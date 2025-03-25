@@ -174,16 +174,17 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, req req.SubmitShiftReq)
 		if shiftLog.IsHandedOver() {
 			return errors.New("当前班次已交班")
 		}
+		cashBox := repository.NewCashBoxRepo(db).Get()
 		withdrawCash = decimal.NewFromFloat(req.WithdrawCash)
 		leaveCash = decimal.NewFromFloat(req.LeaveCash)
 		// 后台交班时，取出金额为当前钱箱现金总计，遗留现金为0
 		if req.IsBackground {
-			withdrawCash = decimal.NewFromFloat(shiftLog.CurrentCashTotal)
+			withdrawCash = decimal.NewFromFloat(cashBox.GetBalance())
 			leaveCash = decimal.Zero
 		}
 		// 当前班次取出金额 + 遗留现金 = 当前钱箱现金总计
 		if !withdrawCash.Add(leaveCash).
-			Equal(decimal.NewFromFloat(shiftLog.CurrentCashTotal)) {
+			Equal(decimal.NewFromFloat(cashBox.GetBalance())) {
 			return errors.New("输入的本班取出現金和本班遗留备用金总额与当前钱箱现金总计不符")
 		}
 		// 当前班次支付方式收入
@@ -194,15 +195,14 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, req req.SubmitShiftReq)
 		totalBusiness := 0
 		// 更新当班记录
 		_, err = shiftLogRepo.Update(shiftLog, map[string]interface{}{
-			"status":              constant.StaffHandedOver,      // 交班状态
-			"previous_shift_cash": shiftLog.CurrentCashTotal,     // 上交班现金总计
-			"current_cash_total":  leaveCash.InexactFloat64(),    // 当前钱箱现金总计
-			"cash_taken_out":      withdrawCash.InexactFloat64(), // 取出现金
-			"cash_left":           leaveCash.InexactFloat64(),    // 遗留现金
-			"shift_end_time":      time.Now().Unix(),             // 交班时间
-			"cash_income":         cashAmount,                    // 现金收入
-			"incomes":             incomes,                       // 支付方式收入
-			"total_business":      totalBusiness,                 // 营业额
+			"status":             constant.StaffHandedOver,      // 交班状态
+			"current_cash_total": leaveCash.InexactFloat64(),    // 当前钱箱现金总计
+			"cash_taken_out":     withdrawCash.InexactFloat64(), // 取出现金
+			"cash_left":          leaveCash.InexactFloat64(),    // 遗留现金
+			"shift_end_time":     time.Now().Unix(),             // 交班时间
+			"cash_income":        cashAmount,                    // 现金收入
+			"incomes":            incomes,                       // 支付方式收入
+			"total_business":     totalBusiness,                 // 营业额
 		})
 		if err != nil {
 			return errors.New("交班失败")
@@ -370,9 +370,8 @@ func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdraw
 	err = repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 更新交班记录
 		_, err = shiftLogRepo.Update(log, map[string]interface{}{
-			"withdraw_cash":      gorm.Expr("withdraw_cash + ?", req.WithdrawCash),
-			"current_cash_total": gorm.Expr("current_cash_total - ?", req.WithdrawCash),
-			"cash_left":          gorm.Expr("cash_left - ?", req.WithdrawCash),
+			"withdraw_cash": gorm.Expr("withdraw_cash + ?", req.WithdrawCash),
+			"cash_left":     gorm.Expr("cash_left - ?", req.WithdrawCash),
 		})
 		if err != nil {
 			return errors.New("取钱失败")
@@ -423,9 +422,8 @@ func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositRe
 	err = repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 更新交班记录
 		_, err = shiftLogRepo.Update(log, map[string]interface{}{
-			"deposit_cash":       gorm.Expr("deposit_cash + ?", req.DepositCash),
-			"current_cash_total": gorm.Expr("current_cash_total + ?", req.DepositCash),
-			"cash_left":          gorm.Expr("cash_left + ?", req.DepositCash),
+			"deposit_cash": gorm.Expr("deposit_cash + ?", req.DepositCash),
+			"cash_left":    gorm.Expr("cash_left + ?", req.DepositCash),
 		})
 		if err != nil {
 			return errors.New("存钱失败")
