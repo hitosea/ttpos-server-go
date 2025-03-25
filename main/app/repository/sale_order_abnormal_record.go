@@ -1,11 +1,9 @@
 package repository
 
 import (
-	"fmt"
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -47,11 +45,11 @@ func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(Source, dutyNo 
 	record.Remark = obj.Remark
 
 	// constant.OrderProductFree
-	fmt.Println("CreateSaleOrderAbnormalLog", utils.ToJsonString(obj))
+	// fmt.Println("CreateSaleOrderAbnormalLog", utils.ToJsonString(obj))
 
-	if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Create(&obj).Error; err != nil {
-		return 0, errors.WithMessage(err)
-	}
+	// if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Create(&obj).Error; err != nil {
+	// 	return 0, errors.WithMessage(err)
+	// }
 
 	// 返回
 	return obj.Uuid, nil

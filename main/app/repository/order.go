@@ -43,7 +43,6 @@ type IOrderRepo interface {
 	HideOrder(saleBillUuid uint64) error                                                                                            // 隐藏订单
 	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                                // 删除订单产品
 	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                                  // 查询销售订单的所有bom
-	ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, price float64) error                 // 修改订单商品价格
 	ChangePopulation(saleBillUuid uint64, population int) error                                                                     // 修改订单人数
 	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error                    // 修改订单商品备注
 	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                                // 获取销售账单所有信息
@@ -1287,18 +1286,6 @@ func (r *orderRepo) DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64
 		return fmt.Errorf("DeleteOrderProduct: %v", err)
 	}
 	return nil
-}
-
-// ChangeProductPrice 修改订单商品价格
-func (r *orderRepo) ChangeProductPrice(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64, price float64) error {
-	err := r.db.Model(&model.SaleOrderProduct{}).
-		Where("delete_time = ?", 0).
-		Where("sale_bill_uuid = ? AND sale_order_uuid = ? AND uuid = ?", saleBillUuid, saleOrderUuid, saleOrderProductUuid).
-		Updates(map[string]interface{}{
-			"is_custom_price": 1,
-			"product_price":   price,
-		}).Error
-	return errors.WithMessage(err)
 }
 
 // ChangePopulation 修改订单人数
