@@ -2943,7 +2943,7 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 	}
 
 	// 判断订单状态
-	if err := billInfo.ValidateOrderStatus(constant.OrderRemark, req.SaleOrderUuid); err != nil {
+	if err := billInfo.ValidateOrderStatus(constant.OrderProductRemark, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -3446,7 +3446,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		return nil, errors.WithMessage(errSaleBill)
 	}
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderRemark, request.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(constant.OrderAddProduct, request.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -3486,7 +3486,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	ctx.Log().Debug("获取到账单信息成功")
 
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(constant.OrderRemark, request.SaleOrderUuid); err != nil {
+	if err := saleBill.ValidateOrderStatus(constant.OrderUpdateProductNum, request.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -3991,6 +3991,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			Remark:          saleOrderProduct.Remark,
 			Reason:          model.GetReturnFoodReasonNames(returnFoodReason),
 			CustomReason:    saleOrderProduct.CancelReason,
+			Sign:            saleOrderProduct.Sign,
 		})
 	}()
 	// 获取新的购物车信息
@@ -4077,6 +4078,7 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 			Num:            saleOrderProduct.Num,
 			ParentId:       saleOrder.SaleBillUuid,
 			OrderName:      saleOrder.Uuid,
+			Sign:           saleOrderProduct.Sign,
 		})
 	}()
 

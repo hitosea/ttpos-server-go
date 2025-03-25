@@ -22,6 +22,7 @@ type CancelSaleOrderProductPayload struct {
 	Remark          string               `json:"remark"`           // 备注
 	Reason          dto.LocaleResponse   `json:"reason"`           // 退菜原因
 	CustomReason    string               `json:"custom_reason"`    // 自定义退菜原因
+	Sign            string               `json:"sign"`             // sign
 }
 
 func (payload *CancelSaleOrderProductPayload) ToJsonString() string {

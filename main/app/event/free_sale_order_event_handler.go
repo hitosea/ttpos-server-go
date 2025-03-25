@@ -31,8 +31,8 @@ func freeSaleOrderEventHandler() {
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 			record := model.SaleOrderOperationRecord{
 				Source:        payload.Source,
-				Action:        constant.OrderSettle,
-				Remark:        "结账",
+				Action:        constant.OrderFreeSale,
+				Remark:        "免单",
 				SaleBillUuid:  payload.SaleBillUuid,
 				SaleOrderUuid: payload.SaleOrderUuid,
 				OperatorUuid:  payload.GetOperatorUuid(),

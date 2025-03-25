@@ -118,6 +118,7 @@ const (
 	OrderDiscount            = "DISCOUNT"              // 优惠折扣
 	OrderCancelDiscount      = "CANCEL_DISCOUNT"       // 撤销优惠折扣
 	OrderSettle              = "SETTLE"                // 结账
+	OrderFreeSale            = "FREE_SALE"             // 免单
 	OrderReverseSettle       = "REVERSE_SETTLE"        // 反结账
 	OrderRefund              = "REFUND"                // 退款
 	OrderOrderTaking         = "ORDER_TAKING"          // 接单
@@ -127,15 +128,16 @@ const (
 	OrderCheckoutDiscount    = "CHECKOUT_DISCOUNT"     // 结账手动抹零
 	OrderSplitOrder          = "SPLIT_ORDER"           // 拆单
 	OrderCancelSplitOrder    = "CANCEL_SPLIT_ORDER"    // 撤销拆单
-
-	OrderRemark        = "CHANGE_PRICE"   // 备注
-	OrderAddProduct    = "ADD_PRODUCT"    // 增加菜品
-	OrderDeleteProduct = "DELETE_PRODUCT" // 删除菜品
-	OrderClock         = "CLOCK"          // 加钟
-	OrderTakeout       = "TAKEOUT"        // 打包
-	OrderUnlock        = "UNLOCK"         // 解锁
-	OrderQuery         = "QUERY"          // 查询。查询自助餐商品列表
-	OrderH5Confirm     = "H5_CONFIRM"     // 下单扫码h5订单
+	// -----订单操作类型-----
+	OrderProductRemark    = "PRODUCT_REMARK"     // 产品备注
+	OrderAddProduct       = "ADD_PRODUCT"        // 增加菜品
+	OrderDeleteProduct    = "DELETE_PRODUCT"     // 删除菜品
+	OrderUpdateProductNum = "UPDATE_PRODUCT_NUM" // 修改桌台就餐人数
+	OrderClock            = "CLOCK"              // 加钟
+	OrderTakeout          = "TAKEOUT"            // 打包
+	OrderUnlock           = "UNLOCK"             // 解锁
+	OrderQuery            = "QUERY"              // 查询。查询自助餐商品列表
+	OrderH5Confirm        = "H5_CONFIRM"         // 下单扫码h5订单
 )
 
 // 结账抹零操作类型
