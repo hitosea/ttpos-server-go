@@ -4,7 +4,7 @@ package constant
 
 const (
 	CashBoxLogScenePay       = 1 // 销售订单支付
-	CashBoxLogSceneRefund    = 2 // 退货退款
+	CashBoxLogSceneRefund    = 2 // 退货退款、反结账
 	CashBoxLogSceneCancelPay = 3 // 取消付款
 	CashBoxLogSceneOut       = 4 // 中途取出
 	CashBoxLogSceneIn        = 5 // 中途存入

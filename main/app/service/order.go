@@ -1689,6 +1689,16 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 						RelatedUuid: saleOrder.Uuid,
 					})
 				}
+				// 取现金，更新钱箱
+				if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+					if err := s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
+						Amount:    -paymentOrder.Amount,
+						Scene:     constant.CashBoxLogSceneRefund,
+						OrderUuid: saleOrder.Uuid,
+					}); err != nil {
+						return errors.WithMessage(err)
+					}
+				}
 			}
 			// 发布“会员余额变动”事件
 			go func() {
