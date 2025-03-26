@@ -519,6 +519,9 @@ definitions:
     type: object
   product_resp.ProductCategory:
     properties:
+      category_key:
+        description: all-表示全部
+        type: string
       children:
         allOf:
         - $ref: '#/definitions/product_resp.ProductCategoryListResp'
@@ -3027,6 +3030,14 @@ definitions:
     type: object
   resp.MenuBaseInfo:
     properties:
+      cloud:
+        allOf:
+        - $ref: '#/definitions/setting.CloudBasic'
+        description: 云端基础信息
+      company:
+        allOf:
+        - $ref: '#/definitions/resp.Company'
+        description: 商家信息
       currency:
         allOf:
         - $ref: '#/definitions/setting.Currency'
