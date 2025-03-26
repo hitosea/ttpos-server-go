@@ -5113,9 +5113,6 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 			}
 			return newInfoResp, nil
 		}
-		if req.PaymentOrderUuid == 0 || req.PaymentOrderUuid != paymentOrder.Uuid {
-			return nil, errors.New("支付订单ID错误")
-		}
 	} else if req.PaymentOrderUuid != 0 {
 		return nil, errors.New("非在线支付无需传支付订单ID")
 	}

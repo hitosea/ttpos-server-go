@@ -288,9 +288,6 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 			}
 			return s.GetPendingRechargeOrder(companyUuid), nil
 		}
-		if addReq.PaymentOrderUuid == 0 || addReq.PaymentOrderUuid != paymentOrder.Uuid {
-			return orderResp, errors.New("支付订单ID错误")
-		}
 	} else if addReq.PaymentOrderUuid != 0 {
 		return orderResp, errors.New("非在线支付无需传支付订单ID")
 	}

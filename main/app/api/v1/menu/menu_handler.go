@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -17,6 +18,7 @@ import (
 
 type Handler struct {
 	productSrv service.IProductSrv // 产品服务
+	settingSrv setting.ISrv        // 设置
 }
 
 // GetProductCategoryList 获取产品类别列表
@@ -62,6 +64,27 @@ func (h *Handler) GetProductList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// BaseInfo 获取基础信息
+// @Summary 获取基础信息
+// @Description 获取基础信息
+// @Tags 电子菜单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.MenuBaseInfo}
+// @Router /menu/base [get]
+func (h *Handler) BaseInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	currencySetting, err := h.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("获取配置失败")))
+		return
+	}
+	helper.Success(c, resp.MenuBaseInfo{
+		Currency: currencySetting,
+	})
+}
+
 // RegisterMenuHandlers 注册菜单路由
 func RegisterMenuHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -78,10 +101,12 @@ func RegisterMenuHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 初始化处理器
 	wrapper := Handler{
 		productSrv: productService,
+		settingSrv: settingSrv,
 	}
 	// 需要认证
 	privateApi := router.Group("", middleware.DeskAuth(authSrv, dbm))
 	{
+		privateApi.GET("/base", wrapper.BaseInfo)                                // 获取货币信息
 		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取产品类别列表
 		privateApi.GET("/product/list", wrapper.GetProductList)                  // 获取产品列表
 	}

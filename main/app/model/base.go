@@ -1,6 +1,8 @@
 package model
 
 import (
+	"strconv"
+	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/logger"
@@ -57,4 +59,29 @@ func (model *BaseModel) BeforeCreate(tx *gorm.DB) (err error) {
 // IsDelete 判断记录是否已删除
 func (model *BaseModel) IsDelete() bool {
 	return model.DeleteTime != constant.NotDeleted
+}
+
+// getGormDbUuid 从数据库名称中提取公司UUID
+func (model *BaseModel) getGormDbUuid(tx *gorm.DB) uint64 {
+	// 获取数据库名称
+	var dbName string
+	// 根据不同的数据库类型获取数据库名称
+	switch tx.Dialector.Name() {
+	case "mysql":
+		tx.Raw("SELECT DATABASE()").Scan(&dbName)
+	case "sqlite":
+		// todo 离线版本要重新考虑
+		// 对于 SQLite，数据库名称就是文件路径
+		// dbName = tx.Dialector.(gorm.Dialector).DSN()
+	}
+	// 从数据库名称中提取公司UUID
+	// 格式为: shop8609817471094784
+	if len(dbName) > 4 && strings.HasPrefix(dbName, "shop") {
+		uuidStr := strings.TrimPrefix(dbName, "shop")
+		uuid, err := strconv.ParseUint(uuidStr, 10, 64)
+		if err == nil {
+			return uuid
+		}
+	}
+	return 0
 }

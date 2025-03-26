@@ -26,11 +26,11 @@ var WsClients []ConnectionInfo
 
 // Message represents a generic message structure
 type PushMessage struct {
-	Event string `json:"event"`
-	State int    `json:"state"`
-	Msg   string `json:"msg"`
-	Data  string `json:"data,omitempty"`
-	MsgId int    `json:"msg_id,omitempty"`
+	Event string      `json:"event"`
+	State int         `json:"state"`
+	Msg   string      `json:"msg"`
+	Data  interface{} `json:"data,omitempty"`
+	MsgId int         `json:"msg_id,omitempty"`
 }
 
 // ClientMessage represents a generic message structure
@@ -161,12 +161,12 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 		Event: "connect",
 		State: constant.CodeSuccess,
 		Msg:   "Connected successfully",
-		Data: utils.StructToJson(map[string]interface{}{
+		Data: map[string]interface{}{
 			"source":       claims.Source,
 			"company_uuid": claims.CompanyUuid,
 			"staff_uuid":   claims.StaffUuid,
 			"device_id":    claims.DeviceId,
-		}),
+		},
 	})); err != nil {
 		fmt.Println("Error sending ping message:", err)
 		return
@@ -214,7 +214,7 @@ func handleMessage(ws *websocket.Conn, msg []byte) {
 }
 
 // PushClient 推送消息
-func PushClient(CompanyUuid uint64, SourceClient, DeviceId string, msgType string, data string) {
+func PushClient(CompanyUuid uint64, SourceClient, DeviceId string, msgType string, data interface{}) {
 	for _, conn := range WsClients {
 		if conn.CompanyUuid == CompanyUuid && (conn.SourceClient == SourceClient || SourceClient == "*") && (conn.DeviceId == DeviceId || DeviceId == "*") {
 			// 创建一个 WebSocketMsgRepository 实例
@@ -230,7 +230,7 @@ func PushClient(CompanyUuid uint64, SourceClient, DeviceId string, msgType strin
 			id, err := repo.Create(model.WebSocketMsg{
 				CompanyUuid:  CompanyUuid,
 				Uid:          conn.DeviceId,
-				Msg:          data,
+				Msg:          utils.StructToJson(data),
 				Type:         msgType,
 				SourceClient: conn.SourceClient,
 				Status:       0,
@@ -242,6 +242,7 @@ func PushClient(CompanyUuid uint64, SourceClient, DeviceId string, msgType strin
 				fmt.Printf("Error creating WebSocket message: %v\n", err)
 				continue
 			}
+
 			// 发送消息
 			message := PushMessage{
 				Event: msgType,
@@ -249,6 +250,7 @@ func PushClient(CompanyUuid uint64, SourceClient, DeviceId string, msgType strin
 				Data:  data,
 				MsgId: int(id),
 			}
+
 			err = conn.ws.WriteMessage(websocket.TextMessage, getMsgData(message))
 			if err != nil {
 				fmt.Printf("Error sending message to client: %v\n", err)

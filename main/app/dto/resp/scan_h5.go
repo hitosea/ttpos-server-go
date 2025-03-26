@@ -132,6 +132,10 @@ type H5BaseInfo struct {
 	Kitchen       setting.Kitchen    `json:"kitchen"`          // 厨显设置
 }
 
+type MenuBaseInfo struct {
+	Currency setting.Currency `json:"currency"` // 货币设置
+}
+
 type GetBaseInfoResponse struct {
 	TableInfo struct {
 		TableID        uint64 `json:"table_id"`
