@@ -345,8 +345,8 @@ func (model *SaleOrderProduct) calcOriginServiceFee(serviceFeeRate float64, taxF
 // 当不收取服务费税费时，服务费税费为0
 // 当收取服务费税费时，服务费税费=订单商品服务费*商品消费税税率
 func (model *SaleOrderProduct) calcServiceTaxFee(serviceFeeRate float64, taxFeeType int, serviceFeeType int) float64 {
-	// 当服务费收费税费时
-	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax {
+	// 当服务费收费税费且开启税费时
+	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax && taxFeeType != constant.TaxFeeTypeNone {
 		// 服务费税费=订单商品服务费*商品消费税税率
 		serviceTaxFee := decimal.NewFromFloat(model.calcServiceFee(serviceFeeRate, taxFeeType)).Mul(decimal.NewFromFloat(model.TaxRate))
 		return serviceTaxFee.InexactFloat64()
