@@ -6,7 +6,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventCheckoutSaleOrder 事件名称，每个事件都有一个全局唯一的名称
+// EventCheckoutSaleOrder 结账事件
 const EventCheckoutSaleOrder EventName = "Event_Checkout_Sale_Order"
 
 // CheckoutSaleOrderPayload 每个事件有一个数据结构

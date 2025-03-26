@@ -5,7 +5,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventAcceptH5Order 接单事件名称
+// EventAcceptH5Order 接单事件
 const EventAcceptH5Order EventName = "Event_Accept_H5_Order"
 
 // AcceptH5OrderPayload 接单事件数据结构

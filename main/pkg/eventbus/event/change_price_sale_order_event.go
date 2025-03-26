@@ -5,7 +5,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventChangePriceSaleOrder 事件名称，每个事件都有一个全局唯一的名称
+// EventChangePriceSaleOrder 改价事件
 const EventChangePriceSaleOrder EventName = "Event_Change_Price_Sale_Order"
 
 // ChangePriceSaleOrderPayload 每个事件有一个数据结构

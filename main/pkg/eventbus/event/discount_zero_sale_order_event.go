@@ -5,7 +5,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventDiscountZeroSaleOrder 事件名称，每个事件都有一个全局唯一的名称
+// EventDiscountZeroSaleOrder "订单抹零"事件
 const EventDiscountZeroSaleOrder EventName = "Event_Discount_Zero_Sale_Order"
 
 // DiscountZeroSaleOrderPayload 每个事件有一个数据结构
