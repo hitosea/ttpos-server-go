@@ -17,6 +17,7 @@ type ShopCart struct {
 	MustPlans     *ProductMustPlanList `json:"must_plans,omitempty"` // 必点方案列表信息
 	DiningMethod  uint                 `json:"dining_method"`        // 用餐方式 0:堂食 1:打包。与Takeout重复，废弃
 	SaleOrderList []SaleOrder          `json:"sale_order_list"`      // 销售订单列表
+	UpdateTime    int64                `json:"update_time"`          // 更新时间
 }
 
 // H5CartSendProduct 扫码h5购物车已下单品

@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 	"websocket/constant"
 	"websocket/pkg/cache"
 	"websocket/utils"
+
+	"github.com/google/uuid"
 )
 
 func PushClient(w http.ResponseWriter, r *http.Request) {
@@ -18,6 +21,7 @@ func PushClient(w http.ResponseWriter, r *http.Request) {
 		DeviceId     string      `json:"device_id"`
 		NotDeviceId  string      `json:"not_device_id"`
 		MessageType  string      `json:"message_type"`
+		MessageKey   string      `json:"message_key"`
 		Data         interface{} `json:"data"`
 	}
 
@@ -36,9 +40,22 @@ func PushClient(w http.ResponseWriter, r *http.Request) {
 		params.SourceClient = "*"
 	}
 
-	// 推送
-	err := cache.GlobalRedis.Client.Publish(context.Background(), "websocket_msg_push", utils.StructToJson(params)).Err()
-	if err != nil {
+	// 启动延时发送的goroutine
+	uuidStr := uuid.New().String()
+	if params.MessageKey != "" {
+		cache.GlobalRedis.Set(params.MessageKey, uuidStr, 2*time.Second)
+	}
+	go func(_uuid string) {
+		// 检查Redis缓存是否被更新
+		if params.MessageKey != "" {
+			time.Sleep(1 * time.Second)
+			if cachedUUID, exists := cache.GlobalRedis.Get(params.MessageKey); exists {
+				if _uuid != cachedUUID.(string) {
+					return
+				}
+			}
+		}
+		// 推送
 		err := cache.GlobalRedis.Client.Publish(context.Background(), "websocket_msg_push", utils.StructToJson(params)).Err()
 		if err != nil {
 			fmt.Fprintf(w, "%s", utils.StructToJson(map[string]interface{}{
@@ -46,16 +63,12 @@ func PushClient(w http.ResponseWriter, r *http.Request) {
 				"error":   err,
 				"message": "failed",
 			}))
-		} else {
-			fmt.Fprintf(w, "%s", utils.StructToJson(map[string]interface{}{
-				"code":    constant.CodeSuccess,
-				"message": "success",
-			}))
 		}
-	} else {
-		fmt.Fprintf(w, "%s", utils.StructToJson(map[string]interface{}{
-			"code":    constant.CodeSuccess,
-			"message": "success",
-		}))
-	}
+	}(uuidStr)
+
+	// 返回成功
+	fmt.Fprintf(w, "%s", utils.StructToJson(map[string]interface{}{
+		"code":    constant.CodeSuccess,
+		"message": "success",
+	}))
 }

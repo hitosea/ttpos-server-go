@@ -25,12 +25,13 @@ type DeskNo struct {
 }
 
 type DeskExtra struct {
-	AvailableNum       uint `json:"available_num"`         // 桌台可用数量
-	LockNum            uint `json:"lock_num"`              // 桌台锁定数量
-	OccupyBuffetNum    uint `json:"occupy_buffet_num"`     // 桌台自助餐数量
-	OccupyNotBuffetNum uint `json:"occupy_not_buffet_num"` // 桌台非自助餐数量
-	OccupyWaitNum      uint `json:"occupy_wait_num"`       // 桌台待清台数量
-	TotalNum           uint `json:"total_num"`             // 桌台总计数量
+	AvailableNum       uint  `json:"available_num"`         // 桌台可用数量
+	LockNum            uint  `json:"lock_num"`              // 桌台锁定数量
+	OccupyBuffetNum    uint  `json:"occupy_buffet_num"`     // 桌台自助餐数量
+	OccupyNotBuffetNum uint  `json:"occupy_not_buffet_num"` // 桌台非自助餐数量
+	OccupyWaitNum      uint  `json:"occupy_wait_num"`       // 桌台待清台数量
+	TotalNum           uint  `json:"total_num"`             // 桌台总计数量
+	UpdateTime         int64 `json:"update_time"`           // 更新时间
 }
 
 type DeskRegion struct {

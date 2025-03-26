@@ -125,6 +125,9 @@ func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskList
 	// 返回响应对象
 	return resp.DeskListWithPaginationResp{
 		List: deskResp,
+		Extra: resp.DeskExtra{
+			UpdateTime: time.Now().Unix(),
+		},
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
 			PageSize: req.PageSize,

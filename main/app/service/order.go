@@ -3202,6 +3202,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		Buffet:        nil,
 		DiningMethod:  shopCart.SaleBill.DiningMethod,
 		SaleOrderList: saleOrderList,
+		UpdateTime:    shopCart.SaleBill.UpdateTime,
 	}
 	// 如果要显示必点信息
 	if productMustPlanList != nil {
