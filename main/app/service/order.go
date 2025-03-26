@@ -15,7 +15,6 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	apperrors "ttpos-server-go/app/errors"
-	event2 "ttpos-server-go/app/event"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
@@ -1117,7 +1116,14 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		}
 		// 发布"加库存"事件
 		go func() {
-			event2.AddStock(db, saleBill.Uuid)
+			event.NewSystemBus().PublishChangeStockEvent(event.ChangeStockPayload{
+				BasePayload: event.BasePayload{
+					CompanyUuid:  ctx.GetCompanyUuid(),
+					Source:       ctx.GetSource(),
+					SaleBillUuid: billInfo.Uuid,
+					OperatorUuid: int64(ctx.GetStaffUuid()),
+				},
+			})
 		}()
 	}
 
@@ -1338,8 +1344,14 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				}
 				// 发布“会员余额变动”事件
 				go func() {
-					time.Sleep(400 * time.Microsecond)
-					event2.HandleMemberBalance(s.dbm.GetDB(ctx.GetDbId())) // 不要使用tx或者ctx.GetDB, 执行完会context canceled
+					s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
+						BasePayload: event.BasePayload{
+							CompanyUuid:  ctx.GetCompanyUuid(),
+							Source:       ctx.GetSource(),
+							SaleBillUuid: req.SaleBillUuid,
+							OperatorUuid: int64(ctx.GetStaffUuid()),
+						},
+					})
 				}()
 			}
 			// 如果退款金额为现金，则更新钱箱
@@ -1724,8 +1736,14 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 
 			// 发布“会员余额变动”事件
 			go func() {
-				time.Sleep(time.Microsecond * 200)
-				event2.HandleMemberBalance(s.dbm.GetDB(ctx.GetDbId()))
+				s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
+					BasePayload: event.BasePayload{
+						CompanyUuid:  ctx.GetCompanyUuid(),
+						Source:       ctx.GetSource(),
+						SaleBillUuid: req.SaleBillUuid,
+						OperatorUuid: int64(ctx.GetStaffUuid()),
+					},
+				})
 			}()
 		}
 		// 更新桌台
@@ -1827,13 +1845,16 @@ func (s *orderSrv) reverseSettleWarehouseForm(ctx context.Context, saleBill *mod
 		return errors.WithMessage(err)
 	}
 
-	// 发布"加库存"事件
+	// 发布"库存变更"事件
 	go func() {
-		event2.AddStock(db, saleBill.Uuid)
-	}()
-	// 发布"减库存"事件
-	go func() {
-		event2.ReduceStock(db, saleBill.Uuid)
+		event.NewSystemBus().PublishChangeStockEvent(event.ChangeStockPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: saleBill.Uuid,
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
 	}()
 
 	return nil

@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -26,6 +27,9 @@ func init() {
 // acceptH5OrderEventHandler "接单"事件处理器
 func acceptH5OrderEventHandler() {
 	once_accept_h5_order_event_handler.Do(func() {
+		var orderSrv service.IOrderSrv
+		_ = orderSrv
+
 		event.NewSystemBus().SubscribeAcceptH5OrderEvent(func(payload event.AcceptH5OrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
