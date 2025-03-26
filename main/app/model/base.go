@@ -86,14 +86,3 @@ func (model *BaseModel) getGormDbUuid(tx *gorm.DB) uint64 {
 	}
 	return 0
 }
-
-// getDeviceIdFromTx 从事务上下文中获取设备ID
-func (model *BaseModel) getDeviceIdFromTx(tx *gorm.DB) string {
-	// 尝试从事务上下文中获取设备ID
-	if value, ok := tx.Get("device_id"); ok {
-		if deviceId, ok := value.(string); ok {
-			return deviceId
-		}
-	}
-	return "" // 如果没有找到设备ID，返回空字符串
-}

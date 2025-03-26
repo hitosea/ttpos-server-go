@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
@@ -87,16 +86,15 @@ type SaleOrder struct {
 func (model *SaleOrder) AfterUpdate(tx *gorm.DB) (err error) {
 	// 如果有有效的公司UUID，发送WebSocket消息
 	if companyUuid := model.getGormDbUuid(tx); companyUuid > 0 {
-		// 获取当前设备ID
 		go websocket.PushClient(
 			companyUuid,
 			"*",
-			model.getDeviceIdFromTx(tx), // 使用从事务上下文中获取的设备ID
+			"*", // 使用从事务上下文中获取的设备ID
 			websocket.UPDATE_ORDER,
 			map[string]interface{}{
 				"sale_bill_uuid":  model.SaleBillUuid,
 				"sale_order_uuid": model.Uuid,
-				"timestamp":       time.Now().Unix(),
+				"update_time":     model.BaseModel.UpdateTime,
 			},
 		)
 	}
@@ -111,12 +109,12 @@ func (model *SaleOrder) AfterDelete(tx *gorm.DB) (err error) {
 		go websocket.PushClient(
 			companyUuid,
 			"*",
-			model.getDeviceIdFromTx(tx), // 使用从事务上下文中获取的设备ID
+			"*", // 使用从事务上下文中获取的设备ID
 			websocket.UPDATE_ORDER,
 			map[string]interface{}{
 				"sale_bill_uuid":  model.SaleBillUuid,
 				"sale_order_uuid": model.Uuid,
-				"timestamp":       time.Now().Unix(),
+				"update_time":     model.BaseModel.UpdateTime,
 			},
 		)
 	}

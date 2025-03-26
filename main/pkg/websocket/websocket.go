@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	UPDATE_ORDER   = "update_order"   // 更新订单 data = {"timestamp": 1742971471,"sale_bill_uuid": 3655262269341697,"sale_order_uuid": 3655262269341699}
+	UPDATE_ORDER   = "update_order"   // 更新订单 data = {"update_time": 1742971471,"sale_bill_uuid": 3655262269341697,"sale_order_uuid": 3655262269341699}
 	UPDATE_PRODUCT = "update_product" // 更新商品
 )
 
