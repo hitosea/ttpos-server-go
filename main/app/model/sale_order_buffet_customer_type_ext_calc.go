@@ -28,7 +28,7 @@ func (model *SaleOrderBuffetCustomerType) calcSaleOrderBuffetCustomerType(servic
 	model.CustomDiscountFee = calc.CustomDiscountFee
 	calc.ServiceTaxFee = model.calcServiceTaxFee(serviceFeeRate, taxFeeType, serviceFeeType)
 	model.ServiceTaxFee = calc.ServiceTaxFee
-	calc.TaxFee = model.calcTaxFee(model.Price, taxFeeType)
+	calc.TaxFee = model.calcTaxFee(model.TaxRate, taxFeeType)
 	model.TaxFee = calc.TaxFee
 	calc.ServiceFee = model.calcServiceFee(serviceFeeRate, taxFeeType)
 	model.ServiceFee = calc.ServiceFee
@@ -109,16 +109,24 @@ func (model *SaleOrderBuffetCustomerType) calcServiceTaxFee(serviceFeeRate float
 	return 0
 }
 
-// 计算商品的税费（单商品的消费税税费，不含服务费的税费）
+// 计算自助餐顾客的税费（单顾客的消费税税费，不含服务费的税费）
 // 商品未含税时，商品原价=商品未含税原价。消费税税费=商品未含税原价*消费税税率
 // 商品已含税时，商品原价=商品未含税原价+消费税税费；故，消费税税费=商品原价-商品未含税原价。
 // 商品原价=商品未含税原价+（商品未含税原价*消费税税率）= 商品未含税原价*（1+消费税税率）
 // 商品未含税原价=商品原价/(1+消费税税率)
 func (model *SaleOrderBuffetCustomerType) calcTaxFee(taxFeeRate float64, taxFeeType int) float64 {
-	// 计算自助餐顾客类型未含税原价的未含税原价
-	productPriceNoneTax := model.calcProductPriceNoneTax(model.SalePrice, taxFeeType)
-	// 自助餐顾客类型税费=自助餐顾客类型未含税原价*税率
-	return decimal.NewFromFloat(productPriceNoneTax).Mul(decimal.NewFromFloat(taxFeeRate)).InexactFloat64()
+	// 商品已含税时，消费税税费=商品销售价-商品未含税销售价
+	if taxFeeType == constant.TaxFeeTypeTax {
+		taxFee := decimal.NewFromFloat(model.Price).Sub(decimal.NewFromFloat(model.calcProductPriceNoneTax(model.Price, taxFeeType)))
+		return taxFee.InexactFloat64()
+	} else if taxFeeType == constant.TaxFeeTypeNoTax {
+		// 商品未含税时，消费税税费=商品销售价*消费税税率
+		taxFee := decimal.NewFromFloat(model.Price).Mul(decimal.NewFromFloat(taxFeeRate))
+		return taxFee.InexactFloat64()
+	}
+
+	// 默认为商品关闭税费
+	return 0
 }
 
 // 计算商品的未含税原价。

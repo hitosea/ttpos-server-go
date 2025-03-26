@@ -104,6 +104,16 @@ type SaleOrderProduct struct {
 	operation string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
 }
 
+// 获取销售订单商品的税费。税费=销售订单商品的税费*销售订单商品的数量
+func (model *SaleOrderProduct) GetTaxFee() float64 {
+	return decimal.NewFromFloat(model.TaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+}
+
+// 获取销售订单商品的服务费税费。服务费税费=销售订单商品的服务费税费*销售订单商品的数量
+func (model *SaleOrderProduct) GetServiceTaxFee() float64 {
+	return decimal.NewFromFloat(model.ServiceTaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+}
+
 // 获取销售订单商品的服务费。服务费=销售订单商品的服务费*销售订单商品的数量
 func (model *SaleOrderProduct) GetServiceFee() float64 {
 	return decimal.NewFromFloat(model.ServiceFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()

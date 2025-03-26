@@ -424,13 +424,18 @@ func (model *SaleOrder) calcUnCookingProductAmount() float64 {
 	return sumPrice.Round(2).InexactFloat64()
 }
 
-// 计算订单产生的税费。订单税费=订单商品TaxFee之和 + 订单商品ServiceTaxFee之和
+// 计算订单产生的税费。订单税费=订单商品TaxFee之和 + 订单商品ServiceTaxFee之和 + 自助餐顾客税费之和
 func (model *SaleOrder) calcTaxFee(products []*SaleOrderProduct) float64 {
 	taxFee := decimal.NewFromFloat(0)
 	for _, orderProduct := range products {
 		taxFee = taxFee.Add(
-			decimal.NewFromFloat(orderProduct.TaxFee)).Add(
-			decimal.NewFromFloat(orderProduct.ServiceTaxFee))
+			decimal.NewFromFloat(orderProduct.GetTaxFee())).Add(
+			decimal.NewFromFloat(orderProduct.GetServiceTaxFee()))
+	}
+	for _, buffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+		taxFee = taxFee.Add(
+			decimal.NewFromFloat(buffetCustomer.GetTaxFee())).Add(
+			decimal.NewFromFloat(buffetCustomer.GetServiceTaxFee()))
 	}
 	return taxFee.InexactFloat64()
 }
@@ -541,7 +546,11 @@ func (model *SaleOrder) calcCookingServiceTaxFee(products []*SaleOrderProduct) f
 	serviceTaxFee := decimal.NewFromFloat(0)
 	for _, orderProduct := range products {
 		serviceTaxFee = serviceTaxFee.Add(
-			decimal.NewFromFloat(orderProduct.ServiceTaxFee))
+			decimal.NewFromFloat(orderProduct.GetServiceTaxFee()))
+	}
+	for _, buffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+		serviceTaxFee = serviceTaxFee.Add(
+			decimal.NewFromFloat(buffetCustomer.GetServiceTaxFee()))
 	}
 	return serviceTaxFee.InexactFloat64()
 }
@@ -557,30 +566,28 @@ func (model *SaleOrder) calcAmount(products []*SaleOrderProduct, serviceFeeType 
 	amount := decimal.NewFromFloat(0)
 	// 商品已含税时 todo
 	if taxFeeType == constant.TaxFeeTypeTax {
-		serviceTaxFee := model.calcCookingServiceTaxFee(products)
+		serviceTaxFee := model.calcCookingServiceTaxFee(products) // 订单商品服务费税费之和 + 自助餐顾客服务费税费之和
 		//商品金额（包含商品消费税税费）+服务费+服务费税费。
 		amount = amount.Add(
 			decimal.NewFromFloat(productAmount)).Add(
 			decimal.NewFromFloat(serviceFee)).Add(
 			decimal.NewFromFloat(serviceTaxFee))
-		return amount.InexactFloat64()
+		return amount.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 商品未含税时
 	if taxFeeType == constant.TaxFeeTypeNoTax {
-		taxFee := model.calcTaxFee(products)
+		taxFee := model.calcTaxFee(products) // 订单商品税费之和 + 自助餐顾客税费之和
 		// 销售订单应付金额=商品金额+服务费+消费税（商品消费税税费+服务费税费）
 		amount = amount.Add(
 			decimal.NewFromFloat(productAmount).Add(
 				decimal.NewFromFloat(serviceFee).Add(
 					decimal.NewFromFloat(taxFee))))
-		return amount.InexactFloat64()
+		return amount.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 商品关闭税费时
 	// 销售订单应付金额=商品金额ProductAmount(折后)+服务费
 	result := decimal.NewFromFloat(productAmount).Add(decimal.NewFromFloat(serviceFee))
-
-	inexactFloat64 := result.InexactFloat64()
-	return inexactFloat64
+	return result.Truncate(3).Round(2).InexactFloat64()
 }
 
 // 计算已送厨的订单应付金额抹零后的金额。订单应付金额抹零后的金额=订单应付金额-订单抹零金额
@@ -644,7 +651,7 @@ func (model *SaleOrder) CalcGiftAmount(products []*SaleOrderProduct) float64 {
 // 计算订单服务费。
 // 当服务费关闭时，订单服务费为0
 // 当服务费为固定费用时，订单服务费为固定费用
-// 当服务费为按比例收费时，订单服务费为所有订单商品的服务费之和
+// 当服务费为按比例收费时，订单服务费=所有订单商品的服务费之和+所有自助餐顾客的服务费之和
 func (model *SaleOrder) calcServiceFee(products []*SaleOrderProduct, serviceFeeType int, serviceFeeValue float64) float64 {
 	// 当服务费关闭时，订单服务费为0
 	if serviceFeeType == constant.SaleBillSettingServiceFeeTypeNone {
@@ -657,10 +664,15 @@ func (model *SaleOrder) calcServiceFee(products []*SaleOrderProduct, serviceFeeT
 	// 当服务费为按比例收费时，订单服务费为所有订单商品的服务费之和
 	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercent || serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax {
 		serviceFee := decimal.NewFromFloat(0)
+		// 订单商品服务费之和
 		for _, orderProduct := range products {
 			serviceFee = serviceFee.Add(decimal.NewFromFloat(orderProduct.GetServiceFee()))
 		}
-		return serviceFee.InexactFloat64()
+		// 自助餐顾客服务费之和
+		for _, buffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+			serviceFee = serviceFee.Add(decimal.NewFromFloat(buffetCustomer.GetServiceFee()))
+		}
+		return serviceFee.Truncate(2).InexactFloat64()
 	}
 	// 默认不收取服务费
 	return 0
