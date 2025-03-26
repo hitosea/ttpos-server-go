@@ -1656,7 +1656,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 				}
 			}
 			// 退积分
-			{
+			if saleOrder.ConsumerUuid != 0 {
 				points := saleOrder.GiftPoints
 				member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
 				if err != nil {
