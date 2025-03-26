@@ -54,12 +54,18 @@ func freeSaleOrderEventHandler() {
 				SaleOrderUuid: payload.SaleOrderUuid,
 				OperatorUuid:  payload.GetOperatorUuid(),
 			}
-			checkoutSaleOrder := event.CheckoutSaleOrderPayload{
+			checkoutSaleOrderPayload := event.CheckoutSaleOrderPayload{
 				OrderPrice: payload.OrderPrice,
 				PayPrice:   payload.PayPrice,
 				IsFree:     true,
 			}
-			settleRecord.Data = checkoutSaleOrder.ToJsonString()
+			checkoutSaleOrderPayload.IsSplitOrder = payload.SaleBill.IsSplit()
+			for i, saleOrder := range payload.SaleBill.SaleOrders {
+				if saleOrder.Uuid == payload.SaleOrderUuid {
+					checkoutSaleOrderPayload.Index = i + 1
+				}
+			}
+			settleRecord.Data = checkoutSaleOrderPayload.ToJsonString()
 			uuid, err = orderRecordRepo.CreateSaleOrderOperationRecord(settleRecord)
 			if err != nil {
 				logger.Logger.Error("SubscribeFreeSaleOrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))

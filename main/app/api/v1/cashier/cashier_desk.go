@@ -968,7 +968,7 @@ func (h *DeskHandler) OrderPaymentInfo(c *gin.Context) {
 	}
 	ctx.Log().Info("查询销售订单收银机结账页面信息", zap.Any("params", params))
 	// 获取销售订单的付款信息
-	res, err := h.orderSrv.InstantOrderPaymentInfo(ctx, params.SaleBillUuid, params.SaleOrderUuid)
+	res, err := h.orderSrv.InstantOrderPaymentInfo(ctx, nil, params.SaleBillUuid, params.SaleOrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

@@ -12,13 +12,15 @@ const EventCheckoutSaleOrder EventName = "Event_Checkout_Sale_Order"
 // CheckoutSaleOrderPayload 每个事件有一个数据结构
 type CheckoutSaleOrderPayload struct {
 	BasePayload
-	SaleBill    *model.SaleBill
-	OrderPrice  float64   `json:"order_price"`  // 订单应付金额
-	PayPrice    float64   `json:"pay_price"`    // 最终应付金额。最终应付金额=订单应付金额+手续费（手续费=每笔付款单的手续费之和）
-	ActualPrice float64   `json:"actual_price"` // 最终实付金额。最终实付金额=最终应付金额+找零金额。如果没有找零，则最终实付金额=最终应付金额。最终实付金额=每笔付款单的付款金额之和（含手续费）
-	ChangeDue   float64   `json:"change_due"`   // 找零金额
-	PayType     []PayType `json:"pay_type"`     // 支付方式
-	IsFree      bool      `json:"is_free"`      // 是否免单
+	SaleBill     *model.SaleBill `json:"-"`
+	OrderPrice   float64         `json:"order_price"`    // 订单应付金额
+	PayPrice     float64         `json:"pay_price"`      // 最终应付金额。最终应付金额=订单应付金额+手续费（手续费=每笔付款单的手续费之和）
+	ActualPrice  float64         `json:"actual_price"`   // 最终实付金额。最终实付金额=最终应付金额+找零金额。如果没有找零，则最终实付金额=最终应付金额。最终实付金额=每笔付款单的付款金额之和（含手续费）
+	ChangeDue    float64         `json:"change_due"`     // 找零金额
+	PayType      []PayType       `json:"pay_type"`       // 支付方式
+	IsFree       bool            `json:"is_free"`        // 是否免单
+	IsSplitOrder bool            `json:"is_split_order"` // 是否拆单
+	Index        int             `json:"index"`          // 子单索引
 }
 
 type PayType struct {
