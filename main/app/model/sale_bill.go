@@ -7,9 +7,6 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
-	"ttpos-server-go/pkg/websocket"
-
-	"gorm.io/gorm"
 )
 
 // SaleBill 销售账单 `ttpos_sale_bill`
@@ -88,18 +85,6 @@ type SaleBill struct {
 	Desk            *Desk             `gorm:"foreignKey:DeskUuid;references:uuid"`
 	BuffetPackage1  *BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
-}
-
-// AfterUpdate 更新销售订单后的逻辑 - 推送订单更新
-func (model *SaleBill) AfterUpdate(tx *gorm.DB) (err error) {
-	if companyUuid := model.getGormDbUuid(tx); companyUuid > 0 {
-		go websocket.PushClient(companyUuid, "*", "*", websocket.UPDATE_ORDER, map[string]interface{}{
-			"sale_bill_uuid": model.Uuid,
-			"desk_uuid":      model.DeskUuid,
-			"update_time":    model.BaseModel.UpdateTime,
-		})
-	}
-	return nil
 }
 
 // 判断销售账单是否可反结账。

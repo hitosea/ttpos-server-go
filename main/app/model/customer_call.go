@@ -1,6 +1,8 @@
 package model
 
-import "ttpos-server-go/config"
+import (
+	"ttpos-server-go/config"
+)
 
 // CustomerCall 客户呼叫记录表 ttpos_customer_call
 type CustomerCall struct {

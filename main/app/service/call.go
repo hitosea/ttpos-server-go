@@ -153,7 +153,7 @@ func (s *callSrv) Call(ctx context.Context, callReq req.CallReq) error {
 		DeskNo:   desk.DeskNo,
 		CallType: callReq.CallType,
 	}); err != nil {
-		return errors.ErrInternal
+		return err
 	}
 	return nil
 }

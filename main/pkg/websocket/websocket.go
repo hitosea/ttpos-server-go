@@ -10,37 +10,40 @@ import (
 	"os"
 )
 
+// 源类型
+const (
+	SourceShop      = "shop"      // 商家
+	SourceCashier   = "cashier"   // 收银机
+	SourceTablet    = "tablet"    // 平板端
+	SourceKitchen   = "kitchen"   // 厨显端
+	SourceAssistant = "assistant" // 点餐助手
+	SourceH5        = "H5"        // H5
+)
+
 const (
 	// 更新订单，刷新购物车和桌台列表都用它（desk_uuid不等于0代表是桌台订单，desk_uuid等于0代表是点餐订单），data = {"update_time": 1742971471,"sale_bill_uuid": 3655262269341697,"desk_uuid": 3655262269341699}
 	UPDATE_ORDER = "update_order"
-	// 更新商品
-	UPDATE_PRODUCT = "update_product"
+	// 客户呼叫  data = {"update_time": 1742971471,"customer_call_uuid": 3655262269341697,"desk_uuid": 3655262269341699}
+	CUSTOMER_CALL = "customer_call"
+	// 打印数据  data = {"update_time": 1742971471,"print_log_uuid": 3655262269341697}
+	PRINT_DATA = "print_data"
 )
 
 // Push sends a POST request to the WebSocket server with specific parameters.
 func PushClient(company_uuid uint64, source_client, not_device_id, message_type string, data map[string]interface{}) error {
 	var jsonData []byte
-	var err error
 	// 计算包含关键参数的MD5值
 	if message_type == UPDATE_ORDER {
-		jsonData, err = json.Marshal(map[string]interface{}{
-			"sale_bill_uuid": data["sale_bill_uuid"],
-		})
-	} else if message_type == UPDATE_PRODUCT {
-		jsonData, err = json.Marshal(map[string]interface{}{
-			"sale_bill_uuid": data["sale_bill_uuid"],
-		})
-	}
-	if err != nil {
-		fmt.Println("Failed to marshal JSON: %v", err)
-		log.Printf("Failed to marshal JSON: %v", err)
-		return err
+		jsonData = fmt.Appendf(nil, "%d", data["sale_bill_uuid"])
 	}
 
 	// 创建缓存键
-	key := fmt.Sprintf("%d:%s:%s:%s", company_uuid, source_client, not_device_id, message_type)
-	md5Sum := fmt.Sprintf("%x", md5.Sum(append([]byte(key), jsonData...)))
-	cacheKey := fmt.Sprintf("ws_msg:%s", md5Sum)
+	var cacheKey string
+	if message_type != PRINT_DATA {
+		key := fmt.Sprintf("%d:%s:%s:%s", company_uuid, source_client, not_device_id, message_type)
+		md5Sum := fmt.Sprintf("%x", md5.Sum(append([]byte(key), jsonData...)))
+		cacheKey = fmt.Sprintf("ws_msg:%s", md5Sum)
+	}
 
 	// 判断当前是否在容器内执行
 	url := fmt.Sprintf("http://127.0.0.1:%s/ws/push", os.Getenv("NGINX_PORT"))
