@@ -112,6 +112,7 @@ type IOrderSrv interface {
 	GetOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (*resp.H5CartSendProduct, error) // 获取扫码h5购物车已下单商品列表
 	ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) error                                                                                    // 下单扫码h5订单
 	AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error)                                                            // 接单扫码h5订单
+	RejectH5Order(ctx context.Context, h5OrderUuid uint64) error                                                                                                            // 拒单扫码h5订单
 	GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error)             // 未送厨商品列表
 	GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart) (resp.SentKitchen, error)                                                             // 已送厨商品列表
 
@@ -1025,6 +1026,23 @@ func (s *orderSrv) IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (
 	return billInfo, nil
 }
 
+// 拒绝某销售账单的所有未接单h5订单
+func (s *orderSrv) RejectAllH5Order(ctx context.Context, saleBillUuid uint64) error {
+	db := ctx.GetDB()
+	// 获取所有待接单的h5订单
+	h5Orders, err := repository.NewH5OrderRepo(db).GetH5OrderListBySaleBillUuid(saleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	for _, h5Order := range h5Orders {
+		err := s.RejectH5Order(ctx, h5Order.Uuid)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+	return nil
+}
+
 // CancelOrder 取消订单
 func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) error {
 	dbId := ctx.GetDbId()
@@ -1068,7 +1086,6 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 
 	orderRepo := repository.NewOrderRepo(tx)
 	deskRepo := repository.NewDeskRepo(tx)
-	qrOrderRepo := repository.NewH5OrderRepo(tx)
 
 	// 退回商品库存
 	{
@@ -1107,8 +1124,8 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	// 如果是桌台订单
 	if billInfo.BillType == 0 && billInfo.DeskUuid > 0 {
 		// 拒绝所有待接单
-		err := qrOrderRepo.Reject(billInfo.DeskUuid)
-		if err != nil {
+		ctx.SetDB(tx)
+		if err := s.RejectAllH5Order(ctx, billInfo.Uuid); err != nil {
 			tx.Rollback()
 			return errors.WithMessage(err)
 		}
@@ -7248,6 +7265,60 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		return nil, errors.WithMessage(err, "接单失败")
 	}
 	return nil, nil
+}
+
+func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	h5OrderRepo := repository.NewH5OrderRepo(db)
+	// 获取h5订单
+	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
+	if err != nil {
+		return errors.WithMessage(apperrors.ErrInternal, "获取h5订单失败", err.Error())
+	}
+	// 非待处理状态不可操作
+	if h5Order.Status != constant.H5OrderStatusOrder {
+		return errors.WithMessage(apperrors.ErrInternal, "当前状态不可操作")
+	}
+
+	// 拒单,保证h5订单的商品快照信息
+	h5Order.Reject(ctx.GetStaffUuid(), ctx.GetLanguage())
+	// 删除销售订单商品
+	h5Order.DeleteSaleOrderProduct()
+
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 更新h5订单
+		if err := repository.NewH5OrderRepo(db).UpdateH5OrderRecord(*h5Order); err != nil {
+			return errors.WithMessage(err, "更新h5订单失败")
+		}
+		// 更新h5订单商品列表
+		for _, h5OrderProduct := range h5Order.H5OrderProducts {
+			// 更新h5订单商品
+			if err := repository.NewH5OrderRepo(db).UpdateH5OrderProductRecord(*h5OrderProduct); err != nil {
+				return errors.WithMessage(err, "更新h5订单商品失败")
+			}
+		}
+		// 删除销售订单商品.将该h5订单的商品删除
+		if err := repository.NewSaleOrderProductRepo(db).DeleteSaleOrderProductList(h5Order.SaleOrderProducts); err != nil {
+			return errors.WithMessage(err, "删除销售订单商品失败")
+		}
+
+		// 发布“拒单”操作事件
+		go func() {
+			s.bus.PublishRejectH5OrderEvent(event.RejectH5OrderPayload{
+				BasePayload: event.BasePayload{
+					CompanyUuid:  ctx.GetCompanyUuid(),
+					Source:       ctx.GetSource(),
+					SaleBillUuid: h5Order.SaleBillUuid,
+					OperatorUuid: int64(ctx.GetStaffUuid()),
+				},
+				H5OrderUuid: h5Order.Uuid,
+			})
+		}()
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err, "拒单失败")
+	}
+	return nil
 }
 
 // GetUnsentKitchen 未送厨商品列表

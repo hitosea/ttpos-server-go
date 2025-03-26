@@ -15,7 +15,6 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 
 	"github.com/shopspring/decimal"
-	"gorm.io/gorm"
 )
 
 // IH5OrderSrv 定义接单服务接口
@@ -231,57 +230,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*
 }
 
 func (s *h5OrderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error {
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-	h5OrderRepo := repository.NewH5OrderRepo(db)
-	// 获取h5订单
-	order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
-	if err != nil {
-		return errors.WithMessage(apperrors.ErrInternal, "获取h5订单失败", err.Error())
-	}
-	// 非待处理状态不可操作
-	if order.Status != constant.H5OrderStatusOrder {
-		return errors.WithMessage(apperrors.ErrInternal, "当前状态不可操作")
-	}
-
-	// 拒单,保证h5订单的商品快照信息
-	order.Reject(ctx.GetStaffUuid(), ctx.GetLanguage())
-	// 删除销售订单商品
-	order.DeleteSaleOrderProduct()
-
-	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-		// 更新h5订单
-		if err := repository.NewH5OrderRepo(db).UpdateH5OrderRecord(*order); err != nil {
-			return errors.WithMessage(err, "更新h5订单失败")
-		}
-		// 更新h5订单商品列表
-		for _, h5OrderProduct := range order.H5OrderProducts {
-			// 更新h5订单商品
-			if err := repository.NewH5OrderRepo(db).UpdateH5OrderProductRecord(*h5OrderProduct); err != nil {
-				return errors.WithMessage(err, "更新h5订单商品失败")
-			}
-		}
-		// 删除销售订单商品.将该h5订单的商品删除
-		if err := repository.NewSaleOrderProductRepo(db).DeleteSaleOrderProductList(order.SaleOrderProducts); err != nil {
-			return errors.WithMessage(err, "删除销售订单商品失败")
-		}
-
-		// 发布“拒单”操作事件
-		go func() {
-			s.bus.PublishRejectH5OrderEvent(event.RejectH5OrderPayload{
-				BasePayload: event.BasePayload{
-					CompanyUuid:  ctx.GetCompanyUuid(),
-					Source:       ctx.GetSource(),
-					SaleBillUuid: order.SaleBillUuid,
-					OperatorUuid: int64(ctx.GetStaffUuid()),
-				},
-				H5OrderUuid: order.Uuid,
-			})
-		}()
-		return nil
-	}); err != nil {
-		return errors.WithMessage(err, "拒单失败")
-	}
-	return nil
+	return s.orderSrv.RejectH5Order(ctx, h5OrderUuid)
 }
 
 func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error) {
