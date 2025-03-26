@@ -7,6 +7,9 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/websocket"
+
+	"gorm.io/gorm"
 )
 
 // SaleBill 销售账单 `ttpos_sale_bill`
@@ -85,6 +88,18 @@ type SaleBill struct {
 	Desk            *Desk             `gorm:"foreignKey:DeskUuid;references:uuid"`
 	BuffetPackage1  *BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
+}
+
+// AfterUpdate 更新销售订单后的逻辑 - 推送订单更新
+func (model *SaleBill) AfterUpdate(tx *gorm.DB) (err error) {
+	if companyUuid := model.getGormDbUuid(tx); companyUuid > 0 {
+		go websocket.PushClient(companyUuid, "*", "*", websocket.UPDATE_ORDER, map[string]interface{}{
+			"sale_bill_uuid": model.Uuid,
+			"desk_uuid":      model.DeskUuid,
+			"update_time":    model.BaseModel.UpdateTime,
+		})
+	}
+	return nil
 }
 
 // 判断销售账单是否可反结账。
@@ -272,12 +287,15 @@ func (model *SaleBill) AddSaleOrderBuffetDelayProduct(saleOrderUuid uint64, dela
 
 // ValidateOrderStatus 判断订单是否可操作
 func (model *SaleBill) ValidateOrderStatus(source string, operation string, saleOrderUuid ...uint64) error {
-	if model.IsLockStatus() && !slices.Contains([]string{
-		constant.OrderSettle,
-		constant.OrderUnlock,
-	}, operation) {
+	// 解锁订单
+	if operation == constant.OrderUnlock {
+		return nil
+	}
+	// 锁定订单 - 白名单
+	if model.IsLockStatus() && !slices.Contains([]string{constant.OrderSettle}, operation) {
 		return errors.New("订单已被锁定，请解锁后重新操作")
 	}
+	// 账单已退款，不能操作
 	if model.Status == constant.SaleBillStatusCanceled {
 		return errors.New("订单已取消")
 	}

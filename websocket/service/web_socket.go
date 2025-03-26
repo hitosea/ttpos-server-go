@@ -179,7 +179,7 @@ func handleMessage(ws *websocket.Conn, msg []byte) {
 	clientMessage := ClientMessage{}
 	err := json.Unmarshal(msg, &clientMessage)
 	if err != nil {
-		fmt.Println("Error parsing message:", err)
+		fmt.Println("WebSocket Error parsing message:", err)
 		return
 	}
 
