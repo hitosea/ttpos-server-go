@@ -5459,6 +5459,10 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 					return err
 				}
 			}
+			// 拒绝所有待接单的h5订单
+			if err := s.RejectAllH5Order(ctx, saleBill.Uuid); err != nil {
+				return err
+			}
 		}
 		// 更新会员的余额
 		if saleOrder.ConsumerUuid != 0 {
