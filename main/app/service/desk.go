@@ -178,7 +178,7 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 	if shopCart == nil {
 		shopCart, err = s.orderSrv.GetOrderCartInfo(ctx, desk.SaleBillUuid)
 		if err != nil {
-			return res, errors.WithMessage(errors.New("订单不存在"), "获取销售账单信息失败")
+			return res, errors.WithMessage(errors.New("订单不存在"), fmt.Sprintf("获取销售账单信息失败,SaleBillUuid: %d", desk.SaleBillUuid))
 		}
 	}
 	// 未送厨商品信息
