@@ -260,9 +260,8 @@ func (model *SaleOrderProduct) calcTaxFee(price float64, taxFeeType int) float64
 		return taxFee.InexactFloat64()
 	}
 
-	// 默认为商品未含税时
-	taxFee := decimal.NewFromFloat(price).Mul(decimal.NewFromFloat(model.TaxRate))
-	return taxFee.InexactFloat64()
+	// 默认为商品关闭税费
+	return 0
 }
 
 // 计算商品原税费。
