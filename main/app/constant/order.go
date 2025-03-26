@@ -57,6 +57,18 @@ const (
 )
 
 const (
+	// 是否开启服务费
+	SaleBillSettingIsOpenServiceFeeNo  = "0" // 关闭服务费
+	SaleBillSettingIsOpenServiceFeeYes = "1" // 开启服务费
+	// 服务费类型
+	SaleBillSettingServiceFeeFixed   = "1" // 固定服务费
+	SaleBillSettingServiceFeePercent = "2" // 按比例
+	// 是否开启税费
+	SaleBillSettingIsOpenTaxNo  = "0" // 关闭税费
+	SaleBillSettingIsOpenTaxYes = "1" // 开启税费
+)
+
+const (
 	SaleBillSettingServiceFeeTypeNone       = 0 // 不收取服务费
 	SaleBillSettingServiceFeeTypeFixed      = 1 // 固定服务费
 	SaleBillSettingServiceFeeTypePercent    = 2 // 按比例-不收取税费

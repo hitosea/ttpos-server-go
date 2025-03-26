@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"math"
 	"slices"
 	"sort"
 	"strconv"
@@ -320,6 +321,29 @@ func createSaleOrder(db *gorm.DB, saleBillSetting *model.SaleBillSetting, saleBi
 	return &saleOrder, nil
 }
 
+// 解析服务费比例
+// 兼容取值范围0-100的情况。本系统中比例的统一取值范围是0-1，所以需要转换
+// 取值范围0-1
+func parseServiceFeeRate(ServiceChargeRate string) (float64, error) {
+	serviceFeeValue, err := utils.ParseFloat(ServiceChargeRate)
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	// 兼容取值范围0-100的情况。本系统中比例的统一取值范围是0-1，所以需要转换
+	if serviceFeeValue > 1 {
+		// 将取值范围0-100转换为0-1
+		serviceFeeValue = decimal.NewFromFloat(serviceFeeValue).Div(decimal.NewFromInt(100)).Truncate(2).InexactFloat64()
+		// 取值范围0-1
+		serviceFeeValue = math.Min(serviceFeeValue, 1)
+		serviceFeeValue = math.Max(serviceFeeValue, 0)
+		return serviceFeeValue, nil
+	}
+	// 取值范围0-1
+	serviceFeeValue = math.Min(serviceFeeValue, 1)
+	serviceFeeValue = math.Max(serviceFeeValue, 0)
+	return serviceFeeValue, nil
+}
+
 // CreateSaleBillSetting 创建销售账单设置
 func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64) (*model.SaleBillSetting, error) {
 	// 获取服务费设置
@@ -348,22 +372,32 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64) 
 	var isStatFree uint = constant.SaleBillSettingIsStatFreeYes
 
 	// 销售账单服务费
-	if serviceFeeSetting.IsOpen == "1" {
-		if serviceFeeSetting.ChargeType == "1" {
+	// 开启服务费时
+	if serviceFeeSetting.IsOpen == constant.SaleBillSettingIsOpenServiceFeeYes {
+		// 服务费类型，固定金额
+		if serviceFeeSetting.ChargeType == constant.SaleBillSettingServiceFeeFixed {
 			serviceFeeType = constant.SaleBillSettingServiceFeeTypeFixed
+			serviceFeeValue, err = utils.ParseFloat(serviceFeeSetting.ServiceCharge)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
 		}
-		if serviceFeeSetting.ChargeType == "2" {
-			if serviceFeeSetting.IsOpenTax == "0" {
+		// 服务费类型，按比例
+		if serviceFeeSetting.ChargeType == constant.SaleBillSettingServiceFeePercent {
+			// 税费类型，不收取税费
+			if serviceFeeSetting.IsOpenTax == constant.SaleBillSettingIsOpenTaxNo {
 				serviceFeeType = constant.SaleBillSettingServiceFeeTypePercent
 			}
-			if serviceFeeSetting.IsOpenTax == "1" {
+			// 税费类型，收取税费
+			if serviceFeeSetting.IsOpenTax == constant.SaleBillSettingIsOpenTaxYes {
 				serviceFeeType = constant.SaleBillSettingServiceFeeTypePercentTax
 			}
+			serviceFeeValue, err = parseServiceFeeRate(serviceFeeSetting.ServiceChargeRate)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
 		}
-		serviceFeeValue, err = utils.ParseFloat(serviceFeeSetting.ServiceCharge)
-		if err != nil {
-			return nil, errors.WithMessage(err)
-		}
+
 	}
 
 	// 销售账单税率

@@ -300,6 +300,13 @@ func (model *SaleOrderProduct) calcServiceFee(serviceFeeRate float64, taxFeeType
 		serviceFee := priceNoneTaxDecimal.Mul(decimal.NewFromFloat(serviceFeeRate))
 		return serviceFee.InexactFloat64()
 	}
+
+	// 关闭税费时
+	if taxFeeType == constant.TaxFeeTypeNone {
+		// 服务费=最终单价*服务费比例
+		serviceFee := decimal.NewFromFloat(price).Mul(decimal.NewFromFloat(serviceFeeRate))
+		return serviceFee.Truncate(2).InexactFloat64()
+	}
 	// 默认商品不收取服务费
 	return 0
 }

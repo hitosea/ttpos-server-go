@@ -658,8 +658,9 @@ func (model *SaleOrder) calcServiceFee(products []*SaleOrderProduct, serviceFeeT
 	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercent || serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax {
 		serviceFee := decimal.NewFromFloat(0)
 		for _, orderProduct := range products {
-			serviceFee = serviceFee.Add(decimal.NewFromFloat(orderProduct.ServiceFee))
+			serviceFee = serviceFee.Add(decimal.NewFromFloat(orderProduct.GetServiceFee()))
 		}
+		return serviceFee.InexactFloat64()
 	}
 	// 默认不收取服务费
 	return 0
