@@ -657,8 +657,8 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 					IsCellRefund:        false,
 					IsCellCancel:        false,
 					IsCellReverseSettle: false,
-					IsCellPrint:         !isSplit && order.Status != constant.SaleBillStatusPending,
-					IsCellInvoice:       !isSplit && order.Status == constant.SaleBillStatusComplete,
+					IsCellPrint:         order.Status != constant.SaleBillStatusPending,
+					IsCellInvoice:       order.Status == constant.SaleBillStatusComplete,
 					IsCellDelete:        order.Status == constant.SaleBillStatusCanceled,
 				}
 				// 不等于免单 && 未全退款 && 完成
