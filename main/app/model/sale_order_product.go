@@ -101,7 +101,8 @@ type SaleOrderProduct struct {
 	H5Order                    *H5Order                     `gorm:"foreignKey:H5OrderUuid;references:uuid"`
 
 	// 内部字段
-	operation string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
+	operation    string  `gorm:"-"` // 操作类型。add: 加购，sub: 减购
+	priceNoneTax float64 `gorm:"-"` // 商品未含税价格(折后价)
 }
 
 // 获取销售订单商品的税费。税费=销售订单商品的税费*销售订单商品的数量
@@ -117,6 +118,11 @@ func (model *SaleOrderProduct) GetServiceTaxFee() float64 {
 // 获取销售订单商品的服务费。服务费=销售订单商品的服务费*销售订单商品的数量
 func (model *SaleOrderProduct) GetServiceFee() float64 {
 	return decimal.NewFromFloat(model.ServiceFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+}
+
+// 获取销售订单商品的未含税价格。
+func (model *SaleOrderProduct) GetUnitPriceNoneTax() float64 {
+	return model.priceNoneTax
 }
 
 func (model *SaleOrderProduct) SetAddOperation() {

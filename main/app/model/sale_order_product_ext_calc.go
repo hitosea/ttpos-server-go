@@ -295,6 +295,7 @@ func (model *SaleOrderProduct) calcServiceFee(serviceFeeRate float64, taxFeeType
 	if taxFeeType == constant.TaxFeeTypeTax {
 		// 商品未含税价格=（最终单价-商品税费）
 		priceNoneTax := model.calcProductPriceNoneTax(price, taxFeeType) // decimal.NewFromFloat(model.calcPrice()).Sub(decimal.NewFromFloat(model.calcTaxFee(taxFeeType)))
+		model.priceNoneTax = priceNoneTax
 		priceNoneTaxDecimal := decimal.NewFromFloat(priceNoneTax)
 		//  服务费=（最终单价-商品税费）*服务费比例
 		serviceFee := priceNoneTaxDecimal.Mul(decimal.NewFromFloat(serviceFeeRate))
