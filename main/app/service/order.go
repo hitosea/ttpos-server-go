@@ -7117,7 +7117,10 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 		return errors.WithMessage(err)
 	}
 
-	h5Order := saleBill.NewH5Order()
+	h5Order, err := saleBill.NewH5Order()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
 	// 获取未下单的h5订单商品
 	h5OrderProducts := saleBill.GetUnOrderH5OrderProduct()
 	// 将未下单的h5订单商品变为已下单的h5订单商品

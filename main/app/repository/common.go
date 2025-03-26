@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"strings"
 	"ttpos-server-go/app/constant"
 
 	"gorm.io/gorm"
@@ -343,18 +344,28 @@ func (r *commonRepo) FilterSaleOrderProductH5Unordered() DBOption {
 
 // FilterSaleOrderProductH5Ordered 只查询H5已下单的购物车商品.包括已送厨商品和已下单未接单的商品
 func (r *commonRepo) FilterSaleOrderProductH5Ordered() DBOption {
+	fmt.Println("FilterSaleOrderProductH5Ordered 111111111")
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("delete_time = ? AND is_accept_order = ? AND status > ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted, constant.SaleOrderProductStatusCooking).
-			Or("delete_time = ? AND h5_order_uuid <> ? AND is_accept_order = ?", constant.NotDeleted, constant.OptionalUuid, constant.OrderProductIsAcceptOrderUnAccept)
+		return db.
+			Where("delete_time = ? AND h5_order_uuid <> ? AND is_accept_order = ?", constant.NotDeleted, constant.OptionalUuid, constant.OrderProductIsAcceptOrderUnAccept).
+			Or("delete_time = ? AND is_accept_order = ? AND status > ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted, constant.SaleOrderProductStatusCooking)
 	}
 }
 
 // FilterSaleOrderProductH5OrderedWithReject 查询H5已下单的购物车商品.包括已送厨商品、已下单未接单的商品和被拒单的商品
 func (r *commonRepo) FilterSaleOrderProductH5OrderedWithReject() DBOption {
+	fmt.Println("FilterSaleOrderProductH5OrderedWithReject 222222222")
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("delete_time = ? AND is_accept_order = ? AND status > ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted, constant.SaleOrderProductStatusCooking).
-			Or("delete_time = ? AND h5_order_uuid <> ? AND is_accept_order = ?", constant.NotDeleted, constant.OptionalUuid, constant.OrderProductIsAcceptOrderUnAccept).
-			Or("delete_time <> ? AND h5_order_uuid <> ? AND is_accept_order = ?", constant.NotDeleted, constant.OptionalUuid, constant.OrderProductIsAcceptOrderUnAccept)
+		sql := strings.ReplaceAll(`(
+				(delete_time = ? AND h5_order_uuid <> ? AND is_accept_order = ?) OR 
+				(delete_time <> ? AND h5_order_uuid <> ? AND is_accept_order = ?) OR 
+				(delete_time = ? AND is_accept_order = ? AND status > ?)
+			)`, "\t", "")
+		return db.
+			Where(sql, constant.NotDeleted, constant.OptionalUuid, constant.OrderProductIsAcceptOrderUnAccept,
+				constant.NotDeleted, constant.OptionalUuid, constant.OrderProductIsAcceptOrderUnAccept,
+				constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted, constant.SaleOrderProductStatusNormal,
+			)
 	}
 }
 

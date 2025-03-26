@@ -328,10 +328,13 @@ func (model *SaleBill) CopyOrderProductAndEdit(saleOrderProductUuid uint64, upda
 }
 
 // NewH5Order 创建h5订单
-func (model *SaleBill) NewH5Order() *H5Order {
+func (model *SaleBill) NewH5Order() (*H5Order, error) {
 	h5OrderUuid, _ := utils.GetID()
 	// 获取未下单的h5订单商品
 	h5OrderProducts := model.GetUnOrderH5OrderProduct()
+	if len(h5OrderProducts) == 0 {
+		return nil, errors.WithMessage(errors.New("请先加购商品"))
+	}
 	h5OrderProductList := make([]*H5OrderProduct, 0)
 	for _, h5OrderProduct := range h5OrderProducts {
 		h5OrderProductList = append(h5OrderProductList, &H5OrderProduct{
@@ -353,5 +356,5 @@ func (model *SaleBill) NewH5Order() *H5Order {
 		Status:          constant.H5OrderStatusOrder,      // 状态，已下单
 		OrderTime:       time.Now().Unix(),                // 下单时间
 		H5OrderProducts: h5OrderProductList,               // 订单商品
-	}
+	}, nil
 }
