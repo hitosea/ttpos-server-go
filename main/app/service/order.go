@@ -665,11 +665,6 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 				if order.IsFree == 0 && order.GetTotalRefundAmount() < order.PaymentAmount && order.Status == constant.SaleBillStatusComplete {
 					orderExtra.IsCellRefund = true
 				}
-				// 等于主单 && 完成 && 等于当前用户 && 在班次时间内
-				orderExtra.IsCellReverseSettle = bill.IsCellReverseSettle(ctx.GetStaff().Uuid, ctx.GetStaff().CashierLoginTime)
-				// if order.Status == constant.SaleBillStatusComplete && ctx.GetStaff().Uuid == bill.CashierUuid && order.FinishTime > ctx.GetStaff().CashierLoginTime {
-				// 	orderExtra.IsCellReverseSettle = true
-				// }
 				//
 				paymentAmount := order.GetActualPaymentAmount()
 				paymentAmounts += paymentAmount
