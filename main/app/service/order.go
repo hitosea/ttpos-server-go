@@ -994,14 +994,15 @@ func (s *orderSrv) getRecordList(ctx context.Context, saleBillUuid uint64, saleO
 		if desc != "" {
 			actionText = actionText + ": " + desc
 		}
+		refundPayTypes := s.getRefundPayType(ctx, record, language)
 		logs = append(logs, resp.OrderOperationLog{
 			Uuid:        record.Uuid,
 			RealName:    record.Operator.RealName,
 			Email:       record.Operator.Username,
 			Source:      record.Source,
 			CreateTime:  record.CreateTime,
-			Description: actionText,                                     // 获取描述
-			PayType:     make([]resp.OrderOperationLogPaymentMethod, 0), // ToDo 关联支付方式
+			Description: actionText,     // 获取描述
+			PayType:     refundPayTypes, // ToDo 关联支付方式
 		})
 	}
 	return logs, nil
@@ -1405,18 +1406,46 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	if err != nil {
 		return errors.WithMessage(err), constant.CodeFail
 	}
+	// 发布“退款”事件
+	products := make(event.Products, 0)
+	for _, saleOrderProduct := range saleOrderProducts {
+		if num, exists := numMap[saleOrderProduct.Uuid]; exists && num > 0 {
+			products = append(products, event.OrderProduct{
+				OrderProductId:  saleOrderProduct.Uuid,
+				ProductId:       saleOrderProduct.ProductPackageUuid,
+				ProductName:     saleOrderProduct.MultiLanguageName.GetNames(),
+				ProductAttr:     saleOrderProduct.GetAttributeName(),
+				ProductAttrList: saleOrderProduct.GetAttributeNameList(),
+				TotalNum:        num,
+				IsBuffet:        saleOrderProduct.IsBuffet == 1,
+				Remark:          saleOrderProduct.Remark,
+			})
+		}
+	}
+	var payTypes []event.RefundPayType
+	for _, amount := range returnOrder.ReturnOrderAmounts {
+		payTypes = append(payTypes, event.RefundPayType{
+			Name:          amount.PaymentMethod.PaymentName,
+			Code:          amount.PaymentMethod.Code,
+			Amount:        amount.Amount,
+			PaymentStatus: amount.RefundStatus,
+		})
+	}
+	go func() {
+		s.bus.PublishReturnOrderEvent(event.ReturnOrderPayload{
+			SaleBill: saleBill,
+			BasePayload: event.BasePayload{
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: saleBill.Uuid,
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+			Products:   products,
+			PayTypes:   payTypes,
+			RefundType: returnType,
+		})
+	}()
 
-	// todo 退款日志
-	s.bus.PublishReturnOrderEvent(event.ReturnOrderPayload{
-		BasePayload: event.BasePayload{
-			CompanyUuid:  ctx.GetCompanyUuid(),
-			Source:       ctx.GetSource(),
-			SaleBillUuid: saleBill.Uuid,
-			OperatorUuid: int64(ctx.GetStaffUuid()),
-		},
-		PayTypes:   nil,
-		ReturnType: returnType,
-	})
 	return nil, 0
 }
 

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -159,6 +160,33 @@ type SettlePayType struct {
 // ReverseSettlePayload 反结账
 type ReverseSettlePayload struct {
 	PayType []SettlePayType `json:"pay_type"` // 支付方式
+}
+
+type ReturnOrderProduct struct {
+	OrderProductId  uint64               `json:"order_product_id"` // 订单商品ID
+	ProductId       uint64               `json:"product_id"`       // 商品ID
+	ProductName     dto.LocaleResponse   `json:"product_name"`     // 商品名称
+	ProductAttr     dto.LocaleResponse   `json:"product_attr"`     // 商品属性, 包含规格、属性、小料
+	ProductAttrList []dto.LocaleResponse `json:"product_attrs"`    // 商品属性, 包含规格、属性、小料
+	TotalNum        uint                 `json:"total_num"`        // 总数量
+	IsBuffet        bool                 `json:"is_buffet"`        // 是否自助餐
+	Remark          string               `json:"remark"`           // 备注
+}
+
+type RefundPayType struct {
+	Name          string  `json:"name"`           // 退款支付方式名称
+	Code          int     `json:"code"`           // 退款支付方式代号
+	Amount        float64 `json:"amount"`         // 退款金额
+	PaymentStatus int     `json:"payment_status"` // 支付状态
+}
+
+// RefundPayload 退款
+type RefundPayload struct {
+	Products     []ReturnOrderProduct `json:"products"`       // 退款商品
+	PayTypes     []RefundPayType      `json:"pay_type"`       // 支付方式
+	RefundType   int                  `json:"refund_type"`    // 退款方式：1-整单退款；2-部分退款
+	IsSplitOrder bool                 `json:"is_split_order"` // 是否拆单
+	Index        int                  `json:"index"`          // 子单索引
 }
 
 // MergeTablePayload 并台
@@ -329,7 +357,16 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 			}
 			return strings.Join(payTypeList, "、")
 		}
-	//case constant.OrderRefund: // 退款
+	case constant.OrderRefund: // 退款
+		var refundPayload RefundPayload
+		if err := json.Unmarshal([]byte(log.Data), &refundPayload); err == nil {
+			var desc []string
+			for _, product := range refundPayload.Products {
+				desc = append(desc, product.ProductName.GetLocale(language)+" ("+product.ProductAttr.GetLocale(language)+") *"+
+					strconv.Itoa(int(product.TotalNum)))
+			}
+			return strings.Join(desc, "、")
+		}
 	case constant.OrderOrderTaking: // 接单 不需要解析data
 	case constant.OrderOrderReject: // 拒单 不需要解析data
 	case constant.OrderMergeTable:
@@ -431,4 +468,25 @@ func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language st
 	}
 
 	return prefix + text
+}
+
+func (s *orderSrv) getRefundPayType(ctx context.Context, log model.SaleOrderOperationRecord, language string) []resp.OrderOperationLogPaymentMethod {
+	refundPayTypes := make([]resp.OrderOperationLogPaymentMethod, 0)
+	if log.Action != constant.OrderRefund {
+		return refundPayTypes
+	}
+	var refundPayload RefundPayload
+	currencySetting, _ := s.settingSrv.GetCurrencySetting(ctx)
+	if err := json.Unmarshal([]byte(log.Data), &refundPayload); err == nil {
+		for _, payType := range refundPayload.PayTypes {
+			refundPayTypes = append(refundPayTypes, resp.OrderOperationLogPaymentMethod{
+				Code:          payType.Code,
+				Name:          payType.Name,
+				RefundMoney:   utils.FormatFloat(payType.Amount),
+				PaymentStatus: payType.PaymentStatus,
+				Unit:          currencySetting.Unit,
+			})
+		}
+	}
+	return refundPayTypes
 }
