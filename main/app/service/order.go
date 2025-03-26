@@ -1435,10 +1435,11 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		s.bus.PublishReturnOrderEvent(event.ReturnOrderPayload{
 			SaleBill: saleBill,
 			BasePayload: event.BasePayload{
-				CompanyUuid:  ctx.GetCompanyUuid(),
-				Source:       ctx.GetSource(),
-				SaleBillUuid: saleBill.Uuid,
-				OperatorUuid: int64(ctx.GetStaffUuid()),
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  saleBill.Uuid,
+				SaleOrderUuid: saleOrder.Uuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
 			Products:   products,
 			PayTypes:   payTypes,
