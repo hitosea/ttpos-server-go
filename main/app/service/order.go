@@ -5675,6 +5675,19 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		})
 	}()
 
+	// 整单完结时, 发布"统计"事件
+	if saleBill.CanFinishSaleBill() {
+		go func() {
+			s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
+				BasePayload: event.BasePayload{
+					Ctx:         ctx,
+					CompanyUuid: ctx.GetCompanyUuid(),
+				},
+				SaleBill: saleBill,
+			})
+		}()
+	}
+
 	payMethods := make([]resp.PayMethod, 0)
 	for _, paymentOrder := range infoResp.PaymentOrders.List {
 		method := resp.PayMethod{

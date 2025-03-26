@@ -1918,4 +1918,53 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_login_log` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '员工登录日志表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
+    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售单UUID',
+    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单UUID',
+    `duty_no` varchar(255) NOT NULL DEFAULT '' COMMENT '当班编号',
+    `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台UUID',
+    `meal_num` INT(11) NOT NULL DEFAULT 0 COMMENT '用餐人数',
+    `product_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品原价: 不含税',
+    `product_sale_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品销售价',
+    `product_num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
+    `product_tax` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品税',
+    `service_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '服务费',
+    `service_tax` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '服务税',
+    `discount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '优惠折扣',
+    `discount_member` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '会员折扣',
+    `gift_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '赠菜金额',
+    `gift_num` INT(11) NOT NULL DEFAULT 0 COMMENT '赠菜数量',
+    `free_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '免单金额',
+    `free_num` INT(11) NOT NULL DEFAULT 0 COMMENT '免单数量',
+    `payment_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '支付金额',
+    `payment_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '支付手续费',
+    `payment_balance` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '支付余额',
+    `refund_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款金额',
+    `complete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间',
+    `refund_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '退款时间',
+    `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '销售统计表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_statistics_payment` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
+    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售单UUID',
+    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单UUID',
+    `duty_no` varchar(255) NOT NULL DEFAULT '' COMMENT '当班编号',
+    `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台UUID',
+    `payment_method_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付方式UUID',
+    `payment_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '支付金额',
+    `refund_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款金额',
+    `complete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间',
+    `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '支付统计表';
+
 SET FOREIGN_KEY_CHECKS = 1;
