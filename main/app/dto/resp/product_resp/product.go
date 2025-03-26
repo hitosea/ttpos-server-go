@@ -83,11 +83,12 @@ type ProductListWithPaginationResp struct {
 
 // ProductCategory 商品类别
 type ProductCategory struct {
-	Uuid       uint64                  `json:"uuid"`        // 商品类别UUID
-	LocaleName dto.LocaleResponse      `json:"locale_name"` // 商品类别名称
-	ParentUuid uint64                  `json:"parent_uuid"` // 父级类别UUID
-	IsSpecial  bool                    `json:"is_special"`  // 是否特殊类别
-	Children   ProductCategoryListResp `json:"children"`    // 子级类别
+	Uuid        uint64                  `json:"uuid"`         // 商品类别UUID
+	LocaleName  dto.LocaleResponse      `json:"locale_name"`  // 商品类别名称
+	ParentUuid  uint64                  `json:"parent_uuid"`  // 父级类别UUID
+	IsSpecial   bool                    `json:"is_special"`   // 是否特殊类别
+	Children    ProductCategoryListResp `json:"children"`     // 子级类别
+	CategoryKey string                  `json:"category_key"` // all-表示全部
 }
 
 // ProductCategoryListResp 商品类别列表响应

@@ -133,7 +133,9 @@ type H5BaseInfo struct {
 }
 
 type MenuBaseInfo struct {
-	Currency setting.Currency `json:"currency"` // 货币设置
+	Currency   setting.Currency   `json:"currency"` // 货币设置
+	CloudBasic setting.CloudBasic `json:"cloud"`    // 云端基础信息
+	Company    Company            `json:"company"`  // 商家信息
 }
 
 type GetBaseInfoResponse struct {

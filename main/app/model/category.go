@@ -3,17 +3,18 @@ package model
 // ProductCategory 商品类别 ttpos_product_category
 type ProductCategory struct {
 	BaseModel
-	Name                  string `gorm:"default:'';column:name;comment:名称"`
-	ParentUuid            uint64 `gorm:"default:0;column:parent_uuid;comment:父级ID"`
-	IsSpecial             uint   `gorm:"default:0;column:is_special;comment:是否特殊, 0-否、1-是"`
-	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:多语言名称ID"`
-	Status                uint   `gorm:"default:1;column:status;comment:状态, 1-开启、0-关闭"`
-	Sort                  uint   `gorm:"default:0;column:sort;comment:排序"`
+	Name                  string `gorm:"column:name;type:varchar(255);comment:名称;NOT NULL" json:"name"`
+	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;default:0;comment:多语言名称ID;NOT NULL" json:"multi_language_name_uuid"`
+	Status                int    `gorm:"column:status;type:tinyint(1);default:1;comment:状态, 1-开启 0-关闭;NOT NULL" json:"status"`
+	ParentUuid            uint64 `gorm:"column:parent_uuid;type:bigint(20) unsigned;comment:父级ID" json:"parent_uuid"`
+	IsSpecial             int    `gorm:"column:is_special;type:tinyint(1);default:0;comment:特殊分类, 1-是 0-否;NOT NULL" json:"is_special"`
+	CategoryKey           string `gorm:"column:category_key;type:varchar(255);comment:关键字;NOT NULL" json:"category_key"`
+	Sort                  uint   `gorm:"column:sort;type:int(11);default:0;comment:排序;NOT NULL" json:"sort"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 }
 
-// 获取一级分类uuid
+// GetFirstCategoryUuid 获取一级分类uuid
 func (model *ProductCategory) GetFirstCategoryUuid() uint64 {
 	// 如果没有父级uuid，则该分类时一级
 	if model.ParentUuid == 0 {

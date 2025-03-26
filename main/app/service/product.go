@@ -200,10 +200,11 @@ func (s *productSrv) GetProductCategoryList(dbId uint64) (product_resp.ProductCa
 			for _, child := range categories {
 				if child.ParentUuid == category.Uuid {
 					children = append(children, product_resp.ProductCategory{
-						Uuid:       child.Uuid,
-						LocaleName: s.localeSrv.GetLocaleNames(child.MultiLanguageName),
-						ParentUuid: child.ParentUuid,
-						IsSpecial:  child.IsSpecial == 1,
+						Uuid:        child.Uuid,
+						LocaleName:  s.localeSrv.GetLocaleNames(child.MultiLanguageName),
+						ParentUuid:  child.ParentUuid,
+						IsSpecial:   child.IsSpecial == 1,
+						CategoryKey: child.CategoryKey,
 						Children: product_resp.ProductCategoryListResp{
 							List: make([]product_resp.ProductCategory, 0),
 						},
@@ -211,10 +212,11 @@ func (s *productSrv) GetProductCategoryList(dbId uint64) (product_resp.ProductCa
 				}
 			}
 			list = append(list, product_resp.ProductCategory{
-				Uuid:       category.Uuid,
-				LocaleName: s.localeSrv.GetLocaleNames(category.MultiLanguageName),
-				ParentUuid: category.ParentUuid,
-				IsSpecial:  category.IsSpecial == 1,
+				Uuid:        category.Uuid,
+				LocaleName:  s.localeSrv.GetLocaleNames(category.MultiLanguageName),
+				ParentUuid:  category.ParentUuid,
+				IsSpecial:   category.IsSpecial == 1,
+				CategoryKey: category.CategoryKey,
 				Children: product_resp.ProductCategoryListResp{
 					List: children,
 				},

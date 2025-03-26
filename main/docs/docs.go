@@ -15333,6 +15333,10 @@ const docTemplate = `{
         "product_resp.ProductCategory": {
             "type": "object",
             "properties": {
+                "category_key": {
+                    "description": "all-表示全部",
+                    "type": "string"
+                },
                 "children": {
                     "description": "子级类别",
                     "allOf": [
@@ -19074,6 +19078,22 @@ const docTemplate = `{
         "resp.MenuBaseInfo": {
             "type": "object",
             "properties": {
+                "cloud": {
+                    "description": "云端基础信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.CloudBasic"
+                        }
+                    ]
+                },
+                "company": {
+                    "description": "商家信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.Company"
+                        }
+                    ]
+                },
                 "currency": {
                     "description": "货币设置",
                     "allOf": [

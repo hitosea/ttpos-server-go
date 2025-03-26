@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -75,13 +76,24 @@ func (h *Handler) GetProductList(c *gin.Context) {
 // @Router /menu/base [get]
 func (h *Handler) BaseInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	currencySetting, err := h.settingSrv.GetCurrencySetting(ctx)
-	if err != nil {
+	currencySetting, err1 := h.settingSrv.GetCurrencySetting(ctx)
+	cloudBasic, err2 := h.settingSrv.GetCloudBasicSetting(ctx)
+	if err1 != nil || err2 != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("获取配置失败")))
 		return
 	}
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
+	companyResp := resp.Company{
+		Uuid:     company.Uuid,
+		Name:     company.Name,
+		Logo:     utils.AddImageDomain(company.Logo, utils.GetBaseURL(c.Request), true),
+		TimeZone: companySetting.Timezone,
+	}
 	helper.Success(c, resp.MenuBaseInfo{
-		Currency: currencySetting,
+		Currency:   currencySetting,
+		CloudBasic: cloudBasic,
+		Company:    companyResp,
 	})
 }
 
