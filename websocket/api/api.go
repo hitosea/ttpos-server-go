@@ -35,16 +35,19 @@ func PushClient(w http.ResponseWriter, r *http.Request) {
 	if params.DeviceId == "" {
 		params.DeviceId = "*"
 	}
-
 	if params.SourceClient == "" {
 		params.SourceClient = "*"
 	}
 
-	// 启动延时发送的goroutine
+	// 生成UUID
 	uuidStr := uuid.New().String()
+
+	// 设置缓存
 	if params.MessageKey != "" {
 		cache.GlobalRedis.Set(params.MessageKey, uuidStr, 2*time.Second)
 	}
+
+	// 启动延时发送的goroutine
 	go func(_uuid string) {
 		// 检查Redis缓存是否被更新
 		if params.MessageKey != "" {

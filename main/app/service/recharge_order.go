@@ -2,9 +2,7 @@ package service
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
-	"os"
 	"slices"
 	"sort"
 	"time"
