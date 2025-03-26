@@ -13,13 +13,15 @@ import (
 func PushClient(w http.ResponseWriter, r *http.Request) {
 	// 解析请求参数
 	var params struct {
-		CompanyId    uint   `json:"company_id"`
-		SourceClient string `json:"source_client"`
-		DeviceId     string `json:"device_id"`
-		MessageType  string `json:"message_type"`
-		Data         string `json:"data"`
+		CompanyUuid  uint        `json:"company_uuid"`
+		SourceClient string      `json:"source_client"`
+		DeviceId     string      `json:"device_id"`
+		MessageType  string      `json:"message_type"`
+		Data         interface{} `json:"data"`
 	}
+
 	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		fmt.Println("Failed to decode JSON", err)
 		http.Error(w, "Failed to decode JSON", http.StatusBadRequest)
 		return
 	}

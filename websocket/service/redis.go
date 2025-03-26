@@ -9,11 +9,11 @@ import (
 )
 
 type MessageData struct {
-	CompanyUuid  uint64          `json:"company_uuid"`
-	SourceClient string          `json:"source_client"`
-	DeviceId     string          `json:"device_id"`
-	MessageType  string          `json:"message_type"`
-	Data         json.RawMessage `json:"data"`
+	CompanyUuid  uint64      `json:"company_uuid"`
+	SourceClient string      `json:"source_client"`
+	DeviceId     string      `json:"device_id"`
+	MessageType  string      `json:"message_type"`
+	Data         interface{} `json:"data"`
 }
 
 func RedisSubscribe() {
@@ -40,6 +40,6 @@ func RedisSubscribe() {
 		}
 
 		// 发送消息
-		PushClient(message.CompanyUuid, message.SourceClient, message.DeviceId, message.MessageType, string(message.Data))
+		PushClient(message.CompanyUuid, message.SourceClient, message.DeviceId, message.MessageType, message.Data)
 	}
 }
