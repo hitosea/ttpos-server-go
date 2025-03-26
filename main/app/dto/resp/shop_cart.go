@@ -139,6 +139,7 @@ type SaleOrder struct {
 // Product 购物车商品
 type Product struct {
 	Uuid                uint64             `json:"uuid"`                  // 商品uuid
+	ProductPackageUuid  uint64             `json:"product_package_uuid"`  // 商品包uuid
 	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称。商品名称、自助餐名称、自助餐加钟名称
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 uint               `json:"num"`                   // 数量
@@ -154,12 +155,11 @@ type Product struct {
 	IsCancel            bool               `json:"is_cancel"`             // 是否退菜
 	AboutBuffet         AboutBuffet        `json:"about_buffet"`          // 自助餐信息
 	// 后端使用，前端不返回
-	SendKitchenTime    int64   `json:"-"` // 送厨时间
-	AcceptTime         int64   `json:"-"` // 接单时间
-	Sign               string  `json:"-"` // 签名，用于合并商品
-	ProductPackageUuid uint64  `json:"-"` // 商品Uuid，用于获取送厨和完成数量
-	CanReturnNum       uint    `json:"-"` // 可退货数量
-	CanReturnAmount    float64 `json:"-"` // 可退款金额
+	SendKitchenTime int64   `json:"-"` // 送厨时间
+	AcceptTime      int64   `json:"-"` // 接单时间
+	Sign            string  `json:"-"` // 签名，用于合并商品
+	CanReturnNum    uint    `json:"-"` // 可退货数量
+	CanReturnAmount float64 `json:"-"` // 可退款金额
 }
 
 // GetPrice 获取商品价格(折后价)
