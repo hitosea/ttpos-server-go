@@ -1531,7 +1531,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_company` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '集团ID',
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '集团名称',
-    `logo` VARCHAR(255) NOT NULL DEFAULT '' COMMENT 'logo',
+    `logo` TEXT DEFAULT NULL COMMENT 'logo',
     `expire_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '过期时间;not null',
     `auth_day` INT(11) NOT NULL DEFAULT 0 COMMENT '授权时间(天) 0为永不过期',
     `status` INT(10) NOT NULL DEFAULT 1 COMMENT '状态 1-启用 0-禁用;not null',

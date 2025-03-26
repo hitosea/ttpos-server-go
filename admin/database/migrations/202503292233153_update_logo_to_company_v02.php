@@ -3,8 +3,11 @@
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class AddSaleOrderUuidToH5Order extends Migrator
+class UpdateLogoToCompanyV02 extends Migrator
 {
+    // 迁移目标
+    const TARGET = 'all';
+
     /**
      * Change Method.
      *
@@ -27,14 +30,14 @@ class AddSaleOrderUuidToH5Order extends Migrator
      * with the Table class.
      */
     public function change()
-    {
-        $table = $this->table('h5_order');
-        if (!$table->hasColumn('sale_order_uuid')) {
-            $table->addColumn('sale_order_uuid', 'biginteger', [
+    { 
+        $table = $this->table('company');
+        if ($table->hasColumn('logo')) {
+            $table->changeColumn('logo', 'text', [
                 'null' => false,
-                'default' => 0,
-                'comment' => '销售订单uuid',
-                'after' => 'desk_uuid',
+                'default' => '',
+                'comment' => 'logo',
+                'after' => 'name',
             ]);
             $table->update();
         }
