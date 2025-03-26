@@ -40,28 +40,30 @@ type IDeskSrv interface {
 
 // deskSrv 收银服务结构体
 type deskSrv struct {
-	bus        *event.SystemEventBus
-	dbm        *database.DBManager // 数据库管理器
-	localeSrv  ILocaleSrv          // 多语言名称服务
-	orderSrv   IOrderSrv           // 订单服务
-	settingSrv setting.ISrv        // 设置服务
-	deviceSrv  IDeviceSrv          // 设备服务
+	bus         *event.SystemEventBus
+	dbm         *database.DBManager // 数据库管理器
+	localeSrv   ILocaleSrv          // 多语言名称服务
+	orderSrv    IOrderSrv           // 订单服务
+	settingSrv  setting.ISrv        // 设置服务
+	deviceSrv   IDeviceSrv          // 设备服务
+	mustPlanSrv IMustPlanSrv        // 必点方案服务
 }
 
 // NewDeskSrv 创建新的收银产品类别服务
-func NewDeskSrv(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv, settingSrv setting.ISrv, deviceSrv IDeviceSrv) IDeskSrv {
-	return NewDeskSrvImpl(dbm, localeSrv, orderSrv, settingSrv, deviceSrv)
+func NewDeskSrv(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv, settingSrv setting.ISrv, deviceSrv IDeviceSrv, mustPlanSrv IMustPlanSrv) IDeskSrv {
+	return NewDeskSrvImpl(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv)
 }
 
 // NewDeskSrvImpl 创建新的收银服务实现
-func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv, settingSrv setting.ISrv, deviceSrv IDeviceSrv) IDeskSrv {
+func NewDeskSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, orderSrv IOrderSrv, settingSrv setting.ISrv, deviceSrv IDeviceSrv, mustPlanSrv IMustPlanSrv) IDeskSrv {
 	return &deskSrv{
-		bus:        event.NewSystemBus(),
-		dbm:        dbm,
-		localeSrv:  localeSrv,
-		orderSrv:   orderSrv,
-		settingSrv: settingSrv,
-		deviceSrv:  deviceSrv,
+		bus:         event.NewSystemBus(),
+		dbm:         dbm,
+		localeSrv:   localeSrv,
+		orderSrv:    orderSrv,
+		settingSrv:  settingSrv,
+		deviceSrv:   deviceSrv,
+		mustPlanSrv: mustPlanSrv,
 	}
 }
 
@@ -272,6 +274,23 @@ func (s *deskSrv) GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *
 	// 必点方案列表
 	if shopCart.MustPlans != nil {
 		res.MustPlans = *shopCart.MustPlans
+	}
+	// 必点商品列表
+	mustProducts, err := s.mustPlanSrv.GetDeskMustPlanProductPackageList(ctx, deskUuid)
+	if err != nil {
+		return res, errors.WithMessage(err)
+	}
+	if len(mustProducts) > 0 {
+		mustProductList := make([]resp.BuffetProduct, 0, len(mustProducts))
+		for _, mustProduct := range mustProducts {
+			mustProductList = append(mustProductList, resp.BuffetProduct{
+				Uuid: mustProduct.Uuid,
+				Name: mustProduct.Name,
+			})
+		}
+		res.MustProducts = resp.BuffetProductList{
+			List: mustProductList,
+		}
 	}
 	return res, nil
 }

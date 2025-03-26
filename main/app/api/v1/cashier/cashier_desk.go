@@ -1460,7 +1460,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 	// 初始化处理器
 	wrapper := DeskHandler{
-		deskSrv:   service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv),
+		deskSrv:   service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv),
 		memberSrv: memberSrv,
 		orderSrv:  orderSrv,
 	}

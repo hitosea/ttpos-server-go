@@ -92,6 +92,7 @@ type H5DeskPing struct {
 	UnsentKitchen UnsentKitchen       `json:"unsent_kitchen"` // 未送厨商品信息
 	Buffet        BuffetInfo          `json:"buffet"`         // 自助餐信息
 	MustPlans     ProductMustPlanList `json:"must_plans"`     // 必点方案列表
+	MustProducts  BuffetProductList   `json:"must_products"`  // 必点商品列表
 }
 
 type UnsentKitchenInfo struct {

@@ -81,7 +81,7 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	memberSrv := service.NewMemberSrv(dbm)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv)
 
-	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv)
+	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv)
 
 	wrapper := &AuthHandler{
 		authSrv: authSrv,

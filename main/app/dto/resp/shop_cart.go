@@ -195,12 +195,12 @@ type PayMethod struct {
 	Name string `json:"name"` // 支付方式名称
 }
 
-// BuffetProductList 自助餐商品列表
+// BuffetProductList 自助餐商品列表 或 必点商品列表
 type BuffetProductList struct {
 	List []BuffetProduct `json:"list"` // 商品列表
 }
 
 type BuffetProduct struct {
-	Uuid uint64 `json:"uuid"` // 商品uuid
+	Uuid uint64 `json:"uuid"` // 商品product_package_uuid
 	Name string `json:"name"` // 商品名称. 不用于前端展示，仅用于开发核对接口数据是否正确
 }

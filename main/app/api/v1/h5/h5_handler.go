@@ -511,18 +511,19 @@ func (h *H5Handler) OrderMustPlanConfirm(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data query req.DeskInfoReq true "详情参数"
 // @Success 200 {object} dto.Response{data=resp.H5DeskPing} "桌台详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/desk/ping [get]
 func (h *H5Handler) GetDeskPing(c *gin.Context) {
-	// 绑定请求参数
-	var deskInfoReq req.DeskInfoReq
-	if err := c.ShouldBindQuery(&deskInfoReq); err != nil {
-		helper.HandleValidationError(c, err, deskInfoReq, nil)
-		return
-	}
-	res, err := h.deskSrv.GetH5DeskPing(helper.GetContext(c), deskInfoReq.Uuid, nil)
+	ctx := helper.GetContext(c)
+	deskUuid := ctx.GetDeskUuid()
+	// // 绑定请求参数
+	// var deskInfoReq req.DeskInfoReq
+	// if err := c.ShouldBindQuery(&deskInfoReq); err != nil {
+	// 	helper.HandleValidationError(c, err, deskInfoReq, nil)
+	// 	return
+	// }
+	res, err := h.deskSrv.GetH5DeskPing(helper.GetContext(c), deskUuid, nil)
 	// 处理错误
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
@@ -547,7 +548,7 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 	memberSrv := service.NewMemberSrv(dbm)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv)
-	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv)
+	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv)
 	buffetSrv := service.NewBuffetSrv(dbm)
 	h5Srv := service.NewH5Srv(dbm, deskSrv, orderSrv, buffetSrv, settingSrv)
 	productService := service.NewProductSrv(dbm, localeSrv)

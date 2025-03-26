@@ -262,7 +262,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// 初始化处理器
 	wrapper := OrderHandler{
 		service:     orderSrv,
-		deskService: service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv),
+		deskService: service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv, mustPlanSrv),
 	}
 
 	// 需要认证

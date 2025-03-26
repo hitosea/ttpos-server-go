@@ -2612,6 +2612,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.ProductMustPlanList'
         description: 必点方案列表
+      must_products:
+        allOf:
+        - $ref: '#/definitions/resp.BuffetProductList'
+        description: 必点商品列表
       sent_kitchen:
         allOf:
         - $ref: '#/definitions/resp.H5CartSendProduct'
@@ -3856,6 +3860,9 @@ definitions:
       price:
         description: 原价. 原价=单价*数量
         type: number
+      product_package_uuid:
+        description: 商品包uuid
+        type: integer
       remark:
         description: 备注
         type: string

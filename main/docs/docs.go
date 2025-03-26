@@ -18386,6 +18386,14 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "must_products": {
+                    "description": "必点商品列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.BuffetProductList"
+                        }
+                    ]
+                },
                 "sent_kitchen": {
                     "description": "已送厨商品信息",
                     "allOf": [
@@ -20231,6 +20239,10 @@ const docTemplate = `{
                 "price": {
                     "description": "原价. 原价=单价*数量",
                     "type": "number"
+                },
+                "product_package_uuid": {
+                    "description": "商品包uuid",
+                    "type": "integer"
                 },
                 "remark": {
                     "description": "备注",

@@ -17,6 +17,8 @@ import (
 
 // IMustPlanSrv 定义必点方案服务接口
 type IMustPlanSrv interface {
+	GetProductMustPlans(ctx context.Context, deskUuid uint64) ([]*model.ProductMustPlan, error)                                                                    // 获取桌台的必选方案model列表
+	GetDeskMustPlanProductPackageList(ctx context.Context, deskUuid uint64) ([]*model.ProductPackage, error)                                                       // 获取桌台的必点ProductPackage列表
 	GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCartMustProductInfo ro.MustPlanProductInfo) ([]resp.InstantProductMustPlan, error)                // 获取点餐的必点方案列表
 	GetDeskMustPlanList(ctx context.Context, mealNum uint, shopCartMustProductInfo ro.MustPlanProductInfo, deskUuid uint64) ([]resp.InstantProductMustPlan, error) // 获取桌台的必点方案列表
 	GetMustPlanUuidByProductPackage(ctx context.Context, saleBillUuid, productPackageUuid uint64, deskUuid uint64) (uint64, error)                                 // 通过商品包获取必点方案uuid
@@ -208,6 +210,21 @@ func (s *mustPlanSrv) GetProductMustPlans(ctx context.Context, deskUuid uint64) 
 		}
 	}
 	return productMustPlans, nil
+}
+
+// 获取桌台的必点ProductPackage列表
+func (s *mustPlanSrv) GetDeskMustPlanProductPackageList(ctx context.Context, deskUuid uint64) ([]*model.ProductPackage, error) {
+	productMustPlans, err := s.GetProductMustPlans(ctx, deskUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	productPackageList := make([]*model.ProductPackage, 0)
+	for _, mustPlan := range productMustPlans {
+		for _, planItem := range mustPlan.ProductMustPlanItems {
+			productPackageList = append(productPackageList, &planItem.ProductPackage)
+		}
+	}
+	return productPackageList, nil
 }
 
 // 获取桌台的必点方案列表，用于检查加购的商品是否是必点商品并且属于哪个必点方案
