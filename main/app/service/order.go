@@ -631,7 +631,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 			IsCellRefund:        false,
 			IsCellCancel:        bill.Status == constant.SaleBillStatusPending,
 			IsCellReverseSettle: bill.IsCellReverseSettle(ctx.GetStaff().Uuid, ctx.GetStaff().CashierLoginTime),
-			IsCellPrint:         !isSplit && bill.Status != constant.SaleBillStatusPending,
+			IsCellPrint:         !isSplit,
 			IsCellInvoice:       !isSplit && bill.Status == constant.SaleBillStatusComplete,
 			IsCellDelete:        bill.Status == constant.SaleBillStatusCanceled,
 		}
@@ -657,7 +657,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 					IsCellRefund:        false,
 					IsCellCancel:        false,
 					IsCellReverseSettle: false,
-					IsCellPrint:         order.Status != constant.SaleBillStatusPending,
+					IsCellPrint:         true,
 					IsCellInvoice:       order.Status == constant.SaleBillStatusComplete,
 					IsCellDelete:        order.Status == constant.SaleBillStatusCanceled,
 				}

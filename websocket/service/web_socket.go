@@ -214,9 +214,16 @@ func handleMessage(ws *websocket.Conn, msg []byte) {
 }
 
 // PushClient 推送消息
-func PushClient(CompanyUuid uint64, SourceClient, DeviceId string, msgType string, data interface{}) {
+func PushClient(
+	CompanyUuid uint64,
+	SourceClient,
+	DeviceId,
+	NotDeviceId string,
+	msgType string,
+	data interface{},
+) {
 	for _, conn := range WsClients {
-		if conn.CompanyUuid == CompanyUuid && (conn.SourceClient == SourceClient || SourceClient == "*") && (conn.DeviceId == DeviceId || DeviceId == "*") {
+		if conn.CompanyUuid == CompanyUuid && (conn.SourceClient == SourceClient || SourceClient == "*") && (conn.DeviceId == DeviceId || DeviceId == "*") && (conn.DeviceId != NotDeviceId || NotDeviceId == "*" || NotDeviceId == "") {
 			// 创建一个 WebSocketMsgRepository 实例
 			repo := repository.NewWebSocketMsgRepository(&database.DBManager{})
 
