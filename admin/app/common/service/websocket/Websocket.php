@@ -45,8 +45,6 @@ class Websocket
         array $data
     ) {
 
-        trace("pushClient");
-
         try {
             // 计算包含关键参数的MD5值
             $jsonData = '';
