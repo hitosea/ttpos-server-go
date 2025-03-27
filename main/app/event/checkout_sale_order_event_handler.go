@@ -58,6 +58,12 @@ func checkoutSaleOrderEventHandler() {
 				SaleOrderUuid: payload.SaleOrderUuid,
 				OperatorUuid:  payload.GetOperatorUuid(),
 			}
+			payload.IsSplitOrder = payload.SaleBill.IsSplit()
+			for i, saleOrder := range payload.SaleBill.SaleOrders {
+				if saleOrder.Uuid == payload.SaleOrderUuid {
+					payload.Index = i + 1
+				}
+			}
 			record.Data = payload.ToJsonString()
 			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {

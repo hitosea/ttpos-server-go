@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,35 +10,63 @@ import (
 	"os"
 )
 
+// 源类型
 const (
-	UPDATE_ORDER   = "update_order"   // 更新订单 data = {"sale_bill_uuid": 3655262269341697,"sale_order_uuid": 3655262269341699}
-	UPDATE_PRODUCT = "update_product" // 更新商品
+	SourceShop      = "shop"      // 商家
+	SourceCashier   = "cashier"   // 收银机
+	SourceTablet    = "tablet"    // 平板端
+	SourceKitchen   = "kitchen"   // 厨显端
+	SourceAssistant = "assistant" // 点餐助手
+	SourceH5        = "H5"        // H5
+)
+
+const (
+	// 更新订单，刷新购物车和桌台列表都用它（desk_uuid不等于0代表是桌台订单，desk_uuid等于0代表是点餐订单），data = {"update_time": 1742971471,"sale_bill_uuid": 3655262269341697,"desk_uuid": 3655262269341699}
+	UPDATE_ORDER = "update_order"
+	// 客户呼叫  data = {"update_time": 1742971471,"customer_call_uuid": 3655262269341697,"desk_uuid": 3655262269341699}
+	CUSTOMER_CALL = "customer_call"
+	// 打印数据  data = {"update_time": 1742971471,"print_log_uuid": 3655262269341697}
+	PRINT_DATA = "print_data"
 )
 
 // Push sends a POST request to the WebSocket server with specific parameters.
-func PushClient(company_uuid uint64, source_client, device_id, message_type string, data map[string]interface{}) error {
+func PushClient(company_uuid uint64, source_client, not_device_id, message_type string, data map[string]interface{}) error {
+	var jsonData []byte
+	// 计算包含关键参数的MD5值
+	if message_type == UPDATE_ORDER {
+		jsonData = fmt.Appendf(nil, "%d", data["sale_bill_uuid"])
+	}
+
+	// 创建缓存键
+	var cacheKey string
+	if message_type != PRINT_DATA {
+		key := fmt.Sprintf("%d:%s:%s:%s", company_uuid, source_client, not_device_id, message_type)
+		md5Sum := fmt.Sprintf("%x", md5.Sum(append([]byte(key), jsonData...)))
+		cacheKey = fmt.Sprintf("ws_msg:%s", md5Sum)
+	}
+
 	// 判断当前是否在容器内执行
-	url := fmt.Sprintf("http://127.0.0.1:%s/ws/push", "8099")
+	url := fmt.Sprintf("http://127.0.0.1:%s/ws/push", os.Getenv("NGINX_PORT"))
 	if _, err := os.Stat("/.dockerenv"); err == nil {
 		url = "http://nginx/ws/push"
 	}
-	//
+
+	// 构建请求体
 	payload := map[string]interface{}{
 		"company_uuid":  company_uuid,
 		"source_client": source_client,
-		"device_id":     device_id,
+		"not_device_id": not_device_id,
 		"message_type":  message_type,
-		"data":          data, // 直接传递 data 对象，不进行额外的 JSON 编码
+		"message_key":   cacheKey,
+		"data":          data,
 	}
-
-	//
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		fmt.Println("Failed to marshal payload: %v", err)
 		log.Printf("Failed to marshal payload: %v", err)
 		return err
 	}
-	//
+
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		fmt.Println("Failed to create request: %v", err)

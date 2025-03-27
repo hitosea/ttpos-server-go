@@ -7,11 +7,9 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
-	"ttpos-server-go/pkg/websocket"
 
 	"github.com/duke-git/lancet/cryptor"
 	"github.com/shopspring/decimal"
-	"gorm.io/gorm"
 )
 
 // SaleOrder 销售订单 `ttpos_sale_order`
@@ -80,30 +78,6 @@ type SaleOrder struct {
 	InvoiceInfo                  *SaleOrderInvoiceInfo          `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleBill                     *SaleBill                      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	MemberPointLog               *MemberPointLog                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 关联积分变动记录.赠送积分
-}
-
-// AfterUpdate 更新销售订单后的逻辑
-func (model *SaleOrder) AfterUpdate(tx *gorm.DB) (err error) {
-	// 如果有有效的公司UUID，发送WebSocket消息
-	if companyUuid := model.getGormDbUuid(tx); companyUuid > 0 {
-		go websocket.PushClient(companyUuid, "*", "*", websocket.UPDATE_ORDER, map[string]interface{}{
-			"sale_bill_uuid":  model.SaleBillUuid,
-			"sale_order_uuid": model.Uuid,
-		})
-	}
-	return nil
-}
-
-// AfterDelete 删除销售订单后的逻辑
-func (model *SaleOrder) AfterDelete(tx *gorm.DB) (err error) {
-	// 如果有有效的公司UUID，发送WebSocket消息
-	if companyUuid := model.getGormDbUuid(tx); companyUuid > 0 {
-		go websocket.PushClient(companyUuid, "*", "*", websocket.UPDATE_ORDER, map[string]interface{}{
-			"sale_bill_uuid":  model.SaleBillUuid,
-			"sale_order_uuid": model.Uuid,
-		})
-	}
-	return nil
 }
 
 // 获取销售订单的顾客列表

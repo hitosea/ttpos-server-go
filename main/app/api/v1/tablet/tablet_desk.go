@@ -155,40 +155,6 @@ func (h *DeskHandler) GetDeskPing(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// OrderCartProductAdd 向购物车添加商品
-// @Summary 向购物车添加商品
-// @Description 向购物车添加商品
-// @Tags 平板端.桌台
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @param data body req.OrderCartProductAddReq true "商品参数"
-// @Success 200 {object} dto.Response{data=resp.DeskPing}
-// @Router /tablet/desk/order/cart/product/add [post]
-func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	// 绑定请求参数
-	params := req.OrderCartProductAddReq{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
-		return
-	}
-	// 添加商品。 若没有点餐账单则新建一个
-	shopCart, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
-	}
-	// 返回结果
-	helper.Success(c, res)
-}
-
 // OrderCartProductAddAndCooking 向购物车添加商品并送厨
 // @Summary 向购物车添加商品并送厨
 // @Description 向购物车添加商品并送厨
@@ -199,7 +165,7 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 // @param data body req.TabletOrderCartProductAddReq true "商品参数"
 // @Success 200 {object} dto.Response
 // @Router /tablet/desk/order/cart/product/add_and_cooking [post]
-func (h *DeskHandler) OrderCartProductAddAndCooking(c *gin.Context) { // todo 是否用到离线购物车
+func (h *DeskHandler) OrderCartProductAddAndCooking(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var params req.TabletOrderCartProductAddReq
 	if err := c.ShouldBindJSON(&params); err != nil {
@@ -370,13 +336,13 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/list", wrapper.GetDeskList) // 获取桌台列表
 		privateApi.POST("/desk/bind", wrapper.BindDesk)   // 绑定桌台
 
-		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                              // 创建桌台订单(开桌)
-		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                   // 获取桌台详情
-		privateApi.GET("/desk/ping", wrapper.GetDeskPing)                                   // 获取桌台详情-用于定时轮询
-		privateApi.POST("/desk/order/cart/product/add", wrapper.OrderCartProductAdd)        // 向购物车添加商品并送厨
-		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen)                  // 获取已送厨商品
-		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList) // 获取自助餐商品列表
-		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)           // 桌台订单商品备注
-		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)      // 确认必点商品
+		privateApi.POST("/desk/open", wrapper.CreateDeskOrder)                                             // 创建桌台订单(开桌)
+		privateApi.GET("/desk/info", wrapper.GetDeskInfo)                                                  // 获取桌台详情
+		privateApi.GET("/desk/ping", wrapper.GetDeskPing)                                                  // 获取桌台详情-用于定时轮询
+		privateApi.POST("/desk/order/cart/product/add_and_cooking", wrapper.OrderCartProductAddAndCooking) // 向购物车添加商品并送厨
+		privateApi.GET("/desk/order/sent_kitchen", wrapper.GetSentKitchen)                                 // 获取已送厨商品
+		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList)                // 获取自助餐商品列表
+		privateApi.POST("/desk/order/product/remark", wrapper.OrderProductRemark)                          // 桌台订单商品备注
+		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                     // 确认必点商品
 	}
 }

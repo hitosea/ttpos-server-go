@@ -15,18 +15,18 @@ import (
 	"go.uber.org/zap"
 )
 
-var once_discount_zero_sale_order_event_handler sync.Once
+var once_change_price_sale_order_event_handler sync.Once
 
 // init 自动注册事件处理器
 func init() {
 	// 只初始化一次
-	discountZeroSaleOrderEventHandler()
+	discountChangePriceSaleOrderEventHandler()
 }
 
-// discountZeroSaleOrderEventHandler "优惠折扣"事件处理器
-func discountZeroSaleOrderEventHandler() {
-	once_discount_zero_sale_order_event_handler.Do(func() {
-		event.NewSystemBus().SubscribeDiscountZeroSaleOrderEvent(func(payload event.DiscountSaleOrderPayload) {
+// discountChangePriceSaleOrderEventHandler "修改整单价格"事件处理器
+func discountChangePriceSaleOrderEventHandler() {
+	once_change_price_sale_order_event_handler.Do(func() {
+		event.NewSystemBus().SubscribeDiscountChangePriceSaleOrderEvent(func(payload event.DiscountSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 			record := model.SaleOrderOperationRecord{
@@ -40,10 +40,10 @@ func discountZeroSaleOrderEventHandler() {
 			record.Data = payload.ToJsonString()
 			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
-				logger.Logger.Error("SubscribeDiscountZeroSaleOrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+				logger.Logger.Error("SubscribeDiscountChangePriceSaleOrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 				return
 			}
-			logger.Logger.Info(fmt.Sprintf("操作记录:优惠折扣-抹零 %+v", payload), zap.Uint64("record", uuid))
+			logger.Logger.Info(fmt.Sprintf("操作记录:优惠折扣-整单改价 %+v", payload), zap.Uint64("record", uuid))
 		})
 	})
 }

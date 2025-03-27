@@ -86,7 +86,7 @@ type IOrderSrv interface {
 	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProductGivingReq) (*resp.ShopCart, error)                                                           // 取消赠菜购物车商品
 	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                              // 取消赠菜购物车商品
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error)                                                                    // 获取点餐必点方案
-	InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)                                      // 获取结账页面信息
+	InstantOrderPaymentInfo(ctx context.Context, saleBill *model.SaleBill, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)            // 获取结账页面信息
 	InstantOrderPaymentQrcode(ctx context.Context, req req.InstantOrderPaymentQrcodeReq) (*resp.InstantOrderPaymentQrcodeInfoResp, error)                                   // 获取支付二维码
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                                         // 给销售订单创建一个支付单
 	InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                         // 撤销一个支付单
@@ -631,7 +631,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 			IsCellRefund:        false,
 			IsCellCancel:        bill.Status == constant.SaleBillStatusPending,
 			IsCellReverseSettle: bill.IsCellReverseSettle(ctx.GetStaff().Uuid, ctx.GetStaff().CashierLoginTime),
-			IsCellPrint:         !isSplit && bill.Status != constant.SaleBillStatusPending,
+			IsCellPrint:         !isSplit,
 			IsCellInvoice:       !isSplit && bill.Status == constant.SaleBillStatusComplete,
 			IsCellDelete:        bill.Status == constant.SaleBillStatusCanceled,
 		}
@@ -657,7 +657,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 					IsCellRefund:        false,
 					IsCellCancel:        false,
 					IsCellReverseSettle: false,
-					IsCellPrint:         order.Status != constant.SaleBillStatusPending,
+					IsCellPrint:         true,
 					IsCellInvoice:       order.Status == constant.SaleBillStatusComplete,
 					IsCellDelete:        order.Status == constant.SaleBillStatusCanceled,
 				}
@@ -994,14 +994,15 @@ func (s *orderSrv) getRecordList(ctx context.Context, saleBillUuid uint64, saleO
 		if desc != "" {
 			actionText = actionText + ": " + desc
 		}
+		refundPayTypes := s.getRefundPayType(ctx, record, language)
 		logs = append(logs, resp.OrderOperationLog{
 			Uuid:        record.Uuid,
 			RealName:    record.Operator.RealName,
 			Email:       record.Operator.Username,
 			Source:      record.Source,
 			CreateTime:  record.CreateTime,
-			Description: actionText,                                     // 获取描述
-			PayType:     make([]resp.OrderOperationLogPaymentMethod, 0), // ToDo 关联支付方式
+			Description: actionText,     // 获取描述
+			PayType:     refundPayTypes, // ToDo 关联支付方式
 		})
 	}
 	return logs, nil
@@ -1405,10 +1406,47 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	if err != nil {
 		return errors.WithMessage(err), constant.CodeFail
 	}
+	// 发布“退款”事件
+	products := make(event.Products, 0)
+	for _, saleOrderProduct := range saleOrderProducts {
+		if num, exists := numMap[saleOrderProduct.Uuid]; exists && num > 0 {
+			products = append(products, event.OrderProduct{
+				OrderProductId:  saleOrderProduct.Uuid,
+				ProductId:       saleOrderProduct.ProductPackageUuid,
+				ProductName:     saleOrderProduct.MultiLanguageName.GetNames(),
+				ProductAttr:     saleOrderProduct.GetAttributeName(),
+				ProductAttrList: saleOrderProduct.GetAttributeNameList(),
+				TotalNum:        num,
+				IsBuffet:        saleOrderProduct.IsBuffet == 1,
+				Remark:          saleOrderProduct.Remark,
+			})
+		}
+	}
+	var payTypes []event.RefundPayType
+	for _, amount := range returnOrder.ReturnOrderAmounts {
+		payTypes = append(payTypes, event.RefundPayType{
+			Name:          amount.PaymentMethod.PaymentName,
+			Code:          amount.PaymentMethod.Code,
+			Amount:        amount.Amount,
+			PaymentStatus: amount.RefundStatus,
+		})
+	}
+	go func() {
+		s.bus.PublishReturnOrderEvent(event.ReturnOrderPayload{
+			SaleBill: saleBill,
+			BasePayload: event.BasePayload{
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  saleBill.Uuid,
+				SaleOrderUuid: saleOrder.Uuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			Products:   products,
+			PayTypes:   payTypes,
+			RefundType: returnType,
+		})
+	}()
 
-	// todo 发布退款事件
-	// todo 退款到现金
-	// todo 回退积分
 	return nil, 0
 }
 
@@ -1746,6 +1784,42 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 				})
 			}()
 		}
+
+		go func() {
+			// 发布“反结账”操作事件
+			var payTypes []event.PayType
+			for _, order := range saleBill.SaleOrders {
+				if order.IsFree == 1 {
+					payTypes = append(payTypes, event.PayType{
+						Name:  "免单",
+						Value: constant.PaymentMethodCodeFreePay,
+						Price: order.Amount,
+					})
+				} else {
+					if infoResp, err := s.InstantOrderPaymentInfo(ctx, saleBill, req.SaleBillUuid, order.Uuid); err == nil {
+						for _, paymentOrder := range infoResp.PaymentOrders.List {
+							payTypes = append(payTypes, event.PayType{
+								Name:           paymentOrder.PaymentMethodName,
+								Value:          paymentOrder.PaymentMethodCode,
+								DisabledCancel: utils.BoolToUint(paymentOrder.DisabledCancel),
+								Price:          paymentOrder.Amount,
+								FeeMoney:       paymentOrder.PaymentCommissionFee,
+							})
+						}
+					}
+				}
+			}
+			s.bus.PublishOrderReverseSettleEvent(event.OrderReverseSettlePayload{
+				BasePayload: event.BasePayload{
+					CompanyUuid:  ctx.GetCompanyUuid(),
+					Source:       ctx.GetSource(),
+					SaleBillUuid: saleBill.Uuid,
+					OperatorUuid: int64(ctx.GetStaffUuid()),
+				},
+				PayTypes: payTypes,
+			})
+		}()
+
 		// 更新桌台
 		if saleBill.IsDeskSaleBill() {
 			if err := repository.NewDeskRepo(db).UpdateDeskRecord(*desk); err != nil {
@@ -2322,7 +2396,7 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 
 	// 发布"改价"事件
 	go func() {
-		event.NewSystemBus().PublishChangePriceSaleOrderEvent(event.ChangePriceSaleOrderPayload{
+		event.NewSystemBus().PublishDiscountChangePriceSaleOrderEvent(event.DiscountSaleOrderPayload{
 			BasePayload: event.BasePayload{
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
@@ -2462,7 +2536,7 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 
 	// 发布"订单抹零"事件
 	go func() {
-		event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountZeroSaleOrderPayload{
+		event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountSaleOrderPayload{
 			BasePayload: event.BasePayload{
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
@@ -3128,6 +3202,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		Buffet:        nil,
 		DiningMethod:  shopCart.SaleBill.DiningMethod,
 		SaleOrderList: saleOrderList,
+		UpdateTime:    shopCart.SaleBill.UpdateTime,
 	}
 	// 如果要显示必点信息
 	if productMustPlanList != nil {
@@ -3337,6 +3412,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			},
 			Attribute:     attributes,
 			IsAcceptOrder: uint(isAcceptOrder),
+			Remark:        product.Remark,
 		}, &productPackage, product.Operation)
 		// 设置必点信息
 		var mustPlanUuid uint64
@@ -4813,7 +4889,7 @@ func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (
 }
 
 // InstantOrderPaymentInfo 获取结账页面信息
-func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error) {
+func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.SaleBill, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error) {
 	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 	// 加锁
 	if ctx.NoLock() {
@@ -4823,9 +4899,12 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBillUuid uin
 	}
 	// 获取销售账单信息
 	db := s.dbm.GetDB(ctx.GetDbId())
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
-	if errSaleBill != nil {
-		return nil, errSaleBill
+	if saleBill == nil {
+		var errSaleBill error
+		saleBill, errSaleBill = repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
+		if errSaleBill != nil {
+			return nil, errSaleBill
+		}
 	}
 	if saleBill.IsEndStatus() {
 		return nil, errors.WithMessage(errors.New("销售账单已结束"))
@@ -5128,7 +5207,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 			if paymentOrder.PaymentAmount != req.PaymentAmount {
 				return nil, errors.New("不能重复支付")
 			}
-			newInfoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+			newInfoResp, err := s.InstantOrderPaymentInfo(ctx, nil, req.SaleBillUuid, req.SaleOrderUuid)
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
@@ -5144,7 +5223,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err, "添加支付订单-获取货币设置失败")
 	}
 
-	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -5229,7 +5308,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 		}()
 	}
 
-	newInfoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+	newInfoResp, err := s.InstantOrderPaymentInfo(ctx, nil, req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -5283,7 +5362,7 @@ func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.Instan
 	}); err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -5340,7 +5419,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		return nil, errors.New("无法查询到销售订单")
 	}
 
-	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -5597,6 +5676,19 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		})
 	}()
 
+	// 整单完结时, 发布"统计"事件
+	if saleBill.CanFinishSaleBill() {
+		go func() {
+			s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
+				BasePayload: event.BasePayload{
+					Ctx:         ctx,
+					CompanyUuid: ctx.GetCompanyUuid(),
+				},
+				SaleBill: saleBill,
+			})
+		}()
+	}
+
 	payMethods := make([]resp.PayMethod, 0)
 	for _, paymentOrder := range infoResp.PaymentOrders.List {
 		method := resp.PayMethod{
@@ -5641,7 +5733,7 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 		return nil, errors.WithMessage(errors.New("无法查询到销售订单"))
 	}
 
-	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -5747,6 +5839,7 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 				SaleOrderUuid: req.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
+			SaleBill:      saleBill,
 			OrderPrice:    saleOrder.GetAmount(),
 			PayPrice:      0, // 免单时，支付金额为0
 			ActualPrice:   0, // 免单时，实际支付金额为0
@@ -5797,7 +5890,7 @@ func (s *orderSrv) InstantOrderPaymentZeroRule(ctx context.Context, req req.Inst
 		return nil, errors.WithMessage(err)
 	}
 
-	infoResp, err := s.InstantOrderPaymentInfo(ctx, req.SaleBillUuid, req.SaleOrderUuid)
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, req.SaleBillUuid, req.SaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -6833,7 +6926,7 @@ func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMembe
 		return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
 	}
 
-	infoResp, err := s.InstantOrderPaymentInfo(ctx, request.SaleBillUuid, request.SaleOrderUuid)
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, request.SaleBillUuid, request.SaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -6885,7 +6978,7 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 		return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
 	}
 
-	infoResp, err := s.InstantOrderPaymentInfo(ctx, request.SaleBillUuid, request.SaleOrderUuid)
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, request.SaleBillUuid, request.SaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

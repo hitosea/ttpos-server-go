@@ -191,7 +191,7 @@ func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, sal
 	return nil
 }
 
-// 加购并送厨
+// ActionAddAndCooking 加购并送厨
 func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*resp.OrderCheckServiceRes, error) {
 
 	// 加购相关

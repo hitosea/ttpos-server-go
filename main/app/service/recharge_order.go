@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
@@ -798,7 +799,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 
 	logs := make([]resp.RechargeOrderOperationLogItem, 0, len(order.RechargeOrderOperationLogs))
 	for _, log := range order.RechargeOrderOperationLogs {
-		actionDesc := s.getActionDescription(log, ctx.GetLanguage())
+		actionDesc := s.getActionDescription(ctx, log, ctx.GetLanguage())
 		actionText := s.getActionText(log, ctx.GetLanguage())
 		var desc string
 		if actionDesc != "" {
@@ -1320,6 +1321,20 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			return errors.NewWithCode(constant.CodeReturnOrderBank, "请选择银行")
 		}
 	}
+	refundPayTypes := make([]event.RefundPayType, 0)
+	for _, amount := range returnOrderAmounts {
+		for _, paymentRecord := range paymentRecords {
+			if amount.PaymentMethodUuid == paymentRecord.PaymentMethodUuid {
+				refundPayTypes = append(refundPayTypes, event.RefundPayType{
+					Name:          paymentRecord.PaymentName,
+					Code:          paymentRecord.PaymentMethodCode,
+					Amount:        amount.Amount,
+					PaymentStatus: amount.RefundStatus,
+				})
+				break
+			}
+		}
+	}
 
 	lianLianPayCount := returnOrder.GetLianLianPayCount()
 
@@ -1342,15 +1357,16 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			Client:            ctx.GetSource(),
 			Message:           "退款",
 			Action:            constant.RechargeOrderActionRefund,
-			Data:              s.getRefundData(refundReq.RefundType, refundReq.RefundMoney), // ToDo 处理退款日志数据
+			Data:              s.getRefundData(refundReq.RefundType, refundReq.RefundMoney, refundPayTypes),
 			RechargeOrderUuid: order.Uuid,
 		})
 		if err != nil {
 			return errors2.ErrInternal
 		}
 
+		var paymentOrderUuid uint64
 		// 创建退货单
-		if _, err = repository.NewReturnOrderRepo(tx).CreateReturnOrderRecord(returnOrder); err != nil {
+		if paymentOrderUuid, err = repository.NewReturnOrderRepo(tx).CreateReturnOrderRecord(returnOrder); err != nil {
 			return errors.WithMessage(err)
 		}
 
@@ -1379,6 +1395,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			} else {
 				returnOrderAmount.RefundStatus = 1
 			}
+			returnOrderAmount.ReturnOrderUuid = paymentOrderUuid
 			// 创建退款金额
 			if err = repository.NewReturnOrderRepo(db).CreateReturnOrderAmount([]model.ReturnOrderAmount{returnOrderAmount}); err != nil {
 				return errors.WithMessage(err)

@@ -48,6 +48,7 @@ type ProductParams struct {
 	SauceProductBomUuidList         []uint64 `json:"sauce_product_bom_uuid_list"`                // 加料信息
 	ProductPackageAttributeUuidList []uint64 `json:"product_package_attribute_uuid_list"`        // 属性信息
 	Operation                       string   `json:"operation"`                                  // 操作类型。add: 加购，sub: 减购
+	Remark                          string   `json:"remark"`                                     // 备注，平板端离线购物车提交
 }
 
 // OrderCartProductNumReq 修改购物车商品数量请求参数

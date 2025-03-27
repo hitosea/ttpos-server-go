@@ -272,12 +272,15 @@ func (model *SaleBill) AddSaleOrderBuffetDelayProduct(saleOrderUuid uint64, dela
 
 // ValidateOrderStatus 判断订单是否可操作
 func (model *SaleBill) ValidateOrderStatus(source string, operation string, saleOrderUuid ...uint64) error {
-	if model.IsLockStatus() && !slices.Contains([]string{
-		constant.OrderSettle,
-		constant.OrderUnlock,
-	}, operation) {
+	// 解锁订单
+	if operation == constant.OrderUnlock {
+		return nil
+	}
+	// 锁定订单 - 白名单
+	if model.IsLockStatus() && !slices.Contains([]string{constant.OrderSettle}, operation) {
 		return errors.New("订单已被锁定，请解锁后重新操作")
 	}
+	// 账单已退款，不能操作
 	if model.Status == constant.SaleBillStatusCanceled {
 		return errors.New("订单已取消")
 	}

@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/websocket"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -61,21 +62,10 @@ func (model *BaseModel) IsDelete() bool {
 	return model.DeleteTime != constant.NotDeleted
 }
 
-// getGormDbUuid 从数据库名称中提取公司UUID
-func (model *BaseModel) getGormDbUuid(tx *gorm.DB) uint64 {
-	// 获取数据库名称
+// getCompanyUuid 从数据库名称中提取公司UUID
+func (model *BaseModel) getCompanyUuid(tx *gorm.DB) uint64 {
 	var dbName string
-	// 根据不同的数据库类型获取数据库名称
-	switch tx.Dialector.Name() {
-	case "mysql":
-		tx.Raw("SELECT DATABASE()").Scan(&dbName)
-	case "sqlite":
-		// todo 离线版本要重新考虑
-		// 对于 SQLite，数据库名称就是文件路径
-		// dbName = tx.Dialector.(gorm.Dialector).DSN()
-	}
-	// 从数据库名称中提取公司UUID
-	// 格式为: shop8609817471094784
+	tx.Raw("SELECT DATABASE()").Scan(&dbName)
 	if len(dbName) > 4 && strings.HasPrefix(dbName, "shop") {
 		uuidStr := strings.TrimPrefix(dbName, "shop")
 		uuid, err := strconv.ParseUint(uuidStr, 10, 64)
@@ -83,5 +73,54 @@ func (model *BaseModel) getGormDbUuid(tx *gorm.DB) uint64 {
 			return uuid
 		}
 	}
+	// todo sqlite - 离线版本要重新考虑
 	return 0
+}
+
+// --------------------------------
+// Hook Methods
+// --------------------------------
+
+// SaleBill - AfterUpdate 更新销售订单后的逻辑 - 推送订单更新
+func (model *SaleBill) AfterUpdate(tx *gorm.DB) (err error) {
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		go websocket.PushClient(companyUuid, "*", "*", websocket.UPDATE_ORDER, map[string]interface{}{
+			"sale_bill_uuid": model.Uuid,
+			"desk_uuid":      model.DeskUuid,
+			"update_time":    model.BaseModel.UpdateTime,
+		})
+	}
+	return nil
+}
+
+// CustomerCall - AfterCreate 新增客户呼叫后的逻辑 - 推送订单更新
+func (model *CustomerCall) AfterCreate(tx *gorm.DB) (err error) {
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, "*", websocket.CUSTOMER_CALL, map[string]interface{}{
+			"customer_call_uuid": model.Uuid,
+			"desk_uuid":          model.DeskUuid,
+			"update_time":        model.BaseModel.UpdateTime,
+		})
+	}
+	return nil
+}
+
+// PrinterLog - AfterCreate 打印数据
+func (model *PrinterLog) AfterCreate(tx *gorm.DB) (err error) {
+	if model.Type != 1 || model.Data == "" {
+		return
+	}
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		go websocket.PushClient(
+			companyUuid,
+			websocket.SourceCashier,
+			utils.IfString(model.CashierDeviceId != "", model.CashierDeviceId, "*"),
+			websocket.PRINT_DATA,
+			map[string]interface{}{
+				"print_log_uuid": model.Uuid,
+				"update_time":    model.BaseModel.UpdateTime,
+			},
+		)
+	}
+	return nil
 }

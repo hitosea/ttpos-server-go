@@ -125,6 +125,9 @@ func (s *deskSrv) GetDeskList(ctx context.Context, dbId uint64, req req.DeskList
 	// 返回响应对象
 	return resp.DeskListWithPaginationResp{
 		List: deskResp,
+		Extra: resp.DeskExtra{
+			UpdateTime: time.Now().Unix(),
+		},
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
 			PageSize: req.PageSize,
@@ -298,6 +301,7 @@ func (s *deskSrv) GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *
 // CreateDeskOrder 创建桌台订单
 func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
 	dbId := ctx.GetDbId()
+	companySetting := ctx.GetCompanySetting()
 	// 验证请求参数
 	err := req.ValidateCreateDeskOrderReq()
 	if err != nil {
@@ -335,6 +339,9 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 		}
 	}
 	if ctx.GetSource() == constant.SourceH5 {
+		if companySetting.IsOpenH5 != 1 {
+			return resp.CreateDeskOrderResp{}, errors.New("当前未开启扫码点餐功能，请联系销售代表")
+		}
 		tabletSetting, err := s.settingSrv.GetH5Setting(ctx, nil)
 		if err != nil {
 			return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
@@ -347,6 +354,10 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 	// 判断是否自助餐订单
 	var result resp.CreateDeskOrderResp
 	if req.IsBuffet() {
+		buffetSetting, _ := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+		if buffetSetting.IsOpen != "1" {
+			return resp.CreateDeskOrderResp{}, errors.New("未开启自助餐")
+		}
 		deskBuffetOrder, err := s.createDeskBuffetOrder(ctx, req)
 		if err != nil {
 			return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "s.createDeskBuffetOrder failed, request:", utils.ToJson(req))
@@ -638,8 +649,8 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 				SaleOrderUuid: reqs.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
-			Old: event.Old{TableId: oldDesk.Uuid, TableNo: oldDesk.DeskNo},
-			New: event.New{TableId: reqs.DeskUuid, TableNo: desk.DeskNo},
+			Old: event.Table{TableId: oldDesk.Uuid, TableNo: oldDesk.DeskNo},
+			New: event.Table{TableId: reqs.DeskUuid, TableNo: desk.DeskNo},
 		})
 	}()
 

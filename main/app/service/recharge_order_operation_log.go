@@ -7,6 +7,8 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/utils"
 )
 
@@ -89,20 +91,23 @@ func (s *rechargeOrderSrv) getReverseSettleLogData(order model.MemberRechargeOrd
 }
 
 type RefundLog struct {
-	RefundType  uint    `json:"refund_type"`
-	RefundMoney float64 `json:"refund_money"`
+	RefundType     uint                  `json:"refund_type"`
+	RefundMoney    float64               `json:"refund_money"`
+	RefundPayTypes []event.RefundPayType `json:"refund_pay_types"`
 }
 
 // 订单退款日志data
-func (s *rechargeOrderSrv) getRefundData(refundType uint, refundMoney float64) string {
+func (s *rechargeOrderSrv) getRefundData(refundType uint, refundMoney float64, refundPayTypes []event.RefundPayType) string {
 	operationData, _ := json.Marshal(RefundLog{
-		RefundType:  refundType,
-		RefundMoney: refundMoney,
+		RefundType:     refundType,
+		RefundMoney:    refundMoney,
+		RefundPayTypes: refundPayTypes,
 	})
 	return string(operationData)
 }
 
-func (s *rechargeOrderSrv) getActionDescription(log model.MemberRechargeOrderOperationLog, language string) string {
+func (s *rechargeOrderSrv) getActionDescription(ctx context.Context, log model.MemberRechargeOrderOperationLog, language string) string {
+	currencySetting, _ := s.settingSrv.GetCurrencySetting(ctx)
 	switch log.Action {
 	case constant.RechargeOrderActionChangeAmount:
 		var changeAmount ChangeAmountLog
@@ -117,11 +122,11 @@ func (s *rechargeOrderSrv) getActionDescription(log model.MemberRechargeOrderOpe
 			if payType.Value == constant.PaymentMethodCodeCash {
 				price = utils.DecimalSub(price, recharge.ChangeDue)
 			}
-			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s%.2f", payType.Name, i18n.Translate(language, "¥"), price))
+			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s%.2f", payType.Name, currencySetting.Unit, price))
 		}
 		desc := fmt.Sprintf("%s %s %.2f，%s %s %.2f",
-			i18n.Translate(language, "订单金额"), i18n.Translate(language, "¥"), recharge.RechargeMoney,
-			i18n.Translate(language, "实付金额"), i18n.Translate(language, "¥"), recharge.PayPrice)
+			i18n.Translate(language, "订单金额"), currencySetting.Unit, recharge.RechargeMoney,
+			i18n.Translate(language, "实付金额"), currencySetting.Unit, recharge.PayPrice)
 		if len(payTypeList) > 0 {
 			return desc + "(" + strings.Join(payTypeList, "、") + ")"
 		}
@@ -135,11 +140,17 @@ func (s *rechargeOrderSrv) getActionDescription(log model.MemberRechargeOrderOpe
 			if payType.Value == constant.PaymentMethodCodeCash {
 				price = utils.DecimalSub(price, reverseSettle.ChangeDue)
 			}
-			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s%.2f", payType.Name, i18n.Translate(language, "¥"), price))
+			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s%.2f", payType.Name, currencySetting.Unit, price))
 		}
 		return strings.Join(payTypeList, "、")
 	case constant.RechargeOrderActionRefund:
-
+		var refundLog RefundLog
+		json.Unmarshal([]byte(log.Data), &refundLog)
+		var payTypeList []string
+		for _, payType := range refundLog.RefundPayTypes {
+			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s%.2f", payType.Name, currencySetting.Unit, payType.Amount))
+		}
+		return strings.Join(payTypeList, "、")
 	}
 	return ""
 }
