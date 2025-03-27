@@ -42,6 +42,8 @@ const (
 	UPDATE_CATEGORY = "update_category"
 	// 更新自助餐 data = {"update_time": 1742971471, "buffet_uuid": 1, "type": "update | delete"}
 	UPDATE_BUFFET = "update_buffet"
+	// 更新桌台 data = {"update_time": 1742971471, "desk_uuid": 1, "type": "update | delete"}
+	UPDATE_DESK = "update_desk"
 )
 
 // Push sends a POST request to the WebSocket server with specific parameters.

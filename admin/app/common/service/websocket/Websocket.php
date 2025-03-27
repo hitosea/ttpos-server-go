@@ -23,7 +23,8 @@ class Websocket
     const UPDATE_USER = 'update_user';              // 更新用户
     const UPDATE_PRODUCT = 'update_product';        // 更新商品
     const UPDATE_CATEGORY = 'update_category';      // 更新分类
-    const UPDATE_BUFFET = 'update_buffet';      // 更新自助餐
+    const UPDATE_BUFFET = 'update_buffet';          // 更新自助餐
+    const UPDATE_DESK = 'update_desk';              // 更新桌台
 
     /**
      * 推送消息到WebSocket服务器

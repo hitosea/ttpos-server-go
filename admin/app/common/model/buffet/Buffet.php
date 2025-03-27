@@ -24,7 +24,7 @@ class Buffet extends BaseModel
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 
-     /**
+    /**
      * 分类更新后推送通知
      */
     public static function onAfterWrite(Buffet $model)
