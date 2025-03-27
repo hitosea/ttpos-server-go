@@ -15,6 +15,7 @@ type OrderCartProductAddReq struct {
 	SauceUuidList     []uint64 `json:"sauce_uuid"`      // 小料ID
 	AttributeUuidList []uint64 `json:"attribute_uuid"`  // 规格ID
 	Operation         string   `json:"operation"`       // 操作类型。add: 加购，sub: 减购. 不填，默认是加购
+	MustPlanUuid      uint64   `json:"must_plan_uuid"`  // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
 	// 后端内部使用的参数
 	isH5Product bool `json:"-"` // 是否是H5商品
 }
@@ -48,6 +49,7 @@ type ProductParams struct {
 	SauceProductBomUuidList         []uint64 `json:"sauce_product_bom_uuid_list"`                // 加料信息
 	ProductPackageAttributeUuidList []uint64 `json:"product_package_attribute_uuid_list"`        // 属性信息
 	Operation                       string   `json:"operation"`                                  // 操作类型。add: 加购，sub: 减购
+	MustPlanUuid                    uint64   `json:"must_plan_uuid"`                             // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
 	Remark                          string   `json:"remark"`                                     // 备注，平板端离线购物车提交
 }
 
