@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
-	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/trans/model/utils"
 
 	"gorm.io/gorm"
 )
@@ -78,6 +78,55 @@ func (model *Product) GetProductStatus() uint8 {
 	return 1
 }
 
+func (model *Product) GetStockDeductMethod() uint {
+	if model.DeductStockType == 10 {
+		return 0
+	}
+	return 1
+}
+
+func (model *Product) IsShowCashierValue() uint {
+	if model.IsShowCashier == 1 {
+		return 1
+	}
+	return 0
+}
+
+func (model *Product) IsShowTabletValue() uint {
+	if model.IsShowTablet == 1 {
+		return 1
+	}
+	return 0
+}
+
+func (model *Product) IsShowKitchenValue() uint {
+	if model.IsShowKitchen == 1 {
+		return 1
+	}
+	return 0
+}
+
+func (model *Product) IsShowAssistantValue() uint {
+	if model.IsShowAssistant == 1 {
+		return 1
+	}
+	return 0
+}
+
+func (model *Product) IsShowH5Value() uint {
+	if model.IsShowH5 == 1 {
+		return 1
+	}
+	return 0
+}
+
+func (model *Product) OpenDiscount() uint {
+	if model.IsEnableGrade == 1 {
+		return 1
+	}
+	return 0
+}
+
 // 获取商品的属性组
 func (model *Product) GetProductAttributeGroupList(db *gorm.DB, ids []uint64) ([]*Attribute, error) {
 	var attributes []*Attribute
@@ -98,7 +147,7 @@ func (model *Product) GetProductAttributeList(db *gorm.DB, ids []uint64) ([]*Att
 	return attributes, nil
 }
 
-type ProductAttr struct {
+type ProductAttrGroup struct {
 	ParentID               int      `json:"parent_id"`
 	ParentName             string   `json:"parent_name"`
 	AttributeName          string   `json:"attribute_name"`
@@ -111,14 +160,37 @@ type ProductAttr struct {
 	AttributeNameText      string   `json:"attribute_name_text"`
 }
 
+func (model *ProductAttrGroup) GetIsMust() uint {
+	if model.AttributeRequired == 1 {
+		return 1
+	}
+	return 0
+}
+
+func (model *ProductAttrGroup) GetMaxSelection() uint {
+	if model.AttributeMaxSelect == 0 {
+		return 0
+	}
+	return uint(model.AttributeMaxSelect)
+}
+
 // 解析ProductAttr字段
-func (model *Product) ParseProductAttr() ([]*ProductAttr, error) {
-	var attributes []*ProductAttr
+func (model *Product) ParseProductAttr() ([]*ProductAttrGroup, error) {
+	var attributes []*ProductAttrGroup
 	err := json.Unmarshal([]byte(model.ProductAttr), &attributes)
 	if err != nil {
 		return nil, err
 	}
 	return attributes, nil
+}
+
+// 解析ProductFeed字段
+func (model *Product) ParseProductFeed() ([]utils.ProductFeed, error) {
+	productFeeds, err := utils.ParseFeedJson(model.ProductFeed)
+	if err != nil {
+		return nil, err
+	}
+	return productFeeds, nil
 }
 
 type ProductImage struct {
@@ -192,49 +264,14 @@ func (s *ProductService) ConvertProduct() error {
 		if product.Type == 10 {
 			// 成品
 			fmt.Println(fmt.Sprintf("-----迁移成品：%+v", product))
-			StockDeductMethod := func() uint8 {
-				if product.DeductStockType == 10 {
-					return 0
-				}
-				return 1
-			}()
+			StockDeductMethod := product.GetStockDeductMethod()
 			Status := product.GetProductStatus()
-			IsShowCashier := func() uint {
-				if product.IsShowCashier == 1 {
-					return 1
-				}
-				return 0
-			}()
-			IsShowTablet := func() uint {
-				if product.IsShowTablet == 1 {
-					return 1
-				}
-				return 0
-			}()
-			IsShowKitchen := func() uint {
-				if product.IsShowKitchen == 1 {
-					return 1
-				}
-				return 0
-			}()
-			IsShowAssistant := func() uint {
-				if product.IsShowAssistant == 1 {
-					return 1
-				}
-				return 0
-			}()
-			IsShowH5 := func() uint {
-				if product.IsShowH5 == 1 {
-					return 1
-				}
-				return 0
-			}()
-			OpenDiscount := func() uint {
-				if product.IsEnableGrade == 1 {
-					return 1
-				}
-				return 0
-			}()
+			IsShowCashier := product.IsShowCashierValue()
+			IsShowTablet := product.IsShowTabletValue()
+			IsShowKitchen := product.IsShowKitchenValue()
+			IsShowAssistant := product.IsShowAssistantValue()
+			IsShowH5 := product.IsShowH5Value()
+			OpenDiscount := product.OpenDiscount()
 
 			productDineTax, err := s.GetProductTax(product.ProductID, 1)
 			if err != nil {

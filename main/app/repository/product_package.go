@@ -11,6 +11,7 @@ type IProductPackageRepo interface {
 	GetProductPackage(opts ...DBOption) (*model.ProductPackage, error)
 	GetProductPackageBaseInfoByBomUuid(flavorBomUuid uint64) (*model.ProductBom, error)
 	GetProductPackageListByUuids(uuids []uint64) ([]*model.ProductPackage, error)
+	CreateProductPackage(productPackage *model.ProductPackage) error
 }
 
 type productPackageRepoImpl struct {
@@ -55,4 +56,32 @@ func (r *productPackageRepoImpl) GetProductPackageListByUuids(uuids []uint64) ([
 	var productPackages []*model.ProductPackage
 	err := r.db.Model(&model.ProductPackage{}).Where("uuid IN ?", uuids).Find(&productPackages).Error
 	return productPackages, errors.WithMessage(err)
+}
+
+func (r *productPackageRepoImpl) CreateProductPackage(productPackage *model.ProductPackage) error {
+	// 创建product_package表数据
+	if err := r.db.Model(&model.ProductPackage{}).Create(productPackage).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	// 创建product_package_attribute_group表数据
+	if err := r.db.Model(&model.ProductPackageAttributeGroup{}).Create(productPackage.ProductPackageAttributeGroups).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	// 创建product_package_attribute表数据
+	for _, attributeGroup := range productPackage.ProductPackageAttributeGroups {
+		if err := r.db.Model(&model.ProductPackageAttribute{}).Create(attributeGroup.ProductPackageAttributes).Error; err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+	// 创建product_bom表数据
+	if err := r.db.Model(&model.ProductBom{}).Create(productPackage.ProductBoms).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	// 创建related_material表数据
+	for _, bom := range productPackage.ProductBoms {
+		if err := r.db.Model(&model.RelatedMaterial{}).Create(bom.FlavorMaterials).Error; err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+	return nil
 }

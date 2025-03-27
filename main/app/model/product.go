@@ -233,7 +233,7 @@ func (model *ProductBom) GetStockNum() float64 {
 // RelatedMaterial 关联材料表,定义关联材料的相关信息 ttpos_related_material
 type RelatedMaterial struct {
 	BaseModel
-	MaterialUUID     uint64  `gorm:"column:material_uuid;type:bigint(20) unsigned;default:0;comment:'原料ID'"`
+	MaterialUuid     uint64  `gorm:"column:material_uuid;type:bigint(20) unsigned;default:0;comment:'原料ID'"`
 	RelatedUuid      uint64  `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:'物料清单BOM的ID'"`
 	ProductBomUuid   uint64  `gorm:"column:product_bom_uuid;type:bigint(20) unsigned;default:0;comment:'物料清单BOM的ID'"`
 	ProductSauceUuid uint64  `gorm:"column:product_sauce_uuid;type:bigint(20) unsigned;default:0;comment:'商品小料ID'"`

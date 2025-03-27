@@ -4024,7 +4024,7 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 			if saleOrderProductBom.IsFlavor() {
 				for _, productBomMaterial := range saleOrderProductBom.ProductBom.FlavorMaterials {
 					productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
-						MaterialUuid:  productBomMaterial.MaterialUUID,
+						MaterialUuid:  productBomMaterial.MaterialUuid,
 						Num:           productBomMaterial.GetDecreaseNum(cookingDeductSaleOrderProduct.Num),
 						SaleOrderUuid: cookingDeductSaleOrderProduct.SaleOrderUuid,
 					})
@@ -4034,7 +4034,7 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 			if saleOrderProductBom.IsSauce() {
 				for _, material := range saleOrderProductBom.ProductBom.ProductSauce.SauceMaterials {
 					productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
-						MaterialUuid: material.MaterialUUID,
+						MaterialUuid: material.MaterialUuid,
 						Num:          material.GetDecreaseNum(cookingDeductSaleOrderProduct.Num),
 					})
 				}

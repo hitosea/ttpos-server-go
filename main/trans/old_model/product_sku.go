@@ -8,6 +8,18 @@ import (
 	"gorm.io/gorm"
 )
 
+// 产品规格材料关联表 `jjjfood_product_sku_material`
+type ProductSkuMaterial struct {
+	ID             uint64  `gorm:"primaryKey;autoIncrement;comment:规格材料关联表主键"`
+	SpecID         int     `gorm:"default:0;comment:规格id"`
+	ProductSkuID   int     `gorm:"default:0;comment:产品规格id"`
+	MaterialID     int     `gorm:"default:0;comment:材料id"`
+	MaterialNum    float64 `gorm:"type:decimal(12,4);default:0.0000;comment:使用库存数量"`
+	ShopSupplierID int     `gorm:"default:0;comment:门店id"`
+	AppID          int     `gorm:"default:0;comment:应用id"`
+	CreateTime     int64   `gorm:"autoCreateTime;comment:创建时间"`
+}
+
 // 产品售罄关联表 `jjjfood_product_sold_out`
 type ProductSoldOut struct {
 	ID             uint64 `gorm:"primaryKey;autoIncrement;comment:Uuid"`
@@ -44,8 +56,9 @@ type ProductSKU struct {
 	CreateTime    int64   `gorm:"autoCreateTime;comment:创建时间"`
 	UpdateTime    int64   `gorm:"autoUpdateTime;comment:更新时间"`
 
-	Product        Product         `gorm:"foreignKey:ProductID;references:ProductID"`
-	ProductSoldOut *ProductSoldOut `gorm:"foreignKey:ProductSkuID;references:ProductSkuID"`
+	Product             Product               `gorm:"foreignKey:ProductID;references:ProductID"`
+	ProductSoldOut      *ProductSoldOut       `gorm:"foreignKey:ProductSkuID;references:ProductSkuID"`
+	ProductSkuMaterials []*ProductSkuMaterial `gorm:"foreignKey:ProductSkuID;references:ProductSkuID"`
 }
 
 func (model *ProductSKU) GetIsSoldOut() int {
@@ -67,7 +80,7 @@ type ProductSKUService struct {
 
 func (s *ProductSKUService) GetProductSKUService() ([]*ProductSKU, error) {
 	var productSKUs []*ProductSKU
-	if err := s.db.Preload("ProductSoldOut").Preload("Product").Find(&productSKUs).Error; err != nil {
+	if err := s.db.Preload("ProductSoldOut").Preload("Product").Preload("ProductSkuMaterials").Find(&productSKUs).Error; err != nil {
 		return nil, err
 	}
 	return productSKUs, nil
