@@ -511,7 +511,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_desk` (
     `type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台类型ID',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序序号',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-未开台 1-已开台',
-    `is_disable` INT(10) NOT NULL DEFAULT 1 COMMENT '是否禁用, 0-否 1-是',
+    `is_disable` INT(10) NOT NULL DEFAULT 0 COMMENT '是否禁用, 0-否 1-是',
     `need_service_fee` INT(10) NOT NULL DEFAULT 1 COMMENT '是否需要服务费, 0-否 1-是.标记该桌台收取服务费',
     `qrcode_token` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '二维码图片URL的token,判断二维码链接是否有效,token相同则二维码链接有效',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单UUID,销售账单ID,一个桌台只能绑定一个销售账单，一个单结束后才能绑定下一个单',

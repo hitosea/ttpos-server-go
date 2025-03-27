@@ -33,7 +33,7 @@ type Desk struct {
 	TypeUuid     uint64 `gorm:"column:type_uuid;type:bigint(20) unsigned;default:0;comment:桌台类型ID;NOT NULL" json:"type_uuid"`
 	Sort         uint   `gorm:"column:sort;type:int(11);default:0;comment:排序序号;NOT NULL" json:"sort"`
 	Status       uint   `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-未开台 1-已开台;NOT NULL" json:"status"`
-	IsDisable    uint   `gorm:"column:is_disable;type:tinyint(1);default:1;comment:是否禁用, 0-否 1-是;NOT NULL" json:"is_disable"`
+	IsDisable    uint   `gorm:"column:is_disable;type:tinyint(1);default:0;comment:是否禁用, 0-否 1-是;NOT NULL" json:"is_disable"`
 	QrcodeToken  string `gorm:"column:qrcode_token;type:varchar(255);comment:二维码图片URL的token,判断二维码链接是否有效,token相同则二维码链接有效;NOT NULL" json:"qrcode_token"`
 	SaleBillUuid uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单UUID,销售账单ID,一个桌台只能绑定一个销售账单，一个单结束后才能绑定下一个单;NOT NULL" json:"sale_bill_uuid"`
 	DeviceUuid   uint64 `gorm:"column:device_uuid;type:bigint(20) unsigned;default:0;comment:平板设备uuid, 0-未绑定;NOT NULL" json:"device_uuid"`

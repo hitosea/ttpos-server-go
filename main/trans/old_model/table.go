@@ -79,6 +79,7 @@ func (s *TableService) ConvertTable() error {
 			QrcodeToken: table.QRCodeValue,
 			DeviceUuid:  uint64(deviceId),
 		}
+		fmt.Println(fmt.Sprintf("desk: %+v", desk))
 
 		_, err := repository.NewDeskRepo(s.targetDB).CreateDesk(desk)
 		if err != nil {

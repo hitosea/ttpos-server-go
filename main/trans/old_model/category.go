@@ -19,7 +19,7 @@ type Category struct {
 	Sort           uint   `gorm:"not null;default:0;comment:排序方式(数字越小越靠前)"`
 	Type           uint8  `gorm:"not null;default:0;comment:0外卖1店内"`
 	ShopSupplierID int    `gorm:"not null;default:0;comment:门店id"`
-	Status         uint   `gorm:"not null;default:1;comment:是否显示1显示0隐藏"`
+	Status         int    `gorm:"not null;default:1;comment:是否显示1显示0隐藏"`
 	IsButton       int    `gorm:"default:0;comment:是否按钮 0-否 1-是"`
 	AppID          uint   `gorm:"not null;default:0;comment:应用id"`
 	CreateTime     uint   `gorm:"not null;default:0;comment:创建时间"`
