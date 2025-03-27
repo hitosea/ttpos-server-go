@@ -641,8 +641,8 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 				SaleOrderUuid: reqs.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
-			Old: event.Old{TableId: oldDesk.Uuid, TableNo: oldDesk.DeskNo},
-			New: event.New{TableId: reqs.DeskUuid, TableNo: desk.DeskNo},
+			Old: event.Table{TableId: oldDesk.Uuid, TableNo: oldDesk.DeskNo},
+			New: event.Table{TableId: reqs.DeskUuid, TableNo: desk.DeskNo},
 		})
 	}()
 

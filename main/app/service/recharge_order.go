@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
@@ -1320,11 +1321,11 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			return errors.NewWithCode(constant.CodeReturnOrderBank, "请选择银行")
 		}
 	}
-	refundPayTypes := make([]RefundPayType, 0)
+	refundPayTypes := make([]event.RefundPayType, 0)
 	for _, amount := range returnOrderAmounts {
 		for _, paymentRecord := range paymentRecords {
 			if amount.PaymentMethodUuid == paymentRecord.PaymentMethodUuid {
-				refundPayTypes = append(refundPayTypes, RefundPayType{
+				refundPayTypes = append(refundPayTypes, event.RefundPayType{
 					Name:          paymentRecord.PaymentName,
 					Code:          paymentRecord.PaymentMethodCode,
 					Amount:        amount.Amount,

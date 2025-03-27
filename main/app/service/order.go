@@ -2396,7 +2396,7 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 
 	// 发布"改价"事件
 	go func() {
-		event.NewSystemBus().PublishChangePriceSaleOrderEvent(event.ChangePriceSaleOrderPayload{
+		event.NewSystemBus().PublishDiscountChangePriceSaleOrderEvent(event.DiscountSaleOrderPayload{
 			BasePayload: event.BasePayload{
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
@@ -2536,7 +2536,7 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 
 	// 发布"订单抹零"事件
 	go func() {
-		event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountZeroSaleOrderPayload{
+		event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountSaleOrderPayload{
 			BasePayload: event.BasePayload{
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),

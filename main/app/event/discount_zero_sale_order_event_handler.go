@@ -26,7 +26,7 @@ func init() {
 // discountZeroSaleOrderEventHandler "优惠折扣"事件处理器
 func discountZeroSaleOrderEventHandler() {
 	once_discount_zero_sale_order_event_handler.Do(func() {
-		event.NewSystemBus().SubscribeDiscountZeroSaleOrderEvent(func(payload event.DiscountZeroSaleOrderPayload) {
+		event.NewSystemBus().SubscribeDiscountZeroSaleOrderEvent(func(payload event.DiscountSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 			record := model.SaleOrderOperationRecord{

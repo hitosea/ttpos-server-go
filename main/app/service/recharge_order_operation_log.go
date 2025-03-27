@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/utils"
 )
 
@@ -90,13 +91,13 @@ func (s *rechargeOrderSrv) getReverseSettleLogData(order model.MemberRechargeOrd
 }
 
 type RefundLog struct {
-	RefundType     uint            `json:"refund_type"`
-	RefundMoney    float64         `json:"refund_money"`
-	RefundPayTypes []RefundPayType `json:"refund_pay_types"`
+	RefundType     uint                  `json:"refund_type"`
+	RefundMoney    float64               `json:"refund_money"`
+	RefundPayTypes []event.RefundPayType `json:"refund_pay_types"`
 }
 
 // 订单退款日志data
-func (s *rechargeOrderSrv) getRefundData(refundType uint, refundMoney float64, refundPayTypes []RefundPayType) string {
+func (s *rechargeOrderSrv) getRefundData(refundType uint, refundMoney float64, refundPayTypes []event.RefundPayType) string {
 	operationData, _ := json.Marshal(RefundLog{
 		RefundType:     refundType,
 		RefundMoney:    refundMoney,

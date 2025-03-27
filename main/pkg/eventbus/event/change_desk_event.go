@@ -11,16 +11,11 @@ const EventChangeDesk EventName = "Event_Change_Desk"
 // ChangeDeskPayload “转台”事件数据结构
 type ChangeDeskPayload struct {
 	BasePayload
-	Old Old `json:"old"`
-	New New `json:"new"`
+	Old Table `json:"old"`
+	New Table `json:"new"`
 }
 
-type Old struct {
-	TableId uint64 `json:"table_id"`
-	TableNo string `json:"table_no"`
-}
-
-type New struct {
+type Table struct {
 	TableId uint64 `json:"table_id"`
 	TableNo string `json:"table_no"`
 }

@@ -18026,6 +18026,10 @@ const docTemplate = `{
                 "total_num": {
                     "description": "桌台总计数量",
                     "type": "integer"
+                },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "integer"
                 }
             }
         },
@@ -21404,6 +21408,10 @@ const docTemplate = `{
                 "takeout": {
                     "description": "是否是打包订单，false:堂食订单 true:打包订单。只有点餐订单才有这个字段",
                     "type": "boolean"
+                },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "integer"
                 }
             }
         },
