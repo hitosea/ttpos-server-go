@@ -152,3 +152,15 @@ func (model *H5Order) AfterUpdate(tx *gorm.DB) (err error) {
 	}
 	return nil
 }
+
+// Desk - AfterUpdate 更新桌台后的逻辑 - 推送桌台更新
+func (model *Desk) AfterUpdate(tx *gorm.DB) (err error) {
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		data := map[string]interface{}{
+			"desk_uuid":   model.Uuid,
+			"update_time": model.BaseModel.UpdateTime,
+		}
+		go websocket.PushClient(companyUuid, "*", "*", websocket.UPDATE_DESK, data)
+	}
+	return nil
+}

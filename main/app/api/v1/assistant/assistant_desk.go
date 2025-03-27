@@ -1410,6 +1410,35 @@ func (h *DeskHandler) OrderChangePopulation(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// CompleteDesk 处理清台
+// @Summary 清台
+// @Description 清台
+// @Tags 点餐助手端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.DeskInfoReq true "详情参数"
+// @Success 200 {object} nil
+// @Failure 404 {object} nil "未找到"
+// @Router /assistant/desk/complete [post]
+func (h *DeskHandler) CompleteDesk(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.DeskJsonUuidReq{}
+	if err := c.ShouldBind(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.DeskReqMessage)
+		return
+	}
+	//
+	err := h.deskSrv.CompleteDesk(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -1478,5 +1507,6 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/desk/order/payment/zero_rule", wrapper.OrderPaymentZeroRule)                        // 设置结账抹零规则
 		privateApi.POST("/desk/order/free", wrapper.OrderFree)                                                // 免单
 		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品
+		privateApi.POST("/desk/complete", wrapper.CompleteDesk)                                               // 完成桌台
 	}
 }
