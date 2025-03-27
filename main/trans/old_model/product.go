@@ -1,6 +1,7 @@
 package old_model
 
 import (
+	"encoding/json"
 	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
@@ -64,6 +65,8 @@ type Product struct {
 	CreateTime           int64   `gorm:"autoCreateTime;comment:'创建时间'"`
 	UpdateTime           int64   `gorm:"autoUpdateTime;comment:'更新时间'"`
 
+	// 旧表中没有的字段。用于关联
+
 	ProductImage ProductImage `gorm:"foreignKey:product_id;references:product_id"`
 	ProductTax   ProductTax   `gorm:"foreignKey:product_id;references:product_id"`
 }
@@ -73,6 +76,49 @@ func (model *Product) GetProductStatus() uint8 {
 		return 0
 	}
 	return 1
+}
+
+// 获取商品的属性组
+func (model *Product) GetProductAttributeGroupList(db *gorm.DB, ids []uint64) ([]*Attribute, error) {
+	var attributes []*Attribute
+	err := db.Where("id IN ?", ids).Find(&attributes).Error
+	if err != nil {
+		return nil, err
+	}
+	return attributes, nil
+}
+
+// 获取商品的属性组的属性
+func (model *Product) GetProductAttributeList(db *gorm.DB, ids []uint64) ([]*Attribute, error) {
+	var attributes []*Attribute
+	err := db.Where("id IN ?", ids).Find(&attributes).Error
+	if err != nil {
+		return nil, err
+	}
+	return attributes, nil
+}
+
+type ProductAttr struct {
+	ParentID               int      `json:"parent_id"`
+	ParentName             string   `json:"parent_name"`
+	AttributeName          string   `json:"attribute_name"`
+	AttributeValue         []string `json:"attribute_value"`
+	DefaultSelect          []int    `json:"default_select"`
+	AttributeIDs           []int    `json:"attribute_ids"`
+	AttributeMaxSelect     int      `json:"attribute_max_select"`
+	AttributeOpenMaxSelect int      `json:"attribute_open_max_select"`
+	AttributeRequired      int      `json:"attribute_required"`
+	AttributeNameText      string   `json:"attribute_name_text"`
+}
+
+// 解析ProductAttr字段
+func (model *Product) ParseProductAttr() ([]*ProductAttr, error) {
+	var attributes []*ProductAttr
+	err := json.Unmarshal([]byte(model.ProductAttr), &attributes)
+	if err != nil {
+		return nil, err
+	}
+	return attributes, nil
 }
 
 type ProductImage struct {
