@@ -149,7 +149,6 @@ func (r *StatisticsRepo) CountBusinessAmount(shiftNo string) float64 {
 // CountSale 统计销售数据
 func (r *StatisticsRepo) CountSale(opts ...DBOption) model.StatisticsSaleData {
 	var result model.StatisticsSaleData
-
 	db := r.db
 	for _, opt := range opts {
 		db = opt(db)
@@ -178,9 +177,9 @@ func (r *StatisticsRepo) CountSale(opts ...DBOption) model.StatisticsSaleData {
 			"SUM(payment_amount) AS order_amount",
 			"SUM(IF(desk_uuid > 0, payment_amount, NULL)) AS desk_order_amount",
 			"SUM(IF(desk_uuid = 0, payment_amount, NULL)) AS instant_order_amount",
-		).Group("sale_bill_uuid").Find(&result)
+		).Group("sale_bill_uuid")
 
-	db.Table("(?) AS t", subQuery).
+	r.db.Table("(?) AS t", subQuery).
 		Select(
 			"SUM(t.sale_amount) AS total_sale_amount",
 			"SUM(t.received_amount) AS total_received_amount",

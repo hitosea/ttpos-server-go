@@ -42,20 +42,24 @@ func NewBusinessSrvImpl(statisticsSrv IStatisticsSrv) IBusinessSrv {
 }
 
 // Printer 打印
-func (s *businessSrv) Printer(ctx context.Context, req req.BusinessDataPrinterReq) (*resp.PrinterData, error) {
+func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPrinterReq) (*resp.PrinterData, error) {
 	// Initialize the pointer to avoid nil dereference
 	reqPrinterData := &template.PrintingBusinessData{}
 	//
-	if req.StatisticsType == 0 {
+	if printerReq.StatisticsType == 0 {
 		// 销售数据
-		saleData := s.statisticsSrv.CountSale(ctx, CountSaleReq{
-			QueryStartTime: int64(req.QueryStartTime),
-			QueryEndTime:   int64(req.QueryEndTime),
+		saleData := s.statisticsSrv.CountSale(ctx, CountReq{
+			TimeType:       printerReq.TimeType,
+			QueryStartTime: int64(printerReq.QueryStartTime),
+			QueryEndTime:   int64(printerReq.QueryEndTime),
+			CategoryType:   printerReq.CategoryType,
 		})
 		// 支付数据
-		_, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, BuildPaymentMethodIncomeReq{
-			QueryStartTime: int64(req.QueryStartTime),
-			QueryEndTime:   int64(req.QueryEndTime),
+		_, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req.BusinessDataCountReq{
+			QueryStartTime: int64(printerReq.QueryStartTime),
+			QueryEndTime:   int64(printerReq.QueryEndTime),
+			TimeType:       printerReq.TimeType,
+			CategoryType:   printerReq.CategoryType,
 		})
 
 		reqPrinterData.All = &business_data_resp.BusinessDataAll{
@@ -106,8 +110,8 @@ func (s *businessSrv) Printer(ctx context.Context, req req.BusinessDataPrinterRe
 			},
 			PeakHourList: func() []business_data_resp.PeakHour {
 				peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
-					uint(req.QueryStartTime),
-					uint(req.QueryEndTime),
+					uint(printerReq.QueryStartTime),
+					uint(printerReq.QueryEndTime),
 					ctx.GetStaffUuid(),
 				)
 				if err != nil {
@@ -140,11 +144,13 @@ func (s *businessSrv) Printer(ctx context.Context, req req.BusinessDataPrinterRe
 		}
 	}
 
-	if req.StatisticsType == 1 {
+	if printerReq.StatisticsType == 1 {
 		// 支付数据
-		paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, BuildPaymentMethodIncomeReq{
-			QueryStartTime: int64(req.QueryStartTime),
-			QueryEndTime:   int64(req.QueryEndTime),
+		paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req.BusinessDataCountReq{
+			QueryStartTime: int64(printerReq.QueryStartTime),
+			QueryEndTime:   int64(printerReq.QueryEndTime),
+			TimeType:       printerReq.TimeType,
+			CategoryType:   printerReq.CategoryType,
 		})
 		reqPrinterData.PaymentMethod = &business_data_resp.BusinessDataPaymentMethod{
 			TotalReceivedPrice:   paymentData.TotalReceivedAmount,
@@ -152,7 +158,7 @@ func (s *businessSrv) Printer(ctx context.Context, req req.BusinessDataPrinterRe
 		}
 	}
 
-	if req.StatisticsType == 2 {
+	if printerReq.StatisticsType == 2 {
 		reqPrinterData.ProductCategory = &business_data_resp.BusinessDataProductCategory{
 			SalesNum: 120,
 			CategoryList: []business_data_resp.Category{
@@ -190,7 +196,7 @@ func (s *businessSrv) Printer(ctx context.Context, req req.BusinessDataPrinterRe
 		}
 	}
 
-	if req.StatisticsType == 3 {
+	if printerReq.StatisticsType == 3 {
 		reqPrinterData.Product = &business_data_resp.BusinessDataProduct{
 			Products: []business_data_resp.Product{
 				{
@@ -210,7 +216,7 @@ func (s *businessSrv) Printer(ctx context.Context, req req.BusinessDataPrinterRe
 	}
 
 	// 打印
-	printerData, err := printer.NewPrinterRepo(ctx).PrintingBusinessData(reqPrinterData, int64(req.QueryStartTime), int64(req.QueryEndTime))
+	printerData, err := printer.NewPrinterRepo(ctx).PrintingBusinessData(reqPrinterData, int64(printerReq.QueryStartTime), int64(printerReq.QueryEndTime))
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -221,17 +227,15 @@ func (s *businessSrv) Printer(ctx context.Context, req req.BusinessDataPrinterRe
 // CountBusiness 统计营业数据
 func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataAll, error) {
 	// 销售数据
-	saleData := s.statisticsSrv.CountSale(ctx, CountSaleReq{
-		ShiftNo:        req.DutyNo,
+	saleData := s.statisticsSrv.CountSale(ctx, CountReq{
+		TimeType:       req.TimeType,
 		QueryStartTime: int64(req.QueryStartTime),
 		QueryEndTime:   int64(req.QueryEndTime),
+		CategoryType:   req.CategoryType,
+		DutyNo:         req.DutyNo,
 	})
 	// 支付数据
-	_, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, BuildPaymentMethodIncomeReq{
-		ShiftNo:        req.DutyNo,
-		QueryStartTime: int64(req.QueryStartTime),
-		QueryEndTime:   int64(req.QueryEndTime),
-	})
+	_, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req)
 
 	// 营业数据
 	var businessData = business_data_resp.BusinessDataAll{
@@ -321,11 +325,7 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 
 // CountPaymentMethod 统计支付方式
 func (s *businessSrv) CountPaymentMethod(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataPaymentMethod, error) {
-	paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, BuildPaymentMethodIncomeReq{
-		ShiftNo:        req.DutyNo,
-		QueryStartTime: int64(req.QueryStartTime),
-		QueryEndTime:   int64(req.QueryEndTime),
-	})
+	paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req)
 
 	var paymentMethodData = business_data_resp.BusinessDataPaymentMethod{
 		TotalReceivedPrice:   paymentData.TotalReceivedAmount,
@@ -337,11 +337,7 @@ func (s *businessSrv) CountPaymentMethod(ctx context.Context, req req.BusinessDa
 
 // CountProductCategory 统计商品分类
 func (s *businessSrv) CountProductCategory(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProductCategory, error) {
-	paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, BuildPaymentMethodIncomeReq{
-		ShiftNo:        req.DutyNo,
-		QueryStartTime: int64(req.QueryStartTime),
-		QueryEndTime:   int64(req.QueryEndTime),
-	})
+	paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req)
 
 	var productCategoryData = business_data_resp.BusinessDataProductCategory{
 		SalesNum:           120,
@@ -472,19 +468,14 @@ func (s *businessSrv) CountProductSales(ctx context.Context, req req.BusinessDat
 	return &productListData, nil
 }
 
-// BuildPaymentMethodIncomeReq 构建支付方式收入请求
-type BuildPaymentMethodIncomeReq struct {
-	ShiftNo        string `json:"shift_no"`
-	QueryStartTime int64  `json:"query_start_time"`
-	QueryEndTime   int64  `json:"query_end_time"`
-}
-
 // BuildPaymentMethodIncome 构建支付方式收入
-func (s *businessSrv) BuildPaymentMethodIncome(ctx context.Context, req BuildPaymentMethodIncomeReq) (CountPaymentResp, []business_data_resp.PaymentMethodIncome) {
-	paymentData := s.statisticsSrv.CountPayment(ctx, CountPaymentReq{
-		ShiftNo:        req.ShiftNo,
+func (s *businessSrv) BuildPaymentMethodIncome(ctx context.Context, req req.BusinessDataCountReq) (CountPaymentResp, []business_data_resp.PaymentMethodIncome) {
+	paymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
+		DutyNo:         req.DutyNo,
 		QueryStartTime: req.QueryStartTime,
-		QueryEndTime:   int64(req.QueryEndTime),
+		QueryEndTime:   req.QueryEndTime,
+		TimeType:       req.TimeType,
+		CategoryType:   req.CategoryType,
 	})
 
 	paymentMethodIncomes := make([]business_data_resp.PaymentMethodIncome, 0)

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"time"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
@@ -12,9 +13,9 @@ import (
 
 // IStatisticsSrv 统计服务接口
 type IStatisticsSrv interface {
-	CountSale(ctx context.Context, req CountSaleReq) CountSaleResp          // 统计销售
-	CountPayment(ctx context.Context, req CountPaymentReq) CountPaymentResp // 统计支付
-	SaveSale(ctx context.Context, req SaveSaleReq) error                    // 保存销售
+	CountSale(ctx context.Context, req CountReq) CountSaleResp       // 统计销售
+	CountPayment(ctx context.Context, req CountReq) CountPaymentResp // 统计支付
+	SaveSale(ctx context.Context, req SaveSaleReq) error             // 保存销售
 }
 
 // statisticsSrv 统计服务实现
@@ -29,13 +30,6 @@ func NewStatisticsSrv() IStatisticsSrv {
 // NewStatisticsSrvImpl 创建统计服务实现
 func NewStatisticsSrvImpl() IStatisticsSrv {
 	return &statisticsSrv{}
-}
-
-// CountSaleReq 统计销售请求
-type CountSaleReq struct {
-	ShiftNo        string `json:"shift_no"`         // 当班编号
-	QueryStartTime int64  `json:"query_start_time"` // 查询开始时间
-	QueryEndTime   int64  `json:"query_end_time"`   // 查询结束时间
 }
 
 // CountSaleResp 统计销售响应
@@ -74,21 +68,9 @@ type CountSaleResp struct {
 }
 
 // CountSale 统计销售
-func (s *statisticsSrv) CountSale(ctx context.Context, req CountSaleReq) CountSaleResp {
-	var (
-		opts           []repository.DBOption
-		statisticsRepo = repository.NewStatisticsRepo(ctx.GetDB())
-		commonRepo     = repository.NewCommonRepo()
-	)
-
-	if req.ShiftNo != "" {
-		opts = append(opts, commonRepo.WhereByShiftNo(req.ShiftNo))
-	}
-	if req.QueryStartTime > 0 && req.QueryEndTime > 0 {
-		opts = append(opts, commonRepo.WhereBetweenByCompleteTime(req.QueryStartTime, req.QueryEndTime))
-	}
-
-	saleData := statisticsRepo.CountSale(opts...)
+func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleResp {
+	opts := s.buildCountOpts(req)
+	saleData := repository.NewStatisticsRepo(ctx.GetDB()).CountSale(opts...)
 
 	// 总优惠折扣率 = 总优惠折扣 / 总销售额
 	var discountRatio decimal.Decimal
@@ -159,26 +141,14 @@ type CountPaymentRespList struct {
 }
 
 // CountPayment 统计支付
-func (s *statisticsSrv) CountPayment(ctx context.Context, req CountPaymentReq) CountPaymentResp {
-	var (
-		opts           []repository.DBOption
-		list           []CountPaymentRespList
-		statisticsRepo = repository.NewStatisticsRepo(ctx.GetDB())
-		commonRepo     = repository.NewCommonRepo()
-	)
-
-	if req.ShiftNo != "" {
-		opts = append(opts, commonRepo.WhereByShiftNo(req.ShiftNo))
-	}
-	if req.QueryStartTime > 0 && req.QueryEndTime > 0 {
-		opts = append(opts, commonRepo.WhereBetweenByCompleteTime(req.QueryStartTime, req.QueryEndTime))
-	}
-
-	paymentData := statisticsRepo.CountPayment(opts...)
+func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPaymentResp {
+	opts := s.buildCountOpts(req)
+	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountPayment(opts...)
 
 	var (
 		totalReceivedAmount decimal.Decimal
 		totalRefundAmount   decimal.Decimal
+		list                = make([]CountPaymentRespList, 0)
 	)
 	for _, payment := range paymentData {
 		list = append(list, CountPaymentRespList{
@@ -309,4 +279,59 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 		}
 	}
 	return nil
+}
+
+// CountReq 统计请求
+type CountReq struct {
+	TimeType       int    `json:"time_type"`        // 时间类型 (1 今天, 2 昨天, 3 本周, 4 本月)
+	QueryStartTime int64  `json:"query_start_time"` // 查询开始时间戳
+	QueryEndTime   int64  `json:"query_end_time"`   // 查询结束时间戳
+	CategoryType   int    `json:"category_type"`    // 分类类型 (1 按一级分类, 2 按二级分类)
+	DutyNo         string `json:"duty_no"`          // 班次编号
+}
+
+// buildCountOpts 构建统计选项
+func (s *statisticsSrv) buildCountOpts(req CountReq) []repository.DBOption {
+	var (
+		opts           []repository.DBOption
+		commonRepo     = repository.NewCommonRepo()
+		queryStartTime int64
+		queryEndTime   int64
+	)
+	// 处理时间范围
+	if req.TimeType > 0 && req.TimeType < 5 {
+		now := time.Now()
+		var startTime, endTime time.Time
+		switch req.TimeType {
+		case 1: // 今天
+			startTime = now.Truncate(24 * time.Hour)
+			endTime = startTime.Add(24*time.Hour - time.Second)
+		case 2: // 昨天
+			startTime = now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
+			endTime = startTime.Add(24*time.Hour - time.Second)
+		case 3: // 本周
+			weekday := int(now.Weekday())
+			if weekday == 0 {
+				weekday = 7
+			}
+			startTime = now.AddDate(0, 0, -weekday+1).Truncate(24 * time.Hour)
+			endTime = startTime.AddDate(0, 0, 7).Add(-time.Second)
+		case 4: // 本月
+			startTime = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+			endTime = startTime.AddDate(0, 1, 0).Add(-time.Second)
+		}
+		queryStartTime = startTime.Unix()
+		queryEndTime = endTime.Unix()
+	}
+	if req.QueryStartTime > 0 && req.QueryEndTime > 0 {
+		queryStartTime = req.QueryStartTime
+		queryEndTime = req.QueryEndTime
+	}
+	if queryStartTime > 0 && queryEndTime > 0 {
+		opts = append(opts, commonRepo.WhereBetweenByCompleteTime(queryStartTime, queryEndTime))
+	}
+	if req.DutyNo != "" {
+		opts = append(opts, commonRepo.WhereByShiftNo(req.DutyNo))
+	}
+	return opts
 }
