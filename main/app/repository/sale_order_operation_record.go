@@ -10,8 +10,11 @@ import (
 
 // IOrderOperationRecordRepo 订单操作记录
 type IOrderOperationRecordRepo interface {
+	WithSaleBillUuid(saleBillUuid uint64) DBOption
+	WithH5OrderUuid(h5OrderUuid uint64) DBOption
+
 	GetRecordList(pageNo, pageSize int, opts ...DBOption) ([]model.SaleOrderOperationRecord, int64, error)
-	GetRecordLists(saleBillUuid uint64) ([]model.SaleOrderOperationRecord, error)
+	GetRecordLists(opts ...DBOption) ([]model.SaleOrderOperationRecord, error)
 	GetRecordInfo(saleBillUuid uint64) (model.SaleOrderOperationRecord, error)
 	UpdateRecord(saleBillUuid uint64, record model.SaleOrderOperationRecord) error
 	CreateSaleOrderOperationRecord(model model.SaleOrderOperationRecord) (uint64, error)
@@ -63,11 +66,28 @@ func (r *OrderOperationRecordRepoImpl) GetRecordList(pageNo, pageSize int, opts 
 	return orderOperationRecords, total, errors.WithMessage(err)
 }
 
+// WithSaleBillUuid 账单Uuid条件
+func (r *OrderOperationRecordRepoImpl) WithSaleBillUuid(saleBillUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("sale_bill_uuid = ?", saleBillUuid)
+	}
+}
+
+// WithH5OrderUuid H5订单Uuid条件
+func (r *OrderOperationRecordRepoImpl) WithH5OrderUuid(h5OrderUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("h5_order_uuid = ?", h5OrderUuid)
+	}
+}
+
 // GetRecordLists 获取订单操作记录列表
-func (r *OrderOperationRecordRepoImpl) GetRecordLists(saleBillUuid uint64) ([]model.SaleOrderOperationRecord, error) {
+func (r *OrderOperationRecordRepoImpl) GetRecordLists(opts ...DBOption) ([]model.SaleOrderOperationRecord, error) {
 	var orderOperationRecords []model.SaleOrderOperationRecord
-	err := r.db.Model(&model.SaleOrderOperationRecord{}).Preload("Operator").
-		Where("delete_time = ?", 0).Where("sale_bill_uuid = ?", saleBillUuid).Order("create_time desc, id desc").Find(&orderOperationRecords).Error
+	db := r.db.Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Model(&model.SaleOrderOperationRecord{}).Preload("Operator").Order("create_time desc, id desc").Find(&orderOperationRecords).Error
 	return orderOperationRecords, errors.WithMessage(err)
 }
 

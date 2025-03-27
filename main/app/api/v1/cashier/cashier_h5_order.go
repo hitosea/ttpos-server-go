@@ -39,7 +39,7 @@ func (h *H5OrderHandler) GetH5OrderList(c *gin.Context) {
 		helper.HandleValidationError(c, err, h5OrderListReq, nil)
 		return
 	}
-	res, err := h.h5OrderSrv.GetH5OrderList(helper.GetCompanyUuid(c), h5OrderListReq)
+	res, err := h.h5OrderSrv.GetH5OrderList(helper.GetContext(c), h5OrderListReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -63,7 +63,7 @@ func (h *H5OrderHandler) GetH5OrderDetail(c *gin.Context) {
 		helper.HandleValidationError(c, err, h5OrderDetailReq, nil)
 		return
 	}
-	res, err := h.h5OrderSrv.GetH5OrderDetail(helper.GetCompanyUuid(c), h5OrderDetailReq.H5OrderUuid)
+	res, err := h.h5OrderSrv.GetH5OrderDetail(helper.GetContext(c), h5OrderDetailReq.H5OrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

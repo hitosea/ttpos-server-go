@@ -66,6 +66,7 @@ func createSaleOrderOperationRecord(db *gorm.DB, payload event.SentCookingPayloa
 		Remark:        "送厨",
 		SaleBillUuid:  payload.SaleBillUuid,
 		SaleOrderUuid: payload.SaleOrderUuid,
+		H5OrderUuid:   payload.H5OrderUuid,
 		OperatorUuid:  payload.GetOperatorUuid(),
 	}
 	record.Data = payload.ToJsonString()

@@ -706,26 +706,26 @@ definitions:
     type: object
   req.BusinessDataCountReq:
     properties:
-      category_type:
-        description: 分类类型 (1 按一级分类, 2 按二级分类)
+      categoryType:
+        description: 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
         type: integer
-      duty_no:
+      dutyNo:
         description: 班次编号
         type: string
-      query_end_time:
+      queryEndTime:
         description: 查询结束时间戳
         type: integer
-      query_start_time:
+      queryStartTime:
         description: 查询开始时间戳
         type: integer
-      time_type:
-        description: 时间类型 (1 按日, 2 昨天, 3 本周, 4 本月)
+      timeType:
+        description: 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)
         type: integer
     type: object
   req.BusinessDataPrinterReq:
     properties:
       category_type:
-        description: 分类类型 (1 按一级分类, 2 按二级分类)
+        description: 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
         type: integer
       query_end_time:
         description: 查询结束时间戳
@@ -737,18 +737,18 @@ definitions:
         description: 统计类型 (0 全部, 1 按支付方式, 2 按商品分类, 3 按商品)
         type: integer
       time_type:
-        description: 时间类型 (1 按日, 2 昨天, 3 本周, 4 本月)
+        description: 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)
         type: integer
     type: object
   req.BusinessDataRankProductReq:
     properties:
-      query_end_time:
+      queryEndTime:
         description: 查询结束时间戳
         type: integer
-      query_start_time:
+      queryStartTime:
         description: 查询开始时间戳
         type: integer
-      rank_type:
+      rankType:
         description: 排行类型 (1 按销量, 2 按销售额)
         type: integer
     type: object
@@ -2689,7 +2689,7 @@ definitions:
     type: object
   resp.H5OrderDetailResp:
     properties:
-      accepted_product_list:
+      accepted_product:
         allOf:
         - $ref: '#/definitions/resp.ProductList'
         description: 已下单商品列表
@@ -2697,13 +2697,13 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.H5OrderDetail'
         description: 订单详情
-      new_product_list:
+      new_product:
         allOf:
         - $ref: '#/definitions/resp.ProductList'
         description: 新增商品列表
-      operation_log_list:
+      operation:
         allOf:
-        - $ref: '#/definitions/resp.OperationLogList'
+        - $ref: '#/definitions/resp.OperationLog'
         description: 操作日志列表
     type: object
   resp.H5OrderItem:
@@ -3071,29 +3071,11 @@ definitions:
           $ref: '#/definitions/resp.OnlineCashier'
         type: array
     type: object
-  resp.OperationLogItem:
-    properties:
-      create_time:
-        description: 日志创建时间
-        type: integer
-      description:
-        description: 描述
-        type: string
-      email:
-        description: 账号
-        type: string
-      real_name:
-        description: real_name 真实姓名
-        type: string
-      source:
-        description: 来源：收银端、商家后台等
-        type: string
-    type: object
-  resp.OperationLogList:
+  resp.OperationLog:
     properties:
       list:
         items:
-          $ref: '#/definitions/resp.OperationLogItem'
+          $ref: '#/definitions/resp.OrderOperationLog'
         type: array
     type: object
   resp.OrderBuffetResp:

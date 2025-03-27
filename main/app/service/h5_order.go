@@ -19,8 +19,8 @@ import (
 
 // IH5OrderSrv 定义接单服务接口
 type IH5OrderSrv interface {
-	GetH5OrderList(companyUuid uint64, acceptOrderListReq req.H5OrderListReq) (*resp.H5OrderList, error)       // 获取h5订单列表
-	GetH5OrderDetail(companyUuid uint64, orderUuid uint64) (*resp.H5OrderDetailResp, error)                    // 获取h5订单详情
+	GetH5OrderList(ctx context.Context, listReq req.H5OrderListReq) (*resp.H5OrderList, error)                 // 获取h5订单列表
+	GetH5OrderDetail(ctx context.Context, orderUuid uint64) (*resp.H5OrderDetailResp, error)                   // 获取h5订单详情
 	RejectH5Order(ctx context.Context, h5OrderUuid uint64) error                                               // 拒单
 	AcceptH5Order(ctx context.Context, orderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error) // 接单
 }
@@ -42,11 +42,11 @@ func NewH5OrderSrvImpl(dbm *database.DBManager, orderSrv IOrderSrv) IH5OrderSrv 
 	}
 }
 
-func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListReq) (*resp.H5OrderList, error) {
+func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderListReq) (*resp.H5OrderList, error) {
 	var listResp = resp.H5OrderList{
 		List: make([]resp.H5OrderItem, 0),
 	}
-	h5OrderRepo := repository.NewH5OrderRepo(s.dbm.GetDB(companyUuid))
+	h5OrderRepo := repository.NewH5OrderRepo(ctx.GetDB())
 	var dbOptions []repository.DBOption
 	unhandledStatusOption := h5OrderRepo.WhereStatus([]uint{constant.H5OrderStatusOrder})
 	handledStatusOption := h5OrderRepo.WhereStatus([]uint{constant.H5OrderStatusAccepted, constant.H5OrderStatusRejected})
@@ -142,8 +142,8 @@ func (s *h5OrderSrv) GetH5OrderList(companyUuid uint64, listReq req.H5OrderListR
 	return &listResp, nil
 }
 
-func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*resp.H5OrderDetailResp, error) {
-	h5OrderRepo := repository.NewH5OrderRepo(s.dbm.GetDB(companyUuid))
+func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (*resp.H5OrderDetailResp, error) {
+	h5OrderRepo := repository.NewH5OrderRepo(ctx.GetDB())
 	h5Order, err := h5OrderRepo.GetH5OrderDetailOrdered(h5OrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
@@ -202,6 +202,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*
 		cashier = h5Order.Staff.RealName
 	}
 
+	operationLogs, _ := s.orderSrv.GetRecordList(ctx, h5Order.SaleBillUuid, h5OrderUuid)
 	return &resp.H5OrderDetailResp{
 		H5OrderDetail: resp.H5OrderDetail{
 			H5OrderInfo: resp.H5OrderInfo{
@@ -217,14 +218,14 @@ func (s *h5OrderSrv) GetH5OrderDetail(companyUuid uint64, h5OrderUuid uint64) (*
 			DeskUuid: h5Order.DeskUuid,
 			Cashier:  cashier,
 		},
-		NewProductList: resp.ProductList{
+		NewProduct: resp.ProductList{
 			List: newProducts,
 		},
-		AcceptedProductList: resp.ProductList{
+		AcceptedProduct: resp.ProductList{
 			List: acceptedProducts,
 		},
-		OperationLogList: resp.OperationLogList{ // ToDo 处理日志
-			List: make([]resp.OperationLogItem, 0),
+		OperationLog: resp.OperationLog{
+			List: operationLogs,
 		},
 	}, nil
 }

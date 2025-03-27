@@ -11,7 +11,6 @@ const EventRejectH5Order EventName = "Event_Reject_H5_Order"
 // RejectH5OrderPayload 拒单事件数据结构
 type RejectH5OrderPayload struct {
 	BasePayload
-	H5OrderUuid uint64 `json:"h_5_order_uuid"` // h5订单Uuid
 }
 
 func (payload *RejectH5OrderPayload) ToJsonString() string {
