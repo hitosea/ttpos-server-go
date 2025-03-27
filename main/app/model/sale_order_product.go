@@ -692,8 +692,9 @@ type DefaultSaleOrderProduct struct {
 	Sauces                 []Sauce
 	Flavor                 Flavor
 	Attribute              []Attribute
-	IsAcceptOrder          uint // 是否接单
-	Num                    uint // 数量
+	IsAcceptOrder          uint   // 是否接单
+	Num                    uint   // 数量
+	Remark                 string // 备注
 }
 
 func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *ProductPackage, operation string) *SaleOrderProduct {
@@ -734,6 +735,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 			Uuid: saleOrderProductUuid,
 		},
 		Name:                       def.Name,
+		Remark:                     def.Remark,
 		FlavorName:                 def.Flavor.Name,
 		Num:                        def.Num,
 		Status:                     constant.OrderProductStatusUnSending,

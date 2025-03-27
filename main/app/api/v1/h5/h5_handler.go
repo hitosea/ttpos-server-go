@@ -72,7 +72,7 @@ func (h *H5Handler) GetBuffetList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// CreateDeskOrder 处理创建开台
+// OpenDesk 处理创建开台
 // @Summary 开台
 // @Description 开台
 // @Tags 扫码点餐
@@ -93,7 +93,6 @@ func (h *H5Handler) OpenDesk(c *gin.Context) {
 	}
 	// 获取桌台uuid
 	params.DeskUuid = ctx.GetDeskUuid()
-	// todo 判断门店设置扫码H5能否开台
 	// 创建桌台订单
 	res, err := h.deskSrv.CreateDeskOrder(ctx, params)
 	// 处理错误
@@ -145,14 +144,14 @@ func (h *H5Handler) GetProductCategoryList(c *gin.Context) {
 // @Router /h5/product/list [get]
 func (h *H5Handler) GetProductList(c *gin.Context) {
 	// 绑定请求参数
-	req := req.ProductListReq{}
-	if err := c.ShouldBindQuery(&req); err != nil {
-		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
+	productListReq := req.ProductListReq{}
+	if err := c.ShouldBindQuery(&productListReq); err != nil {
+		helper.HandleValidationError(c, err, productListReq, dto.PageReqMessage)
 		return
 	}
 
 	// 获取收银产品列表
-	res, err := h.productSrv.GetProductList(helper.GetContext(c), req)
+	res, err := h.productSrv.GetProductList(helper.GetContext(c), productListReq)
 
 	// 处理错误
 	if err != nil {

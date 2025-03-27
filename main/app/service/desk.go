@@ -301,6 +301,7 @@ func (s *deskSrv) GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *
 // CreateDeskOrder 创建桌台订单
 func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error) {
 	dbId := ctx.GetDbId()
+	companySetting := ctx.GetCompanySetting()
 	// 验证请求参数
 	err := req.ValidateCreateDeskOrderReq()
 	if err != nil {
@@ -338,6 +339,9 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 		}
 	}
 	if ctx.GetSource() == constant.SourceH5 {
+		if companySetting.IsOpenH5 != 1 {
+			return resp.CreateDeskOrderResp{}, errors.New("当前未开启扫码点餐功能，请联系销售代表")
+		}
 		tabletSetting, err := s.settingSrv.GetH5Setting(ctx, nil)
 		if err != nil {
 			return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
@@ -350,6 +354,10 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 	// 判断是否自助餐订单
 	var result resp.CreateDeskOrderResp
 	if req.IsBuffet() {
+		buffetSetting, _ := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+		if buffetSetting.IsOpen != "1" {
+			return resp.CreateDeskOrderResp{}, errors.New("未开启自助餐")
+		}
 		deskBuffetOrder, err := s.createDeskBuffetOrder(ctx, req)
 		if err != nil {
 			return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "s.createDeskBuffetOrder failed, request:", utils.ToJson(req))

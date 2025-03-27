@@ -1500,6 +1500,9 @@ definitions:
         items:
           type: integer
         type: array
+      remark:
+        description: 备注，平板端离线购物车提交
+        type: string
       sauce_product_bom_uuid_list:
         description: 加料信息
         items:
@@ -13658,35 +13661,6 @@ paths:
       security:
       - JwtToken: []
       summary: 获取自助餐商品列表
-      tags:
-      - 平板端.桌台
-  /tablet/desk/order/cart/product/add:
-    post:
-      consumes:
-      - application/json
-      description: 向购物车添加商品
-      parameters:
-      - description: 商品参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.OrderCartProductAddReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.DeskPing'
-              type: object
-      security:
-      - JwtToken: []
-      summary: 向购物车添加商品
       tags:
       - 平板端.桌台
   /tablet/desk/order/cart/product/add_and_cooking:

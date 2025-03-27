@@ -14089,57 +14089,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/tablet/desk/order/cart/product/add": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "向购物车添加商品",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "平板端.桌台"
-                ],
-                "summary": "向购物车添加商品",
-                "parameters": [
-                    {
-                        "description": "商品参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.OrderCartProductAddReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.DeskPing"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
         "/tablet/desk/order/cart/product/add_and_cooking": {
             "post": {
                 "security": [
@@ -16734,6 +16683,10 @@ const docTemplate = `{
                     "items": {
                         "type": "integer"
                     }
+                },
+                "remark": {
+                    "description": "备注，平板端离线购物车提交",
+                    "type": "string"
                 },
                 "sauce_product_bom_uuid_list": {
                     "description": "加料信息",

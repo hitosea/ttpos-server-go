@@ -3412,6 +3412,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			},
 			Attribute:     attributes,
 			IsAcceptOrder: uint(isAcceptOrder),
+			Remark:        product.Remark,
 		}, &productPackage, product.Operation)
 		// 设置必点信息
 		var mustPlanUuid uint64
