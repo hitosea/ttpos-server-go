@@ -250,7 +250,7 @@ func (s *ProductService) ConvertProduct() error {
 				ImageName:             product.ImgName,
 				UnitUuid:              product.UnitID,
 				Price:                 product.ProductPrice, // todo 确认“采购单价”是对应旧表的哪个字段
-				StockNum:              product.ProductMaterialStock,
+				StockNum:              usign(product.ProductMaterialStock),
 				BarcodeValue:          product.ProductNo,
 				Status:                product.ProductStatus == 10,
 				MultiLanguageName:     languageName,
@@ -262,4 +262,11 @@ func (s *ProductService) ConvertProduct() error {
 		}
 	}
 	return nil
+}
+
+func usign(num float64) float64 {
+	if num < 0 {
+		return 0
+	}
+	return num
 }

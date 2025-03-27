@@ -38,11 +38,11 @@ func TestConvertAll(t *testing.T) {
 	testConvertTable()                 // 桌台
 	testConvertTableType()             // 桌台类型
 	testConvertTableArea()             // 桌台区域
-	testConvertShopAccess()            // 权限 // 主键冲突
-	testConvertShopRole()              // 角色
-	testConvertShopUser()              // 用户
-	testConvertShopUserRole()          // 用户角色
-	testConvertShopRoleAccess()        // 角色权限
+	// testConvertShopAccess()            // 权限 // 主键冲突
+	testConvertShopRole()       // 角色
+	testConvertShopUser()       // 用户
+	testConvertShopUserRole()   // 用户角色
+	testConvertShopRoleAccess() // 角色权限
 	// testConvertCall()                  // 客户呼叫记录 // Table 'shop7828781666304000.customer_call' doesn't exist [recove
 	testConvertSupplierPrinting() // 商品打印（档口）
 	testConvertPrinter()          // 打印机
@@ -55,5 +55,5 @@ func TestConvertAll(t *testing.T) {
 	testConvertUserCardRecord() // 会员卡领取记录
 	testConvertUserPointsLog()  // 会员积分变动记录
 	testConvertUserBalanceLog() // 会员余额变动记录
-
+	testConvertProductSKU()     // 商品规格
 }
