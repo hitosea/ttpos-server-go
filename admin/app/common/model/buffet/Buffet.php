@@ -5,13 +5,14 @@ namespace app\common\model\buffet;
 use think\facade\Db;
 use app\common\library\helper;
 use app\common\model\BaseModel;
-use think\model\concern\SoftDelete;
-use app\common\enum\order\OrderPayStatusEnum;
 use app\common\model\bill\SaleBill;
-use app\common\model\bill\SaleOrderBuffetCustomerType;
-use app\common\model\order\Order as OrderModel;
-use app\common\model\order\OrderBuffet as OrderBuffetModel;
+use think\model\concern\SoftDelete;
+use app\common\service\websocket\Websocket;
+use app\common\enum\order\OrderPayStatusEnum;
 use app\common\model\store\MultiLanguageName;
+use app\common\model\order\Order as OrderModel;
+use app\common\model\bill\SaleOrderBuffetCustomerType;
+use app\common\model\order\OrderBuffet as OrderBuffetModel;
 
 /**
  *
@@ -23,6 +24,32 @@ class Buffet extends BaseModel
     protected $deleteTime = 'delete_time';
     protected $defaultSoftDelete = 0;
 
+     /**
+     * 分类更新后推送通知
+     */
+    public static function onAfterWrite(Buffet $model)
+    {
+        $msgData = [
+            'type' => 'update',
+            'buffet_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_BUFFET, 0, $msgData);
+    }
+
+    /**
+     * 分类删除后推送通知
+     */
+    public static function onAfterDelete(Buffet $model)
+    {
+        $msgData = [
+            'type' => 'delete',
+            'buffet_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_BUFFET, 0, $msgData);
+    }
+    
     /**
      * 追加字段
      * @var string[]

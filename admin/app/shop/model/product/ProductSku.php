@@ -54,49 +54,4 @@ class ProductSku extends ProductSkuModel
         }
     }
 
-    /**
-     * 添加商品规格关系记录
-     */
-    public function addProductSpecRel($product_id, $spec_attr)
-    {
-        $data = [];
-        $model = new ProductSpecRel;
-
-        array_map(function ($val) use (&$data, $product_id, $model) {
-            array_map(function ($item) use (&$val, &$data, $product_id, $model) {
-                $detail = $model->where('product_id', '=', $product_id)
-                    ->where('spec_id', '=', $val['group_id'])
-                    ->where('spec_value_id', '=', $item['item_id'])->find();
-                if (!$detail) {
-                    $data[] = [
-                        'product_id' => $product_id,
-                        'spec_id' => $val['group_id'],
-                        'spec_value_id' => $item['item_id'],
-                    ];
-                }
-            }, $val['spec_items']);
-        }, $spec_attr);
-
-        count($data) > 0 && $model->saveAll($data);
-    }
-
-    /**
-     * 移除指定商品的所有sku
-     */
-    public function removeAll($product_id)
-    {
-        $model = new ProductSpecRel;
-        return $model->where('product_id', '=', $product_id)->delete();
-    }
-
-    /**
-     * 移除指定商品的所有sku
-     */
-    public function removeSkuBySpec($product_id)
-    {
-        $model = new self;
-        return $model->where('product_id', '=', $product_id)
-            ->where('spec_sku_id', '<>', 0)
-            ->delete();
-    }
 }

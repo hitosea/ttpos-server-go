@@ -3,6 +3,7 @@
 namespace app\common\model\product;
 
 use app\common\model\BaseModel;
+use app\common\service\websocket\Websocket;
 
 /**
  * 打印标签模型
@@ -16,6 +17,32 @@ class Label extends BaseModel
      * 追加字段
      */
     protected $append = ['label_id', 'label_name', 'label_name_text'];
+
+    /**
+     * 商品更新后推送通知
+     */
+    public static function onAfterWrite(Label $model)
+    {
+        $msgData = [
+            'type' => 'update',
+            'product_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_KITCHEN, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData);
+    }
+
+    /**
+     * 商品删除后推送通知
+     */
+    public static function onAfterDelete(Label $model)
+    {
+        $msgData = [
+            'type' => 'update',
+            'product_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_KITCHEN, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData);
+    }
 
     /**
      * 兼容字段

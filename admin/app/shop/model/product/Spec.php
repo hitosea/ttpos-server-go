@@ -2,8 +2,9 @@
 
 namespace app\shop\model\product;
 
-use app\common\model\product\ProductBom;
 use help\ValidateHelp;
+use app\common\model\product\ProductBom;
+use app\common\service\websocket\Websocket;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Spec as SpecModel;
 
@@ -12,6 +13,32 @@ use app\common\model\product\Spec as SpecModel;
  */
 class Spec extends SpecModel
 {
+    /**
+     * 规格更新后推送通知
+     */
+    public static function onAfterWrite(Spec $model)
+    {
+        $msgData = [
+            'type' => 'update',
+            'product_uuid' => 0,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData);
+    }
+
+    /**
+     * 规格删除后推送通知
+     */
+    public static function onAfterDelete(Spec $model)
+    {
+        $msgData = [
+            'type' => 'update',
+            'product_uuid' =>0,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData);
+    }
+    
     /**
      * 获取列表数据
      */
@@ -163,7 +190,19 @@ class Spec extends SpecModel
                 }
                 ProductBom::insertAll($insert_data);
             }
+            // 提交事务
             $this->commit();
+
+            // 推送
+            if (!empty($delete_product_ids) || !empty($add_product_ids)) {
+                $msgData = [
+                    'type' => 'update',
+                    'product_uuid' => 0,
+                    'update_time' => time()
+                ];
+                Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData);
+            }
+
             return true;
         } catch (\Exception $e) {
             $this->rollback();
@@ -188,6 +227,17 @@ class Spec extends SpecModel
                     ->update(['price' => $product['product_price']]);
             }
             $this->commit();
+
+            // 推送
+            if (!empty($data['products'])) {
+                $msgData = [
+                    'type' => 'update',
+                    'product_uuid' => 0,
+                    'update_time' => time()
+                ];
+                Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData);
+            }
+
             return true;
         } catch (\Exception $e) {
             $this->rollback();

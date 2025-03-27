@@ -3,6 +3,7 @@
 namespace app\shop\model\auth;
 
 use think\facade\Cache;
+use app\common\service\websocket\Websocket;
 use app\common\model\shop\Role as RoleModel;
 use app\shop\model\auth\UserRole as UserRoleModel;
 
@@ -125,7 +126,6 @@ class Role extends RoleModel
                 'name' => $data['role_name'],
                 'sort' => max($data['sort'] ?? 1, 1),
             ]);
-            trace($res);
             $model = new RoleAccess();
             $roleAccess = [];
             foreach ($data['access_id'] as $val) {
@@ -187,6 +187,15 @@ class Role extends RoleModel
             $this->commit();
             // 删除收银机缓存
             Cache::tag('cashier')->clear();
+            // 推送配置更新
+            Websocket::pushClient(
+                request()->appId, 
+                Websocket::SOURCE_All, 
+                Websocket::SOURCE_All, 
+                Websocket::UPDATE_PERMISSION, 
+                0,
+                ['update_time' => time()]
+            );
             //
             return true;
         } catch (\Exception $e) {

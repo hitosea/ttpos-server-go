@@ -2,6 +2,7 @@
 
 namespace app\shop\model\product;
 
+use app\common\service\websocket\Websocket;
 use app\common\model\product\Label as LabelModel;
 
 /**
@@ -89,6 +90,14 @@ class Label extends LabelModel
             // 添加新关系
             Product::whereIn('uuid', $product_ids)->update(['printer_tag_uuid' => $label_id]);
             $this->commit();
+            // 推送
+            $msgData = [
+                'type' => 'update', 
+                'product_uuid' => 0,
+                'update_time' => time()
+            ];
+            Websocket::pushClient(request()->appId, Websocket::SOURCE_KITCHEN, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData); 
+            //  
             return true;
         } catch (\Exception $e) {
             $this->rollback();

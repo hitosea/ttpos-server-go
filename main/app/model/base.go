@@ -96,16 +96,18 @@ func (model *SaleBill) AfterUpdate(tx *gorm.DB) (err error) {
 // CustomerCall - AfterCreate 新增客户呼叫后的逻辑 - 推送订单更新
 func (model *CustomerCall) AfterCreate(tx *gorm.DB) (err error) {
 	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
-		go websocket.PushClient(companyUuid, websocket.SourceCashier, "*", websocket.CUSTOMER_CALL, map[string]interface{}{
+		data := map[string]interface{}{
 			"customer_call_uuid": model.Uuid,
 			"desk_uuid":          model.DeskUuid,
 			"update_time":        model.BaseModel.UpdateTime,
-		})
+		}
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, "*", websocket.CUSTOMER_CALL, data)
+		go websocket.PushClient(companyUuid, websocket.SourceAssistant, "*", websocket.CUSTOMER_CALL, data)
 	}
 	return nil
 }
 
-// PrinterLog - AfterCreate 打印数据
+// PrinterLog - AfterCreate 打印数据 - 推送打印数据
 func (model *PrinterLog) AfterCreate(tx *gorm.DB) (err error) {
 	if model.Type != 1 || model.Data == "" {
 		return
@@ -121,6 +123,32 @@ func (model *PrinterLog) AfterCreate(tx *gorm.DB) (err error) {
 				"update_time":    model.BaseModel.UpdateTime,
 			},
 		)
+	}
+	return nil
+}
+
+// H5Order - AfterCreate 新增H5订单后的逻辑 - 推送订单更新
+func (model *H5Order) AfterCreate(tx *gorm.DB) (err error) {
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		data := map[string]interface{}{
+			"h5_order_uuid": model.Uuid,
+			"desk_uuid":     model.DeskUuid,
+			"update_time":   model.BaseModel.UpdateTime,
+		}
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, "*", websocket.H5_ORDER, data)
+	}
+	return nil
+}
+
+// H5Order - AfterUpdate 更新H5订单后的逻辑 - 推送订单更新
+func (model *H5Order) AfterUpdate(tx *gorm.DB) (err error) {
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		data := map[string]interface{}{
+			"h5_order_uuid": model.Uuid,
+			"desk_uuid":     model.DeskUuid,
+			"update_time":   model.BaseModel.UpdateTime,
+		}
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, "*", websocket.H5_ORDER, data)
 	}
 	return nil
 }

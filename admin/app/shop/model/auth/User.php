@@ -6,6 +6,7 @@ use think\facade\Env;
 use help\ValidateHelp;
 use think\facade\Cache;
 use app\admin\model\CompanyStaff;
+use app\common\service\websocket\Websocket;
 use app\common\model\shop\User as UserModel;
 
 
@@ -225,6 +226,18 @@ class User extends UserModel
             $this->commit();
             // 删除收银机缓存
             Cache::tag('cashier')->clear();
+            // 推送配置更新
+            Websocket::pushClient(
+                request()->appId, 
+                Websocket::SOURCE_All, 
+                Websocket::SOURCE_All, 
+                Websocket::UPDATE_PERMISSION, 
+                $data['shop_user_id'], 
+                [
+                    'staff_uuid' => $data['shop_user_id'],
+                    'update_time' => time(), 
+                ]
+            );
             //
             return true;
         } catch (\Exception $e) {
