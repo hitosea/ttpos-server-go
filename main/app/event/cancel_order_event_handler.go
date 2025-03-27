@@ -35,6 +35,7 @@ func cancelOrderEventHandler() {
 				Remark:        "整单取消",
 				SaleBillUuid:  payload.SaleBillUuid,
 				SaleOrderUuid: payload.SaleOrderUuid,
+				H5OrderUuid:   payload.H5OrderUuid,
 				OperatorUuid:  payload.GetOperatorUuid(),
 			}
 			record.Data = ""

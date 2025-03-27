@@ -25,7 +25,7 @@ func withCalcAndSaveSaleBill() func(option *ActionCookingOption) {
 }
 
 // ActionCooking 送厨
-func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) {
+func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, h5OrderUuid uint64, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) {
 	option := &ActionCookingOption{}
 	for _, opt := range options {
 		opt(option)
@@ -162,6 +162,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 					Source:        ctx.GetSource(),
 					SaleBillUuid:  saleBill.Uuid,
 					SaleOrderUuid: saleOrderUuid,
+					H5OrderUuid:   h5OrderUuid,
 					OperatorUuid:  int64(ctx.GetStaffUuid()),
 				},
 				Products: products,
@@ -209,7 +210,7 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 		}
 
 		// 送厨
-		checkServiceRes, err := s.ActionCooking(ctx, false, saleBill, unCookingSaleOrderProducts, withCalcAndSaveSaleBill())
+		checkServiceRes, err := s.ActionCooking(ctx, false, saleBill, unCookingSaleOrderProducts, 0, withCalcAndSaveSaleBill()) // 平板端加购并送厨
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}

@@ -48,6 +48,7 @@ type IOrderSrv interface {
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                                                      // 创建桌台订单
 	GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error)                                                                          // 获取订单列表
 	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                                                   // 获取订单详情
+	GetRecordList(ctx context.Context, saleBillUuid uint64, h5OrderUuid uint64) ([]resp.OrderOperationLog, error)                                                           // 获取订单操作日志
 	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                                                          // 取消订单
 	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                                          // 删除订单
 	ReturnOrder(ctx context.Context, req req.OrderReturnReq) (error, int)                                                                                                   // 退款订单
@@ -115,8 +116,8 @@ type IOrderSrv interface {
 	GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error)             // 未送厨商品列表
 	GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart) (resp.SentKitchen, error)                                                             // 已送厨商品列表
 
-	ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) // 送厨
-	ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*resp.OrderCheckServiceRes, error)                                                                                     // 加购并送厨
+	ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, h5OrderUuid uint64, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) // 送厨
+	ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*resp.OrderCheckServiceRes, error)                                                                                                         // 加购并送厨
 
 	TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) error // 平板端加购并送厨
 }
@@ -967,7 +968,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			List []resp.OrderOperationLog `json:"list"`
 		}{
 			List: func() []resp.OrderOperationLog {
-				logs, err := s.getRecordList(ctx, req.SaleBillUuid, 0)
+				logs, err := s.GetRecordList(ctx, req.SaleBillUuid, 0)
 				if err != nil {
 					return []resp.OrderOperationLog{}
 				}
@@ -978,15 +979,23 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 	}, nil
 }
 
-// getRecordList 获取操作记录
-func (s *orderSrv) getRecordList(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) ([]resp.OrderOperationLog, error) {
+// GetRecordList 获取操作记录
+func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5OrderUuid uint64) ([]resp.OrderOperationLog, error) {
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(ctx.GetDB())
-	orderRecordLists, err := orderRecordRepo.GetRecordLists(saleBillUuid)
+	orderRecordLists, err := orderRecordRepo.GetRecordLists(orderRecordRepo.WithSaleBillUuid(saleBillUuid), orderRecordRepo.WithH5OrderUuid(h5OrderUuid))
 	if err != nil {
 		return []resp.OrderOperationLog{}, errors.WithMessage(err)
 	}
 	logs := make([]resp.OrderOperationLog, 0)
 	language := ctx.GetLanguage()
+
+	sourceText := map[string]string{
+		constant.SourceCashier:   "收银端",
+		constant.SourceAssistant: "点餐助手",
+		constant.SourceShop:      "商家后台",
+		constant.SourceTablet:    "平板端",
+		constant.SourceH5:        "扫码点餐",
+	}
 
 	for _, record := range orderRecordLists {
 		desc := s.getActionDescription(ctx, record, language)
@@ -994,15 +1003,19 @@ func (s *orderSrv) getRecordList(ctx context.Context, saleBillUuid uint64, saleO
 		if desc != "" {
 			actionText = actionText + ": " + desc
 		}
+		realName := record.Operator.RealName
+		if record.Source == constant.SourceH5 {
+			realName = i18n.Translate(language, "用户")
+		}
 		refundPayTypes := s.getRefundPayType(ctx, record, language)
 		logs = append(logs, resp.OrderOperationLog{
 			Uuid:        record.Uuid,
-			RealName:    record.Operator.RealName,
+			RealName:    realName,
 			Email:       record.Operator.Username,
-			Source:      record.Source,
+			Source:      i18n.Translate(language, sourceText[record.Source]),
 			CreateTime:  record.CreateTime,
 			Description: actionText,     // 获取描述
-			PayType:     refundPayTypes, // ToDo 关联支付方式
+			PayType:     refundPayTypes, // ToDo 关联连连支付方式
 		})
 	}
 	return logs, nil
@@ -4053,7 +4066,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	}
 
 	// 送厨
-	checkServiceRes, err := s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts)
+	checkServiceRes, err := s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0) // 购物车送厨商品
 	if err != nil {
 		return nil, nil, err
 	}
@@ -7321,6 +7334,18 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 	h5Order.ChangeToAccepted()
 	// 送厨已经接单的商品。送厨指定的商品列表
 
+	// 先发布“接单”操作事件
+	s.bus.PublishAcceptH5OrderEvent(event.AcceptH5OrderPayload{
+		BasePayload: event.BasePayload{
+			CompanyUuid:  ctx.GetCompanyUuid(),
+			Source:       ctx.GetSource(),
+			SaleBillUuid: h5Order.SaleBillUuid,
+			H5OrderUuid:  h5OrderUuid,
+			OperatorUuid: int64(ctx.GetStaffUuid()),
+		},
+		IsAutoOrder: isAutoOrder,
+	})
+
 	{
 		ignoreMust := true // 接单，送厨忽略必点方案
 		// 获取销售账单信息
@@ -7334,7 +7359,7 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		unCookingSaleOrderProducts := h5Order.SaleOrderProducts
 
 		// 送厨
-		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts)
+		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, h5OrderUuid) // 接单
 		if err != nil {
 			return nil, errors.WithMessage(err, "ActionCooking")
 		}
@@ -7360,20 +7385,6 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		// 		return errors.WithMessage(err, "将已下单的h5订单商品变为已接单单的h5订单商品失败")
 		// 	}
 		// }
-
-		// 发布“接单”操作事件
-		go func() {
-			s.bus.PublishAcceptH5OrderEvent(event.AcceptH5OrderPayload{
-				BasePayload: event.BasePayload{
-					CompanyUuid:  ctx.GetCompanyUuid(),
-					Source:       ctx.GetSource(),
-					SaleBillUuid: h5Order.SaleBillUuid,
-					OperatorUuid: int64(ctx.GetStaffUuid()),
-				},
-				IsAutoOrder: isAutoOrder,
-				H5OrderUuid: h5Order.Uuid,
-			})
-		}()
 
 		return nil
 	}); err != nil {
@@ -7424,9 +7435,9 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 					CompanyUuid:  ctx.GetCompanyUuid(),
 					Source:       ctx.GetSource(),
 					SaleBillUuid: h5Order.SaleBillUuid,
+					H5OrderUuid:  h5OrderUuid,
 					OperatorUuid: int64(ctx.GetStaffUuid()),
 				},
-				H5OrderUuid: h5Order.Uuid,
 			})
 		}()
 		return nil

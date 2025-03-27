@@ -46,21 +46,13 @@ type ProductList struct {
 	List []ProductItem `json:"list"`
 }
 
-type OperationLogItem struct {
-	RealName    string `json:"real_name"`   // real_name 真实姓名
-	Email       string `json:"email"`       // 账号
-	Source      string `json:"source"`      // 来源：收银端、商家后台等
-	CreateTime  int64  `json:"create_time"` // 日志创建时间
-	Description string `json:"description"` // 描述
-}
-
-type OperationLogList struct {
-	List []OperationLogItem `json:"list"`
+type OperationLog struct {
+	List []OrderOperationLog `json:"list"`
 }
 
 type H5OrderDetailResp struct {
-	H5OrderDetail       H5OrderDetail    `json:"h5_order_detail"`       // 订单详情
-	NewProductList      ProductList      `json:"new_product_list"`      // 新增商品列表
-	AcceptedProductList ProductList      `json:"accepted_product_list"` // 已下单商品列表
-	OperationLogList    OperationLogList `json:"operation_log_list"`    // 操作日志列表
+	H5OrderDetail   H5OrderDetail `json:"h5_order_detail"`  // 订单详情
+	NewProduct      ProductList   `json:"new_product"`      // 新增商品列表
+	AcceptedProduct ProductList   `json:"accepted_product"` // 已下单商品列表
+	OperationLog    OperationLog  `json:"operation"`        // 操作日志列表
 }

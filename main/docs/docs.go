@@ -15557,24 +15557,24 @@ const docTemplate = `{
         "req.BusinessDataCountReq": {
             "type": "object",
             "properties": {
-                "category_type": {
-                    "description": "分类类型 (1 按一级分类, 2 按二级分类)",
+                "categoryType": {
+                    "description": "分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)",
                     "type": "integer"
                 },
-                "duty_no": {
+                "dutyNo": {
                     "description": "班次编号",
                     "type": "string"
                 },
-                "query_end_time": {
+                "queryEndTime": {
                     "description": "查询结束时间戳",
                     "type": "integer"
                 },
-                "query_start_time": {
+                "queryStartTime": {
                     "description": "查询开始时间戳",
                     "type": "integer"
                 },
-                "time_type": {
-                    "description": "时间类型 (1 按日, 2 昨天, 3 本周, 4 本月)",
+                "timeType": {
+                    "description": "时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)",
                     "type": "integer"
                 }
             }
@@ -15583,7 +15583,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "category_type": {
-                    "description": "分类类型 (1 按一级分类, 2 按二级分类)",
+                    "description": "分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)",
                     "type": "integer"
                 },
                 "query_end_time": {
@@ -15599,7 +15599,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "time_type": {
-                    "description": "时间类型 (1 按日, 2 昨天, 3 本周, 4 本月)",
+                    "description": "时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)",
                     "type": "integer"
                 }
             }
@@ -15607,15 +15607,15 @@ const docTemplate = `{
         "req.BusinessDataRankProductReq": {
             "type": "object",
             "properties": {
-                "query_end_time": {
+                "queryEndTime": {
                     "description": "查询结束时间戳",
                     "type": "integer"
                 },
-                "query_start_time": {
+                "queryStartTime": {
                     "description": "查询开始时间戳",
                     "type": "integer"
                 },
-                "rank_type": {
+                "rankType": {
                     "description": "排行类型 (1 按销量, 2 按销售额)",
                     "type": "integer"
                 }
@@ -18484,7 +18484,7 @@ const docTemplate = `{
         "resp.H5OrderDetailResp": {
             "type": "object",
             "properties": {
-                "accepted_product_list": {
+                "accepted_product": {
                     "description": "已下单商品列表",
                     "allOf": [
                         {
@@ -18500,7 +18500,7 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "new_product_list": {
+                "new_product": {
                     "description": "新增商品列表",
                     "allOf": [
                         {
@@ -18508,11 +18508,11 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "operation_log_list": {
+                "operation": {
                     "description": "操作日志列表",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/resp.OperationLogList"
+                            "$ref": "#/definitions/resp.OperationLog"
                         }
                     ]
                 }
@@ -19093,38 +19093,13 @@ const docTemplate = `{
                 }
             }
         },
-        "resp.OperationLogItem": {
-            "type": "object",
-            "properties": {
-                "create_time": {
-                    "description": "日志创建时间",
-                    "type": "integer"
-                },
-                "description": {
-                    "description": "描述",
-                    "type": "string"
-                },
-                "email": {
-                    "description": "账号",
-                    "type": "string"
-                },
-                "real_name": {
-                    "description": "real_name 真实姓名",
-                    "type": "string"
-                },
-                "source": {
-                    "description": "来源：收银端、商家后台等",
-                    "type": "string"
-                }
-            }
-        },
-        "resp.OperationLogList": {
+        "resp.OperationLog": {
             "type": "object",
             "properties": {
                 "list": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/resp.OperationLogItem"
+                        "$ref": "#/definitions/resp.OrderOperationLog"
                     }
                 }
             }
