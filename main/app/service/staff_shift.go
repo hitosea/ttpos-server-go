@@ -36,8 +36,8 @@ type IStaffShiftSrv interface {
 	ShiftPrinter(ctx context.Context, req req.ShiftPrinterReq) (*resp.PrinterData, error)
 }
 
-func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv) IStaffShiftSrv {
-	return NewShiftSrvImpl(cache, dbm, cashBoxSrv)
+func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv, statisticsSrv IStatisticsSrv) IStaffShiftSrv {
+	return NewShiftSrvImpl(cache, dbm, cashBoxSrv, statisticsSrv)
 }
 
 type staffShiftSrv struct {
@@ -45,14 +45,16 @@ type staffShiftSrv struct {
 	cache          cache.Cache
 	cacheKeyPrefix string
 	cashBoxSrv     ICashBoxSrv
+	statisticsSrv  IStatisticsSrv
 }
 
-func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv) IStaffShiftSrv {
+func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv, statisticsSrv IStatisticsSrv) IStaffShiftSrv {
 	return &staffShiftSrv{
 		dbm:            dbm,
 		cache:          cache,
 		cacheKeyPrefix: "__USERSHIFTLOG_GENERATENUMBER__",
 		cashBoxSrv:     cashBoxSrv,
+		statisticsSrv:  statisticsSrv,
 	}
 }
 
@@ -466,51 +468,52 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		return nil, errors.New("当前班次已交班")
 	}
 
+	// 销售数据
+	saleData := s.statisticsSrv.CountSale(ctx, CountReq{
+		DutyNo: log.ShiftNo,
+	})
+
 	// 营业数据
 	var businessData = business_data_resp.BusinessDataAll{
 		TotalSales:             log.TotalBusiness,
 		TotalReceivedPrice:     log.CurrentCashTotal,
-		TotalPayPrice:          21230,
-		TotalPayFeeMoney:       2110,
-		TotalServiceMoney:      120,
-		TotalTaxMoney:          10124,
-		TotalUserDiscountMoney: 120,
-		TotalDiscountMoney:     120,
-		TotalFreeOrderPrice:    120,
-		TotalRefundMoney:       10,
-		TotalOrderNum:          1230,
-		TotalPeopleNum:         120,
-		TotalProductNum:        320,
-		TotalTableNum:          120,
-		AvgOrderPrice:          620,
-		MinOrderPrice:          120,
-		MaxOrderPrice:          1200,
-		AllTableOrderNum:       1230,
-		AllTablePeopleNum:      120,
-		AllTableAvgOrderPrice:  620,
-		AllTableMinOrderPrice:  120,
-		AllTableMaxOrderPrice:  1200,
-		AllTablePeopleAvg:      10,
-		PaymentMethodIncomes: []business_data_resp.PaymentMethodIncome{
-			{
-				Name:     "现金",
-				OrderNum: 1,
-				Amount:   123213,
-				Code:     40,
-			},
-			{
-				Name:     "支付宝",
-				OrderNum: 1,
-				Amount:   24121,
-				Code:     41,
-			},
-			{
-				Name:     "微信支付",
-				OrderNum: 1,
-				Amount:   123213,
-				Code:     42,
-			},
-		},
+		TotalPayPrice:          saleData.TotalSaleAmount,
+		TotalPayFeeMoney:       saleData.TotalPaymentFee,
+		TotalServiceMoney:      saleData.TotalServiceFee,
+		TotalTaxMoney:          saleData.TotalTax,
+		TotalUserDiscountMoney: saleData.TotalDiscountMember,
+		TotalDiscountMoney:     saleData.TotalDiscount,
+		TotalFreeOrderPrice:    saleData.TotalFreeAmount,
+		TotalRefundMoney:       saleData.TotalRefundAmount,
+		TotalOrderNum:          int(saleData.TotalOrderNum),
+		TotalPeopleNum:         int(saleData.TotalMealNum),
+		TotalProductNum:        int(saleData.TotalProductNum),
+		TotalTableNum:          int(saleData.TotalDeskNum),
+		AvgOrderPrice:          saleData.AvgOrderAmount,
+		MinOrderPrice:          saleData.MinOrderAmount,
+		MaxOrderPrice:          saleData.MaxOrderAmount,
+		AllTableOrderNum:       int(saleData.TotalDeskNum),
+		AllTablePeopleNum:      int(saleData.TotalMealNum),
+		AllTableAvgOrderPrice:  saleData.AvgDeskOrderAmount,
+		AllTableMinOrderPrice:  saleData.MinDeskOrderAmount,
+		AllTableMaxOrderPrice:  saleData.MaxDeskOrderAmount,
+		AllTablePeopleAvg:      saleData.AvgDeskPeopleOrderAmount,
+		PaymentMethodIncomes: func() []business_data_resp.PaymentMethodIncome {
+			// 支付数据
+			paymentData := s.statisticsSrv.CountPayment(ctx, CountReq{
+				DutyNo: log.ShiftNo,
+			})
+			paymentMethodIncomes := make([]business_data_resp.PaymentMethodIncome, 0, len(paymentData.PaymentList))
+			for _, v := range paymentData.PaymentList {
+				paymentMethodIncomes = append(paymentMethodIncomes, business_data_resp.PaymentMethodIncome{
+					Name:     v.PaymentName,
+					Amount:   v.TotalPaymentAmount,
+					OrderNum: int(v.TotalOrderNum),
+					Code:     v.PaymentCode,
+				})
+			}
+			return paymentMethodIncomes
+		}(),
 		AbnormalData: func() business_data_resp.AbnormalData {
 			AbnormalData, err := repository.NewOrderAbnormalRecordRepo(ctx.GetDB()).GetRecordInfo(
 				ctx.GetStaffUuid(),
@@ -537,28 +540,37 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 			}
 			return peakHours
 		}(),
-		CategoryList: []business_data_resp.Category{
-			{
-				Name:     "12",
-				SalesNum: 1,
-				Prices:   323,
-			},
-			{
-				Name:     "121232",
-				SalesNum: 2,
-				Prices:   23,
-			},
-		},
-		PercentageList: []business_data_resp.Percentage{
-			{
-				TaxRate:        120,
-				ConsumptionTax: 120,
-			},
-			{
-				TaxRate:        110,
-				ConsumptionTax: 2120,
-			},
-		},
+		CategoryList: func() []business_data_resp.Category {
+			// 统计分类
+			categoryData := s.statisticsSrv.CountCategory(ctx, CountReq{
+				DutyNo: log.ShiftNo,
+			})
+
+			categoryList := make([]business_data_resp.Category, 0, len(categoryData.CategoryList))
+			for _, v := range categoryData.CategoryList {
+				categoryList = append(categoryList, business_data_resp.Category{
+					Name:     v.CategoryName,
+					SalesNum: int(v.SaleNum),
+					Prices:   v.SaleAmount,
+				})
+			}
+			return categoryList
+		}(),
+		PercentageList: func() []business_data_resp.Percentage {
+			taxData := s.statisticsSrv.CountTax(ctx, CountReq{
+				DutyNo: log.ShiftNo,
+			})
+
+			percentageList := make([]business_data_resp.Percentage, 0, len(taxData))
+			for _, v := range taxData {
+				percentageList = append(percentageList, business_data_resp.Percentage{
+					TaxRate:        v.TaxRate,
+					ConsumptionTax: v.TotalTaxFee,
+					TotalPrice:     v.TotalProductAmount,
+				})
+			}
+			return percentageList
+		}(),
 	}
 
 	// 打印

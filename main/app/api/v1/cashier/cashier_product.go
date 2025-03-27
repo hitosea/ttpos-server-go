@@ -85,7 +85,8 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
 	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	cashBoxSrv := service.NewCashBoxSrv(dbm)
-	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv)
+	statisticsSrv := service.NewStatisticsSrv()
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 	// 创建收银产品处理程序

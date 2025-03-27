@@ -48,7 +48,8 @@ func RegisterBuffetHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	roleAccessSrv := service.NewRoleAccessSrv(dbm)
 	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	cashBoxSrv := service.NewCashBoxSrv(dbm)
-	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv)
+	statisticsSrv := service.NewStatisticsSrv()
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 	// 初始化处理器

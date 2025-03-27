@@ -127,7 +127,8 @@ func RegisterPrinterHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
 	printerLogSrv := printerService.NewPrinterLogSrv(dbm, settingSrv)
 	cashBoxSrv := service.NewCashBoxSrv(dbm)
-	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv)
+	statisticsSrv := service.NewStatisticsSrv()
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 	wrapper := &PrinterHandler{

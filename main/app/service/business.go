@@ -163,26 +163,26 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	}
 
 	if printerReq.StatisticsType == 2 {
+		categoryData, categoryList := s.BuildCategoryList(ctx, req.BusinessDataCountReq{
+			TimeType:       printerReq.TimeType,
+			QueryStartTime: int64(printerReq.QueryStartTime),
+			QueryEndTime:   int64(printerReq.QueryEndTime),
+			CategoryType:   printerReq.CategoryType,
+		})
+
+		paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req.BusinessDataCountReq{
+			QueryStartTime: int64(printerReq.QueryStartTime),
+			QueryEndTime:   int64(printerReq.QueryEndTime),
+			TimeType:       printerReq.TimeType,
+			CategoryType:   printerReq.CategoryType,
+		})
+
 		reqPrinterData.ProductCategory = &business_data_resp.BusinessDataProductCategory{
-			SalesNum: 120,
-			CategoryList: func() []business_data_resp.Category {
-				_, categoryList := s.BuildCategoryList(ctx, req.BusinessDataCountReq{
-					TimeType:       printerReq.TimeType,
-					QueryStartTime: int64(printerReq.QueryStartTime),
-					QueryEndTime:   int64(printerReq.QueryEndTime),
-					CategoryType:   printerReq.CategoryType,
-				})
-				return categoryList
-			}(),
-			PaymentMethodIncomes: func() []business_data_resp.PaymentMethodIncome {
-				_, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req.BusinessDataCountReq{
-					QueryStartTime: int64(printerReq.QueryStartTime),
-					QueryEndTime:   int64(printerReq.QueryEndTime),
-					TimeType:       printerReq.TimeType,
-					CategoryType:   printerReq.CategoryType,
-				})
-				return paymentMethodIncomes
-			}(),
+			SalesNum:             int(categoryData.TotalSaleNum),
+			TotalRefundMoney:     paymentData.TotalRefundAmount,
+			TotalReceivedPrice:   paymentData.TotalReceivedAmount,
+			CategoryList:         categoryList,
+			PaymentMethodIncomes: paymentMethodIncomes,
 		}
 	}
 
