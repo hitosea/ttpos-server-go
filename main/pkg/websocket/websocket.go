@@ -20,13 +20,30 @@ const (
 	SourceH5        = "H5"        // H5
 )
 
+// 消息类型
 const (
 	// 更新订单，刷新购物车和桌台列表都用它（desk_uuid不等于0代表是桌台订单，desk_uuid等于0代表是点餐订单），data = {"update_time": 1742971471,"sale_bill_uuid": 3655262269341697,"desk_uuid": 3655262269341699}
 	UPDATE_ORDER = "update_order"
-	// 客户呼叫  data = {"update_time": 1742971471,"customer_call_uuid": 3655262269341697,"desk_uuid": 3655262269341699}
+	// 客户呼叫 data = {"update_time": 1742971471,"customer_call_uuid": 3655262269341697,"desk_uuid": 3655262269341699}
 	CUSTOMER_CALL = "customer_call"
-	// 打印数据  data = {"update_time": 1742971471,"print_log_uuid": 3655262269341697}
+	// 打印数据 data = {"update_time": 1742971471,"print_log_uuid": 3655262269341697}
 	PRINT_DATA = "print_data"
+	// H5订单 data = {"update_time": 1742971471,"h5_order_uuid": 3655262269341697, "desk_uuid": 3655262269341699}
+	H5_ORDER = "h5_order"
+	// 更新配置 （所有后台配置相关变动） data = {"update_time": 1742971471}
+	UPDATE_CONFIG = "update_config"
+	// 更新权限 （编辑角色的时候） data = {"update_time": 1742971471}
+	UPDATE_PERMISSION = "update_permission"
+	// 更新用户 （用户名称、头像等信息）（也可能会切换角色，所以也要更新权限） data = {"update_time": 1742971471, "staff_uuid": 3655262269341697}
+	UPDATE_USER = "update_user"
+	// 更新商品 data = {"update_time": 1742971471, "product_uuid": 1, "type": "update | delete"}
+	UPDATE_PRODUCT = "update_product"
+	// 更新分类 data = {"update_time": 1742971471, "category_uuid": 1, "type": "update | delete"}
+	UPDATE_CATEGORY = "update_category"
+	// 更新自助餐 data = {"update_time": 1742971471, "buffet_uuid": 1, "type": "update | delete"}
+	UPDATE_BUFFET = "update_buffet"
+	// 更新桌台 data = {"update_time": 1742971471, "desk_uuid": 1, "type": "update | delete"}
+	UPDATE_DESK = "update_desk"
 )
 
 // Push sends a POST request to the WebSocket server with specific parameters.
@@ -85,9 +102,9 @@ func PushClient(company_uuid uint64, source_client, not_device_id, message_type 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Received non-OK response: %v", resp.Status)
-		log.Printf("Received non-OK response: %v", resp.Status)
-		return fmt.Errorf("received non-OK response: %v", resp.Status)
+		fmt.Println("Received non-OK response: %s %s", resp.Status, url)
+		log.Printf("Received non-OK response: %s %s", resp.Status, url)
+		return fmt.Errorf("received non-OK response: %s", resp.Status)
 	}
 
 	return nil

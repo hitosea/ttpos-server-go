@@ -206,18 +206,33 @@ class Paytype extends Controller
             }
         }
         //
-        $isShowCheckout = $param['is_show_checkout'] ?: [];
-        $isShowRecharge = $param['is_show_recharge'] ?: [];
-        $param['is_show_cashier'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $isShowCheckout) ? 1 : 0;
-        $param['is_show_assistant'] = in_array(PayTypeModel::ASSISTANT_SHOW_VALUE, $isShowCheckout) ? 1 : 0;
-        $param['is_show_member_recharge'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $isShowRecharge) ? 1 : 0;
-        $param['logo_file_uuid'] = $param['img']['file_id'] ?? 0;
-        $param['qrcode_file_uuid'] = $param['qrcode']['file_id'] ?? 0;
-        $param['logo_url'] = ImgHelp::removeImageDomain($param['img']['file_path'] ?? '');
-        $param['qrcode_url'] = ImgHelp::removeImageDomain($param['qrcode']['file_path'] ?? '');
-        $param['payment_name'] = $remark;
-        $param['fee_percent'] = $param['fee'];
-        $orderPayType->save($param);
+        $saveData = [
+            'status' => $param['status'],
+            'remark' => $remark,
+            'fee_percent' => $param['fee'],
+        ];
+        if (isset($param['is_show_checkout'])) {
+            $isShowCheckout = $param['is_show_checkout'] ?: [];
+            $saveData['is_show_cashier'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $isShowCheckout) ? 1 : 0;
+            $param['is_show_assistant'] = in_array(PayTypeModel::ASSISTANT_SHOW_VALUE, $isShowCheckout) ? 1 : 0;
+        }
+        if (isset($param['is_show_recharge'])) {
+            $isShowRecharge = $param['is_show_recharge'] ?: [];
+            $param['is_show_member_recharge'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $isShowRecharge) ? 1 : 0;
+        }
+        if (isset($param['img']['file_id'])) {
+            $saveData['logo_file_uuid'] = $param['img']['file_id'];
+        }
+        if (isset($param['img']['file_path'])) {
+            $saveData['logo_url'] = ImgHelp::removeImageDomain($param['img']['file_path']);
+        }
+        if (isset($param['qrcode']['file_id'])) {
+            $saveData['qrcode_file_uuid'] = $param['qrcode']['file_id'];
+        }
+        if (isset($param['qrcode']['file_path'])) {
+            $saveData['qrcode_url'] = ImgHelp::removeImageDomain($param['qrcode']['file_path']);
+        }
+        $orderPayType->save($saveData);
         //
         return $this->renderSuccess('操作成功', $orderPayType);
     }

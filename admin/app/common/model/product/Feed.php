@@ -7,6 +7,7 @@ use help\StringHelp;
 use think\facade\Db;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
+use app\common\service\websocket\Websocket;
 
 /**
  * 加料库模型
@@ -26,6 +27,32 @@ class Feed extends BaseModel
      * 追加字段
      */
     protected $append = ['feed_id', 'feed_name', 'feed_name_text'];
+
+    /**
+     * 商品更新后推送通知
+     */
+    public static function onAfterWrite(Feed $model)
+    {
+        $msgData = [
+            'type' => 'update',
+            'product_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData);
+    }
+
+    /**
+     * 商品删除后推送通知
+     */
+    public static function onAfterDelete(Feed $model)
+    {
+        $msgData = [
+            'type' => 'delete',
+            'product_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData);
+    }
 
     /**
      * 兼容字段

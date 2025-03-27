@@ -7,6 +7,7 @@ use app\common\model\BaseModel;
 use app\common\model\order\Order;
 use app\common\enum\settings\SettingEnum;
 use app\common\enum\order\OrderStatusEnum;
+use app\common\service\websocket\Websocket;
 use app\tablet\model\order\Order as OrderModel;
 use app\common\model\settings\Setting as SettingModel;
 
@@ -23,6 +24,32 @@ class Table extends BaseModel
      * @var string[]
      */
     protected $append = ['table_id', 'table_no', 'switch_status'];
+
+    /**
+     * 分类更新后推送通知
+     */
+    public static function onAfterWrite(Table $model)
+    {
+        $msgData = [
+            'type' => 'update',
+            'desk_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_DESK, 0, $msgData);
+    }
+
+    /**
+     * 分类删除后推送通知
+     */
+    public static function onAfterDelete(Table $model)
+    {
+        $msgData = [
+            'type' => 'delete',
+            'desk_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_DESK, 0, $msgData);
+    }
 
     /**
      * 兼容字段

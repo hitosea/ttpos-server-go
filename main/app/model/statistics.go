@@ -42,6 +42,24 @@ type StatisticsPayment struct {
 	CompleteTime      int64   `gorm:"column:complete_time;type:bigint(20);default:0;comment:完成时间;NOT NULL" json:"complete_time"`
 }
 
+// StatisticsProduct 商品统计表 ttpos_statistics_product
+type StatisticsProduct struct {
+	BaseModel
+	SaleBillUuid       uint64  `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单uuid;NOT NULL" json:"sale_bill_uuid"`
+	SaleOrderUuid      uint64  `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单uuid;NOT NULL" json:"sale_order_uuid"`
+	DutyNo             string  `gorm:"column:duty_no;type:varchar(64);comment:当班编号;NOT NULL" json:"duty_no"`
+	DeskUuid           uint64  `gorm:"column:desk_uuid;type:bigint(20) unsigned;default:0;comment:桌台uuid;NOT NULL" json:"desk_uuid"`
+	ProductPackageUuid uint64  `gorm:"column:product_package_uuid;type:bigint(20) unsigned;default:0;comment:商品包uuid;NOT NULL" json:"product_package_uuid"`
+	ProductBomUuid     uint64  `gorm:"column:product_bom_uuid;type:bigint(20) unsigned;default:0;comment:商品清单uuid;NOT NULL" json:"product_bom_uuid"`
+	ProductPrice       float64 `gorm:"column:product_price;type:decimal(14,2);default:0.00;comment:商品单价: 未含税;NOT NULL" json:"product_price"`
+	ProductSalePrice   float64 `gorm:"column:product_sale_price;type:decimal(14,2);default:0.00;comment:商品单价: 规格+加料;NOT NULL" json:"product_sale_price"`
+	ProductNum         int     `gorm:"column:product_num;type:int(11);default:0;comment:商品数量;NOT NULL" json:"product_num"`
+	TaxRate            float64 `gorm:"column:tax_rate;type:decimal(14,2);default:0.00;comment:税率;NOT NULL" json:"tax_rate"`
+	TaxFee             float64 `gorm:"column:tax_fee;type:decimal(14,2);default:0.00;comment:税费;NOT NULL" json:"tax_fee"`
+	CompleteTime       int64   `gorm:"column:complete_time;type:bigint(20);default:0;comment:完成时间;NOT NULL" json:"complete_time"`
+	RefundTime         int64   `gorm:"column:refund_time;type:bigint(20);default:0;comment:退款时间;NOT NULL" json:"refund_time"`
+}
+
 // StatisticsShiftSaleRefundAmount 当班用餐订单退款金额
 type StatisticsShiftSaleRefundAmount struct {
 	ShiftNo         string          `json:"shift_no"`
@@ -110,4 +128,38 @@ type StatisticsPaymentData struct {
 	TotalOrderNum      sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
 	TotalPaymentAmount sql.NullFloat64 `gorm:"column:total_payment_amount;comment:总支付金额"`
 	TotalRefundAmount  sql.NullFloat64 `gorm:"column:total_refund_amount;comment:总退款金额"`
+}
+
+// StatisticsTaxData 税类统计数据
+type StatisticsTaxData struct {
+	TaxRate            sql.NullFloat64 `gorm:"column:tax_rate;comment:税率"`
+	TotalTaxFee        sql.NullFloat64 `gorm:"column:total_tax_fee;comment:总税费"`
+	TotalProductAmount sql.NullFloat64 `gorm:"column:total_product_amount;comment:总商品金额: 含税"`
+}
+
+// StatisticsCategoryData 分类统计数据
+type StatisticsCategoryData struct {
+	CategoryParentUuid sql.NullInt64   `gorm:"column:category_parent_uuid;comment:分类父级uuid"`
+	CategoryParentName sql.NullString  `gorm:"column:category_parent_name;comment:分类父级名称"`
+	CategoryUuid       sql.NullInt64   `gorm:"column:category_uuid;comment:分类uuid"`
+	CategoryName       sql.NullString  `gorm:"column:category_name;comment:分类名称"`
+	SaleNum            sql.NullInt64   `gorm:"column:sale_num;comment:销售数量"`
+	SaleAmount         sql.NullFloat64 `gorm:"column:sale_amount;comment:销售金额"`
+}
+
+// StatisticsProductData 商品统计数据
+type StatisticsProductData struct {
+	ProductName sql.NullString  `gorm:"column:product_name;comment:商品名称"`
+	FlavorName  sql.NullString  `gorm:"column:flavor_name;comment:规格名称"`
+	SalePrice   sql.NullFloat64 `gorm:"column:sale_price;comment:销售单价"`
+	SaleNum     sql.NullInt64   `gorm:"column:sale_num;comment:销售数量"`
+	SaleAmount  sql.NullFloat64 `gorm:"column:sale_amount;comment:销售金额"`
+}
+
+// StatisticsAreaData 区域统计数据
+type StatisticsAreaData struct {
+	AreaName           sql.NullString  `gorm:"column:area_name;comment:区域名称"`
+	AreaSaleAmount     sql.NullFloat64 `gorm:"column:area_sale_amount;comment:区域销售额"`
+	AreaBusinessAmount sql.NullFloat64 `gorm:"column:area_business_amount;comment:区域营业收入"`
+	AreaProductNum     sql.NullInt64   `gorm:"column:area_product_num;comment:区域商品数量"`
 }

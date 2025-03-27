@@ -2,6 +2,8 @@
 
 namespace app\common\model\product;
 
+use app\common\service\websocket\Websocket;
+
 use think\facade\Db;
 use think\facade\Env;
 use app\common\library\helper;
@@ -65,6 +67,33 @@ class Product extends BaseModel
      */
     const TYPE_PRODUCT = 10;
     const TYPE_MATERIAL = 20;
+
+    /**
+     * 商品更新后推送通知
+     */
+    public static function onAfterWrite(Product $model)
+    {
+        $msgData = [
+            'type' => 'update',
+            'product_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData);
+    }
+
+    /**
+     * 商品删除后推送通知
+     */
+    public static function onAfterDelete(Product $model)
+    {
+        
+        $msgData = [
+            'type' => 'delete',
+            'product_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData);
+    }
 
     /**
      * 兼容字段

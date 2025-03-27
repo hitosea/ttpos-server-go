@@ -6,6 +6,7 @@ use think\facade\Db;
 use think\Collection;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
+use app\common\service\websocket\Websocket;
 use app\common\model\product\AttributeGroup;
 use app\common\model\product\ProductAttribute;
 use app\common\model\product\ProductAttributeGroup;
@@ -27,6 +28,32 @@ class Attribute extends BaseModel
      */
     protected $append = ['attribute_id', 'attribute_name', 'attribute_name_text', 'parent_attribute_name_text', 'parent_id'];
 
+    /**
+     * 规格更新后推送通知
+     */
+    public static function onAfterWrite(Attribute $model)
+    {
+        $msgData = [
+            'type' => 'update',
+            'product_uuid' => 0,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData);
+    }
+
+    /**
+     * 规格删除后推送通知
+     */
+    public static function onAfterDelete(Attribute $model)
+    {
+        $msgData = [
+            'type' => 'update',
+            'product_uuid' =>0,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData);
+    }
+    
     /**
      * 兼容字段
      */

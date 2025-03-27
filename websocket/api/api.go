@@ -20,6 +20,8 @@ func PushClient(w http.ResponseWriter, r *http.Request) {
 		SourceClient string      `json:"source_client"`
 		DeviceId     string      `json:"device_id"`
 		NotDeviceId  string      `json:"not_device_id"`
+		StaffUuid    uint64      `json:"staff_uuid"`
+		NotStaffUuid uint64      `json:"not_staff_uuid"`
 		MessageType  string      `json:"message_type"`
 		MessageKey   string      `json:"message_key"`
 		Data         interface{} `json:"data"`

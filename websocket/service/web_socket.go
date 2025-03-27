@@ -44,6 +44,7 @@ type ConnectionInfo struct {
 	CompanyUuid   uint64 `json:"company_id"`
 	SourceClient  string `json:"source_client"`
 	DeviceId      string `json:"device_id"`
+	StaffUuid     uint64 `json:"staff_uuid"`
 	LastHeartbeat string `json:"last_heartbeat"`
 	ws            *websocket.Conn
 }
@@ -139,6 +140,7 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 	// 添加新连接
 	WsClients = append(WsClients, ConnectionInfo{
 		CompanyUuid:   claims.CompanyUuid,
+		StaffUuid:     claims.StaffUuid,
 		SourceClient:  existsDevice.Source,
 		DeviceId:      existsDevice.DeviceId,
 		LastHeartbeat: time.Now().Format(time.RFC3339),
@@ -214,31 +216,30 @@ func handleMessage(ws *websocket.Conn, msg []byte) {
 }
 
 // PushClient 推送消息
-func PushClient(
-	CompanyUuid uint64,
-	SourceClient,
-	DeviceId,
-	NotDeviceId string,
-	msgType string,
-	data interface{},
-) {
+func PushClient(messageData MessageData) {
 	for _, conn := range WsClients {
-		if conn.CompanyUuid == CompanyUuid && (conn.SourceClient == SourceClient || SourceClient == "*") && (conn.DeviceId == DeviceId || DeviceId == "*") && (conn.DeviceId != NotDeviceId || NotDeviceId == "*" || NotDeviceId == "") {
+		if conn.CompanyUuid == messageData.CompanyUuid &&
+			(conn.StaffUuid == messageData.StaffUuid || messageData.StaffUuid == 0) &&
+			(conn.StaffUuid != messageData.NotStaffUuid || messageData.NotStaffUuid == 0) &&
+			(conn.SourceClient == messageData.SourceClient || messageData.SourceClient == "*") &&
+			(conn.DeviceId == messageData.DeviceId || messageData.DeviceId == "*") &&
+			(conn.DeviceId != messageData.NotDeviceId || messageData.NotDeviceId == "*" || messageData.NotDeviceId == "") {
+
 			// 创建一个 WebSocketMsgRepository 实例
 			repo := repository.NewWebSocketMsgRepository(&database.DBManager{})
 
 			// 1. 先删后加 - 同一个类型，只保留最新的
-			err := repo.DeleteByTypeAndCompanyId(msgType, CompanyUuid)
+			err := repo.DeleteByTypeAndCompanyId(messageData.MessageType, messageData.CompanyUuid)
 			if err != nil {
 				fmt.Printf("Error deleting old messages: %v\n", err)
 			}
 
 			// 2. 创建
 			id, err := repo.Create(model.WebSocketMsg{
-				CompanyUuid:  CompanyUuid,
+				CompanyUuid:  messageData.CompanyUuid,
 				Uid:          conn.DeviceId,
-				Msg:          utils.StructToJson(data),
-				Type:         msgType,
+				Msg:          utils.StructToJson(messageData.Data),
+				Type:         messageData.MessageType,
 				SourceClient: conn.SourceClient,
 				Status:       0,
 				IsOffline:    0,
@@ -252,9 +253,9 @@ func PushClient(
 
 			// 发送消息
 			message := PushMessage{
-				Event: msgType,
+				Event: messageData.MessageType,
 				State: constant.CodeSuccess,
-				Data:  data,
+				Data:  messageData.Data,
 				MsgId: int(id),
 			}
 

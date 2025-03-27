@@ -119,28 +119,32 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 				}
 				return peakHours
 			}(),
-			CategoryList: []business_data_resp.Category{
-				{
-					Name:     "12",
-					SalesNum: 1,
-					Prices:   323,
-				},
-				{
-					Name:     "121232",
-					SalesNum: 2,
-					Prices:   23,
-				},
-			},
-			PercentageList: []business_data_resp.Percentage{
-				{
-					TaxRate:        120,
-					ConsumptionTax: 120,
-				},
-				{
-					TaxRate:        110,
-					ConsumptionTax: 2120,
-				},
-			},
+			CategoryList: func() []business_data_resp.Category {
+				_, categoryList := s.BuildCategoryList(ctx, req.BusinessDataCountReq{
+					TimeType:       printerReq.TimeType,
+					QueryStartTime: int64(printerReq.QueryStartTime),
+					QueryEndTime:   int64(printerReq.QueryEndTime),
+					CategoryType:   printerReq.CategoryType,
+				})
+				return categoryList
+			}(),
+			PercentageList: func() []business_data_resp.Percentage {
+				taxData := s.statisticsSrv.CountTax(ctx, CountReq{
+					TimeType:       printerReq.TimeType,
+					QueryStartTime: int64(printerReq.QueryStartTime),
+					QueryEndTime:   int64(printerReq.QueryEndTime),
+					CategoryType:   printerReq.CategoryType,
+				})
+				list := make([]business_data_resp.Percentage, 0, len(taxData))
+				for _, tax := range taxData {
+					list = append(list, business_data_resp.Percentage{
+						TaxRate:        tax.TaxRate,
+						ConsumptionTax: tax.TotalTaxFee,
+						TotalPrice:     tax.TotalProductAmount,
+					})
+				}
+				return list
+			}(),
 		}
 	}
 
@@ -159,59 +163,49 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	}
 
 	if printerReq.StatisticsType == 2 {
+		categoryData, categoryList := s.BuildCategoryList(ctx, req.BusinessDataCountReq{
+			TimeType:       printerReq.TimeType,
+			QueryStartTime: int64(printerReq.QueryStartTime),
+			QueryEndTime:   int64(printerReq.QueryEndTime),
+			CategoryType:   printerReq.CategoryType,
+		})
+
+		paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req.BusinessDataCountReq{
+			QueryStartTime: int64(printerReq.QueryStartTime),
+			QueryEndTime:   int64(printerReq.QueryEndTime),
+			TimeType:       printerReq.TimeType,
+			CategoryType:   printerReq.CategoryType,
+		})
+
 		reqPrinterData.ProductCategory = &business_data_resp.BusinessDataProductCategory{
-			SalesNum: 120,
-			CategoryList: []business_data_resp.Category{
-				{
-					Name:     "12",
-					SalesNum: 1,
-					Prices:   323,
-				},
-				{
-					Name:     "121232",
-					SalesNum: 2,
-					Prices:   23,
-				},
-			},
-			PaymentMethodIncomes: []business_data_resp.PaymentMethodIncome{
-				{
-					Name:     "现金",
-					OrderNum: 1,
-					Amount:   123213,
-					Code:     40,
-				},
-				{
-					Name:     "支付宝",
-					OrderNum: 1,
-					Amount:   24121,
-					Code:     41,
-				},
-				{
-					Name:     "微信支付",
-					OrderNum: 1,
-					Amount:   123213,
-					Code:     42,
-				},
-			},
+			SalesNum:             int(categoryData.TotalSaleNum),
+			TotalRefundMoney:     paymentData.TotalRefundAmount,
+			TotalReceivedPrice:   paymentData.TotalReceivedAmount,
+			CategoryList:         categoryList,
+			PaymentMethodIncomes: paymentMethodIncomes,
 		}
 	}
 
 	if printerReq.StatisticsType == 3 {
 		reqPrinterData.Product = &business_data_resp.BusinessDataProduct{
-			Products: []business_data_resp.Product{
-				{
-					Name:     "12",
-					SalesNum: 1,
-					Price:    323,
-					Subtotal: 323,
-				},
-				{
-					Name:     "121232",
-					SalesNum: 2,
-					Price:    23,
-					Subtotal: 46,
-				},
-			},
+			Products: func() []business_data_resp.Product {
+				productList := s.statisticsSrv.CountProduct(ctx, CountReq{
+					TimeType:       printerReq.TimeType,
+					QueryStartTime: int64(printerReq.QueryStartTime),
+					QueryEndTime:   int64(printerReq.QueryEndTime),
+					CategoryType:   printerReq.CategoryType,
+				})
+				list := make([]business_data_resp.Product, 0, len(productList))
+				for _, product := range productList {
+					list = append(list, business_data_resp.Product{
+						Name:     product.ProductName,
+						SalesNum: int(product.SaleNum),
+						Price:    product.SalePrice,
+						Subtotal: product.SaleAmount,
+					})
+				}
+				return list
+			}(),
 		}
 	}
 
@@ -296,28 +290,27 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 			}
 			return peakHours
 		}(),
-		CategoryList: []business_data_resp.Category{
-			{
-				Name:     "12",
-				SalesNum: 1,
-				Prices:   323,
-			},
-			{
-				Name:     "121232",
-				SalesNum: 2,
-				Prices:   23,
-			},
-		},
-		PercentageList: []business_data_resp.Percentage{
-			{
-				TaxRate:        120,
-				ConsumptionTax: 120,
-			},
-			{
-				TaxRate:        110,
-				ConsumptionTax: 2120,
-			},
-		},
+		CategoryList: func() []business_data_resp.Category {
+			_, categoryList := s.BuildCategoryList(ctx, req)
+			return categoryList
+		}(),
+		PercentageList: func() []business_data_resp.Percentage {
+			taxData := s.statisticsSrv.CountTax(ctx, CountReq{
+				TimeType:       req.TimeType,
+				QueryStartTime: int64(req.QueryStartTime),
+				QueryEndTime:   int64(req.QueryEndTime),
+				CategoryType:   req.CategoryType,
+			})
+			list := make([]business_data_resp.Percentage, 0, len(taxData))
+			for _, tax := range taxData {
+				list = append(list, business_data_resp.Percentage{
+					TaxRate:        tax.TaxRate,
+					ConsumptionTax: tax.TotalTaxFee,
+					TotalPrice:     tax.TotalProductAmount,
+				})
+			}
+			return list
+		}(),
 	}
 
 	return &businessData, nil
@@ -338,23 +331,12 @@ func (s *businessSrv) CountPaymentMethod(ctx context.Context, req req.BusinessDa
 // CountProductCategory 统计商品分类
 func (s *businessSrv) CountProductCategory(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProductCategory, error) {
 	paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req)
-
+	categoryData, categoryList := s.BuildCategoryList(ctx, req)
 	var productCategoryData = business_data_resp.BusinessDataProductCategory{
-		SalesNum:           120,
-		TotalRefundMoney:   paymentData.TotalRefundAmount,
-		TotalReceivedPrice: paymentData.TotalReceivedAmount,
-		CategoryList: []business_data_resp.Category{
-			{
-				Name:     "12",
-				SalesNum: 1,
-				Prices:   323,
-			},
-			{
-				Name:     "121232",
-				SalesNum: 2,
-				Prices:   23,
-			},
-		},
+		SalesNum:             int(categoryData.TotalSaleNum),
+		TotalRefundMoney:     paymentData.TotalRefundAmount,
+		TotalReceivedPrice:   paymentData.TotalReceivedAmount,
+		CategoryList:         categoryList,
 		PaymentMethodIncomes: paymentMethodIncomes,
 	}
 
@@ -364,20 +346,25 @@ func (s *businessSrv) CountProductCategory(ctx context.Context, req req.Business
 // CountProduct 统计商品
 func (s *businessSrv) CountProduct(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProduct, error) {
 	var productData = business_data_resp.BusinessDataProduct{
-		Products: []business_data_resp.Product{
-			{
-				Name:     "12",
-				SalesNum: 1,
-				Price:    323,
-				Subtotal: 323,
-			},
-			{
-				Name:     "121232",
-				SalesNum: 2,
-				Price:    23,
-				Subtotal: 46,
-			},
-		},
+		Products: func() []business_data_resp.Product {
+			productList := s.statisticsSrv.CountProduct(ctx, CountReq{
+				TimeType:       req.TimeType,
+				QueryStartTime: int64(req.QueryStartTime),
+				QueryEndTime:   int64(req.QueryEndTime),
+				CategoryType:   req.CategoryType,
+				DutyNo:         req.DutyNo,
+			})
+			list := make([]business_data_resp.Product, 0, len(productList))
+			for _, product := range productList {
+				list = append(list, business_data_resp.Product{
+					Name:     product.ProductName,
+					SalesNum: int(product.SaleNum),
+					Price:    product.SalePrice,
+					Subtotal: product.SaleAmount,
+				})
+			}
+			return list
+		}(),
 	}
 
 	return &productData, nil
@@ -385,41 +372,48 @@ func (s *businessSrv) CountProduct(ctx context.Context, req req.BusinessDataCoun
 
 // CountArea 统计区域
 func (s *businessSrv) CountArea(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataArea, error) {
-	var areaData = business_data_resp.BusinessDataArea{
-		Areas: []business_data_resp.Area{
-			{
-				Name:               "12",
-				TotalSales:         120,
-				TotalReceivedPrice: 120,
-				TotalProductNum:    120,
-			},
-			{
-				Name:               "121232",
-				TotalSales:         120,
-				TotalReceivedPrice: 120,
-				TotalProductNum:    120,
-			},
-		},
+	areaData := s.statisticsSrv.CountArea(ctx, CountReq{
+		TimeType:       req.TimeType,
+		QueryStartTime: int64(req.QueryStartTime),
+		QueryEndTime:   int64(req.QueryEndTime),
+		CategoryType:   req.CategoryType,
+		DutyNo:         req.DutyNo,
+	})
+
+	var areaList = []business_data_resp.Area{}
+	for _, area := range areaData {
+		areaList = append(areaList, business_data_resp.Area{
+			Name:               area.AreaName,
+			TotalSales:         area.AreaSaleAmount,
+			TotalReceivedPrice: area.AreaBusinessAmount,
+			TotalProductNum:    int(area.AreaProductNum),
+		})
 	}
 
-	return &areaData, nil
+	return &business_data_resp.BusinessDataArea{
+		Areas: areaList,
+	}, nil
 }
 
 // RankProduct 统计商品排行
 func (s *businessSrv) RankProduct(ctx context.Context, req req.BusinessDataRankProductReq) (*business_data_resp.BusinessDataProductRank, error) {
 	var productRankData = business_data_resp.BusinessDataProductRank{
-		Ranks: []business_data_resp.ProductRank{
-			{
-				ProductName: "12",
-				SalesNum:    1,
-				SalesPrice:  323,
-			},
-			{
-				ProductName: "121232",
-				SalesNum:    2,
-				SalesPrice:  23,
-			},
-		},
+		Ranks: func() []business_data_resp.ProductRank {
+			productRankList := s.statisticsSrv.RankProduct(ctx, CountReq{
+				RankType:       req.RankType,
+				QueryStartTime: int64(req.QueryStartTime),
+				QueryEndTime:   int64(req.QueryEndTime),
+			})
+			list := make([]business_data_resp.ProductRank, 0, len(productRankList))
+			for _, productRank := range productRankList {
+				list = append(list, business_data_resp.ProductRank{
+					ProductName: productRank.ProductName,
+					SalesNum:    int(productRank.SaleNum),
+					SalesPrice:  productRank.SaleAmount,
+				})
+			}
+			return list
+		}(),
 	}
 
 	return &productRankData, nil
@@ -489,4 +483,25 @@ func (s *businessSrv) BuildPaymentMethodIncome(ctx context.Context, req req.Busi
 	}
 
 	return paymentData, paymentMethodIncomes
+}
+
+// BuildCategoryList 构建分类列表
+func (s *businessSrv) BuildCategoryList(ctx context.Context, req req.BusinessDataCountReq) (CountCategoryResp, []business_data_resp.Category) {
+	categoryData := s.statisticsSrv.CountCategory(ctx, CountReq{
+		TimeType:       req.TimeType,
+		QueryStartTime: req.QueryStartTime,
+		QueryEndTime:   req.QueryEndTime,
+		CategoryType:   req.CategoryType,
+		DutyNo:         req.DutyNo,
+	})
+	list := make([]business_data_resp.Category, 0, len(categoryData.CategoryList))
+	for _, category := range categoryData.CategoryList {
+		list = append(list, business_data_resp.Category{
+			Name:     category.CategoryName,
+			SalesNum: int(category.SaleNum),
+			Prices:   category.SaleAmount,
+		})
+	}
+
+	return categoryData, list
 }

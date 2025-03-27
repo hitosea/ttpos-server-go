@@ -864,7 +864,7 @@ class Order extends BaseModelOrder
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/product_rank', [
             'query_start_time' => $start_time,
             'query_end_time' => $end_time,
-            'rank_type' => $type,
+            'rank_type' => $type + 1,
         ], [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
@@ -880,7 +880,6 @@ class Order extends BaseModelOrder
             return false;
         }
         $data = $res['data'];
-
         $list = [];
         foreach ($data['ranks'] as $item) {
             $list[] = [

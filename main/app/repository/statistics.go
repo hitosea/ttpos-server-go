@@ -9,17 +9,24 @@ import (
 )
 
 type IStatisticsRepo interface {
-	CountShiftSaleRefundAmount(shiftNo string) model.StatisticsShiftSaleRefundAmount         // 统计当班用餐订单退款金额
-	CountShiftRechargeRefundAmount(shiftNo string) model.StatisticsShiftRechargeRefundAmount // 统计当班充值订单退款金额
-	CountShiftPaymentMethodAmount(shiftNo string) []model.StatisticsPaymentMethodAmount      // 统计当前班次支付方式收入
-	CountShiftSaleFreeAmount(shiftNo string) model.StatisticsSaleFreeAmount                  // 统计当班用餐订单免单金额
-	CountBusinessAmount(shiftNo string) float64                                              // 统计营业额
-	CountSale(opts ...DBOption) model.StatisticsSaleData                                     // 统计销售
-	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                             // 统计支付
-	SaveSale(sales []model.StatisticsSale) error                                             // 保存销售
-	SavePayment(payments []model.StatisticsPayment) error                                    // 保存支付
-	DeleteSale(saleBillUuid uint64) error                                                    // 删除销售
-	DeletePayment(saleBillUuid uint64) error                                                 // 删除支付
+	CountShiftSaleRefundAmount(shiftNo string) model.StatisticsShiftSaleRefundAmount                  // 统计当班用餐订单退款金额
+	CountShiftRechargeRefundAmount(shiftNo string) model.StatisticsShiftRechargeRefundAmount          // 统计当班充值订单退款金额
+	CountShiftPaymentMethodAmount(shiftNo string) []model.StatisticsPaymentMethodAmount               // 统计当前班次支付方式收入
+	CountShiftSaleFreeAmount(shiftNo string) model.StatisticsSaleFreeAmount                           // 统计当班用餐订单免单金额
+	CountBusinessAmount(shiftNo string) float64                                                       // 统计营业额
+	CountSale(opts ...DBOption) model.StatisticsSaleData                                              // 统计销售
+	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                      // 统计支付
+	CountTax(opts ...DBOption) []model.StatisticsTaxData                                              // 统计税类
+	CountCategory(categoryType int, language string, opts ...DBOption) []model.StatisticsCategoryData // 统计分类
+	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                     // 统计商品
+	CountArea(opts ...DBOption) []model.StatisticsAreaData                                            // 统计区域
+	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData        // 统计商品排行
+	SaveSale(sales []model.StatisticsSale) error                                                      // 保存销售
+	SavePayment(payments []model.StatisticsPayment) error                                             // 保存支付
+	SaveProduct(products []model.StatisticsProduct) error                                             // 保存商品
+	DeleteSale(saleBillUuid uint64) error                                                             // 删除销售
+	DeletePayment(saleBillUuid uint64) error                                                          // 删除支付
+	DeleteProduct(saleBillUuid uint64) error                                                          // 删除商品
 }
 
 func NewStatisticsRepo(db *gorm.DB) IStatisticsRepo {
@@ -138,8 +145,6 @@ func (r *StatisticsRepo) CountShiftSaleFreeAmount(shiftNo string) model.Statisti
 }
 
 // CountBusinessAmount 统计营业额
-// 商品已含税（原商品金额+实收服务费+实收服务税费+实收支付手续费）
-// 商品未含税（原商品金额+实收服务费+实收商品及服务税费+实收支付手续费）
 func (r *StatisticsRepo) CountBusinessAmount(shiftNo string) float64 {
 	var result float64
 
@@ -246,6 +251,178 @@ func (r *StatisticsRepo) CountPayment(opts ...DBOption) []model.StatisticsPaymen
 	return result
 }
 
+// CountTax 统计税类
+func (r *StatisticsRepo) CountTax(opts ...DBOption) []model.StatisticsTaxData {
+	var result []model.StatisticsTaxData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	db.Model(&model.StatisticsProduct{}).
+		Select(
+			"tax_rate",
+			"SUM((product_price + tax_fee) * product_num) AS total_product_amount",
+			"SUM(tax_fee) AS total_tax_fee",
+		).Group("tax_rate").
+		Find(&result)
+
+	return result
+}
+
+// CountCategory 统计分类
+func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts ...DBOption) []model.StatisticsCategoryData {
+	var result []model.StatisticsCategoryData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	prefix := config.Database.TablePrefix
+	statisticsProductTable := prefix + "statistics_product as sp"
+	productPackageTable := prefix + "product_package as pp"
+	productBomTable := prefix + "product_bom as pb"
+	productCategoryTable := prefix + "product_category as pc"
+	productParentCategoryTable := prefix + "product_category as ppc"
+
+	if categoryType == 1 {
+		db.Table(statisticsProductTable).
+			Select(
+				"IF(pc.parent_uuid = 0, pp.category_uuid, pc.parent_uuid) AS category_parent_uuid",
+				"IF(pc.parent_uuid = 0, JSON_UNQUOTE(JSON_EXTRACT(pc.NAME, '$."+language+"')), JSON_UNQUOTE(JSON_EXTRACT(ppc.NAME, '$."+language+"'))) AS category_parent_name",
+				"0 AS category_uuid",
+				"'' AS category_name",
+				"SUM(sp.product_num) AS sale_num",
+				"SUM(sp.product_sale_price * sp.product_num) AS sale_amount",
+			).
+			Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
+			Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
+			Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
+			Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
+			Group("IF(pc.parent_uuid = 0, pp.category_uuid, pc.parent_uuid)").
+			Find(&result)
+	}
+
+	if categoryType == 2 {
+		db.Table(statisticsProductTable).
+			Select(
+				"pc.parent_uuid AS category_parent_uuid",
+				"JSON_UNQUOTE(JSON_EXTRACT(ppc.NAME, '$."+language+"')) AS category_parent_name",
+				"pc.uuid AS category_uuid",
+				"JSON_UNQUOTE(JSON_EXTRACT(pc.NAME, '$."+language+"')) AS category_name",
+				"SUM(sp.product_num) AS sale_num",
+				"SUM(sp.product_sale_price * sp.product_num) AS sale_amount",
+			).
+			Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
+			Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
+			Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
+			Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
+			Where("pc.parent_uuid > 0").
+			Group("pc.uuid").
+			Find(&result)
+	}
+
+	return result
+}
+
+// CountProduct 统计商品
+func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model.StatisticsProductData {
+	var result []model.StatisticsProductData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	prefix := config.Database.TablePrefix
+	statisticsProductTable := prefix + "statistics_product as sp"
+	productPackageTable := prefix + "product_package as pp"
+	productBomTable := prefix + "product_bom as pb"
+
+	db.Table(statisticsProductTable).
+		Select(
+			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) AS product_name",
+			"JSON_UNQUOTE(JSON_EXTRACT(pb.name, '$."+language+"')) AS flavor_name",
+			"sp.product_sale_price AS sale_price",
+			"SUM(sp.product_num) AS sale_num",
+			"SUM(sp.product_sale_price * sp.product_num) AS sale_amount",
+		).
+		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
+		Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
+		Group("sp.product_bom_uuid").
+		Find(&result)
+
+	return result
+}
+
+// CountArea 统计区域
+func (r *StatisticsRepo) CountArea(opts ...DBOption) []model.StatisticsAreaData {
+	var result []model.StatisticsAreaData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	prefix := config.Database.TablePrefix
+	statisticsSaleTable := prefix + "statistics_sale as ss"
+	deskTable := prefix + "desk as d"
+	deskRegionTable := prefix + "desk_region as dr"
+
+	db.Table(statisticsSaleTable).
+		Select(
+			"dr.name AS area_name",
+			"SUM(ss.product_price + ss.product_tax + ss.service_fee + ss.service_tax + ss.payment_fee) AS area_sale_amount",
+			"SUM(ss.payment_amount - ss.product_tax - ss.service_tax) AS area_business_amount",
+			"SUM(ss.product_num) AS area_product_num",
+		).
+		Joins("LEFT JOIN " + deskTable + " ON ss.desk_uuid = d.uuid").
+		Joins("LEFT JOIN " + deskRegionTable + " ON d.region_uuid = dr.uuid").
+		Where("ss.desk_uuid > 0").
+		Group("dr.uuid").
+		Find(&result)
+
+	return result
+}
+
+// RankProduct 统计商品排行
+func (r *StatisticsRepo) RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData {
+	var result []model.StatisticsProductData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	prefix := config.Database.TablePrefix
+	statisticsProductTable := prefix + "statistics_product as sp"
+	productPackageTable := prefix + "product_package as pp"
+	productBomTable := prefix + "product_bom as pb"
+
+	query := db.Table(statisticsProductTable).
+		Select(
+			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) AS product_name",
+			"JSON_UNQUOTE(JSON_EXTRACT(pb.name, '$."+language+"')) AS flavor_name",
+			"sp.product_sale_price AS sale_price",
+			"SUM(sp.product_num) AS sale_num",
+			"SUM(sp.product_sale_price * sp.product_num) AS sale_amount",
+		).
+		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
+		Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
+		Where("sp.refund_time = 0").
+		Group("sp.product_bom_uuid")
+
+	if rankType == 1 {
+		query = query.Order("sale_num DESC")
+	}
+
+	if rankType == 2 {
+		query = query.Order("sale_amount DESC")
+	}
+
+	query = query.Limit(10)
+	query.Find(&result)
+
+	return result
+}
+
 // SaveSale 保存销售
 func (r *StatisticsRepo) SaveSale(sales []model.StatisticsSale) error {
 	return r.db.Create(&sales).Error
@@ -264,4 +441,14 @@ func (r *StatisticsRepo) SavePayment(payments []model.StatisticsPayment) error {
 // DeletePayment 删除支付
 func (r *StatisticsRepo) DeletePayment(saleBillUuid uint64) error {
 	return r.db.Where("sale_bill_uuid = ?", saleBillUuid).Delete(&model.StatisticsPayment{}).Error
+}
+
+// SaveProduct 保存商品
+func (r *StatisticsRepo) SaveProduct(products []model.StatisticsProduct) error {
+	return r.db.Create(&products).Error
+}
+
+// DeleteProduct 删除商品
+func (r *StatisticsRepo) DeleteProduct(saleBillUuid uint64) error {
+	return r.db.Where("sale_bill_uuid = ?", saleBillUuid).Delete(&model.StatisticsProduct{}).Error
 }

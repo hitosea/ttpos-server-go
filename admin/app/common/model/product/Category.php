@@ -10,6 +10,7 @@ use app\common\model\BaseModel;
 use app\common\model\order\Order;
 use think\model\concern\SoftDelete;
 use app\common\model\product\Product;
+use app\common\service\websocket\Websocket;
 use app\common\model\supplier\Supplier as SupplierModel;
 
 /**
@@ -28,6 +29,32 @@ class Category extends BaseModel
      */
     protected $append = ['category_id', 'parent_id', 'name_text', 'path_name_text'];
 
+    /**
+     * 分类更新后推送通知
+     */
+    public static function onAfterWrite(Category $model)
+    {
+        $msgData = [
+            'type' => 'update',
+            'category_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_CATEGORY, 0, $msgData);
+    }
+
+    /**
+     * 分类删除后推送通知
+     */
+    public static function onAfterDelete(Category $model)
+    {
+        $msgData = [
+            'type' => 'delete',
+            'category_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_CATEGORY, 0, $msgData);
+    }
+    
     /**
      * 兼容字段
      */

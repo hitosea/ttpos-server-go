@@ -9,6 +9,7 @@ use app\common\model\supplier\Supplier;
 use app\common\enum\settings\SettingEnum;
 use app\common\model\app\App;
 use app\common\model\settings\Setting as SettingModel;
+use app\common\service\websocket\Websocket;
 
 class Setting extends SettingModel
 {
@@ -112,6 +113,17 @@ class Setting extends SettingModel
         Cache::tag('common_get_settingLanguages')->clear();
         // 删除收银机缓存
         Cache::tag('cashier')->clear();
+
+        // 推送配置更新
+        Websocket::pushClient(
+            $appId, 
+            Websocket::SOURCE_All, 
+            Websocket::SOURCE_All, 
+            Websocket::UPDATE_CONFIG, 
+            0,
+            ['update_time' => time()]
+        );
+
         //
         return $res;
     }
