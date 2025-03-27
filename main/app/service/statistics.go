@@ -18,6 +18,7 @@ type IStatisticsSrv interface {
 	CountTax(ctx context.Context, req CountReq) []CountTaxResp            // 统计税类
 	CountCategory(ctx context.Context, req CountReq) CountCategoryResp    // 统计分类
 	CountProduct(ctx context.Context, req CountReq) []CountProductResp    // 统计商品
+	CountArea(ctx context.Context, req CountReq) []CountAreaResp          // 统计区域
 	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp // 统计商品排行
 	SaveSale(ctx context.Context, req SaveSaleReq) error                  // 保存销售
 }
@@ -260,6 +261,30 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 			SalePrice:   product.SalePrice.Float64,
 			SaleNum:     product.SaleNum.Int64,
 			SaleAmount:  product.SaleAmount.Float64,
+		})
+	}
+	return list
+}
+
+type CountAreaResp struct {
+	AreaName           string  `json:"area_name"`            // 区域名称
+	AreaSaleAmount     float64 `json:"area_sale_amount"`     // 区域销售额
+	AreaBusinessAmount float64 `json:"area_business_amount"` // 区域营业收入
+	AreaProductNum     int64   `json:"area_product_num"`     // 区域商品数量
+}
+
+// CountArea 统计区域
+func (s *statisticsSrv) CountArea(ctx context.Context, req CountReq) []CountAreaResp {
+	opts := s.buildCountOpts(req)
+	areaData := repository.NewStatisticsRepo(ctx.GetDB()).CountArea(opts...)
+
+	var list []CountAreaResp
+	for _, area := range areaData {
+		list = append(list, CountAreaResp{
+			AreaName:           area.AreaName.String,
+			AreaSaleAmount:     area.AreaSaleAmount.Float64,
+			AreaBusinessAmount: area.AreaBusinessAmount.Float64,
+			AreaProductNum:     area.AreaProductNum.Int64,
 		})
 	}
 	return list

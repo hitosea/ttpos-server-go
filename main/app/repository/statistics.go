@@ -19,6 +19,7 @@ type IStatisticsRepo interface {
 	CountTax(opts ...DBOption) []model.StatisticsTaxData                                              // 统计税类
 	CountCategory(categoryType int, language string, opts ...DBOption) []model.StatisticsCategoryData // 统计分类
 	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                     // 统计商品
+	CountArea(opts ...DBOption) []model.StatisticsAreaData                                            // 统计区域
 	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData        // 统计商品排行
 	SaveSale(sales []model.StatisticsSale) error                                                      // 保存销售
 	SavePayment(payments []model.StatisticsPayment) error                                             // 保存支付
@@ -348,6 +349,35 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
 		Group("sp.product_bom_uuid").
+		Find(&result)
+
+	return result
+}
+
+// CountArea 统计区域
+func (r *StatisticsRepo) CountArea(opts ...DBOption) []model.StatisticsAreaData {
+	var result []model.StatisticsAreaData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	prefix := config.Database.TablePrefix
+	statisticsSaleTable := prefix + "statistics_sale as ss"
+	deskTable := prefix + "desk as d"
+	deskRegionTable := prefix + "desk_region as dr"
+
+	db.Table(statisticsSaleTable).
+		Select(
+			"dr.name AS area_name",
+			"SUM(ss.product_price + ss.product_tax + ss.service_fee + ss.service_tax + ss.payment_fee) AS area_sale_amount",
+			"SUM(ss.payment_amount - ss.product_tax - ss.service_tax) AS area_business_amount",
+			"SUM(ss.product_num) AS area_product_num",
+		).
+		Joins("LEFT JOIN " + deskTable + " ON ss.desk_uuid = d.uuid").
+		Joins("LEFT JOIN " + deskRegionTable + " ON d.region_uuid = dr.uuid").
+		Where("ss.desk_uuid > 0").
+		Group("dr.uuid").
 		Find(&result)
 
 	return result

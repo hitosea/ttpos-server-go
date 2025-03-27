@@ -155,3 +155,11 @@ type StatisticsProductData struct {
 	SaleNum     sql.NullInt64   `gorm:"column:sale_num;comment:销售数量"`
 	SaleAmount  sql.NullFloat64 `gorm:"column:sale_amount;comment:销售金额"`
 }
+
+// StatisticsAreaData 区域统计数据
+type StatisticsAreaData struct {
+	AreaName           sql.NullString  `gorm:"column:area_name;comment:区域名称"`
+	AreaSaleAmount     sql.NullFloat64 `gorm:"column:area_sale_amount;comment:区域销售额"`
+	AreaBusinessAmount sql.NullFloat64 `gorm:"column:area_business_amount;comment:区域营业收入"`
+	AreaProductNum     sql.NullInt64   `gorm:"column:area_product_num;comment:区域商品数量"`
+}

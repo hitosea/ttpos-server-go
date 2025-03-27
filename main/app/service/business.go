@@ -372,24 +372,27 @@ func (s *businessSrv) CountProduct(ctx context.Context, req req.BusinessDataCoun
 
 // CountArea 统计区域
 func (s *businessSrv) CountArea(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataArea, error) {
-	var areaData = business_data_resp.BusinessDataArea{
-		Areas: []business_data_resp.Area{
-			{
-				Name:               "12",
-				TotalSales:         120,
-				TotalReceivedPrice: 120,
-				TotalProductNum:    120,
-			},
-			{
-				Name:               "121232",
-				TotalSales:         120,
-				TotalReceivedPrice: 120,
-				TotalProductNum:    120,
-			},
-		},
+	areaData := s.statisticsSrv.CountArea(ctx, CountReq{
+		TimeType:       req.TimeType,
+		QueryStartTime: int64(req.QueryStartTime),
+		QueryEndTime:   int64(req.QueryEndTime),
+		CategoryType:   req.CategoryType,
+		DutyNo:         req.DutyNo,
+	})
+
+	var areaList = []business_data_resp.Area{}
+	for _, area := range areaData {
+		areaList = append(areaList, business_data_resp.Area{
+			Name:               area.AreaName,
+			TotalSales:         area.AreaSaleAmount,
+			TotalReceivedPrice: area.AreaBusinessAmount,
+			TotalProductNum:    int(area.AreaProductNum),
+		})
 	}
 
-	return &areaData, nil
+	return &business_data_resp.BusinessDataArea{
+		Areas: areaList,
+	}, nil
 }
 
 // RankProduct 统计商品排行
