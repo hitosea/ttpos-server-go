@@ -8,6 +8,7 @@ import (
 )
 
 type IProductBomRepo interface {
+	CreateProductBom(productBom model.ProductBom) (*model.ProductBom, error)
 	GetProductBom(opts ...DBOption) (*model.ProductBom, error)
 	GetProductBoms(opts ...DBOption) ([]*model.ProductBom, error)
 	GetFlavorProductBomByUuid(uuid uint64) (*model.ProductBom, error)
@@ -22,6 +23,14 @@ type productBomRepoImpl struct {
 
 func NewProductBomRepo(db *gorm.DB) IProductBomRepo {
 	return &productBomRepoImpl{db: db}
+}
+
+func (r *productBomRepoImpl) CreateProductBom(productBom model.ProductBom) (*model.ProductBom, error) {
+	productBom.SetNil()
+	if err := r.db.Create(&productBom).Error; err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &productBom, nil
 }
 
 func (r *productBomRepoImpl) GetProductBom(opts ...DBOption) (*model.ProductBom, error) {

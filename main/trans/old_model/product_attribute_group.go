@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// 产品属性组表 `jjjfood_product_attribute_group`
 type ProductAttributeGroup struct {
 	GroupAttributeID       uint64 `gorm:"primaryKey;autoIncrement;comment:产品属性组ID"`
 	ProductID              uint64 `gorm:"default:0;comment:关联产品ID"`
@@ -50,9 +51,10 @@ func (s *ProductAttributeGroupService) ConvertProductAttributeGroup() error {
 			BaseModel: model.BaseModel{
 				Uuid: uint64(productAttributeGroup.GroupAttributeID),
 			},
-			IsMust:             productAttributeGroup.AttributeRequired,
-			MaxSelection:       productAttributeGroup.AttributeMaxSelect,
-			ProductPackageUuid: productAttributeGroup.ProductID,
+			IsMust:                    productAttributeGroup.AttributeRequired,
+			MaxSelection:              productAttributeGroup.AttributeMaxSelect,
+			ProductPackageUuid:        productAttributeGroup.ProductID,
+			ProductAttributeGroupUuid: uint64(productAttributeGroup.AttributeID),
 		}
 		_, err := base.NewProductPackageAttributeGroupRepo(s.targetDB).CreateProductPackageAttributeGroup(group)
 		if err != nil {

@@ -68,6 +68,13 @@ type Product struct {
 	ProductTax   ProductTax   `gorm:"foreignKey:product_id;references:product_id"`
 }
 
+func (model *Product) GetProductStatus() uint8 {
+	if model.ProductStatus == 20 {
+		return 0
+	}
+	return 1
+}
+
 type ProductImage struct {
 	ID         uint   `gorm:"primaryKey;autoIncrement;comment:'主键id'"`
 	ProductID  uint   `gorm:"default:0;comment:'商品id'"`
@@ -145,12 +152,7 @@ func (s *ProductService) ConvertProduct() error {
 				}
 				return 1
 			}()
-			Status := func() uint8 {
-				if product.ProductStatus == 20 {
-					return 0
-				}
-				return 1
-			}()
+			Status := product.GetProductStatus()
 			IsShowCashier := func() uint {
 				if product.IsShowCashier == 1 {
 					return 1
