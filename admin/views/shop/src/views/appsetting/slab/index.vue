@@ -166,7 +166,7 @@
 
         <el-form-item for="no_click" :label="$t('常用语言')" prop="language" :rules="[{ required: true, message: $t('请选择常用语言') }]">
           <el-checkbox-group v-model="form.language">
-            <el-checkbox v-for="item in languageList" v-show="item.key" :key="item.name" :label="item.name" :disabled="form.language.length == 1 && form.language.includes(item.name)">
+            <el-checkbox v-for="item in languageList" v-show="item.key" :key="item.key" :label="item.key" :disabled="form.language.length == 1 && form.language.includes(item.key)">
               {{ item.value }}
             </el-checkbox>
           </el-checkbox-group>
@@ -174,7 +174,7 @@
         <el-form-item for="no_click" :label="$t('默认语言')" prop="default_language" :rules="[{ required: true, message: $t('请选择常用语言') }]">
           <el-select v-model="form.default_language">
             <template v-for="(item, index) in defaultLanguageList" :key="index">
-              <el-option :value="item.name" :label="item.value">{{ item.value }}</el-option>
+              <el-option :value="item.key" :label="item.value">{{ item.value }}</el-option>
             </template>
           </el-select>
         </el-form-item>
@@ -299,7 +299,7 @@
       defaultLanguageList() {
         let result = [];
         this.languageList.map((item) => {
-          if ((this.form.language || []).includes(item.name)) {
+          if ((this.form.language || []).includes(item.key)) {
             result.push(item);
           }
           if (!(this.form.language || []).includes(this.form.default_language)) {
@@ -360,7 +360,7 @@
               self.password = 666666;
             }
             self.form.language = self.form.language.filter((lang) => {
-              return self.languageList.map((h) => h.name).indexOf(lang) != -1;
+              return self.languageList.map((h) => h.key).indexOf(lang) != -1;
             });
             self.onlineList = [];
             self.offlineList = [];
