@@ -5161,7 +5161,6 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 // InstantOrderPaymentCreate 给销售订单创建一个支付单
 func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
-	fmt.Println("InstantOrderPaymentCreate source:", ctx.GetSource())
 	// 判断订单是否已经结束，若订单结束则拒绝操作
 	if err := s.checkCanOperateOrder(ctx, req.SaleBillUuid, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
@@ -5508,7 +5507,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	fmt.Println("s.settingSrv.GetPointsSetting(ctx) pointsSetting:", utils.ToJsonString(pointsSetting))
 	// 计算本单获取的积分
 	saleOrder.SetGiftPointsRate(pointsSetting.GetGiftRatio())
 
@@ -7314,8 +7312,6 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 			return
 		}
 		totalPrice := saleBill.GetUnAcceptH5OrderProductTotalPrice(h5OrderProducts) // 未接单的h5订单商品的商品金额之和
-		fmt.Println("acceptOrderSetting", utils.ToJsonString(acceptOrderSetting))
-		fmt.Println("totalPrice", totalPrice)
 		if acceptOrderSetting.CanAutoOrder(totalPrice) {
 			// 自动接单
 			s.AcceptH5Order(ctx, h5Order.Uuid, true)

@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"slices"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -125,8 +124,6 @@ func (model *SaleBill) IsCookingStatus() bool {
 
 // 判断账单是否为结束状态，包括已完成、已取消、已删除
 func (model *SaleBill) IsEndStatus() bool {
-	fmt.Println("model.Status:", model.Status)
-	fmt.Println("model.IsDelete():", model.IsDelete())
 	return model.Status == constant.SaleBillStatusComplete || model.Status == constant.SaleBillStatusCanceled || model.IsDelete()
 }
 

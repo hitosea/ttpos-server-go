@@ -102,7 +102,7 @@ func (model *Desk) SetCloseDesk() {
 
 // SetCloseDesk 设置待清台信息，将桌台改为待清台状态
 func (model *Desk) SetWaitClearDesk() {
-	model.Status = constant.DeskStatusClose
+	model.Status = constant.DeskStatusOpen
 	model.SaleBillUuid = 0
 }
 
