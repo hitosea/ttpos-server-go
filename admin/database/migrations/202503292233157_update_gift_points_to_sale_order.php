@@ -34,5 +34,9 @@ class UpdateGiftPointsToSaleOrder extends Migrator
             $table->renameColumn('gift_point', 'gift_points');
             $table->update();
         }
+        if ($table->hasColumn('gift_point_rate') && !$table->hasColumn('gift_points_rate')) {
+            $table->renameColumn('gift_point_rate', 'gift_points_rate');
+            $table->update();
+        }
     }
 }
