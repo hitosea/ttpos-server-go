@@ -1968,4 +1968,29 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_payment` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '支付统计表';
 
+
+CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
+    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售单UUID',
+    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单UUID',
+    `duty_no` varchar(255) NOT NULL DEFAULT '' COMMENT '当班编号',
+    `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台UUID',
+    `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包uuid',
+    `product_bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品清单uuid',
+    `product_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品单价: 未含税',
+    `product_sale_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品销售价: 规格+加料',
+    `product_num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
+    `tax_rate` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '税率',
+    `tax_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '税费',
+    `complete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间',
+    `refund_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间',
+    `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '支付统计表';
+
+
+
 SET FOREIGN_KEY_CHECKS = 1;

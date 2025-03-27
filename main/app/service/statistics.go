@@ -13,9 +13,13 @@ import (
 
 // IStatisticsSrv 统计服务接口
 type IStatisticsSrv interface {
-	CountSale(ctx context.Context, req CountReq) CountSaleResp       // 统计销售
-	CountPayment(ctx context.Context, req CountReq) CountPaymentResp // 统计支付
-	SaveSale(ctx context.Context, req SaveSaleReq) error             // 保存销售
+	CountSale(ctx context.Context, req CountReq) CountSaleResp            // 统计销售
+	CountPayment(ctx context.Context, req CountReq) CountPaymentResp      // 统计支付
+	CountTax(ctx context.Context, req CountReq) []CountTaxResp            // 统计税类
+	CountCategory(ctx context.Context, req CountReq) CountCategoryResp    // 统计分类
+	CountProduct(ctx context.Context, req CountReq) []CountProductResp    // 统计商品
+	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp // 统计商品排行
+	SaveSale(ctx context.Context, req SaveSaleReq) error                  // 保存销售
 }
 
 // statisticsSrv 统计服务实现
@@ -170,6 +174,119 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 	}
 }
 
+// CountTaxResp 统计税类响应
+type CountTaxResp struct {
+	TaxRate            float64 `json:"tax_rate"`             // 税类
+	TotalTaxFee        float64 `json:"total_tax_fee"`        // 总税费
+	TotalProductAmount float64 `json:"total_product_amount"` // 总商品金额: 含税
+}
+
+// CountTax 统计税类
+func (s *statisticsSrv) CountTax(ctx context.Context, req CountReq) []CountTaxResp {
+	opts := s.buildCountOpts(req)
+	opts = append(opts, repository.NewCommonRepo().WhereByRefundTime(0))
+	taxData := repository.NewStatisticsRepo(ctx.GetDB()).CountTax(opts...)
+
+	var list []CountTaxResp
+	for _, tax := range taxData {
+		list = append(list, CountTaxResp{
+			TaxRate:            tax.TaxRate.Float64,
+			TotalTaxFee:        tax.TotalTaxFee.Float64,
+			TotalProductAmount: tax.TotalProductAmount.Float64,
+		})
+	}
+
+	return list
+}
+
+type CountCategoryResp struct {
+	TotalSaleNum int64                   `json:"total_sale_num"` // 总销售数量
+	CategoryList []CountCategoryListResp `json:"category_list"`  // 分类列表
+}
+
+// CountCategoryResp 统计分类响应
+type CountCategoryListResp struct {
+	CategoryName string  `json:"category_name"` // 分类名称
+	SaleNum      int64   `json:"sale_num"`      // 销售数量
+	SaleAmount   float64 `json:"sale_amount"`   // 销售金额
+}
+
+// CountCategory 统计分类
+func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCategoryResp {
+	var (
+		SaleNum int64
+		list    []CountCategoryListResp
+	)
+
+	opts := s.buildCountOpts(req)
+	categoryData := repository.NewStatisticsRepo(ctx.GetDB()).CountCategory(req.CategoryType, ctx.GetLanguage(), opts...)
+
+	for _, category := range categoryData {
+		categoryName := category.CategoryParentName.String
+		if category.CategoryName.String != "" {
+			categoryName = categoryName + "-" + category.CategoryName.String
+		}
+		list = append(list, CountCategoryListResp{
+			CategoryName: categoryName,
+			SaleNum:      category.SaleNum.Int64,
+			SaleAmount:   category.SaleAmount.Float64,
+		})
+		SaleNum += category.SaleNum.Int64
+	}
+
+	return CountCategoryResp{
+		TotalSaleNum: SaleNum,
+		CategoryList: list,
+	}
+}
+
+// CountProductResp 统计商品响应
+type CountProductResp struct {
+	ProductName string  `json:"product_name"` // 商品名称
+	SalePrice   float64 `json:"sale_price"`   // 销售单价
+	SaleNum     int64   `json:"sale_num"`     // 销售数量
+	SaleAmount  float64 `json:"sale_amount"`  // 销售金额
+}
+
+// CountProduct 统计商品
+func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountProductResp {
+	opts := s.buildCountOpts(req)
+	productData := repository.NewStatisticsRepo(ctx.GetDB()).CountProduct(ctx.GetLanguage(), opts...)
+
+	var list []CountProductResp
+	for _, product := range productData {
+		list = append(list, CountProductResp{
+			ProductName: product.ProductName.String + "（" + product.FlavorName.String + "）",
+			SalePrice:   product.SalePrice.Float64,
+			SaleNum:     product.SaleNum.Int64,
+			SaleAmount:  product.SaleAmount.Float64,
+		})
+	}
+	return list
+}
+
+// CountProductRankResp 统计商品排行响应
+type CountProductRankResp struct {
+	ProductName string  `json:"product_name"` // 商品名称
+	SaleNum     int64   `json:"sale_num"`     // 销售数量
+	SaleAmount  float64 `json:"sale_amount"`  // 销售金额
+}
+
+// CountProductRank 统计商品排行
+func (s *statisticsSrv) RankProduct(ctx context.Context, req CountReq) []CountProductRankResp {
+	opts := s.buildCountOpts(req)
+	productData := repository.NewStatisticsRepo(ctx.GetDB()).RankProduct(req.RankType, ctx.GetLanguage(), opts...)
+	var list []CountProductRankResp
+	for _, product := range productData {
+		list = append(list, CountProductRankResp{
+			ProductName: product.ProductName.String + "（" + product.FlavorName.String + "）",
+			SaleNum:     product.SaleNum.Int64,
+			SaleAmount:  product.SaleAmount.Float64,
+		})
+	}
+	return list
+}
+
 // SaveSaleReq 保存销售请求
 type SaveSaleReq struct {
 	SaleBill *model.SaleBill
@@ -183,10 +300,12 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 	// 先删除
 	statisticsRepo.DeleteSale(req.SaleBill.Uuid)
 	statisticsRepo.DeletePayment(req.SaleBill.Uuid)
+	statisticsRepo.DeleteProduct(req.SaleBill.Uuid)
 
 	var (
 		sales    []model.StatisticsSale
 		payments []model.StatisticsPayment
+		products []model.StatisticsProduct
 	)
 	// 销售订单
 	for _, saleOrder := range req.SaleBill.SaleOrders {
@@ -204,14 +323,37 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 		)
 		// 销售商品
 		for _, saleProduct := range saleOrder.SaleOrderProducts {
-			productNum += int(saleProduct.Num)
-			productPrice = productPrice.Add(decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()))
-			productSalePrice = productSalePrice.Add(decimal.NewFromFloat(saleProduct.SalePrice))
-			productTax = productTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
-			serviceFee = serviceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee))
-			serviceTax = serviceTax.Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee))
-			if saleProduct.GiftTime > 0 {
-				giveNum += int(saleProduct.Num)
+			if saleProduct.CancelTime == 0 {
+				productNum += int(saleProduct.Num)
+				productPrice = productPrice.Add(decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()))
+				productSalePrice = productSalePrice.Add(decimal.NewFromFloat(saleProduct.SalePrice))
+				productTax = productTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
+				serviceFee = serviceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee))
+				serviceTax = serviceTax.Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee))
+				if saleProduct.GiftTime > 0 {
+					giveNum += int(saleProduct.Num)
+				}
+				var bomUuid uint64
+				for _, productBom := range saleProduct.SaleOrderProductBoms {
+					if productBom.IsFlavorBom == 1 {
+						bomUuid = productBom.ProductBomUuid
+					}
+				}
+
+				products = append(products, model.StatisticsProduct{
+					SaleBillUuid:       req.SaleBill.Uuid,
+					SaleOrderUuid:      saleOrder.Uuid,
+					DutyNo:             req.SaleBill.DutyNo,
+					DeskUuid:           req.SaleBill.DeskUuid,
+					ProductPackageUuid: saleProduct.ProductPackageUuid,
+					ProductBomUuid:     bomUuid,
+					ProductPrice:       saleProduct.GetUnitPriceNoneTax(),
+					ProductSalePrice:   saleProduct.ProductPrice,
+					ProductNum:         int(saleProduct.Num),
+					TaxRate:            saleProduct.TaxRate,
+					TaxFee:             saleProduct.TaxFee,
+					CompleteTime:       req.SaleBill.FinishTime,
+				})
 			}
 		}
 		if saleOrder.IsFree > 0 {
@@ -278,6 +420,14 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			return err
 		}
 	}
+
+	if len(products) > 0 {
+		err := statisticsRepo.SaveProduct(products)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -288,6 +438,7 @@ type CountReq struct {
 	QueryEndTime   int64  `json:"query_end_time"`   // 查询结束时间戳
 	CategoryType   int    `json:"category_type"`    // 分类类型 (1 按一级分类, 2 按二级分类)
 	DutyNo         string `json:"duty_no"`          // 班次编号
+	RankType       int    `json:"rank_type"`        // 排行类型 (1 按销售数量, 2 按销售金额)
 }
 
 // buildCountOpts 构建统计选项
