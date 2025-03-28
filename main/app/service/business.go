@@ -21,6 +21,7 @@ type IBusinessSrv interface {
 	CountProduct(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProduct, error)                                      // 统计商品
 	CountArea(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataArea, error)                                            // 统计区域
 	CountProductSales(ctx context.Context, req req.BusinessDataCountProductSalesReq) (*business_data_resp.BusinessDataCountProductSalesPagination, error) // 统计商品列表
+	Count7Days(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataCount7Days, error)                                     // 统计7天
 	RankProduct(ctx context.Context, req req.BusinessDataRankProductReq) (*business_data_resp.BusinessDataProductRank, error)                             // 统计商品排行
 }
 
@@ -460,6 +461,28 @@ func (s *businessSrv) CountProductSales(ctx context.Context, req req.BusinessDat
 	}
 
 	return &productListData, nil
+}
+
+// Count7Days 统计7天
+func (s *businessSrv) Count7Days(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataCount7Days, error) {
+	sevenDaysData := s.statisticsSrv.Count7Days(ctx, CountReq{
+		QueryStartTime: int64(req.QueryStartTime),
+		QueryEndTime:   int64(req.QueryEndTime),
+	})
+
+	sevenDaysDataList := make([]business_data_resp.BusinessDataCount7DaysItem, 0, len(sevenDaysData.Data))
+	for _, day := range sevenDaysData.Data {
+		sevenDaysDataList = append(sevenDaysDataList, business_data_resp.BusinessDataCount7DaysItem{
+			Day:        day.Day,
+			TotalNum:   day.TotalNum,
+			TotalMoney: day.TotalMoney,
+		})
+	}
+
+	return &business_data_resp.BusinessDataCount7Days{
+		Days: sevenDaysData.Days,
+		Data: sevenDaysDataList,
+	}, nil
 }
 
 // BuildPaymentMethodIncome 构建支付方式收入

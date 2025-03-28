@@ -64,9 +64,6 @@ type SaleOrder struct {
 	GiftPointsRate       float64 `gorm:"column:gift_points_rate;type:decimal(12,4);default:0;comment:赠送积分比例,取值范围0-1。结账后记录，不受后台改变" json:"gift_points_rate"`
 	MemberBalance        float64 `gorm:"column:member_balance;type:decimal(12,2);default:0;comment:会员余额,会员消费本单后剩余的余额" json:"member_balance"`
 
-	// 虚拟字段，用于标记当前子单是第几个
-	Index int `gorm:"-" json:"index,omitempty"`
-
 	// 关联对象
 	PaymentOrders                []*PaymentOrder                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 支付订单，也叫付款单
 	Member                       *Member                        `gorm:"foreignKey:ConsumerUuid;references:uuid"`
@@ -78,6 +75,19 @@ type SaleOrder struct {
 	InvoiceInfo                  *SaleOrderInvoiceInfo          `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleBill                     *SaleBill                      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	MemberPointLog               *MemberPointLog                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 关联积分变动记录.赠送积分
+
+	// 虚拟字段，用于标记当前子单是第几个
+	index int `gorm:"-" json:"index,omitempty"`
+}
+
+// 获取销售订单的序号
+func (model *SaleOrder) GetIndex() int {
+	return model.index
+}
+
+// 设置销售订单的序号
+func (model *SaleOrder) SetIndex(index int) {
+	model.index = index
 }
 
 // 获取销售订单的顾客列表
@@ -348,7 +358,10 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 			PaymentOrderUuid:      paymentOrder.PaymentOrderUuid,
 			Amount:                amount.InexactFloat64(),
 			MerchantRefundOrderNo: utils.GenerateMerchantOrderNo("PS"),
-			PaymentMethod:         &PaymentMethod{Code: paymentOrder.PaymentMethodCode},
+			PaymentMethod: &PaymentMethod{
+				PaymentName: paymentOrder.PaymentMethodName,
+				Code:        paymentOrder.PaymentMethodCode,
+			},
 		}
 		// 如果退款金额为余额，则创建余额变动记录
 		if returnOrderAmount.PaymentMethod.Code == constant.PaymentMethodCodeBalance {

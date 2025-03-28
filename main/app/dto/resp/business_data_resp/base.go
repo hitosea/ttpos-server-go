@@ -170,3 +170,16 @@ type BusinessDataCountProductSalesItem struct {
 	SalesNum           int     `json:"sales_num"`            // 销售数量
 	GiveProductNum     int     `json:"give_product_num"`     // 赠菜数量
 }
+
+// 营业数据 - 7天
+type BusinessDataCount7Days struct {
+	Days []string                     `json:"days"` // 7天
+	Data []BusinessDataCount7DaysItem `json:"data"` // 7天
+}
+
+// 营业数据 - 7天 - 单天
+type BusinessDataCount7DaysItem struct {
+	Day        string  `json:"day"`         // 日期
+	TotalNum   int64   `json:"total_num"`   // 总订单数量
+	TotalMoney float64 `json:"total_money"` // 总实收金额
+}

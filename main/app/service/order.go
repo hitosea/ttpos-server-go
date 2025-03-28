@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"slices"
@@ -103,7 +104,7 @@ type IOrderSrv interface {
 	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                                         // 取消使用会员优惠
 	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                                                          // 使用会员优惠
 	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error                                        // 计算并保存销售账单
-	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.PrinterData, error)                                                                                       // 打印
+	OrderPrint(ctx context.Context, req req.OrderPrintReq, needLock bool) (*resp.PrinterData, error)                                                                        // 打印
 	OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvoiceReq) (*resp.PrinterData, error)                                                                         // 图片打印
 	OrderPrintInvoiceInfo(ctx context.Context, req req.OrderInvoiceInfoReq) resp.SaleOrderInvoiceInfo                                                                       // 图片打印
 	OrderUnlock(ctx context.Context, saleBillUuid uint64) error                                                                                                             // 订单解锁
@@ -956,7 +957,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			RefundAmount:  saleBill.GetTotalRefundAmount(),
 			MemberNames:   strings.Join(totalMemberNames, ","),
 			MemberUuids:   strings.Join(totalMemberUuids, ","),
-			CashierName:   saleBill.Cashier.RealName,
+			CashierName:   saleBill.CashierName,
 			IsBuffet:      saleBill.IsBuffet == 1,
 			BuffetNames:   saleBill.GetBuffetNames(ctx.GetLanguage()),
 			CancelReason:  saleBill.Reason,
@@ -989,14 +990,6 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 	logs := make([]resp.OrderOperationLog, 0)
 	language := ctx.GetLanguage()
 
-	sourceText := map[string]string{
-		constant.SourceCashier:   "收银端",
-		constant.SourceAssistant: "点餐助手",
-		constant.SourceShop:      "商家后台",
-		constant.SourceTablet:    "平板端",
-		constant.SourceH5:        "扫码点餐",
-	}
-
 	for _, record := range orderRecordLists {
 		desc := s.getActionDescription(ctx, record, language)
 		actionText := s.getActionText(record, language)
@@ -1007,15 +1000,23 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 		if record.Source == constant.SourceH5 {
 			realName = i18n.Translate(language, "用户")
 		}
-		refundPayTypes := s.getRefundPayType(ctx, record, language)
+
+		var refundType int
+		if record.Action == constant.OrderRefund {
+			var refundPayload event.ReturnOrderPayload
+			json.Unmarshal([]byte(record.Data), &refundPayload)
+			refundType = refundPayload.RefundType
+		}
+
 		logs = append(logs, resp.OrderOperationLog{
 			Uuid:        record.Uuid,
 			RealName:    realName,
 			Email:       record.Operator.Username,
-			Source:      i18n.Translate(language, sourceText[record.Source]),
+			Source:      i18n.Translate(language, constant.SourceTextMap[record.Source]),
 			CreateTime:  record.CreateTime,
-			Description: actionText,     // 获取描述
-			PayType:     refundPayTypes, // ToDo 关联连连支付方式
+			RefundType:  refundType,
+			Description: actionText, // 获取描述
+			PayType:     s.getRefundPayType(ctx, record, language),
 		})
 	}
 	return logs, nil
@@ -1438,10 +1439,14 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	var payTypes []event.RefundPayType
 	for _, amount := range returnOrder.ReturnOrderAmounts {
 		payTypes = append(payTypes, event.RefundPayType{
-			Name:          amount.PaymentMethod.PaymentName,
-			Code:          amount.PaymentMethod.Code,
-			Amount:        amount.Amount,
-			PaymentStatus: amount.RefundStatus,
+			Name:              amount.PaymentMethod.PaymentName,
+			Code:              amount.PaymentMethod.Code,
+			Amount:            amount.Amount,
+			RefundStatus:      amount.RefundStatus,
+			ReturnAmountUuid:  amount.Uuid,
+			ReturnOrderUuid:   amount.ReturnOrderUuid,
+			PaymentOrderUuid:  amount.PaymentOrderUuid,
+			PaymentMethodUuid: amount.PaymentMethodUuid,
 		})
 	}
 	go func() {
@@ -5375,6 +5380,7 @@ func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.Instan
 	}
 	// 撤销支付单
 	paymentOrder.Cancel()
+	paymentOrder.SetNil()
 	// 更新支付单
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*paymentOrder); err != nil {
@@ -7007,7 +7013,7 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 }
 
 // OrderPrint 打印
-func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*resp.PrinterData, error) {
+func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq, needLock bool) (*resp.PrinterData, error) {
 	// 加锁
 	if ctx.NoLock() {
 		s.lock.LockUuid(request.SaleBillUuid)
@@ -7058,8 +7064,10 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 	}
 
 	// 保存销售账单
-	if err := repository.NewOrderRepo(db).SetLock(saleBill.Uuid, true); err != nil {
-		return nil, errors.WithMessage(err, "设置锁单失败")
+	if needLock {
+		if err := repository.NewOrderRepo(db).SetLock(saleBill.Uuid, true); err != nil {
+			return nil, errors.WithMessage(err, "设置锁单失败")
+		}
 	}
 
 	// 如果是点餐助手，不能直接打印

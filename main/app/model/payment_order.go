@@ -107,7 +107,8 @@ type PaymentOrder struct {
 	PaymentCommissionFee float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费,支付金额*支付手续费百分比;NOT NULL" json:"payment_commission_fee"`
 	Amount               float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:实收金额,实收金额=支付金额+支付手续费;NOT NULL" json:"amount"`
 	TransactionNumber    string  `gorm:"column:transaction_number;type:varchar(255);comment:交易号;NOT NULL" json:"transaction_number"`
-	Status               int     `gorm:"column:status;type:tinyint(1);default:0;comment:支付状态, 0-未支付 1-已支付 2-已退款;NOT NULL" json:"status"`
+	Status               int     `gorm:"column:status;type:tinyint(1);default:0;comment:支付状态, 0-未支付 1-已支付 2-已退款 3-支付异常;NOT NULL" json:"status"`
+	StatusReason         string  `gorm:"column:status_reason;type:text;default:'';comment:支付状态原因;NOT NULL" json:"status_reason"`
 
 	// 余额支付相关
 	BalanceAmount     float64 `gorm:"column:balance_amount;type:decimal(12,2);default:0;comment:主账户金额,用于反结账时退款;NOT NULL" json:"balance_amount"`
@@ -180,4 +181,5 @@ func (model *PaymentOrder) SetNil() {
 
 func (model *PaymentOrder) Cancel() {
 	model.Status = constant.PaymentOrderStatusRefund
+	model.SetDelete()
 }

@@ -1384,7 +1384,7 @@ func (h *DeskHandler) OrderPrint(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res, err := h.orderSrv.OrderPrint(ctx, printReq)
+	res, err := h.orderSrv.OrderPrint(ctx, printReq, true)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

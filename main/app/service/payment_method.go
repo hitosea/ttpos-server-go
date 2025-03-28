@@ -113,7 +113,7 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 			qrcode = method.QrcodeFile.GetUrl(baseUrl)
 		}
 		paymentMethodItems = append(paymentMethodItems, resp.PaymentMethodItem{
-			SourceText:  i18n.Translate(i18n.GetAcceptLanguage(ctx.GetGin()), constant.SourceTextMap[method.Source]),
+			SourceText:  i18n.Translate(i18n.GetAcceptLanguage(ctx.GetGin()), constant.PaymentMethodSourceTextMap[method.Source]),
 			Uuid:        method.Uuid,
 			PaymentName: method.PaymentName,
 			FeePercent:  method.FeePercent,

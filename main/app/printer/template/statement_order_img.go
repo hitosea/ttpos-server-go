@@ -56,8 +56,8 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 
 	// 订单名称
-	orderName := fmt.Sprintf("%d", saleOrder.Index)
-	if orderName != "" && saleOrder.Index > 0 {
+	orderName := fmt.Sprintf("%d", saleOrder.GetIndex())
+	if orderName != "" && saleOrder.GetIndex() > 0 {
 		orderName = "-" + orderName
 	}
 
@@ -173,7 +173,6 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	} else if temp == 3 {
 		// 打印logo
 		if logoAddr := t.base.GetLogoAddr(); logoAddr != "" {
-			fmt.Println(logoAddr)
 			img.SetTextLineHeight(25)
 			img.SetAlignment(pkg.AlignCenter)
 			img.AppendImg(logoAddr, 150, false, 0)

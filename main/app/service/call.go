@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -24,6 +25,7 @@ type ICallSrv interface {
 	Processed(companyUuid uint64, callUuid uint64) error                                                             // 呼叫已处理
 	DeletePrint(companyUuid uint64, printLogUuid uint64) error                                                       // 打印删除
 	GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, error)                                                 // 获取未处理消息数量
+	GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedListResp, error)                                      // 获取未处理的通知
 	Call(ctx context.Context, callReq req.CallReq) error                                                             // 发起呼叫
 }
 
@@ -138,6 +140,89 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 		UnprocessedCallCount: unprocessedCallCount,
 		AbnormalPrintCount:   abnormalPrintCount,
 	}, nil
+}
+
+// GetUnprocessedNotice 获取未处理消息数量
+func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedListResp, error) {
+	res := resp.UnprocessedListResp{
+		Call: resp.UnprocessedCall{
+			List: make([]resp.UnprocessedCallItemForNotice, 0),
+		},
+		AbnormalPrint: resp.UnprocessedAbnormalPrint{
+			List: make([]resp.AbnormalPrintItemForNotice, 0),
+		},
+		H5Order: resp.UnprocessedH5Order{
+			List: make([]resp.UnprocessedH5OrderItem, 0),
+		},
+	}
+	callRepo := repository.NewCallRepo(ctx.GetDB())
+	unprocessedCalls, _, err := callRepo.PaginateGet(1, 10,
+		callRepo.WhereC1Status(constant.CallStatusUnprocessed), callRepo.WhereC2IsNull())
+	if err != nil {
+		return res, errors.WithMessage(errors.ErrInternal, "获取未处理呼叫失败: "+err.Error())
+	}
+	printerLogRepo := repository.NewPrinterLogRepo(ctx.GetDB())
+	abnormalPrints, _, err := printerLogRepo.PaginateGet(
+		1,
+		10,
+		printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
+		printerLogRepo.WhereType(constant.PrinterLogTypeDefault),
+		printerLogRepo.WithPrinter(),
+		printerLogRepo.WithSaleOrder(),
+		printerLogRepo.WithSaleBill())
+	if err != nil {
+		return res, errors.WithMessage(errors.ErrInternal, "获取异常打印失败: "+err.Error())
+	}
+
+	h5OrderRepo := repository.NewH5OrderRepo(ctx.GetDB())
+	orders, _, err := h5OrderRepo.PaginateGetH5Order(1, 10,
+		h5OrderRepo.WhereStatus([]uint{constant.H5OrderStatusOrder}), repository.CommonRepo.SortWithCreateTime("desc"))
+
+	if err != nil {
+		return res, errors.WithMessage(errors.ErrInternal, "获取未处理的H5订单失败: "+err.Error())
+	}
+
+	// 未处理的呼叫
+	language := ctx.GetLanguage()
+	textMap := map[uint8]string{
+		constant.CallTypeWaiter:   "呼叫服务员",
+		constant.CallTypeCheckout: "呼叫结账",
+	}
+	for _, call := range unprocessedCalls {
+		var item resp.UnprocessedCallItemForNotice
+		copier.Copy(&item, call)
+		item.CallText = i18n.Translate(language, "桌位") + " " + item.DeskNo + " " + i18n.Translate(language, textMap[item.CallType])
+		res.Call.List = append(res.Call.List, item)
+	}
+
+	// 异常打印
+	abnormalPrintItems := make([]resp.AbnormalPrintItemForNotice, 0, len(abnormalPrints))
+	for _, printerLog := range abnormalPrints {
+		var (
+			deskNo string
+			item   resp.AbnormalPrintItemForNotice
+		)
+		if printerLog.SaleBill != nil || printerLog.SaleOrder != nil {
+			if printerLog.SaleBill != nil {
+				deskNo = printerLog.SaleBill.SerialNo
+			} else if printerLog.SaleOrder != nil {
+				deskNo = printerLog.SaleOrder.SaleBill.SerialNo
+			}
+		}
+		copier.Copy(&item, printerLog)
+		item.DeskNo = deskNo
+		abnormalPrintItems = append(abnormalPrintItems, item)
+	}
+	res.AbnormalPrint.List = abnormalPrintItems
+
+	// 未处理的h5订单
+	for _, order := range orders {
+		res.H5Order.List = append(res.H5Order.List, resp.UnprocessedH5OrderItem{
+			Uuid:   order.Uuid,
+			DeskNo: order.DeskNo,
+		})
+	}
+	return res, nil
 }
 
 // Call 平板端呼叫

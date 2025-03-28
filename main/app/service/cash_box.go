@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -9,7 +8,6 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
-	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
 )
@@ -44,7 +42,6 @@ func NewCashBoxSrvImpl(dbm *database.DBManager) ICashBoxSrv {
 
 // UpdateBalance 更新钱箱余额
 func (s *cashBoxSrv) UpdateBalance(ctx context.Context, param UpdateCashBalanceParam) error {
-	fmt.Println("UpdateBalance", utils.ToJsonString(param))
 	companyUuid := ctx.GetCompanyUuid()
 
 	if ctx.NoLock() {

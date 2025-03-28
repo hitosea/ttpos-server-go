@@ -211,7 +211,9 @@ type CashierReportResp struct {
 
 // ShiftSubmit 交班提交
 type ShiftSubmit struct {
-	CashIncome   float64 `json:"cash_income"`    // 本班现金收入
-	CashTakenOut float64 `json:"cash_taken_out"` // 本班取出现金
-	CashLeft     float64 `json:"cash_left"`      // 本班遗留现金
+	CashIncome   float64      `json:"cash_income"`    // 本班现金收入
+	CashTakenOut float64      `json:"cash_taken_out"` // 本班取出现金
+	CashLeft     float64      `json:"cash_left"`      // 本班遗留现金
+	DutyNo       string       `json:"duty_no"`        // 班次编号
+	PrinterData  *PrinterData `json:"printer_data"`   // 打印数据
 }

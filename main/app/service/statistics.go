@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
+	"github.com/duke-git/lancet/v2/slice"
 	"github.com/shopspring/decimal"
 )
 
@@ -19,6 +20,7 @@ type IStatisticsSrv interface {
 	CountCategory(ctx context.Context, req CountReq) CountCategoryResp    // 统计分类
 	CountProduct(ctx context.Context, req CountReq) []CountProductResp    // 统计商品
 	CountArea(ctx context.Context, req CountReq) []CountAreaResp          // 统计区域
+	Count7Days(ctx context.Context, req CountReq) Count7DaysResp          // 统计销售天数
 	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp // 统计商品排行
 	SaveSale(ctx context.Context, req SaveSaleReq) error                  // 保存销售
 }
@@ -290,6 +292,46 @@ func (s *statisticsSrv) CountArea(ctx context.Context, req CountReq) []CountArea
 	return list
 }
 
+type Count7DaysResp struct {
+	Days []string             `json:"days"` // 7天
+	Data []Count7DaysDataResp `json:"data"` // 7天数据
+}
+
+type Count7DaysDataResp struct {
+	Day        string  `json:"day"`         // 日期
+	TotalNum   int64   `json:"total_num"`   // 总订单数量
+	TotalMoney float64 `json:"total_money"` // 总实收金额
+}
+
+// Count7Days 统计7天
+func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7DaysResp {
+	opts := s.buildCountOpts(req)
+	sevenDayData := repository.NewStatisticsRepo(ctx.GetDB()).Count7Days(opts...)
+
+	days := s.buildDays(req)
+	sevenDayList := make([]Count7DaysDataResp, 0, len(sevenDayData))
+	for _, day := range days {
+		oneDayData := Count7DaysDataResp{
+			Day:        day,
+			TotalNum:   0,
+			TotalMoney: 0,
+		}
+		result, ok := slice.FindBy(sevenDayData, func(index int, dayData model.Statistics7DaysData) bool {
+			return dayData.Day.String == day
+		})
+		if ok {
+			oneDayData.TotalNum = result.TotalOrderNum.Int64
+			oneDayData.TotalMoney = result.TotalReceivedAmount.Float64
+		}
+		sevenDayList = append(sevenDayList, oneDayData)
+	}
+
+	return Count7DaysResp{
+		Days: days,
+		Data: sevenDayList,
+	}
+}
+
 // CountProductRankResp 统计商品排行响应
 type CountProductRankResp struct {
 	ProductName string  `json:"product_name"` // 商品名称
@@ -345,6 +387,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			serviceTax       decimal.Decimal
 			freeAmount       decimal.Decimal
 			refundAmount     decimal.Decimal
+			paymentBalance   decimal.Decimal
 		)
 		// 销售商品
 		for _, saleProduct := range saleOrder.SaleOrderProducts {
@@ -394,6 +437,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					paymentRefundAmount = paymentRefundAmount.Add(decimal.NewFromFloat(refundOrder.Amount))
 				}
 			}
+			if salePayment.PaymentMethod != nil && salePayment.PaymentMethod.Code == 10 {
+				paymentBalance = decimal.NewFromFloat(salePayment.Amount)
+			}
 			payments = append(payments, model.StatisticsPayment{
 				SaleBillUuid:      req.SaleBill.Uuid,
 				DutyNo:            req.SaleBill.DutyNo,
@@ -425,7 +471,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			FreeNum:          freeNum,
 			PaymentAmount:    saleOrder.Amount,
 			PaymentFee:       saleOrder.PaymentCommissionFee,
-			PaymentBalance:   saleOrder.MemberBalance,
+			PaymentBalance:   paymentBalance.Round(2).InexactFloat64(),
 			RefundAmount:     refundAmount.Round(2).InexactFloat64(),
 			CompleteTime:     req.SaleBill.FinishTime,
 		}
@@ -510,4 +556,21 @@ func (s *statisticsSrv) buildCountOpts(req CountReq) []repository.DBOption {
 		opts = append(opts, commonRepo.WhereByShiftNo(req.DutyNo))
 	}
 	return opts
+}
+
+// buildDays 构建日期
+func (s *statisticsSrv) buildDays(req CountReq) []string {
+	var (
+		days      []string
+		format    = "2006-01-02"
+		startTime = time.Unix(req.QueryStartTime, 0)
+		endTime   = time.Unix(req.QueryEndTime, 0)
+	)
+
+	for startTime.Before(endTime) {
+		days = append(days, startTime.Format(format))
+		startTime = startTime.AddDate(0, 0, 1)
+	}
+
+	return days
 }

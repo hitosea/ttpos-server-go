@@ -113,17 +113,12 @@ func (model *SaleBill) GetSaleOrderProductAll() []*SaleOrderProduct {
 	return saleOrderProducts
 }
 
-// 获取销售账单的取单列表item卡片的信息
-func (model *SaleBill) GetHideSaleBillCardInfo() {
-
-}
-
 // 返回新的销售账单
 func (model *SaleBill) GetSaleOrder(saleOrderUuid uint64) *SaleOrder {
 	for i, saleOrder := range model.SaleOrders {
 		if saleOrderUuid == saleOrder.Uuid {
 			if len(model.SaleOrders) > 1 {
-				saleOrder.Index = i + 1
+				saleOrder.SetIndex(i + 1)
 			}
 			return saleOrder
 		}
@@ -177,14 +172,14 @@ func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
 	// 只有一个自助餐时都是只填在BuffetPackage1
 	if model.BuffetPackage1 != nil {
 		name = dto.LocaleResponse{
-			ZH:   fmt.Sprintf("%s", name1.ZH),
-			TH:   fmt.Sprintf("%s", name1.TH),
-			EN:   fmt.Sprintf("%s", name1.EN),
-			ZHTW: fmt.Sprintf("%s", name1.ZHTW),
-			JA:   fmt.Sprintf("%s", name1.JA),
-			KO:   fmt.Sprintf("%s", name1.KO),
-			MY:   fmt.Sprintf("%s", name1.MY),
-			TR:   fmt.Sprintf("%s", name1.TR),
+			ZH:   name1.ZH,
+			TH:   name1.TH,
+			EN:   name1.EN,
+			ZHTW: name1.ZHTW,
+			JA:   name1.JA,
+			KO:   name1.KO,
+			MY:   name1.MY,
+			TR:   name1.TR,
 		}
 		return
 	}
@@ -307,6 +302,9 @@ func (model *SaleBill) GetPayTypes(language string, saleOrderUuid uint64) []resp
 		} else {
 			// 正常支付方式处理
 			for _, payment := range saleOrder.PaymentOrders {
+				if payment.Status == 2 || payment.IsDelete() {
+					continue
+				}
 				key := fmt.Sprintf("%s_%d", payment.PaymentMethodName, payment.Status)
 				if existingPayType, ok := payTypeMap[key]; ok {
 					existingPayType.PaymentAmount += payment.PaymentAmount
@@ -317,6 +315,7 @@ func (model *SaleBill) GetPayTypes(language string, saleOrderUuid uint64) []resp
 						CurrencyUnit:    payment.CurrencyUnit,
 						PaymentAmount:   payment.PaymentAmount,
 						Status:          uint(payment.Status),
+						StatusReason:    payment.StatusReason,
 						Source:          uint(payment.GetSource()),
 						SourceText:      payment.GetSourceText(language),
 					}
@@ -356,7 +355,6 @@ func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
 func (model *SaleBill) GetUnAcceptH5OrderProductTotalPrice(h5OrderProducts []*SaleOrderProduct) float64 {
 	totalPrice := decimal.NewFromFloat(0)
 	for _, h5OrderProduct := range h5OrderProducts {
-		fmt.Println("22222 h5OrderProduct.Price", h5OrderProduct.Price)
 		totalPrice = totalPrice.Add(decimal.NewFromFloat(h5OrderProduct.Price).Mul(decimal.NewFromInt(int64(h5OrderProduct.Num))))
 	}
 	return totalPrice.Truncate(2).InexactFloat64()

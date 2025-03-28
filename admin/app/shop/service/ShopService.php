@@ -7,7 +7,6 @@ use app\common\library\helper;
 use app\shop\model\order\Order;
 use app\shop\model\product\Product;
 use app\common\model\erp\ErpPurchaseOrder;
-use app\shop\model\supplier\Supplier as SupplierModel;
 use app\common\repositories\OrderBusinessDataRepository;
 
 /**
@@ -19,10 +18,10 @@ class ShopService
     private $ProductModel;
     // 订单模型
     private $OrderModel;
-    // 用户模型
-    private $UserModel;
     // 采购单模型
     private $ErpPurchaseOrderModel;
+    // 错误信息
+    public $error = '';
 
     /**
      * 构造方法
@@ -32,7 +31,6 @@ class ShopService
         /* 初始化模型 */
         $this->ProductModel = new Product();
         $this->OrderModel = new Order();
-        $this->UserModel = new User();
         $this->ErpPurchaseOrderModel = new ErpPurchaseOrder();
     }
 
@@ -43,18 +41,28 @@ class ShopService
     {
         $today = date('Y-m-d');
         $yesterday = date('Y-m-d', strtotime('-1 day'));
-        $where = [];
         $shop_supplier_id = 0;
         if ($user['user_type'] == 1) {
-            $where = ['shop_supplier_id' => $user['shop_supplier_id']];
             $shop_supplier_id = $user['shop_supplier_id'];
         }
 
         // 营业数据
         $params['shop_supplier_id'] = $shop_supplier_id;
         $businessData = (new OrderBusinessDataRepository($this->OrderModel, $params, 0))->setSource('HomeData')->getBusinessData();
+        if (empty($businessData)) {
+            $this->error = '请求失败';
+            return false;
+        }
         $todayBusinessData = (new OrderBusinessDataRepository($this->OrderModel, $params, 1))->setSource('HomeData')->getBusinessData();
+        if (empty($todayBusinessData)) {
+            $this->error = '请求失败';
+            return false;
+        }
         $ytdBusinessData = (new OrderBusinessDataRepository($this->OrderModel, $params, 2))->setSource('HomeData')->getBusinessData();
+        if (empty($ytdBusinessData)) {
+            $this->error = '请求失败';
+            return false;
+        }
 
         // 当天汇总
         $data = [
@@ -175,79 +183,6 @@ class ShopService
     private function getSupplierProductTotal($shop_supplier_id, $product_type, $product_status = 0)
     {
         return number_format($this->ProductModel->getSupplierProductTotal($shop_supplier_id, $product_type, $product_status), 0, '.', '');
-    }
-
-    /**
-     * 获取商品库存告急总量
-     */
-    private function getProductStockTotal($shop_supplier_id)
-    {
-        return number_format($this->ProductModel->getProductStockTotal($shop_supplier_id), 0, '.', '');
-    }
-
-    /**
-     * 获取用户总量
-     */
-    private function getUserTotal($day = null)
-    {
-        return number_format($this->UserModel->getUserTotal($day), 0, '.', '');
-    }
-
-    /**
-     * 获取订单总量
-     */
-    private function getOrderTotal($day, $shop_supplier_id = 0)
-    {
-        return number_format($this->OrderModel->getOrderData($day, null, 'order_total', $shop_supplier_id), 0, '.', '');
-    }
-
-    /**
-     * 获取待处理订单总量
-     */
-    private function getReviewOrderTotal($shop_supplier_id)
-    {
-        return number_format($this->OrderModel->getReviewOrderTotal($shop_supplier_id), 0, '.', '');
-    }
-
-    /**
-     * 获取订单总量 (指定日期)
-     */
-    private function getOrderTotalByDate($days)
-    {
-        $data = [];
-        foreach ($days as $day) {
-            $data[] = $this->getOrderTotal($day);
-        }
-        return $data;
-    }
-
-    /**
-     * 获取供应商总量
-     */
-    private function getSupplierTotal()
-    {
-        $model = new SupplierModel;
-        return number_format($model->getSupplierTotal(), 0, '.', '');
-    }
-
-    /**
-     * 获取某天的总销售额
-     */
-    private function getOrderTotalPrice($day, $shop_supplier_id = 0)
-    {
-        return Helper::number2($this->OrderModel->getOrderTotalPrice($day, null, $shop_supplier_id));
-    }
-
-    /**
-     * 获取订单总量 (指定日期)
-     */
-    private function getOrderTotalPriceByDate($days)
-    {
-        $data = [];
-        foreach ($days as $day) {
-            $data[] = $this->getOrderTotalPrice($day);
-        }
-        return $data;
     }
 
     /**

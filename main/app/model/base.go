@@ -3,6 +3,7 @@ package model
 import (
 	"strconv"
 	"strings"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/logger"
@@ -32,6 +33,11 @@ func (model *BaseModel) NoPrimaryKey() bool {
 		return true
 	}
 	return false
+}
+
+// SetDelete 设置需要删除
+func (model *BaseModel) SetDelete() {
+	model.DeleteTime = time.Now().Unix()
 }
 
 // SetUpdate 设置需要更新

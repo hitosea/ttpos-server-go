@@ -90,6 +90,24 @@ func (h *CallHandler) GetUnprocessed(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetUnprocessedNotice 获取未处理消息
+// @Summary 获取未处理消息
+// @Description 获取未处理消息
+// @Tags 收银端.呼叫
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.UnprocessedListResp}
+// @Router /cashier/call/unprocessed_notice [get]
+func (h *CallHandler) GetUnprocessedNotice(c *gin.Context) {
+	res, err := h.callSrv.GetUnprocessedNotice(helper.GetContext(c))
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // Processed 处理呼叫
 // @Summary 处理呼叫
 // @Description 处理呼叫
@@ -188,5 +206,6 @@ func RegisterCallHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.DELETE("/call/print", wrapper.DeletePrint)                     // 删除异常打印
 		privateApi.POST("/call/reprint", wrapper.Reprint)                         // 重新打印
 		privateApi.GET("/call/unprocessed", wrapper.GetUnprocessed)               // 获取未处理消息数量
+		privateApi.GET("/call/unprocessed_notice", wrapper.GetUnprocessedNotice)  // 获取未处理消息
 	}
 }

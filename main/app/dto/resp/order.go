@@ -70,7 +70,8 @@ type OrderInfoPayTypes struct {
 	CurrencyUnit    string  `json:"currency_unit"`     // 货币单位
 	PaymentAmount   float64 `json:"payment_amount"`    // 支付金额
 	Code            string  `json:"code"`              // 支付Code
-	Status          uint    `json:"status"`            // 支付状态, 0-未支付 1-已支付 2-已退款
+	Status          uint    `json:"status"`            // 支付状态, 0-未支付 1-已支付 2-已退款 3-支付异常
+	StatusReason    string  `json:"status_reason"`     // 支付状态原因
 	Source          uint    `json:"source"`            // 支付状态, 来源 0-系统 1-手动 2-LianLianPay
 	SourceText      string  `json:"source_text"`       // 支付状态, 来源 0-系统 1-手动 2-LianLianPay
 }
@@ -149,21 +150,22 @@ type OrderOperationLog struct {
 	CreateTime  int64                            `json:"create_time"` // 创建时间
 	Description string                           `json:"description"` // 描述
 	PayType     []OrderOperationLogPaymentMethod `json:"pay_type"`    // 支付方式列表
+	RefundType  int                              `json:"refund_type"` // 退款方式：1-部分退款；2-整单退款
 }
 
 type OrderOperationLogPaymentMethod struct {
-	Price               string `json:"price"`                 // 支付金额
-	Code                int    `json:"value"`                 // 支付方式代号
-	Name                string `json:"name"`                  // 支付方式名称
-	Remark              string `json:"remark"`                // 备注
-	PaymentOrderId      int    `json:"payment_order_id"`      // 付款单ID
-	RefundMoney         string `json:"refund_money"`          // 退款金额
-	BankCode            string `json:"bank_code"`             // 银行代码
-	AccountNo           string `json:"account_no"`            // 账号
-	AccountName         string `json:"account_name"`          // 账号姓名
-	RefundDestinationId int    `json:"refund_destination_id"` // 退款目的地ID ??
-	PaymentStatus       int    `json:"payment_status"`        // 支付状态
-	Unit                string `json:"unit"`                  // 现金单位
+	Price            string `json:"price"`             // 支付金额
+	Code             int    `json:"value"`             // 支付方式代号
+	Name             string `json:"name"`              // 支付方式名称
+	Remark           string `json:"remark"`            // 备注
+	PaymentOrderUuid uint64 `json:"payment_order_id"`  // 付款单ID
+	RefundMoney      string `json:"refund_money"`      // 退款金额
+	RefundStatus     int    `json:"refund_status"`     // 退款状态 0-退款失败 1-退款成功
+	ReturnOrderUuid  uint64 `json:"return_order_uuid"` // 退款单ID
+	BankCode         string `json:"bank_code"`         // 银行代码
+	AccountNo        string `json:"account_no"`        // 账号
+	AccountName      string `json:"account_name"`      // 账号姓名
+	Unit             string `json:"unit"`              // 现金单位
 }
 
 type OrderInfosResp struct {

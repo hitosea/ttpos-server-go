@@ -47,7 +47,6 @@ func (r *MemberRechargeAbnormalRecordRepoImpl) CreateRechargeAbnormalLog(obj mod
 	case constant.RechargeOrderActionRefund, constant.RechargeOrderActionReverseSettle:
 		// 退款，反结账
 		if err := r.db.Create(&record).Error; err != nil {
-			fmt.Println("CreateRechargeAbnormalLog", err)
 			return errors.WithMessage(err)
 		}
 	}

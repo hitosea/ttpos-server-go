@@ -55,20 +55,16 @@ class Sales extends Controller
      */
     public function order($search_time)
     {
-        $days = $this->getDays($search_time);
         $user = $this->store['user'];
         $shop_supplier_id = 0;
         if ($user['user_type'] == 1) {
             $shop_supplier_id = $user['shop_supplier_id'];
         }
-        // todo 兼容
-        // $data = (new OrderService($shop_supplier_id))->getDataByDate($days);
-        return $this->renderSuccess('', [
-            // 日期
-            'days' => $days,
-            // 数据
-            'data' => [],
-        ]);
+        $data = (new OrderService($shop_supplier_id))->getDataBy7Date($search_time);
+        if (empty($data)) {
+            return $this->renderError('请求失败');
+        }
+        return $this->renderSuccess('', $data);
     }
 
     /**

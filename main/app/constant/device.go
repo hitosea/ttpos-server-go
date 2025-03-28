@@ -9,6 +9,14 @@ const (
 	SourceH5        = "h5"        // H5
 )
 
+var SourceTextMap = map[string]string{
+	SourceCashier:   "收银端",
+	SourceAssistant: "点餐助手",
+	SourceShop:      "商家后台",
+	SourceTablet:    "平板端",
+	SourceH5:        "扫码点餐",
+}
+
 const (
 	BrandA11500  = "A1-1500"  //不带打印机的 compax收银机器
 	BrandA11510P = "A2-1510P" //自带打印机的 compax收银机器

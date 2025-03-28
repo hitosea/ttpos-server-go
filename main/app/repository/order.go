@@ -263,7 +263,6 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 				case constant.OrderDateTypeToday: // 今天
 					startTime = now.Truncate(24 * time.Hour)
 					endTime = startTime.Add(24*time.Hour - time.Second)
-					fmt.Println("今天", startTime, endTime)
 				case constant.OrderDateTypeYesterday: // 昨天
 					startTime = now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
 					endTime = startTime.Add(24*time.Hour - time.Second)
@@ -500,7 +499,6 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 	filterProduct := CommonRepo.DBOption(CommonRepo.FilterSaleOrderProduct())
 	if option.UnorderedH5Product == UnorderedH5Product {
 		// 只查询H5未下单的商品
-		fmt.Println("GetOrderCartInfo 只查询H5未下单的商品")
 		filterProduct = CommonRepo.DBOption(CommonRepo.FilterSaleOrderProductH5Unordered())
 	} else if option.UnorderedH5Product == OrderedH5Product {
 		// 只查询H5已下单的商品

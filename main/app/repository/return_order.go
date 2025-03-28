@@ -8,13 +8,12 @@ import (
 )
 
 type IReturnOrderRepo interface {
-	CreateReturnOrder(order model.ReturnOrder) (model.ReturnOrder, error) // 创建退货单
-	CreateReturnOrderRecord(order model.ReturnOrder) (uint64, error)      // 创建退货单
-	CreateReturnOrderAmount(amounts []model.ReturnOrderAmount) error      // 创建退货金额
-	CreateReturnOrderProduct(products []*model.ReturnOrderProduct) error  // 创建退货商品
-	// 获取退货金额
+	CreateReturnOrder(order model.ReturnOrder) (model.ReturnOrder, error)   // 创建退货单
+	CreateReturnOrderRecord(order model.ReturnOrder) (uint64, error)        // 创建退货单
+	CreateReturnOrderAmount(amounts []model.ReturnOrderAmount) error        // 创建退货金额
+	CreateReturnOrderProduct(products []*model.ReturnOrderProduct) error    // 创建退货商品
+	GetReturnOrder(opts ...DBOption) (model.ReturnOrder, error)             // 获取退货单
 	GetReturnOrderAmount(opts ...DBOption) (model.ReturnOrderAmount, error) // 获取退货金额
-	// 更新退货金额
 	UpdateReturnOrderAmount(opts []DBOption, amount model.ReturnOrderAmount) error
 
 	WhereUuid(uuid uint64) DBOption                                   // 通过uuid查询
@@ -61,6 +60,16 @@ func (r *returnOrderRepo) CreateReturnOrderProduct(products []*model.ReturnOrder
 		product.SetNil()
 	}
 	return r.db.Model(&model.ReturnOrderProduct{}).Create(products).Error
+}
+
+func (r *returnOrderRepo) GetReturnOrder(opts ...DBOption) (model.ReturnOrder, error) {
+	var order model.ReturnOrder
+	db := r.db
+	for _, w := range opts {
+		db = w(db)
+	}
+	err := db.First(&order).Error
+	return order, errors.WithMessage(err)
 }
 
 func (r *returnOrderRepo) GetReturnOrderAmount(opts ...DBOption) (model.ReturnOrderAmount, error) {

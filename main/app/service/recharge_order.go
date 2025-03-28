@@ -2,6 +2,7 @@ package service
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"sort"
@@ -793,14 +794,23 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 			Name:       paymentOrder.PaymentMethodName,
 			Price:      amount,
 			Code:       paymentOrder.PaymentMethod.Code,
-			SourceText: i18n.Translate(ctx.GetLanguage(), constant.SourceTextMap[paymentOrder.PaymentMethod.Source]),
+			SourceText: i18n.Translate(ctx.GetLanguage(), constant.PaymentMethodSourceTextMap[paymentOrder.PaymentMethod.Source]),
 		})
 	}
 
+	language := ctx.GetLanguage()
 	logs := make([]resp.RechargeOrderOperationLogItem, 0, len(order.RechargeOrderOperationLogs))
 	for _, log := range order.RechargeOrderOperationLogs {
 		actionDesc := s.getActionDescription(ctx, log, ctx.GetLanguage())
 		actionText := s.getActionText(log, ctx.GetLanguage())
+		refundPayTypes := make([]resp.RefundPayType, 0)
+		var refundType uint
+		if log.Action == constant.RechargeOrderActionRefund {
+			var refundLog RefundLog
+			json.Unmarshal([]byte(log.Data), &refundLog)
+			copier.Copy(&refundPayTypes, refundLog.RefundPayTypes)
+			refundType = refundLog.RefundType
+		}
 		var desc string
 		if actionDesc != "" {
 			desc = actionText + ": " + actionDesc
@@ -808,11 +818,13 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 			desc = actionText
 		}
 		logs = append(logs, resp.RechargeOrderOperationLogItem{
-			RealName:    log.OperatorName,
-			Username:    log.OperatorEmail,
-			Client:      log.Client,
-			CreateTime:  log.CreateTime,
-			Description: desc,
+			RealName:       log.OperatorName,
+			Username:       log.OperatorEmail,
+			Client:         i18n.Translate(language, constant.SourceTextMap[log.Client]),
+			CreateTime:     log.CreateTime,
+			Description:    desc,
+			RefundType:     refundType,
+			RefundPayTypes: refundPayTypes,
 		})
 	}
 
@@ -1326,10 +1338,10 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		for _, paymentRecord := range paymentRecords {
 			if amount.PaymentMethodUuid == paymentRecord.PaymentMethodUuid {
 				refundPayTypes = append(refundPayTypes, event.RefundPayType{
-					Name:          paymentRecord.PaymentName,
-					Code:          paymentRecord.PaymentMethodCode,
-					Amount:        amount.Amount,
-					PaymentStatus: amount.RefundStatus,
+					Name:         paymentRecord.PaymentName,
+					Code:         paymentRecord.PaymentMethodCode,
+					Amount:       amount.Amount,
+					RefundStatus: amount.RefundStatus,
 				})
 				break
 			}
