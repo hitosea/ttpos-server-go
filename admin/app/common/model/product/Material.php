@@ -281,6 +281,8 @@ class Material extends BaseModel
                 // erp商品月初库存记录
                 ErpMonthlyMaterialStatistics::newMaterialRecord($this['uuid']);
             }
+
+            return true;
         });
     }
 
