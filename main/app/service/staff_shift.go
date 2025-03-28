@@ -254,6 +254,7 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		CashIncome:   cashAmount,
 		CashTakenOut: withdrawCash.InexactFloat64(),
 		CashLeft:     leaveCash.InexactFloat64(),
+		DutyNo:       staff.DutyNo,
 		PrinterData: func() *resp.PrinterData {
 			printerData, err := s.ShiftPrinter(ctx, req.ShiftPrinterReq{
 				WithdrawCash: withdrawCash.InexactFloat64(),
@@ -483,6 +484,11 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		DutyNo: log.ShiftNo,
 	})
 
+	// 会员数量
+	memberNum := s.statisticsSrv.CountMemberNum(ctx, CountReq{
+		DutyNo: log.ShiftNo,
+	})
+
 	// 营业数据
 	var businessData = business_data_resp.BusinessDataAll{
 		TotalSales:             log.TotalBusiness,
@@ -538,6 +544,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 			RechargeAmount: 120,
 			GiftMoney:      120,
 			GiftPoints:     120,
+			UserCount:      int(memberNum),
 		},
 		PeakHourList: func() []business_data_resp.PeakHour {
 			peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(

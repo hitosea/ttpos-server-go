@@ -14,12 +14,14 @@ type IReturnOrderRepo interface {
 	CreateReturnOrderProduct(products []*model.ReturnOrderProduct) error    // 创建退货商品
 	GetReturnOrder(opts ...DBOption) (model.ReturnOrder, error)             // 获取退货单
 	GetReturnOrderAmount(opts ...DBOption) (model.ReturnOrderAmount, error) // 获取退货金额
+	UpdateReturnOrder(opts []DBOption, order model.ReturnOrder) error
 	UpdateReturnOrderAmount(opts []DBOption, amount model.ReturnOrderAmount) error
 
 	WhereUuid(uuid uint64) DBOption                                   // 通过uuid查询
 	WhereMerchantRefundOrderNo(merchantRefundOrderNo string) DBOption // 通过商户退货单号查询
 
 	WithReturnOrder() DBOption // 预加载退货单
+	WithPaymentMethod() DBOption
 }
 
 func NewReturnOrderRepo(db *gorm.DB) IReturnOrderRepo {
@@ -82,6 +84,14 @@ func (r *returnOrderRepo) GetReturnOrderAmount(opts ...DBOption) (model.ReturnOr
 	return amount, errors.WithMessage(err)
 }
 
+func (r *returnOrderRepo) UpdateReturnOrder(opts []DBOption, order model.ReturnOrder) error {
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Updates(&order).Error
+}
+
 func (r *returnOrderRepo) UpdateReturnOrderAmount(opts []DBOption, amount model.ReturnOrderAmount) error {
 	db := r.db
 	for _, opt := range opts {
@@ -99,6 +109,12 @@ func (r *returnOrderRepo) WhereMerchantRefundOrderNo(merchantRefundOrderNo strin
 func (r *returnOrderRepo) WithReturnOrder() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ReturnOrder")
+	}
+}
+
+func (r *returnOrderRepo) WithPaymentMethod() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("PaymentMethod")
 	}
 }
 

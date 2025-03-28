@@ -10,6 +10,7 @@ use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Product as ProductModel;
 use app\common\model\Product\Material as MaterialModel;
 use app\shop\model\product\ProductBom;
+use think\facade\Log;
 
 /**
  * 商品模型
@@ -490,7 +491,7 @@ class Product extends ProductModel
             'sort' => $data['product_sort'], // 排序
             'limit_num' => $data['limit_num'], // 限购数量,
             'sauce_required' => $data['feed_required'], // 是否必选加料: 0-否, 1-是,
-            'sauce_max_selection' => $data['feed_max_select'], // 加料最多可选数量
+            'sauce_max_selection' => $data['feed_open_max_select'] == 0 ? 0 : $data['feed_max_select'], // 加料最多可选数量
             'special_category_uuid' => $data['special_id'], // 热门分类
             'describe' => $data['selling_point'], // 卖点
             'open_discount' => $data['is_enable_grade'], // 是否开启折扣: 0-否, 1-是

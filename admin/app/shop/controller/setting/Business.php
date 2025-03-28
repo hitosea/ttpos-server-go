@@ -107,7 +107,7 @@ class Business extends Controller
         $arr = ['a' => request()->appId, 'q' => $qr_code];
         $auth = new AuthService();
         $token = $auth->generateToken($arr);
-        $qrCode = new QrCode(base_url() . "menu/#/?token={$token}");
+        $qrCode = new QrCode(env('EMENU_BASE_URL') . "/#/home?token={$token}");
         $qrCode->setSize(300);
         $qrCode->setMargin(10);
 

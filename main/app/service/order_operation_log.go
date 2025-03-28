@@ -285,14 +285,24 @@ func (s *orderSrv) getRefundPayType(ctx context.Context, log model.SaleOrderOper
 	currencySetting, _ := s.settingSrv.GetCurrencySetting(ctx)
 	if err := json.Unmarshal([]byte(log.Data), &refundPayload); err == nil {
 		for _, payType := range refundPayload.PayTypes {
-
+			// 支付方式名称
+			payTypeName := payType.Name
+			if slices.Contains([]int{
+				constant.PaymentMethodCodeFreePay,
+				constant.PaymentMethodCodeBalance,
+				constant.PaymentMethodCodeCash,
+			}, payType.Code) {
+				payTypeName = i18n.Translate(language, payTypeName)
+			}
 			// 退款支付类型
 			data := resp.OrderOperationLogPaymentMethod{
+				Price:            utils.FormatFloat(payType.Amount),
 				Code:             payType.Code,
-				Name:             payType.Name,
+				Name:             payTypeName,
 				RefundMoney:      utils.FormatFloat(payType.Amount),
 				RefundStatus:     1,
 				ReturnOrderUuid:  payType.ReturnOrderUuid,
+				ReturnAmountUuid: payType.ReturnAmountUuid,
 				PaymentOrderUuid: payType.PaymentOrderUuid,
 				Unit:             currencySetting.Unit,
 			}
@@ -303,12 +313,14 @@ func (s *orderSrv) getRefundPayType(ctx context.Context, log model.SaleOrderOper
 				constant.PaymentMethodCodeLianLianQRPromptPay,
 			}, payType.Code) {
 				returnOrderRepo := repository.NewReturnOrderRepo(ctx.GetDB())
-				orderAmount, err := returnOrderRepo.GetReturnOrderAmount(returnOrderRepo.WithReturnOrder(), returnOrderRepo.WhereUuid(payType.ReturnOrderUuid))
+				orderAmount, err := returnOrderRepo.GetReturnOrderAmount(returnOrderRepo.WithReturnOrder(), returnOrderRepo.WhereUuid(payType.ReturnAmountUuid))
 				if err == nil {
+					data.RefundStatus = utils.IfInt(orderAmount.RefundStatus == 2, 0, 1)
+				}
+				if err == nil && payType.Code == constant.PaymentMethodCodeLianLianQRPromptPay {
 					data.BankCode = orderAmount.ReturnOrder.BankCode
 					data.AccountNo = orderAmount.ReturnOrder.AccountNo
 					data.AccountName = orderAmount.ReturnOrder.AccountName
-					data.RefundStatus = utils.IfInt(orderAmount.RefundStatus == 2, 0, 1)
 				}
 			}
 			refundPayTypes = append(refundPayTypes, data)

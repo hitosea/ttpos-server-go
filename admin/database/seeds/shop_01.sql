@@ -1144,7 +1144,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_form` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '库存入库单ID',
     `form_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '编号',
-    `scene` INT(10) NOT NULL DEFAULT 0 COMMENT '交易类型,0-purchase采购入库 1-add添加入库 2-adjust调整入库',
+    `scene` INT(10) NOT NULL DEFAULT 0 COMMENT '交易类型,0-purchase采购入库 1-add添加入库 2-adjust调整入库 3-退菜入库',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '数量',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态,0-success已入库 1-canceled已撤销',

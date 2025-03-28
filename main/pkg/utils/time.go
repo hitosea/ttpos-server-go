@@ -1,6 +1,9 @@
 package utils
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type TimeUtil interface {
 	Now() time.Time                                       // 获取当前时间
@@ -16,6 +19,7 @@ type TimeUtil interface {
 	FormatUnixTime(timestamp int64, layout string) string // 将时间戳转换为指定格式的时间字符串
 	FormatUnixTimeDefault(timestamp int64) string         // 将时间戳转换为默认格式(2006-01-02 15:04:05)的时间字符串
 	FormatUnixTimeWithSlash(timestamp int64) string       // 将时间戳转换为默认格式(2006/01/02 15:04:05)的时间字符串
+	GetTimeRange(dayType DayType) (int64, int64, error)   // 订单列表：今天、昨天、本周搜索时间范围
 }
 
 type Timezone string
@@ -25,6 +29,14 @@ const (
 	JP_TIMEZONE Timezone = "Asia/Tokyo"      // 日本时区 UTC+9
 	TH_TIMEZONE Timezone = "Asia/Bangkok"    // 泰国时区 UTC+7
 	TR_TIMEZONE Timezone = "Europe/Istanbul" // 土耳其时区 UTC+3
+)
+
+type DayType string
+
+const (
+	DayTypeToday     DayType = "today"
+	DayTypeYesterday DayType = "yesterday"
+	DayTypeThisWeek  DayType = "this_week"
 )
 
 func SetTimezone(timezone string) TimeUtil {
@@ -122,4 +134,34 @@ func (t Timezone) FormatUnixTimeDefault(timestamp int64) string {
 // 这是一个便捷方法，等同于使用FormatUnixTime方法并传入空字符串作为layout
 func (t Timezone) FormatUnixTimeWithSlash(timestamp int64) string {
 	return t.FormatUnixTime(timestamp, "2006/01/02 15:04:05")
+}
+
+// GetTimeRange 订单列表：今天、昨天、本周搜索时间范围
+func (t Timezone) GetTimeRange(dayType DayType) (int64, int64, error) {
+	// 加载时区
+	loc, err := time.LoadLocation(string(t))
+	if err != nil {
+		return 0, 0, err
+	}
+	now := time.Now().In(loc)
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	switch dayType {
+	case DayTypeToday:
+		todayEnd := todayStart.Add(24 * time.Hour).Add(-time.Second)
+		return todayStart.Unix(), todayEnd.Unix(), nil
+	case DayTypeYesterday:
+		yesterdayStart := todayStart.Add(-24 * time.Hour)
+		yesterdayEnd := todayStart.Add(-time.Second)
+		return yesterdayStart.Unix(), yesterdayEnd.Unix(), nil
+	case DayTypeThisWeek:
+		weekday := now.Weekday()
+		if weekday == time.Sunday {
+			weekday = 7
+		}
+		weekStart := todayStart.Add(-time.Duration(weekday-1) * 24 * time.Hour)
+		weekEnd := weekStart.Add(7 * 24 * time.Hour).Add(-time.Second)
+		return weekStart.Unix(), weekEnd.Unix(), nil
+	default:
+		return 0, 0, errors.New("typ error")
+	}
 }

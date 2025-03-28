@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/pkg/auth"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -93,6 +94,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 		context.WithSource(claims.Source),
 		context.WithCompanyUuid(claims.CompanyUuid),
 		context.WithDeviceUuid(claims.DeviceUuid),
+		context.WithLogger(logger.Logger),
 	)
 	company, companySetting, staff, desk, err := authSrv.Auth(ctx, req.Authenticate{
 		Source:      claims.Source,

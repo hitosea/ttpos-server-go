@@ -37,7 +37,7 @@ func (model *PaymentMethod) GetFeePercent() float64 {
 	return model.FeePercent
 }
 
-// 计算手续费
+// CalculatePaymentCommissionFee 计算手续费
 func (model *PaymentMethod) CalculatePaymentCommissionFee(paymentAmount float64) float64 {
 	// 将 paymentAmount 和 fee/100 转换为 decimal
 	decimalPrice := decimal.NewFromFloat(paymentAmount)
@@ -48,7 +48,7 @@ func (model *PaymentMethod) CalculatePaymentCommissionFee(paymentAmount float64)
 	return feeMoney.InexactFloat64()
 }
 
-// 包含手续费
+// CalculatePaymentAmount 包含手续费
 func (model *PaymentMethod) CalculatePaymentAmount(paymentAmount float64) float64 {
 	return decimal.NewFromFloat(paymentAmount).Add(decimal.NewFromFloat(model.CalculatePaymentCommissionFee(paymentAmount))).InexactFloat64()
 }
@@ -77,7 +77,7 @@ func (model *PaymentMethod) IsQrPromptPay() bool {
 	return model.Code == constant.PaymentMethodCodeLianLianQRPromptPay
 }
 
-// 判断是否不允许取消支付
+// IsDisabledCancel 判断是否不允许取消支付
 func (model *PaymentMethod) IsDisabledCancel() bool {
 	return model.IsLianLianPay()
 }
@@ -85,9 +85,9 @@ func (model *PaymentMethod) IsDisabledCancel() bool {
 // GetSourceText 获取来源文本
 func (model *PaymentMethod) GetSourceText(language string) string {
 	if model.Source == 0 {
-		return i18n.Translate(language, "系统")
+		return i18n.Translate(language, "系统默认")
 	} else if model.Source == 1 {
-		return i18n.Translate(language, "手动")
+		return i18n.Translate(language, "自行添加")
 	} else if model.Source == 2 {
 		return i18n.Translate(language, "LianLianPay")
 	}

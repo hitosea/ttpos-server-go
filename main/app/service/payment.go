@@ -22,6 +22,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/websocket"
 
 	"github.com/shopspring/decimal"
 	"github.com/skip2/go-qrcode"
@@ -336,7 +337,6 @@ func (p *PaymentRepo) Refund(serviceRefundReq PaymentServiceRefundReq) (*LianLia
 	if err := json.Unmarshal(responseJSON, &resp); err != nil {
 		return nil, err
 	}
-
 	// 返回支付订单
 	return &resp, nil
 }
@@ -486,7 +486,7 @@ func (p *PaymentRepo) HandleRefundCallback(sign string, callbackReq req.LianLian
 	if callbackReq.RefundStatus == "RS" {
 		orderAmount.RefundStatus = 1
 	} else {
-		orderAmount.RefundStatus = -1
+		orderAmount.RefundStatus = 2
 	}
 	err = returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{returnOrderRepo.WhereUuid(orderAmount.Uuid)}, orderAmount)
 	if err != nil {
@@ -494,6 +494,12 @@ func (p *PaymentRepo) HandleRefundCallback(sign string, callbackReq req.LianLian
 		logger.Logger.Error("更新退款状态失败", zap.Error(err))
 		return err
 	}
+
+	// Desk - AfterUpdate 更新桌台后的逻辑 - 推送桌台更新
+	go websocket.PushClient(companyUuid, websocket.SourceCashier, "*", websocket.UPDATE_REFUND_STATE, map[string]interface{}{
+		"uuid":        orderAmount.Uuid,
+		"update_time": orderAmount.BaseModel.UpdateTime,
+	})
 
 	return nil
 }

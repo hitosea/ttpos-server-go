@@ -62,6 +62,13 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			TimeType:       printerReq.TimeType,
 			CategoryType:   printerReq.CategoryType,
 		})
+		// 会员数量
+		memberNum := s.statisticsSrv.CountMemberNum(ctx, CountReq{
+			TimeType:       printerReq.TimeType,
+			QueryStartTime: int64(printerReq.QueryStartTime),
+			QueryEndTime:   int64(printerReq.QueryEndTime),
+			CategoryType:   printerReq.CategoryType,
+		})
 
 		reqPrinterData.All = &business_data_resp.BusinessDataAll{
 			TotalSales:              saleData.TotalSaleAmount,
@@ -108,6 +115,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 				RechargeAmount: 120,
 				GiftMoney:      120,
 				GiftPoints:     120,
+				UserCount:      int(memberNum),
 			},
 			PeakHourList: func() []business_data_resp.PeakHour {
 				peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
@@ -231,6 +239,14 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 	})
 	// 支付数据
 	_, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req)
+	// 会员数量
+	memberNum := s.statisticsSrv.CountMemberNum(ctx, CountReq{
+		TimeType:       req.TimeType,
+		QueryStartTime: int64(req.QueryStartTime),
+		QueryEndTime:   int64(req.QueryEndTime),
+		CategoryType:   req.CategoryType,
+		DutyNo:         req.DutyNo,
+	})
 
 	// 营业数据
 	var businessData = business_data_resp.BusinessDataAll{
@@ -278,6 +294,7 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 			RechargeAmount: 120,
 			GiftMoney:      120,
 			GiftPoints:     120,
+			UserCount:      int(memberNum),
 		},
 		PeakHourList: func() []business_data_resp.PeakHour {
 			peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(

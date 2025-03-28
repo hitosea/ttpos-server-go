@@ -170,6 +170,35 @@ func (h *OrderHandler) ReturnOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// ReturnOrder 处理退款订单
+// @Summary 重新退款
+// @Description 重新退款
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderReReturnReq true "详情参数"
+// @Success 200 {object} nil "退款订单成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/order/re_return [post]
+func (h *OrderHandler) ReReturnOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	req := req.OrderReReturnReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	//
+	err, codeFail := h.orderSrv.ReReturnOrder(ctx, req)
+	if err != nil {
+		helper.Fail(c, codeFail, err.Error())
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // ReverseSettleInfo 获取反结账弹窗信息
 // @Summary 获取反结账弹窗信息
 // @Description 获取反结账弹窗信息
@@ -404,6 +433,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)              // 取消订单
 		privateApi.GET("/order/return", wrapper.ReturnOrderInfo)           // 获取退款弹窗信息
 		privateApi.POST("/order/return", wrapper.ReturnOrder)              // 整单退款或部分退款
+		privateApi.POST("/order/re_return", wrapper.ReReturnOrder)         // 重新退款
 		privateApi.GET("/order/reverse_settle", wrapper.ReverseSettleInfo) // 获取反结账弹窗信息
 		privateApi.POST("/order/reverse_settle", wrapper.ReverseSettle)    // 反结账
 		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)            // 删除订单

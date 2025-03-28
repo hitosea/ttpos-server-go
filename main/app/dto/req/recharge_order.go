@@ -31,6 +31,15 @@ type RechargeOrderRefundReq struct {
 	AccountName string `json:"account_name"` // 账号名称
 }
 
+type RechargeOrderReReturnReq struct {
+	ReturnOrderUuid  uint64 `json:"return_order_uuid"`  // 退款订单UUID
+	ReturnAmountUuid uint64 `json:"return_amount_uuid"` // 退款金额UUID
+	// 退款账户信息
+	BankCode    string `json:"bank_code"`    // 银行编码 - 当存在QR PromptPay的时候需要传
+	AccountNo   string `json:"account_no"`   // 账号 - 当存在QR PromptPay的时候需要传
+	AccountName string `json:"account_name"` // 账户名称 - 当存在QR PromptPay的时候需要传
+}
+
 // RechargeOrderPaymentQrcode
 type RechargeOrderPaymentQrcodeReq struct {
 	RechargeOrderUuid uint64  `form:"recharge_order_uuid"` // 充值订单UUID, 必填

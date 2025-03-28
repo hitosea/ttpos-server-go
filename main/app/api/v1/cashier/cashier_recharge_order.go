@@ -221,6 +221,35 @@ func (h *RechargeOrderHandler) RechargeOrderRefund(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// ReturnOrder 处理退款订单
+// @Summary 重新退款
+// @Description 重新退款
+// @Tags 收银端.充值订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.RechargeOrderReReturnReq true "详情参数"
+// @Success 200 {object} nil "退款订单成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/recharge_order/re_return [post]
+func (h *RechargeOrderHandler) ReReturnOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	req := req.RechargeOrderReReturnReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	//
+	err := h.rechargeOrderSrv.RechargeOrderReReturnOrder(ctx, req)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterRechargeOrderHandlers 注册收银充值订单路由
 func RegisterRechargeOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -250,6 +279,7 @@ func RegisterRechargeOrderHandlers(router gin.IRouter, dbm *database.DBManager, 
 		privateApi.POST("/recharge_order/print", wrapper.PrintTicket)
 		privateApi.GET("/recharge_order/refund", wrapper.GetRechargeOrderRefundInfo)
 		privateApi.POST("/recharge_order/refund", wrapper.RechargeOrderRefund)
+		privateApi.POST("/recharge_order/re_return", wrapper.ReReturnOrder)
 		privateApi.GET("/recharge_order/check_reverse_settle", wrapper.CheckRechargeOrderReverseSettle)
 		privateApi.POST("/recharge_order/reverse_settle", wrapper.RechargeOrderReverseSettle)
 	}

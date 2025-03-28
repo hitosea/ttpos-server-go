@@ -22,6 +22,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
@@ -46,6 +47,7 @@ type IRechargeOrderSrv interface {
 	CheckRechargeOrderReverseSettle(ctx context.Context, uuid uint64) (resp.RechargeOrderReverseSettleInfo, error)                              // 检查反结账信息
 	RechargeOrderReverseSettle(ctx context.Context, uuid uint64) error                                                                          // 充值订单反结账
 	RechargeOrderRefund(ctx context.Context, refundReq req.RechargeOrderRefundReq) error                                                        // 充值订单退款
+	RechargeOrderReReturnOrder(ctx context.Context, req req.RechargeOrderReReturnReq) error                                                     // 充值订单退款
 }
 
 type rechargeOrderSrv struct {
@@ -653,24 +655,17 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 
 	// -1=全都、 0=今天、 1=昨天、 2=本周
 	if listReq.DateType >= 0 && listReq.DateType <= 2 {
-		now := time.Now()
-		var startTime, endTime time.Time
+		var startTime, endTime int64
+		tz := ctx.GetCompanySetting().Timezone
 		switch listReq.DateType {
 		case 0: // 今天
-			startTime = now.Truncate(24 * time.Hour)
-			endTime = startTime.Add(24*time.Hour - time.Second)
+			startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeToday)
 		case 1: // 昨天
-			startTime = now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
-			endTime = startTime.Add(24*time.Hour - time.Second)
+			startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeYesterday)
 		case 2: // 本周
-			weekday := int(now.Weekday())
-			if weekday == 0 {
-				weekday = 7
-			}
-			startTime = now.AddDate(0, 0, -weekday+1).Truncate(24 * time.Hour)
-			endTime = startTime.AddDate(0, 0, 7).Add(-time.Second)
+			startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeThisWeek)
 		}
-		dateTypeOption := rechargeOrderRepo.WhereCreateTimeBetween(startTime.Unix(), endTime.Unix())
+		dateTypeOption := rechargeOrderRepo.WhereCreateTimeBetween(startTime, endTime)
 		options = append(options, dateTypeOption)
 		countOptions = append(countOptions, dateTypeOption)
 	}
@@ -799,6 +794,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 	}
 
 	language := ctx.GetLanguage()
+	currencySetting, _ := s.settingSrv.GetCurrencySetting(ctx)
 	logs := make([]resp.RechargeOrderOperationLogItem, 0, len(order.RechargeOrderOperationLogs))
 	for _, log := range order.RechargeOrderOperationLogs {
 		actionDesc := s.getActionDescription(ctx, log, ctx.GetLanguage())
@@ -808,8 +804,49 @@ func (s *rechargeOrderSrv) GetRechargeOrderInfo(ctx context.Context, uuid uint64
 		if log.Action == constant.RechargeOrderActionRefund {
 			var refundLog RefundLog
 			json.Unmarshal([]byte(log.Data), &refundLog)
-			copier.Copy(&refundPayTypes, refundLog.RefundPayTypes)
 			refundType = refundLog.RefundType
+			//
+			for _, payType := range refundLog.RefundPayTypes {
+				// 支付方式名称
+				payTypeName := payType.Name
+				if slices.Contains([]int{
+					constant.PaymentMethodCodeFreePay,
+					constant.PaymentMethodCodeBalance,
+					constant.PaymentMethodCodeCash,
+				}, payType.Code) {
+					payTypeName = i18n.Translate(language, payTypeName)
+				}
+				// 退款支付类型
+				data := resp.RefundPayType{
+					Price:            "0",
+					Code:             payType.Code,
+					Name:             payTypeName,
+					RefundMoney:      utils.FormatFloat(payType.Amount),
+					RefundStatus:     1,
+					ReturnOrderUuid:  payType.ReturnOrderUuid,
+					ReturnAmountUuid: payType.ReturnAmountUuid,
+					PaymentOrderUuid: payType.PaymentOrderUuid,
+					Unit:             currencySetting.Unit,
+				}
+				// 银行支付
+				if slices.Contains([]int{
+					constant.PaymentMethodCodeLianLianWechatPay,
+					constant.PaymentMethodCodeLianLianAliPay,
+					constant.PaymentMethodCodeLianLianQRPromptPay,
+				}, payType.Code) {
+					returnOrderRepo := repository.NewReturnOrderRepo(ctx.GetDB())
+					orderAmount, err := returnOrderRepo.GetReturnOrderAmount(returnOrderRepo.WithReturnOrder(), returnOrderRepo.WhereUuid(payType.ReturnAmountUuid))
+					if err == nil {
+						data.RefundStatus = utils.IfInt(orderAmount.RefundStatus == 2, 0, 1)
+					}
+					if err == nil && payType.Code == constant.PaymentMethodCodeLianLianQRPromptPay {
+						data.BankCode = orderAmount.ReturnOrder.BankCode
+						data.AccountNo = orderAmount.ReturnOrder.AccountNo
+						data.AccountName = orderAmount.ReturnOrder.AccountName
+					}
+				}
+				refundPayTypes = append(refundPayTypes, data)
+			}
 		}
 		var desc string
 		if actionDesc != "" {
@@ -1289,11 +1326,17 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		// 遍历所有支付方式，如果小于扣款金额，则继续扣款，否则跳过
 		if record.RefundableAmount < refundMoney {
 			returnOrderAmounts = append(returnOrderAmounts, model.ReturnOrderAmount{
+				BaseModel: model.BaseModel{
+					Uuid: func() uint64 {
+						id, _ := utils.GetID()
+						return id
+					}(),
+				},
 				PaymentMethodUuid:     record.PaymentMethodUuid,
 				Amount:                record.RefundableAmount,
 				PaymentOrderUuid:      record.PaymentOrderUuid,
 				MerchantRefundOrderNo: utils.GenerateMerchantOrderNo("RE"),
-				PaymentMethod:         &model.PaymentMethod{Code: record.PaymentMethodCode},
+				PaymentMethod:         &model.PaymentMethod{Code: record.PaymentMethodCode, PaymentName: record.PaymentName},
 			})
 			refundMoney = utils.DecimalSub(refundMoney, record.RefundableAmount)
 			if record.PaymentMethodCode == constant.PaymentMethodCodeCash {
@@ -1301,11 +1344,17 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			}
 		} else {
 			returnOrderAmounts = append(returnOrderAmounts, model.ReturnOrderAmount{
+				BaseModel: model.BaseModel{
+					Uuid: func() uint64 {
+						id, _ := utils.GetID()
+						return id
+					}(),
+				},
 				PaymentMethodUuid:     record.PaymentMethodUuid,
 				Amount:                refundMoney,
 				PaymentOrderUuid:      record.PaymentOrderUuid,
 				MerchantRefundOrderNo: utils.GenerateMerchantOrderNo("RE"),
-				PaymentMethod:         &model.PaymentMethod{Code: record.PaymentMethodCode},
+				PaymentMethod:         &model.PaymentMethod{Code: record.PaymentMethodCode, PaymentName: record.PaymentName},
 			})
 			if record.PaymentMethodCode == constant.PaymentMethodCodeCash {
 				refundCashMoney = refundMoney
@@ -1316,6 +1365,12 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 
 	// 创建退货单
 	returnOrder := model.ReturnOrder{
+		BaseModel: model.BaseModel{
+			Uuid: func() uint64 {
+				id, _ := utils.GetID()
+				return id
+			}(),
+		},
 		RelatedOrderType:   constant.ReturnOrderRelatedOrderTypeRechargeOrder,
 		RelatedOrderUuid:   order.Uuid,
 		RelatedOrderNo:     order.OrderNo,
@@ -1338,10 +1393,14 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		for _, paymentRecord := range paymentRecords {
 			if amount.PaymentMethodUuid == paymentRecord.PaymentMethodUuid {
 				refundPayTypes = append(refundPayTypes, event.RefundPayType{
-					Name:         paymentRecord.PaymentName,
-					Code:         paymentRecord.PaymentMethodCode,
-					Amount:       amount.Amount,
-					RefundStatus: amount.RefundStatus,
+					Name:              paymentRecord.PaymentName,
+					Code:              paymentRecord.PaymentMethodCode,
+					Amount:            amount.Amount,
+					RefundStatus:      amount.RefundStatus,
+					ReturnAmountUuid:  amount.BaseModel.Uuid,
+					ReturnOrderUuid:   returnOrder.BaseModel.Uuid,
+					PaymentOrderUuid:  amount.PaymentOrderUuid,
+					PaymentMethodUuid: amount.PaymentMethodUuid,
 				})
 				break
 			}
@@ -1443,5 +1502,106 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+	return nil
+}
+
+// RechargeOrderReReturnOrder 重新退款
+func (s *rechargeOrderSrv) RechargeOrderReReturnOrder(ctx context.Context, req req.RechargeOrderReReturnReq) error {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.ReturnOrderUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.ReturnOrderUuid)
+		ctx.AddLock()
+	}
+	// 获取退款订单信息
+	returnOrderRepo := repository.NewReturnOrderRepo(ctx.GetDB())
+	orderAmount, err := returnOrderRepo.GetReturnOrderAmount(
+		returnOrderRepo.WithReturnOrder(),
+		returnOrderRepo.WithPaymentMethod(),
+		returnOrderRepo.WhereUuid(req.ReturnAmountUuid),
+	)
+	if err != nil || orderAmount.ReturnOrder.Uuid != req.ReturnOrderUuid {
+		return errors.New("找不到订单")
+	}
+	if orderAmount.RefundStatus == 1 {
+		return errors.New("该订单已成功退款，无法重复退款")
+	}
+	if !orderAmount.PaymentMethod.IsLianLianPay() {
+		return errors.New("该订单无法重新退款")
+	}
+	// 判断订单是否正在退款
+	if orderAmount.LlReturnOrderid == "" {
+		return errors.New("该订单正在进行退款，无法重复操作")
+	}
+
+	refundReq := PaymentServiceRefundReq{
+		RelatedType:           constant.PaymentOrderRelatedTypeRechargeOrder,
+		PaymentOrderUuid:      orderAmount.PaymentOrderUuid,
+		MerchantRefundOrderNo: orderAmount.MerchantRefundOrderNo,
+		RefundAmount:          orderAmount.Amount,
+		RefundOrderId:         orderAmount.LlReturnOrderid,
+	}
+
+	// 是否存在QrPromptPay支付
+	isChangeBankCode := false
+	if orderAmount.PaymentMethod.IsQrPromptPay() {
+		if req.BankCode == "" || req.AccountNo == "" || req.AccountName == "" {
+			return errors.NewWithCode(constant.CodeReturnOrderBank, "请选择银行")
+		}
+		if req.BankCode != orderAmount.ReturnOrder.BankCode || req.AccountNo != orderAmount.ReturnOrder.AccountNo || req.AccountName != orderAmount.ReturnOrder.AccountName {
+			isChangeBankCode = true
+		}
+		refundReq.BankCode = orderAmount.ReturnOrder.BankCode
+		refundReq.AccountNo = orderAmount.ReturnOrder.AccountNo
+		refundReq.AccountName = orderAmount.ReturnOrder.AccountName
+	}
+
+	// 发起退款
+	refund, err := NewPaymentRepo(ctx, s.dbm).Refund(refundReq)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	if refund.RefundStatus == "RP" {
+		return errors.New("该订单正在进行退款，无法重复操作")
+	}
+	if refund.RefundStatus == "RS" {
+		orderAmount.RefundStatus = 1
+		err = returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{returnOrderRepo.WhereUuid(orderAmount.Uuid)}, orderAmount)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		return errors.New("该订单已成功退款，无法重复退款")
+	}
+
+	// 更新银行信息 - 重新发起退款
+	if isChangeBankCode {
+		orderAmount.RefundStatus = 1
+		orderAmount.MerchantRefundOrderNo = utils.GenerateMerchantOrderNo("RE")
+		// 更新退款订单号
+		refundReq.MerchantRefundOrderNo = orderAmount.MerchantRefundOrderNo
+		refundReq.BankCode = req.BankCode
+		refundReq.AccountNo = req.AccountNo
+		refundReq.AccountName = req.AccountName
+		// 更新银行信息
+		orderAmount.ReturnOrder.BankCode = req.BankCode
+		orderAmount.ReturnOrder.AccountNo = req.AccountNo
+		orderAmount.ReturnOrder.AccountName = req.AccountName
+	}
+	// 重新发起退款
+	refund, err = NewPaymentRepo(ctx, s.dbm).Refund(refundReq)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	// 更新退款订单号
+	orderAmount.LlReturnOrderid = refund.RefundOrderId
+	err = returnOrderRepo.UpdateReturnOrder([]repository.DBOption{returnOrderRepo.WhereUuid(orderAmount.ReturnOrder.Uuid)}, *orderAmount.ReturnOrder)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	err = returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{returnOrderRepo.WhereUuid(orderAmount.Uuid)}, orderAmount)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	//
 	return nil
 }
