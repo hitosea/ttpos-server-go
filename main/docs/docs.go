@@ -9410,7 +9410,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.OrderReturnReq"
+                            "$ref": "#/definitions/req.OrderReReturnReq"
                         }
                     }
                 ],
@@ -10274,7 +10274,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/req.OrderReturnReq"
+                            "$ref": "#/definitions/req.RechargeOrderReReturnReq"
                         }
                     }
                 ],
@@ -16773,6 +16773,31 @@ const docTemplate = `{
                 }
             }
         },
+        "req.OrderReReturnReq": {
+            "type": "object",
+            "properties": {
+                "account_name": {
+                    "description": "账户名称 - 当存在QR PromptPay的时候需要传",
+                    "type": "string"
+                },
+                "account_no": {
+                    "description": "账号 - 当存在QR PromptPay的时候需要传",
+                    "type": "string"
+                },
+                "bank_code": {
+                    "description": "退款账户信息",
+                    "type": "string"
+                },
+                "return_amount_uuid": {
+                    "description": "退款金额UUID",
+                    "type": "integer"
+                },
+                "return_order_uuid": {
+                    "description": "退款订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.OrderReturnProduct": {
             "type": "object",
             "properties": {
@@ -17035,6 +17060,31 @@ const docTemplate = `{
                 },
                 "recharge_order_uuid": {
                     "description": "充值订单Uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.RechargeOrderReReturnReq": {
+            "type": "object",
+            "properties": {
+                "account_name": {
+                    "description": "账户名称 - 当存在QR PromptPay的时候需要传",
+                    "type": "string"
+                },
+                "account_no": {
+                    "description": "账号 - 当存在QR PromptPay的时候需要传",
+                    "type": "string"
+                },
+                "bank_code": {
+                    "description": "退款账户信息",
+                    "type": "string"
+                },
+                "return_amount_uuid": {
+                    "description": "退款金额UUID",
+                    "type": "integer"
+                },
+                "return_order_uuid": {
+                    "description": "退款订单UUID",
                     "type": "integer"
                 }
             }

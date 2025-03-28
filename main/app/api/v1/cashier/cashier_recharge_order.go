@@ -228,7 +228,7 @@ func (h *RechargeOrderHandler) RechargeOrderRefund(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.OrderReturnReq true "详情参数"
+// @param data body req.RechargeOrderReReturnReq true "详情参数"
 // @Success 200 {object} nil "退款订单成功"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/recharge_order/re_return [post]
