@@ -1627,6 +1627,9 @@ definitions:
     type: object
   req.ShiftPrinterReq:
     properties:
+      duty_no:
+        description: 班次编号 (交班时，返回的班次编号)
+        type: string
       leave_cash:
         description: '遗留现金: 0 - 当前钱箱现金总计'
         type: number
@@ -3201,8 +3204,11 @@ definitions:
         description: 支付状态, 来源 0-系统 1-手动 2-LianLianPay
         type: string
       status:
-        description: 支付状态, 0-未支付 1-已支付 2-已退款
+        description: 支付状态, 0-未支付 1-已支付 2-已退款 3-支付异常
         type: integer
+      status_reason:
+        description: 支付状态原因
+        type: string
     type: object
   resp.OrderInfos:
     properties:
@@ -4568,6 +4574,13 @@ definitions:
       cash_taken_out:
         description: 本班取出现金
         type: number
+      duty_no:
+        description: 班次编号
+        type: string
+      printer_data:
+        allOf:
+        - $ref: '#/definitions/resp.PrinterData'
+        description: 打印数据
     type: object
   resp.ShopCart:
     properties:
@@ -5594,6 +5607,30 @@ paths:
       security:
       - JwtToken: []
       summary: 关闭桌台
+      tags:
+      - 点餐助手端.桌台
+  /assistant/desk/complete:
+    post:
+      consumes:
+      - application/json
+      description: 清台
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeskInfoReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 清台
       tags:
       - 点餐助手端.桌台
   /assistant/desk/info:

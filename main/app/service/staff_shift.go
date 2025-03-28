@@ -137,12 +137,12 @@ func (s *staffShiftSrv) GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, erro
 }
 
 // SubmitShift 提交交班
-func (s *staffShiftSrv) SubmitShift(ctx context.Context, req req.SubmitShiftReq) (*resp.ShiftSubmit, error) {
+func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq) (*resp.ShiftSubmit, error) {
 	// 验证参数
-	if req.WithdrawCash < 0 {
+	if reqs.WithdrawCash < 0 {
 		return nil, errors.New("取出金额不能小于0")
 	}
-	if req.LeaveCash < 0 {
+	if reqs.LeaveCash < 0 {
 		return nil, errors.New("遗留现金不能小于0")
 	}
 	var (
@@ -155,8 +155,8 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, req req.SubmitShiftReq)
 		staff model.Staff
 		db    *gorm.DB = s.dbm.GetDB(ctx.GetCompanyUuid())
 	)
-	if req.IsBackground {
-		staff = repository.NewStaffRepo(db).GetStaff(repository.CommonRepo.WhereByUuid(req.StaffUuid))
+	if reqs.IsBackground {
+		staff = repository.NewStaffRepo(db).GetStaff(repository.CommonRepo.WhereByUuid(reqs.StaffUuid))
 	} else {
 		staff = ctx.GetStaff()
 	}
@@ -177,10 +177,10 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, req req.SubmitShiftReq)
 			return errors.New("当前班次已交班")
 		}
 		cashBox := repository.NewCashBoxRepo(db).Get()
-		withdrawCash = decimal.NewFromFloat(req.WithdrawCash)
-		leaveCash = decimal.NewFromFloat(req.LeaveCash)
+		withdrawCash = decimal.NewFromFloat(reqs.WithdrawCash)
+		leaveCash = decimal.NewFromFloat(reqs.LeaveCash)
 		// 后台交班时，取出金额为当前钱箱现金总计，遗留现金为0
-		if req.IsBackground {
+		if reqs.IsBackground {
 			withdrawCash = decimal.NewFromFloat(cashBox.GetBalance())
 			leaveCash = decimal.Zero
 		}
@@ -253,6 +253,18 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, req req.SubmitShiftReq)
 		CashIncome:   cashAmount,
 		CashTakenOut: withdrawCash.InexactFloat64(),
 		CashLeft:     leaveCash.InexactFloat64(),
+		PrinterData: func() *resp.PrinterData {
+			printerData, err := s.ShiftPrinter(ctx, req.ShiftPrinterReq{
+				WithdrawCash: withdrawCash.InexactFloat64(),
+				LeaveCash:    leaveCash.InexactFloat64(),
+				DutyNo:       staff.DutyNo,
+			})
+			if err != nil {
+				fmt.Println(err)
+				return &resp.PrinterData{}
+			}
+			return printerData
+		}(),
 	}, nil
 }
 
@@ -459,13 +471,10 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 	log, err := shiftLogRepo.GetShiftLog(
 		shiftLogRepo.WithStaff(),
 		repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
-		repository.CommonRepo.WhereByShiftNo(staff.DutyNo),
+		repository.CommonRepo.WhereByShiftNo(req.DutyNo),
 	)
 	if err != nil {
 		return nil, errors.New("当前班次错误，请退出重新登录")
-	}
-	if log.IsHandedOver() {
-		return nil, errors.New("当前班次已交班")
 	}
 
 	// 销售数据

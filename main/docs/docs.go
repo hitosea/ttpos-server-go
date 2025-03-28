@@ -376,6 +376,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/desk/complete": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "清台",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "清台",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeskInfoReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/assistant/desk/info": {
             "get": {
                 "security": [
@@ -16857,6 +16896,10 @@ const docTemplate = `{
         "req.ShiftPrinterReq": {
             "type": "object",
             "properties": {
+                "duty_no": {
+                    "description": "班次编号 (交班时，返回的班次编号)",
+                    "type": "string"
+                },
                 "leave_cash": {
                     "description": "遗留现金: 0 - 当前钱箱现金总计",
                     "type": "number"
@@ -19279,8 +19322,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
-                    "description": "支付状态, 0-未支付 1-已支付 2-已退款",
+                    "description": "支付状态, 0-未支付 1-已支付 2-已退款 3-支付异常",
                     "type": "integer"
+                },
+                "status_reason": {
+                    "description": "支付状态原因",
+                    "type": "string"
                 }
             }
         },
@@ -21292,6 +21339,18 @@ const docTemplate = `{
                 "cash_taken_out": {
                     "description": "本班取出现金",
                     "type": "number"
+                },
+                "duty_no": {
+                    "description": "班次编号",
+                    "type": "string"
+                },
+                "printer_data": {
+                    "description": "打印数据",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PrinterData"
+                        }
+                    ]
                 }
             }
         },
