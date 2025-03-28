@@ -37,7 +37,7 @@ func (model *PaymentMethod) GetFeePercent() float64 {
 	return model.FeePercent
 }
 
-// 计算手续费
+// CalculatePaymentCommissionFee 计算手续费
 func (model *PaymentMethod) CalculatePaymentCommissionFee(paymentAmount float64) float64 {
 	// 将 paymentAmount 和 fee/100 转换为 decimal
 	decimalPrice := decimal.NewFromFloat(paymentAmount)
@@ -48,7 +48,7 @@ func (model *PaymentMethod) CalculatePaymentCommissionFee(paymentAmount float64)
 	return feeMoney.InexactFloat64()
 }
 
-// 包含手续费
+// CalculatePaymentAmount 包含手续费
 func (model *PaymentMethod) CalculatePaymentAmount(paymentAmount float64) float64 {
 	return decimal.NewFromFloat(paymentAmount).Add(decimal.NewFromFloat(model.CalculatePaymentCommissionFee(paymentAmount))).InexactFloat64()
 }
@@ -77,7 +77,7 @@ func (model *PaymentMethod) IsQrPromptPay() bool {
 	return model.Code == constant.PaymentMethodCodeLianLianQRPromptPay
 }
 
-// 判断是否不允许取消支付
+// IsDisabledCancel 判断是否不允许取消支付
 func (model *PaymentMethod) IsDisabledCancel() bool {
 	return model.IsLianLianPay()
 }
@@ -85,9 +85,9 @@ func (model *PaymentMethod) IsDisabledCancel() bool {
 // GetSourceText 获取来源文本
 func (model *PaymentMethod) GetSourceText(language string) string {
 	if model.Source == 0 {
-		return i18n.Translate(language, "系统")
+		return i18n.Translate(language, "系统默认")
 	} else if model.Source == 1 {
-		return i18n.Translate(language, "手动")
+		return i18n.Translate(language, "自行添加")
 	} else if model.Source == 2 {
 		return i18n.Translate(language, "LianLianPay")
 	}
@@ -136,7 +136,7 @@ func (model *PaymentOrder) NewRefundOrder() *RefundOrder {
 type RefundOrder struct {
 	BaseModel
 	SaleOrderUuid    uint64  `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单ID;NOT NULL" json:"sale_order_uuid"` // 也可能是充值订单ID
-	SaleOrderNo      string  `gorm:"column:sale_order_no;type:varchar(255);default:'';comment:销售订单号;NOT NULL" json:"sale_order_no"`            // 废弃，暂时用不到
+	SaleOrderNo      string  `gorm:"column:sale_order_no;type:varchar(255);default:'';comment:销售订单号;NOT NULL" json:"sale_order_no"`           // 废弃，暂时用不到
 	PaymentOrderUuid uint64  `gorm:"column:payment_order_uuid;type:bigint(20) unsigned;default:0;comment:支付单ID;NOT NULL" json:"payment_order_uuid"`
 	RefundType       uint    `gorm:"column:refund_type;type:int(11);default:0;comment:退款类型,1-反结账;NOT NULL" json:"refund_type"`
 	Amount           float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:退款金额;NOT NULL" json:"amount"`

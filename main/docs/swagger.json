@@ -15249,9 +15249,6 @@
         "dto.LanguageItem": {
             "type": "object",
             "properties": {
-                "key": {
-                    "type": "integer"
-                },
                 "name": {
                     "type": "string"
                 },
@@ -19749,25 +19746,25 @@
                     "description": "付款单ID",
                     "type": "integer"
                 },
-                "payment_status": {
-                    "description": "支付状态",
-                    "type": "integer"
-                },
                 "price": {
-                    "description": "支付金额",
+                    "description": "金额",
                     "type": "string"
-                },
-                "refund_destination_id": {
-                    "description": "退款目的地ID ??",
-                    "type": "integer"
                 },
                 "refund_money": {
                     "description": "退款金额",
                     "type": "string"
                 },
+                "refund_status": {
+                    "description": "退款状态 0-退款失败 1-退款成功",
+                    "type": "integer"
+                },
                 "remark": {
                     "description": "备注",
                     "type": "string"
+                },
+                "return_order_uuid": {
+                    "description": "退款单ID",
+                    "type": "integer"
                 },
                 "unit": {
                     "description": "现金单位",
@@ -21265,20 +21262,52 @@
         "resp.RefundPayType": {
             "type": "object",
             "properties": {
-                "amount": {
-                    "description": "退款金额",
-                    "type": "number"
-                },
-                "code": {
-                    "description": "退款支付方式代号",
-                    "type": "integer"
-                },
-                "name": {
-                    "description": "退款支付方式名称",
+                "account_name": {
+                    "description": "账号姓名",
                     "type": "string"
                 },
-                "payment_status": {
-                    "description": "支付状态",
+                "account_no": {
+                    "description": "账号",
+                    "type": "string"
+                },
+                "bank_code": {
+                    "description": "银行代码",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "payment_order_id": {
+                    "description": "付款单ID",
+                    "type": "integer"
+                },
+                "price": {
+                    "description": "支付金额",
+                    "type": "string"
+                },
+                "refund_money": {
+                    "description": "退款金额",
+                    "type": "string"
+                },
+                "refund_status": {
+                    "description": "退款状态 0-退款失败 1-退款成功",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string"
+                },
+                "return_order_uuid": {
+                    "description": "退款单ID",
+                    "type": "integer"
+                },
+                "unit": {
+                    "description": "现金单位",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "支付方式代号",
                     "type": "integer"
                 }
             }
