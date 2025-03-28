@@ -1338,10 +1338,10 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		for _, paymentRecord := range paymentRecords {
 			if amount.PaymentMethodUuid == paymentRecord.PaymentMethodUuid {
 				refundPayTypes = append(refundPayTypes, event.RefundPayType{
-					Name:          paymentRecord.PaymentName,
-					Code:          paymentRecord.PaymentMethodCode,
-					Amount:        amount.Amount,
-					PaymentStatus: amount.RefundStatus,
+					Name:         paymentRecord.PaymentName,
+					Code:         paymentRecord.PaymentMethodCode,
+					Amount:       amount.Amount,
+					RefundStatus: amount.RefundStatus,
 				})
 				break
 			}

@@ -10,10 +10,14 @@ import (
 const EventReturnOrder EventName = "Event_Return_Order"
 
 type RefundPayType struct {
-	Name          string  `json:"name"`           // 退款支付方式名称
-	Code          int     `json:"code"`           // 退款支付方式代号
-	Amount        float64 `json:"amount"`         // 退款金额
-	PaymentStatus int     `json:"payment_status"` // 支付状态
+	Name              string  `json:"name"`                // 退款支付方式名称
+	Code              int     `json:"code"`                // 退款支付方式代号
+	Amount            float64 `json:"amount"`              // 退款金额
+	RefundStatus      int     `json:"refund_status"`       // 退款状态
+	ReturnAmountUuid  uint64  `json:"return_amount_uuid"`  // 退款金额ID
+	ReturnOrderUuid   uint64  `json:"return_order_uuid"`   // 退款单ID
+	PaymentOrderUuid  uint64  `json:"payment_order_uuid"`  // 支付单ID
+	PaymentMethodUuid uint64  `json:"payment_method_uuid"` // 支付方式ID
 }
 
 // ReturnOrderPayload 用餐订单退款事件数据结构

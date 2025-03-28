@@ -2,11 +2,13 @@ package service
 
 import (
 	"encoding/json"
+	"slices"
 	"strconv"
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -283,13 +285,33 @@ func (s *orderSrv) getRefundPayType(ctx context.Context, log model.SaleOrderOper
 	currencySetting, _ := s.settingSrv.GetCurrencySetting(ctx)
 	if err := json.Unmarshal([]byte(log.Data), &refundPayload); err == nil {
 		for _, payType := range refundPayload.PayTypes {
-			refundPayTypes = append(refundPayTypes, resp.OrderOperationLogPaymentMethod{
-				Code:          payType.Code,
-				Name:          payType.Name,
-				RefundMoney:   utils.FormatFloat(payType.Amount),
-				PaymentStatus: payType.PaymentStatus,
-				Unit:          currencySetting.Unit,
-			})
+
+			// 退款支付类型
+			data := resp.OrderOperationLogPaymentMethod{
+				Code:             payType.Code,
+				Name:             payType.Name,
+				RefundMoney:      utils.FormatFloat(payType.Amount),
+				RefundStatus:     1,
+				ReturnOrderUuid:  payType.ReturnOrderUuid,
+				PaymentOrderUuid: payType.PaymentOrderUuid,
+				Unit:             currencySetting.Unit,
+			}
+			// 银行支付
+			if slices.Contains([]int{
+				constant.PaymentMethodCodeLianLianWechatPay,
+				constant.PaymentMethodCodeLianLianAliPay,
+				constant.PaymentMethodCodeLianLianQRPromptPay,
+			}, payType.Code) {
+				returnOrderRepo := repository.NewReturnOrderRepo(ctx.GetDB())
+				orderAmount, err := returnOrderRepo.GetReturnOrderAmount(returnOrderRepo.WithReturnOrder(), returnOrderRepo.WhereUuid(payType.ReturnOrderUuid))
+				if err == nil {
+					data.BankCode = orderAmount.ReturnOrder.BankCode
+					data.AccountNo = orderAmount.ReturnOrder.AccountNo
+					data.AccountName = orderAmount.ReturnOrder.AccountName
+					data.RefundStatus = utils.IfInt(orderAmount.RefundStatus == 2, 0, 1)
+				}
+			}
+			refundPayTypes = append(refundPayTypes, data)
 		}
 	}
 	return refundPayTypes

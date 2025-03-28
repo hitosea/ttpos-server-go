@@ -358,7 +358,10 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 			PaymentOrderUuid:      paymentOrder.PaymentOrderUuid,
 			Amount:                amount.InexactFloat64(),
 			MerchantRefundOrderNo: utils.GenerateMerchantOrderNo("PS"),
-			PaymentMethod:         &PaymentMethod{Code: paymentOrder.PaymentMethodCode},
+			PaymentMethod: &PaymentMethod{
+				PaymentName: paymentOrder.PaymentMethodName,
+				Code:        paymentOrder.PaymentMethodCode,
+			},
 		}
 		// 如果退款金额为余额，则创建余额变动记录
 		if returnOrderAmount.PaymentMethod.Code == constant.PaymentMethodCodeBalance {

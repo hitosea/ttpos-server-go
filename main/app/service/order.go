@@ -1008,16 +1008,15 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			refundType = refundPayload.RefundType
 		}
 
-		refundPayTypes := s.getRefundPayType(ctx, record, language)
 		logs = append(logs, resp.OrderOperationLog{
 			Uuid:        record.Uuid,
 			RealName:    realName,
 			Email:       record.Operator.Username,
 			Source:      i18n.Translate(language, constant.SourceTextMap[record.Source]),
 			CreateTime:  record.CreateTime,
-			Description: actionText,     // 获取描述
-			PayType:     refundPayTypes, // ToDo 关联连连支付方式
 			RefundType:  refundType,
+			Description: actionText, // 获取描述
+			PayType:     s.getRefundPayType(ctx, record, language),
 		})
 	}
 	return logs, nil
@@ -1440,10 +1439,14 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	var payTypes []event.RefundPayType
 	for _, amount := range returnOrder.ReturnOrderAmounts {
 		payTypes = append(payTypes, event.RefundPayType{
-			Name:          amount.PaymentMethod.PaymentName,
-			Code:          amount.PaymentMethod.Code,
-			Amount:        amount.Amount,
-			PaymentStatus: amount.RefundStatus,
+			Name:              amount.PaymentMethod.PaymentName,
+			Code:              amount.PaymentMethod.Code,
+			Amount:            amount.Amount,
+			RefundStatus:      amount.RefundStatus,
+			ReturnAmountUuid:  amount.Uuid,
+			ReturnOrderUuid:   amount.ReturnOrderUuid,
+			PaymentOrderUuid:  amount.PaymentOrderUuid,
+			PaymentMethodUuid: amount.PaymentMethodUuid,
 		})
 	}
 	go func() {
