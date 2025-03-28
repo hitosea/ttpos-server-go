@@ -909,8 +909,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_related_material` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联材料ID',
     `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '物料清单BOM的ID',
     `material_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '原料ID',
-    `product_bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品规格bom的uuid。暂时废弃，使用related_uuid代替',
-    `product_sauce_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品小料的uuid',
     `num` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '材料用量,可小数',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',

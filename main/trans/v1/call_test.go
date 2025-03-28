@@ -7,7 +7,7 @@ import (
 )
 
 func TestCall(t *testing.T) {
-	db, err := NewMySQLConnection(conf, dbName)
+	db, err := NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}
@@ -30,7 +30,7 @@ func TestConvertCall(t *testing.T) {
 func testConvertCall() {
 	InitializeSonyFlakeId()
 
-	db, err := NewMySQLConnection(conf, dbName)
+	db, err := NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}

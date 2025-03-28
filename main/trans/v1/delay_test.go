@@ -7,7 +7,7 @@ import (
 )
 
 func TestBuffetDelay(t *testing.T) {
-	db, err := NewMySQLConnection(conf, dbName)
+	db, err := NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}
@@ -30,7 +30,7 @@ func TestConvertBuffetDelay(t *testing.T) {
 func testConvertBuffetDelay() {
 	InitializeSonyFlakeId()
 
-	db, err := NewMySQLConnection(conf, dbName)
+	db, err := NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}

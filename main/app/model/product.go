@@ -19,11 +19,17 @@ type ProductFlavor struct {
 // ProductSauce 商品小料表,定义商品小料的相关信息 ttpos_product_sauce
 type ProductSauce struct {
 	BaseModel
-	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
-	MultiLanguageNameUuid uint   `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	Name                  string  `gorm:"default:'';column:name;comment:'名称'"`
+	Price                 float64 `gorm:"default:0;column:price;comment:'价格'"`
+	MultiLanguageNameUuid uint    `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 
 	MultiLanguageName MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
-	SauceMaterials    []*RelatedMaterial `gorm:"foreignKey:product_sauce_uuid;references:uuid"`       // 小料的组成材料
+	SauceMaterials    []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`             // 小料的组成材料
+}
+
+func (model *ProductSauce) SetNil() {
+	model.MultiLanguageName = MultiLanguageName{}
+	model.SauceMaterials = nil
 }
 
 // ProductUnit 商品单位表,定义商品的单位信息 ttpos_product_unit
@@ -253,11 +259,9 @@ func (model *ProductBom) GetStockNum() float64 {
 // RelatedMaterial 关联材料表,定义关联材料的相关信息 ttpos_related_material
 type RelatedMaterial struct {
 	BaseModel
-	MaterialUuid     uint64  `gorm:"column:material_uuid;type:bigint(20) unsigned;default:0;comment:'原料ID'"`
-	RelatedUuid      uint64  `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:'物料清单BOM的ID'"`
-	ProductBomUuid   uint64  `gorm:"column:product_bom_uuid;type:bigint(20) unsigned;default:0;comment:'物料清单BOM的ID'"`
-	ProductSauceUuid uint64  `gorm:"column:product_sauce_uuid;type:bigint(20) unsigned;default:0;comment:'商品小料ID'"`
-	Num              float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:'材料用量,可小数'"`
+	RelatedUuid  uint64  `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:'物料清单BOM的ID'"`
+	MaterialUuid uint64  `gorm:"column:material_uuid;type:bigint(20) unsigned;default:0;comment:'原料ID'"`
+	Num          float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:'材料用量,可小数'"`
 }
 
 func (model *RelatedMaterial) SetNil() {

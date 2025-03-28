@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"fmt"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	oldModel "ttpos-server-go/trans/v1"
 	"ttpos-server-go/trans/v2/constant"
 	newModel "ttpos-server-go/trans/v2/model"
@@ -70,6 +73,7 @@ func (s *ProductService) ConvertProduct() error {
 
 			if product.Type == constant.ProductTypeProduct {
 				// 成品
+				fmt.Println(fmt.Sprintf("-----迁移成品：%+v", product))
 				productPackage, err := newModel.NewProductPackage(product, s.db)
 				if err != nil {
 					return err
@@ -81,6 +85,36 @@ func (s *ProductService) ConvertProduct() error {
 
 			} else if product.Type == constant.ProductTypeMaterial {
 				// 材料
+				fmt.Println(fmt.Sprintf("-----迁移材料：%+v", product))
+				languageName, err := newModel.NewMultiLanguageName(product.ProductName)
+				if err != nil {
+					return err
+				}
+				// 创建multi_language_name表数据
+				multiLanguageNameRepo := repository.NewMultiLanguageNameRepoImpl(tx)
+				if _, err := multiLanguageNameRepo.CreateMultiLanguageName(*languageName); err != nil {
+					return errors.WithMessage(err)
+				}
+
+				material := model.Material{
+					BaseModel: model.BaseModel{
+						Uuid: uint64(product.ProductID),
+					},
+					Name:                  languageName.ZhName,
+					MultiLanguageNameUuid: uint(languageName.Uuid),
+					CategoryUuid:          product.CategoryID,
+					SupplierUuid:          product.ErpSupplierID,
+					ImageUuid:             product.ProductImage.ImageID,
+					ImageName:             product.ImgName,
+					UnitUuid:              product.UnitID,
+					Price:                 product.ProductPrice, // todo 确认“采购单价”是对应旧表的哪个字段
+					StockNum:              usign(product.ProductMaterialStock),
+					BarcodeValue:          product.ProductNo,
+					Status:                product.ProductStatus == 10,
+				}
+				if _, err := base.NewMaterialRepo(s.targetDB).CreateMaterial(material); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -88,4 +122,11 @@ func (s *ProductService) ConvertProduct() error {
 		return err
 	}
 	return nil
+}
+
+func usign(num float64) float64 {
+	if num < 0 {
+		return 0
+	}
+	return num
 }

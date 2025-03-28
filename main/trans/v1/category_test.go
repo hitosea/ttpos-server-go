@@ -46,7 +46,7 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 }
 
 func TestCategory(t *testing.T) {
-	db, err := NewMySQLConnection(conf, dbName)
+	db, err := NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +69,7 @@ func TestConvertCategory(t *testing.T) {
 func testConvertCategory() {
 	InitializeSonyFlakeId()
 
-	db, err := NewMySQLConnection(conf, dbName)
+	db, err := NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}

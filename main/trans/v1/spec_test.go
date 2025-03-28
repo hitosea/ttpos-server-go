@@ -8,7 +8,7 @@ import (
 )
 
 func TestSpec(t *testing.T) {
-	db, err := database.NewMySQLConnection(conf, dbName)
+	db, err := database.NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}
@@ -31,7 +31,7 @@ func TestConvertSpec(t *testing.T) {
 func testConvertSpec() {
 	InitializeSonyFlakeId()
 
-	db, err := NewMySQLConnection(conf, dbName)
+	db, err := NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}

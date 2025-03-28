@@ -7,7 +7,7 @@ import (
 )
 
 func TestProductAttribute(t *testing.T) {
-	db, err := NewMySQLConnection(conf, dbName)
+	db, err := NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}
@@ -30,7 +30,7 @@ func TestConvertProductAttribute(t *testing.T) {
 func testConvertProductAttribute() {
 	InitializeSonyFlakeId()
 
-	db, err := NewMySQLConnection(conf, dbName)
+	db, err := NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}

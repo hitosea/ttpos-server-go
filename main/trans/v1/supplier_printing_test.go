@@ -8,7 +8,7 @@ import (
 )
 
 func TestSupplierPrinting(t *testing.T) {
-	db, err := database.NewMySQLConnection(conf, dbName)
+	db, err := database.NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}
@@ -31,7 +31,7 @@ func TestConvertSupplierPrinting(t *testing.T) {
 func testConvertSupplierPrinting() {
 	InitializeSonyFlakeId()
 
-	db, err := NewMySQLConnection(conf, dbName)
+	db, err := NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}

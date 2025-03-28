@@ -4,7 +4,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	pkgUtils "ttpos-server-go/pkg/utils"
-	"ttpos-server-go/trans/v1"
+	v1 "ttpos-server-go/trans/v1"
 	"ttpos-server-go/trans/v1/repository"
 	"ttpos-server-go/trans/v2/constant"
 	"ttpos-server-go/trans/v2/utils"
@@ -68,7 +68,7 @@ func NewProductPackage(product *v1.Product, db *gorm.DB) (*model.ProductPackage,
 			CreateTime: product.CreateTime,
 			UpdateTime: product.UpdateTime,
 		},
-		Name:                          languageName.ZhName,
+		Name:                          languageName.ToJson(),
 		MultiLanguageNameUuid:         languageName.Uuid,
 		ImageName:                     product.ImgName,
 		ImageFileUuid:                 product.ProductImage.ImageID,
@@ -170,11 +170,9 @@ func NewFlavorProductBom(db *gorm.DB, productID uint64) ([]model.ProductBom, err
 				BaseModel: model.BaseModel{
 					Uuid: uint64(productSkuMaterial.ID),
 				},
-				MaterialUuid:     uint64(productSkuMaterial.MaterialID),
-				RelatedUuid:      0,
-				ProductBomUuid:   uint64(productSkuMaterial.ProductSkuID),
-				ProductSauceUuid: 0,
-				Num:              productSkuMaterial.MaterialNum,
+				MaterialUuid: uint64(productSkuMaterial.MaterialID),
+				RelatedUuid:  uint64(productSkuMaterial.ProductSkuID),
+				Num:          productSkuMaterial.MaterialNum,
 			})
 		}
 		productBom := model.ProductBom{

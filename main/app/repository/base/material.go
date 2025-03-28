@@ -62,26 +62,8 @@ func (r *MaterialRepoImpl) UpdateMaterial(id uint, material model.Material) erro
 
 // CreateMaterial 创建原料
 func (r *MaterialRepoImpl) CreateMaterial(material model.Material) (uint64, error) {
-	tx := r.db.Begin() // 开始事务
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback() // 回滚事务
-		}
-	}()
-
-	// 创建多语言名称
-	if err := tx.Create(&material.MultiLanguageName).Error; err != nil {
-		tx.Rollback() // 创建多语言名称失败，回滚事务
-		return 0, errors.WithMessage(err)
-	}
-
-	// 创建原料
-	if err := tx.Create(&material).Error; err != nil {
-		tx.Rollback() // 创建失败，回滚事务
-		return 0, errors.WithMessage(err)
-	}
-
-	return material.Uuid, tx.Commit().Error // 提交事务
+	err := r.db.Model(&model.Material{}).Create(&material).Error // 将多语言名称插入数据库
+	return material.Uuid, errors.WithMessage(err)
 }
 
 // DeleteMaterial 删除原料

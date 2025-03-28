@@ -1,6 +1,9 @@
 package model
 
-import "ttpos-server-go/app/dto"
+import (
+	"encoding/json"
+	"ttpos-server-go/app/dto"
+)
 
 // MultiLanguageName 结构体表示多语言名称 ttpos_multi_language_name
 type MultiLanguageName struct {
@@ -27,6 +30,12 @@ func (m *MultiLanguageName) GetNames() dto.LocaleResponse {
 		MY:   m.MyName,
 		TR:   m.TrName,
 	}
+}
+
+func (m *MultiLanguageName) ToJson() string {
+	names := m.GetNames()
+	json, _ := json.Marshal(names)
+	return string(json)
 }
 
 // GetNameByLang 获取指定语言名称
