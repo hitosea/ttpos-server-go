@@ -136,7 +136,7 @@ func (model *PaymentOrder) NewRefundOrder() *RefundOrder {
 type RefundOrder struct {
 	BaseModel
 	SaleOrderUuid    uint64  `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单ID;NOT NULL" json:"sale_order_uuid"` // 也可能是充值订单ID
-	SaleOrderNo      string  `gorm:"column:sale_order_no;type:varchar(255);default:'';comment:销售订单号;NOT NULL" json:"sale_order_no"`           // 废弃，暂时用不到
+	SaleOrderNo      string  `gorm:"column:sale_order_no;type:varchar(255);default:'';comment:销售订单号;NOT NULL" json:"sale_order_no"`            // 废弃，暂时用不到
 	PaymentOrderUuid uint64  `gorm:"column:payment_order_uuid;type:bigint(20) unsigned;default:0;comment:支付单ID;NOT NULL" json:"payment_order_uuid"`
 	RefundType       uint    `gorm:"column:refund_type;type:int(11);default:0;comment:退款类型,1-反结账;NOT NULL" json:"refund_type"`
 	Amount           float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:退款金额;NOT NULL" json:"amount"`

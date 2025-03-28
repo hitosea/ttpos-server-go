@@ -616,7 +616,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 	// 获取列表源数据
 	var reqs repository.GetCashierOrderListWithPaginationType
 	_ = copier.Copy(&reqs, req)
-	lists, total, dbOption, err := orderRepo.GetCashierOrderListWithPagination(reqs)
+	lists, total, dbOption, err := orderRepo.GetCashierOrderListWithPagination(reqs, ctx.GetCompanySetting().Timezone)
 	if err != nil {
 		return resp.OrderListPaginationResp{}, errors.WithMessage(err)
 	}

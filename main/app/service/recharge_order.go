@@ -655,24 +655,17 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 
 	// -1=全都、 0=今天、 1=昨天、 2=本周
 	if listReq.DateType >= 0 && listReq.DateType <= 2 {
-		now := time.Now()
-		var startTime, endTime time.Time
+		var startTime, endTime int64
+		tz := ctx.GetCompanySetting().Timezone
 		switch listReq.DateType {
 		case 0: // 今天
-			startTime = now.Truncate(24 * time.Hour)
-			endTime = startTime.Add(24*time.Hour - time.Second)
+			startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeToday)
 		case 1: // 昨天
-			startTime = now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
-			endTime = startTime.Add(24*time.Hour - time.Second)
+			startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeYesterday)
 		case 2: // 本周
-			weekday := int(now.Weekday())
-			if weekday == 0 {
-				weekday = 7
-			}
-			startTime = now.AddDate(0, 0, -weekday+1).Truncate(24 * time.Hour)
-			endTime = startTime.AddDate(0, 0, 7).Add(-time.Second)
+			startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeThisWeek)
 		}
-		dateTypeOption := rechargeOrderRepo.WhereCreateTimeBetween(startTime.Unix(), endTime.Unix())
+		dateTypeOption := rechargeOrderRepo.WhereCreateTimeBetween(startTime, endTime)
 		options = append(options, dateTypeOption)
 		countOptions = append(countOptions, dateTypeOption)
 	}
