@@ -19,6 +19,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/duke-git/lancet/convertor"
 	"github.com/shopspring/decimal"
@@ -471,7 +472,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 	log, err := shiftLogRepo.GetShiftLog(
 		shiftLogRepo.WithStaff(),
 		repository.CommonRepo.WhereByStaffUuid(staff.Uuid),
-		repository.CommonRepo.WhereByShiftNo(req.DutyNo),
+		repository.CommonRepo.WhereByShiftNo(utils.IfString(req.DutyNo != "", req.DutyNo, staff.DutyNo)),
 	)
 	if err != nil {
 		return nil, errors.New("当前班次错误，请退出重新登录")
