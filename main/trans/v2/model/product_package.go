@@ -1,12 +1,11 @@
 package model
 
 import (
-	"fmt"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	pkgUtils "ttpos-server-go/pkg/utils"
-	"ttpos-server-go/trans/old_model"
-	"ttpos-server-go/trans/old_model/repository"
+	"ttpos-server-go/trans/v1"
+	"ttpos-server-go/trans/v1/repository"
 	"ttpos-server-go/trans/v2/constant"
 	"ttpos-server-go/trans/v2/utils"
 
@@ -14,18 +13,16 @@ import (
 )
 
 // NewProductPackage 创建产品包
-func NewProductPackage(product *old_model.Product, db *gorm.DB) (*model.ProductPackage, error) {
+func NewProductPackage(product *v1.Product, db *gorm.DB) (*model.ProductPackage, error) {
 	productAttrGroups, err := product.ParseProductAttr()
 	if err != nil {
 		return nil, errors.WithMessage(err, "ParseProductAttr failed")
 	}
 
-	fmt.Println(fmt.Sprintf("product.ProductName: %s", product.ProductName))
 	languageName, err := NewMultiLanguageName(product.ProductName)
 	if err != nil {
 		return nil, errors.WithMessage(err, "NewMultiLanguageName failed")
 	}
-	fmt.Println(fmt.Sprintf("languageName: %+v", pkgUtils.ToJsonString(languageName)))
 
 	StockDeductMethod := product.GetStockDeductMethod()
 	Status := product.GetProductStatus()
@@ -103,7 +100,7 @@ func NewProductPackage(product *old_model.Product, db *gorm.DB) (*model.ProductP
 	return m, nil
 }
 
-func NewProductPackageAttributeGroup(productPackageUuid uint64, productAttrGroup []*old_model.ProductAttrGroup) ([]model.ProductPackageAttributeGroup, error) {
+func NewProductPackageAttributeGroup(productPackageUuid uint64, productAttrGroup []*v1.ProductAttrGroup) ([]model.ProductPackageAttributeGroup, error) {
 	productPackageAttributeGroups := make([]model.ProductPackageAttributeGroup, 0)
 	for _, attrGroup := range productAttrGroup {
 		uuid, err := pkgUtils.GetID()
@@ -128,7 +125,7 @@ func NewProductPackageAttributeGroup(productPackageUuid uint64, productAttrGroup
 	return productPackageAttributeGroups, nil
 }
 
-func NewProductPackageAttribute(productPackageAttributeGroupUuid uint64, productAttrGroup old_model.ProductAttrGroup) ([]model.ProductPackageAttribute, error) {
+func NewProductPackageAttribute(productPackageAttributeGroupUuid uint64, productAttrGroup v1.ProductAttrGroup) ([]model.ProductPackageAttribute, error) {
 	productPackageAttributes := make([]model.ProductPackageAttribute, 0)
 	for index, attrID := range productAttrGroup.AttributeIDs {
 		uuid, err := pkgUtils.GetID()
@@ -204,7 +201,7 @@ func NewFlavorProductBom(db *gorm.DB, productID uint64) ([]model.ProductBom, err
 	return productBoms, nil
 }
 
-func NewSauceProductBom(db *gorm.DB, product *old_model.Product) ([]model.ProductBom, error) {
+func NewSauceProductBom(db *gorm.DB, product *v1.Product) ([]model.ProductBom, error) {
 	productFeeds, err := product.ParseProductFeed()
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取商品规格失败")

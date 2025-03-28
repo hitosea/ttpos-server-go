@@ -1,11 +1,9 @@
 package handler
 
 import (
-	"fmt"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
-	pkgUtils "ttpos-server-go/pkg/utils"
-	oldModel "ttpos-server-go/trans/old_model"
+	oldModel "ttpos-server-go/trans/v1"
 	"ttpos-server-go/trans/v2/constant"
 	newModel "ttpos-server-go/trans/v2/model"
 
@@ -67,20 +65,15 @@ func (s *ProductService) ConvertProduct() error {
 		return err
 	}
 	if err := s.targetDB.Transaction(func(tx *gorm.DB) error {
-		fmt.Println(fmt.Sprintf("products: %v", len(products)))
 		for index, _ := range products {
 			product := &products[index]
 
-			fmt.Println(fmt.Sprintf("index: %d, product: %+v", index, product))
 			if product.Type == constant.ProductTypeProduct {
 				// 成品
-				fmt.Println(fmt.Sprintf("-----迁移成品：%+v", product))
 				productPackage, err := newModel.NewProductPackage(product, s.db)
 				if err != nil {
-					fmt.Println(fmt.Sprintf("err: %v", err))
 					return err
 				}
-				fmt.Println(fmt.Sprintf("productPackage: %+v", pkgUtils.ToJsonString(productPackage)))
 				repo := repository.NewProductPackageRepo(tx)
 				if err := repo.CreateProductPackage(productPackage); err != nil {
 					return err
@@ -88,7 +81,6 @@ func (s *ProductService) ConvertProduct() error {
 
 			} else if product.Type == constant.ProductTypeMaterial {
 				// 材料
-				fmt.Println(fmt.Sprintf("-----迁移材料：%+v", product))
 			}
 		}
 		return nil
