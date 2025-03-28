@@ -607,7 +607,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				deviceRepo := repository.NewDeviceRepo(db)
 				cashierDevice, _ := deviceRepo.GetDevice(deviceRepo.WhereSource(constant.SourceCashier), deviceRepo.WhereSn(auth.DeviceId))
 				if cashierDevice.Uuid == 0 {
-					return company, companySetting, staff, desk, errors.New("收银员设备已解绑，请重新绑定")
+					return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeCashierNotLogin, "收银员设备已解绑，请重新绑定")
 				}
 				if cashierDevice.FinallyLoginUuid == 0 || auth.Assistant.StaffUuid == 0 {
 					return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeCashierNotLogin, "收银员登录信息错误，请重新登录")
