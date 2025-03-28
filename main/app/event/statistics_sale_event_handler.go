@@ -19,7 +19,8 @@ func statisticsSaleEventHandler() {
 	once_statistics_sale_event_handler.Do(func() {
 		event.NewSystemBus().SubscribeStatisticsSaleEvent(func(payload event.StatisticsSalePayload) {
 			service.NewStatisticsSrv().SaveSale(payload.Ctx, service.SaveSaleReq{
-				SaleBill: payload.SaleBill,
+				SaleBill:   payload.SaleBill,
+				OnlyDelete: payload.OnlyDelete,
 			})
 		})
 	})

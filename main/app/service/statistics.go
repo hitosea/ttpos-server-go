@@ -356,7 +356,8 @@ func (s *statisticsSrv) RankProduct(ctx context.Context, req CountReq) []CountPr
 
 // SaveSaleReq 保存销售请求
 type SaveSaleReq struct {
-	SaleBill *model.SaleBill
+	SaleBill   *model.SaleBill
+	OnlyDelete bool
 }
 
 // SaveSale 保存销售
@@ -368,6 +369,10 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 	statisticsRepo.DeleteSale(req.SaleBill.Uuid)
 	statisticsRepo.DeletePayment(req.SaleBill.Uuid)
 	statisticsRepo.DeleteProduct(req.SaleBill.Uuid)
+
+	if req.OnlyDelete {
+		return nil
+	}
 
 	var (
 		sales    []model.StatisticsSale

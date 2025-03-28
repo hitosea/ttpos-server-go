@@ -1844,6 +1844,19 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 				return errors.WithMessage(err)
 			}
 		}
+
+		go func() {
+			// 发布“统计”操作事件
+			s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
+				BasePayload: event.BasePayload{
+					Ctx:         ctx,
+					CompanyUuid: ctx.GetCompanyUuid(),
+				},
+				SaleBill:   saleBill,
+				OnlyDelete: true,
+			})
+		}()
+
 		return nil
 	}); err != nil {
 		return errors.WithMessage(err)

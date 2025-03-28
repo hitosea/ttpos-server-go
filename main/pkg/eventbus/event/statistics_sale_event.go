@@ -12,7 +12,8 @@ const EventStatisticsSale EventName = "Event_Statistics_Sale"
 // StatisticsSalePayload 每个事件有一个数据结构
 type StatisticsSalePayload struct {
 	BasePayload
-	SaleBill *model.SaleBill
+	SaleBill   *model.SaleBill
+	OnlyDelete bool
 }
 
 func (payload *StatisticsSalePayload) ToJsonString() string {
