@@ -153,7 +153,7 @@ func (p *PaymentRepo) CreatePayment(
 		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
 	}, REQUEST_TIME_OUT)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("连连支付失败：404")
 	}
 
 	// 返回支付结果
@@ -324,7 +324,7 @@ func (p *PaymentRepo) Refund(serviceRefundReq PaymentServiceRefundReq) (*LianLia
 		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
 	}, REQUEST_TIME_OUT)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("连连退款失败：404")
 	}
 	// 返回结果
 	var resp LianLianPaymentRefundResp

@@ -113,11 +113,6 @@ func (model *SaleBill) GetSaleOrderProductAll() []*SaleOrderProduct {
 	return saleOrderProducts
 }
 
-// 获取销售账单的取单列表item卡片的信息
-func (model *SaleBill) GetHideSaleBillCardInfo() {
-
-}
-
 // 返回新的销售账单
 func (model *SaleBill) GetSaleOrder(saleOrderUuid uint64) *SaleOrder {
 	for i, saleOrder := range model.SaleOrders {
@@ -177,14 +172,14 @@ func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
 	// 只有一个自助餐时都是只填在BuffetPackage1
 	if model.BuffetPackage1 != nil {
 		name = dto.LocaleResponse{
-			ZH:   fmt.Sprintf("%s", name1.ZH),
-			TH:   fmt.Sprintf("%s", name1.TH),
-			EN:   fmt.Sprintf("%s", name1.EN),
-			ZHTW: fmt.Sprintf("%s", name1.ZHTW),
-			JA:   fmt.Sprintf("%s", name1.JA),
-			KO:   fmt.Sprintf("%s", name1.KO),
-			MY:   fmt.Sprintf("%s", name1.MY),
-			TR:   fmt.Sprintf("%s", name1.TR),
+			ZH:   name1.ZH,
+			TH:   name1.TH,
+			EN:   name1.EN,
+			ZHTW: name1.ZHTW,
+			JA:   name1.JA,
+			KO:   name1.KO,
+			MY:   name1.MY,
+			TR:   name1.TR,
 		}
 		return
 	}

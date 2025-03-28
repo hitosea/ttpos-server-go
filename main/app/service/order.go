@@ -103,7 +103,7 @@ type IOrderSrv interface {
 	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                                         // 取消使用会员优惠
 	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                                                          // 使用会员优惠
 	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error                                        // 计算并保存销售账单
-	OrderPrint(ctx context.Context, req req.OrderPrintReq) (*resp.PrinterData, error)                                                                                       // 打印
+	OrderPrint(ctx context.Context, req req.OrderPrintReq, needLock bool) (*resp.PrinterData, error)                                                                        // 打印
 	OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvoiceReq) (*resp.PrinterData, error)                                                                         // 图片打印
 	OrderPrintInvoiceInfo(ctx context.Context, req req.OrderInvoiceInfoReq) resp.SaleOrderInvoiceInfo                                                                       // 图片打印
 	OrderUnlock(ctx context.Context, saleBillUuid uint64) error                                                                                                             // 订单解锁
@@ -7008,7 +7008,7 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 }
 
 // OrderPrint 打印
-func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*resp.PrinterData, error) {
+func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq, needLock bool) (*resp.PrinterData, error) {
 	// 加锁
 	if ctx.NoLock() {
 		s.lock.LockUuid(request.SaleBillUuid)
@@ -7059,8 +7059,10 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq) (*
 	}
 
 	// 保存销售账单
-	if err := repository.NewOrderRepo(db).SetLock(saleBill.Uuid, true); err != nil {
-		return nil, errors.WithMessage(err, "设置锁单失败")
+	if needLock {
+		if err := repository.NewOrderRepo(db).SetLock(saleBill.Uuid, true); err != nil {
+			return nil, errors.WithMessage(err, "设置锁单失败")
+		}
 	}
 
 	// 如果是点餐助手，不能直接打印
