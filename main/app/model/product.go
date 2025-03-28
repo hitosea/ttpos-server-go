@@ -69,8 +69,13 @@ type ProductPackageAttributeGroup struct {
 	ProductPackageUuid        uint64 `gorm:"default:0;column:product_package_uuid;comment:'产品包UUID'"`
 	ProductAttributeGroupUuid uint64 `gorm:"default:0;column:product_attribute_group_uuid;comment:'商品属性组UUID'"`
 
-	ProductAttributeGroup    ProductAttributeGroup     `gorm:"foreignKey:product_attribute_group_uuid;references:uuid"`         // 商品属性组
-	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:product_package_attribute_group_uuid;references:uuid"` // 产品包属性
+	ProductAttributeGroup    ProductAttributeGroup     `gorm:"foreignKey:product_attribute_group_uuid;references:uuid" json:"-"` // 商品属性组
+	ProductPackageAttributes []ProductPackageAttribute `gorm:"foreignKey:product_package_attribute_group_uuid;references:uuid"`  // 产品包属性
+}
+
+func (model *ProductPackageAttributeGroup) SetNil() {
+	model.ProductAttributeGroup = ProductAttributeGroup{}
+	model.ProductPackageAttributes = nil
 }
 
 func (model *ProductPackageAttributeGroup) IsMustBool() bool {
@@ -84,7 +89,11 @@ type ProductPackageAttribute struct {
 	AttributeUuid                    uint64 `gorm:"default:0;column:attribute_uuid;comment:'产品属性UUID'"`
 	IsDefaultSelected                uint   `gorm:"default:0;column:is_default_selected;comment:'是否默认选中, 0-否 1-是'"`
 
-	Attribute ProductAttribute `gorm:"foreignKey:attribute_uuid;references:uuid"` // 产品属性
+	Attribute ProductAttribute `gorm:"foreignKey:attribute_uuid;references:uuid" json:"-"` // 产品属性
+}
+
+func (model *ProductPackageAttribute) SetNil() {
+	model.Attribute = ProductAttribute{}
 }
 
 func (model *ProductPackageAttribute) IsDefaultSelectedBool() bool {
@@ -120,14 +129,25 @@ type ProductPackage struct {
 	SauceMaxSelection uint  `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
 	OpenDiscount      uint  `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
 
-	MultiLanguageName             MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
-	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid"`                // 单位
-	ProductBoms                   []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`     // BOM
-	ProductPackageAttributeGroups []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`     // 产品包属性组
-	DineTax                       Tax                            `gorm:"foreignKey:dine_tax_uuid;references:uuid"`            // 堂食税
-	TakeoutTax                    Tax                            `gorm:"foreignKey:takeout_tax_uuid;references:uuid"`         // 外卖税
-	ProductCategory               ProductCategory                `gorm:"foreignKey:category_uuid;references:uuid"`            // 类别
-	ImageFile                     File                           `gorm:"foreignKey:image_file_uuid;references:uuid"`          // 图片
+	MultiLanguageName             MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`  // 多语言名称
+	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid" json:"-"`        // 单位
+	ProductBoms                   []ProductBom                   `gorm:"foreignKey:product_package_uuid;references:uuid"`      // BOM
+	ProductPackageAttributeGroups []ProductPackageAttributeGroup `gorm:"foreignKey:product_package_uuid;references:uuid"`      // 产品包属性组
+	DineTax                       Tax                            `gorm:"foreignKey:dine_tax_uuid;references:uuid" json:"-"`    // 堂食税
+	TakeoutTax                    Tax                            `gorm:"foreignKey:takeout_tax_uuid;references:uuid" json:"-"` // 外卖税
+	ProductCategory               ProductCategory                `gorm:"foreignKey:category_uuid;references:uuid" json:"-"`    // 类别
+	ImageFile                     File                           `gorm:"foreignKey:image_file_uuid;references:uuid" json:"-"`  // 图片
+}
+
+func (model *ProductPackage) SetNil() {
+	model.MultiLanguageName = MultiLanguageName{}
+	model.ProductUnit = ProductUnit{}
+	model.ProductBoms = nil
+	model.ProductPackageAttributeGroups = nil
+	model.DineTax = Tax{}
+	model.TakeoutTax = Tax{}
+	model.ProductCategory = ProductCategory{}
+	model.ImageFile = File{}
 }
 
 // IsCookingDeductStock 判断商品包是否是下单减库存
@@ -210,10 +230,10 @@ type ProductBom struct {
 	ProductSauceUuid   uint64 `gorm:"column:product_sauce_uuid;type:bigint(20) unsigned;default:0;comment:商品小料ID(仅小料使用);NOT NULL" json:"product_sauce_uuid"`
 	ProductPackageUuid uint64 `gorm:"column:product_package_uuid;type:bigint(20) unsigned;default:0;comment:商品包ID;NOT NULL" json:"product_package_uuid"`
 
-	ProductPackage  ProductPackage     `gorm:"foreignKey:ProductPackageUuid;references:uuid"`  // 商品
-	ProductFlavor   ProductFlavor      `gorm:"foreignKey:product_flavor_uuid;references:uuid"` // 商品规格
-	ProductSauce    ProductSauce       `gorm:"foreignKey:product_sauce_uuid;references:uuid"`  // 商品小料
-	FlavorMaterials []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`        // 规格商品的组成材料
+	ProductPackage  ProductPackage     `gorm:"foreignKey:ProductPackageUuid;references:uuid" json:"-"`  // 商品
+	ProductFlavor   ProductFlavor      `gorm:"foreignKey:product_flavor_uuid;references:uuid" json:"-"` // 商品规格
+	ProductSauce    ProductSauce       `gorm:"foreignKey:product_sauce_uuid;references:uuid" json:"-"`  // 商品小料
+	FlavorMaterials []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`                 // 规格商品的组成材料
 }
 
 func (model *ProductBom) SetNil() {
@@ -238,6 +258,9 @@ type RelatedMaterial struct {
 	ProductBomUuid   uint64  `gorm:"column:product_bom_uuid;type:bigint(20) unsigned;default:0;comment:'物料清单BOM的ID'"`
 	ProductSauceUuid uint64  `gorm:"column:product_sauce_uuid;type:bigint(20) unsigned;default:0;comment:'商品小料ID'"`
 	Num              float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:'材料用量,可小数'"`
+}
+
+func (model *RelatedMaterial) SetNil() {
 }
 
 // GetDecreaseNum 获取减少的库存数量. 减少的库存数量 = 材料用量 * 商品数量

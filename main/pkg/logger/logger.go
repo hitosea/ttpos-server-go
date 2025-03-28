@@ -26,14 +26,14 @@ func Init() error {
 	}
 
 	// 创建Logger
-	Logger = newLogger("")
-	SqlLogger = newLogger(".sql")
+	Logger = NewLoggerInstance("")
+	SqlLogger = NewLoggerInstance(".sql")
 	// 定时每天清理一次日志
 	startCron()
 	return nil
 }
 
-func newLogger(name string) *zap.Logger {
+func NewLoggerInstance(name string) *zap.Logger {
 	now := time.Now()
 	logfile := filepath.Join(config.Log.Dir, fmt.Sprintf("%s%s.log", now.Format(time.DateOnly), name))
 

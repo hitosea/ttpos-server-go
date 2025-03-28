@@ -43,5 +43,4 @@ func testConvertProduct() {
 	if err != nil {
 		panic(err)
 	}
-
 }

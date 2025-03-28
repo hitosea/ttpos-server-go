@@ -1,13 +1,14 @@
 package model
 
 import (
+	"fmt"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	pkgUtils "ttpos-server-go/pkg/utils"
-	"ttpos-server-go/trans/model/constant"
-	"ttpos-server-go/trans/model/utils"
 	"ttpos-server-go/trans/old_model"
 	"ttpos-server-go/trans/old_model/repository"
+	"ttpos-server-go/trans/v2/constant"
+	"ttpos-server-go/trans/v2/utils"
 
 	"gorm.io/gorm"
 )
@@ -19,10 +20,12 @@ func NewProductPackage(product *old_model.Product, db *gorm.DB) (*model.ProductP
 		return nil, errors.WithMessage(err, "ParseProductAttr failed")
 	}
 
+	fmt.Println(fmt.Sprintf("product.ProductName: %s", product.ProductName))
 	languageName, err := NewMultiLanguageName(product.ProductName)
 	if err != nil {
 		return nil, errors.WithMessage(err, "NewMultiLanguageName failed")
 	}
+	fmt.Println(fmt.Sprintf("languageName: %+v", pkgUtils.ToJsonString(languageName)))
 
 	StockDeductMethod := product.GetStockDeductMethod()
 	Status := product.GetProductStatus()
@@ -58,7 +61,11 @@ func NewProductPackage(product *old_model.Product, db *gorm.DB) (*model.ProductP
 	productBoms = append(productBoms, flavorBoms...)
 	productBoms = append(productBoms, sauceBoms...)
 
-	return &model.ProductPackage{
+	productPackageAttributeGroups, err := NewProductPackageAttributeGroup(uint64(product.ProductID), productAttrGroups)
+	if err != nil {
+		return nil, errors.WithMessage(err, "NewProductPackageAttributeGroup failed")
+	}
+	m := &model.ProductPackage{
 		BaseModel: model.BaseModel{
 			Uuid:       uint64(product.ProductID),
 			CreateTime: product.CreateTime,
@@ -88,18 +95,24 @@ func NewProductPackage(product *old_model.Product, db *gorm.DB) (*model.ProductP
 		OpenDiscount:                  OpenDiscount,
 		SauceRequired:                 uint8(product.FeedRequired),
 		SauceMaxSelection:             product.FeedMaxSelect,
-		ProductPackageAttributeGroups: NewProductPackageAttributeGroup(uint64(product.ProductID), productAttrGroups),
+		ProductPackageAttributeGroups: productPackageAttributeGroups,
 		MultiLanguageName:             *languageName,
 		ProductBoms:                   productBoms,
-	}, nil
+	}
+
+	return m, nil
 }
 
-func NewProductPackageAttributeGroup(productPackageUuid uint64, productAttrGroup []*old_model.ProductAttrGroup) []model.ProductPackageAttributeGroup {
+func NewProductPackageAttributeGroup(productPackageUuid uint64, productAttrGroup []*old_model.ProductAttrGroup) ([]model.ProductPackageAttributeGroup, error) {
 	productPackageAttributeGroups := make([]model.ProductPackageAttributeGroup, 0)
 	for _, attrGroup := range productAttrGroup {
 		uuid, err := pkgUtils.GetID()
 		if err != nil {
-			panic(errors.WithMessage(err, "获取uuid失败"))
+			return nil, errors.WithMessage(err, "获取uuid失败")
+		}
+		productPackageAttributes, err := NewProductPackageAttribute(uuid, *attrGroup)
+		if err != nil {
+			return nil, errors.WithMessage(err, "NewProductPackageAttribute failed")
 		}
 		productPackageAttributeGroups = append(productPackageAttributeGroups, model.ProductPackageAttributeGroup{
 			BaseModel: model.BaseModel{
@@ -109,18 +122,18 @@ func NewProductPackageAttributeGroup(productPackageUuid uint64, productAttrGroup
 			MaxSelection:              attrGroup.GetMaxSelection(), // 最大选择数量
 			ProductPackageUuid:        productPackageUuid,          // 产品包id
 			ProductAttributeGroupUuid: uint64(attrGroup.ParentID),  // 产品属性组id
-			ProductPackageAttributes:  NewProductPackageAttribute(uuid, *attrGroup),
+			ProductPackageAttributes:  productPackageAttributes,
 		})
 	}
-	return productPackageAttributeGroups
+	return productPackageAttributeGroups, nil
 }
 
-func NewProductPackageAttribute(productPackageAttributeGroupUuid uint64, productAttrGroup old_model.ProductAttrGroup) []model.ProductPackageAttribute {
+func NewProductPackageAttribute(productPackageAttributeGroupUuid uint64, productAttrGroup old_model.ProductAttrGroup) ([]model.ProductPackageAttribute, error) {
 	productPackageAttributes := make([]model.ProductPackageAttribute, 0)
 	for index, attrID := range productAttrGroup.AttributeIDs {
 		uuid, err := pkgUtils.GetID()
 		if err != nil {
-			panic(errors.WithMessage(err, "获取uuid失败"))
+			return nil, errors.WithMessage(err, "获取uuid失败")
 		}
 		productPackageAttributes = append(productPackageAttributes, model.ProductPackageAttribute{
 			BaseModel: model.BaseModel{
@@ -131,7 +144,7 @@ func NewProductPackageAttribute(productPackageAttributeGroupUuid uint64, product
 			IsDefaultSelected:                uint(productAttrGroup.DefaultSelect[index]),
 		})
 	}
-	return productPackageAttributes
+	return productPackageAttributes, nil
 }
 
 func NewMultiLanguageName(nameJson string) (*model.MultiLanguageName, error) {
@@ -198,16 +211,24 @@ func NewSauceProductBom(db *gorm.DB, product *old_model.Product) ([]model.Produc
 	}
 	productBoms := make([]model.ProductBom, 0)
 	for _, productFeed := range productFeeds {
+		price, err := productFeed.GetPrice()
+		if err != nil {
+			return nil, errors.WithMessage(err, "productFeed.GetPrice() failed")
+		}
+		defaultSelect, err := productFeed.GetDefaultSelect()
+		if err != nil {
+			return nil, errors.WithMessage(err, "productFeed.GetDefaultSelect() failed")
+		}
 		productBom := model.ProductBom{
 			BaseModel: model.BaseModel{
 				Uuid: uint64(productFeed.ProductFeedID),
 			},
 			PurchasePrice:      0,
-			Price:              float64(productFeed.Price),
+			Price:              price,
 			Name:               productFeed.FeedName,
 			StockNum:           float64(productFeed.StockNum),
 			BarcodeValue:       "",
-			IsDefaultSelect:    productFeed.DefaultSelect,
+			IsDefaultSelect:    defaultSelect,
 			Status:             1,
 			IsSoldOut:          0,
 			ProductFlavorUuid:  0,

@@ -60,27 +60,47 @@ func (r *productPackageRepoImpl) GetProductPackageListByUuids(uuids []uint64) ([
 
 func (r *productPackageRepoImpl) CreateProductPackage(productPackage *model.ProductPackage) error {
 	// 创建product_package表数据
-	if err := r.db.Model(&model.ProductPackage{}).Create(productPackage).Error; err != nil {
+	productPkg := *productPackage
+	productPkg.SetNil()
+	if err := r.db.Model(&model.ProductPackage{}).Create(&productPkg).Error; err != nil {
 		return errors.WithMessage(err)
 	}
-	// 创建product_package_attribute_group表数据
-	if err := r.db.Model(&model.ProductPackageAttributeGroup{}).Create(productPackage.ProductPackageAttributeGroups).Error; err != nil {
+
+	// 创建multi_language_name表数据
+	multiLanguageNameRepo := NewMultiLanguageNameRepoImpl(r.db)
+	if _, err := multiLanguageNameRepo.CreateMultiLanguageName(productPackage.MultiLanguageName); err != nil {
 		return errors.WithMessage(err)
 	}
+
+	productPackageAttributeGroupRepo := NewProductPackageAttributeGroupRepo(r.db)
+	if err := productPackageAttributeGroupRepo.CreateProductPackageAttributeGroups(productPackage.ProductPackageAttributeGroups); err != nil {
+		return errors.WithMessage(err)
+	}
+
 	// 创建product_package_attribute表数据
+	productPackageAttributeRepo := NewProductPackageAttributeRepo(r.db)
 	for _, attributeGroup := range productPackage.ProductPackageAttributeGroups {
-		if err := r.db.Model(&model.ProductPackageAttribute{}).Create(attributeGroup.ProductPackageAttributes).Error; err != nil {
+		if err := productPackageAttributeRepo.CreateProductPackageAttributes(attributeGroup.ProductPackageAttributes); err != nil {
 			return errors.WithMessage(err)
 		}
 	}
 	// 创建product_bom表数据
-	if err := r.db.Model(&model.ProductBom{}).Create(productPackage.ProductBoms).Error; err != nil {
+	productBomRepo := NewProductBomRepo(r.db)
+	if err := productBomRepo.CreateProductBoms(productPackage.ProductBoms); err != nil {
 		return errors.WithMessage(err)
 	}
+
 	// 创建related_material表数据
+	relatedMaterialRepo := NewRelatedMaterialRepo(r.db)
 	for _, bom := range productPackage.ProductBoms {
-		if err := r.db.Model(&model.RelatedMaterial{}).Create(bom.FlavorMaterials).Error; err != nil {
-			return errors.WithMessage(err)
+		if len(bom.FlavorMaterials) > 0 {
+			relatedMaterials := make([]model.RelatedMaterial, 0)
+			for _, material := range bom.FlavorMaterials {
+				relatedMaterials = append(relatedMaterials, *material)
+			}
+			if err := relatedMaterialRepo.CreateRelatedMaterials(relatedMaterials); err != nil {
+				return errors.WithMessage(err)
+			}
 		}
 	}
 	return nil

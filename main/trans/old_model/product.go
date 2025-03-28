@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
-	"ttpos-server-go/trans/model/utils"
+	pkgUtils "ttpos-server-go/pkg/utils"
+	"ttpos-server-go/trans/v2/utils"
 
 	"gorm.io/gorm"
 )
@@ -253,7 +254,7 @@ func (s *ProductService) ConvertProduct() error {
 		}
 		fmt.Println(fmt.Sprintf("product_id: %d, product_name: %+v", product.ProductID, names))
 
-		id, err := utils.GetID()
+		id, err := pkgUtils.GetID()
 		if err != nil {
 			return err
 		}

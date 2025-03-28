@@ -11,6 +11,7 @@ type IProductPackageAttributeRepo interface {
 	GetProductPackageAttribute(opts ...DBOption) (*model.ProductPackageAttribute, error)
 	GetProductPackageAttributes(opts ...DBOption) ([]*model.ProductPackageAttribute, error)
 	GetProductPackageAttributesByUuids(uuids []uint64) ([]*model.ProductPackageAttribute, error)
+	CreateProductPackageAttributes(productPackageAttributes []model.ProductPackageAttribute) error
 }
 
 type productPackageAttributeRepoImpl struct {
@@ -64,4 +65,23 @@ func (r *productPackageAttributeRepoImpl) GetProductPackageAttributesByUuids(uui
 		return nil, errors.WithMessage(err)
 	}
 	return productPackageAttributes, nil
+}
+
+func (r *productPackageAttributeRepoImpl) CreateProductPackageAttributes(productPackageAttributes []model.ProductPackageAttribute) error {
+	// 如果productPackageAttributes为空，则不创建
+	if len(productPackageAttributes) == 0 {
+		return nil
+	}
+	// 清空关联对象
+	list := make([]model.ProductPackageAttribute, 0)
+	for _, attribute := range productPackageAttributes {
+		attribute.SetNil()
+		list = append(list, attribute)
+	}
+
+	// 创建product_package_attribute表数据
+	if err := r.db.Model(&model.ProductPackageAttribute{}).Create(list).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }

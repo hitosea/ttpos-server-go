@@ -9,6 +9,7 @@ import (
 
 // ICommonRepo 通用
 type ICommonRepo interface {
+	CreateProductPackage(productPackage *model.ProductPackage) error
 }
 
 func NewCommonRepo(db *gorm.DB) ICommonRepo {

@@ -7,13 +7,13 @@ import (
 
 var conf = config.DatabaseConf{
 	Host:          "localhost",
-	Port:          13306,
+	Port:          25443,
 	User:          "root",
-	Password:      "cfeb18fa768c2d5f",
+	Password:      "69c1e9542d2a7f19",
 	TablePrefix:   "jjjfood_",
 	SlowQueryTime: 0,
 }
-var dbName = "test-shop"
+var dbName = "shop1724054084"
 var targetConf = config.DatabaseConf{
 	Host:          "localhost",
 	Port:          13306,
@@ -22,22 +22,22 @@ var targetConf = config.DatabaseConf{
 	TablePrefix:   "ttpos_",
 	SlowQueryTime: 0,
 }
-var targetDBName = "shop7828781666304000"
+var targetDBName = "shop4649658617856000"
 
 func TestConvertAll(t *testing.T) {
-	testConvertAttribute()             // 商品属性
-	testConvertCategory()              // 商品分类
-	testConvertFreeTag()               // 商品标签
-	testConvertProductAttributeGroup() // 商品属性组
-	testConvertProductAttribute()      // 商品包属性
-	testConvertProductPrintLabel()     // 商品打印标签
-	testConvertProductUnit()           // 商品单位
-	testConvertReturnReason()          // 退菜原因
-	testConvertSpec()                  // 规格
-	testConvertProduct()               // 商品
-	testConvertTable()                 // 桌台
-	testConvertTableType()             // 桌台类型
-	testConvertTableArea()             // 桌台区域
+	testConvertAttribute() // 商品属性
+	testConvertCategory()  // 商品分类
+	testConvertFreeTag()   // 商品标签
+	// testConvertProductAttributeGroup() // 商品属性组
+	// testConvertProductAttribute()      // 商品包属性
+	testConvertProductPrintLabel() // 商品打印标签
+	testConvertProductUnit()       // 商品单位
+	testConvertReturnReason()      // 退菜原因
+	testConvertSpec()              // 规格
+	// testConvertProduct()               // 商品
+	testConvertTable()     // 桌台
+	testConvertTableType() // 桌台类型
+	testConvertTableArea() // 桌台区域
 	// testConvertShopAccess()            // 权限 // 主键冲突
 	testConvertShopRole()       // 角色
 	testConvertShopUser()       // 用户
@@ -55,5 +55,5 @@ func TestConvertAll(t *testing.T) {
 	testConvertUserCardRecord() // 会员卡领取记录
 	testConvertUserPointsLog()  // 会员积分变动记录
 	testConvertUserBalanceLog() // 会员余额变动记录
-	testConvertProductSKU()     // 商品规格
+	// testConvertProductSKU()     // 商品规格
 }

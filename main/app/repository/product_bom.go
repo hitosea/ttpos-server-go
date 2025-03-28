@@ -15,6 +15,7 @@ type IProductBomRepo interface {
 	GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
 	UpdateProductBomStockNum(warehouseOutFormItems []*model.WarehouseOutFormItem) error // 更新规格商品或小料的库存数量
 	UpdateProductBoms(productBoms []*model.ProductBom) error                            // 更新ProductBom
+	CreateProductBoms(productBoms []model.ProductBom) error                             // 创建ProductBom
 }
 
 type productBomRepoImpl struct {
@@ -118,6 +119,25 @@ func (r *productBomRepoImpl) UpdateProductBoms(productBoms []*model.ProductBom) 
 		list = append(list, bom)
 	}
 	if err := r.db.Model(&model.ProductBom{}).Save(list).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+func (r *productBomRepoImpl) CreateProductBoms(productBoms []model.ProductBom) error {
+	// 如果productBoms为空，则不创建
+	if len(productBoms) == 0 {
+		return nil
+	}
+	// 清空关联对象
+	list := make([]model.ProductBom, 0)
+	for _, productBom := range productBoms {
+		productBom.SetNil()
+		list = append(list, productBom)
+	}
+
+	// 创建product_bom表数据
+	if err := r.db.Model(&model.ProductBom{}).Create(list).Error; err != nil {
 		return errors.WithMessage(err)
 	}
 	return nil
