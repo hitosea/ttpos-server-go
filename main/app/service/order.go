@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"slices"
@@ -1007,6 +1008,14 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 		if record.Source == constant.SourceH5 {
 			realName = i18n.Translate(language, "用户")
 		}
+
+		var refundType int
+		if record.Action == constant.OrderRefund {
+			var refundPayload event.ReturnOrderPayload
+			json.Unmarshal([]byte(record.Data), &refundPayload)
+			refundType = refundPayload.RefundType
+		}
+
 		refundPayTypes := s.getRefundPayType(ctx, record, language)
 		logs = append(logs, resp.OrderOperationLog{
 			Uuid:        record.Uuid,
@@ -1016,6 +1025,7 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			CreateTime:  record.CreateTime,
 			Description: actionText,     // 获取描述
 			PayType:     refundPayTypes, // ToDo 关联连连支付方式
+			RefundType:  refundType,
 		})
 	}
 	return logs, nil

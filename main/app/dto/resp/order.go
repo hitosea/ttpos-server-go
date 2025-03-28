@@ -150,6 +150,7 @@ type OrderOperationLog struct {
 	CreateTime  int64                            `json:"create_time"` // 创建时间
 	Description string                           `json:"description"` // 描述
 	PayType     []OrderOperationLogPaymentMethod `json:"pay_type"`    // 支付方式列表
+	RefundType  int                              `json:"refund_type"` // 退款方式：1-部分退款；2-整单退款
 }
 
 type OrderOperationLogPaymentMethod struct {
