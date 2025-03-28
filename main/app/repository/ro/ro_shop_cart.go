@@ -1,9 +1,7 @@
 package ro
 
 import (
-	"fmt"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/pkg/utils"
 )
 
 type ShopCartRepo struct {
@@ -48,6 +46,5 @@ func (ro *ShopCartRepo) GetMustPlanProductInfo() MustPlanProductInfo {
 			}
 		}
 	}
-	fmt.Println("GetMustPlanProductInfo dataMap", utils.ToJsonString(dataMap))
 	return dataMap
 }

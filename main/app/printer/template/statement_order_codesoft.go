@@ -52,8 +52,8 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 	}
 
 	// 订单名称
-	orderName := fmt.Sprintf("%d", saleOrder.Index)
-	if orderName != "" && saleOrder.Index > 0 {
+	orderName := fmt.Sprintf("%d", saleOrder.GetIndex())
+	if orderName != "" && saleOrder.GetIndex() > 0 {
 		orderName = "-" + orderName
 	}
 

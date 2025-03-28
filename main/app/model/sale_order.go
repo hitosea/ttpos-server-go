@@ -65,7 +65,7 @@ type SaleOrder struct {
 	MemberBalance        float64 `gorm:"column:member_balance;type:decimal(12,2);default:0;comment:会员余额,会员消费本单后剩余的余额" json:"member_balance"`
 
 	// 虚拟字段，用于标记当前子单是第几个
-	Index int `gorm:"-" json:"index,omitempty"`
+	index int `gorm:"-" json:"index,omitempty"`
 
 	// 关联对象
 	PaymentOrders                []*PaymentOrder                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 支付订单，也叫付款单
@@ -78,6 +78,16 @@ type SaleOrder struct {
 	InvoiceInfo                  *SaleOrderInvoiceInfo          `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleBill                     *SaleBill                      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	MemberPointLog               *MemberPointLog                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 关联积分变动记录.赠送积分
+}
+
+// 获取销售订单的序号
+func (model *SaleOrder) GetIndex() int {
+	return model.index
+}
+
+// 设置销售订单的序号
+func (model *SaleOrder) SetIndex(index int) {
+	model.index = index
 }
 
 // 获取销售订单的顾客列表

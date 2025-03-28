@@ -123,7 +123,7 @@ func (model *SaleBill) GetSaleOrder(saleOrderUuid uint64) *SaleOrder {
 	for i, saleOrder := range model.SaleOrders {
 		if saleOrderUuid == saleOrder.Uuid {
 			if len(model.SaleOrders) > 1 {
-				saleOrder.Index = i + 1
+				saleOrder.SetIndex(i + 1)
 			}
 			return saleOrder
 		}
@@ -360,7 +360,6 @@ func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
 func (model *SaleBill) GetUnAcceptH5OrderProductTotalPrice(h5OrderProducts []*SaleOrderProduct) float64 {
 	totalPrice := decimal.NewFromFloat(0)
 	for _, h5OrderProduct := range h5OrderProducts {
-		fmt.Println("22222 h5OrderProduct.Price", h5OrderProduct.Price)
 		totalPrice = totalPrice.Add(decimal.NewFromFloat(h5OrderProduct.Price).Mul(decimal.NewFromInt(int64(h5OrderProduct.Num))))
 	}
 	return totalPrice.Truncate(2).InexactFloat64()
