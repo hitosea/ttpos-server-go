@@ -48,6 +48,7 @@ const (
 	PaymentOrderStatusUnPay  = 0 // 支付订单未支付
 	PaymentOrderStatusPaid   = 1 // 支付订单已支付
 	PaymentOrderStatusRefund = 2 // 支付订单已退款
+	PaymentOrderStatusFailed = 3 // 支付订单支付失败
 )
 
 // 支付订单关联的订单类型

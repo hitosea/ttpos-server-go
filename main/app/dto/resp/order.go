@@ -70,7 +70,8 @@ type OrderInfoPayTypes struct {
 	CurrencyUnit    string  `json:"currency_unit"`     // 货币单位
 	PaymentAmount   float64 `json:"payment_amount"`    // 支付金额
 	Code            string  `json:"code"`              // 支付Code
-	Status          uint    `json:"status"`            // 支付状态, 0-未支付 1-已支付 2-已退款
+	Status          uint    `json:"status"`            // 支付状态, 0-未支付 1-已支付 2-已退款 3-支付异常
+	StatusReason    string  `json:"status_reason"`     // 支付状态原因
 	Source          uint    `json:"source"`            // 支付状态, 来源 0-系统 1-手动 2-LianLianPay
 	SourceText      string  `json:"source_text"`       // 支付状态, 来源 0-系统 1-手动 2-LianLianPay
 }

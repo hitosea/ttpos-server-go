@@ -956,7 +956,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			RefundAmount:  saleBill.GetTotalRefundAmount(),
 			MemberNames:   strings.Join(totalMemberNames, ","),
 			MemberUuids:   strings.Join(totalMemberUuids, ","),
-			CashierName:   saleBill.Cashier.RealName,
+			CashierName:   saleBill.CashierName,
 			IsBuffet:      saleBill.IsBuffet == 1,
 			BuffetNames:   saleBill.GetBuffetNames(ctx.GetLanguage()),
 			CancelReason:  saleBill.Reason,
@@ -5375,6 +5375,7 @@ func (s *orderSrv) InstantOrderPaymentCancel(ctx context.Context, req req.Instan
 	}
 	// 撤销支付单
 	paymentOrder.Cancel()
+	paymentOrder.SetNil()
 	// 更新支付单
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*paymentOrder); err != nil {

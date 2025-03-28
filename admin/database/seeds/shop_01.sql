@@ -143,6 +143,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_payment_order` (
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '实收金额，实收金额=支付金额+支付手续费',
     `transaction_number` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '交易号',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '支付状态, 0-未支付 1-已支付 2-已退款',
+    `status_reason` TEXT  COMMENT '支付状态原因',
     -- 余额支付相关，用于反结账时退款
     `balance_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '主账户金额,用于反结账时退款',
     `gift_balance_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送帐户金额,用于反结账时退款',

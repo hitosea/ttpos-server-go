@@ -10,15 +10,15 @@ var GetServerPublicKeyRequestMessage = map[string]string{
 }
 
 type LianLianCallbackRequest struct {
-	CompanyUuid     string `json:"shop_supplier_id"`
-	MerchantOrderNo string `json:"merchant_order_no"`
-	MerchantUserId  string `json:"merchant_user_id"`
-	PayTypeDesc     string `json:"pay_type_desc"`
-	PayStatus       int    `json:"pay_status"`
-	PaymentId       string `json:"payment_id"`
-	OrderAmount     string `json:"order_amount"`
-	OrderCurrency   string `json:"order_currency"`
-	PayAt           string `json:"pay_at"`
+	CompanyUuid     string `json:"shop_supplier_id"`  // 商户ID
+	MerchantOrderNo string `json:"merchant_order_no"` // 商户订单号
+	MerchantUserId  string `json:"merchant_user_id"`  // 商户用户ID
+	PayTypeDesc     string `json:"pay_type_desc"`     // 支付类型描述
+	PayStatus       int    `json:"pay_status"`        // 支付状态
+	PaymentId       string `json:"payment_id"`        // 支付ID
+	OrderAmount     string `json:"order_amount"`      // 订单金额
+	OrderCurrency   string `json:"order_currency"`    // 订单币种
+	PayAt           string `json:"pay_at"`            // 支付时间
 }
 
 type LianLianRefundCallbackRequest struct {

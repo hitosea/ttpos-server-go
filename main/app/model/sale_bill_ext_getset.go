@@ -307,6 +307,9 @@ func (model *SaleBill) GetPayTypes(language string, saleOrderUuid uint64) []resp
 		} else {
 			// 正常支付方式处理
 			for _, payment := range saleOrder.PaymentOrders {
+				if payment.Status == 2 || payment.IsDelete() {
+					continue
+				}
 				key := fmt.Sprintf("%s_%d", payment.PaymentMethodName, payment.Status)
 				if existingPayType, ok := payTypeMap[key]; ok {
 					existingPayType.PaymentAmount += payment.PaymentAmount
@@ -317,6 +320,7 @@ func (model *SaleBill) GetPayTypes(language string, saleOrderUuid uint64) []resp
 						CurrencyUnit:    payment.CurrencyUnit,
 						PaymentAmount:   payment.PaymentAmount,
 						Status:          uint(payment.Status),
+						StatusReason:    payment.StatusReason,
 						Source:          uint(payment.GetSource()),
 						SourceText:      payment.GetSourceText(language),
 					}

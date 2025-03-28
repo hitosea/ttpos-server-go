@@ -147,7 +147,7 @@ func (p *PaymentRepo) CreatePayment(
 		strings.ReplaceAll(p.payCallbackUrl, "/", "\\/"),
 	)
 
-	// 计算签名
+	// 请求支付
 	response, err := p.postRequest(url, jsonStr, map[string]string{
 		"Content-Type": "application/json; charset=utf-8",
 		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
