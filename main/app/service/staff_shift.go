@@ -254,6 +254,7 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		CashIncome:   cashAmount,
 		CashTakenOut: withdrawCash.InexactFloat64(),
 		CashLeft:     leaveCash.InexactFloat64(),
+		DutyNo:       staff.DutyNo,
 		PrinterData: func() *resp.PrinterData {
 			printerData, err := s.ShiftPrinter(ctx, req.ShiftPrinterReq{
 				WithdrawCash: withdrawCash.InexactFloat64(),

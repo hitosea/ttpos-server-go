@@ -154,7 +154,7 @@ type OrderOperationLog struct {
 }
 
 type OrderOperationLogPaymentMethod struct {
-	Price            string `json:"price"`             // 支付金额
+	Price            string `json:"price"`             // 金额
 	Code             int    `json:"value"`             // 支付方式代号
 	Name             string `json:"name"`              // 支付方式名称
 	Remark           string `json:"remark"`            // 备注
