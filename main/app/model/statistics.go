@@ -163,3 +163,10 @@ type StatisticsAreaData struct {
 	AreaBusinessAmount sql.NullFloat64 `gorm:"column:area_business_amount;comment:区域营业收入"`
 	AreaProductNum     sql.NullInt64   `gorm:"column:area_product_num;comment:区域商品数量"`
 }
+
+// Statistics7DaysData 7天统计数据
+type Statistics7DaysData struct {
+	Day                 sql.NullString  `gorm:"column:day;comment:日期"`
+	TotalOrderNum       sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数"`
+	TotalReceivedAmount sql.NullFloat64 `gorm:"column:total_received_amount;comment:总实收金额"`
+}

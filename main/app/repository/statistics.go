@@ -20,6 +20,7 @@ type IStatisticsRepo interface {
 	CountCategory(categoryType int, language string, opts ...DBOption) []model.StatisticsCategoryData // 统计分类
 	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                     // 统计商品
 	CountArea(opts ...DBOption) []model.StatisticsAreaData                                            // 统计区域
+	Count7Days(opts ...DBOption) []model.Statistics7DaysData                                          // 统计销售天数
 	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData        // 统计商品排行
 	SaveSale(sales []model.StatisticsSale) error                                                      // 保存销售
 	SavePayment(payments []model.StatisticsPayment) error                                             // 保存支付
@@ -419,6 +420,34 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, opts ...DBOp
 
 	query = query.Limit(10)
 	query.Find(&result)
+
+	return result
+}
+
+// Count7Days 统计销售天数
+func (r *StatisticsRepo) Count7Days(opts ...DBOption) []model.Statistics7DaysData {
+	var result []model.Statistics7DaysData
+
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	subQuery := db.Model(&model.StatisticsSale{}).
+		Select(
+			"complete_time",
+			"COUNT(sale_bill_uuid) AS order_num",
+			"SUM(payment_amount - payment_balance) AS received_amount",
+		).
+		Group("sale_bill_uuid")
+
+	r.db.Table("(?) AS t", subQuery).
+		Select(
+			"FROM_UNIXTIME(t.complete_time, '%Y-%m-%d') AS day",
+			"SUM(t.order_num) AS total_order_num",
+			"SUM(t.received_amount) AS total_received_amount",
+		).
+		Group("FROM_UNIXTIME(t.complete_time, '%Y-%m-%d')").
+		Find(&result)
 
 	return result
 }

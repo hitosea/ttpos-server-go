@@ -6,6 +6,7 @@ use app\common\library\helper;
 use app\common\model\order\Order as OrderModel;
 use app\common\model\product\Product as ProductModel;
 use app\common\model\order\OrderProduct as OrderProductModel;
+use help\HttpHelp;
 
 /**
  * 订单数据概况
@@ -60,6 +61,29 @@ class OrderService
             'yesterday' => $data['order_user_total']['yesterday'] == 0 ? 0 : helper::number2($data['order_total_price']['yesterday'] / $data['order_user_total']['yesterday'])
         ];
         return $data;
+    }
+
+    /**
+     * 通过时间段查询订单数据
+     */
+    public function getDataBy7Date($date)
+    {
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/7days', [
+            'query_start_time' => strtotime($date[0]),
+            'query_end_time' => strtotime($date[1]) + 86399,
+        ], [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
+        ]);
+        if (!$res) {
+            return [];
+        }
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return [];
+        }
+        return $result['data'];
     }
 
     /**
