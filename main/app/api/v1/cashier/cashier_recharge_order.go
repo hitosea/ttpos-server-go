@@ -224,7 +224,7 @@ func (h *RechargeOrderHandler) RechargeOrderRefund(c *gin.Context) {
 // ReturnOrder 处理退款订单
 // @Summary 重新退款
 // @Description 重新退款
-// @Tags 收银端.订单
+// @Tags 收银端.充值订单
 // @Accept json
 // @Produce json
 // @Security JwtToken

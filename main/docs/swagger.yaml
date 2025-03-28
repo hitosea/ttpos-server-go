@@ -11564,7 +11564,7 @@ paths:
       - JwtToken: []
       summary: 重新退款
       tags:
-      - 收银端.订单
+      - 收银端.充值订单
   /cashier/recharge_order/refund:
     get:
       consumes:

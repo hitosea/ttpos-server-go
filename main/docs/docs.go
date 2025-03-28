@@ -10264,7 +10264,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.充值订单"
                 ],
                 "summary": "重新退款",
                 "parameters": [
