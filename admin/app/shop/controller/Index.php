@@ -118,7 +118,11 @@ class Index extends Controller
     public function index()
     {
         $service = new ShopService;
-        return $this->renderSuccess('', ['data' => $service->getHomeData($this->store['user']), 'test' => DiskHelp::getDiskSpaceInfo()]);
+        $data = $service->getHomeData($this->store['user']);
+        if (!$data) {
+            return $this->renderError($service->error);
+        }
+        return $this->renderSuccess('', ['data' => $data, 'test' => DiskHelp::getDiskSpaceInfo()]);
     }
 
     /**
