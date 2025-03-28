@@ -63,6 +63,16 @@ type OrderReturnReq struct {
 	AccountName string `json:"account_name"` // 账户名称 - 当存在QR PromptPay的时候需要传
 }
 
+// OrderReReturnReq 订单重新退款
+type OrderReReturnReq struct {
+	ReturnOrderUuid  uint64 `json:"return_order_uuid"`  // 退款订单UUID
+	ReturnAmountUuid uint64 `json:"return_amount_uuid"` // 退款金额UUID
+	// 退款账户信息
+	BankCode    string `json:"bank_code"`    // 银行编码 - 当存在QR PromptPay的时候需要传
+	AccountNo   string `json:"account_no"`   // 账号 - 当存在QR PromptPay的时候需要传
+	AccountName string `json:"account_name"` // 账户名称 - 当存在QR PromptPay的时候需要传
+}
+
 type OrderReturnProduct struct {
 	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品UUID
 	Num                  int    `json:"num"`                     // 退款数量

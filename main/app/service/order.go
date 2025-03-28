@@ -53,6 +53,7 @@ type IOrderSrv interface {
 	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                                                          // 取消订单
 	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                                          // 删除订单
 	ReturnOrder(ctx context.Context, req req.OrderReturnReq) (error, int)                                                                                                   // 退款订单
+	ReReturnOrder(ctx context.Context, req req.OrderReReturnReq) (error, int)                                                                                               // 重新退款
 	GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error)                                                                  // 获取退款信息
 	GetReverseSettleInfo(ctx context.Context, req req.OrderReverseSettleInfoReq) (*resp.OrderReverseSettleInfoResp, error)                                                  // 获取反结账信息
 	ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error                                                                                                 // 反结账
@@ -1465,6 +1466,107 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		})
 	}()
 
+	return nil, 0
+}
+
+// ReReturnReq 重新退款
+func (s *orderSrv) ReReturnOrder(ctx context.Context, req req.OrderReReturnReq) (error, int) {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.ReturnOrderUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.ReturnOrderUuid)
+		ctx.AddLock()
+	}
+	// 获取退款订单信息
+	returnOrderRepo := repository.NewReturnOrderRepo(ctx.GetDB())
+	orderAmount, err := returnOrderRepo.GetReturnOrderAmount(
+		returnOrderRepo.WithReturnOrder(),
+		returnOrderRepo.WithPaymentMethod(),
+		returnOrderRepo.WhereUuid(req.ReturnAmountUuid),
+	)
+	if err != nil || orderAmount.ReturnOrder.Uuid != req.ReturnOrderUuid {
+		return errors.New("找不到订单"), constant.CodeFail
+	}
+	if orderAmount.RefundStatus == 1 {
+		return errors.New("该订单已成功退款，无法重复退款"), constant.CodeFail
+	}
+	if !orderAmount.PaymentMethod.IsLianLianPay() {
+		return errors.New("该订单无法重新退款"), constant.CodeFail
+	}
+	// 判断订单是否正在退款
+	if orderAmount.LlReturnOrderid == "" {
+		return errors.New("该订单正在进行退款，无法重复操作"), constant.CodeFail
+	}
+
+	refundReq := PaymentServiceRefundReq{
+		RelatedType:           constant.PaymentOrderRelatedTypeSaleOrder,
+		PaymentOrderUuid:      orderAmount.PaymentOrderUuid,
+		MerchantRefundOrderNo: orderAmount.MerchantRefundOrderNo,
+		RefundAmount:          orderAmount.Amount,
+		RefundOrderId:         orderAmount.LlReturnOrderid,
+	}
+
+	// 是否存在QrPromptPay支付
+	isChangeBankCode := false
+	if orderAmount.PaymentMethod.IsQrPromptPay() {
+		if req.BankCode == "" || req.AccountNo == "" || req.AccountName == "" {
+			return errors.WithMessage(errors.New("请选择银行")), constant.CodeReturnOrderBank
+		}
+		if req.BankCode != orderAmount.ReturnOrder.BankCode || req.AccountNo != orderAmount.ReturnOrder.AccountNo || req.AccountName != orderAmount.ReturnOrder.AccountName {
+			isChangeBankCode = true
+		}
+		refundReq.BankCode = orderAmount.ReturnOrder.BankCode
+		refundReq.AccountNo = orderAmount.ReturnOrder.AccountNo
+		refundReq.AccountName = orderAmount.ReturnOrder.AccountName
+	}
+
+	// 发起退款
+	refund, err := NewPaymentRepo(ctx, s.dbm).Refund(refundReq)
+	if err != nil {
+		return errors.WithMessage(err), constant.CodeFail
+	}
+	if refund.RefundStatus == "RP" {
+		return errors.New("该订单正在进行退款，无法重复操作"), constant.CodeFail
+	}
+	if refund.RefundStatus == "RS" {
+		orderAmount.RefundStatus = 1
+		err = returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{returnOrderRepo.WhereUuid(orderAmount.Uuid)}, orderAmount)
+		if err != nil {
+			return errors.WithMessage(err), constant.CodeFail
+		}
+		return errors.New("该订单已成功退款，无法重复退款"), constant.CodeFail
+	}
+
+	// 更新银行信息 - 重新发起退款
+	if isChangeBankCode {
+		orderAmount.RefundStatus = 1
+		orderAmount.MerchantRefundOrderNo = utils.GenerateMerchantOrderNo("RE")
+		// 更新退款订单号
+		refundReq.MerchantRefundOrderNo = orderAmount.MerchantRefundOrderNo
+		refundReq.BankCode = req.BankCode
+		refundReq.AccountNo = req.AccountNo
+		refundReq.AccountName = req.AccountName
+		// 更新银行信息
+		orderAmount.ReturnOrder.BankCode = req.BankCode
+		orderAmount.ReturnOrder.AccountNo = req.AccountNo
+		orderAmount.ReturnOrder.AccountName = req.AccountName
+	}
+	// 重新发起退款
+	refund, err = NewPaymentRepo(ctx, s.dbm).Refund(refundReq)
+	if err != nil {
+		return errors.WithMessage(err), constant.CodeFail
+	}
+	// 更新退款订单号
+	orderAmount.LlReturnOrderid = refund.RefundOrderId
+	err = returnOrderRepo.UpdateReturnOrder([]repository.DBOption{returnOrderRepo.WhereUuid(orderAmount.ReturnOrder.Uuid)}, *orderAmount.ReturnOrder)
+	if err != nil {
+		return errors.WithMessage(err), constant.CodeFail
+	}
+	err = returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{returnOrderRepo.WhereUuid(orderAmount.Uuid)}, orderAmount)
+	if err != nil {
+		return errors.WithMessage(err), constant.CodeFail
+	}
+	//
 	return nil, 0
 }
 

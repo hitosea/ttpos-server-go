@@ -302,6 +302,7 @@ func (s *orderSrv) getRefundPayType(ctx context.Context, log model.SaleOrderOper
 				RefundMoney:      utils.FormatFloat(payType.Amount),
 				RefundStatus:     1,
 				ReturnOrderUuid:  payType.ReturnOrderUuid,
+				ReturnAmountUuid: payType.ReturnAmountUuid,
 				PaymentOrderUuid: payType.PaymentOrderUuid,
 				Unit:             currencySetting.Unit,
 			}
