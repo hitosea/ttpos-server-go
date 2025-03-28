@@ -345,6 +345,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			serviceTax       decimal.Decimal
 			freeAmount       decimal.Decimal
 			refundAmount     decimal.Decimal
+			paymentBalance   decimal.Decimal
 		)
 		// 销售商品
 		for _, saleProduct := range saleOrder.SaleOrderProducts {
@@ -394,6 +395,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					paymentRefundAmount = paymentRefundAmount.Add(decimal.NewFromFloat(refundOrder.Amount))
 				}
 			}
+			if salePayment.PaymentMethod != nil && salePayment.PaymentMethod.Code == 10 {
+				paymentBalance = decimal.NewFromFloat(salePayment.Amount)
+			}
 			payments = append(payments, model.StatisticsPayment{
 				SaleBillUuid:      req.SaleBill.Uuid,
 				DutyNo:            req.SaleBill.DutyNo,
@@ -425,7 +429,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			FreeNum:          freeNum,
 			PaymentAmount:    saleOrder.Amount,
 			PaymentFee:       saleOrder.PaymentCommissionFee,
-			PaymentBalance:   saleOrder.MemberBalance,
+			PaymentBalance:   paymentBalance.Round(2).InexactFloat64(),
 			RefundAmount:     refundAmount.Round(2).InexactFloat64(),
 			CompleteTime:     req.SaleBill.FinishTime,
 		}
