@@ -990,14 +990,6 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 	logs := make([]resp.OrderOperationLog, 0)
 	language := ctx.GetLanguage()
 
-	sourceText := map[string]string{
-		constant.SourceCashier:   "收银端",
-		constant.SourceAssistant: "点餐助手",
-		constant.SourceShop:      "商家后台",
-		constant.SourceTablet:    "平板端",
-		constant.SourceH5:        "扫码点餐",
-	}
-
 	for _, record := range orderRecordLists {
 		desc := s.getActionDescription(ctx, record, language)
 		actionText := s.getActionText(record, language)
@@ -1021,7 +1013,7 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			Uuid:        record.Uuid,
 			RealName:    realName,
 			Email:       record.Operator.Username,
-			Source:      i18n.Translate(language, sourceText[record.Source]),
+			Source:      i18n.Translate(language, constant.SourceTextMap[record.Source]),
 			CreateTime:  record.CreateTime,
 			Description: actionText,     // 获取描述
 			PayType:     refundPayTypes, // ToDo 关联连连支付方式

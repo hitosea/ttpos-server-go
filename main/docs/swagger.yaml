@@ -189,6 +189,31 @@ definitions:
           $ref: '#/definitions/business_data_resp.Area'
         type: array
     type: object
+  business_data_resp.BusinessDataCount7Days:
+    properties:
+      data:
+        description: 7天
+        items:
+          $ref: '#/definitions/business_data_resp.BusinessDataCount7DaysItem'
+        type: array
+      days:
+        description: 7天
+        items:
+          type: string
+        type: array
+    type: object
+  business_data_resp.BusinessDataCount7DaysItem:
+    properties:
+      day:
+        description: 日期
+        type: string
+      total_money:
+        description: 总实收金额
+        type: number
+      total_num:
+        description: 总订单数量
+        type: integer
+    type: object
   business_data_resp.BusinessDataCountProductSalesItem:
     properties:
       category_name:
@@ -4328,6 +4353,14 @@ definitions:
       real_name:
         description: 操作员工真实姓名
         type: string
+      refund_pay_types:
+        description: 退款支付方式
+        items:
+          $ref: '#/definitions/resp.RefundPayType'
+        type: array
+      refund_type:
+        description: 退款方式：1-整单退款；2-部分退款
+        type: integer
       username:
         description: 操作员工账号
         type: string
@@ -4403,6 +4436,21 @@ definitions:
         type: string
       status:
         description: 订单状态：0-正常；1-会员主账户余额不足；2-存在待支付订单
+        type: integer
+    type: object
+  resp.RefundPayType:
+    properties:
+      amount:
+        description: 退款金额
+        type: number
+      code:
+        description: 退款支付方式代号
+        type: integer
+      name:
+        description: 退款支付方式名称
+        type: string
+      payment_status:
+        description: 支付状态
         type: integer
     type: object
   resp.RefundRechargeOrderMemberInfo:
@@ -13380,6 +13428,35 @@ paths:
       summary: 提交交班
       tags:
       - 商家端.交班
+  /shop/statistics/7days:
+    get:
+      consumes:
+      - application/json
+      description: 统计7天
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.BusinessDataCountReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/business_data_resp.BusinessDataCount7Days'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 统计7天
+      tags:
+      - 商家端.营业数据
   /shop/statistics/area:
     get:
       consumes:

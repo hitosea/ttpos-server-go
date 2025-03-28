@@ -13478,6 +13478,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/statistics/7days": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "统计7天",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.营业数据"
+                ],
+                "summary": "统计7天",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BusinessDataCountReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/business_data_resp.BusinessDataCount7Days"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/statistics/area": {
             "get": {
                 "security": [
@@ -14907,6 +14958,42 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/business_data_resp.Area"
                     }
+                }
+            }
+        },
+        "business_data_resp.BusinessDataCount7Days": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "7天",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.BusinessDataCount7DaysItem"
+                    }
+                },
+                "days": {
+                    "description": "7天",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "business_data_resp.BusinessDataCount7DaysItem": {
+            "type": "object",
+            "properties": {
+                "day": {
+                    "description": "日期",
+                    "type": "string"
+                },
+                "total_money": {
+                    "description": "总实收金额",
+                    "type": "number"
+                },
+                "total_num": {
+                    "description": "总订单数量",
+                    "type": "integer"
                 }
             }
         },
@@ -21057,6 +21144,17 @@ const docTemplate = `{
                     "description": "操作员工真实姓名",
                     "type": "string"
                 },
+                "refund_pay_types": {
+                    "description": "退款支付方式",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.RefundPayType"
+                    }
+                },
+                "refund_type": {
+                    "description": "退款方式：1-整单退款；2-部分退款",
+                    "type": "integer"
+                },
                 "username": {
                     "description": "操作员工账号",
                     "type": "string"
@@ -21166,6 +21264,27 @@ const docTemplate = `{
                 },
                 "status": {
                     "description": "订单状态：0-正常；1-会员主账户余额不足；2-存在待支付订单",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.RefundPayType": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "退款金额",
+                    "type": "number"
+                },
+                "code": {
+                    "description": "退款支付方式代号",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "退款支付方式名称",
+                    "type": "string"
+                },
+                "payment_status": {
+                    "description": "支付状态",
                     "type": "integer"
                 }
             }

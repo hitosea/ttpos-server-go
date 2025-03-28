@@ -38,7 +38,7 @@ const (
 	PaymentMethodSourceLianLianPay = 2 // LianLianPay
 )
 
-var SourceTextMap = map[int]string{
+var PaymentMethodSourceTextMap = map[int]string{
 	PaymentMethodSourceSystem:      "系统默认",
 	PaymentMethodSourceDefault:     "自行添加",
 	PaymentMethodSourceLianLianPay: "LianLianPay",

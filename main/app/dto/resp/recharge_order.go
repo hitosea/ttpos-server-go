@@ -1,6 +1,8 @@
 package resp
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/dto"
+)
 
 // RechargeOrderItem 订单列表响应
 type RechargeOrderItem struct {
@@ -45,12 +47,21 @@ type RechargeOrderPaymentMethod struct {
 	SourceText string  `json:"source_text"` // 来源
 }
 
+type RefundPayType struct {
+	Name          string  `json:"name"`           // 退款支付方式名称
+	Code          int     `json:"code"`           // 退款支付方式代号
+	Amount        float64 `json:"amount"`         // 退款金额
+	PaymentStatus int     `json:"payment_status"` // 支付状态
+}
+
 type RechargeOrderOperationLogItem struct {
-	RealName    string `json:"real_name"`   // 操作员工真实姓名
-	Username    string `json:"username"`    // 操作员工账号
-	Client      string `json:"client"`      // 来源
-	CreateTime  int64  `json:"create_time"` // 创建时间
-	Description string `json:"description"` // 描述
+	RealName       string          `json:"real_name"`        // 操作员工真实姓名
+	Username       string          `json:"username"`         // 操作员工账号
+	Client         string          `json:"client"`           // 来源
+	CreateTime     int64           `json:"create_time"`      // 创建时间
+	Description    string          `json:"description"`      // 描述
+	RefundType     uint            `json:"refund_type"`      // 退款方式：1-整单退款；2-部分退款
+	RefundPayTypes []RefundPayType `json:"refund_pay_types"` // 退款支付方式
 }
 
 type RechargeOrderOperationLog struct {
