@@ -127,7 +127,7 @@ class ErpWarehouseForm extends BaseModel
         $startTime = isset($params['date'][0]) ? strtotime($params['date'][0]) : 0;
         $endTime = isset($params['date'][1]) ? strtotime($params['date'][1] . ' 23:59:59') : 0;
 
-        $model = new self;
+        $model = (new self())->where('scene', '<>', 3);
         if (isset($params['name']) && $params['name']) {
             $model = $model->like('name', $params['name']);
         }
