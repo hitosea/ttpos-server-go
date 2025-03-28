@@ -21,6 +21,7 @@ type IStatisticsRepo interface {
 	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                     // 统计商品
 	CountArea(opts ...DBOption) []model.StatisticsAreaData                                            // 统计区域
 	Count7Days(opts ...DBOption) []model.Statistics7DaysData                                          // 统计销售天数
+	CountMemberNum(opts ...DBOption) int64                                                            // 统计会员数量
 	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData        // 统计商品排行
 	SaveSale(sales []model.StatisticsSale) error                                                      // 保存销售
 	SavePayment(payments []model.StatisticsPayment) error                                             // 保存支付
@@ -448,6 +449,19 @@ func (r *StatisticsRepo) Count7Days(opts ...DBOption) []model.Statistics7DaysDat
 		).
 		Group("FROM_UNIXTIME(t.complete_time, '%Y-%m-%d')").
 		Find(&result)
+
+	return result
+}
+
+// CountMemberNum 统计会员数量
+func (r *StatisticsRepo) CountMemberNum(opts ...DBOption) int64 {
+	var result int64
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	db.Model(&model.Member{}).Count(&result)
 
 	return result
 }

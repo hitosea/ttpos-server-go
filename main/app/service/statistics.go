@@ -21,6 +21,7 @@ type IStatisticsSrv interface {
 	CountProduct(ctx context.Context, req CountReq) []CountProductResp    // 统计商品
 	CountArea(ctx context.Context, req CountReq) []CountAreaResp          // 统计区域
 	Count7Days(ctx context.Context, req CountReq) Count7DaysResp          // 统计销售天数
+	CountMemberNum(ctx context.Context, req CountReq) int64               // 统计会员数量
 	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp // 统计商品排行
 	SaveSale(ctx context.Context, req SaveSaleReq) error                  // 保存销售
 }
@@ -330,6 +331,12 @@ func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7Days
 		Days: days,
 		Data: sevenDayList,
 	}
+}
+
+// CountMemberNum 统计会员数量
+func (s *statisticsSrv) CountMemberNum(ctx context.Context, req CountReq) int64 {
+	opts := s.buildCountOpts(req)
+	return repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNum(opts...)
 }
 
 // CountProductRankResp 统计商品排行响应
