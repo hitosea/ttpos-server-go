@@ -16,12 +16,16 @@ import (
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 
+	"ttpos-server-go/app/printer/printer_tasks"
+
 	"github.com/jinzhu/copier"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -387,8 +391,9 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 
 // AddLog 添加打印日志
 func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, printerLogData model.PrinterLog, controlDeviceId string) (model.PrinterLog, error) {
+	companyUuid := ctx.GetCompanyUuid()
 	// 获取打印日志仓库
-	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
 	// 标记进行中
 	printerLogData.Status = constant.PrinterLogStatusInProgress
 	// 获取商家设置，判断是否开启本地打印
@@ -425,6 +430,11 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 			logger.Logger.Error("删除n天前的打印日志失败", zap.Error(err))
 		}
 	}()
+
+	// 进行队列打印
+	if viper.GetString("CHECK_PRINT") == "false" || printerLog.Type == constant.PrinterLogTypeDefault {
+		go printer_tasks.NewPrinterTask(s.dbm, cache.Global).ExecutePrinter(companyUuid, printerLog)
+	}
 
 	return printerLog, nil
 }

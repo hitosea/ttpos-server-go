@@ -89,58 +89,70 @@ func (t *printerTask) sendPrinter(companyUuid uint64) {
 	if len(printerLogList) == 0 {
 		return
 	}
-
 	// 执行打印
 	for _, printerLog := range printerLogList {
-		num := printerLog.Num + 1
-		if printerLog.Printer != nil {
-			copies := printerLog.Printer.Copies
-			if copies == 0 {
-				copies = 1
-			}
-			content := printerLog.DecompressData()
-			configJson := printerLog.Printer.GetConfigJson()
-			for i := uint(0); i < copies; i++ {
-				// 执行打印
-				var err error
-				if slices.Contains([]string{
-					constant.PrinterTypeSunmiLan,
-					constant.PrinterTypeSunmiCloud,
-					constant.PrinterTypeCashierSunmi,
-				}, printerLog.PrinterType) {
-					err = pkg.PrintSunmiTicket(configJson, content)
-				} else {
-					err = pkg.PrintTicket(configJson.IP, configJson.PORT, content, printerLog.PrintMethod)
-				}
-				if err == nil {
-					// 打印成功
-					printerLog.Reason = "打印成功"
-					printerLog.Status = 2
-				} else {
-					// 打印失败
-					printerLog.Reason = err.Error()
-					if num >= 5 {
-						printerLog.Status = 0
-					} else {
-						printerLog.Status = 1
-					}
-				}
-			}
-		} else {
-			// 打印机不存在
-			printerLog.Reason = "The printer does not exist and has been deleted"
-			printerLog.Status = 0
-		}
+		t.ExecutePrinter(companyUuid, printerLog)
+	}
+}
 
-		// 更新打印日志
-		if err := printerLogRepo.Update(printerLog.Uuid, map[string]any{
-			"reason":       printerLog.Reason,
-			"status":       printerLog.Status,
-			"num":          num,
-			"printer_time": time.Now().Unix(),
-		}); err != nil {
-			log.Fatalf("更新打印日志失败 : %s", err)
-			return
+// 执行任务
+func (t *printerTask) ExecutePrinter(companyUuid uint64, printerLog model.PrinterLog) {
+	printerLog.Num = printerLog.Num + 1
+	if printerLog.Printer != nil {
+		copies := printerLog.Printer.Copies
+		if copies == 0 {
+			copies = 1
 		}
+		content := printerLog.DecompressData()
+		configJson := printerLog.Printer.GetConfigJson()
+		for i := uint(0); i < copies; i++ {
+			// 执行打印
+			var err error
+			if slices.Contains([]string{
+				constant.PrinterTypeSunmiLan,
+				constant.PrinterTypeSunmiCloud,
+				constant.PrinterTypeCashierSunmi,
+			}, printerLog.PrinterType) {
+				err = pkg.PrintSunmiTicket(configJson, content)
+			} else {
+				err = pkg.PrintTicket(configJson.IP, configJson.PORT, content, printerLog.PrintMethod)
+			}
+			if err == nil {
+				// 打印成功
+				printerLog.Reason = "打印成功"
+				printerLog.Status = 2
+			} else {
+				// 打印失败
+				printerLog.Reason = err.Error()
+				if printerLog.Num >= 3 {
+					printerLog.Status = 0
+				} else {
+					printerLog.Status = 1
+				}
+			}
+		}
+	} else {
+		// 打印机不存在
+		printerLog.Reason = "The printer does not exist and has been deleted"
+		printerLog.Status = 0
+	}
+
+	// 更新打印日志
+	if err := repository.NewPrinterLogRepo(t.dbm.GetDB(companyUuid)).Update(printerLog.Uuid, map[string]any{
+		"reason":       printerLog.Reason,
+		"status":       printerLog.Status,
+		"num":          printerLog.Num,
+		"printer_time": time.Now().Unix(),
+	}); err != nil {
+		log.Fatalf("更新打印日志失败 : %s", err)
+		return
+	}
+
+	// 递归执行
+	if printerLog.Status == 1 && printerLog.Num < 3 {
+		go func() {
+			time.Sleep(3 * time.Second)
+			t.ExecutePrinter(companyUuid, printerLog)
+		}()
 	}
 }
