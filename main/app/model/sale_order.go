@@ -90,6 +90,14 @@ func (model *SaleOrder) SetIndex(index int) {
 	model.index = index
 }
 
+// 设置销售订单的序号
+func (model *SaleOrder) GetOrderName() string {
+	if index := model.GetIndex(); index > 0 {
+		return "-" + fmt.Sprintf("%d", index)
+	}
+	return ""
+}
+
 // 获取销售订单的顾客列表
 func (model *SaleOrder) GetCustomerList() []resp.Product {
 	productList := make([]resp.Product, 0)
