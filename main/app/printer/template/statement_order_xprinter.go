@@ -99,6 +99,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		} else if saleBill.SerialNo != "" {
 			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 		}
+		printer.LineFeed(1)
 		printer.SetLineSpacing(50)
 		printer.LineFeed(1)
 		printer.SetLineSpacing(90)
