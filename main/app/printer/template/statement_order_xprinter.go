@@ -95,14 +95,18 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		if saleBill.DeskUuid > 0 {
 			printer.SetLineSpacing(120)
 			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
+			printer.LineFeed(1)
 			printer.SetLineSpacing(90)
 		} else if saleBill.SerialNo != "" {
 			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
+			printer.LineFeed(1)
 		}
-		printer.LineFeed(1)
-		printer.SetLineSpacing(50)
-		printer.LineFeed(1)
-		printer.SetLineSpacing(90)
+		//
+		if printerType == PrinterTypeXPrinterWifi {
+			printer.SetLineSpacing(50)
+			printer.LineFeed(1)
+			printer.SetLineSpacing(90)
+		}
 		//
 		printer.SetCharacterSize(1, 1)
 		printer.SetPrintModes(false, false, false)
