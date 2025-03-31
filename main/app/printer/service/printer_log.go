@@ -336,7 +336,7 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 				}
 				return string(configJson)
 			}(),
-			// IsCashierPrinter: log.Printer.IsCashierPrinter,
+			IsCashierPrinter: log.IsCashierPrinter(),
 		})
 	}
 
