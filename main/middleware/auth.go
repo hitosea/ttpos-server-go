@@ -60,6 +60,33 @@ func DeskAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc
 	}
 }
 
+func BusinessMenu(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		menuHeader := c.GetHeader("Authorization") // 电子菜单二维码的token
+
+		if menuHeader == "" {
+			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
+			c.Abort()
+			return
+		}
+		parts := strings.SplitN(menuHeader, " ", 2)
+		if !(len(parts) == 2 && parts[0] == "Bearer") {
+			helper.Fail(c, constant.CodeTokenInvalid, "token 格式错误")
+			c.Abort()
+			return
+		}
+		token, err := auth.DecodeMenuToken(parts[1])
+		if err != nil {
+			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
+			c.Abort()
+			return
+		}
+ 
+		ParseMenuToken(c, token, authSrv, dbm)
+		c.Next()
+	}
+}
+
 func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *database.DBManager) {
 
 	parts := strings.SplitN(authHeader, " ", 2)
@@ -155,4 +182,22 @@ func ParseDeskToken(c *gin.Context, token *auth.DeskToken, authSrv service.IAuth
 	c.Set(jwt.CompanySetting, *company.CompanySetting) // 商家设置信息
 	c.Set(jwt.DB, dbm.GetDB(token.CompanyUuid))        // 数据库连接
 	fmt.Println(fmt.Sprintf("ParseDeskToken deskUuid: %d, companyUuid: %d", token.DeskUuid, token.CompanyUuid))
+}
+
+func ParseMenuToken(c *gin.Context, token *auth.MenuToken, authSrv service.IAuthSrv, dbm *database.DBManager) {
+	ctx := context.NewContext(context.WithCompanyUuid(token.CompanyUuid))
+	// 用户鉴权, 查询desk表判断qrcode_token值是否相同
+	company, err := authSrv.AuthMenu(ctx, token.QrCode)
+	if err != nil {
+		helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
+		c.Abort()
+		return
+	}
+	// 将用户信息存储到上下文
+	c.Set(jwt.Source, jwt.SourceH5)
+	c.Set(jwt.CompanyUuid, token.CompanyUuid)          // 商家Uuid
+	c.Set(jwt.Company, *company)                       // 商家信息
+	c.Set(jwt.CompanySetting, *company.CompanySetting) // 商家设置信息
+	c.Set(jwt.DB, dbm.GetDB(token.CompanyUuid))        // 数据库连接
+	fmt.Println(fmt.Sprintf("ParseMenuToken companyUuid: %d", token.CompanyUuid))
 }

@@ -117,7 +117,7 @@ func RegisterMenuHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		settingSrv: settingSrv,
 	}
 	// 需要认证
-	privateApi := router.Group("", middleware.DeskAuth(authSrv, dbm))
+	privateApi := router.Group("", middleware.BusinessMenu(authSrv, dbm))
 	{
 		privateApi.GET("/base", wrapper.BaseInfo)                                // 获取货币信息
 		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取产品类别列表

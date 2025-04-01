@@ -56,10 +56,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 
 	// 订单名称
-	orderName := fmt.Sprintf("%d", saleOrder.GetIndex())
-	if orderName != "" && saleOrder.GetIndex() > 0 {
-		orderName = "-" + orderName
-	}
+	orderName := saleOrder.GetOrderName()
 
 	//  创建打印机实例
 	img := pkg.NewImgFont(568, 0, 0)

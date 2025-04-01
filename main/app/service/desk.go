@@ -469,7 +469,7 @@ func (s *deskSrv) IsCellCloseInstant(ctx context.Context, saleBillUuid uint64) (
 		for _, product := range productCooking {
 			productList = append(productList, resp.Product{
 				Uuid:                product.Uuid,
-				LocaleName:          product.GetAttributeName(),
+				LocaleName:          product.MultiLanguageName.GetNames(),
 				LocaleAttributeName: product.GetAttributeName(),
 				Num:                 uint(product.Num),
 				SalePrice:           product.SalePrice,
