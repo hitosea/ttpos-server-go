@@ -1,5 +1,10 @@
 package constant
 
+// 商品数量不能超过999个
+const (
+	ProductNumMax = 999
+)
+
 const (
 	ProductPackageDeductStockTypePay     = 0 // 结账减库存，付款减库存
 	ProductPackageDeductStockTypeCooking = 1 // 下单减库存，送厨减库存

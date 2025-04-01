@@ -669,7 +669,6 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 // @Router /cashier/desk/order/cart/product/num [post]
 func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	ctx.Log().Debug("收到桌台页面修改购物车商品数量接口请求")
 	// 绑定请求参数
 	params := req.OrderCartProductNumReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {

@@ -3630,6 +3630,9 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				orderProduct.Num += saleOrderProduct.Num
 				orderProduct.SetUpdate()
 				saleOrderProducts = append(saleOrderProducts, orderProduct)
+				if saleOrderProduct.Num > constant.ProductNumMax {
+					return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
+				}
 			} else if saleOrderProduct.IsSubOperation() {
 				// 减去新增的商品数量
 				orderProduct.Num -= saleOrderProduct.Num
@@ -3640,6 +3643,10 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			// 将新的订单商品加入到订单的商品列表中，用于计算订单金额
 			params.SaleOrder.SaleOrderProducts = append(params.SaleOrder.SaleOrderProducts, saleOrderProduct)
 			saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
+			// 商品数量不能超过999个
+			if saleOrderProduct.Num > 999 {
+				return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
+			}
 		}
 	}
 	return saleOrderProducts, nil
@@ -3689,6 +3696,12 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.Log().Info("修改购物车商品数量", zap.Any("request", request))
+	// 商品数量不能超过999个
+	if request.Num > 999 {
+		ctx.Log().Error("商品数量不能超过999个", zap.Any("request", request))
+		return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
+	}
 
 	// 检查商品销售库存是否充足
 	// todo
@@ -3759,6 +3772,15 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 			if len(overLimitProducts) > 0 {
 				return nil, errors.WithMessage(errors.New("商品超过限购"))
 			}
+		}
+	}
+
+	// 商品数量不能超过999个
+	// 如果是减数量，则不检查限购. 只有加数量时，才检查限购999个
+	if uint(request.Num) > beforeNum {
+		if request.Num > constant.ProductNumMax {
+			ctx.Log().Error("商品数量不能超过999个", zap.Any("request", request))
+			return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
 		}
 	}
 

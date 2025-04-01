@@ -387,6 +387,10 @@ func (model *SaleBill) GetSaleOrderProductOverLimit() []*SaleOrderProduct {
 		limitNum := productPackageMap[productPackageUuid].LimitNum
 		// 0表示不限购
 		if limitNum == 0 {
+			// 不限购，但是商品数量不能超过999个
+			if num > 999 {
+				products = append(products, saleOrderProductMap[productPackageUuid])
+			}
 			continue
 		}
 		if num > limitNum {
