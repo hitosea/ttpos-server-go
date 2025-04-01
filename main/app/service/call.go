@@ -226,7 +226,7 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 			Uuid:         order.Uuid,
 			DeskNo:       order.DeskNo,
 			Status:       order.Status,
-			IsAutoAccept: order.IsAutoAccept,
+			IsAutoAccept: order.IsAutoAccept == 1,
 		})
 	}
 	return res, nil

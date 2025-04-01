@@ -22302,11 +22302,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "is_auto_accept": {
-                    "description": "是否自动接单, 0-否 1-是",
-                    "type": "integer"
+                    "description": "是否自动接单",
+                    "type": "boolean"
                 },
                 "status": {
-                    "description": "订单状态",
+                    "description": "订单状态, 0-未下单 1-未接单 2-已接单 3-已拒单",
                     "type": "integer"
                 },
                 "uuid": {
