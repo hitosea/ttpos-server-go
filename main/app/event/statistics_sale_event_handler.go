@@ -14,13 +14,13 @@ func init() {
 	statisticsSaleEventHandler()
 }
 
-// splitOrderEventHandler "拆单"事件处理器
+// statisticsSaleEventHandler "统计销售"事件处理器
 func statisticsSaleEventHandler() {
 	once_statistics_sale_event_handler.Do(func() {
 		event.NewSystemBus().SubscribeStatisticsSaleEvent(func(payload event.StatisticsSalePayload) {
 			service.NewStatisticsSrv().SaveSale(payload.Ctx, service.SaveSaleReq{
-				SaleBill:   payload.SaleBill,
-				OnlyDelete: payload.OnlyDelete,
+				SaleBillUuid: payload.SaleBillUuid,
+				OnlyDelete:   payload.OnlyDelete,
 			})
 		})
 	})

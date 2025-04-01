@@ -1,7 +1,6 @@
 package event
 
 import (
-	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/eventbus"
 	"ttpos-server-go/pkg/utils"
 )
@@ -12,8 +11,8 @@ const EventStatisticsSale EventName = "Event_Statistics_Sale"
 // StatisticsSalePayload 每个事件有一个数据结构
 type StatisticsSalePayload struct {
 	BasePayload
-	SaleBill   *model.SaleBill
-	OnlyDelete bool
+	SaleBillUuid uint64
+	OnlyDelete   bool
 }
 
 func (payload *StatisticsSalePayload) ToJsonString() string {
