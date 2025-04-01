@@ -7201,7 +7201,7 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq, ne
 	}
 
 	// 保存销售账单
-	if needLock {
+	if needLock && request.PayMethodUuid == 0 {
 		if err := repository.NewOrderRepo(db).SetLock(saleBill.Uuid, true); err != nil {
 			return nil, errors.WithMessage(err, "设置锁单失败")
 		}
