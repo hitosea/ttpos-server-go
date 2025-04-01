@@ -19,6 +19,7 @@ type IOrderRepo interface {
 	CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error)                                                    // 创建销售账单设置
 	UpdateSaleBillSetting(obj model.SaleBillSetting) (model.SaleBillSetting, error)                                                      // 更新销售账单设置
 	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                                                // 获取销售单
+	IsOrderNoExists(orderNo string) (bool, error)                                                                                        // 查询orderNo是否存在
 	GetInstantSaleBill(deviceUuid uint64) (*model.SaleBill, error)                                                                       // 获取待支付且未挂单的点餐订单
 	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                                      // 创建订单
 	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)                              // 获取订单列表
@@ -123,6 +124,27 @@ func (r *orderRepo) GetSaleBill(opts ...DBOption) (model.SaleBill, error) {
 	}
 
 	return saleBill, nil
+}
+
+// 查询orderNo是否存在
+func (r *orderRepo) IsOrderNoExists(orderNo string) (bool, error) {
+	var countSaleBill int64
+	var countSaleOrder int64
+
+	if err := r.db.Model(&model.SaleBill{}).Where("order_no = ?", orderNo).Count(&countSaleBill).Error; err != nil {
+		return false, errors.WithMessage(err)
+	}
+	if countSaleBill < 1 {
+		return true, nil
+	}
+	if err := r.db.Model(&model.SaleOrder{}).Where("order_no = ?", orderNo).Count(&countSaleOrder).Error; err != nil {
+		return false, errors.WithMessage(err)
+	}
+	if countSaleOrder < 1 {
+		return true, nil
+	}
+
+	return false, errors.WithMessage(errors.New("订单编号生产异常"))
 }
 
 // GetInstantSaleBill 获取待支付且未挂单的点餐订单

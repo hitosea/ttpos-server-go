@@ -591,18 +591,17 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) (string, error
 		// 订单编号
 		orderNo = datePart + orderSourceType + n
 		// 检查订单编号是否存在
-		saleBill, err := repository.NewOrderRepo(db).GetSaleBill(repository.NewCommonRepo().WhereByOrderNo(orderNo))
-		if err == nil && saleBill.Uuid > 0 {
+		noExist, err := repository.NewOrderRepo(db).IsOrderNoExists(orderNo)
+		if err != nil {
+			return "", errors.WithMessage(err)
+		}
+		// 如果订单编号存在，则重新生成
+		if !noExist {
 			orderNo = ""
 			continue
 		}
-
-		if !utils.IsNotFoundRecord(err) {
-			orderNo = ""
-			break
-		} else {
-			break
-		}
+		// 如果订单编号不存在，则退出，本次生成的订单编号可用
+		break
 	}
 	if orderNo == "" {
 		return "", errors.New("订单编号生成失败")
@@ -6133,10 +6132,22 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 		return nil, errors.WithMessage(err)
 	}
 
+	// 生成订单编号
+	var orderSourceType string
+	if saleBill.IsDeskSaleBill() {
+		orderSourceType = constant.OrderSourceDesk
+	} else {
+		orderSourceType = constant.OrderSourceInstant
+	}
+	orderNo, err := s.createOrderNo(db, orderSourceType)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 创建销售订单
-		if _, errCreateSaleOrder := createSaleOrder(db, saleBill.SaleBillSetting, saleBill.Uuid, saleBill.OrderNo); errCreateSaleOrder != nil {
-			return errors.WithMessage(errCreateSaleOrder, fmt.Sprintf("新建拆单失败,saleBill.Uuid:%v, saleBill.OrderNo:%v", saleBill.Uuid, saleBill.OrderNo))
+		if _, errCreateSaleOrder := createSaleOrder(db, saleBill.SaleBillSetting, saleBill.Uuid, orderNo); errCreateSaleOrder != nil {
+			return errors.WithMessage(errCreateSaleOrder, fmt.Sprintf("新建拆单失败,saleBill.Uuid:%v, orderNo:%v", saleBill.Uuid, orderNo))
 		}
 
 		// 计算并保存销售账单
