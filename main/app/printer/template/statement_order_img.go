@@ -619,7 +619,15 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 				}
 			} else {
 				qrCodeUrl := paymentMethod.QrcodeFile.GetUrl(utils.GetBaseURL(t.base.Ctx.GetGin().Request))
-				img.AppendImg(t.base.GetQrcodeAddr(qrCodeUrl), 280, false, 10)
+				if url := t.base.GetQrcodeAddr(qrCodeUrl); url != "" {
+					img.AppendImg(url, 280, false, 10)
+				} else {
+					img.LineFeed(1)
+					img.AppendText(t.base.Translate("获取二维码错误"))
+					img.LineFeed(1)
+					img.AppendText(qrCodeUrl)
+					img.LineFeed(1)
+				}
 			}
 			img.SetTextLineHeight(50)
 		}

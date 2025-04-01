@@ -180,7 +180,7 @@ func (model *SaleOrderProduct) calcMemberDiscountRate() float64 {
 	return memberDiscountRate.InexactFloat64()
 }
 
-// 计算商品的会员折扣费用。会员折扣费用=(商品销售价-商品销售价*会员折扣率) * 商品数量 =商品销售价 * 商品数量 *（1-会员折扣率）
+// 计算商品的会员折扣费用。会员折扣费用(单个商品)=(商品销售价-商品销售价*会员折扣率)  =商品销售价 *（1-会员折扣率）
 func (model *SaleOrderProduct) calcMemberDiscountFee() float64 {
 	// 当会员折扣率为0时，会员折扣费用=0
 	memberDiscountRate := model.calcMemberDiscountRate()
@@ -189,10 +189,15 @@ func (model *SaleOrderProduct) calcMemberDiscountFee() float64 {
 	if memberDiscountRate >= constant.NoDiscount {
 		return 0
 	}
+	// 如果商品赠送，则不计算会员折扣费用
+	if model.IsGiftProduct() {
+		return 0
+	}
+
 	// 1-会员折扣率
 	discount := decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(memberDiscountRate))
-	// 商品销售价 * 商品数量 *（1-会员折扣率）
-	memberDiscountFee := decimal.NewFromFloat(model.calcSalePrice()).Mul(decimal.NewFromUint64(uint64(model.Num))).Mul(discount)
+	// 商品销售价 *（1-会员折扣率）
+	memberDiscountFee := decimal.NewFromFloat(model.calcSalePrice()).Mul(discount)
 	return memberDiscountFee.InexactFloat64()
 }
 
@@ -204,6 +209,12 @@ func (model *SaleOrderProduct) calcCustomDiscountFee() float64 {
 	if customDiscountRate == constant.NoDiscount {
 		return 0
 	}
+
+	// 如果商品赠送，则不计算自定义折扣费用. 但销售订单的优惠折扣费用中会另外计算加上赠菜金额
+	if model.IsGiftProduct() {
+		return 0
+	}
+
 	// 会员折扣价 = 商品销售价-会员折扣费。没有会员时，会员折扣费为0。
 	memberDiscountPrice := decimal.NewFromFloat(model.calcSalePrice()).Sub(decimal.NewFromFloat(model.calcMemberDiscountFee()))
 	//（1-自定义折扣率）
@@ -250,6 +261,10 @@ func (model *SaleOrderProduct) calcProductPriceNoneTax(price float64, taxFeeType
 // 商品原价=商品未含税原价+（商品未含税原价*消费税税率）= 商品未含税原价*（1+消费税税率）
 // 商品未含税时，价格中消费税税费为0，故 商品原价=商品未含税原价+消费税税费0，两种情况中可以用公式：消费税税费=商品原价-商品未含税原价
 func (model *SaleOrderProduct) calcTaxFee(price float64, taxFeeType int) float64 {
+	// 如果商品赠送，则不计算税费
+	if model.IsGiftProduct() {
+		return 0
+	}
 	// 商品已含税时，消费税税费=商品销售价-商品未含税销售价
 	if taxFeeType == constant.TaxFeeTypeTax {
 		taxFee := decimal.NewFromFloat(price).Sub(decimal.NewFromFloat(model.calcProductPriceNoneTax(price, taxFeeType)))
@@ -275,6 +290,11 @@ func (model *SaleOrderProduct) calcOriginTaxFee(taxFeeType int) float64 {
 // 服务费（单商品）,0-固定服务费 大于0-按比例收服务费；商品已含税时，服务费=(最终单价-商品税费)*服务费比例；商品未含税时，服务费=最终单价*服务费比例
 func (model *SaleOrderProduct) calcServiceFee(serviceFeeRate float64, taxFeeType int) float64 {
 	price := model.calcPrice()
+
+	// 如果商品赠送，则不计算服务费
+	if model.IsGiftProduct() {
+		return 0
+	}
 
 	// 服务费关闭时，不收取服务费。视为服务费比例为0，不收取
 	// 服务费按固定费用收取时，不收取单收订单商品的服务费。视为服务费比例为0，不收取

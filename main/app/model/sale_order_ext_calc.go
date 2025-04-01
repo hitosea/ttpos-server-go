@@ -467,9 +467,9 @@ func (model *SaleOrder) calcSumOrderProductCustomDiscountFee(products []*SaleOrd
 	for _, orderProduct := range products {
 		// 累加各个订单商品的自定义优惠金额
 		sumCustomDiscountFee = sumCustomDiscountFee.Add(
-			decimal.NewFromFloat(orderProduct.CustomDiscountFee))
+			decimal.NewFromFloat(orderProduct.GetCustomDiscountFee()))
 	}
-	return sumCustomDiscountFee.InexactFloat64()
+	return sumCustomDiscountFee.Truncate(3).Round(2).InexactFloat64()
 }
 
 // 计算销售订单自助餐顾客自定义优惠金额之和
@@ -515,9 +515,9 @@ func (model *SaleOrder) calcMemberDiscountFee(products []*SaleOrderProduct) floa
 	memberDiscountFee := decimal.NewFromFloat(0)
 	for _, orderProduct := range products {
 		memberDiscountFee = memberDiscountFee.Add(
-			decimal.NewFromFloat(orderProduct.MemberDiscountFee))
+			decimal.NewFromFloat(orderProduct.GetMemberDiscountFee()))
 	}
-	return memberDiscountFee.Round(2).InexactFloat64()
+	return memberDiscountFee.Truncate(3).Round(2).InexactFloat64()
 }
 
 // 计算销售订单服务费消费税金额。销售订单服务费消费税金额=订单商品服务费消费税金额之和
