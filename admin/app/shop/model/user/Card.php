@@ -27,7 +27,7 @@ class Card extends CardModel
         if ($data['status'] >= 0) {
             $model = $model->where('status', '=', $data['status']);
         }
-        $list = $model->order(['create_time' => 'desc'])->paginate($data);
+        $list = $model->where('delete_time', '=', 0)->order(['create_time' => 'desc'])->paginate($data);
         return $list;
     }
 
@@ -135,7 +135,7 @@ class Card extends CardModel
         $CardRecordModel = new CardRecordModel;
         $detail = $CardRecordModel::where('id', '=', $data['order_id'])->find();
         //
-        if (!$detail || $detail['is_delete'] != 0) {
+        if (!$detail || $detail['delete_time'] != 0) {
             $this->error = "记录不存在";
             return false;
         }

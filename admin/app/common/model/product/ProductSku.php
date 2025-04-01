@@ -81,7 +81,7 @@ class ProductSku extends BaseModel
         $model = (new ProductSku())->alias('ps')
             ->field('ps.*, p.category_id, p.erp_supplier_id, IF(p.type=10, ps.stock_num, ps.material_stock) as stock_num')
             ->leftJoin('product p', 'ps.product_id = p.product_id')
-            ->where('p.is_delete', '=', 0)
+            ->where('p.delete_time', '=', 0)
             ->with(['product' => function ($query) {
                 $query->with(['image', 'image.file', 'category', 'erpSupplier', 'erpSupplier.purchaser']);
             }]);
@@ -185,13 +185,13 @@ class ProductSku extends BaseModel
             ->where('psm.product_sku_id', null)
             ->where('p.product_type', 1)
             ->where('p.type', Product::TYPE_PRODUCT)
-            ->where('p.is_delete', 0)
+            ->where('p.delete_time', 0)
             ->sum('ps.stock_num');
         $product_material_stock = (new ProductSku)->alias('ps')
             ->join('product p', 'ps.product_id = p.product_id')
             ->where('p.product_type', 1)
             ->where('p.type', Product::TYPE_MATERIAL)
-            ->where('p.is_delete', 0)
+            ->where('p.delete_time', 0)
             ->sum('ps.material_stock');
         $total_stock = helper::bcadd($product_stock, $product_material_stock, 4);
         return floatval($total_stock);
@@ -218,7 +218,7 @@ class ProductSku extends BaseModel
     {
         $filter = [
             'sku.barcode' => $name,
-            'p.is_delete' => 0,
+            'p.delete_time' => 0,
         ];
         if (!is_null($id) && $id != 0) {
             $filter[] = ['sku.product_sku_id', '<>', $id];

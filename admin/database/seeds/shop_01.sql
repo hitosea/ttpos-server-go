@@ -1700,6 +1700,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_device` (
     `brand` VARCHAR(255) DEFAULT '' COMMENT '品牌名称',
     `platform` INT(10) DEFAULT 0 COMMENT '平台,0-Web-网页, 1-Android-安卓, 2-iPhone-苹果, 3-Mobile-移动端',
     `user_agent` LONGTEXT DEFAULT '' COMMENT '请求头信息',
+    -- 收银加密配置
+    `cash_sign` VARCHAR(255) DEFAULT '' COMMENT '收银终端标识',
+    `cash_box_id` VARCHAR(255) DEFAULT '' COMMENT '现金箱ID',
+    `access_token` VARCHAR(255) DEFAULT '' COMMENT '访问令牌',
+    `queue_url` VARCHAR(255) DEFAULT '' COMMENT '关联队列url',
+    -- 
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1989,7 +1995,5 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '支付统计表';
-
-
 
 SET FOREIGN_KEY_CHECKS = 1;

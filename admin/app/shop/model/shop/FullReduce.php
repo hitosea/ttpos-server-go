@@ -16,7 +16,7 @@ class FullReduce extends FullReduceModel
     {
         return $this->alias('reduce')->field(['reduce.*,supplier.name as supplier_name'])
             ->join('supplier', 'reduce.shop_supplier_id = supplier.shop_supplier_id', 'left')
-            ->where('reduce.is_delete', '=', 0)
+            ->where('reduce.delete_time', '=', 0)
             ->where('reduce.shop_supplier_id', '=', $data['shop_supplier_id'])
             ->order(['reduce.create_time' => 'asc'])
             ->paginate($data, false, [

@@ -119,7 +119,7 @@ class Order extends OrderModel
                         $q->where('is_merge', 1)->where('pay_status', OrderPayStatusEnum::SUCCESS);
                     });
             })
-            ->where('order.is_delete', '=', 0)
+            ->where('order.delete_time', '=', 0)
             ->limit(2000)
             ->order(['order.create_time' => 'desc'])
             ->select();

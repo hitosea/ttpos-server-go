@@ -129,7 +129,7 @@ class Spec extends BaseModel
         //         SELECT psku.spec_sku_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT psku.spec_sku_id) AS sku_count
         //         FROM {$prefix}product_sku psku
         //         LEFT JOIN {$prefix}product_package product ON psku.product_id = product.product_id
-        //         WHERE product.is_delete = 0
+        //         WHERE product.delete_time = 0
         //         GROUP BY psku.spec_sku_id
         //     ) psku
         // ", 'sku.spec_id = psku.spec_sku_id')

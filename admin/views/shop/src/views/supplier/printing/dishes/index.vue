@@ -19,7 +19,7 @@
           <el-table-column prop="printer_name_text" :label="$t('打印机')">
             <template #default="scope">
               <div>
-                {{ scope.row?.is_delete == 1 ? '-' : scope.row.printer_name_text }}
+                {{ scope.row?.delete_time > 0 ? '-' : scope.row.printer_name_text }}
               </div>
             </template>
           </el-table-column>

@@ -48,7 +48,7 @@ class ProductSoldOut extends BaseModel
             ->when($search, function ($q) use ($search) {
                 $q->jsonLike('product.product_name', trim($search));
             })
-            ->where('product.is_delete', '=', 0)
+            ->where('product.delete_time', '=', 0)
             ->where('product.product_type', '=', 1)
             ->where('product.shop_supplier_id', '=', $params['shop_supplier_id'])
             ->where('product.product_status', '=', 10)

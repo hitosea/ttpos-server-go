@@ -517,7 +517,7 @@ class Product extends BaseModel
             })
             //
             ->where('c.status', '=', 1)
-            ->where($prefix . 'product.is_delete', '=', 0)
+            ->where($prefix . 'product.delete_time', '=', 0)
             ->where($prefix . 'product.type', '=', 10)    // 10-成品 20-材料
             ->where($prefix . 'product.product_type', '=', 1)
             ->where($prefix . 'product.shop_supplier_id', '=', $params['shop_supplier_id'])
@@ -697,7 +697,7 @@ class Product extends BaseModel
             })
             //
             ->where('c.status', '=', 1)
-            ->where($prefix . 'product.is_delete', '=', 0)
+            ->where($prefix . 'product.delete_time', '=', 0)
             ->where($prefix . 'product.type', '=', 10)    // 10-成品 20-材料
             ->where($prefix . 'product.product_type', '=', 1)
             ->where($prefix . 'product.shop_supplier_id', '=', $params['shop_supplier_id'])
@@ -1881,7 +1881,7 @@ class Product extends BaseModel
     public static function getDeleteProductIds()
     {
         // 删除或者下架的商品
-        $ids = self::where('is_delete', 1)->whereOr('product_status', 20)->order('update_time', 'desc')->limit(100)->column('product_id');
+        $ids = self::where('delete_time', 1)->whereOr('product_status', 20)->order('update_time', 'desc')->limit(100)->column('product_id');
         return $ids;
     }
 
@@ -2059,7 +2059,7 @@ class Product extends BaseModel
             ->leftJoin('upload_file file', 'file.file_id = img.image_id')
             ->where('img.id', '>', 0)
             ->where('file.file_id', '>', 0)
-            ->where('a.is_delete', '=', 0)
+            ->where('a.delete_time', '=', 0)
             ->where('a.type', '=', 10)    // 10-成品 20-材料
             ->where('a.product_type', '=', 1)
             ->where('a.product_status', '=', 10)

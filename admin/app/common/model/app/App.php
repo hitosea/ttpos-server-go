@@ -166,7 +166,7 @@ class App extends BaseModel
         if ($this->expire_time > 0 && $this->expire_time < time()) {
             throw new BaseException(['msg' => '店铺状态已到期，如需继续使用，请联系销售代表', 'code' => StatusCode::EXPIRE_ERROR]);
         }
-        if ($this->status == 0 || $this->is_delete == 1) {
+        if ($this->status == 0 || $this->delete_time > 0) {
             throw new BaseException(['msg' => '店铺状态异常，如需继续使用，请联系销售代表', 'code' => StatusCode::USER_ERROR]);
         }
         //

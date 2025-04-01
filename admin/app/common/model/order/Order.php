@@ -596,7 +596,7 @@ class Order extends BaseModelOrder
     public function getOrderTotalMoney($order_type, $shop_supplier_id, $data = [])
     {
         $model = $this;
-        $userModel = UserModel::where('is_delete', '=', 0);
+        $userModel = UserModel::where('delete_time', '=', 0);
         if (isset($data['type']) && $data['type']) {
             switch ($data['type']) {
                 case '1': //今天
@@ -801,7 +801,7 @@ class Order extends BaseModelOrder
             ];
         };
         for ($date = $startTime; $date <= $endTime; $date += 86400) {
-            $userModel = UserModel::where('is_delete', '=', 0)->where('create_time', 'between', [$date, $date + 86399]);
+            $userModel = UserModel::where('delete_time', '=', 0)->where('create_time', 'between', [$date, $date + 86399]);
             $userCount = $userModel->count();
             $dateRange[date('Y-m-d', $date)] = $initializeDateData(date('Y-m-d', $date), $userCount, $allIncomes);
         }
@@ -979,7 +979,7 @@ class Order extends BaseModelOrder
             $this->error = "订单状态错误，不允许取消";
             return false;
         }
-        $this->is_delete = 1;
+        $this->delete_time = 1;
         $this->save();
         return $this->delete($this->order_id);
     }
@@ -999,7 +999,7 @@ class Order extends BaseModelOrder
         }
         $this->startTrans();
         try {
-            $this->is_delete = 1;
+            $this->delete_time = 1;
             $this->save();
             $this->delete();
             $this->product()->delete();  // 删除订单商品
@@ -5884,7 +5884,7 @@ class Order extends BaseModelOrder
             $schemeSingleSkuProductList = Product::alias('p')
                 ->leftJoin('product_sku ps', 'p.product_id = ps.product_id')
                 ->whereIn('p.product_id', array_keys($scheme_product_ids))
-                ->where('p.is_delete', 0)
+                ->where('p.delete_time', 0)
                 ->where('p.product_status', 10)
                 ->where('p.product_attr', '[]')       // 无属性
                 ->where('p.product_feed', '[]')       // 无加料
@@ -6007,7 +6007,7 @@ class Order extends BaseModelOrder
             $schemeSingleSkuProductList = Product::alias('p')
                 ->leftJoin('product_sku ps', 'p.product_id = ps.product_id')
                 ->whereIn('p.product_id', array_keys($scheme_product_ids))
-                ->where('p.is_delete', 0)
+                ->where('p.delete_time', 0)
                 ->where('p.product_status', 10)
                 ->where('p.product_attr', '[]')       // 无属性
                 ->where('p.product_feed', '[]')       // 无加料
@@ -6122,7 +6122,7 @@ class Order extends BaseModelOrder
             $schemeSingleSkuProductList = Product::alias('p')
                 ->leftJoin('product_sku ps', 'p.product_id = ps.product_id')
                 ->whereIn('p.product_id', array_keys($scheme_product_ids))
-                ->where('p.is_delete', 0)
+                ->where('p.delete_time', 0)
                 ->where('p.product_status', 10)
                 ->where('p.product_attr', '[]')       // 无属性
                 ->where('p.product_feed', '[]')       // 无加料
@@ -6429,7 +6429,7 @@ class Order extends BaseModelOrder
             $schemeSingleSkuProductList = Product::alias('p')
                 ->leftJoin('product_sku ps', 'p.product_id = ps.product_id')
                 ->whereIn('p.product_id', array_keys($scheme_product_ids))
-                ->where('p.is_delete', 0)
+                ->where('p.delete_time', 0)
                 ->where('p.product_status', 10)
                 ->where('p.product_attr', '[]')       // 无属性
                 ->where('p.product_feed', '[]')       // 无加料

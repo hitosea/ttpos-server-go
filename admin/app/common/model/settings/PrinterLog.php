@@ -320,7 +320,7 @@ class PrinterLog extends BaseModel
     public function addPrinterPush()
     {
         if ($this->getData('type') == 0) {
-            $printers = Printer::where('is_delete', 0)->order('printer_id')->select();
+            $printers = Printer::where('delete_time', 0)->order('printer_id')->select();
             foreach ($printers as $key => $printer) {
                 if ($printer->printer_id == $this->printer_id) {
                     RabbitmqHelp::push('print-data-system-' . ($key > 10 ? 0 : $key), $this->toArray());
@@ -491,7 +491,7 @@ class PrinterLog extends BaseModel
      */
     public function print($deviceId = '')
     {
-        if ($this->printer_id > 0 && (!$this->printer || $this->printer->is_delete == 1)) {
+        if ($this->printer_id > 0 && (!$this->printer || $this->printer->delete_time == 1)) {
             $this->error = '打印失败，打印机已不存在';
             return false;
         }

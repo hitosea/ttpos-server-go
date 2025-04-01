@@ -20,22 +20,6 @@ return [
         ],
         [
             // （必须）标题
-            'title' => '收银端接口',
-            // （必须）控制器目录地址
-            'path' => 'app\cashier\controller',
-            // （必须）唯一的key
-            'key' => 'cashier',
-            'groups'  => [
-                ['title' => '基础', 'name' => 'base'],
-                ['title' => '商品相关', 'name' => 'product'],
-                ['title' => '桌台模块', 'name' => 'table'],
-                ['title' => '订单相关', 'name' => 'order'],
-                ['title' => '打印记录', 'name' => 'print'],
-                ['title' => '支付相关', 'name' => 'payment'],
-            ],
-        ],
-        [
-            // （必须）标题
             'title' => '店铺端接口',
             // （必须）控制器目录地址
             'path' => 'app\shop\controller',
@@ -54,53 +38,6 @@ return [
                 ['title' => '采购管理', 'name' => 'purchase'],
                 ['title' => '库存管理', 'name' => 'inventory'],
             ],
-        ],
-        [
-            // （必须）标题
-            'title' => '平板端接口',
-            // （必须）控制器目录地址
-            'path' => 'app\tablet\controller',
-            // （必须）唯一的key
-            'key' => 'tablet',
-        ],
-        [
-            // （必须）标题
-            'title' => '厨显端接口',
-            // （必须）控制器目录地址
-            'path' => 'app\kitchen\controller',
-            // （必须）唯一的key
-            'key' => 'kitchen',
-        ],
-        [
-            // （必须）标题
-            'title' => '点餐助手接口',
-            // （必须）控制器目录地址
-            'path' => 'app\assistant\controller',
-            // （必须）唯一的key
-            'key' => 'assistant',
-            'groups'  => [
-                ['title' => '基础', 'name' => 'base'],
-                ['title' => '商品相关', 'name' => 'product'],
-                ['title' => '桌台模块', 'name' => 'table'],
-                ['title' => '订单相关', 'name' => 'order'],
-                ['title' => '支付相关', 'name' => 'payment'],
-            ],
-        ],
-        [
-            // （必须）标题
-            'title' => '扫码端接口',
-            // （必须）控制器目录地址
-            'path' => 'app\scan\controller',
-            // （必须）唯一的key
-            'key' => 'scan',
-        ],
-        [
-            // （必须）标题
-            'title' => '电子菜单接口',
-            // （必须）控制器目录地址
-            'path' => 'app\menu\controller',
-            // （必须）唯一的key
-            'key' => 'menu',
         ],
     ],
 

@@ -28,7 +28,7 @@ class AppService extends Service
     {
         // apidoc 数据库配置
         if (strpos(request()->url(), '/apidoc/') !== false) {
-            $name = 'shop' . Db::name('app')->whereIsDelete(0)->value('app_id');
+            $name = 'shop' . Db::name('company')->whereIsDelete(0)->value('uuid');
             $config = config('database');
             if (!isset($config['connections'][$name])) {
                 $mysql = $config['connections']['mysql'];

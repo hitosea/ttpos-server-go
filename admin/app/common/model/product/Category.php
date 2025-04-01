@@ -218,7 +218,7 @@ class Category extends BaseModel
                         SELECT if(c.parent_id, c.parent_id, c.category_id) as category_id, count(*) AS product_count
                         FROM {$prefix}product_package product
                         left join {$prefix}category c on `product`.`category_id` = c.category_id or c.category_id = product.special_id
-                        where product.type = 10 and product.is_delete = 0 and product.product_status = 10 and c.status = 1 and c.is_button = 0
+                        where product.type = 10 and product.delete_time = 0 and product.product_status = 10 and c.status = 1 and c.is_button = 0
                         GROUP BY if(c.parent_id, c.parent_id, c.category_id)
                     ) product
                 ", 'a.category_id = product.category_id or a.parent_id = product.category_id')
@@ -263,7 +263,7 @@ class Category extends BaseModel
                         SELECT if(c.parent_id, c.parent_id, c.category_id) as category_id, count(*) AS product_count
                         FROM {$prefix}product_package product
                         left join {$prefix}category c on `product`.`category_id` = c.category_id or c.category_id = product.special_id
-                        where product.type = 10 and product.is_delete = 0 and product.product_status = 10 and c.status = 1 and c.is_button = 0
+                        where product.type = 10 and product.delete_time = 0 and product.product_status = 10 and c.status = 1 and c.is_button = 0
                         GROUP BY if(c.parent_id, c.parent_id, c.category_id)
                     ) product
                 ", 'a.category_id = product.category_id or a.parent_id = product.category_id')
@@ -327,7 +327,7 @@ class Category extends BaseModel
                         SELECT if(cc.parent_id, cc.parent_id, cc.category_id) as category_id, count(*) AS product_num
                         FROM {$prefix}product_package product
                         left join {$prefix}product_category cc on `product`.`category_id` = cc.category_id or cc.category_id = product.special_id and cc.is_button = 0
-                        where product.type = 10 and product.is_delete = 0 and product.product_status = 10 and cc.status = 1
+                        where product.type = 10 and product.delete_time = 0 and product.product_status = 10 and cc.status = 1
                         GROUP BY if(cc.parent_id, cc.parent_id, cc.category_id)
                     ) product_num
                 ", 'c.category_id = product_num.category_id or c.parent_id = product_num.category_id')
@@ -342,7 +342,7 @@ class Category extends BaseModel
                     AND op.is_send_kitchen = 0
                     AND op.add_source = {$product_source}
                     AND p.type = 10
-                    AND p.is_delete = 0
+                    AND p.delete_time = 0
                     AND p.product_status = 10
                     AND c.status = 1
                 GROUP BY if(c.parent_id, c.parent_id, c.category_id)

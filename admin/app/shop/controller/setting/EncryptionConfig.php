@@ -14,7 +14,7 @@ use app\shop\model\settings\Setting as SettingModel;
  * @Apidoc\Group("supplier")
  * @Apidoc\Sort(6)
  */
-class Printing extends Controller
+class EncryptionConfig extends Controller
 {
     /**
      * @Apidoc\Title("打印设置(get-获取/post-设置)")
