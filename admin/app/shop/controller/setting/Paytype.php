@@ -214,11 +214,11 @@ class Paytype extends Controller
         if (isset($param['is_show_checkout'])) {
             $isShowCheckout = $param['is_show_checkout'] ?: [];
             $saveData['is_show_cashier'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $isShowCheckout) ? 1 : 0;
-            $param['is_show_assistant'] = in_array(PayTypeModel::ASSISTANT_SHOW_VALUE, $isShowCheckout) ? 1 : 0;
+            $saveData['is_show_assistant'] = in_array(PayTypeModel::ASSISTANT_SHOW_VALUE, $isShowCheckout) ? 1 : 0;
         }
         if (isset($param['is_show_recharge'])) {
             $isShowRecharge = $param['is_show_recharge'] ?: [];
-            $param['is_show_member_recharge'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $isShowRecharge) ? 1 : 0;
+            $saveData['is_show_member_recharge'] = in_array(PayTypeModel::CASHIER_SHOW_VALUE, $isShowRecharge) ? 1 : 0;
         }
         if (isset($param['img']['file_id'])) {
             $saveData['logo_file_uuid'] = $param['img']['file_id'];
