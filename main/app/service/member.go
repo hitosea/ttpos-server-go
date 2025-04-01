@@ -142,13 +142,20 @@ func (s *memberSrv) HandleMemberUpgrade(companyUuid uint64, memberUuid uint64) {
 	if member.Uuid == 0 || member.MemberLevel == nil {
 		return
 	}
-	memberLevels := repository.NewMemberRepo(db).GetMemberLevels()
+	memberLevels := repository.NewMemberRepo(db).GetMemberLevelsAllColumns()
 	if len(memberLevels) == 0 {
 		return
 	}
+
+	priority := member.MemberLevel.Priority
 	var upgradeLevel model.MemberLevel
 	for _, level := range memberLevels {
 		if level.IsDefault == 1 {
+			continue
+		}
+		// 如果当前会员等级优先级大于等于升级等级优先级，则跳过. 只找比当前会员等级优先级高的等级
+		// 注意：这个判断会导致会员只能升级，不能降级
+		if priority >= level.Priority {
 			continue
 		}
 		if s.checkCanUpgrade(member, level) {
@@ -193,7 +200,7 @@ func (s *memberSrv) HandleMemberPoints(ctx context.Context, changeReq MemberPoin
 	}
 	// 处理会员积分
 	if err := memberRepo.Update(changeReq.Uuid, map[string]any{
-		"frozen_point": utils.DecimalAdd(member.GetPoints(), changeReq.Points),
+		"frozen_point": utils.DecimalAdd(member.FrozenPoint, changeReq.Points),
 	}); err != nil {
 		return errors.WithMessage(err, "处理会员积分失败")
 	}

@@ -23,6 +23,7 @@ type IMemberRepo interface {
 	GetMemberByUuid(uuid uint64) (*model.Member, error)        // 根据uuid获取会员
 	GetMembersByUuids(uuids []uint64) ([]*model.Member, error) // 根据uuid列表获取会员列表
 	GetMemberLevels() []model.MemberLevel                      // 获取会员等级
+	GetMemberLevelsAllColumns() []model.MemberLevel            // 获取会员等级所有列
 	SearchMember(keyword string) []model.Member                // 关键字搜索会员
 	CheckMemberExists(phone string) bool                       // 根据手机号检查是否存在
 	CheckLevelExists(uuid uint64) bool                         // 根据Uuid检查等级是否存在
@@ -50,6 +51,13 @@ func NewMemberRepoImpl(db *gorm.DB) IMemberRepo {
 func (r *memberRepo) GetMemberLevels() []model.MemberLevel {
 	var levels []model.MemberLevel
 	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Select("uuid, name, priority, create_time").Order("priority asc, create_time asc").Find(&levels)
+	return levels
+}
+
+// GetMemberLevels 获取会员等级
+func (r *memberRepo) GetMemberLevelsAllColumns() []model.MemberLevel {
+	var levels []model.MemberLevel
+	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Order("priority asc, create_time asc").Find(&levels)
 	return levels
 }
 

@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -42,6 +43,24 @@ func orderReverseSettleEventHandler() {
 				return
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:反结账 %+v", payload), zap.Uint64("record", uuid))
+		})
+
+		event.NewSystemBus().SubscribeOrderReverseSettleEvent(func(payload event.OrderReverseSettlePayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+
+			// 反结账处理所有会员的等级变化。账单有多个销售订单时，要处理多个会员的等级变化
+			saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(payload.SaleBillUuid)
+			if errSaleBill != nil {
+				logger.Logger.Error("GetSaleBillAllInfo", zap.Error(fmt.Errorf("%v %s", payload.SaleBillUuid, errSaleBill)))
+				return
+			}
+			memberSrv := service.NewMemberSrv(database.GetDBManager(config.DatabaseConf{}))
+			for _, saleOrder := range saleBill.SaleOrders {
+				if saleOrder.ConsumerUuid != 0 {
+					// 处理会员升级
+					go memberSrv.HandleMemberUpgrade(payload.CompanyUuid, saleOrder.ConsumerUuid)
+				}
+			}
 		})
 	})
 }

@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -111,7 +112,7 @@ func checkoutSaleOrderEventHandler() {
 				saleOrder.HandleMemberPoints(member)
 				saleOrder.AccumulateMemberConsumeAmountAndTimes(member) // 累计会员的消费金额、消费次数
 				if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-					// 更新会员积分
+					// 更新会员积分 // todo 可以考虑跟func (s *memberSrv) HandleMemberPoints方法合并
 					if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{
 						"frozen_point":                   member.FrozenPoint,
 						"accumulated_consumption_amount": member.AccumulatedConsumptionAmount,
@@ -129,6 +130,10 @@ func checkoutSaleOrderEventHandler() {
 					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, Transaction failed", zap.Any("payload", payload), zap.Error(err))
 					return
 				}
+
+				// 处理会员升级
+				memberSrv := service.NewMemberSrv(database.GetDBManager(config.DatabaseConf{}))
+				go memberSrv.HandleMemberUpgrade(payload.CompanyUuid, saleOrder.ConsumerUuid)
 
 				// 发布“积分变动”事件
 				go HandleMemberPoints(db)
