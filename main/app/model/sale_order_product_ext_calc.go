@@ -319,7 +319,7 @@ func (model *SaleOrderProduct) calcServiceFee(serviceFeeRate float64, taxFeeType
 		priceNoneTaxDecimal := decimal.NewFromFloat(priceNoneTax)
 		//  服务费=（最终单价-商品税费）*服务费比例
 		serviceFee := priceNoneTaxDecimal.Mul(decimal.NewFromFloat(serviceFeeRate))
-		return serviceFee.InexactFloat64()
+		return serviceFee.Truncate(3).Round(2).InexactFloat64()
 	}
 
 	// 关闭税费时
