@@ -433,7 +433,12 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 
 	// 进行队列打印
 	if viper.GetString("CHECK_PRINT") == "false" || printerLog.Type == constant.PrinterLogTypeDefault {
-		go printer_tasks.NewPrinterTask(s.dbm, cache.Global).ExecutePrinter(companyUuid, printerLog)
+		go func() {
+			if printerLog.Printer == nil {
+				printerLog.Printer = printerLogRepo.GetPrinter(printerLogRepo.WhereUuid(printerLog.PrinterUuid))
+			}
+			printer_tasks.NewPrinterTask(s.dbm, cache.Global).ExecutePrinter(companyUuid, printerLog)
+		}()
 	}
 
 	return printerLog, nil
