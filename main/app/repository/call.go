@@ -10,6 +10,7 @@ import (
 type ICallRepo interface {
 	WhereStatus(status uint8) DBOption                                                     // 状态条件
 	WhereC1Status(status uint8) DBOption                                                   // join表时，c1状态条件
+	WhereC1CreateTimeGt(ts int64) DBOption                                                 // join表时，c1创建时间大于
 	WhereC2IsNull() DBOption                                                               // join表时，c2 is null 条件
 	WhereUuid(uuid uint64) DBOption                                                        // Uuid 条件
 	WhereDeskUuid(uuid uint64) DBOption                                                    // 桌台uuid条件
@@ -80,6 +81,12 @@ func (r *callRepo) WhereStatus(status uint8) DBOption {
 func (r *callRepo) WhereC1Status(status uint8) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("c1.status = ?", status)
+	}
+}
+
+func (r *callRepo) WhereC1CreateTimeGt(ts int64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("c1.create_time > ?", ts)
 	}
 }
 

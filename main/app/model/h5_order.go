@@ -15,6 +15,7 @@ type H5Order struct {
 	SaleBillUuid  uint64 `gorm:"column:sale_bill_uuid;not null;default:0;comment:'销售账单uuid'"`            // 销售账单uuid
 	DeskNo        string `gorm:"column:desk_no;type:varchar(255);not null;default:'';comment:'桌台编号'"`    // 桌台编号
 	Status        uint   `gorm:"column:status;not null;default:0;comment:'状态, 0-未下单 1-未接单 2-已接单 3-已拒单'"` // 状态
+	IsAutoAccept  uint   `gorm:"column:is_auto_accept;not null;default:0;comment:'是否自动接单, 0-否 1-是'"`     // 是否自动接单, 0-否 1-是
 	OrderTime     int64  `gorm:"column:order_time;not null;default:0;comment:'下单时间(时间戳)'"`               // 下单时间
 
 	// 拒单或接单信息

@@ -22301,6 +22301,14 @@ const docTemplate = `{
                     "description": "桌台编号",
                     "type": "string"
                 },
+                "is_auto_accept": {
+                    "description": "是否自动接单",
+                    "type": "boolean"
+                },
+                "status": {
+                    "description": "订单状态, 0-未下单 1-未接单 2-已接单 3-已拒单",
+                    "type": "integer"
+                },
                 "uuid": {
                     "description": "h5订单Uuid",
                     "type": "integer"

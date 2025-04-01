@@ -165,25 +165,25 @@ func (r *StatisticsRepo) CountSale(opts ...DBOption) model.StatisticsSaleData {
 		Select(
 			"sale_bill_uuid",
 			"desk_uuid",
-			"SUM(product_price + product_tax + service_fee + service_tax + payment_fee) AS sale_amount",
-			"SUM(payment_amount - payment_balance) AS received_amount",
+			"SUM(product_price + product_tax + service_fee + service_tax + payment_fee - refund_tax - refund_service_fee) AS sale_amount",
+			"SUM(payment_amount - payment_balance - refund_amount - refund_service_fee) AS received_amount",
 			"SUM(product_price) AS product_price",
 			"SUM(product_num) AS product_num",
-			"SUM(discount_member) AS discount_member",
+			"SUM(discount_member - refund_discount_member) AS discount_member",
 			"SUM(payment_amount - product_tax - service_tax) AS business_amount",
-			"SUM(payment_fee) AS payment_fee",
-			"SUM(service_fee) AS service_fee",
-			"SUM(product_tax + service_tax) AS tax",
-			"SUM(refund_amount) AS refund_amount",
-			"SUM(discount) AS discount",
+			"SUM(payment_fee - refund_fee) AS payment_fee",
+			"SUM(service_fee - refund_service_fee) AS service_fee",
+			"SUM(product_tax + service_tax - refund_tax) AS tax",
+			"SUM(refund_amount + refund_service_fee) AS refund_amount",
+			"SUM(discount - refund_discount) AS discount",
 			"SUM(gift_amount) AS gift_amount",
 			"SUM(gift_num) AS gift_num",
 			"SUM(free_amount) AS free_amount",
 			"SUM(free_num) AS free_num",
 			"SUM(IF(desk_uuid > 0, meal_num, 0)) AS meal_num",
-			"SUM(payment_amount) AS order_amount",
-			"SUM(IF(desk_uuid > 0, payment_amount, NULL)) AS desk_order_amount",
-			"SUM(IF(desk_uuid = 0, payment_amount, NULL)) AS instant_order_amount",
+			"SUM(payment_amount - refund_amount - refund_service_fee) AS order_amount",
+			"SUM(IF(desk_uuid > 0, payment_amount - refund_amount - refund_service_fee, NULL)) AS desk_order_amount",
+			"SUM(IF(desk_uuid = 0, payment_amount - refund_amount - refund_service_fee, NULL)) AS instant_order_amount",
 		).Group("sale_bill_uuid")
 
 	r.db.Table("(?) AS t", subQuery).
@@ -243,7 +243,7 @@ func (r *StatisticsRepo) CountPayment(opts ...DBOption) []model.StatisticsPaymen
 			paymentMethodTable+".name AS payment_name",
 			paymentMethodTable+".code AS payment_code",
 			"COUNT("+statisticsPaymentTable+".payment_method_uuid) AS total_order_num",
-			"SUM("+statisticsPaymentTable+".payment_amount) AS total_payment_amount",
+			"SUM("+statisticsPaymentTable+".payment_amount-"+statisticsPaymentTable+".refund_amount) AS total_payment_amount",
 			"SUM("+statisticsPaymentTable+".refund_amount) AS total_refund_amount",
 		).
 		Joins("LEFT JOIN " + paymentMethodTable + " ON " + statisticsPaymentTable + ".payment_method_uuid = " + paymentMethodTable + ".uuid").
@@ -264,8 +264,8 @@ func (r *StatisticsRepo) CountTax(opts ...DBOption) []model.StatisticsTaxData {
 	db.Model(&model.StatisticsProduct{}).
 		Select(
 			"tax_rate",
-			"SUM((product_price + tax_fee) * product_num) AS total_product_amount",
-			"SUM(tax_fee) AS total_tax_fee",
+			"SUM((product_price + tax_fee) * (product_num - refund_num)) AS total_product_amount",
+			"SUM(tax_fee * (product_num - refund_num)) AS total_tax_fee",
 		).Group("tax_rate").
 		Find(&result)
 

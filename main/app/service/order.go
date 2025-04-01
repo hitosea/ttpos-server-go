@@ -1475,6 +1475,13 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			RefundType: returnType,
 		})
 	}()
+	// 发布“统计”事件
+	go func() {
+		s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
+			BasePayload:  event.BasePayload{Ctx: ctx},
+			SaleBillUuid: saleBill.Uuid,
+		})
+	}()
 
 	return nil, 0
 }
@@ -1546,7 +1553,6 @@ func (s *orderSrv) ReReturnOrder(ctx context.Context, req req.OrderReReturnReq) 
 		}
 		return errors.New("该订单已成功退款，无法重复退款"), constant.CodeFail
 	}
-
 	// 更新银行信息 - 重新发起退款
 	if isChangeBankCode {
 		orderAmount.RefundStatus = 1
@@ -1972,12 +1978,9 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 		go func() {
 			// 发布“统计”操作事件
 			s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
-				BasePayload: event.BasePayload{
-					Ctx:         ctx,
-					CompanyUuid: ctx.GetCompanyUuid(),
-				},
-				SaleBill:   saleBill,
-				OnlyDelete: true,
+				BasePayload:  event.BasePayload{Ctx: ctx},
+				SaleBillUuid: saleBill.Uuid,
+				OnlyDelete:   true,
 			})
 		}()
 
@@ -5867,11 +5870,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	if saleBill.CanFinishSaleBill() {
 		go func() {
 			s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
-				BasePayload: event.BasePayload{
-					Ctx:         ctx,
-					CompanyUuid: ctx.GetCompanyUuid(),
-				},
-				SaleBill: saleBill,
+				BasePayload:  event.BasePayload{Ctx: ctx},
+				SaleBillUuid: saleBill.Uuid,
 			})
 		}()
 	}
@@ -7519,6 +7519,11 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 	// 将已下单的h5订单商品变为已接单单的h5订单商品
 	h5Order.ChangeToAccepted()
 	// 送厨已经接单的商品。送厨指定的商品列表
+
+	// 标记为是自动接单
+	if isAutoOrder {
+		h5Order.IsAutoAccept = 1
+	}
 
 	// 先发布“接单”操作事件
 	s.bus.PublishAcceptH5OrderEvent(event.AcceptH5OrderPayload{

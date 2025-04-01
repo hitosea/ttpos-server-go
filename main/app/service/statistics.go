@@ -363,8 +363,8 @@ func (s *statisticsSrv) RankProduct(ctx context.Context, req CountReq) []CountPr
 
 // SaveSaleReq 保存销售请求
 type SaveSaleReq struct {
-	SaleBill   *model.SaleBill
-	OnlyDelete bool
+	SaleBillUuid uint64
+	OnlyDelete   bool
 }
 
 // SaveSale 保存销售
@@ -373,11 +373,19 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 	statisticsRepo := repository.NewStatisticsRepo(db)
 
 	// 先删除
-	statisticsRepo.DeleteSale(req.SaleBill.Uuid)
-	statisticsRepo.DeletePayment(req.SaleBill.Uuid)
-	statisticsRepo.DeleteProduct(req.SaleBill.Uuid)
+	statisticsRepo.DeleteSale(req.SaleBillUuid)
+	statisticsRepo.DeletePayment(req.SaleBillUuid)
+	statisticsRepo.DeleteProduct(req.SaleBillUuid)
 
 	if req.OnlyDelete {
+		return nil
+	}
+
+	// 查询销售账单详情
+	orderRepo := repository.NewOrderRepo(db)
+	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
+	saleBill.CalcAll()
+	if err != nil {
 		return nil
 	}
 
@@ -387,19 +395,25 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 		products []model.StatisticsProduct
 	)
 	// 销售订单
-	for _, saleOrder := range req.SaleBill.SaleOrders {
+	for _, saleOrder := range saleBill.SaleOrders {
 		var (
-			productNum       int
-			giveNum          int
-			freeNum          int
-			productPrice     decimal.Decimal
-			productSalePrice decimal.Decimal
-			productTax       decimal.Decimal
-			serviceFee       decimal.Decimal
-			serviceTax       decimal.Decimal
-			freeAmount       decimal.Decimal
-			refundAmount     decimal.Decimal
-			paymentBalance   decimal.Decimal
+			productNum           int
+			giveNum              int
+			freeNum              int
+			refundNum            int
+			productPrice         decimal.Decimal
+			productSalePrice     decimal.Decimal
+			productTax           decimal.Decimal
+			serviceFee           decimal.Decimal
+			serviceTax           decimal.Decimal
+			freeAmount           decimal.Decimal
+			refundAmount         decimal.Decimal
+			paymentBalance       decimal.Decimal
+			refundTax            decimal.Decimal
+			refundServiceFee     decimal.Decimal
+			refundDiscount       decimal.Decimal
+			refundDiscountMember decimal.Decimal
+			refundFee            decimal.Decimal
 		)
 		// 销售商品
 		for _, saleProduct := range saleOrder.SaleOrderProducts {
@@ -420,11 +434,19 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					}
 				}
 
+				for _, refundProduct := range saleProduct.ReturnOrderProducts {
+					refundNum += int(refundProduct.Num)
+					refundTax = refundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					refundServiceFee = refundServiceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					refundDiscount = refundDiscount.Add(decimal.NewFromFloat(saleProduct.DiscountFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					refundDiscountMember = refundDiscountMember.Add(decimal.NewFromFloat(saleProduct.MemberDiscountFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+				}
+
 				products = append(products, model.StatisticsProduct{
-					SaleBillUuid:       req.SaleBill.Uuid,
+					SaleBillUuid:       saleBill.Uuid,
 					SaleOrderUuid:      saleOrder.Uuid,
-					DutyNo:             req.SaleBill.DutyNo,
-					DeskUuid:           req.SaleBill.DeskUuid,
+					DutyNo:             saleBill.DutyNo,
+					DeskUuid:           saleBill.DeskUuid,
 					ProductPackageUuid: saleProduct.ProductPackageUuid,
 					ProductBomUuid:     bomUuid,
 					ProductPrice:       saleProduct.GetUnitPriceNoneTax(),
@@ -432,7 +454,8 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					ProductNum:         int(saleProduct.Num),
 					TaxRate:            saleProduct.TaxRate,
 					TaxFee:             saleProduct.TaxFee,
-					CompleteTime:       req.SaleBill.FinishTime,
+					CompleteTime:       saleBill.FinishTime,
+					RefundNum:          refundNum,
 				})
 			}
 		}
@@ -440,52 +463,60 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			freeNum = 1
 			freeAmount = decimal.NewFromFloat(saleOrder.Amount)
 		}
+		if saleOrder.GetCanReturnAmount() == 0 {
+			refundFee = decimal.NewFromFloat(saleOrder.PaymentCommissionFee)
+		}
 		// 支付订单
 		for _, salePayment := range saleOrder.PaymentOrders {
 			var paymentRefundAmount decimal.Decimal
-			for _, refundOrder := range salePayment.ReturnOrderAmounts {
-				if refundOrder.RefundStatus == 1 {
-					refundAmount = refundAmount.Add(decimal.NewFromFloat(refundOrder.Amount))
-					paymentRefundAmount = paymentRefundAmount.Add(decimal.NewFromFloat(refundOrder.Amount))
+			for _, refundOrderAmount := range salePayment.ReturnOrderAmounts {
+				if refundOrderAmount.RefundStatus == 1 {
+					refundAmount = refundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
+					paymentRefundAmount = paymentRefundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
 				}
 			}
 			if salePayment.PaymentMethod != nil && salePayment.PaymentMethod.Code == 10 {
 				paymentBalance = decimal.NewFromFloat(salePayment.Amount)
 			}
 			payments = append(payments, model.StatisticsPayment{
-				SaleBillUuid:      req.SaleBill.Uuid,
-				DutyNo:            req.SaleBill.DutyNo,
-				DeskUuid:          req.SaleBill.DeskUuid,
+				SaleBillUuid:      saleBill.Uuid,
+				DutyNo:            saleBill.DutyNo,
+				DeskUuid:          saleBill.DeskUuid,
 				SaleOrderUuid:     saleOrder.Uuid,
 				PaymentMethodUuid: salePayment.PaymentMethodUuid,
 				PaymentAmount:     salePayment.Amount,
 				RefundAmount:      paymentRefundAmount.Round(2).InexactFloat64(),
-				CompleteTime:      req.SaleBill.FinishTime,
+				CompleteTime:      saleBill.FinishTime,
 			})
 		}
 		sale := model.StatisticsSale{
-			SaleBillUuid:     req.SaleBill.Uuid,
-			DutyNo:           req.SaleBill.DutyNo,
-			DeskUuid:         req.SaleBill.DeskUuid,
-			SaleOrderUuid:    saleOrder.Uuid,
-			MealNum:          int(req.SaleBill.MealNum),
-			ProductPrice:     productPrice.Round(2).InexactFloat64(),
-			ProductSalePrice: productSalePrice.Round(2).InexactFloat64(),
-			ProductNum:       productNum,
-			ProductTax:       productTax.Round(2).InexactFloat64(),
-			ServiceFee:       serviceFee.Round(2).InexactFloat64(),
-			ServiceTax:       serviceTax.Round(2).InexactFloat64(),
-			Discount:         saleOrder.CustomDiscountFee,
-			DiscountMember:   saleOrder.MemberDiscountFee,
-			GiftAmount:       saleOrder.GiftAmount,
-			GiftNum:          giveNum,
-			FreeAmount:       freeAmount.Round(2).InexactFloat64(),
-			FreeNum:          freeNum,
-			PaymentAmount:    saleOrder.Amount,
-			PaymentFee:       saleOrder.PaymentCommissionFee,
-			PaymentBalance:   paymentBalance.Round(2).InexactFloat64(),
-			RefundAmount:     refundAmount.Round(2).InexactFloat64(),
-			CompleteTime:     req.SaleBill.FinishTime,
+			SaleBillUuid:         saleBill.Uuid,
+			DutyNo:               saleBill.DutyNo,
+			DeskUuid:             saleBill.DeskUuid,
+			SaleOrderUuid:        saleOrder.Uuid,
+			MealNum:              int(saleBill.MealNum),
+			ProductPrice:         productPrice.Round(2).InexactFloat64(),
+			ProductSalePrice:     productSalePrice.Round(2).InexactFloat64(),
+			ProductNum:           productNum,
+			ProductTax:           productTax.Round(2).InexactFloat64(),
+			ServiceFee:           serviceFee.Round(2).InexactFloat64(),
+			ServiceTax:           serviceTax.Round(2).InexactFloat64(),
+			Discount:             saleOrder.CustomDiscountFee,
+			DiscountMember:       saleOrder.MemberDiscountFee,
+			GiftAmount:           saleOrder.GiftAmount,
+			GiftNum:              giveNum,
+			FreeAmount:           freeAmount.Round(2).InexactFloat64(),
+			FreeNum:              freeNum,
+			PaymentAmount:        saleOrder.Amount,
+			PaymentFee:           saleOrder.PaymentCommissionFee,
+			PaymentBalance:       paymentBalance.Round(2).InexactFloat64(),
+			RefundAmount:         refundAmount.Round(2).InexactFloat64(),
+			RefundTax:            refundTax.Round(2).InexactFloat64(),
+			RefundServiceFee:     refundServiceFee.Round(2).InexactFloat64(),
+			RefundDiscount:       refundDiscount.Round(2).InexactFloat64(),
+			RefundDiscountMember: refundDiscountMember.Round(2).InexactFloat64(),
+			RefundFee:            refundFee.Round(2).InexactFloat64(),
+			CompleteTime:         saleBill.FinishTime,
 		}
 		sales = append(sales, sale)
 	}

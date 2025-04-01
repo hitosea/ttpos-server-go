@@ -155,9 +155,12 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 			List: make([]resp.UnprocessedH5OrderItem, 0),
 		},
 	}
+	thirtyMinutesAgo := time.Now().Add(-30 * time.Minute).Unix()
 	callRepo := repository.NewCallRepo(ctx.GetDB())
 	unprocessedCalls, _, err := callRepo.PaginateGet(1, 10,
-		callRepo.WhereC1Status(constant.CallStatusUnprocessed), callRepo.WhereC2IsNull())
+		callRepo.WhereC1Status(constant.CallStatusUnprocessed),
+		callRepo.WhereC1CreateTimeGt(thirtyMinutesAgo),
+		callRepo.WhereC2IsNull())
 	if err != nil {
 		return res, errors.WithMessage(errors.ErrInternal, "获取未处理呼叫失败: "+err.Error())
 	}
@@ -167,6 +170,7 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 		10,
 		printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
 		printerLogRepo.WhereType(constant.PrinterLogTypeDefault),
+		printerLogRepo.WhereCreateTimeGt(thirtyMinutesAgo),
 		printerLogRepo.WithPrinter(),
 		printerLogRepo.WithSaleOrder(),
 		printerLogRepo.WithSaleBill())
@@ -176,7 +180,8 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 
 	h5OrderRepo := repository.NewH5OrderRepo(ctx.GetDB())
 	orders, _, err := h5OrderRepo.PaginateGetH5Order(1, 10,
-		h5OrderRepo.WhereStatus([]uint{constant.H5OrderStatusOrder}), repository.CommonRepo.SortWithCreateTime("desc"))
+		h5OrderRepo.WhereUnNotified(), h5OrderRepo.WhereCreateTimeGt(thirtyMinutesAgo),
+		repository.CommonRepo.SortWithCreateTime("desc"))
 
 	if err != nil {
 		return res, errors.WithMessage(errors.ErrInternal, "获取未处理的H5订单失败: "+err.Error())
@@ -218,8 +223,10 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 	// 未处理的h5订单
 	for _, order := range orders {
 		res.H5Order.List = append(res.H5Order.List, resp.UnprocessedH5OrderItem{
-			Uuid:   order.Uuid,
-			DeskNo: order.DeskNo,
+			Uuid:         order.Uuid,
+			DeskNo:       order.DeskNo,
+			Status:       order.Status,
+			IsAutoAccept: order.IsAutoAccept == 1,
 		})
 	}
 	return res, nil

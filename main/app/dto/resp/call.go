@@ -56,8 +56,10 @@ type UnprocessedAbnormalPrint struct {
 }
 
 type UnprocessedH5OrderItem struct {
-	Uuid   uint64 `json:"uuid"`    // h5订单Uuid
-	DeskNo string `json:"desk_no"` // 桌台编号
+	Uuid         uint64 `json:"uuid"`           // h5订单Uuid
+	DeskNo       string `json:"desk_no"`        // 桌台编号
+	Status       uint   `json:"status"`         // 订单状态, 0-未下单 1-未接单 2-已接单 3-已拒单
+	IsAutoAccept bool   `json:"is_auto_accept"` // 是否自动接单
 }
 
 type UnprocessedH5Order struct {

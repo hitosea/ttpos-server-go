@@ -81,6 +81,7 @@ export interface ShowAddType {
   category_set?: number; // 商品分类设置10同步 主店20分店创建
   logo?: string; // Logo
   sale_stock?: number; // 进销存: 0不开启, 1开启
+  is_open_tax?: number; // 开启税务
   reserve?: number; // 预订: 0不开启, 1开启
   auth_day?: number; // 授权时间(天) 0为永不过期
   auth_start_time?: string; //
