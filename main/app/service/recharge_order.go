@@ -52,6 +52,7 @@ type IRechargeOrderSrv interface {
 
 type rechargeOrderSrv struct {
 	dbm              *database.DBManager // 数据库管理器
+	bus              *event.SystemEventBus
 	cache            cache.Cache
 	paymentMethodSrv IPaymentMethodSrv
 	settingSrv       setting.ISrv
@@ -66,6 +67,7 @@ func NewRechargeOrderSrv(dbm *database.DBManager, cache cache.Cache, paymentMeth
 func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv) IRechargeOrderSrv {
 	return &rechargeOrderSrv{
 		dbm:              dbm,
+		bus:              event.NewSystemBus(),
 		cache:            cache,
 		paymentMethodSrv: paymentMethodSrv,
 		settingSrv:       settingSrv,
@@ -551,6 +553,28 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 		if err != nil {
 			logger.Logger.Error("打印充值单失败", zap.Error(err))
 		}
+	}()
+
+	// 发布“会员余额变动”事件
+	go func() {
+		s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
+	}()
+
+	// 发布“会员积分变动”事件
+	go func() {
+		s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
+			BasePayload: event.BasePayload{
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
 	}()
 
 	return s.confirmRechargeOrderResp(companyUuid, order.Uuid), nil
