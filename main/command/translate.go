@@ -61,7 +61,13 @@ func execute() {
 		}
 
 		// 只处理.go文件
-		if !info.IsDir() && strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, "docs.go") && !strings.Contains(path, "old_model") && !strings.Contains(path, "model") {
+		if !info.IsDir() &&
+			strings.HasSuffix(path, ".go") &&
+			!strings.HasSuffix(path, "docs.go") &&
+			!strings.Contains(path, "trans") &&
+			!strings.Contains(path, "old_model") &&
+			!strings.Contains(path, "command") &&
+			!strings.Contains(path, "model") {
 			content, err := ioutil.ReadFile(path)
 			if err != nil {
 				return err

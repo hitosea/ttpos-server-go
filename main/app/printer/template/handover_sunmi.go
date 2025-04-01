@@ -396,7 +396,7 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 			printer.LineFeed(1)
 			printer.SetAlignment(pkg.AlignRight)
 			if t.base.Lang == "ja" {
-				printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中消費税"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
+				printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中消费税"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
 			} else {
 				printer.AppendText(fmt.Sprintf("(%s%s)", t.base.Translate("其中VAT"), t.base.GetPriceAndUnit(percentage.ConsumptionTax)))
 			}
