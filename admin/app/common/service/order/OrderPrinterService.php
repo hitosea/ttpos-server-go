@@ -225,7 +225,7 @@ class OrderPrinterService
                 //
                 foreach ($printerItem->printers() as $printer) {
                     // 获取当前的打印机
-                    if ($printer->is_delete) {
+                    if ($printer->delete_time) {
                         continue;
                     }
                     $printerItem->printer = $printer;

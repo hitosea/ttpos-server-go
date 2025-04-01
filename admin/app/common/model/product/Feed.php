@@ -138,7 +138,7 @@ class Feed extends BaseModel
         //         SELECT pf.feed_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT pf.feed_id) AS feed_count
         //         FROM {$prefix}product_feed pf
         //         LEFT JOIN {$prefix}product_package product ON pf.product_id = product.product_id
-        //         WHERE product.is_delete = 0
+        //         WHERE product.delete_time = 0
         //         GROUP BY pf.feed_id
         //     ) pf
         // ", 'feed.feed_id = pf.feed_id')

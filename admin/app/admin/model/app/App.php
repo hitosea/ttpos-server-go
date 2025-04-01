@@ -126,8 +126,8 @@ class App extends AppModel
             ->leftJoin('supplier su', "su.app_id = app.app_id")
             ->where('user.is_super', '=', 1)
             ->where('su.parent_id', '=', 0)
-            ->where('su.is_delete', '=', 0)
-            ->where('app.is_delete', '=', 0)
+            ->where('su.delete_time', '=', 0)
+            ->where('app.delete_time', '=', 0)
             ->when($keyword, function ($q) use ($keyword) {
                 $q->where(function ($qq) use ($keyword) {
                     $qq->like('su.name', $keyword);

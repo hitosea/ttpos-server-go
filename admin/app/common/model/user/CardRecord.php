@@ -28,7 +28,7 @@ class CardRecord extends BaseModel
         //
         'order_id',
         'pay_price',
-        'is_delete',
+        'delete_time',
         'expire_time',
         'pay_type',
     ];
@@ -183,7 +183,7 @@ class CardRecord extends BaseModel
     public function getDiscount($user_id)
     {
         $discount = $this->alias('r')
-            ->where('r.is_delete', '=', 0)
+            ->where('r.delete_time', '=', 0)
             ->where('r.pay_status', '=', 20)
             ->where('r.user_id', '=', $user_id)
             ->where('r.discount', '>', 0)

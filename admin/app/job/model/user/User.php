@@ -38,7 +38,7 @@ class User extends UserModel
     {
         $birthSql = "UNIX_TIMESTAMP(concat(YEAR(NOW()),FROM_UNIXTIME(birthday,'-%m-%d')))-UNIX_TIMESTAMP(FROM_UNIXTIME(unix_timestamp(now()),'%Y-%m-%d'))=86400";
         $sendSql = "YEAR(FROM_UNIXTIME(send_time,'%Y-%m-%d'))<>YEAR(now())";
-        $list = UserModel::where('is_delete', '=', 0)->where($birthSql)->where($sendSql)->limit(10)->select();
+        $list = UserModel::where('delete_time', '=', 0)->where($birthSql)->where($sendSql)->limit(10)->select();
         return $list;
     }
 }

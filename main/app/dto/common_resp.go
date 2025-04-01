@@ -1,5 +1,7 @@
 package dto
 
+import "encoding/json"
+
 type Response struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
@@ -59,4 +61,10 @@ func (l *LocaleResponse) GetLocale(locale string) string {
 		return l.TR
 	}
 	return l.ZH
+}
+
+// ToJson 获取语言json
+func (l *LocaleResponse) ToJson() string {
+	str, _ := json.Marshal(l)
+	return string(str)
 }

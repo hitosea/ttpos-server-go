@@ -148,6 +148,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 			var item resp.ProductionItem
 			copier.Copy(&item, product)
 			json.Unmarshal([]byte(product.FlavorName), &item.LocaleName)
+			json.Unmarshal([]byte(product.ProductAttributeNames), &item.ProductAttributeNames)
 			item.SerialNo = product.SaleBill.SerialNo
 			items = append(items, item)
 		}
@@ -239,6 +240,7 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 			var item resp.ProductionItem
 			copier.Copy(&item, product)
 			json.Unmarshal([]byte(product.FlavorName), &item.LocaleName)
+			json.Unmarshal([]byte(product.ProductAttributeNames), &item.ProductAttributeNames)
 			item.SerialNo = product.SaleBill.SerialNo
 			items = append(items, item)
 		}

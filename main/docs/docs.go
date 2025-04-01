@@ -21092,7 +21092,11 @@ const docTemplate = `{
                 },
                 "product_attribute_names": {
                     "description": "商品属性",
-                    "type": "string"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
                 "remark": {
                     "description": "备注",

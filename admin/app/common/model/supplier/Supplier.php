@@ -2,6 +2,7 @@
 
 namespace app\common\model\supplier;
 
+use app\admin\model\app\App;
 use think\Model;
 use help\ImgHelp;
 use help\DateHelp;
@@ -303,10 +304,11 @@ class Supplier extends BaseModel
                     }
                 }
             }
-            //
+            $company = App::where('uuid', $companyUuid)->find();
+            $logo = $company->logo ?: '';
             (new SettingModel)->edit(SettingEnum::STORE, [
                 'name' => $data['name'],
-                'logoUrl' => ImgHelp::removeImageDomain($data['logo'] ?? ''),
+                'logoUrl' => ImgHelp::removeImageDomain($logo),
                 'time_zone' => $data['timezone'] ?? '',
                 'phone' => $data['link_phone'] ?? '',
                 'address' => $data['address'] ?? '',

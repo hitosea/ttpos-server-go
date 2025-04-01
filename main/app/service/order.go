@@ -4273,7 +4273,7 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64,
 			ProductPackageUuid:    unCookingSaleOrderProduct.ProductPackageUuid,
 			Num:                   unCookingSaleOrderProduct.Num,
 			FlavorName:            unCookingSaleOrderProduct.Name,
-			ProductAttributeNames: attributeName.GetLocale(ctx.GetLanguage()),
+			ProductAttributeNames: attributeName.ToJson(),
 			Status:                constant.ProductionOrderProductStatusCooking,
 			Remark:                unCookingSaleOrderProduct.Remark,
 			//HasMaterial:              unCookingSaleOrderProduct, todo

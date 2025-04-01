@@ -86,7 +86,7 @@ class OrderBusinessDataRepository
         $this->baseModel = $this->model->alias('a')
             ->where('a.pay_status', '=', OrderPayStatusEnum::SUCCESS)
             ->where('a.order_status', '=', OrderStatusEnum::COMPLETED)
-            ->where('a.is_delete', '=', 0)
+            ->where('a.delete_time', '=', 0)
             ->when($shopSupplierId, function ($q) use ($shopSupplierId) {
                 $q->where('a.shop_supplier_id', '=', $shopSupplierId);
             })
@@ -200,7 +200,7 @@ class OrderBusinessDataRepository
             $this->model->alias('a')
                 ->where('a.pay_status', '=', OrderPayStatusEnum::PENDING)
                 ->where('a.order_status', '=', OrderStatusEnum::NORMAL)
-                ->where('a.is_delete', '=', 0)
+                ->where('a.delete_time', '=', 0)
                 ->where('a.parent_id', '=', 0)
                 ->when($shopSupplierId, function ($q) use ($shopSupplierId) {
                     $q->where('a.shop_supplier_id', '=', $shopSupplierId);

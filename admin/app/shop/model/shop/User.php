@@ -32,7 +32,7 @@ class User extends UserModel
             $this->error = '账号或密码错误';
             return false;
         }
-        if ($user['is_delete'] == 1) {
+        if ($user['delete_time'] > 0) {
             $this->error = '账号被删除，请联系管理员';
             return false;
         }
@@ -45,7 +45,7 @@ class User extends UserModel
             $this->error = '未找到绑定的商家，请确认登录信息';
             return false;
         }
-        if ($user['app']['is_delete']) {
+        if ($user['app']['delete_time']) {
             $this->error = '未找到绑定的商家，请确认登录信息';
             return false;
         }

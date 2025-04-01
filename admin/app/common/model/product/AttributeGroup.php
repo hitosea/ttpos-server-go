@@ -119,7 +119,7 @@ class AttributeGroup extends BaseModel
             ->field('product.product_id')
             ->leftJoin('product_attribute pa', 'attr.attribute_id = pa.attribute_id')
             ->leftJoin('product product', 'product.product_id = pa.product_id')
-            ->where('product.is_delete', 0)
+            ->where('product.delete_time', 0)
             ->where('attr.attribute_id', $attribute_id)
             ->select();
     }

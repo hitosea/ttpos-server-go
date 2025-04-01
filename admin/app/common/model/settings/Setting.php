@@ -282,20 +282,7 @@ class Setting extends BaseModel
 
         // v1.0.8 语言数据兼容处理
         $result = ArrayHelp::arrayMergeMultiple($defaultData, $userData);
-        foreach ($result as $key => $value) {
-            if (
-                $key == SettingEnum::PRINTER
-                || $key == SettingEnum::CASHIER
-                || $key == SettingEnum::TABLET
-                || $key == SettingEnum::H5
-                || $key == SettingEnum::KITCHEN
-                || $key == SettingEnum::ASSISTANT
-            ) {
-                foreach ($value['values']['language_list'] ?? [] as $k => $language) {
-                    $result[$key]['values']['language_list'][$k]['index'] = $language['key'];
-                }
-            }
-        }
+       
         //
         return $result;
     }

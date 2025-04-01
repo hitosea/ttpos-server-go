@@ -1122,7 +1122,7 @@ class OrderProduct extends BaseModel
         foreach ($unSendKitchenProduct as $orderProduct) {
             // 判断商品是否下架
             foreach ($allProductList as $product) {
-                if ($product['is_delete'] == 1 || $product['product_status']['value'] == 20){
+                if ($product['delete_time'] == 1 || $product['product_status']['value'] == 20){
                     if ($orderProduct['product_id'] == $product['product_id']) {
                         $this->error = __('商品') .' '. $product['product_name_text'] . ' ' . __('已下架，请选择其他商品');
                         $this->errorData = ['product_id' => $product['product_id']];

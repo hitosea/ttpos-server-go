@@ -613,7 +613,7 @@ class Product extends ProductModel
             ->join('product_sku sku', 'sku.product_id = product.product_id')
             ->where('sku.stock_num', '<', condition: 10)
             ->where('product.type', ProductModel::TYPE_PRODUCT)
-            ->where('product.is_delete', '=', 0);
+            ->where('product.delete_time', '=', 0);
 
         if ($shop_supplier_id > 0) {
             $query = $query->where('product.shop_supplier_id', $shop_supplier_id);
