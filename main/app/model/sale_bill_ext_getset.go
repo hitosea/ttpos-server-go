@@ -75,7 +75,7 @@ func (model *SaleBill) GetSaleOrderProductUnCooking() []*SaleOrderProduct {
 	for _, saleOrder := range model.SaleOrders {
 		for i, _ := range saleOrder.SaleOrderProducts {
 			orderProduct := saleOrder.SaleOrderProducts[i]
-			if !orderProduct.IsAcceptOrderBool() && orderProduct.IsDelete() {
+			if !orderProduct.IsAcceptOrderBool() || orderProduct.IsDelete() {
 				continue
 			}
 			if orderProduct.Status == constant.SaleOrderProductStatusNormal {
