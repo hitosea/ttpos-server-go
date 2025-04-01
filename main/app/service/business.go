@@ -47,7 +47,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	// Initialize the pointer to avoid nil dereference
 	reqPrinterData := &template.PrintingBusinessData{}
 	//
-	if printerReq.StatisticsType == 0 {
+	if printerReq.StatisticsType <= 0 {
 		// 销售数据
 		saleData := s.statisticsSrv.CountSale(ctx, CountReq{
 			TimeType:       printerReq.TimeType,
