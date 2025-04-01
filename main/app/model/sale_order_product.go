@@ -32,12 +32,13 @@ type SaleOrderProduct struct {
 	IsAcceptOrder uint `gorm:"column:is_accept_order;type:tinyint(1);not null;default:0;comment:'是否已接单, 0-否 1-是'" json:"is_accept_order"`
 
 	// 价格相关字段
-	FlavorPrice  float64 `gorm:"column:flavor_price;type:decimal(12,2);not null;default:0.00;comment:'规格原价（单商品）,仅某规格商品的原价'" json:"flavor_price"`
-	SaucePrice   float64 `gorm:"column:sauce_price;type:decimal(12,2);not null;default:0.00;comment:'小料价（单商品）,所有小料的价格之和'" json:"sauce_price"`
-	ProductPrice float64 `gorm:"column:product_price;type:decimal(12,2);not null;default:0.00;comment:'原始单价（单商品）,规格原价+小料价'" json:"product_price"`
-	SalePrice    float64 `gorm:"column:sale_price;type:decimal(12,2);not null;default:0.00;comment:'销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价'" json:"sale_price"`
-	Price        float64 `gorm:"column:price;type:decimal(12,2);not null;default:0.00;comment:'最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'" json:"price"`
-	TotalPrice   float64 `gorm:"column:total_price;type:decimal(12,2);not null;default:0.00;comment:'应收金额(单商品)=最终单价+服务费+总税费'" json:"total_price"`
+	FlavorPrice      float64 `gorm:"column:flavor_price;type:decimal(12,2);not null;default:0.00;comment:'规格原价（单商品）,仅某规格商品的原价'" json:"flavor_price"`
+	SaucePrice       float64 `gorm:"column:sauce_price;type:decimal(12,2);not null;default:0.00;comment:'小料价（单商品）,所有小料的价格之和'" json:"sauce_price"`
+	ProductPrice     float64 `gorm:"column:product_price;type:decimal(12,2);not null;default:0.00;comment:'原始单价（单商品）,规格原价+小料价'" json:"product_price"`
+	SalePrice        float64 `gorm:"column:sale_price;type:decimal(12,2);not null;default:0.00;comment:'销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价'" json:"sale_price"`
+	Price            float64 `gorm:"column:price;type:decimal(12,2);not null;default:0.00;comment:'最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'" json:"price"`
+	TotalPrice       float64 `gorm:"column:total_price;type:decimal(12,2);not null;default:0.00;comment:'应收金额(单商品)。商品已含税时，应收金额(单商品)=(最终单价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=最终单价+服务费+总税费'" json:"total_price"`
+	OriginTotalPrice float64 `gorm:"column:origin_total_price;type:decimal(12,2);not null;default:0.00;comment:'应收金额(单商品)。商品已含税时，应收金额(单商品)=(销售价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=销售价+服务费+总税费'" json:"origin_total_price"`
 
 	// 折扣相关字段
 	ChangePriceTime        int64   `gorm:"column:change_price_time;type:int(10);not null;default:0;comment:'改价时间(时间戳),用于判断是否改价和不同时间改价的商品不合并'" json:"change_price_time"`
@@ -110,14 +111,32 @@ func (model *SaleOrderProduct) GetTaxFee() float64 {
 	return decimal.NewFromFloat(model.TaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
 }
 
+// 获取销售订单商品的原始税费(折前价)。税费=销售订单商品的税费*销售订单商品的数量
+func (model *SaleOrderProduct) GetOriginTaxFee(taxFeeType int) float64 {
+	taxFee := model.calcOriginTaxFee(taxFeeType) // 税费（折前）
+	return decimal.NewFromFloat(taxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+}
+
 // 获取销售订单商品的服务费税费。服务费税费=销售订单商品的服务费税费*销售订单商品的数量
 func (model *SaleOrderProduct) GetServiceTaxFee() float64 {
 	return decimal.NewFromFloat(model.ServiceTaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
 }
 
+// 获取销售订单商品的服务费税费。服务费税费=销售订单商品的服务费税费*销售订单商品的数量
+func (model *SaleOrderProduct) GetOriginServiceTaxFee(serviceFeeRate float64, taxFeeType int, serviceFeeType int) float64 {
+	serviceTaxFee := model.calcOriginServiceTaxFee(serviceFeeRate, taxFeeType, serviceFeeType) // 服务费（折前）
+	return decimal.NewFromFloat(serviceTaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+}
+
 // 获取销售订单商品的服务费。服务费=销售订单商品的服务费*销售订单商品的数量
 func (model *SaleOrderProduct) GetServiceFee() float64 {
 	return decimal.NewFromFloat(model.ServiceFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+}
+
+// 获取销售订单商品的原始服务费(折前价)。服务费=销售订单商品的服务费*销售订单商品的数量
+func (model *SaleOrderProduct) GetOriginServiceFee(serviceFeeRate float64, taxFeeType int) float64 {
+	serviceFee := model.calcServiceFee(model.SalePrice, serviceFeeRate, taxFeeType) // 服务费（折前）
+	return decimal.NewFromFloat(serviceFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
 }
 
 func (model *SaleOrderProduct) GetMemberDiscountFee() float64 {
@@ -537,6 +556,13 @@ func (model *SaleOrderProduct) GetSalePrice() float64 {
 	return salePrice
 }
 
+// 获取商品销售价(折前价) 单个商品
+func (model *SaleOrderProduct) GetSalePriceUnit() float64 {
+	// 销售价
+	salePrice := decimal.NewFromFloat(model.SalePrice).Truncate(2).InexactFloat64()
+	return salePrice
+}
+
 // 获取商品的最终售价。最终售价为商品的最终单价，默认等于Price，如果免单，则等于0
 func (model *SaleOrderProduct) GetFinalSalePrice() float64 {
 	if model.IsGiftBool() {
@@ -545,11 +571,23 @@ func (model *SaleOrderProduct) GetFinalSalePrice() float64 {
 	return model.Price
 }
 
-// 获取商品总金额
+// 获取商品总金额（折后价）
 func (model *SaleOrderProduct) GetTotalPrice() float64 {
 	// 金额*数量
-	salePrice := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
-	return salePrice
+	price := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	return price
+}
+
+// 获取商品总金额（折前价）
+func (model *SaleOrderProduct) GetTotalPriceOrigin() float64 {
+	originTotalPrice := model.OriginTotalPrice
+	// 如果折前价为0，则使用折后价. 兼容未加OriginTotalPrice字段前的订单数据
+	if originTotalPrice == 0 {
+		originTotalPrice = model.GetTotalPrice()
+	}
+	// 金额*数量
+	price := decimal.NewFromFloat(originTotalPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	return price
 }
 
 // 获取最终价格（折后价）

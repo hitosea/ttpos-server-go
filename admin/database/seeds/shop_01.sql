@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费固定服务费时，服务费=固定服务费；按比例收服务费时，服务费=(订单商品.总服务费)之和',
     `tax_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '税费。税费=(订单商品.总税费)之和',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额。商品未含税时，总金额=商品金额+服务费+税费。商品已含税时，总金额=商品金额（含商品消费税）+服务费+税费（只有服务费税）',
+    `origin_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始应收金额。原始应收金额=商品金额+服务费+消费税。商品未含税时，原始应收金额=商品金额+服务费+消费税（商品消费税税费+服务费税费）。商品已含税时，原始应收金额=商品金额（包含商品消费税税费）+服务费+服务费税费。',
     -- 免单。
     `is_free` INT(10) NOT NULL DEFAULT 0 COMMENT '是否免单, 0-否 1-是',
     `free_reason` TEXT COMMENT '免单原因',
@@ -247,6 +248,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `service_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费（单商品）,0-固定服务费 大于0-按比例收服务费；商品已含税时，服务费=(最终单价-商品税费)*服务费比例；商品未含税时，服务费=最终单价*服务费比例',
     -- 单个商品应收金额=最终单价+服务费+总税费; 总应收金额=单个商品应收金额*商品数量
     `total_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额(单商品)。商品已含税时，应收金额(单商品)=(最终单价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=最终单价+服务费+总税费',
+    `origin_total_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '应收金额(单商品)。商品已含税时，应收金额(单商品)=(销售价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=销售价+服务费+总税费',
     -- 打折金额；总打折金额=单个商品打折金额*商品数量
     `discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '打折金额（单商品）=销售价-最终单价。校验：打折金额=会员折扣金额+自定义折扣金额',
     -- 会员折扣金额

@@ -168,6 +168,8 @@ func (model *SaleOrder) calcSaleOrder(serviceFeeType int, serviceFeeValue float6
 	model.MemberDiscountFee = calc.MemberDiscountFee
 	calc.Amount = model.calcAmount(products, serviceFeeType, serviceFeeValue, taxFeeType)
 	model.Amount = calc.Amount
+	calc.OriginAmount = model.calcOriginAmount(products, serviceFeeType, serviceFeeValue, taxFeeType)
+	model.OriginAmount = calc.OriginAmount
 	calc.ZeroFee = model.calcZeroFee(model.Amount)
 	model.ZeroFee = calc.ZeroFee
 	calc.CustomDiscountFee = model.calcCustomDiscountFee(products, calc.Amount)
@@ -319,6 +321,17 @@ func (model *SaleOrder) calcSumOrderProductPrice(products []*SaleOrderProduct) f
 	return sumPrice.Round(2).InexactFloat64()
 }
 
+// 计算订单“商品金额”（折前价）。订单“商品金额”（折前价）=等于所有已接单商品SalePrice之和
+func (model *SaleOrder) calcSumOriginOrderProductPrice(products []*SaleOrderProduct) float64 {
+	sumPrice := decimal.NewFromFloat(0)
+	for _, orderProduct := range products {
+		// price * num
+		price := decimal.NewFromFloat(orderProduct.GetSalePriceUnit()).Mul(decimal.NewFromUint64(uint64(orderProduct.Num)))
+		sumPrice = sumPrice.Add(price)
+	}
+	return sumPrice.Truncate(3).Round(2).InexactFloat64()
+}
+
 // 计算自助餐顾客价格之和。等于所有自助餐顾客价格之和。折后价
 func (model *SaleOrder) calcSumOrderProductCustomerDiscountPrice() float64 {
 	sumCustomerPrice := decimal.NewFromFloat(0)
@@ -335,6 +348,24 @@ func (model *SaleOrder) calcSumOrderProductCustomerDiscountPrice() float64 {
 		sumCustomerPrice = sumCustomerPrice.Add(discountPrice)
 	}
 	return sumCustomerPrice.InexactFloat64()
+}
+
+// 计算自助餐顾客价格之和。等于所有自助餐顾客价格之和。折前价
+func (model *SaleOrder) calcSumOriginOrderProductCustomerPrice() float64 {
+	sumCustomerPrice := decimal.NewFromFloat(0)
+	for _, orderBuffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+		// 已经移动到其他订单的商品不计
+		if orderBuffetCustomer.SaleOrderUuid != model.Uuid {
+			continue
+		}
+		if orderBuffetCustomer.IsDelete() {
+			continue
+		}
+		// 自助餐顾客价格之和
+		originPrice := decimal.NewFromFloat(orderBuffetCustomer.GetOriginPrice())
+		sumCustomerPrice = sumCustomerPrice.Add(originPrice)
+	}
+	return sumCustomerPrice.Truncate(3).Round(2).InexactFloat64()
 }
 
 // 计算自助餐加钟商品价格之和。等于所有自助餐加钟商品价格之和
@@ -375,6 +406,19 @@ func (model *SaleOrder) calcProductAmount(products []*SaleOrderProduct) float64 
 	// 自助餐顾客价格Price之和。折后价
 	sumCustomerPrice := model.calcSumOrderProductCustomerDiscountPrice()
 	// 自助餐加钟商品价格之和
+	sumBuffetDelayPrice := model.calcSumOrderProductBuffetDelayPrice()
+	return decimal.NewFromFloat(sumOrderProductPrice).Add(
+		decimal.NewFromFloat(sumCustomerPrice)).Add(
+		decimal.NewFromFloat(sumBuffetDelayPrice)).InexactFloat64()
+}
+
+// 计算订单商品金额（折前价）。订单商品金额（折前价）= 订单商品SalePrice之和 + 自助餐顾客价格Price之和 + 自助餐加钟商品价格Price
+func (model *SaleOrder) calcOriginProductAmount(products []*SaleOrderProduct) float64 {
+	// 订单商品SalePrice之和
+	sumOrderProductPrice := model.calcSumOriginOrderProductPrice(products)
+	// 自助餐顾客价格SalePrice之和。折前价
+	sumCustomerPrice := model.calcSumOriginOrderProductCustomerPrice()
+	// 自助餐加钟商品价格之和. 折前价, 加钟商品不能打折，所以折前价和折后价一样
 	sumBuffetDelayPrice := model.calcSumOrderProductBuffetDelayPrice()
 	return decimal.NewFromFloat(sumOrderProductPrice).Add(
 		decimal.NewFromFloat(sumCustomerPrice)).Add(
@@ -436,6 +480,22 @@ func (model *SaleOrder) calcTaxFee(products []*SaleOrderProduct) float64 {
 		taxFee = taxFee.Add(
 			decimal.NewFromFloat(buffetCustomer.GetTaxFee())).Add(
 			decimal.NewFromFloat(buffetCustomer.GetServiceTaxFee()))
+	}
+	return taxFee.InexactFloat64()
+}
+
+// 计算订单产生的税费(折前价)。订单税费=订单商品TaxFee之和 + 订单商品ServiceTaxFee之和 + 自助餐顾客税费之和
+func (model *SaleOrder) calcOriginTaxFee(products []*SaleOrderProduct, serviceFeeRate float64, taxFeeType int, serviceFeeType int) float64 {
+	taxFee := decimal.NewFromFloat(0)
+	for _, orderProduct := range products {
+		taxFee = taxFee.Add(
+			decimal.NewFromFloat(orderProduct.GetOriginTaxFee(taxFeeType))).Add(
+			decimal.NewFromFloat(orderProduct.GetOriginServiceTaxFee(serviceFeeRate, taxFeeType, serviceFeeType)))
+	}
+	for _, buffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+		taxFee = taxFee.Add(
+			decimal.NewFromFloat(buffetCustomer.GetOriginTaxFee(taxFeeType))).Add(
+			decimal.NewFromFloat(buffetCustomer.GetOriginServiceTaxFee(serviceFeeRate, taxFeeType, serviceFeeType)))
 	}
 	return taxFee.InexactFloat64()
 }
@@ -555,6 +615,20 @@ func (model *SaleOrder) calcCookingServiceTaxFee(products []*SaleOrderProduct) f
 	return serviceTaxFee.InexactFloat64()
 }
 
+// 计算已送厨的销售订单服务费消费税金额。已送厨的销售订单服务费消费税金额=已送厨订单商品服务费消费税金额之和
+func (model *SaleOrder) calcOriginCookingServiceTaxFee(products []*SaleOrderProduct, serviceFeeRate float64, taxFeeType int, serviceFeeType int) float64 {
+	serviceTaxFee := decimal.NewFromFloat(0)
+	for _, orderProduct := range products {
+		serviceTaxFee = serviceTaxFee.Add(
+			decimal.NewFromFloat(orderProduct.GetOriginServiceTaxFee(serviceFeeRate, taxFeeType, serviceFeeType)))
+	}
+	for _, buffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+		serviceTaxFee = serviceTaxFee.Add(
+			decimal.NewFromFloat(buffetCustomer.GetOriginServiceTaxFee(serviceFeeRate, taxFeeType, serviceFeeType)))
+	}
+	return serviceTaxFee.InexactFloat64()
+}
+
 // 计算已送厨的销售订单应付金额。已送厨的销售订单应付金额=商品金额+服务费+消费税。 给前端显示时，已送厨的销售订单应付金额=商品金额+服务费+消费税-订单抹零金额
 // 商品未含税时，已送厨的销售订单应付金额=商品金额+服务费+消费税（商品消费税税费+服务费税费）。
 // 商品已含税时，已送厨的销售订单应付金额=商品金额（包含商品消费税税费）+服务费+服务费税费。
@@ -586,6 +660,41 @@ func (model *SaleOrder) calcAmount(products []*SaleOrderProduct, serviceFeeType 
 	}
 	// 商品关闭税费时
 	// 销售订单应付金额=商品金额ProductAmount(折后)+服务费
+	result := decimal.NewFromFloat(productAmount).Add(decimal.NewFromFloat(serviceFee))
+	return result.Truncate(3).Round(2).InexactFloat64()
+}
+
+// 计算已送厨的销售订单原始应收金额。已送厨的销售订单原始应收金额=商品金额+服务费+消费税。 给前端显示时，已送厨的销售订单原始应收金额=商品金额+服务费+消费税-订单抹零金额
+// 商品未含税时，已送厨的销售订单原始应收金额=商品金额+服务费+消费税（商品消费税税费+服务费税费）。
+// 商品已含税时，已送厨的销售订单原始应收金额=商品金额（包含商品消费税税费）+服务费+服务费税费。
+// 商品关闭税费时，已送厨的销售订单原始应收金额=商品金额ProductAmount(折前价)+服务费
+func (model *SaleOrder) calcOriginAmount(products []*SaleOrderProduct, serviceFeeType int, serviceFeeValue float64, taxFeeType int) float64 {
+	productAmount := model.calcOriginProductAmount(products)
+	serviceFee := model.calcOriginServiceFee(products, serviceFeeType, serviceFeeValue, taxFeeType)
+
+	amount := decimal.NewFromFloat(0)
+	// 商品已含税时 todo
+	if taxFeeType == constant.TaxFeeTypeTax {
+		serviceTaxFee := model.calcOriginCookingServiceTaxFee(products, serviceFeeValue, taxFeeType, serviceFeeType) // 订单商品服务费税费之和 + 自助餐顾客服务费税费之和
+		//商品金额（包含商品消费税税费）+服务费+服务费税费。
+		amount = amount.Add(
+			decimal.NewFromFloat(productAmount)).Add(
+			decimal.NewFromFloat(serviceFee)).Add(
+			decimal.NewFromFloat(serviceTaxFee))
+		return amount.Truncate(3).Round(2).InexactFloat64()
+	}
+	// 商品未含税时
+	if taxFeeType == constant.TaxFeeTypeNoTax {
+		taxFee := model.calcOriginTaxFee(products, serviceFeeValue, taxFeeType, serviceFeeType) // 订单商品税费之和 + 自助餐顾客税费之和
+		// 销售订单应付金额=商品金额+服务费+消费税（商品消费税税费+服务费税费）
+		amount = amount.Add(
+			decimal.NewFromFloat(productAmount).Add(
+				decimal.NewFromFloat(serviceFee).Add(
+					decimal.NewFromFloat(taxFee))))
+		return amount.Truncate(3).Round(2).InexactFloat64()
+	}
+	// 商品关闭税费时
+	// 销售订单应付金额=商品金额ProductAmount(折前价)+服务费
 	result := decimal.NewFromFloat(productAmount).Add(decimal.NewFromFloat(serviceFee))
 	return result.Truncate(3).Round(2).InexactFloat64()
 }
@@ -678,6 +787,36 @@ func (model *SaleOrder) calcServiceFee(products []*SaleOrderProduct, serviceFeeT
 	return 0
 }
 
+// 计算订单服务费。
+// 当服务费关闭时，订单服务费为0
+// 当服务费为固定费用时，订单服务费为固定费用
+// 当服务费为按比例收费时，订单服务费=所有订单商品的服务费之和+所有自助餐顾客的服务费之和
+func (model *SaleOrder) calcOriginServiceFee(products []*SaleOrderProduct, serviceFeeType int, serviceFeeValue float64, taxFeeType int) float64 {
+	// 当服务费关闭时，订单服务费为0
+	if serviceFeeType == constant.SaleBillSettingServiceFeeTypeNone {
+		return 0
+	}
+	// 当服务费为固定费用时，订单服务费为固定费用
+	if serviceFeeType == constant.SaleBillSettingServiceFeeTypeFixed {
+		return serviceFeeValue
+	}
+	// 当服务费为按比例收费时，订单服务费为所有订单商品的服务费之和
+	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercent || serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax {
+		serviceFee := decimal.NewFromFloat(0)
+		// 订单商品服务费之和
+		for _, orderProduct := range products {
+			serviceFee = serviceFee.Add(decimal.NewFromFloat(orderProduct.GetOriginServiceFee(serviceFeeValue, taxFeeType)))
+		}
+		// 自助餐顾客服务费之和
+		for _, buffetCustomer := range model.SaleOrderBuffetCustomerTypes {
+			serviceFee = serviceFee.Add(decimal.NewFromFloat(buffetCustomer.GetOriginServiceFee(serviceFeeValue, taxFeeType)))
+		}
+		return serviceFee.Truncate(2).InexactFloat64()
+	}
+	// 默认不收取服务费
+	return 0
+}
+
 func (model *SaleOrder) BeforeCalc() Calc {
 	return Calc{
 		ProductOriginalAmount: model.ProductOriginalAmount,
@@ -699,5 +838,6 @@ type Calc struct {
 	CustomDiscountFee     float64 `json:"custom_discount_fee"`     // 订单优惠折扣
 	MemberDiscountFee     float64 `json:"member_discount_fee"`     // 订单会员折扣
 	Amount                float64 `json:"amount"`                  // 订单应付金额
+	OriginAmount          float64 `json:"origin_amount"`           // 订单原始应收金额
 	ZeroFee               float64 `json:"zero_fee"`                // 订单优惠折扣抹零金额
 }

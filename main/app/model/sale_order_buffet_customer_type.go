@@ -48,14 +48,32 @@ func (model *SaleOrderBuffetCustomerType) GetTaxFee() float64 {
 	return decimal.NewFromFloat(model.TaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
 }
 
+// 获取销售订单自助餐顾客类型的原始税费。税费=销售订单自助餐顾客类型的税费*销售订单自助餐顾客类型的数量
+func (model *SaleOrderBuffetCustomerType) GetOriginTaxFee(taxFeeType int) float64 {
+	taxFee := model.calcTaxFee(model.SalePrice, model.TaxRate, taxFeeType) // 税费（折前）
+	return decimal.NewFromFloat(taxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+}
+
 // 获取销售订单自助餐顾客类型的服务费税费。服务费税费=销售订单自助餐顾客类型的服务费税费*销售订单自助餐顾客类型的数量
 func (model *SaleOrderBuffetCustomerType) GetServiceTaxFee() float64 {
 	return decimal.NewFromFloat(model.ServiceTaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
 }
 
+// 获取销售订单自助餐顾客类型的服务费税费。服务费税费=销售订单自助餐顾客类型的服务费税费*销售订单自助餐顾客类型的数量
+func (model *SaleOrderBuffetCustomerType) GetOriginServiceTaxFee(serviceFeeRate float64, taxFeeType int, serviceFeeType int) float64 {
+	serviceTaxFee := model.calcServiceTaxFee(model.SalePrice, serviceFeeRate, taxFeeType, serviceFeeType) // 服务费（折前）
+	return decimal.NewFromFloat(serviceTaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+}
+
 // 获取销售订单自助餐顾客类型的服务费。服务费=销售订单自助餐顾客类型的服务费*销售订单自助餐顾客类型的数量
 func (model *SaleOrderBuffetCustomerType) GetServiceFee() float64 {
 	return decimal.NewFromFloat(model.ServiceFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+}
+
+// 获取销售订单自助餐顾客类型的原始服务费。服务费=销售订单自助餐顾客类型的服务费*销售订单自助餐顾客类型的数量
+func (model *SaleOrderBuffetCustomerType) GetOriginServiceFee(serviceFeeRate float64, taxFeeType int) float64 {
+	serviceFee := model.calcServiceFee(model.SalePrice, serviceFeeRate, taxFeeType) // 服务费（折前）
+	return decimal.NewFromFloat(serviceFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
 }
 
 // GetCanReturnNum 获取销售订单自助餐顾客类型的可退货数量. 可退货数量=订单自助餐顾客类型数量-已退货数量

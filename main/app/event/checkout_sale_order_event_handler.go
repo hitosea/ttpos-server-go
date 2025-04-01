@@ -65,6 +65,9 @@ func checkoutSaleOrderEventHandler() {
 					payload.Index = i + 1
 				}
 			}
+			fmt.Println("payload.ToJsonString()", payload.ToJsonString())
+			fmt.Println("11111111 payload.OrderPrice", payload.OrderPrice)
+
 			record.Data = payload.ToJsonString()
 			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {

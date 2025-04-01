@@ -877,9 +877,9 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					Uuid:                saleOrderProduct.Uuid,
 					LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
 					LocaleAttributeName: saleOrderProduct.GetAttributeName(),
-					Price:               saleOrderProduct.Price,
+					Price:               saleOrderProduct.SalePrice,
 					Num:                 saleOrderProduct.Num,
-					SalePrice:           saleOrderProduct.GetSalePrice(),
+					SalePrice:           saleOrderProduct.GetTotalPriceOrigin(),
 					TotalPrice:          saleOrderProduct.GetTotalPrice(),
 					Status:              saleOrderProduct.Status,
 					Remark:              saleOrderProduct.Remark,
@@ -5829,6 +5829,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 
 	// 发布"结账"事件
 	saleOrderAmount := saleOrder.GetAmount()
+	originSaleOrderAmount := saleOrder.GetOriginAmountValue()
 	saleOrderPaymentAmount := saleOrder.PaymentAmount
 	saleOrderChangeAmount := saleOrder.ChangeAmount
 	go func() {
@@ -5854,7 +5855,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
 			SaleBill:    saleBill,
-			OrderPrice:  saleOrderAmount,
+			OrderPrice:  originSaleOrderAmount,
 			PayPrice:    saleOrderPaymentAmount,
 			ActualPrice: paymentAmount.InexactFloat64(), // 最终实付金额=每笔付款单的付款金额之和（含手续费）
 			ChangeDue:   saleOrderChangeAmount,

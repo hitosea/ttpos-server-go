@@ -38,7 +38,8 @@ type SaleOrder struct {
 	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);default:0;comment:会员折扣金额" json:"member_discount_fee"`
 
 	// 订单总额相关字段
-	Amount       float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:应收金额。商品未含税时，总金额=商品金额+服务费+税费。商品已含税时，总金额=商品金额（含商品消费税）+服务费+税费（只有服务费税）" json:"amount"`
+	OriginAmount float64 `gorm:"column:origin_amount;type:decimal(12,2);default:0;comment:原始应收金额(折前价)。商品未含税时，总金额=商品金额+服务费+税费。商品已含税时，总金额=商品金额（含商品消费税）+服务费+税费（只有服务费税）" json:"origin_amount"`
+	Amount       float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:应收金额(折后价)。商品未含税时，总金额=商品金额+服务费+税费。商品已含税时，总金额=商品金额（含商品消费税）+服务费+税费（只有服务费税）" json:"amount"`
 	CustomAmount float64 `gorm:"column:custom_amount;type:decimal(12,2);default:-1;comment:整单改价金额。改价后，应收金额=整单改价金额，前端优先显示改价后的金额，改价金额不能为负数。当为-1时，表示不改价，显示amount改收金额" json:"custom_amount"`
 
 	// 时间相关字段
@@ -317,7 +318,13 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 		// 退货数量
 		num := numMap[saleOrderProduct.Uuid]
 		// 商品总金额=退货商品数量*商品最终单价
-		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromInt(int64(num)))
+		// 商品金额=退货商品数量*商品最终单价
+		// 未含税时，商品总金额=商品金额 + 商品税费 + 服务费 + 服务费税费
+		// 已含税时，商品总金额=商品金额 + 服务费 + 服务费税费
+		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromInt(int64(num)))
+		// 如果商品未含税，则要再加上商品税费
+		// price := saleOrderProduct.TotalPrice + saleOrderProduct.TaxFee + saleOrderProduct.ServiceTaxFee
+		productTotalAmount = decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromInt(int64(num)))
 		returnOrderProducts = append(returnOrderProducts, &ReturnOrderProduct{
 			SaleOrderUuid:        model.Uuid,
 			SaleOrderProductUuid: saleOrderProduct.Uuid,

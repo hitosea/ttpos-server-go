@@ -80,10 +80,10 @@ type OrderProduct struct {
 	Uuid                uint64             `json:"uuid"`                  // 销售订单商品ID
 	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 产品名称
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 口味名称
-	Price               float64            `json:"price"`                 // 单价
+	Price               float64            `json:"price"`                 // 单价. 折前价
 	Num                 uint               `json:"num"`                   // 数量
-	SalePrice           float64            `json:"sale_price"`            // 销售价 (原价) (划线价格) 当 sale_price 不等于 total_price 时才显示
-	TotalPrice          float64            `json:"total_price"`           // 最终总价
+	SalePrice           float64            `json:"sale_price"`            // 销售价 (折前价) (划线价格) 当 sale_price 不等于 total_price 时才显示
+	TotalPrice          float64            `json:"total_price"`           // 最终总价(折后价)
 	RefundAmount        float64            `json:"refund_amount"`         // 退款金额
 	Status              uint               `json:"status"`                // 状态, 0-正常 1-退菜
 	Remark              string             `json:"remark"`                // 备注

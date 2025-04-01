@@ -281,6 +281,11 @@ func (model *SaleOrder) GetOriginAmount() float64 {
 	return decimal.NewFromFloat(model.Amount).Add(decimal.NewFromFloat(model.MemberDiscountFee)).Add(decimal.NewFromFloat(model.CustomDiscountFee)).Round(2).InexactFloat64()
 }
 
+// GetOriginAmount 获取订单没打折之前的订单应收金额。原订单应收金额=现应收金额+会员折扣金额+优惠折扣金额
+func (model *SaleOrder) GetOriginAmountValue() float64 {
+	return model.OriginAmount
+}
+
 // GetMemberDiscountAmount 获取订单的会员折扣后应收金额。 会员折扣后应收金额=原订单应收金额-会员折扣金额
 func (model *SaleOrder) GetMemberDiscountAmount() float64 {
 	//会员折扣后应收金额=现应收金额+会员折扣金额
