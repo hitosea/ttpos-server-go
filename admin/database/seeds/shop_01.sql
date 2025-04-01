@@ -1551,6 +1551,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `link_name` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '联系人',
     `link_phone` VARCHAR(25) NOT NULL DEFAULT '' COMMENT '联系电话',
     `sale_stock` INT(10) NOT NULL DEFAULT 0 COMMENT '进销存: 0不开启, 1开启',
+    `is_open_tax` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启税务对接: 0不开启, 1奥地利 2-其他',
     `is_open_member` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启会员: 0不开启, 1开启',
     `is_open_tablet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启平板: 0不开启, 1开启',
     `is_open_h5` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启扫码H5: 0不开启, 1开启',

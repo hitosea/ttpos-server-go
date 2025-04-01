@@ -47,6 +47,8 @@ class AppValidate extends  BaseValidate
         'is_accept_scan_order|是否开启扫码点餐接单' => 'require|in:0,1',
         // v1.1.0
         'is_open_local_print|是否开启本地打印服务' => 'require|in:0,1',
+        // v2.0.0
+        'is_open_tax|是否开启税务对接' => 'require|in:0,1,2,3,4,5,6,7,8,9,10',
     ];
 
     protected $message = [
@@ -94,6 +96,8 @@ class AppValidate extends  BaseValidate
             'is_accept_scan_order',
             // v1.1.0
             'is_open_local_print',
+            // v2.0.0
+            'is_open_tax',
         ],
         'edit' => [
             'app_id',
@@ -128,6 +132,8 @@ class AppValidate extends  BaseValidate
             'is_accept_scan_order',
             // v1.1.0
             'is_open_local_print',
+            // v2.0.0
+            'is_open_tax',
         ],
         'id' => [
             'app_id',

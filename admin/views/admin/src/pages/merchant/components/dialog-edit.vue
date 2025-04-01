@@ -74,6 +74,12 @@
             <el-radio :value="0">{{ $t('关闭') }}</el-radio>
           </el-radio-group>
         </el-form-item>
+        <el-form-item :label="$t('税务对接')" prop="is_open_tax">
+          <el-radio-group v-model="formData.is_open_tax">
+            <el-radio :value="1">{{ $t('开启') }}</el-radio>
+            <el-radio :value="0">{{ $t('关闭') }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item :label="$t('会员')" prop="is_open_member">
           <el-radio-group v-model="formData.is_open_member">
             <el-radio :value="1">{{ $t('开启') }}</el-radio>
@@ -291,6 +297,7 @@
     category_set: 10, // 商品分类设置10同步 主店20分店创建
     logo: '', // Logo
     sale_stock: 1, // 进销存: 0不开启, 1开启
+    is_open_tax: 0, // 税务对接: 0不开启, 1开启
     reserve: 1, // 预订: 0不开启, 1开启
     auth_day: 0, // 授权时间(天) 0为永不过期
     auth_start_time: '', // 授权开始时间
@@ -331,6 +338,7 @@
     category_set: [{ required: true, message: $t('请选择商品分类'), trigger: 'blur' }],
     logo: [{ required: true, message: $t('请输上传LOGO'), trigger: ['change', 'blur'] }],
     sale_stock: [{ required: true, message: $t('请选择进销存'), trigger: 'blur' }],
+    is_open_tax: [{ required: true, message: $t('请选择税务对接'), trigger: 'blur' }],
     reserve: [{ required: true, message: $t('请选择预订'), trigger: 'blur' }],
     auth_day: [{ required: true, message: $t('请输入授权时间'), trigger: 'blur' }],
     auth_start_time: [{ required: true, message: $t('请输入授权开始时间'), trigger: 'blur' }],
@@ -539,6 +547,7 @@
         category_set: props.detail?.category_set || 10,
         logo: props.detail?.logo || '',
         sale_stock: props.detail?.sale_stock || 0,
+        is_open_tax: props.detail?.is_open_tax || 0,
         reserve: props.detail?.reserve || 0,
         auth_day: props.detail?.auth_day || 0,
         auth_start_time: props.detail?.auth_start_time || dayjs().format('YYYY-MM-DD HH:mm:ss'),

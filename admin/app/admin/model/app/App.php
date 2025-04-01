@@ -59,6 +59,7 @@ class App extends AppModel
             //
             "su.link_phone",
             "su.sale_stock",
+            "su.is_open_tax",
             "su.cash_limit",
             "su.kitchen_limit",
             "su.tablet_limit",

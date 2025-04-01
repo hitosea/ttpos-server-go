@@ -1,0 +1,1 @@
+import{e as n,f as e}from"./index-B_EgWmjZ.js";function r(e){return n("/admin.role/index",e)}function i(e){return n("/admin.role/delete",{id:e})}function d(e){return n("/admin.role/add",e)}function a(){return e("/admin.role/add")}function t(e){return n("/admin.role/edit",e)}function o(n){return e(`/admin.role/edit?id=${n}`)}export{d as a,a as b,o as c,i as d,t as f,r as g};
