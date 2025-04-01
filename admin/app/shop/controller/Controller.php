@@ -130,7 +130,7 @@ class Controller extends BaseController
         if (!$user = UserModel::getUser($data['data'])) {
             throw new BaseException(['msg' => '没有找到用户信息', 'code' => StatusCode::USER_ERROR]);
         }
-        if ($user->delete_time == 1) {
+        if ($user->delete_time > 0) {
             throw new BaseException(['msg' => '账号被删除，请联系管理员', 'code' => StatusCode::USER_ERROR]);
         }
         if ($user->is_status == 1) {
