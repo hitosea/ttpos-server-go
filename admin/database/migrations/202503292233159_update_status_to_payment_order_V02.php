@@ -3,7 +3,7 @@
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class UpdateStatusToPaymentOrder extends Migrator
+class UpdateStatusToPaymentOrderV02 extends Migrator
 {
 
     /**
@@ -30,12 +30,9 @@ class UpdateStatusToPaymentOrder extends Migrator
     public function change()
     { 
         $table = $this->table('payment_order');
-        if ($table->hasColumn('status')) {
-            $table->changeColumn('status', 'integer', ['signed' => false, 'null' => false, 'default' => 0, 'comment' => '支付状态, 0-未支付 1-已支付 2-已退款 3-支付异常']);
-        }
         if (!$table->hasColumn('status_reason')) {
             $table->addColumn('status_reason', 'text', ['comment' => '支付状态原因', 'after' => 'status']);
+            $table->update();
         }
-        $table->update();
     }
 }
