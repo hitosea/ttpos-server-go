@@ -281,7 +281,7 @@ func HandleMemberBalance(db *gorm.DB) {
 	lock.NewSystemLock().LockUuid(constant.LockNameMemberBalance)
 	defer lock.NewSystemLock().UnlockUuid(constant.LockNameMemberBalance)
 
-	// 查询积分变动
+	// 查询余额变动
 	memberBalanceLogRepo := repository.NewMemberBalanceLogRepo(db)
 	memberBalanceLogs, err := memberBalanceLogRepo.GetMemberBalanceLogNotProcessed()
 	if err != nil {
@@ -319,7 +319,7 @@ func HandleMemberBalance(db *gorm.DB) {
 		logger.Logger.Info("HandleMemberBalance process, GetMembersByUuids failed", zap.Any("memberUuids", memberUuids), zap.Error(err))
 		return
 	}
-	// 更新会员积分
+	// 更新会员余额
 	logMemberInfoMap := make(map[string][]float64)
 	for _, member := range members {
 		beforeBalance := member.Balance
@@ -335,7 +335,7 @@ func HandleMemberBalance(db *gorm.DB) {
 		uuids = append(uuids, memberBalanceLog.Uuid)
 	}
 
-	// 更新会员积分,更新到数据库
+	// 更新会员余额,更新到数据库
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		for _, member := range members {
 			if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{

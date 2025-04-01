@@ -1414,6 +1414,17 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
 				return errors.WithMessage(err)
 			}
+			// 发布“会员积分变动”事件
+			go func() {
+				s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
+					BasePayload: event.BasePayload{
+						CompanyUuid:  ctx.GetCompanyUuid(),
+						Source:       ctx.GetSource(),
+						SaleBillUuid: req.SaleBillUuid,
+						OperatorUuid: int64(ctx.GetStaffUuid()),
+					},
+				})
+			}()
 		}
 
 		return nil
@@ -1895,6 +1906,18 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 			// 发布“会员余额变动”事件
 			go func() {
 				s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
+					BasePayload: event.BasePayload{
+						CompanyUuid:  ctx.GetCompanyUuid(),
+						Source:       ctx.GetSource(),
+						SaleBillUuid: req.SaleBillUuid,
+						OperatorUuid: int64(ctx.GetStaffUuid()),
+					},
+				})
+			}()
+
+			// 发布“会员积分变动”事件
+			go func() {
+				s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
 					BasePayload: event.BasePayload{
 						CompanyUuid:  ctx.GetCompanyUuid(),
 						Source:       ctx.GetSource(),
