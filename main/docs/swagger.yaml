@@ -4132,8 +4132,9 @@ definitions:
         description: 送厨商品数量
         type: integer
       product_attribute_names:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
         description: 商品属性
-        type: string
       remark:
         description: 备注
         type: string
