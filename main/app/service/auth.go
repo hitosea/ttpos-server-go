@@ -36,6 +36,7 @@ type IAuthSrv interface {
 	KitchenBase(ctx context.Context) (resp.KitchenBase, error)                                                             // 厨显端基本信息
 	Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, model.Desk, error) // 鉴权
 	AuthDesk(ctx context.Context, qrcodeToken string) (*model.Company, error)                                              // 鉴权桌台
+	AuthMenu(ctx context.Context, qrcodeToken string) (*model.Company, error)                                              // 鉴权点子菜单
 	BindCashier(ctx context.Context, cashierReq req.BindCashierReq) (string, error)                                        // 点餐助手绑定收银机
 	GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList                                                           // 获取在线收银机
 }
@@ -654,6 +655,27 @@ func (s *authSrv) AuthDesk(ctx context.Context, qrcodeToken string) (*model.Comp
 		return nil, errors.New("桌台已经删除")
 	}
 	if deskInfo.QrcodeToken != qrcodeToken {
+		return nil, errors.New("二维码已失效，请联系商家")
+	}
+	return company, nil
+}
+
+func (s *authSrv) AuthMenu(ctx context.Context, qrcodeToken string) (*model.Company, error) {
+	companyUuid := ctx.GetCompanyUuid()
+	db := s.dbm.GetDB(companyUuid)
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(companyUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if company.IsDelete() {
+		return nil, errors.New("商家已经删除")
+	}
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return nil, errors.ErrInternal
+	}
+ 
+	if businessSetting.QrCode != qrcodeToken {
 		return nil, errors.New("二维码已失效，请联系商家")
 	}
 	return company, nil
