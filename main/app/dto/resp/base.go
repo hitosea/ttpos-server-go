@@ -144,11 +144,13 @@ type UpdateInfo struct {
 
 type LoginResp struct {
 	Token               string `json:"token"`
-	CashierIsFirstLogin bool   `json:"cashier_is_first_login"`
+	RefreshToken        string `json:"refresh_token"` // 刷新token，用于重新获取token
+	CashierIsFirstLogin bool   `json:"-"`
 }
 
 type CashierLoginResp struct {
-	Token        string `json:"token"`          // token
+	Token        string `json:"token"`
+	RefreshToken string `json:"refresh_token"`  // 刷新token，用于重新获取token
 	IsFirstLogin bool   `json:"is_first_login"` // 是否首次登录
 }
 

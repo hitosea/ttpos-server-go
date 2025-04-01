@@ -27,7 +27,7 @@ type AuthHandler struct {
 // @Produce json
 // @Param X-SIGN header string true "验证码sign"
 // @param data body req.LoginReq true "登录参数"
-// @Success 200 {object} dto.Response
+// @Success 200 {object} dto.Response{data=resp.LoginResp}
 // @Router /kitchen/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -42,7 +42,26 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeLoginFailed, err)
 		return
 	}
-	helper.Success(c, gin.H{"token": loginResp.Token})
+	helper.Success(c, loginResp)
+}
+
+// RefreshToken 刷新token
+// @Summary 刷新token
+// @Description 刷新token
+// @Tags 厨显端.认证鉴权
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.LoginResp}
+// @Router /kitchen/refresh_token [get]
+func (h *AuthHandler) RefreshToken(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	loginResp, err := h.authSrv.RefreshToken(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeLoginFailed, err)
+		return
+	}
+	helper.Success(c, loginResp)
 }
 
 // Logout 退出登录
@@ -87,6 +106,7 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.POST("/logout", wrapper.Logout) // 退出登录
+		privateApi.GET("/refresh_token", wrapper.RefreshToken) // 刷新token
+		privateApi.POST("/logout", wrapper.Logout)             // 退出登录
 	}
 }

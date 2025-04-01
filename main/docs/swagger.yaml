@@ -2314,8 +2314,10 @@ definitions:
       is_first_login:
         description: 是否首次登录
         type: boolean
+      refresh_token:
+        description: 刷新token，用于重新获取token
+        type: string
       token:
-        description: token
         type: string
     type: object
   resp.CashierReportResp:
@@ -3059,6 +3061,14 @@ definitions:
     properties:
       name:
         description: 会员等级名称
+        type: string
+    type: object
+  resp.LoginResp:
+    properties:
+      refresh_token:
+        description: 刷新token，用于重新获取token
+        type: string
+      token:
         type: string
     type: object
   resp.MemberDiscountResp:
@@ -5620,7 +5630,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
       security:
       - JwtToken: []
       summary: 绑定收银机
@@ -7107,7 +7122,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
       summary: 登录
       tags:
       - 点餐助手端.认证鉴权
@@ -7408,6 +7428,28 @@ paths:
       summary: 获取产品列表
       tags:
       - 点餐助手端.产品
+  /assistant/refresh_token:
+    get:
+      consumes:
+      - application/json
+      description: 刷新token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 刷新token
+      tags:
+      - 点餐助手端.认证鉴权
   /assistant/return_reason:
     get:
       consumes:
@@ -11676,6 +11718,28 @@ paths:
       summary: 反结账充值订单
       tags:
       - 收银端.充值订单
+  /cashier/refresh_token:
+    get:
+      consumes:
+      - application/json
+      description: 刷新token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CashierLoginResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 刷新token
+      tags:
+      - 收银端.认证
   /cashier/report:
     get:
       consumes:
@@ -12796,7 +12860,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
       summary: 登录
       tags:
       - 厨显端.认证鉴权
@@ -12992,6 +13061,28 @@ paths:
       summary: 获取打印档口列表
       tags:
       - 厨显端.基础信息
+  /kitchen/refresh_token:
+    get:
+      consumes:
+      - application/json
+      description: 刷新token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 刷新token
+      tags:
+      - 厨显端.认证鉴权
   /kitchen/verify_advanced_password:
     post:
       consumes:
@@ -14148,7 +14239,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.Response'
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
       summary: 登录
       tags:
       - 平板端.认证鉴权
@@ -14218,6 +14314,28 @@ paths:
       summary: 获取产品列表
       tags:
       - 平板端.产品
+  /tablet/refresh_token:
+    get:
+      consumes:
+      - application/json
+      description: 刷新token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 刷新token
+      tags:
+      - 平板端.认证鉴权
   /tablet/setting:
     post:
       consumes:

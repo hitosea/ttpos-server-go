@@ -25,7 +25,7 @@ func Auth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
 		authHeader := c.GetHeader("Authorization")
 
 		if authHeader == "" {
-			helper.Fail(c, constant.CodeTokenInvalid, "token 为空")
+			helper.Fail(c, constant.CodeTokenInvalid, "token is required")
 			c.Abort()
 			return
 		}
@@ -81,7 +81,7 @@ func BusinessMenu(authSrv service.IAuthSrv, dbm *database.DBManager) gin.Handler
 			c.Abort()
 			return
 		}
- 
+
 		ParseMenuToken(c, token, authSrv, dbm)
 		c.Next()
 	}
@@ -91,7 +91,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 
 	parts := strings.SplitN(authHeader, " ", 2)
 	if !(len(parts) == 2 && parts[0] == "Bearer") {
-		helper.Fail(c, constant.CodeTokenInvalid, "token 格式错误")
+		helper.Fail(c, constant.CodeTokenInvalid, "登录失效，请重新登录")
 		c.Abort()
 		return
 	}
@@ -99,7 +99,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 	// 验证token
 	claims, err := auth.ParseToken(parts[1], config.JWT.Secret)
 	if err != nil {
-		helper.Fail(c, constant.CodeTokenInvalid, "无效的token")
+		helper.Fail(c, constant.CodeTokenInvalid, "登录失效，请重新登录")
 		c.Abort()
 		return
 	}
@@ -110,8 +110,18 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 		return
 	}
 
-	if !regexp.MustCompile(`^/api/v\d+/` + claims.Source).Match([]byte(c.Request.URL.Path)) {
+	urlPath := c.Request.URL.Path
+	if !regexp.MustCompile(`^/api/v\d+/` + claims.Source).Match([]byte(urlPath)) {
 		helper.Fail(c, constant.CodeAccessDenied, "用户信息错误")
+		c.Abort()
+		return
+	}
+	if strings.HasSuffix(urlPath, "/refresh_token") && !claims.IsRefreshToken {
+		helper.Fail(c, constant.CodeTokenInvalid, "无效的refresh_token")
+		c.Abort()
+		return
+	} else if !strings.HasSuffix(urlPath, "/refresh_token") && claims.IsRefreshToken {
+		helper.Fail(c, constant.CodeTokenInvalid, "无效的token")
 		c.Abort()
 		return
 	}

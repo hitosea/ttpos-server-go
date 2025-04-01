@@ -65,12 +65,14 @@ func logConf(opt copier.Option) {
 
 func jwtConf(opt copier.Option) {
 	JWT = JWTConf{
-		Secret: "your-secret-key-here",
-		Expire: 3600 * 24,
+		Secret:        "your-secret-key-here",
+		Expire:        3600 * 24,      // 默认24小时
+		RefreshExpire: 3600 * 24 * 30, // 默认30天
 	}
 	copier.CopyWithOption(&JWT, JWTConf{
-		Secret: viper.GetString("JWT_SECRET"),
-		Expire: viper.GetInt("JWT_EXPIRE"),
+		Secret:        viper.GetString("JWT_SECRET"),
+		Expire:        viper.GetInt("JWT_EXPIRE"),
+		RefreshExpire: viper.GetInt("JWT_REFRESH_EXPIRE"),
 	}, opt)
 }
 
