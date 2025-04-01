@@ -30,6 +30,8 @@ type IH5OrderRepo interface {
 	WhereUuid(uuid uint64) DBOption           // 扫码订单uuid条件
 	WhereUuidIn(uuids []uint64) DBOption      // 扫码订单uuid条件
 	WhereStatus(status []uint) DBOption       // 扫码订单状态条件
+	WhereUnNotified() DBOption                // 未处理的、 或已自动接单的h5订单
+	WhereCreateTimeGt(ts int64) DBOption      // 创建时间大于
 	WhereNotStatus(status []uint) DBOption    // 扫码订单非状态
 	WhereDeskRegionUuid(uuid uint64) DBOption // 扫码订单桌台区域id条件
 
@@ -81,7 +83,7 @@ func (r *H5OrderRepoImpl) PaginateGetH5Order(pageNo, pageSize int, opts ...DBOpt
 		return nil, 0, errors.WithMessage(err)
 	}
 	// 获取分页数据
-	err := db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&qrcodeOrders).Error
+	err := db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Debug().Find(&qrcodeOrders).Error
 	return qrcodeOrders, total, errors.WithMessage(err)
 }
 
@@ -367,6 +369,18 @@ func (r *H5OrderRepoImpl) CreateH5OrderProduct(h5OrderProduct model.H5OrderProdu
 func (r *H5OrderRepoImpl) WhereStatus(status []uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status in (?)", status)
+	}
+}
+
+func (r *H5OrderRepoImpl) WhereUnNotified() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status = ? OR (status = ? AND is_auto_accept = 1)", constant.H5OrderStatusOrder, constant.H5OrderStatusAccepted)
+	}
+}
+
+func (r *H5OrderRepoImpl) WhereCreateTimeGt(ts int64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("create_time > ?", ts)
 	}
 }
 

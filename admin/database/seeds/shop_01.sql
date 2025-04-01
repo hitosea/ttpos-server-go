@@ -348,6 +348,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_h5_order` (
     `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台uuid',
     `desk_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '桌台编号',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-未下单 1-未接单 2-已接单 3-已拒单',
+    `is_auto_accept` INT(10) NOT NULL DEFAULT 0 COMMENT '是否自动接单, 0-否 1-是',
     `is_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否是自助餐, 0-非自助餐 1-自助餐',
     -- start 记录信息，用于财务核算或门店营业管理
     `member_discount_rate` DECIMAL(12, 2) NOT NULL DEFAULT 1 COMMENT '会员折扣率(0-100%).接单和拒单后从sale_order_product表获取，不再改变',

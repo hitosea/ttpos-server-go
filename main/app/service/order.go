@@ -7519,6 +7519,11 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 	h5Order.ChangeToAccepted()
 	// 送厨已经接单的商品。送厨指定的商品列表
 
+	// 标记为是自动接单
+	if isAutoOrder {
+		h5Order.IsAutoAccept = 1
+	}
+
 	// 先发布“接单”操作事件
 	s.bus.PublishAcceptH5OrderEvent(event.AcceptH5OrderPayload{
 		BasePayload: event.BasePayload{

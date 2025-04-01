@@ -20,6 +20,7 @@ type IPrinterLogRepo interface {
 
 	WhereLimit(limit int) DBOption                   // 限制查询数量
 	WhereStatus(status uint8) DBOption               // 状态查询条件
+	WhereCreateTimeGt(ts int64) DBOption             // 创建时间大于
 	WhereType(typ uint8) DBOption                    // 类型查询条件
 	WhereFirstExecution(firstExecution int) DBOption // 是否首次执行
 	WhereUuid(uuid uint64) DBOption                  // uuid 查询条件
@@ -229,6 +230,12 @@ func (r *printerLogRepo) WithProductPrinter() DBOption {
 func (r *printerLogRepo) WhereStatus(status uint8) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", status)
+	}
+}
+
+func (r *printerLogRepo) WhereCreateTimeGt(ts int64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("create_time > ?", ts)
 	}
 }
 
