@@ -36,6 +36,8 @@ type IPrinterLogRepo interface {
 	GetPrinterData(deviceSn string, opts ...DBOption) ([]model.PrinterLog, error)
 	GetByUuids(uuids []uint64) ([]model.PrinterLog, error)
 
+	GetPrinter(opts ...DBOption) *model.Printer
+
 	//
 	Update(uuid uint64, vars map[string]any) error
 	UpdateByWhere(vars map[string]any, opts ...DBOption) error
@@ -162,6 +164,17 @@ func (r *printerLogRepo) GetPrinterData(deviceSn string, opts ...DBOption) ([]mo
 	}
 
 	return printerLogList, nil
+}
+
+// GetPrinter 获取打印机
+func (r *printerLogRepo) GetPrinter(opts ...DBOption) *model.Printer {
+	var printer model.Printer
+	db := r.db.Model(&model.Printer{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.First(&printer)
+	return &printer
 }
 
 // GetByUuids 根据UUID列表获取打印日志
