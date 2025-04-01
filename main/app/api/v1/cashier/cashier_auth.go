@@ -48,6 +48,29 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
+// RefreshToken 刷新token
+// @Summary 刷新token
+// @Description 刷新token
+// @Tags 收银端.认证
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.CashierLoginResp}
+// @Router /cashier/refresh_token [get]
+func (h *AuthHandler) RefreshToken(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	loginResp, err := h.authSrv.RefreshToken(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeLoginFailed, err)
+		return
+	}
+	helper.Success(c, resp.CashierLoginResp{
+		Token:        loginResp.Token,
+		RefreshToken: loginResp.RefreshToken,
+		IsFirstLogin: loginResp.CashierIsFirstLogin,
+	})
+}
+
 // Logout 退出登录
 // @Summary 退出登录
 // @Description 退出登录
@@ -90,6 +113,7 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.POST("/logout", wrapper.Logout) // 退出登录
+		privateApi.GET("/refresh_token", wrapper.RefreshToken) // 刷新token
+		privateApi.POST("/logout", wrapper.Logout)             // 退出登录
 	}
 }

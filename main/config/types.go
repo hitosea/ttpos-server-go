@@ -31,8 +31,9 @@ type RedisConf struct {
 }
 
 type JWTConf struct {
-	Secret string // 密钥
-	Expire int    // 有效期，单位秒
+	Secret        string // 密钥
+	Expire        int    // 有效期，单位秒
+	RefreshExpire int    // refresh token 有效期，单位秒
 }
 
 type CaptchaConf struct {

@@ -4,6 +4,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -27,7 +28,7 @@ type AuthHandler struct {
 // @Produce json
 // @Param X-SIGN header string true "验证码sign"
 // @param data body req.LoginReq true "登录参数"
-// @Success 200 {object} dto.Response
+// @Success 200 {object} dto.Response{data=resp.LoginResp}
 // @Router /assistant/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -42,7 +43,26 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeLoginFailed, err)
 		return
 	}
-	helper.Success(c, gin.H{"token": loginResp.Token})
+	helper.Success(c, loginResp)
+}
+
+// RefreshToken 刷新token
+// @Summary 刷新token
+// @Description 刷新token
+// @Tags 点餐助手端.认证鉴权
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.LoginResp}
+// @Router /assistant/refresh_token [get]
+func (h *AuthHandler) RefreshToken(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	loginResp, err := h.authSrv.RefreshToken(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeLoginFailed, err)
+		return
+	}
+	helper.Success(c, loginResp)
 }
 
 // Logout 退出登录
@@ -72,7 +92,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body req.BindCashierReq true "绑定收银机参数"
-// @Success 200 {object} dto.Response
+// @Success 200 {object} dto.Response{data=resp.LoginResp}
 // @Router /assistant/bind_cashier [post]
 func (h *AuthHandler) BindCashier(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -81,12 +101,15 @@ func (h *AuthHandler) BindCashier(c *gin.Context) {
 		helper.HandleValidationError(c, err, bindReq, nil)
 		return
 	}
-	token, err := h.authSrv.BindCashier(ctx, bindReq)
+	token, refreshToken, err := h.authSrv.BindCashier(ctx, bindReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{"token": token})
+	helper.Success(c, resp.LoginResp{
+		Token:        token,
+		RefreshToken: refreshToken,
+	})
 }
 
 func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -112,7 +135,8 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.POST("/bind_cashier", wrapper.BindCashier) // 绑定收银机
-		privateApi.POST("/logout", wrapper.Logout)            // 退出登录
+		privateApi.POST("/bind_cashier", wrapper.BindCashier)  // 绑定收银机
+		privateApi.GET("/refresh_token", wrapper.RefreshToken) // 刷新token
+		privateApi.POST("/logout", wrapper.Logout)             // 退出登录
 	}
 }

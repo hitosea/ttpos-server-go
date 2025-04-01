@@ -341,8 +341,6 @@ func (p *printerTemplate) GetLogoAddr() string {
 
 // GetQrcodeAddr 获取二维码地址
 func (p *printerTemplate) GetQrcodeAddr(qrcodeURL string) string {
-
-	fmt.Println("qrcodeURL:", qrcodeURL)
 	// 检查是否是URL
 	if !strings.HasPrefix(qrcodeURL, "http://") && !strings.HasPrefix(qrcodeURL, "https://") {
 		return qrcodeURL

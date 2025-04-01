@@ -37,8 +37,9 @@ type IAuthSrv interface {
 	Auth(ctx context.Context, auth req.Authenticate) (model.Company, model.CompanySetting, model.Staff, model.Desk, error) // 鉴权
 	AuthDesk(ctx context.Context, qrcodeToken string) (*model.Company, error)                                              // 鉴权桌台
 	AuthMenu(ctx context.Context, qrcodeToken string) (*model.Company, error)                                              // 鉴权点子菜单
-	BindCashier(ctx context.Context, cashierReq req.BindCashierReq) (string, error)                                        // 点餐助手绑定收银机
+	BindCashier(ctx context.Context, bindReq req.BindCashierReq) (string, string, error)                                   // 点餐助手绑定收银机
 	GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList                                                           // 获取在线收银机
+	RefreshToken(ctx context.Context) (resp.LoginResp, error)                                                              // 刷新token
 }
 
 func NewAuthSrv(
@@ -119,7 +120,7 @@ func NewAuthSrvImpl(
 // Login 登录
 func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginResp, error) {
 	var loginResp resp.LoginResp
-	var token string
+	var token, refreshToken string
 	// 验证验证码
 	if !s.captchaSrv.Verify(ctx.GetGin().GetHeader("X-SIGN"), loginReq.Code) {
 		return loginResp, errors.New("验证码错误")
@@ -246,14 +247,28 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		return loginResp, errors.WithMessage(err)
 	}
 
-	// 生成 JWT token
-	token, err = auth.GenerateToken(loginReq.Source, loginReq.DeviceId, staff.CompanyUuid, staff.Uuid, deviceUuid, config.JWT.Secret, config.JWT.Expire, auth.Assistant{})
+	claims := auth.Claims{
+		Source:      loginReq.Source,
+		CompanyUuid: staff.CompanyUuid,
+		StaffUuid:   staff.Uuid,
+		DeviceUuid:  deviceUuid,
+		DeviceId:    loginReq.DeviceId,
+		Assistant:   auth.Assistant{},
+	}
+	// 生成 JWT token，refresh_token
+	token, err = auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
 	if err != nil {
 		return loginResp, errors.New("生成token失败")
 	}
+	refreshToken, err = auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+	if err != nil {
+		return loginResp, errors.New("生成refresh_token失败")
+	}
 	fmt.Println("login token:", token)
+	fmt.Println("login refresh token:", refreshToken)
 	return resp.LoginResp{
 		Token:               token,
+		RefreshToken:        refreshToken,
 		CashierIsFirstLogin: isFirstLogin,
 	}, nil
 }
@@ -674,7 +689,7 @@ func (s *authSrv) AuthMenu(ctx context.Context, qrcodeToken string) (*model.Comp
 	if err != nil {
 		return nil, errors.ErrInternal
 	}
- 
+
 	if businessSetting.QrCode != qrcodeToken {
 		return nil, errors.New("二维码已失效，请联系商家")
 	}
@@ -703,46 +718,60 @@ func (s *authSrv) isTableOpen(ctx context.Context) bool {
 }
 
 // BindCashier 绑定收银机
-func (s *authSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (string, error) {
-	var newToken string
+func (s *authSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (string, string, error) {
+	var newToken, refreshToken string
 	companyUuid := helper.GetCompanyUuid(ctx.GetGin())
 	if helper.GetSource(ctx.GetGin()) != constant.SourceAssistant {
-		return newToken, errors.New("用户信息错误")
+		return newToken, refreshToken, errors.New("用户信息错误")
 	}
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
 	staff := staffRepo.GetStaff(staffRepo.WhereUuid(bindReq.CashierUuid), staffRepo.WhereDeviceId(bindReq.DeviceId), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	// 检查传递的收银设备
 	if staff.Uuid == 0 {
-		return newToken, errors.New("用户不存在")
+		return newToken, refreshToken, errors.New("用户不存在")
 	}
 	if staff.CashierOnline != 1 {
-		return newToken, errors.New("收银设备不在线")
+		return newToken, refreshToken, errors.New("收银设备不在线")
 	}
 	// 判断收银员状态
 	if staff.DeleteTime != 0 {
-		return newToken, errors.New("账号被删除，请联系管理员")
+		return newToken, refreshToken, errors.New("账号被删除，请联系管理员")
 	}
 	if staff.IsDisable == 1 {
-		return newToken, errors.New("账号被禁用，请联系管理员")
+		return newToken, refreshToken, errors.New("账号被禁用，请联系管理员")
 	}
 	if staff.Company == nil || staff.Company.Uuid == 0 || staff.Company.DeleteTime != 0 {
-		return newToken, errors.New("未找到绑定的商家，请确认登录信息")
+		return newToken, refreshToken, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 	// 是否已开启点餐助手功能
 	if staff.Company.CompanySetting == nil || staff.Company.CompanySetting.IsOpenAssistant != 1 {
-		return newToken, errors.New("当前尚未开启点餐助手功能，如有需要，请联系销售代表")
+		return newToken, refreshToken, errors.New("当前尚未开启点餐助手功能，如有需要，请联系销售代表")
+	}
+
+	claims := auth.Claims{
+		Source:      constant.SourceAssistant,
+		CompanyUuid: companyUuid,
+		StaffUuid:   bindReq.CashierUuid,
+		DeviceUuid:  ctx.GetDeviceUuid(),
+		DeviceId:    bindReq.DeviceId,
+		Assistant: auth.Assistant{
+			DeviceId:  ctx.GetGin().GetString(jwt.DeviceId),
+			StaffUuid: ctx.GetGin().GetUint64(jwt.StaffUuid),
+		},
 	}
 	// 生成新的 JWT token，将点餐助手设备ID和员工Uuid单独存放
-	newToken, err := auth.GenerateToken(constant.SourceAssistant, bindReq.DeviceId, companyUuid, bindReq.CashierUuid, ctx.GetDeviceUuid(), config.JWT.Secret, config.JWT.Expire, auth.Assistant{
-		DeviceId:  ctx.GetGin().GetString(jwt.DeviceId),
-		StaffUuid: ctx.GetGin().GetUint64(jwt.StaffUuid),
-	})
+	newToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
+	if err != nil {
+		return newToken, refreshToken, errors.New("生成token失败")
+	}
+	newRefreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+	if err != nil {
+		return newToken, refreshToken, errors.New("生成refresh_token失败")
+	}
 	// ToDo 记得删除
 	fmt.Println("bind cashier token:", newToken)
-	if err != nil {
-		return newToken, errors.New("生成token失败")
-	}
-	return newToken, nil
+	fmt.Println("bind cashier refresh_token:", newRefreshToken)
+	return newToken, newRefreshToken, nil
 }
 
 // GetOnlineCashiers 获取在线收银机
@@ -766,4 +795,40 @@ func (s *authSrv) GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList {
 	return resp.OnlineCashierList{
 		List: cashiers,
 	}
+}
+
+// RefreshToken 刷新token
+func (s *authSrv) RefreshToken(ctx context.Context) (resp.LoginResp, error) {
+	var (
+		newToken, newRefreshToken string
+		loginResp                 resp.LoginResp
+		err                       error
+	)
+	claims := auth.Claims{
+		Source:      ctx.GetSource(),
+		CompanyUuid: ctx.GetCompanyUuid(),
+		StaffUuid:   ctx.GetStaffUuid(),
+		DeviceUuid:  ctx.GetDeviceUuid(),
+		DeviceId:    ctx.GetDeviceSn(),
+		Assistant: auth.Assistant{
+			DeviceId:  ctx.GetGin().GetString(jwt.AssistantDeviceId),
+			StaffUuid: ctx.GetGin().GetUint64(jwt.AssistantStaffUuid),
+		},
+	}
+	// 生成 JWT new token，new refresh token
+	newToken, err = auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
+	if err != nil {
+		return loginResp, errors.New("生成token失败")
+	}
+	newRefreshToken, err = auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+	if err != nil {
+		return loginResp, errors.New("生成refresh_token失败")
+	}
+	fmt.Println("refresh new token:", newToken)
+	fmt.Println("refresh new refresh token:", newRefreshToken)
+	return resp.LoginResp{
+		Token:               newToken,
+		RefreshToken:        newRefreshToken,
+		CashierIsFirstLogin: false,
+	}, nil
 }

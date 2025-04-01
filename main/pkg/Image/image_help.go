@@ -2,6 +2,7 @@
 package image
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"image"
@@ -164,9 +165,13 @@ func (h *ImageHelp) simpleRemoveDomain(imageURL string) string {
 
 // downloadImage 从URL下载图像
 func (h *ImageHelp) DownloadImage(imageURL string) (image.Image, error) {
-	// 创建HTTP客户端，设置超时
+	// 创建HTTP客户端，设置超时和TLS配置
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout:   10 * time.Second,
+		Transport: tr,
 	}
 
 	// 发送GET请求
@@ -193,8 +198,12 @@ func (h *ImageHelp) DownloadImage(imageURL string) (image.Image, error) {
 // DownloadFile 从URL下载文件到本地
 func (h *ImageHelp) DownloadFile(url string, destPath string) error {
 	// 创建HTTP客户端，设置超时
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout:   10 * time.Second,
+		Transport: tr,
 	}
 
 	// 发送GET请求
