@@ -843,9 +843,9 @@ func (s *deskSrv) BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) (re
 	db := s.dbm.GetDB(companyUuid)
 	// 当前设备已经绑定桌台
 	deskRepo := repository.NewDeskRepo(db)
-	desk, _ := deskRepo.GetDesk(deskRepo.WhereUuid(deviceUuid), deskRepo.WhereIsDisable(constant.DeskEnable))
+	desk, _ := deskRepo.GetDesk(deskRepo.WhereDeviceUuid(deviceUuid), deskRepo.WhereIsDisable(constant.DeskEnable))
 	if desk.Uuid != 0 {
-		return resp.Desk{}, errors.WithMessage(errors.ErrInternal, "已绑定桌台")
+		return resp.Desk{}, errors.WithMessage(errors.New("已绑定桌台"))
 	}
 	// 桌台已被占用
 	desk, err = deskRepo.GetDesk(deskRepo.WhereUuid(bindDeskReq.DeskUuid), deskRepo.WhereIsDisable(constant.DeskEnable))
