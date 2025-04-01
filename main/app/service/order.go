@@ -6125,6 +6125,11 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 		return nil, errSaleBill
 	}
 
+	// 最大只能创建10个
+	if len(saleBill.SaleOrders) == 10 {
+		return nil, errors.New("销售账单最多只能创建10个销售订单")
+	}
+
 	// 如果销售账单目前只有一个销售订单，增加一个销售订单后要求撤销订单1的优惠折扣
 	// 这是产品的特殊要求，可能后续会改。
 	// 撤销订单的优惠折扣
