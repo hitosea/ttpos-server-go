@@ -239,7 +239,7 @@ class Card extends CardModel
         $data['name'] = $data['card_name'] ?? '';
         $data['open_point'] = $data['open_points'] ?? 0;
         $data['open_point_num'] = $data['open_point'] ? ($data['open_points_num'] ?? 0) : 0;
-        $data['open_money_num'] = $data['open_money'] ? ($data['open_money_num'] ?? 0) : 0;
+        $data['open_money_num'] = ($data['open_money'] ?? 0) ? ($data['open_money_num'] ?? 0) : 0;
         $data['describe'] = $data['content'] ?? '';
         $data['price'] = $data['money'] ?? 0;
         return $this->save($data);
