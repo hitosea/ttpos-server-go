@@ -846,21 +846,17 @@ func (h *InstantHandler) OrderPaymentZeroRule(c *gin.Context) {
 // @Router /cashier/instant/order/sale_order/create [post]
 func (h *InstantHandler) OrderSaleOrderCreate(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	ctx.Log().Debug("收到点餐页面创建一个销售订单接口请求")
-
 	params := req.InstantOrderSaleOrderCreateReq{}
 	if err := c.ShouldBindJSON(&params); err != nil {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
-	ctx.Log().Info("创建一个销售订单", zap.Any("params", params))
 	// 创建一个销售订单
 	res, err := h.orderSrv.InstantOrderSaleOrderCreate(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	ctx.Log().Debug("创建一个销售订单成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }

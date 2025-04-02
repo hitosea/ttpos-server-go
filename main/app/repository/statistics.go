@@ -22,6 +22,7 @@ type IStatisticsRepo interface {
 	CountArea(opts ...DBOption) []model.StatisticsAreaData                                            // 统计区域
 	Count7Days(opts ...DBOption) []model.Statistics7DaysData                                          // 统计销售天数
 	CountMemberNum(opts ...DBOption) int64                                                            // 统计会员数量
+	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                // 统计未结订单
 	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData        // 统计商品排行
 	SaveSale(sales []model.StatisticsSale) error                                                      // 保存销售
 	SavePayment(payments []model.StatisticsPayment) error                                             // 保存支付
@@ -494,4 +495,21 @@ func (r *StatisticsRepo) SaveProduct(products []model.StatisticsProduct) error {
 // DeleteProduct 删除商品
 func (r *StatisticsRepo) DeleteProduct(saleBillUuid uint64) error {
 	return r.db.Where("sale_bill_uuid = ?", saleBillUuid).Delete(&model.StatisticsProduct{}).Error
+}
+
+// CountUnpaidOrder 统计未结订单
+func (r *StatisticsRepo) CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData {
+	var result model.StatisticsUnpaidOrderData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	db.Model(&model.SaleBill{}).
+		Select("COUNT(uuid) AS total_order_num", "SUM(amount) AS total_amount").
+		Where("status = ?", constant.SaleBillStatusPending).
+		Where("production_time > 0").
+		Find(&result)
+
+	return result
 }

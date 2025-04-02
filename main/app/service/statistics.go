@@ -14,16 +14,17 @@ import (
 
 // IStatisticsSrv 统计服务接口
 type IStatisticsSrv interface {
-	CountSale(ctx context.Context, req CountReq) CountSaleResp            // 统计销售
-	CountPayment(ctx context.Context, req CountReq) CountPaymentResp      // 统计支付
-	CountTax(ctx context.Context, req CountReq) []CountTaxResp            // 统计税类
-	CountCategory(ctx context.Context, req CountReq) CountCategoryResp    // 统计分类
-	CountProduct(ctx context.Context, req CountReq) []CountProductResp    // 统计商品
-	CountArea(ctx context.Context, req CountReq) []CountAreaResp          // 统计区域
-	Count7Days(ctx context.Context, req CountReq) Count7DaysResp          // 统计销售天数
-	CountMemberNum(ctx context.Context, req CountReq) int64               // 统计会员数量
-	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp // 统计商品排行
-	SaveSale(ctx context.Context, req SaveSaleReq) error                  // 保存销售
+	CountSale(ctx context.Context, req CountReq) CountSaleResp               // 统计销售
+	CountPayment(ctx context.Context, req CountReq) CountPaymentResp         // 统计支付
+	CountTax(ctx context.Context, req CountReq) []CountTaxResp               // 统计税类
+	CountCategory(ctx context.Context, req CountReq) CountCategoryResp       // 统计分类
+	CountProduct(ctx context.Context, req CountReq) []CountProductResp       // 统计商品
+	CountArea(ctx context.Context, req CountReq) []CountAreaResp             // 统计区域
+	Count7Days(ctx context.Context, req CountReq) Count7DaysResp             // 统计销售天数
+	CountMemberNum(ctx context.Context, req CountReq) int64                  // 统计会员数量
+	CountUnpaidOrder(ctx context.Context, req CountReq) CountUnpaidOrderResp // 统计未结订单
+	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp    // 统计商品排行
+	SaveSale(ctx context.Context, req SaveSaleReq) error                     // 保存销售
 }
 
 // statisticsSrv 统计服务实现
@@ -335,8 +336,26 @@ func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7Days
 
 // CountMemberNum 统计会员数量
 func (s *statisticsSrv) CountMemberNum(ctx context.Context, req CountReq) int64 {
+	req.IsCreateTime = true
 	opts := s.buildCountOpts(req)
 	return repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNum(opts...)
+}
+
+type CountUnpaidOrderResp struct {
+	TotalOrderNum int64   `json:"total_order_num"` // 总订单数
+	TotalAmount   float64 `json:"total_amount"`    // 总金额
+}
+
+// CountUnpaidOrder 统计未结订单
+func (s *statisticsSrv) CountUnpaidOrder(ctx context.Context, req CountReq) CountUnpaidOrderResp {
+	req.IsCreateTime = true
+	opts := s.buildCountOpts(req)
+	unpaidOrderData := repository.NewStatisticsRepo(ctx.GetDB()).CountUnpaidOrder(opts...)
+
+	return CountUnpaidOrderResp{
+		TotalOrderNum: unpaidOrderData.TotalOrderNum.Int64,
+		TotalAmount:   unpaidOrderData.TotalAmount.Float64,
+	}
 }
 
 // CountProductRankResp 统计商品排行响应
@@ -553,6 +572,7 @@ type CountReq struct {
 	CategoryType   int    `json:"category_type"`    // 分类类型 (1 按一级分类, 2 按二级分类)
 	DutyNo         string `json:"duty_no"`          // 班次编号
 	RankType       int    `json:"rank_type"`        // 排行类型 (1 按销售数量, 2 按销售金额)
+	IsCreateTime   bool   `json:"is_create_time"`   // 是否是创建时间
 }
 
 // buildCountOpts 构建统计选项
@@ -593,7 +613,11 @@ func (s *statisticsSrv) buildCountOpts(req CountReq) []repository.DBOption {
 		queryEndTime = req.QueryEndTime
 	}
 	if queryStartTime > 0 && queryEndTime > 0 {
-		opts = append(opts, commonRepo.WhereBetweenByCompleteTime(queryStartTime, queryEndTime))
+		if req.IsCreateTime {
+			opts = append(opts, commonRepo.WhereBetweenByCreateTime(queryStartTime, queryEndTime))
+		} else {
+			opts = append(opts, commonRepo.WhereBetweenByCompleteTime(queryStartTime, queryEndTime))
+		}
 	}
 	if req.DutyNo != "" {
 		opts = append(opts, commonRepo.WhereByShiftNo(req.DutyNo))

@@ -84,6 +84,7 @@ class Passport extends Controller
             $setting = SettingModel::getSupplierItem(SettingEnum::STORE, $companyUuid, $companyUuid);
             //
             return $this->renderSuccess('登录成功', [
+                'app_id' => $companyUuid,
                 'user_name' => $userInfo['username'],
                 'token' => $userInfo['token'],
                 'shop_name' => $setting['name'],

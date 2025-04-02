@@ -650,6 +650,9 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 					payTypeNames = append(payTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
 				} else {
 					for _, payment := range order.PaymentOrders {
+						if payment.IsDelete() {
+							continue
+						}
 						totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
 						payTypeNames = append(payTypeNames, payment.PaymentMethodName)
 					}
@@ -706,6 +709,9 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 					totalPayTypeNames = append(totalPayTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
 				} else {
 					for _, payment := range order.PaymentOrders {
+						if payment.IsDelete() {
+							continue
+						}
 						totalPayTypeNames = append(totalPayTypeNames, payment.PaymentMethodName)
 					}
 				}
@@ -6155,6 +6161,11 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
 	if errSaleBill != nil {
 		return nil, errSaleBill
+	}
+
+	// 最大只能创建10个
+	if len(saleBill.SaleOrders) == 10 {
+		return nil, errors.New("销售账单最多只能创建10个销售订单")
 	}
 
 	// 如果销售账单目前只有一个销售订单，增加一个销售订单后要求撤销订单1的优惠折扣

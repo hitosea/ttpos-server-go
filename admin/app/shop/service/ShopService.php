@@ -113,8 +113,8 @@ class ShopService
                 ],
                 // 新增用户数
                 'new_user_total' => [
-                    'tday' => $businessData['member_data']['user_count'],
-                    'ytd' => $businessData['member_data']['user_count']
+                    'tday' => $todayBusinessData['member_data']['user_count'],
+                    'ytd' => $ytdBusinessData['member_data']['user_count']
                 ],
                 // 新供应商数
                 'new_supplier_total' => [
