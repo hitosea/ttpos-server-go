@@ -1417,7 +1417,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	}
 
 	// 是否存在QrPromptPay支付
-	if returnOrder.IsExistLianLianPay() {
+	if returnOrder.IsExistQrPromptPay() {
 		if refundReq.BankCode == "" || refundReq.AccountNo == "" || refundReq.AccountName == "" {
 			return errors.NewWithCode(constant.CodeReturnOrderBank, "请选择银行")
 		}
