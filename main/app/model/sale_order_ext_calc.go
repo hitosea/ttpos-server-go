@@ -220,9 +220,6 @@ func (model *SaleOrder) calcOrderOriginServiceFee(serviceFeeRate float64, servic
 		}
 		return originServiceFee.InexactFloat64()
 	}
-
-	// 默认，不是按比例收取服务费
-	return serviceFeeValue
 }
 
 // 计算销售订单的原商品服务费税费。销售订单的原商品服务费税费 = 销售订单的各个商品的原服务费税费之和
@@ -285,6 +282,9 @@ func (model *SaleOrder) calcFinallyAmount() (float64, bool) {
 func (model *SaleOrder) calcSumOrderProductSalePrice(products []*SaleOrderProduct) float64 {
 	sumSalePrice := decimal.NewFromFloat(0)
 	for _, orderProduct := range products {
+		if orderProduct.IsGiftProduct() {
+			continue
+		}
 		// SalePrice * Num
 		saleProductSalePrice := decimal.NewFromFloat(orderProduct.SalePrice).Mul(decimal.NewFromUint64(uint64(orderProduct.Num)))
 		sumSalePrice = sumSalePrice.Add(saleProductSalePrice)
@@ -749,7 +749,7 @@ func (model *SaleOrder) CalcGiftAmount(products []*SaleOrderProduct) float64 {
 	for _, saleOrderProduct := range products {
 		if saleOrderProduct.IsGiftProduct() {
 			// 商品的最终金额
-			giftFee := saleOrderProduct.GetPrice()
+			giftFee := saleOrderProduct.GetSalePrice()
 			// 累计各个赠品的最终金额
 			amount = decimal.NewFromFloat(amount).Add(decimal.NewFromFloat(giftFee)).InexactFloat64()
 		}
