@@ -3,6 +3,7 @@ package template
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -308,6 +309,20 @@ func (p *printerTemplate) GetLogoAddr() string {
 	}
 
 	logoURL := p.StoreSetting.LogoURL
+
+	// 处理storage.googleapis.com的URL
+	if strings.Contains(logoURL, "storage_googleapis") {
+		// 解析URL以获取域名和路径
+		parsedURL, err := url.Parse(logoURL)
+		if err == nil {
+			// 替换为新的域名
+			parsedURL.Host = "storage.googleapis.com"
+			// 修复路径中的双斜杠问题
+			parsedURL.Path = strings.Replace(parsedURL.Path, "//storage_googleapis", "", 1)
+			parsedURL.Path = strings.Replace(parsedURL.Path, "/storage_googleapis", "", 1)
+			logoURL = parsedURL.String()
+		}
+	}
 
 	// 从 URL 中提取文件名
 	urlParts := strings.Split(logoURL, "/")
