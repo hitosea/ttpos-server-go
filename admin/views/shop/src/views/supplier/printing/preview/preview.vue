@@ -2641,6 +2641,5 @@
     width: 80px;
     height: 80px;
     margin: 12px auto 12px;
-    border-radius: 50%;
   }
 </style>
