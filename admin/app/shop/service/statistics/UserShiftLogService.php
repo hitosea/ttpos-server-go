@@ -39,9 +39,7 @@ class UserShiftLogService
         //填充数据
         $index = 0;
         foreach ($list as $item) {
-            $incomes = $item['incomes'] ?? [];
-            $exist = array_search(40, array_column($incomes, 'pay_type'));
-            $cash_money = $exist !== false ? $incomes[$exist]['price'] : 0;
+            $cash_money = $item['cash_income'];
             $sheet->setCellValue('A' . ($index + 2), "\t" . $item['shift_no'] . "\t");
             $sheet->setCellValue('B' . ($index + 2), $item['user']['real_name'] ?? '');
             $sheet->setCellValue('C' . ($index + 2), $item['shift_start_time'] . __('至') . $item['shift_end_time']);

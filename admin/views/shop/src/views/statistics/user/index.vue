@@ -183,14 +183,7 @@
         self.loading = true;
         StatisticsApi.getUserShiftLog(params, true)
           .then((res) => {
-            self.tableData = [];
-            Object.assign(
-              self.tableData,
-              res.data.list.data.map((h) => {
-                h.cash_income = h.incomes.find((v) => v.pay_type == 40)?.price || '0.00';
-                return h;
-              })
-            );
+            self.tableData = res.data.list.data;
             Object.assign(self.exStyle, res.data.cashierList.data);
             self.totalDataNumber = res.data.list.total;
             self.loading = false;
