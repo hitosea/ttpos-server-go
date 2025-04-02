@@ -6,9 +6,6 @@ use help\HttpHelp;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\common\model\shop\BindRecord;
-use app\common\enum\settings\SettingEnum;
-use app\shop\model\settings\Printer as PrinterModel;
-use app\shop\model\settings\Setting as SettingModel;
 
 /**
  * 加密设置

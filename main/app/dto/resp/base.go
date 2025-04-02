@@ -20,6 +20,8 @@ type CashierBase struct {
 	Business   setting.Business    `json:"business"` // 门店业务设置
 	Cashier    setting.CashierResp `json:"cashier"`  // 收银机设置
 	Printer    setting.Printer     `json:"printer"`  // 打印机设置
+
+	UpdateTime int64 `json:"update_time"` // 更新时间
 }
 
 type AssistantStaff struct {

@@ -349,6 +349,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 		},
 		CloudBasic: cloudBasicSetting,
 		Printer:    printerSetting,
+		UpdateTime: time.Now().Unix(),
 	}, nil
 }
 

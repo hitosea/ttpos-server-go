@@ -65,7 +65,7 @@
           <el-table-column prop="" :label="$t('会员等级')">
             <template #default="scope">
               <span v-if="scope.row.grade_id == 0">{{ $t('无等级') }}</span>
-              <span v-else>{{ scope.row.grade.name }}</span>
+              <span v-else>{{ scope.row.grade?.name }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="balance" :label="$t('主账户余额')">
@@ -126,7 +126,7 @@
   import UserApi from '@/api/user.js';
   import deduction from './dialog/deduction.vue';
   import Recharge from './dialog/Recharge.vue';
-  import AddEdit from './dialog/AddEdit.vue';
+  import AddEdit from './dialog/addEdit.vue';
   export default {
     components: {
       /*编辑组件*/
