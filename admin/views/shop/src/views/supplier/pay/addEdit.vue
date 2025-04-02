@@ -7,7 +7,7 @@
           <el-radio :label="2">{{ $t('快捷添加') }}</el-radio>
         </el-radio-group>
       </el-form-item>
-      <el-form-item for="no_click" :label="$t('请选择')" v-if="form.add_method == 2" prop="add_pay_type" :rules="[{ required: true, message: $t('请选择') }]">
+      <el-form-item for="no_click" class="h-auto" v-if="form.add_method == 2" prop="add_pay_type" :rules="[{ required: true, message: $t('请选择') }]">
         <el-select v-model="form.add_pay_type" multiple @change="handleChange">
           <template v-for="(item, index) in payList" :key="index">
             <el-option :value="item.value" :label="item.name">{{ item.name }}</el-option>
@@ -581,5 +581,10 @@
   .must {
     color: var(--el-color-danger);
     margin-right: 4px;
+  }
+  :deep(.el-select--small .el-select__wrapper) {
+    min-height: 32px !important;
+    height: auto;
+    padding: 4px 8px !important;
   }
 </style>
