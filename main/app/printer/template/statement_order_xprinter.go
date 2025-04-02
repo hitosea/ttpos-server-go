@@ -410,7 +410,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	}
 
 	// 税费 - 商品未含税
-	if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 2 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 3) {
+	if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 1 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 3) {
 		for _, percentage := range saleOrder.GetPercentageList() {
 			taxRate := percentage["TaxRate"]
 			taxFee, _ := strconv.ParseFloat(percentage["TaxFee"], 64)
@@ -515,7 +515,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	printer.AppendText("\x1D\x21\x00\x00")
 
 	// 税费 - 商品已含税
-	if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 1 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 2) {
+	if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 2 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 2) {
 		printer.LineFeed()
 		printer.AppendText("------------------------------------------------\n")
 		printer.SetLineSpacing(20)

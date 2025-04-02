@@ -13,6 +13,7 @@ type IMemberRechargeOrderRepo interface {
 	WithStaff() DBOption                                                                                             // 预加载收银员
 	WithPaymentOrders() DBOption                                                                                     // 预加载支付订单
 	WithPaymentOrderPaymentMethod() DBOption                                                                         // 预加载支付订单.支付方式
+	WithPaymentOrderReturnOrderAmount() DBOption                                                                     // 预加载支付订单.退款金额
 	WithRechargeOrderOperationLogs() DBOption                                                                        // 预加载操作日志
 	WithReturnOrders() DBOption                                                                                      // 关联退货单
 	WithReturnOrderAmount() DBOption                                                                                 // 关联退货单.退款金额
@@ -27,6 +28,7 @@ type IMemberRechargeOrderRepo interface {
 	Create(rechargeOrder model.MemberRechargeOrder) (model.MemberRechargeOrder, error)                               // 创建充值订单
 	Update(uuid uint64, vars map[string]any) error                                                                   // 更新充值订单
 	GetRechargeOrderByUuid(uuid uint64) (model.MemberRechargeOrder, error)                                           // 通过Uuid获取充值订单
+	GetRechargeOrderAllInfo(uuid uint64) model.MemberRechargeOrder                                                   // 获取充值订单所有信息
 }
 
 func NewMemberRechargeOrderRepo(db *gorm.DB) IMemberRechargeOrderRepo {
@@ -188,6 +190,13 @@ func (r *memberRechargeOrderRepo) WithPaymentOrderPaymentMethod() DBOption {
 	}
 }
 
+// WithPaymentOrderReturnOrderAmount 预加载支付订单.退款金额
+func (r *memberRechargeOrderRepo) WithPaymentOrderReturnOrderAmount() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("PaymentOrders.ReturnOrderAmounts")
+	}
+}
+
 // WithRechargeOrderOperationLogs 预加载操作日志
 func (r *memberRechargeOrderRepo) WithRechargeOrderOperationLogs() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -231,4 +240,18 @@ func (r *memberRechargeOrderRepo) GetRechargeOrderByUuid(uuid uint64) (model.Mem
 	var rechargeOrder model.MemberRechargeOrder
 	err := r.db.Model(&model.MemberRechargeOrder{}).Where("uuid = ?", uuid).First(&rechargeOrder).Error
 	return rechargeOrder, errors.WithMessage(err)
+}
+
+// GetRechargeOrderAllInfo 获取充值订单所有信息
+func (r *memberRechargeOrderRepo) GetRechargeOrderAllInfo(uuid uint64) model.MemberRechargeOrder {
+	rechargeOrder := r.GetRechargeOrder(
+		r.WithPaymentOrders(),
+		r.WithPaymentOrderPaymentMethod(),
+		r.WithPaymentOrderReturnOrderAmount(),
+		r.WithReturnOrders(),
+		r.WithReturnOrderAmount(),
+		r.WhereUuid(uuid),
+	)
+
+	return rechargeOrder
 }

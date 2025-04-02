@@ -18,6 +18,7 @@ type Desk struct {
 	SaleBillUuid  uint64  `json:"sale_bill_uuid"`  // 销售账单UUID
 	SaleOrderUuid uint64  `json:"sale_order_uuid"` // 第一个销售订单UUID
 	IsSplitOrder  bool    `json:"is_split_order"`  // 是否拆单
+	UpdateTime    int64   `json:"update_time"`     // 更新时间
 }
 
 type DeskNo struct {
@@ -85,6 +86,7 @@ type DeskPing struct {
 	Buffet              BuffetInfo             `json:"buffet"`                // 自助餐信息
 	MustPlans           ProductMustPlanList    `json:"must_plans"`            // 必点方案列表
 	SaleOrderList       []SaleOrder            `json:"sale_order_list"`       // 销售订单列表
+	UpdateTime          int64                  `json:"update_time"`           // 更新时间
 }
 
 type H5DeskPing struct {
@@ -94,6 +96,7 @@ type H5DeskPing struct {
 	Buffet        BuffetInfo          `json:"buffet"`         // 自助餐信息
 	MustPlans     ProductMustPlanList `json:"must_plans"`     // 必点方案列表
 	MustProducts  BuffetProductList   `json:"must_products"`  // 必点商品列表
+	UpdateTime    int64               `json:"update_time"`    // 更新时间
 }
 
 type UnsentKitchenInfo struct {

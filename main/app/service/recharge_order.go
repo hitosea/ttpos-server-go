@@ -580,6 +580,15 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 			},
 		})
 	}()
+	// 发布“统计”事件
+	go func() {
+		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{
+			BasePayload: event.BasePayload{
+				Ctx: ctx,
+			},
+			MemberRechargeOrderUuid: order.Uuid,
+		})
+	}()
 
 	return s.confirmRechargeOrderResp(companyUuid, order.Uuid), nil
 }
@@ -1226,6 +1235,16 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		go s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), order.MemberUuid)
 	}
 
+	// 发布“统计”事件
+	go func() {
+		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{
+			BasePayload: event.BasePayload{
+				Ctx: ctx,
+			},
+			MemberRechargeOrderUuid: order.Uuid,
+			OnlyDelete:              true,
+		})
+	}()
 	return nil
 }
 
@@ -1417,7 +1436,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	}
 
 	// 是否存在QrPromptPay支付
-	if returnOrder.IsExistLianLianPay() {
+	if returnOrder.IsExistQrPromptPay() {
 		if refundReq.BankCode == "" || refundReq.AccountNo == "" || refundReq.AccountName == "" {
 			return errors.NewWithCode(constant.CodeReturnOrderBank, "请选择银行")
 		}
@@ -1553,6 +1572,15 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+	// 发布“统计”事件
+	go func() {
+		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{
+			BasePayload: event.BasePayload{
+				Ctx: ctx,
+			},
+			MemberRechargeOrderUuid: order.Uuid,
+		})
+	}()
 	return nil
 }
 

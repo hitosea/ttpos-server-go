@@ -204,30 +204,44 @@
           );
         });
 
+        // Create newData with the same order as _originalData
         const newData = [];
-        for (const newItem of val) {
-          const hasGroup = newData.find((item) => item.parent_id === newItem.parent_id);
-          if (typeof hasGroup !== 'undefined') {
-            hasGroup.attribute_value.push(newItem.attribute_name);
-            hasGroup.default_select.push(0);
-            hasGroup.attribute_ids.push(newItem.attribute_id);
-            newData.splice(
-              newData.findIndex((item) => item.parent_id === newItem.parent_id),
-              1,
-              hasGroup
-            );
-          } else {
-            newData.push({
-              parent_id: newItem.parent_id,
-              parent_name: newItem.parent_attribute_name,
-              attribute_name: newItem.parent_attribute_name,
-              attribute_value: [newItem.attribute_name],
-              default_select: [0],
-              attribute_ids: [newItem.attribute_id],
+        // First, process existing parent_ids in their original order
+        for (const originalItem of _originalData) {
+          const parentId = originalItem.parent_id;
+          if (_newParentIds.includes(parentId)) {
+            const itemsWithParentId = val.filter((item) => item.parent_id === parentId);
+            const newItem = {
+              parent_id: parentId,
+              parent_name: itemsWithParentId[0].parent_attribute_name,
+              attribute_name: itemsWithParentId[0].parent_attribute_name,
+              attribute_value: itemsWithParentId.map((item) => item.attribute_name),
+              default_select: itemsWithParentId.map(() => 0),
+              attribute_ids: itemsWithParentId.map((item) => item.attribute_id),
               attribute_max_select: 0,
               attribute_open_max_select: 0,
               attribute_required: 0,
-            });
+            };
+            newData.push(newItem);
+          }
+        }
+
+        // 然后添加原数据中没有的parent_id
+        for (const parentId of _newParentIds) {
+          if (!newData.some((item) => item.parent_id === parentId)) {
+            const itemsWithParentId = val.filter((item) => item.parent_id === parentId);
+            const newItem = {
+              parent_id: parentId,
+              parent_name: itemsWithParentId[0].parent_attribute_name,
+              attribute_name: itemsWithParentId[0].parent_attribute_name,
+              attribute_value: itemsWithParentId.map((item) => item.attribute_name),
+              default_select: itemsWithParentId.map(() => 0),
+              attribute_ids: itemsWithParentId.map((item) => item.attribute_id),
+              attribute_max_select: 0,
+              attribute_open_max_select: 0,
+              attribute_required: 0,
+            };
+            newData.push(newItem);
           }
         }
 

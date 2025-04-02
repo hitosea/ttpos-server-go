@@ -101,7 +101,7 @@ func (model *SaleOrderBuffetCustomerType) calcServiceTaxFee(price float64, servi
 	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax {
 		// 服务费税费=订单商品服务费*商品消费税税率
 		serviceTaxFee := decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType)).Mul(decimal.NewFromFloat(model.TaxRate))
-		return serviceTaxFee.InexactFloat64()
+		return serviceTaxFee.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 当服务费不收费税费时
 	return 0

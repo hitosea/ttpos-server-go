@@ -137,11 +137,13 @@ func (model *PrinterLog) AfterCreate(tx *gorm.DB) (err error) {
 func (model *H5Order) AfterCreate(tx *gorm.DB) (err error) {
 	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
 		data := map[string]interface{}{
-			"h5_order_uuid": model.Uuid,
-			"desk_uuid":     model.DeskUuid,
-			"update_time":   model.BaseModel.UpdateTime,
+			"customer_call_uuid": model.Uuid,
+			"h5_order_uuid":      model.Uuid,
+			"desk_uuid":          model.DeskUuid,
+			"update_time":        model.BaseModel.UpdateTime,
 		}
 		go websocket.PushClient(companyUuid, websocket.SourceCashier, "*", websocket.H5_ORDER, data)
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, "*", websocket.CUSTOMER_CALL, data)
 	}
 	return nil
 }

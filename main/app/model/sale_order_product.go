@@ -106,6 +106,11 @@ type SaleOrderProduct struct {
 	priceNoneTax float64 `gorm:"-"` // 商品未含税价格(折后价)
 }
 
+// 获取销售订单商品的总税费。包含服务费税费
+func (model *SaleOrderProduct) GetTotalTaxFee() float64 {
+	return model.GetTaxFee() + model.GetServiceTaxFee()
+}
+
 // 获取销售订单商品的税费。税费=销售订单商品的税费*销售订单商品的数量
 func (model *SaleOrderProduct) GetTaxFee() float64 {
 	return decimal.NewFromFloat(model.TaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()

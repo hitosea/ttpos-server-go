@@ -111,12 +111,20 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 				}
 				return *AbnormalData
 			}(),
-			MemberData: business_data_resp.MemberData{
-				RechargeAmount: 120,
-				GiftMoney:      120,
-				GiftPoints:     120,
-				UserCount:      int(memberNum),
-			},
+			MemberData: func() business_data_resp.MemberData {
+				memberData := s.statisticsSrv.CountMember(ctx, CountReq{
+					TimeType:       printerReq.TimeType,
+					QueryStartTime: int64(printerReq.QueryStartTime),
+					QueryEndTime:   int64(printerReq.QueryEndTime),
+					CategoryType:   printerReq.CategoryType,
+				})
+				return business_data_resp.MemberData{
+					RechargeAmount: memberData.TotalRechargeAmount,
+					GiftMoney:      memberData.TotalGiveAmount,
+					GiftPoints:     int(memberData.TotalGivePoint),
+					UserCount:      int(memberNum),
+				}
+			}(),
 			PeakHourList: func() []business_data_resp.PeakHour {
 				peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
 					uint(printerReq.QueryStartTime),
@@ -255,7 +263,6 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		CategoryType:   req.CategoryType,
 		DutyNo:         req.DutyNo,
 	})
-
 	// 营业数据
 	var businessData = business_data_resp.BusinessDataAll{
 		TotalSales:              saleData.TotalSaleAmount,
@@ -300,12 +307,20 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 			}
 			return *AbnormalData
 		}(),
-		MemberData: business_data_resp.MemberData{
-			RechargeAmount: 120,
-			GiftMoney:      120,
-			GiftPoints:     120,
-			UserCount:      int(memberNum),
-		},
+		MemberData: func() business_data_resp.MemberData {
+			memberData := s.statisticsSrv.CountMember(ctx, CountReq{
+				TimeType:       req.TimeType,
+				QueryStartTime: int64(req.QueryStartTime),
+				QueryEndTime:   int64(req.QueryEndTime),
+				CategoryType:   req.CategoryType,
+			})
+			return business_data_resp.MemberData{
+				RechargeAmount: memberData.TotalRechargeAmount,
+				GiftMoney:      memberData.TotalGiveAmount,
+				GiftPoints:     int(memberData.TotalGivePoint),
+				UserCount:      int(memberNum),
+			}
+		}(),
 		PeakHourList: func() []business_data_resp.PeakHour {
 			peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
 				uint(req.QueryStartTime),

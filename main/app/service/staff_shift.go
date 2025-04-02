@@ -540,12 +540,17 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 			}
 			return *AbnormalData
 		}(),
-		MemberData: business_data_resp.MemberData{
-			RechargeAmount: 120,
-			GiftMoney:      120,
-			GiftPoints:     120,
-			UserCount:      int(memberNum),
-		},
+		MemberData: func() business_data_resp.MemberData {
+			memberData := s.statisticsSrv.CountMember(ctx, CountReq{
+				DutyNo: log.ShiftNo,
+			})
+			return business_data_resp.MemberData{
+				RechargeAmount: memberData.TotalRechargeAmount,
+				GiftMoney:      memberData.TotalGiveAmount,
+				GiftPoints:     int(memberData.TotalGivePoint),
+				UserCount:      int(memberNum),
+			}
+		}(),
 		PeakHourList: func() []business_data_resp.PeakHour {
 			peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
 				uint(log.ShiftStartTime),

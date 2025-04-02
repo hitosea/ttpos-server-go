@@ -202,5 +202,6 @@ func (model *Desk) GetDeskResp() resp.Desk {
 		SaleBillUuid:  model.SaleBillUuid,
 		SaleOrderUuid: saleOrderUuid,
 		IsSplitOrder:  isSplitOrder,
+		UpdateTime:    time.Now().Unix(),
 	}
 }

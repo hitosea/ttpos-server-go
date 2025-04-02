@@ -12,8 +12,7 @@ class AuthService
     {
         // 将数组转换为字符串
         $dataString = json_encode($data);
-        // 使用SHA-256散列函数
-        $hash = hash('sha256', $dataString);
+        $hash = md5($dataString);
         // 将散列值与原始数据字符串拼接
         $token = $hash . '.' . base64_encode($dataString);
 

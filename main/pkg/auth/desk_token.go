@@ -1,10 +1,10 @@
 package auth
 
 import (
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/duke-git/lancet/cryptor"
 	"strconv"
 	"strings"
 )
@@ -43,12 +43,8 @@ func DecodeDeskToken(token string) (*DeskToken, error) {
 		return nil, fmt.Errorf("failed to base64 decode data: %v", err)
 	}
 
-	// Recalculate the hash of the data for verification
-	newHash := sha256.Sum256(dataBytes)
-	newHashString := fmt.Sprintf("%x", newHash)
-
 	// Compare the hash values to verify the token's integrity
-	if newHashString == hash {
+	if cryptor.Md5Byte(dataBytes) == hash {
 		// Decode the JSON string into a map
 		//var result map[string]interface{}
 		var result deskToken
