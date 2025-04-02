@@ -2004,6 +2004,41 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '支付统计表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品统计表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_statistics_member` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
+    `member_recharge_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员充值订单uuid',
+    `duty_no` varchar(255) NOT NULL DEFAULT '' COMMENT '当班编号',
+    `recharge_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '充值金额',
+    `give_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '赠送金额',
+    `give_point` INT(11) NOT NULL DEFAULT 0 COMMENT '赠送积分',
+    `payment_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '支付金额',
+    `payment_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '支付手续费',
+    `refund_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款金额',
+    `refund_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款手续费',
+    `complete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间',
+    `refund_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间',
+    `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '会员统计表';
+
+CREATE TABLE IF NOT EXISTS `statistics_member_payment` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
+    `member_recharge_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员充值订单uuid',
+    `duty_no` varchar(255) NOT NULL DEFAULT '' COMMENT '当班编号',
+    `payment_method_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付方式UUID',
+    `payment_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '支付金额',
+    `refund_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款金额',
+    `complete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间',
+    `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
+    `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
+    `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '会员支付统计表';
 
 SET FOREIGN_KEY_CHECKS = 1;

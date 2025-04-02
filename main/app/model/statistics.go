@@ -66,6 +66,32 @@ type StatisticsProduct struct {
 	RefundTime         int64   `gorm:"column:refund_time;type:bigint(20);default:0;comment:退款时间;NOT NULL" json:"refund_time"`
 }
 
+// StatisticsMember 会员统计表 ttpos_statistics_member
+type StatisticsMember struct {
+	BaseModel
+	MemberRechargeOrderUuid uint64  `gorm:"column:member_recharge_order_uuid;type:bigint(20) unsigned;default:0;comment:会员充值订单uuid;NOT NULL" json:"member_recharge_order_uuid"`
+	DutyNo                  string  `gorm:"column:duty_no;type:varchar(64);comment:当班编号;NOT NULL" json:"duty_no"`
+	RechargeAmount          float64 `gorm:"column:recharge_amount;type:decimal(14,2);default:0.00;comment:充值金额;NOT NULL" json:"recharge_amount"`
+	GiveAmount              float64 `gorm:"column:give_amount;type:decimal(14,2);default:0.00;comment:赠送金额;NOT NULL" json:"give_amount"`
+	GivePoint               float64 `gorm:"column:give_point;type:decimal(14,2);default:0.00;comment:赠送积分;NOT NULL" json:"give_point"`
+	PaymentAmount           float64 `gorm:"column:payment_amount;type:decimal(14,2);default:0.00;comment:支付金额;NOT NULL" json:"payment_amount"`
+	PaymentFee              float64 `gorm:"column:payment_fee;type:decimal(14,2);default:0.00;comment:支付手续费;NOT NULL" json:"payment_fee"`
+	RefundAmount            float64 `gorm:"column:refund_amount;type:decimal(14,2);default:0.00;comment:退款金额;NOT NULL" json:"refund_amount"`
+	RefundFee               float64 `gorm:"column:refund_fee;type:decimal(14,2);default:0.00;comment:退款支付手续费;NOT NULL" json:"refund_fee"`
+	CompleteTime            int64   `gorm:"column:complete_time;type:bigint(20);default:0;comment:完成时间;NOT NULL" json:"complete_time"`
+}
+
+// StatisticsMemberPayment 会员支付统计表 ttpos_statistics_member_payment
+type StatisticsMemberPayment struct {
+	BaseModel
+	MemberRechargeOrderUuid uint64  `gorm:"column:member_recharge_order_uuid;type:bigint(20) unsigned;default:0;comment:会员充值订单uuid;NOT NULL" json:"member_recharge_order_uuid"`
+	DutyNo                  string  `gorm:"column:duty_no;type:varchar(64);comment:当班编号;NOT NULL" json:"duty_no"`
+	PaymentMethodUuid       uint64  `gorm:"column:payment_method_uuid;type:bigint(20) unsigned;default:0;comment:支付方式uuid;NOT NULL" json:"payment_method_uuid"`
+	PaymentAmount           float64 `gorm:"column:payment_amount;type:decimal(14,2);default:0.00;comment:支付金额;NOT NULL" json:"payment_amount"`
+	RefundAmount            float64 `gorm:"column:refund_amount;type:decimal(14,2);default:0.00;comment:退款金额;NOT NULL" json:"refund_amount"`
+	CompleteTime            int64   `gorm:"column:complete_time;type:bigint(20);default:0;comment:完成时间;NOT NULL" json:"complete_time"`
+}
+
 // StatisticsShiftSaleRefundAmount 当班用餐订单退款金额
 type StatisticsShiftSaleRefundAmount struct {
 	ShiftNo         string          `json:"shift_no"`
@@ -181,4 +207,15 @@ type Statistics7DaysData struct {
 type StatisticsUnpaidOrderData struct {
 	TotalOrderNum sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数"`
 	TotalAmount   sql.NullFloat64 `gorm:"column:total_amount;comment:总金额"`
+}
+
+// StatisticsMemberData 会员统计数据
+type StatisticsMemberData struct {
+	TotalSaleAmount     sql.NullFloat64 `gorm:"column:total_sale_amount;comment:总销售额"`
+	TotalRechargeAmount sql.NullFloat64 `gorm:"column:total_recharge_amount;comment:总充值金额"`
+	TotalGiveAmount     sql.NullFloat64 `gorm:"column:total_give_amount;comment:总赠送金额"`
+	TotalGivePoint      sql.NullFloat64 `gorm:"column:total_give_point;comment:总赠送积分"`
+	TotalPaymentAmount  sql.NullFloat64 `gorm:"column:total_payment_amount;comment:总支付金额"`
+	TotalPaymentFee     sql.NullFloat64 `gorm:"column:total_payment_fee;comment:总支付手续费"`
+	TotalRefundAmount   sql.NullFloat64 `gorm:"column:total_refund_amount;comment:总退款金额"`
 }

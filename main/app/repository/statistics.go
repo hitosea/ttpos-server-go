@@ -21,8 +21,10 @@ type IStatisticsRepo interface {
 	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                     // 统计商品
 	CountArea(opts ...DBOption) []model.StatisticsAreaData                                            // 统计区域
 	Count7Days(opts ...DBOption) []model.Statistics7DaysData                                          // 统计销售天数
-	CountMemberNum(opts ...DBOption) int64                                                            // 统计会员数量
 	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                // 统计未结订单
+	CountMemberNum(opts ...DBOption) int64                                                            // 统计会员数量
+	CountMember(opts ...DBOption) model.StatisticsMemberData                                          // 统计会员
+	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                // 统计会员支付
 	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData        // 统计商品排行
 	SaveSale(sales []model.StatisticsSale) error                                                      // 保存销售
 	SavePayment(payments []model.StatisticsPayment) error                                             // 保存支付
@@ -30,6 +32,10 @@ type IStatisticsRepo interface {
 	DeleteSale(saleBillUuid uint64) error                                                             // 删除销售
 	DeletePayment(saleBillUuid uint64) error                                                          // 删除支付
 	DeleteProduct(saleBillUuid uint64) error                                                          // 删除商品
+	SaveMember(member model.StatisticsMember) error                                                   // 保存会员
+	SaveMemberPayment(payments []model.StatisticsMemberPayment) error                                 // 保存会员支付
+	DeleteMember(memberRechargeOrderUuid uint64) error                                                // 删除会员
+	DeleteMemberPayment(memberRechargeOrderUuid uint64) error                                         // 删除会员支付
 }
 
 func NewStatisticsRepo(db *gorm.DB) IStatisticsRepo {
@@ -509,6 +515,78 @@ func (r *StatisticsRepo) CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpa
 		Select("COUNT(uuid) AS total_order_num", "SUM(amount) AS total_amount").
 		Where("status = ?", constant.SaleBillStatusPending).
 		Where("production_time > 0").
+		Find(&result)
+
+	return result
+}
+
+// SaveMember 保存会员
+func (r *StatisticsRepo) SaveMember(member model.StatisticsMember) error {
+	return r.db.Create(&member).Error
+}
+
+// DeleteMember 删除会员
+func (r *StatisticsRepo) DeleteMember(memberRechargeOrderUuid uint64) error {
+	return r.db.Where("member_recharge_order_uuid = ?", memberRechargeOrderUuid).Delete(&model.StatisticsMember{}).Error
+}
+
+// SaveMemberPayment 保存会员支付
+func (r *StatisticsRepo) SaveMemberPayment(payments []model.StatisticsMemberPayment) error {
+	return r.db.Create(&payments).Error
+}
+
+// DeleteMemberPayment 删除会员支付
+func (r *StatisticsRepo) DeleteMemberPayment(memberRechargeOrderUuid uint64) error {
+	return r.db.Where("member_recharge_order_uuid = ?", memberRechargeOrderUuid).Delete(&model.StatisticsMemberPayment{}).Error
+}
+
+// CountMember 统计会员
+func (r *StatisticsRepo) CountMember(opts ...DBOption) model.StatisticsMemberData {
+	var result model.StatisticsMemberData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	db.Model(&model.StatisticsMember{}).
+		Select(
+			"SUM(payment_fee) AS total_sale_amount",
+			"SUM(IF(payment_amount - refund_amount = 0, 0, recharge_amount - refund_amount)) AS total_recharge_amount",
+			"SUM(give_amount) AS total_give_amount",
+			"SUM(give_point) AS total_give_point",
+			"SUM(payment_amount - refund_amount - refund_fee) AS total_payment_amount",
+			"SUM(payment_fee) AS total_payment_fee",
+			"SUM(refund_amount) AS total_refund_amount",
+		).
+		Find(&result)
+
+	return result
+}
+
+// CountMemberPayment 统计会员支付
+func (r *StatisticsRepo) CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData {
+	var result []model.StatisticsPaymentData
+
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	prefix := config.Database.TablePrefix
+	statisticsMemberPaymentTable := prefix + "statistics_member_payment"
+	paymentMethodTable := prefix + "payment_method"
+
+	db.Model(&model.StatisticsMemberPayment{}).
+		Select(
+			statisticsMemberPaymentTable+".payment_method_uuid",
+			paymentMethodTable+".name AS payment_name",
+			paymentMethodTable+".code AS payment_code",
+			"COUNT("+statisticsMemberPaymentTable+".payment_method_uuid) AS total_order_num",
+			"SUM("+statisticsMemberPaymentTable+".payment_amount-"+statisticsMemberPaymentTable+".refund_amount) AS total_payment_amount",
+			"SUM("+statisticsMemberPaymentTable+".refund_amount) AS total_refund_amount",
+		).
+		Joins("LEFT JOIN " + paymentMethodTable + " ON " + statisticsMemberPaymentTable + ".payment_method_uuid = " + paymentMethodTable + ".uuid").
+		Group(statisticsMemberPaymentTable + ".payment_method_uuid").
 		Find(&result)
 
 	return result

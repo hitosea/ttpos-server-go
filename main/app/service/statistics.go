@@ -2,14 +2,17 @@ package service
 
 import (
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 // IStatisticsSrv 统计服务接口
@@ -22,9 +25,12 @@ type IStatisticsSrv interface {
 	CountArea(ctx context.Context, req CountReq) []CountAreaResp             // 统计区域
 	Count7Days(ctx context.Context, req CountReq) Count7DaysResp             // 统计销售天数
 	CountMemberNum(ctx context.Context, req CountReq) int64                  // 统计会员数量
+	CountMember(ctx context.Context, req CountReq) CountMemberResp           // 统计会员
+	CountMemberPayment(ctx context.Context, req CountReq) CountPaymentResp   // 统计会员支付
 	CountUnpaidOrder(ctx context.Context, req CountReq) CountUnpaidOrderResp // 统计未结订单
 	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp    // 统计商品排行
 	SaveSale(ctx context.Context, req SaveSaleReq) error                     // 保存销售
+	SaveMember(ctx context.Context, req SaveMemberReq) error                 // 保存会员
 }
 
 // statisticsSrv 统计服务实现
@@ -78,8 +84,10 @@ type CountSaleResp struct {
 
 // CountSale 统计销售
 func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleResp {
+	db := ctx.GetDB()
 	opts := s.buildCountOpts(req)
-	saleData := repository.NewStatisticsRepo(ctx.GetDB()).CountSale(opts...)
+	saleData := repository.NewStatisticsRepo(db).CountSale(opts...)
+	memberData := s.CountMember(ctx, req)
 
 	// 总优惠折扣率 = 总优惠折扣 / 总销售额
 	var discountRatio decimal.Decimal
@@ -93,17 +101,23 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 		avgDeskPeopleOrderAmount = decimal.NewFromFloat(saleData.TotalDeskOrderAmount.Float64).Div(decimal.NewFromInt(saleData.TotalMealNum.Int64))
 	}
 
+	totalSaleAmount := decimal.NewFromFloat(saleData.TotalSaleAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalSaleAmount))
+	totalReceivedAmount := decimal.NewFromFloat(saleData.TotalReceivedAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentAmount))
+	totalPaymentFee := decimal.NewFromFloat(saleData.TotalPaymentFee.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentFee))
+	totalRefundAmount := decimal.NewFromFloat(saleData.TotalRefundAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalRefundAmount))
+	totalBusinessAmount := decimal.NewFromFloat(saleData.TotalBusinessAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentFee))
+
 	return CountSaleResp{
-		TotalSaleAmount:          saleData.TotalSaleAmount.Float64,
-		TotalReceivedAmount:      saleData.TotalReceivedAmount.Float64,
+		TotalSaleAmount:          totalSaleAmount.Round(2).InexactFloat64(),
+		TotalReceivedAmount:      totalReceivedAmount.Round(2).InexactFloat64(),
 		TotalProductPrice:        saleData.TotalProductPrice.Float64,
 		TotalProductNum:          saleData.TotalProductNum.Int64,
 		TotalDiscountMember:      saleData.TotalDiscountMember.Float64,
-		TotalBusinessAmount:      saleData.TotalBusinessAmount.Float64,
+		TotalBusinessAmount:      totalBusinessAmount.Round(2).InexactFloat64(),
 		TotalServiceFee:          saleData.TotalServiceFee.Float64,
-		TotalPaymentFee:          saleData.TotalPaymentFee.Float64,
+		TotalPaymentFee:          totalPaymentFee.Round(2).InexactFloat64(),
 		TotalTax:                 saleData.TotalTax.Float64,
-		TotalRefundAmount:        saleData.TotalRefundAmount.Float64,
+		TotalRefundAmount:        totalRefundAmount.Round(2).InexactFloat64(),
 		TotalDiscount:            saleData.TotalDiscount.Float64,
 		TotalDiscountRatio:       discountRatio.Round(2).InexactFloat64(),
 		TotalGiftAmount:          saleData.TotalGiftAmount.Float64,
@@ -153,6 +167,67 @@ type CountPaymentRespList struct {
 func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPaymentResp {
 	opts := s.buildCountOpts(req)
 	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountPayment(opts...)
+	memberPaymentData := s.CountMemberPayment(ctx, req)
+	logger.Logger.Info("memberPaymentData", zap.Any("memberPaymentData", memberPaymentData))
+
+	var (
+		totalReceivedAmount decimal.Decimal
+		totalRefundAmount   decimal.Decimal
+		list                = make([]CountPaymentRespList, 0)
+	)
+
+	for _, payment := range paymentData {
+		item, ok := slice.Find(list, func(index int, item CountPaymentRespList) bool {
+			return item.PaymentCode == payment.PaymentCode
+		})
+		if !ok {
+			list = append(list, CountPaymentRespList{
+				PaymentName:        payment.PaymentName,
+				PaymentCode:        payment.PaymentCode,
+				TotalOrderNum:      payment.TotalOrderNum.Int64,
+				TotalPaymentAmount: payment.TotalPaymentAmount.Float64,
+			})
+		} else {
+			item.TotalOrderNum += payment.TotalOrderNum.Int64
+			item.TotalPaymentAmount += payment.TotalPaymentAmount.Float64
+		}
+		if payment.PaymentCode != 10 {
+			totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(payment.TotalPaymentAmount.Float64))
+		}
+		totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(payment.TotalRefundAmount.Float64))
+	}
+
+	for _, memberPayment := range memberPaymentData.PaymentList {
+		item, ok := slice.Find(list, func(index int, item CountPaymentRespList) bool {
+			return item.PaymentCode == memberPayment.PaymentCode
+		})
+		if !ok {
+			list = append(list, CountPaymentRespList{
+				PaymentName:        memberPayment.PaymentName,
+				PaymentCode:        memberPayment.PaymentCode,
+				TotalOrderNum:      memberPayment.TotalOrderNum,
+				TotalPaymentAmount: memberPayment.TotalPaymentAmount,
+			})
+		} else {
+			item.TotalOrderNum += memberPayment.TotalOrderNum
+			item.TotalPaymentAmount += memberPayment.TotalPaymentAmount
+		}
+	}
+
+	totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(memberPaymentData.TotalReceivedAmount))
+	totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(memberPaymentData.TotalRefundAmount))
+
+	return CountPaymentResp{
+		TotalReceivedAmount: totalReceivedAmount.Round(2).InexactFloat64(),
+		TotalRefundAmount:   totalRefundAmount.Round(2).InexactFloat64(),
+		PaymentList:         list,
+	}
+}
+
+// CountMemberPayment 统计会员支付
+func (s *statisticsSrv) CountMemberPayment(ctx context.Context, req CountReq) CountPaymentResp {
+	opts := s.buildCountOpts(req)
+	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberPayment(opts...)
 
 	var (
 		totalReceivedAmount decimal.Decimal
@@ -166,9 +241,8 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 			TotalOrderNum:      payment.TotalOrderNum.Int64,
 			TotalPaymentAmount: payment.TotalPaymentAmount.Float64,
 		})
-		if payment.PaymentCode != 10 {
-			totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(payment.TotalPaymentAmount.Float64))
-		}
+
+		totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(payment.TotalPaymentAmount.Float64))
 		totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(payment.TotalRefundAmount.Float64))
 	}
 
@@ -640,4 +714,113 @@ func (s *statisticsSrv) buildDays(req CountReq) []string {
 	}
 
 	return days
+}
+
+// SaveMemberReq 保存会员请求
+type SaveMemberReq struct {
+	MemberRechargeOrderUuid uint64
+	OnlyDelete              bool
+}
+
+// SaveMember 保存会员
+func (s *statisticsSrv) SaveMember(ctx context.Context, req SaveMemberReq) error {
+	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
+	statisticsRepo := repository.NewStatisticsRepo(db)
+
+	// 先删除
+	statisticsRepo.DeleteMember(req.MemberRechargeOrderUuid)
+	statisticsRepo.DeleteMemberPayment(req.MemberRechargeOrderUuid)
+
+	if req.OnlyDelete {
+		return nil
+	}
+
+	memberRechargeOrderRepo := repository.NewMemberRechargeOrderRepo(db)
+	memberRechargeOrder := memberRechargeOrderRepo.GetRechargeOrderAllInfo(req.MemberRechargeOrderUuid)
+	if memberRechargeOrder.Uuid == 0 {
+		return nil
+	}
+	logger.Logger.Info("memberRechargeOrder", zap.Any("memberRechargeOrder", memberRechargeOrder))
+
+	var payments []model.StatisticsMemberPayment
+	for _, paymentOrder := range memberRechargeOrder.PaymentOrders {
+		var paymentRefundAmount decimal.Decimal
+		for _, refundOrderAmount := range paymentOrder.ReturnOrderAmounts {
+			if refundOrderAmount.RefundStatus == 1 {
+				paymentRefundAmount = paymentRefundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
+			}
+		}
+		payment := model.StatisticsMemberPayment{
+			MemberRechargeOrderUuid: memberRechargeOrder.Uuid,
+			DutyNo:                  memberRechargeOrder.DutyNo,
+			PaymentMethodUuid:       paymentOrder.PaymentMethodUuid,
+			PaymentAmount:           paymentOrder.Amount,
+			RefundAmount:            paymentRefundAmount.Round(2).InexactFloat64(),
+			CompleteTime:            memberRechargeOrder.PaymentTime,
+		}
+		payments = append(payments, payment)
+	}
+
+	paymentFee := decimal.NewFromFloat(memberRechargeOrder.Amount).Sub(decimal.NewFromFloat(memberRechargeOrder.RechargeAmount))
+	var refundFee decimal.Decimal
+	for _, returnOrder := range memberRechargeOrder.ReturnOrders {
+		if returnOrder.ReturnType == constant.ReturnOrderRefundTypeTotal {
+			refundFee = paymentFee
+		}
+	}
+
+	member := model.StatisticsMember{
+		MemberRechargeOrderUuid: memberRechargeOrder.Uuid,
+		DutyNo:                  memberRechargeOrder.DutyNo,
+		RechargeAmount:          memberRechargeOrder.RechargeAmount,
+		GiveAmount:              memberRechargeOrder.GiftAmount,
+		GivePoint:               memberRechargeOrder.GiftPoint,
+		PaymentAmount:           memberRechargeOrder.Amount,
+		PaymentFee:              paymentFee.Round(2).InexactFloat64(),
+		RefundAmount:            memberRechargeOrder.RefundAmount,
+		RefundFee:               refundFee.Round(2).InexactFloat64(),
+		CompleteTime:            memberRechargeOrder.PaymentTime,
+	}
+	err := statisticsRepo.SaveMember(member)
+	if err != nil {
+		return nil
+	}
+
+	if len(payments) > 0 {
+		err := statisticsRepo.SaveMemberPayment(payments)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// CountMemberResp 统计会员响应
+type CountMemberResp struct {
+	TotalSaleAmount     float64 `json:"total_sale_amount"`     // 总销售额
+	TotalRechargeAmount float64 `json:"total_recharge_amount"` // 总充值金额
+	TotalGiveAmount     float64 `json:"total_give_amount"`     // 总赠送金额
+	TotalGivePoint      float64 `json:"total_give_point"`      // 总赠送积分
+	TotalPaymentAmount  float64 `json:"total_payment_amount"`  // 总支付金额
+	TotalPaymentFee     float64 `json:"total_payment_fee"`     // 总支付手续费
+	TotalRefundAmount   float64 `json:"total_refund_amount"`   // 总退款金额
+}
+
+// CountMember 统计会员
+func (s *statisticsSrv) CountMember(ctx context.Context, req CountReq) CountMemberResp {
+	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
+	statisticsRepo := repository.NewStatisticsRepo(db)
+
+	memberData := statisticsRepo.CountMember(s.buildCountOpts(req)...)
+
+	return CountMemberResp{
+		TotalSaleAmount:     memberData.TotalSaleAmount.Float64,
+		TotalRechargeAmount: memberData.TotalRechargeAmount.Float64,
+		TotalGiveAmount:     memberData.TotalGiveAmount.Float64,
+		TotalGivePoint:      memberData.TotalGivePoint.Float64,
+		TotalPaymentAmount:  memberData.TotalPaymentAmount.Float64,
+		TotalPaymentFee:     memberData.TotalPaymentFee.Float64,
+		TotalRefundAmount:   memberData.TotalRefundAmount.Float64,
+	}
 }
