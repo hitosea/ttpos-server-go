@@ -481,7 +481,7 @@ func (model *SaleOrder) calcTaxFee(products []*SaleOrderProduct) float64 {
 			decimal.NewFromFloat(buffetCustomer.GetTaxFee())).Add(
 			decimal.NewFromFloat(buffetCustomer.GetServiceTaxFee()))
 	}
-	return taxFee.InexactFloat64()
+	return taxFee.Truncate(3).Round(2).InexactFloat64()
 }
 
 // 计算订单产生的税费(折前价)。订单税费=订单商品TaxFee之和 + 订单商品ServiceTaxFee之和 + 自助餐顾客税费之和
@@ -781,7 +781,7 @@ func (model *SaleOrder) calcServiceFee(products []*SaleOrderProduct, serviceFeeT
 		for _, buffetCustomer := range model.SaleOrderBuffetCustomerTypes {
 			serviceFee = serviceFee.Add(decimal.NewFromFloat(buffetCustomer.GetServiceFee()))
 		}
-		return serviceFee.Truncate(2).InexactFloat64()
+		return serviceFee.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 默认不收取服务费
 	return 0
