@@ -31,7 +31,7 @@ type H5GroupList struct {
 
 type H5Group struct {
 	SentKitchenProductGroup
-	AcceptTime int64 `json:"accept_time"` // 接单时间. “17:20:01 接单”。值为0时不显示
+	AcceptTime int64 `json:"accept_time"` // 接单时间. “17:20:01 接单”。值为0时不显示。 -1 表示收银机送厨的商品或顾客
 }
 
 type H5Product struct {
