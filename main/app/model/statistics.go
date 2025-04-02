@@ -176,3 +176,9 @@ type Statistics7DaysData struct {
 	TotalOrderNum       sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数"`
 	TotalReceivedAmount sql.NullFloat64 `gorm:"column:total_received_amount;comment:总实收金额"`
 }
+
+// StatisticsUnpaidOrderData 未结订单统计数据
+type StatisticsUnpaidOrderData struct {
+	TotalOrderNum sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数"`
+	TotalAmount   sql.NullFloat64 `gorm:"column:total_amount;comment:总金额"`
+}

@@ -247,6 +247,14 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		CategoryType:   req.CategoryType,
 		DutyNo:         req.DutyNo,
 	})
+	// 未结订单
+	unpaidOrderData := s.statisticsSrv.CountUnpaidOrder(ctx, CountReq{
+		TimeType:       req.TimeType,
+		QueryStartTime: int64(req.QueryStartTime),
+		QueryEndTime:   int64(req.QueryEndTime),
+		CategoryType:   req.CategoryType,
+		DutyNo:         req.DutyNo,
+	})
 
 	// 营业数据
 	var businessData = business_data_resp.BusinessDataAll{
@@ -279,6 +287,8 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		AllCashierMinOrderPrice: saleData.MinInstantOrderAmount,
 		AllCashierMaxOrderPrice: saleData.MaxInstantOrderAmount,
 		AllCashierAvgOrderPrice: saleData.AvgInstantOrderAmount,
+		UnclosedTotalOrderNum:   int(unpaidOrderData.TotalOrderNum),
+		UnclosedTotalPrice:      unpaidOrderData.TotalAmount,
 		PaymentMethodIncomes:    paymentMethodIncomes,
 		AbnormalData: func() business_data_resp.AbnormalData {
 			AbnormalData, err := repository.NewOrderAbnormalRecordRepo(ctx.GetDB()).GetRecordInfo(
