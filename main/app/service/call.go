@@ -139,6 +139,7 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 	return resp.UnprocessedResp{
 		UnprocessedCallCount: unprocessedCallCount,
 		AbnormalPrintCount:   abnormalPrintCount,
+		UpdateTime:           time.Now().Unix(),
 	}, nil
 }
 

@@ -436,8 +436,6 @@ class OrderOperationLog extends BaseModel
             return false;
         }
 
-        $account_no = '1948288621';
-
         // 禁止并发操作
         $queue = new QueueHelp('CASHIER_REFUNDAGAIN_' . $orderRefundDestination->app_id . '-' . $orderRefundDestination->id);
         $queue->while();

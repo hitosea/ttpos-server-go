@@ -33,6 +33,7 @@ type AbnormalPrintList struct {
 type UnprocessedResp struct {
 	UnprocessedCallCount int64 `json:"unprocessed_call_count"` // 未处理呼叫数量
 	AbnormalPrintCount   int64 `json:"abnormal_print_count"`   // 异常打印数量
+	UpdateTime           int64 `json:"update_time"`            // 更新时间
 }
 
 type UnprocessedCallItemForNotice struct {

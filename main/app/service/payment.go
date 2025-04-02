@@ -325,7 +325,7 @@ func (p *PaymentRepo) Refund(serviceRefundReq PaymentServiceRefundReq) (*LianLia
 		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
 	}, REQUEST_TIME_OUT)
 	if err != nil {
-		return nil, errors.New("连连退款失败：404")
+		return nil, errors.New(err.Error())
 	}
 	// 返回结果
 	var resp LianLianPaymentRefundResp
