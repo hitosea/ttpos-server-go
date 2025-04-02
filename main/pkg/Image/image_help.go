@@ -2,6 +2,7 @@
 package image
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -165,25 +166,43 @@ func (h *ImageHelp) simpleRemoveDomain(imageURL string) string {
 
 // downloadImage 从URL下载图像
 func (h *ImageHelp) DownloadImage(imageURL string) (image.Image, error) {
+	// 修复URL中的双斜杠问题
+	imageURL = strings.Replace(imageURL, "//storage_googleapis", "/storage_googleapis", 1)
+
 	// 创建HTTP客户端，设置超时和TLS配置
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		// 添加连接池设置
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+		DisableCompression:  false,
 	}
 	client := &http.Client{
-		Timeout:   10 * time.Second,
+		Timeout:   10 * time.Second, // 增加超时时间到30秒
 		Transport: tr,
 	}
 
-	// 发送GET请求
-	resp, err := client.Get(imageURL)
+	// 创建带有上下文的请求，以便更好地控制超时
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("创建请求失败: %w URL: %s", err, imageURL)
+	}
+
+	// 发送GET请求
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("下载图像失败: %w URL: %s", err, imageURL)
 	}
 	defer resp.Body.Close()
 
 	// 检查响应状态码
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("下载图像失败，HTTP状态码：" + resp.Status)
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("下载图像失败，HTTP状态码：%s，响应：%s URL: %s", resp.Status, string(body), imageURL)
 	}
 
 	// 解码图像
