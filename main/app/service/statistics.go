@@ -563,10 +563,8 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 		for _, salePayment := range saleOrder.PaymentOrders {
 			var paymentRefundAmount decimal.Decimal
 			for _, refundOrderAmount := range salePayment.ReturnOrderAmounts {
-				if refundOrderAmount.RefundStatus == 1 {
-					refundAmount = refundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
-					paymentRefundAmount = paymentRefundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
-				}
+				refundAmount = refundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
+				paymentRefundAmount = paymentRefundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
 			}
 			if salePayment.PaymentMethod != nil && salePayment.PaymentMethod.Code == 10 {
 				paymentBalance = decimal.NewFromFloat(salePayment.Amount)
@@ -740,15 +738,12 @@ func (s *statisticsSrv) SaveMember(ctx context.Context, req SaveMemberReq) error
 	if memberRechargeOrder.Uuid == 0 {
 		return nil
 	}
-	logger.Logger.Info("memberRechargeOrder", zap.Any("memberRechargeOrder", memberRechargeOrder))
 
 	var payments []model.StatisticsMemberPayment
 	for _, paymentOrder := range memberRechargeOrder.PaymentOrders {
 		var paymentRefundAmount decimal.Decimal
 		for _, refundOrderAmount := range paymentOrder.ReturnOrderAmounts {
-			if refundOrderAmount.RefundStatus == 1 {
-				paymentRefundAmount = paymentRefundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
-			}
+			paymentRefundAmount = paymentRefundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
 		}
 		payment := model.StatisticsMemberPayment{
 			MemberRechargeOrderUuid: memberRechargeOrder.Uuid,
