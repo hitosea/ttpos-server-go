@@ -378,7 +378,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	}
 
 	// 税费 - 商品未含税
-	if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 2 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 3) {
+	if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 1 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 3) {
 		for _, percentage := range saleOrder.GetPercentageList() {
 			taxRate := percentage["TaxRate"]
 			taxFee, _ := strconv.ParseFloat(percentage["TaxFee"], 64)
@@ -485,7 +485,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	printer.SetLineSpacing(20)
 
 	// 税费 - 商品已含税
-	if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 1 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 2) {
+	if saleOrder.TaxFee > 0 && saleBill.SaleBillSetting.TaxFeeType == 2 && (t.base.ConsumptionTax == 1 || t.base.ConsumptionTax == 2) {
 		printer.LineFeed()
 		printer.AppendText("------------------------------------------------\n")
 		printer.LineFeed()

@@ -43,6 +43,11 @@ func (model *SaleOrderBuffetCustomerType) SetNil() {
 	model.BuffetCustomerTypePrice = BuffetCustomerTypePrice{}
 }
 
+// 获取销售订单自助餐顾客类型的总税费。包含服务费税费
+func (model *SaleOrderBuffetCustomerType) GetTotalTaxFee() float64 {
+	return model.GetTaxFee() + model.GetServiceTaxFee()
+}
+
 // 获取销售订单自助餐顾客类型的税费。税费=销售订单自助餐顾客类型的税费*销售订单自助餐顾客类型的数量
 func (model *SaleOrderBuffetCustomerType) GetTaxFee() float64 {
 	return decimal.NewFromFloat(model.TaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
