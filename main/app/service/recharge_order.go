@@ -294,6 +294,9 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 			}
 			return s.GetPendingRechargeOrder(companyUuid), nil
 		}
+		if addReq.PaymentOrderUuid == 0 {
+			return orderResp, errors.New("支付订单ID不能为空")
+		}
 	} else if addReq.PaymentOrderUuid != 0 {
 		return orderResp, errors.New("非在线支付无需传支付订单ID")
 	}
@@ -348,6 +351,7 @@ func (s *rechargeOrderSrv) AddPaymentMethod(ctx context.Context, addReq req.Rech
 			return orderResp, errors.WithMessage(err, "添加支付方式失败")
 		}
 		_, err = paymentOrderRepo.Create(model.PaymentOrder{
+			BaseModel:            model.BaseModel{Uuid: addReq.PaymentOrderUuid},
 			PaymentMethodName:    paymentMethod.PaymentName,
 			PaymentMethodUuid:    paymentMethod.Uuid,
 			PaymentFeePercent:    paymentMethod.FeePercent,
@@ -1298,9 +1302,15 @@ func (s *rechargeOrderSrv) GetRechargeOrderRefundInfo(ctx context.Context, uuid 
 func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq req.RechargeOrderRefundReq) error {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(db)
-	order := rechargeOrderRepo.GetRechargeOrder(rechargeOrderRepo.WhereUuid(refundReq.Uuid),
-		rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod(),
-		rechargeOrderRepo.WithStaff(), rechargeOrderRepo.WithMember(), rechargeOrderRepo.WithReturnOrders(), rechargeOrderRepo.WithReturnOrderAmount())
+	order := rechargeOrderRepo.GetRechargeOrder(
+		rechargeOrderRepo.WhereUuid(refundReq.Uuid),
+		rechargeOrderRepo.WithPaymentOrders(),
+		rechargeOrderRepo.WithPaymentOrderPaymentMethod(),
+		rechargeOrderRepo.WithStaff(),
+		rechargeOrderRepo.WithMember(),
+		rechargeOrderRepo.WithReturnOrders(),
+		rechargeOrderRepo.WithReturnOrderAmount(),
+	)
 
 	if order.Uuid == 0 {
 		return errors.New("充值订单不存在")
@@ -1478,7 +1488,24 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 					AccountName:           returnOrder.AccountName,
 				}
 				if lianLianPayCount > 1 {
-					go NewPaymentRepo(ctx, s.dbm).Refund(paymentServiceRefundReq)
+					go func() {
+						payment, err := NewPaymentRepo(ctx, s.dbm).Refund(paymentServiceRefundReq)
+						if err != nil {
+							returnOrderAmount.RefundStatus = 2
+							returnOrderAmount.LlReturnOrderid = "0"
+						} else {
+							returnOrderAmount.LlReturnOrderid = payment.RefundOrderId
+						}
+						// 更新退款状态
+						returnOrderRepo := repository.NewReturnOrderRepo(s.dbm.GetDB(ctx.GetDbId()))
+						err = returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{
+							returnOrderRepo.WhereUuid(returnOrderAmount.Uuid),
+						}, returnOrderAmount)
+						if err != nil {
+							fmt.Println("更新退款状态失败", err)
+							logger.Logger.Error("更新退款状态失败", zap.Error(err))
+						}
+					}()
 				} else {
 					payment, err := NewPaymentRepo(ctx, s.dbm).Refund(paymentServiceRefundReq)
 					if err != nil {
@@ -1554,7 +1581,7 @@ func (s *rechargeOrderSrv) RechargeOrderReReturnOrder(ctx context.Context, req r
 		return errors.New("该订单无法重新退款")
 	}
 	// 判断订单是否正在退款
-	if orderAmount.LlReturnOrderid == "" {
+	if orderAmount.RefundStatus == 0 {
 		return errors.New("该订单正在进行退款，无法重复操作")
 	}
 

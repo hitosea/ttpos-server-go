@@ -244,6 +244,35 @@ func (h *OrderHandler) ReturnOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// ReturnOrder 处理退款订单
+// @Summary 重新退款
+// @Description 重新退款
+// @Tags 商家端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderReReturnReq true "详情参数"
+// @Success 200 {object} nil "退款订单成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /shop/order/re_return [post]
+func (h *OrderHandler) ReReturnOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	req := req.OrderReReturnReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	//
+	err, codeFail := h.service.ReReturnOrder(ctx, req)
+	if err != nil {
+		helper.Fail(c, codeFail, err.Error())
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterOrderHandlers 注册商家订单路由
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -276,5 +305,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)
 		privateApi.POST("/order/return", wrapper.ReturnOrder)
 		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)
+		privateApi.POST("/order/re_return", wrapper.ReReturnOrder)
 	}
 }

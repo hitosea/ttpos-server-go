@@ -264,10 +264,13 @@ class UserRechargeOrder extends Controller
             return $this->renderError('请求失败');
         } 
         $result = json_decode($res, true);
-        if (($result['code'] ?? -1) != 0) {
+        $code = $result['code'] ?? -1;
+        if ($code == -401) {
+            return $this->renderError($result['message'] ?? '请求失败', ['code' => -901], 0);
+        }
+        if ($code != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
         }
-
         return $this->renderSuccess('操作成功');
     }
 
@@ -285,18 +288,29 @@ class UserRechargeOrder extends Controller
     public function refundAgain()
     {
         $params = $this->postData();
-        $payment_order_id = $params['payment_order_id'] ?? 0;
-        $refund_money = $params['refund_money'] ?? 0;
-        $refund_destination_id = $params['refund_destination_id'] ?? 0;
         //
-        $bank_code = isset($params['bank_code']) ? $params['bank_code'] : 0;
-        $account_no = isset($params['account_no']) ? $params['account_no'] :'';
-        $account_name = isset($params['account_name']) ? $params['account_name'] : '';
-        //
-        $model = new UserRechargeOrderModel;
-        if ($model->refundAgain($payment_order_id, $refund_money, $refund_destination_id, $bank_code, $account_no, $account_name)) {
-            return $this->renderSuccess('操作成功');
+        $requeustHeader = [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
+        ];
+        // 退款请求数据
+        $requeustData = [
+            'return_order_uuid' => intval($params['return_order_uuid']),
+            'return_amount_uuid' => intval($params['return_amount_uuid']),
+            'bank_code' => $params['bank_code'],
+            'account_no' => $params['account_no'],
+            'account_name' => $params['account_name'],
+        ];
+        // 退款请求
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/order/re_return', json_encode($requeustData), $requeustHeader);
+        if (!$res) {
+            return $this->renderError('请求失败');
         }
-        return $this->renderError($model->getError() ?: '操作失败');
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+        return $this->renderSuccess('', $result['data']);
     }
 }
