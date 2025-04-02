@@ -335,6 +335,7 @@ func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7Days
 
 // CountMemberNum 统计会员数量
 func (s *statisticsSrv) CountMemberNum(ctx context.Context, req CountReq) int64 {
+	req.IsMember = true
 	opts := s.buildCountOpts(req)
 	return repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNum(opts...)
 }
@@ -553,6 +554,7 @@ type CountReq struct {
 	CategoryType   int    `json:"category_type"`    // 分类类型 (1 按一级分类, 2 按二级分类)
 	DutyNo         string `json:"duty_no"`          // 班次编号
 	RankType       int    `json:"rank_type"`        // 排行类型 (1 按销售数量, 2 按销售金额)
+	IsMember       bool   `json:"is_member"`        // 是否是会员
 }
 
 // buildCountOpts 构建统计选项
@@ -593,7 +595,11 @@ func (s *statisticsSrv) buildCountOpts(req CountReq) []repository.DBOption {
 		queryEndTime = req.QueryEndTime
 	}
 	if queryStartTime > 0 && queryEndTime > 0 {
-		opts = append(opts, commonRepo.WhereBetweenByCompleteTime(queryStartTime, queryEndTime))
+		if req.IsMember {
+			opts = append(opts, commonRepo.WhereBetweenByCreateTime(queryStartTime, queryEndTime))
+		} else {
+			opts = append(opts, commonRepo.WhereBetweenByCompleteTime(queryStartTime, queryEndTime))
+		}
 	}
 	if req.DutyNo != "" {
 		opts = append(opts, commonRepo.WhereByShiftNo(req.DutyNo))
