@@ -30,7 +30,7 @@ func (r *MemberRechargeOperationRepo) AddLog(log model.MemberRechargeOrderOperat
 		return errors.WithMessage(err)
 	}
 	// 添加异常日志
-	go NewMemberRechargeAbnormalRecordRepo(r.db).CreateRechargeAbnormalLog(log)
+	NewMemberRechargeAbnormalRecordRepo(r.db).CreateRechargeAbnormalLog(log)
 	// 返回
 	return nil
 }
