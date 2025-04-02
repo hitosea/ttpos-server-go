@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
+	"ttpos-server-go/pkg/utils"
 )
 
 // IH5Srv 定义H5服务接口
@@ -93,6 +94,7 @@ func (s *h5Srv) GetBaseInfo(ctx context.Context, deskUuid uint64) (*resp.H5BaseI
 		Company: resp.Company{
 			Uuid:     company.Uuid,
 			Name:     company.Name,
+			Logo:     utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
 			TimeZone: companySetting.Timezone,
 		},
 		H5:         h5Setting,
