@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"time"
+	_ "time/tzdata"
 )
 
 type TimeUtil interface {
