@@ -18307,6 +18307,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "integer"
+                },
                 "username": {
                     "description": "登录账号",
                     "type": "string"
@@ -20189,7 +20193,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "price": {
-                    "description": "单价",
+                    "description": "单价. 折前价",
                     "type": "number"
                 },
                 "refund_amount": {
@@ -20205,7 +20209,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "sale_price": {
-                    "description": "销售价 (原价) (划线价格) 当 sale_price 不等于 total_price 时才显示",
+                    "description": "销售价 (折前价) (划线价格) 当 sale_price 不等于 total_price 时才显示",
                     "type": "number"
                 },
                 "status": {
@@ -20213,7 +20217,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "total_price": {
-                    "description": "最终总价",
+                    "description": "最终总价(折后价)",
                     "type": "number"
                 },
                 "uuid": {
@@ -22353,6 +22357,10 @@ const docTemplate = `{
                 },
                 "unprocessed_call_count": {
                     "description": "未处理呼叫数量",
+                    "type": "integer"
+                },
+                "update_time": {
+                    "description": "更新时间",
                     "type": "integer"
                 }
             }

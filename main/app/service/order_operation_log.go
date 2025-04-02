@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -51,12 +52,19 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		if err := json.Unmarshal([]byte(log.Data), &returnProduct); err == nil {
 			desc := returnProduct.ProductName.GetLocale(language) + " (" + returnProduct.ProductAttr.GetLocale(language) + ")*" +
 				strconv.Itoa(int(returnProduct.TotalNum)) +
-				" (" + i18n.Translate(language, "原因") + ": " + returnProduct.Reason.GetLocale(language)
-
-			if returnProduct.CustomReason != "" {
-				desc = desc + "、" + returnProduct.CustomReason
+				" (" + i18n.Translate(language, "原因") + ": "
+			reason := returnProduct.Reason.GetLocale(language)
+			if reason != "" {
+				if returnProduct.CustomReason != "" {
+					desc = desc + reason + "、" + returnProduct.CustomReason
+				} else {
+					desc = desc + reason
+				}
+			} else if returnProduct.CustomReason != "" {
+				desc = desc + returnProduct.CustomReason
 			}
 			desc = desc + ")"
+			return desc
 		}
 	case constant.OrderCancelRefundProduct: // 取消退菜
 		var cancelRefundProduct event.CancelReturnSaleOrderProductPayload
@@ -97,8 +105,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 	case constant.OrderProductMove: // 转菜
 		var productMove event.ChangeDeskSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &productMove); err == nil {
-			return productMove.ProductName.GetLocale(language) + " (" + productMove.ProductAttr.GetLocale(language) + ") (" + i18n.Translate(language, "转至") +
-				productMove.ToTableNo + ")"
+			return fmt.Sprintf("%s (%s) *%d（%s%s）", productMove.ProductName.GetLocale(language), productMove.ProductAttr.GetLocale(language), productMove.TotalNum, i18n.Translate(language, "转至"), productMove.ToTableNo)
 		}
 	case constant.OrderDiscount: // 优惠折扣
 		var discount DiscountPayload
@@ -237,7 +244,7 @@ func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language st
 		constant.OrderSettle:              i18n.Translate(language, "结账"),
 		constant.OrderReverseSettle:       i18n.Translate(language, "反结账"),
 		constant.OrderRefund:              i18n.Translate(language, "部分退款"), // 默认部分退款
-		constant.OrderOrderTaking:         i18n.Translate(language, "接单"),   // 默认非自动接单
+		constant.OrderOrderTaking:         i18n.Translate(language, "接单"),     // 默认非自动接单
 		constant.OrderOrderReject:         i18n.Translate(language, "拒单"),
 		constant.OrderMergeTable:          i18n.Translate(language, "并台"),
 		constant.OrderOrderCancel:         i18n.Translate(language, "整单取消"),

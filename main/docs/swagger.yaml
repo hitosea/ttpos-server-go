@@ -2294,6 +2294,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Printer'
         description: 打印机设置
+      update_time:
+        description: 更新时间
+        type: integer
       username:
         description: 登录账号
         type: string
@@ -3519,7 +3522,7 @@ definitions:
         description: 数量
         type: integer
       price:
-        description: 单价
+        description: 单价. 折前价
         type: number
       refund_amount:
         description: 退款金额
@@ -3531,13 +3534,13 @@ definitions:
         description: 备注
         type: string
       sale_price:
-        description: 销售价 (原价) (划线价格) 当 sale_price 不等于 total_price 时才显示
+        description: 销售价 (折前价) (划线价格) 当 sale_price 不等于 total_price 时才显示
         type: number
       status:
         description: 状态, 0-正常 1-退菜
         type: integer
       total_price:
-        description: 最终总价
+        description: 最终总价(折后价)
         type: number
       uuid:
         description: 销售订单商品ID
@@ -4967,6 +4970,9 @@ definitions:
         type: integer
       unprocessed_call_count:
         description: 未处理呼叫数量
+        type: integer
+      update_time:
+        description: 更新时间
         type: integer
     type: object
   resp.UnsentKitchen:
