@@ -51,9 +51,9 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 	unhandledStatusOption := h5OrderRepo.WhereStatus([]uint{constant.H5OrderStatusOrder})
 	handledStatusOption := h5OrderRepo.WhereStatus([]uint{constant.H5OrderStatusAccepted, constant.H5OrderStatusRejected})
 	if *listReq.Status == 0 { // 未处理
-		dbOptions = append(dbOptions, unhandledStatusOption)
+		dbOptions = append(dbOptions, unhandledStatusOption, repository.CommonRepo.SortWithCreateTime("asc"))
 	} else { // 已处理：已接单、已拒单
-		dbOptions = append(dbOptions, handledStatusOption)
+		dbOptions = append(dbOptions, handledStatusOption, repository.CommonRepo.SortWithCreateTime("desc"))
 	}
 	// 桌台区域条件
 	if listReq.DeskRegionUuid > 0 {
@@ -61,7 +61,6 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 	}
 	dbOptions = append(
 		dbOptions,
-		repository.CommonRepo.SortWithCreateTime("desc"),
 		h5OrderRepo.WithDesk(),
 		h5OrderRepo.WithH5OrderProducts(),
 		h5OrderRepo.WithSaleOrderProducts(),
