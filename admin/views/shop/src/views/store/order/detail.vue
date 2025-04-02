@@ -437,7 +437,7 @@
               self.activities.push({
                 refund_type: item.refund_type,
                 pay_type: item.pay_type,
-                content: item.remark,
+                content: item.description,
                 timestamp:
                   item.create_time +
                   ' ' +

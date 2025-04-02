@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 	"websocket/config"
 	"websocket/constant"
@@ -116,8 +117,8 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 	}
 
 	// 验证设备是否绑定
-	DeviceRepo := repository.NewDeviceRepository(&database.DBManager{})
-	existsDevice := DeviceRepo.GetRecordBySourceAndDeviceId(claims.CompanyUuid, claims.Source, claims.DeviceId)
+	deviceRepo := repository.NewDeviceRepository(&database.DBManager{})
+	existsDevice := deviceRepo.GetRecordBySourceAndDeviceId(claims.CompanyUuid, claims.Source, claims.DeviceId)
 	if existsDevice.ID == 0 {
 		ws.WriteMessage(websocket.TextMessage, getMsgData(PushMessage{
 			Event: "connect",
@@ -132,7 +133,7 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 	for i, conn := range WsClients {
 		if conn.CompanyUuid == claims.CompanyUuid && conn.SourceClient == existsDevice.Source && conn.DeviceId == existsDevice.DeviceId && conn.ws != ws {
 			conn.ws.Close()
-			WsClients = append(WsClients[:i], WsClients[i+1:]...)
+			WsClients = slices.Delete(WsClients, i, i+1)
 			break
 		}
 	}
@@ -151,7 +152,7 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 	ws.SetCloseHandler(func(code int, text string) error {
 		for i, conn := range WsClients {
 			if conn.CompanyUuid == claims.CompanyUuid && conn.SourceClient == existsDevice.Source && conn.DeviceId == existsDevice.DeviceId {
-				WsClients = append(WsClients[:i], WsClients[i+1:]...)
+				WsClients = slices.Delete(WsClients, i, i+1)
 				break
 			}
 		}
@@ -224,7 +225,6 @@ func PushClient(messageData MessageData) {
 			(conn.SourceClient == messageData.SourceClient || messageData.SourceClient == "*") &&
 			(conn.DeviceId == messageData.DeviceId || messageData.DeviceId == "*") &&
 			(conn.DeviceId != messageData.NotDeviceId || messageData.NotDeviceId == "*" || messageData.NotDeviceId == "") {
-
 			// 创建一个 WebSocketMsgRepository 实例
 			repo := repository.NewWebSocketMsgRepository(&database.DBManager{})
 
@@ -263,7 +263,6 @@ func PushClient(messageData MessageData) {
 			if err != nil {
 				fmt.Printf("Error sending message to client: %v\n", err)
 			}
-			return
 		}
 	}
 }
