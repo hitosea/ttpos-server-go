@@ -165,6 +165,7 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 			List: make([]resp.InstantProductMustPlan, 0),
 		},
 		SaleOrderList: make([]resp.SaleOrder, 0),
+		UpdateTime:    time.Now().Unix(),
 	}
 	// 获取桌台详情
 	desk, err := repository.NewDeskRepo(ctx.GetDB()).GetDeskInfo(deskUuid)
@@ -244,6 +245,7 @@ func (s *deskSrv) GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *
 		MustPlans: resp.ProductMustPlanList{
 			List: make([]resp.InstantProductMustPlan, 0),
 		},
+		UpdateTime: time.Now().Unix(),
 	}
 	// 获取桌台详情
 	desk, err := repository.NewDeskRepo(ctx.GetDB()).GetDeskInfo(deskUuid)
