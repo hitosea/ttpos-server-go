@@ -272,11 +272,11 @@ func (model *SaleOrderProduct) calcTaxFee(price float64, taxFeeType int) float64
 	// 商品已含税时，消费税税费=商品销售价-商品未含税销售价
 	if taxFeeType == constant.TaxFeeTypeTax {
 		taxFee := decimal.NewFromFloat(price).Sub(decimal.NewFromFloat(model.calcProductPriceNoneTax(price, taxFeeType)))
-		return taxFee.InexactFloat64()
+		return taxFee.Truncate(3).Round(2).InexactFloat64()
 	} else if taxFeeType == constant.TaxFeeTypeNoTax {
 		// 商品未含税时，消费税税费=商品销售价*消费税税率
 		taxFee := decimal.NewFromFloat(price).Mul(decimal.NewFromFloat(model.TaxRate))
-		return taxFee.InexactFloat64()
+		return taxFee.Truncate(3).Round(2).InexactFloat64()
 	}
 
 	// 默认为商品关闭税费
@@ -372,7 +372,7 @@ func (model *SaleOrderProduct) calcServiceTaxFee(price float64, serviceFeeRate f
 	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax && taxFeeType != constant.TaxFeeTypeNone {
 		// 服务费税费=订单商品服务费*商品消费税税率
 		serviceTaxFee := decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType)).Mul(decimal.NewFromFloat(model.TaxRate))
-		return serviceTaxFee.InexactFloat64()
+		return serviceTaxFee.Truncate(3).Round(2).InexactFloat64()
 	}
 	return 0
 }
