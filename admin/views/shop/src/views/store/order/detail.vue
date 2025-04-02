@@ -259,10 +259,9 @@
           <el-timeline-item v-for="(activity, index) in activities" placement="top" :key="index" :color="activity.color" :hollow="activity.hollow" :timestamp="activity.timestamp">
             <div class="flex">
               {{ activity.content }}
-              <template v-if="(activity.pay_type || []).length > 0">
-                <template v-if="activity.refund_type == '2'">(</template>
-                <span class="flex" v-for="(item, itemIndex) in activity.pay_type" :key="itemIndex">
-                  <span>{{ item.name }}:{{ item.unit + this.$formatPrice(item.price) }}</span>
+              <template v-if="(activity.pay_type || []).length > 0">&nbsp;
+                (<span class="flex" v-for="(item, itemIndex) in activity.pay_type" :key="itemIndex">
+                  <span>{{ item.name }}:{{ item.unit + this.$formatPrice(item.refund_money) }}</span>
                   <el-tag v-if="item.refund_status == '0'" class="cupon" type="danger" @click="handleRetry(item)">{{ $t('退款失败，重试') }}</el-tag>
                   <el-tooltip v-if="item.value == '90333'" placement="bottom" trigger="click">
                     <el-icon class="icon"><WarningFilled /></el-icon>
@@ -272,9 +271,8 @@
                       <div> {{ $t('账号') }}{{ $t('：') }}{{ item.account_name }} </div>
                     </template>
                   </el-tooltip>
-                  <span v-if="itemIndex < (activity.pay_type || []).length - 1">，</span>
-                </span>
-                <template v-if="activity.refund_type == '2'">)</template>
+                  <span v-if="itemIndex < (activity.pay_type || []).length - 1">、</span>
+                </span>)
               </template>
             </div>
           </el-timeline-item>
