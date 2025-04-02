@@ -1,6 +1,8 @@
 package service
 
 import (
+	"go.uber.org/zap"
+	"gorm.io/gorm"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -9,9 +11,6 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
-
-	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type ActionCookingOption struct {
@@ -224,14 +223,11 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 
 // TabletAddAndCooking 平板端加购并送厨
 func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) error {
-	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillWithProducts(request.SaleBillUuid)
-	if err != nil {
-		return errors.WithMessage(errors.ErrInternal, "数据错误")
-	}
+	saleBill, _ := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(request.SaleBillUuid)
 	if saleBill.Uuid == 0 || len(saleBill.SaleOrders) == 0 {
 		return errors.New("订单不存在")
 	}
-	_, err = s.ActionAddAndCooking(ctx, req.ProductAddReq{
+	_, err := s.ActionAddAndCooking(ctx, req.ProductAddReq{
 		SaleBillUuid:  saleBill.Uuid,
 		SaleOrderUuid: request.SaleOrderUuid,
 		Products:      request.Products,
