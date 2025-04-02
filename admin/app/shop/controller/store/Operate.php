@@ -5,7 +5,6 @@ namespace app\shop\controller\store;
 use app\common\model\order\Order;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
-use app\common\model\order\OrderOperationLog;
 use app\shop\model\order\Order as OrderModel;
 use help\HttpHelp;
 
@@ -219,9 +218,8 @@ class Operate extends Controller
      * @Apidoc\Title("操作记录-重新退款（v1.0.9）")
      * @Apidoc\Method ("POST")
      * @Apidoc\Url("/index.php/shop/store.operate/orderRefundAgain")
-     * @Apidoc\Param("payment_order_id", type="int",require=true, default=0, desc="订单支付id")
-     * @Apidoc\Param("refund_money", type="int",require=true, default=0, desc="退款金额")
-     * @Apidoc\Param("refund_destination_id", type="int",require=true, default=0, desc="退款ID")
+     * @Apidoc\Param("return_order_uuid", type="int",require=true, default=0, desc="订单支付id")
+     * @Apidoc\Param("return_amount_uuid", type="int",require=true, default=0, desc="退款金额")
      * @Apidoc\Param("bank_code", type="int",require=true, default=004, desc="退款bank_code")
      * @Apidoc\Param("account_no", type="string",require=true, default="1941288621", desc="退款账号")
      * @Apidoc\Param("account_name", type="string",require=true, default="MR.TAO ZHANG", desc="退款名称")
@@ -229,18 +227,29 @@ class Operate extends Controller
     public function orderRefundAgain()
     {
         $params = $this->postData();
-        $payment_order_id = $params['payment_order_id'] ?? 0;
-        $refund_money = $params['refund_money'] ?? 0;
-        $refund_destination_id = $params['refund_destination_id'] ?? 0;
         //
-        $bank_code = isset($params['bank_code']) ? $params['bank_code'] : 0;
-        $account_no = isset($params['account_no']) ? $params['account_no'] :'';
-        $account_name = isset($params['account_name']) ? $params['account_name'] : '';
-        //
-        $model = new OrderOperationLog;
-        if ($model->refundAgain($payment_order_id, $refund_money, $refund_destination_id, $bank_code, $account_no, $account_name)) {
-            return $this->renderSuccess('操作成功');
+        $requeustHeader = [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json; charset=utf-8',
+        ];
+        // 退款请求数据
+        $requeustData = [
+            'return_order_uuid' => intval($params['return_order_uuid']),
+            'return_amount_uuid' => intval($params['return_amount_uuid']),
+            'bank_code' => $params['bank_code'],
+            'account_no' => $params['account_no'],
+            'account_name' => $params['account_name'],
+        ];
+        // 退款请求
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/order/re_return', json_encode($requeustData), $requeustHeader);
+        if (!$res) {
+            return $this->renderError('请求失败');
         }
-        return $this->renderError($model->getError() ?: '操作失败');
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+        return $this->renderSuccess('', $result['data']);
     }
 }

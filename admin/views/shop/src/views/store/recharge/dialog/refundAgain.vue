@@ -133,9 +133,8 @@
         try {
           loading.value = true;
           const params = {
-            payment_order_id: props.refundOrder.payment_order_id,
-            refund_money: props.refundOrder.refund_money,
-            refund_destination_id: props.refundOrder.refund_destination_id,
+            return_order_uuid: props.refundOrder.return_order_uuid,
+            return_amount_uuid: props.refundOrder.return_amount_uuid,
             bank_code: bankForm.value.bank_code,
             account_no: bankForm.value.account_no,
             account_name: bankForm.value.account_name,

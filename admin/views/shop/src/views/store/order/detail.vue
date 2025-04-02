@@ -263,7 +263,7 @@
                 <template v-if="activity.refund_type == '2'">(</template>
                 <span class="flex" v-for="(item, itemIndex) in activity.pay_type" :key="itemIndex">
                   <span>{{ item.name }}:{{ item.unit + this.$formatPrice(item.price) }}</span>
-                  <el-tag v-if="item.payment_status == '0'" class="cupon" type="danger" @click="handleRetry(item)">{{ $t('退款失败，重试') }}</el-tag>
+                  <el-tag v-if="item.refund_status == '0'" class="cupon" type="danger" @click="handleRetry(item)">{{ $t('退款失败，重试') }}</el-tag>
                   <el-tooltip v-if="item.value == '90333'" placement="bottom" trigger="click">
                     <el-icon class="icon"><WarningFilled /></el-icon>
                     <template #content>
@@ -531,9 +531,8 @@
             .then(() => {
               this.loading = true;
               const params = {
-                payment_sale_bill_uuid: item.payment_sale_bill_uuid,
-                refund_money: item.refund_money,
-                refund_destination_id: item.refund_destination_id,
+                return_order_uuid: item.return_order_uuid,
+                return_amount_uuid: item.return_amount_uuid,
               };
               OrderApi.orderRefundAgain(params, true)
                 .then((data) => {
