@@ -1,12 +1,13 @@
 package auth
 
 import (
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/duke-git/lancet/cryptor"
 )
 
 type menuToken struct {
@@ -37,10 +38,8 @@ func DecodeMenuToken(token string) (*MenuToken, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to base64 decode data: %v", err)
 	}
-	newHash := sha256.Sum256(dataBytes)
-	newHashString := fmt.Sprintf("%x", newHash)
 
-	if newHashString == hash {
+	if cryptor.Md5Byte(dataBytes) == hash {
 		var result menuToken
 
 		if err := json.Unmarshal(dataBytes, &result); err != nil {

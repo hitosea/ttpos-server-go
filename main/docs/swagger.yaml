@@ -13397,6 +13397,30 @@ paths:
       summary: 获取订单列表
       tags:
       - 商家端.订单
+  /shop/order/re_return:
+    post:
+      consumes:
+      - application/json
+      description: 重新退款
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderReReturnReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 退款订单成功
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 重新退款
+      tags:
+      - 商家端.订单
   /shop/order/return:
     get:
       consumes:

@@ -13297,6 +13297,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/order/re_return": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "重新退款",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.订单"
+                ],
+                "summary": "重新退款",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderReReturnReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "退款订单成功"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/shop/order/return": {
             "get": {
                 "security": [
