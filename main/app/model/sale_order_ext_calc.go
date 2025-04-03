@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"ttpos-server-go/app/constant"
 
 	"github.com/shopspring/decimal"
@@ -602,7 +601,7 @@ func (model *SaleOrder) calcAmount(products []*SaleOrderProduct, serviceFeeType 
 			decimal.NewFromFloat(productAmount)).Add(
 			decimal.NewFromFloat(serviceFee)).Add(
 			decimal.NewFromFloat(serviceTaxFee))
-		fmt.Println("销售订单应收金额 productAmount", productAmount, "serviceFee", serviceFee, "serviceTaxFee", serviceTaxFee, "amount", amount.InexactFloat64())
+		// fmt.Println("销售订单应收金额 productAmount", productAmount, "serviceFee", serviceFee, "serviceTaxFee", serviceTaxFee, "amount", amount.InexactFloat64())
 		return amount.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 商品未含税时
@@ -638,7 +637,7 @@ func (model *SaleOrder) calcOriginAmount(products []*SaleOrderProduct, serviceFe
 			decimal.NewFromFloat(productAmount)).Add(
 			decimal.NewFromFloat(serviceFee)).Add(
 			decimal.NewFromFloat(serviceTaxFee))
-		fmt.Println("销售订单原价 productAmount", productAmount, "serviceFee", serviceFee, "serviceTaxFee", serviceTaxFee, "amount", amount.InexactFloat64())
+		// fmt.Println("销售订单原价 productAmount", productAmount, "serviceFee", serviceFee, "serviceTaxFee", serviceTaxFee, "amount", amount.InexactFloat64())
 		return amount.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 商品未含税时

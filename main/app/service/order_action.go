@@ -210,7 +210,7 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 		}
 
 		// 送厨
-		checkServiceRes, err := s.ActionCooking(ctx, false, saleBill, unCookingSaleOrderProducts, 0, withCalcAndSaveSaleBill()) // 平板端加购并送厨
+		checkServiceRes, err := s.ActionCooking(ctx, true, saleBill, unCookingSaleOrderProducts, 0, withCalcAndSaveSaleBill()) // 平板端加购并送厨
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
