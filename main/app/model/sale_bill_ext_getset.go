@@ -22,14 +22,14 @@ func (model *SaleBill) GetBuffetProductList() resp.BuffetProductList {
 		buffetProductList.List = append(buffetProductList.List, model.BuffetPackage1.GetBuffetProductList().List...)
 	}
 	if model.BuffetPackage2 != nil {
-
 		buffetProductList.List = append(buffetProductList.List, model.BuffetPackage2.GetBuffetProductList().List...)
 	}
-	// 去重
+	// 去重, 并重新计算限制数量
 	buffetProductMap := make(map[uint64]bool)
 	for _, buffetProduct := range buffetProductList.List {
 		if !buffetProductMap[buffetProduct.Uuid] {
 			buffetProductMap[buffetProduct.Uuid] = true
+			buffetProduct.Limit = buffetProduct.Limit * model.MealNum // 限制数量=单人限购数量*用餐人数
 			list = append(list, buffetProduct)
 		}
 	}

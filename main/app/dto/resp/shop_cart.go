@@ -202,6 +202,7 @@ type BuffetProductList struct {
 }
 
 type BuffetProduct struct {
-	Uuid uint64 `json:"uuid"` // 商品product_package_uuid
-	Name string `json:"name"` // 商品名称. 不用于前端展示，仅用于开发核对接口数据是否正确
+	Uuid  uint64 `json:"uuid"`  // 商品product_package_uuid
+	Name  string `json:"name"`  // 商品名称. 不用于前端展示，仅用于开发核对接口数据是否正确
+	Limit uint   `json:"limit"` // 限购数量， 限购数量=单人限购数量*用餐人数
 }
