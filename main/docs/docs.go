@@ -18548,6 +18548,10 @@ const docTemplate = `{
                     "description": "桌台类型ID",
                     "type": "integer"
                 },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "integer"
+                },
                 "uuid": {
                     "description": "桌台UUID",
                     "type": "integer"
@@ -18767,6 +18771,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.UnsentKitchenInfo"
                         }
                     ]
+                },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "integer"
                 }
             }
         },
@@ -19015,6 +19023,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.UnsentKitchen"
                         }
                     ]
+                },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "integer"
                 }
             }
         },

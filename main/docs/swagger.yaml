@@ -2433,6 +2433,9 @@ definitions:
       type_uuid:
         description: 桌台类型ID
         type: integer
+      update_time:
+        description: 更新时间
+        type: integer
       uuid:
         description: 桌台UUID
         type: integer
@@ -2575,6 +2578,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.UnsentKitchenInfo'
         description: 未送厨商品信息，即将废弃，随时被删掉，信息从unsent_kitchen中读取
+      update_time:
+        description: 更新时间
+        type: integer
     type: object
   resp.DeskRegion:
     properties:
@@ -2718,6 +2724,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.UnsentKitchen'
         description: 未送厨商品信息
+      update_time:
+        description: 更新时间
+        type: integer
     type: object
   resp.H5Group:
     properties:

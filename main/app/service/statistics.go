@@ -8,11 +8,9 @@ import (
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/logger"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/shopspring/decimal"
-	"go.uber.org/zap"
 )
 
 // IStatisticsSrv 统计服务接口
@@ -168,7 +166,6 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 	opts := s.buildCountOpts(req)
 	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountPayment(opts...)
 	memberPaymentData := s.CountMemberPayment(ctx, req)
-	logger.Logger.Info("memberPaymentData", zap.Any("memberPaymentData", memberPaymentData))
 
 	var (
 		totalReceivedAmount decimal.Decimal
@@ -692,7 +689,7 @@ func (s *statisticsSrv) buildCountOpts(req CountReq) []repository.DBOption {
 		}
 	}
 	if req.DutyNo != "" {
-		opts = append(opts, commonRepo.WhereByShiftNo(req.DutyNo))
+		opts = append(opts, commonRepo.WhereByDutyNo(req.DutyNo))
 	}
 	return opts
 }

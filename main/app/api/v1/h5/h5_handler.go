@@ -185,7 +185,7 @@ func (h *H5Handler) Call(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{})
+	helper.Success(c, gin.H{}, "已呼叫服务员，请稍等")
 }
 
 // OrderProductRemark 处理桌台订单商品备注

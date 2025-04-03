@@ -283,6 +283,13 @@ func (s *authSrv) Logout(ctx context.Context) error {
 	if err != nil {
 		return apperrors.ErrInternal
 	}
+	if ctx.GetSource() == constant.SourceTablet {
+		// 解绑桌台
+		err = repository.NewDeskRepo(db).UnbindDesk(ctx.GetDeskUuid(), ctx.GetDeviceUuid())
+		if err != nil {
+			return apperrors.ErrInternal
+		}
+	}
 	return nil
 }
 

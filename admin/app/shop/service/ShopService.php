@@ -2,12 +2,13 @@
 
 namespace app\shop\service;
 
-use app\shop\model\user\User;
 use app\common\library\helper;
 use app\shop\model\order\Order;
 use app\shop\model\product\Product;
 use app\common\model\erp\ErpPurchaseOrder;
 use app\common\repositories\OrderBusinessDataRepository;
+use app\common\model\product\ProductBom;
+use think\facade\Log;
 
 /**
  * 商城模型
@@ -63,7 +64,13 @@ class ShopService
             $this->error = '请求失败';
             return false;
         }
-
+        // 库存告急
+        $stockProductList = (new ProductBom())->getProductBomList([
+            'material_type' => 10,
+            'list_rows' => 99999,
+            'stock_num' => 10,
+        ]);
+        $purchaseApply = ErpPurchaseOrder::where('status', 0)->count() ?: 0;
         // 当天汇总
         $data = [
             'top_data' => [
@@ -93,11 +100,11 @@ class ShopService
                 ],
                 // 库存
                 'stock' => [
-                    'product' => 0,
+                    'product' => $stockProductList['total'],
                 ],
                 // 采购单
                 'purchase' => [
-                    'apply' => 0,
+                    'apply' => $purchaseApply,
                 ],
             ],
             'today_data' => [

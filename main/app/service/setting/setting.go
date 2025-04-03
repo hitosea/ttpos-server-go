@@ -459,6 +459,12 @@ func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageI
 			return tablet, errors.WithMessage(err)
 		}
 	}
+	if strings.Contains(st.Values, "\"buffet_order_limit\":[]") {
+		st.Values = strings.Replace(st.Values, "\"buffet_order_limit\":[]", "\"buffet_order_limit\":{}", -1)
+	}
+	if strings.Contains(st.Values, "\"order_limit\":[]") {
+		st.Values = strings.Replace(st.Values, "\"order_limit\":[]", "\"order_limit\":{}", -1)
+	}
 	err = json.Unmarshal([]byte(st.Values), &tablet)
 	if err != nil {
 		ctx.Log().Error("解析各端-平板端设置失败", zap.Error(err))
@@ -704,6 +710,12 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 		}
 	}
 	st := s.getSettingByKey(ctx, constant.SettingH5)
+	if strings.Contains(st.Values, "\"buffet_order_limit\":[]") {
+		st.Values = strings.Replace(st.Values, "\"buffet_order_limit\":[]", "\"buffet_order_limit\":{}", -1)
+	}
+	if strings.Contains(st.Values, "\"order_limit\":[]") {
+		st.Values = strings.Replace(st.Values, "\"order_limit\":[]", "\"order_limit\":{}", -1)
+	}
 	err = json.Unmarshal([]byte(st.Values), &h5)
 	if err != nil {
 		ctx.Log().Error("解析各端-扫码H5设置失败", zap.Error(err))
@@ -869,10 +881,20 @@ func (s *Srv) CheckUpdate(ctx context.Context, appType int, brand string, langua
 		ctx.Log().Error("解析版本更新信息失败", zap.Error(err))
 	}
 
+	var updateLogMultilanguage dto.LocaleResponse
+	var updateLog string
+	if updateData.Data.UpdateLog != "" {
+		err := json.Unmarshal([]byte(updateData.Data.UpdateLog), &updateLogMultilanguage)
+		if err != nil {
+			updateLog = updateData.Data.UpdateLog
+		} else {
+			updateLog = updateLogMultilanguage.GetLocale(language)
+		}
+	}
 	return resp.UpdateInfo{
 		VersionName:  updateData.Data.VersionName,
 		ForcedUpdate: updateData.Data.ForcedUpdate,
-		UpdateLog:    updateData.Data.UpdateLog,
+		UpdateLog:    updateLog,
 		DownloadURL:  updateData.Data.DownloadURL,
 	}, nil
 }
