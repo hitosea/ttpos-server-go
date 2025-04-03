@@ -9,28 +9,29 @@ import (
 )
 
 type IStatisticsRepo interface {
-	CountSale(opts ...DBOption) model.StatisticsSaleData                                              // 统计销售
-	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                      // 统计支付
-	CountTax(opts ...DBOption) []model.StatisticsTaxData                                              // 统计税类
-	CountCategory(categoryType int, language string, opts ...DBOption) []model.StatisticsCategoryData // 统计分类
-	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                     // 统计商品
-	CountArea(opts ...DBOption) []model.StatisticsAreaData                                            // 统计区域
-	Count7Days(opts ...DBOption) []model.Statistics7DaysData                                          // 统计销售天数
-	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                // 统计未结订单
-	CountMemberNum(opts ...DBOption) int64                                                            // 统计会员数量
-	CountMember(opts ...DBOption) model.StatisticsMemberData                                          // 统计会员
-	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                // 统计会员支付
-	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData        // 统计商品排行
-	SaveSale(sales []model.StatisticsSale) error                                                      // 保存销售
-	SavePayment(payments []model.StatisticsPayment) error                                             // 保存支付
-	SaveProduct(products []model.StatisticsProduct) error                                             // 保存商品
-	DeleteSale(saleBillUuid uint64) error                                                             // 删除销售
-	DeletePayment(saleBillUuid uint64) error                                                          // 删除支付
-	DeleteProduct(saleBillUuid uint64) error                                                          // 删除商品
-	SaveMember(member model.StatisticsMember) error                                                   // 保存会员
-	SaveMemberPayment(payments []model.StatisticsMemberPayment) error                                 // 保存会员支付
-	DeleteMember(memberRechargeOrderUuid uint64) error                                                // 删除会员
-	DeleteMemberPayment(memberRechargeOrderUuid uint64) error                                         // 删除会员支付
+	CountSale(opts ...DBOption) model.StatisticsSaleData                                                       // 统计销售
+	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                               // 统计支付
+	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                       // 统计税类
+	CountCategory(categoryType int, language string, opts ...DBOption) []model.StatisticsCategoryData          // 统计分类
+	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                              // 统计商品
+	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                     // 统计区域
+	Count7Days(opts ...DBOption) []model.Statistics7DaysData                                                   // 统计销售天数
+	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                         // 统计未结订单
+	CountMemberNum(opts ...DBOption) int64                                                                     // 统计会员数量
+	CountMember(opts ...DBOption) model.StatisticsMemberData                                                   // 统计会员
+	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                         // 统计会员支付
+	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64) // 统计商品销售
+	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                 // 统计商品排行
+	SaveSale(sales []model.StatisticsSale) error                                                               // 保存销售
+	SavePayment(payments []model.StatisticsPayment) error                                                      // 保存支付
+	SaveProduct(products []model.StatisticsProduct) error                                                      // 保存商品
+	DeleteSale(saleBillUuid uint64) error                                                                      // 删除销售
+	DeletePayment(saleBillUuid uint64) error                                                                   // 删除支付
+	DeleteProduct(saleBillUuid uint64) error                                                                   // 删除商品
+	SaveMember(member model.StatisticsMember) error                                                            // 保存会员
+	SaveMemberPayment(payments []model.StatisticsMemberPayment) error                                          // 保存会员支付
+	DeleteMember(memberRechargeOrderUuid uint64) error                                                         // 删除会员
+	DeleteMemberPayment(memberRechargeOrderUuid uint64) error                                                  // 删除会员支付
 }
 
 func NewStatisticsRepo(db *gorm.DB) IStatisticsRepo {
@@ -475,4 +476,93 @@ func (r *StatisticsRepo) CountMemberPayment(opts ...DBOption) []model.Statistics
 		Find(&result)
 
 	return result
+}
+
+type CountProductSaleRepoReq struct {
+	PageNo        int
+	PageSize      int
+	RankType      int
+	RankDirection int
+	Language      string
+	AreaUuid      uint64
+	CategoryUuid  uint64
+}
+
+// CountProductSale 统计商品销售
+func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64) {
+	var result []model.StatisticsProductSaleData
+	db := r.db
+	db2 := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	for _, opt := range opts {
+		db2 = opt(db2)
+	}
+
+	prefix := config.Database.TablePrefix
+	statisticsProductTable := prefix + "statistics_product as sp"
+	productPackageTable := prefix + "product_package as pp"
+	productCategoryTable := prefix + "product_category as pc"
+	productParentCategoryTable := prefix + "product_category as ppc"
+	saleBillTable := prefix + "sale_bill as sb"
+	deskTable := prefix + "desk as d"
+
+	var total int64
+	db.Table(statisticsProductTable).
+		Select("COUNT(DISTINCT sp.product_package_uuid) AS total").
+		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
+		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
+		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
+		Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
+
+	if req.AreaUuid > 0 {
+		db.Where("sb.desk_uuid IN (?)", r.db.Table(deskTable).Select("d.uuid").Where("d.region_uuid = ?", req.AreaUuid))
+	}
+	if req.CategoryUuid > 0 {
+		db.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
+	}
+	db.Find(&total)
+
+	listQuery := db2.Table(statisticsProductTable).
+		Select(
+			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+req.Language+"')) AS product_name",
+			"JSON_UNQUOTE(JSON_EXTRACT(pc.name, '$."+req.Language+"')) AS category_name",
+			"JSON_UNQUOTE(JSON_EXTRACT(ppc.name, '$."+req.Language+"')) AS category_parent_name",
+			"SUM(sp.product_num) AS sale_num",
+			"SUM(IF(sp.give_num > 0 OR sp.free_num > 0, sp.product_sale_price, sp.product_sale_price + sp.tax_fee + sp.service_fee + service_tax) * sp.product_num) AS origin_sale_amount",
+			"SUM(sp.product_final_price * sp.product_num) AS actual_sale_amount",
+			"SUM((sp.product_final_price - sp.tax_fee - sp.service_tax) * sp.product_num) AS business_amount",
+			"SUM(IF(sp.free_num > 0,sp.free_num,sp.give_num)) AS give_num",
+		).
+		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
+		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
+		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
+		Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
+
+	if req.AreaUuid > 0 {
+		listQuery.Where("sb.desk_uuid IN (?)", r.db.Table(deskTable).Select("d.uuid").Where("d.region_uuid = ?", req.AreaUuid))
+	}
+	if req.CategoryUuid > 0 {
+		listQuery.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
+	}
+	listQuery.Group("sp.product_package_uuid")
+
+	direction := "DESC"
+	if req.RankDirection == 1 {
+		direction = "ASC"
+	}
+
+	if req.RankType == 1 {
+		listQuery = listQuery.Order("sale_num " + direction)
+	}
+
+	if req.RankType == 2 {
+		listQuery = listQuery.Order("origin_sale_amount " + direction)
+	}
+
+	listQuery.Limit(req.PageSize).Offset((req.PageNo - 1) * req.PageSize).Find(&result)
+
+	return result, total
 }

@@ -26,6 +26,7 @@ type IStatisticsSrv interface {
 	CountMember(ctx context.Context, req CountReq) CountMemberResp           // 统计会员
 	CountMemberPayment(ctx context.Context, req CountReq) CountPaymentResp   // 统计会员支付
 	CountUnpaidOrder(ctx context.Context, req CountReq) CountUnpaidOrderResp // 统计未结订单
+	CountProductSale(ctx context.Context, req CountReq) CountProductSaleResp // 统计商品销售
 	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp    // 统计商品排行
 	SaveSale(ctx context.Context, req SaveSaleReq) error                     // 保存销售
 	SaveMember(ctx context.Context, req SaveMemberReq) error                 // 保存会员
@@ -512,10 +513,16 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				productPrice = productPrice.Add(decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()))
 				productSalePrice = productSalePrice.Add(decimal.NewFromFloat(saleProduct.SalePrice))
 				productTax = productTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
+				productGiveNum := 0
+				productFreeNum := 0
 				serviceFee = serviceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee))
 				serviceTax = serviceTax.Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee))
 				if saleProduct.GiftTime > 0 {
 					giveNum += int(saleProduct.Num)
+					productGiveNum = int(saleProduct.Num)
+				}
+				if saleOrder.IsFree > 0 {
+					productFreeNum = int(saleProduct.Num)
 				}
 				var bomUuid uint64
 				for _, productBom := range saleProduct.SaleOrderProductBoms {
@@ -541,9 +548,14 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					ProductBomUuid:     bomUuid,
 					ProductPrice:       saleProduct.GetUnitPriceNoneTax(),
 					ProductSalePrice:   saleProduct.ProductPrice,
+					ProductFinalPrice:  saleProduct.Price,
 					ProductNum:         int(saleProduct.Num),
 					TaxRate:            saleProduct.TaxRate,
 					TaxFee:             saleProduct.TaxFee,
+					ServiceFee:         saleProduct.ServiceFee,
+					ServiceTax:         saleProduct.ServiceTaxFee,
+					GiveNum:            productGiveNum,
+					FreeNum:            productFreeNum,
 					CompleteTime:       saleBill.FinishTime,
 					RefundNum:          refundNum,
 				})
@@ -641,7 +653,12 @@ type CountReq struct {
 	CategoryType   int    `json:"category_type"`    // 分类类型 (1 按一级分类, 2 按二级分类)
 	DutyNo         string `json:"duty_no"`          // 班次编号
 	RankType       int    `json:"rank_type"`        // 排行类型 (1 按销售数量, 2 按销售金额)
+	RankDirection  int    `json:"rank_direction"`   // 排行方向 (1 升序, 2 降序)
 	IsCreateTime   bool   `json:"is_create_time"`   // 是否是创建时间
+	PageNo         int    `json:"page_no"`          // 页码
+	PageSize       int    `json:"page_size"`        // 每页大小
+	AreaUuid       uint64 `json:"area_uuid"`        // 区域UUID -1=全都
+	CategoryUuid   uint64 `json:"category_uuid"`    // 分类UUID -1=全都
 }
 
 // buildCountOpts 构建统计选项
@@ -691,6 +708,11 @@ func (s *statisticsSrv) buildCountOpts(req CountReq) []repository.DBOption {
 	if req.DutyNo != "" {
 		opts = append(opts, commonRepo.WhereByDutyNo(req.DutyNo))
 	}
+	// logger.Logger.Info("buildCountOptsReq", zap.Any("req", req))
+	// if req.AreaUuid > 0 {
+	// 	prefix := config.Database.TablePrefix
+	// 	opts = append(opts, commonRepo.WhereSubQueryByRegionUuid(prefix+"sale_bill", req.AreaUuid))
+	// }
 	return opts
 }
 
@@ -815,4 +837,58 @@ func (s *statisticsSrv) CountMember(ctx context.Context, req CountReq) CountMemb
 		TotalPaymentFee:     memberData.TotalPaymentFee.Float64,
 		TotalRefundAmount:   memberData.TotalRefundAmount.Float64,
 	}
+}
+
+// CountProductSaleResp 统计商品销售响应
+type CountProductSaleResp struct {
+	Data  []CountProductSale `json:"data"`
+	Total int64              `json:"total"`
+}
+
+type CountProductSale struct {
+	ProductName           string  `json:"product_name"`
+	CategoryName          string  `json:"category_name"`
+	TotalSaleNum          int64   `json:"total_sale_num"`
+	TotalOriginSaleAmount float64 `json:"total_origin_sale_amount"`
+	TotalActualSaleAmount float64 `json:"total_actual_sale_amount"`
+	TotalGiveNum          int64   `json:"total_give_num"`
+	TotalBusinessAmount   float64 `json:"total_business_amount"`
+}
+
+// CountProductSale 统计商品销售
+func (s *statisticsSrv) CountProductSale(ctx context.Context, req CountReq) CountProductSaleResp {
+	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
+	statisticsRepo := repository.NewStatisticsRepo(db)
+	productSaleData, total := statisticsRepo.CountProductSale(repository.CountProductSaleRepoReq{
+		PageNo:        req.PageNo,
+		PageSize:      req.PageSize,
+		RankType:      req.RankType,
+		RankDirection: req.RankDirection,
+		Language:      ctx.GetLanguage(),
+		AreaUuid:      req.AreaUuid,
+		CategoryUuid:  req.CategoryUuid,
+	}, s.buildCountOpts(req)...)
+
+	var data []CountProductSale
+	for _, productSale := range productSaleData {
+		categoryName := productSale.CategoryName.String
+		if productSale.CategoryParentName.String != "" {
+			categoryName = productSale.CategoryParentName.String + "-" + categoryName
+		}
+		data = append(data, CountProductSale{
+			ProductName:           productSale.ProductName.String,
+			CategoryName:          categoryName,
+			TotalSaleNum:          productSale.SaleNum.Int64,
+			TotalOriginSaleAmount: productSale.OriginSaleAmount.Float64,
+			TotalActualSaleAmount: productSale.ActualSaleAmount.Float64,
+			TotalGiveNum:          productSale.GiveNum.Int64,
+			TotalBusinessAmount:   productSale.BusinessAmount.Float64,
+		})
+	}
+
+	return CountProductSaleResp{
+		Data:  data,
+		Total: total,
+	}
+
 }
