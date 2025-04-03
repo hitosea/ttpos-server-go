@@ -567,11 +567,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					CommonRepo.Preload(
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts",
-							Args: []interface{}{
-								func(db *gorm.DB) *gorm.DB {
-									return db.Where("delete_time = ? AND is_accept_order = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted)
-								},
-							},
+							Args:  []any{filterProduct},
 						},
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.H5Order",

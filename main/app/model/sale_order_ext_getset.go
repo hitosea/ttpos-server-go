@@ -168,7 +168,6 @@ func FilterUnAcceptOrderProduct(products []*SaleOrderProduct) []*SaleOrderProduc
 	list := make([]*SaleOrderProduct, 0)
 	for _, product := range products {
 		if product.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept {
-			fmt.Println("5555 product.Uuid", product.Uuid)
 			continue
 		}
 		list = append(list, product)
