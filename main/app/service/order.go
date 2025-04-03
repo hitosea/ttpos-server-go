@@ -3310,6 +3310,10 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		// 商品计数
 		productNum := 0
 		for _, product := range productList {
+			// 退菜的商品不计入
+			if product.IsCancel {
+				continue
+			}
 			productNum += int(product.Num)
 		}
 
