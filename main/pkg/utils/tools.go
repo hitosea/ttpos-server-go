@@ -200,7 +200,7 @@ func DecimalMul(f1 float64, fs ...float64) float64 {
 }
 
 func FormatFloat(f1 float64) string {
-	return strconv.FormatFloat(f1, 'f', 2, 64)
+	return strconv.FormatFloat(f1, 'f', -1, 64)
 }
 
 func DecimalSub(f1 float64, fs ...float64) float64 {

@@ -83,7 +83,7 @@ func (r *H5OrderRepoImpl) PaginateGetH5Order(pageNo, pageSize int, opts ...DBOpt
 		return nil, 0, errors.WithMessage(err)
 	}
 	// 获取分页数据
-	err := db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Debug().Find(&qrcodeOrders).Error
+	err := db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&qrcodeOrders).Error
 	return qrcodeOrders, total, errors.WithMessage(err)
 }
 

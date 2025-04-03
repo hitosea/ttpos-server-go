@@ -19034,7 +19034,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "accept_time": {
-                    "description": "接单时间. “17:20:01 接单”。值为0时不显示",
+                    "description": "接单时间. “17:20:01 接单”。值为0时不显示。 -1 表示收银机送厨的商品或顾客",
                     "type": "integer"
                 },
                 "products": {
