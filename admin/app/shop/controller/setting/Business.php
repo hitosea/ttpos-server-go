@@ -108,8 +108,6 @@ class Business extends Controller
         $auth = new AuthService();
         $token = $auth->generateToken($arr);
         $qrCode = new QrCode(env('EMENU_BASE_URL') . "/#/home?token={$token}");
-        $qrCode->setSize(300);
-        $qrCode->setMargin(10);
 
         return $this->renderSuccess('', (new PngWriter())->write($qrCode)->getDataUri());
     }

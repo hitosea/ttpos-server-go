@@ -4,7 +4,6 @@
 .vscode
 .rnd
 error.log
-composer.lock
 /vendor
 /node_modules
 /docker/redis/data/*

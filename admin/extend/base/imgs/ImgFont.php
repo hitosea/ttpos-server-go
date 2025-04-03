@@ -447,8 +447,6 @@ class ImgFont
             $this->textTotalHeight = $this->textTotalHeight - ($margin * 2);
         } else {
             $qrCode = new QrCode($data);
-            $qrCode->setSize($size);
-            $qrCode->setMargin($margin);
             $qrCodeString = (new PngWriter())->write($qrCode)->getString();
         }
         // 

@@ -279,8 +279,6 @@ class Client extends Controller
         }
         //
         $qrCode = new QrCode($version->package_url);
-        $qrCode->setSize(300);
-        $qrCode->setMargin(10);
         //
         return $this->renderSuccess('', (new PngWriter())->write($qrCode)->getDataUri());
     }
