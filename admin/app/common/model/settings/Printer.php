@@ -165,7 +165,7 @@ class Printer extends BaseModel
         $paginate =  self::alias('a')
             ->field("a.*, IF(find_in_set(a.uuid, '$printerIds'), 1, 0) as is_use")
             ->with(['printerType'])
-            ->order(['a.sort' => 'asc'])
+            ->order(['a.id' => 'desc'])
             ->paginate($params);
 
         $list = [];
