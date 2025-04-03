@@ -244,7 +244,7 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 	if _, err := repository.NewMemberBalanceLogRepo(tx).Create(model.MemberBalanceLog{
 		MemberUuid:  changeReq.MemberUuid,
 		Scene:       changeReq.Scene,
-		Money:       changeReq.Money,
+		Money:       utils.DecimalAdd(changeReq.Money, changeReq.GiftMoney),
 		GiftMoney:   changeReq.GiftMoney,
 		Describe:    changeReq.Describe,
 		RelatedUuid: changeReq.RelatedUuid,
