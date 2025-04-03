@@ -96,7 +96,7 @@ class Clear extends Controller
      */
     private function rmCache($keys)
     {
-        $app_id = $this->store['app']['app_id'];
+        $app_id = $this->store['app']['uuid'];
         $cacheList = $this->getItems();
         $keys = array_intersect(array_keys($cacheList), $keys);
         foreach ($keys as $key) {
