@@ -5153,9 +5153,6 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 
 	companySetting := ctx.GetCompanySetting()
 	paymentApp, paymentAppErr := admin.NewPaymentAppRepo(s.dbm.GetDB(0)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
-	serviceFeeRate := saleBill.SaleBillSetting.GetServiceFeeRate()
-	serviceFeeValue := saleBill.SaleBillSetting.ServiceFeeValue
-	taxFeeType := saleBill.SaleBillSetting.GetTaxFeeType()
 	for _, paymentMethod := range paymentMethods {
 		// 不显示免单
 		if paymentMethod.Code == constant.PaymentMethodCodeFreePay {
@@ -5197,7 +5194,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 		commissionFee := saleOrder.CalcCommissionFee()
 
 		saleOrderAmount := saleOrder.GetAmount()
-		saleOrderOriginAmount := saleOrder.CalcOrderOriginAmount(serviceFeeRate, serviceFeeValue, taxFeeType)
+		saleOrderOriginAmount := saleOrder.GetOriginAmountValue()
 		if commissionFee > 0 {
 			// 如果有手续费
 			amount := resp.PaymentMethodAmount{

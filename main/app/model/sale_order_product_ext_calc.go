@@ -334,36 +334,6 @@ func (model *SaleOrderProduct) calcServiceFee(price float64, serviceFeeRate floa
 	return 0
 }
 
-// 计算商品原服务费，即为打折前的服务费。0-固定服务费 大于0-按比例收服务费；
-// 商品已含税时，服务费=(销售价-商品税费)*服务费比例；
-// 商品未含税时，服务费=销售价*服务费比例
-func (model *SaleOrderProduct) calcOriginServiceFee(serviceFeeRate float64, taxFeeType int) float64 {
-	// 服务费关闭时，不收取服务费。视为服务费比例为0，不收取
-	// 服务费按固定费用收取时，不收取单收订单商品的服务费。视为服务费比例为0，不收取
-	// 服务费按比例收取时，根据服务费比例收取
-	if serviceFeeRate <= 0 {
-		return 0
-	}
-	// 服务费按比例收取时，根据服务费比例收取
-	// 服务费比例大于0时，
-	// 商品未含税时，服务费=销售价（折前价）*服务费比例
-	if taxFeeType == constant.TaxFeeTypeNoTax {
-		// 未含税时
-		serviceFee := decimal.NewFromFloat(model.calcSalePrice()).Mul(decimal.NewFromFloat(serviceFeeRate))
-		return serviceFee.InexactFloat64()
-	}
-	// 已含税时
-	if taxFeeType == constant.TaxFeeTypeTax {
-		// 商品未含税价格=（销售价-商品原税费）
-		priceNoneTax := decimal.NewFromFloat(model.calcSalePrice()).Sub(decimal.NewFromFloat(model.calcTaxFee(model.SalePrice, taxFeeType)))
-		//  服务费=（最终单价-商品税费）*服务费比例
-		serviceFee := priceNoneTax.Mul(decimal.NewFromFloat(serviceFeeRate))
-		return serviceFee.InexactFloat64()
-	}
-	// 默认商品不收取服务费
-	return 0
-}
-
 // 计算订单商品的服务费税费。
 // 当不收取服务费税费时，服务费税费为0
 // 当收取服务费税费时，服务费税费=订单商品服务费*商品消费税税率
@@ -384,8 +354,9 @@ func (model *SaleOrderProduct) calcOriginServiceTaxFee(serviceFeeRate float64, t
 	// 当服务费收费税费时
 	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax {
 		// 服务费税费=订单商品服务费*商品消费税税率
-		serviceTaxFee := decimal.NewFromFloat(model.calcOriginServiceFee(serviceFeeRate, taxFeeType)).Mul(decimal.NewFromFloat(model.TaxRate))
-		return serviceTaxFee.InexactFloat64()
+		serviceFee := model.calcServiceFee(model.calcSalePrice(), serviceFeeRate, taxFeeType)
+		serviceTaxFee := decimal.NewFromFloat(serviceFee).Mul(decimal.NewFromFloat(model.TaxRate))
+		return serviceTaxFee.Truncate(3).Round(2).InexactFloat64()
 	}
 	return 0
 }

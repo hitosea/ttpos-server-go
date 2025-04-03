@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"ttpos-server-go/app/constant"
 
 	"github.com/shopspring/decimal"
@@ -32,51 +33,6 @@ func (model *SaleOrder) CalcCookingAndOrderSaleOrder(setting SaleBillSetting) *C
 	products := model.GetCookingOrderProductList()
 	products = append(products, model.GetH5OrderProductList()...)
 	return model.calcCookingSaleOrder(products, serviceFeeType, setting.ServiceFeeValue, taxFeeType)
-}
-
-// 计算销售订单原价金额。
-// 商品未含税时，销售订单原价金额=销售订单商品总价（折前价）+ 服务费 + 消费税（包括消费税税费和服务费税费）
-// 商品已含税时，销售订单原价金额=销售订单商品总价（折前价）+ 服务费 + 消费税（只含服务费税费）
-func (model *SaleOrder) CalcOrderOriginAmount(serviceFeeRate float64, serviceFeeValue float64, taxFeeType int) float64 {
-	// 商品未含税时,销售订单原价金额=销售订单商品总价（折前价）+ 服务费 + 消费税（包括消费税税费和服务费税费）
-	if taxFeeType == constant.TaxFeeTypeNoTax {
-		// 原服务费
-		originService := model.calcOrderOriginServiceFee(serviceFeeRate, serviceFeeValue, taxFeeType)
-		// 原服务费税费
-		serviceTaxFee := model.calcOrderOriginServiceTaxFee(serviceFeeRate, taxFeeType)
-		// 原商品消费税税费
-		originProductTaxFee := model.calcOriginProductTaxFee(taxFeeType)
-
-		// 销售订单原价金额=销售订单商品总价（折前价）+ 服务费 + 消费税（包括消费税税费和服务费税费）
-		amount := decimal.NewFromFloat(model.ProductOriginalAmount).Add( // 销售订单商品总价（折前价）
-			decimal.NewFromFloat(originService)).Add( //  服务费
-			decimal.NewFromFloat(serviceTaxFee)).Add( //  服务费消费税金额
-			decimal.NewFromFloat(originProductTaxFee)) // 商品消费税税费金额
-		return amount.InexactFloat64()
-	}
-	// 商品已含税时，销售订单原价金额=销售订单商品总价（折前价）+ 服务费 + 消费税（只含服务费税费）
-	if taxFeeType == constant.TaxFeeTypeTax {
-		// 服务费
-		originService := model.calcOrderOriginServiceFee(serviceFeeRate, serviceFeeValue, taxFeeType)
-		// 服务费税费
-		serviceTaxFee := decimal.NewFromFloat(model.calcOrderOriginServiceTaxFee(serviceFeeRate, taxFeeType))
-		//销售订单原价金额=销售订单商品总价（折前价）+ 服务费 + 消费税（只含服务费税费）
-		amount := decimal.NewFromFloat(model.ProductOriginalAmount).Add(
-			decimal.NewFromFloat(originService)).Add(
-			serviceTaxFee)
-		return amount.InexactFloat64()
-	}
-
-	// 默认按商品已含税处理。
-	// 服务费
-	originService := model.calcOrderOriginServiceFee(serviceFeeRate, serviceFeeValue, taxFeeType)
-	// 服务费税费
-	serviceTaxFee := decimal.NewFromFloat(model.calcOrderOriginServiceTaxFee(serviceFeeRate, taxFeeType))
-	//销售订单原价金额=销售订单商品总价（折前价）+ 服务费 + 消费税（只含服务费税费）
-	amount := decimal.NewFromFloat(model.ProductOriginalAmount).Add(
-		decimal.NewFromFloat(originService)).Add(
-		serviceTaxFee)
-	return amount.InexactFloat64()
 }
 
 // 计算销售订单已经支付的付款单手续费
@@ -215,10 +171,10 @@ func (model *SaleOrder) calcOrderOriginServiceFee(serviceFeeRate float64, servic
 			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
 				continue
 			}
-			serviceFee := saleOrderProduct.calcOriginServiceFee(serviceFeeRate, taxFeeType)
+			serviceFee := saleOrderProduct.calcServiceFee(saleOrderProduct.calcSalePrice(), serviceFeeRate, taxFeeType)
 			originServiceFee = originServiceFee.Add(decimal.NewFromFloat(serviceFee))
 		}
-		return originServiceFee.InexactFloat64()
+		return originServiceFee.Truncate(3).Round(2).InexactFloat64()
 	}
 }
 
@@ -240,7 +196,7 @@ func (model *SaleOrder) calcOrderOriginServiceTaxFee(serviceFeeRate float64, tax
 			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
 				continue
 			}
-			serviceFee := saleOrderProduct.calcOriginServiceFee(serviceFeeRate, taxFeeType)
+			serviceFee := saleOrderProduct.calcServiceFee(saleOrderProduct.calcSalePrice(), serviceFeeRate, taxFeeType)
 			// 商品的原服务费税费= 原服务费 * 服务费税率
 			originServiceTaxFee := decimal.NewFromFloat(serviceFee).Mul(decimal.NewFromFloat(saleOrderProduct.TaxRate))
 			// 累加各个订单商品的服务费税费
@@ -646,6 +602,7 @@ func (model *SaleOrder) calcAmount(products []*SaleOrderProduct, serviceFeeType 
 			decimal.NewFromFloat(productAmount)).Add(
 			decimal.NewFromFloat(serviceFee)).Add(
 			decimal.NewFromFloat(serviceTaxFee))
+		fmt.Println("销售订单应收金额 productAmount", productAmount, "serviceFee", serviceFee, "serviceTaxFee", serviceTaxFee, "amount", amount.InexactFloat64())
 		return amount.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 商品未含税时
@@ -681,6 +638,7 @@ func (model *SaleOrder) calcOriginAmount(products []*SaleOrderProduct, serviceFe
 			decimal.NewFromFloat(productAmount)).Add(
 			decimal.NewFromFloat(serviceFee)).Add(
 			decimal.NewFromFloat(serviceTaxFee))
+		fmt.Println("销售订单原价 productAmount", productAmount, "serviceFee", serviceFee, "serviceTaxFee", serviceTaxFee, "amount", amount.InexactFloat64())
 		return amount.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 商品未含税时
