@@ -105,7 +105,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 	case constant.OrderProductMove: // 转菜
 		var productMove event.ChangeDeskSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &productMove); err == nil {
-			return fmt.Sprintf("%s (%s) *%d（%s%s）", productMove.ProductName.GetLocale(language), productMove.ProductAttr.GetLocale(language), productMove.TotalNum, i18n.Translate(language, "转至"), productMove.ToTableNo)
+			return fmt.Sprintf("%s (%s) *%d(%s%s)", productMove.ProductName.GetLocale(language), productMove.ProductAttr.GetLocale(language), productMove.TotalNum, i18n.Translate(language, "转至"), productMove.ToTableNo)
 		}
 	case constant.OrderDiscount: // 优惠折扣
 		var discount DiscountPayload
@@ -150,7 +150,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 				}
 				payTypeList = append(payTypeList, payTypeName+": "+currencySetting.Unit+utils.FormatFloat(payType.Price))
 			}
-			desc := i18n.Translate(language, "订单金额") + " " + currencySetting.Unit + utils.FormatFloat(settle.OrderPrice) + "，" +
+			desc := i18n.Translate(language, "订单金额") + " " + currencySetting.Unit + utils.FormatFloat(settle.OrderPrice) + ", " +
 				i18n.Translate(language, "实付金额") + " " + currencySetting.Unit + utils.FormatFloat(settle.ActualPrice)
 			if len(payTypeList) > 0 {
 				desc = desc + " (" + strings.Join(payTypeList, "、") + ")"
@@ -214,7 +214,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		if err := json.Unmarshal([]byte(log.Data), &splitOrder); err == nil {
 			var orderDetails []string
 			for i, order := range splitOrder.Orders {
-				orderDetails = append(orderDetails, strconv.Itoa(i+1)+"（"+i18n.Translate(language, "订单金额")+"："+currencySetting.Unit+utils.FormatFloat(order.Amount)+"）")
+				orderDetails = append(orderDetails, strconv.Itoa(i+1)+"("+i18n.Translate(language, "订单金额")+"："+currencySetting.Unit+utils.FormatFloat(order.Amount)+")")
 			}
 			return strings.Join(orderDetails, ", ")
 		}
@@ -244,7 +244,7 @@ func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language st
 		constant.OrderSettle:              i18n.Translate(language, "结账"),
 		constant.OrderReverseSettle:       i18n.Translate(language, "反结账"),
 		constant.OrderRefund:              i18n.Translate(language, "部分退款"), // 默认部分退款
-		constant.OrderOrderTaking:         i18n.Translate(language, "接单"),     // 默认非自动接单
+		constant.OrderOrderTaking:         i18n.Translate(language, "接单"),   // 默认非自动接单
 		constant.OrderOrderReject:         i18n.Translate(language, "拒单"),
 		constant.OrderMergeTable:          i18n.Translate(language, "并台"),
 		constant.OrderOrderCancel:         i18n.Translate(language, "整单取消"),
@@ -267,7 +267,7 @@ func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language st
 	var common Common
 	json.Unmarshal([]byte(log.Data), &common)
 	if common.IsSplitOrder && common.Index > 0 {
-		prefix = "（" + i18n.Translate(language, "拆单") + strconv.Itoa(common.Index) + "）"
+		prefix = "(" + i18n.Translate(language, "拆单") + strconv.Itoa(common.Index) + ")"
 	}
 	if log.Action == constant.OrderRefund && common.RefundType == 1 {
 		return prefix + i18n.Translate(language, "整单退款")

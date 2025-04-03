@@ -45,7 +45,7 @@ func DeskAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc
 		}
 		parts := strings.SplitN(deskTokenHeader, " ", 2)
 		if !(len(parts) == 2 && parts[0] == "Bearer") {
-			helper.Fail(c, constant.CodeTokenInvalid, "token 格式错误")
+			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
 			c.Abort()
 			return
 		}
@@ -71,7 +71,7 @@ func BusinessMenu(authSrv service.IAuthSrv, dbm *database.DBManager) gin.Handler
 		}
 		parts := strings.SplitN(menuHeader, " ", 2)
 		if !(len(parts) == 2 && parts[0] == "Bearer") {
-			helper.Fail(c, constant.CodeTokenInvalid, "token 格式错误")
+			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
 			c.Abort()
 			return
 		}

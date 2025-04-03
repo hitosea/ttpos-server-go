@@ -580,7 +580,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	}
 	// 修改密码后，token失效
 	if staff.PasswordChangeTime > auth.TokenIssuedAt {
-		return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeTokenInvalid, "无效的token")
+		return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeTokenInvalid, "登录失效，请重新登录")
 	}
 	if staff.DeleteTime != 0 {
 		return company, companySetting, staff, desk, errors.New("用户被删除")
@@ -620,7 +620,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			if err != nil {
 				return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			}
-			// ToDo 记得开放
+			// ToDo 记得做完数据迁移后开放
 			//if !slices.Contains(permissions, urlPath) {
 			//	return company, companySetting, staff, apperrors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			//}
