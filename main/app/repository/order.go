@@ -573,6 +573,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 								},
 							},
 						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.H5Order",
+						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
@@ -660,6 +663,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 							Query: "SaleOrders.SaleOrderProducts",
 							Args:  []any{filterProduct},
 						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.H5Order",
+						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
@@ -743,6 +749,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 								return db.Where("delete_time = ? AND is_accept_order = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted)
 							},
 						},
+					},
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.H5Order",
 					},
 				),
 				CommonRepo.Preload(

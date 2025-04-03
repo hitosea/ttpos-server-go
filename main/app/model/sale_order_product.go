@@ -181,7 +181,7 @@ func (model *SaleOrderProduct) GetAcceptTime() int64 {
 	if model.H5Order != nil {
 		return model.H5Order.HandleTime
 	}
-	return -1
+	return 0
 }
 
 // 将已下单的h5订单商品变为已接单单的h5订单商品
