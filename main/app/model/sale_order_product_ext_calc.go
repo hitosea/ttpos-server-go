@@ -99,6 +99,8 @@ func (model *SaleOrderProduct) calcSaleOrderProduct(serviceFeeRate float64, taxF
 	model.ProductPrice = calc.ProductPrice
 	calc.SalePrice = model.calcSalePrice()
 	model.SalePrice = calc.SalePrice
+	calc.SalePriceNoTax = model.calcProductPriceNoneTax(model.SalePrice, taxFeeType)
+	model.SalePriceNoTax = calc.SalePriceNoTax
 	calc.Price = model.calcPrice()
 	model.Price = calc.Price
 	calc.MemberDiscountFee = model.calcMemberDiscountFee()
@@ -317,7 +319,6 @@ func (model *SaleOrderProduct) calcServiceFee(price float64, serviceFeeRate floa
 	if taxFeeType == constant.TaxFeeTypeTax {
 		// 商品未含税价格=（最终单价-商品税费）
 		priceNoneTax := model.calcProductPriceNoneTax(price, taxFeeType) // decimal.NewFromFloat(model.calcPrice()).Sub(decimal.NewFromFloat(model.calcTaxFee(taxFeeType)))
-		model.priceNoneTax = priceNoneTax
 		priceNoneTaxDecimal := decimal.NewFromFloat(priceNoneTax)
 		//  服务费=（最终单价-商品税费）*服务费比例
 		serviceFee := priceNoneTaxDecimal.Mul(decimal.NewFromFloat(serviceFeeRate))
@@ -514,6 +515,7 @@ type SaleOrderProductCalc struct {
 	SaucePrice        float64 `json:"sauce_price"`
 	ProductPrice      float64 `json:"product_price"`
 	SalePrice         float64 `json:"sale_price"`
+	SalePriceNoTax    float64 `json:"sale_price_no_tax"`
 	Price             float64 `json:"price"`
 	MemberDiscountFee float64 `json:"member_discount_fee"`
 	CustomDiscountFee float64 `json:"custom_discount_fee"`

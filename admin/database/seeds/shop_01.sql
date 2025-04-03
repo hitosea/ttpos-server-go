@@ -231,6 +231,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `is_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否为自助餐商品,0-否 1-是. 如果是自助餐商品，则sale_price为0',
     -- 总销售价=销售价*数量
     `sale_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价',
+    `sale_price_no_tax` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '销售价,未含税价格（折前）',
     -- 税率
     `tax_rate` DECIMAL(10, 2) NOT NULL DEFAULT 0 COMMENT '税率,单位%.加购时记录税率,结账时再重新核算',
     -- 折扣率=会员折扣率*会员卡折扣率*自定义折扣率

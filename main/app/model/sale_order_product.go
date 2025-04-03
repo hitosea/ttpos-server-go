@@ -36,6 +36,7 @@ type SaleOrderProduct struct {
 	SaucePrice       float64 `gorm:"column:sauce_price;type:decimal(12,2);not null;default:0.00;comment:'小料价（单商品）,所有小料的价格之和'" json:"sauce_price"`
 	ProductPrice     float64 `gorm:"column:product_price;type:decimal(12,2);not null;default:0.00;comment:'原始单价（单商品）,规格原价+小料价'" json:"product_price"`
 	SalePrice        float64 `gorm:"column:sale_price;type:decimal(12,2);not null;default:0.00;comment:'销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价'" json:"sale_price"`
+	SalePriceNoTax   float64 `gorm:"column:sale_price_no_tax;type:decimal(12,2);not null;default:0.00;comment:'销售价,未含税价格（折前）'" json:"sale_price_no_tax"`
 	Price            float64 `gorm:"column:price;type:decimal(12,2);not null;default:0.00;comment:'最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。销售价*折扣率'" json:"price"`
 	TotalPrice       float64 `gorm:"column:total_price;type:decimal(12,2);not null;default:0.00;comment:'应收金额(单商品)。商品已含税时，应收金额(单商品)=(最终单价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=最终单价+服务费+总税费'" json:"total_price"`
 	OriginTotalPrice float64 `gorm:"column:origin_total_price;type:decimal(12,2);not null;default:0.00;comment:'应收金额(单商品)。商品已含税时，应收金额(单商品)=(销售价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=销售价+服务费+总税费'" json:"origin_total_price"`
@@ -101,8 +102,7 @@ type SaleOrderProduct struct {
 	H5Order                    *H5Order                     `gorm:"foreignKey:H5OrderUuid;references:uuid"`
 
 	// 内部字段
-	operation    string  `gorm:"-"` // 操作类型。add: 加购，sub: 减购
-	priceNoneTax float64 `gorm:"-"` // 商品未含税价格(折后价)
+	operation string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
 }
 
 // 获取销售订单商品的总税费。包含服务费税费
@@ -153,7 +153,7 @@ func (model *SaleOrderProduct) GetCustomDiscountFee() float64 {
 
 // 获取销售订单商品的未含税价格。
 func (model *SaleOrderProduct) GetUnitPriceNoneTax() float64 {
-	return model.priceNoneTax
+	return model.SalePriceNoTax
 }
 
 func (model *SaleOrderProduct) SetAddOperation() {
