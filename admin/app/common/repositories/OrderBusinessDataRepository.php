@@ -486,7 +486,7 @@ class OrderBusinessDataRepository
         $token = $params['token'] ?? '';
         $language = $params['language'] ?? 'zh-CN';
 
-        $res = HttpHelp::getRequest('http://192.168.100.178:8080/api/v1/shop/statistics/product_sales', [
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/product_sales', [
             'product_name' => $productName,
             'area_uuid' => $areaId,
             'category_uuid' => $categoryId,
