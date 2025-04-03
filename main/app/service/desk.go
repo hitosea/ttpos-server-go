@@ -635,6 +635,16 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 		if err := repository.NewSaleBillRepo(tx).UpdateSaleBillRecord(*saleBill); err != nil {
 			return errors.WithMessage(err)
 		}
+		// 将该saleBill的所有h5订单都进行转台
+		if err := repository.NewH5OrderRepo(tx).Update(
+			map[string]interface{}{
+				"desk_uuid": reqs.DeskUuid,
+				"desk_no":   desk.DeskNo,
+			},
+			repository.NewCommonRepo().WhereBySaleBillUuid(reqs.SaleBillUuid),
+		); err != nil {
+			return errors.WithMessage(err)
+		}
 		return nil
 	}); err != nil {
 		return nil, errors.WithMessage(err)
