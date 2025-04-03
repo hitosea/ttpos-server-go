@@ -464,41 +464,36 @@ func (s *businessSrv) RankProduct(ctx context.Context, req req.BusinessDataRankP
 
 // CountProductSales 统计商品列表
 func (s *businessSrv) CountProductSales(ctx context.Context, req req.BusinessDataCountProductSalesReq) (*business_data_resp.BusinessDataCountProductSalesPagination, error) {
-	var list = []business_data_resp.BusinessDataCountProductSalesItem{
-		{
-			ProductName:        "12",
-			SalesNum:           1,
-			SalesPrice:         323,
-			CategoryName:       "12",
-			OriginalSalesPrice: 120,
-			TotalPayPrice:      120,
-			GiveProductNum:     120,
-		},
-		{
-			ProductName:        "121232",
-			SalesNum:           2,
-			SalesPrice:         23,
-			CategoryName:       "121232",
-			OriginalSalesPrice: 120,
-			TotalPayPrice:      120,
-			GiveProductNum:     120,
-		},
-		{
-			ProductName:        "121232",
-			SalesNum:           2,
-			SalesPrice:         23,
-			CategoryName:       "121232",
-			OriginalSalesPrice: 120,
-			TotalPayPrice:      120,
-			GiveProductNum:     120,
-		},
+	productSalesData := s.statisticsSrv.CountProductSale(ctx, CountReq{
+		QueryStartTime: req.QueryStartTime,
+		QueryEndTime:   req.QueryEndTime,
+		RankType:       req.SortType,
+		RankDirection:  req.SortDirection,
+		PageNo:         req.PageNo,
+		PageSize:       req.PageSize,
+		AreaUuid:       req.AreaUuid,
+		CategoryUuid:   req.CategoryUuid,
+	})
+
+	var list = []business_data_resp.BusinessDataCountProductSalesItem{}
+	for _, productSale := range productSalesData.Data {
+		list = append(list, business_data_resp.BusinessDataCountProductSalesItem{
+			ProductName:        productSale.ProductName,
+			SalesNum:           int(productSale.TotalSaleNum),
+			SalesPrice:         productSale.TotalOriginSaleAmount,
+			CategoryName:       productSale.CategoryName,
+			OriginalSalesPrice: productSale.TotalOriginSaleAmount,
+			TotalPayPrice:      productSale.TotalActualSaleAmount,
+			GiveProductNum:     int(productSale.TotalGiveNum),
+		})
 	}
+
 	var productListData = business_data_resp.BusinessDataCountProductSalesPagination{
 		List: list,
 		Meta: dto.PageResponse{
-			PageNo:   1,
-			PageSize: 10,
-			Total:    int64(len(list)),
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    productSalesData.Total,
 		},
 	}
 

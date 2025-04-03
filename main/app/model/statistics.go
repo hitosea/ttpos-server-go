@@ -58,9 +58,14 @@ type StatisticsProduct struct {
 	ProductBomUuid     uint64  `gorm:"column:product_bom_uuid;type:bigint(20) unsigned;default:0;comment:商品清单uuid;NOT NULL" json:"product_bom_uuid"`
 	ProductPrice       float64 `gorm:"column:product_price;type:decimal(14,2);default:0.00;comment:商品单价: 未含税;NOT NULL" json:"product_price"`
 	ProductSalePrice   float64 `gorm:"column:product_sale_price;type:decimal(14,2);default:0.00;comment:商品单价: 规格+加料;NOT NULL" json:"product_sale_price"`
+	ProductFinalPrice  float64 `gorm:"column:product_final_price;type:decimal(14,2);default:0.00;comment:商品最终单价;NOT NULL" json:"product_final_price"`
 	ProductNum         int     `gorm:"column:product_num;type:int(11);default:0;comment:商品数量;NOT NULL" json:"product_num"`
 	TaxRate            float64 `gorm:"column:tax_rate;type:decimal(14,2);default:0.00;comment:税率;NOT NULL" json:"tax_rate"`
 	TaxFee             float64 `gorm:"column:tax_fee;type:decimal(14,2);default:0.00;comment:税费;NOT NULL" json:"tax_fee"`
+	ServiceFee         float64 `gorm:"column:service_fee;type:decimal(14,2);default:0.00;comment:服务费;NOT NULL" json:"service_fee"`
+	ServiceTax         float64 `gorm:"column:service_tax;type:decimal(14,2);default:0.00;comment:服务税;NOT NULL" json:"service_tax"`
+	GiveNum            int     `gorm:"column:give_num;type:int(11);default:0;comment:增菜数量;NOT NULL" json:"give_num"`
+	FreeNum            int     `gorm:"column:free_num;type:int(11);default:0;comment:免单数量;NOT NULL" json:"free_num"`
 	RefundNum          int     `gorm:"column:refund_num;type:int(11);default:0;comment:退款数量;NOT NULL" json:"refund_num"`
 	CompleteTime       int64   `gorm:"column:complete_time;type:bigint(20);default:0;comment:完成时间;NOT NULL" json:"complete_time"`
 	RefundTime         int64   `gorm:"column:refund_time;type:bigint(20);default:0;comment:退款时间;NOT NULL" json:"refund_time"`
@@ -191,4 +196,16 @@ type StatisticsMemberData struct {
 	TotalPaymentAmount  sql.NullFloat64 `gorm:"column:total_payment_amount;comment:总支付金额"`
 	TotalPaymentFee     sql.NullFloat64 `gorm:"column:total_payment_fee;comment:总支付手续费"`
 	TotalRefundAmount   sql.NullFloat64 `gorm:"column:total_refund_amount;comment:总退款金额"`
+}
+
+// StatisticsProductSaleData 商品销售统计数据
+type StatisticsProductSaleData struct {
+	ProductName        sql.NullString  `gorm:"column:product_name;comment:商品名称"`
+	CategoryParentName sql.NullString  `gorm:"column:category_parent_name;comment:分类父级名称"`
+	CategoryName       sql.NullString  `gorm:"column:category_name;comment:分类名称"`
+	SaleNum            sql.NullInt64   `gorm:"column:sale_num;comment:销售数量"`
+	OriginSaleAmount   sql.NullFloat64 `gorm:"column:origin_sale_amount;comment:原价销售金额"`
+	ActualSaleAmount   sql.NullFloat64 `gorm:"column:actual_sale_amount;comment:实际销售金额"`
+	GiveNum            sql.NullInt64   `gorm:"column:give_num;comment:赠菜数量"`
+	BusinessAmount     sql.NullFloat64 `gorm:"column:business_amount;comment:营业收入"`
 }
