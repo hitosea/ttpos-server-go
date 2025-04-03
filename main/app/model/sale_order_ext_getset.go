@@ -230,7 +230,10 @@ func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOptio
 		}
 
 		if option.CookingStatus == CookingStatusAll {
-			// 已送厨和未送厨的商品计入
+			// 已送厨和未送厨的商品计入，排除未接单的商品
+			if orderProduct.IsH5OrderProductBool() {
+				continue
+			}
 			products = append(products, orderProduct)
 		}
 	}
