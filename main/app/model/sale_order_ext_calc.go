@@ -768,7 +768,7 @@ func (model *SaleOrder) calcOriginServiceFee(products []*SaleOrderProduct, servi
 		for _, buffetCustomer := range model.SaleOrderBuffetCustomerTypes {
 			serviceFee = serviceFee.Add(decimal.NewFromFloat(buffetCustomer.GetOriginServiceFee(serviceFeeValue, taxFeeType)))
 		}
-		return serviceFee.Truncate(2).InexactFloat64()
+		return serviceFee.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 默认不收取服务费
 	return 0

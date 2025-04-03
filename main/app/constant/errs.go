@@ -56,7 +56,7 @@ func ParseCodeOrderCheck(code int) string {
 	case CodeOrderCheckProductStockZero:
 		return "以下商品库存不足，请删除后再下单"
 	case CodeOrderCheckProductMust:
-		return "已下单和本次要下单的商品未选择必点商品，确定要继续下单吗？"
+		return "已送厨和本次要送厨的商品未选择必点商品，确定要继续送厨吗？" // todo 扫码端要这样显示？已下单和本次要下单的商品未选择必点商品，确定要继续下单吗？
 	case CodeOrderCheckProductPriceChanged:
 		return "订单商品数据有变动，请重新查看订单"
 	case CodeOrderCheckProductLimitOut:
