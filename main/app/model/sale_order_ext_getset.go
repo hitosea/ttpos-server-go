@@ -159,7 +159,21 @@ func (model *SaleOrder) GetUnCookingOrderProductList() []*SaleOrderProduct {
 
 // 获取全部商品，包括已送厨和未送厨
 func (model *SaleOrder) GetUnCookingAndCookingOrderProductList() []*SaleOrderProduct {
-	return model.GetAllOrderProductList(WithAll())
+	products := model.GetAllOrderProductList(WithAll())
+	return FilterUnAcceptOrderProduct(products)
+}
+
+// 过滤未接单的商品
+func FilterUnAcceptOrderProduct(products []*SaleOrderProduct) []*SaleOrderProduct {
+	list := make([]*SaleOrderProduct, 0)
+	for _, product := range products {
+		if product.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept {
+			fmt.Println("5555 product.Uuid", product.Uuid)
+			continue
+		}
+		list = append(list, product)
+	}
+	return list
 }
 
 // 获取h5已下单的商品
@@ -231,7 +245,7 @@ func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOptio
 
 		if option.CookingStatus == CookingStatusAll {
 			// 已送厨和未送厨的商品计入，排除未接单的商品
-			if orderProduct.IsH5OrderProductBool() {
+			if orderProduct.IsH5OrderProductBool() || orderProduct.IsUnAcceptH5OrderProduct() {
 				continue
 			}
 			products = append(products, orderProduct)

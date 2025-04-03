@@ -7535,7 +7535,6 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 	h5Order.Accept(ctx.GetStaffUuid(), ctx.GetLanguage())
 	// 将已下单的h5订单商品变为已接单单的h5订单商品
 	h5Order.ChangeToAccepted()
-	// 送厨已经接单的商品。送厨指定的商品列表
 
 	// 标记为是自动接单
 	if isAutoOrder {
@@ -7566,8 +7565,12 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		// 获取本次接单的商品列表
 		unCookingSaleOrderProducts := h5Order.SaleOrderProducts
 
+		// 将h5订单商品插入到销售订单中
+		saleOrder := saleBill.GetFirstSaleOrder()
+		saleOrder.InsertSaleOrderProduct(unCookingSaleOrderProducts)
+
 		// 送厨
-		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, h5OrderUuid) // 接单
+		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, h5OrderUuid, withCalcAndSaveSaleBill()) // 接单
 		if err != nil {
 			return nil, errors.WithMessage(err, "ActionCooking")
 		}

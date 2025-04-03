@@ -86,6 +86,28 @@ func (model *SaleOrder) GetIndex() int {
 	return model.index
 }
 
+// 插入销售订单商品，如果商品已存在，则更新
+func (model *SaleOrder) InsertSaleOrderProduct(saleOrderProducts []*SaleOrderProduct) {
+	saleOrderProductMap := make(map[uint64]*SaleOrderProduct)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		saleOrderProductMap[saleOrderProduct.Uuid] = saleOrderProduct
+	}
+	for i, _ := range saleOrderProducts {
+		if _, ok := saleOrderProductMap[saleOrderProducts[i].Uuid]; !ok {
+			// 如果商品不存在，则添加
+			model.SaleOrderProducts = append(model.SaleOrderProducts, saleOrderProducts[i])
+		} else {
+			// 如果商品已存在，则更新
+			saleOrderProductMap[saleOrderProducts[i].Uuid] = saleOrderProducts[i]
+		}
+	}
+
+	// saleOrderProductMap中保存的是最新的商品，所以需要更新销售订单中的商品
+	for i, saleOrderProduct := range model.SaleOrderProducts {
+		model.SaleOrderProducts[i] = saleOrderProductMap[saleOrderProduct.Uuid]
+	}
+}
+
 // 设置销售订单的序号
 func (model *SaleOrder) SetIndex(index int) {
 	model.index = index

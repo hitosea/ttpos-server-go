@@ -1,8 +1,6 @@
 package service
 
 import (
-	"go.uber.org/zap"
-	"gorm.io/gorm"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -11,6 +9,9 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
+
+	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 type ActionCookingOption struct {
