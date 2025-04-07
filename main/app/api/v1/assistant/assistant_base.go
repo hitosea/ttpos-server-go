@@ -21,6 +21,7 @@ type BaseHandler struct {
 	settingSrv       setting.ISrv
 	paymentMethodSrv service.IPaymentMethodSrv
 	otherSrv         service.IOtherSrv
+	deviceSrv        service.IDeviceSrv
 }
 
 // GetLanguage 语言
@@ -201,6 +202,31 @@ func (h *BaseHandler) GetFreeOrGiftReason(c *gin.Context) {
 	helper.Success(c, respSetting)
 }
 
+// EditSetting 修改设置
+// @Summary 修改设置
+// @Description 修改设置
+// @Tags 点餐助手端.设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.EditDeviceRemarkReq true "修改设置参数"
+// @Success 200 {object} dto.Response
+// @Router /assistant/setting [post]
+func (h *BaseHandler) EditSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var settingReq req.EditDeviceRemarkReq
+	if err := c.ShouldBindJSON(&settingReq); err != nil {
+		helper.HandleValidationError(c, err, settingReq, nil)
+		return
+	}
+	err := h.deviceSrv.UpdateRemark(ctx, settingReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -220,6 +246,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		settingSrv:       settingSrv,
 		paymentMethodSrv: paymentMethodSrv,
 		otherSrv:         otherSrv,
+		deviceSrv:        deviceSrv,
 	}
 
 	// 需要认证
@@ -234,5 +261,6 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/payment_method/list", wrapper.GetPaymentMethodList)         // 获取支付方式列表
 		privateApi.GET("/return_reason", wrapper.GetReturnReason)                    // 获取退菜原因
 		privateApi.GET("/free_or_gift_reason", wrapper.GetFreeOrGiftReason)          // 获取退菜原因
+		privateApi.POST("/setting", wrapper.EditSetting)                             // 修改机器备注
 	}
 }

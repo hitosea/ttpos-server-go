@@ -18,9 +18,10 @@ import (
 )
 
 type IDeviceSrv interface {
-	AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uint64, error) // 添加绑定记录
-	GetRemark(companyUuid uint64, source string, deviceId string) string    // 获取设备绑定备注
-	IsDeviceBind(companyUuid uint64, source string, deviceId string) bool   // 设备是否绑定
+	AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uint64, error)         // 添加绑定记录
+	GetRemark(companyUuid uint64, source string, deviceId string) string            // 获取设备绑定备注
+	IsDeviceBind(companyUuid uint64, source string, deviceId string) bool           // 设备是否绑定
+	UpdateRemark(ctx context.Context, editSettingReq req.EditDeviceRemarkReq) error // 更新备注
 }
 
 func NewDeviceSrv(settingSrv setting.ISrv, dbm *database.DBManager) IDeviceSrv {
@@ -157,4 +158,10 @@ func (s *deviceSrv) IsDeviceBind(companyUuid uint64, source string, deviceId str
 	deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(companyUuid))
 	device, _ := deviceRepo.GetDevice(deviceRepo.WhereSource(source), deviceRepo.WhereSn(deviceId))
 	return device.Uuid > 0
+}
+
+func (s *deviceSrv) UpdateRemark(ctx context.Context, editSettingReq req.EditDeviceRemarkReq) error {
+	return ctx.GetDB().Model(&model.Device{}).Where("uuid = ?", ctx.GetDeviceUuid()).Updates(map[string]any{
+		"remark": editSettingReq.Remark,
+	}).Error
 }
