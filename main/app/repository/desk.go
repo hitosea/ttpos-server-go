@@ -258,6 +258,7 @@ func (r *deskRepo) CloseDesk(ctx context.Context, deskUuid uint64, reason string
 		return errors.WithMessage(err)
 	}
 	return r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Updates(map[string]any{
+		"uuid":           deskUuid,
 		"status":         constant.DeskStatusClose,
 		"sale_bill_uuid": 0,
 	}).Error
