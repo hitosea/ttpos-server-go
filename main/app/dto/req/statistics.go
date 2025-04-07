@@ -1,6 +1,9 @@
 package req
 
-import "ttpos-server-go/app/dto"
+import (
+	"time"
+	"ttpos-server-go/app/dto"
+)
 
 type BusinessDataPrinterReq struct {
 	TimeType       int  `json:"time_type"`        // 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)
@@ -10,6 +13,50 @@ type BusinessDataPrinterReq struct {
 	CategoryType   int  `json:"category_type"`    // 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
 }
 
+// GetParam 获取参数
+func (r *BusinessDataPrinterReq) GetParam() BusinessDataPrinterReq {
+	var (
+		queryStartTime int64
+		queryEndTime   int64
+	)
+	// 处理时间范围
+	if r.TimeType > 0 && r.TimeType < 5 {
+		now := time.Now()
+		var startTime, endTime time.Time
+		switch r.TimeType {
+		case 1: // 今天
+			startTime = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+			endTime = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
+		case 2: // 昨天
+			startTime = time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, now.Location())
+			endTime = time.Date(now.Year(), now.Month(), now.Day()-1, 23, 59, 59, 0, now.Location())
+		case 3: // 本周
+			weekday := int(now.Weekday())
+			if weekday == 0 {
+				weekday = 7
+			}
+			startTime = time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 0, 0, 0, 0, now.Location())
+			endTime = time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 23, 59, 59, 0, now.Location())
+		case 4: // 本月
+			startTime = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+			endTime = startTime.AddDate(0, 1, 0).Add(-time.Second)
+		}
+		queryStartTime = startTime.Unix()
+		queryEndTime = endTime.Unix()
+	}
+	if r.QueryStartTime > 0 && r.QueryEndTime > 0 {
+		queryStartTime = int64(r.QueryStartTime)
+		queryEndTime = int64(r.QueryEndTime)
+	}
+	return BusinessDataPrinterReq{
+		TimeType:       r.TimeType,
+		StatisticsType: r.StatisticsType,
+		QueryStartTime: uint(queryStartTime),
+		QueryEndTime:   uint(queryEndTime),
+		CategoryType:   r.CategoryType,
+	}
+}
+
 // BusinessDataCountReq 营业数据统计请求
 type BusinessDataCountReq struct {
 	TimeType       int    `form:"time_type"`        // 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)
@@ -17,6 +64,49 @@ type BusinessDataCountReq struct {
 	QueryEndTime   int64  `form:"query_end_time"`   // 查询结束时间戳
 	CategoryType   int    `form:"category_type"`    // 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
 	DutyNo         string `form:"duty_no"`          // 班次编号
+}
+
+// GetParam 获取参数
+func (r *BusinessDataCountReq) GetParam() BusinessDataCountReq {
+	var (
+		queryStartTime int64
+		queryEndTime   int64
+	)
+	// 处理时间范围
+	if r.TimeType > 0 && r.TimeType < 5 {
+		now := time.Now()
+		var startTime, endTime time.Time
+		switch r.TimeType {
+		case 1: // 今天
+			startTime = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+			endTime = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
+		case 2: // 昨天
+			startTime = time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, now.Location())
+			endTime = time.Date(now.Year(), now.Month(), now.Day()-1, 23, 59, 59, 0, now.Location())
+		case 3: // 本周
+			weekday := int(now.Weekday())
+			if weekday == 0 {
+				weekday = 7
+			}
+			startTime = time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 0, 0, 0, 0, now.Location())
+			endTime = time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 23, 59, 59, 0, now.Location())
+		case 4: // 本月
+			startTime = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+			endTime = startTime.AddDate(0, 1, 0).Add(-time.Second)
+		}
+		queryStartTime = startTime.Unix()
+		queryEndTime = endTime.Unix()
+	}
+	if r.QueryStartTime > 0 && r.QueryEndTime > 0 {
+		queryStartTime = int64(r.QueryStartTime)
+		queryEndTime = int64(r.QueryEndTime)
+	}
+	return BusinessDataCountReq{
+		TimeType:       r.TimeType,
+		QueryStartTime: queryStartTime,
+		QueryEndTime:   queryEndTime,
+		CategoryType:   r.CategoryType,
+	}
 }
 
 // BusinessDataRankProductReq 营业数据排行请求

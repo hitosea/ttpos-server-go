@@ -69,7 +69,7 @@ services:
     volumes:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env
-      - ./version.json:/var/www/version.json
+      - ./main/version.json:/var/www/version.json
     restart: always
 
   websocket:

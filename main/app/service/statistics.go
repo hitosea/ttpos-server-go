@@ -675,17 +675,17 @@ func (s *statisticsSrv) buildCountOpts(req CountReq) []repository.DBOption {
 		var startTime, endTime time.Time
 		switch req.TimeType {
 		case 1: // 今天
-			startTime = now.Truncate(24 * time.Hour)
-			endTime = startTime.Add(24*time.Hour - time.Second)
+			startTime = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+			endTime = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
 		case 2: // 昨天
-			startTime = now.AddDate(0, 0, -1).Truncate(24 * time.Hour)
-			endTime = startTime.Add(24*time.Hour - time.Second)
+			startTime = time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, now.Location())
+			endTime = time.Date(now.Year(), now.Month(), now.Day()-1, 23, 59, 59, 0, now.Location())
 		case 3: // 本周
 			weekday := int(now.Weekday())
 			if weekday == 0 {
 				weekday = 7
 			}
-			startTime = now.AddDate(0, 0, -weekday+1).Truncate(24 * time.Hour)
+			startTime = time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 0, 0, 0, 0, now.Location())
 			endTime = startTime.AddDate(0, 0, 7).Add(-time.Second)
 		case 4: // 本月
 			startTime = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
