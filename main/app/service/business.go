@@ -46,28 +46,27 @@ func NewBusinessSrvImpl(statisticsSrv IStatisticsSrv) IBusinessSrv {
 func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPrinterReq) (*resp.PrinterData, error) {
 	// Initialize the pointer to avoid nil dereference
 	reqPrinterData := &template.PrintingBusinessData{}
-	//
+	// 获取参数
+	printerParam := printerReq.GetParam()
+	// 统计类型
 	if printerReq.StatisticsType <= 0 {
 		// 销售数据
 		saleData := s.statisticsSrv.CountSale(ctx, CountReq{
-			TimeType:       printerReq.TimeType,
-			QueryStartTime: int64(printerReq.QueryStartTime),
-			QueryEndTime:   int64(printerReq.QueryEndTime),
-			CategoryType:   printerReq.CategoryType,
+			QueryStartTime: int64(printerParam.QueryStartTime),
+			QueryEndTime:   int64(printerParam.QueryEndTime),
+			CategoryType:   printerParam.CategoryType,
 		})
 		// 支付数据
 		_, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req.BusinessDataCountReq{
-			QueryStartTime: int64(printerReq.QueryStartTime),
-			QueryEndTime:   int64(printerReq.QueryEndTime),
-			TimeType:       printerReq.TimeType,
-			CategoryType:   printerReq.CategoryType,
+			QueryStartTime: int64(printerParam.QueryStartTime),
+			QueryEndTime:   int64(printerParam.QueryEndTime),
+			CategoryType:   printerParam.CategoryType,
 		})
 		// 会员数量
 		memberNum := s.statisticsSrv.CountMemberNum(ctx, CountReq{
-			TimeType:       printerReq.TimeType,
-			QueryStartTime: int64(printerReq.QueryStartTime),
-			QueryEndTime:   int64(printerReq.QueryEndTime),
-			CategoryType:   printerReq.CategoryType,
+			QueryStartTime: int64(printerParam.QueryStartTime),
+			QueryEndTime:   int64(printerParam.QueryEndTime),
+			CategoryType:   printerParam.CategoryType,
 		})
 
 		reqPrinterData.All = &business_data_resp.BusinessDataAll{
@@ -113,10 +112,9 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			}(),
 			MemberData: func() business_data_resp.MemberData {
 				memberData := s.statisticsSrv.CountMember(ctx, CountReq{
-					TimeType:       printerReq.TimeType,
-					QueryStartTime: int64(printerReq.QueryStartTime),
-					QueryEndTime:   int64(printerReq.QueryEndTime),
-					CategoryType:   printerReq.CategoryType,
+					QueryStartTime: int64(printerParam.QueryStartTime),
+					QueryEndTime:   int64(printerParam.QueryEndTime),
+					CategoryType:   printerParam.CategoryType,
 				})
 				return business_data_resp.MemberData{
 					RechargeAmount: memberData.TotalRechargeAmount,
@@ -127,8 +125,8 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			}(),
 			PeakHourList: func() []business_data_resp.PeakHour {
 				peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
-					uint(printerReq.QueryStartTime),
-					uint(printerReq.QueryEndTime),
+					uint(printerParam.QueryStartTime),
+					uint(printerParam.QueryEndTime),
 					ctx.GetStaffUuid(),
 				)
 				if err != nil {
@@ -138,19 +136,17 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			}(),
 			CategoryList: func() []business_data_resp.Category {
 				_, categoryList := s.BuildCategoryList(ctx, req.BusinessDataCountReq{
-					TimeType:       printerReq.TimeType,
-					QueryStartTime: int64(printerReq.QueryStartTime),
-					QueryEndTime:   int64(printerReq.QueryEndTime),
-					CategoryType:   printerReq.CategoryType,
+					QueryStartTime: int64(printerParam.QueryStartTime),
+					QueryEndTime:   int64(printerParam.QueryEndTime),
+					CategoryType:   printerParam.CategoryType,
 				})
 				return categoryList
 			}(),
 			PercentageList: func() []business_data_resp.Percentage {
 				taxData := s.statisticsSrv.CountTax(ctx, CountReq{
-					TimeType:       printerReq.TimeType,
-					QueryStartTime: int64(printerReq.QueryStartTime),
-					QueryEndTime:   int64(printerReq.QueryEndTime),
-					CategoryType:   printerReq.CategoryType,
+					QueryStartTime: int64(printerParam.QueryStartTime),
+					QueryEndTime:   int64(printerParam.QueryEndTime),
+					CategoryType:   printerParam.CategoryType,
 				})
 				list := make([]business_data_resp.Percentage, 0, len(taxData))
 				for _, tax := range taxData {
@@ -168,10 +164,9 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	if printerReq.StatisticsType == 1 {
 		// 支付数据
 		paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req.BusinessDataCountReq{
-			QueryStartTime: int64(printerReq.QueryStartTime),
-			QueryEndTime:   int64(printerReq.QueryEndTime),
-			TimeType:       printerReq.TimeType,
-			CategoryType:   printerReq.CategoryType,
+			QueryStartTime: int64(printerParam.QueryStartTime),
+			QueryEndTime:   int64(printerParam.QueryEndTime),
+			CategoryType:   printerParam.CategoryType,
 		})
 		reqPrinterData.PaymentMethod = &business_data_resp.BusinessDataPaymentMethod{
 			TotalReceivedPrice:   paymentData.TotalReceivedAmount,
@@ -181,17 +176,15 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 
 	if printerReq.StatisticsType == 2 {
 		categoryData, categoryList := s.BuildCategoryList(ctx, req.BusinessDataCountReq{
-			TimeType:       printerReq.TimeType,
-			QueryStartTime: int64(printerReq.QueryStartTime),
-			QueryEndTime:   int64(printerReq.QueryEndTime),
-			CategoryType:   printerReq.CategoryType,
+			QueryStartTime: int64(printerParam.QueryStartTime),
+			QueryEndTime:   int64(printerParam.QueryEndTime),
+			CategoryType:   printerParam.CategoryType,
 		})
 
 		paymentData, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req.BusinessDataCountReq{
-			QueryStartTime: int64(printerReq.QueryStartTime),
-			QueryEndTime:   int64(printerReq.QueryEndTime),
-			TimeType:       printerReq.TimeType,
-			CategoryType:   printerReq.CategoryType,
+			QueryStartTime: int64(printerParam.QueryStartTime),
+			QueryEndTime:   int64(printerParam.QueryEndTime),
+			CategoryType:   printerParam.CategoryType,
 		})
 
 		reqPrinterData.ProductCategory = &business_data_resp.BusinessDataProductCategory{
@@ -207,10 +200,9 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 		reqPrinterData.Product = &business_data_resp.BusinessDataProduct{
 			Products: func() []business_data_resp.Product {
 				productList := s.statisticsSrv.CountProduct(ctx, CountReq{
-					TimeType:       printerReq.TimeType,
-					QueryStartTime: int64(printerReq.QueryStartTime),
-					QueryEndTime:   int64(printerReq.QueryEndTime),
-					CategoryType:   printerReq.CategoryType,
+					QueryStartTime: int64(printerParam.QueryStartTime),
+					QueryEndTime:   int64(printerParam.QueryEndTime),
+					CategoryType:   printerParam.CategoryType,
 				})
 				list := make([]business_data_resp.Product, 0, len(productList))
 				for _, product := range productList {
@@ -227,7 +219,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	}
 
 	// 打印
-	printerData, err := printer.NewPrinterRepo(ctx).PrintingBusinessData(reqPrinterData, int64(printerReq.QueryStartTime), int64(printerReq.QueryEndTime))
+	printerData, err := printer.NewPrinterRepo(ctx).PrintingBusinessData(reqPrinterData, int64(printerParam.QueryStartTime), int64(printerParam.QueryEndTime))
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
