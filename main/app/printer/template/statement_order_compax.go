@@ -281,6 +281,10 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		if item.IsDelete() || item.IsUnCookingProduct() || item.IsCancelProduct() {
 			continue
 		}
+		if item.IsBuffetProduct() && item.GetPrice() <= 0 {
+			continue
+		}
+		//
 		productNum += item.Num
 		productTotalPrice := item.GetPrice()
 		// 赠品
