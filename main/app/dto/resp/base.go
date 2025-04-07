@@ -13,7 +13,7 @@ type CashierBase struct {
 	DeviceRemark string        `json:"device_remark"` // 设备备注
 	Permissions  []*Permission `json:"permissions"`   // 页面权限
 
-	Buffet     setting.Buffet      `json:"buffet"`   // 自助餐设置
+	Buffet     setting.BuffetResp  `json:"buffet"`   // 自助餐设置
 	CloudBasic setting.CloudBasic  `json:"cloud"`    // 云端基础信息
 	Company    Company             `json:"company"`  // 商家信息
 	Currency   setting.Currency    `json:"currency"` // 货币单位
@@ -42,7 +42,7 @@ type AssistantBase struct {
 	Permissions    []string              `json:"permissions"`     // 点餐助手权限
 	CashierStaff   CashierStaff          `json:"cashier_staff"`   // 收银机员工
 	AssistantStaff AssistantStaff        `json:"assistant_staff"` // 点餐助手员工
-	Buffet         setting.Buffet        `json:"buffet"`          // 自助餐设置
+	Buffet         setting.BuffetResp    `json:"buffet"`          // 自助餐设置
 	CloudBasic     setting.CloudBasic    `json:"cloud"`           // 云端基础信息
 	Company        Company               `json:"company"`         // 商家信息
 	Currency       setting.Currency      `json:"currency"`        // 货币设置
@@ -58,7 +58,7 @@ type TabletBase struct {
 	RealName      string              `json:"real_name"`      // 员工姓名
 	ServerVersion string              `json:"system_version"` // 服务端版本
 	ClientVersion string              `json:"client_version"` // 客户端版本
-	Buffet        setting.Buffet      `json:"buffet"`         // 自助餐设置
+	Buffet        setting.BuffetResp  `json:"buffet"`         // 自助餐设置
 	CloudBasic    setting.CloudBasic  `json:"cloud"`          // 云端基础信
 	Company       Company             `json:"company"`        // 商家信息
 	Currency      setting.Currency    `json:"currency"`       // 货币单位
@@ -78,7 +78,7 @@ type TabletDeskList struct {
 
 type KitchenBase struct {
 	RealName      string              `json:"real_name"`      // 员工真实姓名
-	Buffet        setting.Buffet      `json:"buffet"`         // 自助餐设置
+	Buffet        setting.BuffetResp  `json:"buffet"`         // 自助餐设置
 	CloudBasic    setting.CloudBasic  `json:"cloud"`          // 云端基础信息
 	Company       Company             `json:"company"`        // 商家信息
 	Currency      setting.Currency    `json:"currency"`       // 货币单位

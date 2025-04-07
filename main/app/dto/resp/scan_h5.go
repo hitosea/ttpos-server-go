@@ -125,7 +125,7 @@ type H5BaseInfo struct {
 	Desk          Desk               `json:"desk"`             // 桌台信息
 	Company       Company            `json:"company"`          // 商家信息
 	H5            setting.H5         `json:"h5"`               // 扫码H5设置
-	Buffet        setting.Buffet     `json:"buffet"`           // 自助餐设置
+	Buffet        setting.BuffetResp `json:"buffet"`           // 自助餐设置
 	Currency      setting.Currency   `json:"currency"`         // 货币设置
 	CloudBasic    setting.CloudBasic `json:"cloud"`            // 云端基础信息
 	Business      setting.Business   `json:"business"`         // 门店业务设置.为了前端业务统一，这个字段实际未返回任何东西

@@ -186,6 +186,19 @@ func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
 	return name
 }
 
+// IsBuffetTabletH5TimeSet 助手、平板、h5时间是否已设置
+func (model *SaleBill) IsBuffetTabletH5TimeSet() bool {
+	if model.BuffetPackage1 != nil && model.BuffetPackage2 != nil {
+		return model.BuffetPackage1.NonOrderingTime != 0 || model.BuffetPackage1.ReminderOrderTime != 0 ||
+			model.BuffetPackage2.NonOrderingTime != 0 || model.BuffetPackage2.ReminderOrderTime != 0
+	} else if model.BuffetPackage1 != nil {
+		return model.BuffetPackage1.NonOrderingTime != 0 || model.BuffetPackage1.ReminderOrderTime != 0
+	} else if model.BuffetPackage2 != nil {
+		return model.BuffetPackage2.NonOrderingTime != 0 || model.BuffetPackage2.ReminderOrderTime != 0
+	}
+	return false
+}
+
 // 自助餐还剩余多少秒
 func (model *SaleBill) GetBuffetRemainingSeconds() int64 {
 	if model.BuffetDuration == 0 {

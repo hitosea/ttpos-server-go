@@ -17832,7 +17832,7 @@ const docTemplate = `{
                     "description": "自助餐设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Buffet"
+                            "$ref": "#/definitions/setting.BuffetResp"
                         }
                     ]
                 },
@@ -18222,6 +18222,10 @@ const docTemplate = `{
         "resp.BuffetInfo": {
             "type": "object",
             "properties": {
+                "is_tablet_h5_time_set": {
+                    "description": "助手、平板、h5时间是否已设置",
+                    "type": "boolean"
+                },
                 "is_time_limited": {
                     "description": "是否限时",
                     "type": "boolean"
@@ -18243,7 +18247,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "reminder_order_time": {
-                    "description": "自助餐结束前x分钟时提醒即将不可下单，用于助手端、平板端和h5",
+                    "description": "自助餐结束前x秒时提醒即将不可下单，用于助手端、平板端和h5",
                     "type": "integer"
                 }
             }
@@ -18327,7 +18331,7 @@ const docTemplate = `{
                     "description": "自助餐设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Buffet"
+                            "$ref": "#/definitions/setting.BuffetResp"
                         }
                     ]
                 },
@@ -18946,7 +18950,7 @@ const docTemplate = `{
                     "description": "自助餐设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Buffet"
+                            "$ref": "#/definitions/setting.BuffetResp"
                         }
                     ]
                 },
@@ -19534,7 +19538,7 @@ const docTemplate = `{
                     "description": "自助餐设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Buffet"
+                            "$ref": "#/definitions/setting.BuffetResp"
                         }
                     ]
                 },
@@ -22245,7 +22249,7 @@ const docTemplate = `{
                     "description": "自助餐设置",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.Buffet"
+                            "$ref": "#/definitions/setting.BuffetResp"
                         }
                     ]
                 },
@@ -22596,50 +22600,6 @@ const docTemplate = `{
                 }
             }
         },
-        "setting.Buffet": {
-            "type": "object",
-            "properties": {
-                "add_clock": {
-                    "description": "名称 - 加钟时间（分）- 价格",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/setting.AddClockItem"
-                    }
-                },
-                "is_add_clock": {
-                    "description": "是否开启加钟 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_buffet_discount": {
-                    "description": "是否开启自助餐优惠折扣 0-关闭 1-开启 // todo 干嘛用的？ 如果要删掉的话要跟前端沟通，否则删掉后收银端数据解析错误",
-                    "type": "string"
-                },
-                "is_buy_continue": {
-                    "description": "非自助餐商品到时是否能继续选购 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_open": {
-                    "description": "是否开启自助餐 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "is_remain_continue": {
-                    "description": "剩余xx分不可继续点餐开关 0-关闭 1-开启",
-                    "type": "string"
-                },
-                "remain_continue_notice_time": {
-                    "description": "剩余xx分提醒不可继续点餐",
-                    "type": "string"
-                },
-                "remain_continue_time": {
-                    "description": "剩余xx分不可继续点餐",
-                    "type": "string"
-                },
-                "tablet_end_time": {
-                    "description": "平板结束时间提醒（分）",
-                    "type": "string"
-                }
-            }
-        },
         "setting.BuffetOrderLimit": {
             "type": "object",
             "properties": {
@@ -22658,6 +22618,50 @@ const docTemplate = `{
                 "limit_time": {
                     "description": "时间限制（分钟）",
                     "type": "string"
+                }
+            }
+        },
+        "setting.BuffetResp": {
+            "type": "object",
+            "properties": {
+                "add_clock": {
+                    "description": "名称 - 加钟时间（分）- 价格",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.AddClockItem"
+                    }
+                },
+                "is_add_clock": {
+                    "description": "是否开启加钟 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_buffet_discount": {
+                    "description": "是否开启自助餐优惠折扣 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_buy_continue": {
+                    "description": "非自助餐商品到时是否能继续选购 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_open": {
+                    "description": "是否开启自助餐 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "is_remain_continue": {
+                    "description": "剩余xx分不可继续点餐开关 0-关闭 1-开启",
+                    "type": "string"
+                },
+                "remain_continue_notice_time": {
+                    "description": "剩余xx秒提醒不可继续点餐",
+                    "type": "string"
+                },
+                "remain_continue_time": {
+                    "description": "剩余xx秒不可继续点餐",
+                    "type": "string"
+                },
+                "tablet_end_time": {
+                    "description": "平板结束时间提醒（秒）",
+                    "type": "integer"
                 }
             }
         },
