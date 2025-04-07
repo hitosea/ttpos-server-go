@@ -3864,8 +3864,35 @@ func (s *orderSrv) skipCheck(saleOrderProduct *model.SaleOrderProduct) bool {
 	return false
 }
 
+type CheckOrderOptions struct {
+	CheckType int // 1:送厨检查 2:结账检查
+}
+
+const (
+	CheckTypeCooking  = 1 // 1:送厨检查
+	CheckTypeCheckout = 2 // 2:结账检查
+)
+
+// 送厨检查
+func WithCheckTypeCooking() func(*CheckOrderOptions) {
+	return func(options *CheckOrderOptions) {
+		options.CheckType = CheckTypeCooking
+	}
+}
+
+// 结账检查
+func WithCheckTypeCheckout() func(*CheckOrderOptions) {
+	return func(options *CheckOrderOptions) {
+		options.CheckType = CheckTypeCheckout
+	}
+}
+
 // checkOrder 检查订单
-func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, saleOrderProductAll []*model.SaleOrderProduct) (*resp.OrderCheckServiceRes, error) {
+func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, saleOrderProductAll []*model.SaleOrderProduct, opts ...func(*CheckOrderOptions)) (*resp.OrderCheckServiceRes, error) {
+	options := &CheckOrderOptions{}
+	for _, opt := range opts {
+		opt(options)
+	}
 	ctx.SetDB(db)
 	// 检查必选
 	if !ignoreMust {
@@ -3912,7 +3939,16 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			if s.skipCheck(saleOrderProduct) {
 				continue
 			}
-			status, message := saleOrderProduct.CheckProduct()
+
+			var status int
+			var message string
+			if options.CheckType == CheckTypeCheckout {
+				// 如果是结账检查
+				status, message = saleOrderProduct.CheckOutProduct()
+			} else {
+				// 如果是送厨检查
+				status, message = saleOrderProduct.CheckCookingProduct()
+			}
 			ctx.Log().Debug("检查商品", zap.Any("status", status), zap.Any("message", message))
 			if status != constant.CodeSuccess {
 				statusMap[status] = append(statusMap[status], saleOrderProduct)
@@ -6867,7 +6903,7 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 	if saleBill.IsDeskSaleBill() {
 		deskUuid = saleBill.DeskUuid
 	}
-	checkServiceRes, errCheck := s.checkOrder(ctx, req.IgnoreMust, db, req.SaleBillUuid, deskUuid, saleOrderProductAll)
+	checkServiceRes, errCheck := s.checkOrder(ctx, req.IgnoreMust, db, req.SaleBillUuid, deskUuid, saleOrderProductAll, WithCheckTypeCheckout())
 	if errCheck != nil {
 		return nil, errors.WithMessage(errCheck, "订单检查失败")
 	}

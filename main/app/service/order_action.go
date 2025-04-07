@@ -50,7 +50,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		saleOrderProductAll := saleBill.GetSaleOrderProductAll()
 
 		// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购、必点为选择
-		checkServiceRes, errCheck := s.checkOrder(ctx, false, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll)
+		checkServiceRes, errCheck := s.checkOrder(ctx, false, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking())
 		if errCheck != nil {
 			ctx.Log().Error("检查商品失败", zap.Error(errCheck))
 			return nil, errors.New("检查商品失败")

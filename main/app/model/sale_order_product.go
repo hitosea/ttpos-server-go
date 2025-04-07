@@ -317,14 +317,63 @@ func (model *SaleOrderProduct) SetCooking(productionOrderUuid uint64) {
 	model.SetUpdate()                         // 标记该model需要更新
 }
 
-// 产品是否已经下架
-func (model *SaleOrderProduct) CheckProduct() (int, string) {
+// 结账检查
+func (model *SaleOrderProduct) CheckOutProduct() (int, string) {
+	// 检查商品是否删除、下架、库存是否充足、价格变动
+	for _, bom := range model.SaleOrderProductBoms {
+		if bom.ProductBom.IsFlavor() {
+			// 只检查结账减库存的商品
+			if model.DeductStockType == constant.ProductPackageDeductStockTypePay {
+				// 商品已经沽清
+				if bom.ProductBom.IsSoldOutStatus() {
+					return constant.CodeOrderCheckProductStockZero, "商品已经沽清"
+				}
+				// 下单商品数量超过库存数量. 只检查结账减库存的商品
+				if bom.ProductBom.IsStockShortage(model.Num) {
+					return constant.CodeOrderCheckProductStockZero, "下单商品数量超过库存数量"
+				}
+			}
+			// 商品规格价格变动
+			if bom.ProductBom.IsPriceChanged(model.FlavorPrice) {
+				return constant.CodeOrderCheckProductPriceChanged, "商品规格价格变动"
+			}
+		}
+		if bom.ProductBom.IsSauce() {
+			// 只检查结账减库存的商品
+			if model.DeductStockType == constant.ProductPackageDeductStockTypePay {
+				// 商品已经沽清
+				if bom.ProductBom.IsSoldOutStatus() {
+					return constant.CodeOrderCheckProductStockZero, "小料已经售罄"
+				}
+				// 下单商品数量超过库存数量
+				// 每个订单商品一个小料只消耗一个小料库存
+				if bom.ProductBom.IsStockShortage(1) {
+					return constant.CodeOrderCheckProductStockZero, "下单小料数量超过库存数量"
+				}
+			}
+		}
+	}
+
+	// 小料的价格有变动
+	if model.saucePriceChanged(model.SaucePrice) {
+		return constant.CodeOrderCheckProductPriceChanged, "小料价格变动"
+	}
+
+	return constant.CodeSuccess, "商品检查通过"
+}
+
+// 送厨检查
+func (model *SaleOrderProduct) CheckCookingProduct() (int, string) {
 	// 检查商品是否删除、下架、库存是否充足、价格变动
 	for _, bom := range model.SaleOrderProductBoms {
 		if bom.ProductBom.IsFlavor() {
 			// 商品已经沽清
 			if bom.ProductBom.IsSoldOutStatus() {
 				return constant.CodeOrderCheckProductStockZero, "商品已经沽清"
+			}
+			// 下单商品数量超过库存数量
+			if bom.ProductBom.IsStockShortage(model.Num) {
+				return constant.CodeOrderCheckProductStockZero, "下单商品数量超过库存数量"
 			}
 			// 商品已经下架
 			if bom.ProductBom.IsProductPackageDown() {
@@ -337,10 +386,6 @@ func (model *SaleOrderProduct) CheckProduct() (int, string) {
 			// 商品已经删除
 			if bom.ProductBom.IsDelete() {
 				return constant.CodeOrderCheckProductFlavorDown, "商品已经删除"
-			}
-			// 下单商品数量超过库存数量
-			if bom.ProductBom.IsStockShortage(model.Num) {
-				return constant.CodeOrderCheckProductStockZero, "下单商品数量超过库存数量"
 			}
 			// 商品规格价格变动
 			if bom.ProductBom.IsPriceChanged(model.FlavorPrice) {
