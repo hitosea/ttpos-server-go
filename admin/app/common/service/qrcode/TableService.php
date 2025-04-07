@@ -44,7 +44,7 @@ class TableService extends Base
         if ($this->source == 'wx') {
             $qrCode = new QrCode($this->base_url . "pages/product/share-login/#/?token={$token}");
         } else if ($this->source == 'mp' || $this->source == 'h5') {
-            $qrCode = new QrCode($this->base_url . "/#/home?token={$token}");
+            $qrCode = new QrCode($this->base_url . "/home?token={$token}");
         }
         if ($this->action == 'update') {
             $table->save(['qrcode_token' => $qrCodeValue]);
@@ -74,7 +74,7 @@ class TableService extends Base
             if ($this->source == 'wx') {
                 $qrCode = new QrCode($this->base_url . "pages/product/share-login/#/?token={$token}");
             } else if ($this->source == 'mp' || $this->source == 'h5') {
-                $qrCode = new QrCode($this->base_url . "scan/#/?token={$token}");
+                $qrCode = new QrCode($this->base_url . "scan/?token={$token}");
             }
             if ($this->action == 'update') {
                 $table->save(['qrcode_token' => $qrCodeValue]);

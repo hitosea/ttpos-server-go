@@ -139,6 +139,9 @@ class Controller extends BaseController
         if (($data['data']['pwd'] ?? '') != md5($user->password)) {
             throw new BaseException(['msg' => '密码已变更，请重新登录', 'code' => StatusCode::USER_ERROR]);
         }
+        if (!$user->app) {
+            throw new BaseException(['msg' => '店铺状态异常，请联系销售代表', 'code' => StatusCode::USER_ERROR]);
+        }
         // 授权
         request()->licenses = $user->app->getLicense();
         // 保存登录状态

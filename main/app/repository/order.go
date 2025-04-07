@@ -38,7 +38,7 @@ type IOrderRepo interface {
 	DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error                                                                        // 删除销售订单自助餐顾客类型
 	CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error)                // 创建销售订单自助餐加钟
 	UpdateSaleOrderBuffetDelayProductRecord(model model.SaleOrderBuffetDelayProduct) error                                               // 更新销售订单自助餐加钟
-	CancelOrder(ctx context.Context, saleBillUuid uint64, reason string) error                                                           // 取消订单
+	CancelOrder(ctx context.Context, saleBillUuid uint64, deskUuid uint64, reason string) error                                          // 取消订单
 	CancelDeskOrder(ctx context.Context, deskUuid uint64, reason string) error                                                           // 取消桌台订单
 	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                                         // 删除订单
 	IsPartiallyPaid(param any) bool                                                                                                      // 判断是否存在部分支付
@@ -971,7 +971,7 @@ func (r *orderRepo) GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64
 }
 
 // CancelOrder 取消订单
-func (r *orderRepo) CancelOrder(ctx context.Context, saleBillUuid uint64, reason string) error {
+func (r *orderRepo) CancelOrder(ctx context.Context, saleBillUuid uint64, deskUuid uint64, reason string) error {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		err := tx.Model(&model.SaleOrder{}).Where("sale_bill_uuid = ?", saleBillUuid).Where("status = ?", constant.SaleOrderStatusPending).Update("status", constant.SaleOrderStatusCanceled).Error
 		if err != nil {
@@ -982,6 +982,8 @@ func (r *orderRepo) CancelOrder(ctx context.Context, saleBillUuid uint64, reason
 			Where("uuid = ?", saleBillUuid).
 			Where("status = ?", constant.SaleBillStatusPending).
 			Updates(map[string]interface{}{
+				"desk_uuid":    deskUuid,
+				"uuid":         saleBillUuid,
 				"status":       constant.SaleBillStatusCanceled,
 				"reason":       reason,
 				"duty_no":      ctx.GetStaff().DutyNo,
@@ -1004,7 +1006,7 @@ func (r *orderRepo) CancelDeskOrder(ctx context.Context, deskUuid uint64, reason
 		First(&saleBill).Error; err != nil {
 		return fmt.Errorf("CancelDeskOrder: %v", err)
 	}
-	return r.CancelOrder(ctx, saleBill.Uuid, reason)
+	return r.CancelOrder(ctx, saleBill.Uuid, deskUuid, reason)
 }
 
 // DeleteOrder 软删除订单

@@ -87,23 +87,26 @@ func (s *rechargeOrderSrv) GetPendingRechargeOrder(companyUuid uint64) resp.Rech
 		return resp.RechargeOrder{PaymentOrders: resp.PaymentInfoList{List: make([]resp.PaymentOrder, 0)}}
 	}
 
-	paymentOrderCount := len(order.PaymentOrders)
-	respPaymentOrders := make([]resp.PaymentOrder, 0, paymentOrderCount)
-	if paymentOrderCount > 0 {
+	respPaymentOrders := make([]resp.PaymentOrder, 0, len(order.PaymentOrders))
+
+	for _, paymentOrder := range order.PaymentOrders {
+
 		var respPaymentOrder resp.PaymentOrder
-		for _, paymentOrder := range order.PaymentOrders {
-			copier.Copy(&respPaymentOrder, paymentOrder)
-			respPaymentOrder.PaymentMethodCode = paymentOrder.PaymentMethod.Code
-			respPaymentOrder.PaymentMethodName = paymentOrder.PaymentMethod.PaymentName
-			respPaymentOrder.DisabledCancel = slices.Contains([]int{constant.PaymentMethodCodeLianLianWechatPay,
-				constant.PaymentMethodCodeLianLianAliPay,
-				constant.PaymentMethodCodeLianLianQRPromptPay}, paymentOrder.PaymentMethod.Code)
-			respPaymentOrders = append(respPaymentOrders, respPaymentOrder)
-		}
+		copier.Copy(&respPaymentOrder, paymentOrder)
+
+		respPaymentOrder.PaymentMethodCode = paymentOrder.PaymentMethod.Code
+		respPaymentOrder.PaymentMethodName = paymentOrder.PaymentMethod.PaymentName
+		respPaymentOrder.DisabledCancel = slices.Contains([]int{constant.PaymentMethodCodeLianLianWechatPay,
+			constant.PaymentMethodCodeLianLianAliPay,
+			constant.PaymentMethodCodeLianLianQRPromptPay}, paymentOrder.PaymentMethod.Code)
+
+		respPaymentOrders = append(respPaymentOrders, respPaymentOrder)
 	}
 
 	var respRechargeOrder resp.RechargeOrder
 	copier.Copy(&respRechargeOrder, order)
+
+	respRechargeOrder.ChargeDue = s.getChargeDue(order.PaymentOrders)
 
 	respRechargeOrder.PaymentOrders = resp.PaymentInfoList{List: respPaymentOrders}
 	return respRechargeOrder

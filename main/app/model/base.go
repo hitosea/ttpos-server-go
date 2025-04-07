@@ -165,7 +165,7 @@ func (model *H5Order) AfterUpdate(tx *gorm.DB) (err error) {
 func (model *Desk) AfterUpdate(tx *gorm.DB) (err error) {
 	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
 		data := map[string]interface{}{
-			"desk_uuid":   model.Uuid,
+			"desk_uuid":   model.BaseModel.Uuid,
 			"update_time": model.BaseModel.UpdateTime,
 		}
 		go websocket.PushClient(companyUuid, "*", "*", websocket.UPDATE_DESK, data)

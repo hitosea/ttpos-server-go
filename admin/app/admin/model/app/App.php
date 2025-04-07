@@ -11,6 +11,7 @@ use app\common\model\app\App as AppModel;
 use app\common\enum\order\OrderPayTypeEnum;
 use app\common\model\shop\User  as ShopStaffModel;
 use app\admin\model\supplier\Supplier as SupplierModel;
+use PDO;
 
 class App extends AppModel
 {
@@ -281,6 +282,17 @@ class App extends AppModel
      */
     public function setDelete()
     {
+        $deleteTime = time();
+        $host = env('DB_HOST');
+        $port = env('DB_PORT');
+        $prefix = env('DB_PREFIX');
+        $pdo = new PDO("mysql:host={$host};port={$port}", 'root', env('DB_ROOT_PASSWORD'));
+        $databaseName = 'shop' . $this->uuid;
+        $pdo->exec("use {$databaseName}");
+        $res = $pdo->exec("UPDATE {$prefix}company SET delete_time = $deleteTime WHERE uuid = {$this->uuid}");
+        if ($res === false) {
+            return false;
+        }
         $this->supplier?->delete();
         return $this->delete();
     }

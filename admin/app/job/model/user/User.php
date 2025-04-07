@@ -4,7 +4,6 @@ namespace app\job\model\user;
 
 use app\common\model\user\User as UserModel;
 use app\common\enum\user\grade\ChangeTypeEnum;
-use app\common\service\message\MessageService;
 use app\job\model\user\GradeLog as GradeLogModel;
 
 /**

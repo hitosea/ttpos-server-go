@@ -1132,7 +1132,7 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 			return errors.WithMessage(err)
 		}
 	} else {
-		err = orderRepo.CancelOrder(ctx, req.SaleBillUuid, req.CancelReason)
+		err = orderRepo.CancelOrder(ctx, req.SaleBillUuid, 0, req.CancelReason)
 		if err != nil {
 			tx.Rollback()
 			return errors.WithMessage(err)
@@ -3415,7 +3415,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 			return nil, err
 		}
 		if hasInstantOrder {
-			return nil, errors.New("参数错误")
+			return nil, errors.New("参数错误, 有未支付的订单")
 		}
 		//
 		order, err := s.CreateInstantOrder(ctx)

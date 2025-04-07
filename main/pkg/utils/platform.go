@@ -7,11 +7,11 @@ import (
 // GetPlatform 根据User-Agent获取平台信息
 func GetPlatform(userAgent string) int {
 	switch {
-	case strings.Contains(userAgent, "Android"):
+	case strings.Contains(strings.ToLower(userAgent), "android"):
 		return 1
-	case strings.Contains(userAgent, "iPhone"):
+	case strings.Contains(strings.ToLower(userAgent), "iphone"):
 		return 2
-	case strings.Contains(userAgent, "Mobile"):
+	case strings.Contains(strings.ToLower(userAgent), "mobile"):
 		return 3
 	default:
 		return 0
