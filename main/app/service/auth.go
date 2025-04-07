@@ -572,7 +572,10 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		desk           model.Desk
 		db             = s.dbm.GetDB(auth.CompanyUuid)
 	)
-
+	// 如果使用旧的token，但是商家已被删除，优化提示
+	if db == nil {
+		return company, companySetting, staff, desk, errors.New("未找到绑定的商家，请确认登录信息")
+	}
 	staffRepo := repository.NewStaffRepo(db)
 	staff = staffRepo.GetStaff(staffRepo.WhereUuid(auth.StaffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	if staff.Uuid == 0 {
