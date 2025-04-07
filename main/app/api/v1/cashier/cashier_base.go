@@ -26,7 +26,7 @@ type BaseHandler struct {
 	staffShiftSrv    service.IStaffShiftSrv
 }
 
-// GetCashierBase 基本信息
+// GetBase 基本信息
 // @Summary 基本信息
 // @Description 基本信息
 // @Tags 收银端.基础信息
@@ -35,7 +35,7 @@ type BaseHandler struct {
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=resp.CashierBase}
 // @Router /cashier/base [get]
-func (h *BaseHandler) GetCashierBase(c *gin.Context) {
+func (h *BaseHandler) GetBase(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	info, err := h.authSrv.CashierBase(ctx)
 	if err != nil {
@@ -536,7 +536,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/base", wrapper.GetCashierBase)                                      // 获取基础信息
+		privateApi.GET("/base", wrapper.GetBase)                                             // 获取基础信息
 		privateApi.GET("/language", wrapper.GetLanguage)                                     // 获取语言
 		privateApi.GET("/ad", wrapper.GetAd)                                                 // 收银机副屏广告
 		privateApi.POST("/verify_cash_box_password", wrapper.VerifyCashBoxPassword)          // 验证钱箱密码

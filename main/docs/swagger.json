@@ -18484,6 +18484,10 @@
         "resp.Company": {
             "type": "object",
             "properties": {
+                "expire_time": {
+                    "description": "店铺到期时间，0表示没有过期时间",
+                    "type": "integer"
+                },
                 "logo": {
                     "description": "商家logo",
                     "type": "string"

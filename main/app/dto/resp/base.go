@@ -98,10 +98,11 @@ type ProductPrinterList struct {
 }
 
 type Company struct {
-	Uuid     uint64 `json:"uuid"`      // 商家UUID
-	Name     string `json:"name"`      // 商家名称
-	Logo     string `json:"logo"`      // 商家logo
-	TimeZone string `json:"time_zone"` // 时区，形如 Asia/Shanghai
+	Uuid       uint64 `json:"uuid"`        // 商家UUID
+	Name       string `json:"name"`        // 商家名称
+	Logo       string `json:"logo"`        // 商家logo
+	TimeZone   string `json:"time_zone"`   // 时区，形如 Asia/Shanghai
+	ExpireTime int64  `json:"expire_time"` // 店铺到期时间，0表示没有过期时间
 }
 
 type Permission struct {

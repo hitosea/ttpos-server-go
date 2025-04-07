@@ -91,11 +91,12 @@ func (s *h5Srv) GetBaseInfo(ctx context.Context, deskUuid uint64) (*resp.H5BaseI
 	return &resp.H5BaseInfo{
 		IsOpenH5Order: companySetting.IsOpenH5Order,
 		Desk:          deskInfo,
-		Company: resp.Company{
-			Uuid:     company.Uuid,
-			Name:     company.Name,
-			Logo:     utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
-			TimeZone: companySetting.Timezone,
+		Company: resp.Company{ // h5
+			Uuid:       company.Uuid,
+			Name:       company.Name,
+			Logo:       utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
+			TimeZone:   companySetting.Timezone,
+			ExpireTime: company.ExpireTime,
 		},
 		H5:         h5Setting,
 		Buffet:     buffetSetting,
