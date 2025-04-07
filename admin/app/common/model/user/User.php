@@ -5,21 +5,25 @@ namespace app\common\model\user;
 
 use help\ValidateHelp;
 use app\common\model\BaseModel;
-use app\common\model\order\Order;
 use app\common\enum\user\pointsLog\PointsLogSceneEnum;
 use app\common\model\settings\Setting as SettingModel;
 use app\common\model\user\PointsLog as PointsLogModel;
 use app\shop\model\user\BalanceLog as BalanceLogModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum as SceneEnum;
+use think\model\concern\SoftDelete;
 
 /**
  * 用户模型
  */
 class User extends BaseModel
 {
+    use SoftDelete;
     protected $name = 'member';
     protected $pk = 'id';
+    protected $defaultSoftDelete = 0;
+    protected $delete_time = 'delete_time';
+    protected $autoWriteTimestamp = true;
 
     /**
      * 追加属性

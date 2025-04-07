@@ -3,10 +3,7 @@
 
 namespace app\shop\model\store;
 
-use app\common\model\order\Order;
 use app\common\model\shop\BindRecord;
-use app\common\enum\order\OrderStatusEnum;
-use app\common\enum\order\OrderPayStatusEnum;
 use app\common\model\store\Table as TableModel;
 
 /**
@@ -77,18 +74,6 @@ class Table extends TableModel
             return false;
         }
         $data = $this->sortData($data);
-        // todo 兼容 同步修改订单
-        // if ($data['table_no'] ?? '') {
-        //     $order = Order::where('table_id', $this->table_id)
-        //         ->where("order_status", OrderStatusEnum::NORMAL)
-        //         ->where('pay_status', OrderPayStatusEnum::PENDING)
-        //         ->find();
-        //     if ($order) {
-        //         $order->table_no = $data['table_no'];
-        //         $order->save();
-        //     }
-        // }
-        //
         return $this->save($data);
     }
 
