@@ -231,14 +231,13 @@ class BindRecord extends BaseModel
         foreach ($list as &$item) {
             if ($item['source'] == self::SOURCE_CASHIER) {
                 $item['is_cashier_shift'] = 1;
-                $item['key'] = $item['device_id'];
-                $item['finally_login_id'] = $item['finally_login_uuid'];
                 $user = User::where(['bind_key' => $item['key']])->find();
                 if ($user) {
                     $item['is_cashier_shift'] = $user->cashier_online ? 0 : 1;
                 }
             }
-            // 格式化时间
+            $item['key'] = $item['device_id'];
+            $item['finally_login_id'] = $item['finally_login_uuid'];
             $item['finally_login_time'] = date('Y-m-d H:i:s', $item['finally_login_time']);
         }
         return $list;
