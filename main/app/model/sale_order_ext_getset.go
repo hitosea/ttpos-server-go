@@ -109,6 +109,7 @@ func (model *SaleOrder) GetPrintReceivablePrice() float64 {
 	// 未结账时，需要计算最终应收金额
 	if model.Status != constant.SaleOrderStatusFinish {
 		finalPrice, _ = model.calcFinallyAmount()
+		finalPrice = finalPrice - model.GetCheckOutZeroFee()
 	}
 	// 如果是免单，返回0
 	if model.IsFreeSaleOrder() {
