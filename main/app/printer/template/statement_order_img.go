@@ -402,7 +402,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			if t.base.Lang == "ja" {
 				img.AppendText(fmt.Sprintf("%s: %s", taxRate+"%"+t.base.Translate("的对象消费税"), t.base.GetPriceAndUnit(taxFee)))
 			} else {
-				img.AppendText(fmt.Sprintf("%s: %s", "VAT ("+taxRate+"%)"+t.base.Translate("的对象消费税"), t.base.GetPriceAndUnit(taxFee)))
+				img.AppendText(fmt.Sprintf("%s: %s", "VAT ("+taxRate+"%)", t.base.GetPriceAndUnit(taxFee)))
 			}
 			img.LineFeed(1)
 		}
