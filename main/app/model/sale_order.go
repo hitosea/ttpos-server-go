@@ -219,7 +219,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 	productList := make([]resp.Product, 0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		// 如果查询的是H5已下单的商品和被拒单的商品，则不跳过被删除的商品
-		if hasOrderedH5ProductWithReject {
+		if !hasOrderedH5ProductWithReject {
 			if saleOrderProduct.IsDelete() {
 				continue
 			}
@@ -246,6 +246,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			Sign:                cryptor.Md5String(saleOrderProduct.Sign),
 			ProductPackageUuid:  saleOrderProduct.ProductPackageUuid,
 			AcceptTime:          saleOrderProduct.GetAcceptTime(),
+			IsAccept:            saleOrderProduct.IsAcceptOrderProduct(),
 			UnitPrice:           saleOrderProduct.SalePrice,
 		}
 		if saleOrderProduct.ProductionOrderProduct != nil {

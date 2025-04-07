@@ -7451,6 +7451,7 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 				},
 			},
 			AcceptTime: products[0].AcceptTime,
+			IsAccept:   products[0].IsAccept,
 		})
 	}
 	sort.Slice(groups, func(i, j int) bool {

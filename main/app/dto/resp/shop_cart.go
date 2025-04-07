@@ -32,6 +32,7 @@ type H5GroupList struct {
 type H5Group struct {
 	SentKitchenProductGroup
 	AcceptTime int64 `json:"accept_time"` // 接单时间. “17:20:01 接单”。值为0时不显示。
+	IsAccept   bool  `json:"is_accept"`   // false:已拒单 true:已接单
 }
 
 type H5Product struct {
@@ -158,6 +159,7 @@ type Product struct {
 	// 后端使用，前端不返回
 	SendKitchenTime int64   `json:"-"` // 送厨时间
 	AcceptTime      int64   `json:"-"` // 接单时间
+	IsAccept        bool    `json:"-"` // 是否已接单
 	Sign            string  `json:"-"` // 签名，用于合并商品
 	CanReturnNum    uint    `json:"-"` // 可退货数量
 	CanReturnAmount float64 `json:"-"` // 可退款金额
