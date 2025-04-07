@@ -364,6 +364,10 @@ func (model *SaleOrderProduct) CheckOutProduct() (int, string) {
 
 // 送厨检查
 func (model *SaleOrderProduct) CheckCookingProduct() (int, string) {
+	// 如果是已送厨的商品，则不检查
+	if model.IsCookingProduct() {
+		return constant.CodeSuccess, "商品检查通过"
+	}
 	// 检查商品是否删除、下架、库存是否充足、价格变动
 	for _, bom := range model.SaleOrderProductBoms {
 		if bom.ProductBom.IsFlavor() {
