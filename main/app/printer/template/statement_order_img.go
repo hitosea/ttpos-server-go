@@ -464,8 +464,8 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 
 	// 抹零
-	if saleOrder.ZeroFee > 0 {
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手动抹零"), t.base.GetPriceAndUnit(saleOrder.ZeroFee)))
+	if checkOutZeroFee := saleOrder.GetCheckOutZeroFee(); checkOutZeroFee > 0 {
+		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手动抹零"), t.base.GetPriceAndUnit(checkOutZeroFee)))
 		img.LineFeed(1)
 	}
 	if returnAmount := saleOrder.GetReturnAmount(); returnAmount > 0 {

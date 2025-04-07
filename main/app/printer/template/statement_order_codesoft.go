@@ -481,8 +481,8 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 	}
 
 	// 抹零
-	if saleOrder.ZeroFee > 0 {
-		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手动抹零"), t.base.GetPriceAndUnit(saleOrder.ZeroFee)))
+	if checkOutZeroFee := saleOrder.GetCheckOutZeroFee(); checkOutZeroFee > 0 {
+		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手动抹零"), t.base.GetPriceAndUnit(checkOutZeroFee)))
 		printer.LineFeed(1)
 	}
 	// 退款金额
