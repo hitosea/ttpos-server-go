@@ -778,3 +778,11 @@ type DiscountInfo struct {
 	MemberCardDiscountRate float64 `json:"member_card_discount_rate"`
 	CustomDiscountRate     float64 `json:"custom_discount_rate"`
 }
+
+// 计算销售订单结账抹零金额
+func (model *SaleOrder) GetCheckOutZeroFee() float64 {
+	if model.Status != constant.SaleOrderStatusFinish {
+		return model.CalcCheckOutZeroFee()
+	}
+	return model.ZeroCheckoutFee
+}
