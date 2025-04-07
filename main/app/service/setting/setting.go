@@ -50,7 +50,7 @@ type ISrv interface {
 	GetKitchenSetting(ctx context.Context, companySetting model.CompanySetting, languageList []dto.LanguageItem) (setting.Kitchen, error) // 获取厨显端设置
 	GetH5Setting(ctx context.Context, languageList []dto.LanguageItem) (setting.H5, error)                                                // 获取扫码H5设置
 	GetBusinessSetting(ctx context.Context) (setting.Business, error)                                                                     // 获取门店业务设置
-	GetBuffetSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Buffet, error)                                    // 获取自助餐设置
+	GetBuffetSetting(ctx context.Context, companySetting model.CompanySetting) (setting.BuffetResp, error)                                // 获取自助餐设置
 	GetTabletSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Tablet, error)                                        // 获取平板端设置
 	GetCurrencySetting(ctx context.Context) (setting.Currency, error)                                                                     // 获取货币单位设置
 	GetCompanySetting(ctx context.Context) (model.CompanySetting, error)                                                                  // 获取公司设置
@@ -232,13 +232,19 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 		return store, errors.New("合并商城设置失败")
 	}
 	ginContext := ctx.GetGin()
-	if store.LogoURL != "" && ginContext != nil {
-		store.LogoURL = utils.GetBaseURL(ginContext.Request) + store.LogoURL
+	if defaultStore.LogoURL != "" && ginContext != nil {
+		defaultStore.LogoURL = utils.GetBaseURL(ginContext.Request) + defaultStore.LogoURL
 	}
-	if store.AvatarURL != "" && ginContext != nil {
-		store.AvatarURL = utils.GetBaseURL(ginContext.Request) + store.AvatarURL
+	if defaultStore.AvatarURL != "" && ginContext != nil {
+		defaultStore.AvatarURL = utils.GetBaseURL(ginContext.Request) + defaultStore.AvatarURL
 	}
-	return store, nil
+	if len(defaultStore.TimeZoneList) == 0 {
+		defaultStore.TimeZoneList = make([]setting.TimeZoneItem, 0)
+	}
+	if len(defaultStore.Language) == 0 {
+		defaultStore.Language = make([]dto.LanguageItem, 0)
+	}
+	return defaultStore, nil
 }
 
 // GetPrinterSetting 获取打印机设置
@@ -328,6 +334,23 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 		ctx.Log().Error("合并小票打印机设置失败", zap.Error(err))
 		return printer, errors.New("合并小票打印机设置失败")
 	}
+
+	if len(defaultPrinter.CashierPrinter) == 0 {
+		defaultPrinter.CashierPrinter = make([]setting.CashierPrinterItem, 0)
+	}
+	if len(defaultPrinter.LanguageList) == 0 {
+		defaultPrinter.LanguageList = make([]dto.LanguageItem, 0)
+	}
+	if len(defaultPrinter.CalendarList) == 0 {
+		defaultPrinter.CalendarList = make([]setting.CalendarItem, 0)
+	}
+	if len(defaultPrinter.PrintList) == 0 {
+		defaultPrinter.PrintList = make([]setting.PrintItem, 0)
+	}
+	if len(defaultPrinter.Language) == 0 {
+		defaultPrinter.Language = make([]string, 0)
+	}
+
 	return defaultPrinter, nil
 }
 
@@ -423,16 +446,29 @@ func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) 
 		ctx.Log().Error("合并门店-业务设置失败", zap.Error(err))
 		return business, errors.New("合并门店-业务设置失败")
 	}
+
+	if len(defaultBusiness.ZeroingMethodList) == 0 {
+		defaultBusiness.ZeroingMethodList = make([]setting.ZeroingMethodItem, 0)
+	}
+	if len(defaultBusiness.CheckoutZeroingMethodList) == 0 {
+		defaultBusiness.CheckoutZeroingMethodList = make([]setting.CheckoutZeroingMethodItem, 0)
+	}
+	if len(defaultBusiness.GiftMethodList) == 0 {
+		defaultBusiness.GiftMethodList = make([]setting.GiftMethodItem, 0)
+	}
+	if len(defaultBusiness.FreeMethodList) == 0 {
+		defaultBusiness.FreeMethodList = make([]setting.FreeMethodItem, 0)
+	}
 	return defaultBusiness, nil
 }
 
 // GetBuffetSetting 自助餐设置
-func (s *Srv) GetBuffetSetting(ctx context.Context, companySetting model.CompanySetting) (setting.Buffet, error) {
+func (s *Srv) GetBuffetSetting(ctx context.Context, companySetting model.CompanySetting) (setting.BuffetResp, error) {
 	st := s.getSettingByKey(ctx, constant.SettingBuffet)
 	var buffet setting.Buffet
 	err := json.Unmarshal([]byte(st.Values), &buffet)
 	if err != nil {
-		return buffet, errors.New("解析自助餐-自助餐设置失败")
+		return setting.BuffetResp{}, errors.New("解析自助餐-自助餐设置失败")
 	}
 	if companySetting.IsOpenBuffet == 0 {
 		buffet.IsOpen = "0"
@@ -440,9 +476,24 @@ func (s *Srv) GetBuffetSetting(ctx context.Context, companySetting model.Company
 	defaultBuffet := s.getDefaultBuffet()
 	err = copier.CopyWithOption(&defaultBuffet, buffet, copier.Option{IgnoreEmpty: true})
 	if err != nil {
-		return buffet, errors.New("解析自助餐-自助餐设置失败")
+		return setting.BuffetResp{}, errors.New("解析自助餐-自助餐设置失败")
 	}
-	return defaultBuffet, nil
+	if len(defaultBuffet.AddClock) == 0 {
+		defaultBuffet.AddClock = make([]setting.AddClockItem, 0)
+	}
+	tabletEndTime, _ := strconv.Atoi(defaultBuffet.TabletEndTime)
+	return setting.BuffetResp{
+		IsOpen:                   defaultBuffet.IsOpen,
+		TabletEndTime:            tabletEndTime * 60,
+		IsRemainContinue:         defaultBuffet.IsRemainContinue,
+		RemainContinueTime:       defaultBuffet.RemainContinueTime,
+		RemainContinueNoticeTime: defaultBuffet.RemainContinueNoticeTime,
+		IsBuyContinue:            defaultBuffet.IsBuyContinue,
+		IsAddClock:               defaultBuffet.IsAddClock,
+		IsBuffetDiscount:         defaultBuffet.IsBuffetDiscount,
+		AddClock:                 defaultBuffet.AddClock,
+	}, nil
+
 }
 
 // GetTabletSetting 平板端设置
@@ -484,7 +535,22 @@ func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageI
 		ctx.Log().Error("合并各端-平板端设置失败", zap.Error(err))
 		return tablet, errors.New("合并各端-平板端设置失败")
 	}
-
+	if len(defaultTablet.Carousel) == 0 {
+		defaultTablet.Carousel = make([]setting.CarouselItem, 0)
+	}
+	if len(defaultTablet.LanguageList) == 0 {
+		defaultTablet.LanguageList = make([]dto.LanguageItem, 0)
+	}
+	if len(defaultTablet.Language) == 0 {
+		defaultTablet.Language = make([]string, 0)
+	}
+	validLanguageList := make([]dto.LanguageItem, 0)
+	for _, item := range defaultTablet.LanguageList {
+		if slices.Contains(defaultTablet.Language, item.Name) {
+			validLanguageList = append(validLanguageList, item)
+		}
+	}
+	defaultTablet.LanguageList = validLanguageList
 	return defaultTablet, nil
 }
 
@@ -575,6 +641,25 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 		return cashier, errors.New("合并各端-收银机设置失败")
 	}
 
+	if len(defaultCashier.Carousel) == 0 {
+		defaultCashier.Carousel = make([]setting.CarouselItem, 0)
+	}
+	if len(defaultCashier.LanguageList) == 0 {
+		defaultCashier.LanguageList = make([]dto.LanguageItem, 0)
+	}
+	if len(defaultCashier.Language) == 0 {
+		defaultCashier.Language = make([]string, 0)
+	}
+	if len(defaultCashier.RemainColor) == 0 {
+		defaultCashier.RemainColor = make([]string, 0)
+	}
+	validLanguageList := make([]dto.LanguageItem, 0)
+	for _, item := range defaultCashier.LanguageList {
+		if slices.Contains(defaultCashier.Language, item.Name) {
+			validLanguageList = append(validLanguageList, item)
+		}
+	}
+	defaultCashier.LanguageList = validLanguageList
 	return defaultCashier, nil
 }
 
@@ -640,6 +725,25 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 	} else {
 		defaultAssistant.IsShowAssistantSoldOut = s.getDefaultCashier(languageList).IsShowAssistantSoldOut
 	}
+
+	if len(defaultAssistant.RemainColor) == 0 {
+		defaultAssistant.RemainColor = make([]string, 0)
+	}
+	if len(defaultAssistant.LanguageList) == 0 {
+		defaultAssistant.LanguageList = make([]dto.LanguageItem, 0)
+	}
+	if len(defaultAssistant.Language) == 0 {
+		defaultAssistant.Language = make([]string, 0)
+	}
+
+	validLanguageList := make([]dto.LanguageItem, 0)
+	for _, item := range defaultAssistant.LanguageList {
+		if slices.Contains(defaultAssistant.Language, item.Name) {
+			validLanguageList = append(validLanguageList, item)
+		}
+	}
+	defaultAssistant.LanguageList = validLanguageList
+
 	return defaultAssistant, nil
 }
 
@@ -694,6 +798,25 @@ func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.Compan
 	if companySetting.IsOpenKitchenKds == 0 {
 		kitchen.IsOpen = "0"
 	}
+
+	if len(defaultKitchen.WaitColor) == 0 {
+		defaultKitchen.WaitColor = make([]string, 0)
+	}
+	if len(defaultKitchen.LanguageList) == 0 {
+		defaultKitchen.LanguageList = make([]dto.LanguageItem, 0)
+	}
+	if len(defaultKitchen.Language) == 0 {
+		defaultKitchen.Language = make([]string, 0)
+	}
+
+	validLanguageList := make([]dto.LanguageItem, 0)
+	for _, item := range defaultKitchen.LanguageList {
+		if slices.Contains(defaultKitchen.Language, item.Name) {
+			validLanguageList = append(validLanguageList, item)
+		}
+	}
+	defaultKitchen.LanguageList = validLanguageList
+
 	return defaultKitchen, nil
 }
 
@@ -741,6 +864,21 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 	} else {
 		defaultH5.IsShowScanSoldOut = s.getDefaultCashier(languageList).IsShowScanSoldOut
 	}
+
+	if len(defaultH5.LanguageList) == 0 {
+		defaultH5.LanguageList = make([]dto.LanguageItem, 0)
+	}
+	if len(defaultH5.Language) == 0 {
+		defaultH5.Language = make([]string, 0)
+	}
+
+	validLanguageList := make([]dto.LanguageItem, 0)
+	for _, item := range defaultH5.LanguageList {
+		if slices.Contains(defaultH5.Language, item.Name) {
+			validLanguageList = append(validLanguageList, item)
+		}
+	}
+	defaultH5.LanguageList = validLanguageList
 	return defaultH5, nil
 }
 
@@ -756,11 +894,26 @@ func (s *Srv) GetCashierLanguage(c context.Context) (resp.LanguageResp, error) {
 	if err != nil {
 		return resp.LanguageResp{}, errors.New("获取语言失败")
 	}
-	return resp.LanguageResp{
+	languageResp := resp.LanguageResp{
 		Languages:       cashierSetting.Language,
 		LanguageList:    cashierSetting.LanguageList,
 		DefaultLanguage: cashierSetting.DefaultLanguage,
-	}, nil
+	}
+	if len(languageResp.Languages) == 0 {
+		languageResp.Languages = make([]string, 0)
+	}
+	if len(languageResp.LanguageList) == 0 {
+		languageResp.LanguageList = make([]dto.LanguageItem, 0)
+	}
+
+	validLanguageList := make([]dto.LanguageItem, 0)
+	for _, item := range languageResp.LanguageList {
+		if slices.Contains(languageResp.Languages, item.Name) {
+			validLanguageList = append(validLanguageList, item)
+		}
+	}
+	languageResp.LanguageList = validLanguageList
+	return languageResp, nil
 }
 
 // GetCashierAd 获取收银机副屏广告
@@ -808,6 +961,9 @@ func (s *Srv) GetTaxRateSetting(ctx context.Context) (setting.TaxRate, error) {
 	err = copier.CopyWithOption(&defaultTaxRate, taxRate, copier.Option{IgnoreEmpty: true})
 	if err != nil {
 		return taxRate, errors.New("解析税率设置失败")
+	}
+	if len(defaultTaxRate.AddTaxCategory) == 0 {
+		defaultTaxRate.AddTaxCategory = make([]setting.AddTaxCategoryItem, 0)
 	}
 	return defaultTaxRate, nil
 }
