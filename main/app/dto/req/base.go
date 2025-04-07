@@ -61,3 +61,8 @@ type ShiftPrinterReq struct {
 	LeaveCash    float64 `json:"leave_cash"`    // 遗留现金: 0 - 当前钱箱现金总计
 	DutyNo       string  `json:"duty_no"`       // 班次编号 (交班时，返回的班次编号)
 }
+
+// EditDeviceRemarkReq 助手端修改设置请求参数
+type EditDeviceRemarkReq struct {
+	Remark string `json:"remark"` // 机器备注
+}

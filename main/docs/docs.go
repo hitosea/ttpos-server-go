@@ -3235,6 +3235,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/setting": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改设置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.设置"
+                ],
+                "summary": "修改设置",
+                "parameters": [
+                    {
+                        "description": "修改设置参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.EditDeviceRemarkReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/verify_advanced_password": {
             "post": {
                 "security": [
@@ -16303,6 +16342,15 @@ const docTemplate = `{
                 }
             }
         },
+        "req.EditDeviceRemarkReq": {
+            "type": "object",
+            "properties": {
+                "remark": {
+                    "description": "机器备注",
+                    "type": "string"
+                }
+            }
+        },
         "req.EditSettingReq": {
             "type": "object",
             "required": [
@@ -18217,6 +18265,10 @@ const docTemplate = `{
         "resp.BuffetProduct": {
             "type": "object",
             "properties": {
+                "limit": {
+                    "description": "限购数量， 限购数量=单人限购数量*用餐人数",
+                    "type": "integer"
+                },
                 "name": {
                     "description": "商品名称. 不用于前端展示，仅用于开发核对接口数据是否正确",
                     "type": "string"
@@ -19034,8 +19086,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "accept_time": {
-                    "description": "接单时间. “17:20:01 接单”。值为0时不显示。 -1 表示收银机送厨的商品或顾客",
+                    "description": "接单时间. “17:20:01 接单”。值为0时不显示。",
                     "type": "integer"
+                },
+                "is_accept": {
+                    "description": "false:已拒单 true:已接单",
+                    "type": "boolean"
                 },
                 "products": {
                     "description": "组商品列表",

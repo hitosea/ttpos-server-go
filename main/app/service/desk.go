@@ -880,12 +880,6 @@ func (s *deskSrv) ChangeBindDesk(ctx context.Context, changeBindDeskReq req.Edit
 	dbId := ctx.GetDbId()
 	db := s.dbm.GetDB(dbId)
 	deviceUuid := ctx.GetDeviceUuid()
-	updateRemark := func(tx *gorm.DB, remark string) error {
-		if remark != "" {
-			return repository.NewDeviceRepo(tx).UpdateDevice(deviceUuid, map[string]any{"remark": remark})
-		}
-		return nil
-	}
 	// 当前设备未绑定桌台，不能换绑
 	deskRepo := repository.NewDeskRepo(db)
 	oldDesk, _ := deskRepo.GetDesk(deskRepo.WhereDeviceUuid(deviceUuid), deskRepo.WhereIsDisable(constant.DeskEnable))
@@ -894,7 +888,7 @@ func (s *deskSrv) ChangeBindDesk(ctx context.Context, changeBindDeskReq req.Edit
 	}
 	// 已绑定的桌台和传递桌台一样，不做操作
 	if oldDesk.Uuid == changeBindDeskReq.DeskUuid {
-		if err := updateRemark(db, changeBindDeskReq.Remark); err != nil {
+		if err := s.deviceSrv.UpdateRemark(ctx, req.EditDeviceRemarkReq{Remark: changeBindDeskReq.Remark}); err != nil {
 			return resp.Desk{}, errors.WithMessage(errors.ErrInternal, "修改机器备注失败: "+err.Error())
 		}
 		return s.GetDeskInfo(dbId, changeBindDeskReq.DeskUuid)
@@ -908,7 +902,8 @@ func (s *deskSrv) ChangeBindDesk(ctx context.Context, changeBindDeskReq req.Edit
 		return resp.Desk{}, errors.New("桌台已被占用")
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
-		if err := updateRemark(tx, changeBindDeskReq.Remark); err != nil {
+		ctx.SetDB(tx)
+		if err := s.deviceSrv.UpdateRemark(ctx, req.EditDeviceRemarkReq{Remark: changeBindDeskReq.Remark}); err != nil {
 			return err
 		}
 		deskRepo = repository.NewDeskRepo(tx)
