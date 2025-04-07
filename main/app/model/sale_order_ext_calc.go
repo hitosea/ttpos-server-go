@@ -215,7 +215,7 @@ func (model *SaleOrder) calcPayOrderAmount() float64 {
 }
 
 // 计算销售订单的最终应收金额。
-// 最终应收=应收金额+支付手续费= 应收金额 +（各个支付订单的手续费之和+当前支付方式的手续费）
+// 最终应收=应收金额+支付手续费= 应收金额 +（各个支付订单的手续费之和+当前支付方式的手续费）- 减去结账抹零金额
 func (model *SaleOrder) calcFinallyAmount() (float64, bool) {
 	hasCommission := false
 	amount := decimal.NewFromFloat(model.Amount)
@@ -225,7 +225,7 @@ func (model *SaleOrder) calcFinallyAmount() (float64, bool) {
 	}
 	// 未支付的金额的手续费 = 未支付的金额 * 支付手续费费率
 	// 最终应收 = 应收金额+已支付的手续费
-	finallyAmount := amount.Add(commissionFee)
+	finallyAmount := amount.Add(commissionFee).Sub(decimal.NewFromFloat(model.CalcCheckOutZeroFee()))
 
 	if commissionFee.InexactFloat64() > 0 {
 		hasCommission = true
