@@ -229,6 +229,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 
 // CountBusiness 统计营业数据
 func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataAll, error) {
+	req = req.GetParam()
 	// 销售数据
 	saleData := s.statisticsSrv.CountSale(ctx, CountReq{
 		TimeType:       req.TimeType,
