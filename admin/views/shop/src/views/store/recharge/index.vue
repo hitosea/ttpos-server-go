@@ -257,7 +257,7 @@
   const onExport = () => {
     searchForm.value.token = token;
     const baseUrl = window.location.protocol + '//' + window.location.host;
-    const url = baseUrl + '/api/index.php/shop/store.UserRechargeOrder/export?' + qs.stringify(searchForm.value) + '&language=' + languageStore().language;
+    const url = baseUrl + '/index.php/shop/store.UserRechargeOrder/export?' + qs.stringify(searchForm.value) + '&language=' + languageStore().language;
     window.open(url, '_blank');
   };
 
