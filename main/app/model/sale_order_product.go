@@ -184,6 +184,11 @@ func (model *SaleOrderProduct) GetAcceptTime() int64 {
 	return 0
 }
 
+// IsAcceptOrderProduct 商品是否已接单
+func (model *SaleOrderProduct) IsAcceptOrderProduct() bool {
+	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderAccepted
+}
+
 // 将已下单的h5订单商品变为已接单单的h5订单商品
 func (model *SaleOrderProduct) SetAcceptOrderProduct() {
 	defer model.SetUpdate() // 标记要更新model
