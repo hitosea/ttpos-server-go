@@ -210,6 +210,9 @@ class Paytype extends Controller
             'status' => $param['status'],
             'remark' => $remark,
             'fee_percent' => $param['fee'],
+            'sort' => $sort,
+            'fee' => $param['fee'],
+            'name' => $param['name'],
         ];
         if (isset($param['is_show_checkout'])) {
             $isShowCheckout = $param['is_show_checkout'] ?: [];
