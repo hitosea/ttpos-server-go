@@ -323,7 +323,7 @@ class BindRecord extends BaseModel
      */
     public function unbindByKey($source, $key)
     {
-        $record = $this->where('source', '=', $source)->where('key', '=', $key)->find();
+        $record = $this->where('source', '=', $source)->where('uuid', '=', $key)->find();
         if (!$record) {
             $this->error = "设备不存在";
             return false;

@@ -5,11 +5,8 @@ namespace app\common\model\store;
 
 use app\common\model\BaseModel;
 use app\common\model\order\Order;
-use app\common\enum\settings\SettingEnum;
 use app\common\enum\order\OrderStatusEnum;
 use app\common\service\websocket\Websocket;
-use app\tablet\model\order\Order as OrderModel;
-use app\common\model\settings\Setting as SettingModel;
 
 /**
  * 桌位模型
@@ -23,7 +20,7 @@ class Table extends BaseModel
      * 追加字段
      * @var string[]
      */
-    protected $append = ['table_id', 'table_no', 'switch_status'];
+    protected $append = ['table_id', 'table_no', 'switch_status', 'is_bind'];
 
     /**
      * 分类更新后推送通知
@@ -66,6 +63,14 @@ class Table extends BaseModel
     {
         return $this->is_disable == 1 ? 0 : 1;
     }
+    public function getIsBindAttr($value, $data)
+    {
+        return $this->device_uuid > 0 ? 1 : 0;
+    }
+    public function getStatusAttr($value, $data)
+    {
+        return $this->sale_bill_uuid > 0 ? 30 : $value;
+    }
 
     /**
      * 关联进行中订单
@@ -82,40 +87,6 @@ class Table extends BaseModel
     {
         $filter = is_array($where) ? $where : ['uuid' => $where];
         return static::with(['underwayOrder'])->where($filter)->find();
-    }
-
-    /**
-     * 查询桌台是否进行中
-     * @param $table_id
-     * @return bool
-     */
-    public static function isOpen($table_id)
-    {
-        $order = OrderModel::where([['table_id', '=', $table_id], ['order_status', '=', OrderStatusEnum::NORMAL]])->field('table_id')->find();
-        $tableInfo = static::field('status, shop_supplier_id, app_id')->where('table_id', '=', $table_id)->find();
-        $tableStatus = $tableInfo['status'];
-        if (!$order) {
-            if ($tableStatus == 30) {
-                // 支付后是否清台 0-清台 1-不清台
-                $store = SettingModel::getSupplierItem(SettingEnum::BUSINESS, $tableInfo['shop_supplier_id'], $tableInfo['app_id']);
-                if ($store['no_clear_table'] == 1) {
-                    return true;
-                }
-                static::where('table_id', '=', $table_id)->update(['status' => 10]);
-            }
-            return false;
-        }
-        return $tableStatus == 30;
-    }
-
-    /**
-     * 查询桌台是否绑定中 1:绑定  0:未绑定
-     * @param $table_id
-     * @return bool
-     */
-    public static function isBind($table_id)
-    {
-        return static::where('table_id', '=', $table_id)->value('is_bind') == 1;
     }
 
     /**
