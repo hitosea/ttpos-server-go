@@ -361,7 +361,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		if item.IsBuffetProduct() && item.GetPrice() <= 0 {
 			continue
 		}
-		//
+		// 商品数量
 		productNum += item.Num
 		productTotalPrice := item.GetPrice()
 		// 赠品
@@ -371,7 +371,9 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 			freeMoney += item.GetPrice()
 			productTotalPrice = 0
 		}
-		productName := gift + item.MultiLanguageName.GetNameByLang(t.base.Lang) + "\n" + item.GetAttributeNamesByLang(t.base.Lang)
+		// 商品名称
+		productAttr := item.GetAttributeNamesByLang(t.base.Lang)
+		productName := gift + item.MultiLanguageName.GetNameByLang(t.base.Lang) + "\n(" + productAttr + ")"
 		//
 		printer.AppendText(t.base.PrintText(
 			productName,
