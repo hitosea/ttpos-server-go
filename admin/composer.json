@@ -39,7 +39,7 @@
         "topthink/think-multi-app": "1.0.17",
         "firebase/php-jwt": "^6.8",
         "topthink/think-worker": "4.0",
-        "endroid/qr-code": "^4.8",
+        "endroid/qr-code": "^6.0",
         "wechatpay/wechatpay": "^1.4",
         "topthink/think-migration": "3.1.1",
         "stichoza/google-translate-php": "^4.1",

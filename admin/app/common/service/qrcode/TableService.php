@@ -46,8 +46,6 @@ class TableService extends Base
         } else if ($this->source == 'mp' || $this->source == 'h5') {
             $qrCode = new QrCode($this->base_url . "/#/home?token={$token}");
         }
-        $qrCode->setSize(300);
-        $qrCode->setMargin(10);
         if ($this->action == 'update') {
             $table->save(['qrcode_token' => $qrCodeValue]);
         }
@@ -78,8 +76,6 @@ class TableService extends Base
             } else if ($this->source == 'mp' || $this->source == 'h5') {
                 $qrCode = new QrCode($this->base_url . "scan/#/?token={$token}");
             }
-            $qrCode->setSize(300);
-            $qrCode->setMargin(10);
             if ($this->action == 'update') {
                 $table->save(['qrcode_token' => $qrCodeValue]);
             }

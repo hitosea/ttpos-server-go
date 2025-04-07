@@ -154,6 +154,7 @@ class Category extends BaseModel
             }])
                 ->where('c.parent_uuid', '=', 0)
                 ->where('c.is_special', '=', $is_special)
+                ->where('c.category_key','<>', 'all')
                 ->order($order_conditions)
                 ->when($name != '', function ($q) use ($prefix, $name) {
                     $q->jsonLike('c.name', $name);
