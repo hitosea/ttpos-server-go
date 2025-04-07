@@ -17,7 +17,7 @@ import (
 
 /**
  * 菜品打印
- * @param int $printType 打印类型 -1-为退菜打印 0-付款打印 1-送厨打印
+ * @param int printType 打印类型 -1-为退菜打印 0-付款打印 1-送厨打印
  */
 func (p *PrinterRepoImpl) PrintingDishes(
 	printType int,
@@ -28,7 +28,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 	p.Lang = p.printerSetting.KitchenLanguage
 
 	// 获取商品打印机列表
-	productPrinters, err := p.getProductPrinterList()
+	productPrinters, err := p.getProductPrinterList(printType)
 	if err != nil {
 		logger.Logger.Error("获取商品打印机列表失败", zap.Error(err))
 		return false

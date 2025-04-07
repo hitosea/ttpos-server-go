@@ -9,6 +9,7 @@ import (
 type IProductPrinterRepo interface {
 	WhereStatus(status int) DBOption
 	WhereProductPrinterUuid(uuid uint64) DBOption
+	WidthPrintMode(widthPrintMode int) DBOption
 
 	GetProductPrinters(opts ...DBOption) ([]model.ProductPrinter, error) // 获取商品打印
 	GetProductPackageUuids(opts ...DBOption) ([]uint64, error)           // 获取指定商品打印关联的商品Uuid
@@ -58,8 +59,20 @@ func (r *productPrinterRepo) WhereStatus(status int) DBOption {
 		return db.Where("status = ?", status)
 	}
 }
+
 func (r *productPrinterRepo) WhereProductPrinterUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("product_printer_uuid = ?", uuid)
+	}
+}
+
+func (r *productPrinterRepo) WidthPrintMode(printMode int) DBOption {
+	if printMode == -1 {
+		return func(db *gorm.DB) *gorm.DB {
+			return db
+		}
+	}
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("print_mode = ?", printMode)
 	}
 }

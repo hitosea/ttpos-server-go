@@ -32,13 +32,12 @@ func init() {
 // sentCookingEventHandler "送厨"事件处理器
 func sentCookingEventHandler() {
 	once_sent_cooking_event_handler.Do(func() {
+
+		// 创建送厨单打印记录
 		event.NewSystemBus().SubscribeSentCookingEvent(func(payload event.SentCookingPayload) {
-			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
-			// 创建操作记录
-			go func() {
-				createSaleOrderOperationRecord(db, payload)
-			}()
-			// 创建送厨单打印记录
+			if len(payload.Products) == 0 {
+				return
+			}
 			go func() {
 				products := printer_model.Products{}
 				copier.Copy(&products, payload.Products)
@@ -49,33 +48,35 @@ func sentCookingEventHandler() {
 				)
 			}()
 		})
+
+		// 创建操作记录
+		event.NewSystemBus().SubscribeSentCookingEvent(func(payload event.SentCookingPayload) {
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
+			record := model.SaleOrderOperationRecord{
+				Source:        payload.Source,
+				Action:        constant.OrderSendKitchen,
+				Remark:        "送厨",
+				SaleBillUuid:  payload.SaleBillUuid,
+				SaleOrderUuid: payload.SaleOrderUuid,
+				H5OrderUuid:   payload.H5OrderUuid,
+				OperatorUuid:  payload.GetOperatorUuid(),
+			}
+			record.Data = payload.ToJsonString()
+			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
+			if err != nil {
+				logger.Logger.Error("SubscribeSentCookingEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
+				return
+			}
+			logger.Logger.Info(fmt.Sprintf("操作记录:送厨 %+v", payload), zap.Uint64("record", uuid))
+		})
+
 		// 扣减库存
 		event.NewSystemBus().SubscribeSentCookingEvent(func(payload event.SentCookingPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			ReduceStock(db, payload.SaleBillUuid)
 		})
 	})
-}
-
-// createSaleOrderOperationRecord 创建销售账单操作记录
-func createSaleOrderOperationRecord(db *gorm.DB, payload event.SentCookingPayload) {
-	orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
-	record := model.SaleOrderOperationRecord{
-		Source:        payload.Source,
-		Action:        constant.OrderSendKitchen,
-		Remark:        "送厨",
-		SaleBillUuid:  payload.SaleBillUuid,
-		SaleOrderUuid: payload.SaleOrderUuid,
-		H5OrderUuid:   payload.H5OrderUuid,
-		OperatorUuid:  payload.GetOperatorUuid(),
-	}
-	record.Data = payload.ToJsonString()
-	uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
-	if err != nil {
-		logger.Logger.Error("SubscribeSentCookingEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
-		return
-	}
-	logger.Logger.Info(fmt.Sprintf("操作记录:送厨 %+v", payload), zap.Uint64("record", uuid))
 }
 
 func ReduceStock(db *gorm.DB, saleBillUuid uint64) {

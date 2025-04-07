@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
+	"ttpos-server-go/app/printer/printer_model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
@@ -33,18 +34,46 @@ func init() {
 func checkoutSaleOrderEventHandler() {
 	once_checkout_sale_order_event_handler.Do(func() {
 
-		// 创建打印
+		// 创建菜单-付款打印
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
-			_, err := printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(
+			saleOrder := payload.SaleBill.GetSaleOrder(payload.SaleOrderUuid)
+			if saleOrder == nil {
+				return
+			}
+			products := printer_model.Products{}
+			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+				if saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsSendKitchen() {
+					continue
+				}
+				products = append(products, printer_model.OrderProduct{
+					OrderProductId:  saleOrderProduct.Uuid,
+					ProductId:       saleOrderProduct.ProductPackageUuid,
+					ProductName:     saleOrderProduct.MultiLanguageName.GetNames(),
+					ProductAttr:     saleOrderProduct.GetAttributeName(),
+					ProductAttrList: saleOrderProduct.GetAttributeNameList(),
+					TotalNum:        saleOrderProduct.Num,
+					IsBuffet:        saleOrderProduct.IsBuffet == 1,
+					Remark:          saleOrderProduct.Remark,
+				})
+			}
+			if len(products) > 0 {
+				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
+					constant.PrinterProductTypePay,
+					payload.SaleBillUuid,
+					products,
+				)
+			}
+		})
+
+		// 创建结账单打印
+		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+			printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(
 				constant.PrinterTemplateBilling,
 				payload.SaleBill,
 				payload.SaleOrderUuid,
 				0,
 				0,
 			)
-			if err != nil {
-				return
-			}
 		})
 
 		// 创建操作记录
