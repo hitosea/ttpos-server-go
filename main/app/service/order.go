@@ -3249,6 +3249,17 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 
 // GetOrderCartInfo 获取点餐购物车信息
 func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
+	// 追加请求头参数
+	if ctx.GetSource() == constant.SourceCashier {
+		h5OrderUuid := ctx.GetGin().GetHeader("h5_order_uuid")
+		if h5OrderUuid != "" {
+			h5OrderUuidInt, err := strconv.ParseUint(h5OrderUuid, 10, 64)
+			if err == nil {
+				opts = append(opts, repository.WithH5OrderUuid(h5OrderUuidInt))
+			}
+		}
+	}
+
 	option := &repository.OrderCartInfoOption{}
 	for _, opt := range opts {
 		opt(option)
