@@ -3780,6 +3780,13 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	saleOrderProduct.Num = uint(request.Num)
 	ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
+	// 检查商品销售库存是否充足
+	if uint(request.Num) > beforeNum {
+		status, message := saleOrderProduct.CheckCookingProduct()
+		if status != constant.CodeSuccess {
+			return nil, errors.WithMessage(errors.New(message))
+		}
+	}
 	// 计算商品数据。折扣、税费、服务
 	saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
 	ctx.Log().Debug("重新计算了商品金额", zap.Any("saleOrderProduct salePrice", saleOrderProduct.SalePrice))
