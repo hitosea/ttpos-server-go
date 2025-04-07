@@ -798,7 +798,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			totalMemberNames = append(totalMemberNames, saleOrder.GetMemberName())
 		}
 		if saleOrder.ConsumerUuid != 0 {
-			totalMemberUuids = append(totalMemberUuids, strconv.FormatUint(saleOrder.ConsumerUuid, 10))
+			totalMemberUuids = append(totalMemberUuids, strconv.FormatUint(uint64(saleOrder.Member.ID), 10))
 		}
 		//
 		products := make([]resp.OrderProduct, 0)

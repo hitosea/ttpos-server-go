@@ -388,6 +388,9 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 				Query: "SaleOrders.ReturnOrders",
 			},
 			WithPreload{
+				Query: "SaleOrders.Member",
+			},
+			WithPreload{
 				Query: "SaleOrders.PaymentOrders",
 			},
 			WithPreload{
