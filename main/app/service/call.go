@@ -123,23 +123,32 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 		unprocessedCallCount int64
 		abnormalPrintCount   int64
 		err                  error
+		db                   = s.dbm.GetDB(companyUuid)
 	)
-	callRepo := repository.NewCallRepo(s.dbm.GetDB(companyUuid))
+	callRepo := repository.NewCallRepo(db)
 	unprocessedCallCount, err = callRepo.GetUnprocessedCallCount(callRepo.WhereC1Status(constant.CallStatusUnprocessed), callRepo.WhereC2IsNull())
 	if err != nil {
-		return res, errors.WithMessage(err, "获取未处理呼叫数量失败")
+		return res, errors.WithMessage(errors.ErrInternal, "获取未处理呼叫数量失败")
 	}
-	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
+	printerLogRepo := repository.NewPrinterLogRepo(db)
 	abnormalPrintCount, err = printerLogRepo.GetPrintLogCount(printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
 		printerLogRepo.WhereType(constant.PrinterLogTypeDefault), printerLogRepo.WhereFirstExecution(0))
 	if err != nil {
 		logger.Logger.Error("获取异常打印数量失败", zap.Error(err))
-		return res, errors.WithMessage(err, "获取异常打印数量失败")
+		return res, errors.WithMessage(errors.ErrInternal, "获取异常打印数量失败")
 	}
+	h5OrderRepo := repository.NewH5OrderRepo(db)
+	unhandledH5OrderCount, err := h5OrderRepo.GetH5OrderCount(h5OrderRepo.WhereStatus([]uint{constant.H5OrderStatusOrder}))
+	if err != nil {
+		logger.Logger.Error("获取未处理的h5订单数量失败", zap.Error(err))
+		return res, errors.WithMessage(errors.ErrInternal, "获取未处理的h5订单数量失败")
+	}
+
 	return resp.UnprocessedResp{
-		UnprocessedCallCount: unprocessedCallCount,
-		AbnormalPrintCount:   abnormalPrintCount,
-		UpdateTime:           time.Now().Unix(),
+		UnprocessedCallCount:    unprocessedCallCount,
+		AbnormalPrintCount:      abnormalPrintCount,
+		UnprocessedH5OrderCount: unhandledH5OrderCount,
+		UpdateTime:              time.Now().Unix(),
 	}, nil
 }
 
