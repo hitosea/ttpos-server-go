@@ -15,6 +15,7 @@ error.log
 /docker/php/job.log
 /docker/php/inotify.log
 /public/uploads/*
+/public/home/*
 /public/temp/*
 /fonts
 generated_image.png

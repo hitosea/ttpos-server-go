@@ -74,7 +74,7 @@ class TableService extends Base
             if ($this->source == 'wx') {
                 $qrCode = new QrCode($this->base_url . "pages/product/share-login/#/?token={$token}");
             } else if ($this->source == 'mp' || $this->source == 'h5') {
-                $qrCode = new QrCode($this->base_url . "scan/?token={$token}");
+                $qrCode = new QrCode($this->base_url . "/home?token={$token}");
             }
             if ($this->action == 'update') {
                 $table->save(['qrcode_token' => $qrCodeValue]);
@@ -115,7 +115,7 @@ class TableService extends Base
             $arr = ['a' => $companyUuid, 't' => $this->id, 'q' => $table['qrcode_token']];
             $auth = (new AuthService);
             $token = $auth->generateToken($arr);
-            $this->saveMpQrcodeToDir("scan/#/?token={$token}", $savePath);
+            $this->saveMpQrcodeToDir("/home?token={$token}", $savePath);
         }
 
         // 打开或创建压缩文件
