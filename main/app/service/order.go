@@ -5844,6 +5844,9 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	go func() {
 		// 判断销售订单的每个商品是否都已有对应的出库记录
 		// 获取没有出库记录的销售订单商品
+		db := s.dbm.GetDB(ctx.GetDbId())
+		ctx := ctx.Copy()
+		ctx.SetDB(db)
 		withoutWarehouseOutFormSaleOrderProducts, err := s.getSaleOrderProductWithoutWarehouseOutForm(ctx, saleOrder.Uuid, saleOrder.SaleOrderProducts)
 		if err != nil {
 			logger.Logger.Error("出库失败 - 01", zap.Error(err))
@@ -5867,10 +5870,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 				if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
 					return errors.WithMessage(err)
 				}
-			}
-			// 更新该销售订单的所有出库单记录为已出库
-			if err := repository.NewWarehouseFormRepo(tx).UpdateWarehouseOutFormItemRecordsStatus(saleOrder.Uuid); err != nil {
-				return errors.WithMessage(err)
 			}
 			return nil
 		}); err != nil {

@@ -31,6 +31,7 @@ type Context interface {
 	SetDB(tx *gorm.DB)                       // 设置gorm.DB
 	GetDB() *gorm.DB                         // 获取gorm.DB
 	GetRequestUuid() string                  // 获取请求ID
+	Copy() Context                           // 复制一个ctx实例。避免在协程中修改上下文导致主进程的ctx被修改
 }
 type ContextImpl struct {
 	context.Context
@@ -151,6 +152,26 @@ func NewContext(options ...func(*ContextImpl)) Context {
 		option(ctx)
 	}
 	return ctx
+}
+
+// 复制一个ctx对象
+func (c *ContextImpl) Copy() Context {
+	return NewContext(
+		WithLanguage(c.language),
+		WithCompanyUuid(c.companyUuid),
+		WithSource(c.source),
+		WithCompany(c.company),
+		WithStaff(c.staff),
+		WithCompanySetting(c.companySetting),
+		WithStaffUuid(c.staffUuid),
+		WithDeskUuid(c.deskUuid),
+		WithDeviceSn(c.deviceSn),
+		WithDeviceUuid(c.deviceUuid),
+		WithRequestUuid(c.requestUuid),
+		WithLogger(c.log),
+		WithGinContext(c.cc),
+		WithContext(c.Context),
+	)
 }
 
 func (c *ContextImpl) GetLanguage() string {
