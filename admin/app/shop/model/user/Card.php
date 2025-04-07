@@ -103,10 +103,11 @@ class Card extends CardModel
                 // 会员卡id
                 if ($memberCardUuid) {
                     /** @var User $user */
-                    $user->setMemberCardId($memberCardUuid);
+                    $user->setMemberCardId($data['card_id']);
                 }
                 // 赠送积分
                 if ($detail['open_point'] && $detail['open_point_num']) {
+                    /** @var User $user */
                     $user->setIncPoints($detail['open_point_num'], '发会员卡获取积分');
                 }
                 // 赠送余额
