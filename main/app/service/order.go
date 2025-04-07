@@ -4420,6 +4420,16 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		}
 	}
 
+	// 如果退菜商品是下单减库存的商品，则需要创建入库单
+	var warehouseForm *model.WarehouseForm
+	if returnSaleOrderProduct.DeductStockType == constant.ProductPackageDeductStockTypeCooking {
+		productList, err := s.getDecreaseStockList(ctx, []*model.SaleOrderProduct{returnSaleOrderProduct})
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		warehouseForm = model.NewWarehouseForm(productList, req.SaleBillUuid)
+	}
+
 	// 新建一个销售订单商品，该商品数量为移动数量
 	if errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 创建退菜记录
@@ -4434,6 +4444,16 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			return errors.WithMessage(err)
 		}
 
+		if warehouseForm != nil && len(warehouseForm.WarehouseFormItems) > 0 {
+			// 创建入库单
+			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseFormRecord(*warehouseForm); err != nil {
+				return errors.WithMessage(err)
+			}
+			// 创建入库单记录
+			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseFormItemRecords(warehouseForm.WarehouseFormItems); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
 		return nil
 	}); errUpdateDB != nil {
 		return nil, errors.WithMessage(errUpdateDB, "更新数据失败")
