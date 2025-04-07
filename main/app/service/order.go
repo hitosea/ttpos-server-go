@@ -1114,38 +1114,7 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-		s.reverseSettleWarehouseForm(ctx, saleBill)
-		var warehouseForm *model.WarehouseForm
-		{
-			products := saleBill.GetSaleOrderProductCooking()
-			productList, err := s.getDecreaseStockList(ctx, products)
-			if err != nil {
-				return errors.WithMessage(err)
-			}
-			warehouseForm = model.NewWarehouseForm(productList, saleBill.Uuid)
-		}
-		// 创建入库单
-		if warehouseForm != nil && len(warehouseForm.WarehouseFormItems) > 0 {
-			// 创建入库单
-			if err := repository.NewWarehouseFormRepo(db).CreateWarehouseFormRecord(*warehouseForm); err != nil {
-				return errors.WithMessage(err)
-			}
-			// 创建入库单记录
-			if err := repository.NewWarehouseFormRepo(db).CreateWarehouseFormItemRecords(warehouseForm.WarehouseFormItems); err != nil {
-				return errors.WithMessage(err)
-			}
-		}
-		// 发布"加库存"事件
-		go func() {
-			event.NewSystemBus().PublishChangeStockEvent(event.ChangeStockPayload{
-				BasePayload: event.BasePayload{
-					CompanyUuid:  ctx.GetCompanyUuid(),
-					Source:       ctx.GetSource(),
-					SaleBillUuid: billInfo.Uuid,
-					OperatorUuid: int64(ctx.GetStaffUuid()),
-				},
-			})
-		}()
+		s.returnInventory(ctx, saleBill)
 	}
 
 	// 如果是桌台订单
@@ -1848,7 +1817,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 	// 构建入库单，将账单的商品重新入库.
 	// 出库记录标记为已撤销，并生成入库单将库存退还
 	// 构建出库单，将账单下单减库存的商品出库
-	if err := s.reverseSettleWarehouseForm(ctx, saleBill); err != nil {
+	if err := s.returnInventory(ctx, saleBill, WithReverseSettle()); err != nil {
 		return errors.WithMessage(err)
 	}
 
@@ -2015,7 +1984,24 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 	return nil
 }
 
-func (s *orderSrv) reverseSettleWarehouseForm(ctx context.Context, saleBill *model.SaleBill) error {
+type returnInventoryOptions struct {
+	IsReverseSettle bool // 是否是反结账
+}
+
+func WithReverseSettle() func(opts *returnInventoryOptions) {
+	return func(opts *returnInventoryOptions) {
+		opts.IsReverseSettle = true
+	}
+}
+
+// returnInventory 退回库存
+// 取消订单时，将所有商品都退回库存
+// 反结账时，将先将所有商品都退回库存，再将下单减库存的商品扣除库存(出库)
+func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill, opts ...func(opts *returnInventoryOptions)) error {
+	opt := &returnInventoryOptions{}
+	for _, o := range opts {
+		o(opt)
+	}
 	db := ctx.GetDB()
 	// 构建入库单，将账单的商品重新入库.
 	// 出库记录标记为已撤销，并生成入库单将库存退还
@@ -2048,7 +2034,7 @@ func (s *orderSrv) reverseSettleWarehouseForm(ctx context.Context, saleBill *mod
 
 	// 3.构建出库单，将账单下单减库存的商品出库
 	var warehouseOutForm *model.WarehouseOutForm
-	{
+	if opt.IsReverseSettle {
 		products := saleBill.GetSaleOrderProductCookingSubStock()
 		productList, err := s.getDecreaseStockList(ctx, products)
 		if err != nil {

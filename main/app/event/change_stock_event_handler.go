@@ -2,7 +2,6 @@ package event
 
 import (
 	"sync"
-	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -18,17 +17,12 @@ func init() {
 
 // acceptH5OrderEventHandler "接单"事件处理器
 func changeStockEventHandler() {
-	once_accept_h5_order_event_handler.Do(func() {
-		var orderSrv service.IOrderSrv
-		_ = orderSrv
-
+	once_change_stock_event_handler.Do(func() {
 		event.NewSystemBus().SubscribeChangeStockEvent(func(payload event.ChangeStockPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			// 发布"加库存"事件
 			go func() {
 				AddStock(db, payload.SaleBillUuid)
-			}()
-			// 发布"减库存"事件
-			go func() {
 				ReduceStock(db, payload.SaleBillUuid)
 			}()
 		})
