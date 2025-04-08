@@ -608,6 +608,18 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 		}
 	}
 	st := s.getSettingByKey(ctx, constant.SettingCashier)
+	if strings.Contains(st.Values, "\"is_show_scan_sold_out\":\"1\"") {
+		st.Values = strings.Replace(st.Values, "\"is_show_scan_sold_out\":\"1\"", "\"is_show_scan_sold_out\":1", -1)
+	}
+	if strings.Contains(st.Values, "\"is_show_scan_sold_out\":\"0\"") {
+		st.Values = strings.Replace(st.Values, "\"is_show_scan_sold_out\":\"0\"", "\"is_show_scan_sold_out\":0", -1)
+	}
+	if strings.Contains(st.Values, "\"is_show_assistant_sold_out\":\"1\"") {
+		st.Values = strings.Replace(st.Values, "\"is_show_assistant_sold_out\":\"1\"", "\"is_show_assistant_sold_out\":1", -1)
+	}
+	if strings.Contains(st.Values, "\"is_show_assistant_sold_out\":\"0\"") {
+		st.Values = strings.Replace(st.Values, "\"is_show_assistant_sold_out\":\"0\"", "\"is_show_assistant_sold_out\":0", -1)
+	}
 	isSetIsShowScanSoldOut := strings.Contains(st.Values, "is_show_scan_sold_out")
 	isSetIsShowAssistantSoldOut := strings.Contains(st.Values, "is_show_assistant_sold_out")
 	err = json.Unmarshal([]byte(st.Values), &cashier)
