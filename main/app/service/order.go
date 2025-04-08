@@ -7490,8 +7490,9 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 					List: products,
 				},
 			},
-			AcceptTime: products[0].AcceptTime,
-			IsAccept:   products[0].IsAccept,
+			AcceptTime:  products[0].AcceptTime,
+			IsAccept:    products[0].IsAccept,
+			H5OrderTime: products[0].H5OrderTime,
 		})
 	}
 	sort.Slice(groups, func(i, j int) bool {
