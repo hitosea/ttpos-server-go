@@ -5784,6 +5784,11 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 
 	// 现金支付
 	cashAmount := saleOrder.GetCashAmount()
+	outMoney := totalPay - finalAmount // 超付金额=支付金额-最终应收
+	// 如果超付金额大于现金支付金额，则拒绝完成订单，提示“收款金额大于最终应收，请先修改收款金额”
+	if outMoney > cashAmount {
+		return nil, errors.New("收款金额大于最终应收，请先修改收款金额")
+	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db)
