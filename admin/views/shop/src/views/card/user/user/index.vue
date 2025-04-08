@@ -91,7 +91,9 @@
               <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/card/user/user/edit'">{{ $t('编辑') }}</el-button>
               <el-button @click="addClick(scope.row)" type="primary" link size="small" v-auth="'/card/user/user/recharge'">{{ $t('充值') }}</el-button>
               <el-button @click="deductionClick(scope.row)" type="primary" link size="small" v-auth="'/user/user/deduct'">{{ $t('扣减') }}</el-button>
-              <el-button @click="deleteClick(scope.row)" type="primary" link size="small" v-auth="'/card/user/user/delete'">{{ $t('删除') }}</el-button>
+              <el-button :disabled="!scope.row.can_delete" @click="deleteClick(scope.row)" type="primary" link size="small" v-auth="'/card/user/user/delete'">{{
+                $t('删除')
+              }}</el-button>
             </template>
           </el-table-column>
         </el-table>
