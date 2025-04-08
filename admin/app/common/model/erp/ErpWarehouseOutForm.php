@@ -224,7 +224,7 @@ class ErpWarehouseOutForm extends BaseModel
                 return false;
             }
             $formItem = $this->erpWarehouseOutFormItem;
-            if (!$formItem->productBom && !$formItem->material) {
+            if (!$formItem->productBom || $formItem->productBom->delete_time > 0) {
                 $this->error = '规格不存在，无法进行撤销操作';
                 return false;
             }
