@@ -162,6 +162,10 @@ class Client extends Controller
             ->where('type', $type)
             ->order('id', 'desc')
             ->paginate($param);
+
+        foreach ($list as $k => $item) {
+            $list[$k]["update_log"] = json_decode($item["update_log"], true)[checkDetect()];
+        }
         //
         return $this->renderSuccess('', compact('list'));
     }
