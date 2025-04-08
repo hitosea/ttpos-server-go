@@ -432,6 +432,8 @@ class Material extends BaseModel
             'material_uuid' => $material['uuid'],
             'num' => $num,
             'remark' => $remark,
+            'status' => 1,
+            'reduce_stock' => 1,
         ]);
     }
 

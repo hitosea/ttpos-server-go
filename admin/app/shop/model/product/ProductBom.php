@@ -246,6 +246,8 @@ class ProductBom extends ProductBomModel
             'product_bom_uuid' => $flavor['uuid'],
             'num' => $num,
             'remark' => $remark,
+            'status' => 1,
+            'reduce_stock' => 1,
         ]);
     }
 }
