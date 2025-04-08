@@ -247,7 +247,7 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 	}
 
 	// 录入订单商品数据
-	_, err := s.newSaleOrderProduct(ctx, CreateSaleOrderProductParams{
+	saleOrderProducts, err := s.newSaleOrderProduct(ctx, CreateSaleOrderProductParams{
 		IsH5Product: request.IsH5Product,
 		Setting:     *saleBill.SaleBillSetting,
 		SaleBill:    saleBill,
@@ -270,7 +270,25 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 		if saleBill.IsBuffetSaleBill() {
 			// 获取自助餐的剩余时长
 			if saleBill.GetTotalRemainingSeconds() == 0 {
-				return nil, errors.New("自助餐已结束")
+				// 自助餐已结束，不能加购自助餐商品。但可以根据设置，继续选购非自助餐商品
+				for _, saleOrderProduct := range saleOrderProducts {
+					if saleOrderProduct.IsBuffetProduct() {
+						return nil, errors.New("自助餐已结束")
+					}
+				}
+				// 获取自助餐设置
+				companySetting, err := s.settingSrv.GetCompanySetting(ctx)
+				if err != nil {
+					return nil, err
+				}
+				buffetSetting, buffetErr := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+				if buffetErr != nil {
+					return nil, buffetErr
+				}
+				// 如果自助餐设置为非自助餐商品到时不能继续选购，则不能加购
+				if buffetSetting.IsBuyContinue == "0" {
+					return nil, errors.New("自助餐已结束")
+				}
 			}
 		}
 	}
