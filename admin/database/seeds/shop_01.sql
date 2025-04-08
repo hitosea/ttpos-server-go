@@ -1392,17 +1392,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 8 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印日志表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_printer_read_log` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印读取日志ID',
-    `log_uuid` int(11) DEFAULT 0 COMMENT '打印uuid',
-    `device_id` varchar(255) DEFAULT '' COMMENT '设备id',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='打印读取日志表';
-
 CREATE TABLE IF NOT EXISTS `ttpos_product_printer` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品打印机ID',
