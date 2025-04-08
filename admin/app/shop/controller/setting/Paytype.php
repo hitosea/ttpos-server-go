@@ -29,7 +29,7 @@ class Paytype extends Controller
         $shop_supplier_id = $this->store['user']['shop_supplier_id'];
         $list = PayTypeModel::list($shop_supplier_id, $app_id);
         foreach ($list as $key => $item) {
-            $item['img'] = $item['logoFile'] ? $item['logoFile']['file_path'] : '';
+            $item['img'] = $item['logoFile'] ? $item['logoFile']['file_path'] : $item['default_img'];
             $item['qrcode'] = $item['qrcodeFile'] ? $item['qrcodeFile']['file_path'] : '';
             $list[$key] = $item;
         }
@@ -130,6 +130,9 @@ class Paytype extends Controller
             // 兼容快捷添加多个code一致
             foreach ($validatedItems as $key => $item) {
                 $validatedItems[$key]['code'] = $item['code'] + $key * 100;
+                if ($item['logo_file_uuid'] == 0) {
+                    $validatedItems[$key]['default_img'] = $item['logo_url'];
+                }
             }
             if ($model->saveAll($validatedItems)) {
                 return $this->renderSuccess('操作成功');
@@ -227,7 +230,7 @@ class Paytype extends Controller
             $saveData['logo_file_uuid'] = $param['img']['file_id'];
         }
         if (isset($param['img']['file_path'])) {
-            $saveData['logo_url'] = ImgHelp::removeImageDomain($param['img']['file_path']);
+            $saveData['default_img'] = ImgHelp::removeImageDomain($param['img']['file_path']);
         }
         if (isset($param['qrcode']['file_id'])) {
             $saveData['qrcode_file_uuid'] = $param['qrcode']['file_id'];
