@@ -94,27 +94,27 @@ type OrderProduct struct {
 	IsMust              bool               `json:"is_must"`               // 是否必点, false-否 true-是
 	GiftReason          string             `json:"gift_reason"`           // 赠品原因
 	ImageUrl            string             `json:"image_url"`             // 图片地址
-	CancelReason        string             `json:"refund_reason"`         // 退菜原因
+	CancelReason        dto.LocaleResponse `json:"refund_reason"`         // 退菜原因
 }
 
 // OrderInfo 订单信息响应
 type OrderInfo struct {
-	SaleOrderUuid uint64         `json:"sale_order_uuid"` // 销售订单UUID
-	BillType      uint           `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
-	DiningMethod  uint           `json:"dining_method"`   // 用餐方式,0-堂食 1-打包
-	SerialNo      string         `json:"serial_no"`       // 桌位编号 (点餐流水号)
-	OrderNo       string         `json:"order_no"`        // 订单编号
-	Status        uint           `json:"status"`          // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
-	FinishTime    int64          `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
-	OrderAmount   float64        `json:"order_amount"`    // 订单总金额
-	PaymentAmount float64        `json:"payment_amount"`  // 支付金额
-	RefundAmount  float64        `json:"refund_amount"`   // 退款金额
-	PayTypeName   string         `json:"pay_type_name"`   // 支付类型名称
-	MemberName    string         `json:"member_name"`     // 会员名称
-	MemberUuid    uint64         `json:"member_uuid"`     // 会员名称
-	IsFree        bool           `json:"is_free"`         // 是否免单
-	FreeReason    string         `json:"free_reason"`     // 免单原因
-	Products      []OrderProduct `json:"products"`        // 产品列表
+	SaleOrderUuid uint64             `json:"sale_order_uuid"` // 销售订单UUID
+	BillType      uint               `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
+	DiningMethod  uint               `json:"dining_method"`   // 用餐方式,0-堂食 1-打包
+	SerialNo      string             `json:"serial_no"`       // 桌位编号 (点餐流水号)
+	OrderNo       string             `json:"order_no"`        // 订单编号
+	Status        uint               `json:"status"`          // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
+	FinishTime    int64              `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
+	OrderAmount   float64            `json:"order_amount"`    // 订单总金额
+	PaymentAmount float64            `json:"payment_amount"`  // 支付金额
+	RefundAmount  float64            `json:"refund_amount"`   // 退款金额
+	PayTypeName   string             `json:"pay_type_name"`   // 支付类型名称
+	MemberName    string             `json:"member_name"`     // 会员名称
+	MemberUuid    uint64             `json:"member_uuid"`     // 会员名称
+	IsFree        bool               `json:"is_free"`         // 是否免单
+	FreeReason    dto.LocaleResponse `json:"free_reason"`     // 免单原因
+	Products      []OrderProduct     `json:"products"`        // 产品列表
 }
 
 // OrderInfos 订单信息响应

@@ -893,7 +893,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					IsGift:              saleOrderProduct.IsGiftProduct(),
 					IsBuffet:            saleOrderProduct.IsBuffetProduct(),
 					ImageUrl:            imageUrl,
-					CancelReason:        saleOrderProduct.CancelReason,
+					CancelReason:        saleOrderProduct.GetCancelReason(),
 					GiftReason:          saleOrderProduct.GiftReason,
 					RefundAmount:        saleOrderProduct.GetReturnPrice(),
 				})
@@ -909,7 +909,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			OrderNo:       saleOrder.OrderNo,
 			Status:        saleOrder.Status,
 			IsFree:        saleOrder.IsFree == 1,
-			FreeReason:    saleOrder.FreeReason,
+			FreeReason:    saleOrder.GetFreeReason(),
 			OrderAmount:   saleOrder.Amount,
 			PaymentAmount: saleOrder.GetActualPaymentAmount(),
 			RefundAmount:  saleOrder.GetTotalRefundAmount(),

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/i18n"
@@ -21,6 +22,50 @@ func (model *SaleOrder) GetDiscountInfo() DiscountInfo {
 		MemberCardDiscountRate: model.MemberCardDiscountRate,
 		CustomDiscountRate:     model.CustomDiscountRate,
 	}
+}
+
+// 获取免单原因
+func (model *SaleOrder) GetFreeReason() dto.LocaleResponse {
+	// 获取免单原因
+	zhNames := make([]string, len(model.FreeReasons))
+	thNames := make([]string, len(model.FreeReasons))
+	enNames := make([]string, len(model.FreeReasons))
+	zhtwNames := make([]string, len(model.FreeReasons))
+	jaNames := make([]string, len(model.FreeReasons))
+	koNames := make([]string, len(model.FreeReasons))
+	myNames := make([]string, len(model.FreeReasons))
+	trNames := make([]string, len(model.FreeReasons))
+	// 遍历选择的免单原因
+	for _, reason := range model.FreeReasons {
+		zhNames = append(zhNames, reason.MultiLanguageName.ZhName)
+		thNames = append(thNames, reason.MultiLanguageName.ThName)
+		enNames = append(enNames, reason.MultiLanguageName.EnName)
+		zhtwNames = append(zhtwNames, reason.MultiLanguageName.ZhTwName)
+		jaNames = append(jaNames, reason.MultiLanguageName.JaName)
+		koNames = append(koNames, reason.MultiLanguageName.KoName)
+		myNames = append(myNames, reason.MultiLanguageName.MyName)
+		trNames = append(trNames, reason.MultiLanguageName.TrName)
+	}
+	// 添加自定义的免单原因
+	zhNames = append(zhNames, model.FreeReason)
+	thNames = append(thNames, model.FreeReason)
+	enNames = append(enNames, model.FreeReason)
+	zhtwNames = append(zhtwNames, model.FreeReason)
+	jaNames = append(jaNames, model.FreeReason)
+	koNames = append(koNames, model.FreeReason)
+	myNames = append(myNames, model.FreeReason)
+	trNames = append(trNames, model.FreeReason)
+	reasonDto := dto.LocaleResponse{
+		ZH:   strings.Join(zhNames, "、"),
+		TH:   strings.Join(thNames, "、"),
+		EN:   strings.Join(enNames, "、"),
+		ZHTW: strings.Join(zhtwNames, "、"),
+		JA:   strings.Join(jaNames, "、"),
+		KO:   strings.Join(koNames, "、"),
+		MY:   strings.Join(myNames, "、"),
+		TR:   strings.Join(trNames, "、"),
+	}
+	return reasonDto
 }
 
 // 获取所有自助餐名称
