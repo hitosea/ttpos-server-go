@@ -3201,15 +3201,13 @@ func (s *orderSrv) getSaleBillUuidByDeviceSn(ctx context.Context, deviceSn strin
 	if errDevice != nil {
 		return 0, errors.WithMessage(errDevice, "deviceRepo.GetDevice failed")
 	}
-	ctx.Log().Debug("通过device_sn查询设备uuid", zap.Any("deviceSn", deviceSn), zap.Any("device_uuid", device.Uuid))
 	if device.IsDelete() {
 		return 0, errors.NewWithCode(constant.CodeParamError, "设备不存在")
 	}
-	ctx.Log().Debug("通过设备ID查询未挂单的销售账单", zap.Any("device_uuid", device.Uuid))
-	// 通过设备ID查询未挂单的销售账单
+	// 通过设备ID查询未挂单的销售订单
 	if saleBill, err := repository.NewSaleBillRepo(db).GetSaleBillByDeviceUuid(device.Uuid); err != nil {
 		if utils.IsNotFoundRecord(err) {
-			return 0, nil // 没有点餐账单
+			return 0, nil // 没有点餐订单
 		}
 		return 0, errors.WithMessage(err)
 	} else {
@@ -3270,8 +3268,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		return nil, errors.WithMessage(err, fmt.Sprintf("saleBillUuid: %d", saleBillUuid))
 	}
 	if shopCart.SaleBill.IsEndStatus() {
-		ctx.Log().Info("销售账单已经结束", zap.Uint64("saleBillUuid", saleBillUuid))
-		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台账单结束"))
+		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))
 	}
 	// 重新计算金额
 	shopCart.SaleBill.CalcAll()
@@ -5059,11 +5056,9 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 	if errDevice != nil {
 		return nil, errors.WithMessage(errDevice)
 	}
-	ctx.Log().Debug("通过device_sn查询设备uuid", zap.Any("deviceSn", deviceSn), zap.Any("device_uuid", device.Uuid))
 	if device.IsDelete() {
 		return nil, errors.NewWithCode(constant.CodeParamError, "设备不存在")
 	}
-	ctx.Log().Debug("通过设备ID查询未挂单的销售账单", zap.Any("device_uuid", device.Uuid))
 	// 通过设备ID查询未挂单的销售账单
 	saleBill, errGetSaleBill := repository.NewSaleBillRepo(db).GetSaleBillByDeviceUuid(device.Uuid)
 	if errGetSaleBill != nil {
@@ -5074,8 +5069,6 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 	if saleBill != nil {
 		saleBillUuid = saleBill.Uuid
 	}
-
-	ctx.Log().Debug("查询到的账单", zap.Any("saleBillUuid", saleBillUuid))
 
 	var shopCartInfo *resp.ShopCart
 	if saleBillUuid == 0 {
