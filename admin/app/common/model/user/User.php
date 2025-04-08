@@ -12,6 +12,8 @@ use app\shop\model\user\BalanceLog as BalanceLogModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum as SceneEnum;
 use app\common\library\helper;
+use app\common\model\bill\SaleBill;
+use app\common\model\order\RechargeOrder;
 use think\model\concern\SoftDelete;
 
 /**
@@ -29,7 +31,7 @@ class User extends BaseModel
     /**
      * 追加属性
      */
-    protected $append = ['user_id', 'points', 'mobile', 'grade_id', 'card_id'];
+    protected $append = ['user_id', 'points', 'mobile', 'grade_id', 'card_id', 'can_delete'];
 
     /**
      * 兼容字段
@@ -65,6 +67,22 @@ class User extends BaseModel
     public function getGiftBalanceAttr($value)
     {
         return floatval(helper::bcadd($value, $this->frozen_gift_balance));
+    }
+    public function getCanDeleteAttr($value,$data)
+    {
+        $memberId = $data['uuid'];
+        // 是否有进行中的用餐订单 
+        $saleOrderCount = SaleBill::where('uuid', 'IN', function($q) use ($memberId) {
+            $prefix = env('DB_PREFIX');
+            $q->table($prefix . 'sale_order')->where('consumer_uuid', $memberId)->field('DISTINCT sale_bill_uuid');
+        })
+        ->where('finish_time', 0)
+        ->count();
+
+        // 是否有进行中的充值订单
+        $rechargeOrderCount = RechargeOrder::where('member_uuid', $memberId)->where('status', 0)->count();
+
+        return ($saleOrderCount + $rechargeOrderCount) <= 0;
     }
 
     /**
@@ -598,8 +616,12 @@ class User extends BaseModel
         $stats = $this->where([
             ['delete_time', '=', 0],
         ])->field([
-            'COALESCE(SUM(balance), 0) as balance',
-            'COALESCE(SUM(gift_balance), 0) as gift_balance',
+            'balance',
+            'frozen_balance',
+            'gift_balance',
+            'frozen_gift_balance',
+            'COALESCE(SUM(balance + frozen_balance), 0) as balance',
+            'COALESCE(SUM(gift_balance + frozen_gift_balance), 0) as gift_balance',
         ])->findOrEmpty();
 
         return [
@@ -625,13 +647,16 @@ class User extends BaseModel
         $rechargeRank = self::alias('a')
             ->leftJoin('member_balance_log ubl', 'a.uuid = ubl.member_uuid')
             ->field([
+                'a.id',
                 'a.uuid',
-                'a.uuid as user_id',
                 'COALESCE(SUM(ubl.money), 0) as tatal_amount',
                 'COALESCE(SUM(ubl.gift_money), 0) as gift_amount',
                 '(COALESCE(SUM(ubl.money), 0) - COALESCE(SUM(ubl.gift_money), 0)) as recharge_amount',
                 'a.nickName as nickname'
             ])
+            ->withAttr('user_id', function ($value, $data) {
+                return $data['id'];
+            })
             ->whereIn('ubl.scene', $rechargeScenes)
             ->group('a.uuid')
             ->order(['recharge_amount' => 'desc', 'gift_amount' => 'desc', 'uuid' => 'desc'])
@@ -640,12 +665,12 @@ class User extends BaseModel
     }
 
     /**
-     * todo 兼容 消费排行榜
+     * 消费排行榜
      */
     public function getConsumerRank($data)
     {
         $sort = ($data['sort'] ??  0) == 2 ? 'accumulated_consumption_amount' : 'consumption_count';
-        $consumerRank = self::field('id,nickname,accumulated_consumption_amount as consumption_amount,consumption_count as consumption_num')
+        $consumerRank = self::field('id,uuid,nickname,accumulated_consumption_amount as consumption_amount,consumption_count as consumption_num')
             ->withAttr('user_id', function ($value, $data) {
                 return $data['id'];
             })

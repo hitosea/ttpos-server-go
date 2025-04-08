@@ -29,7 +29,7 @@ WORKDIR /var/www
 COPY --from=builder /app/main ./main
 
 # 暴露应用运行的端口
-EXPOSE 8080
+EXPOSE 8099
 
 # 运行应用
 CMD ["./main"]

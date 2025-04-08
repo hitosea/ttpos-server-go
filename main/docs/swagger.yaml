@@ -2748,6 +2748,9 @@ definitions:
       accept_time:
         description: 接单时间. “17:20:01 接单”。值为0时不显示。
         type: integer
+      h5_order_time:
+        description: h5下单时间 0表示不是h5下单
+        type: integer
       is_accept:
         description: false:已拒单 true:已接单
         type: boolean

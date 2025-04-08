@@ -32,13 +32,17 @@ class Grade extends GradeModel
             $this->error = "等级权重不能为空";
             return false;
         }
-        if ($data['weight'] < 1 || $data['weight'] > 99) {
-            $this->error = "等级权重范围1-99";
+        if ($data['weight'] < 1 || $data['weight'] > 999) {
+            $this->error = "等级权重范围1-999";
             return false;
         }
         $exist = self::where('priority', $data['weight'])->count();
         if ($exist > 0) {
             $this->error = "等级权重不能重复";
+            return false;
+        }
+        if ($data['equity'] < 0 || $data['equity'] > 100) {
+            $this->error = "等级折扣范围0-100%";
             return false;
         }
         // 累计消费满/积分满-范围为：0~100000000
@@ -70,8 +74,8 @@ class Grade extends GradeModel
             $this->error = "等级权重不能为空";
             return false;
         }
-        if ($data['weight'] < 1 || $data['weight'] > 99) {
-            $this->error = "等级权重范围1-99";
+        if ($data['weight'] < 1 || $data['weight'] > 999) {
+            $this->error = "等级权重范围1-999";
             return false;
         }
         // 累计消费满/积分满-范围为：0~100000000
@@ -87,6 +91,10 @@ class Grade extends GradeModel
         $exist = self::where('priority', $data['weight'])->where('uuid', '<>', $data['grade_id'])->findOrEmpty();
         if (!$exist->isEmpty()) {
             $this->error = "等级权重不能重复";
+            return false;
+        }
+        if ($data['equity'] < 0 || $data['equity'] > 100) {
+            $this->error = "等级折扣范围0-100%";
             return false;
         }
         if ($this['is_default'] == 0) {
