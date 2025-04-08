@@ -401,7 +401,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			printerCashierDeviceSn = printerId
 			isCashierPrinter = true
 			deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-			brand := deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(deviceSn))
+			brand := deviceRepo.GetDeviceBrand(deviceRepo.WhereSn(printerId))
 			if slices.Contains(constant.SunmiAllPrints, brand) {
 				// 商米打印机
 				printerType = constant.PrinterTypeCashierSunmi

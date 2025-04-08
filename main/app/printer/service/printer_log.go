@@ -327,9 +327,17 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 			Uuid:        log.Uuid,
 			Data:        log.Data,
 			PrintMethod: log.PrintMethod,
-			Copies:      log.Printer.Copies,
-			PrinterType: log.Printer.PrinterType.Key,
+			Copies: func() uint {
+				if log.Printer == nil {
+					return 1
+				}
+				return log.Printer.Copies
+			}(),
+			PrinterType: log.PrinterType,
 			PrinterConfig: func() string {
+				if log.Printer == nil {
+					return ""
+				}
 				configJson, err := json.Marshal(log.Printer.GetConfigJson())
 				if err != nil {
 					return ""

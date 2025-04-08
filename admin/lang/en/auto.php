@@ -771,7 +771,6 @@ return [
     "服务费必须为数字" => "Service fee must be numerical",
     "当前订单不可修改" => "The current order cannot be modified",
     "当前状态不可操作" => "The current status cannot be operated",
-    "等级权重不能为空" => "Level weight cannot be empty",
     "等级权重不能重复" => "Level weight cannot be repeated",
     "元可升级到此等级" => "yuan can be upgraded to this level",
     "备注最长200个字符" => "The maximum length of the remark is 200 characters",

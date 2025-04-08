@@ -28,11 +28,7 @@ class Grade extends GradeModel
      */
     public function add($data)
     {
-        if (!$data['weight']) {
-            $this->error = "等级权重不能为空";
-            return false;
-        }
-        if ($data['weight'] < 1 || $data['weight'] > 999) {
+        if (!$data['weight'] || $data['weight'] < 1 || $data['weight'] > 999) {
             $this->error = "等级权重范围1-999";
             return false;
         }
@@ -70,11 +66,7 @@ class Grade extends GradeModel
      */
     public function edit($data)
     {
-        if (!$data['weight']) {
-            $this->error = "等级权重不能为空";
-            return false;
-        }
-        if ($data['weight'] < 1 || $data['weight'] > 999) {
+        if (!$data['weight'] || $data['weight'] < 1 || $data['weight'] > 999) {
             $this->error = "等级权重范围1-999";
             return false;
         }

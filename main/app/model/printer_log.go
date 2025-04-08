@@ -108,10 +108,3 @@ func (model *PrinterLog) IsCashierPrinter() bool {
 		constant.PrinterTypeCodesoftWifi,
 	}, model.PrinterType)
 }
-
-// PrinterReadLog 打印读取日志表 ttpos_printer_read_log
-type PrinterReadLog struct {
-	BaseModel
-	LogUuid  uint64 `gorm:"column:log_uuid;type:int(11);default:0;comment:打印uuid" json:"log_uuid"`
-	DeviceId string `gorm:"column:device_id;type:varchar(255);comment:设备id" json:"device_id"`
-}

@@ -3710,6 +3710,9 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		return nil, errors.WithMessage(err)
 	}
 
+	// 设置添加来源
+	saleBill.SetAddSource(ctx.GetSource())
+
 	// 加购
 	if err := s.ActionAdd(ctx, request, saleBill); err != nil {
 		return nil, errors.WithMessage(err)
@@ -5797,6 +5800,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 
 		// 更新账单
 		if updateSaleBill {
+			// 更新销售账单
+			saleBill.SetCookingStatus()
 			if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 				return errUpdateSaleBill
 			}
