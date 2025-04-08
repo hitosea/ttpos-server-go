@@ -245,9 +245,7 @@ class ProductBom extends ProductBomModel
         return $outFormModel->addOutForm($scene, $operatorUuid, [
             'product_bom_uuid' => $flavor['uuid'],
             'num' => $num,
-            'remark' => $remark,
-            'status' => 1,
-            'reduce_stock' => 1,
+            'remark' => $remark
         ]);
     }
 }

@@ -316,8 +316,8 @@ class ErpWarehouseOutForm extends BaseModel
             'material_uuid' => $data['material_uuid'] ?? 0,
             'num' => $data['num'] ?? 0,
             'scene' => $scene,
-            'status' => $data['status'] ?? 0,
-            'reduce_stock' => $data['reduce_stock'] ?? 0,
+            'status' => 1,
+            'reduce_stock' => 1,
         ]);
     }
 }
