@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 )
 
 // IBuffetSrv 定义收银服务接口
@@ -53,7 +54,7 @@ func (s *buffetSrv) GetBuffetList(dbId uint64) (resp.BuffetListPaginationResp, e
 		}
 		respBuffet := resp.Buffet{
 			Uuid:                buffet.Uuid,
-			Price:               buffet.GetMinPrice(),
+			Price:               utils.IfFloat64(len(buffet.BuffetCustomerTypePrices) > 0, buffet.BuffetCustomerTypePrices[0].Price, 0), // 默认价格为第一个
 			IsLimitTime:         buffet.IsLimitTime == 1,
 			CanCombined:         buffet.CanCombined == 1,
 			NonOrderingTime:     buffet.NonOrderingTime * 60,   // 分转为秒
