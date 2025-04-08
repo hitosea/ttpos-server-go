@@ -2025,11 +2025,32 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 	var warehouseForm *model.WarehouseForm
 	{
 		products := saleBill.GetSaleOrderProductCooking()
+		//
 		productList, err := s.getDecreaseStockList(ctx, products)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-		warehouseForm = model.NewWarehouseForm(productList, saleBill.Uuid)
+
+		// 查询所有出库过的商品
+		{
+			// 创建一个映射来存储所有出库单中的SaleOrderProductUuid
+			existingSaleOrderProductUuids := make(map[uint64]bool)
+			for _, form := range forms {
+				for _, item := range form.WarehouseOutFormItems {
+					existingSaleOrderProductUuids[item.SaleOrderProductUuid] = true
+				}
+			}
+
+			// 过滤productList，只保留那些SaleOrderProductUuid存在于出库单中的项目
+			filteredProductList := make([]*model.Product, 0)
+			for _, product := range productList {
+				if existingSaleOrderProductUuids[product.SaleOrderProductUuid] {
+					filteredProductList = append(filteredProductList, product)
+				}
+			}
+
+			warehouseForm = model.NewWarehouseForm(filteredProductList, saleBill.Uuid)
+		}
 	}
 
 	// 3.构建出库单，将账单下单减库存的商品出库
@@ -4252,30 +4273,36 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 			// 如果是规格商品
 			if saleOrderProductBom.IsFlavor() {
 				for _, productBomMaterial := range saleOrderProductBom.ProductBom.FlavorMaterials {
-					productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
-						MaterialUuid:  productBomMaterial.MaterialUuid,
-						Num:           productBomMaterial.GetDecreaseNum(cookingDeductSaleOrderProduct.Num),
-						SaleOrderUuid: cookingDeductSaleOrderProduct.SaleOrderUuid,
-					})
+					if num := productBomMaterial.GetDecreaseNum(cookingDeductSaleOrderProduct.Num); num > 0 {
+						productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
+							MaterialUuid:  productBomMaterial.MaterialUuid,
+							Num:           num,
+							SaleOrderUuid: cookingDeductSaleOrderProduct.SaleOrderUuid,
+						})
+					}
 				}
 			}
 			// 如果是小料
 			if saleOrderProductBom.IsSauce() {
 				for _, material := range saleOrderProductBom.ProductBom.ProductSauce.SauceMaterials {
-					productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
-						MaterialUuid: material.MaterialUuid,
-						Num:          material.GetDecreaseNum(cookingDeductSaleOrderProduct.Num),
-					})
+					if num := material.GetDecreaseNum(cookingDeductSaleOrderProduct.Num); num > 0 {
+						productBomMaterials = append(productBomMaterials, &model.ProductBomMaterials{
+							MaterialUuid: material.MaterialUuid,
+							Num:          num,
+						})
+					}
 				}
 			}
 			// 获取规格商品的出库数量
-			list = append(list, &model.Product{
-				ProductBomUuid:       saleOrderProductBom.ProductBomUuid,
-				SaleOrderProductUuid: cookingDeductSaleOrderProduct.Uuid,
-				SaleOrderUuid:        cookingDeductSaleOrderProduct.SaleOrderUuid,
-				Num:                  int(cookingDeductSaleOrderProduct.Num),
-				ProductBomMaterials:  productBomMaterials,
-			})
+			if int(cookingDeductSaleOrderProduct.Num) > 0 {
+				list = append(list, &model.Product{
+					ProductBomUuid:       saleOrderProductBom.ProductBomUuid,
+					SaleOrderProductUuid: cookingDeductSaleOrderProduct.Uuid,
+					SaleOrderUuid:        cookingDeductSaleOrderProduct.SaleOrderUuid,
+					Num:                  int(cookingDeductSaleOrderProduct.Num),
+					ProductBomMaterials:  productBomMaterials,
+				})
+			}
 		}
 	}
 	return list, nil
