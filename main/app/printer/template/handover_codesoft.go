@@ -46,6 +46,8 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 	}
 	// 判断是否是土耳其语、泰语、英语
 	isTrThEn := t.base.Lang == "tr" || t.base.Lang == "th" || t.base.Lang == "en"
+	// 收银员名称
+	cashierName := utils.IfString(log.Staff.RealName != "", log.Staff.RealName, log.Staff.Username)
 
 	// 宽度
 	width := 48
@@ -74,7 +76,7 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 		printer.SetAlignment(pkg.AlignLeft)
 		printer.AppendText(t.base.PrintText(t.base.Translate("当班编号"), "", log.ShiftNo, width))
 		printer.LineFeed()
-		printer.AppendText(t.base.PrintText(t.base.Translate("交班人"), "", log.Staff.RealName, width))
+		printer.AppendText(t.base.PrintText(t.base.Translate("交班人"), "", cashierName, width))
 		printer.LineFeed()
 		// 营业数据
 		if t.base.Lang != "th" {
@@ -240,7 +242,7 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 		printer.SetAlignment(pkg.AlignLeft)
 		printer.AppendText(t.base.PrintText(t.base.Translate("当班编号"), "", log.ShiftNo, width))
 		printer.LineFeed()
-		printer.AppendText(t.base.PrintText(t.base.Translate("交班人"), "", log.Staff.RealName, width))
+		printer.AppendText(t.base.PrintText(t.base.Translate("交班人"), "", cashierName, width))
 		printer.LineFeed()
 		printer.AppendText(t.base.PrintText(t.base.Translate("当班时间"), "", startTime+" "+t.base.Translate("至"), width))
 		printer.LineFeed()

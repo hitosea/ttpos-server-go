@@ -50,6 +50,9 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 	isOneself := printerType != PrinterTypeSunmiLan && printerType != PrinterTypeSunmiCloud
 	lineSpacing := utils.IfInt(!isOneself, 20, 20)
 
+	// 收银员名称
+	cashierName := utils.IfString(log.Staff.RealName != "", log.Staff.RealName, log.Staff.Username)
+
 	//  创建打印机实例
 	printer := pkg.NewPrinter(567)
 	printer.LineFeed()
@@ -74,7 +77,7 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 		)
 		printer.PrintInColumns(t.base.Translate("当班编号"), log.ShiftNo)
 		printer.LineFeed()
-		printer.PrintInColumns(t.base.Translate("交班人"), log.Staff.RealName)
+		printer.PrintInColumns(t.base.Translate("交班人"), cashierName)
 		printer.LineFeed()
 		// 营业数据
 		printer.SetupColumns(
@@ -326,7 +329,7 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 		)
 		printer.PrintInColumns(t.base.Translate("当班编号"), log.ShiftNo)
 		printer.LineFeed()
-		printer.PrintInColumns(t.base.Translate("交班人"), log.Staff.RealName)
+		printer.PrintInColumns(t.base.Translate("交班人"), cashierName)
 		printer.LineFeed()
 		printer.PrintInColumns(t.base.Translate("当班时间"), startTime+" "+t.base.Translate("至"))
 		printer.SetLineSpacing(lineSpacing - 6)
