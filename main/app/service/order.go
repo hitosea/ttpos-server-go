@@ -3005,6 +3005,17 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 		return nil, errors.WithMessage(err)
 	}
 
+	// 重新计算销售账单.
+	{
+		newSaleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "repository.NewOrderRepo(db).GetSaleBillAllInfo faile")
+		}
+		if err := s.CalcAndSaveSaleBill(ctx, db, newSaleBill); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+	}
+
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
