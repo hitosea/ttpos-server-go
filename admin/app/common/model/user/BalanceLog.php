@@ -78,7 +78,6 @@ class BalanceLog extends BaseModel
         $model = new static;
         $setting = SettingModel::getSupplierItem(SettingEnum::POINTS, $model::$app_id, $model::$app_id);
         //
-        $order_id = isset($data['order_id'])  ? $data['order_id'] : 0;
         $user_id = isset($data['member_uuid'])  ? $data['member_uuid'] : 0;
         $money = isset($data['money'])  ? $data['money'] : 0;
         $gift_money = isset($data['gift_money'])  ? $data['gift_money'] : 0;
@@ -97,19 +96,8 @@ class BalanceLog extends BaseModel
                 // 扣除类型
                 $deduct_money_type = isset($setting['deduct_order']) ? $setting['deduct_order'] : 1;
                 if (($scene == BalanceLogSceneEnum::ADMIN || $scene == BalanceLogSceneEnum::DEDUCT) && $gift_money < 0) {
-                    $user->where('uuid', $user_id)->dec('gift_balance', abs($gift_money))->update();
+                    $user->where('uuid', $user_id)->dec('frozen_gift_balance', abs($gift_money))->update();
                     $data['gift_money'] = -abs($gift_money); // 余额日志记录赠送金额
-                }
-                // 用户充值订单退款（退款时不扣减赠送金额跟赠送积分，前去商家后台处理）
-                else if ($scene == BalanceLogSceneEnum::RECHARGE_REFUND) {
-                    $user->where('uuid', $user_id)->dec('balance', $abs_money)->update();
-                }
-                // 用户充值订单反结账
-                else if ($scene == BalanceLogSceneEnum::RECHARGE_REVERSE) {
-                    // 反结账 abs_money 包含赠送金额，所以直接扣除
-                    $giftMoney = abs($gift_money);
-                    $absBalance = $abs_money - $giftMoney; // 余额
-                    $user->where('uuid', $user_id)->dec('balance', $absBalance)->dec('gift_balance', $giftMoney)->update();
                 }
                 // 订单日志操作
                 else {
@@ -186,36 +174,10 @@ class BalanceLog extends BaseModel
                  * 增加
                  */
                 $after_money = helper::bcadd($before_money, $money);
-                // 订单余额退款都退回赠送余额
-                if ($scene == BalanceLogSceneEnum::REFUND) {
-                    // 赠送余额
-                    $user->where('uuid', $user_id)->inc('gift_balance', abs($money))->update();
-                    $data['gift_money'] = abs($money); // 余额日志记录赠送金额
-                }
-                // 反结账余额原路返回还
-                else if ($scene == BalanceLogSceneEnum::REVERSE) {
-                    $log = BalanceLog::where('scene', BalanceLogSceneEnum::CONSUME)->where('order_id', $order_id)->order(['log_id' => 'desc'])->find();
-                    if ($log) {
-                        // 主余额
-                        $user->where('uuid', $user_id)->inc('balance', abs($log->money - $log->gift_money))->update();
-                        // 赠送余额
-                        $user->where('uuid', $user_id)->inc('gift_balance', abs($log->gift_money))->update();
-                        $data['gift_money'] = abs($log->gift_money); // 余额日志记录赠送金额
-                    } else {
-                        // 主余额
-                        $user->where('uuid', $user_id)->inc('balance', abs($money - $gift_money))->update();
-                        // 赠送余额
-                        $user->where('uuid', $user_id)->inc('gift_balance', abs($gift_money))->update();
-                        $data['gift_money'] = abs($gift_money); // 余额日志记录赠送金额
-                    }
-                }
-                //
-                else {
-                    // 主余额
-                    $user->where('uuid', $user_id)->inc('balance', abs($money - $gift_money))->update();
-                    // 赠送余额
-                    $user->where('uuid', $user_id)->inc('gift_balance', abs($gift_money))->update();
-                }
+                // 主余额
+                $user->where('uuid', $user_id)->inc('frozen_balance', abs($money - $gift_money))->update();
+                // 赠送余额
+                $user->where('uuid', $user_id)->inc('frozen_gift_balance', abs($gift_money))->update();
             }
             $data['before_money'] = $before_money;
             $data['after_money'] = $after_money;

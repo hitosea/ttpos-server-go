@@ -7774,7 +7774,7 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shop
 		var err error
 		shopCart, err = s.GetOrderCartInfo(ctx, saleBillUuid)
 		if err != nil {
-			return resp.SentKitchen{}, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
+			return resp.SentKitchen{}, errors.WithMessage(err, "获取点餐购物车信息: "+err.Error())
 		}
 	}
 

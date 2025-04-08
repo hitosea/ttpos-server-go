@@ -225,8 +225,10 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 // TabletAddAndCooking 平板端加购并送厨
 func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) error {
 	saleBill, _ := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(request.SaleBillUuid)
-	if saleBill.Uuid == 0 || len(saleBill.SaleOrders) == 0 {
-		return errors.New("订单不存在")
+ 
+	// 判断订单状态
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, request.SaleOrderUuid); err != nil {
+		return errors.WithMessage(err)
 	}
 	_, err := s.ActionAddAndCooking(ctx, req.ProductAddReq{
 		SaleBillUuid:  saleBill.Uuid,
