@@ -894,7 +894,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					IsBuffet:            saleOrderProduct.IsBuffetProduct(),
 					ImageUrl:            imageUrl,
 					CancelReason:        saleOrderProduct.GetCancelReason(),
-					GiftReason:          saleOrderProduct.GiftReason,
+					GiftReason:          saleOrderProduct.GetGiftReason(),
 					RefundAmount:        saleOrderProduct.GetReturnPrice(),
 				})
 			}

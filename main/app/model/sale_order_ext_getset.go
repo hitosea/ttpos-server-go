@@ -27,16 +27,19 @@ func (model *SaleOrder) GetDiscountInfo() DiscountInfo {
 // 获取免单原因
 func (model *SaleOrder) GetFreeReason() dto.LocaleResponse {
 	// 获取免单原因
-	zhNames := make([]string, len(model.FreeReasons))
-	thNames := make([]string, len(model.FreeReasons))
-	enNames := make([]string, len(model.FreeReasons))
-	zhtwNames := make([]string, len(model.FreeReasons))
-	jaNames := make([]string, len(model.FreeReasons))
-	koNames := make([]string, len(model.FreeReasons))
-	myNames := make([]string, len(model.FreeReasons))
-	trNames := make([]string, len(model.FreeReasons))
+	zhNames := make([]string, 0)
+	thNames := make([]string, 0)
+	enNames := make([]string, 0)
+	zhtwNames := make([]string, 0)
+	jaNames := make([]string, 0)
+	koNames := make([]string, 0)
+	myNames := make([]string, 0)
+	trNames := make([]string, 0)
 	// 遍历选择的免单原因
 	for _, reason := range model.FreeReasons {
+		if !reason.IsFreeReason() {
+			continue
+		}
 		zhNames = append(zhNames, reason.MultiLanguageName.ZhName)
 		thNames = append(thNames, reason.MultiLanguageName.ThName)
 		enNames = append(enNames, reason.MultiLanguageName.EnName)

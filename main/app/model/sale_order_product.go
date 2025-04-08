@@ -508,16 +508,65 @@ func (model *SaleOrderProduct) SetCancelInfo(reason string, reasons []*SaleOrder
 
 // 获取退菜原因
 func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
-	zhNames := make([]string, len(model.CancelReasons))
-	thNames := make([]string, len(model.CancelReasons))
-	enNames := make([]string, len(model.CancelReasons))
-	zhtwNames := make([]string, len(model.CancelReasons))
-	jaNames := make([]string, len(model.CancelReasons))
-	koNames := make([]string, len(model.CancelReasons))
-	myNames := make([]string, len(model.CancelReasons))
-	trNames := make([]string, len(model.CancelReasons))
+	zhNames := make([]string, 0)
+	thNames := make([]string, 0)
+	enNames := make([]string, 0)
+	zhtwNames := make([]string, 0)
+	jaNames := make([]string, 0)
+	koNames := make([]string, 0)
+	myNames := make([]string, 0)
+	trNames := make([]string, 0)
 	// 遍历选择的退菜原因
 	for _, reason := range model.CancelReasons {
+		if !reason.IsReturnFoodReason() {
+			continue
+		}
+		zhNames = append(zhNames, reason.MultiLanguageName.ZhName)
+		thNames = append(thNames, reason.MultiLanguageName.ThName)
+		enNames = append(enNames, reason.MultiLanguageName.EnName)
+		zhtwNames = append(zhtwNames, reason.MultiLanguageName.ZhTwName)
+		jaNames = append(jaNames, reason.MultiLanguageName.JaName)
+		koNames = append(koNames, reason.MultiLanguageName.KoName)
+		myNames = append(myNames, reason.MultiLanguageName.MyName)
+		trNames = append(trNames, reason.MultiLanguageName.TrName)
+	}
+	// 添加自定义的退菜原因
+	zhNames = append(zhNames, model.CancelReason)
+	thNames = append(thNames, model.CancelReason)
+	enNames = append(enNames, model.CancelReason)
+	zhtwNames = append(zhtwNames, model.CancelReason)
+	jaNames = append(jaNames, model.CancelReason)
+	koNames = append(koNames, model.CancelReason)
+	myNames = append(myNames, model.CancelReason)
+	trNames = append(trNames, model.CancelReason)
+	reasonDto := dto.LocaleResponse{
+		ZH:   strings.Join(zhNames, "、"),
+		TH:   strings.Join(thNames, "、"),
+		EN:   strings.Join(enNames, "、"),
+		ZHTW: strings.Join(zhtwNames, "、"),
+		JA:   strings.Join(jaNames, "、"),
+		KO:   strings.Join(koNames, "、"),
+		MY:   strings.Join(myNames, "、"),
+		TR:   strings.Join(trNames, "、"),
+	}
+	return reasonDto
+}
+
+// 获取赠品原因
+func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
+	zhNames := make([]string, 0)
+	thNames := make([]string, 0)
+	enNames := make([]string, 0)
+	zhtwNames := make([]string, 0)
+	jaNames := make([]string, 0)
+	koNames := make([]string, 0)
+	myNames := make([]string, 0)
+	trNames := make([]string, 0)
+	// 遍历选择的赠品原因
+	for _, reason := range model.CancelReasons {
+		if !reason.IsGiftReason() {
+			continue
+		}
 		zhNames = append(zhNames, reason.MultiLanguageName.ZhName)
 		thNames = append(thNames, reason.MultiLanguageName.ThName)
 		enNames = append(enNames, reason.MultiLanguageName.EnName)

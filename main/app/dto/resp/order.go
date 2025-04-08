@@ -92,7 +92,7 @@ type OrderProduct struct {
 	IsBuffetCustomer    bool               `json:"is_buffet_customer"`    // 是否自助餐顾客, false-否 true-是
 	IsDelay             bool               `json:"is_delay"`              // 是否加钟, false-否 true-是
 	IsMust              bool               `json:"is_must"`               // 是否必点, false-否 true-是
-	GiftReason          string             `json:"gift_reason"`           // 赠品原因
+	GiftReason          dto.LocaleResponse `json:"gift_reason"`           // 赠品原因
 	ImageUrl            string             `json:"image_url"`             // 图片地址
 	CancelReason        dto.LocaleResponse `json:"refund_reason"`         // 退菜原因
 }

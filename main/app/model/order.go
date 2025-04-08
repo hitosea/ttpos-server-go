@@ -318,6 +318,21 @@ type SaleOrderProductReason struct {
 	MultiLanguageName *MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 }
 
+// 是否是退菜原因
+func (model *SaleOrderProductReason) IsReturnFoodReason() bool {
+	return model.ReturnFoodReasonUuid != 0
+}
+
+// 是否是免单原因
+func (model *SaleOrderProductReason) IsFreeReason() bool {
+	return model.FreeReasonUuid != 0
+}
+
+// 是否是赠菜原因
+func (model *SaleOrderProductReason) IsGiftReason() bool {
+	return model.GiftReasonUuid != 0
+}
+
 func (model *SaleOrderProductReason) SetNil() {
 	model.MultiLanguageName = nil
 }

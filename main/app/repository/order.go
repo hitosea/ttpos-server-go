@@ -388,6 +388,9 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 				Query: "SaleOrders.ReturnOrders",
 			},
 			WithPreload{
+				Query: "SaleOrders.FreeReasons.MultiLanguageName",
+			},
+			WithPreload{
 				Query: "SaleOrders.Member",
 			},
 			WithPreload{
@@ -395,6 +398,9 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.ImageFile",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.CancelReasons.MultiLanguageName",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
