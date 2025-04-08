@@ -545,9 +545,11 @@ func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageI
 		defaultTablet.Language = make([]string, 0)
 	}
 	validLanguageList := make([]dto.LanguageItem, 0)
+	var languageNames []string
 	for _, item := range defaultTablet.LanguageList {
-		if slices.Contains(defaultTablet.Language, item.Name) {
+		if slices.Contains(defaultTablet.Language, item.Name) && !slices.Contains(languageNames, item.Name) {
 			validLanguageList = append(validLanguageList, item)
+			languageNames = append(languageNames, item.Name)
 		}
 	}
 	defaultTablet.LanguageList = validLanguageList
@@ -666,9 +668,11 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 		defaultCashier.RemainColor = make([]string, 0)
 	}
 	validLanguageList := make([]dto.LanguageItem, 0)
+	var languageNames []string
 	for _, item := range defaultCashier.LanguageList {
-		if slices.Contains(defaultCashier.Language, item.Name) {
+		if slices.Contains(defaultCashier.Language, item.Name) && !slices.Contains(languageNames, item.Name) {
 			validLanguageList = append(validLanguageList, item)
+			languageNames = append(languageNames, item.Name)
 		}
 	}
 	defaultCashier.LanguageList = validLanguageList
@@ -749,9 +753,11 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 	}
 
 	validLanguageList := make([]dto.LanguageItem, 0)
+	var languageNames []string
 	for _, item := range defaultAssistant.LanguageList {
-		if slices.Contains(defaultAssistant.Language, item.Name) {
+		if slices.Contains(defaultAssistant.Language, item.Name) && !slices.Contains(languageNames, item.Name) {
 			validLanguageList = append(validLanguageList, item)
+			languageNames = append(languageNames, item.Name)
 		}
 	}
 	defaultAssistant.LanguageList = validLanguageList
@@ -822,9 +828,11 @@ func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.Compan
 	}
 
 	validLanguageList := make([]dto.LanguageItem, 0)
+	var languageNames []string
 	for _, item := range defaultKitchen.LanguageList {
-		if slices.Contains(defaultKitchen.Language, item.Name) {
+		if slices.Contains(defaultKitchen.Language, item.Name) && !slices.Contains(languageNames, item.Name) {
 			validLanguageList = append(validLanguageList, item)
+			languageNames = append(languageNames, item.Name)
 		}
 	}
 	defaultKitchen.LanguageList = validLanguageList
@@ -885,9 +893,11 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 	}
 
 	validLanguageList := make([]dto.LanguageItem, 0)
+	var languageNames []string
 	for _, item := range defaultH5.LanguageList {
-		if slices.Contains(defaultH5.Language, item.Name) {
+		if slices.Contains(defaultH5.Language, item.Name) && !slices.Contains(languageNames, item.Name) {
 			validLanguageList = append(validLanguageList, item)
+			languageNames = append(languageNames, item.Name)
 		}
 	}
 	defaultH5.LanguageList = validLanguageList
@@ -919,9 +929,11 @@ func (s *Srv) GetCashierLanguage(c context.Context) (resp.LanguageResp, error) {
 	}
 
 	validLanguageList := make([]dto.LanguageItem, 0)
+	var languageNames []string
 	for _, item := range languageResp.LanguageList {
-		if slices.Contains(languageResp.Languages, item.Name) {
+		if slices.Contains(languageResp.Languages, item.Name) && !slices.Contains(languageNames, item.Name) {
 			validLanguageList = append(validLanguageList, item)
+			languageNames = append(languageNames, item.Name)
 		}
 	}
 	languageResp.LanguageList = validLanguageList

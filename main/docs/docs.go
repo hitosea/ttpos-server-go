@@ -16708,6 +16708,10 @@ const docTemplate = `{
         "req.OrderCartProductCookingReq": {
             "type": "object",
             "properties": {
+                "h5_order_uuid": {
+                    "description": "h5订单ID。默认为0，表示不送厨h5订单商品。当从H5订单进入桌台时，需要传入h5订单ID，将该h5订单的商品送厨",
+                    "type": "integer"
+                },
                 "ignore_must": {
                     "description": "是否忽略必点方案",
                     "type": "boolean"
@@ -19890,7 +19894,11 @@ const docTemplate = `{
                 },
                 "free_reason": {
                     "description": "免单原因",
-                    "type": "string"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
                 "is_free": {
                     "description": "是否免单",
@@ -20265,7 +20273,11 @@ const docTemplate = `{
             "properties": {
                 "gift_reason": {
                     "description": "赠品原因",
-                    "type": "string"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
                 "image_url": {
                     "description": "图片地址",
@@ -20321,7 +20333,11 @@ const docTemplate = `{
                 },
                 "refund_reason": {
                     "description": "退菜原因",
-                    "type": "string"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
                 },
                 "remark": {
                     "description": "备注",
@@ -22648,7 +22664,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "is_buy_continue": {
-                    "description": "非自助餐商品到时是否能继续选购 0-关闭 1-开启",
+                    "description": "非自助餐商品到时是否能继续选购 0-关闭 1-开启 (用餐时间到后可继续选购非自助餐商品)",
                     "type": "string"
                 },
                 "is_open": {
