@@ -462,8 +462,8 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		printer.LineFeed(1)
 	}
 	// 免单金额
-	if saleOrder.IsFreeSaleOrder() && saleOrder.Amount > 0 {
-		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("免单金额"), t.base.GetPriceAndUnit(saleOrder.Amount)))
+	if saleOrder.IsFreeSaleOrder() && saleOrder.GetAmount() > 0 {
+		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("免单金额"), t.base.GetPriceAndUnit(saleOrder.GetAmount())))
 		printer.LineFeed(1)
 	}
 

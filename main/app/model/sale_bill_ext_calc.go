@@ -33,7 +33,7 @@ func (model *SaleBill) calcAmount() float64 {
 		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
 			continue
 		}
-		amount = amount.Add(decimal.NewFromFloat(saleOrder.Amount))
+		amount = amount.Add(decimal.NewFromFloat(saleOrder.GetAmount()))
 	}
 	return amount.InexactFloat64()
 }
@@ -108,7 +108,7 @@ func (model *SaleBill) calcFreeAmount() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
 		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
-			amount = amount.Add(decimal.NewFromFloat(saleOrder.Amount))
+			amount = amount.Add(decimal.NewFromFloat(saleOrder.GetAmount()))
 		}
 	}
 	return amount.InexactFloat64()

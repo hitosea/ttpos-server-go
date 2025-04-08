@@ -497,7 +497,7 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 	}
 	// 免单金额
 	if saleOrder.IsFreeSaleOrder() {
-		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("免单金额"), t.base.GetPriceAndUnit(saleOrder.Amount)))
+		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("免单金额"), t.base.GetPriceAndUnit(saleOrder.GetAmount())))
 		printer.LineFeed(1)
 	}
 

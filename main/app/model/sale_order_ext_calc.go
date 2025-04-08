@@ -75,7 +75,7 @@ func (model *SaleOrder) SetCheckOutZeroFee() {
 
 // 计算销售订单的结账抹零金额。根据订单设置的结账抹零规则金额计算
 func (model *SaleOrder) CalcCheckOutZeroFee() float64 {
-	amount := model.Amount
+	amount := model.GetAmount()
 	switch model.ZeroCheckoutRule {
 	// 实款实收
 	case constant.SaleBillSettingCheckoutZeroingMethodNone:
@@ -218,7 +218,7 @@ func (model *SaleOrder) calcPayOrderAmount() float64 {
 // 最终应收=应收金额+支付手续费= 应收金额 +（各个支付订单的手续费之和+当前支付方式的手续费）- 减去结账抹零金额
 func (model *SaleOrder) calcFinallyAmount() (float64, bool) {
 	hasCommission := false
-	amount := decimal.NewFromFloat(model.Amount)
+	amount := decimal.NewFromFloat(model.GetAmount())
 	commissionFee := decimal.NewFromFloat(0)
 	for _, paymentOrder := range model.PaymentOrders {
 		commissionFee = commissionFee.Add(decimal.NewFromFloat(paymentOrder.PaymentCommissionFee))
@@ -788,7 +788,7 @@ func (model *SaleOrder) BeforeCalc() Calc {
 		TaxFee:                model.TaxFee,
 		CustomDiscountFee:     model.CustomDiscountFee,
 		MemberDiscountFee:     model.MemberDiscountFee,
-		Amount:                model.Amount,
+		Amount:                model.GetAmount(),
 		ZeroFee:               model.ZeroFee,
 	}
 }

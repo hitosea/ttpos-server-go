@@ -563,7 +563,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 		}
 		if saleOrder.IsFree > 0 {
 			freeNum = 1
-			freeAmount = decimal.NewFromFloat(saleOrder.Amount)
+			freeAmount = decimal.NewFromFloat(saleOrder.GetAmount())
 		}
 		if saleOrder.GetCanReturnAmount() == 0 {
 			refundFee = decimal.NewFromFloat(saleOrder.PaymentCommissionFee)

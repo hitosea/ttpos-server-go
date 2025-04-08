@@ -280,7 +280,7 @@ func (model *SaleOrder) SetGiftPointsRate(giftPointsRate float64) {
 
 // CalcMemberPoint 计算会员积分. 会员积分=订单应收金额*积分赠送比例
 func (model *SaleOrder) CalcMemberPoint() float64 {
-	return decimal.NewFromFloat(model.Amount).Mul(decimal.NewFromFloat(model.GiftPointsRate)).InexactFloat64()
+	return decimal.NewFromFloat(model.GetAmount()).Mul(decimal.NewFromFloat(model.GiftPointsRate)).InexactFloat64()
 }
 
 // 发放消费积分
@@ -298,7 +298,7 @@ func (model *SaleOrder) HandleMemberPoints(member *Member) {
 // 累计会员的消费金额、消费次数
 func (model *SaleOrder) AccumulateMemberConsumeAmountAndTimes(member *Member) {
 	model.Member = member // 使用最新的会员信息。避免该会员的积分信息已经被更新过
-	model.Member.AccumulateConsumeAmount(model.Amount)
+	model.Member.AccumulateConsumeAmount(model.GetAmount())
 }
 
 func (model *SaleOrder) NewMemberPointLog() *MemberPointLog {

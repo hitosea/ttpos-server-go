@@ -688,7 +688,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 					OrderNo:       order.OrderNo,
 					Status:        order.Status,
 					FinishTime:    order.FinishTime,
-					OrderAmount:   order.Amount,
+					OrderAmount:   order.GetAmount(),
 					PaymentAmount: paymentAmount,
 					PayTypeName:   strings.Join(utils.RemoveDuplicates(payTypeNames), ","),
 					Extra:         orderExtra,
@@ -910,7 +910,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			Status:        saleOrder.Status,
 			IsFree:        saleOrder.IsFree == 1,
 			FreeReason:    saleOrder.GetFreeReason(),
-			OrderAmount:   saleOrder.Amount,
+			OrderAmount:   saleOrder.GetAmount(),
 			PaymentAmount: saleOrder.GetActualPaymentAmount(),
 			RefundAmount:  saleOrder.GetTotalRefundAmount(),
 			PayTypeName:   saleOrder.GetPayTypeNames(ctx.GetLanguage()),
@@ -1888,8 +1888,8 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 				}
 				// 更新会员积分
 				if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
-					"frozen_point":                   member.FrozenPoint - points,                            // 扣减积分
-					"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - saleOrder.Amount, // 扣减累计消费金额
+					"frozen_point":                   member.FrozenPoint - points,                                 // 扣减积分
+					"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - saleOrder.GetAmount(), // 扣减累计消费金额
 				}); err != nil {
 					return errors.WithMessage(err)
 				}
@@ -1933,7 +1933,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 					payTypes = append(payTypes, event.PayType{
 						Name:  "免单",
 						Value: constant.PaymentMethodCodeFreePay,
-						Price: order.Amount,
+						Price: order.GetAmount(),
 					})
 				} else {
 					if infoResp, err := s.InstantOrderPaymentInfo(ctx, saleBill, req.SaleBillUuid, order.Uuid); err == nil {
@@ -5704,7 +5704,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	}
 
 	// 最终应收=应收金额+手续费
-	finalAmount := decimal.NewFromFloat(saleOrder.Amount).Add(decimal.NewFromFloat(amount.CommissionFee)).InexactFloat64()
+	finalAmount := decimal.NewFromFloat(saleOrder.GetAmount()).Add(decimal.NewFromFloat(amount.CommissionFee)).InexactFloat64()
 
 	totalPay := float64(0)
 	for _, paymentOrder := range infoResp.PaymentOrders.List {

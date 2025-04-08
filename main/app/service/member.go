@@ -160,7 +160,6 @@ func (s *memberSrv) HandleMemberUpgrade(companyUuid uint64, memberUuid uint64) {
 		}
 		if s.checkCanUpgrade(member, level) {
 			upgradeLevel = level
-			break
 		}
 	}
 	if upgradeLevel.Uuid == 0 ||

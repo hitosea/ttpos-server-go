@@ -477,7 +477,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 	}
 	if saleOrder.IsFreeSaleOrder() {
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("免单金额"), t.base.GetPriceAndUnit(saleOrder.Amount)))
+		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("免单金额"), t.base.GetPriceAndUnit(saleOrder.GetAmount())))
 		img.LineFeed(1)
 	}
 
