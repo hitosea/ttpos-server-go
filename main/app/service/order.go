@@ -3249,15 +3249,10 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 
 // GetOrderCartInfo 获取点餐购物车信息
 func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
-	// 追加请求头参数
-	if ctx.GetSource() == constant.SourceCashier {
-		h5OrderUuid := ctx.GetGin().GetHeader("h5_order_uuid")
-		if h5OrderUuid != "" {
-			h5OrderUuidInt, err := strconv.ParseUint(h5OrderUuid, 10, 64)
-			if err == nil {
-				opts = append(opts, repository.WithH5OrderUuid(h5OrderUuidInt))
-			}
-		}
+	// 追加请求头参数，从http的header中获取h5_order_uuid
+	h5OrderUuid := context.GetH5OrderUuid(ctx)
+	if h5OrderUuid != 0 {
+		opts = append(opts, repository.WithH5OrderUuid(h5OrderUuid))
 	}
 
 	option := &repository.OrderCartInfoOption{}
@@ -4287,6 +4282,12 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 从http的header中获取h5_order_uuid
+	h5OrderUuid := context.GetH5OrderUuid(ctx)
+	if h5OrderUuid != 0 {
+		req.H5OrderUuid = h5OrderUuid
+	}
 
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
