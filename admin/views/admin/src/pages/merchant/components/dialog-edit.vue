@@ -74,12 +74,12 @@
             <el-radio :value="0">{{ $t('关闭') }}</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item :label="$t('税务对接')" prop="is_open_tax">
+        <!-- <el-form-item :label="$t('税务对接')" prop="is_open_tax">
           <el-radio-group v-model="formData.is_open_tax">
             <el-radio :value="1">{{ $t('开启') }}</el-radio>
             <el-radio :value="0">{{ $t('关闭') }}</el-radio>
           </el-radio-group>
-        </el-form-item>
+        </el-form-item> -->
         <el-form-item :label="$t('会员')" prop="is_open_member">
           <el-radio-group v-model="formData.is_open_member">
             <el-radio :value="1">{{ $t('开启') }}</el-radio>
