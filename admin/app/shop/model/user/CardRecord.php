@@ -2,7 +2,6 @@
 
 namespace app\shop\model\user;
 
-use think\Env;
 use app\common\model\user\Card;
 use app\common\model\user\MemberCard;
 use app\common\model\user\CardRecord as CardRecordModel;
@@ -23,6 +22,7 @@ class CardRecord extends CardRecordModel
                 ->join('member u', 'u.uuid=r.member_uuid')
                 ->join('member_card_type c', 'c.uuid=r.member_card_type_uuid')
                 ->where('r.delete_time', '=', 0)
+                ->where('u.delete_time', '=', 0)
                 ->order(['r.create_time' => 'desc']);
 
         if (isset($data['card_name']) && $data['card_name'] != '') {
@@ -33,10 +33,10 @@ class CardRecord extends CardRecordModel
             $model = $model->where(function ($query) use ($data) {
                 $query = $query->where('r.delete_time', '=', 0);
                 if ($data['status'] == 0) {
-                    $query->where('r.expire_time', '<', time())->where('r.expire_time', '>', 0);
+                    $query->where('r.expire', '<', time())->where('r.expire', '>', 0);
                 } else {
-                    $query->where('expire_time', '>=', time())
-                        ->whereOr('expire_time', 0);
+                    $query->where('r.expire', '>=', time())
+                        ->whereOr('r.expire', 0);
                 }
             });
         }
@@ -47,7 +47,7 @@ class CardRecord extends CardRecordModel
             $item['is_used'] = (new Card)->checkUserConsumeRecord($item['user_id'], $item['card_id']) ? 1 : 0;
             if ($item['delete_time'] == 0) {
                 $memberCard = (new MemberCard)->where('member_uuid', $item['member_uuid'])->find();
-                $item['expire_time_text'] = date('Y-m-d', $memberCard['expire_time'] ?: 0);
+                $item['expire_time_text'] = date('Y-m-d', $memberCard['expire'] ?: 0);
             } else {
                 $item['expire_time_text'] = date('Y-m-d', $item['expire']);
             }
