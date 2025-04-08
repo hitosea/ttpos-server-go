@@ -19,10 +19,10 @@ import (
 
 // IH5OrderSrv 定义接单服务接口
 type IH5OrderSrv interface {
-	GetH5OrderList(ctx context.Context, listReq req.H5OrderListReq) (*resp.H5OrderList, error)                 // 获取h5订单列表
-	GetH5OrderDetail(ctx context.Context, orderUuid uint64) (*resp.H5OrderDetailResp, error)                   // 获取h5订单详情
-	RejectH5Order(ctx context.Context, h5OrderUuid uint64) error                                               // 拒单
-	AcceptH5Order(ctx context.Context, orderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error) // 接单
+	GetH5OrderList(ctx context.Context, listReq req.H5OrderListReq) (*resp.H5OrderList, error) // 获取h5订单列表
+	GetH5OrderDetail(ctx context.Context, orderUuid uint64) (*resp.H5OrderDetailResp, error)   // 获取h5订单详情
+	RejectH5Order(ctx context.Context, h5OrderUuid uint64) error                               // 拒单
+	AcceptH5Order(ctx context.Context, orderUuid uint64) (*resp.OrderCheckServiceRes, error)   // 接单
 }
 
 type h5OrderSrv struct {
@@ -233,6 +233,6 @@ func (s *h5OrderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) erro
 	return s.orderSrv.RejectH5Order(ctx, h5OrderUuid)
 }
 
-func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error) {
-	return s.orderSrv.AcceptH5Order(ctx, h5OrderUuid, isAutoOrder)
+func (s *h5OrderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64) (*resp.OrderCheckServiceRes, error) {
+	return s.orderSrv.AcceptH5Order(ctx, h5OrderUuid, false)
 }

@@ -116,7 +116,7 @@ func (h *H5OrderHandler) AcceptH5Order(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
-	checkRes, err := h.h5OrderSrv.AcceptH5Order(ctx, params.H5OrderUuid, false)
+	checkRes, err := h.h5OrderSrv.AcceptH5Order(ctx, params.H5OrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

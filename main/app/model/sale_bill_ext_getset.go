@@ -86,6 +86,19 @@ func (model *SaleBill) GetSaleOrderProductUnCooking() []*SaleOrderProduct {
 	return unCookingSaleOrderProducts
 }
 
+// 获取销售账单中某个H5订单的已下单但未接单的商品
+func (model *SaleBill) GetH5OrderProductUnAccept(h5OrderUuid uint64) []*SaleOrderProduct {
+	products := make([]*SaleOrderProduct, 0)
+	for _, saleOrder := range model.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			if saleOrderProduct.H5OrderUuid == h5OrderUuid && !saleOrderProduct.IsAcceptOrderBool() && !saleOrderProduct.IsDelete() {
+				products = append(products, saleOrderProduct)
+			}
+		}
+	}
+	return products
+}
+
 // 获取订单中下单减库存的商品
 func (model *SaleBill) GetSaleOrderProductCookingSubStock() []*SaleOrderProduct {
 	products := make([]*SaleOrderProduct, 0)

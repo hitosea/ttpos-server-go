@@ -4292,21 +4292,38 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	}
 	ctx.Log().Debug("获取销售账单信息")
 
+	h5OrderProductUnAccept := make([]*model.SaleOrderProduct, 0)
+	if req.H5OrderUuid != 0 {
+		h5OrderProductUnAccept = saleBill.GetH5OrderProductUnAccept(req.H5OrderUuid)
+	}
+
 	// 获取未送厨的商品列表
 	unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
-	if len(unCookingSaleOrderProducts) == 0 {
+	if len(unCookingSaleOrderProducts) == 0 && len(h5OrderProductUnAccept) == 0 {
 		return nil, nil, errors.New("没有未送厨的商品")
 	}
 
-	// 送厨
-	checkServiceRes, err := s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0) // 购物车送厨商品
-	if err != nil {
-		return nil, nil, err
-	}
-	if checkServiceRes != nil {
-		return nil, checkServiceRes, nil
+	// 获取某个h5订单的已下单但未接单的商品
+	if req.H5OrderUuid != 0 {
+		checkRes, err := s.AcceptH5Order(ctx, req.H5OrderUuid, false)
+		if err != nil {
+			return nil, nil, err
+		}
+		if checkRes != nil {
+			return nil, checkRes, nil
+		}
 	}
 
+	// 送厨
+	if len(unCookingSaleOrderProducts) > 0 {
+		checkServiceRes, err := s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0) // 购物车送厨商品
+		if err != nil {
+			return nil, nil, err
+		}
+		if checkServiceRes != nil {
+			return nil, checkServiceRes, nil
+		}
+	}
 	ctx.Log().Debug("获取新的购物车信息")
 	cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {

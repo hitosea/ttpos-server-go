@@ -66,6 +66,7 @@ type OrderCartProductCookingReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单ID
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单ID。废弃
 	IgnoreMust    bool   `json:"ignore_must"`     // 是否忽略必点方案
+	H5OrderUuid   uint64 `json:"h5_order_uuid"`   // h5订单ID。默认为0，表示不送厨h5订单商品。当从H5订单进入桌台时，需要传入h5订单ID，将该h5订单的商品送厨
 }
 
 // OrderCartProductReturningReq 退菜购物车商品退菜请求参数

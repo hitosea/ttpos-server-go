@@ -579,6 +579,7 @@ func (model *SaleOrderProduct) DeleteProduct() {
 	}
 }
 
+// 订单商品是否已接单
 func (model *SaleOrderProduct) IsAcceptOrderBool() bool {
 	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderAccepted
 }
