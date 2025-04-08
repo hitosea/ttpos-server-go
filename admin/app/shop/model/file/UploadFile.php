@@ -15,7 +15,7 @@ class UploadFile extends UploadFileModel
      */
     public function softDelete($fileIds)
     {
-        return $this->where('file_id', 'in', $fileIds)->delete();
+        return $this->where('uuid', 'in', $fileIds)->delete();
     }
 
     /**
@@ -23,6 +23,6 @@ class UploadFile extends UploadFileModel
      */
     public function moveGroup($group_id, $fileIds)
     {
-        return $this->where('file_id', 'in', $fileIds)->update(compact('group_id'));
+        return $this->where('uuid', 'in', $fileIds)->update(compact('group_id'));
     }
 }
