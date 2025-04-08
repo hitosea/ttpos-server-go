@@ -519,7 +519,6 @@ func (s *deskSrv) CloseDesk(ctx context.Context, reqs req.DeskCloseReq) error {
 	}
 	// 如果桌台非空闲，且账单已完成或已取消时，直接关闭桌台
 	if !desk.IsAvailableDesk() && desk.SaleBillUuid != 0 {
-		ctx.Log().Info("请求关闭桌台。桌台非空闲，但销售账单已完成或已取消")
 		// desk可能没有预加载SaleBill
 		if desk.SaleBill == nil {
 			saleBill, err := repository.NewSaleBillRepo(db).GetSaleBillRecord(desk.SaleBillUuid)

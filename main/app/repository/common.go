@@ -264,6 +264,11 @@ func (r *commonRepo) WhereByAddStock(addStock uint) DBOption {
 }
 
 func (r *commonRepo) WhereByDeviceUuid(deviceUuid uint64) DBOption {
+	if deviceUuid == 0 {
+		return func(db *gorm.DB) *gorm.DB {
+			return db
+		}
+	}
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("device_uuid = ?", deviceUuid)
 	}

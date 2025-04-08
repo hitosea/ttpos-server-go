@@ -18,9 +18,9 @@ type ISaleBillRepo interface {
 	UpdateSaleBillRecord(saleBill model.SaleBill) error
 	UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error
 	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error
-	GetHideSaleBillList(pageNo, pageSize int) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
-	GetInstantSaleBillLatest() (*model.SaleBill, error)                         // 获取最新的一条点餐销售账单
-	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)  // 获取销售账单的自助餐商品列表
+	GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
+	GetInstantSaleBillLatest() (*model.SaleBill, error)                                            // 获取最新的一条点餐销售账单
+	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                     // 获取销售账单的自助餐商品列表
 	GetSaleBillRecord(uuid uint64) (*model.SaleBill, error)
 }
 
@@ -134,12 +134,13 @@ func (r *saleBillRepo) UpdateSaleBillShowMustPlan(saleBillUuid uint64) error {
 	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Update("show_must_plan", constant.SaleBillShowMustPlanNo).Error
 }
 
-func (r *saleBillRepo) GetHideSaleBillList(pageNo, pageSize int) ([]*model.SaleBill, int64, error) {
+func (r *saleBillRepo) GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64) ([]*model.SaleBill, int64, error) {
 	var saleBills []*model.SaleBill
 	saleBills, total, err := r.GetSaleBillListPage(pageNo, pageSize,
 		CommonRepo.WhereByIsHide(true),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByStatus(constant.SaleBillStatusPending),
+		CommonRepo.WhereByDeviceUuid(deviceUuid),
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "SaleOrders",
