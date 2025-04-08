@@ -505,8 +505,14 @@ func (model *SaleOrder) calcSumOrderBuffetCustomerCustomDiscountFee() float64 {
 	return sumOrderBuffetCustomerCustomDiscountFee.InexactFloat64()
 }
 
-// 计算已送厨商品的销售订单的自定义优惠折扣金额。订单自定义优惠金额=销售订单商品自定义优惠金额之和 + 自助餐顾客自定义优惠金额之和 + 订单抹零金额 + 赠菜商品的金额之和
+// 计算已送厨商品的销售订单的自定义优惠折扣金额。
+// 没有整单改价时，订单自定义优惠金额=销售订单商品自定义优惠金额之和 + 自助餐顾客自定义优惠金额之和 + 订单抹零金额 + 赠菜商品的金额之和
+// 有整单改价时，订单自定义优惠金额=销售订单应收金额 - 整单改价金额
 func (model *SaleOrder) calcCustomDiscountFee(products []*SaleOrderProduct, amount float64) float64 {
+	// 有整单改价时, 订单自定义优惠金额=销售订单应收金额 - 整单改价金额
+	if model.CustomAmount != constant.SaleOrderCustomAmountCancel {
+		return decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(model.CustomAmount)).Truncate(3).Round(2).InexactFloat64()
+	}
 	customDiscountFee := decimal.NewFromFloat(0)
 	// 销售订单商品自定义优惠金额之和
 	sumOrderProductCustomDiscountFee := model.calcSumOrderProductCustomDiscountFee(products)
