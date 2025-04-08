@@ -2033,4 +2033,6 @@ return [
     "发现重复ID: " => "Yinelenen ID bulundu: ",
     "并发生成" => "Eşzamanlı Oluşturma",
     "测试通过!" => "Test başarılı!",
+    "等级权重范围1-999" => "Derece ağırlık aralığı 1-999",
+    "等级等级折扣范围0-100%" => "Seviye seviye indirim aralığı 0-100%",
 ];

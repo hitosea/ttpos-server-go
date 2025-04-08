@@ -2033,4 +2033,6 @@ return [
     "发现重复ID: " => "Duplicate ID found: ",
     "并发生成" => "Concurrent Generation",
     "测试通过!" => "Test passed!",
+    "等级权重范围1-999" => "Level weight range 1-999",
+    "等级等级折扣范围0-100%" => "Level level discount range 0-100%",
 ];
