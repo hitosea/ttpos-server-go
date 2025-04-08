@@ -45,7 +45,7 @@ build() {
 
     # 平台端
     if [[ "$build_env" == 'all' || "$build_env" == 'admin' ]]; then
-        cd view/admin
+        cd views/admin
         pnpm install
         if ! check_pnpm_lock; then
             cd ../../

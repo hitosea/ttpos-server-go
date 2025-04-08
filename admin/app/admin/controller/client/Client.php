@@ -164,10 +164,11 @@ class Client extends Controller
             ->paginate($param);
 
         foreach ($list as $k => $item) {
+            $list[$k]["language_update_log"] = $item['update_log'];
             $updateLogs = json_decode($item["update_log"], true);
             $language = checkDetect();
             if (isset($updateLogs[$language])) {
-                $list[$k]["update_log"] = $updateLogs[$language];
+                $list[$k]["language_update_log"] = $updateLogs[$language];
             }
         }
         //

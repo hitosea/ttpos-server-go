@@ -30,9 +30,9 @@
           {{ scope.row.brand == '1' ? 'TTPOS' : 'JBCレジ' }}
         </template>
       </el-table-column>
-      <el-table-column prop="update_log_text" :label="$t('更新日志')" :show-overflow-tooltip="{ popperClass: 'max-w-[220px]' }">
+      <el-table-column prop="language_update_log" :label="$t('更新日志')" :show-overflow-tooltip="{ popperClass: 'max-w-[220px]' }">
         <template #default="scope">
-          {{ scope.row.update_log_text ? scope.row.update_log_text : '-' }}
+          {{ scope.row.language_update_log ? scope.row.language_update_log : '-' }}
         </template>
       </el-table-column>
       <el-table-column prop="forced_update" :label="$t('强制更新')">
