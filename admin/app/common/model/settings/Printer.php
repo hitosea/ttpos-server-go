@@ -92,7 +92,6 @@ class Printer extends BaseModel
         //
         $cashierDevices = BindRecord::alias('a')
             ->where('source', BindRecord::SOURCE_CASHIER)
-            ->where('platform', 'Android')
             ->whereIn('brand', BindRecord::BRANDS_PRINTS)
             ->field("a.device_id as printer_id")
             ->field("CONCAT(if(remark='', a.device_id, remark), ' ($text)') printer_name")
