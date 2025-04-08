@@ -11,6 +11,7 @@ use app\common\model\user\PointsLog as PointsLogModel;
 use app\shop\model\user\BalanceLog as BalanceLogModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum as SceneEnum;
+use app\common\library\helper;
 use think\model\concern\SoftDelete;
 
 /**
@@ -57,6 +58,14 @@ class User extends BaseModel
     {
         return $this->member_card_uuid ?: 0;
     }
+    public function getBalanceAttr($value)
+    {
+        return floatval(helper::bcadd($value, $this->frozen_balance));
+    }
+    public function getGiftBalanceAttr($value)
+    {
+        return floatval(helper::bcadd($value, $this->frozen_gift_balance));
+    }
 
     /**
      * 默认头像
@@ -72,30 +81,6 @@ class User extends BaseModel
     public function getBirthdayAttr($value)
     {
         return $value ? date('Y-m-d', $value) : '';
-    }
-
-    /**
-     * 余额
-     */
-    public function getBalanceAttr($value, $data)
-    {
-        if (isset($data['balance'])) {
-            return floatval($data['balance']);
-        } else {
-            return $value;
-        }
-    }
-
-    /**
-     * 赠送余额
-     */
-    public function getGiftBalanceAttr($value, $data)
-    {
-        if (isset($data['gift_balance'])) {
-            return floatval($data['gift_balance']);
-        } else {
-            return $value;
-        }
     }
 
     /**
