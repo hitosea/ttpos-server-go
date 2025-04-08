@@ -416,7 +416,7 @@ class Product extends Controller
                 }
                 // 验证是否已经存在
                 $val['product_name_is_exist'] = CheckService::checkNameExist('product', $productName, $shop_supplier_id);
-                $val['img_name_is_exist'] = CheckService::checkNameExist('product_img', ['exist' => $val['img_name']], $shop_supplier_id)['exist'];
+                $val['img_name_is_exist'] = $val['img_name'] ? CheckService::checkNameExist('product_img', ['exist' => $val['img_name']], $shop_supplier_id)['exist'] : false;
                 $val['barcode_is_exist'] = CheckService::checkNameExist('product_bom_barcode', ['exist' => $val['barcode']], $shop_supplier_id)['exist'];
             } catch (\Throwable $th) {
                 return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __($th->getMessage()));
@@ -429,11 +429,14 @@ class Product extends Controller
             $unit_list = (new UnitModel)->getLists($shop_supplier_id);
             $spec_list = (new SpecModel)->getLists($shop_supplier_id);
             $tax_list = (new TaxCategory)->getList();
+            foreach ($tax_list as $key => $tax_item) {
+                $tax_list[$key]['id'] = $tax_item['tax_category_id'];
+            }
             return $this->renderSuccess('', compact('list', 'category_list', 'unit_list', 'spec_list', 'tax_list'));
         }
 
         // 商品条码不能重复
-        if ($duplicateRows = ArrayHelp::findDuplicateIds($list, 'barcode')) {
+        if ($duplicateRows = ArrayHelp::findDuplicateIds($list, 'barcode', 'row', true)) {
             return $this->renderError(__('行') . '[' . (implode(',', $duplicateRows)) . ']: ' . __('商品条码不能重复'), compact('duplicateRows'));
         };
         // die;
@@ -446,10 +449,6 @@ class Product extends Controller
             }
             if ($val['barcode_is_exist'] == true) {
                 return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('商品条码已存在'), $val);
-            }
-            if (!preg_match('/^[0-9a-zA-Z]+$/', $val['barcode'])) {
-                // todo 产品要求，可为空
-                // return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('商品条码只能为数字、字母、数字+字母组合'), $val);
             }
         }
 

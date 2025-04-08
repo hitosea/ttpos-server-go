@@ -221,12 +221,15 @@ class ArrayHelp
      * @param $key
      * @return array
      */
-    public static function findDuplicateIds($array, $key, $key2 = 'row')
+    public static function findDuplicateIds($array, $key, $key2 = 'row', $ignoreEmpty = false)
     {
         $count = array_count_values(array_column($array, $key));
-        $duplicateValues = array_filter($count, function ($value) {
+        $duplicateValues = array_filter($count, function ($value, $key) use ($ignoreEmpty) {
+            if ($ignoreEmpty && empty($key)) {
+                return false;
+            }
             return $value > 1;
-        });
+        }, ARRAY_FILTER_USE_BOTH);
         $duplicateIds = [];
         foreach ($array as $k => $item) {
             if (in_array($item[$key] ?? '', array_keys($duplicateValues))) {
