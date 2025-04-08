@@ -609,3 +609,13 @@ func (model *SaleBill) SetBuffetStartTimeAndDuration(maxTimeLimit int) {
 func (model *SaleBill) IsFinish() bool {
 	return model.Status == constant.SaleBillStatusComplete
 }
+
+// 设置添加来源
+func (model *SaleBill) SetAddSource(addSource string) {
+	model.addSource = addSource
+}
+
+// 获取添加来源
+func (model *SaleBill) GetAddSource() string {
+	return model.addSource
+}

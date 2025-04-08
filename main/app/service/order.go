@@ -3710,6 +3710,9 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		return nil, errors.WithMessage(err)
 	}
 
+	// 设置添加来源
+	saleBill.SetAddSource(ctx.GetSource())
+
 	// 加购
 	if err := s.ActionAdd(ctx, request, saleBill); err != nil {
 		return nil, errors.WithMessage(err)

@@ -89,6 +89,11 @@ func (model *BaseModel) getCompanyUuid(tx *gorm.DB) uint64 {
 
 // SaleBill - AfterUpdate 更新销售订单后的逻辑 - 推送订单更新
 func (model *SaleBill) AfterUpdate(tx *gorm.DB) (err error) {
+	if addSource, ok := tx.Statement.Context.Value("add_source").(string); ok {
+		if addSource == constant.SourceH5 {
+			return nil
+		}
+	}
 	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
 		go websocket.PushClient(companyUuid, "*", "*", websocket.UPDATE_ORDER, map[string]interface{}{
 			"sale_bill_uuid": model.Uuid,

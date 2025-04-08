@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -115,7 +116,10 @@ func (r *saleBillRepo) UpdateSaleBillRecord(saleBill model.SaleBill) error {
 	if saleBill.NoPrimaryKey() {
 		return errors.New("SaleBill不能没有ID或UUID")
 	}
-	return r.db.Model(&model.SaleBill{}).Select("*").Where("uuid = ?", saleBill.Uuid).Updates(&saleBill).Error
+	// 2. 创建上下文
+	ctx := context.WithValue(context.Background(), "add_source", saleBill.GetAddSource())
+	// 3. 更新
+	return r.db.WithContext(ctx).Model(&model.SaleBill{}).Select("*").Where("uuid = ?", saleBill.Uuid).Updates(&saleBill).Error
 }
 
 func (r *saleBillRepo) UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error {

@@ -84,6 +84,9 @@ type SaleBill struct {
 	Desk            *Desk             `gorm:"foreignKey:DeskUuid;references:uuid"`
 	BuffetPackage1  *BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
+
+	// 虚拟字段，用于标记添加来源
+	addSource string `gorm:"-" json:"add_source,omitempty"`
 }
 
 // 判断销售账单是否可反结账。
