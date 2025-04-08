@@ -772,7 +772,6 @@ return [
     "服务费必须为数字" => "Hizmet bedeli sayısal olmalıdır",
     "当前订单不可修改" => "Geçerli sipariş değiştirilemez",
     "当前状态不可操作" => "Mevcut durum çalışmıyor",
-    "等级权重不能为空" => "Seviye ağırlığı boş olamaz",
     "等级权重不能重复" => "Sınıf ağırlığı tekrarlanamaz",
     "元可升级到此等级" => "Yuan bu seviyeye yükseltilebilir",
     "备注最长200个字符" => "Açıklamalar en fazla 200 karakter uzunluğunda olabilir",
