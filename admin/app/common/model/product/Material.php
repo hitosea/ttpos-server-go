@@ -431,7 +431,7 @@ class Material extends BaseModel
         return $outFormModel->addOutForm($scene, $operatorUuid, [
             'material_uuid' => $material['uuid'],
             'num' => $num,
-            'remark' => $remark,
+            'remark' => $remark
         ]);
     }
 

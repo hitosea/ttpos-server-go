@@ -78,11 +78,31 @@ class ErpWarehouseOutForm extends BaseModel
         $startTime = isset($params['date'][0]) ? strtotime($params['date'][0]) : 0;
         $endTime = isset($params['date'][1]) ? strtotime($params['date'][1] . ' 23:59:59') : 0;
 
-        $model = new self;
+        $list = [];
+        $model = (new self())->hasWhere('erpWarehouseOutFormItem', ['status' => 1])->with([
+            'erpWarehouseOutFormItem' => function ($q) {
+                return $q->with([
+                    'productBom' => function ($q) {
+                        return $q->withTrashed()->with([
+                            'product' => function ($q) {
+                                return $q->withTrashed();
+                            },
+                            'relatedMaterial' => function ($q) {
+                                return $q->withTrashed();
+                            }
+                        ]);
+                    },
+                    'material' => function ($q) {
+                        return $q->withTrashed()->with(['unit']);
+                    }
+                ]);
+            },
+            'operator',
+        ]);
 
         // 操作类型 30-销售出库 40-调整出库 41-删除出库
         if (isset($params['type']) && $params['type']) {
-            $model = $model->where('scene', [
+            $model = $model->where('ErpWarehouseOutForm.scene', [
                 30 => 0,
                 40 => 1,
                 41 => 4,
@@ -91,28 +111,10 @@ class ErpWarehouseOutForm extends BaseModel
 
         // 起始时间
         if ($startTime && $endTime) {
-            $model = $model->where('create_time', 'between', [$startTime, $endTime]);
+            $model = $model->where('ErpWarehouseOutForm.create_time', 'between', [$startTime, $endTime]);
         }
 
-        $list = [];
-        $paginate = $model->with([
-            'erpWarehouseOutFormItem' => [
-                'productBom' => function ($q) {
-                    return $q->withTrashed()->with([
-                        'product' => function ($q) {
-                            return $q->withTrashed();
-                        },
-                        'relatedMaterial' => function ($q) {
-                            return $q->withTrashed();
-                        }
-                    ]);
-                },
-                'material' => function ($q) {
-                    return $q->withTrashed()->with(['unit']);
-                }
-            ],
-            'operator',
-        ])->order('create_time desc')->paginate($params);
+        $paginate = $model->order('ErpWarehouseOutForm.create_time desc')->paginate($params);
 
         foreach ($paginate->items() as $item) {
             $product = [
@@ -157,7 +159,7 @@ class ErpWarehouseOutForm extends BaseModel
                     'real_name' => $item['operator']['real_name'] ?? '',
                 ],
                 'out_time' => strtotime($item['create_time']),
-                'revoke_time' => strtotime($item['revoke_time']),
+                'revoke_time' => $item['revoke_time'],
                 'is_show_out_cancel' => $isShowOutCancel,
             ];
         }
@@ -248,6 +250,9 @@ class ErpWarehouseOutForm extends BaseModel
             $this->status = 1;
             $this->revoke_time = time();
             $this->save();
+            // 更新出库明细表
+            $formItem->revoke_time = time();
+            $formItem->save();
             $this->commit();
         } catch (\Exception $e) {
             $this->rollback();
@@ -311,6 +316,8 @@ class ErpWarehouseOutForm extends BaseModel
             'material_uuid' => $data['material_uuid'] ?? 0,
             'num' => $data['num'] ?? 0,
             'scene' => $scene,
+            'status' => 1,
+            'reduce_stock' => 1,
         ]);
     }
 }
