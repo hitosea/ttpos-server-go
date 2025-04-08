@@ -25,11 +25,7 @@
       <div class="table-wrap">
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
           <el-table-column prop="order_id" label="ID"></el-table-column>
-          <el-table-column prop="card_name" :label="$t('昵称')">
-            <template #default="scope">
-              <span>{{ scope.row.user.nickName }}</span>
-            </template>
-          </el-table-column>
+          <el-table-column prop="user.nickName" :label="$t('昵称')"></el-table-column>
           <el-table-column prop="user.mobile" :label="$t('手机号')"> </el-table-column>
           <el-table-column prop="user.user_id" :label="$t('会员ID')"> </el-table-column>
           <el-table-column prop="card.card_name" :label="$t('会员卡名称')"> </el-table-column>
