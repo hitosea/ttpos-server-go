@@ -2012,9 +2012,13 @@ class Product extends BaseModel
         }
         //
         foreach ($product_taxes as $item) {
-            $product_tax_type = $item['product_tax_type'] ?? 0;
-            $tax_category_id = $item['tax_category_id'] ?? 0;
-            ProductTax::where('product_id', 'in', $product_ids)->where('product_tax_type', $product_tax_type)->update(['tax_category_id' => $tax_category_id]);
+            $product_tax_type = $item['product_tax_type'];
+            $tax_category_id = $item['tax_category_id'];
+            if ($product_tax_type == 1) {
+                Product::where('uuid', 'in', $product_ids)->update(['dine_tax_uuid' => $tax_category_id]);
+            } else {
+                Product::where('uuid', 'in', $product_ids)->update(['takeout_tax_uuid' => $tax_category_id]);
+            }
         }
         return true;
     }
