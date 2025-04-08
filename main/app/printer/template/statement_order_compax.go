@@ -240,10 +240,10 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		if orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name != "" {
 			buffetNameText += "\n(" + orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name + ")"
 		}
-		discountPrice := orderBuffetCustomer.GetDiscountPrice()
+		discountPrice := orderBuffetCustomer.GetOriginPrice()
 		printer.AppendText(t.base.PrintText(
 			buffetNameText,
-			fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.Price), orderBuffetCustomer.Num),
+			fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.SalePrice), orderBuffetCustomer.Num),
 			t.base.GetPriceAndUnit(discountPrice),
 			currencyWidth,
 			leftWidth,
@@ -286,12 +286,12 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		}
 		// 商品数量
 		productNum += item.Num
-		productTotalPrice := item.GetPrice()
+		productTotalPrice := item.GetTotalProductPrice()
 		// 赠品
 		var gift string
 		if item.IsGiftBool() {
 			gift = "(" + t.base.Translate("赠") + ") "
-			freeMoney += item.GetPrice()
+			freeMoney += item.GetTotalProductPrice()
 			productTotalPrice = 0
 		}
 		// 商品名称
@@ -300,7 +300,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		//
 		printer.AppendText(t.base.PrintText(
 			productName,
-			fmt.Sprintf("%s*%d", t.base.Amount(item.Price), item.Num),
+			fmt.Sprintf("%s*%d", t.base.Amount(item.ProductPrice), item.Num),
 			t.base.GetPriceAndUnit(productTotalPrice),
 			currencyWidth,
 			leftWidth,
@@ -324,14 +324,14 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.AppendText(t.base.PrintText(
 			t.base.Translate("商品数量")+": "+fmt.Sprintf("%d", productNum),
 			"",
-			t.base.Translate("商品金额")+": "+t.base.GetPriceAndUnit(saleOrder.ProductAmount),
+			t.base.Translate("商品金额")+": "+t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount),
 			currencyWidth,
 		))
 		printer.LineFeed()
 	} else {
 		printer.AppendText(t.base.Translate("商品数量") + ": " + fmt.Sprintf("%d", productNum))
 		printer.LineFeed()
-		printer.AppendText(t.base.Translate("商品金额") + ": " + t.base.GetPriceAndUnit(saleOrder.ProductAmount))
+		printer.AppendText(t.base.Translate("商品金额") + ": " + t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount))
 		printer.LineFeed()
 	}
 	if saleOrder.ServiceFee > 0 {
@@ -362,7 +362,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 					ratio = " (0% OFF)"
 				} else {
 					// 计算折扣率：折扣金额 / 原始金额 * 100
-					discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(float64(saleOrder.GetOriginAmount()))).Mul(decimal.NewFromInt(100))
+					discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
 					ratio = fmt.Sprintf(" (%s%% OFF)", t.base.Number(discountRate.InexactFloat64()))
 				}
 			}
