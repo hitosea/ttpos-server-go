@@ -45,6 +45,8 @@ func (t *handoverImgTemplate) GetPrintContent(
 	}
 	// 判断是否是土耳其语、泰语、英语
 	isTrThEn := t.base.Lang == "tr" || t.base.Lang == "th" || t.base.Lang == "en"
+	// 收银员名称
+	cashierName := utils.IfString(log.Staff.RealName != "", log.Staff.RealName, log.Staff.Username)
 
 	//  创建打印机实例
 	img := pkg.NewImgFont(568, 0, 0)
@@ -68,7 +70,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("交班人"), Width: 350, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: log.Staff.RealName, Width: 0, Align: pkg.AlignRight},
+			pkg.ColumnConfig{Text: cashierName, Width: 0, Align: pkg.AlignRight},
 		)
 		// 营业数据
 		img.PrintInColumns(
@@ -349,7 +351,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("交班人"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: log.Staff.RealName, Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: cashierName, Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.AppendText(t.base.Translate("当班时间"))
 		img.SetAlignment(pkg.AlignRight)

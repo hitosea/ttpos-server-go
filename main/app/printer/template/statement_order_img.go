@@ -321,11 +321,11 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		if orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name != "" {
 			buffetNameText += "\n(" + orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name + ")"
 		}
-		discountPrice := orderBuffetCustomer.GetDiscountPrice()
+		originPrice := orderBuffetCustomer.GetOriginPrice()
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: buffetNameText, Width: 310, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.Price), orderBuffetCustomer.Num), Width: 120, Align: pkg.AlignCenter},
-			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(discountPrice), Width: 0, Align: pkg.AlignRight},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(orderBuffetCustomer.SalePrice), orderBuffetCustomer.Num), Width: 120, Align: pkg.AlignCenter},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(originPrice), Width: 0, Align: pkg.AlignRight},
 		)
 	}
 	// 添加加钟商品
@@ -334,11 +334,11 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			continue
 		}
 		productNum += delay.Num
-		discountPrice := delay.GetAmount()
+		originPrice := delay.GetAmount()
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: delay.Name, Width: 310, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(delay.Price), saleBill.MealNum), Width: 120, Align: pkg.AlignCenter},
-			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(discountPrice), Width: 0, Align: pkg.AlignRight},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(originPrice), Width: 0, Align: pkg.AlignRight},
 		)
 	}
 	// 商品列表
@@ -351,12 +351,12 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		}
 		// 商品数量
 		productNum += item.Num
-		productTotalPrice := item.GetPrice()
+		productTotalPrice := item.GetTotalProductPrice() // 商品原价
 		// 赠品
 		var gift string
 		if item.IsGiftBool() {
 			gift = "(" + t.base.Translate("赠") + ") "
-			freeMoney += item.GetPrice()
+			freeMoney += item.GetTotalProductPrice()
 			productTotalPrice = 0
 		}
 		// 商品名称
@@ -366,7 +366,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.SetTextLineHeight(45)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: productName, Width: 310, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(item.Price), item.Num), Width: 120, Align: pkg.AlignCenter},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(item.ProductPrice), item.Num), Width: 120, Align: pkg.AlignCenter},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(productTotalPrice), Width: 0, Align: pkg.AlignRight},
 		)
 		img.RecoverDefaultTextLineHeight()
@@ -382,13 +382,13 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	if temp == 3 {
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %d", t.base.Translate("商品数量"), productNum), Width: 250, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(saleOrder.ProductAmount)), Width: 0, Align: pkg.AlignRight},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount)), Width: 0, Align: pkg.AlignRight},
 		)
 	} else {
 		img.SetAlignment(pkg.AlignRight)
 		img.AppendText(fmt.Sprintf("%s: %d", t.base.Translate("商品数量"), productNum))
 		img.LineFeed(1)
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(saleOrder.ProductAmount)))
+		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount)))
 		img.LineFeed(1)
 	}
 
@@ -423,7 +423,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 					ratio = " (0% OFF)"
 				} else {
 					// 计算折扣率：折扣金额 / 原始金额 * 100
-					discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(float64(saleOrder.GetOriginAmount()))).Mul(decimal.NewFromInt(100))
+					discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
 					ratio = fmt.Sprintf(" (%s%% OFF)", t.base.Number(discountRate.InexactFloat64()))
 				}
 			}

@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
+	"ttpos-server-go/pkg/utils"
 )
 
 // rechargeXPrinterTemplate 图片订单打印模板
@@ -29,10 +30,8 @@ func (t *rechargeXPrinterTemplate) GetPrintContent(
 	// 日历
 	payTime := t.base.FormatUnixTimeDefault(order.PaymentTime)
 
-	cashierName := order.Staff.Username
-	if cashierName == "" {
-		cashierName = order.Staff.RealName
-	}
+	// 收银员名称
+	cashierName := utils.IfString(order.Staff.RealName != "", order.Staff.RealName, order.Staff.Username)
 
 	/* *
 	* 打印模版
