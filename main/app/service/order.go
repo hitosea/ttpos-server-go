@@ -5783,6 +5783,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 
 		// 更新账单
 		if updateSaleBill {
+			// 更新销售账单
+			saleBill.SetCookingStatus()
 			if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
 				return errUpdateSaleBill
 			}
