@@ -79,6 +79,9 @@ class User extends UserModel
      */
     public function setDelete()
     {
+        if (!$this->can_delete) {
+            return false;
+        }
         return $this->transaction(function () {
             return $this->delete();
         });
