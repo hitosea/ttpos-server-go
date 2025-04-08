@@ -153,10 +153,10 @@ class Printing extends BaseModel
         $productList = [];
         foreach ($this['printingProductItem'] as $productItem) {
             $productList[] = [
-                'product_id' => $productItem['product_package_uuid'],
-                'category_id' => $productItem['product']['category_uuid'],
-                'label_id' => $productItem['product']['label_id'],
-                'parent_category_id' => $productItem['product']['category']['parent_id'],
+                'product_id' => $productItem['product_package_uuid'] ?? 0,
+                'category_id' => $productItem['product']['category_uuid'] ?? 0,
+                'label_id' => $productItem['product']['label_id'] ?? 0,
+                'parent_category_id' => $productItem['product']['category']['parent_id'] ?? 0,
             ];
         }
         // 打印机uuid列表
