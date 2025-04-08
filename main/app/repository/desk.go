@@ -132,7 +132,7 @@ func (r *deskRepo) GetDesks(opts ...DBOption) ([]*model.Desk, error) {
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Order("sort desc").Find(&desks).Error
+	err := db.Order("sort asc").Find(&desks).Error
 	return desks, errors.WithMessage(err)
 }
 

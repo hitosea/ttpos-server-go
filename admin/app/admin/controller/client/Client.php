@@ -164,7 +164,11 @@ class Client extends Controller
             ->paginate($param);
 
         foreach ($list as $k => $item) {
-            $list[$k]["update_log"] = json_decode($item["update_log"], true)[checkDetect()];
+            $updateLogs = json_decode($item["update_log"], true);
+            $language = checkDetect();
+            if (isset($updateLogs[$language])) {
+                $list[$k]["update_log"] = $updateLogs[$language];
+            }
         }
         //
         return $this->renderSuccess('', compact('list'));
