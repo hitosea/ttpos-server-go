@@ -67,13 +67,16 @@ func checkoutSaleOrderEventHandler() {
 
 		// 创建结账单打印
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
-			printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(
+			_, err := printer.NewPrinterRepo(payload.Ctx).PrintingStatementOrder(
 				constant.PrinterTemplateBilling,
 				payload.SaleBill,
 				payload.SaleOrderUuid,
 				0,
 				0,
 			)
+			if err != nil {
+				fmt.Println("CheckoutSaleOrderEvent process, PrintingStatementOrder failed ", err)
+			}
 		})
 
 		// 创建操作记录
