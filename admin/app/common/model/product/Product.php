@@ -876,7 +876,9 @@ class Product extends BaseModel
                 '10 as type',
                 'c1.uuid as category_uuid',
                 'c2.uuid as category_parent_uuid',
-                '0 as is_material_used'
+                '0 as is_material_used',
+                'p.sort as sort',
+                'p.id as id'
             ]))
             ->leftJoin('product_category c1', 'p.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
@@ -884,6 +886,8 @@ class Product extends BaseModel
             ->leftJoin('file', 'p.image_file_uuid = file.uuid')
             ->where('bom.product_flavor_uuid', '>', 0)
             ->group('p.uuid')
+            ->order('p.sort', 'asc')
+            ->order('p.id', 'desc')
             ->buildSql();
 
         // 材料
@@ -908,13 +912,16 @@ class Product extends BaseModel
                 '20 as type', 
                 'c1.uuid as category_uuid',
                 'c2.uuid as category_parent_uuid',
-                'count(rm.uuid) as is_material_used'
+                'count(rm.uuid) as is_material_used',
+                '0 as sort',
+                'm.id as id'
             ]))
             ->leftJoin('product_category c1', 'm.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
             ->leftJoin('file', 'm.image_uuid = file.uuid')
             ->leftJoin('related_material rm', 'm.uuid = rm.material_uuid')
             ->group('m.uuid')
+            ->order('m.id', 'desc')
             ->buildSql();
 
         // 分页
@@ -1017,8 +1024,10 @@ class Product extends BaseModel
             'category_uuid',
             'category_parent_uuid',
             'is_material_used',
+            'sort',
+            'id'
         ]) . " FROM ($productSql UNION ALL $materialSql) AS all_product";
-        $orderSql = ' ORDER BY create_time DESC';
+        $orderSql = ' ORDER BY sort ASC, id DESC';
         $pageSql = " LIMIT {$offset}, {$limit}";
 
         // 执行查询
