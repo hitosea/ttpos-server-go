@@ -12,6 +12,8 @@ use app\shop\model\user\BalanceLog as BalanceLogModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum as SceneEnum;
 use app\common\library\helper;
+use app\common\model\bill\SaleBill;
+use app\common\model\order\RechargeOrder;
 use think\model\concern\SoftDelete;
 
 /**
@@ -29,7 +31,7 @@ class User extends BaseModel
     /**
      * 追加属性
      */
-    protected $append = ['user_id', 'points', 'mobile', 'grade_id', 'card_id'];
+    protected $append = ['user_id', 'points', 'mobile', 'grade_id', 'card_id', 'can_delete'];
 
     /**
      * 兼容字段
@@ -65,6 +67,22 @@ class User extends BaseModel
     public function getGiftBalanceAttr($value)
     {
         return floatval(helper::bcadd($value, $this->frozen_gift_balance));
+    }
+    public function getCanDeleteAttr($value,$data)
+    {
+        $memberId = $data['uuid'];
+        // 是否有进行中的用餐订单 
+        $saleOrderCount = SaleBill::where('uuid', 'IN', function($q) use ($memberId) {
+            $prefix = env('DB_PREFIX');
+            $q->table($prefix . 'sale_order')->where('consumer_uuid', $memberId)->field('DISTINCT sale_bill_uuid');
+        })
+        ->where('finish_time', 0)
+        ->count();
+
+        // 是否有进行中的充值订单
+        $rechargeOrderCount = RechargeOrder::where('member_uuid', $memberId)->where('status', 0)->count();
+
+        return ($saleOrderCount + $rechargeOrderCount) <= 0;
     }
 
     /**
