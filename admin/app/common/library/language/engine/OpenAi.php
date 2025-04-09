@@ -45,7 +45,7 @@ class OpenAi
             $ret = $this->request(self::URL, 'post', $jsonData, true);
             $res = json_decode($ret, true);
             if ($res['code'] == 200 && !empty($res['data'])) {
-                $dataArray = json_decode($res['data'], true);
+                $dataArray = $res['data'];
                 $res['data'] = is_array($dataArray) && !empty($dataArray) ? $dataArray : [];
                 return $res['data'];
             }
