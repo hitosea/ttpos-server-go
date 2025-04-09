@@ -47,8 +47,10 @@ class CardRecord extends CardRecordModel
             $item['is_used'] = (new Card)->checkUserConsumeRecord($item['user_id'], $item['card_id']) ? 1 : 0;
             if ($item['delete_time'] == 0) {
                 $memberCard = (new MemberCard)->where('member_uuid', $item['member_uuid'])->find();
-                $item['expire_time_text'] = date('Y-m-d', $memberCard['expire'] ?: 0);
+                $item['expire_time'] = $memberCard['expire_time'] ?: 0;
+                $item['expire_time_text'] = date('Y-m-d', $memberCard['expire_time'] ?: 0);
             } else {
+                $item['expire_time'] = $item['expire'];
                 $item['expire_time_text'] = date('Y-m-d', $item['expire']);
             }
         }

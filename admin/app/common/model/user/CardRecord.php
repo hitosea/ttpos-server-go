@@ -25,11 +25,9 @@ class CardRecord extends BaseModel
     protected $append = [
         'pay_time_text',
         'disabled',
-        //
         'order_id',
         'pay_price',
         'delete_time',
-        'expire_time',
         'pay_type',
     ];
 
@@ -52,10 +50,6 @@ class CardRecord extends BaseModel
     public function getIsdeleteAttr()
     {
         return $this->delete_time ? 1 : 0;
-    }
-    public function getExpireTimeAttr()
-    {
-        return $this->expire ?: '';
     }
     public function getPayTypeAttr()
     {
