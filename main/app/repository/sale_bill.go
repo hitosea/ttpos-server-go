@@ -17,7 +17,7 @@ type ISaleBillRepo interface {
 	UpdateSaleBill(saleBill *model.SaleBill) error
 	UpdateSaleBillRecord(saleBill model.SaleBill) error
 	UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error
-	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error
+	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error                                          // 确认必点
 	GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
 	GetInstantSaleBillLatest() (*model.SaleBill, error)                                            // 获取最新的一条点餐销售账单
 	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                     // 获取销售账单的自助餐商品列表

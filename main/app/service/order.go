@@ -3393,8 +3393,21 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		}
 
 		if mustPlan != nil {
-			productMustPlanList = &resp.ProductMustPlanList{
-				List: mustPlan.List,
+			// 如果已经自动加购完成，则不在显示必点方案
+			finish := true
+			for _, mustPlan := range mustPlan.List {
+				// 如果必点方案中还有需要加购的商品，则显示必点方案
+				if mustPlan.NeedNum != 0 {
+					finish = false
+				}
+			}
+			if finish {
+				// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
+				repository.NewSaleBillRepo(s.dbm.GetDB(dbId)).UpdateSaleBillShowMustPlan(saleBillUuid)
+			} else {
+				productMustPlanList = &resp.ProductMustPlanList{
+					List: mustPlan.List,
+				}
 			}
 		}
 	}
