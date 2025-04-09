@@ -133,9 +133,10 @@ type H5BaseInfo struct {
 }
 
 type MenuBaseInfo struct {
-	Currency   setting.Currency   `json:"currency"` // 货币设置
-	CloudBasic setting.CloudBasic `json:"cloud"`    // 云端基础信息
-	Company    Company            `json:"company"`  // 商家信息
+	Currency      setting.Currency   `json:"currency"`         // 货币设置
+	CloudBasic    setting.CloudBasic `json:"cloud"`            // 云端基础信息
+	Company       Company            `json:"company"`          // 商家信息
+	IsShowSoldOut bool               `json:"is_show_sold_out"` // 电子菜单是否显示售罄商品
 }
 
 type GetBaseInfoResponse struct {

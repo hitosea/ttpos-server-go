@@ -15511,7 +15511,7 @@ const docTemplate = `{
                 },
                 "gift_points": {
                     "description": "赠送积分",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "recharge_amount": {
                     "description": "充值金额",
@@ -19776,6 +19776,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/setting.Currency"
                         }
                     ]
+                },
+                "is_show_sold_out": {
+                    "description": "电子菜单是否显示售罄商品",
+                    "type": "boolean"
                 }
             }
         },
@@ -20277,11 +20281,7 @@ const docTemplate = `{
             "properties": {
                 "gift_reason": {
                     "description": "赠品原因",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
+                    "type": "string"
                 },
                 "image_url": {
                     "description": "图片地址",
@@ -20337,11 +20337,7 @@ const docTemplate = `{
                 },
                 "refund_reason": {
                     "description": "退菜原因",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
+                    "type": "string"
                 },
                 "remark": {
                     "description": "备注",

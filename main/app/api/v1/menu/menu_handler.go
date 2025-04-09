@@ -78,7 +78,8 @@ func (h *Handler) BaseInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	currencySetting, err1 := h.settingSrv.GetCurrencySetting(ctx)
 	cloudBasic, err2 := h.settingSrv.GetCloudBasicSetting(ctx)
-	if err1 != nil || err2 != nil {
+	cashierSetting, err3 := h.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
+	if err1 != nil || err2 != nil || err3 != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("获取配置失败")))
 		return
 	}
@@ -92,9 +93,10 @@ func (h *Handler) BaseInfo(c *gin.Context) {
 		ExpireTime: company.ExpireTime,
 	}
 	helper.Success(c, resp.MenuBaseInfo{
-		Currency:   currencySetting,
-		CloudBasic: cloudBasic,
-		Company:    companyResp,
+		Currency:      currencySetting,
+		CloudBasic:    cloudBasic,
+		Company:       companyResp,
+		IsShowSoldOut: cashierSetting.MenuShowSoldOut == "1",
 	})
 }
 
