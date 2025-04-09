@@ -18,6 +18,7 @@ type ISaleBillRepo interface {
 	UpdateSaleBillRecord(saleBill model.SaleBill) error
 	UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error
 	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error                                          // 确认必点
+	UpdateSaleBillAutoAddMustProduct(saleBillUuid uint64) error                                    // 完成自动加购
 	GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
 	GetInstantSaleBillLatest() (*model.SaleBill, error)                                            // 获取最新的一条点餐销售账单
 	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                     // 获取销售账单的自助餐商品列表
@@ -132,6 +133,11 @@ func (r *saleBillRepo) UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) err
 
 func (r *saleBillRepo) UpdateSaleBillShowMustPlan(saleBillUuid uint64) error {
 	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Update("show_must_plan", constant.SaleBillShowMustPlanNo).Error
+}
+
+// 设置账单已经完成自动加购
+func (r *saleBillRepo) UpdateSaleBillAutoAddMustProduct(saleBillUuid uint64) error {
+	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Update("auto_add_must_product", 0).Error
 }
 
 func (r *saleBillRepo) GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64) ([]*model.SaleBill, int64, error) {

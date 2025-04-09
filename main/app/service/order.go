@@ -3298,6 +3298,13 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		opts = append(opts, repository.WithH5OrderUuid(h5OrderUuid))
 	}
 
+	// todo 推送打印日志 进行排查
+	fmt.Println("h5OrderUuidh5OrderUuid - ", h5OrderUuid)
+	fmt.Println("h5OrderUuidh5OrderUuid - 22", ctx.GetGin().GetHeader("h5_order_uuid"))
+	fmt.Println("h5OrderUuidh5OrderUuid - 33", ctx.GetGin().GetHeader("H5_order_uuid"))
+	fmt.Println("h5OrderUuidh5OrderUuid - 44", ctx.GetGin().GetHeader("h5-order-uuid"))
+	fmt.Println("h5OrderUuidh5OrderUuid - GetSource", ctx.GetSource())
+
 	option := &repository.OrderCartInfoOption{}
 	for _, opt := range opts {
 		opt(option)
@@ -5022,6 +5029,10 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 			if err != nil {
 				return errors.WithMessage(err, "自动添加必点商品失败")
 			}
+			// 设置已经完成自动加购
+			if err := repository.NewSaleBillRepo(tx).UpdateSaleBillAutoAddMustProduct(saleBillUuid); err != nil {
+				return errors.WithMessage(err, "标记自动加购完成失败")
+			}
 			return nil
 		})
 		if errTx != nil {
@@ -5042,7 +5053,8 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	if shopCartInfo.SaleBill.IsShowMustPlan() {
 		list = mustPlanList
 	}
-	return &resp.InstantProductMustPlanResp{List: list, ShopCartInfo: cartInfo}, nil
+	mustPlan := &resp.InstantProductMustPlanResp{List: list, ShopCartInfo: cartInfo}
+	return mustPlan, nil
 }
 
 func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, mealNum uint) (*resp.InstantProductMustPlanResp, error) {
