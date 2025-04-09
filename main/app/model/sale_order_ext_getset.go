@@ -37,7 +37,7 @@ func (model *SaleOrder) GetFreeReason() dto.LocaleResponse {
 	trNames := make([]string, 0)
 	// 遍历选择的免单原因
 	for _, reason := range model.FreeReasons {
-		if !reason.IsFreeReason() {
+		if !reason.IsFreeReason() || reason.IsDelete() {
 			continue
 		}
 		zhNames = append(zhNames, reason.MultiLanguageName.ZhName)

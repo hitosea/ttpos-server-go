@@ -86,6 +86,18 @@ func (model *SaleOrder) GetIndex() int {
 	return model.index
 }
 
+func (model *SaleOrder) ClearSettleInfo() {
+	model.PaymentAmount = 0
+	model.ChangeAmount = 0
+	model.ZeroCheckoutFee = 0
+	model.FinalPrice = 0
+	model.PaymentCommissionFee = 0
+	model.GiftAmount = 0
+	model.GiftPoints = 0
+	model.GiftPointsRate = 0
+	model.MemberBalance = 0
+}
+
 // 插入销售订单商品，如果商品已存在，则更新
 func (model *SaleOrder) InsertSaleOrderProduct(saleOrderProducts []*SaleOrderProduct) {
 	saleOrderProductMap := make(map[uint64]*SaleOrderProduct)

@@ -1822,6 +1822,17 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 如果销售订单是免单，删除免单原因
+		for _, saleOrder := range saleBill.SaleOrders {
+			if saleOrder.IsFreeSaleOrder() {
+				saleOrder.FreeReason = ""
+				// 删除销售订单的免单原因
+				if err := repository.NewSaleOrderProductReasonRepo(db).DeleteFreeReason(saleOrder.Uuid); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+		}
+
 		// 如果存在需要挂单的销售账单，则更新该销售账单
 		if hideSaleBill != nil {
 			if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*hideSaleBill); err != nil {
@@ -1838,6 +1849,8 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 		}
 		// 更新销售订单
 		for _, saleOrder := range saleBill.SaleOrders {
+			// 将结账才记录的值清空
+			saleOrder.ClearSettleInfo()
 			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
 				return errors.WithMessage(err)
 			}
