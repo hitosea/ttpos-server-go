@@ -426,6 +426,8 @@
             document.removeEventListener('keyup', this.onEnter);
             document.removeEventListener('focus', this.getCode('return'));
             this.logining = false;
+            // 由于路由存在缓存，导致数据更新不及时，所以需要刷新页面
+            location.reload();
           })
           .catch((error) => {
             this.logining = false;
@@ -454,8 +456,8 @@
       handleFocus() {
         // 获取当前时间戳
         let timestamp = new Date().getTime();
-        // 当前时间戳减去上次图片获取验证码的时间戳大于1500s
-        if (timestamp - Number(this.$refs.imgRef.getAttribute('data-time')) > 1500 * 1000) {
+        // Check if imgRef exists before accessing its properties
+        if (this.$refs.imgRef && this.$refs.imgRef.getAttribute('data-time') && timestamp - Number(this.$refs.imgRef.getAttribute('data-time')) > 1500 * 1000) {
           // 如果大于1500s，重新获取验证码
           this.getCode();
         }

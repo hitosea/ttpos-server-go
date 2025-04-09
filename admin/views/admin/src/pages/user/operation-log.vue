@@ -12,7 +12,7 @@
     <!-- 表格 -->
     <el-table v-loading="isFetching" :data="data?.data?.list?.data" border>
       <el-table-column prop="id" label="ID"></el-table-column>
-      <el-table-column prop="user_name" :label="$t('用户名')"></el-table-column>
+      <el-table-column prop="username" :label="$t('用户名')"></el-table-column>
       <el-table-column prop="real_name" :label="$t('姓名')">
         <template #default="scope">
           {{ scope.row.real_name || '-' }}
@@ -59,7 +59,7 @@
           <div class="rounded py-2 px-3 bg-[#f6f8fb] w-full">{{ detailItem.id }}</div>
         </el-form-item>
         <el-form-item :label="$t('用户名：')">
-          <div class="rounded py-2 px-3 bg-[#f6f8fb] w-full">{{ detailItem.user_name || '-' }}</div>
+          <div class="rounded py-2 px-3 bg-[#f6f8fb] w-full">{{ detailItem.username || '-' }}</div>
         </el-form-item>
         <el-form-item :label="$t('真实姓名：')">
           <div class="rounded py-2 px-3 bg-[#f6f8fb] w-full">{{ detailItem.real_name || '-' }}</div>

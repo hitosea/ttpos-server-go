@@ -1,7 +1,10 @@
 package repository
 
 import (
+	"encoding/json"
 	"time"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/logger"
@@ -22,6 +25,7 @@ type IPrinterLogRepo interface {
 	WhereStatus(status uint8) DBOption               // 状态查询条件
 	WhereCreateTimeGt(ts int64) DBOption             // 创建时间大于
 	WhereType(typ uint8) DBOption                    // 类型查询条件
+	WhereDataType(dataType uint8) DBOption           // 数据类型查询条件
 	WhereFirstExecution(firstExecution int) DBOption // 是否首次执行
 	WhereUuid(uuid uint64) DBOption                  // uuid 查询条件
 	WhereCreatedBefore(days uint) DBOption           // n天前的数据
@@ -36,6 +40,7 @@ type IPrinterLogRepo interface {
 	GetPrinterLogList(opts ...DBOption) ([]model.PrinterLog, error)
 	GetPrinterData(deviceSn string, opts ...DBOption) ([]model.PrinterLog, error)
 	GetByUuids(uuids []uint64) ([]model.PrinterLog, error)
+	GetShiftPrinterData(deviceSn string, opts ...DBOption) *resp.PrinterData
 
 	GetPrinter(opts ...DBOption) *model.Printer
 
@@ -167,6 +172,65 @@ func (r *printerLogRepo) GetPrinterData(deviceSn string, opts ...DBOption) ([]mo
 	return printerLogList, nil
 }
 
+// GetShiftPrinterData 获取交班打印数据
+func (r *printerLogRepo) GetShiftPrinterData(deviceSn string, opts ...DBOption) *resp.PrinterData {
+	printerLog := r.GetPrinterLog(
+		r.WithPrinter(),
+		r.WithPrinterPrinterType(),
+		r.WhereType(1),
+		r.WhereDataType(constant.PrinterTemplateHandoverSheet),
+		r.WhereStatus(1),
+		r.WhereFirstExecution(0),
+		func(db *gorm.DB) *gorm.DB {
+			// 相同设备的
+			db.Where("(cashier_device_id = ? OR cashier_device_id = '')", deviceSn)
+			// 0次或1次
+			db.Where("(num in (0, 1))")
+			// 1天内
+			db.Where("(create_time > UNIX_TIMESTAMP() - 86400)")
+			// 未读
+			db.Where("read_device_id = ''")
+			//
+			return db
+		},
+	)
+
+	// 标记已读
+	if printerLog.ID > 0 {
+		// 更新打印日志为已读
+		err := r.UpdateByWhere(
+			map[string]any{
+				"read_device_id": deviceSn,
+				"status":         2,
+			},
+			func(db *gorm.DB) *gorm.DB {
+				return db.Where("id = ?", printerLog.ID)
+			},
+		)
+		if err != nil {
+			logger.Logger.Error("更新打印日志失败", zap.Error(err))
+		}
+		// 返回打印数据
+		return &resp.PrinterData{
+			Uuid:             printerLog.Uuid,
+			Data:             printerLog.Data,
+			PrintMethod:      printerLog.PrintMethod,
+			Copies:           printerLog.Printer.Copies,
+			PrinterType:      printerLog.PrinterType,
+			IsCashierPrinter: printerLog.IsCashierPrinter(),
+			PrinterConfig: func() string {
+				configJson, err := json.Marshal(printerLog.Printer.GetConfigJson())
+				if err != nil {
+					return ""
+				}
+				return string(configJson)
+			}(),
+		}
+	}
+
+	return nil
+}
+
 // GetPrinter 获取打印机
 func (r *printerLogRepo) GetPrinter(opts ...DBOption) *model.Printer {
 	var printer model.Printer
@@ -248,6 +312,12 @@ func (r *printerLogRepo) WhereLimit(limit int) DBOption {
 func (r *printerLogRepo) WhereType(typ uint8) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("type = ?", typ)
+	}
+}
+
+func (r *printerLogRepo) WhereDataType(dataType uint8) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("data_type = ?", dataType)
 	}
 }
 

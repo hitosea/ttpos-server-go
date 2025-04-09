@@ -336,12 +336,12 @@
     parent_id: [{ required: true, message: $t('请选择上级商家'), trigger: 'blur' }],
     store_type: [{ required: true, message: $t('请选择经营模式'), trigger: 'blur' }],
     category_set: [{ required: true, message: $t('请选择商品分类'), trigger: 'blur' }],
-    logo: [{ required: true, message: $t('请输上传LOGO'), trigger: ['change', 'blur'] }],
+    logo: [{ required: true, message: $t('请上传LOGO'), trigger: ['change', 'blur'] }],
     sale_stock: [{ required: true, message: $t('请选择进销存'), trigger: 'blur' }],
     is_open_tax: [{ required: true, message: $t('请选择税务对接'), trigger: 'blur' }],
     reserve: [{ required: true, message: $t('请选择预订'), trigger: 'blur' }],
     auth_day: [{ required: true, message: $t('请输入授权时间'), trigger: 'blur' }],
-    auth_start_time: [{ required: true, message: $t('请输入授权开始时间'), trigger: 'blur' }],
+    auth_start_time: [{ required: true, message: $t('请选择授权开始时间'), trigger: 'blur' }],
     cash_limit: [{ required: true, message: $t('请输入收银机登录上限'), trigger: 'blur' }],
     tablet_limit: [{ required: true, message: $t('请输入平板登录上限'), trigger: 'blur' }],
     kitchen_limit: [{ required: true, message: $t('请输入厨显登录上限'), trigger: 'blur' }],
@@ -417,7 +417,7 @@
         validator: (_: object, value: string, callback: any) => {
           if (hasEdit.value && !value) callback();
           if (!value) {
-            callback(new Error($t('请确认密码')));
+            callback(new Error($t('请输入确认密码')));
           } else if (value !== formData.value.password) {
             callback(new Error($t('两次密码不一致！')));
           }

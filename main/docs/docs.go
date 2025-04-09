@@ -18879,6 +18879,10 @@ const docTemplate = `{
                             }
                         }
                     }
+                },
+                "update_time": {
+                    "description": "更新时间",
+                    "type": "integer"
                 }
             }
         },
