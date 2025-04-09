@@ -36,7 +36,7 @@ type AbnormalData struct {
 type MemberData struct {
 	RechargeAmount float64 `json:"recharge_amount"` // 充值金额
 	GiftMoney      float64 `json:"gift_money"`      // 赠送金额
-	GiftPoints     int     `json:"gift_points"`     // 赠送积分
+	GiftPoints     float64 `json:"gift_points"`     // 赠送积分
 	UserCount      int     `json:"user_count"`      // 会员数量
 }
 

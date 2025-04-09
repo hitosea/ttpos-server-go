@@ -118,7 +118,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 				return business_data_resp.MemberData{
 					RechargeAmount: memberData.TotalRechargeAmount,
 					GiftMoney:      memberData.TotalGiveAmount,
-					GiftPoints:     int(memberData.TotalGivePoint),
+					GiftPoints:     memberData.TotalGivePoint,
 					UserCount:      int(memberNum),
 				}
 			}(),
@@ -311,7 +311,7 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 			return business_data_resp.MemberData{
 				RechargeAmount: memberData.TotalRechargeAmount,
 				GiftMoney:      memberData.TotalGiveAmount,
-				GiftPoints:     int(memberData.TotalGivePoint),
+				GiftPoints:     memberData.TotalGivePoint,
 				UserCount:      int(memberNum),
 			}
 		}(),
