@@ -5,8 +5,10 @@ namespace app\common\library\language\engine;
 class OpenAi
 {
 
-    const URL = "http://103.63.139.229:8088/api/translate";
+    // const URL = "http://103.63.139.229:8088/api/translate";
+    const URL = "https://aitrans.keli.vip/translate";
     const CURL_TIMEOUT = 10000;
+    const CONNECT_TIMEOUT = 10;
 
     private string $APP_KEY = '';
     private string $SEC_KEY = '';
@@ -82,15 +84,11 @@ class OpenAi
     {
         $curl = curl_init();
         $method = strtoupper($method);
-        //
         curl_setopt($curl, CURLOPT_URL, $url);
-        //请求方式
         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
-        //post请求
         if ($method == 'POST') curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
-        //超时时间
         curl_setopt($curl, CURLOPT_TIMEOUT, $timeout);
-        //设置header头
+        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, self::CONNECT_TIMEOUT);
         if ($header === 'form') {
             curl_setopt($curl, CURLOPT_HTTPHEADER, array(
                 'Content-Type: application/x-www-form-urlencoded;',
@@ -107,13 +105,9 @@ class OpenAi
             ));
         }
         curl_setopt($curl, CURLOPT_FAILONERROR, false);
-        //返回抓取数据
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        //输出header头信息
         curl_setopt($curl, CURLOPT_HEADER, true);
-        //TRUE 时追踪句柄的请求字符串，从 PHP 5.1.3 开始可用。这个很关键，就是允许你查看请求header
         curl_setopt($curl, CURLINFO_HEADER_OUT, true);
-        //https请求
         if (1 == strpos("$" . $url, "https://")) {
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
