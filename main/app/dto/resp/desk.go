@@ -47,7 +47,8 @@ type DeskType struct {
 
 // DeskRegionAndTypeListWithPaginationResp 桌台区域和类型列表响应
 type DeskRegionAndTypeListWithPaginationResp struct {
-	Region struct { // 餐桌区域
+	UpdateTime int64    `json:"update_time"` // 更新时间
+	Region     struct { // 餐桌区域
 		List []DeskRegion `json:"list"`
 	} `json:"region"`
 	Type struct { // 餐桌类型
