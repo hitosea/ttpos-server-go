@@ -27,16 +27,16 @@ class Printer extends PrinterModel
             return false;
         }
         $printerType = $data['printer_type'];
+        $type = PrinterType::getPrinterTypeByKey($printerType);
+        if (!$type) {
+            $this->error = '打印机类型不存在';
+            return false;
+        }
         if ($printerType == PrinterTypeEnum::XPRINTER_WIFI) {
             $printerType = PrinterTypeEnum::XPRINTER_LAN;
         }
         if ($printerType == PrinterTypeEnum::CODESOFT_WIFI) {
             $printerType = PrinterTypeEnum::CODESOFT_LAN;
-        }
-        $type = PrinterType::getPrinterTypeByKey($printerType);
-        if (!$type) {
-            $this->error = '打印机类型不存在';
-            return false;
         }
         $data['uuid'] = createUuid();
         $data['name'] = $data['printer_name'] ?? '';
@@ -63,16 +63,16 @@ class Printer extends PrinterModel
             return false;
         }
         $printerType = $data['printer_type'];
+        $type = PrinterType::getPrinterTypeByKey($printerType);
+        if (!$type) {
+            $this->error = '打印机类型不存在';
+            return false;
+        }
         if ($printerType == PrinterTypeEnum::XPRINTER_WIFI) {
             $printerType = PrinterTypeEnum::XPRINTER_LAN;
         }
         if ($printerType == PrinterTypeEnum::CODESOFT_WIFI) {
             $printerType = PrinterTypeEnum::CODESOFT_LAN;
-        }
-        $type = PrinterType::getPrinterTypeByKey($printerType);
-        if (!$type) {
-            $this->error = '打印机类型不存在';
-            return false;
         }
         $data['name'] = $data['printer_name'] ?? '';
         $data['copies'] = $data['print_times'] ?? 0;

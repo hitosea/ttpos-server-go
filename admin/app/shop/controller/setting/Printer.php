@@ -110,6 +110,7 @@ class Printer extends Controller
         if ($this->request->isGet()) {
             return $this->detail($printer_id);
         }
+        /** @var PrinterModel $model */
         $model = PrinterModel::detail($printer_id);
         // 更新记录
         if ($model->edit($this->postData())) {
