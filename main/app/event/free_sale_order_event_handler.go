@@ -55,9 +55,10 @@ func freeSaleOrderEventHandler() {
 				OperatorUuid:  payload.GetOperatorUuid(),
 			}
 			checkoutSaleOrderPayload := event.CheckoutSaleOrderPayload{
-				OrderPrice: payload.OrderPrice,
-				PayPrice:   payload.PayPrice,
-				IsFree:     true,
+				OrderPrice:    payload.OrderPrice,
+				PayPrice:      payload.PayPrice,
+				IsFree:        true,
+				DiscountMoney: payload.DiscountMoney,
 			}
 			checkoutSaleOrderPayload.IsSplitOrder = payload.SaleBill.IsSplit()
 			for i, saleOrder := range payload.SaleBill.SaleOrders {

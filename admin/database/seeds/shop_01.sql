@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `buffet_package2_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '自助餐套餐2的uuid',
     `device_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '设备ID，用于标识这个账单是由哪个设备创建的。点餐账单通过设备uuid查询',
     -- 随订单修改而更新的字段
-    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单金额,关联销售订单的总金额之和',
+    `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单金额(折后价),关联销售订单的总金额之和',
+    `origin_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单金额(折前价)。商品未含税时，订单金额(折前价)=商品金额+服务费+税费。商品已含税时，订单金额(折前价)=商品金额（含商品消费税）+服务费+税费（只有服务费税）',
+    
 
     -- 完成账单才记录的字段
     `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额,关联销售订单的商品金额之和',

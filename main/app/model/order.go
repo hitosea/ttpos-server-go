@@ -42,6 +42,7 @@ func NewDeskSaleBill(saleBillUuid uint64, orderNo string, buffetUuids []uint64, 
 
 type SaleBillCalc struct {
 	Amount            float64 `json:"amount"`              // 订单总金额=销售订单的应收金额之和
+	OriginAmount      float64 `json:"origin_amount"`       // 订单金额(折前价)。销售订单的原始应收金额之和
 	ProductAmount     float64 `json:"product_amount"`      // 商品金额=销售订单的商品金额之和
 	ServiceFee        float64 `json:"service_fee"`         // 服务费=销售订单的服务费之和
 	TaxFee            float64 `json:"tax_fee"`             // 税费=销售订单的税费之和

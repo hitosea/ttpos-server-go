@@ -39,6 +39,7 @@ type SaleBill struct {
 
 	// 金额字段 - 主要金额
 	Amount                float64 `gorm:"column:amount;type:decimal(12,2);default:0;comment:订单总金额,关联销售订单的总金额之和" json:"amount"`
+	OriginAmount          float64 `gorm:"column:origin_amount;type:decimal(12,2);default:0;comment:订单金额(折前价)。商品未含税时，订单金额(折前价)=商品金额+服务费+税费。商品已含税时，订单金额(折前价)=商品金额（含商品消费税）+服务费+税费（只有服务费税）" json:"origin_amount"`
 	ProductAmount         float64 `gorm:"column:product_amount;type:decimal(12,2);default:0;comment:商品金额,关联销售订单的商品金额之和" json:"product_amount"`
 	ProductOriginalAmount float64 `gorm:"column:product_original_amount;type:decimal(12,2);default:0;comment:原始商品金额。 商品原始金额=(订单.原始商品金额)之和。" json:"product_original_amount"`
 

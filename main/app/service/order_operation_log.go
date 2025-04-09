@@ -134,14 +134,14 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 	case constant.OrderFreeSale: // 免单
 		var freeSale event.FreeSaleOrderPayload
 		if err := json.Unmarshal([]byte(log.Data), &freeSale); err == nil {
-			return i18n.Translate(language, "免单") + " (" + currencySetting.Unit + utils.FormatFloat(freeSale.OrderPrice) + ")"
+			return i18n.Translate(language, "免单") + " (" + currencySetting.Unit + utils.FormatFloat(freeSale.DiscountMoney) + ")"
 		}
 	case constant.OrderSettle: // 结账
 		var settle event.CheckoutSaleOrderPayload
 		if err := json.Unmarshal([]byte(log.Data), &settle); err == nil {
 			var payTypeList []string
 			if settle.IsFree {
-				payTypeList = append(payTypeList, i18n.Translate(language, "免单")+": "+currencySetting.Unit+utils.FormatFloat(settle.OrderPrice))
+				payTypeList = append(payTypeList, i18n.Translate(language, "免单")+": "+currencySetting.Unit+utils.FormatFloat(settle.DiscountMoney))
 			}
 			for _, payType := range settle.PayType {
 				payTypeName := payType.Name

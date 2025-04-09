@@ -30,12 +30,24 @@ func (model *SaleBill) calcProductOriginalAmount() float64 {
 func (model *SaleBill) calcAmount() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
+		if saleOrder.IsDelete() {
 			continue
 		}
 		amount = amount.Add(decimal.NewFromFloat(saleOrder.GetAmount()))
 	}
-	return amount.InexactFloat64()
+	return amount.Truncate(3).Round(2).InexactFloat64()
+}
+
+// 计算销售账单的原始金额。原始金额=销售订单的原始应收金额之和
+func (model *SaleBill) calcOriginAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrder := range model.SaleOrders {
+		if saleOrder.IsDelete() {
+			continue
+		}
+		amount = amount.Add(decimal.NewFromFloat(saleOrder.OriginAmount))
+	}
+	return amount.Truncate(3).Round(2).InexactFloat64()
 }
 
 // 计算销售订单的商品金额。商品金额=销售订单的商品金额之和
@@ -152,6 +164,8 @@ func (model *SaleBill) CalcSaleBill() *SaleBillCalc {
 	calc := SaleBillCalc{}
 	calc.Amount = model.calcAmount()
 	model.Amount = calc.Amount
+	calc.OriginAmount = model.calcOriginAmount()
+	model.OriginAmount = calc.OriginAmount
 	calc.ProductAmount = model.calcProductAmount()
 	model.ProductAmount = calc.ProductAmount
 	calc.ServiceFee = model.calcServiceFee()
