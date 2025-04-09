@@ -58,7 +58,9 @@ class BalanceLog extends BalanceLogModel
                 $item['describe'] = $item['describe'] . '：' . ($item['remark'] ?: '-');
             }
             // 
-            $item['member_uuid'] = $item['user']['id'];
+            if (isset($item['user']['id'])) {
+                $item['member_uuid'] = $item['user']['id'];
+            }
         }
         return $list;
     }
