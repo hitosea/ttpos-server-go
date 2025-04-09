@@ -201,6 +201,7 @@ func (r *printerLogRepo) GetShiftPrinterData(deviceSn string, opts ...DBOption) 
 		err := r.UpdateByWhere(
 			map[string]any{
 				"read_device_id": deviceSn,
+				"status":         2,
 			},
 			func(db *gorm.DB) *gorm.DB {
 				return db.Where("id = ?", printerLog.ID)
