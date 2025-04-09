@@ -124,6 +124,9 @@ func (model *SaleOrderProduct) calcSaleOrderProduct(serviceFeeRate float64, taxF
 
 // 计算销售订单商品的所有计算值字段。从后台获取最新的价格
 func (model *SaleOrderProduct) calcLastestSaleOrderProduct(serviceFeeRate float64, taxFeeType int, serviceFeeType int) SaleOrderProductCalc {
+	// 设置最新的商品会员折扣设置，即是否开启会员折扣
+	model.OpenMemberDiscount = model.ProductPackage.OpenDiscount
+
 	calc := SaleOrderProductCalc{}
 	// 开始计算
 	calc.SaucePrice = model.calcLastestSaucePrice() // 从后台获取最新的价格
