@@ -20,6 +20,10 @@ func (e AppError) GetCode() int {
 	return e.Code
 }
 
+func (e AppError) GetData() interface{} {
+	return e.data
+}
+
 func New(messages ...string) AppError {
 	msg := strings.Join(messages, " ")
 	return AppError{Code: constant.CodeFail, Message: msg}

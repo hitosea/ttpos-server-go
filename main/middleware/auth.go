@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -18,6 +19,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	apperrors "ttpos-server-go/app/errors"
 )
 
 func Auth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
@@ -146,6 +149,15 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 		TokenIssuedAt: claims.IssuedAt.Unix(),
 	})
 	if err != nil {
+		var appErr apperrors.AppError
+		if errors.As(err, &appErr) {
+			code := appErr.GetCode()
+			if code == constant.CodeTokenInvalid && appErr.GetData() != nil {
+				helper.ErrorWithData(c, constant.CodeAccessDenied, appErr.GetData(), err)
+				c.Abort()
+				return
+			}
+		}
 		helper.ErrorWithDetail(c, constant.CodeAccessDenied, err)
 		c.Abort()
 		return
