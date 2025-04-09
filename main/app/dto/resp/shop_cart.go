@@ -170,7 +170,7 @@ type Product struct {
 
 // GetPrice 获取商品价格(折后价)
 func (p *Product) GetPrice() float64 {
-	return decimal.NewFromFloat(p.DiscountPrice).Mul(decimal.NewFromInt(int64(p.Num))).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(p.DiscountPrice).Round(2).InexactFloat64()
 }
 
 type AboutBuffet struct {
