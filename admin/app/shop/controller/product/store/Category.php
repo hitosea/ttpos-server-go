@@ -5,6 +5,7 @@ namespace app\shop\controller\product\store;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\shop\model\product\Category as CategoryModel;
+use think\facade\Log;
 
 /**
  * 店内商品分类
@@ -26,7 +27,7 @@ class Category extends Controller
         $params = $this->postData();
         $model = new CategoryModel;
         $name = isset($params['name']) ? $params['name'] : '';
-        $list = $model->getCacheAll(1, 0, $this->store, $name, false) ?: [];
+        $list = $model->getCacheAll(1, 0, $this->store, $name, false, 1) ?: [];
         // 列表关联产品数量
         foreach ($list['data'] as &$item) {
             // 处理按钮子分类

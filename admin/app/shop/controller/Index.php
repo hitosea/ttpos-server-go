@@ -398,6 +398,9 @@ class Index extends Controller
     {
         $ai = new OpenAi();
         $res = $ai->forward(request()->post());
+        if ($res) {
+            $res['data'] = json_encode($res['data'], JSON_UNESCAPED_UNICODE);
+        }
         return $this->renderSuccess('', $res);
     }
 

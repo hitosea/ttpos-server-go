@@ -135,7 +135,7 @@ class Category extends BaseModel
     /**
      * 所有分类
      */
-    public static function getAll($type, $is_special, $store = [], $name = '', $is_sort = 1)
+    public static function getAll($type, $is_special, $store = [], $name = '', $is_sort = 1, $all = 0)
     {
         $request = request();
         $page = $request->param('page');
@@ -145,7 +145,7 @@ class Category extends BaseModel
         $child_order_conditions = $is_sort ? ['sort' => 'asc', 'create_time' => 'desc'] : ['create_time' => 'desc'];
 
         $model = new static;
-        $cacheKey = 'category_' . $model::$app_id . $type . $is_special . $is_sort . '_' . checkDetect();
+        $cacheKey = 'category_' . $model::$app_id . $type . $is_special . $is_sort . $all . '_' . checkDetect();
         if ($name != '' || $isPaginate || !($result = Cache::get($cacheKey))) {
             $prefix = Env::get('DB_PREFIX');
             $data = $model->alias('c')->with(['images', 'child' => function ($q) use ($name, $child_order_conditions) {
@@ -154,7 +154,11 @@ class Category extends BaseModel
             }])
                 ->where('c.parent_uuid', '=', 0)
                 ->where('c.is_special', '=', $is_special)
-                ->where('c.category_key','<>', 'all')
+                ->where(function ($query) use ($all) {
+                    if ($all == 0) {
+                        $query->where('c.category_key', '<>', 'all');
+                    }
+                })
                 ->order($order_conditions)
                 ->when($name != '', function ($q) use ($prefix, $name) {
                     $q->jsonLike('c.name', $name);
@@ -188,6 +192,7 @@ class Category extends BaseModel
         $model = $model->with(['images'])
             ->where('parent_uuid', '=', 0)
             ->where('is_special', '=', $is_special)
+            ->where('category_key', '<>', 'all')
             ->order(['create_time' => 'desc']);
         // 过滤按钮分类
         if ($filter_button) {
@@ -361,9 +366,9 @@ class Category extends BaseModel
     /**
      * 获取所有分类
      */
-    public static function getCacheAll($type, $is_special, $store = '', $name = '', $is_sort = true)
+    public static function getCacheAll($type, $is_special, $store = '', $name = '', $is_sort = true, $all = 0)
     {
-        return self::getAll($type, $is_special, $store, $name, $is_sort);
+        return self::getAll($type, $is_special, $store, $name, $is_sort, $all);
     }
 
     /**
