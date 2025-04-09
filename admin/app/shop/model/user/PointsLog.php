@@ -45,6 +45,8 @@ class PointsLog extends PointsLogModel
             if ($item['scene']['value'] == PointsLogSceneEnum::DEDUCT) {
                 $item['describe'] = $item['describe'] . '：' . ($item['remark'] ?: '-');
             }
+            // 
+            $item['member_uuid'] = $item['user']['id'];
         }
         return $list;
     }
