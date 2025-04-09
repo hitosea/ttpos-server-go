@@ -9,7 +9,7 @@
     @close="emits('update:show', false)"
   >
     <h2 class="border-l-4 border-[#ffbe00] pl-2 text-[16px] mb-4">{{ $t('申请信息') }}(LianLian)</h2>
-    <el-form :model="formData" :rules="formRules" ref="formElement" label-position="top" label-width="auto">
+    <el-form :model="formData" :rules="formRules" ref="formElement" label-position="top" label-width="auto" v-loading="formLoading">
       <el-form-item :label="$t('白名单IP')" prop="ll_white_ip">
         <el-input v-model="formData.ll_white_ip" type="text" maxlength="50" disabled clearable :placeholder="$t('请输入白名单IP')"></el-input>
       </el-form-item>
@@ -114,6 +114,15 @@
   watch(
     () => props.show,
     (val) => {
+      // 清空数据
+      formData.value = {
+        ll_white_ip: '',
+        ll_merchant_id: '',
+        ll_public_key: '',
+        ll_merchant_private_key: '',
+        ll_token: '',
+        ll_store_id: '',
+      };
       if (!val) return;
       getPaymentData();
     },
