@@ -2462,7 +2462,7 @@ func getSaleOrderFromDB(ctx context.Context, db *gorm.DB, saleBillUuid, saleOrde
 // OrderProductChangePrice  修改订单商品价格
 func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error) {
 	if req.Price < 0 || req.Price > 1000000 {
-		return nil, errors.New("价格错误")
+		return nil, errors.New("请输入0-1000000间的价格")
 	}
 
 	// 禁止并发操作
@@ -3711,6 +3711,9 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			} else if saleOrderProduct.IsSubOperation() {
 				// 减去新增的商品数量
 				orderProduct.Num -= saleOrderProduct.Num
+				if orderProduct.Num <= 0 {
+					orderProduct.SetDelete()
+				}
 				orderProduct.SetUpdate()
 				saleOrderProducts = append(saleOrderProducts, orderProduct)
 			}
