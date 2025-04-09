@@ -224,17 +224,16 @@ class ErpWarehouseOutForm extends BaseModel
                 return false;
             }
             $formItem = $this->erpWarehouseOutFormItem;
-            if (!$formItem->productBom || $formItem->productBom->delete_time > 0) {
-                $this->error = '规格不存在，无法进行撤销操作';
-                return false;
-            }
-            if ($formItem->productBom && $formItem->productBom->relatedMaterial->count() > 0) {
-                $this->error = '关联材料商品无法进行撤销操作';
-                return false;
-            }
-            
-            // 回滚规格库存
             if ($formItem->productBom) {
+                if ($formItem->productBom->delete_time > 0) {
+                    $this->error = '规格不存在，无法进行撤销操作';
+                    return false;
+                }
+                if ($formItem->productBom->relatedMaterial->count() > 0) {
+                    $this->error = '关联材料商品无法进行撤销操作';
+                    return false;
+                }
+                // 回滚规格库存
                 ProductBom::where('uuid', $formItem->productBom->uuid)->inc('stock_num', $formItem->num)->update();
             }
 
