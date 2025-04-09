@@ -1,8 +1,10 @@
 package model
 
 import (
+	"github.com/spf13/viper"
 	"path/filepath"
 	"slices"
+	"strings"
 )
 
 // File 文件库记录表 ttpos_file
@@ -28,15 +30,15 @@ type File struct {
 // GetUrl 获取地址。file_url + save_name + url_param
 func (model *File) GetUrl(baseUrl string) string {
 	videoExtensions := []string{".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv", ".webm", ".m4v", ".mpeg", ".3gp"}
-	if model.Storage == "local" {
+	if model.Storage == "local" && (model.UrlParam != "" || viper.GetString("STORAGE_DRIVER") == "local") {
 		saveName := model.SaveName
 		if model.FileType == ".video" || slices.Contains(videoExtensions, "."+filepath.Ext(saveName)) {
 			return baseUrl + "uploads/" + saveName
 		}
 		return baseUrl + "api/product/thumbs/uploads/" + saveName
 	}
-	if model.Storage == "google" {
-		return model.FileUrl + "/" + model.SaveName + "?" + model.UrlParam
+	if model.Storage == "google" || strings.Contains(model.UrlParam, "GoogleAccessId") {
+		return strings.Replace(model.FileUrl+"/"+model.SaveName+"?"+model.UrlParam, "https://storage.googleapis.com/", baseUrl+"storage_googleapis/", -1) + "&"
 	}
 	return model.FileUrl + "/" + model.FileName
 }
