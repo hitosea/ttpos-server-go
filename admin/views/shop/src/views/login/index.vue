@@ -426,6 +426,8 @@
             document.removeEventListener('keyup', this.onEnter);
             document.removeEventListener('focus', this.getCode('return'));
             this.logining = false;
+            // 由于路由存在缓存，导致数据更新不及时，所以需要刷新页面
+            location.reload();
           })
           .catch((error) => {
             this.logining = false;
