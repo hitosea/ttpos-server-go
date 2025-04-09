@@ -685,7 +685,7 @@ class Order extends BaseModelOrder
             'pay_fee_money' => $data['total_pay_fee_money'],
             'consumption_tax_money' => $data['total_tax_money'],
             'refund_money' => $data['total_refund_money'],
-            'discount_money' => $data['total_user_discount_money'],
+            'discount_money' => $data['total_discount_money'],
             'discount_ratio' => $data['total_discount_ratio'] . '%',
             'free_product_price' => $data['total_give_product_price'],
             'free_product_num' => $data['total_give_product_num'],
