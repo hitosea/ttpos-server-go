@@ -225,7 +225,9 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 // TabletAddAndCooking 平板端加购并送厨
 func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) error {
 	saleBill, _ := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(request.SaleBillUuid)
- 
+	if saleBill.IsEndStatus() {
+		return errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))
+	}
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, request.SaleOrderUuid); err != nil {
 		return errors.WithMessage(err)

@@ -2625,6 +2625,9 @@ definitions:
               $ref: '#/definitions/resp.DeskType'
             type: array
         type: object
+      update_time:
+        description: 更新时间
+        type: integer
     type: object
   resp.DeskType:
     properties:
