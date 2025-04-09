@@ -879,6 +879,8 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				if saleOrderProduct.ImageFile != nil {
 					imageUrl = saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
 				}
+				cancelReason := saleOrderProduct.GetCancelReason()
+				giftReason := saleOrderProduct.GetGiftReason()
 				products = append(products, resp.OrderProduct{
 					Uuid:                saleOrderProduct.Uuid,
 					LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
@@ -893,8 +895,8 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					IsGift:              saleOrderProduct.IsGiftProduct(),
 					IsBuffet:            saleOrderProduct.IsBuffetProduct(),
 					ImageUrl:            imageUrl,
-					CancelReason:        saleOrderProduct.GetCancelReason(),
-					GiftReason:          saleOrderProduct.GetGiftReason(),
+					CancelReason:        cancelReason.GetLocale(ctx.GetLanguage()),
+					GiftReason:          giftReason.GetLocale(ctx.GetLanguage()),
 					RefundAmount:        saleOrderProduct.GetReturnPrice(),
 				})
 			}
