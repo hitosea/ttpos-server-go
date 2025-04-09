@@ -3,6 +3,8 @@ package service
 import (
 	"encoding/json"
 	"github.com/jinzhu/copier"
+	"go.uber.org/zap"
+	"os"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -13,6 +15,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 )
 
 type IProductionSrv interface {
@@ -83,7 +86,6 @@ func (s *productionSrv) getProductPackageUuids(ctx context.Context) ([]uint64, r
 		FinishedList: resp.ProductionList{
 			List: make([]resp.ProductionItem, 0),
 		},
-		Meta: dto.PageResponse{},
 	}
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	deviceRepo := repository.NewDeviceRepo(db)
@@ -238,9 +240,18 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 				}
 			}
 			var item resp.ProductionItem
-			copier.Copy(&item, product)
-			json.Unmarshal([]byte(product.FlavorName), &item.LocaleName)
-			json.Unmarshal([]byte(product.ProductAttributeNames), &item.ProductAttributeNames)
+			err := copier.Copy(&item, product)
+			if err != nil {
+				logger.Logger.Error("copier error", zap.Error(err))
+			}
+			err = json.Unmarshal([]byte(product.FlavorName), &item.LocaleName)
+			if err != nil {
+				logger.Logger.Error("json unmarshal error", zap.Error(err))
+			}
+			err = json.Unmarshal([]byte(product.ProductAttributeNames), &item.ProductAttributeNames)
+			if err != nil {
+				logger.Logger.Error("json unmarshal error", zap.Error(err))
+			}
 			item.SerialNo = product.SaleBill.SerialNo
 			items = append(items, item)
 		}
@@ -251,6 +262,15 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 			List: items,
 		}
 		groups = append(groups, group)
+	}
+
+	// ToDo 移除这段代码
+	groupsBytes, err := json.Marshal(groups)
+	if err != nil {
+		logger.Logger.Error("json unmarshal error", zap.Error(err))
+	}
+	if err = os.WriteFile("groups.json", groupsBytes, os.ModePerm); err != nil {
+		logger.Logger.Error("write file error", zap.Error(err))
 	}
 	return groups
 }

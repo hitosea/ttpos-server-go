@@ -80,7 +80,7 @@ func (r *productionRepo) GetProducts(opts ...DBOption) ([]model.ProductionOrderP
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	result := db.Order("create_time asc").Find(&productionOrderProducts)
+	result := db.Order("create_time asc").Debug().Find(&productionOrderProducts)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -95,7 +95,7 @@ func (r *productionRepo) GetFinishedLimitProducts(limit int, opts ...DBOption) (
 	}
 	result := db.Preload("SaleBill").
 		Where("status = ?", constant.ProductionOrderProductStatusFinished).
-		Order("finished_time desc").Limit(limit).Find(&productionOrderProducts)
+		Order("finished_time desc").Limit(limit).Debug().Find(&productionOrderProducts)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -119,12 +119,12 @@ func (r *productionRepo) GetLimitedProducts(column string, pageNo, pageSize int,
 		db = opt(db)
 	}
 	// 获取总数
-	err := db.Select(fmt.Sprintf("count(distinct `%s`) as total", column)).Scan(&total).Error
+	err := db.Select(fmt.Sprintf("count(distinct `%s`) as total", column)).Debug().Scan(&total).Error
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
 	// 获取列表
-	err = db.Select("DISTINCT " + column).Offset((pageNo - 1) * pageSize).Limit(pageSize).Order("create_time asc").Find(&productionOrderProducts).Error
+	err = db.Select("DISTINCT " + column).Offset((pageNo - 1) * pageSize).Limit(pageSize).Debug().Order("create_time asc").Find(&productionOrderProducts).Error
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
