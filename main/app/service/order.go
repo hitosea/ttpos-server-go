@@ -3298,6 +3298,9 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		opts = append(opts, repository.WithH5OrderUuid(h5OrderUuid))
 	}
 
+	// todo 推送打印日志 进行排查
+	fmt.Println("h5OrderUuidh5OrderUuid - ", h5OrderUuid)
+
 	option := &repository.OrderCartInfoOption{}
 	for _, opt := range opts {
 		opt(option)
