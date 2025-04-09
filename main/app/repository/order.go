@@ -581,6 +581,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.H5Order",
 						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductPackage",
+						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
@@ -676,6 +679,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
 						},
+						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.ProductPackage",
+						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
@@ -757,6 +763,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					},
 					WithPreload{
 						Query: "SaleOrders.SaleOrderProducts.H5Order",
+					},
+					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.ProductPackage",
 					},
 				),
 				CommonRepo.Preload(

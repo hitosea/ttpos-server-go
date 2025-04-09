@@ -105,6 +105,24 @@ type SaleOrderProduct struct {
 	operation string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
 }
 
+// 获取销售订单商品的会员卡折扣率
+func (model *SaleOrderProduct) GetMemberCardDiscountRate() float64 {
+	// 如果商品不参与会员打折，则返回1,表示不打折
+	if model.OpenMemberDiscount == constant.ProductMemberDiscountOff {
+		return constant.NoDiscount
+	}
+	return model.MemberCardDiscountRate
+}
+
+// 获取销售订单商品的会员折扣率
+func (model *SaleOrderProduct) GetMemberDiscountRate() float64 {
+	// 如果商品不参与会员打折，则返回1,表示不打折
+	if model.OpenMemberDiscount == constant.ProductMemberDiscountOff {
+		return constant.NoDiscount
+	}
+	return model.MemberDiscountRate
+}
+
 // 获取销售订单商品的总税费。包含服务费税费
 func (model *SaleOrderProduct) GetTotalTaxFee() float64 {
 	return model.GetTaxFee() + model.GetServiceTaxFee()
@@ -354,6 +372,14 @@ func (model *SaleOrderProduct) CheckOutProduct() (int, string) {
 		}
 	}
 
+	// 商品是否享受会员折扣发生变动
+	if model.memberDiscountChanged() {
+		// 如果商品已经有会员折扣时才返回价格变动
+		if model.MemberCardDiscountRate < 1 || model.MemberDiscountRate < 1 {
+			return constant.CodeOrderCheckProductPriceChanged, "商品会员折扣发生变动"
+		}
+	}
+
 	// 小料的价格有变动
 	if model.saucePriceChanged(model.SaucePrice) {
 		return constant.CodeOrderCheckProductPriceChanged, "小料价格变动"
@@ -423,6 +449,12 @@ func (model *SaleOrderProduct) CheckCookingProduct() (int, string) {
 	}
 
 	return constant.CodeSuccess, "商品检查通过"
+}
+
+// 商品是否享受会员折扣发生变动
+func (model *SaleOrderProduct) memberDiscountChanged() bool {
+	latestOpenMemberDiscount := model.ProductPackage.OpenDiscount
+	return latestOpenMemberDiscount != model.OpenMemberDiscount
 }
 
 // 小料的价格是否有变动
