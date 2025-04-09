@@ -31,7 +31,7 @@ class BalanceLog extends BalanceLogModel
         if (!empty($query['keyword'])) {
             $keyword = trim($query['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
-                $query->like('user.uuid|user.phone|user.nickname', $keyword);
+                $query->like('user.id|user.phone|user.nickname', $keyword);
             });
         }
         // 搜索时间段
