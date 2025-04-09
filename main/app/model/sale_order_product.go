@@ -278,6 +278,11 @@ func (model *SaleOrderProduct) SetIsBuffet() {
 	model.IsBuffet = constant.SaleOrderProductIsBuffetYes
 }
 
+// 设置该商品为非自助餐商品
+func (model *SaleOrderProduct) SetNotBuffet() {
+	model.IsBuffet = constant.SaleOrderProductIsBuffetNo
+}
+
 // 使用反射动态更新字段
 func (model *SaleOrderProduct) SetFields(updateProduct SaleOrderProduct, specialFields map[string]bool) bool {
 	// 使用反射动态更新字段

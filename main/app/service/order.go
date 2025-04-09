@@ -3687,17 +3687,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		// 判断该商品是不是自助餐商品
 		if params.SaleBill.IsBuffetSaleBill() {
 			// 获取自助餐商品包uuid列表
-			productPackageUuidMap := make(map[uint64]bool) // 自助餐商品包uuid
-			if params.SaleBill.BuffetPackage1 != nil {
-				for _, buffetProduct := range params.SaleBill.BuffetPackage1.BuffetProducts {
-					productPackageUuidMap[buffetProduct.ProductPackageUuid] = true
-				}
-			}
-			if params.SaleBill.BuffetPackage2 != nil {
-				for _, buffetProduct := range params.SaleBill.BuffetPackage2.BuffetProducts {
-					productPackageUuidMap[buffetProduct.ProductPackageUuid] = true
-				}
-			}
+			productPackageUuidMap := params.SaleBill.GetBuffetProductMap()
 			// 判断该商品是不是自助餐商品
 			if _, ok := productPackageUuidMap[saleOrderProduct.ProductPackageUuid]; ok {
 				saleOrderProduct.SetIsBuffet()
@@ -4730,6 +4720,13 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 	saleOrderProduct.MemberDiscountRate = targetSaleOrder.MemberDiscountRate
 	saleOrderProduct.MemberCardDiscountRate = targetSaleOrder.MemberCardDiscountRate
 	saleOrderProduct.CustomDiscountRate = targetSaleOrder.CustomDiscountRate
+	// 判断商品是否在目标桌台是否是自助餐商品
+	productPackageUuidMap := targetSaleBill.GetBuffetProductMap()
+	if _, ok := productPackageUuidMap[saleOrderProduct.ProductPackageUuid]; ok {
+		saleOrderProduct.SetIsBuffet()
+	} else {
+		saleOrderProduct.SetNotBuffet()
+	}
 	saleOrderProduct.SetUpdate() // 标记该商品的记录要更新，会在原桌台账单的CalcAndSaveSaleBill方法中更新
 	// 将商品添加到目标桌台的销售订单中
 	targetSaleOrder.SaleOrderProducts = append(targetSaleOrder.SaleOrderProducts, saleOrderProduct)
