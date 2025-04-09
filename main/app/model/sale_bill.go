@@ -85,9 +85,6 @@ type SaleBill struct {
 	Desk            *Desk             `gorm:"foreignKey:DeskUuid;references:uuid"`
 	BuffetPackage1  *BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
-
-	// 虚拟字段，用于标记添加来源
-	addSource string `gorm:"-" json:"add_source,omitempty"`
 }
 
 // 获取销售账单的自助餐商品列表。key为自助餐商品包uuid，value为true

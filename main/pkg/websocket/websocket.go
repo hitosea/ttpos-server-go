@@ -12,6 +12,7 @@ import (
 
 // 源类型
 const (
+	SourceAll       = "*"         // 所有
 	SourceShop      = "shop"      // 商家
 	SourceCashier   = "cashier"   // 收银机
 	SourceTablet    = "tablet"    // 平板端

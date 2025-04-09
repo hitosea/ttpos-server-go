@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strconv"
 	"time"
 	"websocket/config"
 	"websocket/constant"
@@ -37,7 +38,7 @@ type PushMessage struct {
 // ClientMessage represents a generic message structure
 type ClientMessage struct {
 	Event string `json:"event"`
-	MsgId int    `json:"msg_id,omitempty"`
+	MsgId any    `json:"msg_id,omitempty"`
 }
 
 // ConnectionInfo represents a generic message structure
@@ -179,11 +180,22 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 // handleMessage 处理消息
 func handleMessage(ws *websocket.Conn, msg []byte) {
 	// 解析消息
+	msgId := uint(0)
 	clientMessage := ClientMessage{}
 	err := json.Unmarshal(msg, &clientMessage)
 	if err != nil {
 		fmt.Println("WebSocket Error parsing message:", err)
 		return
+	}
+
+	// 将字符串转换为uint
+	switch v := clientMessage.MsgId.(type) {
+	case float64:
+		msgId = uint(v)
+	case string:
+		if msgIdInt, err := strconv.ParseUint(v, 10, 64); err == nil {
+			msgId = uint(msgIdInt)
+		}
 	}
 
 	// 处理心跳消息
@@ -198,7 +210,7 @@ func handleMessage(ws *websocket.Conn, msg []byte) {
 	// 处理已读删除
 	if clientMessage.Event == "reply" {
 		repo := repository.NewWebSocketMsgRepository(&database.DBManager{})
-		err := repo.DeleteByTypeAndId(uint(clientMessage.MsgId))
+		err := repo.DeleteByTypeAndId(msgId)
 		if err != nil {
 			fmt.Printf("Error updating message status: %v\n", err)
 		}
@@ -262,6 +274,16 @@ func PushClient(messageData MessageData) {
 			err = conn.ws.WriteMessage(websocket.TextMessage, getMsgData(message))
 			if err != nil {
 				fmt.Printf("Error sending message to client: %v\n", err)
+			} else {
+				fmt.Println("推送消息:", utils.StructToJson(map[string]interface{}{
+					"SourceClient": conn.SourceClient,
+					"CompanyUuid":  messageData.CompanyUuid,
+					"DeviceId":     conn.DeviceId,
+					"Event":        messageData.MessageType,
+					"State":        constant.CodeSuccess,
+					"Data":         messageData.Data,
+					"MsgId":        int(id),
+				}))
 			}
 		}
 	}
