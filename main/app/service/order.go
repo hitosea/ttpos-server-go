@@ -3301,6 +3301,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	// todo 推送打印日志 进行排查
 	fmt.Println("h5OrderUuidh5OrderUuid - ", h5OrderUuid)
 	fmt.Println("h5OrderUuidh5OrderUuid - 22", ctx.GetGin().GetHeader("h5_order_uuid"))
+	fmt.Println("h5OrderUuidh5OrderUuid - 33", ctx.GetGin().GetHeader("H5_order_uuid"))
+	fmt.Println("h5OrderUuidh5OrderUuid - 44", ctx.GetGin().GetHeader("h5-order-uuid"))
 	fmt.Println("h5OrderUuidh5OrderUuid - GetSource", ctx.GetSource())
 
 	option := &repository.OrderCartInfoOption{}

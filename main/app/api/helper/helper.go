@@ -208,6 +208,10 @@ func GetCompanySetting(cc *gin.Context) model.CompanySetting {
 	return model.CompanySetting{}
 }
 
+func GetH5OrderUuid(cc *gin.Context) string {
+	return cc.GetHeader("h5_order_uuid")
+}
+
 func GetContext(c *gin.Context) context.Context {
 	return context.NewContext(
 		context.WithGinContext(c.Copy()),                 // 在上下文中添加gin上下文
@@ -222,6 +226,7 @@ func GetContext(c *gin.Context) context.Context {
 		context.WithDeviceSn(GetDeviceSn(c)),             // 在上下文中添加设备SN信息
 		context.WithDeviceUuid(GetDeviceUuid(c)),         // 在上下文中添加设备Uuid
 		context.WithRequestUuid(GetRequestUuid(c)),       // 在上下文中请求uuid
+		context.WithH5OrderUuid(GetH5OrderUuid(c)),       // 在上下文中添加H5订单ID
 		context.WithLogger(func() *zap.Logger {
 			if logger.Logger == nil {
 				return zap.NewNop() // 避免未初始化日志导致nil空指针错误

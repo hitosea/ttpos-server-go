@@ -2,6 +2,7 @@ package cashier
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -599,6 +600,9 @@ func (h *DeskHandler) OrderProductRemark(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/desk/order/cart/info [get]
 func (h *DeskHandler) OrderCartInfo(c *gin.Context) {
+
+	fmt.Println("h5OrderUuidh5OrderUuid - 22", c.GetHeader("h5_order_uuid"))
+
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.OrderCartInfoReq{}
