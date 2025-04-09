@@ -40,7 +40,7 @@ func (h *CallHandler) Call(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	helper.Success(c, gin.H{})
+	helper.Success(c, gin.H{}, "已呼叫服务员，请稍等")
 }
 
 func RegisterCallHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {

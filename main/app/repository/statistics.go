@@ -21,6 +21,7 @@ type IStatisticsRepo interface {
 	CountMember(opts ...DBOption) model.StatisticsMemberData                                                   // 统计会员
 	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                         // 统计会员支付
 	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64) // 统计商品销售
+	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                         // 统计免单支付
 	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                 // 统计商品排行
 	SaveSale(sales []model.StatisticsSale) error                                                               // 保存销售
 	SavePayment(payments []model.StatisticsPayment) error                                                      // 保存支付
@@ -565,4 +566,23 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	listQuery.Limit(req.PageSize).Offset((req.PageNo - 1) * req.PageSize).Find(&result)
 
 	return result, total
+}
+
+// CountFreePayment 统计免单支付
+func (r *StatisticsRepo) CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData {
+	var result model.StatisticsFreePaymentData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	db.Model(&model.StatisticsSale{}).
+		Select(
+			"COUNT(sale_order_uuid) AS total_order_num",
+			"SUM(free_amount) AS total_free_amount",
+		).
+		Where("free_num > 0").
+		Find(&result)
+
+	return result
 }

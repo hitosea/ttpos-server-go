@@ -118,7 +118,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 				return business_data_resp.MemberData{
 					RechargeAmount: memberData.TotalRechargeAmount,
 					GiftMoney:      memberData.TotalGiveAmount,
-					GiftPoints:     int(memberData.TotalGivePoint),
+					GiftPoints:     memberData.TotalGivePoint,
 					UserCount:      int(memberNum),
 				}
 			}(),
@@ -237,6 +237,7 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		CategoryType:   req.CategoryType,
 		DutyNo:         req.DutyNo,
 	})
+
 	// 支付数据
 	_, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req)
 	// 会员数量
@@ -266,6 +267,9 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		TotalDiscountMoney:      saleData.TotalDiscount,
 		TotalDiscountRatio:      saleData.TotalDiscountRatio,
 		TotalFreeOrderPrice:     saleData.TotalFreeAmount,
+		TotalFreeOrderNum:       int(saleData.TotalFreeNum),
+		TotalGiveProductPrice:   saleData.TotalGiftAmount,
+		TotalGiveProductNum:     int(saleData.TotalGiftNum),
 		TotalRefundMoney:        saleData.TotalRefundAmount,
 		TotalOrderNum:           int(saleData.TotalOrderNum),
 		TotalPeopleNum:          int(saleData.TotalMealNum),
@@ -307,7 +311,7 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 			return business_data_resp.MemberData{
 				RechargeAmount: memberData.TotalRechargeAmount,
 				GiftMoney:      memberData.TotalGiveAmount,
-				GiftPoints:     int(memberData.TotalGivePoint),
+				GiftPoints:     memberData.TotalGivePoint,
 				UserCount:      int(memberNum),
 			}
 		}(),
@@ -529,6 +533,23 @@ func (s *businessSrv) BuildPaymentMethodIncome(ctx context.Context, req req.Busi
 			OrderNum: int(payment.TotalOrderNum),
 			Amount:   payment.TotalPaymentAmount,
 			Code:     payment.PaymentCode,
+		})
+	}
+
+	// 统计免单支付
+	freePaymentData := s.statisticsSrv.CountFreePayment(ctx, CountReq{
+		DutyNo:         req.DutyNo,
+		QueryStartTime: req.QueryStartTime,
+		QueryEndTime:   req.QueryEndTime,
+		TimeType:       req.TimeType,
+		CategoryType:   req.CategoryType,
+	})
+	if freePaymentData.TotalOrderNum > 0 {
+		paymentMethodIncomes = append(paymentMethodIncomes, business_data_resp.PaymentMethodIncome{
+			Name:     freePaymentData.PaymentName,
+			OrderNum: int(freePaymentData.TotalOrderNum),
+			Amount:   freePaymentData.TotalPaymentAmount,
+			Code:     freePaymentData.PaymentCode,
 		})
 	}
 

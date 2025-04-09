@@ -75,7 +75,7 @@ func (s *UserCardService) ConvertUserCard() error {
 			Name:         userCard.CardName,
 			Expire:       userCard.Expire,
 			Price:        userCard.Money,
-			Discount:     int(userCard.Discount),
+			Discount:     userCard.Discount,
 			Sort:         userCard.Sort,
 			Status:       userCard.Status,
 			OpenMoney:    userCard.OpenMoney,

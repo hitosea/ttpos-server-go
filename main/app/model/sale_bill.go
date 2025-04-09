@@ -90,6 +90,28 @@ type SaleBill struct {
 	addSource string `gorm:"-" json:"add_source,omitempty"`
 }
 
+// 获取销售账单的自助餐商品列表。key为自助餐商品包uuid，value为true
+func (model *SaleBill) GetBuffetProductMap() map[uint64]bool {
+	productPackageUuidMap := make(map[uint64]bool) // 自助餐商品包uuid
+	if model.BuffetPackage1 != nil {
+		for _, buffetProduct := range model.BuffetPackage1.BuffetProducts {
+			if buffetProduct.IsDelete() {
+				continue
+			}
+			productPackageUuidMap[buffetProduct.ProductPackageUuid] = true
+		}
+	}
+	if model.BuffetPackage2 != nil {
+		for _, buffetProduct := range model.BuffetPackage2.BuffetProducts {
+			if buffetProduct.IsDelete() {
+				continue
+			}
+			productPackageUuidMap[buffetProduct.ProductPackageUuid] = true
+		}
+	}
+	return productPackageUuidMap
+}
+
 // 判断销售账单是否可反结账。
 // 1. 账单已完成
 // 2. 未交班。

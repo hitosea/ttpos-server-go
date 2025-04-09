@@ -204,7 +204,7 @@ type MemberCard struct {
 	CardTypeUuid uint64  `gorm:"column:card_type_uuid;type:bigint(20) unsigned;default:0;comment:会员卡类型ID;NOT NULL" json:"card_type_uuid"`
 	MemberUuid   uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
 	ExpireTime   int64   `gorm:"column:expire_time;type:int(11);default:0;comment:截止日期(时间戳);NOT NULL" json:"expire_time"`
-	Discount     float64 `gorm:"column:discount;type:decimal(12, 4);default:1;comment:折扣,单位%, 如80%为打8折，discount值为0.8 .不随后台改变,按领取时的折扣。后续会员卡类型折扣改变时,不改变此字段;NOT NULL" json:"discount"`
+	Discount     float64 `gorm:"column:discount;type:decimal(12, 4);default:1.0000;comment:折扣,单位%, 如80%为打8折，discount值为0.8 .不随后台改变,按领取时的折扣。后续会员卡类型折扣改变时,不改变此字段;NOT NULL" json:"discount"`
 
 	Member         *Member         `gorm:"foreignKey:MemberUuid;references:Uuid"`
 	MemberCardType *MemberCardType `gorm:"foreignKey:CardTypeUuid;references:Uuid"`
@@ -228,7 +228,7 @@ type MemberCardType struct {
 	Name         string  `gorm:"column:name;type:varchar(255);comment:会员卡类型名称;NOT NULL" json:"name"`
 	Expire       int     `gorm:"column:expire;type:int(11);default:0;comment:有效期限,单位:月, 0为永久有效;NOT NULL" json:"expire"`
 	Price        float64 `gorm:"column:price;type:decimal(12,2);default:0.00;comment:价格;NOT NULL" json:"price"`
-	Discount     int     `gorm:"column:discount;type:tinyint(3);default:0;comment:折扣,单位%;NOT NULL" json:"discount"`
+	Discount     float64 `gorm:"column:discount;type:tinyint(3);default:0;comment:折扣,单位%;NOT NULL" json:"discount"`
 	Sort         int     `gorm:"column:sort;type:int(11);default:0;comment:排序;NOT NULL" json:"sort"`
 	Status       int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-开启 1-关闭;NOT NULL" json:"status"`
 	OpenPoint    int     `gorm:"column:open_point;type:tinyint(1);default:0;comment:开卡赠送积分,0-否 1-是;NOT NULL" json:"open_point"`
