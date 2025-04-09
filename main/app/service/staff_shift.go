@@ -483,9 +483,14 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		DutyNo: log.ShiftNo,
 	})
 
-	// 会员数量
+	// 会员数量, 根据当班记录的开始和结束时间
+	queryEndTime := time.Now().Unix()
+	if log.ShiftEndTime > 0 {
+		queryEndTime = log.ShiftEndTime
+	}
 	memberNum := s.statisticsSrv.CountMemberNum(ctx, CountReq{
-		DutyNo: log.ShiftNo,
+		QueryStartTime: log.ShiftStartTime,
+		QueryEndTime:   queryEndTime,
 	})
 
 	// 营业数据

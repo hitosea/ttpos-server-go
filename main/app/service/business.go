@@ -66,7 +66,6 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 		memberNum := s.statisticsSrv.CountMemberNum(ctx, CountReq{
 			QueryStartTime: int64(printerParam.QueryStartTime),
 			QueryEndTime:   int64(printerParam.QueryEndTime),
-			CategoryType:   printerParam.CategoryType,
 		})
 
 		reqPrinterData.All = &business_data_resp.BusinessDataAll{
@@ -245,8 +244,6 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		TimeType:       req.TimeType,
 		QueryStartTime: int64(req.QueryStartTime),
 		QueryEndTime:   int64(req.QueryEndTime),
-		CategoryType:   req.CategoryType,
-		DutyNo:         req.DutyNo,
 	})
 	// 未结订单
 	unpaidOrderData := s.statisticsSrv.CountUnpaidOrder(ctx, CountReq{
