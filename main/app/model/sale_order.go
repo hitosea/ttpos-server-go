@@ -538,6 +538,9 @@ func NewSaleOrder(saleBillUuid uint64, saleBillOrderNo string, setting SaleBillS
 	}
 	// 设置服务费初始值
 	saleOrder.SetInitServiceFee(setting)
+	// 设置默认的订单抹零规格、结账抹零规则
+	saleOrder.ZeroRule = uint8(setting.ZeroRule)
+	saleOrder.ZeroCheckoutRule = uint8(setting.ZeroCheckoutRule)
 	return saleOrder
 }
 

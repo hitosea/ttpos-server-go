@@ -5732,10 +5732,22 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
-	amount := infoResp.Amounts.List[0]
-	unpaidAmount := amount.UnpaidAmount
+	var unpaidAmount float64  // 未付款金额
+	var commissionFee float64 // 手续费，付款已经产生的手续费
+	// 获取最小的那个未付款金额。因为可能结账抹零后已经没有未付款金额了
+	for index, amountItem := range infoResp.Amounts.List {
+		if index == 0 {
+			unpaidAmount = amountItem.UnpaidAmount
+			commissionFee = amountItem.CommissionFee
+			continue
+		}
+		if amountItem.UnpaidAmount < unpaidAmount {
+			unpaidAmount = amountItem.UnpaidAmount
+			commissionFee = amountItem.CommissionFee
+		}
+	}
 	if unpaidAmount > 0 {
-		return nil, errors.New("销售订单未结清")
+		return nil, errors.WithMessage(errors.New("销售订单未结清"))
 	}
 
 	// 检查是否有未送厨的商品。场景：当收银机1结账时，收银机2加购了新的商品。
@@ -5744,9 +5756,9 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	}
 
 	// 最终应收=应收金额+手续费
-	finalAmount := decimal.NewFromFloat(saleOrder.GetAmount()).Add(decimal.NewFromFloat(amount.CommissionFee)).InexactFloat64()
+	finalAmount := decimal.NewFromFloat(saleOrder.GetAmount()).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64()
 
-	totalPay := float64(0)
+	totalPay := float64(0) // 总付款金额=各个付款单的实收金额之和
 	for _, paymentOrder := range infoResp.PaymentOrders.List {
 		totalPay = decimal.NewFromFloat(totalPay).Add(decimal.NewFromFloat(paymentOrder.Amount)).InexactFloat64()
 	}
@@ -5758,7 +5770,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	}
 
 	// 计算抹零金额. 只有没有手续费时，才能抹零
-	if amount.CommissionFee == 0 {
+	if commissionFee == 0 {
 		saleOrder.SetCheckOutZeroFee()
 	}
 
@@ -5768,7 +5780,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		ChangeAmount:         changeAmount,
 		ZeroCheckoutFee:      saleOrder.CalcCheckOutZeroFee(),
 		FinalPrice:           finalAmount,
-		PaymentCommissionFee: amount.CommissionFee,
+		PaymentCommissionFee: commissionFee,
 		GiftAmount:           saleOrder.CalcGiftAmount(saleOrder.SaleOrderProducts),
 	}
 	saleOrder.SetFinishStatus(final) // 设置销售订单状态为已结清
