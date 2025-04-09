@@ -168,21 +168,7 @@ func (model *SaleOrderProduct) calcPrice() float64 {
 // 计算会员折扣率。会员折扣率=会员等级折扣率*会员卡折扣率
 // 如果商品不参与会员打折的话，会员折扣率=0
 func (model *SaleOrderProduct) calcMemberDiscountRate() float64 {
-	if model.OpenMemberDiscount == constant.ProductMemberDiscountOff {
-		return constant.NoDiscount
-	}
-	//if model.MemberDiscountRate == 0 && model.MemberCardDiscountRate != 0 {
-	//	return model.MemberCardDiscountRate
-	//} else if model.MemberCardDiscountRate == 0 && model.MemberDiscountRate != 0 {
-	//	return model.MemberDiscountRate
-	//} else if model.MemberCardDiscountRate != 0 && model.MemberDiscountRate != 0 {
-	//	memberDiscountRate := decimal.NewFromFloat(model.MemberDiscountRate).Mul(decimal.NewFromFloat(model.MemberCardDiscountRate))
-	//	return memberDiscountRate.InexactFloat64()
-	//}
-	//// 不匹配时默认为0
-	//return 0
-
-	memberDiscountRate := decimal.NewFromFloat(model.MemberDiscountRate).Mul(decimal.NewFromFloat(model.MemberCardDiscountRate))
+	memberDiscountRate := decimal.NewFromFloat(model.GetMemberDiscountRate()).Mul(decimal.NewFromFloat(model.GetMemberCardDiscountRate()))
 	return memberDiscountRate.InexactFloat64()
 }
 
@@ -499,8 +485,8 @@ func (model *SaleOrderProduct) calcSalePrice() float64 {
 // 计算商品的折扣率。 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
 func (model *SaleOrderProduct) calcDiscountRate() float64 {
 	rate := decimal.NewFromFloat(1)
-	memberDiscountRate := model.MemberDiscountRate
-	memberCardDiscountRate := model.MemberCardDiscountRate
+	memberDiscountRate := model.GetMemberDiscountRate()
+	memberCardDiscountRate := model.GetMemberCardDiscountRate()
 	customDiscountRate := model.CustomDiscountRate
 	// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
 	rate = rate.Mul(decimal.NewFromFloat(memberDiscountRate))

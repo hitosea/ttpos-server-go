@@ -105,6 +105,24 @@ type SaleOrderProduct struct {
 	operation string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
 }
 
+// 获取销售订单商品的会员卡折扣率
+func (model *SaleOrderProduct) GetMemberCardDiscountRate() float64 {
+	// 如果商品不参与会员打折，则返回1,表示不打折
+	if model.OpenMemberDiscount == constant.ProductMemberDiscountOff {
+		return constant.NoDiscount
+	}
+	return model.MemberCardDiscountRate
+}
+
+// 获取销售订单商品的会员折扣率
+func (model *SaleOrderProduct) GetMemberDiscountRate() float64 {
+	// 如果商品不参与会员打折，则返回1,表示不打折
+	if model.OpenMemberDiscount == constant.ProductMemberDiscountOff {
+		return constant.NoDiscount
+	}
+	return model.MemberDiscountRate
+}
+
 // 获取销售订单商品的总税费。包含服务费税费
 func (model *SaleOrderProduct) GetTotalTaxFee() float64 {
 	return model.GetTaxFee() + model.GetServiceTaxFee()
