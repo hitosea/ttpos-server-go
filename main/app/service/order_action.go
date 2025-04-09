@@ -138,6 +138,16 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		return nil, errors.WithMessage(err, "更新数据失败")
 	}
 
+	// 送厨成功后，重新获取账单信息。为了补全新加购商品中缺失的信息
+	if option.CalcAndSaveSaleBill { // 只有加购并送厨时，才需要补全新加购商品中缺失的信息
+		saleBill, _ = repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBill.Uuid)
+		uuids := make(map[uint64]bool)
+		for _, saleOrderProduct := range unCookingSaleOrderProducts {
+			uuids[saleOrderProduct.Uuid] = true
+		}
+		unCookingSaleOrderProducts = saleBill.GetSaleOrderProductUnCookingByUuids(uuids)
+	}
+
 	// 操作记录相关
 	{
 		// 发起“送厨”操作的事件
