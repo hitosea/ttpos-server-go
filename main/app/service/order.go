@@ -5022,6 +5022,10 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 			if err != nil {
 				return errors.WithMessage(err, "自动添加必点商品失败")
 			}
+			// 设置已经完成自动加购
+			if err := repository.NewSaleBillRepo(tx).UpdateSaleBillAutoAddMustProduct(saleBillUuid); err != nil {
+				return errors.WithMessage(err, "标记自动加购完成失败")
+			}
 			return nil
 		})
 		if errTx != nil {
@@ -5042,7 +5046,8 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	if shopCartInfo.SaleBill.IsShowMustPlan() {
 		list = mustPlanList
 	}
-	return &resp.InstantProductMustPlanResp{List: list, ShopCartInfo: cartInfo}, nil
+	mustPlan := &resp.InstantProductMustPlanResp{List: list, ShopCartInfo: cartInfo}
+	return mustPlan, nil
 }
 
 func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, mealNum uint) (*resp.InstantProductMustPlanResp, error) {
