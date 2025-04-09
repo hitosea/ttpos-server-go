@@ -110,7 +110,7 @@ class Controller extends BaseController
             throw new BaseException(['msg' => '用户信息错误', 'code' => StatusCode::USER_ERROR]);
         }
         if (!$user = UserModel::getUser($data['data'])) {
-            throw new BaseException(['msg' => '账号被删除，请联系管理员', 'code' => StatusCode::USER_ERROR]);
+            throw new BaseException(['msg' => '账号已删除，请联系管理员', 'code' => StatusCode::USER_ERROR]);
         }
         if ($user->status == 0) {
             throw new BaseException(['msg' => '账号被禁用，请联系管理员', 'code' => StatusCode::USER_ERROR]);

@@ -33,7 +33,7 @@ class User extends UserModel
             return false;
         }
         if ($user['delete_time'] > 0) {
-            $this->error = '账号被删除，请联系管理员';
+            $this->error = '账号已删除，请联系管理员';
             return false;
         }
         if ($user['is_status'] == 1) {
