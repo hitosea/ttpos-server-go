@@ -3,6 +3,7 @@
 
 namespace app\shop\model\store;
 
+use app\common\service\websocket\Websocket;
 use app\common\model\store\TableArea as TableAreaModel;
 
 /**
@@ -13,6 +14,32 @@ class TableArea extends TableAreaModel
 
     const FORM_SCENE_ADD = 'add';
     const FORM_SCENE_EDIT = 'edit';
+
+    /**
+     * 分类更新后推送通知
+     */
+    public static function onAfterWrite(TableArea $model)
+    {
+        $msgData = [
+            'type' => 'update',
+            'type_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_DESK_TYPE, 0, $msgData);
+    }
+
+    /**
+     * 分类删除后推送通知
+     */
+    public static function onAfterDelete(TableArea $model)
+    {   
+        $msgData = [
+            'type' => 'delete',
+            'type_uuid' => $model->uuid,
+            'update_time' => time()
+        ];
+        Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_DESK_TYPE, 0, $msgData);
+    }
 
     /**
      * 获取列表数据

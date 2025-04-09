@@ -5,13 +5,13 @@ namespace app\common\service\websocket;
 class Websocket
 {
     // 源类型常量
-    const SOURCE_All = '*';       // 商家
-    const SOURCE_SHOP = 'shop';       // 商家
-    const SOURCE_CASHIER = 'cashier'; // 收银机
-    const SOURCE_TABLET = 'tablet';   // 平板端
-    const SOURCE_KITCHEN = 'kitchen'; // 厨显端
-    const SOURCE_ASSISTANT = 'assistant'; // 点餐助手
-    const SOURCE_H5 = 'H5';          // H5
+    const SOURCE_All = '*';                 // 全部
+    const SOURCE_SHOP = 'shop';             // 商家
+    const SOURCE_CASHIER = 'cashier';       // 收银机
+    const SOURCE_TABLET = 'tablet';         // 平板端
+    const SOURCE_KITCHEN = 'kitchen';       // 厨显端
+    const SOURCE_ASSISTANT = 'assistant';   // 点餐助手
+    const SOURCE_H5 = 'H5';                 // H5
 
     // 消息类型常量
     const UPDATE_ORDER = 'update_order';            // 更新订单
@@ -25,6 +25,7 @@ class Websocket
     const UPDATE_CATEGORY = 'update_category';      // 更新分类
     const UPDATE_BUFFET = 'update_buffet';          // 更新自助餐
     const UPDATE_DESK = 'update_desk';              // 更新桌台
+    const UPDATE_DESK_TYPE = 'update_desk_type';    // 更新桌台类型
 
     /**
      * 推送消息到WebSocket服务器
