@@ -258,7 +258,7 @@ class BindRecord extends BaseModel
             // 解绑收银机
             if ($device['source'] == self::SOURCE_CASHIER) {
                 // 收银机没交班时：自动生成交班操作，预留金额为0
-                $staff = User::with(['working'])->where(['bind_key' => $device['device_id']])->find();
+                $staff = User::with(['working'])->where(['bind_key' => $device['device_id']])->where('cashier_online', 1)->find();
                 if ($staff && $staff->working) {
                     if (!$staff->working->shiftLog($staff)) {
                         $this->error = $staff->working->getError();
