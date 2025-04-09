@@ -999,6 +999,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		SaleOrderUuid:              def.SaleOrderUuid,
 		SaleOrderProductBoms:       saleOrderProductBoms,
 		SaleOrderProductAttributes: saleOrderProductAttributes,
+		MultiLanguageName:          &productPackage.MultiLanguageName,
 	}
 	product.SetTaxRate(def.TaxRate)
 	// 设置商品包. 加购并送厨时用到，用于计算限购
