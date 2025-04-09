@@ -568,7 +568,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_abnormal_record` (
 CREATE TABLE IF NOT EXISTS `ttpos_buffet_package` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐套餐ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '自助餐套餐名称',
+    `name` TEXT DEFAULT NULL COMMENT '自助餐套餐名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序顺序',
     `tax_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '税收ID',
@@ -751,7 +751,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material_attribute` (
 CREATE TABLE IF NOT EXISTS `ttpos_product_category` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品类别ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
+    `name` TEXT DEFAULT NULL COMMENT '名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `status` INT(10) NOT NULL DEFAULT 1 COMMENT '状态, 1-开启 0-关闭',
     `parent_uuid` BIGINT UNSIGNED DEFAULT NULL COMMENT '父级ID',
@@ -767,7 +767,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_category` (
 CREATE TABLE IF NOT EXISTS `ttpos_product_unit` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品单位ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '单位名称',
+    `name` TEXT DEFAULT NULL COMMENT '单位名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -788,7 +788,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_tag` (
 CREATE TABLE IF NOT EXISTS `ttpos_product_flavor` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品规格ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
+    `name` TEXT DEFAULT NULL COMMENT '名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -925,7 +925,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_related_material` (
 CREATE TABLE IF NOT EXISTS `ttpos_product_sauce` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品小料ID',
-    `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '名称',
+    `name` TEXT DEFAULT NULL COMMENT '名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '价格',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
