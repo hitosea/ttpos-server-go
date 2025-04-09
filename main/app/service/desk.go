@@ -92,6 +92,7 @@ func (s *deskSrv) GetDeskRegionAndTypeList(dbId uint64) (resp.DeskRegionAndTypeL
 
 	// 返回响应对象
 	return resp.DeskRegionAndTypeListWithPaginationResp{
+		UpdateTime: time.Now().Unix(),
 		Region: struct {
 			List []resp.DeskRegion `json:"list"`
 		}{List: deskRegionResp},

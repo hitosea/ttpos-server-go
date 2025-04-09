@@ -57,6 +57,10 @@ class BalanceLog extends BalanceLogModel
             if ($item['scene']['value'] == BalanceLogSceneEnum::DEDUCT) {
                 $item['describe'] = $item['describe'] . '：' . ($item['remark'] ?: '-');
             }
+            // 
+            if (isset($item['user']['id'])) {
+                $item['member_uuid'] = $item['user']['id'];
+            }
         }
         return $list;
     }

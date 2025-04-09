@@ -44,6 +44,8 @@ const (
 	UPDATE_BUFFET = "update_buffet"
 	// 更新桌台 data = {"update_time": 1742971471, "desk_uuid": 1, "type": "update | delete"}
 	UPDATE_DESK = "update_desk"
+	// 更新桌台类型 data = {"update_time": 1742971471, "type_uuid": 1, "type": "update | delete"}
+	UPDATE_DESK_TYPE = "update_desk_type"
 	// 更新退款状态 data = {"update_time": 1742971471, "uuid": 1, "type": "update | delete"}
 	UPDATE_REFUND_STATE = "update_refund_state"
 )
