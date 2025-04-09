@@ -25,6 +25,7 @@ type Context interface {
 	GetDeviceSn() string                     // 获取设备SN
 	GetDeviceUuid() uint64                   // 获取设备uuid
 	GetDeskUuid() uint64                     // 获取桌台ID
+	GetH5OrderUuid() string                  // 获取H5订单ID
 	NoLock() bool                            // 判断上文中是否已经加锁
 	AddLock()                                // 在上下文中标记是否已经加锁 todo 改名为SetLock
 	Log() *zap.Logger                        // 获取日志实例
@@ -47,6 +48,7 @@ type ContextImpl struct {
 	deviceSn       string               // 设备序列号。用于唯一标识一个设备。如识别是哪个收银机，以找到收银机的未挂单点餐账单
 	deviceUuid     uint64               // 设备uuid
 	requestUuid    string               // 请求uuid
+	h5OrderUuid    string               // H5订单ID
 	hasLock        bool                 // 是否已经上锁
 	log            *zap.Logger
 	db             *gorm.DB
@@ -81,6 +83,12 @@ func WithDeviceUuid(deviceUuid uint64) Option {
 func WithRequestUuid(requestUuid string) Option {
 	return func(ctx *ContextImpl) {
 		ctx.requestUuid = requestUuid
+	}
+}
+
+func WithH5OrderUuid(h5OrderUuid string) Option {
+	return func(ctx *ContextImpl) {
+		ctx.h5OrderUuid = h5OrderUuid
 	}
 }
 
@@ -224,6 +232,10 @@ func (c *ContextImpl) GetDeviceSn() string {
 
 func (c *ContextImpl) GetDeviceUuid() uint64 {
 	return c.deviceUuid
+}
+
+func (c *ContextImpl) GetH5OrderUuid() string {
+	return c.h5OrderUuid
 }
 
 func (c *ContextImpl) NoLock() bool {

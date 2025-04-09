@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 
@@ -27,6 +28,7 @@ type IStatisticsSrv interface {
 	CountMemberPayment(ctx context.Context, req CountReq) CountPaymentResp   // 统计会员支付
 	CountUnpaidOrder(ctx context.Context, req CountReq) CountUnpaidOrderResp // 统计未结订单
 	CountProductSale(ctx context.Context, req CountReq) CountProductSaleResp // 统计商品销售
+	CountFreePayment(ctx context.Context, req CountReq) CountFreePaymentResp // 统计免单支付
 	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp    // 统计商品排行
 	SaveSale(ctx context.Context, req SaveSaleReq) error                     // 保存销售
 	SaveMember(ctx context.Context, req SaveMemberReq) error                 // 保存会员
@@ -91,7 +93,7 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 	// 总优惠折扣率 = 总优惠折扣 / 总销售额
 	var discountRatio decimal.Decimal
 	if saleData.TotalSaleAmount.Float64 > 0 {
-		discountRatio = decimal.NewFromFloat(saleData.TotalDiscount.Float64).Div(decimal.NewFromFloat(saleData.TotalSaleAmount.Float64))
+		discountRatio = decimal.NewFromFloat(saleData.TotalDiscount.Float64).Div(decimal.NewFromFloat(saleData.TotalSaleAmount.Float64)).Mul(decimal.NewFromInt(100))
 	}
 
 	// 平均桌台每人订单金额 = 总桌台订单金额 / 总桌台数量 / 总用餐人数
@@ -500,29 +502,42 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			freeAmount           decimal.Decimal
 			refundAmount         decimal.Decimal
 			paymentBalance       decimal.Decimal
+			discount             decimal.Decimal
 			refundTax            decimal.Decimal
 			refundServiceFee     decimal.Decimal
 			refundDiscount       decimal.Decimal
 			refundDiscountMember decimal.Decimal
 			refundFee            decimal.Decimal
 		)
+
+		discount = decimal.NewFromFloat(saleOrder.CustomDiscountFee)
+
+		if saleBill.SaleBillSetting.IsStatGift == 0 {
+			discount = discount.Sub(decimal.NewFromFloat(saleOrder.GiftAmount))
+		} else {
+			productPrice = productPrice.Add(decimal.NewFromFloat(saleOrder.GiftAmount))
+		}
+
 		// 销售商品
 		for _, saleProduct := range saleOrder.SaleOrderProducts {
 			if saleProduct.CancelTime == 0 {
 				productNum += int(saleProduct.Num)
-				productPrice = productPrice.Add(decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()))
 				productSalePrice = productSalePrice.Add(decimal.NewFromFloat(saleProduct.SalePrice))
-				productTax = productTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
 				productGiveNum := 0
 				productFreeNum := 0
-				serviceFee = serviceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee))
-				serviceTax = serviceTax.Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee))
 				if saleProduct.GiftTime > 0 {
 					giveNum += int(saleProduct.Num)
 					productGiveNum = int(saleProduct.Num)
 				}
 				if saleOrder.IsFree > 0 {
 					productFreeNum = int(saleProduct.Num)
+					if saleBill.SaleBillSetting.IsStatFree == 1 {
+						productPrice = productPrice.Add(decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()))
+						productTax = productTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
+						serviceFee = serviceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee))
+						serviceTax = serviceTax.Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee))
+						discount = discount.Add(productPrice).Add(productTax).Add(serviceFee).Add(serviceTax)
+					}
 				}
 				var bomUuid uint64
 				for _, productBom := range saleProduct.SaleOrderProductBoms {
@@ -601,13 +616,13 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			ProductTax:           productTax.Round(2).InexactFloat64(),
 			ServiceFee:           serviceFee.Round(2).InexactFloat64(),
 			ServiceTax:           serviceTax.Round(2).InexactFloat64(),
-			Discount:             saleOrder.CustomDiscountFee,
+			Discount:             discount.Round(2).InexactFloat64(),
 			DiscountMember:       saleOrder.MemberDiscountFee,
 			GiftAmount:           saleOrder.GiftAmount,
 			GiftNum:              giveNum,
 			FreeAmount:           freeAmount.Round(2).InexactFloat64(),
 			FreeNum:              freeNum,
-			PaymentAmount:        saleOrder.Amount,
+			PaymentAmount:        saleOrder.PaymentAmount,
 			PaymentFee:           saleOrder.PaymentCommissionFee,
 			PaymentBalance:       paymentBalance.Round(2).InexactFloat64(),
 			RefundAmount:         refundAmount.Round(2).InexactFloat64(),
@@ -891,4 +906,27 @@ func (s *statisticsSrv) CountProductSale(ctx context.Context, req CountReq) Coun
 		Total: total,
 	}
 
+}
+
+// CountFreePaymentResp 统计免单支付响应
+type CountFreePaymentResp struct {
+	PaymentName        string  `json:"payment_name"`
+	PaymentCode        int     `json:"payment_code"`
+	TotalOrderNum      int64   `json:"total_order_num"`
+	TotalPaymentAmount float64 `json:"total_payment_amount"`
+	TotalRefundAmount  float64 `json:"total_refund_amount"`
+}
+
+// CountFreePayment 统计免单支付
+func (s *statisticsSrv) CountFreePayment(ctx context.Context, req CountReq) CountFreePaymentResp {
+	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
+	statisticsRepo := repository.NewStatisticsRepo(db)
+	freePaymentData := statisticsRepo.CountFreePayment(s.buildCountOpts(req)...)
+
+	return CountFreePaymentResp{
+		PaymentName:        i18n.Translate(ctx.GetLanguage(), "免单"),
+		PaymentCode:        0,
+		TotalOrderNum:      freePaymentData.TotalOrderNum.Int64,
+		TotalPaymentAmount: freePaymentData.TotalFreeAmount.Float64,
+	}
 }

@@ -209,3 +209,9 @@ type StatisticsProductSaleData struct {
 	GiveNum            sql.NullInt64   `gorm:"column:give_num;comment:赠菜数量"`
 	BusinessAmount     sql.NullFloat64 `gorm:"column:business_amount;comment:营业收入"`
 }
+
+// StatisticsFreePaymentData 免单支付统计数据
+type StatisticsFreePaymentData struct {
+	TotalOrderNum   sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
+	TotalFreeAmount sql.NullFloat64 `gorm:"column:total_free_amount;comment:总免单金额"`
+}

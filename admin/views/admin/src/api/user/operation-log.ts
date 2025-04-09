@@ -17,7 +17,7 @@ export interface OperationLogData {
   content?: string; // 操作内容
   ip?: string; // 登录ip
   create_time?: number; // 创建时间
-  user_name?: string; // 用户名
+  username?: string; // 用户名
   real_name?: string; // 姓名
 }
 export function getOperationLog(data: OperationLogType) {

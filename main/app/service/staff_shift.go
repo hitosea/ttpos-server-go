@@ -556,7 +556,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 			return business_data_resp.MemberData{
 				RechargeAmount: memberData.TotalRechargeAmount,
 				GiftMoney:      memberData.TotalGiveAmount,
-				GiftPoints:     int(memberData.TotalGivePoint),
+				GiftPoints:     memberData.TotalGivePoint,
 				UserCount:      int(memberNum),
 			}
 		}(),
