@@ -84,7 +84,7 @@
             <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
           </template>
         </el-table-column>
-        <el-table-column prop="shift_start_time" :label="$t('添加时间')"></el-table-column>
+        <el-table-column prop="shift_end_time" :label="$t('添加时间')"></el-table-column>
         <el-table-column fixed="right" :label="$t('操作')" width="120">
           <template #default="scope">
             <el-button v-auth="'/statistics/user/detail'" @click="detailClick(scope.row)" type="primary" link size="small">{{ $t('详情') }}</el-button>
