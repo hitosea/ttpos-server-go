@@ -5838,7 +5838,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	}
 	originTotalPay := totalPay // 结账完成后的弹窗要显示的金额。需要包含找零金额
 
-	// 现金支付
+	// 现金支付的金额，未减掉找零的金额
 	cashAmount := saleOrder.GetCashAmount()
 	outMoney := totalPay - finalAmount // 超付金额=支付金额-最终应收
 	// 如果超付金额大于现金支付金额，则拒绝完成订单，提示“收款金额大于最终应收，请先修改收款金额”
@@ -5869,6 +5869,9 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		// 总付款金额=各个付款单的实收金额之和。总付款金额=总付款金额-找零金额
 		totalPay = totalPay - changeAmount
 	}
+
+	// 现金支付的金额，已减掉找零的金额
+	cashAmount = saleOrder.GetCashAmount()
 
 	// 计算抹零金额. 只有没有手续费时，才能抹零
 	if commissionFee == 0 {
