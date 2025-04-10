@@ -569,14 +569,16 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 		trNames = append(trNames, reason.MultiLanguageName.TrName)
 	}
 	// 添加自定义的退菜原因
-	zhNames = append(zhNames, model.CancelReason)
-	thNames = append(thNames, model.CancelReason)
-	enNames = append(enNames, model.CancelReason)
-	zhtwNames = append(zhtwNames, model.CancelReason)
-	jaNames = append(jaNames, model.CancelReason)
-	koNames = append(koNames, model.CancelReason)
-	myNames = append(myNames, model.CancelReason)
-	trNames = append(trNames, model.CancelReason)
+	if model.CancelReason != "" {
+		zhNames = append(zhNames, model.CancelReason)
+		thNames = append(thNames, model.CancelReason)
+		enNames = append(enNames, model.CancelReason)
+		zhtwNames = append(zhtwNames, model.CancelReason)
+		jaNames = append(jaNames, model.CancelReason)
+		koNames = append(koNames, model.CancelReason)
+		myNames = append(myNames, model.CancelReason)
+		trNames = append(trNames, model.CancelReason)
+	}
 	reasonDto := dto.LocaleResponse{
 		ZH:   strings.Join(zhNames, "、"),
 		TH:   strings.Join(thNames, "、"),
@@ -615,14 +617,16 @@ func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 		trNames = append(trNames, reason.MultiLanguageName.TrName)
 	}
 	// 添加自定义的退菜原因
-	zhNames = append(zhNames, model.CancelReason)
-	thNames = append(thNames, model.CancelReason)
-	enNames = append(enNames, model.CancelReason)
-	zhtwNames = append(zhtwNames, model.CancelReason)
-	jaNames = append(jaNames, model.CancelReason)
-	koNames = append(koNames, model.CancelReason)
-	myNames = append(myNames, model.CancelReason)
-	trNames = append(trNames, model.CancelReason)
+	if model.CancelReason != "" {
+		zhNames = append(zhNames, model.CancelReason)
+		thNames = append(thNames, model.CancelReason)
+		enNames = append(enNames, model.CancelReason)
+		zhtwNames = append(zhtwNames, model.CancelReason)
+		jaNames = append(jaNames, model.CancelReason)
+		koNames = append(koNames, model.CancelReason)
+		myNames = append(myNames, model.CancelReason)
+		trNames = append(trNames, model.CancelReason)
+	}
 	reasonDto := dto.LocaleResponse{
 		ZH:   strings.Join(zhNames, "、"),
 		TH:   strings.Join(thNames, "、"),
