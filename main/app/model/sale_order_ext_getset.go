@@ -50,14 +50,16 @@ func (model *SaleOrder) GetFreeReason() dto.LocaleResponse {
 		trNames = append(trNames, reason.MultiLanguageName.TrName)
 	}
 	// 添加自定义的免单原因
-	zhNames = append(zhNames, model.FreeReason)
-	thNames = append(thNames, model.FreeReason)
-	enNames = append(enNames, model.FreeReason)
-	zhtwNames = append(zhtwNames, model.FreeReason)
-	jaNames = append(jaNames, model.FreeReason)
-	koNames = append(koNames, model.FreeReason)
-	myNames = append(myNames, model.FreeReason)
-	trNames = append(trNames, model.FreeReason)
+	if model.FreeReason != "" {
+		zhNames = append(zhNames, model.FreeReason)
+		thNames = append(thNames, model.FreeReason)
+		enNames = append(enNames, model.FreeReason)
+		zhtwNames = append(zhtwNames, model.FreeReason)
+		jaNames = append(jaNames, model.FreeReason)
+		koNames = append(koNames, model.FreeReason)
+		myNames = append(myNames, model.FreeReason)
+		trNames = append(trNames, model.FreeReason)
+	}
 	reasonDto := dto.LocaleResponse{
 		ZH:   strings.Join(zhNames, "、"),
 		TH:   strings.Join(thNames, "、"),

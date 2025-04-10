@@ -86,6 +86,12 @@ func (model *SaleOrder) GetIndex() int {
 	return model.index
 }
 
+// 判断销售订单是否已经结账
+func (model *SaleOrder) IsSettled() bool {
+	return model.Status == constant.SaleOrderStatusFinish
+}
+
+// 清除结账信息
 func (model *SaleOrder) ClearSettleInfo() {
 	model.PaymentAmount = 0
 	model.ChangeAmount = 0

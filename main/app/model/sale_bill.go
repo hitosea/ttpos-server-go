@@ -215,8 +215,8 @@ func (model *SaleBill) CanFinishSaleBill() bool {
 		if saleOrder.IsFreeSaleOrder() || saleOrder.IsDelete() {
 			continue
 		}
-		// 只要有一个未完成支付，这个销售账单就不可以点完成
-		if saleOrder.Status != constant.SaleOrderStatusFinish {
+		// 只要有一个销售订单未结账，这个销售账单就不可以点完成
+		if !saleOrder.IsSettled() {
 			return false
 		}
 	}
