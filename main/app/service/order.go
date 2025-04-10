@@ -15,6 +15,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	apperrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -5734,6 +5735,47 @@ func (s *orderSrv) getSaleOrderProductWithoutWarehouseOutForm(ctx context.Contex
 	return list, nil
 }
 
+// 完成销售账单
+func (s *orderSrv) FinishSaleBill(ctx context.Context, saleBill *model.SaleBill, businessSetting settingResp.Business, db *gorm.DB) error {
+	// 更新销售账单
+	updateSaleBill := false
+	if saleBill.CanFinishSaleBill() {
+		saleBill.SetFinishSaleBill(ctx.GetStaff().DutyNo, ctx.GetStaff().Uuid, ctx.GetStaff().Username)
+		saleBill.CalcAll()
+		updateSaleBill = true
+	}
+	if updateSaleBill {
+		// 更新销售账单
+		saleBill.SetCookingStatus()
+		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
+			return errUpdateSaleBill
+		}
+		// 如果是桌台账单，则将桌台状态改为待清台或者空闲
+		// 待清台，将桌台信息中的sale_bill_uuid设为0、状态为开台状态
+		// 空闲，将桌台信息中的sale_bill_uuid设为0、状态为未开台状态
+		// 完成销售账单后，桌台是待清台还是空闲状态由系统是否设置了自动清台决定。若不自动清台，则桌台为待清台桌台。若自动清台，则桌台为空闲桌台
+		if saleBill.IsDeskSaleBill() && businessSetting.IsAutoClearDesk() {
+			// 结账自动清台，将桌台状态设置为空闲
+			saleBill.Desk.SetCloseDesk()
+			if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
+				return err
+			}
+		}
+		if saleBill.IsDeskSaleBill() && !businessSetting.IsAutoClearDesk() {
+			// 结账不自动清台，将桌台状态设置为待清台
+			saleBill.Desk.SetWaitClearDesk()
+			if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
+				return err
+			}
+		}
+		// 拒绝所有待接单的h5订单
+		if err := s.RejectAllH5Order(ctx, saleBill.Uuid); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // InstantOrderPaymentFinish 完成销售订单的付款结账
 func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error) {
 	// 加锁
@@ -5817,14 +5859,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	}
 	saleOrder.SetFinishStatus(final) // 设置销售订单状态为已结清
 
-	// 更新销售账单
-	updateSaleBill := false
-	if saleBill.CanFinishSaleBill() {
-		saleBill.SetFinishSaleBill(ctx.GetStaff().DutyNo, ctx.GetStaff().Uuid, ctx.GetStaff().Username)
-		saleBill.CalcAll()
-		updateSaleBill = true
-	}
-
 	// 获取门店业务设置
 	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 	if err != nil {
@@ -5892,36 +5926,11 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			return errors.WithMessage(err)
 		}
 
-		// 更新账单
-		if updateSaleBill {
-			// 更新销售账单
-			saleBill.SetCookingStatus()
-			if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
-				return errUpdateSaleBill
-			}
-			// 如果是桌台账单，则将桌台状态改为待清台或者空闲
-			// 待清台，将桌台信息中的sale_bill_uuid设为0、状态为开台状态
-			// 空闲，将桌台信息中的sale_bill_uuid设为0、状态为未开台状态
-			// 完成销售账单后，桌台是待清台还是空闲状态由系统是否设置了自动清台决定。若不自动清台，则桌台为待清台桌台。若自动清台，则桌台为空闲桌台
-			if saleBill.IsDeskSaleBill() && businessSetting.IsAutoClearDesk() {
-				// 结账自动清台，将桌台状态设置为空闲
-				saleBill.Desk.SetCloseDesk()
-				if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
-					return err
-				}
-			}
-			if saleBill.IsDeskSaleBill() && !businessSetting.IsAutoClearDesk() {
-				// 结账不自动清台，将桌台状态设置为待清台
-				saleBill.Desk.SetWaitClearDesk()
-				if err := repository.NewDeskRepo(db).UpdateDeskRecord(*saleBill.Desk); err != nil {
-					return err
-				}
-			}
-			// 拒绝所有待接单的h5订单
-			if err := s.RejectAllH5Order(ctx, saleBill.Uuid); err != nil {
-				return err
-			}
+		// 更新销售账单. 如果可以结束销售账单的话
+		if err := s.FinishSaleBill(ctx, saleBill, businessSetting, db); err != nil {
+			return errors.WithMessage(err)
 		}
+
 		// 更新会员的余额
 		if saleOrder.ConsumerUuid != 0 {
 			if saleOrder.Member.GetUpdate() {
@@ -7141,6 +7150,7 @@ func (s *orderSrv) getMoveProductList(saleOrderFrom *model.SaleOrder) []req.Move
 
 // InstantOrderSaleOrderDelete 删除一个销售订单(删除拆单)
 func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error) {
+	var shopCart *resp.ShopCart
 	if ctx.NoLock() {
 		// 加锁
 		s.lock.LockUuid(request.SaleBillUuid)
@@ -7171,32 +7181,88 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 	// 获取要移动的商品列表
 	moveProductList := s.getMoveProductList(saleOrderFrom)
 
-	moveProductReq := req.InstantOrderSaleOrderMoveProductReq{
-		SaleBillUuid: request.SaleBillUuid,
-		From:         request.SaleOrderUuid,
-		To:           firstSaleOrder.Uuid,
-		Products:     moveProductList,
+	// 如果第一个销售订单已经结账且要删除的订单还有商品的话，则提示“拆单1已结账，请结账当前拆单或删除商品后再删除拆单”。已送厨的商品也要先退菜再删除后才能删除拆单
+	if firstSaleOrder.IsSettled() && len(moveProductList) > 0 {
+		return nil, errors.New("拆单1已结账，请结账当前拆单或删除商品后再删除拆单")
 	}
 
-	if len(moveProductList) > 0 {
-		shopCart, err := s.SaleOrderMoveProduct(ctx, moveProductReq, true)
+	// 如果第一个销售订单已经结账且要删除的订单没有商品且销售订单数量大于2时，则删除该拆单
+	if firstSaleOrder.IsSettled() && len(moveProductList) == 0 && len(saleBill.SaleOrders) > 2 {
+		// 如果销售订单中没有商品，则直接删除订单
+		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderSoftDeleteByUuid(saleOrderFrom.Uuid); err != nil {
+			ctx.Log().Error("删除订单失败", zap.Error(err))
+			return nil, errors.New("删除订单失败")
+		}
+
+		var err error
+		shopCart, err = s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+		if err != nil {
+			ctx.Log().Error("获取购物车信息失败", zap.Error(err))
+			return nil, errors.WithMessage(err, "获取购物车信息失败")
+		}
+	}
+
+	// 如果第一个销售订单已经结账且要删除的订单没有商品且销售订单数量等于2时，则删除该拆单并完成该销售账单
+	if firstSaleOrder.IsSettled() && len(moveProductList) == 0 && len(saleBill.SaleOrders) == 2 {
+		// 如果销售订单中没有商品，则直接删除订单
+		saleOrderFrom.SetDelete()
+		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+			if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderSoftDeleteByUuid(saleOrderFrom.Uuid); err != nil {
+				ctx.Log().Error("删除订单失败", zap.Error(err))
+				return errors.New("删除订单失败")
+			}
+
+			// 获取门店业务设置
+			businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+
+			// 更新销售账单. 如果可以结束销售账单的话
+			if err := s.FinishSaleBill(ctx, saleBill, businessSetting, tx); err != nil {
+				return errors.WithMessage(err)
+			}
+			return nil
+		}); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		var err error
+		shopCart, err = s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+		if err != nil {
+			ctx.Log().Error("获取购物车信息失败", zap.Error(err))
+			return nil, errors.WithMessage(err, "获取购物车信息失败")
+		}
+	}
+
+	// 如果销售订单中有商品，则先移动商品到第一个销售订单再删除该子单
+	if !firstSaleOrder.IsSettled() && len(moveProductList) > 0 {
+		moveProductReq := req.InstantOrderSaleOrderMoveProductReq{
+			SaleBillUuid: request.SaleBillUuid,
+			From:         request.SaleOrderUuid,
+			To:           firstSaleOrder.Uuid,
+			Products:     moveProductList,
+		}
+		var err error
+		shopCart, err = s.SaleOrderMoveProduct(ctx, moveProductReq, true)
 		if err != nil {
 			ctx.Log().Error("移动商品失败", zap.Error(err))
 			return nil, errors.WithMessage(err)
 		}
-		return shopCart, nil
 	}
 
-	// 如果销售订单中没有商品，则直接删除订单
-	if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderSoftDeleteByUuid(saleOrderFrom.Uuid); err != nil {
-		ctx.Log().Error("删除订单失败", zap.Error(err))
-		return nil, errors.New("删除订单失败")
-	}
+	if !firstSaleOrder.IsSettled() && len(moveProductList) == 0 {
+		// 如果销售订单中没有商品，则直接删除订单
+		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderSoftDeleteByUuid(saleOrderFrom.Uuid); err != nil {
+			ctx.Log().Error("删除订单失败", zap.Error(err))
+			return nil, errors.New("删除订单失败")
+		}
 
-	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
-	if err != nil {
-		ctx.Log().Error("获取购物车信息失败", zap.Error(err))
-		return nil, errors.WithMessage(err, "获取购物车信息失败")
+		var err error
+		shopCart, err = s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+		if err != nil {
+			ctx.Log().Error("获取购物车信息失败", zap.Error(err))
+			return nil, errors.WithMessage(err, "获取购物车信息失败")
+		}
 	}
 
 	// 发布“撤销拆单”操作事件
@@ -7211,7 +7277,7 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 		})
 	}()
 
-	return info, nil
+	return shopCart, nil
 
 }
 
@@ -7238,6 +7304,11 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 	}
 
 	firstSaleOrder := saleBill.GetSaleOrder(saleBill.SaleOrders[0].Uuid)
+
+	// 如果第一个销售订单已经结账，则提示“当前订单已结账，无法撤销”
+	if firstSaleOrder.IsSettled() {
+		return nil, errors.New("当前订单已结账，无法撤销")
+	}
 
 	saleOrderFromList := make([]*model.SaleOrder, 0)
 	for _, saleOrder := range saleBill.SaleOrders {
