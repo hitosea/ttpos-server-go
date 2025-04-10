@@ -76,3 +76,7 @@ restart:
 # 翻译
 translate:
 	cd main && go run ./main.go translate
+
+# 运行数据库迁移
+migrate-data:
+	cd main && go run ./main.go migrate-data $(ARGS)

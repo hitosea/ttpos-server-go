@@ -7580,6 +7580,12 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvo
 		} else {
 			saleOrder.InvoiceInfo = invoiceInfo
 		}
+		// 更新打印次数
+		saleOrder.InvoiceInfo.PrintNum = saleOrder.InvoiceInfo.PrintNum + 1
+		repository.NewOrderRepo(db).SaveOrUpdateInvoiceInfo(saleOrder.Uuid, model.SaleOrderInvoiceInfo{
+			SaleOrderUuid: saleOrder.Uuid,
+			PrintNum:      saleOrder.InvoiceInfo.PrintNum,
+		})
 	}
 
 	// 打印
