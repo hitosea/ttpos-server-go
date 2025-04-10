@@ -300,7 +300,7 @@ class BindRecord extends BaseModel
             if ($device['source'] == self::SOURCE_TABLET) {
                 $table = Table::where('device_uuid', $device['uuid'])->find();
                 if ($table) {
-                    $table->save(['sale_bill_uuid' => 0, 'device_uuid' => 0]);
+                    $table->save(['device_uuid' => 0]);
                 }
             }
             // 厨显端（暂无处理）
