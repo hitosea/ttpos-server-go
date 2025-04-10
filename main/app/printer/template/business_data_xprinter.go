@@ -203,7 +203,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("赠送金额"), "", t.base.GetPriceAndUnit(businessData.All.MemberData.GiftMoney), width))
 		printer.LineFeed(1)
-		printer.AppendText(t.base.PrintText(t.base.Translate("赠送积分"), "", fmt.Sprintf("%d", businessData.All.MemberData.GiftPoints), width))
+		printer.AppendText(t.base.PrintText(t.base.Translate("赠送积分"), "", strconv.FormatFloat(businessData.All.MemberData.GiftPoints, 'f', -1, 64), width))
 		printer.LineFeed(1)
 		// 未结账相关
 		printer.AppendText("------------------------------------------------")
