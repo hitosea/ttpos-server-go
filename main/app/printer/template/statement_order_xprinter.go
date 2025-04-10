@@ -537,9 +537,9 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 			taxFee, _ := strconv.ParseFloat(percentage["TaxFee"], 64)
 			totalPrice, _ := strconv.ParseFloat(percentage["TotalPrice"], 64)
 			if t.base.Lang == "ja" {
-				printer.AppendText(t.base.PrintText(fmt.Sprintf("%s%% %s", taxRate, t.base.Translate("的对象")), "", t.base.GetPriceAndUnit(totalPrice)+" ("+t.base.GetPriceAndUnit(taxFee)+")", width, 34))
+				printer.AppendText(t.base.PrintText(fmt.Sprintf("%s%% %s", taxRate, t.base.Translate("的对象")), "", t.base.Amount(totalPrice)+" ("+t.base.Amount(taxFee)+")", width, 34))
 			} else {
-				printer.AppendText(t.base.PrintText(fmt.Sprintf("VAT (%s%%)", taxRate), "", t.base.GetPriceAndUnit(totalPrice)+" ("+t.base.GetPriceAndUnit(taxFee)+")", width, 34))
+				printer.AppendText(t.base.PrintText(fmt.Sprintf("VAT (%s%%)", taxRate), "", t.base.Amount(totalPrice)+" ("+t.base.Amount(taxFee)+")", width, 34))
 			}
 		}
 	}

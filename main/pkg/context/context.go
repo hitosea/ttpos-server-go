@@ -30,6 +30,7 @@ type Context interface {
 	AddLock()                                // 在上下文中标记是否已经加锁 todo 改名为SetLock
 	Log() *zap.Logger                        // 获取日志实例
 	SetDB(tx *gorm.DB)                       // 设置gorm.DB
+	SetCompanyUuid(uuid uint64)              // 设置商家ID
 	GetDB() *gorm.DB                         // 获取gorm.DB
 	GetRequestUuid() string                  // 获取请求ID
 	Copy() Context                           // 复制一个ctx实例。避免在协程中修改上下文导致主进程的ctx被修改
@@ -252,6 +253,10 @@ func (c *ContextImpl) Log() *zap.Logger {
 
 func (c *ContextImpl) SetDB(tx *gorm.DB) {
 	c.db = tx
+}
+
+func (c *ContextImpl) SetCompanyUuid(uuid uint64) {
+	c.companyUuid = uuid
 }
 
 // GetDB 获取gorm实例
