@@ -1,7 +1,6 @@
 package command
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"websocket/config"
@@ -36,7 +35,7 @@ var testsCmd = &cobra.Command{
 		// token, _ := utils.GenerateToken("cashier", 1, 1, "", config.JWT.Secret, 1186400)
 		// fmt.Println(token)
 		// 订阅
-		err := cache.GlobalRedis.Client.Publish(context.Background(), "websocket_msg_push", "{'name': 1}").Err()
+		err := cache.GlobalRedis.Publish("websocket_msg_push", "{'name': 1}")
 		if err != nil {
 			fmt.Println("Error publishing message:", err)
 		} else {

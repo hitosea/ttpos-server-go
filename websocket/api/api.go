@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -61,7 +60,7 @@ func PushClient(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		// 推送
-		err := cache.GlobalRedis.Client.Publish(context.Background(), "websocket_msg_push", utils.StructToJson(params)).Err()
+		err := cache.GlobalRedis.Publish("websocket_msg_push", utils.StructToJson(params))
 		if err != nil {
 			fmt.Fprintf(w, "%s", utils.StructToJson(map[string]interface{}{
 				"code":    constant.CodeFail,

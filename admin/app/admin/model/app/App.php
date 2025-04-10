@@ -286,7 +286,7 @@ class App extends AppModel
         $host = env('DB_HOST');
         $port = env('DB_PORT');
         $prefix = env('DB_PREFIX');
-        $pdo = new PDO("mysql:host={$host};port={$port}", 'root', env('DB_ROOT_PASSWORD'));
+        $pdo = new PDO("mysql:host={$host};port={$port}", env('DB_USERNAME'), env('DB_ROOT_PASSWORD'));
         $databaseName = 'shop' . $this->uuid;
         $pdo->exec("use {$databaseName}");
         $res = $pdo->exec("UPDATE {$prefix}company SET delete_time = $deleteTime WHERE uuid = {$this->uuid}");

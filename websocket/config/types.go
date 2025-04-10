@@ -20,7 +20,7 @@ type DatabaseConf struct {
 
 type RedisConf struct {
 	Host     string
-	Port     int
+	Port     string
 	Password string
 	DB       int // 数据库(0~15)
 }

@@ -40,7 +40,7 @@ class BaseModel extends Model
             if (!isset($config['connections'][$name])) {
                 $mysql = $config['connections']['mysql'];
                 $mysql['database'] = $name;
-                $mysql['username'] = 'root';
+                $mysql['username'] = env('DB_USERNAME');
                 $mysql['password'] = env('DB_ROOT_PASSWORD');
                 $config['connections'] = array_merge($config['connections'], [$name => $mysql]);
                 Config::set($config, 'database');
