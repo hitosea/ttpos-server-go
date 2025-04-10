@@ -35,7 +35,6 @@ var translateCmd = &cobra.Command{
 	Run: func(_ *cobra.Command, _ []string) {
 		fmt.Printf("-------translate start-------\n")
 		//
-		// websocket.PushClient(1, "*", "*", websocket.UPDATE_PRODUCT, "")
 		execute()
 		//
 		fmt.Printf("-------translate end-------\n")

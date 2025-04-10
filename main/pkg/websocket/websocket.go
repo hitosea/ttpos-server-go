@@ -52,7 +52,7 @@ const (
 )
 
 // Push sends a POST request to the WebSocket server with specific parameters.
-func PushClient(company_uuid uint64, source_client, not_device_id, message_type string, data map[string]interface{}) error {
+func PushClient(company_uuid uint64, source_client, device_id, message_type string, data map[string]interface{}) error {
 	var jsonData []byte
 	// 计算包含关键参数的MD5值
 	if message_type == UPDATE_ORDER {
@@ -62,7 +62,7 @@ func PushClient(company_uuid uint64, source_client, not_device_id, message_type 
 	// 创建缓存键
 	var cacheKey string
 	if message_type != PRINT_DATA {
-		key := fmt.Sprintf("%d:%s:%s:%s", company_uuid, source_client, not_device_id, message_type)
+		key := fmt.Sprintf("%d:%s:%s:%s", company_uuid, source_client, device_id, message_type)
 		md5Sum := fmt.Sprintf("%x", md5.Sum(append([]byte(key), jsonData...)))
 		cacheKey = fmt.Sprintf("ws_msg:%s", md5Sum)
 	}
@@ -77,7 +77,7 @@ func PushClient(company_uuid uint64, source_client, not_device_id, message_type 
 	payload := map[string]interface{}{
 		"company_uuid":  company_uuid,
 		"source_client": source_client,
-		"not_device_id": not_device_id,
+		"device_id":     device_id,
 		"message_type":  message_type,
 		"message_key":   cacheKey,
 		"data":          data,
