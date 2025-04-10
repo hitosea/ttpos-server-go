@@ -127,6 +127,9 @@ func (p *Printers) httpPost(path string, body map[string]interface{}) (map[strin
 	// 创建一个自定义的Transport，强制使用HTTP/1.1
 	transport := &http.Transport{
 		TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true, // 禁用证书验证
+		},
 	}
 	client := &http.Client{Transport: transport}
 	resp, err := client.Do(req)
