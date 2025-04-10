@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
 )
@@ -355,12 +356,13 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 		if item.IsDelete() || item.IsUnCookingProduct() || item.IsCancelProduct() {
 			continue
 		}
-		if item.IsBuffetProduct() && item.GetPrice() <= 0 {
+		if item.IsBuffetProduct() && item.GetTotalSaucePrice() <= 0 {
 			continue
 		}
 		// 商品数量
 		productNum += item.Num
-		productTotalPrice := item.GetTotalProductPrice()
+		productPrice := utils.IfFloat64(item.IsBuffetProduct(), item.SaucePrice, item.ProductPrice)
+		productTotalPrice := utils.IfFloat64(item.IsBuffetProduct(), item.GetTotalSaucePrice(), item.GetTotalProductPrice()) // 商品原价
 		// 赠品
 		var gift string
 		if item.IsGiftBool() {
@@ -374,7 +376,7 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 		//
 		printer.AppendText(t.base.PrintText(
 			productName,
-			fmt.Sprintf("%s*%d", t.base.Amount(item.ProductPrice), item.Num),
+			fmt.Sprintf("%s*%d", t.base.Amount(productPrice), item.Num),
 			t.base.GetPriceAndUnit(productTotalPrice),
 			width,
 			leftWidth,
