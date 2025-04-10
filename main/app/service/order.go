@@ -5836,11 +5836,38 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	for _, paymentOrder := range infoResp.PaymentOrders.List {
 		totalPay = decimal.NewFromFloat(totalPay).Add(decimal.NewFromFloat(paymentOrder.Amount)).InexactFloat64()
 	}
+	originTotalPay := totalPay // 结账完成后的弹窗要显示的金额。需要包含找零金额
+
+	// 现金支付
+	cashAmount := saleOrder.GetCashAmount()
+	outMoney := totalPay - finalAmount // 超付金额=支付金额-最终应收
+	// 如果超付金额大于现金支付金额，则拒绝完成订单，提示“收款金额大于最终应收，请先修改收款金额”
+	if outMoney > cashAmount {
+		return nil, errors.New("收款金额大于最终应收，请先修改收款金额")
+	}
 
 	// 计算找零金额。
 	changeAmount := float64(0)
 	if totalPay > finalAmount {
 		changeAmount = decimal.NewFromFloat(totalPay).Sub(decimal.NewFromFloat(finalAmount)).InexactFloat64()
+	}
+
+	// 注意在检查超付金额大于现金支付金额之后再修改现金付款金额
+	// 如果找零金额大于0，则修改现金付款单的payment_amount和amount字段。amount = payment_amount = amount - changeAmount
+	var cashPaymentOrder *model.PaymentOrder
+	if changeAmount > 0 {
+		for index, paymentOrder := range saleOrder.PaymentOrders {
+			if paymentOrder.IsDelete() {
+				continue
+			}
+			if paymentOrder.PaymentMethod.IsCash() {
+				saleOrder.PaymentOrders[index].PaymentAmount = paymentOrder.Amount - changeAmount
+				saleOrder.PaymentOrders[index].Amount = paymentOrder.Amount - changeAmount
+				cashPaymentOrder = saleOrder.PaymentOrders[index]
+			}
+		}
+		// 总付款金额=各个付款单的实收金额之和。总付款金额=总付款金额-找零金额
+		totalPay = totalPay - changeAmount
 	}
 
 	// 计算抹零金额. 只有没有手续费时，才能抹零
@@ -5911,16 +5938,14 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	// 记录会员余额
 	saleOrder.SetMemberBalance()
 
-	// 现金支付
-	cashAmount := saleOrder.GetCashAmount()
-	outMoney := totalPay - finalAmount // 超付金额=支付金额-最终应收
-	// 如果超付金额大于现金支付金额，则拒绝完成订单，提示“收款金额大于最终应收，请先修改收款金额”
-	if outMoney > cashAmount {
-		return nil, errors.New("收款金额大于最终应收，请先修改收款金额")
-	}
-
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db)
+		if cashPaymentOrder != nil {
+			// 更新现金支付单
+			if err := repository.NewPaymentOrderRepo(db).UpdatePaymentOrderRecord(*cashPaymentOrder); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
 		// 更新销售订单
 		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
 			return errors.WithMessage(err)
@@ -6019,7 +6044,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	saleOrderChangeAmount := saleOrder.ChangeAmount
 	go func() {
 		payTypes := make([]event.PayType, 0)
-		paymentAmount := decimal.NewFromFloat(0)
 		for _, paymentOrder := range infoResp.PaymentOrders.List {
 			payTypes = append(payTypes, event.PayType{
 				Name:           paymentOrder.PaymentMethodName,
@@ -6028,7 +6052,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 				Price:          paymentOrder.Amount,
 				FeeMoney:       paymentOrder.PaymentCommissionFee,
 			})
-			paymentAmount = paymentAmount.Add(decimal.NewFromFloat(paymentOrder.Amount))
 		}
 		s.bus.PublishCheckoutSaleOrderEvent(event.CheckoutSaleOrderPayload{
 			BasePayload: event.BasePayload{
@@ -6042,7 +6065,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			SaleBill:    saleBill,
 			OrderPrice:  originSaleOrderAmount,
 			PayPrice:    saleOrderPaymentAmount,
-			ActualPrice: paymentAmount.InexactFloat64(), // 最终实付金额=每笔付款单的付款金额之和（含手续费）
+			ActualPrice: totalPay, // 最终实付金额=每笔付款单的付款金额之和（含手续费）- 找零金额
 			ChangeDue:   saleOrderChangeAmount,
 			PayType:     payTypes,
 		})
@@ -6071,7 +6094,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		SaleOrderUuid: req.SaleOrderUuid,
 		AmountInfo: resp.PayAmountInfo{
 			OrderAmount:  saleOrderAmount,
-			PayAmount:    saleOrderPaymentAmount,
+			PayAmount:    originTotalPay, // 原总付款=总付款-找零金额
 			ChangeAmount: saleOrderChangeAmount,
 		},
 		PayMethodList: resp.PayMethodList{

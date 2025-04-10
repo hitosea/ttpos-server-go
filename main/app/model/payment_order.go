@@ -63,6 +63,11 @@ func (model *PaymentMethod) IsBalance() bool {
 	return model.Code == constant.PaymentMethodCodeBalance
 }
 
+// IsCash 是否是现金支付
+func (model *PaymentMethod) IsCash() bool {
+	return model.Code == constant.PaymentMethodCodeCash
+}
+
 // IsLianLianPay 是否连连支付
 func (model *PaymentMethod) IsLianLianPay() bool {
 	return slices.Contains([]int{
