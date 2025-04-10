@@ -234,6 +234,8 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		return loginResp, errors.New("登录来源错误")
 	}
 
+	// 登录时没有商家ID，补上
+	ctx.SetCompanyUuid(staff.CompanyUuid)
 	// 添加绑定记录
 	deviceUuid, err := s.deviceSrv.AddDevice(ctx, req.AddDeviceReq{
 		DeviceId:         loginReq.DeviceId,
