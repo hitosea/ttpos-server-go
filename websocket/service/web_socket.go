@@ -60,8 +60,11 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	}
 	defer ws.Close()
 
-	// 处理连接成功
-	handleConnectionSuccess(ws, r)
+	// 处理连接
+	newConn := handleConnectionSuccess(ws, r)
+	if newConn == nil {
+		return
+	}
 
 	// 设置一个自动收报机来发送ping消息
 	ticker := time.NewTicker(10 * time.Second)
@@ -85,7 +88,7 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		// 处理消息
-		handleMessage(ws, msg)
+		handleMessage(ws, msg, newConn)
 	}
 }
 
@@ -96,13 +99,13 @@ func getMsgData(msg PushMessage) []byte {
 }
 
 // handleConnectionSuccess 处理连接成功
-func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
+func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInfo {
 	// 验证参数
 	client := r.URL.Query().Get("client")
 	token := r.URL.Query().Get("token")
 	if client == "" || token == "" {
 		ws.Close()
-		return
+		return nil
 	}
 
 	// 验证token
@@ -114,7 +117,7 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 			Msg:   "Token Error",
 		}))
 		ws.Close()
-		return
+		return nil
 	}
 
 	// 验证设备是否绑定
@@ -127,7 +130,7 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 			Msg:   "No binding",
 		}))
 		ws.Close()
-		return
+		return nil
 	}
 
 	// 断开之前的链接
@@ -140,14 +143,15 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 	}
 
 	// 添加新连接
-	WsClients = append(WsClients, ConnectionInfo{
+	newConn := ConnectionInfo{
 		CompanyUuid:   claims.CompanyUuid,
 		StaffUuid:     claims.StaffUuid,
 		SourceClient:  existsDevice.Source,
 		DeviceId:      existsDevice.DeviceId,
 		LastHeartbeat: time.Now().Format(time.RFC3339),
 		ws:            ws,
-	})
+	}
+	WsClients = append(WsClients, newConn)
 
 	// 监听关闭事件以删除连接详细信息
 	ws.SetCloseHandler(func(code int, text string) error {
@@ -173,12 +177,13 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) {
 		},
 	})); err != nil {
 		fmt.Println("Error sending ping message:", err)
-		return
+		return nil
 	}
+	return &newConn
 }
 
 // handleMessage 处理消息
-func handleMessage(ws *websocket.Conn, msg []byte) {
+func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 	// 解析消息
 	msgId := uint(0)
 	clientMessage := ClientMessage{}
@@ -203,6 +208,8 @@ func handleMessage(ws *websocket.Conn, msg []byte) {
 		err := ws.WriteMessage(websocket.TextMessage, msg)
 		if err != nil {
 			fmt.Println("Error writing message:", err)
+		} else {
+			fmt.Println("Heartbeat message DeviceId: ", newConn.DeviceId)
 		}
 		return
 	}
