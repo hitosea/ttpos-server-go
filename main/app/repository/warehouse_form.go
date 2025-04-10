@@ -119,7 +119,8 @@ func (r *warehouseFormRepoImpl) GetWarehouseFormItem(opts ...DBOption) ([]*model
 
 func (r *warehouseFormRepoImpl) GetWarehouseOutFormItemBySaleOrderUuid(saleOrderUuid uint64) ([]*model.WarehouseOutFormItem, error) {
 	warehouseOutFormItems, err := r.GetWarehouseOutFormItem(
-		CommonRepo.WhereBySaleOrderUuid(saleOrderUuid),
+		CommonRepo.WhereBySaleOrderUuid(saleOrderUuid), // 销售订单uuid
+		CommonRepo.WhereByNotRevoked(),                 // 未撤销的出库记录
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)

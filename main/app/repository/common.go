@@ -35,6 +35,7 @@ type ICommonRepo interface {
 	WhereBySaleBillUuid(uuid uint64) DBOption                           // 根据销售单UUID查询
 	WhereByAssociatedOrderUuid(uuid uint64) DBOption                    // 根据关联订单UUID查询
 	WhereBySaleOrderUuid(uuid uint64) DBOption                          // 根据销售订单UUID查询
+	WhereByNotRevoked() DBOption                                        // 未撤销的出库记录
 	WhereByStatus(status uint) DBOption                                 // 根据状态查询
 	WhereByIsShowCashier(isShowCashier uint) DBOption                   // 根据是否显示收银机查询
 	WhereByIsShowAssistant(isShow uint) DBOption                        // 根据是否显示点餐助手端查询
@@ -429,6 +430,13 @@ func (r *commonRepo) Preload(preloads ...WithPreload) DBOption {
 func (r *commonRepo) WhereBySaleOrderUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("sale_order_uuid = ?", uuid)
+	}
+}
+
+// WhereByNotRevoked 未撤销的出库记录
+func (r *commonRepo) WhereByNotRevoked() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("revoke_time = 0")
 	}
 }
 
