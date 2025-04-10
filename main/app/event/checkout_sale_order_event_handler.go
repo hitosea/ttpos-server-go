@@ -287,7 +287,8 @@ func HandleMemberBalance(db *gorm.DB) {
 	for _, memberBalanceLog := range memberBalanceLogs {
 		// 累计同一个会员的余额变动
 		pre := memberChangeBalance[MemberUuid(memberBalanceLog.MemberUuid)]
-		memberChangeBalance[MemberUuid(memberBalanceLog.MemberUuid)] = pre.Add(decimal.NewFromFloat(memberBalanceLog.Money))
+		money := decimal.NewFromFloat(memberBalanceLog.Money).Sub(decimal.NewFromFloat(memberBalanceLog.GiftMoney)) // 主余额变动金额=余额变动金额-赠送余额变动金额
+		memberChangeBalance[MemberUuid(memberBalanceLog.MemberUuid)] = pre.Add(money)
 		// 累计同一个会员的赠送帐户余额变动
 		preGift := memberChangeBalanceGift[MemberUuid(memberBalanceLog.MemberUuid)]
 		memberChangeBalanceGift[MemberUuid(memberBalanceLog.MemberUuid)] = preGift.Add(decimal.NewFromFloat(memberBalanceLog.GiftMoney))

@@ -1049,7 +1049,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_balance_log` (
     `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
     `scene` INT(10) NOT NULL DEFAULT 0 COMMENT '场景,10-用户充值 20-用户消费 30-管理员操作 40-订单退款 50-余额提现 60-订单反结账 70-充值反结账 80-充值退款 90-销售订单支付扣减',
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
-    `money` decimal(12, 2) NOT NULL DEFAULT 0.00 COMMENT '变动金额,负数:减余额 整数:加余额',
+    `money` decimal(12, 2) NOT NULL DEFAULT 0.00 COMMENT '变动金额,负数:减余额 正数:加余额。包含赠送余额',
     `gift_money` decimal(12, 2) DEFAULT 0.00 COMMENT '变动赠送金额',
     `describe` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '变动描述',
     `processed` INT(10) NOT NULL DEFAULT 0 COMMENT '是否已处理,0-未处理 1-已处理. 用于处理会员余额变动，修改会员的余额并清0冻结的余额',

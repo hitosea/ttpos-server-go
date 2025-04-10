@@ -257,7 +257,7 @@ type MemberBalanceLog struct {
 	BaseModel
 	MemberUuid  uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
 	Scene       int     `gorm:"column:scene;type:tinyint(2);default:0;comment:场景,10-用户充值 20-用户消费 30-管理员操作 40-订单退款 50-余额提现 60-订单反结账 70-充值反结账 80-充值退款 90-扣减;NOT NULL" json:"scene"`
-	Money       float64 `gorm:"column:money;type:decimal(12,2);default:0.00;comment:变动金额,负数:减余额 整数:加余额;NOT NULL" json:"money"`
+	Money       float64 `gorm:"column:money;type:decimal(12,2);default:0.00;comment:变动金额,负数:减余额 正数:加余额。包含赠送余额;NOT NULL" json:"money"`
 	GiftMoney   float64 `gorm:"column:gift_money;type:decimal(12,2);default:0.00;comment:变动赠送金额" json:"gift_money"`
 	Describe    string  `gorm:"column:describe;type:varchar(255);comment:变动描述;NOT NULL" json:"describe"`
 	Processed   uint64  `gorm:"column:processed;type:tinyint(1);default:0;comment:是否已处理,0-未处理 1-已处理. 用于处理会员余额变动，修改会员的余额并清0冻结的余额;NOT NULL" json:"processed"`
