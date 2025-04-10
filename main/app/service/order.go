@@ -2597,6 +2597,7 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 
 	// 设置整单改价金额
 	saleOrder.SetCustomAmount(req.Price)
+	oldPrice := saleOrder.GetOriginAmount()
 
 	// 整单改价后，整单折扣会取消，需要重新计算订单商品的金额
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
@@ -2613,10 +2614,10 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 				SaleOrderUuid: req.SaleOrderUuid,
 				OperatorUuid:  int64(ctx.GetStaffUuid()),
 			},
-			OldPrice:        saleOrder.GetOriginAmount(), // 旧价格为订单的原始应收金额
+			OldPrice:        oldPrice, // 旧价格为订单的原始应收金额
 			NewPrice:        req.Price,
 			DiscountType:    constant.DiscountOperationLogTypeChangePriceSaleOrder, // 整单改价的类型值
-			SpecialDiscount: decimal.NewFromFloat(saleOrder.GetOriginAmount()).Sub(decimal.NewFromFloat(req.Price)).InexactFloat64(),
+			SpecialDiscount: decimal.NewFromFloat(oldPrice).Sub(decimal.NewFromFloat(req.Price)).InexactFloat64(),
 		})
 	}()
 
