@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
-	"os"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -264,14 +263,6 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 		groups = append(groups, group)
 	}
 
-	// ToDo 移除这段代码
-	groupsBytes, err := json.Marshal(groups)
-	if err != nil {
-		logger.Logger.Error("json unmarshal error", zap.Error(err))
-	}
-	if err = os.WriteFile("groups.json", groupsBytes, os.ModePerm); err != nil {
-		logger.Logger.Error("write file error", zap.Error(err))
-	}
 	return groups
 }
 

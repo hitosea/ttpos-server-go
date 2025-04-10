@@ -207,7 +207,13 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 	// 处理心跳消息
 	if clientMessage.Type == "heartbeat" {
 		fmt.Println("Heartbeat message DeviceId: ", newConn.DeviceId)
-		err := ws.WriteMessage(websocket.TextMessage, msg)
+		// 发送回复消息
+		message := PushMessage{
+			Event: "reply_heartbeat",
+			State: constant.CodeSuccess,
+			Msg:   "Reply successfully",
+		}
+		err := ws.WriteMessage(websocket.TextMessage, getMsgData(message))
 		if err != nil {
 			fmt.Println("Error writing message:", err)
 		}

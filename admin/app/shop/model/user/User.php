@@ -67,11 +67,20 @@ class User extends UserModel
             $model = $model->where('gender', '=', (int)$data['gender']);
         }
         // 获取用户列表
-        return $model->with(['grade', 'card'])
+        $paginate = $model->with(['grade', 'memberCard' => ['card']])
             ->field('*, nickname as nickName')
             ->order(['create_time' => 'desc'])
             ->hidden(['open_id', 'union_id', 'password'])
             ->paginate($data);
+
+        foreach ($paginate as $item) {
+            $item['card'] = [];
+            if ($item['memberCard'] && isset($item['memberCard']['card'])) {
+                $item['card'] = $item['memberCard']['card'];
+            }
+        }
+
+        return $paginate;
     }
 
     /**

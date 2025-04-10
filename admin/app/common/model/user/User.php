@@ -123,12 +123,9 @@ class User extends BaseModel
         return $this->belongsTo('app\\common\\model\\user\\Grade', 'member_level_uuid', 'uuid');
     }
 
-    /**
-     * 关联会员卡表
-     */
-    public function card()
+    public function memberCard()
     {
-        return $this->hasOne('app\\common\\model\\user\\Card', 'uuid', 'member_card_uuid');
+        return $this->hasOne('app\\common\\model\\user\\MemberCard', 'member_uuid', 'uuid');
     }
 
     /**

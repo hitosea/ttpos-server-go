@@ -43,7 +43,7 @@ class CardRecord extends CardRecordModel
 
         $list = $model->paginate($data) ?: [];
         //
-        foreach ($list as &$item) {
+        foreach ($list as $key => &$item) {
             $item['is_used'] = (new Card)->checkUserConsumeRecord($item['user_id'], $item['card_id']) ? 1 : 0;
             if ($item['delete_time'] == 0) {
                 $memberCard = (new MemberCard)->where('member_uuid', $item['member_uuid'])->find();
@@ -52,6 +52,11 @@ class CardRecord extends CardRecordModel
             } else {
                 $item['expire_time'] = $item['expire'];
                 $item['expire_time_text'] = date('Y-m-d', $item['expire']);
+            }
+            if (isset($item['user'])) {
+                $user = $list[$key]['user']->toArray();
+                $user['user_id'] = $user['id'];
+                $list[$key]['user'] = $user;
             }
         }
         return $list;

@@ -346,12 +346,13 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		if item.IsDelete() || item.IsUnCookingProduct() || item.IsCancelProduct() {
 			continue
 		}
-		if item.IsBuffetProduct() && item.GetPrice() <= 0 {
+		if item.IsBuffetProduct() && item.GetTotalSaucePrice() <= 0 {
 			continue
 		}
 		// 商品数量
 		productNum += item.Num
-		productTotalPrice := item.GetTotalProductPrice() // 商品原价
+		productPrice := utils.IfFloat64(item.IsBuffetProduct(), item.SaucePrice, item.ProductPrice)
+		productTotalPrice := utils.IfFloat64(item.IsBuffetProduct(), item.GetTotalSaucePrice(), item.GetTotalProductPrice()) // 商品原价
 		// 赠品
 		var gift string
 		if item.IsGiftBool() {
@@ -366,7 +367,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.SetTextLineHeight(45)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: productName, Width: 310, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(item.ProductPrice), item.Num), Width: 120, Align: pkg.AlignCenter},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(productPrice), item.Num), Width: 120, Align: pkg.AlignCenter},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(productTotalPrice), Width: 0, Align: pkg.AlignRight},
 		)
 		img.RecoverDefaultTextLineHeight()

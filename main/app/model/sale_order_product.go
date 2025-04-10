@@ -783,6 +783,13 @@ func (model *SaleOrderProduct) GetTotalPrice() float64 {
 	return price
 }
 
+// 获取商品总小料价格（折后价）
+func (model *SaleOrderProduct) GetTotalSaucePrice() float64 {
+	// 金额*数量
+	price := decimal.NewFromFloat(model.SaucePrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	return price
+}
+
 // 获取商品总金额（折前价）
 func (model *SaleOrderProduct) GetTotalPriceOrigin() float64 {
 	originTotalPrice := model.OriginTotalPrice
