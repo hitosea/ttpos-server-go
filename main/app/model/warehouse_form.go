@@ -155,21 +155,28 @@ func (p ProductList) GetProductBomMaterials() []*ProductBomMaterials {
 // 使用场景：
 // 1. 送厨时，下单减库存，创建出库单
 // 2. 结账时，判断订单的每个商品是否都已有对应的出库记录，如果没有，则创建出库单
-func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64, staffUuid uint64) *WarehouseOutForm {
-	uuid, _ := utils.GetID()
-	form := &WarehouseOutForm{BaseModel: BaseModel{Uuid: uuid}}
-	form.FormNo = "CK" + time.Now().Format("20060102150405") // todo: 根据原先的编号规则生成
-	form.Scene = constant.WarehouseOutFormSceneSales         // 销售出库
-	form.AssociatedOrderUuid = saleBillUuid
-	form.OperatorUuid = staffUuid
+func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64, staffUuid uint64) []*WarehouseOutForm {
+	newForm := func() *WarehouseOutForm {
+		uuid, _ := utils.GetID()
+		form := &WarehouseOutForm{BaseModel: BaseModel{Uuid: uuid}}
+		form.FormNo = "CK" + time.Now().Format("20060102150405") // todo: 根据原先的编号规则生成
+		form.Scene = constant.WarehouseOutFormSceneSales         // 销售出库
+		form.AssociatedOrderUuid = saleBillUuid
+		form.OperatorUuid = staffUuid
+		return form
+	}
+
 	status := constant.WarehouseOutFormItemStatusPre
 	if isCheckout {
 		status = constant.WarehouseOutFormItemStatusSuccess
 	}
 
-	items := make([]*WarehouseOutFormItem, 0)
+	forms := make([]*WarehouseOutForm, 0)
 	// 规格商品或小料出库记录
 	for _, item := range list {
+		form := newForm()
+
+		items := make([]*WarehouseOutFormItem, 0)
 		items = append(items, &WarehouseOutFormItem{
 			WarehouseOutFormUuid: form.Uuid,
 			ProductBomUuid:       item.ProductBomUuid,
@@ -180,11 +187,16 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64,
 			SaleOrderProductUuid: item.SaleOrderProductUuid,
 			SaleBillUuid:         saleBillUuid,
 		})
+		form.WarehouseOutFormItems = items
+		forms = append(forms, form)
 	}
 
 	// 原材料出库记录
 	materials := list.GetProductBomMaterials()
 	for _, material := range materials {
+		form := newForm()
+
+		items := make([]*WarehouseOutFormItem, 0)
 		items = append(items, &WarehouseOutFormItem{
 			WarehouseOutFormUuid: form.Uuid,
 			MaterialUuid:         material.MaterialUuid,
@@ -194,9 +206,11 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64,
 			SaleOrderUuid:        material.SaleOrderUuid,
 			SaleBillUuid:         saleBillUuid,
 		})
+		form.WarehouseOutFormItems = items
+		forms = append(forms, form)
 	}
-	form.WarehouseOutFormItems = items
-	return form
+
+	return forms
 }
 
 // NewWarehouseForm 创建入库单.

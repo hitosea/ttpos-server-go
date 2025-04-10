@@ -2074,14 +2074,14 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 	}
 
 	// 3.构建出库单，将账单下单减库存的商品出库
-	var warehouseOutForm *model.WarehouseOutForm
+	var warehouseOutForms []*model.WarehouseOutForm
 	if opt.IsReverseSettle {
 		products := saleBill.GetSaleOrderProductCookingSubStock()
 		productList, err := s.getDecreaseStockList(ctx, products)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-		warehouseOutForm = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid())
+		warehouseOutForms = model.NewWarehouseOutForm(productList, false, saleBill.Uuid, ctx.GetStaffUuid())
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
@@ -2111,14 +2111,16 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 		}
 
 		// 如果出库单明细不为空，则创建出库单
-		if warehouseOutForm != nil && len(warehouseOutForm.WarehouseOutFormItems) > 0 {
-			// 创建出库单
-			if err := repository.NewWarehouseFormRepo(db).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
-				return errors.WithMessage(err)
-			}
-			// 创建出库单记录
-			if err := repository.NewWarehouseFormRepo(db).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
-				return errors.WithMessage(err)
+		for _, warehouseOutForm := range warehouseOutForms {
+			if warehouseOutForm != nil && len(warehouseOutForm.WarehouseOutFormItems) > 0 {
+				// 创建出库单
+				if err := repository.NewWarehouseFormRepo(db).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
+					return errors.WithMessage(err)
+				}
+				// 创建出库单记录
+				if err := repository.NewWarehouseFormRepo(db).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
+					return errors.WithMessage(err)
+				}
 			}
 		}
 
@@ -5973,16 +5975,18 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			return
 		}
 		// 构建出库单
-		warehouseOutForm := model.NewWarehouseOutForm(decreaseStockList, true, req.SaleBillUuid, ctx.GetStaffUuid())
+		warehouseOutForms := model.NewWarehouseOutForm(decreaseStockList, true, req.SaleBillUuid, ctx.GetStaffUuid())
 		if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-			if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
-				// 创建出库单
-				if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
-					return errors.WithMessage(err)
-				}
-				// 创建出库单记录
-				if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
-					return errors.WithMessage(err)
+			for _, warehouseOutForm := range warehouseOutForms {
+				if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
+					// 创建出库单
+					if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
+						return errors.WithMessage(err)
+					}
+					// 创建出库单记录
+					if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
+						return errors.WithMessage(err)
+					}
 				}
 			}
 			return nil

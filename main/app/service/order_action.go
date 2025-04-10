@@ -32,7 +32,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		opt(option)
 	}
 	var productionOrder *model.ProductionOrder
-	var warehouseOutForm *model.WarehouseOutForm
+	var warehouseOutForms []*model.WarehouseOutForm
 
 	if ctx.NoLock() {
 		s.lock.LockUuid(saleBill.Uuid)
@@ -87,7 +87,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			return nil, errors.WithMessage(err, "s.GetProductDecreaseStockList failed")
 		}
 		// 构建出库单
-		warehouseOutForm = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid())
+		warehouseOutForms = model.NewWarehouseOutForm(decreaseStockList, false, saleBill.Uuid, ctx.GetStaffUuid())
 	}
 
 	ctx.Log().Debug("准备开始更新")
@@ -128,15 +128,17 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		}
 		// 出库相关
 		{
-			// 如果出库单明细不为空，则创建出库单
-			if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
-				// 创建出库单
-				if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
-					return errors.WithMessage(err)
-				}
-				// 创建出库单记录
-				if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
-					return errors.WithMessage(err)
+			for _, warehouseOutForm := range warehouseOutForms {
+				// 如果出库单明细不为空，则创建出库单
+				if len(warehouseOutForm.WarehouseOutFormItems) > 0 {
+					// 创建出库单
+					if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormRecord(*warehouseOutForm); err != nil {
+						return errors.WithMessage(err)
+					}
+					// 创建出库单记录
+					if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseOutFormItemRecords(warehouseOutForm.WarehouseOutFormItems); err != nil {
+						return errors.WithMessage(err)
+					}
 				}
 			}
 		}
