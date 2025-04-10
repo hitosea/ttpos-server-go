@@ -114,7 +114,7 @@ func (r *productionRepo) CreateProductionOrder(order *model.ProductionOrder) err
 func (r *productionRepo) GetLimitedProducts(column string, pageNo, pageSize int, opts ...DBOption) ([]model.ProductionOrderProduct, int64, error) {
 	var productionOrderProducts []model.ProductionOrderProduct
 	var total int64
-	db := r.db.Model(&model.ProductionOrderProduct{}).Session(&gorm.Session{})
+	db := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted).Session(&gorm.Session{})
 	for _, opt := range opts {
 		db = opt(db)
 	}
