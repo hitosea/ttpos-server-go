@@ -33,7 +33,7 @@ class AppService extends Service
             if (!isset($config['connections'][$name])) {
                 $mysql = $config['connections']['mysql'];
                 $mysql['database'] = $name;
-                $mysql['username'] = 'root';
+                $mysql['username'] = env('DB_USERNAME');
                 $mysql['password'] = env('DB_ROOT_PASSWORD');
                 $config['connections']['mysql'] = $mysql;
                 Config::set($config, 'database');

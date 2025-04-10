@@ -33,7 +33,7 @@ class ReloadOrder extends Command
         $config = config('database');
         $mysql = $config['connections'][$default];
         $mysql['database'] = 'shop'.$appId;
-        $mysql['username'] = 'root';
+        $mysql['username'] = env('DB_USERNAME');
         $mysql['password'] = env('DB_ROOT_PASSWORD');
         $config['connections'][$default] = $mysql;
         Config::set($config, 'database');
