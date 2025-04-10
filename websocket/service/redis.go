@@ -23,7 +23,7 @@ func RedisSubscribe() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	pubsub := cache.GlobalRedis.Client.Subscribe(ctx, "websocket_msg_push")
+	pubsub := cache.GlobalRedis.Subscribe(ctx, "websocket_msg_push")
 	defer pubsub.Close()
 
 	for {
