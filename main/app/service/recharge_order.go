@@ -737,7 +737,12 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 	}
 
 	// 关联查询
-	options = append(options, rechargeOrderRepo.WithPaymentOrders(), rechargeOrderRepo.WithPaymentOrderPaymentMethod(), rechargeOrderRepo.WithStaff())
+	options = append(options,
+		rechargeOrderRepo.WithMember(),
+		rechargeOrderRepo.WithPaymentOrders(),
+		rechargeOrderRepo.WithPaymentOrderPaymentMethod(),
+		rechargeOrderRepo.WithStaff(),
+	)
 	rechargeOrders, total, err := rechargeOrderRepo.PaginateGetRechargeOrder(listReq.PageNo, listReq.PageSize, options...)
 
 	if err != nil {
@@ -771,7 +776,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 			PaymentMethods: paymentMethods,
 			GiftAmount:     order.GiftAmount,
 			GiftPoint:      order.GiftPoint,
-			MemberUuid:     order.MemberUuid,
+			MemberUuid:     uint64(order.Member.ID),
 			RefundMoney:    order.RefundMoney,
 			Cashier: resp.RechargeOrderCashier{
 				RealName: cashierName,

@@ -342,6 +342,9 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 			WithPreload{
 				Query: "SaleOrders.ReturnOrders",
 			},
+			WithPreload{
+				Query: "SaleOrders.Member",
+			},
 		),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByCooking(),
