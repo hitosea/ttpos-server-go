@@ -311,15 +311,8 @@ func IsToday(timestamp int64) bool {
 
 func createSaleOrder(db *gorm.DB, saleBillSetting *model.SaleBillSetting, saleBillUuid uint64, saleBillOrderNo string) (*model.SaleOrder, error) {
 	// 创建销售订单
-	var serviceFee float64
-	if saleBillSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypeFixed {
-		serviceFee = saleBillSetting.ServiceFeeValue
-	}
-	saleOrder, err := repository.NewOrderRepo(db).CreateSaleOrder(model.SaleOrder{
-		SaleBillUuid: saleBillUuid,
-		OrderNo:      saleBillOrderNo,
-		ServiceFee:   serviceFee,
-	})
+	saleOrderObj := model.NewSaleOrder(saleBillUuid, saleBillOrderNo, *saleBillSetting)
+	saleOrder, err := repository.NewOrderRepo(db).CreateSaleOrder(*saleOrderObj)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
