@@ -297,7 +297,7 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 				// 开始时间
 				endTime := uint(0)
 				if param.QueryEndTime != 0 {
-					endTime = param.QueryEndTime + 86399
+					endTime = param.QueryEndTime
 				}
 				//
 				query := ""
