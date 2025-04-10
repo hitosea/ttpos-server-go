@@ -89,7 +89,7 @@ func (s *productionSrv) getProductPackageUuids(ctx context.Context) ([]uint64, r
 	}
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	deviceRepo := repository.NewDeviceRepo(db)
-	device, err := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()))
+	device, err := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()), deviceRepo.WhereSource(ctx.GetSource()))
 	if err != nil {
 		return productPackageUuids, emptyResp, errors.ErrInternal
 	}

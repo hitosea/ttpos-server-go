@@ -34,6 +34,9 @@ class Client extends Controller
     {
         $ai = new OpenAi();
         $res = $ai->forward(request()->post());
+        if ($res) {
+            $res['data'] = json_encode($res['data'], JSON_UNESCAPED_UNICODE);
+        }
         return $this->renderSuccess('', $res);
     }
 
@@ -160,7 +163,9 @@ class Client extends Controller
             ->field('id, type, brand, download_num, version_number, is_publish, version_name, forced_update, update_log, update_time as create_time')
             ->field('MD5(package_url) as uuid')
             ->where('type', $type)
-            ->order('id', 'desc')
+            ->orderRaw('CAST(SUBSTRING_INDEX(version_name, ".", 1) AS UNSIGNED) DESC, 
+                      CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(version_name, ".", 2), ".", -1) AS UNSIGNED) DESC,
+                      CAST(SUBSTRING_INDEX(version_name, ".", -1) AS UNSIGNED) DESC')
             ->paginate($param);
 
         foreach ($list as $k => $item) {
@@ -415,7 +420,9 @@ class Client extends Controller
         //
         $result = ClientVersionModel::field('md5_hash, brand, version_number, version_name, apk_version_code, apk_data, forced_update, update_log, original_name')
             ->field("package_url as download_url")
-            ->orderRaw("CONCAT(REPLACE(version_name, '.', ''), LPAD('', 10 - LENGTH(REPLACE(version_name, '.', '')), '0')) DESC")
+            ->orderRaw('CAST(SUBSTRING_INDEX(version_name, ".", 1) AS UNSIGNED) DESC, 
+                      CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(version_name, ".", 2), ".", -1) AS UNSIGNED) DESC,
+                      CAST(SUBSTRING_INDEX(version_name, ".", -1) AS UNSIGNED) DESC')
             ->where('type', $type)
             ->where('is_publish', 1)
             ->when($brand, function ($q) use ($brand) {
