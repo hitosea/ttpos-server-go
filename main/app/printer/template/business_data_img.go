@@ -236,7 +236,7 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("赠送积分"), Width: 350, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%d", businessData.All.MemberData.GiftPoints), Width: 0, Align: pkg.AlignRight},
+			pkg.ColumnConfig{Text: strconv.FormatFloat(businessData.All.MemberData.GiftPoints, 'f', -1, 64), Width: 0, Align: pkg.AlignRight},
 		)
 		// 未结账相关
 		img.AppendSplitLine()

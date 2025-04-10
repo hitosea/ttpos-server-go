@@ -226,7 +226,7 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 		printer.LineFeed(1)
 		printer.PrintInColumns(t.base.Translate("赠送金额"), t.base.GetPriceAndUnit(businessData.All.MemberData.GiftMoney))
 		printer.LineFeed(1)
-		printer.PrintInColumns(t.base.Translate("赠送积分"), fmt.Sprintf("%d", businessData.All.MemberData.GiftPoints))
+		printer.PrintInColumns(t.base.Translate("赠送积分"), strconv.FormatFloat(businessData.All.MemberData.GiftPoints, 'f', -1, 64))
 		printer.LineFeed(1)
 		// 未结账相关
 		printer.AppendText("------------------------------------------------")
