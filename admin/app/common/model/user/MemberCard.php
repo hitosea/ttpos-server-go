@@ -53,4 +53,12 @@ class MemberCard extends BaseModel
         }
         return $model->findOrEmpty();
     }
+
+    /**
+     * 关联会员卡表
+     */
+    public function card()
+    {
+        return $this->hasOne('app\\common\\model\\user\\Card', 'uuid', 'card_type_uuid');
+    }
 }
