@@ -136,13 +136,13 @@ class UserShiftLog extends Controller
             return $this->renderError($res['message'] ?? '请求失败');
         }
         $businessData = $res['data'];
+
         //
         $detail['shift_no'] = $info['shift_no']; // 当班编号
         $detail['shift_start_time'] = $info['shift_start_time']; // 当班时间开始时间
         $detail['shift_end_time'] = $info['shift_end_time']; // 当班时间结束时间
         $detail['total_business'] = $businessData['total_sales']; // 总销售额
         $detail['total_income'] = $businessData['total_pay_price']; // 营业收入
-        $detail['cash_income'] = $businessData['total_received_price']; // 实收金额
         $detail['previous_shift_cash'] = $info['previous_shift_cash'];  // 上一班遗留备用金
         $detail['cash_taken_out'] = $info['cash_taken_out']; // 本班取出现金
         $detail['cash_left'] = $info['cash_left']; // 本班遗留备用金
@@ -154,6 +154,7 @@ class UserShiftLog extends Controller
             'real_name' => $info['user']['real_name'], // 收银员-姓名
         ];
         $detail['order'] = [
+            'received_price' => $businessData['total_received_price'], // 实收金额
             'service_money' => $businessData['total_service_money'], // 服务费
             'pay_fee_money' => $businessData['total_pay_fee_money'], // 支付手续费
             'consumption_tax_money' => $businessData['total_tax_money'], // 税费

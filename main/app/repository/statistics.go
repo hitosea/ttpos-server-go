@@ -181,7 +181,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 	productCategoryTable := prefix + "product_category as pc"
 	productParentCategoryTable := prefix + "product_category as ppc"
 
-	if categoryType == 1 {
+	if categoryType != 2 {
 		db.Table(statisticsProductTable).
 			Select(
 				"IF(pc.parent_uuid = 0, pp.category_uuid, pc.parent_uuid) AS category_parent_uuid",
@@ -197,9 +197,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 			Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
 			Group("IF(pc.parent_uuid = 0, pp.category_uuid, pc.parent_uuid)").
 			Find(&result)
-	}
-
-	if categoryType == 2 {
+	} else {
 		db.Table(statisticsProductTable).
 			Select(
 				"pc.parent_uuid AS category_parent_uuid",

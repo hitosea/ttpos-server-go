@@ -538,6 +538,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 						serviceTax = serviceTax.Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee))
 						discount = discount.Add(productPrice).Add(productTax).Add(serviceFee).Add(serviceTax)
 					}
+				} else {
+					productPrice = productPrice.Add(decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()))
+					productTax = productTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
+					serviceFee = serviceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee))
+					serviceTax = serviceTax.Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee))
 				}
 				var bomUuid uint64
 				for _, productBom := range saleProduct.SaleOrderProductBoms {
