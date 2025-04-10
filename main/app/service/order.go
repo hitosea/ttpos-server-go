@@ -5822,8 +5822,13 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		return nil, errors.New("有未送厨的商品")
 	}
 
-	// 最终应收=应收金额+手续费
-	finalAmount := decimal.NewFromFloat(saleOrder.GetAmount()).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64()
+	// 计算抹零金额. 只有没有手续费时，才能抹零
+	if commissionFee == 0 {
+		saleOrder.SetCheckOutZeroFee()
+	}
+
+	// 最终应收=应收金额+手续费-结账抹零金额
+	finalAmount := decimal.NewFromFloat(saleOrder.GetAmount()).Add(decimal.NewFromFloat(commissionFee)).Sub(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee)).InexactFloat64()
 
 	totalPay := float64(0) // 总付款金额=各个付款单的实收金额之和
 	for _, paymentOrder := range infoResp.PaymentOrders.List {
@@ -5866,10 +5871,10 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	// 现金支付的金额，已减掉找零的金额
 	cashAmount = saleOrder.GetCashAmount()
 
-	// 计算抹零金额. 只有没有手续费时，才能抹零
-	if commissionFee == 0 {
-		saleOrder.SetCheckOutZeroFee()
-	}
+	// // 计算抹零金额. 只有没有手续费时，才能抹零
+	// if commissionFee == 0 {
+	// 	saleOrder.SetCheckOutZeroFee()
+	// }
 
 	// 修改订单为支付完成，并记录找零金额、最终付款金额等结算后才计算的字段
 	final := model.FinalAmount{
@@ -6034,7 +6039,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormItemRecordsStatus(saleOrder.Uuid)
 
 	// 发布"结账"事件
-	saleOrderAmount := saleOrder.GetAmount()
 	originSaleOrderAmount := saleOrder.GetOriginAmountValue()
 	saleOrderPaymentAmount := saleOrder.PaymentAmount
 	saleOrderChangeAmount := saleOrder.ChangeAmount
@@ -6089,8 +6093,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		SaleBillUuid:  req.SaleBillUuid,
 		SaleOrderUuid: req.SaleOrderUuid,
 		AmountInfo: resp.PayAmountInfo{
-			OrderAmount:  saleOrderAmount,
-			PayAmount:    originTotalPay, // 原总付款=总付款-找零金额
+			OrderAmount:  saleOrder.FinalPrice, // 最终应收
+			PayAmount:    originTotalPay,       // 原总付款=总付款-找零金额
 			ChangeAmount: saleOrderChangeAmount,
 		},
 		PayMethodList: resp.PayMethodList{
