@@ -10,10 +10,11 @@ import (
 
 // ProductPackageRepoInterface 产品包
 type ProductPackageRepoInterface interface {
-	GetProductPackageList() ([]model.ProductPackage, error)                   // 获取产品包列表
-	UpdateProductPackage(id uint, productPackage model.ProductPackage) error  // 更新产品包
-	CreateProductPackage(productPackage model.ProductPackage) (uint64, error) // 创建产品包
-	DeleteProductPackage(id uint) error                                       // 软删除产品包
+	GetProductPackageList() ([]model.ProductPackage, error)                      // 获取产品包列表
+	UpdateProductPackage(id uint, productPackage model.ProductPackage) error     // 更新产品包
+	UpdateProductPackageActualSaleNum(productPackage model.ProductPackage) error // 更新产品包的实际销量
+	CreateProductPackage(productPackage model.ProductPackage) (uint64, error)    // 创建产品包
+	DeleteProductPackage(id uint) error                                          // 软删除产品包
 }
 
 func NewProductPackageRepo(db *gorm.DB) ProductPackageRepoInterface {
@@ -56,6 +57,11 @@ func (r *ProductPackageRepoImpl) UpdateProductPackage(id uint, productPackage mo
 	}
 
 	return tx.Commit().Error // 提交事务
+}
+
+// UpdateProductPackageActualSaleNum 更新产品包的实际销量
+func (r *ProductPackageRepoImpl) UpdateProductPackageActualSaleNum(productPackage model.ProductPackage) error {
+	return r.db.Model(&model.ProductPackage{}).Where("uuid = ?", productPackage.Uuid).Update("actual_sale_num", productPackage.ActualSaleNum).Error
 }
 
 // CreateProductPackage 创建产品包

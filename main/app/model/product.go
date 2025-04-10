@@ -131,6 +131,8 @@ type ProductPackage struct {
 	LimitNum              uint   `gorm:"default:0;column:limit_num;comment:'限购数量'"`
 	Describe              string `gorm:"default:'';column:describe;comment:'卖点描述'"`
 
+	ActualSaleNum float64 `gorm:"default:0.0000;column:actual_sale_num;comment:'实际销量。每次卖出时,实际销量增加'"`
+
 	SauceRequired     uint8 `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是'"`
 	SauceMaxSelection uint  `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
 	OpenDiscount      uint  `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`

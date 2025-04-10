@@ -101,6 +101,7 @@ func ReduceStock(db *gorm.DB, saleBillUuid uint64) {
 			}
 			ProductBoms[warehouseOutFormItem.ProductBomUuid].StockNum -= warehouseOutFormItem.Num      // 扣减库存
 			ProductBoms[warehouseOutFormItem.ProductBomUuid].ActualSaleNum += warehouseOutFormItem.Num // 增加实际销量
+			ProductBoms[warehouseOutFormItem.ProductBomUuid].ProductPackage.ActualSaleNum += warehouseOutFormItem.Num
 		} else if warehouseOutFormItem.IsMaterial() {
 			if Materials[warehouseOutFormItem.MaterialUuid] == nil {
 				Materials[warehouseOutFormItem.MaterialUuid] = warehouseOutFormItem.Material
@@ -132,6 +133,15 @@ func ReduceStock(db *gorm.DB, saleBillUuid uint64) {
 			logger.Logger.Error("SubscribeSentCookingEvent process, UpdateMaterialStockNum failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
 			return err
 		}
+
+		// 更新product_package的actual_sale_num字段
+		for _, productBom := range ProductBomsList {
+			if err := base.NewProductPackageRepo(tx).UpdateProductPackageActualSaleNum(productBom.ProductPackage); err != nil {
+				logger.Logger.Error("SubscribeSentCookingEvent process, UpdateProductPackageActualSaleNum failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))
+				return err
+			}
+		}
+
 		return nil
 	}); err != nil {
 		logger.Logger.Error("SubscribeSentCookingEvent process, Transaction failed", zap.Any("saleBillUuid", saleBillUuid), zap.Error(err))

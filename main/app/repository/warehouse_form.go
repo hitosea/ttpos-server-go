@@ -147,7 +147,7 @@ func (r *warehouseFormRepoImpl) GetWarehouseOutFormItemNotProcessed(saleBillUuid
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.Preload(
 			WithPreload{
-				Query: "ProductBom",
+				Query: "ProductBom.ProductPackage",
 			},
 			WithPreload{
 				Query: "Material",
