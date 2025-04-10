@@ -96,11 +96,17 @@ func ReduceStock(db *gorm.DB, saleBillUuid uint64) {
 	for _, warehouseOutFormItem := range warehouseOutFormItems {
 		warehouseOutFormItem.ReduceStock = constant.WarehouseOutFormItemReduceStockSuccess
 		if warehouseOutFormItem.IsProductBom() {
-			ProductBoms[warehouseOutFormItem.ProductBomUuid] = warehouseOutFormItem.ProductBom
-			ProductBoms[warehouseOutFormItem.ProductBomUuid].StockNum -= warehouseOutFormItem.Num
+			if ProductBoms[warehouseOutFormItem.ProductBomUuid] == nil {
+				ProductBoms[warehouseOutFormItem.ProductBomUuid] = warehouseOutFormItem.ProductBom
+			}
+			ProductBoms[warehouseOutFormItem.ProductBomUuid].StockNum -= warehouseOutFormItem.Num      // 扣减库存
+			ProductBoms[warehouseOutFormItem.ProductBomUuid].ActualSaleNum += warehouseOutFormItem.Num // 增加实际销量
 		} else if warehouseOutFormItem.IsMaterial() {
-			Materials[warehouseOutFormItem.MaterialUuid] = warehouseOutFormItem.Material
+			if Materials[warehouseOutFormItem.MaterialUuid] == nil {
+				Materials[warehouseOutFormItem.MaterialUuid] = warehouseOutFormItem.Material
+			}
 			Materials[warehouseOutFormItem.MaterialUuid].StockNum -= warehouseOutFormItem.Num
+			Materials[warehouseOutFormItem.MaterialUuid].ActualSaleNum += warehouseOutFormItem.Num
 		}
 	}
 

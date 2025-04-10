@@ -12,6 +12,7 @@ type Material struct {
 	UnitUuid              uint64  `gorm:"default:0;column:unit_uuid;comment:'单位ID'"`
 	Price                 float64 `gorm:"default:0;column:price;comment:'采购单价'"`
 	StockNum              float64 `gorm:"default:0;column:stock_num;comment:'库存数量'"`
+	ActualSaleNum         float64 `gorm:"default:0;column:actual_sale_num;comment:'实际销量'"`
 	BarcodeValue          string  `gorm:"default:'';column:barcode_value;comment:'条形码值'"`
 	Status                bool    `gorm:"default:false;column:status;comment:'状态,true上架 false下架'"`
 

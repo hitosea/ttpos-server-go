@@ -230,6 +230,7 @@ type ProductBom struct {
 	IsDefaultSelect int     `gorm:"column:is_default_select;type:tinyint(1);default:0;comment:是否默认选择, 0-否 1-是;NOT NULL" json:"is_default_select"`
 	Status          int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-下架 1-上架. 同步商品包的状态;NOT NULL" json:"status"`
 	IsSoldOut       int     `gorm:"column:is_sold_out;type:tinyint(1);default:0;comment:是否沽清, 0-否 1-是;NOT NULL" json:"is_sold_out"`
+	ActualSaleNum   float64 `gorm:"column:actual_sale_num;type:decimal(12,4);default:0.0000;comment:实际销量;NOT NULL" json:"actual_sale_num"`
 
 	// 关联ID
 	ProductFlavorUuid  uint64 `gorm:"column:product_flavor_uuid;type:bigint(20) unsigned;default:0;comment:商品规格ID(仅商品使用);NOT NULL" json:"product_flavor_uuid"`
