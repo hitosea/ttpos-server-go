@@ -540,6 +540,7 @@ func (model *SaleOrderProduct) SetCancelInfo(reason string, reasons []*SaleOrder
 	model.CancelTime = time.Now().Unix()
 	model.CancelReason = reason
 	model.CancelReasons = append(model.CancelReasons, reasons...)
+	model.ProductionOrderUuid = 0            // 取消生产订单关联
 	model.Sign = model.GenerateProductSign() // 更新签名
 }
 

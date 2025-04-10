@@ -5991,6 +5991,9 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		}
 	}()
 
+	// 该订单的所有出库记录都标记已出库。将预出库的状态改为已出库
+	repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormItemRecordsStatus(saleOrder.Uuid)
+
 	// 发布"结账"事件
 	saleOrderAmount := saleOrder.GetAmount()
 	originSaleOrderAmount := saleOrder.GetOriginAmountValue()
