@@ -61,7 +61,7 @@ services:
     
   golang:
     container_name: "saas-golang-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-go:754c1e4
+    image: hub.hitosea.com/ttpos-server/ttpos-server-go:${IMAGE_VERSION}
     volumes:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env
@@ -72,7 +72,7 @@ services:
 
   websocket:
     container_name: "saas-websocket-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-websocket:754c1e4
+    image: hub.hitosea.com/ttpos-server/ttpos-server-websocket:${IMAGE_VERSION}
     volumes:
       - .env:/var/.env
     restart: always
