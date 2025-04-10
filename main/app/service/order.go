@@ -627,8 +627,8 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 
 	// 组合列表源数据
 	billList := make([]resp.BillLists, len(lists))
-	consumerUuids := []string{}
 	for i, bill := range lists {
+		consumerUuids := []string{}
 		totalPayTypeNames := []string{}
 		isSplit := len(bill.SaleOrders) > 1 // 拆单
 		orderList := make([]resp.BillListsOrder, 0)
@@ -688,7 +688,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 						if order.ConsumerUuid == 0 {
 							return ""
 						}
-						return strconv.FormatUint(order.ConsumerUuid, 10)
+						return strconv.FormatUint(uint64(order.Member.ID), 10)
 					}(),
 					OrderNo:       order.OrderNo,
 					Status:        order.Status,
@@ -700,7 +700,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 				})
 				//
 				if order.ConsumerUuid > 0 {
-					consumerUuids = append(consumerUuids, strconv.FormatUint(order.ConsumerUuid, 10))
+					consumerUuids = append(consumerUuids, strconv.FormatUint(uint64(order.Member.ID), 10))
 				}
 			}
 		} else {
@@ -708,7 +708,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 			if len(bill.SaleOrders) > 0 {
 				order := bill.SaleOrders[0]
 				if order.ConsumerUuid > 0 {
-					consumerUuids = append(consumerUuids, strconv.FormatUint(order.ConsumerUuid, 10))
+					consumerUuids = append(consumerUuids, strconv.FormatUint(uint64(order.Member.ID), 10))
 				}
 				if order.IsFree == 1 {
 					totalPayTypeNames = append(totalPayTypeNames, i18n.Translate(ctx.GetLanguage(), "免单"))
@@ -922,8 +922,13 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			RefundAmount:  saleOrder.GetTotalRefundAmount(),
 			PayTypeName:   saleOrder.GetPayTypeNames(ctx.GetLanguage()),
 			MemberName:    saleOrder.GetMemberName(),
-			MemberUuid:    saleOrder.ConsumerUuid,
-			Products:      products,
+			MemberUuid: func() uint64 {
+				if saleOrder.Member == nil {
+					return uint64(0)
+				}
+				return uint64(saleOrder.Member.ID)
+			}(),
+			Products: products,
 		})
 		//
 		if saleOrder.Status != constant.SaleBillStatusPending {
