@@ -30,7 +30,7 @@ func RedisSubscribe() {
 		msg, err := pubsub.ReceiveMessage(ctx)
 		if err != nil {
 			fmt.Println("Redis Error receiving message:", err)
-			time.Sleep(1 * time.Second) // 重试间隔
+			time.Sleep(100 * time.Microsecond) // 重试间隔
 			continue
 		}
 

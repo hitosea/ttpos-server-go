@@ -1,6 +1,7 @@
 package service
 
 import (
+	contexts "context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -516,6 +517,10 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 
 	// 开始事务
 	if err := db.Transaction(func(tx *gorm.DB) error {
+
+		// 标记
+		tx = tx.WithContext(contexts.WithValue(contexts.Background(), constant.OrderOperateSource, constant.OrderOpenTable))
+
 		// 如果是自助餐，有顾客列表的话，创建顾客
 		if len(saleOrderBuffetCustomerTypes) > 0 {
 			for _, customer := range saleOrderBuffetCustomerTypes {
@@ -3756,7 +3761,7 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 	}
 
 	// 设置添加来源
-	saleBill.SetAddSource(ctx.GetSource())
+	saleBill.SetOperateSource(ctx.GetSource())
 
 	// 加购
 	if err := s.ActionAdd(ctx, request, saleBill); err != nil {

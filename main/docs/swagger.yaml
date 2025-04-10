@@ -318,7 +318,7 @@ definitions:
         type: number
       gift_points:
         description: 赠送积分
-        type: integer
+        type: number
       recharge_amount:
         description: 充值金额
         type: number
@@ -3180,6 +3180,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Currency'
         description: 货币设置
+      is_show_sold_out:
+        description: 电子菜单是否显示售罄商品
+        type: boolean
     type: object
   resp.OnlineCashier:
     properties:
@@ -3527,9 +3530,8 @@ definitions:
   resp.OrderProduct:
     properties:
       gift_reason:
-        allOf:
-        - $ref: '#/definitions/dto.LocaleResponse'
         description: 赠品原因
+        type: string
       image_url:
         description: 图片地址
         type: string
@@ -3566,9 +3568,8 @@ definitions:
         description: 退款金额
         type: number
       refund_reason:
-        allOf:
-        - $ref: '#/definitions/dto.LocaleResponse'
         description: 退菜原因
+        type: string
       remark:
         description: 备注
         type: string

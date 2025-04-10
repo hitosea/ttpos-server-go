@@ -1,6 +1,10 @@
 package constant
 
 const (
+	OrderOperateSource = "operate_source" // 操作来源
+)
+
+const (
 	OrderSourceInstant  = "instant"  // 点餐
 	OrderSourceDesk     = "desk"     // 桌台
 	OrderSourceRecharge = "recharge" // 充值

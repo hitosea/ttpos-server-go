@@ -2034,4 +2034,5 @@ return [
     "测试通过!" => "Test passed!",
     "等级权重范围1-999" => "Level weight range 1-999",
     "等级等级折扣范围0-100%" => "Level level discount range 0-100%",
+    "账号已删除，请联系管理员" => "Account has been deleted, please contact the administrator.",
 ];

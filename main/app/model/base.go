@@ -16,12 +16,13 @@ import (
 
 // BaseModel 基础模型
 type BaseModel struct {
-	ID         uint   `gorm:"column:id;type:int(11) unsigned;primaryKey;autoIncrement;comment:'自增ID'"`
-	Uuid       uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:'绑定记录ID';"`
-	CreateTime int64  `gorm:"autoCreateTime;column:create_time;type:int(10);comment:'创建时间(时间戳)'"`
-	UpdateTime int64  `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:'更新时间(时间戳)'"`
-	DeleteTime int64  `gorm:"column:delete_time;type:int(10);default:0;comment:'删除时间(时间戳)'"`
-	isUpdate   bool   // 用于判断该model是否需要更新
+	ID            uint   `gorm:"column:id;type:int(11) unsigned;primaryKey;autoIncrement;comment:'自增ID'"`
+	Uuid          uint64 `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:'绑定记录ID';"`
+	CreateTime    int64  `gorm:"autoCreateTime;column:create_time;type:int(10);comment:'创建时间(时间戳)'"`
+	UpdateTime    int64  `gorm:"autoUpdateTime;column:update_time;type:int(10);comment:'更新时间(时间戳)'"`
+	DeleteTime    int64  `gorm:"column:delete_time;type:int(10);default:0;comment:'删除时间(时间戳)'"`
+	isUpdate      bool   // 用于判断该model是否需要更新
+	operateSource string // 虚拟字段，用于标记添加来源
 }
 
 // NoPrimaryKey 判断是否无主键
@@ -83,19 +84,35 @@ func (model *BaseModel) getCompanyUuid(tx *gorm.DB) uint64 {
 	return 0
 }
 
+// 设置添加来源
+func (model *SaleBill) SetOperateSource(addSource string) {
+	model.operateSource = addSource
+}
+
+// 获取添加来源
+func (model *SaleBill) GetOperateSource() string {
+	return model.operateSource
+}
+
 // --------------------------------
 // Hook Methods
 // --------------------------------
 
 // SaleBill - AfterUpdate 更新销售订单后的逻辑 - 推送订单更新
 func (model *SaleBill) AfterUpdate(tx *gorm.DB) (err error) {
-	if addSource, ok := tx.Statement.Context.Value("add_source").(string); ok {
-		if addSource == constant.SourceH5 {
+	if model.Uuid == 0 {
+		return nil
+	}
+	if operateSource, ok := tx.Statement.Context.Value(constant.OrderOperateSource).(string); ok {
+		if operateSource == constant.SourceH5 {
+			return nil
+		}
+		if operateSource == constant.OrderOpenTable {
 			return nil
 		}
 	}
 	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
-		go websocket.PushClient(companyUuid, "*", "*", websocket.UPDATE_ORDER, map[string]interface{}{
+		go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
 			"sale_bill_uuid": model.Uuid,
 			"desk_uuid":      model.DeskUuid,
 			"update_time":    model.BaseModel.UpdateTime,
@@ -112,8 +129,8 @@ func (model *CustomerCall) AfterCreate(tx *gorm.DB) (err error) {
 			"desk_uuid":          model.DeskUuid,
 			"update_time":        model.BaseModel.UpdateTime,
 		}
-		go websocket.PushClient(companyUuid, websocket.SourceCashier, "*", websocket.CUSTOMER_CALL, data)
-		go websocket.PushClient(companyUuid, websocket.SourceAssistant, "*", websocket.CUSTOMER_CALL, data)
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+		go websocket.PushClient(companyUuid, websocket.SourceAssistant, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
 	}
 	return nil
 }
@@ -127,7 +144,7 @@ func (model *PrinterLog) AfterCreate(tx *gorm.DB) (err error) {
 		go websocket.PushClient(
 			companyUuid,
 			websocket.SourceCashier,
-			utils.IfString(model.CashierDeviceId != "", model.CashierDeviceId, "*"),
+			utils.IfString(model.CashierDeviceId != "", model.CashierDeviceId, websocket.SourceAll),
 			websocket.PRINT_DATA,
 			map[string]interface{}{
 				"print_log_uuid": model.Uuid,
@@ -147,8 +164,8 @@ func (model *H5Order) AfterCreate(tx *gorm.DB) (err error) {
 			"desk_uuid":          model.DeskUuid,
 			"update_time":        model.BaseModel.UpdateTime,
 		}
-		go websocket.PushClient(companyUuid, websocket.SourceCashier, "*", websocket.H5_ORDER, data)
-		go websocket.PushClient(companyUuid, websocket.SourceCashier, "*", websocket.CUSTOMER_CALL, data)
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.H5_ORDER, data)
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
 	}
 	return nil
 }
@@ -161,7 +178,7 @@ func (model *H5Order) AfterUpdate(tx *gorm.DB) (err error) {
 			"desk_uuid":     model.DeskUuid,
 			"update_time":   model.BaseModel.UpdateTime,
 		}
-		go websocket.PushClient(companyUuid, websocket.SourceCashier, "*", websocket.H5_ORDER, data)
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.H5_ORDER, data)
 	}
 	return nil
 }
@@ -173,7 +190,7 @@ func (model *Desk) AfterUpdate(tx *gorm.DB) (err error) {
 			"desk_uuid":   model.BaseModel.Uuid,
 			"update_time": model.BaseModel.UpdateTime,
 		}
-		go websocket.PushClient(companyUuid, "*", "*", websocket.UPDATE_DESK, data)
+		go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, data)
 	}
 	return nil
 }

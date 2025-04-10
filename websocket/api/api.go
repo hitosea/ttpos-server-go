@@ -53,7 +53,7 @@ func PushClient(w http.ResponseWriter, r *http.Request) {
 	go func(_uuid string) {
 		// 检查Redis缓存是否被更新
 		if params.MessageKey != "" {
-			time.Sleep(1 * time.Second)
+			time.Sleep(900 * time.Millisecond)
 			if cachedUUID, exists := cache.GlobalRedis.Get(params.MessageKey); exists {
 				if _uuid != cachedUUID.(string) {
 					return

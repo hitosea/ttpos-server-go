@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/websocket"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -117,6 +118,12 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 					ctx.Log().Debug("更新账单失败", zap.Error(err))
 					return errors.WithMessage(err, "更新账单失败")
 				}
+			} else {
+				go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
+					"sale_bill_uuid": saleBill.Uuid,
+					"desk_uuid":      saleBill.DeskUuid,
+					"update_time":    saleBill.UpdateTime,
+				})
 			}
 		}
 		// 出库相关

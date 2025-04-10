@@ -2034,4 +2034,5 @@ return [
     "测试通过!" => "Test başarılı!",
     "等级权重范围1-999" => "Derece ağırlık aralığı 1-999",
     "等级等级折扣范围0-100%" => "Seviye seviye indirim aralığı 0-100%",
+    "账号已删除，请联系管理员" => "Hesap silindi, lütfen yöneticiyle iletişime geçin.",
 ];

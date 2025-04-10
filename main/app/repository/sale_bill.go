@@ -118,7 +118,7 @@ func (r *saleBillRepo) UpdateSaleBillRecord(saleBill model.SaleBill) error {
 		return errors.New("SaleBill不能没有ID或UUID")
 	}
 	// 2. 创建上下文
-	ctx := context.WithValue(context.Background(), "add_source", saleBill.GetAddSource())
+	ctx := context.WithValue(context.Background(), constant.OrderOperateSource, saleBill.GetOperateSource())
 	// 3. 更新
 	return r.db.WithContext(ctx).Model(&model.SaleBill{}).Select("*").Where("uuid = ?", saleBill.Uuid).Updates(&saleBill).Error
 }
