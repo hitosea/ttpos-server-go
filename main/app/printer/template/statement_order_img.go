@@ -515,12 +515,12 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			if t.base.Lang == "ja" {
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: taxRate + "%" + t.base.Translate("的对象"), Width: 280, Align: pkg.AlignLeft},
-					pkg.ColumnConfig{Text: fmt.Sprintf("%s (%s)", t.base.GetPriceAndUnit(totalPrice), t.base.Amount(taxFee)), Width: 0, Align: pkg.AlignRight},
+					pkg.ColumnConfig{Text: fmt.Sprintf("%s (%s)", t.base.Amount(totalPrice), t.base.Amount(taxFee)), Width: 0, Align: pkg.AlignRight},
 				)
 			} else {
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: fmt.Sprintf("VAT (%s)", taxRate+"%"), Width: 280, Align: pkg.AlignLeft},
-					pkg.ColumnConfig{Text: fmt.Sprintf("%s (%s)", t.base.GetPriceAndUnit(totalPrice), t.base.Amount(taxFee)), Width: 0, Align: pkg.AlignRight},
+					pkg.ColumnConfig{Text: fmt.Sprintf("%s (%s)", t.base.Amount(totalPrice), t.base.Amount(taxFee)), Width: 0, Align: pkg.AlignRight},
 				)
 			}
 		}
