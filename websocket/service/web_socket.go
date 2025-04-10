@@ -37,6 +37,7 @@ type PushMessage struct {
 
 // ClientMessage represents a generic message structure
 type ClientMessage struct {
+	Type  string `json:"type"`
 	Event string `json:"event"`
 	MsgId any    `json:"msg_id,omitempty"`
 }
@@ -84,7 +85,7 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, msg, err := ws.ReadMessage()
 		if err != nil {
-			fmt.Println("Error reading message:", err)
+			fmt.Println("Error reading message:", err, " DeviceId:", newConn.DeviceId)
 			break
 		}
 		// 处理消息
@@ -204,18 +205,17 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 	}
 
 	// 处理心跳消息
-	if clientMessage.Event == "heartbeat" {
+	if clientMessage.Type == "heartbeat" {
+		fmt.Println("Heartbeat message DeviceId: ", newConn.DeviceId)
 		err := ws.WriteMessage(websocket.TextMessage, msg)
 		if err != nil {
 			fmt.Println("Error writing message:", err)
-		} else {
-			fmt.Println("Heartbeat message DeviceId: ", newConn.DeviceId)
 		}
 		return
 	}
 
 	// 处理已读删除
-	if clientMessage.Event == "reply" {
+	if clientMessage.Type == "reply" {
 		repo := repository.NewWebSocketMsgRepository(&database.DBManager{})
 		err := repo.DeleteByTypeAndId(msgId)
 		if err != nil {
