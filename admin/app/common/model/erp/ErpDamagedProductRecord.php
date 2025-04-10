@@ -135,10 +135,14 @@ class ErpDamagedProductRecord extends BaseModel
 
         $paginate = $model
             ->with([
-                'sku' => [ 
-                    'product' => [ 'image', 'category' ]
-                ], 
-                'material' => [ 'image', 'category' ], 
+                'sku' => function($q) {
+                    return $q->with([ 'product' => function($q) {
+                        return $q->with([ 'image', 'category' ])->withTrashed();
+                    }])->withTrashed();
+                }, 
+                'material' => function($q) {
+                    return $q->with([ 'image', 'category' ])->withTrashed();
+                }, 
                 'operator',
             ])
             ->when($type && $type > 0, function ($q) use ($type) {
@@ -429,12 +433,12 @@ class ErpDamagedProductRecord extends BaseModel
         if ($productBom) {
             $stock_num = ProductBom::where('uuid',  $productId)->value('stock_num');
             $productBomUuid =  $productId;
-        }
-
-        // 原料
-        if ($material) {
+        } else if ($material) {
             $stock_num = Material::where('uuid',  $productId)->value('stock_num');
             $materialUuid =  $productId;
+        } else {
+            $this->error = '商品不存在';
+            return false;
         }
 
         if ($num > $stock_num) {
@@ -495,6 +499,12 @@ class ErpDamagedProductRecord extends BaseModel
                 }
             }
             if (($params['review_status'] ?? 0) == 2) {
+                $product = ProductBom::where('uuid', $this->product_bom_uuid)->find();
+                $material = Material::where('uuid', $this->material_uuid)->find();
+                if (!$product && !$material) {
+                    $this->error = '商品不存在';
+                    return false;
+                }
                 $updateArr['status'] = 2;
                 $updateArr['revoke_time'] = time();
                 $updateArr['reject_reason'] = $params['refused'] ?? '';
