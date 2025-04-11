@@ -97,6 +97,7 @@ func (r *orderRepo) UpdateSaleBillSetting(obj model.SaleBillSetting) (model.Sale
 		"service_fee_type":   obj.ServiceFeeType,
 		"service_fee_value":  obj.ServiceFeeValue,
 		"tax_fee_type":       obj.TaxFeeType,
+		"service_apply":      obj.ServiceApply,
 		"discount_type":      obj.DiscountType,
 		"zero_rule":          obj.ZeroRule,
 		"zero_checkout_rule": obj.ZeroCheckoutRule,

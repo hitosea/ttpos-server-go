@@ -77,7 +77,7 @@ type IOrderSrv interface {
 	OrderDeskBuffetProductList(ctx context.Context, req req.OrderChangeBuffetProductListReq) (*resp.BuffetProductList, error)                                               // 获取桌台的自助餐商品列表
 	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                                        // 通过桌台uuid获取到销售账单信息
 	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                              // 修改订单商品备注
-	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64) (*model.SaleBillSetting, error)                                                            // 创建销售账单设置
+	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64, deskUuid uint64) (*model.SaleBillSetting, error)                                           // 创建销售账单设置
 	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                                                // 通过设备SN获取点餐购物车信息
 	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                                         // 获取购物车信息
 	InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                 // 向购物车添加商品
@@ -245,7 +245,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		}
 
 		// 创建销售账单设置
-		saleBillSetting, err := s.CreateSaleBillSetting(ctx, tx, saleBill.Uuid)
+		saleBillSetting, err := s.CreateSaleBillSetting(ctx, tx, saleBill.Uuid, saleBill.DeskUuid)
 		if err != nil {
 			return errors.WithMessage(err)
 		}
@@ -343,7 +343,7 @@ func parseServiceFeeRate(ServiceChargeRate string) (float64, error) {
 }
 
 // CreateSaleBillSetting 创建销售账单设置
-func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64) (*model.SaleBillSetting, error) {
+func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, deskUuid uint64) (*model.SaleBillSetting, error) {
 	// 获取服务费设置
 	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(ctx)
 	if err != nil {
@@ -430,7 +430,10 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64) 
 	if businessSetting.FreeMethod == "20" {
 		isStatFree = constant.SaleBillSettingIsStatFreeNone
 	}
-
+	serviceApply, err := s.IsServiceFeeApply(ctx, deskUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 	saleBillSetting := model.SaleBillSetting{
 		SaleBillUuid:     saleBillUuid,
 		ServiceFeeType:   serviceFeeType,
@@ -441,14 +444,47 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64) 
 		ZeroCheckoutRule: zeroCheckout,
 		IsStatGift:       isStatGift,
 		IsStatFree:       isStatFree,
+		ServiceApply:     serviceApply,
 	}
 
 	return &saleBillSetting, nil
 }
 
+// 判断该销售账单是否在服务费应用范围内
+func (s *orderSrv) IsServiceFeeApply(ctx context.Context, deskUuid uint64) (uint, error) {
+	// 是否是全部应用
+	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(ctx)
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	// 是否是全部应用。是的话，则在范围内
+	if serviceFeeSetting.IsApplyScopeAll() {
+		return 1, nil
+	}
+	// 部分应用时
+	// 点餐订单
+	if deskUuid == 0 {
+		// 部分应用时，点餐方式是否勾选
+		if serviceFeeSetting.IsApplyScopeOrderingOpen() {
+			return 1, nil
+		} else {
+			return 0, nil
+		}
+	}
+	// 桌台订单
+	if serviceFeeSetting.IsApplyScopeTableOpen() {
+		// 判断账单的桌台是否在应用服务费的桌台列表中
+		saleBillDeskUuid := int64(deskUuid)
+		if slices.Contains(serviceFeeSetting.ApplyScopeTableList, saleBillDeskUuid) {
+			return 1, nil
+		}
+	}
+	return 0, nil
+}
+
 // CreateSaleBillSetting 创建销售账单设置
-func (s *orderSrv) CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64) (*model.SaleBillSetting, error) {
-	saleBillSetting, err := s.NewSaleBillSetting(ctx, saleBillUuid)
+func (s *orderSrv) CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64, deskUuid uint64) (*model.SaleBillSetting, error) {
+	saleBillSetting, err := s.NewSaleBillSetting(ctx, saleBillUuid, deskUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -491,7 +527,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, req.BuffetUuids, req.GetMealNum(), req.Remark, req.DeskUuid, desk.DeskNo, ctx.GetStaff().DutyNo, ctx.GetStaff().Uuid, ctx.GetStaff().Username)
 
 	// 构建销售账单设置
-	saleBillSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid)
+	saleBillSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, req.DeskUuid)
 	if err != nil {
 		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 	}
@@ -4160,7 +4196,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 	}
 
 	oldSetting := saleBill.SaleBillSetting
-	newSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid)
+	newSetting, err := s.NewSaleBillSetting(ctx, saleBill.Uuid, saleBill.DeskUuid)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err)
 	}
@@ -4256,7 +4292,24 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 		})
 		return res, newSetting, nil
 	}
+	// 检查订单是否在服务费应用范围内是否改变
+	if oldSetting.ServiceApply != newSetting.ServiceApply {
 
+		res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, resp.Product{
+			Uuid: oldSetting.Uuid,
+			LocaleName: dto.LocaleResponse{
+				ZH:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
+				TH:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
+				EN:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
+				ZHTW: fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
+				JA:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
+				KO:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
+				MY:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
+				TR:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
+			},
+		})
+		return res, newSetting, nil
+	}
 	return nil, nil, nil
 }
 
@@ -4285,6 +4338,18 @@ func parseTaxFeeType(taxFeeType uint) string {
 		return "关闭消费税"
 	}
 }
+
+func parseServiceApply(serviceApply uint) string {
+	switch serviceApply {
+	case 1:
+		return "订单在服务费应用范围内"
+	case 0:
+		return "订单不在服务费应用范围内"
+	default:
+		return "未知"
+	}
+}
+
 func (s *orderSrv) GetProductDecreaseStockList(ctx context.Context, unCookingSaleOrderProducts []*model.SaleOrderProduct) ([]*model.Product, error) {
 	cookingDeductSaleOrderProducts, err := s.getOrderProductForDecreaseStock(ctx, unCookingSaleOrderProducts)
 	if err != nil {

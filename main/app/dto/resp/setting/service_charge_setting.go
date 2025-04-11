@@ -12,3 +12,24 @@ type ServiceCharge struct {
 	ApplyScopeTable     string  `json:"apply_scope_table"`      // 适用范围-桌台 0-关闭 1-开启
 	ApplyScopeTableList []int64 `json:"apply_scope_table_list"` // 适用范围-桌台id列表
 }
+
+const (
+	ApplyScopeAll           = "1" // 应用范围-全部
+	ApplyScopePart          = "2" // 应用范围-部分
+	ApplyScopeOrderingOpen  = "1" // 应用范围-点餐-开启
+	ApplyScopeOrderingClose = "0" // 应用范围-点餐-关闭
+	ApplyScopeTableOpen     = "1" // 应用范围-桌台-开启
+	ApplyScopeTableClose    = "0" // 应用范围-桌台-关闭
+)
+
+func (obj ServiceCharge) IsApplyScopeAll() bool {
+	return obj.ApplyScope == ApplyScopeAll
+}
+
+func (obj ServiceCharge) IsApplyScopeOrderingOpen() bool {
+	return obj.ApplyScopeOrdering == ApplyScopeOrderingOpen
+}
+
+func (obj ServiceCharge) IsApplyScopeTableOpen() bool {
+	return obj.ApplyScopeTable == ApplyScopeTableOpen
+}

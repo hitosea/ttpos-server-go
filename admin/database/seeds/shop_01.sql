@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     `service_fee_type` INT(10) NOT NULL DEFAULT 0 COMMENT '服务费类型, 0-免服务费 1-按固定金额 2-按比例-不收取税费 3-按比例-收取税费。如果服务费收费应用范围不包括该账单，则该账单的服务费类型为0',
     `service_fee_value` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费值,服务费类型为1时,服务费值为固定金额,服务费类型为2和3时,服务费值为%比例',
+    `service_apply` INT(10) NOT NULL DEFAULT 0 COMMENT '是否收取服务费，0-不收取 1-收取。根据后台的服务费应用范围决定',
     `tax_fee_type` INT(10) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-关闭消费税 1-商品未含税 2-商品已含税',
     `zero_rule` INT(10) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数',
     `zero_checkout_rule` INT(10) NOT NULL DEFAULT 0 COMMENT '结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元',

@@ -147,6 +147,7 @@ type SaleBillSetting struct {
 	ServiceFeeType  uint    `gorm:"column:service_fee_type;type:tinyint(1);default:0;comment:服务费类型, 0-免服务费 1-按固定金额 2-按比例-不收取税费 3-按比例-收取税费" json:"service_fee_type"`
 	ServiceFeeValue float64 `gorm:"column:service_fee_value;type:decimal(12,2);default:0;comment:服务费值,服务费类型为1时,服务费值为固定金额,服务费类型为2和3时,服务费值为%比例" json:"service_fee_value"`
 	TaxFeeType      uint    `gorm:"column:tax_fee_type;type:tinyint(1);default:0;comment:税费类型, 0-关闭消费税 1-商品未含税 2-商品已含税" json:"tax_fee_type"`
+	ServiceApply    uint    `gorm:"column:service_apply;type:tinyint(1);default:0;comment:是否收取服务费，0-不收取 1-收取。根据后台的服务费应用范围决定" json:"service_apply"`
 
 	// 优惠和抹零设置
 	DiscountType     uint `gorm:"column:discount_type;type:tinyint(1);default:0;comment:打折类型, 0-百分比打折% 1-百分比直接减免% off" json:"discount_type"`
@@ -178,6 +179,10 @@ func (model *SaleBillSetting) GetTaxFeeType() int {
 
 // 获取销售账单商品税费类型
 func (model *SaleBillSetting) GetServiceFeeType() int {
+	// 如果后台设置该账单不在服务费应用范围内，则不收取服务费
+	if model.ServiceApply == 0 {
+		return constant.SaleBillSettingServiceFeeTypeNone
+	}
 	switch model.ServiceFeeType {
 	// 不收取服务费
 	case constant.SaleBillSettingServiceFeeTypeNone:
@@ -202,6 +207,10 @@ func (model *SaleBillSetting) GetServiceFeeType() int {
 // 当服务费按固定金额收取时，服务费比例为0，即不收取销售订单商品的服务费，只在销售订单加上固定金额的服务费
 // 当服务费按比例收取时，服务费比例为ServiceFeeValue字段记录的值
 func (model *SaleBillSetting) GetServiceFeeRate() float64 {
+	// 如果后台设置该账单不在服务费应用范围内，则不收取服务费
+	if model.ServiceApply == 0 {
+		return 0
+	}
 	switch model.ServiceFeeType {
 	// 不收取服务费时，服务费比率为0
 	case constant.SaleBillSettingServiceFeeTypeNone:

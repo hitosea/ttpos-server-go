@@ -188,9 +188,14 @@ func (model *SaleBill) IsShowSaleBill() bool {
 	return model.HideBillTime == 0
 }
 
-// 判断是否为自助餐销售账单
+// 判断是否为桌台销售账单
 func (model *SaleBill) IsDeskSaleBill() bool {
 	return model.DeskUuid != 0 // 桌台账单肯定是有桌台ID
+}
+
+// 判断是否为点餐销售账单
+func (model *SaleBill) IsInstantSaleBill() bool {
+	return !model.IsDeskSaleBill() // 点餐账单肯定是没有桌台ID
 }
 
 // 判断是否为自助餐销售账单
