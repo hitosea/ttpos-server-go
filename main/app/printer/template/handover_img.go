@@ -161,11 +161,13 @@ func (t *handoverImgTemplate) GetPrintContent(
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.TotalDiscountMoney), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		if isOpenBalance || businessData.TotalUserDiscountMoney > 0 {
+			img.LineFeed(1, 12)
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: t.base.Translate("会员折扣"), Width: 320, Align: pkg.AlignLeft, FontWeight: 1},
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.TotalUserDiscountMoney), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 			)
 		}
+		img.LineFeed(1, 12)
 		img.SetTextLineHeight(34)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("免单金额"), Width: 320, Align: pkg.AlignLeft, FontWeight: 1},

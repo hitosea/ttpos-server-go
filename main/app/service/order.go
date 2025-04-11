@@ -1200,7 +1200,7 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	}
 
 	// 送厨成功后，推送更新订单
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.KITCHEN, map[string]interface{}{
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
 		"update_time": time.Now().Unix(),
 	})
 
@@ -4707,7 +4707,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	}()
 
 	// 送厨成功后，推送更新订单
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.KITCHEN, map[string]interface{}{
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
 		"update_time": time.Now().Unix(),
 	})
 

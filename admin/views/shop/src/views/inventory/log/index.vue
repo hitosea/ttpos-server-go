@@ -45,7 +45,7 @@
           </el-table-column>
           <el-table-column prop="product.product_name_text" :label="$t('商品名称')" width="300"></el-table-column>
           <el-table-column prop="num" :label="$t('商品数量')"> </el-table-column>
-          <el-table-column prop="num" :label="$t('规格/单位')" width="140">
+          <el-table-column prop="num" :label="$t('规格/单位/加料')" width="140">
             <template #default="scope">
               {{ scope.row.product?.type == 10 ? scope.row.product_sku_name_text || '-' : scope.row.product?.product_unit_text || '-' }}
             </template>

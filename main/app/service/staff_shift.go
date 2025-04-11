@@ -502,6 +502,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 	var businessData = business_data_resp.BusinessDataAll{
 		TotalSales:             saleData.TotalSaleAmount,
 		TotalReceivedPrice:     saleData.TotalReceivedAmount,
+		TotalProductPrice:      saleData.TotalProductPrice,
 		TotalPayPrice:          saleData.TotalSaleAmount,
 		TotalPayFeeMoney:       saleData.TotalPaymentFee,
 		TotalServiceMoney:      saleData.TotalServiceFee,
@@ -563,7 +564,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		PeakHourList: func() []business_data_resp.PeakHour {
 			peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
 				uint(log.ShiftStartTime),
-				uint(log.ShiftEndTime),
+				uint(queryEndTime),
 				log.StaffUuid,
 			)
 			if err != nil {
