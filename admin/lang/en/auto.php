@@ -2035,4 +2035,9 @@ return [
     "等级权重范围1-999" => "Level weight range 1-999",
     "等级等级折扣范围0-100%" => "Level level discount range 0-100%",
     "账号已删除，请联系管理员" => "Account has been deleted, please contact the administrator.",
+    "等级折扣范围0-100%" => "Tier discount range 0-100%",
+    "-打包 " => "-Takeout",
+    "请选择服务费应用范围" => "Please select the service fee application scope",
+    "请选择应用服务费的桌台" => "Please select the table for which to apply the service fee.",
+    "并发生成 " => "Concurrent generation",
 ];

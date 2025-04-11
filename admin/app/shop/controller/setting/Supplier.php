@@ -210,6 +210,10 @@ class Supplier extends Controller
         $service_charge = $data['service_charge'] ?? 0;
         $service_charge_rate = $data['service_charge_rate'] ?? 0;
         $is_open_tax = $data['is_open_tax'] ?? '';
+        $apply_scope = $data['apply_scope'] ?? '1';
+        $apply_scope_ordering = $data['apply_scope_ordering'] ?? '0';
+        $apply_scope_table = $data['apply_scope_table'] ?? '0';
+        $apply_scope_table_list = $data['apply_scope_table_list'] ?? [];
         if (!in_array($charge_type, ['1', '2'])) {
             return $this->renderError('服务费类型错误');
         }
@@ -241,9 +245,27 @@ class Supplier extends Controller
             return $this->renderError('税费参数错误');
         }
 
+        if ($apply_scope == '2') {
+            if ($apply_scope_ordering == '0' && $apply_scope_table == '0') {
+                return $this->renderError('请选择服务费应用范围');
+            }
+            if ($apply_scope_table == '1' && empty($apply_scope_table_list)) {
+                return $this->renderError('请选择应用服务费的桌台');
+            }
+        }
+
+        // 台位id列表, 字符串转数字
+        $apply_scope_table_list = array_map(function ($item) {
+            return intval($item);
+        }, $apply_scope_table_list);
+
         $arr = [
             'is_open' => $data['is_open'], // 是否开启服务费
             'charge_type' => $charge_type, // 服务费类型 1-固定金额 2-百分比
+            'apply_scope' => $apply_scope, // 适用范围 1-全部 2-部分
+            'apply_scope_ordering' => $apply_scope_ordering, // 适用范围-点餐 0-关闭 1-开启
+            'apply_scope_table' => $apply_scope_table, // 适用范围-桌台 0-关闭 1-开启
+            'apply_scope_table_list' => $apply_scope_table_list, // 台位uuid列表
         ];
 
         if ($charge_type == '1') {

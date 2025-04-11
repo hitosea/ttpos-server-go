@@ -2035,4 +2035,9 @@ return [
     "等级权重范围1-999" => "Derece ağırlık aralığı 1-999",
     "等级等级折扣范围0-100%" => "Seviye seviye indirim aralığı 0-100%",
     "账号已删除，请联系管理员" => "Hesap silindi, lütfen yöneticiyle iletişime geçin.",
+    "等级折扣范围0-100%" => "Seviye İndirim Aralığı %0-100",
+    "-打包 " => "-Paket Servis",
+    "请选择服务费应用范围" => "Lütfen servis ücreti uygulama kapsamını seçin",
+    "请选择应用服务费的桌台" => "Lütfen servis ücreti uygulanacak masayı seçin.",
+    "并发生成 " => "Eş Zamanlı Oluşturma",
 ];

@@ -868,6 +868,10 @@ class Setting extends BaseModel
                     'service_charge' => '', // 服务费金额
                     'service_charge_rate' => '', // 服务费率
                     'is_open_tax' => '0', // 税费 1-收取税费 0-不收取税费
+                    'apply_scope' => '1', // 适用范围 1-全部 2-部分
+                    'apply_scope_ordering' => '0', // 适用范围-点餐 0-关闭 1-开启
+                    'apply_scope_table' => '0', // 适用范围-桌台 0-关闭 1-开启
+                    'apply_scope_table_list' => [], // 适用范围-桌台id列表
                 ],
             ],
             SettingEnum::CASHIER => [
