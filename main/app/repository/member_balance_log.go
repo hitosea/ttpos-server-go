@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -8,9 +9,10 @@ import (
 )
 
 type IMemberBalanceLogRepo interface {
-	Create(log model.MemberBalanceLog) (model.MemberBalanceLog, error)           // 创建会员积分日志
-	GetMemberBalanceLogList(opts ...DBOption) ([]*model.MemberBalanceLog, error) // 获取会员余额日志列表
-	GetMemberBalanceLogNotProcessed() ([]*model.MemberBalanceLog, error)         // 获取未处理的会员余额日志. 用于处理会员余额变动
+	Create(log model.MemberBalanceLog) (model.MemberBalanceLog, error)            // 创建会员积分日志
+	GetMemberBalanceLogList(opts ...DBOption) ([]*model.MemberBalanceLog, error)  // 获取会员余额日志列表
+	GetMemberBalanceLogNotProcessed() ([]*model.MemberBalanceLog, error)          // 获取未处理的会员余额日志. 用于处理会员余额变动
+	ReverseSettleDelete(memberUuid uint64, saleOrderUuid uint64, scene int) error // 反结账时删除充值记录
 }
 
 func NewMemberBalanceLogRepo(db *gorm.DB) IMemberBalanceLogRepo {
@@ -29,6 +31,15 @@ func NewMemberBalanceLogRepoImpl(db *gorm.DB) *MemberBalanceLogRepo {
 func (r *MemberBalanceLogRepo) Create(log model.MemberBalanceLog) (model.MemberBalanceLog, error) {
 	err := r.db.Model(&model.MemberBalanceLog{}).Create(&log).Error
 	return log, errors.WithMessage(err)
+}
+
+// ReverseSettleDelete 反结账时删除充值记录
+func (r *MemberBalanceLogRepo) ReverseSettleDelete(memberUuid uint64, saleOrderUuid uint64, scene int) error {
+	return r.db.Model(&model.MemberBalanceLog{}).
+		Where("member_uuid = ? AND related_uuid = ? AND scene = ?", memberUuid, saleOrderUuid, scene).Debug().
+		Updates(map[string]any{
+			"delete_time": time.Now().Unix(),
+		}).Error
 }
 
 // GetMemberBalanceLogList 获取会员余额日志列表
