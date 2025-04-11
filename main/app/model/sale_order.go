@@ -399,14 +399,14 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 	// 退款顺序优先退会员、不够退则到现金、再到记录支付（多个时，哪个先后都行）、再到lianlian（多个时，哪个先后都行）
 	returnOrderAmounts := make([]ReturnOrderAmount, 0)
 	for _, paymentOrder := range paymentRecords {
-		amount := decimal.NewFromFloat(0)
+		amount := float64(0)
 		// 如果退款金额大于付款单的可退款金额，则该退款单的退款金额=付款单的可退款金额
-		if returnAmount.InexactFloat64() > paymentOrder.CanReturnAmount {
-			amount = decimal.NewFromFloat(paymentOrder.CanReturnAmount)
+		if refundAmount > paymentOrder.CanReturnAmount {
+			amount = paymentOrder.CanReturnAmount
 		}
 		// 如果退款金额小于或等于付款单的可退款金额，则该退款单的退款金额=退款金额
-		if returnAmount.InexactFloat64() <= paymentOrder.CanReturnAmount {
-			amount = returnAmount
+		if refundAmount <= paymentOrder.CanReturnAmount {
+			amount = refundAmount
 		}
 		// 创建退款金额记录
 		returnOrderAmountUuid, _ := utils.GetID()
@@ -417,7 +417,7 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 			ReturnOrderUuid:       returnOrderUuid,
 			PaymentMethodUuid:     paymentOrder.PaymentMethodUuid,
 			PaymentOrderUuid:      paymentOrder.PaymentOrderUuid,
-			Amount:                amount.InexactFloat64(),
+			Amount:                amount,
 			MerchantRefundOrderNo: utils.GenerateMerchantOrderNo("PS"),
 			PaymentMethod: &PaymentMethod{
 				PaymentName: paymentOrder.PaymentMethodName,
@@ -449,9 +449,9 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 		}
 
 		returnOrderAmounts = append(returnOrderAmounts, returnOrderAmount)
-		returnAmount = returnAmount.Sub(amount)
-		// 如果退款金额为0，则退出
-		if returnAmount.InexactFloat64() <= 0 {
+		refundAmount = refundAmount - amount
+		// 如果退款金额为0，则退出. 表示本次要退款的金额已经全都分到不同的退款渠道中
+		if refundAmount <= 0 {
 			break
 		}
 	}
