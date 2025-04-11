@@ -19,8 +19,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// H5Handler 商家H5端处理程序
-type H5Handler struct {
+// Handler 商家H5端处理程序
+type Handler struct {
 	h5Srv      service.IH5Srv      // h5扫码服务
 	deskSrv    service.IDeskSrv    // 桌台服务
 	buffetSrv  service.IBuffetSrv  // 自助餐服务
@@ -38,7 +38,7 @@ type H5Handler struct {
 // @Security JwtToken
 // @Success 200 {object} resp.H5BaseInfo{}
 // @Router /h5/base [get]
-func (h *H5Handler) BaseInfo(c *gin.Context) {
+func (h *Handler) BaseInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	deskUuid := ctx.GetDeskUuid()
 	ctx.Log().Info("GetBaseInfo", zap.Uint64("deskUuid", deskUuid))
@@ -51,7 +51,7 @@ func (h *H5Handler) BaseInfo(c *gin.Context) {
 	helper.Success(c, info)
 }
 
-// GetBaseInfo 获取自助餐套餐列表
+// GetBuffetList 获取自助餐套餐列表
 // @Summary 自助餐套餐信息
 // @Description 获取自助餐套餐列表
 // @Tags 扫码点餐
@@ -60,7 +60,7 @@ func (h *H5Handler) BaseInfo(c *gin.Context) {
 // @Security JwtToken
 // @Success 200 {object} resp.BuffetListPaginationResp "自助餐列表"
 // @Router /h5/buffet/list [get]
-func (h *H5Handler) GetBuffetList(c *gin.Context) {
+func (h *Handler) GetBuffetList(c *gin.Context) {
 	companyUuid := helper.GetCompanyUuid(c)
 	// 获取自助餐列表
 	res, err := h.buffetSrv.GetBuffetList(companyUuid)
@@ -84,7 +84,7 @@ func (h *H5Handler) GetBuffetList(c *gin.Context) {
 // @Success 200 {object} resp.CreateDeskOrderResp "开台成功"
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/desk/open [post]
-func (h *H5Handler) OpenDesk(c *gin.Context) {
+func (h *Handler) OpenDesk(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.DeskOrderCreateReq{}
@@ -117,7 +117,7 @@ func (h *H5Handler) OpenDesk(c *gin.Context) {
 // @Success 200 {object} product_resp.ProductCategoryListResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /h5/product/category/list [get]
-func (h *H5Handler) GetProductCategoryList(c *gin.Context) {
+func (h *Handler) GetProductCategoryList(c *gin.Context) {
 	// 获取收银产品类别列表
 	res, err := h.productSrv.GetProductCategoryList(helper.GetCompanyUuid(c))
 
@@ -143,7 +143,7 @@ func (h *H5Handler) GetProductCategoryList(c *gin.Context) {
 // @Success 200 {object} product_resp.ProductListWithPaginationResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /h5/product/list [get]
-func (h *H5Handler) GetProductList(c *gin.Context) {
+func (h *Handler) GetProductList(c *gin.Context) {
 	// 绑定请求参数
 	productListReq := req.ProductListReq{}
 	if err := c.ShouldBindQuery(&productListReq); err != nil {
@@ -174,7 +174,7 @@ func (h *H5Handler) GetProductList(c *gin.Context) {
 // @Param data body req.CallReq true "呼叫请求"
 // @Success 200 {object} dto.Response
 // @Router /h5/call [post]
-func (h *H5Handler) Call(c *gin.Context) {
+func (h *Handler) Call(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var callReq req.CallReq
 	if err := c.ShouldBindJSON(&callReq); err != nil {
@@ -200,7 +200,7 @@ func (h *H5Handler) Call(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.H5DeskPing}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/remark [post]
-func (h *H5Handler) OrderProductRemark(c *gin.Context) {
+func (h *Handler) OrderProductRemark(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.OrderProductRemarkReq{}
@@ -243,7 +243,7 @@ func (h *H5Handler) OrderProductRemark(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.H5DeskPing}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/order/cart/product/add [post]
-func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
+func (h *Handler) OrderCartProductAdd(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.OrderCartProductAddReq{}
@@ -297,7 +297,7 @@ func (h *H5Handler) OrderCartProductAdd(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.UnsentKitchen}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/order/cart/product/unordered/list [get]
-func (h *H5Handler) GetOrderCartProductUnordered(c *gin.Context) {
+func (h *Handler) GetOrderCartProductUnordered(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 获取桌台的账单uuid和第一子单的uuid
 	saleBillUuid, saleOrderUuid, err := h.orderSrv.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
@@ -328,7 +328,7 @@ func (h *H5Handler) GetOrderCartProductUnordered(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.H5CartSendProduct}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/order/cart/product/ordered/list [get]
-func (h *H5Handler) GetOrderCartProductOrdered(c *gin.Context) {
+func (h *Handler) GetOrderCartProductOrdered(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 获取桌台的账单uuid和第一子单的uuid
 	saleBillUuid, saleOrderUuid, err := h.orderSrv.GetSaleBillUuidAndSaleOrderUuid(ctx, ctx.GetDeskUuid())
@@ -360,7 +360,7 @@ func (h *H5Handler) GetOrderCartProductOrdered(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.UnsentKitchen}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/order/cart/product/num [post]
-func (h *H5Handler) OrderCartProductNum(c *gin.Context) {
+func (h *Handler) OrderCartProductNum(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	ctx.Log().Debug("收到桌台页面修改购物车商品数量接口请求")
 	// 绑定请求参数
@@ -414,7 +414,7 @@ func (h *H5Handler) OrderCartProductNum(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.H5CartSendProduct}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/order/cart/confirm [post]
-func (h *H5Handler) ConfirmOrder(c *gin.Context) {
+func (h *Handler) ConfirmOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 
 	// 获取桌台的账单uuid和第一子单的uuid
@@ -451,7 +451,7 @@ func (h *H5Handler) ConfirmOrder(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.BuffetProductList}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/desk/order/buffet/product/list [get]
-func (h *H5Handler) GetDeskBuffetProductList(c *gin.Context) {
+func (h *Handler) GetDeskBuffetProductList(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.OrderChangeBuffetProductListReq{}
@@ -480,7 +480,7 @@ func (h *H5Handler) GetDeskBuffetProductList(c *gin.Context) {
 // @param data body req.InstantOrderMustPlanConfirmReq true "确认必点商品参数"
 // @Success 200 {object} dto.Response{}
 // @Router /h5/desk/order/must_plan/confirm [post]
-func (h *H5Handler) OrderMustPlanConfirm(c *gin.Context) {
+func (h *Handler) OrderMustPlanConfirm(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	ctx.Log().Debug("收到桌台页面确认必点商品接口请求")
 
@@ -514,7 +514,7 @@ func (h *H5Handler) OrderMustPlanConfirm(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.H5DeskPing} "桌台详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/desk/ping [get]
-func (h *H5Handler) GetDeskPing(c *gin.Context) {
+func (h *Handler) GetDeskPing(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	deskUuid := ctx.GetDeskUuid()
 	// // 绑定请求参数
@@ -555,7 +555,7 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	productService := service.NewProductSrv(dbm, localeSrv)
 	callSrv := service.NewCallSrv(dbm)
 	// 初始化处理器
-	wrapper := H5Handler{
+	wrapper := Handler{
 		h5Srv:      h5Srv,
 		deskSrv:    deskSrv,
 		buffetSrv:  buffetSrv,

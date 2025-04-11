@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"time"
 	"ttpos-server-go/app/api/helper"
@@ -61,9 +62,8 @@ type authSrv struct {
 	shiftSrv      IStaffShiftSrv
 	settingSrv    setting.ISrv
 
-	cashierOpenStatusActions []string
-	assistantRoutes          []string
-	tabletRoutes             []string
+	assistantRoutes []string
+	tabletRoutes    []string
 }
 
 func NewAuthSrvImpl(
@@ -82,18 +82,6 @@ func NewAuthSrvImpl(
 		shiftSrv:      staffShiftSrv,
 		settingSrv:    settingSrv,
 
-		cashierOpenStatusActions: []string{ // 开启收银端才能访问的接口 ToDo 待完善
-			//"/order/cart/add",
-			//"/order/cart/delProduct",
-			//"/order/cart/stay",
-			//"/order/cart/pick",
-			//"/order/cart/delStay",
-			//"/order/cart/sendKitchen",
-			//"/order/cart/moveProduct",
-			//"/order/cart/changeMoney",
-			//"/order/order/buy",
-			//"/index/getAllProductImg",
-		},
 		assistantRoutes: []string{ // 已登录点餐助手，但未绑定收银机可以不判断收银机状态的接口 ToDo 待完善
 			"/api/v1/assistant/online_cashiers",
 			"/api/v1/assistant/bind_cashier",
@@ -625,9 +613,13 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	switch auth.Source {
 	case constant.SourceCashier: // 收银端
 		{
-			// 检查收银是否开启
+			// 检查收银机设置-收银用餐是否开启
 			if !s.isCashierOpen(ctx, auth.UrlPath) {
-				return company, companySetting, staff, desk, errors.New("收银用餐已关闭，请选择其他用餐方式")
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "收银用餐已关闭，请选择其他用餐方式")
+			}
+			// 检查收银机设置-桌台用餐是否开启
+			if !s.isTableOpen(ctx, auth.UrlPath) {
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 			}
 			// 判断权限
 			_, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, auth.CompanyUuid)
@@ -651,22 +643,28 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 					return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeCashierNotLogin, "收银员登录信息错误，请重新登录")
 				}
 			}
-			// 检查桌台功能是否开启
-			if !s.isTableOpen(ctx) {
-				return company, companySetting, staff, desk, errors.New("桌台用餐已关闭，请选择其他用餐方式")
+			// 检查收银机设置-桌台用餐是否开启
+			if !s.isTableOpen(ctx, auth.UrlPath) {
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 			}
 		}
 	case constant.SourceTablet: // 平板端
-		if !slices.Contains(s.tabletRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断是否绑定了桌台
-			deskRepo := repository.NewDeskRepo(db)
-			var err error
-			desk, err = deskRepo.GetDesk(deskRepo.WhereDeviceUuid(ctx.GetDeviceUuid()))
-			if err != nil {
-				return company, companySetting, staff, desk, errors.New("桌台未绑定")
+		{
+			if !slices.Contains(s.tabletRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断是否绑定了桌台
+				deskRepo := repository.NewDeskRepo(db)
+				var err error
+				desk, err = deskRepo.GetDesk(deskRepo.WhereDeviceUuid(ctx.GetDeviceUuid()))
+				if err != nil {
+					return company, companySetting, staff, desk, errors.New("桌台未绑定")
+				}
 			}
-		}
-		if companySetting.IsOpenTablet != 1 {
-			return company, companySetting, staff, desk, errors.New("当前未开启平板点餐功能，请联系销售代表")
+			if companySetting.IsOpenTablet != 1 {
+				return company, companySetting, staff, desk, errors.New("当前未开启平板点餐功能，请联系销售代表")
+			}
+			// 检查收银机设置-桌台用餐是否开启
+			if !s.isTableOpen(ctx, auth.UrlPath) {
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
+			}
 		}
 	}
 	return company, companySetting, staff, desk, nil
@@ -677,23 +675,20 @@ func (s *authSrv) AuthDesk(ctx context.Context, qrcodeToken string) (*model.Comp
 	deskUuid := ctx.GetDeskUuid()
 	db := s.dbm.GetDB(companyUuid)
 	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(companyUuid)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-	if company.IsDelete() {
-		return nil, errors.New("商家已经删除")
+	if err != nil || company.IsDelete() {
+		return nil, errors.New("二维码已失效，请联系商家")
 	}
 
 	deskInfo, err := repository.NewDeskRepo(db).GetDeskInfo(deskUuid)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-	if deskInfo.IsDelete() {
-		return nil, errors.New("桌台已经删除")
-	}
-	if deskInfo.QrcodeToken != qrcodeToken {
+	if err != nil || deskInfo.IsDelete() || deskInfo.QrcodeToken != qrcodeToken {
 		return nil, errors.New("二维码已失效，请联系商家")
 	}
+
+	cashierSetting, _ := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
+	if cashierSetting.OrderMethod.IsTableOrder == "0" {
+		return nil, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
+	}
+
 	return company, nil
 }
 
@@ -701,42 +696,46 @@ func (s *authSrv) AuthMenu(ctx context.Context, qrcodeToken string) (*model.Comp
 	companyUuid := ctx.GetCompanyUuid()
 	db := s.dbm.GetDB(companyUuid)
 	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(companyUuid)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-	if company.IsDelete() {
-		return nil, errors.New("商家已经删除")
-	}
-	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
-	if err != nil {
-		return nil, errors.ErrInternal
+	if err != nil || company.IsDelete() {
+		return nil, errors.New("二维码已失效，请联系商家")
 	}
 
-	if businessSetting.QrCode != qrcodeToken {
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil || businessSetting.QrCode != qrcodeToken {
 		return nil, errors.New("二维码已失效，请联系商家")
+	}
+	
+	cashierSetting, _ := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
+	if cashierSetting.OrderMethod.IsTableOrder == "0" {
+		return nil, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 	}
 	return company, nil
 }
 
-// 检查收银是否开启
+// 检查收银机设置-收银用餐是否开启
 func (s *authSrv) isCashierOpen(ctx context.Context, pathUrl string) bool {
 	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	if err != nil {
 		return false
 	}
-	if cashierSetting.OrderMethod.IsCashierOrder == "0" && slices.Contains(s.cashierOpenStatusActions, pathUrl) {
+	if cashierSetting.OrderMethod.IsCashierOrder == "0" && regexp.MustCompile(`^/api/v\d+/cashier/instant/`).Match([]byte(pathUrl)) {
 		return false
 	}
 	return true
 }
 
-// 检查桌台功能是否开启
-func (s *authSrv) isTableOpen(ctx context.Context) bool {
+// 检查收银机设置-桌台用餐是否开启
+func (s *authSrv) isTableOpen(ctx context.Context, pathUrl string) bool {
 	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	if err != nil {
 		return false
 	}
-	return cashierSetting.OrderMethod.IsTableOrder != "0"
+	if cashierSetting.OrderMethod.IsTableOrder == "0" &&
+		(slices.Contains([]string{constant.SourceAssistant, constant.SourceTablet}, ctx.GetSource()) ||
+			ctx.GetSource() == constant.SourceCashier || regexp.MustCompile(`^/api/v\d+/cashier/desk/`).Match([]byte(pathUrl))) {
+		return false
+	}
+	return true
 }
 
 // BindCashier 绑定收银机

@@ -22890,7 +22890,7 @@ const docTemplate = `{
                     "description": "用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）",
                     "allOf": [
                         {
-                            "$ref": "#/definitions/setting.OrderMethodItem"
+                            "$ref": "#/definitions/setting.OrderMethod"
                         }
                     ]
                 },
@@ -23202,7 +23202,7 @@ const docTemplate = `{
                 }
             }
         },
-        "setting.OrderMethodItem": {
+        "setting.OrderMethod": {
             "type": "object",
             "properties": {
                 "is_cashier_order": {

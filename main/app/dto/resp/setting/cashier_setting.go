@@ -6,7 +6,7 @@ import "ttpos-server-go/app/dto"
 type CashierResp struct {
 	Carousel               []CarouselItem     `json:"carousel"`                   // 上传后的轮播内容url（图片 + 视频）
 	IsAutoSend             string             `json:"is_auto_send"`               // 收银结账自动送厨房 0-关闭 1-开启
-	OrderMethod            OrderMethodItem    `json:"order_method"`               // 用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）
+	OrderMethod            OrderMethod        `json:"order_method"`               // 用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）
 	Server                 Server             `json:"server"`                     // 收银机服务器连接
 	IsRemainColor          string             `json:"is_remain_color"`            // 是否开启剩余时长颜色 0-关闭 1-开启
 	RemainColor            []string           `json:"remain_color"`               // 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
@@ -32,7 +32,7 @@ type Cashier struct {
 	LockPassword     string `json:"lock_password"`     // 锁屏密码
 }
 
-type OrderMethodItem struct {
+type OrderMethod struct {
 	IsCashierOrder string `json:"is_cashier_order"` // 收银用餐
 	IsTableOrder   string `json:"is_table_order"`   // 桌台用餐
 }

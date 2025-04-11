@@ -36,7 +36,7 @@ func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier
 		CashierResp: setting.CashierResp{
 			Carousel:   []setting.CarouselItem{}, // 上传后的轮播内容url（图片 + 视频）
 			IsAutoSend: "0",                      // 收银结账自动送厨房 0-关闭 1-开启
-			OrderMethod: setting.OrderMethodItem{
+			OrderMethod: setting.OrderMethod{
 				IsCashierOrder: "1",
 				IsTableOrder:   "1",
 			}, // 用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）
