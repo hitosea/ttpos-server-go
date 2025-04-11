@@ -1,6 +1,7 @@
 package service
 
 import (
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -125,6 +126,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 					"update_time":    saleBill.UpdateTime,
 				})
 			}
+
 		}
 		// 出库相关
 		{
@@ -173,20 +175,22 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 				Remark:          unCookingSaleOrderProduct.Remark,
 			})
 		}
-		go func() {
-			s.bus.PublishSentCookingEvent(event.SentCookingPayload{
-				BasePayload: event.BasePayload{
-					Ctx:           ctx,
-					CompanyUuid:   ctx.GetCompanyUuid(),
-					Source:        ctx.GetSource(),
-					SaleBillUuid:  saleBill.Uuid,
-					SaleOrderUuid: saleOrderUuid,
-					H5OrderUuid:   h5OrderUuid,
-					OperatorUuid:  int64(ctx.GetStaffUuid()),
-				},
-				Products: products,
-			})
-		}()
+		go s.bus.PublishSentCookingEvent(event.SentCookingPayload{
+			BasePayload: event.BasePayload{
+				Ctx:           ctx,
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  saleBill.Uuid,
+				SaleOrderUuid: saleOrderUuid,
+				H5OrderUuid:   h5OrderUuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			Products: products,
+		})
+		// 送厨成功后，推送更新订单
+		go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.KITCHEN, map[string]interface{}{
+			"update_time": time.Now().Unix(),
+		})
 	}
 	return nil, nil
 }
@@ -283,7 +287,11 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 
 	// 检查限购
 	{
-		overLimitProducts := saleBill.GetSaleOrderProductOverLimit()
+		limitProducts, err := s.getBuffetProductLimitList(ctx, request.SaleBillUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts)
 		if len(overLimitProducts) > 0 {
 			return nil, errors.New("商品超过限购")
 		}

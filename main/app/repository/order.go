@@ -472,6 +472,7 @@ func (r *orderRepo) GetSaleBillInfoByDesk(deskUuid uint64, saleOrderUuid uint64)
 type OrderCartInfoOption struct {
 	UnorderedH5Product int    // 1-查询H5未下单的商品 2-查询H5已下单的商品 3-查询H5已下单的商品和被拒单的商品
 	H5OrderUuid        uint64 // 指定某个h5订单
+	FilterEndStatus    bool   // 指定传入的salebill状态
 }
 
 const (
@@ -507,6 +508,13 @@ func WithOrderedH5ProductWithReject() OrderCartInfoOptionFunc {
 func WithH5OrderUuid(h5OrderUuid uint64) OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.H5OrderUuid = h5OrderUuid
+	}
+}
+
+// 过滤结束状态
+func FilterEndStatus() OrderCartInfoOptionFunc {
+	return func(option *OrderCartInfoOption) {
+		option.FilterEndStatus = true
 	}
 }
 
