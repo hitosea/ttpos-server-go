@@ -641,7 +641,7 @@ class User extends BaseModel
             BalanceLogSceneEnum::DEDUCT
         ];
         $rechargeRank = self::alias('a')
-            ->leftJoin('member_balance_log ubl', 'a.uuid = ubl.member_uuid')
+            ->leftJoin('member_balance_log ubl', 'a.uuid = ubl.member_uuid and ubl.delete_time = 0')
             ->field([
                 'a.id',
                 'a.uuid',

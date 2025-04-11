@@ -60,6 +60,12 @@ const (
 	TaxFeeTypeTax   = 2 // 商品已含税
 )
 
+// 拆单
+const (
+	SaleBillIsSplitOrderYes = 1 // 拆单
+	SaleBillIsSplitOrderNo  = 0 // 不拆单
+)
+
 const (
 	// 是否开启服务费
 	SaleBillSettingIsOpenServiceFeeNo  = "0" // 关闭服务费

@@ -32,6 +32,7 @@ import (
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/websocket"
 
 	"github.com/duke-git/lancet/v2/cryptor"
 	"github.com/duke-git/lancet/v2/slice"
@@ -1197,6 +1198,11 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	if err := tx.Commit().Error; err != nil {
 		return errors.WithMessage(err)
 	}
+
+	// 送厨成功后，推送更新订单
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.KITCHEN, map[string]interface{}{
+		"update_time": time.Now().Unix(),
+	})
 
 	return nil
 }
@@ -3366,12 +3372,11 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
 
 	// 通过销售订单ID得到订单商品列表、订单金额信息、账单的销售订单列表
-
 	shopCart, err := orderRepo.GetOrderCartInfo(saleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, fmt.Sprintf("saleBillUuid: %d", saleBillUuid))
 	}
-	if shopCart.SaleBill.IsEndStatus() {
+	if !option.FilterEndStatus && shopCart.SaleBill.IsEndStatus() {
 		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))
 	}
 	// 重新计算金额
@@ -4700,6 +4705,12 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			Sign:            returnSaleOrderProduct.Sign,
 		})
 	}()
+
+	// 送厨成功后，推送更新订单
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.KITCHEN, map[string]interface{}{
+		"update_time": time.Now().Unix(),
+	})
+
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
@@ -6485,6 +6496,9 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 		return nil, errors.WithMessage(err)
 	}
 
+	// 设置拆单
+	saleBill.SetIsSplitOrder(true)
+
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 创建销售订单
 		if _, errCreateSaleOrder := createSaleOrder(db, saleBill.SaleBillSetting, saleBill.Uuid, orderNo); errCreateSaleOrder != nil {
@@ -7341,7 +7355,7 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 		}
 
 		var err error
-		shopCart, err = s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+		shopCart, err = s.GetOrderCartInfo(ctx, request.SaleBillUuid, repository.FilterEndStatus())
 		if err != nil {
 			ctx.Log().Error("获取购物车信息失败", zap.Error(err))
 			return nil, errors.WithMessage(err, "获取购物车信息失败")
@@ -7373,7 +7387,7 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 			return nil, errors.WithMessage(err)
 		}
 		var err error
-		shopCart, err = s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+		shopCart, err = s.GetOrderCartInfo(ctx, request.SaleBillUuid, repository.FilterEndStatus())
 		if err != nil {
 			ctx.Log().Error("获取购物车信息失败", zap.Error(err))
 			return nil, errors.WithMessage(err, "获取购物车信息失败")
@@ -7404,11 +7418,17 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 		}
 
 		var err error
-		shopCart, err = s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+		shopCart, err = s.GetOrderCartInfo(ctx, request.SaleBillUuid, repository.FilterEndStatus())
 		if err != nil {
 			ctx.Log().Error("获取购物车信息失败", zap.Error(err))
 			return nil, errors.WithMessage(err, "获取购物车信息失败")
 		}
+	}
+
+	// 更新销售账单
+	saleBill.SetIsSplitOrder(len(saleBill.SaleOrders)-1 > 1)
+	if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
+		return nil, errors.WithMessage(errUpdateSaleBill)
 	}
 
 	// 发布“撤销拆单”操作事件

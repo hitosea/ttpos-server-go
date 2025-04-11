@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `is_buffet` INT(10) NOT NULL DEFAULT 0 COMMENT '是否自助餐, 0-否 1-是',
     `reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '取消原因',
     `is_lock` INT(10) NOT NULL DEFAULT 0 COMMENT '是否锁单, 0-否 1-是',
+    `is_split_order` INT(10) NOT NULL DEFAULT 0 COMMENT '是否拆单, 0-否 1-是',
     `meal_num` INT(11) NOT NULL DEFAULT 0 COMMENT '就餐人数',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '订单状态, 0-待付款、1-已完成、2-已取消。',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注(开台备注)',
