@@ -282,7 +282,7 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 	if product.Status != constant.ProductionOrderProductStatusCooking {
 		return errors.New("订单商品未送厨")
 	}
-	if err := productionRepo.UpdateProduct(productUuid, map[string]any{
+	if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(productUuid)}, map[string]any{
 		"status":        constant.ProductionOrderProductStatusFinished,
 		"finished_time": time.Now().Unix(),
 	}); err != nil {
@@ -302,7 +302,7 @@ func (s *productionSrv) Recovery(ctx context.Context, productUuid uint64) error 
 	if product.Status != constant.ProductionOrderProductStatusFinished {
 		return errors.New("订单商品未完成")
 	}
-	if err := productionRepo.UpdateProduct(productUuid, map[string]any{
+	if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(productUuid)}, map[string]any{
 		"status":        constant.ProductionOrderProductStatusCooking,
 		"finished_time": 0,
 	}); err != nil {
