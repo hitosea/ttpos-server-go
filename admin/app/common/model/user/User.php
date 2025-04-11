@@ -137,7 +137,7 @@ class User extends BaseModel
     }
 
     /**
-     * 获取用户信息
+     * 获取用户信息, 包含会员卡信息
      */
     public static function detail($where, $includeDeleted = false)
     {
