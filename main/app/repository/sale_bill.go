@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -23,6 +24,7 @@ type ISaleBillRepo interface {
 	GetInstantSaleBillLatest() (*model.SaleBill, error)                                            // 获取最新的一条点餐销售账单
 	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                     // 获取销售账单的自助餐商品列表
 	GetSaleBillRecord(uuid uint64) (*model.SaleBill, error)
+	DeleteSaleBill(saleBillUuid uint64) error // 软删除销售账单
 }
 
 type saleBillRepo struct {
@@ -238,4 +240,8 @@ func (r *saleBillRepo) GetSaleBillRecord(uuid uint64) (*model.SaleBill, error) {
 		return nil, errors.WithMessage(err)
 	}
 	return &saleBill, nil
+}
+
+func (r *saleBillRepo) DeleteSaleBill(saleBillUuid uint64) error {
+	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Update("delete_time", time.Now().Unix()).Error
 }

@@ -16,6 +16,7 @@ type ISaleOrderRepo interface {
 	CreateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateOrCreateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error
+	DeleteSaleOrder(saleOrderUuid uint64) error
 }
 
 type saleOrderRepo struct {
@@ -78,4 +79,8 @@ func (r *saleOrderRepo) UpdateOrCreateSaleOrderRecord(obj model.SaleOrder) error
 
 func (r *saleOrderRepo) UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error {
 	return r.db.Model(&model.SaleOrder{}).Select("delete_time").Where("uuid = ?", uuid).Updates(model.SaleOrder{BaseModel: model.BaseModel{DeleteTime: time.Now().Unix()}}).Error
+}
+
+func (r *saleOrderRepo) DeleteSaleOrder(saleOrderUuid uint64) error {
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Update("delete_time", time.Now().Unix()).Error
 }

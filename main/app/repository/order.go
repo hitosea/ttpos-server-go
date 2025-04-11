@@ -49,7 +49,7 @@ type IOrderRepo interface {
 	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error                         // 修改订单商品备注
 	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                                     // 获取销售账单所有信息
 	GetSaleBillWithProducts(saleBillUuid uint64) (*model.SaleBill, error)                                                                // 获取销售账单所有商品信息
-	HasShowOrder(deviceUuid uint64) (bool, error)                                                                                        // 判断该设备是否有未挂单的点餐订单
+	HasShowOrder(deviceUuid uint64) (uint64, error)                                                                                      // 判断该设备是否有未挂单的点餐订单
 	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                                      // 获取销售账单记录
 	SetLock(saleBillUuid uint64, isLock bool) error                                                                                      // 设置订单锁定状态
 	SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) (*model.SaleOrderInvoiceInfo, error)           // 设置订单发票信息
@@ -1383,15 +1383,15 @@ func (r *orderRepo) GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBil
 }
 
 // HasShowOrder 判断该设备是否有未挂单的点餐订单
-func (r *orderRepo) HasShowOrder(deviceUuid uint64) (bool, error) {
+func (r *orderRepo) HasShowOrder(deviceUuid uint64) (uint64, error) {
 	var saleBill model.SaleBill
 	if err := r.db.Where("device_uuid = ? AND status = ? AND hide_bill_time = ? AND delete_time = ?", deviceUuid, constant.SaleBillStatusPending, 0, constant.NotDeleted).First(&saleBill).Error; err != nil {
 		if utils.IsNotFoundRecord(err) {
-			return false, nil
+			return 0, nil
 		}
-		return false, fmt.Errorf("HasShowOrder: %v", err)
+		return 0, fmt.Errorf("HasShowOrder: %v", err)
 	}
-	return saleBill.Uuid != 0, nil
+	return saleBill.Uuid, nil
 }
 
 // SetLock 设置订单锁定状态

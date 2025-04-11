@@ -2208,13 +2208,27 @@ func (s *orderSrv) ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.S
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 判断是否有未挂单的点餐账单
-	hasShowOrder, err := repository.NewOrderRepo(db).HasShowOrder(ctx.GetDeviceUuid())
+	currentSaleBillUuid, err := repository.NewOrderRepo(db).HasShowOrder(ctx.GetDeviceUuid())
 	if err != nil {
 		ctx.Log().Error("判断是否有未挂单的点餐账单失败", zap.Error(err))
 		return nil, errors.WithMessage(err, "判断是否有未挂单的点餐账单失败")
 	}
-	if hasShowOrder {
-		return nil, errors.New("该设备有未挂单的点餐账单，禁止取单")
+	if currentSaleBillUuid != 0 {
+		// 如果未挂单的点餐账单没有商品，则删除该订单，并允许取单
+		// 当前销售账单数据
+		currentSaleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(currentSaleBillUuid)
+		if errSaleBill != nil {
+			return nil, errSaleBill
+		}
+		if len(currentSaleBill.GetSaleOrderProductAll()) == 0 {
+			// 软删除sale_bill和sale_order
+			repository.NewSaleBillRepo(db).DeleteSaleBill(currentSaleBill.Uuid)
+			for _, saleOrder := range currentSaleBill.SaleOrders {
+				repository.NewSaleOrderRepo(db).DeleteSaleOrder(saleOrder.Uuid)
+			}
+		} else {
+			return nil, errors.New("该设备有未挂单的点餐账单，禁止取单")
+		}
 	}
 
 	saleBill, err := repository.NewOrderRepo(db).GetSaleBillRecord(req.SaleBillUuid)
