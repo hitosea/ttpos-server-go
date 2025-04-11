@@ -21,13 +21,14 @@ type IProductionOrderRepo interface {
 	WhereProductPackageUuidIn(uuids []uint64) DBOption                                                                       // 商品ID条件
 	WhereProductFinishedTime(finishedTime int64) DBOption                                                                    // 生产商品完成时间条件
 	WhereProductUuid(uuid uint64) DBOption                                                                                   // 生产商品Uuid条件
+	WhereProductSaleOrderProductUuid(uuid uint64) DBOption                                                                   // 生产商品销售订单uuid条件
 	WhereProductSaleBillUuidIn(uuids []uint64) DBOption                                                                      // 生产商品销售账单uuid条件
 	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption                                                                 // 生产商品分类Uuid条件
 	WhereProductHistoryCondition() DBOption                                                                                  // 历史上菜条件
 	WithSaleBill() DBOption                                                                                                  // 关联销售账单
 	WithProductCategory() DBOption                                                                                           // 关联商品分类
 	WithProductCategoryMultiLanguageName() DBOption                                                                          // 关联商品分类多语言
-	UpdateProduct(uuid uint64, vars map[string]any) error                                                                    // 更新送厨商品
+	UpdateProduct(opts []DBOption, vars map[string]any) error                                                                // 更新送厨商品
 }
 
 type productionRepo struct {
@@ -181,6 +182,13 @@ func (r *productionRepo) WhereProductUuid(uuid uint64) DBOption {
 	}
 }
 
+// WhereProductSaleOrderProductUuid 生产商品销售订单商品Uuid条件
+func (r *productionRepo) WhereProductSaleOrderProductUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("sale_order_product_uuid = ?", uuid)
+	}
+}
+
 // WhereProductSaleBillUuidIn 生产商品销售账单uuid条件
 func (r *productionRepo) WhereProductSaleBillUuidIn(uuids []uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -217,6 +225,10 @@ func (r *productionRepo) WithProductCategoryMultiLanguageName() DBOption {
 }
 
 // UpdateProduct 修改
-func (r *productionRepo) UpdateProduct(uuid uint64, vars map[string]any) error {
-	return r.db.Model(&model.ProductionOrderProduct{}).Where("uuid = ?", uuid).Updates(vars).Error
+func (r *productionRepo) UpdateProduct(opts []DBOption, vars map[string]any) error {
+	db := r.db.Model(&model.ProductionOrderProduct{})
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	return db.Updates(vars).Error
 }
