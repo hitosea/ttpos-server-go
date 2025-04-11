@@ -145,7 +145,7 @@ class User extends BaseModel
         $filter = $includeDeleted ? [] : ['delete_time' => 0];
         $filter = is_array($where) ? array_merge($filter, $where) : array_merge($filter, ['uuid' => (int) $where]);
 
-        $info = $model->field(['*, (balance + gift_balance) as balance'])->where($filter)->with(['grade', 'card'])->find();
+        $info = $model->field(['*, (balance + gift_balance) as balance'])->where($filter)->with(['grade', 'memberCard' => [ 'card' ]])->find();
         if ($info) {
             $info->password = '';
         }
@@ -634,7 +634,6 @@ class User extends BaseModel
     {
         // 所需充值场景类型
         $rechargeScenes = [
-            BalanceLogSceneEnum::REFUND, // 订单退款
             BalanceLogSceneEnum::RECHARGE,
             BalanceLogSceneEnum::ADMIN,
             BalanceLogSceneEnum::RECHARGE_REVERSE,
