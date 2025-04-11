@@ -6,7 +6,17 @@
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('起始时间')">
           <div class="block">
-            <datePick @onchange="onChange"></datePick>
+            <el-date-picker
+              size="small"
+              v-model="searchForm.date"
+              type="daterange"
+              value-format="YYYY-MM-DD"
+              range-separator="~"
+              :start-placeholder="$t('开始日期')"
+              :end-placeholder="$t('结束日期')"
+              clearable
+              @change="onSearch"
+            ></el-date-picker>
           </div>
         </el-form-item>
         <el-form-item>
@@ -447,8 +457,28 @@
           });
       },
 
+      timeLimit() {
+        if (this.searchForm.date[0] && this.searchForm.date[1]) {
+          //不能超过31天
+          const startDate = new Date(this.searchForm.date[0]);
+          const endDate = new Date(this.searchForm.date[1]);
+          const diffTime = endDate.getTime() - startDate.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          if (diffDays > 30) {
+            return true;
+          }
+        }
+      },
+
       onExport: function () {
         if (this.searchForm.date[0] && this.searchForm.date[1]) {
+          if (this.timeLimit()) {
+            this.$ElMessage({
+              message: this.$t('导出时间范围不能超过31天'),
+              type: 'warning',
+            });
+            return;
+          }
           let baseUrl = window.location.protocol + '//' + window.location.host;
           this.searchForm.token = this.token;
           window.location.href = baseUrl + '/index.php/shop/store.survey/export?' + qs.stringify(this.searchForm) + '&language=' + this.languageTag;

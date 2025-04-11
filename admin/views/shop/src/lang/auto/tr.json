@@ -1566,5 +1566,10 @@
     "店内就餐": "Restoranda yemek",
     "是否取消此订单?": "Bu siparişi iptal etmek istiyor musunuz?",
     "打包带走": "Paket olarak götür",
-    "注：需为正确的支付方式，用于显示给用户查看": "Not: Kullanıcıya görüntülenmesi için doğru ödeme yöntemi olmalıdır"
+    "注：需为正确的支付方式，用于显示给用户查看": "Not: Kullanıcıya görüntülenmesi için doğru ödeme yöntemi olmalıdır",
+    "导出时间范围不能超过31天": "Dışa aktarma zaman aralığı 31 günden uzun olamaz",
+    "应用范围": "Uygulama kapsamı",
+    "请选择应用范围": "Lütfen uygulama kapsamını seçin",
+    "全部应用": "Tüm uygulamalar",
+    "部分应用": "Kısmi uygulamalar"
 }

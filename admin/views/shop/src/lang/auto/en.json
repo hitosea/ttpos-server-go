@@ -1812,5 +1812,10 @@
     "店内就餐": "Dine in",
     "是否取消此订单?": "Do you want to cancel this order?",
     "打包带走": "Takeaway",
-    "注：需为正确的支付方式，用于显示给用户查看": "Note: Must be the correct payment method to display to users"
+    "注：需为正确的支付方式，用于显示给用户查看": "Note: Must be the correct payment method to display to users",
+    "导出时间范围不能超过31天": "The export time range cannot exceed 31 days",
+    "应用范围": "Application Scope",
+    "请选择应用范围": "Please select application scope",
+    "全部应用": "All applications",
+    "部分应用": "Partial applications"
 }
