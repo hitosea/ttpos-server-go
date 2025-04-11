@@ -200,7 +200,7 @@
     @close="handleProductSelectorClose"
     selectorType="all"
     type="product"
-    :selectedProductIds="form?.product_ids?.map((item) => item.product_id) ?? []"
+    :selectedProductIds="select_product_ids"
   >
   </ProductSelector>
 </template>
@@ -256,15 +256,14 @@
   };
 
   const addProduct = () => {
-    openProductSelector.value = true;
     select_product_ids.value = [];
     if (product_list.value.length > 0) {
       product_list.value.map((item) => {
-        select_product_ids.value.push({
-          product_id: item.product_id,
-        });
+        select_product_ids.value.push(item.product_id);
       });
     }
+    console.log(select_product_ids.value);
+    openProductSelector.value = true;
   };
 
   const handleProductSelectorClose = (list, categories) => {
