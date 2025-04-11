@@ -49,6 +49,8 @@ const (
 	UPDATE_DESK_TYPE = "update_desk_type"
 	// 更新退款状态 data = {"update_time": 1742971471, "uuid": 1, "type": "update | delete"}
 	UPDATE_REFUND_STATE = "update_refund_state"
+	// 更新厨显 data = {"update_time": 1742971471}
+	KITCHEN = "kitchen"
 )
 
 // Push sends a POST request to the WebSocket server with specific parameters.

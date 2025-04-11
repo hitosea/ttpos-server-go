@@ -32,6 +32,7 @@ import (
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/websocket"
 
 	"github.com/duke-git/lancet/v2/cryptor"
 	"github.com/duke-git/lancet/v2/slice"
@@ -1197,6 +1198,11 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	if err := tx.Commit().Error; err != nil {
 		return errors.WithMessage(err)
 	}
+
+	// 送厨成功后，推送更新订单
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.KITCHEN, map[string]interface{}{
+		"update_time": time.Now().Unix(),
+	})
 
 	return nil
 }
@@ -4680,6 +4686,12 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			Sign:            returnSaleOrderProduct.Sign,
 		})
 	}()
+
+	// 送厨成功后，推送更新订单
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.KITCHEN, map[string]interface{}{
+		"update_time": time.Now().Unix(),
+	})
+
 	// 获取新的购物车信息
 	var cartInfo *resp.ShopCart
 	cartInfo, errGetCartInfo := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
