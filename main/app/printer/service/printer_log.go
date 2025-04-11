@@ -384,10 +384,18 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 		Uuid:             req.Uuid,
 		Data:             data,
 		PrintMethod:      printerLog.PrintMethod,
-		Copies:           printerLog.Printer.Copies,
 		PrinterType:      printerLog.PrinterType,
 		IsCashierPrinter: printerLog.IsCashierPrinter(),
+		Copies: func() uint {
+			if printerLog.Printer == nil {
+				return 1
+			}
+			return printerLog.Printer.Copies
+		}(),
 		PrinterConfig: func() string {
+			if printerLog.Printer == nil {
+				return ""
+			}
 			configJson, err := json.Marshal(printerLog.Printer.GetConfigJson())
 			if err != nil {
 				return ""
