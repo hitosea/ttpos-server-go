@@ -3,8 +3,9 @@ package resp
 import "ttpos-server-go/app/dto"
 
 type ProductionGroup struct {
-	LocaleName     *dto.LocaleResponse `json:"locale_name"`  // 序列号
-	ProductionList ProductionList      `json:"product_list"` // 送厨商品列表
+	LocaleName     *dto.LocaleResponse `json:"locale_name"`   // 序列号
+	DiningMethod   uint                `json:"dining_method"` // 用餐方式,0-堂食(店内就餐) 1-打包
+	ProductionList ProductionList      `json:"product_list"`  // 送厨商品列表
 }
 
 type ProductionList struct {
@@ -12,6 +13,7 @@ type ProductionList struct {
 }
 
 type ProductionItem struct {
+	DiningMethod          uint               `json:"dining_method"`           // 用餐方式,0-堂食(店内就餐) 1-打包
 	SerialNo              string             `json:"serial_no"`               // 序列号
 	Uuid                  uint64             `json:"uuid"`                    // 送厨商品Uuid
 	LocaleName            dto.LocaleResponse `json:"locale_name"`             // 送厨商品名称

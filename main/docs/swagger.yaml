@@ -1363,7 +1363,6 @@ definitions:
         type: integer
     required:
     - order_product_uuid
-    - price
     - sale_bill_uuid
     - sale_order_uuid
     type: object
@@ -4146,6 +4145,9 @@ definitions:
     type: object
   resp.ProductionGroup:
     properties:
+      dining_method:
+        description: 用餐方式,0-堂食(店内就餐) 1-打包
+        type: integer
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -4166,6 +4168,9 @@ definitions:
     properties:
       create_time:
         description: 送厨时间
+        type: integer
+      dining_method:
+        description: 用餐方式,0-堂食(店内就餐) 1-打包
         type: integer
       locale_name:
         allOf:
