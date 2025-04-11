@@ -105,7 +105,7 @@ type IOrderSrv interface {
 	InstantOrderSaleOrderDelete(ctx context.Context, req req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error)                                                        // 删除一个销售订单(删除拆单)
 	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                                                  // 删除所有子销售订单(撤销拆单)
 	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                                         // 取消使用会员优惠
-	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                                                          // 使用会员优惠
+	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, bool, error)                                                    // 使用会员优惠
 	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error                                        // 计算并保存销售账单
 	OrderPrint(ctx context.Context, req req.OrderPrintReq, needLock bool) (*resp.PrinterData, error)                                                                        // 打印
 	OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvoiceReq) (*resp.PrinterData, error)                                                                         // 图片打印
@@ -7492,7 +7492,7 @@ func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMembe
 }
 
 // OrderUseMember 使用会员优惠
-func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error) {
+func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, bool, error) {
 	// 加锁
 	if ctx.NoLock() {
 		s.lock.LockUuid(request.SaleBillUuid)
@@ -7505,7 +7505,7 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 	// 获取会员信息
 	member, errMember := repository.NewMemberRepo(db).GetMemberInfoForSaleOrder(ctx, request.MemberUuid)
 	if errMember != nil {
-		return nil, errMember
+		return nil, false, errMember
 	}
 
 	// 如果会员有密码的话，验证会员密码
@@ -7514,33 +7514,39 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 		ctx.Log().Debug("验证密码", zap.Any("md5Password", md5Password), zap.Any("member.Password", member.Password))
 		if member.Password != md5Password {
 			ctx.Log().Debug("验证密码", zap.Any("md5Password", md5Password), zap.Any("member.Password", member.Password))
-			return nil, errors.New("密码错误")
+			return nil, false, errors.New("密码错误")
 		}
 	}
 
 	// 获取账单信息
 	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "查询销售账单失败")
+		return nil, false, errors.WithMessage(err, "查询销售账单失败")
 	}
 
 	// 获取销售账单信息
 	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
-		return nil, errors.New("销售订单不存在")
+		return nil, false, errors.New("销售订单不存在")
+	}
+
+	// 判断订单是否进行了整单改价或抹零
+	isCustomAmountAndZero := false
+	if saleOrder.IsCustomAmount() || saleOrder.IsZeroRule() {
+		isCustomAmountAndZero = true
 	}
 
 	saleOrder.SetMemberDiscount(*member)
 
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
-		return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
+		return nil, false, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
 	}
 
 	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, request.SaleBillUuid, request.SaleOrderUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err)
+		return nil, false, errors.WithMessage(err)
 	}
-	return infoResp, nil
+	return infoResp, isCustomAmountAndZero, nil
 }
 
 // OrderPrint 打印
