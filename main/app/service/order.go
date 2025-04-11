@@ -4014,13 +4014,21 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 		var instantMustPlanList []resp.InstantProductMustPlan
 		if deskUuid != 0 {
 			// 如果是桌台订单
-			instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid)
+			if options.CheckType == CheckTypeCheckout {
+				instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCheckout())
+			} else {
+				instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCooking())
+			}
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
 		} else {
 			// 如果不是桌台订单
-			instantMustPlanList, err = s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
+			if options.CheckType == CheckTypeCheckout {
+				instantMustPlanList, err = s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo(), WithCheckSceneCheckout())
+			} else {
+				instantMustPlanList, err = s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo(), WithCheckSceneCooking())
+			}
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
@@ -4630,7 +4638,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 				return errors.WithMessage(err)
 			}
 		}
-		
+
 		// 修改送厨商品
 		productionRepo := repository.NewProductionRepo(tx)
 		if keepNum > 0 { // 修改数量
