@@ -332,12 +332,12 @@ class OrderScheme extends BaseModel
                 'auto_checkout' => $params['auto_checkout'] ?? 1,
             ];
 
+            $areaList = OrderSchemeArea::where('product_must_plan_uuid', $this->uuid)->select();
+            foreach ($areaList as $area) {
+                $area->force()->delete();
+            }
             // 保存桌台区域
             if (!empty($params['table_area_ids'])) {
-                $areaList = OrderSchemeArea::where('product_must_plan_uuid', $this->uuid)->select();
-                foreach ($areaList as $area) {
-                    $area->force()->delete();
-                }
                 $tableAreaIds = is_array($params['table_area_ids']) ? $params['table_area_ids'] : explode(',', $params['table_area_ids']);
                 $tableAreaData = array_map(fn($id) => [
                     'product_must_plan_uuid' => $this->uuid,
