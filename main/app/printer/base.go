@@ -28,7 +28,7 @@ type PPrinterRepo interface {
 	PrintingStatementOrder(printType int, saleBill *model.SaleBill, saleOrderUuid uint64, FirstExecution int, payMethodUuid uint64) (*resp.PrinterData, error)
 	PrintingInvoice(saleBill *model.SaleBill, saleOrderUuid uint64, firstExecution int) (*resp.PrinterData, error)
 	PrintingRechargeOrder(order model.MemberRechargeOrder, FirstExecution int) (*resp.PrinterData, error)
-	PrintingHandoverOrder(log *model.StaffShiftLog, businessData *business_data_resp.BusinessDataAll, FirstExecution int, deviceSnId ...string) (*resp.PrinterData, error)
+	PrintingHandoverOrder(log *model.StaffShiftLog, businessData *business_data_resp.BusinessDataAll, FirstExecution int, openMoneybox bool, deviceSnId ...string) (*resp.PrinterData, error)
 	PrintingBusinessData(businessData *template.PrintingBusinessData, startTime int64, endTime int64, deviceSnId ...string) (*resp.PrinterData, error)
 }
 

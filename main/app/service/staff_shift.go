@@ -34,7 +34,7 @@ type IStaffShiftSrv interface {
 	SubmitShift(ctx context.Context, req req.SubmitShiftReq) (*resp.ShiftSubmit, error) // 提交交班
 	ShiftWithdraw(ctx context.Context, req req.ShiftWithdrawReq) error
 	ShiftDeposit(ctx context.Context, req req.ShiftDepositReq) error
-	ShiftPrinter(ctx context.Context, req req.ShiftPrinterReq, firstExecution int, staffs ...model.Staff) (*resp.PrinterData, error)
+	ShiftPrinter(ctx context.Context, req req.ShiftPrinterReq, firstExecution int, openMoneybox bool, staffs ...model.Staff) (*resp.PrinterData, error)
 }
 
 func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv, statisticsSrv IStatisticsSrv) IStaffShiftSrv {
@@ -290,7 +290,7 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 				WithdrawCash: withdrawCash.InexactFloat64(),
 				LeaveCash:    leaveCash.InexactFloat64(),
 				DutyNo:       staff.DutyNo,
-			}, utils.IfInt(reqs.IsBackground, 0, 1), staff)
+			}, utils.IfInt(reqs.IsBackground, 0, 1), true, staff)
 			if err != nil {
 				fmt.Println(err)
 				return &resp.PrinterData{}
@@ -464,7 +464,7 @@ func (s *staffShiftSrv) ShiftDeposit(ctx context.Context, req req.ShiftDepositRe
 }
 
 // ShiftPrinter 交班打印
-func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterReq, firstExecution int, staffs ...model.Staff) (*resp.PrinterData, error) {
+func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterReq, firstExecution int, openMoneybox bool, staffs ...model.Staff) (*resp.PrinterData, error) {
 	staff := ctx.GetStaff()
 	if len(staffs) > 0 {
 		staff = staffs[0]
@@ -610,6 +610,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		&log,
 		&businessData,
 		firstExecution,
+		openMoneybox,
 		utils.IfString(firstExecution == 0, staff.BindKey, ctx.GetDeviceSn()),
 	)
 	if err != nil {

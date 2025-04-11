@@ -254,8 +254,6 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 	if err != nil {
 		return loginResp, errors.New("生成refresh_token失败")
 	}
-	fmt.Println("login token:", token)
-	fmt.Println("login refresh token:", refreshToken)
 	return resp.LoginResp{
 		Token:               token,
 		RefreshToken:        refreshToken,

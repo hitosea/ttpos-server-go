@@ -1258,7 +1258,7 @@ func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) st
 		printCode += "\x10\x14\x01\x00\x01"
 	} else if openMoneybox == 2 {
 		// 使用字节表示方式代替PHP的chr()函数
-		printCode += string([]byte{27, 112, 0, 25, 250})
+		printCode += "\x1B\x70\x00\x19\xFA"
 	}
 
 	// 转换为16进制字符串

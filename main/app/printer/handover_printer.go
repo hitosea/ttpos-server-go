@@ -22,6 +22,7 @@ func (p *PrinterRepoImpl) PrintingHandoverOrder(
 	log *model.StaffShiftLog,
 	businessData *business_data_resp.BusinessDataAll,
 	FirstExecution int,
+	openMoneybox bool,
 	deviceSnId ...string,
 ) (*resp.PrinterData, error) {
 	var deviceSn string
@@ -58,7 +59,7 @@ func (p *PrinterRepoImpl) PrintingHandoverOrder(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingHandoverOrderContent(settingPrinterInfo.PrinterType, log, businessData, FirstExecution)
+	printContent := p.getPrintingHandoverOrderContent(settingPrinterInfo.PrinterType, log, businessData, openMoneybox)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -104,7 +105,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 	printerType string, // 打印机类型
 	log *model.StaffShiftLog,
 	businessData *business_data_resp.BusinessDataAll,
-	firstExecution int,
+	openMoneybox bool,
 ) string {
 	// 获取打印模板
 	tmp := p.GetPrinterTemplate(uint64(constant.PrinterTemplateHandoverSheet))
@@ -135,7 +136,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 			tmp,
 			log,
 			businessData,
-			firstExecution,
+			openMoneybox,
 		)
 	}
 
@@ -147,7 +148,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 			tmp,
 			log,
 			businessData,
-			firstExecution,
+			openMoneybox,
 		)
 	}
 
@@ -160,7 +161,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 			tmp,
 			log,
 			businessData,
-			firstExecution,
+			openMoneybox,
 		)
 	}
 
@@ -173,7 +174,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 			tmp,
 			log,
 			businessData,
-			firstExecution,
+			openMoneybox,
 		)
 	}
 
@@ -186,7 +187,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 			tmp,
 			log,
 			businessData,
-			firstExecution,
+			openMoneybox,
 		)
 	}
 

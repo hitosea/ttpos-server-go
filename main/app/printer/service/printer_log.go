@@ -132,7 +132,6 @@ func (s *printerLogSrv) GetPrinterList(ctx context.Context, req req.PrinterListR
 		printerLogRepo.WithSaleBill(),
 		printerLogRepo.WithProductPrinter(),
 		printerLogRepo.WithMemberRechargeOrder(),
-		printerLogRepo.WhereType(constant.Yes),
 	}
 
 	// 添加时间范围查询
@@ -207,13 +206,13 @@ func (s *printerLogSrv) GetPrinterList(ctx context.Context, req req.PrinterListR
 			Uuid: log.Uuid,
 			RuleName: func() string {
 				if log.ProductPrinter == nil {
-					return ""
+					return "-"
 				}
 				return log.ProductPrinter.Name
 			}(),
 			SerialNo: func() string {
 				if log.SaleBill == nil && log.SaleOrder == nil {
-					return ""
+					return "-"
 				}
 				if log.SaleBill != nil {
 					return log.SaleBill.SerialNo
@@ -222,7 +221,7 @@ func (s *printerLogSrv) GetPrinterList(ctx context.Context, req req.PrinterListR
 			}(),
 			OrderNo: func() string {
 				if log.SaleOrder == nil && log.SaleBill == nil && log.MemberRechargeOrder == nil {
-					return ""
+					return "-"
 				}
 				if log.MemberRechargeOrder != nil {
 					return log.MemberRechargeOrder.OrderNo
@@ -253,14 +252,14 @@ func (s *printerLogSrv) GetPrinterList(ctx context.Context, req req.PrinterListR
 				case constant.PrinterTemplateReturnDish:
 					return i18n.Translate(language, "退菜单")
 				default:
-					return ""
+					return "-"
 				}
 			}(),
 			PrinterName: func() string {
 				if log.Printer != nil {
 					return log.Printer.Name
 				}
-				return ""
+				return "-"
 			}(),
 			CreateTime: log.CreateTime,
 			Status:     log.Status,
@@ -279,7 +278,7 @@ func (s *printerLogSrv) GetPrinterList(ctx context.Context, req req.PrinterListR
 					}
 					return i18n.Translate(language, "成功")
 				default:
-					return ""
+					return "-"
 				}
 			}(),
 			PrinterTime: log.PrinterTime,
@@ -365,8 +364,12 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 	if printerLog.Data == "" {
 		return nil, errors.New("打印失败，打印数据为空")
 	}
+	if printerLog.PrinterType == "" {
+		return nil, errors.New("打印失败，打印机类型为空")
+	}
+
 	// 去除开箱指令
-	data := printerLog.Data
+	data := printerLog.DecompressData()
 	dataLen := len(data)
 	if dataLen >= 10 {
 		if strings.HasSuffix(data, "1b700019fa") {
@@ -375,14 +378,11 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 			data = data[:dataLen-10]
 		}
 	}
-
-	if printerLog.PrinterType == "" {
-		return nil, errors.New("打印失败，打印机类型为空")
-	}
+	printerLog.Data = data
 
 	return &resp.PrinterData{
 		Uuid:             req.Uuid,
-		Data:             data,
+		Data:             printerLog.CompressData(),
 		PrintMethod:      printerLog.PrintMethod,
 		PrinterType:      printerLog.PrinterType,
 		IsCashierPrinter: printerLog.IsCashierPrinter(),

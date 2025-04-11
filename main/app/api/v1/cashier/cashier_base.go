@@ -501,7 +501,7 @@ func (h *BaseHandler) ShiftPrinter(c *gin.Context) {
 		helper.HandleValidationError(c, err, printerReq, nil)
 		return
 	}
-	printerData, err := h.staffShiftSrv.ShiftPrinter(ctx, printerReq, 1)
+	printerData, err := h.staffShiftSrv.ShiftPrinter(ctx, printerReq, 1, false)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

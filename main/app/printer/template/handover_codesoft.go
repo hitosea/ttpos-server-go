@@ -32,7 +32,7 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 	temp int,
 	log *model.StaffShiftLog,
 	businessData *business_data_resp.BusinessDataAll,
-	firstExecution int,
+	openMoneybox bool,
 ) string {
 	// 店铺设置
 	companySetting, _ := t.base.Setting.GetCompanySetting(t.base.Ctx)
@@ -441,7 +441,7 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 	printer.LineFeed(4)
 	printer.CutPaper(true)
 	// 打开钱箱
-	if firstExecution == 0 {
+	if openMoneybox {
 		printer.AppendText("\x10\x14\x01\x00\x01")
 	}
 	//
