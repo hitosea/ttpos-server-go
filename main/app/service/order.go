@@ -3423,6 +3423,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			ProductNum:         productNum,
 			ProductList:        productList,
 			IsDiscount:         saleOrder.IsDiscount(),
+			IsMemberDiscount:   saleOrder.IsMemberDiscount(),
 			CustomDiscountRate: saleOrder.CustomDiscountRate,
 			ZeroRule:           saleOrder.ZeroRule,
 			// 订单金额信息

@@ -825,6 +825,11 @@ func (model *SaleOrder) IsDiscount() bool {
 	return model.CustomAmount != -1 || model.CustomDiscountRate != 1 || model.ZeroRule != 0
 }
 
+// IsMemberDiscount 判断是否存在会员优惠折扣
+func (model *SaleOrder) IsMemberDiscount() bool {
+	return model.ConsumerUuid != 0
+}
+
 // HasCheckoutZeroRule 判断订单是否存在结账抹零
 func (model *SaleOrder) HasCheckoutZeroRule() bool {
 	// 如果订单的结账抹零规则不为实款实收，则表示订单存在结账抹零
