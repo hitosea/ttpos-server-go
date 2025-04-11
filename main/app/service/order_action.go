@@ -188,7 +188,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			Products: products,
 		})
 		// 送厨成功后，推送更新订单
-		go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.KITCHEN, map[string]interface{}{
+		go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
 			"update_time": time.Now().Unix(),
 		})
 	}
