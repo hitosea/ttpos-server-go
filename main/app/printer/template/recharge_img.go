@@ -83,6 +83,7 @@ func (t *rechargeImgTemplate) GetPrintContent(
 	// 退款
 	if order.RefundMoney > 0 {
 		img.AppendSplitLine()
+		img.LineFeed(1)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("退款"), Width: 350, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(order.RefundMoney), Width: 0, Align: pkg.AlignRight},
