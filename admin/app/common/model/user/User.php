@@ -137,7 +137,7 @@ class User extends BaseModel
     }
 
     /**
-     * 获取用户信息, 包含会员卡信息
+     * 获取用户信息
      */
     public static function detail($where, $includeDeleted = false)
     {
@@ -145,7 +145,12 @@ class User extends BaseModel
         $filter = $includeDeleted ? [] : ['delete_time' => 0];
         $filter = is_array($where) ? array_merge($filter, $where) : array_merge($filter, ['uuid' => (int) $where]);
 
-        $info = $model->field(['*, (balance + gift_balance) as balance'])->where($filter)->with(['grade', 'memberCard' => [ 'card' ]])->find();
+        $info = $model->field(['*, (balance + gift_balance) as balance'])->where($filter)->with([
+            'grade',
+            'memberCard' => [
+                'card'
+            ]
+        ])->find();
         if ($info) {
             $info->password = '';
         }
