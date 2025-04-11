@@ -279,11 +279,20 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 		// 如果必点方案是可选商品
 		// 当selectedNum>=桌台人数时，NeedNum为0
 		needNum := uint(0)
-		if plan.GetMustRule() == constant.ProductMustPlanMustRuleAny {
+		// 可选商品、每人必点
+		if plan.GetMustRule() == constant.ProductMustPlanMustRuleAny && plan.GetMustType() == constant.ProductMustPlanMustTypeEachPerson {
 			if selectedNum >= mealNum {
 				needNum = 0
 			} else {
 				needNum = mealNum - selectedNum
+			}
+		}
+		// 可选商品、每单必点
+		if plan.GetMustRule() == constant.ProductMustPlanMustRuleAny && plan.GetMustType() == constant.ProductMustPlanMustTypeEachOrder {
+			if selectedNum >= 1 {
+				needNum = 0
+			} else {
+				needNum = 1
 			}
 		}
 		// 如果必点方案是固定商品时，NeedNum的取值为“必选弹框”列表中商品还差数量之和
