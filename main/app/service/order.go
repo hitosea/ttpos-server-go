@@ -4566,6 +4566,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	returnFoodReasonList := saleOrderProduct.NewSaleOrderProductReasonList(returnFoodReason)
 
 	var returnSaleOrderProduct *model.SaleOrderProduct
+	var keepNum uint
 	// 如果退菜数量等于该商品的数量，则标记该商品为退菜并在商品的退菜原因列表中添加退菜原因
 	if saleOrderProduct.Num == req.Num {
 		saleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
@@ -4576,7 +4577,8 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		// 2. 新建一个销售订单商品，该商品数量为退菜数量.
 		// 3. 判断新建的销售订单商品是否要合并到已有的退菜商品中。当两个退菜商品的签名一致时，将两个商品合并，数量相加
 		// 修改原商品的数量
-		saleOrderProduct.SetNum(saleOrderProduct.Num - req.Num)
+		keepNum = saleOrderProduct.Num - req.Num
+		saleOrderProduct.SetNum(keepNum)
 		// 新建一个销售订单商品，该商品数量为退菜数量
 		newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(saleOrderProduct.SaleOrderUuid)
 		newSaleOrderProduct.SetNum(req.Num)
@@ -4625,6 +4627,20 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			}
 			// 创建入库单记录
 			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseFormItemRecords(warehouseForm.WarehouseFormItems); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+		
+		// 修改送厨商品
+		productionRepo := repository.NewProductionRepo(tx)
+		if keepNum > 0 { // 修改数量
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductSaleOrderProductUuid(saleOrderProduct.Uuid)},
+				map[string]any{"num": keepNum}); err != nil {
+				return errors.WithMessage(err)
+			}
+		} else { // 标记删除
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductSaleOrderProductUuid(saleOrderProduct.Uuid)},
+				map[string]any{"delete_time": time.Now().Unix()}); err != nil {
 				return errors.WithMessage(err)
 			}
 		}

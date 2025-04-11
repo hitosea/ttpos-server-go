@@ -54,3 +54,12 @@ type LogConf struct {
 	MaxBackup     int    // 日志文件最大数量
 	CleanSchedule string // 定时清理日志
 }
+
+type MigrateDatabaseConf struct {
+	MigrateOldDBHost     string
+	MigrateOldDBPort     int
+	MigrateOldDBUser     string
+	MigrateOldDBPassword string
+	MigrateOldDBDatabase string // 主数据库，如果是sqlite3，则为文件路径
+	MigrateOldDBPrefix   string // 表名前缀
+}
