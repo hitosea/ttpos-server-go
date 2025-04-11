@@ -87,9 +87,7 @@ class ErpWarehouseOutForm extends BaseModel
                             'product' => function ($q) {
                                 return $q->withTrashed();
                             },
-                            'relatedMaterial' => function ($q) {
-                                return $q->withTrashed();
-                            }
+                            'relatedMaterial'
                         ]);
                     },
                     'material' => function ($q) {
@@ -186,9 +184,7 @@ class ErpWarehouseOutForm extends BaseModel
                         'product' => function ($q) {
                             return $q->withTrashed();
                         },
-                        'relatedMaterial' => function ($q) {
-                            return $q->withTrashed();
-                        }
+                        'relatedMaterial'
                     ]);
                 },
                 'material' => function ($q) {
