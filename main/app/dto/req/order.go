@@ -125,7 +125,7 @@ type OrderProductChangePriceReq struct {
 	SaleBillUuid     uint64  `json:"sale_bill_uuid" binding:"required"`     // 销售账单UUID
 	SaleOrderUuid    uint64  `json:"sale_order_uuid" binding:"required"`    // 销售订单UUID
 	OrderProductUuid uint64  `json:"order_product_uuid" binding:"required"` // 订单商品UUID
-	Price            float64 `json:"price" binding:"required"`              // 改价
+	Price            float64 `json:"price"`                                 // 改价
 }
 
 // OrderDiscountMethodReq 订单打折方式
@@ -143,7 +143,7 @@ type OrderDiscountMethodReq struct {
 type OrderAmountChangeReq struct {
 	SaleBillUuid  uint64  `json:"sale_bill_uuid" binding:"required"`  // 销售账单UUID
 	SaleOrderUuid uint64  `json:"sale_order_uuid" binding:"required"` // 销售订单UUID
-	Price         float64 `json:"price" binding:"required"`           // 改价
+	Price         float64 `json:"price"`                              // 改价
 }
 
 // Validate 验证参数
