@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
 )
@@ -637,7 +638,7 @@ func (model *SaleBill) SetBuffetStartTimeAndDuration(maxTimeLimit int) {
 	}
 }
 
-// 是否完成
-func (model *SaleBill) IsFinish() bool {
-	return model.Status == constant.SaleBillStatusComplete
+// SetIsSplitOrder 设置拆单
+func (model *SaleBill) SetIsSplitOrder(isSplitOrder bool) {
+	model.IsSplitOrder = uint(utils.IfInt(isSplitOrder, constant.SaleBillIsSplitOrderYes, constant.SaleBillIsSplitOrderNo))
 }
