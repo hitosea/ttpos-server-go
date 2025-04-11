@@ -151,6 +151,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 			json.Unmarshal([]byte(product.FlavorName), &item.LocaleName)
 			json.Unmarshal([]byte(product.ProductAttributeNames), &item.ProductAttributeNames)
 			item.SerialNo = product.SaleBill.SerialNo
+			item.DiningMethod = product.SaleBill.DiningMethod
 			items = append(items, item)
 		}
 		if group.LocaleName == nil {
@@ -188,6 +189,7 @@ func (s *productionSrv) getLatestFinishedList(repo repository.IProductionOrderRe
 		copier.Copy(&item, product)
 		json.Unmarshal([]byte(product.FlavorName), &item.LocaleName)
 		item.SerialNo = product.SaleBill.SerialNo
+		item.DiningMethod = product.SaleBill.DiningMethod
 		items = append(items, item)
 	}
 	return resp.ProductionList{
@@ -252,6 +254,7 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 				logger.Logger.Error("json unmarshal error", zap.Error(err))
 			}
 			item.SerialNo = product.SaleBill.SerialNo
+			item.DiningMethod = product.SaleBill.DiningMethod
 			items = append(items, item)
 		}
 		if group.LocaleName == nil {
@@ -259,6 +262,9 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 		}
 		group.ProductionList = resp.ProductionList{
 			List: items,
+		}
+		if len(items) > 0 {
+			group.DiningMethod = items[0].DiningMethod
 		}
 		groups = append(groups, group)
 	}

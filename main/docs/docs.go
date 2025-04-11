@@ -17001,7 +17001,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "order_product_uuid",
-                "price",
                 "sale_bill_uuid",
                 "sale_order_uuid"
             ],
@@ -21181,6 +21180,10 @@ const docTemplate = `{
         "resp.ProductionGroup": {
             "type": "object",
             "properties": {
+                "dining_method": {
+                    "description": "用餐方式,0-堂食(店内就餐) 1-打包",
+                    "type": "integer"
+                },
                 "locale_name": {
                     "description": "序列号",
                     "allOf": [
@@ -21215,6 +21218,10 @@ const docTemplate = `{
             "properties": {
                 "create_time": {
                     "description": "送厨时间",
+                    "type": "integer"
+                },
+                "dining_method": {
+                    "description": "用餐方式,0-堂食(店内就餐) 1-打包",
                     "type": "integer"
                 },
                 "locale_name": {
