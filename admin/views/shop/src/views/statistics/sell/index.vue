@@ -13,7 +13,17 @@
         </el-form-item>
         <el-form-item :label="$t('起始时间')">
           <div class="block">
-            <datePick ref="datePickRef" @onchange="onChange"></datePick>
+            <el-date-picker
+              size="small"
+              v-model="searchForm.date"
+              type="daterange"
+              value-format="YYYY-MM-DD"
+              range-separator="~"
+              :start-placeholder="$t('开始日期')"
+              :end-placeholder="$t('结束日期')"
+              clearable
+              @change="onSearch"
+            ></el-date-picker>
           </div>
         </el-form-item>
         <el-form-item :label="$t('选择区域')">
@@ -34,6 +44,9 @@
               <span class="span-w" @click="handleValue(data)">{{ data.label }}</span>
             </template>
           </a-cascader>
+        </el-form-item>
+        <el-form-item :label="$t('商品名称')">
+          <el-input size="small" :placeholder="$t('请输入商品名称')" v-model="searchForm.product_name" @input="onSearch"></el-input>
         </el-form-item>
         <el-form-item>
           <el-button size="small" type="primary" icon="Search" class="search-button" @click="onSearch">
@@ -123,6 +136,7 @@
     time_type: '1',
     area_id: '',
     category_id: '',
+    product_name: '',
     sort_field: 'product_num',
     sort_type: 'desc',
   });
@@ -136,13 +150,6 @@
     datePickRef.value.dateStar = '';
     datePickRef.value.dateEnd = '';
     searchForm.value.date = ['', ''];
-    onSearch();
-  };
-
-  const onChange = (starDate, endDate) => {
-    searchForm.value.date[0] = starDate;
-    searchForm.value.date[1] = endDate;
-    searchForm.value.time_type = '';
     onSearch();
   };
 

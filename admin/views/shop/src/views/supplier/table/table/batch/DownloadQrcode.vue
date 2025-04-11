@@ -1,16 +1,13 @@
 <template>
   <!--
-      	
-      	时间：2020-06-01
-      	描述：插件中心-分销-提现申请-弹窗
-      -->
+            
+            时间：2020-06-01
+            描述：插件中心-分销-提现申请-弹窗
+        -->
   <div>
     <el-dialog :title="$t('选择桌台')" width="820" v-model="dialogVisible" @close="dialogFormVisible" :close-on-click-modal="false" :close-on-press-escape="false">
       <div v-loading="loading">
         <el-form size="small" :inline="true" :model="form" class="demo-form-inline d-s-c">
-          <el-form-item>
-            <el-input v-model="form.search" autocomplete="off" :placeholder="$t('桌位名称')" @input="onSearch"></el-input>
-          </el-form-item>
           <el-form-item>
             <a-select size="small" v-model:value="form.area_id" :placeholder="$t('选择区域')" @change="onSearch">
               <el-option :label="$t('全部')" value="0"></el-option>
@@ -22,6 +19,9 @@
               <el-option :label="$t('全部')" value="0"></el-option>
               <el-option v-for="(item, index) in type_list" :key="index" :label="item.type_name" :value="item.type_id"> </el-option>
             </a-select>
+          </el-form-item>
+          <el-form-item>
+            <el-input v-model="form.search" autocomplete="off" :placeholder="$t('桌位名称')" @input="onSearch"></el-input>
           </el-form-item>
           <el-form-item>
             <el-button size="small" type="primary" icon="Search" class="search-button" @click="onSearch">
@@ -46,16 +46,16 @@
         </div>
       </div>
       <!-- <div class="pagination" v-if="Dtype == 'delete'">
-        <el-pagination
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
-          background
-          :current-page="curPage"
-          :page-size="pageSize"
-          layout="total, prev, pager, next, jumper"
-          :total="totalDataNumber"
-        ></el-pagination>
-      </div> -->
+          <el-pagination
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+            background
+            :current-page="curPage"
+            :page-size="pageSize"
+            layout="total, prev, pager, next, jumper"
+            :total="totalDataNumber"
+          ></el-pagination>
+        </div> -->
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="dialogFormVisible">{{ $t('取消') }}</el-button>
@@ -98,14 +98,21 @@
         last_page: 999,
         searchLoading: '',
         supplier,
+        selectedTableIds: [],
       };
     },
-    props: ['open', 'Dtype'],
+    props: ['open', 'Dtype', 'include'],
 
     created() {
       this.dialogVisible = this.open;
-      this.getData('first');
+      if (this.include && this.include.length) {
+        this.selectedTableIds = [...this.include];
+      }
+
       // this.handleScroll();
+    },
+    mounted() {
+      this.getData('first');
     },
     methods: {
       /*选择第几页*/
@@ -158,6 +165,15 @@
               self.last_page = data.data.list.last_page;
               self.totalDataNumber = data.data.list.total;
             }
+            //自动打钩
+            this.$nextTick(() => {
+              const okSelected = this.selectedTableIds;
+              self.tableData.forEach((item) => {
+                if (okSelected.includes(item.table_id)) {
+                  self.$refs.multipleTableRef.toggleRowSelection(item, true);
+                }
+              });
+            });
           })
           .catch((error) => {
             self.loading = false;
@@ -167,6 +183,9 @@
       handleClick() {
         if (this.Dtype == 'delete') {
           this.deleteQrcode();
+        } else if (this.Dtype == 'service') {
+          // 使用selectedTableIds查找完整的表格行数据
+          this.$emit('selectTable', this.selectedTableIds);
         } else {
           this.downloadQrcode();
         }
@@ -174,10 +193,7 @@
 
       downloadQrcode() {
         let self = this;
-        let ids = [];
-        if (self.$refs.multipleTableRef.multipleSelection) {
-          ids = self.$refs.multipleTableRef.multipleSelection.map((item) => item.table_id);
-        }
+        let ids = this.selectedTableIds.join(',');
 
         if (!ids.length) {
           self.$ElMessage({
@@ -188,7 +204,7 @@
         }
         self.downloadLoading = true;
         self
-          .getQrcode(ids.join(','))
+          .getQrcode(ids)
           .then((res) => {
             const zip = new JSZip();
             for (const imgData of res) {
@@ -225,12 +241,9 @@
       deleteQrcode() {
         let self = this;
         self.downloadLoading = true;
-        let ids = [];
-        if (self.$refs.multipleTableRef.multipleSelection) {
-          ids = self.$refs.multipleTableRef.multipleSelection.map((item) => item.table_id);
-        }
+
         let params = {
-          ids: ids.join(','),
+          ids: this.selectedTableIds.join(','),
         };
         StoreApi.batchTableDelete(params, true)
           .then((data) => {
@@ -346,7 +359,21 @@
       },
 
       handleSelectionChange(val) {
-        this.$refs.multipleTableRef.multipleSelection = val;
+        // 不直接覆盖，而是更新selectedTableIds
+        const currentIds = val.map((item) => item.table_id);
+
+        // 获取当前表格中显示的所有ID
+        const visibleIds = this.tableData.map((item) => item.table_id);
+
+        // 从selectedTableIds中移除当前页面中未被选中的ID
+        this.selectedTableIds = this.selectedTableIds.filter((id) => !visibleIds.includes(id) || currentIds.includes(id));
+
+        // 添加新选中的ID
+        currentIds.forEach((id) => {
+          if (!this.selectedTableIds.includes(id)) {
+            this.selectedTableIds.push(id);
+          }
+        });
       },
 
       reset() {
@@ -356,6 +383,7 @@
         this.pageSize = 10;
         this.totalDataNumber = 0;
         this.last_page = 999;
+        this.selectedTableIds = [];
       },
 
       // handleScroll() {
