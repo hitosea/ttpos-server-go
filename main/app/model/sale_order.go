@@ -296,9 +296,9 @@ func (model *SaleOrder) SetGiftPointsRate(giftPointsRate float64) {
 	model.GiftPoints = model.CalcMemberPoint()
 }
 
-// CalcMemberPoint 计算会员积分. 会员积分=订单应收金额*积分赠送比例
+// CalcMemberPoint 计算会员积分. 会员积分=订单最终应收金额*积分赠送比例
 func (model *SaleOrder) CalcMemberPoint() float64 {
-	return decimal.NewFromFloat(model.GetAmount()).Mul(decimal.NewFromFloat(model.GiftPointsRate)).InexactFloat64()
+	return decimal.NewFromFloat(model.FinalPrice).Mul(decimal.NewFromFloat(model.GiftPointsRate)).InexactFloat64()
 }
 
 // 发放消费积分
