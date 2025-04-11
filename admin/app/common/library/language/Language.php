@@ -262,7 +262,7 @@ class Language
             $trans = $tr->translate($chunk, $from); // 翻译
             // 解析翻译结果
             foreach ($trans as $translation) {
-                if ((count($translation) - 1) != count($this->targetFiles)) {
+                if ((count($translation) - 1) < count($this->targetFiles) ) {
                     throw new \Exception("ai translate return error");
                 }
                 foreach ($targets as $lang => $target) {
