@@ -100,12 +100,12 @@ type IOrderSrv interface {
 	InstantOrderPaymentZeroRule(ctx context.Context, req req.InstantOrderPaymentZeroRuleReq) (*resp.InstantOrderPaymentInfoResp, error)                                     // 设置结账抹零规则
 	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                                                        // 给销售订单创建一个销售订单
 	SaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error)                                // 从一个销售订单移动商品到另一个销售订单
-	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error)                                                                  // 确认必点商品
+	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, *resp.InstantProductMustPlan, error)                                    // 确认必点商品
 	OrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error)                                                                       // 订单检查
 	InstantOrderSaleOrderDelete(ctx context.Context, req req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error)                                                        // 删除一个销售订单(删除拆单)
 	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                                                  // 删除所有子销售订单(撤销拆单)
 	OrderMemberCancel(ctx context.Context, req req.OrderMemberCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                                         // 取消使用会员优惠
-	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error)                                                          // 使用会员优惠
+	OrderUseMember(ctx context.Context, req req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, bool, error)                                                    // 使用会员优惠
 	CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error                                        // 计算并保存销售账单
 	OrderPrint(ctx context.Context, req req.OrderPrintReq, needLock bool) (*resp.PrinterData, error)                                                                        // 打印
 	OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvoiceReq) (*resp.PrinterData, error)                                                                         // 图片打印
@@ -4014,13 +4014,21 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 		var instantMustPlanList []resp.InstantProductMustPlan
 		if deskUuid != 0 {
 			// 如果是桌台订单
-			instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid)
+			if options.CheckType == CheckTypeCheckout {
+				instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCheckout())
+			} else {
+				instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCooking())
+			}
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
 		} else {
 			// 如果不是桌台订单
-			instantMustPlanList, err = s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
+			if options.CheckType == CheckTypeCheckout {
+				instantMustPlanList, err = s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo(), WithCheckSceneCheckout())
+			} else {
+				instantMustPlanList, err = s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo(), WithCheckSceneCooking())
+			}
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
@@ -4566,6 +4574,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	returnFoodReasonList := saleOrderProduct.NewSaleOrderProductReasonList(returnFoodReason)
 
 	var returnSaleOrderProduct *model.SaleOrderProduct
+	var keepNum uint
 	// 如果退菜数量等于该商品的数量，则标记该商品为退菜并在商品的退菜原因列表中添加退菜原因
 	if saleOrderProduct.Num == req.Num {
 		saleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
@@ -4576,7 +4585,8 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		// 2. 新建一个销售订单商品，该商品数量为退菜数量.
 		// 3. 判断新建的销售订单商品是否要合并到已有的退菜商品中。当两个退菜商品的签名一致时，将两个商品合并，数量相加
 		// 修改原商品的数量
-		saleOrderProduct.SetNum(saleOrderProduct.Num - req.Num)
+		keepNum = saleOrderProduct.Num - req.Num
+		saleOrderProduct.SetNum(keepNum)
 		// 新建一个销售订单商品，该商品数量为退菜数量
 		newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(saleOrderProduct.SaleOrderUuid)
 		newSaleOrderProduct.SetNum(req.Num)
@@ -4625,6 +4635,20 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			}
 			// 创建入库单记录
 			if err := repository.NewWarehouseFormRepo(tx).CreateWarehouseFormItemRecords(warehouseForm.WarehouseFormItems); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+
+		// 修改送厨商品
+		productionRepo := repository.NewProductionRepo(tx)
+		if keepNum > 0 { // 修改数量
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductSaleOrderProductUuid(saleOrderProduct.Uuid)},
+				map[string]any{"num": keepNum}); err != nil {
+				return errors.WithMessage(err)
+			}
+		} else { // 标记删除
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductSaleOrderProductUuid(saleOrderProduct.Uuid)},
+				map[string]any{"delete_time": time.Now().Unix()}); err != nil {
 				return errors.WithMessage(err)
 			}
 		}
@@ -7063,34 +7087,34 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 }
 
 // InstantOrderMustPlanConfirm 确认必点商品
-func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error) {
+func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, *resp.InstantProductMustPlan, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		ctx.Log().Error("获取销售账单信息失败", zap.Error(errSaleBill))
-		return false, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
+		return false, nil, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
 	}
 
 	// 查询到购物车信息
 	shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(req.SaleBillUuid)
 	if err != nil {
 		ctx.Log().Error("获取购物车信息失败", zap.Error(err))
-		return false, errors.WithMessage(err, "获取购物车信息失败")
+		return false, nil, errors.WithMessage(err, "获取购物车信息失败")
 	}
 
 	var mustPlanList []resp.InstantProductMustPlan
 	if saleBill.IsDeskSaleBill() {
 		mustPlan, errMustPlan := s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), saleBill.DeskUuid)
 		if errMustPlan != nil {
-			return false, errMustPlan
+			return false, nil, errMustPlan
 		}
 		mustPlanList = mustPlan
 	} else {
 		mustPlan, errMustPlan := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
 		if errMustPlan != nil {
-			return false, errMustPlan
+			return false, nil, errMustPlan
 		}
 		mustPlanList = mustPlan
 	}
@@ -7099,17 +7123,17 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 		for _, plan := range mustPlanList {
 			if plan.NeedNum > 0 {
 				ctx.Log().Info("确认必点商品失败，必点商品未点", zap.Any("plan name", plan.Name))
-				return false, nil
+				return false, &plan, nil
 			}
 		}
 	}
 
 	// 修改sale_bill表的show_must_plan
 	if err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(req.SaleBillUuid); err != nil {
-		return false, errors.WithMessage(err, "确认必点商品失败")
+		return false, nil, errors.WithMessage(err, "确认必点商品失败")
 	}
 
-	return true, nil
+	return true, nil, nil
 }
 
 // InstantOrderCheck 订单检查
@@ -7492,7 +7516,7 @@ func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMembe
 }
 
 // OrderUseMember 使用会员优惠
-func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, error) {
+func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPasswordReq) (*resp.InstantOrderPaymentInfoResp, bool, error) {
 	// 加锁
 	if ctx.NoLock() {
 		s.lock.LockUuid(request.SaleBillUuid)
@@ -7505,7 +7529,7 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 	// 获取会员信息
 	member, errMember := repository.NewMemberRepo(db).GetMemberInfoForSaleOrder(ctx, request.MemberUuid)
 	if errMember != nil {
-		return nil, errMember
+		return nil, false, errMember
 	}
 
 	// 如果会员有密码的话，验证会员密码
@@ -7514,33 +7538,39 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 		ctx.Log().Debug("验证密码", zap.Any("md5Password", md5Password), zap.Any("member.Password", member.Password))
 		if member.Password != md5Password {
 			ctx.Log().Debug("验证密码", zap.Any("md5Password", md5Password), zap.Any("member.Password", member.Password))
-			return nil, errors.New("密码错误")
+			return nil, false, errors.New("密码错误")
 		}
 	}
 
 	// 获取账单信息
 	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "查询销售账单失败")
+		return nil, false, errors.WithMessage(err, "查询销售账单失败")
 	}
 
 	// 获取销售账单信息
 	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
-		return nil, errors.New("销售订单不存在")
+		return nil, false, errors.New("销售订单不存在")
+	}
+
+	// 判断订单是否进行了整单改价或抹零
+	isCustomAmountAndZero := false
+	if saleOrder.IsCustomAmount() || saleOrder.IsZeroRule() {
+		isCustomAmountAndZero = true
 	}
 
 	saleOrder.SetMemberDiscount(*member)
 
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
-		return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
+		return nil, false, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
 	}
 
 	infoResp, err := s.InstantOrderPaymentInfo(ctx, nil, request.SaleBillUuid, request.SaleOrderUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err)
+		return nil, false, errors.WithMessage(err)
 	}
-	return infoResp, nil
+	return infoResp, isCustomAmountAndZero, nil
 }
 
 // OrderPrint 打印

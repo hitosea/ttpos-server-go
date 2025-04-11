@@ -642,7 +642,15 @@ func (model *SaleOrder) SetMemberDiscount(member Member) {
 	model.setMemberDiscount(member.Uuid, member.GetMemberDiscountRate(), member.GetMemberCardDiscountRate())
 }
 
-// 设置取消会员折扣，并修改订单商品的折扣
+// 判断订单是否进行了整单改价或抹零
+func (model *SaleOrder) IsCustomAmount() bool {
+	return model.CustomAmount != -1
+}
+
+// 判断订单是否进行了订单抹零
+func (model *SaleOrder) IsZeroRule() bool {
+	return model.ZeroRule != 0
+}
 func (model *SaleOrder) SetMemberDiscountCancel() {
 	// 修改订单的会员信息
 	discountRate := float64(1)                  // 无折扣，1乘任何价格都等于原价

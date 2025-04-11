@@ -913,13 +913,13 @@ func (h *InstantHandler) OrderMustPlanConfirm(c *gin.Context) {
 	}
 	ctx.Log().Info("确认必点商品", zap.Any("params", params))
 	// 确认必点商品
-	res, err := h.orderSrv.InstantOrderMustPlanConfirm(ctx, params)
+	res, mustPlan, err := h.orderSrv.InstantOrderMustPlanConfirm(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	if !res {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.ErrMustPlanNotComplete)
+		helper.ErrorWithDetail(c, constant.CodeOrderCheckProductMust, errors.New(fmt.Sprintf("【%s】%s", mustPlan.Name, errors.ErrMustPlanNotComplete.Error())))
 		return
 	}
 	ctx.Log().Debug("确认必点商品成功", zap.Any("res", res))
@@ -1071,9 +1071,13 @@ func (h *InstantHandler) OrderUseMember(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res, err := h.orderSrv.OrderUseMember(ctx, passwordReq)
+	res, isCustomAmountAndZero, err := h.orderSrv.OrderUseMember(ctx, passwordReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	if isCustomAmountAndZero {
+		helper.FailWithData(c, constant.CodeMemberWarn, res, "改价/抹零已失效，请重新进行改价/抹零操作")
 		return
 	}
 	helper.Success(c, res)

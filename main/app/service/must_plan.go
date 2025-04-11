@@ -17,11 +17,11 @@ import (
 
 // IMustPlanSrv 定义必点方案服务接口
 type IMustPlanSrv interface {
-	GetProductMustPlans(ctx context.Context, deskUuid uint64) ([]*model.ProductMustPlan, error)                                                                    // 获取桌台的必选方案model列表
-	GetDeskMustPlanProductPackageList(ctx context.Context, deskUuid uint64) ([]*model.ProductPackage, error)                                                       // 获取桌台的必点ProductPackage列表
-	GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCartMustProductInfo ro.MustPlanProductInfo) ([]resp.InstantProductMustPlan, error)                // 获取点餐的必点方案列表
-	GetDeskMustPlanList(ctx context.Context, mealNum uint, shopCartMustProductInfo ro.MustPlanProductInfo, deskUuid uint64) ([]resp.InstantProductMustPlan, error) // 获取桌台的必点方案列表
-	GetMustPlanUuidByProductPackage(ctx context.Context, saleBillUuid, productPackageUuid uint64, deskUuid uint64) (uint64, error)                                 // 通过商品包获取必点方案uuid
+	GetProductMustPlans(ctx context.Context, deskUuid uint64) ([]*model.ProductMustPlan, error)                                                                                                          // 获取桌台的必选方案model列表
+	GetDeskMustPlanProductPackageList(ctx context.Context, deskUuid uint64) ([]*model.ProductPackage, error)                                                                                             // 获取桌台的必点ProductPackage列表
+	GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCartMustProductInfo ro.MustPlanProductInfo, options ...func(option *CheckOption)) ([]resp.InstantProductMustPlan, error)                // 获取点餐的必点方案列表
+	GetDeskMustPlanList(ctx context.Context, mealNum uint, shopCartMustProductInfo ro.MustPlanProductInfo, deskUuid uint64, options ...func(option *CheckOption)) ([]resp.InstantProductMustPlan, error) // 获取桌台的必点方案列表
+	GetMustPlanUuidByProductPackage(ctx context.Context, saleBillUuid, productPackageUuid uint64, deskUuid uint64) (uint64, error)                                                                       // 通过商品包获取必点方案uuid
 }
 
 // mustPlanSrv 必点方案服务结构体
@@ -41,8 +41,34 @@ func NewMustPlanSrvImpl(dbm *database.DBManager) IMustPlanSrv {
 	}
 }
 
-// 获取点餐的必点方案列表，用于检查加购的商品是否是必点商品并且属于哪个必点方案
-func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCartMustProductInfo ro.MustPlanProductInfo) ([]resp.InstantProductMustPlan, error) {
+type CheckOption struct {
+	Scene uint // 检查场景. 1-下单场景 2-结账场景
+}
+
+const (
+	CheckSceneCooking  = 1 // 下单场景
+	CheckSceneCheckout = 2 // 结账场景
+)
+
+func WithCheckSceneCooking() func(option *CheckOption) {
+	return func(option *CheckOption) {
+		option.Scene = CheckSceneCooking
+	}
+}
+
+func WithCheckSceneCheckout() func(option *CheckOption) {
+	return func(option *CheckOption) {
+		option.Scene = CheckSceneCheckout
+	}
+}
+
+// 获取点餐的必点方案列表，用于获取各个必点方案的点餐情况
+func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCartMustProductInfo ro.MustPlanProductInfo, options ...func(option *CheckOption)) ([]resp.InstantProductMustPlan, error) {
+	option := &CheckOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+
 	mustPlanList := make([]resp.InstantProductMustPlan, 0)
 
 	// 获取必选方案信息
@@ -59,6 +85,21 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 		}
 		if plan.IsDelete() {
 			continue
+		}
+
+		if option.Scene != 0 {
+			if option.Scene == CheckSceneCheckout {
+				// 结账场景下，如果“结账时检查必点商品”为关闭时，则不检查必点商品
+				if plan.AutoCheckout == 0 {
+					continue
+				}
+			}
+			if option.Scene == CheckSceneCooking {
+				// 结账场景下，如果“下单时检查必点商品”为关闭时，则不检查必点商品
+				if plan.AutoCheck == 0 {
+					continue
+				}
+			}
 		}
 
 		productPackageList := s.getInstantMustPlanProductList(ctx, plan)
@@ -228,7 +269,11 @@ func (s *mustPlanSrv) GetDeskMustPlanProductPackageList(ctx context.Context, des
 }
 
 // 获取桌台的必点方案列表，用于检查加购的商品是否是必点商品并且属于哪个必点方案
-func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, shopCartMustProductInfo ro.MustPlanProductInfo, deskUuid uint64) ([]resp.InstantProductMustPlan, error) {
+func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, shopCartMustProductInfo ro.MustPlanProductInfo, deskUuid uint64, options ...func(option *CheckOption)) ([]resp.InstantProductMustPlan, error) {
+	option := &CheckOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
 	// 获取该桌台的必选方案
 	productMustPlanList, err := s.GetProductMustPlans(ctx, deskUuid)
 	if err != nil {
@@ -241,6 +286,21 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 	for _, plan := range productMustPlanList {
 		if plan.IsDelete() {
 			continue
+		}
+
+		if option.Scene != 0 {
+			if option.Scene == CheckSceneCheckout {
+				// 结账场景下，如果“结账时检查必点商品”为关闭时，则不检查必点商品
+				if plan.AutoCheckout == 0 {
+					continue
+				}
+			}
+			if option.Scene == CheckSceneCooking {
+				// 结账场景下，如果“下单时检查必点商品”为关闭时，则不检查必点商品
+				if plan.AutoCheck == 0 {
+					continue
+				}
+			}
 		}
 
 		productPackages := s.getIDeskMustPlanProductList(ctx, plan, mealNum)
