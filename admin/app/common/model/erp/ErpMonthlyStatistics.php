@@ -54,7 +54,7 @@ class ErpMonthlyStatistics extends BaseModel
 
         return (new ErpWarehouseForm())
             ->where('create_time', 'between', [strtotime($start_time), strtotime($end_time)])
-            ->whereIn('scene', [0, 2]) // 场景,0-采购入库 2-调整入库
+            ->whereIn('scene', [0, 1, 2]) // 场景,0-采购入库 1-添加入库 2-调整入库
             ->where('status', '=', 0)  // 状态,0-success已入库
             ->sum('num') ?: 0;
     }
@@ -191,7 +191,7 @@ class ErpMonthlyStatistics extends BaseModel
                     },
                     'erpInventoryRecord' => function($q) use ($startTime, $endTime) {
                         return $q->where('status', 0)
-                            ->whereIn('scene', [0, 2])
+                            ->whereIn('scene', [0, 1, 2])
                             ->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)]);
                     }
                 ])->withTrashed();
@@ -203,7 +203,7 @@ class ErpMonthlyStatistics extends BaseModel
                     },
                     'erpInventoryRecord' => function($q) use ($startTime, $endTime) {
                         return $q->where('status', 0)
-                            ->whereIn('scene', [0, 2])
+                            ->whereIn('scene', [0, 1, 2])
                             ->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)]);
                     }
                 ])->withTrashed();

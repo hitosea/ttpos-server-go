@@ -268,7 +268,7 @@ class ErpDamagedProductRecord extends BaseModel
                             },
                             'erpInventoryRecord' => function($q) use ($startTime, $endTime) {
                                 return $q->where('status', 0)
-                                    ->whereIn('scene', [0, 2])
+                                    ->whereIn('scene', [0, 1, 2])
                                     ->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)]);
                             }
                         ])->withTrashed();
@@ -289,7 +289,7 @@ class ErpDamagedProductRecord extends BaseModel
                         },
                         'erpInventoryRecord' => function($q) use ($startTime, $endTime) {
                             return $q->where('status', 0)
-                                ->whereIn('scene', [0, 2])
+                                ->whereIn('scene', [0, 1, 2])
                                 ->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)]);
                         }
                     ])->withTrashed();
