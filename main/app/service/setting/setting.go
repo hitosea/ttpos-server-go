@@ -964,6 +964,10 @@ func (s *Srv) GetServiceFeeSetting(ctx context.Context) (setting.ServiceCharge, 
 	}
 	defaultServiceFee := s.getDefaultServiceCharge()
 	err = copier.CopyWithOption(&defaultServiceFee, serviceFee, copier.Option{IgnoreEmpty: true})
+
+	if len(defaultServiceFee.ApplyScopeTableList) == 0 {
+		defaultServiceFee.ApplyScopeTableList = make([]int64, 0)
+	}
 	if err != nil {
 		return serviceFee, errors.New("解析服务费设置失败")
 	}

@@ -420,8 +420,12 @@ func (s *Srv) getDefaultTaxRate() setting.TaxRate {
 // 默认服务费设置
 func (s *Srv) getDefaultServiceCharge() setting.ServiceCharge {
 	return setting.ServiceCharge{
-		IsOpen:     "0", // 是否开启 0关闭 1开启
-		ChargeType: "1", // 服务费类型 1-固定金额 2-百分比
-		IsOpenTax:  "0", // 税费 1-收取税费 0-不收取税费
+		IsOpen:              "0",              // 是否开启 0关闭 1开启
+		ChargeType:          "1",              // 服务费类型 1-固定金额 2-百分比
+		IsOpenTax:           "0",              // 税费 1-收取税费 0-不收取税费
+		ApplyScope:          "1",              // 适用范围 1-全部 2-部分
+		ApplyScopeOrdering:  "0",              // 适用范围-点餐 0-关闭 1-开启
+		ApplyScopeTable:     "0",              // 适用范围-桌台 0-关闭 1-开启
+		ApplyScopeTableList: make([]int64, 0), // 适用范围-桌台id列表
 	}
 }
