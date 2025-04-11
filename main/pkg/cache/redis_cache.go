@@ -49,7 +49,6 @@ func newRedisCache(conf Config) Cache {
 	clusterConfig := ParseRedisConfig(conf)
 	if len(clusterConfig) == 1 {
 		address := fmt.Sprintf("%s:%s", conf.Host, conf.Port)
-		fmt.Println("address:", address)
 		client = redis.NewClient(&redis.Options{
 			Addr:     address,
 			Password: conf.Password,

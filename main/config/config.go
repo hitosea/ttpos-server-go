@@ -10,6 +10,7 @@ import (
 
 var Server ServerConf
 var Database DatabaseConf
+var MigrateDatabase MigrateDatabaseConf
 var Redis RedisConf
 var JWT JWTConf
 var Captcha CaptchaConf
@@ -32,6 +33,8 @@ func Init() error {
 	redisConf(opt)    // Redis
 	jwtConf(opt)      // JWT
 	logConf(opt)      // 日志
+
+	migrateDatabaseConf(opt) // 迁移数据库
 
 	// 验证码
 	Captcha = CaptchaConf{CachePrefix: "captcha:"}
@@ -134,5 +137,24 @@ func serverConf(opt copier.Option) {
 		Mode:       viper.GetString("SERVER_MODE"),
 		DeployMode: viper.GetString("DEPLOY_MODE"),
 		BrandName:  viper.GetString("BRAND_NAME"),
+	}, opt)
+}
+
+func migrateDatabaseConf(opt copier.Option) {
+	MigrateDatabase = MigrateDatabaseConf{
+		MigrateOldDBHost:     "",
+		MigrateOldDBPort:     0,
+		MigrateOldDBUser:     "",
+		MigrateOldDBPassword: "",
+		MigrateOldDBDatabase: "",
+		MigrateOldDBPrefix:   "",
+	}
+	copier.CopyWithOption(&MigrateDatabase, MigrateDatabaseConf{
+		MigrateOldDBHost:     viper.GetString("MIGRATE_OLD_DB_HOST"),
+		MigrateOldDBPort:     viper.GetInt("MIGRATE_OLD_DB_PORT"),
+		MigrateOldDBUser:     viper.GetString("MIGRATE_OLD_DB_USERNAME"),
+		MigrateOldDBPassword: viper.GetString("MIGRATE_OLD_DB_PASSWORD"),
+		MigrateOldDBDatabase: viper.GetString("MIGRATE_OLD_DB_DATABASE"),
+		MigrateOldDBPrefix:   viper.GetString("MIGRATE_OLD_DB_PREFIX"),
 	}, opt)
 }

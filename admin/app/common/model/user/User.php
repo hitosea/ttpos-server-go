@@ -646,7 +646,7 @@ class User extends BaseModel
                 'a.id',
                 'a.uuid',
                 'COALESCE(SUM(ubl.money), 0) as tatal_amount',
-                'COALESCE(SUM(ubl.gift_money), 0) as gift_amount',
+                'COALESCE(IF(SUM(ubl.gift_money) > 0, SUM(ubl.gift_money), 0), 0) as gift_amount',
                 '(COALESCE(SUM(ubl.money), 0) - COALESCE(SUM(ubl.gift_money), 0)) as recharge_amount',
                 'a.nickName as nickname'
             ])
