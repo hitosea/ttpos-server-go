@@ -100,7 +100,7 @@ type IOrderSrv interface {
 	InstantOrderPaymentZeroRule(ctx context.Context, req req.InstantOrderPaymentZeroRuleReq) (*resp.InstantOrderPaymentInfoResp, error)                                     // 设置结账抹零规则
 	InstantOrderSaleOrderCreate(ctx context.Context, req req.InstantOrderSaleOrderCreateReq) (*resp.ShopCart, error)                                                        // 给销售订单创建一个销售订单
 	SaleOrderMoveProduct(ctx context.Context, req req.InstantOrderSaleOrderMoveProductReq, needDeleteSaleOrder bool) (*resp.ShopCart, error)                                // 从一个销售订单移动商品到另一个销售订单
-	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error)                                                                  // 确认必点商品
+	InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, *resp.InstantProductMustPlan, error)                                    // 确认必点商品
 	OrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error)                                                                       // 订单检查
 	InstantOrderSaleOrderDelete(ctx context.Context, req req.InstantOrderSaleOrderDeleteReq) (*resp.ShopCart, error)                                                        // 删除一个销售订单(删除拆单)
 	InstantOrderSaleOrderDeleteAll(ctx context.Context, req req.InstantOrderSaleOrderDeleteAllReq) (*resp.ShopCart, error)                                                  // 删除所有子销售订单(撤销拆单)
@@ -7063,34 +7063,34 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 }
 
 // InstantOrderMustPlanConfirm 确认必点商品
-func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, error) {
+func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.InstantOrderMustPlanConfirmReq) (bool, *resp.InstantProductMustPlan, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
 		ctx.Log().Error("获取销售账单信息失败", zap.Error(errSaleBill))
-		return false, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
+		return false, nil, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
 	}
 
 	// 查询到购物车信息
 	shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(req.SaleBillUuid)
 	if err != nil {
 		ctx.Log().Error("获取购物车信息失败", zap.Error(err))
-		return false, errors.WithMessage(err, "获取购物车信息失败")
+		return false, nil, errors.WithMessage(err, "获取购物车信息失败")
 	}
 
 	var mustPlanList []resp.InstantProductMustPlan
 	if saleBill.IsDeskSaleBill() {
 		mustPlan, errMustPlan := s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), saleBill.DeskUuid)
 		if errMustPlan != nil {
-			return false, errMustPlan
+			return false, nil, errMustPlan
 		}
 		mustPlanList = mustPlan
 	} else {
 		mustPlan, errMustPlan := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
 		if errMustPlan != nil {
-			return false, errMustPlan
+			return false, nil, errMustPlan
 		}
 		mustPlanList = mustPlan
 	}
@@ -7099,17 +7099,17 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 		for _, plan := range mustPlanList {
 			if plan.NeedNum > 0 {
 				ctx.Log().Info("确认必点商品失败，必点商品未点", zap.Any("plan name", plan.Name))
-				return false, nil
+				return false, &plan, nil
 			}
 		}
 	}
 
 	// 修改sale_bill表的show_must_plan
 	if err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(req.SaleBillUuid); err != nil {
-		return false, errors.WithMessage(err, "确认必点商品失败")
+		return false, nil, errors.WithMessage(err, "确认必点商品失败")
 	}
 
-	return true, nil
+	return true, nil, nil
 }
 
 // InstantOrderCheck 订单检查

@@ -2,6 +2,7 @@ package assistant
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -1366,13 +1367,13 @@ func (h *DeskHandler) OrderMustPlanConfirm(c *gin.Context) {
 	}
 	ctx.Log().Info("确认必点商品", zap.Any("params", params))
 	// 确认必点商品
-	res, err := h.orderSrv.InstantOrderMustPlanConfirm(ctx, params)
+	res, mustPlan, err := h.orderSrv.InstantOrderMustPlanConfirm(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	if !res {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.ErrMustPlanNotComplete))
+		helper.ErrorWithDetail(c, constant.CodeOrderCheckProductMust, errors.New(fmt.Sprintf("【%s】%s", mustPlan.Name, errors.ErrMustPlanNotComplete.Error())))
 		return
 	}
 	// 返回结果

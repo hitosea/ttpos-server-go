@@ -48,5 +48,5 @@ func NewWithCodeAndData(code int, data interface{}, message string) AppError {
 var (
 	ErrInternal            = AppError{Code: constant.CodeSystemError, Message: "系统内部错误"}
 	ErrNoDeviceSn          = AppError{Code: constant.CodeParamError, Message: "无法解析到设备SN"}
-	ErrMustPlanNotComplete = AppError{Code: constant.CodeOrderCheckProductMust, Message: "必点未完成"}
+	ErrMustPlanNotComplete = AppError{Code: constant.CodeOrderCheckProductMust, Message: "必点商品未选，请选择对应商品"}
 )
