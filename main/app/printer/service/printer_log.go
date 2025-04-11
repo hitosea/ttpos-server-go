@@ -359,7 +359,7 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 		printerLogRepo.WhereUuid(req.Uuid),
 		printerLogRepo.WithPrinter(),
 	)
-	if printerLog.PrinterUuid > 0 && printerLog.Printer == nil && printerLog.Printer.IsDelete() {
+	if printerLog.PrinterUuid > 0 && (printerLog.Printer == nil || printerLog.Printer.IsDelete()) {
 		return nil, errors.New("打印失败，打印机已不存在")
 	}
 	if printerLog.Data == "" {
