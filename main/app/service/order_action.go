@@ -283,7 +283,11 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 
 	// 检查限购
 	{
-		overLimitProducts := saleBill.GetSaleOrderProductOverLimit()
+		limitProducts, err := s.getBuffetProductLimitList(ctx, request.SaleBillUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts)
 		if len(overLimitProducts) > 0 {
 			return nil, errors.New("商品超过限购")
 		}

@@ -406,7 +406,7 @@ func (model *SaleBill) GetUnAcceptH5OrderProductTotalPrice(h5OrderProducts []*Sa
 }
 
 // 获取超过限购的商品
-func (model *SaleBill) GetSaleOrderProductOverLimit() []*SaleOrderProduct {
+func (model *SaleBill) GetSaleOrderProductOverLimit(limitProducts map[uint64]uint) []*SaleOrderProduct {
 	products := make([]*SaleOrderProduct, 0)
 
 	saleOrderProductAll := model.GetSaleOrderProductAll()
@@ -430,6 +430,10 @@ func (model *SaleBill) GetSaleOrderProductOverLimit() []*SaleOrderProduct {
 
 	for productPackageUuid, num := range numMap {
 		limitNum := productPackageMap[productPackageUuid].LimitNum
+		// 如果商品是自助餐商品的话，使用自助餐商品的限购规则
+		if buffetLimitNum, ok := limitProducts[productPackageUuid]; ok {
+			limitNum = buffetLimitNum
+		}
 		// 0表示不限购
 		if limitNum == 0 {
 			// 不限购，但是商品数量不能超过999个

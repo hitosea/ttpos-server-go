@@ -3918,7 +3918,11 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	{
 		// 如果是减数量，则不检查限购. 只有加数量时，才检查限购
 		if uint(request.Num) > beforeNum {
-			overLimitProducts := saleBill.GetSaleOrderProductOverLimit()
+			limitProducts, err := s.getBuffetProductLimitList(ctx, request.SaleBillUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts)
 			if len(overLimitProducts) > 0 {
 				return nil, errors.WithMessage(errors.New("商品超过限购"))
 			}
@@ -3960,6 +3964,21 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	ctx.Log().Debug("获取新的账单数据")
 
 	return info, nil
+}
+
+// 获取销售账单的自助餐商品限购商品列表
+func (s *orderSrv) getBuffetProductLimitList(ctx context.Context, saleBillUuid uint64) (map[uint64]uint, error) {
+	buffetProductList, err := s.OrderDeskBuffetProductList(ctx, req.OrderChangeBuffetProductListReq{
+		SaleBillUuid: saleBillUuid,
+	})
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	limitProducts := make(map[uint64]uint)
+	for _, buffetProduct := range buffetProductList.List {
+		limitProducts[buffetProduct.Uuid] = buffetProduct.Limit
+	}
+	return limitProducts, nil
 }
 
 func (s *orderSrv) skipCheck(saleOrderProduct *model.SaleOrderProduct) bool {
