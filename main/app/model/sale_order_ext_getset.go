@@ -819,12 +819,12 @@ func (model *SaleOrder) SetFreeOrder(reason string, freeReasons []*SaleOrderProd
 	model.FinishTime = time.Now().Unix()
 }
 
-// 是否存在折扣
-func (model *SaleOrder) IsDiscount() bool {
+// 是否存在手动折扣
+func (model *SaleOrder) IsManualDiscount(ZeroRule uint8) bool {
 	// custom_amount == -1 是没有进行订单改价
 	// custom_discount_rate = 1 是没有折扣
 	// zero_rule = 0 是没有去零
-	return model.CustomAmount != -1 || model.CustomDiscountRate != 1 || model.ZeroRule != 0
+	return model.CustomAmount != -1 || model.CustomDiscountRate != 1 || (model.ZeroRule != 0 && model.ZeroRule != ZeroRule)
 }
 
 // IsMemberDiscount 判断是否存在会员优惠折扣

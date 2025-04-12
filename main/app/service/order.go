@@ -3440,7 +3440,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			Status:             saleOrder.Status,
 			ProductNum:         productNum,
 			ProductList:        productList,
-			IsDiscount:         saleOrder.IsDiscount(),
+			IsDiscount:         saleOrder.IsManualDiscount(uint8(shopCart.SaleBill.SaleBillSetting.ZeroRule)),
 			IsMemberDiscount:   saleOrder.IsMemberDiscount(),
 			CustomDiscountRate: saleOrder.CustomDiscountRate,
 			ZeroRule:           saleOrder.ZeroRule,
@@ -6495,7 +6495,9 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 	if len(saleBill.SaleOrders) == 1 {
 		saleOrder := saleBill.GetFirstSaleOrder()
 		// 撤销订单1的优惠折扣
-		saleOrder.SetAllDiscountCancel()
+		if saleOrder.IsManualDiscount(uint8(saleBill.SaleBillSetting.ZeroRule)) {
+			saleOrder.SetAllDiscountCancel()
+		}
 		// 撤销订单1的会员折扣
 		saleOrder.SetMemberDiscountCancel()
 	}
