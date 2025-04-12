@@ -6496,6 +6496,8 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 		saleOrder := saleBill.GetFirstSaleOrder()
 		// 撤销订单1的优惠折扣
 		saleOrder.SetAllDiscountCancel()
+		// 撤销订单1的会员折扣
+		saleOrder.SetMemberDiscountCancel()
 	}
 
 	// 计算并保存销售账单

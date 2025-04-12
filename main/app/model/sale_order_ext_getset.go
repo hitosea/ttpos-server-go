@@ -651,6 +651,8 @@ func (model *SaleOrder) IsCustomAmount() bool {
 func (model *SaleOrder) IsZeroRule() bool {
 	return model.ZeroRule != 0
 }
+
+// 设置会员折扣取消
 func (model *SaleOrder) SetMemberDiscountCancel() {
 	// 修改订单的会员信息
 	discountRate := float64(1)                  // 无折扣，1乘任何价格都等于原价
