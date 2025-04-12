@@ -1424,7 +1424,7 @@ func (h *DeskHandler) OrderPrintInvoice(c *gin.Context) {
 // OrderUnlock 订单解锁
 // @Summary 订单解锁
 // @Description 订单解锁
-// @Tags 收银端.点餐
+// @Tags 收银端.桌台
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -1444,6 +1444,30 @@ func (h *DeskHandler) OrderUnlock(c *gin.Context) {
 		return
 	}
 	helper.Success(c, gin.H{})
+}
+
+// GetOrderMemberList 获取订单会员列表
+// @Summary 获取订单会员列表
+// @Description 获取订单会员列表
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.InstantOrderMemberList}
+// @Router /cashier/desk/order/member/list [get]
+func (h *DeskHandler) GetOrderMemberList(c *gin.Context) {
+	var req req.OrderGetOrderMemberListReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderSrv.GetOrderMemberList(ctx, req.SaleBillUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
 }
 
 // RegisterDeskHandlers 注册收银产品路由
@@ -1516,8 +1540,9 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/member/discount", wrapper.GetMemberDiscount)                              // 获取订单会员优惠
 		privateApi.POST("/desk/order/member/confirm", wrapper.OrderUseMember)                                 // 确认使用会员优惠并验证密码
 		privateApi.DELETE("/desk/order/member/cancel", wrapper.OrderMemberCancel)                             // 不使用此会员
-		privateApi.POST("/desk/order/print", wrapper.OrderPrint)                                              // 打印
-		privateApi.POST("/desk/order/print/invoice", wrapper.OrderPrintInvoice)                               // 打印
+		privateApi.POST("/desk/order/print", wrapper.OrderPrint)                                              // 打印小票
+		privateApi.POST("/desk/order/print/invoice", wrapper.OrderPrintInvoice)                               // 打印发票
 		privateApi.POST("/desk/order/unlock", wrapper.OrderUnlock)                                            // 订单解锁
+		privateApi.GET("/desk/order/member/list", wrapper.GetOrderMemberList)                                 // 使用会员列表
 	}
 }

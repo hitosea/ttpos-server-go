@@ -125,6 +125,8 @@ type IOrderSrv interface {
 	ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*resp.OrderCheckServiceRes, error)                                                                                                         // 加购并送厨
 
 	TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) error // 平板端加购并送厨
+
+	GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error) // 获取订单会员列表
 }
 
 // orderSrv 订单服务结构
@@ -7029,6 +7031,9 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 	}
 
 	saleOrderProducts, saleOrderBuffetCustomers, buffetDelayProducts, err := s.getMoveProductInfo(ctx, saleOrderFrom, req)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	moveNumMap := make(map[uint64]uint)
 	for _, moveProduct := range req.Products {
@@ -7482,7 +7487,6 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 将除了第一个销售订单的所有商品都移动到第一个销售订单里
-
 	ctx.Log().Debug("删除所有子销售订单(撤销拆单)", zap.Any("request", request))
 
 	// 获取销售账单信息
@@ -7529,6 +7533,30 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 				ctx.Log().Error("删除订单失败", zap.Error(err))
 				return nil, errors.WithMessage(err, "删除订单失败")
 			}
+		}
+	}
+
+	// 获取会员信息
+	if request.MemberUuid > 0 {
+		// 获取账单信息
+		saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "查询销售账单失败")
+		}
+		// 获取销售订单信息
+		saleOrder := saleBill.GetSaleOrder(saleBill.SaleOrders[0].Uuid)
+		if saleOrder == nil {
+			return nil, errors.New("销售订单不存在")
+		}
+		// 设置会员折扣
+		member, errMember := repository.NewMemberRepo(db).GetMemberInfoForSaleOrder(ctx, request.MemberUuid)
+		if errMember != nil {
+			return nil, errors.WithMessage(errMember)
+		}
+		saleOrder.SetMemberDiscount(*member)
+		// 重新计算销售订单金额
+		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+			return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
 		}
 	}
 
@@ -8238,5 +8266,34 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shop
 	return resp.SentKitchen{
 		Groups:     resp.GroupList{List: groups},
 		AmountInfo: amount,
+	}, nil
+}
+
+// GetOrderMemberList 已送厨商品列表
+func (s *orderSrv) GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error) {
+	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillInfoAndMember(saleBillUuid)
+	if err != nil {
+		return resp.InstantOrderMemberList{}, errors.WithMessage(errors.ErrInternal, "获取销售账单信息: "+err.Error())
+	}
+	//
+	list := make([]resp.InstantOrderMember, 0)
+	uuidList := make([]uint64, 0)
+	for _, v := range saleBill.SaleOrders {
+		if v.Member == nil {
+			continue
+		}
+		if slices.Contains(uuidList, v.Member.Uuid) {
+			continue
+		}
+		uuidList = append(uuidList, v.Member.Uuid)
+		list = append(list, resp.InstantOrderMember{
+			Uuid:     v.Member.Uuid,
+			Nickname: v.Member.Nickname,
+			Phone:    v.Member.Phone,
+		})
+	}
+	//
+	return resp.InstantOrderMemberList{
+		List: list,
 	}, nil
 }

@@ -1183,6 +1183,30 @@ func (h *InstantHandler) OrderUnlock(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// GetOrderMemberList 获取订单会员列表
+// @Summary 获取订单会员列表
+// @Description 获取订单会员列表
+// @Tags 收银端.点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.InstantOrderMemberList}
+// @Router /cashier/instant/order/member/list [get]
+func (h *InstantHandler) GetOrderMemberList(c *gin.Context) {
+	var req req.OrderGetOrderMemberListReq
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	ctx := helper.GetContext(c)
+	res, err := h.orderSrv.GetOrderMemberList(ctx, req.SaleBillUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 // RegisterInstantHandlers 注册收银订单路由
 func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -1246,5 +1270,6 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/print/invoice", wrapper.OrderPrintInvoice)                               // 打印发票
 		privateApi.POST("/instant/order/unlock", wrapper.OrderUnlock)                                            // 订单解锁
 		privateApi.GET("/instant/order/payment/qrcode", wrapper.OrderPaymentQrcodeInfo)                          // 获取支付方式的二维码信息
+		privateApi.GET("/instant/order/member/list", wrapper.GetOrderMemberList)                                 // 获取订单会员列表
 	}
 }
