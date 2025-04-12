@@ -609,25 +609,20 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 			return cashier, errors.WithMessage(err)
 		}
 	}
+
 	st := s.getSettingByKey(ctx, constant.SettingCashier)
-	if strings.Contains(st.Values, "\"is_show_scan_sold_out\":\"1\"") {
-		st.Values = strings.Replace(st.Values, "\"is_show_scan_sold_out\":\"1\"", "\"is_show_scan_sold_out\":1", -1)
-	}
-	if strings.Contains(st.Values, "\"is_show_scan_sold_out\":\"0\"") {
-		st.Values = strings.Replace(st.Values, "\"is_show_scan_sold_out\":\"0\"", "\"is_show_scan_sold_out\":0", -1)
-	}
-	if strings.Contains(st.Values, "\"is_show_assistant_sold_out\":\"1\"") {
-		st.Values = strings.Replace(st.Values, "\"is_show_assistant_sold_out\":\"1\"", "\"is_show_assistant_sold_out\":1", -1)
-	}
-	if strings.Contains(st.Values, "\"is_show_assistant_sold_out\":\"0\"") {
-		st.Values = strings.Replace(st.Values, "\"is_show_assistant_sold_out\":\"0\"", "\"is_show_assistant_sold_out\":0", -1)
-	}
 	isSetIsShowScanSoldOut := strings.Contains(st.Values, "is_show_scan_sold_out")
 	isSetIsShowAssistantSoldOut := strings.Contains(st.Values, "is_show_assistant_sold_out")
-	err = json.Unmarshal([]byte(st.Values), &cashier)
+
+	// 解析json字符串为map进行处理
+	modifiedJSON, err := s.parseCashierSetting(st.Values, constant.SettingCashier)
 	if err != nil {
-		ctx.Log().Error("解析各端-收银机设置失败", zap.Error(err))
-		return cashier, errors.New("解析各端-收银机设置失败")
+		return cashier, err
+	}
+	err = json.Unmarshal(modifiedJSON, &cashier)
+	if err != nil {
+		ctx.Log().Error("解析各端-收银机设置失败 - 02", zap.Error(err))
+		return cashier, errors.New("解析各端-收银机设置失败 - 02")
 	}
 
 	// 滚动图/视频处理
@@ -651,8 +646,8 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 		defaultCashier.IsShowAssistantSoldOut = cashier.IsShowAssistantSoldOut // 助手端是否显示售罄
 	}
 	if err != nil {
-		ctx.Log().Error("合并各端-收银机设置失败", zap.Error(err))
-		return cashier, errors.New("合并各端-收银机设置失败")
+		ctx.Log().Error("合并各端-收银机设置失败 - 04", zap.Error(err))
+		return cashier, errors.New("合并各端-收银机设置失败 - 04")
 	}
 
 	if len(defaultCashier.Carousel) == 0 {
@@ -712,10 +707,32 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 		}
 	}
 	st := s.getSettingByKey(ctx, constant.SettingAssistant)
-	err = json.Unmarshal([]byte(st.Values), &assistant)
+	// 解析json字符串为map进行处理
+	var jsonMap map[string]interface{}
+	err = json.Unmarshal([]byte(st.Values), &jsonMap)
 	if err != nil {
-		ctx.Log().Error("解析各端-点餐助手设置失败", zap.Error(err))
-		return assistant, errors.New("解析各端-点餐助手设置失败")
+		ctx.Log().Error("解析点餐助手设置失败-01", zap.Error(err))
+		return assistant, errors.New("解析点餐助手设置失败-01 " + err.Error())
+	}
+	// 处理 isShowAssistantSoldOut
+	if isShowAssistantSoldOut, ok := jsonMap["is_show_assistant_sold_out"]; ok {
+		if numVal, ok := isShowAssistantSoldOut.(float64); ok {
+			jsonMap["is_show_assistant_sold_out"] = int(numVal)
+		} else if strVal, ok := isShowAssistantSoldOut.(string); ok {
+			jsonMap["is_show_assistant_sold_out"], _ = strconv.Atoi(strVal)
+		}
+	}
+	// 重新序列化为JSON
+	modifiedJSON, err := json.Marshal(jsonMap)
+	if err != nil {
+		ctx.Log().Error("解析点餐助手设置失败 - 重新序列化JSON失败 - 02", zap.Error(err))
+		return assistant, errors.New("解析点餐助手设置失败 - 重新序列化JSON失败 - 02 " + err.Error())
+	}
+	//
+	err = json.Unmarshal(modifiedJSON, &assistant)
+	if err != nil {
+		ctx.Log().Error("解析各端-点餐助手设置失败 - 01", zap.Error(err))
+		return assistant, errors.New("解析各端-点餐助手设置失败 - 01")
 	}
 	if len(assistant.LanguageList) == 0 {
 		assistant.LanguageList = nil
@@ -723,19 +740,22 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 	defaultAssistant := s.getDefaultAssistant(languageList)
 	err = copier.CopyWithOption(&defaultAssistant, assistant, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	if err != nil {
-		ctx.Log().Error("合并各端-点餐助手设置失败", zap.Error(err))
-		return assistant, errors.New("合并各端-点餐助手设置失败")
+		ctx.Log().Error("合并各端-点餐助手设置失败 - 02", zap.Error(err))
+		return assistant, errors.New("合并各端-点餐助手设置失败 - 02")
 	}
 
-	cashierSet := s.getSettingByKey(ctx, constant.SettingCashier)
-
 	// 如果设置了 is_show_assistant_sold_out，则读取解析后的数据，否则读取默认设置
+	cashierSet := s.getSettingByKey(ctx, constant.SettingCashier)
 	if strings.Contains(cashierSet.Values, "\"is_show_assistant_sold_out\"") {
-		var cashier setting.Cashier
-		err = json.Unmarshal([]byte(st.Values), &cashier)
+		modifiedJSON, err := s.parseCashierSetting(cashierSet.Values, constant.SettingCashier)
 		if err != nil {
-			ctx.Log().Error("解析各端-收银机设置失败", zap.Error(err))
-			return assistant, errors.New("解析各端-收银机设置失败")
+			return assistant, err
+		}
+		var cashier setting.Cashier
+		err = json.Unmarshal(modifiedJSON, &cashier)
+		if err != nil {
+			ctx.Log().Error("解析各端-收银机设置失败 - 02", zap.Error(err))
+			return assistant, errors.New("解析各端-收银机设置失败 - 02")
 		}
 		defaultAssistant.IsShowAssistantSoldOut = cashier.IsShowAssistantSoldOut
 	} else {
@@ -874,11 +894,15 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 	// 如果设置了 is_show_scan_sold_out，则读取解析后的数据，否则读取默认设置
 	cashierSet := s.getSettingByKey(ctx, constant.SettingCashier)
 	if strings.Contains(cashierSet.Values, "\"is_show_scan_sold_out\"") {
-		var cashier setting.Cashier
-		err = json.Unmarshal([]byte(st.Values), &cashier)
+		modifiedJSON, err := s.parseCashierSetting(cashierSet.Values, constant.SettingCashier)
 		if err != nil {
-			ctx.Log().Error("解析各端-收银机设置失败", zap.Error(err))
-			return h5, errors.New("解析各端-收银机设置失败")
+			return defaultH5, err
+		}
+		var cashier setting.Cashier
+		err = json.Unmarshal(modifiedJSON, &cashier)
+		if err != nil {
+			ctx.Log().Error("解析各端-收银机设置失败 - 02", zap.Error(err))
+			return defaultH5, errors.New("解析各端-收银机设置失败 - 02")
 		}
 		defaultH5.IsShowScanSoldOut = cashier.IsShowScanSoldOut
 	} else {
