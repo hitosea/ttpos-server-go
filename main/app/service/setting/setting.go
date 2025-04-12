@@ -860,7 +860,7 @@ func (s *Srv) GetKitchenSetting(ctx context.Context, companySetting model.Compan
 	return defaultKitchen, nil
 }
 
-// GetH5Setting 获取点餐助手设置
+// GetH5Setting 获取H5设置
 func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem) (setting.H5, error) {
 	var (
 		err error
@@ -879,7 +879,29 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 	if strings.Contains(st.Values, "\"order_limit\":[]") {
 		st.Values = strings.Replace(st.Values, "\"order_limit\":[]", "\"order_limit\":{}", -1)
 	}
-	err = json.Unmarshal([]byte(st.Values), &h5)
+	// 解析json字符串为map进行处理
+	var jsonMap map[string]interface{}
+	err = json.Unmarshal([]byte(st.Values), &jsonMap)
+	if err != nil {
+		ctx.Log().Error("解析各端-扫码H5设置失败 - 01", zap.Error(err))
+		return h5, errors.New("解析各端-扫码H5设置失败 - 01")
+	}
+	// 处理 isShowScanSoldOut
+	if isShowScanSoldOut, ok := jsonMap["is_show_scan_sold_out"]; ok {
+		if numVal, ok := isShowScanSoldOut.(float64); ok {
+			jsonMap["is_show_scan_sold_out"] = int(numVal)
+		} else if strVal, ok := isShowScanSoldOut.(string); ok {
+			jsonMap["is_show_scan_sold_out"], _ = strconv.Atoi(strVal)
+		}
+	}
+	// 重新序列化为JSON
+	modifiedJSON, err := json.Marshal(jsonMap)
+	if err != nil {
+		ctx.Log().Error("重新序列化JSON失败 - 02", zap.Error(err))
+		return h5, errors.New("重新序列化JSON失败 - 02")
+	}
+	// 解析json字符串
+	err = json.Unmarshal(modifiedJSON, &h5)
 	if err != nil {
 		ctx.Log().Error("解析各端-扫码H5设置失败", zap.Error(err))
 		return h5, errors.New("解析各端-扫码H5设置失败")
