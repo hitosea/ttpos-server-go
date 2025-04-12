@@ -260,11 +260,17 @@ type InstantOrderPaymentQrcodeInfoResp struct {
 }
 
 type InstantOrderMemberList struct {
-	List []InstantOrderMember `json:"list"`
+	List  []InstantOrderMember    `json:"list"`
+	Extra InstantOrderMemberExtra `json:"extra"` // 会员额外信息
 }
 
 type InstantOrderMember struct {
 	Uuid     uint64 `json:"uuid"`     // 会员UUID
 	Nickname string `json:"nickname"` // 会员名称
 	Phone    string `json:"phone"`    // 会员手机号
+}
+
+type InstantOrderMemberExtra struct {
+	IsCheckout        bool `json:"is_checkout"`         // 是否结账
+	IsPartialCheckout bool `json:"is_partial_checkout"` // 是否部分结账
 }

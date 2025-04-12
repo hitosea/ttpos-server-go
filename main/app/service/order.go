@@ -7486,9 +7486,6 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 
-	// 将除了第一个销售订单的所有商品都移动到第一个销售订单里
-	ctx.Log().Debug("删除所有子销售订单(撤销拆单)", zap.Any("request", request))
-
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if errSaleBill != nil {
@@ -7501,6 +7498,11 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 	// 如果第一个销售订单已经结账，则提示“当前订单已结账，无法撤销”
 	if firstSaleOrder.IsSettled() {
 		return nil, errors.New("当前订单已结账，无法撤销")
+	}
+
+	// 判断订单是否已被部分支付
+	if repository.NewOrderRepo(db).IsPartiallyPaid(request.SaleBillUuid) {
+		return nil, errors.New("当前订单已被部分支付，不支持撤销拆单")
 	}
 
 	saleOrderFromList := make([]*model.SaleOrder, 0)
@@ -8269,9 +8271,11 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shop
 	}, nil
 }
 
-// GetOrderMemberList 已送厨商品列表
+// GetOrderMemberList 获取订单会员列表
 func (s *orderSrv) GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error) {
-	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillInfoAndMember(saleBillUuid)
+	db := ctx.GetDB()
+	//
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillInfoAndMember(saleBillUuid)
 	if err != nil {
 		return resp.InstantOrderMemberList{}, errors.WithMessage(errors.ErrInternal, "获取销售账单信息: "+err.Error())
 	}
@@ -8293,7 +8297,16 @@ func (s *orderSrv) GetOrderMemberList(ctx context.Context, saleBillUuid uint64) 
 		})
 	}
 	//
+	extra := resp.InstantOrderMemberExtra{
+		IsCheckout:        saleBill.IsExistPaid(),
+		IsPartialCheckout: saleBill.IsExistPaid(),
+	}
+	if !saleBill.IsExistPaid() && repository.NewOrderRepo(db).IsPartiallyPaid(saleBillUuid) {
+		extra.IsPartialCheckout = true
+	}
+	//
 	return resp.InstantOrderMemberList{
-		List: list,
+		List:  list,
+		Extra: extra,
 	}, nil
 }
