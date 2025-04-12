@@ -385,12 +385,14 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 		})
 		returnAmount = returnAmount.Add(productTotalAmount)
 	}
-	refundAmount := returnAmount.Truncate(2).InexactFloat64()
 
+	// 退货金额=退货商品总金额之和
+	refundAmount := returnAmount.Truncate(2).InexactFloat64()
 	if returnType == constant.ReturnOrderRefundTypeTotal {
 		// 整单退款，退款金额=订单最终应收金额-已退款金额
 		refundAmount = decimal.NewFromFloat(model.FinalPrice).Sub(decimal.NewFromFloat(model.GetReturnAmount())).Truncate(2).InexactFloat64()
 	}
+	totalRefundAmount := refundAmount
 
 	// 获取销售订单的每个付款单的可退款金额
 	paymentRecords, currencyUnit := model.GetPaymentOrderCanReturnAmount()
@@ -463,7 +465,7 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 		RelatedOrderUuid:    model.Uuid,
 		RelatedOrderNo:      model.OrderNo,
 		ReturnType:          uint(returnType),
-		RefundAmount:        refundAmount,
+		RefundAmount:        totalRefundAmount,
 		Unit:                currencyUnit,
 		RefundTaxAmount:     model.TaxFee,
 		RefundReason:        "退款",
