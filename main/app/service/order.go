@@ -2383,6 +2383,24 @@ func (s *orderSrv) OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*
 		ctx.AddLock()
 	}
 
+	// 当不填销售账单ID时，表示要新建一个销售账单
+	if req.SaleBillUuid == 0 {
+		// 判断是否有待支付、未挂单的订单
+		_, hasInstantOrder, err := HasInstantOrder(ctx, s.dbm.GetDB(ctx.GetDbId()))
+		if err != nil {
+			return nil, err
+		}
+		if hasInstantOrder {
+			return nil, errors.New("参数错误, 有未支付的订单")
+		}
+		//
+		order, err := s.CreateInstantOrder(ctx)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		req.SaleBillUuid = order.SaleBillUuid
+	}
+
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
 
