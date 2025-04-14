@@ -475,6 +475,7 @@ type OrderCartInfoOption struct {
 	H5OrderUuid        uint64 // 指定某个h5订单
 	FilterEndStatus    bool   // 指定传入的salebill状态
 	NotDeleted         bool   // 查询未被删除的商品
+	NoQueryMustPlan    bool   // 不查询必点信息
 }
 
 const (
@@ -524,6 +525,13 @@ func WithNotDeleted() OrderCartInfoOptionFunc {
 func FilterEndStatus() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.FilterEndStatus = true
+	}
+}
+
+// 不查询必点信息
+func WithNoQueryMustPlan() OrderCartInfoOptionFunc {
+	return func(option *OrderCartInfoOption) {
+		option.NoQueryMustPlan = true
 	}
 }
 

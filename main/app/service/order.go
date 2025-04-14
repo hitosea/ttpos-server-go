@@ -91,7 +91,7 @@ type IOrderSrv interface {
 	InstantOrderCartProductChangeDesk(ctx context.Context, req req.OrderCartProductChangeDeskReq) (*resp.ShopCart, error)                                                             // 转菜购物车商品
 	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProductGivingReq) (*resp.ShopCart, error)                                                                     // 取消赠菜购物车商品
 	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                                        // 取消赠菜购物车商品
-	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error)                                                                              // 获取点餐必点方案
+	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, bool, error)                                                                        // 获取点餐必点方案
 	InstantOrderPaymentInfo(ctx context.Context, saleBill *model.SaleBill, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)                      // 获取结账页面信息
 	InstantOrderPaymentQrcode(ctx context.Context, req req.InstantOrderPaymentQrcodeReq) (*resp.InstantOrderPaymentQrcodeInfoResp, error)                                             // 获取支付二维码
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                                                   // 给销售订单创建一个支付单
@@ -3460,43 +3460,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		saleOrderList = append(saleOrderList, order)
 	}
 
-	var productMustPlanList *resp.ProductMustPlanList
-	// 如果销售账单需要显示必点方案
-	if shopCart.SaleBill.IsShowMustPlan() {
-		// 获取必点方案列表
-		var mustPlan *resp.InstantProductMustPlanResp
-		if shopCart.SaleBill.IsDeskSaleBill() {
-			mustPlan, err = s.DeskOrderMustPlan(ctx, saleBillUuid, shopCart.SaleBill.MealNum)
-			if err != nil {
-				ctx.Log().Info("获取桌台必点方案列表失败", zap.Error(errors.WithMessage(err)))
-			}
-		} else {
-			mustPlan, err = s.InstantOrderMustPlan(ctx, ctx.GetDeviceSn())
-			if err != nil {
-				ctx.Log().Info("获取点餐必点方案列表失败", zap.Error(errors.WithMessage(err)))
-			}
-		}
-
-		if mustPlan != nil {
-			// 如果已经自动加购完成，则不在显示必点方案
-			finish := true
-			for _, mustPlan := range mustPlan.List {
-				// 如果必点方案中还有需要加购的商品，则显示必点方案
-				if mustPlan.NeedNum != 0 {
-					finish = false
-				}
-			}
-			if finish {
-				// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
-				repository.NewSaleBillRepo(s.dbm.GetDB(dbId)).UpdateSaleBillShowMustPlan(saleBillUuid)
-			} else {
-				productMustPlanList = &resp.ProductMustPlanList{
-					List: mustPlan.List,
-				}
-			}
-		}
-	}
-
 	takeout := shopCart.SaleBill.IsTakeout()
 	shopCartInfo := &resp.ShopCart{
 		SaleBillUuid:  saleBillUuid,
@@ -3508,10 +3471,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		DiningMethod:  shopCart.SaleBill.DiningMethod,
 		SaleOrderList: saleOrderList,
 		UpdateTime:    shopCart.SaleBill.UpdateTime,
-	}
-	// 如果要显示必点信息
-	if productMustPlanList != nil {
-		shopCartInfo.MustPlans = productMustPlanList
 	}
 	// 如果是桌台购物车
 	if shopCart.IsDeskShopCart() {
@@ -3535,6 +3494,81 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			}
 		}
 	}
+
+	// 获取必点方案
+	if !option.NoQueryMustPlan {
+		saleOrder := shopCart.SaleBill.GetFirstSaleOrder()
+		var productMustPlanList *resp.ProductMustPlanList
+		// 如果销售账单需要显示必点方案
+		if shopCart.SaleBill.IsShowMustPlan() {
+			// 获取必点方案列表
+			var mustPlan *resp.InstantProductMustPlanResp
+			var isAutoAdd bool
+			if shopCart.SaleBill.IsDeskSaleBill() {
+				mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum)
+				if err != nil {
+					ctx.Log().Info("获取桌台必点方案列表失败", zap.Error(errors.WithMessage(err)))
+				}
+			} else {
+				mustPlan, isAutoAdd, err = s.InstantOrderMustPlan(ctx, ctx.GetDeviceSn())
+				if err != nil {
+					ctx.Log().Info("获取点餐必点方案列表失败", zap.Error(errors.WithMessage(err)))
+				}
+			}
+
+			if mustPlan != nil {
+				// 如果已经自动加购完成，则不在显示必点方案
+				finish := true
+				for _, mustPlan := range mustPlan.List {
+					// 如果必点方案中还有需要加购的商品，则显示必点方案
+					if mustPlan.NeedNum != 0 {
+						finish = false
+					}
+				}
+				if finish && isAutoAdd {
+					// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
+					repository.NewSaleBillRepo(s.dbm.GetDB(dbId)).UpdateSaleBillShowMustPlan(saleBillUuid)
+				} else {
+					productMustPlanList = &resp.ProductMustPlanList{
+						List: mustPlan.List,
+					}
+				}
+				if mustPlan.ShopCartInfo != nil {
+					// 自动加购后要重新获取一次必点信息，否则还是显示未自动加购前的信息
+					mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum)
+					if err != nil {
+						ctx.Log().Info("获取桌台必点方案列表失败", zap.Error(errors.WithMessage(err)))
+					}
+					if mustPlan != nil {
+						finish := true
+						for _, mustPlan := range mustPlan.List {
+							// 如果必点方案中还有需要加购的商品，则显示必点方案
+							if mustPlan.NeedNum != 0 {
+								finish = false
+							}
+						}
+						if finish && isAutoAdd {
+							// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
+							repository.NewSaleBillRepo(s.dbm.GetDB(dbId)).UpdateSaleBillShowMustPlan(saleBillUuid)
+							productMustPlanList = &resp.ProductMustPlanList{
+								List: nil,
+							}
+						} else {
+							productMustPlanList = &resp.ProductMustPlanList{
+								List: mustPlan.List,
+							}
+						}
+						shopCartInfo.SaleOrderList = mustPlan.ShopCartInfo.SaleOrderList
+					}
+				}
+			}
+		}
+		// 如果要显示必点信息
+		if productMustPlanList != nil {
+			shopCartInfo.MustPlans = productMustPlanList
+		}
+	}
+
 	return shopCartInfo, nil
 }
 
@@ -5134,13 +5168,13 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 }
 
 // InstantOrderMustPlan 获取点餐必点方案
-func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, error) {
+func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, bool, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 通过deviceSn获取saleBillUuid
 	saleBillUuid, errUuid := s.getSaleBillUuidByDeviceSn(ctx, deviceSn)
 	if errUuid != nil {
-		return nil, errors.WithMessage(errUuid, "无法找到销售账单")
+		return nil, false, errors.WithMessage(errUuid, "无法找到销售账单")
 	}
 	ctx.Log().Debug("查询必点方案列表", zap.Any("saleBillUuid", saleBillUuid), zap.Any("deviceSn", deviceSn))
 
@@ -5151,13 +5185,13 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	// 查询到购物车信息
 	shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "repository.NewOrderRepo(db).GetOrderCartInfo failed", fmt.Sprintf("saleBillUuid:%d", saleBillUuid))
+		return nil, false, errors.WithMessage(err, "repository.NewOrderRepo(db).GetOrderCartInfo failed", fmt.Sprintf("saleBillUuid:%d", saleBillUuid))
 	}
 
 	planList, errMustPlan := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
 	if errMustPlan != nil {
 		ctx.Log().Info("获取必点列表失败", zap.Error(errMustPlan))
-		return nil, errors.New("获取必点列表失败")
+		return nil, false, errors.New("获取必点列表失败")
 	}
 	mustPlanList = planList
 	ctx.Log().Debug("构建好必点方案列表", zap.Any("数量", len(mustPlanList)))
@@ -5174,6 +5208,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	}
 
 	var shopCart *resp.ShopCart
+	var isAutoAdd bool
 	// 判断是否需要给点餐账单自动加购商品。当map列表中有商品时，表示需要自动加购
 	if len(autoFlavorProduct) > 0 && shopCartInfo.SaleBill.IsAutoAddMustProduct() {
 		errTx := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
@@ -5189,8 +5224,9 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 			return nil
 		})
 		if errTx != nil {
-			return nil, errors.WithMessage(errTx, "自动添加必点商品失败")
+			return nil, false, errors.WithMessage(errTx, "自动添加必点商品失败")
 		}
+		isAutoAdd = true
 	}
 
 	var cartInfo *resp.InstantShopCart
@@ -5207,26 +5243,26 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 		list = mustPlanList
 	}
 	mustPlan := &resp.InstantProductMustPlanResp{List: list, ShopCartInfo: cartInfo}
-	return mustPlan, nil
+	return mustPlan, isAutoAdd, nil
 }
 
-func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, mealNum uint) (*resp.InstantProductMustPlanResp, error) {
+func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64, mealNum uint) (*resp.InstantProductMustPlanResp, bool, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	mustPlanList := make([]resp.InstantProductMustPlan, 0)
 	// product_bom_uuid => *resp.InstantMustPlanProduct
-	autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProduct) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
+	autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProductStat) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
 
 	// 查询到购物车信息
 	shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "repository.NewOrderRepo(db).GetOrderCartInfo failed", fmt.Sprintf("saleBillUuid:%d", saleBillUuid))
+		return nil, false, errors.WithMessage(err, "repository.NewOrderRepo(db).GetOrderCartInfo failed", fmt.Sprintf("saleBillUuid:%d", saleBillUuid))
 	}
 
 	planList, errMustPlan := s.mustPlanSrv.GetDeskMustPlanList(ctx, mealNum, shopCartInfo.GetMustPlanProductInfo(), shopCartInfo.SaleBill.DeskUuid)
 	if errMustPlan != nil {
 		ctx.Log().Info("获取必点列表失败", zap.Error(errMustPlan))
-		return nil, errors.New("获取必点列表失败")
+		return nil, false, errors.New("获取必点列表失败")
 	}
 	mustPlanList = planList
 	ctx.Log().Debug("构建好必点方案列表", zap.Any("数量", len(mustPlanList)))
@@ -5237,41 +5273,47 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, m
 			if product.IsAutoAdd {
 				planProduct := mustPlanList[i].Products.List[j].Product
 				productFlavorBomUuid := planProduct.Flavors.List[0].Uuid
-				autoFlavorProduct[productFlavorBomUuid] = &planProduct
+				autoFlavorProduct[productFlavorBomUuid] = &mustPlanList[i].Products.List[j]
 			}
 		}
 	}
 
-	var shopCart *resp.ShopCart
+	isAutoAdd := false
+
 	// 判断是否需要给点餐账单自动加购商品。当map列表中有商品时，表示需要自动加购
 	if len(autoFlavorProduct) > 0 && shopCartInfo.SaleBill.IsAutoAddMustProduct() {
 		errTx := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 			// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
-			shopCart, err = autoAddSaleOrderProduct(ctx, db, s, autoFlavorProduct)
+			ctx.SetDB(tx)
+			_, err = autoAddSaleOrderProductToDesk(ctx, s, autoFlavorProduct, saleBillUuid, saleOrderUuid, shopCartInfo.SaleBill)
 			if err != nil {
 				return errors.WithMessage(err, "自动添加必点商品失败")
 			}
 			return nil
 		})
 		if errTx != nil {
-			return nil, errors.WithMessage(errTx, "自动添加必点商品失败")
+			return nil, false, errors.WithMessage(errTx, "自动添加必点商品失败")
 		}
+		isAutoAdd = true
 	}
 
-	var cartInfo *resp.InstantShopCart
-	if shopCart != nil {
-		cartInfo = &resp.InstantShopCart{
-			SaleBillUuid:  shopCart.SaleBillUuid,
-			DiningMethod:  shopCart.DiningMethod,
-			SaleOrderList: shopCart.SaleOrderList,
-		}
+	// 获取新的购物车商品数据
+	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid, repository.WithNoQueryMustPlan())
+	if err != nil {
+		return nil, false, errors.WithMessage(err)
+	}
+
+	cartInfo := &resp.InstantShopCart{
+		SaleBillUuid:  shopCart.SaleBillUuid,
+		DiningMethod:  shopCart.DiningMethod,
+		SaleOrderList: shopCart.SaleOrderList,
 	}
 
 	list := make([]resp.InstantProductMustPlan, 0)
 	if shopCartInfo.SaleBill.IsShowMustPlan() {
 		list = mustPlanList
 	}
-	return &resp.InstantProductMustPlanResp{List: list, ShopCartInfo: cartInfo}, nil
+	return &resp.InstantProductMustPlanResp{List: list, ShopCartInfo: cartInfo}, isAutoAdd, nil
 }
 
 func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, autoFlavorProduct map[uint64]*resp.InstantMustPlanProduct) (*resp.ShopCart, error) {
@@ -5333,6 +5375,40 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 		// 如果有未挂单的点餐销售账单。未有这个需求，暂时不做
 	}
 	return shopCartInfo, nil
+}
+
+func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, autoFlavorProduct map[uint64]*resp.InstantMustPlanProductStat, saleBillUuid, saleOrderUuid uint64, saleBill *model.SaleBill) (*resp.ShopCart, error) {
+	productParams := make([]req.ProductParams, 0)
+	for flavorUuid, stat := range autoFlavorProduct {
+		productParams = append(productParams, req.ProductParams{
+			FlavorProductBomUuid: flavorUuid,
+			Num:                  stat.MustNum,
+		})
+	}
+	// 加购
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	errAdd := s.ActionAdd(ctx, req.ProductAddReq{
+		SaleBillUuid:  saleBillUuid,
+		SaleOrderUuid: saleOrderUuid,
+		Products:      productParams,
+	}, saleBill)
+	if errAdd != nil {
+		return nil, errors.WithMessage(errAdd)
+	}
+	// 更新sale_bill为自动加购完成
+	saleBill.AutoAddMustProduct = uint(0)
+	if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 获取新的购物车商品数据
+	info, err := s.GetOrderCartInfo(ctx, saleBillUuid, repository.WithNoQueryMustPlan())
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return info, nil
 }
 
 // InstantOrderMustPlan2 获取点餐必点方案
