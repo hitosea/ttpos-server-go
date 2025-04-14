@@ -10,7 +10,6 @@ use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Product as ProductModel;
 use app\common\model\Product\Material as MaterialModel;
 use app\shop\model\product\ProductBom;
-use think\facade\Log;
 
 /**
  * 商品模型
@@ -531,6 +530,7 @@ class Product extends ProductModel
                 'feed',
                 'productAttributeGroup' => [ 'productAttribute' ],
                 'buffetProduct',
+                'orderSchemeProduct'
             ])
             ->whereIn('uuid', $product_ids)
             ->select();
@@ -561,10 +561,14 @@ class Product extends ProductModel
                 }
                 // 删除产品语言
                 $multiLanguageName->clearCache($product->multi_language_name_uuid);
-                $product->multiLanguageName->delete();
+                $product->multiLanguageName?->delete();
                 // 删除自助餐商品
                 foreach ($product->buffetProduct as $buffetProduct) {
                     $buffetProduct->delete();
+                }
+                // 删除必点方案商品
+                foreach ($product->orderSchemeProduct as $orderSchemeProduct) {
+                    $orderSchemeProduct->delete();
                 }
                 // 删除产品
                 $product->delete();
