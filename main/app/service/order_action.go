@@ -176,7 +176,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			})
 		}
 		go s.bus.PublishSentCookingEvent(event.SentCookingPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 送厨
 				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),

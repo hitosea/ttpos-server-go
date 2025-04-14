@@ -389,7 +389,8 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 	// 发布“开台”操作事件
 	go func() {
 		s.bus.PublishOpenDeskEvent(event.OpenDeskPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 开台
+				Ctx:           ctx,
 				CompanyUuid:   dbId,
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  result.SaleBillUuid,
@@ -665,7 +666,8 @@ func (s *deskSrv) ChangeDesk(ctx context.Context, reqs req.ChangeDeskReq) (*resp
 	go func() {
 		ctx.Log().Info("发布转台事件")
 		s.bus.PublishChangeDeskEvent(event.ChangeDeskPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 转台
+				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  reqs.SaleBillUuid,
@@ -831,7 +833,8 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 	// 发布“并台”操作事件
 	go func() {
 		s.bus.PublishMergeDeskEvent(event.MergeDeskPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 并台
+				Ctx:          ctx,
 				CompanyUuid:  ctx.GetCompanyUuid(),
 				Source:       ctx.GetSource(),
 				SaleBillUuid: saleBill.Uuid,
