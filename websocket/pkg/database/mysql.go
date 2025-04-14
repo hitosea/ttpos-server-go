@@ -29,8 +29,7 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 		conf.Port,
 		dbName,
 	)
-	// 初始化会话
-	return gorm.Open(mysql.Open(dsn), &gorm.Config{
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
 		NamingStrategy: schema.NamingStrategy{
 			TablePrefix:   conf.TablePrefix, // 表名前缀
 			SingularTable: true,             // 使用单一表名, eg. `User` => `user`
@@ -47,4 +46,19 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 			},
 		),
 	})
+	if err != nil {
+		return nil, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	// 设置最大空闲连接数
+	sqlDB.SetMaxIdleConns(conf.MaxIdleConns)
+	// 设置最大打开的连接数
+	sqlDB.SetMaxOpenConns(conf.MaxOpenConns)
+	// 设置连接的最大可存活时间
+	sqlDB.SetConnMaxLifetime(time.Duration(conf.ConnMaxLifetime) * time.Minute)
+
+	return db, nil
 }

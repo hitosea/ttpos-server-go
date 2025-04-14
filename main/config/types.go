@@ -20,7 +20,7 @@ type DatabaseConf struct {
 
 	MaxIdleConns    int // 最大空闲连接数
 	MaxOpenConns    int // 最大打开的连接数
-	ConnMaxLifetime int // 连接的最大可存活时间，单位小时
+	ConnMaxLifetime int // 连接的最大可存活时间，单位分钟
 }
 
 type RedisConf struct {

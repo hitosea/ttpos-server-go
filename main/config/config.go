@@ -107,7 +107,7 @@ func databaseConf(opt copier.Option) {
 		SlowQueryTime:   2,
 		MaxIdleConns:    10,
 		MaxOpenConns:    100,
-		ConnMaxLifetime: 1,
+		ConnMaxLifetime: 60,
 	}
 	copier.CopyWithOption(&Database, DatabaseConf{
 		DBType:          viper.GetString("DB_TYPE"),
