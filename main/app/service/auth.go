@@ -729,7 +729,7 @@ func (s *authSrv) isTableOpen(ctx context.Context, pathUrl string) bool {
 	}
 	if cashierSetting.OrderMethod.IsTableOrder == "0" &&
 		(slices.Contains([]string{constant.SourceAssistant, constant.SourceTablet}, ctx.GetSource()) ||
-			ctx.GetSource() == constant.SourceCashier || regexp.MustCompile(`^/api/v\d+/cashier/desk/`).Match([]byte(pathUrl))) {
+			(ctx.GetSource() == constant.SourceCashier && regexp.MustCompile(`^/api/v\d+/cashier/desk/`).Match([]byte(pathUrl)))) {
 		return false
 	}
 	return true
