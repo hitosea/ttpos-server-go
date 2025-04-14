@@ -16,6 +16,7 @@ use app\common\model\order\OrderProduct;
 use app\common\model\product\ProductTax;
 use app\common\model\product\ProductFeed;
 use app\common\model\erp\ErpInventoryRecord;
+use app\common\model\order\OrderSchemeProduct;
 use app\common\model\product\ProductSkuMaterial;
 use app\common\model\product\ProductFeedMaterial;
 use app\common\model\product\Material;
@@ -420,6 +421,14 @@ class Product extends BaseModel
     public function buffetProduct()
     {
         return $this->hasMany(BuffetProduct::class, 'product_package_uuid', 'uuid');
+    }
+
+    /**
+     * 关联必点方案商品
+     */
+    public function orderSchemeProduct()
+    {
+        return $this->hasMany(OrderSchemeProduct::class, 'product_package_uuid', 'uuid');
     }
 
 

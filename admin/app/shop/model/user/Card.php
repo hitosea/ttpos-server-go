@@ -94,14 +94,16 @@ class Card extends CardModel
                 $CardRecordModel = new CardRecordModel;
                 $CardRecordModel->save($record);
                 //
-                $memberCardUuid = (new MemberCard)->add([
+                $memberCardUuid = createUuid();
+                $id = (new MemberCard)->add([
+                    'uuid' => $memberCardUuid,
                     'card_type_uuid' => $data['card_id'],
                     'member_uuid' => $userId,
                     'expire_time' => $detail['expire'] ? (time() + $detail['expire'] * 86400 * 30) : 0,
                     'discount' => $detail['discount'] > 0 ? $detail['discount'] : 0,
                 ]);
                 // 会员卡id
-                if ($memberCardUuid) {
+                if ($id) {
                     /** @var User $user */
                     $user->setMemberCardId($memberCardUuid);
                 }

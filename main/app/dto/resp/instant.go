@@ -186,8 +186,15 @@ func (obj InstantOrderPaymentInfoResp) GetCommissionAmount() float64 {
 }
 
 // GetUnpaidAmount 获取未收金额。未收金额=应收金额-实收金额
-func (obj InstantOrderPaymentInfoResp) GetUnpaidAmount() float64 {
+func (obj InstantOrderPaymentInfoResp) GetUnpaidAmount(paymentMethodUuid ...uint64) float64 {
 	//  Amounts.List列表中的每一个元素的UnpaidAmount都相同，所以直接返回第一个元素的UnpaidAmount
+	if len(paymentMethodUuid) > 0 {
+		for _, amount := range obj.Amounts.List {
+			if amount.PaymentMethodUuid == paymentMethodUuid[0] {
+				return amount.UnpaidAmount
+			}
+		}
+	}
 	if len(obj.Amounts.List) != 0 {
 		return obj.Amounts.List[0].UnpaidAmount
 	}

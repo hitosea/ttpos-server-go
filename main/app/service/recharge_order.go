@@ -27,6 +27,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -565,7 +566,8 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 	// 发布“会员余额变动”事件
 	go func() {
 		s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 会员余额变动
+				Ctx:          ctx,
 				CompanyUuid:  ctx.GetCompanyUuid(),
 				Source:       ctx.GetSource(),
 				OperatorUuid: int64(ctx.GetStaffUuid()),
@@ -576,7 +578,8 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 	// 发布“会员积分变动”事件
 	go func() {
 		s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 会员积分变动
+				Ctx:          ctx,
 				CompanyUuid:  ctx.GetCompanyUuid(),
 				Source:       ctx.GetSource(),
 				OperatorUuid: int64(ctx.GetStaffUuid()),
@@ -586,7 +589,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 	// 发布“统计”事件
 	go func() {
 		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 统计
 				Ctx: ctx,
 			},
 			MemberRechargeOrderUuid: order.Uuid,
@@ -1009,7 +1012,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderPaymentQrcode(ctx context.Context, re
 		order.Uuid,
 		paymentMethod.Uuid,
 		paymentMethod.Code,
-		paymentAmount,
+		decimal.NewFromFloat(paymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64(),
 		commissionFee,
 	)
 	if err != nil {
@@ -1246,7 +1249,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 	// 发布“统计”事件
 	go func() {
 		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 统计
 				Ctx: ctx,
 			},
 			MemberRechargeOrderUuid: order.Uuid,
@@ -1583,7 +1586,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	// 发布“统计”事件
 	go func() {
 		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 统计
 				Ctx: ctx,
 			},
 			MemberRechargeOrderUuid: order.Uuid,

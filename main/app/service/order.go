@@ -1034,7 +1034,12 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 // GetRecordList 获取操作记录
 func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5OrderUuid uint64) ([]resp.OrderOperationLog, error) {
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(ctx.GetDB())
-	orderRecordLists, err := orderRecordRepo.GetRecordLists(orderRecordRepo.WithSaleBillUuid(saleBillUuid), orderRecordRepo.WithH5OrderUuid(h5OrderUuid))
+	var dbOptions []repository.DBOption
+	dbOptions = append(dbOptions, orderRecordRepo.WithSaleBillUuid(saleBillUuid))
+	if h5OrderUuid > 0 {
+		dbOptions = append(dbOptions, orderRecordRepo.WithH5OrderUuid(h5OrderUuid))
+	}
+	orderRecordLists, err := orderRecordRepo.GetRecordLists(dbOptions...)
 	if err != nil {
 		return []resp.OrderOperationLog{}, errors.WithMessage(err)
 	}
@@ -1187,7 +1192,8 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	// 发布“整单取消”操作事件
 	go func() {
 		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 整单取消
+				Ctx:          ctx,
 				CompanyUuid:  ctx.GetCompanyUuid(),
 				Source:       ctx.GetSource(),
 				SaleBillUuid: billInfo.Uuid,
@@ -1402,7 +1408,8 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				// 发布“会员余额变动”事件
 				go func() {
 					s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
-						BasePayload: event.BasePayload{
+						BasePayload: event.BasePayload{ // 会员余额变动
+							Ctx:          ctx,
 							CompanyUuid:  ctx.GetCompanyUuid(),
 							Source:       ctx.GetSource(),
 							SaleBillUuid: req.SaleBillUuid,
@@ -1458,7 +1465,8 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			// 发布“会员积分变动”事件
 			go func() {
 				s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
-					BasePayload: event.BasePayload{
+					BasePayload: event.BasePayload{ // 会员积分变动
+						Ctx:          ctx,
 						CompanyUuid:  ctx.GetCompanyUuid(),
 						Source:       ctx.GetSource(),
 						SaleBillUuid: req.SaleBillUuid,
@@ -1505,7 +1513,8 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	go func() {
 		s.bus.PublishReturnOrderEvent(event.ReturnOrderPayload{
 			SaleBill: saleBill,
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 退款
+				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  saleBill.Uuid,
@@ -1520,7 +1529,9 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	// 发布“统计”事件
 	go func() {
 		s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
-			BasePayload:  event.BasePayload{Ctx: ctx},
+			BasePayload: event.BasePayload{ // 统计
+				Ctx: ctx,
+			},
 			SaleBillUuid: saleBill.Uuid,
 		})
 	}()
@@ -1966,7 +1977,8 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 			// 发布“会员余额变动”事件
 			go func() {
 				s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
-					BasePayload: event.BasePayload{
+					BasePayload: event.BasePayload{ // 会员余额变动
+						Ctx:          ctx,
 						CompanyUuid:  ctx.GetCompanyUuid(),
 						Source:       ctx.GetSource(),
 						SaleBillUuid: req.SaleBillUuid,
@@ -1978,7 +1990,8 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 			// 发布“会员积分变动”事件
 			go func() {
 				s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
-					BasePayload: event.BasePayload{
+					BasePayload: event.BasePayload{ // 会员积分变动
+						Ctx:          ctx,
 						CompanyUuid:  ctx.GetCompanyUuid(),
 						Source:       ctx.GetSource(),
 						SaleBillUuid: req.SaleBillUuid,
@@ -2013,7 +2026,8 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 				}
 			}
 			s.bus.PublishOrderReverseSettleEvent(event.OrderReverseSettlePayload{
-				BasePayload: event.BasePayload{
+				BasePayload: event.BasePayload{ // 订单反结账
+					Ctx:          ctx,
 					CompanyUuid:  ctx.GetCompanyUuid(),
 					Source:       ctx.GetSource(),
 					SaleBillUuid: saleBill.Uuid,
@@ -2033,7 +2047,9 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 		go func() {
 			// 发布“统计”操作事件
 			s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
-				BasePayload:  event.BasePayload{Ctx: ctx},
+				BasePayload: event.BasePayload{ // 统计
+					Ctx: ctx,
+				},
 				SaleBillUuid: saleBill.Uuid,
 				OnlyDelete:   true,
 			})
@@ -2175,7 +2191,8 @@ func (s *orderSrv) returnInventory(ctx context.Context, saleBill *model.SaleBill
 	// 发布"库存变更"事件
 	go func() {
 		event.NewSystemBus().PublishChangeStockEvent(event.ChangeStockPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 库存变更
+				Ctx:          ctx,
 				CompanyUuid:  ctx.GetCompanyUuid(),
 				Source:       ctx.GetSource(),
 				SaleBillUuid: saleBill.Uuid,
@@ -2221,7 +2238,8 @@ func (s *orderSrv) HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.Sh
 	// 发布"挂单"事件
 	go func() {
 		event.NewSystemBus().PublishHideSaleBillEvent(event.HideSaleBillPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 挂单
+				Ctx:          ctx,
 				CompanyUuid:  ctx.GetCompanyUuid(),
 				Source:       ctx.GetSource(),
 				SaleBillUuid: saleBillUuid,
@@ -2294,7 +2312,8 @@ func (s *orderSrv) ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.S
 	// 发布"取单"事件
 	go func() {
 		event.NewSystemBus().PublishShowSaleBillEvent(event.ShowSaleBillPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 取单
+				Ctx:          ctx,
 				CompanyUuid:  ctx.GetCompanyUuid(),
 				Source:       ctx.GetSource(),
 				SaleBillUuid: req.SaleBillUuid,
@@ -2617,7 +2636,8 @@ func (s *orderSrv) OrderProductChangePrice(ctx context.Context, req req.OrderPro
 	// 发布"改价"事件
 	go func() {
 		event.NewSystemBus().PublishChangeSaleOrderProductPriceEvent(event.ChangeSaleOrderProductPricePayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 改价
+				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  req.SaleBillUuid,
@@ -2683,7 +2703,8 @@ func (s *orderSrv) OrderAmountChange(ctx context.Context, req req.OrderAmountCha
 	// 发布"改价"事件
 	go func() {
 		event.NewSystemBus().PublishDiscountChangePriceSaleOrderEvent(event.DiscountSaleOrderPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 改价
+				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  req.SaleBillUuid,
@@ -2754,7 +2775,8 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 	// 发布"整单打折"事件
 	go func() {
 		event.NewSystemBus().PublishDiscountSaleOrderEvent(event.DiscountSaleOrderPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 整单打折
+				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  req.SaleBillUuid,
@@ -2823,7 +2845,8 @@ func (s *orderSrv) OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) 
 	// 发布"订单抹零"事件
 	go func() {
 		event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountSaleOrderPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 订单抹零
+				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  req.SaleBillUuid,
@@ -2883,7 +2906,8 @@ func (s *orderSrv) OrderDiscountCancel(ctx context.Context, req req.OrderDiscoun
 	// 发布取消优惠折扣事件
 	go func() {
 		event.NewSystemBus().PublishCancelSaleOrderDiscountEvent(event.CancelSaleOrderDiscountPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 取消折扣
+				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  req.SaleBillUuid,
@@ -2960,7 +2984,8 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 	// 发布"修改桌台就餐人数"事件
 	go func() {
 		event.NewSystemBus().PublishChangeMealNumSaleBillEvent(event.ChangeMealNumSaleBillPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 修改桌台人数
+				Ctx:          ctx,
 				CompanyUuid:  ctx.GetCompanyUuid(),
 				Source:       ctx.GetSource(),
 				SaleBillUuid: req.SaleBillUuid,
@@ -4739,7 +4764,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	// 发布“退菜”事件
 	go func() {
 		s.bus.PublishCancelSaleOrderProductEvent(event.CancelSaleOrderProductPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 退菜
 				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
@@ -4836,7 +4861,8 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 	// 发布取消退菜事件
 	go func() {
 		s.bus.PublishCancelReturnSaleOrderProductEvent(event.CancelReturnSaleOrderProductPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 取消退菜
+				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  req.SaleBillUuid,
@@ -4954,7 +4980,8 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 	// 发布转菜事件
 	go func() {
 		s.bus.PublishChangeDeskSaleOrderProductEvent(event.ChangeDeskSaleOrderProductPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 转菜
+				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  req.SaleBillUuid,
@@ -5057,7 +5084,8 @@ func (s *orderSrv) InstantOrderCartProductGiving(ctx context.Context, req req.Or
 	// 发布赠菜事件
 	go func() {
 		s.bus.PublishGiftSaleOrderProductEvent(event.GiftSaleOrderProductPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 赠菜
+				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  req.SaleBillUuid,
@@ -5140,7 +5168,8 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 	// 发布取消赠菜事件
 	go func() {
 		s.bus.PublishCancelGiftSaleOrderProductEvent(event.CancelGiftSaleOrderProductPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 取消赠菜
+				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  req.SaleBillUuid,
@@ -5668,11 +5697,14 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	// 计算手续费
 	commissionFee := paymentMethod.CalculatePaymentCommissionFee(req.PaymentAmount)
 	paymentAmount := paymentMethod.CalculatePaymentAmount(req.PaymentAmount)
+	if commissionFee > 0 {
+		saleOrder.SetCheckoutZeroRuleCancel()
+	}
+	unpaidAmount := saleOrder.GetUnpaidAmount()
 
 	// 判断支付金额是否大于未收金额.只能现金支付大于未收金额
-	unpaidAmount := saleOrder.GetUnpaidAmount()
 	if unpaidAmount < req.PaymentAmount {
-		return nil, errors.New("超出订单剩余可支付金额")
+		return nil, errors.WithMessage(errors.New(fmt.Sprintf("支付金额不能大于未收金额 %.2f", unpaidAmount)))
 	}
 
 	// 创建连连支付订单
@@ -5681,7 +5713,7 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 		saleOrder.Uuid,
 		paymentMethod.Uuid,
 		paymentMethod.Code,
-		paymentAmount,
+		decimal.NewFromFloat(paymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64(),
 		commissionFee,
 	)
 	if err != nil {
@@ -5794,7 +5826,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	commissionAmount := infoResp.GetCommissionAmount()
 
 	// 判断支付金额是否大于未收金额.只能现金支付大于未收金额
-	unpaidAmount := infoResp.GetUnpaidAmount()
+	unpaidAmount := infoResp.GetUnpaidAmount(paymentMethod.Uuid)
 	if unpaidAmount < req.PaymentAmount {
 		if paymentMethod.Code != constant.PaymentMethodCodeCash {
 			return nil, errors.WithMessage(errors.New(fmt.Sprintf("支付金额不能大于未收金额 %.2f", unpaidAmount)))
@@ -5859,7 +5891,8 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	if needCancelCheckoutZeroRule {
 		go func() {
 			s.bus.PublishCheckoutZeroSaleOrderEvent(event.CheckoutZeroSaleOrderPayload{
-				BasePayload: event.BasePayload{
+				BasePayload: event.BasePayload{ // 自动抹零
+					Ctx:           ctx,
 					CompanyUuid:   ctx.GetCompanyUuid(),
 					Source:        ctx.GetSource(),
 					SaleBillUuid:  req.SaleBillUuid,
@@ -6285,7 +6318,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			})
 		}
 		s.bus.PublishCheckoutSaleOrderEvent(event.CheckoutSaleOrderPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 结账
 				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
@@ -6306,7 +6339,9 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	if saleBill.CanFinishSaleBill() {
 		go func() {
 			s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
-				BasePayload:  event.BasePayload{Ctx: ctx},
+				BasePayload: event.BasePayload{ // 统计
+					Ctx: ctx,
+				},
 				SaleBillUuid: saleBill.Uuid,
 			})
 		}()
@@ -6454,7 +6489,7 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 	// 发布"免单"事件
 	go func() {
 		s.bus.PublishFreeSaleOrderEvent(event.FreeSaleOrderPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 免单
 				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
@@ -6474,7 +6509,9 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 	// 发布"统计"事件
 	go func() {
 		s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
-			BasePayload:  event.BasePayload{Ctx: ctx},
+			BasePayload: event.BasePayload{ // 统计
+				Ctx: ctx,
+			},
 			SaleBillUuid: saleBill.Uuid,
 		})
 	}()
@@ -6530,7 +6567,8 @@ func (s *orderSrv) InstantOrderPaymentZeroRule(ctx context.Context, req req.Inst
 	// 发布“结账抹零”事件
 	go func() {
 		s.bus.PublishCheckoutZeroSaleOrderEvent(event.CheckoutZeroSaleOrderPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 结账抹零
+				Ctx:           ctx,
 				CompanyUuid:   ctx.GetCompanyUuid(),
 				Source:        ctx.GetSource(),
 				SaleBillUuid:  req.SaleBillUuid,
@@ -6634,7 +6672,8 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 	// 发布“拆单”操作事件
 	go func() {
 		s.bus.PublishSplitOrderEvent(event.SplitOrderPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 拆单
+				Ctx:          ctx,
 				CompanyUuid:  ctx.GetCompanyUuid(),
 				Source:       ctx.GetSource(),
 				SaleBillUuid: saleBill.Uuid,
@@ -7559,7 +7598,8 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 	// 发布“撤销拆单”操作事件
 	go func() {
 		s.bus.PublishCancelSplitOrderEvent(event.CancelSplitOrderPayload{
-			BasePayload: event.BasePayload{
+			BasePayload: event.BasePayload{ // 撤销拆单
+				Ctx:          ctx,
 				CompanyUuid:  ctx.GetCompanyUuid(),
 				Source:       ctx.GetSource(),
 				SaleBillUuid: saleBill.Uuid,
@@ -8112,7 +8152,8 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 
 	// 先发布“接单”操作事件
 	s.bus.PublishAcceptH5OrderEvent(event.AcceptH5OrderPayload{
-		BasePayload: event.BasePayload{
+		BasePayload: event.BasePayload{ // 接单
+			Ctx:          ctx,
 			CompanyUuid:  ctx.GetCompanyUuid(),
 			Source:       ctx.GetSource(),
 			SaleBillUuid: h5Order.SaleBillUuid,
@@ -8211,7 +8252,8 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 		// 发布“拒单”操作事件
 		go func() {
 			s.bus.PublishRejectH5OrderEvent(event.RejectH5OrderPayload{
-				BasePayload: event.BasePayload{
+				BasePayload: event.BasePayload{ // 拒单
+					Ctx:          ctx,
 					CompanyUuid:  ctx.GetCompanyUuid(),
 					Source:       ctx.GetSource(),
 					SaleBillUuid: h5Order.SaleBillUuid,
