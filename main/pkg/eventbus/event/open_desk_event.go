@@ -1,6 +1,7 @@
 package event
 
 import (
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus"
 	"ttpos-server-go/pkg/utils"
@@ -22,6 +23,9 @@ type BasePayload struct {
 func (base BasePayload) GetOperatorUuid() uint64 {
 	if base.OperatorUuid < 0 {
 		return 0
+	}
+	if base.Ctx.GetSource() == constant.SourceAssistant {
+		return base.Ctx.GetAssistantUuid()
 	}
 	return uint64(base.OperatorUuid)
 }

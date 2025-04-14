@@ -22,6 +22,7 @@ type Context interface {
 	GetCompanySetting() model.CompanySetting // 获取商家设置
 	GetStaff() model.Staff                   // 获取员工信息
 	GetStaffUuid() uint64                    // 获取员工uuid
+	GetAssistantUuid() uint64                // 获取员工uuid(助手端)
 	GetDeviceSn() string                     // 获取设备SN
 	GetDeviceUuid() uint64                   // 获取设备uuid
 	GetDeskUuid() uint64                     // 获取桌台ID
@@ -45,6 +46,7 @@ type ContextImpl struct {
 	companySetting model.CompanySetting // 商家设置信息
 	staff          model.Staff          // 员工信息，如果是点餐助手，应该是收银员
 	staffUuid      uint64               // 员工uuid
+	assistantUuid  uint64               // 员工uuid(助手端)
 	deskUuid       uint64               // 桌台ID
 	deviceSn       string               // 设备序列号。用于唯一标识一个设备。如识别是哪个收银机，以找到收银机的未挂单点餐账单
 	deviceUuid     uint64               // 设备uuid
@@ -120,6 +122,12 @@ func WithStaff(staff model.Staff) Option {
 func WithStaffUuid(staffUuid uint64) Option {
 	return func(ctx *ContextImpl) {
 		ctx.staffUuid = staffUuid
+	}
+}
+
+func WithAssistantUuid(assistantUuid uint64) Option {
+	return func(ctx *ContextImpl) {
+		ctx.assistantUuid = assistantUuid
 	}
 }
 
@@ -225,6 +233,10 @@ func (c *ContextImpl) GetStaff() model.Staff {
 
 func (c *ContextImpl) GetStaffUuid() uint64 {
 	return c.staffUuid
+}
+
+func (c *ContextImpl) GetAssistantUuid() uint64 {
+	return c.assistantUuid
 }
 
 func (c *ContextImpl) GetDeviceSn() string {

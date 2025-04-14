@@ -5212,6 +5212,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/order/member/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取订单会员列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台"
+                ],
+                "summary": "获取订单会员列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderMemberList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/desk/order/must_plan/confirm": {
             "post": {
                 "security": [
@@ -6117,7 +6157,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.点餐"
+                    "收银端.桌台"
                 ],
                 "summary": "订单解锁",
                 "parameters": [
@@ -7346,6 +7386,46 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/resp.MemberDiscountResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/instant/order/member/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取订单会员列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐"
+                ],
+                "summary": "获取订单会员列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderMemberList"
                                         }
                                     }
                                 }
@@ -16484,6 +16564,10 @@ const docTemplate = `{
         "req.InstantOrderSaleOrderDeleteAllReq": {
             "type": "object",
             "properties": {
+                "member_uuid": {
+                    "description": "会员UUID, 可选",
+                    "type": "integer"
+                },
                 "sale_bill_uuid": {
                     "description": "销售账单UUID, 必填",
                     "type": "integer"
@@ -19439,6 +19523,55 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.InstantOrderMember": {
+            "type": "object",
+            "properties": {
+                "nickname": {
+                    "description": "会员名称",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "会员手机号",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "会员UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.InstantOrderMemberExtra": {
+            "type": "object",
+            "properties": {
+                "is_checkout": {
+                    "description": "是否结账",
+                    "type": "boolean"
+                },
+                "is_partial_checkout": {
+                    "description": "是否部分结账",
+                    "type": "boolean"
+                }
+            }
+        },
+        "resp.InstantOrderMemberList": {
+            "type": "object",
+            "properties": {
+                "extra": {
+                    "description": "会员额外信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.InstantOrderMemberExtra"
+                        }
+                    ]
+                },
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.InstantOrderMember"
+                    }
+                }
+            }
+        },
         "resp.InstantOrderPaymentInfoResp": {
             "type": "object",
             "properties": {
@@ -21920,6 +22053,10 @@ const docTemplate = `{
                 },
                 "is_discount": {
                     "description": "是否存在折扣 true:存在 false:不存在",
+                    "type": "boolean"
+                },
+                "is_member_discount": {
+                    "description": "是否存在会员优惠折扣 true:存在 false:不存在",
                     "type": "boolean"
                 },
                 "order_no": {

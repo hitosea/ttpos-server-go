@@ -1034,7 +1034,12 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 // GetRecordList 获取操作记录
 func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5OrderUuid uint64) ([]resp.OrderOperationLog, error) {
 	orderRecordRepo := repository.NewOrderOperationRecordRepo(ctx.GetDB())
-	orderRecordLists, err := orderRecordRepo.GetRecordLists(orderRecordRepo.WithSaleBillUuid(saleBillUuid), orderRecordRepo.WithH5OrderUuid(h5OrderUuid))
+	var dbOptions []repository.DBOption
+	dbOptions = append(dbOptions, orderRecordRepo.WithSaleBillUuid(saleBillUuid))
+	if h5OrderUuid > 0 {
+		dbOptions = append(dbOptions, orderRecordRepo.WithH5OrderUuid(h5OrderUuid))
+	}
+	orderRecordLists, err := orderRecordRepo.GetRecordLists(dbOptions...)
 	if err != nil {
 		return []resp.OrderOperationLog{}, errors.WithMessage(err)
 	}
