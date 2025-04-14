@@ -5597,11 +5597,14 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	// 计算手续费
 	commissionFee := paymentMethod.CalculatePaymentCommissionFee(req.PaymentAmount)
 	paymentAmount := paymentMethod.CalculatePaymentAmount(req.PaymentAmount)
+	if commissionFee > 0 {
+		saleOrder.SetCheckoutZeroRuleCancel()
+	}
+	unpaidAmount := saleOrder.GetUnpaidAmount()
 
 	// 判断支付金额是否大于未收金额.只能现金支付大于未收金额
-	unpaidAmount := saleOrder.GetUnpaidAmount()
 	if unpaidAmount < req.PaymentAmount {
-		return nil, errors.New("超出订单剩余可支付金额")
+		return nil, errors.WithMessage(errors.New(fmt.Sprintf("支付金额不能大于未收金额 %.2f", unpaidAmount)))
 	}
 
 	// 创建连连支付订单
@@ -5610,7 +5613,7 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 		saleOrder.Uuid,
 		paymentMethod.Uuid,
 		paymentMethod.Code,
-		paymentAmount,
+		decimal.NewFromFloat(paymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64(),
 		commissionFee,
 	)
 	if err != nil {
@@ -5723,7 +5726,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 	commissionAmount := infoResp.GetCommissionAmount()
 
 	// 判断支付金额是否大于未收金额.只能现金支付大于未收金额
-	unpaidAmount := infoResp.GetUnpaidAmount()
+	unpaidAmount := infoResp.GetUnpaidAmount(paymentMethod.Uuid)
 	if unpaidAmount < req.PaymentAmount {
 		if paymentMethod.Code != constant.PaymentMethodCodeCash {
 			return nil, errors.WithMessage(errors.New(fmt.Sprintf("支付金额不能大于未收金额 %.2f", unpaidAmount)))

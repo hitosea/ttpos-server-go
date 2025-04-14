@@ -100,11 +100,11 @@ func (model *SaleOrder) GetSummaryPaymentAmount() float64 {
 
 // 获取待支付的金额
 func (model *SaleOrder) GetUnpaidAmount() float64 {
-	unpaidAmount := model.GetPrintReceivablePrice() - model.GetSummaryPaymentAmount()
+	unpaidAmount, _ := model.calcFinallyAmount()
 	if unpaidAmount < 0 {
 		return 0
 	}
-	return unpaidAmount
+	return unpaidAmount - model.GetSummaryPaymentAmount()
 }
 
 // 获取总的退款金额

@@ -27,6 +27,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -1009,7 +1010,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderPaymentQrcode(ctx context.Context, re
 		order.Uuid,
 		paymentMethod.Uuid,
 		paymentMethod.Code,
-		paymentAmount,
+		decimal.NewFromFloat(paymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64(),
 		commissionFee,
 	)
 	if err != nil {
