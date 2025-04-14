@@ -143,6 +143,40 @@ func (model *SaleOrder) GetSaleOrderProductList(saleOrderProductUuids []uint64) 
 	return saleOrderProducts
 }
 
+// 获取退款的自助餐顾客列表
+func (model *SaleOrder) GetSaleOrderBuffetComstomerTypeList(productUuids []uint64) []*SaleOrderBuffetCustomerType {
+	targetList := make([]*SaleOrderBuffetCustomerType, 0)
+	productMap := make(map[uint64]*SaleOrderBuffetCustomerType)
+	for _, customerType := range model.SaleOrderBuffetCustomerTypes {
+		productMap[customerType.Uuid] = customerType
+	}
+	for _, productUuid := range productUuids {
+		saleOrderBuffetCustomerType, ok := productMap[productUuid]
+		if !ok {
+			continue
+		}
+		targetList = append(targetList, saleOrderBuffetCustomerType)
+	}
+	return targetList
+}
+
+// 获取退款的自助餐加钟列表
+func (model *SaleOrder) GetSaleOrderBuffetDelayList(productUuids []uint64) []*SaleOrderBuffetDelayProduct {
+	targetList := make([]*SaleOrderBuffetDelayProduct, 0)
+	productMap := make(map[uint64]*SaleOrderBuffetDelayProduct)
+	for _, delayProduct := range model.SaleOrderBuffetDelayProducts {
+		productMap[delayProduct.Uuid] = delayProduct
+	}
+	for _, productUuid := range productUuids {
+		saleOrderBuffetDelay, ok := productMap[productUuid]
+		if !ok {
+			continue
+		}
+		targetList = append(targetList, saleOrderBuffetDelay)
+	}
+	return targetList
+}
+
 // 获取销售订单应收金额
 func (model *SaleOrder) GetAmount() float64 {
 	// 整单改价金额大于等于0时，返回整单改价金额

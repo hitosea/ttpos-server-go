@@ -353,7 +353,7 @@ func (model *SaleOrder) NewReverseSettleMemberPointLog(points float64) *MemberPo
 }
 
 // 创建退货单
-func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, numMap map[uint64]uint, returnType int) *ReturnOrder {
+func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]uint, returnType int) *ReturnOrder {
 	returnOrderUuid, _ := utils.GetID()
 
 	// 如果退款类型为整单退款，则退款金额=订单最终应收金额-已退款金额
@@ -380,6 +380,55 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, nu
 			ProductName:          saleOrderProduct.Name,
 			ProductPrice:         saleOrderProduct.Price,
 			TaxRate:              saleOrderProduct.TaxRate,
+			Num:                  num,
+			ProductTotalAmount:   productTotalAmount.InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
+		})
+		returnAmount = returnAmount.Add(productTotalAmount)
+	}
+	for _, saleOrderProduct := range buffetCustomers {
+		// 退货数量
+		num := numMap[saleOrderProduct.Uuid]
+		// 商品总金额=退货商品数量*商品最终单价
+		// 商品金额=退货商品数量*商品最终单价
+		// 未含税时，商品总金额=商品金额 + 商品税费 + 服务费 + 服务费税费
+		// 已含税时，商品总金额=商品金额 + 服务费 + 服务费税费
+		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromInt(int64(num)))
+		// 如果商品未含税，则要再加上商品税费
+		// price := saleOrderProduct.TotalPrice + saleOrderProduct.TaxFee + saleOrderProduct.ServiceTaxFee
+		productTotalAmount = decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromInt(int64(num)))
+		returnOrderProducts = append(returnOrderProducts, &ReturnOrderProduct{
+			SaleOrderUuid:        model.Uuid,
+			SaleOrderProductUuid: saleOrderProduct.Uuid,
+			ReturnOrderUuid:      returnOrderUuid,
+			ProductType:          constant.ReturnOrderProductTypeSaleOrderProduct,
+			ProductPackageUuid:   saleOrderProduct.BuffetPackageUuid,
+			ProductName:          saleOrderProduct.Name,
+			ProductPrice:         saleOrderProduct.Price,
+			TaxRate:              saleOrderProduct.TaxRate,
+			Num:                  num,
+			ProductTotalAmount:   productTotalAmount.InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
+		})
+		returnAmount = returnAmount.Add(productTotalAmount)
+	}
+	for _, saleOrderProduct := range buffetDelays {
+		// 退货数量
+		num := numMap[saleOrderProduct.Uuid]
+		// 商品总金额=退货商品数量*商品最终单价
+		// 商品金额=退货商品数量*商品最终单价
+		// 未含税时，商品总金额=商品金额 + 商品税费 + 服务费 + 服务费税费
+		// 已含税时，商品总金额=商品金额 + 服务费 + 服务费税费
+		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromInt(int64(num)))
+		// 如果商品未含税，则要再加上商品税费
+		// price := saleOrderProduct.TotalPrice + saleOrderProduct.TaxFee + saleOrderProduct.ServiceTaxFee
+		productTotalAmount = decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromInt(int64(num)))
+		returnOrderProducts = append(returnOrderProducts, &ReturnOrderProduct{
+			SaleOrderUuid:        model.Uuid,
+			SaleOrderProductUuid: saleOrderProduct.Uuid,
+			ReturnOrderUuid:      returnOrderUuid,
+			ProductType:          constant.ReturnOrderProductTypeSaleOrderProduct,
+			ProductPackageUuid:   saleOrderProduct.BuffetDelayUuid,
+			ProductName:          saleOrderProduct.Name,
+			ProductPrice:         saleOrderProduct.Price,
 			Num:                  num,
 			ProductTotalAmount:   productTotalAmount.InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
 		})

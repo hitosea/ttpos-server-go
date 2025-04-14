@@ -866,6 +866,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					Num:              orderBuffetCustomer.Num, // 这种类型顾客多少个，如老人这个类型2人
 					SalePrice:        orderBuffetCustomer.GetOriginPrice(),
 					TotalPrice:       orderBuffetCustomer.GetDiscountPrice(),
+					RefundAmount:     orderBuffetCustomer.GetReturnPrice(),
 					Status:           1,
 					Remark:           "",
 					IsMust:           false,
@@ -898,6 +899,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					Price:               delayProduct.Price,
 					SalePrice:           delayProduct.GetAmount(),
 					TotalPrice:          delayProduct.GetAmount(),
+					RefundAmount:        delayProduct.GetReturnPrice(),
 					Status:              1,  // 添加后标记送厨状态，不可修改
 					Remark:              "", // 加钟商品没有备注
 					IsMust:              false,
@@ -1294,8 +1296,10 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	}
 
 	returnType := constant.ReturnOrderRefundTypeTotal
-	saleOrderProducts := make([]*model.SaleOrderProduct, 0) // 退款商品列表
-	numMap := make(map[uint64]uint)                         // 每个退款商品的退货数量
+	saleOrderProducts := make([]*model.SaleOrderProduct, 0)                        // 退款商品列表
+	saleOrderBuffetComstomerTypes := make([]*model.SaleOrderBuffetCustomerType, 0) // 退款自助餐顾客列表
+	saleOrderBuffetDelayProducts := make([]*model.SaleOrderBuffetDelayProduct, 0)  // 退款自助餐延迟商品列表
+	numMap := make(map[uint64]uint)                                                // 每个退款商品的退货数量
 	// 整单退款
 	if len(req.Products) == 0 {
 		returnType = constant.ReturnOrderRefundTypeTotal
@@ -1320,9 +1324,6 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		}
 		// 注意：要判断订单商品是否还有可退货数量
 		saleOrderProductList := saleOrder.GetSaleOrderProductList(saleOrderProductUuids)
-		if len(saleOrderProductList) == 0 {
-			return errors.WithMessage(errors.New("找不到退货商品")), constant.CodeFail
-		}
 		for _, saleOrderProduct := range saleOrderProductList {
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
 			if canReturnNum > 0 {
@@ -1330,19 +1331,45 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				if num <= canReturnNum {
 					saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
 				} else {
-					return errors.WithMessage(errors.New("退货数量超过可退货数量")), constant.CodeFail
+					return errors.WithMessage(errors.New("1退货数量超过可退货数量")), constant.CodeFail
 				}
 			}
 		}
+		saleOrderBuffetComstomerTypeList := saleOrder.GetSaleOrderBuffetComstomerTypeList(saleOrderProductUuids)
+		for _, saleOrderProduct := range saleOrderBuffetComstomerTypeList {
+			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
+			if canReturnNum > 0 {
+				num := numMap[saleOrderProduct.Uuid] // 退货数量
+				if num <= canReturnNum {
+					saleOrderBuffetComstomerTypes = append(saleOrderBuffetComstomerTypes, saleOrderProduct)
+				} else {
+					return errors.WithMessage(errors.New("2退货数量超过可退货数量")), constant.CodeFail
+				}
+			}
+		}
+		saleOrderBuffetDelayProductsList := saleOrder.GetSaleOrderBuffetDelayList(saleOrderProductUuids)
+
+		for _, saleOrderProduct := range saleOrderBuffetDelayProductsList {
+			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
+			if canReturnNum > 0 {
+				num := numMap[saleOrderProduct.Uuid] // 退货数量
+				if num <= canReturnNum {
+					saleOrderBuffetDelayProducts = append(saleOrderBuffetDelayProducts, saleOrderProduct)
+				} else {
+					return errors.WithMessage(errors.New("3退货数量超过可退货数量")), constant.CodeFail
+				}
+			}
+		}
+
 	}
 
 	// 如果退款类型为部分退款，则必须有可退货的商品。整单退款则可以没有可退货的商品，可能已经退完商品了但还有手续费没有退
-	if len(saleOrderProducts) == 0 && returnType == constant.ReturnOrderRefundTypePart {
+	if len(saleOrderProducts) == 0 && len(saleOrderBuffetComstomerTypes) == 0 && len(saleOrderBuffetDelayProducts) == 0 && returnType == constant.ReturnOrderRefundTypePart {
 		return errors.WithMessage(errors.New("没有可退货的商品")), constant.CodeFail
 	}
 
 	// 创建退款单
-	returnOrder := saleOrder.NewReturnOrder(saleOrderProducts, numMap, returnType)
+	returnOrder := saleOrder.NewReturnOrder(saleOrderProducts, saleOrderBuffetComstomerTypes, saleOrderBuffetDelayProducts, numMap, returnType)
 
 	// 是否存在QrPromptPay支付
 	if returnOrder.IsExistQrPromptPay() {

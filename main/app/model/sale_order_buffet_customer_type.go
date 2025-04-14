@@ -43,6 +43,11 @@ func (model *SaleOrderBuffetCustomerType) SetNil() {
 	model.BuffetCustomerTypePrice = BuffetCustomerTypePrice{}
 }
 
+// GetReturnPrice 获取销售订单商品的已退金额。订单商品金额 - 可退货金额
+func (model *SaleOrderBuffetCustomerType) GetReturnPrice() float64 {
+	return decimal.NewFromFloat(model.Price).Sub(decimal.NewFromFloat(model.GetCanReturnPrice())).Round(2).InexactFloat64()
+}
+
 // 获取销售订单自助餐顾客类型的总税费。包含服务费税费
 func (model *SaleOrderBuffetCustomerType) GetTotalTaxFee() float64 {
 	return model.GetTaxFee() + model.GetServiceTaxFee()
