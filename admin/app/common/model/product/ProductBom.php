@@ -144,6 +144,14 @@ class ProductBom extends BaseModel
     }
 
     /**
+     * 关联加料
+     */
+    public function productSauce()
+    {
+        return $this->belongsTo(Feed::class, 'product_sauce_uuid', 'uuid');
+    }
+
+    /**
      * 关联月度库存记录
      */
     public function erpMonthlyProductStatistics()
