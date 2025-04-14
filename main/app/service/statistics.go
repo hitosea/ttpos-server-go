@@ -518,6 +518,16 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			productPrice = productPrice.Add(decimal.NewFromFloat(saleOrder.GiftAmount))
 		}
 
+		// 统计服务费
+		if saleOrder.IsFree > 0 {
+			// 如果免单计入服务费
+			if saleBill.SaleBillSetting.IsStatFree == 1 {
+				serviceFee = serviceFee.Add(decimal.NewFromFloat(saleOrder.ServiceFee))
+			}
+		} else {
+			serviceFee = serviceFee.Add(decimal.NewFromFloat(saleOrder.ServiceFee))
+		}
+
 		// 销售商品
 		for _, saleProduct := range saleOrder.SaleOrderProducts {
 			if saleProduct.CancelTime == 0 {
@@ -534,14 +544,12 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					if saleBill.SaleBillSetting.IsStatFree == 1 {
 						productPrice = productPrice.Add(decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()))
 						productTax = productTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
-						serviceFee = serviceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee))
 						serviceTax = serviceTax.Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee))
 						discount = discount.Add(productPrice).Add(productTax).Add(serviceFee).Add(serviceTax)
 					}
 				} else {
 					productPrice = productPrice.Add(decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()))
 					productTax = productTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
-					serviceFee = serviceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee))
 					serviceTax = serviceTax.Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee))
 				}
 				var bomUuid uint64
