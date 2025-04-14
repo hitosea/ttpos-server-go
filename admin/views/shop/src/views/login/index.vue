@@ -42,6 +42,7 @@
                   :disabled="logining"
                   :placeholder="$t('验证码')"
                   @focus="handleFocus"
+                  @input="handleInput"
                   class="l-input"
                   style="max-width: 230px"
                 ></el-input>
@@ -461,6 +462,13 @@
           // 如果大于1500s，重新获取验证码
           this.getCode();
         }
+      },
+
+      handleInput() {
+        this.$nextTick(() => {
+          //过滤验证码中的空间符号
+          this.ruleForm.code = this.ruleForm.code.replace(/\s/g, '');
+        });
       },
 
       // 异步获取验证码

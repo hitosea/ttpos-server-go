@@ -26,7 +26,7 @@
           </el-input>
         </el-form-item>
         <el-form-item class="ti-verify-code-box" prop="code">
-          <el-input class="" type="text" v-model="formData.code" maxlength="50" :placeholder="$t('请输入验证码')" @keyup.enter="handleSubmit">
+          <el-input class="" type="text" v-model="formData.code" maxlength="50" @input="handleInput" :placeholder="$t('请输入验证码')" @keyup.enter="handleSubmit">
             <template #prefix>
               <ti-icon size="20" name="verify-code" color="#100A05" />
             </template>
@@ -59,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
+  import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
   import { useRouter, useRoute } from 'vue-router';
   import { message } from '@/utils/feedback';
   import type { FormRules } from 'element-plus';
@@ -156,6 +156,13 @@
 
   const handleVisibilityChange = async () => {
     handleGetCaptcha();
+  };
+
+  const handleInput = () => {
+    //过滤验证码中的空格符号
+    nextTick(() => {
+      formData.value.code = formData.value.code.replace(/\s/g, '');
+    });
   };
 
   const handleGetService = async () => {

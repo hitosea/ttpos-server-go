@@ -571,7 +571,10 @@ class Product extends ProductModel
                     $orderSchemeProduct->delete();
                 }
                 // 删除产品
-                $product->delete();
+                if (!$product->delete()) {
+                    $this->error = '删除失败';
+                    return false;
+                }
             }
 
             // 删除材料
@@ -597,7 +600,10 @@ class Product extends ProductModel
                     MaterialModel::addWarehouseOutForm($material, 4, $shop_user_id, $material['stock_num']);
                 }
                 // 删除材料
-                $material->delete();
+                if (!$material->delete()) {
+                    $this->error = '删除失败';
+                    return false;
+                }
             }
             $this->commit();
             return true;

@@ -673,6 +673,7 @@ class User extends BaseModel
     {
         $sort = ($data['sort'] ??  0) == 2 ? 'accumulated_consumption_amount' : 'consumption_count';
         $consumerRank = self::field('id,uuid,nickname,accumulated_consumption_amount as consumption_amount,consumption_count as consumption_num')
+            ->where('consumption_count', '>', 0)
             ->withAttr('user_id', function ($value, $data) {
                 return $data['id'];
             })
