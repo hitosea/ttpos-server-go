@@ -389,19 +389,29 @@ class Buffet extends BuffetModel
      */
     public function updateBuffetCustomer($buffet_id, $customers)
     {
-        $buffetCustomerType = new BuffetCustomer;
-        $buffetCustomerType->destroy(['buffet_package_uuid' => $buffet_id]);
-        // 新增关联顾客类型
-        $data = [];
+        $delete = [];
         foreach ($customers as $item) {
             $customerTypeId = $item['customer_type_id'];
-            $data[] = [
-                'buffet_package_uuid' => $buffet_id,
-                'customer_type_uuid' => $customerTypeId,
-                'price' => $item['price'] ?? 0,
-            ];
+            $price = $item['price'] ?? 0;
+            $buffetCustomerType = BuffetCustomer::where('buffet_package_uuid', $buffet_id)->where('customer_type_uuid', $customerTypeId)->find();
+            if ($buffetCustomerType) {
+                $buffetCustomerType->price = $price;
+                $buffetCustomerType->save();
+            } else {
+                $buffetCustomerType = BuffetCustomer::create([
+                    'buffet_package_uuid' => $buffet_id,
+                    'customer_type_uuid' => $customerTypeId,
+                    'price' => $price,
+                ]);
+            }
+            $delete[] = $buffetCustomerType->uuid;
         }
-        $buffetCustomerType->saveAll($data);
+        if (count($delete) > 0) {
+            $list = BuffetCustomer::where('buffet_package_uuid', $buffet_id)->whereNotIn('uuid', $delete)->select();
+            foreach ($list as $item) {
+                $item->delete();
+            }
+        }
     }
 
     /**
