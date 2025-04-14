@@ -466,7 +466,7 @@ func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
 	}
 	ctx.Log().Debug("桌台页面修改购物车商品数量接口请求", zap.Any("params", params))
 	// 修改购物车商品数量
-	shopCart, err := h.orderSrv.OrderCartProductNum(ctx, params)
+	shopCart, err := h.orderSrv.AssistantOrderCartProductNum(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

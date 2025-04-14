@@ -170,6 +170,21 @@ func (model *SaleBill) GetSaleOrderProductBySign(sign string) []*SaleOrderProduc
 	return products
 }
 
+// 通过签名获取销售订单商品
+func (model *SaleBill) GetSaleOrderProductByUuid(uuid uint64) *SaleOrderProduct {
+	for _, saleOrder := range model.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			if saleOrderProduct.IsDelete() {
+				continue
+			}
+			if saleOrderProduct.Uuid == uuid {
+				return saleOrderProduct
+			}
+		}
+	}
+	return nil
+}
+
 // 返回第一个销售订单
 func (model *SaleBill) GetFirstSaleOrder() *SaleOrder {
 	return model.SaleOrders[0]
