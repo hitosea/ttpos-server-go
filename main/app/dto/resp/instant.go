@@ -258,3 +258,19 @@ type InstantOrderPaymentQrcodeInfoResp struct {
 	Status           int     `json:"status"`             // 支付单状态 支付状态, 0-未支付 1-已支付 (可选择轮询当前接口，获取支付状态)
 	PaymentAmount    float64 `json:"payment_amount"`     // 支付金额
 }
+
+type InstantOrderMemberList struct {
+	List  []InstantOrderMember    `json:"list"`
+	Extra InstantOrderMemberExtra `json:"extra"` // 会员额外信息
+}
+
+type InstantOrderMember struct {
+	Uuid     uint64 `json:"uuid"`     // 会员UUID
+	Nickname string `json:"nickname"` // 会员名称
+	Phone    string `json:"phone"`    // 会员手机号
+}
+
+type InstantOrderMemberExtra struct {
+	IsCheckout        bool `json:"is_checkout"`         // 是否结账
+	IsPartialCheckout bool `json:"is_partial_checkout"` // 是否部分结账
+}

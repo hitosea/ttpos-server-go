@@ -125,6 +125,8 @@ type IOrderSrv interface {
 	ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*resp.OrderCheckServiceRes, error)                                                                                                         // 加购并送厨
 
 	TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) error // 平板端加购并送厨
+
+	GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error) // 获取订单会员列表
 }
 
 // orderSrv 订单服务结构
@@ -2383,6 +2385,24 @@ func (s *orderSrv) OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*
 		ctx.AddLock()
 	}
 
+	// 当不填销售账单ID时，表示要新建一个销售账单
+	if req.SaleBillUuid == 0 {
+		// 判断是否有待支付、未挂单的订单
+		_, hasInstantOrder, err := HasInstantOrder(ctx, s.dbm.GetDB(ctx.GetDbId()))
+		if err != nil {
+			return nil, err
+		}
+		if hasInstantOrder {
+			return nil, errors.New("参数错误, 有未支付的订单")
+		}
+		//
+		order, err := s.CreateInstantOrder(ctx)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		req.SaleBillUuid = order.SaleBillUuid
+	}
+
 	// 获取信息源
 	db := s.dbm.GetDB(ctx.GetDbId())
 
@@ -3422,7 +3442,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			Status:             saleOrder.Status,
 			ProductNum:         productNum,
 			ProductList:        productList,
-			IsDiscount:         saleOrder.IsDiscount(),
+			IsDiscount:         saleOrder.IsManualDiscount(uint8(shopCart.SaleBill.SaleBillSetting.ZeroRule)),
+			IsMemberDiscount:   saleOrder.IsMemberDiscount(),
 			CustomDiscountRate: saleOrder.CustomDiscountRate,
 			ZeroRule:           saleOrder.ZeroRule,
 			// 订单金额信息
@@ -6476,7 +6497,11 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 	if len(saleBill.SaleOrders) == 1 {
 		saleOrder := saleBill.GetFirstSaleOrder()
 		// 撤销订单1的优惠折扣
-		saleOrder.SetAllDiscountCancel()
+		if saleOrder.IsManualDiscount(uint8(saleBill.SaleBillSetting.ZeroRule)) {
+			saleOrder.SetAllDiscountCancel()
+		}
+		// 撤销订单1的会员折扣
+		saleOrder.SetMemberDiscountCancel()
 	}
 
 	// 计算并保存销售账单
@@ -7006,6 +7031,9 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 	}
 
 	saleOrderProducts, saleOrderBuffetCustomers, buffetDelayProducts, err := s.getMoveProductInfo(ctx, saleOrderFrom, req)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	moveNumMap := make(map[uint64]uint)
 	for _, moveProduct := range req.Products {
@@ -7479,10 +7507,6 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 
-	// 将除了第一个销售订单的所有商品都移动到第一个销售订单里
-
-	ctx.Log().Debug("删除所有子销售订单(撤销拆单)", zap.Any("request", request))
-
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if errSaleBill != nil {
@@ -7495,6 +7519,11 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 	// 如果第一个销售订单已经结账，则提示“当前订单已结账，无法撤销”
 	if firstSaleOrder.IsSettled() {
 		return nil, errors.New("当前订单已结账，无法撤销")
+	}
+
+	// 判断订单是否已被部分支付
+	if repository.NewOrderRepo(db).IsPartiallyPaid(request.SaleBillUuid) {
+		return nil, errors.New("当前订单已被部分支付，不支持撤销拆单")
 	}
 
 	saleOrderFromList := make([]*model.SaleOrder, 0)
@@ -7527,6 +7556,30 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 				ctx.Log().Error("删除订单失败", zap.Error(err))
 				return nil, errors.WithMessage(err, "删除订单失败")
 			}
+		}
+	}
+
+	// 获取会员信息
+	if request.MemberUuid > 0 {
+		// 获取账单信息
+		saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "查询销售账单失败")
+		}
+		// 获取销售订单信息
+		saleOrder := saleBill.GetSaleOrder(saleBill.SaleOrders[0].Uuid)
+		if saleOrder == nil {
+			return nil, errors.New("销售订单不存在")
+		}
+		// 设置会员折扣
+		member, errMember := repository.NewMemberRepo(db).GetMemberInfoForSaleOrder(ctx, request.MemberUuid)
+		if errMember != nil {
+			return nil, errors.WithMessage(errMember)
+		}
+		saleOrder.SetMemberDiscount(*member)
+		// 重新计算销售订单金额
+		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+			return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
 		}
 	}
 
@@ -8236,5 +8289,45 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shop
 	return resp.SentKitchen{
 		Groups:     resp.GroupList{List: groups},
 		AmountInfo: amount,
+	}, nil
+}
+
+// GetOrderMemberList 获取订单会员列表
+func (s *orderSrv) GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error) {
+	db := ctx.GetDB()
+	//
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillInfoAndMember(saleBillUuid)
+	if err != nil {
+		return resp.InstantOrderMemberList{}, errors.WithMessage(errors.ErrInternal, "获取销售账单信息: "+err.Error())
+	}
+	//
+	list := make([]resp.InstantOrderMember, 0)
+	uuidList := make([]uint64, 0)
+	for _, v := range saleBill.SaleOrders {
+		if v.Member == nil {
+			continue
+		}
+		if slices.Contains(uuidList, v.Member.Uuid) {
+			continue
+		}
+		uuidList = append(uuidList, v.Member.Uuid)
+		list = append(list, resp.InstantOrderMember{
+			Uuid:     v.Member.Uuid,
+			Nickname: v.Member.Nickname,
+			Phone:    v.Member.Phone,
+		})
+	}
+	//
+	extra := resp.InstantOrderMemberExtra{
+		IsCheckout:        saleBill.IsExistPaid(),
+		IsPartialCheckout: saleBill.IsExistPaid(),
+	}
+	if !saleBill.IsExistPaid() && repository.NewOrderRepo(db).IsPartiallyPaid(saleBillUuid) {
+		extra.IsPartialCheckout = true
+	}
+	//
+	return resp.InstantOrderMemberList{
+		List:  list,
+		Extra: extra,
 	}, nil
 }

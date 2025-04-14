@@ -10,6 +10,9 @@ import (
 	"ttpos-server-go/app/printer/template"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 // IBusinessSrv 定义收银服务接口
@@ -308,6 +311,7 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 				QueryEndTime:   int64(req.QueryEndTime),
 				CategoryType:   req.CategoryType,
 			})
+			logger.Logger.Info("memberData", zap.Any("memberData", memberData))
 			return business_data_resp.MemberData{
 				RechargeAmount: memberData.TotalRechargeAmount,
 				GiftMoney:      memberData.TotalGiveAmount,

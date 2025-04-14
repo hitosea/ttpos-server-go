@@ -206,7 +206,17 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 
 	// 处理心跳消息
 	if clientMessage.Type == "heartbeat" {
-		fmt.Println("Heartbeat message DeviceId: ", newConn.DeviceId)
+		isOnline := false
+		for _, conn := range WsClients {
+			if conn.DeviceId == newConn.DeviceId {
+				isOnline = true
+			}
+		}
+		if !isOnline {
+			fmt.Println("Heartbeat message DeviceId - 离线: ", newConn.DeviceId)
+		} else {
+			fmt.Println("Heartbeat message DeviceId - 在线: ", newConn.DeviceId)
+		}
 		// 发送回复消息
 		message := PushMessage{
 			Event: "reply_heartbeat",

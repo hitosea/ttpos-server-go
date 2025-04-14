@@ -171,6 +171,16 @@ func (model *SaleBill) IsFinish() bool {
 	return model.Status == constant.SaleBillStatusComplete
 }
 
+// 是否存在已支付的销售订单
+func (model *SaleBill) IsExistPaid() bool {
+	for _, saleOrder := range model.SaleOrders {
+		if saleOrder.IsPaid() {
+			return true
+		}
+	}
+	return false
+}
+
 // 判断销售账单是否部分支付
 func (model *SaleBill) IsPartialPay() bool {
 	for _, saleOrder := range model.SaleOrders {

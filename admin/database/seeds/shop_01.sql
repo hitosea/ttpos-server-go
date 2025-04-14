@@ -2012,7 +2012,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_member` (
     `duty_no` varchar(255) NOT NULL DEFAULT '' COMMENT '当班编号',
     `recharge_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '充值金额',
     `give_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '赠送金额',
-    `give_point` INT(11) NOT NULL DEFAULT 0 COMMENT '赠送积分',
+    `give_point` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '赠送积分',
     `payment_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '支付金额',
     `payment_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '支付手续费',
     `refund_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款金额',

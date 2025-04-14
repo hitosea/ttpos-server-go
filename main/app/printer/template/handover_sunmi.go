@@ -32,7 +32,7 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 	temp int,
 	log *model.StaffShiftLog,
 	businessData *business_data_resp.BusinessDataAll,
-	firstExecution int,
+	openMoneybox bool,
 ) string {
 	// 店铺设置
 	companySetting, _ := t.base.Setting.GetCompanySetting(t.base.Ctx)
@@ -599,8 +599,8 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 	printer.LineFeed(4)
 	printer.CutPaper(true)
 	// 打开钱箱
-	if firstExecution == 0 {
-		printer.AppendText(string([]byte{27, 112, 0, 25, 250}))
+	if openMoneybox {
+		printer.AppendText("\x1B\x70\x00\x19\xFA")
 	}
 	//
 	return printer.GetOrderData()

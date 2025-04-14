@@ -31,6 +31,7 @@ type IOrderRepo interface {
 	GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoOptionFunc) (*ro.ShopCartRepo, error)                                     // 获取点餐购物车信息
 	GetOrderBuffetInfo(saleBillUuid, saleOrderUuid uint64) (model.SaleBill, error)                                                       // 获取订单自助餐信息
 	GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error)            // 获取销售账单详细信息-包含商品信息
+	GetSaleBillInfoAndMember(saleBillUuid uint64) (model.SaleBill, error)                                                                // 获取销售账单详细信息-包含会员信息
 	GetSaleBillInfoAndPaymentOrders(saleBillUuid uint64, saleOrderUuid uint64, saleOrderPaymentUuid uint64) (model.SaleBill, error)      // 获取销售账单详细信息-包含商品信息
 	GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error)                     // 根据销售订单商品uuid列表获取销售订单商品列表
 	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                                // 获取销售账单详细信息-丰富的-几乎包含所有的关联
@@ -913,7 +914,39 @@ func (r *orderRepo) GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid
 	return info, nil
 }
 
-// GetSaleBillInfoAndProduct 获取销售账单详细信息-包含商品信息
+// GetSaleBillInfoAndMember 获取销售账单详细信息-包含会员信息
+func (r *orderRepo) GetSaleBillInfoAndMember(saleBillUuid uint64) (model.SaleBill, error) {
+	info, err := r.GetSaleBill(
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []interface{}{
+					func(db *gorm.DB) *gorm.DB {
+						db = db.Where("delete_time = ?", 0)
+						return db
+					},
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.Member",
+				Args: []interface{}{
+					func(db *gorm.DB) *gorm.DB {
+						db = db.Where("delete_time = ?", 0)
+						return db
+					},
+				},
+			},
+		),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByUuid(saleBillUuid),
+	)
+	if err != nil {
+		return model.SaleBill{}, fmt.Errorf("GetSaleBillInfoAndMember: %v", err)
+	}
+	return info, nil
+}
+
+// GetSaleBillInfoAndPaymentOrders 获取销售账单详细信息-包含支付信息
 func (r *orderRepo) GetSaleBillInfoAndPaymentOrders(saleBillUuid uint64, saleOrderUuid uint64, saleOrderPaymentUuid uint64) (model.SaleBill, error) {
 	info, err := r.GetSaleBill(
 		CommonRepo.Preload(

@@ -149,6 +149,7 @@ type InstantOrderSaleOrderDeleteReq struct {
 
 type InstantOrderSaleOrderDeleteAllReq struct {
 	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单UUID, 必填
+	MemberUuid   uint64 `json:"member_uuid"`    // 会员UUID, 可选
 }
 
 type HideSaleBillListReq struct {
@@ -235,4 +236,8 @@ func (r *InstantOrderPaymentQrcodeReq) Validate() error {
 		return errors.New("最小支付金额为1")
 	}
 	return nil
+}
+
+type OrderGetOrderMemberListReq struct {
+	SaleBillUuid uint64 `form:"sale_bill_uuid"` // 销售账单UUID, 必填
 }

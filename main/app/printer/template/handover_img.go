@@ -31,7 +31,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 	temp int,
 	log *model.StaffShiftLog,
 	businessData *business_data_resp.BusinessDataAll,
-	firstExecution int,
+	openMoneybox bool,
 ) string {
 	// 店铺设置
 	companySetting, _ := t.base.Setting.GetCompanySetting(t.base.Ctx)
@@ -629,9 +629,9 @@ func (t *handoverImgTemplate) GetPrintContent(
 	//
 	img.LineFeed(3)
 	//
-	openMoneybox := 0
-	if firstExecution == 0 {
-		openMoneybox = utils.IfInt(t.base.IsSunMi, 2, 1)
+	openMoneyboxInt := 0
+	if openMoneybox {
+		openMoneyboxInt = utils.IfInt(t.base.IsSunMi, 2, 1)
 	}
-	return img.Save("", !t.base.IsSunMi, openMoneybox)
+	return img.Save("", !t.base.IsSunMi, openMoneyboxInt)
 }

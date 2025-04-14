@@ -5288,7 +5288,7 @@ definitions:
         type: string
       order_method:
         allOf:
-        - $ref: '#/definitions/setting.OrderMethodItem'
+        - $ref: '#/definitions/setting.OrderMethod'
         description: 用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）
       remain_color:
         description: 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
@@ -5500,7 +5500,7 @@ definitions:
         description: 时间限制（分钟）
         type: string
     type: object
-  setting.OrderMethodItem:
+  setting.OrderMethod:
     properties:
       is_cashier_order:
         description: 收银用餐

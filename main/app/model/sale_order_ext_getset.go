@@ -635,6 +635,7 @@ func (model *SaleOrder) setMemberDiscount(memberUuid uint64, memberDiscount, car
 	// 对自助餐顾客进行打折. 顾客没有会员折扣
 }
 
+// 设置会员折扣
 func (model *SaleOrder) SetMemberDiscount(member Member) {
 	defer model.SetZeroRuleCancel()     // 设置会员折扣后，要取消订单抹零
 	defer model.SetCustomAmountCancel() // 设置会员折扣后，要取消整单改价
@@ -651,6 +652,8 @@ func (model *SaleOrder) IsCustomAmount() bool {
 func (model *SaleOrder) IsZeroRule() bool {
 	return model.ZeroRule != 0
 }
+
+// 设置会员折扣取消
 func (model *SaleOrder) SetMemberDiscountCancel() {
 	// 修改订单的会员信息
 	discountRate := float64(1)                  // 无折扣，1乘任何价格都等于原价
@@ -817,12 +820,17 @@ func (model *SaleOrder) SetFreeOrder(reason string, freeReasons []*SaleOrderProd
 	model.FinishTime = time.Now().Unix()
 }
 
-// 是否存在折扣
-func (model *SaleOrder) IsDiscount() bool {
+// 是否存在手动折扣
+func (model *SaleOrder) IsManualDiscount(ZeroRule uint8) bool {
 	// custom_amount == -1 是没有进行订单改价
 	// custom_discount_rate = 1 是没有折扣
 	// zero_rule = 0 是没有去零
-	return model.CustomAmount != -1 || model.CustomDiscountRate != 1 || model.ZeroRule != 0
+	return model.CustomAmount != -1 || model.CustomDiscountRate != 1 || (model.ZeroRule != 0 && model.ZeroRule != ZeroRule)
+}
+
+// IsMemberDiscount 判断是否存在会员优惠折扣
+func (model *SaleOrder) IsMemberDiscount() bool {
+	return model.ConsumerUuid != 0
 }
 
 // HasCheckoutZeroRule 判断订单是否存在结账抹零

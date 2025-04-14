@@ -133,6 +133,7 @@ type SaleOrder struct {
 	OrderNo            string     `json:"order_no"`
 	Status             uint       `json:"status"`               // 订单状态, 0-未结账 1-已结账
 	IsDiscount         bool       `json:"is_discount"`          // 是否存在折扣 true:存在 false:不存在
+	IsMemberDiscount   bool       `json:"is_member_discount"`   // 是否存在会员优惠折扣 true:存在 false:不存在
 	CustomDiscountRate float64    `json:"custom_discount_rate"` // 订单改价折扣率
 	ZeroRule           uint8      `json:"zero_rule"`            // 订单抹零规则
 	ProductList        []Product  `json:"product_list"`         // 商品列表

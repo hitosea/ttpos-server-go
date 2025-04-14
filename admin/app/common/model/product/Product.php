@@ -981,9 +981,10 @@ class Product extends BaseModel
         }
 
         // 搜索商品名称
+        $lang = request()->header('language') ?: 'zh';
         $productName = $params['product_name'] ?? '';
         if ($productName != '') {
-            $where = "(product_name LIKE :product_name)";
+            $where = "(JSON_UNQUOTE(JSON_EXTRACT(product_name, '$.$lang')) LIKE :product_name)";
             if (!$whereSql) {
                 $whereSql .= " WHERE {$where}";
             } else {

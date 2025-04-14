@@ -1,9 +1,12 @@
 package setting
 
 import (
+	"encoding/json"
+	"strconv"
 	"strings"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp/setting"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/utils"
 
@@ -36,7 +39,7 @@ func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier
 		CashierResp: setting.CashierResp{
 			Carousel:   []setting.CarouselItem{}, // 上传后的轮播内容url（图片 + 视频）
 			IsAutoSend: "0",                      // 收银结账自动送厨房 0-关闭 1-开启
-			OrderMethod: setting.OrderMethodItem{
+			OrderMethod: setting.OrderMethod{
 				IsCashierOrder: "1",
 				IsTableOrder:   "1",
 			}, // 用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）
@@ -428,4 +431,35 @@ func (s *Srv) getDefaultServiceCharge() setting.ServiceCharge {
 		ApplyScopeTable:     "0",              // 适用范围-桌台 0-关闭 1-开启
 		ApplyScopeTableList: make([]int64, 0), // 适用范围-桌台id列表
 	}
+}
+
+func (s *Srv) parseCashierSetting(values string, key string) ([]byte, error) {
+	// 解析json字符串为map进行处理
+	var jsonMap map[string]interface{}
+	err := json.Unmarshal([]byte(values), &jsonMap)
+	if err != nil {
+		return nil, errors.WithMessage(err, "解析收银机设置失败-01")
+	}
+	// 处理 isShowScanSoldOut
+	if isShowScanSoldOut, ok := jsonMap["is_show_scan_sold_out"]; ok {
+		if numVal, ok := isShowScanSoldOut.(float64); ok {
+			jsonMap["is_show_scan_sold_out"] = int(numVal)
+		} else if strVal, ok := isShowScanSoldOut.(string); ok {
+			jsonMap["is_show_scan_sold_out"], _ = strconv.Atoi(strVal)
+		}
+	}
+	// 处理 isShowAssistantSoldOut
+	if isShowAssistantSoldOut, ok := jsonMap["is_show_assistant_sold_out"]; ok {
+		if numVal, ok := isShowAssistantSoldOut.(float64); ok {
+			jsonMap["is_show_assistant_sold_out"] = int(numVal)
+		} else if strVal, ok := isShowAssistantSoldOut.(string); ok {
+			jsonMap["is_show_assistant_sold_out"], _ = strconv.Atoi(strVal)
+		}
+	}
+	// 重新序列化为JSON
+	modifiedJSON, err := json.Marshal(jsonMap)
+	if err != nil {
+		return nil, errors.WithMessage(err, "重新序列化JSON失败 - 02")
+	}
+	return modifiedJSON, nil
 }

@@ -192,7 +192,7 @@ func ParseDeskToken(c *gin.Context, token *auth.DeskToken, authSrv service.IAuth
 	// 用户鉴权, 查询desk表判断qrcode_token值是否相同
 	company, err := authSrv.AuthDesk(ctx, token.DeskTokenValue)
 	if err != nil {
-		helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
+		helper.ErrorWithDetail(c, constant.CodeTokenInvalid, err)
 		c.Abort()
 		return
 	}
@@ -210,7 +210,7 @@ func ParseMenuToken(c *gin.Context, token *auth.MenuToken, authSrv service.IAuth
 	// 用户鉴权, 查询desk表判断qrcode_token值是否相同
 	company, err := authSrv.AuthMenu(ctx, token.QrCode)
 	if err != nil {
-		helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
+		helper.ErrorWithDetail(c, constant.CodeTokenInvalid, err)
 		c.Abort()
 		return
 	}
