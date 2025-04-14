@@ -19,14 +19,14 @@
           </el-input>
         </el-form-item>
         <el-form-item prop="password">
-          <el-input type="password" v-model="formData.password" maxlength="50" :placeholder="$t('请输入登录密码')" @input="handleInput" show-password @keyup.enter="handleSubmit">
+          <el-input type="password" v-model="formData.password" maxlength="50" :placeholder="$t('请输入登录密码')" show-password @keyup.enter="handleSubmit">
             <template #prefix>
               <ti-icon size="20" name="lock" color="#100A05" />
             </template>
           </el-input>
         </el-form-item>
         <el-form-item class="ti-verify-code-box" prop="code">
-          <el-input class="" type="text" v-model="formData.code" maxlength="50" :placeholder="$t('请输入验证码')" @keyup.enter="handleSubmit">
+          <el-input class="" type="text" v-model="formData.code" maxlength="50" @input="handleInput" :placeholder="$t('请输入验证码')" @keyup.enter="handleSubmit">
             <template #prefix>
               <ti-icon size="20" name="verify-code" color="#100A05" />
             </template>
@@ -159,9 +159,9 @@
   };
 
   const handleInput = () => {
-    //过滤密码中的空格符号
+    //过滤验证码中的空格符号
     nextTick(() => {
-      formData.value.password = formData.value.password.replace(/\s/g, '');
+      formData.value.code = formData.value.code.replace(/\s/g, '');
     });
   };
 

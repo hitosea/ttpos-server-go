@@ -27,7 +27,6 @@
                 auto-complete="off"
                 :disabled="logining"
                 @focus="handleFocus"
-                @input="handleInput"
                 :placeholder="$t('请输入登录密码')"
               >
               </el-input>
@@ -43,6 +42,7 @@
                   :disabled="logining"
                   :placeholder="$t('验证码')"
                   @focus="handleFocus"
+                  @input="handleInput"
                   class="l-input"
                   style="max-width: 230px"
                 ></el-input>
@@ -466,8 +466,8 @@
 
       handleInput() {
         this.$nextTick(() => {
-          //过滤密码中的空间符号
-          this.ruleForm.checkPass = this.ruleForm.checkPass.replace(/\s/g, '');
+          //过滤验证码中的空间符号
+          this.ruleForm.code = this.ruleForm.code.replace(/\s/g, '');
         });
       },
 
