@@ -4091,6 +4091,154 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	return info, nil
 }
 
+// // AssistantOrderCartProductNum 助手端修改购物车商品数量
+// func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
+// 	// 禁止并发操作
+// 	if ctx.NoLock() {
+// 		lock.NewSystemLock().LockUuid(request.SaleBillUuid)
+// 		defer lock.NewSystemLock().UnlockUuid(request.SaleBillUuid)
+// 		ctx.AddLock()
+// 	}
+
+// 	db := s.dbm.GetDB(ctx.GetDbId())
+// 	ctx.Log().Info("修改购物车商品数量", zap.Any("request", request))
+// 	// 商品数量不能超过999个
+// 	if request.Num > 999 {
+// 		ctx.Log().Error("商品数量不能超过999个", zap.Any("request", request))
+// 		return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
+// 	}
+
+// 	// 检查商品销售库存是否充足
+// 	// todo
+// 	ctx.Log().Debug("获取账单信息")
+// 	// 获取销售账单信息
+// 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+// 	if errSaleBill != nil {
+// 		return nil, errors.WithMessage(errSaleBill)
+// 	}
+// 	ctx.Log().Debug("获取到账单信息成功")
+
+// 	// 判断订单状态
+// 	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderUpdateProductNum); err != nil {
+// 		return nil, errors.WithMessage(err)
+// 	}
+
+// 	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+// 	if saleOrder == nil {
+// 		return nil, errors.New("销售订单不存在")
+// 	}
+
+// 	ctx.Log().Debug("获取到订单信息成功")
+
+// 	// 获取销售订单商品信息
+// 	saleOrderProduct, index, errSaleOrderProduct := saleOrder.GetSaleOrderProduct(request.SaleOrderProductUuid)
+// 	if errSaleOrderProduct != nil {
+// 		return nil, errors.WithMessage(errSaleOrderProduct)
+// 	}
+// 	ctx.Log().Debug("获取到订单商品信息成功")
+
+// 	// 商品的签名
+// 	sign := saleOrderProduct.Sign
+// 	var saleOrderProduct *model.SaleOrderProduct
+// 	saleOrderProductList := saleBill.GetSaleOrderProductBySign(sign)
+// 	if len(saleOrderProductList) > 0 {
+// 		for _, saleOrderProduct := range saleOrderProductList {
+// 			if saleOrderProduct.IsCookingProduct() {
+// 				return nil, errors.WithMessage(errors.New("商品已送厨，不能修改数量"))
+// 			}
+// 		}
+// 	}
+// 	if saleOrderProduct.IsCookingProduct() {
+// 		return nil, errors.WithMessage(errors.New("商品已送厨，不能修改数量"))
+// 	}
+// 	// 数量为0删除商品
+// 	if request.Num == 0 {
+// 		res, err := s.OrderProductDelete(ctx, ctx.GetDbId(), ctx.GetStaffUuid(), ctx.GetSource(), req.OrderProductDeleteReq{
+// 			SaleBillUuid:     request.SaleBillUuid,
+// 			SaleOrderUuid:    request.SaleOrderUuid,
+// 			OrderProductUuid: request.SaleOrderProductUuid,
+// 		})
+// 		if err != nil {
+// 			return nil, errors.WithMessage(err, "删除商品失败")
+// 		}
+// 		return res, nil
+// 	}
+
+// 	// 修改销售订单商品数量
+// 	beforeNum := saleOrderProduct.Num
+// 	saleOrderProduct.Num = uint(request.Num)
+// 	ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
+
+// 	// 检查商品销售库存是否充足
+// 	if uint(request.Num) > beforeNum {
+// 		status, message := saleOrderProduct.CheckCookingProduct()
+// 		if status != constant.CodeSuccess {
+// 			return nil, errors.WithMessage(errors.New(message))
+// 		}
+// 	}
+// 	// 计算商品数据。折扣、税费、服务
+// 	saleOrderProduct.CalcSaleOrderProduct(*saleBill.SaleBillSetting)
+// 	ctx.Log().Debug("重新计算了商品金额", zap.Any("saleOrderProduct salePrice", saleOrderProduct.SalePrice))
+// 	// saleOrder.SaleOrderProducts[index] = saleOrderProduct
+
+// 	// 计算订单金额
+// 	calc := saleOrder.CalcSaleOrder(*saleBill.SaleBillSetting)
+// 	ctx.Log().Debug("重新计算了订单金额", zap.Any("calc", calc))
+// 	// 计算账单金额
+// 	saleBill.CalcSaleBill()
+
+// 	// 检查限购
+// 	{
+// 		// 如果是减数量，则不检查限购. 只有加数量时，才检查限购
+// 		if uint(request.Num) > beforeNum {
+// 			limitProducts, err := s.getBuffetProductLimitList(ctx, request.SaleBillUuid)
+// 			if err != nil {
+// 				return nil, errors.WithMessage(err)
+// 			}
+// 			overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts)
+// 			if len(overLimitProducts) > 0 {
+// 				return nil, errors.WithMessage(errors.New("商品超过限购"))
+// 			}
+// 		}
+// 	}
+
+// 	// 商品数量不能超过999个
+// 	// 如果是减数量，则不检查限购. 只有加数量时，才检查限购999个
+// 	if uint(request.Num) > beforeNum {
+// 		if request.Num > constant.ProductNumMax {
+// 			ctx.Log().Error("商品数量不能超过999个", zap.Any("request", request))
+// 			return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
+// 		}
+// 	}
+
+// 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+// 		if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
+// 			return errors.WithMessage(errUpdate)
+// 		}
+// 		ctx.Log().Debug("更新销售订单商品成功")
+
+// 		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+// 			return errors.WithMessage(errUpdate)
+// 		}
+// 		ctx.Log().Debug("更新销售订单成功")
+// 		if errUpdateSaleBill := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); errUpdateSaleBill != nil {
+// 			return errors.WithMessage(errUpdateSaleBill)
+// 		}
+// 		return nil
+// 	}); err != nil {
+// 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
+// 	}
+
+// 	// 获取新的桌台数据
+// 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
+// 	if err != nil {
+// 		return nil, errors.WithMessage(err)
+// 	}
+// 	ctx.Log().Debug("获取新的账单数据")
+
+// 	return info, nil
+// }
+
 // 获取销售账单的自助餐商品限购商品列表
 func (s *orderSrv) getBuffetProductLimitList(ctx context.Context, saleBillUuid uint64) (map[uint64]uint, error) {
 	buffetProductList, err := s.OrderDeskBuffetProductList(ctx, req.OrderChangeBuffetProductListReq{
