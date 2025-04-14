@@ -673,7 +673,7 @@ func (s *authSrv) AuthDesk(ctx context.Context, qrcodeToken string) (*model.Comp
 	deskUuid := ctx.GetDeskUuid()
 	db := s.dbm.GetDB(companyUuid)
 	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(companyUuid)
-	if err != nil || company.IsDelete() {
+	if err != nil || company.IsExpired() || company.IsDelete() {
 		return nil, errors.New("二维码已失效，请联系商家")
 	}
 
@@ -694,7 +694,7 @@ func (s *authSrv) AuthMenu(ctx context.Context, qrcodeToken string) (*model.Comp
 	companyUuid := ctx.GetCompanyUuid()
 	db := s.dbm.GetDB(companyUuid)
 	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(companyUuid)
-	if err != nil || company.IsDelete() {
+	if err != nil || company.IsExpired() || company.IsDelete() {
 		return nil, errors.New("二维码已失效，请联系商家")
 	}
 
@@ -702,7 +702,7 @@ func (s *authSrv) AuthMenu(ctx context.Context, qrcodeToken string) (*model.Comp
 	if err != nil || businessSetting.QrCode != qrcodeToken {
 		return nil, errors.New("二维码已失效，请联系商家")
 	}
-	
+
 	cashierSetting, _ := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	if cashierSetting.OrderMethod.IsTableOrder == "0" {
 		return nil, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")

@@ -11,7 +11,6 @@ import (
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
-	apperrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
@@ -102,7 +101,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		}
 		bindCount := deviceRepo.GetBindCountBySource(sourceName)
 		if bindCount >= source.Limit { // 超过绑定上限
-			return 0, apperrors.NewWithCode(source.ErrorCode, source.Name+"登录设备已达上限，请在其他设备上退出登录或联系销售代表")
+			return 0, errors.NewWithCode(source.ErrorCode, source.Name+"登录设备已达上限，请在其他设备上退出登录或联系销售代表")
 		}
 	}
 

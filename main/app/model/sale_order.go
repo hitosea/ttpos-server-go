@@ -210,9 +210,9 @@ func (model *SaleOrder) GetDelayProductList() []resp.Product {
 			Num:                 delayProduct.Num, // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
 			FinishedNum:         delayProduct.Num,
 			SalePrice:           delayProduct.GetAmount(),
-			DiscountPrice:       0,  // 加钟商品没有优惠价
-			Status:              1,  // 添加后标记送厨状态，不可修改
-			Remark:              "", // 加钟商品没有备注
+			DiscountPrice:       delayProduct.GetAmount(), // 加钟商品没有优惠价
+			Status:              1,                        // 添加后标记送厨状态，不可修改
+			Remark:              "",                       // 加钟商品没有备注
 			IsMust:              false,
 			IsGift:              false,
 			IsCancel:            false,
