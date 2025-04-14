@@ -335,7 +335,10 @@ func (model *SaleBill) ValidateOrderStatus(source string, operation string, sale
 	}
 	if len(model.SaleOrders) > 0 {
 		// 当不是收银端的时候，拆单不可操作
-		if source != constant.SourceCashier && operation == constant.OrderOrderCancel && len(model.SaleOrders) > 1 {
+		if !slices.Contains([]string{
+			constant.SourceShop,
+			constant.SourceCashier,
+		}, source) && operation == constant.OrderOrderCancel && len(model.SaleOrders) > 1 {
 			return errors.New("拆单不可操作")
 		}
 		// 单个订单不能操作
