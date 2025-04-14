@@ -9,6 +9,7 @@ import (
 
 type IProductPackageRepo interface {
 	GetProductPackage(opts ...DBOption) (*model.ProductPackage, error)
+	GetProductPackageBoms(productPackageUuid uint64) (*model.ProductPackage, error) // 获取商品包的库存信息
 	GetProductPackageBaseInfoByBomUuid(flavorBomUuid uint64) (*model.ProductBom, error)
 	GetProductPackageListByUuids(uuids []uint64) ([]*model.ProductPackage, error)
 	CreateProductPackage(productPackage *model.ProductPackage) error
@@ -36,6 +37,25 @@ func (r *productPackageRepoImpl) GetProductPackage(opts ...DBOption) (*model.Pro
 	}
 
 	return &productPackage, nil
+}
+
+// 查询商品包库存信息
+func (r *productPackageRepoImpl) GetProductPackageBoms(productPackageUuid uint64) (*model.ProductPackage, error) {
+	productPackage, err := r.GetProductPackage(
+		CommonRepo.WhereByUuid(productPackageUuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "ProductBoms",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productPackage, nil
 }
 
 func (r *productPackageRepoImpl) GetProductPackageBaseInfoByBomUuid(flavorBomUuid uint64) (*model.ProductBom, error) {

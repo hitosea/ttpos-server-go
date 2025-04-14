@@ -179,6 +179,26 @@ func (model *ProductPackage) TaxRate(dineType uint) float64 {
 	return model.TakeoutTax.TaxRate
 }
 
+// 判断商品是否已经无法加购：下架、售罄、删除
+func (model *ProductPackage) IsSaleout() bool {
+	return model.IsDown() || model.GetStockNum() <= 0 || model.IsDelete()
+}
+
+func (model *ProductPackage) GetStockNum() int {
+	stockNum := 0
+	for index, bom := range model.ProductBoms {
+		if index == 0 {
+			stockNum = int(bom.StockNum)
+			continue
+		}
+		// 取库存最小的一个
+		if bom.StockNum < float64(stockNum) {
+			stockNum = int(bom.StockNum)
+		}
+	}
+	return stockNum
+}
+
 // IsUp 判断商品是否是上架状态。排除下架、删除状态
 func (model *ProductPackage) IsUp() bool {
 	if model.Status == constant.ProductStatusOffSale || model.DeleteTime != constant.NotDeleted {

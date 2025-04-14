@@ -7342,8 +7342,17 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 	if mustPlanList != nil && len(mustPlanList) > 0 {
 		for _, plan := range mustPlanList {
 			if plan.NeedNum > 0 {
-				ctx.Log().Info("确认必点商品失败，必点商品未点", zap.Any("plan name", plan.Name))
-				return false, &plan, nil
+				// 判断商品是否售罄。如果售罄，则允许“确认必点”
+				isSaleout, err := planProductSaleout(ctx, &plan)
+				if err != nil {
+					return false, nil, errors.WithMessage(err)
+				}
+				if isSaleout {
+					break // 所有的未满足必点的商品都没有库存时，允许“确认必点”
+				} else {
+					ctx.Log().Info("确认必点商品失败，必点商品未点", zap.Any("plan name", plan.Name))
+					return false, &plan, nil
+				}
 			}
 		}
 	}
@@ -7354,6 +7363,29 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 	}
 
 	return true, nil, nil
+}
+
+func planProductSaleout(ctx context.Context, plan *resp.InstantProductMustPlan) (bool, error) {
+	if len(plan.Products.List) == 0 {
+		return false, nil
+	}
+	isSaleOut := true
+	for _, product := range plan.Products.List {
+		if product.NeedNum <= 0 {
+			continue
+		}
+		// 未满足必点的商品包
+		productPackage, err := repository.NewProductPackageRepo(ctx.GetDB()).GetProductPackageBoms(product.Product.Uuid)
+		if err != nil {
+			return false, errors.WithMessage(err)
+		}
+		if !productPackage.IsSaleout() {
+			isSaleOut = false
+			break
+		}
+	}
+	// 所有的未满足必点的商品都没有库存时才返回true
+	return isSaleOut, nil
 }
 
 // InstantOrderCheck 订单检查
