@@ -3530,7 +3530,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			var mustPlan *resp.InstantProductMustPlanResp
 			var isAutoAdd bool
 			if shopCart.SaleBill.IsDeskSaleBill() {
-				mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum)
+				mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum, option.H5AutoAdd)
 				if err != nil {
 					ctx.Log().Info("获取桌台必点方案列表失败", zap.Error(errors.WithMessage(err)))
 				}
@@ -3560,7 +3560,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 				}
 				if mustPlan.ShopCartInfo != nil {
 					// 自动加购后要重新获取一次必点信息，否则还是显示未自动加购前的信息
-					mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum)
+					mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum, option.H5AutoAdd)
 					if err != nil {
 						ctx.Log().Info("获取桌台必点方案列表失败", zap.Error(errors.WithMessage(err)))
 					}
@@ -5275,7 +5275,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	return mustPlan, isAutoAdd, nil
 }
 
-func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64, mealNum uint) (*resp.InstantProductMustPlanResp, bool, error) {
+func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64, mealNum uint, h5AutoAdd bool) (*resp.InstantProductMustPlanResp, bool, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	mustPlanList := make([]resp.InstantProductMustPlan, 0)
@@ -5314,7 +5314,7 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 		errTx := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 			// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
 			ctx.SetDB(tx)
-			_, err = autoAddSaleOrderProductToDesk(ctx, s, autoFlavorProduct, saleBillUuid, saleOrderUuid, shopCartInfo.SaleBill)
+			_, err = autoAddSaleOrderProductToDesk(ctx, s, autoFlavorProduct, saleBillUuid, saleOrderUuid, shopCartInfo.SaleBill, h5AutoAdd)
 			if err != nil {
 				return errors.WithMessage(err, "自动添加必点商品失败")
 			}
@@ -5406,7 +5406,7 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 	return shopCartInfo, nil
 }
 
-func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, autoFlavorProduct map[uint64]*resp.InstantMustPlanProductStat, saleBillUuid, saleOrderUuid uint64, saleBill *model.SaleBill) (*resp.ShopCart, error) {
+func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, autoFlavorProduct map[uint64]*resp.InstantMustPlanProductStat, saleBillUuid, saleOrderUuid uint64, saleBill *model.SaleBill, isH5AutoAdd bool) (*resp.ShopCart, error) {
 	productParams := make([]req.ProductParams, 0)
 	for flavorUuid, stat := range autoFlavorProduct {
 		productParams = append(productParams, req.ProductParams{
@@ -5421,6 +5421,7 @@ func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, autoFlavorP
 		SaleBillUuid:  saleBillUuid,
 		SaleOrderUuid: saleOrderUuid,
 		Products:      productParams,
+		IsH5Product:   isH5AutoAdd,
 	}, saleBill)
 	if errAdd != nil {
 		return nil, errors.WithMessage(errAdd)

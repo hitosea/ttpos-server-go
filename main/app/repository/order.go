@@ -476,6 +476,7 @@ type OrderCartInfoOption struct {
 	FilterEndStatus    bool   // 指定传入的salebill状态
 	NotDeleted         bool   // 查询未被删除的商品
 	NoQueryMustPlan    bool   // 不查询必点信息
+	H5AutoAdd          bool   // 是否是H5自动添加的商品
 }
 
 const (
@@ -532,6 +533,13 @@ func FilterEndStatus() OrderCartInfoOptionFunc {
 func WithNoQueryMustPlan() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.NoQueryMustPlan = true
+	}
+}
+
+// 是否是H5自动添加的商品.如果需要自动加购时，加购的商品应该为未下单商品
+func WithH5AutoAdd() OrderCartInfoOptionFunc {
+	return func(option *OrderCartInfoOption) {
+		option.H5AutoAdd = true
 	}
 }
 
