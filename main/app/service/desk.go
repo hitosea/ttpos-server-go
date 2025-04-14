@@ -278,8 +278,19 @@ func (s *deskSrv) GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *
 		res.Buffet = *shopCart.Buffet
 	}
 	// 必点方案列表
-	if shopCart.MustPlans != nil {
-		res.MustPlans = *shopCart.MustPlans
+	if desk.SaleBill.IsShowMustPlan() {
+		// 查询到购物车信息
+		shopCartInfo, err := repository.NewOrderRepo(ctx.GetDB()).GetOrderCartInfo(shopCart.SaleBillUuid, repository.WithNotDeleted())
+		if err != nil {
+			return resp.H5DeskPing{}, errors.WithMessage(err)
+		}
+		deskMustPlanList, err := s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid)
+		if err != nil {
+			return resp.H5DeskPing{}, errors.WithMessage(err)
+		}
+		res.MustPlans = resp.ProductMustPlanList{
+			List: deskMustPlanList,
+		}
 	}
 	// 必点商品列表
 	mustProducts, err := s.mustPlanSrv.GetDeskMustPlanProductPackageList(ctx, deskUuid)

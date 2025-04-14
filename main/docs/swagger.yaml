@@ -982,6 +982,9 @@ definitions:
     type: object
   req.InstantOrderSaleOrderDeleteAllReq:
     properties:
+      member_uuid:
+        description: 会员UUID, 可选
+        type: integer
       sale_bill_uuid:
         description: 销售账单UUID, 必填
         type: integer
@@ -2969,6 +2972,38 @@ definitions:
         description: 已选数量
         type: integer
     type: object
+  resp.InstantOrderMember:
+    properties:
+      nickname:
+        description: 会员名称
+        type: string
+      phone:
+        description: 会员手机号
+        type: string
+      uuid:
+        description: 会员UUID
+        type: integer
+    type: object
+  resp.InstantOrderMemberExtra:
+    properties:
+      is_checkout:
+        description: 是否结账
+        type: boolean
+      is_partial_checkout:
+        description: 是否部分结账
+        type: boolean
+    type: object
+  resp.InstantOrderMemberList:
+    properties:
+      extra:
+        allOf:
+        - $ref: '#/definitions/resp.InstantOrderMemberExtra'
+        description: 会员额外信息
+      list:
+        items:
+          $ref: '#/definitions/resp.InstantOrderMember'
+        type: array
+    type: object
   resp.InstantOrderPaymentInfoResp:
     properties:
       amounts:
@@ -4641,6 +4676,9 @@ definitions:
         type: number
       is_discount:
         description: 是否存在折扣 true:存在 false:不存在
+        type: boolean
+      is_member_discount:
+        description: 是否存在会员优惠折扣 true:存在 false:不存在
         type: boolean
       order_no:
         type: string
@@ -8699,6 +8737,28 @@ paths:
       summary: 获取订单会员优惠
       tags:
       - 收银端.桌台.结账
+  /cashier/desk/order/member/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取订单会员列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderMemberList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取订单会员列表
+      tags:
+      - 收银端.桌台
   /cashier/desk/order/must_plan/confirm:
     post:
       consumes:
@@ -9234,7 +9294,7 @@ paths:
       - JwtToken: []
       summary: 订单解锁
       tags:
-      - 收银端.点餐
+      - 收银端.桌台
   /cashier/desk/region_and_type:
     get:
       consumes:
@@ -9941,6 +10001,28 @@ paths:
       summary: 获取订单会员优惠
       tags:
       - 收银端.点餐.结账
+  /cashier/instant/order/member/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取订单会员列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderMemberList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取订单会员列表
+      tags:
+      - 收银端.点餐
   /cashier/instant/order/must_plan/confirm:
     post:
       consumes:

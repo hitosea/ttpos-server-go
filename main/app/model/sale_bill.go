@@ -191,6 +191,7 @@ func (model *SaleBill) IsPartialPay() bool {
 	return false
 }
 
+// 是否显示必点方案
 func (model *SaleBill) IsShowMustPlan() bool {
 	return model.ShowMustPlan == constant.SaleBillShowMustPlanYes
 }

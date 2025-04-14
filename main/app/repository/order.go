@@ -474,6 +474,7 @@ type OrderCartInfoOption struct {
 	UnorderedH5Product int    // 1-查询H5未下单的商品 2-查询H5已下单的商品 3-查询H5已下单的商品和被拒单的商品
 	H5OrderUuid        uint64 // 指定某个h5订单
 	FilterEndStatus    bool   // 指定传入的salebill状态
+	NotDeleted         bool   // 查询未被删除的商品
 }
 
 const (
@@ -512,6 +513,13 @@ func WithH5OrderUuid(h5OrderUuid uint64) OrderCartInfoOptionFunc {
 	}
 }
 
+// 查询未被删除的商品
+func WithNotDeleted() OrderCartInfoOptionFunc {
+	return func(option *OrderCartInfoOption) {
+		option.NotDeleted = true
+	}
+}
+
 // 过滤结束状态
 func FilterEndStatus() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
@@ -540,6 +548,9 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 	} else if option.H5OrderUuid > constant.OptionalUuid {
 		// 查询常规的购物车商品、某个h5订单的商品
 		filterProduct = CommonRepo.DBOption(CommonRepo.FilterSaleOrderProductWithH5Order(option.H5OrderUuid))
+	} else if option.NotDeleted {
+		// 查询未被删除的商品
+		filterProduct = CommonRepo.DBOption(CommonRepo.WhereBySoftDelete())
 	}
 
 	repo := NewSaleBillRepo(r.db)
