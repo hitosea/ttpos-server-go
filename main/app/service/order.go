@@ -165,19 +165,14 @@ func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv s
 
 // HasInstantOrder 判断该收银机是否有未挂单的点餐订单
 func HasInstantOrder(ctx context.Context, db *gorm.DB) (*model.SaleBill, bool, error) {
-	// 获取设备uuid
-	device, err := repository.NewDeviceRepo(db).GetDeviceBySn(ctx.GetDeviceSn())
-	if err != nil {
-		return nil, false, errors.WithMessage(err, "获取设备uuid失败")
-	}
-
+	deviceUuid := ctx.GetDeviceUuid()
 	// 判断是否有待支付、未挂单的订单
 	orderRepo := repository.NewOrderRepo(db)
-	saleBill, err := orderRepo.GetInstantSaleBill(device.Uuid)
+	saleBill, err := orderRepo.GetInstantSaleBill(deviceUuid)
 	if err != nil && !strings.Contains(err.Error(), "record not found") {
 		return nil, false, errors.WithMessage(err, "获取待支付、未挂单的订单失败")
 	}
-	if saleBill != nil && device.Uuid == saleBill.DeviceUuid {
+	if saleBill != nil && deviceUuid == saleBill.DeviceUuid {
 		return saleBill, true, nil
 	}
 	return nil, false, nil
@@ -199,14 +194,6 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		return resp.CreateInstantOrderResp{}, errors.New("有待支付、未挂单的订单")
 	}
 	if err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
-
-		deviceRepo := repository.NewDeviceRepo(db)
-		// 获取设备uuid
-		device, err := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()))
-		if err != nil {
-			return errors.WithMessage(err, "获取设备uuid失败")
-		}
-
 		// todo
 		// // 判断是否有待支付、未挂单的订单
 		// commonRepo := repository.NewCommonRepo()
@@ -242,7 +229,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 			SerialNo:     serialNo,
 			BillType:     constant.OrderSourceMapToBillType[constant.OrderSourceInstant],
 			DiningMethod: constant.SaleBillDiningMethodDineIn,
-			DeviceUuid:   device.Uuid,
+			DeviceUuid:   ctx.GetDeviceUuid(),
 		})
 		if err != nil {
 			return errors.WithMessage(err)
