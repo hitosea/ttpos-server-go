@@ -539,16 +539,17 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					giveNum += int(saleProduct.Num)
 					productGiveNum = int(saleProduct.Num)
 				}
+				unitPriceNoneTax := decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()).Round(2)
 				if saleOrder.IsFree > 0 {
 					productFreeNum = int(saleProduct.Num)
 					if saleBill.SaleBillSetting.IsStatFree == 1 {
-						productPrice = productPrice.Add(decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()))
+						productPrice = productPrice.Add(unitPriceNoneTax)
 						productTax = productTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
 						serviceTax = serviceTax.Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee))
 						discount = discount.Add(productPrice).Add(productTax).Add(serviceFee).Add(serviceTax)
 					}
 				} else {
-					productPrice = productPrice.Add(decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()))
+					productPrice = productPrice.Add(unitPriceNoneTax)
 					productTax = productTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
 					serviceTax = serviceTax.Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee))
 				}
@@ -574,7 +575,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					DeskUuid:           saleBill.DeskUuid,
 					ProductPackageUuid: saleProduct.ProductPackageUuid,
 					ProductBomUuid:     bomUuid,
-					ProductPrice:       saleProduct.GetUnitPriceNoneTax(),
+					ProductPrice:       unitPriceNoneTax.InexactFloat64(),
 					ProductSalePrice:   saleProduct.ProductPrice,
 					ProductFinalPrice:  saleProduct.Price,
 					ProductNum:         int(saleProduct.Num),
@@ -623,7 +624,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			DeskUuid:             saleBill.DeskUuid,
 			SaleOrderUuid:        saleOrder.Uuid,
 			MealNum:              int(saleBill.MealNum),
-			ProductPrice:         productPrice.Round(2).InexactFloat64(),
+			ProductPrice:         productPrice.InexactFloat64(),
 			ProductSalePrice:     productSalePrice.Round(2).InexactFloat64(),
 			ProductNum:           productNum,
 			ProductTax:           productTax.Round(2).InexactFloat64(),
