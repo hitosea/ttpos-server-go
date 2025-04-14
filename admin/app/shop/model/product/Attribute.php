@@ -193,7 +193,7 @@ class Attribute extends AttributeModel
                         ->select();
 
                     foreach ($attributeList as $attribute) {
-                        (new ProductAttribute())->destroy(['attribute_uuid', $attribute['attribute_uuid']], true); // 强制删除
+                        $attribute->force()->delete();
                     }
 
                     // 删除无属性值的属性组
@@ -205,7 +205,7 @@ class Attribute extends AttributeModel
                         ->whereIn('pag.product_package_uuid', $chunk)
                         ->select();
                     foreach ($attributeGroupList as $attributeGroup) {
-                        (new ProductAttributeGroup())->destroy(['uuid', $attributeGroup['uuid']], true); // 强制删除
+                        $attributeGroup->force()->delete();
                     }
                 }
             }
