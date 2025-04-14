@@ -27,6 +27,7 @@
                 auto-complete="off"
                 :disabled="logining"
                 @focus="handleFocus"
+                @input="handleInput"
                 :placeholder="$t('请输入登录密码')"
               >
               </el-input>
@@ -461,6 +462,13 @@
           // 如果大于1500s，重新获取验证码
           this.getCode();
         }
+      },
+
+      handleInput() {
+        this.$nextTick(() => {
+          //过滤密码中的空间符号
+          this.ruleForm.checkPass = this.ruleForm.checkPass.replace(/\s/g, '');
+        });
       },
 
       // 异步获取验证码

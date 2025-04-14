@@ -19,7 +19,7 @@
           </el-input>
         </el-form-item>
         <el-form-item prop="password">
-          <el-input type="password" v-model="formData.password" maxlength="50" :placeholder="$t('请输入登录密码')" show-password @keyup.enter="handleSubmit">
+          <el-input type="password" v-model="formData.password" maxlength="50" :placeholder="$t('请输入登录密码')" @input="handleInput" show-password @keyup.enter="handleSubmit">
             <template #prefix>
               <ti-icon size="20" name="lock" color="#100A05" />
             </template>
@@ -59,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
+  import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
   import { useRouter, useRoute } from 'vue-router';
   import { message } from '@/utils/feedback';
   import type { FormRules } from 'element-plus';
@@ -156,6 +156,13 @@
 
   const handleVisibilityChange = async () => {
     handleGetCaptcha();
+  };
+
+  const handleInput = () => {
+    //过滤密码中的空格符号
+    nextTick(() => {
+      formData.value.password = formData.value.password.replace(/\s/g, '');
+    });
   };
 
   const handleGetService = async () => {
