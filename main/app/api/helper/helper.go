@@ -5,7 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto"
-	apperrors "ttpos-server-go/app/errors"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
@@ -17,7 +17,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/pkg/errors"
+	pkgerrors "github.com/pkg/errors"
 )
 
 // ErrorWithDetail 返回错误
@@ -25,12 +25,12 @@ func ErrorWithDetail(c *gin.Context, code int, err error) {
 	if config.Server.Mode == constant.ServerModeRelease {
 		// 只有Release模式才返回原始错误信息。如123123
 		// 开发模式和测试模式都返回调用栈信息。如[v1/cashier/cashier_instant.go:384]h.orderService.GetOrderCartInfoByDeviceSn failed: [app/service/order.go:1837]deviceRepo.GetDevice failed: [app/repository/device.go:41]db.First failed: 123123
-		err = errors.Cause(err)
+		err = pkgerrors.Cause(err)
 	}
 	logger.Logger.Info("ErrorWithDetail", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
 	messages := []string{err.Error()}
-	var appErr apperrors.AppError
-	if errors.As(err, &appErr) {
+	var appErr errors.AppError
+	if pkgerrors.As(err, &appErr) {
 		code = appErr.GetCode()
 		if len(appErr.Replace) > 0 {
 			messages = append(messages, appErr.Replace...)
@@ -42,8 +42,8 @@ func ErrorWithDetail(c *gin.Context, code int, err error) {
 // ErrorWithData 返回错误携带数据
 func ErrorWithData(c *gin.Context, code int, data interface{}, err error) {
 	messages := []string{err.Error()}
-	var appErr apperrors.AppError
-	if errors.As(err, &appErr) {
+	var appErr errors.AppError
+	if pkgerrors.As(err, &appErr) {
 		code = appErr.GetCode()
 		if len(appErr.Replace) > 0 {
 			messages = append(messages, appErr.Replace...)
@@ -85,9 +85,9 @@ func Fail(c *gin.Context, code int, message ...string) {
 }
 
 func ResponseFail(c *gin.Context, code int, err error) {
-	var appErr apperrors.AppError
+	var appErr errors.AppError
 	bizCode := 0
-	if errors.As(err, &appErr) {
+	if pkgerrors.As(err, &appErr) {
 		bizCode = appErr.GetCode()
 	}
 	msg := i18n.Translate(i18n.GetAcceptLanguage(c), err.Error())
@@ -117,7 +117,7 @@ func FailWithData(c *gin.Context, code int, data interface{}, message ...string)
 func HandleValidationError(c *gin.Context, err error, obj any, messages map[string]string) {
 	structFieldJsonTagMaps := utils.GetStructFieldsMapRecursive(obj)
 	var ves validator.ValidationErrors
-	ok := errors.As(err, &ves)
+	ok := pkgerrors.As(err, &ves)
 	if !ok {
 		if config.Server.Mode == constant.ServerModeDebug {
 			Fail(c, constant.CodeParamError, err.Error())
