@@ -63,8 +63,27 @@ func (h *InstantHandler) CancelOrder(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	// 点餐桌台查询时没有销售账单ID，只能通过判断请求来自哪个收银机判断是哪个销售账单。
+	// 一个收银机只一个未挂单的点餐销售账单
+	deviceSn := ctx.GetDeviceSn()
+	if deviceSn == "" {
+		err := errors.NewWithCode(constant.CodeParamError, "DeviceSn should not be an empty string")
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, ""))
+		return
+	}
+	// 通过收银机sn获取收银机设备ID，通过设备ID查询属于该收银机的未挂单点餐账单。有0个或1个账单
+	res, err := h.orderSrv.GetOrderCartInfoByDeviceSn(ctx, deviceSn)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err, "h.orderSrv.GetOrderCartInfoByDeviceSn failed", "deviceSn:", deviceSn))
+		return
+	}
+	if res == nil {
+		// 没有查询到属于该收银机的未挂单销售账单
+		helper.Success(c, resp.ShopCart{SaleOrderList: make([]resp.SaleOrder, 0)})
+		return
+	}
 	// 返回结果
-	helper.Success(c, gin.H{})
+	helper.Success(c, res)
 }
 
 // HideOrder 处理隐藏点餐订单（挂单）

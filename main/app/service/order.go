@@ -3379,9 +3379,7 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 	}
 	// 没有找到销售账单
 	if saleBillUuid == 0 {
-		ctx.Log().Info("没有找到销售账单", zap.String("deviceSn", deviceSn))
 		// 收银机点餐页面没有销售账单时，检查是否有自动加购的必点方案，如果有，则创建一个销售账单并自动加购商品
-
 		res, err := s.InstantOrderMustPlan2(ctx, deviceSn)
 		if err != nil {
 			return nil, errors.WithMessage(err)
@@ -3392,7 +3390,6 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 		return res, nil
 	}
 	// 查询购物车信息
-	ctx.Log().Info("查询购物车信息", zap.Uint64("saleBillUuid", saleBillUuid))
 	cartInfo, errInfo := s.GetOrderCartInfo(ctx, saleBillUuid)
 	if errInfo != nil {
 		return nil, errInfo
@@ -5480,6 +5477,11 @@ func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (
 		})
 		if err != nil {
 			return nil, errors.WithMessage(err, "自动添加必点商品失败")
+		}
+	} else {
+		shopCart = &resp.ShopCart{
+			SaleOrderList: []resp.SaleOrder{},
+			MustPlans:     &resp.ProductMustPlanList{List: mustPlanList},
 		}
 	}
 
