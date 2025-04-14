@@ -122,7 +122,7 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 	}
 
 	// 验证设备是否绑定
-	deviceRepo := repository.NewDeviceRepository(&database.DBManager{})
+	deviceRepo := repository.NewDeviceRepository(database.Instance)
 	existsDevice := deviceRepo.GetRecordBySourceAndDeviceId(claims.CompanyUuid, claims.Source, claims.DeviceId)
 	if existsDevice.ID == 0 {
 		ws.WriteMessage(websocket.TextMessage, getMsgData(PushMessage{
@@ -232,7 +232,7 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 
 	// 处理已读删除
 	if clientMessage.Type == "reply" {
-		repo := repository.NewWebSocketMsgRepository(&database.DBManager{})
+		repo := repository.NewWebSocketMsgRepository(database.Instance)
 		err := repo.DeleteByTypeAndId(msgId)
 		if err != nil {
 			fmt.Printf("Error updating message status: %v\n", err)
@@ -261,7 +261,7 @@ func PushClient(messageData MessageData) {
 			(conn.DeviceId == messageData.DeviceId || messageData.DeviceId == "*") &&
 			(conn.DeviceId != messageData.NotDeviceId || messageData.NotDeviceId == "*" || messageData.NotDeviceId == "") {
 			// 创建一个 WebSocketMsgRepository 实例
-			repo := repository.NewWebSocketMsgRepository(&database.DBManager{})
+			repo := repository.NewWebSocketMsgRepository(database.Instance)
 
 			// 1. 先删后加 - 同一个类型，只保留最新的
 			err := repo.DeleteByTypeAndCompanyId(messageData.MessageType, messageData.CompanyUuid)
