@@ -2249,8 +2249,9 @@ func (s *orderSrv) HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.Sh
 	}()
 
 	// 获取新的数据
-	info, err := s.GetOrderCartInfo(ctx, saleBillUuid)
+	info, err := s.GetOrderCartInfoByDeviceSn(ctx, ctx.GetDeviceSn())
 	if err != nil {
+		fmt.Println("获取订单信息失败", err)
 		return &resp.ShopCart{SaleOrderList: make([]resp.SaleOrder, 0)}, nil
 	}
 
