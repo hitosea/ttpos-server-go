@@ -118,8 +118,10 @@ type IOrderSrv interface {
 	ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) error                                                                                              // 下单扫码h5订单
 	AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error)                                                                      // 接单扫码h5订单
 	RejectH5Order(ctx context.Context, h5OrderUuid uint64) error                                                                                                                      // 拒单扫码h5订单
-	GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error)                       // 未送厨商品列表
-	GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart) (resp.SentKitchen, error)                                                                       // 已送厨商品列表
+	RejectAllH5Order(ctx context.Context, saleBillUuid uint64) error
+	RejectAllH5OrderInShop(ctx context.Context) error                                                                                                           // 拒单商家的所有待接单h5订单
+	GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error) // 未送厨商品列表
+	GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart) (resp.SentKitchen, error)                                                 // 已送厨商品列表
 
 	ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, h5OrderUuid uint64, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) // 送厨
 	ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*resp.OrderCheckServiceRes, error)                                                                                                         // 加购并送厨
@@ -1109,6 +1111,20 @@ func (s *orderSrv) RejectAllH5Order(ctx context.Context, saleBillUuid uint64) er
 		if err != nil {
 			return errors.WithMessage(err)
 		}
+	}
+	return nil
+}
+
+// 将商机的所有待接单的h5订单都拒单
+func (s *orderSrv) RejectAllH5OrderInShop(ctx context.Context) error {
+	db := ctx.GetDB()
+	// 查询所有还在进行中的桌台账单
+	saleBills, err := repository.NewSaleBillRepo(db).GetDeskSaleBillUnpay()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	for _, saleBill := range saleBills {
+		s.RejectAllH5Order(ctx, saleBill.Uuid)
 	}
 	return nil
 }
@@ -8118,14 +8134,21 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 	}
 
 	go func() {
-		// 判断
-		acceptOrderSetting, err := s.settingSrv.GetAcceptOrderSetting(ctx)
-		if err != nil {
-			ctx.Log().Error("获取接单设置失败", zap.Error(err))
-			return
-		}
-		totalPrice := saleBill.GetUnAcceptH5OrderProductTotalPrice(h5OrderProducts) // 未接单的h5订单商品的商品金额之和
-		if acceptOrderSetting.CanAutoOrder(totalPrice) {
+		companySetting := ctx.GetCompanySetting()
+		if companySetting.GetIsOpenH5Order() {
+			// 判断
+			acceptOrderSetting, err := s.settingSrv.GetAcceptOrderSetting(ctx)
+			if err != nil {
+				ctx.Log().Error("获取接单设置失败", zap.Error(err))
+				return
+			}
+			totalPrice := saleBill.GetUnAcceptH5OrderProductTotalPrice(h5OrderProducts) // 未接单的h5订单商品的商品金额之和
+			if acceptOrderSetting.CanAutoOrder(totalPrice) {
+				// 自动接单
+				s.AcceptH5Order(ctx, h5Order.Uuid, true)
+			}
+		} else {
+			// 如果关闭h5接单功能
 			// 自动接单
 			s.AcceptH5Order(ctx, h5Order.Uuid, true)
 		}

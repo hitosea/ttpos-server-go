@@ -273,6 +273,28 @@ func (h *OrderHandler) ReReturnOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// RejectAllH5Order 拒单商家的所有待接单h5订单
+// @Summary 拒单商家的所有待接单h5订单
+// @Description 拒单商家的所有待接单h5订单
+// @Tags 商家端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{}
+// @Failure 404 {object} nil "未找到"
+// @Router /shop/order/reject_all [post]
+func (h *OrderHandler) RejectAllH5Order(c *gin.Context) {
+	ctx := helper.GetContext(c)
+
+	if err := h.service.RejectAllH5OrderInShop(ctx); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterOrderHandlers 注册商家订单路由
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -306,5 +328,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/order/return", wrapper.ReturnOrder)
 		privateApi.DELETE("/order/delete", wrapper.DeleteOrder)
 		privateApi.POST("/order/re_return", wrapper.ReReturnOrder)
+		privateApi.POST("/order/reject_all", wrapper.RejectAllH5Order)
 	}
 }

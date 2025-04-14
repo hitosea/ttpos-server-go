@@ -340,6 +340,13 @@ func (h *Handler) GetOrderCartProductOrdered(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("没有桌台账单")))
 		return
 	}
+	// // 如果关闭h5接单功能，则拒单所有h5待接单订单。
+	// {
+	// 	companySetting := ctx.GetCompanySetting()
+	// 	if !companySetting.GetIsOpenH5Order() {
+	// 		h.orderSrv.RejectAllH5Order(ctx, saleBillUuid)
+	// 	}
+	// }
 	res, err := h.orderSrv.GetOrderedH5ProductList(ctx, saleBillUuid, nil, repository.WithOrderedH5ProductWithReject())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))

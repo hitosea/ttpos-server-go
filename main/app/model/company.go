@@ -50,6 +50,11 @@ type CompanySetting struct {
 	Address          string `gorm:"column:address;type:varchar(255);comment:联系地址;NOT NULL" json:"address"`
 }
 
+// GetIsOpenH5Order 是否开启扫码点餐接单
+func (model *CompanySetting) GetIsOpenH5Order() bool {
+	return model.IsOpenH5Order == 1
+}
+
 // CompanyStaff saas库保存的集团员工关联表 ttpos_company_staff
 type CompanyStaff struct {
 	BaseModel
