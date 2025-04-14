@@ -3527,7 +3527,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			var mustPlan *resp.InstantProductMustPlanResp
 			var isAutoAdd bool
 			if shopCart.SaleBill.IsDeskSaleBill() {
-				mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum, option.H5AutoAdd)
+				mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum, option.H5AutoAdd, option.NoAutoAdd)
 				if err != nil {
 					ctx.Log().Info("获取桌台必点方案列表失败", zap.Error(errors.WithMessage(err)))
 				}
@@ -3557,7 +3557,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 				}
 				if mustPlan.ShopCartInfo != nil {
 					// 自动加购后要重新获取一次必点信息，否则还是显示未自动加购前的信息
-					mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum, option.H5AutoAdd)
+					mustPlan, _, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum, option.H5AutoAdd, option.NoAutoAdd)
 					if err != nil {
 						ctx.Log().Info("获取桌台必点方案列表失败", zap.Error(errors.WithMessage(err)))
 					}
@@ -5272,7 +5272,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	return mustPlan, isAutoAdd, nil
 }
 
-func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64, mealNum uint, h5AutoAdd bool) (*resp.InstantProductMustPlanResp, bool, error) {
+func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64, mealNum uint, h5AutoAdd bool, noAutoAdd bool) (*resp.InstantProductMustPlanResp, bool, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	mustPlanList := make([]resp.InstantProductMustPlan, 0)
@@ -5311,9 +5311,13 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 		errTx := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 			// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
 			ctx.SetDB(tx)
-			_, err = autoAddSaleOrderProductToDesk(ctx, s, autoFlavorProduct, saleBillUuid, saleOrderUuid, shopCartInfo.SaleBill, h5AutoAdd)
-			if err != nil {
-				return errors.WithMessage(err, "自动添加必点商品失败")
+			// 是否自动加购。平板不自动加购
+			if !noAutoAdd {
+				// 自动加购
+				_, err = autoAddSaleOrderProductToDesk(ctx, s, autoFlavorProduct, saleBillUuid, saleOrderUuid, shopCartInfo.SaleBill, h5AutoAdd)
+				if err != nil {
+					return errors.WithMessage(err, "自动添加必点商品失败")
+				}
 			}
 			return nil
 		})

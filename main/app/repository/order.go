@@ -477,6 +477,7 @@ type OrderCartInfoOption struct {
 	NotDeleted         bool   // 查询未被删除的商品
 	NoQueryMustPlan    bool   // 不查询必点信息
 	H5AutoAdd          bool   // 是否是H5自动添加的商品
+	NoAutoAdd          bool   // 是否不自动添加的商品。如果为true，则不自动加购的商品，平板上操作时不自动加购
 }
 
 const (
@@ -540,6 +541,13 @@ func WithNoQueryMustPlan() OrderCartInfoOptionFunc {
 func WithH5AutoAdd() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.H5AutoAdd = true
+	}
+}
+
+// 是否不自动添加的商品。如果为true，则不自动加购的商品，平板上操作时不自动加购
+func WithNoAutoAdd() OrderCartInfoOptionFunc {
+	return func(option *OrderCartInfoOption) {
+		option.NoAutoAdd = true
 	}
 }
 
