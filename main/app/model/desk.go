@@ -203,5 +203,6 @@ func (model *Desk) GetDeskResp() resp.Desk {
 		SaleOrderUuid: saleOrderUuid,
 		IsSplitOrder:  isSplitOrder,
 		UpdateTime:    time.Now().Unix(),
+		LockTime:      model.SaleBill.LockTime,
 	}
 }
