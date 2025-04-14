@@ -12,7 +12,10 @@ use think\model\concern\SoftDelete;
 use app\common\model\store\TakeOrder;
 use app\common\enum\settings\SettingEnum;
 use app\common\enum\settings\LanguageEnum;
+use app\common\model\shop\User;
 use app\shop\model\settings\Setting as SettingModel;
+use help\HttpHelp;
+use think\facade\Log;
 
 /**
  * 商家供应商模型
@@ -318,10 +321,21 @@ class Supplier extends BaseModel
             ], $data->shop_supplier_id, $companyUuid, 1);
             // 拒单
             if (isset($data['is_open_h5_order']) && $data['is_open_h5_order'] == 0) {
-                $list = (new TakeOrder([], $companyUuid))->where('status', 0)->select();
-                /** @var TakeOrder $item */
-                foreach ($list as $item) {
-                    $item?->reject();
+                $user = User::where('company_uuid', $companyUuid)->find();
+                if (!empty($user)) {
+                    $token = signToken($user['uuid'], 'shop', '', md5($user->password), $companyUuid);
+                    $res = HttpHelp::postRequest('http://nginx/api/v1/shop/order/reject_all', [], [
+                        'Authorization: Bearer ' . $token,
+                        'Accept-Language: ' . request()->header('language') ?: 'zh',
+                    ]);
+                    if (!$res) {
+                        return false;
+                    } 
+                    Log::error($res);
+                    $result = json_decode($res, true);
+                    if (($result['code'] ?? -1) != 0) {
+                        return false;
+                    }
                 }
             }
         } catch (\Exception $e) {
