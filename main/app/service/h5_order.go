@@ -8,7 +8,6 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
-	apperrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -68,7 +67,7 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 	)
 	orders, total, err := h5OrderRepo.PaginateGetH5Order(listReq.PageNo, listReq.PageSize, dbOptions...)
 	if err != nil {
-		return nil, apperrors.ErrInternal
+		return nil, errors.ErrInternal
 	}
 	items := make([]resp.H5OrderItem, 0, len(orders))
 	for _, order := range orders {
@@ -85,7 +84,7 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 				amount := decimal.NewFromFloat(0) // 已下单的商品金额之和
 				products, err := h5OrderRepo.GetH5OrderProductsBySaleBillUuidAndAccept(order.SaleBillUuid)
 				if err != nil {
-					return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
+					return nil, errors.WithMessage(errors.ErrInternal, "获取h5订单详情失败", err.Error())
 				}
 				for _, product := range products {
 					totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromInt(int64(product.Num))).Truncate(2).InexactFloat64()
@@ -122,13 +121,13 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 
 	unhandledCount, err := h5OrderRepo.GetH5OrderCount(unhandledStatusOption)
 	if err != nil {
-		return nil, apperrors.ErrInternal
+		return nil, errors.ErrInternal
 	}
 	listResp.Extra.UnhandledCount = unhandledCount
 
 	handledCount, err := h5OrderRepo.GetH5OrderCount(handledStatusOption)
 	if err != nil {
-		return nil, apperrors.ErrInternal
+		return nil, errors.ErrInternal
 	}
 	listResp.Extra.HandledCount = handledCount
 
@@ -145,7 +144,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (
 	h5OrderRepo := repository.NewH5OrderRepo(ctx.GetDB())
 	h5Order, err := h5OrderRepo.GetH5OrderDetailOrdered(h5OrderUuid)
 	if err != nil {
-		return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
+		return nil, errors.WithMessage(errors.ErrInternal, "获取h5订单详情失败", err.Error())
 	}
 	newProducts := make([]resp.ProductItem, 0)
 	acceptedProducts := make([]resp.ProductItem, 0)
@@ -170,7 +169,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (
 		if saleBillUuid > 0 {
 			products, err := h5OrderRepo.GetH5OrderProductsBySaleBillUuidAndAccept(saleBillUuid)
 			if err != nil {
-				return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单详情失败", err.Error())
+				return nil, errors.WithMessage(errors.ErrInternal, "获取h5订单详情失败", err.Error())
 			}
 			for _, product := range products {
 				if product.IsAccepted() {

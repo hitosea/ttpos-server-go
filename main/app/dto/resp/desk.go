@@ -11,6 +11,7 @@ type Desk struct {
 	IsBuffet      bool    `json:"is_buffet"`       // 是否自助餐
 	IsWait        bool    `json:"is_wait"`         // 是否待清台
 	Time          int64   `json:"time"`            // 桌台用餐时间（秒）
+	LockTime      int64   `json:"lock_time"`       // 锁单时间
 	Price         float64 `json:"price"`           // 桌台价格
 	Remark        string  `json:"remark"`          // 桌台备注
 	TypeUuid      uint64  `json:"type_uuid"`       // 桌台类型ID

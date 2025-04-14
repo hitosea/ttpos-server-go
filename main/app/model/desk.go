@@ -181,9 +181,13 @@ func (model *Desk) GetDeskResp() resp.Desk {
 
 	var saleOrderUuid uint64
 	var isSplitOrder bool
+	var lockTime int64
 	if model.SaleBill != nil && len(model.SaleBill.SaleOrders) > 0 {
 		saleOrderUuid = model.SaleBill.SaleOrders[0].Uuid
 		isSplitOrder = len(model.SaleBill.SaleOrders) > 1
+		if model.SaleBill.IsLockStatus() {
+			lockTime = time.Now().Unix() - model.SaleBill.LockTime
+		}
 	}
 
 	return resp.Desk{
@@ -203,5 +207,6 @@ func (model *Desk) GetDeskResp() resp.Desk {
 		SaleOrderUuid: saleOrderUuid,
 		IsSplitOrder:  isSplitOrder,
 		UpdateTime:    time.Now().Unix(),
+		LockTime:      lockTime,
 	}
 }

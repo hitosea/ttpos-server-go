@@ -19,7 +19,6 @@ import (
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
-	apperrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
@@ -144,7 +143,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 	if staff.Company.IsExpired() {
-		return loginResp, apperrors.NewWithCode(constant.CompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
+		return loginResp, errors.NewWithCode(constant.CompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
 	}
 	if staff.Company.IsException() {
 		return loginResp, errors.New("店铺状态异常，如需继续使用，请联系销售代表")
@@ -169,7 +168,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		if viper.GetString("CHECK_SHIFT_HANDOVER") != "false" {
 			currentStaff := staffRepo.GetStaff(staffRepo.WhereDeviceId(loginReq.DeviceId), staffRepo.WhereCashierOnline())
 			if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
-				return loginResp, apperrors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
+				return loginResp, errors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.RealName})
 			}
 			// 是否已在其他收银机登录
 			if staff.CashierOnline == 1 && loginReq.DeviceId != staff.BindKey {
@@ -177,7 +176,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 				if cashierName == "" {
 					cashierName = staff.Username
 				}
-				return loginResp, apperrors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
+				return loginResp, errors.NewWithReplace("收银员 %s 已在其他收银机登录未交班，请先完成交班操作", []string{cashierName})
 			}
 		}
 
@@ -190,7 +189,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		if staff.CashierLoginTime == 0 || staff.CashierOnline == 0 {
 			shiftLog, err := s.shiftSrv.CreateWorkingLog(staff)
 			if err != nil {
-				return loginResp, apperrors.ErrInternal
+				return loginResp, errors.ErrInternal
 			}
 			updates["cashier_login_time"] = shiftLog.ShiftStartTime
 			updates["duty_no"] = shiftLog.ShiftNo
@@ -269,13 +268,13 @@ func (s *authSrv) Logout(ctx context.Context) error {
 		"finally_login_uuid": 0,
 	})
 	if err != nil {
-		return apperrors.ErrInternal
+		return errors.ErrInternal
 	}
 	if ctx.GetSource() == constant.SourceTablet {
 		// 解绑桌台
 		err = repository.NewDeskRepo(db).UnbindDesk(ctx.GetDeskUuid(), ctx.GetDeviceUuid())
 		if err != nil {
-			return apperrors.ErrInternal
+			return errors.ErrInternal
 		}
 	}
 	return nil
@@ -575,7 +574,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	}
 	// 修改密码后，token失效
 	if staff.PasswordChangeTime > auth.TokenIssuedAt {
-		return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeTokenInvalid, "登录失效，请重新登录")
+		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenInvalid, "登录失效，请重新登录")
 	}
 	if staff.DeleteTime != 0 {
 		return company, companySetting, staff, desk, errors.New("用户被删除")
@@ -590,7 +589,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		return company, companySetting, staff, desk, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 	if company.IsExpired() {
-		return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
+		return company, companySetting, staff, desk, errors.NewWithCode(constant.CompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
 	}
 	if company.IsException() {
 		return company, companySetting, staff, desk, errors.New("店铺状态异常，如需继续使用，请联系销售代表")
@@ -602,11 +601,11 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	}
 	if auth.Source != constant.SourceShop && !s.deviceSrv.IsDeviceBind(auth.CompanyUuid, auth.Source, deviceId) {
 		if printerData := repository.NewPrinterLogRepo(db).GetShiftPrinterData(deviceId); printerData != nil {
-			return company, companySetting, staff, desk, apperrors.NewWithCodeAndData(constant.CodeTokenInvalid, map[string]interface{}{
+			return company, companySetting, staff, desk, errors.NewWithCodeAndData(constant.CodeTokenInvalid, map[string]interface{}{
 				"printer_data": printerData,
 			}, "设备已解绑，请重新绑定")
 		}
-		return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeTokenInvalid, "设备已解绑，请重新绑定")
+		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenInvalid, "设备已解绑，请重新绑定")
 	}
 	switch auth.Source {
 	case constant.SourceCashier: // 收银端
@@ -622,11 +621,11 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			// 判断权限
 			_, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, auth.CompanyUuid)
 			if err != nil {
-				return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			}
 			// ToDo 记得做完数据迁移后开放
 			//if !slices.Contains(permissions, urlPath) {
-			//	return company, companySetting, staff, apperrors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
+			//	return company, companySetting, staff, errors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			//}
 		}
 	case constant.SourceAssistant: // 点餐助手端
@@ -635,10 +634,10 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				deviceRepo := repository.NewDeviceRepo(db)
 				cashierDevice, _ := deviceRepo.GetDevice(deviceRepo.WhereSource(constant.SourceCashier), deviceRepo.WhereSn(auth.DeviceId))
 				if cashierDevice.Uuid == 0 {
-					return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeCashierNotLogin, "收银员设备已解绑，请重新绑定")
+					return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierNotLogin, "收银员设备已解绑，请重新绑定")
 				}
 				if cashierDevice.FinallyLoginUuid == 0 || auth.Assistant.StaffUuid == 0 {
-					return company, companySetting, staff, desk, apperrors.NewWithCode(constant.CodeCashierNotLogin, "收银员登录信息错误，请重新登录")
+					return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierNotLogin, "收银员登录信息错误，请重新登录")
 				}
 			}
 			// 检查收银机设置-桌台用餐是否开启
@@ -673,13 +672,13 @@ func (s *authSrv) AuthDesk(ctx context.Context, qrcodeToken string) (*model.Comp
 	deskUuid := ctx.GetDeskUuid()
 	db := s.dbm.GetDB(companyUuid)
 	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(companyUuid)
-	if err != nil || company.IsDelete() {
-		return nil, errors.New("二维码已失效，请联系商家")
+	if err != nil || company.IsExpired() || company.IsDelete() {
+		return nil, errors.NewWithCode(constant.CodeTokenInvalid, "二维码已失效，请联系商家")
 	}
 
 	deskInfo, err := repository.NewDeskRepo(db).GetDeskInfo(deskUuid)
 	if err != nil || deskInfo.IsDelete() || deskInfo.QrcodeToken != qrcodeToken {
-		return nil, errors.New("二维码已失效，请联系商家")
+		return nil, errors.NewWithCode(constant.CodeTokenInvalid, "二维码已失效，请联系商家")
 	}
 
 	cashierSetting, _ := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
@@ -694,15 +693,15 @@ func (s *authSrv) AuthMenu(ctx context.Context, qrcodeToken string) (*model.Comp
 	companyUuid := ctx.GetCompanyUuid()
 	db := s.dbm.GetDB(companyUuid)
 	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(companyUuid)
-	if err != nil || company.IsDelete() {
-		return nil, errors.New("二维码已失效，请联系商家")
+	if err != nil || company.IsExpired() || company.IsDelete() {
+		return nil, errors.NewWithCode(constant.CodeTokenInvalid, "二维码已失效，请联系商家")
 	}
 
 	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 	if err != nil || businessSetting.QrCode != qrcodeToken {
-		return nil, errors.New("二维码已失效，请联系商家")
+		return nil, errors.NewWithCode(constant.CodeTokenInvalid, "二维码已失效，请联系商家")
 	}
-	
+
 	cashierSetting, _ := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	if cashierSetting.OrderMethod.IsTableOrder == "0" {
 		return nil, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")

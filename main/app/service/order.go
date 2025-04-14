@@ -17,7 +17,6 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
-	apperrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
@@ -2265,8 +2264,9 @@ func (s *orderSrv) HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.Sh
 	}()
 
 	// 获取新的数据
-	info, err := s.GetOrderCartInfo(ctx, saleBillUuid)
+	info, err := s.GetOrderCartInfoByDeviceSn(ctx, ctx.GetDeviceSn())
 	if err != nil {
+		fmt.Println("获取订单信息失败", err)
 		return &resp.ShopCart{SaleOrderList: make([]resp.SaleOrder, 0)}, nil
 	}
 
@@ -8163,11 +8163,11 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 	// 获取h5订单
 	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
 	if err != nil {
-		return nil, errors.WithMessage(apperrors.ErrInternal, "获取h5订单失败", err.Error())
+		return nil, errors.WithMessage(errors.ErrInternal, "获取h5订单失败", err.Error())
 	}
 	// 非待处理状态不可操作
 	if h5Order.Status != constant.H5OrderStatusOrder {
-		return nil, errors.WithMessage(apperrors.ErrInternal, "当前状态不可操作")
+		return nil, errors.WithMessage(errors.ErrInternal, "当前状态不可操作")
 	}
 
 	// 接单,保证h5订单的商品快照信息
@@ -8250,11 +8250,11 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 	// 获取h5订单
 	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
 	if err != nil {
-		return errors.WithMessage(apperrors.ErrInternal, "获取h5订单失败", err.Error())
+		return errors.WithMessage(errors.ErrInternal, "获取h5订单失败", err.Error())
 	}
 	// 非待处理状态不可操作
 	if h5Order.Status != constant.H5OrderStatusOrder {
-		return errors.WithMessage(apperrors.ErrInternal, "当前状态不可操作")
+		return errors.WithMessage(errors.ErrInternal, "当前状态不可操作")
 	}
 
 	// 拒单,保证h5订单的商品快照信息

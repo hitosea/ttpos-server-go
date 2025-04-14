@@ -1474,12 +1474,17 @@ func (r *orderRepo) HasShowOrder(deviceUuid uint64) (uint64, error) {
 // SetLock 设置订单锁定状态
 func (r *orderRepo) SetLock(saleBillUuid uint64, isLock bool) error {
 	isLockInt := 0
+	lockTime := 0
 	if isLock {
 		isLockInt = 1
+		lockTime = int(time.Now().Unix())
 	}
 	err := r.db.Model(&model.SaleBill{}).
 		Where("delete_time = ? AND uuid = ?", constant.NotDeleted, saleBillUuid).
-		Update("is_lock", isLockInt).Error
+		Updates(map[string]interface{}{
+			"is_lock":   isLockInt,
+			"lock_time": lockTime,
+		}).Error
 	if err != nil {
 		return fmt.Errorf("SetLock: %v", err)
 	}

@@ -10,7 +10,6 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
-	apperrors "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -75,7 +74,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 	res, err := h.deskSrv.GetDeskList(ctx, companyId, deskListReq)
 	// 处理错误
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, apperrors.ErrInternal)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.ErrInternal)
 		return
 	}
 	// 返回结果
@@ -104,7 +103,7 @@ func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
 	res, err := h.deskSrv.GetDeskInfo(companyId, deskInfoReq.Uuid)
 	// 处理错误
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, apperrors.ErrInternal)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.ErrInternal)
 		return
 	}
 	// 返回结果

@@ -296,6 +296,7 @@ class User extends BaseModel
             'member_uuid' => $this['uuid'],
             'value' => $points,
             'describe' => $custom_dec ? $describe : vsprintf(PointsLogSceneEnum::data()[$scene]['describe'], [$describe]),
+            'processed' => 1,
         ]);
 
         // 更新用户可用积分

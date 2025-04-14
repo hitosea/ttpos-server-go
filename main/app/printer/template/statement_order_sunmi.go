@@ -404,13 +404,9 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		if saleOrder.CustomDiscountFee != 0 {
 			ratio := ""
 			if temp == 3 {
-				if saleOrder.CustomDiscountFee <= 0 {
-					ratio = " (0% OFF)"
-				} else {
-					// 计算折扣率：折扣金额 / 原始金额 * 100
-					discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
-					ratio = fmt.Sprintf(" (%s%% OFF)", t.base.Number(discountRate.InexactFloat64()))
-				}
+				// 计算折扣率：折扣金额 / 原始金额 * 100
+				discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
+				ratio = fmt.Sprintf(" (%s%% OFF)", t.base.Number(discountRate.InexactFloat64()))
 			}
 			//
 			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("优惠折扣"), t.base.GetPriceAndUnit(saleOrder.CustomDiscountFee), ratio))

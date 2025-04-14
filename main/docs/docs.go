@@ -18663,6 +18663,10 @@ const docTemplate = `{
                     "description": "是否待清台",
                     "type": "boolean"
                 },
+                "lock_time": {
+                    "description": "锁单时间",
+                    "type": "integer"
+                },
                 "price": {
                     "description": "桌台价格",
                     "type": "number"

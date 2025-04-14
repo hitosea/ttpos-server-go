@@ -13,7 +13,6 @@ use app\common\model\erp\ErpSupplier;
 use app\common\model\file\UploadFile;
 use app\common\model\order\OrderBuffet;
 use app\common\model\order\OrderProduct;
-use app\common\model\product\ProductTax;
 use app\common\model\product\ProductFeed;
 use app\common\model\erp\ErpInventoryRecord;
 use app\common\model\order\OrderSchemeProduct;
@@ -1295,8 +1294,13 @@ class Product extends BaseModel
                 ]
             ],
             // todo 兼容
-            'feed',
-            // 'supplier',
+            'feed' => [
+                'productSauce' => [
+                    'relatedMaterial' => [
+                        'material'
+                    ]
+                ]
+            ],
             'dineTax',
             'takeoutTax',
         ])->where('p.uuid', '=', $product_id)->find();
@@ -1402,6 +1406,23 @@ class Product extends BaseModel
     {
         $productFeed = [];
         foreach ($product->feed as $feed) {
+            $material = [];
+            foreach ($feed->productSauce->relatedMaterial as $relatedMaterial) {
+                $material[] = [
+                    'id' => $relatedMaterial['uuid'],
+                    'material_id' => $relatedMaterial['material_uuid'],
+                    'material_num' => $relatedMaterial['num'],
+                    'product_feed_id' => $feed->product_sauce_uuid,
+                    'materialProduct' => [
+                        'product_id' => $relatedMaterial['material_uuid'],
+                        'product_material_stock' => $relatedMaterial['material']['stock_num'],
+                        'product_name' => $relatedMaterial['material']['product_name'],
+                        'product_name_text' => $relatedMaterial['material']['product_name_text'],
+                        'product_unit' => $relatedMaterial['material']['unit']['unit_name'],
+                        'product_unit_text' => $relatedMaterial['material']['unit']['unit_name_text'],
+                    ]
+                ];
+            }
             $productFeed[] = [
                 'feed_name_text' => $feed->spec_name_text,
                 'feed_id' => $feed->product_sauce_uuid,
@@ -1409,7 +1430,7 @@ class Product extends BaseModel
                 'price' => $feed->product_price,
                 'stock_num' => $feed->stock_num,
                 'default_select' => $feed->is_default_select,
-                'material' => [],
+                'material' => $material,
             ];
         }
 
