@@ -179,6 +179,7 @@ func (model *H5Order) AfterUpdate(tx *gorm.DB) (err error) {
 			"update_time":   model.BaseModel.UpdateTime,
 		}
 		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.H5_ORDER, data)
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
 	}
 	return nil
 }
