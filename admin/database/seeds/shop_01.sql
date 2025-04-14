@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill` (
     `delay_duration` INT(10) NOT NULL DEFAULT 0 COMMENT '总延迟时长(秒)',
     `delay_start_time` INT(10) NOT NULL DEFAULT 0 COMMENT '总延迟时长开始时间(秒)',
     `hide_bill_time` INT(10) NOT NULL DEFAULT 0 COMMENT '隐藏账单(挂单)时间(时间戳)',
+    `lock_time` INT(10) NOT NULL DEFAULT 0 COMMENT '锁单时间',
     `production_time` INT(10) NOT NULL DEFAULT 0 COMMENT '首次送厨时间(时间戳)',
     `finish_time` INT(10) NOT NULL DEFAULT 0 COMMENT '完成时间(时间戳),结账时间',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),开台时间',
