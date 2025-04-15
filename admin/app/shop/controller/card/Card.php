@@ -204,6 +204,10 @@ class Card extends Controller
             // 处理小数点
             $model['open_points_num'] = helper::number2($model['open_point_num']);
             $model['open_money_num'] = helper::number2($model['open_money_num']);
+            if (sprintf("%.0f", $model['discount'])  == '100') {
+                $model['is_discount'] = 0;
+                $model['discount'] = 0.0;
+            }
             return $this->renderSuccess('', compact('model', 'image'));
         }
         // 修改记录
