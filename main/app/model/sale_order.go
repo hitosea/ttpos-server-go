@@ -557,7 +557,13 @@ func (model *SaleOrder) NewFreeOrderReason(freeReasons []*FreeReason) []*SaleOrd
 
 // 判断销售订单是否部分支付
 func (model *SaleOrder) IsPartialPay() bool {
-	return len(model.PaymentOrders) > 1
+	num := 0
+	for _, paymentOrder := range model.PaymentOrders {
+		if !paymentOrder.IsDelete() {
+			num++
+		}
+	}
+	return num > 0
 }
 
 // 判断销售订单是否已支付
