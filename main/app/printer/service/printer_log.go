@@ -312,6 +312,20 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 		ctx.AddLock()
 	}
 
+	// 获取设备 - 判断网页版的设备 不能获取
+	deviceRepo := repository.NewDeviceRepo(s.dbm.GetDB(companyUuid))
+	device, errDevice := deviceRepo.GetDevice(deviceRepo.WhereSource(ctx.GetSource()), deviceRepo.WhereSn(ctx.GetDeviceSn()))
+	if errDevice != nil {
+		return nil, errors.WithMessage(errDevice, "deviceRepo.GetDevice failed")
+	}
+	if device.IsDelete() {
+		return nil, errors.NewWithCode(constant.CodeParamError, "设备不存在")
+	}
+	// 网页版设备不能获取打印数据
+	if device.Platform == 0 {
+		return &resp.PrinterDataList{List: []resp.PrinterData{}}, nil
+	}
+
 	// 获取打印日志
 	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
 	printerLogList, err := printerLogRepo.GetPrinterData(ctx.GetDeviceSn())
