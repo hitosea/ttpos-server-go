@@ -1371,6 +1371,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 
 	lianLianPayCount := returnOrder.GetLianLianPayCount()
 
+	var publishChangeMemberBalance, publishChangeMemberPoints bool
 	// 创建
 	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db) // 否则 s.memberSrv.HandleMemberBalance会事务失效
@@ -1435,18 +1436,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				}); err != nil {
 					return errors.WithMessage(err)
 				}
-				// 发布“会员余额变动”事件
-				go func() {
-					s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
-						BasePayload: event.BasePayload{ // 会员余额变动
-							Ctx:          ctx,
-							CompanyUuid:  ctx.GetCompanyUuid(),
-							Source:       ctx.GetSource(),
-							SaleBillUuid: req.SaleBillUuid,
-							OperatorUuid: int64(ctx.GetStaffUuid()),
-						},
-					})
-				}()
+				publishChangeMemberBalance = true
 			}
 			// 如果退款金额为现金，则更新钱箱
 			if returnOrderAmount.PaymentMethod.Code == constant.PaymentMethodCodeCash {
@@ -1492,22 +1482,42 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
 				return errors.WithMessage(err)
 			}
-			// 发布“会员积分变动”事件
-			go func() {
-				s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
-					BasePayload: event.BasePayload{ // 会员积分变动
-						Ctx:          ctx,
-						CompanyUuid:  ctx.GetCompanyUuid(),
-						Source:       ctx.GetSource(),
-						SaleBillUuid: req.SaleBillUuid,
-						OperatorUuid: int64(ctx.GetStaffUuid()),
-					},
-				})
-			}()
+			publishChangeMemberPoints = true
 		}
 
 		return nil
 	})
+
+	if publishChangeMemberBalance {
+		// 发布“会员余额变动”事件
+		go func() {
+			s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
+				BasePayload: event.BasePayload{ // 会员余额变动
+					Ctx:          ctx,
+					CompanyUuid:  ctx.GetCompanyUuid(),
+					Source:       ctx.GetSource(),
+					SaleBillUuid: req.SaleBillUuid,
+					OperatorUuid: int64(ctx.GetStaffUuid()),
+				},
+			})
+		}()
+	}
+
+	if publishChangeMemberPoints {
+		// 发布“会员积分变动”事件
+		go func() {
+			s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
+				BasePayload: event.BasePayload{ // 会员积分变动
+					Ctx:          ctx,
+					CompanyUuid:  ctx.GetCompanyUuid(),
+					Source:       ctx.GetSource(),
+					SaleBillUuid: req.SaleBillUuid,
+					OperatorUuid: int64(ctx.GetStaffUuid()),
+				},
+			})
+		}()
+	}
+
 	if err != nil {
 		return errors.WithMessage(err), constant.CodeFail
 	}
