@@ -540,7 +540,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 1000,
+                        "maximum": 1100,
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
@@ -4022,7 +4022,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 1000,
+                        "maximum": 1100,
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
@@ -7197,7 +7197,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 1000,
+                        "maximum": 1100,
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
@@ -9427,7 +9427,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 1000,
+                        "maximum": 1100,
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
@@ -9941,7 +9941,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 1000,
+                        "maximum": 1100,
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
@@ -12726,7 +12726,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 1000,
+                        "maximum": 1100,
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
@@ -12783,7 +12783,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 1000,
+                        "maximum": 1100,
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
@@ -13230,6 +13230,108 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/order/export": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取订单列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.订单"
+                ],
+                "summary": "获取订单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
+                        "name": "billType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
+                        "name": "dateType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "用餐方式,-1=全都、 0-堂食 1-打包",
+                        "name": "diningMethod",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "启用开台时间 false-不启用，true-启用",
+                        "name": "enableCreateTime",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "启用支付时间 false-不启用，true-启用",
+                        "name": "enablePayTime",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "订单编号",
+                        "name": "orderNo",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "每页大小",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "查询结束时间戳",
+                        "name": "queryEndTime",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "查询开始时间戳",
+                        "name": "queryStartTime",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "账单状态, -1=全都、 0=待付款、1=已完成、2=已取消",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "订单列表",
+                        "schema": {
+                            "$ref": "#/definitions/resp.OrderListPaginationResp"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/shop/order/info": {
             "get": {
                 "security": [
@@ -13377,7 +13479,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 1000,
+                        "maximum": 1100,
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
@@ -14559,7 +14661,7 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 1000,
+                        "maximum": 1100,
                         "minimum": 1,
                         "type": "integer",
                         "description": "每页大小",
@@ -16207,7 +16309,7 @@ const docTemplate = `{
                 "page_size": {
                     "description": "每页大小",
                     "type": "integer",
-                    "maximum": 1000,
+                    "maximum": 1100,
                     "minimum": 1
                 },
                 "productName": {
@@ -18223,7 +18325,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "sale_bill_uuid": {
-                    "description": "销售订单UUID",
+                    "description": "销售账单UUID",
                     "type": "integer"
                 },
                 "sale_order_uuid": {
