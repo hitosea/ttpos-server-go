@@ -30,7 +30,7 @@ func NewShiftLogRepoImpl(db *gorm.DB) *ShiftLogRepo {
 
 func (r *ShiftLogRepo) GetPreviousShiftCash() (float64, error) {
 	var previewShiftCash float64
-	err := r.db.Model(&model.StaffShiftLog{}).Where("status = 1").Order("id desc").Limit(1).Select("cash_left").Scan(&previewShiftCash).Error
+	err := r.db.Model(&model.StaffShiftLog{}).Where("status = 1").Order("id desc").Limit(1).Select("current_cash_total").Scan(&previewShiftCash).Error
 	return previewShiftCash, errors.WithMessage(err)
 }
 
