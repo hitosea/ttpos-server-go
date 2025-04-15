@@ -1247,11 +1247,18 @@ func (s *orderSrv) IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (
 	if err != nil {
 		return model.SaleBill{}, errors.WithMessage(err)
 	}
+	if slices.Contains([]string{constant.SourceShop}, ctx.GetSource()) {
+		if orderRepo.IsPartiallyPaid(saleBillUuid) {
+			return model.SaleBill{}, errors.New("当前订单已被部分支付，不支持取消")
+		}
+	}
 	if err := billInfo.ValidateOrderStatus(ctx.GetSource(), constant.OrderOrderCancel); err != nil {
 		return model.SaleBill{}, errors.WithMessage(err)
 	}
-	if orderRepo.IsPartiallyPaid(saleBillUuid) {
-		return model.SaleBill{}, errors.New("当前订单已被部分支付，不支持取消")
+	if !slices.Contains([]string{constant.SourceShop}, ctx.GetSource()) {
+		if orderRepo.IsPartiallyPaid(saleBillUuid) {
+			return model.SaleBill{}, errors.New("当前订单已被部分支付，不支持取消")
+		}
 	}
 	return billInfo, nil
 }
@@ -1300,9 +1307,6 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	// 获取订单信息
 	billInfo, err := s.IsCellCancelOrder(ctx, req.SaleBillUuid)
 	if err != nil {
-		if err.Error() == "订单已结账" && ctx.GetSource() == constant.SourceCashier {
-			return errors.New("当前订单已被部分支付，不支持撤销拆单")
-		}
 		return errors.WithMessage(err)
 	}
 	if billInfo.ID == 0 {
