@@ -3,6 +3,8 @@ package cache
 import (
 	"sync"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 // Cache 缓存接口
@@ -10,6 +12,8 @@ type Cache interface {
 	Set(key string, value interface{}, expiration time.Duration) error
 	Get(key string) (interface{}, bool)
 	Del(keys ...string)
+	GetClient() *redis.Client
+	GetClusterClient() *redis.ClusterClient
 }
 
 // CacheType 缓存类型
@@ -37,6 +41,14 @@ func NewCache(cacheType CacheType, config Config) Cache {
 	default:
 		return newRedisCache(config) // 默认使用redis-cache
 	}
+}
+
+func (c *redisCache) GetClient() *redis.Client {
+	return c.client
+}
+
+func (c *redisCache) GetClusterClient() *redis.ClusterClient {
+	return c.clusterClient
 }
 
 var Global Cache
