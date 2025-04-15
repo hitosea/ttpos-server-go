@@ -8494,6 +8494,7 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 	signProduct := make(map[string]resp.Product)
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
+			res.AmountInfo.ProductNum += product.Num
 			// 只处理未送厨且非赠菜的商品
 			if product.Status != constant.SaleOrderProductStatusNormal {
 				continue
@@ -8507,7 +8508,6 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 				product.Num = p.Num + product.Num
 			}
 			signProduct[product.Sign] = product
-			res.AmountInfo.ProductNum += product.Num
 		}
 	}
 
