@@ -8778,7 +8778,7 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 		// 获取购物车信息
 		shopCart, err = s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
 		if err != nil {
-			return res, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
+			return res, errors.WithMessage(err, "获取点餐购物车信息: "+err.Error())
 		}
 	}
 
