@@ -305,7 +305,7 @@ type MemberRechargeOrder struct {
 func (model *MemberRechargeOrder) GetReceivableAmount() float64 {
 	payAmount := decimal.NewFromFloat(0)
 	payAmount = payAmount.Add(decimal.NewFromFloat(model.Amount))
-	payAmount = payAmount.Sub(decimal.NewFromFloat(model.RefundAmount))
+	payAmount = payAmount.Sub(decimal.NewFromFloat(model.RefundMoney))
 	return payAmount.InexactFloat64()
 }
 
