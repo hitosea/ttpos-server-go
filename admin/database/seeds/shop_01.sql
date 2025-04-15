@@ -573,6 +573,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_package` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐套餐ID',
     `name` TEXT DEFAULT NULL COMMENT '自助餐套餐名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
+    `actual_sale_num` DECIMAL(12, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加',
     `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序顺序',
     `tax_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '税收ID',
     `is_limit_time` INT(10) NOT NULL DEFAULT 0 COMMENT '是否限时, 0-否 1-是',

@@ -16,6 +16,9 @@ type IBuffetRepo interface {
 	GetBuffetInfo(opts ...DBOption) (model.BuffetPackage, error)                         // 获取自助餐详情
 	GetBuffetCustomerTypeInfo(opts ...DBOption) (model.BuffetCustomerType, error)        // 获取自助餐顾客类型详情
 	GetBuffetCustomerTypePrice(opts ...DBOption) (model.BuffetCustomerTypePrice, error)  // 获取自助餐顾客类型价格
+	UpdateBuffetInfo(buffet model.BuffetPackage) error                                   // 更新自助餐信息
+	AddActualSaleNum(buffetUuid uint64) error                                            // 更新自助餐销量
+	SubActualSaleNum(buffetUuid uint64) error                                            // 更新自助餐销量
 }
 
 func NewBuffetRepo(db *gorm.DB) IBuffetRepo {
@@ -148,4 +151,22 @@ func (r *BuffetRepoImpl) GetBuffetCustomerTypePrice(opts ...DBOption) (model.Buf
 
 	err := db.First(&buffetCustomerTypePrice).Error
 	return buffetCustomerTypePrice, errors.WithMessage(err)
+}
+
+// UpdateBuffetInfo 更新自助餐信息
+func (r *BuffetRepoImpl) UpdateBuffetInfo(buffet model.BuffetPackage) error {
+	if buffet.NoPrimaryKey() {
+		return errors.New("BuffetPackage不能没有ID或UUID")
+	}
+	return r.db.Model(&model.BuffetPackage{}).Select("*").Where("uuid = ?", buffet.Uuid).Updates(&buffet).Error
+}
+
+// AddActualSaleNum 更新自助餐销量
+func (r *BuffetRepoImpl) AddActualSaleNum(buffetUuid uint64) error {
+	return r.db.Model(&model.BuffetPackage{}).Where("uuid = ?", buffetUuid).Update("actual_sale_num", gorm.Expr("actual_sale_num + 1")).Error
+}
+
+// SubActualSaleNum 更新自助餐销量
+func (r *BuffetRepoImpl) SubActualSaleNum(buffetUuid uint64) error {
+	return r.db.Model(&model.BuffetPackage{}).Where("uuid = ?", buffetUuid).Update("actual_sale_num", gorm.Expr("actual_sale_num - 1")).Error
 }

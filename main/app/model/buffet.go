@@ -5,15 +5,16 @@ import "ttpos-server-go/app/dto/resp"
 // BuffetPackage 自助餐套餐信息表 ttpos_buffet_package
 type BuffetPackage struct {
 	BaseModel
-	Name                  string `gorm:"default:'';column:name;comment:'自助餐名称'"`
-	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:多语言名称ID"`
-	Sort                  uint   `gorm:"default:0;column:sort;comment:排序顺序"`
-	TaxUuid               uint64 `gorm:"default:0;column:tax_uuid;comment:税率ID"`
-	IsLimitTime           uint   `gorm:"default:0;column:is_limit_time;comment:是否限时, 0-否、1-是"`
-	LimitTime             uint   `gorm:"default:0;column:limit_time;comment:限时时间"`
-	CanCombined           uint   `gorm:"default:0;comment:是否可组合, 0-否、1-是"`
-	NonOrderingTime       uint   `gorm:"default:0;comment:不可下单时间（分钟）"`
-	ReminderOrderTime     uint   `gorm:"default:0;column:reminder_order_time;comment:提醒下单时间（分钟）"`
+	Name                  string  `gorm:"default:'';column:name;comment:'自助餐名称'"`
+	MultiLanguageNameUuid uint64  `gorm:"default:0;column:multi_language_name_uuid;comment:多语言名称ID"`
+	Sort                  uint    `gorm:"default:0;column:sort;comment:排序顺序"`
+	TaxUuid               uint64  `gorm:"default:0;column:tax_uuid;comment:税率ID"`
+	IsLimitTime           uint    `gorm:"default:0;column:is_limit_time;comment:是否限时, 0-否、1-是"`
+	LimitTime             uint    `gorm:"default:0;column:limit_time;comment:限时时间"`
+	CanCombined           uint    `gorm:"default:0;comment:是否可组合, 0-否、1-是"`
+	NonOrderingTime       uint    `gorm:"default:0;comment:不可下单时间（分钟）"`
+	ReminderOrderTime     uint    `gorm:"default:0;column:reminder_order_time;comment:提醒下单时间（分钟）"`
+	ActualSaleNum         float64 `gorm:"default:0;column:actual_sale_num;comment:实际销量"`
 
 	MultiLanguageName        MultiLanguageName         `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 	BuffetCustomerTypePrices []BuffetCustomerTypePrice `gorm:"foreignKey:buffet_package_uuid;references:uuid"`

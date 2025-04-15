@@ -2084,6 +2084,21 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 			}
 		}
 
+		// 更新自助餐销量
+		if saleBill.IsBuffetSaleBill() {
+			if saleBill.BuffetPackage1Uuid != 0 {
+				if err := repository.NewBuffetRepo(db).SubActualSaleNum(saleBill.BuffetPackage1Uuid); err != nil {
+					fmt.Println(err)
+					ctx.Log().Error("SubActualSaleNum", zap.Error(fmt.Errorf("%s %s", ctx.GetRequestUuid(), err)))
+				}
+			}
+			if saleBill.BuffetPackage2Uuid != 0 {
+				if err := repository.NewBuffetRepo(db).SubActualSaleNum(saleBill.BuffetPackage2Uuid); err != nil {
+					ctx.Log().Error("SubActualSaleNum", zap.Error(fmt.Errorf("%s %s", ctx.GetRequestUuid(), err)))
+				}
+			}
+		}
+
 		go func() {
 			// 发布“统计”操作事件
 			s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
@@ -6205,6 +6220,24 @@ func (s *orderSrv) FinishSaleBill(ctx context.Context, saleBill *model.SaleBill,
 			return err
 		}
 	}
+	// 更新自助餐销量
+	go func() {
+		db := ctx.GetDB()
+		if saleBill.IsFinish() && saleBill.IsBuffetSaleBill() {
+			if saleBill.BuffetPackage1Uuid != 0 {
+				if err := repository.NewBuffetRepo(db).AddActualSaleNum(saleBill.BuffetPackage1Uuid); err != nil {
+					fmt.Println(err)
+					ctx.Log().Error("AddActualSaleNum", zap.Error(fmt.Errorf("%s %s", ctx.GetRequestUuid(), err)))
+				}
+			}
+			if saleBill.BuffetPackage2Uuid != 0 {
+				if err := repository.NewBuffetRepo(db).AddActualSaleNum(saleBill.BuffetPackage2Uuid); err != nil {
+					ctx.Log().Error("AddActualSaleNum", zap.Error(fmt.Errorf("%s %s", ctx.GetRequestUuid(), err)))
+				}
+			}
+		}
+	}()
+	//
 	return nil
 }
 

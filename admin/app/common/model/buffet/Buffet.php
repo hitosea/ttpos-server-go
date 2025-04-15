@@ -103,7 +103,7 @@ class Buffet extends BaseModel
     }
     public function getSaleNumAttr($value, $data = [])
     {
-        return 0;
+        return (int)($data['actual_sale_num'] ?? 0);
     }
 
     /**
