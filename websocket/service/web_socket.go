@@ -26,6 +26,11 @@ var upgrader = websocket.Upgrader{
 // WsClients 存储所有的连接
 var WsClients []ConnectionInfo
 
+// 初始化函数，启动定时检查心跳超时的连接
+func init() {
+	go checkHeartbeatTimeout()
+}
+
 // Message represents a generic message structure
 type PushMessage struct {
 	Event string      `json:"event"`
@@ -134,12 +139,30 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 		return nil
 	}
 
-	// 断开之前的链接
+	// 允许一个设备最多存在两个连接，超过则清空之前的连接
+	// 计算当前设备的连接数量
+	connCount := 0
+	connIndexes := []int{}
 	for i, conn := range WsClients {
-		if conn.CompanyUuid == claims.CompanyUuid && conn.SourceClient == existsDevice.Source && conn.DeviceId == existsDevice.DeviceId && conn.ws != ws {
-			conn.ws.Close()
-			WsClients = slices.Delete(WsClients, i, i+1)
-			break
+		if conn.CompanyUuid == claims.CompanyUuid &&
+			conn.SourceClient == existsDevice.Source &&
+			conn.DeviceId == existsDevice.DeviceId &&
+			conn.ws != ws {
+			connCount++
+			connIndexes = append(connIndexes, i)
+		}
+	}
+
+	// 如果连接数量大于等于2，则清空之前的连接
+	if connCount >= 2 {
+		// 从后向前遍历，避免删除元素影响索引
+		for i := len(connIndexes) - 1; i >= 0; i-- {
+			index := connIndexes[i]
+			// 确保索引有效
+			if index >= 0 && index < len(WsClients) {
+				WsClients[index].ws.Close()
+				WsClients = slices.Delete(WsClients, index, index+1)
+			}
 		}
 	}
 
@@ -157,7 +180,10 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 	// 监听关闭事件以删除连接详细信息
 	ws.SetCloseHandler(func(code int, text string) error {
 		for i, conn := range WsClients {
-			if conn.CompanyUuid == claims.CompanyUuid && conn.SourceClient == existsDevice.Source && conn.DeviceId == existsDevice.DeviceId {
+			if conn.CompanyUuid == claims.CompanyUuid &&
+				conn.SourceClient == existsDevice.Source &&
+				conn.DeviceId == existsDevice.DeviceId &&
+				conn.ws == ws {
 				WsClients = slices.Delete(WsClients, i, i+1)
 				break
 			}
@@ -206,6 +232,17 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 
 	// 处理心跳消息
 	if clientMessage.Type == "heartbeat" {
+		// 更新心跳时间
+		for i, conn := range WsClients {
+			if conn.CompanyUuid == newConn.CompanyUuid &&
+				conn.SourceClient == newConn.SourceClient &&
+				conn.DeviceId == newConn.DeviceId &&
+				conn.ws == newConn.ws {
+				WsClients[i].LastHeartbeat = time.Now().Format(time.RFC3339)
+				break
+			}
+		}
+
 		isOnline := false
 		for _, conn := range WsClients {
 			if conn.DeviceId == newConn.DeviceId {
@@ -248,6 +285,37 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 			fmt.Printf("Error sending message to client: %v\n", err)
 		}
 		return
+	}
+}
+
+// checkHeartbeatTimeout 检查心跳超时的连接并断开
+func checkHeartbeatTimeout() {
+	// 每30秒检查一次
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		// 遍历所有连接
+		for i := len(WsClients) - 1; i >= 0; i-- {
+			// 确保索引有效
+			if i < len(WsClients) {
+				conn := WsClients[i]
+				// 解析最后心跳时间
+				lastHeartbeat, err := time.Parse(time.RFC3339, conn.LastHeartbeat)
+				if err != nil {
+					// 如果解析出错，可能是初始值或无效值，设置为当前时间
+					lastHeartbeat = time.Now()
+				}
+				// 检查是否超过2分钟没有心跳
+				if time.Since(lastHeartbeat) > 2*time.Minute {
+					fmt.Printf("断开超时2分钟没有心跳的连接: %s, 最后心跳时间: %s\n", conn.DeviceId, conn.LastHeartbeat)
+					// 关闭连接
+					conn.ws.Close()
+					// 从列表中移除
+					WsClients = slices.Delete(WsClients, i, i+1)
+				}
+			}
+		}
 	}
 }
 
