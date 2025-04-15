@@ -8537,7 +8537,6 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 	signProduct := make(map[string]resp.Product)
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
-			res.AmountInfo.ProductNum += product.Num
 			// 只处理未送厨且非赠菜的商品
 			if product.Status != constant.SaleOrderProductStatusNormal {
 				continue
@@ -8545,6 +8544,7 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 			if product.IsGift {
 				product.DiscountPrice = 0
 			}
+			res.AmountInfo.ProductNum += product.Num
 			// 合并相同商品的数量和折扣价格
 			if p, exists := signProduct[product.Sign]; exists {
 				product.DiscountPrice = utils.DecimalAdd(p.DiscountPrice, product.DiscountPrice)
