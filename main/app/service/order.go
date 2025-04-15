@@ -3578,40 +3578,15 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 						finish = false
 					}
 				}
-				if finish && isAutoAdd {
-					// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
-					repository.NewSaleBillRepo(s.dbm.GetDB(dbId)).UpdateSaleBillShowMustPlan(saleBillUuid)
+				if isAutoAdd {
+					if finish {
+						// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
+						repository.NewSaleBillRepo(s.dbm.GetDB(dbId)).UpdateSaleBillShowMustPlan(saleBillUuid)
+					}
+					return s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
 				} else {
 					productMustPlanList = &resp.ProductMustPlanList{
 						List: mustPlan.List,
-					}
-				}
-				if mustPlan.ShopCartInfo != nil {
-					// 自动加购后要重新获取一次必点信息，否则还是显示未自动加购前的信息
-					mustPlan, _, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum, option.H5AutoAdd, option.NoAutoAdd)
-					if err != nil {
-						ctx.Log().Info("获取桌台必点方案列表失败", zap.Error(errors.WithMessage(err)))
-					}
-					if mustPlan != nil {
-						finish := true
-						for _, mustPlan := range mustPlan.List {
-							// 如果必点方案中还有需要加购的商品，则显示必点方案
-							if mustPlan.NeedNum != 0 {
-								finish = false
-							}
-						}
-						if finish && isAutoAdd {
-							// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
-							repository.NewSaleBillRepo(s.dbm.GetDB(dbId)).UpdateSaleBillShowMustPlan(saleBillUuid)
-							productMustPlanList = &resp.ProductMustPlanList{
-								List: nil,
-							}
-						} else {
-							productMustPlanList = &resp.ProductMustPlanList{
-								List: mustPlan.List,
-							}
-						}
-						shopCartInfo.SaleOrderList = mustPlan.ShopCartInfo.SaleOrderList
 					}
 				}
 			}
