@@ -295,6 +295,36 @@ func (h *OrderHandler) RejectAllH5Order(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// GetShopOrderList 处理获取订单列表
+// @Summary 获取订单列表
+// @Description 获取订单列表
+// @Tags 商家端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.OrderListReq true "列表参数"
+// @Success 200 {object} resp.OrderListPaginationResp "订单列表"
+// @Failure 404 {object} nil "未找到"
+// @Router /shop/order/export [get]
+func (h *OrderHandler) ExportShopOrderList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	orderListReq := req.OrderListReq{}
+	if err := c.ShouldBindQuery(&orderListReq); err != nil {
+		helper.HandleValidationError(c, err, orderListReq, dto.PageReqMessage)
+		return
+	}
+	// 获取产品列表
+	res, err := h.service.ExportOrderLists(ctx, orderListReq)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterOrderHandlers 注册商家订单路由
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -322,6 +352,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	{
 		privateApi.GET("/order/list", wrapper.GetShopOrderList)
 		privateApi.GET("/order/info", wrapper.GetOrderInfo)
+		privateApi.GET("/order/export", wrapper.ExportShopOrderList)
 		privateApi.GET("/order/is_cell_close", wrapper.IsCellClose)
 		privateApi.GET("/order/return", wrapper.ReturnOrderInfo)
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)

@@ -28,6 +28,40 @@ class Operate extends Controller
      */
     public function export($dataType = 'all')
     {
+        $url = 'http://192.168.100.88:8080/api/v1/shop/order/export';
+        $data = $this->postData();
+        // 
+        $data['page'] = 1;
+        $data['list_rows'] = 1000;
+        $res = HttpHelp::getRequest($url, $this->buildListQueryParams($data), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        } 
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+        // 
+        foreach ($result['data']['list'] as $key => &$item) {
+            $item['finish_time'] = $item['finish_time'] ? date('Y-m-d H:i:s', $item['finish_time']) : '';
+            if ($item['sale_orders']) {
+                foreach ($item['sale_orders'] as $subKey => &$subItem) {
+                    $subItem['finish_time'] = $subItem['finish_time'] ? date('Y-m-d H:i:s', $subItem['finish_time']) : '';
+                }
+            }
+        }
+
+        //   // 导出excel文件
+        //   return (new Exportservice)->orderList($list);
+
+        dump($result['data']);
+        die;
+        //
+        return $this->renderSuccess('', $result['data']);
+
         $model = new OrderModel();
         $data = $this->postData();
         $data['shop_supplier_id'] = $this->store['user']['shop_supplier_id'];
@@ -43,6 +77,71 @@ class Operate extends Controller
             return $exportList;
         }
         return $this->renderError($model->getError() ?: '操作失败');
+    }
+
+    /**
+     * 构建列表查询参数
+     */
+    private function buildListQueryParams($data)
+    {
+        // 搜索日期类型: '0'-全部 '1'-今天 '2'-昨天 '3'-本周
+        $dateType = intval($data['time_type']) - 1;
+        // 搜索订单类型: ''-全部 '10'-桌台 '20-点餐
+        $billType = intval(trim($data['order_source'] ?? 0) ?: -1);
+        if ($billType == 10) {
+            $billType = 0;
+        }
+        if ($billType == 20) {
+            $billType = 1;
+        }
+        // 搜索订单号
+        $orderNo = $data['order_no'];
+        // 搜索用餐方式: ''-全部 '30'-打包 '40'-堂食
+        $diningMethod = intval(trim($data['style_id']) ?: -1);
+        if ($diningMethod == 30) {
+            $diningMethod = 1;
+        }
+        if ($diningMethod == 40) {
+            $diningMethod = 0;
+        }
+        // 搜索开台时间、支付时间
+        $enableCreateTime = false;
+        $enablePayTime = false;
+        $queryStartTime = 0;
+        $queryEndTime = 0;
+        $time = $data['time'] ?: [];
+        if (!empty($time)) {
+            $queryStartTime = strtotime($time[0]);
+            $queryEndTime = strtotime($time[1]) + 86399;
+            $timeMode = $data['time_mode'] ?: [];
+            if (in_array(0, $timeMode)) {
+                $enableCreateTime = true;
+            }
+            if (in_array(1, $timeMode)) {
+                $enablePayTime = true;
+            }
+        }
+        // 搜索订单状态
+        $status = [
+            'all' => -1,
+            'payment' => 0,
+            'complete' => 1,
+            'cancel' => 2,
+        ][$data['dataType']];
+
+        return [
+            'order_no' => $orderNo,
+            'bill_type' =>$billType,
+            'date_type' => $dateType,
+            'dining_method' => $diningMethod,
+            'status' => $status,
+            'page_no' => $data['page'] ?? 1,
+            'page_size' => $data['list_rows'] ?? 10,
+            'enable_create_time' => $enableCreateTime,
+            'enable_pay_time' => $enablePayTime,
+            'query_start_time' => $queryStartTime,
+            'query_end_time' => $queryEndTime,
+        ];
     }
 
     /**

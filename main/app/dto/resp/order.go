@@ -9,7 +9,7 @@ type CreateOrderResp struct {
 
 // BillListsOrder 账单列表订单响应
 type BillListsOrder struct {
-	SaleBillUuid  uint64         `json:"sale_bill_uuid"`  // 销售订单UUID
+	SaleBillUuid  uint64         `json:"sale_bill_uuid"`  // 销售账单UUID
 	SaleOrderUuid uint64         `json:"sale_order_uuid"` // 销售订单UUID
 	BillType      uint           `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
 	SerialNo      string         `json:"serial_no"`       // 桌位编号 (点餐流水号)
@@ -51,17 +51,17 @@ type BillLists struct {
 	Extra         BillListsExtra   `json:"extra,omitempty"` // 通过当前数据控制按钮是否显示
 }
 
-// OrderListPaginationResp 订单列表分页响应
-type OrderListPaginationResp struct {
-	List []BillLists   `json:"list"` // 订单列表
-	Meta OrderListMeta `json:"meta"` // Meta信息
-}
-
 type OrderListMeta struct {
 	dto.PageResponse
 	UnpaidNum   int64 `json:"unpaid_num"`   // 待付款数量
 	CompleteNum int64 `json:"complete_num"` // 已完成数量
 	CancelNum   int64 `json:"cancel_num"`   // 已取消数量
+}
+
+// OrderListPaginationResp 订单列表分页响应
+type OrderListPaginationResp struct {
+	List []BillLists   `json:"list"` // 订单列表
+	Meta OrderListMeta `json:"meta"` // Meta信息
 }
 
 type OrderInfoPayTypes struct {
@@ -242,4 +242,35 @@ type OrderBuffetResp struct {
 type DeskBuffetCustomerType struct {
 	Uuid    uint64 `json:"uuid"`     // 自助餐顾客类型uuid
 	MealNum uint   `json:"meal_num"` // 就餐人数
+}
+
+// ExportBillLists 订单列表响应
+type OrderExportInfo struct {
+	SaleBillUuid  uint64           `json:"sale_bill_uuid"`  // 销售账单UUID
+	SaleOrderUuid uint64           `json:"sale_order_uuid"` // 销售订单UUID,第一个销售订单的uuid
+	BillType      uint             `json:"bill_type"`       // 订单类型	0:桌台订单 1:点餐订单
+	IsSplit       bool             `json:"is_split"`        // 是否拆单	false:否 true:是
+	SerialNo      string           `json:"serial_no"`       // 桌位编号 (点餐流水号)
+	OrderNo       string           `json:"order_no"`        // 订单编号
+	Status        uint             `json:"status"`          // 订单状态 订单状态, 0-待付款、1-已完成、2-已取消
+	FinishTime    int64            `json:"finish_time"`     // 完成时间（支付时间）（时间戳）
+	OrderAmount   float64          `json:"order_amount"`    // 订单总金额
+	PaymentAmount float64          `json:"payment_amount"`  // 支付金额
+	PayTypeName   string           `json:"pay_type_name"`   // 支付类型名称
+	ConsumerUuids string           `json:"consumer_uuids"`  // 会员id
+	SaleOrders    []BillListsOrder `json:"sale_orders"`     // 订单列表
+	Extra         BillListsExtra   `json:"extra,omitempty"` // 通过当前数据控制按钮是否显示
+}
+
+type OrderExportMeta struct {
+	dto.PageResponse
+	UnpaidNum   int64 `json:"unpaid_num"`   // 待付款数量
+	CompleteNum int64 `json:"complete_num"` // 已完成数量
+	CancelNum   int64 `json:"cancel_num"`   // 已取消数量
+}
+
+// OrderListPaginationResp 订单列表分页响应
+type OrderExportListPaginationResp struct {
+	List []OrderExportInfo `json:"list"` // 订单列表
+	Meta OrderExportMeta   `json:"meta"` // Meta信息
 }
