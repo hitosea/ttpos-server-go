@@ -323,9 +323,6 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 			}
 		}
 	}
-	// 检查库存 todo 检查商品库存，避免前端商品列表未更新导致库存不足的商品被成功加购
-	// for _, productParam := range request.Products {
-	// }
 
 	// saleBill已经加入了新的商品，并且重新计算了价格
 	return saleBill, nil

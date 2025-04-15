@@ -3934,6 +3934,9 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if errFlavorProductBom != nil {
 			return nil, errFlavorProductBom
 		}
+		if flavorProductBom.GetStockNum() < float64(product.Num) {
+			return nil, errors.WithMessage(errors.New("库存不足"))
+		}
 
 		// 获取加料信息
 		sauceProductBoms := make(map[uint64]*model.ProductBom)
@@ -3944,6 +3947,9 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			}
 			for i, bom := range sauceProductBomList {
 				sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
+				if bom.GetStockNum() < float64(product.Num) {
+					return nil, errors.WithMessage(errors.New("加料库存不足"))
+				}
 			}
 		}
 
