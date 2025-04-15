@@ -226,7 +226,7 @@ class BindRecord extends BaseModel
             }
             $query = $query->where('source', '=', $source);
         }
-        $list = $query->with([ 'shopUser' ])->order(['create_time' => 'desc'])->select();
+        $list = $query->where('delete_time', '=', 0)->with([ 'shopUser' ])->order(['create_time' => 'desc'])->select();
         // 处理收银机是否有交班  is_cashier_shift 1-已交班 0-未交班
         foreach ($list as &$item) {
             if ($item['source'] == self::SOURCE_CASHIER) {
@@ -309,7 +309,9 @@ class BindRecord extends BaseModel
             // 点餐助手（暂无处理）
             if ($device['source'] == self::SOURCE_ASSISTANT) {
             }
-            $device->delete();
+            // 使用软删除而不是硬删除
+            $device->save(['delete_time' => time()]);
+            // 提交事务
             $this->commit();
             return true;
         } catch (\Exception $e) {

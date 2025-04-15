@@ -52,7 +52,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 	db := s.dbm.GetDB(addReq.CompanyUuid)
 	// 获取绑定
 	deviceRepo := repository.NewDeviceRepo(db)
-	existsDevice, _ := deviceRepo.GetDevice(deviceRepo.WhereSource(addReq.Source), deviceRepo.WhereSn(addReq.DeviceId))
+	existsDevice, _ := deviceRepo.GetDeviceAll(deviceRepo.WhereSource(addReq.Source), deviceRepo.WhereSn(addReq.DeviceId))
 	if existsDevice.ID != 0 {
 		productPrinterUuid := addReq.ProductPrinterUuid
 		if productPrinterUuid == 0 {
@@ -68,6 +68,7 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		}
 		// 更新绑定
 		err := deviceRepo.UpdateDevice(existsDevice.Uuid, map[string]any{
+			"delete_time":          0,
 			"product_printer_uuid": productPrinterUuid,
 			"remark":               remark,
 			"brand":                addReq.Brand,
