@@ -42,16 +42,20 @@ class CardRecord extends CardRecordModel
         }
 
         $list = $model->paginate($data) ?: [];
-        //
+
         foreach ($list as $key => &$item) {
-            $item['is_used'] = (new Card)->checkUserConsumeRecord($item['user_id'], $item['card_id']) ? 1 : 0;
+            if (sprintf("%.0f", $item['discount'])  == '100') {
+                $item['is_discount'] = 0;
+                $item['discount'] = 0.0;
+            }
+            $item['is_used'] = (new Card)->checkUserConsumeRecord($item['user_id'], $item['card_id'],  strtotime($item['create_time'])) ? 1 : 0;
             if ($item['delete_time'] == 0) {
                 $memberCard = (new MemberCard)->where('member_uuid', $item['member_uuid'])->find();
                 $item['expire_time'] = $memberCard['expire_time'] ?: 0;
-                $item['expire_time_text'] = date('Y-m-d', $memberCard['expire_time'] ?: 0);
+                $item['expire_time_text'] = $memberCard['expire_time'] ? date('Y-m-d', $memberCard['expire_time']) : __('永久有效');
             } else {
                 $item['expire_time'] = $item['expire'];
-                $item['expire_time_text'] = date('Y-m-d', $item['expire']);
+                $item['expire_time_text'] =  $item['expire'] ? date('Y-m-d', $item['expire']) : __('永久有效');
             }
             if (isset($item['user'])) {
                 $user = $list[$key]['user']->toArray();

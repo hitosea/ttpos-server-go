@@ -167,11 +167,12 @@ class Card extends BaseModel
     }
 
     // 检测用户是否有余额/积分消费记录
-    public function checkUserConsumeRecord($user_id, $card_id = 0)
+    public function checkUserConsumeRecord($user_id, $card_id = 0, $createTime = 0)
     {
-        if (!(new BalanceLogModel)->where('member_uuid', $user_id)->where('scene', BalanceLogSceneEnum::CONSUME)->findOrEmpty()->isEmpty()) {
+        // 发卡后有消费过
+        if (!(new BalanceLogModel)->where('member_uuid', $user_id)->where('scene', BalanceLogSceneEnum::CONSUME)->where('create_time', '>', $createTime)->findOrEmpty()->isEmpty()) {
             return true;
         }
-        return !(new PointsLogModel)->where('member_uuid', $user_id)->where('scene', PointsLogSceneEnum::CONSUME)->findOrEmpty()->isEmpty();
+        return !(new PointsLogModel)->where('member_uuid', $user_id)->where('scene', PointsLogSceneEnum::CONSUME)->where('create_time', '>', $createTime)->findOrEmpty()->isEmpty();
     }
 }
