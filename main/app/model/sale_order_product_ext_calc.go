@@ -318,7 +318,7 @@ func (model *SaleOrderProduct) calcServiceFee(price float64, serviceFeeRate floa
 	if taxFeeType == constant.TaxFeeTypeNone {
 		// 服务费=最终单价*服务费比例
 		serviceFee := decimal.NewFromFloat(price).Mul(decimal.NewFromFloat(serviceFeeRate))
-		return serviceFee.Truncate(2).InexactFloat64()
+		return serviceFee.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 默认商品不收取服务费
 	return 0
@@ -332,7 +332,7 @@ func (model *SaleOrderProduct) calcServiceTaxFee(price float64, serviceFeeRate f
 	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax && taxFeeType != constant.TaxFeeTypeNone {
 		// 服务费税费=订单商品服务费*商品消费税税率
 		serviceTaxFee := decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType)).Mul(decimal.NewFromFloat(model.TaxRate))
-		return serviceTaxFee.Truncate(3).Round(2).InexactFloat64()
+		return serviceTaxFee.Round(3).Round(2).InexactFloat64()
 	}
 	return 0
 }
@@ -372,19 +372,19 @@ func (model *SaleOrderProduct) calcTotalPrice(serviceFeeRate float64, taxFeeType
 			decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType))).Add(
 			decimal.NewFromFloat(model.calcTaxFee(price, taxFeeType))).Add(
 			decimal.NewFromFloat(model.calcServiceTaxFee(price, serviceFeeRate, taxFeeType, serviceFeeType)))
-		return totalPrice.InexactFloat64()
+		return totalPrice.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 当商品已含税时，单个商品最终应收金额=最终价格（折后价）+ 服务费 + 服务费税费
 	if taxFeeType == constant.TaxFeeTypeTax {
 		totalPrice := decimal.NewFromFloat(price).Add(
 			decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType))).Add(
 			decimal.NewFromFloat(model.calcServiceTaxFee(price, serviceFeeRate, taxFeeType, serviceFeeType)))
-		return totalPrice.InexactFloat64()
+		return totalPrice.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 如果不收取税费时，单个商品最终应收金额=最终价格（折后价）+ 服务费
 	totalPrice := decimal.NewFromFloat(price).Add(
 		decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType)))
-	return totalPrice.InexactFloat64()
+	return totalPrice.Truncate(3).Round(2).InexactFloat64()
 }
 
 // 计算单个商品最终应收金额（折前价）。
