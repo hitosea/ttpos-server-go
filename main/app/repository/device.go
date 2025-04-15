@@ -110,7 +110,7 @@ func (r *deviceRepo) WhereUuid(uuid uint64) DBOption {
 
 func (r *deviceRepo) GetBindCountBySource(source string) uint {
 	var count int64
-	r.db.Model(&model.Device{}).Where("source = ? AND finally_login_uuid > 0", source).Count(&count)
+	r.db.Model(&model.Device{}).Scopes(NotDeleted).Where("source = ? AND finally_login_uuid > 0", source).Count(&count)
 	return uint(count)
 }
 

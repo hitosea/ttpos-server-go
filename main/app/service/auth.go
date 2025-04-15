@@ -81,14 +81,10 @@ func NewAuthSrvImpl(
 		shiftSrv:      staffShiftSrv,
 		settingSrv:    settingSrv,
 
-		assistantRoutes: []string{ // 已登录点餐助手，但未绑定收银机可以不判断收银机状态的接口 ToDo 待完善
+		assistantRoutes: []string{ // 已登录点餐助手，但未绑定收银机可以不判断收银机状态的接口
 			"/api/v1/assistant/online_cashiers",
 			"/api/v1/assistant/bind_cashier",
-			//            '/index/getOnlineCashierList',
-			//            '/call/call/unprocessed',
-			//            '/store/table/table',
-			//            '/index/tablePing',
-			//            '/index/getAllProductImg'
+			"/api/v1/assistant/verify_lock_password",
 		},
 		tabletRoutes: []string{
 			"/api/v1/tablet/desk/list",
