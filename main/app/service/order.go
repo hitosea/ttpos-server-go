@@ -7488,6 +7488,20 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
+
+	// 点餐页面未创建销售账单时，但前端已显示出必点弹窗
+	if req.SaleBillUuid == 0 {
+		// 获取点餐的必选方案列表
+		mustPlanList, err := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, make(ro.MustPlanProductInfo))
+		if err != nil {
+			return false, nil, errors.WithMessage(err, "GetInstantMustPlanList failed")
+		}
+		if len(mustPlanList) == 0 {
+			return false, nil, errors.New("没有必点方案")
+		}
+		return false, &mustPlanList[0], nil
+	}
+
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 	if errSaleBill != nil {
