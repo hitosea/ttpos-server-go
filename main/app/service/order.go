@@ -1743,7 +1743,7 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
 			Num:                  saleOrderProduct.GetCanReturnNum(), // 可退货数量=订单商品数量-已退货数量
-			Price:                saleOrderProduct.Price,
+			Price:                saleOrderProduct.TotalPrice,
 			CanReturnAmount:      saleOrderProduct.GetCanReturnPrice(),
 			CurrencyUnit:         currencyUnit,
 		})
