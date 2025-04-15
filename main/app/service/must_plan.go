@@ -117,6 +117,11 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 
 				// 设置每个商品的已选数量
 				productPackageList[i].SelectedNum = num
+				if productPackageList[i].SelectedNum >= productPackageList[i].MustNum {
+					productPackageList[i].NeedNum = 0
+				} else {
+					productPackageList[i].NeedNum = productPackageList[i].MustNum - productPackageList[i].SelectedNum
+				}
 				// 如果必点方案是“每单必点1份”且“固定商品”
 				if plan.GetMustType() == constant.ProductMustPlanMustTypeEachOrder && plan.GetMustRule() == constant.ProductMustPlanMustRuleAll {
 					selectedNum += num
@@ -334,6 +339,11 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 			mustMap[productPackageUuid] = result
 			// 设置每个商品的已选数量
 			productPackages[i].SelectedNum = num
+			if productPackages[i].SelectedNum >= productPackages[i].MustNum {
+				productPackages[i].NeedNum = 0
+			} else {
+				productPackages[i].NeedNum = productPackages[i].MustNum - productPackages[i].SelectedNum
+			}
 		}
 
 		// 如果必点方案是可选商品
