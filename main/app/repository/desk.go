@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
@@ -149,6 +150,9 @@ func (r *deskRepo) GetSaleBillUuidAndSaleOrderUuid(deskUuid uint64) (uint64, uin
 		),
 	)
 	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return 0, 0, errors.WithMessage(errors.New("订单已结账"))
+		}
 		return 0, 0, errors.WithMessage(err)
 	}
 	if desk.SaleBill == nil {
