@@ -490,83 +490,106 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 	// 销售订单
 	for _, saleOrder := range saleBill.SaleOrders {
 		var (
-			productNum           int
-			giveNum              int
-			freeNum              int
-			refundNum            int
-			productPrice         decimal.Decimal
-			productSalePrice     decimal.Decimal
-			productTax           decimal.Decimal
-			serviceFee           decimal.Decimal
-			serviceTax           decimal.Decimal
-			freeAmount           decimal.Decimal
-			refundAmount         decimal.Decimal
-			paymentBalance       decimal.Decimal
-			discount             decimal.Decimal
-			refundTax            decimal.Decimal
-			refundServiceFee     decimal.Decimal
-			refundDiscount       decimal.Decimal
-			refundDiscountMember decimal.Decimal
-			refundFee            decimal.Decimal
+			orderProductNum           int
+			orderGiveNum              int
+			orderFreeNum              int
+			orderRefundNum            int
+			orderProductPrice         decimal.Decimal
+			orderProductSalePrice     decimal.Decimal
+			orderProductTax           decimal.Decimal
+			orderServiceFee           decimal.Decimal
+			orderServiceTax           decimal.Decimal
+			orderFreeAmount           decimal.Decimal
+			orderRefundAmount         decimal.Decimal
+			paymentBalance            decimal.Decimal
+			orderDiscount             decimal.Decimal
+			orderRefundTax            decimal.Decimal
+			orderRefundServiceFee     decimal.Decimal
+			orderRefundDiscount       decimal.Decimal
+			orderRefundDiscountMember decimal.Decimal
+			orderRefundFee            decimal.Decimal
+
+			isFree     bool = saleOrder.IsFree > 0
+			isStatFree bool = saleBill.SaleBillSetting.IsStatFree == 1
+			isSateGive bool = saleBill.SaleBillSetting.IsStatGift == 1
 		)
 
-		discount = decimal.NewFromFloat(saleOrder.CustomDiscountFee)
-
-		if saleBill.SaleBillSetting.IsStatGift == 0 {
-			discount = discount.Sub(decimal.NewFromFloat(saleOrder.GiftAmount))
-		} else {
-			productPrice = productPrice.Add(decimal.NewFromFloat(saleOrder.GiftAmount))
+		// 统计订单免单
+		if isFree {
+			orderFreeNum = 1
+			orderFreeAmount = decimal.NewFromFloat(saleOrder.GetAmount()).Round(2)
 		}
 
-		// 统计服务费
-		if saleOrder.IsFree > 0 {
-			// 如果免单计入服务费
-			if saleBill.SaleBillSetting.IsStatFree == 1 {
-				serviceFee = serviceFee.Add(decimal.NewFromFloat(saleOrder.ServiceFee))
-			}
-		} else {
-			serviceFee = serviceFee.Add(decimal.NewFromFloat(saleOrder.ServiceFee))
+		// 统计自定义优惠折扣
+		orderDiscount = decimal.NewFromFloat(saleOrder.CustomDiscountFee)
+
+		// 统计赠菜优惠折扣
+		if isSateGive && saleOrder.CustomDiscountFee == 0 {
+			orderDiscount = orderDiscount.Add(decimal.NewFromFloat(saleOrder.GiftAmount))
 		}
 
 		// 销售商品
 		for _, saleProduct := range saleOrder.SaleOrderProducts {
 			if saleProduct.CancelTime == 0 {
-				productNum += int(saleProduct.Num)
-				productSalePrice = productSalePrice.Add(decimal.NewFromFloat(saleProduct.SalePrice))
+				// 统计商品数量
+				productNum := int(saleProduct.Num)
+				orderProductNum += productNum
+
+				// 统计赠送商品数量
 				productGiveNum := 0
-				productFreeNum := 0
 				if saleProduct.GiftTime > 0 {
-					giveNum += int(saleProduct.Num)
 					productGiveNum = int(saleProduct.Num)
+					orderGiveNum += productGiveNum
 				}
-				unitPriceNoneTax := decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()).Round(2)
-				if saleOrder.IsFree > 0 {
+
+				// 统计免单商品数据
+				productFreeNum := 0
+				if isFree {
 					productFreeNum = int(saleProduct.Num)
-					if saleBill.SaleBillSetting.IsStatFree == 1 {
-						productPrice = productPrice.Add(unitPriceNoneTax)
-						productTax = productTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
-						serviceTax = serviceTax.Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee))
-						discount = discount.Add(productPrice).Add(productTax).Add(serviceFee).Add(serviceTax)
+				}
+
+				// 统计: 商品原价(不含税)、商品税、服务费、服务费税
+				productPrice := decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()).Round(2)
+				productTax := decimal.NewFromFloat(saleProduct.TaxFee)
+				productServiceFee := decimal.NewFromFloat(saleProduct.ServiceFee)
+				productServiceTax := decimal.NewFromFloat(saleProduct.ServiceTaxFee)
+				if isFree {
+					if isStatFree {
+						orderProductPrice = orderProductPrice.Add(productPrice)
+						orderProductTax = orderProductTax.Add(productTax)
+						orderServiceFee = orderServiceFee.Add(productServiceFee)
+						orderServiceTax = orderServiceTax.Add(productServiceTax)
+						orderDiscount = orderDiscount.Add(productPrice.Add(productTax).Add(productServiceFee).Add(productServiceTax))
 					}
 				} else {
-					productPrice = productPrice.Add(unitPriceNoneTax)
-					productTax = productTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
-					serviceTax = serviceTax.Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee))
+					orderProductPrice = orderProductPrice.Add(productPrice)
+					orderProductTax = orderProductTax.Add(productTax)
+					orderServiceFee = orderServiceFee.Add(productServiceFee)
+					orderServiceTax = orderServiceTax.Add(productServiceTax)
 				}
-				var bomUuid uint64
+
+				// 统计商品销售价
+				productSalePrice := decimal.NewFromFloat(saleProduct.SalePrice)
+				orderProductSalePrice = orderProductSalePrice.Add(productSalePrice)
+
+				// 保存商品BOM UUID
+				var productBomUuid uint64
 				for _, productBom := range saleProduct.SaleOrderProductBoms {
 					if productBom.IsFlavorBom == 1 {
-						bomUuid = productBom.ProductBomUuid
+						productBomUuid = productBom.ProductBomUuid
 					}
 				}
 
+				productRefundNum := 0
 				for _, refundProduct := range saleProduct.ReturnOrderProducts {
-					refundNum += int(refundProduct.Num)
-					refundTax = refundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
-					refundServiceFee = refundServiceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
-					refundDiscount = refundDiscount.Add(decimal.NewFromFloat(saleProduct.DiscountFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
-					refundDiscountMember = refundDiscountMember.Add(decimal.NewFromFloat(saleProduct.MemberDiscountFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					productRefundNum += int(refundProduct.Num)
+					orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					orderRefundServiceFee = orderRefundServiceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					orderRefundDiscount = orderRefundDiscount.Add(decimal.NewFromFloat(saleProduct.DiscountFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					orderRefundDiscountMember = orderRefundDiscountMember.Add(decimal.NewFromFloat(saleProduct.MemberDiscountFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
 				}
+
+				orderRefundNum += productRefundNum
 
 				products = append(products, model.StatisticsProduct{
 					SaleBillUuid:       saleBill.Uuid,
@@ -574,34 +597,31 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					DutyNo:             saleBill.DutyNo,
 					DeskUuid:           saleBill.DeskUuid,
 					ProductPackageUuid: saleProduct.ProductPackageUuid,
-					ProductBomUuid:     bomUuid,
-					ProductPrice:       unitPriceNoneTax.InexactFloat64(),
-					ProductSalePrice:   saleProduct.ProductPrice,
+					ProductBomUuid:     productBomUuid,
+					ProductPrice:       productPrice.InexactFloat64(),
+					ProductSalePrice:   productSalePrice.InexactFloat64(),
 					ProductFinalPrice:  saleProduct.Price,
-					ProductNum:         int(saleProduct.Num),
+					ProductNum:         productNum,
 					TaxRate:            saleProduct.TaxRate,
-					TaxFee:             saleProduct.TaxFee,
-					ServiceFee:         saleProduct.ServiceFee,
-					ServiceTax:         saleProduct.ServiceTaxFee,
+					TaxFee:             productTax.InexactFloat64(),
+					ServiceFee:         productServiceFee.InexactFloat64(),
+					ServiceTax:         productServiceTax.InexactFloat64(),
 					GiveNum:            productGiveNum,
 					FreeNum:            productFreeNum,
 					CompleteTime:       saleBill.FinishTime,
-					RefundNum:          refundNum,
+					RefundNum:          productRefundNum,
 				})
 			}
 		}
-		if saleOrder.IsFree > 0 {
-			freeNum = 1
-			freeAmount = decimal.NewFromFloat(saleOrder.GetAmount())
-		}
+
 		if saleOrder.GetCanReturnAmount() == 0 {
-			refundFee = decimal.NewFromFloat(saleOrder.PaymentCommissionFee)
+			orderRefundFee = decimal.NewFromFloat(saleOrder.PaymentCommissionFee)
 		}
 		// 支付订单
 		for _, salePayment := range saleOrder.PaymentOrders {
 			var paymentRefundAmount decimal.Decimal
 			for _, refundOrderAmount := range salePayment.ReturnOrderAmounts {
-				refundAmount = refundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
+				orderRefundAmount = orderRefundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
 				paymentRefundAmount = paymentRefundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
 			}
 			if salePayment.PaymentMethod != nil && salePayment.PaymentMethod.Code == 10 {
@@ -624,27 +644,27 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			DeskUuid:             saleBill.DeskUuid,
 			SaleOrderUuid:        saleOrder.Uuid,
 			MealNum:              int(saleBill.MealNum),
-			ProductPrice:         productPrice.InexactFloat64(),
-			ProductSalePrice:     productSalePrice.Round(2).InexactFloat64(),
-			ProductNum:           productNum,
-			ProductTax:           productTax.Round(2).InexactFloat64(),
-			ServiceFee:           serviceFee.Round(2).InexactFloat64(),
-			ServiceTax:           serviceTax.Round(2).InexactFloat64(),
-			Discount:             discount.Round(2).InexactFloat64(),
+			ProductPrice:         orderProductPrice.InexactFloat64(),
+			ProductSalePrice:     orderProductSalePrice.InexactFloat64(),
+			ProductNum:           orderProductNum,
+			ProductTax:           orderProductTax.InexactFloat64(),
+			ServiceFee:           orderServiceFee.InexactFloat64(),
+			ServiceTax:           orderServiceTax.InexactFloat64(),
+			Discount:             orderDiscount.InexactFloat64(),
 			DiscountMember:       saleOrder.MemberDiscountFee,
 			GiftAmount:           saleOrder.GiftAmount,
-			GiftNum:              giveNum,
-			FreeAmount:           freeAmount.Round(2).InexactFloat64(),
-			FreeNum:              freeNum,
+			GiftNum:              orderGiveNum,
+			FreeAmount:           orderFreeAmount.InexactFloat64(),
+			FreeNum:              orderFreeNum,
 			PaymentAmount:        saleOrder.PaymentAmount,
 			PaymentFee:           saleOrder.PaymentCommissionFee,
 			PaymentBalance:       paymentBalance.Round(2).InexactFloat64(),
-			RefundAmount:         refundAmount.Round(2).InexactFloat64(),
-			RefundTax:            refundTax.Round(2).InexactFloat64(),
-			RefundServiceFee:     refundServiceFee.Round(2).InexactFloat64(),
-			RefundDiscount:       refundDiscount.Round(2).InexactFloat64(),
-			RefundDiscountMember: refundDiscountMember.Round(2).InexactFloat64(),
-			RefundFee:            refundFee.Round(2).InexactFloat64(),
+			RefundAmount:         orderRefundAmount.Round(2).InexactFloat64(),
+			RefundTax:            orderRefundTax.Round(2).InexactFloat64(),
+			RefundServiceFee:     orderRefundServiceFee.Round(2).InexactFloat64(),
+			RefundDiscount:       orderRefundDiscount.Round(2).InexactFloat64(),
+			RefundDiscountMember: orderRefundDiscountMember.Round(2).InexactFloat64(),
+			RefundFee:            orderRefundFee.Round(2).InexactFloat64(),
 			CompleteTime:         saleBill.FinishTime,
 		}
 		sales = append(sales, sale)
