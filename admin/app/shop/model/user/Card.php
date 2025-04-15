@@ -3,7 +3,6 @@
 namespace app\shop\model\user;
 
 use app\common\library\helper;
-use app\common\model\user\CardRecord;
 use app\common\model\user\MemberCard;
 use app\common\model\user\Card as CardModel;
 use app\shop\model\user\CardRecord as CardRecordModel;
@@ -136,7 +135,7 @@ class Card extends CardModel
     public function cancel($data)
     {
         $CardRecordModel = new CardRecordModel;
-        $detail = $CardRecordModel::where('id', '=', $data['order_id'])->find();
+        $detail = $CardRecordModel::with(['card'])->where('id', '=', $data['order_id'])->find();
         //
         if (!$detail || $detail['delete_time'] != 0) {
             $this->error = "记录不存在";
@@ -157,14 +156,14 @@ class Card extends CardModel
             /** @var User $user */
             $user?->setMemberCardId(0);
             // 撤销积分
-            if ($detail['open_point'] && $detail['open_point_num']) {
-                $user->setIncPoints(-$detail['open_point_num'], '撤销会员卡减少积分');
+            if ($detail['card']['open_point'] && $detail['card']['open_point_num']) {
+                $user->setIncPoints(-$detail['card']['open_point_num'], '撤销会员卡减少积分');
             }
-            if ($detail['open_money'] && $detail['open_money_num']) {
+            if ($detail['card']['open_money'] && $detail['card']['open_money_num']) {
                 BalanceLogModel::add(BalanceLogSceneEnum::ADMIN, [
                     'member_uuid' => $user['user_id'],
-                    'money' => -$detail['open_money_num'],
-                    'gift_money' => -$detail['open_money_num'], // v1.0.8影响到赠送余额，而且不是主账户
+                    'money' => -$detail['card']['open_money_num'],
+                    'gift_money' => -$detail['card']['open_money_num'], // v1.0.8影响到赠送余额，而且不是主账户
                 ], ['order_no' => '撤销会员卡减少余额']);
             }
 

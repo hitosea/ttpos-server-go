@@ -512,16 +512,20 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			isFree     bool = saleOrder.IsFree > 0
 			isStatFree bool = saleBill.SaleBillSetting.IsStatFree == 1
 			isSateGive bool = saleBill.SaleBillSetting.IsStatGift == 1
+			isFeeType  bool = saleBill.SaleBillSetting.TaxFeeType == 2
 		)
+
+		// 统计自定义优惠折扣
+		orderDiscount = decimal.NewFromFloat(saleOrder.CustomDiscountFee)
 
 		// 统计订单免单
 		if isFree {
 			orderFreeNum = 1
 			orderFreeAmount = decimal.NewFromFloat(saleOrder.GetAmount()).Round(2)
+			if isStatFree {
+				orderDiscount = orderDiscount.Add(decimal.NewFromFloat(saleOrder.Amount))
+			}
 		}
-
-		// 统计自定义优惠折扣
-		orderDiscount = decimal.NewFromFloat(saleOrder.CustomDiscountFee)
 
 		// 统计赠菜优惠折扣
 		if isSateGive && saleOrder.CustomDiscountFee == 0 {
@@ -548,8 +552,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					productFreeNum = int(saleProduct.Num)
 				}
 
-				// 统计: 商品原价(不含税)、商品税、服务费、服务费税
-				productPrice := decimal.NewFromFloat(saleProduct.GetUnitPriceNoneTax()).Round(2)
+				// 统计: 商品定价(折扣前)、商品税、服务费、服务费税
+				productPrice := decimal.NewFromFloat(saleProduct.SalePrice)
+				if isFeeType {
+					productPrice = productPrice.Sub(decimal.NewFromFloat(saleProduct.TaxFee))
+				}
 				productTax := decimal.NewFromFloat(saleProduct.TaxFee)
 				productServiceFee := decimal.NewFromFloat(saleProduct.ServiceFee)
 				productServiceTax := decimal.NewFromFloat(saleProduct.ServiceTaxFee)
@@ -559,7 +566,6 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 						orderProductTax = orderProductTax.Add(productTax)
 						orderServiceFee = orderServiceFee.Add(productServiceFee)
 						orderServiceTax = orderServiceTax.Add(productServiceTax)
-						orderDiscount = orderDiscount.Add(productPrice.Add(productTax).Add(productServiceFee).Add(productServiceTax))
 					}
 				} else {
 					orderProductPrice = orderProductPrice.Add(productPrice)
