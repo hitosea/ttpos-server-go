@@ -41,6 +41,9 @@ func ErrorWithDetail(c *gin.Context, code int, err error) {
 
 // ErrorWithData 返回错误携带数据
 func ErrorWithData(c *gin.Context, code int, data interface{}, err error) {
+	if config.Server.Mode == constant.ServerModeRelease {
+		err = pkgerrors.Cause(err)
+	}
 	messages := []string{err.Error()}
 	var appErr errors.AppError
 	if pkgerrors.As(err, &appErr) {
@@ -49,7 +52,7 @@ func ErrorWithData(c *gin.Context, code int, data interface{}, err error) {
 			messages = append(messages, appErr.Replace...)
 		}
 	}
-	FailWithData(c, code, data, messages...)
+	FailWithData(c, code, data, nil, messages...)
 }
 
 // Success 返回成功
@@ -84,23 +87,12 @@ func Fail(c *gin.Context, code int, message ...string) {
 	})
 }
 
-func ResponseFail(c *gin.Context, code int, err error) {
-	var appErr errors.AppError
-	bizCode := 0
-	if pkgerrors.As(err, &appErr) {
-		bizCode = appErr.GetCode()
-	}
-	msg := i18n.Translate(i18n.GetAcceptLanguage(c), err.Error())
-	c.JSON(code, dto.Response{
-		Code:    bizCode,
-		Message: msg,
-		Data:    gin.H{},
-	})
-}
-
 // FailWithData 返回失败携带数据
-func FailWithData(c *gin.Context, code int, data interface{}, message ...string) {
+func FailWithData(c *gin.Context, code int, data interface{}, err error, message ...string) {
 	msg := "fail"
+	if err != nil && config.Server.Mode == constant.ServerModeRelease {
+		msg = pkgerrors.Cause(err).Error()
+	}
 	if len(message) == 1 {
 		msg = i18n.Translate(i18n.GetAcceptLanguage(c), message[0])
 	} else if len(message) > 1 {

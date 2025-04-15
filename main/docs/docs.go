@@ -13455,6 +13455,37 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/order/reject_all": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "拒单商家的所有待接单h5订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.订单"
+                ],
+                "summary": "拒单商家的所有待接单h5订单",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/shop/order/return": {
             "get": {
                 "security": [

@@ -505,7 +505,7 @@ func (h *InstantHandler) OrderCartProductCooking(c *gin.Context) {
 		return
 	}
 	if errRes != nil {
-		helper.FailWithData(c, errRes.Code, errRes.OrderCheckRes, constant.ParseCodeOrderCheck(errRes.Code))
+		helper.FailWithData(c, errRes.Code, errRes.OrderCheckRes, nil, constant.ParseCodeOrderCheck(errRes.Code))
 		return
 	}
 	ctx.Log().Debug("送厨购物车商品成功", zap.Any("res", res))
@@ -975,7 +975,7 @@ func (h *InstantHandler) OrderCheck(c *gin.Context) {
 	}
 	if checkRes != nil {
 		ctx.Log().Debug("送厨检查不通过", zap.Any("res", checkRes))
-		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, constant.ParseCodeOrderCheck(checkRes.Code))
+		helper.FailWithData(c, checkRes.Code, checkRes.OrderCheckRes, nil, constant.ParseCodeOrderCheck(checkRes.Code))
 		return
 	}
 	ctx.Log().Debug("订单检查成功")
@@ -1096,7 +1096,7 @@ func (h *InstantHandler) OrderUseMember(c *gin.Context) {
 		return
 	}
 	if isCustomAmountAndZero {
-		helper.FailWithData(c, constant.CodeMemberWarn, res, "改价/抹零已失效，请重新进行改价/抹零操作")
+		helper.FailWithData(c, constant.CodeMemberWarn, res, nil, "改价/抹零已失效，请重新进行改价/抹零操作")
 		return
 	}
 	helper.Success(c, res)

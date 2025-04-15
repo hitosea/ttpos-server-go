@@ -165,13 +165,13 @@ func (h *OrderHandler) IsCellClose(c *gin.Context) {
 	if params.DeskUuid > 0 {
 		_, productList, err = h.deskService.IsCellCloseDesk(ctx, params.DeskUuid)
 		if productList != nil {
-			helper.FailWithData(c, constant.CodeOrderCheckProductCooking, &productList, err.Error())
+			helper.FailWithData(c, constant.CodeOrderCheckProductCooking, &productList, err)
 			return
 		}
 	} else if params.SaleBillUuid > 0 {
 		productList, err = h.deskService.IsCellCloseInstant(ctx, params.SaleBillUuid)
 		if productList != nil {
-			helper.FailWithData(c, constant.CodeOrderCheckProductCooking, &productList, err.Error())
+			helper.FailWithData(c, constant.CodeOrderCheckProductCooking, &productList, err)
 			return
 		}
 	} else {

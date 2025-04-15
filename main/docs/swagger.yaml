@@ -13578,6 +13578,25 @@ paths:
       summary: 重新退款
       tags:
       - 商家端.订单
+  /shop/order/reject_all:
+    post:
+      consumes:
+      - application/json
+      description: 拒单商家的所有待接单h5订单
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 拒单商家的所有待接单h5订单
+      tags:
+      - 商家端.订单
   /shop/order/return:
     get:
       consumes:
