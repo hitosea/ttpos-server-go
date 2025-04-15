@@ -115,7 +115,7 @@ func (r *deviceRepo) GetBindCountBySource(source string) uint {
 }
 
 func (r *deviceRepo) UpdateDevice(uuid uint64, vars map[string]interface{}) error {
-	return r.db.Model(&model.Device{}).Debug().Where("uuid = ?", uuid).Updates(vars).Error
+	return r.db.Model(&model.Device{}).Where("uuid = ?", uuid).Updates(vars).Error
 }
 
 func (r *deviceRepo) CreateDevice(device model.Device) (model.Device, error) {

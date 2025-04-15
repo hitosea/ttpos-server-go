@@ -36,7 +36,7 @@ func (r *MemberBalanceLogRepo) Create(log model.MemberBalanceLog) (model.MemberB
 // ReverseSettleDelete 反结账时删除充值记录
 func (r *MemberBalanceLogRepo) ReverseSettleDelete(memberUuid uint64, saleOrderUuid uint64, scene int) error {
 	return r.db.Model(&model.MemberBalanceLog{}).
-		Where("member_uuid = ? AND related_uuid = ? AND scene = ?", memberUuid, saleOrderUuid, scene).Debug().
+		Where("member_uuid = ? AND related_uuid = ? AND scene = ?", memberUuid, saleOrderUuid, scene).
 		Updates(map[string]any{
 			"delete_time": time.Now().Unix(),
 		}).Error

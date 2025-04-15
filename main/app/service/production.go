@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -61,11 +60,13 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	for _, limitedProduct := range limitedProducts {
 		uuids = append(uuids, limitedProduct.SaleBillUuid)
 	}
-	products, err := productionRepo.GetProducts(cookingStatus, inProductPackageUuids, productionRepo.WhereProductSaleBillUuidIn(uuids), productionRepo.WithSaleBill())
+	products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc,
+		cookingStatus, inProductPackageUuids, productionRepo.WhereProductSaleBillUuidIn(uuids))
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}
-	finishedList, err := s.getLatestFinishedList(productionRepo, inProductPackageUuids)
+	cookedStatus := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished)
+	finishedList, err := s.getLatestFinishedList(productionRepo, cookedStatus, inProductPackageUuids)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}
@@ -130,9 +131,9 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 		uuids = append(uuids, product.FirstCategoryUuid)
 	}
 
-	products, err := productionRepo.GetProducts(cookingStatus, inProductPackageUuids,
-		productionRepo.WhereProductFirstCategoryUuidIn(uuids), productionRepo.WithProductCategory(),
-		productionRepo.WithProductCategoryMultiLanguageName(), productionRepo.WithSaleBill())
+	products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc,
+		cookingStatus, inProductPackageUuids, productionRepo.WhereProductFirstCategoryUuidIn(uuids),
+		productionRepo.WithProductCategory(), productionRepo.WithProductCategoryMultiLanguageName())
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
 	}
@@ -150,8 +151,8 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 			}
 			var item resp.ProductionItem
 			copier.Copy(&item, product)
-			json.Unmarshal([]byte(product.FlavorName), &item.LocaleName)
-			json.Unmarshal([]byte(product.ProductAttributeNames), &item.ProductAttributeNames)
+			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
+			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
 			item.SerialNo = product.SaleBill.SerialNo
 			item.DiningMethod = product.SaleBill.DiningMethod
 			items = append(items, item)
@@ -164,7 +165,8 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 		}
 		groups = append(groups, group)
 	}
-	finishedList, err := s.getLatestFinishedList(productionRepo, inProductPackageUuids)
+	cookedStatus := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished)
+	finishedList, err := s.getLatestFinishedList(productionRepo, cookedStatus, inProductPackageUuids)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
 	}
@@ -181,7 +183,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 
 // 最近上菜历史
 func (s *productionSrv) getLatestFinishedList(repo repository.IProductionOrderRepo, opts ...repository.DBOption) (resp.ProductionList, error) {
-	products, err := repo.GetFinishedLimitProducts(3, opts...)
+	products, err := repo.GetProducts(3, repository.FinishedTimeDesc, opts...)
 	if err != nil {
 		return resp.ProductionList{}, errors.ErrInternal
 	}
@@ -189,7 +191,7 @@ func (s *productionSrv) getLatestFinishedList(repo repository.IProductionOrderRe
 	for _, product := range products {
 		var item resp.ProductionItem
 		copier.Copy(&item, product)
-		json.Unmarshal([]byte(product.FlavorName), &item.LocaleName)
+		item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 		item.SerialNo = product.SaleBill.SerialNo
 		item.DiningMethod = product.SaleBill.DiningMethod
 		items = append(items, item)
@@ -210,7 +212,8 @@ func (s *productionSrv) GetHistory(ctx context.Context) (resp.ProductionHistory,
 		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)
 	}
 
-	products, err := productionRepo.GetProducts(statusOption, finishedTimeOption, productionRepo.WhereProductHistoryCondition(), productionRepo.WithSaleBill())
+	products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc,
+		statusOption, finishedTimeOption, productionRepo.WhereProductHistoryCondition())
 	if err != nil {
 		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)
 	}
@@ -247,14 +250,8 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 			if err != nil {
 				logger.Logger.Error("copier error", zap.Error(err))
 			}
-			err = json.Unmarshal([]byte(product.FlavorName), &item.LocaleName)
-			if err != nil {
-				logger.Logger.Error("json unmarshal error", zap.Error(err))
-			}
-			err = json.Unmarshal([]byte(product.ProductAttributeNames), &item.ProductAttributeNames)
-			if err != nil {
-				logger.Logger.Error("json unmarshal error", zap.Error(err))
-			}
+			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
+			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
 			item.SerialNo = product.SaleBill.SerialNo
 			item.DiningMethod = product.SaleBill.DiningMethod
 			items = append(items, item)

@@ -2,7 +2,6 @@ package repository
 
 import (
 	"fmt"
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -15,8 +14,7 @@ type IProductionOrderRepo interface {
 	CreateProductionOrder(order *model.ProductionOrder) error                                                                // 创建生产订单
 	GetLimitedProducts(column string, pageNo, pageSize int, opts ...DBOption) ([]model.ProductionOrderProduct, int64, error) // 分页获取账单ID、分类ID
 	GetLimitedHistoryProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error)                                      // 历史获取销售账单Uuid
-	GetProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error)                                                    // 获取生产订单商品
-	GetFinishedLimitProducts(limit int, opts ...DBOption) ([]model.ProductionOrderProduct, error)                            // 获取完成的生产订单商品
+	GetProducts(limit int, orderBy string, opts ...DBOption) ([]model.ProductionOrderProduct, error)                         // 获取生产订单商品
 	WhereProductStatus(status uint) DBOption                                                                                 // 生产商品状态
 	WhereProductPackageUuidIn(uuids []uint64) DBOption                                                                       // 商品ID条件
 	WhereProductFinishedTime(finishedTime int64) DBOption                                                                    // 生产商品完成时间条件
@@ -25,7 +23,6 @@ type IProductionOrderRepo interface {
 	WhereProductSaleBillUuidIn(uuids []uint64) DBOption                                                                      // 生产商品销售账单uuid条件
 	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption                                                                 // 生产商品分类Uuid条件
 	WhereProductHistoryCondition() DBOption                                                                                  // 历史上菜条件
-	WithSaleBill() DBOption                                                                                                  // 关联销售账单
 	WithProductCategory() DBOption                                                                                           // 关联商品分类
 	WithProductCategoryMultiLanguageName() DBOption                                                                          // 关联商品分类多语言
 	UpdateProduct(opts []DBOption, vars map[string]any) error                                                                // 更新送厨商品
@@ -75,28 +72,33 @@ func (r *productionRepo) GetProduct(opts ...DBOption) (*model.ProductionOrderPro
 	return &product, nil
 }
 
-func (r *productionRepo) GetProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error) {
-	var productionOrderProducts []model.ProductionOrderProduct
-	db := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted)
-	for _, opt := range opts {
-		db = opt(db)
-	}
-	result := db.Order("create_time asc").Debug().Find(&productionOrderProducts)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return productionOrderProducts, nil
-}
+const (
+	CreateTimeAsc    string = "create_time asc"
+	FinishedTimeDesc string = "finished_time desc"
+)
 
-func (r *productionRepo) GetFinishedLimitProducts(limit int, opts ...DBOption) ([]model.ProductionOrderProduct, error) {
+func (r *productionRepo) GetProducts(limit int, orderBy string, opts ...DBOption) ([]model.ProductionOrderProduct, error) {
 	var productionOrderProducts []model.ProductionOrderProduct
 	db := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	result := db.Preload("SaleBill").
-		Where("status = ?", constant.ProductionOrderProductStatusFinished).
-		Order("finished_time desc").Limit(limit).Debug().Find(&productionOrderProducts)
+	db.Preload("SaleBill").
+		Preload("SaleOrderProduct").
+		Preload("SaleOrderProduct.MultiLanguageName").
+		Preload("SaleOrderProduct.SaleOrderProductBoms").
+		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom").
+		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor").
+		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName").
+		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductSauce").
+		Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName").
+		Preload("SaleOrderProduct.SaleOrderProductAttributes").
+		Preload("SaleOrderProduct.SaleOrderProductAttributes.ProductAttribute").
+		Preload("SaleOrderProduct.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName").Order(orderBy)
+	if limit > 0 {
+		db.Limit(limit)
+	}
+	result := db.Find(&productionOrderProducts)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -120,12 +122,12 @@ func (r *productionRepo) GetLimitedProducts(column string, pageNo, pageSize int,
 		db = opt(db)
 	}
 	// 获取总数
-	err := db.Select(fmt.Sprintf("count(distinct `%s`) as total", column)).Debug().Scan(&total).Error
+	err := db.Select(fmt.Sprintf("count(distinct `%s`) as total", column)).Scan(&total).Error
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
 	// 获取列表
-	err = db.Select("DISTINCT " + column).Offset((pageNo - 1) * pageSize).Limit(pageSize).Debug().Order("create_time asc").Find(&productionOrderProducts).Error
+	err = db.Select("DISTINCT " + column).Offset((pageNo - 1) * pageSize).Limit(pageSize).Order("create_time asc").Find(&productionOrderProducts).Error
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
