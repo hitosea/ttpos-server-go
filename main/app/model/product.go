@@ -187,13 +187,16 @@ func (model *ProductPackage) IsSaleout() bool {
 func (model *ProductPackage) GetStockNum() int {
 	stockNum := 0
 	for index, bom := range model.ProductBoms {
-		if index == 0 {
-			stockNum = int(bom.StockNum)
+		if bom.IsSauce() {
 			continue
 		}
-		// 取库存最小的一个
-		if bom.StockNum < float64(stockNum) {
-			stockNum = int(bom.StockNum)
+		if index == 0 {
+			stockNum = int(bom.GetStockNum())
+			continue
+		}
+		// 取库存最大的一个
+		if bom.GetStockNum() > float64(stockNum) {
+			stockNum = int(bom.GetStockNum())
 		}
 	}
 	return stockNum

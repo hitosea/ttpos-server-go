@@ -7565,6 +7565,24 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 }
 
 func planProductSaleout(ctx context.Context, plan *resp.InstantProductMustPlan) (bool, error) {
+	// 如果是可选商品. 只有必点方案的所有商品都无库存时才返回true
+	if plan.MustRule == constant.ProductMustPlanMustRuleAny {
+		isSaleOut := true
+		for _, product := range plan.Products.List {
+			// 未满足必点的商品包
+			productPackage, err := repository.NewProductPackageRepo(ctx.GetDB()).GetProductPackageBoms(product.Product.Uuid)
+			if err != nil {
+				return false, errors.WithMessage(err)
+			}
+			sisSaleOut := productPackage.IsSaleout()
+			if !sisSaleOut {
+				isSaleOut = false
+				break
+			}
+		}
+		// 可选商品. 只有必点方案的所有商品都无库存时才返回true
+		return isSaleOut, nil
+	}
 	if len(plan.Products.List) == 0 {
 		return false, nil
 	}
