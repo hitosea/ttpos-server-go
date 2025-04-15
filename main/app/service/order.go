@@ -1300,6 +1300,9 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	// 获取订单信息
 	billInfo, err := s.IsCellCancelOrder(ctx, req.SaleBillUuid)
 	if err != nil {
+		if err.Error() == "订单已结账" && ctx.GetSource() == constant.SourceCashier {
+			return errors.New("当前订单已被部分支付，不支持撤销拆单")
+		}
 		return errors.WithMessage(err)
 	}
 	if billInfo.ID == 0 {
