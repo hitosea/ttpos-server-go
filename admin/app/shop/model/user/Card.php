@@ -141,7 +141,7 @@ class Card extends CardModel
             $this->error = "记录不存在";
             return false;
         }
-        if ($this->checkUserConsumeRecord($detail['user_id'], $detail['card_id'])) {
+        if ($this->checkUserConsumeRecord($detail['member_uuid'], $detail['card_id'], strtotime($detail['create_time']))) {
             $this->error = "会员卡已使用，无法撤销";
             return false;
         }
