@@ -166,7 +166,7 @@ func (model *SaleOrderProduct) GetMemberDiscountFee() float64 {
 }
 
 func (model *SaleOrderProduct) GetCustomDiscountFee() float64 {
-	return decimal.NewFromFloat(model.CustomDiscountFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+	return decimal.NewFromFloat(model.CustomDiscountFee).Mul(decimal.NewFromUint64(uint64(model.Num))).Truncate(3).Round(2).InexactFloat64()
 }
 
 // 获取销售订单商品的未含税价格。

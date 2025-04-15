@@ -506,7 +506,7 @@ func (model *SaleOrder) calcSumOrderBuffetCustomerCustomDiscountFee() float64 {
 }
 
 // 计算已送厨商品的销售订单的自定义优惠折扣金额。
-// 没有整单改价时，订单自定义优惠金额=销售订单商品自定义优惠金额之和 + 自助餐顾客自定义优惠金额之和 + 订单抹零金额 + 赠菜商品的金额之和
+// 没有整单改价时，订单自定义优惠金额=销售订单商品金额（折前价）- 销售订单商品金额（折后价）- 会员折扣金额 + 订单抹零金额 + 赠菜商品的金额之和 。 总的优惠金额= 销售订单商品金额（折前价）- 销售订单商品金额（折后价）。这样计算的原因是避免四舍五入引起的误差问题
 // 有整单改价时，订单自定义优惠金额=销售订单应收金额 - 整单改价金额
 func (model *SaleOrder) calcCustomDiscountFee(products []*SaleOrderProduct, amount float64) float64 {
 	// 有整单改价时, 订单自定义优惠金额=销售订单应收金额 - 整单改价金额
@@ -514,18 +514,22 @@ func (model *SaleOrder) calcCustomDiscountFee(products []*SaleOrderProduct, amou
 		return decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(model.CustomAmount)).Truncate(3).Round(2).InexactFloat64()
 	}
 	customDiscountFee := decimal.NewFromFloat(0)
-	// 销售订单商品自定义优惠金额之和
-	sumOrderProductCustomDiscountFee := model.calcSumOrderProductCustomDiscountFee(products)
-	// 自助餐顾客自定义优惠金额之和
-	sumOrderBuffetCustomerCustomDiscountFee := model.calcSumOrderBuffetCustomerCustomDiscountFee()
+	// 销售订单商品金额（折前价）
+	productOriginalAmount := model.ProductOriginalAmount
+	// 销售订单商品金额（折后价）
+	productAmount := model.ProductAmount
+	// 会员折扣金额
+	memberDiscountFee := model.MemberDiscountFee
+	// 总折扣 = 销售订单商品金额（折前价）- 销售订单商品金额（折后价） = 会员折扣 + 优惠折扣
+	// 优惠折扣 = 销售订单商品金额（折前价）- 销售订单商品金额（折后价）- 会员折扣
+	discount := productOriginalAmount - productAmount - memberDiscountFee
 	// 订单抹零金额
 	zeroFee := model.calcZeroFee(amount)
 	// 赠菜商品的金额之和
 	sumGiftAmount := model.CalcGiftAmount(products)
-	// 优惠折扣金额 = 销售订单商品自定义折扣优惠金额之和 + 自助餐顾客自定义折扣优惠金额之和 + 订单抹零金额 + 赠菜商品的金额之和
+	// 订单自定义优惠金额=销售订单商品金额（折前价）- 销售订单商品金额（折后价）- 会员折扣金额 + 订单抹零金额 + 赠菜商品的金额之和
 	customDiscountFee = customDiscountFee.Add(
-		decimal.NewFromFloat(sumOrderProductCustomDiscountFee)).Add(
-		decimal.NewFromFloat(sumOrderBuffetCustomerCustomDiscountFee)).Add(
+		decimal.NewFromFloat(discount)).Add(
 		decimal.NewFromFloat(zeroFee)).Add(
 		decimal.NewFromFloat(sumGiftAmount))
 	return customDiscountFee.InexactFloat64()

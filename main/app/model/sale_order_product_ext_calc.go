@@ -193,7 +193,7 @@ func (model *SaleOrderProduct) calcMemberDiscountFee() float64 {
 	discount := decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(memberDiscountRate))
 	// 商品销售价 *（1-会员折扣率）
 	memberDiscountFee := decimal.NewFromFloat(model.calcSalePrice()).Mul(discount)
-	return memberDiscountFee.InexactFloat64()
+	return memberDiscountFee.Truncate(3).Round(2).InexactFloat64()
 }
 
 // 当有会员折扣时，自定义折扣费  = 会员折扣价-会员折扣价*自定义折扣率 = 会员折扣价*（1-自定义折扣率）=（商品销售价-会员折扣费）*（1-自定义折扣率）；
@@ -216,7 +216,7 @@ func (model *SaleOrderProduct) calcCustomDiscountFee() float64 {
 	discount := decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(customDiscountRate))
 	// 会员折扣价*（1-自定义折扣率）
 	customDiscountFee := memberDiscountPrice.Mul(discount)
-	return customDiscountFee.InexactFloat64()
+	return customDiscountFee.Truncate(3).Round(2).InexactFloat64()
 }
 
 // 计算某规格商品未含税原价。当商品未含税时，未含税原价=商品原价；当商品已含税时，未含税原价=某规格商品原价/（1+消费税税率）
@@ -263,7 +263,7 @@ func (model *SaleOrderProduct) calcTaxFee(price float64, taxFeeType int) float64
 	// 商品已含税时，消费税税费=商品销售价-商品未含税销售价
 	if taxFeeType == constant.TaxFeeTypeTax {
 		taxFee := decimal.NewFromFloat(price).Sub(decimal.NewFromFloat(model.calcProductPriceNoneTax(price, taxFeeType)))
-		return taxFee.Truncate(3).Round(2).InexactFloat64()
+		return taxFee.Round(3).Round(2).InexactFloat64()
 	} else if taxFeeType == constant.TaxFeeTypeNoTax {
 		// 商品未含税时，消费税税费=商品销售价*消费税税率
 		taxFee := decimal.NewFromFloat(price).Mul(decimal.NewFromFloat(model.TaxRate))
