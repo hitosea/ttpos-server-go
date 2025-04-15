@@ -2302,13 +2302,15 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 		// 更新自助餐销量
 		if saleBill.IsBuffetSaleBill() {
 			if saleBill.BuffetPackage1Uuid != 0 {
-				if err := repository.NewBuffetRepo(db).SubActualSaleNum(saleBill.BuffetPackage1Uuid); err != nil {
+				saleNum := saleBill.GetBuffetSaleNum(saleBill.BuffetPackage1Uuid)
+				if err := repository.NewBuffetRepo(db).SubActualSaleNum(saleBill.BuffetPackage1Uuid, saleNum); err != nil {
 					fmt.Println(err)
 					ctx.Log().Error("SubActualSaleNum", zap.Error(fmt.Errorf("%s %s", ctx.GetRequestUuid(), err)))
 				}
 			}
 			if saleBill.BuffetPackage2Uuid != 0 {
-				if err := repository.NewBuffetRepo(db).SubActualSaleNum(saleBill.BuffetPackage2Uuid); err != nil {
+				saleNum := saleBill.GetBuffetSaleNum(saleBill.BuffetPackage2Uuid)
+				if err := repository.NewBuffetRepo(db).SubActualSaleNum(saleBill.BuffetPackage2Uuid, saleNum); err != nil {
 					ctx.Log().Error("SubActualSaleNum", zap.Error(fmt.Errorf("%s %s", ctx.GetRequestUuid(), err)))
 				}
 			}
@@ -6444,13 +6446,14 @@ func (s *orderSrv) FinishSaleBill(ctx context.Context, saleBill *model.SaleBill,
 	// 更新自助餐销量
 	if saleBill.IsFinish() && saleBill.IsBuffetSaleBill() {
 		if saleBill.BuffetPackage1Uuid != 0 {
-			if err := repository.NewBuffetRepo(db).AddActualSaleNum(saleBill.BuffetPackage1Uuid); err != nil {
-				fmt.Println(err)
+			saleNum := saleBill.GetBuffetSaleNum(saleBill.BuffetPackage1Uuid)
+			if err := repository.NewBuffetRepo(db).AddActualSaleNum(saleBill.BuffetPackage1Uuid, saleNum); err != nil {
 				ctx.Log().Error("AddActualSaleNum", zap.Error(fmt.Errorf("%s %s", ctx.GetRequestUuid(), err)))
 			}
 		}
 		if saleBill.BuffetPackage2Uuid != 0 {
-			if err := repository.NewBuffetRepo(db).AddActualSaleNum(saleBill.BuffetPackage2Uuid); err != nil {
+			saleNum := saleBill.GetBuffetSaleNum(saleBill.BuffetPackage2Uuid)
+			if err := repository.NewBuffetRepo(db).AddActualSaleNum(saleBill.BuffetPackage2Uuid, saleNum); err != nil {
 				ctx.Log().Error("AddActualSaleNum", zap.Error(fmt.Errorf("%s %s", ctx.GetRequestUuid(), err)))
 			}
 		}

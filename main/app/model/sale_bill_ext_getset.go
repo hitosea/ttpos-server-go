@@ -677,3 +677,16 @@ func (model *SaleBill) SetBuffetStartTimeAndDuration(maxTimeLimit int) {
 func (model *SaleBill) SetIsSplitOrder(isSplitOrder bool) {
 	model.IsSplitOrder = uint(utils.IfInt(isSplitOrder, constant.SaleBillIsSplitOrderYes, constant.SaleBillIsSplitOrderNo))
 }
+
+// GetBuffetSaleNum 获取自助餐销售数量
+func (model *SaleBill) GetBuffetSaleNum(buffetPackageUuid uint64) uint {
+	num := uint(0)
+	for _, saleOrder := range model.SaleOrders {
+		for _, customerType := range saleOrder.SaleOrderBuffetCustomerTypes {
+			if customerType.BuffetPackageUuid == buffetPackageUuid {
+				num += customerType.Num
+			}
+		}
+	}
+	return num
+}
