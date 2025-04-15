@@ -27,6 +27,10 @@ type LocaleResponse struct {
 	TR   string `json:"tr"`   // 土耳其语
 }
 
+func (l *LocaleResponse) IsNull() bool {
+	return l.ZH == "" && l.TH == "" && l.EN == "" && l.ZHTW == "" && l.JA == "" && l.KO == "" && l.MY == "" && l.TR == ""
+}
+
 type LocaleType string
 
 const (

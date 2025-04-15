@@ -1537,6 +1537,45 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			})
 		}
 	}
+	for _, saleOrderProduct := range saleOrderBuffetComstomerTypes {
+		if num, exists := numMap[saleOrderProduct.Uuid]; exists && num > 0 {
+			products = append(products, event.OrderProduct{
+				OrderProductId: saleOrderProduct.Uuid,
+				ProductId:      saleOrderProduct.BuffetCustomerTypePriceUuid,
+				ProductName:    saleOrderProduct.BuffetPackage.MultiLanguageName.GetNames(),
+				ProductAttr: dto.LocaleResponse{
+					ZH:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+					TH:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+					EN:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+					ZHTW: saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+					JA:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+					KO:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+					MY:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+					TR:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+				},
+				TotalNum: num,
+			})
+		}
+	}
+	for _, saleOrderProduct := range saleOrderBuffetDelayProducts {
+		if num, exists := numMap[saleOrderProduct.Uuid]; exists && num > 0 {
+			products = append(products, event.OrderProduct{
+				OrderProductId: saleOrderProduct.Uuid,
+				ProductId:      saleOrderProduct.BuffetDelayUuid,
+				ProductName: dto.LocaleResponse{
+					ZH:   saleOrderProduct.Name,
+					TH:   saleOrderProduct.Name,
+					EN:   saleOrderProduct.Name,
+					ZHTW: saleOrderProduct.Name,
+					JA:   saleOrderProduct.Name,
+					KO:   saleOrderProduct.Name,
+					MY:   saleOrderProduct.Name,
+					TR:   saleOrderProduct.Name,
+				},
+				TotalNum: num,
+			})
+		}
+	}
 	var payTypes []event.RefundPayType
 	for _, amount := range returnOrder.ReturnOrderAmounts {
 		payTypes = append(payTypes, event.RefundPayType{

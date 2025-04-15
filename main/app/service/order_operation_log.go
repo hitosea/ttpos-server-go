@@ -175,8 +175,14 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		if err := json.Unmarshal([]byte(log.Data), &refundPayload); err == nil {
 			var desc []string
 			for _, product := range refundPayload.Products {
-				desc = append(desc, product.ProductName.GetLocale(language)+" ("+product.ProductAttr.GetLocale(language)+") *"+
-					strconv.Itoa(int(product.TotalNum)))
+				item := product.ProductName.GetLocale(language) + " (" + product.ProductAttr.GetLocale(language) + ") *" +
+					strconv.Itoa(int(product.TotalNum))
+				// 如果商品属性为空，则去掉括弧（）
+				if product.ProductAttr.IsNull() {
+					item = product.ProductName.GetLocale(language) + " *" +
+						strconv.Itoa(int(product.TotalNum))
+				}
+				desc = append(desc, item)
 			}
 			return strings.Join(desc, "、")
 		}
