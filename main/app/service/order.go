@@ -3378,20 +3378,12 @@ func (s *orderSrv) OrderProductRemark(ctx context.Context, req req.OrderProductR
 }
 
 // 通过设备SN获取销售账单uuid
-func (s *orderSrv) getSaleBillUuidByDeviceSn(ctx context.Context, deviceSn string) (uint64, error) {
+func (s *orderSrv) getSaleBillUuidByDeviceSn(ctx context.Context) (uint64, error) {
 	var saleBillUuid uint64
 	// 通过设备sn查询设备ID
 	db := s.dbm.GetDB(ctx.GetDbId())
-	deviceRepo := repository.NewDeviceRepo(db)
-	device, errDevice := deviceRepo.GetDevice(deviceRepo.WhereSn(deviceSn))
-	if errDevice != nil {
-		return 0, errors.WithMessage(errDevice, "deviceRepo.GetDevice failed")
-	}
-	if device.IsDelete() {
-		return 0, errors.NewWithCode(constant.CodeParamError, "设备不存在")
-	}
 	// 通过设备ID查询未挂单的销售订单
-	if saleBill, err := repository.NewSaleBillRepo(db).GetSaleBillByDeviceUuid(device.Uuid); err != nil {
+	if saleBill, err := repository.NewSaleBillRepo(db).GetSaleBillByDeviceUuid(ctx.GetDeviceUuid()); err != nil {
 		if utils.IsNotFoundRecord(err) {
 			return 0, nil // 没有点餐订单
 		}
@@ -3404,7 +3396,7 @@ func (s *orderSrv) getSaleBillUuidByDeviceSn(ctx context.Context, deviceSn strin
 }
 func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error) {
 	// 通过deviceSn获取saleBillUuid
-	saleBillUuid, errUuid := s.getSaleBillUuidByDeviceSn(ctx, deviceSn)
+	saleBillUuid, errUuid := s.getSaleBillUuidByDeviceSn(ctx)
 	if errUuid != nil {
 		return nil, errors.WithMessage(errUuid)
 	}
@@ -5358,7 +5350,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 通过deviceSn获取saleBillUuid
-	saleBillUuid, errUuid := s.getSaleBillUuidByDeviceSn(ctx, deviceSn)
+	saleBillUuid, errUuid := s.getSaleBillUuidByDeviceSn(ctx)
 	if errUuid != nil {
 		return nil, false, errors.WithMessage(errUuid, "无法找到销售账单")
 	}

@@ -423,23 +423,25 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		cardDiscount := float64(100)
 		if temp == 3 {
 			if saleOrder.MemberDiscountRate != 0 {
-				gradeEquity = saleOrder.MemberDiscountRate
+				gradeEquity = saleOrder.MemberDiscountRate * 100
 			}
 			if saleOrder.MemberCardDiscountRate != 0 {
-				cardDiscount = saleOrder.MemberCardDiscountRate
+				cardDiscount = saleOrder.MemberCardDiscountRate * 100
 			}
 		}
 		// 中文/繁体中文
 		unit := "%"
 		if t.base.Lang == "zh" || t.base.Lang == "zhtw" {
 			unit = "折"
+			gradeEquity /= 10
+			cardDiscount /= 10
 		}
 		if gradeEquity != 100 && gradeEquity > 0 {
-			printer.AppendText(fmt.Sprintf("%s: %.1f%s", t.base.Translate("会员折扣"), float64(gradeEquity/10), unit))
+			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("会员折扣"), t.base.Number(gradeEquity), unit))
 			printer.LineFeed(1)
 		}
 		if cardDiscount != 100 && cardDiscount > 0 {
-			printer.AppendText(fmt.Sprintf("%s: %.1f%s", t.base.Translate("会员卡折扣"), float64(cardDiscount/10), unit))
+			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("会员卡折扣"), t.base.Number(cardDiscount), unit))
 			printer.LineFeed(1)
 		}
 	}
