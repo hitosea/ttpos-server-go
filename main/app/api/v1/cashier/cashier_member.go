@@ -14,7 +14,6 @@ import (
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 )
 
 // MemberHandler 会员相关控制器
@@ -309,7 +308,6 @@ func (h *MemberHandler) GetRechargeOrderPaymentQrcode(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	ctx.Log().Debug("获取支付二维码成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }

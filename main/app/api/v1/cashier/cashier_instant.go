@@ -508,7 +508,6 @@ func (h *InstantHandler) OrderCartProductCooking(c *gin.Context) {
 		helper.FailWithData(c, errRes.Code, errRes.OrderCheckRes, nil, constant.ParseCodeOrderCheck(errRes.Code))
 		return
 	}
-	ctx.Log().Debug("送厨购物车商品成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }
@@ -647,21 +646,17 @@ func (h *InstantHandler) OrderCartProductCancelGiving(c *gin.Context) {
 // @Router /cashier/instant/order/payment/info [get]
 func (h *InstantHandler) OrderPaymentInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	ctx.Log().Debug("收到点餐页面结账页面信息接口请求")
-
 	params := &req.InstantOrderPaymentInfoReq{}
 	if err := params.Parse(c); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	ctx.Log().Info("查询销售订单收银机结账页面信息", zap.Any("params", params))
 	// 获取销售订单的付款信息
 	res, err := h.orderSrv.InstantOrderPaymentInfo(ctx, nil, params.SaleBillUuid, params.SaleOrderUuid)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	ctx.Log().Debug("获取结账页面信息成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }
@@ -689,7 +684,6 @@ func (h *InstantHandler) OrderPaymentQrcodeInfo(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	ctx.Log().Debug("获取支付二维码成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }
