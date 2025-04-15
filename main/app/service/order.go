@@ -5085,7 +5085,13 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 	}
 
 	// 将销售订单商品的sale_bill_uuid和sale_order_uuid更新为新的桌台
-	targetSaleOrder := targetSaleBill.SaleOrders[0]
+	targetSaleOrder := targetSaleBill.GetFirstSaleOrder()
+
+	// 判断订单状态
+	if err := targetSaleOrder.ValidateOrderStatus(); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	saleOrderProduct.SaleBillUuid = targetDesk.SaleBillUuid
 	saleOrderProduct.SaleOrderUuid = targetSaleOrder.Uuid
 	// 将商品的折扣改为使用目标桌台的折扣
