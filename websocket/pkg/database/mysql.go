@@ -58,7 +58,7 @@ func NewMySQLConnection(conf config.DatabaseConf, dbName string) (*gorm.DB, erro
 	// 设置最大打开的连接数
 	sqlDB.SetMaxOpenConns(conf.MaxOpenConns)
 	// 设置连接的最大可存活时间
-	sqlDB.SetConnMaxLifetime(time.Duration(conf.ConnMaxLifetime) * time.Minute)
+	sqlDB.SetConnMaxLifetime(1 * time.Second)
 
 	return db, nil
 }
