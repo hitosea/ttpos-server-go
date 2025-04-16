@@ -130,7 +130,7 @@ func (model *SaleOrderProduct) GetTotalTaxFee() float64 {
 
 // 获取销售订单商品的税费。税费=销售订单商品的税费*销售订单商品的数量
 func (model *SaleOrderProduct) GetTaxFee() float64 {
-	return decimal.NewFromFloat(model.TaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+	return decimal.NewFromFloat(model.TaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).Truncate(3).Round(2).InexactFloat64()
 }
 
 // 获取销售订单商品的原始税费(折前价)。税费=销售订单商品的税费*销售订单商品的数量
@@ -141,7 +141,7 @@ func (model *SaleOrderProduct) GetOriginTaxFee(taxFeeType int) float64 {
 
 // 获取销售订单商品的服务费税费。服务费税费=销售订单商品的服务费税费*销售订单商品的数量
 func (model *SaleOrderProduct) GetServiceTaxFee() float64 {
-	return decimal.NewFromFloat(model.ServiceTaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+	return decimal.NewFromFloat(model.ServiceTaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).Truncate(3).Round(2).InexactFloat64()
 }
 
 // 获取销售订单商品的服务费税费。服务费税费=销售订单商品的服务费税费*销售订单商品的数量

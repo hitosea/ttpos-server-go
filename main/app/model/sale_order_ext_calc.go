@@ -348,9 +348,15 @@ func (model *SaleOrder) calcProductAmount(products []*SaleOrderProduct, options 
 		optionFunc(option)
 	}
 	// 订单商品Price之和。折后价
-	sumOrderProductPrice := model.calcSumOrderProductPrice(products, WithOriginPrice())
+	sumOrderProductPrice := model.calcSumOrderProductPrice(products)
+	if option.IsOriginPrice {
+		sumOrderProductPrice = model.calcSumOrderProductPrice(products, WithOriginPrice())
+	}
 	// 自助餐顾客价格SalePrice之和。折前价
-	sumCustomerPrice := model.calcSumOrderProductCustomerDiscountPrice(WithOriginPrice())
+	sumCustomerPrice := model.calcSumOrderProductCustomerDiscountPrice()
+	if option.IsOriginPrice {
+		sumCustomerPrice = model.calcSumOrderProductCustomerDiscountPrice(WithOriginPrice())
+	}
 	// 自助餐加钟商品价格之和
 	sumBuffetDelayPrice := model.calcSumOrderProductBuffetDelayPrice()
 	return decimal.NewFromFloat(sumOrderProductPrice).Add(
