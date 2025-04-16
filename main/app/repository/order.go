@@ -1231,6 +1231,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 				},
 			},
 			WithPreload{
+				Query: "SaleOrders.PaymentOrders.ReturnOrderAmounts.PaymentMethod",
+			},
+			WithPreload{
 				Query: "SaleOrders.Member.MemberLevel",
 			},
 			WithPreload{

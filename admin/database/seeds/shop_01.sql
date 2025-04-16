@@ -1948,6 +1948,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     `payment_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '支付手续费',
     `payment_balance` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '支付余额',
     `refund_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款金额',
+    `refund_payment_balance` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款支付余额',
     `refund_tax` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款税额',
     `refund_service_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款服务费',
     `refund_discount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款优惠折扣',
