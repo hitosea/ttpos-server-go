@@ -49,6 +49,7 @@ services:
       MARIADB_PASSWORD: "${DB_PASSWORD}"
       MARIADB_PREFIX: "${DB_PREFIX}"
       MARIADB_HOST: "${DB_HOST}"
+      MARIADB_PORT: "${DB_PORT}"
     restart: always
 
   redis:
