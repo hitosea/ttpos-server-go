@@ -112,6 +112,7 @@ class Printing extends Controller
             ->field("a.device_id as cashier_key")
             ->field("CONCAT(if(remark='', '-', remark), ' (', a.device_id, ')') cashier_name")
             ->order('id')
+            ->where("delete_time", 0) // 加了软删除，需要这个条件
             ->select()
             ->toArray();
         //

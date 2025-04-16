@@ -80,6 +80,12 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		if err != nil {
 			return 0, errors.WithMessage(err, "更新绑定信息失败")
 		}
+		// 绑定品牌，如果自带打印，默认更新收银打印配置
+		if existsDevice.DeleteTime != 0 && addReq.Source == constant.SourceCashier && slices.Contains(constant.BrandsPrints, addReq.Brand) {
+			if err := s.bindPrinter(ctx, addReq.DeviceId); err != nil {
+				return 0, errors.WithMessage(err, "设置默认打印机失败")
+			}
+		}
 		return existsDevice.Uuid, nil
 	}
 
@@ -108,27 +114,8 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 
 	// 绑定品牌，如果自带打印，默认更新收银打印配置
 	if addReq.Source == constant.SourceCashier && slices.Contains(constant.BrandsPrints, addReq.Brand) {
-		printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, []dto.LanguageItem{})
-		if err != nil {
-			return 0, errors.WithMessage(err)
-		}
-		if printerSetting.CashierOpen == "1" {
-			var added bool
-			for _, item := range printerSetting.CashierPrinter {
-				if item.Key == addReq.DeviceId {
-					added = true
-				}
-			}
-			if !added {
-				printerSetting.CashierPrinter = append(printerSetting.CashierPrinter, setting2.CashierPrinterItem{
-					Key:       addReq.DeviceId,
-					PrinterId: addReq.DeviceId,
-				})
-			}
-			// 设置默认打印机
-			if err = s.settingSrv.UpdateSetting(ctx, constant.SettingPrinter, printerSetting); err != nil {
-				return 0, errors.WithMessage(err, "设置默认打印机失败")
-			}
+		if err := s.bindPrinter(ctx, addReq.DeviceId); err != nil {
+			return 0, errors.WithMessage(err, "设置默认打印机失败")
 		}
 	}
 
@@ -146,6 +133,31 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		return 0, errors.WithMessage(err)
 	}
 	return device.Uuid, nil
+}
+
+// 收银机绑定自带打印机
+func (s *deviceSrv) bindPrinter(ctx context.Context, deviceId string) error {
+	printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, []dto.LanguageItem{})
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	if printerSetting.CashierOpen != "1" {
+		return nil
+	}
+	var added bool
+	for _, item := range printerSetting.CashierPrinter {
+		if item.Key == deviceId {
+			added = true
+		}
+	}
+	if !added {
+		printerSetting.CashierPrinter = append(printerSetting.CashierPrinter, setting2.CashierPrinterItem{
+			Key:       deviceId,
+			PrinterId: deviceId,
+		})
+	}
+	// 设置默认打印机
+	return s.settingSrv.UpdateSetting(ctx, constant.SettingPrinter, printerSetting)
 }
 
 func (s *deviceSrv) GetRemark(companyUuid uint64, source string, deviceId string) string {
