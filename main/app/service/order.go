@@ -5232,7 +5232,7 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 		if err := repository.NewSaleOrderProductRepo(db).DeleteSaleOrderProductReasons(
 			saleOrderProduct.SaleOrderUuid,
 			saleOrderProduct.Uuid,
-			constant.ProductReasonTypeGift,
+			constant.ProductReasonTypeReturnFood,
 		); err != nil {
 			return errors.WithMessage(err)
 		}

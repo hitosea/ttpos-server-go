@@ -559,6 +559,9 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 		if !reason.IsReturnFoodReason() {
 			continue
 		}
+		if reason.IsDelete() {
+			continue
+		}
 		zhNames = append(zhNames, reason.MultiLanguageName.ZhName)
 		thNames = append(thNames, reason.MultiLanguageName.ThName)
 		enNames = append(enNames, reason.MultiLanguageName.EnName)
