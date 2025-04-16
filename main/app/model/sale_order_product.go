@@ -785,14 +785,14 @@ func (model *SaleOrderProduct) GetFinalSalePrice() float64 {
 // 获取商品总金额（折前价）（商品原价）
 func (model *SaleOrderProduct) GetTotalProductPrice() float64 {
 	// 金额*数量
-	price := decimal.NewFromFloat(model.ProductPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	price := decimal.NewFromFloat(model.ProductPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Truncate(3).Round(2).InexactFloat64()
 	return price
 }
 
 // 获取商品总金额（折后价）
 func (model *SaleOrderProduct) GetTotalPrice() float64 {
 	// 金额*数量
-	price := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	price := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Truncate(3).Round(2).InexactFloat64()
 	return price
 }
 
@@ -811,7 +811,7 @@ func (model *SaleOrderProduct) GetTotalPriceOrigin() float64 {
 		originTotalPrice = model.GetTotalPrice()
 	}
 	// 金额*数量
-	price := decimal.NewFromFloat(originTotalPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	price := decimal.NewFromFloat(originTotalPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Truncate(3).Round(2).InexactFloat64()
 	return price
 }
 

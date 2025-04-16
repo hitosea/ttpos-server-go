@@ -125,7 +125,7 @@ func (model *SaleOrderProduct) calcSaleOrderProduct(serviceFeeRate float64, taxF
 	model.ServiceTaxFee = calc.ServiceTaxFee
 	calc.TotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType)
 	model.TotalPrice = calc.TotalPrice
-	calc.OriginTotalPrice = model.CalcOriginTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType)
+	calc.OriginTotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType, WithOriginPrice())
 	model.OriginTotalPrice = calc.OriginTotalPrice
 	return calc
 }
@@ -159,7 +159,7 @@ func (model *SaleOrderProduct) calcLastestSaleOrderProduct(serviceFeeRate float6
 	model.ServiceTaxFee = calc.ServiceTaxFee
 	calc.TotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType)
 	model.TotalPrice = calc.TotalPrice
-	calc.OriginTotalPrice = model.CalcOriginTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType)
+	calc.OriginTotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType, WithOriginPrice())
 	model.OriginTotalPrice = calc.OriginTotalPrice
 	return calc
 }
@@ -358,8 +358,16 @@ func (model *SaleOrderProduct) calcDiscountFee() float64 {
 // 商品未含税时，单个商品最终应收金额=最终价格（折后价）+服务费+总税费=最终价格（折后价）+服务费+（商品税费+服务费税费）
 // 商品已含税时，单个商品最终应收金额=商品折后不含税价格+服务费+总税费=（最终价格（折扣价）-商品税费） + 服务费 + 总税费 = （最终价格（折后价）-商品税费） + 服务费 + （商品税费+服务费税费）= 最终价格（折后价）+ 服务费 + 服务费税费
 // 总结，商品已含税时，单个商品最终应收金额=最终价格（折后价）+ 服务费 + 服务费税费
-func (model *SaleOrderProduct) calcTotalPrice(serviceFeeRate float64, taxFeeType int, serviceFeeType int) float64 {
+func (model *SaleOrderProduct) calcTotalPrice(serviceFeeRate float64, taxFeeType int, serviceFeeType int, options ...func(option *CalcOption)) float64 {
+	option := &CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+
 	price := model.calcPrice() // 折后价
+	if option.IsOriginPrice {
+		price = model.calcSalePrice() // 折前价
+	}
 
 	// 商品未含税时，单个商品最终应收金额=最终价格（折后价）+服务费+商品税费+服务费税费
 	if taxFeeType == constant.TaxFeeTypeNoTax {
@@ -380,35 +388,6 @@ func (model *SaleOrderProduct) calcTotalPrice(serviceFeeRate float64, taxFeeType
 	totalPrice := decimal.NewFromFloat(price).Add(
 		decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType)))
 	return totalPrice.Truncate(3).Round(2).InexactFloat64()
-}
-
-// 计算单个商品最终应收金额（折前价）。
-// 如果不收取税费时，单个商品最终应收金额=最终价格（折后价）+ 服务费
-// 商品未含税时，单个商品最终应收金额=最终价格（折后价）+服务费+总税费=最终价格（折后价）+服务费+（商品税费+服务费税费）
-// 商品已含税时，单个商品最终应收金额=商品折后不含税价格+服务费+总税费=（最终价格（折扣价）-商品税费） + 服务费 + 总税费 = （最终价格（折后价）-商品税费） + 服务费 + （商品税费+服务费税费）= 最终价格（折后价）+ 服务费 + 服务费税费
-// 总结，商品已含税时，单个商品最终应收金额=最终价格（折后价）+ 服务费 + 服务费税费
-func (model *SaleOrderProduct) CalcOriginTotalPrice(serviceFeeRate float64, taxFeeType int, serviceFeeType int) float64 {
-	price := model.calcSalePrice() // 折前价
-
-	// 商品未含税时，单个商品最终应收金额=商品销售价（折前价）+服务费+商品税费+服务费税费
-	if taxFeeType == constant.TaxFeeTypeNoTax {
-		totalPrice := decimal.NewFromFloat(price).Add(
-			decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType))).Add(
-			decimal.NewFromFloat(model.calcTaxFee(price, taxFeeType))).Add(
-			decimal.NewFromFloat(model.calcServiceTaxFee(price, serviceFeeRate, taxFeeType, serviceFeeType)))
-		return totalPrice.InexactFloat64()
-	}
-	// 当商品已含税时，单个商品最终应收金额=最终价格（折后价）+ 服务费 + 服务费税费
-	if taxFeeType == constant.TaxFeeTypeTax {
-		totalPrice := decimal.NewFromFloat(price).Add(
-			decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType))).Add(
-			decimal.NewFromFloat(model.calcServiceTaxFee(price, serviceFeeRate, taxFeeType, serviceFeeType)))
-		return totalPrice.InexactFloat64()
-	}
-	// 如果不收取税费时，单个商品最终应收金额=最终价格（折后价）+ 服务费
-	totalPrice := decimal.NewFromFloat(price).Add(
-		decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType)))
-	return totalPrice.InexactFloat64()
 }
 
 // 计算小料的价格。累计销售订单商品的所有小料的价格
