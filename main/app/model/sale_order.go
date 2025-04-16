@@ -364,6 +364,10 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, bu
 	for _, saleOrderProduct := range saleOrderProducts {
 		// 退货数量
 		num := numMap[saleOrderProduct.Uuid]
+		// 如果退货数量为0，则跳过
+		if num == 0 {
+			continue
+		}
 		// 商品总金额=退货商品数量*商品最终单价
 		// 商品金额=退货商品数量*商品最终单价
 		// 未含税时，商品总金额=商品金额 + 商品税费 + 服务费 + 服务费税费
@@ -389,6 +393,10 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, bu
 	for _, saleOrderProduct := range buffetCustomers {
 		// 退货数量
 		num := numMap[saleOrderProduct.Uuid]
+		// 如果退货数量为0，则跳过
+		if num == 0 {
+			continue
+		}
 		// 商品总金额=退货商品数量*商品最终单价
 		// 商品金额=退货商品数量*商品最终单价
 		// 未含税时，商品总金额=商品金额 + 商品税费 + 服务费 + 服务费税费
@@ -414,6 +422,10 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, bu
 	for _, saleOrderProduct := range buffetDelays {
 		// 退货数量
 		num := numMap[saleOrderProduct.Uuid]
+		// 如果退货数量为0，则跳过
+		if num == 0 {
+			continue
+		}
 		// 商品总金额=退货商品数量*商品最终单价
 		// 商品金额=退货商品数量*商品最终单价
 		// 未含税时，商品总金额=商品金额 + 商品税费 + 服务费 + 服务费税费
