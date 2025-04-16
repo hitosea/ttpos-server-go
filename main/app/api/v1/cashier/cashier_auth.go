@@ -44,6 +44,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 	helper.Success(c, resp.CashierLoginResp{
 		Token:        loginResp.Token,
+		RefreshToken: loginResp.RefreshToken,
 		IsFirstLogin: loginResp.CashierIsFirstLogin,
 	})
 }
