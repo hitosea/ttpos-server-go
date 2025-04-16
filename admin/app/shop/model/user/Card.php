@@ -89,6 +89,8 @@ class Card extends CardModel
                     'member_phone' => $user['phone'] ?? '',
                     'member_no' => $user['member_no'] ?? '',
                     'member_card_type_name' => $detail['name'],
+                    'give_money' => $detail['open_money'] ? $detail['open_money_num'] : 0,
+                    'give_point' => $detail['open_point'] ? $detail['open_point_num'] : 0,
                 ];
                 $CardRecordModel = new CardRecordModel;
                 $CardRecordModel->save($record);
@@ -147,6 +149,16 @@ class Card extends CardModel
         }
         //
         $user = (new User)::detail($detail['member_uuid'], true);
+        $giveBalance = helper::bcadd($user['frozen_gift_balance'], $user['gift_balance'], 2);
+        $givePoint = helper::bcadd($user['frozen_point'], $user['point'], 2);
+        if ($giveBalance < $detail['give_money']) {
+            $this->error = "会员卡已使用，无法撤销";
+            return false;
+        }
+        if ($givePoint < $detail['give_point']) {
+            $this->error = "会员卡已使用，无法撤销";
+            return false;
+        }
         $memberCard = (new MemberCard())::where('member_uuid', '=', $detail['member_uuid'])->find();
         $this->startTrans();
         try {

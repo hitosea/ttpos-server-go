@@ -17,6 +17,7 @@ services:
     depends_on:
       - db
       - redis
+      - redis-proxy
       
   nginx:
     container_name: "saas-nginx-${APP_ID}"
@@ -58,6 +59,16 @@ services:
     volumes:
       - ./docker/redis/data:/data
       - ./docker/redis/redis.conf:/etc/redis/redis.conf:ro
+    restart: always
+    
+  redis-proxy:
+    container_name: "saas-redis-proxy-${APP_ID}"
+    build:
+      context: ./redis-proxy
+      dockerfile: Dockerfile
+    volumes:
+      - .env:/var/.env
+    image: redis-proxy
     restart: always
     
   golang:

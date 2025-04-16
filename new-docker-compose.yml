@@ -17,6 +17,7 @@ services:
     depends_on:
       - db
       - redis
+      - redis-proxy
       
   nginx:
     container_name: "saas-nginx-${APP_ID}"
@@ -84,4 +85,11 @@ services:
     #   -  16446:6446
     volumes:
       - ./docker/mysql-proxy/nginx.conf:/etc/nginx/nginx.conf
+    restart: always
+
+  redis-proxy:
+    container_name: "saas-redis-proxy-${APP_ID}"
+    image: hub.hitosea.com/ttpos-server/ttpos-server-redis-proxy:${IMAGE_VERSION}
+    volumes:
+      - .env:/var/.env
     restart: always
