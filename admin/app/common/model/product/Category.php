@@ -145,9 +145,8 @@ class Category extends BaseModel
         $child_order_conditions = $is_sort ? ['sort' => 'asc', 'create_time' => 'desc'] : ['create_time' => 'desc'];
 
         $model = new static;
-        // todo - 缓存不需要
-        // $cacheKey = 'category_' . $model::$app_id . $type . $is_special . $is_sort . $all . '_' . checkDetect();
-        // if ($name != '' || $isPaginate || !($result = Cache::get($cacheKey))) {
+        $cacheKey = 'category_' . $model::$app_id . $type . $is_special . $is_sort . $all . '_' . checkDetect();
+        if ($name != '' || $isPaginate || !($result = Cache::get($cacheKey))) {
             $prefix = Env::get('DB_PREFIX');
             $data = $model->alias('c')->with(['images', 'child' => function ($q) use ($name, $child_order_conditions) {
                 $q->jsonLike('name', $name);
@@ -177,10 +176,10 @@ class Category extends BaseModel
             $data = $isPaginate ? $data->paginate(compact('page', 'list_rows')) : $data->select();
             $all = !empty($data) ? $data->toArray() : [];
             $result = $all;
-            // if ($name == '' && !$isPaginate) {
-            //     Cache::tag('category' . $model::$app_id . (!$is_special ? 1 : 0) . $type)->set($cacheKey, $all);
-            // }
-        // }
+            if ($name == '' && !$isPaginate) {
+                Cache::tag('category' . $model::$app_id . (!$is_special ? 1 : 0) . $type)->set($cacheKey, $all);
+            }
+        }
         return $result;
     }
 
