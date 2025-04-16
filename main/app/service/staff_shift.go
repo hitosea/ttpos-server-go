@@ -15,14 +15,17 @@ import (
 	printerService "ttpos-server-go/app/printer/service"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/duke-git/lancet/convertor"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
@@ -470,6 +473,13 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		staff = staffs[0]
 	}
 
+	setting := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global)
+	storeSetting, err := setting.GetStoreSetting(ctx)
+	if err != nil {
+		logger.Logger.Error("获取门店设置失败", zap.Error(err))
+		fmt.Println("获取门店设置失败", zap.Error(err))
+	}
+
 	//
 	shiftLogRepo := repository.NewShiftLogRepo(ctx.GetDB())
 
@@ -563,6 +573,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		}(),
 		PeakHourList: func() []business_data_resp.PeakHour {
 			peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
+				storeSetting.TimeZone,
 				uint(log.ShiftStartTime),
 				uint(queryEndTime),
 				log.StaffUuid,

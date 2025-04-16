@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
@@ -9,7 +10,11 @@ import (
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/printer/template"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 
 	"go.uber.org/zap"
@@ -47,6 +52,12 @@ func NewBusinessSrvImpl(statisticsSrv IStatisticsSrv) IBusinessSrv {
 
 // Printer 打印
 func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPrinterReq) (*resp.PrinterData, error) {
+	setting := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global)
+	storeSetting, err := setting.GetStoreSetting(ctx)
+	if err != nil {
+		logger.Logger.Error("获取门店设置失败", zap.Error(err))
+		fmt.Println("获取门店设置失败", zap.Error(err))
+	}
 	// Initialize the pointer to avoid nil dereference
 	reqPrinterData := &template.PrintingBusinessData{}
 	// 获取参数
@@ -127,6 +138,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			}(),
 			PeakHourList: func() []business_data_resp.PeakHour {
 				peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
+					storeSetting.TimeZone,
 					uint(printerParam.QueryStartTime),
 					uint(printerParam.QueryEndTime),
 					ctx.GetStaffUuid(),
@@ -241,6 +253,13 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		DutyNo:         req.DutyNo,
 	})
 
+	setting := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global)
+	storeSetting, err := setting.GetStoreSetting(ctx)
+	if err != nil {
+		logger.Logger.Error("获取门店设置失败", zap.Error(err))
+		fmt.Println("获取门店设置失败", zap.Error(err))
+	}
+
 	// 支付数据
 	_, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req)
 	// 会员数量
@@ -321,6 +340,7 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		}(),
 		PeakHourList: func() []business_data_resp.PeakHour {
 			peakHours, err := repository.NewSaleOrderPeakTimeRepo(ctx.GetDB()).GetMaxRecord(
+				storeSetting.TimeZone,
 				uint(req.QueryStartTime),
 				uint(req.QueryEndTime),
 				ctx.GetStaffUuid(),

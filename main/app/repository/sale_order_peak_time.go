@@ -15,7 +15,7 @@ import (
 
 type ISaleOrderPeakTimeRepo interface {
 	Record(recordType string, saleBill *model.SaleBill, refundMoney float64) error
-	GetMaxRecord(startTime, endTime uint, cashierUuid uint64) ([]business_data_resp.PeakHour, error)
+	GetMaxRecord(timezone string, startTime, endTime uint, cashierUuid uint64) ([]business_data_resp.PeakHour, error)
 }
 
 type saleOrderPeakTimeRepo struct {
@@ -78,7 +78,7 @@ func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBi
 }
 
 // 获取高峰时段
-func (r *saleOrderPeakTimeRepo) GetMaxRecord(startTime, endTime uint, cashierUuid uint64) ([]business_data_resp.PeakHour, error) {
+func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime uint, cashierUuid uint64) ([]business_data_resp.PeakHour, error) {
 	// 获取开始时间和结束时间的时间对象
 	startTimeObj := time.Unix(int64(startTime), 0)
 	endTimeObj := time.Unix(int64(endTime), 0)
@@ -96,7 +96,7 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(startTime, endTime uint, cashierUui
 	var peakTimeResult PeakTimeResult
 	if err := r.db.Model(&model.SaleOrderPeakTime{}).
 		Where("(date + hour * 60 * 60) between ? and ?", startDate+startHour*3600, endDate+endHour*3600).
-		Where("cashier_uuid = ?", cashierUuid).
+		// Where("cashier_uuid = ?", cashierUuid).
 		Group("CONCAT(date,hour)").
 		Select("sum(num) as sum_num, group_concat(id) as ids").
 		Order("sum_num desc").
@@ -111,6 +111,23 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(startTime, endTime uint, cashierUui
 	// 如果没有IDs，返回空数组
 	if peakTimeResult.Ids == "" {
 		return []business_data_resp.PeakHour{}, nil
+	}
+
+	// 使用子查询实现复杂的SQL查询
+	subQuery := r.db.Model(&model.SaleOrderPeakTime{}).
+		Where("(date + hour * 60 * 60) between ? and ?", startDate+startHour*3600, endDate+endHour*3600).
+		Group("CONCAT(date,hour)").
+		Select("sum(num) as sum_num, group_concat(id) as ids")
+	if err := r.db.Table("(?) as t", subQuery).
+		Select("sum_num, group_concat(ids) as ids").
+		Where("sum_num = ?", peakTimeResult.SumNum).
+		First(&peakTimeResult).Error; err != nil {
+		// 如果是记录未找到的错误，返回空数组
+		if err == gorm.ErrRecordNotFound {
+			return []business_data_resp.PeakHour{}, nil
+		}
+		// 其他错误则返回错误信息
+		return nil, errors.WithMessage(err)
 	}
 
 	// 将逗号分隔的ID字符串转换为整数数组
@@ -144,7 +161,7 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(startTime, endTime uint, cashierUui
 	for _, v := range results {
 		startHour := fmt.Sprintf("%02d", v.Hour) // 将整点数补齐为两位数作为起始小时
 		endHour := fmt.Sprintf("%02d", v.Hour+1) // 结束小时为起始小时加1
-		timePeriod := startHour + ":00-" + endHour + ":00"
+		timePeriod := fmt.Sprintf("%s %s:00-%s:00", utils.SetTimezone(timezone).FormatUnixTime(v.Date, "01/02"), startHour, endHour)
 		peakHours = append(peakHours, business_data_resp.PeakHour{
 			TimePeriod: timePeriod,
 			OrderNum:   v.Num,
