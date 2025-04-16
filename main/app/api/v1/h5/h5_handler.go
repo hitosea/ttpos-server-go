@@ -434,8 +434,8 @@ func (h *Handler) ConfirmOrder(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("没有桌台账单")))
 		return
 	}
-	if err := h.orderSrv.ConfirmH5Order(ctx, saleBillUuid, saleOrderUuid); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+	if failedData, err := h.orderSrv.ConfirmH5Order(ctx, saleBillUuid, saleOrderUuid); err != nil {
+		helper.ErrorWithData(c, constant.CodeFail, failedData, err)
 		return
 	}
 	res, err := h.orderSrv.GetOrderedH5ProductList(ctx, saleBillUuid, nil, repository.WithOrderedH5ProductWithReject())
