@@ -553,8 +553,18 @@ func readCommand(reader *bufio.Reader) ([]string, error) {
 
 			// 读取字符串内容
 			str := make([]byte, strLen)
-			if _, err := reader.Read(str); err != nil {
-				return nil, err
+
+			// 使用ReadFull确保完整读取所有字节
+			totalRead := 0
+			for totalRead < strLen {
+				n, err := reader.Read(str[totalRead:])
+				if err != nil {
+					return nil, err
+				}
+				totalRead += n
+				if totalRead >= strLen {
+					break
+				}
 			}
 
 			// 读取 \r\n

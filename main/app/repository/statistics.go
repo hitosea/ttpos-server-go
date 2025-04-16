@@ -484,10 +484,24 @@ type CountProductSaleRepoReq struct {
 	Language      string
 	AreaUuid      uint64
 	CategoryUuid  uint64
+	ProductName   string
 }
 
 // CountProductSale 统计商品销售
 func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64) {
+	/*
+			$lang = request()->header('language') ?: 'zh';
+		        $productName = $params['product_name'] ?? '';
+		        if ($productName != '') {
+		            $where = "(JSON_UNQUOTE(JSON_EXTRACT(product_name, '$.$lang')) LIKE :product_name)";
+		            if (!$whereSql) {
+		                $whereSql .= " WHERE {$where}";
+		            } else {
+		                $whereSql .= " AND {$where}";
+		            }
+		            $bind['product_name'] = "%{$productName}%";
+		        }
+	*/
 	var result []model.StatisticsProductSaleData
 	db := r.db
 	db2 := r.db
@@ -521,6 +535,9 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	if req.CategoryUuid > 0 {
 		db.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
 	}
+	if req.ProductName != "" {
+		db.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
+	}
 	db.Find(&total)
 
 	listQuery := db2.Table(statisticsProductTable).
@@ -544,6 +561,9 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	}
 	if req.CategoryUuid > 0 {
 		listQuery.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
+	}
+	if req.ProductName != "" {
+		listQuery.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
 	}
 	listQuery.Group("sp.product_package_uuid")
 

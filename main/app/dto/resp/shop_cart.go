@@ -159,6 +159,7 @@ type Product struct {
 	IsBuffet            bool               `json:"is_buffet"`             // 是否是自助餐
 	IsCancel            bool               `json:"is_cancel"`             // 是否退菜
 	AboutBuffet         AboutBuffet        `json:"about_buffet"`          // 自助餐信息
+	IsShowKitchen       uint               `json:"is_show_kitchen"`       // 是否在厨显端显示
 	// 后端使用，前端不返回
 	SendKitchenTime int64   `json:"-"` // 送厨时间
 	H5OrderTime     int64   `json:"-"` // h5下单时间
