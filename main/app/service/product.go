@@ -167,7 +167,8 @@ func (s *productSrv) formatProducts(ctx context.Context, products []model.Produc
 			AttributeGroups: product_resp.ProductAttributeGroupList{
 				List: attributeGroups,
 			},
-			Describe: product.Describe,
+			Describe:      product.Describe,
+			IsShowKitchen: product.IsShowKitchen,
 		})
 	}
 	return list

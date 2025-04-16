@@ -272,6 +272,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			AcceptTime:          saleOrderProduct.GetAcceptTime(),
 			IsAccept:            saleOrderProduct.IsAcceptOrderProduct(),
 			UnitPrice:           saleOrderProduct.SalePrice,
+			IsShowKitchen:       saleOrderProduct.ProductPackage.IsShowKitchen,
 		}
 		if saleOrderProduct.ProductionOrderProduct != nil {
 			if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {

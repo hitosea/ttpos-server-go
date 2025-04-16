@@ -15941,6 +15941,10 @@ const docTemplate = `{
                     "description": "商品图片",
                     "type": "string"
                 },
+                "is_show_kitchen": {
+                    "description": "是否在厨显端显示：1-是；0-否",
+                    "type": "integer"
+                },
                 "limit_num": {
                     "description": "商品限购数量",
                     "type": "integer"
@@ -21218,6 +21222,10 @@ const docTemplate = `{
                 "is_must": {
                     "description": "是否必点",
                     "type": "boolean"
+                },
+                "is_show_kitchen": {
+                    "description": "是否在厨显端显示",
+                    "type": "integer"
                 },
                 "locale_attribute_name": {
                     "description": "商品属性",

@@ -17,6 +17,7 @@ type Product struct {
 	Sauces              ProductSauceList          `json:"sauces"`                // 商品小料
 	AttributeGroups     ProductAttributeGroupList `json:"attribute_groups"`      // 商品属性组
 	Describe            string                    `json:"describe"`              // 卖点，h5端显示
+	IsShowKitchen       uint                      `json:"is_show_kitchen"`       // 是否在厨显端显示：1-是；0-否
 }
 
 // ProductFlavor 商品规格
