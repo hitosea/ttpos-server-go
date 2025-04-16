@@ -1,8 +1,10 @@
 package passport
 
 import (
+	"go.uber.org/zap"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 
@@ -28,6 +30,7 @@ type Handler struct {
 func (h *Handler) GetCaptcha(c *gin.Context) {
 	captcha, err := h.captchaSrv.Generate()
 	if err != nil {
+		logger.Logger.Error("生成验证码失败", zap.Error(err))
 		helper.Fail(c, constant.CodeFail, "生成验证码失败")
 		return
 	}

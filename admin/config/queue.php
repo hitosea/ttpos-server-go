@@ -21,10 +21,10 @@ return [
             // 队列名称（支持商户隔离）
             'queue'      => 'default', 
             // 连接配置
-            'host'       => env('REDIS_HOST', '127.0.0.1'),
-            'port'       => env('REDIS_PORT', 6379),
-            'password'   => env('REDIS_PASSWORD', ''),
-            'select'     => env('REDIS_SELECT', 0),
+            'host'       => 'golang',
+            'port'       => 6739,
+            'password'   => '',
+            'select'     => 0, 
             'timeout'    => 0,
             'persistent' => false,
         ],

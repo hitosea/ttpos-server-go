@@ -27,24 +27,43 @@ return [
             // 序列化机制 例如 ['serialize', 'unserialize']
             'serialize'  => [],
         ],
+        // 'redis' => [
+        //     'type'       => 'redis',
+        //     'host'       => Env::get('REDIS_HOST', '127.0.0.1'),
+        //     'port'       => Env::get('REDIS_PORT', 6379),
+        //     'password'   => Env::get('REDIS_PASSWORD', ''),
+        //     'select'     => Env::get('REDIS_DB', 0), 
+        //     'timeout'    => 0,
+        //     'persistent' => false,
+        // ],
+        // 'redis-write' => [
+        //     'type'       => 'redis',
+        //     'host'       => Env::get('REDIS_HOST_WRITE', Env::get('REDIS_HOST', '127.0.0.1')),
+        //     'port'       => Env::get('REDIS_PORT_WRITE', Env::get('REDIS_PORT', 6379)),
+        //     'password'   => Env::get('REDIS_PASSWORD_WRITE', Env::get('REDIS_PASSWORD', '')),
+        //     'select'     => Env::get('REDIS_DB', 0),
+        //     'timeout'    => 0,
+        //     'persistent' => false,
+        // ],
+        
+        // 更多的缓存连接
         'redis' => [
             'type'       => 'redis',
-            'host'       => Env::get('REDIS_HOST', '127.0.0.1'),
-            'port'       => Env::get('REDIS_PORT', 6379),
-            'password'   => Env::get('REDIS_PASSWORD', ''),
-            'select'     => Env::get('REDIS_DB', 0), 
+            'host'       => 'golang',
+            'port'       => 6739,
+            'password'   => '',
+            'select'     => 0, 
             'timeout'    => 0,
             'persistent' => false,
         ],
         'redis-write' => [
             'type'       => 'redis',
-            'host'       => Env::get('REDIS_HOST_WRITE', Env::get('REDIS_HOST', '127.0.0.1')),
-            'port'       => Env::get('REDIS_PORT_WRITE', Env::get('REDIS_PORT', 6379)),
-            'password'   => Env::get('REDIS_PASSWORD_WRITE', Env::get('REDIS_PASSWORD', '')),
-            'select'     => Env::get('REDIS_DB', 0),
+            'host'       => 'golang',
+            'port'       => 6739,
+            'password'   => '',
+            'select'     => 0,
             'timeout'    => 0,
             'persistent' => false,
-        ],
-        // 更多的缓存连接
+        ]
     ],
 ];

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	gocache "github.com/patrickmn/go-cache"
+	"github.com/redis/go-redis/v9"
 )
 
 type goCache struct {
@@ -31,4 +32,12 @@ func (c *goCache) Del(keys ...string) {
 	for _, key := range keys {
 		c.cache.Delete(key)
 	}
+}
+
+func (c *goCache) GetClient() *redis.Client {
+	return nil
+}
+
+func (c *goCache) GetClusterClient() *redis.ClusterClient {
+	return nil
 }
