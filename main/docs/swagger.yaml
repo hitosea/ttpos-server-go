@@ -4017,7 +4017,7 @@ definitions:
         - $ref: '#/definitions/resp.AboutBuffet'
         description: 自助餐信息
       discount_price:
-        description: 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。
+        description: 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量
         type: number
       finished_num:
         description: 制作完成数量
@@ -4058,7 +4058,7 @@ definitions:
         description: '0: 未送厨 1:已送厨 2:制作完成（出餐）'
         type: integer
       unit_price:
-        description: 单价
+        description: 单价（折前）
         type: number
       uuid:
         description: 商品uuid

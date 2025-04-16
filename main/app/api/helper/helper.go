@@ -90,8 +90,12 @@ func Fail(c *gin.Context, code int, message ...string) {
 // FailWithData 返回失败携带数据
 func FailWithData(c *gin.Context, code int, data any, err error, message ...string) {
 	msg := "fail"
-	if err != nil && config.Server.Mode == constant.ServerModeRelease {
-		msg = pkgerrors.Cause(err).Error()
+	if err != nil {
+		if config.Server.Mode == constant.ServerModeRelease {
+			msg = pkgerrors.Cause(err).Error()
+		} else {
+			msg = err.Error()
+		}
 	}
 	if len(message) == 1 {
 		msg = i18n.Translate(i18n.GetAcceptLanguage(c), message[0])

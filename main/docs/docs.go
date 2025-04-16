@@ -21196,7 +21196,7 @@ const docTemplate = `{
                     ]
                 },
                 "discount_price": {
-                    "description": "折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。",
+                    "description": "折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量",
                     "type": "number"
                 },
                 "finished_num": {
@@ -21256,7 +21256,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "unit_price": {
-                    "description": "单价",
+                    "description": "单价（折前）",
                     "type": "number"
                 },
                 "uuid": {

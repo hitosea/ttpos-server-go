@@ -2,6 +2,7 @@
 
 namespace app\common\model\supplier;
 
+use think\facade\Cache;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
 
@@ -83,6 +84,24 @@ class Printing extends BaseModel
         self::PRINT_MODE_SCENE_MERGE,
         self::PRINT_MODE_SCENE_SEPARATE,
     ];
+
+    /**
+     * 分类更新后推送通知
+     */
+    public static function onAfterWrite()
+    {
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST:%d:%d", self::$app_id, 0), null);
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST:%d:%d", self::$app_id, 1), null);
+    }
+
+    /**
+     * 分类删除后推送通知
+     */
+    public static function onAfterDelete()
+    {
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST:%d:%d", self::$app_id, 0), null);
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST:%d:%d", self::$app_id, 1), null);
+    }
 
     /**
      * 关联商品打印详情
