@@ -40,6 +40,51 @@ docker_name() {
     echo `$COMPOSE ps | awk '{print $1}' | grep "\-$1\-"`
 }
 
+env_init(){
+    # 初始化env文件 
+    if [ ! -f ".env" ]; then 
+        cp .env.example .env; 
+        success "Created .env file from .env.example"; 
+        sed -i 's/^APP_ID=.*/APP_ID='$(openssl rand -hex 3)'/' .env 
+    fi 
+    if [ -z $(env_get DB_REDIS_TYPE) ]; then
+        read -p "是否使用项目中的数据库，请输入 y 或 n: " input
+        # Check the input and echo the result
+        if [ "$input" = "y" ]; then
+            sed -i 's/^DB_REDIS_TYPE=.*/DB_REDIS_TYPE=local/' .env 
+            sed -i 's/^DB_HOST=.*/DB_HOST=db/' .env 
+            sed -i 's/^DB_PORT=.*/DB_PORT=3306/' .env 
+            sed -i 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env 
+            sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD='$(openssl rand -hex 8)'/' .env 
+            sed -i 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$(openssl rand -hex 8)'/' .env 
+        elif [ "$input" = "n" ]; then
+            sed -i 's/^DB_REDIS_TYPE=.*/DB_REDIS_TYPE=remote/' .env 
+            success "请自行修改.env文件中的数据库和reids连接配置信息，然后重新运行bash cmd install"
+            exit 1
+        else
+            error "输入无效，请输入 y 或 n"
+            exit 1
+        fi
+    elif [ $(env_get DB_REDIS_TYPE) = "local" ]; then
+        sed -i 's/^DB_HOST=.*/DB_HOST=db/' .env 
+        sed -i 's/^DB_PORT=.*/DB_PORT=3306/' .env 
+        sed -i 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env 
+        sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD='$(openssl rand -hex 8)'/' .env 
+        sed -i 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$(openssl rand -hex 8)'/' .env 
+    elif [ $(env_get DB_REDIS_TYPE) = "remote" ]; then
+        read -p "确认是否已修改.env文件中的数据库和reids连接配置信息，是请输入 y; 否请输入 n: " input
+        if [ "$input" = "y" ]; then
+            success "数据库和reids连接配置信息已修改"
+        elif [ "$input" = "n" ]; then
+            success "请自行修改.env文件中的数据库和reids连接配置信息，然后重新运行bash cmd install"
+            exit 1
+        else
+            error "输入无效，请输入 y 或 n"
+            exit 1
+        fi
+    fi
+}
+
 env_get() {
     local key=$1
     local value=`cat ${cur_path}/.env | grep "^$key=" | awk -F '=' '{print $2}'`
@@ -181,6 +226,8 @@ if [ $# -gt 0 ]; then
     if [[ "$1" == "init" ]] || [[ "$1" == "install" ]]; then
         shift 1
         #
+        env_init
+        $COMPOSE up -d
         run_exec php "composer install --ignore-platform-reqs"
         echo -e "${OK} ${GreenBG} 初始化数据库 ${Font}"
         # 
