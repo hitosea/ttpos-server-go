@@ -62,6 +62,9 @@ class Buffet extends BuffetModel
         foreach ($list as &$item) {
             $item['buy_limit_status'] = count($item['buffetLimitProducts']) > 0 ? 1 : 0;
             $item['can_delete'] = $this->getCanDelete($item);
+            if ($item['buffetTaxes']) {
+                $item['buffetTaxes'][0]['buffet_tax_type'] = '1';
+            }
         }
         return $list;
     }
