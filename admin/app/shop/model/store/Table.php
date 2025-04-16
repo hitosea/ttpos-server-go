@@ -3,6 +3,7 @@
 
 namespace app\shop\model\store;
 
+use app\common\model\bill\SaleBill;
 use app\common\model\shop\BindRecord;
 use app\common\model\store\Table as TableModel;
 
@@ -174,6 +175,11 @@ class Table extends TableModel
     {
         if ($this['status'] == 1 || $this['device_uuid'] > 0) {
             $this->error = '当前桌位状态不允许该操作';
+            return false;
+        }
+        $bill = SaleBill::where('desk_uuid', $this['uuid'])->where('status', 0)->find();
+        if ($bill) {
+            $this->error = '桌台使用中，无法禁用';
             return false;
         }
         return $this->save(['is_disable' => $switch_status == 0 ? 1 : 0]);

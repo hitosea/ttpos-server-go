@@ -2040,4 +2040,5 @@ return [
     "请选择服务费应用范围" => "Lütfen servis ücreti uygulama kapsamını seçin",
     "请选择应用服务费的桌台" => "Lütfen servis ücreti uygulanacak masayı seçin.",
     "并发生成 " => "Eş Zamanlı Oluşturma",
+    "桌台使用中，无法禁用" => "Masa kullanılıyor, devre dışı bırakılamaz",
 ];

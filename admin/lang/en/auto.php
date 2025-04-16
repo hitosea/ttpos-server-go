@@ -2040,4 +2040,5 @@ return [
     "请选择服务费应用范围" => "Please select the service fee application scope",
     "请选择应用服务费的桌台" => "Please select the table for which to apply the service fee.",
     "并发生成 " => "Concurrent generation",
+    "桌台使用中，无法禁用" => "The table is in use and cannot be disabled",
 ];
