@@ -304,31 +304,13 @@ class ErpDamagedProductRecord extends BaseModel
             ->select();
         
         $list = [];
-        $skuList = [];
-        $materialList = [];
         foreach ($records as $record) {
             $monthStartStock = 0; // 月初库存数
             $monthEntryStock = 0; // 月入库存数
-            if ($record->sku) {
-                foreach ($record->sku->erpMonthlyProductStatistics as $item) {
-                    $monthStartStock = helper::bcadd($monthStartStock, $item->stock);
-                }
-                foreach ($record->sku->erpInventoryRecord as $item) {
-                    $monthEntryStock = helper::bcadd($monthEntryStock, $item->num);
-                }  
-                
+            if ($record->sku) {                
                 $category = $record->sku->product->category;
-                $skuList[] = $record->sku->uuid;
             } else {
-                foreach ($record->material->erpMonthlyMaterialStatistics as $item) {
-                    $monthStartStock = helper::bcadd($monthStartStock, $item->stock);
-                }
-                foreach ($record->material->erpInventoryRecord as $item) {
-                    $monthEntryStock = helper::bcadd($monthEntryStock, $item->num);
-                }
-
                 $category = $record->material->category;
-                $materialList[] = $record->material->uuid;
             }
             $totalEntryStock = helper::bcadd($monthEntryStock, $monthStartStock, 4);
 
@@ -349,7 +331,7 @@ class ErpDamagedProductRecord extends BaseModel
         foreach ($list as $key => $item) {
             // 该分类下未统计的sku库存数(月初+月入)
             $productList = Product::with([
-                'sku' => function($q) use ($skuList, $year, $month, $startTime, $endTime) {
+                'sku' => function($q) use ($year, $month, $startTime, $endTime) {
                     return $q->with([
                         'erpMonthlyProductStatistics' => function($q) use ($year, $month) {
                             return $q->where('year', $year)
@@ -361,7 +343,7 @@ class ErpDamagedProductRecord extends BaseModel
                                 ->whereIn('scene', [0, 1, 2])
                                 ->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)]);
                         }
-                    ])->whereNotIn('uuid', $skuList);
+                    ]);
                 }
             ])->where('category_uuid', $item['category_id'])->select();
             foreach ($productList as $product) {
@@ -388,7 +370,7 @@ class ErpDamagedProductRecord extends BaseModel
                         ->whereIn('scene', [0, 1, 2])
                         ->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)]);
                 }
-            ])->where('category_uuid', $item['category_id'])->whereNotIn('uuid', $materialList)->select();
+            ])->where('category_uuid', $item['category_id'])->select();
             foreach ($materialList as $material) {
                 foreach ($material->erpMonthlyMaterialStatistics as $i) {
                     $item['entry_stock'] = helper::bcadd($item['entry_stock'] ?? 0, $i->stock, 4);
