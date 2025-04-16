@@ -45,7 +45,11 @@ func (model *SaleOrderBuffetCustomerType) SetNil() {
 
 // GetReturnPrice 获取销售订单商品的已退金额。订单商品金额 - 可退货金额
 func (model *SaleOrderBuffetCustomerType) GetReturnPrice() float64 {
-	return decimal.NewFromFloat(model.Price).Sub(decimal.NewFromFloat(model.GetCanReturnPrice())).Round(2).InexactFloat64()
+	if model.GetReturnNum() == 0 {
+		return 0
+	}
+	returnPrice := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromUint64(uint64(model.GetReturnNum()))).Truncate(3).Round(2).InexactFloat64()
+	return returnPrice
 }
 
 // 获取销售订单自助餐顾客类型的总税费。包含服务费税费
@@ -92,17 +96,23 @@ func (model *SaleOrderBuffetCustomerType) GetCanReturnNum() uint {
 	for _, returnOrderProduct := range model.ReturnOrderProducts {
 		amount = amount.Add(decimal.NewFromFloat(float64(returnOrderProduct.Num)))
 	}
+	num := float64(model.Num) - amount.InexactFloat64()
 	// 如果可退货数量小于0，则返回0
 	// 这个判断很有必要，否则会出现可退货数量为负数的情况但uint是无符号的，结果会得到一个很大的数。如2-14=18446744073709551604
-	if model.Num <= uint(amount.InexactFloat64()) {
+	if num < 0 {
 		return 0
 	}
-	return model.Num - uint(amount.InexactFloat64())
+	return uint(num)
+}
+
+// GetReturnNum 获取销售订单自助餐顾客类型的已退货数量. 已退货数量=订单自助餐顾客类型数量-可退货数量
+func (model *SaleOrderBuffetCustomerType) GetReturnNum() uint {
+	return model.Num - model.GetCanReturnNum()
 }
 
 // GetCanReturnPrice 获取销售订单自助餐顾客类型的可退货金额. 可退货金额=订单自助餐顾客类型金额-已退货金额
 func (model *SaleOrderBuffetCustomerType) GetCanReturnPrice() float64 {
-	return decimal.NewFromFloat(model.Price).Mul(decimal.NewFromUint64(uint64(model.GetCanReturnNum()))).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromUint64(uint64(model.GetCanReturnNum()))).Round(2).InexactFloat64()
 }
 
 func (model *SaleOrderBuffetCustomerType) GetSign() string {

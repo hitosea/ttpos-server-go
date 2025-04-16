@@ -1023,7 +1023,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					Num:              orderBuffetCustomer.Num, // 这种类型顾客多少个，如老人这个类型2人
 					SalePrice:        orderBuffetCustomer.GetOriginPrice(),
 					TotalPrice:       orderBuffetCustomer.GetDiscountPrice(),
-					RefundAmount:     orderBuffetCustomer.GetReturnPrice(),
+					RefundAmount:     -orderBuffetCustomer.GetReturnPrice(),
 					Status:           1,
 					Remark:           "",
 					IsMust:           false,
@@ -1056,7 +1056,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					Price:               delayProduct.Price,
 					SalePrice:           delayProduct.GetAmount(),
 					TotalPrice:          delayProduct.GetAmount(),
-					RefundAmount:        delayProduct.GetReturnPrice(),
+					RefundAmount:        -delayProduct.GetReturnPrice(),
 					Status:              1,  // 添加后标记送厨状态，不可修改
 					Remark:              "", // 加钟商品没有备注
 					IsMust:              false,
@@ -1095,7 +1095,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					ImageUrl:            imageUrl,
 					CancelReason:        cancelReason.GetLocale(ctx.GetLanguage()),
 					GiftReason:          giftReason.GetLocale(ctx.GetLanguage()),
-					RefundAmount:        saleOrderProduct.GetReturnPrice(),
+					RefundAmount:        -saleOrderProduct.GetReturnPrice(),
 				})
 			}
 		}
@@ -1941,7 +1941,7 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 			LocaleName:           buffetCustomer.LocaleName,
 			LocaleAttributeName:  buffetCustomer.LocaleAttributeName,
 			Num:                  buffetCustomer.CanReturnNum,    // 自助餐顾客类型可退货数量
-			Price:                buffetCustomer.UnitPrice,       // 自助餐顾客类型单价
+			Price:                buffetCustomer.TotalPrice,      // 自助餐顾客类型总价（单个商品、折后）
 			CanReturnAmount:      buffetCustomer.CanReturnAmount, // 自助餐顾客类型可退款金额
 			CurrencyUnit:         currencyUnit,
 		})

@@ -411,6 +411,9 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
 			},
 			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ReturnOrderProducts",
+			},
+			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName",
 			},
 			WithPreload{
@@ -420,10 +423,13 @@ func (r *orderRepo) GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
 			},
 			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetDelayProducts",
+				Query: "SaleOrders.SaleOrderBuffetDelayProducts.ReturnOrderProducts",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.ReturnOrderProducts",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetCustomerTypePrice.BuffetCustomerType",
