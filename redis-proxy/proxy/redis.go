@@ -6,11 +6,11 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"redis-proxy/cache"
+	"redis-proxy/config"
 	"strconv"
 	"strings"
 	"time"
-	"ttpos-server-go/config"
-	"ttpos-server-go/pkg/cache"
 
 	"github.com/redis/go-redis/v9"
 )

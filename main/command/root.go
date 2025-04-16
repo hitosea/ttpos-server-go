@@ -15,7 +15,6 @@ import (
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/validator"
-	"ttpos-server-go/proxy"
 	"ttpos-server-go/router"
 
 	"github.com/gin-gonic/gin"
@@ -68,9 +67,6 @@ var rootCommand = &cobra.Command{
 		// 定时器
 		// initializeTimers(dbm, cache.Global)
 
-		// Redis代理
-		go initializeRedisProxy()
-
 		// 外网服务
 		initializeExternalService(dbm, cache.Global)
 	},
@@ -117,20 +113,4 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 
 	// 启动定时器
 	c.Start()
-}
-
-// 初始化Redis代理
-func initializeRedisProxy() {
-	// 创建并启动服务器
-	server, err := proxy.NewServer(":6739")
-	if err != nil {
-		fmt.Println("Error creating Redis proxy", zap.Error(err))
-		return
-	}
-
-	fmt.Println("Redis proxy starting on port 6739...")
-	if err := server.Start(); err != nil {
-		fmt.Println("Error starting Redis proxy", zap.Error(err))
-		return
-	}
 }

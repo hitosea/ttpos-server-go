@@ -49,8 +49,8 @@ return [
         // 更多的缓存连接
         'redis' => [
             'type'       => 'redis',
-            'host'       => 'golang',
-            'port'       => 6739,
+            'host'       => 'redis-proxy',
+            'port'       => 16379,
             'password'   => '',
             'select'     => 0, 
             'timeout'    => 0,
@@ -58,8 +58,8 @@ return [
         ],
         'redis-write' => [
             'type'       => 'redis',
-            'host'       => 'golang',
-            'port'       => 6739,
+            'host'       => 'redis-proxy',
+            'port'       => 16379,
             'password'   => '',
             'select'     => 0,
             'timeout'    => 0,
