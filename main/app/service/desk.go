@@ -205,7 +205,7 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
 			// 合计已送厨商品列表
-			if product.Status == constant.SaleOrderProductStatusCooking && !(product.AboutBuffet.IsCustomer || product.AboutBuffet.IsDelay) {
+			if product.Status == constant.SaleOrderProductStatusCooking && !(product.AboutBuffet.IsCustomer || product.AboutBuffet.IsDelay) && product.IsShowKitchen == 1 {
 				var sentKitchenNum, finishedNum uint
 				if existsProduct, exits := productPackageUuidMap[product.ProductPackageUuid]; exits {
 					sentKitchenNum = existsProduct.SentKitchenNum + product.Num
