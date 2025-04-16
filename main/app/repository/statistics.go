@@ -60,24 +60,24 @@ func (r *StatisticsRepo) CountSale(opts ...DBOption) model.StatisticsSaleData {
 			"sale_bill_uuid",
 			"desk_uuid",
 			"SUM(product_price + product_tax + service_fee + service_tax + payment_fee - refund_tax - refund_service_fee) AS sale_amount",
-			"SUM(payment_amount - payment_balance - refund_amount - refund_service_fee) AS received_amount",
+			"SUM(payment_amount - refund_amount - payment_balance) AS received_amount",
 			"SUM(product_price) AS product_price",
 			"SUM(product_num) AS product_num",
-			"SUM(discount_member - refund_discount_member) AS discount_member",
-			"SUM(payment_amount - product_tax - service_tax) AS business_amount",
+			"SUM(discount_member) AS discount_member",
+			"SUM(payment_amount - refund_amount - refund_payment_balance - product_tax - service_tax + refund_tax) AS business_amount",
 			"SUM(payment_fee - refund_fee) AS payment_fee",
 			"SUM(service_fee - refund_service_fee) AS service_fee",
 			"SUM(product_tax + service_tax - refund_tax) AS tax",
-			"SUM(refund_amount + refund_service_fee) AS refund_amount",
+			"SUM(refund_amount + refund_payment_balance) AS refund_amount",
 			"SUM(discount - refund_discount) AS discount",
 			"SUM(gift_amount) AS gift_amount",
 			"SUM(gift_num) AS gift_num",
 			"SUM(free_amount) AS free_amount",
 			"SUM(free_num) AS free_num",
 			"SUM(IF(desk_uuid > 0, meal_num, 0)) AS meal_num",
-			"SUM(payment_amount - refund_amount - refund_service_fee) AS order_amount",
-			"SUM(IF(desk_uuid > 0, payment_amount - refund_amount - refund_service_fee, NULL)) AS desk_order_amount",
-			"SUM(IF(desk_uuid = 0, payment_amount - refund_amount - refund_service_fee, NULL)) AS instant_order_amount",
+			"SUM(payment_amount - refund_amount - refund_payment_balance) AS order_amount",
+			"SUM(IF(desk_uuid > 0, payment_amount - refund_amount - refund_payment_balance, NULL)) AS desk_order_amount",
+			"SUM(IF(desk_uuid = 0, payment_amount - refund_amount - refund_payment_balance, NULL)) AS instant_order_amount",
 		).Group("sale_bill_uuid")
 
 	r.db.Table("(?) AS t", subQuery).
@@ -260,12 +260,11 @@ func (r *StatisticsRepo) CountArea(opts ...DBOption) []model.StatisticsAreaData 
 	statisticsSaleTable := prefix + "statistics_sale as ss"
 	deskTable := prefix + "desk as d"
 	deskRegionTable := prefix + "desk_region as dr"
-
 	db.Table(statisticsSaleTable).
 		Select(
 			"dr.name AS area_name",
-			"SUM(ss.product_price + ss.product_tax + ss.service_fee + ss.service_tax + ss.payment_fee) AS area_sale_amount",
-			"SUM(ss.payment_amount - ss.product_tax - ss.service_tax) AS area_business_amount",
+			"SUM(ss.product_price + ss.product_tax + ss.service_fee + ss.service_tax + ss.payment_fee - ss.refund_tax - ss.refund_service_fee) AS area_sale_amount",
+			"SUM(ss.payment_amount - ss.refund_amount - ss.refund_payment_balance - ss.product_tax - ss.service_tax + ss.refund_tax) AS area_business_amount",
 			"SUM(ss.product_num) AS area_product_num",
 		).
 		Joins("LEFT JOIN " + deskTable + " ON ss.desk_uuid = d.uuid").
