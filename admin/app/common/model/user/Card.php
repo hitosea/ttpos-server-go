@@ -8,6 +8,7 @@ use app\common\enum\user\pointsLog\PointsLogSceneEnum;
 use app\common\model\user\PointsLog as PointsLogModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
 use app\common\library\helper;
+use app\common\model\bill\SaleOrder;
 use app\common\model\user\BalanceLog as BalanceLogModel;
 
 /**
@@ -166,13 +167,14 @@ class Card extends BaseModel
         return $image;
     }
 
-    // 检测用户是否有余额/积分消费记录
+    // 检测用户是否有余额
     public function checkUserConsumeRecord($user_id, $card_id = 0, $cardCreateTime = 0)
     {
-        // 发卡后有消费过
-        if (!(new BalanceLogModel)->where('member_uuid', $user_id)->where('scene', BalanceLogSceneEnum::CONSUME)->where('create_time', '>', $cardCreateTime)->findOrEmpty()->isEmpty()) {
+        $count = SaleOrder::where('consumer_uuid', $user_id)->where('status', 1)->where(function ($query) use ($card_id) {
+            $query->where('member_card_discount_rate', '>=', 0)->whereOr('member_card_discount_rate', '<', 1);
+        })->count();
+        if ($count > 0) {
             return true;
         }
-        return !(new PointsLogModel)->where('member_uuid', $user_id)->where('scene', PointsLogSceneEnum::CONSUME)->where('create_time', '>', $cardCreateTime)->findOrEmpty()->isEmpty();
     }
 }

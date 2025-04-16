@@ -1042,6 +1042,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card_log` (
     `member_card_type_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员卡类型名称,不随后台改变,当无法用member_card_type_uuid获取会员卡类型信息时,用此字段',
     `member_card_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡类型ID',
     `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
+    `give_money` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送余额',
+    `give_point` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送积分',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
