@@ -13,6 +13,7 @@ type SaleOrderBuffetCustomerCalc struct {
 	TaxFee            float64 `json:"tax_fee"`
 	ServiceFee        float64 `json:"service_fee"`
 	TotalPrice        float64 `json:"total_price"`
+	OriginTotalPrice  float64 `json:"origin_total_price"`
 }
 
 // 计算销售订单自助餐顾客类型
@@ -34,6 +35,8 @@ func (model *SaleOrderBuffetCustomerType) calcSaleOrderBuffetCustomerType(servic
 	model.ServiceFee = calc.ServiceFee
 	calc.TotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType)
 	model.TotalPrice = calc.TotalPrice
+	calc.OriginTotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType, WithOriginPrice())
+	model.OriginTotalPrice = calc.OriginTotalPrice
 	return calc
 }
 
@@ -119,7 +122,7 @@ func (model *SaleOrderBuffetCustomerType) calcTaxFee(price float64, taxFeeRate f
 		return taxFee.InexactFloat64()
 	} else if taxFeeType == constant.TaxFeeTypeNoTax {
 		// 商品未含税时，消费税税费=商品销售价*消费税税率
-		taxFee := decimal.NewFromFloat(model.Price).Mul(decimal.NewFromFloat(taxFeeRate))
+		taxFee := decimal.NewFromFloat(price).Mul(decimal.NewFromFloat(taxFeeRate))
 		return taxFee.InexactFloat64()
 	}
 
@@ -158,12 +161,19 @@ func (model *SaleOrderBuffetCustomerType) calcProductPriceNoneTax(price float64,
 // 商品未含税时，单个商品最终应收金额=最终价格（折后价）+服务费+总税费=最终价格（折后价）+服务费+（商品税费+服务费税费）
 // 商品已含税时，单个商品最终应收金额=商品折后不含税价格+服务费+总税费=（最终价格（折扣价）-商品税费） + 服务费 + 总税费 = （最终价格（折后价）-商品税费） + 服务费 + （商品税费+服务费税费）= 最终价格（折后价）+ 服务费 + 服务费税费
 // 总结，商品已含税时，单个商品最终应收金额=最终价格（折后价）+ 服务费 + 服务费税费
-func (model *SaleOrderBuffetCustomerType) calcTotalPrice(serviceFeeRate float64, taxFeeType int, serviceFeeType int) float64 {
+func (model *SaleOrderBuffetCustomerType) calcTotalPrice(serviceFeeRate float64, taxFeeType int, serviceFeeType int, options ...func(option *CalcOption)) float64 {
+	option := &CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+	price := model.calcPrice() // 折后价
+	if option.IsOriginPrice {
+		price = model.SalePrice // 折前价
+	}
 	// 商品未含税时，单个商品最终应收金额=最终价格（折后价）+服务费+商品税费+服务费税费
-	price := model.calcPrice()
 	if taxFeeType == constant.TaxFeeTypeNoTax {
 		totalPrice := decimal.NewFromFloat(price).Add(
-			decimal.NewFromFloat(model.calcServiceFee(model.Price, serviceFeeRate, taxFeeType))).Add(
+			decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType))).Add(
 			decimal.NewFromFloat(model.calcTaxFee(price, model.TaxRate, taxFeeType))).Add(
 			decimal.NewFromFloat(model.calcServiceTaxFee(price, serviceFeeRate, taxFeeType, serviceFeeType)))
 		return totalPrice.InexactFloat64()
@@ -171,13 +181,13 @@ func (model *SaleOrderBuffetCustomerType) calcTotalPrice(serviceFeeRate float64,
 	// 当商品已含税时，单个商品最终应收金额=最终价格（折后价）+ 服务费 + 服务费税费
 	if taxFeeType == constant.TaxFeeTypeTax {
 		totalPrice := decimal.NewFromFloat(price).Add(
-			decimal.NewFromFloat(model.calcServiceFee(model.Price, serviceFeeRate, taxFeeType))).Add(
+			decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType))).Add(
 			decimal.NewFromFloat(model.calcServiceTaxFee(price, serviceFeeRate, taxFeeType, serviceFeeType)))
 		return totalPrice.InexactFloat64()
 	}
 	// 如果不收取税费时，单个商品最终应收金额=最终价格（折后价）+ 服务费
 	totalPrice := decimal.NewFromFloat(price).Add(
-		decimal.NewFromFloat(model.calcServiceFee(model.Price, serviceFeeRate, taxFeeType)))
+		decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType)))
 	return totalPrice.InexactFloat64()
 }
 

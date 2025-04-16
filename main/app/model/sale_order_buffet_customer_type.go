@@ -25,6 +25,7 @@ type SaleOrderBuffetCustomerType struct {
 	TaxFee            float64 `gorm:"column:tax_fee;type:decimal(12,2);not null;default:0;comment:自助餐顾客类型税费（单人）。自助餐顾客类型已含税时，税费=自助餐顾客类型原价*(1-1/(1+税率))；自助餐顾客类型未含税时，税费=自助餐顾客类型原价*税率" json:"tax_fee"`
 	ServiceFee        float64 `gorm:"column:service_fee;type:decimal(12,2);not null;default:0;comment:服务费（单人）,0-固定服务费 大于0-按比例收服务费；自助餐顾客类型已含税时，服务费=(自助餐顾客类型原价-自助餐顾客类型税费)*服务费比例；自助餐顾客类型未含税时，服务费=自助餐顾客类型原价*服务费比例" json:"service_fee"`
 	TotalPrice        float64 `gorm:"column:total_price;type:decimal(12,2);not null;default:0;comment:应收金额(单人)。商品已含税时，应收金额(单人)=(最终单价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=最终单价+服务费+总税费" json:"total_price"`
+	OriginTotalPrice  float64 `gorm:"column:origin_total_price;type:decimal(12,2);not null;default:0;comment:原始应收金额(单人)。商品已含税时，应收金额(单人)=（原始单价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=原始单价+服务费+总税费" json:"origin_total_price"`
 
 	// 关联ID字段
 	SaleOrderUuid               uint64 `gorm:"column:sale_order_uuid;comment:销售订单ID" json:"sale_order_uuid"`
@@ -65,7 +66,8 @@ func (model *SaleOrderBuffetCustomerType) GetTaxFee() float64 {
 // 获取销售订单自助餐顾客类型的原始税费。税费=销售订单自助餐顾客类型的税费*销售订单自助餐顾客类型的数量
 func (model *SaleOrderBuffetCustomerType) GetOriginTaxFee(taxFeeType int) float64 {
 	taxFee := model.calcTaxFee(model.SalePrice, model.TaxRate, taxFeeType) // 税费（折前）
-	return decimal.NewFromFloat(taxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+	totalTaxFee := decimal.NewFromFloat(taxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+	return totalTaxFee
 }
 
 // 获取销售订单自助餐顾客类型的服务费税费。服务费税费=销售订单自助餐顾客类型的服务费税费*销售订单自助餐顾客类型的数量
@@ -146,3 +148,27 @@ func (model *SaleOrderBuffetCustomerType) GetDiscountPrice() float64 {
 	price := decimal.NewFromFloat(model.Price).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
 	return price
 }
+
+// 获取顾客折后价(含VAT) = 应收金额(单人、折后)*人数
+// 获取顾客折前价(含VAT) = 应收金额(单人、折前)*人数
+func (model *SaleOrderBuffetCustomerType) GetDiscountPriceWithVAT(options ...func(option *CalcOption)) float64 {
+	option := &CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+	totalPrice := model.TotalPrice
+	if option.IsOriginPrice {
+		// 折前价. = 顾客原价+服务费+税费
+		totalPrice = model.OriginTotalPrice
+		// 兼容没有OriginTotalPrice字段时的情况
+
+	}
+	price := decimal.NewFromFloat(totalPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Truncate(3).Round(2).InexactFloat64()
+	return price
+}
+
+// // 获取顾客折后价(含VAT) = 应收金额(单人、折后)*人数
+// func (model *SaleOrderBuffetCustomerType) GetDiscountPriceWithVAT() float64 {
+// 	price := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Truncate(3).Round(2).InexactFloat64()
+// 	return price
+// }

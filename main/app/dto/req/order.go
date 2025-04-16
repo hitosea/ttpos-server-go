@@ -205,6 +205,15 @@ func (req OrderDiscountReq) GetOffDiscount() float64 {
 	return decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(discount)).Mul(decimal.NewFromFloat(100)).InexactFloat64()
 }
 
+// GetPercentDiscount 获取百分比折扣的折扣率。使用场景：1.记录订单操作日志时，“优惠折扣：折扣-80%（￥50）”
+// 示例1: 80% => 80
+// 示例1: 30% off => 70
+func (req OrderDiscountReq) GetPercentDiscount() float64 {
+	discount := req.GetDiscount()
+	// discount * 100
+	return decimal.NewFromFloat(discount).Mul(decimal.NewFromFloat(100)).InexactFloat64()
+}
+
 // OrderZeroRuleReq 订单抹零规则
 type OrderZeroRuleReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID

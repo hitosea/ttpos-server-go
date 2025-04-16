@@ -4,7 +4,6 @@ import (
 	contexts "context"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"math"
 	"slices"
 	"sort"
@@ -33,6 +32,8 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
+
+	"github.com/gin-gonic/gin"
 
 	"github.com/duke-git/lancet/v2/cryptor"
 	"github.com/duke-git/lancet/v2/slice"
@@ -1020,10 +1021,10 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 						MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 						TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 					},
-					Price:            orderBuffetCustomer.Price,
+					Price:            orderBuffetCustomer.SalePrice,
 					Num:              orderBuffetCustomer.Num, // 这种类型顾客多少个，如老人这个类型2人
-					SalePrice:        orderBuffetCustomer.GetOriginPrice(),
-					TotalPrice:       orderBuffetCustomer.GetDiscountPrice(),
+					SalePrice:        orderBuffetCustomer.GetDiscountPriceWithVAT(model.WithOriginPrice()),
+					TotalPrice:       orderBuffetCustomer.GetDiscountPriceWithVAT(),
 					RefundAmount:     -orderBuffetCustomer.GetReturnPrice(),
 					Status:           1,
 					Remark:           "",
@@ -3048,6 +3049,7 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 
 	// 发布"整单打折"事件
 	go func() {
+		discountAmount := saleOrder.CustomDiscountFee
 		event.NewSystemBus().PublishDiscountSaleOrderEvent(event.DiscountSaleOrderPayload{
 			BasePayload: event.BasePayload{ // 整单打折
 				Ctx:           ctx,
@@ -3060,8 +3062,8 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 			OldPrice:        memberDiscountAmount, // 旧价格为订单的会员折扣后的金额。如果没有会员折扣，则旧价格为订单应收金额
 			NewPrice:        saleOrder.GetAmount(),
 			DiscountType:    constant.DiscountOperationLogTypeDiscountSaleOrder,
-			RoundingRate:    req.GetOffDiscount(),
-			SpecialDiscount: decimal.NewFromFloat(memberDiscountAmount).Sub(decimal.NewFromFloat(saleOrder.GetAmount())).InexactFloat64(),
+			RoundingRate:    req.GetPercentDiscount(),
+			SpecialDiscount: discountAmount,
 		})
 	}()
 

@@ -393,7 +393,7 @@ func (model *SaleOrder) calcOriginTaxFee(products []*SaleOrderProduct, serviceFe
 			decimal.NewFromFloat(buffetCustomer.GetOriginTaxFee(taxFeeType))).Add(
 			decimal.NewFromFloat(buffetCustomer.GetOriginServiceTaxFee(serviceFeeRate, taxFeeType, serviceFeeType)))
 	}
-	return taxFee.InexactFloat64()
+	return taxFee.Truncate(3).Round(2).InexactFloat64()
 }
 
 // 计算已送厨商品的销售订单的自定义优惠折扣金额。
