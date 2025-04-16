@@ -65,7 +65,6 @@ func newRedisCache(conf Config) Cache {
 		for _, conf := range clusterConfig {
 			address := fmt.Sprintf("%s:%s", conf.Host, conf.Port)
 			addressList = append(addressList, address)
-
 		}
 		opt := &redis.ClusterOptions{
 			Addrs:    addressList,
@@ -113,6 +112,7 @@ func (c *redisCache) Get(key string) (interface{}, bool) {
 func (c *redisCache) Del(key ...string) {
 	if c.clusterClient != nil {
 		c.clusterClient.Del(context.Background(), key...)
+		return
 	}
 	c.client.Del(context.Background(), key...)
 }

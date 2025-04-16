@@ -58,7 +58,9 @@ func (cap *Captcha) Generate() (string, string, error) {
 		return "", "", err
 	}
 	cacheKey := cap.cachePrefix + id
-	cap.cache.Set(cacheKey, answer, cap.maxAge)
+	if err := cap.cache.Set(cacheKey, answer, cap.maxAge); err != nil {
+		return "", "", err
+	}
 	return id, base64Img, nil
 }
 
