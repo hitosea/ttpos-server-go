@@ -54,6 +54,13 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 	deviceRepo := repository.NewDeviceRepo(db)
 	existsDevice, _ := deviceRepo.GetDeviceAll(deviceRepo.WhereSource(addReq.Source), deviceRepo.WhereSn(addReq.DeviceId))
 	if existsDevice.ID != 0 {
+		// 已软删除设备重新登录，判断设备绑定上限
+		if existsDevice.DeleteTime != 0 {
+			companySetting := repository.NewCompanySettingRepo(db).Get()
+			if err := s.reachBindLimit(deviceRepo, companySetting, addReq.Source); err != nil {
+				return 0, err
+			}
+		}
 		productPrinterUuid := addReq.ProductPrinterUuid
 		if productPrinterUuid == 0 {
 			productPrinterUuid = existsDevice.ProductPrinterUuid
@@ -80,55 +87,26 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		if err != nil {
 			return 0, errors.WithMessage(err, "更新绑定信息失败")
 		}
+		// 已软删除收银机重新登录，如果自带打印，默认更新收银打印配置
+		if existsDevice.DeleteTime != 0 &&
+			addReq.Source == constant.SourceCashier && slices.Contains(constant.BrandsPrints, addReq.Brand) {
+			if err := s.bindPrinter(ctx, addReq.DeviceId); err != nil {
+				return 0, errors.WithMessage(err, "设置默认打印机失败")
+			}
+		}
 		return existsDevice.Uuid, nil
 	}
 
 	// 判断设备绑定上限
 	companySetting := repository.NewCompanySettingRepo(db).Get()
-	type Source struct {
-		Name      string
-		Limit     uint
-		ErrorCode int
-	}
-	sources := map[string]Source{
-		constant.SourceCashier:   {"收银机", uint(companySetting.CashLimit), constant.CashierLoginLimit},
-		constant.SourceAssistant: {"点餐助手", uint(companySetting.AssistantLimit), constant.AssistantLoginLimit},
-		constant.SourceKitchen:   {"厨显", uint(companySetting.KitchenLimit), constant.KitchenLoginLimit},
-		constant.SourceTablet:    {"平板", uint(companySetting.TabletLimit), constant.TabletLoginLimit},
-	}
-	for sourceName, source := range sources {
-		if sourceName != addReq.Source {
-			continue
-		}
-		bindCount := deviceRepo.GetBindCountBySource(sourceName)
-		if bindCount >= source.Limit { // 超过绑定上限
-			return 0, errors.NewWithCode(source.ErrorCode, source.Name+"登录设备已达上限，请在其他设备上退出登录或联系销售代表")
-		}
+	if err := s.reachBindLimit(deviceRepo, companySetting, addReq.Source); err != nil {
+		return 0, err
 	}
 
 	// 绑定品牌，如果自带打印，默认更新收银打印配置
 	if addReq.Source == constant.SourceCashier && slices.Contains(constant.BrandsPrints, addReq.Brand) {
-		printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, []dto.LanguageItem{})
-		if err != nil {
-			return 0, errors.WithMessage(err)
-		}
-		if printerSetting.CashierOpen == "1" {
-			var added bool
-			for _, item := range printerSetting.CashierPrinter {
-				if item.Key == addReq.DeviceId {
-					added = true
-				}
-			}
-			if !added {
-				printerSetting.CashierPrinter = append(printerSetting.CashierPrinter, setting2.CashierPrinterItem{
-					Key:       addReq.DeviceId,
-					PrinterId: addReq.DeviceId,
-				})
-			}
-			// 设置默认打印机
-			if err = s.settingSrv.UpdateSetting(ctx, constant.SettingPrinter, printerSetting); err != nil {
-				return 0, errors.WithMessage(err, "设置默认打印机失败")
-			}
+		if err := s.bindPrinter(ctx, addReq.DeviceId); err != nil {
+			return 0, errors.WithMessage(err, "设置默认打印机失败")
 		}
 	}
 
@@ -146,6 +124,55 @@ func (s *deviceSrv) AddDevice(ctx context.Context, addReq req.AddDeviceReq) (uin
 		return 0, errors.WithMessage(err)
 	}
 	return device.Uuid, nil
+}
+
+// 检查绑定上限
+func (s *deviceSrv) reachBindLimit(deviceRepo repository.IDeviceRepo, companySetting model.CompanySetting, reqSource string) error {
+	type Source struct {
+		Name      string
+		Limit     uint
+		ErrorCode int
+	}
+	sources := map[string]Source{
+		constant.SourceCashier:   {"收银机", uint(companySetting.CashLimit), constant.CashierLoginLimit},
+		constant.SourceAssistant: {"点餐助手", uint(companySetting.AssistantLimit), constant.AssistantLoginLimit},
+		constant.SourceKitchen:   {"厨显", uint(companySetting.KitchenLimit), constant.KitchenLoginLimit},
+		constant.SourceTablet:    {"平板", uint(companySetting.TabletLimit), constant.TabletLoginLimit},
+	}
+	for sourceName, source := range sources {
+		if sourceName != reqSource {
+			continue
+		}
+		if deviceRepo.GetBindCountBySource(sourceName) >= source.Limit {
+			return errors.NewWithCode(source.ErrorCode, source.Name+"登录设备已达上限，请在其他设备上退出登录或联系销售代表")
+		}
+	}
+	return nil
+}
+
+// 收银机绑定自带打印机
+func (s *deviceSrv) bindPrinter(ctx context.Context, deviceId string) error {
+	printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, []dto.LanguageItem{})
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	if printerSetting.CashierOpen != "1" {
+		return nil
+	}
+	var added bool
+	for _, item := range printerSetting.CashierPrinter {
+		if item.Key == deviceId {
+			added = true
+		}
+	}
+	if !added {
+		printerSetting.CashierPrinter = append(printerSetting.CashierPrinter, setting2.CashierPrinterItem{
+			Key:       deviceId,
+			PrinterId: deviceId,
+		})
+	}
+	// 设置默认打印机
+	return s.settingSrv.UpdateSetting(ctx, constant.SettingPrinter, printerSetting)
 }
 
 func (s *deviceSrv) GetRemark(companyUuid uint64, source string, deviceId string) string {

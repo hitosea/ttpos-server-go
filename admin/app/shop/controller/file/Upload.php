@@ -270,27 +270,35 @@ class Upload extends BaseController
 
                         foreach ($insert_file_res_arr as $item) {
                             if (in_array($item['product_id'], $existingProductIds)) {
-                                $productData = [
+                                $productDataItem = [
                                     'uuid' => $item['product_id'],
                                     'image_file_uuid' => $item['image_id']
                                 ];
-                                $productData[] = $productData;
+                                $productData[] = $productDataItem;
                             }
                             if (in_array($item['product_id'], $existingMaterialIds)) {
-                                $materialData = [
+                                $materialDataItem = [
                                     'uuid' => $item['product_id'],
                                     'image_uuid' => $item['image_id']
                                 ];
-                                $materialData[] = $materialData;
+                                $materialData[] = $materialDataItem;
                             }
                         }
 
                         // 批量更新
                         if (!empty($productData)) {
-                            Product::whereIn('uuid', array_column($productData, 'uuid'))->update(['image_file_uuid' => $productData['image_file_uuid']]);
+                            foreach (array_chunk($productData, 1000) as $list) {
+                                foreach ($list as $item) {
+                                    Product::where('uuid', $item['uuid'])->update(['image_file_uuid' => $item['image_file_uuid']]);
+                                }
+                            }
                         }
                         if (!empty($materialData)) {
-                            Material::whereIn('uuid', array_column($materialData, 'uuid'))->update(['image_uuid' => $materialData['image_uuid']]);
+                            foreach (array_chunk($materialData, 1000) as $list) {
+                                foreach ($list as $item) {
+                                    Material::where('uuid', $item['uuid'])->update(['image_uuid' => $item['image_uuid']]);
+                                }
+                            }
                         }
                     }
 
