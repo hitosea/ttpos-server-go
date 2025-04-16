@@ -1,6 +1,7 @@
 package assistant
 
 import (
+	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -57,6 +58,9 @@ func (h *OrderHandler) IsCellClose(c *gin.Context) {
 		err = errors.New("参数错误")
 	}
 	if err != nil {
+		if strings.Contains(err.Error(), "订单已结账") {
+			err = errors.New("当前订单已被部分支付，无法整单取消")
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
