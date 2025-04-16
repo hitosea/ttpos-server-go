@@ -453,14 +453,18 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("会员优惠"), t.base.GetPriceAndUnit(saleOrder.MemberDiscountFee)))
 		printer.LineFeed(1)
 		// 会员折扣
+		oldGradeEquity := float64(100)
+		oldCardDiscount := float64(100)
 		gradeEquity := float64(100)
 		cardDiscount := float64(100)
 		if temp == 3 {
 			if saleOrder.MemberDiscountRate != 0 {
 				gradeEquity = saleOrder.MemberDiscountRate * 100
+				oldGradeEquity = gradeEquity
 			}
 			if saleOrder.MemberCardDiscountRate != 0 {
 				cardDiscount = saleOrder.MemberCardDiscountRate * 100
+				oldCardDiscount = cardDiscount
 			}
 		}
 		// 中文/繁体中文
@@ -470,11 +474,11 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 			gradeEquity /= 10
 			cardDiscount /= 10
 		}
-		if gradeEquity != 100 && gradeEquity > 0 {
+		if oldGradeEquity != 100 && gradeEquity > 0 {
 			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("会员折扣"), t.base.Number(gradeEquity), unit))
 			printer.LineFeed(1)
 		}
-		if cardDiscount != 100 && cardDiscount > 0 {
+		if oldCardDiscount != 100 && cardDiscount > 0 {
 			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("会员卡折扣"), t.base.Number(cardDiscount), unit))
 			printer.LineFeed(1)
 		}
