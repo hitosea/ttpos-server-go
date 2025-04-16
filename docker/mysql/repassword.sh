@@ -17,7 +17,7 @@ fi
 
 md5_password=$(salt_hash $new_password)
 
-content=$(echo "select \`admin_user_id\` from ${MARIADB_PREFIX}admin_user order by \`admin_user_id\` limit 1;" | mysql -u$MARIADB_USER -p$MARIADB_PASSWORD $MARIADB_DATABASE -h$MARIADB_HOST)
+content=$(echo "select \`admin_user_id\` from ${MARIADB_PREFIX}admin_user order by \`admin_user_id\` limit 1;" | mysql -u$MARIADB_USER -p$MARIADB_PASSWORD $MARIADB_DATABASE -h$MARIADB_HOST -P$MARIADB_PORT)
 userid=$(echo "$content" | sed -n '2p')
 
 if [ -z "$userid" ]; then
@@ -25,7 +25,7 @@ if [ -z "$userid" ]; then
     exit 1
 fi
 
-mysql -u$MARIADB_USER -p$MARIADB_PASSWORD $MARIADB_DATABASE -h$MARIADB_HOST <<EOF
+mysql -u$MARIADB_USER -p$MARIADB_PASSWORD $MARIADB_DATABASE -h$MARIADB_HOST -P$MARIADB_PORT <<EOF
 update ${MARIADB_PREFIX}admin_user set \`username\`='admin',\`password\`='${md5_password}' where \`admin_user_id\` = '${userid}';
 EOF
 account="admin"
