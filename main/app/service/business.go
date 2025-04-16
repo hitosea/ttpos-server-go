@@ -471,6 +471,7 @@ func (s *businessSrv) CountProductSales(ctx context.Context, req req.BusinessDat
 		PageSize:       req.PageSize,
 		AreaUuid:       req.AreaUuid,
 		CategoryUuid:   req.CategoryUuid,
+		ProductName:    req.ProductName,
 	})
 
 	var list = []business_data_resp.BusinessDataCountProductSalesItem{}

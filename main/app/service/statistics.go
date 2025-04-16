@@ -720,6 +720,7 @@ type CountReq struct {
 	PageSize       int    `json:"page_size"`        // 每页大小
 	AreaUuid       uint64 `json:"area_uuid"`        // 区域UUID -1=全都
 	CategoryUuid   uint64 `json:"category_uuid"`    // 分类UUID -1=全都
+	ProductName    string `json:"product_name"`     // 商品名称
 }
 
 // buildCountOpts 构建统计选项
@@ -928,6 +929,7 @@ func (s *statisticsSrv) CountProductSale(ctx context.Context, req CountReq) Coun
 		Language:      ctx.GetLanguage(),
 		AreaUuid:      req.AreaUuid,
 		CategoryUuid:  req.CategoryUuid,
+		ProductName:   req.ProductName,
 	}, s.buildCountOpts(req)...)
 
 	var data []CountProductSale
