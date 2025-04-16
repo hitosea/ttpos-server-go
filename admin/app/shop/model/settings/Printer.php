@@ -7,7 +7,6 @@ use app\common\enum\settings\PrinterTypeEnum;
 use app\common\model\settings\Printer as PrinterModel;
 use app\common\model\settings\PrinterType;
 use app\common\model\supplier\Printing as PrintingModel;
-use think\facade\Cache;
 
 class Printer extends PrinterModel
 {
@@ -47,9 +46,6 @@ class Printer extends PrinterModel
             return false;
         }
 
-        // 清除打印机列表缓存
-        $this->clearPrinterListCache();
-
         return true;
     }
 
@@ -82,9 +78,6 @@ class Printer extends PrinterModel
             return false;
         }
 
-        // 清除打印机列表缓存
-        $this->clearPrinterListCache();
-
         return true;
     }
 
@@ -108,17 +101,7 @@ class Printer extends PrinterModel
             return false;
         }
 
-        // 清除打印机列表缓存
-        $this->clearPrinterListCache();
-
         return true;
     }
 
-    /**
-     * 清除打印机列表缓存
-     */
-    private function clearPrinterListCache()
-    {
-        Cache::set(sprintf("PRODUCT_PRINTER_LIST:%d", self::$app_id), null);
-    }
 }

@@ -311,7 +311,6 @@ func (h *DeskHandler) OrderPaymentInfo(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	ctx.Log().Debug("获取结账页面信息成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }
@@ -520,7 +519,6 @@ func (h *DeskHandler) OrderCartProductCooking(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	ctx.Log().Debug("送厨购物车商品成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }

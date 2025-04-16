@@ -249,7 +249,7 @@ func (model *SaleOrderProduct) GetCanReturnNum() uint {
 
 // GetReturnPrice 获取销售订单商品的已退金额。订单商品金额 - 可退货金额
 func (model *SaleOrderProduct) GetReturnPrice() float64 {
-	return decimal.NewFromFloat(model.Price).Sub(decimal.NewFromFloat(model.GetCanReturnPrice())).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.TotalPrice).Sub(decimal.NewFromFloat(model.GetCanReturnPrice())).Round(2).InexactFloat64()
 }
 
 // GetCanReturnPrice 获取销售订单商品的可退货金额. 可退货金额=订单商品金额-已退货金额

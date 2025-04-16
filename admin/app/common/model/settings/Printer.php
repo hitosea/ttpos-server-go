@@ -3,11 +3,10 @@
 namespace app\common\model\settings;
 
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 use app\common\model\shop\BindRecord;
 use app\common\enum\settings\SettingEnum;
 use app\common\model\supplier\PrintingItem;
-use think\facade\Log;
-use think\model\concern\SoftDelete;
 
 /**
  * 打印机模型
