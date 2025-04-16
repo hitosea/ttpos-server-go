@@ -11,6 +11,7 @@ type CalcOption struct {
 	SaleBillSetting *SaleBillSetting // 新的销售账单设置
 	CookingStatus   int              // 0-包括已送厨和未送厨 1-已送厨的 2-未送厨的
 	H5OrderStatus   int              // 0-包括已下单和未下单 1-已接单的 2-未接单的
+	IsOriginPrice   bool             // 是否计算原价. 默认计算折后价
 }
 
 const (
@@ -70,6 +71,13 @@ func WithH5Cart() func(option *CalcOption) {
 func WithAll() func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.CookingStatus = CookingStatusAll
+	}
+}
+
+// WithOriginPrice 计算原价
+func WithOriginPrice() func(option *CalcOption) {
+	return func(option *CalcOption) {
+		option.IsOriginPrice = true
 	}
 }
 
@@ -331,22 +339,9 @@ func (model *SaleOrderProduct) calcServiceTaxFee(price float64, serviceFeeRate f
 	// 当服务费收费税费且开启税费时
 	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax && taxFeeType != constant.TaxFeeTypeNone {
 		// 服务费税费=订单商品服务费*商品消费税税率
-		serviceTaxFee := decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType)).Mul(decimal.NewFromFloat(model.TaxRate))
-		return serviceTaxFee.Round(3).Round(2).InexactFloat64()
-	}
-	return 0
-}
-
-// 计算订单商品的原服务费税费（打折前）。
-// 当不收取服务费税费时，服务费税费为0
-// 当收取服务费税费时，服务费税费=订单商品服务费（打折前）*商品消费税税率
-func (model *SaleOrderProduct) calcOriginServiceTaxFee(serviceFeeRate float64, taxFeeType int, serviceFeeType int) float64 {
-	// 当服务费收费税费时
-	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax {
-		// 服务费税费=订单商品服务费*商品消费税税率
-		serviceFee := model.calcServiceFee(model.calcSalePrice(), serviceFeeRate, taxFeeType)
+		serviceFee := model.calcServiceFee(price, serviceFeeRate, taxFeeType)
 		serviceTaxFee := decimal.NewFromFloat(serviceFee).Mul(decimal.NewFromFloat(model.TaxRate))
-		return serviceTaxFee.Truncate(3).Round(2).InexactFloat64()
+		return serviceTaxFee.Round(3).Round(2).InexactFloat64()
 	}
 	return 0
 }
