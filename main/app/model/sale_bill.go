@@ -338,6 +338,7 @@ func (model *SaleBill) ValidateOrderStatus(source string, operation string, sale
 		if !slices.Contains([]string{
 			constant.SourceShop,
 			constant.SourceCashier,
+			constant.SourceAssistant,
 		}, source) && operation == constant.OrderOrderCancel && len(model.SaleOrders) > 1 {
 			return errors.New("拆单不可操作")
 		}

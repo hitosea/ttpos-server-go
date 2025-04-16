@@ -46,6 +46,9 @@ const (
 	CodeOrderCheckProductUnCooking = -206 // 有商品未送厨
 	// 关闭桌台检查
 	CodeOrderCheckProductCooking = -207 // 有商品已送厨
+
+	CodeH5OrderTimeLimit = -231 // h5订单时间限制
+	CodeH5OrderNumLimit  = -232 // h5订单数量限制
 )
 
 func ParseCodeOrderCheck(code int) string {

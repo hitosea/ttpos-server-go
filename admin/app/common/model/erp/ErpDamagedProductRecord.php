@@ -6,6 +6,7 @@ use app\common\library\helper;
 use app\common\model\BaseModel;
 use app\common\model\shop\User;
 use think\model\concern\SoftDelete;
+use app\common\model\product\Product;
 use app\common\model\product\Material;
 use app\common\model\product\ProductBom;
 use app\shop\model\product\RelatedMaterial;
@@ -303,6 +304,8 @@ class ErpDamagedProductRecord extends BaseModel
             ->select();
         
         $list = [];
+        $skuList = [];
+        $materialList = [];
         foreach ($records as $record) {
             $monthStartStock = 0; // 月初库存数
             $monthEntryStock = 0; // 月入库存数
@@ -315,6 +318,7 @@ class ErpDamagedProductRecord extends BaseModel
                 }  
                 
                 $category = $record->sku->product->category;
+                $skuList[] = $record->sku->uuid;
             } else {
                 foreach ($record->material->erpMonthlyMaterialStatistics as $item) {
                     $monthStartStock = helper::bcadd($monthStartStock, $item->stock);
@@ -324,6 +328,7 @@ class ErpDamagedProductRecord extends BaseModel
                 }
 
                 $category = $record->material->category;
+                $materialList[] = $record->material->uuid;
             }
             $totalEntryStock = helper::bcadd($monthEntryStock, $monthStartStock, 4);
 
@@ -339,8 +344,60 @@ class ErpDamagedProductRecord extends BaseModel
             $list[$categoryUuid]['damage_count'] = helper::bcadd($list[$categoryUuid]['damage_count'] ?? 0, $record['num'], 4);
             $list[$categoryUuid]['entry_stock'] = helper::bcadd($list[$categoryUuid]['entry_stock'] ?? 0, $totalEntryStock, 4);
         }
+
         $list = array_values($list);
         foreach ($list as $key => $item) {
+            // 该分类下未统计的sku库存数(月初+月入)
+            $productList = Product::with([
+                'sku' => function($q) use ($skuList, $year, $month, $startTime, $endTime) {
+                    return $q->with([
+                        'erpMonthlyProductStatistics' => function($q) use ($year, $month) {
+                            return $q->where('year', $year)
+                                ->where('month', $month)
+                                ->where('scene', ErpMonthlyProductStatistics::MONTH_START);
+                        },
+                        'erpInventoryRecord' => function($q) use ($startTime, $endTime) {
+                            return $q->where('status', 0)
+                                ->whereIn('scene', [0, 1, 2])
+                                ->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)]);
+                        }
+                    ])->whereNotIn('uuid', $skuList);
+                }
+            ])->where('category_uuid', $item['category_id'])->select();
+            foreach ($productList as $product) {
+                foreach ($product->sku as $sku) {
+                    foreach ($sku->erpMonthlyProductStatistics as $i) {
+                        $item['entry_stock'] = helper::bcadd($item['entry_stock'] ?? 0, $i->stock, 4);
+                    }
+                    foreach ($sku->erpInventoryRecord as $i) {
+                        $item['entry_stock'] = helper::bcadd($item['entry_stock'] ?? 0, $i->num, 4);
+                    }
+                }
+            }
+
+
+            // 该分类下未统计的材料库存数(月初+月入)
+            $materialList = Material::with([
+                'erpMonthlyMaterialStatistics' => function($q) use ($year, $month) {
+                    return $q->where('year', $year)
+                        ->where('month', $month)
+                        ->where('scene', ErpMonthlyProductStatistics::MONTH_START);
+                },      
+                'erpInventoryRecord' => function($q) use ($startTime, $endTime) {
+                    return $q->where('status', 0)
+                        ->whereIn('scene', [0, 1, 2])
+                        ->where('create_time', 'between', [strtotime($startTime), strtotime($endTime)]);
+                }
+            ])->where('category_uuid', $item['category_id'])->whereNotIn('uuid', $materialList)->select();
+            foreach ($materialList as $material) {
+                foreach ($material->erpMonthlyMaterialStatistics as $i) {
+                    $item['entry_stock'] = helper::bcadd($item['entry_stock'] ?? 0, $i->stock, 4);
+                }
+                foreach ($material->erpInventoryRecord as $i) {
+                    $item['entry_stock'] = helper::bcadd($item['entry_stock'] ?? 0, $i->num, 4);
+                }
+            }
+
             $item['damage_ratio'] = $item['entry_stock'] > 0 ? helper::bcdiv($item['damage_count'], $item['entry_stock'], 5) : 0;
             $item['damage_ratio'] = floatval(helper::bcmul($item['damage_ratio'], 100, 2)) . '%';
             $item['damage_count'] = floatval($item['damage_count']);

@@ -130,7 +130,7 @@ func (model *SaleOrderProduct) GetTotalTaxFee() float64 {
 
 // 获取销售订单商品的税费。税费=销售订单商品的税费*销售订单商品的数量
 func (model *SaleOrderProduct) GetTaxFee() float64 {
-	return decimal.NewFromFloat(model.TaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+	return decimal.NewFromFloat(model.TaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).Truncate(3).Round(2).InexactFloat64()
 }
 
 // 获取销售订单商品的原始税费(折前价)。税费=销售订单商品的税费*销售订单商品的数量
@@ -141,12 +141,12 @@ func (model *SaleOrderProduct) GetOriginTaxFee(taxFeeType int) float64 {
 
 // 获取销售订单商品的服务费税费。服务费税费=销售订单商品的服务费税费*销售订单商品的数量
 func (model *SaleOrderProduct) GetServiceTaxFee() float64 {
-	return decimal.NewFromFloat(model.ServiceTaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+	return decimal.NewFromFloat(model.ServiceTaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).Truncate(3).Round(2).InexactFloat64()
 }
 
 // 获取销售订单商品的服务费税费。服务费税费=销售订单商品的服务费税费*销售订单商品的数量
 func (model *SaleOrderProduct) GetOriginServiceTaxFee(serviceFeeRate float64, taxFeeType int, serviceFeeType int) float64 {
-	serviceTaxFee := model.calcOriginServiceTaxFee(serviceFeeRate, taxFeeType, serviceFeeType) // 服务费（折前）
+	serviceTaxFee := model.calcServiceTaxFee(model.calcSalePrice(), serviceFeeRate, taxFeeType, serviceFeeType) // 服务费（折前）
 	return decimal.NewFromFloat(serviceTaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
 }
 
@@ -239,22 +239,32 @@ func (model *SaleOrderProduct) GetCanReturnNum() uint {
 	for _, returnOrderProduct := range model.ReturnOrderProducts {
 		amount = amount.Add(decimal.NewFromFloat(float64(returnOrderProduct.Num)))
 	}
+	num := float64(model.Num) - amount.InexactFloat64()
 	// 如果可退货数量小于0，则返回0
 	// 这个判断很有必要，否则会出现可退货数量为负数的情况但uint是无符号的，结果会得到一个很大的数。如2-14=18446744073709551604
-	if model.Num <= uint(amount.InexactFloat64()) {
+	if num < 0 {
 		return 0
 	}
-	return model.Num - uint(amount.InexactFloat64())
+	return uint(num)
 }
 
-// GetReturnPrice 获取销售订单商品的已退金额。订单商品金额 - 可退货金额
+// GetReturnNum 获取销售订单商品的已退货数量. 已退货数量=订单商品数量-可退货数量
+func (model *SaleOrderProduct) GetReturnNum() uint {
+	return model.Num - model.GetCanReturnNum()
+}
+
+// GetReturnPrice 获取销售订单商品的已退金额。已退金额=订单商品金额*已退货数量
 func (model *SaleOrderProduct) GetReturnPrice() float64 {
-	return decimal.NewFromFloat(model.TotalPrice).Sub(decimal.NewFromFloat(model.GetCanReturnPrice())).Round(2).InexactFloat64()
+	if model.GetReturnNum() == 0 {
+		return 0
+	}
+	returnPrice := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromUint64(uint64(model.GetReturnNum()))).Truncate(3).Round(2).InexactFloat64()
+	return returnPrice
 }
 
 // GetCanReturnPrice 获取销售订单商品的可退货金额. 可退货金额=订单商品金额-已退货金额
 func (model *SaleOrderProduct) GetCanReturnPrice() float64 {
-	return decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromUint64(uint64(model.GetCanReturnNum()))).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromUint64(uint64(model.GetCanReturnNum()))).Truncate(3).Round(2).InexactFloat64()
 }
 
 func (model *SaleOrderProduct) IsCurrentDeskProduct() bool {
@@ -557,6 +567,9 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 	// 遍历选择的退菜原因
 	for _, reason := range model.CancelReasons {
 		if !reason.IsReturnFoodReason() {
+			continue
+		}
+		if reason.IsDelete() {
 			continue
 		}
 		zhNames = append(zhNames, reason.MultiLanguageName.ZhName)

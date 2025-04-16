@@ -26,6 +26,7 @@ type StatisticsSale struct {
 	PaymentFee           float64 `gorm:"column:payment_fee;type:decimal(14,2);default:0.00;comment:支付手续费;NOT NULL" json:"payment_fee"`
 	PaymentBalance       float64 `gorm:"column:payment_balance;type:decimal(14,2);default:0.00;comment:支付余额;NOT NULL" json:"payment_balance"`
 	RefundAmount         float64 `gorm:"column:refund_amount;type:decimal(14,2);default:0.00;comment:退款金额;NOT NULL" json:"refund_amount"`
+	RefundPaymentBalance float64 `gorm:"column:refund_payment_balance;type:decimal(14,2);default:0.00;comment:退款支付余额;NOT NULL" json:"refund_payment_balance"`
 	RefundTax            float64 `gorm:"column:refund_tax;type:decimal(14,2);default:0.00;comment:退款税费;NOT NULL" json:"refund_tax"`
 	RefundServiceFee     float64 `gorm:"column:refund_service_fee;type:decimal(14,2);default:0.00;comment:退款服务费;NOT NULL" json:"refund_service_fee"`
 	RefundDiscount       float64 `gorm:"column:refund_discount;type:decimal(14,2);default:0.00;comment:退款优惠折扣;NOT NULL" json:"refund_discount"`

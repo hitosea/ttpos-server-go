@@ -149,9 +149,9 @@ type Product struct {
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 uint               `json:"num"`                   // 数量
 	FinishedNum         uint               `json:"finished_num"`          // 制作完成数量
-	UnitPrice           float64            `json:"unit_price"`            // 单价
+	UnitPrice           float64            `json:"unit_price"`            // 单价（折前）
 	SalePrice           float64            `json:"price"`                 // 原价. 原价=单价*数量
-	DiscountPrice       float64            `json:"discount_price"`        // 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。
+	DiscountPrice       float64            `json:"discount_price"`        // 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量
 	Status              int                `json:"status"`                // 0: 未送厨 1:已送厨 2:制作完成（出餐）
 	Remark              string             `json:"remark"`                // 备注
 	IsMust              bool               `json:"is_must"`               // 是否必点
@@ -167,6 +167,7 @@ type Product struct {
 	Sign            string  `json:"-"` // 签名，用于合并商品
 	CanReturnNum    uint    `json:"-"` // 可退货数量
 	CanReturnAmount float64 `json:"-"` // 可退款金额
+	TotalPrice      float64 `json:"-"` // 总价（单个商品、折后）
 }
 
 // GetPrice 获取商品价格(折后价)

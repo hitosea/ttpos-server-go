@@ -4,6 +4,7 @@ import (
 	contexts "context"
 	"encoding/json"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"math"
 	"slices"
 	"sort"
@@ -116,7 +117,7 @@ type IOrderSrv interface {
 	GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error)                                                                                       // 必点方案列表
 	GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnsentKitchen, error)             // 获取扫码h5购物车未下单商品列表
 	GetOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (*resp.H5CartSendProduct, error)           // 获取扫码h5购物车已下单商品列表
-	ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) error                                                                                              // 下单扫码h5订单
+	ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (any, error)                                                                                       // 下单扫码h5订单
 	AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error)                                                                      // 接单扫码h5订单
 	RejectH5Order(ctx context.Context, h5OrderUuid uint64) error                                                                                                                      // 拒单扫码h5订单
 	RejectAllH5Order(ctx context.Context, saleBillUuid uint64) error
@@ -1023,7 +1024,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					Num:              orderBuffetCustomer.Num, // 这种类型顾客多少个，如老人这个类型2人
 					SalePrice:        orderBuffetCustomer.GetOriginPrice(),
 					TotalPrice:       orderBuffetCustomer.GetDiscountPrice(),
-					RefundAmount:     orderBuffetCustomer.GetReturnPrice(),
+					RefundAmount:     -orderBuffetCustomer.GetReturnPrice(),
 					Status:           1,
 					Remark:           "",
 					IsMust:           false,
@@ -1056,7 +1057,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					Price:               delayProduct.Price,
 					SalePrice:           delayProduct.GetAmount(),
 					TotalPrice:          delayProduct.GetAmount(),
-					RefundAmount:        delayProduct.GetReturnPrice(),
+					RefundAmount:        -delayProduct.GetReturnPrice(),
 					Status:              1,  // 添加后标记送厨状态，不可修改
 					Remark:              "", // 加钟商品没有备注
 					IsMust:              false,
@@ -1095,7 +1096,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 					ImageUrl:            imageUrl,
 					CancelReason:        cancelReason.GetLocale(ctx.GetLanguage()),
 					GiftReason:          giftReason.GetLocale(ctx.GetLanguage()),
-					RefundAmount:        saleOrderProduct.GetReturnPrice(),
+					RefundAmount:        -saleOrderProduct.GetReturnPrice(),
 				})
 			}
 		}
@@ -1941,7 +1942,7 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 			LocaleName:           buffetCustomer.LocaleName,
 			LocaleAttributeName:  buffetCustomer.LocaleAttributeName,
 			Num:                  buffetCustomer.CanReturnNum,    // 自助餐顾客类型可退货数量
-			Price:                buffetCustomer.UnitPrice,       // 自助餐顾客类型单价
+			Price:                buffetCustomer.TotalPrice,      // 自助餐顾客类型总价（单个商品、折后）
 			CanReturnAmount:      buffetCustomer.CanReturnAmount, // 自助餐顾客类型可退款金额
 			CurrencyUnit:         currencyUnit,
 		})
@@ -5232,7 +5233,7 @@ func (s *orderSrv) InstantOrderCartProductCancelReturning(ctx context.Context, r
 		if err := repository.NewSaleOrderProductRepo(db).DeleteSaleOrderProductReasons(
 			saleOrderProduct.SaleOrderUuid,
 			saleOrderProduct.Uuid,
-			constant.ProductReasonTypeGift,
+			constant.ProductReasonTypeReturnFood,
 		); err != nil {
 			return errors.WithMessage(err)
 		}
@@ -8558,20 +8559,75 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 }
 
 // ConfirmH5Order 下单扫码h5订单
-func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) error {
+func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (any, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
+	res := make(map[string]any)
 	// 获取销售账单信息
 	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
 	if err != nil {
-		return errors.WithMessage(err, "查询销售账单失败")
+		return res, errors.WithMessage(err, "查询销售账单失败")
 	}
 	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderH5Confirm, saleOrderUuid); err != nil {
-		return errors.WithMessage(err)
+		return res, errors.WithMessage(err)
+	}
+
+	// h5下单限制
+	h5Setting, _ := s.settingSrv.GetH5Setting(ctx, []dto.LanguageItem{})
+	if h5Setting.IsBuffetOrderLimit == "1" || h5Setting.IsOrderLimit == "1" {
+		// 读取上一单下单时间
+		h5Repo := repository.NewH5OrderRepo(db)
+		lastH5Order, _ := h5Repo.GetH5Order(h5Repo.WhereSaleBillUuid(saleBillUuid))
+		if h5Setting.IsBuffetOrderLimit == "1" && saleBill.IsBuffetSaleBill() { // 自助餐下单限制
+			if h5Setting.BuffetOrderLimit.IsLimitTime == "1" { // 限制下单间隔
+				interval, err := strconv.Atoi(h5Setting.BuffetOrderLimit.LimitTime)
+				if err != nil {
+					return nil, errors.WithMessage(err, "解析H5设置失败")
+				}
+				// 小于间隔时间，不可下单
+				nextTime := time.Unix(lastH5Order.CreateTime, 0).Add(time.Duration(interval) * time.Minute).Unix()
+				now := time.Now().Unix()
+				if nextTime-now > 0 {
+					return gin.H{"value": nextTime - now}, errors.NewWithCode(constant.CodeH5OrderTimeLimit, "时间限制")
+				}
+			}
+			if h5Setting.BuffetOrderLimit.IsLimitNum == "1" { // 限制下单最大商品总数
+				numLimit, err := strconv.Atoi(h5Setting.BuffetOrderLimit.LimitNum)
+				if err != nil {
+					return nil, errors.WithMessage(err, "解析H5设置失败")
+				}
+				if saleBill.GetUnOrderH5OrderProductNum() > uint(numLimit) {
+					return gin.H{"value": numLimit}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
+				}
+			}
+		}
+		if h5Setting.IsOrderLimit == "1" && !saleBill.IsBuffetSaleBill() { // 非自助餐下单限制
+			if h5Setting.OrderLimit.IsLimitTime == "1" { // 限制下单间隔
+				interval, err := strconv.Atoi(h5Setting.OrderLimit.LimitTime)
+				if err != nil {
+					return nil, errors.WithMessage(err, "解析H5设置失败")
+				}
+				// 小于间隔时间，不可下单
+				nextTime := time.Unix(lastH5Order.CreateTime, 0).Add(time.Duration(interval) * time.Minute).Unix()
+				now := time.Now().Unix()
+				if nextTime-now > 0 {
+					return gin.H{"value": nextTime - now}, errors.NewWithCode(constant.CodeH5OrderTimeLimit, "时间限制")
+				}
+			}
+			if h5Setting.OrderLimit.IsLimitNum == "1" { // 限制下单最大商品总数
+				numLimit, err := strconv.Atoi(h5Setting.OrderLimit.LimitNum)
+				if err != nil {
+					return nil, errors.WithMessage(err, "解析H5设置失败")
+				}
+				if saleBill.GetUnOrderH5OrderProductNum() > uint(numLimit) {
+					return gin.H{"value": numLimit}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
+				}
+			}
+		}
 	}
 
 	h5Order, err := saleBill.NewH5Order()
 	if err != nil {
-		return errors.WithMessage(err)
+		return res, errors.WithMessage(err)
 	}
 	// 获取未下单的h5订单商品
 	h5OrderProducts := saleBill.GetUnOrderH5OrderProduct()
@@ -8600,7 +8656,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 		}
 		return nil
 	}); err != nil {
-		return errors.WithMessage(err, "下单扫码h5订单失败")
+		return res, errors.WithMessage(err, "下单扫码h5订单失败")
 	}
 
 	go func() {
@@ -8624,7 +8680,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 		}
 	}()
 
-	return nil
+	return res, nil
 }
 
 func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error) {

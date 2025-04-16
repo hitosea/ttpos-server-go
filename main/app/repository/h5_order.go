@@ -94,7 +94,7 @@ func (r *H5OrderRepoImpl) GetH5Order(opts ...DBOption) (*model.H5Order, error) {
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.First(&h5Order).Error
+	err := db.Order("create_time desc").First(&h5Order).Error
 	return &h5Order, errors.WithMessage(err)
 }
 

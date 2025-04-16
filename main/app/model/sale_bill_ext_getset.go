@@ -428,6 +428,16 @@ func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
 	return newH5OrderProducts
 }
 
+// 获取未下单的h5订单商品数量
+func (model *SaleBill) GetUnOrderH5OrderProductNum() uint {
+	var num uint
+	products := model.GetUnOrderH5OrderProduct()
+	for _, product := range products {
+		num += product.Num
+	}
+	return num
+}
+
 // 获取未接单的h5订单商品的商品金额之和
 func (model *SaleBill) GetUnAcceptH5OrderProductTotalPrice(h5OrderProducts []*SaleOrderProduct) float64 {
 	totalPrice := decimal.NewFromFloat(0)

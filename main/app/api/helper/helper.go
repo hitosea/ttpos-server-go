@@ -40,7 +40,7 @@ func ErrorWithDetail(c *gin.Context, code int, err error) {
 }
 
 // ErrorWithData 返回错误携带数据
-func ErrorWithData(c *gin.Context, code int, data interface{}, err error) {
+func ErrorWithData(c *gin.Context, code int, data any, err error) {
 	if config.Server.Mode == constant.ServerModeRelease {
 		err = pkgerrors.Cause(err)
 	}
@@ -56,7 +56,7 @@ func ErrorWithData(c *gin.Context, code int, data interface{}, err error) {
 }
 
 // Success 返回成功
-func Success(c *gin.Context, data interface{}, message ...string) {
+func Success(c *gin.Context, data any, message ...string) {
 	msg := "请求成功"
 	if len(message) == 1 {
 		msg = i18n.Translate(i18n.GetAcceptLanguage(c), message[0])
@@ -88,10 +88,14 @@ func Fail(c *gin.Context, code int, message ...string) {
 }
 
 // FailWithData 返回失败携带数据
-func FailWithData(c *gin.Context, code int, data interface{}, err error, message ...string) {
+func FailWithData(c *gin.Context, code int, data any, err error, message ...string) {
 	msg := "fail"
-	if err != nil && config.Server.Mode == constant.ServerModeRelease {
-		msg = pkgerrors.Cause(err).Error()
+	if err != nil {
+		if config.Server.Mode == constant.ServerModeRelease {
+			msg = pkgerrors.Cause(err).Error()
+		} else {
+			msg = err.Error()
+		}
 	}
 	if len(message) == 1 {
 		msg = i18n.Translate(i18n.GetAcceptLanguage(c), message[0])

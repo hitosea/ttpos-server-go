@@ -500,9 +500,10 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			orderServiceFee           decimal.Decimal
 			orderServiceTax           decimal.Decimal
 			orderFreeAmount           decimal.Decimal
-			orderRefundAmount         decimal.Decimal
 			paymentBalance            decimal.Decimal
 			orderDiscount             decimal.Decimal
+			orderRefundAmount         decimal.Decimal
+			orderRefundPaymentBalance decimal.Decimal
 			orderRefundTax            decimal.Decimal
 			orderRefundServiceFee     decimal.Decimal
 			orderRefundDiscount       decimal.Decimal
@@ -589,9 +590,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				productRefundNum := 0
 				for _, refundProduct := range saleProduct.ReturnOrderProducts {
 					productRefundNum += int(refundProduct.Num)
-					orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee).Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee)).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
 					orderRefundServiceFee = orderRefundServiceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
-					orderRefundDiscount = orderRefundDiscount.Add(decimal.NewFromFloat(saleProduct.DiscountFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					orderRefundDiscount = orderRefundDiscount.Add(decimal.NewFromFloat(saleProduct.CustomDiscountFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
 					orderRefundDiscountMember = orderRefundDiscountMember.Add(decimal.NewFromFloat(saleProduct.MemberDiscountFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
 				}
 
@@ -627,7 +628,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 		for _, salePayment := range saleOrder.PaymentOrders {
 			var paymentRefundAmount decimal.Decimal
 			for _, refundOrderAmount := range salePayment.ReturnOrderAmounts {
-				orderRefundAmount = orderRefundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
+				if refundOrderAmount.PaymentMethod != nil && refundOrderAmount.PaymentMethod.Code == 10 {
+					orderRefundPaymentBalance = orderRefundPaymentBalance.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
+				} else {
+					orderRefundAmount = orderRefundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
+				}
 				paymentRefundAmount = paymentRefundAmount.Add(decimal.NewFromFloat(refundOrderAmount.Amount))
 			}
 			if salePayment.PaymentMethod != nil && salePayment.PaymentMethod.Code == 10 {
@@ -664,13 +669,14 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			FreeNum:              orderFreeNum,
 			PaymentAmount:        saleOrder.PaymentAmount,
 			PaymentFee:           saleOrder.PaymentCommissionFee,
-			PaymentBalance:       paymentBalance.Round(2).InexactFloat64(),
-			RefundAmount:         orderRefundAmount.Round(2).InexactFloat64(),
-			RefundTax:            orderRefundTax.Round(2).InexactFloat64(),
-			RefundServiceFee:     orderRefundServiceFee.Round(2).InexactFloat64(),
-			RefundDiscount:       orderRefundDiscount.Round(2).InexactFloat64(),
-			RefundDiscountMember: orderRefundDiscountMember.Round(2).InexactFloat64(),
-			RefundFee:            orderRefundFee.Round(2).InexactFloat64(),
+			PaymentBalance:       paymentBalance.InexactFloat64(),
+			RefundAmount:         orderRefundAmount.InexactFloat64(),
+			RefundPaymentBalance: orderRefundPaymentBalance.InexactFloat64(),
+			RefundTax:            orderRefundTax.InexactFloat64(),
+			RefundServiceFee:     orderRefundServiceFee.InexactFloat64(),
+			RefundDiscount:       orderRefundDiscount.InexactFloat64(),
+			RefundDiscountMember: orderRefundDiscountMember.InexactFloat64(),
+			RefundFee:            orderRefundFee.InexactFloat64(),
 			CompleteTime:         saleBill.FinishTime,
 		}
 		sales = append(sales, sale)
