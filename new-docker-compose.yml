@@ -33,6 +33,10 @@ services:
       - php
       - golang
       - websocket
+    depends_on:
+      - php
+      - golang
+      - websocket
     restart: unless-stopped
 
   db:
