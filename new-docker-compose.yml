@@ -18,6 +18,7 @@ services:
       - db
       - redis
       - redis-proxy
+      - mysql-proxy
       
   nginx:
     container_name: "saas-nginx-${APP_ID}"
@@ -72,8 +73,6 @@ services:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env
       - ./main/version.json:/var/www/version.json
-#      - /etc/localtime:/etc/localtime:ro
-#     - /etc/timezone:/etc/timezone:ro
     restart: always
 
   websocket:
@@ -84,12 +83,13 @@ services:
     restart: always
 
   mysql-proxy:
-    container_name: "mysql-proxy-${APP_ID}"
+    container_name: "saas-mysql-proxy-${APP_ID}"
     image: "nginx:alpine"
     # ports:
     #   -  16446:6446
     volumes:
       - ./docker/mysql-proxy/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/mysql-proxy/conf.d:/etc/nginx/conf.d
     restart: always
 
   redis-proxy:
