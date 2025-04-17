@@ -29,7 +29,7 @@ class Operate extends Controller
      */
     public function export($dataType = 'all')
     {
-        $url = 'http://192.168.100.88:8080/api/v1/shop/order/export';
+        $url = 'http://nginx/api/v1/shop/order/export';
         $data = $this->postData();
         // 
         $data['page'] = 1;
