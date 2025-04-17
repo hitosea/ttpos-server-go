@@ -383,7 +383,6 @@ type Count7DaysDataResp struct {
 func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7DaysResp {
 	opts := s.buildCountOpts(req)
 	sevenDayData := repository.NewStatisticsRepo(ctx.GetDB()).Count7Days(opts...)
-
 	days := s.buildDays(req)
 	sevenDayList := make([]Count7DaysDataResp, 0, len(sevenDayData))
 	for _, day := range days {
@@ -446,7 +445,7 @@ func (s *statisticsSrv) RankProduct(ctx context.Context, req CountReq) []CountPr
 	var list []CountProductRankResp
 	for _, product := range productData {
 		list = append(list, CountProductRankResp{
-			ProductName: product.ProductName.String + "（" + product.FlavorName.String + "）",
+			ProductName: product.ProductName.String,
 			SaleNum:     product.SaleNum.Int64,
 			SaleAmount:  product.SaleAmount.Float64,
 		})
@@ -525,7 +524,10 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			orderFreeAmount = decimal.NewFromFloat(saleOrder.GetAmount()).Round(2)
 			if isStatFree {
 				orderDiscount = orderDiscount.Add(decimal.NewFromFloat(saleOrder.Amount))
+				orderServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
 			}
+		} else {
+			orderServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
 		}
 
 		// 统计赠菜优惠折扣
@@ -538,6 +540,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			if saleProduct.CancelTime == 0 {
 				// 统计商品数量
 				productNum := int(saleProduct.Num)
+				productNumDec := decimal.NewFromFloat(float64(productNum))
 				orderProductNum += productNum
 
 				// 统计赠送商品数量
@@ -563,21 +566,19 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				productServiceTax := decimal.NewFromFloat(saleProduct.ServiceTaxFee)
 				if isFree {
 					if isStatFree {
-						orderProductPrice = orderProductPrice.Add(productPrice)
-						orderProductTax = orderProductTax.Add(productTax)
-						orderServiceFee = orderServiceFee.Add(productServiceFee)
-						orderServiceTax = orderServiceTax.Add(productServiceTax)
+						orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
+						orderProductTax = orderProductTax.Add(productTax.Mul(productNumDec))
+						orderServiceTax = orderServiceTax.Add(productServiceTax.Mul(productNumDec))
 					}
 				} else {
-					orderProductPrice = orderProductPrice.Add(productPrice)
-					orderProductTax = orderProductTax.Add(productTax)
-					orderServiceFee = orderServiceFee.Add(productServiceFee)
-					orderServiceTax = orderServiceTax.Add(productServiceTax)
+					orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
+					orderProductTax = orderProductTax.Add(productTax.Mul(productNumDec))
+					orderServiceTax = orderServiceTax.Add(productServiceTax.Mul(productNumDec))
 				}
 
 				// 统计商品销售价
 				productSalePrice := decimal.NewFromFloat(saleProduct.SalePrice)
-				orderProductSalePrice = orderProductSalePrice.Add(productSalePrice)
+				orderProductSalePrice = orderProductSalePrice.Add(productSalePrice.Mul(productNumDec))
 
 				// 保存商品BOM UUID
 				var productBomUuid uint64
@@ -721,6 +722,7 @@ type CountReq struct {
 	AreaUuid       uint64 `json:"area_uuid"`        // 区域UUID -1=全都
 	CategoryUuid   uint64 `json:"category_uuid"`    // 分类UUID -1=全都
 	ProductName    string `json:"product_name"`     // 商品名称
+	Timezone       string `json:"timezone"`         // 时区
 }
 
 // buildCountOpts 构建统计选项
@@ -780,11 +782,14 @@ func (s *statisticsSrv) buildCountOpts(req CountReq) []repository.DBOption {
 
 // buildDays 构建日期
 func (s *statisticsSrv) buildDays(req CountReq) []string {
+
+	location, _ := time.LoadLocation(req.Timezone) // 或其他时区
+
 	var (
 		days      []string
 		format    = "2006-01-02"
-		startTime = time.Unix(req.QueryStartTime, 0)
-		endTime   = time.Unix(req.QueryEndTime, 0)
+		startTime = time.Unix(req.QueryStartTime, 0).In(location)
+		endTime   = time.Unix(req.QueryEndTime, 0).In(location)
 	)
 
 	for startTime.Before(endTime) {

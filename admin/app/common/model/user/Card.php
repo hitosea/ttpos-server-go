@@ -170,11 +170,9 @@ class Card extends BaseModel
     // 检测用户是否有余额
     public function checkUserConsumeRecord($user_id, $card_id = 0, $cardCreateTime = 0)
     {
-        $count = SaleOrder::where('consumer_uuid', $user_id)->where('status', 1)->where(function ($query) use ($card_id) {
+        $count = SaleOrder::where('consumer_uuid', $user_id)->where('create_time', '>=', $cardCreateTime)->where('status', 1)->where(function ($query) {
             $query->where('member_card_discount_rate', '>=', 0)->whereOr('member_card_discount_rate', '<', 1);
         })->count();
-        if ($count > 0) {
-            return true;
-        }
+        return $count > 0;
     }
 }

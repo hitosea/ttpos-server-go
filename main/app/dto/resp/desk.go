@@ -20,6 +20,7 @@ type Desk struct {
 	SaleOrderUuid uint64  `json:"sale_order_uuid"` // 第一个销售订单UUID
 	IsSplitOrder  bool    `json:"is_split_order"`  // 是否拆单
 	UpdateTime    int64   `json:"update_time"`     // 更新时间
+	IsDisabled    bool    `json:"-"`               // 是否被禁用
 }
 
 type DeskNo struct {
