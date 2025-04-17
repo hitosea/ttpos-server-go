@@ -67,6 +67,7 @@ type ISrv interface {
 	EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error                                                   // 修改系统设置
 	GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error)                                                           // 获取收银端设置
 	GetAcceptOrderSetting(ctx context.Context) (*resp.AcceptOrderSetting, error)                                                          // 获取接单设置
+	SymbolPosition(ctx context.Context, price float64) string                                                                             // 根据货币符号位置返回字符串
 }
 
 func NewSrv(dbm *database.DBManager, cache cache.Cache) ISrv {
@@ -1244,6 +1245,16 @@ func (s *Srv) GetAcceptOrderSetting(ctx context.Context) (*resp.AcceptOrderSetti
 		AutoOrderLimit: cashierSetting.AutoOrderLimit,
 		IsAutoVoice:    cashierSetting.IsAutoVoice,
 	}, nil
+}
+
+// SymbolPosition 货币符号位置
+func (s *Srv) SymbolPosition(ctx context.Context, amount float64) string {
+	currencySetting, _ := s.GetCurrencySetting(ctx)
+	if currencySetting.UnitPosition == "0" {
+		return currencySetting.Unit + " " + utils.FormatAmount(amount)
+	} else {
+		return utils.FormatAmount(amount) + " " + currencySetting.Unit
+	}
 }
 
 // UpdateSetting 更新设置
