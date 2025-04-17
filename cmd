@@ -59,7 +59,7 @@ env_init(){
             sed -i 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$(openssl rand -hex 8)'/' .env 
         elif [ "$input" = "n" ]; then
             sed -i 's/^DB_REDIS_TYPE=.*/DB_REDIS_TYPE=remote/' .env 
-            success "请自行修改.env文件中的数据库和reids连接配置信息，然后重新运行bash cmd install"
+            success "请自行修改.env文件中的数据库、reids连接信息和修改docker/mysql-proxy/conf.d/stream.conf文件，然后重新运行: bash cmd install"
             exit 1
         else
             error "输入无效，请输入 y 或 n"
@@ -72,11 +72,11 @@ env_init(){
         sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD='$(openssl rand -hex 8)'/' .env 
         sed -i 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$(openssl rand -hex 8)'/' .env 
     elif [ $(env_get DB_REDIS_TYPE) = "remote" ]; then
-        read -p "确认是否已修改.env文件中的数据库和reids连接配置信息，是请输入 y; 否请输入 n: " input
+        read -p "请确认是否已修改.env文件中的数据库、reids连接信息和修改docker/mysql-proxy/conf.d/stream.conf文件，是请输入 y; 否请输入 n: " input
         if [ "$input" = "y" ]; then
             success "数据库和reids连接配置信息已修改"
         elif [ "$input" = "n" ]; then
-            success "请自行修改.env文件中的数据库和reids连接配置信息，然后重新运行bash cmd install"
+            success "请自行修改.env文件中的数据库、reids连接信息和修改docker/mysql-proxy/conf.d/stream.conf文件，然后重新运行: bash cmd install"
             exit 1
         else
             error "输入无效，请输入 y 或 n"

@@ -173,6 +173,9 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 	case constant.OrderRefund: // 退款
 		var refundPayload event.ReturnOrderPayload
 		if err := json.Unmarshal([]byte(log.Data), &refundPayload); err == nil {
+			if refundPayload.RefundType == constant.ReturnOrderRefundTypeTotal { // 整单退款不显示商品
+				return ""
+			}
 			var desc []string
 			for _, product := range refundPayload.Products {
 				item := product.ProductName.GetLocale(language) + " (" + product.ProductAttr.GetLocale(language) + ") *" +
@@ -250,7 +253,7 @@ func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language st
 		constant.OrderSettle:              i18n.Translate(language, "结账"),
 		constant.OrderReverseSettle:       i18n.Translate(language, "反结账"),
 		constant.OrderRefund:              i18n.Translate(language, "部分退款"), // 默认部分退款
-		constant.OrderOrderTaking:         i18n.Translate(language, "接单"),   // 默认非自动接单
+		constant.OrderOrderTaking:         i18n.Translate(language, "接单"),     // 默认非自动接单
 		constant.OrderOrderReject:         i18n.Translate(language, "拒单"),
 		constant.OrderMergeTable:          i18n.Translate(language, "并台"),
 		constant.OrderOrderCancel:         i18n.Translate(language, "整单取消"),
