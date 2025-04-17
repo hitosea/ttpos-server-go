@@ -29,7 +29,7 @@ class Operate extends Controller
      */
     public function export($dataType = 'all')
     {
-        $url = 'http://192.168.100.88:8080/api/v1/shop/order/export';
+        $url = 'http://nginx/api/v1/shop/order/export';
         $data = $this->postData();
         // 
         $data['page'] = 1;
@@ -50,24 +50,6 @@ class Operate extends Controller
         }
         //  
         return (new ExportService())->orderList($result['data']['list']);
-        //
-
-
-        $model = new OrderModel();
-        $data = $this->postData();
-        $data['shop_supplier_id'] = $this->store['user']['shop_supplier_id'];
-        $data['order_type'] = 1;
-        // 时间模式
-        if (!isset($data['time_mode']) || !is_array($data['time_mode'])) {
-            $data['time_mode'] = [0]; // 默认开台时间
-        }
-        if ($exportList = $model->exportList($dataType, $data)) {
-            if (($data['request_type'] ?? '') == 1) {
-                return $this->renderSuccess('操作成功');
-            }
-            return $exportList;
-        }
-        return $this->renderError($model->getError() ?: '操作失败');
     }
 
     /**

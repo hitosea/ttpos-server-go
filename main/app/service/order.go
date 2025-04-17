@@ -897,10 +897,33 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 			var allPayTypeNames []string
 			for _, orderExportInfo := range exportLists {
 				if orderExportInfo.BillUuid == bill.Uuid {
-					allMemberNames = append(allMemberNames, orderExportInfo.MemberNames)
-					allMemberUuids = append(allMemberUuids, orderExportInfo.MemberIds)
+					// 添加产品和支付方式
 					allProducts = append(allProducts, orderExportInfo.Products...)
-					allPayTypeNames = append(allPayTypeNames, orderExportInfo.PayTypeName)
+					// 处理MemberNames，将字符串拆分为数组并逐个添加
+					if orderExportInfo.MemberNames != "" {
+						memberNames := strings.Split(orderExportInfo.MemberNames, ",")
+						for _, name := range memberNames {
+							if name != "" {
+								allMemberNames = append(allMemberNames, name)
+							}
+						}
+					}
+					if orderExportInfo.MemberIds != "" {
+						memberIds := strings.Split(orderExportInfo.MemberIds, ",")
+						for _, id := range memberIds {
+							if id != "" {
+								allMemberUuids = append(allMemberUuids, id)
+							}
+						}
+					}
+					if orderExportInfo.PayTypeName != "" {
+						payTypeNames := strings.Split(orderExportInfo.PayTypeName, ",")
+						for _, name := range payTypeNames {
+							if name != "" {
+								allPayTypeNames = append(allPayTypeNames, name)
+							}
+						}
+					}
 				}
 			}
 			//
@@ -924,9 +947,6 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 			exportLists = append(exportLists, mainOrder)
 		}
 	}
-	//
-	fmt.Println(utils.ToJsonString(exportLists))
-	fmt.Println(len(exportLists))
 	//
 	return resp.OrderExportListPaginationResp{
 		List: exportLists,
@@ -7888,16 +7908,17 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 		products := make([]resp.Product, 0)
 		for _, product := range unCookingSaleOrderProducts {
 			products = append(products, resp.Product{
-				Uuid:          product.Uuid,
-				LocaleName:    product.MultiLanguageName.GetNames(),
-				Num:           product.Num,
-				SalePrice:     product.SalePrice,
-				DiscountPrice: product.DiscountFee,
-				Status:        int(product.Status),
-				Remark:        product.Remark,
-				IsMust:        product.IsMustProduct(),
-				IsGift:        product.IsGiftProduct(),
-				IsCancel:      product.IsCancelProduct(),
+				Uuid:                product.Uuid,
+				LocaleName:          product.MultiLanguageName.GetNames(),
+				LocaleAttributeName: product.GetAttributeName(),
+				Num:                 product.Num,
+				SalePrice:           product.SalePrice,
+				DiscountPrice:       product.DiscountFee,
+				Status:              int(product.Status),
+				Remark:              product.Remark,
+				IsMust:              product.IsMustProduct(),
+				IsGift:              product.IsGiftProduct(),
+				IsCancel:            product.IsCancelProduct(),
 			})
 		}
 		res := &resp.OrderCheckServiceRes{

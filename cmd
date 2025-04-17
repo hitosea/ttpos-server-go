@@ -230,6 +230,8 @@ if [ $# -gt 0 ]; then
         $COMPOSE up -d
         run_exec php "composer install --ignore-platform-reqs"
         echo -e "${OK} ${GreenBG} 初始化数据库 ${Font}"
+        create=`run_exec db "sh /etc/mysql/create_saas.sh"`
+        echo -e "$create"
         # 
         sleep 2
         run_exec php "php think migrate:run"
