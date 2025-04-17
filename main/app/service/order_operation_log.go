@@ -27,9 +27,6 @@ type DiscountPayload struct {
 }
 
 func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrderOperationRecord, language string) string {
-
-	currencySetting, _ := s.settingSrv.GetCurrencySetting(ctx)
-
 	switch log.Action {
 	case constant.OrderOpenTable: // 开台
 		var openTable event.OpenDeskPayload
@@ -81,7 +78,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		var changePrice event.ChangeSaleOrderProductPricePayload
 		if err := json.Unmarshal([]byte(log.Data), &changePrice); err == nil {
 			return changePrice.ProductName.GetLocale(language) + " (" + changePrice.ProductAttr.GetLocale(language) + ") *" +
-				strconv.Itoa(int(changePrice.TotalNum)) + " (" + currencySetting.Unit + utils.FormatFloat(changePrice.Price) + ")"
+				strconv.Itoa(int(changePrice.TotalNum)) + " (" + s.settingSrv.SymbolPosition(ctx, changePrice.Price) + ")"
 		}
 	case constant.OrderUpdateMealNum: // 修改桌台就餐人数
 		var updateMealNum event.ChangeMealNumSaleBillPayload
@@ -94,13 +91,13 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		var productFree event.GiftSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &productFree); err == nil {
 			return productFree.ProductName.GetLocale(language) + " (" + productFree.ProductAttr.GetLocale(language) + ") *" + strconv.Itoa(int(productFree.TotalNum)) +
-				" (" + currencySetting.Unit + utils.FormatFloat(productFree.TotalPrice) + ")"
+				" (" + s.settingSrv.SymbolPosition(ctx, productFree.TotalPrice) + ")"
 		}
 	case constant.OrderCancelProductFree: // 取消赠菜
 		var cancelProductFree event.CancelGiftSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &cancelProductFree); err == nil {
 			return cancelProductFree.ProductName.GetLocale(language) + " (" + cancelProductFree.ProductAttr.GetLocale(language) + ") *" + strconv.Itoa(int(cancelProductFree.TotalNum)) +
-				" (" + currencySetting.Unit + utils.FormatFloat(cancelProductFree.TotalPrice) + ")"
+				" (" + s.settingSrv.SymbolPosition(ctx, cancelProductFree.TotalPrice) + ")"
 		}
 	case constant.OrderProductMove: // 转菜
 		var productMove event.ChangeDeskSaleOrderProductPayload
@@ -114,10 +111,10 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 			switch discount.DiscountType {
 			case constant.DiscountOperationLogTypeChangePriceSaleOrder: // 改价
 				desc = utils.FormatFloat(discount.OldPrice) + i18n.Translate(language, "改价") +
-					utils.FormatFloat(discount.NewPrice) + " (" + currencySetting.Unit + utils.FormatFloat(discount.SpecialDiscount) + ")"
+					utils.FormatFloat(discount.NewPrice) + " (" + s.settingSrv.SymbolPosition(ctx, discount.SpecialDiscount) + ")"
 			case constant.DiscountOperationLogTypeDiscountSaleOrder: // 折扣
 				desc = i18n.Translate(language, "折扣") + "-" + utils.FormatFloat(discount.RoundingRate) +
-					"% (" + currencySetting.Unit + utils.FormatFloat(discount.SpecialDiscount) + ")"
+					"% (" + s.settingSrv.SymbolPosition(ctx, discount.SpecialDiscount) + ")"
 			case constant.DiscountOperationLogTypeZeroSaleOrder: // 抹零
 				roundingTypeMap := map[int]string{
 					constant.DiscountZeroRulePercent: "抹分",
@@ -126,7 +123,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 					constant.DiscountZeroRuleInteger: "四舍五入到整数",
 				}
 				desc = i18n.Translate(language, "抹零") + "-" + i18n.Translate(language, roundingTypeMap[discount.RoundingType]) +
-					" (" + currencySetting.Unit + utils.FormatFloat(discount.SpecialDiscount) + ")"
+					" (" + s.settingSrv.SymbolPosition(ctx, discount.SpecialDiscount) + ")"
 			}
 			return desc
 		}
@@ -134,24 +131,24 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 	case constant.OrderFreeSale: // 免单
 		var freeSale event.FreeSaleOrderPayload
 		if err := json.Unmarshal([]byte(log.Data), &freeSale); err == nil {
-			return i18n.Translate(language, "免单") + " (" + currencySetting.Unit + utils.FormatFloat(freeSale.DiscountMoney) + ")"
+			return i18n.Translate(language, "免单") + " (" + s.settingSrv.SymbolPosition(ctx, freeSale.DiscountMoney) + ")"
 		}
 	case constant.OrderSettle: // 结账
 		var settle event.CheckoutSaleOrderPayload
 		if err := json.Unmarshal([]byte(log.Data), &settle); err == nil {
 			var payTypeList []string
 			if settle.IsFree {
-				payTypeList = append(payTypeList, i18n.Translate(language, "免单")+": "+currencySetting.Unit+utils.FormatFloat(settle.DiscountMoney))
+				payTypeList = append(payTypeList, i18n.Translate(language, "免单")+": "+s.settingSrv.SymbolPosition(ctx, settle.DiscountMoney))
 			}
 			for _, payType := range settle.PayType {
 				payTypeName := payType.Name
 				if payType.Value == constant.PaymentMethodCodeCash {
 					payType.Price = utils.DecimalSub(payType.Price, settle.ChangeDue)
 				}
-				payTypeList = append(payTypeList, payTypeName+": "+currencySetting.Unit+utils.FormatFloat(payType.Price))
+				payTypeList = append(payTypeList, payTypeName+": "+s.settingSrv.SymbolPosition(ctx, payType.Price))
 			}
-			desc := i18n.Translate(language, "订单金额") + " " + currencySetting.Unit + utils.FormatFloat(settle.OrderPrice) + ", " +
-				i18n.Translate(language, "实付金额") + " " + currencySetting.Unit + utils.FormatFloat(settle.ActualPrice)
+			desc := i18n.Translate(language, "订单金额") + " " + s.settingSrv.SymbolPosition(ctx, settle.OrderPrice) + ", " +
+				i18n.Translate(language, "实付金额") + " " + s.settingSrv.SymbolPosition(ctx, settle.ActualPrice)
 			if len(payTypeList) > 0 {
 				desc = desc + " (" + strings.Join(payTypeList, "、") + ")"
 			}
@@ -166,7 +163,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 				if payType.Value == constant.PaymentMethodCodeFreePay {
 					payTypeName = i18n.Translate(language, "免单")
 				}
-				payTypeList = append(payTypeList, payTypeName+": "+currencySetting.Unit+utils.FormatFloat(payType.Price))
+				payTypeList = append(payTypeList, payTypeName+": "+s.settingSrv.SymbolPosition(ctx, payType.Price))
 			}
 			return strings.Join(payTypeList, "、")
 		}
@@ -214,7 +211,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 					constant.SaleBillSettingCheckoutZeroingMethodYuan:    "抹元",
 				}
 				desc = i18n.Translate(language, discountTypeMap[orderCheckoutDiscount.RoundingType]) +
-					" (" + currencySetting.Unit + utils.FormatFloat(orderCheckoutDiscount.SpecialDiscount) + ")"
+					" (" + s.settingSrv.SymbolPosition(ctx, orderCheckoutDiscount.SpecialDiscount) + ")"
 			}
 			return desc
 		}
@@ -223,7 +220,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		if err := json.Unmarshal([]byte(log.Data), &splitOrder); err == nil {
 			var orderDetails []string
 			for i, order := range splitOrder.Orders {
-				orderDetails = append(orderDetails, strconv.Itoa(i+1)+"("+i18n.Translate(language, "订单金额")+"："+currencySetting.Unit+utils.FormatFloat(order.Amount)+")")
+				orderDetails = append(orderDetails, strconv.Itoa(i+1)+"("+i18n.Translate(language, "订单金额")+"："+s.settingSrv.SymbolPosition(ctx, order.Amount)+")")
 			}
 			return strings.Join(orderDetails, ", ")
 		}
@@ -253,7 +250,7 @@ func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language st
 		constant.OrderSettle:              i18n.Translate(language, "结账"),
 		constant.OrderReverseSettle:       i18n.Translate(language, "反结账"),
 		constant.OrderRefund:              i18n.Translate(language, "部分退款"), // 默认部分退款
-		constant.OrderOrderTaking:         i18n.Translate(language, "接单"),     // 默认非自动接单
+		constant.OrderOrderTaking:         i18n.Translate(language, "接单"),   // 默认非自动接单
 		constant.OrderOrderReject:         i18n.Translate(language, "拒单"),
 		constant.OrderMergeTable:          i18n.Translate(language, "并台"),
 		constant.OrderOrderCancel:         i18n.Translate(language, "整单取消"),

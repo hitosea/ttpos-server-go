@@ -107,7 +107,6 @@ func (s *rechargeOrderSrv) getRefundData(refundType uint, refundMoney float64, r
 }
 
 func (s *rechargeOrderSrv) getActionDescription(ctx context.Context, log model.MemberRechargeOrderOperationLog, language string) string {
-	currencySetting, _ := s.settingSrv.GetCurrencySetting(ctx)
 	switch log.Action {
 	case constant.RechargeOrderActionChangeAmount:
 		var changeAmount ChangeAmountLog
@@ -122,11 +121,11 @@ func (s *rechargeOrderSrv) getActionDescription(ctx context.Context, log model.M
 			if payType.Value == constant.PaymentMethodCodeCash {
 				price = utils.DecimalSub(price, recharge.ChangeDue)
 			}
-			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s%s", payType.Name, currencySetting.Unit, utils.FormatFloat(price)))
+			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s", payType.Name, s.settingSrv.SymbolPosition(ctx, price)))
 		}
-		desc := fmt.Sprintf("%s %s %s, %s %s %s",
-			i18n.Translate(language, "订单金额"), currencySetting.Unit, utils.FormatFloat(recharge.RechargeMoney),
-			i18n.Translate(language, "实付金额"), currencySetting.Unit, utils.FormatFloat(recharge.PayPrice))
+		desc := fmt.Sprintf("%s %s, %s %s",
+			i18n.Translate(language, "订单金额"), s.settingSrv.SymbolPosition(ctx, recharge.RechargeMoney),
+			i18n.Translate(language, "实付金额"), s.settingSrv.SymbolPosition(ctx, recharge.PayPrice))
 		if len(payTypeList) > 0 {
 			return desc + "(" + strings.Join(payTypeList, "、") + ")"
 		}
@@ -140,7 +139,7 @@ func (s *rechargeOrderSrv) getActionDescription(ctx context.Context, log model.M
 			if payType.Value == constant.PaymentMethodCodeCash {
 				price = utils.DecimalSub(price, reverseSettle.ChangeDue)
 			}
-			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s%s", payType.Name, currencySetting.Unit, utils.FormatFloat(price)))
+			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s", payType.Name, s.settingSrv.SymbolPosition(ctx, price)))
 		}
 		return strings.Join(payTypeList, "、")
 	case constant.RechargeOrderActionRefund:
@@ -148,7 +147,7 @@ func (s *rechargeOrderSrv) getActionDescription(ctx context.Context, log model.M
 		json.Unmarshal([]byte(log.Data), &refundLog)
 		var payTypeList []string
 		for _, payType := range refundLog.RefundPayTypes {
-			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s%s", payType.Name, currencySetting.Unit, utils.FormatFloat(payType.Amount)))
+			payTypeList = append(payTypeList, fmt.Sprintf("%s: %s", payType.Name, s.settingSrv.SymbolPosition(ctx, payType.Amount)))
 		}
 		return strings.Join(payTypeList, "、")
 	}
