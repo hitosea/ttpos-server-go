@@ -524,6 +524,7 @@ func (s *businessSrv) Count7Days(ctx context.Context, req req.BusinessDataCountR
 	sevenDaysData := s.statisticsSrv.Count7Days(ctx, CountReq{
 		QueryStartTime: int64(req.QueryStartTime),
 		QueryEndTime:   int64(req.QueryEndTime),
+		Timezone:       ctx.GetCompany().CompanySetting.Timezone,
 	})
 
 	sevenDaysDataList := make([]business_data_resp.BusinessDataCount7DaysItem, 0, len(sevenDaysData.Data))

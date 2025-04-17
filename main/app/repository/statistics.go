@@ -287,20 +287,17 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, opts ...DBOp
 	prefix := config.Database.TablePrefix
 	statisticsProductTable := prefix + "statistics_product as sp"
 	productPackageTable := prefix + "product_package as pp"
-	productBomTable := prefix + "product_bom as pb"
 
 	query := db.Table(statisticsProductTable).
 		Select(
 			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) AS product_name",
-			"JSON_UNQUOTE(JSON_EXTRACT(pb.name, '$."+language+"')) AS flavor_name",
 			"sp.product_sale_price AS sale_price",
 			"SUM(sp.product_num) AS sale_num",
 			"SUM(sp.product_sale_price * sp.product_num) AS sale_amount",
 		).
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
-		Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
 		Where("sp.refund_time = 0").
-		Group("sp.product_bom_uuid")
+		Group("sp.product_package_uuid")
 
 	if rankType == 1 {
 		query = query.Order("sale_num DESC")
