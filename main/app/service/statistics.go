@@ -524,7 +524,10 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			orderFreeAmount = decimal.NewFromFloat(saleOrder.GetAmount()).Round(2)
 			if isStatFree {
 				orderDiscount = orderDiscount.Add(decimal.NewFromFloat(saleOrder.Amount))
+				orderServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
 			}
+		} else {
+			orderServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
 		}
 
 		// 统计赠菜优惠折扣
@@ -537,6 +540,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			if saleProduct.CancelTime == 0 {
 				// 统计商品数量
 				productNum := int(saleProduct.Num)
+				productNumDec := decimal.NewFromFloat(float64(productNum))
 				orderProductNum += productNum
 
 				// 统计赠送商品数量
@@ -562,21 +566,19 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				productServiceTax := decimal.NewFromFloat(saleProduct.ServiceTaxFee)
 				if isFree {
 					if isStatFree {
-						orderProductPrice = orderProductPrice.Add(productPrice)
-						orderProductTax = orderProductTax.Add(productTax)
-						orderServiceFee = orderServiceFee.Add(productServiceFee)
-						orderServiceTax = orderServiceTax.Add(productServiceTax)
+						orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
+						orderProductTax = orderProductTax.Add(productTax.Mul(productNumDec))
+						orderServiceTax = orderServiceTax.Add(productServiceTax.Mul(productNumDec))
 					}
 				} else {
-					orderProductPrice = orderProductPrice.Add(productPrice)
-					orderProductTax = orderProductTax.Add(productTax)
-					orderServiceFee = orderServiceFee.Add(productServiceFee)
-					orderServiceTax = orderServiceTax.Add(productServiceTax)
+					orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
+					orderProductTax = orderProductTax.Add(productTax.Mul(productNumDec))
+					orderServiceTax = orderServiceTax.Add(productServiceTax.Mul(productNumDec))
 				}
 
 				// 统计商品销售价
 				productSalePrice := decimal.NewFromFloat(saleProduct.SalePrice)
-				orderProductSalePrice = orderProductSalePrice.Add(productSalePrice)
+				orderProductSalePrice = orderProductSalePrice.Add(productSalePrice.Mul(productNumDec))
 
 				// 保存商品BOM UUID
 				var productBomUuid uint64
