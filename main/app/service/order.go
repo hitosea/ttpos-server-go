@@ -3690,7 +3690,12 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))
 	}
 	// 重新计算金额
-	shopCart.SaleBill.CalcAll()
+	if option.H5OrderUuid == 0 {
+		shopCart.SaleBill.CalcAll()
+	} else {
+		// 如果从待接单进入桌台时，要把h5订单商品计算在内
+		shopCart.SaleBill.CalcAll(model.WithAllAndOneH5Order(option.H5OrderUuid))
+	}
 
 	// 给订单列表添加订单
 	saleOrderList := make([]resp.SaleOrder, 0)

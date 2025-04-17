@@ -242,16 +242,25 @@ func (model *SaleOrder) GetUnCookingOrderProductList() []*SaleOrderProduct {
 }
 
 // 获取全部商品，包括已送厨和未送厨
-func (model *SaleOrder) GetUnCookingAndCookingOrderProductList() []*SaleOrderProduct {
-	products := model.GetAllOrderProductList(WithAll())
-	return FilterUnAcceptOrderProduct(products)
+func (model *SaleOrder) GetUnCookingAndCookingOrderProductList(h5OrderUuid uint64) []*SaleOrderProduct {
+	var products []*SaleOrderProduct
+	if h5OrderUuid == 0 {
+		products = model.GetAllOrderProductList(WithAll())
+	} else {
+		products = model.GetAllOrderProductList(WithAllAndOneH5Order(h5OrderUuid))
+	}
+	return FilterUnAcceptOrderProduct(products, h5OrderUuid)
 }
 
 // 过滤未接单的商品
-func FilterUnAcceptOrderProduct(products []*SaleOrderProduct) []*SaleOrderProduct {
+func FilterUnAcceptOrderProduct(products []*SaleOrderProduct, h5OrderUuid uint64) []*SaleOrderProduct {
 	list := make([]*SaleOrderProduct, 0)
 	for _, product := range products {
 		if product.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept {
+			// 如果从待接单进入桌台时，不过滤该h5订单的商品
+			if product.H5OrderUuid == h5OrderUuid {
+				list = append(list, product)
+			}
 			continue
 		}
 		list = append(list, product)
@@ -326,9 +335,23 @@ func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOptio
 			}
 		}
 
+		if option.CookingStatus == CookingStatusAllAndOneH5Order {
+			// 已送厨和未送厨的商品和某个h5订单的商品计入，排除未接单的商品
+			if orderProduct.IsUnAcceptH5OrderProduct() /*未下单*/ {
+				continue
+			}
+			// 如果是已下单未接单商品且是某个h5订单的商品时记入
+			if orderProduct.IsH5OrderProductBool() /*未接单*/ {
+				if orderProduct.H5OrderUuid != option.H5OrderUuid {
+					continue
+				}
+			}
+			products = append(products, orderProduct)
+		}
+
 		if option.CookingStatus == CookingStatusAll {
 			// 已送厨和未送厨的商品计入，排除未接单的商品
-			if orderProduct.IsH5OrderProductBool() || orderProduct.IsUnAcceptH5OrderProduct() {
+			if orderProduct.IsH5OrderProductBool() /*未接单*/ || orderProduct.IsUnAcceptH5OrderProduct() /*未下单*/ {
 				continue
 			}
 			products = append(products, orderProduct)
