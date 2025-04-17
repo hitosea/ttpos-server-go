@@ -310,7 +310,7 @@ func (model *SaleOrderProduct) calcServiceFee(price float64, serviceFeeRate floa
 	if taxFeeType == constant.TaxFeeTypeNoTax {
 		// 未含税时
 		serviceFee := decimal.NewFromFloat(price).Mul(decimal.NewFromFloat(serviceFeeRate))
-		return serviceFee.InexactFloat64()
+		return serviceFee.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 已含税时
 	if taxFeeType == constant.TaxFeeTypeTax {
