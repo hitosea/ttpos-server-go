@@ -54,7 +54,7 @@ func (model *SaleBill) calcOriginAmount() float64 {
 func (model *SaleBill) calcProductAmount() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		if saleOrder.IsDelete() {
+		if !saleOrder.IsDelete() {
 			amount = amount.Add(decimal.NewFromFloat(saleOrder.ProductAmount))
 		}
 	}
@@ -65,7 +65,7 @@ func (model *SaleBill) calcProductAmount() float64 {
 func (model *SaleBill) calcServiceFee() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
+		if !saleOrder.IsDelete() {
 			amount = amount.Add(decimal.NewFromFloat(saleOrder.ServiceFee))
 		}
 	}
@@ -76,7 +76,7 @@ func (model *SaleBill) calcServiceFee() float64 {
 func (model *SaleBill) calcTaxFee() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
+		if !saleOrder.IsDelete() {
 			amount = amount.Add(decimal.NewFromFloat(saleOrder.TaxFee))
 		}
 	}
@@ -87,7 +87,7 @@ func (model *SaleBill) calcTaxFee() float64 {
 func (model *SaleBill) calcDiscountFee() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
+		if !saleOrder.IsDelete() {
 			amount = amount.Add(decimal.NewFromFloat(saleOrder.CustomDiscountFee))
 		}
 	}
@@ -98,7 +98,7 @@ func (model *SaleBill) calcDiscountFee() float64 {
 func (model *SaleBill) calcMemberDiscountFee() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
+		if !saleOrder.IsDelete() {
 			amount = amount.Add(decimal.NewFromFloat(saleOrder.MemberDiscountFee))
 		}
 	}
@@ -119,7 +119,7 @@ func (model *SaleBill) calcGiftAmount() float64 {
 func (model *SaleBill) calcFreeAmount() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
-		if saleOrder.IsDelete() || saleOrder.IsFreeSaleOrder() {
+		if !saleOrder.IsDelete() && saleOrder.IsFreeSaleOrder() {
 			amount = amount.Add(decimal.NewFromFloat(saleOrder.GetAmount()))
 		}
 	}
