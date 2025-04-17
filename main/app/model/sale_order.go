@@ -258,7 +258,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
 			SalePrice:           saleOrderProduct.GetSalePrice(),
-			DiscountPrice:       saleOrderProduct.GetPrice(),
+			DiscountPrice:       saleOrderProduct.GetProductFinalSalePrice(),
 			Status:              saleOrderProduct.StatusValue(),
 			Remark:              saleOrderProduct.Remark,
 			IsMust:              saleOrderProduct.IsMustProduct(),
