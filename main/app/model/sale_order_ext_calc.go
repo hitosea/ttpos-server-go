@@ -371,6 +371,7 @@ func (model *SaleOrder) calcTaxFee(products []*SaleOrderProduct) float64 {
 		taxFee = taxFee.Add(
 			decimal.NewFromFloat(orderProduct.GetTaxFee())).Add(
 			decimal.NewFromFloat(orderProduct.GetServiceTaxFee()))
+		// fmt.Println("订单税费", orderProduct.GetTaxFee(), orderProduct.GetServiceTaxFee(), taxFee.InexactFloat64())
 	}
 	for _, buffetCustomer := range model.SaleOrderBuffetCustomerTypes {
 		taxFee = taxFee.Add(
