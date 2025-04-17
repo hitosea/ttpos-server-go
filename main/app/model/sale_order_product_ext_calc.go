@@ -339,7 +339,7 @@ func (model *SaleOrderProduct) calcServiceTaxFee(price float64, serviceFeeRate f
 	// 当服务费收费税费且开启税费时
 	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax && taxFeeType != constant.TaxFeeTypeNone {
 		// 服务费税费=订单商品服务费*商品消费税税率
-		serviceFee := model.ServiceFee
+		serviceFee := model.calcServiceFee(price, serviceFeeRate, taxFeeType) // 计算订单商品服务费。price可能是折后价，也可能是折前价。当计算订单金额（折前）时，price是折前价；当计算订单应收金额时，price是折后价。
 		serviceTaxFee := decimal.NewFromFloat(serviceFee).Mul(decimal.NewFromFloat(model.TaxRate))
 		// fmt.Println("订单商品服务费", serviceFee, "税费", serviceTaxFee.InexactFloat64(), serviceTaxFee.Truncate(3).Round(2).InexactFloat64())
 		return serviceTaxFee.Truncate(3).Round(2).InexactFloat64()

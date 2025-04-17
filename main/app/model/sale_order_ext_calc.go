@@ -455,8 +455,9 @@ func (model *SaleOrder) calcCookingServiceTaxFee(products []*SaleOrderProduct) f
 func (model *SaleOrder) calcOriginCookingServiceTaxFee(products []*SaleOrderProduct, serviceFeeRate float64, taxFeeType int, serviceFeeType int) float64 {
 	serviceTaxFee := decimal.NewFromFloat(0)
 	for _, orderProduct := range products {
+		originServiceTaxFee := orderProduct.GetOriginServiceTaxFee(serviceFeeRate, taxFeeType, serviceFeeType)
 		serviceTaxFee = serviceTaxFee.Add(
-			decimal.NewFromFloat(orderProduct.GetOriginServiceTaxFee(serviceFeeRate, taxFeeType, serviceFeeType)))
+			decimal.NewFromFloat(originServiceTaxFee))
 	}
 	for _, buffetCustomer := range model.SaleOrderBuffetCustomerTypes {
 		serviceTaxFee = serviceTaxFee.Add(
