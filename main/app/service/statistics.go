@@ -383,7 +383,6 @@ type Count7DaysDataResp struct {
 func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7DaysResp {
 	opts := s.buildCountOpts(req)
 	sevenDayData := repository.NewStatisticsRepo(ctx.GetDB()).Count7Days(opts...)
-
 	days := s.buildDays(req)
 	sevenDayList := make([]Count7DaysDataResp, 0, len(sevenDayData))
 	for _, day := range days {
@@ -446,7 +445,7 @@ func (s *statisticsSrv) RankProduct(ctx context.Context, req CountReq) []CountPr
 	var list []CountProductRankResp
 	for _, product := range productData {
 		list = append(list, CountProductRankResp{
-			ProductName: product.ProductName.String + "（" + product.FlavorName.String + "）",
+			ProductName: product.ProductName.String,
 			SaleNum:     product.SaleNum.Int64,
 			SaleAmount:  product.SaleAmount.Float64,
 		})
@@ -721,6 +720,7 @@ type CountReq struct {
 	AreaUuid       uint64 `json:"area_uuid"`        // 区域UUID -1=全都
 	CategoryUuid   uint64 `json:"category_uuid"`    // 分类UUID -1=全都
 	ProductName    string `json:"product_name"`     // 商品名称
+	Timezone       string `json:"timezone"`         // 时区
 }
 
 // buildCountOpts 构建统计选项
@@ -780,11 +780,14 @@ func (s *statisticsSrv) buildCountOpts(req CountReq) []repository.DBOption {
 
 // buildDays 构建日期
 func (s *statisticsSrv) buildDays(req CountReq) []string {
+
+	location, _ := time.LoadLocation(req.Timezone) // 或其他时区
+
 	var (
 		days      []string
 		format    = "2006-01-02"
-		startTime = time.Unix(req.QueryStartTime, 0)
-		endTime   = time.Unix(req.QueryEndTime, 0)
+		startTime = time.Unix(req.QueryStartTime, 0).In(location)
+		endTime   = time.Unix(req.QueryEndTime, 0).In(location)
 	)
 
 	for startTime.Before(endTime) {
