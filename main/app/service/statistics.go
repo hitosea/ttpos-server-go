@@ -592,7 +592,6 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				for _, refundProduct := range saleProduct.ReturnOrderProducts {
 					productRefundNum += int(refundProduct.Num)
 					orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee).Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee)).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
-					orderRefundServiceFee = orderRefundServiceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
 					orderRefundDiscount = orderRefundDiscount.Add(decimal.NewFromFloat(saleProduct.CustomDiscountFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
 					orderRefundDiscountMember = orderRefundDiscountMember.Add(decimal.NewFromFloat(saleProduct.MemberDiscountFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
 				}
@@ -624,6 +623,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 
 		if saleOrder.GetCanReturnAmount() == 0 {
 			orderRefundFee = decimal.NewFromFloat(saleOrder.PaymentCommissionFee)
+			orderRefundServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
 		}
 		// 支付订单
 		for _, salePayment := range saleOrder.PaymentOrders {
