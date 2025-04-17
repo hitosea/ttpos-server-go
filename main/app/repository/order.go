@@ -15,46 +15,47 @@ import (
 
 // IOrderRepo 定义订单仓库接口
 type IOrderRepo interface {
-	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                                         // 创建销售单
-	CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error)                                                    // 创建销售账单设置
-	UpdateSaleBillSetting(obj model.SaleBillSetting) (model.SaleBillSetting, error)                                                      // 更新销售账单设置
-	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                                                // 获取销售单
-	IsOrderNoExists(orderNo string) (bool, error)                                                                                        // 查询orderNo是否存在
-	GetInstantSaleBill(deviceUuid uint64) (*model.SaleBill, error)                                                                       // 获取待支付且未挂单的点餐订单
-	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                                      // 创建订单
-	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)                              // 获取订单列表
-	GetOrderNum(opts ...DBOption) (int64, error)                                                                                         // 获取订单数量
-	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType, tz string) ([]model.SaleBill, int64, DBOption, error) // 获取收银的订单列表
-	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                                   // 获取销售账单详细信息
-	GetSaleBillInfoByDesk(deskUuid, saleOrderUuid uint64) (model.SaleBill, error)                                                        // 获取桌台的销售账单详细信息
-	GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBill, error)                                                                // 获取桌台的销售账单详细信息
-	GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoOptionFunc) (*ro.ShopCartRepo, error)                                     // 获取点餐购物车信息
-	GetOrderBuffetInfo(saleBillUuid, saleOrderUuid uint64) (model.SaleBill, error)                                                       // 获取订单自助餐信息
-	GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error)            // 获取销售账单详细信息-包含商品信息
-	GetSaleBillInfoAndMember(saleBillUuid uint64) (model.SaleBill, error)                                                                // 获取销售账单详细信息-包含会员信息
-	GetSaleBillInfoAndPaymentOrders(saleBillUuid uint64, saleOrderUuid uint64, saleOrderPaymentUuid uint64) (model.SaleBill, error)      // 获取销售账单详细信息-包含商品信息
-	GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error)                     // 根据销售订单商品uuid列表获取销售订单商品列表
-	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                                // 获取销售账单详细信息-丰富的-几乎包含所有的关联
-	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error)                // 创建销售订单自助餐顾客类型
-	DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error                                                                        // 删除销售订单自助餐顾客类型
-	CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error)                // 创建销售订单自助餐加钟
-	UpdateSaleOrderBuffetDelayProductRecord(model model.SaleOrderBuffetDelayProduct) error                                               // 更新销售订单自助餐加钟
-	CancelOrder(ctx context.Context, saleBillUuid uint64, deskUuid uint64, reason string) error                                          // 取消订单
-	CancelDeskOrder(ctx context.Context, deskUuid uint64, reason string) error                                                           // 取消桌台订单
-	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                                         // 删除订单
-	IsPartiallyPaid(param any) bool                                                                                                      // 判断是否存在部分支付
-	HideOrder(saleBillUuid uint64) error                                                                                                 // 隐藏订单
-	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                                     // 删除订单产品
-	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                                       // 查询销售订单的所有bom
-	ChangePopulation(saleBillUuid uint64, population int) error                                                                          // 修改订单人数
-	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error                         // 修改订单商品备注
-	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                                     // 获取销售账单所有信息
-	GetSaleBillWithProducts(saleBillUuid uint64) (*model.SaleBill, error)                                                                // 获取销售账单所有商品信息
-	HasShowOrder(deviceUuid uint64) (uint64, error)                                                                                      // 判断该设备是否有未挂单的点餐订单
-	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                                      // 获取销售账单记录
-	SetLock(saleBillUuid uint64, isLock bool) error                                                                                      // 设置订单锁定状态
-	SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) (*model.SaleOrderInvoiceInfo, error)           // 设置订单发票信息
-	GetInvoiceInfo(saleOrderUuid uint64) (*model.SaleOrderInvoiceInfo, error)                                                            // 获取订单发票信息
+	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                                               // 创建销售单
+	CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error)                                                          // 创建销售账单设置
+	UpdateSaleBillSetting(obj model.SaleBillSetting) (model.SaleBillSetting, error)                                                            // 更新销售账单设置
+	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                                                      // 获取销售单
+	IsOrderNoExists(orderNo string) (bool, error)                                                                                              // 查询orderNo是否存在
+	GetInstantSaleBill(deviceUuid uint64) (*model.SaleBill, error)                                                                             // 获取待支付且未挂单的点餐订单
+	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                                            // 创建订单
+	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)                                    // 获取订单列表
+	GetOrderNum(opts ...DBOption) (int64, error)                                                                                               // 获取订单数量
+	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType, tz string) ([]model.SaleBill, int64, DBOption, error)       // 获取收银的订单列表
+	GetCashierOrderExportListWithPagination(param GetCashierOrderListWithPaginationType, tz string) ([]model.SaleBill, int64, DBOption, error) // 获取收银的订单列表
+	GetSaleBillInfo(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                                         // 获取销售账单详细信息
+	GetSaleBillInfoByDesk(deskUuid, saleOrderUuid uint64) (model.SaleBill, error)                                                              // 获取桌台的销售账单详细信息
+	GetSaleBillProductInfoByDesk(deskUuid uint64) (model.SaleBill, error)                                                                      // 获取桌台的销售账单详细信息
+	GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoOptionFunc) (*ro.ShopCartRepo, error)                                           // 获取点餐购物车信息
+	GetOrderBuffetInfo(saleBillUuid, saleOrderUuid uint64) (model.SaleBill, error)                                                             // 获取订单自助餐信息
+	GetSaleBillInfoAndProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) (model.SaleBill, error)                  // 获取销售账单详细信息-包含商品信息
+	GetSaleBillInfoAndMember(saleBillUuid uint64) (model.SaleBill, error)                                                                      // 获取销售账单详细信息-包含会员信息
+	GetSaleBillInfoAndPaymentOrders(saleBillUuid uint64, saleOrderUuid uint64, saleOrderPaymentUuid uint64) (model.SaleBill, error)            // 获取销售账单详细信息-包含商品信息
+	GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error)                           // 根据销售订单商品uuid列表获取销售订单商品列表
+	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                                      // 获取销售账单详细信息-丰富的-几乎包含所有的关联
+	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error)                      // 创建销售订单自助餐顾客类型
+	DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error                                                                              // 删除销售订单自助餐顾客类型
+	CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error)                      // 创建销售订单自助餐加钟
+	UpdateSaleOrderBuffetDelayProductRecord(model model.SaleOrderBuffetDelayProduct) error                                                     // 更新销售订单自助餐加钟
+	CancelOrder(ctx context.Context, saleBillUuid uint64, deskUuid uint64, reason string) error                                                // 取消订单
+	CancelDeskOrder(ctx context.Context, deskUuid uint64, reason string) error                                                                 // 取消桌台订单
+	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                                               // 删除订单
+	IsPartiallyPaid(param any) bool                                                                                                            // 判断是否存在部分支付
+	HideOrder(saleBillUuid uint64) error                                                                                                       // 隐藏订单
+	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                                           // 删除订单产品
+	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                                             // 查询销售订单的所有bom
+	ChangePopulation(saleBillUuid uint64, population int) error                                                                                // 修改订单人数
+	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error                               // 修改订单商品备注
+	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                                           // 获取销售账单所有信息
+	GetSaleBillWithProducts(saleBillUuid uint64) (*model.SaleBill, error)                                                                      // 获取销售账单所有商品信息
+	HasShowOrder(deviceUuid uint64) (uint64, error)                                                                                            // 判断该设备是否有未挂单的点餐订单
+	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                                            // 获取销售账单记录
+	SetLock(saleBillUuid uint64, isLock bool) error                                                                                            // 设置订单锁定状态
+	SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) (*model.SaleOrderInvoiceInfo, error)                 // 设置订单发票信息
+	GetInvoiceInfo(saleOrderUuid uint64) (*model.SaleOrderInvoiceInfo, error)                                                                  // 获取订单发票信息
 }
 
 // orderRepo 订单仓库
@@ -258,75 +259,77 @@ type GetCashierOrderListWithPaginationType struct {
 	DiningMethod     int    // 用餐方式,-1=全都、 0-堂食 1-打包
 }
 
+func (r *orderRepo) getOrderListDBOption(param GetCashierOrderListWithPaginationType, tz string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		// 订单编号
+		if param.OrderNo != "" {
+			db = db.Where("order_no like ?", "%"+param.OrderNo+"%")
+		}
+		// 账单类型
+		if param.BillType != -1 {
+			db = db.Where("bill_type = ?", param.BillType)
+		}
+		if param.DiningMethod != -1 {
+			db = db.Where("dining_method = ?", param.DiningMethod)
+		}
+		//  日期类型 -1-全都 1-今天 2-昨天 3-本周
+		if param.DateType >= 0 && param.DateType <= 3 {
+			var startTime, endTime int64
+			switch param.DateType {
+			case constant.OrderDateTypeToday: // 今天
+				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeToday)
+			case constant.OrderDateTypeYesterday: // 昨天
+				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeYesterday)
+			case constant.OrderDateTypeWeek: // 本周
+				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeThisWeek)
+			}
+			db = db.Where("create_time BETWEEN ? AND ?", startTime, endTime)
+		}
+		// 日期范围
+		if param.QueryStartTime != 0 || param.QueryEndTime != 0 {
+			timeFields := []string{}
+			if param.EnableCreateTime || !param.EnablePayTime {
+				timeFields = append(timeFields, "create_time")
+			}
+			if param.EnablePayTime {
+				timeFields = append(timeFields, "finish_time")
+			}
+			// 开始时间
+			endTime := uint(0)
+			if param.QueryEndTime != 0 {
+				endTime = param.QueryEndTime
+			}
+			//
+			query := ""
+			args := []interface{}{}
+			for i, field := range timeFields {
+				if i > 0 {
+					query += " OR "
+				}
+				if param.QueryStartTime > 0 && endTime > 0 {
+					query += fmt.Sprintf("(%s BETWEEN ? AND ?)", field)
+					args = append(args, param.QueryStartTime, endTime)
+				} else if param.QueryStartTime > 0 {
+					query += fmt.Sprintf("(%s > ?)", field)
+					args = append(args, param.QueryStartTime)
+				} else if endTime > 0 {
+					query += fmt.Sprintf("(%s < ? AND %s > 0)", field, field)
+					args = append(args, endTime)
+				}
+			}
+			if query != "" {
+				db = db.Where(query, args...)
+			}
+		}
+		//
+		return db
+	}
+}
+
 // GetCashierOrderListWithPagination 获取收银台订单列表
 func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType, tz string) (lists []model.SaleBill, total int64, dbOption DBOption, err error) {
 	// 额外条件
-	dbOption = func() DBOption {
-		return func(db *gorm.DB) *gorm.DB {
-			// 订单编号
-			if param.OrderNo != "" {
-				db = db.Where("order_no like ?", "%"+param.OrderNo+"%")
-			}
-			// 账单类型
-			if param.BillType != -1 {
-				db = db.Where("bill_type = ?", param.BillType)
-			}
-			if param.DiningMethod != -1 {
-				db = db.Where("dining_method = ?", param.DiningMethod)
-			}
-			//  日期类型 -1-全都 1-今天 2-昨天 3-本周
-			if param.DateType >= 0 && param.DateType <= 3 {
-				var startTime, endTime int64
-				switch param.DateType {
-				case constant.OrderDateTypeToday: // 今天
-					startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeToday)
-				case constant.OrderDateTypeYesterday: // 昨天
-					startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeYesterday)
-				case constant.OrderDateTypeWeek: // 本周
-					startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeThisWeek)
-				}
-				db = db.Where("create_time BETWEEN ? AND ?", startTime, endTime)
-			}
-			// 日期范围
-			if param.QueryStartTime != 0 || param.QueryEndTime != 0 {
-				timeFields := []string{}
-				if param.EnableCreateTime || !param.EnablePayTime {
-					timeFields = append(timeFields, "create_time")
-				}
-				if param.EnablePayTime {
-					timeFields = append(timeFields, "finish_time")
-				}
-				// 开始时间
-				endTime := uint(0)
-				if param.QueryEndTime != 0 {
-					endTime = param.QueryEndTime
-				}
-				//
-				query := ""
-				args := []interface{}{}
-				for i, field := range timeFields {
-					if i > 0 {
-						query += " OR "
-					}
-					if param.QueryStartTime > 0 && endTime > 0 {
-						query += fmt.Sprintf("(%s BETWEEN ? AND ?)", field)
-						args = append(args, param.QueryStartTime, endTime)
-					} else if param.QueryStartTime > 0 {
-						query += fmt.Sprintf("(%s > ?)", field)
-						args = append(args, param.QueryStartTime)
-					} else if endTime > 0 {
-						query += fmt.Sprintf("(%s < ? AND %s > 0)", field, field)
-						args = append(args, endTime)
-					}
-				}
-				if query != "" {
-					db = db.Where(query, args...)
-				}
-			}
-			//
-			return db
-		}
-	}()
+	dbOption = r.getOrderListDBOption(param, tz)
 	//
 	lists, total, err = r.GetOrderListWithPagination(
 		param.PageNo,
@@ -360,6 +363,82 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 					db = db.Where("status = ?", uint(param.Status))
 				}
 				//
+				return db
+			}
+		}(),
+	)
+	if err != nil {
+		return nil, 0, dbOption, fmt.Errorf("GetCashierOrderListWithPagination: %v", err)
+	}
+	return lists, total, dbOption, nil
+}
+
+// GetCashierOrderExportListWithPagination 获取收银台导出订单列表
+func (r *orderRepo) GetCashierOrderExportListWithPagination(param GetCashierOrderListWithPaginationType, tz string) (lists []model.SaleBill, total int64, dbOption DBOption, err error) {
+	// 额外条件
+	dbOption = r.getOrderListDBOption(param, tz)
+	//
+	lists, total, err = r.GetOrderListWithPagination(
+		param.PageNo,
+		param.PageSize,
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders.PaymentMethod",
+			},
+			WithPreload{
+				Query: "SaleOrders.ReturnOrders",
+			},
+			WithPreload{
+				Query: "SaleOrders.Member",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.CancelReasons.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ReturnOrderProducts",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetDelayProducts.ReturnOrderProducts",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.ReturnOrderProducts",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetCustomerTypePrice.BuffetCustomerType",
+			},
+		),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByCooking(),
+		CommonRepo.SortWithID("DESC"),
+		dbOption,
+		//
+		func() DBOption {
+			return func(db *gorm.DB) *gorm.DB {
+				//  账单状态
+				if param.Status != -1 {
+					db = db.Where("status = ?", uint(param.Status))
+				}
 				return db
 			}
 		}(),
@@ -1081,6 +1160,8 @@ func (r *orderRepo) CancelOrder(ctx context.Context, saleBillUuid uint64, deskUu
 		if err != nil {
 			return errors.WithMessage(err)
 		}
+		// 获取当前员工信息
+		staff := ctx.GetStaff()
 		//
 		return tx.Model(&model.SaleBill{}).
 			Where("uuid = ?", saleBillUuid).
@@ -1090,9 +1171,9 @@ func (r *orderRepo) CancelOrder(ctx context.Context, saleBillUuid uint64, deskUu
 				"uuid":         saleBillUuid,
 				"status":       constant.SaleBillStatusCanceled,
 				"reason":       reason,
-				"duty_no":      ctx.GetStaff().DutyNo,
-				"cashier_uuid": ctx.GetStaff().Uuid,
-				"cashier_name": ctx.GetStaff().Username,
+				"duty_no":      staff.DutyNo,
+				"cashier_uuid": staff.Uuid,
+				"cashier_name": staff.GetUserName(),
 			}).Error
 	})
 	if err != nil {

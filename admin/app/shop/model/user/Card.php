@@ -149,7 +149,7 @@ class Card extends CardModel
         }
         //
         $user = (new User)::detail($detail['member_uuid'], true);
-        $giveBalance = helper::bcadd($user['frozen_gift_balance'], $user['gift_balance'], 2);
+        $giveBalance = $user['gift_balance'];
         $givePoint = helper::bcadd($user['frozen_point'], $user['point'], 2);
         if ($giveBalance < $detail['give_money']) {
             $this->error = "会员卡已使用，无法撤销";

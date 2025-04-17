@@ -12,12 +12,14 @@ type CalcOption struct {
 	CookingStatus   int              // 0-包括已送厨和未送厨 1-已送厨的 2-未送厨的
 	H5OrderStatus   int              // 0-包括已下单和未下单 1-已接单的 2-未接单的
 	IsOriginPrice   bool             // 是否计算原价. 默认计算折后价
+	H5OrderUuid     uint64           // 指定一个h5订单uuid
 }
 
 const (
-	CookingStatusAll       = iota // 0-包括已送厨和未送厨
-	CookingStatusCooking          // 1-已送厨的
-	CookingStatusUnCooking        // 2-未送厨的
+	CookingStatusAll              = iota // 0-包括已送厨和未送厨
+	CookingStatusCooking                 // 1-已送厨的
+	CookingStatusUnCooking               // 2-未送厨的
+	CookingStatusAllAndOneH5Order        // 3-包括已送厨和未送厨和一个h5订单的商品
 )
 
 const (
@@ -71,6 +73,14 @@ func WithH5Cart() func(option *CalcOption) {
 func WithAll() func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.CookingStatus = CookingStatusAll
+	}
+}
+
+// WithAllAndOneH5Order 获取全部商品，包括已送厨和未送厨和某个h5订单的商品
+func WithAllAndOneH5Order(h5OrderUuid uint64) func(option *CalcOption) {
+	return func(option *CalcOption) {
+		option.CookingStatus = CookingStatusAllAndOneH5Order
+		option.H5OrderUuid = h5OrderUuid
 	}
 }
 

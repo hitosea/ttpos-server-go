@@ -7,10 +7,18 @@ import (
 )
 
 // 计算销售订单的金额
-func (model *SaleOrder) CalcSaleOrder(setting SaleBillSetting) *Calc {
+func (model *SaleOrder) CalcSaleOrder(setting SaleBillSetting, options ...func(option *CalcOption)) *Calc {
+	option := &CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
 	taxFeeType := setting.GetTaxFeeType()
 	serviceFeeType := setting.GetServiceFeeType()
-	return model.calcSaleOrder(serviceFeeType, setting.ServiceFeeValue, taxFeeType)
+	if option.H5OrderUuid == 0 {
+		return model.calcSaleOrder(serviceFeeType, setting.ServiceFeeValue, taxFeeType, 0)
+	} else {
+		return model.calcSaleOrder(serviceFeeType, setting.ServiceFeeValue, taxFeeType, option.H5OrderUuid)
+	}
 }
 
 // 计算已送厨商品的订单金额
@@ -108,10 +116,10 @@ func (model *SaleOrder) CalcCheckOutZeroFee() float64 {
 }
 
 // 重新计算销售订单的金额
-func (model *SaleOrder) calcSaleOrder(serviceFeeType int, serviceFeeValue float64, taxFeeType int) *Calc {
+func (model *SaleOrder) calcSaleOrder(serviceFeeType int, serviceFeeValue float64, taxFeeType int, h5OrderUuid uint64) *Calc {
 	calc := Calc{}
-	products := model.GetUnCookingAndCookingOrderProductList()
-	calc.ProductOriginalAmount = model.calcProductOriginalAmount(products)
+	products := model.GetUnCookingAndCookingOrderProductList(h5OrderUuid)
+	calc.ProductOriginalAmount = model.calcProductAmount(products, WithOriginPrice())
 	model.ProductOriginalAmount = calc.ProductOriginalAmount
 	calc.ProductAmount = model.calcProductAmount(products)
 	model.ProductAmount = calc.ProductAmount
@@ -398,7 +406,7 @@ func (model *SaleOrder) calcOriginTaxFee(products []*SaleOrderProduct, serviceFe
 }
 
 // 计算已送厨商品的销售订单的自定义优惠折扣金额。
-// 没有整单改价时，订单自定义优惠金额=销售订单商品金额（折前价）- 销售订单商品金额（折后价）- 会员折扣金额 + 订单抹零金额 + 赠菜商品的金额之和 。 总的优惠金额= 销售订单商品金额（折前价）- 销售订单商品金额（折后价）。这样计算的原因是避免四舍五入引起的误差问题
+// 没有整单改价时，订单自定义优惠金额=销售订单商品金额（折前价，含赠菜商品的金额之和）- 销售订单商品金额（折后价）- 会员折扣金额 + 订单抹零金额 + 赠菜商品的金额之和 。 总的优惠金额= 销售订单商品金额（折前价）- 销售订单商品金额（折后价）。这样计算的原因是避免四舍五入引起的误差问题
 // 有整单改价时，订单自定义优惠金额=销售订单应收金额 - 整单改价金额
 func (model *SaleOrder) calcCustomDiscountFee(products []*SaleOrderProduct, amount float64) float64 {
 	// 有整单改价时, 订单自定义优惠金额=销售订单应收金额 - 整单改价金额
@@ -417,13 +425,10 @@ func (model *SaleOrder) calcCustomDiscountFee(products []*SaleOrderProduct, amou
 	discount := productOriginalAmount - productAmount - memberDiscountFee
 	// 订单抹零金额
 	zeroFee := model.calcZeroFee(amount)
-	// 赠菜商品的金额之和
-	sumGiftAmount := model.CalcGiftAmount(products)
-	// 订单自定义优惠金额=销售订单商品金额（折前价）- 销售订单商品金额（折后价）- 会员折扣金额 + 订单抹零金额 + 赠菜商品的金额之和
+	// 订单自定义优惠金额=销售订单商品金额（折前价，含赠菜商品的金额之和）- 销售订单商品金额（折后价）- 会员折扣金额 + 订单抹零金额
 	customDiscountFee = customDiscountFee.Add(
 		decimal.NewFromFloat(discount)).Add(
-		decimal.NewFromFloat(zeroFee)).Add(
-		decimal.NewFromFloat(sumGiftAmount))
+		decimal.NewFromFloat(zeroFee))
 	return customDiscountFee.InexactFloat64()
 }
 

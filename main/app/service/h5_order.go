@@ -76,7 +76,7 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 		if order.Status == constant.H5OrderStatusOrder { // 如果订单状态是1（待处理），读取关联的销售订单商品
 			for _, product := range order.SaleOrderProducts {
 				num = num + product.Num
-				totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromInt(int64(product.Num))).Truncate(2).InexactFloat64()
+				totalPrice := product.GetProductFinalSalePrice()
 				price = price + totalPrice
 			}
 			// 再加上已经接单的商品价格。同一个销售账单，已接单的，h5订单商品
@@ -156,7 +156,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (
 		}
 		for _, product := range h5Order.SaleOrderProducts {
 			if !product.IsAcceptOrderBool() {
-				totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromInt(int64(product.Num))).Truncate(2).InexactFloat64()
+				totalPrice := product.GetProductFinalSalePrice()
 				newProducts = append(newProducts, resp.ProductItem{
 					LocaleName: product.MultiLanguageName.GetNames(),
 					Num:        product.Num,

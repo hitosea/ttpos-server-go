@@ -2,11 +2,12 @@
 
 namespace app\shop\controller\store;
 
+use help\HttpHelp;
 use app\common\model\order\Order;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
+use app\shop\service\order\ExportService;
 use app\shop\model\order\Order as OrderModel;
-use help\HttpHelp;
 
 /**
  * 订单操作
@@ -32,10 +33,10 @@ class Operate extends Controller
         $data = $this->postData();
         // 
         $data['page'] = 1;
-        $data['list_rows'] = 1000;
+        $data['list_rows'] = 1001;
         $res = HttpHelp::getRequest($url, $this->buildListQueryParams($data), [
-            'Authorization: Bearer ' . request()->header('token'),
-            'Accept-Language: ' . request()->header('language'),
+            'Authorization: Bearer ' . (request()->header('token') ?: request()->param('token')),
+            'Accept-Language: ' . (request()->header('language') ?: request()->param('language')),
         ]);
         if (!$res) {
             return $this->renderError('请求失败');
@@ -44,23 +45,13 @@ class Operate extends Controller
         if (($result['code'] ?? -1) != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
         }
-        // 
-        foreach ($result['data']['list'] as $key => &$item) {
-            $item['finish_time'] = $item['finish_time'] ? date('Y-m-d H:i:s', $item['finish_time']) : '';
-            if ($item['sale_orders']) {
-                foreach ($item['sale_orders'] as $subKey => &$subItem) {
-                    $subItem['finish_time'] = $subItem['finish_time'] ? date('Y-m-d H:i:s', $subItem['finish_time']) : '';
-                }
-            }
+        if ($result['data']['meta']['total'] > 1000) {
+            return $this->renderError('请选择具体时间段，最多可导出1000条以下的数据');
         }
-
-        //   // 导出excel文件
-        //   return (new Exportservice)->orderList($list);
-
-        dump($result['data']);
-        die;
+        //  
+        return (new ExportService())->orderList($result['data']['list']);
         //
-        return $this->renderSuccess('', $result['data']);
+
 
         $model = new OrderModel();
         $data = $this->postData();
