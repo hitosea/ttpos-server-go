@@ -673,7 +673,7 @@ func (s *authSrv) AuthDesk(ctx context.Context, qrcodeToken string) (*model.Comp
 	}
 
 	deskInfo, err := repository.NewDeskRepo(db).GetDeskInfo(deskUuid)
-	if err != nil || deskInfo.IsDelete() || deskInfo.QrcodeToken != qrcodeToken {
+	if err != nil || deskInfo.IsDisableDesk() || deskInfo.IsDelete() || deskInfo.QrcodeToken != qrcodeToken {
 		return nil, errors.NewWithCode(constant.CodeTokenInvalid, "二维码已失效，请联系商家")
 	}
 
