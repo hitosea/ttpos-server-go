@@ -208,5 +208,6 @@ func (model *Desk) GetDeskResp() resp.Desk {
 		IsSplitOrder:  isSplitOrder,
 		UpdateTime:    time.Now().Unix(),
 		LockTime:      lockTime,
+		IsDisabled:    model.IsDisable == constant.DeskDisable,
 	}
 }

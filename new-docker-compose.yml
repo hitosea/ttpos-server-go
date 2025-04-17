@@ -33,6 +33,10 @@ services:
       - php
       - golang
       - websocket
+    depends_on:
+      - php
+      - golang
+      - websocket
     restart: unless-stopped
 
   db:
@@ -93,4 +97,6 @@ services:
     image: hub.hitosea.com/ttpos-server/ttpos-server-redis-proxy:${IMAGE_VERSION}
     volumes:
       - .env:/var/.env
+    depends_on:
+      - redis
     restart: always

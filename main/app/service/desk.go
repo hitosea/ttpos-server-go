@@ -327,6 +327,9 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 	if desk.Uuid == 0 {
 		return resp.CreateDeskOrderResp{}, errors.New("桌台不存在")
 	}
+	if desk.IsDisabled {
+		return resp.CreateDeskOrderResp{}, errors.New("桌台未开启")
+	}
 
 	// 判断桌台是否空闲
 	if desk.Status != constant.DeskStatusAvailable {
