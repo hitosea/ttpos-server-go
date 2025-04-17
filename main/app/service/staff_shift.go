@@ -552,7 +552,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		}(),
 		AbnormalData: func() business_data_resp.AbnormalData {
 			AbnormalData, err := repository.NewOrderAbnormalRecordRepo(ctx.GetDB()).GetRecordInfo(
-				ctx.GetStaffUuid(),
+				0,
 				ctx.GetStaff().DutyNo,
 			)
 			if err != nil {

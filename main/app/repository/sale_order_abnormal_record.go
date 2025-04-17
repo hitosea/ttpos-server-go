@@ -225,20 +225,22 @@ func (r *OrderAbnormalRecordRepoImpl) GetRecordInfo(cashierUuid uint64, dutyNo s
 		constant.OrderReverseSettle,
 	)
 	// 查询
-	err := r.db.Model(&model.SaleOrderAbnormalRecord{}).
-		Select(
-			refundProductTimes,
-			productFreeTimes,
-			refundTimes,
-			productMoveTimes,
-			changePriceTimes,
-			changeOrderPriceTimes,
-			discountOrderTimes,
-			roundOrderTimes,
-			freeOrderTimes,
-			reverseSettleTimes,
-		).
-		Where("cashier_uuid = ?", cashierUuid).
+	db := r.db.Model(&model.SaleOrderAbnormalRecord{})
+	if cashierUuid != 0 {
+		db = db.Where("cashier_uuid = ?", cashierUuid)
+	}
+	err := db.Select(
+		refundProductTimes,
+		productFreeTimes,
+		refundTimes,
+		productMoveTimes,
+		changePriceTimes,
+		changeOrderPriceTimes,
+		discountOrderTimes,
+		roundOrderTimes,
+		freeOrderTimes,
+		reverseSettleTimes,
+	).
 		Where("duty_no = ?", dutyNo).
 		First(&orderAbnormalRecord).Error
 	if err != nil {
