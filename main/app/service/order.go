@@ -925,9 +925,6 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 		}
 	}
 	//
-	fmt.Println(utils.ToJsonString(exportLists))
-	fmt.Println(len(exportLists))
-	//
 	return resp.OrderExportListPaginationResp{
 		List: exportLists,
 		Meta: resp.OrderExportMeta{
