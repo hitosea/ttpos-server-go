@@ -254,16 +254,17 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 		} else {
 			fmt.Println("Heartbeat message DeviceId - 在线: ", newConn.DeviceId)
 		}
+		// todo 暂时不回复心跳消息
 		// 发送回复消息
-		message := PushMessage{
-			Event: "reply_heartbeat",
-			State: constant.CodeSuccess,
-			Msg:   "Reply successfully",
-		}
-		err := ws.WriteMessage(websocket.TextMessage, getMsgData(message))
-		if err != nil {
-			fmt.Println("Error writing message:", err)
-		}
+		// message := PushMessage{
+		// 	Event: "reply_heartbeat",
+		// 	State: constant.CodeSuccess,
+		// 	Msg:   "Reply successfully",
+		// }
+		// err := ws.WriteMessage(websocket.TextMessage, getMsgData(message))
+		// if err != nil {
+		// 	fmt.Println("Error writing message:", err)
+		// }
 		return
 	}
 
@@ -274,16 +275,16 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 		if err != nil {
 			fmt.Printf("Error updating message status: %v\n", err)
 		}
-		//
-		message := PushMessage{
-			Event: "reply",
-			State: constant.CodeSuccess,
-			Msg:   "Reply successfully",
-		}
-		err = ws.WriteMessage(websocket.TextMessage, getMsgData(message))
-		if err != nil {
-			fmt.Printf("Error sending message to client: %v\n", err)
-		}
+		// todo 暂时不回复心跳消息
+		// message := PushMessage{
+		// 	Event: "reply",
+		// 	State: constant.CodeSuccess,
+		// 	Msg:   "Reply successfully",
+		// }
+		// err = ws.WriteMessage(websocket.TextMessage, getMsgData(message))
+		// if err != nil {
+		// 	fmt.Printf("Error sending message to client: %v\n", err)
+		// }
 		return
 	}
 }
