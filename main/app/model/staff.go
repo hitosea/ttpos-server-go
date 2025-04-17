@@ -1,6 +1,9 @@
 package model
 
-import "ttpos-server-go/app/constant"
+import (
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/pkg/utils"
+)
 
 // Staff 员工表 ttpos_staff
 type Staff struct {
@@ -22,6 +25,11 @@ type Staff struct {
 
 	Company *Company `gorm:"foreignKey:CompanyUuid;references:Uuid"`
 	Device  *Device  `gorm:"foreignKey:BindKey;references:DeviceId"`
+}
+
+// GetUserName 获取用户名
+func (model *Staff) GetUserName() string {
+	return utils.IfString(model.RealName != "", model.RealName, model.Username)
 }
 
 // StaffRole 员工角色关系表 ttpos_staff_role

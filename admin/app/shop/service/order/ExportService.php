@@ -47,54 +47,22 @@ class ExportService
         //填充数据
         $index = 0;
         foreach ($list as $order) {
-            $payType = '';
-            foreach ($order['payType'] as $pay) {
-                $payType .= $pay['name'] . '+';
-            }
-            // 合单合并 table_no
-            $table_no = !empty($order['table_no']) ? $order['table_no'] : (!empty($order['call_no']) ? $order['call_no'] : '');
-            if (!empty($order['is_merge']) && $order['is_merge'] == 1) {
-                $list_array = is_array($list) ? $list : $list->toArray();
-                $merged_table_no = array_filter(array_map(function ($item) use ($order) {
-                    return $item['merge_parent_id'] == $order['order_id'] ? $item['table_no'] : null;
-                }, $list_array));
-                $table_no = implode('+', $merged_table_no);
-            }
-            // 拆单
-            $order_name = $order['order_name'] ?? '';
-            if (!empty($order_name)) {
-                $table_no = $table_no . '-' . $order_name;
-            }
-            // 拆单会员ID
-            $main_user_id = '';
-            $user_text = '';
-            if ($order['parent_id'] == 0) {
-                $order['subOrder'] = $order->subOrder()->select()?->toArray() ?: [];
-                $user_ids = array_filter(array_column($order['subOrder'], 'user_id'));
-                if (!empty($user_ids)) {
-                    $main_user_id = implode(',', $user_ids);
-                }
-            }
-            $user_id = $order['parent_id'] > 0 && isset($order['user']['user_id']) ? $order['user']['user_id'] : $main_user_id;
-            if ($user_id) {
-                $user_text = __('会员') . 'ID' . '(' . $user_id . ')';
-            }
-            $sheet->setCellValue('A' . ($index + 2), $order['order_source_text']);
+            $sheet->setCellValue('A' . ($index + 2), $order['bill_type']);
             $sheet->setCellValue('B' . ($index + 2), $this->filterProductInfo($order));
-            $sheet->setCellValue('C' . ($index + 2), $table_no);
+            $sheet->setCellValue('C' . ($index + 2), $order['serial_no'] ?? '');
             $sheet->setCellValue('D' . ($index + 2), "\t" . $order['order_no'] . "\t");
-            $sheet->setCellValue('E' . ($index + 2), $order['order_status']['text']);
-            $sheet->setCellValue('F' . ($index + 2), $this->filterTime($order['pay_time']));
-            $sheet->setCellValue('G' . ($index + 2), $order['order_price']);
-            $sheet->setCellValue('H' . ($index + 2), $order['service_money']);
-            $sheet->setCellValue('I' . ($index + 2), $order['discount_money']);
-            $sheet->setCellValue('J' . ($index + 2), $order['user_discount_money']);
-            $sheet->setCellValue('K' . ($index + 2), Helper::number2($order['pay_price'] - $order['refund_money']));
-            $sheet->setCellValue('L' . ($index + 2), $order['refund_money']);
-            $sheet->setCellValue('M' . ($index + 2), $user_text);
-            $sheet->setCellValue('N' . ($index + 2), rtrim($payType, '+'));
-            $sheet->setCellValue('O' . ($index + 2), $order['delivery_type']['text']);
-            $sheet->setCellValue('P' . ($index + 2), $order['cashier'] ? $order['cashier']['real_name'] : '');
+            $sheet->setCellValue('E' . ($index + 2), $order['status_text']);
+            $sheet->setCellValue('F' . ($index + 2), $this->filterTime($order['finish_time']));
+            $sheet->setCellValue('G' . ($index + 2), $order['order_amount']);
+            $sheet->setCellValue('H' . ($index + 2), $order['service_fee']);
+            $sheet->setCellValue('I' . ($index + 2), $order['discount_fee']);
+            $sheet->setCellValue('J' . ($index + 2), $order['member_fee']);
+            $sheet->setCellValue('K' . ($index + 2), Helper::number2($order['payment_amount']));
+            $sheet->setCellValue('L' . ($index + 2), $order['refund_amount']);
+            $sheet->setCellValue('M' . ($index + 2), $order['member_names'] ?? '');
+            $sheet->setCellValue('N' . ($index + 2), rtrim($order['pay_type_name'], '+'));
+            $sheet->setCellValue('O' . ($index + 2), ($order['dining_method'] ?? 0) == 1 ? __('打包带走') : __('店内就餐') );
+            $sheet->setCellValue('P' . ($index + 2), $order['cashier_name'] ?? '');
 
             $index++;
         }
@@ -252,30 +220,18 @@ class ExportService
     {
         $content = '';
         $key = 1;
-        // 拆单兼容
-        if ($order->buffet->isEmpty()) {
-            $order['buffet'] = $order->buffet()->select()?->toArray() ?: [];
-        }
-        if ($order->product->isEmpty()) {
-            $order['product'] = $order->product()->withTrashed()->where('is_send_kitchen', 1)->select()?->toArray() ?: [];
-        }
-        // 自助餐
-        foreach ($order['buffet'] as $buffet) {
-            $content .= $key . "." . __("商品名称") . "：{$buffet['name_text']}\n";
-            $total_price = Helper::number2($buffet['total_price']);
-            $customer = $buffet['buffetCustomerType'][0]['customer_type_name'] ?? '';
-            $customer = __($customer);
-            !empty($customer) && $content .= "　" . __("商品规格") . "：{$customer}\n";
-            $content .= "　" . __("购买数量") . "：{$buffet['num']}\n";
-            $content .= "　" . __("商品总价") . "：{$total_price}\n\n";
-            $key++;
-        }
         // 商品
         foreach ($order['product'] as $product) {
-            $content .= $key . "." . __("商品名称") . "：{$product['product_name_text']}\n";
             $total_price = Helper::number2($product['total_price']);
-            !empty($product['product_attr']) && $content .= "　" . __("商品规格") . "：{$product['product_attr']}\n";
-            $content .= "　" . __("购买数量") . "：{$product['total_num']}\n";
+            // 商品名称
+            $content .= $key . "." . __("商品名称") . "：{$product['name']}\n";
+            // 商品规格
+            if (!empty($product['attr_name'])) {
+                $content .= "　" . __("商品规格") . "：{$product['attr_name']}\n";
+            }
+            // 购买数量
+            $content .= "　" . __("购买数量") . "：{$product['num']}\n";
+            // 商品总价
             $content .= "　" . __("商品总价") . "：{$total_price}\n\n";
             $key++;
         }
