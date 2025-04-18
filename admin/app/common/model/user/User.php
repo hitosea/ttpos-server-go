@@ -31,7 +31,7 @@ class User extends BaseModel
     /**
      * 追加属性
      */
-    protected $append = ['user_id', 'points', 'mobile', 'grade_id', 'card_id', 'can_delete'];
+    protected $append = ['user_id', 'points', 'mobile', 'grade_id', 'card_id', 'can_delete', 'pay_money'];
 
     /**
      * 兼容字段
@@ -113,6 +113,11 @@ class User extends BaseModel
         } else {
             return '-';
         }
+    }
+
+    public function getPayMoneyAttr($value, $data)
+    {
+        return $data['accumulated_consumption_amount'];
     }
 
     /**
