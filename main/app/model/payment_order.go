@@ -43,14 +43,15 @@ func (model *PaymentMethod) CalculatePaymentCommissionFee(paymentAmount float64)
 	decimalPrice := decimal.NewFromFloat(paymentAmount)
 	feeRate := decimal.NewFromFloat(model.GetFeePercent())
 	// 计算费用，先保留3位小数，然后四舍五入到2位
-	feeMoney := decimalPrice.Mul(feeRate).Round(3).Round(2)
+	feeMoney := decimalPrice.Mul(feeRate).Truncate(3).Round(2)
 	// 转换回 float64
 	return feeMoney.InexactFloat64()
 }
 
 // CalculatePaymentAmount 包含手续费
 func (model *PaymentMethod) CalculatePaymentAmount(paymentAmount float64) float64 {
-	return decimal.NewFromFloat(paymentAmount).Add(decimal.NewFromFloat(model.CalculatePaymentCommissionFee(paymentAmount))).InexactFloat64()
+	commissionFee := model.CalculatePaymentCommissionFee(paymentAmount)
+	return decimal.NewFromFloat(paymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64()
 }
 
 // HasCommission 判断是否含手续费
