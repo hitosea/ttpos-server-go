@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
@@ -232,10 +233,20 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 	if member.Uuid == 0 {
 		return errors.New("会员不存在")
 	}
-	if err := memberRepo.Update(changeReq.MemberUuid, map[string]any{
+	updateData := map[string]any{
 		"frozen_balance":      utils.DecimalAdd(member.FrozenBalance, changeReq.Money),
 		"frozen_gift_balance": utils.DecimalAdd(member.FrozenGiftBalance, changeReq.GiftMoney),
-	}); err != nil {
+	}
+	if changeReq.Scene == constant.MemberBalanceLogConsume && changeReq.Money < 0 {
+		updateData["accumulated_consumption_amount"] = utils.DecimalSub(member.AccumulatedConsumptionAmount, changeReq.Money)
+		updateData["consumption_count"] = member.ConsumptionCount + 1
+	}
+	logger.Logger.Info("更新会员余额", zap.Any("changeReq", changeReq))
+	if changeReq.Scene == constant.MemberBalanceLogReverse && changeReq.Money > 0 {
+		updateData["accumulated_consumption_amount"] = utils.DecimalSub(member.AccumulatedConsumptionAmount, changeReq.Money)
+		updateData["consumption_count"] = member.ConsumptionCount - 1
+	}
+	if err := memberRepo.Update(changeReq.MemberUuid, updateData); err != nil {
 		return errors.WithMessage(err, "更新会员余额失败")
 	}
 
