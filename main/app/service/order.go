@@ -1356,7 +1356,7 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 			return errors.WithMessage(err)
 		}
 		// 关闭桌台
-		err = deskRepo.CloseDesk(ctx, billInfo.DeskUuid, req.CancelReason)
+		err = deskRepo.CloseDesk(ctx, billInfo.DeskUuid, billInfo.Uuid, req.CancelReason)
 		if err != nil {
 			tx.Rollback()
 			return errors.WithMessage(err)

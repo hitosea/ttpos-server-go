@@ -30,7 +30,7 @@ type IDeskRepo interface {
 	UnbindDesk(deskUuid, deviceUuid uint64) error               // 平板端解绑桌台
 	CreateDesk(desk model.Desk) (uint64, error)
 	DeleteDesk(deskUuid uint64) error
-	CloseDesk(ctx context.Context, deskUuid uint64, reason string) error
+	CloseDesk(ctx context.Context, deskUuid, saleBillUuid uint64, reason string) error
 	WhereUuid(uuid uint64) DBOption
 	WhereDeviceUuid(uuid uint64) DBOption
 	WhereIsDisable(isDisable int) DBOption
@@ -256,11 +256,18 @@ func (r *deskRepo) DeleteDesk(deskUuid uint64) error {
 }
 
 // CloseDesk 关闭桌台
-func (r *deskRepo) CloseDesk(ctx context.Context, deskUuid uint64, reason string) error {
+func (r *deskRepo) CloseDesk(ctx context.Context, deskUuid, saleBillUuid uint64, reason string) error {
 	err := NewOrderRepo(r.db).CancelDeskOrder(ctx, deskUuid, reason)
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+	// 删除销售账单
+	if saleBillUuid > 0 {
+		if err := r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Update("delete_time", uint(time.Now().Unix())).Error; err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+	// 更新桌台
 	return r.db.Model(&model.Desk{}).Where("uuid = ?", deskUuid).Updates(map[string]any{
 		"uuid":           deskUuid,
 		"status":         constant.DeskStatusClose,
