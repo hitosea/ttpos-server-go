@@ -2803,6 +2803,18 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 
 	saleOrderProduct.DeleteProduct()
 
+	if saleOrderProduct.H5OrderUuid != 0 {
+		// 如果这个商品是h5订单的最后一个商品，则删除拒单该h5订单
+		// 查询h5订单是否只有一个商品，如果只有一个商品就拒单该h5订单
+		h5OrderProductCount, err := repository.NewH5OrderRepo(db).GetH5OrderProductCount(saleOrderProduct.H5OrderUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if h5OrderProductCount == 1 {
+			s.RejectH5Order(ctx, saleOrderProduct.H5OrderUuid)
+		}
+	}
+
 	// 计算订单金额
 	afterSaleOrderCalc := saleOrder.CalcSaleOrder(*saleBill.SaleBillSetting)
 	ctx.Log().Debug("删除商品后,销售订单信息", zap.Any("saleOrder calc", afterSaleOrderCalc))
