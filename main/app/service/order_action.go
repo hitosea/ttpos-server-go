@@ -48,9 +48,11 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 
 	// 送厨相关
 	{
+		ctx.Log().Debug("wfs  --- 10004")
 		// 获取所有商品,用于检查限购
 		saleOrderProductAll := saleBill.GetSaleOrderProductAll()
 
+		ctx.Log().Debug("wfs  --- 10005")
 		// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购、必点为选择
 		checkServiceRes, errCheck := s.checkOrder(ctx, false, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking())
 		if errCheck != nil {

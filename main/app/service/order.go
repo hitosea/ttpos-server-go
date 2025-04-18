@@ -5002,7 +5002,9 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 
 	h5OrderProductUnAccept := make([]*model.SaleOrderProduct, 0)
 	if req.H5OrderUuid != 0 {
+		ctx.Log().Debug("wfs  --- 10001")
 		h5OrderProductUnAccept = saleBill.GetH5OrderProductUnAccept(req.H5OrderUuid)
+		ctx.Log().Debug("wfs  --- 10002")
 	}
 
 	// 获取未送厨的商品列表
@@ -5024,6 +5026,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 
 	// 送厨
 	if len(unCookingSaleOrderProducts) > 0 {
+		ctx.Log().Debug("wfs  --- 10003")
 		checkServiceRes, err := s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0) // 购物车送厨商品
 		if err != nil {
 			return nil, nil, err
