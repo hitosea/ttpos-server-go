@@ -88,6 +88,7 @@ func freeSaleOrderEventHandler() {
 				OperatorUuid:  payload.GetOperatorUuid(),
 			}
 			record.Data = payload.ToJsonString()
+			record.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
 			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
 				logger.Logger.Error("SubscribeFreeSaleOrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
@@ -117,6 +118,7 @@ func freeSaleOrderEventHandler() {
 				}
 			}
 			settleRecord.Data = checkoutSaleOrderPayload.ToJsonString()
+			settleRecord.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
 			uuid, err = orderRecordRepo.CreateSaleOrderOperationRecord(settleRecord)
 			if err != nil {
 				logger.Logger.Error("SubscribeFreeSaleOrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))

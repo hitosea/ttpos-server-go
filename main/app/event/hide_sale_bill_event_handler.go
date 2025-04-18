@@ -37,6 +37,7 @@ func hideSaleBillEventHandler() {
 				OperatorUuid: payload.GetOperatorUuid(),
 			}
 			record.Data = ""
+			record.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
 			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
 				logger.Logger.Error("SubscribeHideSaleBillEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))

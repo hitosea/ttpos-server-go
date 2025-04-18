@@ -47,6 +47,7 @@ func cancelSaleOrderProductEventHandler() {
 					OperatorUuid:  payload.GetOperatorUuid(),
 				}
 				record.Data = payload.ToJsonString()
+				record.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
 				uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 				if err != nil {
 					logger.Logger.Error("SubscribeCancelSaleOrderProductEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
