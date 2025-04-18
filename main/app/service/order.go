@@ -8552,7 +8552,7 @@ func (s *orderSrv) OrderUnlock(ctx context.Context, saleBillUuid uint64) error {
 	// 推送桌台更新
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, map[string]interface{}{
 		"desk_uuid":   saleBill.DeskUuid,
-		"update_time": saleBill.BaseModel.UpdateTime,
+		"update_time": time.Now().Unix(),
 	})
 
 	return nil
