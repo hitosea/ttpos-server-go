@@ -788,6 +788,11 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 		)
 		return num
 	}
+	// 获取数量
+	unpaidNum := getOrderNum(constant.SaleBillStatusPending)
+	completeNum := getOrderNum(constant.SaleBillStatusComplete)
+	cancelNum := getOrderNum(constant.SaleBillStatusCanceled)
+
 	// 返回响应对象
 	return resp.OrderListPaginationResp{
 		List: billList,
@@ -797,9 +802,10 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 				PageSize: req.PageSize,
 				Total:    total,
 			},
-			UnpaidNum:   getOrderNum(constant.SaleBillStatusPending),
-			CompleteNum: getOrderNum(constant.SaleBillStatusComplete),
-			CancelNum:   getOrderNum(constant.SaleBillStatusCanceled),
+			TotalNum:    unpaidNum + completeNum + cancelNum,
+			UnpaidNum:   unpaidNum,
+			CompleteNum: completeNum,
+			CancelNum:   cancelNum,
 		},
 	}, nil
 }

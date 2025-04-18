@@ -53,6 +53,7 @@ type BillLists struct {
 
 type OrderListMeta struct {
 	dto.PageResponse
+	TotalNum    int64 `json:"total_num"`    // 总数量
 	UnpaidNum   int64 `json:"unpaid_num"`   // 待付款数量
 	CompleteNum int64 `json:"complete_num"` // 已完成数量
 	CancelNum   int64 `json:"cancel_num"`   // 已取消数量
