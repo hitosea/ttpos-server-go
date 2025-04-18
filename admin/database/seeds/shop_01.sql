@@ -239,7 +239,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `sale_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '销售价（单商品，折前价）,当自定义价格时，销售价=自定义价格,否则销售价=原始单价',
     `sale_price_no_tax` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '销售价,未含税价格（折前）',
     -- 税率
-    `tax_rate` DECIMAL(10, 2) NOT NULL DEFAULT 0 COMMENT '税率,单位%.加购时记录税率,结账时再重新核算',
+    `tax_rate` DECIMAL(10, 4) NOT NULL DEFAULT 0 COMMENT '税率,单位%.加购时记录税率,结账时再重新核算',
     -- 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
     `member_discount_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '会员折扣率(0-100%)',
     `member_card_discount_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '会员卡折扣率(0-100%)',
@@ -1996,7 +1996,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     `product_sale_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品销售价: 规格+加料',
     `product_final_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品最终价',
     `product_num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
-    `tax_rate` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '税率',
+    `tax_rate` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '税率',
     `tax_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '税费',
     `service_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '服务费',
     `service_tax` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '服务税',

@@ -883,7 +883,7 @@ func (s *deskSrv) BindDesk(ctx context.Context, bindDeskReq req.BindDeskReq) (re
 	// 桌台已被占用
 	desk, err = deskRepo.GetDesk(deskRepo.WhereUuid(bindDeskReq.DeskUuid), deskRepo.WhereIsDisable(constant.DeskEnable))
 	if err != nil || desk.Uuid == 0 {
-		return resp.Desk{}, errors.WithMessage(errors.ErrInternal, "桌台不存在")
+		return resp.Desk{}, errors.WithMessage(errors.New("桌台不存在"))
 	}
 	if desk.DeviceUuid > 0 && desk.DeviceUuid != deviceUuid {
 		return resp.Desk{}, errors.New("桌台已被占用")
@@ -905,12 +905,12 @@ func (s *deskSrv) ChangeBindDesk(ctx context.Context, changeBindDeskReq req.Edit
 	deskRepo := repository.NewDeskRepo(db)
 	oldDesk, _ := deskRepo.GetDesk(deskRepo.WhereDeviceUuid(deviceUuid), deskRepo.WhereIsDisable(constant.DeskEnable))
 	if oldDesk.Uuid == 0 {
-		return resp.Desk{}, errors.WithMessage(errors.ErrInternal, "未绑定桌台")
+		return resp.Desk{}, errors.WithMessage(errors.New("未绑定桌台"))
 	}
 	// 已绑定的桌台和传递桌台一样，不做操作
 	if oldDesk.Uuid == changeBindDeskReq.DeskUuid {
 		if err := s.deviceSrv.UpdateRemark(ctx, req.EditDeviceRemarkReq{Remark: changeBindDeskReq.Remark}); err != nil {
-			return resp.Desk{}, errors.WithMessage(errors.ErrInternal, "修改机器备注失败: "+err.Error())
+			return resp.Desk{}, errors.WithMessage(errors.New("修改机器备注失败"), err.Error())
 		}
 		return s.GetDeskInfo(dbId, changeBindDeskReq.DeskUuid)
 	}

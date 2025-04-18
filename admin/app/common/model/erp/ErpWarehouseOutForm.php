@@ -145,7 +145,7 @@ class ErpWarehouseOutForm extends BaseModel
                     4 => self::TYPE_ADJUST_OUT_DEL,
                 ][$item['scene']],
                 'product' => $product,
-                'num' => $formItem['num'],
+                'num' => floatval($formItem['num']),
                 'remark' => $item['remark'],
                 'status' => [
                     0 => self::STATUS_OUT,

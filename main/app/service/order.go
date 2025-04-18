@@ -2803,6 +2803,18 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 
 	saleOrderProduct.DeleteProduct()
 
+	if saleOrderProduct.H5OrderUuid != 0 {
+		// 如果这个商品是h5订单的最后一个商品，则删除拒单该h5订单
+		// 查询h5订单是否只有一个商品，如果只有一个商品就拒单该h5订单
+		h5OrderProductCount, err := repository.NewH5OrderRepo(db).GetH5OrderProductCount(saleOrderProduct.H5OrderUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if h5OrderProductCount == 1 {
+			s.RejectH5Order(ctx, saleOrderProduct.H5OrderUuid)
+		}
+	}
+
 	// 计算订单金额
 	afterSaleOrderCalc := saleOrder.CalcSaleOrder(*saleBill.SaleBillSetting)
 	ctx.Log().Debug("删除商品后,销售订单信息", zap.Any("saleOrder calc", afterSaleOrderCalc))
@@ -5002,30 +5014,14 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 
 	h5OrderProductUnAccept := make([]*model.SaleOrderProduct, 0)
 	if req.H5OrderUuid != 0 {
-		ctx.Log().Debug("wfs  --- 10001")
 		h5OrderProductUnAccept = saleBill.GetH5OrderProductUnAccept(req.H5OrderUuid)
-		ctx.Log().Debug("wfs  --- 10002")
 	}
-
-	//  todo 调试
-	for _, saleOrder := range saleBill.SaleOrders {
-		for i, _ := range saleOrder.SaleOrderProducts {
-			orderProduct := saleOrder.SaleOrderProducts[i]
-			if orderProduct == nil {
-				ctx.Log().Debug(utils.ToJsonString(saleOrder.SaleOrderProducts))
-			}
-		}
-	}
-
-	ctx.Log().Debug("wfs  --- 10003")
 
 	// 获取未送厨的商品列表
 	unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
 	if len(unCookingSaleOrderProducts) == 0 && len(h5OrderProductUnAccept) == 0 {
 		return nil, nil, errors.New("没有未送厨的商品")
 	}
-
-	ctx.Log().Debug("wfs  --- 10003")
 
 	// 获取某个h5订单的已下单但未接单的商品
 	if req.H5OrderUuid != 0 {
@@ -5038,8 +5034,6 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		}
 	}
 
-	ctx.Log().Debug("wfs  --- 10004")
-
 	// 送厨
 	if len(unCookingSaleOrderProducts) > 0 {
 		checkServiceRes, err := s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0) // 购物车送厨商品
@@ -5050,6 +5044,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 			return nil, checkServiceRes, nil
 		}
 	}
+
 	ctx.Log().Debug("获取新的购物车信息")
 	cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
@@ -8609,7 +8604,7 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 		var err error
 		shopCart, err = s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
 		if err != nil {
-			return nil, errors.WithMessage(errors.ErrInternal, "获取点餐购物车信息: "+err.Error())
+			return nil, errors.WithMessage(errors.New("获取点餐购物车信息"), err.Error())
 		}
 	}
 	productGroup := make(map[int64][]resp.Product)
@@ -8773,11 +8768,10 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 	// 获取h5订单
 	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
 	if err != nil {
-		return nil, errors.WithMessage(errors.ErrInternal, "获取h5订单失败", err.Error())
+		return nil, errors.WithMessage(errors.New("获取h5订单失败"), err.Error())
 	}
-	// 非待处理状态不可操作
 	if h5Order.Status != constant.H5OrderStatusOrder {
-		return nil, errors.WithMessage(errors.ErrInternal, "当前状态不可操作")
+		return nil, nil
 	}
 
 	// 接单,保证h5订单的商品快照信息
@@ -8859,12 +8853,12 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	// 获取h5订单
 	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
-	if err != nil {
-		return errors.WithMessage(errors.ErrInternal, "获取h5订单失败", err.Error())
+	if err != nil && !builtinerrors.Is(err, gorm.ErrRecordNotFound) {
+		return errors.WithMessage(errors.New("获取h5订单失败"), err.Error())
 	}
 	// 非待处理状态不可操作
 	if h5Order.Status != constant.H5OrderStatusOrder {
-		return errors.WithMessage(errors.ErrInternal, "当前状态不可操作")
+		return errors.WithMessage(errors.New("当前状态不可操作"))
 	}
 
 	// 拒单,保证h5订单的商品快照信息
@@ -8961,7 +8955,7 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 	// 获取销售账单信息并计算未送厨商品总金额
 	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
 	if err != nil {
-		return res, errors.WithMessage(errors.ErrInternal, "获取销售账单所有信息: "+err.Error())
+		return res, errors.WithMessage(errors.New("获取销售账单所有信息"), err.Error())
 	}
 
 	for _, order := range saleBill.SaleOrders {
@@ -9029,7 +9023,7 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shop
 	// 获取销售账单并计算金额
 	saleBill, err := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
 	if err != nil {
-		return resp.SentKitchen{}, errors.WithMessage(errors.ErrInternal, "获取销售账单所有信息: "+err.Error())
+		return resp.SentKitchen{}, errors.WithMessage(errors.New("获取销售账单所有信息"), err.Error())
 	}
 
 	amount := resp.AmountInfo{ProductNum: productNum}
@@ -9056,7 +9050,7 @@ func (s *orderSrv) GetOrderMemberList(ctx context.Context, saleBillUuid uint64) 
 	//
 	saleBill, err := repository.NewOrderRepo(db).GetSaleBillInfoAndMember(saleBillUuid)
 	if err != nil {
-		return resp.InstantOrderMemberList{}, errors.WithMessage(errors.ErrInternal, "获取销售账单信息: "+err.Error())
+		return resp.InstantOrderMemberList{}, errors.WithMessage(errors.New("获取销售账单信息"), err.Error())
 	}
 	//
 	list := make([]resp.InstantOrderMember, 0)
