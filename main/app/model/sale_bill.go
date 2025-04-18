@@ -378,7 +378,7 @@ func (model *SaleBill) CopyOrderProductAndEdit(saleOrderProductUuid uint64, upda
 }
 
 // NewH5Order 创建h5订单
-func (model *SaleBill) NewH5Order() (*H5Order, error) {
+func (model *SaleBill) NewH5Order(companySetting CompanySetting) (*H5Order, error) {
 	h5OrderUuid, _ := utils.GetID()
 	// 获取未下单的h5订单商品
 	h5OrderProducts := model.GetUnOrderH5OrderProduct()
@@ -406,5 +406,6 @@ func (model *SaleBill) NewH5Order() (*H5Order, error) {
 		Status:          constant.H5OrderStatusOrder,      // 状态，已下单
 		OrderTime:       time.Now().Unix(),                // 下单时间
 		H5OrderProducts: h5OrderProductList,               // 订单商品
+		IsNeedAudit:     companySetting.IsOpenH5Order,     // 是否需要审核，关闭商家扫码点餐接单，则不需要审核
 	}, nil
 }

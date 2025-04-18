@@ -61,8 +61,10 @@ type authSrv struct {
 	shiftSrv      IStaffShiftSrv
 	settingSrv    setting.ISrv
 
-	assistantRoutes []string
-	tabletRoutes    []string
+	assistantRoutes             []string
+	tabletRoutes                []string
+	memberFunctionRoutes        []string
+	h5AcceptOrderFunctionRoutes []string
 }
 
 func NewAuthSrvImpl(
@@ -96,6 +98,21 @@ func NewAuthSrvImpl(
 			"/api/v1/tablet/product/category/list",
 			"/api/v1/tablet/product/list",
 			"/api/v1/tablet/buffet/list",
+		},
+		memberFunctionRoutes: []string{
+			"/api/v1/cashier/instant/order/member/confirm",  // 收银端使用会员优惠
+			"/api/v1/assistant/member/add",                  // 助手端添加会员
+			"/api/v1/cashier/member/add",                    // 收银端添加会员
+			"/api/v1/cashier/member/create_recharge_order",  // 收银端创建会员充值单
+			"/api/v1/cashier/member/confirm_recharge_order", // 收银端确认会员充值订单
+			"/api/v1/assistant/desk/order/member/confirm",   // 助手端使用会员优惠
+			"/api/v1/cashier/desk/order/member/confirm",     // 收银端使用会员优惠
+		},
+		h5AcceptOrderFunctionRoutes: []string{
+			"/api/v1/cashier/h5_order/list",   // h5订单列表
+			"/api/v1/cashier/h5_order/detail", // h5订单详情
+			"/api/v1/cashier/h5_order/reject", // h5拒单
+			"/api/v1/cashier/h5_order/accept", // h5接单
 		},
 	}
 }
@@ -139,7 +156,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 		return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 	if staff.Company.IsExpired() {
-		return loginResp, errors.NewWithCode(constant.CompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
+		return loginResp, errors.NewWithCode(constant.CodeCompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
 	}
 	if staff.Company.IsException() {
 		return loginResp, errors.New("店铺状态异常，如需继续使用，请联系销售代表")
@@ -325,11 +342,14 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 		Currency:     currencySetting,
 		Permissions:  permissions,
 		Company: resp.Company{ // cashier
-			Uuid:       company.Uuid,
-			Name:       company.Name,
-			Logo:       utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
-			TimeZone:   companySetting.Timezone,
-			ExpireTime: company.ExpireTime,
+			Uuid:          company.Uuid,
+			Name:          company.Name,
+			Logo:          utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
+			TimeZone:      companySetting.Timezone,
+			ExpireTime:    company.ExpireTime,
+			IsOpenMember:  companySetting.IsOpenMember,
+			IsOpenBuffet:  companySetting.IsOpenBuffet,
+			IsOpenH5Order: companySetting.IsOpenH5Order,
 		},
 		CloudBasic: cloudBasicSetting,
 		Printer:    printerSetting,
@@ -337,7 +357,7 @@ func (s *authSrv) CashierBase(ctx context.Context) (resp.CashierBase, error) {
 	}, nil
 }
 
-// AssistantBase 获取收银端基本信息
+// AssistantBase 获取助手端基本信息
 func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error) {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	assistantBase := resp.AssistantBase{}
@@ -414,11 +434,14 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 		Buffet:     buffetSetting,
 		CloudBasic: cloudBasicSetting,
 		Company: resp.Company{ // assistant
-			Uuid:       company.Uuid,
-			Name:       company.Name,
-			TimeZone:   companySetting.Timezone,
-			Logo:       utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
-			ExpireTime: company.ExpireTime,
+			Uuid:          company.Uuid,
+			Name:          company.Name,
+			Logo:          utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
+			TimeZone:      companySetting.Timezone,
+			ExpireTime:    company.ExpireTime,
+			IsOpenMember:  companySetting.IsOpenMember,
+			IsOpenBuffet:  companySetting.IsOpenBuffet,
+			IsOpenH5Order: companySetting.IsOpenH5Order,
 		},
 		Currency:      currencySetting,
 		Business:      businessSetting,
@@ -477,11 +500,14 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 		Buffet:        buffetSetting,
 		CloudBasic:    cloudBasicSetting,
 		Company: resp.Company{ // tablet
-			Uuid:       company.Uuid,
-			Name:       company.Name,
-			Logo:       utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
-			TimeZone:   companySetting.Timezone,
-			ExpireTime: company.ExpireTime,
+			Uuid:          company.Uuid,
+			Name:          company.Name,
+			Logo:          utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
+			TimeZone:      companySetting.Timezone,
+			ExpireTime:    company.ExpireTime,
+			IsOpenMember:  companySetting.IsOpenMember,
+			IsOpenBuffet:  companySetting.IsOpenBuffet,
+			IsOpenH5Order: companySetting.IsOpenH5Order,
 		},
 		Currency: currencySetting,
 		Business: businessSetting,
@@ -490,7 +516,7 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 	}, nil
 }
 
-// KitchenBase 获取收银端基本信息
+// KitchenBase 获取厨显端基本信息
 func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 	var (
 		kitchenBase        resp.KitchenBase
@@ -529,11 +555,14 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 		Buffet:     buffetSetting,
 		CloudBasic: cloudBasicSetting,
 		Company: resp.Company{ // kitchen
-			Uuid:       company.Uuid,
-			Name:       company.Name,
-			Logo:       utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
-			TimeZone:   companySetting.Timezone,
-			ExpireTime: company.ExpireTime,
+			Uuid:          company.Uuid,
+			Name:          company.Name,
+			Logo:          utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
+			TimeZone:      companySetting.Timezone,
+			ExpireTime:    company.ExpireTime,
+			IsOpenMember:  companySetting.IsOpenMember,
+			IsOpenBuffet:  companySetting.IsOpenBuffet,
+			IsOpenH5Order: companySetting.IsOpenH5Order,
 		},
 		Currency:      currencySetting,
 		Business:      businessSetting,
@@ -578,7 +607,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		return company, companySetting, staff, desk, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 	if company.IsExpired() {
-		return company, companySetting, staff, desk, errors.NewWithCode(constant.CompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
+		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCompanyLicenceExpired, "店铺状态已到期，如需继续使用，请联系销售代表")
 	}
 	if company.IsException() {
 		return company, companySetting, staff, desk, errors.New("店铺状态异常，如需继续使用，请联系销售代表")
@@ -596,16 +625,22 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		}
 		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenInvalid, "设备已解绑，请重新绑定")
 	}
+	if slices.Contains(s.memberFunctionRoutes, auth.UrlPath) && companySetting.IsOpenMember != 1 {
+		return company, companySetting, staff, desk, errors.New("当前尚未开启会员功能，如有需要，请联系销售代表")
+	}
+	if slices.Contains(s.h5AcceptOrderFunctionRoutes, auth.UrlPath) && companySetting.IsOpenH5Order != 1 {
+		return company, companySetting, staff, desk, errors.New("当前尚未开启扫码点餐接单功能，如有需要，请联系销售代表")
+	}
 	switch auth.Source {
 	case constant.SourceCashier: // 收银端
 		{
 			// 检查收银机设置-收银用餐是否开启
 			if !s.isCashierOpen(ctx, auth.UrlPath) {
-				return company, companySetting, staff, desk, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "收银用餐已关闭，请选择其他用餐方式")
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "收银用餐已关闭，请选择其他用餐方式")
 			}
 			// 检查收银机设置-桌台用餐是否开启
 			if !s.isTableOpen(ctx, auth.UrlPath) {
-				return company, companySetting, staff, desk, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 			}
 			// 判断权限
 			_, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, auth.CompanyUuid)
@@ -620,7 +655,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	case constant.SourceAssistant: // 点餐助手端
 		{
 			if companySetting.IsOpenAssistant != 1 {
-				return company, companySetting, staff, desk, errors.NewWithCode(constant.EndFunctionDisabled, "当前尚未开启点餐助手功能，如有需要，请联系销售代表")
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeFunctionDisabled, "当前尚未开启点餐助手功能，如有需要，请联系销售代表")
 			}
 			if !slices.Contains(s.assistantRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断收银机状态
 				deviceRepo := repository.NewDeviceRepo(db)
@@ -634,13 +669,13 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			}
 			// 检查收银机设置-桌台用餐是否开启
 			if !s.isTableOpen(ctx, auth.UrlPath) {
-				return company, companySetting, staff, desk, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 			}
 		}
 	case constant.SourceTablet: // 平板端
 		{
 			if companySetting.IsOpenTablet != 1 {
-				return company, companySetting, staff, desk, errors.NewWithCode(constant.EndFunctionDisabled, "当前尚未开启平板点餐功能，如有需要，请联系销售代表")
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeFunctionDisabled, "当前尚未开启平板点餐功能，如有需要，请联系销售代表")
 			}
 			if !slices.Contains(s.tabletRoutes, auth.UrlPath) { // 除了这些接口外，其他都需要判断是否绑定了桌台
 				deskRepo := repository.NewDeskRepo(db)
@@ -652,14 +687,14 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			}
 			// 检查收银机设置-桌台用餐是否开启
 			if !s.isTableOpen(ctx, auth.UrlPath) {
-				return company, companySetting, staff, desk, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 			}
 		}
 	case constant.SourceKitchen: // 厨显端
 		{
 			kitchenSetting, _ := s.settingSrv.GetKitchenSetting(ctx, companySetting, []dto.LanguageItem{})
 			if kitchenSetting.IsOpen != "1" || companySetting.IsOpenKitchenKds != 1 {
-				return company, companySetting, staff, desk, errors.NewWithCode(constant.EndFunctionDisabled, "当前尚未开启厨显功能，如有需要，请联系销售代表")
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeFunctionDisabled, "当前尚未开启厨显功能，如有需要，请联系销售代表")
 			}
 		}
 	}
@@ -687,7 +722,7 @@ func (s *authSrv) AuthDesk(ctx context.Context, qrcodeToken string) (*model.Comp
 
 	cashierSetting, _ := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	if cashierSetting.OrderMethod.IsTableOrder != "1" {
-		return nil, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
+		return nil, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 	}
 
 	return company, nil
@@ -708,7 +743,7 @@ func (s *authSrv) AuthMenu(ctx context.Context, qrcodeToken string) (*model.Comp
 
 	cashierSetting, _ := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	if cashierSetting.OrderMethod.IsTableOrder != "1" {
-		return nil, errors.NewWithCode(constant.CashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
+		return nil, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 	}
 	return company, nil
 }

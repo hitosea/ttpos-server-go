@@ -6013,15 +6013,10 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	methodItems := make([]resp.PaymentMethodItem, 0)
 	amounts := make([]resp.PaymentMethodAmount, 0)
 
-	companySetting := ctx.GetCompanySetting()
 	paymentApp, paymentAppErr := admin.NewPaymentAppRepo(s.dbm.GetDB(0)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
 	for _, paymentMethod := range paymentMethods {
 		// 不显示免单
 		if paymentMethod.Code == constant.PaymentMethodCodeFreePay {
-			continue
-		}
-		// 没有启用会员功能不显示余额
-		if companySetting.IsOpenMember != 1 {
 			continue
 		}
 		// LianLianPay 没有配置支付信息 不显示
@@ -6229,7 +6224,7 @@ func (s *orderSrv) InstantOrderPaymentCreate(ctx context.Context, req req.Instan
 
 	paymentMethod, err := repository.NewPaymentMethodRepo(db).GetPaymentMethodByUuid(req.PaymentMethodUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err)
+		return nil, errors.WithMessage(errors.New("支付方式未开启"))
 	}
 
 	// 支付方式是否可用
@@ -8695,7 +8690,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 		}
 	}
 
-	h5Order, err := saleBill.NewH5Order()
+	h5Order, err := saleBill.NewH5Order(ctx.GetCompanySetting())
 	if err != nil {
 		return res, errors.WithMessage(err)
 	}
