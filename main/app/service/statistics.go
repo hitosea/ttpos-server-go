@@ -268,8 +268,9 @@ func (s *statisticsSrv) CountTax(ctx context.Context, req CountReq) []CountTaxRe
 
 	var list []CountTaxResp
 	for _, tax := range taxData {
+		rate := decimal.NewFromFloat(tax.TaxRate.Float64).Mul(decimal.NewFromInt(100)).InexactFloat64()
 		list = append(list, CountTaxResp{
-			TaxRate:            tax.TaxRate.Float64,
+			TaxRate:            rate,
 			TotalTaxFee:        tax.TotalTaxFee.Float64,
 			TotalProductAmount: tax.TotalProductAmount.Float64,
 		})
