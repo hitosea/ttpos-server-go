@@ -8347,10 +8347,15 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq, ne
 	}
 
 	// 保存销售账单
-	if needLock && request.PayMethodUuid == 0 {
+	if needLock && request.PayMethodUuid == 0 && !saleOrder.IsPaid() {
 		if err := repository.NewOrderRepo(db).SetLock(saleBill.Uuid, true); err != nil {
 			return nil, errors.WithMessage(err, "设置锁单失败")
 		}
+		// 推送桌台更新
+		go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, map[string]interface{}{
+			"desk_uuid":   saleBill.DeskUuid,
+			"update_time": saleBill.BaseModel.UpdateTime,
+		})
 	}
 
 	// 如果是点餐助手，不能直接打印
@@ -8481,6 +8486,12 @@ func (s *orderSrv) OrderUnlock(ctx context.Context, saleBillUuid uint64) error {
 	if err := repository.NewOrderRepo(db).SetLock(saleBill.Uuid, false); err != nil {
 		return errors.WithMessage(err, "解锁失败")
 	}
+
+	// 推送桌台更新
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, map[string]interface{}{
+		"desk_uuid":   saleBill.DeskUuid,
+		"update_time": saleBill.BaseModel.UpdateTime,
+	})
 
 	return nil
 }

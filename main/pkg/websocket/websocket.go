@@ -63,7 +63,12 @@ func PushClient(company_uuid uint64, source_client, device_id, message_type stri
 
 	// 创建缓存键
 	var cacheKey string
-	if message_type != PRINT_DATA {
+	// 更新桌台的时候
+	if message_type == UPDATE_DESK {
+		key := fmt.Sprintf("%d:%s:%s:%s", company_uuid, source_client, device_id, message_type)
+		md5Sum := fmt.Sprintf("%x", md5.Sum([]byte(key)))
+		cacheKey = fmt.Sprintf("ws_msg:%s", md5Sum)
+	} else if message_type != PRINT_DATA {
 		key := fmt.Sprintf("%d:%s:%s:%s", company_uuid, source_client, device_id, message_type)
 		md5Sum := fmt.Sprintf("%x", md5.Sum(append([]byte(key), jsonData...)))
 		cacheKey = fmt.Sprintf("ws_msg:%s", md5Sum)

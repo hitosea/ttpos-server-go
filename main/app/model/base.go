@@ -112,11 +112,25 @@ func (model *SaleBill) AfterUpdate(tx *gorm.DB) (err error) {
 		}
 	}
 	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
-		go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
-			"sale_bill_uuid": model.Uuid,
-			"desk_uuid":      model.DeskUuid,
-			"update_time":    model.BaseModel.UpdateTime,
-		})
+		if model.DeskUuid > 0 {
+			// 推送订单更新
+			go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
+				"sale_bill_uuid": model.Uuid,
+				"desk_uuid":      model.DeskUuid,
+				"update_time":    model.BaseModel.UpdateTime,
+			})
+			// 推送桌台更新
+			go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, map[string]interface{}{
+				"desk_uuid":   model.DeskUuid,
+				"update_time": model.BaseModel.UpdateTime,
+			})
+		} else {
+			go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
+				"sale_bill_uuid": model.Uuid,
+				"desk_uuid":      model.DeskUuid,
+				"update_time":    model.BaseModel.UpdateTime,
+			})
+		}
 	}
 	return nil
 }

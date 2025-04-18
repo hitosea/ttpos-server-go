@@ -68,12 +68,11 @@ func (r *MemberRechargeAbnormalRecordRepoImpl) GetRecordInfo(cashierUuid uint64,
 		constant.RechargeOrderActionReverseSettle,
 	)
 	// 查询
-	err := r.db.Model(&model.MemberRechargeOrderAbnormalRecord{}).
-		Select(
-			refundTimes,
-			reverseSettleTimes,
-		).
-		Where("cashier_uuid = ?", cashierUuid).
+	db := r.db.Model(&model.MemberRechargeOrderAbnormalRecord{})
+	if cashierUuid != 0 {
+		db = db.Where("cashier_uuid = ?", cashierUuid)
+	}
+	err := db.Select(refundTimes, reverseSettleTimes).
 		Where("duty_no = ?", dutyNo).
 		First(&orderAbnormalRecord).Error
 	if err != nil {

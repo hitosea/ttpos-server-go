@@ -115,7 +115,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			PaymentMethodIncomes:    paymentMethodIncomes,
 			AbnormalData: func() business_data_resp.AbnormalData {
 				AbnormalData, err := repository.NewOrderAbnormalRecordRepo(ctx.GetDB()).GetRecordInfo(
-					ctx.GetStaffUuid(),
+					0,
 					ctx.GetStaff().DutyNo,
 				)
 				if err != nil {
@@ -315,7 +315,7 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		PaymentMethodIncomes:    paymentMethodIncomes,
 		AbnormalData: func() business_data_resp.AbnormalData {
 			AbnormalData, err := repository.NewOrderAbnormalRecordRepo(ctx.GetDB()).GetRecordInfo(
-				ctx.GetStaffUuid(),
+				0,
 				ctx.GetStaff().DutyNo,
 			)
 			if err != nil {

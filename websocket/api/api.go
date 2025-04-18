@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"sync"
 	"time"
 	"websocket/constant"
 	"websocket/pkg/cache"
@@ -11,6 +13,34 @@ import (
 
 	"github.com/google/uuid"
 )
+
+// 全局限流器，控制同时运行的goroutine数量
+var (
+	// 最大并发处理的消息数
+	maxConcurrentMessages = 500
+	// 信号量通道，用于限制并发
+	messageSemaphore = make(chan struct{}, maxConcurrentMessages)
+	// 保护共享资源的锁
+	messageMutex sync.Mutex
+)
+
+// 消息任务结构体
+type messageTask struct {
+	Params     interface{}
+	UUID       string
+	MessageKey string
+	CountKey   string
+	Count      int64
+	Writer     http.ResponseWriter
+}
+
+// 初始化函数，在包初始化时调用
+func init() {
+	// 初始化信号量通道
+	for i := 0; i < maxConcurrentMessages; i++ {
+		messageSemaphore <- struct{}{}
+	}
+}
 
 func PushClient(w http.ResponseWriter, r *http.Request) {
 	// 解析请求参数
@@ -43,36 +73,119 @@ func PushClient(w http.ResponseWriter, r *http.Request) {
 	// 生成UUID
 	uuidStr := uuid.New().String()
 
-	// 设置缓存
-	if params.MessageKey != "" {
-		cache.GlobalRedis.Set(params.MessageKey, uuidStr, 2*time.Second)
+	// 准备消息任务
+	task := messageTask{
+		Params:     params,
+		UUID:       uuidStr,
+		MessageKey: params.MessageKey,
+		Writer:     w,
 	}
 
-	// 启动延时发送的goroutine
-	go func(_uuid string) {
-		// 检查Redis缓存是否被更新
-		if params.MessageKey != "" {
-			time.Sleep(900 * time.Millisecond)
-			if cachedUUID, exists := cache.GlobalRedis.Get(params.MessageKey); exists {
-				if _uuid != cachedUUID.(string) {
-					return
+	// 设置缓存和计数
+	if params.MessageKey != "" {
+		// 使用互斥锁保护共享资源
+		messageMutex.Lock()
+		cache.GlobalRedis.Set(params.MessageKey, uuidStr, 2*time.Second)
+		// 检查消息次数
+		task.CountKey = fmt.Sprintf("%s_count", params.MessageKey)
+		if countVal, countExists := cache.GlobalRedis.Get(task.CountKey); countExists {
+			// 安全地将缓存值转换为int64
+			switch v := countVal.(type) {
+			case int64:
+				task.Count = v
+			case string:
+				// 尝试将字符串转换为int64
+				if intVal, err := strconv.ParseInt(v, 10, 64); err == nil {
+					task.Count = intVal
 				}
+			default:
+				// 如果是其他类型，使用默认值0
+				fmt.Printf("Unexpected type for count: %T\n", v)
+				task.Count = 11
 			}
 		}
-		// 推送
-		err := cache.GlobalRedis.Publish("websocket_msg_push", utils.StructToJson(params))
-		if err != nil {
-			fmt.Fprintf(w, "%s", utils.StructToJson(map[string]interface{}{
-				"code":    constant.CodeFail,
-				"error":   err,
-				"message": "failed",
-			}))
-		}
-	}(uuidStr)
+		cache.GlobalRedis.Set(task.CountKey, fmt.Sprintf("%d", task.Count+1), 2*time.Second)
+		messageMutex.Unlock()
+	}
 
-	// 返回成功
+	// 非阻塞地尝试获取信号量
+	select {
+	case <-messageSemaphore:
+		// 成功获取信号量，启动goroutine处理
+		go processMessage(task)
+	default:
+		// 无法获取信号量，表示并发量已满
+		// 直接在当前协程中处理，但不等待
+		go func() {
+			// 阻塞等待信号量
+			<-messageSemaphore
+			processMessage(task)
+		}()
+	}
+
+	// 立即返回成功响应，不等待处理完成
 	fmt.Fprintf(w, "%s", utils.StructToJson(map[string]interface{}{
 		"code":    constant.CodeSuccess,
 		"message": "success",
 	}))
+}
+
+// 处理消息的函数，在goroutine中运行
+func processMessage(task messageTask) {
+	defer func() {
+		// 处理完成后释放信号量
+		messageSemaphore <- struct{}{}
+	}()
+
+	// 标记是否应该发送消息
+	shouldSend := true
+
+	// 检查Redis缓存是否被更新或消息次数超过50
+	if task.MessageKey != "" {
+		// 等待900毫秒
+		time.Sleep(900 * time.Millisecond)
+
+		// 检查消息次数
+		if task.Count <= 10 {
+			// 使用互斥锁保护共享资源
+			messageMutex.Lock()
+			// 检查UUID
+			if cachedUUID, exists := cache.GlobalRedis.Get(task.MessageKey); exists {
+				// 安全地转换类型
+				var uuidStr string
+				switch v := cachedUUID.(type) {
+				case string:
+					uuidStr = v
+				default:
+					// 如果不是字符串，尝试转换
+					uuidStr = fmt.Sprintf("%v", cachedUUID)
+				}
+				if task.UUID != uuidStr {
+					shouldSend = false
+				}
+			}
+			messageMutex.Unlock()
+		}
+	}
+
+	// 如果不应该发送消息，直接返回
+	if !shouldSend {
+		return
+	}
+
+	// 推送消息
+	params := task.Params
+
+	// 使用互斥锁保护Redis操作
+	messageMutex.Lock()
+	if task.CountKey != "" {
+		cache.GlobalRedis.Del(task.CountKey)
+	}
+	err := cache.GlobalRedis.Publish("websocket_msg_push", utils.StructToJson(params))
+	messageMutex.Unlock()
+
+	if err != nil {
+		// 注意：这里不能再写入HTTP响应，因为响应可能已经发送
+		fmt.Println("Error publishing message:", err)
+	}
 }
