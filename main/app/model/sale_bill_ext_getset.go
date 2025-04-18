@@ -132,6 +132,9 @@ func (model *SaleBill) GetSaleOrderProductAll() []*SaleOrderProduct {
 	for _, saleOrder := range model.SaleOrders {
 		for i, _ := range saleOrder.SaleOrderProducts {
 			orderProduct := saleOrder.SaleOrderProducts[i]
+			if orderProduct == nil {
+				continue
+			}
 			if !orderProduct.IsAcceptOrderBool() && orderProduct.IsDelete() {
 				continue
 			}
