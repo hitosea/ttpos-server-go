@@ -659,7 +659,8 @@ class User extends BaseModel
                 'COALESCE(SUM(ubl.money), 0) as tatal_amount',
                 'COALESCE(IF(SUM(ubl.gift_money) > 0, SUM(ubl.gift_money), 0), 0) as gift_amount',
                 '(COALESCE(SUM(ubl.money), 0) - COALESCE(SUM(ubl.gift_money), 0)) as recharge_amount',
-                'a.nickName as nickname'
+                'a.nickName as nickname',
+                'a.accumulated_consumption_amount'
             ])
             ->withAttr('user_id', function ($value, $data) {
                 return $data['id'];
