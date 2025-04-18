@@ -61,7 +61,7 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 		uuids = append(uuids, limitedProduct.SaleBillUuid)
 	}
 	products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc,
-		cookingStatus, inProductPackageUuids, productionRepo.WhereProductSaleBillUuidIn(uuids))
+		cookingStatus, inProductPackageUuids, productionRepo.WhereSaleBillUuidIn(uuids))
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}

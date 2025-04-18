@@ -3,6 +3,7 @@ package service
 import (
 	contexts "context"
 	"encoding/json"
+	builtinerrors "errors"
 	"fmt"
 	"math"
 	"slices"
@@ -1375,6 +1376,23 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		})
 	}()
 
+	// 标记送厨单、送厨商品为删除
+	productionRepo := repository.NewProductionRepo(tx)
+	saleBillUuidOpt := productionRepo.WhereSaleBillUuid(billInfo.Uuid)
+	err = productionRepo.UpdateOrder([]repository.DBOption{saleBillUuidOpt}, map[string]any{
+		"delete_time": time.Now().Unix(),
+	})
+	if err != nil {
+		tx.Rollback()
+		return errors.WithMessage(builtinerrors.New("删除送厨单失败"), err.Error())
+	}
+	err = productionRepo.UpdateProduct([]repository.DBOption{saleBillUuidOpt}, map[string]any{
+		"delete_time": time.Now().Unix(),
+	})
+	if err != nil {
+		tx.Rollback()
+		return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
+	}
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
 		return errors.WithMessage(err)

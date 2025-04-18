@@ -221,7 +221,7 @@ class ExportService
         $content = '';
         $key = 1;
         // 商品
-        foreach ($order['product'] as $product) {
+        foreach ($order['product'] ?? [] as $product) {
             $total_price = Helper::number2($product['total_price']);
             // 商品名称
             $content .= $key . "." . __("商品名称") . "：{$product['name']}\n";

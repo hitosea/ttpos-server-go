@@ -162,7 +162,9 @@ func (s *productSrv) formatProducts(ctx context.Context, products []model.Produc
 				List: flavors,
 			},
 			Sauces: product_resp.ProductSauceList{
-				List: sauces,
+				List:      sauces,
+				IsMust:    product.SauceRequired == 1,
+				MaxSelect: int(product.SauceMaxSelection),
 			},
 			AttributeGroups: product_resp.ProductAttributeGroupList{
 				List: attributeGroups,
