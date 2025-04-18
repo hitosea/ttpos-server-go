@@ -5414,6 +5414,9 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 		return nil, errors.WithMessage(err)
 	}
 
+	// 设置已接单
+	saleOrderProduct.SetAcceptOrderProduct()
+	// 更新销售订单商品
 	saleOrderProduct.SaleBillUuid = targetDesk.SaleBillUuid
 	saleOrderProduct.SaleOrderUuid = targetSaleOrder.Uuid
 	// 将商品的折扣改为使用目标桌台的折扣
