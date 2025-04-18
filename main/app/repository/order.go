@@ -1526,6 +1526,7 @@ func (r *orderRepo) ChangePopulation(saleBillUuid uint64, population int) error 
 		Where("delete_time = ?", 0).
 		Where("uuid = ?", saleBillUuid).
 		Updates(map[string]interface{}{
+			"uuid":     saleBillUuid, // NOTE 不要删除，事件钩子需要
 			"meal_num": population,
 		}).Error
 	if err != nil {

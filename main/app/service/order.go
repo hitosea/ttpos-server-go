@@ -1979,12 +1979,15 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 
 	// 获取销售订单商品列表
 	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+		if saleOrderProduct.IsCancelBool() || saleOrderProduct.IsGiftBool() || saleOrderProduct.Status == constant.OrderProductStatusUnSending {
+			continue
+		}
 		products = append(products, resp.OrderReturnProduct{
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
 			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
 			Num:                  saleOrderProduct.GetCanReturnNum(), // 可退货数量=订单商品数量-已退货数量
-			Price:                saleOrderProduct.TotalPrice,
+			Price:                saleOrderProduct.GetTotalPrice(),
 			CanReturnAmount:      saleOrderProduct.GetCanReturnPrice(),
 			CurrencyUnit:         currencyUnit,
 		})
@@ -3285,6 +3288,12 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 			NewMealNum: uint(req.Population),
 		})
 	}()
+
+	// 推送桌台更新
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, map[string]interface{}{
+		"desk_uuid":   billInfo.DeskUuid,
+		"update_time": billInfo.UpdateTime,
+	})
 
 	// 获取新的数据
 	info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
