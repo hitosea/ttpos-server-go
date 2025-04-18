@@ -43,6 +43,7 @@ func acceptH5OrderEventHandler() {
 				OperatorUuid:  payload.GetOperatorUuid(),
 			}
 			record.Data = payload.ToJsonString()
+			record.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
 			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
 				logger.Logger.Error("SubscribeAcceptH5OrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))

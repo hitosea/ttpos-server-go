@@ -30,7 +30,11 @@ type File struct {
 // GetUrl 获取地址。file_url + save_name + url_param
 func (model *File) GetUrl(baseUrl string) string {
 	videoExtensions := []string{".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv", ".webm", ".m4v", ".mpeg", ".3gp"}
-	if model.Storage == "local" && (model.UrlParam != "" || viper.GetString("STORAGE_DRIVER") == "local") {
+	driver := viper.GetString("STORAGE_DRIVER")
+	if driver == "" {
+		driver = "local"
+	}
+	if model.Storage == "local" && (model.UrlParam != "" || driver == "local") {
 		saveName := model.SaveName
 		if model.FileType == ".video" || slices.Contains(videoExtensions, "."+filepath.Ext(saveName)) {
 			return baseUrl + "uploads/" + saveName

@@ -173,9 +173,9 @@ func (h *DeskHandler) OrderCartProductAddAndCooking(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-	err := h.orderSrv.TabletAddAndCooking(ctx, params)
+	failedData, err := h.orderSrv.TabletAddAndCooking(ctx, params)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		helper.ErrorWithData(c, constant.CodeFail, failedData, err)
 		return
 	}
 	helper.Success(c, gin.H{})

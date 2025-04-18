@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -44,7 +45,7 @@ func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(obj model.SaleO
 		SaleBillUuid:  obj.SaleBillUuid,
 		SaleOrderUuid: obj.SaleOrderUuid,
 		CashierUuid:   obj.OperatorUuid,
-		DutyNo:        bill.DutyNo,
+		DutyNo:        utils.IfString(obj.GetDutyNo() != "", obj.GetDutyNo(), bill.DutyNo),
 		Action:        obj.Action,
 		SubAction:     "",
 		Remark:        obj.Remark,
@@ -153,7 +154,7 @@ func (r *OrderAbnormalRecordRepoImpl) CreateSaleOrderAbnormalLog(obj model.SaleO
 			fmt.Println("CreateSaleOrderAbnormalLog-OrderReverseSettle", err)
 			return errors.WithMessage(err)
 		}
-		if info := r.db.Model(&model.SaleOrderAbnormalRecord{}).Where("sale_order_uuid = ? and action = ?", obj.SaleOrderUuid, constant.OrderReverseSettle).First(&record); info.Error != nil {
+		if info := r.db.Model(&model.SaleOrderAbnormalRecord{}).Where("sale_bill_uuid = ? and action = ?", obj.SaleBillUuid, constant.OrderReverseSettle).First(&record); info.Error != nil {
 			if err := r.db.Model(&model.SaleOrderAbnormalRecord{}).Create(&record).Error; err != nil {
 				fmt.Println("CreateSaleOrderAbnormalLog-OrderReverseSettle", err)
 				return errors.WithMessage(err)
