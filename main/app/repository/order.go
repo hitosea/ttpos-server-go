@@ -1357,7 +1357,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 				Query: "SaleOrders.SaleOrderProducts.CancelReasons",
 			},
 			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.ProductPackage",
+				Query: "SaleOrders.SaleOrderProducts.ProductPackage.MultiLanguageName",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.ProductPackage.DineTax",
