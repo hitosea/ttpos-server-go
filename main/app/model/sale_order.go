@@ -249,8 +249,10 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			sendKitchenTime = saleOrderProduct.CreateTime
 		}
 		var h5OrderTime int64
+		var isH5NeedAudit bool
 		if saleOrderProduct.H5Order != nil {
 			h5OrderTime = saleOrderProduct.H5Order.CreateTime
+			isH5NeedAudit = saleOrderProduct.H5Order.IsNeedAudit == 1
 		}
 		product := resp.Product{
 			Uuid:                saleOrderProduct.Uuid,
@@ -267,6 +269,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			IsCancel:            saleOrderProduct.IsCancelProduct(),
 			SendKitchenTime:     sendKitchenTime,
 			H5OrderTime:         h5OrderTime,
+			IsH5OrderNeedAudit:  isH5NeedAudit,
 			Sign:                cryptor.Md5String(saleOrderProduct.Sign),
 			ProductPackageUuid:  saleOrderProduct.ProductPackageUuid,
 			AcceptTime:          saleOrderProduct.GetAcceptTime(),

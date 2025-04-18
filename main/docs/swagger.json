@@ -19343,6 +19343,10 @@
                     "description": "false:已拒单 true:已接单",
                     "type": "boolean"
                 },
+                "is_h5_order_need_audit": {
+                    "description": "h5订单是否需要审核，是则需要显示接单/拒单时间",
+                    "type": "boolean"
+                },
                 "products": {
                     "description": "组商品列表",
                     "allOf": [
