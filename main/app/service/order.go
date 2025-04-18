@@ -3292,7 +3292,7 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 	// 推送桌台更新
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, map[string]interface{}{
 		"desk_uuid":   billInfo.DeskUuid,
-		"update_time": billInfo.UpdateTime,
+		"update_time": time.Now().Unix(),
 	})
 
 	// 获取新的数据
