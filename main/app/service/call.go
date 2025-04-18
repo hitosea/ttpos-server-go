@@ -128,20 +128,20 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 	callRepo := repository.NewCallRepo(db)
 	unprocessedCallCount, err = callRepo.GetUnprocessedCallCount(callRepo.WhereC1Status(constant.CallStatusUnprocessed), callRepo.WhereC2IsNull())
 	if err != nil {
-		return res, errors.WithMessage(errors.ErrInternal, "获取未处理呼叫数量失败")
+		return res, errors.WithMessage(errors.New("获取未处理呼叫数量失败"), err.Error())
 	}
 	printerLogRepo := repository.NewPrinterLogRepo(db)
 	abnormalPrintCount, err = printerLogRepo.GetPrintLogCount(printerLogRepo.WhereStatus(constant.PrinterLogStatusEnd),
 		printerLogRepo.WhereType(constant.PrinterLogTypeDefault), printerLogRepo.WhereFirstExecution(0))
 	if err != nil {
 		logger.Logger.Error("获取异常打印数量失败", zap.Error(err))
-		return res, errors.WithMessage(errors.ErrInternal, "获取异常打印数量失败")
+		return res, errors.WithMessage(errors.New("获取异常打印数量失败"), err.Error())
 	}
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	unhandledH5OrderCount, err := h5OrderRepo.GetH5OrderCount(h5OrderRepo.WhereStatus([]uint{constant.H5OrderStatusOrder}))
 	if err != nil {
 		logger.Logger.Error("获取未处理的h5订单数量失败", zap.Error(err))
-		return res, errors.WithMessage(errors.ErrInternal, "获取未处理的h5订单数量失败")
+		return res, errors.WithMessage(errors.New("获取未处理的h5订单数量失败"), err.Error())
 	}
 
 	return resp.UnprocessedResp{
@@ -172,7 +172,7 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 		callRepo.WhereC1CreateTimeGt(thirtyMinutesAgo),
 		callRepo.WhereC2IsNull())
 	if err != nil {
-		return res, errors.WithMessage(errors.ErrInternal, "获取未处理呼叫失败: "+err.Error())
+		return res, errors.WithMessage(errors.New("获取未处理呼叫失败"), err.Error())
 	}
 	printerLogRepo := repository.NewPrinterLogRepo(ctx.GetDB())
 	abnormalPrints, _, err := printerLogRepo.PaginateGet(
@@ -185,7 +185,7 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 		printerLogRepo.WithSaleOrder(),
 		printerLogRepo.WithSaleBill())
 	if err != nil {
-		return res, errors.WithMessage(errors.ErrInternal, "获取异常打印失败: "+err.Error())
+		return res, errors.WithMessage(errors.New("获取异常打印失败"), err.Error())
 	}
 
 	h5OrderRepo := repository.NewH5OrderRepo(ctx.GetDB())
@@ -194,7 +194,7 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 		repository.CommonRepo.SortWithCreateTime("desc"))
 
 	if err != nil {
-		return res, errors.WithMessage(errors.ErrInternal, "获取未处理的H5订单失败: "+err.Error())
+		return res, errors.WithMessage(errors.New("获取未处理的H5订单失败"), err.Error())
 	}
 
 	// 未处理的呼叫
