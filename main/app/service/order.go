@@ -1492,6 +1492,22 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				numMap[saleOrderProduct.Uuid] = canReturnNum
 			}
 		}
+
+		for _, saleOrderProduct := range saleOrder.SaleOrderBuffetCustomerTypes {
+			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
+			if canReturnNum > 0 {
+				saleOrderBuffetComstomerTypes = append(saleOrderBuffetComstomerTypes, saleOrderProduct)
+				numMap[saleOrderProduct.Uuid] = canReturnNum
+			}
+		}
+
+		for _, saleOrderProduct := range saleOrder.SaleOrderBuffetDelayProducts {
+			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
+			if canReturnNum > 0 {
+				saleOrderBuffetDelayProducts = append(saleOrderBuffetDelayProducts, saleOrderProduct)
+				numMap[saleOrderProduct.Uuid] = canReturnNum
+			}
+		}
 	}
 	// 部分退款
 	if len(req.Products) > 0 {
@@ -1515,6 +1531,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				}
 			}
 		}
+
 		saleOrderBuffetComstomerTypeList := saleOrder.GetSaleOrderBuffetComstomerTypeList(saleOrderProductUuids)
 		for _, saleOrderProduct := range saleOrderBuffetComstomerTypeList {
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
@@ -1527,8 +1544,8 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				}
 			}
 		}
-		saleOrderBuffetDelayProductsList := saleOrder.GetSaleOrderBuffetDelayList(saleOrderProductUuids)
 
+		saleOrderBuffetDelayProductsList := saleOrder.GetSaleOrderBuffetDelayList(saleOrderProductUuids)
 		for _, saleOrderProduct := range saleOrderBuffetDelayProductsList {
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
 			if canReturnNum > 0 {
