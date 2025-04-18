@@ -61,8 +61,22 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 	dbOptions = append(
 		dbOptions,
 		h5OrderRepo.WithDesk(),
-		h5OrderRepo.WithH5OrderProducts(),
-		h5OrderRepo.WithSaleOrderProducts(),
+		repository.CommonRepo.Preload(
+			repository.WithPreload{
+				Query: "H5OrderProducts",
+				Args: []any{
+					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+		),
+		repository.CommonRepo.Preload(
+			repository.WithPreload{
+				Query: "SaleOrderProducts",
+				Args: []any{
+					repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+				},
+			},
+		),
 		h5OrderRepo.WithSaleOrderProductsMultiLanguageName(),
 	)
 	orders, total, err := h5OrderRepo.PaginateGetH5Order(listReq.PageNo, listReq.PageSize, dbOptions...)

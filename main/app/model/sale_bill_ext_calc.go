@@ -140,6 +140,9 @@ func (model *SaleBill) CalcAll(options ...func(option *CalcOption)) {
 		saleOrder := model.SaleOrders[i]
 		for j, _ := range saleOrder.SaleOrderProducts {
 			saleOrderProduct := saleOrder.SaleOrderProducts[j]
+			if saleOrderProduct == nil {
+				continue
+			}
 			// 如果订单商品已删除或已取消，则不计算
 			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() {
 				continue
