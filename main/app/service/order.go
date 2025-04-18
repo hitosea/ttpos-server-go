@@ -7182,6 +7182,9 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 			}
 			// 保存订单商品
 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+				if saleOrderProduct == nil {
+					continue
+				}
 				// 保存订单商品。只有标记更新的商品才会更新
 				if err := repository.NewSaleOrderProductRepo(db).UpdateOrCreateSaleOrderProductRecord(*saleOrderProduct); err != nil {
 					return errors.WithMessage(err)
@@ -8736,7 +8739,7 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		h5Order.IsAutoAccept = 1
 	}
 
-	// 先发布“接单”操作事件
+	// 先发布“接单”操作事件. 操作日志先显示接单再显示送厨
 	s.bus.PublishAcceptH5OrderEvent(event.AcceptH5OrderPayload{
 		BasePayload: event.BasePayload{ // 接单
 			Ctx:          ctx,
