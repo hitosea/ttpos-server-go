@@ -371,6 +371,9 @@ func (s *deskSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateRe
 	// 判断是否自助餐订单
 	var result resp.CreateDeskOrderResp
 	if req.IsBuffet() {
+		if companySetting.IsOpenBuffet != 1 {
+			return resp.CreateDeskOrderResp{}, errors.New("当前尚未开启自助餐功能，如有需要，请联系销售代表")
+		}
 		buffetSetting, _ := s.settingSrv.GetBuffetSetting(ctx, companySetting)
 		if buffetSetting.IsOpen != "1" {
 			return resp.CreateDeskOrderResp{}, errors.New("未开启自助餐")

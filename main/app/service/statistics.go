@@ -516,9 +516,6 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			isFeeType  bool = saleBill.SaleBillSetting.TaxFeeType == 2
 		)
 
-		// 统计自定义优惠折扣
-		orderDiscount = decimal.NewFromFloat(saleOrder.CustomDiscountFee)
-
 		// 统计订单免单
 		if isFree {
 			orderFreeNum = 1
@@ -528,6 +525,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				orderServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
 			}
 		} else {
+			// 统计自定义优惠折扣
+			orderDiscount = decimal.NewFromFloat(saleOrder.CustomDiscountFee)
+			orderDiscount = orderDiscount.Add(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee))
 			orderServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
 		}
 
@@ -593,8 +593,6 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				for _, refundProduct := range saleProduct.ReturnOrderProducts {
 					productRefundNum += int(refundProduct.Num)
 					orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee).Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee)).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
-					orderRefundDiscount = orderRefundDiscount.Add(decimal.NewFromFloat(saleProduct.CustomDiscountFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
-					orderRefundDiscountMember = orderRefundDiscountMember.Add(decimal.NewFromFloat(saleProduct.MemberDiscountFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
 				}
 
 				orderRefundNum += productRefundNum
@@ -622,9 +620,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			}
 		}
 
-		if saleOrder.GetCanReturnAmount() == 0 {
+		if !isFree && saleOrder.GetCanReturnAmount() == 0 {
 			orderRefundFee = decimal.NewFromFloat(saleOrder.PaymentCommissionFee)
 			orderRefundServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
+			orderRefundDiscount = decimal.NewFromFloat(saleOrder.CustomDiscountFee).Add(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee))
+			orderRefundDiscountMember = decimal.NewFromFloat(saleOrder.MemberDiscountFee)
 		}
 		// 支付订单
 		for _, salePayment := range saleOrder.PaymentOrders {

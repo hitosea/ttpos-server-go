@@ -25,15 +25,15 @@ const (
 	CodeLoginFailed     = -106 // 登录失败
 	CodeCashierNotLogin = -107 // 点餐助手绑定的收银机未登录
 
-	CashierOrderMethodNotOpen = -110 //
-	CashierLoginLimit         = -111 // 收银机登录已达上限
-	AssistantLoginLimit       = -112 // 点餐助手登录已达上限
-	KitchenLoginLimit         = -113 // 厨显登录已达上限
-	TabletLoginLimit          = -114 // 平板登录已达上限
+	CodeCashierOrderMethodNotOpen = -110 //
+	CodeCashierLoginLimit         = -111 // 收银机登录已达上限
+	CodeAssistantLoginLimit       = -112 // 点餐助手登录已达上限
+	CodeKitchenLoginLimit         = -113 // 厨显登录已达上限
+	CodeTabletLoginLimit          = -114 // 平板登录已达上限
 
-	EndFunctionDisabled = -119 // 助手端、平板端、厨显端 功能被关闭
+	CodeFunctionDisabled = -119 // 助手端、平板端、厨显端、会员、自助餐功能
 
-	CompanyLicenceExpired = -191 // 商家过期
+	CodeCompanyLicenceExpired = -191 // 商家过期
 )
 
 // 送厨检查的业务错误码

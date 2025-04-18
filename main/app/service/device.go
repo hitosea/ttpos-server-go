@@ -134,10 +134,10 @@ func (s *deviceSrv) reachBindLimit(deviceRepo repository.IDeviceRepo, companySet
 		ErrorCode int
 	}
 	sources := map[string]Source{
-		constant.SourceCashier:   {"收银机", uint(companySetting.CashLimit), constant.CashierLoginLimit},
-		constant.SourceAssistant: {"点餐助手", uint(companySetting.AssistantLimit), constant.AssistantLoginLimit},
-		constant.SourceKitchen:   {"厨显", uint(companySetting.KitchenLimit), constant.KitchenLoginLimit},
-		constant.SourceTablet:    {"平板", uint(companySetting.TabletLimit), constant.TabletLoginLimit},
+		constant.SourceCashier:   {"收银机", uint(companySetting.CashLimit), constant.CodeCashierLoginLimit},
+		constant.SourceAssistant: {"点餐助手", uint(companySetting.AssistantLimit), constant.CodeAssistantLoginLimit},
+		constant.SourceKitchen:   {"厨显", uint(companySetting.KitchenLimit), constant.CodeKitchenLoginLimit},
+		constant.SourceTablet:    {"平板", uint(companySetting.TabletLimit), constant.CodeTabletLoginLimit},
 	}
 	for sourceName, source := range sources {
 		if sourceName != reqSource {

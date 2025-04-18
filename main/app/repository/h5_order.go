@@ -30,6 +30,7 @@ type IH5OrderRepo interface {
 	WhereUuid(uuid uint64) DBOption           // 扫码订单uuid条件
 	WhereUuidIn(uuids []uint64) DBOption      // 扫码订单uuid条件
 	WhereStatus(status []uint) DBOption       // 扫码订单状态条件
+	WhereIsNeedAudit() DBOption               // 需要审核条件
 	WhereUnNotified() DBOption                // 未处理的、 或已自动接单的h5订单
 	WhereCreateTimeGt(ts int64) DBOption      // 创建时间大于
 	WhereNotStatus(status []uint) DBOption    // 扫码订单非状态
@@ -99,6 +100,7 @@ func (r *H5OrderRepoImpl) GetH5Order(opts ...DBOption) (*model.H5Order, error) {
 func (r *H5OrderRepoImpl) GetH5OrderDetailOrdered(uuid uint64) (*model.H5Order, error) {
 	h5Order, err := r.GetH5Order(
 		CommonRepo.WhereByUuid(uuid),
+		r.WhereIsNeedAudit(),
 		r.WhereNotStatus([]uint{constant.H5OrderStatusChooseProduct}),
 		CommonRepo.Preload(
 			WithPreload{
@@ -159,6 +161,7 @@ func (r *H5OrderRepoImpl) GetH5OrderListBySaleBillUuid(saleBillUuid uint64) ([]*
 func (r *H5OrderRepoImpl) GetH5OrderDetail(h5OrderUuid uint64) (*model.H5Order, error) {
 	h5Order, err := r.GetH5Order(
 		CommonRepo.WhereByUuid(h5OrderUuid),
+		r.WhereIsNeedAudit(),
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "H5OrderProducts",
@@ -376,6 +379,12 @@ func (r *H5OrderRepoImpl) CreateH5OrderProduct(h5OrderProduct model.H5OrderProdu
 func (r *H5OrderRepoImpl) WhereStatus(status []uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status in (?)", status)
+	}
+}
+
+func (r *H5OrderRepoImpl) WhereIsNeedAudit() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_need_audit = 1")
 	}
 }
 

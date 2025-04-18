@@ -14,7 +14,7 @@ import (
 )
 
 type ISaleOrderPeakTimeRepo interface {
-	Record(recordType string, saleBill *model.SaleBill, refundMoney float64) error
+	Record(recordType string, saleBill *model.SaleBill, refundMoney float64, timezone ...string) error
 	GetMaxRecord(timezone string, startTime, endTime uint, cashierUuid uint64) ([]business_data_resp.PeakHour, error)
 }
 
@@ -28,14 +28,22 @@ func NewSaleOrderPeakTimeRepo(db *gorm.DB) ISaleOrderPeakTimeRepo {
 
 // Record 记录销售订单高峰时间
 // recordType: inc - 增加, dec - 减少
-func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBill, refundMoney float64) error {
-	// 获取完成时间的时间对象
-	finishTime := time.Unix(saleBill.FinishTime, 0)
+func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBill, refundMoney float64, timezone ...string) error {
+	tz := string(utils.ZH_TIMEZONE)
+	if len(timezone) > 0 {
+		tz = timezone[0]
+	}
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		loc = time.Local
+	}
+	// 将时间戳转换为time.Time
+	tm := time.Unix(saleBill.FinishTime, 0).In(loc)
 	// 获取日期时间戳 - 将时间设置为当天的0点0分0秒
-	dateTime := time.Date(finishTime.Year(), finishTime.Month(), finishTime.Day(), 0, 0, 0, 0, finishTime.Location())
+	dateTime := time.Date(tm.Year(), tm.Month(), tm.Day(), 0, 0, 0, 0, tm.Location())
 	dateTimestamp := dateTime.Unix()
 	// 获取小时
-	hour := int64(finishTime.Hour())
+	hour := int64(tm.Hour())
 	// 查询条件
 	condition := map[string]any{
 		"date":         dateTimestamp,

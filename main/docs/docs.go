@@ -18718,6 +18718,18 @@ const docTemplate = `{
                     "description": "店铺到期时间，0表示没有过期时间",
                     "type": "integer"
                 },
+                "is_open_buffet": {
+                    "description": "是否开启自助餐功能: 0不开启, 1开启",
+                    "type": "integer"
+                },
+                "is_open_h5_order": {
+                    "description": "是否开启扫码接单功能: 0不开启, 1开启",
+                    "type": "integer"
+                },
+                "is_open_member": {
+                    "description": "是否开启会员功能: 0不开启, 1开启",
+                    "type": "integer"
+                },
                 "logo": {
                     "description": "商家logo",
                     "type": "string"
@@ -20424,6 +20436,10 @@ const docTemplate = `{
                 },
                 "total": {
                     "description": "总数",
+                    "type": "integer"
+                },
+                "total_num": {
+                    "description": "总数量",
                     "type": "integer"
                 },
                 "unpaid_num": {
