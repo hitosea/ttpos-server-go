@@ -1,8 +1,11 @@
 package service
 
 import (
+	"github.com/gin-gonic/gin"
+	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -246,22 +249,87 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 }
 
 // TabletAddAndCooking 平板端加购并送厨
-func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) error {
-	saleBill, _ := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(request.SaleBillUuid)
+func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) (any, error) {
+	db := ctx.GetDB()
+	saleBill, _ := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if saleBill.IsEndStatus() {
-		return errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))
+		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))
 	}
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, request.SaleOrderUuid); err != nil {
-		return errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
+
+	getProductNum := func(products []req.ProductParams) uint {
+		var num uint
+		for _, product := range products {
+			num = num + product.Num
+		}
+		return num
+	}
+	// 平板端下单限制
+	tabletSetting, _ := s.settingSrv.GetTabletSetting(ctx, []dto.LanguageItem{})
+	if tabletSetting.IsBuffetOrderLimit == "1" || tabletSetting.IsOrderLimit == "1" {
+		// 读取上一单下单时间
+		//h5Repo := repository.NewH5OrderRepo(db)
+		//lastH5Order, _ := h5Repo.GetH5Order(h5Repo.WhereSaleBillUuid(request.SaleBillUuid))
+		// todo 获取上次平板下单时间
+		lastOrderTime := time.Now().Add(-60 * time.Minute).Unix()
+		if tabletSetting.IsBuffetOrderLimit == "1" && saleBill.IsBuffetSaleBill() { // 自助餐下单限制
+			if tabletSetting.BuffetOrderLimit.IsLimitTime == "1" { // 限制下单间隔
+				interval, err := strconv.Atoi(tabletSetting.BuffetOrderLimit.LimitTime)
+				if err != nil {
+					return nil, errors.WithMessage(err, "解析H5设置失败")
+				}
+				// 小于间隔时间，不可下单
+				nextTime := time.Unix(lastOrderTime, 0).Add(time.Duration(interval) * time.Minute).Unix()
+				now := time.Now().Unix()
+				if nextTime-now > 0 {
+					return gin.H{"value": nextTime - now}, errors.NewWithCode(constant.CodeH5OrderTimeLimit, "时间限制")
+				}
+			}
+			if tabletSetting.BuffetOrderLimit.IsLimitNum == "1" { // 限制下单最大商品总数
+				numLimit, err := strconv.Atoi(tabletSetting.BuffetOrderLimit.LimitNum)
+				if err != nil {
+					return nil, errors.WithMessage(err, "解析H5设置失败")
+				}
+				if getProductNum(request.Products) > uint(numLimit) {
+					return gin.H{"value": numLimit}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
+				}
+			}
+		}
+		if tabletSetting.IsOrderLimit == "1" && !saleBill.IsBuffetSaleBill() { // 非自助餐下单限制
+			if tabletSetting.OrderLimit.IsLimitTime == "1" { // 限制下单间隔
+				interval, err := strconv.Atoi(tabletSetting.OrderLimit.LimitTime)
+				if err != nil {
+					return nil, errors.WithMessage(err, "解析平板端设置失败")
+				}
+				// 小于间隔时间，不可下单
+				nextTime := time.Unix(lastOrderTime, 0).Add(time.Duration(interval) * time.Minute).Unix()
+				now := time.Now().Unix()
+				if nextTime-now > 0 {
+					return gin.H{"value": nextTime - now}, errors.NewWithCode(constant.CodeH5OrderTimeLimit, "时间限制")
+				}
+			}
+			if tabletSetting.OrderLimit.IsLimitNum == "1" { // 限制下单最大商品总数
+				numLimit, err := strconv.Atoi(tabletSetting.OrderLimit.LimitNum)
+				if err != nil {
+					return nil, errors.WithMessage(err, "解析平板端设置失败")
+				}
+				if getProductNum(request.Products) > uint(numLimit) {
+					return gin.H{"value": numLimit}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
+				}
+			}
+		}
+	}
+
 	_, err := s.ActionAddAndCooking(ctx, req.ProductAddReq{
 		SaleBillUuid:  saleBill.Uuid,
 		SaleOrderUuid: request.SaleOrderUuid,
 		Products:      request.Products,
 		IsH5Product:   false,
 	}, saleBill)
-	return err
+	return nil, err
 }
 
 // 加购。内部方法复用

@@ -130,7 +130,7 @@ type IOrderSrv interface {
 	ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, h5OrderUuid uint64, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) // 送厨
 	ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*resp.OrderCheckServiceRes, error)                                                                                                         // 加购并送厨
 
-	TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) error // 平板端加购并送厨
+	TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) (any, error) // 平板端加购并送厨
 
 	GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error) // 获取订单会员列表
 }
@@ -6045,6 +6045,9 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 		var qrcodeUrl string
 		if paymentMethod.LogoFile != nil {
 			logoUrl = paymentMethod.LogoFile.GetUrl(baseUrl)
+		}
+		if logoUrl == "" && paymentMethod.DefaultImg != "" {
+			logoUrl = strings.TrimRight(baseUrl, "/") + paymentMethod.DefaultImg
 		}
 		if paymentMethod.QrcodeFile != nil {
 			qrcodeUrl = paymentMethod.QrcodeFile.GetUrl(baseUrl)

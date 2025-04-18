@@ -3,6 +3,7 @@ package service
 import (
 	"go.uber.org/zap"
 	"slices"
+	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/model"
@@ -107,6 +108,9 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 		baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 		if method.LogoFile != nil {
 			logo = method.LogoFile.GetUrl(baseUrl)
+		}
+		if logo == "" && method.DefaultImg != "" {
+			logo = strings.TrimRight(baseUrl, "/") + method.DefaultImg
 		}
 		if method.QrcodeFile != nil {
 			qrcode = method.QrcodeFile.GetUrl(baseUrl)
