@@ -58,7 +58,7 @@ export function loadDirectives(app) {
             imgURL = binding.value;
         }
 
-        if (imgURL && !imgURL.includes('undefined')) {
+        if (imgURL && !imgURL.includes('undefined') && imgURL != '/') {
             try {
                 let exist = await imageIsExist(imgURL);
                 if (exist) {

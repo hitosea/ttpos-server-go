@@ -12472,6 +12472,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/kitchen/call/unprocessed_notice": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取未处理消息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "厨显端.呼叫"
+                ],
+                "summary": "获取未处理消息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.UnprocessedListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/kitchen/check_update": {
             "get": {
                 "security": [
@@ -19347,6 +19387,10 @@ const docTemplate = `{
                 },
                 "is_accept": {
                     "description": "false:已拒单 true:已接单",
+                    "type": "boolean"
+                },
+                "is_h5_order_need_audit": {
+                    "description": "h5订单是否需要审核，是则需要显示接单/拒单时间",
                     "type": "boolean"
                 },
                 "products": {
