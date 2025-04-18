@@ -145,6 +145,7 @@ func (model *CustomerCall) AfterCreate(tx *gorm.DB) (err error) {
 		}
 		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
 		go websocket.PushClient(companyUuid, websocket.SourceAssistant, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+		go websocket.PushClient(companyUuid, websocket.SourceKitchen, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
 	}
 	return nil
 }
