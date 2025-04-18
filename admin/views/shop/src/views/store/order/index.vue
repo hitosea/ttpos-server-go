@@ -86,7 +86,7 @@
             <template #label>
               <span>
                 {{ $t('全部订单') }}
-                <el-tag size="" class="ml-4">{{ order_count.total }}</el-tag>
+                <el-tag size="" class="ml-4">{{ order_count.total_num }}</el-tag>
               </span>
             </template>
           </el-tab-pane>
@@ -278,6 +278,7 @@
           page_no: 1,
           page_size: 10,
           total: 0,
+          total_num: 0,
           unpaid_num: 0,
         },
         /*是否打开编辑弹窗*/

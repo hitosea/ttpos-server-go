@@ -27,6 +27,9 @@ class Card extends CardModel
             $model = $model->where('status', '=', $data['status']);
         }
         $list = $model->where('delete_time', '=', 0)->order(['create_time' => 'desc'])->paginate($data);
+        foreach ($list as $item) {
+            $item['discount'] = $item['discount'] == 100 ? 0 : $item['discount'];
+        }
         return $list;
     }
 
@@ -247,7 +250,7 @@ class Card extends CardModel
             return false;
         }
         if (($data['is_discount'] ?? 0) == 0) {
-            $data['discount'] = 0;
+            $data['discount'] = 100;
         }
         //
         $data['name'] = $data['card_name'] ?? '';

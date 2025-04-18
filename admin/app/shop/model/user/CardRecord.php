@@ -62,6 +62,9 @@ class CardRecord extends CardRecordModel
                 $user['user_id'] = $user['id'];
                 $list[$key]['user'] = $user;
             }
+            if ($item['card']) {
+                $item['card']['discount'] = $item['card']['discount'] == 100 ? 0 : $item['card']['discount'];
+            }
         }
         return $list;
     }

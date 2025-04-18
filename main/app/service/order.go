@@ -788,6 +788,11 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 		)
 		return num
 	}
+	// 获取数量
+	unpaidNum := getOrderNum(constant.SaleBillStatusPending)
+	completeNum := getOrderNum(constant.SaleBillStatusComplete)
+	cancelNum := getOrderNum(constant.SaleBillStatusCanceled)
+
 	// 返回响应对象
 	return resp.OrderListPaginationResp{
 		List: billList,
@@ -797,9 +802,10 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 				PageSize: req.PageSize,
 				Total:    total,
 			},
-			UnpaidNum:   getOrderNum(constant.SaleBillStatusPending),
-			CompleteNum: getOrderNum(constant.SaleBillStatusComplete),
-			CancelNum:   getOrderNum(constant.SaleBillStatusCanceled),
+			TotalNum:    unpaidNum + completeNum + cancelNum,
+			UnpaidNum:   unpaidNum,
+			CompleteNum: completeNum,
+			CancelNum:   cancelNum,
 		},
 	}, nil
 }
@@ -7182,6 +7188,9 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 			}
 			// 保存订单商品
 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+				if saleOrderProduct == nil {
+					continue
+				}
 				// 保存订单商品。只有标记更新的商品才会更新
 				if err := repository.NewSaleOrderProductRepo(db).UpdateOrCreateSaleOrderProductRecord(*saleOrderProduct); err != nil {
 					return errors.WithMessage(err)
@@ -8736,7 +8745,7 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		h5Order.IsAutoAccept = 1
 	}
 
-	// 先发布“接单”操作事件
+	// 先发布“接单”操作事件. 操作日志先显示接单再显示送厨
 	s.bus.PublishAcceptH5OrderEvent(event.AcceptH5OrderPayload{
 		BasePayload: event.BasePayload{ // 接单
 			Ctx:          ctx,

@@ -287,6 +287,9 @@ func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOptio
 
 	products := make([]*SaleOrderProduct, 0)
 	for _, orderProduct := range model.SaleOrderProducts {
+		if orderProduct == nil {
+			continue
+		}
 		// 已经移动到其他订单的商品不计
 		if orderProduct.SaleOrderUuid != model.Uuid {
 			continue

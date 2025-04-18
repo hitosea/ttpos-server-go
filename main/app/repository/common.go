@@ -346,8 +346,14 @@ func (r *commonRepo) FilterSaleOrderProduct() DBOption {
 // FilterSaleOrderProductWithH5Order 只查询常规的购物车商品、指定某个h5订单的商品
 func (r *commonRepo) FilterSaleOrderProductWithH5Order(h5OrderUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("delete_time = ? AND is_accept_order = ? AND h5_order_uuid = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderUnAccept, h5OrderUuid).
-			Or("delete_time = ? AND is_accept_order = ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted)
+		return db.Where(`
+				( delete_time = ? AND is_accept_order = ? AND h5_order_uuid = ?) 
+				OR 
+				( delete_time = ? AND is_accept_order = ?)
+			`,
+			constant.NotDeleted, constant.OrderProductIsAcceptOrderUnAccept, h5OrderUuid,
+			constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted,
+		)
 	}
 }
 
@@ -361,9 +367,14 @@ func (r *commonRepo) FilterSaleOrderProductH5Unordered() DBOption {
 // FilterSaleOrderProductH5Ordered 只查询H5已下单的购物车商品.包括已送厨商品和已下单未接单的商品
 func (r *commonRepo) FilterSaleOrderProductH5Ordered() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.
-			Where("delete_time = ? AND h5_order_uuid <> ? AND is_accept_order = ?", constant.NotDeleted, constant.OptionalUuid, constant.OrderProductIsAcceptOrderUnAccept).
-			Or("delete_time = ? AND is_accept_order = ? AND status > ?", constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted, constant.SaleOrderProductStatusCooking)
+		return db.Where(`
+				( delete_time = ? AND h5_order_uuid <> ? AND is_accept_order = ?) 
+				OR 
+				( delete_time = ? AND is_accept_order = ? AND status > ?)
+			`,
+			constant.NotDeleted, constant.OptionalUuid, constant.OrderProductIsAcceptOrderUnAccept,
+			constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted, constant.SaleOrderProductStatusCooking,
+		)
 	}
 }
 
