@@ -13005,6 +13005,28 @@ paths:
       summary: 未处理呼叫列表
       tags:
       - 厨显端.呼叫
+  /kitchen/call/unprocessed_notice:
+    get:
+      consumes:
+      - application/json
+      description: 获取未处理消息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.UnprocessedListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取未处理消息
+      tags:
+      - 厨显端.呼叫
   /kitchen/check_update:
     get:
       consumes:
