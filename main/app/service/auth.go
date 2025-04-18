@@ -107,6 +107,7 @@ func NewAuthSrvImpl(
 			"/api/v1/cashier/member/confirm_recharge_order", // 收银端确认会员充值订单
 			"/api/v1/assistant/desk/order/member/confirm",   // 助手端使用会员优惠
 			"/api/v1/cashier/desk/order/member/confirm",     // 收银端使用会员优惠
+			"/api/v1/cashier/recharge_order/list",           // 收银端订单列表
 		},
 		h5AcceptOrderFunctionRoutes: []string{
 			"/api/v1/cashier/h5_order/list",   // h5订单列表
