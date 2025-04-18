@@ -389,7 +389,7 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 	// 将 paymentAmount 和 fee/100 转换为 decimal
 	commissionFee := decimal.NewFromFloat(order.CommissionFee)
 	orderAmount := decimal.NewFromFloat(order.OrderAmount)
-	paymentFeePercent := commissionFee.Div(orderAmount).Round(3).Round(2).InexactFloat64()
+	paymentFeePercent := commissionFee.Div(orderAmount).Truncate(3).Round(2).InexactFloat64()
 
 	// 获取支付订单
 	paymentOrderId := uint(0)
