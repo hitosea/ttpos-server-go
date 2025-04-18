@@ -1680,16 +1680,18 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				return errors.WithMessage(err)
 			}
 			// 更新会员积分
-			if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
-				"frozen_point":                   member.FrozenPoint - points,                        // 扣减积分
-				"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - refundAmount, // 扣减累计消费金额
-			}); err != nil {
-				return errors.WithMessage(err)
-			}
-			// 创建积分变动记录
-			memberPointLog := saleOrder.NewRefundMemberPointLog(-points)
-			if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
-				return errors.WithMessage(err)
+			if points > 0 {
+				if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
+					"frozen_point":                   member.FrozenPoint - points,                        // 扣减积分
+					"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - refundAmount, // 扣减累计消费金额
+				}); err != nil {
+					return errors.WithMessage(err)
+				}
+				// 创建积分变动记录
+				memberPointLog := saleOrder.NewRefundMemberPointLog(-points)
+				if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
+					return errors.WithMessage(err)
+				}
 			}
 			publishChangeMemberPoints = true
 		}
@@ -2251,17 +2253,19 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 				if err != nil {
 					return errors.WithMessage(err)
 				}
-				// 更新会员积分
-				if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
-					"frozen_point":                   member.FrozenPoint - points,                                 // 扣减积分
-					"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - saleOrder.GetAmount(), // 扣减累计消费金额
-				}); err != nil {
-					return errors.WithMessage(err)
-				}
-				// 创建积分变动记录
-				memberPointLog := saleOrder.NewReverseSettleMemberPointLog(-points)
-				if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
-					return errors.WithMessage(err)
+				if points > 0 {
+					// 更新会员积分
+					if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
+						"frozen_point":                   member.FrozenPoint - points,                                 // 扣减积分
+						"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - saleOrder.GetAmount(), // 扣减累计消费金额
+					}); err != nil {
+						return errors.WithMessage(err)
+					}
+					// 创建积分变动记录
+					memberPointLog := saleOrder.NewReverseSettleMemberPointLog(-points)
+					if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
+						return errors.WithMessage(err)
+					}
 				}
 			}
 
