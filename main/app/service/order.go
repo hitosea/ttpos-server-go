@@ -4146,6 +4146,11 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				if saleOrderProduct.Num > constant.ProductNumMax {
 					return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
 				}
+				// 检查商品是否超过限购
+				status, message := orderProduct.CheckCookingProduct(ctx.GetLanguage())
+				if status != constant.CodeSuccess {
+					return nil, errors.WithMessage(errors.New(message))
+				}
 			} else if saleOrderProduct.IsSubOperation() {
 				// 减去新增的商品数量
 				orderProduct.Num -= saleOrderProduct.Num
@@ -4160,7 +4165,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			params.SaleOrder.SaleOrderProducts = append(params.SaleOrder.SaleOrderProducts, saleOrderProduct)
 			saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
 			// 商品数量不能超过999个
-			if saleOrderProduct.Num > 999 {
+			if saleOrderProduct.Num > constant.ProductNumMax {
 				return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
 			}
 		}
@@ -4274,7 +4279,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 
 	// 检查商品销售库存是否充足
 	if uint(request.Num) > beforeNum {
-		status, message := saleOrderProduct.CheckCookingProduct()
+		status, message := saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
 		if status != constant.CodeSuccess {
 			return nil, errors.WithMessage(errors.New(message))
 		}
@@ -4424,7 +4429,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		request.Num = int(saleOrderProduct.Num)
 		ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
-		status, message := saleOrderProduct.CheckCookingProduct()
+		status, message := saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
 		if status != constant.CodeSuccess {
 			return nil, errors.WithMessage(errors.New(message))
 		}
@@ -4614,7 +4619,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 				status, message = saleOrderProduct.CheckOutProduct()
 			} else {
 				// 如果是送厨检查
-				status, message = saleOrderProduct.CheckCookingProduct()
+				status, message = saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
 			}
 			ctx.Log().Debug("检查商品", zap.Any("status", status), zap.Any("message", message))
 			if status != constant.CodeSuccess {

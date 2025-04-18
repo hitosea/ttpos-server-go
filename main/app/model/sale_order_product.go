@@ -404,7 +404,7 @@ func (model *SaleOrderProduct) CheckOutProduct() (int, string) {
 }
 
 // 送厨检查
-func (model *SaleOrderProduct) CheckCookingProduct() (int, string) {
+func (model *SaleOrderProduct) CheckCookingProduct(lang string) (int, string) {
 	// 如果是已送厨的商品，则不检查
 	if model.IsCookingProduct() {
 		return constant.CodeSuccess, "商品检查通过"
@@ -418,7 +418,8 @@ func (model *SaleOrderProduct) CheckCookingProduct() (int, string) {
 			}
 			// 下单商品数量超过库存数量
 			if bom.ProductBom.IsStockShortage(model.Num) {
-				return constant.CodeOrderCheckProductStockZero, "下单商品数量超过库存数量"
+				productInfoString := model.GetNameAndFlavorName()
+				return constant.CodeOrderCheckProductStockZero, fmt.Sprintf("%s 库存不足", productInfoString.GetLocale(lang))
 			}
 			// 商品已经下架
 			if bom.ProductBom.IsProductPackageDown() {
@@ -856,6 +857,27 @@ func (model *SaleOrderProduct) StatusValue() int {
 // 如一个珍珠奶茶加料珍珠，则计算成分珍珠、奶、茶等各个原材料等用量
 func (model *SaleOrderProduct) GetMaterialBom() []*ProductionOrderMaterial {
 	return nil // todo
+}
+
+// 获取商品的名称。格式：`商品名 (规格名)`
+func (model *SaleOrderProduct) GetNameAndFlavorName() dto.LocaleResponse {
+	var flavorName dto.LocaleResponse
+	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if saleOrderProductBom.IsFlavor() {
+			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNames()
+		}
+	}
+	productPackageName := model.ProductPackage.MultiLanguageName.GetNames()
+	return dto.LocaleResponse{
+		ZH:   fmt.Sprintf("%s (%s)", productPackageName.ZH, flavorName.ZH),
+		TH:   fmt.Sprintf("%s (%s)", productPackageName.TH, flavorName.TH),
+		EN:   fmt.Sprintf("%s (%s)", productPackageName.EN, flavorName.EN),
+		ZHTW: fmt.Sprintf("%s (%s)", productPackageName.ZHTW, flavorName.ZHTW),
+		JA:   fmt.Sprintf("%s (%s)", productPackageName.JA, flavorName.JA),
+		KO:   fmt.Sprintf("%s (%s)", productPackageName.KO, flavorName.KO),
+		MY:   fmt.Sprintf("%s (%s)", productPackageName.MY, flavorName.MY),
+		TR:   fmt.Sprintf("%s (%s)", productPackageName.TR, flavorName.TR),
+	}
 }
 
 func (model *SaleOrderProduct) GetAttributeName() dto.LocaleResponse {
