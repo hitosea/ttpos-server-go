@@ -36,10 +36,8 @@ type IH5OrderRepo interface {
 	WhereDeskRegionUuid(uuid uint64) DBOption // 扫码订单桌台区域id条件
 
 	WithDesk() DBOption                                            // 关联桌台
-	WithSaleOrderProducts() DBOption                               // 关联销售订单商品
 	WithSaleOrderProductsMultiLanguageName() DBOption              // 关联销售订单商品关联多语言
 	WithSaleOrderProductMultiLanguageName() DBOption               // 关联销售订单商品关联多语言
-	WithH5OrderProducts() DBOption                                 // 关联扫码订单商品
 	WithH5OrderProductSaleOrderProduct() DBOption                  // 关联扫码订单商品关联销售订单商品
 	WithH5OrderProductSaleOrderProductMultiLanguageName() DBOption // 关联扫码订单商品关联销售订单商品关联多语言
 	WithCashier() DBOption                                         // 关联收银员
@@ -105,9 +103,18 @@ func (r *H5OrderRepoImpl) GetH5OrderDetailOrdered(uuid uint64) (*model.H5Order, 
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "H5OrderProducts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
 			},
 			WithPreload{
 				Query: "H5OrderProducts.SaleOrderProduct.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "SaleOrderProducts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
 			},
 			WithPreload{
 				Query: "SaleOrderProducts.MultiLanguageName",
@@ -431,12 +438,6 @@ func (r *H5OrderRepoImpl) WithDesk() DBOption {
 	}
 }
 
-func (r *H5OrderRepoImpl) WithSaleOrderProducts() DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("SaleOrderProducts")
-	}
-}
-
 func (r *H5OrderRepoImpl) WithSaleOrderProductsMultiLanguageName() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("SaleOrderProducts.MultiLanguageName")
@@ -446,12 +447,6 @@ func (r *H5OrderRepoImpl) WithSaleOrderProductsMultiLanguageName() DBOption {
 func (r *H5OrderRepoImpl) WithSaleOrderProductMultiLanguageName() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("SaleOrderProduct.MultiLanguageName")
-	}
-}
-
-func (r *H5OrderRepoImpl) WithH5OrderProducts() DBOption {
-	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("H5OrderProducts")
 	}
 }
 

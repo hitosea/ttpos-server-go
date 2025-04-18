@@ -128,6 +128,10 @@ func (o *H5OrderProduct) SetNil() {
 
 // 拒单或接单
 func (model *H5OrderProduct) Handle(lang string) {
+	if model.SaleOrderProduct.IsDelete() {
+		model.SetDelete()
+		return
+	}
 	model.Name = model.SaleOrderProduct.MultiLanguageName.GetNameByLang(lang)
 	model.Price = model.SaleOrderProduct.GetFinalSalePrice() // 最终售价(单价)
 	model.SalePrice = model.SaleOrderProduct.SalePrice
