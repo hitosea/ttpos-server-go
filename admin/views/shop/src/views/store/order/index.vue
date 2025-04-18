@@ -119,19 +119,19 @@
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading" row-key="unique_key">
           <el-table-column prop="serial_no" :label="$t('订单类型')">
             <template #default="scope">
-              {{ scope.row.bill_type == 1 ? $t('点餐订单') : $t('桌台订单')}}
+              {{ scope.row.bill_type == 1 ? $t('点餐订单') : $t('桌台订单') }}
             </template>
           </el-table-column>
           <el-table-column prop="serial_no" :label="$t('桌号/序号')"></el-table-column>
           <el-table-column prop="order_no" :label="$t('订单号')"></el-table-column>
           <el-table-column prop="status" :label="$t('状态')">
             <template #default="scope">
-                {{ scope.row.status == 0 ? $t('待付款') : scope.row.status == 2 ? $t('已取消') : $t('已完成') }}
+              {{ scope.row.status == 0 ? $t('待付款') : scope.row.status == 2 ? $t('已取消') : $t('已完成') }}
             </template>
           </el-table-column>
           <el-table-column prop="finish_time" :label="$t('支付时间')">
             <template #default="scope">
-                {{ scope.row.finish_time }}
+              {{ scope.row.finish_time }}
             </template>
           </el-table-column>
           <el-table-column prop="order_amount" :label="$t('订单金额')" width="140" show-overflow-tooltip>
@@ -151,7 +151,7 @@
           <el-table-column prop="payment_amount" :label="$t('实付金额')" show-overflow-tooltip>
             <template #default="scope">
               <div>
-                <div class="orange" v-if="scope.row.status == 1">
+                <div class="orange" v-if="scope.row.status == 1 || (scope.row.sale_orders && scope.row.sale_orders.map((item) => item.status == 1).includes(true))">
                   <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
                   {{ this.$formatPrice(scope.row.payment_amount) }}
                   <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
@@ -162,12 +162,19 @@
           </el-table-column>
           <el-table-column prop="" :label="$t('会员')" show-overflow-tooltip>
             <template #default="scope">
-                <span v-if="scope.row.consumer_uuids" class="gray9">{{ $t('会员ID') }}&nbsp;({{scope.row.consumer_uuids}})</span>
-                <span v-else class="gray9">-</span>
+              <span v-if="scope.row.consumer_uuids" class="gray9">{{ $t('会员ID') }}&nbsp;({{ scope.row.consumer_uuids }})</span>
+              <span v-else class="gray9">-</span>
             </template>
           </el-table-column>
 
-           <el-table-column prop="pay_type_name" :label="$t('支付方式')" show-overflow-tooltip></el-table-column>
+          <el-table-column prop="pay_type_name" :label="$t('支付方式')" show-overflow-tooltip>
+            <template #default="scope">
+              <span v-if="scope.row.status == 1 || (scope.row.sale_orders && scope.row.sale_orders.map((item) => item.status == 1).includes(true))">{{
+                scope.row.pay_type_name
+              }}</span>
+              <span v-else class="gray9">-</span>
+            </template>
+          </el-table-column>
 
           <el-table-column fixed="right" :label="$t('操作')" width="160">
             <template #default="scope">
@@ -179,13 +186,7 @@
                 <el-button v-if="scope.row.extra.is_cell_cancel" @click="cancelClick(scope.row)" type="danger" link size="small" v-auth="'/store/operate/order_cancel'"
                   >{{ $t('取消') }}
                 </el-button>
-                <el-button
-                  v-if="scope.row.extra.is_cell_delete"
-                  @click="delClick(scope.row)"
-                  type="danger"
-                  link
-                  size="small"
-                  v-auth="'/store/order/delete'"
+                <el-button v-if="scope.row.extra.is_cell_delete" @click="delClick(scope.row)" type="danger" link size="small" v-auth="'/store/order/delete'"
                   >{{ $t('删除') }}
                 </el-button>
               </div>
@@ -210,7 +211,15 @@
     <!--处理-->
     <Cancel v-if="open_edit" :open_edit="open_edit" :order_no="order_no" :order_id="order_id" @closeDialog="closeDialogFunc($event, 'edit')"> </Cancel>
     <!--处理-->
-    <refund v-if="open_refund" :open_edit="open_refund" :order_id="order_id" :sub_order_id="sub_order_id" :pay_price="pay_price" @closeDialog="closerefundDialogFunc($event, 'edit')"> </refund>
+    <refund
+      v-if="open_refund"
+      :open_edit="open_refund"
+      :order_id="order_id"
+      :sub_order_id="sub_order_id"
+      :pay_price="pay_price"
+      @closeDialog="closerefundDialogFunc($event, 'edit')"
+    >
+    </refund>
   </div>
 </template>
 
@@ -264,12 +273,12 @@
         time: '',
         /*统计*/
         order_count: {
-            cancel_num : 0,
-            complete_num : 0,
-            page_no : 1,
-            page_size : 10,
-            total : 0,
-            unpaid_num : 0,
+          cancel_num: 0,
+          complete_num: 0,
+          page_no: 1,
+          page_size: 10,
+          total: 0,
+          unpaid_num: 0,
         },
         /*是否打开编辑弹窗*/
         open_edit: false,
@@ -372,10 +381,10 @@
           .then((res) => {
             self.tableData = res.data.list;
             self.tableData.map((item) => {
-                if (item.sale_orders.length > 0) {
-                    item.children = item.sale_orders;
-                }
-                item.unique_key = item.order_no + item.serial_no
+              if (item.sale_orders.length > 0) {
+                item.children = item.sale_orders;
+              }
+              item.unique_key = item.order_no + item.serial_no;
             });
             self.totalDataNumber = res.data.meta.total;
             self.exStyle = res.data.ex_style;
