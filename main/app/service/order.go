@@ -5074,6 +5074,10 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 
 	var returnSaleOrderProduct *model.SaleOrderProduct
 	var keepNum uint
+	// 提前获取属性和属性列表
+	productAttr := saleOrderProduct.GetAttributeName()
+	productAttrList := saleOrderProduct.GetAttributeNameList()
+
 	// 如果退菜数量等于该商品的数量，则标记该商品为退菜并在商品的退菜原因列表中添加退菜原因
 	if saleOrderProduct.Num == req.Num {
 		saleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
@@ -5170,8 +5174,8 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			OrderProductId:  req.SaleOrderProductUuid,
 			ProductId:       returnSaleOrderProduct.ProductPackageUuid,
 			ProductName:     returnSaleOrderProduct.MultiLanguageName.GetNames(),
-			ProductAttr:     returnSaleOrderProduct.GetAttributeName(),
-			ProductAttrList: returnSaleOrderProduct.GetAttributeNameList(),
+			ProductAttr:     productAttr,
+			ProductAttrList: productAttrList,
 			TotalNum:        req.Num,
 			IsBuffet:        returnSaleOrderProduct.IsBuffet == 1,
 			Remark:          returnSaleOrderProduct.Remark,
