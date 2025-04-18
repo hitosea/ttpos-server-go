@@ -14,6 +14,7 @@ type IH5OrderRepo interface {
 	PaginateGetH5Order(pageNo, pageSize int, opts ...DBOption) ([]model.H5Order, int64, error)
 	GetH5Order(opts ...DBOption) (*model.H5Order, error)
 	GetH5OrderList(opts ...DBOption) ([]*model.H5Order, error)                  // 获取h5订单列表
+	GetH5OrderProductCount(h5OrderUuid uint64) (int64, error)                   // 获取h5订单的商品数量
 	GetH5OrderDetailOrdered(uuid uint64) (*model.H5Order, error)                // 获取接单详情，只获取已下单商品
 	GetH5OrderListBySaleBillUuid(saleBillUuid uint64) ([]*model.H5Order, error) // 获取销售账单的所有待接单h5订单列表
 	GetH5OrderUuids(opts ...DBOption) ([]uint64, error)
@@ -144,6 +145,15 @@ func (r *H5OrderRepoImpl) GetH5OrderList(opts ...DBOption) ([]*model.H5Order, er
 		return nil, errors.WithMessage(err)
 	}
 	return h5Orders, nil
+}
+
+// GetH5OrderProductCount 获取h5订单的商品数量
+func (r *H5OrderRepoImpl) GetH5OrderProductCount(h5OrderUuid uint64) (int64, error) {
+	var count int64
+	if err := r.db.Model(&model.H5OrderProduct{}).Where("h5_order_uuid = ? AND delete_time = ?", h5OrderUuid, constant.NotDeleted).Count(&count).Error; err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	return count, nil
 }
 
 func (r *H5OrderRepoImpl) GetH5OrderListBySaleBillUuid(saleBillUuid uint64) ([]*model.H5Order, error) {
