@@ -28,7 +28,7 @@
     <div class="product-content">
       <div class="table-wrap">
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
-          <el-table-column prop="card_id" label="ID"></el-table-column>
+          <el-table-column prop="id" label="ID"></el-table-column>
           <el-table-column prop="card_name" :label="$t('会员卡名称')"></el-table-column>
           <el-table-column prop="expire" :label="$t('有效期')">
             <template #default="scope">
