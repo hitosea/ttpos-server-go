@@ -5007,11 +5007,25 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		ctx.Log().Debug("wfs  --- 10002")
 	}
 
+	//  todo 调试
+	for _, saleOrder := range saleBill.SaleOrders {
+		for i, _ := range saleOrder.SaleOrderProducts {
+			orderProduct := saleOrder.SaleOrderProducts[i]
+			if orderProduct == nil {
+				ctx.Log().Debug(utils.ToJsonString(saleOrder.SaleOrderProducts))
+			}
+		}
+	}
+
+	ctx.Log().Debug("wfs  --- 10003")
+
 	// 获取未送厨的商品列表
 	unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
 	if len(unCookingSaleOrderProducts) == 0 && len(h5OrderProductUnAccept) == 0 {
 		return nil, nil, errors.New("没有未送厨的商品")
 	}
+
+	ctx.Log().Debug("wfs  --- 10003")
 
 	// 获取某个h5订单的已下单但未接单的商品
 	if req.H5OrderUuid != 0 {
@@ -5024,9 +5038,10 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		}
 	}
 
+	ctx.Log().Debug("wfs  --- 10004")
+
 	// 送厨
 	if len(unCookingSaleOrderProducts) > 0 {
-		ctx.Log().Debug("wfs  --- 10003")
 		checkServiceRes, err := s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0) // 购物车送厨商品
 		if err != nil {
 			return nil, nil, err
@@ -8844,7 +8859,8 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	// 获取h5订单
 	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
-	if err != nil {
+	
+	if err != nil && !builtinerrors.Is(err, gorm.ErrRecordNotFound) {
 		return errors.WithMessage(errors.ErrInternal, "获取h5订单失败", err.Error())
 	}
 	// 非待处理状态不可操作
