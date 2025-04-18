@@ -31,6 +31,8 @@ const (
 	KitchenLoginLimit         = -113 // 厨显登录已达上限
 	TabletLoginLimit          = -114 // 平板登录已达上限
 
+	EndFunctionDisabled = -119 // 助手端、平板端、厨显端 功能被关闭
+
 	CompanyLicenceExpired = -191 // 商家过期
 )
 
