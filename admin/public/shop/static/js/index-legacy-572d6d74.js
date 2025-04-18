@@ -1,5 +1,0 @@
-<<<<<<<< HEAD:admin/public/shop/static/js/index-legacy-625fa4ca.js
-System.register(["./index-legacy-e9ef7191.js","./vue-legacy-da7d0b7f.js","./element-legacy-a06c0771.js"],(function(e,n){"use strict";var t,u,c,i,r,s;return{setters:[function(e){t=e.u},function(e){u=e.aB,c=e.x,i=e.y,r=e.a3,s=e.B},null],execute:function(){e("default",{__name:"index",setup:function(e){var n=t(),o=u(),l=function(){n.setLock(!1),o.push("/home")};return function(e,n){return c(),i("div",null,[n[0]||(n[0]=r(" 锁屏 ")),s("button",{onClick:l},"解锁")])}}})}}}));
-========
-System.register(["./index-legacy-68194e2f.js","./vue-legacy-da7d0b7f.js","./element-legacy-a06c0771.js"],(function(e,n){"use strict";var t,u,c,i,r,s;return{setters:[function(e){t=e.u},function(e){u=e.aB,c=e.x,i=e.y,r=e.a3,s=e.B},null],execute:function(){e("default",{__name:"index",setup:function(e){var n=t(),o=u(),l=function(){n.setLock(!1),o.push("/home")};return function(e,n){return c(),i("div",null,[n[0]||(n[0]=r(" 锁屏 ")),s("button",{onClick:l},"解锁")])}}})}}}));
->>>>>>>> 6ce895bdaff6b037b0439a56772e56d081709051:admin/public/shop/static/js/index-legacy-572d6d74.js

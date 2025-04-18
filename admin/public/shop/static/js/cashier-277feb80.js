@@ -1,5 +1,0 @@
-<<<<<<<< HEAD:admin/public/shop/static/js/cashier-277feb80.js
-import{r as s}from"./index-b2f56009.js";let e={getSetting:(e,t)=>s._get("/shop/plus.cashier.setting/index",e,t),editSetting:(e,t)=>s._post("/shop/plus.cashier.setting/index",e,t),userList:(e,t)=>s._post("/shop/plus.cashier.user/index",e,t),addUser:(e,t)=>s._post("/shop/plus.cashier.user/add",e,t),editUser:(e,t)=>s._post("/shop/plus.cashier.user/edit",e,t),deleteUser:(e,t)=>s._post("/shop/plus.cashier.user/delete",e,t),setUser:(e,t)=>s._post("/shop/plus.cashier.user/set",e,t)};export{e as C};
-========
-import{r as s}from"./index-f75dbe46.js";let e={getSetting:(e,t)=>s._get("/shop/plus.cashier.setting/index",e,t),editSetting:(e,t)=>s._post("/shop/plus.cashier.setting/index",e,t),userList:(e,t)=>s._post("/shop/plus.cashier.user/index",e,t),addUser:(e,t)=>s._post("/shop/plus.cashier.user/add",e,t),editUser:(e,t)=>s._post("/shop/plus.cashier.user/edit",e,t),deleteUser:(e,t)=>s._post("/shop/plus.cashier.user/delete",e,t),setUser:(e,t)=>s._post("/shop/plus.cashier.user/set",e,t)};export{e as C};
->>>>>>>> 6ce895bdaff6b037b0439a56772e56d081709051:admin/public/shop/static/js/cashier-be220be5.js

@@ -1,5 +1,0 @@
-<<<<<<<< HEAD:admin/public/shop/static/js/takeout-8561a1d3.js
-import{r as e}from"./index-b2f56009.js";let t={takeSurvey:(t,o)=>e._post("/shop/takeout.survey/index",t,o),deliverList:(t,o)=>e._post("/shop/takeout.Deliver/index",t,o),verify:(t,o)=>e._post("/shop/takeout.Deliver/verify",t,o),cancel:(t,o)=>e._post("/shop/takeout.Deliver/cancel",t,o),detail:(t,o)=>e._post("/shop/takeout.Deliver/detail",t,o),export:(t,o)=>e._post("/shop/takeout.Deliver/export",t,o)};export{t as T};
-========
-import{r as e}from"./index-f75dbe46.js";let t={takeSurvey:(t,o)=>e._post("/shop/takeout.survey/index",t,o),deliverList:(t,o)=>e._post("/shop/takeout.Deliver/index",t,o),verify:(t,o)=>e._post("/shop/takeout.Deliver/verify",t,o),cancel:(t,o)=>e._post("/shop/takeout.Deliver/cancel",t,o),detail:(t,o)=>e._post("/shop/takeout.Deliver/detail",t,o),export:(t,o)=>e._post("/shop/takeout.Deliver/export",t,o)};export{t as T};
->>>>>>>> 6ce895bdaff6b037b0439a56772e56d081709051:admin/public/shop/static/js/takeout-fad1bfb6.js
