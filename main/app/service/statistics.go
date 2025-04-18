@@ -521,7 +521,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			orderFreeNum = 1
 			orderFreeAmount = decimal.NewFromFloat(saleOrder.GetAmount()).Round(2)
 			if isStatFree {
-				orderDiscount = orderDiscount.Add(decimal.NewFromFloat(saleOrder.Amount))
+				if saleOrder.ZeroFee > 0 {
+					orderDiscount = orderDiscount.Add(decimal.NewFromFloat(saleOrder.OriginAmount))
+				} else if saleOrder.CustomDiscountRate == 0 {
+					orderDiscount = orderDiscount.Add(decimal.NewFromFloat(saleOrder.Amount))
+				}
 				orderServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
 			}
 		} else {
@@ -570,6 +574,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 						orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
 						orderProductTax = orderProductTax.Add(productTax.Mul(productNumDec))
 						orderServiceTax = orderServiceTax.Add(productServiceTax.Mul(productNumDec))
+						if saleOrder.CustomDiscountRate > 0 {
+							orderDiscount = orderDiscount.Add(productPrice.Add(productTax).Add(productServiceFee).Add(productServiceTax).Mul(productNumDec))
+						}
 					}
 				} else {
 					orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
