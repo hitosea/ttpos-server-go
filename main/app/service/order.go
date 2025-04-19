@@ -9066,7 +9066,7 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shop
 		amount.TaxAmount = utils.DecimalAdd(amount.TaxAmount, calc.TaxFee)
 		amount.DiscountAmount = utils.DecimalAdd(amount.DiscountAmount, calc.CustomDiscountFee)
 		amount.MemberDiscountAmount = utils.DecimalAdd(amount.MemberDiscountAmount, calc.MemberDiscountFee)
-		amount.Amount = utils.DecimalAdd(amount.Amount, calc.Amount)
+		amount.Amount = utils.DecimalAdd(amount.Amount, utils.IfFloat64(order.CustomAmount >= 0, order.CustomAmount, calc.Amount))
 	}
 
 	return resp.SentKitchen{
