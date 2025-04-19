@@ -2091,7 +2091,7 @@ func (s *orderSrv) GetReverseSettleInfo(ctx context.Context, req req.OrderRevers
 	}
 
 	// 获取支付方式名称列表
-	payMethods := saleBill.GetPaymentMethodNameList()
+	payMethods := saleBill.GetPaymentMethodNameList(ctx.GetLanguage())
 
 	return &resp.OrderReverseSettleInfoResp{
 		SaleBillUuid:    saleBill.Uuid,
@@ -2179,7 +2179,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 		// 如果销售订单是免单，删除免单原因
 		for _, saleOrder := range saleBill.SaleOrders {
 			if saleOrder.IsFreeSaleOrder() {
-				saleOrder.FreeReason = ""
+				saleOrder.SetCancelFreeOrder()
 				// 删除销售订单的免单原因
 				if err := repository.NewSaleOrderProductReasonRepo(db).DeleteFreeReason(saleOrder.Uuid); err != nil {
 					return errors.WithMessage(err)

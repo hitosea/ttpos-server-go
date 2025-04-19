@@ -39,10 +39,17 @@ func (model *SaleBill) GetBuffetProductList() resp.BuffetProductList {
 }
 
 // 获取支付方式名称列表. 获取所有子单的付款单用到的支付方式，不重复
-func (model *SaleBill) GetPaymentMethodNameList() []string {
+func (model *SaleBill) GetPaymentMethodNameList(lang string) []string {
 	payMethods := make(map[string]bool)
 	for _, saleOrder := range model.SaleOrders {
+		if saleOrder.IsFreeSaleOrder() {
+			payMethods[i18n.Translate(lang, "免单")] = true
+			continue
+		}
 		for _, paymentOrder := range saleOrder.PaymentOrders {
+			if paymentOrder.IsDelete() {
+				continue
+			}
 			payMethods[paymentOrder.PaymentMethodName] = true
 		}
 	}

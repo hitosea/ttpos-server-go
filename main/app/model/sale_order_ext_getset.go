@@ -880,6 +880,13 @@ func (model *SaleOrder) SetFreeOrder(reason string, freeReasons []*SaleOrderProd
 	model.FinishTime = time.Now().Unix()
 }
 
+// SetCancelFreeOrder 设置免单
+func (model *SaleOrder) SetCancelFreeOrder() {
+	defer model.SetUpdate() // 标记更新
+	model.IsFree = constant.SaleOrderIsFreeNo
+	model.FreeReason = ""
+}
+
 // 是否存在手动折扣
 func (model *SaleOrder) IsManualDiscount(ZeroRule uint8) bool {
 	// custom_amount == -1 是没有进行订单改价
