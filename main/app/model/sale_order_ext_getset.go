@@ -627,8 +627,8 @@ func (model *SaleOrder) GetMemberSurplusPoints(giftRatio ...float64) float64 {
 		}
 		// 计算本单获取的积分
 		model.SetGiftPointsRate(giftRatio[0])
-		// 记录会员余额
-		return model.GiftPoints
+		// 计算本单应收金额
+		return model.CalcMemberPoint(model.GetPrintReceivablePrice())
 	}
 }
 

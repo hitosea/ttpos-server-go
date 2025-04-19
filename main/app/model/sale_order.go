@@ -302,7 +302,10 @@ func (model *SaleOrder) SetGiftPointsRate(giftPointsRate float64) {
 }
 
 // CalcMemberPoint 计算会员积分. 会员积分=订单最终应收金额*积分赠送比例
-func (model *SaleOrder) CalcMemberPoint() float64 {
+func (model *SaleOrder) CalcMemberPoint(finalPrice ...float64) float64 {
+	if len(finalPrice) > 0 {
+		return decimal.NewFromFloat(finalPrice[0]).Mul(decimal.NewFromFloat(model.GiftPointsRate)).InexactFloat64()
+	}
 	return decimal.NewFromFloat(model.FinalPrice).Mul(decimal.NewFromFloat(model.GiftPointsRate)).InexactFloat64()
 }
 
@@ -324,6 +327,7 @@ func (model *SaleOrder) AccumulateMemberConsumeAmountAndTimes(member *Member) {
 	model.Member.AccumulateConsumeAmount(model.GetAmount())
 }
 
+// 创建积分变动记录
 func (model *SaleOrder) NewMemberPointLog() *MemberPointLog {
 	memberPointLog := &MemberPointLog{
 		MemberUuid:  model.ConsumerUuid,
@@ -335,6 +339,7 @@ func (model *SaleOrder) NewMemberPointLog() *MemberPointLog {
 	return memberPointLog
 }
 
+// 创建退款积分变动记录
 func (model *SaleOrder) NewRefundMemberPointLog(points float64) *MemberPointLog {
 	memberPointLog := &MemberPointLog{
 		MemberUuid:  model.ConsumerUuid,
@@ -346,6 +351,7 @@ func (model *SaleOrder) NewRefundMemberPointLog(points float64) *MemberPointLog 
 	return memberPointLog
 }
 
+// 创建订单反结账积分变动记录
 func (model *SaleOrder) NewReverseSettleMemberPointLog(points float64) *MemberPointLog {
 	memberPointLog := &MemberPointLog{
 		MemberUuid:  model.ConsumerUuid,
