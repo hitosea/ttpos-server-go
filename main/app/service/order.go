@@ -7924,6 +7924,12 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 	}
 	ctx.Log().Debug("获取销售账单信息")
 
+	// 从http的header中获取h5_order_uuid
+	h5OrderProductUnAccept := make([]*model.SaleOrderProduct, 0)
+	if h5OrderUuid := context.GetH5OrderUuid(ctx); h5OrderUuid != 0 {
+		h5OrderProductUnAccept = saleBill.GetH5OrderProductUnAccept(h5OrderUuid)
+	}
+
 	// 获取未送厨的商品列表
 	unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
 
@@ -7984,9 +7990,24 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 	}
 
 	// 检查是否有未送厨的商品
-	if len(unCookingSaleOrderProducts) > 0 {
+	if len(unCookingSaleOrderProducts) > 0 || len(h5OrderProductUnAccept) > 0 {
 		products := make([]resp.Product, 0)
 		for _, product := range unCookingSaleOrderProducts {
+			products = append(products, resp.Product{
+				Uuid:                product.Uuid,
+				LocaleName:          product.MultiLanguageName.GetNames(),
+				LocaleAttributeName: product.GetAttributeName(),
+				Num:                 product.Num,
+				SalePrice:           product.SalePrice,
+				DiscountPrice:       product.DiscountFee,
+				Status:              int(product.Status),
+				Remark:              product.Remark,
+				IsMust:              product.IsMustProduct(),
+				IsGift:              product.IsGiftProduct(),
+				IsCancel:            product.IsCancelProduct(),
+			})
+		}
+		for _, product := range h5OrderProductUnAccept {
 			products = append(products, resp.Product{
 				Uuid:                product.Uuid,
 				LocaleName:          product.MultiLanguageName.GetNames(),
