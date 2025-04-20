@@ -8840,6 +8840,11 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		// 获取本次接单的商品列表
 		unCookingSaleOrderProducts := h5Order.SaleOrderProducts
 
+		// 检查超时不能加购
+		if err := s.checkTimeoutAndCannotAddPurchase(ctx, saleBill, unCookingSaleOrderProducts); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+
 		// 将h5订单商品插入到销售订单中
 		saleOrder := saleBill.GetFirstSaleOrder()
 		saleOrder.InsertSaleOrderProduct(unCookingSaleOrderProducts)
