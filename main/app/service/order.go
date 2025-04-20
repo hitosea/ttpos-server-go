@@ -8746,6 +8746,11 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 		h5OrderProduct.SetH5OrderProduct(h5Order.Uuid)
 	}
 
+	// 检查超时不能加购
+	if err := s.checkTimeoutAndCannotAddPurchase(ctx, saleBill, h5OrderProducts); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 创建h5订单
 		if _, err := repository.NewH5OrderRepo(tx).CreateH5Order(*h5Order); err != nil {
@@ -8841,8 +8846,10 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		unCookingSaleOrderProducts := h5Order.SaleOrderProducts
 
 		// 检查超时不能加购
-		if err := s.checkTimeoutAndCannotAddPurchase(ctx, saleBill, unCookingSaleOrderProducts); err != nil {
-			return nil, errors.WithMessage(err)
+		if !isAutoOrder {
+			if err := s.checkTimeoutAndCannotAddPurchase(ctx, saleBill, unCookingSaleOrderProducts); err != nil {
+				return nil, errors.WithMessage(err)
+			}
 		}
 
 		// 将h5订单商品插入到销售订单中
