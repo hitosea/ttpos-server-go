@@ -382,12 +382,6 @@ func (s *orderSrv) checkTimeoutAndCannotAddPurchase(ctx context.Context, saleBil
 	if saleBill.IsBuffetSaleBill() {
 		// 获取自助餐的剩余时长
 		if saleBill.GetTotalRemainingSeconds() == 0 {
-			// 自助餐已结束，不能加购自助餐商品。但可以根据设置，继续选购非自助餐商品
-			for _, saleOrderProduct := range saleOrderProducts {
-				if saleOrderProduct.IsBuffetProduct() {
-					return errors.New("自助餐时间已到达，自助餐商品不可继续下单")
-				}
-			}
 			// 获取自助餐设置
 			companySetting, err := s.settingSrv.GetCompanySetting(ctx)
 			if err != nil {
@@ -400,6 +394,12 @@ func (s *orderSrv) checkTimeoutAndCannotAddPurchase(ctx context.Context, saleBil
 			// 如果自助餐设置为非自助餐商品到时不能继续选购，则不能加购
 			if buffetSetting.IsBuyContinue == "0" {
 				return errors.New("用餐时间已到，无法继续下单")
+			}
+			// 自助餐已结束，不能加购自助餐商品。但可以根据设置，继续选购非自助餐商品
+			for _, saleOrderProduct := range saleOrderProducts {
+				if saleOrderProduct.IsBuffetProduct() {
+					return errors.New("自助餐时间已到达，自助餐商品不可继续下单")
+				}
 			}
 		}
 	}
