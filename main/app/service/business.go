@@ -30,6 +30,7 @@ type IBusinessSrv interface {
 	CountArea(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataArea, error)                                            // 统计区域
 	CountProductSales(ctx context.Context, req req.BusinessDataCountProductSalesReq) (*business_data_resp.BusinessDataCountProductSalesPagination, error) // 统计商品列表
 	Count7Days(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataCount7Days, error)                                     // 统计7天
+	CountExport(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataExport, error)                                        // 统计导出
 	RankProduct(ctx context.Context, req req.BusinessDataRankProductReq) (*business_data_resp.BusinessDataProductRank, error)                             // 统计商品排行
 }
 
@@ -601,4 +602,80 @@ func (s *businessSrv) BuildCategoryList(ctx context.Context, req req.BusinessDat
 	}
 
 	return categoryData, list
+}
+
+// CountExport 统计导出
+func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataExport, error) {
+	exportData, err := s.statisticsSrv.CountExport(ctx, CountReq{
+		QueryStartTime: req.QueryStartTime,
+		QueryEndTime:   req.QueryEndTime,
+		Timezone:       ctx.GetCompany().CompanySetting.Timezone,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	exportDataList := make([]business_data_resp.BusinessDataExportItem, 0, len(exportData.Data))
+	for _, export := range exportData.Data {
+		areaList := make([]business_data_resp.BusinessDataExportArea, 0, len(export.AreaList))
+		for _, area := range export.AreaList {
+			areaList = append(areaList, business_data_resp.BusinessDataExportArea{
+				AreaID:             area.AreaID,
+				AreaName:           area.AreaName,
+				AreaSaleAmount:     area.AreaSaleAmount,
+				AreaBusinessAmount: area.AreaBusinessAmount,
+				AreaProductNum:     area.AreaProductNum,
+			})
+		}
+
+		paymentList := make([]business_data_resp.BusinessDataExportPayment, 0, len(export.PaymentList))
+		for _, payment := range export.PaymentList {
+			paymentList = append(paymentList, business_data_resp.BusinessDataExportPayment{
+				PaymentName:        payment.PaymentName,
+				PaymentCode:        payment.PaymentCode,
+				TotalOrderNum:      payment.TotalOrderNum,
+				TotalPaymentAmount: payment.TotalPaymentAmount,
+			})
+		}
+
+		exportDataList = append(exportDataList, business_data_resp.BusinessDataExportItem{
+			Day:                   export.Day,
+			TotalSaleAmount:       export.TotalSaleAmount,
+			TotalBusinessAmount:   export.TotalBusinessAmount,
+			TotalServiceFee:       export.TotalServiceFee,
+			TotalPaymentFee:       export.TotalPaymentFee,
+			TotalTax:              export.TotalTax,
+			TotalProductNum:       export.TotalProductNum,
+			TotalMemberNum:        export.TotalMemberNum,
+			TotalDiscountMember:   export.TotalDiscountMember,
+			TotalDiscount:         export.TotalDiscount,
+			TotalDiscountRatio:    export.TotalDiscountRatio,
+			TotalRefundAmount:     export.TotalRefundAmount,
+			TotalGiftAmount:       export.TotalGiftAmount,
+			TotalGiftNum:          export.TotalGiftNum,
+			TotalFreeAmount:       export.TotalFreeAmount,
+			TotalFreeNum:          export.TotalFreeNum,
+			TotalReceivedAmount:   export.TotalReceivedAmount,
+			TotalOrderNum:         export.TotalOrderNum,
+			MinOrderAmount:        export.MinOrderAmount,
+			MaxOrderAmount:        export.MaxOrderAmount,
+			AvgOrderAmount:        export.AvgOrderAmount,
+			TotalDeskNum:          export.TotalDeskNum,
+			TotalMealNum:          export.TotalMealNum,
+			MinDeskOrderAmount:    export.MinDeskOrderAmount,
+			MaxDeskOrderAmount:    export.MaxDeskOrderAmount,
+			AvgDeskOrderAmount:    export.AvgDeskOrderAmount,
+			TotalInstantOrderNum:  export.TotalInstantOrderNum,
+			MinInstantOrderAmount: export.MinInstantOrderAmount,
+			MaxInstantOrderAmount: export.MaxInstantOrderAmount,
+			AvgInstantOrderAmount: export.AvgInstantOrderAmount,
+			AreaList:              areaList,
+			PaymentList:           paymentList,
+		})
+	}
+
+	return &business_data_resp.BusinessDataExport{
+		Days: exportData.Days,
+		Data: exportDataList,
+	}, nil
 }

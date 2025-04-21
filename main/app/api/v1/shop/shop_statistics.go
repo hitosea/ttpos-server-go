@@ -218,6 +218,31 @@ func (h *statisticsHandler) Count7Days(c *gin.Context) {
 	helper.Success(c, sevenDaysData)
 }
 
+// CountExport 统计导出
+// @Summary 统计导出
+// @Description 统计导出
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataCountReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataExport} "统计数据"
+// @Router /shop/statistics/export [get]
+func (h *statisticsHandler) CountExport(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataCountReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	exportData, err := h.businessSrv.CountExport(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, exportData)
+}
+
 func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -245,5 +270,6 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)         // 统计商品排行
 		privateApi.GET("/statistics/product_sales", wrapper.CountProductSales)       // 统计商品销售
 		privateApi.GET("/statistics/7days", wrapper.Count7Days)                      // 统计7天
+		privateApi.GET("/statistics/export", wrapper.CountExport)                    // 统计导出
 	}
 }

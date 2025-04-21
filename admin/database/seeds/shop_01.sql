@@ -2031,7 +2031,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_member` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '会员统计表';
 
-CREATE TABLE IF NOT EXISTS `statistics_member_payment` (
+CREATE TABLE IF NOT EXISTS `ttpos_statistics_member_payment` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
     `member_recharge_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员充值订单uuid',

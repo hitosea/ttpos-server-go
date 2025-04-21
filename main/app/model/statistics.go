@@ -132,6 +132,12 @@ type StatisticsSaleData struct {
 	AvgInstantOrderAmount   sql.NullFloat64 `gorm:"column:avg_instant_order_amount;comment:平均即时订单金额"`
 }
 
+// StatisticsSaleDaysData 销售天数统计数据
+type StatisticsSaleDaysData struct {
+	StatisticsSaleData
+	Day sql.NullString `gorm:"column:day;comment:日期"`
+}
+
 // StatisticsPaymentData 支付统计数据
 type StatisticsPaymentData struct {
 	PaymentName        string          `gorm:"column:payment_name;comment:支付方式名称"`
@@ -139,6 +145,12 @@ type StatisticsPaymentData struct {
 	TotalOrderNum      sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
 	TotalPaymentAmount sql.NullFloat64 `gorm:"column:total_payment_amount;comment:总支付金额"`
 	TotalRefundAmount  sql.NullFloat64 `gorm:"column:total_refund_amount;comment:总退款金额"`
+}
+
+// StatisticsPaymentDaysData 支付天数统计数据
+type StatisticsPaymentDaysData struct {
+	StatisticsPaymentData
+	Day sql.NullString `gorm:"column:day;comment:日期"`
 }
 
 // StatisticsTaxData 税类统计数据
@@ -175,6 +187,13 @@ type StatisticsAreaData struct {
 	AreaProductNum     sql.NullInt64   `gorm:"column:area_product_num;comment:区域商品数量"`
 }
 
+// StatisticsAreaDaysData 区域天数统计数据
+type StatisticsAreaDaysData struct {
+	StatisticsAreaData
+	AreaID sql.NullInt64  `gorm:"column:area_id;comment:区域id"`
+	Day    sql.NullString `gorm:"column:day;comment:日期"`
+}
+
 // Statistics7DaysData 7天统计数据
 type Statistics7DaysData struct {
 	Day                 sql.NullString  `gorm:"column:day;comment:日期"`
@@ -199,6 +218,12 @@ type StatisticsMemberData struct {
 	TotalRefundAmount   sql.NullFloat64 `gorm:"column:total_refund_amount;comment:总退款金额"`
 }
 
+// StatisticsMemberDaysData 会员天数统计数据
+type StatisticsMemberDaysData struct {
+	StatisticsMemberData
+	Day sql.NullString `gorm:"column:day;comment:日期"`
+}
+
 // StatisticsProductSaleData 商品销售统计数据
 type StatisticsProductSaleData struct {
 	ProductName        sql.NullString  `gorm:"column:product_name;comment:商品名称"`
@@ -215,4 +240,10 @@ type StatisticsProductSaleData struct {
 type StatisticsFreePaymentData struct {
 	TotalOrderNum   sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
 	TotalFreeAmount sql.NullFloat64 `gorm:"column:total_free_amount;comment:总免单金额"`
+}
+
+// StatisticsFreePaymentDaysData 免单支付天数统计数据
+type StatisticsFreePaymentDaysData struct {
+	StatisticsFreePaymentData
+	Day sql.NullString `gorm:"column:day;comment:日期"`
 }
