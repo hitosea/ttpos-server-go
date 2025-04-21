@@ -49,7 +49,7 @@ type IH5OrderRepo interface {
 
 	GetH5OrderProducts(opts ...DBOption) ([]*model.H5OrderProduct, error)                           // 扫码订单商品
 	GetH5OrderProductsBySaleBillUuidAndAccept(saleBillUuid uint64) ([]*model.H5OrderProduct, error) // 获取同一个销售账单，已接单的，h5订单商品
-	GetH5OrderDetail(h5OrderUuid uint64, skipAudit bool) (*model.H5Order, error)                    // 扫码订单详情
+	GetH5OrderDetail(h5OrderUuid uint64, isNeedAudit bool) (*model.H5Order, error)                  // 扫码订单详情
 	CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (*model.H5OrderProduct, error)        // 快照销售订单商品
 
 	WhereSaleBillUuid(uuid uint64) DBOption // 扫码订单商品销售账单Uuid条件
@@ -169,14 +169,14 @@ func (r *H5OrderRepoImpl) GetH5OrderListBySaleBillUuid(saleBillUuid uint64) ([]*
 }
 
 // GetH5OrderDetail 获取接单详情
-func (r *H5OrderRepoImpl) GetH5OrderDetail(h5OrderUuid uint64, skipAudit bool) (*model.H5Order, error) {
+func (r *H5OrderRepoImpl) GetH5OrderDetail(h5OrderUuid uint64, isNeedAudit bool) (*model.H5Order, error) {
 	needAudit := map[bool]DBOption{
-		false: r.WhereIsNeedAudit(1), // 查找需要审核
-		true:  r.WhereIsNeedAudit(0), // 查找不需要审核，自动接单
+		true:  r.WhereIsNeedAudit(1), // 查找需要审核
+		false: r.WhereIsNeedAudit(0), // 查找不需要审核，自动接单
 	}
 	h5Order, err := r.GetH5Order(
 		CommonRepo.WhereByUuid(h5OrderUuid),
-		needAudit[skipAudit],
+		needAudit[isNeedAudit],
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "H5OrderProducts",
