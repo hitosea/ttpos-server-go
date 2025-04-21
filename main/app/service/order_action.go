@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/gin-gonic/gin"
 	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -14,6 +13,8 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/websocket"
+
+	"github.com/gin-gonic/gin"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -334,13 +335,11 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 
 // 加购。内部方法复用
 func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*model.SaleBill, error) {
-
 	// 获取当前销售订单信息
 	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
 	}
-
 	// 录入订单商品数据
 	saleOrderProducts, err := s.newSaleOrderProduct(ctx, CreateSaleOrderProductParams{
 		IsH5Product: request.IsH5Product,
@@ -352,46 +351,57 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 	if err != nil {
 		return nil, errors.WithMessage(err, "构建商品失败")
 	}
-
 	// 检查限购
-	{
-		limitProducts, err := s.getBuffetProductLimitList(ctx, request.SaleBillUuid)
-		if err != nil {
-			return nil, errors.WithMessage(err)
-		}
-		overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts)
-		if len(overLimitProducts) > 0 {
-			return nil, errors.New("商品超过限购")
-		}
+	if err := s.checkLimitPurchase(ctx, saleBill); err != nil {
+		return nil, errors.WithMessage(err)
 	}
 	// 检查超时不能加购
-	{
-		if saleBill.IsBuffetSaleBill() {
-			// 获取自助餐的剩余时长
-			if saleBill.GetTotalRemainingSeconds() == 0 {
-				// 自助餐已结束，不能加购自助餐商品。但可以根据设置，继续选购非自助餐商品
-				for _, saleOrderProduct := range saleOrderProducts {
-					if saleOrderProduct.IsBuffetProduct() {
-						return nil, errors.New("自助餐已结束")
-					}
-				}
-				// 获取自助餐设置
-				companySetting, err := s.settingSrv.GetCompanySetting(ctx)
-				if err != nil {
-					return nil, err
-				}
-				buffetSetting, buffetErr := s.settingSrv.GetBuffetSetting(ctx, companySetting)
-				if buffetErr != nil {
-					return nil, buffetErr
-				}
-				// 如果自助餐设置为非自助餐商品到时不能继续选购，则不能加购
-				if buffetSetting.IsBuyContinue == "0" {
-					return nil, errors.New("自助餐已结束")
+	if err := s.checkTimeoutAndCannotAddPurchase(ctx, saleBill, saleOrderProducts); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// saleBill已经加入了新的商品，并且重新计算了价格
+	return saleBill, nil
+}
+
+// 检查限制购 checkLimitPurchase
+func (s *orderSrv) checkLimitPurchase(ctx context.Context, saleBill *model.SaleBill) error {
+	limitProducts, err := s.getBuffetProductLimitList(ctx, saleBill.Uuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts)
+	if len(overLimitProducts) > 0 {
+		return errors.New("商品超过限购")
+	}
+	return nil
+}
+
+// 检查超时不能加购 checkTimeoutAndCannotAddPurchase
+func (s *orderSrv) checkTimeoutAndCannotAddPurchase(ctx context.Context, saleBill *model.SaleBill, saleOrderProducts []*model.SaleOrderProduct) error {
+	// 检查超时不能加购
+	if saleBill.IsBuffetSaleBill() {
+		// 获取自助餐的剩余时长
+		if saleBill.GetTotalRemainingSeconds() == 0 {
+			// 获取自助餐设置
+			companySetting, err := s.settingSrv.GetCompanySetting(ctx)
+			if err != nil {
+				return err
+			}
+			buffetSetting, buffetErr := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+			if buffetErr != nil {
+				return buffetErr
+			}
+			// 如果自助餐设置为非自助餐商品到时不能继续选购，则不能加购
+			if buffetSetting.IsBuyContinue == "0" {
+				return errors.New("用餐时间已到，无法继续下单")
+			}
+			// 自助餐已结束，不能加购自助餐商品。但可以根据设置，继续选购非自助餐商品
+			for _, saleOrderProduct := range saleOrderProducts {
+				if saleOrderProduct.IsBuffetProduct() {
+					return errors.New("自助餐时间已到达，自助餐商品不可继续下单")
 				}
 			}
 		}
 	}
-
-	// saleBill已经加入了新的商品，并且重新计算了价格
-	return saleBill, nil
+	return nil
 }

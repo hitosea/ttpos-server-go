@@ -627,8 +627,8 @@ func (model *SaleOrder) GetMemberSurplusPoints(giftRatio ...float64) float64 {
 		}
 		// 计算本单获取的积分
 		model.SetGiftPointsRate(giftRatio[0])
-		// 记录会员余额
-		return model.GiftPoints
+		// 计算本单应收金额
+		return model.CalcMemberPoint(model.GetPrintReceivablePrice())
 	}
 }
 
@@ -878,6 +878,13 @@ func (model *SaleOrder) SetFreeOrder(reason string, freeReasons []*SaleOrderProd
 	// 订单状态
 	model.Status = constant.SaleOrderStatusFinish
 	model.FinishTime = time.Now().Unix()
+}
+
+// SetCancelFreeOrder 设置免单
+func (model *SaleOrder) SetCancelFreeOrder() {
+	defer model.SetUpdate() // 标记更新
+	model.IsFree = constant.SaleOrderIsFreeNo
+	model.FreeReason = ""
 }
 
 // 是否存在手动折扣

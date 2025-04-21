@@ -10,6 +10,7 @@ use think\model\concern\SoftDelete;
 use app\common\enum\http\StatusCode;
 use app\common\exception\BaseException;
 use app\common\model\supplier\Supplier;
+use app\common\service\websocket\Websocket;
 
 /**
  * 应用模型
@@ -129,6 +130,17 @@ class App extends BaseModel
         $res = $this->allowField(['status'])->save([
             'status' => $this['status'] == 1 ? 0 : 1,
         ]);
+
+        // 推送配置更新
+        Websocket::pushClient(
+            self::$app_id, 
+            Websocket::SOURCE_All, 
+            Websocket::SOURCE_All, 
+            Websocket::UPDATE_CONFIG, 
+            0,
+            ['update_time' => time()]
+        );
+
         return $res;
     }
 

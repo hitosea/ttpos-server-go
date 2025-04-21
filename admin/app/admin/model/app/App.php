@@ -2,6 +2,7 @@
 
 namespace app\admin\model\app;
 
+use PDO;
 use think\facade\Env;
 use think\facade\Validate;
 use app\admin\model\CompanyStaff;
@@ -9,9 +10,9 @@ use app\common\model\store\PayType;
 use hg\apidoc\annotation as Apidoc;
 use app\common\model\app\App as AppModel;
 use app\common\enum\order\OrderPayTypeEnum;
+use app\common\service\websocket\Websocket;
 use app\common\model\shop\User  as ShopStaffModel;
 use app\admin\model\supplier\Supplier as SupplierModel;
-use PDO;
 
 class App extends AppModel
 {
@@ -294,6 +295,17 @@ class App extends AppModel
             return false;
         }
         $this->supplier?->delete();
+
+        // 推送配置更新
+        Websocket::pushClient(
+            self::$app_id, 
+            Websocket::SOURCE_All, 
+            Websocket::SOURCE_All, 
+            Websocket::UPDATE_CONFIG, 
+            0,
+            ['update_time' => time()]
+        );
+
         return $this->delete();
     }
 }

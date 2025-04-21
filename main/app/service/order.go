@@ -1680,16 +1680,18 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				return errors.WithMessage(err)
 			}
 			// 更新会员积分
-			if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
-				"frozen_point":                   member.FrozenPoint - points,                        // 扣减积分
-				"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - refundAmount, // 扣减累计消费金额
-			}); err != nil {
-				return errors.WithMessage(err)
-			}
-			// 创建积分变动记录
-			memberPointLog := saleOrder.NewRefundMemberPointLog(-points)
-			if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
-				return errors.WithMessage(err)
+			if points > 0 {
+				if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
+					"frozen_point":                   member.FrozenPoint - points,                        // 扣减积分
+					"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - refundAmount, // 扣减累计消费金额
+				}); err != nil {
+					return errors.WithMessage(err)
+				}
+				// 创建积分变动记录
+				memberPointLog := saleOrder.NewRefundMemberPointLog(-points)
+				if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
+					return errors.WithMessage(err)
+				}
 			}
 			publishChangeMemberPoints = true
 		}
@@ -2089,7 +2091,7 @@ func (s *orderSrv) GetReverseSettleInfo(ctx context.Context, req req.OrderRevers
 	}
 
 	// 获取支付方式名称列表
-	payMethods := saleBill.GetPaymentMethodNameList()
+	payMethods := saleBill.GetPaymentMethodNameList(ctx.GetLanguage())
 
 	return &resp.OrderReverseSettleInfoResp{
 		SaleBillUuid:    saleBill.Uuid,
@@ -2177,7 +2179,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 		// 如果销售订单是免单，删除免单原因
 		for _, saleOrder := range saleBill.SaleOrders {
 			if saleOrder.IsFreeSaleOrder() {
-				saleOrder.FreeReason = ""
+				saleOrder.SetCancelFreeOrder()
 				// 删除销售订单的免单原因
 				if err := repository.NewSaleOrderProductReasonRepo(db).DeleteFreeReason(saleOrder.Uuid); err != nil {
 					return errors.WithMessage(err)
@@ -2251,17 +2253,19 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 				if err != nil {
 					return errors.WithMessage(err)
 				}
-				// 更新会员积分
-				if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
-					"frozen_point":                   member.FrozenPoint - points,                                 // 扣减积分
-					"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - saleOrder.GetAmount(), // 扣减累计消费金额
-				}); err != nil {
-					return errors.WithMessage(err)
-				}
-				// 创建积分变动记录
-				memberPointLog := saleOrder.NewReverseSettleMemberPointLog(-points)
-				if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
-					return errors.WithMessage(err)
+				if points > 0 {
+					// 更新会员积分
+					if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
+						"frozen_point":                   member.FrozenPoint - points,                                 // 扣减积分
+						"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - saleOrder.GetAmount(), // 扣减累计消费金额
+					}); err != nil {
+						return errors.WithMessage(err)
+					}
+					// 创建积分变动记录
+					memberPointLog := saleOrder.NewReverseSettleMemberPointLog(-points)
+					if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
+						return errors.WithMessage(err)
+					}
 				}
 			}
 
@@ -5410,6 +5414,9 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 		return nil, errors.WithMessage(err)
 	}
 
+	// 设置已接单
+	saleOrderProduct.SetAcceptOrderProduct()
+	// 更新销售订单商品
 	saleOrderProduct.SaleBillUuid = targetDesk.SaleBillUuid
 	saleOrderProduct.SaleOrderUuid = targetSaleOrder.Uuid
 	// 将商品的折扣改为使用目标桌台的折扣
@@ -7917,6 +7924,12 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 	}
 	ctx.Log().Debug("获取销售账单信息")
 
+	// 从http的header中获取h5_order_uuid
+	h5OrderProductUnAccept := make([]*model.SaleOrderProduct, 0)
+	if h5OrderUuid := context.GetH5OrderUuid(ctx); h5OrderUuid != 0 {
+		h5OrderProductUnAccept = saleBill.GetH5OrderProductUnAccept(h5OrderUuid)
+	}
+
 	// 获取未送厨的商品列表
 	unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
 
@@ -7977,9 +7990,24 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 	}
 
 	// 检查是否有未送厨的商品
-	if len(unCookingSaleOrderProducts) > 0 {
+	if len(unCookingSaleOrderProducts) > 0 || len(h5OrderProductUnAccept) > 0 {
 		products := make([]resp.Product, 0)
 		for _, product := range unCookingSaleOrderProducts {
+			products = append(products, resp.Product{
+				Uuid:                product.Uuid,
+				LocaleName:          product.MultiLanguageName.GetNames(),
+				LocaleAttributeName: product.GetAttributeName(),
+				Num:                 product.Num,
+				SalePrice:           product.SalePrice,
+				DiscountPrice:       product.DiscountFee,
+				Status:              int(product.Status),
+				Remark:              product.Remark,
+				IsMust:              product.IsMustProduct(),
+				IsGift:              product.IsGiftProduct(),
+				IsCancel:            product.IsCancelProduct(),
+			})
+		}
+		for _, product := range h5OrderProductUnAccept {
 			products = append(products, resp.Product{
 				Uuid:                product.Uuid,
 				LocaleName:          product.MultiLanguageName.GetNames(),
@@ -8718,6 +8746,11 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 		h5OrderProduct.SetH5OrderProduct(h5Order.Uuid)
 	}
 
+	// 检查超时不能加购
+	if err := s.checkTimeoutAndCannotAddPurchase(ctx, saleBill, h5OrderProducts); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 创建h5订单
 		if _, err := repository.NewH5OrderRepo(tx).CreateH5Order(*h5Order); err != nil {
@@ -8811,6 +8844,13 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 
 		// 获取本次接单的商品列表
 		unCookingSaleOrderProducts := h5Order.SaleOrderProducts
+
+		// 检查超时不能加购
+		if !isAutoOrder {
+			if err := s.checkTimeoutAndCannotAddPurchase(ctx, saleBill, unCookingSaleOrderProducts); err != nil {
+				return nil, errors.WithMessage(err)
+			}
+		}
 
 		// 将h5订单商品插入到销售订单中
 		saleOrder := saleBill.GetFirstSaleOrder()
@@ -9038,7 +9078,7 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shop
 		amount.TaxAmount = utils.DecimalAdd(amount.TaxAmount, calc.TaxFee)
 		amount.DiscountAmount = utils.DecimalAdd(amount.DiscountAmount, calc.CustomDiscountFee)
 		amount.MemberDiscountAmount = utils.DecimalAdd(amount.MemberDiscountAmount, calc.MemberDiscountFee)
-		amount.Amount = utils.DecimalAdd(amount.Amount, calc.Amount)
+		amount.Amount = utils.DecimalAdd(amount.Amount, utils.IfFloat64(order.CustomAmount >= 0, order.CustomAmount, calc.Amount))
 	}
 
 	return resp.SentKitchen{

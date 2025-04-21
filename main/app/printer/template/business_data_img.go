@@ -198,9 +198,9 @@ func (t *businessDataImgTemplate) GetPrintContent(
 				img.SetAlignment(pkg.AlignLeft)
 				img.SetFontWeight(2)
 				if t.base.Lang == "ja" {
-					img.AppendText(fmt.Sprintf("%.1f%s%s", percentage.TaxRate, "%", t.base.Translate("的对象")))
+					img.AppendText(fmt.Sprintf("%s%s%s", t.base.Amount(percentage.TaxRate), "%", t.base.Translate("的对象")))
 				} else {
-					img.AppendText(fmt.Sprintf("VAT (%.1f%%)", percentage.TaxRate))
+					img.AppendText(fmt.Sprintf("VAT (%s%%)", t.base.Amount(percentage.TaxRate)))
 				}
 				img.SetFontWeight(1)
 				img.LineFeed(1)

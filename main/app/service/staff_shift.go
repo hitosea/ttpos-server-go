@@ -180,6 +180,7 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 	if staff.Uuid == 0 {
 		return nil, errors.New("员工不存在")
 	}
+	var currentCashTotal decimal.Decimal
 	err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 		// 获取当前班次
 		shiftLogRepo := repository.NewShiftLogRepo(db)
@@ -229,16 +230,17 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		incomes, _ := convertor.ToJson(paymentMethodIncomeList)
 		// 当前班次营业额
 		// 更新当班记录
+		currentCashTotal = leaveCash
 		_, err = shiftLogRepo.Update(shiftLog, map[string]interface{}{
-			"status":             constant.StaffHandedOver,      // 交班状态
-			"current_cash_total": leaveCash.InexactFloat64(),    // 当前钱箱现金总计
-			"cash_taken_out":     withdrawCash.InexactFloat64(), // 取出现金
-			"cash_left":          leaveCash.InexactFloat64(),    // 遗留现金
-			"shift_end_time":     time.Now().Unix(),             // 交班时间
-			"cash_income":        cashAmount,                    // 现金收入
-			"incomes":            incomes,                       // 支付方式收入
-			"total_business":     saleData.TotalSaleAmount,      // 营业额
-			"total_income":       saleData.TotalReceivedAmount,  // 总收入
+			"status":             constant.StaffHandedOver,          // 交班状态
+			"current_cash_total": currentCashTotal.InexactFloat64(), // 当前钱箱现金总计
+			"cash_taken_out":     withdrawCash.InexactFloat64(),     // 取出现金
+			"cash_left":          currentCashTotal.InexactFloat64(), // 遗留现金
+			"shift_end_time":     time.Now().Unix(),                 // 交班时间
+			"cash_income":        cashAmount,                        // 现金收入
+			"incomes":            incomes,                           // 支付方式收入
+			"total_business":     saleData.TotalSaleAmount,          // 营业额
+			"total_income":       saleData.TotalReceivedAmount,      // 总收入
 		})
 		if err != nil {
 			return errors.New("交班失败")
@@ -286,12 +288,12 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 	return &resp.ShiftSubmit{
 		CashIncome:   cashAmount,
 		CashTakenOut: withdrawCash.InexactFloat64(),
-		CashLeft:     leaveCash.InexactFloat64(),
+		CashLeft:     currentCashTotal.InexactFloat64(),
 		DutyNo:       staff.DutyNo,
 		PrinterData: func() *resp.PrinterData {
 			printerData, err := s.ShiftPrinter(ctx, req.ShiftPrinterReq{
 				WithdrawCash: withdrawCash.InexactFloat64(),
-				LeaveCash:    leaveCash.InexactFloat64(),
+				LeaveCash:    currentCashTotal.InexactFloat64(),
 				DutyNo:       staff.DutyNo,
 			}, utils.IfInt(reqs.IsBackground, 0, 1), true, staff)
 			if err != nil {
