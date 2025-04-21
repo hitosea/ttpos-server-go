@@ -141,7 +141,7 @@ func (r *productionRepo) GetLimitedProducts(column string, pageNo, pageSize int,
 // GetLimitedHistoryProducts 历史获取销售账单Uuid
 func (r *productionRepo) GetLimitedHistoryProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error) {
 	var productionOrderProducts []model.ProductionOrderProduct
-	db := r.db.Model(&model.ProductionOrderProduct{})
+	db := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}

@@ -136,13 +136,13 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 		})
 	}
 
-	unhandledCount, err := h5OrderRepo.GetH5OrderCount(unhandledStatusOption)
+	unhandledCount, err := h5OrderRepo.GetH5OrderCount(unhandledStatusOption, h5OrderRepo.WhereIsNeedAudit(1))
 	if err != nil {
 		return nil, errors.ErrInternal
 	}
 	listResp.Extra.UnhandledCount = unhandledCount
 
-	handledCount, err := h5OrderRepo.GetH5OrderCount(handledStatusOption, limitTime)
+	handledCount, err := h5OrderRepo.GetH5OrderCount(handledStatusOption, limitTime, h5OrderRepo.WhereIsNeedAudit(1))
 	if err != nil {
 		return nil, errors.ErrInternal
 	}

@@ -138,7 +138,7 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 		return res, errors.WithMessage(errors.New("获取异常打印数量失败"), err.Error())
 	}
 	h5OrderRepo := repository.NewH5OrderRepo(db)
-	unhandledH5OrderCount, err := h5OrderRepo.GetH5OrderCount(h5OrderRepo.WhereStatus([]uint{constant.H5OrderStatusOrder}))
+	unhandledH5OrderCount, err := h5OrderRepo.GetH5OrderCount(h5OrderRepo.WhereStatus([]uint{constant.H5OrderStatusOrder}), h5OrderRepo.WhereIsNeedAudit(1))
 	if err != nil {
 		logger.Logger.Error("获取未处理的h5订单数量失败", zap.Error(err))
 		return res, errors.WithMessage(errors.New("获取未处理的h5订单数量失败"), err.Error())
@@ -189,7 +189,7 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 	}
 
 	h5OrderRepo := repository.NewH5OrderRepo(ctx.GetDB())
-	orders, _, err := h5OrderRepo.PaginateGetH5Order(1, 10,
+	orders, _, err := h5OrderRepo.PaginateGetH5Order(1, 10, h5OrderRepo.WhereIsNeedAudit(1),
 		h5OrderRepo.WhereUnNotified(), h5OrderRepo.WhereCreateTimeGt(thirtyMinutesAgo),
 		repository.CommonRepo.SortWithCreateTime("desc"))
 
