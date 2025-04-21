@@ -53,7 +53,6 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 	if option, ok := sourceMap[ctx.GetSource()]; ok {
 		dbOptions = append(dbOptions, option)
 	}
-	dbOptions = append(dbOptions, commonRepo.WhereByStatus(1), commonRepo.WhereBySoftDelete(), commonRepo.SortWithSort("ASC"), commonRepo.SortWithID("DESC"))
 	products, total, err := productRepo.GetProductListWithPagination(
 		req.PageNo,
 		req.PageSize,
