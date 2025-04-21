@@ -28,7 +28,7 @@ class Grade extends GradeModel
      */
     public function add($data)
     {
-        if (!$data['weight'] || $data['weight'] < 1 || $data['weight'] > 999) {
+        if (!$data['weight'] || $data['weight'] < 1 || $data['weight'] > 999 || intval($data['weight']) != $data['weight']) {
             $this->error = "等级权重范围1-999";
             return false;
         }
@@ -66,7 +66,7 @@ class Grade extends GradeModel
      */
     public function edit($data)
     {
-        if (!$data['weight'] || $data['weight'] < 1 || $data['weight'] > 999) {
+        if (!$data['weight'] || $data['weight'] < 1 || $data['weight'] > 999 || intval($data['weight']) != $data['weight']) {
             $this->error = "等级权重范围1-999";
             return false;
         }
