@@ -4063,6 +4063,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 商品名称。商品名称、自助餐名称、自助餐加钟名称
+      must_plan_uuid:
+        description: 必点方案uuid
+        type: integer
       num:
         description: 数量
         type: integer

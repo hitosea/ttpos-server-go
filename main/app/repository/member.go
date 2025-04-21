@@ -33,6 +33,11 @@ type IMemberRepo interface {
 
 	GetMemberInfoForSaleOrder(ctx context.Context, memberUuid uint64) (*model.Member, error) // 获取会员信息，用于销售订单结账时
 	UpdateProcessed(uuids []uint64) error                                                    // 更新会员积分日志为已处理
+
+	IncConsumptionAmount(uuid uint64, amount float64) error // 增加会员消费金额
+	IncConsumptionCount(uuid uint64) error                  // 增加会员消费次数
+	DecConsumptionAmount(uuid uint64, amount float64) error // 减少会员消费金额
+	DecConsumptionCount(uuid uint64) error                  // 减少会员消费次数
 }
 
 func NewMemberRepo(db *gorm.DB) IMemberRepo {
@@ -194,4 +199,24 @@ func (r *memberRepo) UpdateProcessed(uuids []uint64) error {
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+// IncConsumptionAmount 增加会员消费金额
+func (r *memberRepo) IncConsumptionAmount(uuid uint64, amount float64) error {
+	return r.db.Model(&model.Member{}).Where("uuid = ?", uuid).Update("accumulated_consumption_amount", gorm.Expr("accumulated_consumption_amount + ?", amount)).Error
+}
+
+// IncConsumptionCount 增加会员消费次数
+func (r *memberRepo) IncConsumptionCount(uuid uint64) error {
+	return r.db.Model(&model.Member{}).Where("uuid = ?", uuid).Update("consumption_count", gorm.Expr("consumption_count + 1")).Error
+}
+
+// DecConsumptionAmount 减少会员消费金额
+func (r *memberRepo) DecConsumptionAmount(uuid uint64, amount float64) error {
+	return r.db.Model(&model.Member{}).Where("uuid = ?", uuid).Update("accumulated_consumption_amount", gorm.Expr("accumulated_consumption_amount - ?", amount)).Error
+}
+
+// DecConsumptionCount 减少会员消费次数
+func (r *memberRepo) DecConsumptionCount(uuid uint64) error {
+	return r.db.Model(&model.Member{}).Where("uuid = ?", uuid).Update("consumption_count", gorm.Expr("consumption_count - 1")).Error
 }

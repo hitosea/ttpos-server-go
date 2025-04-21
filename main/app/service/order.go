@@ -2219,6 +2219,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 		}
 		// 生成退款单
 		for _, saleOrder := range saleBill.SaleOrders {
+			isUseMember := saleOrder.ConsumerUuid != 0
 			for _, paymentOrder := range saleOrder.PaymentOrders {
 				refundOrder := paymentOrder.RefundOrder
 				if err := repository.NewPaymentOrderRepo(db).CreateRefundOrderRecord(*refundOrder); err != nil {
@@ -2245,6 +2246,14 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 						return errors.WithMessage(err)
 					}
 				}
+				if isUseMember {
+					// 更新会员消费金额
+					repository.NewMemberRepo(db).DecConsumptionAmount(saleOrder.ConsumerUuid, paymentOrder.Amount)
+				}
+			}
+			if isUseMember {
+				// 更新会员消费次数
+				repository.NewMemberRepo(db).DecConsumptionCount(saleOrder.ConsumerUuid)
 			}
 			// 退积分
 			if saleOrder.ConsumerUuid != 0 {
@@ -3874,11 +3883,13 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 				mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum, option.H5AutoAdd, option.NoAutoAdd)
 				if err != nil {
 					ctx.Log().Info("获取桌台必点方案列表失败", zap.Error(errors.WithMessage(err)))
+					return nil, errors.WithMessage(errors.New("获取桌台必点方案列表失败"))
 				}
 			} else {
 				mustPlan, isAutoAdd, err = s.InstantOrderMustPlan(ctx, ctx.GetDeviceSn())
 				if err != nil {
 					ctx.Log().Info("获取点餐必点方案列表失败", zap.Error(errors.WithMessage(err)))
+					return nil, errors.WithMessage(errors.New("获取点餐必点方案列表失败"))
 				}
 			}
 
@@ -5834,6 +5845,7 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 	}
 
 	// 获取新的购物车商品数据
+	ctx.SetDB(db)
 	shopCart, err := s.GetOrderCartInfo(ctx, saleBillUuid, repository.WithNoQueryMustPlan())
 	if err != nil {
 		return nil, false, errors.WithMessage(err)
@@ -6725,6 +6737,9 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 				}
 			}
 		}
+		// 更新会员消费金额和消费次数
+		repository.NewMemberRepo(db).IncConsumptionAmount(saleOrder.ConsumerUuid, saleOrder.PaymentAmount)
+		repository.NewMemberRepo(db).IncConsumptionCount(saleOrder.ConsumerUuid)
 	}
 
 	// 记录会员余额
@@ -8922,7 +8937,10 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	// 获取h5订单
 	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
-	if err != nil && !builtinerrors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil {
+		if builtinerrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
 		return errors.WithMessage(errors.New("获取h5订单失败"), err.Error())
 	}
 	// 非待处理状态不可操作
