@@ -4623,8 +4623,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 	ctx.SetDB(db)
 	// 检查必选
 	if !ignoreMust {
-		// 查询到购物车信息
-		shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+		shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithH5OrderUuid(context.GetH5OrderUuid(ctx)))
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}

@@ -348,11 +348,11 @@ func (r *commonRepo) FilterSaleOrderProduct() DBOption {
 // FilterSaleOrderProductWithH5Order 只查询常规的购物车商品、指定某个h5订单的商品
 func (r *commonRepo) FilterSaleOrderProductWithH5Order(h5OrderUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where(`
+		return db.Where(`(
 				( delete_time = ? AND is_accept_order = ? AND h5_order_uuid = ?) 
 				OR 
 				( delete_time = ? AND is_accept_order = ?)
-			`,
+			)`,
 			constant.NotDeleted, constant.OrderProductIsAcceptOrderUnAccept, h5OrderUuid,
 			constant.NotDeleted, constant.OrderProductIsAcceptOrderAccepted,
 		)
