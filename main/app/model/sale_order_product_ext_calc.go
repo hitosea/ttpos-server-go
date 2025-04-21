@@ -13,6 +13,7 @@ type CalcOption struct {
 	H5OrderStatus   int              // 0-包括已下单和未下单 1-已接单的 2-未接单的
 	IsOriginPrice   bool             // 是否计算原价. 默认计算折后价
 	H5OrderUuid     uint64           // 指定一个h5订单uuid
+	H5CheckLimit    bool             // 是否是在h5端检查限购的场景
 }
 
 const (
@@ -88,6 +89,12 @@ func WithAllAndOneH5Order(h5OrderUuid uint64) func(option *CalcOption) {
 func WithOriginPrice() func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.IsOriginPrice = true
+	}
+}
+
+func WithH5CheckLimit() func(option *CalcOption) {
+	return func(option *CalcOption) {
+		option.H5CheckLimit = true
 	}
 }
 
