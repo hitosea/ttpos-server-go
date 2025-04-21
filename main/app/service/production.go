@@ -212,7 +212,7 @@ func (s *productionSrv) GetHistory(ctx context.Context) (resp.ProductionHistory,
 		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)
 	}
 
-	products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc,
+	products, err := productionRepo.GetProducts(0, repository.FinishedTimeDesc,
 		statusOption, finishedTimeOption, productionRepo.WhereProductHistoryCondition())
 	if err != nil {
 		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)

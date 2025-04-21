@@ -2819,6 +2819,14 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 	// 获取操作的销售账单信息
 	saleBill, saleOrder, saleOrderProduct, err := getSaleOrderFromDB(ctx, db, req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
 	if err != nil {
+		if strings.Contains(err.Error(), "销售订单商品不存在") {
+			// 获取新的数据
+			info, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			return info, nil
+		}
 		return nil, errors.WithMessage(err, "查询销售订单信息失败")
 	}
 	// 判断订单状态
@@ -2904,7 +2912,7 @@ func getSaleOrderFromDB(ctx context.Context, db *gorm.DB, saleBillUuid, saleOrde
 	}
 	if newSaleOrderProduct == nil {
 		ctx.Log().Error("改价商品时无法查询到销售订单商品信息", zap.Any("saleBillUuid", saleBillUuid), zap.Any("saleOrderUuid", saleOrderUuid), zap.Any("saleOrderProductUuid", saleOrderProductUuid))
-		return nil, nil, nil, errors.New("业务错误")
+		return nil, nil, nil, errors.New("销售订单商品不存在")
 	}
 	return newSaleBill, newSaleOrder, newSaleOrderProduct, nil
 }
@@ -4407,8 +4415,6 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
 	}
 
-	// 检查商品销售库存是否充足
-	// todo
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if errSaleBill != nil {
@@ -4447,20 +4453,21 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		operation = "sub"
 	}
 
+	// 排序. 从子单开始减商品
+	slices.SortFunc(saleBill.SaleOrders, func(a, b *model.SaleOrder) int {
+		return int(b.CreateTime) - int(a.CreateTime)
+	})
+	for _, saleOrder := range saleBill.SaleOrders {
+		for _, product := range saleOrderProductList {
+			if product.SaleOrderUuid == saleOrder.Uuid {
+				saleOrderProduct = product
+				break
+			}
+		}
+	}
+
 	if saleOrderProduct.IsCookingProduct() {
 		return nil, errors.WithMessage(errors.New("商品已送厨，不能修改数量"))
-	}
-	// 数量为0删除商品
-	if request.Num == 0 {
-		res, err := s.OrderProductDelete(ctx, ctx.GetDbId(), ctx.GetStaffUuid(), ctx.GetSource(), req.OrderProductDeleteReq{
-			SaleBillUuid:     request.SaleBillUuid,
-			SaleOrderUuid:    request.SaleOrderUuid,
-			OrderProductUuid: request.SaleOrderProductUuid,
-		})
-		if err != nil {
-			return nil, errors.WithMessage(err, "删除商品失败")
-		}
-		return res, nil
 	}
 
 	// 修改销售订单商品数量
@@ -4477,7 +4484,20 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 			return nil, errors.WithMessage(errors.New(message))
 		}
 	} else if operation == "sub" {
-		saleOrderProduct.Num = saleOrderProduct.Num - 1
+		num := saleOrderProduct.Num - 1
+		// 数量为0删除商品
+		if num == 0 {
+			res, err := s.OrderProductDelete(ctx, ctx.GetDbId(), ctx.GetStaffUuid(), ctx.GetSource(), req.OrderProductDeleteReq{
+				SaleBillUuid:     request.SaleBillUuid,
+				SaleOrderUuid:    saleOrderProduct.SaleOrderUuid,
+				OrderProductUuid: saleOrderProduct.Uuid,
+			})
+			if err != nil {
+				return nil, errors.WithMessage(err, "删除商品失败")
+			}
+			return res, nil
+		}
+		saleOrderProduct.Num = num
 		request.Num = int(saleOrderProduct.Num)
 		ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 	}
@@ -8834,9 +8854,10 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 
 func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error) {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	companySetting := ctx.GetCompanySetting()
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	// 获取h5订单
-	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid, isAutoOrder)
+	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid, companySetting.GetIsOpenH5Order())
 	if err != nil {
 		return nil, errors.WithMessage(errors.New("获取h5订单失败"), err.Error())
 	}
@@ -8929,7 +8950,7 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	// 获取h5订单
-	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid, false)
+	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid, true)
 	if err != nil {
 		if builtinerrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil
