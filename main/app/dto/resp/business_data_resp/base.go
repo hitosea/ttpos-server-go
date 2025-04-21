@@ -183,3 +183,62 @@ type BusinessDataCount7DaysItem struct {
 	TotalNum   int64   `json:"total_num"`   // 总订单数量
 	TotalMoney float64 `json:"total_money"` // 总实收金额
 }
+
+// 营业数据 - 导出
+type BusinessDataExport struct {
+	Days []string                 `json:"days"` // 日期
+	Data []BusinessDataExportItem `json:"data"` // 数据
+}
+
+// 营业数据 - 导出 - 单天
+type BusinessDataExportItem struct {
+	Day                   string                      `json:"day"`
+	TotalSaleAmount       float64                     `json:"total_sale_amount"`
+	TotalBusinessAmount   float64                     `json:"total_business_amount"`
+	TotalServiceFee       float64                     `json:"total_service_fee"`
+	TotalPaymentFee       float64                     `json:"total_payment_fee"`
+	TotalTax              float64                     `json:"total_tax"`
+	TotalProductNum       int64                       `json:"total_product_num"`
+	TotalMemberNum        int64                       `json:"total_member_num"`
+	TotalDiscountMember   float64                     `json:"total_discount_member"`
+	TotalDiscount         float64                     `json:"total_discount"`
+	TotalDiscountRatio    float64                     `json:"total_discount_ratio"`
+	TotalRefundAmount     float64                     `json:"total_refund_amount"`
+	TotalGiftAmount       float64                     `json:"total_gift_amount"`
+	TotalGiftNum          int64                       `json:"total_gift_num"`
+	TotalFreeAmount       float64                     `json:"total_free_amount"`
+	TotalFreeNum          int64                       `json:"total_free_num"`
+	TotalReceivedAmount   float64                     `json:"total_received_amount"`
+	TotalOrderNum         int64                       `json:"total_order_num"`
+	MinOrderAmount        float64                     `json:"min_order_amount"`
+	MaxOrderAmount        float64                     `json:"max_order_amount"`
+	AvgOrderAmount        float64                     `json:"avg_order_amount"`
+	TotalDeskNum          int64                       `json:"total_desk_num"`
+	TotalMealNum          int64                       `json:"total_meal_num"`
+	MinDeskOrderAmount    float64                     `json:"min_desk_order_amount"`
+	MaxDeskOrderAmount    float64                     `json:"max_desk_order_amount"`
+	AvgDeskOrderAmount    float64                     `json:"avg_desk_order_amount"`
+	TotalInstantOrderNum  int64                       `json:"total_instant_order_num"`
+	MinInstantOrderAmount float64                     `json:"min_instant_order_amount"`
+	MaxInstantOrderAmount float64                     `json:"max_instant_order_amount"`
+	AvgInstantOrderAmount float64                     `json:"avg_instant_order_amount"`
+	AreaList              []BusinessDataExportArea    `json:"area_list"`    // 区域列表
+	PaymentList           []BusinessDataExportPayment `json:"payment_list"` // 支付列表
+}
+
+// 营业数据 - 导出 - 区域
+type BusinessDataExportArea struct {
+	AreaID             int64   `json:"area_id"`              // 区域id
+	AreaName           string  `json:"area_name"`            // 区域名称
+	AreaSaleAmount     float64 `json:"area_sale_amount"`     // 区域销售额
+	AreaBusinessAmount float64 `json:"area_business_amount"` // 区域营业收入
+	AreaProductNum     int64   `json:"area_product_num"`     // 区域商品数量
+}
+
+// 营业数据 - 导出 - 支付
+type BusinessDataExportPayment struct {
+	PaymentName        string  `json:"payment_name"`
+	PaymentCode        int     `json:"payment_code"`
+	TotalOrderNum      int64   `json:"total_order_num"`
+	TotalPaymentAmount float64 `json:"total_payment_amount"`
+}

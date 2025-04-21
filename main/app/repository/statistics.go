@@ -10,18 +10,24 @@ import (
 
 type IStatisticsRepo interface {
 	CountSale(opts ...DBOption) model.StatisticsSaleData                                                       // 统计销售
+	CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData                                             // 统计销售天数
 	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                               // 统计支付
+	CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                       // 统计支付天数
 	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                       // 统计税类
 	CountCategory(categoryType int, language string, opts ...DBOption) []model.StatisticsCategoryData          // 统计分类
 	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                              // 统计商品
 	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                     // 统计区域
+	CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData                                             // 统计区域
 	Count7Days(opts ...DBOption) []model.Statistics7DaysData                                                   // 统计销售天数
 	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                         // 统计未结订单
 	CountMemberNum(opts ...DBOption) int64                                                                     // 统计会员数量
 	CountMember(opts ...DBOption) model.StatisticsMemberData                                                   // 统计会员
+	CountMemberDays(opts ...DBOption) []model.StatisticsMemberDaysData                                         // 统计会员天数
 	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                         // 统计会员支付
+	CountMemberPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                 // 统计会员支付天数
 	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64) // 统计商品销售
 	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                         // 统计免单支付
+	CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData                               // 统计免单支付天数
 	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                 // 统计商品排行
 	SaveSale(sales []model.StatisticsSale) error                                                               // 保存销售
 	SavePayment(payments []model.StatisticsPayment) error                                                      // 保存支付
@@ -47,6 +53,67 @@ func NewStatisticsRepoImpl(db *gorm.DB) *StatisticsRepo {
 	return &StatisticsRepo{db: db}
 }
 
+var (
+	// 统计销售子查询
+	countSaleSubQuerySelect = []string{
+		"sale_bill_uuid",
+		"desk_uuid",
+		"SUM(product_price + product_tax + service_fee + service_tax + payment_fee - refund_tax - refund_service_fee) AS sale_amount",
+		"SUM(payment_amount - refund_amount - payment_balance) AS received_amount",
+		"SUM(product_price) AS product_price",
+		"SUM(product_num) AS product_num",
+		"SUM(discount_member) AS discount_member",
+		"SUM(payment_amount - refund_amount - refund_payment_balance - product_tax - service_tax + refund_tax) AS business_amount",
+		"SUM(payment_fee - refund_fee) AS payment_fee",
+		"SUM(service_fee - refund_service_fee) AS service_fee",
+		"SUM(product_tax + service_tax - refund_tax) AS tax",
+		"SUM(refund_amount + refund_payment_balance) AS refund_amount",
+		"SUM(discount - refund_discount) AS discount",
+		"SUM(gift_amount) AS gift_amount",
+		"SUM(gift_num) AS gift_num",
+		"SUM(free_amount) AS free_amount",
+		"SUM(free_num) AS free_num",
+		"SUM(IF(desk_uuid > 0, meal_num, 0)) AS meal_num",
+		"SUM(payment_amount - refund_amount - refund_payment_balance) AS order_amount",
+		"SUM(IF(desk_uuid > 0, payment_amount - refund_amount - refund_payment_balance, NULL)) AS desk_order_amount",
+		"SUM(IF(desk_uuid = 0, payment_amount - refund_amount - refund_payment_balance, NULL)) AS instant_order_amount",
+		"complete_time",
+	}
+	// 统计销售
+	countSaleSelect = []string{
+		"SUM(t.sale_amount) AS total_sale_amount",
+		"SUM(t.received_amount) AS total_received_amount",
+		"SUM(t.product_price) AS total_product_price",
+		"SUM(t.product_num) AS total_product_num",
+		"SUM(t.discount_member) AS total_discount_member",
+		"SUM(t.business_amount) AS total_business_amount",
+		"SUM(t.payment_fee) AS total_payment_fee",
+		"SUM(t.service_fee) AS total_service_fee",
+		"SUM(t.tax) AS total_tax",
+		"SUM(t.refund_amount) AS total_refund_amount",
+		"SUM(t.discount) AS total_discount",
+		"SUM(t.gift_amount) AS total_gift_amount",
+		"SUM(t.gift_num) AS total_gift_num",
+		"SUM(t.free_amount) AS total_free_amount",
+		"SUM(t.free_num) AS total_free_num",
+		"COUNT(t.sale_bill_uuid) AS total_order_num",
+		"COUNT(CASE WHEN t.desk_uuid > 0 THEN 1 END) AS total_desk_num",
+		"SUM(t.desk_order_amount) AS total_desk_order_amount",
+		"SUM(t.meal_num) AS total_meal_num",
+		"SUM(t.instant_order_amount) AS total_instant_order_amount",
+		"COUNT(CASE WHEN t.desk_uuid = 0 THEN 1 END) AS total_instant_order_num",
+		"MIN(t.order_amount) AS min_order_amount",
+		"MAX(t.order_amount) AS max_order_amount",
+		"AVG(t.order_amount) AS avg_order_amount",
+		"MIN(CASE WHEN t.desk_order_amount >= 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",
+		"MAX(CASE WHEN t.desk_order_amount >= 0 THEN t.desk_order_amount ELSE NULL END) AS max_desk_order_amount",
+		"AVG(CASE WHEN t.desk_order_amount >= 0 THEN t.desk_order_amount ELSE NULL END) AS avg_desk_order_amount",
+		"MIN(CASE WHEN t.instant_order_amount >= 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",
+		"MAX(CASE WHEN t.instant_order_amount >= 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",
+		"AVG(CASE WHEN t.instant_order_amount >= 0 THEN t.instant_order_amount ELSE NULL END) AS avg_instant_order_amount",
+	}
+)
+
 // CountSale 统计销售数据
 func (r *StatisticsRepo) CountSale(opts ...DBOption) model.StatisticsSaleData {
 	var result model.StatisticsSaleData
@@ -56,67 +123,48 @@ func (r *StatisticsRepo) CountSale(opts ...DBOption) model.StatisticsSaleData {
 	}
 
 	subQuery := db.Model(&model.StatisticsSale{}).
-		Select(
-			"sale_bill_uuid",
-			"desk_uuid",
-			"SUM(product_price + product_tax + service_fee + service_tax + payment_fee - refund_tax - refund_service_fee) AS sale_amount",
-			"SUM(payment_amount - refund_amount - payment_balance) AS received_amount",
-			"SUM(product_price) AS product_price",
-			"SUM(product_num) AS product_num",
-			"SUM(discount_member) AS discount_member",
-			"SUM(payment_amount - refund_amount - refund_payment_balance - product_tax - service_tax + refund_tax) AS business_amount",
-			"SUM(payment_fee - refund_fee) AS payment_fee",
-			"SUM(service_fee - refund_service_fee) AS service_fee",
-			"SUM(product_tax + service_tax - refund_tax) AS tax",
-			"SUM(refund_amount + refund_payment_balance) AS refund_amount",
-			"SUM(discount - refund_discount) AS discount",
-			"SUM(gift_amount) AS gift_amount",
-			"SUM(gift_num) AS gift_num",
-			"SUM(free_amount) AS free_amount",
-			"SUM(free_num) AS free_num",
-			"SUM(IF(desk_uuid > 0, meal_num, 0)) AS meal_num",
-			"SUM(payment_amount - refund_amount - refund_payment_balance) AS order_amount",
-			"SUM(IF(desk_uuid > 0, payment_amount - refund_amount - refund_payment_balance, NULL)) AS desk_order_amount",
-			"SUM(IF(desk_uuid = 0, payment_amount - refund_amount - refund_payment_balance, NULL)) AS instant_order_amount",
-		).Group("sale_bill_uuid")
+		Select(countSaleSubQuerySelect).
+		Group("sale_bill_uuid")
 
 	r.db.Table("(?) AS t", subQuery).
-		Select(
-			"SUM(t.sale_amount) AS total_sale_amount",
-			"SUM(t.received_amount) AS total_received_amount",
-			"SUM(t.product_price) AS total_product_price",
-			"SUM(t.product_num) AS total_product_num",
-			"SUM(t.discount_member) AS total_discount_member",
-			"SUM(t.business_amount) AS total_business_amount",
-			"SUM(t.payment_fee) AS total_payment_fee",
-			"SUM(t.service_fee) AS total_service_fee",
-			"SUM(t.tax) AS total_tax",
-			"SUM(t.refund_amount) AS total_refund_amount",
-			"SUM(t.discount) AS total_discount",
-			"SUM(t.gift_amount) AS total_gift_amount",
-			"SUM(t.gift_num) AS total_gift_num",
-			"SUM(t.free_amount) AS total_free_amount",
-			"SUM(t.free_num) AS total_free_num",
-			"COUNT(t.sale_bill_uuid) AS total_order_num",
-			"COUNT(CASE WHEN t.desk_uuid > 0 THEN 1 END) AS total_desk_num",
-			"SUM(t.desk_order_amount) AS total_desk_order_amount",
-			"SUM(t.meal_num) AS total_meal_num",
-			"SUM(t.instant_order_amount) AS total_instant_order_amount",
-			"COUNT(CASE WHEN t.desk_uuid = 0 THEN 1 END) AS total_instant_order_num",
-			"MIN(t.order_amount) AS min_order_amount",
-			"MAX(t.order_amount) AS max_order_amount",
-			"AVG(t.order_amount) AS avg_order_amount",
-			"MIN(CASE WHEN t.desk_order_amount >= 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",
-			"MAX(CASE WHEN t.desk_order_amount >= 0 THEN t.desk_order_amount ELSE NULL END) AS max_desk_order_amount",
-			"AVG(CASE WHEN t.desk_order_amount >= 0 THEN t.desk_order_amount ELSE NULL END) AS avg_desk_order_amount",
-			"MIN(CASE WHEN t.instant_order_amount >= 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",
-			"MAX(CASE WHEN t.instant_order_amount >= 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",
-			"AVG(CASE WHEN t.instant_order_amount >= 0 THEN t.instant_order_amount ELSE NULL END) AS avg_instant_order_amount",
-		).
+		Select(countSaleSelect).
 		Find(&result)
 
 	return result
 }
+
+// CountSaleDays 统计销售天数
+func (r *StatisticsRepo) CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData {
+	var result []model.StatisticsSaleDaysData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	subQuery := db.Model(&model.StatisticsSale{}).
+		Select(countSaleSubQuerySelect).
+		Group("sale_bill_uuid").
+		Group("FROM_UNIXTIME(complete_time, '%Y-%m-%d')")
+
+	r.db.Table("(?) AS t", subQuery).
+		Select(countSaleSelect, "FROM_UNIXTIME(complete_time, '%Y-%m-%d') AS day").
+		Group("DAY").
+		Order("DAY ASC").
+		Find(&result)
+
+	return result
+}
+
+var (
+	countPaymentSelect = []string{
+		"sp.payment_method_uuid",
+		"pm.name AS payment_name",
+		"pm.code AS payment_code",
+		"COUNT(sp.payment_method_uuid) AS total_order_num",
+		"SUM(sp.payment_amount-sp.refund_amount) AS total_payment_amount",
+		"SUM(sp.refund_amount) AS total_refund_amount",
+	}
+)
 
 // CountPayment 统计支付
 func (r *StatisticsRepo) CountPayment(opts ...DBOption) []model.StatisticsPaymentData {
@@ -128,20 +176,37 @@ func (r *StatisticsRepo) CountPayment(opts ...DBOption) []model.StatisticsPaymen
 	}
 
 	prefix := config.Database.TablePrefix
-	statisticsPaymentTable := prefix + "statistics_payment"
-	paymentMethodTable := prefix + "payment_method"
+	statisticsPaymentTable := prefix + "statistics_payment sp"
+	paymentMethodTable := prefix + "payment_method pm"
 
-	db.Model(&model.StatisticsPayment{}).
-		Select(
-			statisticsPaymentTable+".payment_method_uuid",
-			paymentMethodTable+".name AS payment_name",
-			paymentMethodTable+".code AS payment_code",
-			"COUNT("+statisticsPaymentTable+".payment_method_uuid) AS total_order_num",
-			"SUM("+statisticsPaymentTable+".payment_amount-"+statisticsPaymentTable+".refund_amount) AS total_payment_amount",
-			"SUM("+statisticsPaymentTable+".refund_amount) AS total_refund_amount",
-		).
-		Joins("LEFT JOIN " + paymentMethodTable + " ON " + statisticsPaymentTable + ".payment_method_uuid = " + paymentMethodTable + ".uuid").
-		Group(statisticsPaymentTable + ".payment_method_uuid").
+	db.Table(statisticsPaymentTable).
+		Select(countPaymentSelect).
+		Joins("LEFT JOIN " + paymentMethodTable + " ON sp.payment_method_uuid = pm.uuid").
+		Group("sp.payment_method_uuid").
+		Find(&result)
+
+	return result
+}
+
+// CountPaymentDays 统计支付天数
+func (r *StatisticsRepo) CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData {
+	var result []model.StatisticsPaymentDaysData
+
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	prefix := config.Database.TablePrefix
+	statisticsPaymentTable := prefix + "statistics_payment sp"
+	paymentMethodTable := prefix + "payment_method pm"
+
+	db.Table(statisticsPaymentTable).
+		Select(countPaymentSelect, "FROM_UNIXTIME(sp.complete_time, '%Y-%m-%d') AS day").
+		Joins("LEFT JOIN " + paymentMethodTable + " ON sp.payment_method_uuid = pm.uuid").
+		Group("sp.payment_method_uuid").
+		Group("day").
+		Order("day ASC").
 		Find(&result)
 
 	return result
@@ -248,6 +313,15 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 	return result
 }
 
+var (
+	countAreaSelect = []string{
+		"dr.name AS area_name",
+		"SUM(ss.product_price + ss.product_tax + ss.service_fee + ss.service_tax + ss.payment_fee - ss.refund_tax - ss.refund_service_fee) AS area_sale_amount",
+		"SUM(ss.payment_amount - ss.refund_amount - ss.refund_payment_balance - ss.product_tax - ss.service_tax + ss.refund_tax) AS area_business_amount",
+		"SUM(ss.product_num) AS area_product_num",
+	}
+)
+
 // CountArea 统计区域
 func (r *StatisticsRepo) CountArea(opts ...DBOption) []model.StatisticsAreaData {
 	var result []model.StatisticsAreaData
@@ -261,16 +335,36 @@ func (r *StatisticsRepo) CountArea(opts ...DBOption) []model.StatisticsAreaData 
 	deskTable := prefix + "desk as d"
 	deskRegionTable := prefix + "desk_region as dr"
 	db.Table(statisticsSaleTable).
-		Select(
-			"dr.name AS area_name",
-			"SUM(ss.product_price + ss.product_tax + ss.service_fee + ss.service_tax + ss.payment_fee - ss.refund_tax - ss.refund_service_fee) AS area_sale_amount",
-			"SUM(ss.payment_amount - ss.refund_amount - ss.refund_payment_balance - ss.product_tax - ss.service_tax + ss.refund_tax) AS area_business_amount",
-			"SUM(ss.product_num) AS area_product_num",
-		).
+		Select(countAreaSelect, "dr.uuid AS area_id").
 		Joins("LEFT JOIN " + deskTable + " ON ss.desk_uuid = d.uuid").
 		Joins("LEFT JOIN " + deskRegionTable + " ON d.region_uuid = dr.uuid").
 		Where("ss.desk_uuid > 0").
 		Group("dr.uuid").
+		Find(&result)
+
+	return result
+}
+
+// CountAreaDays 统计区域
+func (r *StatisticsRepo) CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData {
+	var result []model.StatisticsAreaDaysData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	prefix := config.Database.TablePrefix
+	statisticsSaleTable := prefix + "statistics_sale as ss"
+	deskTable := prefix + "desk as d"
+	deskRegionTable := prefix + "desk_region as dr"
+	db.Table(statisticsSaleTable).
+		Select(countAreaSelect, "FROM_UNIXTIME(ss.complete_time, '%Y-%m-%d') AS day").
+		Joins("LEFT JOIN " + deskTable + " ON ss.desk_uuid = d.uuid").
+		Joins("LEFT JOIN " + deskRegionTable + " ON d.region_uuid = dr.uuid").
+		Where("ss.desk_uuid > 0").
+		Group("dr.uuid").
+		Group("day").
+		Order("day ASC").
 		Find(&result)
 
 	return result
@@ -421,6 +515,19 @@ func (r *StatisticsRepo) DeleteMemberPayment(memberRechargeOrderUuid uint64) err
 	return r.db.Where("member_recharge_order_uuid = ?", memberRechargeOrderUuid).Delete(&model.StatisticsMemberPayment{}).Error
 }
 
+var (
+	// 统计会员查询
+	countMemberSelect = []string{
+		"SUM(payment_fee) AS total_sale_amount",
+		"SUM(IF(payment_amount - refund_amount = 0, 0, recharge_amount - refund_amount)) AS total_recharge_amount",
+		"SUM(give_amount) AS total_give_amount",
+		"SUM(give_point) AS total_give_point",
+		"SUM(payment_amount - refund_amount - refund_fee) AS total_payment_amount",
+		"SUM(payment_fee) AS total_payment_fee",
+		"SUM(refund_amount) AS total_refund_amount",
+	}
+)
+
 // CountMember 统计会员
 func (r *StatisticsRepo) CountMember(opts ...DBOption) model.StatisticsMemberData {
 	var result model.StatisticsMemberData
@@ -430,19 +537,38 @@ func (r *StatisticsRepo) CountMember(opts ...DBOption) model.StatisticsMemberDat
 	}
 
 	db.Model(&model.StatisticsMember{}).
-		Select(
-			"SUM(payment_fee) AS total_sale_amount",
-			"SUM(IF(payment_amount - refund_amount = 0, 0, recharge_amount - refund_amount)) AS total_recharge_amount",
-			"SUM(give_amount) AS total_give_amount",
-			"SUM(give_point) AS total_give_point",
-			"SUM(payment_amount - refund_amount - refund_fee) AS total_payment_amount",
-			"SUM(payment_fee) AS total_payment_fee",
-			"SUM(refund_amount) AS total_refund_amount",
-		).
+		Select(countMemberSelect).
 		Find(&result)
 
 	return result
 }
+
+// CountMemberDays 统计会员天数
+func (r *StatisticsRepo) CountMemberDays(opts ...DBOption) []model.StatisticsMemberDaysData {
+	var result []model.StatisticsMemberDaysData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	db.Model(&model.StatisticsMember{}).
+		Select(countMemberSelect, "FROM_UNIXTIME(complete_time, '%Y-%m-%d') AS day").
+		Group("FROM_UNIXTIME(complete_time, '%Y-%m-%d')").
+		Find(&result)
+
+	return result
+}
+
+var (
+	countMemberPaymentSelect = []string{
+		"smp.payment_method_uuid",
+		"pm.name AS payment_name",
+		"pm.code AS payment_code",
+		"COUNT(smp.payment_method_uuid) AS total_order_num",
+		"SUM(smp.payment_amount-smp.refund_amount) AS total_payment_amount",
+		"SUM(smp.refund_amount) AS total_refund_amount",
+	}
+)
 
 // CountMemberPayment 统计会员支付
 func (r *StatisticsRepo) CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData {
@@ -454,20 +580,37 @@ func (r *StatisticsRepo) CountMemberPayment(opts ...DBOption) []model.Statistics
 	}
 
 	prefix := config.Database.TablePrefix
-	statisticsMemberPaymentTable := prefix + "statistics_member_payment"
-	paymentMethodTable := prefix + "payment_method"
+	statisticsMemberPaymentTable := prefix + "statistics_member_payment smp"
+	paymentMethodTable := prefix + "payment_method pm"
 
-	db.Model(&model.StatisticsMemberPayment{}).
-		Select(
-			statisticsMemberPaymentTable+".payment_method_uuid",
-			paymentMethodTable+".name AS payment_name",
-			paymentMethodTable+".code AS payment_code",
-			"COUNT("+statisticsMemberPaymentTable+".payment_method_uuid) AS total_order_num",
-			"SUM("+statisticsMemberPaymentTable+".payment_amount-"+statisticsMemberPaymentTable+".refund_amount) AS total_payment_amount",
-			"SUM("+statisticsMemberPaymentTable+".refund_amount) AS total_refund_amount",
-		).
-		Joins("LEFT JOIN " + paymentMethodTable + " ON " + statisticsMemberPaymentTable + ".payment_method_uuid = " + paymentMethodTable + ".uuid").
-		Group(statisticsMemberPaymentTable + ".payment_method_uuid").
+	db.Table(statisticsMemberPaymentTable).
+		Select(countMemberPaymentSelect).
+		Joins("LEFT JOIN " + paymentMethodTable + " ON smp.payment_method_uuid = pm.uuid").
+		Group("smp.payment_method_uuid").
+		Find(&result)
+
+	return result
+}
+
+// CountMemberPaymentDays 统计会员支付天数
+func (r *StatisticsRepo) CountMemberPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData {
+	var result []model.StatisticsPaymentDaysData
+
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	prefix := config.Database.TablePrefix
+	statisticsMemberPaymentTable := prefix + "statistics_member_payment smp"
+	paymentMethodTable := prefix + "payment_method pm"
+
+	db.Table(statisticsMemberPaymentTable).
+		Select(countMemberPaymentSelect, "FROM_UNIXTIME(smp.complete_time, '%Y-%m-%d') AS day").
+		Joins("LEFT JOIN " + paymentMethodTable + " ON smp.payment_method_uuid = pm.uuid").
+		Group("smp.payment_method_uuid").
+		Group("day").
+		Order("day ASC").
 		Find(&result)
 
 	return result
@@ -596,6 +739,27 @@ func (r *StatisticsRepo) CountFreePayment(opts ...DBOption) model.StatisticsFree
 			"SUM(free_amount) AS total_free_amount",
 		).
 		Where("free_num > 0").
+		Find(&result)
+
+	return result
+}
+
+// CountFreePaymentDays 统计免单支付天数
+func (r *StatisticsRepo) CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData {
+	var result []model.StatisticsFreePaymentDaysData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	db.Model(&model.StatisticsSale{}).
+		Select(
+			"COUNT(sale_order_uuid) AS total_order_num",
+			"SUM(free_amount) AS total_free_amount",
+			"FROM_UNIXTIME(complete_time, '%Y-%m-%d') AS day",
+		).
+		Group("day").
+		Order("day ASC").
 		Find(&result)
 
 	return result

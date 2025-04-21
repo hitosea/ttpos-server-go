@@ -351,8 +351,8 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		}
 		// 商品数量
 		productNum += item.Num
-		productPrice := utils.IfFloat64(item.IsBuffetProduct(), item.SaucePrice, item.ProductPrice)
-		productTotalPrice := utils.IfFloat64(item.IsBuffetProduct(), item.GetTotalSaucePrice(), item.GetTotalProductPrice()) // 商品原价
+		productPrice := utils.IfFloat64(item.IsBuffetProduct(), item.SaucePrice, item.SalePrice)
+		productTotalPrice := utils.IfFloat64(item.IsBuffetProduct(), item.GetTotalSaucePrice(), item.GetSalePrice()) // 商品原价
 		// 赠品
 		var gift string
 		if item.IsGiftBool() {

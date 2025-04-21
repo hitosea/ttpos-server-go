@@ -2747,20 +2747,21 @@ func (s *orderSrv) OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*
 
 	// 当不填销售账单ID时，表示要新建一个销售账单
 	if req.SaleBillUuid == 0 {
-		// 判断是否有待支付、未挂单的订单
-		_, hasInstantOrder, err := HasInstantOrder(ctx, s.dbm.GetDB(ctx.GetDbId()))
+		billInfo, hasInstantOrder, err := HasInstantOrder(ctx, s.dbm.GetDB(ctx.GetDbId()))
 		if err != nil {
 			return nil, err
 		}
-		if hasInstantOrder {
-			return nil, errors.New("参数错误, 有未支付的订单")
+		if billInfo != nil && hasInstantOrder {
+			req.SaleBillUuid = billInfo.Uuid
+		} else {
+			order, err := s.CreateInstantOrder(ctx)
+			if err != nil {
+				ctx.Log().Info("添加商品时点餐订单创建失败", zap.Any("err", err.Error()))
+				return nil, errors.WithMessage(err)
+			}
+			ctx.Log().Debug("添加商品时点餐订单创建成功", zap.Any("order info", order))
+			req.SaleBillUuid = order.SaleBillUuid
 		}
-		//
-		order, err := s.CreateInstantOrder(ctx)
-		if err != nil {
-			return nil, errors.WithMessage(err)
-		}
-		req.SaleBillUuid = order.SaleBillUuid
 	}
 
 	// 获取信息源
@@ -5793,7 +5794,10 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 			if product.IsAutoAdd {
 				planProduct := mustPlanList[i].Products.List[j].Product
 				productFlavorBomUuid := planProduct.Flavors.List[0].Uuid
-				autoFlavorProduct[productFlavorBomUuid] = &planProduct
+				productFlavorStockNum := planProduct.Flavors.List[0].StockNum
+				if productFlavorStockNum > 0 {
+					autoFlavorProduct[productFlavorBomUuid] = &planProduct
+				}
 			}
 		}
 	}
@@ -5864,7 +5868,10 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 			if product.IsAutoAdd {
 				planProduct := mustPlanList[i].Products.List[j].Product
 				productFlavorBomUuid := planProduct.Flavors.List[0].Uuid
-				autoFlavorProduct[productFlavorBomUuid] = &mustPlanList[i].Products.List[j]
+				productFlavorStockNum := planProduct.Flavors.List[0].StockNum
+				if productFlavorStockNum > 0 {
+					autoFlavorProduct[productFlavorBomUuid] = &mustPlanList[i].Products.List[j]
+				}
 			}
 		}
 	}
@@ -6009,7 +6016,10 @@ func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (
 			if product.IsAutoAdd {
 				planProduct := mustPlanList[i].Products.List[j].Product
 				productFlavorBomUuid := planProduct.Flavors.List[0].Uuid
-				autoFlavorProduct[productFlavorBomUuid] = &planProduct
+				productFlavorStockNum := planProduct.Flavors.List[0].StockNum
+				if productFlavorStockNum > 0 {
+					autoFlavorProduct[productFlavorBomUuid] = &planProduct
+				}
 			}
 		}
 	}
@@ -7858,55 +7868,57 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 
+	var mustPlanList []resp.InstantProductMustPlan
+
 	// 点餐页面未创建销售账单时，但前端已显示出必点弹窗
 	if req.SaleBillUuid == 0 {
 		// 获取点餐的必选方案列表
-		mustPlanList, err := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, make(ro.MustPlanProductInfo))
+		mustPlanLists, err := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, make(ro.MustPlanProductInfo))
 		if err != nil {
 			return false, nil, errors.WithMessage(err, "GetInstantMustPlanList failed")
 		}
-		if len(mustPlanList) == 0 {
+		if len(mustPlanLists) == 0 {
 			return false, nil, errors.New("没有必点方案")
 		}
-		return false, &mustPlanList[0], nil
-	}
-
-	// 获取销售账单信息
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
-	if errSaleBill != nil {
-		ctx.Log().Error("获取销售账单信息失败", zap.Error(errSaleBill))
-		return false, nil, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
-	}
-
-	// 查询到购物车信息
-	var shopCartInfo *ro.ShopCartRepo
-	var err error
-	if option.IsH5Order {
-		// 如果是h5订单时要查询出未下单的商品
-		shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(req.SaleBillUuid, repository.WithNotDeleted())
+		mustPlanList = mustPlanLists
 	} else {
-		shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(req.SaleBillUuid)
-	}
-	if err != nil {
-		ctx.Log().Error("获取购物车信息失败", zap.Error(err))
-		return false, nil, errors.WithMessage(err, "获取购物车信息失败")
+		// 获取销售账单信息
+		saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+		if errSaleBill != nil {
+			ctx.Log().Error("获取销售账单信息失败", zap.Error(errSaleBill))
+			return false, nil, errors.WithMessage(errSaleBill, "获取销售账单信息失败")
+		}
+
+		// 查询到购物车信息
+		var shopCartInfo *ro.ShopCartRepo
+		var err error
+		if option.IsH5Order {
+			// 如果是h5订单时要查询出未下单的商品
+			shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(req.SaleBillUuid, repository.WithNotDeleted())
+		} else {
+			shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(req.SaleBillUuid)
+		}
+		if err != nil {
+			ctx.Log().Error("获取购物车信息失败", zap.Error(err))
+			return false, nil, errors.WithMessage(err, "获取购物车信息失败")
+		}
+
+		if saleBill.IsDeskSaleBill() {
+			mustPlan, errMustPlan := s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), saleBill.DeskUuid)
+			if errMustPlan != nil {
+				return false, nil, errMustPlan
+			}
+			mustPlanList = mustPlan
+		} else {
+			mustPlan, errMustPlan := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
+			if errMustPlan != nil {
+				return false, nil, errMustPlan
+			}
+			mustPlanList = mustPlan
+		}
 	}
 
-	var mustPlanList []resp.InstantProductMustPlan
-	if saleBill.IsDeskSaleBill() {
-		mustPlan, errMustPlan := s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), saleBill.DeskUuid)
-		if errMustPlan != nil {
-			return false, nil, errMustPlan
-		}
-		mustPlanList = mustPlan
-	} else {
-		mustPlan, errMustPlan := s.mustPlanSrv.GetInstantMustPlanList(ctx, db, shopCartInfo.GetMustPlanProductInfo())
-		if errMustPlan != nil {
-			return false, nil, errMustPlan
-		}
-		mustPlanList = mustPlan
-	}
-
+	// 判断必点商品是否售罄
 	if mustPlanList != nil && len(mustPlanList) > 0 {
 		for _, plan := range mustPlanList {
 			if plan.NeedNum > 0 {
@@ -7922,6 +7934,25 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 					return false, &plan, nil
 				}
 			}
+		}
+	}
+
+	// 点餐订单需要创建
+	if req.SaleBillUuid == 0 {
+		// 判断是否有待支付、未挂单的订单
+		billInfo, hasInstantOrder, err := HasInstantOrder(ctx, s.dbm.GetDB(ctx.GetDbId()))
+		if err != nil {
+			return false, nil, errors.WithMessage(err)
+		}
+		if billInfo != nil && hasInstantOrder {
+			req.SaleBillUuid = billInfo.Uuid
+		} else {
+			order, err := s.CreateInstantOrder(ctx)
+			if err != nil {
+				ctx.Log().Info("添加商品时点餐订单创建失败", zap.Any("err", err.Error()))
+				return false, nil, errors.WithMessage(err)
+			}
+			req.SaleBillUuid = order.SaleBillUuid
 		}
 	}
 

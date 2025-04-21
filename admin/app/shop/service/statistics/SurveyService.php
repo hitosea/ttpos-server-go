@@ -25,8 +25,9 @@ class SurveyService
 
         // 所有区域数据
         $allRegionData = [];
+        $list = $list['data'];
         foreach ($list as $date => $data) {
-            foreach ($data['regionData'] as $region) {
+            foreach ($data['area_list'] as $region) {
                 $allRegionData[$region['area_id']] = $region;
             }
         }
@@ -93,9 +94,9 @@ class SurveyService
         $sheet->setCellValue('A' . ($index = $index + 1), __('平均订单金额'));
         $sheet->setCellValue('A' . ($index = $payRow = $index + 1), __('支付数据'));
         // 纵向的支付数据
-        $paymentType = array_values($list)[0]['incomes'];
+        $paymentType = array_values($list)[0]['payment_list'];
         foreach ($paymentType as $value) {
-            $sheet->setCellValue('A' . ($index + 1), $value['pay_type_name']);
+            $sheet->setCellValue('A' . ($index + 1), $value['payment_name']);
             $index++;
         }
         // 合并单元格并设置背景颜色为浅灰色
@@ -109,37 +110,37 @@ class SurveyService
         foreach ($list as $date => $data) {
             $index = 2;
             $columnLetter = Coordinate::stringFromColumnIndex($columnIndex);
-            $sheet->setCellValue($columnLetter . $index, $date)->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT); // 设置日期
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['receivable_price']); //总销售额
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['business_price']); //营业收入
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['service_money']); //服务费
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['pay_fee_money']); //支付手续费
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['consumption_tax_money']); //税费
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['product_num']); //商品数量
+            $sheet->setCellValue($columnLetter . $index, $data['day'])->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT); // 设置日期
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_sale_amount']); //总销售额
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_business_amount']); //营业收入
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_service_fee']); //服务费
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_payment_fee']); //支付手续费
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_tax']); //税费
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_product_num']); //商品数量
             if ($isOpenMember) {
                 // 新增会员数/会员折扣  -  优惠折扣/优惠占比
-                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['user_count'] . "/" . Helper::number2($data['user_discount_money']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
-                $sheet->setCellValue($columnLetter . ($index = $index + 1), Helper::number2($data['discount_money']) . "/" . Helper::number2($data['discount_ratio']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_member_num'] . "/" . Helper::number2($data['total_discount_member']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), Helper::number2($data['total_discount']) . "/" . Helper::number2($data['total_discount_ratio']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
             } else {
                 // 优惠折扣/优惠占比
-                $sheet->setCellValue($columnLetter . ($index = $index + 1), Helper::number2($data['discount_money']) . "/" . Helper::number2($data['discount_ratio']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), Helper::number2($data['total_discount']) . "/" . Helper::number2($data['total_discount_ratio']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
             }
             // 赠菜折扣/赠菜数量 - 免单折扣/免单数量
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['refund_money']); //退款金额
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), Helper::number2($data['free_product_price']) . "/" . Helper::number2($data['free_product_num']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), Helper::number2($data['free_order_price']) . "/" . Helper::number2($data['free_order_num']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['received_price']); //实收金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_refund_amount']); //退款金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), Helper::number2($data['total_gift_amount']) . "/" . Helper::number2($data['total_gift_num']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), Helper::number2($data['total_free_amount']) . "/" . Helper::number2($data['total_free_num']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_received_amount']); //实收金额
             // ------区域数据--------
             $sheet->setCellValue($columnLetter . ($index = $index + 1), ''); // 区域数据 - 空白行
             foreach ($allRegionData as $region) {
                 $salesPrice = 0;
                 $businessPrice = 0;
                 $productNum = 0;
-                foreach ($data['regionData'] as $regionData) {
+                foreach ($data['area_list'] as $regionData) {
                     if ($region['area_id'] == $regionData['area_id']) {
-                        $salesPrice = $regionData['sales_price'];
-                        $businessPrice = $regionData['business_price'];
-                        $productNum = $regionData['product_num'];
+                        $salesPrice = $regionData['area_sale_amount'];
+                        $businessPrice = $regionData['area_business_amount'];
+                        $productNum = $regionData['area_product_num'];
                     }
                 }
                 $sheet->setCellValue($columnLetter . ($index = $index + 2), $salesPrice); //总销售额
@@ -148,22 +149,22 @@ class SurveyService
             }
             // ------订单数据--------
             $sheet->setCellValue($columnLetter . ($index = $index + 2), $data['total_order_num']); //合计订单数
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['min_order_price']); //最小订单金额
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['max_order_price']); //最大订单金额
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['avg_order_price']); //平均订单金额
-            $sheet->setCellValue($columnLetter . ($index = $index + 2), $data['table_order_num']); //桌数
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['table_people_num']); //人数
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['table_min_order_price']); //最小订单金额
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['table_max_order_price']); //最大订单金额
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['table_avg_order_price']); //平均订单金额
-            $sheet->setCellValue($columnLetter . ($index = $index + 2), $data['cashier_order_num']); //订单数
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['cashier_min_order_price']); //最小订单金额
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['cashier_max_order_price']); //最大订单金额
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['cashier_avg_order_price']); //平均订单金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['min_order_amount']); //最小订单金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['max_order_amount']); //最大订单金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['avg_order_amount']); //平均订单金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 2), $data['total_desk_num']); //桌数
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_meal_num']); //人数
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['min_desk_order_amount']); //最小订单金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['max_desk_order_amount']); //最大订单金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['avg_desk_order_amount']); //平均订单金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 2), $data['total_instant_order_num']); //订单数
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['min_instant_order_amount']); //最小订单金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['max_instant_order_amount']); //最大订单金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['avg_instant_order_amount']); //平均订单金额
             // 支付数据
             $payColumnIndex = $index + 1;
-            foreach ($data['incomes'] as $value) {
-                $sheet->setCellValue($columnLetter . ($payColumnIndex + 1), $value['price']);
+            foreach ($data['payment_list'] as $value) {
+                $sheet->setCellValue($columnLetter . ($payColumnIndex + 1), $value['total_payment_amount']);
                 $payColumnIndex++;
             }
             $columnIndex++;
