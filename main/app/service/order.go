@@ -1682,8 +1682,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			// 更新会员积分
 			if points > 0 {
 				if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
-					"frozen_point":                   member.FrozenPoint - points,                        // 扣减积分
-					"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - refundAmount, // 扣减累计消费金额
+					"frozen_point": member.FrozenPoint - points, // 扣减积分
 				}); err != nil {
 					return errors.WithMessage(err)
 				}
@@ -2265,8 +2264,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 				if points > 0 {
 					// 更新会员积分
 					if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
-						"frozen_point":                   member.FrozenPoint - points,                                 // 扣减积分
-						"accumulated_consumption_amount": member.AccumulatedConsumptionAmount - saleOrder.GetAmount(), // 扣减累计消费金额
+						"frozen_point": member.FrozenPoint - points, // 扣减积分
 					}); err != nil {
 						return errors.WithMessage(err)
 					}
