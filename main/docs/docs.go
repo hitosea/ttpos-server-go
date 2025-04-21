@@ -21566,6 +21566,10 @@ const docTemplate = `{
                     "description": "用餐方式,0-堂食(店内就餐) 1-打包",
                     "type": "integer"
                 },
+                "finished_time": {
+                    "description": "完成时间",
+                    "type": "integer"
+                },
                 "locale_name": {
                     "description": "送厨商品名称",
                     "allOf": [
