@@ -7864,23 +7864,6 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 			return false, nil, errors.New("没有必点方案")
 		}
 		mustPlanList = mustPlanLists
-
-		// 判断是否有待支付、未挂单的订单
-		billInfo, hasInstantOrder, err := HasInstantOrder(ctx, s.dbm.GetDB(ctx.GetDbId()))
-		if err != nil {
-			return false, nil, errors.WithMessage(err)
-		}
-		if billInfo != nil && hasInstantOrder {
-			req.SaleBillUuid = billInfo.Uuid
-		} else {
-			order, err := s.CreateInstantOrder(ctx)
-			if err != nil {
-				ctx.Log().Info("添加商品时点餐订单创建失败", zap.Any("err", err.Error()))
-				return false, nil, errors.WithMessage(err)
-			}
-			req.SaleBillUuid = order.SaleBillUuid
-		}
-
 	} else {
 		// 获取销售账单信息
 		saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
@@ -7934,6 +7917,25 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 					return false, &plan, nil
 				}
 			}
+		}
+	}
+
+	// 点餐订单需要创建
+	if req.SaleBillUuid == 0 {
+		// 判断是否有待支付、未挂单的订单
+		billInfo, hasInstantOrder, err := HasInstantOrder(ctx, s.dbm.GetDB(ctx.GetDbId()))
+		if err != nil {
+			return false, nil, errors.WithMessage(err)
+		}
+		if billInfo != nil && hasInstantOrder {
+			req.SaleBillUuid = billInfo.Uuid
+		} else {
+			order, err := s.CreateInstantOrder(ctx)
+			if err != nil {
+				ctx.Log().Info("添加商品时点餐订单创建失败", zap.Any("err", err.Error()))
+				return false, nil, errors.WithMessage(err)
+			}
+			req.SaleBillUuid = order.SaleBillUuid
 		}
 	}
 
