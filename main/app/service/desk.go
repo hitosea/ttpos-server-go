@@ -489,18 +489,17 @@ func (s *deskSrv) IsCellCloseInstant(ctx context.Context, saleBillUuid uint64) (
 		productList := make([]resp.Product, 0, len(productCooking))
 		for _, product := range productCooking {
 			productList = append(productList, resp.Product{
-				Uuid:                product.Uuid,
-				LocaleName:          product.MultiLanguageName.GetNames(),
-				LocaleAttributeName: product.GetAttributeName(),
-				Num:                 uint(product.Num),
-				SalePrice:           product.SalePrice,
-				DiscountPrice:       product.Price,
-				Status:              int(product.Status),
-				Remark:              product.Remark,
-				IsMust:              product.IsMustProduct(),
-				IsGift:              product.IsGiftBool(),
-				IsBuffet:            product.IsBuffet == 1,
-				IsCancel:            product.IsCancelBool(),
+				Uuid:          product.Uuid,
+				LocaleName:    product.MultiLanguageName.GetNames(),
+				Num:           product.Num,
+				SalePrice:     product.SalePrice,
+				DiscountPrice: product.Price,
+				Status:        int(product.Status),
+				Remark:        product.Remark,
+				IsMust:        product.IsMustProduct(),
+				IsGift:        product.IsGiftBool(),
+				IsBuffet:      product.IsBuffet == 1,
+				IsCancel:      product.IsCancelBool(),
 			})
 		}
 		return &resp.CartProductList{
