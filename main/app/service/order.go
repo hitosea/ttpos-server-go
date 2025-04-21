@@ -3889,13 +3889,13 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 				mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum, option.H5AutoAdd, option.NoAutoAdd)
 				if err != nil {
 					ctx.Log().Info("获取桌台必点方案列表失败", zap.Error(errors.WithMessage(err)))
-					return nil, errors.WithMessage(errors.New("获取桌台必点方案列表失败"))
+					return nil, errors.WithMessage(errors.New("获取桌台必点方案列表失败"), err.Error())
 				}
 			} else {
 				mustPlan, isAutoAdd, err = s.InstantOrderMustPlan(ctx, ctx.GetDeviceSn())
 				if err != nil {
 					ctx.Log().Info("获取点餐必点方案列表失败", zap.Error(errors.WithMessage(err)))
-					return nil, errors.WithMessage(errors.New("获取点餐必点方案列表失败"))
+					return nil, errors.WithMessage(errors.New("获取点餐必点方案列表失败"), err.Error())
 				}
 			}
 
@@ -3952,22 +3952,23 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 	// 当不填销售账单ID时，表示要新建一个销售账单
 	if request.SaleBillUuid == 0 {
 		// 判断是否有待支付、未挂单的订单
-		_, hasInstantOrder, err := HasInstantOrder(ctx, s.dbm.GetDB(ctx.GetDbId()))
+		billInfo, hasInstantOrder, err := HasInstantOrder(ctx, s.dbm.GetDB(ctx.GetDbId()))
 		if err != nil {
 			return nil, err
 		}
-		if hasInstantOrder {
-			return nil, errors.New("参数错误, 有未支付的订单")
+		if billInfo != nil && hasInstantOrder {
+			request.SaleBillUuid = billInfo.Uuid
+			request.SaleOrderUuid = billInfo.SaleOrders[0].Uuid
+		} else {
+			order, err := s.CreateInstantOrder(ctx)
+			if err != nil {
+				ctx.Log().Info("添加商品时点餐订单创建失败", zap.Any("err", err.Error()))
+				return nil, errors.WithMessage(err)
+			}
+			ctx.Log().Debug("添加商品时点餐订单创建成功", zap.Any("order info", order))
+			request.SaleBillUuid = order.SaleBillUuid
+			request.SaleOrderUuid = order.SaleOrderUuid
 		}
-		//
-		order, err := s.CreateInstantOrder(ctx)
-		if err != nil {
-			ctx.Log().Info("添加商品时点餐订单创建失败", zap.Any("err", err.Error()))
-			return nil, errors.WithMessage(err)
-		}
-		ctx.Log().Debug("添加商品时点餐订单创建成功", zap.Any("order info", order))
-		request.SaleBillUuid = order.SaleBillUuid
-		request.SaleOrderUuid = order.SaleOrderUuid
 	}
 
 	// 往销售账单里添加商品
@@ -5786,7 +5787,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	if len(autoFlavorProduct) > 0 && shopCartInfo.SaleBill.IsAutoAddMustProduct() {
 		errTx := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 			// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
-			shopCart, err = autoAddSaleOrderProduct(ctx, db, s, autoFlavorProduct)
+			shopCart, err = autoAddSaleOrderProduct(ctx, tx, s, autoFlavorProduct)
 			if err != nil {
 				return errors.WithMessage(err, "自动添加必点商品失败")
 			}
@@ -5894,23 +5895,13 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 
 func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, autoFlavorProduct map[uint64]*resp.InstantMustPlanProduct) (*resp.ShopCart, error) {
 	var saleBillUuid uint64
-	deviceSn := ctx.GetDeviceSn()
-	ctx.Log().Debug("autoAddSaleOrderProduct", zap.Any("deviceSn", deviceSn))
-	if deviceSn == "" {
-		ctx.Log().Debug("自动加购必选商品失败，上下文中没有device_sn")
-		return nil, errors.New("自动加购必选商品失败，上下文中没有device_sn")
-	}
-
-	deviceRepo := repository.NewDeviceRepo(db)
-	device, errDevice := deviceRepo.GetDevice(deviceRepo.WhereSn(deviceSn))
-	if errDevice != nil {
-		return nil, errors.WithMessage(errDevice)
-	}
-	if device.IsDelete() {
-		return nil, errors.NewWithCode(constant.CodeParamError, "设备不存在")
+	deviceUuid := ctx.GetDeviceUuid()
+	if deviceUuid == 0 {
+		ctx.Log().Debug("自动加购必选商品失败，上下文中没有device_uuid")
+		return nil, errors.New("自动加购必选商品失败，上下文中没有device_uuid")
 	}
 	// 通过设备ID查询未挂单的销售账单
-	saleBill, errGetSaleBill := repository.NewSaleBillRepo(db).GetSaleBillByDeviceUuid(device.Uuid)
+	saleBill, errGetSaleBill := repository.NewSaleBillRepo(db).GetSaleBillByDeviceUuid(deviceUuid)
 	if errGetSaleBill != nil {
 		if !utils.IsNotFoundRecord(errGetSaleBill) {
 			return nil, errors.New(errGetSaleBill.Error())
@@ -6011,7 +6002,7 @@ func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (
 	if len(autoFlavorProduct) > 0 {
 		err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 			// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
-			cart, err := autoAddSaleOrderProduct(ctx, db, s, autoFlavorProduct)
+			cart, err := autoAddSaleOrderProduct(ctx, tx, s, autoFlavorProduct)
 			if err != nil {
 				return errors.WithMessage(err, "自动添加必点商品失败")
 			}

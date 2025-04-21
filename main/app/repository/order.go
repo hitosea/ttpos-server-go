@@ -158,6 +158,14 @@ func (r *orderRepo) GetInstantSaleBill(deviceUuid uint64) (*model.SaleBill, erro
 		CommonRepo.WhereByIsHide(false),
 		CommonRepo.WhereByDeviceUuid(deviceUuid),
 		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+		),
 	)
 	if err != nil {
 		return nil, err

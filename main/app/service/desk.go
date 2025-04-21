@@ -780,6 +780,8 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 		// 更新销售订单
 		for _, deskSaleBill := range saleBillList {
 			deskSaleOrder := deskSaleBill.GetFirstSaleOrder()
+			saleBillOpt := repository.NewCommonRepo().WhereBySaleBillUuid(deskSaleBill.Uuid)
+			saleOrderOpt := repository.NewCommonRepo().WhereBySaleOrderUuid(deskSaleOrder.Uuid)
 
 			// 更新销售订单商品
 			if err := repository.NewSaleOrderProductRepo(tx).Update(
@@ -789,9 +791,24 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 					"sale_order_uuid": saleOrder.Uuid,
 					"create_time":     time.Now().Unix(),
 				},
-				repository.NewCommonRepo().WhereBySaleBillUuid(deskSaleBill.Uuid),
-				repository.NewCommonRepo().WhereBySaleOrderUuid(deskSaleOrder.Uuid),
+				saleBillOpt,
+				saleOrderOpt,
 			); err != nil {
+				return errors.WithMessage(err)
+			}
+
+			// 更新送厨单和商品
+			productionRepo := repository.NewProductionRepo(db)
+			if err := productionRepo.UpdateProduct([]repository.DBOption{saleBillOpt}, map[string]any{
+				"sale_bill_uuid": saleBill.Uuid,
+			}); err != nil {
+				return errors.WithMessage(err)
+			}
+			if err := repository.NewProductionRepo(db).UpdateOrder([]repository.DBOption{saleBillOpt, saleOrderOpt}, map[string]any{
+				"desk_uuid":       saleBill.DeskUuid,
+				"sale_bill_uuid":  saleBill.Uuid,
+				"sale_order_uuid": saleOrder.Uuid,
+			}); err != nil {
 				return errors.WithMessage(err)
 			}
 
