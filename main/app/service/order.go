@@ -8937,7 +8937,10 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	// 获取h5订单
 	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
-	if err != nil && !builtinerrors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil {
+		if builtinerrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
 		return errors.WithMessage(errors.New("获取h5订单失败"), err.Error())
 	}
 	// 非待处理状态不可操作

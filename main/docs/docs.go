@@ -21303,6 +21303,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "must_plan_uuid": {
+                    "description": "必点方案uuid",
+                    "type": "integer"
+                },
                 "num": {
                     "description": "数量",
                     "type": "integer"
