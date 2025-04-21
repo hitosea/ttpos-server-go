@@ -2219,6 +2219,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 		}
 		// 生成退款单
 		for _, saleOrder := range saleBill.SaleOrders {
+			isUseMember := saleOrder.ConsumerUuid != 0
 			for _, paymentOrder := range saleOrder.PaymentOrders {
 				refundOrder := paymentOrder.RefundOrder
 				if err := repository.NewPaymentOrderRepo(db).CreateRefundOrderRecord(*refundOrder); err != nil {
@@ -2245,6 +2246,14 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 						return errors.WithMessage(err)
 					}
 				}
+				if isUseMember {
+					// 更新会员消费金额
+					repository.NewMemberRepo(db).DecConsumptionAmount(saleOrder.ConsumerUuid, paymentOrder.Amount)
+				}
+			}
+			if isUseMember {
+				// 更新会员消费次数
+				repository.NewMemberRepo(db).DecConsumptionCount(saleOrder.ConsumerUuid)
 			}
 			// 退积分
 			if saleOrder.ConsumerUuid != 0 {
@@ -6728,6 +6737,9 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 				}
 			}
 		}
+		// 更新会员消费金额和消费次数
+		repository.NewMemberRepo(db).IncConsumptionAmount(saleOrder.ConsumerUuid, saleOrder.PaymentAmount)
+		repository.NewMemberRepo(db).IncConsumptionCount(saleOrder.ConsumerUuid)
 	}
 
 	// 记录会员余额
