@@ -190,7 +190,7 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 
 	h5OrderRepo := repository.NewH5OrderRepo(ctx.GetDB())
 	orders, _, err := h5OrderRepo.PaginateGetH5Order(1, 10,
-		h5OrderRepo.WhereUnNotified(), h5OrderRepo.WhereCreateTimeGt(thirtyMinutesAgo), h5OrderRepo.WhereIsNeedAudit(),
+		h5OrderRepo.WhereUnNotified(), h5OrderRepo.WhereCreateTimeGt(thirtyMinutesAgo),
 		repository.CommonRepo.SortWithCreateTime("desc"))
 
 	if err != nil {
