@@ -149,9 +149,7 @@ func checkoutSaleOrderEventHandler() {
 				if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 					// 更新会员积分 // todo 可以考虑跟func (s *memberSrv) HandleMemberPoints方法合并
 					if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{
-						"frozen_point":                   member.FrozenPoint,
-						"accumulated_consumption_amount": member.AccumulatedConsumptionAmount,
-						"consumption_count":              member.ConsumptionCount,
+						"frozen_point": member.FrozenPoint,
 					}); err != nil {
 						return errors.WithMessage(err)
 					}
