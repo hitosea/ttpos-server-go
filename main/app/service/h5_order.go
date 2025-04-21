@@ -62,7 +62,7 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 	}
 	dbOptions = append(
 		dbOptions,
-		h5OrderRepo.WhereIsNeedAudit(),
+		h5OrderRepo.WhereIsNeedAudit(1),
 		h5OrderRepo.WithDesk(),
 		repository.CommonRepo.Preload(
 			repository.WithPreload{

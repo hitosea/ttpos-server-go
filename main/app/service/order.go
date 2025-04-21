@@ -3905,7 +3905,10 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 				if isAutoAdd {
 					if finish {
 						// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
-						repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(saleBillUuid)
+						err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(saleBillUuid)
+						if err != nil {
+							return nil, errors.WithMessage(err)
+						}
 					}
 					return s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
 				} else {
@@ -5823,18 +5826,16 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 
 	isAutoAdd := false
 
-	// 判断是否需要给点餐账单自动加购商品。当map列表中有商品时，表示需要自动加购
-	if len(autoFlavorProduct) > 0 && shopCartInfo.SaleBill.IsAutoAddMustProduct() {
+	// 1. 是否自动加购。平板不自动加购
+	// 2. 判断是否需要给点餐账单自动加购商品。当map列表中有商品时，表示需要自动加购
+	if !noAutoAdd && len(autoFlavorProduct) > 0 && shopCartInfo.SaleBill.IsAutoAddMustProduct() {
 		errTx := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 			// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
 			ctx.SetDB(tx)
-			// 是否自动加购。平板不自动加购
-			if !noAutoAdd {
-				// 自动加购
-				_, err = autoAddSaleOrderProductToDesk(ctx, s, autoFlavorProduct, saleBillUuid, saleOrderUuid, shopCartInfo.SaleBill, h5AutoAdd)
-				if err != nil {
-					return errors.WithMessage(err, "自动添加必点商品失败")
-				}
+			// 自动加购
+			err = autoAddSaleOrderProductToDesk(ctx, s, autoFlavorProduct, saleBillUuid, saleOrderUuid, shopCartInfo.SaleBill, h5AutoAdd)
+			if err != nil {
+				return errors.WithMessage(err, "自动添加必点商品失败")
 			}
 			return nil
 		})
@@ -5925,7 +5926,7 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 	return shopCartInfo, nil
 }
 
-func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, autoFlavorProduct map[uint64]*resp.InstantMustPlanProductStat, saleBillUuid, saleOrderUuid uint64, saleBill *model.SaleBill, isH5AutoAdd bool) (*resp.ShopCart, error) {
+func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, autoFlavorProduct map[uint64]*resp.InstantMustPlanProductStat, saleBillUuid, saleOrderUuid uint64, saleBill *model.SaleBill, isH5AutoAdd bool) error {
 	productParams := make([]req.ProductParams, 0)
 	for flavorUuid, stat := range autoFlavorProduct {
 		productParams = append(productParams, req.ProductParams{
@@ -5942,21 +5943,15 @@ func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, autoFlavorP
 		IsH5Product:   isH5AutoAdd,
 	}, saleBill)
 	if errAdd != nil {
-		return nil, errors.WithMessage(errAdd)
+		return errors.WithMessage(errAdd)
 	}
 	// 更新sale_bill为自动加购完成
-	saleBill.AutoAddMustProduct = uint(0)
+	saleBill.AutoAddMustProduct = constant.AutoAddMustProductNo
 	if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
-		return nil, errors.WithMessage(err)
+		return errors.WithMessage(err)
 	}
 
-	// 获取新的购物车商品数据
-	info, err := s.GetOrderCartInfo(ctx, saleBillUuid, repository.WithNoQueryMustPlan())
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-
-	return info, nil
+	return nil
 }
 
 // InstantOrderMustPlan2 获取点餐必点方案
@@ -8843,7 +8838,7 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	// 获取h5订单
-	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
+	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid, isAutoOrder)
 	if err != nil {
 		return nil, errors.WithMessage(errors.New("获取h5订单失败"), err.Error())
 	}
@@ -8936,7 +8931,7 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	// 获取h5订单
-	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid)
+	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid, false)
 	if err != nil {
 		if builtinerrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil
