@@ -8691,7 +8691,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 			if h5Setting.BuffetOrderLimit.IsLimitTime == "1" { // 限制下单间隔
 				interval, err := strconv.Atoi(h5Setting.BuffetOrderLimit.LimitTime)
 				if err != nil {
-					return nil, errors.WithMessage(err, "解析H5设置失败")
+					return res, errors.WithMessage(err, "解析H5设置失败")
 				}
 				// 小于间隔时间，不可下单
 				nextTime := time.Unix(lastH5Order.CreateTime, 0).Add(time.Duration(interval) * time.Minute).Unix()
@@ -8703,7 +8703,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 			if h5Setting.BuffetOrderLimit.IsLimitNum == "1" { // 限制下单最大商品总数
 				numLimit, err := strconv.Atoi(h5Setting.BuffetOrderLimit.LimitNum)
 				if err != nil {
-					return nil, errors.WithMessage(err, "解析H5设置失败")
+					return res, errors.WithMessage(err, "解析H5设置失败")
 				}
 				if saleBill.GetUnOrderH5OrderProductNum() > uint(numLimit) {
 					return gin.H{"value": numLimit}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
@@ -8714,7 +8714,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 			if h5Setting.OrderLimit.IsLimitTime == "1" { // 限制下单间隔
 				interval, err := strconv.Atoi(h5Setting.OrderLimit.LimitTime)
 				if err != nil {
-					return nil, errors.WithMessage(err, "解析H5设置失败")
+					return res, errors.WithMessage(err, "解析H5设置失败")
 				}
 				// 小于间隔时间，不可下单
 				nextTime := time.Unix(lastH5Order.CreateTime, 0).Add(time.Duration(interval) * time.Minute).Unix()
@@ -8726,7 +8726,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 			if h5Setting.OrderLimit.IsLimitNum == "1" { // 限制下单最大商品总数
 				numLimit, err := strconv.Atoi(h5Setting.OrderLimit.LimitNum)
 				if err != nil {
-					return nil, errors.WithMessage(err, "解析H5设置失败")
+					return res, errors.WithMessage(err, "解析H5设置失败")
 				}
 				if saleBill.GetUnOrderH5OrderProductNum() > uint(numLimit) {
 					return gin.H{"value": numLimit}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
@@ -8748,7 +8748,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 
 	// 检查超时不能加购
 	if err := s.checkTimeoutAndCannotAddPurchase(ctx, saleBill, h5OrderProducts); err != nil {
-		return nil, errors.WithMessage(err)
+		return res, errors.WithMessage(err)
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
