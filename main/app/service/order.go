@@ -2708,6 +2708,27 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 	return res, nil
 }
 
+// 删除或拒单h5订单商品
+func (s *orderSrv) deleteOrRejectH5OrderProduct(ctx context.Context, db *gorm.DB, saleOrderProduct *model.SaleOrderProduct) error {
+	if saleOrderProduct.H5OrderUuid != 0 {
+		// 如果这个商品是h5订单的最后一个商品，则删除拒单该h5订单
+		// 查询h5订单是否只有一个商品，如果只有一个商品就拒单该h5订单
+		h5OrderProductCount, err := repository.NewH5OrderRepo(db).GetH5OrderProductCount(saleOrderProduct.H5OrderUuid)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		if h5OrderProductCount == 1 {
+			s.RejectH5Order(ctx, saleOrderProduct.H5OrderUuid)
+		} else {
+			// 删除h5订单商品
+			if err := repository.NewH5OrderRepo(db).DeleteH5OrderProduct(saleOrderProduct.H5OrderUuid, saleOrderProduct.Uuid); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+	}
+	return nil
+}
+
 // OrderTakeout 打包
 func (s *orderSrv) OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*resp.ShopCart, error) {
 	// 禁止并发操作
@@ -2808,14 +2829,8 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 	saleOrderProduct.DeleteProduct()
 
 	if saleOrderProduct.H5OrderUuid != 0 {
-		// 如果这个商品是h5订单的最后一个商品，则删除拒单该h5订单
-		// 查询h5订单是否只有一个商品，如果只有一个商品就拒单该h5订单
-		h5OrderProductCount, err := repository.NewH5OrderRepo(db).GetH5OrderProductCount(saleOrderProduct.H5OrderUuid)
-		if err != nil {
+		if err := s.deleteOrRejectH5OrderProduct(ctx, db, saleOrderProduct); err != nil {
 			return nil, errors.WithMessage(err)
-		}
-		if h5OrderProductCount == 1 {
-			s.RejectH5Order(ctx, saleOrderProduct.H5OrderUuid)
 		}
 	}
 
@@ -5416,6 +5431,13 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 
 	// 设置已接单
 	saleOrderProduct.SetAcceptOrderProduct()
+	// h5订单只有一个商品时拒单
+	if saleOrderProduct.H5OrderUuid != 0 {
+		// 如果这个商品是h5订单的最后一个商品，则删除拒单该h5订单
+		s.deleteOrRejectH5OrderProduct(ctx, db, saleOrderProduct)
+		// 删除掉h5订单uuid
+		saleOrderProduct.H5OrderUuid = 0
+	}
 	// 更新销售订单商品
 	saleOrderProduct.SaleBillUuid = targetDesk.SaleBillUuid
 	saleOrderProduct.SaleOrderUuid = targetSaleOrder.Uuid

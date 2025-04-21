@@ -26,6 +26,7 @@ type IH5OrderRepo interface {
 
 	CreateH5Order(qrcodeOrder model.H5Order) (uint64, error)
 	DeleteH5Order(qrcodeOrderUuid uint64) error
+	DeleteH5OrderProduct(h5OrderUuid, saleOrderProductUuid uint64) error
 	Reject(DeskUuid uint64) error
 
 	WhereUuid(uuid uint64) DBOption           // 扫码订单uuid条件
@@ -326,6 +327,11 @@ func (r *H5OrderRepoImpl) CreateH5Order(obj model.H5Order) (uint64, error) {
 // DeleteH5Order 软删除接单
 func (r *H5OrderRepoImpl) DeleteH5Order(qrcodeOrderUuid uint64) error {
 	return r.db.Model(&model.H5Order{}).Where("uuid = ?", qrcodeOrderUuid).Update("delete_time", uint(time.Now().Unix())).Error
+}
+
+// DeleteH5OrderProduct 软删除订单商品。
+func (r *H5OrderRepoImpl) DeleteH5OrderProduct(h5OrderUuid, saleOrderProductUuid uint64) error {
+	return r.db.Model(&model.H5OrderProduct{}).Where("h5_order_uuid = ? AND sale_order_product_uuid = ?", h5OrderUuid, saleOrderProductUuid).Update("delete_time", uint(time.Now().Unix())).Error
 }
 
 // Reject 拒绝接单
