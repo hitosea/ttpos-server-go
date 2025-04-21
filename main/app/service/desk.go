@@ -808,10 +808,11 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 			// 被并桌待接单记录变更为本桌
 			if err := repository.NewH5OrderRepo(tx).Update(
 				map[string]interface{}{
-					"desk_uuid":      saleBill.DeskUuid,
-					"desk_no":        saleBill.Desk.DeskNo,
-					"sale_bill_uuid": saleBill.Uuid, // 待接单记录改成当前销售账单
-					"create_time":    time.Now().Unix(),
+					"desk_uuid":       saleBill.DeskUuid,
+					"desk_no":         saleBill.Desk.DeskNo,
+					"sale_bill_uuid":  saleBill.Uuid,  // 待接单记录改成当前销售账单
+					"sale_order_uuid": saleOrder.Uuid, // 待接单记录改成当前销售订单
+					"create_time":     time.Now().Unix(),
 				},
 				repository.NewCommonRepo().WhereByDeskUuid(deskSaleBill.DeskUuid),
 			); err != nil {
