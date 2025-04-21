@@ -16,22 +16,28 @@ import (
 
 // IStatisticsSrv 统计服务接口
 type IStatisticsSrv interface {
-	CountSale(ctx context.Context, req CountReq) CountSaleResp               // 统计销售
-	CountPayment(ctx context.Context, req CountReq) CountPaymentResp         // 统计支付
-	CountTax(ctx context.Context, req CountReq) []CountTaxResp               // 统计税类
-	CountCategory(ctx context.Context, req CountReq) CountCategoryResp       // 统计分类
-	CountProduct(ctx context.Context, req CountReq) []CountProductResp       // 统计商品
-	CountArea(ctx context.Context, req CountReq) []CountAreaResp             // 统计区域
-	Count7Days(ctx context.Context, req CountReq) Count7DaysResp             // 统计销售天数
-	CountMemberNum(ctx context.Context, req CountReq) int64                  // 统计会员数量
-	CountMember(ctx context.Context, req CountReq) CountMemberResp           // 统计会员
-	CountMemberPayment(ctx context.Context, req CountReq) CountPaymentResp   // 统计会员支付
-	CountUnpaidOrder(ctx context.Context, req CountReq) CountUnpaidOrderResp // 统计未结订单
-	CountProductSale(ctx context.Context, req CountReq) CountProductSaleResp // 统计商品销售
-	CountFreePayment(ctx context.Context, req CountReq) CountFreePaymentResp // 统计免单支付
-	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp    // 统计商品排行
-	SaveSale(ctx context.Context, req SaveSaleReq) error                     // 保存销售
-	SaveMember(ctx context.Context, req SaveMemberReq) error                 // 保存会员
+	CountSale(ctx context.Context, req CountReq) CountSaleResp                                        // 统计销售
+	CountSaleDays(ctx context.Context, req CountReq, days []string) []CountSaleDaysResp               // 统计销售天数
+	CountPayment(ctx context.Context, req CountReq) CountPaymentResp                                  // 统计支付
+	CountPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp         // 统计支付天数
+	CountTax(ctx context.Context, req CountReq) []CountTaxResp                                        // 统计税类
+	CountCategory(ctx context.Context, req CountReq) CountCategoryResp                                // 统计分类
+	CountProduct(ctx context.Context, req CountReq) []CountProductResp                                // 统计商品
+	CountArea(ctx context.Context, req CountReq) []CountAreaResp                                      // 统计区域
+	CountAreaDays(ctx context.Context, req CountReq, days []string) []CountAreaDaysResp               // 统计区域天数
+	Count7Days(ctx context.Context, req CountReq) Count7DaysResp                                      // 统计销售天数
+	CountMemberNum(ctx context.Context, req CountReq) int64                                           // 统计会员数量
+	CountMember(ctx context.Context, req CountReq) CountMemberResp                                    // 统计会员
+	CountMemberPayment(ctx context.Context, req CountReq) CountPaymentResp                            // 统计会员支付
+	CountMemberPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp   // 统计会员支付天数
+	CountUnpaidOrder(ctx context.Context, req CountReq) CountUnpaidOrderResp                          // 统计未结订单
+	CountProductSale(ctx context.Context, req CountReq) CountProductSaleResp                          // 统计商品销售
+	CountFreePayment(ctx context.Context, req CountReq) CountFreePaymentResp                          // 统计免单支付
+	CountFreePaymentDays(ctx context.Context, req CountReq, days []string) []CountFreePaymentDaysResp // 统计免单支付天数
+	CountExport(ctx context.Context, req CountReq) (CountExportResp, error)                           // 统计导出
+	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp                             // 统计商品排行
+	SaveSale(ctx context.Context, req SaveSaleReq) error                                              // 保存销售
+	SaveMember(ctx context.Context, req SaveMemberReq) error                                          // 保存会员
 }
 
 // statisticsSrv 统计服务实现
@@ -143,6 +149,145 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 	}
 }
 
+// CountSaleDaysResp 统计销售天数响应
+type CountSaleDaysResp struct {
+	CountSaleResp
+	Day string `json:"day"` // 日期
+}
+
+// CountSaleDays 统计销售天数
+func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []string) []CountSaleDaysResp {
+	repo := repository.NewStatisticsRepo(ctx.GetDB())
+	opts := s.buildCountOpts(req)
+	saleData := repo.CountSaleDays(opts...)
+	memberData := repo.CountMemberDays(opts...)
+
+	list := make([]CountSaleDaysResp, 0, len(days))
+	for _, day := range days {
+		var (
+			totalSaleAmount          decimal.Decimal
+			totalReceivedAmount      decimal.Decimal
+			totalProductPrice        decimal.Decimal
+			totalDiscountMember      decimal.Decimal
+			totalBusinessAmount      decimal.Decimal
+			totalServiceFee          decimal.Decimal
+			totalPaymentFee          decimal.Decimal
+			totalTax                 decimal.Decimal
+			totalRefundAmount        decimal.Decimal
+			totalDiscount            decimal.Decimal
+			totalDiscountRatio       decimal.Decimal
+			totalGiveAmount          decimal.Decimal
+			totalFreeAmount          decimal.Decimal
+			totalInstantOrderAmount  decimal.Decimal
+			minOrderAmount           decimal.Decimal
+			maxOrderAmount           decimal.Decimal
+			avgOrderAmount           decimal.Decimal
+			minDeskOrderAmount       decimal.Decimal
+			maxDeskOrderAmount       decimal.Decimal
+			avgDeskOrderAmount       decimal.Decimal
+			avgDeskPeopleOrderAmount decimal.Decimal
+			minInstantOrderAmount    decimal.Decimal
+			maxInstantOrderAmount    decimal.Decimal
+			avgInstantOrderAmount    decimal.Decimal
+			totalProductNum          int64
+			totalGiveNum             int64
+			totalFreeNum             int64
+			totalOrderNum            int64
+			totalDeskNum             int64
+			totalMealNum             int64
+			totalInstantOrderNum     int64
+		)
+
+		saleResult, ok := slice.FindBy(saleData, func(index int, dayData model.StatisticsSaleDaysData) bool {
+			return dayData.Day.String == day
+		})
+		if ok {
+			totalSaleAmount = decimal.NewFromFloat(saleResult.TotalSaleAmount.Float64)
+			totalReceivedAmount = decimal.NewFromFloat(saleResult.TotalReceivedAmount.Float64)
+			totalProductPrice = decimal.NewFromFloat(saleResult.TotalProductPrice.Float64)
+			totalDiscountMember = decimal.NewFromFloat(saleResult.TotalDiscountMember.Float64)
+			totalBusinessAmount = decimal.NewFromFloat(saleResult.TotalBusinessAmount.Float64)
+			totalServiceFee = decimal.NewFromFloat(saleResult.TotalServiceFee.Float64)
+			totalPaymentFee = decimal.NewFromFloat(saleResult.TotalPaymentFee.Float64)
+			totalTax = decimal.NewFromFloat(saleResult.TotalTax.Float64)
+			totalRefundAmount = decimal.NewFromFloat(saleResult.TotalRefundAmount.Float64)
+			totalDiscount = decimal.NewFromFloat(saleResult.TotalDiscount.Float64)
+			if totalSaleAmount.GreaterThan(decimal.Zero) {
+				totalDiscountRatio = totalDiscount.Div(totalSaleAmount).Mul(decimal.NewFromFloat(100)).Round(2)
+			}
+			totalGiveAmount = decimal.NewFromFloat(saleResult.TotalGiftAmount.Float64)
+			totalFreeAmount = decimal.NewFromFloat(saleResult.TotalFreeAmount.Float64)
+			totalInstantOrderAmount = decimal.NewFromFloat(saleResult.TotalInstantOrderAmount.Float64)
+			minOrderAmount = decimal.NewFromFloat(saleResult.MinOrderAmount.Float64).Round(2)
+			maxOrderAmount = decimal.NewFromFloat(saleResult.MaxOrderAmount.Float64).Round(2)
+			avgOrderAmount = decimal.NewFromFloat(saleResult.AvgOrderAmount.Float64).Round(2)
+			minDeskOrderAmount = decimal.NewFromFloat(saleResult.MinDeskOrderAmount.Float64).Round(2)
+			maxDeskOrderAmount = decimal.NewFromFloat(saleResult.MaxDeskOrderAmount.Float64).Round(2)
+			avgDeskOrderAmount = decimal.NewFromFloat(saleResult.AvgDeskOrderAmount.Float64).Round(2)
+			if saleResult.TotalMealNum.Int64 > 0 {
+				avgDeskPeopleOrderAmount = decimal.NewFromFloat(saleResult.TotalDeskOrderAmount.Float64).Div(decimal.NewFromInt(saleResult.TotalMealNum.Int64)).Round(2)
+			}
+			minInstantOrderAmount = decimal.NewFromFloat(saleResult.MinInstantOrderAmount.Float64).Round(2)
+			maxInstantOrderAmount = decimal.NewFromFloat(saleResult.MaxInstantOrderAmount.Float64).Round(2)
+			avgInstantOrderAmount = decimal.NewFromFloat(saleResult.AvgInstantOrderAmount.Float64).Round(2)
+			totalProductNum = saleResult.TotalProductNum.Int64
+			totalGiveNum = saleResult.TotalGiftNum.Int64
+			totalFreeNum = saleResult.TotalFreeNum.Int64
+			totalOrderNum = saleResult.TotalOrderNum.Int64
+			totalDeskNum = saleResult.TotalDeskNum.Int64
+			totalMealNum = saleResult.TotalMealNum.Int64
+			totalInstantOrderNum = saleResult.TotalInstantOrderNum.Int64
+		}
+		memberResult, ok := slice.FindBy(memberData, func(index int, dayData model.StatisticsMemberDaysData) bool {
+			return dayData.Day.String == day
+		})
+		if ok {
+			totalSaleAmount = totalSaleAmount.Add(decimal.NewFromFloat(memberResult.TotalSaleAmount.Float64))
+			totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(memberResult.TotalPaymentAmount.Float64))
+			totalBusinessAmount = totalBusinessAmount.Add(decimal.NewFromFloat(memberResult.TotalPaymentFee.Float64))
+			totalPaymentFee = totalPaymentFee.Add(decimal.NewFromFloat(memberResult.TotalPaymentFee.Float64))
+			totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(memberResult.TotalRefundAmount.Float64))
+		}
+		list = append(list, CountSaleDaysResp{
+			CountSaleResp: CountSaleResp{
+				TotalSaleAmount:          totalSaleAmount.InexactFloat64(),
+				TotalReceivedAmount:      totalReceivedAmount.InexactFloat64(),
+				TotalProductPrice:        totalProductPrice.InexactFloat64(),
+				TotalProductNum:          totalProductNum,
+				TotalDiscountMember:      totalDiscountMember.InexactFloat64(),
+				TotalBusinessAmount:      totalBusinessAmount.InexactFloat64(),
+				TotalServiceFee:          totalServiceFee.InexactFloat64(),
+				TotalPaymentFee:          totalPaymentFee.InexactFloat64(),
+				TotalTax:                 totalTax.InexactFloat64(),
+				TotalRefundAmount:        totalRefundAmount.InexactFloat64(),
+				TotalDiscount:            totalDiscount.InexactFloat64(),
+				TotalDiscountRatio:       totalDiscountRatio.InexactFloat64(),
+				TotalGiftAmount:          totalGiveAmount.InexactFloat64(),
+				TotalGiftNum:             totalGiveNum,
+				TotalFreeAmount:          totalFreeAmount.InexactFloat64(),
+				TotalFreeNum:             totalFreeNum,
+				TotalOrderNum:            totalOrderNum,
+				TotalDeskNum:             totalDeskNum,
+				TotalMealNum:             totalMealNum,
+				TotalInstantOrderNum:     totalInstantOrderNum,
+				TotalInstantOrderAmount:  totalInstantOrderAmount.InexactFloat64(),
+				MinOrderAmount:           minOrderAmount.InexactFloat64(),
+				MaxOrderAmount:           maxOrderAmount.InexactFloat64(),
+				AvgOrderAmount:           avgOrderAmount.InexactFloat64(),
+				MinDeskOrderAmount:       minDeskOrderAmount.InexactFloat64(),
+				MaxDeskOrderAmount:       maxDeskOrderAmount.InexactFloat64(),
+				AvgDeskOrderAmount:       avgDeskOrderAmount.InexactFloat64(),
+				AvgDeskPeopleOrderAmount: avgDeskPeopleOrderAmount.InexactFloat64(),
+				MinInstantOrderAmount:    minInstantOrderAmount.InexactFloat64(),
+				MaxInstantOrderAmount:    maxInstantOrderAmount.InexactFloat64(),
+				AvgInstantOrderAmount:    avgInstantOrderAmount.InexactFloat64(),
+			},
+			Day: day,
+		})
+	}
+	return list
+}
+
 // CountPaymentReq 统计支付请求
 type CountPaymentReq struct {
 	ShiftNo        string `json:"shift_no"`         // 当班编号
@@ -224,6 +369,39 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 	}
 }
 
+// CountPaymentDaysResp 统计支付天数响应
+type CountPaymentDaysResp struct {
+	PaymentList []CountPaymentRespList `json:"payment_list"` // 支付方式列表
+	Day         string                 `json:"day"`          // 日期
+}
+
+// CountPaymentDays 统计支付天数
+func (s *statisticsSrv) CountPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp {
+	opts := s.buildCountOpts(req)
+	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountPaymentDays(opts...)
+
+	list := make([]CountPaymentDaysResp, 0)
+	for _, day := range days {
+		paymentList := make([]CountPaymentRespList, 0)
+		for _, payment := range paymentData {
+			if payment.Day.String == day {
+				paymentList = append(paymentList, CountPaymentRespList{
+					PaymentName:        payment.PaymentName,
+					PaymentCode:        payment.PaymentCode,
+					TotalOrderNum:      payment.TotalOrderNum.Int64,
+					TotalPaymentAmount: payment.TotalPaymentAmount.Float64,
+				})
+			}
+		}
+		list = append(list, CountPaymentDaysResp{
+			PaymentList: paymentList,
+			Day:         day,
+		})
+	}
+
+	return list
+}
+
 // CountMemberPayment 统计会员支付
 func (s *statisticsSrv) CountMemberPayment(ctx context.Context, req CountReq) CountPaymentResp {
 	opts := s.buildCountOpts(req)
@@ -251,6 +429,32 @@ func (s *statisticsSrv) CountMemberPayment(ctx context.Context, req CountReq) Co
 		TotalRefundAmount:   totalRefundAmount.Round(2).InexactFloat64(),
 		PaymentList:         list,
 	}
+}
+
+// CountMemberPaymentDays 统计会员支付天数
+func (s *statisticsSrv) CountMemberPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp {
+	opts := s.buildCountOpts(req)
+	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberPaymentDays(opts...)
+
+	list := make([]CountPaymentDaysResp, 0)
+	for _, day := range days {
+		paymentList := make([]CountPaymentRespList, 0)
+		for _, payment := range paymentData {
+			if payment.Day.String == day {
+				paymentList = append(paymentList, CountPaymentRespList{
+					PaymentName:        payment.PaymentName,
+					PaymentCode:        payment.PaymentCode,
+					TotalOrderNum:      payment.TotalOrderNum.Int64,
+					TotalPaymentAmount: payment.TotalPaymentAmount.Float64,
+				})
+			}
+		}
+		list = append(list, CountPaymentDaysResp{
+			PaymentList: paymentList,
+			Day:         day,
+		})
+	}
+	return list
 }
 
 // CountTaxResp 统计税类响应
@@ -346,6 +550,7 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 }
 
 type CountAreaResp struct {
+	AreaID             int64   `json:"area_id"`              // 区域id
 	AreaName           string  `json:"area_name"`            // 区域名称
 	AreaSaleAmount     float64 `json:"area_sale_amount"`     // 区域销售额
 	AreaBusinessAmount float64 `json:"area_business_amount"` // 区域营业收入
@@ -364,6 +569,41 @@ func (s *statisticsSrv) CountArea(ctx context.Context, req CountReq) []CountArea
 			AreaSaleAmount:     area.AreaSaleAmount.Float64,
 			AreaBusinessAmount: area.AreaBusinessAmount.Float64,
 			AreaProductNum:     area.AreaProductNum.Int64,
+		})
+	}
+	return list
+}
+
+// CountAreaDaysResp 统计区域天数响应
+type CountAreaDaysResp struct {
+	AreaList []CountAreaResp `json:"area_list"` // 区域列表
+	Day      string          `json:"day"`       // 日期
+}
+
+// CountAreaDays 统计区域天数
+func (s *statisticsSrv) CountAreaDays(ctx context.Context, req CountReq, days []string) []CountAreaDaysResp {
+	opts := s.buildCountOpts(req)
+	areaData := repository.NewStatisticsRepo(ctx.GetDB()).CountAreaDays(opts...)
+
+	var list []CountAreaDaysResp
+
+	for _, day := range days {
+		var areaList []CountAreaResp
+		result, ok := slice.FindBy(areaData, func(index int, dayData model.StatisticsAreaDaysData) bool {
+			return dayData.Day.String == day
+		})
+		if ok {
+			areaList = append(areaList, CountAreaResp{
+				AreaID:             result.AreaID.Int64,
+				AreaName:           result.AreaName.String,
+				AreaSaleAmount:     result.AreaSaleAmount.Float64,
+				AreaBusinessAmount: result.AreaBusinessAmount.Float64,
+				AreaProductNum:     result.AreaProductNum.Int64,
+			})
+		}
+		list = append(list, CountAreaDaysResp{
+			AreaList: areaList,
+			Day:      day,
 		})
 	}
 	return list
@@ -1015,4 +1255,209 @@ func (s *statisticsSrv) CountFreePayment(ctx context.Context, req CountReq) Coun
 		TotalOrderNum:      freePaymentData.TotalOrderNum.Int64,
 		TotalPaymentAmount: freePaymentData.TotalFreeAmount.Float64,
 	}
+}
+
+// CountFreePaymentDaysResp 统计免单支付天数响应
+type CountFreePaymentDaysResp struct {
+	PaymentList []CountPaymentRespList `json:"payment_list"`
+	Day         string                 `json:"day"`
+}
+
+// CountFreePaymentDays 统计免单支付天数
+func (s *statisticsSrv) CountFreePaymentDays(ctx context.Context, req CountReq, days []string) []CountFreePaymentDaysResp {
+	opts := s.buildCountOpts(req)
+	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountFreePaymentDays(opts...)
+
+	list := make([]CountFreePaymentDaysResp, 0)
+	for _, day := range days {
+		paymentList := make([]CountPaymentRespList, 0)
+		result, ok := slice.FindBy(paymentData, func(index int, item model.StatisticsFreePaymentDaysData) bool {
+			return item.Day.String == day
+		})
+		if ok {
+			if result.TotalFreeAmount.Float64 > 0 {
+				paymentList = append(paymentList, CountPaymentRespList{
+					PaymentName:        i18n.Translate(ctx.GetLanguage(), "免单"),
+					PaymentCode:        0,
+					TotalOrderNum:      result.TotalOrderNum.Int64,
+					TotalPaymentAmount: result.TotalFreeAmount.Float64,
+				})
+			}
+		}
+		list = append(list, CountFreePaymentDaysResp{
+			PaymentList: paymentList,
+			Day:         day,
+		})
+	}
+	return list
+}
+
+// CountExportResp 统计导出响应
+type CountExportResp struct {
+	Days []string          `json:"days"`
+	Data []CountExportData `json:"data"`
+}
+
+// CountExportData 统计导出数据
+type CountExportData struct {
+	Day                   string                   `json:"day"`
+	TotalSaleAmount       float64                  `json:"total_sale_amount"`
+	TotalBusinessAmount   float64                  `json:"total_business_amount"`
+	TotalServiceFee       float64                  `json:"total_service_fee"`
+	TotalPaymentFee       float64                  `json:"total_payment_fee"`
+	TotalTax              float64                  `json:"total_tax"`
+	TotalProductNum       int64                    `json:"total_product_num"`
+	TotalMemberNum        int64                    `json:"total_member_num"`
+	TotalDiscountMember   float64                  `json:"total_discount_member"`
+	TotalDiscount         float64                  `json:"total_discount"`
+	TotalDiscountRatio    float64                  `json:"total_discount_ratio"`
+	TotalRefundAmount     float64                  `json:"total_refund_amount"`
+	TotalGiftAmount       float64                  `json:"total_gift_amount"`
+	TotalGiftNum          int64                    `json:"total_gift_num"`
+	TotalFreeAmount       float64                  `json:"total_free_amount"`
+	TotalFreeNum          int64                    `json:"total_free_num"`
+	TotalReceivedAmount   float64                  `json:"total_received_amount"`
+	TotalOrderNum         int64                    `json:"total_order_num"`
+	MinOrderAmount        float64                  `json:"min_order_amount"`
+	MaxOrderAmount        float64                  `json:"max_order_amount"`
+	AvgOrderAmount        float64                  `json:"avg_order_amount"`
+	TotalDeskNum          int64                    `json:"total_desk_num"`
+	TotalMealNum          int64                    `json:"total_meal_num"`
+	MinDeskOrderAmount    float64                  `json:"min_desk_order_amount"`
+	MaxDeskOrderAmount    float64                  `json:"max_desk_order_amount"`
+	AvgDeskOrderAmount    float64                  `json:"avg_desk_order_amount"`
+	TotalInstantOrderNum  int64                    `json:"total_instant_order_num"`
+	MinInstantOrderAmount float64                  `json:"min_instant_order_amount"`
+	MaxInstantOrderAmount float64                  `json:"max_instant_order_amount"`
+	AvgInstantOrderAmount float64                  `json:"avg_instant_order_amount"`
+	AreaList              []CountExportAreaData    `json:"area_list"`
+	PaymentList           []CountExportPaymentData `json:"payment_list"`
+}
+
+// CountExportAreaData 统计导出区域数据
+type CountExportAreaData struct {
+	AreaID             int64   `json:"area_id"`              // 区域id
+	AreaName           string  `json:"area_name"`            // 区域名称
+	AreaSaleAmount     float64 `json:"area_sale_amount"`     // 区域销售额
+	AreaBusinessAmount float64 `json:"area_business_amount"` // 区域营业收入
+	AreaProductNum     int64   `json:"area_product_num"`     // 区域商品数量
+}
+
+// CountExportPaymentData 统计导出支付数据
+type CountExportPaymentData struct {
+	PaymentName        string  `json:"payment_name"`
+	PaymentCode        int     `json:"payment_code"`
+	TotalOrderNum      int64   `json:"total_order_num"`
+	TotalPaymentAmount float64 `json:"total_payment_amount"`
+}
+
+// CountExport 统计导出
+func (s *statisticsSrv) CountExport(ctx context.Context, req CountReq) (CountExportResp, error) {
+	days := s.buildDays(req)
+	saleData := s.CountSaleDays(ctx, req, days)
+	areaData := s.CountAreaDays(ctx, req, days)
+	paymentData := s.CountPaymentDays(ctx, req, days)
+	memberPaymentData := s.CountMemberPaymentDays(ctx, req, days)
+	freePaymentData := s.CountFreePaymentDays(ctx, req, days)
+
+	var data []CountExportData
+	for _, sale := range saleData {
+		// 统计区域数据
+		areaList := make([]CountExportAreaData, 0)
+		areaResult, ok := slice.FindBy(areaData, func(index int, item CountAreaDaysResp) bool {
+			return item.Day == sale.Day
+		})
+		if ok {
+			for _, area := range areaResult.AreaList {
+				areaList = append(areaList, CountExportAreaData(area))
+			}
+		}
+
+		// 统计支付数据
+		paymentCode := make(map[int]bool)
+		paymentList := make([]CountExportPaymentData, 0)
+		paymentResult, ok := slice.FindBy(paymentData, func(index int, item CountPaymentDaysResp) bool {
+			return item.Day == sale.Day
+		})
+		if ok {
+			for _, payment := range paymentResult.PaymentList {
+				paymentList = append(paymentList, CountExportPaymentData(payment))
+				paymentCode[payment.PaymentCode] = true
+			}
+		}
+
+		// 统计会员数据
+		memberResult, ok := slice.FindBy(memberPaymentData, func(index int, item CountPaymentDaysResp) bool {
+			return item.Day == sale.Day
+		})
+		if ok {
+			for _, member := range memberResult.PaymentList {
+				if _, ok := paymentCode[member.PaymentCode]; !ok {
+					paymentList = append(paymentList, CountExportPaymentData(member))
+					paymentCode[member.PaymentCode] = true
+				} else {
+					i := 0
+					payment, ok := slice.FindBy(paymentList, func(index int, item CountExportPaymentData) bool {
+						i = index
+						return item.PaymentCode == member.PaymentCode
+					})
+					if ok {
+						payment.TotalOrderNum += member.TotalOrderNum
+						payment.TotalPaymentAmount += member.TotalPaymentAmount
+					}
+					paymentList[i] = payment
+				}
+			}
+		}
+
+		// 统计免单数据
+		freeResult, ok := slice.FindBy(freePaymentData, func(index int, item CountFreePaymentDaysResp) bool {
+			return item.Day == sale.Day
+		})
+		if ok {
+			for _, free := range freeResult.PaymentList {
+				paymentList = append(paymentList, CountExportPaymentData(free))
+			}
+		}
+
+		data = append(data, CountExportData{
+			Day:                   sale.Day,
+			TotalSaleAmount:       sale.TotalSaleAmount,
+			TotalBusinessAmount:   sale.TotalBusinessAmount,
+			TotalServiceFee:       sale.TotalServiceFee,
+			TotalPaymentFee:       sale.TotalPaymentFee,
+			TotalTax:              sale.TotalTax,
+			TotalProductNum:       sale.TotalProductNum,
+			TotalMemberNum:        0, // todo 统计会员数量
+			TotalDiscountMember:   sale.TotalDiscountMember,
+			TotalDiscount:         sale.TotalDiscount,
+			TotalDiscountRatio:    sale.TotalDiscountRatio,
+			TotalRefundAmount:     sale.TotalRefundAmount,
+			TotalGiftAmount:       sale.TotalGiftAmount,
+			TotalGiftNum:          sale.TotalGiftNum,
+			TotalFreeAmount:       sale.TotalFreeAmount,
+			TotalFreeNum:          sale.TotalFreeNum,
+			TotalReceivedAmount:   sale.TotalReceivedAmount,
+			TotalOrderNum:         sale.TotalOrderNum,
+			MinOrderAmount:        sale.MinOrderAmount,
+			MaxOrderAmount:        sale.MaxOrderAmount,
+			AvgOrderAmount:        sale.AvgOrderAmount,
+			TotalDeskNum:          sale.TotalDeskNum,
+			TotalMealNum:          sale.TotalMealNum,
+			MinDeskOrderAmount:    sale.MinDeskOrderAmount,
+			MaxDeskOrderAmount:    sale.MaxDeskOrderAmount,
+			AvgDeskOrderAmount:    sale.AvgDeskOrderAmount,
+			TotalInstantOrderNum:  sale.TotalInstantOrderNum,
+			MinInstantOrderAmount: sale.MinInstantOrderAmount,
+			MaxInstantOrderAmount: sale.MaxInstantOrderAmount,
+			AvgInstantOrderAmount: sale.AvgInstantOrderAmount,
+			AreaList:              areaList,
+			PaymentList:           paymentList,
+		})
+	}
+
+	return CountExportResp{
+		Days: days,
+		Data: data,
+	}, nil
 }

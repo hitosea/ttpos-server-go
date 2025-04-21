@@ -19,6 +19,7 @@ type ProductionItem struct {
 	LocaleName            dto.LocaleResponse `json:"locale_name"`             // 送厨商品名称
 	Num                   uint               `json:"num"`                     // 送厨商品数量
 	CreateTime            int64              `json:"create_time"`             // 送厨时间
+	FinishedTime          int64              `json:"finished_time"`           // 完成时间
 	ProductAttributeNames dto.LocaleResponse `json:"product_attribute_names"` // 商品属性
 	Remark                string             `json:"remark"`                  // 备注
 }

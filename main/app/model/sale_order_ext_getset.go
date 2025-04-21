@@ -340,7 +340,7 @@ func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOptio
 
 		if option.CookingStatus == CookingStatusAllAndOneH5Order {
 			// 已送厨和未送厨的商品和某个h5订单的商品计入，排除未接单的商品
-			if orderProduct.IsUnAcceptH5OrderProduct() /*未下单*/ {
+			if orderProduct.IsUnOrderH5OrderProduct() /*未下单*/ {
 				continue
 			}
 			// 如果是已下单未接单商品且是某个h5订单的商品时记入
@@ -354,7 +354,7 @@ func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOptio
 
 		if option.CookingStatus == CookingStatusAll {
 			// 已送厨和未送厨的商品计入，排除未接单的商品
-			if orderProduct.IsH5OrderProductBool() /*未接单*/ || orderProduct.IsUnAcceptH5OrderProduct() /*未下单*/ {
+			if orderProduct.IsH5OrderProductBool() /*未接单*/ || orderProduct.IsUnOrderH5OrderProduct() /*未下单*/ {
 				continue
 			}
 			products = append(products, orderProduct)

@@ -724,133 +724,28 @@ class Order extends BaseModelOrder
      */
     public function storeOverviewByDate($params)
     {
-        Db::connect()->execute("SET SESSION sql_mode = ''");
-        //
-        $queryMode = $params['mode'] ?? 0;
-        //
-        $repository =  new OrderBusinessDataRepository($this, $params);
-        [$startTime, $endTime] = $repository->getTimes();
-        //
-        $prefix = env('DB_PREFIX');
-        // 基础模型
-        $model = $repository->getBaseModel();
-        // 汇总数据
-        $results = $repository->getBusinessData(2);
-        // 收入列表（时间段内所有，初始化为0）
-        $allIncomes = [];
-        if ($queryMode != 3) {
-            $values = $model->clone()
-                ->leftJoin('order_pay_type opt', 'a.order_id = opt.order_id')
-                ->whereNotNull('opt.id')
-                ->group("opt.value")
-                ->field("opt.value, opt.price")
-                ->select()?->append([]) ?? [];
-            foreach ($values as $value) {
-                if ($value['price'] > 0) {
-                    $allIncomes[] = [
-                        'pay_type' => $value['value'],
-                        'pay_type_name' => (new self)->getPayTypeName($value['value']),
-                        'price' => 0,
-                        'order_num' => 0,
-                    ];
-                }
-            }
+        $start_time = isset($params['date'][0]) ? $params['date'][0] : 0;
+        $end_time = isset($params['date'][1]) ? $params['date'][1] : 0;
+
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/export', [
+            'query_start_time' => strtotime($start_time),
+            'query_end_time' => strtotime($end_time) + 86399,
+        ], [
+            'Authorization: Bearer ' . $params['token'],
+            'Accept-Language: ' . $params['language'],
+            'Content-Type: application/json; charset=utf-8',
+        ]);
+        if (!$res) {
+            $this->error = '请求失败';
+            return false;
         }
-        // 初始化日期范围
-        $dateRange = [];
-        $initializeDateData = function ($date, $userCount = 0, $allIncomes = []) {
-            return [
-                'date' => $date,
-                'pay_type_date' => '',
-                'total_price' => 0,
-                'receivable_price' => 0,
-                'service_money' => 0,
-                'sales_price' => 0,
-                'consumption_tax_money' => 0,
-                'product_num' => 0,
-                'pay_fee_money' => 0,
-                'discount_money' => 0,
-                'discount_ratio' => 0,
-                'business_price' => 0,
-                'free_product_price' => 0,
-                'free_product_num' => 0,
-                'free_order_price' => 0,
-                'free_order_num' => 0,
-                'user_discount_money' => 0,
-                'refund_money' => 0,
-                'received_price' => 0,
-                'total_order_num' => 0,
-                'total_table_num' => 0,
-                'total_people_num' => 0,
-                'min_order_price' => 0,
-                'max_order_price' => 0,
-                'avg_order_price' => 0,
-                'table_order_num' => 0,
-                'table_people_num' => 0,
-                'table_min_order_price' => 0,
-                'table_max_order_price' => 0,
-                'table_avg_order_price' => 0,
-                'table_people_avg' => 0,
-                'cashier_order_num' => 0,
-                'cashier_min_order_price' => 0,
-                'cashier_max_order_price' => 0,
-                'cashier_avg_order_price' => 0,
-                'incomes' => $allIncomes,
-                'user_count' => $userCount,
-                'regionData' => [],
-            ];
-        };
-        for ($date = $startTime; $date <= $endTime; $date += 86400) {
-            $userModel = UserModel::where('delete_time', '=', 0)->where('create_time', 'between', [$date, $date + 86399]);
-            $userCount = $userModel->count();
-            $dateRange[date('Y-m-d', $date)] = $initializeDateData(date('Y-m-d', $date), $userCount, $allIncomes);
+        $res = json_decode($res, true);
+        if (($res['code'] ?? -1) != 0) {
+            $this->error = $res['message'] ?? '请求失败';
+            return false;
         }
-        //
-        foreach ($results as $result) {
-            $date = $result['date'];
-            // 当天支付方式收款金额
-            $payTypeDate = $model->clone()
-                ->leftJoin('order_pay_type opt', 'a.order_id = opt.order_id')
-                ->leftJoin("
-                    (
-                        select rp.merge_parent_id, count(*) as count_num
-                        from {$prefix}order rp
-                        group by merge_parent_id
-                    ) sub
-                ", 'a.order_id = sub.merge_parent_id')
-                ->whereNotNull('opt.id')
-                ->where('a.pay_time', 'between', [strtotime($date), strtotime($date) + 86399])
-                ->group("opt.value")
-                ->field("opt.value, sum(ifnull(sub.count_num,1)) order_num")
-                ->field("sum(if(opt.value = 40, opt.price - a.change_due, opt.price)) as price")
-                ->select()?->append([])->toArray() ?? [];
-            // 根据当前日期查询收入列表，跟allIncomes比较，如果有则赋值，没有则为0
-            $incomes = [];
-            foreach ($allIncomes as $income) {
-                $payType = $income['pay_type'];
-                $exist = array_search($payType, array_column($payTypeDate, 'value'));
-                if ($exist !== false) {
-                    $incomes[] = [
-                        'pay_type' => $payType,
-                        'pay_type_name' => $income['pay_type_name'],
-                        'price' => Helper::number2($payTypeDate[$exist]['price']),
-                        'order_num' => Helper::number2($payTypeDate[$exist]['order_num']),
-                    ];
-                } else {
-                    $incomes[] = $income;
-                }
-            }
-            $result['incomes'] = $incomes;
-            // 区域数据
-            $result['regionData'] = $repository->getRegionData([strtotime($date), strtotime($date) + 86399]);
-            //
-            if (!isset($dateRange[$date])) {
-                $dateRange[$date] = $initializeDateData($date);
-            }
-            $dateRange[$date] = array_merge($dateRange[$date], $result);
-        }
-        //
-        return $dateRange;
+        $data = $res['data'];
+        return $data;
     }
 
     /**

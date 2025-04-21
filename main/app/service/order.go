@@ -119,7 +119,7 @@ type IOrderSrv interface {
 	GetMustPlanList(ctx context.Context, saleBillUuid uint64) (resp.ProductMustPlanList, error)                                                                                       // 必点方案列表
 	GetUnOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (*resp.UnsentKitchen, error)             // 获取扫码h5购物车未下单商品列表
 	GetOrderedH5ProductList(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (*resp.H5CartSendProduct, error)           // 获取扫码h5购物车已下单商品列表
-	ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (any, error)                                                                                       // 下单扫码h5订单
+	ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64, ignoreMust bool) (any, error)                                                                      // 下单扫码h5订单
 	AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error)                                                                      // 接单扫码h5订单
 	RejectH5Order(ctx context.Context, h5OrderUuid uint64) error                                                                                                                      // 拒单扫码h5订单
 	RejectAllH5Order(ctx context.Context, saleBillUuid uint64) error
@@ -4604,7 +4604,8 @@ func (s *orderSrv) skipCheck(saleOrderProduct *model.SaleOrderProduct) bool {
 }
 
 type CheckOrderOptions struct {
-	CheckType int // 1:送厨检查 2:结账检查
+	CheckType int  // 1:送厨检查 2:结账检查
+	IsH5Check bool // 是否是H5检查
 }
 
 const (
@@ -4623,6 +4624,12 @@ func WithCheckTypeCooking() func(*CheckOrderOptions) {
 func WithCheckTypeCheckout() func(*CheckOrderOptions) {
 	return func(options *CheckOrderOptions) {
 		options.CheckType = CheckTypeCheckout
+	}
+}
+
+func WithIsH5Check() func(*CheckOrderOptions) {
+	return func(options *CheckOrderOptions) {
+		options.IsH5Check = true
 	}
 }
 
@@ -4685,6 +4692,10 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			if s.skipCheck(saleOrderProduct) {
 				continue
 			}
+			// 如果是h5下单场景，只检查h5下单的商品, 跳过不是未下单的商品
+			if options.IsH5Check && !saleOrderProduct.IsUnOrderH5OrderProduct() {
+				continue
+			}
 
 			var status int
 			var message string
@@ -4703,7 +4714,13 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 				// 1. 商品规格价格变化
 				// 2. 商品小料价格变化
 				if status == constant.CodeOrderCheckProductPriceChanged {
-					shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+					var shopCartInfo *ro.ShopCartRepo
+					var err error
+					if options.IsH5Check {
+						shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithUnorderedH5Product())
+					} else {
+						shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+					}
 					if err != nil {
 						return nil, errors.WithMessage(err)
 					}
@@ -8749,7 +8766,7 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 }
 
 // ConfirmH5Order 下单扫码h5订单
-func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (any, error) {
+func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64, ignoreMust bool) (any, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	res := make(map[string]any)
 	// 获取销售账单信息
@@ -8833,6 +8850,21 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 	// 检查超时不能加购
 	if err := s.checkTimeoutAndCannotAddPurchase(ctx, saleBill, h5OrderProducts); err != nil {
 		return res, errors.WithMessage(err)
+	}
+
+	// 检查必点
+	saleOrderProductAll := saleBill.GetSaleOrderProductAll(model.WithH5CheckLimit())
+	checkServiceRes, errCheck := s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithIsH5Check())
+	if errCheck != nil {
+		ctx.Log().Error("检查商品失败", zap.Error(errCheck))
+		return nil, errors.New("检查商品失败")
+	}
+	if checkServiceRes != nil {
+		if checkServiceRes.Code == constant.CodeOrderCheckProductMust && ignoreMust {
+			// 必点方案未选择，且忽略必点方案
+		} else {
+			return checkServiceRes.OrderCheckRes, errors.WithMessage(errors.New(constant.ParseCodeOrderCheck(checkServiceRes.Code)))
+		}
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
