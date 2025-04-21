@@ -11,8 +11,8 @@ stream {
    upstream database_servers {
         zone database_servers 64k;
         server 172.16.10.101:6446 max_fails=1 fail_timeout=3s;
-        server 172.16.10.164:6446 max_fails=1 fail_timeout=3s backup;
-        server 172.16.10.179:6446 max_fails=1 fail_timeout=3s backup;
+        server 172.16.10.164:6446 max_fails=1 fail_timeout=3s;
+        server 172.16.10.179:6446 max_fails=1 fail_timeout=3s;
     }
     # 配置健康检查
     server {
