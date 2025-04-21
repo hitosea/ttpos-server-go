@@ -738,7 +738,7 @@ func (model *SaleOrderProduct) IsH5OrderProductBool() bool {
 }
 
 // 是否是H5未下单商品。 未接单且无h5订单uuid
-func (model *SaleOrderProduct) IsUnAcceptH5OrderProduct() bool {
+func (model *SaleOrderProduct) IsUnOrderH5OrderProduct() bool {
 	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept && model.H5OrderUuid == 0
 }
 
