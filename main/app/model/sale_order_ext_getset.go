@@ -258,7 +258,7 @@ func FilterUnAcceptOrderProduct(products []*SaleOrderProduct, h5OrderUuid uint64
 	for _, product := range products {
 		if product.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept {
 			// 如果从待接单进入桌台时，不过滤该h5订单的商品
-			if product.H5OrderUuid == h5OrderUuid {
+			if product.H5OrderUuid != 0 && product.H5OrderUuid == h5OrderUuid {
 				list = append(list, product)
 			}
 			continue
