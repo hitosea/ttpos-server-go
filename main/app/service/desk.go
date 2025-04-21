@@ -764,6 +764,10 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 		saleBillList = append(saleBillList, *deskSaleBill)
 		// 将桌台编号添加到桌台编号列表
 		deskNos = append(deskNos, desk.DeskNo)
+		// 更新销售账单的首次送厨时间
+		if saleBill.ProductionTime == 0 || saleBill.ProductionTime > deskSaleBill.ProductionTime {
+			saleBill.ProductionTime = deskSaleBill.ProductionTime
+		}
 	}
 	if len(deskMergeCheckRes.List) > 0 {
 		return nil, &deskMergeCheckRes, errors.New(errDeskMsg)
@@ -824,6 +828,8 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 
 		// 更新购买人数
 		saleBill.MealNum = saleBill.MealNum + mealNum
+		// 更新首次送厨时间
+
 		// 取消整单折扣
 		if saleBill.SetAllDiscountCancel() {
 			resp.IsResetDiscount = true
