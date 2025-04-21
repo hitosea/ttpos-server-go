@@ -4633,8 +4633,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 	ctx.SetDB(db)
 	// 检查必选
 	if !ignoreMust {
-		// 查询到购物车信息
-		shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+		shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithH5OrderUuid(context.GetH5OrderUuid(ctx)))
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -8054,17 +8053,16 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 		products := make([]resp.Product, 0)
 		for _, product := range unCookingSaleOrderProducts {
 			products = append(products, resp.Product{
-				Uuid:                product.Uuid,
-				LocaleName:          product.MultiLanguageName.GetNames(),
-				LocaleAttributeName: product.GetAttributeName(),
-				Num:                 product.Num,
-				SalePrice:           product.SalePrice,
-				DiscountPrice:       product.DiscountFee,
-				Status:              int(product.Status),
-				Remark:              product.Remark,
-				IsMust:              product.IsMustProduct(),
-				IsGift:              product.IsGiftProduct(),
-				IsCancel:            product.IsCancelProduct(),
+				Uuid:          product.Uuid,
+				LocaleName:    product.GetNameAndFlavorName(),
+				Num:           product.Num,
+				SalePrice:     product.SalePrice,
+				DiscountPrice: product.DiscountFee,
+				Status:        int(product.Status),
+				Remark:        product.Remark,
+				IsMust:        product.IsMustProduct(),
+				IsGift:        product.IsGiftProduct(),
+				IsCancel:      product.IsCancelProduct(),
 			})
 		}
 		for _, product := range h5OrderProductUnAccept {
