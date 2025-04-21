@@ -1,6 +1,10 @@
 package model
 
-import "github.com/shopspring/decimal"
+import (
+	"time"
+
+	"github.com/shopspring/decimal"
+)
 
 // Member 会员信息表 `ttpos_member`
 type Member struct {
@@ -211,6 +215,10 @@ type MemberCard struct {
 }
 
 func (model *MemberCard) GetDiscount() float64 {
+	// 如果会员卡过期，则折扣不生效
+	if time.Now().Unix() > model.ExpireTime {
+		return 1
+	}
 	// 兼容1-100的取值范围
 	if model.Discount > 1 {
 		return decimal.NewFromFloat(model.Discount).Div(decimal.NewFromUint64(100)).InexactFloat64()
