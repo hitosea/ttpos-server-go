@@ -404,7 +404,6 @@ func (model *SaleBill) NewH5Order(companySetting CompanySetting) (*H5Order, erro
 		SaleBillUuid:    model.Uuid,                       // 销售账单uuid
 		DeskNo:          model.Desk.DeskNo,                // 桌台编号
 		Status:          constant.H5OrderStatusOrder,      // 状态，已下单
-		OrderTime:       time.Now().Unix(),                // 下单时间
 		H5OrderProducts: h5OrderProductList,               // 订单商品
 		IsNeedAudit:     companySetting.IsOpenH5Order,     // 是否需要审核，关闭商家扫码点餐接单，则不需要审核
 	}, nil

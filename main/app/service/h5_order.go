@@ -49,10 +49,12 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 	var dbOptions []repository.DBOption
 	unhandledStatusOption := h5OrderRepo.WhereStatus([]uint{constant.H5OrderStatusOrder})
 	handledStatusOption := h5OrderRepo.WhereStatus([]uint{constant.H5OrderStatusAccepted, constant.H5OrderStatusRejected})
+	// 只查询前7天的数据
+	limitTime := repository.CommonRepo.WhereCreateTimeGt(time.Now().Unix() - 7*24*60*60)
 	if *listReq.Status == 0 { // 未处理
 		dbOptions = append(dbOptions, unhandledStatusOption, repository.CommonRepo.SortWithCreateTime("asc"))
 	} else { // 已处理：已接单、已拒单
-		dbOptions = append(dbOptions, handledStatusOption, repository.CommonRepo.SortWithCreateTime("desc"))
+		dbOptions = append(dbOptions, handledStatusOption, repository.CommonRepo.SortWithCreateTime("desc"), limitTime)
 	}
 	// 桌台区域条件
 	if listReq.DeskRegionUuid > 0 {
@@ -122,9 +124,9 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 			H5OrderInfo: resp.H5OrderInfo{
 				SaleBillUuid: order.SaleBillUuid,
 				H5OrderUuid:  order.Uuid,
-				OrderTime:    order.OrderTime,
+				OrderTime:    order.CreateTime,
 				HandleTime:   order.HandleTime,
-				WaitTime:     time.Now().Unix() - order.OrderTime,
+				WaitTime:     time.Now().Unix() - order.CreateTime,
 				DeskNo:       order.DeskNo,
 				Price:        price,
 				Status:       order.Status,
@@ -140,7 +142,7 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 	}
 	listResp.Extra.UnhandledCount = unhandledCount
 
-	handledCount, err := h5OrderRepo.GetH5OrderCount(handledStatusOption)
+	handledCount, err := h5OrderRepo.GetH5OrderCount(handledStatusOption, limitTime)
 	if err != nil {
 		return nil, errors.ErrInternal
 	}
@@ -221,9 +223,9 @@ func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (
 			H5OrderInfo: resp.H5OrderInfo{
 				SaleBillUuid: h5Order.SaleBillUuid,
 				H5OrderUuid:  h5Order.Uuid,
-				OrderTime:    h5Order.OrderTime,
+				OrderTime:    h5Order.CreateTime,
 				HandleTime:   h5Order.HandleTime,
-				WaitTime:     time.Now().Unix() - h5Order.OrderTime,
+				WaitTime:     time.Now().Unix() - h5Order.CreateTime,
 				DeskNo:       h5Order.DeskNo,
 				Price:        price,
 				Status:       h5Order.Status,

@@ -22,6 +22,7 @@ type IProductionOrderRepo interface {
 	WhereProductSaleOrderProductUuid(uuid uint64) DBOption                                                                   // 生产商品销售订单uuid条件
 	WhereSaleBillUuidIn(uuids []uint64) DBOption                                                                             // 销售账单uuid条件
 	WhereSaleBillUuid(uuid uint64) DBOption                                                                                  // 销售账单uuid条件
+	WhereSource(source string) DBOption                                                                                      // 来源条件
 	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption                                                                 // 生产商品分类Uuid条件
 	WhereProductHistoryCondition() DBOption                                                                                  // 历史上菜条件
 	WithProductCategory() DBOption                                                                                           // 关联商品分类
@@ -50,7 +51,7 @@ func (r *productionRepo) GetProductionOrder(opts ...DBOption) (*model.Production
 		db = opt(db)
 	}
 
-	result := db.First(&productionOrder)
+	result := db.Order("create_time desc").First(&productionOrder)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -204,6 +205,13 @@ func (r *productionRepo) WhereSaleBillUuidIn(uuids []uint64) DBOption {
 func (r *productionRepo) WhereSaleBillUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("sale_bill_uuid = ?", uuid)
+	}
+}
+
+// WhereSource 来源
+func (r *productionRepo) WhereSource(source string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("source = ?", source)
 	}
 }
 

@@ -6,6 +6,7 @@ type ProductionOrder struct {
 	DeskUuid      uint64 `gorm:"column:desk_uuid;type:bigint(20) unsigned;default:0;comment:桌台ID;NOT NULL" json:"desk_uuid"`
 	SaleOrderUuid uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单ID;NOT NULL" json:"sale_order_uuid"`
 	SaleBillUuid  uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单ID;NOT NULL" json:"sale_bill_uuid"`
+	Source        string `gorm:"column:source;type:varchar(255);comment:操作来源 shop-商家、cashier-收银机、tablet-平板端、kitchen-厨显端、assistant-点餐助手、h5-H5" json:"source"`
 
 	ProductionOrderProducts []*ProductionOrderProduct `gorm:"foreignKey:ProductionOrderUuid;references:Uuid" json:"production_order_products"`
 }
