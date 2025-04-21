@@ -1,9 +1,11 @@
 package repository
 
 import (
+	"fmt"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/config"
 
 	"gorm.io/gorm"
 )
@@ -90,6 +92,9 @@ func (r *productRepo) defaultPreload() []DBOption {
 func (r *productRepo) GetProductListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) {
 	var products []model.ProductPackage
 	var total int64
+	var prefix = config.Database.TablePrefix
+	var productPackage = prefix + "product_package"
+	var productBom = prefix + "product_bom"
 
 	db := r.db.Model(&model.ProductPackage{}).Session(&gorm.Session{})
 
@@ -98,6 +103,13 @@ func (r *productRepo) GetProductListWithPagination(pageNo int, pageSize int, opt
 	for _, opt := range opts {
 		db = opt(db)
 	}
+
+	db = db.Joins(fmt.Sprintf("LEFT JOIN %s ON %s.uuid = %s.product_package_uuid", productBom, productPackage, productBom))
+	db = db.Where(fmt.Sprintf("%s.status = ?", productPackage), 1).
+		Where(fmt.Sprintf("%s.delete_time = ?", productPackage), 0).
+		Where(fmt.Sprintf("%s.delete_time = ?", productBom), 0).
+		Order(fmt.Sprintf("%s.sort ASC", productPackage)).
+		Order(fmt.Sprintf("%s.id DESC", productPackage))
 
 	// 获取总数
 	err := db.Count(&total).Error
