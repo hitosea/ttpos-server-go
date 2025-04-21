@@ -163,8 +163,9 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 		}
 		// 如果必点方案是固定商品时，NeedNum的取值为“必选弹框”列表中商品还差数量之和
 		if plan.GetMustRule() == constant.ProductMustPlanMustRuleAll {
-			for _, num := range mustMap {
-				needNum += num
+			for _, product := range productPackageList {
+				needNum += product.NeedNum
+
 			}
 		}
 
