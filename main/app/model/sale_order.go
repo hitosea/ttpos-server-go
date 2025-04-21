@@ -272,6 +272,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			IsH5OrderNeedAudit:  isH5NeedAudit,
 			Sign:                cryptor.Md5String(saleOrderProduct.Sign),
 			ProductPackageUuid:  saleOrderProduct.ProductPackageUuid,
+			MustPlanUuid:        saleOrderProduct.MustPlanUuid,
 			AcceptTime:          saleOrderProduct.GetAcceptTime(),
 			IsAccept:            saleOrderProduct.IsAcceptOrderProduct(),
 			UnitPrice:           saleOrderProduct.SalePrice,
