@@ -134,7 +134,12 @@ func (model *SaleBill) GetSaleOrderProductCookingSubStock() []*SaleOrderProduct 
 }
 
 // 获取已送厨和未送厨的销售订单商品
-func (model *SaleBill) GetSaleOrderProductAll() []*SaleOrderProduct {
+func (model *SaleBill) GetSaleOrderProductAll(options ...func(option *CalcOption)) []*SaleOrderProduct {
+	option := &CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+
 	saleOrderProducts := make([]*SaleOrderProduct, 0)
 	for _, saleOrder := range model.SaleOrders {
 		for i, _ := range saleOrder.SaleOrderProducts {
@@ -142,8 +147,16 @@ func (model *SaleBill) GetSaleOrderProductAll() []*SaleOrderProduct {
 			if orderProduct == nil {
 				continue
 			}
-			if !orderProduct.IsAcceptOrderBool() && orderProduct.IsDelete() {
-				continue
+
+			if option.H5CheckLimit {
+				if orderProduct.IsDelete() {
+					continue
+				}
+			} else {
+				// 非h5端检查限购的场景下，未接单的商品不占限购数
+				if !orderProduct.IsAcceptOrderBool() || orderProduct.IsDelete() {
+					continue
+				}
 			}
 			saleOrderProducts = append(saleOrderProducts, saleOrder.SaleOrderProducts[i])
 		}
@@ -458,10 +471,10 @@ func (model *SaleBill) GetUnAcceptH5OrderProductTotalPrice(h5OrderProducts []*Sa
 }
 
 // 获取超过限购的商品
-func (model *SaleBill) GetSaleOrderProductOverLimit(limitProducts map[uint64]uint) []*SaleOrderProduct {
+func (model *SaleBill) GetSaleOrderProductOverLimit(limitProducts map[uint64]uint, options ...func(option *CalcOption)) []*SaleOrderProduct {
 	products := make([]*SaleOrderProduct, 0)
 
-	saleOrderProductAll := model.GetSaleOrderProductAll()
+	saleOrderProductAll := model.GetSaleOrderProductAll(options...)
 	// product_package_uuid => num
 	numMap := make(map[uint64]uint) // key为商品包uuid value为已购买数量
 	// product_package_uuid => ProductPackage

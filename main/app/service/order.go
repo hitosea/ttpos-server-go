@@ -4270,6 +4270,11 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 		ctx.AddLock()
 	}
 
+	option := &repository.OrderCartInfoOption{}
+	for _, opt := range opts {
+		opt(option)
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.Log().Info("修改购物车商品数量", zap.Any("request", request))
 	// 商品数量不能超过999个
@@ -4354,7 +4359,12 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
-			overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts)
+			var overLimitProducts []*model.SaleOrderProduct
+			if option.UnorderedH5Product == repository.UnorderedH5Product {
+				overLimitProducts = saleBill.GetSaleOrderProductOverLimit(limitProducts, model.WithH5CheckLimit())
+			} else {
+				overLimitProducts = saleBill.GetSaleOrderProductOverLimit(limitProducts)
+			}
 			if len(overLimitProducts) > 0 {
 				return nil, errors.WithMessage(errors.New("商品超过限购"))
 			}
