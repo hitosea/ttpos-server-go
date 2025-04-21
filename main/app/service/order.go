@@ -8854,9 +8854,10 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 
 func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAutoOrder bool) (*resp.OrderCheckServiceRes, error) {
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	companySetting := ctx.GetCompanySetting()
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	// 获取h5订单
-	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid, isAutoOrder)
+	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid, companySetting.GetIsOpenH5Order())
 	if err != nil {
 		return nil, errors.WithMessage(errors.New("获取h5订单失败"), err.Error())
 	}
@@ -8949,7 +8950,7 @@ func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error 
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	// 获取h5订单
-	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid, false)
+	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid, true)
 	if err != nil {
 		if builtinerrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil

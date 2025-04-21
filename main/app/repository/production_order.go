@@ -101,7 +101,7 @@ func (r *productionRepo) GetProducts(limit int, orderBy string, opts ...DBOption
 	if limit > 0 {
 		db.Limit(limit)
 	}
-	result := db.Find(&productionOrderProducts)
+	result := db.Debug().Find(&productionOrderProducts)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -145,7 +145,7 @@ func (r *productionRepo) GetLimitedHistoryProducts(opts ...DBOption) ([]model.Pr
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Model(&model.ProductionOrderProduct{}).Select("DISTINCT sale_bill_uuid").Order("finished_time desc").Find(&productionOrderProducts).Error
+	err := db.Model(&model.ProductionOrderProduct{}).Select("DISTINCT sale_bill_uuid").Order("finished_time desc").Debug().Find(&productionOrderProducts).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
