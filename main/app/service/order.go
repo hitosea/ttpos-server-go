@@ -3749,8 +3749,8 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		opt(option)
 	}
 
-	dbId := ctx.GetDbId()
-	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(dbId))
+	db := ctx.GetDB()
+	orderRepo := repository.NewOrderRepo(db)
 
 	// 通过销售订单ID得到订单商品列表、订单金额信息、账单的销售订单列表
 	shopCart, err := orderRepo.GetOrderCartInfo(saleBillUuid, opts...)
@@ -3894,7 +3894,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 				if isAutoAdd {
 					if finish {
 						// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
-						repository.NewSaleBillRepo(s.dbm.GetDB(dbId)).UpdateSaleBillShowMustPlan(saleBillUuid)
+						repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(saleBillUuid)
 					}
 					return s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
 				} else {
@@ -5779,7 +5779,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 }
 
 func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64, mealNum uint, h5AutoAdd bool, noAutoAdd bool) (*resp.InstantProductMustPlanResp, bool, error) {
-	db := s.dbm.GetDB(ctx.GetDbId())
+	db := ctx.GetDB()
 
 	mustPlanList := make([]resp.InstantProductMustPlan, 0)
 	// product_bom_uuid => *resp.InstantMustPlanProduct
@@ -5922,8 +5922,7 @@ func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, autoFlavorP
 		})
 	}
 	// 加购
-	db := s.dbm.GetDB(ctx.GetDbId())
-	ctx.SetDB(db)
+	db := ctx.GetDB()
 	errAdd := s.ActionAdd(ctx, req.ProductAddReq{
 		SaleBillUuid:  saleBillUuid,
 		SaleOrderUuid: saleOrderUuid,
