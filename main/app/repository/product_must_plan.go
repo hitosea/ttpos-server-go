@@ -126,10 +126,22 @@ func (r *ProductMustPlanRepoImpl) GetProductMustPlanListDeskInfos(ctx context.Co
 				Query: "ProductMustPlanItems.ProductPackage.ImageFile",
 			},
 			WithPreload{
+				Query: "ProductMustPlanItems.ProductPackage.ProductBoms",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
 				Query: "ProductMustPlanItems.ProductPackage.ProductBoms.ProductFlavor.MultiLanguageName",
 			},
 			WithPreload{
 				Query: "ProductMustPlanItems.ProductPackage.ProductBoms.ProductSauce.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductMustPlanItems.ProductPackage.ProductPackageAttributeGroups",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
 			},
 			WithPreload{
 				Query: "ProductMustPlanItems.ProductPackage.ProductPackageAttributeGroups.ProductAttributeGroup.MultiLanguageName",
