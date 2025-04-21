@@ -5102,6 +5102,7 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64,
 		SaleOrderUuid:           saleOrderUuid,
 		SaleBillUuid:            saleBillUuid,
 		ProductionOrderProducts: productionOrderProducts,
+		Source:                  ctx.GetSource(),
 	}
 	return &productionOrder
 }
@@ -8709,14 +8710,18 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 		// 读取上一单下单时间
 		h5Repo := repository.NewH5OrderRepo(db)
 		lastH5Order, _ := h5Repo.GetH5Order(h5Repo.WhereSaleBillUuid(saleBillUuid))
+		var lastOrderTime int64 = 0
+		if lastH5Order != nil {
+			lastOrderTime = lastH5Order.CreateTime
+		}
 		if h5Setting.IsBuffetOrderLimit == "1" && saleBill.IsBuffetSaleBill() { // 自助餐下单限制
-			if h5Setting.BuffetOrderLimit.IsLimitTime == "1" { // 限制下单间隔
+			if h5Setting.BuffetOrderLimit.IsLimitTime == "1" && lastOrderTime > 0 { // 限制下单间隔
 				interval, err := strconv.Atoi(h5Setting.BuffetOrderLimit.LimitTime)
 				if err != nil {
 					return res, errors.WithMessage(err, "解析H5设置失败")
 				}
 				// 小于间隔时间，不可下单
-				nextTime := time.Unix(lastH5Order.CreateTime, 0).Add(time.Duration(interval) * time.Minute).Unix()
+				nextTime := time.Unix(lastOrderTime, 0).Add(time.Duration(interval) * time.Minute).Unix()
 				now := time.Now().Unix()
 				if nextTime-now > 0 {
 					return gin.H{"value": nextTime - now}, errors.NewWithCode(constant.CodeH5OrderTimeLimit, "时间限制")
@@ -8733,13 +8738,13 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 			}
 		}
 		if h5Setting.IsOrderLimit == "1" && !saleBill.IsBuffetSaleBill() { // 非自助餐下单限制
-			if h5Setting.OrderLimit.IsLimitTime == "1" { // 限制下单间隔
+			if h5Setting.OrderLimit.IsLimitTime == "1" && lastOrderTime > 0 { // 限制下单间隔
 				interval, err := strconv.Atoi(h5Setting.OrderLimit.LimitTime)
 				if err != nil {
 					return res, errors.WithMessage(err, "解析H5设置失败")
 				}
 				// 小于间隔时间，不可下单
-				nextTime := time.Unix(lastH5Order.CreateTime, 0).Add(time.Duration(interval) * time.Minute).Unix()
+				nextTime := time.Unix(lastOrderTime, 0).Add(time.Duration(interval) * time.Minute).Unix()
 				now := time.Now().Unix()
 				if nextTime-now > 0 {
 					return gin.H{"value": nextTime - now}, errors.NewWithCode(constant.CodeH5OrderTimeLimit, "时间限制")
