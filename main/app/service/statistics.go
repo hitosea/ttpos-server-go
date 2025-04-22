@@ -27,6 +27,7 @@ type IStatisticsSrv interface {
 	CountAreaDays(ctx context.Context, req CountReq, days []string) []CountAreaDaysResp               // 统计区域天数
 	Count7Days(ctx context.Context, req CountReq) Count7DaysResp                                      // 统计销售天数
 	CountMemberNum(ctx context.Context, req CountReq) int64                                           // 统计会员数量
+	CountMemberNumDays(ctx context.Context, req CountReq, days []string) []CountMemberNumDaysResp     // 统计会员数量天数
 	CountMember(ctx context.Context, req CountReq) CountMemberResp                                    // 统计会员
 	CountMemberPayment(ctx context.Context, req CountReq) CountPaymentResp                            // 统计会员支付
 	CountMemberPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp   // 统计会员支付天数
@@ -653,6 +654,37 @@ func (s *statisticsSrv) CountMemberNum(ctx context.Context, req CountReq) int64 
 	req.IsCreateTime = true
 	opts := s.buildCountOpts(req)
 	return repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNum(opts...)
+}
+
+type CountMemberNumDaysResp struct {
+	Day       string `json:"day"`        // 日期
+	MemberNum int64  `json:"member_num"` // 会员数量
+}
+
+// CountMemberNumDays 统计会员数量天数
+func (s *statisticsSrv) CountMemberNumDays(ctx context.Context, req CountReq, days []string) []CountMemberNumDaysResp {
+	req.IsCreateTime = true
+	opts := s.buildCountOpts(req)
+	memberNumData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNumDays(opts...)
+
+	var list []CountMemberNumDaysResp
+	for _, day := range days {
+		result, ok := slice.FindBy(memberNumData, func(index int, dayData model.CountMemberNumDaysResp) bool {
+			return dayData.Day.String == day
+		})
+		if ok {
+			list = append(list, CountMemberNumDaysResp{
+				Day:       day,
+				MemberNum: result.MemberNum.Int64,
+			})
+		} else {
+			list = append(list, CountMemberNumDaysResp{
+				Day:       day,
+				MemberNum: 0,
+			})
+		}
+	}
+	return list
 }
 
 type CountUnpaidOrderResp struct {
@@ -1365,6 +1397,7 @@ func (s *statisticsSrv) CountExport(ctx context.Context, req CountReq) (CountExp
 	paymentData := s.CountPaymentDays(ctx, req, days)
 	memberPaymentData := s.CountMemberPaymentDays(ctx, req, days)
 	freePaymentData := s.CountFreePaymentDays(ctx, req, days)
+	memberNumData := s.CountMemberNumDays(ctx, req, days)
 
 	var data []CountExportData
 	for _, sale := range saleData {
@@ -1426,6 +1459,15 @@ func (s *statisticsSrv) CountExport(ctx context.Context, req CountReq) (CountExp
 			}
 		}
 
+		// 统计会员数量
+		var totalMemberNum int64
+		memberNumResult, ok := slice.FindBy(memberNumData, func(index int, item CountMemberNumDaysResp) bool {
+			return item.Day == sale.Day
+		})
+		if ok {
+			totalMemberNum = memberNumResult.MemberNum
+		}
+
 		data = append(data, CountExportData{
 			Day:                   sale.Day,
 			TotalSaleAmount:       sale.TotalSaleAmount,
@@ -1434,7 +1476,7 @@ func (s *statisticsSrv) CountExport(ctx context.Context, req CountReq) (CountExp
 			TotalPaymentFee:       sale.TotalPaymentFee,
 			TotalTax:              sale.TotalTax,
 			TotalProductNum:       sale.TotalProductNum,
-			TotalMemberNum:        0, // todo 统计会员数量
+			TotalMemberNum:        totalMemberNum,
 			TotalDiscountMember:   sale.TotalDiscountMember,
 			TotalDiscount:         sale.TotalDiscount,
 			TotalDiscountRatio:    sale.TotalDiscountRatio,

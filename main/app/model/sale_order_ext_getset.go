@@ -582,7 +582,7 @@ func (model *SaleOrder) GetPercentageList() []map[string]string {
 
 	// 商品列表
 	for _, item := range model.SaleOrderProducts {
-		if item.IsDelete() || item.IsUnCookingProduct() || item.IsCancelProduct() {
+		if item.IsDelete() || item.IsUnCookingProduct() || item.IsUnAcceptOrderBool() || item.IsCancelProduct() {
 			continue
 		}
 		// 获取税率

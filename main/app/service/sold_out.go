@@ -55,9 +55,9 @@ func (s *soldOutSrv) GetSoldOutList(companyUuid uint64, soldOutReq req.SoldOutLi
 
 	for _, bom := range boms {
 		soldOuts = append(soldOuts, resp.SoldOut{
-			LocaleProductName:    s.localeSrv.GetLocaleNames(bom.ProductPackage.MultiLanguageName),
+			LocaleProductName:    bom.ProductPackage.MultiLanguageName.GetNames(),
 			ProductBomUuid:       bom.Uuid,
-			LocaleProductBomName: s.localeSrv.GetLocaleNames(bom.ProductFlavor.MultiLanguageName),
+			LocaleProductBomName: bom.ProductFlavor.MultiLanguageName.GetNames(),
 		})
 	}
 
