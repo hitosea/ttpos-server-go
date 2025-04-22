@@ -236,7 +236,7 @@ func (model *SaleOrder) GetCookingOrderProductList() []*SaleOrderProduct {
 	return model.GetAllOrderProductList(WithCooking())
 }
 
-// 获取未送厨的订单商品列表
+// 获取未送厨的订单商品列表，不包含未接单的商品
 func (model *SaleOrder) GetUnCookingOrderProductList() []*SaleOrderProduct {
 	return model.GetAllOrderProductList(WithUnCooking())
 }
@@ -312,6 +312,7 @@ func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOptio
 				products = append(products, orderProduct)
 				continue
 			}
+			continue
 		}
 
 		if option.H5OrderStatus == H5OrderStatusUnAccepted {
@@ -320,6 +321,7 @@ func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOptio
 				products = append(products, orderProduct)
 				continue
 			}
+			continue
 		}
 
 		if option.CookingStatus == CookingStatusCooking {
@@ -328,6 +330,7 @@ func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOptio
 				products = append(products, orderProduct)
 				continue
 			}
+			continue
 		}
 
 		if option.CookingStatus == CookingStatusUnCooking {
@@ -336,6 +339,7 @@ func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOptio
 				products = append(products, orderProduct)
 				continue
 			}
+			continue
 		}
 
 		if option.CookingStatus == CookingStatusAllAndOneH5Order {
