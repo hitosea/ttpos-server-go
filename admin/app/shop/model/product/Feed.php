@@ -221,6 +221,7 @@ class Feed extends FeedModel
                         'stock_num' => $min_stock_num,
                         'create_time' => time(),
                         'update_time' => time(),
+                        'status' => 1,
                     ];
                 }
                 ProductBom::insertAll($insert_data);

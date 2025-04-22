@@ -115,26 +115,34 @@ class Spec extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        return $this->order(['create_time' => 'desc'])->select();
-
-        // todo 兼容
-        // $prefix = env('DB_PREFIX');
-        // return $this->alias('sku')
-        //     ->with(['material'])
-        //     ->field('sku.*')
-        //     ->field("IF(psku.sku_count IS NULL, 0, 1) AS is_used")
-        //     ->field("IFNULL(psku.product_ids, '') AS product_ids")
-        //     ->leftJoin("
-        //     (
-        //         SELECT psku.spec_sku_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT psku.spec_sku_id) AS sku_count
-        //         FROM {$prefix}product_sku psku
-        //         LEFT JOIN {$prefix}product_package product ON psku.product_id = product.product_id
-        //         WHERE product.delete_time = 0
-        //         GROUP BY psku.spec_sku_id
-        //     ) psku
-        // ", 'sku.spec_id = psku.spec_sku_id')
-        //     ->order(['create_time' => 'desc'])
-        //     ->select();
+        $list = [];
+        $flavors = $this->with(['multiLanguageName'])->order(['create_time' => 'desc'])->select();
+        foreach ($flavors as $flavor) {
+            $name = [
+                'zh' => $flavor['multiLanguageName']['zh_name'],
+                'zhtw' => $flavor['multiLanguageName']['zh_tw_name'],
+                'en' => $flavor['multiLanguageName']['en_name'],
+                'ja' => $flavor['multiLanguageName']['ja_name'],
+                'ko' => $flavor['multiLanguageName']['ko_name'],
+                'my' => $flavor['multiLanguageName']['my_name'],
+                'th' => $flavor['multiLanguageName']['th_name'],
+                'tr' => $flavor['multiLanguageName']['tr_name'],
+            ];
+            extractLanguage($name);
+            $list[] = [
+                'spec_id' => $flavor['uuid'],
+                'spec_name' => json_encode($name),
+                'spec_name_text' => extractLanguage(json_encode($name)),
+                'id' => $flavor['id'],
+                'uuid' => $flavor['uuid'],
+                'name' => json_encode($name),
+                'multi_language_name_uuid' => $flavor['multi_language_name_uuid'],
+                'create_time' => $flavor['create_time'],
+                'update_time' => $flavor['update_time'],
+                'delete_time' => $flavor['delete_time'],
+            ];
+        }
+        return $list;
     }
 
     /**

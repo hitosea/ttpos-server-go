@@ -828,7 +828,6 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 					"desk_no":         saleBill.Desk.DeskNo,
 					"sale_bill_uuid":  saleBill.Uuid,  // 待接单记录改成当前销售账单
 					"sale_order_uuid": saleOrder.Uuid, // 待接单记录改成当前销售订单
-					"create_time":     time.Now().Unix(),
 				},
 				repository.NewCommonRepo().WhereByDeskUuid(deskSaleBill.DeskUuid),
 			); err != nil {

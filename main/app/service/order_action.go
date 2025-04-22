@@ -220,7 +220,7 @@ func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, sal
 }
 
 // ActionAddAndCooking 加购并送厨
-func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*resp.OrderCheckServiceRes, error) {
+func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill, ignoreMust bool) (*resp.OrderCheckServiceRes, error) {
 
 	// 加购相关
 	_, err := s.actionAdd(ctx, request, saleBill)
@@ -237,7 +237,7 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 		}
 
 		// 送厨
-		checkServiceRes, err := s.ActionCooking(ctx, true, saleBill, unCookingSaleOrderProducts, 0, withCalcAndSaveSaleBill()) // 平板端加购并送厨
+		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, 0, withCalcAndSaveSaleBill()) // 平板端加购并送厨
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -328,12 +328,19 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 		}
 	}
 
-	_, err := s.ActionAddAndCooking(ctx, req.ProductAddReq{
+	checkServiceRes, err := s.ActionAddAndCooking(ctx, req.ProductAddReq{
 		SaleBillUuid:  saleBill.Uuid,
 		SaleOrderUuid: request.SaleOrderUuid,
 		Products:      request.Products,
 		IsH5Product:   false,
-	}, saleBill)
+	}, saleBill, request.IgnoreMust)
+	if checkServiceRes != nil {
+		if checkServiceRes.Code == constant.CodeOrderCheckProductMust && request.IgnoreMust {
+			// 必点方案未选择，且忽略必点方案
+		} else {
+			return checkServiceRes.OrderCheckRes, errors.WithMessage(errors.New(constant.ParseCodeOrderCheck(checkServiceRes.Code)))
+		}
+	}
 	return res, err
 }
 

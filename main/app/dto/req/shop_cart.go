@@ -40,6 +40,7 @@ type TabletOrderCartProductAddReq struct {
 	SaleBillUuid  uint64          `json:"sale_bill_uuid" binding:"required"`      // 销售账单ID。
 	SaleOrderUuid uint64          `json:"sale_order_uuid" binding:"required"`     // 销售订单ID。
 	Products      []ProductParams `json:"products" binding:"required,min=1,dive"` // 商品信息列表·
+	IgnoreMust    bool            `json:"ignore_must"`                            // 是否忽略必点方案
 }
 
 // ProductParams 商品参数
