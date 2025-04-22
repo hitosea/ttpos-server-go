@@ -5847,8 +5847,6 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 	db := ctx.GetDB()
 
 	mustPlanList := make([]resp.InstantProductMustPlan, 0)
-	// product_bom_uuid => *resp.InstantMustPlanProduct
-	autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProductStat) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
 	// must_plan_uuid => autoFlavorProduct
 	planAutoFlavorProduct := make(map[uint64]AutoFlavorProduct) // 必点方案ID => 自动加购的商品列表. 用于记录每个必点方案的自动加购商品
 
@@ -5868,6 +5866,8 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 
 	// 遍历得到要自动加购的商品
 	for i, plan := range mustPlanList {
+		// product_bom_uuid => *resp.InstantMustPlanProduct
+		autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProductStat) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
 		for j, product := range plan.Products.List {
 			if product.IsAutoAdd {
 				planProduct := mustPlanList[i].Products.List[j].Product
@@ -5878,14 +5878,16 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 				}
 			}
 		}
-		planAutoFlavorProduct[plan.Uuid] = autoFlavorProduct
+		if len(autoFlavorProduct) > 0 {
+			planAutoFlavorProduct[plan.Uuid] = autoFlavorProduct
+		}
 	}
 
 	isAutoAdd := false
 
 	// 1. 是否自动加购。平板不自动加购
 	// 2. 判断是否需要给点餐账单自动加购商品。当map列表中有商品时，表示需要自动加购
-	if !noAutoAdd && len(autoFlavorProduct) > 0 && shopCartInfo.SaleBill.IsAutoAddMustProduct() {
+	if !noAutoAdd && len(planAutoFlavorProduct) > 0 && shopCartInfo.SaleBill.IsAutoAddMustProduct() {
 		errTx := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
 			// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
 			ctx.SetDB(tx)
