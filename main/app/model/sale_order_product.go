@@ -732,6 +732,11 @@ func (model *SaleOrderProduct) IsAcceptOrderBool() bool {
 	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderAccepted
 }
 
+// 订单商品是否未接单
+func (model *SaleOrderProduct) IsUnAcceptOrderBool() bool {
+	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept
+}
+
 // 是否是H5下单商品。 未接单且有h5订单uuid
 func (model *SaleOrderProduct) IsH5OrderProductBool() bool {
 	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept && model.H5OrderUuid != 0

@@ -500,7 +500,7 @@ func (s *businessSrv) CountProductSales(ctx context.Context, req req.BusinessDat
 		list = append(list, business_data_resp.BusinessDataCountProductSalesItem{
 			ProductName:        productSale.ProductName,
 			SalesNum:           int(productSale.TotalSaleNum),
-			SalesPrice:         productSale.TotalOriginSaleAmount,
+			SalesPrice:         productSale.TotalBusinessAmount,
 			CategoryName:       productSale.CategoryName,
 			OriginalSalesPrice: productSale.TotalOriginSaleAmount,
 			TotalPayPrice:      productSale.TotalActualSaleAmount,

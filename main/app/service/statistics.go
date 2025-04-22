@@ -751,10 +751,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			orderRefundDiscountMember decimal.Decimal
 			orderRefundFee            decimal.Decimal
 
-			isFree     bool = saleOrder.IsFree > 0
-			isStatFree bool = saleBill.SaleBillSetting.IsStatFree == 1
-			isSateGive bool = saleBill.SaleBillSetting.IsStatGift == 1
-			isFeeType  bool = saleBill.SaleBillSetting.TaxFeeType == 2
+			isFree          bool = saleOrder.IsFree > 0
+			isStatFree      bool = saleBill.SaleBillSetting.IsStatFree == 1
+			isSateGive      bool = saleBill.SaleBillSetting.IsStatGift == 1
+			isFeeType       bool = saleBill.SaleBillSetting.TaxFeeType == 2
+			isFixServiceFee bool = saleBill.SaleBillSetting.ServiceFeeType == 1
 		)
 
 		if isStatFree {
@@ -800,17 +801,21 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				productNumDec := decimal.NewFromFloat(float64(productNum))
 				orderProductNum += productNum
 
+				productFinalPrice := decimal.NewFromFloat(saleProduct.TotalPrice)
+
 				// 统计赠送商品数量
 				productGiveNum := 0
 				if saleProduct.GiftTime > 0 {
 					productGiveNum = int(saleProduct.Num)
 					orderGiveNum += productGiveNum
+					productFinalPrice = decimal.Zero
 				}
 
 				// 统计免单商品数据
 				productFreeNum := 0
 				if isFree {
 					productFreeNum = int(saleProduct.Num)
+					productFinalPrice = decimal.Zero
 				}
 
 				// 统计: 商品定价(折扣前)、商品税、服务费、服务费税
@@ -821,7 +826,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				productTax := decimal.NewFromFloat(saleProduct.TaxFee)
 				productServiceFee := decimal.NewFromFloat(saleProduct.ServiceFee)
 				productServiceTax := decimal.NewFromFloat(saleProduct.ServiceTaxFee)
-				if saleProduct.GiftTime > 0 {
+				if saleProduct.GiftTime > 0 || isFree {
 					productTax = decimal.NewFromFloat(0)
 					productServiceFee = decimal.NewFromFloat(0)
 					productServiceTax = decimal.NewFromFloat(0)
@@ -865,6 +870,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				for _, refundProduct := range saleProduct.ReturnOrderProducts {
 					productRefundNum += int(refundProduct.Num)
 					orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee).Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee)).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					if !isFixServiceFee {
+						orderRefundServiceFee = orderRefundServiceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					}
 				}
 
 				orderRefundNum += productRefundNum
@@ -878,7 +886,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					ProductBomUuid:     productBomUuid,
 					ProductPrice:       productPrice.InexactFloat64(),
 					ProductSalePrice:   productSalePrice.InexactFloat64(),
-					ProductFinalPrice:  saleProduct.Price,
+					ProductFinalPrice:  productFinalPrice.InexactFloat64(),
 					ProductNum:         productNum,
 					TaxRate:            saleProduct.TaxRate,
 					TaxFee:             productTax.InexactFloat64(),
@@ -894,9 +902,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 
 		if !isFree && saleOrder.GetCanReturnAmount() == 0 {
 			orderRefundFee = decimal.NewFromFloat(saleOrder.PaymentCommissionFee)
-			orderRefundServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
 			orderRefundDiscount = decimal.NewFromFloat(saleOrder.CustomDiscountFee).Add(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee))
 			orderRefundDiscountMember = decimal.NewFromFloat(saleOrder.MemberDiscountFee)
+			if isFixServiceFee {
+				orderRefundServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
+			}
 		}
 		// 支付订单
 		for _, salePayment := range saleOrder.PaymentOrders {
@@ -1045,11 +1055,7 @@ func (s *statisticsSrv) buildCountOpts(req CountReq) []repository.DBOption {
 	if req.DutyNo != "" {
 		opts = append(opts, commonRepo.WhereByDutyNo(req.DutyNo))
 	}
-	// logger.Logger.Info("buildCountOptsReq", zap.Any("req", req))
-	// if req.AreaUuid > 0 {
-	// 	prefix := config.Database.TablePrefix
-	// 	opts = append(opts, commonRepo.WhereSubQueryByRegionUuid(prefix+"sale_bill", req.AreaUuid))
-	// }
+
 	return opts
 }
 

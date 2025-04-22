@@ -39,6 +39,24 @@ func ErrorWithDetail(c *gin.Context, code int, err error) {
 	Fail(c, code, messages...)
 }
 
+// ErrorWithMessage 返回错误
+func ErrorWithMessage(c *gin.Context, code int, err error) {
+	if config.Server.Mode == constant.ServerModeRelease {
+		// 只有Release模式才返回原始错误信息。如123123
+		// 开发模式和测试模式都返回调用栈信息。如[v1/cashier/cashier_instant.go:384]h.orderService.GetOrderCartInfoByDeviceSn failed: [app/service/order.go:1837]deviceRepo.GetDevice failed: [app/repository/device.go:41]db.First failed: 123123
+		err = pkgerrors.Cause(err)
+	}
+	logger.Logger.Info("ErrorWithDetail", zap.String("url", c.Request.URL.String()), zap.String("error", err.Error()))
+	messages := []string{err.Error()}
+	var appErr errors.AppError
+	if pkgerrors.As(err, &appErr) {
+		if len(appErr.Replace) > 0 {
+			messages = append(messages, appErr.Replace...)
+		}
+	}
+	Fail(c, code, messages...)
+}
+
 // ErrorWithData 返回错误携带数据
 func ErrorWithData(c *gin.Context, code int, data any, err error) {
 	if config.Server.Mode == constant.ServerModeRelease {

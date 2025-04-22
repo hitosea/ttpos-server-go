@@ -1565,9 +1565,14 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		return errors.WithMessage(errors.New("没有可退货的商品")), constant.CodeFail
 	}
 
-	// 创建退款单
-	returnOrder := saleOrder.NewReturnOrder(saleOrderProducts, saleOrderBuffetComstomerTypes, saleOrderBuffetDelayProducts, numMap, returnType)
+	// 可退款金额
+	canReturnAmount := saleOrder.GetCanReturnAmount()
 
+	// 创建退款单
+	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetComstomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
+	if err != nil {
+		return errors.WithMessage(err), constant.CodeFail
+	}
 	// 是否存在QrPromptPay支付
 	if returnOrder.IsExistQrPromptPay() {
 		if req.BankCode == "" || req.AccountNo == "" || req.AccountName == "" {
@@ -2005,7 +2010,7 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
 			Num:                  saleOrderProduct.GetCanReturnNum(), // 可退货数量=订单商品数量-已退货数量
-			Price:                saleOrderProduct.GetTotalPrice(),
+			Price:                saleOrderProduct.TotalPrice,
 			CanReturnAmount:      saleOrderProduct.GetCanReturnPrice(),
 			CurrencyUnit:         currencyUnit,
 		})
@@ -4642,7 +4647,13 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 	ctx.SetDB(db)
 	// 检查必选
 	if !ignoreMust {
-		shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithH5OrderUuid(context.GetH5OrderUuid(ctx)))
+		var shopCartInfo *ro.ShopCartRepo
+		var err error
+		if options.IsH5Check {
+			shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithNotDeleted())
+		} else {
+			shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithH5OrderUuid(context.GetH5OrderUuid(ctx)))
+		}
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -4650,8 +4661,10 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 		if deskUuid != 0 {
 			// 如果是桌台订单
 			if options.CheckType == CheckTypeCheckout {
+				// 检查结账
 				instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCheckout())
 			} else {
+				// 检查送厨
 				instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCooking())
 			}
 			if err != nil {
@@ -4678,7 +4691,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 		if len(mustPlans) > 0 {
 			res := &resp.OrderCheckServiceRes{
 				Code:          constant.CodeOrderCheckProductMust,
-				OrderCheckRes: resp.OrderCheckRes{ProductMustPlanList: &resp.ProductMustPlanList{List: instantMustPlanList}},
+				OrderCheckRes: resp.OrderCheckRes{ProductMustPlanList: &resp.ProductMustPlanList{List: mustPlans}},
 			}
 			return res, nil
 		}
@@ -5863,12 +5876,16 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 		return nil, false, errors.WithMessage(err, "repository.NewOrderRepo(db).GetOrderCartInfo failed", fmt.Sprintf("saleBillUuid:%d", saleBillUuid))
 	}
 
-	planList, errMustPlan := s.mustPlanSrv.GetDeskMustPlanList(ctx, mealNum, shopCartInfo.GetMustPlanProductInfo(), shopCartInfo.SaleBill.DeskUuid)
-	if errMustPlan != nil {
-		ctx.Log().Info("获取必点列表失败", zap.Error(errMustPlan))
-		return nil, false, errors.New("获取必点列表失败")
+	if shopCartInfo.SaleBill.IsBuffetSaleBill() {
+		// 如果是自助餐桌台，将必点商品弹框中的自助餐商品价格标记为0元
+		mustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, mealNum, shopCartInfo.GetMustPlanProductInfo(), shopCartInfo.SaleBill.DeskUuid, WithSaleBillUuid(shopCartInfo.SaleBill.Uuid))
+	} else {
+		mustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, mealNum, shopCartInfo.GetMustPlanProductInfo(), shopCartInfo.SaleBill.DeskUuid)
 	}
-	mustPlanList = planList
+	if err != nil {
+		ctx.Log().Info("获取必点列表失败", zap.Error(err))
+		return nil, false, errors.WithMessage(err, "获取必点列表失败")
+	}
 	ctx.Log().Debug("构建好必点方案列表", zap.Any("数量", len(mustPlanList)))
 
 	// 遍历得到要自动加购的商品
@@ -6564,6 +6581,9 @@ func (s *orderSrv) getSaleOrderProductWithoutWarehouseOutForm(ctx context.Contex
 	}
 	productMap := make(map[uint64]*model.SaleOrderProduct)
 	for _, saleOrderProduct := range allSaleOrderProducts {
+		if saleOrderProduct.IsUnAcceptOrderBool() {
+			continue
+		}
 		productMap[saleOrderProduct.Uuid] = saleOrderProduct
 	}
 	for _, warehouseOutFormItem := range warehouseOutFormItems {
