@@ -318,7 +318,7 @@ class ErpMonthlyStatistics extends BaseModel
 
             $list[] = [
                 'product_name_text' => $productNametext,
-                'total_num' => $row['total_num']
+                'total_num' => floatval($row['total_num'])
             ];
         }
 

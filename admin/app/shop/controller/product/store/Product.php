@@ -15,7 +15,6 @@ use app\shop\model\product\Label as LabelModel;
 use app\shop\model\product\Product as ProductModel;
 use app\common\model\product\Material as MaterialModel;
 use app\shop\model\product\Category as CategoryModel;
-use think\facade\Log;
 
 /**
  * 店内商品
