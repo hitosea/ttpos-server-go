@@ -5863,12 +5863,16 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 		return nil, false, errors.WithMessage(err, "repository.NewOrderRepo(db).GetOrderCartInfo failed", fmt.Sprintf("saleBillUuid:%d", saleBillUuid))
 	}
 
-	planList, errMustPlan := s.mustPlanSrv.GetDeskMustPlanList(ctx, mealNum, shopCartInfo.GetMustPlanProductInfo(), shopCartInfo.SaleBill.DeskUuid)
-	if errMustPlan != nil {
-		ctx.Log().Info("获取必点列表失败", zap.Error(errMustPlan))
-		return nil, false, errors.New("获取必点列表失败")
+	if shopCartInfo.SaleBill.IsBuffetSaleBill() {
+		// 如果是自助餐桌台，将必点商品弹框中的自助餐商品价格标记为0元
+		mustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, mealNum, shopCartInfo.GetMustPlanProductInfo(), shopCartInfo.SaleBill.DeskUuid, WithSaleBillUuid(shopCartInfo.SaleBill.Uuid))
+	} else {
+		mustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, mealNum, shopCartInfo.GetMustPlanProductInfo(), shopCartInfo.SaleBill.DeskUuid)
 	}
-	mustPlanList = planList
+	if err != nil {
+		ctx.Log().Info("获取必点列表失败", zap.Error(err))
+		return nil, false, errors.WithMessage(err, "获取必点列表失败")
+	}
 	ctx.Log().Debug("构建好必点方案列表", zap.Any("数量", len(mustPlanList)))
 
 	// 遍历得到要自动加购的商品

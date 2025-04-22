@@ -42,7 +42,8 @@ func NewMustPlanSrvImpl(dbm *database.DBManager) IMustPlanSrv {
 }
 
 type CheckOption struct {
-	Scene uint // 检查场景. 1-下单场景 2-结账场景
+	Scene        uint   // 检查场景. 1-下单场景 2-结账场景
+	SaleBillUuid uint64 // 桌台自助餐场景下，将必点商品价格记为0元
 }
 
 const (
@@ -59,6 +60,12 @@ func WithCheckSceneCooking() func(option *CheckOption) {
 func WithCheckSceneCheckout() func(option *CheckOption) {
 	return func(option *CheckOption) {
 		option.Scene = CheckSceneCheckout
+	}
+}
+
+func WithSaleBillUuid(saleBillUuid uint64) func(option *CheckOption) {
+	return func(option *CheckOption) {
+		option.SaleBillUuid = saleBillUuid
 	}
 }
 
@@ -288,6 +295,19 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 
 	mustPlanList := make([]resp.InstantProductMustPlan, 0)
 
+	// 获取自助餐商品列表
+	buffetProductMap := make(map[uint64]bool) // product_package_uuid => true
+	if option.SaleBillUuid != 0 {
+		saleBill, err := repository.NewSaleBillRepo(ctx.GetDB()).GetSaleBillBuffetProductList(option.SaleBillUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		buffetProducts := saleBill.GetBuffetProductList()
+		for _, buffetProduct := range buffetProducts.List {
+			buffetProductMap[buffetProduct.Uuid] = true
+		}
+	}
+
 	// 构建必点方案响应列表
 	for _, plan := range productMustPlanList {
 		if plan.IsDelete() {
@@ -344,6 +364,11 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 				productPackages[i].NeedNum = 0
 			} else {
 				productPackages[i].NeedNum = productPackages[i].MustNum - productPackages[i].SelectedNum
+			}
+
+			// 如果商品是自助餐商品，则价格为0元
+			if option.SaleBillUuid != 0 && buffetProductMap[productPackageUuid] {
+				productPackages[i].Product.Price = 0
 			}
 		}
 
