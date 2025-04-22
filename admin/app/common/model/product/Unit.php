@@ -49,6 +49,14 @@ class Unit extends BaseModel
         ];
         Websocket::pushClient(request()->appId, Websocket::SOURCE_All, Websocket::SOURCE_All, Websocket::UPDATE_PRODUCT, 0, $msgData);
     }
+
+    /**
+     * 多语言关联
+     */
+    public function multiLanguageName()
+    {
+        return $this->hasOne('app\common\model\store\MultiLanguageName', 'uuid', 'multi_language_name_uuid');
+    }
     
     /**
      * 兼容字段
@@ -109,7 +117,24 @@ class Unit extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        return $this->order(['create_time' => 'desc'])->select()?->append(['product_ids'], true);
+        $unitList = $this->with(['multiLanguageName'])->order(['create_time' => 'desc'])->select();
+        foreach ($unitList as $key => $unit) {
+            $name = [
+                'zh' => $unit['multiLanguageName']['zh_name'],
+                'zhtw' => $unit['multiLanguageName']['zh_tw_name'],
+                'en' => $unit['multiLanguageName']['en_name'],
+                'ja' => $unit['multiLanguageName']['ja_name'],
+                'ko' => $unit['multiLanguageName']['ko_name'],
+                'my' => $unit['multiLanguageName']['my_name'],
+                'th' => $unit['multiLanguageName']['th_name'],
+                'tr' => $unit['multiLanguageName']['tr_name'],
+            ];
+            $unit['name'] = json_encode($name);
+            $unit['unit_name'] = json_encode($name);
+            $unit['unit_name_text'] = extractLanguage(json_encode($name));
+            $unitList[$key] = $unit;
+        }
+        return $unitList;
     }
 
     /**

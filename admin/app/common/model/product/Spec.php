@@ -128,7 +128,6 @@ class Spec extends BaseModel
                 'th' => $flavor['multiLanguageName']['th_name'],
                 'tr' => $flavor['multiLanguageName']['tr_name'],
             ];
-            extractLanguage($name);
             $list[] = [
                 'spec_id' => $flavor['uuid'],
                 'spec_name' => json_encode($name),
