@@ -23,6 +23,10 @@ type ProductMustPlan struct {
 	ProductMustPlanRegions []ProductMustPlanRegion `gorm:"foreignKey:ProductMustPlanUuid;references:Uuid"`
 }
 
+func (model *ProductMustPlan) GetCanChangeNum() bool {
+	return model.AutoChange == constant.Yes
+}
+
 func (model *ProductMustPlan) GetMustType() int {
 	switch model.MustType {
 	// 每单必点

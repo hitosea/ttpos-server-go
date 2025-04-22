@@ -160,6 +160,7 @@ type Product struct {
 	IsGift              bool               `json:"is_gift"`               // 是否是赠菜
 	IsBuffet            bool               `json:"is_buffet"`             // 是否是自助餐
 	IsCancel            bool               `json:"is_cancel"`             // 是否退菜
+	CanChangeNum        bool               `json:"can_change_num"`        // 顾客可修改必点数量
 	AboutBuffet         AboutBuffet        `json:"about_buffet"`          // 自助餐信息
 	IsShowKitchen       uint               `json:"is_show_kitchen"`       // 是否在厨显端显示
 	// 后端使用，前端不返回

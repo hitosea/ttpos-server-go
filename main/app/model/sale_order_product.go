@@ -100,6 +100,7 @@ type SaleOrderProduct struct {
 	CancelReasons              []*SaleOrderProductReason    `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`
 	ProductionOrderProduct     *ProductionOrderProduct      `gorm:"foreignKey:SaleOrderProductUuid;references:uuid"`
 	H5Order                    *H5Order                     `gorm:"foreignKey:H5OrderUuid;references:uuid"`
+	ProductMustPlan            *ProductMustPlan             `gorm:"foreignKey:MustPlanUuid;references:uuid"`
 
 	// 内部字段
 	operation string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
