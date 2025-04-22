@@ -629,19 +629,6 @@ type CountProductSaleRepoReq struct {
 
 // CountProductSale 统计商品销售
 func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64) {
-	/*
-			$lang = request()->header('language') ?: 'zh';
-		        $productName = $params['product_name'] ?? '';
-		        if ($productName != '') {
-		            $where = "(JSON_UNQUOTE(JSON_EXTRACT(product_name, '$.$lang')) LIKE :product_name)";
-		            if (!$whereSql) {
-		                $whereSql .= " WHERE {$where}";
-		            } else {
-		                $whereSql .= " AND {$where}";
-		            }
-		            $bind['product_name'] = "%{$productName}%";
-		        }
-	*/
 	var result []model.StatisticsProductSaleData
 	db := r.db
 	db2 := r.db
@@ -686,7 +673,7 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 			"JSON_UNQUOTE(JSON_EXTRACT(pc.name, '$."+req.Language+"')) AS category_name",
 			"JSON_UNQUOTE(JSON_EXTRACT(ppc.name, '$."+req.Language+"')) AS category_parent_name",
 			"SUM(sp.product_num) AS sale_num",
-			"SUM(IF(sp.give_num > 0 OR sp.free_num > 0, sp.product_sale_price, sp.product_sale_price + sp.tax_fee + sp.service_fee + service_tax) * sp.product_num) AS origin_sale_amount",
+			"SUM((sp.product_price + sp.tax_fee + sp.service_fee + service_tax) * sp.product_num) AS origin_sale_amount",
 			"SUM(sp.product_final_price * sp.product_num) AS actual_sale_amount",
 			"SUM((sp.product_final_price - sp.tax_fee - sp.service_tax) * sp.product_num) AS business_amount",
 			"SUM(IF(sp.free_num > 0,sp.free_num,sp.give_num)) AS give_num",
