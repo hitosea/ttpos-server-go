@@ -14196,6 +14196,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/statistics/export": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "统计导出",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.营业数据"
+                ],
+                "summary": "统计导出",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BusinessDataCountReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/business_data_resp.BusinessDataExport"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/statistics/payment_method": {
             "get": {
                 "security": [
@@ -15664,6 +15715,176 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.PageResponse"
                         }
                     ]
+                }
+            }
+        },
+        "business_data_resp.BusinessDataExport": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "description": "数据",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.BusinessDataExportItem"
+                    }
+                },
+                "days": {
+                    "description": "日期",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "business_data_resp.BusinessDataExportArea": {
+            "type": "object",
+            "properties": {
+                "area_business_amount": {
+                    "description": "区域营业收入",
+                    "type": "number"
+                },
+                "area_id": {
+                    "description": "区域id",
+                    "type": "integer"
+                },
+                "area_name": {
+                    "description": "区域名称",
+                    "type": "string"
+                },
+                "area_product_num": {
+                    "description": "区域商品数量",
+                    "type": "integer"
+                },
+                "area_sale_amount": {
+                    "description": "区域销售额",
+                    "type": "number"
+                }
+            }
+        },
+        "business_data_resp.BusinessDataExportItem": {
+            "type": "object",
+            "properties": {
+                "area_list": {
+                    "description": "区域列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.BusinessDataExportArea"
+                    }
+                },
+                "avg_desk_order_amount": {
+                    "type": "number"
+                },
+                "avg_instant_order_amount": {
+                    "type": "number"
+                },
+                "avg_order_amount": {
+                    "type": "number"
+                },
+                "day": {
+                    "type": "string"
+                },
+                "max_desk_order_amount": {
+                    "type": "number"
+                },
+                "max_instant_order_amount": {
+                    "type": "number"
+                },
+                "max_order_amount": {
+                    "type": "number"
+                },
+                "min_desk_order_amount": {
+                    "type": "number"
+                },
+                "min_instant_order_amount": {
+                    "type": "number"
+                },
+                "min_order_amount": {
+                    "type": "number"
+                },
+                "payment_list": {
+                    "description": "支付列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/business_data_resp.BusinessDataExportPayment"
+                    }
+                },
+                "total_business_amount": {
+                    "type": "number"
+                },
+                "total_desk_num": {
+                    "type": "integer"
+                },
+                "total_discount": {
+                    "type": "number"
+                },
+                "total_discount_member": {
+                    "type": "number"
+                },
+                "total_discount_ratio": {
+                    "type": "number"
+                },
+                "total_free_amount": {
+                    "type": "number"
+                },
+                "total_free_num": {
+                    "type": "integer"
+                },
+                "total_gift_amount": {
+                    "type": "number"
+                },
+                "total_gift_num": {
+                    "type": "integer"
+                },
+                "total_instant_order_num": {
+                    "type": "integer"
+                },
+                "total_meal_num": {
+                    "type": "integer"
+                },
+                "total_member_num": {
+                    "type": "integer"
+                },
+                "total_order_num": {
+                    "type": "integer"
+                },
+                "total_payment_fee": {
+                    "type": "number"
+                },
+                "total_product_num": {
+                    "type": "integer"
+                },
+                "total_received_amount": {
+                    "type": "number"
+                },
+                "total_refund_amount": {
+                    "type": "number"
+                },
+                "total_sale_amount": {
+                    "type": "number"
+                },
+                "total_service_fee": {
+                    "type": "number"
+                },
+                "total_tax": {
+                    "type": "number"
+                }
+            }
+        },
+        "business_data_resp.BusinessDataExportPayment": {
+            "type": "object",
+            "properties": {
+                "payment_code": {
+                    "type": "integer"
+                },
+                "payment_name": {
+                    "type": "string"
+                },
+                "total_order_num": {
+                    "type": "integer"
+                },
+                "total_payment_amount": {
+                    "type": "number"
                 }
             }
         },
@@ -17816,6 +18037,10 @@ const docTemplate = `{
                 "sale_order_uuid"
             ],
             "properties": {
+                "ignore_must": {
+                    "description": "是否忽略必点方案",
+                    "type": "boolean"
+                },
                 "products": {
                     "description": "商品信息列表·",
                     "type": "array",

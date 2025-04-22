@@ -7058,6 +7058,13 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 				}
 			}
 		}
+
+		ctx.SetDB(db)
+		// 拒绝所有待接单的h5订单
+		if err := s.RejectAllH5Order(ctx, saleBill.Uuid); err != nil {
+			return err
+		}
+
 		return nil
 	}); err != nil {
 		return nil, errors.WithMessage(err)
@@ -9018,7 +9025,7 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 }
 
 func (s *orderSrv) RejectH5Order(ctx context.Context, h5OrderUuid uint64) error {
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	db := ctx.GetDB()
 	h5OrderRepo := repository.NewH5OrderRepo(db)
 	// 获取h5订单
 	h5Order, err := h5OrderRepo.GetH5OrderDetail(h5OrderUuid, true)
