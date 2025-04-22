@@ -365,7 +365,7 @@ func (model *SaleOrder) NewReverseSettleMemberPointLog(points float64) *MemberPo
 }
 
 // 创建退货单
-func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]uint, returnType int) *ReturnOrder {
+func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]uint, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
 	returnOrderUuid, _ := utils.GetID()
 
 	// 如果退款类型为整单退款，则退款金额=订单最终应收金额-已退款金额
@@ -460,12 +460,17 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, bu
 	}
 
 	// 退货金额=退货商品总金额之和
-	refundAmount := returnAmount.Truncate(2).InexactFloat64()
+	refundAmount := returnAmount.Round(2).InexactFloat64()
 	if returnType == constant.ReturnOrderRefundTypeTotal {
 		// 整单退款，退款金额=订单最终应收金额-已退款金额
-		refundAmount = decimal.NewFromFloat(model.FinalPrice).Sub(decimal.NewFromFloat(model.GetReturnAmount())).Truncate(2).InexactFloat64()
+		refundAmount = decimal.NewFromFloat(model.FinalPrice).Sub(decimal.NewFromFloat(model.GetReturnAmount())).Round(2).InexactFloat64()
 	}
 	totalRefundAmount := refundAmount
+
+	// 退款金额不能大于可退金额
+	if totalRefundAmount > canReturnAmount {
+		return nil, errors.New("退款金额不能大于实付金额" + fmt.Sprintf("%v", canReturnAmount))
+	}
 
 	// 获取销售订单的每个付款单的可退款金额
 	paymentRecords, currencyUnit := model.GetPaymentOrderCanReturnAmount()
@@ -544,7 +549,7 @@ func (model *SaleOrder) NewReturnOrder(saleOrderProducts []*SaleOrderProduct, bu
 		RefundReason:        "退款",
 		ReturnOrderAmounts:  returnOrderAmounts,
 		ReturnOrderProducts: returnOrderProducts,
-	}
+	}, nil
 }
 
 func (model *SaleOrder) NewSaleOrderBuffetCustomerType(buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting) *SaleOrderBuffetCustomerType {

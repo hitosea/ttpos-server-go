@@ -1565,9 +1565,14 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		return errors.WithMessage(errors.New("没有可退货的商品")), constant.CodeFail
 	}
 
-	// 创建退款单
-	returnOrder := saleOrder.NewReturnOrder(saleOrderProducts, saleOrderBuffetComstomerTypes, saleOrderBuffetDelayProducts, numMap, returnType)
+	// 可退款金额
+	canReturnAmount := saleOrder.GetCanReturnAmount()
 
+	// 创建退款单
+	returnOrder, err := saleOrder.NewReturnOrder(saleOrderProducts, saleOrderBuffetComstomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
+	if err != nil {
+		return errors.WithMessage(err), constant.CodeFail
+	}
 	// 是否存在QrPromptPay支付
 	if returnOrder.IsExistQrPromptPay() {
 		if req.BankCode == "" || req.AccountNo == "" || req.AccountName == "" {
