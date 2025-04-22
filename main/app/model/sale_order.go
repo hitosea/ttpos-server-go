@@ -470,7 +470,7 @@ func (model *SaleOrder) NewReturnOrder(lang string, saleOrderProducts []*SaleOrd
 
 	// 退款金额不能大于可退金额
 	if totalRefundAmount > canReturnAmount {
-		return nil, errors.WithMessage(errors.New(i18n.Translate(lang, "退款金额不能大于可退金额") + fmt.Sprintf("%v", canReturnAmount)))
+		return nil, errors.WithMessage(errors.New(i18n.Translate(lang, "退款金额不能大于可退金额") + fmt.Sprintf(" %v", canReturnAmount)))
 	}
 
 	// 获取销售订单的每个付款单的可退款金额
