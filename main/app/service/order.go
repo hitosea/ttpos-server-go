@@ -6581,6 +6581,9 @@ func (s *orderSrv) getSaleOrderProductWithoutWarehouseOutForm(ctx context.Contex
 	}
 	productMap := make(map[uint64]*model.SaleOrderProduct)
 	for _, saleOrderProduct := range allSaleOrderProducts {
+		if saleOrderProduct.IsUnAcceptOrderBool() {
+			continue
+		}
 		productMap[saleOrderProduct.Uuid] = saleOrderProduct
 	}
 	for _, warehouseOutFormItem := range warehouseOutFormItems {
