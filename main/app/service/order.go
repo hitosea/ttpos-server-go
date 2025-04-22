@@ -5841,12 +5841,16 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	return mustPlan, isAutoAdd, nil
 }
 
+type AutoFlavorProduct map[uint64]*resp.InstantMustPlanProductStat
+
 func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64, mealNum uint, h5AutoAdd bool, noAutoAdd bool) (*resp.InstantProductMustPlanResp, bool, error) {
 	db := ctx.GetDB()
 
 	mustPlanList := make([]resp.InstantProductMustPlan, 0)
 	// product_bom_uuid => *resp.InstantMustPlanProduct
 	autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProductStat) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
+	// must_plan_uuid => autoFlavorProduct
+	planAutoFlavorProduct := make(map[uint64]AutoFlavorProduct) // 必点方案ID => 自动加购的商品列表. 用于记录每个必点方案的自动加购商品
 
 	// 查询到购物车信息
 	shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
@@ -5874,6 +5878,7 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 				}
 			}
 		}
+		planAutoFlavorProduct[plan.Uuid] = autoFlavorProduct
 	}
 
 	isAutoAdd := false
@@ -5885,7 +5890,7 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 			// 通过上下文中的device_sn找到该收银机的点餐账单，若没有点餐账单则新建一个点餐账单并加购这些自动加购商品
 			ctx.SetDB(tx)
 			// 自动加购
-			err = autoAddSaleOrderProductToDesk(ctx, s, autoFlavorProduct, saleBillUuid, saleOrderUuid, shopCartInfo.SaleBill, h5AutoAdd)
+			err = autoAddSaleOrderProductToDesk(ctx, s, planAutoFlavorProduct, saleBillUuid, saleOrderUuid, shopCartInfo.SaleBill, h5AutoAdd)
 			if err != nil {
 				return errors.WithMessage(err, "自动添加必点商品失败")
 			}
@@ -5968,13 +5973,17 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, auto
 	return shopCartInfo, nil
 }
 
-func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, autoFlavorProduct map[uint64]*resp.InstantMustPlanProductStat, saleBillUuid, saleOrderUuid uint64, saleBill *model.SaleBill, isH5AutoAdd bool) error {
+func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, planAutoFlavorProduct map[uint64]AutoFlavorProduct, saleBillUuid, saleOrderUuid uint64, saleBill *model.SaleBill, isH5AutoAdd bool) error {
 	productParams := make([]req.ProductParams, 0)
-	for flavorUuid, stat := range autoFlavorProduct {
-		productParams = append(productParams, req.ProductParams{
-			FlavorProductBomUuid: flavorUuid,
-			Num:                  stat.MustNum,
-		})
+
+	for mustPlanUuid, autoFlavorProduct := range planAutoFlavorProduct {
+		for flavorUuid, stat := range autoFlavorProduct {
+			productParams = append(productParams, req.ProductParams{
+				FlavorProductBomUuid: flavorUuid,
+				MustPlanUuid:         mustPlanUuid,
+				Num:                  stat.MustNum,
+			})
+		}
 	}
 	// 加购
 	db := ctx.GetDB()
