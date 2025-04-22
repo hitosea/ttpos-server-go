@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/websocket"
@@ -21,12 +22,19 @@ import (
 )
 
 type ActionCookingOption struct {
-	CalcAndSaveSaleBill bool
+	CalcAndSaveSaleBill     bool
+	SeletedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
 }
 
 func withCalcAndSaveSaleBill() func(option *ActionCookingOption) {
 	return func(option *ActionCookingOption) {
 		option.CalcAndSaveSaleBill = true
+	}
+}
+
+func WithSeletedMustPlanProductsActionCookingOption(seletedMustPlanProducts *ro.MustPlanProductInfo) func(option *ActionCookingOption) {
+	return func(option *ActionCookingOption) {
+		option.SeletedMustPlanProducts = seletedMustPlanProducts
 	}
 }
 
@@ -56,7 +64,13 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		saleOrderProductAll := saleBill.GetSaleOrderProductAll()
 
 		// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购、必点为选择
-		checkServiceRes, errCheck := s.checkOrder(ctx, false, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking())
+		var checkServiceRes *resp.OrderCheckServiceRes
+		var errCheck error
+		if option.SeletedMustPlanProducts != nil {
+			checkServiceRes, errCheck = s.checkOrder(ctx, false, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSeletedMustPlanProducts(option.SeletedMustPlanProducts))
+		} else {
+			checkServiceRes, errCheck = s.checkOrder(ctx, false, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking())
+		}
 		if errCheck != nil {
 			ctx.Log().Error("检查商品失败", zap.Error(errCheck))
 			return nil, errors.New("检查商品失败")
@@ -228,6 +242,18 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 		return nil, errors.WithMessage(err)
 	}
 
+	// MustPlanUuid => ProductPackageUuid => num
+	seletedMustPlanProducts := make(ro.MustPlanProductInfo)
+	for _, product := range request.Products {
+		if seletedMustPlanProducts[product.MustPlanUuid] == nil {
+			seletedMustPlanProducts[product.MustPlanUuid] = make(map[uint64]uint)
+		}
+		flavorProductBom, err := repository.NewProductBomRepo(ctx.GetDB()).GetFlavorProductBomByUuid(product.FlavorProductBomUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		seletedMustPlanProducts[product.MustPlanUuid][flavorProductBom.ProductPackageUuid] = product.Num
+	}
 	// 送厨相关
 	{
 		// 获取未送厨的商品列表
@@ -237,7 +263,7 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 		}
 
 		// 送厨
-		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, 0, withCalcAndSaveSaleBill()) // 平板端加购并送厨
+		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, 0, withCalcAndSaveSaleBill(), WithSeletedMustPlanProductsActionCookingOption(&seletedMustPlanProducts)) // 平板端加购并送厨
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}

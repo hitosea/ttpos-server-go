@@ -4609,8 +4609,9 @@ func (s *orderSrv) skipCheck(saleOrderProduct *model.SaleOrderProduct) bool {
 }
 
 type CheckOrderOptions struct {
-	CheckType int  // 1:送厨检查 2:结账检查
-	IsH5Check bool // 是否是H5检查
+	CheckType               int                     // 1:送厨检查 2:结账检查
+	IsH5Check               bool                    // 是否是H5检查
+	SeletedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
 }
 
 const (
@@ -4635,6 +4636,12 @@ func WithCheckTypeCheckout() func(*CheckOrderOptions) {
 func WithIsH5Check() func(*CheckOrderOptions) {
 	return func(options *CheckOrderOptions) {
 		options.IsH5Check = true
+	}
+}
+
+func WithSeletedMustPlanProducts(seletedMustPlanProducts *ro.MustPlanProductInfo) func(*CheckOrderOptions) {
+	return func(options *CheckOrderOptions) {
+		options.SeletedMustPlanProducts = seletedMustPlanProducts
 	}
 }
 
@@ -4665,7 +4672,12 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 				instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCheckout())
 			} else {
 				// 检查送厨
-				instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCooking())
+				if options.SeletedMustPlanProducts != nil {
+					instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCheckout(), WithSeletedMustPlanProductsCheckOption(options.SeletedMustPlanProducts))
+				} else {
+					// 检查结账
+					instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCooking())
+				}
 			}
 			if err != nil {
 				return nil, errors.WithMessage(err)
