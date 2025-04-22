@@ -5570,21 +5570,24 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 
 		productionRepo := repository.NewProductionRepo(db)
 		oldProductionOrder, _ := productionRepo.GetProductionOrder(productionRepo.WhereUuid(oldProductionOrderUuid))
-		if err := productionRepo.CreateProductionOrder(&model.ProductionOrder{
-			BaseModel:     model.BaseModel{Uuid: newProductionOrderUuid},
-			DeskUuid:      targetDesk.Uuid,
-			SaleOrderUuid: targetSaleOrder.Uuid,
-			SaleBillUuid:  targetSaleBill.Uuid,
-			Source:        oldProductionOrder.Source,
-		}); err != nil {
-			return errors.WithMessage(err)
+		if oldProductionOrder != nil {
+			if err := productionRepo.CreateProductionOrder(&model.ProductionOrder{
+				BaseModel:     model.BaseModel{Uuid: newProductionOrderUuid},
+				DeskUuid:      targetDesk.Uuid,
+				SaleOrderUuid: targetSaleOrder.Uuid,
+				SaleBillUuid:  targetSaleBill.Uuid,
+				Source:        oldProductionOrder.Source,
+			}); err != nil {
+				return errors.WithMessage(err)
+			}
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(saleOrderProduct.Uuid)}, map[string]any{
+				"sale_bill_uuid":        targetSaleBill.Uuid,
+				"production_order_uuid": newProductionOrderUuid,
+			}); err != nil {
+				return errors.WithMessage(err)
+			}
 		}
-		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(saleOrderProduct.Uuid)}, map[string]any{
-			"sale_bill_uuid":        targetSaleBill.Uuid,
-			"production_order_uuid": newProductionOrderUuid,
-		}); err != nil {
-			return errors.WithMessage(err)
-		}
+
 		return nil
 	}); err != nil {
 		return nil, errors.WithMessage(err, "更新数据失败")
