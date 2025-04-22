@@ -800,17 +800,21 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				productNumDec := decimal.NewFromFloat(float64(productNum))
 				orderProductNum += productNum
 
+				productFinalPrice := decimal.NewFromFloat(saleProduct.TotalPrice)
+
 				// 统计赠送商品数量
 				productGiveNum := 0
 				if saleProduct.GiftTime > 0 {
 					productGiveNum = int(saleProduct.Num)
 					orderGiveNum += productGiveNum
+					productFinalPrice = decimal.Zero
 				}
 
 				// 统计免单商品数据
 				productFreeNum := 0
 				if isFree {
 					productFreeNum = int(saleProduct.Num)
+					productFinalPrice = decimal.Zero
 				}
 
 				// 统计: 商品定价(折扣前)、商品税、服务费、服务费税
@@ -821,7 +825,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				productTax := decimal.NewFromFloat(saleProduct.TaxFee)
 				productServiceFee := decimal.NewFromFloat(saleProduct.ServiceFee)
 				productServiceTax := decimal.NewFromFloat(saleProduct.ServiceTaxFee)
-				if saleProduct.GiftTime > 0 {
+				if saleProduct.GiftTime > 0 || isFree {
 					productTax = decimal.NewFromFloat(0)
 					productServiceFee = decimal.NewFromFloat(0)
 					productServiceTax = decimal.NewFromFloat(0)
@@ -878,7 +882,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					ProductBomUuid:     productBomUuid,
 					ProductPrice:       productPrice.InexactFloat64(),
 					ProductSalePrice:   productSalePrice.InexactFloat64(),
-					ProductFinalPrice:  saleProduct.Price,
+					ProductFinalPrice:  productFinalPrice.InexactFloat64(),
 					ProductNum:         productNum,
 					TaxRate:            saleProduct.TaxRate,
 					TaxFee:             productTax.InexactFloat64(),
@@ -1045,11 +1049,7 @@ func (s *statisticsSrv) buildCountOpts(req CountReq) []repository.DBOption {
 	if req.DutyNo != "" {
 		opts = append(opts, commonRepo.WhereByDutyNo(req.DutyNo))
 	}
-	// logger.Logger.Info("buildCountOptsReq", zap.Any("req", req))
-	// if req.AreaUuid > 0 {
-	// 	prefix := config.Database.TablePrefix
-	// 	opts = append(opts, commonRepo.WhereSubQueryByRegionUuid(prefix+"sale_bill", req.AreaUuid))
-	// }
+
 	return opts
 }
 
