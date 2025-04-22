@@ -145,7 +145,8 @@ func (r *productionRepo) GetLimitedHistoryProducts(opts ...DBOption) ([]model.Pr
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Model(&model.ProductionOrderProduct{}).Select("DISTINCT sale_bill_uuid").Order("finished_time desc").Debug().Find(&productionOrderProducts).Error
+
+	err := db.Model(&model.ProductionOrderProduct{}).Select("sale_bill_uuid, MAX(finished_time) as finished_time").Group("sale_bill_uuid").Order("finished_time desc").Debug().Find(&productionOrderProducts).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
