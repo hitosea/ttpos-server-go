@@ -268,6 +268,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			IsGift:              saleOrderProduct.IsGiftProduct(),
 			IsBuffet:            saleOrderProduct.IsBuffetProduct(),
 			IsCancel:            saleOrderProduct.IsCancelProduct(),
+			CanChangeNum:        saleOrderProduct.ProductMustPlan.GetCanChangeNum(),
 			SendKitchenTime:     sendKitchenTime,
 			H5OrderTime:         h5OrderTime,
 			IsH5OrderNeedAudit:  isH5NeedAudit,
