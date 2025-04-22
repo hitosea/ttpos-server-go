@@ -31,7 +31,9 @@ func ErrorWithDetail(c *gin.Context, code int, err error) {
 	messages := []string{err.Error()}
 	var appErr errors.AppError
 	if pkgerrors.As(err, &appErr) {
-		code = appErr.GetCode()
+		if appErr.GetCode() != constant.CodeFail {
+			code = appErr.GetCode()
+		}
 		if len(appErr.Replace) > 0 {
 			messages = append(messages, appErr.Replace...)
 		}
