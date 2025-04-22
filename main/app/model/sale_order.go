@@ -255,6 +255,10 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			h5OrderTime = saleOrderProduct.H5Order.CreateTime
 			isH5NeedAudit = saleOrderProduct.H5Order.IsNeedAudit == 1
 		}
+		canChangeNum := false
+		if saleOrderProduct.MustPlanUuid != 0 {
+			canChangeNum = saleOrderProduct.ProductMustPlan.GetCanChangeNum()
+		}
 		product := resp.Product{
 			Uuid:                saleOrderProduct.Uuid,
 			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
@@ -268,7 +272,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			IsGift:              saleOrderProduct.IsGiftProduct(),
 			IsBuffet:            saleOrderProduct.IsBuffetProduct(),
 			IsCancel:            saleOrderProduct.IsCancelProduct(),
-			CanChangeNum:        saleOrderProduct.ProductMustPlan.GetCanChangeNum(),
+			CanChangeNum:        canChangeNum,
 			SendKitchenTime:     sendKitchenTime,
 			H5OrderTime:         h5OrderTime,
 			IsH5OrderNeedAudit:  isH5NeedAudit,
