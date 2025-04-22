@@ -211,7 +211,7 @@ class Paytype extends Controller
         //
         $saveData = [
             'status' => $param['status'],
-            'remark' => $remark,
+            'payment_name' => $remark,
             'fee_percent' => $param['fee'],
             'sort' => $sort,
             'fee' => $param['fee'],
