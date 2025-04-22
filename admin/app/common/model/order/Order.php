@@ -757,9 +757,9 @@ class Order extends BaseModelOrder
         $end_time = isset($data['date'][1]) ? $data['date'][1] : 0;
 
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/product_rank', [
-            'query_start_time' => $start_time,
-            'query_end_time' => $end_time,
-            'rank_type' => $type + 1,
+            'query_start_time' => intval(strtotime($start_time)),
+            'query_end_time' => intval(strtotime($end_time) + 86399),
+            'rank_type' => intval($type + 1),
         ], [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
