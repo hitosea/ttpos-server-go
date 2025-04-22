@@ -90,6 +90,12 @@ func (r *ProductMustPlanRepoImpl) GetProductMustPlanListAllInfos(ctx context.Con
 				Query: "ProductMustPlanItems.ProductPackage.ImageFile",
 			},
 			WithPreload{
+				Query: "ProductMustPlanItems.ProductPackage.ProductBoms",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
 				Query: "ProductMustPlanItems.ProductPackage.ProductBoms.ProductFlavor.MultiLanguageName",
 			},
 			WithPreload{
