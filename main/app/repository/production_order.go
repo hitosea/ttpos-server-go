@@ -16,10 +16,11 @@ type IProductionOrderRepo interface {
 	GetLimitedHistoryProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error)                                      // 历史获取销售账单Uuid
 	GetProducts(limit int, orderBy string, opts ...DBOption) ([]model.ProductionOrderProduct, error)                         // 获取生产订单商品
 	WhereProductStatus(status uint) DBOption                                                                                 // 生产商品状态
+	WhereUuid(uuid uint64) DBOption                                                                                          // Uuid 条件
 	WhereProductPackageUuidIn(uuids []uint64) DBOption                                                                       // 商品ID条件
 	WhereProductFinishedTime(finishedTime int64) DBOption                                                                    // 生产商品完成时间条件
 	WhereProductUuid(uuid uint64) DBOption                                                                                   // 生产商品Uuid条件
-	WhereProductSaleOrderProductUuid(uuid uint64) DBOption                                                                   // 生产商品销售订单uuid条件
+	WhereSaleOrderProductUuid(uuid uint64) DBOption                                                                          // 生产商品销售订单uuid条件
 	WhereSaleBillUuidIn(uuids []uint64) DBOption                                                                             // 销售账单uuid条件
 	WhereSaleBillUuid(uuid uint64) DBOption                                                                                  // 销售账单uuid条件
 	WhereSource(source string) DBOption                                                                                      // 来源条件
@@ -101,7 +102,7 @@ func (r *productionRepo) GetProducts(limit int, orderBy string, opts ...DBOption
 	if limit > 0 {
 		db.Limit(limit)
 	}
-	result := db.Debug().Find(&productionOrderProducts)
+	result := db.Find(&productionOrderProducts)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -146,7 +147,7 @@ func (r *productionRepo) GetLimitedHistoryProducts(opts ...DBOption) ([]model.Pr
 		db = opt(db)
 	}
 
-	err := db.Model(&model.ProductionOrderProduct{}).Select("sale_bill_uuid, MAX(finished_time) as finished_time").Group("sale_bill_uuid").Order("finished_time desc").Debug().Find(&productionOrderProducts).Error
+	err := db.Model(&model.ProductionOrderProduct{}).Select("sale_bill_uuid, MAX(finished_time) as finished_time").Group("sale_bill_uuid").Order("finished_time desc").Find(&productionOrderProducts).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -164,6 +165,13 @@ func (r *productionRepo) WhereProductHistoryCondition() DBOption {
 func (r *productionRepo) WhereProductStatus(status uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", status)
+	}
+}
+
+// WhereUuid uuid条件
+func (r *productionRepo) WhereUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid = ?", uuid)
 	}
 }
 
@@ -188,8 +196,8 @@ func (r *productionRepo) WhereProductUuid(uuid uint64) DBOption {
 	}
 }
 
-// WhereProductSaleOrderProductUuid 生产商品销售订单商品Uuid条件
-func (r *productionRepo) WhereProductSaleOrderProductUuid(uuid uint64) DBOption {
+// WhereSaleOrderProductUuid 生产商品销售订单商品Uuid条件
+func (r *productionRepo) WhereSaleOrderProductUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("sale_order_product_uuid = ?", uuid)
 	}
