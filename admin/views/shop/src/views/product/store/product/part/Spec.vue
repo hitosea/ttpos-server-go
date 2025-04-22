@@ -95,9 +95,9 @@
           val.unit.map((item, index) => {
             let unit_name = this.isValidJSON(item.unit_name) ? JSON.parse(item.unit_name) : {};
             languageList.forEach((items) => {
-              if (unit_name[items.key]) {
+              if (unit_name[items.key] != null) {
                 this.restaurantsObj[items.key].push({
-                  value: unit_name[items.key],
+                  value: unit_name[items.key] == '' ? '-' : unit_name[items.key],
                   index: index,
                   unit_id: item.unit_id,
                 });

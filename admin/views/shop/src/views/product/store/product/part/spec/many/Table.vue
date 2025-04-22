@@ -275,7 +275,7 @@
             languageList.forEach((items) => {
               if (spec_name[items.key] != null) {
                 this.restaurantsObj[items.key].push({
-                  value: spec_name[items.key],
+                  value: spec_name[items.key] == '' ? '-' : spec_name[items.key],
                   index: index,
                   spec_id: item.spec_id,
                 });
