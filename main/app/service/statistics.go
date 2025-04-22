@@ -778,6 +778,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			orderRefundAmount         decimal.Decimal
 			orderRefundPaymentBalance decimal.Decimal
 			orderRefundTax            decimal.Decimal
+			noOrderRefundTax          decimal.Decimal
 			orderRefundServiceFee     decimal.Decimal
 			orderRefundDiscount       decimal.Decimal
 			orderRefundDiscountMember decimal.Decimal
@@ -901,7 +902,10 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				productRefundNum := 0
 				for _, refundProduct := range saleProduct.ReturnOrderProducts {
 					productRefundNum += int(refundProduct.Num)
-					orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee).Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee)).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee)).Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee)).Mul(decimal.NewFromFloat(float64(refundProduct.Num)))
+					if isFeeType {
+						noOrderRefundTax = noOrderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
+					}
 					if !isFixServiceFee {
 						orderRefundServiceFee = orderRefundServiceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
 					}
@@ -989,6 +993,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			RefundAmount:         orderRefundAmount.InexactFloat64(),
 			RefundPaymentBalance: orderRefundPaymentBalance.InexactFloat64(),
 			RefundTax:            orderRefundTax.InexactFloat64(),
+			NoRefundTax:          noOrderRefundTax.InexactFloat64(),
 			RefundServiceFee:     orderRefundServiceFee.InexactFloat64(),
 			RefundDiscount:       orderRefundDiscount.InexactFloat64(),
 			RefundDiscountMember: orderRefundDiscountMember.InexactFloat64(),
