@@ -247,3 +247,9 @@ type StatisticsFreePaymentDaysData struct {
 	StatisticsFreePaymentData
 	Day sql.NullString `gorm:"column:day;comment:日期"`
 }
+
+// CountMemberNumDaysResp 会员数量天数统计数据
+type CountMemberNumDaysResp struct {
+	Day       sql.NullString `gorm:"column:day;comment:日期"`
+	MemberNum sql.NullInt64  `gorm:"column:member_num;comment:会员数量"`
+}

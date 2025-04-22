@@ -21,6 +21,7 @@ type IStatisticsRepo interface {
 	Count7Days(opts ...DBOption) []model.Statistics7DaysData                                                   // 统计销售天数
 	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                         // 统计未结订单
 	CountMemberNum(opts ...DBOption) int64                                                                     // 统计会员数量
+	CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp                                        // 统计会员数量天数
 	CountMember(opts ...DBOption) model.StatisticsMemberData                                                   // 统计会员
 	CountMemberDays(opts ...DBOption) []model.StatisticsMemberDaysData                                         // 统计会员天数
 	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                         // 统计会员支付
@@ -444,6 +445,23 @@ func (r *StatisticsRepo) CountMemberNum(opts ...DBOption) int64 {
 	}
 
 	db.Model(&model.Member{}).Count(&result)
+
+	return result
+}
+
+// CountMemberNumDays 统计会员数量天数
+func (r *StatisticsRepo) CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp {
+	var result []model.CountMemberNumDaysResp
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	db.Model(&model.Member{}).
+		Select("COUNT(uuid) AS member_num", "FROM_UNIXTIME(create_time, '%Y-%m-%d') AS day").
+		Group("day").
+		Order("day ASC").
+		Find(&result)
 
 	return result
 }
