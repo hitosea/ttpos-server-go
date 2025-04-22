@@ -4642,7 +4642,13 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 	ctx.SetDB(db)
 	// 检查必选
 	if !ignoreMust {
-		shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithH5OrderUuid(context.GetH5OrderUuid(ctx)))
+		var shopCartInfo *ro.ShopCartRepo
+		var err error
+		if options.IsH5Check {
+			shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithNotDeleted())
+		} else {
+			shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithH5OrderUuid(context.GetH5OrderUuid(ctx)))
+		}
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -4650,8 +4656,10 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 		if deskUuid != 0 {
 			// 如果是桌台订单
 			if options.CheckType == CheckTypeCheckout {
+				// 检查结账
 				instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCheckout())
 			} else {
+				// 检查送厨
 				instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCooking())
 			}
 			if err != nil {
@@ -4678,7 +4686,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 		if len(mustPlans) > 0 {
 			res := &resp.OrderCheckServiceRes{
 				Code:          constant.CodeOrderCheckProductMust,
-				OrderCheckRes: resp.OrderCheckRes{ProductMustPlanList: &resp.ProductMustPlanList{List: instantMustPlanList}},
+				OrderCheckRes: resp.OrderCheckRes{ProductMustPlanList: &resp.ProductMustPlanList{List: mustPlans}},
 			}
 			return res, nil
 		}

@@ -350,6 +350,7 @@ func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOptio
 				}
 			}
 			products = append(products, orderProduct)
+			continue
 		}
 
 		if option.CookingStatus == CookingStatusAll {
@@ -358,7 +359,10 @@ func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOptio
 				continue
 			}
 			products = append(products, orderProduct)
+			continue
 		}
+		// 不做任何过滤，所有商品
+		products = append(products, orderProduct)
 	}
 	return products
 }

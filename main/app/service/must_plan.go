@@ -281,7 +281,7 @@ func (s *mustPlanSrv) GetDeskMustPlanProductPackageList(ctx context.Context, des
 	return productPackageList, nil
 }
 
-// 获取桌台的必点方案列表，用于检查加购的商品是否是必点商品并且属于哪个必点方案
+// 获取桌台的各个必点方案的点购情况，如是否满足必点、还差多少个
 func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, shopCartMustProductInfo ro.MustPlanProductInfo, deskUuid uint64, options ...func(option *CheckOption)) ([]resp.InstantProductMustPlan, error) {
 	option := &CheckOption{}
 	for _, optionFunc := range options {
@@ -415,7 +415,7 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 	return mustPlanList, nil
 }
 
-// 获取桌台的必点方案的商品列表。用于加购商品时判断该商品是不是这些商品列表里的商品
+// 获取桌台的各个必点方案的要求，如某个商品要求选购多少个
 func (s *mustPlanSrv) getIDeskMustPlanProductList(ctx context.Context, mustPlan *model.ProductMustPlan, personNum uint) []resp.InstantMustPlanProductStat {
 	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 	// 不是桌台的必单方案
