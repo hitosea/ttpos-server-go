@@ -751,10 +751,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			orderRefundDiscountMember decimal.Decimal
 			orderRefundFee            decimal.Decimal
 
-			isFree     bool = saleOrder.IsFree > 0
-			isStatFree bool = saleBill.SaleBillSetting.IsStatFree == 1
-			isSateGive bool = saleBill.SaleBillSetting.IsStatGift == 1
-			isFeeType  bool = saleBill.SaleBillSetting.TaxFeeType == 2
+			isFree          bool = saleOrder.IsFree > 0
+			isStatFree      bool = saleBill.SaleBillSetting.IsStatFree == 1
+			isSateGive      bool = saleBill.SaleBillSetting.IsStatGift == 1
+			isFeeType       bool = saleBill.SaleBillSetting.TaxFeeType == 2
+			isFixServiceFee bool = saleBill.SaleBillSetting.ServiceFeeType == 1
 		)
 
 		if isStatFree {
@@ -869,6 +870,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				for _, refundProduct := range saleProduct.ReturnOrderProducts {
 					productRefundNum += int(refundProduct.Num)
 					orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee).Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee)).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					if !isFixServiceFee {
+						orderRefundServiceFee = orderRefundServiceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					}
 				}
 
 				orderRefundNum += productRefundNum
@@ -898,9 +902,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 
 		if !isFree && saleOrder.GetCanReturnAmount() == 0 {
 			orderRefundFee = decimal.NewFromFloat(saleOrder.PaymentCommissionFee)
-			orderRefundServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
 			orderRefundDiscount = decimal.NewFromFloat(saleOrder.CustomDiscountFee).Add(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee))
 			orderRefundDiscountMember = decimal.NewFromFloat(saleOrder.MemberDiscountFee)
+			if isFixServiceFee {
+				orderRefundServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
+			}
 		}
 		// 支付订单
 		for _, salePayment := range saleOrder.PaymentOrders {
