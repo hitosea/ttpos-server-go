@@ -84,7 +84,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		}
 
 		// 构建送厨单
-		productionOrder = newProductionOrder(ctx, saleOrderUuid, saleBill.Uuid, unCookingSaleOrderProducts)
+		productionOrder = newProductionOrder(ctx, saleOrderUuid, saleBill.Uuid, saleBill.DeskUuid, unCookingSaleOrderProducts)
 
 		// 修改商品状态为已送厨
 		for index, _ := range unCookingSaleOrderProducts {

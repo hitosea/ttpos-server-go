@@ -5157,7 +5157,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 	return cartInfo, nil, nil
 }
 
-func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64, unCookingSaleOrderProducts []*model.SaleOrderProduct) *model.ProductionOrder {
+func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid, deskUuid uint64, unCookingSaleOrderProducts []*model.SaleOrderProduct) *model.ProductionOrder {
 	productionOrderUuid, _ := utils.GetID()
 	productionOrderProducts := make([]*model.ProductionOrderProduct, 0)
 	for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
@@ -5184,6 +5184,7 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid uint64,
 	}
 	productionOrder := model.ProductionOrder{
 		BaseModel:               model.BaseModel{Uuid: productionOrderUuid},
+		DeskUuid:                deskUuid,
 		SaleOrderUuid:           saleOrderUuid,
 		SaleBillUuid:            saleBillUuid,
 		ProductionOrderProducts: productionOrderProducts,
@@ -5318,12 +5319,12 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 		// 修改送厨商品
 		productionRepo := repository.NewProductionRepo(tx)
 		if keepNum > 0 { // 修改数量
-			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductSaleOrderProductUuid(saleOrderProduct.Uuid)},
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(saleOrderProduct.Uuid)},
 				map[string]any{"num": keepNum}); err != nil {
 				return errors.WithMessage(err)
 			}
 		} else { // 标记删除
-			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductSaleOrderProductUuid(saleOrderProduct.Uuid)},
+			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(saleOrderProduct.Uuid)},
 				map[string]any{"delete_time": time.Now().Unix()}); err != nil {
 				return errors.WithMessage(err)
 			}
@@ -5515,6 +5516,12 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 		return nil, errors.WithMessage(err)
 	}
 
+	// 获取原生产单Uuid
+	oldProductionOrderUuid := saleOrderProduct.ProductionOrderUuid
+	newProductionOrderUuid, _ := utils.GetID()
+
+	// 修改生产单Uuid
+	saleOrderProduct.ProductionOrderUuid = newProductionOrderUuid
 	// 设置已接单
 	saleOrderProduct.SetAcceptOrderProduct()
 	// h5订单只有一个商品时拒单
@@ -5558,6 +5565,24 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 
 		// 重新计算目标桌台的销售账单
 		if err := s.CalcAndSaveSaleBill(ctx, tx, targetSaleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+
+		productionRepo := repository.NewProductionRepo(db)
+		oldProductionOrder, _ := productionRepo.GetProductionOrder(productionRepo.WhereUuid(oldProductionOrderUuid))
+		if err := productionRepo.CreateProductionOrder(&model.ProductionOrder{
+			BaseModel:     model.BaseModel{Uuid: newProductionOrderUuid},
+			DeskUuid:      targetDesk.Uuid,
+			SaleOrderUuid: targetSaleOrder.Uuid,
+			SaleBillUuid:  targetSaleBill.Uuid,
+			Source:        oldProductionOrder.Source,
+		}); err != nil {
+			return errors.WithMessage(err)
+		}
+		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(saleOrderProduct.Uuid)}, map[string]any{
+			"sale_bill_uuid":        targetSaleBill.Uuid,
+			"production_order_uuid": newProductionOrderUuid,
+		}); err != nil {
 			return errors.WithMessage(err)
 		}
 		return nil
