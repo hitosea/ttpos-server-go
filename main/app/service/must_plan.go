@@ -42,8 +42,9 @@ func NewMustPlanSrvImpl(dbm *database.DBManager) IMustPlanSrv {
 }
 
 type CheckOption struct {
-	Scene        uint   // 检查场景. 1-下单场景 2-结账场景
-	SaleBillUuid uint64 // 桌台自助餐场景下，将必点商品价格记为0元
+	Scene                   uint                    // 检查场景. 1-下单场景 2-结账场景
+	SaleBillUuid            uint64                  // 桌台自助餐场景下，将必点商品价格记为0元
+	SeletedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
 }
 
 const (
@@ -66,6 +67,12 @@ func WithCheckSceneCheckout() func(option *CheckOption) {
 func WithSaleBillUuid(saleBillUuid uint64) func(option *CheckOption) {
 	return func(option *CheckOption) {
 		option.SaleBillUuid = saleBillUuid
+	}
+}
+
+func WithSeletedMustPlanProductsCheckOption(seletedMustPlanProducts *ro.MustPlanProductInfo) func(option *CheckOption) {
+	return func(option *CheckOption) {
+		option.SeletedMustPlanProducts = seletedMustPlanProducts
 	}
 }
 
@@ -287,6 +294,20 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 	for _, optionFunc := range options {
 		optionFunc(option)
 	}
+
+	if option.SeletedMustPlanProducts != nil {
+		// 将新加购的商品与已经加购的商品合并
+		// MustPlanUuid => ProductPackageUuid => num
+		for mustPlanUuid, productPackageMap := range *option.SeletedMustPlanProducts {
+			for productPackageUuid, num := range productPackageMap {
+				if _, ok := shopCartMustProductInfo[mustPlanUuid]; !ok {
+					shopCartMustProductInfo[mustPlanUuid] = make(map[uint64]uint)
+				}
+				shopCartMustProductInfo[mustPlanUuid][productPackageUuid] += num
+			}
+		}
+	}
+
 	// 获取该桌台的必选方案
 	productMustPlanList, err := s.GetProductMustPlans(ctx, deskUuid)
 	if err != nil {

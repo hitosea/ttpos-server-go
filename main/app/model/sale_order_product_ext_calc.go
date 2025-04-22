@@ -24,8 +24,8 @@ const (
 )
 
 const (
-	H5OrderStatusUnAccepted = iota // 0-未接单的
-	H5OrderStatusAccepted          // 1-已接单的
+	H5OrderStatusUnAccepted = 1 // 1-未接单的
+	H5OrderStatusAccepted   = 2 // 2-已接单的
 )
 
 // WithLastestPrice 用最新的价格信息计算订单金额
