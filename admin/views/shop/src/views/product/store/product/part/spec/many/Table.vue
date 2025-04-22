@@ -273,7 +273,7 @@
           val.spec.map((item, index) => {
             let spec_name = JSON.parse(item.spec_name);
             languageList.forEach((items) => {
-              if (spec_name[items.key]) {
+              if (spec_name[items.key] != null) {
                 this.restaurantsObj[items.key].push({
                   value: spec_name[items.key],
                   index: index,
