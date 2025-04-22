@@ -21484,6 +21484,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "can_change_num": {
+                    "description": "顾客可修改必点数量",
+                    "type": "boolean"
+                },
                 "discount_price": {
                     "description": "折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量",
                     "type": "number"

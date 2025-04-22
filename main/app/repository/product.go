@@ -115,7 +115,7 @@ func (r *productRepo) GetProductListWithPagination(pageNo int, pageSize int, opt
 func (r *productRepo) GetSoldOutWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductBom, int64, error) {
 	var productBom []model.ProductBom
 	var total int64
-	db := r.db.Model(&model.ProductBom{}).Session(&gorm.Session{}).Where("is_sold_out = 1")
+	db := r.db.Model(&model.ProductBom{}).Where("product_package_uuid not in (?)", r.db.Model(&model.ProductPackage{}).Select("uuid").Where("delete_time > 0")).Session(&gorm.Session{}).Where("is_sold_out = 1")
 	for _, opt := range opts {
 		db = opt(db)
 	}
