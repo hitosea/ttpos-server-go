@@ -26,9 +26,10 @@ type ProductionItem struct {
 
 // ProductionListWithPagination 商品列表响应
 type ProductionListWithPagination struct {
-	List         []ProductionGroup `json:"list"`          // 分组列表
-	FinishedList ProductionList    `json:"finished_list"` // 最近三个上菜历史
-	Meta         dto.PageResponse  `json:"meta"`          // 分页信息
+	SendKitchenNum int64             `json:"send_kitchen_num"` // 送厨商品数量，用于厨显来菜提醒
+	List           []ProductionGroup `json:"list"`             // 分组列表
+	FinishedList   ProductionList    `json:"finished_list"`    // 最近三个上菜历史
+	Meta           dto.PageResponse  `json:"meta"`             // 分页信息
 }
 
 // ProductionHistory 上菜历史
