@@ -3911,13 +3911,17 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 				mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum, option.H5AutoAdd, option.NoAutoAdd)
 				if err != nil {
 					ctx.Log().Info("获取桌台必点方案列表失败", zap.Error(errors.WithMessage(err)))
-					return nil, errors.WithMessage(errors.New("获取桌台必点方案列表失败"), err.Error())
+					if !shopCart.SaleBill.IsEndStatus() {
+						return nil, errors.WithMessage(errors.New("获取桌台必点方案列表失败"), err.Error())
+					}
 				}
 			} else {
 				mustPlan, isAutoAdd, err = s.InstantOrderMustPlan(ctx, ctx.GetDeviceSn())
 				if err != nil {
 					ctx.Log().Info("获取点餐必点方案列表失败", zap.Error(errors.WithMessage(err)))
-					return nil, errors.WithMessage(errors.New("获取点餐必点方案列表失败"), err.Error())
+					if !shopCart.SaleBill.IsEndStatus() {
+						return nil, errors.WithMessage(errors.New("获取点餐必点方案列表失败"), err.Error())
+					}
 				}
 			}
 
