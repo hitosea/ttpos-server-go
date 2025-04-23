@@ -127,8 +127,8 @@ type IOrderSrv interface {
 	GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart, opts ...repository.OrderCartInfoOptionFunc) (resp.UnsentKitchen, error) // 未送厨商品列表
 	GetSentKitchen(ctx context.Context, saleBillUuid uint64, shopCart *resp.ShopCart) (resp.SentKitchen, error)                                                 // 已送厨商品列表
 
-	ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, h5OrderUuid uint64, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) // 送厨
-	ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill, IgnoreMust bool) (*resp.OrderCheckServiceRes, error)                                                                                        // 加购并送厨
+	ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, h5OrderUuid uint64, isAutoOrder bool, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) // 送厨
+	ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill, IgnoreMust bool) (*resp.OrderCheckServiceRes, error)                                                                                                          // 加购并送厨
 
 	TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) (any, error) // 平板端加购并送厨
 
@@ -5185,7 +5185,7 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 
 	// 送厨
 	if len(unCookingSaleOrderProducts) > 0 {
-		checkServiceRes, err := s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0) // 购物车送厨商品
+		checkServiceRes, err := s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0, false) // 购物车送厨商品
 		if err != nil {
 			return nil, nil, err
 		}
@@ -9095,19 +9095,6 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		h5Order.IsAutoAccept = 1
 	}
 
-	// 先发布“接单”操作事件. 操作日志先显示接单再显示送厨
-	s.bus.PublishAcceptH5OrderEvent(event.AcceptH5OrderPayload{
-		BasePayload: event.BasePayload{ // 接单
-			Ctx:          ctx,
-			CompanyUuid:  ctx.GetCompanyUuid(),
-			Source:       ctx.GetSource(),
-			SaleBillUuid: h5Order.SaleBillUuid,
-			H5OrderUuid:  h5OrderUuid,
-			OperatorUuid: int64(ctx.GetStaffUuid()),
-		},
-		IsAutoOrder: isAutoOrder,
-	})
-
 	{
 		ignoreMust := true // 接单，送厨忽略必点方案
 		// 获取销售账单信息
@@ -9132,7 +9119,7 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 		saleOrder.InsertSaleOrderProduct(unCookingSaleOrderProducts)
 
 		// 送厨
-		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, h5OrderUuid, withCalcAndSaveSaleBill()) // 接单
+		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, h5OrderUuid, isAutoOrder, withCalcAndSaveSaleBill()) // 接单
 		if err != nil {
 			return nil, errors.WithMessage(err, "ActionCooking")
 		}
