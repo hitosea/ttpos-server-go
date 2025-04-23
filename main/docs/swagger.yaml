@@ -4402,6 +4402,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.PageResponse'
         description: 分页信息
+      send_kitchen_num:
+        description: 送厨商品数量，用于厨显来菜提醒
+        type: integer
     type: object
   resp.RechargeMember:
     properties:

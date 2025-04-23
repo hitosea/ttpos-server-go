@@ -14,7 +14,7 @@ type IProductionOrderRepo interface {
 	CreateProductionOrder(order *model.ProductionOrder) error                                                                // 创建生产订单
 	GetLimitedProducts(column string, pageNo, pageSize int, opts ...DBOption) ([]model.ProductionOrderProduct, int64, error) // 分页获取账单ID、分类ID
 	GetLimitedHistoryProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error)                                      // 历史获取销售账单Uuid
-	GetProducts(limit int, orderBy string, opts ...DBOption) ([]model.ProductionOrderProduct, error)                         // 获取生产订单商品
+	GetProducts(limit int, orderBy string, opts ...DBOption) (int64, []model.ProductionOrderProduct, error)                  // 获取生产订单商品
 	WhereProductStatus(status uint) DBOption                                                                                 // 生产商品状态
 	WhereUuid(uuid uint64) DBOption                                                                                          // Uuid 条件
 	WhereProductPackageUuidIn(uuids []uint64) DBOption                                                                       // 商品ID条件
@@ -81,12 +81,15 @@ const (
 	FinishedTimeDesc string = "finished_time desc"
 )
 
-func (r *productionRepo) GetProducts(limit int, orderBy string, opts ...DBOption) ([]model.ProductionOrderProduct, error) {
+func (r *productionRepo) GetProducts(limit int, orderBy string, opts ...DBOption) (int64, []model.ProductionOrderProduct, error) {
 	var productionOrderProducts []model.ProductionOrderProduct
-	db := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted)
+	var total int64
+	db := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted).Session(&gorm.Session{})
 	for _, opt := range opts {
 		db = opt(db)
 	}
+
+	db.Count(&total)
 	db.Preload("SaleBill").
 		Preload("SaleOrderProduct").
 		Preload("SaleOrderProduct.MultiLanguageName").
@@ -104,9 +107,9 @@ func (r *productionRepo) GetProducts(limit int, orderBy string, opts ...DBOption
 	}
 	result := db.Find(&productionOrderProducts)
 	if result.Error != nil {
-		return nil, result.Error
+		return total, nil, result.Error
 	}
-	return productionOrderProducts, nil
+	return total, productionOrderProducts, nil
 }
 
 // CreateProductionOrder 创建ProductionOrder记录及它管理的表记录
