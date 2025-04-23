@@ -120,6 +120,9 @@ func (model *ProductMustPlanItem) GetProductInfo(baseUrl string) *resp.InstantMu
 	if model.IsDelete() {
 		return nil
 	}
+	if model.ProductPackage.IsDown() {
+		return nil
+	}
 
 	flavorList := make([]resp.ProductFlavor, 0)                        // 商品的规格列表
 	sauceList := make([]resp.ProductSauce, 0)                          // 商品的小料列表
