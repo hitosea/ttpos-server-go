@@ -206,7 +206,9 @@ func (model *SaleOrderProduct) calcMemberDiscountRate() float64 {
 	return memberDiscountRate.InexactFloat64()
 }
 
-// 计算商品的会员折扣费用。会员折扣费用(单个商品)=(商品销售价-商品销售价*会员折扣率)  =商品销售价 *（1-会员折扣率）
+// 计算商品的会员折扣费用。会员折扣费用(单个商品)=(商品销售价-商品销售价*会员折扣率)  = 商品销售价 *（1-会员折扣率）
+// 注意： 商品销售价 *（1-会员折扣率）  这个公式不能使用，会因为四舍五入导致计算错误。如：商品销售价=75.7，会员折扣率=0.85，则折后价为64.345，四舍五入后为64.35，再计算会员折扣费用时，结果为11.355，再四舍五入后为11.36，64.35+11.36=75.71，计算结果错误多1分钱。
+// 正确计算公式： 会员折扣费用= 商品销售价-商品销售价*会员折扣率
 func (model *SaleOrderProduct) calcMemberDiscountFee() float64 {
 	// 当会员折扣率为0时，会员折扣费用=0
 	memberDiscountRate := model.calcMemberDiscountRate()
@@ -220,11 +222,11 @@ func (model *SaleOrderProduct) calcMemberDiscountFee() float64 {
 		return 0
 	}
 
-	// 1-会员折扣率
-	discount := decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(memberDiscountRate))
-	// 商品销售价 *（1-会员折扣率）
-	memberDiscountFee := decimal.NewFromFloat(model.calcSalePrice()).Mul(discount)
-	return memberDiscountFee.Truncate(3).Round(2).InexactFloat64()
+	// 会员折扣费用= 商品销售价-商品销售价*会员折扣率
+	price := model.calcSalePrice()
+	discountPrice := decimal.NewFromFloat(price).Mul(decimal.NewFromFloat(memberDiscountRate)).Round(2) // 商品折后价
+	memberDiscountFee := decimal.NewFromFloat(price).Sub(discountPrice)
+	return memberDiscountFee.Round(2).InexactFloat64()
 }
 
 // 当有会员折扣时，自定义折扣费  = 会员折扣价-会员折扣价*自定义折扣率 = 会员折扣价*（1-自定义折扣率）=（商品销售价-会员折扣费）*（1-自定义折扣率）；
