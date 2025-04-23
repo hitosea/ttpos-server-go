@@ -140,11 +140,26 @@ func (model *SaleBill) GetSaleOrderProductAll(options ...func(option *CalcOption
 		optionFunc(option)
 	}
 
+	// 获取SaleOrderProductUuids商品的ProductPackageUuid
+	productPackageUuids := make([]uint64, 0)
+	for _, saleOrder := range model.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			if slices.Contains(option.SaleOrderProductUuids, saleOrderProduct.Uuid) {
+				productPackageUuids = append(productPackageUuids, saleOrderProduct.ProductPackageUuid)
+			}
+		}
+	}
+
 	saleOrderProducts := make([]*SaleOrderProduct, 0)
 	for _, saleOrder := range model.SaleOrders {
 		for i, _ := range saleOrder.SaleOrderProducts {
 			orderProduct := saleOrder.SaleOrderProducts[i]
 			if orderProduct == nil {
+				continue
+			}
+
+			// 在检查限购的时候，只检查SaleOrderProductUuids中相关的商品包是否超过限购
+			if option.SaleOrderProductUuids != nil && !slices.Contains(productPackageUuids, orderProduct.ProductPackageUuid) {
 				continue
 			}
 
