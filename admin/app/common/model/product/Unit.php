@@ -132,6 +132,7 @@ class Unit extends BaseModel
             $unit['name'] = json_encode($name);
             $unit['unit_name'] = json_encode($name);
             $unit['unit_name_text'] = extractLanguage(json_encode($name));
+            unset($unit['multiLanguageName']);
             $unitList[$key] = $unit;
         }
         return $unitList;

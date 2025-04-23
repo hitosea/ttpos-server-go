@@ -50,9 +50,9 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 		return emptyRes, err
 	}
 	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-	cookingStatus := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusCooking)
-	inProductPackageUuids := productionRepo.WhereProductPackageUuidIn(productPackageUuids)
-	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnSaleBill, req.PageNo, req.PageSize, cookingStatus, inProductPackageUuids)
+	statusOpt := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusCooking)
+	productPackageUuidOpt := productionRepo.WhereProductPackageUuidIn(productPackageUuids)
+	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnSaleBill, req.PageNo, req.PageSize, statusOpt, productPackageUuidOpt)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}
@@ -60,13 +60,12 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	for _, limitedProduct := range limitedProducts {
 		uuids = append(uuids, limitedProduct.SaleBillUuid)
 	}
-	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc,
-		cookingStatus, inProductPackageUuids, productionRepo.WhereSaleBillUuidIn(uuids))
+	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt,
+		productPackageUuidOpt, productionRepo.WhereSaleBillUuidIn(uuids))
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}
-	cookedStatus := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished)
-	finishedList, err := s.getLatestFinishedList(productionRepo, cookedStatus, inProductPackageUuids)
+	finishedList, err := s.getLatestFinishedList(productionRepo, productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished), productPackageUuidOpt)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}
@@ -114,11 +113,11 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 		return emptyRes, err
 	}
 	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-	cookingStatus := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusCooking)
-	inProductPackageUuids := productionRepo.WhereProductPackageUuidIn(productPackageUuids)
+	statusOpt := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusCooking)
+	productPackageUuidOpt := productionRepo.WhereProductPackageUuidIn(productPackageUuids)
 	dbOptions := []repository.DBOption{
-		cookingStatus,
-		inProductPackageUuids,
+		statusOpt,
+		productPackageUuidOpt,
 	}
 	if req.CategoryUuid != 0 {
 		dbOptions = append(dbOptions, productionRepo.WhereProductFirstCategoryUuidIn([]uint64{req.CategoryUuid}))
@@ -132,9 +131,8 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 		uuids = append(uuids, product.FirstCategoryUuid)
 	}
 
-	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc,
-		cookingStatus, inProductPackageUuids, productionRepo.WhereProductFirstCategoryUuidIn(uuids),
-		productionRepo.WithProductCategory(), productionRepo.WithProductCategoryMultiLanguageName())
+	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt,
+		productPackageUuidOpt, productionRepo.WhereProductFirstCategoryUuidIn(uuids), productionRepo.WithProductCategory(), productionRepo.WithProductCategoryMultiLanguageName())
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
 	}
@@ -166,8 +164,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 		}
 		groups = append(groups, group)
 	}
-	cookedStatus := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished)
-	finishedList, err := s.getLatestFinishedList(productionRepo, cookedStatus, inProductPackageUuids)
+	finishedList, err := s.getLatestFinishedList(productionRepo, productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished), productPackageUuidOpt)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
 	}
@@ -184,8 +181,8 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 }
 
 // 最近上菜历史
-func (s *productionSrv) getLatestFinishedList(repo repository.IProductionOrderRepo, opts ...repository.DBOption) (resp.ProductionList, error) {
-	_, products, err := repo.GetProducts(3, repository.FinishedTimeDesc, opts...)
+func (s *productionSrv) getLatestFinishedList(repo repository.IProductionOrderRepo, statusOpt repository.DBOption, opts ...repository.DBOption) (resp.ProductionList, error) {
+	_, products, err := repo.GetProducts(3, repository.FinishedTimeDesc, statusOpt, opts...)
 	if err != nil {
 		return resp.ProductionList{}, errors.ErrInternal
 	}
@@ -207,15 +204,15 @@ func (s *productionSrv) getLatestFinishedList(repo repository.IProductionOrderRe
 func (s *productionSrv) GetHistory(ctx context.Context) (resp.ProductionHistory, error) {
 	// 获取过去24小时内的上菜历史，按照上菜时间倒序
 	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-	statusOption := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished)
-	finishedTimeOption := productionRepo.WhereProductFinishedTime(time.Now().Add(-1 * time.Hour * 24).Unix())
-	limitProducts, err := productionRepo.GetLimitedHistoryProducts(statusOption, finishedTimeOption)
+	statusOpt := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished)
+	finishedTimeOpt := productionRepo.WhereProductFinishedTime(time.Now().Add(-1 * time.Hour * 24).Unix())
+	limitProducts, err := productionRepo.GetLimitedHistoryProducts(statusOpt, finishedTimeOpt)
 	if err != nil {
 		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)
 	}
 
-	_, products, err := productionRepo.GetProducts(0, repository.FinishedTimeDesc,
-		statusOption, finishedTimeOption, productionRepo.WhereProductHistoryCondition())
+	_, products, err := productionRepo.GetProducts(0, repository.FinishedTimeDesc, statusOpt,
+		finishedTimeOpt, productionRepo.SaleBillUuidOpt())
 	if err != nil {
 		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)
 	}
