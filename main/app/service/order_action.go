@@ -74,14 +74,14 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		var errCheck error
 		if option.SeletedMustPlanProducts != nil {
 			// 平板端加购并送厨时，将平板加购的商品注入到checkOrder中
-			checkServiceRes, errCheck = s.checkOrder(ctx, false, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSeletedMustPlanProducts(option.SeletedMustPlanProducts))
+			checkServiceRes, errCheck = s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSeletedMustPlanProducts(option.SeletedMustPlanProducts))
 		} else {
 			// 限购检查只检查未送厨的商品
 			uuids := make([]uint64, 0)
 			for _, saleOrderProduct := range unCookingSaleOrderProducts {
 				uuids = append(uuids, saleOrderProduct.Uuid)
 			}
-			checkServiceRes, errCheck = s.checkOrder(ctx, false, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSaleOrderProductUuid(uuids...))
+			checkServiceRes, errCheck = s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSaleOrderProductUuid(uuids...))
 		}
 		if errCheck != nil {
 			ctx.Log().Error("检查商品失败", zap.Error(errCheck))
