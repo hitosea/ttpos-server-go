@@ -83,17 +83,12 @@ func ParseCodeOrderCheck(code int, options ...func(option *ParseCodeOrderCheckOp
 	case CodeOrderCheckProductStockZero:
 		return "以下商品库存不足，请删除后再下单"
 	case CodeOrderCheckProductMust:
-<<<<<<< HEAD
 		tips := "已下单和本次要下单的商品未选择必点商品，确定要继续下单吗？"
 		if option.IsH5 {
 			return tips
 		}
 		if option.IsTablet {
 			return tips
-=======
-		if option.IsH5 {
-			return "已下单和本次要下单的商品未选择必点商品，确定要继续下单吗？"
->>>>>>> 63736ad3f396d7af8d4efa9dea1641533dcd89bf
 		}
 		return "已送厨和本次要送厨的商品未选择必点商品，确定要继续送厨吗？"
 	case CodeOrderCheckProductPriceChanged:
