@@ -3911,13 +3911,17 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 				mustPlan, isAutoAdd, err = s.DeskOrderMustPlan(ctx, saleBillUuid, saleOrder.Uuid, shopCart.SaleBill.MealNum, option.H5AutoAdd, option.NoAutoAdd)
 				if err != nil {
 					ctx.Log().Info("获取桌台必点方案列表失败", zap.Error(errors.WithMessage(err)))
-					return nil, errors.WithMessage(errors.New("获取桌台必点方案列表失败"), err.Error())
+					if !shopCart.SaleBill.IsEndStatus() {
+						return nil, errors.WithMessage(errors.New("获取桌台必点方案列表失败"), err.Error())
+					}
 				}
 			} else {
 				mustPlan, isAutoAdd, err = s.InstantOrderMustPlan(ctx, ctx.GetDeviceSn())
 				if err != nil {
 					ctx.Log().Info("获取点餐必点方案列表失败", zap.Error(errors.WithMessage(err)))
-					return nil, errors.WithMessage(errors.New("获取点餐必点方案列表失败"), err.Error())
+					if !shopCart.SaleBill.IsEndStatus() {
+						return nil, errors.WithMessage(errors.New("获取点餐必点方案列表失败"), err.Error())
+					}
 				}
 			}
 
@@ -8250,17 +8254,16 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 		}
 		for _, product := range h5OrderProductUnAccept {
 			products = append(products, resp.Product{
-				Uuid:                product.Uuid,
-				LocaleName:          product.MultiLanguageName.GetNames(),
-				LocaleAttributeName: product.GetAttributeName(),
-				Num:                 product.Num,
-				SalePrice:           product.SalePrice,
-				DiscountPrice:       product.DiscountFee,
-				Status:              int(product.Status),
-				Remark:              product.Remark,
-				IsMust:              product.IsMustProduct(),
-				IsGift:              product.IsGiftProduct(),
-				IsCancel:            product.IsCancelProduct(),
+				Uuid:          product.Uuid,
+				LocaleName:    product.GetNameAndFlavorName(),
+				Num:           product.Num,
+				SalePrice:     product.SalePrice,
+				DiscountPrice: product.DiscountFee,
+				Status:        int(product.Status),
+				Remark:        product.Remark,
+				IsMust:        product.IsMustProduct(),
+				IsGift:        product.IsGiftProduct(),
+				IsCancel:      product.IsCancelProduct(),
 			})
 		}
 		res := &resp.OrderCheckServiceRes{

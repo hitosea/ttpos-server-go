@@ -94,9 +94,8 @@ class App extends AppModel
         //
         return $this->alias('app')
             ->field($field)
-            ->leftJoin('company_staff user', "user.company_uuid = app.uuid")
+            ->leftJoin('company_staff user', "user.company_uuid = app.uuid and user.is_super = 1")
             ->leftJoin('company_setting su', "su.company_uuid = app.uuid")
-
             ->when($keyword, function ($q) use ($keyword) {
                 $q->where(function ($qq) use ($keyword) {
                     $qq->like('app.name', $keyword);
@@ -294,11 +293,12 @@ class App extends AppModel
         if ($res === false) {
             return false;
         }
+
         $this->supplier?->delete();
 
         // 推送配置更新
         Websocket::pushClient(
-            self::$app_id, 
+            $this->uuid, 
             Websocket::SOURCE_All, 
             Websocket::SOURCE_All, 
             Websocket::UPDATE_CONFIG, 

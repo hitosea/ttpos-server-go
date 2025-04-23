@@ -250,6 +250,7 @@ CREATE TABLE `ttpos_company_staff` (
   `company_uuid` BIGINT unsigned NOT NULL DEFAULT 0 COMMENT '集团ID',
   `username` varchar(255) NOT NULL DEFAULT '' COMMENT '员工账号',
   `phone` varchar(255) NOT NULL DEFAULT '' COMMENT '员工手机号',
+  `is_super` int(11) DEFAULT 0 COMMENT '是否超级管理员',
   `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
   `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
   `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',
