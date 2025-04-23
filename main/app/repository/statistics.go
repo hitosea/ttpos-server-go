@@ -59,7 +59,7 @@ var (
 	countSaleSubQuerySelect = []string{
 		"sale_bill_uuid",
 		"desk_uuid",
-		"SUM(product_price + product_tax + service_fee + service_tax + payment_fee - refund_tax - refund_service_fee) AS sale_amount",
+		"SUM(product_price + product_tax + service_fee + service_tax + no_refund_tax + payment_fee - refund_tax - refund_service_fee - refund_fee) AS sale_amount",
 		"SUM(payment_amount - refund_amount - payment_balance) AS received_amount",
 		"SUM(product_price) AS product_price",
 		"SUM(product_num) AS product_num",
