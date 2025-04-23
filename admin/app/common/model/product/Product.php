@@ -20,6 +20,7 @@ use app\common\model\product\ProductSkuMaterial;
 use app\common\model\product\ProductFeedMaterial;
 use app\common\model\product\Material;
 use app\common\model\store\MultiLanguageName;
+use think\facade\Log;
 use think\model\concern\SoftDelete;
 
 /**
@@ -862,6 +863,7 @@ class Product extends BaseModel
             'special_id' => 0,        //特殊分类id
         ], $param);
 
+        $queryTime = microtime(true);
         // 成品
         $productSql = self::alias('p')
             ->field(implode(',', [
@@ -1050,9 +1052,12 @@ class Product extends BaseModel
             $total = $count[0]['total_count'];
             $rows = Db::connect('shop' . self::$app_id)->query($querySql . $whereSql . $orderSql . $pageSql, $bind);
         }
+        $queryTime2 = microtime(true);
+        Log::info('queryTime:' . (($queryTime2 - $queryTime) * 1000));
 
         $file = new UploadFile();
         $list = [];
+        $forTime = microtime(true);
         foreach ($rows as $row) {
             // 分类
             $pathNameText = extractLanguage($row['category_name']);
@@ -1111,6 +1116,9 @@ class Product extends BaseModel
                 'is_material_used' => $row['is_material_used'] > 0 ? 1 : 0,
             ];
         }
+
+        $forTime2 = microtime(true);
+        Log::info('forTime:' . (($forTime2 - $forTime) * 1000));
 
         if ($page == 1) {
             return $list;
