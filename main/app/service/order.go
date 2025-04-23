@@ -7181,6 +7181,7 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 			DiscountMoney: saleOrder.GetAmount(),
 		})
 	}()
+
 	// 发布"统计"事件
 	go func() {
 		s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
