@@ -7,13 +7,14 @@ import (
 )
 
 type CalcOption struct {
-	IsLatestPrice   bool             // 是否获取最新价格
-	SaleBillSetting *SaleBillSetting // 新的销售账单设置
-	CookingStatus   int              // 0-包括已送厨和未送厨 1-已送厨的 2-未送厨的
-	H5OrderStatus   int              // 0-包括已下单和未下单 1-已接单的 2-未接单的
-	IsOriginPrice   bool             // 是否计算原价. 默认计算折后价
-	H5OrderUuid     uint64           // 指定一个h5订单uuid
-	H5CheckLimit    bool             // 是否是在h5端检查限购的场景
+	IsLatestPrice         bool             // 是否获取最新价格
+	SaleBillSetting       *SaleBillSetting // 新的销售账单设置
+	CookingStatus         int              // 0-包括已送厨和未送厨 1-已送厨的 2-未送厨的
+	H5OrderStatus         int              // 0-包括已下单和未下单 1-已接单的 2-未接单的
+	IsOriginPrice         bool             // 是否计算原价. 默认计算折后价
+	H5OrderUuid           uint64           // 指定一个h5订单uuid
+	H5CheckLimit          bool             // 是否是在h5端检查限购的场景
+	SaleOrderProductUuids []uint64         // 指定一个或多个销售订单商品,仅检查这个或这些销售订单商品是否超过限购
 }
 
 const (
@@ -101,6 +102,12 @@ func WithH5CheckLimit() func(option *CalcOption) {
 func WithH5OrderUuid(h5OrderUuid uint64) func(option *CalcOption) {
 	return func(option *CalcOption) {
 		option.H5OrderUuid = h5OrderUuid
+	}
+}
+
+func WithSaleOrderProductUuid(saleOrderProductUuids ...uint64) func(option *CalcOption) {
+	return func(option *CalcOption) {
+		option.SaleOrderProductUuids = saleOrderProductUuids
 	}
 }
 

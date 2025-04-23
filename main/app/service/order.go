@@ -4388,9 +4388,9 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 			}
 			var overLimitProducts []*model.SaleOrderProduct
 			if option.UnorderedH5Product == repository.UnorderedH5Product {
-				overLimitProducts = saleBill.GetSaleOrderProductOverLimit(limitProducts, model.WithH5CheckLimit())
+				overLimitProducts = saleBill.GetSaleOrderProductOverLimit(limitProducts, model.WithH5CheckLimit(), model.WithSaleOrderProductUuid(request.SaleOrderProductUuid))
 			} else {
-				overLimitProducts = saleBill.GetSaleOrderProductOverLimit(limitProducts)
+				overLimitProducts = saleBill.GetSaleOrderProductOverLimit(limitProducts, model.WithSaleOrderProductUuid(request.SaleOrderProductUuid))
 			}
 			if len(overLimitProducts) > 0 {
 				return nil, errors.WithMessage(errors.New("商品超过限购"))
@@ -4557,7 +4557,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 			if err != nil {
 				return nil, errors.WithMessage(err)
 			}
-			overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts)
+			overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts, model.WithSaleOrderProductUuid(request.SaleOrderProductUuid))
 			if len(overLimitProducts) > 0 {
 				return nil, errors.WithMessage(errors.New("商品超过限购"))
 			}
@@ -4601,7 +4601,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 	return info, nil
 }
 
-// 获取销售账单的自助餐商品限购商品列表
+// 获取自助餐商品的限购数量
 func (s *orderSrv) getBuffetProductLimitList(ctx context.Context, saleBillUuid uint64) (map[uint64]uint, error) {
 	buffetProductList, err := s.OrderDeskBuffetProductList(ctx, req.OrderChangeBuffetProductListReq{
 		SaleBillUuid: saleBillUuid,
@@ -4632,6 +4632,7 @@ type CheckOrderOptions struct {
 	CheckType               int                     // 1:送厨检查 2:结账检查
 	IsH5Check               bool                    // 是否是H5检查
 	SeletedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
+	SaleOrderProudctUuids   []uint64                // h5端下单场景下，只检查本次下单的商品是否超过限购
 }
 
 const (
@@ -4662,6 +4663,12 @@ func WithIsH5Check() func(*CheckOrderOptions) {
 func WithSeletedMustPlanProducts(seletedMustPlanProducts *ro.MustPlanProductInfo) func(*CheckOrderOptions) {
 	return func(options *CheckOrderOptions) {
 		options.SeletedMustPlanProducts = seletedMustPlanProducts
+	}
+}
+
+func WithSaleOrderProductUuid(saleOrderProductUuids ...uint64) func(*CheckOrderOptions) {
+	return func(options *CheckOrderOptions) {
+		options.SaleOrderProudctUuids = saleOrderProductUuids
 	}
 }
 
@@ -4781,9 +4788,18 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 		// product_package_uuid => num
 		numMap := make(map[uint64]uint) // key为商品包uuid value为已购买数量
 		// product_package_uuid => ProductPackage
-		productPackageMap := make(map[uint64]*model.ProductPackage) // key为商品包uuid value为已购买数量
+		productPackageMap := make(map[uint64]*model.ProductPackage) // key为商品包uuid, value为ProductPackage
 		// product_package_uuid => SaleOrderProduct
 		saleOrderProductMap := make(map[uint64]*model.SaleOrderProduct) // key为商品包uuid value为订单商品
+
+		// 只检查本次下单的商品是否超过限购
+		productPackageUuids := make([]uint64, 0)
+		for _, saleOrderProduct := range saleOrderProductAll {
+			if options.SaleOrderProudctUuids != nil && slices.Contains(options.SaleOrderProudctUuids, saleOrderProduct.Uuid) {
+				productPackageUuids = append(productPackageUuids, saleOrderProduct.ProductPackageUuid)
+			}
+		}
+
 		for _, saleOrderProduct := range saleOrderProductAll {
 			// 限购检查只检查本台的商品，并台过来的商品不记.
 			// 跳过非本台的商品
@@ -4791,6 +4807,11 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 				continue
 			}
 			productPackageUuid := saleOrderProduct.ProductPackageUuid
+			// 在h5端下单场景下，只检查本次下单的商品是否超过限购
+			// 在收银端送厨场景下，只检查本次送厨的商品是否超过限购
+			if options.SaleOrderProudctUuids != nil && !slices.Contains(productPackageUuids, saleOrderProduct.ProductPackageUuid) {
+				continue
+			}
 			productPackageMap[productPackageUuid] = saleOrderProduct.ProductPackage
 			numMap[productPackageUuid] = numMap[productPackageUuid] + saleOrderProduct.Num
 			saleOrderProductMap[productPackageUuid] = saleOrderProduct
@@ -8135,8 +8156,9 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 	ctx.Log().Debug("获取销售账单信息")
 
 	// 从http的header中获取h5_order_uuid
-	h5OrderProductUnAccept := make([]*model.SaleOrderProduct, 0)
-	if h5OrderUuid := context.GetH5OrderUuid(ctx); h5OrderUuid != 0 {
+	h5OrderProductUnAccept := make([]*model.SaleOrderProduct, 0) // 未接单的h5订单商品
+	h5OrderUuid := context.GetH5OrderUuid(ctx)
+	if h5OrderUuid != 0 {
 		h5OrderProductUnAccept = saleBill.GetH5OrderProductUnAccept(h5OrderUuid)
 	}
 
@@ -8144,14 +8166,28 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 	unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
 
 	// 获取所有商品,用于检查限购
-	saleOrderProductAll := saleBill.GetSaleOrderProductAll()
+	var saleOrderProductAll []*model.SaleOrderProduct
+	if h5OrderUuid != 0 {
+		// 如果从接到“进入桌台”时操作结账检查，要加入本h5订单的商品
+		saleOrderProductAll = saleBill.GetSaleOrderProductAll(model.WithH5CheckLimit(), model.WithH5OrderUuid(h5OrderUuid))
+	} else {
+		saleOrderProductAll = saleBill.GetSaleOrderProductAll()
+	}
+	// 结账检查时，只检查未送厨的商品是否超过限购
+	saleOrderProductUuids := make([]uint64, 0)
+	for _, saleOrderProduct := range unCookingSaleOrderProducts {
+		saleOrderProductUuids = append(saleOrderProductUuids, saleOrderProduct.Uuid)
+	}
+	for _, saleOrderProduct := range h5OrderProductUnAccept {
+		saleOrderProductUuids = append(saleOrderProductUuids, saleOrderProduct.Uuid)
+	}
 
 	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购、必点为选择
 	var deskUuid uint64
 	if saleBill.IsDeskSaleBill() {
 		deskUuid = saleBill.DeskUuid
 	}
-	checkServiceRes, errCheck := s.checkOrder(ctx, req.IgnoreMust, db, req.SaleBillUuid, deskUuid, saleOrderProductAll, WithCheckTypeCheckout())
+	checkServiceRes, errCheck := s.checkOrder(ctx, req.IgnoreMust, db, req.SaleBillUuid, deskUuid, saleOrderProductAll, WithCheckTypeCheckout(), WithSaleOrderProductUuid(saleOrderProductUuids...))
 	if errCheck != nil {
 		return nil, errors.WithMessage(errCheck, "订单检查失败")
 	}
@@ -8963,9 +8999,15 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 		return res, errors.WithMessage(err)
 	}
 
+	// 只检查本次下单的商品是否超过限购
+	uuids := make([]uint64, 0)
+	for _, h5OrderProduct := range h5OrderProducts {
+		uuids = append(uuids, h5OrderProduct.Uuid)
+	}
+
 	// 检查必点
 	saleOrderProductAll := saleBill.GetSaleOrderProductAll(model.WithH5CheckLimit())
-	checkServiceRes, errCheck := s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithIsH5Check())
+	checkServiceRes, errCheck := s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithIsH5Check(), WithSaleOrderProductUuid(uuids...))
 	if errCheck != nil {
 		ctx.Log().Error("检查商品失败", zap.Error(errCheck))
 		return nil, errors.New("检查商品失败")
