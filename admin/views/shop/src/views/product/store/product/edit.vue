@@ -453,9 +453,22 @@
 
           params.spec_type = 20; //规格类型固定20
           // 处理sku中的规格
+          let isError = false;
           params.sku.map((item, index) => {
+            if (!item.spec_id) {
+              isError = true;
+            }
             params.sku[index].spec_name = JSON.stringify(item.spec_name);
           });
+
+          if (isError) {
+            self.save_loading = false;
+            self.$ElMessage({
+              message: self.$t('添加失败，请检查系统的语言设置。'),
+              type: 'warning',
+            });
+            return;
+          }
 
           params.stock_remark = self.tiao.stock_remark;
 
