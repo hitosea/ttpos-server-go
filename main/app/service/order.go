@@ -4793,17 +4793,16 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			products := make([]resp.Product, 0)
 			for _, product := range saleOrderProduct {
 				products = append(products, resp.Product{
-					Uuid:                product.Uuid,
-					LocaleName:          product.MultiLanguageName.GetNames(),
-					LocaleAttributeName: product.GetAttributeName(),
-					Num:                 product.Num,
-					SalePrice:           product.SalePrice,
-					DiscountPrice:       product.DiscountFee,
-					Status:              int(product.Status),
-					Remark:              product.Remark,
-					IsMust:              product.IsMustProduct(),
-					IsGift:              product.IsGiftProduct(),
-					IsCancel:            product.IsCancelProduct(),
+					Uuid:          product.Uuid,
+					LocaleName:    product.GetNameAndFlavorName(),
+					Num:           product.Num,
+					SalePrice:     product.SalePrice,
+					DiscountPrice: product.DiscountFee,
+					Status:        int(product.Status),
+					Remark:        product.Remark,
+					IsMust:        product.IsMustProduct(),
+					IsGift:        product.IsGiftProduct(),
+					IsCancel:      product.IsCancelProduct(),
 				})
 			}
 			res := &resp.OrderCheckServiceRes{
