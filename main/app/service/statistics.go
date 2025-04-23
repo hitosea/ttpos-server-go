@@ -791,10 +791,12 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			isFixServiceFee bool = saleBill.SaleBillSetting.ServiceFeeType == 1
 		)
 
-		if isStatFree {
-			isSateGive = true
-		} else {
-			isSateGive = false
+		if isFree {
+			if isStatFree {
+				isSateGive = true
+			} else {
+				isSateGive = false
+			}
 		}
 
 		orderGiveAmount = decimal.NewFromFloat(saleOrder.CalcGiftAmount(saleOrder.SaleOrderProducts))
@@ -859,7 +861,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				productTax := decimal.NewFromFloat(saleProduct.TaxFee)
 				productServiceFee := decimal.NewFromFloat(saleProduct.ServiceFee)
 				productServiceTax := decimal.NewFromFloat(saleProduct.ServiceTaxFee)
-				if saleProduct.GiftTime > 0 || isFree {
+				if saleProduct.GiftTime > 0 {
 					productTax = decimal.NewFromFloat(0)
 					productServiceFee = decimal.NewFromFloat(0)
 					productServiceTax = decimal.NewFromFloat(0)
