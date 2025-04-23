@@ -53,7 +53,21 @@ const (
 	CodeH5OrderNumLimit  = -232 // h5订单数量限制
 )
 
-func ParseCodeOrderCheck(code int) string {
+type ParseCodeOrderCheckOption struct {
+	IsH5 bool // 是否是h5端的文案
+}
+
+func WithIsH5() func(option *ParseCodeOrderCheckOption) {
+	return func(option *ParseCodeOrderCheckOption) {
+		option.IsH5 = true
+	}
+}
+
+func ParseCodeOrderCheck(code int, options ...func(option *ParseCodeOrderCheckOption)) string {
+	option := &ParseCodeOrderCheckOption{}
+	for _, opt := range options {
+		opt(option)
+	}
 	switch code {
 	case CodeOrderCheckProductDown:
 		return "商品已下架"
@@ -62,7 +76,10 @@ func ParseCodeOrderCheck(code int) string {
 	case CodeOrderCheckProductStockZero:
 		return "以下商品库存不足，请删除后再下单"
 	case CodeOrderCheckProductMust:
-		return "已送厨和本次要送厨的商品未选择必点商品，确定要继续送厨吗？" // todo 扫码端要这样显示？已下单和本次要下单的商品未选择必点商品，确定要继续下单吗？
+		if option.IsH5 {
+			return "已下单和本次要下单的商品未选择必点商品，确定要继续下单吗？"
+		}
+		return "已送厨和本次要送厨的商品未选择必点商品，确定要继续送厨吗？"
 	case CodeOrderCheckProductPriceChanged:
 		return "订单商品数据有变动，请重新查看订单"
 	case CodeOrderCheckProductLimitOut:

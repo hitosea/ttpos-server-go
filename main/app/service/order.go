@@ -8971,7 +8971,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 		if checkServiceRes.Code == constant.CodeOrderCheckProductMust && ignoreMust {
 			// 必点方案未选择，且忽略必点方案
 		} else {
-			return checkServiceRes.OrderCheckRes, errors.WithMessage(errors.New(constant.ParseCodeOrderCheck(checkServiceRes.Code)))
+			return checkServiceRes.OrderCheckRes, errors.WithMessage(errors.New(constant.ParseCodeOrderCheck(checkServiceRes.Code, constant.WithIsH5())))
 		}
 	}
 
