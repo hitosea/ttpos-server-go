@@ -120,9 +120,10 @@ class UserShiftLog extends Controller
         if (!$info) {
             return $this->renderError('找不到数据');
         }
-
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/business', [
             'duty_no' => $info['shift_no'],
+            'query_start_time' => $info['start_time'],
+            'query_end_time' => $info['end_time'],
         ], [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
