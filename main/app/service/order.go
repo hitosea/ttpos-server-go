@@ -1461,6 +1461,14 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
 		ctx.AddLock()
 	}
+
+	// 获取门店设置
+	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
+	if err != nil {
+		logger.Logger.Info("ReturnOrder process, GetStoreSetting failed", zap.Error(err))
+		return errors.WithMessage(err), constant.CodeFail
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 	orderRepo := repository.NewOrderRepo(db)
 	// 获取销售账单信息
@@ -1670,7 +1678,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			return errors.WithMessage(err)
 		}
 		// 更新高峰时段
-		if err := repository.NewSaleOrderPeakTimeRepo(db).Record("dec", saleBill, returnOrder.RefundAmount); err != nil {
+		if err := repository.NewSaleOrderPeakTimeRepo(db).Record("dec", saleBill, returnOrder.RefundAmount, storeSetting.TimeZone); err != nil {
 			return errors.WithMessage(err)
 		}
 		// 退积分
@@ -2117,6 +2125,14 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 		defer lock.NewSystemLock().UnlockUuid(req.SaleBillUuid)
 		ctx.AddLock()
 	}
+
+	// 获取门店设置
+	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
+	if err != nil {
+		logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetStoreSetting failed", zap.Error(err))
+		return errors.WithMessage(err)
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	orderRepo := repository.NewOrderRepo(db)
@@ -2198,7 +2214,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 			}
 		}
 		// 更新高峰时段
-		if err := repository.NewSaleOrderPeakTimeRepo(db).Record("dec", saleBill, 0); err != nil {
+		if err := repository.NewSaleOrderPeakTimeRepo(db).Record("dec", saleBill, 0, storeSetting.TimeZone); err != nil {
 			return errors.WithMessage(err)
 		}
 		// 更新销售账单
