@@ -733,9 +733,9 @@ class Setting extends BaseModel
                 'describe' => '系统设置',
                 'values' => [
                     'brand_name' => 'XXX shop', // 商城名称
-                    'brand_logo' => '/image/logo/jbc_64_64.png', // 商城背景图
-                    'brand_logo_long' => '/image/logo/jbc_146_40.png', // 商城logo
-                    'browser_logo' => '/image/logo/jbc_146_40.png', // 浏览器LOGO
+                    'brand_logo' => '/image/logo/ttpos_64_64.png', // 商城背景图
+                    'brand_logo_long' => '/image/logo/ttpos_146_40.png', // 商城logo
+                    'browser_logo' => '/image/logo/ttpos_146_40.png', // 浏览器LOGO
                     'browser_title' => 'XXX shop', // 浏览器标题
                     'expiration_reminder' => 0, // 商城logo
                 ]
