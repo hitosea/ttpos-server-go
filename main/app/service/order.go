@@ -4062,6 +4062,11 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if productBom.IsDelete() {
 			return nil, errors.New("商品规格已经删除")
 		}
+		// 商品已经下架
+		if productBom.IsProductPackageDown() {
+			return nil, errors.New("商品已经下架")
+		}
+
 		productPackage := productBom.ProductPackage
 
 		// 获取某商品规格信息
