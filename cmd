@@ -267,8 +267,8 @@ if [ $# -gt 0 ]; then
                 echo -e "${OK} ${GreenBG} Git pull 成功 ${Font}"
                 run_exec php "composer update --ignore-platform-reqs"
                 run_exec php "php think migrate:run"
+                $COMPOSE down
                 $COMPOSE up -d --pull always
-                $COMPOSE restart
             else
                 echo -e "${Error} ${RedBG} Git pull 失败，请检查网络或远程仓库状态 ${Font}"
                 exit 1
