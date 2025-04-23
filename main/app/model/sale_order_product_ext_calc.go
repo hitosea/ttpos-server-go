@@ -203,7 +203,7 @@ func (model *SaleOrderProduct) calcPrice() float64 {
 	// 销售价*折扣率
 	price := decimal.NewFromFloat(model.SalePrice).Mul(
 		decimal.NewFromFloat(discountRate))
-	return price.InexactFloat64()
+	return price.Round(2).InexactFloat64()
 }
 
 // 计算会员折扣率。会员折扣率=会员等级折扣率*会员卡折扣率
