@@ -106,6 +106,7 @@ func (r *BusinessDataCountReq) GetParam() BusinessDataCountReq {
 		QueryStartTime: queryStartTime,
 		QueryEndTime:   queryEndTime,
 		CategoryType:   r.CategoryType,
+		DutyNo:         r.DutyNo,
 	}
 }
 

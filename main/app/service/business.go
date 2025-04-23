@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 )
@@ -317,7 +318,7 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		AbnormalData: func() business_data_resp.AbnormalData {
 			AbnormalData, err := repository.NewOrderAbnormalRecordRepo(ctx.GetDB()).GetRecordInfo(
 				0,
-				ctx.GetStaff().DutyNo,
+				utils.IfString(req.DutyNo != "", req.DutyNo, ctx.GetStaff().DutyNo),
 			)
 			if err != nil {
 				return business_data_resp.AbnormalData{}
