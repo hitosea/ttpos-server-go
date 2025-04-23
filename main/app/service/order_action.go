@@ -371,7 +371,7 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 		if checkServiceRes.Code == constant.CodeOrderCheckProductMust && request.IgnoreMust {
 			// 必点方案未选择，且忽略必点方案
 		} else {
-			return checkServiceRes.OrderCheckRes, errors.WithMessage(errors.New(constant.ParseCodeOrderCheck(checkServiceRes.Code)))
+			return checkServiceRes.OrderCheckRes, errors.WithMessage(errors.New(constant.ParseCodeOrderCheck(checkServiceRes.Code, constant.WithIsTablet())))
 		}
 	}
 	return res, err
