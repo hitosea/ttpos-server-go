@@ -1388,7 +1388,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单、充值订单id',
     `data` longtext COMMENT '打印数据',
     `type` INT(11) NOT NULL DEFAULT 0 COMMENT '类型:0系统默认队列,1云上服务下放',
-    `data_type` INT(10) NOT NULL DEFAULT 1 COMMENT '数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单',
+    `data_type` INT(10) NOT NULL DEFAULT 1 COMMENT '数据类型 1-交班单 2-结账单 3-预结账单 4-一菜一单 5-营业数据 6-整单打印 7-打印发票 8-充值单 9-退菜单',
     `print_method` INT(10) NOT NULL DEFAULT 1 COMMENT '打印方式 1文本打印, 2图片打印',
     `printer_type` VARCHAR(50) DEFAULT '' COMMENT '打印机类型',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '打印次数',
