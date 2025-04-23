@@ -443,6 +443,7 @@ class ProductBom extends BaseModel
                 'update_time' => date('Y-m-d H:i:s', $row['update_time']),
                 'history_purchase_num' => floatval($historyPurchaseNum),
                 'history_loss_num' => floatval($historyLossNum),
+                'barcode' => $row['barcode_value'],
             ];
         }
 

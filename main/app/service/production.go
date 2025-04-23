@@ -60,7 +60,7 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	for _, limitedProduct := range limitedProducts {
 		uuids = append(uuids, limitedProduct.SaleBillUuid)
 	}
-	products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc,
+	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc,
 		cookingStatus, inProductPackageUuids, productionRepo.WhereSaleBillUuidIn(uuids))
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
@@ -71,8 +71,9 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}
 	return resp.ProductionListWithPagination{
-		List:         s.groupByOrder(limitedProducts, products),
-		FinishedList: finishedList,
+		SendKitchenNum: sendKitchenNum,
+		List:           s.groupByOrder(limitedProducts, products),
+		FinishedList:   finishedList,
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
 			PageSize: req.PageSize,
@@ -131,7 +132,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 		uuids = append(uuids, product.FirstCategoryUuid)
 	}
 
-	products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc,
+	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc,
 		cookingStatus, inProductPackageUuids, productionRepo.WhereProductFirstCategoryUuidIn(uuids),
 		productionRepo.WithProductCategory(), productionRepo.WithProductCategoryMultiLanguageName())
 	if err != nil {
@@ -171,8 +172,9 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
 	}
 	return resp.ProductionListWithPagination{
-		List:         groups,
-		FinishedList: finishedList,
+		SendKitchenNum: sendKitchenNum,
+		List:           groups,
+		FinishedList:   finishedList,
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
 			PageSize: req.PageSize,
@@ -183,7 +185,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 
 // 最近上菜历史
 func (s *productionSrv) getLatestFinishedList(repo repository.IProductionOrderRepo, opts ...repository.DBOption) (resp.ProductionList, error) {
-	products, err := repo.GetProducts(3, repository.FinishedTimeDesc, opts...)
+	_, products, err := repo.GetProducts(3, repository.FinishedTimeDesc, opts...)
 	if err != nil {
 		return resp.ProductionList{}, errors.ErrInternal
 	}
@@ -212,7 +214,7 @@ func (s *productionSrv) GetHistory(ctx context.Context) (resp.ProductionHistory,
 		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)
 	}
 
-	products, err := productionRepo.GetProducts(0, repository.FinishedTimeDesc,
+	_, products, err := productionRepo.GetProducts(0, repository.FinishedTimeDesc,
 		statusOption, finishedTimeOption, productionRepo.WhereProductHistoryCondition())
 	if err != nil {
 		return resp.ProductionHistory{}, errors.WithMessage(errors.ErrInternal)

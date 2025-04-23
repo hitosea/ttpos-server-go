@@ -388,19 +388,24 @@ func (s *staffShiftSrv) ShiftWithdraw(ctx context.Context, req req.ShiftWithdraw
 	}
 
 	err = repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
-		// 更新交班记录
-		_, err = shiftLogRepo.Update(log, map[string]interface{}{
-			"withdraw_cash": gorm.Expr("withdraw_cash + ?", req.WithdrawCash),
-			"cash_left":     gorm.Expr("cash_left - ?", req.WithdrawCash),
-		})
-		if err != nil {
-			return errors.New("取钱失败")
-		}
 		// 更新钱箱记录
 		err = s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
 			Amount:         -req.WithdrawCash,
 			CashWithdrawal: req.WithdrawCash,
 			Scene:          constant.CashBoxLogSceneOut,
+		})
+		if err != nil {
+			return errors.New("取钱失败")
+		}
+
+		// 更新交班记录
+		balance, err := s.cashBoxSrv.GetBalance(ctx)
+		if err != nil {
+			return errors.New("获取钱箱余额失败")
+		}
+		_, err = shiftLogRepo.Update(log, map[string]interface{}{
+			"withdraw_cash": gorm.Expr("withdraw_cash + ?", req.WithdrawCash),
+			"cash_left":     balance,
 		})
 		if err != nil {
 			return errors.New("取钱失败")
@@ -479,7 +484,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 	storeSetting, err := setting.GetStoreSetting(ctx)
 	if err != nil {
 		logger.Logger.Error("获取门店设置失败", zap.Error(err))
-		fmt.Println("获取门店设置失败", zap.Error(err))
+		return nil, errors.WithMessage(err)
 	}
 
 	//
@@ -494,6 +499,14 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 	if err != nil {
 		return nil, errors.New("当前班次错误，请退出重新登录")
 	}
+
+	// 查询钱箱
+	cashBox, err := s.cashBoxSrv.GetRecord(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取钱箱记录失败")
+	}
+
+	log.CashLeft = cashBox.GetBalance()
 
 	// 销售数据
 	saleData := s.statisticsSrv.CountSale(ctx, CountReq{

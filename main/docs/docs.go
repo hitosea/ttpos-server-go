@@ -21870,6 +21870,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.PageResponse"
                         }
                     ]
+                },
+                "send_kitchen_num": {
+                    "description": "送厨商品数量，用于厨显来菜提醒",
+                    "type": "integer"
                 }
             }
         },

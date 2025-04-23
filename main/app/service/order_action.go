@@ -61,12 +61,19 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 	// 送厨相关
 	{
 		// 获取所有商品,用于检查限购
-		saleOrderProductAll := saleBill.GetSaleOrderProductAll()
+		var saleOrderProductAll []*model.SaleOrderProduct
+		// 如果是接单场景
+		if h5OrderUuid != 0 {
+			saleOrderProductAll = saleBill.GetSaleOrderProductAll(model.WithH5CheckLimit(), model.WithH5OrderUuid(h5OrderUuid))
+		} else {
+			saleOrderProductAll = saleBill.GetSaleOrderProductAll()
+		}
 
 		// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购、必点为选择
 		var checkServiceRes *resp.OrderCheckServiceRes
 		var errCheck error
 		if option.SeletedMustPlanProducts != nil {
+			// 平板端加购并送厨时，将平板加购的商品注入到checkOrder中
 			checkServiceRes, errCheck = s.checkOrder(ctx, false, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSeletedMustPlanProducts(option.SeletedMustPlanProducts))
 		} else {
 			checkServiceRes, errCheck = s.checkOrder(ctx, false, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking())

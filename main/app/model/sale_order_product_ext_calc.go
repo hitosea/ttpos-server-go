@@ -98,6 +98,12 @@ func WithH5CheckLimit() func(option *CalcOption) {
 	}
 }
 
+func WithH5OrderUuid(h5OrderUuid uint64) func(option *CalcOption) {
+	return func(option *CalcOption) {
+		option.H5OrderUuid = h5OrderUuid
+	}
+}
+
 func (model *SaleOrderProduct) CalcSaleOrderProduct(setting SaleBillSetting, options ...func(option *CalcOption)) SaleOrderProductCalc {
 	defer model.SetUpdate() // 标记该记录要更新
 	serviceFeeRate := setting.GetServiceFeeRate()

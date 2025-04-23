@@ -66,7 +66,7 @@ func ParseCodeOrderCheck(code int) string {
 	case CodeOrderCheckProductPriceChanged:
 		return "订单商品数据有变动，请重新查看订单"
 	case CodeOrderCheckProductLimitOut:
-		return "超过限购数量"
+		return "以下商品超出限购数量，请在限购数量内下单"
 	default:
 		return "success"
 	}

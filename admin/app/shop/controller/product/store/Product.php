@@ -47,7 +47,7 @@ class Product extends Controller
         // 商品分类
         $category = CategoryModel::getCacheTree(1, 0, $this->store);
         // 打印标签
-        $label = (new LabelModel)->getAllList($this->store['user']['shop_supplier_id']);
+        $label = [];
         // 数量
         $product_count = [
             'lower' => $model->getCount('lower', $this->store['user']['shop_supplier_id'], 1),

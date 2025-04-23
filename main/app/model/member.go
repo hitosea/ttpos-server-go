@@ -215,9 +215,11 @@ type MemberCard struct {
 }
 
 func (model *MemberCard) GetDiscount() float64 {
-	// 如果会员卡过期，则折扣不生效
-	if time.Now().Unix() > model.ExpireTime {
-		return 1
+	// 如果会员卡有有效期时，会员卡过期，则折扣不生效
+	if model.ExpireTime != 0 {
+		if time.Now().Unix() > model.ExpireTime {
+			return 1
+		}
 	}
 	// 兼容1-100的取值范围
 	if model.Discount > 1 {
