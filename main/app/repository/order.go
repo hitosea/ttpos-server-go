@@ -698,6 +698,12 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 						WithPreload{
 							Query: "BuffetPackage1.MultiLanguageName",
 						},
+						WithPreload{
+							Query: "BuffetPackage1.BuffetProducts",
+						},
+						WithPreload{
+							Query: "BuffetPackage2.BuffetProducts",
+						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
