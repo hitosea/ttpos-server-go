@@ -39,7 +39,7 @@ func WithSeletedMustPlanProductsActionCookingOption(seletedMustPlanProducts *ro.
 }
 
 // ActionCooking 送厨
-func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, h5OrderUuid uint64, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) {
+func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, h5OrderUuid uint64, isAutoOrder bool, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) {
 	option := &ActionCookingOption{}
 	for _, opt := range options {
 		opt(option)
@@ -74,14 +74,14 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		var errCheck error
 		if option.SeletedMustPlanProducts != nil {
 			// 平板端加购并送厨时，将平板加购的商品注入到checkOrder中
-			checkServiceRes, errCheck = s.checkOrder(ctx, false, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSeletedMustPlanProducts(option.SeletedMustPlanProducts))
+			checkServiceRes, errCheck = s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSeletedMustPlanProducts(option.SeletedMustPlanProducts))
 		} else {
 			// 限购检查只检查未送厨的商品
 			uuids := make([]uint64, 0)
 			for _, saleOrderProduct := range unCookingSaleOrderProducts {
 				uuids = append(uuids, saleOrderProduct.Uuid)
 			}
-			checkServiceRes, errCheck = s.checkOrder(ctx, false, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSaleOrderProductUuid(uuids...))
+			checkServiceRes, errCheck = s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSaleOrderProductUuid(uuids...))
 		}
 		if errCheck != nil {
 			ctx.Log().Error("检查商品失败", zap.Error(errCheck))
@@ -191,6 +191,21 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 
 	// 操作记录相关
 	{
+		// 接单后送厨，需要先发布接单事件
+		if h5OrderUuid > 0 {
+			s.bus.PublishAcceptH5OrderEvent(event.AcceptH5OrderPayload{
+				BasePayload: event.BasePayload{ // 接单
+					Ctx:          ctx,
+					CompanyUuid:  ctx.GetCompanyUuid(),
+					Source:       ctx.GetSource(),
+					SaleBillUuid: saleBill.Uuid,
+					H5OrderUuid:  h5OrderUuid,
+					OperatorUuid: int64(ctx.GetStaffUuid()),
+				},
+				IsAutoOrder: isAutoOrder,
+			})
+		}
+
 		// 发起“送厨”操作的事件
 		products := make(event.Products, 0)
 		for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
@@ -275,7 +290,7 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 		}
 
 		// 送厨
-		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, 0, withCalcAndSaveSaleBill(), WithSeletedMustPlanProductsActionCookingOption(&seletedMustPlanProducts)) // 平板端加购并送厨
+		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, 0, false, withCalcAndSaveSaleBill(), WithSeletedMustPlanProductsActionCookingOption(&seletedMustPlanProducts)) // 平板端加购并送厨
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
