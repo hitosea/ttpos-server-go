@@ -22,6 +22,8 @@ type UpdateCashBalanceParam struct {
 
 type ICashBoxSrv interface {
 	UpdateBalance(ctx context.Context, param UpdateCashBalanceParam) error
+	GetBalance(ctx context.Context) (float64, error)
+	GetRecord(ctx context.Context) (model.CashBox, error)
 }
 
 func NewCashBoxSrv(dbm *database.DBManager) ICashBoxSrv {
@@ -85,4 +87,18 @@ func (s *cashBoxSrv) UpdateBalance(ctx context.Context, param UpdateCashBalanceP
 	_, err = repository.NewCashBoxLogRepo(tx).Create(log)
 
 	return errors.WithMessage(err)
+}
+
+// GetBalance 获取钱箱余额
+func (s *cashBoxSrv) GetBalance(ctx context.Context) (float64, error) {
+	cashBox, err := s.GetRecord(ctx)
+	if err != nil {
+		return 0, errors.WithMessage(err, "获取钱箱余额失败")
+	}
+	return cashBox.GetBalance(), nil
+}
+
+// GetRecord 获取钱箱记录
+func (s *cashBoxSrv) GetRecord(ctx context.Context) (model.CashBox, error) {
+	return repository.NewCashBoxRepo(ctx.GetDB()).Get(), nil
 }
