@@ -8,7 +8,9 @@ import (
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/printer/printer_model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
@@ -72,6 +74,29 @@ func freeSaleOrderEventHandler() {
 			)
 			if err != nil {
 				fmt.Println("FreeSaleOrderEvent process, PrintingStatementOrder failed ", err)
+			}
+		})
+
+		// 处理高峰时段
+		event.NewSystemBus().SubscribeFreeSaleOrderEvent(func(payload event.FreeSaleOrderPayload) {
+			// 如果订单未完成，不处理
+			if !payload.SaleBill.IsFinish() {
+				return
+			}
+			// 获取门店设置
+			setting := setting.NewSrvImpl(database.GetDBManager(config.Database), cache.Global)
+			storeSetting, err := setting.GetStoreSetting(payload.Ctx)
+			if err != nil {
+				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetStoreSetting failed", zap.Error(err))
+				return
+			}
+			//
+			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+			payload.SaleBill.Amount = 0
+			err = repository.NewSaleOrderPeakTimeRepo(db).Record("inc", payload.SaleBill, 0.0, storeSetting.TimeZone)
+			if err != nil {
+				fmt.Println("SubscribeCheckoutSaleOrderEvent process, Record failed", payload, err)
+				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, Record failed", zap.Any("payload", payload), zap.Error(err))
 			}
 		})
 
