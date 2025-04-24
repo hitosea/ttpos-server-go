@@ -8636,9 +8636,8 @@ func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMembe
 		return nil, errors.WithMessage(err, "查询销售账单失败")
 	}
 
-	// 当不是收银端的时候，拆单不可操作结账
-	if ctx.GetSource() != constant.SourceCashier && saleBill.IsSplit() {
-		return nil, errors.NewWithCode(constant.CodeOrderCheckSplit, "当前订单已经拆单，请前去收银机操作")
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle); err != nil {
+		return nil, errors.WithMessage(err)
 	}
 
 	// 获取销售账单信息
