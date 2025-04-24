@@ -4878,9 +4878,20 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 		for code, saleOrderProduct := range statusMap {
 			products := make([]resp.Product, 0)
 			for _, product := range saleOrderProduct {
+				localeName := product.GetNameAndFlavorName()
+				// 如果商品包没有多语言名称，则查询数据库获取
+				if product.MultiLanguageName.IsNullName() {
+					uuid := product.MultiLanguageNameUuid
+					names, err := repository.NewMultiLanguageNameRepositoryImpl(db).GetMultiLanguageNameByUuid(uuid)
+					if err != nil {
+						return nil, errors.WithMessage(err)
+					}
+					bom, _ := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(product.SaleOrderProductBoms[0].ProductBomUuid)
+					localeName = product.GetNameAndFlavorNameFrom(bom, &names)
+				}
 				products = append(products, resp.Product{
 					Uuid:          product.Uuid,
-					LocaleName:    product.GetNameAndFlavorName(),
+					LocaleName:    localeName,
 					Num:           product.Num,
 					SalePrice:     product.SalePrice,
 					DiscountPrice: product.DiscountFee,

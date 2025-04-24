@@ -269,7 +269,7 @@ func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, sal
 func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill, ignoreMust bool) (*resp.OrderCheckServiceRes, error) {
 
 	// 加购相关
-	_, err := s.actionAdd(ctx, request, saleBill, WithIsTableAdd())
+	_, err := s.actionAdd(ctx, request, saleBill, WithIsTableAdd(), WithSkipLimit())
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -419,6 +419,7 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 
 type ActionAddOption struct {
 	IsTableAdd bool // 是否是平板端加购
+	skipLimit  bool // 是否跳过加购时的限购检查。使用场景是加购并送厨时，因为送厨会在坚持一次限购，所有加购时不检查
 }
 
 func WithIsTableAdd() func(option *ActionAddOption) {
@@ -427,8 +428,18 @@ func WithIsTableAdd() func(option *ActionAddOption) {
 	}
 }
 
+func WithSkipLimit() func(option *ActionAddOption) {
+	return func(option *ActionAddOption) {
+		option.skipLimit = true
+	}
+}
+
 // 加购。内部方法复用
 func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill, options ...func(option *ActionAddOption)) (*model.SaleBill, error) {
+	option := &ActionAddOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
 	// 获取当前销售订单信息
 	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
@@ -445,15 +456,18 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 	if err != nil {
 		return nil, errors.WithMessage(err, "构建商品失败")
 	}
-	// 检查限购
-	if request.IsH5Product == true {
-		// 如果是h5端加购的话
-		if err := s.checkLimitPurchase(ctx, saleBill, saleOrderProducts, model.WithH5CheckLimit()); err != nil {
-			return nil, errors.WithMessage(err)
-		}
-	} else {
-		if err := s.checkLimitPurchase(ctx, saleBill, saleOrderProducts); err != nil {
-			return nil, errors.WithMessage(err)
+
+	if !option.skipLimit {
+		// 检查限购
+		if request.IsH5Product == true {
+			// 如果是h5端加购的话
+			if err := s.checkLimitPurchase(ctx, saleBill, saleOrderProducts, model.WithH5CheckLimit()); err != nil {
+				return nil, errors.WithMessage(err)
+			}
+		} else {
+			if err := s.checkLimitPurchase(ctx, saleBill, saleOrderProducts); err != nil {
+				return nil, errors.WithMessage(err)
+			}
 		}
 	}
 	// 检查超时不能加购
