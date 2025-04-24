@@ -488,6 +488,12 @@ func (s *deskSrv) IsCellCloseInstant(ctx context.Context, saleBillUuid uint64) (
 	if productCooking := billInfo.GetSaleOrderProductCooking(); len(productCooking) > 0 {
 		productList := make([]resp.Product, 0, len(productCooking))
 		for _, product := range productCooking {
+			if product.IsDelete() || product.IsCancelProduct() {
+				// 如果商品已经删除，则跳过
+				// 如果商品已经退菜，则跳过
+				continue
+			}
+
 			productList = append(productList, resp.Product{
 				Uuid:          product.Uuid,
 				LocaleName:    product.MultiLanguageName.GetNames(),
@@ -501,6 +507,9 @@ func (s *deskSrv) IsCellCloseInstant(ctx context.Context, saleBillUuid uint64) (
 				IsBuffet:      product.IsBuffet == 1,
 				IsCancel:      product.IsCancelBool(),
 			})
+		}
+		if len(productList) == 0 {
+			return nil, nil
 		}
 		return &resp.CartProductList{
 			List: productList,
