@@ -6954,6 +6954,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		// 更新会员消费金额和消费次数
 		repository.NewMemberRepo(db).IncConsumptionAmount(saleOrder.ConsumerUuid, saleOrder.PaymentAmount)
 		repository.NewMemberRepo(db).IncConsumptionCount(saleOrder.ConsumerUuid)
+		// 处理会员升级
+		go s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), saleOrder.ConsumerUuid)
 	}
 
 	// 记录会员余额
