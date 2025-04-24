@@ -168,7 +168,7 @@ func (model *SaleBill) GetSaleOrderProductAll(options ...func(option *CalcOption
 					continue
 				}
 				// 如果是在接单场景下检查限购，则只检查当前h5订单的商品。不是本h5订单的商品跳过
-				if orderProduct.H5OrderUuid != 0 && orderProduct.H5OrderUuid != option.H5OrderUuid {
+				if orderProduct.H5OrderUuid != 0 && option.H5OrderUuid != 0 && orderProduct.H5OrderUuid != option.H5OrderUuid {
 					continue
 				}
 			} else {

@@ -416,8 +416,15 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 		return nil, errors.WithMessage(err, "构建商品失败")
 	}
 	// 检查限购
-	if err := s.checkLimitPurchase(ctx, saleBill, saleOrderProducts); err != nil {
-		return nil, errors.WithMessage(err)
+	if request.IsH5Product == true {
+		// 如果是h5端加购的话
+		if err := s.checkLimitPurchase(ctx, saleBill, saleOrderProducts, model.WithH5CheckLimit()); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+	} else {
+		if err := s.checkLimitPurchase(ctx, saleBill, saleOrderProducts); err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 	// 检查超时不能加购
 	if err := s.checkTimeoutAndCannotAddPurchase(ctx, saleBill, saleOrderProducts); err != nil {
@@ -428,7 +435,12 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 }
 
 // 检查限制购 checkLimitPurchase
-func (s *orderSrv) checkLimitPurchase(ctx context.Context, saleBill *model.SaleBill, saleOrderProducts []*model.SaleOrderProduct) error {
+func (s *orderSrv) checkLimitPurchase(ctx context.Context, saleBill *model.SaleBill, saleOrderProducts []*model.SaleOrderProduct, options ...func(option *model.CalcOption)) error {
+	option := &model.CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+
 	// 获取自助餐商品的限购数量
 	limitProducts, err := s.getBuffetProductLimitList(ctx, saleBill.Uuid)
 	if err != nil {
@@ -439,7 +451,14 @@ func (s *orderSrv) checkLimitPurchase(ctx context.Context, saleBill *model.SaleB
 	for _, saleOrderProduct := range saleOrderProducts {
 		uuids = append(uuids, saleOrderProduct.Uuid)
 	}
-	overLimitProducts := saleBill.GetSaleOrderProductOverLimit(limitProducts, model.WithSaleOrderProductUuid(uuids...))
+
+	var overLimitProducts []*model.SaleOrderProduct
+	if option.H5CheckLimit {
+		// 如果是h5端加购检查限购
+		overLimitProducts = saleBill.GetSaleOrderProductOverLimit(limitProducts, model.WithH5CheckLimit(), model.WithSaleOrderProductUuid(uuids...))
+	} else {
+		overLimitProducts = saleBill.GetSaleOrderProductOverLimit(limitProducts, model.WithSaleOrderProductUuid(uuids...))
+	}
 	if len(overLimitProducts) > 0 {
 		return errors.New("商品超过限购")
 	}
