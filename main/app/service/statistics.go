@@ -9,11 +9,9 @@ import (
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/logger"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/shopspring/decimal"
-	"go.uber.org/zap"
 )
 
 // IStatisticsSrv 统计服务接口
@@ -369,8 +367,6 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 			list[i] = *item
 		}
 	}
-
-	logger.Logger.Info("list", zap.Any("list", list))
 
 	totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(memberPaymentData.TotalReceivedAmount))
 	totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(memberPaymentData.TotalRefundAmount))
