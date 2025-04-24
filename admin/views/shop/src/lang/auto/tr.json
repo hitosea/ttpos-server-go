@@ -1572,5 +1572,6 @@
     "请选择应用范围": "Lütfen uygulama kapsamını seçin",
     "全部应用": "Tüm uygulamalar",
     "部分应用": "Kısmi uygulamalar",
-    "规格/单位/加料": "Özellik/Birim/Ekstralar"
+    "规格/单位/加料": "Özellik/Birim/Ekstralar",
+    "添加失败，请检查系统的语言设置。": "Ekleme başarısız oldu, lütfen sistem dil ayarlarını kontrol edin."
 }

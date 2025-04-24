@@ -299,7 +299,9 @@ if [ $# -gt 0 ]; then
         else
             e="mysql $@" && run_exec db "$e"
         fi
-    
+    elif [[ "$1" == "go" ]]; then
+        shift 1
+        e="./main $@" && run_exec golang "$e"
     elif [[ "$1" == "golang" ]]; then
         shift 1
         e="go $@" && run_exec golang "$e"
