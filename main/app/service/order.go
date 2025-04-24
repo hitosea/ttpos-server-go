@@ -2010,7 +2010,7 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 
 	// 获取销售订单商品列表
 	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-		if saleOrderProduct.IsCancelBool() || saleOrderProduct.IsGiftBool() || saleOrderProduct.Status == constant.OrderProductStatusUnSending {
+		if saleOrderProduct.IsCancelProduct() || saleOrderProduct.IsGiftBool() || saleOrderProduct.Status == constant.OrderProductStatusUnSending {
 			continue
 		}
 		products = append(products, resp.OrderReturnProduct{
