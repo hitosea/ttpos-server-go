@@ -2,10 +2,7 @@
 
 namespace app\shop\controller\file;
 
-use app\common\exception\BaseException;
 use app\common\service\example\ExampleService;
-use app\shop\model\product\ProductImage;
-use image\Image;
 use app\shop\model\file\UploadFile;
 use hg\apidoc\annotation as Apidoc;
 use app\shop\model\settings\Setting as SettingModel;
@@ -13,6 +10,7 @@ use app\shop\controller\Controller as BaseController;
 use app\common\library\storage\Driver as StorageDriver;
 use app\shop\model\product\Material;
 use app\shop\model\product\Product;
+use think\facade\Db;
 use think\facade\Log;
 use think\file\UploadedFile;
 
@@ -119,6 +117,127 @@ class Upload extends BaseController
         return $this->renderError($model->getError() ?: '移动失败');
     }
 
+    public function repeatList()
+    {
+        $page = request()->param('page') ?? 1;
+        $listRows = request()->param('list_rows') ?? 10;
+        $product_list = request()->param('list') ?? '[]';
+        $list = [];
+        $result = [
+            'current_page' => $page,
+            'data' => $list,
+            'per_page' => $listRows,
+            'total' => 0,
+            'last_page' => 0,
+        ];
+
+        $product_list_assoc = array_column($product_list, null, 'img_name');
+        $img_names = array_keys($product_list_assoc);
+        if (empty($img_names)) {
+            return $this->renderSuccess('', $result);
+        }
+
+        // 成品
+        $productSql = Product::alias('p')
+            ->field(implode(',', [
+                'file.real_name',
+                'file.index_file_name',
+                'p.create_time',
+                'p.uuid as product_id', 
+                'p.name as product_name', 
+                'p.sort as product_sort',
+                'c1.name as category_name', 
+                'c2.name as category_parent_name', 
+                'c1.uuid as category_uuid',
+                'c2.uuid as category_parent_uuid',
+                'p.sort as sort',
+                'p.id as id'
+            ]))
+            ->leftJoin('product_category c1', 'p.category_uuid = c1.uuid')
+            ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
+            ->leftJoin('file', 'p.image_file_uuid = file.uuid')
+            ->where('p.delete_time', 0)
+            ->where('file.delete_time', 0)
+            ->whereIn('file.index_file_name', $img_names)
+            ->group('p.uuid')
+            ->order('p.sort', 'asc')
+            ->order('p.id', 'desc')
+            ->buildSql();
+
+            // 材料
+        $materialSql = Material::alias('m')
+        ->field(implode(',', [
+            'file.real_name',
+            'file.index_file_name',
+            'm.create_time',
+            'm.uuid as product_id', 
+            'm.name as product_name', 
+            '0 as product_sort',
+            'c1.name as category_name', 
+            'c2.name as category_parent_name', 
+            'c1.uuid as category_uuid',
+            'c2.uuid as category_parent_uuid',
+            '0 as sort',
+            'm.id as id'
+        ]))
+        ->leftJoin('product_category c1', 'm.category_uuid = c1.uuid')
+        ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
+        ->leftJoin('file', 'm.image_uuid = file.uuid')
+        ->where('m.delete_time', 0)
+        ->whereIn('file.index_file_name', $img_names)
+        ->group('m.uuid')
+        ->order('m.id', 'desc')
+        ->buildSql();
+
+        // 分页
+        $offset = ($page - 1) * $listRows;
+        $limit = $listRows;
+
+        $querySql = "SELECT " . implode(',', [
+            'create_time',
+            'category_name', 
+            'category_parent_name', 
+            'real_name',
+            'index_file_name',
+            'product_id', 
+            'product_name', 
+            'product_sort',
+            'category_uuid',
+            'category_parent_uuid',
+            'sort',
+            'id'
+        ]) . " FROM ($productSql UNION ALL $materialSql) AS all_product";
+        $orderSql = ' ORDER BY sort ASC, id DESC';
+        $pageSql = " LIMIT {$offset}, {$limit}";
+
+        // 执行查询
+        $countSql = "SELECT COUNT(*) AS total_count". " FROM ($productSql UNION ALL $materialSql) AS all_product";
+        $count = Db::connect('shop' . request()->appId)->query($countSql);
+        $total = $count[0]['total_count'];
+        $rows = Db::connect('shop' . request()->appId)->query($querySql . $orderSql . $pageSql);
+
+        foreach ($rows as $row) {
+            // 分类
+            $pathNameText = extractLanguage($row['category_name']);
+            if ($row['category_parent_name']) {
+                $pathNameText = extractLanguage($row['category_parent_name']) . '-' . $pathNameText;
+            }
+            $list[] = [
+                'product_id' => $row['product_id'],
+                'product_name_text' => extractLanguage($row['product_name']),
+                'category_name_text' => $pathNameText,
+                'img_name' => $row['index_file_name'],
+                'file_name' => $row['real_name'],
+            ];
+        }
+
+        $result['total'] = $total;
+        $result['last_page'] = ceil($total / $listRows);
+        $result['data'] = $list;
+
+        return $this->renderSuccess('', $result);
+    }
+
     /**
      * @Apidoc\Title("批量替换商品图片")
      * @Apidoc\Method("POST")
@@ -137,30 +256,6 @@ class Upload extends BaseController
         $product_list = request()->param('list') ?? '[]';
         $product_list_arr = json_decode($product_list, true) ?: [];
         $insert_list = $product_list_arr;
-
-        // 检查图片库重名图片
-        $repeat_list = [];  // 冲突列表
-        if (!$isOverlay) {
-            $product_list_assoc = array_column($product_list_arr, null, 'img_name');
-            $img_names = array_keys($product_list_assoc);
-            if (!empty($img_names)) {
-                $chunks = array_chunk($img_names, 1000);
-                $existFiles = [];
-                foreach ($chunks as $chunk) {
-                    $result = UploadFile::where('delete_time', 0)->whereIn('index_file_name', $chunk)->select();
-                    $existFiles = array_merge($existFiles, $result->toArray());
-                }
-                // 检查重复项
-                foreach ($existFiles as $file) {
-                    if (isset($product_list_assoc[$file['index_file_name']])) {
-                        $repeat_list[] = $product_list_assoc[$file['index_file_name']];
-                    }
-                }
-                if (!empty($repeat_list)) {
-                    return $this->renderError('图片重复', compact('repeat_list', 'request_cache'));
-                }
-            }
-        }
 
         // 判断文件是否上传成功
         if ($fileInfo) {
