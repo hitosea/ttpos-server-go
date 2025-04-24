@@ -129,6 +129,11 @@ class Clear extends Controller
             }
         }
         //
+        // 删除系统设置缓存
+        $key = sprintf("setting:company_id:%d", request()->appId);
+        if (Cache::has($key)) {
+            Cache::delete($key);
+        }
         Cache::tag('common_get_settingLanguages')->clear();
         Cache::set('sync_setting_' . SettingEnum::CLOUD_BASIC, null);
     }
