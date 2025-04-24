@@ -76,7 +76,7 @@ services:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env
       - ./main/version.json:/var/www/version.json
-      - .docker/golang/logs:/var/www/log
+      - ./docker/golang/logs:/var/www/log
     restart: always
 
   websocket:
