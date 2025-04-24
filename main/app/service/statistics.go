@@ -867,7 +867,8 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				if isFeeType {
 					productPrice = productPrice.Sub(decimal.NewFromFloat(saleProduct.TaxFee))
 				}
-				orderProductOriginPrice = orderProductOriginPrice.Add(decimal.NewFromFloat(saleProduct.SalePriceNoTax).Mul(productNumDec))
+				saleProductNoTax := decimal.NewFromFloat(saleProduct.SalePriceNoTax).Round(2)
+				orderProductOriginPrice = orderProductOriginPrice.Add(saleProductNoTax.Mul(productNumDec))
 				productTax := decimal.NewFromFloat(saleProduct.TaxFee)
 				productServiceFee := decimal.NewFromFloat(saleProduct.ServiceFee)
 				productServiceTax := decimal.NewFromFloat(saleProduct.ServiceTaxFee)
