@@ -532,7 +532,7 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 			// 使用匿名结构体的字段
 			buffetCustomerTypePriceUuid := customerTypePrice.BaseModel.Uuid
 			taxRate := buffetPackage.GeTaxRate()
-			saleOrderBuffetCustomerType := NewSaleOrderBuffetCustomerType(customerTypePrice.Name, b.Uuid, buffetUuid, buffetCustomerTypePriceUuid, num, customerTypePrice.Price, taxRate, *saleBillSetting)
+			saleOrderBuffetCustomerType := NewSaleOrderBuffetCustomerType(customerTypePrice.Name, b.Uuid, b.SaleBillUuid, buffetUuid, buffetCustomerTypePriceUuid, num, customerTypePrice.Price, taxRate, *saleBillSetting)
 			saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderBuffetCustomerType)
 			// 只有当buffetUuid不在map中时，才添加到_buffetUuids
 			if !newBuffetUuidMap2[buffetUuid] {

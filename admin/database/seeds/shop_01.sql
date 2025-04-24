@@ -676,6 +676,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_customer_type` (
 
     -- 关联ID
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
+    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     `buffet_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐套餐ID',
     `buffet_customer_type_price_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '自助餐客户类型价格ID',
 

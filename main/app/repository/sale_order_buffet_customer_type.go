@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -11,6 +12,7 @@ type ISaleOrderBuffetCustomerTypeRepo interface {
 	UpdateOrCreateSaleOrderBuffetCustomerTypeRecord(saleOrderBuffetCustomerType model.SaleOrderBuffetCustomerType) error
 	CreateSaleOrderBuffetCustomerTypeRecord(saleOrderBuffetCustomerType model.SaleOrderBuffetCustomerType) error
 	UpdateSaleOrderBuffetCustomerTypeRecord(saleOrderBuffetCustomerType model.SaleOrderBuffetCustomerType) error
+	DeleteSaleOrderBuffetCustomerTypeBySaleBillUuid(saleBillUuid uint64) error // 根据销售账单uuid删除销售订单自助餐顾客。delete_time赋值为当前时间
 }
 
 func NewSaleOrderBuffetCustomerTypeRepo(db *gorm.DB) ISaleOrderBuffetCustomerTypeRepo {
@@ -45,4 +47,9 @@ func (r *saleOrderBuffetCustomerTypeRepo) UpdateOrCreateSaleOrderBuffetCustomerT
 		return r.CreateSaleOrderBuffetCustomerTypeRecord(obj)
 	}
 	return r.UpdateSaleOrderBuffetCustomerTypeRecord(obj)
+}
+
+func (r *saleOrderBuffetCustomerTypeRepo) DeleteSaleOrderBuffetCustomerTypeBySaleBillUuid(saleBillUuid uint64) error {
+	now := time.Now().Unix()
+	return r.db.Model(&model.SaleOrderBuffetCustomerType{}).Where("sale_bill_uuid = ?", saleBillUuid).Update("delete_time", now).Error
 }

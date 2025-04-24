@@ -561,6 +561,7 @@ func (model *SaleOrder) NewReturnOrder(lang string, saleOrderProducts []*SaleOrd
 func (model *SaleOrder) NewSaleOrderBuffetCustomerType(buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting) *SaleOrderBuffetCustomerType {
 	saleOrderBuffetCustomerType := &SaleOrderBuffetCustomerType{
 		SaleOrderUuid:               model.Uuid,
+		SaleBillUuid:                model.SaleBillUuid,
 		BuffetPackageUuid:           buffetPackageUuid,
 		BuffetCustomerTypePriceUuid: buffetCustomerTypePriceUuid,
 		Num:                         customerNum,
@@ -642,10 +643,11 @@ func NewSaleOrder(saleBillUuid uint64, saleBillOrderNo string, setting SaleBillS
 	return saleOrder
 }
 
-func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting) *SaleOrderBuffetCustomerType {
+func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, saleBillUuid, buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting) *SaleOrderBuffetCustomerType {
 	saleOrderBuffetCustomerType := &SaleOrderBuffetCustomerType{
 		Name:                        customerName,
 		SaleOrderUuid:               saleOrderUuid,
+		SaleBillUuid:                saleBillUuid,
 		BuffetPackageUuid:           buffetPackageUuid,
 		BuffetCustomerTypePriceUuid: buffetCustomerTypePriceUuid,
 		Num:                         customerNum,
