@@ -756,9 +756,6 @@ func (model *SaleOrderProduct) IsH5CartProduct() bool {
 func (model *SaleOrderProduct) IsGiftBool() bool {
 	return model.GiftTime > 0
 }
-func (model *SaleOrderProduct) IsCancelBool() bool {
-	return model.CancelTime > 0
-}
 
 func (model *SaleOrderProduct) ChangeProductPrice(price float64) {
 	model.ChangePriceTime = time.Now().Unix()

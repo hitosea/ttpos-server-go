@@ -302,7 +302,7 @@ func (model *SaleOrder) GetAllOrderProductList(options ...func(option *CalcOptio
 
 		// 赠菜？计入
 		// 退菜？退了不计入
-		if orderProduct.IsCancelBool() {
+		if orderProduct.IsCancelProduct() {
 			continue
 		}
 

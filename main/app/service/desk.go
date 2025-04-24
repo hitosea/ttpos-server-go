@@ -505,7 +505,7 @@ func (s *deskSrv) IsCellCloseInstant(ctx context.Context, saleBillUuid uint64) (
 				IsMust:        product.IsMustProduct(),
 				IsGift:        product.IsGiftBool(),
 				IsBuffet:      product.IsBuffet == 1,
-				IsCancel:      product.IsCancelBool(),
+				IsCancel:      product.IsCancelProduct(),
 			})
 		}
 		if len(productList) == 0 {
