@@ -12,7 +12,7 @@ OK="${Green}[OK]${Font}"
 Error="${Red}[错误]${Font}"
 
 cur_path="$(pwd)"
-COMPOSE="docker compose -p ttpos-server-go -f new-docker-compose.yml"
+COMPOSE="docker-compose -p ttpos-server-go -f new-docker-compose.yml"
 
 judge() {
     if [[ 0 -eq $? ]]; then
