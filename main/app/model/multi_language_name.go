@@ -18,6 +18,10 @@ type MultiLanguageName struct {
 	TrName   string `gorm:"default:'';column:tr_name;comment:'土耳其语名称'"`
 }
 
+func (m *MultiLanguageName) IsNullName() bool {
+	return m.ZhName == "" && m.ThName == "" && m.EnName == "" && m.ZhTwName == "" && m.JaName == "" && m.KoName == "" && m.MyName == "" && m.TrName == ""
+}
+
 // GetNames 获取多语言名称
 func (m *MultiLanguageName) GetNames() dto.LocaleResponse {
 	return dto.LocaleResponse{

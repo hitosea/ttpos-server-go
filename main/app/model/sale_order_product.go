@@ -893,6 +893,22 @@ func (model *SaleOrderProduct) GetNameAndFlavorName() dto.LocaleResponse {
 	}
 }
 
+// 获取商品的名称。格式：`商品名 (规格名)`
+func (model *SaleOrderProduct) GetNameAndFlavorNameFrom(ProductBom *ProductBom, productName *MultiLanguageName) dto.LocaleResponse {
+	flavorName := ProductBom.ProductFlavor.MultiLanguageName.GetNames()
+	productPackageName := productName.GetNames()
+	return dto.LocaleResponse{
+		ZH:   fmt.Sprintf("%s (%s)", productPackageName.ZH, flavorName.ZH),
+		TH:   fmt.Sprintf("%s (%s)", productPackageName.TH, flavorName.TH),
+		EN:   fmt.Sprintf("%s (%s)", productPackageName.EN, flavorName.EN),
+		ZHTW: fmt.Sprintf("%s (%s)", productPackageName.ZHTW, flavorName.ZHTW),
+		JA:   fmt.Sprintf("%s (%s)", productPackageName.JA, flavorName.JA),
+		KO:   fmt.Sprintf("%s (%s)", productPackageName.KO, flavorName.KO),
+		MY:   fmt.Sprintf("%s (%s)", productPackageName.MY, flavorName.MY),
+		TR:   fmt.Sprintf("%s (%s)", productPackageName.TR, flavorName.TR),
+	}
+}
+
 func (model *SaleOrderProduct) GetAttributeName() dto.LocaleResponse {
 	return getLocaleResponse(model.GetAttributeNameList(), ";")
 }

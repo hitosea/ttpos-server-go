@@ -11,7 +11,8 @@ import (
 
 // IMultiLanguageNameRepo 定义多语言名称仓库接口
 type IMultiLanguageNameRepo interface {
-	GetMultiLanguageName(id uint64) (model.MultiLanguageName, error)                    // 获取多语言名称
+	GetMultiLanguageName(opts ...DBOption) (*model.MultiLanguageName, error)
+	GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error)            // 获取多语言名称
 	CreateMultiLanguageName(multiLanguageName model.MultiLanguageName) (uint64, error)  // 创建多语言名称
 	UpdateMultiLanguageName(id uint64, multiLanguageName model.MultiLanguageName) error // 更新多语言名称
 	DeleteMultiLanguageName(id uint64) error                                            // 删除多语言名称
@@ -33,10 +34,25 @@ func NewMultiLanguageNameRepositoryImpl(db *gorm.DB) IMultiLanguageNameRepo {
 }
 
 // GetMultiLanguageName 获取多语言名称
-func (r *MultiLanguageNameRepoImpl) GetMultiLanguageName(id uint64) (model.MultiLanguageName, error) {
+func (r *MultiLanguageNameRepoImpl) GetMultiLanguageName(opts ...DBOption) (*model.MultiLanguageName, error) {
 	var multiLanguageName model.MultiLanguageName
-	err := r.db.Model(&model.MultiLanguageName{}).First(&multiLanguageName, id).Error // 从数据库中获取多语言名称
-	return multiLanguageName, errors.WithMessage(err)
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.First(&multiLanguageName).Error
+	return &multiLanguageName, errors.WithMessage(err)
+}
+
+// GetMultiLanguageName 获取多语言名称
+func (r *MultiLanguageNameRepoImpl) GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error) {
+	multiLanguageName, err := r.GetMultiLanguageName(
+		CommonRepo.WhereByUuid(uuid),
+	)
+	if err != nil {
+		return model.MultiLanguageName{}, errors.WithMessage(err)
+	}
+	return *multiLanguageName, nil
 }
 
 // CreateMultiLanguageName 创建多语言名称

@@ -64,7 +64,10 @@ func (r *productPackageRepoImpl) GetProductPackageBaseInfoByBomUuid(flavorBomUui
 	productBom, err := productBomRepo.GetProductBom(
 		CommonRepo.WhereByUuid(flavorBomUuid),
 		CommonRepo.Preload(WithPreload{Query: "ProductPackage.TakeoutTax"}),
-		CommonRepo.Preload(WithPreload{Query: "ProductPackage.DineTax"}),
+		CommonRepo.Preload(
+			WithPreload{Query: "ProductPackage.DineTax"},
+			WithPreload{Query: "ProductFlavor.MultiLanguageName"},
+		),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)

@@ -4878,9 +4878,20 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 		for code, saleOrderProduct := range statusMap {
 			products := make([]resp.Product, 0)
 			for _, product := range saleOrderProduct {
+				localeName := product.GetNameAndFlavorName()
+				// 如果商品包没有多语言名称，则查询数据库获取
+				if product.MultiLanguageName.IsNullName() {
+					uuid := product.MultiLanguageNameUuid
+					names, err := repository.NewMultiLanguageNameRepositoryImpl(db).GetMultiLanguageNameByUuid(uuid)
+					if err != nil {
+						return nil, errors.WithMessage(err)
+					}
+					bom, _ := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(product.SaleOrderProductBoms[0].ProductBomUuid)
+					localeName = product.GetNameAndFlavorNameFrom(bom, &names)
+				}
 				products = append(products, resp.Product{
 					Uuid:          product.Uuid,
-					LocaleName:    product.GetNameAndFlavorName(),
+					LocaleName:    localeName,
 					Num:           product.Num,
 					SalePrice:     product.SalePrice,
 					DiscountPrice: product.DiscountFee,
@@ -8596,28 +8607,28 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 		}
 	}
 
-	// 获取会员信息
+	// 获取账单信息
+	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询销售账单失败")
+	}
+	// 获取销售订单信息
+	saleOrder := saleBill.GetSaleOrder(saleBill.SaleOrders[0].Uuid)
+	if saleOrder == nil {
+		return nil, errors.New("销售订单不存在")
+	}
 	if request.MemberUuid > 0 {
-		// 获取账单信息
-		saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
-		if err != nil {
-			return nil, errors.WithMessage(err, "查询销售账单失败")
-		}
-		// 获取销售订单信息
-		saleOrder := saleBill.GetSaleOrder(saleBill.SaleOrders[0].Uuid)
-		if saleOrder == nil {
-			return nil, errors.New("销售订单不存在")
-		}
 		// 设置会员折扣
 		member, errMember := repository.NewMemberRepo(db).GetMemberInfoForSaleOrder(ctx, request.MemberUuid)
 		if errMember != nil {
 			return nil, errors.WithMessage(errMember)
 		}
 		saleOrder.SetMemberDiscount(*member)
-		// 重新计算销售订单金额
-		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
-			return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
-		}
+	}
+	saleOrder.SetAllDiscountCancel()
+	// 重新计算销售订单金额
+	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+		return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
 	}
 
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
