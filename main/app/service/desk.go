@@ -853,7 +853,6 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 
 		// 更新购买人数
 		saleBill.MealNum = saleBill.MealNum + mealNum
-		// 更新首次送厨时间
 
 		// 取消整单折扣
 		if saleBill.SetAllDiscountCancel() {
