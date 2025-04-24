@@ -5580,7 +5580,11 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 
 	// 获取原生产单Uuid
 	oldProductionOrderUuid := saleOrderProduct.ProductionOrderUuid
-	newProductionOrderUuid, _ := utils.GetID()
+
+	var newProductionOrderUuid uint64
+	if oldProductionOrderUuid != 0 {
+		newProductionOrderUuid, _ = utils.GetID()
+	}
 
 	// 修改生产单Uuid
 	saleOrderProduct.ProductionOrderUuid = newProductionOrderUuid
