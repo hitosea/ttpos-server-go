@@ -92,11 +92,11 @@ class CheckService
         // 
         if (!$isArray) {
             foreach ($result as $lang => $unique) {
-                if (!$unique) {
-                    return false;
+                if ($unique) {
+                    return true;
                 }
             }
-            return true;
+            return false;
         }
         //
         if (isset($result[0])) {
