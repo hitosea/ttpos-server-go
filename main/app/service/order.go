@@ -3947,14 +3947,14 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 						finish = false
 					}
 				}
-				if finish {
-					// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
-					err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(saleBillUuid)
-					if err != nil {
-						return nil, errors.WithMessage(err)
-					}
-				}
 				if isAutoAdd {
+					if finish {
+						// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
+						err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(saleBillUuid)
+						if err != nil {
+							return nil, errors.WithMessage(err)
+						}
+					}
 					return s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
 				} else {
 					productMustPlanList = &resp.ProductMustPlanList{
