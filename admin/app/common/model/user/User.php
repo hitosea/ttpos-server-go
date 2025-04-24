@@ -62,11 +62,11 @@ class User extends BaseModel
     }
     public function getBalanceAttr($value)
     {
-        return floatval(helper::bcadd($value, $this->frozen_balance));
+        return floatval(helper::bcadd($value ?: 0, $this->frozen_balance ?: 0));
     }
     public function getGiftBalanceAttr($value)
     {
-        return floatval(helper::bcadd($value, $this->frozen_gift_balance));
+        return floatval(helper::bcadd($value ?: 0, $this->frozen_gift_balance ?: 0));
     }
     public function getCanDeleteAttr($value,$data)
     {
