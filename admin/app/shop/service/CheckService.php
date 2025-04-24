@@ -19,7 +19,16 @@ class CheckService
     public static function checkNameExist(string $source, array|string $names, int $shop_supplier_id, int $id = null, int $parent_id = 0): bool|array
     {
         $result = [];
-        $names = is_string($names) ? [$names] : $names;
+        $isArray = is_array($names);
+        if (is_string($names) && strstr($names, '{')) {
+            try {
+                $names = json_decode($names, true);
+            } catch (\Exception $e) {
+                $names = [$names];
+            }
+        } elseif (!$isArray) {
+            $names = [$names];
+        }
         foreach ($names as $lang => $name) {
             $unique = true;
             switch ($source) {
@@ -79,6 +88,15 @@ class CheckService
                     break;
             }
             $result[$lang] = $unique;
+        }
+        // 
+        if (!$isArray) {
+            foreach ($result as $lang => $unique) {
+                if (!$unique) {
+                    return false;
+                }
+            }
+            return true;
         }
         //
         if (isset($result[0])) {
