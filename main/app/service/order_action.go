@@ -1,6 +1,7 @@
 package service
 
 import (
+	"slices"
 	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -290,6 +291,12 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 	{
 		// 获取未送厨的商品列表
 		unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
+		addProducts := make([]uint64, 0)
+		for _, product := range request.Products {
+			addProducts = append(addProducts, product.FlavorProductBomUuid)
+		}
+		// 只送厨本次加购的商品。排除掉其他端未送厨的商品
+		unCookingSaleOrderProducts = filterOtherClientProducts(unCookingSaleOrderProducts, addProducts)
 		if len(unCookingSaleOrderProducts) == 0 {
 			return nil, errors.New("没有未送厨的商品")
 		}
@@ -305,6 +312,18 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 	}
 
 	return nil, nil
+}
+
+// 只送厨本次加购的商品。排除掉其他端未送厨的商品
+func filterOtherClientProducts(unCookingSaleOrderProducts []*model.SaleOrderProduct, addProducts []uint64) []*model.SaleOrderProduct {
+	products := make([]*model.SaleOrderProduct, 0)
+	for _, saleOrderProduct := range unCookingSaleOrderProducts {
+		flavorUuid := saleOrderProduct.GetFlavorBomUuid()
+		if slices.Contains(addProducts, flavorUuid) {
+			products = append(products, saleOrderProduct)
+		}
+	}
+	return products
 }
 
 // TabletAddAndCooking 平板端加购并送厨

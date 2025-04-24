@@ -106,6 +106,16 @@ type SaleOrderProduct struct {
 	operation string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
 }
 
+// 获取商品包的规格uuid
+func (model *SaleOrderProduct) GetFlavorBomUuid() uint64 {
+	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsFlavor() {
+			return bom.ProductBomUuid
+		}
+	}
+	return 0
+}
+
 // 获取销售订单商品的会员卡折扣率
 func (model *SaleOrderProduct) GetMemberCardDiscountRate() float64 {
 	// 如果商品不参与会员打折，则返回1,表示不打折
