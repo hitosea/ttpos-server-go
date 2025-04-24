@@ -734,8 +734,13 @@ type SaveSaleReq struct {
 
 // SaveSale 保存销售
 func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
-	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
+	db := database.GetDBManager(config.Database).GetDB(ctx.GetCompanyUuid())
 	statisticsRepo := repository.NewStatisticsRepo(db)
+
+	// 如果销售单号为空，直接返回
+	if req.SaleBillUuid == 0 {
+		return nil
+	}
 
 	// 先删除
 	statisticsRepo.DeleteSale(req.SaleBillUuid)
@@ -749,10 +754,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 	// 查询销售账单详情
 	orderRepo := repository.NewOrderRepo(db)
 	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
-	saleBill.CalcAll()
 	if err != nil {
 		return nil
 	}
+
+	saleBill.CalcAll()
 
 	var (
 		sales    []model.StatisticsSale
@@ -1128,6 +1134,10 @@ type SaveMemberReq struct {
 func (s *statisticsSrv) SaveMember(ctx context.Context, req SaveMemberReq) error {
 	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
 	statisticsRepo := repository.NewStatisticsRepo(db)
+
+	if req.MemberRechargeOrderUuid == 0 {
+		return nil
+	}
 
 	// 先删除
 	statisticsRepo.DeleteMember(req.MemberRechargeOrderUuid)

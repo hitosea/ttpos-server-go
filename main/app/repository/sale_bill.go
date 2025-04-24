@@ -14,6 +14,7 @@ import (
 type ISaleBillRepo interface {
 	GetSaleBill(opts ...DBOption) (model.SaleBill, error)
 	GetSaleBillList(opts ...DBOption) ([]*model.SaleBill, error)
+	GetSaleBillListPage(pageNo, pageSize int, opts ...DBOption) ([]*model.SaleBill, int64, error)
 	GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error)
 	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
 	UpdateSaleBill(saleBill *model.SaleBill) error
@@ -27,6 +28,7 @@ type ISaleBillRepo interface {
 	GetSaleBillRecord(uuid uint64) (*model.SaleBill, error)
 	DeleteSaleBill(saleBillUuid uint64) error         // 软删除销售账单
 	GetDeskSaleBillUnpay() ([]*model.SaleBill, error) // 获取所有未付款的桌台账单
+	GetCompleteTotal() (int64, error)                 // 获取总数量
 }
 
 type saleBillRepo struct {
@@ -259,4 +261,14 @@ func (r *saleBillRepo) GetDeskSaleBillUnpay() ([]*model.SaleBill, error) {
 		return nil, errors.WithMessage(err)
 	}
 	return saleBills, nil
+}
+
+// 获取总数量
+func (r *saleBillRepo) GetCompleteTotal() (int64, error) {
+	var total int64
+	err := r.db.Model(&model.SaleBill{}).Where("delete_time = 0").Where("status = ?", constant.SaleBillStatusComplete).Count(&total).Error
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	return total, nil
 }
