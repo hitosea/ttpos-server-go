@@ -6382,6 +6382,12 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	if errSaleBill != nil {
 		return nil, errSaleBill
 	}
+
+	// 验证订单是否可操作
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	if saleBill.IsEndStatus() {
 		return nil, errors.WithMessage(errors.New("销售账单已结束"))
 	}
@@ -8630,6 +8636,11 @@ func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMembe
 		return nil, errors.WithMessage(err, "查询销售账单失败")
 	}
 
+	// 当不是收银端的时候，拆单不可操作结账
+	if ctx.GetSource() != constant.SourceCashier && saleBill.IsSplit() {
+		return nil, errors.NewWithCode(constant.CodeOrderCheckSplit, "当前订单已经拆单，请前去收银机操作")
+	}
+
 	// 获取销售账单信息
 	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
@@ -8688,6 +8699,11 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 		return nil, false, errors.New("销售订单不存在")
 	}
 
+	// 验证订单是否可操作
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle); err != nil {
+		return nil, false, errors.WithMessage(err)
+	}
+
 	// 判断订单是否进行了整单改价或抹零
 	isCustomAmountAndZero := false
 	if saleOrder.IsCustomAmount() || saleOrder.IsZeroRule() {
@@ -8722,6 +8738,11 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq, ne
 	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询销售账单失败")
+	}
+
+	// 当不是收银端的时候，拆单不可操作结账
+	if ctx.GetSource() != constant.SourceCashier && saleBill.IsSplit() {
+		return nil, errors.NewWithCode(constant.CodeOrderCheckSplit, "当前订单已经拆单，请前去收银机操作")
 	}
 
 	// 获取销售账单信息
