@@ -949,6 +949,95 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			}
 		}
 
+		// 统计自助餐
+		for _, saleBuffetCustomerType := range saleOrder.SaleOrderBuffetCustomerTypes {
+			// 统计商品数量
+			productNum := int(saleBuffetCustomerType.Num)
+			productNumDec := decimal.NewFromFloat(float64(productNum))
+			orderProductNum += productNum
+
+			// 统计: 商品定价(折扣前)、商品税、服务费、服务费税
+			productPrice := decimal.NewFromFloat(saleBuffetCustomerType.SalePrice)
+			if isFeeType {
+				productPrice = productPrice.Sub(decimal.NewFromFloat(saleBuffetCustomerType.TaxFee))
+			}
+			saleProductNoTax := decimal.NewFromFloat(saleBuffetCustomerType.SalePriceNoTax).Round(2)
+			orderProductOriginPrice = orderProductOriginPrice.Add(saleProductNoTax.Mul(productNumDec))
+			productTax := decimal.NewFromFloat(saleBuffetCustomerType.TaxFee)
+			productServiceFee := decimal.NewFromFloat(saleBuffetCustomerType.ServiceFee)
+			productServiceTax := decimal.NewFromFloat(saleBuffetCustomerType.ServiceTaxFee)
+
+			if isFree {
+				if isStatFree {
+					orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
+					orderProductTax = orderProductTax.Add(productTax.Mul(productNumDec))
+					orderServiceTax = orderServiceTax.Add(productServiceTax.Mul(productNumDec))
+					if saleOrder.CustomDiscountRate != 1 {
+						orderDiscount = orderDiscount.Add(productPrice.Add(productTax).Add(productServiceFee).Add(productServiceTax).Mul(productNumDec))
+					}
+				}
+			} else {
+				orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
+				orderProductTax = orderProductTax.Add(productTax.Mul(productNumDec))
+				orderServiceTax = orderServiceTax.Add(productServiceTax.Mul(productNumDec))
+			}
+
+			// 统计商品销售价
+			productSalePrice := decimal.NewFromFloat(saleBuffetCustomerType.SalePrice)
+			orderProductSalePrice = orderProductSalePrice.Add(productSalePrice.Mul(productNumDec))
+
+			productRefundNum := 0
+			for _, refundProduct := range saleBuffetCustomerType.ReturnOrderProducts {
+				productRefundNum += int(refundProduct.Num)
+				orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(saleBuffetCustomerType.TaxFee)).Add(decimal.NewFromFloat(saleBuffetCustomerType.ServiceTaxFee)).Mul(decimal.NewFromFloat(float64(refundProduct.Num)))
+				if isFeeType {
+					noOrderRefundTax = noOrderRefundTax.Add(decimal.NewFromFloat(saleBuffetCustomerType.TaxFee))
+				}
+				if !isFixServiceFee {
+					orderRefundServiceFee = orderRefundServiceFee.Add(decimal.NewFromFloat(saleBuffetCustomerType.ServiceFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+				}
+			}
+
+			orderRefundNum += productRefundNum
+		}
+
+		// 统计加钟
+		for _, saleBuffetDelayProduct := range saleOrder.SaleOrderBuffetDelayProducts {
+			// 统计商品数量
+			productNum := int(saleBuffetDelayProduct.Num)
+			productNumDec := decimal.NewFromFloat(float64(productNum))
+			orderProductNum += productNum
+
+			// 统计: 商品定价(折扣前)、商品税、服务费、服务费税
+			productPrice := decimal.NewFromFloat(saleBuffetDelayProduct.Price)
+
+			saleProductNoTax := productPrice
+			orderProductOriginPrice = orderProductOriginPrice.Add(saleProductNoTax.Mul(productNumDec))
+
+			if isFree {
+				if isStatFree {
+					orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
+					if saleOrder.CustomDiscountRate != 1 {
+						orderDiscount = orderDiscount.Add(productPrice.Mul(productNumDec))
+					}
+				}
+			} else {
+				orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
+			}
+
+			// 统计商品销售价
+			productSalePrice := decimal.NewFromFloat(saleBuffetDelayProduct.Price)
+			orderProductSalePrice = orderProductSalePrice.Add(productSalePrice.Mul(productNumDec))
+
+			productRefundNum := 0
+			for _, refundProduct := range saleBuffetDelayProduct.ReturnOrderProducts {
+				productRefundNum += int(refundProduct.Num)
+			}
+
+			orderRefundNum += productRefundNum
+
+		}
+
 		if !isFree && saleOrder.GetCanReturnAmount() == 0 {
 			orderRefundFee = decimal.NewFromFloat(saleOrder.PaymentCommissionFee)
 			orderRefundDiscount = decimal.NewFromFloat(saleOrder.CustomDiscountFee).Add(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee))
