@@ -527,7 +527,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 	var businessData = business_data_resp.BusinessDataAll{
 		TotalSales:             saleData.TotalSaleAmount,
 		TotalReceivedPrice:     saleData.TotalReceivedAmount,
-		TotalProductPrice:      saleData.TotalProductPrice,
+		TotalProductPrice:      saleData.TotalProductOriginPrice,
 		TotalPayPrice:          saleData.TotalSaleAmount,
 		TotalPayFeeMoney:       saleData.TotalPaymentFee,
 		TotalServiceMoney:      saleData.TotalServiceFee,

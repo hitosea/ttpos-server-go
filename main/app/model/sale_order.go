@@ -255,7 +255,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			h5OrderTime = saleOrderProduct.H5Order.CreateTime
 			isH5NeedAudit = saleOrderProduct.H5Order.IsNeedAudit == 1
 		}
-		canChangeNum := false
+		canChangeNum := true
 		if saleOrderProduct.MustPlanUuid != 0 {
 			canChangeNum = saleOrderProduct.ProductMustPlan.GetCanChangeNum()
 		}

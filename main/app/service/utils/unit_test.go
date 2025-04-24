@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/model"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -144,4 +146,96 @@ func NewGormDB() *gorm.DB {
 		panic("failed to connect database")
 	}
 	return db
+}
+
+// NewSaleBillSetting1 不收取服务费、不收取消费税
+func NewSaleBillSetting1() model.SaleBillSetting {
+	setting := model.SaleBillSetting{}
+	setting.ServiceFeeType = constant.SaleBillSettingServiceFeeTypeNone // 不收取服务费
+	setting.TaxFeeType = constant.SaleBillSettingTaxFeeTypeNone         // 关闭消费税
+	return setting
+}
+
+// NewSaleBillSetting2 按比例收取服务费、商品未含税
+func NewSaleBillSetting2(serviceFeeValue float64) model.SaleBillSetting {
+	setting := NewSaleBillSetting1()
+	setting.ServiceFeeType = constant.SaleBillSettingServiceFeeTypePercentTax // 按比例收取服务费
+	setting.ServiceFeeValue = serviceFeeValue
+	setting.TaxFeeType = constant.SaleBillSettingTaxFeeTypePercent // 商品未含税
+	setting.ServiceApply = 1                                       // 收取服务费
+	return setting
+}
+
+// 测试商品计算
+func TestProductCalc(t *testing.T) {
+	setting := NewSaleBillSetting2(0.07)
+	NewProduct := func(
+		saucePrice []float64, // 小料价格
+		flavorPrice float64, // 规格价格
+		taxRate float64, // 商品税率
+		memberDiscountRate float64, // 会员折扣率
+		memberCardDiscountRate float64, // 会员卡折扣率
+		customDiscountRate float64, // 自定义折扣率
+	) *model.SaleOrderProduct {
+		saleOrderProduct := &model.SaleOrderProduct{
+			TaxRate:                taxRate,
+			FlavorPrice:            flavorPrice,
+			MemberDiscountRate:     memberDiscountRate,
+			MemberCardDiscountRate: memberCardDiscountRate,
+			CustomDiscountRate:     customDiscountRate,
+			OpenMemberDiscount:     constant.ProductMemberDiscountOn,
+			SaleOrderProductBoms: []*model.SaleOrderProductBom{
+				{
+					IsFlavorBom: 1,
+					Price:       flavorPrice, // 商品规格价格
+				},
+			},
+		}
+		for _, price := range saucePrice {
+			saleOrderProduct.SaleOrderProductBoms = append(saleOrderProduct.SaleOrderProductBoms, &model.SaleOrderProductBom{
+				IsFlavorBom: 0,
+				Price:       price,
+			})
+		}
+		return saleOrderProduct
+	}
+
+	tests := []struct {
+		name    string
+		product *model.SaleOrderProduct
+		setting model.SaleBillSetting
+		expect  model.SaleOrderProductCalc
+	}{
+		{
+			name:    "test 1",
+			product: NewProduct([]float64{2.3, 3, 10} /*小料价格*/, 10.27 /*规格价格*/, 0.10 /*商品税率*/, 0.88 /*会员折扣率*/, 0.85 /*会员卡折扣率*/, 0.85 /*自定义折扣率*/),
+			setting: setting,
+			expect: model.SaleOrderProductCalc{
+				SaucePrice:        15.3,
+				ProductPrice:      25.57,
+				SalePrice:         25.57,
+				SalePriceNoTax:    25.57,
+				Price:             16.26,
+				MemberDiscountFee: 6.44,
+				CustomDiscountFee: 2.87,
+				DiscountFee:       9.31,
+				TaxFee:            1.63,
+				ServiceFee:        1.14,
+				ServiceTaxFee:     0.11,
+				TotalPrice:        19.14,
+				OriginTotalPrice:  30.1,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := test.product.CalcSaleOrderProduct(test.setting)
+			if !reflect.DeepEqual(result, test.expect) {
+				t.Errorf(`
+				expected %+v, 
+				got      %+v`, test.expect, result)
+			}
+		})
+	}
 }

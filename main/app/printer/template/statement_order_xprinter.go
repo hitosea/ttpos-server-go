@@ -45,7 +45,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	// 品牌
 	brandName := config.Server.BrandName
 	// 日历
-	payTime := t.base.FormatUnixTimeDefault(saleBill.FinishTime)
+	payTime := t.base.FormatUnixTimeDefault(saleOrder.FinishTime)
 
 	// 就餐人数
 	mealNumStr := ""

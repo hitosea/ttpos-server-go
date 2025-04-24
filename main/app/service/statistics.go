@@ -60,6 +60,7 @@ type CountSaleResp struct {
 	TotalSaleAmount          float64 `json:"total_sale_amount"`            // 总销售额
 	TotalReceivedAmount      float64 `json:"total_received_amount"`        // 总实收金额
 	TotalProductPrice        float64 `json:"total_product_price"`          // 总商品原价
+	TotalProductOriginPrice  float64 `json:"total_product_origin_price"`   // 总原商品金额
 	TotalProductNum          int64   `json:"total_product_num"`            // 总商品数量
 	TotalDiscountMember      float64 `json:"total_discount_member"`        // 总会员折扣
 	TotalBusinessAmount      float64 `json:"total_business_amount"`        // 总营业收入
@@ -119,6 +120,7 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 		TotalSaleAmount:          totalSaleAmount.Round(2).InexactFloat64(),
 		TotalReceivedAmount:      totalReceivedAmount.Round(2).InexactFloat64(),
 		TotalProductPrice:        saleData.TotalProductPrice.Float64,
+		TotalProductOriginPrice:  saleData.TotalProductOriginPrice.Float64,
 		TotalProductNum:          saleData.TotalProductNum.Int64,
 		TotalDiscountMember:      saleData.TotalDiscountMember.Float64,
 		TotalBusinessAmount:      totalBusinessAmount.Round(2).InexactFloat64(),
@@ -734,8 +736,13 @@ type SaveSaleReq struct {
 
 // SaveSale 保存销售
 func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
-	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
+	db := database.GetDBManager(config.Database).GetDB(ctx.GetCompanyUuid())
 	statisticsRepo := repository.NewStatisticsRepo(db)
+
+	// 如果销售单号为空，直接返回
+	if req.SaleBillUuid == 0 {
+		return nil
+	}
 
 	// 先删除
 	statisticsRepo.DeleteSale(req.SaleBillUuid)
@@ -749,10 +756,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 	// 查询销售账单详情
 	orderRepo := repository.NewOrderRepo(db)
 	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
-	saleBill.CalcAll()
 	if err != nil {
 		return nil
 	}
+
+	saleBill.CalcAll()
 
 	var (
 		sales    []model.StatisticsSale
@@ -767,6 +775,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			orderFreeNum              int
 			orderRefundNum            int
 			orderProductPrice         decimal.Decimal
+			orderProductOriginPrice   decimal.Decimal
 			orderProductSalePrice     decimal.Decimal
 			orderProductTax           decimal.Decimal
 			orderServiceFee           decimal.Decimal
@@ -858,6 +867,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				if isFeeType {
 					productPrice = productPrice.Sub(decimal.NewFromFloat(saleProduct.TaxFee))
 				}
+				orderProductOriginPrice = decimal.NewFromFloat(saleProduct.SalePriceNoTax)
 				productTax := decimal.NewFromFloat(saleProduct.TaxFee)
 				productServiceFee := decimal.NewFromFloat(saleProduct.ServiceFee)
 				productServiceTax := decimal.NewFromFloat(saleProduct.ServiceTaxFee)
@@ -978,6 +988,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			SaleOrderUuid:        saleOrder.Uuid,
 			MealNum:              int(saleBill.MealNum),
 			ProductPrice:         orderProductPrice.InexactFloat64(),
+			ProductOriginPrice:   orderProductOriginPrice.InexactFloat64(),
 			ProductSalePrice:     orderProductSalePrice.InexactFloat64(),
 			ProductNum:           orderProductNum,
 			ProductTax:           orderProductTax.InexactFloat64(),
@@ -1128,6 +1139,10 @@ type SaveMemberReq struct {
 func (s *statisticsSrv) SaveMember(ctx context.Context, req SaveMemberReq) error {
 	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
 	statisticsRepo := repository.NewStatisticsRepo(db)
+
+	if req.MemberRechargeOrderUuid == 0 {
+		return nil
+	}
 
 	// 先删除
 	statisticsRepo.DeleteMember(req.MemberRechargeOrderUuid)

@@ -23,7 +23,12 @@ type ProductMustPlan struct {
 	ProductMustPlanRegions []ProductMustPlanRegion `gorm:"foreignKey:ProductMustPlanUuid;references:Uuid"`
 }
 
+// 获取是否顾客可修改必点数量
 func (model *ProductMustPlan) GetCanChangeNum() bool {
+	// 如果必点方案已经关闭，则顾客能修改必点数量
+	if model.Status == constant.No {
+		return true
+	}
 	return model.AutoChange == constant.Yes
 }
 
