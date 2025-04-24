@@ -65,7 +65,8 @@ func NewShiftSrvImpl(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICas
 // CreateWorkingLog 创建当班记录
 func (s *staffShiftSrv) CreateWorkingLog(staff model.Staff) (model.StaffShiftLog, error) {
 	shiftLogRepo := repository.NewShiftLogRepo(s.dbm.GetDB(staff.CompanyUuid))
-	previousShiftCash, _ := shiftLogRepo.GetPreviousShiftCash()
+	cashBox := repository.NewCashBoxRepo(s.dbm.GetDB(staff.CompanyUuid)).Get()
+	previousShiftCash := cashBox.GetBalance()
 	startTime := staff.CashierLoginTime
 	if startTime == 0 {
 		startTime = time.Now().Unix()
