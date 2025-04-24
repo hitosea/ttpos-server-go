@@ -6661,6 +6661,11 @@ func (s *orderSrv) checkCanOperateOrder(ctx context.Context, saleBillUuid, saleO
 	if errSaleBill != nil {
 		return errors.WithMessage(errSaleBill)
 	}
+	// 当不是收银端的时候，拆单不可操作结账
+	if ctx.GetSource() != constant.SourceCashier && saleBill.IsSplit() {
+		return errors.NewWithCode(constant.CodeOrderCheckSplit, "当前订单已经拆单，请前去收银机操作")
+	}
+	// 判断销售账单是否结束
 	if saleBill.IsEndStatus() {
 		return errors.WithMessage(errors.New("销售账单已结束"))
 	}
@@ -6809,6 +6814,11 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	if errSaleBill != nil {
 		ctx.Log().Error("GetSaleBillAllInfo", zap.Error(fmt.Errorf("%s %s", ctx.GetRequestUuid(), errSaleBill)))
 		return nil, errSaleBill
+	}
+
+	// 当不是收银端的时候，拆单不可操作结账
+	if ctx.GetSource() != constant.SourceCashier && saleBill.IsSplit() {
+		return nil, errors.NewWithCode(constant.CodeOrderCheckSplit, "当前订单已经拆单，请前去收银机操作")
 	}
 
 	// 获取销售订单信息
