@@ -8202,6 +8202,12 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}
+
+	// 助手拆单之后不能操作
+	if ctx.GetSource() == constant.SourceAssistant && len(saleBill.SaleOrders) > 1 {
+		return nil, errors.NewWithCode(constant.CodeOrderCheckSplit, "当前订单已经拆单，请前去收银机操作")
+	}
+
 	ctx.Log().Debug("获取销售账单信息")
 
 	// 从http的header中获取h5_order_uuid
