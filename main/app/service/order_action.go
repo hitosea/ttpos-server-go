@@ -1,7 +1,6 @@
 package service
 
 import (
-	"slices"
 	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -270,7 +269,7 @@ func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, sal
 func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill, ignoreMust bool) (*resp.OrderCheckServiceRes, error) {
 
 	// 加购相关
-	_, err := s.actionAdd(ctx, request, saleBill)
+	_, err := s.actionAdd(ctx, request, saleBill, WithIsTableAdd())
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -291,12 +290,8 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 	{
 		// 获取未送厨的商品列表
 		unCookingSaleOrderProducts := saleBill.GetSaleOrderProductUnCooking()
-		addProducts := make([]uint64, 0)
-		for _, product := range request.Products {
-			addProducts = append(addProducts, product.FlavorProductBomUuid)
-		}
 		// 只送厨本次加购的商品。排除掉其他端未送厨的商品
-		unCookingSaleOrderProducts = filterOtherClientProducts(unCookingSaleOrderProducts, addProducts)
+		unCookingSaleOrderProducts = filterOtherClientProducts(unCookingSaleOrderProducts)
 		if len(unCookingSaleOrderProducts) == 0 {
 			return nil, errors.New("没有未送厨的商品")
 		}
@@ -315,11 +310,12 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 }
 
 // 只送厨本次加购的商品。排除掉其他端未送厨的商品
-func filterOtherClientProducts(unCookingSaleOrderProducts []*model.SaleOrderProduct, addProducts []uint64) []*model.SaleOrderProduct {
+func filterOtherClientProducts(unCookingSaleOrderProducts []*model.SaleOrderProduct) []*model.SaleOrderProduct {
 	products := make([]*model.SaleOrderProduct, 0)
 	for _, saleOrderProduct := range unCookingSaleOrderProducts {
-		flavorUuid := saleOrderProduct.GetFlavorBomUuid()
-		if slices.Contains(addProducts, flavorUuid) {
+		// 判断是否是在平板端新加购的商品
+		isAddProduct := saleOrderProduct.CreateTime == 0 // 其他端的未送厨商品都是有创建时间的，只有平板端新加购的商品没有创建时间
+		if isAddProduct {
 			products = append(products, saleOrderProduct)
 		}
 	}
@@ -421,8 +417,18 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 	return res, err
 }
 
+type ActionAddOption struct {
+	IsTableAdd bool // 是否是平板端加购
+}
+
+func WithIsTableAdd() func(option *ActionAddOption) {
+	return func(option *ActionAddOption) {
+		option.IsTableAdd = true
+	}
+}
+
 // 加购。内部方法复用
-func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) (*model.SaleBill, error) {
+func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill, options ...func(option *ActionAddOption)) (*model.SaleBill, error) {
 	// 获取当前销售订单信息
 	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
 	if saleOrder == nil {
@@ -435,7 +441,7 @@ func (s *orderSrv) actionAdd(ctx context.Context, request req.ProductAddReq, sal
 		SaleBill:    saleBill,
 		SaleOrder:   saleOrder,
 		Products:    request.Products,
-	})
+	}, options...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "构建商品失败")
 	}
