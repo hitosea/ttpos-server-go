@@ -8,6 +8,7 @@ import (
 
 type SaleOrderBuffetCustomerCalc struct {
 	Price             float64 `json:"price"`
+	SalePriceNoTax    float64 `json:"sale_price_no_tax"`
 	CustomDiscountFee float64 `json:"custom_discount_fee"`
 	ServiceTaxFee     float64 `json:"service_tax_fee"`
 	TaxFee            float64 `json:"tax_fee"`
@@ -19,6 +20,8 @@ type SaleOrderBuffetCustomerCalc struct {
 // 计算销售订单自助餐顾客类型
 func (model *SaleOrderBuffetCustomerType) calcSaleOrderBuffetCustomerType(serviceFeeRate float64, taxFeeType int, serviceFeeType int, isLatestPrice bool) SaleOrderBuffetCustomerCalc {
 	calc := SaleOrderBuffetCustomerCalc{}
+	calc.SalePriceNoTax = model.calcProductPriceNoneTax(model.SalePrice, taxFeeType)
+	model.SalePriceNoTax = calc.SalePriceNoTax
 	if isLatestPrice {
 		calc.Price = model.calcLatestPrice() // 使用最新的价格
 	} else {
