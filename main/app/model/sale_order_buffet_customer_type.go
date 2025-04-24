@@ -15,6 +15,7 @@ type SaleOrderBuffetCustomerType struct {
 	// 价格信息
 	Num                uint    `gorm:"column:num;type:int(11);default:0;comment:人数" json:"num"`
 	SalePrice          float64 `gorm:"column:sale_price;type:decimal(12,2);not null;default:0;comment:原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变" json:"sale_price"`
+	SalePriceNoTax     float64 `gorm:"column:sale_price_no_tax;type:decimal(12,2);not null;default:0.00;comment:'销售价,未含税价格（折前）'" json:"sale_price_no_tax"`
 	CustomDiscountRate float64 `gorm:"column:custom_discount_rate;type:decimal(12,4);not null;default:1;comment:自定义折扣率(0-100%)" json:"custom_discount_rate"`
 	TaxRate            float64 `gorm:"column:tax_rate;type:decimal(10,2);not null;default:0;comment:税率,单位%.加购时记录税率,结账时再重新核算" json:"tax_rate"`
 

@@ -4638,6 +4638,7 @@ type CheckOrderOptions struct {
 	IsH5Check               bool                    // 是否是H5检查
 	SeletedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
 	SaleOrderProudctUuids   []uint64                // h5端下单场景下，只检查本次下单的商品是否超过限购
+	H5OrderUuid             uint64                  // h5端下单场景下，当h5订单接单时，当h5订单商品金额有变化时更新该h5订单商品金额
 }
 
 const (
@@ -4674,6 +4675,12 @@ func WithSeletedMustPlanProducts(seletedMustPlanProducts *ro.MustPlanProductInfo
 func WithSaleOrderProductUuid(saleOrderProductUuids ...uint64) func(*CheckOrderOptions) {
 	return func(options *CheckOrderOptions) {
 		options.SaleOrderProudctUuids = saleOrderProductUuids
+	}
+}
+
+func WithH5OrderUuid(h5OrderUuid uint64) func(*CheckOrderOptions) {
+	return func(options *CheckOrderOptions) {
+		options.H5OrderUuid = h5OrderUuid
 	}
 }
 
@@ -4776,7 +4783,12 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 					if options.IsH5Check {
 						shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithUnorderedH5Product())
 					} else {
-						shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+						if options.H5OrderUuid != 0 {
+							// 接单场景下，检查h5订单商品金额
+							shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithH5OrderUuid(options.H5OrderUuid))
+						} else {
+							shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+						}
 					}
 					if err != nil {
 						return nil, errors.WithMessage(err)
@@ -8192,7 +8204,15 @@ func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq)
 	if saleBill.IsDeskSaleBill() {
 		deskUuid = saleBill.DeskUuid
 	}
-	checkServiceRes, errCheck := s.checkOrder(ctx, req.IgnoreMust, db, req.SaleBillUuid, deskUuid, saleOrderProductAll, WithCheckTypeCheckout(), WithSaleOrderProductUuid(saleOrderProductUuids...))
+
+	var checkServiceRes *resp.OrderCheckServiceRes
+	var errCheck error
+	if h5OrderUuid != 0 {
+		// 接单场景下，检查h5订单商品金额
+		checkServiceRes, errCheck = s.checkOrder(ctx, req.IgnoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSaleOrderProductUuid(saleOrderProductUuids...), WithH5OrderUuid(h5OrderUuid))
+	} else {
+		checkServiceRes, errCheck = s.checkOrder(ctx, req.IgnoreMust, db, req.SaleBillUuid, deskUuid, saleOrderProductAll, WithCheckTypeCheckout(), WithSaleOrderProductUuid(saleOrderProductUuids...))
+	}
 	if errCheck != nil {
 		return nil, errors.WithMessage(errCheck, "订单检查失败")
 	}
