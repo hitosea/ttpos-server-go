@@ -21,6 +21,7 @@ type ISaleOrderProductRepo interface {
 	CreateSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string, returnFoodReasons [][2]uint64) error
 	DeleteSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string) error
 	DeleteSaleOrderProductList(models []*model.SaleOrderProduct) error // 批量删除销售订单商品。delete_time赋值为当前时间
+	DeleteSaleOrderProductBySaleBillUuid(saleBillUuid uint64) error    // 根据销售账单uuid删除销售订单商品。delete_time赋值为当前时间
 	Update(data map[string]interface{}, opts ...DBOption) error        // 更新订单商品
 }
 
@@ -204,6 +205,12 @@ func (r *saleOrderProductRepo) DeleteSaleOrderProductList(models []*model.SaleOr
 	}
 	now := time.Now().Unix()
 	return r.db.Model(&model.SaleOrderProduct{}).Where("uuid in (?)", uuids).Update("delete_time", now).Error
+}
+
+// 根据销售账单uuid删除销售订单商品。delete_time赋值为当前时间
+func (r *saleOrderProductRepo) DeleteSaleOrderProductBySaleBillUuid(saleBillUuid uint64) error {
+	now := time.Now().Unix()
+	return r.db.Model(&model.SaleOrderProduct{}).Where("sale_bill_uuid = ?", saleBillUuid).Update("delete_time", now).Error
 }
 
 // Update 更新

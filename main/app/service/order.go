@@ -1399,6 +1399,11 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		tx.Rollback()
 		return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
 	}
+	err = repository.NewSaleOrderProductRepo(tx).DeleteSaleOrderProductBySaleBillUuid(billInfo.Uuid)
+	if err != nil {
+		tx.Rollback()
+		return errors.WithMessage(builtinerrors.New("删除销售订单商品失败"), err.Error())
+	}
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
 		return errors.WithMessage(err)
