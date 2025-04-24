@@ -30,6 +30,7 @@ type SaleOrderBuffetCustomerType struct {
 
 	// 关联ID字段
 	SaleOrderUuid               uint64 `gorm:"column:sale_order_uuid;comment:销售订单ID" json:"sale_order_uuid"`
+	SaleBillUuid                uint64 `gorm:"column:sale_bill_uuid;comment:销售账单ID" json:"sale_bill_uuid"`
 	BuffetPackageUuid           uint64 `gorm:"column:buffet_package_uuid;comment:自助餐套餐ID" json:"buffet_package_uuid"`
 	BuffetCustomerTypePriceUuid uint64 `gorm:"column:buffet_customer_type_price_uuid;comment:顾客类型定价ID" json:"buffet_customer_type_price_uuid"`
 

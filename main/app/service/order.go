@@ -1399,6 +1399,19 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		tx.Rollback()
 		return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
 	}
+	// 取消订单后，删除所有销售订单商品
+	err = repository.NewSaleOrderProductRepo(tx).DeleteSaleOrderProductBySaleBillUuid(billInfo.Uuid)
+	if err != nil {
+		tx.Rollback()
+		return errors.WithMessage(builtinerrors.New("删除销售订单商品失败"), err.Error())
+	}
+	// 取消订单后，删除所有销售订单自助餐顾客
+	err = repository.NewSaleOrderBuffetCustomerTypeRepo(tx).DeleteSaleOrderBuffetCustomerTypeBySaleBillUuid(billInfo.Uuid)
+	if err != nil {
+		tx.Rollback()
+		return errors.WithMessage(builtinerrors.New("删除销售订单自助餐顾客失败"), err.Error())
+	}
+
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
 		return errors.WithMessage(err)
@@ -3934,14 +3947,14 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 						finish = false
 					}
 				}
-				if isAutoAdd {
-					if finish {
-						// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
-						err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(saleBillUuid)
-						if err != nil {
-							return nil, errors.WithMessage(err)
-						}
+				if finish {
+					// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
+					err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(saleBillUuid)
+					if err != nil {
+						return nil, errors.WithMessage(err)
 					}
+				}
+				if isAutoAdd {
 					return s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
 				} else {
 					productMustPlanList = &resp.ProductMustPlanList{
@@ -4028,7 +4041,12 @@ type CreateSaleOrderProductParams struct {
 	SaleOrder   *model.SaleOrder      // 销售订单
 }
 
-func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrderProductParams) ([]*model.SaleOrderProduct, error) {
+func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrderProductParams, options ...func(option *ActionAddOption)) ([]*model.SaleOrderProduct, error) {
+	option := &ActionAddOption{}
+	for _, opt := range options {
+		opt(option)
+	}
+
 	type InnerParams struct {
 		IsDeskSaleBill         bool    // 是否是桌台销售账单
 		SaleBillUuid           uint64  // 销售账单uuid
@@ -4212,44 +4230,54 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			}
 		}
 
-		// 查询是否存在签名相同的订单商品
-		orderProduct := params.SaleOrder.GetSaleOrderProductBySign(saleOrderProduct.Sign)
-		if orderProduct == nil {
-			ctx.Log().Debug("不存在相同的sign", zap.Any("sign", saleOrderProduct.Sign))
-		}
-
-		// 订单中存在相同签名的商品
-		//hasSameSign := false
-		if orderProduct != nil {
-			if saleOrderProduct.IsAddOperation() {
-				// 加上新增的商品数量
-				orderProduct.Num += saleOrderProduct.Num
-				orderProduct.SetUpdate()
-				saleOrderProducts = append(saleOrderProducts, orderProduct)
-				if saleOrderProduct.Num > constant.ProductNumMax {
-					return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
-				}
-				// 检查商品是否超过限购
-				status, message := orderProduct.CheckCookingProduct(ctx.GetLanguage())
-				if status != constant.CodeSuccess {
-					return nil, errors.WithMessage(errors.New(message))
-				}
-			} else if saleOrderProduct.IsSubOperation() {
-				// 减去新增的商品数量
-				orderProduct.Num -= saleOrderProduct.Num
-				if orderProduct.Num <= 0 {
-					orderProduct.SetDelete()
-				}
-				orderProduct.SetUpdate()
-				saleOrderProducts = append(saleOrderProducts, orderProduct)
-			}
-		} else {
+		// 如果是平板端加购，用于不会因为签名相同而合并商品
+		if option.IsTableAdd {
 			// 将新的订单商品加入到订单的商品列表中，用于计算订单金额
 			params.SaleOrder.SaleOrderProducts = append(params.SaleOrder.SaleOrderProducts, saleOrderProduct)
 			saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
 			// 商品数量不能超过999个
 			if saleOrderProduct.Num > constant.ProductNumMax {
 				return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
+			}
+		} else {
+			// 查询是否存在签名相同的订单商品
+			orderProduct := params.SaleOrder.GetSaleOrderProductBySign(saleOrderProduct.Sign)
+			if orderProduct == nil {
+				ctx.Log().Debug("不存在相同的sign", zap.Any("sign", saleOrderProduct.Sign))
+			}
+			// 订单中存在相同签名的商品
+			//hasSameSign := false
+			if orderProduct != nil {
+				if saleOrderProduct.IsAddOperation() {
+					// 加上新增的商品数量
+					orderProduct.Num += saleOrderProduct.Num
+					orderProduct.SetUpdate()
+					saleOrderProducts = append(saleOrderProducts, orderProduct)
+					if saleOrderProduct.Num > constant.ProductNumMax {
+						return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
+					}
+					// 检查商品是否超过限购
+					status, message := orderProduct.CheckCookingProduct(ctx.GetLanguage())
+					if status != constant.CodeSuccess {
+						return nil, errors.WithMessage(errors.New(message))
+					}
+				} else if saleOrderProduct.IsSubOperation() {
+					// 减去新增的商品数量
+					orderProduct.Num -= saleOrderProduct.Num
+					if orderProduct.Num <= 0 {
+						orderProduct.SetDelete()
+					}
+					orderProduct.SetUpdate()
+					saleOrderProducts = append(saleOrderProducts, orderProduct)
+				}
+			} else {
+				// 将新的订单商品加入到订单的商品列表中，用于计算订单金额
+				params.SaleOrder.SaleOrderProducts = append(params.SaleOrder.SaleOrderProducts, saleOrderProduct)
+				saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
+				// 商品数量不能超过999个
+				if saleOrderProduct.Num > constant.ProductNumMax {
+					return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
+				}
 			}
 		}
 	}
@@ -5575,7 +5603,11 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 
 	// 获取原生产单Uuid
 	oldProductionOrderUuid := saleOrderProduct.ProductionOrderUuid
-	newProductionOrderUuid, _ := utils.GetID()
+
+	var newProductionOrderUuid uint64
+	if oldProductionOrderUuid != 0 {
+		newProductionOrderUuid, _ = utils.GetID()
+	}
 
 	// 修改生产单Uuid
 	saleOrderProduct.ProductionOrderUuid = newProductionOrderUuid

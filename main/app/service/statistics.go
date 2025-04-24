@@ -9,9 +9,11 @@ import (
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/shopspring/decimal"
+	"go.uber.org/zap"
 )
 
 // IStatisticsSrv 统计服务接口
@@ -324,8 +326,10 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 		list                = make([]CountPaymentRespList, 0)
 	)
 
+	i := 0
 	for _, payment := range paymentData {
 		item, ok := slice.Find(list, func(index int, item CountPaymentRespList) bool {
+			i = index
 			return item.PaymentCode == payment.PaymentCode
 		})
 		if !ok {
@@ -338,6 +342,7 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 		} else {
 			item.TotalOrderNum += payment.TotalOrderNum.Int64
 			item.TotalPaymentAmount += payment.TotalPaymentAmount.Float64
+			list[i] = *item
 		}
 		if payment.PaymentCode != 10 {
 			totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(payment.TotalPaymentAmount.Float64))
@@ -345,8 +350,10 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 		totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(payment.TotalRefundAmount.Float64))
 	}
 
+	i = 0
 	for _, memberPayment := range memberPaymentData.PaymentList {
 		item, ok := slice.Find(list, func(index int, item CountPaymentRespList) bool {
+			i = index
 			return item.PaymentCode == memberPayment.PaymentCode
 		})
 		if !ok {
@@ -359,8 +366,11 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 		} else {
 			item.TotalOrderNum += memberPayment.TotalOrderNum
 			item.TotalPaymentAmount += memberPayment.TotalPaymentAmount
+			list[i] = *item
 		}
 	}
+
+	logger.Logger.Info("list", zap.Any("list", list))
 
 	totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(memberPaymentData.TotalReceivedAmount))
 	totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(memberPaymentData.TotalRefundAmount))
