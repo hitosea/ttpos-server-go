@@ -1,9 +1,9 @@
 name: Go Build & Docker Push
 on:
   workflow_dispatch:
-  pull_request:
   push:
-    branches: [ new-test ]
+    tags:
+      - 'v*'
   
 
 env:
