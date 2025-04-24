@@ -859,6 +859,14 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 		if saleBill.SetAllDiscountCancel() {
 			resp.IsResetDiscount = true
 		}
+
+		// 重新设置会员折扣
+		if saleOrder.Member != nil {
+			saleOrder.SetMemberDiscount(*saleOrder.Member)
+		} else {
+			saleOrder.SetMemberDiscountCancel()
+		}
+
 		// 计算并保存销售账单
 		if err := s.orderSrv.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.WithMessage(err)
