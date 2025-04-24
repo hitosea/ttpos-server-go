@@ -88,6 +88,18 @@
         <el-table-column prop="path_name_text" :label="$t('所属分类')" width="180"></el-table-column>
         <el-table-column prop="file_name" :label="$t('图片名称')" width="180"></el-table-column>
       </el-table>
+      <!--分页-->
+      <div class="pagination">
+        <el-pagination
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          background
+          :current-page="page"
+          :page-size="page_size"
+          layout="total, prev, pager, next, jumper"
+          :total="totalDataNumber"
+        ></el-pagination>
+      </div>
     </div>
 
     <template #footer>
@@ -113,9 +125,12 @@
         folderName: [],
         nameList: [],
         repeat_list: [],
-        request_cache: '',
+        request_cache: false,
         dialogVisible: false,
         loading: false,
+        page: 1,
+        page_size: 10,
+        totalDataNumber: 0,
       };
     },
     watch: {
@@ -253,6 +268,74 @@
         }
       },
 
+      /*选择第几页*/
+      handleCurrentChange(val) {
+        let self = this;
+        self.loading = true;
+        self.page = val;
+        self.repeatList();
+      },
+
+      /*每页多少条*/
+      handleSizeChange(val) {
+        this.page_size = val;
+        this.repeatList();
+      },
+
+      // 批量修改分类验证
+      async repeatList() {
+        const list = [];
+        this.imgList.map((item) => {
+          if (item.file) {
+            list.push({
+              product_id: item.product_id,
+              file_name: item.file.name,
+              img_name: item.file.name.replace(/\.(png|jpg|jpeg|webp)/gi, ''),
+              product_name_text: item.product_name_text,
+            });
+          }
+        });
+        if (list.length === 0) {
+          this.$ElMessage({
+            type: 'warning',
+            message: this.$t('没有相匹配的图片'),
+          });
+          return;
+        }
+        this.loading = true;
+        ProductApi.repeatList(
+          {
+            list,
+            page: this.page,
+            page_size: this.page_size,
+          },
+          true
+        )
+          .then((res) => {
+            this.loading = false;
+            if (res.data?.data?.length > 0) {
+              this.repeat_list = res.data?.data;
+              this.request_cache = true;
+              this.totalDataNumber = res.data?.total;
+              if (this.repeat_list.length > 0) {
+                (this.repeat_list || []).map((item) => {
+                  this.tableData.map((item2) => {
+                    if (item2.product_id === item.product_id) {
+                      item.path_name_text = item2.path_name_text;
+                    }
+                  });
+                });
+              }
+              this.dialogVisible = true;
+            } else {
+              this.packaging();
+            }
+          })
+          .catch((error) => {
+            this.loading = false;
+          });
+      },
+
       //提交数据
       async packaging() {
         const zip = new JSZip();
@@ -300,20 +383,6 @@
           .catch((error) => {
             this.loading = false;
             this.$emit('loading', false);
-            if (error.data?.repeat_list?.length > 0) {
-              this.repeat_list = error.data.repeat_list;
-              this.request_cache = error.data.request_cache;
-              if (this.repeat_list.length > 0) {
-                (this.repeat_list || []).map((item) => {
-                  this.tableData.map((item2) => {
-                    if (item2.product_id === item.product_id) {
-                      item.path_name_text = item2.path_name_text;
-                    }
-                  });
-                });
-              }
-              this.dialogVisible = true;
-            }
           });
       },
 
