@@ -144,7 +144,7 @@ class Label extends BaseModel
             'name' => $name,
         ];
         if (!is_null($id) && $id != 0) {
-            $filter[] = ['id', '<>', $id];
+            $filter[] = ['uuid', '<>', $id];
         }
         return static::where($filter)->value('id') ? true : false;
     }
