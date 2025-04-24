@@ -102,10 +102,10 @@ func (r *callRepo) WhereUuid(uuid uint64) DBOption {
 	}
 }
 func (r *callRepo) WhereDeskUuidByCallUuid(uuid uint64) DBOption {
+	var deskUuid uint64
+	r.db.Model(&model.CustomerCall{}).Select("desk_uuid").Where("uuid = ?", uuid).Limit(1).Scan(&deskUuid)
 	return func(db *gorm.DB) *gorm.DB {
-		model.CustomerCall{}.TableName()
-		return db.Where("desk_uuid = (?)",
-			r.db.Table(model.CustomerCall{}.TableName()).Select("desk_uuid").Where("uuid = ?", uuid).Limit(1))
+		return db.Where("desk_uuid = ?", deskUuid)
 	}
 }
 

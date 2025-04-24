@@ -29,6 +29,7 @@ type IMemberRechargeOrderRepo interface {
 	Update(uuid uint64, vars map[string]any) error                                                                   // 更新充值订单
 	GetRechargeOrderByUuid(uuid uint64) (model.MemberRechargeOrder, error)                                           // 通过Uuid获取充值订单
 	GetRechargeOrderAllInfo(uuid uint64) model.MemberRechargeOrder                                                   // 获取充值订单所有信息
+	GetMemberRechargeOrderList(opts ...DBOption) ([]model.MemberRechargeOrder, error)                                // 获取充值订单列表
 }
 
 func NewMemberRechargeOrderRepo(db *gorm.DB) IMemberRechargeOrderRepo {
@@ -254,4 +255,15 @@ func (r *memberRechargeOrderRepo) GetRechargeOrderAllInfo(uuid uint64) model.Mem
 	)
 
 	return rechargeOrder
+}
+
+// GetMemberRechargeOrderList 获取充值订单列表
+func (r *memberRechargeOrderRepo) GetMemberRechargeOrderList(opts ...DBOption) ([]model.MemberRechargeOrder, error) {
+	var rechargeOrders []model.MemberRechargeOrder
+	db := r.db.Model(&model.MemberRechargeOrder{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Find(&rechargeOrders).Error
+	return rechargeOrders, errors.WithMessage(err)
 }
