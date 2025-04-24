@@ -85,7 +85,7 @@ func (model *SaleOrderBuffetCustomerType) calcServiceFee(price float64, serviceF
 	if taxFeeType == constant.TaxFeeTypeNoTax {
 		// 未含税时
 		serviceFee := decimal.NewFromFloat(price).Mul(decimal.NewFromFloat(serviceFeeRate))
-		return serviceFee.InexactFloat64()
+		return serviceFee.Round(2).InexactFloat64()
 	}
 	// 已含税时
 	if taxFeeType == constant.TaxFeeTypeTax {
@@ -94,7 +94,7 @@ func (model *SaleOrderBuffetCustomerType) calcServiceFee(price float64, serviceF
 		priceNoneTaxDecimal := decimal.NewFromFloat(priceNoneTax)
 		//  服务费=（最终单价-商品税费）*服务费比例
 		serviceFee := priceNoneTaxDecimal.Mul(decimal.NewFromFloat(serviceFeeRate))
-		return serviceFee.InexactFloat64()
+		return serviceFee.Round(2).InexactFloat64()
 	}
 	// 默认商品不收取服务费
 	return 0
