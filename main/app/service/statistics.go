@@ -60,6 +60,7 @@ type CountSaleResp struct {
 	TotalSaleAmount          float64 `json:"total_sale_amount"`            // 总销售额
 	TotalReceivedAmount      float64 `json:"total_received_amount"`        // 总实收金额
 	TotalProductPrice        float64 `json:"total_product_price"`          // 总商品原价
+	TotalProductOriginPrice  float64 `json:"total_product_origin_price"`   // 总原商品金额
 	TotalProductNum          int64   `json:"total_product_num"`            // 总商品数量
 	TotalDiscountMember      float64 `json:"total_discount_member"`        // 总会员折扣
 	TotalBusinessAmount      float64 `json:"total_business_amount"`        // 总营业收入
@@ -119,6 +120,7 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 		TotalSaleAmount:          totalSaleAmount.Round(2).InexactFloat64(),
 		TotalReceivedAmount:      totalReceivedAmount.Round(2).InexactFloat64(),
 		TotalProductPrice:        saleData.TotalProductPrice.Float64,
+		TotalProductOriginPrice:  saleData.TotalProductOriginPrice.Float64,
 		TotalProductNum:          saleData.TotalProductNum.Int64,
 		TotalDiscountMember:      saleData.TotalDiscountMember.Float64,
 		TotalBusinessAmount:      totalBusinessAmount.Round(2).InexactFloat64(),
@@ -773,6 +775,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			orderFreeNum              int
 			orderRefundNum            int
 			orderProductPrice         decimal.Decimal
+			orderProductOriginPrice   decimal.Decimal
 			orderProductSalePrice     decimal.Decimal
 			orderProductTax           decimal.Decimal
 			orderServiceFee           decimal.Decimal
@@ -864,6 +867,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				if isFeeType {
 					productPrice = productPrice.Sub(decimal.NewFromFloat(saleProduct.TaxFee))
 				}
+				orderProductOriginPrice = decimal.NewFromFloat(saleProduct.SalePriceNoTax)
 				productTax := decimal.NewFromFloat(saleProduct.TaxFee)
 				productServiceFee := decimal.NewFromFloat(saleProduct.ServiceFee)
 				productServiceTax := decimal.NewFromFloat(saleProduct.ServiceTaxFee)
@@ -984,6 +988,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			SaleOrderUuid:        saleOrder.Uuid,
 			MealNum:              int(saleBill.MealNum),
 			ProductPrice:         orderProductPrice.InexactFloat64(),
+			ProductOriginPrice:   orderProductOriginPrice.InexactFloat64(),
 			ProductSalePrice:     orderProductSalePrice.InexactFloat64(),
 			ProductNum:           orderProductNum,
 			ProductTax:           orderProductTax.InexactFloat64(),

@@ -11,6 +11,7 @@ type StatisticsSale struct {
 	DeskUuid             uint64  `gorm:"column:desk_uuid;type:bigint(20) unsigned;default:0;comment:桌台uuid;NOT NULL" json:"desk_uuid"`
 	MealNum              int     `gorm:"column:meal_num;type:int(11);default:0;comment:用餐人数;NOT NULL" json:"meal_num"`
 	ProductPrice         float64 `gorm:"column:product_price;type:decimal(14,2);default:0.00;comment:商品原价: 不含税;NOT NULL" json:"product_price"`
+	ProductOriginPrice   float64 `gorm:"column:product_origin_price;type:decimal(14,2);default:0.00;comment:原商品金额;NOT NULL" json:"product_origin_price"`
 	ProductSalePrice     float64 `gorm:"column:product_sale_price;type:decimal(14,2);default:0.00;comment:商品销售价;NOT NULL" json:"product_sale_price"`
 	ProductNum           int     `gorm:"column:product_num;type:int(11);default:0;comment:商品数量;NOT NULL" json:"product_num"`
 	ProductTax           float64 `gorm:"column:product_tax;type:decimal(14,2);default:0.00;comment:商品税;NOT NULL" json:"product_tax"`
@@ -104,6 +105,7 @@ type StatisticsSaleData struct {
 	TotalSaleAmount         sql.NullFloat64 `gorm:"column:total_sale_amount;comment:总销售额"`
 	TotalReceivedAmount     sql.NullFloat64 `gorm:"column:total_received_amount;comment:总实收金额"`
 	TotalProductPrice       sql.NullFloat64 `gorm:"column:total_product_price;comment:总商品原价"`
+	TotalProductOriginPrice sql.NullFloat64 `gorm:"column:total_product_origin_price;comment:总原商品金额"`
 	TotalProductNum         sql.NullInt64   `gorm:"column:total_product_num;comment:总商品数量"`
 	TotalDiscountMember     sql.NullFloat64 `gorm:"column:total_discount_member;comment:总会员折扣"`
 	TotalBusinessAmount     sql.NullFloat64 `gorm:"column:total_business_amount;comment:总营业收入"`

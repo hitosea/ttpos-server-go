@@ -1936,6 +1936,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台UUID',
     `meal_num` INT(11) NOT NULL DEFAULT 0 COMMENT '用餐人数',
     `product_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品原价: 不含税',
+    `product_origin_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '原商品金额',
     `product_sale_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品销售价',
     `product_num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
     `product_tax` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品税',
