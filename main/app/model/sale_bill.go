@@ -319,6 +319,21 @@ func (model *SaleBill) ValidateOrderStatus(source string, operation string, sale
 	if operation == constant.OrderUnlock {
 		return nil
 	}
+
+	// 当不是收银端的时候，拆单不可操作结账
+	if source != constant.SourceCashier && operation == constant.OrderSettle && model.IsSplit() {
+		return errors.NewWithCode(constant.CodeOrderCheckSplit, "当前订单已经拆单，请前去收银机操作")
+	}
+
+	// 当不是收银端的时候，拆单不可操作取消订单
+	if !slices.Contains([]string{
+		constant.SourceShop,
+		constant.SourceCashier,
+		constant.SourceAssistant,
+	}, source) && operation == constant.OrderOrderCancel && model.IsSplit() {
+		return errors.New("拆单不可操作")
+	}
+
 	// 锁定订单 - 白名单
 	if model.IsLockStatus() && !slices.Contains([]string{constant.OrderSettle}, operation) {
 		return errors.New("订单已被锁定，请解锁后重新操作")
@@ -334,14 +349,6 @@ func (model *SaleBill) ValidateOrderStatus(source string, operation string, sale
 		return errors.New("订单已结账")
 	}
 	if len(model.SaleOrders) > 0 {
-		// 当不是收银端的时候，拆单不可操作
-		if !slices.Contains([]string{
-			constant.SourceShop,
-			constant.SourceCashier,
-			constant.SourceAssistant,
-		}, source) && operation == constant.OrderOrderCancel && len(model.SaleOrders) > 1 {
-			return errors.New("拆单不可操作")
-		}
 		// 单个订单不能操作
 		for _, so := range model.SaleOrders {
 			if len(saleOrderUuid) == 0 || slices.Contains(saleOrderUuid, so.Uuid) {

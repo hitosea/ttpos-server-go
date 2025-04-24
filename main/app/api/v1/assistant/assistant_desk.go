@@ -1441,6 +1441,33 @@ func (h *DeskHandler) CompleteDesk(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// OrderPaymentQrcode 获取支付方式的二维码信息
+// @Summary 获取支付方式的二维码信息
+// @Description 获取支付方式的二维码信息
+// @Tags 点餐助手端.桌台.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.InstantOrderPaymentQrcodeReq true "获取支付方式的二维码信息参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentQrcodeInfoResp}
+// @Router /assistant/desk/order/payment/qrcode [get]
+func (h *DeskHandler) OrderPaymentQrcodeInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	params := req.InstantOrderPaymentQrcodeReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取支付二维码
+	res, err := h.orderSrv.InstantOrderPaymentQrcode(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -1495,6 +1522,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
 		privateApi.POST("/desk/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
 		privateApi.POST("/desk/order/payment/cancel", wrapper.OrderPaymentCancel)                             // 撤销一个支付单
+		privateApi.GET("/desk/order/payment/qrcode", wrapper.OrderPaymentQrcodeInfo)                          // 获取支付二维码
 		privateApi.POST("/desk/order/payment/finish", wrapper.OrderPaymentFinish)                             // 完成销售订单的付款结账
 		privateApi.POST("/desk/order/cart/product/change_desk", wrapper.OrderCartProductChangeDesk)           // 转菜
 		privateApi.POST("/desk/order/cart/product/giving", wrapper.OrderCartProductGiving)                    // 赠菜购物车商品
