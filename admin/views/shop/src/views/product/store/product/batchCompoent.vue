@@ -167,7 +167,7 @@
         this.$refs.form.validate((valid) => {
           if (valid) {
             if (this.type == 1) {
-              this.$refs.upImages.packaging();
+              this.$refs.upImages.repeatList();
             }
             if (this.type == 2) {
               this.$refs.typeChange.submit();
