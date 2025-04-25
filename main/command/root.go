@@ -23,6 +23,7 @@ import (
 	"github.com/spf13/cobra"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/zsais/go-gin-prometheus"
 	"go.uber.org/zap"
 )
 
@@ -87,6 +88,9 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	gin.SetMode(config.Server.Mode)
 	// 创建Gin引擎
 	r := gin.New()
+	// Prometheus Metrics
+	p := ginprometheus.NewPrometheus("gin")
+	p.Use(r)
 	// 添加中间件
 	r.Use(middleware.Cors())
 	r.Use(gin.Logger(), middleware.Recovery(logger.Logger, config.Server.Mode))
