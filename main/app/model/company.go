@@ -15,6 +15,10 @@ type Company struct {
 	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting"`
 }
 
+func (company *Company) SetNil() {
+	company.CompanySetting = nil
+}
+
 func (company *Company) IsExpired() bool {
 	return company.ExpireTime > 0 && company.ExpireTime < time.Now().Unix()
 }
