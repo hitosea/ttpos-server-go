@@ -7330,7 +7330,7 @@ func (s *orderSrv) InstantOrderPaymentZeroRule(ctx context.Context, req req.Inst
 		return nil, errors.WithMessage(errSaleBill)
 	}
 	// 验证订单是否可操作
-	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
