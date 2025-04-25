@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -25,6 +26,11 @@ type UserGrade struct {
 	AppID         uint    `gorm:"unsigned;not null;default:0;comment:程序id"`
 	CreateTime    uint    `gorm:"unsigned;not null;default:0;comment:创建时间"`
 	UpdateTime    uint    `gorm:"unsigned;not null;default:0;comment:更新时间"`
+}
+
+func (u *UserGrade) GetDiscount() float64 {
+	discount := decimal.NewFromInt(int64(u.Equity)).Div(decimal.NewFromInt(100)).Round(2).InexactFloat64()
+	return discount
 }
 
 type UserGradeRepository interface {
@@ -50,6 +56,7 @@ func (s *UserGradeService) ConvertUserGrade() error {
 	}
 	for _, userGrade := range userGrades {
 		fmt.Println(fmt.Sprintf("userGrade: %+v", userGrade))
+		fmt.Println(fmt.Sprintf("userGrade.GradeID: %v", userGrade.GradeID))
 		memberLevel := model.MemberLevel{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(userGrade.GradeID),
@@ -61,11 +68,12 @@ func (s *UserGradeService) ConvertUserGrade() error {
 			UpgradeMoney: userGrade.UpgradeMoney,
 			OpenPoint:    int(userGrade.OpenPoints),
 			UpgradePoint: float64(userGrade.UpgradePoints),
-			Discount:     float64(userGrade.Equity),
+			Discount:     userGrade.GetDiscount(),
 			Priority:     int(userGrade.Weight),
 			IsDefault:    int(userGrade.IsDefault),
 			Remark:       userGrade.Remark,
 		}
+		fmt.Println(fmt.Sprintf("memberLevel: %+v", memberLevel))
 		_, err = base.NewMemberLevelRepo(s.targetDB).CreateMemberLevel(memberLevel)
 		if err != nil {
 			return err
