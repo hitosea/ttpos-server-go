@@ -49,5 +49,11 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB) error {
 		return err
 	}
 
+	tableTypeService := v1.NewTableTypeService(sourceDB, targetDB)
+	err = tableTypeService.ConvertTableType()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
