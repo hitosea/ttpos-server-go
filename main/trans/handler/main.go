@@ -43,5 +43,11 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB) error {
 		return err
 	}
 
+	categoryService := v1.NewCategoryService(sourceDB, targetDB)
+	err = categoryService.ConvertCategory()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
