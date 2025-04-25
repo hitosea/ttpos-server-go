@@ -306,6 +306,7 @@
               }
               this.form.many_select_list = [];
 
+              // 处理规格的材料组
               self.form.model.sku.map((item, index) => {
                 //删除多余字段
                 delete item.create_time;
