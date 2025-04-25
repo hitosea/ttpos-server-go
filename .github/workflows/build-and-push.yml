@@ -7,7 +7,6 @@ on:
           required: true
           default: 'new-test'
     
-
 env:
   # Go编译配置
   #GOPROXY: https://goproxy.cn,direct
@@ -79,8 +78,8 @@ jobs:
         file: Dockerfile.${{ matrix.program }}
         push: ${{ github.event_name != 'pull_request' }}
         tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.program == "main" &&  "go" || matrix.program }}:${{ github.ref_name }}-${{ steps.build.outputs.COMMIT_ID }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.program == "main" &&  "go" || matrix.program }}:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.program == 'main' &&  'go' || matrix.program }}:${{ github.ref_name }}-${{ steps.build.outputs.COMMIT_ID }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.program == 'main' &&  'go' || matrix.program }}:latest
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
