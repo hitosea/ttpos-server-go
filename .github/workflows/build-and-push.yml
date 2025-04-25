@@ -1,10 +1,12 @@
 name: Go Build & Docker Push
 on:
   workflow_dispatch:
-#   pull_request:
-#   push:
-#     branches: [ new-test ]
-  
+    inputs:
+        branch: 
+          description: 'branch (e.g., release)'
+          required: true
+          default: 'new-test'
+    
 
 env:
   # Go编译配置
@@ -22,7 +24,6 @@ jobs:
       fail-fast: false
       matrix:
         program: [ main,websocket,redis-proxy ]
-        image: [ go,websocket,redis-proxy ]
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -78,8 +79,8 @@ jobs:
         file: Dockerfile.${{ matrix.program }}
         push: ${{ github.event_name != 'pull_request' }}
         tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.image }}:${{ github.ref_name }}-${{ steps.build.outputs.COMMIT_ID }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.image }}:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.program == "main" &&  "go" || matrix.program }}:${{ github.ref_name }}-${{ steps.build.outputs.COMMIT_ID }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.program == "main" &&  "go" || matrix.program }}:latest
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
