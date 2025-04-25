@@ -6395,7 +6395,7 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	}
 
 	// 验证订单是否可操作
-	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle, req.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -8657,7 +8657,7 @@ func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMembe
 		return nil, errors.WithMessage(err, "查询销售账单失败")
 	}
 
-	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle, request.SaleOrderUuid); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -8720,7 +8720,7 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 	}
 
 	// 验证订单是否可操作
-	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderSettle, request.SaleOrderUuid); err != nil {
 		return nil, false, errors.WithMessage(err)
 	}
 
