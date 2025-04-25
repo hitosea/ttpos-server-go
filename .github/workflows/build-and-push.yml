@@ -22,6 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         program: [ main,websocket,redis-proxy ]
+        image: [ go,websocket,redis-proxy ]
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -77,8 +78,8 @@ jobs:
         file: Dockerfile.${{ matrix.program }}
         push: ${{ github.event_name != 'pull_request' }}
         tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.program }}:${{ github.ref_name }}-${{ steps.build.outputs.COMMIT_ID }}
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.program }}:latest
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.image }}:${{ github.ref_name }}-${{ steps.build.outputs.COMMIT_ID }}
+          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.image }}:latest
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
