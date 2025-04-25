@@ -55,5 +55,11 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB) error {
 		return err
 	}
 
+	returnReasonService := v1.NewReturnReasonService(sourceDB, targetDB)
+	err = returnReasonService.ConvertReturnReason()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
