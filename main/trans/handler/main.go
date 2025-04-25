@@ -61,5 +61,11 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB) error {
 		return err
 	}
 
+	freeTagService := v1.NewFreeTagService(sourceDB, targetDB)
+	err = freeTagService.ConvertFreeTag()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
