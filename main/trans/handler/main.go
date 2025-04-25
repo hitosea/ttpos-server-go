@@ -37,5 +37,11 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB) error {
 		return err
 	}
 
+	customerTypeService := v1.NewCustomerTypeService(sourceDB, targetDB)
+	err = customerTypeService.ConvertCustomerType()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
