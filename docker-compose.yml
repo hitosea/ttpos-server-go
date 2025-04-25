@@ -13,12 +13,16 @@ services:
       - ./admin/:/var/www
     env_file:
       - ./.env
-    restart: always
     depends_on:
       - db
       - redis
       - redis-proxy
-      
+    networks:
+      extnetwork:
+        ipv4_address: "10.22.23.2"
+    restart: always
+
+
   nginx:
     container_name: "saas-nginx-${APP_ID}"
     image: "nginx:alpine"
@@ -37,6 +41,9 @@ services:
       - php
       - golang
       - websocket
+    networks:
+      extnetwork:
+        ipv4_address: "10.22.23.3"
     restart: unless-stopped
 
   db:
@@ -55,6 +62,9 @@ services:
       MARIADB_PREFIX: "${DB_PREFIX}"
       MARIADB_HOST: "${DB_HOST}"
       MARIADB_PORT: "${DB_PORT}"
+    networks:
+      extnetwork:
+        ipv4_address: "10.22.23.4"
     restart: always
 
   redis:
@@ -65,6 +75,9 @@ services:
     volumes:
       - ./docker/redis/data:/data
       - ./docker/redis/redis.conf:/etc/redis/redis.conf:ro
+    networks:
+      extnetwork:
+        ipv4_address: "10.22.23.5"
     restart: always
     
   redis-proxy:
@@ -77,6 +90,9 @@ services:
     image: redis-proxy
     depends_on:
       - redis
+    networks:
+      extnetwork:
+        ipv4_address: "10.22.23.6"
     restart: always
     
   golang:
@@ -89,6 +105,9 @@ services:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env
       - ./main/version.json:/var/www/version.json
+    networks:
+      extnetwork:
+        ipv4_address: "10.22.23.9"
     restart: always
 
   websocket:
@@ -99,6 +118,15 @@ services:
     image: ttpos-server-websocket
     volumes:
       - .env:/var/.env
+    networks:
+      extnetwork:
+        ipv4_address: "10.22.23.10"
     restart: always
 
-  
+networks:
+  extnetwork:
+    name: "ttpos-networks-${APP_ID}"
+    ipam:
+      config:
+        - subnet: "10.22.23.0/24"
+          gateway: 10.22.23.1
