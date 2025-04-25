@@ -313,8 +313,23 @@ func (model *SaleBill) AddSaleOrderBuffetDelayProduct(saleOrderUuid uint64, dela
 	}
 }
 
+type ValidateOrderStatusOption struct {
+	NotCheckSubOrder bool // 是否不检查子订单,是否已经结账。场景：助手端的话，只要还有一个订单未结账，就可以操作
+}
+
+func WithIsAssistant() func(*ValidateOrderStatusOption) {
+	return func(option *ValidateOrderStatusOption) {
+		option.NotCheckSubOrder = true
+	}
+}
+
 // ValidateOrderStatus 判断订单是否可操作
-func (model *SaleBill) ValidateOrderStatus(source string, operation string, saleOrderUuid ...uint64) error {
+func (model *SaleBill) ValidateOrderStatus(source string, operation string, saleOrderUuid uint64, options ...func(*ValidateOrderStatusOption)) error {
+	option := &ValidateOrderStatusOption{}
+	for _, opt := range options {
+		opt(option)
+	}
+
 	// 解锁订单
 	if operation == constant.OrderUnlock {
 		return nil
@@ -348,12 +363,18 @@ func (model *SaleBill) ValidateOrderStatus(source string, operation string, sale
 	if model.Status == constant.SaleBillStatusComplete {
 		return errors.New("订单已结账")
 	}
-	if len(model.SaleOrders) > 0 {
-		// 单个订单不能操作
-		for _, so := range model.SaleOrders {
-			if len(saleOrderUuid) == 0 || slices.Contains(saleOrderUuid, so.Uuid) {
-				if err := so.ValidateOrderStatus(); err != nil {
-					return errors.WithMessage(err)
+
+	if option.NotCheckSubOrder {
+		// 助手端的话，只要还有一个订单未结账，就可以操作
+		return nil
+	} else {
+		if len(model.SaleOrders) > 0 {
+			// 单个订单不能操作
+			for _, so := range model.SaleOrders {
+				if saleOrderUuid == 0 || saleOrderUuid == so.Uuid {
+					if err := so.ValidateOrderStatus(); err != nil {
+						return errors.WithMessage(err)
+					}
 				}
 			}
 		}

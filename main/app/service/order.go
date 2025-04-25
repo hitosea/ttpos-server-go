@@ -1251,7 +1251,7 @@ func (s *orderSrv) IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (
 			return model.SaleBill{}, errors.New("当前订单已被部分支付，不支持取消")
 		}
 	}
-	if err := billInfo.ValidateOrderStatus(ctx.GetSource(), constant.OrderOrderCancel); err != nil {
+	if err := billInfo.ValidateOrderStatus(ctx.GetSource(), constant.OrderOrderCancel, 0); err != nil {
 		return model.SaleBill{}, errors.WithMessage(err)
 	}
 	if !slices.Contains([]string{constant.SourceShop}, ctx.GetSource()) {
@@ -2865,9 +2865,16 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 		return nil, errors.WithMessage(err, "查询销售订单信息失败")
 	}
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderDeleteProduct, req.SaleOrderUuid); err != nil {
-		return nil, errors.WithMessage(err)
+	if ctx.GetSource() == constant.SourceAssistant {
+		if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, req.SaleOrderUuid, model.WithIsAssistant()); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+	} else {
+		if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, req.SaleOrderUuid); err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
+
 	// 判断订单商品状态
 	if saleOrderProduct == nil {
 		return nil, errors.New("找不到订单商品")
@@ -3460,7 +3467,7 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	if saleBill.IsSplit() {
 		return nil, errors.New("当前订单已拆单，无法调整自助餐")
 	}
-	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderUpdateMealNum); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderUpdateMealNum, 0); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -4300,8 +4307,14 @@ func (s *orderSrv) OrderCartProductAdd(ctx context.Context, request req.ProductA
 		return nil, errors.WithMessage(errSaleBill)
 	}
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, request.SaleOrderUuid); err != nil {
-		return nil, errors.WithMessage(err)
+	if ctx.GetSource() == constant.SourceAssistant {
+		if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, request.SaleOrderUuid, model.WithIsAssistant()); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+	} else {
+		if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, request.SaleOrderUuid); err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 
 	// 设置添加来源
@@ -4493,7 +4506,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 	ctx.Log().Debug("获取到账单信息成功")
 
 	// 判断订单状态
-	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderUpdateProductNum); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderUpdateProductNum, 0, model.WithIsAssistant()); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -8924,7 +8937,7 @@ func (s *orderSrv) OrderUnlock(ctx context.Context, saleBillUuid uint64) error {
 	}
 
 	// 验证订单是否可操作
-	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderUnlock); err != nil {
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderUnlock, 0); err != nil {
 		return errors.WithMessage(err)
 	}
 
