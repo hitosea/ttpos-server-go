@@ -25,5 +25,17 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB) error {
 		return err
 	}
 
+	shopAccountService := v1.NewShopAccountService(sourceDB, targetDB)
+	err = shopAccountService.ConvertShopAccount()
+	if err != nil {
+		return err
+	}
+
+	erpMonthlyStatisticsService := v1.NewErpMonthlyStatisticsService(sourceDB, targetDB)
+	err = erpMonthlyStatisticsService.ConvertERPMonthlyStatistics()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
