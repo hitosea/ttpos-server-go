@@ -67,5 +67,11 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB) error {
 		return err
 	}
 
+	payTypeService := v1.NewPayTypeService(sourceDB, targetDB)
+	err = payTypeService.ConvertPayType()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
