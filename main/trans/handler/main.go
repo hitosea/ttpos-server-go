@@ -73,5 +73,11 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB) error {
 		return err
 	}
 
+	printerTemplateService := v1.NewPrinterTemplateService(sourceDB, targetDB)
+	err = printerTemplateService.ConvertPrinterTemplate()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
