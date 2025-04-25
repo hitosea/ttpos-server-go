@@ -34,8 +34,15 @@ func (u *UserGrade) GetDiscount() float64 {
 }
 
 type UserGradeRepository interface {
-	GetUserGradeList() ([]*Delay, error)
+	GetUserGradeList() ([]*UserGrade, error)
 	ConvertUserGrade() error
+}
+
+func NewUserGradeService(db *gorm.DB, targetDB *gorm.DB) UserGradeRepository {
+	return &UserGradeService{
+		db:       db,
+		targetDB: targetDB,
+	}
 }
 
 type UserGradeService struct {
