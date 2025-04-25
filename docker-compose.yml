@@ -100,5 +100,3 @@ services:
     volumes:
       - .env:/var/.env
     restart: always
-
-  
