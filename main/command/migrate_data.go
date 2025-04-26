@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/trans/handler"
 
 	"github.com/jinzhu/copier"
 	"github.com/spf13/cobra"
@@ -198,6 +199,7 @@ var migrateDataCmd = &cobra.Command{
 		// sourceDB = nil
 		// targetDB = nil
 
+		handler.Run(sourceDB, targetDB)
 		fmt.Printf("%s 数据迁移完成 %s\n", greenColor, resetColor)
 	},
 }

@@ -894,7 +894,7 @@ class Product extends BaseModel
             ->leftJoin('product_bom bom', 'p.uuid = bom.product_package_uuid')
             ->leftJoin('file', 'p.image_file_uuid = file.uuid')
             ->where('bom.product_flavor_uuid', '>', 0)
-            ->where('bom.delete_time', 0)
+            // ->where('bom.delete_time', 0)
             ->group('p.uuid')
             ->order('p.sort', 'asc')
             ->order('p.id', 'desc')

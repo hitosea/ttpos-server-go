@@ -10,12 +10,7 @@ import (
 
 // IProductCategoryRepo 商品类别
 type IProductCategoryRepo interface {
-	//GetProductCategoryList() ([]model.ProductCategory, error)
-	//UpdateProductCategory(id uint64, productCategory model.ProductCategory) error
 	CreateProductCategory(productCategory model.ProductCategory) (uint64, error)
-	//DeleteProductCategory(id uint64) error
-	//GetProductCategoryByIdWithMultiLanguageName(id uint64) (*model.ProductCategory, error)
-	//GetProductCategoryListWithMultiLanguageName() ([]model.ProductCategory, error)
 }
 
 func NewProductCategoryRepo(db *gorm.DB) IProductCategoryRepo {

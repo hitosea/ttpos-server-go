@@ -23,6 +23,13 @@ type TableAreaRepository interface {
 	ConvertTableArea() error
 }
 
+func NewTableAreaService(db *gorm.DB, targetDB *gorm.DB) TableAreaRepository {
+	return &TableAreaService{
+		db:       db,
+		targetDB: targetDB,
+	}
+}
+
 type TableAreaService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB

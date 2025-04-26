@@ -11,7 +11,6 @@ use app\common\model\tax\TaxCategory;
 use app\shop\validate\ProductImportsValidate;
 use app\common\model\product\Spec as SpecModel;
 use app\common\model\product\Unit as UnitModel;
-use app\shop\model\product\Label as LabelModel;
 use app\shop\model\product\Product as ProductModel;
 use app\common\model\product\Material as MaterialModel;
 use app\shop\model\product\Category as CategoryModel;

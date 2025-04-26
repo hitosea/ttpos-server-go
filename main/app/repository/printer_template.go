@@ -9,6 +9,7 @@ import (
 // IPrinterTemplateRepo 打印机模板
 type IPrinterTemplateRepo interface {
 	GetPrinterTemplateInfo(id uint64) (model.PrinterTemplate, error)
+	CreatePrinterTemplate(printerTemplate model.PrinterTemplate) error
 }
 
 func NewPrinterTemplateRepo(db *gorm.DB) IPrinterTemplateRepo {
@@ -30,4 +31,12 @@ func (r *PrinterTemplateRepoImpl) GetPrinterTemplateInfo(id uint64) (model.Print
 	db := r.db.Model(&model.PrinterTemplate{}).Where("id = ?", id)
 	err := db.First(&printerTemplate).Error
 	return printerTemplate, err
+}
+
+// CreatePrinterTemplate 创建打印机模板
+func (r *PrinterTemplateRepoImpl) CreatePrinterTemplate(printerTemplate model.PrinterTemplate) error {
+	if err := r.db.Create(&printerTemplate).Error; err != nil {
+		return err
+	}
+	return nil
 }
