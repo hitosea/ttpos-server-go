@@ -286,7 +286,7 @@ class OrderOperationLog extends BaseModel
      */
     public static function getCurrencyUnit($shopSupplierId, $appId)
     {
-        $cacheKey = "currency_unit_{$shopSupplierId}_{$appId}";
+        $cacheKey = '{unit}_' . "currency_unit_{$shopSupplierId}_{$appId}";
         $currency = Cache::get($cacheKey);
         if (!$currency) {
             $currency = Setting::getSupplierItem(SettingEnum::CURRENCY, $shopSupplierId, $appId);
