@@ -1,12 +1,12 @@
 name: Go Build & Docker Push
 on:
   workflow_dispatch:
-    inputs:
-        branch: 
-          description: 'branch (e.g., release)'
-          required: true
-          default: 'new-test'
-    
+
+  push:
+    tags:
+      - 'v*'
+  
+
 env:
   # Go编译配置
   #GOPROXY: https://goproxy.cn,direct
