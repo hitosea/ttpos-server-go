@@ -13,6 +13,7 @@ type ICompanyRepo interface {
 	GetCompany(opts ...DBOption) (model.Company, error) // 获取公司
 	GetCompanyInfo(ctx context.Context, opts ...DBOption) (model.Company, error)
 	GetCompanyInfoByUuid(uuid uint64) (*model.Company, error)
+	CreateCompany(obj model.Company) error
 }
 
 func NewCompanyRepo(db *gorm.DB) ICompanyRepo {
@@ -26,6 +27,24 @@ func NewCompanyRepoImpl(db *gorm.DB) ICompanyRepo {
 
 type companyRepo struct {
 	db *gorm.DB
+}
+
+// CreateCompany 创建公司
+func (r *companyRepo) CreateCompany(obj model.Company) error {
+	company := obj
+	companySetting := obj.CompanySetting
+
+	company.SetNil()
+	result := r.db.Create(&company)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	result = r.db.Create(&companySetting)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
 }
 
 // GetCompanyInfo 获取公司信息

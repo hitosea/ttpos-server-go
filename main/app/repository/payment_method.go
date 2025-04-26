@@ -25,6 +25,8 @@ type IPaymentMethodRepo interface {
 	GetPaymentMethodByUuid(uuid uint64) (*model.PaymentMethod, error)
 	GetPaymentMethods(opts ...DBOption) []model.PaymentMethod
 	GetPaymentMethodsByCtx(ctx context.Context) []*model.PaymentMethod // 获取收银机支付页面的支付方式列表
+
+	CreatePaymentMethod(paymentMethod model.PaymentMethod) error // 创建支付方式
 }
 
 // paymentMethodRepo 仓库
@@ -40,6 +42,14 @@ func NewPaymentMethodRepo(db *gorm.DB) IPaymentMethodRepo {
 // NewPaymentMethodRepoImpl 创建新仓库实现
 func NewPaymentMethodRepoImpl(db *gorm.DB) IPaymentMethodRepo {
 	return &paymentMethodRepo{db: db}
+}
+
+func (r *paymentMethodRepo) CreatePaymentMethod(paymentMethod model.PaymentMethod) error {
+	paymentMethod.SetNil()
+	if err := r.db.Create(&paymentMethod).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetPaymentMethod 获取支付方式

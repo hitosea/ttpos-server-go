@@ -101,7 +101,7 @@ func (p *PrinterRepoImpl) GetPrinterTemplate(id uint64) int {
 
 // 获取商品打印机列表
 func (p *PrinterRepoImpl) getProductPrinterList(widthPrintMode int) ([]model.ProductPrinter, error) {
-	// 构建缓存键
+	// // 构建缓存键
 	cacheKey := fmt.Sprintf("PRODUCT_PRINTER_LIST:%d:%d", p.ctx.GetCompanyUuid(), widthPrintMode)
 
 	// 尝试从缓存获取
@@ -130,12 +130,21 @@ func (p *PrinterRepoImpl) getProductPrinterList(widthPrintMode int) ([]model.Pro
 		repository.CommonRepo.WhereBySoftDelete(),
 		repository.CommonRepo.Preload(repository.WithPreload{
 			Query: "ProductPrinterRegions",
+			Args: []any{
+				repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+			},
 		}),
 		repository.CommonRepo.Preload(repository.WithPreload{
 			Query: "ProductPrinterItems.Printer.PrinterType",
+			Args: []any{
+				repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+			},
 		}),
 		repository.CommonRepo.Preload(repository.WithPreload{
 			Query: "ProductPrinterProductItems",
+			Args: []any{
+				repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySoftDelete()),
+			},
 		}),
 	)
 	//

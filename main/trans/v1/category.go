@@ -90,6 +90,13 @@ type CategoryRepository interface {
 	ConvertCategory() error
 }
 
+func NewCategoryService(db *gorm.DB, targetDB *gorm.DB) CategoryRepository {
+	return &CategoryService{
+		db:       db,
+		targetDB: targetDB,
+	}
+}
+
 type CategoryService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB
@@ -143,28 +150,27 @@ func (s *CategoryService) ConvertCategory() error {
 			return err
 		}
 
-		//if category.IsSpecial {
-		//specialCategory := model.ProductSpecialCategory{
-		//	Uuid:                  category.CategoryID,
-		//	Status:                category.Status,
-		//	Name:                  multiLanguageName.ZhName,
-		//	MultiLanguageNameUuid: uint(id),
-		//	Sort:               category.Sort,
-		//}
-		//_, err := repository.NewProductSpecialCategoryRepo(s.targetDB).CreateProductSpecialCategory(specialCategory)
-		//if err != nil {
-		//	return err
-		//}
-		//} else {
+		uuid := uint64(0)
+		if category.CategoryID == 0 {
+			uuid = 18446744073709551615
+		} else {
+			uuid = uint64(category.CategoryID)
+		}
+		key := ""
+		// 如果categoryID为0，则key为all
+		if category.CategoryID == 0 {
+			key = "all"
+		}
 		productCategory := model.ProductCategory{
 			BaseModel: model.BaseModel{
-				Uuid: uint64(category.CategoryID),
+				Uuid: uuid,
 			},
-			Name:                  names.Zh,
+			Name:                  category.Name,
 			ParentUuid:            uint64(category.ParentID),
 			MultiLanguageNameUuid: uint64(id),
 			Status:                category.Status,
 			Sort:                  category.Sort,
+			CategoryKey:           key,
 		}
 		_, err = repository.NewProductCategoryRepo(s.targetDB).CreateProductCategory(productCategory)
 		if err != nil {

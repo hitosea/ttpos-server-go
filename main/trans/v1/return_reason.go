@@ -23,6 +23,13 @@ type ReturnReasonRepository interface {
 	ConvertReturnReason() error
 }
 
+func NewReturnReasonService(db *gorm.DB, targetDB *gorm.DB) ReturnReasonRepository {
+	return &ReturnReasonService{
+		db:       db,
+		targetDB: targetDB,
+	}
+}
+
 type ReturnReasonService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB

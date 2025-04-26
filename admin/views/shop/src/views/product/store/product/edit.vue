@@ -307,55 +307,40 @@
               this.form.many_select_list = [];
 
               // 处理规格的材料组
-              if (self.form.model.sku.length > 0) {
-                self.form.model.sku.map((item, index) => {
-                  //删除多余字段
-                  delete item.create_time;
-                  delete item.update_time;
+              self.form.model.sku.map((item, index) => {
+                //删除多余字段
+                delete item.create_time;
+                delete item.update_time;
 
-                  //处理条唯一性
-                  item.barcodeUniqueness = true;
+                //处理条唯一性
+                item.barcodeUniqueness = true;
 
-                  this.form.many_select_list.push([]);
-                  if (item.spec_name) {
-                    try {
-                      self.form.model.sku[index].spec_name = JSON.parse(item.spec_name || '{}');
-                    } catch (e) {}
-                  } else {
-                    self.form.model.sku[index].spec_name = JSON.parse(languageData);
+                this.form.many_select_list.push([]);
+                if (item.spec_name) {
+                  try {
+                    self.form.model.sku[index].spec_name = JSON.parse(item.spec_name || '{}');
+                  } catch (e) {}
+                } else {
+                  self.form.model.sku[index].spec_name = JSON.parse(languageData);
+                }
+
+                if (self.form.model.type == 10) {
+                  self.form.model.sku[index].spec_id = self.form.model.sku[index].spec_sku_id;
+                  item.material.map((items, indexs) => {
+                    this.form.many_select_list[index].push(items.materialProduct);
+                    this.form.many_select_list[index][indexs].product_id = this.form.model.sku[index].material[indexs].material_id;
+                    this.form.model.sku[index].material[indexs].product_id = this.form.model.sku[index].material[indexs].material_id;
+
+                    this.form.many_select_list[index][indexs].sku = [];
+                    this.form.many_select_list[index][indexs].sku[0] = {};
+                    this.form.many_select_list[index][indexs].sku[0].material_stock = this.form.many_select_list[index][indexs].product_material_stock;
+                    this.form.many_select_list[index][indexs].sku[0].product_id = this.form.model.sku[index].material[indexs].material_id;
+                  });
+                  if (this.form.many_select_list[0].length > 0) {
+                    this.form.single_select_list = JSON.parse(JSON.stringify(this.form.many_select_list[0]));
                   }
-
-                  if (self.form.model.type == 10) {
-                    self.form.model.sku[index].spec_id = self.form.model.sku[index].spec_sku_id;
-                    item.material.map((items, indexs) => {
-                      this.form.many_select_list[index].push(items.materialProduct);
-                      this.form.many_select_list[index][indexs].product_id = this.form.model.sku[index].material[indexs].material_id;
-                      this.form.model.sku[index].material[indexs].product_id = this.form.model.sku[index].material[indexs].material_id;
-
-                      this.form.many_select_list[index][indexs].sku = [];
-                      this.form.many_select_list[index][indexs].sku[0] = {};
-                      this.form.many_select_list[index][indexs].sku[0].material_stock = this.form.many_select_list[index][indexs].product_material_stock;
-                      this.form.many_select_list[index][indexs].sku[0].product_id = this.form.model.sku[index].material[indexs].material_id;
-                    });
-                    if (this.form.many_select_list[0].length > 0) {
-                      this.form.single_select_list = JSON.parse(JSON.stringify(this.form.many_select_list[0]));
-                    }
-                  }
-                });
-              } else {
-                this.form.model.sku.push({
-                  spec_name: JSON.parse(languageData),
-                  product_price: null,
-                  stock_num: null,
-                  product_weight: '',
-                  cost_price: 0,
-                  material: [],
-                  spec_id: null,
-                  barcode: '',
-                  barcodeUniqueness: true, //条形码是否唯一
-                });
-                self.form.many_select_list.push([]);
-              }
+                }
+              });
 
               //处理属性
               self.form.model.product_attr.map((item) => {

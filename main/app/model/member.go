@@ -178,7 +178,6 @@ func (model *Member) HasPassword() bool {
 // MemberLevel 会员等级表 `ttpos_member_level`
 type MemberLevel struct {
 	BaseModel
-	Uuid         uint64  `gorm:"column:uuid;type:bigint(20) unsigned;default:0;comment:会员等级ID;NOT NULL" json:"uuid"`
 	Name         string  `gorm:"column:name;type:varchar(255);comment:等级名称;NOT NULL" json:"name"`
 	OpenMoney    int     `gorm:"column:open_money;type:tinyint(3);default:0;comment:是否开放累计消费额升级，0-否 1-是" json:"open_money"`
 	UpgradeMoney float64 `gorm:"column:upgrade_money;type:decimal(12,2);default:0.00;comment:升级条件，累计消费额;NOT NULL" json:"upgrade_money"`

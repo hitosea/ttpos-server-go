@@ -23,6 +23,13 @@ type FreeTagRepository interface {
 	ConvertFreeTag() error
 }
 
+func NewFreeTagService(db *gorm.DB, targetDB *gorm.DB) FreeTagRepository {
+	return &FreeTagService{
+		db:       db,
+		targetDB: targetDB,
+	}
+}
+
 type FreeTagService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB

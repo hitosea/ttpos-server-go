@@ -22,6 +22,13 @@ type CustomerTypeRepository interface {
 	ConvertCustomerType() error
 }
 
+func NewCustomerTypeService(db *gorm.DB, targetDB *gorm.DB) CustomerTypeRepository {
+	return &CustomerTypeService{
+		db:       db,
+		targetDB: targetDB,
+	}
+}
+
 type CustomerTypeService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB
