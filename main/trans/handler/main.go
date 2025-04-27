@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, targetCompanyUuid uint64) error {
+func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceCompanyId int, targetCompanyUuid uint64) error {
 	var err error
 	userGradeService := v1.NewUserGradeService(sourceDB, targetDB)
 	err = userGradeService.ConvertUserGrade()
@@ -23,7 +23,7 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, targetComp
 	}
 
 	// 商家表
-	appService := v1.NewAppService(sourceDB, targetDB, targetCompanyUuid)
+	appService := v1.NewAppService(sourceDB, targetSassDB, targetDB, sourceCompanyId, targetCompanyUuid)
 	err = appService.ConvertApp()
 	if err != nil {
 		return errors.WithMessage(err)
