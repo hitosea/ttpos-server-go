@@ -508,6 +508,29 @@ class Product extends ProductModel
      */
     public function setStatus($state)
     {
+        $this->startTrans();
+        try {
+            $value = $state == 10 ? 1 : 0;
+            // 更新product_package表status
+            $res = $this->save(['status' => $value]);
+            if ($res === false) {
+                return false;
+            }
+            // 更新product_bom表status
+            $boms = ProductBom::where('product_package_uuid', $this->uuid)->select();
+            foreach ($boms as $bom) {
+                $bomRes = $bom->save(['status' => $value]);
+                if ($bomRes === false) {
+                    return false;
+                }
+            }
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->error = $e->getMessage();
+            $this->rollback();
+            return false;
+        }
         $value = $state == 10 ? 1 : 0;
         return $this->save(['status' => $value]) !== false;
     }
