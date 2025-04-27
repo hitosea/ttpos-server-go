@@ -146,5 +146,12 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, companyUui
 		return err
 	}
 
+	// 规格
+	specService := v1.NewSpecService(sourceDB, targetDB)
+	err = specService.ConvertSpec()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
