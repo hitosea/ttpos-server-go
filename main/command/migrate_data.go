@@ -226,7 +226,8 @@ var migrateDataCmd = &cobra.Command{
 		}
 
 		// 二.数据迁移
-		err = handler.Run(sourceDB, targetDB, targetSaasDB,companyUuid)
+		err = handler.Run(sourceDB, targetDB, targetSaasDB, companyUuid)
+
 		if err != nil {
 			fmt.Printf("%s 数据迁移失败 : %s %s\n", redColor, err, resetColor)
 			return

@@ -1967,6 +1967,72 @@
                 }
             }
         },
+        "/assistant/desk/order/payment/qrcode": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取支付方式的二维码信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台.结账"
+                ],
+                "summary": "获取支付方式的二维码信息",
+                "parameters": [
+                    {
+                        "type": "number",
+                        "description": "支付金额, 必填",
+                        "name": "payment_amount",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "支付方式UUID, 必填",
+                        "name": "payment_method_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单UUID, 必填",
+                        "name": "sale_bill_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单UUID, 必填",
+                        "name": "sale_order_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentQrcodeInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/desk/order/payment/zero_rule": {
             "post": {
                 "security": [

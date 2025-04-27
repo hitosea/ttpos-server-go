@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, companyUuid uint64) error {
+func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, targetCompanyUuid uint64) error {
 	userService := v1.NewUserGradeService(sourceDB, targetDB)
 	err := userService.ConvertUserGrade()
 	if err != nil {
@@ -21,7 +21,7 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, companyUui
 	}
 
 	// 商家表
-	appService := v1.NewAppService(sourceDB, targetDB, v1.WithCompanyUuid(companyUuid))
+	appService := v1.NewAppService(sourceDB, targetDB, targetCompanyUuid)
 	err = appService.ConvertApp()
 	if err != nil {
 		return err
@@ -119,7 +119,7 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, companyUui
 	}
 
 	// 员工
-	shopUserService := v1.NewShopUserService(sourceDB, targetDB, v1.WithCompanyUuid(companyUuid))
+	shopUserService := v1.NewShopUserService(sourceDB, targetDB, targetSassDB, targetCompanyUuid)
 	err = shopUserService.ConvertShopUser()
 	if err != nil {
 		return err

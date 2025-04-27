@@ -9,6 +9,7 @@ import (
 type ICompanyStaffRepo interface {
 	WhereUsername(username string) DBOption
 	GetCompanyStaff(opts ...DBOption) model.CompanyStaff
+	CreateCompanyStaff(companyStaff *model.CompanyStaff) *model.CompanyStaff
 }
 
 func NewCompanyStaffRepo(db *gorm.DB) ICompanyStaffRepo {
@@ -36,5 +37,10 @@ func (r *companyStaffRepo) GetCompanyStaff(opts ...DBOption) model.CompanyStaff 
 		db = opt(db)
 	}
 	db.First(&companyStaff)
+	return companyStaff
+}
+
+func (r *companyStaffRepo) CreateCompanyStaff(companyStaff *model.CompanyStaff) *model.CompanyStaff {
+	r.db.Model(&model.CompanyStaff{}).Create(companyStaff)
 	return companyStaff
 }
