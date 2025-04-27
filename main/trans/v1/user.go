@@ -54,12 +54,26 @@ type User struct {
 type UserRepository interface {
 	GetUserList() ([]*User, error)
 	GetUserByID(id uint) (*User, error)
+	GetUserCardRecordByUserIdAndCardId(userId uint, cardId uint) (*UserCardRecord, error)
 	ConvertUser() error
+}
+
+func NewUserService(db *gorm.DB, targetDB *gorm.DB) UserRepository {
+	return &UserService{
+		db:       db,
+		targetDB: targetDB,
+	}
 }
 
 type UserService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB
+}
+
+func (s *UserService) GetUserCardRecordByUserIdAndCardId(userId uint, cardId uint) (*UserCardRecord, error) {
+	var userCardRecord UserCardRecord
+	err := s.db.Where("user_id = ? AND card_id = ?", userId, cardId).First(&userCardRecord).Error
+	return &userCardRecord, err
 }
 
 func (s *UserService) GetUserList() ([]*User, error) {
@@ -81,6 +95,12 @@ func (s *UserService) ConvertUser() error {
 	}
 	for _, user := range users {
 		fmt.Println(fmt.Sprintf("user: %+v", user))
+		userCardRecord, err := s.GetUserCardRecordByUserIdAndCardId(user.UserID, user.CardID)
+		if err != nil {
+			return err
+		}
+		fmt.Println(fmt.Sprintf("userCardRecord: %+v", userCardRecord))
+
 		member := model.Member{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(user.UserID),
@@ -99,8 +119,19 @@ func (s *UserService) ConvertUser() error {
 			GiftBalance:      user.GiftBalance,
 			MemberLevelUuid:  uint64(user.GradeID),
 			MemberCardUuid:   uint64(user.CardID),
+			MemberCard: &model.MemberCard{
+				BaseModel: model.BaseModel{
+					Uuid:       uint64(user.CardID),
+					CreateTime: int64(user.CreateTime),
+					UpdateTime: int64(user.UpdateTime),
+				},
+				CardTypeUuid: uint64(user.CardID),
+				MemberUuid:   uint64(user.UserID),
+				ExpireTime:   int64(userCardRecord.ExpireTime),
+				Discount:     userCardRecord.GetDiscount(),
+			},
 		}
-		err := repository.NewMemberRepo(s.targetDB).CreateMember(member)
+		err = repository.NewMemberRepo(s.targetDB).CreateMemberAndMemberCard(member)
 		if err != nil {
 			return err
 		}

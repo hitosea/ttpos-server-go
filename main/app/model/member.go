@@ -31,6 +31,11 @@ type Member struct {
 	MemberCard  *MemberCard  `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
 }
 
+func (model *Member) SetNil() {
+	model.MemberLevel = nil
+	model.MemberCard = nil
+}
+
 // 累计会员的消费金额、消费次数
 func (model *Member) AccumulateConsumeAmount(amount float64) {
 	model.AccumulatedConsumptionAmount = decimal.NewFromFloat(model.AccumulatedConsumptionAmount).Add(decimal.NewFromFloat(amount)).InexactFloat64()
@@ -251,7 +256,7 @@ type MemberCardType struct {
 type MemberCardLog struct {
 	BaseModel
 	Price              float64 `gorm:"column:price;type:decimal(12,2);default:0.00;comment:价格,会员卡价格,不随后台改变,记录领取时的价格;NOT NULL" json:"price"`
-	Discount           int     `gorm:"column:discount;type:tinyint(3);default:0;comment:折扣,单位%,不随后台改变,记录领取时的折扣;NOT NULL" json:"discount"`
+	Discount           float64 `gorm:"column:discount;type:tinyint(3);default:0;comment:折扣,单位%,不随后台改变,记录领取时的折扣;NOT NULL" json:"discount"`
 	Expire             int     `gorm:"column:expire;type:int(11);default:0;comment:有效期限,单位:月, 0为永久有效,不随后台改变,记录领取时的有效期限;NOT NULL" json:"expire"`
 	MemberName         string  `gorm:"column:member_name;type:varchar(255);comment:会员名称,不随后台改变,当无法用member_uuid获取会员信息时,用此字段;NOT NULL" json:"member_name"`
 	MemberPhone        string  `gorm:"column:member_phone;type:varchar(255);comment:会员电话,不随后台改变,当无法用member_uuid获取会员信息时,用此字段;NOT NULL" json:"member_phone"`

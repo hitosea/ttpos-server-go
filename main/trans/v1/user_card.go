@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -34,10 +35,22 @@ type UserCard struct {
 	UpdateTime    int64   `gorm:"type:int(11) unsigned;not null;default:0" json:"update_time" comment:"更新时间"`
 }
 
+func (u *UserCard) GetDiscount() float64 {
+	discount := decimal.NewFromFloat(u.Discount).Div(decimal.NewFromInt(100)).Round(2).InexactFloat64()
+	return discount
+}
+
 type UserCardRepository interface {
 	GetUserCardList() ([]*UserCard, error)
 	GetUserCardByID(id int) (*UserCard, error)
 	ConvertUserCard() error
+}
+
+func NewUserCardService(db *gorm.DB, targetDB *gorm.DB) UserCardRepository {
+	return &UserCardService{
+		db:       db,
+		targetDB: targetDB,
+	}
 }
 
 type UserCardService struct {
@@ -75,7 +88,7 @@ func (s *UserCardService) ConvertUserCard() error {
 			Name:         userCard.CardName,
 			Expire:       userCard.Expire,
 			Price:        userCard.Money,
-			Discount:     userCard.Discount,
+			Discount:     userCard.GetDiscount(),
 			Sort:         userCard.Sort,
 			Status:       userCard.Status,
 			OpenMoney:    userCard.OpenMoney,
