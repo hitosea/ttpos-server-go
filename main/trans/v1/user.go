@@ -3,6 +3,8 @@ package v1
 import (
 	"fmt"
 	"strconv"
+	"strings"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -91,15 +93,36 @@ func (s *UserService) GetUserByID(id uint) (*User, error) {
 func (s *UserService) ConvertUser() error {
 	users, err := s.GetUserList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, user := range users {
 		fmt.Println(fmt.Sprintf("user: %+v", user))
-		userCardRecord, err := s.GetUserCardRecordByUserIdAndCardId(user.UserID, user.CardID)
+
+		var userCardRecord *UserCardRecord
+		userCardRecord, err = s.GetUserCardRecordByUserIdAndCardId(user.UserID, user.CardID)
 		if err != nil {
-			return err
+			if strings.Contains(err.Error(), "record not found") {
+				userCardRecord = nil
+			} else {
+				return errors.WithMessage(err)
+			}
 		}
 		fmt.Println(fmt.Sprintf("userCardRecord: %+v", userCardRecord))
+
+		var memberCard *model.MemberCard
+		if userCardRecord != nil {
+			memberCard = &model.MemberCard{
+				BaseModel: model.BaseModel{
+					Uuid:       uint64(user.CardID),
+					CreateTime: int64(user.CreateTime),
+					UpdateTime: int64(user.UpdateTime),
+				},
+				CardTypeUuid: uint64(user.CardID),
+				MemberUuid:   uint64(user.UserID),
+				ExpireTime:   int64(userCardRecord.ExpireTime),
+				Discount:     userCardRecord.GetDiscount(),
+			}
+		}
 
 		member := model.Member{
 			BaseModel: model.BaseModel{
@@ -119,21 +142,11 @@ func (s *UserService) ConvertUser() error {
 			GiftBalance:      user.GiftBalance,
 			MemberLevelUuid:  uint64(user.GradeID),
 			MemberCardUuid:   uint64(user.CardID),
-			MemberCard: &model.MemberCard{
-				BaseModel: model.BaseModel{
-					Uuid:       uint64(user.CardID),
-					CreateTime: int64(user.CreateTime),
-					UpdateTime: int64(user.UpdateTime),
-				},
-				CardTypeUuid: uint64(user.CardID),
-				MemberUuid:   uint64(user.UserID),
-				ExpireTime:   int64(userCardRecord.ExpireTime),
-				Discount:     userCardRecord.GetDiscount(),
-			},
+			MemberCard:       memberCard,
 		}
 		err = repository.NewMemberRepo(s.targetDB).CreateMemberAndMemberCard(member)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

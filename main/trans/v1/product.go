@@ -181,6 +181,12 @@ func (model *ProductAttrGroup) GetMaxSelection() uint {
 // 解析ProductAttr字段
 func (model *Product) ParseProductAttr() ([]*ProductAttrGroup, error) {
 	var attributes []*ProductAttrGroup
+	fmt.Println(" model.ProductAttr ", model.ProductAttr)
+	// model.ProductAttr 为"" 或 []
+	if len(model.ProductAttr) < 10 {
+		fmt.Println("无属性")
+		return attributes, nil
+	}
 	err := json.Unmarshal([]byte(model.ProductAttr), &attributes)
 	if err != nil {
 		return nil, err
@@ -190,6 +196,11 @@ func (model *Product) ParseProductAttr() ([]*ProductAttrGroup, error) {
 
 // 解析ProductFeed字段
 func (model *Product) ParseProductFeed() ([]utils.ProductFeed, error) {
+	// model.ProductFeed 为"" 或 []
+	if len(model.ProductFeed) < 5 {
+		fmt.Println("无加料")
+		return nil, nil
+	}
 	productFeeds, err := utils.ParseFeedJson(model.ProductFeed)
 	if err != nil {
 		return nil, err

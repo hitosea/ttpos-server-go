@@ -74,6 +74,9 @@ func (s *ProductService) ConvertProduct() error {
 	if err := s.targetDB.Transaction(func(tx *gorm.DB) error {
 		for index, _ := range products {
 			product := &products[index]
+			if product.IsDelete == 1 {
+				continue
+			}
 
 			if product.Type == constant.ProductTypeProduct {
 				// 成品

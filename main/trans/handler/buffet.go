@@ -48,7 +48,7 @@ func (s *BuffetService) GetBuffetList() ([]oldModel.Buffet, error) {
 	var buffets []oldModel.Buffet
 	err := s.db.Preload("BuffetProducts").Preload("BuffetCustomers").Preload("BuffetTaxes").Find(&buffets).Error
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return buffets, nil
 }
@@ -56,7 +56,7 @@ func (s *BuffetService) GetBuffetList() ([]oldModel.Buffet, error) {
 func (s *BuffetService) ConvertBuffet() error {
 	buffets, err := s.GetBuffetList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	if err := s.targetDB.Transaction(func(tx *gorm.DB) error {
 		for index, _ := range buffets {
@@ -64,16 +64,16 @@ func (s *BuffetService) ConvertBuffet() error {
 			fmt.Println(fmt.Sprintf("-----迁移自助餐：%+v", buffet))
 			buffetPackage, err := newModel.NewBuffet(buffet)
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 			repo := repository.NewBuffetRepo(tx)
 			if err := repo.CreateBuffet(*buffetPackage); err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		}
 		return nil
 	}); err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }
