@@ -223,5 +223,12 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, targetComp
 		return err
 	}
 
+	// 桌台
+	tableService := v1.NewTableService(sourceDB, targetDB)
+	err = tableService.ConvertTable()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
