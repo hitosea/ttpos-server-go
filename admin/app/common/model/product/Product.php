@@ -1100,7 +1100,7 @@ class Product extends BaseModel
                 'product_material_stock' => floatval($productMaterialStock),
                 'product_name' => $row['product_name'],
                 'product_name_text' => extractLanguage($row['product_name']),
-                'product_price' => $row['product_price'],
+                'product_price' => $row['product_price'] ?: 0,
                 'product_sort' => $row['product_sort'],
                 'product_status' => [
                     'text' => $row['status'] === 1 ? __('上架') : __('下架'),
