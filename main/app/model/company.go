@@ -65,6 +65,7 @@ type CompanyStaff struct {
 	CompanyUuid uint64 `gorm:"column:company_uuid;type:bigint(20) unsigned;default:0;comment:集团ID;NOT NULL" json:"company_uuid"`
 	Username    string `gorm:"column:username;type:varchar(255);comment:员工账号;NOT NULL" json:"username"`
 	Phone       string `gorm:"column:phone;type:varchar(255);comment:员工手机号;NOT NULL" json:"phone"`
+	IsSuper     int    `gorm:"column:is_super;type:int(11);default:0;comment:是否超级管理员" json:"is_super"`
 
 	Company *Company `gorm:"foreignKey:CompanyUuid;references:Uuid"`
 }

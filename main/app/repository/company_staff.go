@@ -10,6 +10,7 @@ type ICompanyStaffRepo interface {
 	WhereUsername(username string) DBOption
 	GetCompanyStaff(opts ...DBOption) model.CompanyStaff
 	CreateCompanyStaff(companyStaff *model.CompanyStaff) *model.CompanyStaff
+	UpdateCompanyStaff(uuid uint64, vars map[string]any) error
 }
 
 func NewCompanyStaffRepo(db *gorm.DB) ICompanyStaffRepo {
@@ -43,4 +44,8 @@ func (r *companyStaffRepo) GetCompanyStaff(opts ...DBOption) model.CompanyStaff 
 func (r *companyStaffRepo) CreateCompanyStaff(companyStaff *model.CompanyStaff) *model.CompanyStaff {
 	r.db.Model(&model.CompanyStaff{}).Create(companyStaff)
 	return companyStaff
+}
+
+func (r *companyStaffRepo) UpdateCompanyStaff(uuid uint64, vars map[string]any) error {
+	return r.db.Model(&model.CompanyStaff{}).Where("uuid = ?", uuid).Updates(vars).Error
 }
