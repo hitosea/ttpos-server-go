@@ -100,21 +100,29 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 
 	// 打印管理
 	{
-		// 打印机
+		// 商品打印标签 PrinterTag
+		productPrintLabelService := v1.NewProductPrintLabelService(sourceDB, targetDB)
+		err = productPrintLabelService.ConvertProductPrintLabel()
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+
+		// 打印机 Printer
 		printerService := v1.NewPrinterService(sourceDB, targetDB)
 		err = printerService.ConvertPrinter()
 		if err != nil {
 			return err
 		}
 
-		// 打印机模板
+		// 打印机模板 PrinterTemplate
 		printerTemplateService := v1.NewPrinterTemplateService(sourceDB, targetDB)
 		err = printerTemplateService.ConvertPrinterTemplate()
 		if err != nil {
 			return err
 		}
 
-		// 商品打印
+		// 商品打印 ProductPrinterProductItem ProductPrinterItem ProductPrinterRegion ProductPrinter
+		// ToDo ProductPrinter 打印方式不正确
 		supplierPrintingService := v1.NewSupplierPrintingService(sourceDB, targetDB)
 		err = supplierPrintingService.ConvertSupplierPrinting()
 		if err != nil {
@@ -124,11 +132,13 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 
 	// 会员
 	{
+		// 会员等级
 		userGradeService := v1.NewUserGradeService(sourceDB, targetDB)
 		err = userGradeService.ConvertUserGrade()
 		if err != nil {
 			return err
 		}
+
 		// 会员
 		userService := v1.NewUserService(sourceDB, targetDB)
 		err = userService.ConvertUser()
@@ -224,13 +234,6 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 	// 商品单位
 	productUnitService := v1.NewProductUnitService(sourceDB, targetDB)
 	err = productUnitService.ConvertProductUnit()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 商品打印标签
-	productPrintLabelService := v1.NewProductPrintLabelService(sourceDB, targetDB)
-	err = productPrintLabelService.ConvertProductPrintLabel()
 	if err != nil {
 		return errors.WithMessage(err)
 	}
