@@ -79,5 +79,11 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB) error {
 		return err
 	}
 
+	shopRoleService := v1.NewShopRoleService(sourceDB, targetDB)
+	err = shopRoleService.ConvertShopRole()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
