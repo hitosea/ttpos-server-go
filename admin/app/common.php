@@ -268,17 +268,17 @@ function extractLanguage($json)
 function getSettingLanguages($companyUuid = 0)
 {
     if ($companyUuid) {
-        if (!($shopInfo = Cache::get('common_shop_info' . $companyUuid)) || !Cache::get('first_shop_info')) {
+        if (!($shopInfo = Cache::get('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid)) || !Cache::get('{firstshop}_' . 'first_shop_info')) {
             $shopInfo = User::getShopInfo('', true);
-            Cache::tag('common_get_settingLanguages')->set('common_shop_info' . $companyUuid, $shopInfo);
+            Cache::tag('common_get_settingLanguages')->set('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid, $shopInfo);
         }
     } else {
         $shopInfo = User::getShopInfo('', true);
     }
     $companyUuid = $shopInfo['company_uuid'] ?? 0;
-    if (!$languages = Cache::get('common_setting_languages' . $companyUuid)) {
+    if (!$languages = Cache::get('{common_get_settingLanguages}_' . 'common_setting_languages' . $companyUuid)) {
         $languages = SettingModel::getSupplierLanguage($companyUuid);
-        Cache::tag('common_get_settingLanguages')->set('common_setting_languages' . $companyUuid, $languages);
+        Cache::tag('common_get_settingLanguages')->set('{common_get_settingLanguages}_' . 'common_setting_languages' . $companyUuid, $languages);
     }
     return $languages;
 }

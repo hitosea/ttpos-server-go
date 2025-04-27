@@ -143,9 +143,10 @@ class Category extends BaseModel
         $isPaginate = ($request->is_paginate !== false && $page != null && $list_rows != null);
         $order_conditions = $is_sort ? ['c.sort' => 'asc', 'c.create_time' => 'desc'] : ['c.create_time' => 'desc'];
         $child_order_conditions = $is_sort ? ['sort' => 'asc', 'create_time' => 'desc'] : ['create_time' => 'desc'];
-
+        // 
         $model = new static;
-        $cacheKey = 'category_' . $model::$app_id . $type . $is_special . $is_sort . $all . '_' . checkDetect();
+        $tag = 'category' . $model::$app_id . (!$is_special ? 1 : 0) . $type;
+        $cacheKey = '{' . $tag . '}_' . $model::$app_id . $type . $is_special . $is_sort . $all . '_' . checkDetect();
         if ($name != '' || $isPaginate || !($result = Cache::get($cacheKey))) {
             $prefix = Env::get('DB_PREFIX');
             $data = $model->alias('c')->with(['images', 'child' => function ($q) use ($name, $child_order_conditions) {
@@ -177,7 +178,7 @@ class Category extends BaseModel
             $all = !empty($data) ? $data->toArray() : [];
             $result = $all;
             if ($name == '' && !$isPaginate) {
-                Cache::tag('category' . $model::$app_id . (!$is_special ? 1 : 0) . $type)->set($cacheKey, $all);
+                Cache::tag($tag)->set($cacheKey, $all);
             }
         }
         return $result;

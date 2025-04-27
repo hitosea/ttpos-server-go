@@ -29,10 +29,10 @@ class ClearCache extends Command
         Cache::set('sync_setting_' . SettingEnum::CLOUD_BASIC, null);
         //
         $shop_supplier_id = User::getShopInfo('shop_supplier_id');
-        Cache::tag('category' . $shop_supplier_id . '0' . '0');
-        Cache::tag('category' . $shop_supplier_id . '0' . '1');
-        Cache::tag('category' . $shop_supplier_id . '1' . '0');
-        Cache::tag('category' . $shop_supplier_id . '1' . '1');
+        Cache::tag('category' . $shop_supplier_id . '0' . '0')->clear();
+        Cache::tag('category' . $shop_supplier_id . '0' . '1')->clear();
+        Cache::tag('category' . $shop_supplier_id . '1' . '0')->clear();
+        Cache::tag('category' . $shop_supplier_id . '1' . '1')->clear();
         //
         Cache::set('__SYNC_GET_PUBLICKEY_', 0);
     }

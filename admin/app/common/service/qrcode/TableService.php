@@ -65,9 +65,9 @@ class TableService extends Base
         $auth = new AuthService;
         $companyUuid = request()->appId;
         //
-        $tables = TableModel::where('table_id', 'in', $tableIds)->select()->toArray();
+        $tables = TableModel::where('uuid', 'in', $tableIds)->select()->toArray();
         foreach ($tables as $table) {
-            $id = $table['table_id'];
+            $id = $table['uuid'];
             $qrCodeValue = $this->action == 'update' ? StringHelp::generatePassword(6, 1) : $table['qrcode_token'];
             $arr = ['a' => $companyUuid, 't' => $id, 'q' => $qrCodeValue];
             $token = $auth->generateToken($arr);
