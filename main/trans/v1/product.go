@@ -81,10 +81,12 @@ func (model *Product) GetProductStatus() uint8 {
 }
 
 func (model *Product) GetStockDeductMethod() uint {
+	// 10下单减库存 20付款减库存
 	if model.DeductStockType == 10 {
-		return 0
+		// 1 下单减库存 0 付款减库存
+		return 1
 	}
-	return 1
+	return 0
 }
 
 func (model *Product) IsShowCashierValue() uint {
@@ -301,7 +303,7 @@ func (s *ProductService) ConvertProduct() error {
 				TakeoutTaxUuid:        productTakeoutTax.TaxCategoryID,
 				SpecialCategoryUuid:   product.SpecialID,
 				PrinterTagUuid:        product.LabelID,
-				SupplierUuid:          product.ShopSupplierID,
+				SupplierUuid:          uint64(product.ErpSupplierID),
 				Status:                uint(Status),
 				IsShowCashier:         IsShowCashier,
 				IsShowTablet:          IsShowTablet,
