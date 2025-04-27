@@ -14,6 +14,7 @@ type ICompanyRepo interface {
 	GetCompanyInfo(ctx context.Context, opts ...DBOption) (model.Company, error)
 	GetCompanyInfoByUuid(uuid uint64) (*model.Company, error)
 	CreateCompany(obj model.Company) error
+	UpdateCompany(uuid uint64, vars map[string]any) error
 }
 
 func NewCompanyRepo(db *gorm.DB) ICompanyRepo {
@@ -98,4 +99,8 @@ func (r *companyRepo) GetCompanyInfoByUuid(uuid uint64) (*model.Company, error) 
 		return nil, errors.WithMessage(err)
 	}
 	return &companyInfo, nil
+}
+
+func (r *companyRepo) UpdateCompany(uuid uint64, vars map[string]any) error {
+	return r.db.Model(&model.Company{}).Where("uuid = ?", uuid).Updates(vars).Error
 }

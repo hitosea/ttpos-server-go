@@ -19,11 +19,12 @@ import (
 )
 
 var (
-	companyIdStr string
-	companyUuid  uint64
-	sourceDB     *gorm.DB
-	targetDB     *gorm.DB
-	targetSaasDB *gorm.DB
+	companyIdStr    string
+	companyUuid     uint64
+	sourceCompanyId int
+	sourceDB        *gorm.DB
+	targetDB        *gorm.DB
+	targetSaasDB    *gorm.DB
 )
 
 // 使用ANSI转义序列设置文本颜色
@@ -67,11 +68,11 @@ var migrateDataCmd = &cobra.Command{
 			fmt.Printf("%s 数据迁移已取消 %s\n", redColor, resetColor)
 			return
 		}
-		if _, err := fmt.Sscanf(companyIdStr, "%d", &companyUuid); err != nil {
+		if _, err := fmt.Sscanf(companyIdStr, "%d", &sourceCompanyId); err != nil {
 			fmt.Printf("%s 错误: 公司ID必须是有效的数字，当前值: %s%s\n", redColor, companyIdStr, resetColor)
 			return
 		}
-		config.MigrateDatabase.MigrateOldDBDatabase = fmt.Sprintf("%s%d", constant.DBNamePrefix, companyUuid)
+		config.MigrateDatabase.MigrateOldDBDatabase = fmt.Sprintf("%s%d", constant.DBNamePrefix, sourceCompanyId)
 
 		// 检查 MigrateDatabase 各字段是否有值
 		var missingFields []string
@@ -226,7 +227,7 @@ var migrateDataCmd = &cobra.Command{
 		}
 
 		// 二.数据迁移
-		err = handler.Run(sourceDB, targetDB, targetSaasDB, companyUuid)
+		err = handler.Run(sourceDB, targetDB, targetSaasDB, sourceCompanyId, companyUuid)
 
 		if err != nil {
 			fmt.Printf("%s 数据迁移失败 : %s %s\n", redColor, err, resetColor)
