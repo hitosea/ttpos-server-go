@@ -174,5 +174,12 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, targetComp
 		return err
 	}
 
+	// 自助餐加钟
+	buffetDelayService := v1.NewBuffetDelayService(sourceDB, targetDB)
+	err = buffetDelayService.ConvertBuffetDelay()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
