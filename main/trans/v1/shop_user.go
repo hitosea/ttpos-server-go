@@ -34,6 +34,10 @@ type ShopUserRepository interface {
 	ConvertShopUser() error
 }
 
+func NewShopUserService(db *gorm.DB, targetDB *gorm.DB) ShopUserRepository {
+	return &ShopUserService{db: db, targetDB: targetDB}
+}
+
 type ShopUserService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB

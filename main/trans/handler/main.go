@@ -103,5 +103,11 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB) error {
 		return err
 	}
 
+	shopUserService := v1.NewShopUserService(sourceDB, targetDB)
+	err = shopUserService.ConvertShopUser()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
