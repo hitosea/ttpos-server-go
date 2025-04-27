@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -15,6 +16,11 @@ type TaxCategory struct {
 	AppID      int     `gorm:"type:int;default:0;comment:'应用id'"`
 	CreateTime int     `gorm:"type:int;not null;default:0;comment:'创建时间'"`
 	UpdateTime int     `gorm:"type:int;not null;default:0;comment:'更新时间'"`
+}
+
+func (s *TaxCategory) GetTaxRate() float64 {
+	rate := decimal.NewFromFloat(s.TaxRate).Div(decimal.NewFromInt(100)).Round(2).InexactFloat64()
+	return rate
 }
 
 type TaxCategoryRepository interface {
@@ -54,7 +60,7 @@ func (s *TaxCategoryService) ConvertTaxCategory() error {
 				UpdateTime: int64(taxCategory.UpdateTime),
 			},
 			Name:    taxCategory.Name,
-			TaxRate: taxCategory.TaxRate,
+			TaxRate: taxCategory.GetTaxRate(),
 		}
 		err := repository.NewTaxRepo(s.targetDB).CreateTax(tax)
 		if err != nil {
