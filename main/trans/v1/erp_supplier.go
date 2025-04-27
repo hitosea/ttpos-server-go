@@ -28,6 +28,10 @@ type ErpSupplierRepository interface {
 	ConvertErpSupplier() error
 }
 
+func NewErpSupplierService(db *gorm.DB, targetDB *gorm.DB) ErpSupplierRepository {
+	return &ErpSupplierService{db: db, targetDB: targetDB}
+}
+
 type ErpSupplierService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB
