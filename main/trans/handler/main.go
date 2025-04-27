@@ -96,5 +96,12 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB) error {
 	if err != nil {
 		return err
 	}
+
+	settingService := v1.NewSettingService(sourceDB, targetDB)
+	err = settingService.ConvertSetting()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
