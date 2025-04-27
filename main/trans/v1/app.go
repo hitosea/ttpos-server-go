@@ -137,7 +137,7 @@ func (s *AppService) ConvertApp() error {
 				Uuid: s.targetCompanyUuid,
 			},
 			Name:          app.Supplier.Name,
-			Logo:          app.Supplier.Logo,
+			Logo:          app.Supplier.Logo, // ToDo 迁移之前，需要把图片先迁移过来
 			ExpireTime:    int64(app.ExpireTime),
 			AuthDay:       app.AuthDay,
 			Status:        int(app.Status),

@@ -7,8 +7,9 @@ import (
 )
 
 func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, targetCompanyUuid uint64) error {
+	var err error
 	userService := v1.NewUserGradeService(sourceDB, targetDB)
-	err := userService.ConvertUserGrade()
+	err = userService.ConvertUserGrade()
 	if err != nil {
 		return err
 	}
@@ -118,6 +119,13 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, targetComp
 		return err
 	}
 
+	// 员工角色
+	shopStaffRole := v1.NewShopUserRoleService(sourceDB, targetDB)
+	err = shopStaffRole.ConvertShopUserRole()
+	if err != nil {
+		return err
+	}
+ 
 	// 员工
 	shopUserService := v1.NewShopUserService(sourceDB, targetDB, targetSassDB, targetCompanyUuid)
 	err = shopUserService.ConvertShopUser()

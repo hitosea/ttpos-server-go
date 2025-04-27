@@ -62,61 +62,34 @@ func (s *ShopUserService) ConvertShopUser() error {
 	for _, shopUser := range shopUsers {
 		fmt.Println(fmt.Sprintf("shopUser: %+v", shopUser))
 
-		existsStaff := targetStaffRepo.GetStaff(targetStaffRepo.WhereUsername(shopUser.UserName))
 		existsCompanyStaff := targetCompanyStaffRepo.GetCompanyStaff(targetCompanyStaffRepo.WhereUsername(shopUser.UserName))
-
-		if (existsStaff.Uuid != 0 && existsStaff.CompanyUuid != s.targetCompanyUuid) ||
-			(existsCompanyStaff.Uuid != 0 && existsCompanyStaff.CompanyUuid != s.targetCompanyUuid) {
+		if existsCompanyStaff.Uuid != 0 && existsCompanyStaff.CompanyUuid != s.targetCompanyUuid {
 			return errors.New("当前用户名已存在，且不是当前商家员工")
 		}
 
-		if existsStaff.Uuid > 0 { // 更新商家数据库员工
-			err := targetStaffRepo.Update(existsStaff.Uuid, map[string]any{
-				"uuid":                  shopUser.ShopUserID,
-				"company_uuid":          s.targetCompanyUuid,
-				"username":              shopUser.UserName,
-				"password":              shopUser.Password,
-				"phone":                 shopUser.Phone,
-				"password_change_count": shopUser.PasswordChange,
-				"real_name":             shopUser.RealName,
-				"is_super":              shopUser.IsSuper,
-				"user_type":             shopUser.UserType,
-				"is_disable":            shopUser.IsStatus,
-				"bind_key":              shopUser.BindKey,
-				"cashier_online":        shopUser.CashierOnline,
-				"cashier_login_time":    shopUser.CashierLoginTime,
-				"duty_no":               shopUser.DutyNo,
-				"create_time":           shopUser.CreateTime,
-				"update_time":           shopUser.UpdateTime,
-			})
-			if err != nil {
-				return err
-			}
-		} else { // 创建商家数据库员工
-			err := targetStaffRepo.CreateStaff(model.Staff{
-				BaseModel: model.BaseModel{
-					Uuid:       uint64(shopUser.ShopUserID),
-					CreateTime: shopUser.CreateTime,
-					UpdateTime: shopUser.UpdateTime,
-					DeleteTime: shopUser.IsDelete,
-				},
-				CompanyUuid:         s.targetCompanyUuid,
-				Username:            shopUser.UserName,
-				Password:            shopUser.Password,
-				Phone:               shopUser.Phone,
-				PasswordChangeCount: int(shopUser.PasswordChange),
-				RealName:            shopUser.RealName,
-				IsSuper:             int(shopUser.IsSuper),
-				UserType:            int(shopUser.UserType),
-				IsDisable:           int(shopUser.IsStatus),
-				BindKey:             shopUser.BindKey,
-				CashierOnline:       int(shopUser.CashierOnline),
-				CashierLoginTime:    shopUser.CashierLoginTime,
-				DutyNo:              shopUser.DutyNo,
-			})
-			if err != nil {
-				return err
-			}
+		err := targetStaffRepo.CreateStaff(model.Staff{
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(shopUser.ShopUserID),
+				CreateTime: shopUser.CreateTime,
+				UpdateTime: shopUser.UpdateTime,
+				DeleteTime: shopUser.IsDelete,
+			},
+			CompanyUuid:         s.targetCompanyUuid,
+			Username:            shopUser.UserName,
+			Password:            shopUser.Password,
+			Phone:               shopUser.Phone,
+			PasswordChangeCount: int(shopUser.PasswordChange),
+			RealName:            shopUser.RealName,
+			IsSuper:             int(shopUser.IsSuper),
+			UserType:            int(shopUser.UserType),
+			IsDisable:           int(shopUser.IsStatus),
+			BindKey:             shopUser.BindKey,
+			CashierOnline:       int(shopUser.CashierOnline),
+			CashierLoginTime:    shopUser.CashierLoginTime,
+			DutyNo:              shopUser.DutyNo,
+		})
+		if err != nil {
+			return err
 		}
 
 		if existsCompanyStaff.Uuid > 0 { // 更新saas商家员工
@@ -131,7 +104,6 @@ func (s *ShopUserService) ConvertShopUser() error {
 			if err != nil {
 				return err
 			}
-			return nil
 		} else { // 创建saas商家员工
 			repository.NewCompanyStaffRepo(s.targetSaasDB).CreateCompanyStaff(&model.CompanyStaff{
 				BaseModel: model.BaseModel{
