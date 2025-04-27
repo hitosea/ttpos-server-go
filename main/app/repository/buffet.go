@@ -57,6 +57,12 @@ func (r *BuffetRepoImpl) CreateBuffet(obj model.BuffetPackage) error {
 			return errors.WithMessage(err, "创建自助餐产品失败")
 		}
 	}
+
+	multiLanguageName := obj.MultiLanguageName
+	err = r.db.Create(&multiLanguageName).Error
+	if err != nil {
+		return errors.WithMessage(err, "创建自助餐多语言名称失败")
+	}
 	return nil
 }
 
