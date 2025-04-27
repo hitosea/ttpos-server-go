@@ -34,6 +34,10 @@ type ShopAccessRepository interface {
 	ConvertShopAccess() error
 }
 
+func NewShopAccessService(db *gorm.DB, targetDB *gorm.DB) ShopAccessRepository {
+	return &ShopAccessService{db: db, targetDB: targetDB}
+}
+
 type ShopAccessService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB

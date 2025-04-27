@@ -26,6 +26,13 @@ type UserPointsLogRepository interface {
 	ConvertUserPointsLog() error
 }
 
+func NewUserPointsLogService(db *gorm.DB, targetDB *gorm.DB) UserPointsLogRepository {
+	return &UserPointsLogService{
+		db:       db,
+		targetDB: targetDB,
+	}
+}
+
 type UserPointsLogService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB

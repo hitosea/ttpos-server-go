@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -34,9 +35,15 @@ type ShopUserRepository interface {
 	ConvertShopUser() error
 }
 
+func NewShopUserService(db *gorm.DB, targetDB *gorm.DB, targetSaasDB *gorm.DB, targetCompanyUuid uint64) ShopUserRepository {
+	return &ShopUserService{db: db, targetDB: targetDB, targetSaasDB: targetSaasDB, targetCompanyUuid: targetCompanyUuid}
+}
+
 type ShopUserService struct {
-	db       *gorm.DB
-	targetDB *gorm.DB
+	db                *gorm.DB
+	targetDB          *gorm.DB
+	targetSaasDB      *gorm.DB
+	targetCompanyUuid uint64
 }
 
 func (s *ShopUserService) GetShopUserList() ([]*ShopUser, error) {
@@ -50,16 +57,24 @@ func (s *ShopUserService) ConvertShopUser() error {
 	if err != nil {
 		return err
 	}
+	targetStaffRepo := repository.NewStaffRepo(s.targetDB)
+	targetCompanyStaffRepo := repository.NewCompanyStaffRepo(s.targetSaasDB)
 	for _, shopUser := range shopUsers {
 		fmt.Println(fmt.Sprintf("shopUser: %+v", shopUser))
-		staff := model.Staff{
+
+		existsCompanyStaff := targetCompanyStaffRepo.GetCompanyStaff(targetCompanyStaffRepo.WhereUsername(shopUser.UserName))
+		if existsCompanyStaff.Uuid != 0 && existsCompanyStaff.CompanyUuid != s.targetCompanyUuid {
+			return errors.New("当前用户名已存在，且不是当前商家员工")
+		}
+
+		err := targetStaffRepo.CreateStaff(model.Staff{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(shopUser.ShopUserID),
 				CreateTime: shopUser.CreateTime,
 				UpdateTime: shopUser.UpdateTime,
 				DeleteTime: shopUser.IsDelete,
 			},
-			CompanyUuid:         shopUser.AppID,
+			CompanyUuid:         s.targetCompanyUuid,
 			Username:            shopUser.UserName,
 			Password:            shopUser.Password,
 			Phone:               shopUser.Phone,
@@ -72,10 +87,36 @@ func (s *ShopUserService) ConvertShopUser() error {
 			CashierOnline:       int(shopUser.CashierOnline),
 			CashierLoginTime:    shopUser.CashierLoginTime,
 			DutyNo:              shopUser.DutyNo,
-		}
-		err := repository.NewStaffRepo(s.targetDB).CreateStaff(staff)
+		})
 		if err != nil {
 			return err
+		}
+
+		if existsCompanyStaff.Uuid > 0 { // 更新saas商家员工
+			err = targetCompanyStaffRepo.UpdateCompanyStaff(existsCompanyStaff.Uuid, map[string]any{
+				"uuid":         shopUser.ShopUserID,
+				"company_uuid": s.targetCompanyUuid,
+				"username":     shopUser.UserName,
+				"is_super":     shopUser.IsSuper,
+				"create_time":  shopUser.CreateTime,
+				"update_time":  shopUser.UpdateTime,
+			})
+			if err != nil {
+				return err
+			}
+		} else { // 创建saas商家员工
+			repository.NewCompanyStaffRepo(s.targetSaasDB).CreateCompanyStaff(&model.CompanyStaff{
+				BaseModel: model.BaseModel{
+					Uuid:       uint64(shopUser.ShopUserID),
+					CreateTime: shopUser.CreateTime,
+					UpdateTime: shopUser.UpdateTime,
+					DeleteTime: shopUser.IsDelete,
+				},
+				CompanyUuid: s.targetCompanyUuid,
+				Username:    shopUser.UserName,
+				Phone:       shopUser.Phone,
+				IsSuper:     int(shopUser.IsSuper),
+			})
 		}
 	}
 	return nil

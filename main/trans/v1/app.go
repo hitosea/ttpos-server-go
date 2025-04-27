@@ -104,16 +104,22 @@ type AppRepository interface {
 	ConvertApp() error
 }
 
-func NewAppService(db *gorm.DB, targetDB *gorm.DB) AppRepository {
+func NewAppService(db *gorm.DB, targetSaasDB *gorm.DB, targetDB *gorm.DB, sourceCompanyId int, targetCompanyUuid uint64) AppRepository {
 	return &AppService{
-		db:       db,
-		targetDB: targetDB,
+		db:                db,
+		targetDB:          targetDB,
+		targetCompanyUuid: targetCompanyUuid,
+		sourceCompanyId:   sourceCompanyId,
+		targetSaasDB:      targetSaasDB,
 	}
 }
 
 type AppService struct {
-	db       *gorm.DB
-	targetDB *gorm.DB
+	db                *gorm.DB
+	targetDB          *gorm.DB
+	targetSaasDB      *gorm.DB
+	targetCompanyUuid uint64
+	sourceCompanyId   int
 }
 
 func (s *AppService) GetAppList() ([]*App, error) {
@@ -129,22 +135,34 @@ func (s *AppService) ConvertApp() error {
 	if err != nil {
 		return err
 	}
+	targetCompanyRepo := repository.NewCompanyRepo(s.targetSaasDB)
+	saasCompany, err := targetCompanyRepo.GetCompanyInfoByUuid(s.targetCompanyUuid)
+	if err != nil {
+		return err
+	}
+	err = targetCompanyRepo.UpdateCompany(saasCompany.Uuid, map[string]any{
+		"old_company_id": s.sourceCompanyId,
+	})
+	if err != nil {
+		return err
+	}
 	for _, app := range appList {
 		company := model.Company{
 			BaseModel: model.BaseModel{
-				Uuid: uint64(app.AppID),
+				Uuid: s.targetCompanyUuid,
 			},
 			Name:          app.Supplier.Name,
-			Logo:          app.Supplier.Logo,
+			Logo:          saasCompany.Logo,
 			ExpireTime:    int64(app.ExpireTime),
 			AuthDay:       app.AuthDay,
 			Status:        int(app.Status),
 			AuthStartTime: int64(app.AuthStartTime),
+			OldCompanyId:  s.sourceCompanyId,
 			CompanySetting: &model.CompanySetting{
 				BaseModel: model.BaseModel{
-					Uuid: uint64(app.AppID),
+					Uuid: s.targetCompanyUuid,
 				},
-				CompanyUuid:      uint64(app.AppID),
+				CompanyUuid:      s.targetCompanyUuid,
 				RealName:         app.Supplier.RealName,
 				LinkName:         app.Supplier.LinkName,
 				LinkPhone:        app.Supplier.LinkPhone,

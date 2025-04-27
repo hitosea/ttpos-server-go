@@ -31,6 +31,13 @@ type UserBalanceLogRepository interface {
 	ConvertUserBalanceLog() error
 }
 
+func NewUserBalanceLogService(db *gorm.DB, targetDB *gorm.DB) UserBalanceLogRepository {
+	return &UserBalanceLogService{
+		db:       db,
+		targetDB: targetDB,
+	}
+}
+
 type UserBalanceLogService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB

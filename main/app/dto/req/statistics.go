@@ -89,7 +89,7 @@ func (r *BusinessDataCountReq) GetParam() BusinessDataCountReq {
 				weekday = 7
 			}
 			startTime = time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 0, 0, 0, 0, now.Location())
-			endTime = time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 23, 59, 59, 0, now.Location())
+			endTime = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
 		case 4: // 本月
 			startTime = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 			endTime = startTime.AddDate(0, 1, 0).Add(-time.Second)

@@ -152,13 +152,13 @@ class User extends BaseModel
      */
     public static function getShopInfo($key = '', $isClearCache = false)
     {
-        if ((!$data = Cache::get('first_shop_info')) || $isClearCache) {
+        if ((!$data = Cache::get('{firstshop}_' . 'first_shop_info')) || $isClearCache) {
             $userModel = new static;
             $info = (new static)->withoutGlobalScope()->where('company_uuid', '>', 0)->field('company_uuid')->find();
             $company_uuid = $info?->company_uuid ?: 0;
             $data = compact('company_uuid');
             if ($company_uuid) {
-                Cache::tag('firstshop')->set('first_shop_info', $data);
+                Cache::tag('firstshop')->set('{firstshop}_' . 'first_shop_info', $data);
             }
         }
         return $key ? ($data[$key] ?? 0) : $data;

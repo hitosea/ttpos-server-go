@@ -24,6 +24,10 @@ type AttributeInterface interface {
 	ConvertAttribute() error
 }
 
+func NewAttributeService(db *gorm.DB, targetDB *gorm.DB) AttributeInterface {
+	return &AttributeRepository{db: db, targetDB: targetDB}
+}
+
 type AttributeRepository struct {
 	db       *gorm.DB
 	targetDB *gorm.DB
@@ -64,7 +68,7 @@ func (r *AttributeRepository) ConvertAttribute() error {
 			// 创建商品属性组
 			attributeGroup := model.ProductAttributeGroup{
 				BaseModel:             model.BaseModel{Uuid: attribute.AttributeID},
-				Name:                  names.Zh,
+				Name:                  attribute.AttributeName,
 				MultiLanguageNameUuid: id,
 				MultiLanguageName:     languageName,
 			}
@@ -77,7 +81,7 @@ func (r *AttributeRepository) ConvertAttribute() error {
 			// 创建商品属性
 			productAttribute := model.ProductAttribute{
 				BaseModel:          model.BaseModel{Uuid: attribute.AttributeID},
-				Name:               names.Zh,
+				Name:               attribute.AttributeName,
 				AttributeGroupUuid: attribute.ParentID,
 				MultiLanguageName:  languageName,
 			}

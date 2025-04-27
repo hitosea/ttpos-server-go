@@ -6992,6 +6992,45 @@ paths:
       summary: 获取结账页面信息
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/order/payment/qrcode:
+    get:
+      consumes:
+      - application/json
+      description: 获取支付方式的二维码信息
+      parameters:
+      - description: 支付金额, 必填
+        in: query
+        name: payment_amount
+        type: number
+      - description: 支付方式UUID, 必填
+        in: query
+        name: payment_method_uuid
+        type: integer
+      - description: 销售账单UUID, 必填
+        in: query
+        name: sale_bill_uuid
+        type: integer
+      - description: 销售订单UUID, 必填
+        in: query
+        name: sale_order_uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentQrcodeInfoResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取支付方式的二维码信息
+      tags:
+      - 点餐助手端.桌台.结账
   /assistant/desk/order/payment/zero_rule:
     post:
       consumes:

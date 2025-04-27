@@ -24,6 +24,10 @@ type ProductUnitRepository interface {
 	ConvertProductUnit() error
 }
 
+func NewProductUnitService(db *gorm.DB, targetDB *gorm.DB) ProductUnitRepository {
+	return &ProductUnitService{db: db, targetDB: targetDB}
+}
+
 type ProductUnitService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB
@@ -66,7 +70,7 @@ func (s *ProductUnitService) ConvertProductUnit() error {
 				CreateTime: productUnit.CreateTime,
 				UpdateTime: productUnit.UpdateTime,
 			},
-			Name:                  names.Zh,
+			Name:                  productUnit.UnitName,
 			MultiLanguageNameUuid: uint64(id),
 			MultiLanguageName:     languageName,
 		}

@@ -19,6 +19,7 @@ type IBuffetRepo interface {
 	UpdateBuffetInfo(buffet model.BuffetPackage) error                                   // 更新自助餐信息
 	AddActualSaleNum(buffetUuid uint64, saleNum uint) error                              // 更新自助餐
 	SubActualSaleNum(buffetUuid uint64, saleNum uint) error                              // 更新自助餐销量
+	CreateBuffet(buffet model.BuffetPackage) error                                       // 创建自助餐
 }
 
 func NewBuffetRepo(db *gorm.DB) IBuffetRepo {
@@ -32,6 +33,37 @@ func NewBuffetRepoImpl(db *gorm.DB) *BuffetRepoImpl {
 
 type BuffetRepoImpl struct {
 	db *gorm.DB
+}
+
+// CreateBuffet 创建自助餐
+func (r *BuffetRepoImpl) CreateBuffet(obj model.BuffetPackage) error {
+	buffet := obj
+	buffet.SetNil()
+	err := r.db.Create(&buffet).Error
+	if err != nil {
+		return errors.WithMessage(err, "创建自助餐失败")
+	}
+	for _, buffetCustomerTypePrice := range obj.BuffetCustomerTypePrices {
+		buffetCustomerTypePrice.SetNil()
+		err = r.db.Create(&buffetCustomerTypePrice).Error
+		if err != nil {
+			return errors.WithMessage(err, "创建自助餐顾客类型价格失败")
+		}
+	}
+	for _, buffetProduct := range obj.BuffetProducts {
+		buffetProduct.SetNil()
+		err = r.db.Create(&buffetProduct).Error
+		if err != nil {
+			return errors.WithMessage(err, "创建自助餐产品失败")
+		}
+	}
+
+	multiLanguageName := obj.MultiLanguageName
+	err = r.db.Create(&multiLanguageName).Error
+	if err != nil {
+		return errors.WithMessage(err, "创建自助餐多语言名称失败")
+	}
+	return nil
 }
 
 // GetBuffetList 获取

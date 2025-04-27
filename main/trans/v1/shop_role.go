@@ -22,6 +22,10 @@ type ShopRoleRepository interface {
 	ConvertShopRole() error
 }
 
+func NewShopRoleService(db *gorm.DB, targetDB *gorm.DB) ShopRoleRepository {
+	return &ShopRoleService{db: db, targetDB: targetDB}
+}
+
 type ShopRoleService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB

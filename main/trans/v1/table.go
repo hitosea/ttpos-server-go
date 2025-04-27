@@ -9,29 +9,36 @@ import (
 )
 
 type Table struct {
-	TableID        uint64 `gorm:"primaryKey;autoIncrement;comment:id"`
-	TableNo        string `gorm:"default:'';comment:桌位编号"`
-	Sort           uint   `gorm:"default:0;comment:排序"`
-	AreaID         uint64 `gorm:"default:0;comment:区域id"`
-	TypeID         uint64 `gorm:"default:0;comment:类型id"`
-	Status         uint   `gorm:"default:10;comment:桌台状态 10-未开台 30-已开台"`
-	SwitchStatus   uint   `gorm:"default:1;comment:桌台开关状态 0-关 1-开"`
-	AreaName       string `gorm:"default:'';comment:区域名称"`
-	TypeName       string `gorm:"default:'';comment:类型名称"`
-	ShopSupplierID uint   `gorm:"default:0;comment:门店id"`
-	MinNum         uint   `gorm:"default:0;comment:最小人数"`
-	MaxNum         uint   `gorm:"default:0;comment:最大人数"`
-	AppID          uint   `gorm:"default:0;comment:应用id"`
-	BindInfo       string `gorm:"default:'';comment:绑定信息"`
-	QRCodeValue    string `gorm:"default:'';comment:二维码值"`
-	IsBind         uint   `gorm:"default:0;comment:平板绑定状态 0-否 1-是"`
-	CreateTime     int64  `gorm:"autoCreateTime;comment:创建时间"`
-	UpdateTime     int64  `gorm:"autoUpdateTime;comment:更新时间"`
+	TableID        int    `gorm:"column:table_id;type:int(11);primary_key;AUTO_INCREMENT;comment:id" json:"table_id"`
+	TableNo        string `gorm:"column:table_no;type:varchar(50);comment:桌位编号;NOT NULL" json:"table_no"`
+	Sort           int    `gorm:"column:sort;type:int(10);default:0;comment:排序;NOT NULL" json:"sort"`
+	AreaID         int    `gorm:"column:area_id;type:int(11);default:0;comment:区域id;NOT NULL" json:"area_id"`
+	TypeID         int    `gorm:"column:type_id;type:int(11);comment:类型id;NOT NULL" json:"type_id"`
+	Status         int    `gorm:"column:status;type:int(11);default:10;comment:桌台状态 10-未开台 30-已开台;NOT NULL" json:"status"`
+	SwitchStatus   int    `gorm:"column:switch_status;type:int(11);default:1;comment:桌台开关状态 0-关 1-开" json:"switch_status"`
+	AreaName       string `gorm:"column:area_name;type:varchar(50);comment:区域名称;NOT NULL" json:"area_name"`
+	TypeName       string `gorm:"column:type_name;type:varchar(50);comment:类型名称;NOT NULL" json:"type_name"`
+	ShopSupplierId int    `gorm:"column:shop_supplier_id;type:int(11);default:0;comment:门店id;NOT NULL" json:"shop_supplier_id"`
+	MinNum         int    `gorm:"column:min_num;type:int(10);default:0;comment:最小人数;NOT NULL" json:"min_num"`
+	MaxNum         int    `gorm:"column:max_num;type:int(10);comment:最大人数;NOT NULL" json:"max_num"`
+	AppId          uint   `gorm:"column:app_id;type:int(11) unsigned;default:0;comment:应用id;NOT NULL" json:"app_id"`
+	BindInfo       string `gorm:"column:bind_info;type:varchar(255);comment:绑定信息;NOT NULL" json:"bind_info"`
+	QrcodeValue    string `gorm:"column:qrcode_value;type:varchar(50);comment:二维码值" json:"qrcode_value"`
+	IsBind         int    `gorm:"column:is_bind;type:int(11);default:0;comment:平板绑定状态 0-否 1-是;NOT NULL" json:"is_bind"`
+	CreateTime     int64  `gorm:"column:create_time;type:int(11) unsigned;default:0;comment:创建时间;NOT NULL" json:"create_time"`
+	UpdateTime     int64  `gorm:"column:update_time;type:int(11) unsigned;default:0;comment:更新时间;NOT NULL" json:"update_time"`
 }
 
 type TableRepository interface {
 	GetTableList() ([]*Table, error)
 	ConvertTable() error
+}
+
+func NewTableService(db *gorm.DB, targetDB *gorm.DB) TableRepository {
+	return &TableService{
+		db:       db,
+		targetDB: targetDB,
+	}
 }
 
 type TableService struct {
@@ -63,7 +70,6 @@ func (s *TableService) ConvertTable() error {
 		if table.Status == 30 {
 			status = 1
 		}
-		deviceId := 0 // todo 通过bind_info获取设备ID
 		desk := model.Desk{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(table.TableID),
@@ -71,13 +77,12 @@ func (s *TableService) ConvertTable() error {
 				UpdateTime: table.UpdateTime,
 			},
 			DeskNo:      table.TableNo,
-			RegionUuid:  table.AreaID,
-			TypeUuid:    table.TypeID,
+			RegionUuid:  uint64(table.AreaID),
+			TypeUuid:    uint64(table.TypeID),
 			Sort:        uint(table.Sort),
 			Status:      uint(status),
 			IsDisable:   isDisable,
-			QrcodeToken: table.QRCodeValue,
-			DeviceUuid:  uint64(deviceId),
+			QrcodeToken: table.QrcodeValue,
 		}
 		fmt.Println(fmt.Sprintf("desk: %+v", desk))
 

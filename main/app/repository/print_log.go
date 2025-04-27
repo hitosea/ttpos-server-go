@@ -368,7 +368,7 @@ func (r *printerLogRepo) WhereTimeRange(startTime, endTime uint) DBOption {
 
 func (r *printerLogRepo) WhereCreatedBefore(days uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("create_time < ?", time.Now().Add(time.Duration(-days*24)*time.Hour))
+		return db.Where("create_time < ?", time.Now().Add(time.Duration(-days*24)*time.Hour).Unix())
 	}
 }
 

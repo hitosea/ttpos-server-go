@@ -24,6 +24,13 @@ type BuffetDelayRepository interface {
 	ConvertBuffetDelay() error
 }
 
+func NewBuffetDelayService(db *gorm.DB, targetDB *gorm.DB) BuffetDelayRepository {
+	return &BuffetDelayService{
+		db:       db,
+		targetDB: targetDB,
+	}
+}
+
 type BuffetDelayService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB

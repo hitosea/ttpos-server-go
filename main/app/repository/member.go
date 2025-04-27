@@ -28,8 +28,9 @@ type IMemberRepo interface {
 	CheckMemberExists(phone string) bool                       // 根据手机号检查是否存在
 	CheckLevelExists(uuid uint64) bool                         // 根据Uuid检查等级是否存在
 
-	CreateMember(member model.Member) error        // 添加会员
-	Update(uuid uint64, vars map[string]any) error // 更新会员信息
+	CreateMember(member model.Member) error              // 添加会员
+	CreateMemberAndMemberCard(member model.Member) error // 添加会员并发放会员卡。仅用于数据迁移
+	Update(uuid uint64, vars map[string]any) error       // 更新会员信息
 
 	GetMemberInfoForSaleOrder(ctx context.Context, memberUuid uint64) (*model.Member, error) // 获取会员信息，用于销售订单结账时
 	UpdateProcessed(uuids []uint64) error                                                    // 更新会员积分日志为已处理
@@ -77,6 +78,20 @@ func (r *memberRepo) SearchMember(keyword string) []model.Member {
 // CreateMember 添加会员
 func (r *memberRepo) CreateMember(member model.Member) error {
 	return r.db.Create(&member).Error
+}
+
+// CreateMemberAndMemberCard 添加会员并发放会员卡。仅用于数据迁移
+func (r *memberRepo) CreateMemberAndMemberCard(obj model.Member) error {
+	member := obj
+	member.SetNil()
+	if err := r.db.Create(&member).Error; err != nil {
+		return errors.WithMessage(err, "添加会员失败")
+	}
+	memberCard := obj.MemberCard
+	if err := r.db.Create(&memberCard).Error; err != nil {
+		return errors.WithMessage(err, "添加会员卡失败")
+	}
+	return nil
 }
 
 // CheckMemberExists 根据手机号检查是否存在

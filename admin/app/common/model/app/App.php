@@ -113,10 +113,10 @@ class App extends BaseModel
             $self = new static();
             $app_id = $self::$app_id;
         }
-        if (!$data = Cache::get('app_' . $app_id)) {
+        if (!$data = Cache::get('{cache}_' . 'app_' . $app_id)) {
             $data = self::detail($app_id);
             if (empty($data)) throw new BaseException(['msg' => '未找到当前应用信息']);
-            Cache::tag('cache')->set('app_' . $app_id, $data);
+            Cache::tag('cache')->set('{cache}_' . 'app_' . $app_id, $data);
         }
         return $data;
     }

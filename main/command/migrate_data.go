@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
@@ -18,10 +19,12 @@ import (
 )
 
 var (
-	companyIdStr string
-	companyUuid  uint64
-	sourceDB     *gorm.DB
-	targetDB     *gorm.DB
+	companyIdStr    string
+	companyUuid     uint64
+	sourceCompanyId int
+	sourceDB        *gorm.DB
+	targetDB        *gorm.DB
+	targetSaasDB    *gorm.DB
 )
 
 // 使用ANSI转义序列设置文本颜色
@@ -57,6 +60,19 @@ var migrateDataCmd = &cobra.Command{
 		if err := logger.Init(); err != nil {
 			log.Fatalf("Failed to initialize logger: %v", err)
 		}
+
+		//确认
+		fmt.Printf("%s 输入要迁移的旧公司ID继续: %s", blueColor, resetColor)
+		fmt.Scanln(&companyIdStr)
+		if companyIdStr == "" {
+			fmt.Printf("%s 数据迁移已取消 %s\n", redColor, resetColor)
+			return
+		}
+		if _, err := fmt.Sscanf(companyIdStr, "%d", &sourceCompanyId); err != nil {
+			fmt.Printf("%s 错误: 公司ID必须是有效的数字，当前值: %s%s\n", redColor, companyIdStr, resetColor)
+			return
+		}
+		config.MigrateDatabase.MigrateOldDBDatabase = fmt.Sprintf("%s%d", constant.DBNamePrefix, sourceCompanyId)
 
 		// 检查 MigrateDatabase 各字段是否有值
 		var missingFields []string
@@ -102,21 +118,26 @@ var migrateDataCmd = &cobra.Command{
 		sourceDB = source
 		fmt.Printf("%s 连接源数据库成功 %s\n", greenColor, resetColor)
 
-		// 二次确认
+		// 目标的公司UUID
 		fmt.Printf("%s 输入要迁移目标的公司UUID继续: %s", blueColor, resetColor)
-
-		// 读取用户输入
 		fmt.Scanln(&companyIdStr)
 		if companyIdStr == "" {
 			fmt.Printf("%s 数据迁移已取消 %s\n", redColor, resetColor)
 			return
 		}
-
-		// 检查公司ID是否为有效数字
 		if _, err := fmt.Sscanf(companyIdStr, "%d", &companyUuid); err != nil {
 			fmt.Printf("%s 错误: 公司ID必须是有效的数字，当前值: %s%s\n", redColor, companyIdStr, resetColor)
 			return
 		}
+
+		// 初始化目标数据库连接
+		targetSaas, err := database.NewMySQLConnection(config.Database, "saas")
+		if err != nil {
+			fmt.Printf("%s %s %s\n", redColor, err, resetColor)
+			fmt.Printf("%s 错误: 连接数据库失败, 检查是否正确配置了数据库信息，以及 -c 参数是否正确 %s\n", redColor, resetColor)
+			return
+		}
+		targetSaasDB = targetSaas
 
 		// 初始化数据库
 		companyDB, err := database.NewMySQLConnection(config.Database, fmt.Sprintf("%s%d", constant.DBNamePrefix, companyUuid))
@@ -129,7 +150,6 @@ var migrateDataCmd = &cobra.Command{
 
 		// 将公司数据库实例保存到全局变量中，供 Run 函数使用
 		targetDB = companyDB
-
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		// 确保数据库连接有效
@@ -157,7 +177,7 @@ var migrateDataCmd = &cobra.Command{
 		// 获取公司信息
 		companyRepo := repository.NewCompanyRepo(targetDB)
 		company, err := companyRepo.GetCompanyInfoByUuid(companyUuid)
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "record not found") {
 			fmt.Printf("%s %s %s\n", redColor, err, resetColor)
 			fmt.Printf("%s 错误: 获取新数据库公司信息失败 %s\n", redColor, resetColor)
 			return
@@ -166,7 +186,11 @@ var migrateDataCmd = &cobra.Command{
 		// 二次确认
 		fmt.Printf("%s 将要从旧数据库 %s 迁移数据到新数据库 %s %s\n", redColor, config.MigrateDatabase.MigrateOldDBDatabase, fmt.Sprintf("%s%d", constant.DBNamePrefix, companyUuid), resetColor)
 		fmt.Printf("%s 旧数据库的商家名称为： %s %s\n", redColor, supplier.Name, resetColor)
-		fmt.Printf("%s 新数据库的商家名称为： %s %s\n", redColor, company.Name, resetColor)
+		if company != nil {
+			fmt.Printf("%s 目标数据库的商家名称为： %s %s\n", redColor, company.Name, resetColor)
+		} else {
+			fmt.Printf("%s 目标数据库的商家名称为空 %s\n", redColor, resetColor)
+		}
 		fmt.Printf("%s 注意：新数据库将会被清空，请确认是否要开始数据迁移？%s\n", redColor, resetColor)
 
 		// 读取用户输入
@@ -196,10 +220,52 @@ var migrateDataCmd = &cobra.Command{
 		// 2. 读取旧数据库数据
 		// 3. 转换数据格式
 		// 4. 写入新数据库
-		// sourceDB = nil
-		// targetDB = nil
 
-		handler.Run(sourceDB, targetDB)
+		// 一. 清空目标数据库
+		if !truncateTable(targetDB) {
+			return
+		}
+
+		// 二.数据迁移
+		err = handler.Run(sourceDB, targetDB, targetSaasDB, sourceCompanyId, companyUuid)
+
+		if err != nil {
+			fmt.Printf("%s 数据迁移失败 : %s %s\n", redColor, err, resetColor)
+			return
+		}
+
 		fmt.Printf("%s 数据迁移完成 %s\n", greenColor, resetColor)
 	},
+}
+
+// 清空目标数据库
+func truncateTable(targetDB *gorm.DB) bool {
+	// 1. 判断 desk 表 是否存在数据
+	var deskCount int64
+	targetDB.Raw("SELECT COUNT(*) FROM ttpos_desk").Scan(&deskCount)
+	if deskCount > 0 {
+		// 二次确认
+		fmt.Printf("%s 目标数据库已经存在生产数据，是否确认清空？ %s %s\n", redColor, fmt.Sprintf("%s%d", constant.DBNamePrefix, companyUuid), resetColor)
+		var confirmation string
+		fmt.Printf("%s 输入 'yes' 继续，输入其他内容取消: %s", yellowColor, resetColor)
+		fmt.Scanln(&confirmation)
+		if confirmation != "yes" {
+			fmt.Printf("%s 数据迁移已取消 %s\n", redColor, resetColor)
+			return false
+		}
+	}
+
+	// 2. 清空目标数据库
+	fmt.Printf("%s 开始清空目标数据库... %s\n", blueColor, resetColor)
+	var tables []string
+	targetDB.Raw("SHOW TABLES").Scan(&tables)
+	for _, table := range tables {
+		if table == "ttpos_printer_type" {
+			continue
+		}
+		targetDB.Exec(fmt.Sprintf("TRUNCATE TABLE `%s`", table))
+	}
+	fmt.Printf("%s 清空目标数据库完成 %s\n", greenColor, resetColor)
+
+	return true
 }

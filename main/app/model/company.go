@@ -11,6 +11,7 @@ type Company struct {
 	AuthDay       int    `gorm:"column:auth_day;type:int(11);default:0;comment:授权时间(天) 0为永不过期;NOT NULL" json:"auth_day"`
 	Status        int    `gorm:"column:status;type:tinyint(1);default:1;comment:状态 1-启用 0-禁用;not null;NOT NULL" json:"status"`
 	AuthStartTime int64  `gorm:"column:auth_start_time;type:int(10);default:0;comment:授权开始时间（时间戳）;NOT NULL" json:"auth_start_time"`
+	OldCompanyId  int    `gorm:"column:old_company_id;type:int(11);default:0;comment:原商家ID;NOT NULL" json:"old_company_id"`
 
 	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting"`
 }
@@ -65,6 +66,7 @@ type CompanyStaff struct {
 	CompanyUuid uint64 `gorm:"column:company_uuid;type:bigint(20) unsigned;default:0;comment:集团ID;NOT NULL" json:"company_uuid"`
 	Username    string `gorm:"column:username;type:varchar(255);comment:员工账号;NOT NULL" json:"username"`
 	Phone       string `gorm:"column:phone;type:varchar(255);comment:员工手机号;NOT NULL" json:"phone"`
+	IsSuper     int    `gorm:"column:is_super;type:int(11);default:0;comment:是否超级管理员" json:"is_super"`
 
 	Company *Company `gorm:"foreignKey:CompanyUuid;references:Uuid"`
 }

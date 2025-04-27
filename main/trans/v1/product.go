@@ -68,8 +68,9 @@ type Product struct {
 
 	// 旧表中没有的字段。用于关联
 
-	ProductImage ProductImage `gorm:"foreignKey:product_id;references:product_id"`
-	ProductTax   ProductTax   `gorm:"foreignKey:product_id;references:product_id"`
+	ProductImage ProductImage  `gorm:"foreignKey:product_id;references:product_id"`
+	ProductTax   ProductTax    `gorm:"foreignKey:product_id;references:product_id"`
+	ProductSKUs  []*ProductSKU `gorm:"foreignKey:product_id;references:product_id"`
 }
 
 func (model *Product) GetProductStatus() uint8 {
@@ -80,10 +81,12 @@ func (model *Product) GetProductStatus() uint8 {
 }
 
 func (model *Product) GetStockDeductMethod() uint {
+	// 10下单减库存 20付款减库存
 	if model.DeductStockType == 10 {
-		return 0
+		// 1 下单减库存 0 付款减库存
+		return 1
 	}
-	return 1
+	return 0
 }
 
 func (model *Product) IsShowCashierValue() uint {
@@ -178,6 +181,12 @@ func (model *ProductAttrGroup) GetMaxSelection() uint {
 // 解析ProductAttr字段
 func (model *Product) ParseProductAttr() ([]*ProductAttrGroup, error) {
 	var attributes []*ProductAttrGroup
+	fmt.Println(" model.ProductAttr ", model.ProductAttr)
+	// model.ProductAttr 为"" 或 []
+	if len(model.ProductAttr) < 10 {
+		fmt.Println("无属性")
+		return attributes, nil
+	}
 	err := json.Unmarshal([]byte(model.ProductAttr), &attributes)
 	if err != nil {
 		return nil, err
@@ -187,6 +196,11 @@ func (model *Product) ParseProductAttr() ([]*ProductAttrGroup, error) {
 
 // 解析ProductFeed字段
 func (model *Product) ParseProductFeed() ([]utils.ProductFeed, error) {
+	// model.ProductFeed 为"" 或 []
+	if len(model.ProductFeed) < 5 {
+		fmt.Println("无加料")
+		return nil, nil
+	}
 	productFeeds, err := utils.ParseFeedJson(model.ProductFeed)
 	if err != nil {
 		return nil, err
@@ -300,7 +314,7 @@ func (s *ProductService) ConvertProduct() error {
 				TakeoutTaxUuid:        productTakeoutTax.TaxCategoryID,
 				SpecialCategoryUuid:   product.SpecialID,
 				PrinterTagUuid:        product.LabelID,
-				SupplierUuid:          product.ShopSupplierID,
+				SupplierUuid:          uint64(product.ErpSupplierID),
 				Status:                uint(Status),
 				IsShowCashier:         IsShowCashier,
 				IsShowTablet:          IsShowTablet,
