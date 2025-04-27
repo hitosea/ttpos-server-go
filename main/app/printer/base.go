@@ -1,6 +1,9 @@
 package printer
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -101,18 +104,23 @@ func (p *PrinterRepoImpl) GetPrinterTemplate(id uint64) int {
 
 // 获取商品打印机列表
 func (p *PrinterRepoImpl) getProductPrinterList(widthPrintMode int) ([]model.ProductPrinter, error) {
-	// // 构建缓存键
-	cacheKey := fmt.Sprintf("PRODUCT_PRINTER_LIST:%d:%d", p.ctx.GetCompanyUuid(), widthPrintMode)
+	// 构建缓存键
+	cacheKey := fmt.Sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", p.ctx.GetCompanyUuid(), widthPrintMode)
 
 	// 尝试从缓存获取
 	if cachedData, found := p.cache.Get(cacheKey); found {
 		// 尝试反序列化缓存数据
 		var printers []model.ProductPrinter
-		cachedBytes, ok := cachedData.([]byte)
+		cachedBytes, ok := cachedData.(string)
 		if ok {
-			err := json.Unmarshal(cachedBytes, &printers)
-			if err == nil && len(printers) > 0 {
-				return printers, nil
+			// 解压数据
+			decompressed, err := decompress(cachedBytes)
+			if err == nil {
+				// 反序列化
+				err := json.Unmarshal([]byte(decompressed), &printers)
+				if err == nil && len(printers) > 0 {
+					return printers, nil
+				}
 			}
 		}
 		// 反序列化失败或数据为空，删除无效缓存
@@ -158,9 +166,52 @@ func (p *PrinterRepoImpl) getProductPrinterList(widthPrintMode int) ([]model.Pro
 		printersBytes, err := json.Marshal(printers)
 		if err == nil {
 			// 缓存1天
-			p.cache.Set(cacheKey, printersBytes, 24*time.Hour)
+			compressed, err := compress(printersBytes)
+			if err == nil {
+				p.cache.Set(cacheKey, compressed, 24*time.Hour)
+			}
 		}
 	}
 
 	return printers, nil
+}
+
+// compress 压缩数据
+func compress(data []byte) (string, error) {
+	var buf bytes.Buffer
+	zw, err := gzip.NewWriterLevel(&buf, gzip.BestCompression) // 或使用gzip.DefaultCompression
+	if err != nil {
+		return "", err
+	}
+	_, err = zw.Write([]byte(data))
+	if err != nil {
+		return "", err
+	}
+	if err := zw.Close(); err != nil {
+		return "", err
+	}
+	encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
+	return encoded, nil
+}
+
+// decompress 解压数据
+func decompress(data string) (string, error) {
+	// 解码Base64
+	compressed, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return "", err
+	}
+	// 解压数据
+	zr, err := gzip.NewReader(bytes.NewReader(compressed))
+	if err != nil {
+		return "", err
+	}
+	defer zr.Close()
+	//
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(zr)
+	if err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
