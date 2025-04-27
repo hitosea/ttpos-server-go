@@ -8,22 +8,27 @@ import (
 )
 
 type Printer struct {
-	PrinterID      uint   `gorm:"primaryKey;autoIncrement;comment:'打印机id'"`
-	PrinterName    string `gorm:"default:'';comment:'打印机名称'"`
-	PrinterType    string `gorm:"default:'';comment:'打印机类型'"`
-	PrinterConfig  string `gorm:"default:'';comment:'打印机配置'"`
-	PrintTimes     uint   `gorm:"default:0;comment:'打印联数(次数)'"`
-	Sort           uint   `gorm:"default:0;comment:'排序 (数字越小越靠前)'"`
-	IsDelete       uint   `gorm:"default:0;comment:'是否删除0=显示1=隐藏'"`
-	ShopSupplierID uint   `gorm:"default:0;comment:'商户id'"`
-	AppID          uint   `gorm:"default:0;comment:'小程序id'"`
-	CreateTime     int64  `gorm:"autoCreateTime;comment:'创建时间'"`
-	UpdateTime     int64  `gorm:"autoUpdateTime;comment:'更新时间'"`
+	PrinterID      uint   `gorm:"column:printer_id;type:int(11) unsigned;primary_key;AUTO_INCREMENT;comment:打印机id" json:"printer_id"`
+	PrinterName    string `gorm:"column:printer_name;type:varchar(255);comment:打印机名称;NOT NULL" json:"printer_name"`
+	PrinterType    string `gorm:"column:printer_type;type:varchar(255);comment:打印机类型;NOT NULL" json:"printer_type"`
+	PrinterConfig  string `gorm:"column:printer_config;type:text;comment:打印机配置;NOT NULL" json:"printer_config"`
+	PrintTimes     uint   `gorm:"column:print_times;type:smallint(6) unsigned;default:0;comment:打印联数(次数);NOT NULL" json:"print_times"`
+	Sort           uint   `gorm:"column:sort;type:int(11) unsigned;default:0;comment:排序 (数字越小越靠前);NOT NULL" json:"sort"`
+	IsDelete       uint   `gorm:"column:is_delete;type:int(11) unsigned;default:0;comment:是否删除0=显示1=隐藏;NOT NULL" json:"is_delete"`
+	ShopSupplierId int    `gorm:"column:shop_supplier_id;type:int(11);comment:商户id;NOT NULL" json:"shop_supplier_id"`
+	AppId          uint   `gorm:"column:app_id;type:int(11) unsigned;default:0;comment:小程序id;NOT NULL" json:"app_id"`
+	CreateTime     uint   `gorm:"column:create_time;type:int(11) unsigned;default:0;comment:创建时间;NOT NULL" json:"create_time"`
+	UpdateTime     uint   `gorm:"column:update_time;type:int(11) unsigned;default:0;comment:更新时间;NOT NULL" json:"update_time"`
 }
 
 type PrinterRepository interface {
 	GetPrinterList() ([]*Printer, error)
+	GetPrinterTypeList() ([]*model.PrinterType, error)
 	ConvertPrinter() error
+}
+
+func NewPrinterService(db *gorm.DB, targetDB *gorm.DB) PrinterRepository {
+	return &PrinterService{db: db, targetDB: targetDB}
 }
 
 type PrinterService struct {
@@ -39,80 +44,31 @@ func (s *PrinterService) GetPrinterList() ([]*Printer, error) {
 	return printers, nil
 }
 
-func (s *PrinterService) ConvertPrinter() error {
-	// 创建打印机类型数据
-	printerTypes := []model.PrinterType{
-		{
-			BaseModel: model.BaseModel{
-				Uuid: 1,
-			},
-			Name:       "Codesoft（网口）80mm",
-			Key:        "CODESOFT_LAN",
-			ConfigJson: `[{"key":"IP","name":"打印机IP"},{"key":"PORT","name":"打印机PORT"}]`,
-		},
-		{
-			BaseModel: model.BaseModel{
-				Uuid: 2,
-			},
-			Name:       "Codesoft（WIFI）80mm",
-			Key:        "CODESOFT_WIFI",
-			ConfigJson: `[{"key":"IP","name":"打印机IP"},{"key":"PORT","name":"打印机PORT"}]`,
-		},
-		{
-			BaseModel: model.BaseModel{
-				Uuid: 3,
-			},
-			Name:       "商米打印机（云打印）80mm",
-			Key:        "SUNMI_CLOUD",
-			ConfigJson: `[{"key":"APP_ID","name":"打印机APPID"},{"key":"APP_KEY","name":"打印机APPKEY"},{"key":"SN","name":"打印机SN"}]`,
-		},
-		{
-			BaseModel: model.BaseModel{
-				Uuid: 4,
-			},
-			Name:       "商米打印机（局域网）80mm",
-			Key:        "SUNMI_LAN",
-			ConfigJson: `[{"key":"IP","name":"打印机IP"},{"key":"SN","name":"打印机SN"}]`,
-		},
-		{
-			BaseModel: model.BaseModel{
-				Uuid: 5,
-			},
-			Name:       "芯烨打印机（有线）80mm",
-			Key:        "XPRINTER_LAN",
-			ConfigJson: `[{"key":"IP","name":"打印机IP"},{"key":"PORT","name":"打印机PORT"}]`,
-		},
-		{
-			BaseModel: model.BaseModel{
-				Uuid: 6,
-			},
-			Name:       "芯烨打印机（WIFI）80mm",
-			Key:        "XPRINTER_WIFI",
-			ConfigJson: `[{"key":"IP","name":"打印机IP"},{"key":"PORT","name":"打印机PORT"}]`,
-		},
+func (s *PrinterService) GetPrinterTypeList() ([]*model.PrinterType, error) {
+	var printerTypes []*model.PrinterType
+	if err := s.targetDB.Find(&printerTypes).Error; err != nil {
+		return nil, err
 	}
+	return printerTypes, nil
+}
 
-	for _, printerType := range printerTypes {
-		_, err := base.NewPrinterTypeRepo(s.targetDB).CreatePrinterType(printerType)
-		if err != nil {
-			return err
-		}
-	}
+func (s *PrinterService) ConvertPrinter() error {
 	printers, err := s.GetPrinterList()
+	printerTypes, err := s.GetPrinterTypeList()
 	if err != nil {
 		return err
 	}
 	for _, printer := range printers {
-		// 档口打印机. 转换商品打印（档口）数据
+		// 档口打印机
 		printer := model.Printer{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(printer.PrinterID),
-				CreateTime: printer.CreateTime,
-				UpdateTime: printer.UpdateTime,
+				CreateTime: int64(printer.CreateTime),
+				UpdateTime: int64(printer.UpdateTime),
 				DeleteTime: int64(printer.IsDelete),
 			},
 			Name:            printer.PrinterName,
-			PrinterTypeUuid: s.parsePrinterType(printer.PrinterType),
+			PrinterTypeUuid: s.parsePrinterType(printer.PrinterType, printerTypes),
 			ConfigJson:      printer.PrinterConfig,
 			Copies:          printer.PrintTimes,
 			Sort:            printer.Sort,
@@ -125,21 +81,11 @@ func (s *PrinterService) ConvertPrinter() error {
 	return nil
 }
 
-func (s *PrinterService) parsePrinterType(printerTypeString string) uint64 {
-	switch printerTypeString {
-	case "CODESOFT_LAN":
-		return 1
-	case "CODESOFT_WIFI":
-		return 2
-	case "SUNMI_CLOUD":
-		return 3
-	case "SUNMI_LAN":
-		return 4
-	case "XPRINTER_LAN":
-		return 5
-	case "XPRINTER_WIFI":
-		return 6
-	default:
-		return 0
+func (s *PrinterService) parsePrinterType(printerTypeString string, printerTypes []*model.PrinterType) uint64 {
+	for _, printerType := range printerTypes {
+		if printerTypeString == printerType.Key {
+			return printerType.Uuid
+		}
 	}
+	return 0
 }

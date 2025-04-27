@@ -39,6 +39,13 @@ type SupplierPrintingRepository interface {
 	ConvertSupplierPrinting() error
 }
 
+func NewSupplierPrintingService(db *gorm.DB, targetDB *gorm.DB) SupplierPrintingRepository {
+	return &SupplierPrintingService{
+		db:       db,
+		targetDB: targetDB,
+	}
+}
+
 type SupplierPrintingService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB
