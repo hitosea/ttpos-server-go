@@ -220,9 +220,16 @@ func NewSauceProductBom(db *gorm.DB, product *v1.Product) ([]model.ProductBom, e
 		if err != nil {
 			return nil, errors.WithMessage(err, "获取uuid失败")
 		}
+
+		productBomUuid, err := pkgUtils.GetID()
+		if err != nil {
+			return nil, errors.WithMessage(err, "获取uuid失败")
+		}
+
 		productBom := model.ProductBom{
 			BaseModel: model.BaseModel{
-				Uuid: uint64(productFeed.ProductFeedID),
+				//Uuid: uint64(productFeed.ProductFeedID),
+				Uuid: productBomUuid,
 			},
 			PurchasePrice:     0,
 			Price:             price,
