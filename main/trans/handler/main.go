@@ -125,5 +125,12 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, companyUui
 		return err
 	}
 
+	// 商品属性和属性组
+	attributeService := v1.NewAttributeService(sourceDB, targetDB)
+	err = attributeService.ConvertAttribute()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
