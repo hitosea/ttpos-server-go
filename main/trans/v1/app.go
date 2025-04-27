@@ -104,16 +104,25 @@ type AppRepository interface {
 	ConvertApp() error
 }
 
-func NewAppService(db *gorm.DB, targetDB *gorm.DB) AppRepository {
-	return &AppService{
+func NewAppService(db *gorm.DB, targetDB *gorm.DB, opts ...func(*ServiceOption)) AppRepository {
+	option := &ServiceOption{}
+	for _, opt := range opts {
+		opt(option)
+	}
+	service := &AppService{
 		db:       db,
 		targetDB: targetDB,
 	}
+	if option.CompanyUuid != 0 {
+		service.originCommpanyUuid = option.CompanyUuid
+	}
+	return service
 }
 
 type AppService struct {
-	db       *gorm.DB
-	targetDB *gorm.DB
+	db                 *gorm.DB
+	targetDB           *gorm.DB
+	originCommpanyUuid uint64
 }
 
 func (s *AppService) GetAppList() ([]*App, error) {
@@ -132,7 +141,7 @@ func (s *AppService) ConvertApp() error {
 	for _, app := range appList {
 		company := model.Company{
 			BaseModel: model.BaseModel{
-				Uuid: uint64(app.AppID),
+				Uuid: s.originCommpanyUuid,
 			},
 			Name:          app.Supplier.Name,
 			Logo:          app.Supplier.Logo,
@@ -142,9 +151,9 @@ func (s *AppService) ConvertApp() error {
 			AuthStartTime: int64(app.AuthStartTime),
 			CompanySetting: &model.CompanySetting{
 				BaseModel: model.BaseModel{
-					Uuid: uint64(app.AppID),
+					Uuid: s.originCommpanyUuid,
 				},
-				CompanyUuid:      uint64(app.AppID),
+				CompanyUuid:      s.originCommpanyUuid,
 				RealName:         app.Supplier.RealName,
 				LinkName:         app.Supplier.LinkName,
 				LinkPhone:        app.Supplier.LinkPhone,

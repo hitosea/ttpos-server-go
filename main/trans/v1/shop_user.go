@@ -34,13 +34,33 @@ type ShopUserRepository interface {
 	ConvertShopUser() error
 }
 
-func NewShopUserService(db *gorm.DB, targetDB *gorm.DB) ShopUserRepository {
-	return &ShopUserService{db: db, targetDB: targetDB}
+type ServiceOption struct {
+	CompanyUuid uint64
+}
+
+func WithCompanyUuid(companyUuid uint64) func(*ServiceOption) {
+	return func(opt *ServiceOption) {
+		opt.CompanyUuid = companyUuid
+	}
+}
+
+func NewShopUserService(db *gorm.DB, targetDB *gorm.DB, opts ...func(*ServiceOption)) ShopUserRepository {
+	option := &ServiceOption{}
+	for _, opt := range opts {
+		opt(option)
+	}
+
+	service := &ShopUserService{db: db, targetDB: targetDB}
+	if option.CompanyUuid != 0 {
+		service.originCommpanyUuid = option.CompanyUuid
+	}
+	return service
 }
 
 type ShopUserService struct {
-	db       *gorm.DB
-	targetDB *gorm.DB
+	db                 *gorm.DB
+	targetDB           *gorm.DB
+	originCommpanyUuid uint64
 }
 
 func (s *ShopUserService) GetShopUserList() ([]*ShopUser, error) {
@@ -63,7 +83,7 @@ func (s *ShopUserService) ConvertShopUser() error {
 				UpdateTime: shopUser.UpdateTime,
 				DeleteTime: shopUser.IsDelete,
 			},
-			CompanyUuid:         shopUser.AppID,
+			CompanyUuid:         s.originCommpanyUuid,
 			Username:            shopUser.UserName,
 			Password:            shopUser.Password,
 			Phone:               shopUser.Phone,

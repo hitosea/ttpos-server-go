@@ -199,7 +199,7 @@ var migrateDataCmd = &cobra.Command{
 		// sourceDB = nil
 		// targetDB = nil
 
-		handler.Run(sourceDB, targetDB)
+		handler.Run(sourceDB, targetDB, companyUuid)
 		fmt.Printf("%s 数据迁移完成 %s\n", greenColor, resetColor)
 	},
 }
