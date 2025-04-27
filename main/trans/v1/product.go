@@ -68,8 +68,9 @@ type Product struct {
 
 	// 旧表中没有的字段。用于关联
 
-	ProductImage ProductImage `gorm:"foreignKey:product_id;references:product_id"`
-	ProductTax   ProductTax   `gorm:"foreignKey:product_id;references:product_id"`
+	ProductImage ProductImage  `gorm:"foreignKey:product_id;references:product_id"`
+	ProductTax   ProductTax    `gorm:"foreignKey:product_id;references:product_id"`
+	ProductSKUs  []*ProductSKU `gorm:"foreignKey:product_id;references:product_id"`
 }
 
 func (model *Product) GetProductStatus() uint8 {

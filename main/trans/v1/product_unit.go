@@ -70,7 +70,7 @@ func (s *ProductUnitService) ConvertProductUnit() error {
 				CreateTime: productUnit.CreateTime,
 				UpdateTime: productUnit.UpdateTime,
 			},
-			Name:                  names.Zh,
+			Name:                  productUnit.UnitName,
 			MultiLanguageNameUuid: uint64(id),
 			MultiLanguageName:     languageName,
 		}

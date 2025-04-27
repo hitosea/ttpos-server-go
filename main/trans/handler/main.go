@@ -153,5 +153,19 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, companyUui
 		return err
 	}
 
+	// 商品和材料
+	productService := NewProductService(sourceDB, targetDB)
+	err = productService.ConvertProduct()
+	if err != nil {
+		return err
+	}
+
+	// 商品小料库
+	productSauceService := NewProductSauceService(sourceDB, targetDB)
+	err = productSauceService.ConvertProductSauce()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
