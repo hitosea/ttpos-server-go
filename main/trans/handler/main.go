@@ -139,5 +139,12 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, companyUui
 		return err
 	}
 
+	// 商品打印标签
+	productPrintLabelService := v1.NewProductPrintLabelService(sourceDB, targetDB)
+	err = productPrintLabelService.ConvertProductPrintLabel()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
