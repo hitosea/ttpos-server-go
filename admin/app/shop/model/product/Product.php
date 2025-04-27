@@ -197,6 +197,7 @@ class Product extends ProductModel
         $data['is_show_kitchen'] = $data['is_show_kitchen'] != 2 ? 1 : 0;
         $data['is_show_assistant'] = $data['is_show_assistant'] != 2 ? 1 : 0;
         $data['is_show_h5'] = $data['is_show_h5'] != 2 ? 1 : 0;
+        $data['sort'] = $data['product_sort'] ?? 0;
 
         // 开启事务
         $this->startTrans();
