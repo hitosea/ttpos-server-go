@@ -9,24 +9,160 @@ import (
 
 func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceCompanyId int, targetCompanyUuid uint64) error {
 	var err error
-	userGradeService := v1.NewUserGradeService(sourceDB, targetDB)
-	err = userGradeService.ConvertUserGrade()
-	if err != nil {
-		return errors.WithMessage(err)
+	// 桌台
+	{
+		// 桌台区域
+		tableAreaService := v1.NewTableAreaService(sourceDB, targetDB)
+		err = tableAreaService.ConvertTableArea()
+		if err != nil {
+			return err
+		}
+
+		// 桌台类型
+		tableTypeService := v1.NewTableTypeService(sourceDB, targetDB)
+		err = tableTypeService.ConvertTableType()
+		if err != nil {
+			return err
+		}
+
+		// 桌台
+		tableService := v1.NewTableService(sourceDB, targetDB)
+		err = tableService.ConvertTable()
+		if err != nil {
+			return err
+		}
 	}
 
-	// 桌台区域
-	tableAreaService := v1.NewTableAreaService(sourceDB, targetDB)
-	err = tableAreaService.ConvertTableArea()
-	if err != nil {
-		return errors.WithMessage(err)
+	// 设备
+	{
+		shopBindRecordService := v1.NewShopBindRecordService(sourceDB, targetDB)
+		err = shopBindRecordService.ConvertShopBindRecord()
+		if err != nil {
+			return err
+		}
 	}
 
-	// 商家表
-	appService := v1.NewAppService(sourceDB, targetSassDB, targetDB, sourceCompanyId, targetCompanyUuid)
-	err = appService.ConvertApp()
-	if err != nil {
-		return errors.WithMessage(err)
+	// 设置
+	{
+		// 设置
+		settingService := v1.NewSettingService(sourceDB, targetDB)
+		err = settingService.ConvertSetting()
+		if err != nil {
+			return err
+		}
+	}
+
+	// 商家、员工
+	{
+		// 商家表
+		appService := v1.NewAppService(sourceDB, targetSassDB, targetDB, sourceCompanyId, targetCompanyUuid)
+		err = appService.ConvertApp()
+		if err != nil {
+			return err
+		}
+
+		// 角色
+		shopRoleService := v1.NewShopRoleService(sourceDB, targetDB)
+		err = shopRoleService.ConvertShopRole()
+		if err != nil {
+			return err
+		}
+
+		// 权限
+		shopAccessService := v1.NewShopAccessService(sourceDB, targetDB)
+		err = shopAccessService.ConvertShopAccess()
+		if err != nil {
+			return err
+		}
+
+		// 角色权限
+		shopRoleAccess := v1.NewShopRoleAccessService(sourceDB, targetDB)
+		err = shopRoleAccess.ConvertShopRoleAccess()
+		if err != nil {
+			return err
+		}
+
+		// 员工
+		shopUserService := v1.NewShopUserService(sourceDB, targetDB, targetSassDB, targetCompanyUuid)
+		err = shopUserService.ConvertShopUser()
+		if err != nil {
+			return err
+		}
+
+		// 员工角色
+		shopStaffRole := v1.NewShopUserRoleService(sourceDB, targetDB)
+		err = shopStaffRole.ConvertShopUserRole()
+		if err != nil {
+			return err
+		}
+
+	}
+
+	// 打印管理
+	{
+		// 打印机
+		printerService := v1.NewPrinterService(sourceDB, targetDB)
+		err = printerService.ConvertPrinter()
+		if err != nil {
+			return err
+		}
+
+		// 打印机模板
+		printerTemplateService := v1.NewPrinterTemplateService(sourceDB, targetDB)
+		err = printerTemplateService.ConvertPrinterTemplate()
+		if err != nil {
+			return err
+		}
+
+		// 商品打印
+		supplierPrintingService := v1.NewSupplierPrintingService(sourceDB, targetDB)
+		err = supplierPrintingService.ConvertSupplierPrinting()
+		if err != nil {
+			return err
+		}
+	}
+
+	// 会员
+	{
+		userGradeService := v1.NewUserGradeService(sourceDB, targetDB)
+		err = userGradeService.ConvertUserGrade()
+		if err != nil {
+			return err
+		}
+		// 会员
+		userService := v1.NewUserService(sourceDB, targetDB)
+		err = userService.ConvertUser()
+		if err != nil {
+			return err
+		}
+
+		// 会员卡领取记录
+		userCardRecordService := v1.NewUserCardRecordService(sourceDB, targetDB)
+		err = userCardRecordService.ConvertUserCardRecord()
+		if err != nil {
+			return err
+		}
+
+		// 会员积分变动记录
+		userPointsLogService := v1.NewUserPointsLogService(sourceDB, targetDB)
+		err = userPointsLogService.ConvertUserPointsLog()
+		if err != nil {
+			return err
+		}
+
+		// 会员余额变动记录
+		userBalanceLogService := v1.NewUserBalanceLogService(sourceDB, targetDB)
+		err = userBalanceLogService.ConvertUserBalanceLog()
+		if err != nil {
+			return err
+		}
+
+		// 会员卡
+		userCardService := v1.NewUserCardService(sourceDB, targetDB)
+		err = userCardService.ConvertUserCard()
+		if err != nil {
+			return err
+		}
 	}
 
 	// 钱箱
@@ -57,13 +193,6 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		return errors.WithMessage(err)
 	}
 
-	// 桌台类型
-	tableTypeService := v1.NewTableTypeService(sourceDB, targetDB)
-	err = tableTypeService.ConvertTableType()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
 	// 退菜原因
 	returnReasonService := v1.NewReturnReasonService(sourceDB, targetDB)
 	err = returnReasonService.ConvertReturnReason()
@@ -81,55 +210,6 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 	// 支付方式
 	payTypeService := v1.NewPayTypeService(sourceDB, targetDB)
 	err = payTypeService.ConvertPayType()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 打印机模板
-	printerTemplateService := v1.NewPrinterTemplateService(sourceDB, targetDB)
-	err = printerTemplateService.ConvertPrinterTemplate()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 角色
-	shopRoleService := v1.NewShopRoleService(sourceDB, targetDB)
-	err = shopRoleService.ConvertShopRole()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 权限
-	shopAccessService := v1.NewShopAccessService(sourceDB, targetDB)
-	err = shopAccessService.ConvertShopAccess()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 角色权限
-	shopRoleAccess := v1.NewShopRoleAccessService(sourceDB, targetDB)
-	err = shopRoleAccess.ConvertShopRoleAccess()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 设置
-	settingService := v1.NewSettingService(sourceDB, targetDB)
-	err = settingService.ConvertSetting()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 员工角色
-	shopStaffRole := v1.NewShopUserRoleService(sourceDB, targetDB)
-	err = shopStaffRole.ConvertShopUserRole()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 员工
-	shopUserService := v1.NewShopUserService(sourceDB, targetDB, targetSassDB, targetCompanyUuid)
-	err = shopUserService.ConvertShopUser()
 	if err != nil {
 		return errors.WithMessage(err)
 	}
@@ -193,48 +273,6 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 	// 自助餐
 	buffetService := NewBuffetService(sourceDB, targetDB)
 	err = buffetService.ConvertBuffet()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 会员
-	userService := v1.NewUserService(sourceDB, targetDB)
-	err = userService.ConvertUser()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 会员卡领取记录
-	userCardRecordService := v1.NewUserCardRecordService(sourceDB, targetDB)
-	err = userCardRecordService.ConvertUserCardRecord()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 会员积分变动记录
-	userPointsLogService := v1.NewUserPointsLogService(sourceDB, targetDB)
-	err = userPointsLogService.ConvertUserPointsLog()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 会员余额变动记录
-	userBalanceLogService := v1.NewUserBalanceLogService(sourceDB, targetDB)
-	err = userBalanceLogService.ConvertUserBalanceLog()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 会员卡
-	userCardService := v1.NewUserCardService(sourceDB, targetDB)
-	err = userCardService.ConvertUserCard()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 桌台
-	tableService := v1.NewTableService(sourceDB, targetDB)
-	err = tableService.ConvertTable()
 	if err != nil {
 		return errors.WithMessage(err)
 	}

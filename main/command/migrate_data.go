@@ -260,6 +260,9 @@ func truncateTable(targetDB *gorm.DB) bool {
 	var tables []string
 	targetDB.Raw("SHOW TABLES").Scan(&tables)
 	for _, table := range tables {
+		if table == "ttpos_printer_type" {
+			continue
+		}
 		targetDB.Exec(fmt.Sprintf("TRUNCATE TABLE `%s`", table))
 	}
 	fmt.Printf("%s 清空目标数据库完成 %s\n", greenColor, resetColor)
