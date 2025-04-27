@@ -34,6 +34,13 @@ type TableRepository interface {
 	ConvertTable() error
 }
 
+func NewTableService(db *gorm.DB, targetDB *gorm.DB) TableRepository {
+	return &TableService{
+		db:       db,
+		targetDB: targetDB,
+	}
+}
+
 type TableService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB

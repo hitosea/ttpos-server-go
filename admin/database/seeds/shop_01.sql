@@ -1725,7 +1725,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_shift_log` (
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态: 0未交班,1已交班',
     `previous_shift_cash` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '上一班遗留备用金',
     `current_cash_total` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '当前钱箱现金总计',
-    `incomes` VARCHAR(255) DEFAULT NULL COMMENT '收入详情',
+    `incomes` TEXT  COMMENT '收入详情',
     `total_income` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '总收入',
     `cash_taken_out` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '本班取出现金',
     `cash_left` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '本班遗留备用金',

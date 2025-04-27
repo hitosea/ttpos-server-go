@@ -22,6 +22,13 @@ type BuffetPackage struct {
 	Tax                      *Tax                      `gorm:"foreignKey:tax_uuid;references:uuid"`
 }
 
+func (model *BuffetPackage) SetNil() {
+	model.MultiLanguageName = MultiLanguageName{}
+	model.BuffetCustomerTypePrices = nil
+	model.BuffetProducts = nil
+	model.Tax = nil
+}
+
 func (model *BuffetPackage) GetBuffetProductList() resp.BuffetProductList {
 	buffetProductList := resp.BuffetProductList{}
 	buffetProductList.List = make([]resp.BuffetProduct, 0)
@@ -79,6 +86,10 @@ type BuffetCustomerTypePrice struct {
 	BuffetCustomerType BuffetCustomerType `gorm:"foreignKey:customer_type_uuid;references:uuid"`
 }
 
+func (model *BuffetCustomerTypePrice) SetNil() {
+	model.BuffetCustomerType = BuffetCustomerType{}
+}
+
 // BuffetProduct 自助餐产品信息表 ttpos_buffet_product
 type BuffetProduct struct {
 	BaseModel
@@ -91,6 +102,10 @@ type BuffetProduct struct {
 	Limit              uint   `gorm:"default:0;column:limit;comment:限购数量"`
 
 	ProductPackage *ProductPackage `gorm:"foreignKey:product_package_uuid;references:uuid"`
+}
+
+func (model *BuffetProduct) SetNil() {
+	model.ProductPackage = nil
 }
 
 // BuffetDelay 自助餐加钟价格表 `ttpos_buffet_delay`
