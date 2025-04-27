@@ -85,5 +85,11 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB) error {
 		return err
 	}
 
+	shopAccessService := v1.NewShopAccessService(sourceDB, targetDB)
+	err = shopAccessService.ConvertShopAccess()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
