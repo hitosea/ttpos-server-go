@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Run(sourceDB *gorm.DB, targetDB *gorm.DB, companyUuid uint64) error {
+func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, companyUuid uint64) error {
 	userService := v1.NewUserGradeService(sourceDB, targetDB)
 	err := userService.ConvertUserGrade()
 	if err != nil {
