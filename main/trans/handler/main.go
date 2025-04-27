@@ -238,5 +238,12 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, targetComp
 		return err
 	}
 
+	// 税种
+	taxCategoryService := v1.NewTaxCategoryService(sourceDB, targetDB)
+	err = taxCategoryService.ConvertTaxCategory()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
