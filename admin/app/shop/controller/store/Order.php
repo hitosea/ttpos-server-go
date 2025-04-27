@@ -6,6 +6,8 @@ use help\HttpHelp;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\common\enum\settings\DeliveryTypeEnum;
+use app\shop\model_old\order\Order as OldOrderModel;
+use app\common\model\app\App as AppModel;
 
 /**
  * 订单管理
@@ -28,10 +30,11 @@ class Order extends Controller
      * @Apidoc\Param(ref="pageParam")
      * @Apidoc\Returned("list", type="array", ref="app\shop\model\order\Order\getList", desc="列表")
      */
-    public function index($dataType = 'all')
+    public function index()
     {   
-        $data = $this->postData();
         // 
+        $data = $this->postData();
+        //
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/order/list', $this->buildListQueryParams($data), [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
@@ -43,7 +46,7 @@ class Order extends Controller
         if (($result['code'] ?? -1) != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
         }
-        // 
+        
         foreach ($result['data']['list'] as $key => &$item) {
             $item['finish_time'] = $item['finish_time'] ? date('Y-m-d H:i:s', $item['finish_time']) : '';
             if ($item['sale_orders']) {
@@ -52,9 +55,9 @@ class Order extends Controller
                 }
             }
         }
-        //
+        
         $result['data']['ex_style']  = DeliveryTypeEnum::store();
-        // 
+        
         return $this->renderSuccess('', $result['data']);
     }
 
