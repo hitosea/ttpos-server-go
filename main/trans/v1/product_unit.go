@@ -24,6 +24,10 @@ type ProductUnitRepository interface {
 	ConvertProductUnit() error
 }
 
+func NewProductUnitService(db *gorm.DB, targetDB *gorm.DB) ProductUnitRepository {
+	return &ProductUnitService{db: db, targetDB: targetDB}
+}
+
 type ProductUnitService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB

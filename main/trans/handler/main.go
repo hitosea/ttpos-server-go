@@ -132,5 +132,12 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, companyUui
 		return err
 	}
 
+	// 商品单位
+	productUnitService := v1.NewProductUnitService(sourceDB, targetDB)
+	err = productUnitService.ConvertProductUnit()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
