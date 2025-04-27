@@ -167,5 +167,12 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, targetComp
 		return err
 	}
 
+	// 供应商
+	erpSupplierService := v1.NewErpSupplierService(sourceDB, targetDB)
+	err = erpSupplierService.ConvertErpSupplier()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
