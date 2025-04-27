@@ -34,33 +34,15 @@ type ShopUserRepository interface {
 	ConvertShopUser() error
 }
 
-type ServiceOption struct {
-	CompanyUuid uint64
-}
-
-func WithCompanyUuid(companyUuid uint64) func(*ServiceOption) {
-	return func(opt *ServiceOption) {
-		opt.CompanyUuid = companyUuid
-	}
-}
-
-func NewShopUserService(db *gorm.DB, targetDB *gorm.DB, opts ...func(*ServiceOption)) ShopUserRepository {
-	option := &ServiceOption{}
-	for _, opt := range opts {
-		opt(option)
-	}
-
-	service := &ShopUserService{db: db, targetDB: targetDB}
-	if option.CompanyUuid != 0 {
-		service.originCommpanyUuid = option.CompanyUuid
-	}
-	return service
+func NewShopUserService(db *gorm.DB, targetDB *gorm.DB, targetSaasDB *gorm.DB, targetCompanyUuid uint64) ShopUserRepository {
+	return &ShopUserService{db: db, targetDB: targetDB, targetSaasDB: targetSaasDB, targetCompanyUuid: targetCompanyUuid}
 }
 
 type ShopUserService struct {
-	db                 *gorm.DB
-	targetDB           *gorm.DB
-	originCommpanyUuid uint64
+	db                *gorm.DB
+	targetDB          *gorm.DB
+	targetSaasDB      *gorm.DB
+	targetCompanyUuid uint64
 }
 
 func (s *ShopUserService) GetShopUserList() ([]*ShopUser, error) {
@@ -83,7 +65,7 @@ func (s *ShopUserService) ConvertShopUser() error {
 				UpdateTime: shopUser.UpdateTime,
 				DeleteTime: shopUser.IsDelete,
 			},
-			CompanyUuid:         s.originCommpanyUuid,
+			CompanyUuid:         s.targetCompanyUuid,
 			Username:            shopUser.UserName,
 			Password:            shopUser.Password,
 			Phone:               shopUser.Phone,
@@ -101,6 +83,18 @@ func (s *ShopUserService) ConvertShopUser() error {
 		if err != nil {
 			return err
 		}
+
+		repository.NewCompanyStaffRepo(s.targetSaasDB).CreateCompanyStaff(&model.CompanyStaff{
+			BaseModel: model.BaseModel{
+				Uuid:       uint64(shopUser.ShopUserID),
+				CreateTime: shopUser.CreateTime,
+				UpdateTime: shopUser.UpdateTime,
+				DeleteTime: shopUser.IsDelete,
+			},
+			CompanyUuid: s.targetCompanyUuid,
+			Username:    shopUser.UserName,
+			Phone:       shopUser.Phone,
+		})
 	}
 	return nil
 }

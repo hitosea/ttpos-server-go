@@ -104,25 +104,18 @@ type AppRepository interface {
 	ConvertApp() error
 }
 
-func NewAppService(db *gorm.DB, targetDB *gorm.DB, opts ...func(*ServiceOption)) AppRepository {
-	option := &ServiceOption{}
-	for _, opt := range opts {
-		opt(option)
+func NewAppService(db *gorm.DB, targetDB *gorm.DB, targetCompanyUuid uint64) AppRepository {
+	return &AppService{
+		db:                db,
+		targetDB:          targetDB,
+		targetCompanyUuid: targetCompanyUuid,
 	}
-	service := &AppService{
-		db:       db,
-		targetDB: targetDB,
-	}
-	if option.CompanyUuid != 0 {
-		service.originCommpanyUuid = option.CompanyUuid
-	}
-	return service
 }
 
 type AppService struct {
-	db                 *gorm.DB
-	targetDB           *gorm.DB
-	originCommpanyUuid uint64
+	db                *gorm.DB
+	targetDB          *gorm.DB
+	targetCompanyUuid uint64
 }
 
 func (s *AppService) GetAppList() ([]*App, error) {
@@ -141,7 +134,7 @@ func (s *AppService) ConvertApp() error {
 	for _, app := range appList {
 		company := model.Company{
 			BaseModel: model.BaseModel{
-				Uuid: s.originCommpanyUuid,
+				Uuid: s.targetCompanyUuid,
 			},
 			Name:          app.Supplier.Name,
 			Logo:          app.Supplier.Logo,
@@ -151,9 +144,9 @@ func (s *AppService) ConvertApp() error {
 			AuthStartTime: int64(app.AuthStartTime),
 			CompanySetting: &model.CompanySetting{
 				BaseModel: model.BaseModel{
-					Uuid: s.originCommpanyUuid,
+					Uuid: s.targetCompanyUuid,
 				},
-				CompanyUuid:      s.originCommpanyUuid,
+				CompanyUuid:      s.targetCompanyUuid,
 				RealName:         app.Supplier.RealName,
 				LinkName:         app.Supplier.LinkName,
 				LinkPhone:        app.Supplier.LinkPhone,
