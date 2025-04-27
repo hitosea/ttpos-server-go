@@ -185,7 +185,7 @@ var migrateDataCmd = &cobra.Command{
 		// 二次确认
 		fmt.Printf("%s 将要从旧数据库 %s 迁移数据到新数据库 %s %s\n", redColor, config.MigrateDatabase.MigrateOldDBDatabase, fmt.Sprintf("%s%d", constant.DBNamePrefix, companyUuid), resetColor)
 		fmt.Printf("%s 旧数据库的商家名称为： %s %s\n", redColor, supplier.Name, resetColor)
-		if company.Name != "" {
+		if company != nil {
 			fmt.Printf("%s 目标数据库的商家名称为： %s %s\n", redColor, company.Name, resetColor)
 		} else {
 			fmt.Printf("%s 目标数据库的商家名称为空 %s\n", redColor, resetColor)
