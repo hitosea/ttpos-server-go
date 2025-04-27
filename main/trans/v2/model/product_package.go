@@ -214,20 +214,27 @@ func NewSauceProductBom(db *gorm.DB, product *v1.Product) ([]model.ProductBom, e
 		if err != nil {
 			return nil, errors.WithMessage(err, "productFeed.GetDefaultSelect() failed")
 		}
+
+		// 生成新的雪花uuid
+		feedUuid, err := NewFeedUuid(productFeed.FeedID)
+		if err != nil {
+			return nil, errors.WithMessage(err, "获取uuid失败")
+		}
 		productBom := model.ProductBom{
 			BaseModel: model.BaseModel{
 				Uuid: uint64(productFeed.ProductFeedID),
 			},
-			PurchasePrice:      0,
-			Price:              price,
-			Name:               productFeed.FeedName,
-			StockNum:           float64(productFeed.StockNum),
-			BarcodeValue:       "",
-			IsDefaultSelect:    defaultSelect,
-			Status:             1,
-			IsSoldOut:          0,
-			ProductFlavorUuid:  0,
-			ProductSauceUuid:   uint64(productFeed.FeedID),
+			PurchasePrice:     0,
+			Price:             price,
+			Name:              productFeed.FeedName,
+			StockNum:          float64(productFeed.StockNum),
+			BarcodeValue:      "",
+			IsDefaultSelect:   defaultSelect,
+			Status:            1,
+			IsSoldOut:         0,
+			ProductFlavorUuid: 0,
+			// ProductSauceUuid:   uint64(productFeed.FeedID),
+			ProductSauceUuid:   feedUuid,
 			ProductPackageUuid: uint64(product.ProductID),
 		}
 		productBoms = append(productBoms, productBom)

@@ -24,6 +24,10 @@ type ProductPrintLabelRepository interface {
 	ConvertProductPrintLabel() error
 }
 
+func NewProductPrintLabelService(db *gorm.DB, targetDB *gorm.DB) ProductPrintLabelRepository {
+	return &ProductPrintLabelService{db: db, targetDB: targetDB}
+}
+
 type ProductPrintLabelService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB

@@ -23,6 +23,10 @@ type SpecRepository interface {
 	ConvertSpec() error
 }
 
+func NewSpecService(db *gorm.DB, targetDB *gorm.DB) SpecRepository {
+	return &SpecService{db: db, targetDB: targetDB}
+}
+
 type SpecService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB

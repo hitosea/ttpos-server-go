@@ -35,8 +35,12 @@ func testConvertProduct() error {
 
 type ProductInterface interface {
 	GetProductList() ([]oldModel.Product, error)
-	GetProductTax(productID uint, taxType uint) (oldModel.ProductTax, error)
+	GetProductTax(productID uint64, taxType uint) (oldModel.ProductTax, error)
 	ConvertProduct() error
+}
+
+func NewProductService(db *gorm.DB, targetDB *gorm.DB) ProductInterface {
+	return &ProductService{db: db, targetDB: targetDB}
 }
 
 type ProductService struct {
@@ -46,7 +50,7 @@ type ProductService struct {
 
 func (s *ProductService) GetProductList() ([]oldModel.Product, error) {
 	var products []oldModel.Product
-	err := s.db.Preload("ProductImage").Preload("ProductTax").Find(&products).Error
+	err := s.db.Preload("ProductImage").Preload("ProductTax").Preload("ProductSKUs").Find(&products).Error
 	if err != nil {
 		return nil, err
 	}
@@ -96,20 +100,34 @@ func (s *ProductService) ConvertProduct() error {
 					return errors.WithMessage(err)
 				}
 
+				// 材料的采购单价
+				purchasePrice := 0.0
+				productSKUs := product.ProductSKUs
+				if len(productSKUs) > 0 {
+					productSKU := productSKUs[0]
+					purchasePrice = productSKU.PurchasePrice
+				}
+				// 材料的条形码
+				barcodeValue := ""
+				if len(productSKUs) > 0 {
+					productSKU := productSKUs[0]
+					barcodeValue = productSKU.Barcode
+				}
+
 				material := model.Material{
 					BaseModel: model.BaseModel{
 						Uuid: uint64(product.ProductID),
 					},
-					Name:                  languageName.ZhName,
+					Name:                  product.ProductName,
 					MultiLanguageNameUuid: uint(languageName.Uuid),
 					CategoryUuid:          product.CategoryID,
 					SupplierUuid:          product.ErpSupplierID,
 					ImageUuid:             product.ProductImage.ImageID,
 					ImageName:             product.ImgName,
 					UnitUuid:              product.UnitID,
-					Price:                 product.ProductPrice, // todo 确认“采购单价”是对应旧表的哪个字段
+					Price:                 purchasePrice,
 					StockNum:              usign(product.ProductMaterialStock),
-					BarcodeValue:          product.ProductNo,
+					BarcodeValue:          barcodeValue,
 					Status:                product.ProductStatus == 10,
 				}
 				if _, err := base.NewMaterialRepo(s.targetDB).CreateMaterial(material); err != nil {

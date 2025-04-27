@@ -31,8 +31,12 @@ func testConvertProductSauce() error {
 }
 
 type ProductSauceInterface interface {
-	GetProductSauceList() ([]oldModel.Product, error)
-	ConvertProduct() error
+	GetProductSauceList() ([]oldModel.Feed, error)
+	ConvertProductSauce() error
+}
+
+func NewProductSauceService(db *gorm.DB, targetDB *gorm.DB) ProductSauceInterface {
+	return &ProductSauceService{db: db, targetDB: targetDB}
 }
 
 type ProductSauceService struct {

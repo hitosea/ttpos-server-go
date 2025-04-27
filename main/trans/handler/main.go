@@ -6,7 +6,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, companyUuid uint64) error {
+func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, targetCompanyUuid uint64) error {
 	userService := v1.NewUserGradeService(sourceDB, targetDB)
 	err := userService.ConvertUserGrade()
 	if err != nil {
@@ -21,7 +21,7 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, companyUui
 	}
 
 	// 商家表
-	appService := v1.NewAppService(sourceDB, targetDB, v1.WithCompanyUuid(companyUuid))
+	appService := v1.NewAppService(sourceDB, targetDB, targetCompanyUuid)
 	err = appService.ConvertApp()
 	if err != nil {
 		return err
@@ -119,8 +119,57 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, companyUui
 	}
 
 	// 员工
-	shopUserService := v1.NewShopUserService(sourceDB, targetDB, v1.WithCompanyUuid(companyUuid))
+	shopUserService := v1.NewShopUserService(sourceDB, targetDB, targetSassDB, targetCompanyUuid)
 	err = shopUserService.ConvertShopUser()
+	if err != nil {
+		return err
+	}
+
+	// 商品属性和属性组
+	attributeService := v1.NewAttributeService(sourceDB, targetDB)
+	err = attributeService.ConvertAttribute()
+	if err != nil {
+		return err
+	}
+
+	// 商品单位
+	productUnitService := v1.NewProductUnitService(sourceDB, targetDB)
+	err = productUnitService.ConvertProductUnit()
+	if err != nil {
+		return err
+	}
+
+	// 商品打印标签
+	productPrintLabelService := v1.NewProductPrintLabelService(sourceDB, targetDB)
+	err = productPrintLabelService.ConvertProductPrintLabel()
+	if err != nil {
+		return err
+	}
+
+	// 规格
+	specService := v1.NewSpecService(sourceDB, targetDB)
+	err = specService.ConvertSpec()
+	if err != nil {
+		return err
+	}
+
+	// 商品和材料
+	productService := NewProductService(sourceDB, targetDB)
+	err = productService.ConvertProduct()
+	if err != nil {
+		return err
+	}
+
+	// 商品小料库
+	productSauceService := NewProductSauceService(sourceDB, targetDB)
+	err = productSauceService.ConvertProductSauce()
+	if err != nil {
+		return err
+	}
+
+	// 供应商
+	erpSupplierService := v1.NewErpSupplierService(sourceDB, targetDB)
+	err = erpSupplierService.ConvertErpSupplier()
 	if err != nil {
 		return err
 	}
