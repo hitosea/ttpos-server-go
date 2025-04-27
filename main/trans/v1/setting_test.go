@@ -7,28 +7,28 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-func TestShopUser(t *testing.T) {
+func TestSetting(t *testing.T) {
 	db, err := NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}
-	shopUserService := ShopUserService{db: db}
-	shopUserList, err := shopUserService.GetShopUserList()
+	settingService := SettingService{db: db}
+	settingList, err := settingService.GetSettingList()
 	if err != nil {
 		panic(err)
 	}
-	json, err := json.Marshal(shopUserList)
+	json, err := json.Marshal(settingList)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(string(json))
 }
 
-func TestConvertShopUser(t *testing.T) {
-	testConvertShopUser()
+func TestConvertSetting(t *testing.T) {
+	testConvertSetting()
 }
 
-func testConvertShopUser() {
+func testConvertSetting() {
 	InitializeSonyFlakeId()
 
 	utils.InitSonyFlakeId()
@@ -42,10 +42,10 @@ func testConvertShopUser() {
 	if err != nil {
 		panic(err)
 	}
-	shopUserService := ShopUserService{db: db, targetDB: targetDB, originCommpanyUuid: 12122233333}
-	err = shopUserService.ConvertShopUser()
+	settingService := SettingService{db: db, targetDB: targetDB}
+	err = settingService.ConvertSetting()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("shop_user转换完成")
+	fmt.Println("setting转换完成")
 }
