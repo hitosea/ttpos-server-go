@@ -1,10 +1,11 @@
 package model
 
 import (
-	"github.com/spf13/viper"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"github.com/spf13/viper"
 )
 
 // File 文件库记录表 ttpos_file
@@ -25,6 +26,10 @@ type File struct {
 	IsRecycle     int    `gorm:"column:is_recycle;type:tinyint(3);default:0;comment:是否已回收;NOT NULL" json:"is_recycle"`
 
 	FileGroup *FileGroup `gorm:"foreignKey:GroupUuid;references:Uuid"` // 关联组
+}
+
+func (model *File) SetNil() {
+	model.FileGroup = nil
 }
 
 // GetUrl 获取地址。file_url + save_name + url_param
@@ -53,4 +58,10 @@ type FileGroup struct {
 	GroupType string `gorm:"column:group_type;type:varchar(10);comment:文件类型;NOT NULL" json:"group_type"`
 	GroupName string `gorm:"column:group_name;type:varchar(30);comment:分类名称;NOT NULL" json:"group_name"`
 	Sort      uint   `gorm:"column:sort;type:int(11) unsigned;default:0;comment:分类排序(数字越小越靠前);NOT NULL" json:"sort"`
+
+	Files []*File `gorm:"foreignKey:GroupUuid;references:Uuid"`
+}
+
+func (model *FileGroup) SetNil() {
+	model.Files = nil
 }

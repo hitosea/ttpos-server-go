@@ -7,28 +7,28 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-func TestShopUser(t *testing.T) {
+func TestUploadGroup(t *testing.T) {
 	db, err := NewMySQLConnection(sourceConf, sourceDBName)
 	if err != nil {
 		panic(err)
 	}
-	shopUserService := ShopUserService{db: db}
-	shopUserList, err := shopUserService.GetShopUserList()
+	uploadGroupService := UploadGroupService{db: db}
+	uploadGroupList, err := uploadGroupService.GetUploadGroupList()
 	if err != nil {
 		panic(err)
 	}
-	json, err := json.Marshal(shopUserList)
+	json, err := json.Marshal(uploadGroupList)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(string(json))
 }
 
-func TestConvertShopUser(t *testing.T) {
-	testConvertShopUser()
+func TestConvertUploadGroup(t *testing.T) {
+	testConvertUploadGroup()
 }
 
-func testConvertShopUser() {
+func testConvertUploadGroup() {
 	InitializeSonyFlakeId()
 
 	utils.InitSonyFlakeId()
@@ -42,10 +42,10 @@ func testConvertShopUser() {
 	if err != nil {
 		panic(err)
 	}
-	shopUserService := ShopUserService{db: db, targetDB: targetDB, targetCompanyUuid: 12122233333}
-	err = shopUserService.ConvertShopUser()
+	uploadGroupService := UploadGroupService{db: db, targetDB: targetDB}
+	err = uploadGroupService.ConvertUploadGroup()
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("shop_user转换完成")
+	fmt.Println("upload_group转换完成")
 }

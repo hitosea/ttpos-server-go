@@ -287,5 +287,19 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		return errors.WithMessage(err)
 	}
 
+	// 文件
+	fileService := v1.NewUploadFileService(sourceDB, targetDB)
+	err = fileService.ConvertUploadFile()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 文件组
+	uploadGroupService := v1.NewUploadGroupService(sourceDB, targetDB)
+	err = uploadGroupService.ConvertUploadGroup()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
 	return nil
 }
