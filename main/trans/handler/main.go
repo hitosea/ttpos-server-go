@@ -96,6 +96,12 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 			return err
 		}
 
+		// 员工交班记录
+		shopUserShiftLog := v1.NewShopUserShiftLogService(sourceDB, targetDB)
+		err = shopUserShiftLog.ConvertShopUserShiftLog()
+		if err != nil {
+			return err
+		}
 	}
 
 	// 打印管理
@@ -122,12 +128,18 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		}
 
 		// 商品打印 ProductPrinterProductItem ProductPrinterItem ProductPrinterRegion ProductPrinter
-		// ToDo ProductPrinter 打印方式不正确
 		supplierPrintingService := v1.NewSupplierPrintingService(sourceDB, targetDB)
 		err = supplierPrintingService.ConvertSupplierPrinting()
 		if err != nil {
 			return err
 		}
+	}
+
+	// 必点商品
+	orderSchemeService := v1.NewOrderSchemeService(sourceDB, targetDB)
+	err = orderSchemeService.ConvertOrderScheme()
+	if err != nil {
+		return err
 	}
 
 	// 会员
@@ -283,6 +295,20 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 	// 税种
 	taxCategoryService := v1.NewTaxCategoryService(sourceDB, targetDB)
 	err = taxCategoryService.ConvertTaxCategory()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 文件
+	fileService := v1.NewUploadFileService(sourceDB, targetDB)
+	err = fileService.ConvertUploadFile()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 文件组
+	uploadGroupService := v1.NewUploadGroupService(sourceDB, targetDB)
+	err = uploadGroupService.ConvertUploadGroup()
 	if err != nil {
 		return errors.WithMessage(err)
 	}

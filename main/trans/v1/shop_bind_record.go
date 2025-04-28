@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -63,6 +64,9 @@ func (s *ShopBindRecordService) ConvertShopBindRecord() error {
 		"Mobile":  3,
 	}
 	for _, shopBindRecord := range shopBindRecords {
+
+		fmt.Println(fmt.Sprintf("bindRecord: %+v", shopBindRecord))
+
 		device := model.Device{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(shopBindRecord.ID),

@@ -66,6 +66,9 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 	}
 
 	for _, supplierPrinting := range supplierPrintings {
+
+		fmt.Println(fmt.Sprintf("supplierPrinting: %+v", supplierPrinting))
+
 		printType := 0
 		if supplierPrinting.PrintType == 20 {
 			printType = 1
@@ -76,7 +79,7 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 			printProductSelect = 1
 		}
 		printMethod := 0
-		if supplierPrinting.IsOpenOneFood == 1 {
+		if supplierPrinting.PrintMethod == 40 {
 			printMethod = 1
 		}
 		printModeScene := 0

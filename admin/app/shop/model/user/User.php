@@ -286,6 +286,7 @@ class User extends UserModel
                 'money' => $money,
                 'gift_money' => $data['gift_balance'] ?? 0,
                 'remark' => $data['remark'],
+                'processed' => 1,
             ], [$storeUserName]);
         });
         return true;
@@ -352,6 +353,7 @@ class User extends UserModel
                 'value' => $points,
                 'describe' => vsprintf("后台管理员 [%s] 操作", [$storeUserName]),
                 'remark' => $data['remark'],
+                'processed' => 1,
             ]);
         });
         event('UserGrade', $this['uuid']);

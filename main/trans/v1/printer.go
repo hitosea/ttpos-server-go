@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -59,6 +60,9 @@ func (s *PrinterService) ConvertPrinter() error {
 		return err
 	}
 	for _, printer := range printers {
+
+		fmt.Println(fmt.Sprintf("printer: %+v", printer))
+
 		// 档口打印机
 		printer := model.Printer{
 			BaseModel: model.BaseModel{

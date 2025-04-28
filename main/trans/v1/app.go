@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -147,6 +148,9 @@ func (s *AppService) ConvertApp() error {
 		return err
 	}
 	for _, app := range appList {
+
+		fmt.Println(fmt.Sprintf("app: %+v", app))
+
 		company := model.Company{
 			BaseModel: model.BaseModel{
 				Uuid: s.targetCompanyUuid,

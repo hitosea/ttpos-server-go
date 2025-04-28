@@ -198,6 +198,7 @@ CREATE TABLE `ttpos_company` (
   `auth_day` int(11) NOT NULL DEFAULT '0' COMMENT '授权时间(天) 0为永不过期',
   `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '状态 1-启用 0-禁用;not null',
   `auth_start_time` int(11) NOT NULL DEFAULT '0' COMMENT '授权开始时间（时间戳）',
+  `old_company_id` int(11) NOT NULL DEFAULT 0 COMMENT '原商家ID',
   `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
   `update_time` int(10) NOT NULL DEFAULT 0 COMMENT '更新时间（时间戳）',
   `delete_time` int(10) NOT NULL DEFAULT 0 COMMENT '删除时间（时间戳）',

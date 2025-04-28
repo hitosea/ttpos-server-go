@@ -91,7 +91,7 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 		}
 	}
 	opts = append(opts, paymentMethodRepo.WithLogoFile(), paymentMethodRepo.WithQrcodeFile())
-	paymentMethods := paymentMethodRepo.GetPaymentMethods(opts...)
+	paymentMethods := paymentMethodRepo.GetPaymentMethodList(opts...)
 
 	paymentMethodItems := make([]resp.PaymentMethodItem, 0, len(paymentMethods))
 	for _, method := range paymentMethods {
