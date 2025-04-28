@@ -145,7 +145,7 @@ class PrinterLog extends BaseModel
      */
     public function printer()
     {
-        return $this->hasOne('app\\common\\model\\settings\\Printer', 'printer_id', 'printer_id');
+        return $this->hasOne('app\\common\\model_old\\settings\\Printer', 'printer_id', 'printer_id');
     }
 
     /**
@@ -153,7 +153,7 @@ class PrinterLog extends BaseModel
      */
     public function printerName()
     {
-        return $this->hasOne('app\\common\\model\\settings\\Printer', 'printer_id', 'printer_id')->bind(['printer_name']);
+        return $this->hasOne('app\\common\\model_old\\settings\\Printer', 'printer_id', 'printer_id')->bind(['printer_name']);
     }
 
     /**
@@ -161,7 +161,7 @@ class PrinterLog extends BaseModel
      */
     public function printerConfig()
     {
-        return $this->hasOne('app\\common\\model\\settings\\Printer', 'printer_id', 'printer_id')->bind(['printer_name', 'printer_config', 'printer_type', 'print_times']);
+        return $this->hasOne('app\\common\\model_old\\settings\\Printer', 'printer_id', 'printer_id')->bind(['printer_name', 'printer_config', 'printer_type', 'print_times']);
     }
 
     /**
@@ -169,7 +169,7 @@ class PrinterLog extends BaseModel
      */
     public function noName()
     {
-        return $this->hasOne('app\\common\\model\\order\\Order', 'order_id', 'order_id')->field(['order_id', "if(table_no!='', table_no, call_no) as no"])->bind(['no']);
+        return $this->hasOne('app\\common\\model_old\\order\\Order', 'order_id', 'order_id')->field(['order_id', "if(table_no!='', table_no, call_no) as no"])->bind(['no']);
     }
 
     /**
@@ -177,7 +177,7 @@ class PrinterLog extends BaseModel
      */
     public function printerLogsGroup()
     {
-        return $this->hasMany('app\\common\\model\\settings\\PrinterLog', 'printer_id', 'printer_id');
+        return $this->hasMany('app\\common\\model_old\\settings\\PrinterLog', 'printer_id', 'printer_id');
     }
 
     /**

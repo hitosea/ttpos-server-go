@@ -89,7 +89,7 @@ class ErpDamagedProductRecord extends BaseModel
      */
     public function sku()
     {
-        return $this->belongsTo('app\\common\\model\\product\\ProductSku', 'product_sku_id', 'product_sku_id');
+        return $this->belongsTo('app\\common\\model_old\\product\\ProductSku', 'product_sku_id', 'product_sku_id');
     }
 
 

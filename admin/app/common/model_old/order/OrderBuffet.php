@@ -41,7 +41,7 @@ class OrderBuffet extends BaseModel
      */
     public function buffet()
     {
-        return $this->belongsTo('app\\common\\model\\buffet\\Buffet', 'buffet_id', 'id');
+        return $this->belongsTo('app\\common\\model_old\\buffet\\Buffet', 'buffet_id', 'id');
     }
 
     /**
@@ -49,7 +49,7 @@ class OrderBuffet extends BaseModel
      */
     public function delOrderBuffetDiscount()
     {
-        return $this->hasMany('app\\common\\model\\order\\OrderBuffetDiscount', 'order_id', 'order_id')->where('buffet_id', '=', $this['buffet_id']);
+        return $this->hasMany('app\\common\\model_old\\order\\OrderBuffetDiscount', 'order_id', 'order_id')->where('buffet_id', '=', $this['buffet_id']);
     }
 
     /**
@@ -57,7 +57,7 @@ class OrderBuffet extends BaseModel
      */
     public function buffetProduct()
     {
-        return $this->hasMany('app\\common\\model\\buffet\\BuffetProduct', 'buffet_id', 'buffet_id');
+        return $this->hasMany('app\\common\\model_old\\buffet\\BuffetProduct', 'buffet_id', 'buffet_id');
     }
 
     /**
@@ -65,7 +65,7 @@ class OrderBuffet extends BaseModel
      */
     public function buffetCustomerType()
     {
-        return $this->hasMany('app\\common\\model\\order\\OrderBuffetCustomer', 'order_id', 'order_id');
+        return $this->hasMany('app\\common\\model_old\\order\\OrderBuffetCustomer', 'order_id', 'order_id');
     }
 
     // 删除订单自助餐

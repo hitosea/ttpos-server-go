@@ -258,7 +258,7 @@ class OrderProduct extends BaseModel
      */
     public function image()
     {
-        return $this->belongsTo('app\\common\\model\\file\\UploadFile', 'image_id', 'file_id');
+        return $this->belongsTo('app\\common\\model_old\\file\\UploadFile', 'image_id', 'file_id');
     }
 
     /**
@@ -267,7 +267,7 @@ class OrderProduct extends BaseModel
      */
     public function product()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Product');
+        return $this->belongsTo('app\\common\\model_old\\product\\Product');
     }
 
     /**
@@ -276,7 +276,7 @@ class OrderProduct extends BaseModel
      */
     public function sku()
     {
-        return $this->belongsTo('app\\common\\model\\product\\ProductSku', 'spec_sku_id', 'spec_sku_id');
+        return $this->belongsTo('app\\common\\model_old\\product\\ProductSku', 'spec_sku_id', 'spec_sku_id');
     }
 
     /**
@@ -285,7 +285,7 @@ class OrderProduct extends BaseModel
      */
     public function productSku()
     {
-        return $this->belongsTo('app\\common\\model\\product\\ProductSku', 'product_sku_id', 'product_sku_id');
+        return $this->belongsTo('app\\common\\model_old\\product\\ProductSku', 'product_sku_id', 'product_sku_id');
     }
 
     /**
@@ -306,7 +306,7 @@ class OrderProduct extends BaseModel
      */
     public function agent()
     {
-        return $this->belongsTo('app\\common\\model\\agent\\Apply', 'agent_user_id', 'user_id');
+        return $this->belongsTo('app\\common\\model_old\\agent\\Apply', 'agent_user_id', 'user_id');
     }
 
     /**
@@ -315,7 +315,7 @@ class OrderProduct extends BaseModel
      */
     public function productReturn()
     {
-        return $this->belongsTo('app\\common\\model\\order\\OrderProductReturn', 'order_product_id', 'order_product_id');
+        return $this->belongsTo('app\\common\\model_old\\order\\OrderProductReturn', 'order_product_id', 'order_product_id');
     }
 
     /**

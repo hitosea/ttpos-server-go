@@ -49,6 +49,10 @@ class BaseModel extends Model
         } else {
             $this->setConnection('mysql');
         }
+        // 
+        if (strlen($this->connection) == 14 && $this->name == 'staff') {
+            $this->name = 'shop_user';
+        }
         //
         parent::__construct($data);
     }

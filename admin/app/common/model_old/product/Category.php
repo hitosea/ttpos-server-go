@@ -51,12 +51,12 @@ class Category extends BaseModel
      */
     public function images()
     {
-        return $this->hasOne('app\\common\\model\\file\\UploadFile', 'file_id', 'image_id');
+        return $this->hasOne('app\\common\\model_old\\file\\UploadFile', 'file_id', 'image_id');
     }
 
     public function child()
     {
-        return $this->hasMany('app\\common\\model\\product\\Category', 'parent_id', 'category_id')->with(['images']);
+        return $this->hasMany('app\\common\\model_old\\product\\Category', 'parent_id', 'category_id')->with(['images']);
     }
 
     /**

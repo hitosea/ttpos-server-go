@@ -141,7 +141,7 @@ class Printing extends BaseModel
      */
     public function supplier()
     {
-        return $this->belongsTo('app\\common\\model\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id');
+        return $this->belongsTo('app\\common\\model_old\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id');
     }
 
 

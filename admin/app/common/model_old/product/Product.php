@@ -161,7 +161,7 @@ class Product extends BaseModel
      */
     public function category()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Category');
+        return $this->belongsTo('app\\common\\model_old\\product\\Category');
     }
 
     /**
@@ -169,7 +169,7 @@ class Product extends BaseModel
      */
     public function label()
     {
-        return $this->hasOne('app\\common\\model\\product\\Label', 'label_id', 'label_id');
+        return $this->hasOne('app\\common\\model_old\\product\\Label', 'label_id', 'label_id');
     }
 
     /**
@@ -177,7 +177,7 @@ class Product extends BaseModel
      */
     public function sku()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductSku')->order(['product_sku_id' => 'asc'])->with(['material']);
+        return $this->hasMany('app\\common\\model_old\\product\\ProductSku')->order(['product_sku_id' => 'asc'])->with(['material']);
     }
 
     /**
@@ -185,7 +185,7 @@ class Product extends BaseModel
      */
     public function feed()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductFeed')->order(['product_feed_id' => 'asc'])->with(['material']);
+        return $this->hasMany('app\\common\\model_old\\product\\ProductFeed')->order(['product_feed_id' => 'asc'])->with(['material']);
     }
 
     /**
@@ -193,7 +193,7 @@ class Product extends BaseModel
      */
     public function image()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductImage')->order(['id' => 'asc']);
+        return $this->hasMany('app\\common\\model_old\\product\\ProductImage')->order(['id' => 'asc']);
     }
 
     /**
@@ -201,7 +201,7 @@ class Product extends BaseModel
      */
     public function logo()
     {
-        return $this->hasOne('app\\common\\model\\product\\ProductImage')->order(['id' => 'asc']);
+        return $this->hasOne('app\\common\\model_old\\product\\ProductImage')->order(['id' => 'asc']);
     }
 
     /**
@@ -209,7 +209,7 @@ class Product extends BaseModel
      */
     public function supplier()
     {
-        return $this->belongsTo('app\\common\\model\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id')
+        return $this->belongsTo('app\\common\\model_old\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id')
             ->field(['shop_supplier_id', 'name', 'address', 'logo']);
     }
 
@@ -250,7 +250,7 @@ class Product extends BaseModel
      */
     public function productTaxes()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductTax', 'product_id', 'product_id');
+        return $this->hasMany('app\\common\\model_old\\product\\ProductTax', 'product_id', 'product_id');
     }
 
     /**

@@ -47,7 +47,7 @@ class Buffet extends BaseModel
      */
     public function buffetCustomerType()
     {
-        return $this->hasMany('app\\common\\model\\buffet\\BuffetCustomer', 'buffet_id', 'id');
+        return $this->hasMany('app\\common\\model_old\\buffet\\BuffetCustomer', 'buffet_id', 'id');
     }
 
     /**
@@ -55,7 +55,7 @@ class Buffet extends BaseModel
      */
     public function buffetLimitProducts()
     {
-        return $this->hasMany('app\\common\\model\\buffet\\BuffetProduct', 'buffet_id', 'id')->where('limit_num', '>', 0)->with('product');
+        return $this->hasMany('app\\common\\model_old\\buffet\\BuffetProduct', 'buffet_id', 'id')->where('limit_num', '>', 0)->with('product');
     }
 
     /**
@@ -63,7 +63,7 @@ class Buffet extends BaseModel
      */
     public function buffetTaxes()
     {
-        return $this->hasMany('app\\common\\model\\buffet\\BuffetTax', 'buffet_id', 'id');
+        return $this->hasMany('app\\common\\model_old\\buffet\\BuffetTax', 'buffet_id', 'id');
     }
 
     /**

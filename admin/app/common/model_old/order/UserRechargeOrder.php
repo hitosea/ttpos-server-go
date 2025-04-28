@@ -60,7 +60,7 @@ class UserRechargeOrder extends BaseModel
      */
     public function payType()
     {
-        return $this->hasMany('app\\common\\model\\order\\UserRechargeOrderPayType', 'order_id', 'id')->field(['id', 'order_id', 'value', 'price', 'disabled_cancel', 'pay_status', 'fee_money']);
+        return $this->hasMany('app\\common\\model_old\\order\\UserRechargeOrderPayType', 'order_id', 'id')->field(['id', 'order_id', 'value', 'price', 'disabled_cancel', 'pay_status', 'fee_money']);
     }
 
     /**
@@ -68,7 +68,7 @@ class UserRechargeOrder extends BaseModel
      */
     public function cashier()
     {
-        return $this->belongsTo('app\\common\\model\\shop\\User', 'cashier_id', 'shop_user_id');
+        return $this->belongsTo('app\\common\\model_old\\shop\\User', 'cashier_id', 'shop_user_id');
     }
 
     /**
@@ -76,7 +76,7 @@ class UserRechargeOrder extends BaseModel
      */
     public function user()
     {
-        return $this->belongsTo('app\\common\\model\\user\\User', 'user_id', 'user_id');
+        return $this->belongsTo('app\\common\\model_old\\user\\User', 'user_id', 'user_id');
     }
 
     /**
@@ -84,7 +84,7 @@ class UserRechargeOrder extends BaseModel
      */
     public function balanceLog()
     {
-        return $this->hasOne('app\\common\\model\\user\\BalanceLog', 'recharge_order_id', 'id')->order(['create_time' => 'desc']);
+        return $this->hasOne('app\\common\\model_old\\user\\BalanceLog', 'recharge_order_id', 'id')->order(['create_time' => 'desc']);
     }
 
     /**
@@ -823,7 +823,7 @@ class UserRechargeOrder extends BaseModel
      */
     public function refundPayType()
     {
-        return $this->hasMany('app\\common\\model\\order\\UserRechargeOrderPayType', 'order_id', 'id')
+        return $this->hasMany('app\\common\\model_old\\order\\UserRechargeOrderPayType', 'order_id', 'id')
             ->alias('uropt')
             ->field("uropt.order_id, uropt.value, uropt.price, uropt.disabled_cancel, uropt.pay_status, uropt.fee_money, uropt.payment_order_id")
             ->field("pt.source, pt.name, pt.remark")
@@ -836,7 +836,7 @@ class UserRechargeOrder extends BaseModel
      */
     public function refundDestinations()
     {
-        return $this->hasMany('app\\common\\model\\order\\UserRechargeOrderRefundDestination', 'order_id', 'id')
+        return $this->hasMany('app\\common\\model_old\\order\\UserRechargeOrderRefundDestination', 'order_id', 'id')
             ->alias('urord')
             ->field("urord.order_id, urord.value, urord.price, sum(urord.refund_money) as refund_money")
             ->field("pt.source, pt.name, pt.remark")

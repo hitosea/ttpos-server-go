@@ -62,7 +62,7 @@ class Spec extends BaseModel
      */
     public function material()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductSkuMaterial', 'spec_id')->where('product_sku_id', '=', 0)->with(['materialProduct']);
+        return $this->hasMany('app\\common\\model_old\\product\\ProductSkuMaterial', 'spec_id')->where('product_sku_id', '=', 0)->with(['materialProduct']);
     }
 
     /**

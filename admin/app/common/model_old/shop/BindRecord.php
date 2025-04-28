@@ -41,7 +41,7 @@ class BindRecord extends BaseModel
      */
     public function shopUser()
     {
-        return $this->hasOne('app\\common\\model\\shop\\User', 'shop_user_id', 'finally_login_id')->hidden(['update_time', 'password']);
+        return $this->hasOne('app\\common\\model_old\\shop\\User', 'shop_user_id', 'finally_login_id')->hidden(['update_time', 'password']);
     }
 
     /**

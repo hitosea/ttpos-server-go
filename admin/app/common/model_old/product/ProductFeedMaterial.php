@@ -24,7 +24,7 @@ class ProductFeedMaterial extends BaseModel
      */
     public function materialProduct()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Product', 'material_id', 'product_id')->field('product_id, product_name, product_unit, product_material_stock');
+        return $this->belongsTo('app\\common\\model_old\\product\\Product', 'material_id', 'product_id')->field('product_id, product_name, product_unit, product_material_stock');
     }
 
     /**
@@ -32,6 +32,6 @@ class ProductFeedMaterial extends BaseModel
      */
     public function materialFeed()
     {
-        return $this->belongsTo('app\\common\\model\\product\\ProductFeed', 'product_feed_id', 'product_feed_id');
+        return $this->belongsTo('app\\common\\model_old\\product\\ProductFeed', 'product_feed_id', 'product_feed_id');
     }
 }

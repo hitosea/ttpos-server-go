@@ -22,7 +22,7 @@ class BuffetProduct extends BaseModel
      */
     public function buffet()
     {
-        return $this->belongsTo('app\\common\\model\\buffet\\Buffet', 'id', 'buffet_id');
+        return $this->belongsTo('app\\common\\model_old\\buffet\\Buffet', 'id', 'buffet_id');
     }
 
     /**
@@ -30,6 +30,6 @@ class BuffetProduct extends BaseModel
      */
     public function product()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Product', 'product_id', 'product_id')->field(['product_id', 'product_name', 'sales_initial', 'sales_actual']);
+        return $this->belongsTo('app\\common\\model_old\\product\\Product', 'product_id', 'product_id')->field(['product_id', 'product_name', 'sales_initial', 'sales_actual']);
     }
 }

@@ -26,7 +26,7 @@ class ProductSkuMaterial extends BaseModel
      */
     public function materialProduct()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Product', 'material_id', 'product_id')->field('product_id, product_name, product_unit, product_material_stock')->with(['sku']);
+        return $this->belongsTo('app\\common\\model_old\\product\\Product', 'material_id', 'product_id')->field('product_id, product_name, product_unit, product_material_stock')->with(['sku']);
     }
 
     /**
@@ -34,6 +34,6 @@ class ProductSkuMaterial extends BaseModel
      */
     public function materialSku()
     {
-        return $this->belongsTo('app\\common\\model\\product\\ProductSku', 'product_sku_id', 'product_sku_id');
+        return $this->belongsTo('app\\common\\model_old\\product\\ProductSku', 'product_sku_id', 'product_sku_id');
     }
 }

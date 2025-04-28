@@ -17,7 +17,7 @@ class ProductImage extends BaseModel
      */
     public function file()
     {
-        return $this->belongsTo('app\\common\\model\\file\\UploadFile', 'image_id', 'file_id')
+        return $this->belongsTo('app\\common\\model_old\\file\\UploadFile', 'image_id', 'file_id')
             ->bind(['file_path', 'file_name', 'file_url']);
     }
 }

@@ -2,10 +2,8 @@
 
 namespace app\shop\controller\store;
 
-use help\HttpHelp;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
-use app\common\enum\settings\DeliveryTypeEnum;
 use app\shop\model_old\order\Order as OldOrderModel;
 use app\common\model\app\App as AppModel;
 
@@ -31,7 +29,8 @@ class OrderOld extends Controller
      * @Apidoc\Returned("list", type="array", ref="app\shop\model\order\Order\getList", desc="列表")
      */
     public function index()
-    {   $data = $this->postData();
+    {   
+        $data = $this->postData();
         $app = AppModel::where('uuid', request()->appId)->find();
         if (!$app->old_company_id) {
             return $this->renderError('未存在迁移库');
@@ -43,39 +42,19 @@ class OrderOld extends Controller
     /**
      * @Apidoc\Title("订单详情")
      * @Apidoc\Method ("POST")
-     * @Apidoc\Url ("/index.php/shop/store.order/detail")
+     * @Apidoc\Url ("/index.php/shop/store.orderOld/detail")
      * @Apidoc\Param("sale_bill_uuid", type="int", require=true, default="", desc="销售账单UUID")
      * @Apidoc\Param("sale_order_uuid", type="int", require=true, default="", desc="销售订单UUID 当查看子订单信息的时候才需要传")
      * @Apidoc\Returned("detail", type="array", ref="app\shop\model\order\Order\detail", desc="订单详情")
      */
-    public function detail($sale_bill_uuid, $sale_order_uuid = 0)
+    public function detail($sale_bill_uuid)
     {
-        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/order/info', [
-            'sale_bill_uuid' => $sale_bill_uuid,
-            'sale_order_uuid' => $sale_order_uuid,
-        ], [
-            'Authorization: Bearer ' . request()->header('token'),
-            'Accept-Language: ' . request()->header('language'),
-        ]);
-        if (!$res) {
-            return $this->renderError('请求失败');
-        } 
-
-        $result = json_decode($res, true);
-        if (($result['code'] ?? -1) != 0) {
-            return $this->renderError($result['message'] ?? '请求失败');
+        $app = AppModel::where('uuid', request()->appId)->find();
+        if (!$app->old_company_id) {
+            return $this->renderError('未存在迁移库');
         }
-        //
-        $data = $result['data'];
-        $data['detail']['create_time'] =  $data['detail']['create_time'] ? date('Y-m-d H:i:s',  $data['detail']['create_time']) : '';
-        $data['detail']['finish_time'] =  $data['detail']['finish_time'] ? date('Y-m-d H:i:s',  $data['detail']['finish_time']) : '';
-
-        foreach ($data['operation_log']['list'] as &$item) {
-            $item['create_time'] = $item['create_time'] ? date('Y-m-d H:i:s', $item['create_time']) : '';
-        }
-
-        // 
-        return $this->renderSuccess('', $data);
+        request()->appId = $app->old_company_id;
+        return $this->renderSuccess('', OldOrderModel::details($sale_bill_uuid));
     }
 
    

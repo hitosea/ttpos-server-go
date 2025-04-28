@@ -23,7 +23,7 @@ class Table extends BaseModel
      */
     public function supplier()
     {
-        return $this->BelongsTo('app\\common\\model\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id');
+        return $this->BelongsTo('app\\common\\model_old\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id');
     }
 
     /**
@@ -31,7 +31,7 @@ class Table extends BaseModel
      */
     public function underwayOrder()
     {
-        return $this->hasOne('app\\common\\model\\order\\Order', 'table_id', 'table_id')->where('is_merge', 0)->where('order_status', 10)->order('order_id desc');
+        return $this->hasOne('app\\common\\model_old\\order\\Order', 'table_id', 'table_id')->where('is_merge', 0)->where('order_status', 10)->order('order_id desc');
     }
 
     /**

@@ -18,7 +18,7 @@ class OrderSettled extends BaseModel
      */
     public function orderMaster()
     {
-        return $this->belongsTo('app\\common\\model\\order\\Order');
+        return $this->belongsTo('app\\common\\model_old\\order\\Order');
     }
 
     /**
@@ -26,7 +26,7 @@ class OrderSettled extends BaseModel
      */
     public function supplier()
     {
-        return $this->belongsTo('app\\common\\model\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id')->field(['shop_supplier_id', 'name']);
+        return $this->belongsTo('app\\common\\model_old\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id')->field(['shop_supplier_id', 'name']);
     }
     /**
      * 详情

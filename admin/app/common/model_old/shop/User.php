@@ -45,7 +45,7 @@ class User extends BaseModel
      */
     public function app()
     {
-        return $this->belongsTo('app\\common\\model\\app\\App', 'app_id', 'app_id');
+        return $this->belongsTo('app\\common\\model_old\\app\\App', 'app_id', 'app_id');
     }
 
     /**
@@ -53,12 +53,12 @@ class User extends BaseModel
      */
     public function role()
     {
-        return $this->belongsToMany('app\\common\\model\\auth\\Role', 'app\\common\\model\\auth\\UserRole');
+        return $this->belongsToMany('app\\common\\model_old\\auth\\Role', 'app\\common\\model_old\\auth\\UserRole');
     }
 
     public function userRole()
     {
-        return $this->hasMany('app\\common\\model\\shop\\UserRole', 'shop_user_id', 'shop_user_id');
+        return $this->hasMany('app\\common\\model_old\\shop\\UserRole', 'shop_user_id', 'shop_user_id');
     }
 
     /**
@@ -66,7 +66,7 @@ class User extends BaseModel
      */
     public function supplier()
     {
-        return $this->belongsTo('app\\common\\model\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id');
+        return $this->belongsTo('app\\common\\model_old\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id');
     }
 
     /**
@@ -74,7 +74,7 @@ class User extends BaseModel
      */
     public function device()
     {
-        return $this->hasOne('app\\common\\model\\shop\\BindRecord', 'key', 'bind_key');
+        return $this->hasOne('app\\common\\model_old\\shop\\BindRecord', 'key', 'bind_key');
     }
 
     /**
@@ -82,7 +82,7 @@ class User extends BaseModel
      */
     public function working()
     {
-        return $this->hasOne('app\\common\\model\\shop\\UserShiftLog', 'shift_user_id', 'shop_user_id')->where('shift_no', $this->duty_no)->where('status', 0);
+        return $this->hasOne('app\\common\\model_old\\shop\\UserShiftLog', 'shift_user_id', 'shop_user_id')->where('shift_no', $this->duty_no)->where('status', 0);
     }
 
     /**

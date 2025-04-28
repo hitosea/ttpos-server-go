@@ -38,7 +38,7 @@ class Label extends BaseModel
      */
     public function product()
     {
-        return $this->hasMany('app\\common\\model\\product\\Product', 'label_id', 'label_id');
+        return $this->hasMany('app\\common\\model_old\\product\\Product', 'label_id', 'label_id');
     }
 
     /**

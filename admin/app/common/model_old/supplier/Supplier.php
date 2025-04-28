@@ -129,7 +129,7 @@ class Supplier extends BaseModel
      */
     public function app()
     {
-        return $this->belongsTo('app\\common\\model\\app\\App', 'app_id', 'app_id');
+        return $this->belongsTo('app\\common\\model_old\\app\\App', 'app_id', 'app_id');
     }
 
     /**
@@ -137,7 +137,7 @@ class Supplier extends BaseModel
      */
     public function category()
     {
-        return $this->hasOne('app\\common\\model\\supplier\\Category', 'category_id', 'category_id');
+        return $this->hasOne('app\\common\\model_old\\supplier\\Category', 'category_id', 'category_id');
     }
 
     /**
@@ -145,7 +145,7 @@ class Supplier extends BaseModel
      */
     public function business()
     {
-        return $this->hasOne('app\\common\\model\\file\\UploadFile', 'file_id', 'business_id');
+        return $this->hasOne('app\\common\\model_old\\file\\UploadFile', 'file_id', 'business_id');
     }
 
     /**
@@ -153,7 +153,7 @@ class Supplier extends BaseModel
      */
     public function superUser()
     {
-        return $this->hasOne('app\\common\\model\\shop\\User', 'shop_supplier_id', 'shop_supplier_id')
+        return $this->hasOne('app\\common\\model_old\\shop\\User', 'shop_supplier_id', 'shop_supplier_id')
             ->where('is_super', '=', 1);
     }
 
@@ -162,7 +162,7 @@ class Supplier extends BaseModel
      */
     public function user()
     {
-        return $this->belongsTo('app\\common\\model\\user\\User', 'user_id', 'user_id');
+        return $this->belongsTo('app\\common\\model_old\\user\\User', 'user_id', 'user_id');
     }
 
     /**
@@ -170,7 +170,7 @@ class Supplier extends BaseModel
      */
     public function paymentApp()
     {
-        return $this->belongsTo('app\\common\\model\\pay\\PaymentApp', 'shop_supplier_id', 'shop_supplier_id');
+        return $this->belongsTo('app\\common\\model_old\\pay\\PaymentApp', 'shop_supplier_id', 'shop_supplier_id');
     }
 
     /**

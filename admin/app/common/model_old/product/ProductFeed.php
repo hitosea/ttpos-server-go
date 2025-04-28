@@ -29,7 +29,7 @@ class ProductFeed extends BaseModel
      */
     public function product()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Product', 'product_id', 'product_id')->with(['image', 'image.file', 'erpSupplier', 'erpSupplier.purchaser']);
+        return $this->belongsTo('app\\common\\model_old\\product\\Product', 'product_id', 'product_id')->with(['image', 'image.file', 'erpSupplier', 'erpSupplier.purchaser']);
     }
 
     /**
@@ -37,7 +37,7 @@ class ProductFeed extends BaseModel
      */
     public function feed()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Feed', 'feed_id', 'feed_id');
+        return $this->belongsTo('app\\common\\model_old\\product\\Feed', 'feed_id', 'feed_id');
     }
 
     /**
@@ -45,7 +45,7 @@ class ProductFeed extends BaseModel
      */
     public function material()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductFeedMaterial', 'product_feed_id')->with(['materialProduct']);
+        return $this->hasMany('app\\common\\model_old\\product\\ProductFeedMaterial', 'product_feed_id')->with(['materialProduct']);
     }
 
     //更新加料库库

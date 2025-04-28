@@ -21,7 +21,7 @@ class User extends BaseModel
      */
     public function role()
     {
-        return $this->belongsToMany('app\\common\\model\\admin\\Role', 'app\\common\\model\\admin\\UserRole');
+        return $this->belongsToMany('app\\common\\model_old\\admin\\Role', 'app\\common\\model_old\\admin\\UserRole');
     }
 
     /**
@@ -29,7 +29,7 @@ class User extends BaseModel
      */
     public function userRole()
     {
-        return $this->hasMany('app\\common\\model\\admin\\UserRole', 'admin_user_id', 'admin_user_id');
+        return $this->hasMany('app\\common\\model_old\\admin\\UserRole', 'admin_user_id', 'admin_user_id');
     }
 
     /**

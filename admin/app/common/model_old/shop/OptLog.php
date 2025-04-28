@@ -17,6 +17,6 @@ class OptLog extends BaseModel
      */
     public function user()
     {
-        return $this->belongsTo('app\\common\\model\\shop\\User', 'shop_user_id', 'shop_user_id');
+        return $this->belongsTo('app\\common\\model_old\\shop\\User', 'shop_user_id', 'shop_user_id');
     }
 }

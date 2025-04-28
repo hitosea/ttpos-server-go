@@ -39,6 +39,17 @@ return [
                 ['title' => '库存管理', 'name' => 'inventory'],
             ],
         ],
+        [
+            // （必须）标题
+            'title' => '收银端接口',
+            // （必须）控制器目录地址
+            'path' => 'app\cashier\controller',
+            // （必须）唯一的key
+            'key' => 'cashier',
+            'groups'  => [
+                ['title' => '订单相关', 'name' => 'order'],
+            ],
+        ],
     ],
 
     // （必须）指定通用注释定义的文件地址

@@ -31,7 +31,7 @@ class OrderProductReturn extends BaseModel
      */
     public function product()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Product', 'product_id', 'product_id');
+        return $this->belongsTo('app\\common\\model_old\\product\\Product', 'product_id', 'product_id');
     }
 
     /**
@@ -39,7 +39,7 @@ class OrderProductReturn extends BaseModel
      */
     public function order()
     {
-        return $this->belongsTo('app\\common\\model\\order\\Order', 'order_id', 'order_id');
+        return $this->belongsTo('app\\common\\model_old\\order\\Order', 'order_id', 'order_id');
     }
 
     /**
@@ -47,7 +47,7 @@ class OrderProductReturn extends BaseModel
      */
     public function orderProduct()
     {
-        return $this->belongsTo('app\\common\\model\\order\\OrderProduct', 'order_product_id', 'order_product_id');
+        return $this->belongsTo('app\\common\\model_old\\order\\OrderProduct', 'order_product_id', 'order_product_id');
     }
 
     /**

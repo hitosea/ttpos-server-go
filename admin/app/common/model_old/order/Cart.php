@@ -26,7 +26,7 @@ class Cart extends BaseModel
      */
     public function product()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Product', 'product_id', 'product_id');
+        return $this->belongsTo('app\\common\\model_old\\product\\Product', 'product_id', 'product_id');
     }
 
     /**
@@ -34,7 +34,7 @@ class Cart extends BaseModel
      */
     public function sku()
     {
-        return $this->belongsTo('app\\common\\model\\product\\ProductSku', 'product_sku_id', 'product_sku_id');
+        return $this->belongsTo('app\\common\\model_old\\product\\ProductSku', 'product_sku_id', 'product_sku_id');
     }
 
     /**
@@ -42,6 +42,6 @@ class Cart extends BaseModel
      */
     public function image()
     {
-        return $this->hasOne('app\\common\\model\\product\\ProductImage', 'product_id', 'product_id')->order(['id' => 'asc']);
+        return $this->hasOne('app\\common\\model_old\\product\\ProductImage', 'product_id', 'product_id')->order(['id' => 'asc']);
     }
 }

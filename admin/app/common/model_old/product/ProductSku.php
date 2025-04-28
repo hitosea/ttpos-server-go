@@ -30,7 +30,7 @@ class ProductSku extends BaseModel
      */
     public function image()
     {
-        return $this->hasOne('app\\common\\model\\file\\UploadFile', 'file_id', 'image_id');
+        return $this->hasOne('app\\common\\model_old\\file\\UploadFile', 'file_id', 'image_id');
     }
 
     /**
@@ -62,7 +62,7 @@ class ProductSku extends BaseModel
      */
     public function product()
     {
-        return $this->belongsTo('app\\common\\model\\product\\Product', 'product_id', 'product_id')->with(['image', 'image.file', 'category', 'erpSupplier', 'erpSupplier.purchaser']);
+        return $this->belongsTo('app\\common\\model_old\\product\\Product', 'product_id', 'product_id')->with(['image', 'image.file', 'category', 'erpSupplier', 'erpSupplier.purchaser']);
     }
 
     /**
@@ -70,7 +70,7 @@ class ProductSku extends BaseModel
      */
     public function material()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductSkuMaterial', 'product_sku_id')->with(['materialProduct']);
+        return $this->hasMany('app\\common\\model_old\\product\\ProductSkuMaterial', 'product_sku_id')->with(['materialProduct']);
     }
 
     /**

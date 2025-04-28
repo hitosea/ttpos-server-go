@@ -112,7 +112,7 @@ class ErpPurchaseDetail extends BaseModel
      */
     public function productImage()
     {
-        return $this->hasOne('app\\common\\model\\file\\UploadFile', 'file_id', 'product_image_id');
+        return $this->hasOne('app\\common\\model_old\\file\\UploadFile', 'file_id', 'product_image_id');
     }
 
     /**

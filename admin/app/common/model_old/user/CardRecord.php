@@ -102,7 +102,7 @@ class CardRecord extends BaseModel
      */
     public function card()
     {
-        return $this->belongsTo('app\\common\\model\\user\\Card', 'card_id', 'card_id');
+        return $this->belongsTo('app\\common\\model_old\\user\\Card', 'card_id', 'card_id');
     }
 
     /**
@@ -110,7 +110,7 @@ class CardRecord extends BaseModel
      */
     public function user()
     {
-        return $this->belongsTo('app\\common\\model\\user\\User', 'user_id', 'user_id');
+        return $this->belongsTo('app\\common\\model_old\\user\\User', 'user_id', 'user_id');
     }
 
     /**

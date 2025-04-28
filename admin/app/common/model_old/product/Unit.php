@@ -39,7 +39,7 @@ class Unit extends BaseModel
      */
     public function product()
     {
-        return $this->hasMany('app\\common\\model\\product\\Product', 'unit_id', 'unit_id');
+        return $this->hasMany('app\\common\\model_old\\product\\Product', 'unit_id', 'unit_id');
     }
 
     /**

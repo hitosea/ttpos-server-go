@@ -18,7 +18,7 @@ class TableArea extends BaseModel
      */
     public function supplier()
     {
-        return $this->BelongsTo('app\\common\\model\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id');
+        return $this->BelongsTo('app\\common\\model_old\\supplier\\Supplier', 'shop_supplier_id', 'shop_supplier_id');
     }
 
     /**

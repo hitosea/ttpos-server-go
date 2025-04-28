@@ -80,7 +80,7 @@ class User extends BaseModel
      */
     public function grade()
     {
-        return $this->belongsTo('app\\common\\model\\user\\Grade', 'grade_id', 'grade_id');
+        return $this->belongsTo('app\\common\\model_old\\user\\Grade', 'grade_id', 'grade_id');
     }
 
     /**
@@ -88,7 +88,7 @@ class User extends BaseModel
      */
     public function card()
     {
-        return $this->hasOne('app\\common\\model\\user\\Card', 'card_id', 'card_id');
+        return $this->hasOne('app\\common\\model_old\\user\\Card', 'card_id', 'card_id');
     }
 
     /**
@@ -96,7 +96,7 @@ class User extends BaseModel
      */
     public function cardRecord()
     {
-        return $this->hasOne('app\\common\\model\\user\\CardRecord', 'user_id', 'user_id')->where('is_delete', 0);
+        return $this->hasOne('app\\common\\model_old\\user\\CardRecord', 'user_id', 'user_id')->where('is_delete', 0);
     }
 
     /**
@@ -104,7 +104,7 @@ class User extends BaseModel
      */
     public function address()
     {
-        return $this->hasOne('app\\common\\model\\user\\UserAddress', 'address_id', 'address_id');
+        return $this->hasOne('app\\common\\model_old\\user\\UserAddress', 'address_id', 'address_id');
     }
 
     /**
@@ -112,7 +112,7 @@ class User extends BaseModel
      */
     public function addressDefault()
     {
-        return $this->belongsTo('app\\common\\model\\user\\UserAddress', 'address_id', 'address_id');
+        return $this->belongsTo('app\\common\\model_old\\user\\UserAddress', 'address_id', 'address_id');
     }
 
     /**

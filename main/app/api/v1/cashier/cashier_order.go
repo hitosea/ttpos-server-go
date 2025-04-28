@@ -1,6 +1,7 @@
 package cashier
 
 import (
+	"fmt"
 	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
@@ -13,6 +14,7 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -36,6 +38,17 @@ type OrderHandler struct {
 // @Router /cashier/order/list [get]
 func (h *OrderHandler) GetCashierOrderList(c *gin.Context) {
 	ctx := helper.GetContext(c)
+	//
+	result, err := utils.HttpGet("http://192.168.100.88:8888/api/cashier/order.order/index", map[string]interface{}{
+		"eat_type": 1,
+	}, map[string]string{
+		"token": strings.SplitN(c.GetHeader("Authorization"), " ", 2)[1],
+	})
+	if err != nil {
+	}
+	fmt.Println(strings.SplitN(c.GetHeader("Authorization"), " ", 2)[1])
+	fmt.Println(utils.ToJsonString(result))
+
 	// 绑定请求参数
 	req := req.OrderListReq{}
 	if err := c.ShouldBindQuery(&req); err != nil {

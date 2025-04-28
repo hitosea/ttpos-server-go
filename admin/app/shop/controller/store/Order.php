@@ -32,6 +32,14 @@ class Order extends Controller
      */
     public function index()
     {   
+        // $data = $this->postData();
+        // $app = AppModel::where('uuid', request()->appId)->find();
+        // if (!$app->old_company_id) {
+        //     return $this->renderError('未存在迁移库');
+        // }
+        // request()->appId = $app->old_company_id;
+        // return $this->renderSuccess('', OldOrderModel::getLists($data));
+        
         // 
         $data = $this->postData();
         //
@@ -71,6 +79,13 @@ class Order extends Controller
      */
     public function detail($sale_bill_uuid, $sale_order_uuid = 0)
     {
+        // $app = AppModel::where('uuid', request()->appId)->find();
+        // if (!$app->old_company_id) {
+        //     return $this->renderError('未存在迁移库');
+        // }
+        // request()->appId = $app->old_company_id;
+        // return $this->renderSuccess('', OldOrderModel::details($sale_bill_uuid));
+
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/order/info', [
             'sale_bill_uuid' => $sale_bill_uuid,
             'sale_order_uuid' => $sale_order_uuid,

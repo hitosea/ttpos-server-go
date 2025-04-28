@@ -66,7 +66,7 @@ class Feed extends BaseModel
      */
     public function material()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductFeedMaterial', 'feed_id')->where('product_feed_id', '=', 0)->with(['materialProduct']);
+        return $this->hasMany('app\\common\\model_old\\product\\ProductFeedMaterial', 'feed_id')->where('product_feed_id', '=', 0)->with(['materialProduct']);
     }
 
     /**

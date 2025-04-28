@@ -8,6 +8,7 @@ use think\facade\Cache;
 use think\facade\Config;
 use think\facade\Request;
 use app\common\model\shop\User;
+use app\common\model_old\shop\User as UserOld;
 use app\common\model\settings\Setting as SettingModel;
 
 // 应用公共文件
@@ -267,13 +268,25 @@ function extractLanguage($json)
  */
 function getSettingLanguages($companyUuid = 0)
 {
-    if ($companyUuid) {
-        if (!($shopInfo = Cache::get('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid)) || !Cache::get('{firstshop}_' . 'first_shop_info')) {
-            $shopInfo = User::getShopInfo('', true);
-            Cache::tag('common_get_settingLanguages')->set('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid, $shopInfo);
+    $connection = (new User())->getConnection();
+    if (strlen($connection) == 14) {
+        if ($companyUuid) {
+            if (!($shopInfo = Cache::get('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid)) || !Cache::get('{firstshop}_' . 'first_shop_info')) {
+                $shopInfo = UserOld::getShopInfo('', true);
+                Cache::tag('common_get_settingLanguages')->set('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid, $shopInfo);
+            }
+        } else {
+            $shopInfo = UserOld::getShopInfo('', true);
         }
     } else {
-        $shopInfo = User::getShopInfo('', true);
+        if ($companyUuid) {
+            if (!($shopInfo = Cache::get('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid)) || !Cache::get('{firstshop}_' . 'first_shop_info')) {
+                $shopInfo = User::getShopInfo('', true);
+                Cache::tag('common_get_settingLanguages')->set('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid, $shopInfo);
+            }
+        } else {
+            $shopInfo = User::getShopInfo('', true);
+        }
     }
     $companyUuid = $shopInfo['company_uuid'] ?? 0;
     if (!$languages = Cache::get('{common_get_settingLanguages}_' . 'common_setting_languages' . $companyUuid)) {

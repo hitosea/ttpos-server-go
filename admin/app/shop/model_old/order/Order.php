@@ -5,6 +5,8 @@ namespace app\shop\model_old\order;
 use app\shop\service\order\ExportService;
 use app\common\enum\order\OrderPayStatusEnum;
 use app\common\enum\settings\DeliveryTypeEnum;
+use app\common\model_old\order\OrderProductFree;
+use app\common\model_old\order\OrderOperationLog;
 use app\common\model_old\order\Order as OrderModel;
 use app\common\model_old\settings\Setting as SettingModel;
 
@@ -53,11 +55,11 @@ class Order extends OrderModel
         foreach ($result as $key => $item) {
             // 是否显示退款按钮 1-显示 0-隐藏
             /** @var OrderModel $item */
-            [$list[$key]['is_refund_button'], $list[$key]['is_cancel_button']] = $item->getButtonStatus($item);
+            [$result[$key]['is_refund_button'], $result[$key]['is_cancel_button']] = $item->getButtonStatus($item);
             if ($item['subOrder']) {
                 foreach ($item['subOrder'] as $subKey => $subItem) {
                     /** @var OrderModel $subItem */
-                    [$list[$key]['subOrder'][$subKey]['is_refund_button'], $list[$key]['subOrder'][$subKey]['is_cancel_button']] = $subItem->getButtonStatus($subItem);
+                    [$result[$key]['subOrder'][$subKey]['is_refund_button'], $result[$key]['subOrder'][$subKey]['is_cancel_button']] = $subItem->getButtonStatus($subItem);
                 }
             }
             // 拆单主单支付方式去重
@@ -74,6 +76,11 @@ class Order extends OrderModel
         // 
         $list = [];
         foreach ($result['data'] as $key => $item) {
+            $consumer_uuids = [];
+            if ($item['user']['user_id'] ?? '') {
+                $consumer_uuids[] = $item['user']['user_id'];
+            }
+            // 
             $subOrder = [];
             foreach ($item['subOrder'] ?? [] as $key => $subItem) {
                 if (isset($subItem['payType']) && $subItem['payType'] instanceof \think\Collection) {
@@ -81,28 +88,33 @@ class Order extends OrderModel
                 } else {
                     $subItemPayType = $subItem['payType'];
                 } 
+                if ($subItem['user']['user_id'] ?? '') {
+                    $consumer_uuids[] = $subItem['user']['user_id'];
+                }
+                // 
+                $status = $subItem['order_status']['value'] == 10 ? 0 : ($subItem['order_status']['value'] == 30 ? 1 : 2);
+                // 
                 $subOrder[] = [
                     'bill_type' => $subItem['order_source'] == 10 ? 0 : 1,
                     'consumer_uuids' => ($subItem['user']['user_id'] ?? '') . '',
                     'extra' => [
-                        'is_cell_cancel' => false,
+                        'is_cell_cancel' => $subItem['is_cancel_button'] ? true : false,
                         'is_cell_delete' => false,
-                        'is_cell_invoice' => false,
-                        'is_cell_print' => false,
-                        'is_cell_refund' => false,
+                        'is_cell_invoice' => true,
+                        'is_cell_print' => true,
+                        'is_cell_refund' => $subItem['is_refund_button'] ? true : false,
                         'is_cell_reverse_settle' => false,
                     ],
                     'finish_time' => $subItem['pay_time_text'],
-                    'is_split' => true,
+                    'is_split' => false,
                     'order_amount' => $subItem['order_price'],
                     'order_no' => $subItem['order_no'],
                     'pay_type_name' => implode(',', array_column($subItemPayType, 'name')),
-                    'payment_amount' => $subItem['pay_price'],
+                    'payment_amount' => $subItem['actual_receive_price'],
                     'sale_bill_uuid' => $subItem['order_id'],
                     'sale_order_uuid' => $subItem['order_id'],
-                    'sale_orders' => [],
-                    'serial_no' => $subItem['table_no'] ?: $subItem['call_no'],
-                    'status' => $subItem['order_status']['value'] == 10 ? 0 : ($subItem['order_status']['value'] == 30 ? 1 : 2),
+                    'serial_no' => ($subItem['table_no'] ?: $subItem['call_no']) . '-' . ($key + 1),
+                    'status' => $status,
                 ];
             }
             //
@@ -111,15 +123,17 @@ class Order extends OrderModel
             } else {
                 $payType = $item['payType'];
             } 
+            // 
+            $status = $item['order_status']['value'] == 10 ? 0 : ($item['order_status']['value'] == 30 ? 1 : 2);
             $list[] = [
                 'bill_type' => $item['order_source'] == 10 ? 0 : 1,
-                'consumer_uuids' => ($item['user']['user_id'] ?? '') . '',
+                'consumer_uuids' => implode(',', array_unique($consumer_uuids)),
                 'extra' => [
-                    'is_cell_cancel' => false,
+                    'is_cell_cancel' => $item['is_cancel_button'] ? true : false,
                     'is_cell_delete' => false,
                     'is_cell_invoice' => false,
                     'is_cell_print' => false,
-                    'is_cell_refund' => false,
+                    'is_cell_refund' => $item['is_refund_button'] ? true : false,
                     'is_cell_reverse_settle' => false,
                 ],
                 'finish_time' => $item['pay_time_text'],
@@ -127,7 +141,7 @@ class Order extends OrderModel
                 'order_amount' => $item['order_price'],
                 'order_no' => $item['order_no'],
                 'pay_type_name' => isset($item['payType']) && count($item['payType']) > 0 ? implode(',', array_column($payType, 'name')) : '',
-                'payment_amount' => $item['pay_price'],
+                'payment_amount' => $item['actual_receive_price'],
                 'sale_bill_uuid' => $item['order_id'],
                 'sale_order_uuid' => $item['order_id'],
                 'sale_orders' => $subOrder,
@@ -141,7 +155,7 @@ class Order extends OrderModel
             'page_size' => $result['per_page'],
             'total' => $result['total'],
             'total_num' => $model->getCount('all', $data),
-            'unpaid_num' => $model->getCount('process', $data),
+            'unpaid_num' => $model->getCount('payment', $data),
             'complete_num' => $model->getCount('complete', $data),
             'cancel_num' => $model->getCount('cancel', $data),
         ];
@@ -149,6 +163,286 @@ class Order extends OrderModel
         $ex_style = DeliveryTypeEnum::store();
         // 
         return compact('list', 'ex_style', 'meta');
+    }
+
+    // 订单详情
+    public static function details($order_id)
+    {
+        $model = new self([], request()->appId);
+        /** @var OrderModel $detail */
+        $detail = $model->detailWithTrashed($order_id, null, ["'' as free_tag_text"]);
+        if (isset($detail['pay_time']) && $detail['pay_time'] > 0) {
+            $detail['pay_time'] = date('Y-m-d H:i:s', $detail['pay_time']);
+        }
+        if (isset($detail['delivery_time']) && $detail['delivery_time'] != '') {
+            $detail['delivery_time'] = date('Y-m-d H:i:s', $detail['delivery_time']);
+        }
+        // 
+        $extra = [
+            'is_cell_cancel' => false,
+            'is_cell_delete' => false,
+            'is_cell_invoice' => false,
+            'is_cell_print' => false,
+            'is_cell_refund' => false,
+            'is_cell_reverse_settle' => false,
+        ];
+        //
+        if ($detail) {
+            $orderProductIds = array_column($detail['product']->toArray(), 'order_product_id');
+            $orderProductFrees = OrderProductFree::where('order_product_id', 'in', $orderProductIds)->select()->toArray();
+            foreach ($detail['product'] as &$orderProduct) {
+                $orderProduct->free_tag_text = $orderProduct->getFreeTagText($orderProductFrees);
+            }
+            // 是否显示退款按钮 1-显示 0-隐藏
+            $buttonStatus = $detail->getButtonStatus($detail);
+            $extra['is_cell_refund'] = $buttonStatus[0] ? true : false;
+            $extra['is_cell_cancel'] = $buttonStatus[1] ? true : false;
+            // 拆单主单支付方式去重
+            if ($detail['parent_id'] == 0 && count($detail['subOrder']) > 0) {
+                $payTypes = $detail['payType']->toArray();
+                $uniquePayTypes = [];
+                foreach ($payTypes as $payType) {
+                    $uniquePayTypes[$payType['value']] = $payType;
+                }
+                $detail['payType'] = new \think\Collection(array_values($uniquePayTypes));
+            }
+        }
+
+        // 
+        $member_names = [];
+        $member_uuids = [];
+        if ($detail['user']['user_id'] ?? '') {
+            $member_uuids[] = $detail['user']['user_id'];
+            $member_names[] = $detail['user']['nickName'];
+        }
+        // 
+        $subOrder = [];
+        if (count($detail['subOrder']) == 0) {
+            $detail['subOrder'][] = $detail;
+        }
+        foreach ($detail['subOrder'] ?? [] as $key => $subItem) {
+            if (isset($subItem['payType']) && $subItem['payType'] instanceof \think\Collection) {
+                $subItemPayType = $subItem['payType']->toArray();
+            } else {
+                $subItemPayType = $subItem['payType'];
+            } 
+            if ($subItem['user']['user_id'] ?? '') {
+                $member_uuids[] = $subItem['user']['user_id'];
+                $member_names[] = $subItem['user']['nickName'];
+            }
+            // 
+            $buffetNames = [];
+            foreach ($subItem['buffet'] as &$buffet) {
+                $buffetNames[] = extractLanguage($buffet['name']);
+            }
+            $payTypes = [];
+            foreach ($subItem['payType']->toArray() as &$payType) {
+                $payTypes[] = [
+                    'code' => $payType['value'],
+                    'currency_unit' => '',
+                    'payment_amount' => $payType['price'],
+                    'payment_type_name' => $payType['name'],
+                    'status' => $payType['pay_status'],
+                    'status_reason' => '',
+                    'source' => $payType['source'],
+                    'source_text' => $payType['source_text'],
+                ];
+            }
+            // 
+            $status = $subItem['order_status']['value'] == 10 ? 0 : ($subItem['order_status']['value'] == 30 ? 1 : 2);
+            // 
+            $products = [];
+            //
+            foreach ($subItem['buffetCustomerType'] as $product) {
+                $names = json_decode($product->getData('buffet_name') ?? '', JSON_UNESCAPED_UNICODE);
+                $products[] = [
+                    'uuid' => $product['product_id'],
+                    'locale_name' => [
+                        'zh' => $names['zh'] ?? '',
+                        'th' => $names['th'] ?? '',
+                        'en' => $names['en'] ?? '',
+                        'zhtw' => $names['zhtw'] ?? '',
+                        'ja' => $names['ja'] ?? '',
+                        'ko' => $names['ko'] ?? '',
+                        'my' => $names['my'] ?? '',
+                        'tr' => $names['tr'] ?? '',
+                    ],
+                    'locale_attribute_name' => [],
+                    'price' => $product['price'],
+                    'num' => $product['num'],
+                    'sale_price' => $product['total_consumption_tax_order_price'],
+                    'total_price' => $product['total_consumption_tax_pay_price'],
+                    'refund_amount' => $product['refund_money'],
+                    'status' => 0,
+                    'remark' => "",
+                    'is_gift' => false,
+                    'is_buffet' => false,
+                    'is_buffet_customer' => true,
+                    'is_delay' => false,
+                    'is_must' => false,
+                    'gift_reason' => '',
+                    'image_url' => '',
+                    'refund_reason' => '',
+                ];
+            }
+            // 
+            foreach ($subItem['delay'] ?? [] as $product) {
+                $products[] = [
+                    'uuid' => $product['product_id'],
+                    'locale_name' => [
+                        'zh' => $product['name'] ?? '',
+                        'th' => $product['name'] ?? '',
+                        'en' => $product['name'] ?? '',
+                        'zhtw' => $product['name'] ?? '',
+                        'ja' => $product['name'] ?? '',
+                        'ko' => $product['name'] ?? '',
+                        'my' => $product['name'] ?? '',
+                        'tr' => $product['name'] ?? '',
+                    ],
+                    'locale_attribute_name' => [],
+                    'price' => $product['price'],
+                    'num' => $product['num'],
+                    'sale_price' => $product['total_product_price'],
+                    'total_price' => $product['total_price'],
+                    'refund_amount' => $product['refund_money'],
+                    'status' => 0,
+                    'remark' => "",
+                    'is_gift' => false,
+                    'is_buffet' => false,
+                    'is_buffet_customer' => false,
+                    'is_delay' => true,
+                    'is_must' => false,
+                    'gift_reason' => '',
+                    'image_url' => '',
+                    'refund_reason' => '',
+                ];
+            }
+            // 
+            foreach ($subItem['product'] as $product) {
+                $names = json_decode($product->getData('product_name') ?? '', JSON_UNESCAPED_UNICODE);
+                $attributes = json_decode($product->getData('product_attr') ?? '', JSON_UNESCAPED_UNICODE);
+                $products[] = [
+                    'uuid' => $product['product_id'],
+                    'locale_name' => [
+                        'zh' => $names['zh'] ?? '',
+                        'th' => $names['th'] ?? '',
+                        'en' => $names['en'] ?? '',
+                        'zhtw' => $names['zhtw'] ?? '',
+                        'ja' => $names['ja'] ?? '',
+                        'ko' => $names['ko'] ?? '',
+                        'my' => $names['my'] ?? '',
+                        'tr' => $names['tr'] ?? '',
+                    ],
+                    'locale_attribute_name' => [
+                        'zh' => $attributes['zh'] ?? '',
+                        'th' => $attributes['th'] ?? '',
+                        'en' => $attributes['en'] ?? '',
+                        'zhtw' => $attributes['zhtw'] ?? '',
+                        'ja' => $attributes['ja'] ?? '',
+                        'ko' => $attributes['ko'] ?? '',
+                        'my' => $attributes['my'] ?? '',
+                        'tr' => $attributes['tr'] ?? '',
+                    ],
+                    'price' => $product['product_price'],
+                    'num' => $product['total_num'],
+                    'sale_price' => $product['total_consumption_tax_order_price'],
+                    'total_price' => $product['total_consumption_tax_pay_price'],
+                    'refund_amount' => $product['refund_money'],
+                    'status' => $product['is_return'] ? 1 : 0,
+                    'remark' => $product['free_remark'],
+                    'is_gift' => $product['is_free'] ? true : false,
+                    'is_buffet' => $product['is_buffet_product'] ? true : false,
+                    'is_buffet_customer' => false,
+                    'is_delay' => false,
+                    'is_must' => false,
+                    'gift_reason' => $product['free_remark'],
+                    'image_url' => $product['image']['file_path'] ?? '',
+                    'refund_reason' => $product['productReturn']['reason'] ?? '',
+                ];
+            }
+            // 
+            $subOrder[] = [
+                'bill_type' => $subItem['order_source'] == 10 ? 0 : 1,
+                'dining_method' => $subItem['order_type'],
+                'finish_time' => $subItem['pay_time'],
+                'free_reason' => $subItem['free_remark'],
+                'is_free' => $subItem['is_free'] == 1 ? true : false,
+                'member_uuid' => $subItem['user']['user_id'] ?? 0,
+                'member_name' => $subItem['user']['nickName'] ?? '',
+                'order_amount' => $subItem['order_price'],
+                'order_no' => $subItem['order_no'],
+                'pay_type_name' => implode(',', array_column($subItemPayType, 'name')),
+                'payment_amount' => $subItem['actual_receive_price'],
+                'products' => $products,
+                'refund_amount' => $subItem['refund_money'],
+                'sale_order_uuid' => $subItem['order_id'],
+                'serial_no' => ($subItem['table_no'] ?: $subItem['call_no']) . '-' . ($key + 1),
+                'status' => $status,
+            ];
+        }
+
+        // 
+        $buffetNames = [];
+        foreach ($detail['buffet'] as &$buffet) {
+            $buffetNames[] = extractLanguage($buffet['name']);
+        }
+        $payTypes = [];
+        foreach ($detail['payType']->toArray() as &$payType) {
+            $payTypes[] = [
+                'code' => $payType['value'],
+                'currency_unit' => '',
+                'payment_amount' => $payType['price'],
+                'payment_type_name' => $payType['name'],
+                'status' => $payType['pay_status'],
+                'status_reason' => '',
+                'source' => $payType['source'],
+                'source_text' => $payType['source_text'],
+            ];
+        }
+
+        // 操作日志
+        $operationOrderId = $detail['parent_id'] > 0 ? $detail['parent_id'] : $order_id;
+        $operationLog = OrderOperationLog::getLogList($operationOrderId);
+        $operation_log = ['list'=>[]];
+        foreach ($operationLog as $log) {
+            $operation_log['list'][] = [
+                "uuid" => 0,
+                "user_name" => $log['user_name'],
+                "user_email" => $log['user_email'],
+                "source" => $log['source'],
+                "create_time" => $log['create_time'],
+                "description" => $log['description'],
+                "pay_type" => $log['pay_type'],
+                "refund_type" => $log['refund_type']
+            ];
+        }
+
+        // 格式转换
+        $detail = [
+            'bill_type' => $detail['order_source'] == 10 ? 0 : 1,
+            'buffet_names' => implode(',', $buffetNames),
+            'cancel_reason' => $detail['cancel_remark'],
+            'cashier_name' => $detail['cashier']['real_name'] ??  $detail['cashier']['user_name'] ?? '-',
+            'dining_method' => $detail['order_type'],
+            'finish_time' => $detail['pay_time'],
+            'create_time' => $detail['create_time'],
+            'is_buffet' => $detail['is_buffet'] == 1 ? true : false,
+            'is_split' => count($detail['subOrder']) > 0 ? true : false,
+            'member_names' => implode(',', $member_names),
+            'member_uuids' => implode(',', $member_uuids),
+            'order_amount' => $detail['order_price'],
+            'order_no' => $detail['order_no'],
+            'pay_types' => $payTypes,
+            'payment_amount' => $detail['actual_receive_price'],
+            'refund_amount' => $detail['refund_money'],
+            'remark' => $detail['free_remark'] ?: $detail['table_remark'],
+            'sale_bill_uuid' => $detail['order_id'],
+            'sale_orders' => $subOrder,
+            'serial_no' => ($detail['table_no'] ?: $detail['call_no']),
+            'status' => $detail['order_status']['value'] == 10 ? 0 : ($detail['order_status']['value'] == 30 ? 1 : 2),
+        ];
+        //
+        return compact('detail', 'extra', 'operation_log');
     }
 
     /**

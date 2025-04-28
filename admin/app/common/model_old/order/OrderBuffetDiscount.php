@@ -33,6 +33,6 @@ class OrderBuffetDiscount extends BaseModel
      */
     public function buffetDiscount()
     {
-        return $this->belongsTo('app\\common\\model\\buffet\\BuffetDiscount', 'buffet_id', 'id');
+        return $this->belongsTo('app\\common\\model_old\\buffet\\BuffetDiscount', 'buffet_id', 'id');
     }
 }
