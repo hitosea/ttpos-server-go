@@ -2,7 +2,7 @@ package repository
 
 import (
 	"ttpos-server-go/app/errors"
-	"ttpos-server-go/trans/v1"
+	v1 "ttpos-server-go/trans/v1"
 
 	"gorm.io/gorm"
 )
@@ -38,7 +38,7 @@ func (s *CommonRepoImpl) GetProductTax(productID uint64, taxType uint) (*v1.Prod
 // GetProductSKU 获取商品规格
 func (s *CommonRepoImpl) GetProductSKUs(productID uint64) ([]*v1.ProductSKU, error) {
 	var productSKUs []*v1.ProductSKU
-	if err := s.db.Where("product_id = ?", productID).Find(&productSKUs).Error; err != nil {
+	if err := s.db.Preload("ProductSoldOut").Where("product_id = ?", productID).Find(&productSKUs).Error; err != nil {
 		return nil, errors.WithMessage(err)
 	}
 	return productSKUs, nil
