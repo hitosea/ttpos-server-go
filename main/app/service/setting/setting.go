@@ -755,8 +755,8 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 		var cashier setting.Cashier
 		err = json.Unmarshal(modifiedJSON, &cashier)
 		if err != nil {
-			ctx.Log().Error("解析各端-收银机设置失败 - 02", zap.Error(err))
-			return assistant, errors.New("解析各端-收银机设置失败 - 02")
+			ctx.Log().Error("解析各端-点餐助手设置失败 - 02", zap.Error(err))
+			return assistant, errors.New("解析各端-点餐助手设置失败 - 02")
 		}
 		defaultAssistant.IsShowAssistantSoldOut = cashier.IsShowAssistantSoldOut
 	} else {
@@ -924,8 +924,8 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 		var cashier setting.Cashier
 		err = json.Unmarshal(modifiedJSON, &cashier)
 		if err != nil {
-			ctx.Log().Error("解析各端-收银机设置失败 - 02", zap.Error(err))
-			return defaultH5, errors.New("解析各端-收银机设置失败 - 02")
+			ctx.Log().Error("解析各端-获取H5设置 - 02", zap.Error(err))
+			return defaultH5, errors.New("解析各端-获取H5设置 - 02")
 		}
 		defaultH5.IsShowScanSoldOut = cashier.IsShowScanSoldOut
 	} else {
