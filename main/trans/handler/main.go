@@ -122,12 +122,18 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		}
 
 		// 商品打印 ProductPrinterProductItem ProductPrinterItem ProductPrinterRegion ProductPrinter
-		// ToDo ProductPrinter 打印方式不正确
 		supplierPrintingService := v1.NewSupplierPrintingService(sourceDB, targetDB)
 		err = supplierPrintingService.ConvertSupplierPrinting()
 		if err != nil {
 			return err
 		}
+	}
+
+	// 必点商品
+	orderSchemeService := v1.NewOrderSchemeService(sourceDB, targetDB)
+	err = orderSchemeService.ConvertOrderScheme()
+	if err != nil {
+		return err
 	}
 
 	// 会员
