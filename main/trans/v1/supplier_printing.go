@@ -76,7 +76,7 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 			printProductSelect = 1
 		}
 		printMethod := 0
-		if supplierPrinting.IsOpenOneFood == 1 {
+		if supplierPrinting.PrintMethod == 40 {
 			printMethod = 1
 		}
 		printModeScene := 0
