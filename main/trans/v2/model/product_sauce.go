@@ -42,9 +42,14 @@ func NewProductSauce(feed *v1.Feed) (*model.ProductSauce, error) {
 
 	sauceMaterials := make([]*model.RelatedMaterial, 0)
 	for _, material := range feed.ProductFeedMaterials {
+		relatedMaterialUuid, err := pkgUtils.GetID()
+		if err != nil {
+			return nil, errors.WithMessage(err, "获取uuid失败")
+		}
 		sauceMaterials = append(sauceMaterials, &model.RelatedMaterial{
 			BaseModel: model.BaseModel{
-				Uuid: uint64(material.MaterialID),
+				// Uuid: uint64(material.MaterialID),
+				Uuid: relatedMaterialUuid,
 			},
 			MaterialUuid: uint64(material.MaterialID),
 			// RelatedUuid:  uint64(feed.FeedID), // 生成新的雪花uuid
