@@ -753,6 +753,7 @@ func (s *authSrv) AuthMenu(ctx context.Context, qrcodeToken string) (*model.Comp
 func (s *authSrv) isCashierOpen(ctx context.Context, pathUrl string) bool {
 	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	if err != nil {
+		fmt.Println(err)
 		return false
 	}
 	if cashierSetting.OrderMethod.IsCashierOrder != "1" && regexp.MustCompile(`^/api/v\d+/cashier/instant/`).Match([]byte(pathUrl)) {
