@@ -212,6 +212,7 @@ class Supplier extends SupplierModel
                 'is_show_assistant' => 1,
                 'is_show_member_recharge' => 1,
                 'status' => 1,
+                'sort' => 1,
                 'create_time' => time(),
                 'update_time' => time(),
             ],
@@ -225,6 +226,7 @@ class Supplier extends SupplierModel
                 'is_show_assistant' => 1,
                 'is_show_member_recharge' => 0,
                 'status' => $isOpenMember,
+                'sort' => 1,
                 'create_time' => time(),
                 'update_time' => time(),
             ],
@@ -238,6 +240,7 @@ class Supplier extends SupplierModel
                 'is_show_cashier' => 1,
                 'is_show_assistant' => 1,
                 'is_show_member_recharge' => 0,
+                'sort' => 0,
                 'create_time' => time(),
                 'update_time' => time(),
             ],
@@ -251,6 +254,7 @@ class Supplier extends SupplierModel
                 'is_show_cashier' => 1,
                 'is_show_assistant' => 1,
                 'is_show_member_recharge' => 0,
+                'sort' => 0,
                 'create_time' => time(),
                 'update_time' => time(),
             ],
@@ -264,6 +268,7 @@ class Supplier extends SupplierModel
                 'is_show_cashier' => 1,
                 'is_show_assistant' => 1,
                 'is_show_member_recharge' => 0,
+                'sort' => 0,
                 'create_time' => time(),
                 'update_time' => time(),
             ],
@@ -271,7 +276,7 @@ class Supplier extends SupplierModel
         foreach ($paymentMethodList as $paymentMethodItem) {
             $pdo->exec($this->getInsertSql($prefix . 'payment_method', $paymentMethodItem, [
                 'uuid', 'name', 'code', 'payment_name', 'source', 'is_show_cashier', 'is_show_assistant',
-                'is_show_member_recharge', 'status', 'create_time', 'update_time',
+                'is_show_member_recharge', 'status', 'sort', 'create_time', 'update_time',
             ]));
         }
     }
