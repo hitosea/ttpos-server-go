@@ -456,6 +456,19 @@ func (s *Srv) parseCashierSetting(values string, key string) ([]byte, error) {
 			jsonMap["is_show_assistant_sold_out"], _ = strconv.Atoi(strVal)
 		}
 	}
+	// 处理 isAutoOrder
+	if isAutoOrder, ok := jsonMap["is_auto_order"]; ok {
+		switch v := isAutoOrder.(type) {
+		case float64:
+			jsonMap["is_auto_order"] = strconv.Itoa(int(v))
+		case int:
+			jsonMap["is_auto_order"] = strconv.Itoa(v)
+		case string:
+			jsonMap["is_auto_order"] = v
+		default:
+			jsonMap["is_auto_order"] = "0"
+		}
+	}
 	// 重新序列化为JSON
 	modifiedJSON, err := json.Marshal(jsonMap)
 	if err != nil {
