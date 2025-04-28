@@ -96,6 +96,12 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 			return err
 		}
 
+		// 员工交班记录
+		shopUserShiftLog := v1.NewShopUserShiftLogService(sourceDB, targetDB)
+		err = shopUserShiftLog.ConvertShopUserShiftLog()
+		if err != nil {
+			return err
+		}
 	}
 
 	// 打印管理
