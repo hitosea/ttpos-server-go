@@ -57,6 +57,11 @@ func (s *ShopAccessService) ConvertShopAccess() error {
 
 	for _, shopAccess := range shopAccesses {
 		fmt.Println(fmt.Sprintf("shopAccess: %+v", shopAccess))
+
+		if shopAccess.Path == "cashier_guqing" {
+			shopAccess.Path = "cashier_sold_out"
+		}
+
 		model := &model.Access{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(shopAccess.AccessID),
