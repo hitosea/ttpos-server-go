@@ -12,12 +12,12 @@ type ProductMustPlan struct {
 	Name         string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'方案名称'"`
 	UseChannel   string `gorm:"column:use_channel;type:varchar(255);not null;default:'';comment:'使用渠道 10-点餐方式 20-桌台方式'"`
 	MustType     uint   `gorm:"column:must_type;default:0;comment:'必点类型 0-每笔订单必点1份 1-每人必点1份 '"`
-	MustRule     uint   `gorm:"column:must_rule;default:1;comment:'必点规则 0-固定商品 1-可选商品'"`
-	Status       uint   `gorm:"column:status;default:1;comment:'状态,1-开启 0-关闭'"`
-	AutoCart     uint   `gorm:"column:auto_cart;default:1;comment:'自动加入购物车 1-是 0-否'"`
-	AutoChange   uint   `gorm:"column:auto_change;default:1;comment:'顾客可修改必点数量 1-是 0-否'"`
-	AutoCheck    uint   `gorm:"column:auto_check;default:1;comment:'下单时检查必点商品 1-是 0-否'"`
-	AutoCheckout uint   `gorm:"column:auto_checkout;default:1;comment:'结账时检查必点商品 1-是 0-否'"`
+	MustRule     uint   `gorm:"column:must_rule;default:0;comment:'必点规则 0-固定商品 1-可选商品'"`
+	Status       uint   `gorm:"column:status;default:0;comment:'状态,1-开启 0-关闭'"`
+	AutoCart     uint   `gorm:"column:auto_cart;default:0;comment:'自动加入购物车 1-是 0-否'"`
+	AutoChange   uint   `gorm:"column:auto_change;default:0;comment:'顾客可修改必点数量 1-是 0-否'"`
+	AutoCheck    uint   `gorm:"column:auto_check;default:0;comment:'下单时检查必点商品 1-是 0-否'"`
+	AutoCheckout uint   `gorm:"column:auto_checkout;default:0;comment:'结账时检查必点商品 1-是 0-否'"`
 
 	ProductMustPlanItems   []ProductMustPlanItem   `gorm:"foreignKey:ProductMustPlanUuid;references:Uuid"`
 	ProductMustPlanRegions []ProductMustPlanRegion `gorm:"foreignKey:ProductMustPlanUuid;references:Uuid"`
