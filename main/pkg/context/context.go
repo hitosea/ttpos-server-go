@@ -2,6 +2,7 @@ package context
 
 import (
 	"context"
+	"strings"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/model"
 
@@ -34,6 +35,7 @@ type Context interface {
 	SetCompanyUuid(uuid uint64)              // 设置商家ID
 	GetDB() *gorm.DB                         // 获取gorm.DB
 	GetRequestUuid() string                  // 获取请求ID
+	GetToken() string                        // 获取请求ID
 	Copy() Context                           // 复制一个ctx实例。避免在协程中修改上下文导致主进程的ctx被修改
 }
 type ContextImpl struct {
@@ -284,4 +286,9 @@ func (c *ContextImpl) GetDB() *gorm.DB {
 // GetRequestUuid 获取请求uuid
 func (c *ContextImpl) GetRequestUuid() string {
 	return c.requestUuid
+}
+
+// GetToken 获取token
+func (c *ContextImpl) GetToken() string {
+	return strings.SplitN(c.cc.GetHeader("Authorization"), " ", 2)[1]
 }

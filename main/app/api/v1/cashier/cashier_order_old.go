@@ -1,6 +1,7 @@
 package cashier
 
 import (
+	"time"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -11,6 +12,7 @@ import (
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,15 +42,79 @@ func (h *OrderOldHandler) GetCashierOrderList(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
 		return
 	}
-	// 获取产品列表
-	res, err := h.orderSrv.GetOrderLists(ctx, req)
-	// 处理错误
+	//
+	dataType := "all"
+	switch req.Status {
+	case 0:
+		dataType = "payment"
+	case 1:
+		dataType = "complete"
+	case 2:
+		dataType = "cancel"
+	}
+	// 订单类型
+	orderSource := 0
+	switch req.BillType {
+	case 0:
+		orderSource = 10
+	case 1:
+		orderSource = 20
+	}
+	// 日期类型
+	dateType := 0
+	switch req.DateType {
+	case 0:
+		dateType = 1
+	case 1:
+		dateType = 2
+	case 2:
+		dateType = 3
+	}
+	//
+	timeMode := []int{}
+	if req.EnableCreateTime {
+		timeMode = append(timeMode, 0)
+	}
+	if req.EnablePayTime {
+		timeMode = append(timeMode, 1)
+	}
+	//
+	orderType := -1
+	switch req.DiningMethod {
+	case 0:
+		orderType = 1
+	case 1:
+		orderType = 0
+	}
+	// 时间
+	times := []string{}
+	if req.QueryStartTime > 0 {
+		times = append(times, time.Unix(int64(req.QueryStartTime), 0).Format("2006-01-02 15:04:05"))
+	}
+	if req.QueryEndTime > 0 {
+		times = append(times, time.Unix(int64(req.QueryEndTime), 0).Format("2006-01-02 15:04:05"))
+	}
+	//
+	result, err := utils.HttpPost("http://nginx/api/cashier/order.order/index", map[string]interface{}{
+		"dataType":     dataType,
+		"order_source": orderSource,
+		"time_type":    dateType,
+		"time_mode":    timeMode,
+		"time":         times,
+		"order_no":     req.OrderNo,
+		"order_type":   orderType,
+		"page":         req.PageNo,
+		"list_rows":    req.PageSize,
+	}, map[string]string{
+		"token":    ctx.GetToken(),
+		"language": ctx.GetLanguage(),
+	})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	// 返回结果
-	helper.Success(c, res)
+
+	helper.Success(c, result["data"])
 }
 
 // GetOrderInfo 处理获取订单详情
@@ -70,15 +136,19 @@ func (h *OrderOldHandler) GetOrderInfo(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
-	// 获取收银产品列表
-	res, err := h.orderSrv.GetOrderInfos(ctx, req)
-	// 处理错误
+	//
+	result, err := utils.HttpPost("http://nginx/api/cashier/order.order/detail", map[string]interface{}{
+		"sale_bill_uuid":  req.SaleBillUuid,
+		"sale_order_uuid": req.SaleOrderUuid,
+	}, map[string]string{
+		"token":    ctx.GetToken(),
+		"language": ctx.GetLanguage(),
+	})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	// 返回结果
-	helper.Success(c, res)
+	helper.Success(c, result["data"])
 }
 
 // CancelOrder 处理取消订单

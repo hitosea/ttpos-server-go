@@ -108,14 +108,16 @@ function checkToken($token, $type)
         JWT::$leeway = 60; //当前时间减去60，把时间留点余地
         $decoded = JWT::decode($token, new Key($key, 'HS256')); //HS256方式，这里要和签发的时候对应
         $arr = json_decode(json_encode($decoded), 1);
+        // 
         $res['code'] = 1;
         $res['data'] = [                             //记录的userid的信息，这里是自已添加上去的，如果有其它信息，可以再添加数组的键值对
             'uid' => $arr['staff_uuid'],
             'type' => $arr['source'],
-            'pwd' => $arr['pwd'],
+            'pwd' => $arr['pwd'] ?? '',
             'device_id' => $arr['device_id'],
             'company_uuid' => $arr['company_uuid'],
         ];
+        // 
         if ($res['data']['type'] != $type){
             $status['msg'] = "签名不正确";
             return $status;

@@ -37,7 +37,57 @@ class Order extends Controller
             return $this->renderError('未存在迁移库');
         }
         request()->appId = $app->old_company_id;
-        return $this->renderSuccess('', OldOrderModel::getLists($data));
+        // 
+        $result = OldOrderModel::getLists($data);
+        foreach ($result['list'] as $key => $value) {
+            $result['list'][$key]['finish_time'] = $value['finish_time'] == '-' ? 0 : strtotime($value['finish_time']);
+            foreach ($value['sale_orders'] as $subKey => $subValue) {
+                $result['list'][$key]['sale_orders'][$subKey]['finish_time'] = $subValue['finish_time'] == '-' ? 0 : strtotime($subValue['finish_time']);
+            }
+        }
+        // 
+        return $this->renderSuccess('', $result);
     }
 
+    /**
+     * @Apidoc\Title("订单详情")
+     * @Apidoc\Tag("订单详情")
+     * @Apidoc\Method("POST")
+     * @Apidoc\Url("/index.php/cashier/order.order/detail")
+     */
+    public function detail($sale_bill_uuid)
+    {
+        $app = AppModel::where('uuid', request()->appId)->find();
+        if (!$app->old_company_id) {
+            return $this->renderError('未存在迁移库');
+        }
+        request()->appId = $app->old_company_id;
+        // 
+        $result = OldOrderModel::details($sale_bill_uuid);
+        foreach ($result['detail']['pay_types'] as $subKey => $subValue) {
+            $result['detail']['pay_types'][$subKey]['code'] = $subValue['code'] . '';
+        }
+        $result['detail']['order_amount'] = floatval($result['detail']['order_amount']);
+        $result['detail']['payment_amount'] = floatval($result['detail']['payment_amount']);
+        $result['detail']['refund_amount'] = floatval($result['detail']['refund_amount']);
+        $result['detail']['create_time'] = !$result['detail']['create_time'] ? 0 : strtotime($result['detail']['create_time']);
+        $result['detail']['finish_time'] = ($result['detail']['finish_time'] == '-' ? 0 : strtotime($result['detail']['finish_time'])) ?: 0;
+        //
+        foreach ($result['detail']['sale_orders'] ?? [] as $subKey => $subValue) {
+            $result['detail']['sale_orders'][$subKey]['finish_time'] = ($subValue['finish_time'] == '-' ? 0 : strtotime($subValue['finish_time'])) ?: 0;
+            $result['detail']['sale_orders'][$subKey]['order_amount'] = floatval($subValue['order_amount']);
+            $result['detail']['sale_orders'][$subKey]['payment_amount'] = floatval($subValue['payment_amount']);
+            $result['detail']['sale_orders'][$subKey]['refund_amount'] = floatval($subValue['refund_amount']);
+            // 
+            foreach ($subValue['products'] ?? [] as $key => $subValue) {
+                $result['detail']['sale_orders'][$subKey]['products'][$key]['refund_amount'] = floatval($subValue['refund_amount']);
+            }
+        }
+        // 
+        foreach ($result['operation_log']['list'] as $subKey => $subValue) {
+            $result['operation_log']['list'][$subKey]['create_time'] = strtotime($subValue['create_time']) ?: 0;
+        }
+        // 
+        return $this->renderSuccess('', $result);
+    }
 }

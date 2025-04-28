@@ -137,6 +137,6 @@ class User extends UserModel
      */
     public static function getUser($data)
     {
-        return self::where(['shop_user_id' => $data['uid']])->with(['app'])->find();
+        return (new static())->where('uuid', '=', $data['uid'])->with(['app'])->find();
     }
 }

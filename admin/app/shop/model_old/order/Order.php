@@ -48,10 +48,7 @@ class Order extends OrderModel
             $data['time_mode'] = [0]; // 默认开台时间
         }
         //
-        $data['order_type'] = 1;
-        $data['parent_id'] = 0;
-        $data['shop_supplier_id'] = request()->appId;
-        $result = $model->getList($data['dataType'], $data);
+        $result = $model->getList($data['dataType'] ?? 'all', $data);
         foreach ($result as $key => $item) {
             // 是否显示退款按钮 1-显示 0-隐藏
             /** @var OrderModel $item */
@@ -365,7 +362,16 @@ class Order extends OrderModel
                 'bill_type' => $subItem['order_source'] == 10 ? 0 : 1,
                 'dining_method' => $subItem['order_type'],
                 'finish_time' => $subItem['pay_time'],
-                'free_reason' => $subItem['free_remark'],
+                'free_reason' => [
+                    'zh' => $subItem['free_remark'],
+                    'th' => $subItem['free_remark'],
+                    'en' => $subItem['free_remark'],
+                    'zhtw' => $subItem['free_remark'],
+                    'ja' => $subItem['free_remark'],
+                    'ko' => $subItem['free_remark'],
+                    'my' => $subItem['free_remark'],
+                    'tr' => $subItem['free_remark'],
+                ],
                 'is_free' => $subItem['is_free'] == 1 ? true : false,
                 'member_uuid' => $subItem['user']['user_id'] ?? 0,
                 'member_name' => $subItem['user']['nickName'] ?? '',
@@ -397,6 +403,7 @@ class Order extends OrderModel
                 'status_reason' => '',
                 'source' => $payType['source'],
                 'source_text' => $payType['source_text'],
+                'sale_bill_uuid' => $detail['order_id'],
             ];
         }
 
@@ -603,7 +610,7 @@ class Order extends OrderModel
             $model = $model->where('delivery_type', '=', $data['style_id']);
         }
         // 用餐方式0外卖1店内
-        if (isset($data['order_type'])) {
+        if (isset($data['order_type']) && $data['order_type'] != '-1') {
             $model = $model->where('order_type', '=', $data['order_type']);
         }
         // 店铺ID
