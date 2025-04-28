@@ -56,7 +56,7 @@ func (s *OrderSchemeService) ConvertOrderScheme() error {
 		return err
 	}
 	for _, orderScheme := range orderSchemes {
-		fmt.Println(fmt.Sprintf("order: %+v", orderScheme))
+		fmt.Println(fmt.Sprintf("orderScheme: %+v", orderScheme))
 
 		mustTypeMap := map[int]int{
 			1: 1,

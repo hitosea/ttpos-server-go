@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -49,6 +50,9 @@ func (s *CustomerTypeService) ConvertCustomerType() error {
 		return err
 	}
 	for _, customerType := range customerTypes {
+
+		fmt.Println(fmt.Sprintf("customerType: %+v", customerType))
+
 		isDelete := 0
 		if customerType.Status == 0 {
 			isDelete = 1
