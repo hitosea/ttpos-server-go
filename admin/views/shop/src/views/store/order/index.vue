@@ -119,7 +119,7 @@
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading" row-key="unique_key">
           <el-table-column prop="serial_no" :label="$t('订单类型')">
             <template #default="scope">
-              {{ scope.row.bill_type == 1 ? $t('点餐订单') : $t('桌台订单') }}
+              {{ scope.row.sale_orders ? (scope.row.bill_type == 1 ? $t('点餐订单') : $t('桌台订单')) : '' }}
             </template>
           </el-table-column>
           <el-table-column prop="serial_no" :label="$t('桌号/序号')"></el-table-column>
