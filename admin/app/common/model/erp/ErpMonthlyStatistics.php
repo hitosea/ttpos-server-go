@@ -107,14 +107,16 @@ class ErpMonthlyStatistics extends BaseModel
     // 获取月末库存
     public static function getMonthEndStock($params)
     {
+        $now = time();
+        $nowYear = date("Y", $now);
+        $nowMonth = date("m", $now);
         if ($params['date']) {
             $timestamp = strtotime($params['date']);
             $year = date("Y", $timestamp);
             $month = date("m", $timestamp);
         } else {
-            $now = time();
-            $year = date("Y", $now);
-            $month = date("m", $now);
+            $year = $nowYear;
+            $month = $nowMonth;
         }
         // 如果月末数据未生成，则显示当前所有规格和材料的库存
         $total = self::where('year', $year)
@@ -122,9 +124,10 @@ class ErpMonthlyStatistics extends BaseModel
             ->where('scene', self::MONTH_END)
             ->value('stock') ?? 0;
 
-        if ($total == 0) {
+        if ($total == 0 && $year == $nowYear && $month == $nowMonth) {
             $total = (new self())->getTotalStockNum();
         }
+
         return floatval($total);
     }
 
@@ -228,8 +231,6 @@ class ErpMonthlyStatistics extends BaseModel
             $monthStartStock = 0; // 月初库存数
             $monthEntryStock = 0; // 月入库存数
             if ($record->sku) {
-                $productName .= ' - ' . $record->sku->spec_name_text;
-
                 foreach ($record->sku->erpMonthlyProductStatistics as $item) {
                     $monthStartStock = helper::bcadd($monthStartStock, $item->stock);
                 }
@@ -292,9 +293,10 @@ class ErpMonthlyStatistics extends BaseModel
             ->leftJoin('product_package p', 'bom.product_package_uuid = p.uuid')
             ->leftJoin('product_flavor f', 'bom.product_flavor_uuid = f.uuid')
             ->leftJoin('warehouse_out_form_item item', 'bom.uuid = item.product_bom_uuid AND item.scene = 0')
-            ->leftJoin('warehouse_out_form form', "item.warehouse_out_form_uuid = form.uuid AND form.scene = 0 AND form.status = 0 AND form.create_time >= {$startTime} AND form.create_time <= {$endTime}")
+            ->leftJoin('warehouse_out_form form', "item.warehouse_out_form_uuid = form.uuid AND form.scene = 0 AND form.status = 0")
+            ->where('form.create_time', '>=', $startTime)
+            ->where('form.create_time', '<=', $endTime)
             ->where('bom.product_flavor_uuid', '>', 0)
-            ->group('bom.uuid')
             ->buildSql();
 
         $materialSql = Material::alias('m')
@@ -304,7 +306,7 @@ class ErpMonthlyStatistics extends BaseModel
             ->group('m.uuid')
             ->buildSql();        
 
-        $querySql = "SELECT name,flavor_name,total_num,create_time FROM ($productBomSql UNION ALL $materialSql) AS all_product";
+        $querySql = "SELECT name,flavor_name,total_num,create_time FROM ($productBomSql UNION ALL $materialSql) AS all_product WHERE total_num > 0";
         $pageSql = " ORDER BY total_num ASC,create_time ASC LIMIT 10";
 
         $rows = Db::connect('shop' . self::$app_id)->query($querySql . $pageSql);
@@ -312,10 +314,6 @@ class ErpMonthlyStatistics extends BaseModel
         $list = [];
         foreach ($rows as $row) {
             $productNametext = extractLanguage($row['name']);
-            if ($row['flavor_name']) {
-                $productNametext .= ' - ' . extractLanguage($row['flavor_name']);
-            }
-
             $list[] = [
                 'product_name_text' => $productNametext,
                 'total_num' => floatval($row['total_num'])
