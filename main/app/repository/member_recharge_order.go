@@ -246,10 +246,37 @@ func (r *memberRechargeOrderRepo) CreateOldRecord(obj model.MemberRechargeOrder)
 	}
 
 	// 创建支付订单
-	for _, paymentOrder := range rechargeOrder.PaymentOrders {
+	for _, paymentOrder := range obj.PaymentOrders {
 		paymentOrder.SetNil()
 		if err := r.db.Model(&model.PaymentOrder{}).Create(&paymentOrder).Error; err != nil {
 			return errors.WithMessage(err)
+		}
+	}
+
+	// 创建操作日志
+	for _, operationLog := range obj.RechargeOrderOperationLogs {
+		operationLog.SetNil()
+		if err := r.db.Model(&model.MemberRechargeOrderOperationLog{}).Create(&operationLog).Error; err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+
+	// 创建退货单
+
+	for _, returnOrder := range obj.ReturnOrders {
+		returnOrder.SetNil()
+		if err := r.db.Model(&model.ReturnOrder{}).Create(&returnOrder).Error; err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+
+	// 创建退货单金额
+	for _, returnOrder := range obj.ReturnOrders {
+		for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
+			returnOrderAmount.SetNil()
+			if err := r.db.Model(&model.ReturnOrderAmount{}).Create(&returnOrderAmount).Error; err != nil {
+				return errors.WithMessage(err)
+			}
 		}
 	}
 	return nil

@@ -343,6 +343,9 @@ type MemberRechargeOrderOperationLog struct {
 	RechargeOrderUuid uint64 `gorm:"column:recharge_order_uuid;type:bigint(20) unsigned;default:0;comment:充值订单ID;NOT NULL" json:"recharge_order_uuid"`
 }
 
+func (model *MemberRechargeOrderOperationLog) SetNil() {
+}
+
 type MemberLevelLog struct {
 	BaseModel
 	MemberUuid uint64 `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
