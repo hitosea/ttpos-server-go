@@ -36,9 +36,12 @@ use app\common\model\shop\UserShiftLog;
 use app\common\service\sync\SyncService;
 use app\common\model\settings\PrinterLog;
 use app\common\model\websock\WebSocketMsg;
+use app\common\enum\settings\DeliveryTypeEnum;
+use app\shop\model_old\order\Order as OrderModel;
 use app\cashier\model\order\Order as CashierOrderModel;
 use app\common\library\printer\party\SunmiCloudPrinter;
 use app\common\model\shop\UserShiftLog as UserShiftLogModel;
+
 
 // 语言翻译
 // ./cmd think Test
@@ -56,93 +59,54 @@ class Test extends Command
     protected function execute(Input $input, Output $output)
     {
 
-        dump(signToken(8609817483677696, 'shop', 1, 'admin', 8609817471094784));
-        die;
-
-        // 测试雪花ID生成是否重复 - 真实并发测试
-        $workerIds = range(1, 3); // 使用3个不同的worker ID
-        $iterations = 1000; // 每个worker生成1000个ID
-        $processes = [];
-        $tempFiles = [];
-
-        // 为每个worker创建一个临时文件存储生成的ID
-        foreach ($workerIds as $workerId) {
-            $tempFiles[$workerId] = tempnam(sys_get_temp_dir(), 'snowflake_');
+        request()->appId = 1724054105;
+        
+        // 订单列表
+        $model = new OrderModel([], request()->appId);
+        $data = [];
+        // 时间模式
+        if (!isset($data['time_mode']) || !is_array($data['time_mode'])) {
+            $data['time_mode'] = [0]; // 默认开台时间
         }
-
-        // 创建多个并发进程
-        foreach ($workerIds as $workerId) {
-            $pid = pcntl_fork();
-
-            if ($pid == -1) {
-            die('无法创建进程');
-            } else if ($pid == 0) {
-            // 子进程
-            $snowflake = new SnowflakeHelp($workerId);
-            $ids = [];
-
-            for ($i = 0; $i < $iterations; $i++) {
-                $ids[] = $snowflake->next();
+        // 订单类型
+        $dataType = 'all';
+        //
+        $data['time'] = [];
+        $data['order_type'] = 1;
+        $data['parent_id'] = 0;
+        $data['shop_supplier_id'] = 1724054105;
+        $list = $model->getList($dataType, $data);
+        foreach ($list as $key => $item) {
+            // 是否显示退款按钮 1-显示 0-隐藏
+            /** @var OrderModel $item */
+            [$list[$key]['is_refund_button'], $list[$key]['is_cancel_button']] = $item->getButtonStatus($item);
+            if ($item['subOrder']) {
+                foreach ($item['subOrder'] as $subKey => $subItem) {
+                    /** @var OrderModel $subItem */
+                    [$list[$key]['subOrder'][$subKey]['is_refund_button'], $list[$key]['subOrder'][$subKey]['is_cancel_button']] = $subItem->getButtonStatus($subItem);
+                }
             }
-
-            // 将生成的ID写入临时文件
-            file_put_contents($tempFiles[$workerId], implode("\n", $ids));
-            exit(0);
-            } else {
-            // 父进程记录进程ID
-            $processes[] = $pid;
+            // 拆单主单支付方式去重
+            if ($item['parent_id'] == 0 && count($item['subOrder']) > 0) {
+                $payTypes = $item['payType']->toArray();
+                $uniquePayTypes = [];
+                foreach ($payTypes as $payType) {
+                    $uniquePayTypes[$payType['value']] = $payType;
+                }
+                $item['payType'] = new \think\Collection(array_values($uniquePayTypes));
             }
         }
-
-        // 等待所有子进程完成
-        foreach ($processes as $pid) {
-            pcntl_waitpid($pid, $status);
-        }
-
-        // 收集并检查所有生成的ID
-        $allIds = [];
-        foreach ($tempFiles as $file) {
-            $ids = explode("\n", file_get_contents($file));
-            foreach ($ids as $id) {
-            if (empty($id)) continue;
-            if (in_array($id, $allIds)) {
-                dump("发现重复ID: " . $id);
-                die;
-            }
-            $allIds[] = $id;
-            }
-            unlink($file); // 删除临时文件
-        }
-        dump($allIds);
-        dump("并发生成 " . count($allIds) . " 个ID,未发现重复");
-        dump("测试通过!");
-        die;
-
-        // 使用项目根目录路径
-        $rootPath = root_path();
-        // 读取输入SQL文件
-        $inputSql = file_get_contents($rootPath . 'jjjfood_shop_access.sql');
-        $outputSql = $this->convertSqlFormat($inputSql);
-        // 保存到数据库初始化文件目录
-        $outputPath = $rootPath . 'out_jjjfood_shop_access.sql';
-        file_put_contents($outputPath, $outputSql);
-        die;
-
-        WebSocketService::publish('1724054105', 'cashier', WebSocketService::MSG_TYPE_UPDATE_PRODUCT, [[
-            'ddd' => '1',
-            'dddd' => '51325121233',
-            'ddddddd' => 'test',
-        ]]);
-        WebSocketService::publish('1724054105', 'cashier', WebSocketService::MSG_TYPE_UPDATE_PRODUCT, [[
-            'ddd' => '1',
-            'dddd' => '51325121231',
-            'ddddddd' => 'test',
-        ]]);
-        WebSocketService::publish('1724054105', 'cashier', WebSocketService::MSG_TYPE_UPDATE_PRODUCT, [[
-            'ddd' => '1',
-            'dddd' => '51325121235',
-            'ddddddd' => 'test',
-        ]]);
+        $order_count = [
+            'order_count' => [
+                'all' => $model->getCount('all', $data),
+                'payment' => $model->getCount('payment', $data),
+                'process' => $model->getCount('process', $data),
+                'complete' => $model->getCount('complete', $data),
+                'cancel' => $model->getCount('cancel', $data),
+            ],
+        ];
+        $ex_style = DeliveryTypeEnum::store();
+        dump(compact('list', 'ex_style', 'order_count'));
 
         die;
         //

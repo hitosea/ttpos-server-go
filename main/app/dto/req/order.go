@@ -29,7 +29,7 @@ type OrderListReq struct {
 	QueryEndTime     uint   `form:"query_end_time"`           // 查询结束时间戳
 	Status           int    `form:"status,default=-1"`        // 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
 	BillType         int    `form:"bill_type,default=-1"`     // 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
-	DiningMethod     int    `form:"dining_method,default=-1"` // 用餐方式,-1=全都、 0-堂食 1-打包
+	DiningMethod     int    `form:"dining_method,default=-1"` // 用餐方式, -1=全都、 0-堂食 1-打包
 }
 
 // OrderInfoReq 订单信息查询
@@ -314,4 +314,19 @@ type OrderChangeBuffetProductListReq struct {
 // GetProductListReq 获取桌台的(未)送厨商品列表
 type GetProductListReq struct {
 	SaleBillUuid uint64 `form:"sale_bill_uuid" json:"sale_bill_uuid" binding:"required"` // 销售账单UUID
+}
+
+// MemberBalanceChangeReq 会员余额变动请求
+type MemberBalanceChangeReq struct {
+	MemberUuid  uint64  `json:"uuid"`
+	OrderNo     string  `json:"order_no"`     // 订单编号
+	Money       float64 `json:"money"`        // 变动的金额。 正数为增加，负数为减少
+	RelatedUuid uint64  `json:"related_uuid"` // 关联的ID。比如退款的时候，关联的是退款单金额的ID; 用餐订单反结账的时候，关联的是用餐订单的ID
+}
+
+// CashBoxBalanceChangeReq 钱箱余额变动请求
+type CashBoxBalanceChangeReq struct {
+	Amount      float64 `json:"amount"`       // 变动的金额。 正数为增加，负数为减少
+	RelatedUuid uint64  `json:"related_uuid"` // 关联的ID。比如退款的时候，关联的是退款单金额的ID; 用餐订单反结账的时候，关联的是用餐订单的ID
+	OrderNo     string  `json:"order_no"`     // 订单编号
 }

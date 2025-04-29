@@ -217,10 +217,10 @@ func (s *memberSrv) HandleMemberPoints(ctx context.Context, changeReq MemberPoin
 
 type MemberBalanceChangeReq struct {
 	MemberUuid  uint64  `json:"uuid"`
-	Money       float64 `json:"money"`      // 变动的金额。 正数为增加，负数为减少
-	GiftMoney   float64 `json:"gift_money"` // 变动的赠送金额。 正数为增加，负数为减少
-	Scene       int     `json:"scene"`
-	Describe    string  `json:"describe"`
+	Money       float64 `json:"money"`        // 变动的金额。 正数为增加，负数为减少
+	GiftMoney   float64 `json:"gift_money"`   // 变动的赠送金额。 正数为增加，负数为减少
+	Scene       int     `json:"scene"`        // 场景
+	Describe    string  `json:"describe"`     // 描述
 	RelatedUuid uint64  `json:"related_uuid"` // 关联的ID。比如退款的时候，关联的是退款单金额的ID; 用餐订单反结账的时候，关联的是用餐订单的ID
 }
 
