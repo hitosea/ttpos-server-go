@@ -313,5 +313,12 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		return errors.WithMessage(err)
 	}
 
+	// 用户充值订单
+	userRechargeOrderService := v1.NewUserRechargeOrderService(sourceDB, targetDB)
+	err = userRechargeOrderService.ConvertUserRechargeOrder()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
 	return nil
 }
