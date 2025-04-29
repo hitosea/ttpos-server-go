@@ -4,6 +4,7 @@ go 1.23
 
 require (
 	github.com/ace-zhaoy/go-id v1.0.6
+	github.com/apache/skywalking-go v0.5.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/duke-git/lancet/v2 v2.3.4
 	github.com/gin-gonic/gin v1.9.1
@@ -29,7 +30,6 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.0
 	github.com/swaggo/swag v1.16.2
-	github.com/zsais/go-gin-prometheus v0.1.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/image v0.15.0
 	golang.org/x/text v0.21.0
@@ -40,14 +40,14 @@ require (
 )
 
 require (
-	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/prometheus/client_golang v1.22.0 // indirect
-	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.62.0 // indirect
-	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
+	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
+	google.golang.org/grpc v1.55.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
+	skywalking.apache.org/repo/goapi v0.0.0-20230314034821-0c5a44bb767a // indirect
 )
 
 require (

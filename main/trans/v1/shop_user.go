@@ -60,11 +60,14 @@ func (s *ShopUserService) ConvertShopUser() error {
 	targetStaffRepo := repository.NewStaffRepo(s.targetDB)
 	targetCompanyStaffRepo := repository.NewCompanyStaffRepo(s.targetSaasDB)
 	for _, shopUser := range shopUsers {
+		if shopUser.IsDelete == 1 {
+			continue
+		}
 		fmt.Println(fmt.Sprintf("shopUser: %+v", shopUser))
 
 		existsCompanyStaff := targetCompanyStaffRepo.GetCompanyStaff(targetCompanyStaffRepo.WhereUsername(shopUser.UserName))
 		if existsCompanyStaff.Uuid != 0 && existsCompanyStaff.CompanyUuid != s.targetCompanyUuid {
-			return errors.New("当前用户名已存在，且不是当前商家员工")
+			return errors.WithMessage(errors.New("当前用户名已存在，且不是当前商家员工" + shopUser.UserName))
 		}
 
 		err := targetStaffRepo.CreateStaff(model.Staff{
