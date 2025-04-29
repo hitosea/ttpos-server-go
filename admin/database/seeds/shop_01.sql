@@ -1118,7 +1118,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order_operation_log` (
     `client` VARCHAR(50) NOT NULL DEFAULT '' COMMENT '客户端信息',
     `message` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '消息内容',
     `action` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '操作',
-    `data` TEXT NOT NULL DEFAULT '' COMMENT '数据',
+    `data` TEXT NOT NULL COMMENT '数据',
     `recharge_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '充值订单ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',

@@ -329,6 +329,7 @@ class OrderOperationLog extends BaseModel
         $parentId = $data['parent_id'] ?? 0;
         $newOrderId = $parentId > 0 ? $parentId : $orderId;
         $subOrderId = $parentId > 0 ? $orderId : 0;
+        
         //
         self::create([
             'app_id' => $appId,
@@ -341,6 +342,7 @@ class OrderOperationLog extends BaseModel
             'remark' => $remark,
             'data' => json_encode($data, JSON_UNESCAPED_UNICODE),
         ]);
+      
         // 异常日志
         OrderAbnormalLog::createLog(OrderAbnormalLog::SOURCE_ORDER, $orderId, $action, $data, $remark);
     }

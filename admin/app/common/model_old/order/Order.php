@@ -2,7 +2,6 @@
 
 namespace app\common\model_old\order;
 
-use app\cashier\model\order\Order as OrderModel;
 use think\Model;
 use help\QueueHelp;
 use help\ClientHelp;
@@ -701,7 +700,7 @@ class Order extends BaseModelOrder
         $repository =  new OrderBusinessDataRepository($this, $params);
         [$startTime, $endTime] = $repository->getTimes();
         //
-        $prefix = env('DB_PREFIX');
+        $prefix = 'jjjfood_';
         // 基础模型
         $model = $repository->getBaseModel();
         // 汇总数据
@@ -3176,10 +3175,11 @@ class Order extends BaseModelOrder
     {
         // 检查订单状态
         /** @var OrderModel $detail */
-        $detail = self::detail([
+        $detail = (new self([], request()->appId))::detail([
             ['order_id', '=', $order_id],
             ['order_status', '=', OrderStatusEnum::NORMAL]
         ]);
+
         if (!$detail) {
             $this->error = '当前状态不可操作';
             return false;
@@ -3189,19 +3189,10 @@ class Order extends BaseModelOrder
             $this->error = '拆单不可操作';
             return false;
         }
-        // 禁止并发操作
-        [$details, $queue] = $detail->concurrencyValidateOrderActionableStatus();
-        if (!$details) {
-            $this->error = $detail->getError();
-            return false;
-        } else {
-            $detail = $details;
-        }
 
         // 检查部分支付
         if ($error = $detail->checkPartialPayment()) {
             $this->error = $error;
-            $queue->release();
             return false;
         }
 
@@ -3282,12 +3273,10 @@ class Order extends BaseModelOrder
             OrderOperationLog::createLog($order_id, OrderOperationLog::ACTION_ORDER_CANCEL, [], '整单取消');
             //
             $this->commit();
-            $queue->release();
             return true;
         } catch (BaseException $e) {
             $this->error = $e->getMessage();
             $this->rollback();
-            $queue->release();
             return false;
         }
     }
@@ -3633,7 +3622,7 @@ class Order extends BaseModelOrder
             $orderIds = implode(',', $orderIds);
         }
         //
-        $prefix = env('DB_PREFIX');
+        $prefix = 'jjjfood_';
         //
         $where = '';
         if ($this->parent_id > 0) {
@@ -4559,7 +4548,7 @@ class Order extends BaseModelOrder
     {
         $order = $this->toArray();
         $refund_method = 3; // 1.0.9  3-原路返还
-        $refund_type = $params['refund_type'] ?: 0;
+        $refund_type = $params['refund_type'] ?? 1;
         $refund_product = isset($params['refund_product']) ? $params['refund_product'] : [];
         $refund_buffet = isset($params['refund_buffet']) ? $params['refund_buffet'] : [];
         $refund_delay = isset($params['refund_delay']) ? $params['refund_delay'] : [];
@@ -4900,7 +4889,7 @@ class Order extends BaseModelOrder
                     }
                 }
             }
-
+           
             // 处理主单高峰时间段退款记录 - 等待所有数据处理完成再记入峰值，保证最终数值正确(v1.1.1版本)
             $PeakTimeOrderId = $this->parent_id > 0 ? $this->parent_id : $this->order_id;
             (new OrderPeakTime)->record('desc', $PeakTimeOrderId, $initRefundMoney);
@@ -4922,6 +4911,10 @@ class Order extends BaseModelOrder
                 'order_name' => $order['order_name'],           //  订单名称
             ], '退款');
 
+            trace($cashRefundMoney);
+          
+            $this->rollback();
+            return false;
             // 添加店铺账户余额
             if (ClientHelp::verifyClientVersion('1.0.8', '>')) {
                 if ($cashRefundMoney > 0) {

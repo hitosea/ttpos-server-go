@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 )
 
 // HttpPost
@@ -56,13 +57,18 @@ func HttpPost(url string, payload map[string]interface{}, headers map[string]str
 
 // HttpGet
 func HttpGet(url string, payload map[string]interface{}, headers map[string]string) (map[string]interface{}, error) {
-	// 构建请求体
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return nil, err
+	// 构建查询参数
+	query := ""
+	if len(payload) > 0 {
+		values := make([]string, 0)
+		for key, value := range payload {
+			values = append(values, fmt.Sprintf("%v=%v", key, value))
+		}
+		query = "?" + strings.Join(values, "&")
 	}
+
 	// 创建请求
-	req, err := http.NewRequest("GET", url, bytes.NewBuffer(payloadBytes))
+	req, err := http.NewRequest("GET", url+query, nil)
 	if err != nil {
 		fmt.Println("Failed to create request: %v", err)
 		log.Printf("Failed to create request: %v", err)

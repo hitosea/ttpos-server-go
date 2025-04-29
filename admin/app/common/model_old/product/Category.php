@@ -100,7 +100,7 @@ class Category extends BaseModel
         $model = new static;
         $cacheKey = 'category_' . $shop_supplier_id . '_' . $model::$app_id . $type . $is_special . $is_sort . '_' . checkDetect();
         if ($name != '' || $isPaginate || !($result = Cache::get($cacheKey))) {
-            $prefix = Env::get('DB_PREFIX');
+            $prefix = 'jjjfood_';
             $data = $model->alias('c')->with(['images', 'child' => function ($q) use ($name, $child_order_conditions) {
                 $q->jsonLike('name', $name);
                 $q->order($child_order_conditions);
@@ -236,7 +236,7 @@ class Category extends BaseModel
             $shop_supplier_id = $detail['shop_supplier_id'];
         }
         //
-        $prefix = env('DB_PREFIX');
+        $prefix = 'jjjfood_';
         $list = $model->alias('a')
             ->leftJoin("
                     (
@@ -281,7 +281,7 @@ class Category extends BaseModel
             $shop_supplier_id = $detail['shop_supplier_id'];
         }
         //
-        $prefix = env('DB_PREFIX');
+        $prefix = 'jjjfood_';
         $list = $model->alias('a')
             ->leftJoin("
                     (
@@ -345,7 +345,7 @@ class Category extends BaseModel
     public static function getOrderProductCountByCategory($type, $order_id, $product_source = Order::CASHIER_PRODUCT_SOURCE)
     {
         //
-        $prefix = env('DB_PREFIX');
+        $prefix = 'jjjfood_';
         return (new self)->alias('c')
             ->leftJoin("
                     (
@@ -517,7 +517,7 @@ class Category extends BaseModel
     public function getProductNum($category_id): mixed
     {
         $model = new self;
-        $prefix = env('DB_PREFIX');
+        $prefix = 'jjjfood_';
 
         $level = $model->where('category_id', $category_id)->value('parent_id') != 0;
         if ($level) {

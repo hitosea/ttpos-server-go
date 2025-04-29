@@ -7,6 +7,7 @@ use app\common\library\helper;
 use app\common\model_old\BaseModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
 use app\common\model_old\settings\Setting as SettingModel;
+use think\facade\Log;
 
 /**
  * 用户余额变动明细模型
@@ -60,6 +61,7 @@ class BalanceLog extends BaseModel
         //
         $model = new static;
         $setting = SettingModel::getSupplierItem(SettingEnum::POINTS, $model::$app_id, $model::$app_id);
+       
         //
         $order_id = isset($data['order_id'])  ? $data['order_id'] : 0;
         $user_id = isset($data['user_id'])  ? $data['user_id'] : 0;
@@ -67,9 +69,9 @@ class BalanceLog extends BaseModel
         $gift_money = isset($data['gift_money'])  ? $data['gift_money'] : 0;
         // 记录余额变更
         $user = User::where('user_id', $user_id)->find();
-        $user_balance = max($user['balance'], 0);
-        $user_gift_balance = max($user['gift_balance'], 0);
         if ($user) {
+            $user_balance = max($user['balance'], 0);
+            $user_gift_balance = max($user['gift_balance'], 0);
             $before_money = $user['balance'] + $user['gift_balance'];
             if ($money < 0 || ($scene == BalanceLogSceneEnum::DEDUCT && $gift_money < 0)) {
                 $abs_money = abs($money);
@@ -203,6 +205,7 @@ class BalanceLog extends BaseModel
             $data['before_money'] = $before_money;
             $data['after_money'] = $after_money;
         }
+       
         $model->save(array_merge([
             'scene' => $scene,
             'describe' => $custom_dec ? $describeParam : vsprintf(BalanceLogSceneEnum::data()[$scene]['describe'], $describeParam),

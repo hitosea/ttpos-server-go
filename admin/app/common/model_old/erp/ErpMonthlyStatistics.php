@@ -227,7 +227,7 @@ class ErpMonthlyStatistics extends BaseModel
         $start_time = strtotime($start_time);
         $end_time = strtotime($end_time);
         //
-        $prefix = Env::get('DB_PREFIX');
+        $prefix = 'jjjfood_';
         return (new Product)->alias('p')
             ->leftJoin("
                 (

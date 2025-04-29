@@ -777,8 +777,14 @@ class BaseModelOrder extends BaseModel
             if (isset($refundDestination[$pay['value']])) {
                 $payTypeCellRefundMoney = floatval(helper::bcsub($payTypeCellRefundMoney, $refundDestination[$pay['value']]['refund_money']));
             }
-            $pay['cell_refund_money'] = $payTypeCellRefundMoney;
-            $res[] = $pay->toArray();
+
+            $res[] = [
+                'payment_order_uuid' => 0,
+                'payment_method_name' => $pay['name'],
+                'currency_unit' => "",
+                'payment_amount' => $pay['price'],
+                'can_return_amount' => $payTypeCellRefundMoney,
+            ];
         }
         return $res;
     }

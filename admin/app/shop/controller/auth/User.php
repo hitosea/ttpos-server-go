@@ -9,6 +9,7 @@ use app\shop\model\auth\User as UserModel;
 use app\shop\model\auth\User as AuthUserModel;
 use app\shop\model\shop\Access as AccessModel;
 use app\common\model\settings\Setting as SettingModel;
+use app\common\model\app\App as AppModel;
 
 /**
  * 用户管理
@@ -182,12 +183,13 @@ class User extends Controller
         }
 
         if ($user_info['is_super'] == 1) {
+            /** @var AccessModel $model  */
             $model = new AccessModel();
             $menus = $model->getList($user['user_type'], $supplier);
         } else {
+            /** @var AccessModel $model  */
             $model = new AccessModel();
             $menus = $model->getListByUser($user['uuid'], $user['user_type'], $supplier);
-
             foreach ($menus as $key => $val) {
                 if (!isset($val['children'][0]['path'])) {
                     continue;
@@ -197,8 +199,30 @@ class User extends Controller
                 }
             }
         }
+        // 格式化菜单
         $menus = $model->formatShopMenu($menus);
+        // 删除权限
         $menus = $model->removeCustomAccess($menus);
+        // 订单管理
+        $app = AppModel::where('uuid', request()->appId)->find();
+        if ($app->old_company_id) {
+            foreach ($menus as $key => $val) {
+                if ($val['uuid'] == 1626506017) {
+                    $menu = $menus[$key]['children'][0];
+                    $menu['name'] = "历史用餐订单";
+                    $menu['path'] = "/store/history_order/index";
+                    $menu['api_path'] = "/store/history_order/index";
+                    $menu['id'] = 1734320550;
+                    $menu['access_id'] = 1734320550;
+                    $menu['uuid'] = 1734320550;
+                    // 
+                    $menuOne = $menus[$key]['children'][1];
+                    $menus[$key]['children'][1] = $menu;
+                    $menus[$key]['children'][2] = $menuOne;
+                }
+            }
+        }
+        // 
         return $this->renderSuccess('', compact('menus'));
     }
 

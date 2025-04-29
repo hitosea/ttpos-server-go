@@ -6,7 +6,6 @@ use app\common\tasks\Task;
 use app\common\library\helper;
 use app\common\model_old\BaseModel;
 use app\common\tasks\RefundTask;
-use app\cashier\model\order\Order;
 use app\common\model_old\store\PayType;
 use app\common\model_old\user\PointsLog;
 use app\common\model_old\settings\Setting;
@@ -86,6 +85,7 @@ class OrderRefundDestination extends BaseModel
         $needRefundMoney = $orderRefundLog['refund_money'];
         $refundDestinations = array_column($order->refundDestinations->toArray(), null, 'value');
 
+
         // 退款分配
         $lianlianPay = [];
         $cashRefundMoney = 0;
@@ -118,7 +118,7 @@ class OrderRefundDestination extends BaseModel
                 'status' => in_array($pay['value'], array_keys(PayType::SOURCE_LIANLIAN_PAY_METHOD)) ? 0 : 1,
             ];
             $refundDestination = (new OrderRefundDestination)->create($saveData);
-
+           
             // 各种支付方式需要单独处理的业务
             if ($pay['value'] == OrderPayTypeEnum::CASH) {
                 $cashRefundMoney += $payTypeRefundMoney;
@@ -164,6 +164,7 @@ class OrderRefundDestination extends BaseModel
                         'describe' => vsprintf(PointsLogSceneEnum::data()[PointsLogSceneEnum::REFUND]['describe'], [$order['order_no']]),
                         'remark' => '',
                     ]);
+                    
                 }
 
                 // 2.回退用户余额

@@ -6,8 +6,6 @@ use help\HttpHelp;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\common\enum\settings\DeliveryTypeEnum;
-use app\shop\model_old\order\Order as OldOrderModel;
-use app\common\model\app\App as AppModel;
 
 /**
  * 订单管理
@@ -32,15 +30,6 @@ class Order extends Controller
      */
     public function index()
     {   
-        // $data = $this->postData();
-        // $app = AppModel::where('uuid', request()->appId)->find();
-        // if (!$app->old_company_id) {
-        //     return $this->renderError('未存在迁移库');
-        // }
-        // request()->appId = $app->old_company_id;
-        // return $this->renderSuccess('', OldOrderModel::getLists($data));
-        
-        // 
         $data = $this->postData();
         //
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/order/list', $this->buildListQueryParams($data), [
@@ -79,13 +68,6 @@ class Order extends Controller
      */
     public function detail($sale_bill_uuid, $sale_order_uuid = 0)
     {
-        // $app = AppModel::where('uuid', request()->appId)->find();
-        // if (!$app->old_company_id) {
-        //     return $this->renderError('未存在迁移库');
-        // }
-        // request()->appId = $app->old_company_id;
-        // return $this->renderSuccess('', OldOrderModel::details($sale_bill_uuid));
-
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/order/info', [
             'sale_bill_uuid' => $sale_bill_uuid,
             'sale_order_uuid' => $sale_order_uuid,

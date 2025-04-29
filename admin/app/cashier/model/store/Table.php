@@ -3,10 +3,10 @@
 
 namespace app\cashier\model\store;
 
-use app\common\model\order\Order;
+use app\common\model_old\order\Order;
 use app\common\enum\order\OrderStatusEnum;
 use app\common\enum\order\OrderPayStatusEnum;
-use app\common\model\store\Table as TableModel;
+use app\common\model_old\store\Table as TableModel;
 
 /**
  * 桌位模型

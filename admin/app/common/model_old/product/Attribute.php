@@ -173,7 +173,7 @@ class Attribute extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        $prefix = env('DB_PREFIX');
+        $prefix = 'jjjfood_';
         return $this->alias('a')
             ->field('a.*')
             ->field("IF(pa.attribute_count IS NULL, 0, 1) AS is_used")
@@ -295,7 +295,7 @@ class Attribute extends BaseModel
                     $product_attribute_map[$product_id][$parent_id]['attribute_ids'][]   = $item['attribute_id'] ?? 0;
                 }
                 // 更新产品表
-                $prefix = env('DB_PREFIX');
+                $prefix = 'jjjfood_';
                 $product = new Product;
                 $product_ids = array_keys($product_attribute_map);
                 $product_attributes = array_values($product_attribute_map);

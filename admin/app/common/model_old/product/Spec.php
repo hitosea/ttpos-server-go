@@ -96,7 +96,7 @@ class Spec extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        $prefix = env('DB_PREFIX');
+        $prefix = 'jjjfood_';
         return $this->alias('sku')
         ->with(['material'])
         ->field('sku.*')

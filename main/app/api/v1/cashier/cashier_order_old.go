@@ -1,26 +1,33 @@
 package cashier
 
 import (
+	"fmt"
 	"time"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
+	printerService "ttpos-server-go/app/printer/service"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // OrderOldHandler 收银点餐处理程序
 type OrderOldHandler struct {
-	orderSrv service.IOrderSrv // 订单服务
-	deskSrv  service.IDeskSrv  // 桌台服务
+	orderSrv      service.IOrderSrv             // 订单服务
+	deskSrv       service.IDeskSrv              // 桌台服务
+	printerLogSrv printerService.IPrinterLogSrv // 打印日志服务
+	settingSrv    setting.ISrv                  // 设置服务
 }
 
 // GetCashierOrderList 处理获取订单列表
@@ -95,7 +102,7 @@ func (h *OrderOldHandler) GetCashierOrderList(c *gin.Context) {
 		times = append(times, time.Unix(int64(req.QueryEndTime), 0).Format("2006-01-02 15:04:05"))
 	}
 	//
-	result, err := utils.HttpPost("http://nginx/api/cashier/order.order/index", map[string]interface{}{
+	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/index", map[string]interface{}{
 		"dataType":     dataType,
 		"order_source": orderSource,
 		"time_type":    dateType,
@@ -113,7 +120,12 @@ func (h *OrderOldHandler) GetCashierOrderList(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-
+	// 判断返回数据是否为空数组
+	if data, ok := result["data"].([]interface{}); ok && len(data) == 0 {
+		helper.Success(c, gin.H{})
+		return
+	}
+	//
 	helper.Success(c, result["data"])
 }
 
@@ -137,7 +149,7 @@ func (h *OrderOldHandler) GetOrderInfo(c *gin.Context) {
 		return
 	}
 	//
-	result, err := utils.HttpPost("http://nginx/api/cashier/order.order/detail", map[string]interface{}{
+	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/detail", map[string]interface{}{
 		"sale_bill_uuid":  req.SaleBillUuid,
 		"sale_order_uuid": req.SaleOrderUuid,
 	}, map[string]string{
@@ -148,6 +160,7 @@ func (h *OrderOldHandler) GetOrderInfo(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	//
 	helper.Success(c, result["data"])
 }
 
@@ -170,69 +183,20 @@ func (h *OrderOldHandler) CancelOrder(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, nil)
 		return
 	}
-	// 订单列表中取消订单不需要密码
-	req.NotNeedPassword = true
-	err := h.orderSrv.CancelOrder(ctx, req)
+	//
+	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/orderCancel", map[string]interface{}{
+		"order_id": req.SaleBillUuid,
+	}, map[string]string{
+		"token":    ctx.GetToken(),
+		"language": ctx.GetLanguage(),
+	})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	// 返回结果
-	helper.Success(c, gin.H{})
-}
-
-// ReturnOrderInfo 获取退款信息
-// @Summary 获取退款信息
-// @Description 获取退款信息
-// @Tags 收银端.订单
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @param data query req.OrderReturnInfoReq true "详情参数"
-// @Success 200 {object} dto.Response{data=resp.OrderReturnInfoResp}
-// @Failure 404 {object} nil "未找到"
-// @Router /cashier/old/order/return [get]
-func (h *OrderOldHandler) ReturnOrderInfo(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	// 绑定请求参数
-	req := req.OrderReturnInfoReq{}
-	if err := c.ShouldBindQuery(&req); err != nil {
-		helper.HandleValidationError(c, err, req, nil)
-		return
-	}
 	//
-	res, err := h.orderSrv.GetReturnOrderInfo(ctx, req)
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	// 返回结果
-	helper.Success(c, res)
-}
-
-// ReturnOrder 处理退款订单
-// @Summary 退款订单
-// @Description 退款订单
-// @Tags 收银端.订单
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @param data body req.OrderReturnReq true "详情参数"
-// @Success 200 {object} nil "退款订单成功"
-// @Failure 404 {object} nil "未找到"
-// @Router /cashier/old/order/return [post]
-func (h *OrderOldHandler) ReturnOrder(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	// 绑定请求参数
-	req := req.OrderReturnReq{}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		helper.HandleValidationError(c, err, req, nil)
-		return
-	}
-	//
-	err, codeFail := h.orderSrv.ReturnOrder(ctx, req)
-	if err != nil {
-		helper.ErrorWithMessage(c, codeFail, err)
+	if result["code"].(float64) != 1 {
+		helper.ErrorWithDetail(c, constant.CodeFail, fmt.Errorf("%v", result["msg"].(string)))
 		return
 	}
 	// 返回结果
@@ -251,7 +215,6 @@ func (h *OrderOldHandler) ReturnOrder(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/old/order/delete [delete]
 func (h *OrderOldHandler) DeleteOrder(c *gin.Context) {
-	companyUuid := helper.GetCompanyUuid(c)
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	req := req.OrderDeleteReq{}
@@ -260,9 +223,19 @@ func (h *OrderOldHandler) DeleteOrder(c *gin.Context) {
 		return
 	}
 	//
-	err := h.orderSrv.DeleteOrder(ctx, companyUuid, req.SaleBillUuid, req.SaleOrderUuid)
+	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/delete", map[string]interface{}{
+		"order_id": req.SaleBillUuid,
+	}, map[string]string{
+		"token":    ctx.GetToken(),
+		"language": ctx.GetLanguage(),
+	})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	//
+	if result["code"].(float64) != 1 {
+		helper.ErrorWithDetail(c, constant.CodeFail, fmt.Errorf("%v", result["msg"].(string)))
 		return
 	}
 	// 返回结果
@@ -286,11 +259,40 @@ func (h *OrderOldHandler) OrderPrint(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res, err := h.orderSrv.OrderPrint(ctx, printReq, false)
+	//
+	if printReq.PrintLang == "" {
+		// 获取打印机设置
+		printerSetting, err := h.settingSrv.GetPrinterSetting(ctx, nil)
+		if err != nil {
+			logger.Logger.Error("获取打印机设置失败", zap.Error(err))
+			fmt.Println("获取打印机设置失败", zap.Error(err))
+		}
+		printReq.PrintLang = printerSetting.DefaultLanguage
+	}
+	//
+	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/print", map[string]interface{}{
+		"order_id":   printReq.SaleBillUuid,
+		"print_lang": printReq.PrintLang,
+	}, map[string]string{
+		"token":    ctx.GetToken(),
+		"language": ctx.GetLanguage(),
+	})
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	//
+	if result["code"].(float64) != 1 {
+		helper.ErrorWithDetail(c, constant.CodeFail, fmt.Errorf("%v", result["msg"].(string)))
+		return
+	}
+
+	res, err := h.printerLogSrv.GetOldOrderPrinterConfig(ctx, result["data"].(map[string]interface{})["printer_data"].(string))
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
 	helper.Success(c, res, "发送成功")
 }
 
@@ -305,13 +307,46 @@ func (h *OrderOldHandler) OrderPrint(c *gin.Context) {
 // @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
 // @Router /cashier/old/order/print/invoice [post]
 func (h *OrderOldHandler) OrderPrintInvoice(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	//
 	var printReq req.OrderPrintInvoiceReq
 	if err := c.ShouldBindJSON(&printReq); err != nil {
 		helper.HandleValidationError(c, err, printReq, nil)
 		return
 	}
-	ctx := helper.GetContext(c)
-	res, err := h.orderSrv.OrderPrintInvoice(ctx, printReq)
+	// 获取打印机设置
+	if printReq.PrintLang == "" {
+		printerSetting, err := h.settingSrv.GetPrinterSetting(ctx, nil)
+		if err != nil {
+			logger.Logger.Error("获取打印机设置失败", zap.Error(err))
+			fmt.Println("获取打印机设置失败", zap.Error(err))
+		}
+		printReq.PrintLang = printerSetting.DefaultLanguage
+	}
+	//
+	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/printInvoice", map[string]interface{}{
+		"order_id":   printReq.SaleBillUuid,
+		"print_lang": printReq.PrintLang,
+		"invoice_info": map[string]interface{}{
+			"company_name":       printReq.CompanyName,
+			"company_addr":       printReq.CompanyAddr,
+			"company_tax_number": printReq.CompanyTaxNumber,
+			"company_phone":      printReq.CompanyPhone,
+		},
+	}, map[string]string{
+		"token":    ctx.GetToken(),
+		"language": ctx.GetLanguage(),
+	})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	//
+	if result["code"].(float64) != 1 {
+		helper.ErrorWithDetail(c, constant.CodeFail, fmt.Errorf("%v", result["msg"].(string)))
+		return
+	}
+	res, err := h.printerLogSrv.GetOldOrderPrinterConfig(ctx, result["data"].(map[string]interface{})["printer_data"].(string))
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -337,8 +372,111 @@ func (h *OrderOldHandler) OrderInvoiceInfo(c *gin.Context) {
 		return
 	}
 	ctx := helper.GetContext(c)
-	res := h.orderSrv.OrderPrintInvoiceInfo(ctx, invoiceReq)
-	helper.Success(c, res)
+	//
+	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/invoiceInfo", map[string]interface{}{
+		"order_id": invoiceReq.SaleBillUuid,
+	}, map[string]string{
+		"token":    ctx.GetToken(),
+		"language": ctx.GetLanguage(),
+	})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	//
+	if result["code"].(float64) != 1 {
+		helper.ErrorWithDetail(c, constant.CodeFail, fmt.Errorf("%v", result["msg"].(string)))
+		return
+	}
+	if result["data"] == nil {
+		helper.Success(c, resp.SaleOrderInvoiceInfo{})
+		return
+	}
+	//
+	helper.Success(c, resp.SaleOrderInvoiceInfo{
+		CompanyName:      result["data"].(map[string]interface{})["company_name"].(string),
+		CompanyAddr:      result["data"].(map[string]interface{})["company_addr"].(string),
+		CompanyTaxNumber: result["data"].(map[string]interface{})["company_tax_number"].(string),
+		CompanyPhone:     result["data"].(map[string]interface{})["company_phone"].(string),
+	})
+}
+
+// ReturnOrderInfo 获取退款信息
+// @Summary 获取退款信息
+// @Description 获取退款信息
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.OrderReturnInfoReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.OrderReturnInfoResp}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/order/return [get]
+func (h *OrderOldHandler) ReturnOrderInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	req := req.OrderReturnInfoReq{}
+	if err := c.ShouldBindQuery(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	//
+	result, err := utils.HttpGet("http://192.168.100.88:8888/api/cashier/order.order/orderRefund", map[string]interface{}{
+		"order_id": req.SaleBillUuid,
+	}, map[string]string{
+		"token":    ctx.GetToken(),
+		"language": ctx.GetLanguage(),
+	})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	//
+	if result["code"].(float64) != 1 {
+		helper.ErrorWithDetail(c, constant.CodeFail, fmt.Errorf("%v", result["msg"].(string)))
+		return
+	}
+	// 返回结果
+	helper.Success(c, result["data"])
+}
+
+// ReturnOrder 处理退款订单
+// @Summary 退款订单
+// @Description 退款订单
+// @Tags 收银端.订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderReturnReq true "详情参数"
+// @Success 200 {object} nil "退款订单成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/old/order/return [post]
+func (h *OrderOldHandler) ReturnOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	req := req.OrderReturnReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	//
+	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/orderRefund", map[string]interface{}{
+		"order_id": req.SaleBillUuid,
+	}, map[string]string{
+		"token":    ctx.GetToken(),
+		"language": ctx.GetLanguage(),
+	})
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	//
+	if result["code"].(float64) != 1 {
+		helper.ErrorWithDetail(c, constant.CodeFail, fmt.Errorf("%v", result["msg"].(string)))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
 }
 
 // RegisterOrderOldHandler 注册收银订单路由
@@ -359,8 +497,10 @@ func RegisterOrderOldHandler(router gin.IRouter, dbm *database.DBManager, cache 
 
 	// 初始化处理器
 	wrapper := OrderOldHandler{
-		orderSrv: orderSrv,
-		deskSrv:  service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv, mustPlanSrv),
+		orderSrv:      orderSrv,
+		deskSrv:       service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv, mustPlanSrv),
+		printerLogSrv: printerService.NewPrinterLogSrv(dbm, settingSrv),
+		settingSrv:    settingSrv,
 	}
 
 	// 需要认证

@@ -2,7 +2,7 @@
 
 namespace app\shop\model_old\order;
 
-use app\shop\service\order\ExportService;
+use app\shop\service\order\ExportServiceOld;
 use app\common\enum\order\OrderPayStatusEnum;
 use app\common\enum\settings\DeliveryTypeEnum;
 use app\common\model_old\order\OrderProductFree;
@@ -96,9 +96,9 @@ class Order extends OrderModel
                     'consumer_uuids' => ($subItem['user']['user_id'] ?? '') . '',
                     'extra' => [
                         'is_cell_cancel' => $subItem['is_cancel_button'] ? true : false,
-                        'is_cell_delete' => false,
-                        'is_cell_invoice' => true,
-                        'is_cell_print' => true,
+                        'is_cell_delete' => $status == 2,
+                        'is_cell_invoice' => $status != 2,
+                        'is_cell_print' => $status != 2,
                         'is_cell_refund' => $subItem['is_refund_button'] ? true : false,
                         'is_cell_reverse_settle' => false,
                     ],
@@ -127,9 +127,9 @@ class Order extends OrderModel
                 'consumer_uuids' => implode(',', array_unique($consumer_uuids)),
                 'extra' => [
                     'is_cell_cancel' => $item['is_cancel_button'] ? true : false,
-                    'is_cell_delete' => false,
-                    'is_cell_invoice' => false,
-                    'is_cell_print' => false,
+                    'is_cell_delete' => $status == 2,
+                    'is_cell_invoice' => $status != 2,
+                    'is_cell_print' => $status != 2,
                     'is_cell_refund' => $item['is_refund_button'] ? true : false,
                     'is_cell_reverse_settle' => false,
                 ],
@@ -177,9 +177,9 @@ class Order extends OrderModel
         // 
         $extra = [
             'is_cell_cancel' => false,
-            'is_cell_delete' => false,
-            'is_cell_invoice' => false,
-            'is_cell_print' => false,
+            'is_cell_delete' => $detail['order_status']['value'] == 20,
+            'is_cell_invoice' => $detail['order_status']['value'] != 20,
+            'is_cell_print' => $detail['order_status']['value'] != 20,
             'is_cell_refund' => false,
             'is_cell_reverse_settle' => false,
         ];
@@ -253,7 +253,7 @@ class Order extends OrderModel
             foreach ($subItem['buffetCustomerType'] as $product) {
                 $names = json_decode($product->getData('buffet_name') ?? '', JSON_UNESCAPED_UNICODE);
                 $products[] = [
-                    'uuid' => $product['product_id'],
+                    'uuid' => $product['buffet_id'],
                     'locale_name' => [
                         'zh' => $names['zh'] ?? '',
                         'th' => $names['th'] ?? '',
@@ -264,12 +264,12 @@ class Order extends OrderModel
                         'my' => $names['my'] ?? '',
                         'tr' => $names['tr'] ?? '',
                     ],
-                    'locale_attribute_name' => [],
-                    'price' => $product['price'],
+                    'locale_attribute_name' => (object)[],
+                    'price' => floatval($product['price']),
                     'num' => $product['num'],
-                    'sale_price' => $product['total_consumption_tax_order_price'],
-                    'total_price' => $product['total_consumption_tax_pay_price'],
-                    'refund_amount' => $product['refund_money'],
+                    'sale_price' => floatval($product['total_consumption_tax_order_price']),
+                    'total_price' => floatval($product['total_consumption_tax_pay_price']),
+                    'refund_amount' => floatval($product['refund_money']),
                     'status' => 0,
                     'remark' => "",
                     'is_gift' => false,
@@ -285,7 +285,7 @@ class Order extends OrderModel
             // 
             foreach ($subItem['delay'] ?? [] as $product) {
                 $products[] = [
-                    'uuid' => $product['product_id'],
+                    'uuid' => $product['id'],
                     'locale_name' => [
                         'zh' => $product['name'] ?? '',
                         'th' => $product['name'] ?? '',
@@ -296,12 +296,12 @@ class Order extends OrderModel
                         'my' => $product['name'] ?? '',
                         'tr' => $product['name'] ?? '',
                     ],
-                    'locale_attribute_name' => [],
-                    'price' => $product['price'],
+                    'locale_attribute_name' => (object)[],
+                    'price' => floatval($product['price']),
                     'num' => $product['num'],
-                    'sale_price' => $product['total_product_price'],
-                    'total_price' => $product['total_price'],
-                    'refund_amount' => $product['refund_money'],
+                    'sale_price' => floatval($product['total_product_price']),
+                    'total_price' => floatval($product['total_price']),
+                    'refund_amount' => floatval($product['refund_money']),
                     'status' => 0,
                     'remark' => "",
                     'is_gift' => false,
@@ -330,7 +330,7 @@ class Order extends OrderModel
                         'my' => $names['my'] ?? '',
                         'tr' => $names['tr'] ?? '',
                     ],
-                    'locale_attribute_name' => [
+                    'locale_attribute_name' => empty($attributes) ? (object)[] : [
                         'zh' => $attributes['zh'] ?? '',
                         'th' => $attributes['th'] ?? '',
                         'en' => $attributes['en'] ?? '',
@@ -340,11 +340,11 @@ class Order extends OrderModel
                         'my' => $attributes['my'] ?? '',
                         'tr' => $attributes['tr'] ?? '',
                     ],
-                    'price' => $product['product_price'],
+                    'price' => floatval($product['product_price']),
                     'num' => $product['total_num'],
-                    'sale_price' => $product['total_consumption_tax_order_price'],
-                    'total_price' => $product['total_consumption_tax_pay_price'],
-                    'refund_amount' => $product['refund_money'],
+                    'sale_price' => floatval($product['total_consumption_tax_order_price']),
+                    'total_price' => floatval($product['total_consumption_tax_pay_price']),
+                    'refund_amount' => floatval($product['refund_money']),
                     'status' => $product['is_return'] ? 1 : 0,
                     'remark' => $product['free_remark'],
                     'is_gift' => $product['is_free'] ? true : false,
@@ -375,12 +375,12 @@ class Order extends OrderModel
                 'is_free' => $subItem['is_free'] == 1 ? true : false,
                 'member_uuid' => $subItem['user']['user_id'] ?? 0,
                 'member_name' => $subItem['user']['nickName'] ?? '',
-                'order_amount' => $subItem['order_price'],
+                'order_amount' => floatval($subItem['order_price']),
                 'order_no' => $subItem['order_no'],
                 'pay_type_name' => implode(',', array_column($subItemPayType, 'name')),
-                'payment_amount' => $subItem['actual_receive_price'],
+                'payment_amount' => floatval($subItem['actual_receive_price']),
                 'products' => $products,
-                'refund_amount' => $subItem['refund_money'],
+                'refund_amount' => floatval($subItem['refund_money']),
                 'sale_order_uuid' => $subItem['order_id'],
                 'serial_no' => ($subItem['table_no'] ?: $subItem['call_no']) . '-' . ($key + 1),
                 'status' => $status,
@@ -419,8 +419,9 @@ class Order extends OrderModel
                 "source" => $log['source'],
                 "create_time" => $log['create_time'],
                 "description" => $log['description'],
-                "pay_type" => $log['pay_type'],
-                "refund_type" => $log['refund_type']
+                // "pay_type" => $log['pay_type'],
+                "pay_type" => [],
+                "refund_type" => (int)$log['refund_type']
             ];
         }
 
@@ -564,7 +565,7 @@ class Order extends OrderModel
             return false;
         }
         // 导出excel文件
-        return (new Exportservice)->orderList($list);
+        return (new ExportServiceOld)->orderList($list);
     }
 
     /**

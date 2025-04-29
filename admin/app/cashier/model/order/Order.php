@@ -5,46 +5,46 @@ namespace app\cashier\model\order;
 use help\QueueHelp;
 use think\facade\Db;
 use app\common\library\helper;
-use app\common\model\shop\Account;
-use app\common\model\buffet\Buffet;
+use app\common\model_old\shop\Account;
+use app\common\model_old\buffet\Buffet;
 use app\common\enum\http\StatusCode;
 use app\shop\model\product\Category;
-use app\common\model\order\OrderFree;
-use app\common\model\product\Product;
-use app\common\model\store\TakeOrder;
+use app\common\model_old\order\OrderFree;
+use app\common\model_old\product\Product;
+use app\common\model_old\store\TakeOrder;
 use app\common\exception\BaseException;
-use app\common\model\order\OrderBuffet;
-use app\common\model\supplier\Printing;
-use app\common\model\supplier\Supplier;
+use app\common\model_old\order\OrderBuffet;
+use app\common\model_old\supplier\Printing;
+use app\common\model_old\supplier\Supplier;
 use app\common\enum\order\OrderTypeEnum;
-use app\common\model\order\OrderPayType;
-use app\common\model\order\OrderProduct;
-use app\common\model\product\ProductSku;
+use app\common\model_old\order\OrderPayType;
+use app\common\model_old\order\OrderProduct;
+use app\common\model_old\product\ProductSku;
 use app\common\enum\order\OrderErrorEnum;
 use app\common\enum\settings\SettingEnum;
-use app\common\model\order\OrderPeakTime;
+use app\common\model_old\order\OrderPeakTime;
 use app\common\enum\order\OrderSourceEnum;
 use app\common\enum\order\OrderStatusEnum;
 use app\common\enum\order\OrderPayTypeEnum;
-use app\common\model\buffet\BuffetCustomer;
-use app\common\model\order\OrderAbnormalLog;
+use app\common\model_old\buffet\BuffetCustomer;
+use app\common\model_old\order\OrderAbnormalLog;
 use app\common\enum\order\OrderPayStatusEnum;
-use app\common\model\order\OrderOperationLog;
+use app\common\model_old\order\OrderOperationLog;
 use app\cashier\model\order\Cart as CartModel;
-use app\common\model\order\OrderProductReturn;
-use app\common\model\order\Order as OrderModel;
-use app\common\model\order\OrderBuffetCustomer;
+use app\common\model_old\order\OrderProductReturn;
+use app\common\model_old\order\Order as OrderModel;
+use app\common\model_old\order\OrderBuffetCustomer;
 use app\cashier\model\store\Table as TableModel;
 use app\common\enum\product\DeductStockTypeEnum;
 use app\common\service\order\OrderPrinterService;
 use app\common\service\order\OrderCompleteService;
-use app\common\model\settings\Setting as SettingModel;
+use app\common\model_old\settings\Setting as SettingModel;
 use app\common\service\product\factory\ProductFactory;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
-use app\common\model\user\BalanceLog as BalanceLogModel;
+use app\common\model_old\user\BalanceLog as BalanceLogModel;
 use app\common\repositories\OrderBusinessDataRepository;
-use app\common\model\order\OrderBuffet as OrderBuffetModel;
-use app\common\model\order\OrderProduct as OrderProductModel;
+use app\common\model_old\order\OrderBuffet as OrderBuffetModel;
+use app\common\model_old\order\OrderProduct as OrderProductModel;
 use app\cashier\service\order\paysuccess\type\MasterPaySuccessService;
 
 /**
@@ -60,117 +60,6 @@ class Order extends OrderModel
         'update_time',
     ];
 
-    /**
-     * 标记订单已支付
-     * @param $orderNo
-     * @param $pay_type
-     * @param $delivery 30-打包带走 40-店内就餐
-     * @param $isPrint 是否打印
-     */
-    public function onPayment($orderNo, $delivery = 40, $isPrint = true)
-    {
-        // 授权信息
-        $license = request()->licenses;
-
-        // 订单数据源
-        $sourceProductList = $this->getOrderSourceProductList();
-        $orderProductList = $sourceProductList['orderProductList'];
-        $allProductSkuList = $sourceProductList['allProductSkuList'];
-
-        // 付款减库存-判断库存
-        $productArray = [];
-        foreach ($orderProductList as $orderProduct) {
-            $productSku = $allProductSkuList[$orderProduct['product_sku_id']] ?? [];
-            if ($productSku && (($license['sale'] ?? 0) != 1 || empty($productSku['material'])) && $orderProduct['deduct_stock_type'] == DeductStockTypeEnum::PAYMENT) {
-                if ($orderProduct['is_return'] != 1) {
-                    $productArray[] = $orderProduct;
-                }
-            }
-        }
-        if ($productArray) {
-            $result = $this->getStockInsufficientProduct($sourceProductList['productSource'], $productArray, $allProductSkuList);
-            if (!empty($result)) {
-                $this->error = "商品库存不足，请重新选择";
-                $this->errorData = $result;
-                return false;
-            }
-        }
-        // 送厨模型
-        $modelSendKitchen = new OrderProductModel();
-        // 获取订单详情
-        $paySuccess = new MasterPaySuccessService($orderNo, $sourceProductList);
-        // 发起余额支付
-        $this->startTrans();
-        //
-        try {
-            // 校验订单商品价格
-            if (!$this->reloadOrderProductPrice($sourceProductList['productSource'], $sourceProductList)) {
-                $this->error = '订单价格有变动，请重新确认后结账';
-                $this->errorCode = OrderErrorEnum::RELOAD_PRICE;
-                $this->reloadPrice($this['order_id']);
-                $this->commit();
-                return false;
-            }
-            // 订单商品送厨
-            if (!$modelSendKitchen->setSourceProductList($sourceProductList)->sendKitchen($this['order_id'], 'payment', false, $delivery)) {
-                $this->error = $modelSendKitchen->getError();
-                $this->errorData = $modelSendKitchen->getErrorData();
-                $this->errorCode = $modelSendKitchen->getErrorCode();
-                $this->rollback();
-                return false;
-            }
-            // 清除其他端未送厨商品
-            $otherUnsendOrderProduct = OrderProduct::where('order_id', $this['order_id'])->where('is_send_kitchen', 0)->where('add_source', '<>', OrderProduct::CASHIER_ADD_PRODUCT)->select();
-            foreach ($otherUnsendOrderProduct as $p) {
-                $p->force()->delete();
-            }
-            // 如果是自助餐，给自助餐增销量
-            if ($this['is_buffet'] == 1) {
-                $orderBuffets = OrderBuffetModel::where('order_id', $this['order_id'])->select();
-                foreach ($orderBuffets as $orderBuffet) {
-                    foreach ($orderBuffet->buffet()->select() as $buffet) {
-                        $buffet->save(['sale_num' => ['inc', $orderBuffet['num']]]);
-                    }
-                }
-            }
-            // 付款
-            if (!$status = $paySuccess->onPaySuccess()) {
-                $this->error = $paySuccess->getError();
-                $this->rollback();
-                return false;
-            }
-            // 销售出库处理（规格，规格材料，加料，加料材料）
-            (new Product)->salesOut($sourceProductList, $this->cashier_id, $this->shop_supplier_id);
-            // 更新店铺账户余额
-            if ($cashAmount = $this->getCashReceivePriceAttr(null, $this)) {
-                Account::updateAmount(1, $cashAmount, $this->order_no, $this->cashier_id, $this->shop_supplier_id, $this->app_id, 'order-pay');
-            }
-            //
-            $this->commit();
-        } catch (BaseException $e) {
-            $this->error = $e->getMessage();
-            $this->rollback();
-            return false;
-        }
-        //
-        if ($this->table_id == 0 && $this->call_no == '' && $this->parent_id == 0) {
-            $create_time = $this->create_time;
-            $this->call_no = $this->getTableNumber($create_time);
-            $this->save();
-        }
-        //
-        $printOrder = $modelSendKitchen->getPrintOrder();
-        if ($printOrder && count($printOrder->product) > 0) {
-            $printOrder->call_no = $this->call_no;
-            (new OrderPrinterService)->printProductTicket($printOrder, Printing::PRINT_TYPE_KITCHEN);
-        }
-        //
-        if ($isPrint) {
-            event('CashierPaySuccess', $this);
-        }
-        //
-        return $status;
-    }
 
     /**
      * 取消订单

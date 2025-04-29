@@ -1387,7 +1387,7 @@ class OrderProduct extends BaseModel
      */
     public static function getGroupByTime($order_id, $buffet_customer_list = [], $delay_list = [], $order_product_list = [], $is_scan = 0)
     {
-        $prefix = Env::get('DB_PREFIX');
+        $prefix = 'jjjfood_';
         $orderProductList = $order_product_list ?: OrderProduct::alias('op')
             ->leftJoin('product p', 'op.product_id = p.product_id')
             ->leftJoin(

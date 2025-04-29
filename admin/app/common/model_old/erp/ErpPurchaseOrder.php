@@ -108,7 +108,7 @@ class ErpPurchaseOrder extends BaseModel
         }
 
         //
-        $prefix = Env::get('DB_PREFIX');
+        $prefix = 'jjjfood_';
         return self::alias('eo')->with(['purchaser'])
             ->field('eo.*, de.erp_supplier_names, de.erp_purchase_names, COALESCE(NULLIF(suser.real_name, ""), suser.user_name) as applicant_name')
             ->leftJoin("shop_user suser", "eo.applicant_id = suser.shop_user_id")

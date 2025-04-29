@@ -74,7 +74,7 @@ class Feed extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        $prefix = env('DB_PREFIX');
+        $prefix = 'jjjfood_';
         return $this->alias('feed')
         ->with(['material'])
         ->field('feed.*')
@@ -161,7 +161,7 @@ class Feed extends BaseModel
                     }
                 }
                 // 更新产品表
-                $prefix = env('DB_PREFIX');
+                $prefix = 'jjjfood_';
                 $product = new Product;
                 $product_ids = array_keys($product_feed_map);
                 $product_feeds = array_values($product_feed_map);
