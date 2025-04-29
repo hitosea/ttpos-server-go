@@ -28,6 +28,8 @@ type OrderOldHandler struct {
 	deskSrv       service.IDeskSrv              // 桌台服务
 	printerLogSrv printerService.IPrinterLogSrv // 打印日志服务
 	settingSrv    setting.ISrv                  // 设置服务
+	memberSrv     service.IMemberSrv            // 会员服务
+	cashBoxSrv    service.ICashBoxSrv           // 钱箱服务
 }
 
 // GetCashierOrderList 处理获取订单列表
@@ -102,7 +104,7 @@ func (h *OrderOldHandler) GetCashierOrderList(c *gin.Context) {
 		times = append(times, time.Unix(int64(req.QueryEndTime), 0).Format("2006-01-02 15:04:05"))
 	}
 	//
-	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/index", map[string]interface{}{
+	result, err := utils.HttpPost("http://nginx/api/cashier/order.order/index", map[string]interface{}{
 		"dataType":     dataType,
 		"order_source": orderSource,
 		"time_type":    dateType,
@@ -149,7 +151,7 @@ func (h *OrderOldHandler) GetOrderInfo(c *gin.Context) {
 		return
 	}
 	//
-	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/detail", map[string]interface{}{
+	result, err := utils.HttpPost("http://nginx/api/cashier/order.order/detail", map[string]interface{}{
 		"sale_bill_uuid":  req.SaleBillUuid,
 		"sale_order_uuid": req.SaleOrderUuid,
 	}, map[string]string{
@@ -184,7 +186,7 @@ func (h *OrderOldHandler) CancelOrder(c *gin.Context) {
 		return
 	}
 	//
-	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/orderCancel", map[string]interface{}{
+	result, err := utils.HttpPost("http://nginx/api/cashier/order.order/orderCancel", map[string]interface{}{
 		"order_id": req.SaleBillUuid,
 	}, map[string]string{
 		"token":    ctx.GetToken(),
@@ -223,7 +225,7 @@ func (h *OrderOldHandler) DeleteOrder(c *gin.Context) {
 		return
 	}
 	//
-	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/delete", map[string]interface{}{
+	result, err := utils.HttpPost("http://nginx/api/cashier/order.order/delete", map[string]interface{}{
 		"order_id": req.SaleBillUuid,
 	}, map[string]string{
 		"token":    ctx.GetToken(),
@@ -270,7 +272,7 @@ func (h *OrderOldHandler) OrderPrint(c *gin.Context) {
 		printReq.PrintLang = printerSetting.DefaultLanguage
 	}
 	//
-	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/print", map[string]interface{}{
+	result, err := utils.HttpPost("http://nginx/api/cashier/order.order/print", map[string]interface{}{
 		"order_id":   printReq.SaleBillUuid,
 		"print_lang": printReq.PrintLang,
 	}, map[string]string{
@@ -324,7 +326,7 @@ func (h *OrderOldHandler) OrderPrintInvoice(c *gin.Context) {
 		printReq.PrintLang = printerSetting.DefaultLanguage
 	}
 	//
-	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/printInvoice", map[string]interface{}{
+	result, err := utils.HttpPost("http://nginx/api/cashier/order.order/printInvoice", map[string]interface{}{
 		"order_id":   printReq.SaleBillUuid,
 		"print_lang": printReq.PrintLang,
 		"invoice_info": map[string]interface{}{
@@ -373,7 +375,7 @@ func (h *OrderOldHandler) OrderInvoiceInfo(c *gin.Context) {
 	}
 	ctx := helper.GetContext(c)
 	//
-	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/invoiceInfo", map[string]interface{}{
+	result, err := utils.HttpPost("http://nginx/api/cashier/order.order/invoiceInfo", map[string]interface{}{
 		"order_id": invoiceReq.SaleBillUuid,
 	}, map[string]string{
 		"token":    ctx.GetToken(),
@@ -421,7 +423,7 @@ func (h *OrderOldHandler) ReturnOrderInfo(c *gin.Context) {
 		return
 	}
 	//
-	result, err := utils.HttpGet("http://192.168.100.88:8888/api/cashier/order.order/orderRefund", map[string]interface{}{
+	result, err := utils.HttpGet("http://nginx/api/cashier/order.order/orderRefund", map[string]interface{}{
 		"order_id": req.SaleBillUuid,
 	}, map[string]string{
 		"token":    ctx.GetToken(),
@@ -460,7 +462,7 @@ func (h *OrderOldHandler) ReturnOrder(c *gin.Context) {
 		return
 	}
 	//
-	result, err := utils.HttpPost("http://192.168.100.88:8888/api/cashier/order.order/orderRefund", map[string]interface{}{
+	result, err := utils.HttpPost("http://nginx/api/cashier/order.order/orderRefund", map[string]interface{}{
 		"order_id": req.SaleBillUuid,
 	}, map[string]string{
 		"token":    ctx.GetToken(),
@@ -476,6 +478,62 @@ func (h *OrderOldHandler) ReturnOrder(c *gin.Context) {
 		return
 	}
 	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// HandleMemberBalance 处理会员余额
+func (h *OrderOldHandler) HandleMemberBalance(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 检查是否为内网IP
+	clientIP := c.ClientIP()
+	if !utils.IsInternalIP(clientIP) {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("只能在内网环境下访问"))
+		return
+	}
+	// 绑定请求参数
+	req := req.MemberBalanceChangeReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	if err := h.memberSrv.HandleMemberBalance(ctx, service.MemberBalanceChangeReq{
+		MemberUuid:  req.MemberUuid,
+		GiftMoney:   req.Money,
+		Scene:       constant.MemberBalanceLogRefund,
+		Describe:    "旧订单退款: " + req.OrderNo,
+		RelatedUuid: req.RelatedUuid,
+	}); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
+// HandleCashBoxBalance 处理钱箱余额
+func (h *OrderOldHandler) HandleCashBoxBalance(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 检查是否为内网IP
+	clientIP := c.ClientIP()
+	if !utils.IsInternalIP(clientIP) {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("只能在内网环境下访问"))
+		return
+	}
+	// 绑定请求参数
+	req := req.CashBoxBalanceChangeReq{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		helper.HandleValidationError(c, err, req, nil)
+		return
+	}
+	// 更新钱箱余额
+	if err := h.cashBoxSrv.UpdateBalance(ctx, service.UpdateCashBalanceParam{
+		Amount:    req.Amount,
+		Scene:     constant.CashBoxLogSceneRefund,
+		OrderUuid: req.RelatedUuid,
+		Remark:    "旧订单退款: " + req.OrderNo,
+	}); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
 	helper.Success(c, gin.H{})
 }
 
@@ -501,19 +559,23 @@ func RegisterOrderOldHandler(router gin.IRouter, dbm *database.DBManager, cache 
 		deskSrv:       service.NewDeskSrv(dbm, service.NewLocaleSrv(), orderSrv, settingSrv, deviceSrv, mustPlanSrv),
 		printerLogSrv: printerService.NewPrinterLogSrv(dbm, settingSrv),
 		settingSrv:    settingSrv,
+		memberSrv:     memberSrv,
+		cashBoxSrv:    cashBoxSrv,
 	}
 
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/old/order/list", wrapper.GetCashierOrderList)         // 获取订单列表
-		privateApi.GET("/old/order/info", wrapper.GetOrderInfo)                // 获取订单详情
-		privateApi.POST("/old/order/cancel", wrapper.CancelOrder)              // 取消订单
-		privateApi.GET("/old/order/return", wrapper.ReturnOrderInfo)           // 获取退款弹窗信息
-		privateApi.POST("/old/order/return", wrapper.ReturnOrder)              // 整单退款或部分退款
-		privateApi.DELETE("/old/order/delete", wrapper.DeleteOrder)            // 删除订单
-		privateApi.POST("/old/order/print", wrapper.OrderPrint)                // 打印
-		privateApi.POST("/old/order/print/invoice", wrapper.OrderPrintInvoice) // 打印发票
-		privateApi.GET("/old/order/invoice", wrapper.OrderInvoiceInfo)         // 获取发票信息
+		privateApi.GET("/old/order/list", wrapper.GetCashierOrderList)            // 获取订单列表
+		privateApi.GET("/old/order/info", wrapper.GetOrderInfo)                   // 获取订单详情
+		privateApi.POST("/old/order/cancel", wrapper.CancelOrder)                 // 取消订单
+		privateApi.GET("/old/order/return", wrapper.ReturnOrderInfo)              // 获取退款弹窗信息
+		privateApi.POST("/old/order/return", wrapper.ReturnOrder)                 // 整单退款或部分退款
+		privateApi.DELETE("/old/order/delete", wrapper.DeleteOrder)               // 删除订单
+		privateApi.POST("/old/order/print", wrapper.OrderPrint)                   // 打印
+		privateApi.POST("/old/order/print/invoice", wrapper.OrderPrintInvoice)    // 打印发票
+		privateApi.GET("/old/order/invoice", wrapper.OrderInvoiceInfo)            // 获取发票信息
+		privateApi.POST("/old/order/member/balance", wrapper.HandleMemberBalance) // 处理会员余额
+		privateApi.POST("/old/order/cash/balance", wrapper.HandleCashBoxBalance)  // 处理钱箱余额
 	}
 }

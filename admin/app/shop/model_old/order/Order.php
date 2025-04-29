@@ -97,8 +97,8 @@ class Order extends OrderModel
                     'extra' => [
                         'is_cell_cancel' => $subItem['is_cancel_button'] ? true : false,
                         'is_cell_delete' => $status == 2,
-                        'is_cell_invoice' => $status != 2,
-                        'is_cell_print' => $status != 2,
+                        'is_cell_invoice' => $status == 1,
+                        'is_cell_print' => $status == 1,
                         'is_cell_refund' => $subItem['is_refund_button'] ? true : false,
                         'is_cell_reverse_settle' => false,
                     ],
@@ -128,8 +128,8 @@ class Order extends OrderModel
                 'extra' => [
                     'is_cell_cancel' => $item['is_cancel_button'] ? true : false,
                     'is_cell_delete' => $status == 2,
-                    'is_cell_invoice' => $status != 2,
-                    'is_cell_print' => $status != 2,
+                    'is_cell_invoice' => $status == 1,
+                    'is_cell_print' => $status == 1,
                     'is_cell_refund' => $item['is_refund_button'] ? true : false,
                     'is_cell_reverse_settle' => false,
                 ],
@@ -178,8 +178,8 @@ class Order extends OrderModel
         $extra = [
             'is_cell_cancel' => false,
             'is_cell_delete' => $detail['order_status']['value'] == 20,
-            'is_cell_invoice' => $detail['order_status']['value'] != 20,
-            'is_cell_print' => $detail['order_status']['value'] != 20,
+            'is_cell_invoice' => $detail['order_status']['value'] == 10,
+            'is_cell_print' => $detail['order_status']['value'] == 10,
             'is_cell_refund' => false,
             'is_cell_reverse_settle' => false,
         ];

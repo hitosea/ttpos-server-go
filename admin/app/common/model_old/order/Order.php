@@ -3,62 +3,63 @@
 namespace app\common\model_old\order;
 
 use think\Model;
+use help\HttpHelp;
 use help\QueueHelp;
 use help\ClientHelp;
 use think\facade\Db;
 use think\facade\Cache;
 use app\common\library\helper;
+use think\db\exception\DbException;
+use app\common\enum\http\StatusCode;
 use app\common\model_old\delay\Delay;
 use app\common\model_old\store\Table;
 use app\common\model_old\shop\Account;
+use app\common\exception\BaseException;
 use app\common\model_old\buffet\Buffet;
 use app\common\model_old\store\FreeTag;
 use app\common\model_old\store\PayType;
-use think\db\exception\DbException;
-use app\common\enum\http\StatusCode;
+use app\common\enum\order\OrderTypeEnum;
 use app\common\model_old\BaseModelOrder;
+use app\common\enum\order\OrderErrorEnum;
+use app\common\enum\settings\SettingEnum;
 use app\common\model_old\product\Product;
 use app\common\model_old\store\TakeOrder;
 use app\common\model_old\user\BalanceLog;
-use app\common\exception\BaseException;
-use app\common\model_old\supplier\Printing;
-use app\common\enum\order\OrderTypeEnum;
-use app\common\model_old\product\ProductSku;
-use app\common\model_old\store\ReturnReason;
-use app\common\enum\order\OrderErrorEnum;
-use app\common\enum\settings\SettingEnum;
-use app\common\model_old\buffet\CustomerType;
 use app\common\enum\order\OrderStatusEnum;
-use app\common\model_old\payment\PaymentOrder;
 use app\common\service\order\OrderService;
 use app\common\enum\order\OrderPayTypeEnum;
+use app\common\model_old\supplier\Printing;
+use app\common\model_old\product\ProductSku;
+use app\common\model_old\store\ReturnReason;
+use app\common\enum\order\OrderPayStatusEnum;
+use app\common\model_old\buffet\CustomerType;
+use think\db\exception\DataNotFoundException;
+use app\common\model_old\payment\PaymentOrder;
+use think\db\exception\ModelNotFoundException;
 use app\common\model_old\buffet\BuffetCustomer;
 use app\common\model_old\buffet\BuffetDiscount;
-use app\common\model_old\user\User as UserModel;
-use app\common\enum\order\OrderPayStatusEnum;
-use app\common\model_old\order\OrderOperationLog;
-use think\db\exception\DataNotFoundException;
-use think\db\exception\ModelNotFoundException;
 use app\cashier\model\store\Table as TableModel;
 use app\common\enum\product\DeductStockTypeEnum;
+use app\common\model_old\user\User as UserModel;
+use app\common\model_old\order\OrderOperationLog;
 use app\common\service\order\OrderPrinterService;
-use app\common\model_old\order\OrderRefundDestination;
 use app\common\service\order\OrderCompleteService;
+use app\common\model_old\order\OrderRefundDestination;
+use app\common\service\product\factory\ProductFactory;
 use app\common\model_old\store\PayType as PayTypeModel;
+use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
+use app\common\repositories\OrderBusinessDataRepository;
 use app\common\model_old\product\Product as ProductModel;
 use app\common\model_old\settings\Setting as SettingModel;
-use app\common\service\product\factory\ProductFactory;
-use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
-use app\common\model_old\user\CardRecord as CardRecordModel;
-use app\common\repositories\OrderBusinessDataRepository;
-use app\common\model_old\product\ProductSku as ProductSkuModel;
 use app\tablet\model\product\Product as TabletProductModel;
-use app\common\model_old\order\OrderProduct as OrderProductModel;
-use app\assistant\model\product\Product as AssistantProductModel;
-use app\cashier\service\order\settled\CashierOrderSettledService;
-use app\common\model_old\order\OrderBuffetCustomer as OrderBuffetCustomerModel;
+use app\common\model_old\user\CardRecord as CardRecordModel;
 use app\common\model_old\order\OrderDelay as OrderDelayModel;
 use app\common\model_old\order\OrderBuffet as OrderBuffetModel;
+use app\common\model_old\product\ProductSku as ProductSkuModel;
+use app\assistant\model\product\Product as AssistantProductModel;
+use app\cashier\service\order\settled\CashierOrderSettledService;
+use app\common\model_old\order\OrderProduct as OrderProductModel;
+use app\common\model_old\order\OrderBuffetCustomer as OrderBuffetCustomerModel;
 
 /**
  * 订单模型模型
@@ -4896,7 +4897,13 @@ class Order extends BaseModelOrder
 
             // 添加退款记录目的地
             $refundDestination = OrderRefundDestination::createData($this, $orderRefundLog, $refund_type, $refund_method, $cashier_id, $bank_code, $account_no, $account_name);
-            $orderProductReturnList = $refundDestination['orderProductReturnList'];
+            if (!$refundDestination) {
+                $this->error = '退款记录目的地创建失败';
+                $this->rollback();
+                return false;
+            }
+           
+            $orderProductReturnList = $refundDestination['orderProductReturnList'] ?? [];
             $cashRefundMoney = $refundDestination['cashRefundMoney'];
 
             // 添加操作记录
@@ -4911,10 +4918,6 @@ class Order extends BaseModelOrder
                 'order_name' => $order['order_name'],           //  订单名称
             ], '退款');
 
-            trace($cashRefundMoney);
-          
-            $this->rollback();
-            return false;
             // 添加店铺账户余额
             if (ClientHelp::verifyClientVersion('1.0.8', '>')) {
                 if ($cashRefundMoney > 0) {
@@ -4925,7 +4928,27 @@ class Order extends BaseModelOrder
                     Account::updateAmount(0, $orderRefundLog->refund_money, $order['order_no'], $cashier_id, $order['shop_supplier_id'], $order['app_id'], 'order-refund');
                 }
             }
-
+            // 请求golang
+            $res = HttpHelp::postRequest('http://nginx/api/v1/cashier/old/order/cash/balance', json_encode([
+                "amount" => floatval($cashRefundMoney),
+                "related_uuid" => $order['order_id'],
+                "order_no" => $order['order_no'],
+            ]), [
+                'Authorization: Bearer ' . request()->header('token'),
+                'Accept-Language: ' . request()->header('language'),
+            ]);
+            if (!$res) {
+                $this->error = 'request golang error';
+                $this->rollback();
+                return false;
+            } 
+            $result = json_decode($res, true);
+            if (($result['code'] ?? -1) != 0) {
+                $this->error = $result['message'] ?? 'request golang error';
+                $this->rollback();
+                return false;
+            }
+            // 
             $this->commit();
             return true;
         } catch (BaseException $e) {

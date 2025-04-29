@@ -6,8 +6,8 @@ use hg\apidoc\annotation as Apidoc;
 use app\cashier\controller\Controller;
 use app\common\model\app\App as AppModel;
 use app\shop\model_old\order\Order as OldOrderModel;
-use app\cashier\model\order\Order as OldCashierOrderModel;
 use app\common\service\order\OrderInvoicePrinterService;
+use app\cashier\model\order\Order as OldCashierOrderModel;
 
 /**
  * 订单
@@ -262,7 +262,6 @@ class Order extends Controller
         // 
         return $this->renderSuccess('发送成功', $order->invoiceInfo);
     }
-    
 
     /**
      * @Apidoc\Title("订单退款（v1.0.5）")

@@ -2,19 +2,20 @@
 
 namespace app\common\model_old\order;
 
+use help\HttpHelp;
 use app\common\tasks\Task;
 use app\common\library\helper;
-use app\common\model_old\BaseModel;
 use app\common\tasks\RefundTask;
+use app\common\model_old\BaseModel;
+use app\common\exception\BaseException;
 use app\common\model_old\store\PayType;
 use app\common\model_old\user\PointsLog;
-use app\common\model_old\settings\Setting;
-use app\common\exception\BaseException;
 use app\common\enum\order\OrderErrorEnum;
 use app\common\enum\settings\SettingEnum;
+use app\common\model_old\settings\Setting;
 use app\common\enum\order\OrderPayTypeEnum;
-use app\common\model_old\user\User as UserModel;
 use app\common\service\payment\RefundService;
+use app\common\model_old\user\User as UserModel;
 use app\common\service\order\OrderRefundService;
 use app\common\enum\user\pointsLog\PointsLogSceneEnum;
 
@@ -164,11 +165,30 @@ class OrderRefundDestination extends BaseModel
                         'describe' => vsprintf(PointsLogSceneEnum::data()[PointsLogSceneEnum::REFUND]['describe'], [$order['order_no']]),
                         'remark' => '',
                     ]);
-                    
                 }
 
                 // 2.回退用户余额
                 (new OrderRefundService)->balanceRefund($order, $payTypeRefundMoney);
+
+                // 请求golang
+                $res = HttpHelp::postRequest('http://nginx/api/v1/cashier/old/order/member/balance', json_encode([
+                    "uuid" => $order['user_id'],
+                    "money" => floatval($payTypeRefundMoney),
+                    "related_uuid" => $order['order_id'],
+                    "order_no" => $order['order_no'],
+                ]), [
+                    'Authorization: Bearer ' . request()->header('token'),
+                    'Accept-Language: ' . request()->header('language'),
+                ]);
+                if (!$res) {
+                    trace($res);
+                    return false;
+                } 
+                $result = json_decode($res, true);
+                if (($result['code'] ?? -1) != 0) {
+                    trace($result);
+                    return false;
+                }
             }
             // lianlianpay 支付
             else if (in_array($pay['value'], array_keys(PayType::SOURCE_LIANLIAN_PAY_METHOD))) {
