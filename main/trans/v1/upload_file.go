@@ -65,6 +65,7 @@ func (s *UploadFileService) ConvertUploadFile() error {
 				Uuid:       uint64(uploadFile.FileID),
 				CreateTime: int64(uploadFile.CreateTime),
 				UpdateTime: int64(uploadFile.UpdateTime),
+				DeleteTime: int64(uploadFile.IsDelete),
 			},
 			Storage:       uploadFile.Storage,
 			GroupUuid:     uploadFile.GroupID,

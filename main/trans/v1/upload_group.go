@@ -57,6 +57,7 @@ func (s *UploadGroupService) ConvertUploadGroup() error {
 				Uuid:       uint64(uploadGroup.GroupID),
 				CreateTime: int64(uploadGroup.CreateTime),
 				UpdateTime: int64(uploadGroup.UpdateTime),
+				DeleteTime: int64(uploadGroup.IsDelete),
 			},
 			GroupType: uploadGroup.GroupType,
 			GroupName: uploadGroup.GroupName,
