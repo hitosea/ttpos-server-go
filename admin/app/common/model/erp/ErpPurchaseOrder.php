@@ -322,10 +322,26 @@ class ErpPurchaseOrder extends BaseModel
                     return false;
                 }
                 // 判断是商品还是材料
-                $materialType = 0;
+                $productBon = ProductBom::with(['product'])->where('uuid', $value['product_sku_id'])->find();
+                if ($productBon) {
+                    $materialType = 0;
+                    $stockNum = $productBon->stock_num;
+                    if (floatval(helper::bcadd($stockNum, $value['estimate_purchase_num'], 4)) > 99999999) {
+                        $productName = extractLanguage($productBon->product->name);
+                        $skuName = extractLanguage($productBon->name);
+                        $this->error = "{$productName}({$skuName}) " . __('库存已超99999999');
+                        return false;
+                    }
+                }
                 $material = Material::where('uuid', $value['product_sku_id'])->find();
                 if ($material) {
                     $materialType = 1;
+                    $stockNum = $material->stock_num;
+                    if (floatval(helper::bcadd($stockNum, $value['estimate_purchase_num'], 4)) > 99999999) {
+                        $materialName = extractLanguage($material->name);
+                        $this->error = "{$materialName} " . __('库存已超99999999');
+                        return false;
+                    }
                 }
                 $dataList[] = [
                     'purchase_form_uuid' => $model->uuid,
@@ -416,10 +432,26 @@ class ErpPurchaseOrder extends BaseModel
                     return false;
                 }
                 // 判断是商品还是材料
-                $materialType = 0;
+                $productBon = ProductBom::with(['product'])->where('uuid', $value['product_sku_id'])->find();
+                if ($productBon) {
+                    $materialType = 0;
+                    $stockNum = $productBon->stock_num;
+                    if (floatval(helper::bcadd($stockNum, $value['estimate_purchase_num'], 4)) > 99999999) {
+                        $productName = extractLanguage($productBon->product->name);
+                        $skuName = extractLanguage($productBon->name);
+                        $this->error = "{$productName}({$skuName}) " . __('库存已超99999999');
+                        return false;
+                    }
+                }
                 $material = Material::where('uuid', $value['product_sku_id'])->find();
                 if ($material) {
                     $materialType = 1;
+                    $stockNum = $material->stock_num;
+                    if (floatval(helper::bcadd($stockNum, $value['estimate_purchase_num'], 4)) > 99999999) {
+                        $materialName = extractLanguage($material->name);
+                        $this->error = "{$materialName} " . __('库存已超99999999');
+                        return false;
+                    }
                 }
                 $dataList[] = [
                     'purchase_form_uuid' => $this->uuid,
