@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -62,6 +63,9 @@ func (s *ShopUserShiftLogService) ConvertShopUserShiftLog() error {
 		return err
 	}
 	for _, shiftLog := range shopUserShiftLogs {
+
+		fmt.Println(fmt.Sprintf("shiftLog: %+v", shiftLog))
+
 		_, err := repository.NewShiftLogRepo(s.targetDB).Create(model.StaffShiftLog{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(shiftLog.ID),

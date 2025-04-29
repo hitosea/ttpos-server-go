@@ -66,6 +66,9 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 	}
 
 	for _, supplierPrinting := range supplierPrintings {
+
+		fmt.Println(fmt.Sprintf("supplierPrinting: %+v", supplierPrinting))
+
 		printType := 0
 		if supplierPrinting.PrintType == 20 {
 			printType = 1

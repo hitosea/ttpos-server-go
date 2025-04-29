@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -44,6 +45,9 @@ func (s *ShopUserRoleService) ConvertShopUserRole() error {
 		return err
 	}
 	for _, shopUserRole := range shopUserRoles {
+
+		fmt.Println(fmt.Sprintf("shopUserRole: %+v", shopUserRole))
+
 		staffRole := model.StaffRole{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(shopUserRole.ID),

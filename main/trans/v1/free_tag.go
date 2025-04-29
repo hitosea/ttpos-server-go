@@ -49,6 +49,9 @@ func (s *FreeTagService) ConvertFreeTag() error {
 		return err
 	}
 	for _, freeTag := range freeTags {
+
+		fmt.Println(fmt.Sprintf("freeTag: %+v", freeTag))
+
 		names := Names{}
 		err := names.GetNames(freeTag.FreeTag)
 		if err != nil {

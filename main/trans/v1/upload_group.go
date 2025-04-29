@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -50,6 +51,7 @@ func (s *UploadGroupService) ConvertUploadGroup() error {
 		return err
 	}
 	for _, uploadGroup := range uploadGroups {
+		fmt.Println(fmt.Sprintf("uploadGroup: %+v", uploadGroup))
 		uploadFileGroup := model.FileGroup{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(uploadGroup.GroupID),

@@ -119,6 +119,9 @@ func (s *CategoryService) ConvertCategory() error {
 		return err
 	}
 	for _, category := range categoryList {
+
+		fmt.Println(fmt.Sprintf("category: %+v", category))
+
 		var names Names
 		err := json.Unmarshal([]byte(category.Name), &names)
 		if err != nil {
