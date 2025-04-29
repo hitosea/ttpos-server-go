@@ -45,7 +45,7 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 	// 设置
 	{
 		// 设置
-		settingService := v1.NewSettingService(sourceDB, targetDB)
+		settingService := v1.NewSettingService(sourceDB, targetDB, targetSassDB, targetCompanyUuid)
 		err = settingService.ConvertSetting()
 		if err != nil {
 			return err
