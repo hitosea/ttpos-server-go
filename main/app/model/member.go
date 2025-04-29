@@ -315,6 +315,14 @@ type MemberRechargeOrder struct {
 	RechargeOrderOperationLogs []MemberRechargeOrderOperationLog `gorm:"foreignKey:RechargeOrderUuid;references:Uuid"` // 一个充值订单关联多个操作日志
 }
 
+func (model *MemberRechargeOrder) SetNil() {
+	model.PaymentOrders = nil
+	model.Member = nil
+	model.Staff = nil
+	model.ReturnOrders = nil
+	model.RechargeOrderOperationLogs = nil
+}
+
 // 获取应收金额 = 应收金额 - 减去退款
 func (model *MemberRechargeOrder) GetReceivableAmount() float64 {
 	payAmount := decimal.NewFromFloat(0)
