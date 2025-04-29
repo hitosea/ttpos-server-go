@@ -65,7 +65,7 @@ class TableType extends TableTypeModel
      */
     private function isTypeAssociatedWithTable($type_id)
     {
-        return Table::where('uuid', $type_id)->count() > 0;
+        return Table::where('type_uuid', $type_id)->count() > 0;
     }
 
     /**
