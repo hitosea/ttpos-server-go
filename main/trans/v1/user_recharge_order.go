@@ -112,25 +112,32 @@ type PayTypeStruct struct {
 	Remark         string  `json:"remark"`
 	Source         int     `json:"source"`
 	PaymentOrderID int     `json:"payment_order_id"`
-	RefundMoney    string  `json:"refund_money"`
+	RefundMoney    any     `json:"refund_money"`
 	ShopSupplierID int     `json:"shop_supplier_id"`
 	AppID          int     `json:"app_id"`
 	Status         int     `json:"status"`
 }
 
 func (model *PayTypeStruct) GetRefundMoney() float64 {
-	refundMoney, err := strconv.ParseFloat(model.RefundMoney, 64)
-	if err != nil {
+	switch v := model.RefundMoney.(type) {
+	case float64:
+		return v
+	case string:
+		refundMoney, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return 0
+		}
+		return refundMoney
+	default:
 		return 0
 	}
-	return refundMoney
 }
 
 type UserRechargeOrderData struct {
 	PayType      []PayTypeStruct `json:"pay_type"`
-	RefundType   int             `json:"refund_type"`
+	RefundType   any             `json:"refund_type"`
 	RefundMethod int             `json:"refund_method"`
-	RefundMoney  float64         `json:"refund_money"`
+	RefundMoney  any             `json:"refund_money"`
 }
 
 func (model *UserRechargeOrderOperationLog) GetData() (string, error) {
@@ -168,9 +175,28 @@ func (model *UserRechargeOrderOperationLog) GetDataRefund() (string, error) {
 			RefundStatus: 0,
 		})
 	}
+
+	var refundMoney float64
+	switch v := data.RefundMoney.(type) {
+	case float64:
+		refundMoney = v
+	case string:
+		refundMoney, err = strconv.ParseFloat(v, 64)
+		if err != nil {
+			return "", errors.WithMessage(err)
+		}
+	}
+	var refundType int
+	switch v := data.RefundType.(type) {
+	case float64:
+		refundType = int(v)
+	case string:
+		refundType, err = strconv.Atoi(v)
+	}
+
 	refundData := RefundData{
-		RefundType:     data.RefundType,
-		RefundMoney:    data.RefundMoney,
+		RefundType:     refundType,
+		RefundMoney:    refundMoney,
 		RefundPayTypes: refundPayTypes,
 	}
 	stringData := utils.ToJson(refundData)
@@ -387,7 +413,7 @@ func (s *UserRechargeOrderService) ConvertUserRechargeOrder() error {
 			OrderNo:                    order.OrderNo,
 			DutyNo:                     order.DutyNo,
 			Status:                     order.GetOrderStatus(),
-			Amount:                     order.OrderPrice,
+			Amount:                     order.PayPrice,
 			RefundMoney:                order.RefundMoney,
 			ChargeDue:                  order.ChangeDue,
 			RechargeAmount:             order.RechargeMoney,
