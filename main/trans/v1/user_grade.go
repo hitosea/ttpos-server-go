@@ -69,6 +69,7 @@ func (s *UserGradeService) ConvertUserGrade() error {
 				Uuid:       uint64(userGrade.GradeID),
 				CreateTime: int64(userGrade.CreateTime),
 				UpdateTime: int64(userGrade.UpdateTime),
+				DeleteTime: int64(userGrade.IsDelete),
 			},
 			Name:         userGrade.Name,
 			OpenMoney:    int(userGrade.OpenMoney),

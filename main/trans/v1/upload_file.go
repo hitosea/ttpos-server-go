@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -58,11 +59,13 @@ func (s *UploadFileService) ConvertUploadFile() error {
 		return err
 	}
 	for _, uploadFile := range uploadFiles {
+		fmt.Println(fmt.Sprintf("uploadFile: %+v", uploadFile))
 		model := model.File{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(uploadFile.FileID),
 				CreateTime: int64(uploadFile.CreateTime),
 				UpdateTime: int64(uploadFile.UpdateTime),
+				DeleteTime: int64(uploadFile.IsDelete),
 			},
 			Storage:       uploadFile.Storage,
 			GroupUuid:     uploadFile.GroupID,

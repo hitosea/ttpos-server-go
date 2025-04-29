@@ -66,8 +66,11 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 	}
 
 	for _, supplierPrinting := range supplierPrintings {
+
+		fmt.Println(fmt.Sprintf("supplierPrinting: %+v", supplierPrinting))
+
 		printType := 0
-		if supplierPrinting.PrintType == 20 {
+		if supplierPrinting.PrintType == 30 || supplierPrinting.PrintType == 20 {
 			printType = 1
 		}
 
@@ -155,6 +158,7 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 					Uuid:       uint64(id),
 					CreateTime: supplierPrinting.CreateTime,
 					UpdateTime: supplierPrinting.UpdateTime,
+					DeleteTime: int64(supplierPrinting.IsDelete),
 				},
 				ProductPrinterUuid: uint64(supplierPrinting.ID),
 				DeskRegionUuid:     uint64(regionID),
@@ -170,6 +174,7 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 				Uuid:       uint64(supplierPrinting.ID),
 				CreateTime: supplierPrinting.CreateTime,
 				UpdateTime: supplierPrinting.UpdateTime,
+				DeleteTime: int64(supplierPrinting.IsDelete),
 			},
 			Name:               supplierPrinting.Name,
 			Status:             int(supplierPrinting.IsOpen),

@@ -1,7 +1,9 @@
 package v1
 
 import (
+	"encoding/json"
 	"fmt"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -22,13 +24,15 @@ type SettingRepository interface {
 	ConvertSetting() error
 }
 
-func NewSettingService(db *gorm.DB, targetDB *gorm.DB) SettingRepository {
-	return &SettingService{db: db, targetDB: targetDB}
+func NewSettingService(db *gorm.DB, targetDB *gorm.DB, targetSaasDB *gorm.DB, targetCompanyUuid uint64) SettingRepository {
+	return &SettingService{db: db, targetDB: targetDB, targetSaasDB: targetSaasDB, targetCompanyUuid: targetCompanyUuid}
 }
 
 type SettingService struct {
-	db       *gorm.DB
-	targetDB *gorm.DB
+	db                *gorm.DB
+	targetDB          *gorm.DB
+	targetSaasDB      *gorm.DB
+	targetCompanyUuid uint64
 }
 
 func (s *SettingService) GetSettingList() ([]*Setting, error) {
@@ -45,6 +49,24 @@ func (s *SettingService) ConvertSetting() error {
 
 	for _, setting := range settings {
 		fmt.Println(fmt.Sprintf("setting: %+v", setting))
+		// 修改商家设置中的logo地址
+		if setting.Key == constant.SettingStore {
+			company, err := repository.NewCompanyRepo(s.targetSaasDB).GetCompanyInfoByUuid(s.targetCompanyUuid)
+			if err != nil {
+				return err
+			}
+			var storeSetting map[string]any
+			err = json.Unmarshal([]byte(setting.Values), &storeSetting)
+			if err != nil {
+				return err
+			}
+			storeSetting["logoUrl"] = company.Logo
+			val, err := json.Marshal(storeSetting)
+			if err != nil {
+				return err
+			}
+			setting.Values = string(val)
+		}
 		model := model.Setting{
 			Key:        setting.Key,
 			Describe:   setting.Describe,
