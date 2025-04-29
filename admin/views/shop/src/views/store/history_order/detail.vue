@@ -260,7 +260,7 @@
               <template v-if="(activity.pay_type || []).length > 0"
                 >&nbsp; (<span class="flex" v-for="(item, itemIndex) in activity.pay_type" :key="itemIndex">
                   <span>{{ item.name }}:{{ item.unit + this.$formatPrice(item.refund_money) }}</span>
-                  <el-tag v-if="item.refund_status == '0'" class="cupon" type="danger" @click="handleRetry(item)">{{ $t('退款失败，重试') }}</el-tag>
+                  <!-- <el-tag v-if="item.refund_status == '0'" class="cupon" type="danger" @click="handleRetry(item)">{{ $t('退款失败，重试') }}</el-tag> -->
                   <el-tooltip v-if="item.value == '90333'" placement="bottom" trigger="click">
                     <el-icon class="icon"><WarningFilled /></el-icon>
                     <template #content>
@@ -521,44 +521,44 @@
           });
         });
       },
-
-      handleRetry(item) {
-        this.refundOrder = item;
-        if (item.value == '90333') {
-          this.open_refundAgain = true;
-        } else {
-          ElMessageBox.confirm('确定重试退款操作?', '提示', {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning',
-          })
-            .then(() => {
-              this.loading = true;
-              const params = {
-                return_order_uuid: item.return_order_uuid,
-                return_amount_uuid: item.return_amount_uuid,
-              };
-              OrderOldApi.orderRefundAgain(params, true)
-                .then((data) => {
-                  this.loading = false;
-                  this.$ElMessage({
-                    message: $t('操作成功'),
-                    type: 'success',
-                  });
-                  this.getParams();
-                })
-                .catch((error) => {
-                  this.loading = false;
-                });
-            })
-            .catch(() => {
-              this.$ElMessage({
-                type: 'info',
-                message: '已取消操作',
-              });
-            });
-        }
-      },
+      // 2025年04月29日10:50:36 退款重试
+      //   handleRetry(item) {
+      //     this.refundOrder = item;
+      //     if (item.value == '90333') {
+      //       this.open_refundAgain = true;
+      //     } else {
+      //       ElMessageBox.confirm('确定重试退款操作?', '提示', {
+      //         confirmButtonText: '确定',
+      //         cancelButtonText: '取消',
+      //         type: 'warning',
+      //       })
+      //         .then(() => {
+      //           this.loading = true;
+      //           const params = {
+      //             return_order_uuid: item.return_order_uuid,
+      //             return_amount_uuid: item.return_amount_uuid,
+      //           };
+      //           OrderOldApi.orderRefundAgain(params, true)
+      //             .then((data) => {
+      //               this.loading = false;
+      //               this.$ElMessage({
+      //                 message: $t('操作成功'),
+      //                 type: 'success',
+      //               });
+      //               this.getParams();
+      //             })
+      //             .catch((error) => {
+      //               this.loading = false;
+      //             });
+      //         })
+      //         .catch(() => {
+      //           this.$ElMessage({
+      //             type: 'info',
+      //             message: '已取消操作',
+      //           });
+      //         });
+      //     }
+      //   },
 
       bankName(value) {
         let name = '';
