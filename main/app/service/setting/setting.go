@@ -506,6 +506,64 @@ func (s *Srv) GetBuffetSetting(ctx context.Context, companySetting model.Company
 
 }
 
+// 转换平板设置指定字段类型
+func (s *Srv) convertTabletFormat(oldVal string) ([]byte, error) {
+	tabletMap := map[string]any{}
+	err := json.Unmarshal([]byte(oldVal), &tabletMap)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := tabletMap["is_call_service"]; ok {
+		switch v.(type) {
+		case float64:
+			tabletMap["is_call_service"] = fmt.Sprintf("%.0f", v)
+		}
+	}
+	if v, ok := tabletMap["is_customer_order"]; ok {
+		switch v.(type) {
+		case float64:
+			tabletMap["is_customer_order"] = fmt.Sprintf("%.0f", v)
+		}
+	}
+	if v, ok := tabletMap["is_voice_remind"]; ok {
+		switch v.(type) {
+		case float64:
+			tabletMap["is_voice_remind"] = fmt.Sprintf("%.0f", v)
+		}
+	}
+	if v, ok := tabletMap["is_show_sold_out"]; ok {
+		switch v.(type) {
+		case float64:
+			tabletMap["is_show_sold_out"] = fmt.Sprintf("%.0f", v)
+		}
+	}
+	if v, ok := tabletMap["is_buffet_order_limit"]; ok {
+		switch v.(type) {
+		case float64:
+			tabletMap["is_buffet_order_limit"] = fmt.Sprintf("%.0f", v)
+		}
+	}
+	if v, ok := tabletMap["is_order_limit"]; ok {
+		switch v.(type) {
+		case float64:
+			tabletMap["is_order_limit"] = fmt.Sprintf("%.0f", v)
+		}
+	}
+	if v, ok := tabletMap["buffet_order_limit"]; ok {
+		switch v.(type) {
+		case []any:
+			tabletMap["buffet_order_limit"] = struct{}{}
+		}
+	}
+	if v, ok := tabletMap["order_limit"]; ok {
+		switch v.(type) {
+		case []any:
+			tabletMap["order_limit"] = struct{}{}
+		}
+	}
+	return json.Marshal(tabletMap)
+}
+
 // GetTabletSetting 平板端设置
 func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Tablet, error) {
 	st := s.getSettingByKey(ctx, constant.SettingTablet)
@@ -520,12 +578,12 @@ func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageI
 			return tablet, errors.WithMessage(err)
 		}
 	}
-	if strings.Contains(st.Values, "\"buffet_order_limit\":[]") {
-		st.Values = strings.Replace(st.Values, "\"buffet_order_limit\":[]", "\"buffet_order_limit\":{}", -1)
+	val, err := s.convertTabletFormat(st.Values)
+	if err != nil {
+		ctx.Log().Error("解析各端-平板端设置失败", zap.Error(err))
+		return tablet, errors.New("解析各端-平板端设置失败")
 	}
-	if strings.Contains(st.Values, "\"order_limit\":[]") {
-		st.Values = strings.Replace(st.Values, "\"order_limit\":[]", "\"order_limit\":{}", -1)
-	}
+	st.Values = string(val)
 	err = json.Unmarshal([]byte(st.Values), &tablet)
 	if err != nil {
 		ctx.Log().Error("解析各端-平板端设置失败", zap.Error(err))
