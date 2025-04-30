@@ -11,19 +11,19 @@ import (
 )
 
 type Category struct {
-	CategoryID     uint64 `gorm:"primaryKey;autoIncrement;comment:产品分类id"`
-	Name           string `gorm:"type:varchar(2000);not null;default:'';comment:分类名称"`
-	ParentID       uint64 `gorm:"not null;default:0;comment:上级分类id"`
-	ImageID        uint   `gorm:"not null;default:0;comment:分类图片id"`
-	IsSpecial      bool   `gorm:"not null;default:false;comment:0普通1特殊"`
-	Sort           uint   `gorm:"not null;default:0;comment:排序方式(数字越小越靠前)"`
-	Type           uint8  `gorm:"not null;default:0;comment:0外卖1店内"`
-	ShopSupplierID int    `gorm:"not null;default:0;comment:门店id"`
-	Status         int    `gorm:"not null;default:1;comment:是否显示1显示0隐藏"`
-	IsButton       int    `gorm:"default:0;comment:是否按钮 0-否 1-是"`
-	AppID          uint   `gorm:"not null;default:0;comment:应用id"`
-	CreateTime     uint   `gorm:"not null;default:0;comment:创建时间"`
-	UpdateTime     uint   `gorm:"not null;default:0;comment:更新时间"`
+	CategoryID     uint   `gorm:"column:category_id;type:int(11) unsigned;primary_key;AUTO_INCREMENT;comment:产品分类id" json:"category_id"`
+	Name           string `gorm:"column:name;type:varchar(2000);comment:分类名称;NOT NULL" json:"name"`
+	ParentID       uint   `gorm:"column:parent_id;type:int(11) unsigned;default:0;comment:上级分类id;NOT NULL" json:"parent_id"`
+	ImageID        uint   `gorm:"column:image_id;type:int(11) unsigned;default:0;comment:分类图片id;NOT NULL" json:"image_id"`
+	IsSpecial      int    `gorm:"column:is_special;type:tinyint(1);default:0;comment:0普通1特殊;NOT NULL" json:"is_special"`
+	Sort           uint   `gorm:"column:sort;type:int(11) unsigned;default:0;comment:排序方式(数字越小越靠前);NOT NULL" json:"sort"`
+	Type           int    `gorm:"column:type;type:tinyint(2);default:0;comment:0外卖1店内;NOT NULL" json:"type"`
+	ShopSupplierId int    `gorm:"column:shop_supplier_id;type:int(11);default:0;comment:门店id;NOT NULL" json:"shop_supplier_id"`
+	Status         int    `gorm:"column:status;type:tinyint(1);default:1;comment:是否显示1显示0隐藏;NOT NULL" json:"status"`
+	IsButton       int    `gorm:"column:is_button;type:int(11);default:0;comment:是否按钮 0-否 1-是" json:"is_button"`
+	AppId          uint   `gorm:"column:app_id;type:int(11) unsigned;default:0;comment:应用id;NOT NULL" json:"app_id"`
+	CreateTime     int64  `gorm:"column:create_time;type:int(11) unsigned;default:0;comment:创建时间;NOT NULL" json:"create_time"`
+	UpdateTime     int64  `gorm:"column:update_time;type:int(11) unsigned;default:0;comment:更新时间;NOT NULL" json:"update_time"`
 }
 
 type Names struct {
@@ -166,14 +166,17 @@ func (s *CategoryService) ConvertCategory() error {
 		}
 		productCategory := model.ProductCategory{
 			BaseModel: model.BaseModel{
-				Uuid: uuid,
+				Uuid:       uuid,
+				CreateTime: category.CreateTime,
+				UpdateTime: category.UpdateTime,
 			},
 			Name:                  category.Name,
-			ParentUuid:            uint64(category.ParentID),
-			MultiLanguageNameUuid: uint64(id),
+			MultiLanguageNameUuid: id,
 			Status:                category.Status,
-			Sort:                  category.Sort,
+			ParentUuid:            uint64(category.ParentID),
+			IsSpecial:             category.IsSpecial,
 			CategoryKey:           key,
+			Sort:                  category.Sort,
 		}
 		_, err = repository.NewProductCategoryRepo(s.targetDB).CreateProductCategory(productCategory)
 		if err != nil {

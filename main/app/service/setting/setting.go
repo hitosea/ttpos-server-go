@@ -1007,12 +1007,36 @@ func (s *Srv) GetCashierAd(ctx context.Context) (resp.Ads, error) {
 	}, nil
 }
 
+// 转换服务费指定字段类型
+func (s *Srv) convertServiceFeeFormat(oldVal string) ([]byte, error) {
+	serviceFeeMap := map[string]any{}
+	err := json.Unmarshal([]byte(oldVal), &serviceFeeMap)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := serviceFeeMap["service_charge"]; ok {
+		switch v.(type) {
+		case float64:
+			serviceFeeMap["service_charge"] = fmt.Sprintf("%f", v)
+		}
+	}
+	return json.Marshal(serviceFeeMap)
+}
+
 // GetServiceFeeSetting 获取服务费设置
 func (s *Srv) GetServiceFeeSetting(ctx context.Context) (setting.ServiceCharge, error) {
 	st := s.getSettingByKey(ctx, constant.SettingServiceCharge)
 	var serviceFee setting.ServiceCharge
-	err := json.Unmarshal([]byte(st.Values), &serviceFee)
+	// 修改类型
+	newVal, err := s.convertServiceFeeFormat(st.Values)
 	if err != nil {
+		ctx.Log().Error("解析服务费设置失败", zap.Error(err))
+		return serviceFee, errors.New("解析服务费设置失败")
+	}
+	st.Values = string(newVal)
+	err = json.Unmarshal([]byte(st.Values), &serviceFee)
+	if err != nil {
+		ctx.Log().Error("解析服务费设置失败", zap.Error(err))
 		return serviceFee, errors.New("解析服务费设置失败")
 	}
 	if serviceFee.IsOpen == "0" {
@@ -1025,6 +1049,7 @@ func (s *Srv) GetServiceFeeSetting(ctx context.Context) (setting.ServiceCharge, 
 		defaultServiceFee.ApplyScopeTableList = make([]int64, 0)
 	}
 	if err != nil {
+		ctx.Log().Error("解析服务费设置失败", zap.Error(err))
 		return serviceFee, errors.New("解析服务费设置失败")
 	}
 	return defaultServiceFee, nil
