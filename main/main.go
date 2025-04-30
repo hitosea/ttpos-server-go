@@ -3,8 +3,6 @@ package main
 import (
 	"runtime"
 	"ttpos-server-go/command"
-
-	_ "github.com/apache/skywalking-go"
 )
 
 // @title ttpos-server-go API
