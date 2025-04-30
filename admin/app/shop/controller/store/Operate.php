@@ -125,7 +125,7 @@ class Operate extends Controller
      * @Apidoc\Param("cancel_remark", type="string", require=false, default="", desc="取消原因")
      * @Apidoc\Returned()
      */
-    public function orderCancel($order_id)
+    public function orderCancel()
     {
         $data = $this->postData();
         if (mb_strlen($data['cancel_remark'] ?? '') > 50) {

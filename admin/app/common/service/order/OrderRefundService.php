@@ -2,15 +2,11 @@
 
 namespace app\common\service\order;
 
-use app\common\library\alipay\AliPay;
-use app\common\library\easywechat\AppMp;
-use app\common\library\easywechat\AppWx;
-use app\common\library\easywechat\WxPay;
-use app\common\library\easywechat\AppOpen;
+
 use app\common\enum\order\OrderPayTypeEnum;
-use app\common\model\user\User as UserModel;
+use app\common\model_old\user\User as UserModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum;
-use app\common\model\user\BalanceLog as BalanceLogModel;
+use app\common\model_old\user\BalanceLog as BalanceLogModel;
 
 /**
  * 订单退款服务类
@@ -104,7 +100,7 @@ class OrderRefundService
         $user = UserModel::detail($order['user_id']);
         // 记录余额明细
         BalanceLogModel::add(BalanceLogSceneEnum::REFUND, [
-            'member_uuid' => $user['user_id'],
+            'user_id' => $user['user_id'],
             'card_id' => $user['card_id'],
             'money' => $money,
         ], ['order_no' => $order['order_no']]);

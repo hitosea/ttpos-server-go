@@ -8,6 +8,7 @@ use think\facade\Cache;
 use think\facade\Config;
 use think\facade\Request;
 use app\common\model\shop\User;
+use app\common\model_old\shop\User as UserOld;
 use app\common\model\settings\Setting as SettingModel;
 
 // 应用公共文件
@@ -107,14 +108,16 @@ function checkToken($token, $type)
         JWT::$leeway = 60; //当前时间减去60，把时间留点余地
         $decoded = JWT::decode($token, new Key($key, 'HS256')); //HS256方式，这里要和签发的时候对应
         $arr = json_decode(json_encode($decoded), 1);
+        // 
         $res['code'] = 1;
         $res['data'] = [                             //记录的userid的信息，这里是自已添加上去的，如果有其它信息，可以再添加数组的键值对
             'uid' => $arr['staff_uuid'],
             'type' => $arr['source'],
-            'pwd' => $arr['pwd'],
+            'pwd' => $arr['pwd'] ?? '',
             'device_id' => $arr['device_id'],
             'company_uuid' => $arr['company_uuid'],
         ];
+        // 
         if ($res['data']['type'] != $type){
             $status['msg'] = "签名不正确";
             return $status;
@@ -267,13 +270,25 @@ function extractLanguage($json)
  */
 function getSettingLanguages($companyUuid = 0)
 {
-    if ($companyUuid) {
-        if (!($shopInfo = Cache::get('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid)) || !Cache::get('{firstshop}_' . 'first_shop_info')) {
-            $shopInfo = User::getShopInfo('', true);
-            Cache::tag('common_get_settingLanguages')->set('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid, $shopInfo);
+    $connection = (new User())->getConnection();
+    if (strlen($connection) == 14) {
+        if ($companyUuid) {
+            if (!($shopInfo = Cache::get('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid)) || !Cache::get('{firstshop}_' . 'first_shop_info')) {
+                $shopInfo = UserOld::getShopInfo('', true);
+                Cache::tag('common_get_settingLanguages')->set('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid, $shopInfo);
+            }
+        } else {
+            $shopInfo = UserOld::getShopInfo('', true);
         }
     } else {
-        $shopInfo = User::getShopInfo('', true);
+        if ($companyUuid) {
+            if (!($shopInfo = Cache::get('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid)) || !Cache::get('{firstshop}_' . 'first_shop_info')) {
+                $shopInfo = User::getShopInfo('', true);
+                Cache::tag('common_get_settingLanguages')->set('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid, $shopInfo);
+            }
+        } else {
+            $shopInfo = User::getShopInfo('', true);
+        }
     }
     $companyUuid = $shopInfo['company_uuid'] ?? 0;
     if (!$languages = Cache::get('{common_get_settingLanguages}_' . 'common_setting_languages' . $companyUuid)) {

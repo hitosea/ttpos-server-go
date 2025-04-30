@@ -18,6 +18,7 @@ type UpdateCashBalanceParam struct {
 	CashDeposit    float64 // 中途存入金额
 	Scene          int     // 场景, 1-销售订单支付 2-退货退款 3-取消付款 4-中途取出 5-中途存入 6-会员充值 7-结账找零 8-交班
 	OrderUuid      uint64  // 订单ID,场景为1时填销售订单uuid、场景为6时填充值订单uuid
+	Remark         string  // 备注
 }
 
 type ICashBoxSrv interface {
@@ -76,6 +77,7 @@ func (s *cashBoxSrv) UpdateBalance(ctx context.Context, param UpdateCashBalanceP
 	log := model.CashBoxLog{
 		Scene:  param.Scene,
 		Amount: param.Amount,
+		Remark: param.Remark,
 	}
 
 	switch param.Scene {
