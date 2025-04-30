@@ -3,6 +3,7 @@
 namespace app\common\model\shop;
 
 use help\DateHelp;
+use help\HttpHelp;
 use think\facade\Cache;
 use app\common\library\helper;
 use app\common\model\BaseModel;
@@ -10,11 +11,11 @@ use app\shop\model\product\Category;
 use app\common\exception\BaseException;
 use app\common\model\order\OrderRefund;
 use app\common\enum\order\OrderStatusEnum;
+use app\common\enum\order\OrderPayTypeEnum;
 use app\common\enum\order\OrderPayStatusEnum;
 use app\common\model\order\Order as OrderModel;
 use app\common\repositories\OrderBusinessDataRepository;
 use app\common\model\order\OrderProduct as OrderProductModel;
-use help\HttpHelp;
 
 /**
  * 用户交班记录模型
@@ -62,10 +63,13 @@ class UserShiftLog extends BaseModel
         $value = $value ? json_decode($value, true) : [];
         if ($value) {
             foreach ($value as $key => $v) {
-                // if ($v['pay_type'] == OrderPayTypeEnum::FREE_PAY) {
-                //     $value[$key]['pay_type_name'] = OrderPayTypeEnum::data($v['pay_type'], 2)['name'] ?? '';
-                // }
-                $value[$key]['pay_type_name'] = __($value[$key]['name']);
+                if (isset($value[$key]['name'])) {
+                    $value[$key]['pay_type_name'] = __($value[$key]['name']);
+                } else {
+                    if ($v['pay_type'] == OrderPayTypeEnum::FREE_PAY) {
+                        $value[$key]['pay_type_name'] = OrderPayTypeEnum::data($v['pay_type'], 2)['name'] ?? '';
+                    }
+                }
             }
         }
         return $value;

@@ -343,7 +343,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 	} else {
 		// 模版 一
 		img.SetFontSize(28)
-		img.AppendText("交班单")
+		img.AppendText(t.base.Translate("交班单"))
 		img.SetFontSize(20)
 		img.LineFeed(1)
 		img.LineFeed(1, 24)
@@ -420,9 +420,9 @@ func (t *handoverImgTemplate) GetPrintContent(
 				img.SetAlignment(pkg.AlignLeft)
 				img.SetFontWeight(2)
 				if t.base.Lang == "ja" {
-					img.AppendText(fmt.Sprintf("%.1f%s%s", percentage.TaxRate, "%", t.base.Translate("的对象")))
+					img.AppendText(fmt.Sprintf("%s%s", t.base.Amount(percentage.TaxRate), "%"))
 				} else {
-					img.AppendText(fmt.Sprintf("VAT (%.1f%%)", percentage.TaxRate))
+					img.AppendText(fmt.Sprintf("VAT (%s%%)", t.base.Amount(percentage.TaxRate)))
 				}
 				img.SetFontWeight(1)
 				img.LineFeed(1)
