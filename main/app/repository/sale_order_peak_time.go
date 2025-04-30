@@ -78,7 +78,7 @@ func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBi
 			Hour:        hour,
 			CashierUuid: saleBill.CashierUuid,
 			Num:         1,
-			Amount:      saleBill.Amount,
+			Amount:      saleBill.PaymentAmount,
 		}).Error; err != nil {
 			return errors.WithMessage(err)
 		}
