@@ -66,7 +66,7 @@ func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBi
 		// 更新高峰时段
 		updateData := map[string]any{
 			"num":    utils.IfInt(recordType == "inc", saleOrderPeakTime.Num+1, descNum),
-			"amount": utils.IfFloat64(recordType == "inc", saleOrderPeakTime.Amount+saleBill.Amount, descAmount),
+			"amount": utils.IfFloat64(recordType == "inc", saleOrderPeakTime.Amount+saleBill.PaymentAmount, descAmount),
 		}
 		if err := r.db.Model(&model.SaleOrderPeakTime{}).Where(condition).Updates(updateData).Error; err != nil {
 			return errors.WithMessage(err)
