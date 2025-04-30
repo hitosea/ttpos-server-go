@@ -16,6 +16,7 @@ import (
 type ISaleOrderPeakTimeRepo interface {
 	Record(recordType string, saleBill *model.SaleBill, refundMoney float64, timezone ...string) error
 	GetMaxRecord(timezone string, startTime, endTime uint, cashierUuid uint64) ([]business_data_resp.PeakHour, error)
+	CreateSaleOrderPeakTime(saleOrderPeakTime model.SaleOrderPeakTime) error
 }
 
 type saleOrderPeakTimeRepo struct {
@@ -178,4 +179,12 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime
 	}
 	//
 	return peakHours, nil
+}
+
+// CreateSaleOrderPeakTime 创建高峰时段
+func (r *saleOrderPeakTimeRepo) CreateSaleOrderPeakTime(saleOrderPeakTime model.SaleOrderPeakTime) error {
+	if err := r.db.Create(&saleOrderPeakTime).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }
