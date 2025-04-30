@@ -202,7 +202,7 @@ func (s *productSrv) GetProductCategoryList(dbId uint64) (product_resp.ProductCa
 		if category.ParentUuid == 0 {
 			children := make([]product_resp.ProductCategory, 0)
 			for _, child := range categories {
-				if child.ParentUuid == category.Uuid {
+				if child.ParentUuid != 0 && child.ParentUuid == category.Uuid {
 					children = append(children, product_resp.ProductCategory{
 						Uuid:        child.Uuid,
 						LocaleName:  s.localeSrv.GetLocaleNames(child.MultiLanguageName),

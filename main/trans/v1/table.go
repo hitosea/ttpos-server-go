@@ -66,10 +66,6 @@ func (s *TableService) ConvertTable() error {
 		} else {
 			isDisable = 1
 		}
-		status := 0
-		if table.Status == 30 {
-			status = 1
-		}
 		desk := model.Desk{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(table.TableID),
@@ -80,7 +76,6 @@ func (s *TableService) ConvertTable() error {
 			RegionUuid:  uint64(table.AreaID),
 			TypeUuid:    uint64(table.TypeID),
 			Sort:        uint(table.Sort),
-			Status:      uint(status),
 			IsDisable:   isDisable,
 			QrcodeToken: table.QrcodeValue,
 		}
