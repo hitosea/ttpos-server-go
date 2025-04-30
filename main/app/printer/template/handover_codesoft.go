@@ -441,9 +441,9 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 	printer.LineFeed(4)
 	printer.CutPaper(true)
 	// 打开钱箱
-	// if openMoneybox {
-	// 	printer.AppendText("\x10\x14\x01\x00\x01")
-	// }
+	if openMoneybox {
+		printer.AppendText("\x10\x14\x01\x00\x01")
+	}
 	//
 	return printer.GetOrderData()
 }

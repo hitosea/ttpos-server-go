@@ -55,6 +55,7 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 
 	//  创建打印机实例
 	printer := pkg.NewPrinter(567)
+	printer.RestoreDefaultSettings()
 	printer.LineFeed()
 	printer.SetAlignment(pkg.AlignCenter)
 	printer.AppendText(t.base.StoreSetting.Name + "\n")
