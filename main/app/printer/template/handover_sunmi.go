@@ -388,9 +388,9 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 			printer.SetAlignment(pkg.AlignLeft)
 			printer.SetPrintModes(true, false, false)
 			if t.base.Lang == "ja" {
-				printer.AppendText(fmt.Sprintf("%.1f%s%s", percentage.TaxRate, "%", t.base.Translate("的对象")))
+				printer.AppendText(fmt.Sprintf("%s%s%s", t.base.Amount(percentage.TaxRate), "%", t.base.Translate("的对象")))
 			} else {
-				printer.AppendText(fmt.Sprintf("VAT (%.1f%%)", percentage.TaxRate))
+				printer.AppendText(fmt.Sprintf("VAT (%s%%)", t.base.Amount(percentage.TaxRate)))
 			}
 			printer.SetPrintModes(false, false, false)
 			printer.LineFeed(1)
@@ -599,9 +599,9 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 	printer.LineFeed(4)
 	printer.CutPaper(true)
 	// 打开钱箱
-	if openMoneybox {
-		printer.AppendText("\x1B\x70\x00\x19\xFA")
-	}
+	// if openMoneybox {
+	// 	printer.AppendText("\x1B\x70\x00\x19\xFA")
+	// }
 	//
 	return printer.GetOrderData()
 }
