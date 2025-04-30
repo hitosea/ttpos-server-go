@@ -184,6 +184,7 @@ class Spec extends SpecModel
                         'product_flavor_uuid' => $spec_id,
                         'name' => $this['name'],
                         'stock_num' => $min_stock_num,
+                        'status' => 1,
                         'create_time' => time(),
                         'update_time' => time(),
                     ];

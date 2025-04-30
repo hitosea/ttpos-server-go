@@ -108,6 +108,7 @@ func (r *BuffetRepoImpl) GetBuffetListInDeskOpen(pageNo, pageSize int) ([]*model
 		}),
 		CommonRepo.WhereByStatus(1),
 		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.SortWithSort("ASC"),
 	)
 }
 

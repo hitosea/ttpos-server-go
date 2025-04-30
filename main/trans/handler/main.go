@@ -45,7 +45,7 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 	// 设置
 	{
 		// 设置
-		settingService := v1.NewSettingService(sourceDB, targetDB)
+		settingService := v1.NewSettingService(sourceDB, targetDB, targetSassDB, targetCompanyUuid)
 		err = settingService.ConvertSetting()
 		if err != nil {
 			return err
@@ -96,25 +96,38 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 			return err
 		}
 
+		// 员工交班记录
+		shopUserShiftLog := v1.NewShopUserShiftLogService(sourceDB, targetDB)
+		err = shopUserShiftLog.ConvertShopUserShiftLog()
+		if err != nil {
+			return err
+		}
 	}
 
 	// 打印管理
 	{
-		// 打印机
+		// 商品打印标签 PrinterTag
+		productPrintLabelService := v1.NewProductPrintLabelService(sourceDB, targetDB)
+		err = productPrintLabelService.ConvertProductPrintLabel()
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+
+		// 打印机 Printer
 		printerService := v1.NewPrinterService(sourceDB, targetDB)
 		err = printerService.ConvertPrinter()
 		if err != nil {
 			return err
 		}
 
-		// 打印机模板
+		// 打印机模板 PrinterTemplate
 		printerTemplateService := v1.NewPrinterTemplateService(sourceDB, targetDB)
 		err = printerTemplateService.ConvertPrinterTemplate()
 		if err != nil {
 			return err
 		}
 
-		// 商品打印
+		// 商品打印 ProductPrinterProductItem ProductPrinterItem ProductPrinterRegion ProductPrinter
 		supplierPrintingService := v1.NewSupplierPrintingService(sourceDB, targetDB)
 		err = supplierPrintingService.ConvertSupplierPrinting()
 		if err != nil {
@@ -122,13 +135,22 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		}
 	}
 
+	// 必点商品
+	orderSchemeService := v1.NewOrderSchemeService(sourceDB, targetDB)
+	err = orderSchemeService.ConvertOrderScheme()
+	if err != nil {
+		return err
+	}
+
 	// 会员
 	{
+		// 会员等级
 		userGradeService := v1.NewUserGradeService(sourceDB, targetDB)
 		err = userGradeService.ConvertUserGrade()
 		if err != nil {
 			return err
 		}
+
 		// 会员
 		userService := v1.NewUserService(sourceDB, targetDB)
 		err = userService.ConvertUser()
@@ -228,13 +250,6 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		return errors.WithMessage(err)
 	}
 
-	// 商品打印标签
-	productPrintLabelService := v1.NewProductPrintLabelService(sourceDB, targetDB)
-	err = productPrintLabelService.ConvertProductPrintLabel()
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
 	// 规格
 	specService := v1.NewSpecService(sourceDB, targetDB)
 	err = specService.ConvertSpec()
@@ -280,6 +295,34 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 	// 税种
 	taxCategoryService := v1.NewTaxCategoryService(sourceDB, targetDB)
 	err = taxCategoryService.ConvertTaxCategory()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 文件
+	fileService := v1.NewUploadFileService(sourceDB, targetDB)
+	err = fileService.ConvertUploadFile()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 文件组
+	uploadGroupService := v1.NewUploadGroupService(sourceDB, targetDB)
+	err = uploadGroupService.ConvertUploadGroup()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 用户充值订单
+	userRechargeOrderService := v1.NewUserRechargeOrderService(sourceDB, targetDB)
+	err = userRechargeOrderService.ConvertUserRechargeOrder()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 高峰时段
+	orderPeakTimeService := v1.NewOrderPeakTimeService(sourceDB, targetDB)
+	err = orderPeakTimeService.ConvertOrderPeakTime()
 	if err != nil {
 		return errors.WithMessage(err)
 	}

@@ -42,7 +42,7 @@ func testConvertShopUser() {
 	if err != nil {
 		panic(err)
 	}
-	shopUserService := ShopUserService{db: db, targetDB: targetDB, originCommpanyUuid: 12122233333}
+	shopUserService := ShopUserService{db: db, targetDB: targetDB, targetCompanyUuid: 12122233333}
 	err = shopUserService.ConvertShopUser()
 	if err != nil {
 		panic(err)

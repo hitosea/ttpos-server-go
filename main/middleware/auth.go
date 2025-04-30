@@ -23,6 +23,13 @@ import (
 	"ttpos-server-go/app/errors"
 )
 
+var (
+	authWhiteList = []string{
+		"/api/v1/cashier/old/order/cash/balance",
+		"/api/v1/cashier/old/order/member/balance",
+	}
+)
+
 func Auth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -114,11 +121,12 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 	}
 
 	urlPath := c.Request.URL.Path
-	if !regexp.MustCompile(`^/api/v\d+/` + claims.Source).Match([]byte(urlPath)) {
+	if !slices.Contains(authWhiteList, urlPath) && !regexp.MustCompile(`^/api/v\d+/`+claims.Source).Match([]byte(urlPath)) {
 		helper.Fail(c, constant.CodeAccessDenied, "用户信息错误")
 		c.Abort()
 		return
 	}
+
 	if strings.HasSuffix(urlPath, "/refresh_token") && !claims.IsRefreshToken {
 		helper.Fail(c, constant.CodeTokenInvalid, "无效的refresh_token")
 		c.Abort()

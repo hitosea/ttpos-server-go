@@ -23,7 +23,7 @@ type IPaymentMethodRepo interface {
 	GetPaymentMethod(opts ...DBOption) model.PaymentMethod
 	GetPaymentMethodError(opts ...DBOption) (*model.PaymentMethod, error)
 	GetPaymentMethodByUuid(uuid uint64) (*model.PaymentMethod, error)
-	GetPaymentMethods(opts ...DBOption) []model.PaymentMethod
+	GetPaymentMethodList(opts ...DBOption) []*model.PaymentMethod
 	GetPaymentMethodsByCtx(ctx context.Context) []*model.PaymentMethod // 获取收银机支付页面的支付方式列表
 
 	CreatePaymentMethod(paymentMethod model.PaymentMethod) error // 创建支付方式
@@ -63,17 +63,6 @@ func (r *paymentMethodRepo) GetPaymentMethod(opts ...DBOption) model.PaymentMeth
 	return paymentMethod
 }
 
-// GetPaymentMethods  获取支付方式
-func (r *paymentMethodRepo) GetPaymentMethods(opts ...DBOption) []model.PaymentMethod {
-	var paymentMethods []model.PaymentMethod
-	db := r.db.Model(&model.PaymentMethod{}).Scopes(NotDeleted)
-	for _, opt := range opts {
-		db = opt(db)
-	}
-	db.Order("CAST(sort AS UNSIGNED), create_time desc").Find(&paymentMethods)
-	return paymentMethods
-}
-
 // GetPaymentMethodList  获取支付方式
 func (r *paymentMethodRepo) GetPaymentMethodList(opts ...DBOption) []*model.PaymentMethod {
 	var paymentMethods []*model.PaymentMethod
@@ -81,7 +70,7 @@ func (r *paymentMethodRepo) GetPaymentMethodList(opts ...DBOption) []*model.Paym
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.Find(&paymentMethods)
+	db.Order("CAST(sort AS UNSIGNED), create_time desc").Find(&paymentMethods)
 	return paymentMethods
 }
 

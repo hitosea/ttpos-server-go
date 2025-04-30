@@ -503,6 +503,7 @@ class User extends BaseModel
                 'value' => $points,
                 'describe' => vsprintf(PointsLogSceneEnum::data()[$scene]['describe'], [$storeUserName]),
                 'remark' => $data['remark'] ?? '',
+                'processed' => 1,
             ]);
         });
         event('UserGrade', $this['uuid']);
@@ -577,6 +578,7 @@ class User extends BaseModel
                 'money' => $giftMoney,
                 'gift_money' => $giftMoney,
                 'remark' => $data['remark'] ?? '',
+                'processed' => 1,
             ], [$storeUserName]);
         });
         return true;

@@ -431,10 +431,19 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 func (s *Srv) GetBusinessSetting(ctx context.Context) (setting.Business, error) {
 	st := s.getSettingByKey(ctx, constant.SettingBusiness)
 	var business setting.Business
+
+	// 兼容v1.0版本dish_card_style_time字段为数字的情况
+	{
+		// 正则表达式用于匹配 dish_card_style_time 后面的任意数字
+		re := regexp.MustCompile(`"dish_card_style_time":(\s*)(\d+)`)
+		// 替换为带引号的字符串数字
+		st.Values = re.ReplaceAllString(st.Values, `"dish_card_style_time":"$2"`)
+	}
+
 	err := json.Unmarshal([]byte(st.Values), &business)
 	if err != nil {
 		ctx.Log().Error("解析门店-业务设置失败", zap.Error(err))
-		return business, errors.New("解析门店-业务设置失败")
+		return business, errors.WithMessage(errors.New("解析门店-业务设置失败"), err.Error())
 	}
 	// 门店业务-过滤列表，使用默认
 	business.ZeroingMethodList = nil
@@ -497,6 +506,64 @@ func (s *Srv) GetBuffetSetting(ctx context.Context, companySetting model.Company
 
 }
 
+// 转换平板设置指定字段类型
+func (s *Srv) convertTabletFormat(oldVal string) ([]byte, error) {
+	tabletMap := map[string]any{}
+	err := json.Unmarshal([]byte(oldVal), &tabletMap)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := tabletMap["is_call_service"]; ok {
+		switch v.(type) {
+		case float64:
+			tabletMap["is_call_service"] = fmt.Sprintf("%.0f", v)
+		}
+	}
+	if v, ok := tabletMap["is_customer_order"]; ok {
+		switch v.(type) {
+		case float64:
+			tabletMap["is_customer_order"] = fmt.Sprintf("%.0f", v)
+		}
+	}
+	if v, ok := tabletMap["is_voice_remind"]; ok {
+		switch v.(type) {
+		case float64:
+			tabletMap["is_voice_remind"] = fmt.Sprintf("%.0f", v)
+		}
+	}
+	if v, ok := tabletMap["is_show_sold_out"]; ok {
+		switch v.(type) {
+		case float64:
+			tabletMap["is_show_sold_out"] = fmt.Sprintf("%.0f", v)
+		}
+	}
+	if v, ok := tabletMap["is_buffet_order_limit"]; ok {
+		switch v.(type) {
+		case float64:
+			tabletMap["is_buffet_order_limit"] = fmt.Sprintf("%.0f", v)
+		}
+	}
+	if v, ok := tabletMap["is_order_limit"]; ok {
+		switch v.(type) {
+		case float64:
+			tabletMap["is_order_limit"] = fmt.Sprintf("%.0f", v)
+		}
+	}
+	if v, ok := tabletMap["buffet_order_limit"]; ok {
+		switch v.(type) {
+		case []any:
+			tabletMap["buffet_order_limit"] = struct{}{}
+		}
+	}
+	if v, ok := tabletMap["order_limit"]; ok {
+		switch v.(type) {
+		case []any:
+			tabletMap["order_limit"] = struct{}{}
+		}
+	}
+	return json.Marshal(tabletMap)
+}
+
 // GetTabletSetting 平板端设置
 func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageItem) (setting.Tablet, error) {
 	st := s.getSettingByKey(ctx, constant.SettingTablet)
@@ -511,12 +578,12 @@ func (s *Srv) GetTabletSetting(ctx context.Context, languageList []dto.LanguageI
 			return tablet, errors.WithMessage(err)
 		}
 	}
-	if strings.Contains(st.Values, "\"buffet_order_limit\":[]") {
-		st.Values = strings.Replace(st.Values, "\"buffet_order_limit\":[]", "\"buffet_order_limit\":{}", -1)
+	val, err := s.convertTabletFormat(st.Values)
+	if err != nil {
+		ctx.Log().Error("解析各端-平板端设置失败", zap.Error(err))
+		return tablet, errors.New("解析各端-平板端设置失败")
 	}
-	if strings.Contains(st.Values, "\"order_limit\":[]") {
-		st.Values = strings.Replace(st.Values, "\"order_limit\":[]", "\"order_limit\":{}", -1)
-	}
+	st.Values = string(val)
 	err = json.Unmarshal([]byte(st.Values), &tablet)
 	if err != nil {
 		ctx.Log().Error("解析各端-平板端设置失败", zap.Error(err))
@@ -755,8 +822,8 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 		var cashier setting.Cashier
 		err = json.Unmarshal(modifiedJSON, &cashier)
 		if err != nil {
-			ctx.Log().Error("解析各端-收银机设置失败 - 02", zap.Error(err))
-			return assistant, errors.New("解析各端-收银机设置失败 - 02")
+			ctx.Log().Error("解析各端-点餐助手设置失败 - 02", zap.Error(err))
+			return assistant, errors.New("解析各端-点餐助手设置失败 - 02")
 		}
 		defaultAssistant.IsShowAssistantSoldOut = cashier.IsShowAssistantSoldOut
 	} else {
@@ -924,8 +991,8 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 		var cashier setting.Cashier
 		err = json.Unmarshal(modifiedJSON, &cashier)
 		if err != nil {
-			ctx.Log().Error("解析各端-收银机设置失败 - 02", zap.Error(err))
-			return defaultH5, errors.New("解析各端-收银机设置失败 - 02")
+			ctx.Log().Error("解析各端-获取H5设置 - 02", zap.Error(err))
+			return defaultH5, errors.New("解析各端-获取H5设置 - 02")
 		}
 		defaultH5.IsShowScanSoldOut = cashier.IsShowScanSoldOut
 	} else {
@@ -998,12 +1065,36 @@ func (s *Srv) GetCashierAd(ctx context.Context) (resp.Ads, error) {
 	}, nil
 }
 
+// 转换服务费指定字段类型
+func (s *Srv) convertServiceFeeFormat(oldVal string) ([]byte, error) {
+	serviceFeeMap := map[string]any{}
+	err := json.Unmarshal([]byte(oldVal), &serviceFeeMap)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := serviceFeeMap["service_charge"]; ok {
+		switch v.(type) {
+		case float64:
+			serviceFeeMap["service_charge"] = fmt.Sprintf("%f", v)
+		}
+	}
+	return json.Marshal(serviceFeeMap)
+}
+
 // GetServiceFeeSetting 获取服务费设置
 func (s *Srv) GetServiceFeeSetting(ctx context.Context) (setting.ServiceCharge, error) {
 	st := s.getSettingByKey(ctx, constant.SettingServiceCharge)
 	var serviceFee setting.ServiceCharge
-	err := json.Unmarshal([]byte(st.Values), &serviceFee)
+	// 修改类型
+	newVal, err := s.convertServiceFeeFormat(st.Values)
 	if err != nil {
+		ctx.Log().Error("解析服务费设置失败", zap.Error(err))
+		return serviceFee, errors.New("解析服务费设置失败")
+	}
+	st.Values = string(newVal)
+	err = json.Unmarshal([]byte(st.Values), &serviceFee)
+	if err != nil {
+		ctx.Log().Error("解析服务费设置失败", zap.Error(err))
 		return serviceFee, errors.New("解析服务费设置失败")
 	}
 	if serviceFee.IsOpen == "0" {
@@ -1016,6 +1107,7 @@ func (s *Srv) GetServiceFeeSetting(ctx context.Context) (setting.ServiceCharge, 
 		defaultServiceFee.ApplyScopeTableList = make([]int64, 0)
 	}
 	if err != nil {
+		ctx.Log().Error("解析服务费设置失败", zap.Error(err))
 		return serviceFee, errors.New("解析服务费设置失败")
 	}
 	return defaultServiceFee, nil

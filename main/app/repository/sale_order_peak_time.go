@@ -16,6 +16,7 @@ import (
 type ISaleOrderPeakTimeRepo interface {
 	Record(recordType string, saleBill *model.SaleBill, refundMoney float64, timezone ...string) error
 	GetMaxRecord(timezone string, startTime, endTime uint, cashierUuid uint64) ([]business_data_resp.PeakHour, error)
+	CreateSaleOrderPeakTime(saleOrderPeakTime model.SaleOrderPeakTime) error
 }
 
 type saleOrderPeakTimeRepo struct {
@@ -65,7 +66,7 @@ func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBi
 		// 更新高峰时段
 		updateData := map[string]any{
 			"num":    utils.IfInt(recordType == "inc", saleOrderPeakTime.Num+1, descNum),
-			"amount": utils.IfFloat64(recordType == "inc", saleOrderPeakTime.Amount+saleBill.Amount, descAmount),
+			"amount": utils.IfFloat64(recordType == "inc", saleOrderPeakTime.Amount+saleBill.PaymentAmount, descAmount),
 		}
 		if err := r.db.Model(&model.SaleOrderPeakTime{}).Where(condition).Updates(updateData).Error; err != nil {
 			return errors.WithMessage(err)
@@ -77,7 +78,7 @@ func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBi
 			Hour:        hour,
 			CashierUuid: saleBill.CashierUuid,
 			Num:         1,
-			Amount:      saleBill.Amount,
+			Amount:      saleBill.PaymentAmount,
 		}).Error; err != nil {
 			return errors.WithMessage(err)
 		}
@@ -178,4 +179,12 @@ func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime
 	}
 	//
 	return peakHours, nil
+}
+
+// CreateSaleOrderPeakTime 创建高峰时段
+func (r *saleOrderPeakTimeRepo) CreateSaleOrderPeakTime(saleOrderPeakTime model.SaleOrderPeakTime) error {
+	if err := r.db.Create(&saleOrderPeakTime).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }

@@ -6,7 +6,6 @@ use help\ImgHelp;
 use help\DiskHelp;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
-use app\common\model\supplier\Supplier;
 use app\common\enum\settings\SettingEnum;
 use app\common\model\app\App;
 use app\shop\model\settings\Setting as SettingModel;

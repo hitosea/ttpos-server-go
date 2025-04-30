@@ -79,6 +79,20 @@ func (s *PayTypeService) GetPayTypeList() ([]*PayType, error) {
 	return payTypes, err
 }
 
+func (s *PayTypeService) GetUploadFileId(filePath string) uint64 {
+	idx := strings.LastIndex(filePath, "/")
+	if idx == -1 {
+		return 0
+	}
+	keyword := filePath[idx+1:]
+	if keyword == "" {
+		return 0
+	}
+	var uploadFile UploadFile
+	s.db.Where("save_name like ?", "%"+keyword+"%").Debug().Find(&uploadFile)
+	return uploadFile.FileID
+}
+
 func (s *PayTypeService) ConvertPayType() error {
 	payTypes, err := s.GetPayTypeList()
 	if err != nil {
@@ -90,6 +104,10 @@ func (s *PayTypeService) ConvertPayType() error {
 		if payType.Value == -1 {
 			continue
 		}
+		remark := payType.Remark
+		if remark == "" {
+			remark = payType.Name
+		}
 		payType := model.PaymentMethod{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(payType.ID),
@@ -99,16 +117,17 @@ func (s *PayTypeService) ConvertPayType() error {
 			},
 			Name:                 payType.Name,
 			Code:                 payType.Value,
-			PaymentName:          payType.Remark,
+			PaymentName:          remark,
 			Source:               payType.Source,
-			LogoFileUuid:         0,
-			QrcodeFileUuid:       0,
+			LogoFileUuid:         s.GetUploadFileId(payType.Img),
+			QrcodeFileUuid:       s.GetUploadFileId(payType.Qrcode),
 			FeePercent:           float64(payType.Fee),
 			IsShowCashier:        payType.IsShowCashier(),
 			IsShowAssistant:      payType.IsShowAssistant(),
 			IsShowMemberRecharge: payType.IsShowMemberRecharge(),
 			Status:               payType.Status,
 			Sort:                 payType.GetSort(),
+			DefaultImg:           payType.Img,
 		}
 		if err := repository.NewPaymentMethodRepo(s.targetDB).CreatePaymentMethod(payType); err != nil {
 			return err

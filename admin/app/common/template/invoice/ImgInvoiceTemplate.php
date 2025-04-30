@@ -22,7 +22,8 @@ class ImgInvoiceTemplate  extends BaseTemplate
      */
     public function create($order, $printType)
     {
-        $template = PrinterTemplate::getTemplate(7);
+        $template = (new PrinterTemplate([], request()->newAppId))->where('id', '=', 7)->value('template');
+
         $settingStore = $this->setting[SettingEnum::STORE]['values'];
         $shopName = $settingStore['name'] ?? '';
         

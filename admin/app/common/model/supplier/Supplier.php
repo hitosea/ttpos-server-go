@@ -216,7 +216,7 @@ class Supplier extends BaseModel
      */
     public static function getWhiteBackgroundWithBlackTextLogoPath($appId, $logoUrl = '')
     {
-        $savePath = public_path("uploads/shop$appId") . 'white_background_with_black_text_logo.png';
+        $savePath = public_path("uploads/shop$appId") . 'white_background_text_' . basename($logoUrl);
         // 判断图片是否存在
         if (!file_exists($savePath) && $logoUrl) {
             ImageHelp::whiteBackgroundWithBlackText($logoUrl, $savePath);

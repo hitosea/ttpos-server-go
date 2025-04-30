@@ -31,19 +31,19 @@ class QueueHelp
      */
     public function while()
     {
-        Cache::hset($this->cacheKey, $this->queueUuid, time());
-        while (($firstKey = (array_keys(Cache::hgetall($this->cacheKey))[0] ?? '')) != $this->queueUuid) {
-            if ($firstKey) {
-                $firstKeyTIme = Cache::hget($this->cacheKey, $firstKey);
-                if ((time() - $firstKeyTIme) > 5) {
-                    Cache::hdel($this->cacheKey, $firstKey);
-                }
-            } else {
-                Cache::hdel($this->cacheKey, $firstKey);
-            }
-            usleep(5000); 
-        }
-        return $this;
+        // Cache::hset($this->cacheKey, $this->queueUuid, time());
+        // while (($firstKey = (array_keys(Cache::hgetall($this->cacheKey))[0] ?? '')) != $this->queueUuid) {
+        //     if ($firstKey) {
+        //         $firstKeyTIme = Cache::hget($this->cacheKey, $firstKey);
+        //         if ((time() - $firstKeyTIme) > 5) {
+        //             Cache::hdel($this->cacheKey, $firstKey);
+        //         }
+        //     } else {
+        //         Cache::hdel($this->cacheKey, $firstKey);
+        //     }
+        //     usleep(5000); 
+        // }
+        // return $this;
     }
 
     /**

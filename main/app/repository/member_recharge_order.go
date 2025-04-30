@@ -26,6 +26,7 @@ type IMemberRechargeOrderRepo interface {
 	GetOrderCount(opts ...DBOption) (int64, error)                                                                   // 获取订单数量
 	PaginateGetRechargeOrder(pageNo int, pageSize int, opts ...DBOption) ([]model.MemberRechargeOrder, int64, error) // 分页获取充值订单
 	Create(rechargeOrder model.MemberRechargeOrder) (model.MemberRechargeOrder, error)                               // 创建充值订单
+	CreateOldRecord(rechargeOrder model.MemberRechargeOrder) error                                                   // 创建充值订单,仅用于迁移数据
 	Update(uuid uint64, vars map[string]any) error                                                                   // 更新充值订单
 	GetRechargeOrderByUuid(uuid uint64) (model.MemberRechargeOrder, error)                                           // 通过Uuid获取充值订单
 	GetRechargeOrderAllInfo(uuid uint64) model.MemberRechargeOrder                                                   // 获取充值订单所有信息
@@ -234,6 +235,51 @@ func (r *memberRechargeOrderRepo) Update(uuid uint64, vars map[string]any) error
 func (r *memberRechargeOrderRepo) Create(rechargeOrder model.MemberRechargeOrder) (model.MemberRechargeOrder, error) {
 	err := r.db.Model(&model.MemberRechargeOrder{}).Create(&rechargeOrder).Error
 	return rechargeOrder, errors.WithMessage(err)
+}
+
+// CreateOldRecord 创建充值订单,仅用于迁移数据
+func (r *memberRechargeOrderRepo) CreateOldRecord(obj model.MemberRechargeOrder) error {
+	rechargeOrder := obj
+	rechargeOrder.SetNil()
+	if err := r.db.Model(&model.MemberRechargeOrder{}).Create(&rechargeOrder).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 创建支付订单
+	for _, paymentOrder := range obj.PaymentOrders {
+		paymentOrder.SetNil()
+		if err := r.db.Model(&model.PaymentOrder{}).Create(&paymentOrder).Error; err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+
+	// 创建操作日志
+	for _, operationLog := range obj.RechargeOrderOperationLogs {
+		operationLog.SetNil()
+		if err := r.db.Model(&model.MemberRechargeOrderOperationLog{}).Create(&operationLog).Error; err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+
+	// 创建退货单
+
+	for _, returnOrder := range obj.ReturnOrders {
+		returnOrder.SetNil()
+		if err := r.db.Model(&model.ReturnOrder{}).Create(&returnOrder).Error; err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+
+	// 创建退货单金额
+	for _, returnOrder := range obj.ReturnOrders {
+		for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
+			returnOrderAmount.SetNil()
+			if err := r.db.Model(&model.ReturnOrderAmount{}).Create(&returnOrderAmount).Error; err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+	}
+	return nil
 }
 
 // GetRechargeOrderByUuid 通过Uuid获取充值订单

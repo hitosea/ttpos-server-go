@@ -17,6 +17,10 @@ type IProductMustPlanRepo interface {
 	GetProductMustPlanListByUuids(uuids []uint64) ([]model.ProductMustPlan, error)
 	GetProductMustPlanByRegionUuid(regionUuid uint64) ([]model.ProductMustPlan, error)
 	GetProductMustPlanListDeskInfos(ctx context.Context) ([]*model.ProductMustPlan, error)
+
+	CreateProductMustPlan(plan *model.ProductMustPlan) (*model.ProductMustPlan, error)
+	CreateProductMustPlanItem(planItems []model.ProductMustPlanItem) error
+	CreateProductMustPlanRegion(planRegions []model.ProductMustPlanRegion) error
 }
 
 func NewProductMustPlanRepo(db *gorm.DB) IProductMustPlanRepo {
@@ -72,6 +76,24 @@ func (r *ProductMustPlanRepoImpl) GetProductMustPlanList(ctx context.Context, op
 	}
 
 	return productMustPlans, nil
+}
+
+// CreateProductMustPlan 创建商品必点方案
+func (r *ProductMustPlanRepoImpl) CreateProductMustPlan(plan *model.ProductMustPlan) (*model.ProductMustPlan, error) {
+	err := r.db.Create(plan).Error
+	return plan, err
+}
+
+// CreateProductMustPlanItem 创建商品必点方案商品
+func (r *ProductMustPlanRepoImpl) CreateProductMustPlanItem(planItems []model.ProductMustPlanItem) error {
+	err := r.db.Create(&planItems).Error
+	return err
+}
+
+// CreateProductMustPlanRegion 创建商品必点方案区域
+func (r *ProductMustPlanRepoImpl) CreateProductMustPlanRegion(planRegions []model.ProductMustPlanRegion) error {
+	err := r.db.Create(&planRegions).Error
+	return err
 }
 
 // 获取搜索必点商品方案列表的数据信息

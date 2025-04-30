@@ -107,14 +107,16 @@ class ErpMonthlyStatistics extends BaseModel
     // 获取月末库存
     public static function getMonthEndStock($params)
     {
+        $now = time();
+        $nowYear = date("Y", $now);
+        $nowMonth = date("m", $now);
         if ($params['date']) {
             $timestamp = strtotime($params['date']);
             $year = date("Y", $timestamp);
             $month = date("m", $timestamp);
         } else {
-            $now = time();
-            $year = date("Y", $now);
-            $month = date("m", $now);
+            $year = $nowYear;
+            $month = $nowMonth;
         }
         // 如果月末数据未生成，则显示当前所有规格和材料的库存
         $total = self::where('year', $year)
@@ -122,9 +124,10 @@ class ErpMonthlyStatistics extends BaseModel
             ->where('scene', self::MONTH_END)
             ->value('stock') ?? 0;
 
-        if ($total == 0) {
+        if ($total == 0 && $year == $nowYear && $month == $nowMonth) {
             $total = (new self())->getTotalStockNum();
         }
+
         return floatval($total);
     }
 
@@ -229,7 +232,6 @@ class ErpMonthlyStatistics extends BaseModel
             $monthEntryStock = 0; // 月入库存数
             if ($record->sku) {
                 $productName .= ' - ' . $record->sku->spec_name_text;
-
                 foreach ($record->sku->erpMonthlyProductStatistics as $item) {
                     $monthStartStock = helper::bcadd($monthStartStock, $item->stock);
                 }
