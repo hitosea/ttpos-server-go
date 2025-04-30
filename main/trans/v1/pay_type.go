@@ -104,6 +104,10 @@ func (s *PayTypeService) ConvertPayType() error {
 		if payType.Value == -1 {
 			continue
 		}
+		remark := payType.Remark
+		if remark == "" {
+			remark = payType.Name
+		}
 		payType := model.PaymentMethod{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(payType.ID),
@@ -113,7 +117,7 @@ func (s *PayTypeService) ConvertPayType() error {
 			},
 			Name:                 payType.Name,
 			Code:                 payType.Value,
-			PaymentName:          payType.Remark,
+			PaymentName:          remark,
 			Source:               payType.Source,
 			LogoFileUuid:         s.GetUploadFileId(payType.Img),
 			QrcodeFileUuid:       s.GetUploadFileId(payType.Qrcode),

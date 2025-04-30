@@ -4,9 +4,8 @@ namespace app\common\service\order;
 
 use app\common\model\shop\BindRecord;
 use app\common\enum\settings\SettingEnum;
-use app\common\model\settings\PrinterLog;
 use app\common\enum\settings\PrinterTypeEnum;
-use app\shop\model\order\Order as OrderModel;
+use app\shop\model_old\order\Order as OrderModel;
 use app\common\template\invoice\ImgInvoiceTemplate;
 use app\common\template\invoice\SunmiInvoiceTemplate;
 use app\common\model\settings\Setting as SettingModel;
@@ -28,11 +27,11 @@ class OrderInvoicePrinterService
     /**
      * 收银打印
      */
-    public function cashierPrint($param = [], $isQueue = true, $deviceId = '')
+    public function cashierPrint($param = [])
     {
         $this->param = $param;
         // 
-        $printerConfig = SettingModel::getSupplierItem(SettingEnum::PRINTER, $this->param['shop_supplier_id'], $this->param['app_id']);
+        $printerConfig = SettingModel::getSupplierItem(SettingEnum::PRINTER, $this->param['shop_supplier_id'] ?? 0, $this->param['app_id'] ?? 0);
         if ($printLang = ($param['print_lang'] ?? '')) {
             request()->language = $printLang;
         } else {
@@ -58,55 +57,13 @@ class OrderInvoicePrinterService
             $this->order->invoiceInfo = null;
         }
         //
-        $printerInfo = SettingModel::getPrinterInfo($printerConfig, $deviceId ?: $this->order->settle_device_id);
-        $printer = $printerInfo['printer'];
-        $printerId = $printerInfo['printerId'];
-        $cashierBindKey = $printerInfo['cashierBindKey'];
-        $isCashierPrinter = $printerInfo['isCashierPrinter'];
-        $isCashierOpen = $printerInfo['isCashierOpen'];
-        // 主动点击打印-但未开启打印
-        if (!$isQueue && !$isCashierOpen) {
-            $this->error = '未开启打印, 请联系管理员';
-            request()->language = '';
-            return false;
-        }
-        // 主动点击打印-但未配置打印机
-        if (!$isQueue && !$printer) {
-            $this->error = '未配置打印机, 请联系管理员';
-            request()->language = '';
-            return false;
-        }
-        // 如果是云打印, cashierBindKey 等于自己
-        if ($deviceId && !$isCashierPrinter && env('IS_CLOUD_DEPLOY', false)) {
-            $cashierBindKey = $deviceId;
-        }
+        $this->order->print_num = $this->order->print_num + 1;
+        $this->order->save();
         //
-        if ($isCashierOpen) {
-            $this->order->print_num = $this->order->print_num + 1;
-            $this->order->save();
-            //
-            $content = $printer ? $this->getPrintContent(is_string($printer) ? $printer : $printer['printer_type']['value'], $isCashierPrinter) : '';
-            request()->language = '';
-            //
-            $printerData = PrinterLog::addPrinterLog($printer, [
-                "printer_id" => $printerId,
-                "cashier_bind_key" => $cashierBindKey,
-                "app_id" => $this->order->app_id,
-                "shop_supplier_id" => $this->order->shop_supplier_id,
-                'order_id' => $this->order->order_id,
-                "data_type" => PrinterLog::DATA_TYPE[5]['value'],
-                "data" => $content,
-                "type" => $isCashierPrinter ? 1 : 0,
-                "first_execution" => !$isQueue ? 1 : 0,
-            ], $deviceId);
-            if (!$printerData) {
-                $this->error = '打印失败，未连接打印机';
-                return false;
-            }
-            return $printerData;
-        }
-        //
-        return true;
+        $content = $this->getPrintContent("", false);
+        request()->language = '';
+        // 
+        return $content;
     }
 
     /**
@@ -115,6 +72,8 @@ class OrderInvoicePrinterService
     private function getPrintContent($printType, $isCashierPrinter)
     {
         $setting = SettingModel::getAll($this->param['app_id'], $this->param['shop_supplier_id']);
+
+        $setting[SettingEnum::PRINTER]['values']['print_method'] = 2;
 
         // 是否商米打印机
         $isSunmi = in_array($printType, BindRecord::BRANDS_SUNMI_ALL_PRINTS) || in_array($printType, [PrinterTypeEnum::SUNMI_LAN, PrinterTypeEnum::SUNMI_CLOUD]);

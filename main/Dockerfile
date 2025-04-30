@@ -1,5 +1,5 @@
 # 使用官方Go语言镜像作为基础镜像
-FROM golang:1.23 AS builder
+FROM apache/skywalking-go:0.5.0-go1.23 AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -16,8 +16,10 @@ RUN go mod download
 # 复制源代码
 COPY . .
 
+RUN skywalking-go-agent -inject /app
+
 # 编译Go程序
-RUN go build -o main ./main.go
+RUN go build -o main -ldflags="-s -w" -toolexec="skywalking-go-agent" -a ./main.go
 
 # 添加执行权限
 RUN chmod +x main

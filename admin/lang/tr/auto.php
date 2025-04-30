@@ -2041,4 +2041,5 @@ return [
     "请选择应用服务费的桌台" => "Lütfen servis ücreti uygulanacak masayı seçin.",
     "并发生成 " => "Eş Zamanlı Oluşturma",
     "桌台使用中，无法禁用" => "Masa kullanılıyor, devre dışı bırakılamaz",
+    "库存已超99999999" => "Stok 99999999'u aştı",
 ];

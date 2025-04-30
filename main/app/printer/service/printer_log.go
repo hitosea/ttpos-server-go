@@ -39,6 +39,7 @@ type IPrinterLogSrv interface {
 	PrinterPrint(ctx context.Context, req req.PrinterPrintReq) (*resp.PrinterData, error)                                                    // 打印
 	PrinterReport(ctx context.Context, req req.PrinterReportReqs) error                                                                      // 打印报告
 	GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (*resp.PrinterData, error)                                                        // 获取静态打印机配置
+	GetOldOrderPrinterConfig(ctx context.Context, data string) (*resp.PrinterData, error)                                                    // 获取旧订单打印配置
 }
 
 type printerLogSrv struct {
@@ -539,4 +540,32 @@ func (s *printerLogSrv) PrinterReport(ctx context.Context, req req.PrinterReport
 	}
 	//
 	return nil
+}
+
+// GetOldOrderPrinterConfig 获取旧订单打印配置
+func (s *printerLogSrv) GetOldOrderPrinterConfig(ctx context.Context, data string) (*resp.PrinterData, error) {
+	// 获取打印设置
+	printerSetting, err := s.settingSrv.GetPrinterSetting(ctx, nil)
+	if err != nil {
+		logger.Logger.Error("获取打印机设置失败", zap.Error(err))
+		fmt.Println("获取打印机设置失败", zap.Error(err))
+		return nil, errors.WithMessage(err, "获取打印机设置失败")
+	}
+	// 获取打印设置
+	settingPrinterInfo, err := s.settingSrv.GetPrinterInfo(ctx, printerSetting, ctx.GetDeviceSn())
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取打印设置失败")
+	}
+	//
+	printerLog := &model.PrinterLog{Data: data}
+	//
+	return &resp.PrinterData{
+		Uuid:             0,
+		Data:             printerLog.CompressData(),
+		PrintMethod:      2,
+		Copies:           settingPrinterInfo.Copies,
+		PrinterType:      settingPrinterInfo.PrinterType,
+		PrinterConfig:    settingPrinterInfo.PrinterConfig,
+		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
+	}, nil
 }

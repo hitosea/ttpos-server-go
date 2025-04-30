@@ -6,17 +6,17 @@ use help\ImgHelp;
 use help\DateHelp;
 use base\imgs\ImgFont;
 use app\common\library\helper;
-use app\common\model\store\PayType;
+use app\common\model_old\store\PayType;
 use app\common\template\BaseTemplate;
 use app\admin\model\supplier\Supplier;
-use app\common\model\order\OrderProduct;
+use app\common\model_old\order\OrderProduct;
 use app\common\enum\settings\SettingEnum;
-use app\common\model\payment\PaymentOrder;
+use app\common\model_old\payment\PaymentOrder;
 use app\common\enum\order\OrderPayTypeEnum;
 use app\common\enum\order\OrderPayStatusEnum;
-use app\common\model\settings\PrinterTemplate;
-use app\common\model\order\Order as OrderModel;
-use app\common\model\settings\Setting as SettingModel;
+use app\common\model_old\settings\PrinterTemplate;
+use app\common\model_old\order\Order as OrderModel;
+use app\common\model_old\settings\Setting as SettingModel;
 
 /**
  * 图片打印 - 结账单模版
@@ -28,12 +28,12 @@ class ImgBillTemplate extends BaseTemplate
      * @param OrderModel $order
      * @param string $printerType
      */
-    public function create(OrderModel $order, $paramData = '', $isPrePrint = true)
+    public function create($order, $paramData = '', $isPrePrint = true)
     {
         $name = __('人');
         $products = $order->getPrinterProductsList();
         $percentageList = $order->getPercentageList();
-        $template = $order->_template ?: PrinterTemplate::getTemplate($order['pay_time'] ? 2 : 3);
+        $template = $order->_template ?: $template = (new PrinterTemplate([], request()->newAppId))->where('id', '=', $order['pay_time'] ? 2 : 3)->value('template');
         // 店铺设置
         $settingStore = $this->setting[SettingEnum::STORE]['values'];
         $settingCloud = SettingModel::getCloudBasic();

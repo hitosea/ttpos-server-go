@@ -44,64 +44,17 @@ class OrderPrinterService
         if ($timezone = ($this->setting[SettingEnum::STORE]['values']['time_zone'] ?? '')) {
             date_default_timezone_set($timezone);
         }
-        // 获取打印信息
-        $printerInfo = SettingModel::getPrinterInfo($this->setting[SettingEnum::PRINTER]['values'], $deviceId ?: $order['settle_device_id']);
-        $printer = $printerInfo['printer'];
-        $printerId = $printerInfo['printerId'];
-        $isCashierPrinter = $printerInfo['isCashierPrinter'];
-        $isCashierOpen = $printerInfo['isCashierOpen'];
-        $cashierBindKey = $printerInfo['cashierBindKey'];
-        // 主动点击打印-但未开启打印
-        if (!$isQueue && !$isCashierOpen) {
-            $this->error = '未开启打印, 请联系管理员';
-            return false;
-        }
-        // 主动点击打印-但未配置打印机
-        if (!$isQueue && !$printer) {
-            $this->error = '未配置打印机, 请联系管理员';
-            return false;
-        }
-        // 如果是云打印, cashierBindKey 等于自己
-        if ($deviceId && !$isCashierPrinter && env('IS_CLOUD_DEPLOY', false)) {
-            $cashierBindKey = $deviceId;
-        }
         //
-        if ($printer && $isCashierOpen) {
-            $order['_language'] = $order['_language'] ?? request()->param('print_lang') ?: ($this->setting[SettingEnum::PRINTER]['values']['default_language'] ?? '');
-            // 如果是图片打印模式则用异步任务执行
-            if ($isQueue && $isAsyn && ($this->setting[SettingEnum::PRINTER]['values']['print_method'] ?? 1) == 2) {
-                Task::deliver(new ImgBillTask($order, $isQueue, $deviceId, $paramData, $isPrePrint));
-                request()->language = '';
-                return true;
-            }
-            // 设置打印语言
-            request()->language = $order['_language'];
-            // 读取订单信息
-            if ($isQueue) {
-                $order = Order::detail($order['order_id']);
-            }
-            // 打印
-            $printerData = PrinterLog::addPrinterLog($printer, [
-                "printer_id" => $printerId,
-                "cashier_bind_key" => $cashierBindKey,
-                "app_id" => $order['app_id'],
-                "shop_supplier_id" => $order['shop_supplier_id'],
-                'order_id' => $order['order_id'],
-                "data_type" => $order['pay_time'] ? PrinterLog::DATA_TYPE[2]['value'] : PrinterLog::DATA_TYPE[1]['value'],
-                "data" => $printer ? $this->getPrintContent($order, $printer, $paramData, $isPrePrint) : '',
-                "type" => $isCashierPrinter ? 1 : 0,
-                "first_execution" => !$isQueue ? 1 : 0,
-            ], $order->settle_device_id);
-            if (!$printerData) {
-                $this->error = '打印失败，未连接打印机';
-                request()->language = '';
-                return false;
-            }
-            return $printerData;
+        $order['_language'] = $order['_language'] ?? request()->param('print_lang') ?: ($this->setting[SettingEnum::PRINTER]['values']['default_language'] ?? '');
+        // 设置打印语言
+        request()->language = $order['_language'];
+        // 读取订单信息
+        if ($isQueue) {
+            $order = Order::detail($order['order_id']);
         }
-        //
-        request()->language = '';
-        return true;
+        $this->setting[SettingEnum::PRINTER]['values']['print_method'] = 2;
+        // 打印
+        return $this->getPrintContent($order, null, $paramData, $isPrePrint);
     }
 
     /**
