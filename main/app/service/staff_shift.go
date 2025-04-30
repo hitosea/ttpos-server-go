@@ -487,6 +487,14 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		logger.Logger.Error("获取门店设置失败", zap.Error(err))
 		return nil, errors.WithMessage(err)
 	}
+	// 获取打印机设置
+	printerSetting, err := setting.GetPrinterSetting(ctx, nil)
+	if err != nil {
+		logger.Logger.Error("获取打印机设置失败", zap.Error(err))
+		fmt.Println("获取打印机设置失败", zap.Error(err))
+	}
+	// 设置打印语言
+	ctx.SetLanguage(printerSetting.DefaultLanguage)
 
 	//
 	shiftLogRepo := repository.NewShiftLogRepo(ctx.GetDB())

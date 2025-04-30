@@ -14,6 +14,7 @@ import (
 
 type Context interface {
 	GetLanguage() string                     // 获取语言
+	SetLanguage(language string)             // 设置语言
 	GetCompanyUuid() uint64                  // 获取商家ID
 	GetDbId() uint64                         // 获取商家ID
 	GetGin() *gin.Context                    // 获取gin上下文
@@ -195,6 +196,10 @@ func (c *ContextImpl) Copy() Context {
 
 func (c *ContextImpl) GetLanguage() string {
 	return c.language
+}
+
+func (c *ContextImpl) SetLanguage(language string) {
+	c.language = language
 }
 
 func (c *ContextImpl) GetDeskUuid() uint64 {

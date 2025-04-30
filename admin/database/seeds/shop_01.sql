@@ -1748,6 +1748,17 @@ CREATE TABLE IF NOT EXISTS `ttpos_staff_shift_log` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '员工交班记录表';
 
+CREATE TABLE `ttpos_staff_shift_snapshot` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '交班快照ID',
+  `shift_log_uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '交班记录ID',
+  `content` text COMMENT '快照json',
+  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='员工交班快照表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_cashier_duty_detail` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '收银交班详情ID',

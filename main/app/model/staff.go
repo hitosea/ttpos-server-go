@@ -65,6 +65,13 @@ type StaffShiftLog struct {
 	Staff *Staff `gorm:"foreignKey:StaffUuid;references:Uuid"`
 }
 
+// StaffShiftSnapshot 员工交班快照表
+type StaffShiftSnapshot struct {
+	BaseModel
+	ShiftLogUuid uint64 `gorm:"column:shift_log_uuid;type:bigint(20) unsigned;default:0;comment:交班记录ID;NOT NULL" json:"shift_log_uuid"`
+	Content      string `gorm:"column:content;type:text;comment:快照json" json:"content"`
+}
+
 // StaffLoginLog 管理员登录记录表 `ttpos_staff_login_log`
 type StaffLoginLog struct {
 	BaseModel

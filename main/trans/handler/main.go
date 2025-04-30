@@ -102,6 +102,13 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		if err != nil {
 			return err
 		}
+
+		// 员工交班快照
+		shopUserShiftSnapshot := v1.NewShopUserShiftSnapshotService(sourceDB, targetDB)
+		err = shopUserShiftSnapshot.ConvertShopUserShiftSnapshot()
+		if err != nil {
+			return err
+		}
 	}
 
 	// 打印管理
