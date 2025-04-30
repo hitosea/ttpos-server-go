@@ -320,5 +320,12 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		return errors.WithMessage(err)
 	}
 
+	// 高峰时段
+	orderPeakTimeService := v1.NewOrderPeakTimeService(sourceDB, targetDB)
+	err = orderPeakTimeService.ConvertOrderPeakTime()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
 	return nil
 }
