@@ -334,5 +334,31 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		return errors.WithMessage(err)
 	}
 
+	// 采购单
+	purchaseService := v1.NewPurchaseService(sourceDB, targetDB)
+	err = purchaseService.ConvertPurchaseForm()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 入库记录
+	err = purchaseService.ConvertWarehouseForm()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 出库记录
+	stockService := v1.NewStockService(sourceDB, targetDB)
+	err = stockService.ConvertWarehouseOut()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 报损记录
+	err = stockService.ConvertDemaged()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
 	return nil
 }
