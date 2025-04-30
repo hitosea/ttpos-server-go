@@ -113,7 +113,7 @@ func (t *rechargeSunmiPrinterTemplate) GetPrintContent(
 	printer.LineFeed()
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(5)
-	printer.CutPaper(!isOneself)
+	printer.CutPaper(false)
 
 	//
 	return printer.GetOrderData()
