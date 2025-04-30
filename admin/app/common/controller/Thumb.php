@@ -29,13 +29,12 @@ class Thumb
         $x = (int)($param['x'] ?? 2);
         $width = (int)($param['w'] ?? 0);
         $height = (int)($param['h'] ?? 0);
-        $defaultPath = public_path('/image/product') . 'default.png';
         // 设置缓存有效期为7天
         header('Cache-Control: max-age=604800');
         // 参数错误-返回默认图
         if (!isset($param['catalogue']) || !isset($param['date']) || !isset($param['name'])) {
             header('Content-Type: image/jpeg');
-            return Response::create(readfile($defaultPath))->header(['Content-Type' => 'image/jpeg']);
+            return '';
         }
         // 文件不存在-返回默认图
         if ($param['shop'] ?? '') {
@@ -44,7 +43,7 @@ class Thumb
             $path = public_path('/uploads/' . $param['date']) . $param['name'];
         }
         if (!file_exists($path)) {
-            return Response::create(readfile($defaultPath))->header(['Content-Type' => 'image/jpeg']);
+            return '';
         }
         // 没有传宽高-返回原图
         if (!$width || !$height) {
