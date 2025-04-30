@@ -708,7 +708,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	printer.LineFeed()
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(3)
-	printer.CutPaper(!isOneself)
+	printer.CutPaper(false)
 
 	// 返回打印数据
 	return printer.GetOrderData()

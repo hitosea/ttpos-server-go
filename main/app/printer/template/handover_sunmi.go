@@ -597,7 +597,7 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 	printer.LineFeed(4)
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(4)
-	printer.CutPaper(!isOneself)
+	printer.CutPaper(false)
 	// 打开钱箱
 	if openMoneybox {
 		printer.AppendText("\x1B\x70\x00\x19\xFA")

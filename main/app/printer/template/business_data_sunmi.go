@@ -380,7 +380,7 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 	// Print and exit page mode
 	printer.PrintAndExitPageMode()
 	printer.LineFeed(4)
-	printer.CutPaper(!isOneself)
+	printer.CutPaper(false)
 	//
 	return printer.GetOrderData()
 }
