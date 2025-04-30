@@ -12,6 +12,7 @@ type IShiftLogRepo interface {
 
 	GetPreviousShiftCash() (float64, error)
 	Create(shiftLog model.StaffShiftLog) (model.StaffShiftLog, error)
+	CreateSnapshot(shiftLogSnapshot model.StaffShiftSnapshot) (model.StaffShiftSnapshot, error)
 	GetShiftLog(opts ...DBOption) (model.StaffShiftLog, error)
 	Update(shiftLog model.StaffShiftLog, updates map[string]interface{}) (model.StaffShiftLog, error)
 }
@@ -37,6 +38,11 @@ func (r *ShiftLogRepo) GetPreviousShiftCash() (float64, error) {
 func (r *ShiftLogRepo) Create(shiftLog model.StaffShiftLog) (model.StaffShiftLog, error) {
 	err := r.db.Model(&model.StaffShiftLog{}).Create(&shiftLog).Error
 	return shiftLog, errors.WithMessage(err)
+}
+
+func (r *ShiftLogRepo) CreateSnapshot(shiftLogSnapshot model.StaffShiftSnapshot) (model.StaffShiftSnapshot, error) {
+	err := r.db.Model(&model.StaffShiftSnapshot{}).Create(&shiftLogSnapshot).Error
+	return shiftLogSnapshot, errors.WithMessage(err)
 }
 
 // GetShiftLog 获取当班记录
