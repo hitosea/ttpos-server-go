@@ -2,8 +2,8 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/repository/base"
 
 	"gorm.io/gorm"
 )
@@ -50,13 +50,19 @@ func (s *UserBalanceLogService) GetUserBalanceLogList() ([]*UserBalanceLog, erro
 }
 
 func (s *UserBalanceLogService) ConvertUserBalanceLog() error {
-	userBalanceLogs, err := s.GetUserBalanceLogList()
+	return s.convertUserBalanceLog(0, 2000)
+}
+
+func (s *UserBalanceLogService) convertUserBalanceLog(offset, limit int) error {
+	var userBalanceLogs []*UserBalanceLog
+	err := s.db.Offset(offset).Limit(limit).Find(&userBalanceLogs).Error
 	if err != nil {
 		return err
 	}
+	//
+	logs := []model.MemberBalanceLog{}
 	for _, userBalanceLog := range userBalanceLogs {
-		fmt.Println(fmt.Sprintf("userBalanceLog: %+v", userBalanceLog))
-		log := model.MemberBalanceLog{
+		logs = append(logs, model.MemberBalanceLog{
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(userBalanceLog.LogID),
 				CreateTime: int64(userBalanceLog.CreateTime),
@@ -67,11 +73,18 @@ func (s *UserBalanceLogService) ConvertUserBalanceLog() error {
 			Money:      userBalanceLog.Money,
 			GiftMoney:  userBalanceLog.GiftMoney,
 			Describe:   userBalanceLog.Describe,
-		}
-		_, err := base.NewMemberBalanceLogRepo(s.targetDB).CreateMemberBalanceLog(log)
-		if err != nil {
-			return err
-		}
+		})
 	}
+	// 保存数据
+	if len(logs) > 0 {
+		fmt.Println(fmt.Sprintf("userBalanceLog - num: %d", len(logs)))
+		if err := s.targetDB.Create(&logs).Error; err != nil {
+			return errors.WithMessage(err)
+		}
+		// 递归
+		offset += limit
+		return s.convertUserBalanceLog(offset, limit)
+	}
+	//
 	return nil
 }
