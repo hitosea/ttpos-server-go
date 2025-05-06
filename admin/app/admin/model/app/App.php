@@ -2,6 +2,7 @@
 
 namespace app\admin\model\app;
 
+use app\common\model\shop\SaasUser;
 use PDO;
 use think\facade\Env;
 use think\facade\Validate;
@@ -295,6 +296,12 @@ class App extends AppModel
         }
 
         $this->supplier?->delete();
+
+        // 软删除saas商家员工
+        $shopUsers  = SaasUser::where('company_uuid', '=', $this['uuid'])->select();
+        foreach ($shopUsers as $shopUser) {
+            $shopUser->delete();
+        }
 
         // 推送配置更新
         Websocket::pushClient(
