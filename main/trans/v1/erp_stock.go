@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/utils"
 
@@ -81,74 +82,90 @@ func NewStockService(db *gorm.DB, targetDB *gorm.DB) *StockService {
 
 // 迁移出库记录
 func (s *StockService) ConvertWarehouseOut() error {
+	isContinue := true
+	page := 1
+	pageSize := 2000
 
-	var (
-		records  []InventoryRecord
-		newForms []*model.WarehouseOutForm
-		newItems []*model.WarehouseOutFormItem
-	)
-	s.db.Preload("Product").Where("inventory_type = ?", 2).Find(&records)
-	for _, record := range records {
-		formUuid, err := utils.GetID()
-		if err != nil {
-			return err
+	for isContinue {
+		var (
+			records  []InventoryRecord
+			newForms []*model.WarehouseOutForm
+			newItems []*model.WarehouseOutFormItem
+		)
+		s.db.Preload("Product").Where("inventory_type = ?", 2).Offset((page - 1) * pageSize).Limit(pageSize).Find(&records)
+		if len(records) < pageSize {
+			isContinue = false
 		}
-		newForms = append(newForms, &model.WarehouseOutForm{
-			BaseModel: model.BaseModel{
-				Uuid:       formUuid,
-				CreateTime: record.OutTime,
-				UpdateTime: record.OutTime,
-				DeleteTime: record.DeleteTime,
-			},
-			FormNo:       record.Number,
-			Scene:        WarehouseOutFormSceneMap[record.Type],
-			Remark:       record.Remark,
-			Status:       WarehouseOutFormStatusMap[record.Status],
-			RevokeTime:   record.RevokeTime,
-			OperatorUuid: uint64(record.OperatorID),
-		})
+		for _, record := range records {
+			formUuid, err := utils.GetID()
+			if err != nil {
+				return err
+			}
+			newForms = append(newForms, &model.WarehouseOutForm{
+				BaseModel: model.BaseModel{
+					Uuid:       formUuid,
+					CreateTime: record.OutTime,
+					UpdateTime: record.OutTime,
+					DeleteTime: record.DeleteTime,
+				},
+				FormNo:       record.Number,
+				Scene:        WarehouseOutFormSceneMap[record.Type],
+				Remark:       record.Remark,
+				Status:       WarehouseOutFormStatusMap[record.Status],
+				RevokeTime:   record.RevokeTime,
+				OperatorUuid: uint64(record.OperatorID),
+			})
 
-		itemUuid, err := utils.GetID()
-		if err != nil {
-			return nil
+			itemUuid, err := utils.GetID()
+			if err != nil {
+				return nil
+			}
+			productBomUuid := uint64(0)
+			materialUuid := uint64(0)
+			if record.Product != nil {
+				if record.Product.Type == 10 {
+					productBomUuid = uint64(record.ProductSkuID)
+				} else {
+					materialUuid = uint64(record.ProductSkuID)
+				}
+			}
+			newItems = append(newItems, &model.WarehouseOutFormItem{
+				BaseModel: model.BaseModel{
+					Uuid:       itemUuid,
+					CreateTime: record.OutTime,
+					UpdateTime: record.OutTime,
+					DeleteTime: record.DeleteTime,
+				},
+				Num:                  record.Num,
+				Scene:                WarehouseOutItemSceneMap[record.Type],
+				Status:               1,
+				ReduceStock:          1,
+				RevokeTime:           record.RevokeTime,
+				WarehouseOutFormUuid: formUuid,
+				ProductBomUuid:       productBomUuid,
+				MaterialUuid:         materialUuid,
+			})
 		}
-		productBomUuid := uint64(0)
-		materialUuid := uint64(0)
-		if record.Product != nil {
-			if record.Product.Type == 10 {
-				productBomUuid = uint64(record.ProductSkuID)
-			} else {
-				materialUuid = uint64(record.ProductSkuID)
+
+		if len(newForms) > 0 {
+			if err := s.targetDB.Create(newForms).Error; err != nil {
+				return err
+			}
+
+			fmt.Printf("已保存批次: offset=%d, batch=%d-%d\n", (page-1)*pageSize, page, len(newForms))
+		}
+
+		if len(newItems) > 0 {
+			if err := s.targetDB.Create(newItems).Error; err != nil {
+				return err
 			}
 		}
-		newItems = append(newItems, &model.WarehouseOutFormItem{
-			BaseModel: model.BaseModel{
-				Uuid:       itemUuid,
-				CreateTime: record.OutTime,
-				UpdateTime: record.OutTime,
-				DeleteTime: record.DeleteTime,
-			},
-			Num:                  record.Num,
-			Scene:                WarehouseOutItemSceneMap[record.Type],
-			Status:               1,
-			ReduceStock:          1,
-			RevokeTime:           record.RevokeTime,
-			WarehouseOutFormUuid: formUuid,
-			ProductBomUuid:       productBomUuid,
-			MaterialUuid:         materialUuid,
-		})
-	}
 
-	if len(newForms) > 0 {
-		if err := s.targetDB.Create(newForms).Error; err != nil {
-			return err
+		if len(records) > 0 {
+			fmt.Println(fmt.Sprintf("warehouse-out - page: %d - num: %d", page, len(records)))
 		}
-	}
 
-	if len(newItems) > 0 {
-		if err := s.targetDB.Create(newItems).Error; err != nil {
-			return err
-		}
+		page++
 	}
 
 	return nil
@@ -156,51 +173,61 @@ func (s *StockService) ConvertWarehouseOut() error {
 
 // 迁移损耗记录
 func (s *StockService) ConvertDemaged() error {
-	var (
-		records    []*DamagedProductRecord
-		newRecords []*model.LossReportForm
-	)
-	s.db.Find(&records)
-	for _, record := range records {
-		formUuid, err := utils.GetID()
-		if err != nil {
-			return err
+	isContinue := true
+	page := 1
+	pageSize := 2000
+
+	for isContinue {
+		var (
+			records    []*DamagedProductRecord
+			newRecords []*model.LossReportForm
+		)
+		s.db.Offset((page - 1) * pageSize).Limit(pageSize).Find(&records)
+		if len(records) < pageSize {
+			isContinue = false
 		}
-		productBomUuid := uint64(0)
-		materialUuid := uint64(0)
-		if record.Product != nil {
-			if record.Product.Type == 10 {
-				productBomUuid = uint64(record.ProductSkuID)
-			} else {
-				materialUuid = uint64(record.ProductSkuID)
+		for _, record := range records {
+			formUuid, err := utils.GetID()
+			if err != nil {
+				return err
+			}
+			productBomUuid := uint64(0)
+			materialUuid := uint64(0)
+			if record.Product != nil {
+				if record.Product.Type == 10 {
+					productBomUuid = uint64(record.ProductSkuID)
+				} else {
+					materialUuid = uint64(record.ProductSkuID)
+				}
+			}
+			newRecords = append(newRecords, &model.LossReportForm{
+				BaseModel: model.BaseModel{
+					Uuid:       formUuid,
+					CreateTime: record.CreateTime,
+					UpdateTime: record.UpdateTime,
+					DeleteTime: record.DeleteTime,
+				},
+				FormNo:         record.Number,
+				Scene:          LossReportFormSceneMap[record.Type],
+				Num:            record.Num,
+				Remark:         record.Remark,
+				ProductBomUuid: productBomUuid,
+				MaterialUuid:   materialUuid,
+				ApplicantUuid:  uint64(record.OperatorID),
+				RejectReason:   record.Refused,
+				Status:         LossReportFormStatusMap[record.ReviewStatus],
+				OperatorUuid:   uint64(record.OperatorID),
+				ApprovedTime:   record.ApprovedTime,
+				RevokeTime:     record.RejectedTime,
+			})
+		}
+
+		if len(newRecords) > 0 {
+			if err := s.targetDB.Create(newRecords).Error; err != nil {
+				return err
 			}
 		}
-		newRecords = append(newRecords, &model.LossReportForm{
-			BaseModel: model.BaseModel{
-				Uuid:       formUuid,
-				CreateTime: record.CreateTime,
-				UpdateTime: record.UpdateTime,
-				DeleteTime: record.DeleteTime,
-			},
-			FormNo:         record.Number,
-			Scene:          LossReportFormSceneMap[record.Type],
-			Num:            record.Num,
-			Remark:         record.Remark,
-			ProductBomUuid: productBomUuid,
-			MaterialUuid:   materialUuid,
-			ApplicantUuid:  uint64(record.OperatorID),
-			RejectReason:   record.Refused,
-			Status:         LossReportFormStatusMap[record.ReviewStatus],
-			OperatorUuid:   uint64(record.OperatorID),
-			ApprovedTime:   record.ApprovedTime,
-			RevokeTime:     record.RejectedTime,
-		})
-	}
-
-	if len(newRecords) > 0 {
-		if err := s.targetDB.Create(newRecords).Error; err != nil {
-			return err
-		}
+		page++
 	}
 
 	return nil
