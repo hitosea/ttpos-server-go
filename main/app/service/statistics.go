@@ -343,7 +343,7 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 			item.TotalPaymentAmount += payment.TotalPaymentAmount.Float64
 			list[i] = *item
 		}
-		if payment.PaymentCode != 10 && payment.PaymentCode != 0 {
+		if payment.PaymentCode != 10 {
 			totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(payment.TotalPaymentAmount.Float64))
 		}
 		totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(payment.TotalRefundAmount.Float64))
@@ -508,12 +508,11 @@ type CountCategoryListResp struct {
 // CountCategory 统计分类
 func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCategoryResp {
 	var (
-		SaleNum int64
-		list    []CountCategoryListResp
+		list []CountCategoryListResp
 	)
 
 	opts := s.buildCountOpts(req)
-	categoryData := repository.NewStatisticsRepo(ctx.GetDB()).CountCategory(req.CategoryType, ctx.GetLanguage(), opts...)
+	orderNum, categoryData := repository.NewStatisticsRepo(ctx.GetDB()).CountCategory(req.CategoryType, ctx.GetLanguage(), opts...)
 
 	for _, category := range categoryData {
 		categoryName := category.CategoryParentName.String
@@ -525,11 +524,10 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 			SaleNum:      category.SaleNum.Int64,
 			SaleAmount:   category.SaleAmount.Float64,
 		})
-		SaleNum += category.SaleNum.Int64
 	}
 
 	return CountCategoryResp{
-		TotalSaleNum: SaleNum,
+		TotalSaleNum: orderNum,
 		CategoryList: list,
 	}
 }

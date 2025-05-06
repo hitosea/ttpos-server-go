@@ -56,8 +56,9 @@ func (s *StatisticsPaymentService) convertPayment(offset int, limit int) error {
 		 	a.pay_status = 20  AND 
 			a.order_status = 30  AND 
 			a.is_delete = 0  AND 
-			opt.id IS NOT NULL  
-			AND a.parent_id = 0 
+			a.parent_id = 0 AND
+			opt.id IS NOT NULL AND 
+			opt.value != -1
 		) AND a.delete_time = 0 
 		order by a.pay_time
 		Limit ?, ?
@@ -103,7 +104,7 @@ func (s *StatisticsPaymentService) convertRechargePayment(offset int, limit int)
 			where urord.status = 1
 			group by urord.order_id, urord.value
 		) urord ON a.id= urord.order_id AND opt.value = urord.value 
-		WHERE a.order_status = '1' AND opt.id IS NOT NULL 
+		WHERE a.order_status = '1' AND opt.id IS NOT NULL AND opt.value != -1
 		order by a.pay_time
 		Limit ?, ?
 	`, offset, limit).Scan(&statisticsPayments).Error

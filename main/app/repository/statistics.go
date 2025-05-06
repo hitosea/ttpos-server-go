@@ -9,37 +9,37 @@ import (
 )
 
 type IStatisticsRepo interface {
-	CountSale(opts ...DBOption) model.StatisticsSaleData                                                       // 统计销售
-	CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData                                             // 统计销售天数
-	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                               // 统计支付
-	CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                       // 统计支付天数
-	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                       // 统计税类
-	CountCategory(categoryType int, language string, opts ...DBOption) []model.StatisticsCategoryData          // 统计分类
-	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                              // 统计商品
-	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                     // 统计区域
-	CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData                                             // 统计区域
-	Count7Days(opts ...DBOption) []model.Statistics7DaysData                                                   // 统计销售天数
-	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                         // 统计未结订单
-	CountMemberNum(opts ...DBOption) int64                                                                     // 统计会员数量
-	CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp                                        // 统计会员数量天数
-	CountMember(opts ...DBOption) model.StatisticsMemberData                                                   // 统计会员
-	CountMemberDays(opts ...DBOption) []model.StatisticsMemberDaysData                                         // 统计会员天数
-	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                         // 统计会员支付
-	CountMemberPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                 // 统计会员支付天数
-	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64) // 统计商品销售
-	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                         // 统计免单支付
-	CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData                               // 统计免单支付天数
-	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                 // 统计商品排行
-	SaveSale(sales []model.StatisticsSale) error                                                               // 保存销售
-	SavePayment(payments []model.StatisticsPayment) error                                                      // 保存支付
-	SaveProduct(products []model.StatisticsProduct) error                                                      // 保存商品
-	DeleteSale(saleBillUuid uint64) error                                                                      // 删除销售
-	DeletePayment(saleBillUuid uint64) error                                                                   // 删除支付
-	DeleteProduct(saleBillUuid uint64) error                                                                   // 删除商品
-	SaveMember(member model.StatisticsMember) error                                                            // 保存会员
-	SaveMemberPayment(payments []model.StatisticsMemberPayment) error                                          // 保存会员支付
-	DeleteMember(memberRechargeOrderUuid uint64) error                                                         // 删除会员
-	DeleteMemberPayment(memberRechargeOrderUuid uint64) error                                                  // 删除会员支付
+	CountSale(opts ...DBOption) model.StatisticsSaleData                                                                       // 统计销售
+	CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData                                                             // 统计销售天数
+	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                                               // 统计支付
+	CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                       // 统计支付天数
+	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                                       // 统计税类
+	CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData) // 统计分类
+	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                                              // 统计商品
+	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                                     // 统计区域
+	CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData                                                             // 统计区域
+	Count7Days(opts ...DBOption) []model.Statistics7DaysData                                                                   // 统计销售天数
+	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                                         // 统计未结订单
+	CountMemberNum(opts ...DBOption) int64                                                                                     // 统计会员数量
+	CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp                                                        // 统计会员数量天数
+	CountMember(opts ...DBOption) model.StatisticsMemberData                                                                   // 统计会员
+	CountMemberDays(opts ...DBOption) []model.StatisticsMemberDaysData                                                         // 统计会员天数
+	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                                         // 统计会员支付
+	CountMemberPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                 // 统计会员支付天数
+	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64)                 // 统计商品销售
+	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                                         // 统计免单支付
+	CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData                                               // 统计免单支付天数
+	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                                 // 统计商品排行
+	SaveSale(sales []model.StatisticsSale) error                                                                               // 保存销售
+	SavePayment(payments []model.StatisticsPayment) error                                                                      // 保存支付
+	SaveProduct(products []model.StatisticsProduct) error                                                                      // 保存商品
+	DeleteSale(saleBillUuid uint64) error                                                                                      // 删除销售
+	DeletePayment(saleBillUuid uint64) error                                                                                   // 删除支付
+	DeleteProduct(saleBillUuid uint64) error                                                                                   // 删除商品
+	SaveMember(member model.StatisticsMember) error                                                                            // 保存会员
+	SaveMemberPayment(payments []model.StatisticsMemberPayment) error                                                          // 保存会员支付
+	DeleteMember(memberRechargeOrderUuid uint64) error                                                                         // 删除会员
+	DeleteMemberPayment(memberRechargeOrderUuid uint64) error                                                                  // 删除会员支付
 }
 
 func NewStatisticsRepo(db *gorm.DB) IStatisticsRepo {
@@ -235,11 +235,12 @@ func (r *StatisticsRepo) CountTax(opts ...DBOption) []model.StatisticsTaxData {
 }
 
 // CountCategory 统计分类
-func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts ...DBOption) []model.StatisticsCategoryData {
-	var result []model.StatisticsCategoryData
+func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData) {
 	db := r.db
+	dbOrder := r.db
 	for _, opt := range opts {
 		db = opt(db)
+		dbOrder = opt(dbOrder)
 	}
 
 	prefix := config.Database.TablePrefix
@@ -249,6 +250,9 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 	productCategoryTable := prefix + "product_category as pc"
 	productParentCategoryTable := prefix + "product_category as ppc"
 
+	// 统计订单数量
+	dbOrder.Table(statisticsProductTable).Select("COUNT(DISTINCT sale_bill_uuid) AS order_num").Pluck("order_num", &orderNum)
+
 	if categoryType != 2 {
 		db.Table(statisticsProductTable).
 			Select(
@@ -257,7 +261,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 				"0 AS category_uuid",
 				"'' AS category_name",
 				"SUM(sp.product_num) AS sale_num",
-				"SUM(sp.product_sale_price * sp.product_num) AS sale_amount",
+				"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
 			).
 			Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 			Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
@@ -273,7 +277,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 				"pc.uuid AS category_uuid",
 				"JSON_UNQUOTE(JSON_EXTRACT(pc.NAME, '$."+language+"')) AS category_name",
 				"SUM(sp.product_num) AS sale_num",
-				"SUM(sp.product_sale_price * sp.product_num) AS sale_amount",
+				"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
 			).
 			Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 			Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
@@ -284,7 +288,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 			Find(&result)
 	}
 
-	return result
+	return orderNum, result
 }
 
 // CountProduct 统计商品
@@ -306,7 +310,7 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 			"JSON_UNQUOTE(JSON_EXTRACT(pb.name, '$."+language+"')) AS flavor_name",
 			"sp.product_sale_price AS sale_price",
 			"SUM(sp.product_num) AS sale_num",
-			"SUM(sp.product_sale_price * sp.product_num) AS sale_amount",
+			"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
 		).
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
@@ -390,7 +394,7 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, opts ...DBOp
 			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) AS product_name",
 			"sp.product_sale_price AS sale_price",
 			"SUM(sp.product_num) AS sale_num",
-			"SUM(sp.product_sale_price * sp.product_num) AS sale_amount",
+			"SUM(sp.product_price * sp.product_num) AS sale_amount",
 		).
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Where("sp.refund_time = 0").
