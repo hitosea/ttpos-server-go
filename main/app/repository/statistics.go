@@ -582,7 +582,7 @@ func (r *StatisticsRepo) CountMemberDays(opts ...DBOption) []model.StatisticsMem
 var (
 	countMemberPaymentSelect = []string{
 		"smp.payment_method_uuid",
-		"pm.name AS payment_name",
+		"pm.payment_name AS payment_name",
 		"pm.code AS payment_code",
 		"COUNT(smp.payment_method_uuid) AS total_order_num",
 		"SUM(smp.payment_amount-smp.refund_amount) AS total_payment_amount",
