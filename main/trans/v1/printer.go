@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -57,7 +58,7 @@ func (s *PrinterService) ConvertPrinter() error {
 	printers, err := s.GetPrinterList()
 	printerTypes, err := s.GetPrinterTypeList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, printer := range printers {
 
@@ -79,7 +80,7 @@ func (s *PrinterService) ConvertPrinter() error {
 		}
 		_, err = base.NewPrinterRepo(s.targetDB).CreatePrinter(printer)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

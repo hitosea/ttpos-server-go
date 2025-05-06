@@ -20,21 +20,21 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		tableAreaService := v1.NewTableAreaService(sourceDB, targetDB)
 		err = tableAreaService.ConvertTableArea()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 桌台类型
 		tableTypeService := v1.NewTableTypeService(sourceDB, targetDB)
 		err = tableTypeService.ConvertTableType()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 桌台
 		tableService := v1.NewTableService(sourceDB, targetDB)
 		err = tableService.ConvertTable()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 
@@ -43,7 +43,7 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		shopBindRecordService := v1.NewShopBindRecordService(sourceDB, targetDB)
 		err = shopBindRecordService.ConvertShopBindRecord()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 
@@ -53,7 +53,7 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		settingService := v1.NewSettingService(sourceDB, targetDB, targetSassDB, targetCompanyUuid)
 		err = settingService.ConvertSetting()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 
@@ -63,21 +63,21 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		appService := v1.NewAppService(sourceDB, targetSassDB, targetDB, sourceCompanyId, targetCompanyUuid)
 		err = appService.ConvertApp()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 角色
 		shopRoleService := v1.NewShopRoleService(sourceDB, targetDB)
 		err = shopRoleService.ConvertShopRole()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 权限
 		shopAccessService := v1.NewShopAccessService(sourceDB, targetDB)
 		err = shopAccessService.ConvertShopAccess()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 角色权限
@@ -91,28 +91,28 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		shopUserService := v1.NewShopUserService(sourceDB, targetDB, targetSassDB, targetCompanyUuid)
 		err = shopUserService.ConvertShopUser()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 员工角色
 		shopStaffRole := v1.NewShopUserRoleService(sourceDB, targetDB)
 		err = shopStaffRole.ConvertShopUserRole()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 员工交班记录
 		shopUserShiftLog := v1.NewShopUserShiftLogService(sourceDB, targetDB)
 		err = shopUserShiftLog.ConvertShopUserShiftLog()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 员工交班快照
 		shopUserShiftSnapshot := v1.NewShopUserShiftSnapshotService(sourceDB, targetDB)
 		err = shopUserShiftSnapshot.ConvertShopUserShiftSnapshot()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 
@@ -136,14 +136,14 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		printerTemplateService := v1.NewPrinterTemplateService(sourceDB, targetDB)
 		err = printerTemplateService.ConvertPrinterTemplate()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 商品打印 ProductPrinterProductItem ProductPrinterItem ProductPrinterRegion ProductPrinter
 		supplierPrintingService := v1.NewSupplierPrintingService(sourceDB, targetDB)
 		err = supplierPrintingService.ConvertSupplierPrinting()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 
@@ -151,7 +151,7 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 	orderSchemeService := v1.NewOrderSchemeService(sourceDB, targetDB)
 	err = orderSchemeService.ConvertOrderScheme()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 
 	// 会员
@@ -160,14 +160,14 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		userGradeService := v1.NewUserGradeService(sourceDB, targetDB)
 		err = userGradeService.ConvertUserGrade()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 会员
 		userService := v1.NewUserService(sourceDB, targetDB)
 		err = userService.ConvertUser()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 会员卡领取记录
@@ -181,21 +181,21 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		userPointsLogService := v1.NewUserPointsLogService(sourceDB, targetDB)
 		err = userPointsLogService.ConvertUserPointsLog()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 会员余额变动记录
 		userBalanceLogService := v1.NewUserBalanceLogService(sourceDB, targetDB)
 		err = userBalanceLogService.ConvertUserBalanceLog()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 会员卡
 		userCardService := v1.NewUserCardService(sourceDB, targetDB)
 		err = userCardService.ConvertUserCard()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 

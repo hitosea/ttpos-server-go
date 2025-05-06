@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/utils"
@@ -46,7 +47,7 @@ func (s *FreeTagService) GetFreeTagList() ([]*FreeTag, error) {
 func (s *FreeTagService) ConvertFreeTag() error {
 	freeTags, err := s.GetFreeTagList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, freeTag := range freeTags {
 
@@ -55,7 +56,7 @@ func (s *FreeTagService) ConvertFreeTag() error {
 		names := Names{}
 		err := names.GetNames(freeTag.FreeTag)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		fmt.Println(fmt.Sprintf("free_tag_id: %d, free_tag_name: %+v", freeTag.Id, names))
 
@@ -76,7 +77,7 @@ func (s *FreeTagService) ConvertFreeTag() error {
 		}
 		_, err = base.NewGiftOrFreeOrderReasonRepo(s.targetDB).CreateGiftOrFreeOrderReason(reason)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

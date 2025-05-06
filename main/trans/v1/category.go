@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/utils"
@@ -41,7 +42,7 @@ func (n *Names) GetNames(jsonString string) error {
 	err := json.Unmarshal([]byte(jsonString), &n)
 	if err != nil {
 		fmt.Println("Error parsing JSON:", err)
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }
@@ -63,7 +64,7 @@ func (n *Names) CreateMultiLanguageName(nameId uint64, targetDB *gorm.DB) error 
 	fmt.Println(fmt.Sprintf("multiLanguageName:%+v", multiLanguageName))
 	_, err := repository.NewMultiLanguageNameRepoImpl(targetDB).CreateMultiLanguageName(multiLanguageName)
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	return nil
 }
@@ -116,7 +117,7 @@ func (s *CategoryService) GetCategoryList() ([]*Category, error) {
 func (s *CategoryService) ConvertCategory() error {
 	categoryList, err := s.GetCategoryList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, category := range categoryList {
 
@@ -126,13 +127,13 @@ func (s *CategoryService) ConvertCategory() error {
 		err := json.Unmarshal([]byte(category.Name), &names)
 		if err != nil {
 			fmt.Println("Error parsing JSON:", err)
-			return err
+			return errors.WithMessage(err)
 		}
 		fmt.Printf("%+v\n", names)
 
 		id, err := utils.GetID()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		fmt.Printf("uuid:%+v\n", id)
 		multiLanguageName := model.MultiLanguageName{
@@ -150,7 +151,7 @@ func (s *CategoryService) ConvertCategory() error {
 		}
 		_, err = repository.NewMultiLanguageNameRepoImpl(s.targetDB).CreateMultiLanguageName(multiLanguageName)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		uuid := uint64(0)
@@ -180,7 +181,7 @@ func (s *CategoryService) ConvertCategory() error {
 		}
 		_, err = repository.NewProductCategoryRepo(s.targetDB).CreateProductCategory(productCategory)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		//}
 	}

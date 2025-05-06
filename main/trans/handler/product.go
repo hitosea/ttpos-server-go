@@ -69,7 +69,7 @@ func (s *ProductService) GetProductTax(productID uint64, taxType uint) (oldModel
 func (s *ProductService) ConvertProduct() error {
 	products, err := s.GetProductList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	if err := s.targetDB.Transaction(func(tx *gorm.DB) error {
 		for index, _ := range products {
@@ -83,11 +83,11 @@ func (s *ProductService) ConvertProduct() error {
 				fmt.Println(fmt.Sprintf("-----迁移成品：%+v", product))
 				productPackage, err := newModel.NewProductPackage(product, s.db)
 				if err != nil {
-					return err
+					return errors.WithMessage(err)
 				}
 				repo := repository.NewProductPackageRepo(tx)
 				if err := repo.CreateProductPackage(productPackage); err != nil {
-					return err
+					return errors.WithMessage(err)
 				}
 
 			} else if product.Type == constant.ProductTypeMaterial {

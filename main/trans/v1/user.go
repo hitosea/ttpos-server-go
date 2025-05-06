@@ -75,19 +75,19 @@ type UserService struct {
 func (s *UserService) GetUserCardRecordByUserIdAndCardId(userId uint, cardId uint) (*UserCardRecord, error) {
 	var userCardRecord UserCardRecord
 	err := s.db.Where("user_id = ? AND card_id = ?", userId, cardId).First(&userCardRecord).Error
-	return &userCardRecord, err
+	return &userCardRecord, errors.WithMessage(err)
 }
 
 func (s *UserService) GetUserList() ([]*User, error) {
 	var users []*User
 	err := s.db.Find(&users).Error
-	return users, err
+	return users, errors.WithMessage(err)
 }
 
 func (s *UserService) GetUserByID(id uint) (*User, error) {
 	var user User
 	err := s.db.Where("user_id = ?", id).First(&user).Error
-	return &user, err
+	return &user, errors.WithMessage(err)
 }
 
 func (s *UserService) ConvertUser() error {

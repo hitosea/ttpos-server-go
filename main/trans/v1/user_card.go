@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -73,7 +74,7 @@ func (s *UserCardService) GetUserCardByID(id int) (*UserCard, error) {
 func (s *UserCardService) ConvertUserCard() error {
 	userCards, err := s.GetUserCardList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, userCard := range userCards {
 		fmt.Println(fmt.Sprintf("userCard: %+v", userCard))
@@ -99,7 +100,7 @@ func (s *UserCardService) ConvertUserCard() error {
 		}
 		_, err := base.NewMemberCardTypeRepo(s.targetDB).CreateMemberCardType(memberCardType)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

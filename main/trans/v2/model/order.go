@@ -6,16 +6,101 @@ import (
 )
 
 func NewOrder(order *v1.Order) (*model.SaleBill, error) {
-	// saleBillUuid := uint64(order.OrderID)
-	// orderNo := order.OrderNo
-	// buffetUuids := make([]uint64, 0)
-	// mealNum := order.MealNum
-	// remark := order.TableRemark
-	// deskUuid := uint64(order.TableID)
-	// deskNo := order.TableNo
-	// deskNo := order.DutyNo
-	// staffUuid := order.StaffUuid
-	// saleBill := model.NewDeskSaleBill(saleBillUuid, orderNo, buffetUuids, mealNum, remark, deskUuid, deskNo, ctx.GetStaff().DutyNo, ctx.GetStaff().Uuid, ctx.GetStaff().Username)
+	saleOrders := make([]*model.SaleOrder, 0)
+	// for _, order := range order.SaleOrders {
+	// 	saleOrders = append(saleOrders, &model.SaleOrder{
+	// 		BaseModel: model.BaseModel{
+	// 			ID:         uint(order.OrderID),
+	// 			CreateTime: order.CreateTime,
+	// 			UpdateTime: order.UpdateTime,
+	// 			DeleteTime: order.DeleteTime,
+	// 		},
+	// 		OrderNo:                order.OrderNo,
+	// 		Status:                 order.Status(),
+	// 		IsFree:                 order.IsFreeOrder(),
+	// 		FreeReason:             order.FreeRemark,
+	// 		CashierName:            order.ShopUser.UserName,
+	// 		ConsumerUuid:           order.UserID,
+	// 		CashierUuid:            order.ShopUser.ShopUserID,
+	// 		SaleBillUuid:           uint64(order.ParentID),
+	// 		ProductAmount:          order.TotalPrice,
+	// 		ProductOriginalAmount:  order.TotalProductPrice,
+	// 		ServiceFee:             order.ServiceFee,
+	// 		TaxFee:                 order.TaxFee,
+	// 		CustomDiscountFee:      order.CustomDiscountFee,
+	// 		MemberDiscountFee:      order.MemberDiscountFee,
+	// 		OriginAmount:           order.TotalProductPrice,
+	// 		Amount:                 0,
+	// 		CustomAmount:           0,
+	// 		FinishTime:             0,
+	// 		MemberDiscountRate:     0,
+	// 		MemberCardDiscountRate: 0,
+	// 		CustomDiscountRate:     0,
+	// 		ZeroRule:               0,
+	// 		ZeroFee:                0,
+	// 		ZeroCheckoutRule:       0,
+	// 		PaymentAmount:          0,
+	// 		ChangeAmount:           0,
+	// 		ZeroCheckoutFee:        0,
+	// 		FinalPrice:             0,
+	// 		PaymentCommissionFee:   0,
+	// 		GiftAmount:             0,
+	// 		GiftPoints:             0,
+	// 		GiftPointsRate:         0,
+	// 		MemberBalance:          0,
+	// 		PaymentOrders:          nil,
+	// 		SaleOrderProducts:      nil,
+	// 	})
+	// }
 
-	return nil, nil
+	saleBill := model.SaleBill{
+		BaseModel: model.BaseModel{
+			ID:         uint(order.OrderID),
+			CreateTime: order.CreateTime,
+			UpdateTime: order.UpdateTime,
+			DeleteTime: order.DeleteTime,
+		},
+		OrderNo:               order.OrderNo,
+		DutyNo:                order.ShopUser.DutyNo,
+		SerialNo:              order.TableNo,
+		Status:                order.Status(),
+		IsLock:                order.IsLock,
+		IsSplitOrder:          order.IsSplitOrder(),
+		BillType:              order.BillType(),
+		DiningMethod:          order.DiningMethod(),
+		IsBuffet:              order.IsBuffet,
+		BuffetDuration:        0,
+		BuffetStartTime:       0,
+		DelayDuration:         0,
+		DelayStartTime:        0,
+		NonOrderingTime:       0,
+		ReminderOrderTime:     0,
+		MealNum:               0,
+		Remark:                order.BuyerRemark,
+		Reason:                order.FreeRemark,
+		Amount:                order.OrderPrice,
+		OriginAmount:          order.TotalProductPrice,
+		ProductAmount:         order.TotalPrice,
+		ProductOriginalAmount: order.TotalProductPrice,
+		PaymentAmount:         order.PayPrice,
+		CustomDiscountFee:     0,
+		MemberDiscountFee:     0,
+		GiftAmount:            0,
+		FreeAmount:            0,
+		LockTime:              0,
+		FinishTime:            0,
+		HideBillTime:          0,
+		ProductionTime:        0,
+		CashierName:           "",
+		ConsumerUuid:          0,
+		CashierUuid:           0,
+		DeskUuid:              0,
+		BuffetPackage1Uuid:    0,
+		BuffetPackage2Uuid:    0,
+		DeviceUuid:            0,
+		ShowMustPlan:          0,
+		AutoAddMustProduct:    0,
+		SaleOrders:            saleOrders,
+	}
+	return &saleBill, nil
 }

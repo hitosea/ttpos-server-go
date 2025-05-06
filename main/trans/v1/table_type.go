@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -46,7 +47,7 @@ func (s *TableTypeService) GetTableTypeList() ([]*TableType, error) {
 func (s *TableTypeService) ConvertTableType() error {
 	tableTypes, err := s.GetTableTypeList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, tableType := range tableTypes {
 		fmt.Println(fmt.Sprintf("tableType: %+v", tableType))
@@ -64,7 +65,7 @@ func (s *TableTypeService) ConvertTableType() error {
 
 		_, err := repository.NewDeskTypeRepo(s.targetDB).CreateDeskType(deskType)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

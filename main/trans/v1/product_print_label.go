@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/utils"
@@ -36,7 +37,7 @@ type ProductPrintLabelService struct {
 func (s *ProductPrintLabelService) GetProductPrintLabelList() ([]*ProductPrintLabel, error) {
 	var productPrintLabels []*ProductPrintLabel
 	if err := s.db.Find(&productPrintLabels).Error; err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return productPrintLabels, nil
 }
@@ -44,14 +45,14 @@ func (s *ProductPrintLabelService) GetProductPrintLabelList() ([]*ProductPrintLa
 func (s *ProductPrintLabelService) ConvertProductPrintLabel() error {
 	productPrintLabels, err := s.GetProductPrintLabelList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, productPrintLabel := range productPrintLabels {
 		fmt.Println(fmt.Sprintf("-------迁移product_print_label: %+v", productPrintLabel))
 
 		id, err := utils.GetID()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
@@ -63,7 +64,7 @@ func (s *ProductPrintLabelService) ConvertProductPrintLabel() error {
 		}
 		_, err = base.NewPrinterTagRepo(s.targetDB).CreatePrinterTag(tag)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil
