@@ -65,6 +65,7 @@ type ICommonRepo interface {
 	WhereByProcessedNot() DBOption                                      // 根据未处理查询
 	WhereByRefundTime(refundTime int64) DBOption                        // 根据退款时间查询
 	WhereByDutyNo(dutyNo string) DBOption                               // 根据班次编号查询
+	WhereByShiftLogUuid(shiftLogUuid uint64) DBOption                   // 根据交班记录UUID查询
 	WhereLikeByName(name string) DBOption                               // 根据名称查询
 	WhereBetweenByCreateTime(startTime int64, endTime int64) DBOption   // 根据创建时间查询
 	WhereBetweenByCompleteTime(startTime int64, endTime int64) DBOption // 根据完成时间查询
@@ -520,5 +521,12 @@ func (r *commonRepo) Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error 
 func (r *commonRepo) WhereByDutyNo(dutyNo string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("duty_no = ?", dutyNo)
+	}
+}
+
+// WhereByShiftLogUuid 根据交班记录UUID查询
+func (r *commonRepo) WhereByShiftLogUuid(shiftLogUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("shift_log_uuid = ?", shiftLogUuid)
 	}
 }

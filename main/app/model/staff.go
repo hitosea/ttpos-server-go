@@ -105,3 +105,160 @@ func (model *StaffShiftLog) IsHandedOver() bool {
 func (model *StaffShiftLog) IsReported() bool {
 	return model.ExceptionRemark != ""
 }
+
+// StaffShiftSnapshotContent 交班快照内容
+type StaffShiftSnapshotContent struct {
+	ID                uint64                        `json:"id"`
+	ShiftUserID       uint64                        `json:"shift_user_id"`
+	ShiftNo           string                        `json:"shift_no"`
+	Status            int                           `json:"status"`
+	PreviousShiftCash string                        `json:"previous_shift_cash"`
+	CurrentCashTotal  string                        `json:"current_cash_total"`
+	Incomes           []StaffShiftSnapshotIncome    `json:"incomes"`
+	TotalIncome       string                        `json:"total_income"`
+	CashTakenOut      string                        `json:"cash_taken_out"`
+	CashLeft          string                        `json:"cash_left"`
+	CashIncome        string                        `json:"cash_income"`
+	TotalBusiness     string                        `json:"total_business"`
+	IsPrinted         int                           `json:"is_printed"`
+	Remark            string                        `json:"remark"`
+	WithdrawCash      string                        `json:"withdraw_cash"`
+	DepositCash       string                        `json:"deposit_cash"`
+	ExceptionRemark   string                        `json:"exception_remark"`
+	AppID             uint64                        `json:"app_id"`
+	ShopSupplierID    uint64                        `json:"shop_supplier_id"`
+	ShiftStartTime    string                        `json:"shift_start_time"`
+	ShiftEndTime      string                        `json:"shift_end_time"`
+	CreateTime        string                        `json:"create_time"`
+	UpdateTime        string                        `json:"update_time"`
+	Abnormal          StaffShiftSnapshotAbnormal    `json:"abnormal"`
+	Order             StaffShiftSnapshotOrder       `json:"order"`
+	SalesInfo         []StaffShiftSnapshotSalesInfo `json:"salesInfo"`
+	User              StaffShiftSnapshotUser        `json:"user"`
+}
+
+// StaffShiftSnapshotAbnormal 交班快照-异常统计
+type StaffShiftSnapshotAbnormal struct {
+	RefundProductTimes         int `json:"refund_product_times"`
+	CancelRefundTimes          int `json:"cancel_refund_times"`
+	ProductFreeTimes           int `json:"product_free_times"`
+	CancelProductFreeTimes     int `json:"cancel_product_free_times"`
+	RefundTime                 int `json:"refund_time"`
+	ProductMoveTimes           int `json:"product_move_times"`
+	ChangePriceTimes           int `json:"change_price_times"`
+	ChangeOrderPriceTimes      int `json:"change_order_price_times"`
+	DiscountOrderTimes         int `json:"discount_order_times"`
+	RoundOrderTimes            int `json:"round_order_times"`
+	FreeOrderTimes             int `json:"free_order_times"`
+	ReverseSettleTimes         int `json:"reverse_settle_times"`
+	RoundOrderCancelTimes      int `json:"round_order_cancel_times"`
+	CheckoutRoundOrderTimes    int `json:"checkout_round_order_times"`
+	RechargeRefundTimes        int `json:"recharge_refund_times"`
+	RechargeReverseSettleTimes int `json:"recharge_reverse_settle_times"`
+}
+
+// StaffShiftSnapshotOrder 交班快照-订单统计
+type StaffShiftSnapshotOrder struct {
+	ReceivablePrice         float64                        `json:"receivable_price"`
+	NotTaxTotalProductPrice float64                        `json:"not_tax_total_product_price"`
+	TotalProductPrice       float64                        `json:"total_product_price"`
+	ServiceMoney            float64                        `json:"service_money"`
+	DiscountMoney           float64                        `json:"discount_money"`
+	ConsumptionTaxMoney     float64                        `json:"consumption_tax_money"`
+	PayFeeMoney             float64                        `json:"pay_fee_money"`
+	ReceivedBalancePrice    float64                        `json:"received_balance_price"`
+	ReceivedPrice           float64                        `json:"received_price"`
+	SalesPrice              float64                        `json:"sales_price"`
+	ProductNum              int                            `json:"product_num"`
+	UserDiscountMoney       float64                        `json:"user_discount_money"`
+	RefundMoney             float64                        `json:"refund_money"`
+	RefundConsumptionTax    float64                        `json:"refund_consumption_tax"`
+	FreeProductPrice        float64                        `json:"free_product_price"`
+	FreeProductNum          uint                           `json:"free_product_num"`
+	FreeOrderPrice          float64                        `json:"free_order_price"`
+	FreeOrderNum            uint                           `json:"free_order_num"`
+	TotalOrderNum           int                            `json:"total_order_num"`
+	TotalTableNum           int                            `json:"total_table_num"`
+	TotalPeopleNum          int                            `json:"total_people_num"`
+	MinOrderPrice           float64                        `json:"min_order_price"`
+	MaxOrderPrice           float64                        `json:"max_order_price"`
+	AvgOrderPrice           float64                        `json:"avg_order_price"`
+	TableOrderNum           int                            `json:"table_order_num"`
+	TablePeopleNum          int                            `json:"table_people_num"`
+	TableMinOrderPrice      float64                        `json:"table_min_order_price"`
+	TableMaxOrderPrice      float64                        `json:"table_max_order_price"`
+	TableAvgOrderPrice      float64                        `json:"table_avg_order_price"`
+	TablePeopleAvg          float64                        `json:"table_people_avg"`
+	CashierOrderNum         int                            `json:"cashier_order_num"`
+	CashierMinOrderPrice    float64                        `json:"cashier_min_order_price"`
+	CashierMaxOrderPrice    float64                        `json:"cashier_max_order_price"`
+	CashierAvgOrderPrice    float64                        `json:"cashier_avg_order_price"`
+	GiftPoints              float64                        `json:"gift_points"`
+	GiftMoney               float64                        `json:"gift_money"`
+	RechargeAmount          float64                        `json:"recharge_amount"`
+	RechargeRefundTotal     float64                        `json:"recharge_refund_total"`
+	NotSettledTotalOrderNum int                            `json:"not_settled_total_order_num"`
+	NotSettledTotalPrice    float64                        `json:"not_settled_total_price"`
+	DiscountRatio           string                         `json:"discount_ratio"`
+	BusinessPrice           float64                        `json:"business_price"`
+	UserCount               int                            `json:"user_count"`
+	PeakHourList            []StaffShiftSnapshotPeakHour   `json:"peak_hour_list"`
+	PercentageList          []StaffShiftSnapshotPercentage `json:"percentage_list"`
+	Incomes                 []StaffShiftSnapshotIncome     `json:"incomes"`
+}
+
+// StaffShiftSnapshotOrder 交班快照-高峰期统计
+type StaffShiftSnapshotPeakHour struct {
+	TimePeriod string  `json:"time_period"`
+	Date       string  `json:"date"`
+	Hour       uint    `json:"hour"`
+	Num        int     `json:"num"`
+	Amount     float64 `json:"amount"`
+}
+
+// StaffShiftSnapshotPercentage 交班快照-税率统计
+type StaffShiftSnapshotPercentage struct {
+	TotalPrice     float64 `json:"total_price"`
+	TaxRate        float64 `json:"tax_rate"`
+	ConsumptionTax float64 `json:"consumption_tax"`
+}
+
+// StaffShiftSnapshotIncome 交班快照-支付统计
+type StaffShiftSnapshotIncome struct {
+	PayType             int     `json:"pay_type"`
+	PayTypeName         string  `json:"pay_type_name"`
+	PayTypeWay          string  `json:"pay_type_way"`
+	Price               float64 `json:"price"`
+	OrderNum            int     `json:"order_num"`
+	RefundIncludedPrice float64 `json:"refund_included_price"`
+}
+
+// StaffShiftSnapshotSalesInfo 交班快照-销售统计
+type StaffShiftSnapshotSalesInfo struct {
+	Name     string `json:"name"`
+	Sales    string `json:"sales"`
+	Prices   string `json:"prices"`
+	NameText string `json:"name_text"`
+}
+
+// StaffShiftSnapshotUser 交班快照-员工
+type StaffShiftSnapshotUser struct {
+	ShopUserID       uint64 `json:"shop_user_id"`
+	UserName         string `json:"user_name"`
+	Password         string `json:"password"`
+	Phone            string `json:"phone"`
+	PasswordChange   int    `json:"password_change"`
+	RealName         string `json:"real_name"`
+	IsSuper          int    `json:"is_super"`
+	ShopSupplierID   uint64 `json:"shop_supplier_id"`
+	IsDelete         int    `json:"is_deleted"`
+	UserType         int    `json:"user_type"`
+	IsStatus         int    `json:"is_status"`
+	AppID            uint64 `json:"app_id"`
+	BindKey          string `json:"bind_key"`
+	CashierOnline    int    `json:"cashier_online"`
+	CashierLoginTime int64  `json:"cashier_login_time"`
+	DutyNo           string `json:"duty_no"`
+	CreateTime       string `json:"create_time"`
+	UpdateTime       string `json:"update_time"`
+}

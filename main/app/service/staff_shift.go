@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"regexp"
@@ -38,6 +39,7 @@ type IStaffShiftSrv interface {
 	ShiftWithdraw(ctx context.Context, req req.ShiftWithdrawReq) error
 	ShiftDeposit(ctx context.Context, req req.ShiftDepositReq) error
 	ShiftPrinter(ctx context.Context, req req.ShiftPrinterReq, firstExecution int, openMoneybox bool, staffs ...model.Staff) (*resp.PrinterData, error)
+	CreateShiftSnapshot(ctx context.Context, shiftLog model.StaffShiftLog) error
 }
 
 func NewStaffShiftSrv(cache cache.Cache, dbm *database.DBManager, cashBoxSrv ICashBoxSrv, statisticsSrv IStatisticsSrv) IStaffShiftSrv {
@@ -232,12 +234,13 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		// 当前班次营业额
 		// 更新当班记录
 		currentCashTotal = leaveCash
+		shiftEndTime := time.Now().Unix()
 		_, err = shiftLogRepo.Update(shiftLog, map[string]interface{}{
 			"status":             constant.StaffHandedOver,          // 交班状态
 			"current_cash_total": currentCashTotal.InexactFloat64(), // 当前钱箱现金总计
 			"cash_taken_out":     withdrawCash.InexactFloat64(),     // 取出现金
 			"cash_left":          currentCashTotal.InexactFloat64(), // 遗留现金
-			"shift_end_time":     time.Now().Unix(),                 // 交班时间
+			"shift_end_time":     shiftEndTime,                      // 交班时间
 			"cash_income":        cashAmount,                        // 现金收入
 			"incomes":            incomes,                           // 支付方式收入
 			"total_business":     saleData.TotalSaleAmount,          // 营业额
@@ -279,6 +282,13 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		repository.NewDeviceRepo(db).UpdateDevice(device.Uuid, map[string]any{
 			"finally_login_uuid": 0,
 		})
+
+		// 创建交班快照
+		err = s.CreateShiftSnapshot(ctx, shiftLog)
+		if err != nil {
+			return errors.New("交班失败")
+		}
+
 		return nil
 	})
 
@@ -653,4 +663,194 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 	}
 
 	return printerData, nil
+}
+
+// CreateShiftSnapshot 创建交班快照
+func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.StaffShiftLog) error {
+	// 获取最新交班数据
+	shiftLogRepo := repository.NewShiftLogRepo(ctx.GetDB())
+	log, err := shiftLogRepo.GetShiftLog(
+		shiftLogRepo.WithStaff(),
+		repository.NewCommonRepo().WhereByUuid(shiftLog.Uuid),
+	)
+	if err != nil {
+		return errors.New("获取交班数据失败")
+	}
+
+	// 获取交班快照
+	snapshot, _ := shiftLogRepo.GetSnapshot(
+		repository.NewCommonRepo().WhereByShiftLogUuid(shiftLog.Uuid),
+	)
+	if snapshot.Uuid > 0 {
+		return nil
+	}
+
+	// 获取交班详情
+	businessSrv := NewBusinessSrvImpl(s.statisticsSrv)
+	businessData, err := businessSrv.CountBusiness(ctx, req.BusinessDataCountReq{
+		QueryStartTime: log.ShiftStartTime,
+		QueryEndTime:   log.ShiftEndTime,
+	})
+	if err != nil {
+		return errors.New("获取交班数据失败")
+	}
+
+	time := utils.SetTimezone(ctx.GetCompany().CompanySetting.Timezone)
+
+	// 高峰期列表
+	peakHourList := make([]model.StaffShiftSnapshotPeakHour, 0, len(businessData.PeakHourList))
+	for _, v := range businessData.PeakHourList {
+		peakHourList = append(peakHourList, model.StaffShiftSnapshotPeakHour{
+			TimePeriod: v.TimePeriod,
+			Num:        v.OrderNum,
+			Amount:     v.Amount,
+		})
+	}
+
+	// 税率列表
+	percentageList := make([]model.StaffShiftSnapshotPercentage, 0, len(businessData.PercentageList))
+	for _, v := range businessData.PercentageList {
+		percentageList = append(percentageList, model.StaffShiftSnapshotPercentage{
+			TotalPrice:     v.TotalPrice,
+			TaxRate:        v.TaxRate,
+			ConsumptionTax: v.ConsumptionTax,
+		})
+	}
+
+	// 支付统计
+	incomes := make([]model.StaffShiftSnapshotIncome, 0, len(businessData.PaymentMethodIncomes))
+	for _, v := range businessData.PaymentMethodIncomes {
+		incomes = append(incomes, model.StaffShiftSnapshotIncome{
+			PayType:     v.Code,
+			PayTypeName: v.Name,
+			Price:       v.Amount,
+			OrderNum:    v.OrderNum,
+		})
+	}
+
+	// 销售统计
+	salesInfo := make([]model.StaffShiftSnapshotSalesInfo, 0, len(businessData.CategoryList))
+	for _, v := range businessData.CategoryList {
+		salesInfo = append(salesInfo, model.StaffShiftSnapshotSalesInfo{
+			Name:     v.Name,
+			Sales:    convertor.ToString(v.SalesNum),
+			Prices:   fmt.Sprintf("%.2f", v.Prices),
+			NameText: v.Name,
+		})
+	}
+
+	userIsDelete := 0
+	if log.Staff.IsDelete() {
+		userIsDelete = 1
+	}
+	userIsStatus := 1
+	if log.Staff.IsDisable == 1 {
+		userIsStatus = 0
+	}
+
+	content := model.StaffShiftSnapshotContent{
+		ID:                log.Uuid,
+		ShiftUserID:       log.StaffUuid,
+		ShiftNo:           log.ShiftNo,
+		Status:            log.Status,
+		PreviousShiftCash: fmt.Sprintf("%.2f", log.PreviousShiftCash),
+		CurrentCashTotal:  fmt.Sprintf("%.2f", log.CurrentCashTotal),
+		Incomes:           incomes,
+		TotalIncome:       fmt.Sprintf("%.2f", log.TotalIncome),
+		CashTakenOut:      fmt.Sprintf("%.2f", log.CashTakenOut),
+		CashLeft:          fmt.Sprintf("%.2f", log.CashLeft),
+		CashIncome:        fmt.Sprintf("%.2f", log.CashIncome),
+		TotalBusiness:     fmt.Sprintf("%.2f", log.TotalBusiness),
+		IsPrinted:         log.IsPrinted,
+		Remark:            log.Remark,
+		WithdrawCash:      fmt.Sprintf("%.2f", log.WithdrawCash),
+		DepositCash:       fmt.Sprintf("%.2f", log.DepositCash),
+		ExceptionRemark:   log.ExceptionRemark,
+		AppID:             log.Staff.CompanyUuid,
+		ShopSupplierID:    log.Staff.CompanyUuid,
+		ShiftStartTime:    time.FormatUnixTimeDefault(log.ShiftStartTime),
+		ShiftEndTime:      time.FormatUnixTimeDefault(log.ShiftEndTime),
+		CreateTime:        time.FormatUnixTimeDefault(log.CreateTime),
+		UpdateTime:        time.FormatUnixTimeDefault(log.UpdateTime),
+		Abnormal: model.StaffShiftSnapshotAbnormal{
+			RefundProductTimes:    businessData.AbnormalData.RefundProductTimes,
+			ProductFreeTimes:      businessData.AbnormalData.ProductFreeTimes,
+			RefundTime:            businessData.AbnormalData.RefundTimes,
+			ProductMoveTimes:      businessData.AbnormalData.ProductMoveTimes,
+			ChangePriceTimes:      businessData.AbnormalData.ChangePriceTimes,
+			ChangeOrderPriceTimes: businessData.AbnormalData.ChangeOrderPriceTimes,
+			DiscountOrderTimes:    businessData.AbnormalData.DiscountOrderTimes,
+			RoundOrderTimes:       businessData.AbnormalData.RoundOrderTimes,
+			FreeOrderTimes:        businessData.AbnormalData.FreeOrderTimes,
+			ReverseSettleTimes:    businessData.AbnormalData.ReverseSettleTimes,
+		},
+		Order: model.StaffShiftSnapshotOrder{
+			ServiceMoney:         businessData.TotalServiceMoney,
+			DiscountMoney:        businessData.TotalDiscountMoney,
+			ConsumptionTaxMoney:  businessData.TotalTaxMoney,
+			PayFeeMoney:          businessData.TotalPayFeeMoney,
+			ReceivedPrice:        businessData.TotalReceivedPrice,
+			ProductNum:           businessData.TotalProductNum,
+			UserDiscountMoney:    businessData.TotalUserDiscountMoney,
+			RefundMoney:          businessData.TotalRefundMoney,
+			TotalOrderNum:        businessData.TotalOrderNum,
+			TotalTableNum:        businessData.TotalTableNum,
+			TotalPeopleNum:       businessData.TotalPeopleNum,
+			MinOrderPrice:        businessData.MinOrderPrice,
+			MaxOrderPrice:        businessData.MaxOrderPrice,
+			AvgOrderPrice:        businessData.AvgOrderPrice,
+			TableOrderNum:        businessData.AllTableOrderNum,
+			TablePeopleNum:       businessData.AllTablePeopleNum,
+			TableMinOrderPrice:   businessData.AllTableMinOrderPrice,
+			TableMaxOrderPrice:   businessData.AllTableMaxOrderPrice,
+			TableAvgOrderPrice:   businessData.AllTableAvgOrderPrice,
+			TablePeopleAvg:       businessData.AllTablePeopleAvg,
+			CashierOrderNum:      businessData.AllCashierOrderNum,
+			CashierMinOrderPrice: businessData.AllCashierMinOrderPrice,
+			CashierMaxOrderPrice: businessData.AllCashierMaxOrderPrice,
+			CashierAvgOrderPrice: businessData.AllCashierAvgOrderPrice,
+			GiftPoints:           businessData.MemberData.GiftPoints,
+			GiftMoney:            businessData.MemberData.GiftMoney,
+			RechargeAmount:       businessData.MemberData.RechargeAmount,
+			PeakHourList:         peakHourList,
+			PercentageList:       percentageList,
+			Incomes:              incomes,
+		},
+		SalesInfo: salesInfo,
+		User: model.StaffShiftSnapshotUser{
+			ShopUserID:       log.Staff.Uuid,
+			UserName:         log.Staff.Username,
+			Password:         log.Staff.Password,
+			Phone:            log.Staff.Phone,
+			PasswordChange:   log.Staff.PasswordChangeCount,
+			RealName:         log.Staff.RealName,
+			IsSuper:          log.Staff.IsSuper,
+			ShopSupplierID:   log.Staff.CompanyUuid,
+			IsDelete:         userIsDelete,
+			UserType:         log.Staff.UserType,
+			IsStatus:         userIsStatus,
+			AppID:            log.Staff.CompanyUuid,
+			BindKey:          log.Staff.BindKey,
+			CashierOnline:    log.Staff.CashierOnline,
+			CashierLoginTime: log.Staff.CashierLoginTime,
+			DutyNo:           log.Staff.DutyNo,
+			CreateTime:       time.FormatUnixTimeDefault(log.Staff.CreateTime),
+			UpdateTime:       time.FormatUnixTimeDefault(log.Staff.UpdateTime),
+		},
+	}
+
+	jsonData, err := json.Marshal(content)
+	if err != nil {
+		return errors.New("序列化交班快照数据失败")
+	}
+
+	_, err = shiftLogRepo.CreateSnapshot(model.StaffShiftSnapshot{
+		ShiftLogUuid: log.Uuid,
+		Content:      string(jsonData),
+	})
+	if err != nil {
+		return errors.New("创建交班快照失败")
+	}
+
+	return nil
 }
