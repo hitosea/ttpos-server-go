@@ -409,7 +409,7 @@
         // 反之查看子单详情, 则sale_order_uuid = 为子单sale_order_uuid
         const saleOrderUuid = row.is_split === undefined ? row.sale_order_uuid : 0;
         self.$router.push({
-          path: '/' + this.app_id + '/store/order/detail',
+          path: '/' + this.app_id + '/store/history_order/detail',
           query: {
             sale_bill_uuid: row.sale_bill_uuid,
             sale_order_uuid: saleOrderUuid,
