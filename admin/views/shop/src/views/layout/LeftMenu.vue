@@ -172,6 +172,8 @@
                 item.children.map((child, i) => {
                   if (child.name == '历史用餐订单') this.active_child = i;
                 });
+
+                this.$emit('selectMenu', false);
               }
             });
           }
