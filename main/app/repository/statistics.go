@@ -161,7 +161,7 @@ func (r *StatisticsRepo) CountSaleDays(opts ...DBOption) []model.StatisticsSaleD
 var (
 	countPaymentSelect = []string{
 		"sp.payment_method_uuid",
-		"pm.name AS payment_name",
+		"pm.payment_name AS payment_name",
 		"pm.code AS payment_code",
 		"COUNT(sp.payment_method_uuid) AS total_order_num",
 		"SUM(sp.payment_amount-sp.refund_amount) AS total_payment_amount",
