@@ -18,6 +18,7 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 )
 
@@ -554,16 +555,6 @@ func (s *businessSrv) BuildPaymentMethodIncome(ctx context.Context, req req.Busi
 		CategoryType:   req.CategoryType,
 	})
 
-	paymentMethodIncomes := make([]business_data_resp.PaymentMethodIncome, 0)
-	for _, payment := range paymentData.PaymentList {
-		paymentMethodIncomes = append(paymentMethodIncomes, business_data_resp.PaymentMethodIncome{
-			Name:     payment.PaymentName,
-			OrderNum: int(payment.TotalOrderNum),
-			Amount:   payment.TotalPaymentAmount,
-			Code:     payment.PaymentCode,
-		})
-	}
-
 	// 统计免单支付
 	freePaymentData := s.statisticsSrv.CountFreePayment(ctx, CountReq{
 		DutyNo:         req.DutyNo,
@@ -572,6 +563,24 @@ func (s *businessSrv) BuildPaymentMethodIncome(ctx context.Context, req req.Busi
 		TimeType:       req.TimeType,
 		CategoryType:   req.CategoryType,
 	})
+
+	paymentMethodIncomes := make([]business_data_resp.PaymentMethodIncome, 0)
+	for _, payment := range paymentData.PaymentList {
+		if payment.PaymentCode == 0 {
+			freePaymentData.PaymentName = payment.PaymentName
+			freePaymentData.TotalOrderNum = freePaymentData.TotalOrderNum + payment.TotalOrderNum
+			freePaymentData.TotalPaymentAmount = decimal.NewFromFloat(freePaymentData.TotalPaymentAmount).Add(decimal.NewFromFloat(payment.TotalPaymentAmount)).InexactFloat64()
+			continue
+		} else {
+			paymentMethodIncomes = append(paymentMethodIncomes, business_data_resp.PaymentMethodIncome{
+				Name:     payment.PaymentName,
+				OrderNum: int(payment.TotalOrderNum),
+				Amount:   payment.TotalPaymentAmount,
+				Code:     payment.PaymentCode,
+			})
+		}
+	}
+
 	if freePaymentData.TotalOrderNum > 0 {
 		paymentMethodIncomes = append(paymentMethodIncomes, business_data_resp.PaymentMethodIncome{
 			Name:     freePaymentData.PaymentName,

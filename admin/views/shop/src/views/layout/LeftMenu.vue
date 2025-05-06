@@ -165,6 +165,16 @@
               }
             });
           }
+          if (newVal.meta.topTree == '/store/history_order/detail') {
+            this.menuList.map((item, index) => {
+              if (item.name == '订单管理') {
+                this.active_menu = index;
+                item.children.map((child, i) => {
+                  if (child.name == '历史用餐订单') this.active_child = i;
+                });
+              }
+            });
+          }
           if (newVal.meta.topTree == '/store/recharge/detail') {
             this.menuList.map((item, index) => {
               if (item.name == '订单管理') {

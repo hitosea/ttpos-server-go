@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"fmt"
+	"time"
 	"ttpos-server-go/app/errors"
 	v1 "ttpos-server-go/trans/v1"
 
@@ -8,6 +10,9 @@ import (
 )
 
 func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceCompanyId int, targetCompanyUuid uint64) error {
+	// 记录开始时间
+	startTime := time.Now()
+	//
 	var err error
 	// 桌台
 	{
@@ -333,6 +338,51 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+
+	// 采购单
+	purchaseService := v1.NewPurchaseService(sourceDB, targetDB)
+	err = purchaseService.ConvertPurchaseForm()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 处理汇总支付数据
+	statisticsPaymentService := v1.NewStatisticsPaymentService(sourceDB, targetDB)
+	err = statisticsPaymentService.ConvertStatisticsPayment()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 入库记录
+	err = purchaseService.ConvertWarehouseForm()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 处理汇总商品数据
+	statisticsProductService := v1.NewStatisticsProductService(sourceDB, targetDB)
+	err = statisticsProductService.ConvertStatisticsProduct()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 出库记录
+	stockService := v1.NewStockService(sourceDB, targetDB)
+	err = stockService.ConvertWarehouseOut()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 报损记录
+	err = stockService.ConvertDemaged()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 打印总结信息
+	fmt.Printf("\n========== 数据迁移完成 ==========\n")
+	fmt.Printf("总耗时: %s\n", time.Since(startTime))
+	fmt.Printf("==================================\n")
 
 	return nil
 }
