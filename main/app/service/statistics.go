@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/duke-git/lancet/v2/slice"
 	"github.com/shopspring/decimal"
@@ -332,7 +333,7 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 		})
 		if !ok {
 			list = append(list, CountPaymentRespList{
-				PaymentName:        payment.PaymentName,
+				PaymentName:        utils.IfString(payment.PaymentCode == 0, i18n.Translate(ctx.GetLanguage(), "免单"), payment.PaymentName),
 				PaymentCode:        payment.PaymentCode,
 				TotalOrderNum:      payment.TotalOrderNum.Int64,
 				TotalPaymentAmount: payment.TotalPaymentAmount.Float64,
@@ -342,7 +343,7 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 			item.TotalPaymentAmount += payment.TotalPaymentAmount.Float64
 			list[i] = *item
 		}
-		if payment.PaymentCode != 10 {
+		if payment.PaymentCode != 10 && payment.PaymentCode != 0 {
 			totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(payment.TotalPaymentAmount.Float64))
 		}
 		totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(payment.TotalRefundAmount.Float64))

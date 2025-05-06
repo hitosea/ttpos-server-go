@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/repository"
 
 	"gorm.io/gorm"
 )
@@ -43,13 +42,18 @@ func (s *OrderPeakTimeService) GetOrderPeakTimeList() ([]*OrderPeakTime, error) 
 }
 
 func (s *OrderPeakTimeService) ConvertOrderPeakTime() error {
-	orderPeakTimes, err := s.GetOrderPeakTimeList()
+	return s.convertOrderPeakTime(0, 2000)
+}
+
+func (s *OrderPeakTimeService) convertOrderPeakTime(offset, limit int) error {
+	var orderPeakTimes []*OrderPeakTime
+	err := s.db.Offset(offset).Limit(limit).Find(&orderPeakTimes).Error
 	if err != nil {
 		return err
 	}
+	saleOrderPeakTimes := []model.SaleOrderPeakTime{}
 	for _, orderPeakTime := range orderPeakTimes {
-		fmt.Println(fmt.Sprintf("orderPeakTime: %+v", orderPeakTime))
-		saleOrderPeakTime := model.SaleOrderPeakTime{
+		saleOrderPeakTimes = append(saleOrderPeakTimes, model.SaleOrderPeakTime{
 			BaseModel: model.BaseModel{
 				Uuid:       orderPeakTime.ID,
 				CreateTime: int64(orderPeakTime.CreateTime),
@@ -60,10 +64,17 @@ func (s *OrderPeakTimeService) ConvertOrderPeakTime() error {
 			Num:         orderPeakTime.Num,
 			Amount:      orderPeakTime.Amount,
 			CashierUuid: uint64(orderPeakTime.CashierID),
-		}
-		if err := repository.NewSaleOrderPeakTimeRepo(s.targetDB).CreateSaleOrderPeakTime(saleOrderPeakTime); err != nil {
+		})
+	}
+	// 保存数据
+	if len(saleOrderPeakTimes) > 0 {
+		fmt.Println(fmt.Sprintf("order-peak-time - num: %d", len(saleOrderPeakTimes)))
+		if err := s.targetDB.Create(&saleOrderPeakTimes).Error; err != nil {
 			return errors.WithMessage(err)
 		}
+		// 递归
+		offset += limit
+		return s.convertOrderPeakTime(offset, limit)
 	}
 	return nil
 }

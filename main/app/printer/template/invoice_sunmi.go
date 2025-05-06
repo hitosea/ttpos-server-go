@@ -364,7 +364,7 @@ func (t *invoiceSunmiTemplate) GetPrintContent(
 	// Print and exit page mode
 	printer.LineFeed(6)
 	printer.PrintAndExitPageMode()
-	printer.CutPaper(true)
+	printer.CutPaper(false)
 
 	// 返回打印数据
 	return printer.GetOrderData()
