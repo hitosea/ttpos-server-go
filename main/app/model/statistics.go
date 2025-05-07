@@ -62,6 +62,8 @@ type StatisticsProduct struct {
 	ProductPrice       float64 `gorm:"column:product_price;type:decimal(14,2);default:0.00;comment:商品单价: 未含税;NOT NULL" json:"product_price"`
 	ProductSalePrice   float64 `gorm:"column:product_sale_price;type:decimal(14,2);default:0.00;comment:商品单价: 规格+加料;NOT NULL" json:"product_sale_price"`
 	ProductFinalPrice  float64 `gorm:"column:product_final_price;type:decimal(14,2);default:0.00;comment:商品最终单价;NOT NULL" json:"product_final_price"`
+	FlavorPrice        float64 `gorm:"column:flavor_price;type:decimal(14,2);default:0.00;comment:商品原价(仅规格);NOT NULL" json:"flavor_price"`
+	SaucePrice         float64 `gorm:"column:sauce_price;type:decimal(14,2);default:0.00;comment:加料价格;NOT NULL" json:"sauce_price"`
 	ProductNum         int     `gorm:"column:product_num;type:int(11);default:0;comment:商品数量;NOT NULL" json:"product_num"`
 	TaxRate            float64 `gorm:"column:tax_rate;type:decimal(14,2);default:0.00;comment:税率;NOT NULL" json:"tax_rate"`
 	TaxFee             float64 `gorm:"column:tax_fee;type:decimal(14,2);default:0.00;comment:税费;NOT NULL" json:"tax_fee"`

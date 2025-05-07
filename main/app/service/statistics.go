@@ -941,6 +941,8 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					ProductPrice:       productPrice.InexactFloat64(),
 					ProductSalePrice:   productSalePrice.InexactFloat64(),
 					ProductFinalPrice:  productFinalPrice.InexactFloat64(),
+					FlavorPrice:        saleProduct.FlavorPrice,
+					SaucePrice:         saleProduct.SaucePrice,
 					ProductNum:         productNum,
 					TaxRate:            saleProduct.TaxRate,
 					TaxFee:             productTax.InexactFloat64(),
