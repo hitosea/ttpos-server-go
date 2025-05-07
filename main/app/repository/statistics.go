@@ -309,7 +309,7 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 		Select(
 			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) AS product_name",
 			"JSON_UNQUOTE(JSON_EXTRACT(pb.name, '$."+language+"')) AS flavor_name",
-			"sp.product_sale_price AS sale_price",
+			"pb.price AS sale_price",
 			"SUM(sp.product_num) AS sale_num",
 			"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
 		).
@@ -394,7 +394,7 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, opts ...DBOp
 			"sp.product_sale_price AS sale_price",
 			"sp.product_package_uuid AS product_package_uuid",
 			"SUM(sp.product_num) AS sale_num",
-			"SUM(sp.product_price * sp.product_num) AS sale_amount",
+			"SUM(sp.flavor_price * sp.product_num) AS sale_amount",
 		).
 		Where("sp.refund_time = 0").
 		Group("sp.product_package_uuid")

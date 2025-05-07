@@ -95,7 +95,7 @@ type CountSaleResp struct {
 // CountSale 统计销售
 func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleResp {
 	db := ctx.GetDB()
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	saleData := repository.NewStatisticsRepo(db).CountSale(opts...)
 	memberData := s.CountMember(ctx, req)
 
@@ -162,7 +162,7 @@ type CountSaleDaysResp struct {
 // CountSaleDays 统计销售天数
 func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []string) []CountSaleDaysResp {
 	repo := repository.NewStatisticsRepo(ctx.GetDB())
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	saleData := repo.CountSaleDays(opts...)
 	memberData := repo.CountMemberDays(opts...)
 
@@ -315,7 +315,7 @@ type CountPaymentRespList struct {
 
 // CountPayment 统计支付
 func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPaymentResp {
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountPayment(opts...)
 	memberPaymentData := s.CountMemberPayment(ctx, req)
 
@@ -387,7 +387,7 @@ type CountPaymentDaysResp struct {
 
 // CountPaymentDays 统计支付天数
 func (s *statisticsSrv) CountPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp {
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountPaymentDays(opts...)
 
 	list := make([]CountPaymentDaysResp, 0)
@@ -414,7 +414,7 @@ func (s *statisticsSrv) CountPaymentDays(ctx context.Context, req CountReq, days
 
 // CountMemberPayment 统计会员支付
 func (s *statisticsSrv) CountMemberPayment(ctx context.Context, req CountReq) CountPaymentResp {
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberPayment(opts...)
 
 	var (
@@ -443,7 +443,7 @@ func (s *statisticsSrv) CountMemberPayment(ctx context.Context, req CountReq) Co
 
 // CountMemberPaymentDays 统计会员支付天数
 func (s *statisticsSrv) CountMemberPaymentDays(ctx context.Context, req CountReq, days []string) []CountPaymentDaysResp {
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberPaymentDays(opts...)
 
 	list := make([]CountPaymentDaysResp, 0)
@@ -476,7 +476,7 @@ type CountTaxResp struct {
 
 // CountTax 统计税类
 func (s *statisticsSrv) CountTax(ctx context.Context, req CountReq) []CountTaxResp {
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	opts = append(opts, repository.NewCommonRepo().WhereByRefundTime(0))
 	taxData := repository.NewStatisticsRepo(ctx.GetDB()).CountTax(opts...)
 
@@ -511,7 +511,7 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 		list []CountCategoryListResp
 	)
 
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	orderNum, categoryData := repository.NewStatisticsRepo(ctx.GetDB()).CountCategory(req.CategoryType, ctx.GetLanguage(), opts...)
 
 	for _, category := range categoryData {
@@ -542,7 +542,7 @@ type CountProductResp struct {
 
 // CountProduct 统计商品
 func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountProductResp {
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	productData := repository.NewStatisticsRepo(ctx.GetDB()).CountProduct(ctx.GetLanguage(), opts...)
 
 	var list []CountProductResp
@@ -567,7 +567,7 @@ type CountAreaResp struct {
 
 // CountArea 统计区域
 func (s *statisticsSrv) CountArea(ctx context.Context, req CountReq) []CountAreaResp {
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	areaData := repository.NewStatisticsRepo(ctx.GetDB()).CountArea(opts...)
 
 	var list []CountAreaResp
@@ -590,7 +590,7 @@ type CountAreaDaysResp struct {
 
 // CountAreaDays 统计区域天数
 func (s *statisticsSrv) CountAreaDays(ctx context.Context, req CountReq, days []string) []CountAreaDaysResp {
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	areaData := repository.NewStatisticsRepo(ctx.GetDB()).CountAreaDays(opts...)
 
 	var list []CountAreaDaysResp
@@ -630,7 +630,7 @@ type Count7DaysDataResp struct {
 
 // Count7Days 统计7天
 func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7DaysResp {
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	sevenDayData := repository.NewStatisticsRepo(ctx.GetDB()).Count7Days(opts...)
 	days := s.buildDays(req)
 	sevenDayList := make([]Count7DaysDataResp, 0, len(sevenDayData))
@@ -659,7 +659,7 @@ func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7Days
 // CountMemberNum 统计会员数量
 func (s *statisticsSrv) CountMemberNum(ctx context.Context, req CountReq) int64 {
 	req.IsCreateTime = true
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	return repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNum(opts...)
 }
 
@@ -671,7 +671,7 @@ type CountMemberNumDaysResp struct {
 // CountMemberNumDays 统计会员数量天数
 func (s *statisticsSrv) CountMemberNumDays(ctx context.Context, req CountReq, days []string) []CountMemberNumDaysResp {
 	req.IsCreateTime = true
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	memberNumData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNumDays(opts...)
 
 	var list []CountMemberNumDaysResp
@@ -702,7 +702,7 @@ type CountUnpaidOrderResp struct {
 // CountUnpaidOrder 统计未结订单
 func (s *statisticsSrv) CountUnpaidOrder(ctx context.Context, req CountReq) CountUnpaidOrderResp {
 	req.IsCreateTime = true
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	unpaidOrderData := repository.NewStatisticsRepo(ctx.GetDB()).CountUnpaidOrder(opts...)
 
 	return CountUnpaidOrderResp{
@@ -720,7 +720,7 @@ type CountProductRankResp struct {
 
 // CountProductRank 统计商品排行
 func (s *statisticsSrv) RankProduct(ctx context.Context, req CountReq) []CountProductRankResp {
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	productData := repository.NewStatisticsRepo(ctx.GetDB()).RankProduct(req.RankType, ctx.GetLanguage(), opts...)
 	var list []CountProductRankResp
 	for _, product := range productData {
@@ -1156,37 +1156,28 @@ type CountReq struct {
 }
 
 // buildCountOpts 构建统计选项
-func (s *statisticsSrv) buildCountOpts(req CountReq) []repository.DBOption {
+func (s *statisticsSrv) buildCountOpts(ctx context.Context, req CountReq) []repository.DBOption {
 	var (
 		opts           []repository.DBOption
 		commonRepo     = repository.NewCommonRepo()
 		queryStartTime int64
 		queryEndTime   int64
 	)
+	if req.Timezone == "" {
+		req.Timezone = ctx.GetCompanySetting().Timezone
+	}
 	// 处理时间范围
 	if req.TimeType > 0 && req.TimeType < 5 {
-		now := time.Now()
-		var startTime, endTime time.Time
 		switch req.TimeType {
 		case 1: // 今天
-			startTime = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-			endTime = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).TodayStartEndUnix()
 		case 2: // 昨天
-			startTime = time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, now.Location())
-			endTime = time.Date(now.Year(), now.Month(), now.Day()-1, 23, 59, 59, 0, now.Location())
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).YesterdayStartEndUnix()
 		case 3: // 本周
-			weekday := int(now.Weekday())
-			if weekday == 0 {
-				weekday = 7
-			}
-			startTime = time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 0, 0, 0, 0, now.Location())
-			endTime = startTime.AddDate(0, 0, 7).Add(-time.Second)
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).WeekStartEndUnix()
 		case 4: // 本月
-			startTime = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-			endTime = startTime.AddDate(0, 1, 0).Add(-time.Second)
+			queryStartTime, queryEndTime = utils.SetTimezone(req.Timezone).MonthStartEndUnix()
 		}
-		queryStartTime = startTime.Unix()
-		queryEndTime = endTime.Unix()
 	}
 	if req.QueryStartTime > 0 && req.QueryEndTime > 0 {
 		queryStartTime = req.QueryStartTime
@@ -1322,8 +1313,7 @@ type CountMemberResp struct {
 func (s *statisticsSrv) CountMember(ctx context.Context, req CountReq) CountMemberResp {
 	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
 	statisticsRepo := repository.NewStatisticsRepo(db)
-
-	memberData := statisticsRepo.CountMember(s.buildCountOpts(req)...)
+	memberData := statisticsRepo.CountMember(s.buildCountOpts(ctx, req)...)
 
 	return CountMemberResp{
 		TotalSaleAmount:     memberData.TotalSaleAmount.Float64,
@@ -1365,7 +1355,7 @@ func (s *statisticsSrv) CountProductSale(ctx context.Context, req CountReq) Coun
 		AreaUuid:      req.AreaUuid,
 		CategoryUuid:  req.CategoryUuid,
 		ProductName:   req.ProductName,
-	}, s.buildCountOpts(req)...)
+	}, s.buildCountOpts(ctx, req)...)
 
 	var data []CountProductSale
 	for _, productSale := range productSaleData {
@@ -1404,7 +1394,7 @@ type CountFreePaymentResp struct {
 func (s *statisticsSrv) CountFreePayment(ctx context.Context, req CountReq) CountFreePaymentResp {
 	db := database.GetDBManager(config.DatabaseConf{}).GetDB(ctx.GetCompanyUuid())
 	statisticsRepo := repository.NewStatisticsRepo(db)
-	freePaymentData := statisticsRepo.CountFreePayment(s.buildCountOpts(req)...)
+	freePaymentData := statisticsRepo.CountFreePayment(s.buildCountOpts(ctx, req)...)
 
 	return CountFreePaymentResp{
 		PaymentName:        i18n.Translate(ctx.GetLanguage(), "免单"),
@@ -1422,7 +1412,7 @@ type CountFreePaymentDaysResp struct {
 
 // CountFreePaymentDays 统计免单支付天数
 func (s *statisticsSrv) CountFreePaymentDays(ctx context.Context, req CountReq, days []string) []CountFreePaymentDaysResp {
-	opts := s.buildCountOpts(req)
+	opts := s.buildCountOpts(ctx, req)
 	paymentData := repository.NewStatisticsRepo(ctx.GetDB()).CountFreePaymentDays(opts...)
 
 	list := make([]CountFreePaymentDaysResp, 0)

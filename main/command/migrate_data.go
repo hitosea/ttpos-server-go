@@ -3,8 +3,6 @@ package command
 import (
 	"context"
 	"fmt"
-	"github.com/duke-git/lancet/v2/cryptor"
-	"github.com/redis/go-redis/v9"
 	"log"
 	"math/rand"
 	"strings"
@@ -16,6 +14,9 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/trans/handler"
+
+	"github.com/duke-git/lancet/v2/cryptor"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/jinzhu/copier"
 	"github.com/spf13/cobra"
@@ -265,6 +266,9 @@ func truncateTable(targetDB *gorm.DB) bool {
 	targetDB.Raw("SHOW TABLES").Scan(&tables)
 	for _, table := range tables {
 		if table == "ttpos_printer_type" {
+			continue
+		}
+		if table == "ttpos_migrations" {
 			continue
 		}
 		targetDB.Exec(fmt.Sprintf("TRUNCATE TABLE `%s`", table))
