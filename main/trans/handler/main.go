@@ -386,6 +386,13 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		return errors.WithMessage(err)
 	}
 
+	// 销售统计
+	statisticsSaleService := v1.NewStatisticsSaleService(sourceDB, targetDB)
+	err = statisticsSaleService.ConvertStatisticsSale()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
 	// 打印总结信息
 	fmt.Printf("\n========== 数据迁移完成 ==========\n")
 	fmt.Printf("总耗时: %s\n", time.Since(startTime))
