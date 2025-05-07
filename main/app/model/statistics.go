@@ -177,11 +177,12 @@ type StatisticsCategoryData struct {
 
 // StatisticsProductData 商品统计数据
 type StatisticsProductData struct {
-	ProductName sql.NullString  `gorm:"column:product_name;comment:商品名称"`
-	FlavorName  sql.NullString  `gorm:"column:flavor_name;comment:规格名称"`
-	SalePrice   sql.NullFloat64 `gorm:"column:sale_price;comment:销售单价"`
-	SaleNum     sql.NullInt64   `gorm:"column:sale_num;comment:销售数量"`
-	SaleAmount  sql.NullFloat64 `gorm:"column:sale_amount;comment:销售金额"`
+	ProductPackageUuid sql.NullInt64   `gorm:"column:product_package_uuid;comment:商品包uuid"` // 用于拿到排行榜数据后在查询商品名称
+	ProductName        sql.NullString  `gorm:"column:product_name;comment:商品名称"`
+	FlavorName         sql.NullString  `gorm:"column:flavor_name;comment:规格名称"`
+	SalePrice          sql.NullFloat64 `gorm:"column:sale_price;comment:销售单价"`
+	SaleNum            sql.NullInt64   `gorm:"column:sale_num;comment:销售数量"`
+	SaleAmount         sql.NullFloat64 `gorm:"column:sale_amount;comment:销售金额"`
 }
 
 // StatisticsAreaData 区域统计数据

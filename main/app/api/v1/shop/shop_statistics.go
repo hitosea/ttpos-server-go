@@ -35,7 +35,7 @@ func (h *statisticsHandler) CountBusiness(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
-	businessData, err := h.businessSrv.CountBusiness(ctx, countReq)
+	businessData, err := h.businessSrv.CountBusiness(ctx, countReq, service.WithIsShop())
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

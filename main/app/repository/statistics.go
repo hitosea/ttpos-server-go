@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
@@ -387,30 +388,61 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, opts ...DBOp
 
 	prefix := config.Database.TablePrefix
 	statisticsProductTable := prefix + "statistics_product as sp"
-	productPackageTable := prefix + "product_package as pp"
 
 	query := db.Table(statisticsProductTable).
 		Select(
-			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) AS product_name",
 			"sp.product_sale_price AS sale_price",
+			"sp.product_package_uuid AS product_package_uuid",
 			"SUM(sp.product_num) AS sale_num",
 			"SUM(sp.product_price * sp.product_num) AS sale_amount",
 		).
-		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Where("sp.refund_time = 0").
 		Group("sp.product_package_uuid")
 
-	if rankType == 1 {
+	if rankType == constant.RankTypeSaleNum {
 		query = query.Order("sale_num DESC")
 	}
 
-	if rankType == 2 {
+	if rankType == constant.RankTypeSaleAmount {
 		query = query.Order("sale_amount DESC")
 	}
 
 	query = query.Limit(10)
 	query.Find(&result)
 
+	// 单独查询商品包名称
+	result = r.QueryName(result, language)
+
+	return result
+}
+
+// QueryName 查询商品包名称
+func (r *StatisticsRepo) QueryName(result []model.StatisticsProductData, language string) []model.StatisticsProductData {
+	productPackageUuids := make([]uint64, 0)
+	for _, product := range result {
+		if product.ProductPackageUuid.Valid {
+			productPackageUuids = append(productPackageUuids, uint64(product.ProductPackageUuid.Int64))
+		}
+	}
+
+	productPackageNameMap := r.QueryProductPackageName(productPackageUuids, language)
+	for i, product := range result {
+		result[i].ProductName = sql.NullString{
+			String: productPackageNameMap[uint64(product.ProductPackageUuid.Int64)],
+			Valid:  product.ProductPackageUuid.Valid,
+		}
+	}
+	return result
+}
+
+// QueryProductPackageName 查询商品包名称
+func (r *StatisticsRepo) QueryProductPackageName(uuids []uint64, language string) map[uint64]string {
+	result := make(map[uint64]string)
+	var productPackages []model.ProductPackage
+	r.db.Model(&model.ProductPackage{}).Preload("MultiLanguageName").Where("uuid IN (?)", uuids).Find(&productPackages)
+	for _, productPackage := range productPackages {
+		result[productPackage.Uuid] = productPackage.MultiLanguageName.GetNameByLang(language)
+	}
 	return result
 }
 

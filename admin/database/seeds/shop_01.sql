@@ -2029,7 +2029,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX idx_refund_time (refund_time),
+    INDEX idx_sale_bill_uuid (sale_bill_uuid)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品统计表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_statistics_member` (
