@@ -64,7 +64,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	// Initialize the pointer to avoid nil dereference
 	reqPrinterData := &template.PrintingBusinessData{}
 	// 获取参数
-	printerParam := printerReq.GetParam()
+	printerParam := printerReq.GetParam(ctx.GetCompanySetting().Timezone)
 	// 统计类型
 	if printerReq.StatisticsType <= 0 {
 		// 销售数据
@@ -246,7 +246,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 
 // CountBusiness 统计营业数据
 func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataAll, error) {
-	req = req.GetParam()
+	req = req.GetParam(ctx.GetCompanySetting().Timezone)
 	// 销售数据
 	saleData := s.statisticsSrv.CountSale(ctx, CountReq{
 		TimeType:       req.TimeType,
