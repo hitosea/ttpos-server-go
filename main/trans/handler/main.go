@@ -346,6 +346,13 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		return errors.WithMessage(err)
 	}
 
+	// 处理汇总会员数据
+	statisticsMemberService := v1.NewStatisticsMemberService(sourceDB, targetDB)
+	err = statisticsMemberService.ConvertStatisticsMember()
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
 	// 处理汇总支付数据
 	statisticsPaymentService := v1.NewStatisticsPaymentService(sourceDB, targetDB)
 	err = statisticsPaymentService.ConvertStatisticsPayment()

@@ -6,3 +6,4 @@ bin/*
 .txt
 main
 tmp
+/log/*

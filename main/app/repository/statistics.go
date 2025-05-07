@@ -38,6 +38,7 @@ type IStatisticsRepo interface {
 	DeletePayment(saleBillUuid uint64) error                                                                                   // 删除支付
 	DeleteProduct(saleBillUuid uint64) error                                                                                   // 删除商品
 	SaveMember(member model.StatisticsMember) error                                                                            // 保存会员
+	SaveMembers(members []model.StatisticsMember) error                                                                        // 保存会员
 	SaveMemberPayment(payments []model.StatisticsMemberPayment) error                                                          // 保存会员支付
 	DeleteMember(memberRechargeOrderUuid uint64) error                                                                         // 删除会员
 	DeleteMemberPayment(memberRechargeOrderUuid uint64) error                                                                  // 删除会员支付
@@ -269,6 +270,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 			Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
 			Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
 			Group("IF(pc.parent_uuid = 0, pp.category_uuid, pc.parent_uuid)").
+			Where("ppc.parent_uuid = 0").
 			Find(&result)
 	} else {
 		db.Table(statisticsProductTable).
@@ -554,6 +556,11 @@ func (r *StatisticsRepo) CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpa
 // SaveMember 保存会员
 func (r *StatisticsRepo) SaveMember(member model.StatisticsMember) error {
 	return r.db.Create(&member).Error
+}
+
+// SaveMembers 保存会员
+func (r *StatisticsRepo) SaveMembers(members []model.StatisticsMember) error {
+	return r.db.Create(&members).Error
 }
 
 // DeleteMember 删除会员
