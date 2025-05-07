@@ -61,7 +61,7 @@ func (s *StatisticsProductService) convertProduct(offset int, limit int) error {
             rp.product_service_fee / rp.total_num  as service_fee,
             rp.product_service_consumption_tax / rp.total_num  as service_tax,
             IF(rp.is_free != 0, rp.total_num, 0)  as give_num,
-            IF(a.is_free != 0, 1, 0)  as free_num,  
+            IF(a.is_free != 0, rp.total_num, 0)  as free_num,  
             rp.refund_num as refund_num,    
             a.pay_time as complete_time,
             a.create_time as create_time

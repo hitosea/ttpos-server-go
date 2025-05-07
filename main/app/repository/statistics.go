@@ -697,9 +697,6 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	db2 := r.db
 	for _, opt := range opts {
 		db = opt(db)
-	}
-
-	for _, opt := range opts {
 		db2 = opt(db2)
 	}
 
@@ -712,14 +709,14 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	deskTable := prefix + "desk as d"
 
 	var total int64
-	db.Table(statisticsProductTable).
+	db = db.Table(statisticsProductTable).
 		Select("COUNT(DISTINCT sp.product_package_uuid) AS total").
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
-		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
-		Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
+		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid")
 
 	if req.AreaUuid > 0 {
+		db.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
 		db.Where("sb.desk_uuid IN (?)", r.db.Table(deskTable).Select("d.uuid").Where("d.region_uuid = ?", req.AreaUuid))
 	}
 	if req.CategoryUuid > 0 {
@@ -728,7 +725,7 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	if req.ProductName != "" {
 		db.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
 	}
-	db.Find(&total)
+	db.Pluck("total", &total)
 
 	listQuery := db2.Table(statisticsProductTable).
 		Select(
@@ -739,14 +736,14 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 			"SUM((sp.product_price + sp.tax_fee + sp.service_fee + service_tax) * sp.product_num) AS origin_sale_amount",
 			"SUM(sp.product_final_price * sp.product_num) AS actual_sale_amount",
 			"SUM((sp.product_final_price - sp.tax_fee - sp.service_tax) * sp.product_num) AS business_amount",
-			"SUM(IF(sp.free_num > 0,sp.free_num,sp.give_num)) AS give_num",
+			"SUM(IF(sp.free_num > 0, sp.free_num, sp.give_num)) AS give_num",
 		).
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
-		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
-		Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
+		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid")
 
 	if req.AreaUuid > 0 {
+		listQuery.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
 		listQuery.Where("sb.desk_uuid IN (?)", r.db.Table(deskTable).Select("d.uuid").Where("d.region_uuid = ?", req.AreaUuid))
 	}
 	if req.CategoryUuid > 0 {
