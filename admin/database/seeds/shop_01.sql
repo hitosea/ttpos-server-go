@@ -916,7 +916,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_product_flavor_uuid` (`product_flavor_uuid`),
+    INDEX `idx_product_package_uuid` (`product_package_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品BOM表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_related_material` (
@@ -1278,7 +1280,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form_item` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_warehouse_out_form_uuid` (`warehouse_out_form_uuid`),
+    INDEX `idx_material_uuid` (`material_uuid`),
+    INDEX `idx_product_bom_uuid` (`product_bom_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '出库单明细表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_loss_report_form` (
