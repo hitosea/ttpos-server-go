@@ -5,7 +5,7 @@ type ProductCategory struct {
 	BaseModel
 	Name                  string `gorm:"column:name;type:varchar(255);comment:名称;NOT NULL" json:"name"`
 	MultiLanguageNameUuid uint64 `gorm:"column:multi_language_name_uuid;type:bigint(20) unsigned;default:0;comment:多语言名称ID;NOT NULL" json:"multi_language_name_uuid"`
-	Status                int    `gorm:"column:status;type:tinyint(1);default:1;comment:状态, 1-开启 0-关闭;NOT NULL" json:"status"`
+	Status                int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 1-开启 0-关闭;NOT NULL" json:"status"`
 	ParentUuid            uint64 `gorm:"column:parent_uuid;type:bigint(20) unsigned;comment:父级ID" json:"parent_uuid"`
 	IsSpecial             int    `gorm:"column:is_special;type:tinyint(1);default:0;comment:特殊分类, 1-是 0-否;NOT NULL" json:"is_special"`
 	CategoryKey           string `gorm:"column:category_key;type:varchar(255);comment:关键字;NOT NULL" json:"category_key"`
