@@ -36,7 +36,7 @@
             <el-option v-for="item in area_list" :key="item.area_id" :label="item.area_name" :value="item.area_id"> </el-option>
           </el-select>
         </el-form-item>
-        <el-form-item for="no_click" prop="must_type" :rules="[{ required: true, message: '' }]">
+        <el-form-item for="no_click" prop="must_type" :rules="[{ required: true, message: $t('请选择必点类型') }]">
           <template #label>
             <span>{{ $t('必点类型') }}</span>
             <el-tooltip class="item" effect="dark" placement="bottom">
