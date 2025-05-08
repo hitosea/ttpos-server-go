@@ -57,6 +57,7 @@ type UserRepository interface {
 	GetUserList() ([]*User, error)
 	GetUserByID(id uint) (*User, error)
 	GetUserCardRecordByUserIdAndCardId(userId uint, cardId uint) (*UserCardRecord, error)
+	GetUserAccumulatedConsumptionAmount(appId uint) (map[uint]*UserAccumulatedConsumptionAmount, error)
 	ConvertUser() error
 }
 
@@ -90,11 +91,65 @@ func (s *UserService) GetUserByID(id uint) (*User, error) {
 	return &user, errors.WithMessage(err)
 }
 
+type UserAccumulatedConsumptionAmount struct {
+	UserID            uint    `gorm:"column:user_id;not null;default:0;comment:'用户id'"`
+	ConsumptionNum    int     `gorm:"column:consumption_num;not null;default:0;comment:'消费次数'"`
+	ConsumptionAmount float64 `gorm:"column:consumption_amount;not null;default:0.00;comment:'消费金额'"`
+	Nickname          string  `gorm:"column:nickname;not null;default:'';comment:'昵称'"`
+}
+
+// 查询用户的累计消费金额
+func (s *UserService) GetUserAccumulatedConsumptionAmount(appId uint) (map[uint]*UserAccumulatedConsumptionAmount, error) {
+	var consumptionAmounts []*UserAccumulatedConsumptionAmount
+	query := `
+		SELECT
+			a.user_id,
+			COUNT(a.order_id) AS consumption_num,
+			SUM(a.pay_price) - SUM(a.refund_money) AS consumption_amount,
+			b.nickname AS nickname 
+		FROM
+			jjjfood_order a
+			LEFT JOIN jjjfood_user b ON a.user_id = b.user_id
+		WHERE
+			(a.app_id = ?
+			AND a.order_status = '30'
+			AND a.pay_status = '20'
+			AND a.delete_time = '0'
+			AND a.user_id > '0'
+			AND b.is_delete = '0')
+			AND a.delete_time = '0'
+		GROUP BY
+			a.user_id
+		ORDER BY
+			consumption_num DESC
+	`
+	err := s.db.Raw(query, appId).Scan(&consumptionAmounts).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	dataMap := make(map[uint]*UserAccumulatedConsumptionAmount)
+	for _, consumptionAmount := range consumptionAmounts {
+		dataMap[consumptionAmount.UserID] = consumptionAmount
+	}
+	return dataMap, nil
+}
+
 func (s *UserService) ConvertUser() error {
 	users, err := s.GetUserList()
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+
+	// 获取用户累计消费金额
+	consumptionAmounts := make(map[uint]*UserAccumulatedConsumptionAmount)
+	if len(users) > 0 {
+		appId := users[0].AppID
+		consumptionAmounts, err = s.GetUserAccumulatedConsumptionAmount(appId)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+
 	for _, user := range users {
 		fmt.Println(fmt.Sprintf("user: %+v", user))
 
@@ -125,6 +180,14 @@ func (s *UserService) ConvertUser() error {
 			}
 		}
 
+		var consumptionAmount *UserAccumulatedConsumptionAmount
+		consumptionAmount = consumptionAmounts[user.UserID]
+		amount := float64(0)
+		consumptionNum := 0
+		if consumptionAmount != nil {
+			amount = consumptionAmount.ConsumptionAmount
+			consumptionNum = consumptionAmount.ConsumptionNum
+		}
 		member := model.Member{
 			BaseModel: model.BaseModel{
 				ID:         user.UserID,
@@ -140,7 +203,8 @@ func (s *UserService) ConvertUser() error {
 			Password:                     user.Password,
 			Birthday:                     int64(user.Birthday),
 			Point:                        user.Points,
-			AccumulatedConsumptionAmount: user.ExpendMoney,
+			AccumulatedConsumptionAmount: amount,
+			ConsumptionCount:             consumptionNum,
 			Balance:                      user.Balance,
 			GiftBalance:                  user.GiftBalance,
 			MemberLevelUuid:              uint64(user.GradeID),
