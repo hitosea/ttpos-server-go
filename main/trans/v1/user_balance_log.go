@@ -46,7 +46,7 @@ type UserBalanceLogService struct {
 func (s *UserBalanceLogService) GetUserBalanceLogList() ([]*UserBalanceLog, error) {
 	var userBalanceLogs []*UserBalanceLog
 	err := s.db.Find(&userBalanceLogs).Error
-	return userBalanceLogs, err
+	return userBalanceLogs, errors.WithMessage(err)
 }
 
 func (s *UserBalanceLogService) ConvertUserBalanceLog() error {
@@ -57,7 +57,7 @@ func (s *UserBalanceLogService) convertUserBalanceLog(offset, limit int) error {
 	var userBalanceLogs []*UserBalanceLog
 	err := s.db.Offset(offset).Limit(limit).Find(&userBalanceLogs).Error
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	//
 	logs := []model.MemberBalanceLog{}

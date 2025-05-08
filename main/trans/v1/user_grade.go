@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -59,7 +60,7 @@ func (s *UserGradeService) GetUserGradeList() ([]*UserGrade, error) {
 func (s *UserGradeService) ConvertUserGrade() error {
 	userGrades, err := s.GetUserGradeList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, userGrade := range userGrades {
 		fmt.Println(fmt.Sprintf("userGrade: %+v", userGrade))
@@ -84,7 +85,7 @@ func (s *UserGradeService) ConvertUserGrade() error {
 		fmt.Println(fmt.Sprintf("memberLevel: %+v", memberLevel))
 		_, err = base.NewMemberLevelRepo(s.targetDB).CreateMemberLevel(memberLevel)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

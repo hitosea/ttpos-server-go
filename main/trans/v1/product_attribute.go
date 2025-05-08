@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -33,7 +34,7 @@ type ProductAttributeService struct {
 func (s *ProductAttributeService) GetProductAttributeList() ([]*ProductAttribute, error) {
 	var productAttributes []*ProductAttribute
 	if err := s.db.Find(&productAttributes).Error; err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return productAttributes, nil
 }
@@ -41,7 +42,7 @@ func (s *ProductAttributeService) GetProductAttributeList() ([]*ProductAttribute
 func (s *ProductAttributeService) ConvertProductAttribute() error {
 	var productAttributes []*ProductAttribute
 	if err := s.db.Find(&productAttributes).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, productAttribute := range productAttributes {
 		fmt.Println(fmt.Sprintf("productAttribute: %+v", productAttribute))
@@ -57,7 +58,7 @@ func (s *ProductAttributeService) ConvertProductAttribute() error {
 		}
 		_, err := base.NewProductPackageAttributeRepo(s.targetDB).CreateProductPackageAttribute(attribute)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

@@ -96,7 +96,7 @@ class BalanceLog extends BaseModel
                 // 扣除类型
                 $deduct_money_type = isset($setting['deduct_order']) ? $setting['deduct_order'] : 1;
                 if (($scene == BalanceLogSceneEnum::ADMIN || $scene == BalanceLogSceneEnum::DEDUCT) && $gift_money < 0) {
-                    $user->where('uuid', $user_id)->dec('frozen_gift_balance', abs($gift_money))->update();
+                    $user->where('uuid', $user_id)->dec('gift_balance', abs($gift_money))->update();
                     $data['gift_money'] = -abs($gift_money); // 余额日志记录赠送金额
                 }
                 // 订单日志操作
@@ -175,9 +175,9 @@ class BalanceLog extends BaseModel
                  */
                 $after_money = helper::bcadd($before_money, $money);
                 // 主余额
-                $user->where('uuid', $user_id)->inc('frozen_balance', abs($money - $gift_money))->update();
+                $user->where('uuid', $user_id)->inc('balance', abs($money - $gift_money))->update();
                 // 赠送余额
-                $user->where('uuid', $user_id)->inc('frozen_gift_balance', abs($gift_money))->update();
+                $user->where('uuid', $user_id)->inc('gift_balance', abs($gift_money))->update();
             }
             $data['before_money'] = $before_money;
             $data['after_money'] = $after_money;

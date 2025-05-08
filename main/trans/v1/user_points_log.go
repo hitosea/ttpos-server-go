@@ -41,7 +41,7 @@ type UserPointsLogService struct {
 func (s *UserPointsLogService) GetUserPointsLogList() ([]*UserPointsLog, error) {
 	var userPointsLogs []*UserPointsLog
 	err := s.db.Find(&userPointsLogs).Error
-	return userPointsLogs, err
+	return userPointsLogs, errors.WithMessage(err)
 }
 
 func (s *UserPointsLogService) ConvertUserPointsLog() error {
@@ -52,7 +52,7 @@ func (s *UserPointsLogService) convertUserPointsLog(offset, limit int) error {
 	var userPointsLogs []*UserPointsLog
 	err := s.db.Offset(offset).Limit(limit).Find(&userPointsLogs).Error
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	//
 	memberPointLogs := []model.MemberPointLog{}
@@ -61,6 +61,7 @@ func (s *UserPointsLogService) convertUserPointsLog(offset, limit int) error {
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(userPointsLog.LogID),
 				CreateTime: int64(userPointsLog.CreateTime),
+				UpdateTime: int64(userPointsLog.CreateTime),
 			},
 			MemberUuid: uint64(userPointsLog.UserID),
 			Scene:      int(userPointsLog.Scene),

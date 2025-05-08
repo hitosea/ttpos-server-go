@@ -2014,6 +2014,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     `product_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品单价: 未含税',
     `product_sale_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品销售价: 规格+加料',
     `product_final_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品最终价',
+    `flavor_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品原价(规格价)',
+    `sauce_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '加料价格',
     `product_num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
     `tax_rate` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '税率',
     `tax_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '税费',
@@ -2027,7 +2029,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX idx_refund_time (refund_time),
+    INDEX idx_sale_bill_uuid (sale_bill_uuid)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品统计表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_statistics_member` (

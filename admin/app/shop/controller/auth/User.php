@@ -215,6 +215,8 @@ class User extends Controller
                     $menu['id'] = 1734320550;
                     $menu['access_id'] = 1734320550;
                     $menu['uuid'] = 1734320550;
+                    $menu['children'][0]['path'] = "/store/history_order/detail";
+                    $menu['children'][0]['api_path'] = "/store/history_order/detail";
                     // 
                     $menuOne = $menus[$key]['children'][1];
                     $menus[$key]['children'][1] = $menu;

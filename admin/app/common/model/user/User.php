@@ -626,10 +626,6 @@ class User extends BaseModel
         $stats = $this->where([
             ['delete_time', '=', 0],
         ])->field([
-            'balance',
-            'frozen_balance',
-            'gift_balance',
-            'frozen_gift_balance',
             'COALESCE(SUM(balance + frozen_balance), 0) as balance',
             'COALESCE(SUM(gift_balance + frozen_gift_balance), 0) as gift_balance',
         ])->findOrEmpty();

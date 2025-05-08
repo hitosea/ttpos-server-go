@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -46,13 +47,13 @@ type ShopAccessService struct {
 func (s *ShopAccessService) GetShopAccessList() ([]*ShopAccess, error) {
 	var shopAccesses []*ShopAccess
 	err := s.db.Find(&shopAccesses).Error
-	return shopAccesses, err
+	return shopAccesses, errors.WithMessage(err)
 }
 
 func (s *ShopAccessService) ConvertShopAccess() error {
 	shopAccesses, err := s.GetShopAccessList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 
 	for _, shopAccess := range shopAccesses {
@@ -88,7 +89,7 @@ func (s *ShopAccessService) ConvertShopAccess() error {
 		}
 		err := repository.NewAccessRepo(s.targetDB).CreateAccess(model)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 

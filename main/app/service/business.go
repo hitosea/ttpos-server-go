@@ -25,7 +25,7 @@ import (
 // IBusinessSrv 定义收银服务接口
 type IBusinessSrv interface {
 	Printer(ctx context.Context, req req.BusinessDataPrinterReq) (*resp.PrinterData, error)                                                               // 打印
-	CountBusiness(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataAll, error)                                         // 统计营业数据
+	CountBusiness(ctx context.Context, req req.BusinessDataCountReq, opts ...func(o *CountBusinessOption)) (*business_data_resp.BusinessDataAll, error)   // 统计营业数据
 	CountPaymentMethod(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataPaymentMethod, error)                          // 统计支付方式
 	CountProductCategory(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProductCategory, error)                      // 统计商品分类
 	CountProduct(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProduct, error)                                      // 统计商品
@@ -64,7 +64,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	// Initialize the pointer to avoid nil dereference
 	reqPrinterData := &template.PrintingBusinessData{}
 	// 获取参数
-	printerParam := printerReq.GetParam()
+	printerParam := printerReq.GetParam(ctx.GetCompanySetting().Timezone)
 	// 统计类型
 	if printerReq.StatisticsType <= 0 {
 		// 销售数据
@@ -244,9 +244,23 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	return printerData, nil
 }
 
+type CountBusinessOption struct {
+	IsShop bool // 是否是商家后台的首页统计的使用场景
+}
+
+func WithIsShop() func(o *CountBusinessOption) {
+	return func(o *CountBusinessOption) {
+		o.IsShop = true
+	}
+}
+
 // CountBusiness 统计营业数据
-func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataAll, error) {
-	req = req.GetParam()
+func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCountReq, opts ...func(o *CountBusinessOption)) (*business_data_resp.BusinessDataAll, error) {
+	option := &CountBusinessOption{}
+	for _, opt := range opts {
+		opt(option)
+	}
+	req = req.GetParam(ctx.GetCompanySetting().Timezone)
 	// 销售数据
 	saleData := s.statisticsSrv.CountSale(ctx, CountReq{
 		TimeType:       req.TimeType,
@@ -355,6 +369,10 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 			return peakHours
 		}(),
 		CategoryList: func() []business_data_resp.Category {
+			// 商家后台首页统计不展示分类列表。不查询该数据可以提升页面响应速度1s
+			if option.IsShop {
+				return nil
+			}
 			_, categoryList := s.BuildCategoryList(ctx, req)
 			return categoryList
 		}(),

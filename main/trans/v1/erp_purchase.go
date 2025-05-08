@@ -354,8 +354,10 @@ func (s *PurchaseService) ConvertWarehouseForm() error {
 		})
 	}
 
-	if err := s.targetDB.Create(newRecords).Error; err != nil {
-		return err
+	if len(newRecords) > 0 {
+		if err := s.targetDB.Create(newRecords).Error; err != nil {
+			return err
+		}
 	}
 
 	return nil

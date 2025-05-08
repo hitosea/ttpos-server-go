@@ -2,6 +2,8 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
+
 	"gorm.io/gorm"
 )
 
@@ -117,6 +119,26 @@ type Order struct {
 	CreateTime                        int64   `gorm:"not null;default:0;comment:'创建时间'"`
 	UpdateTime                        int64   `gorm:"not null;default:0;comment:'更新时间'"`
 	DeleteTime                        int64   `gorm:"default:0;comment:'删除时间'"`
+
+	OrderProducts      []OrderProduct      `gorm:"foreignKey:OrderID;references:OrderID"`
+	OrderPayTypes      []OrderPayType      `gorm:"foreignKey:OrderID;references:OrderID"`
+	OrderOperationLogs []OrderOperationLog `gorm:"foreignKey:OrderID;references:OrderID"`
+	ShopUser           ShopUser            `gorm:"foreignKey:ShopUserID;references:CashierID"`
+	SaleOrders         []Order             `gorm:"foreignKey:OrderID;references:ParentID"`
+}
+
+func (o *Order) IsSplitOrder() uint {
+	if o.ParentID > 0 {
+		return 1
+	}
+	return 0
+}
+
+func (o *Order) IsFreeOrder() uint {
+	if o.IsFree > 0 {
+		return 1
+	}
+	return 0
 }
 
 // 订单状态10=>进行中，20=>已经取消，30=>已完成
@@ -169,7 +191,7 @@ func (s *OrderService) GetOrderList() ([]*Order, error) {
 func (s *OrderService) ConvertOrder() error {
 	orders, err := s.GetOrderList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, order := range orders {
 		fmt.Println(fmt.Sprintf("order: %+v", order))

@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -89,7 +90,7 @@ func (s *ProductSKUService) GetProductSKUService() ([]*ProductSKU, error) {
 func (s *ProductSKUService) ConvertProductSKU() error {
 	productSKUs, err := s.GetProductSKUService()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, productSKU := range productSKUs {
 		fmt.Println(fmt.Sprintf("productSKU: %+v", productSKU))
@@ -115,7 +116,7 @@ func (s *ProductSKUService) ConvertProductSKU() error {
 		// fmt.Println(fmt.Sprintf("productBom: %+v", productBom))
 		_, err := repository.NewProductBomRepo(s.targetDB).CreateProductBom(productBom)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

@@ -15,6 +15,7 @@ type IShiftLogRepo interface {
 	CreateSnapshot(shiftLogSnapshot model.StaffShiftSnapshot) (model.StaffShiftSnapshot, error)
 	GetShiftLog(opts ...DBOption) (model.StaffShiftLog, error)
 	Update(shiftLog model.StaffShiftLog, updates map[string]interface{}) (model.StaffShiftLog, error)
+	GetSnapshot(opts ...DBOption) (model.StaffShiftSnapshot, error)
 }
 
 func NewShiftLogRepo(db *gorm.DB) IShiftLogRepo {
@@ -71,4 +72,19 @@ func (r *ShiftLogRepo) WithStaff() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Staff")
 	}
+}
+
+// GetSnapshot 获取交班快照
+func (r *ShiftLogRepo) GetSnapshot(opts ...DBOption) (model.StaffShiftSnapshot, error) {
+	var (
+		snapshot model.StaffShiftSnapshot
+		db       *gorm.DB = r.db
+	)
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.First(&snapshot).Error
+	return snapshot, errors.WithMessage(err)
 }

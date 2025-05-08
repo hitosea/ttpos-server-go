@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 	pkgUtils "ttpos-server-go/pkg/utils"
@@ -258,19 +259,19 @@ func (s *ProductService) GetProductTax(productID uint64, taxType uint) (ProductT
 func (s *ProductService) ConvertProduct() error {
 	products, err := s.GetProductList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, product := range products {
 		names := Names{}
 		err := names.GetNames(product.ProductName)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		fmt.Println(fmt.Sprintf("product_id: %d, product_name: %+v", product.ProductID, names))
 
 		id, err := pkgUtils.GetID()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
@@ -290,11 +291,11 @@ func (s *ProductService) ConvertProduct() error {
 
 			productDineTax, err := s.GetProductTax(product.ProductID, 1)
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 			productTakeoutTax, err := s.GetProductTax(product.ProductID, 2)
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 
 			productPackage := model.ProductPackage{
@@ -331,14 +332,16 @@ func (s *ProductService) ConvertProduct() error {
 			}
 			_, err = base.NewProductPackageRepo(s.targetDB).CreateProductPackage(productPackage)
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		} else if product.Type == 20 {
 			// 材料
 			fmt.Println(fmt.Sprintf("-----迁移材料：%+v", product))
 			material := model.Material{
 				BaseModel: model.BaseModel{
-					Uuid: uint64(product.ProductID),
+					Uuid:       uint64(product.ProductID),
+					CreateTime: product.CreateTime,
+					UpdateTime: product.UpdateTime,
 				},
 				Name:                  names.Zh,
 				MultiLanguageNameUuid: uint(id),
@@ -355,7 +358,7 @@ func (s *ProductService) ConvertProduct() error {
 			}
 			_, err := base.NewMaterialRepo(s.targetDB).CreateMaterial(material)
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		}
 	}

@@ -515,6 +515,7 @@ class Order extends OrderModel
     {
         $model = $this;
         // 检索查询条件
+        $query['shop_supplier_id'] = request()->appId;
         $model = $model->setWhere($model, $query);
         // 获取数据列表
         return $model->with([

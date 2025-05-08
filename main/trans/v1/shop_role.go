@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -40,7 +41,7 @@ func (s *ShopRoleService) GetShopRoleList() ([]*ShopRole, error) {
 func (s *ShopRoleService) ConvertShopRole() error {
 	shopRoles, err := s.GetShopRoleList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 
 	for _, shopRole := range shopRoles {
@@ -56,7 +57,7 @@ func (s *ShopRoleService) ConvertShopRole() error {
 		}
 		_, err = repository.NewRoleRepo(s.targetDB).CreateRole(model)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -48,7 +49,7 @@ func (s *ErpSupplierService) GetErpSupplierList() ([]*ErpSupplier, error) {
 func (s *ErpSupplierService) ConvertErpSupplier() error {
 	var erpSuppliers []*ErpSupplier
 	if err := s.db.Find(&erpSuppliers).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, erpSupplier := range erpSuppliers {
 		fmt.Println(fmt.Sprintf("erpSupplier: %+v", erpSupplier))
@@ -67,7 +68,7 @@ func (s *ErpSupplierService) ConvertErpSupplier() error {
 		}
 		_, err := base.NewSupplierRepo(s.targetDB).CreateSupplier(supplier)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil
