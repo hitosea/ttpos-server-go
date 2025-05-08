@@ -127,24 +127,25 @@ func (s *UserService) ConvertUser() error {
 
 		member := model.Member{
 			BaseModel: model.BaseModel{
+				ID:         user.UserID,
 				Uuid:       uint64(user.UserID),
 				CreateTime: int64(user.CreateTime),
 				UpdateTime: int64(user.UpdateTime),
 				DeleteTime: int64(user.IsDelete),
 			},
-			MemberNo:         strconv.FormatUint(uint64(user.UserID), 10),
-			Nickname:         user.NickName,
-			Gender:           int(user.Gender),
-			Phone:            user.Mobile,
-			Password:         user.Password,
-			Birthday:         int64(user.Birthday),
-			Point:            user.Points,
-			ConsumptionCount: user.TotalInvite,
-			Balance:          user.Balance,
-			GiftBalance:      user.GiftBalance,
-			MemberLevelUuid:  uint64(user.GradeID),
-			MemberCardUuid:   uint64(user.CardID),
-			MemberCard:       memberCard,
+			MemberNo:                     strconv.FormatUint(uint64(user.UserID), 10),
+			Nickname:                     user.NickName,
+			Gender:                       int(user.Gender),
+			Phone:                        user.Mobile,
+			Password:                     user.Password,
+			Birthday:                     int64(user.Birthday),
+			Point:                        user.Points,
+			AccumulatedConsumptionAmount: user.ExpendMoney,
+			Balance:                      user.Balance,
+			GiftBalance:                  user.GiftBalance,
+			MemberLevelUuid:              uint64(user.GradeID),
+			MemberCardUuid:               uint64(user.CardID),
+			MemberCard:                   memberCard,
 		}
 		err = repository.NewMemberRepo(s.targetDB).CreateMemberAndMemberCard(member)
 		if err != nil {
