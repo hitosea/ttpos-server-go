@@ -23,6 +23,7 @@ type TimeUtil interface {
 	FormatUnixTimeDefault(timestamp int64) string         // 将时间戳转换为默认格式(2006-01-02 15:04:05)的时间字符串
 	FormatUnixTimeWithSlash(timestamp int64) string       // 将时间戳转换为默认格式(2006/01/02 15:04:05)的时间字符串
 	GetTimeRange(dayType DayType) (int64, int64, error)   // 订单列表：今天、昨天、本周搜索时间范围
+	FormatTimeToUnix(timeStr string) (int64, error)       // 2025-04-30转为时间戳
 }
 
 type Timezone string
@@ -179,4 +180,17 @@ func (t Timezone) GetTimeRange(dayType DayType) (int64, int64, error) {
 	default:
 		return 0, 0, errors.New("typ error")
 	}
+}
+
+// 2025-04-30转为时间戳
+func (t Timezone) FormatTimeToUnix(timeStr string) (int64, error) {
+	loc, err := time.LoadLocation(string(t))
+	if err != nil {
+		return 0, err
+	}
+	time, err := time.ParseInLocation("2006-01-02", timeStr, loc)
+	if err != nil {
+		return 0, err
+	}
+	return time.Unix(), nil
 }

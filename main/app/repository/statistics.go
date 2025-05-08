@@ -19,7 +19,7 @@ type IStatisticsRepo interface {
 	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                                              // 统计商品
 	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                                     // 统计区域
 	CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData                                                             // 统计区域
-	Count7Days(opts ...DBOption) []model.Statistics7DaysData                                                                   // 统计销售天数
+	Count7Days(opts ...DBOption) model.Statistics7DaysData                                                                     // 统计销售天数
 	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                                         // 统计未结订单
 	CountMemberNum(opts ...DBOption) int64                                                                                     // 统计会员数量
 	CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp                                                        // 统计会员数量天数
@@ -61,6 +61,8 @@ var (
 	countSaleSubQuerySelect = []string{
 		"sale_bill_uuid",
 		"desk_uuid",
+		"is_meger",
+		"is_special",
 		"SUM(product_price + product_tax + service_fee + service_tax + no_refund_tax + payment_fee - refund_tax - refund_service_fee - refund_fee) AS sale_amount",
 		"SUM(payment_amount - refund_amount - payment_balance) AS received_amount",
 		"SUM(product_price) AS product_price",
@@ -78,9 +80,12 @@ var (
 		"SUM(free_amount) AS free_amount",
 		"SUM(free_num) AS free_num",
 		"SUM(IF(desk_uuid > 0, meal_num, 0)) AS meal_num",
-		"SUM(payment_amount - refund_amount - refund_payment_balance) AS order_amount",
-		"SUM(IF(desk_uuid > 0, payment_amount - refund_amount - refund_payment_balance, NULL)) AS desk_order_amount",
-		"SUM(IF(desk_uuid = 0, payment_amount - refund_amount - refund_payment_balance, NULL)) AS instant_order_amount",
+		"SUM(IF(is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS order_amount",
+		"SUM(payment_amount - refund_amount - refund_payment_balance) AS avg_order_amount",
+		"SUM(IF(desk_uuid > 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS desk_order_amount",
+		"SUM(IF(desk_uuid > 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_desk_order_amount",
+		"SUM(IF(desk_uuid = 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS instant_order_amount",
+		"SUM(IF(desk_uuid = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_instant_order_amount",
 		"complete_time",
 	}
 	// 统计销售
@@ -101,21 +106,21 @@ var (
 		"SUM(t.gift_num) AS total_gift_num",
 		"SUM(t.free_amount) AS total_free_amount",
 		"SUM(t.free_num) AS total_free_num",
-		"COUNT(t.sale_bill_uuid) AS total_order_num",
-		"COUNT(CASE WHEN t.desk_uuid > 0 THEN 1 END) AS total_desk_num",
+		"SUM(IF(t.is_meger = 0, 1, 0)) AS total_order_num",
+		"COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_meger = 0 THEN 1 END) AS total_desk_num",
 		"SUM(t.desk_order_amount) AS total_desk_order_amount",
 		"SUM(t.meal_num) AS total_meal_num",
 		"SUM(t.instant_order_amount) AS total_instant_order_amount",
-		"COUNT(CASE WHEN t.desk_uuid = 0 THEN 1 END) AS total_instant_order_num",
-		"MIN(t.order_amount) AS min_order_amount",
-		"MAX(t.order_amount) AS max_order_amount",
-		"AVG(t.order_amount) AS avg_order_amount",
-		"MIN(CASE WHEN t.desk_order_amount >= 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",
-		"MAX(CASE WHEN t.desk_order_amount >= 0 THEN t.desk_order_amount ELSE NULL END) AS max_desk_order_amount",
-		"AVG(CASE WHEN t.desk_order_amount >= 0 THEN t.desk_order_amount ELSE NULL END) AS avg_desk_order_amount",
-		"MIN(CASE WHEN t.instant_order_amount >= 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",
-		"MAX(CASE WHEN t.instant_order_amount >= 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",
-		"AVG(CASE WHEN t.instant_order_amount >= 0 THEN t.instant_order_amount ELSE NULL END) AS avg_instant_order_amount",
+		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_num",
+		"MIN(CASE WHEN t.order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS min_order_amount",
+		"MAX(CASE WHEN t.order_amount > 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS max_order_amount",
+		"SUM(t.avg_order_amount) / SUM(IF(t.is_meger = 0, 1, 0)) AS avg_order_amount",
+		"MIN(CASE WHEN t.desk_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",
+		"MAX(CASE WHEN t.desk_uuid > 0 AND t.desk_order_amount > 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS max_desk_order_amount",
+		"SUM(t.avg_desk_order_amount) / COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_meger = 0 THEN 1 END) AS avg_desk_order_amount",
+		"MIN(CASE WHEN t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",
+		"MAX(CASE WHEN t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",
+		"SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_meger = 0 THEN 1 END) AS avg_instant_order_amount",
 	}
 )
 
@@ -449,29 +454,19 @@ func (r *StatisticsRepo) QueryProductPackageName(uuids []uint64, language string
 }
 
 // Count7Days 统计销售天数
-func (r *StatisticsRepo) Count7Days(opts ...DBOption) []model.Statistics7DaysData {
-	var result []model.Statistics7DaysData
+func (r *StatisticsRepo) Count7Days(opts ...DBOption) model.Statistics7DaysData {
+	var result model.Statistics7DaysData
 
 	db := r.db
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	subQuery := db.Model(&model.StatisticsSale{}).
-		Select(
-			"complete_time",
-			"COUNT(sale_bill_uuid) AS order_num",
-			"SUM(payment_amount - payment_balance) AS received_amount",
-		).
-		Group("sale_bill_uuid")
 
-	r.db.Table("(?) AS t", subQuery).
-		Select(
-			"FROM_UNIXTIME(t.complete_time, '%Y-%m-%d') AS day",
-			"SUM(t.order_num) AS total_order_num",
-			"SUM(t.received_amount) AS total_received_amount",
-		).
-		Group("FROM_UNIXTIME(t.complete_time, '%Y-%m-%d')").
-		Find(&result)
+	db.Model(&model.StatisticsSale{}).Select(
+		"count(DISTINCT sale_order_uuid) as total_order_num",
+		"FROM_UNIXTIME(complete_time, '%Y-%m-%d') day",
+		"SUM(payment_amount) AS TotalReceivedAmount",
+	).Find(&result)
 
 	return result
 }

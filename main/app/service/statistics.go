@@ -115,7 +115,7 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 	totalReceivedAmount := decimal.NewFromFloat(saleData.TotalReceivedAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentAmount))
 	totalPaymentFee := decimal.NewFromFloat(saleData.TotalPaymentFee.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentFee))
 	totalRefundAmount := decimal.NewFromFloat(saleData.TotalRefundAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalRefundAmount))
-	totalBusinessAmount := decimal.NewFromFloat(saleData.TotalBusinessAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentFee))
+	totalBusinessAmount := decimal.NewFromFloat(saleData.TotalBusinessAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentFee)).Add(decimal.NewFromFloat(memberData.TotalPaymentAmount))
 
 	return CountSaleResp{
 		TotalSaleAmount:          totalSaleAmount.Round(2).InexactFloat64(),
@@ -630,22 +630,19 @@ type Count7DaysDataResp struct {
 
 // Count7Days 统计7天
 func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7DaysResp {
-	opts := s.buildCountOpts(ctx, req)
-	sevenDayData := repository.NewStatisticsRepo(ctx.GetDB()).Count7Days(opts...)
 	days := s.buildDays(req)
-	sevenDayList := make([]Count7DaysDataResp, 0, len(sevenDayData))
+	sevenDayList := make([]Count7DaysDataResp, 0, len(days))
 	for _, day := range days {
+		timezone := utils.SetTimezone(ctx.GetCompanySetting().Timezone)
+		startTime, _ := timezone.FormatTimeToUnix(day)
+		endTime := startTime + 86399
+		sevenDayData := repository.NewStatisticsRepo(ctx.GetDB()).Count7Days(
+			repository.NewCommonRepoImpl().WhereBetweenByCompleteTime(startTime, endTime),
+		)
 		oneDayData := Count7DaysDataResp{
 			Day:        day,
-			TotalNum:   0,
-			TotalMoney: 0,
-		}
-		result, ok := slice.FindBy(sevenDayData, func(index int, dayData model.Statistics7DaysData) bool {
-			return dayData.Day.String == day
-		})
-		if ok {
-			oneDayData.TotalNum = result.TotalOrderNum.Int64
-			oneDayData.TotalMoney = result.TotalReceivedAmount.Float64
+			TotalNum:   sevenDayData.TotalOrderNum.Int64,
+			TotalMoney: sevenDayData.TotalReceivedAmount.Float64,
 		}
 		sevenDayList = append(sevenDayList, oneDayData)
 	}
@@ -660,6 +657,7 @@ func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7Days
 func (s *statisticsSrv) CountMemberNum(ctx context.Context, req CountReq) int64 {
 	req.IsCreateTime = true
 	opts := s.buildCountOpts(ctx, req)
+	opts = append(opts, repository.NewCommonRepoImpl().WhereBySoftDelete())
 	return repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNum(opts...)
 }
 
