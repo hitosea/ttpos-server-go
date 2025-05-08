@@ -49,7 +49,9 @@ func NewProductSauce(feed *v1.Feed) (*model.ProductSauce, error) {
 		sauceMaterials = append(sauceMaterials, &model.RelatedMaterial{
 			BaseModel: model.BaseModel{
 				// Uuid: uint64(material.MaterialID),
-				Uuid: relatedMaterialUuid,
+				Uuid:       relatedMaterialUuid,
+				CreateTime: int64(material.CreateTime),
+				UpdateTime: int64(material.CreateTime),
 			},
 			MaterialUuid: uint64(material.MaterialID),
 			// RelatedUuid:  uint64(feed.FeedID), // 生成新的雪花uuid
@@ -60,7 +62,9 @@ func NewProductSauce(feed *v1.Feed) (*model.ProductSauce, error) {
 	productSauce := &model.ProductSauce{
 		BaseModel: model.BaseModel{
 			// Uuid: uint64(feed.FeedID),
-			Uuid: uuid,
+			Uuid:       uuid,
+			CreateTime: int64(feed.CreateTime),
+			UpdateTime: int64(feed.UpdateTime),
 		},
 		Name:                  languageName.ToJson(),
 		Price:                 feed.Price,

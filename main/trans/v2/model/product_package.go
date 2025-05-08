@@ -169,7 +169,9 @@ func NewFlavorProductBom(db *gorm.DB, productID uint64) ([]model.ProductBom, err
 		for _, productSkuMaterial := range productSKU.ProductSkuMaterials {
 			flavorMaterials = append(flavorMaterials, &model.RelatedMaterial{
 				BaseModel: model.BaseModel{
-					Uuid: uint64(productSkuMaterial.ID),
+					Uuid:       uint64(productSkuMaterial.ID),
+					CreateTime: productSkuMaterial.CreateTime,
+					UpdateTime: productSkuMaterial.CreateTime,
 				},
 				MaterialUuid: uint64(productSkuMaterial.MaterialID),
 				RelatedUuid:  uint64(productSkuMaterial.ProductSkuID),

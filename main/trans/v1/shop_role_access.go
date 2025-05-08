@@ -53,6 +53,7 @@ func (s *ShopRoleAccessService) ConvertShopRoleAccess() error {
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(shopRoleAccess.ID),
 				CreateTime: shopRoleAccess.CreateTime,
+				UpdateTime: shopRoleAccess.CreateTime,
 			},
 			RoleUuid:   shopRoleAccess.RoleID,
 			AccessUuid: shopRoleAccess.AccessID,

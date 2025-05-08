@@ -59,8 +59,10 @@ func (s *UserPointsLogService) convertUserPointsLog(offset, limit int) error {
 	for _, userPointsLog := range userPointsLogs {
 		memberPointLogs = append(memberPointLogs, model.MemberPointLog{
 			BaseModel: model.BaseModel{
+				ID:         userPointsLog.LogID,
 				Uuid:       uint64(userPointsLog.LogID),
 				CreateTime: int64(userPointsLog.CreateTime),
+				UpdateTime: int64(userPointsLog.CreateTime),
 			},
 			MemberUuid: uint64(userPointsLog.UserID),
 			Scene:      int(userPointsLog.Scene),

@@ -119,7 +119,9 @@ func (s *ProductService) ConvertProduct() error {
 
 				material := model.Material{
 					BaseModel: model.BaseModel{
-						Uuid: uint64(product.ProductID),
+						Uuid:       uint64(product.ProductID),
+						CreateTime: int64(product.CreateTime),
+						UpdateTime: int64(product.UpdateTime),
 					},
 					Name:                  product.ProductName,
 					MultiLanguageNameUuid: uint(languageName.Uuid),

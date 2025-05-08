@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -111,9 +112,10 @@ func (s *UserService) ConvertUser() error {
 
 		var memberCard *model.MemberCard
 		if userCardRecord != nil {
+			memberCardUuid, _ := utils.GetID()
 			memberCard = &model.MemberCard{
 				BaseModel: model.BaseModel{
-					Uuid:       uint64(user.CardID),
+					Uuid:       memberCardUuid,
 					CreateTime: int64(user.CreateTime),
 					UpdateTime: int64(user.UpdateTime),
 					DeleteTime: int64(user.IsDelete),
@@ -127,24 +129,25 @@ func (s *UserService) ConvertUser() error {
 
 		member := model.Member{
 			BaseModel: model.BaseModel{
+				ID:         user.UserID,
 				Uuid:       uint64(user.UserID),
 				CreateTime: int64(user.CreateTime),
 				UpdateTime: int64(user.UpdateTime),
 				DeleteTime: int64(user.IsDelete),
 			},
-			MemberNo:         strconv.FormatUint(uint64(user.UserID), 10),
-			Nickname:         user.NickName,
-			Gender:           int(user.Gender),
-			Phone:            user.Mobile,
-			Password:         user.Password,
-			Birthday:         int64(user.Birthday),
-			Point:            user.Points,
-			ConsumptionCount: user.TotalInvite,
-			Balance:          user.Balance,
-			GiftBalance:      user.GiftBalance,
-			MemberLevelUuid:  uint64(user.GradeID),
-			MemberCardUuid:   uint64(user.CardID),
-			MemberCard:       memberCard,
+			MemberNo:                     strconv.FormatUint(uint64(user.UserID), 10),
+			Nickname:                     user.NickName,
+			Gender:                       int(user.Gender),
+			Phone:                        user.Mobile,
+			Password:                     user.Password,
+			Birthday:                     int64(user.Birthday),
+			Point:                        user.Points,
+			AccumulatedConsumptionAmount: user.ExpendMoney,
+			Balance:                      user.Balance,
+			GiftBalance:                  user.GiftBalance,
+			MemberLevelUuid:              uint64(user.GradeID),
+			MemberCardUuid:               uint64(user.CardID),
+			MemberCard:                   memberCard,
 		}
 		err = repository.NewMemberRepo(s.targetDB).CreateMemberAndMemberCard(member)
 		if err != nil {

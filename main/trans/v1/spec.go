@@ -68,6 +68,7 @@ func (s *SpecService) ConvertSpec() error {
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(spec.SpecID),
 				CreateTime: spec.CreateTime,
+				UpdateTime: spec.CreateTime,
 			},
 			Name:                  names.Zh,
 			MultiLanguageNameUuid: uint(id),
