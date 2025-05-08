@@ -78,6 +78,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			QueryStartTime: int64(printerParam.QueryStartTime),
 			QueryEndTime:   int64(printerParam.QueryEndTime),
 			CategoryType:   printerParam.CategoryType,
+			NotQueryFree:   true,
 		})
 		// 会员数量
 		memberNum := s.statisticsSrv.CountMemberNum(ctx, CountReq{
@@ -278,7 +279,9 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 	}
 
 	// 支付数据
+	req.NotQueryFree = true
 	_, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req)
+
 	// 会员数量
 	memberNum := s.statisticsSrv.CountMemberNum(ctx, CountReq{
 		TimeType:       req.TimeType,
@@ -574,13 +577,16 @@ func (s *businessSrv) BuildPaymentMethodIncome(ctx context.Context, req req.Busi
 	})
 
 	// 统计免单支付
-	freePaymentData := s.statisticsSrv.CountFreePayment(ctx, CountReq{
-		DutyNo:         req.DutyNo,
-		QueryStartTime: req.QueryStartTime,
-		QueryEndTime:   req.QueryEndTime,
-		TimeType:       req.TimeType,
-		CategoryType:   req.CategoryType,
-	})
+	var freePaymentData CountFreePaymentResp
+	if !req.NotQueryFree {
+		freePaymentData = s.statisticsSrv.CountFreePayment(ctx, CountReq{
+			DutyNo:         req.DutyNo,
+			QueryStartTime: req.QueryStartTime,
+			QueryEndTime:   req.QueryEndTime,
+			TimeType:       req.TimeType,
+			CategoryType:   req.CategoryType,
+		})
+	}
 
 	paymentMethodIncomes := make([]business_data_resp.PaymentMethodIncome, 0)
 	for _, payment := range paymentData.PaymentList {
@@ -599,7 +605,7 @@ func (s *businessSrv) BuildPaymentMethodIncome(ctx context.Context, req req.Busi
 		}
 	}
 
-	if freePaymentData.TotalOrderNum > 0 {
+	if !req.NotQueryFree && freePaymentData.TotalOrderNum > 0 {
 		paymentMethodIncomes = append(paymentMethodIncomes, business_data_resp.PaymentMethodIncome{
 			Name:     freePaymentData.PaymentName,
 			OrderNum: int(freePaymentData.TotalOrderNum),
