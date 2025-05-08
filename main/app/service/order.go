@@ -4867,7 +4867,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			productPackageUuid := saleOrderProduct.ProductPackageUuid
 			// 在h5端下单场景下，只检查本次下单的商品是否超过限购
 			// 在收银端送厨场景下，只检查本次送厨的商品是否超过限购
-			if options.SaleOrderProudctUuids != nil && !slices.Contains(productPackageUuids, saleOrderProduct.ProductPackageUuid) {
+			if options.SaleOrderProudctUuids != nil && len(productPackageUuids) > 0 && !slices.Contains(productPackageUuids, saleOrderProduct.ProductPackageUuid) {
 				continue
 			}
 			productPackageMap[productPackageUuid] = saleOrderProduct.ProductPackage
@@ -6746,6 +6746,9 @@ func (s *orderSrv) getSaleOrderProductWithoutWarehouseOutForm(ctx context.Contex
 	productMap := make(map[uint64]*model.SaleOrderProduct)
 	for _, saleOrderProduct := range allSaleOrderProducts {
 		if saleOrderProduct.IsUnAcceptOrderBool() {
+			continue
+		}
+		if saleOrderProduct.IsCancelProduct() {
 			continue
 		}
 		productMap[saleOrderProduct.Uuid] = saleOrderProduct
