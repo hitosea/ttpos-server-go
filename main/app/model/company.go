@@ -9,7 +9,7 @@ type Company struct {
 	Logo          string `gorm:"column:logo;type:varchar(255);comment:logo;NOT NULL" json:"logo"`
 	ExpireTime    int64  `gorm:"column:expire_time;type:int(10);default:0;comment:过期时间;not null;NOT NULL" json:"expire_time"`
 	AuthDay       int    `gorm:"column:auth_day;type:int(11);default:0;comment:授权时间(天) 0为永不过期;NOT NULL" json:"auth_day"`
-	Status        int    `gorm:"column:status;type:tinyint(1);default:1;comment:状态 1-启用 0-禁用;not null;NOT NULL" json:"status"`
+	Status        int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态 1-启用 0-禁用;not null;NOT NULL" json:"status"`
 	AuthStartTime int64  `gorm:"column:auth_start_time;type:int(10);default:0;comment:授权开始时间（时间戳）;NOT NULL" json:"auth_start_time"`
 	OldCompanyId  int    `gorm:"column:old_company_id;type:int(11);default:0;comment:原商家ID;NOT NULL" json:"old_company_id"`
 
@@ -43,7 +43,7 @@ type CompanySetting struct {
 	IsOpenKitchenKds int    `gorm:"column:is_open_kitchen_kds;type:int(11);default:0;comment:是否开启后厨KDS: 0不开启, 1开启;NOT NULL" json:"is_open_kitchen_kds"`
 	IsOpenBuffet     int    `gorm:"column:is_open_buffet;type:int(11);default:0;comment:是否开启自助餐: 0不开启, 1开启;NOT NULL" json:"is_open_buffet"`
 	IsOpenH5Order    int    `gorm:"column:is_open_h5_order;type:int(11);default:0;comment:是否开启扫码点餐接单 0不开启, 1开启;NOT NULL" json:"is_open_h5_order"`
-	IsOpenLocalPrint int    `gorm:"column:is_open_local_print;type:int(11);default:1;comment:是否开启本地打印服务 0不开启, 1开启;NOT NULL" json:"is_open_local_print"`
+	IsOpenLocalPrint int    `gorm:"column:is_open_local_print;type:int(11);default:0;comment:是否开启本地打印服务 0不开启, 1开启;NOT NULL" json:"is_open_local_print"`
 	CashLimit        int    `gorm:"column:cash_limit;type:int(11);default:0;comment:收银机上限;NOT NULL" json:"cash_limit"`
 	KitchenLimit     int    `gorm:"column:kitchen_limit;type:int(11);default:0;comment:厨显上限;NOT NULL" json:"kitchen_limit"`
 	TabletLimit      int    `gorm:"column:tablet_limit;type:int(11);default:0;comment:平板上限;NOT NULL" json:"tablet_limit"`
