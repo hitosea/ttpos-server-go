@@ -13,7 +13,7 @@ var sourceConf = config.DatabaseConf{
 	TablePrefix:   "jjjfood_",
 	SlowQueryTime: 0,
 }
-var sourceDBName = "shop1724054114"
+var sourceDBName = "shop1724054088"
 
 var targetConf = config.DatabaseConf{
 	Host:          "localhost",

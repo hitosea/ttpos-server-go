@@ -22,7 +22,7 @@ type StatisticsProductService struct {
 }
 
 func (s *StatisticsProductService) ConvertStatisticsProduct() error {
-	return s.convertProduct(0, 20000)
+	return s.convertProduct(0, 8000)
 }
 
 // 商品数据
