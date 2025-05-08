@@ -58,7 +58,9 @@ func (s *ProductPrintLabelService) ConvertProductPrintLabel() error {
 
 		tag := model.PrinterTag{
 			BaseModel: model.BaseModel{
-				Uuid: uint64(productPrintLabel.LabelID),
+				Uuid:       uint64(productPrintLabel.LabelID),
+				CreateTime: productPrintLabel.CreateTime,
+				UpdateTime: productPrintLabel.UpdateTime,
 			},
 			Name: productPrintLabel.LabelName,
 		}

@@ -153,7 +153,9 @@ func (s *AppService) ConvertApp() error {
 
 		company := model.Company{
 			BaseModel: model.BaseModel{
-				Uuid: s.targetCompanyUuid,
+				Uuid:       s.targetCompanyUuid,
+				CreateTime: int64(app.CreateTime),
+				UpdateTime: int64(app.UpdateTime),
 			},
 			Name:          app.Supplier.Name,
 			Logo:          saasCompany.Logo,
@@ -164,7 +166,9 @@ func (s *AppService) ConvertApp() error {
 			OldCompanyId:  s.sourceCompanyId,
 			CompanySetting: &model.CompanySetting{
 				BaseModel: model.BaseModel{
-					Uuid: s.targetCompanyUuid,
+					Uuid:       s.targetCompanyUuid,
+					CreateTime: int64(app.CreateTime),
+					UpdateTime: int64(app.UpdateTime),
 				},
 				CompanyUuid:      s.targetCompanyUuid,
 				RealName:         app.Supplier.RealName,

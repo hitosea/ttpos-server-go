@@ -61,6 +61,7 @@ func (s *UserPointsLogService) convertUserPointsLog(offset, limit int) error {
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(userPointsLog.LogID),
 				CreateTime: int64(userPointsLog.CreateTime),
+				UpdateTime: int64(userPointsLog.CreateTime),
 			},
 			MemberUuid: uint64(userPointsLog.UserID),
 			Scene:      int(userPointsLog.Scene),

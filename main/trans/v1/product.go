@@ -339,7 +339,9 @@ func (s *ProductService) ConvertProduct() error {
 			fmt.Println(fmt.Sprintf("-----迁移材料：%+v", product))
 			material := model.Material{
 				BaseModel: model.BaseModel{
-					Uuid: uint64(product.ProductID),
+					Uuid:       uint64(product.ProductID),
+					CreateTime: product.CreateTime,
+					UpdateTime: product.UpdateTime,
 				},
 				Name:                  names.Zh,
 				MultiLanguageNameUuid: uint(id),

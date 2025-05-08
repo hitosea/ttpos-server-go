@@ -71,6 +71,7 @@ func (s *ShopBindRecordService) ConvertShopBindRecord() error {
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(shopBindRecord.ID),
 				CreateTime: int64(shopBindRecord.CreateTime),
+				UpdateTime: int64(shopBindRecord.CreateTime),
 			},
 			FinallyLoginUuid:   uint64(shopBindRecord.FinallyLoginId),
 			FinallyLoginTime:   int64(shopBindRecord.FinallyLoginTime),
