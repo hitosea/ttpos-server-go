@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -166,9 +167,10 @@ func (s *UserService) ConvertUser() error {
 
 		var memberCard *model.MemberCard
 		if userCardRecord != nil {
+			memberCardUuid, _ := utils.GetID()
 			memberCard = &model.MemberCard{
 				BaseModel: model.BaseModel{
-					Uuid:       uint64(user.CardID),
+					Uuid:       memberCardUuid,
 					CreateTime: int64(user.CreateTime),
 					UpdateTime: int64(user.UpdateTime),
 					DeleteTime: int64(user.IsDelete),

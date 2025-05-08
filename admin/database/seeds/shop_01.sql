@@ -916,7 +916,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_product_flavor_uuid` (`product_flavor_uuid`),
+    INDEX `idx_product_package_uuid` (`product_package_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品BOM表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_related_material` (
@@ -1026,7 +1028,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡ID',
     `card_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡类型ID',
     `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
-    `expire_time` INT(11) NOT NULL DEFAULT 0 COMMENT '截止日期(时间戳)',
+    `expire_time` BIGINT NOT NULL DEFAULT 0 COMMENT '截止日期(时间戳)',
     `discount` decimal(12, 4) NOT NULL DEFAULT 1 COMMENT '折扣,单位%, 如80%为打8折，discount值为0.8 .不随后台改变,按领取时的折扣。后续会员卡类型折扣改变时,不改变此字段',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),领取时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -1039,7 +1041,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card_log` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡领取记录ID',
     `price` DECIMAL(14, 2) NOT NULL DEFAULT 0 COMMENT '价格,会员卡价格,不随后台改变,记录领取时的价格',
     `discount` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '折扣,单位%,不随后台改变,记录领取时的折扣',
-    `expire` INT(11) NOT NULL DEFAULT 0 COMMENT '有效期限,单位:月, 0为永久有效,不随后台改变,记录领取时的有效期限',
+    `expire` BIGINT NOT NULL DEFAULT 0 COMMENT '有效期限,单位:月, 0为永久有效,不随后台改变,记录领取时的有效期限',
     `member_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员名称,不随后台改变,当无法用member_uuid获取会员信息时,用此字段',
     `member_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员电话,不随后台改变,当无法用member_uuid获取会员信息时,用此字段',
     `member_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员编号,不随后台改变,当无法用member_uuid获取会员信息时,用此字段',
@@ -1278,7 +1280,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form_item` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_warehouse_out_form_uuid` (`warehouse_out_form_uuid`),
+    INDEX `idx_material_uuid` (`material_uuid`),
+    INDEX `idx_product_bom_uuid` (`product_bom_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '出库单明细表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_loss_report_form` (
