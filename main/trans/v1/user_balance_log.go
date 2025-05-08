@@ -64,6 +64,7 @@ func (s *UserBalanceLogService) convertUserBalanceLog(offset, limit int) error {
 	for _, userBalanceLog := range userBalanceLogs {
 		logs = append(logs, model.MemberBalanceLog{
 			BaseModel: model.BaseModel{
+				ID:         userBalanceLog.LogID,
 				Uuid:       uint64(userBalanceLog.LogID),
 				CreateTime: int64(userBalanceLog.CreateTime),
 				UpdateTime: int64(userBalanceLog.CreateTime),
