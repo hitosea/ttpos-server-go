@@ -11,7 +11,7 @@ type Member struct {
 	BaseModel
 	MemberNo                     string  `gorm:"column:member_no;type:varchar(255);comment:会员编号;NOT NULL" json:"member_no"`
 	Nickname                     string  `gorm:"column:nickname;type:varchar(255);comment:昵称;NOT NULL" json:"nickname"`
-	Gender                       int     `gorm:"column:gender;type:tinyint(3);default:2;comment:性别,0-女 1-男 2-未知;NOT NULL" json:"gender"`
+	Gender                       int     `gorm:"column:gender;type:tinyint(3);default:0;comment:性别,0-女 1-男 2-未知;NOT NULL" json:"gender"`
 	Phone                        string  `gorm:"column:phone;type:varchar(20);comment:电话号码;NOT NULL" json:"phone"`
 	Password                     string  `gorm:"column:password;type:varchar(200);comment:密码;NOT NULL" json:"password"`
 	Birthday                     int64   `gorm:"column:birthday;type:int(10);comment:生日,时间戳" json:"birthday"`
