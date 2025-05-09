@@ -90,6 +90,7 @@ class UserRechargeOrder extends Controller
             'query_end_time' => $queryEndTime, // 结束时间
             'status' => $status, // 订单状态: -1全部 0待付款 1已完成 2已取消
             'page' => intval($data['page'] ?? 1),
+            'page_no' => intval($data['page'] ?? 1),
             'page_size' => intval($data['list_rows'] ?? 10),
         ];
     }
