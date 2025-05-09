@@ -279,7 +279,6 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 	}
 
 	// 支付数据
-	req.NotQueryFree = true
 	_, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req)
 
 	// 会员数量

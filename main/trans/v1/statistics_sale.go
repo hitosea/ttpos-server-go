@@ -3,6 +3,7 @@ package v1
 import (
 	"fmt"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -47,6 +48,10 @@ type JOrder struct {
 	PayFeeMoney                       float64 `gorm:"column:pay_fee_money;comment:支付手续费"`
 	SmallDiscountType                 int     `gorm:"column:small_discount_type;comment:抹零(优惠折扣)：1-抹分 2-抹角 3-四舍五入到角 4-四舍五入到元"`
 	DiscountRate                      float64 `gorm:"column:discount_rate;comment:优惠折扣比例 如：50-百分之五十"`
+	ChangeDue                         float64 `gorm:"column:change_due;comment:找零"`
+	CheckoutDiffMoney                 float64 `gorm:"checkout_diff_money;comment:结账抹零后与pay_price差值"`
+	MergeParentID                     uint64  `gorm:"column:merge_parent_id;comment:合并订单id"`
+	IsMerge                           int     `gorm:"column:is_merge;comment:是否合并订单 0-否 1-是"`
 
 	OrderProducts []JOrderProduct           `gorm:"foreignKey:OrderID;references:OrderID"` // 订单商品
 	OrderPayTypes []JOrderPayType           `gorm:"foreignKey:OrderID;references:OrderID"` // 订单支付类型
@@ -66,6 +71,7 @@ type JOrderProduct struct {
 	ProductServiceConsumptionTax  float64 `gorm:"column:product_service_consumption_tax;comment:商品服务费消费税"`
 	ProductDiscountMoney          float64 `gorm:"column:product_discount_money;comment:优惠折扣后与原价总差额(包含数量)"`
 	ProductServiceFee             float64 `gorm:"column:product_service_fee;comment:商品服务费"`
+	TaxCalcType                   int     `gorm:"column:tax_calc_type;comment:是否含税 0-关闭 1-已含税 2-未含税"`
 
 	OrderProductReturns []JOrderProductReturn `gorm:"foreignKey:OrderProductID;references:OrderProductID"` // 订单商品退款
 }
@@ -141,6 +147,19 @@ func NewStatisticsSaleService(db *gorm.DB, targetDB *gorm.DB) *StatisticsSaleSer
 
 // 迁移销售统计
 func (s *StatisticsSaleService) ConvertStatisticsSale() error {
+	s1 := s.convertStatisticsSale1()
+	if s1 != nil {
+		return s1
+	}
+	s2 := s.convertStatisticsSale2()
+	if s2 != nil {
+		return s2
+	}
+	return nil
+}
+
+// 迁移销售统计1
+func (s *StatisticsSaleService) convertStatisticsSale1() error {
 	var isContinue bool = true
 	var page int = 1
 	var pageSize int = 500
@@ -148,14 +167,22 @@ func (s *StatisticsSaleService) ConvertStatisticsSale() error {
 	for isContinue {
 		var oldOrders []JOrder
 		var newOrders []model.StatisticsSale
-		s.db.Preload("OrderProducts").
+		db1 := s.db
+		db1.Preload("OrderProducts").
 			Preload("OrderPayTypes").
 			Preload("OrderRefunds").
 			Preload("OrderProducts.OrderProductReturns").
-			Where("parent_id = 0").Where("is_settled = 1").Where("order_status = ?", 30).Limit(pageSize).Offset((page - 1) * pageSize).Find(&oldOrders)
+			Where("pay_status = 20").
+			Where("order_status = 30").
+			Where("parent_id = 0").
+			Where("is_merge = 0").
+			Where("is_delete = 0").
+			Where("delete_time = 0").
+			Limit(pageSize).Offset((page - 1) * pageSize).Find(&oldOrders)
 		if len(oldOrders) < pageSize {
 			isContinue = false
 		}
+
 		page++
 		for _, order := range oldOrders {
 			var orderProductNum int
@@ -170,7 +197,7 @@ func (s *StatisticsSaleService) ConvertStatisticsSale() error {
 			var orderGiftAmount decimal.Decimal
 			var orderFreeNum int
 			var orderFreeAmount decimal.Decimal
-			var orderPayment decimal.Decimal
+			var orderPaymentAmount decimal.Decimal
 			var orderPaymentBalance decimal.Decimal
 			var orderRefundAmount decimal.Decimal
 			var orderRefundPaymentBalance decimal.Decimal
@@ -188,14 +215,15 @@ func (s *StatisticsSaleService) ConvertStatisticsSale() error {
 			var isFixServiceFee bool = order.SettingServiceMoney > 0
 
 			if isFree {
-				if isStatFree {
-					isSateGive = 1
-				} else {
-					isSateGive = 2
-				}
+				// if isStatFree {
+				// 	isSateGive = 1
+				// } else {
+				// 	isSateGive = 2
+				// }
 				orderFreeNum = 1
-				orderFreeAmount = decimal.NewFromFloat(order.DiscountMoney)
 			}
+
+			orderFreeAmount = decimal.NewFromFloat(order.FreePayPrice)
 
 			// 统计订单免单
 			if isFree {
@@ -210,7 +238,7 @@ func (s *StatisticsSaleService) ConvertStatisticsSale() error {
 			} else {
 				// 统计自定义优惠折扣
 				orderServiceFee = decimal.NewFromFloat(order.ServiceMoney)
-				orderDiscount = decimal.NewFromFloat(order.DiscountMoney)
+				orderDiscount = decimal.NewFromFloat(order.DiscountMoney).Add(decimal.NewFromFloat(order.CheckoutDiffMoney))
 			}
 
 			for _, orderProduct := range order.OrderProducts {
@@ -220,7 +248,7 @@ func (s *StatisticsSaleService) ConvertStatisticsSale() error {
 					orderProductNum += totalNum
 
 					productPrice := decimal.NewFromFloat(orderProduct.ProductPrice)
-					if isFeeType {
+					if isFeeType || (orderProduct.TaxCalcType == 2 && orderProduct.ConsumptionTax > 0 && orderProduct.ProductOriginalConsumptionTax == 0) {
 						productPrice = productPrice.Sub(decimal.NewFromFloat(orderProduct.ConsumptionTax))
 					}
 
@@ -240,30 +268,33 @@ func (s *StatisticsSaleService) ConvertStatisticsSale() error {
 					if isFree {
 						if isStatFree {
 							orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
-							orderProductTax = orderProductTax.Add(productTax.Mul(totalNumDec))
-							orderServiceTax = orderServiceTax.Add(productServiceTax.Mul(totalNumDec))
+							orderProductTax = orderProductTax.Add(productTax)
+							orderServiceTax = orderServiceTax.Add(productServiceTax)
 						}
 					} else {
 						if orderProduct.IsFree > 0 {
-							if isSateGive == 0 && orderProduct.IsFree == 1 {
-								isSateGive = 1
+							if isSateGive == 0 {
+								isSateGive = orderProduct.IsFree
 							}
 							if isSateGive == 1 {
 								orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
-								orderProductTax = orderProductTax.Add(productTax.Mul(totalNumDec))
-								orderServiceTax = orderServiceTax.Add(productServiceTax.Mul(totalNumDec))
+								orderProductTax = orderProductTax.Add(productTax)
+								orderServiceTax = orderServiceTax.Add(productServiceTax)
+							}
+							if isSateGive == 2 {
+								orderDiscount = orderDiscount.Sub(decimal.NewFromFloat(orderProduct.ProductDiscountMoney))
 							}
 						} else {
 							orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
-							orderProductTax = orderProductTax.Add(productTax.Mul(totalNumDec))
-							orderServiceTax = orderServiceTax.Add(productServiceTax.Mul(totalNumDec))
+							orderProductTax = orderProductTax.Add(productTax)
+							orderServiceTax = orderServiceTax.Add(productServiceTax)
 						}
 					}
 
 					for _, orderProductReturn := range orderProduct.OrderProductReturns {
-						orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(orderProduct.ConsumptionTax)).
-							Add(decimal.NewFromFloat(orderProduct.ProductServiceConsumptionTax)).
-							Mul(decimal.NewFromFloat(float64(orderProductReturn.Num)))
+						// orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(orderProduct.ConsumptionTax)).
+						// 	Add(decimal.NewFromFloat(orderProduct.ProductServiceConsumptionTax)).
+						// 	Mul(decimal.NewFromFloat(float64(orderProductReturn.Num)))
 						if isFeeType {
 							noOrderRefundTax = noOrderRefundTax.Add(decimal.NewFromFloat(orderProduct.ConsumptionTax))
 						}
@@ -275,27 +306,36 @@ func (s *StatisticsSaleService) ConvertStatisticsSale() error {
 				}
 			}
 
+			orderRefundTax = decimal.NewFromFloat(order.RefundConsumptionTax)
+
 			for _, orderPayType := range order.OrderPayTypes {
 				if orderPayType.PayStatus == 1 {
-					orderPayment = orderPayment.Add(decimal.NewFromFloat(orderPayType.Price))
 					if orderPayType.Value == 10 {
 						orderPaymentBalance = orderPaymentBalance.Add(decimal.NewFromFloat(orderPayType.Price))
 					}
 				}
 			}
 
-			for _, orderRefund := range order.OrderRefunds {
-				if orderRefund.Status == 1 {
-					orderRefundAmount = orderRefundAmount.Add(decimal.NewFromFloat(orderRefund.RefundMoney))
-					if orderRefund.Value == 10 {
-						orderRefundPaymentBalance = orderRefundPaymentBalance.Add(decimal.NewFromFloat(orderRefund.RefundMoney))
-					}
-				}
+			// for _, orderRefund := range order.OrderRefunds {
+			// 	if orderRefund.Status == 1 {
+			// 		if orderRefund.Value == 10 {
+			// 			orderRefundPaymentBalance = orderRefundPaymentBalance.Add(decimal.NewFromFloat(orderRefund.RefundMoney))
+			// 		} else {
+			// 			orderRefundAmount = orderRefundAmount.Add(decimal.NewFromFloat(orderRefund.RefundMoney))
+			// 		}
+			// 	}
+			// }
+
+			orderRefundAmount = decimal.NewFromFloat(order.RefundMoney)
+			if order.MergeParentID != 0 && order.IsMerge != 1 {
+				orderPaymentAmount = decimal.NewFromFloat(0)
+			} else {
+				orderPaymentAmount = decimal.NewFromFloat(order.PayPrice)
 			}
 
 			if !isFree && order.PayPrice == order.RefundMoney {
 				orderRefundFee = decimal.NewFromFloat(order.PayFeeMoney)
-				orderRefundDiscount = decimal.NewFromFloat(order.DiscountMoney)
+				// orderRefundDiscount = decimal.NewFromFloat(order.DiscountMoney)
 				orderRefundDiscountMember = decimal.NewFromFloat(order.UserDiscountMoney)
 				if isFixServiceFee {
 					orderRefundServiceFee = decimal.NewFromFloat(order.ServiceMoney)
@@ -320,7 +360,7 @@ func (s *StatisticsSaleService) ConvertStatisticsSale() error {
 				GiftNum:              orderGiftNum,
 				FreeAmount:           orderFreeAmount.InexactFloat64(),
 				FreeNum:              orderFreeNum,
-				PaymentAmount:        orderPayment.InexactFloat64(),
+				PaymentAmount:        orderPaymentAmount.InexactFloat64(),
 				PaymentFee:           order.PayFeeMoney,
 				PaymentBalance:       orderPaymentBalance.InexactFloat64(),
 				RefundAmount:         orderRefundAmount.InexactFloat64(),
@@ -332,6 +372,72 @@ func (s *StatisticsSaleService) ConvertStatisticsSale() error {
 				RefundDiscountMember: orderRefundDiscountMember.InexactFloat64(),
 				RefundFee:            orderRefundFee.InexactFloat64(),
 				CompleteTime:         order.PayTime,
+				IsSpecial:            utils.IfInt(order.MergeParentID != 0 && order.IsMerge != 1, 1, 0),
+			})
+		}
+
+		if len(newOrders) > 0 {
+			fmt.Println(fmt.Sprintf("statistics-sale - page: %d - num: %d", page, len(newOrders)))
+			if err := s.targetDB.Create(&newOrders).Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// 迁移销售统计
+func (s *StatisticsSaleService) convertStatisticsSale2() error {
+	var isContinue bool = true
+	var page int = 1
+	var pageSize int = 500
+
+	for isContinue {
+		var oldOrders []JOrder
+		var newOrders []model.StatisticsSale
+		db1 := s.db
+		db1.Preload("OrderProducts").
+			Preload("OrderPayTypes").
+			Preload("OrderRefunds").
+			Preload("OrderProducts.OrderProductReturns").
+			Where("pay_status = 20").
+			Where("order_status = 30").
+			Where("parent_id = 0").
+			Where("is_merge = 1").
+			Where("is_delete = 0").
+			Where("delete_time = 0").
+			Limit(pageSize).Offset((page - 1) * pageSize).Find(&oldOrders)
+		if len(oldOrders) < pageSize {
+			isContinue = false
+		}
+
+		page++
+		for _, order := range oldOrders {
+			var orderServiceFee decimal.Decimal
+			var orderPaymentAmount decimal.Decimal
+			var orderPaymentBalance decimal.Decimal
+
+			for _, orderPayType := range order.OrderPayTypes {
+				if orderPayType.PayStatus == 1 {
+					if orderPayType.Value == 10 {
+						orderPaymentBalance = orderPaymentBalance.Add(decimal.NewFromFloat(orderPayType.Price))
+					}
+				}
+			}
+
+			orderPaymentAmount = decimal.NewFromFloat(order.PayPrice)
+
+			newOrders = append(newOrders, model.StatisticsSale{
+				SaleBillUuid:   order.OrderID,
+				SaleOrderUuid:  order.OrderID,
+				DeskUuid:       order.TableID,
+				ServiceFee:     orderServiceFee.InexactFloat64(),
+				PaymentAmount:  orderPaymentAmount.InexactFloat64(),
+				PaymentFee:     order.PayFeeMoney,
+				PaymentBalance: orderPaymentBalance.InexactFloat64(),
+				CompleteTime:   order.PayTime,
+				IsMeger:        1,
 			})
 		}
 

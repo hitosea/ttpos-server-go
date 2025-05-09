@@ -86,10 +86,10 @@ func (s *StatisticsMemberService) convertMemberBalanceLog(offset int, limit int)
 	err := s.db.Raw(`
 		SELECT
 			log.recharge_order_id as member_recharge_order_uuid,
-			SUM(log.money - log.gift_money) AS recharge_amount,
-			SUM(log.gift_money) AS give_amount,
+			log.money - log.gift_money AS recharge_amount,
+			log.gift_money AS give_amount,
 			0 AS give_point,
-			SUM(log.money - log.gift_money) AS payment_amount,
+			log.money - log.gift_money AS payment_amount,
 			0 AS payment_fee,
 			0 AS refund_amount,
 			0 AS refund_fee,
