@@ -161,8 +161,8 @@ func (s *CategoryService) ConvertCategory() error {
 			uuid = uint64(category.CategoryID)
 		}
 		key := ""
-		// 如果categoryID为0，则key为all
-		if category.CategoryID == 0 {
+		// 如果category是默认的全部分类，则key为all
+		if category.CategoryID == 0 || category.IsButton == 1 {
 			key = "all"
 		}
 		productCategory := model.ProductCategory{
