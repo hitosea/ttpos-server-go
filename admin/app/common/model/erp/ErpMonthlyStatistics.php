@@ -100,7 +100,7 @@ class ErpMonthlyStatistics extends BaseModel
         $total = self::where('year', $year)
             ->where('month', $month)
             ->where('scene', self::MONTH_START)
-            ->value('stock') ?? 0;
+            ->sum('stock') ?? 0;
 
         return floatval($total);
     }

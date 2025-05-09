@@ -353,7 +353,7 @@ func (r *StatisticsRepo) CountArea(opts ...DBOption) []model.StatisticsAreaData 
 		Select(countAreaSelect, "dr.uuid AS area_id").
 		Joins("LEFT JOIN " + deskTable + " ON ss.desk_uuid = d.uuid").
 		Joins("LEFT JOIN " + deskRegionTable + " ON d.region_uuid = dr.uuid").
-		Where("ss.desk_uuid > 0").
+		Where("ss.desk_uuid > 0 and dr.uuid > 0").
 		Group("dr.uuid").
 		Order("dr.id ASC").
 		Find(&result)
