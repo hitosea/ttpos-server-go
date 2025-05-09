@@ -243,6 +243,13 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 
 			orderProductOriginPrice = orderProductOriginPrice.Add(decimal.NewFromFloat(order.TotalProductPrice))
 
+			if order.IsFree == 2 {
+				// 等于子订单的 orderProductTax， orderRefundTax
+			} else {
+				orderProductTax = orderProductTax.Add(decimal.NewFromFloat(order.ConsumptionTaxMoney))
+				orderRefundTax = decimal.NewFromFloat(order.RefundConsumptionTax)
+			}
+
 			for _, orderProduct := range order.OrderProducts {
 				if orderProduct.IsReturn == 0 {
 					totalNum := orderProduct.TotalNum
@@ -256,19 +263,22 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 
 					orderProductSalePrice = orderProductSalePrice.Add(decimal.NewFromFloat(orderProduct.ProductPrice).Mul(totalNumDec))
 
-					productTax := decimal.NewFromFloat(orderProduct.ConsumptionTax)
+					// productTax := decimal.NewFromFloat(orderProduct.ConsumptionTax)
 					productServiceTax := decimal.NewFromFloat(orderProduct.ProductServiceConsumptionTax)
 					if orderProduct.IsFree > 0 {
-						productTax = decimal.NewFromFloat(0)
+						// productTax = decimal.NewFromFloat(0)
 						productServiceTax = decimal.NewFromFloat(0)
 						orderGiftNum += totalNum
 						orderGiftAmount = orderGiftAmount.Add(decimal.NewFromFloat(orderProduct.ProductDiscountMoney))
 					}
 
+					// 减去商品服务费消费税
+					orderProductTax = orderProductTax.Sub(productServiceTax)
+
 					if isFree {
 						if isStatFree {
 							orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
-							orderProductTax = orderProductTax.Add(productTax)
+							// orderProductTax = orderProductTax.Add(productTax)
 							orderServiceTax = orderServiceTax.Add(productServiceTax)
 						}
 					} else {
@@ -278,7 +288,7 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 							}
 							if isSateGive == 1 {
 								orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
-								orderProductTax = orderProductTax.Add(productTax)
+								// orderProductTax = orderProductTax.Add(productTax)
 								orderServiceTax = orderServiceTax.Add(productServiceTax)
 							}
 							if isSateGive == 2 {
@@ -286,7 +296,7 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 							}
 						} else {
 							orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
-							orderProductTax = orderProductTax.Add(productTax)
+							// orderProductTax = orderProductTax.Add(productTax)
 							orderServiceTax = orderServiceTax.Add(productServiceTax)
 						}
 					}
@@ -305,8 +315,6 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 
 				}
 			}
-
-			orderRefundTax = decimal.NewFromFloat(order.RefundConsumptionTax)
 
 			for _, orderPayType := range order.OrderPayTypes {
 				if orderPayType.PayStatus == 1 {

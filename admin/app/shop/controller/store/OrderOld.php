@@ -36,6 +36,8 @@ class OrderOld extends Controller
             return $this->renderError('未存在迁移库');
         }
         request()->appId = $app->old_company_id;
+        $data['order_type'] = 1;
+        $data['parent_id'] = 0;
         return $this->renderSuccess('', OldOrderModel::getLists($data));
     }
 
