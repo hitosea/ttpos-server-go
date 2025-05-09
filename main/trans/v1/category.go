@@ -156,7 +156,7 @@ func (s *CategoryService) ConvertCategory() error {
 
 		uuid := uint64(0)
 		if category.CategoryID == 0 {
-			uuid = 18446744073709551615
+			uuid = 18446744073709551614
 		} else {
 			uuid = uint64(category.CategoryID)
 		}
