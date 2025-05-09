@@ -881,7 +881,7 @@ class Product extends BaseModel
                 'c1.name as category_name', 
                 'c2.name as category_parent_name', 
                 ' (SELECT sum(stock_num) FROM ttpos_product_bom WHERE product_package_uuid = p.uuid AND delete_time = 0 AND product_flavor_uuid > 0) AS product_stock',
-                ' (SELECT min(price) FROM ttpos_product_bom WHERE product_package_uuid = p.uuid AND delete_time = 0) AS product_price',
+                ' (SELECT min(price) FROM ttpos_product_bom WHERE product_package_uuid = p.uuid AND product_flavor_uuid > 0 AND delete_time = 0) AS product_price',
                 '10 as type',
                 'c1.uuid as category_uuid',
                 'c2.uuid as category_parent_uuid',

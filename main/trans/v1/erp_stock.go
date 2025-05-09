@@ -2,11 +2,21 @@ package v1
 
 import (
 	"fmt"
+	"sync"
+	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/utils"
+	pkgUtils "ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
+
+// 默认规格，在无法连接数据库时使用
+var defaultSpec = &Spec{
+	SpecID:   1,
+	SpecName: "默认规格",
+}
 
 // 出库记录场景映射
 var WarehouseOutFormSceneMap = map[int]int{
@@ -71,13 +81,22 @@ func (DamagedProductRecord) TableName() string {
 
 // 库存服务
 type StockService struct {
-	db       *gorm.DB
-	targetDB *gorm.DB
+	db             *gorm.DB
+	targetDB       *gorm.DB
+	bomCache       map[uint64]model.ProductBom
+	cacheMu        sync.RWMutex
+	specsCache     []*Spec
+	specsCacheTime int64
 }
 
 // 实例化库存服务
 func NewStockService(db *gorm.DB, targetDB *gorm.DB) *StockService {
-	return &StockService{db: db, targetDB: targetDB}
+	return &StockService{
+		db:             db,
+		targetDB:       targetDB,
+		bomCache:       make(map[uint64]model.ProductBom),
+		specsCacheTime: 0,
+	}
 }
 
 // 迁移出库记录
@@ -104,7 +123,7 @@ func (s *StockService) ConvertWarehouseOut() error {
 			newForms = append(newForms, &model.WarehouseOutForm{
 				BaseModel: model.BaseModel{
 					Uuid:       formUuid,
-					CreateTime: record.OutTime,
+					CreateTime: record.CreateTime,
 					UpdateTime: record.OutTime,
 					DeleteTime: record.DeleteTime,
 				},
@@ -132,7 +151,7 @@ func (s *StockService) ConvertWarehouseOut() error {
 			newItems = append(newItems, &model.WarehouseOutFormItem{
 				BaseModel: model.BaseModel{
 					Uuid:       itemUuid,
-					CreateTime: record.OutTime,
+					CreateTime: record.CreateTime,
 					UpdateTime: record.OutTime,
 					DeleteTime: record.DeleteTime,
 				},
@@ -231,4 +250,76 @@ func (s *StockService) ConvertDemaged() error {
 	}
 
 	return nil
+}
+
+func (s *StockService) GetProductBom(productSkuId uint64) model.ProductBom {
+	// 先从缓存中查询
+	s.cacheMu.RLock()
+	if bom, exists := s.bomCache[productSkuId]; exists {
+		s.cacheMu.RUnlock()
+		return bom
+	}
+	s.cacheMu.RUnlock()
+
+	// 缓存中不存在，从数据库查询
+	var productBom model.ProductBom
+	s.targetDB.Where("uuid = ?", productSkuId).First(&productBom)
+	if productBom.ID == 0 {
+		return model.ProductBom{}
+	}
+
+	// 更新缓存
+	s.cacheMu.Lock()
+	s.bomCache[productSkuId] = productBom
+	s.cacheMu.Unlock()
+
+	return productBom
+}
+
+func (s *StockService) GetProductSpecList() ([]*Spec, error) {
+	var specs []*Spec
+	if err := s.db.Find(&specs).Error; err != nil {
+		return nil, err
+	}
+	return specs, nil
+}
+
+func (s *StockService) CreateProductBom(productID uint64, bomName string) (uint64, error) {
+	// 如果商品已经删除，则返回一个空的productBom
+	// 获取商品规格.随便给个这个空的规格设置一个specId
+	specs, err := s.GetProductSpecList()
+	if err != nil {
+		return 0, errors.WithMessage(err, "获取商品规格失败")
+	}
+	if len(specs) == 0 {
+		return 0, errors.WithMessage(err, "商品规格为空")
+	}
+	specId := specs[0].SpecID
+
+	productBomUuid, err := pkgUtils.GetID()
+	if err != nil {
+		return 0, errors.WithMessage(err, "获取uuid失败")
+	}
+	productBom := model.ProductBom{
+		BaseModel: model.BaseModel{
+			Uuid:       productBomUuid,
+			CreateTime: time.Now().Unix(),
+			UpdateTime: time.Now().Unix(),
+			DeleteTime: 1,
+		},
+		ProductPackageUuid: productID,
+		ProductFlavorUuid:  uint64(specId),
+		Name:               bomName,
+	}
+
+	if err := s.targetDB.Create(&productBom).Error; err != nil {
+		return 0, errors.WithMessage(err, "创建商品规格失败")
+	}
+
+	// 更新缓存
+	s.cacheMu.Lock()
+	s.bomCache[productBom.Uuid] = productBom
+	s.cacheMu.Unlock()
+
+	return productBom.Uuid, nil
 }
