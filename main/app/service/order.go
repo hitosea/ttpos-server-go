@@ -4940,6 +4940,10 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			if !saleOrderProduct.IsCurrentDeskProduct() {
 				continue
 			}
+			// 跳过退菜商品
+			if saleOrderProduct.IsCancelProduct() {
+				continue
+			}
 			productPackageUuid := saleOrderProduct.ProductPackageUuid
 			// 在h5端下单场景下，只检查本次下单的商品是否超过限购
 			// 在收银端送厨场景下，只检查本次送厨的商品是否超过限购
@@ -4951,8 +4955,17 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			saleOrderProductMap[productPackageUuid] = saleOrderProduct
 		}
 
+		limitProducts, err := s.getBuffetProductLimitList(ctx, saleBillUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+
 		for productPackageUuid, num := range numMap {
 			limitNum := productPackageMap[productPackageUuid].LimitNum
+			// 如果商品是自助餐商品的话，使用自助餐商品的限购规则
+			if productPackageLimitNum, ok := limitProducts[productPackageUuid]; ok {
+				limitNum = productPackageLimitNum
+			}
 			// 0表示不限购
 			if limitNum == 0 {
 				continue
