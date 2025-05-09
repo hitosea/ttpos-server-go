@@ -1988,7 +1988,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_duty_no` (`duty_no`),
+    INDEX `idx_desk_uuid` (`desk_uuid`),
+    INDEX `idx_complete_time` (`complete_time`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '销售统计表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_statistics_payment` (
@@ -2005,7 +2008,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_payment` (
     `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_duty_no` (`duty_no`),
+    INDEX `idx_desk_uuid` (`desk_uuid`),
+    INDEX `idx_complete_time` (`complete_time`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '支付统计表';
 
 
@@ -2038,7 +2044,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
     UNIQUE KEY `unique_uuid` (`uuid`),
     INDEX idx_refund_time (refund_time),
-    INDEX idx_sale_bill_uuid (sale_bill_uuid)
+    INDEX idx_sale_bill_uuid (sale_bill_uuid),
+    INDEX idx_duty_no (duty_no),
+    INDEX idx_desk_uuid (desk_uuid),
+    INDEX idx_complete_time (complete_time)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品统计表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_statistics_member` (
@@ -2058,7 +2067,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_member` (
     `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX idx_duty_no (duty_no),
+    INDEX idx_complete_time (complete_time)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '会员统计表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_statistics_member_payment` (
@@ -2073,7 +2084,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_member_payment` (
     `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX idx_duty_no (duty_no),
+    INDEX idx_complete_time (complete_time),
+    INDEX idx_payment_method_uuid (payment_method_uuid)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '会员支付统计表';
 
 SET FOREIGN_KEY_CHECKS = 1;
