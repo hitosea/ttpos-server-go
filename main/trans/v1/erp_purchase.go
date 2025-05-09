@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"fmt"
+	"sync"
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -9,6 +11,62 @@ import (
 
 	"gorm.io/gorm"
 )
+
+// SimpleCache 简单的内存缓存实现
+type SimpleCache struct {
+	items map[string]cacheItem
+	mutex sync.RWMutex
+}
+
+type cacheItem struct {
+	value      interface{}
+	expiration int64
+}
+
+// NewSimpleCache 创建一个新的简单缓存
+func NewSimpleCache() *SimpleCache {
+	return &SimpleCache{
+		items: make(map[string]cacheItem),
+	}
+}
+
+// Set 设置缓存
+func (c *SimpleCache) Set(key string, value interface{}, duration time.Duration) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	expiration := time.Now().Add(duration).UnixNano()
+	c.items[key] = cacheItem{
+		value:      value,
+		expiration: expiration,
+	}
+}
+
+// Get 获取缓存
+func (c *SimpleCache) Get(key string) (interface{}, bool) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	item, exists := c.items[key]
+	if !exists {
+		return nil, false
+	}
+
+	// 检查是否过期
+	if time.Now().UnixNano() > item.expiration {
+		delete(c.items, key)
+		return nil, false
+	}
+
+	return item.value, true
+}
+
+// Del 删除缓存
+func (c *SimpleCache) Del(key string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	delete(c.items, key)
+}
 
 // 采购单
 type PurchaseOrder struct {
@@ -140,31 +198,52 @@ func (InventoryRecord) TableName() string {
 type PurchaseService struct {
 	db       *gorm.DB
 	targetDB *gorm.DB
+	cache    *SimpleCache
 }
 
 // 实例化采购单服务
 func NewPurchaseService(db *gorm.DB, targetDB *gorm.DB) *PurchaseService {
-	return &PurchaseService{db: db, targetDB: targetDB}
+	return &PurchaseService{
+		db:       db,
+		targetDB: targetDB,
+		cache:    NewSimpleCache(),
+	}
 }
 
 // 获取商品包装
 func (s *PurchaseService) GetProductPackage(productUuid uint64) model.ProductPackage {
+	// 从缓存中获取
+	cacheKey := fmt.Sprintf("product_package_%d", productUuid)
+	if cacheData, ok := s.cache.Get(cacheKey); ok {
+		return cacheData.(model.ProductPackage)
+	}
+
 	var product model.ProductPackage
 	s.targetDB.Preload("ProductBoms").Where("uuid = ?", productUuid).First(&product)
 	if product.ID == 0 {
 		return model.ProductPackage{}
 	}
 
+	// 设置缓存
+	s.cache.Set(cacheKey, product, 30*time.Minute)
 	return product
 }
 
 func (s *PurchaseService) GetProductBom(productSkuId uint64) model.ProductBom {
+	// 从缓存中获取
+	cacheKey := fmt.Sprintf("product_bom_%d", productSkuId)
+	if cacheData, ok := s.cache.Get(cacheKey); ok {
+		return cacheData.(model.ProductBom)
+	}
+
 	var productBom model.ProductBom
 	s.targetDB.Where("uuid = ?", productSkuId).First(&productBom)
 	if productBom.ID == 0 {
 		return model.ProductBom{}
 	}
 
+	// 设置缓存
+	s.cache.Set(cacheKey, productBom, 30*time.Minute)
 	return productBom
 }
 
@@ -177,17 +256,6 @@ func (s *PurchaseService) GetProductSpecList() ([]*Spec, error) {
 }
 
 func (s *PurchaseService) CreateProductBom(productID uint64, productSkuID uint64, bomName string) (uint64, error) {
-	// 如果商品已经删除，则返回一个空的productBom
-	// 获取商品规格.随便给个这个空的规格设置一个specId
-	// specs, err := s.GetProductSpecList()
-	// if err != nil {
-	// 	return 0, errors.WithMessage(err, "获取商品规格失败")
-	// }
-	// if len(specs) == 0 {
-	// 	return 0, errors.WithMessage(err, "商品规格为空")
-	// }
-	// specId := specs[0].SpecID
-
 	productBomUuid, err := pkgUtils.GetID()
 	if err != nil {
 		return 0, errors.WithMessage(err, "获取uuid失败")
@@ -213,12 +281,20 @@ func (s *PurchaseService) CreateProductBom(productID uint64, productSkuID uint64
 
 // 获取原材料
 func (s *PurchaseService) GetMaterial(productUuid uint64) model.Material {
+	// 从缓存中获取
+	cacheKey := fmt.Sprintf("material_%d", productUuid)
+	if cacheData, ok := s.cache.Get(cacheKey); ok {
+		return cacheData.(model.Material)
+	}
+
 	var material model.Material
 	s.targetDB.Where("uuid = ?", productUuid).First(&material)
 	if material.ID == 0 {
 		return model.Material{}
 	}
 
+	// 设置缓存
+	s.cache.Set(cacheKey, material, 30*time.Minute)
 	return material
 }
 
