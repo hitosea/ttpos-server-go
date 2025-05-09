@@ -324,7 +324,7 @@ func parseServiceFeeRate(ServiceChargeRate string) (float64, error) {
 		return 0, errors.WithMessage(err)
 	}
 	// 兼容取值范围0-100的情况。本系统中比例的统一取值范围是0-1，所以需要转换
-	if serviceFeeValue > 1 {
+	if serviceFeeValue > 0 {
 		// 将取值范围0-100转换为0-1
 		serviceFeeValue = decimal.NewFromFloat(serviceFeeValue).Div(decimal.NewFromInt(100)).Truncate(2).InexactFloat64()
 		// 取值范围0-1
