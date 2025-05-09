@@ -66,7 +66,7 @@ class Supplier extends SupplierModel
         $databaseName = $username = 'shop' . $this->uuid;
         $dbExists = $pdo->query("SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = '{$databaseName}'")->fetchColumn();
         if (!$dbExists) {
-            $pdo->exec("CREATE DATABASE {$databaseName}");
+            $pdo->exec("CREATE DATABASE {$databaseName} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
             // $pdo->exec("CREATE USER '{$username}'@'{$host}' IDENTIFIED BY '{$password}'");
             // $pdo->exec("GRANT ALL PRIVILEGES ON {$databaseName}.* TO '{$username}'@'{$host}'");
             // $pdo->exec("FLUSH PRIVILEGES");
