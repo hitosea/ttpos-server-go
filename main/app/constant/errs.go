@@ -16,15 +16,14 @@ const (
 	CodeTimeoutError = -5  // 超时错误
 	UnknownError     = -99 // 未知错误
 
-	CodeUnauthorized      = -100 // 未授权
-	CodeTokenExpired      = -101 // Token过期
-	CodeTokenInvalid      = -102 // Token无效
-	CodeAccessDenied      = -103 // 拒绝访问
-	CodeAccountDisabled   = -104 // 账号已禁用
-	CodeNeedLogin         = -105 // 需要登录
-	CodeLoginFailed       = -106 // 登录失败
-	CodeCashierNotLogin   = -107 // 点餐助手绑定的收银机未登录
-	CodeTabletNotBindDesk = -108 // 平板未绑定桌台
+	CodeUnauthorized    = -100 // 未授权
+	CodeTokenExpired    = -101 // Token过期
+	CodeTokenInvalid    = -102 // Token无效
+	CodeAccessDenied    = -103 // 拒绝访问
+	CodeAccountDisabled = -104 // 账号已禁用
+	CodeNeedLogin       = -105 // 需要登录
+	CodeLoginFailed     = -106 // 登录失败
+	CodeCashierNotLogin = -107 // 点餐助手绑定的收银机未登录
 
 	CodeCashierOrderMethodNotOpen = -110 //
 	CodeCashierLoginLimit         = -111 // 收银机登录已达上限
@@ -104,7 +103,8 @@ func ParseCodeOrderCheck(code int, options ...func(option *ParseCodeOrderCheckOp
 
 // 桌台业务错误码
 const (
-	CodeDeskOrderEnd = -300 // 桌台订单已经结束。前端收到这个业务码后，退出当前桌台，返回首页
+	CodeDeskOrderEnd      = -300 // 桌台订单已经结束。前端收到这个业务码后，退出当前桌台，返回首页
+	CodeTabletNotBindDesk = -301 // 平板未绑定桌台
 )
 
 // 退款业务错误码
