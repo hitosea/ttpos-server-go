@@ -16,8 +16,8 @@ type IStaffRepo interface {
 	WhereCashierOnline() DBOption           // 收银机在线条件
 	WhereDeviceId(bindKey string) DBOption  // 设备ID条件
 
-	GetStaff(opts ...DBOption) model.Staff    // 查询员工
-	GetStaffs(opts ...DBOption) []model.Staff // 查询员工
+	GetStaff(opts ...DBOption) (model.Staff, error) // 查询员工
+	GetStaffs(opts ...DBOption) []model.Staff       // 查询员工
 
 	CreateStaff(staff model.Staff) error           // 创建员工
 	Update(uuid uint64, vars map[string]any) error // 更新员工
@@ -39,14 +39,14 @@ func (r *StaffRepo) CreateStaff(staff model.Staff) error {
 	return r.db.Model(&model.Staff{}).Create(&staff).Error
 }
 
-func (r *StaffRepo) GetStaff(opts ...DBOption) model.Staff {
+func (r *StaffRepo) GetStaff(opts ...DBOption) (model.Staff, error) {
 	var staff model.Staff
 	db := r.db.Model(&model.Staff{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.First(&staff)
-	return staff
+	err := db.First(&staff).Error
+	return staff, err
 }
 
 func (r *StaffRepo) GetStaffs(opts ...DBOption) []model.Staff {

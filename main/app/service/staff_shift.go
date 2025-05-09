@@ -176,7 +176,7 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		db    *gorm.DB = s.dbm.GetDB(ctx.GetCompanyUuid())
 	)
 	if reqs.IsBackground {
-		staff = repository.NewStaffRepo(db).GetStaff(repository.CommonRepo.WhereByUuid(reqs.StaffUuid))
+		staff, _ = repository.NewStaffRepo(db).GetStaff(repository.CommonRepo.WhereByUuid(reqs.StaffUuid))
 	} else {
 		staff = ctx.GetStaff()
 	}
