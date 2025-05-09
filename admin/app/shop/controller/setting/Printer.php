@@ -86,8 +86,8 @@ class Printer extends Controller
     {
         $detail = PrinterModel::detail($printer_id);
         $detail['printer_type'] = [
-            'text' => $detail['printerType']['name_text'],
-            'value' => $detail['printerType']['key'],
+            'text' => $detail['printerType']['name_text'] ?? '',
+            'value' => $detail['printerType']['key'] ?? '',
         ];
         $printerType = PrinterModel::getPrinterTypeList();
         return $this->renderSuccess('', compact('detail', 'printerType'));
