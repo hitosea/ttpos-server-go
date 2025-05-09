@@ -144,12 +144,16 @@ class ErpWarehouseForm extends BaseModel
 
         $paginate = $model->with([
             'purchaseOrder',
-            'productSku' => [ 
-                'product' => function($query) {
-                    $query->WithTrashed();
-                }
-            ],
-            'material',
+            'productSku' => function($query) {
+                $query->with([
+                    'product' => function($query) {
+                        $query->WithTrashed();
+                    }
+                ])->WithTrashed();
+            },
+            'material' => function($query) {
+                $query->WithTrashed();
+            },
             'operator',
         ])->order('create_time desc')->paginate($params);
         //

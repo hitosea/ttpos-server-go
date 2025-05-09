@@ -74,9 +74,10 @@ func (s *ProductService) ConvertProduct() error {
 	if err := s.targetDB.Transaction(func(tx *gorm.DB) error {
 		for index, _ := range products {
 			product := &products[index]
-			if product.IsDelete == 1 {
-				continue
-			}
+			// 需要导入已删除的商品，因为入库记录中要显示商品名称
+			// if product.IsDelete == 1 {
+			// 	continue
+			// }
 
 			if product.Type == constant.ProductTypeProduct {
 				// 成品
@@ -122,6 +123,7 @@ func (s *ProductService) ConvertProduct() error {
 						Uuid:       uint64(product.ProductID),
 						CreateTime: int64(product.CreateTime),
 						UpdateTime: int64(product.UpdateTime),
+						DeleteTime: int64(product.IsDelete),
 					},
 					Name:                  product.ProductName,
 					MultiLanguageNameUuid: uint(languageName.Uuid),

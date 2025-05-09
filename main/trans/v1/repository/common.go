@@ -11,6 +11,7 @@ import (
 type ICommonRepo interface {
 	GetProductTax(productID uint64, taxType uint) (*v1.ProductTax, error)
 	GetProductSKUs(productID uint64) ([]*v1.ProductSKU, error)
+	GetProductSpecList() ([]*v1.Spec, error)
 }
 
 func NewCommonRepo(db *gorm.DB) ICommonRepo {
@@ -24,6 +25,15 @@ func NewCommonRepoImpl(db *gorm.DB) *CommonRepoImpl {
 
 type CommonRepoImpl struct {
 	db *gorm.DB
+}
+
+// GetProductSpecList 获取商品规格列表
+func (s *CommonRepoImpl) GetProductSpecList() ([]*v1.Spec, error) {
+	var specs []*v1.Spec
+	if err := s.db.Find(&specs).Error; err != nil {
+		return nil, err
+	}
+	return specs, nil
 }
 
 // GetProductTax 获取商品税

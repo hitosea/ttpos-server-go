@@ -384,6 +384,17 @@ func (model *ProductPackage) GetFlavor() ProductFlavor {
 	return ProductFlavor{}
 }
 
+// GetFlavorProductBom 获取商品规格BOM
+func (model *ProductPackage) GetFlavorProductBom() ProductBom {
+	for _, bom := range model.ProductBoms {
+		if bom.IsFlavor() {
+			return bom
+		}
+	}
+
+	return ProductBom{}
+}
+
 // GetSauces 获取商品小料
 func (model *ProductPackage) GetSauces() []ProductSauce {
 	sauces := make([]ProductSauce, 0)
