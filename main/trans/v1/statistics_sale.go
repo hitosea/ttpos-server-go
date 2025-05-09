@@ -55,7 +55,7 @@ type JOrder struct {
 
 	OrderProducts []JOrderProduct           `gorm:"foreignKey:OrderID;references:OrderID"` // 订单商品
 	OrderPayTypes []JOrderPayType           `gorm:"foreignKey:OrderID;references:OrderID"` // 订单支付类型
-	OrderRefunds  []JOrderRefundDestination `gorm:"foreignKey:OrderID;references:OrderID"` // 订单退款
+	OrderRefunds  []JOrderRefundDestination `gorm:"foreignKey:OrderID;references:OrderID"` // 订单退款left join (
 }
 
 // 订单商品
@@ -71,6 +71,8 @@ type JOrderProduct struct {
 	ProductServiceConsumptionTax  float64 `gorm:"column:product_service_consumption_tax;comment:商品服务费消费税"`
 	ProductDiscountMoney          float64 `gorm:"column:product_discount_money;comment:优惠折扣后与原价总差额(包含数量)"`
 	ProductServiceFee             float64 `gorm:"column:product_service_fee;comment:商品服务费"`
+	RefundNum                     int     `gorm:"column:refund_num;comment:退款数量"`
+	product_discount_money        float64 `gorm:"column:refund_discount_money;comment:退款优惠折扣"`
 	TaxCalcType                   int     `gorm:"column:tax_calc_type;comment:是否含税 0-关闭 1-已含税 2-未含税"`
 
 	OrderProductReturns []JOrderProductReturn `gorm:"foreignKey:OrderProductID;references:OrderProductID"` // 订单商品退款
@@ -93,6 +95,7 @@ type JOrderRefundDestination struct {
 	OrderID               uint    `gorm:"column:order_id;comment:订单id"`
 	RefundID              uint    `gorm:"column:refund_id;comment:退款id"`
 	PaymentOrderID        uint    `gorm:"column:payment_order_id;comment:支付订单id"`
+	RefundType            int     `gorm:"column:refund_type;comment:退款类型"`
 	MerchantRefundOrderNo string  `gorm:"column:merchant_refund_order_no;comment:商户退款订单号"`
 	Status                int     `gorm:"column:status;comment:退款状态 -1-失败 0-处理中 1-完成"`
 	Value                 int     `gorm:"column:value;comment:支付方式"`
@@ -214,6 +217,15 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 			var isFeeType bool = order.ConsumptionTaxType == 1
 			var isFixServiceFee bool = order.SettingServiceMoney > 0
 
+			// 是否退款所有
+			var isRefundAll bool = false
+			for _, orderRefund := range order.OrderRefunds {
+				if orderRefund.RefundType == 1 {
+					isRefundAll = true
+				}
+			}
+
+			// 是否免单
 			if isFree {
 				// if isStatFree {
 				// 	isSateGive = 1
@@ -223,33 +235,39 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 				orderFreeNum = 1
 			}
 
+			// 免单金额
 			orderFreeAmount = decimal.NewFromFloat(order.FreePayPrice)
 
-			// 统计订单免单
-			if isFree {
-				if isStatFree {
-					orderServiceFee = decimal.NewFromFloat(order.ServiceMoney)
-					orderDiscount = decimal.NewFromFloat(order.DiscountMoney)
-				}
-				// 赠菜计入优惠折扣
-				if isSateGive == 1 {
-					orderDiscount = decimal.NewFromFloat(order.DiscountMoney)
-				}
-			} else {
-				// 统计自定义优惠折扣
-				orderServiceFee = decimal.NewFromFloat(order.ServiceMoney)
-				orderDiscount = decimal.NewFromFloat(order.DiscountMoney).Add(decimal.NewFromFloat(order.CheckoutDiffMoney))
-			}
-
+			// 商品原价
 			orderProductOriginPrice = orderProductOriginPrice.Add(decimal.NewFromFloat(order.TotalProductPrice))
 
-			if order.IsFree == 2 {
-				// 等于子订单的 orderProductTax， orderRefundTax
+			// 订单服务费
+			if (order.MergeParentID != 0 && order.IsMerge != 1) || order.IsFree > 1 || isRefundAll {
+				orderServiceFee = decimal.NewFromFloat(0)
 			} else {
-				orderProductTax = orderProductTax.Add(decimal.NewFromFloat(order.ConsumptionTaxMoney))
-				orderRefundTax = decimal.NewFromFloat(order.RefundConsumptionTax)
+				orderServiceFee = decimal.NewFromFloat(order.ServiceMoney)
 			}
 
+			// 商品消费税
+			if order.IsFree != 2 {
+				orderProductTax = orderProductTax.Add(decimal.NewFromFloat(order.ConsumptionTaxMoney))
+				orderRefundTax = decimal.NewFromFloat(order.RefundConsumptionTax)
+			} else {
+				// todo
+				// 等于子订单的 orderProductTax， orderRefundTax
+			}
+
+			// 优惠折扣
+			if order.IsFree == 0 {
+				orderDiscount = decimal.NewFromFloat(order.DiscountMoney).Add(decimal.NewFromFloat(order.CheckoutDiffMoney))
+			} else if order.IsFree == 1 {
+				orderDiscount = decimal.NewFromFloat(order.DiscountMoney)
+			} else {
+				// todo
+				// 等于子订单的
+			}
+
+			// 商品销售价
 			for _, orderProduct := range order.OrderProducts {
 				if orderProduct.IsReturn == 0 {
 					totalNum := orderProduct.TotalNum
@@ -275,10 +293,21 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 					// 减去商品服务费消费税
 					orderProductTax = orderProductTax.Sub(productServiceTax)
 
+					// 减去退款商品服务费
+					if order.IsFree < 2 {
+						if !isRefundAll && order.SettingServiceMoney == 0 {
+							orderServiceFee = orderServiceFee.Sub(decimal.NewFromFloat(orderProduct.ProductServiceFee / float64(orderProduct.TotalNum) * float64(orderProduct.RefundNum)))
+						}
+					}
+
+					// 减去退款商品优惠折扣
+					if order.IsFree == 0 && orderProduct.IsFree == 2 {
+						orderDiscount = orderDiscount.Sub(decimal.NewFromFloat(orderProduct.ProductDiscountMoney))
+					}
+
 					if isFree {
 						if isStatFree {
 							orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
-							// orderProductTax = orderProductTax.Add(productTax)
 							orderServiceTax = orderServiceTax.Add(productServiceTax)
 						}
 					} else {
@@ -288,23 +317,15 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 							}
 							if isSateGive == 1 {
 								orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
-								// orderProductTax = orderProductTax.Add(productTax)
 								orderServiceTax = orderServiceTax.Add(productServiceTax)
-							}
-							if isSateGive == 2 {
-								orderDiscount = orderDiscount.Sub(decimal.NewFromFloat(orderProduct.ProductDiscountMoney))
 							}
 						} else {
 							orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
-							// orderProductTax = orderProductTax.Add(productTax)
 							orderServiceTax = orderServiceTax.Add(productServiceTax)
 						}
 					}
 
 					for _, orderProductReturn := range orderProduct.OrderProductReturns {
-						// orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(orderProduct.ConsumptionTax)).
-						// 	Add(decimal.NewFromFloat(orderProduct.ProductServiceConsumptionTax)).
-						// 	Mul(decimal.NewFromFloat(float64(orderProductReturn.Num)))
 						if isFeeType {
 							noOrderRefundTax = noOrderRefundTax.Add(decimal.NewFromFloat(orderProduct.ConsumptionTax))
 						}
@@ -323,16 +344,6 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 					}
 				}
 			}
-
-			// for _, orderRefund := range order.OrderRefunds {
-			// 	if orderRefund.Status == 1 {
-			// 		if orderRefund.Value == 10 {
-			// 			orderRefundPaymentBalance = orderRefundPaymentBalance.Add(decimal.NewFromFloat(orderRefund.RefundMoney))
-			// 		} else {
-			// 			orderRefundAmount = orderRefundAmount.Add(decimal.NewFromFloat(orderRefund.RefundMoney))
-			// 		}
-			// 	}
-			// }
 
 			orderRefundAmount = decimal.NewFromFloat(order.RefundMoney)
 			if order.MergeParentID != 0 && order.IsMerge != 1 {
@@ -425,6 +436,30 @@ func (s *StatisticsSaleService) convertStatisticsSale2() error {
 			var orderServiceFee decimal.Decimal
 			var orderPaymentAmount decimal.Decimal
 			var orderPaymentBalance decimal.Decimal
+
+			// 是否退款所有
+			var isRefundAll bool = false
+			for _, orderRefund := range order.OrderRefunds {
+				if orderRefund.RefundType == 1 {
+					isRefundAll = true
+				}
+			}
+
+			// 订单服务费
+			if (order.MergeParentID != 0 && order.IsMerge != 1) || order.IsFree > 1 || isRefundAll {
+				orderServiceFee = decimal.NewFromFloat(0)
+			} else {
+				orderServiceFee = decimal.NewFromFloat(order.ServiceMoney)
+			}
+
+			// 商品销售价
+			for _, orderProduct := range order.OrderProducts {
+				if orderProduct.IsReturn == 0 {
+					if order.IsFree < 2 && !isRefundAll && order.SettingServiceMoney == 0 {
+						orderServiceFee = orderServiceFee.Sub(decimal.NewFromFloat(orderProduct.ProductServiceFee / float64(orderProduct.TotalNum) * float64(orderProduct.RefundNum)))
+					}
+				}
+			}
 
 			for _, orderPayType := range order.OrderPayTypes {
 				if orderPayType.PayStatus == 1 {
