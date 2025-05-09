@@ -9,6 +9,7 @@ use app\common\model\product\Material;
 use app\common\model\product\ProductBom;
 use app\common\model\erp\ErpWarehouseForm;
 use app\common\model\erp\ErpWarehouseOutForm;
+use app\common\model\product\Product;
 use think\facade\Db;
 
 /**
@@ -289,38 +290,29 @@ class ErpMonthlyStatistics extends BaseModel
         $startTime = strtotime($start_time);
         $endTime = strtotime($end_time);
 
-        $productBomSql = ProductBom::alias('bom')
-            ->field('p.name as name,f.name as flavor_name,IF(item.num, sum(item.num), 0) as total_num,bom.create_time as create_time')
+        $bomUuidList = ErpWarehouseOutFormItem::where('scene', 0)
+            ->where('create_time', 'between', [$startTime, $endTime])
+            ->where('status', 1)
+            ->group('product_bom_uuid')
+            ->column('product_bom_uuid');
+
+        $rows = ProductBom::alias('bom')
+            ->field('p.name as name,bom.create_time as create_time')
             ->leftJoin('product_package p', 'bom.product_package_uuid = p.uuid')
-            ->leftJoin('product_flavor f', 'bom.product_flavor_uuid = f.uuid')
-            ->leftJoin('warehouse_out_form_item item', 'bom.uuid = item.product_bom_uuid AND item.scene = 0')
-            ->leftJoin('warehouse_out_form form', "item.warehouse_out_form_uuid = form.uuid AND form.scene = 0 AND form.status = 0 AND form.create_time >= {$startTime} AND form.create_time <= {$endTime}")
+            ->whereNotIn('bom.uuid', $bomUuidList)
             ->where('bom.product_flavor_uuid', '>', 0)
-            ->group('bom.uuid')
-            ->buildSql();
-
-        $materialSql = Material::alias('m')
-            ->field("m.name as name,'' as flavor_name,IF(item.num, sum(item.num), 0) as total_num,m.create_time as create_time")
-            ->leftJoin('warehouse_out_form_item item', 'm.uuid = item.material_uuid AND item.scene = 0')
-            ->leftJoin('warehouse_out_form form', "item.warehouse_out_form_uuid = form.uuid AND form.scene = 0 AND form.status = 0 AND form.create_time >= {$startTime} AND form.create_time <= {$endTime}")
-            ->group('m.uuid')
-            ->buildSql();        
-
-        $querySql = "SELECT name,flavor_name,total_num,create_time FROM ($productBomSql UNION ALL $materialSql) AS all_product";
-        $pageSql = " ORDER BY total_num ASC,create_time ASC LIMIT 10";
-
-        $rows = Db::connect('shop' . self::$app_id)->query($querySql . $pageSql);
+            ->where('p.create_time', '<=', $startTime)
+            ->group('bom.product_package_uuid')
+            ->limit(10)
+            ->select();
 
         $list = [];
         foreach ($rows as $row) {
             $productNametext = extractLanguage($row['name']);
-            if ($row['flavor_name']) {
-                $productNametext .= ' - ' . extractLanguage($row['flavor_name']);
-            }
 
             $list[] = [
                 'product_name_text' => $productNametext,
-                'total_num' => floatval($row['total_num'])
+                'total_num' => 0
             ];
         }
 
