@@ -693,7 +693,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				var err error
 				desk, err = deskRepo.GetDesk(deskRepo.WhereDeviceUuid(ctx.GetDeviceUuid()))
 				if err != nil {
-					return company, companySetting, staff, desk, errors.New("桌台未绑定")
+					return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTabletNotBindDesk, "桌台未绑定")
 				}
 			}
 			// 检查收银机设置-桌台用餐是否开启
