@@ -269,9 +269,9 @@ class Supplier extends Controller
         ];
 
         if ($charge_type == '1') {
-            $arr['service_charge'] = max(0, $service_charge); // 服务费
+            $arr['service_charge'] = max(0, $service_charge). ""; // 服务费
         } else if ($charge_type == '2') {
-            $arr['service_charge_rate'] = max(0, $service_charge_rate); // 服务费率
+            $arr['service_charge_rate'] = max(0, $service_charge_rate) . ""; // 服务费率
             $arr['is_open_tax'] = $is_open_tax; // 税费 1-收取税费 0-不收取税费
         }
 
