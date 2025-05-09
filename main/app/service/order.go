@@ -4824,20 +4824,52 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			if options.CheckType == CheckTypeCheckout {
 				// 如果是结账检查
 				status, message = saleOrderProduct.CheckOutProduct()
+				// 只检查未送厨的商品
+				if saleOrderProduct.DeductStockType == constant.ProductPackageDeductStockTypePay {
+					{
+						flavorBomUuid := saleOrderProduct.GetFlavorBomUuid()
+						if _, ok := productBomNumMap[flavorBomUuid]; !ok {
+							productBomNumMap[flavorBomUuid] = &FlavorNum{
+								SaleOrderProduct: saleOrderProduct,
+								Num:              saleOrderProduct.Num,
+							}
+						} else {
+							flavorNum := productBomNumMap[flavorBomUuid]
+							flavorNum.Num += saleOrderProduct.Num
+						}
+					}
+				} else {
+					if !saleOrderProduct.IsCookingProduct() {
+						{
+							flavorBomUuid := saleOrderProduct.GetFlavorBomUuid()
+							if _, ok := productBomNumMap[flavorBomUuid]; !ok {
+								productBomNumMap[flavorBomUuid] = &FlavorNum{
+									SaleOrderProduct: saleOrderProduct,
+									Num:              saleOrderProduct.Num,
+								}
+							} else {
+								flavorNum := productBomNumMap[flavorBomUuid]
+								flavorNum.Num += saleOrderProduct.Num
+							}
+						}
+					}
+				}
 			} else {
 				// 如果是送厨检查
 				status, message = saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
-			}
 
-			flavorBomUuid := saleOrderProduct.GetFlavorBomUuid()
-			if _, ok := productBomNumMap[flavorBomUuid]; !ok {
-				productBomNumMap[flavorBomUuid] = &FlavorNum{
-					SaleOrderProduct: saleOrderProduct,
-					Num:              saleOrderProduct.Num,
+				{
+					flavorBomUuid := saleOrderProduct.GetFlavorBomUuid()
+					if _, ok := productBomNumMap[flavorBomUuid]; !ok {
+						productBomNumMap[flavorBomUuid] = &FlavorNum{
+							SaleOrderProduct: saleOrderProduct,
+							Num:              saleOrderProduct.Num,
+						}
+					} else {
+						flavorNum := productBomNumMap[flavorBomUuid]
+						flavorNum.Num += saleOrderProduct.Num
+					}
 				}
-			} else {
-				flavorNum := productBomNumMap[flavorBomUuid]
-				flavorNum.Num += saleOrderProduct.Num
 			}
 
 			ctx.Log().Debug("检查商品", zap.Any("status", status), zap.Any("message", message))
@@ -4871,7 +4903,16 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 
 		for _, flavorNum := range productBomNumMap {
 			if flavorNum.IsStockShortage() {
-				statusMap[constant.CodeOrderCheckProductStockZero] = append(statusMap[constant.CodeOrderCheckProductStockZero], flavorNum.SaleOrderProduct)
+				exist := false
+				for _, saleOrderProduct := range statusMap[constant.CodeOrderCheckProductStockZero] {
+					if saleOrderProduct.Uuid == flavorNum.SaleOrderProduct.Uuid {
+						exist = true
+					}
+				}
+				// 如果没有存在，添加
+				if !exist {
+					statusMap[constant.CodeOrderCheckProductStockZero] = append(statusMap[constant.CodeOrderCheckProductStockZero], flavorNum.SaleOrderProduct)
+				}
 			}
 		}
 	}
