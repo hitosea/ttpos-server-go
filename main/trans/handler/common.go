@@ -34,7 +34,7 @@ var sourceConf = config.DatabaseConf{
 	TablePrefix:   "jjjfood_",
 	SlowQueryTime: 0,
 }
-var sourceDBName = "shop1724054085"
+var sourceDBName = "shop1724054088"
 
 var targetConf = config.DatabaseConf{
 	Host:          "localhost",
@@ -44,7 +44,7 @@ var targetConf = config.DatabaseConf{
 	TablePrefix:   "ttpos_",
 	SlowQueryTime: 0,
 }
-var targetDBName = "shop4823869034496000"
+var targetDBName = "shop4477708931072000"
 
 var SqlTransLogger *zap.Logger
 

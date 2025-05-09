@@ -1,8 +1,11 @@
 package v1
 
 import (
+	"time"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/utils"
+	pkgUtils "ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -147,12 +150,65 @@ func NewPurchaseService(db *gorm.DB, targetDB *gorm.DB) *PurchaseService {
 // 获取商品包装
 func (s *PurchaseService) GetProductPackage(productUuid uint64) model.ProductPackage {
 	var product model.ProductPackage
-	s.targetDB.Where("uuid = ?", productUuid).First(&product)
+	s.targetDB.Preload("ProductBoms").Where("uuid = ?", productUuid).First(&product)
 	if product.ID == 0 {
 		return model.ProductPackage{}
 	}
 
 	return product
+}
+
+func (s *PurchaseService) GetProductBom(productSkuId uint64) model.ProductBom {
+	var productBom model.ProductBom
+	s.targetDB.Where("uuid = ?", productSkuId).First(&productBom)
+	if productBom.ID == 0 {
+		return model.ProductBom{}
+	}
+
+	return productBom
+}
+
+func (s *PurchaseService) GetProductSpecList() ([]*Spec, error) {
+	var specs []*Spec
+	if err := s.db.Find(&specs).Error; err != nil {
+		return nil, err
+	}
+	return specs, nil
+}
+
+func (s *PurchaseService) CreateProductBom(productID uint64, bomName string) (uint64, error) {
+	// 如果商品已经删除，则返回一个空的productBom
+	// 获取商品规格.随便给个这个空的规格设置一个specId
+	specs, err := s.GetProductSpecList()
+	if err != nil {
+		return 0, errors.WithMessage(err, "获取商品规格失败")
+	}
+	if len(specs) == 0 {
+		return 0, errors.WithMessage(err, "商品规格为空")
+	}
+	specId := specs[0].SpecID
+
+	productBomUuid, err := pkgUtils.GetID()
+	if err != nil {
+		return 0, errors.WithMessage(err, "获取uuid失败")
+	}
+	productBom := model.ProductBom{
+		BaseModel: model.BaseModel{
+			Uuid:       productBomUuid,
+			CreateTime: time.Now().Unix(),
+			UpdateTime: time.Now().Unix(),
+			DeleteTime: 1,
+		},
+		ProductPackageUuid: productID,
+		ProductFlavorUuid:  uint64(specId),
+		Name:               bomName,
+	}
+
+	if err := s.targetDB.Create(&productBom).Error; err != nil {
+		return 0, errors.WithMessage(err, "创建商品规格失败")
+	}
+
+	return productBom.Uuid, nil
 }
 
 // 获取原材料
@@ -295,6 +351,11 @@ func (s *PurchaseService) ConvertWarehouseForm() error {
 				if s.GetProductPackage(uint64(purchaseOrderDetail.ProductID)).ID > 0 {
 					productBomUuid = uint64(purchaseOrderDetail.ProductSkuID)
 				}
+				// productPackage := s.GetProductPackage(uint64(purchaseOrderDetail.ProductID))
+				// if productPackage.ID > 0 {
+				// 	// productBomUuid = uint64(purchaseOrderDetail.ProductSkuID)
+				// 	productBomUuid = productPackage.GetFlavorProductBom().Uuid
+				// }
 
 				if s.GetMaterial(uint64(purchaseOrderDetail.ProductID)).ID > 0 {
 					materialUuid = uint64(purchaseOrderDetail.ProductID)
@@ -329,7 +390,16 @@ func (s *PurchaseService) ConvertWarehouseForm() error {
 		materialUuid := uint64(0)
 		if record.Product != nil {
 			if record.Product.Type == 10 {
-				productBomUuid = uint64(record.ProductSkuID)
+				productBom := s.GetProductBom(uint64(record.ProductSkuID))
+				if productBom.ID > 0 {
+					productBomUuid = productBom.Uuid
+				} else {
+					productBomUuid, err = s.CreateProductBom(uint64(record.ProductID), record.ProductSkuName)
+					if err != nil {
+						return errors.WithMessage(err, "创建商品规格失败")
+					}
+				}
+				// productBomUuid = uint64(record.ProductSkuID)
 			} else {
 				materialUuid = uint64(record.ProductID)
 			}
