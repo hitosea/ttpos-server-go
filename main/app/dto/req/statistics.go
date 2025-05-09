@@ -11,6 +11,7 @@ type BusinessDataPrinterReq struct {
 	QueryStartTime uint `json:"query_start_time"` // 查询开始时间戳
 	QueryEndTime   uint `json:"query_end_time"`   // 查询结束时间戳
 	CategoryType   int  `json:"category_type"`    // 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
+	NotQueryFree   bool `json:"not_query_free"`   // 是否不查询免费使用场景
 }
 
 // GetParam 获取参数
@@ -42,6 +43,7 @@ func (r *BusinessDataPrinterReq) GetParam(timezone string) BusinessDataPrinterRe
 		QueryStartTime: uint(queryStartTime),
 		QueryEndTime:   uint(queryEndTime),
 		CategoryType:   r.CategoryType,
+		NotQueryFree:   r.NotQueryFree,
 	}
 }
 
@@ -84,6 +86,7 @@ func (r *BusinessDataCountReq) GetParam(timezone string) BusinessDataCountReq {
 		QueryEndTime:   queryEndTime,
 		CategoryType:   r.CategoryType,
 		DutyNo:         r.DutyNo,
+		NotQueryFree:   r.NotQueryFree,
 	}
 }
 
