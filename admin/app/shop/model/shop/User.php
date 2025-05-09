@@ -36,7 +36,7 @@ class User extends UserModel
             $this->error = '账号已删除，请联系管理员';
             return false;
         }
-        if ($user['is_status'] == 1) {
+        if ($user['is_disable'] == 1) {
             $this->error = '账号被禁用，请联系管理员';
             return false;
         }

@@ -70,7 +70,7 @@ func (s *SpecService) ConvertSpec() error {
 				CreateTime: spec.CreateTime,
 				UpdateTime: spec.CreateTime,
 			},
-			Name:                  names.Zh,
+			Name:                  spec.SpecName,
 			MultiLanguageNameUuid: uint(id),
 			MultiLanguageName:     languageName,
 		}

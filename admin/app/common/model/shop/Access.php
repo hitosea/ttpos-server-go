@@ -190,7 +190,7 @@ class Access extends BaseModel
         if ($user['is_super'] == 1) {
             $menus = self::getList($user['user_type'], $supplier);
         } else {
-            $menus = self::getCashierListByUser($user['shop_user_id'], $user['user_type'], $supplier);
+            $menus = self::getCashierListByUser($user['uuid'], $user['user_type'], $supplier);
             foreach ($menus as $key => $val) {
                 if (!isset($val['children'][0]['path'])) {
                     continue;

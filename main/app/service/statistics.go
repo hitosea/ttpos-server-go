@@ -1046,6 +1046,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 		if !isFree && saleOrder.GetCanReturnAmount() == 0 {
 			orderRefundFee = decimal.NewFromFloat(saleOrder.PaymentCommissionFee)
 			orderRefundDiscount = decimal.NewFromFloat(saleOrder.CustomDiscountFee).Add(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee))
+			if !isSateGive {
+				orderRefundDiscount = orderRefundDiscount.Sub(orderGiveAmount)
+			}
 			orderRefundDiscountMember = decimal.NewFromFloat(saleOrder.MemberDiscountFee)
 			if isFixServiceFee {
 				orderRefundServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
@@ -1076,6 +1079,7 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				CompleteTime:      saleBill.FinishTime,
 			})
 		}
+
 		sale := model.StatisticsSale{
 			SaleBillUuid:         saleBill.Uuid,
 			DutyNo:               saleBill.DutyNo,
