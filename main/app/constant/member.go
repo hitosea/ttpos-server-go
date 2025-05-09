@@ -46,3 +46,9 @@ const (
 	RechargeOrderActionReverseSettle = "REVERSE_SETTLE" // 反结账
 	RechargeOrderActionRefund        = "REFUND"         // 退款
 )
+
+const (
+	MemberGenderFemale  = 0 // 女
+	MemberGenderMale    = 1 // 男
+	MemberGenderUnknown = 2 // 未知
+)
