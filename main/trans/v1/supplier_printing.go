@@ -172,6 +172,7 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 		// 档口打印机. 转换商品打印（档口）数据
 		productPrinter := model.ProductPrinter{
 			BaseModel: model.BaseModel{
+				ID:         uint(supplierPrinting.ID),
 				Uuid:       uint64(supplierPrinting.ID),
 				CreateTime: supplierPrinting.CreateTime,
 				UpdateTime: supplierPrinting.UpdateTime,
