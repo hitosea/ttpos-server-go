@@ -79,7 +79,7 @@ class ErpMonthlyStatistics extends BaseModel
 
         return (new ErpWarehouseOutForm())->alias('wof')
             ->leftJoin('warehouse_out_form_item wofi', 'wof.uuid = wofi.warehouse_out_form_uuid')
-            ->whereIn('wof.scene', [0, 1]) // 场景,0-销售出库 1-调整出库
+            ->whereIn('wof.scene', [0, 1, 4]) // 场景,0-销售出库 1-调整出库
             ->where('wof.status', 0)  // 状态,0-success已出库 1-canceled已撤销
             ->where('wof.create_time', 'between', [strtotime($start_time), strtotime($end_time)])
             ->sum('wofi.num') ?: 0;
