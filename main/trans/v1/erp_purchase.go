@@ -176,17 +176,17 @@ func (s *PurchaseService) GetProductSpecList() ([]*Spec, error) {
 	return specs, nil
 }
 
-func (s *PurchaseService) CreateProductBom(productID uint64, bomName string) (uint64, error) {
+func (s *PurchaseService) CreateProductBom(productID uint64, productSkuID uint64, bomName string) (uint64, error) {
 	// 如果商品已经删除，则返回一个空的productBom
 	// 获取商品规格.随便给个这个空的规格设置一个specId
-	specs, err := s.GetProductSpecList()
-	if err != nil {
-		return 0, errors.WithMessage(err, "获取商品规格失败")
-	}
-	if len(specs) == 0 {
-		return 0, errors.WithMessage(err, "商品规格为空")
-	}
-	specId := specs[0].SpecID
+	// specs, err := s.GetProductSpecList()
+	// if err != nil {
+	// 	return 0, errors.WithMessage(err, "获取商品规格失败")
+	// }
+	// if len(specs) == 0 {
+	// 	return 0, errors.WithMessage(err, "商品规格为空")
+	// }
+	// specId := specs[0].SpecID
 
 	productBomUuid, err := pkgUtils.GetID()
 	if err != nil {
@@ -200,7 +200,7 @@ func (s *PurchaseService) CreateProductBom(productID uint64, bomName string) (ui
 			DeleteTime: 1,
 		},
 		ProductPackageUuid: productID,
-		ProductFlavorUuid:  uint64(specId),
+		ProductFlavorUuid:  uint64(productSkuID),
 		Name:               bomName,
 	}
 
@@ -394,7 +394,7 @@ func (s *PurchaseService) ConvertWarehouseForm() error {
 				if productBom.ID > 0 {
 					productBomUuid = productBom.Uuid
 				} else {
-					productBomUuid, err = s.CreateProductBom(uint64(record.ProductID), record.ProductSkuName)
+					productBomUuid, err = s.CreateProductBom(uint64(record.ProductID), record.ProductSkuID, record.ProductSkuName)
 					if err != nil {
 						return errors.WithMessage(err, "创建商品规格失败")
 					}

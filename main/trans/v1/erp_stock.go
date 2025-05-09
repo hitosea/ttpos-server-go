@@ -143,7 +143,26 @@ func (s *StockService) ConvertWarehouseOut() error {
 			materialUuid := uint64(0)
 			if record.Product != nil {
 				if record.Product.Type == 10 {
-					productBomUuid = uint64(record.ProductSkuID)
+					// 先从缓存中查询
+					s.cacheMu.RLock()
+					if bom, exists := s.bomCache[uint64(record.ProductSkuID)]; exists {
+						productBomUuid = bom.Uuid
+						s.cacheMu.RUnlock()
+					} else {
+						s.cacheMu.RUnlock()
+						// 缓存中不存在，从数据库查询
+						productBom := s.GetProductBom(uint64(record.ProductSkuID))
+						if productBom.ID > 0 {
+							productBomUuid = productBom.Uuid
+						} else {
+							// 如果数据库中也不存在，则创建新的
+							var createErr error
+							productBomUuid, createErr = s.CreateProductBom(uint64(record.ProductID), uint64(record.ProductSkuID), record.ProductSkuName)
+							if createErr != nil {
+								return errors.WithMessage(createErr, "创建商品规格失败")
+							}
+						}
+					}
 				} else {
 					materialUuid = uint64(record.ProductSkuID)
 				}
@@ -277,24 +296,42 @@ func (s *StockService) GetProductBom(productSkuId uint64) model.ProductBom {
 }
 
 func (s *StockService) GetProductSpecList() ([]*Spec, error) {
+	// 检查缓存是否有效 (5分钟)
+	s.cacheMu.RLock()
+	if len(s.specsCache) > 0 && time.Now().Unix()-s.specsCacheTime < 300 {
+		specs := s.specsCache
+		s.cacheMu.RUnlock()
+		return specs, nil
+	}
+	s.cacheMu.RUnlock()
+
 	var specs []*Spec
 	if err := s.db.Find(&specs).Error; err != nil {
 		return nil, err
 	}
+
+	// 更新缓存
+	if len(specs) > 0 {
+		s.cacheMu.Lock()
+		s.specsCache = specs
+		s.specsCacheTime = time.Now().Unix()
+		s.cacheMu.Unlock()
+	}
+
 	return specs, nil
 }
 
-func (s *StockService) CreateProductBom(productID uint64, bomName string) (uint64, error) {
+func (s *StockService) CreateProductBom(productID uint64, productSkuID uint64, bomName string) (uint64, error) {
 	// 如果商品已经删除，则返回一个空的productBom
 	// 获取商品规格.随便给个这个空的规格设置一个specId
-	specs, err := s.GetProductSpecList()
-	if err != nil {
-		return 0, errors.WithMessage(err, "获取商品规格失败")
-	}
-	if len(specs) == 0 {
-		return 0, errors.WithMessage(err, "商品规格为空")
-	}
-	specId := specs[0].SpecID
+	// specs, err := s.GetProductSpecList()
+	// if err != nil {
+	// 	return 0, errors.WithMessage(err, "获取商品规格失败")
+	// }
+	// if len(specs) == 0 {
+	// 	return 0, errors.WithMessage(err, "商品规格为空")
+	// }
+	// specId := specs[0].SpecID
 
 	productBomUuid, err := pkgUtils.GetID()
 	if err != nil {
@@ -308,7 +345,7 @@ func (s *StockService) CreateProductBom(productID uint64, bomName string) (uint6
 			DeleteTime: 1,
 		},
 		ProductPackageUuid: productID,
-		ProductFlavorUuid:  uint64(specId),
+		ProductFlavorUuid:  uint64(productSkuID),
 		Name:               bomName,
 	}
 
@@ -318,7 +355,7 @@ func (s *StockService) CreateProductBom(productID uint64, bomName string) (uint6
 
 	// 更新缓存
 	s.cacheMu.Lock()
-	s.bomCache[productBom.Uuid] = productBom
+	s.bomCache[productSkuID] = productBom
 	s.cacheMu.Unlock()
 
 	return productBom.Uuid, nil
