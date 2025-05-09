@@ -4725,6 +4725,20 @@ func WithH5OrderUuid(h5OrderUuid uint64) func(*CheckOrderOptions) {
 	}
 }
 
+type FlavorNum struct {
+	SaleOrderProduct *model.SaleOrderProduct
+	Num              uint // 销售订单中该规格商品的数量
+}
+
+func (f *FlavorNum) IsStockShortage() bool {
+	for _, saleOrderProductBom := range f.SaleOrderProduct.SaleOrderProductBoms {
+		if saleOrderProductBom.IsFlavor() {
+			return saleOrderProductBom.ProductBom.IsStockShortage(f.Num)
+		}
+	}
+	return false
+}
+
 // checkOrder 检查订单
 func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, saleOrderProductAll []*model.SaleOrderProduct, opts ...func(*CheckOrderOptions)) (*resp.OrderCheckServiceRes, error) {
 	options := &CheckOrderOptions{}
@@ -4792,6 +4806,9 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 	statusMap := make(map[int][]*model.SaleOrderProduct)
 	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动
 	{
+		// 某个规格的商品 => 商品数量
+		productBomNumMap := make(map[uint64]*FlavorNum)
+
 		for _, saleOrderProduct := range saleOrderProductAll {
 			// 跳过检查
 			if s.skipCheck(saleOrderProduct) {
@@ -4811,6 +4828,18 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 				// 如果是送厨检查
 				status, message = saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
 			}
+
+			flavorBomUuid := saleOrderProduct.GetFlavorBomUuid()
+			if _, ok := productBomNumMap[flavorBomUuid]; !ok {
+				productBomNumMap[flavorBomUuid] = &FlavorNum{
+					SaleOrderProduct: saleOrderProduct,
+					Num:              saleOrderProduct.Num,
+				}
+			} else {
+				flavorNum := productBomNumMap[flavorBomUuid]
+				flavorNum.Num += saleOrderProduct.Num
+			}
+
 			ctx.Log().Debug("检查商品", zap.Any("status", status), zap.Any("message", message))
 			if status != constant.CodeSuccess {
 				statusMap[status] = append(statusMap[status], saleOrderProduct)
@@ -4837,6 +4866,12 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 					saleBill := shopCartInfo.SaleBill
 					s.CalcAndSaveSaleBill(ctx, db, saleBill, model.WithLastestPrice())
 				}
+			}
+		}
+
+		for _, flavorNum := range productBomNumMap {
+			if flavorNum.IsStockShortage() {
+				statusMap[constant.CodeOrderCheckProductStockZero] = append(statusMap[constant.CodeOrderCheckProductStockZero], flavorNum.SaleOrderProduct)
 			}
 		}
 	}
