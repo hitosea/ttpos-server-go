@@ -241,6 +241,8 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 				orderDiscount = decimal.NewFromFloat(order.DiscountMoney).Add(decimal.NewFromFloat(order.CheckoutDiffMoney))
 			}
 
+			orderProductOriginPrice = orderProductOriginPrice.Add(decimal.NewFromFloat(order.TotalProductPrice))
+
 			for _, orderProduct := range order.OrderProducts {
 				if orderProduct.IsReturn == 0 {
 					totalNum := orderProduct.TotalNum
@@ -252,8 +254,6 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 						productPrice = productPrice.Sub(decimal.NewFromFloat(orderProduct.ConsumptionTax))
 					}
 
-					productNoTax := decimal.NewFromFloat(orderProduct.ProductPrice).Sub(decimal.NewFromFloat(orderProduct.ProductOriginalConsumptionTax))
-					orderProductOriginPrice = orderProductOriginPrice.Add(productNoTax.Mul(totalNumDec))
 					orderProductSalePrice = orderProductSalePrice.Add(decimal.NewFromFloat(orderProduct.ProductPrice).Mul(totalNumDec))
 
 					productTax := decimal.NewFromFloat(orderProduct.ConsumptionTax)
