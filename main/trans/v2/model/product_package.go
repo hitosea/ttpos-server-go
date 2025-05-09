@@ -35,11 +35,11 @@ func NewProductPackage(product *v1.Product, db *gorm.DB) (*model.ProductPackage,
 
 	productDineTax, err := repository.NewCommonRepo(db).GetProductTax(uint64(product.ProductID), constant.ProductTaxTypeDine)
 	if err != nil {
-		return nil, errors.WithMessage(err, "GetProductTax failed")
+		// return nil, errors.WithMessage(err, "GetProductTax failed")
 	}
 	productTakeoutTax, err := repository.NewCommonRepo(db).GetProductTax(uint64(product.ProductID), constant.ProductTaxTypeTakeout)
 	if err != nil {
-		return nil, errors.WithMessage(err, "GetProductTax failed")
+		// return nil, errors.WithMessage(err, "GetProductTax failed")
 	}
 
 	productBoms := make([]model.ProductBom, 0)
@@ -83,15 +83,25 @@ func NewProductPackage(product *v1.Product, db *gorm.DB) (*model.ProductPackage,
 			UpdateTime: product.UpdateTime,
 			DeleteTime: int64(product.IsDelete),
 		},
-		Name:                          languageName.ToJson(),
-		MultiLanguageNameUuid:         languageName.Uuid,
-		ImageName:                     product.ImgName,
-		ImageFileUuid:                 product.ProductImage.ImageID,
-		DeductStockType:               StockDeductMethod,
-		UnitUuid:                      product.UnitID,
-		DineTaxUuid:                   productDineTax.TaxCategoryID,
-		CategoryUuid:                  product.CategoryID,
-		TakeoutTaxUuid:                productTakeoutTax.TaxCategoryID,
+		Name:                  languageName.ToJson(),
+		MultiLanguageNameUuid: languageName.Uuid,
+		ImageName:             product.ImgName,
+		ImageFileUuid:         product.ProductImage.ImageID,
+		DeductStockType:       StockDeductMethod,
+		UnitUuid:              product.UnitID,
+		DineTaxUuid: func() uint64 {
+			if productDineTax != nil {
+				return uint64(productDineTax.TaxCategoryID)
+			}
+			return 0
+		}(),
+		CategoryUuid: product.CategoryID,
+		TakeoutTaxUuid: func() uint64 {
+			if productTakeoutTax != nil {
+				return uint64(productTakeoutTax.TaxCategoryID)
+			}
+			return 0
+		}(),
 		SpecialCategoryUuid:           product.SpecialID,
 		PrinterTagUuid:                product.LabelID,
 		SupplierUuid:                  product.ShopSupplierID,
