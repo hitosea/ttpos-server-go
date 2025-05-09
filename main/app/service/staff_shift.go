@@ -283,11 +283,13 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			"finally_login_uuid": 0,
 		})
 
-		// 创建交班快照
-		err = s.CreateShiftSnapshot(ctx, shiftLog)
-		if err != nil {
-			return errors.New("交班失败")
-		}
+		go func() {
+			// 创建交班快照
+			err = s.CreateShiftSnapshot(ctx.Copy(), shiftLog)
+			if err != nil {
+				ctx.Log().Error("交班-创建交班快照失败", zap.Error(err))
+			}
+		}()
 
 		return nil
 	})
