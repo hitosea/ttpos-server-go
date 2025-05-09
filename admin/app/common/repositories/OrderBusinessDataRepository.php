@@ -478,13 +478,13 @@ class OrderBusinessDataRepository
      */
     public function getProductData($params = [])
     {
-        $areaId = $params['area_id'] ?? 0;
-        $categoryId = $params['category_id'] ?? 0;
-        $productName = $params['product_name'] ?? '';
-        $sortField = $params['sort_field'] ?? 'complete_time';
-        $sortType = $params['sort_type'] ?? 'desc';
-        $token = $params['token'] ?? '';
-        $language = $params['language'] ?? 'zh-CN';
+        $areaId = (!isset($params['area_id']) || !$params['area_id']) ? 0 : $params['area_id'];
+        $categoryId = (!isset($params['category_id']) || !$params['category_id']) ? 0 : $params['category_id'];
+        $productName = (!isset($params['product_name']) || !$params['product_name']) ? '' : $params['product_name'];
+        $sortField = (!isset($params['sort_field']) || !$params['sort_field']) ? 'complete_time' : $params['sort_field'];
+        $sortType = (!isset($params['sort_type']) || !$params['sort_type']) ? 'desc' : $params['sort_type'];
+        $token = (!isset($params['token']) || !$params['token']) ? '' : $params['token'];
+        $language = (!isset($params['language']) || !$params['language']) ? 'zh-CN' : $params['language'];
 
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/product_sales', [
             'product_name' => $productName,
@@ -492,8 +492,8 @@ class OrderBusinessDataRepository
             'category_uuid' => $categoryId,
             'query_start_time' => $this->startTime,
             'query_end_time' => $this->endTime,
-            'sort_field' => ['complete_time' => 0, 'product_num' => 1, 'sales_price' => 2][$sortField ?: 'complete_time'],
-            'sort_type' => ['asc' => 1, 'desc' => 2][$sortType],
+            'sort_type' => ['complete_time' => 0, 'product_num' => 1, 'sales_price' => 2][$sortField ?: 'complete_time'],
+            'sort_direction' => ['asc' => 1, 'desc' => 2][$sortType],
             'page_no' => $params['page'] ?? 1,
             'page_size' => $params['list_rows'] ?? 10,
         ], [

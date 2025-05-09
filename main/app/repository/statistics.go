@@ -701,7 +701,6 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	productPackageTable := prefix + "product_package as pp"
 	productCategoryTable := prefix + "product_category as pc"
 	productParentCategoryTable := prefix + "product_category as ppc"
-	saleBillTable := prefix + "sale_bill as sb"
 	deskTable := prefix + "desk as d"
 
 	var total int64
@@ -712,8 +711,8 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid")
 
 	if req.AreaUuid > 0 {
-		db.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
-		db.Where("sb.desk_uuid IN (?)", r.db.Table(deskTable).Select("d.uuid").Where("d.region_uuid = ?", req.AreaUuid))
+		db.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
+		db.Where("d.region_uuid = ?", req.AreaUuid)
 	}
 	if req.CategoryUuid > 0 {
 		db.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
@@ -739,8 +738,8 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid")
 
 	if req.AreaUuid > 0 {
-		listQuery.Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
-		listQuery.Where("sb.desk_uuid IN (?)", r.db.Table(deskTable).Select("d.uuid").Where("d.region_uuid = ?", req.AreaUuid))
+		listQuery.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
+		listQuery.Where("d.region_uuid = ?", req.AreaUuid)
 	}
 	if req.CategoryUuid > 0 {
 		listQuery.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))

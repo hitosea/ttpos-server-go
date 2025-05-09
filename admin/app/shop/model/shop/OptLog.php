@@ -20,7 +20,7 @@ class OptLog extends OptLogModel
             $model = $model->like('user.username|user.real_name', $params['username']);
         }
         // 查询列表数据
-        return $model->alias('log')->field(['log.*', 'log.source as browser', 'user.username as user_name', 'IF(user.real_name = "", user.username, user.real_name) as real_name'])
+        return $model->alias('log')->field(['log.*', 'request_data as content', 'log.source as browser', 'user.username as user_name', 'IF(user.real_name = "", user.username, user.real_name) as real_name'])
             ->join('staff user', 'user.uuid = log.staff_uuid', 'left')
             ->order(['log.create_time' => 'desc'])
             ->paginate($params);

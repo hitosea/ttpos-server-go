@@ -506,6 +506,10 @@ func (model *SaleBill) GetSaleOrderProductOverLimit(limitProducts map[uint64]uin
 		if !saleOrderProduct.IsCurrentDeskProduct() {
 			continue
 		}
+		// 跳过退菜商品
+		if saleOrderProduct.IsCancelProduct() {
+			continue
+		}
 		productPackageUuid := saleOrderProduct.ProductPackageUuid
 		productPackageMap[productPackageUuid] = saleOrderProduct.ProductPackage
 		numMap[productPackageUuid] = numMap[productPackageUuid] + saleOrderProduct.Num
