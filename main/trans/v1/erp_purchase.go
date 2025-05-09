@@ -394,7 +394,7 @@ func (s *PurchaseService) ConvertWarehouseForm() error {
 				if productBom.ID > 0 {
 					productBomUuid = productBom.Uuid
 				} else {
-					productBomUuid, err = s.CreateProductBom(uint64(record.ProductID), record.ProductSkuID, record.ProductSkuName)
+					productBomUuid, err = s.CreateProductBom(uint64(record.ProductID), uint64(record.ProductSkuID), record.ProductSkuName)
 					if err != nil {
 						return errors.WithMessage(err, "创建商品规格失败")
 					}
