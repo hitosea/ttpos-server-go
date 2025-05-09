@@ -172,7 +172,8 @@ class User extends UserModel
         //
         $data['phone'] = $data['mobile'];
         $data['member_level_uuid'] = $data['grade_id'];
-        return $this->force()->save($data);
+        // 
+        return $this->save($data);
     }
 
     /**

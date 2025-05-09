@@ -183,6 +183,7 @@ class BalanceLog extends BaseModel
             $data['after_money'] = $after_money;
         }
         $model->save(array_merge([
+            'processed' => 1,
             'scene' => $scene,
             'describe' => $custom_dec ? $describeParam : vsprintf(BalanceLogSceneEnum::data()[$scene]['describe'], $describeParam),
             'version' => self::VERSION
