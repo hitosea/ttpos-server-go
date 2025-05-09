@@ -108,8 +108,8 @@ func (s *StockService) ConvertWarehouseOut() error {
 	for isContinue {
 		var (
 			records  []InventoryRecord
-			newForms []*model.WarehouseOutForm
-			newItems []*model.WarehouseOutFormItem
+			newForms []model.WarehouseOutForm
+			newItems []model.WarehouseOutFormItem
 		)
 		s.db.Preload("Product").Where("inventory_type = ?", 2).Offset((page - 1) * pageSize).Limit(pageSize).Find(&records)
 		if len(records) < pageSize {
@@ -120,7 +120,7 @@ func (s *StockService) ConvertWarehouseOut() error {
 			if err != nil {
 				return err
 			}
-			newForms = append(newForms, &model.WarehouseOutForm{
+			newForms = append(newForms, model.WarehouseOutForm{
 				BaseModel: model.BaseModel{
 					Uuid:       formUuid,
 					CreateTime: record.CreateTime,
@@ -167,7 +167,7 @@ func (s *StockService) ConvertWarehouseOut() error {
 					materialUuid = uint64(record.ProductSkuID)
 				}
 			}
-			newItems = append(newItems, &model.WarehouseOutFormItem{
+			newItems = append(newItems, model.WarehouseOutFormItem{
 				BaseModel: model.BaseModel{
 					Uuid:       itemUuid,
 					CreateTime: record.CreateTime,

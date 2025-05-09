@@ -149,6 +149,10 @@ func (s *AppService) ConvertApp() error {
 	}
 	for _, app := range appList {
 
+		if app.AppID <= 10035 {
+			continue
+		}
+
 		fmt.Println(fmt.Sprintf("app: %+v", app))
 
 		company := model.Company{
