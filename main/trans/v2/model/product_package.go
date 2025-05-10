@@ -254,16 +254,22 @@ func NewFlavorProductBom(db *gorm.DB, productID uint64) ([]model.ProductBom, err
 				CreateTime: productSKU.CreateTime,
 				UpdateTime: productSKU.UpdateTime,
 			},
-			PurchasePrice:      productSKU.PurchasePrice,
-			Price:              productSKU.ProductPrice,
-			Name:               productSKU.SpecName,
-			StockNum:           float64(productSKU.StockNum),
-			BarcodeValue:       productSKU.Barcode,
-			IsDefaultSelect:    0,
-			Status:             int(productSKU.Product.GetProductStatus()),
-			IsSoldOut:          productSKU.GetIsSoldOut(),
-			ActualSaleNum:      productSKU.ProductSales,
-			ProductFlavorUuid:  uint64(productSKU.SpecSkuID),
+			PurchasePrice:   productSKU.PurchasePrice,
+			Price:           productSKU.ProductPrice,
+			Name:            productSKU.SpecName,
+			StockNum:        float64(productSKU.StockNum),
+			BarcodeValue:    productSKU.Barcode,
+			IsDefaultSelect: 0,
+			Status:          int(productSKU.Product.GetProductStatus()),
+			IsSoldOut:       productSKU.GetIsSoldOut(),
+			ActualSaleNum:   productSKU.ProductSales,
+			ProductFlavorUuid: func() uint64 {
+				if productSKU.SpecSkuID > 0 {
+					return uint64(productSKU.SpecSkuID)
+				}
+				// 兼容v1.0版本，没有spec_sku_id字段也能点餐
+				return 1971200000000000000
+			}(),
 			ProductSauceUuid:   0,
 			ProductPackageUuid: uint64(productSKU.ProductID),
 			FlavorMaterials:    flavorMaterials,
