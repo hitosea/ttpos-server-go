@@ -439,7 +439,7 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 					orderServiceTax = orderServiceTax.Add(productServiceTax)
 				}
 
-				if isFeeType {
+				if isFeeType && orderBuffetCustomer.RefundMoney > 0 {
 					noOrderRefundTax = noOrderRefundTax.Add(decimal.NewFromFloat(orderBuffetCustomer.ConsumptionTax))
 				}
 				if !isFixServiceFee {
