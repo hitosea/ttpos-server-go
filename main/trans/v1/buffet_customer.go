@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -41,7 +42,7 @@ func (r *BuffetCustomerRepository) GetBuffetCustomerList() ([]BuffetCustomer, er
 func (r *BuffetCustomerRepository) ConvertBuffetCustomer() error {
 	buffetCustomers, err := r.GetBuffetCustomerList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 
 	for _, buffetCustomer := range buffetCustomers {
@@ -60,7 +61,7 @@ func (r *BuffetCustomerRepository) ConvertBuffetCustomer() error {
 		}
 		_, err := base.NewBuffetCustomerTypePriceRepo(r.targetDB).CreateBuffetCustomerTypePrice(price)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

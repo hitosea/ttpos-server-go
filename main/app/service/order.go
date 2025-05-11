@@ -324,9 +324,9 @@ func parseServiceFeeRate(ServiceChargeRate string) (float64, error) {
 		return 0, errors.WithMessage(err)
 	}
 	// 兼容取值范围0-100的情况。本系统中比例的统一取值范围是0-1，所以需要转换
-	if serviceFeeValue > 1 {
+	if serviceFeeValue > 0 {
 		// 将取值范围0-100转换为0-1
-		serviceFeeValue = decimal.NewFromFloat(serviceFeeValue).Div(decimal.NewFromInt(100)).Truncate(2).InexactFloat64()
+		serviceFeeValue = decimal.NewFromFloat(serviceFeeValue).Div(decimal.NewFromInt(100)).Truncate(4).InexactFloat64()
 		// 取值范围0-1
 		serviceFeeValue = math.Min(serviceFeeValue, 1)
 		serviceFeeValue = math.Max(serviceFeeValue, 0)
@@ -4725,6 +4725,20 @@ func WithH5OrderUuid(h5OrderUuid uint64) func(*CheckOrderOptions) {
 	}
 }
 
+type FlavorNum struct {
+	SaleOrderProduct *model.SaleOrderProduct
+	Num              uint // 销售订单中该规格商品的数量
+}
+
+func (f *FlavorNum) IsStockShortage() bool {
+	for _, saleOrderProductBom := range f.SaleOrderProduct.SaleOrderProductBoms {
+		if saleOrderProductBom.IsFlavor() {
+			return saleOrderProductBom.ProductBom.IsStockShortage(f.Num)
+		}
+	}
+	return false
+}
+
 // checkOrder 检查订单
 func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB, saleBillUuid uint64, deskUuid uint64, saleOrderProductAll []*model.SaleOrderProduct, opts ...func(*CheckOrderOptions)) (*resp.OrderCheckServiceRes, error) {
 	options := &CheckOrderOptions{}
@@ -4792,6 +4806,9 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 	statusMap := make(map[int][]*model.SaleOrderProduct)
 	// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动
 	{
+		// 某个规格的商品 => 商品数量
+		productBomNumMap := make(map[uint64]*FlavorNum)
+
 		for _, saleOrderProduct := range saleOrderProductAll {
 			// 跳过检查
 			if s.skipCheck(saleOrderProduct) {
@@ -4807,10 +4824,54 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			if options.CheckType == CheckTypeCheckout {
 				// 如果是结账检查
 				status, message = saleOrderProduct.CheckOutProduct()
+				// 只检查未送厨的商品
+				if saleOrderProduct.DeductStockType == constant.ProductPackageDeductStockTypePay {
+					{
+						flavorBomUuid := saleOrderProduct.GetFlavorBomUuid()
+						if _, ok := productBomNumMap[flavorBomUuid]; !ok {
+							productBomNumMap[flavorBomUuid] = &FlavorNum{
+								SaleOrderProduct: saleOrderProduct,
+								Num:              saleOrderProduct.Num,
+							}
+						} else {
+							flavorNum := productBomNumMap[flavorBomUuid]
+							flavorNum.Num += saleOrderProduct.Num
+						}
+					}
+				} else {
+					if !saleOrderProduct.IsCookingProduct() {
+						{
+							flavorBomUuid := saleOrderProduct.GetFlavorBomUuid()
+							if _, ok := productBomNumMap[flavorBomUuid]; !ok {
+								productBomNumMap[flavorBomUuid] = &FlavorNum{
+									SaleOrderProduct: saleOrderProduct,
+									Num:              saleOrderProduct.Num,
+								}
+							} else {
+								flavorNum := productBomNumMap[flavorBomUuid]
+								flavorNum.Num += saleOrderProduct.Num
+							}
+						}
+					}
+				}
 			} else {
 				// 如果是送厨检查
 				status, message = saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
+
+				{
+					flavorBomUuid := saleOrderProduct.GetFlavorBomUuid()
+					if _, ok := productBomNumMap[flavorBomUuid]; !ok {
+						productBomNumMap[flavorBomUuid] = &FlavorNum{
+							SaleOrderProduct: saleOrderProduct,
+							Num:              saleOrderProduct.Num,
+						}
+					} else {
+						flavorNum := productBomNumMap[flavorBomUuid]
+						flavorNum.Num += saleOrderProduct.Num
+					}
+				}
 			}
+
 			ctx.Log().Debug("检查商品", zap.Any("status", status), zap.Any("message", message))
 			if status != constant.CodeSuccess {
 				statusMap[status] = append(statusMap[status], saleOrderProduct)
@@ -4839,6 +4900,21 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 				}
 			}
 		}
+
+		for _, flavorNum := range productBomNumMap {
+			if flavorNum.IsStockShortage() {
+				exist := false
+				for _, saleOrderProduct := range statusMap[constant.CodeOrderCheckProductStockZero] {
+					if saleOrderProduct.Uuid == flavorNum.SaleOrderProduct.Uuid {
+						exist = true
+					}
+				}
+				// 如果没有存在，添加
+				if !exist {
+					statusMap[constant.CodeOrderCheckProductStockZero] = append(statusMap[constant.CodeOrderCheckProductStockZero], flavorNum.SaleOrderProduct)
+				}
+			}
+		}
 	}
 
 	// 检查限购
@@ -4864,10 +4940,14 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			if !saleOrderProduct.IsCurrentDeskProduct() {
 				continue
 			}
+			// 跳过退菜商品
+			if saleOrderProduct.IsCancelProduct() {
+				continue
+			}
 			productPackageUuid := saleOrderProduct.ProductPackageUuid
 			// 在h5端下单场景下，只检查本次下单的商品是否超过限购
 			// 在收银端送厨场景下，只检查本次送厨的商品是否超过限购
-			if options.SaleOrderProudctUuids != nil && !slices.Contains(productPackageUuids, saleOrderProduct.ProductPackageUuid) {
+			if options.SaleOrderProudctUuids != nil && len(productPackageUuids) > 0 && !slices.Contains(productPackageUuids, saleOrderProduct.ProductPackageUuid) {
 				continue
 			}
 			productPackageMap[productPackageUuid] = saleOrderProduct.ProductPackage
@@ -4875,8 +4955,17 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			saleOrderProductMap[productPackageUuid] = saleOrderProduct
 		}
 
+		limitProducts, err := s.getBuffetProductLimitList(ctx, saleBillUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+
 		for productPackageUuid, num := range numMap {
 			limitNum := productPackageMap[productPackageUuid].LimitNum
+			// 如果商品是自助餐商品的话，使用自助餐商品的限购规则
+			if productPackageLimitNum, ok := limitProducts[productPackageUuid]; ok {
+				limitNum = productPackageLimitNum
+			}
 			// 0表示不限购
 			if limitNum == 0 {
 				continue
@@ -6746,6 +6835,9 @@ func (s *orderSrv) getSaleOrderProductWithoutWarehouseOutForm(ctx context.Contex
 	productMap := make(map[uint64]*model.SaleOrderProduct)
 	for _, saleOrderProduct := range allSaleOrderProducts {
 		if saleOrderProduct.IsUnAcceptOrderBool() {
+			continue
+		}
+		if saleOrderProduct.IsCancelProduct() {
 			continue
 		}
 		productMap[saleOrderProduct.Uuid] = saleOrderProduct

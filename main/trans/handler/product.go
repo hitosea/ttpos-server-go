@@ -69,25 +69,26 @@ func (s *ProductService) GetProductTax(productID uint64, taxType uint) (oldModel
 func (s *ProductService) ConvertProduct() error {
 	products, err := s.GetProductList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	if err := s.targetDB.Transaction(func(tx *gorm.DB) error {
 		for index, _ := range products {
 			product := &products[index]
-			if product.IsDelete == 1 {
-				continue
-			}
+			// 需要导入已删除的商品，因为入库记录中要显示商品名称
+			// if product.IsDelete == 1 {
+			// 	continue
+			// }
 
 			if product.Type == constant.ProductTypeProduct {
 				// 成品
 				fmt.Println(fmt.Sprintf("-----迁移成品：%+v", product))
 				productPackage, err := newModel.NewProductPackage(product, s.db)
 				if err != nil {
-					return err
+					return errors.WithMessage(err)
 				}
 				repo := repository.NewProductPackageRepo(tx)
 				if err := repo.CreateProductPackage(productPackage); err != nil {
-					return err
+					return errors.WithMessage(err)
 				}
 
 			} else if product.Type == constant.ProductTypeMaterial {
@@ -119,7 +120,10 @@ func (s *ProductService) ConvertProduct() error {
 
 				material := model.Material{
 					BaseModel: model.BaseModel{
-						Uuid: uint64(product.ProductID),
+						Uuid:       uint64(product.ProductID),
+						CreateTime: int64(product.CreateTime),
+						UpdateTime: int64(product.UpdateTime),
+						DeleteTime: int64(product.IsDelete),
 					},
 					Name:                  product.ProductName,
 					MultiLanguageNameUuid: uint(languageName.Uuid),

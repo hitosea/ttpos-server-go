@@ -2,7 +2,6 @@ package cashier
 
 import (
 	"fmt"
-	"time"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -97,11 +96,12 @@ func (h *OrderOldHandler) GetCashierOrderList(c *gin.Context) {
 	}
 	// 时间
 	times := []string{}
+	tz := utils.IfString(ctx.GetGin().GetHeader("tz") != "", ctx.GetGin().GetHeader("tz"), "UTC+8")
 	if req.QueryStartTime > 0 {
-		times = append(times, time.Unix(int64(req.QueryStartTime), 0).Format("2006-01-02 15:04:05"))
+		times = append(times, utils.SetTimezone(tz).FormatUnixTime(int64(req.QueryStartTime), ""))
 	}
 	if req.QueryEndTime > 0 {
-		times = append(times, time.Unix(int64(req.QueryEndTime), 0).Format("2006-01-02 15:04:05"))
+		times = append(times, utils.SetTimezone(tz).FormatUnixTime(int64(req.QueryEndTime), ""))
 	}
 	//
 	result, err := utils.HttpPost("http://nginx/api/cashier/order.order/index", map[string]interface{}{

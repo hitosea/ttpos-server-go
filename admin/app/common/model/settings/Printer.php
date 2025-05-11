@@ -172,8 +172,8 @@ class Printer extends BaseModel
                 'printer_id' => $item['printer_id'],
                 'printer_name' => $item['printer_name'],
                 'printer_type' => [
-                    'value' => $item['printerType']['key'],
-                    'text' => $item['printerType']['name_text'],
+                    'value' => $item['printerType']['key'] ?? '',
+                    'text' => $item['printerType']['name_text'] ?? '',
                 ],
                 'sort' => $item['sort'],
                 'create_time' => $item['create_time'],

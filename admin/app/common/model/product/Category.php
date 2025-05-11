@@ -456,6 +456,7 @@ class Category extends BaseModel
             ->when($parentId !== '', function ($q) use ($parentId) {
                 $q->where('parent_uuid', '=', $parentId);
             })
+            ->where('category_key', '<>', 'all')
             ->order('is_special desc, sort asc')
             ->select();
         return self::handleButtonList($list->toArray(), $button_filter);

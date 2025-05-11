@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
@@ -9,37 +10,38 @@ import (
 )
 
 type IStatisticsRepo interface {
-	CountSale(opts ...DBOption) model.StatisticsSaleData                                                       // 统计销售
-	CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData                                             // 统计销售天数
-	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                               // 统计支付
-	CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                       // 统计支付天数
-	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                       // 统计税类
-	CountCategory(categoryType int, language string, opts ...DBOption) []model.StatisticsCategoryData          // 统计分类
-	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                              // 统计商品
-	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                     // 统计区域
-	CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData                                             // 统计区域
-	Count7Days(opts ...DBOption) []model.Statistics7DaysData                                                   // 统计销售天数
-	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                         // 统计未结订单
-	CountMemberNum(opts ...DBOption) int64                                                                     // 统计会员数量
-	CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp                                        // 统计会员数量天数
-	CountMember(opts ...DBOption) model.StatisticsMemberData                                                   // 统计会员
-	CountMemberDays(opts ...DBOption) []model.StatisticsMemberDaysData                                         // 统计会员天数
-	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                         // 统计会员支付
-	CountMemberPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                 // 统计会员支付天数
-	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64) // 统计商品销售
-	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                         // 统计免单支付
-	CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData                               // 统计免单支付天数
-	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                 // 统计商品排行
-	SaveSale(sales []model.StatisticsSale) error                                                               // 保存销售
-	SavePayment(payments []model.StatisticsPayment) error                                                      // 保存支付
-	SaveProduct(products []model.StatisticsProduct) error                                                      // 保存商品
-	DeleteSale(saleBillUuid uint64) error                                                                      // 删除销售
-	DeletePayment(saleBillUuid uint64) error                                                                   // 删除支付
-	DeleteProduct(saleBillUuid uint64) error                                                                   // 删除商品
-	SaveMember(member model.StatisticsMember) error                                                            // 保存会员
-	SaveMemberPayment(payments []model.StatisticsMemberPayment) error                                          // 保存会员支付
-	DeleteMember(memberRechargeOrderUuid uint64) error                                                         // 删除会员
-	DeleteMemberPayment(memberRechargeOrderUuid uint64) error                                                  // 删除会员支付
+	CountSale(opts ...DBOption) model.StatisticsSaleData                                                                       // 统计销售
+	CountSaleDays(opts ...DBOption) []model.StatisticsSaleDaysData                                                             // 统计销售天数
+	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                                               // 统计支付
+	CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                       // 统计支付天数
+	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                                       // 统计税类
+	CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData) // 统计分类
+	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                                              // 统计商品
+	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                                     // 统计区域
+	CountAreaDays(opts ...DBOption) []model.StatisticsAreaDaysData                                                             // 统计区域
+	Count7Days(opts ...DBOption) model.Statistics7DaysData                                                                     // 统计销售天数
+	CountUnpaidOrder(opts ...DBOption) model.StatisticsUnpaidOrderData                                                         // 统计未结订单
+	CountMemberNum(opts ...DBOption) int64                                                                                     // 统计会员数量
+	CountMemberNumDays(opts ...DBOption) []model.CountMemberNumDaysResp                                                        // 统计会员数量天数
+	CountMember(opts ...DBOption) model.StatisticsMemberData                                                                   // 统计会员
+	CountMemberDays(opts ...DBOption) []model.StatisticsMemberDaysData                                                         // 统计会员天数
+	CountMemberPayment(opts ...DBOption) []model.StatisticsPaymentData                                                         // 统计会员支付
+	CountMemberPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                 // 统计会员支付天数
+	CountProductSale(req CountProductSaleRepoReq, opts ...DBOption) ([]model.StatisticsProductSaleData, int64)                 // 统计商品销售
+	CountFreePayment(opts ...DBOption) model.StatisticsFreePaymentData                                                         // 统计免单支付
+	CountFreePaymentDays(opts ...DBOption) []model.StatisticsFreePaymentDaysData                                               // 统计免单支付天数
+	RankProduct(rankType int, language string, opts ...DBOption) []model.StatisticsProductData                                 // 统计商品排行
+	SaveSale(sales []model.StatisticsSale) error                                                                               // 保存销售
+	SavePayment(payments []model.StatisticsPayment) error                                                                      // 保存支付
+	SaveProduct(products []model.StatisticsProduct) error                                                                      // 保存商品
+	DeleteSale(saleBillUuid uint64) error                                                                                      // 删除销售
+	DeletePayment(saleBillUuid uint64) error                                                                                   // 删除支付
+	DeleteProduct(saleBillUuid uint64) error                                                                                   // 删除商品
+	SaveMember(member model.StatisticsMember) error                                                                            // 保存会员
+	SaveMembers(members []model.StatisticsMember) error                                                                        // 保存会员
+	SaveMemberPayment(payments []model.StatisticsMemberPayment) error                                                          // 保存会员支付
+	DeleteMember(memberRechargeOrderUuid uint64) error                                                                         // 删除会员
+	DeleteMemberPayment(memberRechargeOrderUuid uint64) error                                                                  // 删除会员支付
 }
 
 func NewStatisticsRepo(db *gorm.DB) IStatisticsRepo {
@@ -59,6 +61,8 @@ var (
 	countSaleSubQuerySelect = []string{
 		"sale_bill_uuid",
 		"desk_uuid",
+		"is_meger",
+		"is_special",
 		"SUM(product_price + product_tax + service_fee + service_tax + no_refund_tax + payment_fee - refund_tax - refund_service_fee - refund_fee) AS sale_amount",
 		"SUM(payment_amount - refund_amount - payment_balance) AS received_amount",
 		"SUM(product_price) AS product_price",
@@ -76,9 +80,12 @@ var (
 		"SUM(free_amount) AS free_amount",
 		"SUM(free_num) AS free_num",
 		"SUM(IF(desk_uuid > 0, meal_num, 0)) AS meal_num",
-		"SUM(payment_amount - refund_amount - refund_payment_balance) AS order_amount",
-		"SUM(IF(desk_uuid > 0, payment_amount - refund_amount - refund_payment_balance, NULL)) AS desk_order_amount",
-		"SUM(IF(desk_uuid = 0, payment_amount - refund_amount - refund_payment_balance, NULL)) AS instant_order_amount",
+		"SUM(IF(is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS order_amount",
+		"SUM(payment_amount - refund_amount - refund_payment_balance) AS avg_order_amount",
+		"SUM(IF(desk_uuid > 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS desk_order_amount",
+		"SUM(IF(desk_uuid > 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_desk_order_amount",
+		"SUM(IF(desk_uuid = 0 AND is_meger = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS instant_order_amount",
+		"SUM(IF(desk_uuid = 0, payment_amount - refund_amount - refund_payment_balance, 0)) AS avg_instant_order_amount",
 		"complete_time",
 	}
 	// 统计销售
@@ -99,21 +106,21 @@ var (
 		"SUM(t.gift_num) AS total_gift_num",
 		"SUM(t.free_amount) AS total_free_amount",
 		"SUM(t.free_num) AS total_free_num",
-		"COUNT(t.sale_bill_uuid) AS total_order_num",
-		"COUNT(CASE WHEN t.desk_uuid > 0 THEN 1 END) AS total_desk_num",
+		"SUM(IF(t.is_meger = 0, 1, 0)) AS total_order_num",
+		"COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_meger = 0 THEN 1 END) AS total_desk_num",
 		"SUM(t.desk_order_amount) AS total_desk_order_amount",
 		"SUM(t.meal_num) AS total_meal_num",
 		"SUM(t.instant_order_amount) AS total_instant_order_amount",
-		"COUNT(CASE WHEN t.desk_uuid = 0 THEN 1 END) AS total_instant_order_num",
-		"MIN(t.order_amount) AS min_order_amount",
-		"MAX(t.order_amount) AS max_order_amount",
-		"AVG(t.order_amount) AS avg_order_amount",
-		"MIN(CASE WHEN t.desk_order_amount >= 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",
-		"MAX(CASE WHEN t.desk_order_amount >= 0 THEN t.desk_order_amount ELSE NULL END) AS max_desk_order_amount",
-		"AVG(CASE WHEN t.desk_order_amount >= 0 THEN t.desk_order_amount ELSE NULL END) AS avg_desk_order_amount",
-		"MIN(CASE WHEN t.instant_order_amount >= 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",
-		"MAX(CASE WHEN t.instant_order_amount >= 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",
-		"AVG(CASE WHEN t.instant_order_amount >= 0 THEN t.instant_order_amount ELSE NULL END) AS avg_instant_order_amount",
+		"COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_meger = 0 THEN 1 END) AS total_instant_order_num",
+		"MIN(CASE WHEN t.order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS min_order_amount",
+		"MAX(CASE WHEN t.order_amount > 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS max_order_amount",
+		"SUM(t.avg_order_amount) / SUM(IF(t.is_meger = 0, 1, 0)) AS avg_order_amount",
+		"MIN(CASE WHEN t.desk_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",
+		"MAX(CASE WHEN t.desk_uuid > 0 AND t.desk_order_amount > 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS max_desk_order_amount",
+		"SUM(t.avg_desk_order_amount) / COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_meger = 0 THEN 1 END) AS avg_desk_order_amount",
+		"MIN(CASE WHEN t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",
+		"MAX(CASE WHEN t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",
+		"SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_meger = 0 THEN 1 END) AS avg_instant_order_amount",
 	}
 )
 
@@ -161,7 +168,7 @@ func (r *StatisticsRepo) CountSaleDays(opts ...DBOption) []model.StatisticsSaleD
 var (
 	countPaymentSelect = []string{
 		"sp.payment_method_uuid",
-		"pm.name AS payment_name",
+		"pm.payment_name AS payment_name",
 		"pm.code AS payment_code",
 		"COUNT(sp.payment_method_uuid) AS total_order_num",
 		"SUM(sp.payment_amount-sp.refund_amount) AS total_payment_amount",
@@ -235,11 +242,12 @@ func (r *StatisticsRepo) CountTax(opts ...DBOption) []model.StatisticsTaxData {
 }
 
 // CountCategory 统计分类
-func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts ...DBOption) []model.StatisticsCategoryData {
-	var result []model.StatisticsCategoryData
+func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData) {
 	db := r.db
+	dbOrder := r.db
 	for _, opt := range opts {
 		db = opt(db)
+		dbOrder = opt(dbOrder)
 	}
 
 	prefix := config.Database.TablePrefix
@@ -249,6 +257,9 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 	productCategoryTable := prefix + "product_category as pc"
 	productParentCategoryTable := prefix + "product_category as ppc"
 
+	// 统计订单数量
+	dbOrder.Table(statisticsProductTable).Select("COUNT(DISTINCT sale_bill_uuid) AS order_num").Pluck("order_num", &orderNum)
+
 	if categoryType != 2 {
 		db.Table(statisticsProductTable).
 			Select(
@@ -257,13 +268,14 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 				"0 AS category_uuid",
 				"'' AS category_name",
 				"SUM(sp.product_num) AS sale_num",
-				"SUM(sp.product_sale_price * sp.product_num) AS sale_amount",
+				"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
 			).
 			Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 			Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
 			Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
 			Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
 			Group("IF(pc.parent_uuid = 0, pp.category_uuid, pc.parent_uuid)").
+			Where("ppc.parent_uuid = 0").
 			Find(&result)
 	} else {
 		db.Table(statisticsProductTable).
@@ -273,7 +285,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 				"pc.uuid AS category_uuid",
 				"JSON_UNQUOTE(JSON_EXTRACT(pc.NAME, '$."+language+"')) AS category_name",
 				"SUM(sp.product_num) AS sale_num",
-				"SUM(sp.product_sale_price * sp.product_num) AS sale_amount",
+				"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
 			).
 			Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 			Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
@@ -284,7 +296,7 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 			Find(&result)
 	}
 
-	return result
+	return orderNum, result
 }
 
 // CountProduct 统计商品
@@ -304,9 +316,9 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 		Select(
 			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) AS product_name",
 			"JSON_UNQUOTE(JSON_EXTRACT(pb.name, '$."+language+"')) AS flavor_name",
-			"sp.product_sale_price AS sale_price",
+			"pb.price AS sale_price",
 			"SUM(sp.product_num) AS sale_num",
-			"SUM(sp.product_sale_price * sp.product_num) AS sale_amount",
+			"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
 		).
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
@@ -341,8 +353,9 @@ func (r *StatisticsRepo) CountArea(opts ...DBOption) []model.StatisticsAreaData 
 		Select(countAreaSelect, "dr.uuid AS area_id").
 		Joins("LEFT JOIN " + deskTable + " ON ss.desk_uuid = d.uuid").
 		Joins("LEFT JOIN " + deskRegionTable + " ON d.region_uuid = dr.uuid").
-		Where("ss.desk_uuid > 0").
+		Where("ss.desk_uuid > 0 and dr.uuid > 0").
 		Group("dr.uuid").
+		Order("dr.id ASC").
 		Find(&result)
 
 	return result
@@ -383,57 +396,78 @@ func (r *StatisticsRepo) RankProduct(rankType int, language string, opts ...DBOp
 
 	prefix := config.Database.TablePrefix
 	statisticsProductTable := prefix + "statistics_product as sp"
-	productPackageTable := prefix + "product_package as pp"
 
 	query := db.Table(statisticsProductTable).
 		Select(
-			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) AS product_name",
 			"sp.product_sale_price AS sale_price",
+			"sp.product_package_uuid AS product_package_uuid",
 			"SUM(sp.product_num) AS sale_num",
-			"SUM(sp.product_sale_price * sp.product_num) AS sale_amount",
+			"SUM(sp.flavor_price * sp.product_num) AS sale_amount",
 		).
-		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Where("sp.refund_time = 0").
 		Group("sp.product_package_uuid")
 
-	if rankType == 1 {
+	if rankType == constant.RankTypeSaleNum {
 		query = query.Order("sale_num DESC")
 	}
 
-	if rankType == 2 {
+	if rankType == constant.RankTypeSaleAmount {
 		query = query.Order("sale_amount DESC")
 	}
 
 	query = query.Limit(10)
 	query.Find(&result)
 
+	// 单独查询商品包名称
+	result = r.QueryName(result, language)
+
+	return result
+}
+
+// QueryName 查询商品包名称
+func (r *StatisticsRepo) QueryName(result []model.StatisticsProductData, language string) []model.StatisticsProductData {
+	productPackageUuids := make([]uint64, 0)
+	for _, product := range result {
+		if product.ProductPackageUuid.Valid {
+			productPackageUuids = append(productPackageUuids, uint64(product.ProductPackageUuid.Int64))
+		}
+	}
+
+	productPackageNameMap := r.QueryProductPackageName(productPackageUuids, language)
+	for i, product := range result {
+		result[i].ProductName = sql.NullString{
+			String: productPackageNameMap[uint64(product.ProductPackageUuid.Int64)],
+			Valid:  product.ProductPackageUuid.Valid,
+		}
+	}
+	return result
+}
+
+// QueryProductPackageName 查询商品包名称
+func (r *StatisticsRepo) QueryProductPackageName(uuids []uint64, language string) map[uint64]string {
+	result := make(map[uint64]string)
+	var productPackages []model.ProductPackage
+	r.db.Model(&model.ProductPackage{}).Preload("MultiLanguageName").Where("uuid IN (?)", uuids).Find(&productPackages)
+	for _, productPackage := range productPackages {
+		result[productPackage.Uuid] = productPackage.MultiLanguageName.GetNameByLang(language)
+	}
 	return result
 }
 
 // Count7Days 统计销售天数
-func (r *StatisticsRepo) Count7Days(opts ...DBOption) []model.Statistics7DaysData {
-	var result []model.Statistics7DaysData
+func (r *StatisticsRepo) Count7Days(opts ...DBOption) model.Statistics7DaysData {
+	var result model.Statistics7DaysData
 
 	db := r.db
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	subQuery := db.Model(&model.StatisticsSale{}).
-		Select(
-			"complete_time",
-			"COUNT(sale_bill_uuid) AS order_num",
-			"SUM(payment_amount - payment_balance) AS received_amount",
-		).
-		Group("sale_bill_uuid")
 
-	r.db.Table("(?) AS t", subQuery).
-		Select(
-			"FROM_UNIXTIME(t.complete_time, '%Y-%m-%d') AS day",
-			"SUM(t.order_num) AS total_order_num",
-			"SUM(t.received_amount) AS total_received_amount",
-		).
-		Group("FROM_UNIXTIME(t.complete_time, '%Y-%m-%d')").
-		Find(&result)
+	db.Model(&model.StatisticsSale{}).Select(
+		"count(DISTINCT sale_order_uuid) as total_order_num",
+		"FROM_UNIXTIME(complete_time, '%Y-%m-%d') day",
+		"SUM(payment_amount) AS TotalReceivedAmount",
+	).Find(&result)
 
 	return result
 }
@@ -520,6 +554,11 @@ func (r *StatisticsRepo) SaveMember(member model.StatisticsMember) error {
 	return r.db.Create(&member).Error
 }
 
+// SaveMembers 保存会员
+func (r *StatisticsRepo) SaveMembers(members []model.StatisticsMember) error {
+	return r.db.Create(&members).Error
+}
+
 // DeleteMember 删除会员
 func (r *StatisticsRepo) DeleteMember(memberRechargeOrderUuid uint64) error {
 	return r.db.Where("member_recharge_order_uuid = ?", memberRechargeOrderUuid).Delete(&model.StatisticsMember{}).Error
@@ -582,7 +621,7 @@ func (r *StatisticsRepo) CountMemberDays(opts ...DBOption) []model.StatisticsMem
 var (
 	countMemberPaymentSelect = []string{
 		"smp.payment_method_uuid",
-		"pm.name AS payment_name",
+		"pm.payment_name AS payment_name",
 		"pm.code AS payment_code",
 		"COUNT(smp.payment_method_uuid) AS total_order_num",
 		"SUM(smp.payment_amount-smp.refund_amount) AS total_payment_amount",
@@ -654,9 +693,6 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	db2 := r.db
 	for _, opt := range opts {
 		db = opt(db)
-	}
-
-	for _, opt := range opts {
 		db2 = opt(db2)
 	}
 
@@ -665,19 +701,18 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	productPackageTable := prefix + "product_package as pp"
 	productCategoryTable := prefix + "product_category as pc"
 	productParentCategoryTable := prefix + "product_category as ppc"
-	saleBillTable := prefix + "sale_bill as sb"
 	deskTable := prefix + "desk as d"
 
 	var total int64
-	db.Table(statisticsProductTable).
+	db = db.Table(statisticsProductTable).
 		Select("COUNT(DISTINCT sp.product_package_uuid) AS total").
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
-		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
-		Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
+		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid")
 
 	if req.AreaUuid > 0 {
-		db.Where("sb.desk_uuid IN (?)", r.db.Table(deskTable).Select("d.uuid").Where("d.region_uuid = ?", req.AreaUuid))
+		db.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
+		db.Where("d.region_uuid = ?", req.AreaUuid)
 	}
 	if req.CategoryUuid > 0 {
 		db.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))
@@ -685,7 +720,7 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 	if req.ProductName != "" {
 		db.Where("JSON_UNQUOTE(JSON_EXTRACT(pp.name, ?)) LIKE ?", "$."+req.Language, "%"+req.ProductName+"%")
 	}
-	db.Find(&total)
+	db.Pluck("total", &total)
 
 	listQuery := db2.Table(statisticsProductTable).
 		Select(
@@ -696,15 +731,15 @@ func (r *StatisticsRepo) CountProductSale(req CountProductSaleRepoReq, opts ...D
 			"SUM((sp.product_price + sp.tax_fee + sp.service_fee + service_tax) * sp.product_num) AS origin_sale_amount",
 			"SUM(sp.product_final_price * sp.product_num) AS actual_sale_amount",
 			"SUM((sp.product_final_price - sp.tax_fee - sp.service_tax) * sp.product_num) AS business_amount",
-			"SUM(IF(sp.free_num > 0,sp.free_num,sp.give_num)) AS give_num",
+			"SUM(IF(sp.free_num > 0, sp.free_num, sp.give_num)) AS give_num",
 		).
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
-		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
-		Joins("LEFT JOIN " + saleBillTable + " ON sp.sale_bill_uuid = sb.uuid")
+		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid")
 
 	if req.AreaUuid > 0 {
-		listQuery.Where("sb.desk_uuid IN (?)", r.db.Table(deskTable).Select("d.uuid").Where("d.region_uuid = ?", req.AreaUuid))
+		listQuery.Joins("LEFT JOIN " + deskTable + " ON sp.desk_uuid = d.uuid")
+		listQuery.Where("d.region_uuid = ?", req.AreaUuid)
 	}
 	if req.CategoryUuid > 0 {
 		listQuery.Where("pp.category_uuid = ? OR pp.category_uuid IN (?)", req.CategoryUuid, r.db.Table(productCategoryTable).Select("pc.uuid").Where("pc.parent_uuid = ?", req.CategoryUuid))

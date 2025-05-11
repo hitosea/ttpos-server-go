@@ -105,7 +105,7 @@
           <el-col :span="6" v-if="detail.sale_orders.length == 1 && detail.sale_orders[0]?.is_free">
             <div class="pb16">
               <span class="gray9">{{ $t('免单原因：') }}</span>
-              {{ detail.sale_orders[0]?.free_reason || '-' }}
+              {{ detail.sale_orders[0]?.free_reason[language] || '-' }}
             </div>
           </el-col>
           <el-col :span="6">

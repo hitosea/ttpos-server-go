@@ -29,6 +29,6 @@ class UserRole extends BaseModel
      */
     public static function getRoleIds($shop_user_id)
     {
-        return (new self)->column('role_uuid');
+        return (new self)->where("staff_uuid","=", $shop_user_id)->column('role_uuid');
     }
 }

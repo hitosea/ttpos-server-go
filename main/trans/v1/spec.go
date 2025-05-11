@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/utils"
@@ -44,20 +45,20 @@ func (s *SpecService) GetSpecList() ([]*Spec, error) {
 func (s *SpecService) ConvertSpec() error {
 	specs, err := s.GetSpecList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, spec := range specs {
 		fmt.Println(fmt.Sprintf("-------迁移spec: %+v", spec))
 		names := Names{}
 		err := names.GetNames(spec.SpecName)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		fmt.Println(fmt.Sprintf("spec_id: %d, spec_name: %+v", spec.SpecID, names))
 
 		id, err := utils.GetID()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
@@ -67,14 +68,15 @@ func (s *SpecService) ConvertSpec() error {
 			BaseModel: model.BaseModel{
 				Uuid:       uint64(spec.SpecID),
 				CreateTime: spec.CreateTime,
+				UpdateTime: spec.CreateTime,
 			},
-			Name:                  names.Zh,
+			Name:                  spec.SpecName,
 			MultiLanguageNameUuid: uint(id),
 			MultiLanguageName:     languageName,
 		}
 		_, err = base.NewProductFlavorRepo(s.targetDB).CreateProductFlavor(flavor)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

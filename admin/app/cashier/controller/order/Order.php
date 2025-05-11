@@ -40,6 +40,8 @@ class Order extends Controller
         }
         request()->appId = $app->old_company_id;
         // 
+        $data['order_type'] = 1;
+        $data['parent_id'] = 0;
         $result = OldOrderModel::getLists($data);
         foreach ($result['list'] as $key => $value) {
             $result['list'][$key]['finish_time'] = $value['finish_time'] == '-' ? 0 : strtotime($value['finish_time']);

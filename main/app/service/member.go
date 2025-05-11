@@ -102,6 +102,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 		Phone:           addMemberReq.Phone,
 		Password:        addMemberReq.Password,
 		MemberLevelUuid: addMemberReq.LevelUuid,
+		Gender:          constant.MemberGenderUnknown,
 	}); err != nil {
 		ctx.Log().Error("添加会员失败", zap.Error(err))
 		return errors.WithMessage(err, "添加会员失败")

@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -57,6 +58,7 @@ type UserRepository interface {
 	GetUserList() ([]*User, error)
 	GetUserByID(id uint) (*User, error)
 	GetUserCardRecordByUserIdAndCardId(userId uint, cardId uint) (*UserCardRecord, error)
+	GetUserAccumulatedConsumptionAmount(appId uint) (map[uint]*UserAccumulatedConsumptionAmount, error)
 	ConvertUser() error
 }
 
@@ -75,19 +77,62 @@ type UserService struct {
 func (s *UserService) GetUserCardRecordByUserIdAndCardId(userId uint, cardId uint) (*UserCardRecord, error) {
 	var userCardRecord UserCardRecord
 	err := s.db.Where("user_id = ? AND card_id = ?", userId, cardId).First(&userCardRecord).Error
-	return &userCardRecord, err
+	return &userCardRecord, errors.WithMessage(err)
 }
 
 func (s *UserService) GetUserList() ([]*User, error) {
 	var users []*User
 	err := s.db.Find(&users).Error
-	return users, err
+	return users, errors.WithMessage(err)
 }
 
 func (s *UserService) GetUserByID(id uint) (*User, error) {
 	var user User
 	err := s.db.Where("user_id = ?", id).First(&user).Error
-	return &user, err
+	return &user, errors.WithMessage(err)
+}
+
+type UserAccumulatedConsumptionAmount struct {
+	UserID            uint    `gorm:"column:user_id;not null;default:0;comment:'用户id'"`
+	ConsumptionNum    int     `gorm:"column:consumption_num;not null;default:0;comment:'消费次数'"`
+	ConsumptionAmount float64 `gorm:"column:consumption_amount;not null;default:0.00;comment:'消费金额'"`
+	Nickname          string  `gorm:"column:nickname;not null;default:'';comment:'昵称'"`
+}
+
+// 查询用户的累计消费金额
+func (s *UserService) GetUserAccumulatedConsumptionAmount(appId uint) (map[uint]*UserAccumulatedConsumptionAmount, error) {
+	var consumptionAmounts []*UserAccumulatedConsumptionAmount
+	query := `
+		SELECT
+			a.user_id,
+			COUNT(a.order_id) AS consumption_num,
+			SUM(a.pay_price) - SUM(a.refund_money) AS consumption_amount,
+			b.nickname AS nickname 
+		FROM
+			jjjfood_order a
+			LEFT JOIN jjjfood_user b ON a.user_id = b.user_id
+		WHERE
+			(a.app_id = ?
+			AND a.order_status = '30'
+			AND a.pay_status = '20'
+			AND a.delete_time = '0'
+			AND a.user_id > '0'
+			AND b.is_delete = '0')
+			AND a.delete_time = '0'
+		GROUP BY
+			a.user_id
+		ORDER BY
+			consumption_num DESC
+	`
+	err := s.db.Raw(query, appId).Scan(&consumptionAmounts).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	dataMap := make(map[uint]*UserAccumulatedConsumptionAmount)
+	for _, consumptionAmount := range consumptionAmounts {
+		dataMap[consumptionAmount.UserID] = consumptionAmount
+	}
+	return dataMap, nil
 }
 
 func (s *UserService) ConvertUser() error {
@@ -95,6 +140,17 @@ func (s *UserService) ConvertUser() error {
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+
+	// 获取用户累计消费金额
+	consumptionAmounts := make(map[uint]*UserAccumulatedConsumptionAmount)
+	if len(users) > 0 {
+		appId := users[0].AppID
+		consumptionAmounts, err = s.GetUserAccumulatedConsumptionAmount(appId)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+
 	for _, user := range users {
 		fmt.Println(fmt.Sprintf("user: %+v", user))
 
@@ -111,9 +167,10 @@ func (s *UserService) ConvertUser() error {
 
 		var memberCard *model.MemberCard
 		if userCardRecord != nil {
+			memberCardUuid, _ := utils.GetID()
 			memberCard = &model.MemberCard{
 				BaseModel: model.BaseModel{
-					Uuid:       uint64(user.CardID),
+					Uuid:       memberCardUuid,
 					CreateTime: int64(user.CreateTime),
 					UpdateTime: int64(user.UpdateTime),
 					DeleteTime: int64(user.IsDelete),
@@ -125,26 +182,36 @@ func (s *UserService) ConvertUser() error {
 			}
 		}
 
+		var consumptionAmount *UserAccumulatedConsumptionAmount
+		consumptionAmount = consumptionAmounts[user.UserID]
+		amount := float64(0)
+		consumptionNum := 0
+		if consumptionAmount != nil {
+			amount = consumptionAmount.ConsumptionAmount
+			consumptionNum = consumptionAmount.ConsumptionNum
+		}
 		member := model.Member{
 			BaseModel: model.BaseModel{
+				ID:         user.UserID,
 				Uuid:       uint64(user.UserID),
 				CreateTime: int64(user.CreateTime),
 				UpdateTime: int64(user.UpdateTime),
 				DeleteTime: int64(user.IsDelete),
 			},
-			MemberNo:         strconv.FormatUint(uint64(user.UserID), 10),
-			Nickname:         user.NickName,
-			Gender:           int(user.Gender),
-			Phone:            user.Mobile,
-			Password:         user.Password,
-			Birthday:         int64(user.Birthday),
-			Point:            user.Points,
-			ConsumptionCount: user.TotalInvite,
-			Balance:          user.Balance,
-			GiftBalance:      user.GiftBalance,
-			MemberLevelUuid:  uint64(user.GradeID),
-			MemberCardUuid:   uint64(user.CardID),
-			MemberCard:       memberCard,
+			MemberNo:                     strconv.FormatUint(uint64(user.UserID), 10),
+			Nickname:                     user.NickName,
+			Gender:                       int(user.Gender),
+			Phone:                        user.Mobile,
+			Password:                     user.Password,
+			Birthday:                     int64(user.Birthday),
+			Point:                        user.Points,
+			AccumulatedConsumptionAmount: amount,
+			ConsumptionCount:             consumptionNum,
+			Balance:                      user.Balance,
+			GiftBalance:                  user.GiftBalance,
+			MemberLevelUuid:              uint64(user.GradeID),
+			MemberCardUuid:               uint64(user.CardID),
+			MemberCard:                   memberCard,
 		}
 		err = repository.NewMemberRepo(s.targetDB).CreateMemberAndMemberCard(member)
 		if err != nil {

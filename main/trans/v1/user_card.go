@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -22,7 +23,7 @@ type UserCard struct {
 	OpenCoupons   string  `gorm:"type:longtext;not null" json:"open_coupons" comment:"每月赠送项目券"`
 	OpenMoney     int     `gorm:"type:tinyint(1);not null;default:0" json:"open_money" comment:"开卡赠送余额0否1是"`
 	OpenMoneyNum  float64 `gorm:"type:decimal(12,2);not null;default:0.00" json:"open_money_num" comment:"开卡赠送余额数"`
-	Expire        int     `gorm:"type:int;not null;default:0" json:"expire" comment:"有效期(月)0永久有效"`
+	Expire        int64   `gorm:"type:int;not null;default:0" json:"expire" comment:"有效期(月)0永久有效"`
 	Money         float64 `gorm:"type:decimal(12,2);not null;default:0.00" json:"money" comment:"价格"`
 	Status        int     `gorm:"type:tinyint(1);not null;default:0" json:"status" comment:"启用0关闭1"`
 	Content       string  `gorm:"type:varchar(255);not null;default:''" json:"content" comment:"使用须知"`
@@ -73,7 +74,7 @@ func (s *UserCardService) GetUserCardByID(id int) (*UserCard, error) {
 func (s *UserCardService) ConvertUserCard() error {
 	userCards, err := s.GetUserCardList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, userCard := range userCards {
 		fmt.Println(fmt.Sprintf("userCard: %+v", userCard))
@@ -99,7 +100,7 @@ func (s *UserCardService) ConvertUserCard() error {
 		}
 		_, err := base.NewMemberCardTypeRepo(s.targetDB).CreateMemberCardType(memberCardType)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

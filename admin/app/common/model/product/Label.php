@@ -67,10 +67,20 @@ class Label extends BaseModel
     /**
      * 关联产品ids
      */
-    // public function getProductIdsAttr($value, $data = [])
-    // {
-    //     return $this->product()->column('uuid');
-    // }
+    public function getProductIdsAttr($value, $data = [])
+    {
+        if (empty($this->product)) {
+            return [];
+        }
+        if (isset($data['product_ids'])) {
+            return $data['product_ids'];
+        }
+        $product_ids = [];
+        foreach ($this->product as $product) {
+            $product_ids[] = $product->uuid;
+        }
+        return $product_ids;
+    }
 
     /**
      * 关联产品
@@ -115,7 +125,6 @@ class Label extends BaseModel
             $item->product_ids = $product_ids;
             unset($item->product);
         }
-
         return $list;
     }
 

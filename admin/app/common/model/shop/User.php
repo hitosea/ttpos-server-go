@@ -23,7 +23,7 @@ class User extends BaseModel
     public static function getRealNameAttr($v, $data)
     {
         if (!$v) {
-            return $data['username'] ?? '';
+            return $data['user_name'] ?? '';
         }
         return $v;
     }

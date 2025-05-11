@@ -1,17 +1,22 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
 	"strings"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/trans/handler"
+
+	"github.com/duke-git/lancet/v2/cryptor"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/jinzhu/copier"
 	"github.com/spf13/cobra"
@@ -214,13 +219,6 @@ var migrateDataCmd = &cobra.Command{
 		// 开始数据迁移
 		fmt.Printf("%s 开始数据迁移... %s\n", blueColor, resetColor)
 
-		// TODO: 在这里添加数据迁移逻辑
-		// 例如：从旧数据库读取数据，然后写入到新数据库
-		// 1. 连接旧数据库
-		// 2. 读取旧数据库数据
-		// 3. 转换数据格式
-		// 4. 写入新数据库
-
 		// 一. 清空目标数据库
 		if !truncateTable(targetDB) {
 			return
@@ -235,6 +233,13 @@ var migrateDataCmd = &cobra.Command{
 		}
 
 		fmt.Printf("%s 数据迁移完成 %s\n", greenColor, resetColor)
+
+		// 三.清除缓存
+		if err := clearCache(companyUuid); err != nil {
+			fmt.Printf("%s 清除缓存失败 : %s %s\n", redColor, err, resetColor)
+		} else {
+			fmt.Printf("%s 清除缓存完成 %s\n", greenColor, resetColor)
+		}
 	},
 }
 
@@ -263,9 +268,103 @@ func truncateTable(targetDB *gorm.DB) bool {
 		if table == "ttpos_printer_type" {
 			continue
 		}
+		if table == "ttpos_migrations" {
+			continue
+		}
 		targetDB.Exec(fmt.Sprintf("TRUNCATE TABLE `%s`", table))
 	}
 	fmt.Printf("%s 清空目标数据库完成 %s\n", greenColor, resetColor)
 
 	return true
+}
+
+func clearCache(companyUuid uint64) error {
+	client := cache.Global.GetClient()
+	clusterClient := cache.Global.GetClusterClient()
+	if client == nil && clusterClient == nil {
+		return errors.New("获取缓存对象失败")
+	}
+
+	type CacheStruct struct {
+		Type    string   `json:"type"`
+		Key     string   `json:"key"`
+		Keys    string   `json:"keys"`
+		Name    string   `json:"name"`
+		DirPath []string `json:"dir_path"`
+	}
+	companyUuidStr := fmt.Sprintf("%d", companyUuid)
+	cacheMap := map[string]CacheStruct{
+		"category": {
+			Type: "cache",
+			Key:  "category_" + companyUuidStr,
+			Name: "商品分类",
+		},
+		"setting": {
+			Type: "cache",
+			Key:  "setting:company_id:" + companyUuidStr,
+			Keys: "setting:company_id:" + companyUuidStr,
+			Name: "商城设置",
+		},
+		"app": {
+			Type: "cache",
+			Key:  "app_" + companyUuidStr,
+			Name: "应用设置",
+		},
+		"agent": {
+			Type: "cache",
+			Key:  "agent_setting_" + companyUuidStr,
+			Name: "分销设置",
+		},
+		"temp": {
+			Type:    "file",
+			Name:    "临时图片",
+			DirPath: []string{},
+		},
+		"common": {
+			Type: "common",
+			Key:  "common_" + companyUuidStr,
+			Name: "公共",
+		},
+	}
+
+	fn := func(c redis.Cmdable) {
+		ctx := context.Background()
+		for s, cacheStruct := range cacheMap {
+			switch {
+			case cacheStruct.Type == "cache":
+				if cacheStruct.Key != "" {
+					c.Del(ctx, cacheStruct.Key)
+				}
+				if cacheStruct.Keys != "" {
+					c.Del(ctx, cacheStruct.Keys)
+				}
+				if s == "app" {
+					c.Del(ctx, "app_mp_"+companyUuidStr)
+					c.Del(ctx, "app_wx_"+companyUuidStr)
+				}
+			case cacheStruct.Type == "common":
+				c.Del(ctx, "tag:"+cryptor.Md5String(cacheStruct.Key))
+				c.Del(ctx, "tag:"+cryptor.Md5String("firstshop"))
+				c.Del(ctx, "tag:"+cryptor.Md5String("cashier"))
+				c.Del(ctx, "tag:"+cryptor.Md5String("unit"))
+			case s == "category":
+				c.Del(ctx, "tag:"+cryptor.Md5String(fmt.Sprintf("category%d00", companyUuid)))
+				c.Del(ctx, "tag:"+cryptor.Md5String(fmt.Sprintf("category%d01", companyUuid)))
+				c.Del(ctx, "tag:"+cryptor.Md5String(fmt.Sprintf("category%d10", companyUuid)))
+				c.Del(ctx, "tag:"+cryptor.Md5String(fmt.Sprintf("category%d11", companyUuid)))
+			}
+		}
+		c.Del(ctx, fmt.Sprintf("setting:company_id:%d", companyUuid))
+		c.Del(ctx, "tag:"+cryptor.Md5String("common_get_settingLanguages"))
+		c.Del(ctx, "sync_setting_"+constant.SettingCloudBasic)
+		c.Del(ctx, fmt.Sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", companyUuid, 0))
+		c.Del(ctx, fmt.Sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", companyUuid, 1))
+	}
+
+	if client != nil {
+		fn(client)
+	} else {
+		fn(clusterClient)
+	}
+	return nil
 }

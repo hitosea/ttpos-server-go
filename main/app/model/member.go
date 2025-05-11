@@ -11,7 +11,7 @@ type Member struct {
 	BaseModel
 	MemberNo                     string  `gorm:"column:member_no;type:varchar(255);comment:会员编号;NOT NULL" json:"member_no"`
 	Nickname                     string  `gorm:"column:nickname;type:varchar(255);comment:昵称;NOT NULL" json:"nickname"`
-	Gender                       int     `gorm:"column:gender;type:tinyint(3);default:2;comment:性别,0-女 1-男 2-未知;NOT NULL" json:"gender"`
+	Gender                       int     `gorm:"column:gender;type:tinyint(3);default:0;comment:性别,0-女 1-男 2-未知;NOT NULL" json:"gender"`
 	Phone                        string  `gorm:"column:phone;type:varchar(20);comment:电话号码;NOT NULL" json:"phone"`
 	Password                     string  `gorm:"column:password;type:varchar(200);comment:密码;NOT NULL" json:"password"`
 	Birthday                     int64   `gorm:"column:birthday;type:int(10);comment:生日,时间戳" json:"birthday"`
@@ -240,7 +240,7 @@ func (model *MemberCard) GetDiscount() float64 {
 type MemberCardType struct {
 	BaseModel
 	Name         string  `gorm:"column:name;type:varchar(255);comment:会员卡类型名称;NOT NULL" json:"name"`
-	Expire       int     `gorm:"column:expire;type:int(11);default:0;comment:有效期限,单位:月, 0为永久有效;NOT NULL" json:"expire"`
+	Expire       int64   `gorm:"column:expire;type:int(11);default:0;comment:有效期限,单位:月, 0为永久有效;NOT NULL" json:"expire"`
 	Price        float64 `gorm:"column:price;type:decimal(12,2);default:0.00;comment:价格;NOT NULL" json:"price"`
 	Discount     float64 `gorm:"column:discount;type:tinyint(3);default:0;comment:折扣,单位%;NOT NULL" json:"discount"`
 	Sort         int     `gorm:"column:sort;type:int(11);default:0;comment:排序;NOT NULL" json:"sort"`
@@ -257,7 +257,7 @@ type MemberCardLog struct {
 	BaseModel
 	Price              float64 `gorm:"column:price;type:decimal(12,2);default:0.00;comment:价格,会员卡价格,不随后台改变,记录领取时的价格;NOT NULL" json:"price"`
 	Discount           float64 `gorm:"column:discount;type:tinyint(3);default:0;comment:折扣,单位%,不随后台改变,记录领取时的折扣;NOT NULL" json:"discount"`
-	Expire             int     `gorm:"column:expire;type:int(11);default:0;comment:有效期限,单位:月, 0为永久有效,不随后台改变,记录领取时的有效期限;NOT NULL" json:"expire"`
+	Expire             int64   `gorm:"column:expire;type:int(11);default:0;comment:有效期限,单位:月, 0为永久有效,不随后台改变,记录领取时的有效期限;NOT NULL" json:"expire"`
 	MemberName         string  `gorm:"column:member_name;type:varchar(255);comment:会员名称,不随后台改变,当无法用member_uuid获取会员信息时,用此字段;NOT NULL" json:"member_name"`
 	MemberPhone        string  `gorm:"column:member_phone;type:varchar(255);comment:会员电话,不随后台改变,当无法用member_uuid获取会员信息时,用此字段;NOT NULL" json:"member_phone"`
 	MemberNo           string  `gorm:"column:member_no;type:varchar(255);comment:会员编号,不随后台改变,当无法用member_uuid获取会员信息时,用此字段;NOT NULL" json:"member_no"`

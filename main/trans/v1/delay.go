@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -45,7 +46,7 @@ func (s *BuffetDelayService) GetBuffetDelayList() ([]*Delay, error) {
 func (s *BuffetDelayService) ConvertBuffetDelay() error {
 	buffetDelays, err := s.GetBuffetDelayList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, buffetDelay := range buffetDelays {
 		fmt.Println(fmt.Sprintf("buffetDelay: %+v", buffetDelay))
@@ -62,7 +63,7 @@ func (s *BuffetDelayService) ConvertBuffetDelay() error {
 		}
 		_, err := base.NewBuffetDelayRepo(s.targetDB).CreateBuffetDelay(buffetDelay)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

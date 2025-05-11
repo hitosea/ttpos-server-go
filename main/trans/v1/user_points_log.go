@@ -2,8 +2,8 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/repository/base"
 
 	"gorm.io/gorm"
 )
@@ -41,30 +41,45 @@ type UserPointsLogService struct {
 func (s *UserPointsLogService) GetUserPointsLogList() ([]*UserPointsLog, error) {
 	var userPointsLogs []*UserPointsLog
 	err := s.db.Find(&userPointsLogs).Error
-	return userPointsLogs, err
+	return userPointsLogs, errors.WithMessage(err)
 }
 
 func (s *UserPointsLogService) ConvertUserPointsLog() error {
-	userPointsLogs, err := s.GetUserPointsLogList()
+	return s.convertUserPointsLog(0, 2000)
+}
+
+func (s *UserPointsLogService) convertUserPointsLog(offset, limit int) error {
+	var userPointsLogs []*UserPointsLog
+	err := s.db.Offset(offset).Limit(limit).Find(&userPointsLogs).Error
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
+	//
+	memberPointLogs := []model.MemberPointLog{}
 	for _, userPointsLog := range userPointsLogs {
-		fmt.Println(fmt.Sprintf("userPointsLog: %+v", userPointsLog))
-		memberPointLog := model.MemberPointLog{
+		memberPointLogs = append(memberPointLogs, model.MemberPointLog{
 			BaseModel: model.BaseModel{
+				ID:         userPointsLog.LogID,
 				Uuid:       uint64(userPointsLog.LogID),
 				CreateTime: int64(userPointsLog.CreateTime),
+				UpdateTime: int64(userPointsLog.CreateTime),
 			},
 			MemberUuid: uint64(userPointsLog.UserID),
 			Scene:      int(userPointsLog.Scene),
 			Value:      userPointsLog.Value,
 			Describe:   userPointsLog.Describe,
+		})
+
+	}
+	// 保存数据
+	if len(memberPointLogs) > 0 {
+		fmt.Println(fmt.Sprintf("userPointsLog - num: %d", len(memberPointLogs)))
+		if err := s.targetDB.Create(&memberPointLogs).Error; err != nil {
+			return errors.WithMessage(err)
 		}
-		_, err := base.NewMemberPointLogRepo(s.targetDB).CreateMemberPointLog(memberPointLog)
-		if err != nil {
-			return err
-		}
+		// 递归
+		offset += limit
+		return s.convertUserPointsLog(offset, limit)
 	}
 	return nil
 }

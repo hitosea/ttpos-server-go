@@ -49,13 +49,13 @@ type ShopUserService struct {
 func (s *ShopUserService) GetShopUserList() ([]*ShopUser, error) {
 	var shopUsers []*ShopUser
 	err := s.db.Find(&shopUsers).Error
-	return shopUsers, err
+	return shopUsers, errors.WithMessage(err)
 }
 
 func (s *ShopUserService) ConvertShopUser() error {
 	shopUsers, err := s.GetShopUserList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	targetStaffRepo := repository.NewStaffRepo(s.targetDB)
 	targetCompanyStaffRepo := repository.NewCompanyStaffRepo(s.targetSaasDB)
@@ -92,7 +92,7 @@ func (s *ShopUserService) ConvertShopUser() error {
 			DutyNo:              shopUser.DutyNo,
 		})
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		if existsCompanyStaff.Uuid > 0 { // 更新saas商家员工
@@ -105,7 +105,7 @@ func (s *ShopUserService) ConvertShopUser() error {
 				"update_time":  shopUser.UpdateTime,
 			})
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		} else { // 创建saas商家员工
 			repository.NewCompanyStaffRepo(s.targetSaasDB).CreateCompanyStaff(&model.CompanyStaff{

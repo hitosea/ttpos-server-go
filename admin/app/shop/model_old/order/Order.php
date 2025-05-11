@@ -515,6 +515,7 @@ class Order extends OrderModel
     {
         $model = $this;
         // 检索查询条件
+        $query['shop_supplier_id'] = request()->appId;
         $model = $model->setWhere($model, $query);
         // 获取数据列表
         return $model->with([
@@ -630,7 +631,7 @@ class Order extends OrderModel
             foreach ($timeFields as $field) {
                 if (isset($data[$field]) && is_array($data[$field])) {
                     $startTime = isset($data[$field][0]) && $data[$field][0] ? strtotime($data[$field][0]) : null;
-                    $endTime = isset($data[$field][1]) && $data[$field][1] ? strtotime($data[$field][1]) + 86399 : null;
+                    $endTime = isset($data[$field][1]) && $data[$field][1] ? strtotime($data[$field][1]) + (strstr($data['time'][1], ':') ? 0 : 86399) : null;
                     // 开始时间 + 结束时间
                     if ($startTime && $endTime) {
                         $model = $model->where($field, 'between', [$startTime, $endTime]);
@@ -645,7 +646,7 @@ class Order extends OrderModel
             }
         } else if (isset($data['time_mode']) && is_array($data['time_mode']) && count($data['time_mode']) == 2 && $data['time']) {
             $startTime = isset($data['time'][0]) && $data['time'][0] ? strtotime($data['time'][0]) : null;
-            $endTime = isset($data['time'][1]) && $data['time'][1] ? strtotime($data['time'][1]) + 86399 : null;
+            $endTime = isset($data['time'][1]) && $data['time'][1] ? strtotime($data['time'][1]) + (strstr($data['time'][1], ':') ? 0 : 86399) : null;
             // 开始时间 + 结束时间
             if ($startTime && $endTime) {
                 $model = $model->where(function ($query) use ($startTime, $endTime) {

@@ -208,17 +208,23 @@ class User extends Controller
         if ($app->old_company_id) {
             foreach ($menus as $key => $val) {
                 if ($val['uuid'] == 1626506017) {
-                    $menu = $menus[$key]['children'][0];
-                    $menu['name'] = "历史用餐订单";
-                    $menu['path'] = "/store/history_order/index";
-                    $menu['api_path'] = "/store/history_order/index";
-                    $menu['id'] = 1734320550;
-                    $menu['access_id'] = 1734320550;
-                    $menu['uuid'] = 1734320550;
-                    // 
-                    $menuOne = $menus[$key]['children'][1];
-                    $menus[$key]['children'][1] = $menu;
-                    $menus[$key]['children'][2] = $menuOne;
+                    $menu = $menus[$key]['children'][0] ?? [];
+                    if ($menu) {
+                        $menu['name'] = "历史用餐订单";
+                        $menu['path'] = "/store/history_order/index";
+                        $menu['api_path'] = "/store/history_order/index";
+                        $menu['id'] = 1734320550;
+                        $menu['access_id'] = 1734320550;
+                        $menu['uuid'] = 1734320550;
+                        $menu['children'][0]['path'] = "/store/history_order/detail";
+                        $menu['children'][0]['api_path'] = "/store/history_order/detail";
+                        // 
+                        $menuOne = $menus[$key]['children'][1] ?? [];
+                        $menus[$key]['children'][1] = $menu;
+                        if ($menuOne) {
+                            $menus[$key]['children'][2] = $menuOne;
+                        }
+                    }
                 }
             }
         }

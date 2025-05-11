@@ -326,7 +326,7 @@
               ctx.drawImage(img, 80, 80);
 
               // 绘制底部文字
-              ctx.font = '72px Arial';
+              ctx.font = '54px Arial';
 
               // 计算最大允许宽度
               const maxWidth = canvas.width * 0.8;

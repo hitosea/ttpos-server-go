@@ -1,8 +1,8 @@
 package req
 
 import (
-	"time"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/pkg/utils"
 )
 
 type BusinessDataPrinterReq struct {
@@ -11,38 +11,27 @@ type BusinessDataPrinterReq struct {
 	QueryStartTime uint `json:"query_start_time"` // 查询开始时间戳
 	QueryEndTime   uint `json:"query_end_time"`   // 查询结束时间戳
 	CategoryType   int  `json:"category_type"`    // 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
+	NotQueryFree   bool `json:"not_query_free"`   // 是否不查询免费使用场景
 }
 
 // GetParam 获取参数
-func (r *BusinessDataPrinterReq) GetParam() BusinessDataPrinterReq {
+func (r *BusinessDataPrinterReq) GetParam(timezone string) BusinessDataPrinterReq {
 	var (
 		queryStartTime int64
 		queryEndTime   int64
 	)
 	// 处理时间范围
 	if r.TimeType > 0 && r.TimeType < 5 {
-		now := time.Now()
-		var startTime, endTime time.Time
 		switch r.TimeType {
 		case 1: // 今天
-			startTime = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-			endTime = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
+			queryStartTime, queryEndTime = utils.SetTimezone(timezone).TodayStartEndUnix()
 		case 2: // 昨天
-			startTime = time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, now.Location())
-			endTime = time.Date(now.Year(), now.Month(), now.Day()-1, 23, 59, 59, 0, now.Location())
+			queryStartTime, queryEndTime = utils.SetTimezone(timezone).YesterdayStartEndUnix()
 		case 3: // 本周
-			weekday := int(now.Weekday())
-			if weekday == 0 {
-				weekday = 7
-			}
-			startTime = time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 0, 0, 0, 0, now.Location())
-			endTime = time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 23, 59, 59, 0, now.Location())
+			queryStartTime, queryEndTime = utils.SetTimezone(timezone).WeekStartEndUnix()
 		case 4: // 本月
-			startTime = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-			endTime = startTime.AddDate(0, 1, 0).Add(-time.Second)
+			queryStartTime, queryEndTime = utils.SetTimezone(timezone).MonthStartEndUnix()
 		}
-		queryStartTime = startTime.Unix()
-		queryEndTime = endTime.Unix()
 	}
 	if r.QueryStartTime > 0 && r.QueryEndTime > 0 {
 		queryStartTime = int64(r.QueryStartTime)
@@ -54,6 +43,7 @@ func (r *BusinessDataPrinterReq) GetParam() BusinessDataPrinterReq {
 		QueryStartTime: uint(queryStartTime),
 		QueryEndTime:   uint(queryEndTime),
 		CategoryType:   r.CategoryType,
+		NotQueryFree:   r.NotQueryFree,
 	}
 }
 
@@ -64,38 +54,27 @@ type BusinessDataCountReq struct {
 	QueryEndTime   int64  `form:"query_end_time"`   // 查询结束时间戳
 	CategoryType   int    `form:"category_type"`    // 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
 	DutyNo         string `form:"duty_no"`          // 班次编号
+	NotQueryFree   bool   `form:"not_query_free"`   // 是否不查询免费使用场景
 }
 
 // GetParam 获取参数
-func (r *BusinessDataCountReq) GetParam() BusinessDataCountReq {
+func (r *BusinessDataCountReq) GetParam(timezone string) BusinessDataCountReq {
 	var (
 		queryStartTime int64
 		queryEndTime   int64
 	)
 	// 处理时间范围
 	if r.TimeType > 0 && r.TimeType < 5 {
-		now := time.Now()
-		var startTime, endTime time.Time
 		switch r.TimeType {
 		case 1: // 今天
-			startTime = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-			endTime = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
+			queryStartTime, queryEndTime = utils.SetTimezone(timezone).TodayStartEndUnix()
 		case 2: // 昨天
-			startTime = time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, now.Location())
-			endTime = time.Date(now.Year(), now.Month(), now.Day()-1, 23, 59, 59, 0, now.Location())
+			queryStartTime, queryEndTime = utils.SetTimezone(timezone).YesterdayStartEndUnix()
 		case 3: // 本周
-			weekday := int(now.Weekday())
-			if weekday == 0 {
-				weekday = 7
-			}
-			startTime = time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 0, 0, 0, 0, now.Location())
-			endTime = time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
+			queryStartTime, queryEndTime = utils.SetTimezone(timezone).WeekStartEndUnix()
 		case 4: // 本月
-			startTime = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-			endTime = startTime.AddDate(0, 1, 0).Add(-time.Second)
+			queryStartTime, queryEndTime = utils.SetTimezone(timezone).MonthStartEndUnix()
 		}
-		queryStartTime = startTime.Unix()
-		queryEndTime = endTime.Unix()
 	}
 	if r.QueryStartTime > 0 && r.QueryEndTime > 0 {
 		queryStartTime = int64(r.QueryStartTime)
@@ -107,6 +86,7 @@ func (r *BusinessDataCountReq) GetParam() BusinessDataCountReq {
 		QueryEndTime:   queryEndTime,
 		CategoryType:   r.CategoryType,
 		DutyNo:         r.DutyNo,
+		NotQueryFree:   r.NotQueryFree,
 	}
 }
 

@@ -17098,6 +17098,10 @@ const docTemplate = `{
                     "description": "班次编号",
                     "type": "string"
                 },
+                "notQueryFree": {
+                    "description": "是否不查询免费使用场景",
+                    "type": "boolean"
+                },
                 "queryEndTime": {
                     "description": "查询结束时间戳",
                     "type": "integer"
@@ -17118,6 +17122,10 @@ const docTemplate = `{
                 "category_type": {
                     "description": "分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)",
                     "type": "integer"
+                },
+                "not_query_free": {
+                    "description": "是否不查询免费使用场景",
+                    "type": "boolean"
                 },
                 "query_end_time": {
                     "description": "查询结束时间戳",

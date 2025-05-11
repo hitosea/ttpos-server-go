@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -35,7 +36,7 @@ type ProductAttributeGroupService struct {
 func (s *ProductAttributeGroupService) GetProductAttributeGroupList() ([]*ProductAttributeGroup, error) {
 	var productAttributeGroups []*ProductAttributeGroup
 	if err := s.db.Find(&productAttributeGroups).Error; err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return productAttributeGroups, nil
 }
@@ -43,13 +44,15 @@ func (s *ProductAttributeGroupService) GetProductAttributeGroupList() ([]*Produc
 func (s *ProductAttributeGroupService) ConvertProductAttributeGroup() error {
 	var productAttributeGroups []*ProductAttributeGroup
 	if err := s.db.Find(&productAttributeGroups).Error; err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, productAttributeGroup := range productAttributeGroups {
 		fmt.Println(fmt.Sprintf("productAttributeGroup: %+v", productAttributeGroup))
 		group := model.ProductPackageAttributeGroup{
 			BaseModel: model.BaseModel{
-				Uuid: uint64(productAttributeGroup.GroupAttributeID),
+				Uuid:       uint64(productAttributeGroup.GroupAttributeID),
+				CreateTime: productAttributeGroup.CreateTime,
+				UpdateTime: productAttributeGroup.UpdateTime,
 			},
 			IsMust:                    productAttributeGroup.AttributeRequired,
 			MaxSelection:              productAttributeGroup.AttributeMaxSelect,
@@ -58,7 +61,7 @@ func (s *ProductAttributeGroupService) ConvertProductAttributeGroup() error {
 		}
 		_, err := base.NewProductPackageAttributeGroupRepo(s.targetDB).CreateProductPackageAttributeGroup(group)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

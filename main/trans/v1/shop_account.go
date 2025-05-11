@@ -49,7 +49,9 @@ func (s *ShopAccountService) ConvertShopAccount() error {
 		fmt.Println(fmt.Sprintf("shopAccount: %+v", shopAccount))
 		box := model.CashBox{
 			BaseModel: model.BaseModel{
-				Uuid: uint64(shopAccount.ID),
+				Uuid:       uint64(shopAccount.ID),
+				CreateTime: shopAccount.CreateTime,
+				UpdateTime: shopAccount.UpdateTime,
 			},
 			Name:            "",
 			Balance:         shopAccount.Amount,

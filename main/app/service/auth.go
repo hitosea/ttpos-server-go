@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"go.uber.org/zap"
 	"regexp"
 	"slices"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
+	"ttpos-server-go/pkg/logger"
 
 	"github.com/jinzhu/copier"
 	"github.com/spf13/viper"
@@ -137,10 +139,10 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 			return loginResp, errors.New("未找到绑定的商家，请确认登录信息")
 		}
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyStaff.CompanyUuid))
-		staff = staffRepo.GetStaff(staffRepo.WhereUuid(companyStaff.Uuid), staffRepo.WithCompany())
+		staff, _ = staffRepo.GetStaff(staffRepo.WhereUuid(companyStaff.Uuid), staffRepo.WithCompany())
 	} else { // 离线版本
 		staffRepo := repository.NewStaffRepo(s.dbm.GetDB(constant.DefaultDB))
-		staff = staffRepo.GetStaff(staffRepo.WhereUsername(loginReq.Username), staffRepo.WithCompany())
+		staff, _ = staffRepo.GetStaff(staffRepo.WhereUsername(loginReq.Username), staffRepo.WithCompany())
 	}
 	if staff.Uuid == 0 || utils.EncryptPassword(loginReq.Password) != staff.Password {
 		return loginResp, errors.New("账号或密码错误")
@@ -180,7 +182,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 
 		// 检查是否有未交班的收银员
 		if viper.GetString("CHECK_SHIFT_HANDOVER") != "false" {
-			currentStaff := staffRepo.GetStaff(staffRepo.WhereDeviceId(loginReq.DeviceId), staffRepo.WhereCashierOnline())
+			currentStaff, _ := staffRepo.GetStaff(staffRepo.WhereDeviceId(loginReq.DeviceId), staffRepo.WhereCashierOnline())
 			if currentStaff.Uuid != 0 && currentStaff.Uuid != staff.Uuid {
 				return loginResp, errors.NewWithReplace("当前收银机上有未交班的账号，请联系 %s 完成交班后再登录", []string{currentStaff.GetUserName()})
 			}
@@ -366,7 +368,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 	staff := helper.GetStaff(ctx.GetGin())
 	staffRepo := repository.NewStaffRepo(db)
 	assistantStaffUuid := ctx.GetGin().GetUint64(jwt.AssistantStaffUuid)
-	assistantStaff := staffRepo.GetStaff(staffRepo.WhereUuid(assistantStaffUuid))
+	assistantStaff, _ := staffRepo.GetStaff(staffRepo.WhereUuid(assistantStaffUuid))
 	perms, err := s.roleAccessSrv.GetPermission(constant.AssistantRouteName, assistantStaff.Uuid, assistantStaff.CompanyUuid)
 	if err != nil {
 		return assistantBase, errors.WithMessage(err)
@@ -591,7 +593,11 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		return company, companySetting, staff, desk, errors.New("未找到绑定的商家，请确认登录信息")
 	}
 	staffRepo := repository.NewStaffRepo(db)
-	staff = staffRepo.GetStaff(staffRepo.WhereUuid(auth.StaffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(auth.StaffUuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	if err != nil {
+		logger.Logger.Error("获取员工信息失败", zap.Error(err))
+		return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeSystemError, "数据库失联，请稍候再试")
+	}
 	if staff.Uuid == 0 {
 		return company, companySetting, staff, desk, errors.New("用户不存在")
 	}
@@ -687,7 +693,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				var err error
 				desk, err = deskRepo.GetDesk(deskRepo.WhereDeviceUuid(ctx.GetDeviceUuid()))
 				if err != nil {
-					return company, companySetting, staff, desk, errors.New("桌台未绑定")
+					return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTabletNotBindDesk, "桌台未绑定")
 				}
 			}
 			// 检查收银机设置-桌台用餐是否开启
@@ -788,7 +794,7 @@ func (s *authSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (
 		return newToken, refreshToken, errors.New("用户信息错误")
 	}
 	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(companyUuid))
-	staff := staffRepo.GetStaff(staffRepo.WhereUuid(bindReq.CashierUuid), staffRepo.WhereDeviceId(bindReq.DeviceId), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	staff, _ := staffRepo.GetStaff(staffRepo.WhereUuid(bindReq.CashierUuid), staffRepo.WhereDeviceId(bindReq.DeviceId), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
 	// 检查传递的收银设备
 	if staff.Uuid == 0 {
 		return newToken, refreshToken, errors.New("用户不存在")

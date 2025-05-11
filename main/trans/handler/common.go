@@ -28,13 +28,13 @@ import (
 
 var sourceConf = config.DatabaseConf{
 	Host:          "localhost",
-	Port:          13306,
+	Port:          25443,
 	User:          "root",
-	Password:      "cfeb18fa768c2d5f",
+	Password:      "69c1e9542d2a7f19",
 	TablePrefix:   "jjjfood_",
 	SlowQueryTime: 0,
 }
-var sourceDBName = "test-shop"
+var sourceDBName = "shop1724054088"
 
 var targetConf = config.DatabaseConf{
 	Host:          "localhost",
@@ -44,7 +44,7 @@ var targetConf = config.DatabaseConf{
 	TablePrefix:   "ttpos_",
 	SlowQueryTime: 0,
 }
-var targetDBName = "shop4649658617856000"
+var targetDBName = "shop4477708931072000"
 
 var SqlTransLogger *zap.Logger
 

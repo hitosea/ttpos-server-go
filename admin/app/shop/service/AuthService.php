@@ -164,6 +164,9 @@ class AuthService
         if ($this->user && $this->user['is_super'] ?? '') {
             return true;
         }
+        if (strstr($url, 'orderold') !== false) {
+            return true;
+        }
 
         //
         $url = strtolower($url);

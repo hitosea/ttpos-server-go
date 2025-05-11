@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
@@ -38,13 +39,13 @@ type TableAreaService struct {
 func (s *TableAreaService) GetTableAreaList() ([]*TableArea, error) {
 	var tableAreas []*TableArea
 	err := s.db.Find(&tableAreas).Error
-	return tableAreas, err
+	return tableAreas, errors.WithMessage(err)
 }
 
 func (s *TableAreaService) ConvertTableArea() error {
 	tableAreas, err := s.GetTableAreaList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, tableArea := range tableAreas {
 		fmt.Println(fmt.Sprintf("tableArea: %+v", tableArea))
@@ -60,7 +61,7 @@ func (s *TableAreaService) ConvertTableArea() error {
 
 		_, err := repository.NewDeskRegionRepo(s.targetDB).CreateDeskRegion(deskRegion)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

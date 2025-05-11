@@ -101,18 +101,41 @@ let checkChild = function (obj, str) {
 /* 检测图片是否存在*/
 async function imageIsExist(url, timeout = 30000) {
     return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-            reject(new Error('Request timed out'));
-        }, timeout);
+        // Handle HTTP URLs safely
+        if (url.startsWith('http:')) {
+            // For HTTP URLs, use Image object instead of fetch to avoid mixed content errors
+            const img = new Image();
+            const timer = setTimeout(() => {
+                img.onload = img.onerror = null;
+                reject(new Error('Request timed out'));
+            }, timeout);
 
-        fetch(url, { method: 'HEAD' })
-            .then(response => {
+            img.onload = () => {
                 clearTimeout(timer);
-                resolve(response.ok);
-            })
-            .catch(error => {
+                resolve(true);
+            };
+
+            img.onerror = () => {
                 clearTimeout(timer);
-                reject(error);
-            });
+                resolve(false); // Image doesn't exist or couldn't be loaded
+            };
+
+            img.src = url;
+        } else {
+            // For HTTPS URLs, continue using fetch
+            const timer = setTimeout(() => {
+                reject(new Error('Request timed out'));
+            }, timeout);
+
+            fetch(url, { method: 'HEAD' })
+                .then(response => {
+                    clearTimeout(timer);
+                    resolve(response.ok);
+                })
+                .catch(error => {
+                    clearTimeout(timer);
+                    reject(error);
+                });
+        }
     });
 }

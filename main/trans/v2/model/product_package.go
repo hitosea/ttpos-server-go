@@ -35,14 +35,28 @@ func NewProductPackage(product *v1.Product, db *gorm.DB) (*model.ProductPackage,
 
 	productDineTax, err := repository.NewCommonRepo(db).GetProductTax(uint64(product.ProductID), constant.ProductTaxTypeDine)
 	if err != nil {
-		return nil, errors.WithMessage(err, "GetProductTax failed")
+		// return nil, errors.WithMessage(err, "GetProductTax failed")
 	}
 	productTakeoutTax, err := repository.NewCommonRepo(db).GetProductTax(uint64(product.ProductID), constant.ProductTaxTypeTakeout)
 	if err != nil {
-		return nil, errors.WithMessage(err, "GetProductTax failed")
+		// return nil, errors.WithMessage(err, "GetProductTax failed")
 	}
 
 	productBoms := make([]model.ProductBom, 0)
+
+	// 创建产品包的规格
+	// flavorBoms := make([]model.ProductBom, 0)
+	// if product.IsDelete == 1 {
+	// 	flavorBoms, err = NewFlavorProductBom(db, uint64(product.ProductID), WithIsDeletedProduct())
+	// 	if err != nil {
+	// 		return nil, errors.WithMessage(err, "NewProductBom failed")
+	// 	}
+	// } else {
+	// 	flavorBoms, err = NewFlavorProductBom(db, uint64(product.ProductID))
+	// 	if err != nil {
+	// 		return nil, errors.WithMessage(err, "NewProductBom failed")
+	// 	}
+	// }
 
 	// 创建产品包的规格
 	flavorBoms, err := NewFlavorProductBom(db, uint64(product.ProductID))
@@ -67,16 +81,27 @@ func NewProductPackage(product *v1.Product, db *gorm.DB) (*model.ProductPackage,
 			Uuid:       uint64(product.ProductID),
 			CreateTime: product.CreateTime,
 			UpdateTime: product.UpdateTime,
+			DeleteTime: int64(product.IsDelete),
 		},
-		Name:                          languageName.ToJson(),
-		MultiLanguageNameUuid:         languageName.Uuid,
-		ImageName:                     product.ImgName,
-		ImageFileUuid:                 product.ProductImage.ImageID,
-		DeductStockType:               StockDeductMethod,
-		UnitUuid:                      product.UnitID,
-		DineTaxUuid:                   productDineTax.TaxCategoryID,
-		CategoryUuid:                  product.CategoryID,
-		TakeoutTaxUuid:                productTakeoutTax.TaxCategoryID,
+		Name:                  languageName.ToJson(),
+		MultiLanguageNameUuid: languageName.Uuid,
+		ImageName:             product.ImgName,
+		ImageFileUuid:         product.ProductImage.ImageID,
+		DeductStockType:       StockDeductMethod,
+		UnitUuid:              product.UnitID,
+		DineTaxUuid: func() uint64 {
+			if productDineTax != nil {
+				return uint64(productDineTax.TaxCategoryID)
+			}
+			return 0
+		}(),
+		CategoryUuid: product.CategoryID,
+		TakeoutTaxUuid: func() uint64 {
+			if productTakeoutTax != nil {
+				return uint64(productTakeoutTax.TaxCategoryID)
+			}
+			return 0
+		}(),
 		SpecialCategoryUuid:           product.SpecialID,
 		PrinterTagUuid:                product.LabelID,
 		SupplierUuid:                  product.ShopSupplierID,
@@ -158,7 +183,52 @@ func NewMultiLanguageName(nameJson string) (*model.MultiLanguageName, error) {
 	return multiLanguageName, nil
 }
 
+// type NewFlavorProductBomOption struct {
+// 	IsDeletedProduct bool // 是否是已经删除的商品
+// }
+
+// func WithIsDeletedProduct() func(*NewFlavorProductBomOption) {
+// 	return func(option *NewFlavorProductBomOption) {
+// 		option.IsDeletedProduct = true
+// 	}
+// }
+
 func NewFlavorProductBom(db *gorm.DB, productID uint64) ([]model.ProductBom, error) {
+	// func NewFlavorProductBom(db *gorm.DB, productID uint64, options ...func(*NewFlavorProductBomOption)) ([]model.ProductBom, error) {
+	// option := &NewFlavorProductBomOption{}
+	// for _, opt := range options {
+	// 	opt(option)
+	// }
+
+	// // 如果商品已经删除，则返回一个空的productBom
+	// if option.IsDeletedProduct {
+	// 	// 获取商品规格.随便给个这个空的规格设置一个specId
+	// 	specs, err := repository.NewCommonRepo(db).GetProductSpecList()
+	// 	if err != nil {
+	// 		return nil, errors.WithMessage(err, "获取商品规格失败")
+	// 	}
+	// 	if len(specs) == 0 {
+	// 		return nil, errors.WithMessage(err, "商品规格为空")
+	// 	}
+	// 	specId := specs[0].SpecID
+
+	// 	productBomUuid, err := pkgUtils.GetID()
+	// 	if err != nil {
+	// 		return nil, errors.WithMessage(err, "获取uuid失败")
+	// 	}
+	// 	return []model.ProductBom{
+	// 		{
+	// 			BaseModel: model.BaseModel{
+	// 				Uuid:       productBomUuid,
+	// 				CreateTime: time.Now().Unix(),
+	// 				UpdateTime: time.Now().Unix(),
+	// 			},
+	// 			ProductPackageUuid: productID,
+	// 			ProductFlavorUuid:  uint64(specId),
+	// 		},
+	// 	}, nil
+	// }
+
 	productSKUs, err := repository.NewCommonRepo(db).GetProductSKUs(productID)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取商品规格失败")
@@ -169,7 +239,9 @@ func NewFlavorProductBom(db *gorm.DB, productID uint64) ([]model.ProductBom, err
 		for _, productSkuMaterial := range productSKU.ProductSkuMaterials {
 			flavorMaterials = append(flavorMaterials, &model.RelatedMaterial{
 				BaseModel: model.BaseModel{
-					Uuid: uint64(productSkuMaterial.ID),
+					Uuid:       uint64(productSkuMaterial.ID),
+					CreateTime: productSkuMaterial.CreateTime,
+					UpdateTime: productSkuMaterial.CreateTime,
 				},
 				MaterialUuid: uint64(productSkuMaterial.MaterialID),
 				RelatedUuid:  uint64(productSkuMaterial.ProductSkuID),

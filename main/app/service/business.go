@@ -18,13 +18,14 @@ import (
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 )
 
 // IBusinessSrv 定义收银服务接口
 type IBusinessSrv interface {
 	Printer(ctx context.Context, req req.BusinessDataPrinterReq) (*resp.PrinterData, error)                                                               // 打印
-	CountBusiness(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataAll, error)                                         // 统计营业数据
+	CountBusiness(ctx context.Context, req req.BusinessDataCountReq, opts ...func(o *CountBusinessOption)) (*business_data_resp.BusinessDataAll, error)   // 统计营业数据
 	CountPaymentMethod(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataPaymentMethod, error)                          // 统计支付方式
 	CountProductCategory(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProductCategory, error)                      // 统计商品分类
 	CountProduct(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataProduct, error)                                      // 统计商品
@@ -63,7 +64,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	// Initialize the pointer to avoid nil dereference
 	reqPrinterData := &template.PrintingBusinessData{}
 	// 获取参数
-	printerParam := printerReq.GetParam()
+	printerParam := printerReq.GetParam(ctx.GetCompanySetting().Timezone)
 	// 统计类型
 	if printerReq.StatisticsType <= 0 {
 		// 销售数据
@@ -77,6 +78,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			QueryStartTime: int64(printerParam.QueryStartTime),
 			QueryEndTime:   int64(printerParam.QueryEndTime),
 			CategoryType:   printerParam.CategoryType,
+			NotQueryFree:   true,
 		})
 		// 会员数量
 		memberNum := s.statisticsSrv.CountMemberNum(ctx, CountReq{
@@ -243,9 +245,23 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 	return printerData, nil
 }
 
+type CountBusinessOption struct {
+	IsShop bool // 是否是商家后台的首页统计的使用场景
+}
+
+func WithIsShop() func(o *CountBusinessOption) {
+	return func(o *CountBusinessOption) {
+		o.IsShop = true
+	}
+}
+
 // CountBusiness 统计营业数据
-func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataAll, error) {
-	req = req.GetParam()
+func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCountReq, opts ...func(o *CountBusinessOption)) (*business_data_resp.BusinessDataAll, error) {
+	option := &CountBusinessOption{}
+	for _, opt := range opts {
+		opt(option)
+	}
+	req = req.GetParam(ctx.GetCompanySetting().Timezone)
 	// 销售数据
 	saleData := s.statisticsSrv.CountSale(ctx, CountReq{
 		TimeType:       req.TimeType,
@@ -264,6 +280,7 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 
 	// 支付数据
 	_, paymentMethodIncomes := s.BuildPaymentMethodIncome(ctx, req)
+
 	// 会员数量
 	memberNum := s.statisticsSrv.CountMemberNum(ctx, CountReq{
 		TimeType:       req.TimeType,
@@ -354,6 +371,10 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 			return peakHours
 		}(),
 		CategoryList: func() []business_data_resp.Category {
+			// 商家后台首页统计不展示分类列表。不查询该数据可以提升页面响应速度1s
+			if option.IsShop {
+				return nil
+			}
 			_, categoryList := s.BuildCategoryList(ctx, req)
 			return categoryList
 		}(),
@@ -554,25 +575,36 @@ func (s *businessSrv) BuildPaymentMethodIncome(ctx context.Context, req req.Busi
 		CategoryType:   req.CategoryType,
 	})
 
-	paymentMethodIncomes := make([]business_data_resp.PaymentMethodIncome, 0)
-	for _, payment := range paymentData.PaymentList {
-		paymentMethodIncomes = append(paymentMethodIncomes, business_data_resp.PaymentMethodIncome{
-			Name:     payment.PaymentName,
-			OrderNum: int(payment.TotalOrderNum),
-			Amount:   payment.TotalPaymentAmount,
-			Code:     payment.PaymentCode,
+	// 统计免单支付
+	var freePaymentData CountFreePaymentResp
+	if !req.NotQueryFree {
+		freePaymentData = s.statisticsSrv.CountFreePayment(ctx, CountReq{
+			DutyNo:         req.DutyNo,
+			QueryStartTime: req.QueryStartTime,
+			QueryEndTime:   req.QueryEndTime,
+			TimeType:       req.TimeType,
+			CategoryType:   req.CategoryType,
 		})
 	}
 
-	// 统计免单支付
-	freePaymentData := s.statisticsSrv.CountFreePayment(ctx, CountReq{
-		DutyNo:         req.DutyNo,
-		QueryStartTime: req.QueryStartTime,
-		QueryEndTime:   req.QueryEndTime,
-		TimeType:       req.TimeType,
-		CategoryType:   req.CategoryType,
-	})
-	if freePaymentData.TotalOrderNum > 0 {
+	paymentMethodIncomes := make([]business_data_resp.PaymentMethodIncome, 0)
+	for _, payment := range paymentData.PaymentList {
+		if payment.PaymentCode == 0 {
+			freePaymentData.PaymentName = payment.PaymentName
+			freePaymentData.TotalOrderNum = freePaymentData.TotalOrderNum + payment.TotalOrderNum
+			freePaymentData.TotalPaymentAmount = decimal.NewFromFloat(freePaymentData.TotalPaymentAmount).Add(decimal.NewFromFloat(payment.TotalPaymentAmount)).InexactFloat64()
+			continue
+		} else {
+			paymentMethodIncomes = append(paymentMethodIncomes, business_data_resp.PaymentMethodIncome{
+				Name:     payment.PaymentName,
+				OrderNum: int(payment.TotalOrderNum),
+				Amount:   payment.TotalPaymentAmount,
+				Code:     payment.PaymentCode,
+			})
+		}
+	}
+
+	if !req.NotQueryFree && freePaymentData.TotalOrderNum > 0 {
 		paymentMethodIncomes = append(paymentMethodIncomes, business_data_resp.PaymentMethodIncome{
 			Name:     freePaymentData.PaymentName,
 			OrderNum: int(freePaymentData.TotalOrderNum),

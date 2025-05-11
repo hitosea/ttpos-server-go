@@ -59,7 +59,9 @@ func (s *ERPMonthlyStatisticsService) ConvertERPMonthlyStatistics() error {
 		fmt.Println(fmt.Sprintf("erpMonthlyStatistics: %+v", erp))
 		form := model.WarehouseMonthlyForm{
 			BaseModel: model.BaseModel{
-				Uuid: uint64(erp.ID),
+				Uuid:       uint64(erp.ID),
+				CreateTime: erp.CreateTime,
+				UpdateTime: erp.UpdateTime,
 			},
 			Year:  erp.Year,
 			Month: erp.Month,

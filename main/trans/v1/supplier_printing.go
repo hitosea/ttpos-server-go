@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/utils"
@@ -62,7 +63,7 @@ func (s *SupplierPrintingService) GetSupplierPrintingList() ([]*SupplierPrinting
 func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 	supplierPrintings, err := s.GetSupplierPrintingList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 
 	for _, supplierPrinting := range supplierPrintings {
@@ -89,12 +90,12 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 		// 档口产品关联ID列表
 		productIDList, err := s.parseIdList(supplierPrinting.ProductIDs)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		for _, productID := range productIDList {
 			id, err := utils.GetID()
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 			fmt.Println(fmt.Sprintf("id: %d", id))
 			// 转换档口产品关联数据
@@ -110,19 +111,19 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 			}
 			_, err = base.NewProductPrinterProductItemRepo(s.targetDB).CreateProductPrinterProductItem(productPrinterProductItem)
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		}
 
 		// 档口打印机ID列表
 		printerIDList, err := s.parseIdList(supplierPrinting.PrinterID)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		for _, printerID := range printerIDList {
 			id, err := utils.GetID()
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 			fmt.Println(fmt.Sprintf("id: %d", id))
 			// 转换档口打印机数据
@@ -138,18 +139,18 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 			}
 			_, err = base.NewProductPrinterItemRepo(s.targetDB).CreateProductPrinterItem(productPrinterItem)
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		}
 		// 档口区域ID列表
 		regionIDList, err := s.parseIdList(supplierPrinting.AreaID)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		for _, regionID := range regionIDList {
 			id, err := utils.GetID()
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 			fmt.Println(fmt.Sprintf("id: %d", id))
 			// 转换档口区域数据
@@ -165,12 +166,13 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 			}
 			_, err = base.NewProductPrinterRegionRepo(s.targetDB).CreateProductPrinterRegion(productPrinterRegion)
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		}
 		// 档口打印机. 转换商品打印（档口）数据
 		productPrinter := model.ProductPrinter{
 			BaseModel: model.BaseModel{
+				ID:         uint(supplierPrinting.ID),
 				Uuid:       uint64(supplierPrinting.ID),
 				CreateTime: supplierPrinting.CreateTime,
 				UpdateTime: supplierPrinting.UpdateTime,
@@ -185,7 +187,7 @@ func (s *SupplierPrintingService) ConvertSupplierPrinting() error {
 		}
 		_, err = base.NewProductPrinterRepo(s.targetDB).CreateProductPrinter(productPrinter)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

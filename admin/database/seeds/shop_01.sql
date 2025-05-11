@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单设置ID',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
     `service_fee_type` INT(10) NOT NULL DEFAULT 0 COMMENT '服务费类型, 0-免服务费 1-按固定金额 2-按比例-不收取税费 3-按比例-收取税费。如果服务费收费应用范围不包括该账单，则该账单的服务费类型为0',
-    `service_fee_value` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '服务费值,服务费类型为1时,服务费值为固定金额,服务费类型为2和3时,服务费值为%比例',
+    `service_fee_value` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '服务费值,服务费类型为1时,服务费值为固定金额,服务费类型为2和3时,服务费值为%比例',
     `service_apply` INT(10) NOT NULL DEFAULT 0 COMMENT '是否收取服务费，0-不收取 1-收取。根据后台的服务费应用范围决定',
     `tax_fee_type` INT(10) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-关闭消费税 1-商品未含税 2-商品已含税',
     `zero_rule` INT(10) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数',
@@ -699,7 +699,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_material` (
     `image_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '图片名称',
     `unit_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '单位ID',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '采购单价',
-    `stock_num` DECIMAL(12, 4) UNSIGNED NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
+    `stock_num` DECIMAL(14, 4) UNSIGNED NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
     `barcode_value` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '条形码值',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 1-上架 0-下架',
     `actual_sale_num` DECIMAL(12, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加',
@@ -907,7 +907,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `product_flavor_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品规格ID(仅商品使用)',
     `product_sauce_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品小料ID(仅小料使用)',
     `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包ID',
-    `stock_num` DECIMAL(12, 4) NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
+    `stock_num` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '库存数量',
     `barcode_value` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '条形码值',
     `is_default_select` INT(10) NOT NULL DEFAULT 0 COMMENT '是否默认选择, 0-否 1-是',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-下架 1-上架. 同步商品包的状态',
@@ -916,7 +916,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_product_flavor_uuid` (`product_flavor_uuid`),
+    INDEX `idx_product_package_uuid` (`product_package_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品BOM表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_related_material` (
@@ -1026,7 +1028,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡ID',
     `card_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡类型ID',
     `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员ID',
-    `expire_time` INT(11) NOT NULL DEFAULT 0 COMMENT '截止日期(时间戳)',
+    `expire_time` BIGINT NOT NULL DEFAULT 0 COMMENT '截止日期(时间戳)',
     `discount` decimal(12, 4) NOT NULL DEFAULT 1 COMMENT '折扣,单位%, 如80%为打8折，discount值为0.8 .不随后台改变,按领取时的折扣。后续会员卡类型折扣改变时,不改变此字段',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳),领取时间',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -1039,7 +1041,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_card_log` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡领取记录ID',
     `price` DECIMAL(14, 2) NOT NULL DEFAULT 0 COMMENT '价格,会员卡价格,不随后台改变,记录领取时的价格',
     `discount` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '折扣,单位%,不随后台改变,记录领取时的折扣',
-    `expire` INT(11) NOT NULL DEFAULT 0 COMMENT '有效期限,单位:月, 0为永久有效,不随后台改变,记录领取时的有效期限',
+    `expire` BIGINT NOT NULL DEFAULT 0 COMMENT '有效期限,单位:月, 0为永久有效,不随后台改变,记录领取时的有效期限',
     `member_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员名称,不随后台改变,当无法用member_uuid获取会员信息时,用此字段',
     `member_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员电话,不随后台改变,当无法用member_uuid获取会员信息时,用此字段',
     `member_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员编号,不随后台改变,当无法用member_uuid获取会员信息时,用此字段',
@@ -1278,7 +1280,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_warehouse_out_form_item` (
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_warehouse_out_form_uuid` (`warehouse_out_form_uuid`),
+    INDEX `idx_material_uuid` (`material_uuid`),
+    INDEX `idx_product_bom_uuid` (`product_bom_uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '出库单明细表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_loss_report_form` (
@@ -1972,6 +1977,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     `refund_payment_balance` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款支付余额',
     `refund_tax` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款税额',
     `no_refund_tax` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '不退税金额',
+    `is_meger` INT(10) NOT NULL DEFAULT 0 COMMENT '是否合单',
+    `is_special` INT(10) NOT NULL DEFAULT 0 COMMENT '是否特殊订单',
     `refund_service_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款服务费',
     `refund_discount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款优惠折扣',
     `refund_discount_member` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款会员折扣',
@@ -1981,7 +1988,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_duty_no` (`duty_no`),
+    INDEX `idx_desk_uuid` (`desk_uuid`),
+    INDEX `idx_complete_time` (`complete_time`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '销售统计表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_statistics_payment` (
@@ -1998,7 +2008,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_payment` (
     `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_duty_no` (`duty_no`),
+    INDEX `idx_desk_uuid` (`desk_uuid`),
+    INDEX `idx_complete_time` (`complete_time`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '支付统计表';
 
 
@@ -2014,6 +2027,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     `product_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品单价: 未含税',
     `product_sale_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品销售价: 规格+加料',
     `product_final_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品最终价',
+    `flavor_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品原价(规格价)',
+    `sauce_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '加料价格',
     `product_num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
     `tax_rate` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '税率',
     `tax_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '税费',
@@ -2027,7 +2042,12 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX idx_refund_time (refund_time),
+    INDEX idx_sale_bill_uuid (sale_bill_uuid),
+    INDEX idx_duty_no (duty_no),
+    INDEX idx_desk_uuid (desk_uuid),
+    INDEX idx_complete_time (complete_time)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品统计表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_statistics_member` (
@@ -2047,7 +2067,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_member` (
     `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX idx_duty_no (duty_no),
+    INDEX idx_complete_time (complete_time)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '会员统计表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_statistics_member_payment` (
@@ -2062,7 +2084,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_member_payment` (
     `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
-    UNIQUE KEY `unique_uuid` (`uuid`)
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX idx_duty_no (duty_no),
+    INDEX idx_complete_time (complete_time),
+    INDEX idx_payment_method_uuid (payment_method_uuid)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '会员支付统计表';
 
 SET FOREIGN_KEY_CHECKS = 1;

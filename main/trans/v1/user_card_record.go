@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -69,7 +70,7 @@ func (s *UserCardRecordService) GetUserCardRecordList() ([]*UserCardRecord, erro
 func (s *UserCardRecordService) ConvertUserCardRecord() error {
 	userCardRecords, err := s.GetUserCardRecordList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, userCardRecord := range userCardRecords {
 		fmt.Println(fmt.Sprintf("userCardRecord: %+v", userCardRecord))
@@ -80,7 +81,7 @@ func (s *UserCardRecordService) ConvertUserCardRecord() error {
 		}
 		user, err := userService.GetUserByID(uint(userCardRecord.UserID))
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		json, _ := json.Marshal(user)
 		fmt.Println("NickName:", user.NickName, "===========", string(json))
@@ -90,7 +91,7 @@ func (s *UserCardRecordService) ConvertUserCardRecord() error {
 		}
 		userCard, err := userCardService.GetUserCardByID(userCardRecord.CardID)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		memberCardLog := model.MemberCardLog{
 			BaseModel: model.BaseModel{
@@ -101,7 +102,7 @@ func (s *UserCardRecordService) ConvertUserCardRecord() error {
 			},
 			Price:              userCardRecord.PayPrice,
 			Discount:           userCardRecord.GetDiscount(),
-			Expire:             int(userCardRecord.ExpireTime),
+			Expire:             userCardRecord.ExpireTime,
 			MemberName:         user.NickName,
 			MemberPhone:        user.Mobile,
 			MemberNo:           strconv.Itoa(userCardRecord.UserID),
@@ -111,7 +112,7 @@ func (s *UserCardRecordService) ConvertUserCardRecord() error {
 		}
 		_, err = base.NewMemberCardLogRepo(s.targetDB).CreateMemberCardLog(memberCardLog)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/utils"
@@ -44,20 +45,20 @@ func (s *ProductUnitService) GetProductUnitList() ([]*ProductUnit, error) {
 func (s *ProductUnitService) ConvertProductUnit() error {
 	productUnits, err := s.GetProductUnitList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, productUnit := range productUnits {
 		fmt.Println(fmt.Sprintf("-------迁移product_unit: %+v", productUnit))
 		names := Names{}
 		err := names.GetNames(productUnit.UnitName)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		fmt.Println(fmt.Sprintf("product_unit_id: %d, product_unit_name: %+v", productUnit.UnitID, names))
 
 		id, err := utils.GetID()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
@@ -76,7 +77,7 @@ func (s *ProductUnitService) ConvertProductUnit() error {
 		}
 		_, err = base.NewProductUnitRepo(s.targetDB).CreateProductUnit(unit)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

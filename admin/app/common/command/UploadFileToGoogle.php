@@ -33,48 +33,48 @@ class UploadFileToGoogle extends Command
         //
         $storage = new \Google\Cloud\Storage\StorageClient(['keyFilePath' => $credentialsPath]);
 
-        // admin
-        dump("---------------------------------------------------");
-        dump("------------------处理平台端-----------------------");
-        dump("---------------------------------------------------");
-        $uploadFiles = Db::name('upload_file')
-            ->where('storage', 'local')
-            ->where(function ($query) {
-                $query->whereNull('url_param')->whereOr('url_param', '');
-            })
-            ->select();
+        // // admin
+        // dump("---------------------------------------------------");
+        // dump("------------------处理平台端-----------------------");
+        // dump("---------------------------------------------------");
+        // $uploadFiles = Db::name('upload_file')
+        //     ->where('storage', 'local')
+        //     ->where(function ($query) {
+        //         $query->whereNull('url_param')->whereOr('url_param', '');
+        //     })
+        //     ->select();
 
-        // 批量上传文件到谷歌云
-        foreach ($uploadFiles as $file) {
-            $imageSrc = root_path('public/uploads') . $file['save_name'];
-            $objectPath = $catalogue . '/' . $file['save_name'];
-            $object = $storage->bucket($bucket)->object($objectPath);
-            $url = $object->signedUrl(new \DateTime('+100 years'));
-            //
-            if (!$object->exists()) {
-                if (file_exists($imageSrc)) {
-                    $storage->bucket($bucket)->upload(file_get_contents($imageSrc), [
-                        'name' => $objectPath,
-                        'predefinedAcl' => 'publicRead' // 设置为公开访问
-                    ]);
-                    // 更新数据库中的存储类型为google
-                    Db::name('upload_file')->where('file_id', $file['file_id'])->update([
-                        'url_param' =>  explode('?', $url)[1],
-                        'file_url' => "https://storage.googleapis.com/$bucket/$catalogue",
-                    ]);
-                    //
-                    dump("文件处理成功: " . $imageSrc);
-                }
-            } else {
-                // 更新数据库中的存储类型为google
-                Db::name('upload_file')->where('file_id', $file['file_id'])->update([
-                    'url_param' =>  explode('?', $url)[1],
-                    'file_url' => "https://storage.googleapis.com/$bucket/$catalogue",
-                ]);
-                //
-                dump("文件处理成功: " . $imageSrc);
-            }
-        }
+        // // 批量上传文件到谷歌云
+        // foreach ($uploadFiles as $file) {
+        //     $imageSrc = root_path('public/uploads') . $file['save_name'];
+        //     $objectPath = $catalogue . '/' . $file['save_name'];
+        //     $object = $storage->bucket($bucket)->object($objectPath);
+        //     $url = $object->signedUrl(new \DateTime('+100 years'));
+        //     //
+        //     if (!$object->exists()) {
+        //         if (file_exists($imageSrc)) {
+        //             $storage->bucket($bucket)->upload(file_get_contents($imageSrc), [
+        //                 'name' => $objectPath,
+        //                 'predefinedAcl' => 'publicRead' // 设置为公开访问
+        //             ]);
+        //             // 更新数据库中的存储类型为google
+        //             Db::name('upload_file')->where('file_id', $file['file_id'])->update([
+        //                 'url_param' =>  explode('?', $url)[1],
+        //                 'file_url' => "https://storage.googleapis.com/$bucket/$catalogue",
+        //             ]);
+        //             //
+        //             dump("文件处理成功: " . $imageSrc);
+        //         }
+        //     } else {
+        //         // 更新数据库中的存储类型为google
+        //         Db::name('upload_file')->where('file_id', $file['file_id'])->update([
+        //             'url_param' =>  explode('?', $url)[1],
+        //             'file_url' => "https://storage.googleapis.com/$bucket/$catalogue",
+        //         ]);
+        //         //
+        //         dump("文件处理成功: " . $imageSrc);
+        //     }
+        // }
 
         // 处理商户
         $apps = Db::name('app')->select();
@@ -91,12 +91,12 @@ class UploadFileToGoogle extends Command
                 ->select();
             // 批量上传文件到谷歌云
             foreach ($uploadFiles as $file) {
-                $imageSrc = root_path('public/uploads') . $file['save_name'];
                 $objectPath = $catalogue . '/' . $file['save_name'];
                 $object = $storage->bucket($bucket)->object($objectPath);
                 $url = $object->signedUrl(new \DateTime('+100 years'));
                 //
                 if (!$object->exists()) {
+                    $imageSrc = root_path('public/uploads') . $file['save_name'];
                     if (file_exists($imageSrc)) {
                         $storage->bucket($bucket)->upload(file_get_contents($imageSrc), [
                             'name' => $objectPath,
@@ -117,7 +117,7 @@ class UploadFileToGoogle extends Command
                         'file_url' => "https://storage.googleapis.com/$bucket/$catalogue",
                     ]);
                     //
-                    dump("文件处理成功: " . $imageSrc);
+                    dump("文件处理成功: " . $file['save_name']);
                 }
             }
         }

@@ -2,6 +2,8 @@ package v1
 
 import (
 	"fmt"
+	"strings"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -57,11 +59,15 @@ func (s *PrinterService) ConvertPrinter() error {
 	printers, err := s.GetPrinterList()
 	printerTypes, err := s.GetPrinterTypeList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, printer := range printers {
 
 		fmt.Println(fmt.Sprintf("printer: %+v", printer))
+
+		printerConfig := strings.ReplaceAll(printer.PrinterConfig, "\\", "")
+		printerConfig = strings.ReplaceAll(printerConfig, "\"{", "{")
+		printerConfig = strings.ReplaceAll(printerConfig, "}\"", "}")
 
 		// 档口打印机
 		printer := model.Printer{
@@ -73,13 +79,13 @@ func (s *PrinterService) ConvertPrinter() error {
 			},
 			Name:            printer.PrinterName,
 			PrinterTypeUuid: s.parsePrinterType(printer.PrinterType, printerTypes),
-			ConfigJson:      printer.PrinterConfig,
+			ConfigJson:      printerConfig,
 			Copies:          printer.PrintTimes,
 			Sort:            printer.Sort,
 		}
 		_, err = base.NewPrinterRepo(s.targetDB).CreatePrinter(printer)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

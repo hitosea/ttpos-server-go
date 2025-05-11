@@ -217,3 +217,8 @@ const (
 	ReturnOrderProductTypeSaleOrderBuffetCustomer = 2 // 销售订单顾客
 	ReturnOrderProductTypeBuffetAddTimeProduct    = 3 // 自助餐加钟商品
 )
+
+const (
+	RankTypeSaleNum    = 1 // 按销售数量
+	RankTypeSaleAmount = 2 // 按销售金额
+)

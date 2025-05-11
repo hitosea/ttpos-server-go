@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 
@@ -40,7 +41,7 @@ func (s *CallService) GetCallList() ([]*Call, error) {
 func (s *CallService) ConvertCall() error {
 	calls, err := s.GetCallList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 	for _, call := range calls {
 		fmt.Println(fmt.Sprintf("call: %+v", call))
@@ -57,7 +58,7 @@ func (s *CallService) ConvertCall() error {
 		}
 		_, err := base.NewCustomerCallRepo(s.targetDB).CreateCustomerCall(customerCall)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 	}
 	return nil

@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/utils"
@@ -37,7 +38,7 @@ func (r *AttributeRepository) GetAttributeList() ([]Attribute, error) {
 	var attributes []Attribute
 	err := r.db.Find(&attributes).Error
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err)
 	}
 	return attributes, nil
 }
@@ -45,7 +46,7 @@ func (r *AttributeRepository) GetAttributeList() ([]Attribute, error) {
 func (r *AttributeRepository) ConvertAttribute() error {
 	attributes, err := r.GetAttributeList()
 	if err != nil {
-		return err
+		return errors.WithMessage(err)
 	}
 
 	for _, attribute := range attributes {
@@ -53,13 +54,13 @@ func (r *AttributeRepository) ConvertAttribute() error {
 		names := Names{}
 		err := names.GetNames(attribute.AttributeName)
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		fmt.Println(fmt.Sprintf("attribute_id: %d, attribute_name: %+v", attribute.AttributeID, names))
 
 		id, err := utils.GetID()
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 		fmt.Println(fmt.Sprintf("id: %d", id))
 
@@ -75,7 +76,7 @@ func (r *AttributeRepository) ConvertAttribute() error {
 			fmt.Println(fmt.Sprintf("attribute_group: %+v", attributeGroup))
 			_, err = base.NewProductAttributeGroupRepo(r.targetDB).CreateProductAttributeGroup(attributeGroup)
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		} else {
 			// 创建商品属性
@@ -87,7 +88,7 @@ func (r *AttributeRepository) ConvertAttribute() error {
 			}
 			_, err = base.NewProductAttributeRepo(r.targetDB).CreateProductAttribute(productAttribute)
 			if err != nil {
-				return err
+				return errors.WithMessage(err)
 			}
 		}
 	}

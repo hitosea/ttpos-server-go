@@ -36,7 +36,7 @@ class Table extends TableModel
             $model = $model->like('desk_no', $params['search']);
         }
         // 查询列表数据
-        return $model->order(['create_time' => 'desc'])->paginate($params);
+        return $model->order(['a.id' => 'desc'])->paginate($params);
     }
 
     /**
