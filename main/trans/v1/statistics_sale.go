@@ -56,12 +56,15 @@ type JOrder struct {
 	OrderProducts []JOrderProduct           `gorm:"foreignKey:OrderID;references:OrderID"` // 订单商品
 	OrderPayTypes []JOrderPayType           `gorm:"foreignKey:OrderID;references:OrderID"` // 订单支付类型
 	OrderRefunds  []JOrderRefundDestination `gorm:"foreignKey:OrderID;references:OrderID"` // 订单退款left join (
+
+	SubOrderProducts []JOrderProduct `gorm:"foreignKey:SubOrderID;references:OrderID"` // 子订单商品
 }
 
 // 订单商品
 type JOrderProduct struct {
 	OrderProductID                uint64  `gorm:"column:order_product_id;primaryKey;comment:订单id"`
 	OrderID                       uint64  `gorm:"column:order_id;comment:订单id"`
+	SubOrderID                    uint64  `gorm:"column:sub_order_id;comment:子订单id"`
 	IsReturn                      int     `gorm:"column:is_return;comment:是否退菜 0-否 1-是"`
 	TotalNum                      int     `gorm:"column:total_num;comment:购买数量"`
 	ProductPrice                  float64 `gorm:"column:product_price;comment:商品价格"`
@@ -72,8 +75,9 @@ type JOrderProduct struct {
 	ProductDiscountMoney          float64 `gorm:"column:product_discount_money;comment:优惠折扣后与原价总差额(包含数量)"`
 	ProductServiceFee             float64 `gorm:"column:product_service_fee;comment:商品服务费"`
 	RefundNum                     int     `gorm:"column:refund_num;comment:退款数量"`
-	product_discount_money        float64 `gorm:"column:refund_discount_money;comment:退款优惠折扣"`
+	RefundDiscountMoney           float64 `gorm:"column:refund_discount_money;comment:退款优惠折扣"`
 	TaxCalcType                   int     `gorm:"column:tax_calc_type;comment:是否含税 0-关闭 1-已含税 2-未含税"`
+	IsSendKitchen                 int     `gorm:"column:is_send_kitchen;comment:是否发送厨房 0-否 1-是"`
 
 	OrderProductReturns []JOrderProductReturn `gorm:"foreignKey:OrderProductID;references:OrderProductID"` // 订单商品退款
 }
@@ -171,7 +175,7 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 		var oldOrders []JOrder
 		var newOrders []model.StatisticsSale
 		db1 := s.db
-		db1.Preload("OrderProducts").
+		db1 = db1.Preload("OrderProducts").
 			Preload("OrderPayTypes").
 			Preload("OrderRefunds").
 			Preload("OrderProducts.OrderProductReturns").
@@ -180,8 +184,8 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 			Where("parent_id = 0").
 			Where("is_merge = 0").
 			Where("is_delete = 0").
-			Where("delete_time = 0").
-			Limit(pageSize).Offset((page - 1) * pageSize).Find(&oldOrders)
+			Where("delete_time = 0")
+		db1.Limit(pageSize).Offset((page - 1) * pageSize).Find(&oldOrders)
 		if len(oldOrders) < pageSize {
 			isContinue = false
 		}
@@ -307,7 +311,9 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 
 					if isFree {
 						if isStatFree {
-							orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
+							if orderProduct.IsSendKitchen == 1 {
+								orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
+							}
 							orderServiceTax = orderServiceTax.Add(productServiceTax)
 						}
 					} else {
@@ -316,11 +322,15 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 								isSateGive = orderProduct.IsFree
 							}
 							if isSateGive == 1 {
-								orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
-								orderServiceTax = orderServiceTax.Add(productServiceTax)
+								if orderProduct.IsSendKitchen == 1 {
+									orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
+								}
 							}
+							orderServiceTax = orderServiceTax.Add(productServiceTax)
 						} else {
-							orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
+							if orderProduct.IsSendKitchen == 1 {
+								orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
+							}
 							orderServiceTax = orderServiceTax.Add(productServiceTax)
 						}
 					}
