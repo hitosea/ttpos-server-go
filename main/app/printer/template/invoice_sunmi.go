@@ -176,7 +176,7 @@ func (t *invoiceSunmiTemplate) GetPrintContent(
 		printer.LineFeed(2)
 	} else {
 		for key, paymentOrder := range saleOrder.PaymentOrders {
-			printer.PrintInColumns(paymentOrder.PaymentMethod.Name, t.base.GetPriceAndUnit(paymentOrder.Amount))
+			printer.PrintInColumns(paymentOrder.PaymentMethod.GetName(), t.base.GetPriceAndUnit(paymentOrder.Amount))
 			printer.LineFeed()
 			if key < len(saleOrder.PaymentOrders)-1 {
 				printer.LineFeed(2)

@@ -553,7 +553,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			for _, paymentOrder := range saleOrder.PaymentOrders {
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: 280, Align: pkg.AlignLeft},
-					pkg.ColumnConfig{Text: paymentOrder.PaymentMethod.Name, Width: 0, Align: pkg.AlignRight},
+					pkg.ColumnConfig{Text: paymentOrder.PaymentMethod.GetName(), Width: 0, Align: pkg.AlignRight},
 				)
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: t.base.Translate("实收金额"), Width: 280, Align: pkg.AlignLeft},

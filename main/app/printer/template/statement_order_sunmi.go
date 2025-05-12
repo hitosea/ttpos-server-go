@@ -554,7 +554,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 			for _, paymentOrder := range saleOrder.PaymentOrders {
 				printer.PrintInColumns(
 					t.base.Translate("支付方式"),
-					paymentOrder.PaymentMethod.Name,
+					paymentOrder.PaymentMethod.GetName(),
 				)
 				printer.PrintInColumns(
 					t.base.Translate("实收金额"),

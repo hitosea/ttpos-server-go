@@ -333,7 +333,15 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 		})
 		if !ok {
 			list = append(list, CountPaymentRespList{
-				PaymentName:        utils.IfString(payment.PaymentCode == 0, i18n.Translate(ctx.GetLanguage(), "免单"), payment.PaymentName),
+				PaymentName: func() string {
+					if payment.PaymentCode == 0 {
+						return i18n.Translate(ctx.GetLanguage(), "免单")
+					}
+					if payment.PaymentName == "" {
+						return "-"
+					}
+					return payment.PaymentName
+				}(),
 				PaymentCode:        payment.PaymentCode,
 				TotalOrderNum:      payment.TotalOrderNum.Int64,
 				TotalPaymentAmount: payment.TotalPaymentAmount.Float64,
@@ -357,7 +365,12 @@ func (s *statisticsSrv) CountPayment(ctx context.Context, req CountReq) CountPay
 		})
 		if !ok {
 			list = append(list, CountPaymentRespList{
-				PaymentName:        memberPayment.PaymentName,
+				PaymentName: func() string {
+					if memberPayment.PaymentName == "" {
+						return "-"
+					}
+					return memberPayment.PaymentName
+				}(),
 				PaymentCode:        memberPayment.PaymentCode,
 				TotalOrderNum:      memberPayment.TotalOrderNum,
 				TotalPaymentAmount: memberPayment.TotalPaymentAmount,
@@ -396,7 +409,12 @@ func (s *statisticsSrv) CountPaymentDays(ctx context.Context, req CountReq, days
 		for _, payment := range paymentData {
 			if payment.Day.String == day {
 				paymentList = append(paymentList, CountPaymentRespList{
-					PaymentName:        payment.PaymentName,
+					PaymentName: func() string {
+						if payment.PaymentName == "" {
+							return "-"
+						}
+						return payment.PaymentName
+					}(),
 					PaymentCode:        payment.PaymentCode,
 					TotalOrderNum:      payment.TotalOrderNum.Int64,
 					TotalPaymentAmount: payment.TotalPaymentAmount.Float64,
@@ -424,7 +442,12 @@ func (s *statisticsSrv) CountMemberPayment(ctx context.Context, req CountReq) Co
 	)
 	for _, payment := range paymentData {
 		list = append(list, CountPaymentRespList{
-			PaymentName:        payment.PaymentName,
+			PaymentName: func() string {
+				if payment.PaymentName == "" {
+					return "-"
+				}
+				return payment.PaymentName
+			}(),
 			PaymentCode:        payment.PaymentCode,
 			TotalOrderNum:      payment.TotalOrderNum.Int64,
 			TotalPaymentAmount: payment.TotalPaymentAmount.Float64,
@@ -452,7 +475,12 @@ func (s *statisticsSrv) CountMemberPaymentDays(ctx context.Context, req CountReq
 		for _, payment := range paymentData {
 			if payment.Day.String == day {
 				paymentList = append(paymentList, CountPaymentRespList{
-					PaymentName:        payment.PaymentName,
+					PaymentName: func() string {
+						if payment.PaymentName == "" {
+							return "-"
+						}
+						return payment.PaymentName
+					}(),
 					PaymentCode:        payment.PaymentCode,
 					TotalOrderNum:      payment.TotalOrderNum.Int64,
 					TotalPaymentAmount: payment.TotalPaymentAmount.Float64,

@@ -164,7 +164,7 @@ func (t *invoiceCodesoftTemplate) GetPrintContent(
 	} else {
 		for key, paymentOrder := range saleOrder.PaymentOrders {
 			printer.SetLineSpacing(50)
-			printer.AppendText(t.base.PrintText(paymentOrder.PaymentMethod.Name, "", t.base.GetPriceAndUnit(paymentOrder.Amount), width))
+			printer.AppendText(t.base.PrintText(paymentOrder.PaymentMethod.GetName(), "", t.base.GetPriceAndUnit(paymentOrder.Amount), width))
 			printer.LineFeed()
 			if key < len(saleOrder.PaymentOrders)-1 {
 				printer.LineFeed(2)

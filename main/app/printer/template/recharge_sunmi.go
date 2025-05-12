@@ -101,7 +101,7 @@ func (t *rechargeSunmiPrinterTemplate) GetPrintContent(
 	printer.LineFeed(1)
 	printer.SetLineSpacing(45)
 	for _, paymentOrder := range order.PaymentOrders {
-		printer.PrintInColumns(t.base.Translate("支付方式"), paymentOrder.PaymentMethod.Name)
+		printer.PrintInColumns(t.base.Translate("支付方式"), paymentOrder.PaymentMethod.GetName())
 		printer.PrintInColumns(t.base.Translate("实收金额"), t.base.GetPriceAndUnit(paymentOrder.Amount))
 		if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
 			printer.PrintInColumns(t.base.Translate("找零"), t.base.Amount(order.ChargeDue))
