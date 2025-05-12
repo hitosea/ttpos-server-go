@@ -274,6 +274,11 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.SetFontWeight(1)
 		img.SetFontSize(20)
 		img.SetAlignment(pkg.AlignLeft)
+		// 桌台备注
+		if saleBill.Remark != "" {
+			img.AppendText(saleBill.Remark)
+			img.LineFeed(1)
+		}
 		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银员"), saleOrder.CashierName))
 		img.LineFeed(1)
 		if payTime != "" {
