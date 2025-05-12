@@ -6418,14 +6418,15 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			qrcodeUrl = paymentMethod.QrcodeFile.GetUrl(baseUrl)
 		}
 		methodItem := resp.PaymentMethodItem{
-			Source:      paymentMethod.Source,
-			SourceText:  paymentMethod.GetSourceText(ctx.GetLanguage()),
-			Uuid:        paymentMethod.Uuid,
-			PaymentName: paymentMethod.PaymentName,
-			FeePercent:  paymentMethod.FeePercent,
-			Logo:        logoUrl,
-			Qrcode:      qrcodeUrl,
-			Code:        paymentMethod.Code,
+			Source:        paymentMethod.Source,
+			SourceText:    paymentMethod.GetSourceText(ctx.GetLanguage()),
+			Uuid:          paymentMethod.Uuid,
+			PaymentName:   paymentMethod.PaymentName,
+			PaymentMethod: paymentMethod.Name,
+			FeePercent:    paymentMethod.FeePercent,
+			Logo:          logoUrl,
+			Qrcode:        qrcodeUrl,
+			Code:          paymentMethod.Code,
 		}
 		methodItems = append(methodItems, methodItem)
 

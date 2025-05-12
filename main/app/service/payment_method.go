@@ -1,7 +1,6 @@
 package service
 
 import (
-	"go.uber.org/zap"
 	"slices"
 	"strings"
 	"ttpos-server-go/app/constant"
@@ -13,6 +12,8 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
+
+	"go.uber.org/zap"
 )
 
 // IPaymentMethodSrv 定义支付方式服务接口
@@ -116,14 +117,15 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 			qrcode = method.QrcodeFile.GetUrl(baseUrl)
 		}
 		paymentMethodItems = append(paymentMethodItems, resp.PaymentMethodItem{
-			SourceText:  i18n.Translate(i18n.GetAcceptLanguage(ctx.GetGin()), constant.PaymentMethodSourceTextMap[method.Source]),
-			Uuid:        method.Uuid,
-			PaymentName: method.PaymentName,
-			FeePercent:  method.FeePercent,
-			Logo:        logo,
-			Qrcode:      qrcode,
-			Code:        method.Code,
-			Source:      method.Source,
+			SourceText:    i18n.Translate(i18n.GetAcceptLanguage(ctx.GetGin()), constant.PaymentMethodSourceTextMap[method.Source]),
+			Uuid:          method.Uuid,
+			PaymentName:   method.PaymentName,
+			PaymentMethod: method.Name,
+			FeePercent:    method.FeePercent,
+			Logo:          logo,
+			Qrcode:        qrcode,
+			Code:          method.Code,
+			Source:        method.Source,
 		})
 	}
 	return resp.PaymentMethodList{List: paymentMethodItems}
