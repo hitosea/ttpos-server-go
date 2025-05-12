@@ -171,7 +171,7 @@ func (t *invoiceImgTemplate) GetPrintContent(
 		for key, paymentOrder := range saleOrder.PaymentOrders {
 			img.SetTextLineHeight(40)
 			img.PrintInColumns(
-				pkg.ColumnConfig{Text: paymentOrder.PaymentMethodName, Width: 320, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 20},
+				pkg.ColumnConfig{Text: paymentOrder.PaymentMethod.Name, Width: 320, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 20},
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(paymentOrder.Amount), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 20},
 			)
 			if key < len(saleOrder.PaymentOrders)-1 {

@@ -194,7 +194,7 @@ func (t *invoiceXprinterTemplate) GetPrintContent(
 		printer.LineFeed(2)
 	} else {
 		for key, paymentOrder := range saleOrder.PaymentOrders {
-			printer.AppendText(t.base.PrintText(paymentOrder.PaymentMethodName, "", t.base.GetPriceAndUnit(paymentOrder.Amount), width))
+			printer.AppendText(t.base.PrintText(paymentOrder.PaymentMethod.Name, "", t.base.GetPriceAndUnit(paymentOrder.Amount), width))
 			printer.LineFeed()
 			if key < len(saleOrder.PaymentOrders)-1 {
 				printer.LineFeed(2)

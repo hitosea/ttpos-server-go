@@ -86,7 +86,7 @@ func (t *rechargeXPrinterTemplate) GetPrintContent(
 	printer.SetLineSpacing(90)
 	// 支付方式
 	for _, paymentOrder := range order.PaymentOrders {
-		printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), "", paymentOrder.PaymentMethodName, width, 20, 0, 28) + "\n")
+		printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), "", paymentOrder.PaymentMethod.Name, width, 20, 0, 28) + "\n")
 		printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(paymentOrder.Amount), width, 34))
 		if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
 			printer.AppendText(t.base.PrintText(t.base.Translate("找零"), "", t.base.Amount(order.ChargeDue), width, 34))

@@ -165,7 +165,7 @@ func (t *invoiceCompaxTemplate) GetPrintContent(
 	} else {
 		for key, paymentOrder := range saleOrder.PaymentOrders {
 			printer.SetLineSpacing(50)
-			printer.AppendText(t.base.PrintText(paymentOrder.PaymentMethodName, "", t.base.GetPriceAndUnit(paymentOrder.Amount), currencyWidth))
+			printer.AppendText(t.base.PrintText(paymentOrder.PaymentMethod.Name, "", t.base.GetPriceAndUnit(paymentOrder.Amount), currencyWidth))
 			if key < len(saleOrder.PaymentOrders)-1 {
 				printer.LineFeed(1)
 			}
