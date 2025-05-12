@@ -14,7 +14,6 @@
         </el-form-item>
         <el-form-item :label="$t('起始日期')">
           <div class="block">
-            <span class="demonstration"></span>
             <el-date-picker
               v-model="formInline.date"
               type="daterange"
@@ -103,6 +102,7 @@
 <script>
   import Aselect from '@/components/a-select/index.vue';
   import UserApi from '@/api/user.js';
+  import dayjs from '@/utils/dayjs';
   export default {
     components: {
       Aselect,
@@ -132,7 +132,9 @@
         searchLoading: '',
       };
     },
-    created() {
+    mounted() {
+      // js获取当天时间 日期格式 YYYY-MM-DD
+      this.formInline.date = [dayjs(), dayjs()];
       /*获取列表*/
       this.getTableList();
     },

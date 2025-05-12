@@ -13,6 +13,21 @@
         <el-form-item :label="$t('会员卡名称')">
           <el-input v-model="formInline.card_name" :placeholder="$t('请输入会员卡名称')" @input="onSearch"></el-input>
         </el-form-item>
+        <el-form-item :label="$t('领取时间')">
+          <div class="block">
+            <el-date-picker
+              v-model="formInline.date"
+              type="daterange"
+              value-format="YYYY-MM-DD"
+              range-separator="~"
+              :start-placeholder="$t('开始日期')"
+              :end-placeholder="$t('结束日期')"
+              clearable
+              @change="onSearch"
+            >
+            </el-date-picker>
+          </div>
+        </el-form-item>
         <el-form-item>
           <el-button size="small" type="primary" icon="Search" class="search-button" @click="onSearch">
             {{ $t('查询') }}
@@ -92,6 +107,7 @@
   import Aselect from '@/components/a-select/index.vue';
   import CardApi from '@/api/card.js';
   import expire from '../dialog/expire.vue';
+  import dayjs from '@/utils/dayjs';
   export default {
     components: {
       expire,
@@ -113,13 +129,16 @@
         formInline: {
           card_name: '',
           status: '',
+          date: '',
         },
         open_edit: false,
         userModel: {},
         searchLoading: '',
       };
     },
-    created() {
+    mounted() {
+      // js获取当天时间 日期格式 YYYY-MM-DD
+      this.formInline.date = [dayjs(), dayjs()];
       /*获取列表*/
       this.getTableList();
     },
