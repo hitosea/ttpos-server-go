@@ -1977,6 +1977,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     `refund_payment_balance` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款支付余额',
     `refund_tax` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款税额',
     `no_refund_tax` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '不退税金额',
+    `extend_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '扩展价格',
     `is_meger` INT(10) NOT NULL DEFAULT 0 COMMENT '是否合单',
     `is_special` INT(10) NOT NULL DEFAULT 0 COMMENT '是否特殊订单',
     `refund_service_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款服务费',
