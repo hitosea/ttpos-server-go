@@ -63,7 +63,7 @@ var (
 		"desk_uuid",
 		"is_meger",
 		"is_special",
-		"SUM(product_price + product_tax + service_fee + service_tax + no_refund_tax + payment_fee - refund_tax - refund_service_fee - refund_fee) AS sale_amount",
+		"SUM(product_price + product_tax + service_fee + service_tax + no_refund_tax + payment_fee - refund_tax - refund_service_fee - refund_fee + extend_price) AS sale_amount",
 		"SUM(payment_amount - refund_amount - payment_balance) AS received_amount",
 		"SUM(product_price) AS product_price",
 		"SUM(product_origin_price) AS product_origin_price",
@@ -353,7 +353,7 @@ func (r *StatisticsRepo) CountArea(opts ...DBOption) []model.StatisticsAreaData 
 		Select(countAreaSelect, "dr.uuid AS area_id").
 		Joins("LEFT JOIN " + deskTable + " ON ss.desk_uuid = d.uuid").
 		Joins("LEFT JOIN " + deskRegionTable + " ON d.region_uuid = dr.uuid").
-		Where("ss.desk_uuid > 0 and dr.uuid > 0").
+		Where("ss.desk_uuid > 0 and dr.uuid > 0 and dr.delete_time = 0").
 		Group("dr.uuid").
 		Order("dr.id ASC").
 		Find(&result)
