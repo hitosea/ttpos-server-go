@@ -183,6 +183,7 @@
   import Aselect from '@/components/a-select/index.vue';
   import PurchaseApi from '@/api/purchase.js';
   import { useUserStore } from '@/store';
+  import dayjs from '@/utils/dayjs';
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
   const sType = supplier.value?.s_type;
@@ -232,7 +233,10 @@
         searchLoading: '',
       };
     },
-    mounted() {
+    async mounted() {
+      // js获取当天时间 日期格式 YYYY-MM-DD
+      this.searchForm.date = [dayjs(), dayjs()];
+      await this.$nextTick();
       this.getData();
     },
     methods: {

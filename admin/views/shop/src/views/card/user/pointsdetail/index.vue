@@ -123,9 +123,10 @@
         searchLoading: '',
       };
     },
-    mounted() {
+    async mounted() {
       // js获取当天时间 日期格式 YYYY-MM-DD
       this.formInline.date = [dayjs(), dayjs()];
+      await this.$nextTick();
       /*获取列表*/
       this.getTableList();
     },
