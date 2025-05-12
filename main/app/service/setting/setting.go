@@ -1191,6 +1191,12 @@ func (s *Srv) VerifyPassword(ctx context.Context, source string, typ string, pas
 
 // CheckUpdate 检查更新
 func (s *Srv) CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error) {
+	// 不等于安卓就返回空
+	userAgent := ctx.GetGin().GetHeader("User-Agent") + ";" + ctx.GetGin().GetHeader("platform") // 记录平台
+	if utils.GetPlatform(userAgent) != 1 {
+		return resp.UpdateInfo{}, errors.NewWithCode(constant.CodeSystemError, "当前平台暂不支持应用内更新")
+	}
+	//
 	type UpdateData struct {
 		Code int    `json:"code"`
 		Msg  string `json:"msg"`
