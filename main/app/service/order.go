@@ -5078,8 +5078,8 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 	}
 	// 检查税费类型是否改变：商品含税、商品未含税
 	if oldSetting.TaxFeeType != newSetting.TaxFeeType {
-		oldTaxFeeType := parseTaxFeeType(oldSetting.TaxFeeType)
-		newTaxFeeType := parseTaxFeeType(newSetting.TaxFeeType)
+		oldTaxFeeType := parseTaxFeeType(ctx.GetLanguage(), oldSetting.TaxFeeType)
+		newTaxFeeType := parseTaxFeeType(ctx.GetLanguage(), newSetting.TaxFeeType)
 		res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, resp.Product{
 			Uuid: oldSetting.Uuid,
 			LocaleName: dto.LocaleResponse{
@@ -5204,14 +5204,14 @@ func parseServiceFeeType(language string, serviceFeeType uint) string {
 	}
 }
 
-func parseTaxFeeType(taxFeeType uint) string {
+func parseTaxFeeType(language string, taxFeeType uint) string {
 	switch taxFeeType {
 	case constant.TaxFeeTypeTax:
-		return "商品已含税"
+		return i18n.Translate(language, "商品已含税")
 	case constant.TaxFeeTypeNoTax:
-		return "商品未含税"
+		return i18n.Translate(language, "商品未含税")
 	default:
-		return "关闭消费税"
+		return i18n.Translate(language, "关闭消费税")
 	}
 }
 
