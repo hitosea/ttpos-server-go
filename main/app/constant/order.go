@@ -81,8 +81,8 @@ const (
 const (
 	SaleBillSettingServiceFeeTypeNone       = 0 // 不收取服务费
 	SaleBillSettingServiceFeeTypeFixed      = 1 // 固定服务费
-	SaleBillSettingServiceFeeTypePercent    = 2 // 按比例-不收取税费
-	SaleBillSettingServiceFeeTypePercentTax = 3 // 按比例-收取税费
+	SaleBillSettingServiceFeeTypePercent    = 2 // 按比例收取服务费（服务费不收税）
+	SaleBillSettingServiceFeeTypePercentTax = 3 // 按比例收取服务费（服务费收税）
 
 	SaleBillSettingTaxFeeTypeNone       = 0 // 不收取税费
 	SaleBillSettingTaxFeeTypePercent    = 1 // 商品未含税
