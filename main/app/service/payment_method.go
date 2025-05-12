@@ -119,8 +119,8 @@ func (s *paymentMethodSrv) GetList(ctx context.Context, typ string) resp.Payment
 		paymentMethodItems = append(paymentMethodItems, resp.PaymentMethodItem{
 			SourceText:    i18n.Translate(i18n.GetAcceptLanguage(ctx.GetGin()), constant.PaymentMethodSourceTextMap[method.Source]),
 			Uuid:          method.Uuid,
-			PaymentName:   method.PaymentName,
-			PaymentMethod: method.Name,
+			PaymentName:   method.GetPaymentName(),
+			PaymentMethod: method.GetName(),
 			FeePercent:    method.FeePercent,
 			Logo:          logo,
 			Qrcode:        qrcode,
