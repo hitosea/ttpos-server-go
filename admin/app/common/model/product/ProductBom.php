@@ -338,11 +338,12 @@ class ProductBom extends BaseModel
         }
 
         // 排序
-        $sort = $params['sort'] ?? '';
-        $orderSql = ' ORDER BY update_time DESC';
+        $sort = isset($params['sort']) ? trim($params['sort']) : '';
+        $orderSql = ' ORDER BY ';
         if ($sort && in_array($sort, ['asc', 'desc'])) {
-            $orderSql = " ORDER BY stock_num {$sort}";
+            $orderSql .= "stock_num {$sort},";
         }
+        $orderSql .= "update_time DESC";
 
         $querySql = "SELECT " . implode(',', [
             'type',
