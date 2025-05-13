@@ -190,6 +190,7 @@ func (s *productSrv) GetProductCategoryList(dbId uint64) (product_resp.ProductCa
 		repository.NewCommonRepo().WhereByStatus(1),
 		repository.NewCommonRepo().SortWithIsSpecial("DESC"),
 		repository.NewCommonRepo().SortWithSort("ASC"),
+		repository.NewCommonRepo().SortWithCreateTime("DESC"),
 		repository.NewCommonRepo().SortWithID("DESC"),
 	)
 	if err != nil {
