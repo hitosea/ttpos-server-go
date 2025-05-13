@@ -1575,5 +1575,9 @@
     "规格/单位/加料": "Özellik/Birim/Ekstralar",
     "添加失败，请检查系统的语言设置。": "Ekleme başarısız oldu, lütfen sistem dil ayarlarını kontrol edin.",
     "历史用餐订单": "Geçmiş yemek siparişleri",
-    "请选择必点类型": "Lütfen gerekli öğe türünü seçin"
+    "请选择必点类型": "Lütfen gerekli öğe türünü seçin",
+    "服务费计算": "Hizmet bedeli hesaplama",
+    "请选择服务费计算": "Lütfen hizmet bedeli hesaplamasını seçin",
+    "商品价格合计": "Ürün fiyat toplamı",
+    "商品惠后价": "İndirim sonrası ürün fiyatı"
 }

@@ -1,0 +1,1 @@
+function t(){try{const t=new Date;if(isNaN(t.getTime()))return null;const n=t.getFullYear(),a=String(t.getMonth()+1).padStart(2,"0"),e=String(t.getDate()).padStart(2,"0");return"".concat(n,"-").concat(a,"-").concat(e)}catch(t){return null}}export{t as d};
