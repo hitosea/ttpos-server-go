@@ -5097,8 +5097,8 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 	}
 	// 检查服务费类型是否改变
 	if oldSetting.ServiceFeeType != newSetting.ServiceFeeType {
-		oldServiceFeeType := parseServiceFeeType(oldSetting.ServiceFeeType)
-		newServiceFeeType := parseServiceFeeType(newSetting.ServiceFeeType)
+		oldServiceFeeType := parseServiceFeeType(ctx.GetLanguage(), oldSetting.ServiceFeeType)
+		newServiceFeeType := parseServiceFeeType(ctx.GetLanguage(), newSetting.ServiceFeeType)
 		res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, resp.Product{
 			Uuid: oldSetting.Uuid,
 			LocaleName: dto.LocaleResponse{
@@ -5116,7 +5116,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 	}
 	// 检查固定服务费是否改变
 	if oldSetting.ServiceFeeType == newSetting.ServiceFeeType && oldSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypeFixed && oldSetting.ServiceFeeValue != newSetting.ServiceFeeValue {
-		oldServiceFeeType := parseServiceFeeType(oldSetting.ServiceFeeType)
+		oldServiceFeeType := parseServiceFeeType(ctx.GetLanguage(), oldSetting.ServiceFeeType)
 		res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, resp.Product{
 			Uuid: oldSetting.Uuid,
 			LocaleName: dto.LocaleResponse{
@@ -5134,7 +5134,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 	}
 	// 检查"按比例-不收取税费"比例是否改变
 	if oldSetting.ServiceFeeType == newSetting.ServiceFeeType && oldSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypePercent && oldSetting.ServiceFeeValue != newSetting.ServiceFeeValue {
-		oldServiceFeeType := parseServiceFeeType(oldSetting.ServiceFeeType)
+		oldServiceFeeType := parseServiceFeeType(ctx.GetLanguage(), oldSetting.ServiceFeeType)
 		res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, resp.Product{
 			Uuid: oldSetting.Uuid,
 			LocaleName: dto.LocaleResponse{
@@ -5152,7 +5152,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 	}
 	// 检查"按比例-收取税费"比例是否改变
 	if oldSetting.ServiceFeeType == newSetting.ServiceFeeType && oldSetting.ServiceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax && oldSetting.ServiceFeeValue != newSetting.ServiceFeeValue {
-		oldServiceFeeType := parseServiceFeeType(oldSetting.ServiceFeeType)
+		oldServiceFeeType := parseServiceFeeType(ctx.GetLanguage(), oldSetting.ServiceFeeType)
 		res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, resp.Product{
 			Uuid: oldSetting.Uuid,
 			LocaleName: dto.LocaleResponse{
@@ -5174,14 +5174,14 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 		res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, resp.Product{
 			Uuid: oldSetting.Uuid,
 			LocaleName: dto.LocaleResponse{
-				ZH:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
-				TH:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
-				EN:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
-				ZHTW: fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
-				JA:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
-				KO:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
-				MY:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
-				TR:   fmt.Sprintf("%v -> %v", parseServiceApply(oldSetting.ServiceApply), parseServiceApply(newSetting.ServiceApply)),
+				ZH:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
+				TH:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
+				EN:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
+				ZHTW: fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
+				JA:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
+				KO:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
+				MY:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
+				TR:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
 			},
 		})
 		return res, newSetting, nil
@@ -5189,18 +5189,18 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 	return nil, nil, nil
 }
 
-func parseServiceFeeType(serviceFeeType uint) string {
+func parseServiceFeeType(language string, serviceFeeType uint) string {
 	switch serviceFeeType {
 	case constant.SaleBillSettingServiceFeeTypeNone:
-		return "不收取服务费"
+		return i18n.Translate(language, "不收取服务费")
 	case constant.SaleBillSettingServiceFeeTypeFixed:
-		return "固定服务费"
+		return i18n.Translate(language, "固定服务费")
 	case constant.SaleBillSettingServiceFeeTypePercent:
-		return "按比例不收取税费"
+		return i18n.Translate(language, "按比例收取服务费（服务费不收税）")
 	case constant.SaleBillSettingServiceFeeTypePercentTax:
-		return "按比例收取税费"
+		return i18n.Translate(language, "按比例收取服务费（服务费收税）")
 	default:
-		return "未知"
+		return i18n.Translate(language, "未知")
 	}
 }
 
@@ -5215,14 +5215,14 @@ func parseTaxFeeType(taxFeeType uint) string {
 	}
 }
 
-func parseServiceApply(serviceApply uint) string {
+func parseServiceApply(language string, serviceApply uint) string {
 	switch serviceApply {
 	case 1:
-		return "订单在服务费应用范围内"
+		return i18n.Translate(language, "订单在服务费应用范围内")
 	case 0:
-		return "订单不在服务费应用范围内"
+		return i18n.Translate(language, "订单不在服务费应用范围内")
 	default:
-		return "未知"
+		return i18n.Translate(language, "未知")
 	}
 }
 
