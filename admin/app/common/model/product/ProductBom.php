@@ -303,7 +303,7 @@ class ProductBom extends BaseModel
         }
 
         // 搜索库存
-        $stockNum = $params['stock_num'] ?? '';
+        $stockNum = isset($params['stock_num']) ? trim($params['stock_num']) : '';
         if ($stockNum) {
             $where = "(stock_num < :stock_num)";
             if (!$whereSql) {
