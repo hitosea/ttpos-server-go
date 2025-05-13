@@ -29,7 +29,7 @@ class PointsLog extends PointsLogModel
             });
         }
         // 搜索时间段
-        if (isset($query['date']) && $query['date'] != '') {
+        if (isset($query['date']) &&  is_array($query['date']) && count($query['date']) == 2) {
             $model = $model->where('log.create_time', 'between', [strtotime($query['date'][0]), strtotime($query['date'][1]) + 86399]);
         }
         // 获取列表数据

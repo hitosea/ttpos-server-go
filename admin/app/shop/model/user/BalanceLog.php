@@ -35,7 +35,7 @@ class BalanceLog extends BalanceLogModel
             });
         }
         // 搜索时间段
-        if (isset($data['date']) && $data['date'] != '') {
+        if (isset($data['date']) && is_array($data['date']) && count($data['date']) == 2) {
             $model = $model->where('log.create_time', 'between', [strtotime($data['date'][0]), strtotime($data['date'][1]) + 86399]);
         }
         // 余额变动场景
