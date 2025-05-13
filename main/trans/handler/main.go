@@ -38,14 +38,14 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 		}
 	}
 
-	// 设备
-	{
-		shopBindRecordService := v1.NewShopBindRecordService(sourceDB, targetDB)
-		err = shopBindRecordService.ConvertShopBindRecord()
-		if err != nil {
-			return errors.WithMessage(err)
-		}
-	}
+	// // 设备
+	// {
+	// 	shopBindRecordService := v1.NewShopBindRecordService(sourceDB, targetDB)
+	// 	err = shopBindRecordService.ConvertShopBindRecord()
+	// 	if err != nil {
+	// 		return errors.WithMessage(err)
+	// 	}
+	// }
 
 	// 设置
 	{
