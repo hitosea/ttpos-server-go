@@ -3963,17 +3963,23 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 					}
 				}
 				if isAutoAdd {
-					if finish {
+					opts = append(opts, repository.WithCanCloseMustPlanView()) // 设置可以关闭必点弹窗
+					return s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
+				} else {
+					productMustPlanList = &resp.ProductMustPlanList{
+						List: mustPlan.List,
+					}
+
+					// 如果在可以关闭必点弹窗的场景下，且已经自动加购完成
+					if option.CanCloseMustPlanView && finish {
 						// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
 						err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(saleBillUuid)
 						if err != nil {
 							return nil, errors.WithMessage(err)
 						}
-					}
-					return s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
-				} else {
-					productMustPlanList = &resp.ProductMustPlanList{
-						List: mustPlan.List,
+						// 清空必点方案, 不给前端返回必点数据
+						productMustPlanList = nil
+
 					}
 				}
 			}
