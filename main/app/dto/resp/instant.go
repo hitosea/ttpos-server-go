@@ -1,6 +1,8 @@
 package resp
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/dto"
+)
 
 // 创建点餐订单响应
 type CreateInstantOrderResp struct {
@@ -57,12 +59,21 @@ type ProductPackageList struct {
 	List []InstantMustPlanProductStat `json:"list"`
 }
 
+// ProductAutoAddReq 自动加购商品请求参数
+type ProductAutoAddReq struct {
+	FlavorUuid        uint64   `json:"flavor_uuid"`    // 某个规格商品ID
+	SauceUuidList     []uint64 `json:"sauce_uuid"`     // 小料ID列表
+	AttributeUuidList []uint64 `json:"attribute_uuid"` // 属性ID列表
+	Num               uint     `json:"num"`            // 加购数量
+}
+
 type InstantMustPlanProductStat struct {
-	Product     InstantMustPlanProduct `json:"product"`
-	IsAutoAdd   bool                   `json:"is_auto_add"`  // 是否是自动加购的商品。是则自动加入购物车，并且不显示在“必选方案”的弹框中
-	SelectedNum uint                   `json:"selected_num"` // 已选数量
-	MustNum     uint                   `json:"must_num"`     // 这个商品必选点的数量。还需点数量=must_num-selected_num
-	NeedNum     uint                   `json:"need_num"`     // 这个商品还需要点的数量。还需点数量=must_num-selected_num
+	Product           InstantMustPlanProduct `json:"product"`
+	IsAutoAdd         bool                   `json:"is_auto_add"`          // 是否是自动加购的商品。是则自动加入购物车
+	ProductAutoAddReq ProductAutoAddReq      `json:"product_auto_add_req"` // 自动加购商品请求参数
+	SelectedNum       uint                   `json:"selected_num"`         // 已选数量
+	MustNum           uint                   `json:"must_num"`             // 这个商品必选点的数量。还需点数量=must_num-selected_num
+	NeedNum           uint                   `json:"need_num"`             // 这个商品还需要点的数量。还需点数量=must_num-selected_num
 }
 type InstantMustPlanProduct struct {
 	Uuid            uint64             `json:"uuid"`             // 商品product_package的uuid

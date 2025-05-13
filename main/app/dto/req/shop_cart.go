@@ -12,8 +12,8 @@ type OrderCartProductAddReq struct {
 	SaleBillUuid      uint64   `json:"sale_bill_uuid"`  // 销售账单ID。可选，参数不填时表示要新建销售账单，添加商品后创建点餐销售账单。
 	SaleOrderUuid     uint64   `json:"sale_order_uuid"` // 销售订单ID。可选，参数不填时默认加购到第一个销售订单中
 	FlavorUuid        uint64   `json:"flavor_uuid"`     // 某个规格商品ID
-	SauceUuidList     []uint64 `json:"sauce_uuid"`      // 小料ID
-	AttributeUuidList []uint64 `json:"attribute_uuid"`  // 规格ID
+	SauceUuidList     []uint64 `json:"sauce_uuid"`      // 小料ID列表
+	AttributeUuidList []uint64 `json:"attribute_uuid"`  // 属性ID列表
 	Operation         string   `json:"operation"`       // 操作类型。add: 加购，sub: 减购. 不填，默认是加购
 	MustPlanUuid      uint64   `json:"must_plan_uuid"`  // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
 	// 后端内部使用的参数

@@ -6028,7 +6028,7 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 	return cartInfo, nil
 }
 
-type InstanceAutoFlavorProduct map[uint64]*resp.InstantMustPlanProduct
+type InstanceAutoFlavorProduct map[uint64]resp.ProductAutoAddReq
 
 // InstantOrderMustPlan 获取点餐必点方案
 func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, bool, error) {
@@ -6062,14 +6062,14 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	// 遍历得到要自动加购的商品
 	for i, plan := range mustPlanList {
 		// product_bom_uuid => *resp.InstantMustPlanProduct
-		autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProduct) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
+		autoFlavorProduct := make(map[uint64]resp.ProductAutoAddReq) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
 		for j, product := range plan.Products.List {
 			if product.IsAutoAdd {
 				planProduct := mustPlanList[i].Products.List[j].Product
 				productFlavorBomUuid := planProduct.Flavors.List[0].Uuid
 				productFlavorStockNum := planProduct.Flavors.List[0].StockNum
 				if productFlavorStockNum > 0 {
-					autoFlavorProduct[productFlavorBomUuid] = &planProduct
+					autoFlavorProduct[productFlavorBomUuid] = product.ProductAutoAddReq
 				}
 			}
 		}
@@ -6117,7 +6117,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	return mustPlan, isAutoAdd, nil
 }
 
-type AutoFlavorProduct map[uint64]*resp.InstantMustPlanProductStat
+type AutoFlavorProduct map[uint64]resp.ProductAutoAddReq
 
 func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64, mealNum uint, h5AutoAdd bool, noAutoAdd bool) (*resp.InstantProductMustPlanResp, bool, error) {
 	db := ctx.GetDB()
@@ -6147,14 +6147,15 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 	// 遍历得到要自动加购的商品
 	for i, plan := range mustPlanList {
 		// product_bom_uuid => *resp.InstantMustPlanProduct
-		autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProductStat) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
+		autoFlavorProduct := make(map[uint64]resp.ProductAutoAddReq) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
 		for j, product := range plan.Products.List {
 			if product.IsAutoAdd {
 				planProduct := mustPlanList[i].Products.List[j].Product
 				productFlavorBomUuid := planProduct.Flavors.List[0].Uuid
 				productFlavorStockNum := planProduct.Flavors.List[0].StockNum
 				if productFlavorStockNum > 0 {
-					autoFlavorProduct[productFlavorBomUuid] = &mustPlanList[i].Products.List[j]
+					product.ProductAutoAddReq.Num = mustPlanList[i].Products.List[j].MustNum // 商品数量
+					autoFlavorProduct[productFlavorBomUuid] = product.ProductAutoAddReq
 				}
 			}
 		}
@@ -6229,16 +6230,18 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, plan
 		saleBillUuid := uint64(0)
 		saleOrderUuid := uint64(0)
 		for mustPlanUuid, autoFlavorProduct := range planAutoFlavorProduct {
-			for flavorUuid, _ := range autoFlavorProduct {
+			for flavorUuid, autoAddReq := range autoFlavorProduct {
 				if saleBillUuid != 0 {
 					ctx.Log().Debug("新建的销售账单号", zap.Any("saleBillUuid", saleBillUuid))
 				}
 				ctx.Log().Debug("添加商品", zap.Any("flavorUuid", flavorUuid))
 				shopCart, errAdd := s.InstantOrderCartProductAdd(ctx, req.OrderCartProductAddReq{
-					SaleBillUuid:  saleBillUuid,
-					SaleOrderUuid: saleOrderUuid,
-					FlavorUuid:    flavorUuid,
-					MustPlanUuid:  mustPlanUuid,
+					SaleBillUuid:      saleBillUuid,
+					SaleOrderUuid:     saleOrderUuid,
+					FlavorUuid:        autoAddReq.FlavorUuid,
+					AttributeUuidList: autoAddReq.AttributeUuidList,
+					SauceUuidList:     autoAddReq.SauceUuidList,
+					MustPlanUuid:      mustPlanUuid,
 				})
 				if errAdd != nil {
 					return nil, errAdd
@@ -6261,11 +6264,13 @@ func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, planAutoFla
 	productParams := make([]req.ProductParams, 0)
 
 	for mustPlanUuid, autoFlavorProduct := range planAutoFlavorProduct {
-		for flavorUuid, stat := range autoFlavorProduct {
+		for flavorUuid, autoAddReq := range autoFlavorProduct {
 			productParams = append(productParams, req.ProductParams{
-				FlavorProductBomUuid: flavorUuid,
-				MustPlanUuid:         mustPlanUuid,
-				Num:                  stat.MustNum,
+				FlavorProductBomUuid:            flavorUuid,
+				ProductPackageAttributeUuidList: autoAddReq.AttributeUuidList,
+				SauceProductBomUuidList:         autoAddReq.SauceUuidList,
+				MustPlanUuid:                    mustPlanUuid,
+				Num:                             autoAddReq.Num,
 			})
 		}
 	}
@@ -6306,14 +6311,14 @@ func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (
 	// 遍历得到要自动加购的商品
 	for i, plan := range mustPlanList {
 		// product_bom_uuid => *resp.InstantMustPlanProduct
-		autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProduct) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
+		autoFlavorProduct := make(map[uint64]resp.ProductAutoAddReq) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
 		for j, product := range plan.Products.List {
 			if product.IsAutoAdd {
 				planProduct := mustPlanList[i].Products.List[j].Product
 				productFlavorBomUuid := planProduct.Flavors.List[0].Uuid
 				productFlavorStockNum := planProduct.Flavors.List[0].StockNum
 				if productFlavorStockNum > 0 {
-					autoFlavorProduct[productFlavorBomUuid] = &planProduct
+					autoFlavorProduct[productFlavorBomUuid] = product.ProductAutoAddReq
 				}
 			}
 		}
