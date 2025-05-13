@@ -6257,6 +6257,32 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, plan
 	} else {
 		// 如果有未挂单的点餐销售账单。未有这个需求，暂时不做
 	}
+
+	// 如果购物车信息为空，则返回空
+	if shopCartInfo == nil {
+		return nil, nil
+	}
+
+	// 如果已经完成了必点，则关闭必点弹窗
+	finish := true
+	if shopCartInfo.MustPlans != nil {
+		for _, plan := range shopCartInfo.MustPlans.List {
+			if plan.NeedNum != 0 {
+				finish = false
+			}
+		}
+	}
+
+	if finish {
+		// 关闭必点弹窗
+		shopCartInfo.MustPlans = nil
+		// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
+		err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(shopCartInfo.SaleBillUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+	}
+
 	return shopCartInfo, nil
 }
 
