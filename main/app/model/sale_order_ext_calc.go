@@ -160,59 +160,6 @@ func (model *SaleOrder) calcCookingSaleOrder(products []*SaleOrderProduct, servi
 	return &calc
 }
 
-// 计算销售订单原服务费金额。销售订单原服务费金额= 销售订单商品的原服务费之和。
-// 不受服务费、按固定服务费费收时，销售订单商品的原服务费=0 或 销售订单商品的原服务费=固定费用
-// 按比例收服务费时，商品未含税时，销售订单商品的原服务费=销售订单商品的SalePrice * 服务费费率
-// 按比例收服务费时，商品已含税时，销售订单商品的原服务费=销售订单商品的未含税价格 * 服务费费率 = （销售订单商品的SalePrice - 销售订单商品的商品消费税税费） * 服务费费率 = （销售订单商品的SalePrice - （销售订单商品的商品消费税税费）） * 服务费费率
-func (model *SaleOrder) calcOrderOriginServiceFee(serviceFeeRate float64, serviceFeeValue float64, taxFeeType int) float64 {
-	originServiceFee := decimal.NewFromFloat(0)
-	// 不是按比例收取服务费时
-	if serviceFeeRate <= 0 {
-		return serviceFeeValue
-	} else {
-		// 如果按比例收取
-		for _, saleOrderProduct := range model.SaleOrderProducts {
-			if saleOrderProduct.SaleOrderUuid != model.Uuid {
-				continue
-			}
-			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
-				continue
-			}
-			serviceFee := saleOrderProduct.calcServiceFee(saleOrderProduct.calcSalePrice(), serviceFeeRate, taxFeeType)
-			originServiceFee = originServiceFee.Add(decimal.NewFromFloat(serviceFee))
-		}
-		return originServiceFee.Truncate(3).Round(2).InexactFloat64()
-	}
-}
-
-// 计算销售订单的原商品服务费税费。销售订单的原商品服务费税费 = 销售订单的各个商品的原服务费税费之和
-// 不是按比例收取服务费时，服务费税费=0
-// 按比例收取服务费且收取服务费税费时，销售订单的原商品服务费税费 = 销售订单的各个商品的原服务费税费之和
-// 商品的原服务费税费= 原服务费 * 服务费税率
-func (model *SaleOrder) calcOrderOriginServiceTaxFee(serviceFeeRate float64, taxFeeType int) float64 {
-	originServiceFee := decimal.NewFromFloat(0)
-	// 不是按比例收取服务费时
-	if serviceFeeRate <= 0 {
-		return 0
-	} else {
-		// 如果按比例收取
-		for _, saleOrderProduct := range model.SaleOrderProducts {
-			if saleOrderProduct.SaleOrderUuid != model.Uuid {
-				continue
-			}
-			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
-				continue
-			}
-			serviceFee := saleOrderProduct.calcServiceFee(saleOrderProduct.calcSalePrice(), serviceFeeRate, taxFeeType)
-			// 商品的原服务费税费= 原服务费 * 服务费税率
-			originServiceTaxFee := decimal.NewFromFloat(serviceFee).Mul(decimal.NewFromFloat(saleOrderProduct.TaxRate))
-			// 累加各个订单商品的服务费税费
-			originServiceFee = originServiceFee.Add(originServiceTaxFee)
-		}
-		return originServiceFee.InexactFloat64()
-	}
-}
-
 // 计算销售订单已经支付的金额。 销售订单已经支付的金额= 销售订单的所有支付单的支付金额之和
 func (model *SaleOrder) calcPayOrderAmount() float64 {
 	payAmount := decimal.NewFromFloat(0)

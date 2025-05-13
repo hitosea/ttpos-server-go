@@ -430,6 +430,13 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, 
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// 服务费计算基准，默认是商品惠后价
+	serviceFeeBase := uint(constant.SaleBillSettingServiceFeeBasePrice)
+	if serviceFeeSetting.ServiceFeeBase == settingResp.ServiceFeeBaseAmount {
+		serviceFeeBase = uint(constant.SaleBillSettingServiceFeeBaseAmount)
+	}
+
 	saleBillSetting := model.SaleBillSetting{
 		SaleBillUuid:     saleBillUuid,
 		ServiceFeeType:   serviceFeeType,
@@ -441,6 +448,7 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, 
 		IsStatGift:       isStatGift,
 		IsStatFree:       isStatFree,
 		ServiceApply:     serviceApply,
+		ServiceFeeBase:   serviceFeeBase,
 	}
 
 	return &saleBillSetting, nil
