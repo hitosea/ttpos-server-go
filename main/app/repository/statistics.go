@@ -275,7 +275,6 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 			Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
 			Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
 			Group("IF(pc.parent_uuid = 0, pp.category_uuid, pc.parent_uuid)").
-			Where("ppc.parent_uuid = 0").
 			Find(&result)
 	} else {
 		db.Table(statisticsProductTable).
