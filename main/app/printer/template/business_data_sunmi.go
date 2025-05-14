@@ -117,7 +117,7 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 			printer.LineFeed(1)
 		}
 		//
-		for _, income := range businessData.PaymentMethod.PaymentMethodIncomes {
+		for _, income := range businessData.ProductCategory.PaymentMethodIncomes {
 			if income.Code == -1 {
 				income.Name = t.base.Translate("免单金额")
 			}
