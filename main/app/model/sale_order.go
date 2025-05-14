@@ -88,13 +88,18 @@ func (model *SaleOrder) GetIndex() int {
 }
 
 // 判断订单是不是优惠折扣自动抹零。如果SaleBillSetting中的自动抹零规格与订单的自动抹零规格不一致，则返回false
-func (model *SaleOrder) IsAutoDiscount(setting SaleBillSetting) bool {
+func (model *SaleOrder) IsAutoZeroDiscount(setting SaleBillSetting) bool {
 	return model.ZeroRule == uint8(setting.ZeroRule)
+}
+
+// 判断订单是不是结账自动抹零。如果SaleBillSetting中的结账抹零规格与订单的结账抹零规格不一致，则返回false
+func (model *SaleOrder) IsAutoCheckoutZeroDiscount(setting SaleBillSetting) bool {
+	return model.ZeroCheckoutRule == uint8(setting.ZeroCheckoutRule)
 }
 
 // 获取自动抹零信息
 func (model *SaleOrder) GetAutoDiscountMessage(setting SaleBillSetting, lang string) string {
-	if model.IsAutoDiscount(setting) {
+	if model.IsAutoZeroDiscount(setting) {
 		return ParseAutoDiscountMessage(uint8(setting.ZeroRule), model.ZeroFee, lang)
 	}
 	return ""

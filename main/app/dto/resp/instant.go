@@ -222,6 +222,7 @@ type PaymentMethodAmount struct {
 	UnpaidAmount          float64 `json:"unpaid_amount"`            // 未收金额。用于显示在金额输入框，默认显示未收金额。未收金额=应收金额-实付金额。实付金额指去掉手续费为这笔订单支付的金额
 	ZeroAmount            float64 `json:"zero_amount"`              // 抹零金额。当支付方式为有手续费时，结账抹零金额为0。
 	ZeroRule              uint8   `json:"zero_rule"`                // 结账抹零规格。0-实款实收 1-抹分 2-抹角 3-抹元. 当支付方式为有手续费时，值为0 实款实收
+	IsAutoZero            bool    `json:"is_auto_zero"`             // 是否是自动抹零
 	PaymentMethodUuid     uint64  `json:"payment_method_uuid"`      // 支付方式uuid。表示这个amount信息是当前端选择这个支付方式时显示的
 	CommissionFee         float64 `json:"commission_fee"`           // 已付款的手续费。用于显示最终应收，前端显示的最终应收=应收金额+已付款的手续费+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）
 }

@@ -6507,6 +6507,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 				CommissionFee:         commissionFee,
 				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission),
 				ZeroAmount:            zeroFee, // 只有没有手续费时且支付方式不需要手续费才会抹零
+				IsAutoZero:            saleOrder.IsAutoCheckoutZeroDiscount(*saleBill.SaleBillSetting),
 				ZeroRule:              saleOrder.ZeroCheckoutRule,
 				PaymentMethodUuid:     methodItem.Uuid,
 			}
