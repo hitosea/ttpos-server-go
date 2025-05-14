@@ -101,6 +101,7 @@ type AmountInfo struct {
 	MemberDiscountAmount  float64 `json:"member_discount_amount"` // 会员优惠折扣金额
 	Amount                float64 `json:"amount"`                 // 总金额。商品未含税时，总金额=商品金额(折后)+服务费+税费。商品已含税时，总金额=商品金额（折后，含商品消费税）+服务费+税费（只有服务费税）
 	ProductNum            uint    `json:"product_num"`            // 总数量，用于点餐助手、平板端、h5
+	AutoDiscountMessage   string  `json:"auto_discount_message"`  // 优惠折扣-自动抹零信息. 如"优惠折扣自动抹零-抹分" "优惠折扣自动抹零-抹角" "优惠折扣自动抹零-四舍五入保留一位小数" "优惠折扣自动抹零-四舍五入保留整数"
 }
 
 // SimpleAmountInfo 简单金额信息。 用于h5购物车、点餐助手

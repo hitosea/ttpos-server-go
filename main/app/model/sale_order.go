@@ -87,6 +87,49 @@ func (model *SaleOrder) GetIndex() int {
 	return model.index
 }
 
+// 判断订单是不是优惠折扣自动抹零。如果SaleBillSetting中的自动抹零规格与订单的自动抹零规格不一致，则返回false
+func (model *SaleOrder) IsAutoDiscount(setting SaleBillSetting) bool {
+	return model.ZeroRule == uint8(setting.ZeroRule)
+}
+
+// 获取自动抹零信息
+func (model *SaleOrder) GetAutoDiscountMessage(setting SaleBillSetting, lang string) string {
+	if model.IsAutoDiscount(setting) {
+		return ParseAutoDiscountMessage(uint8(setting.ZeroRule), model.ZeroFee, lang)
+	}
+	return ""
+}
+
+// 解析自动抹零信息.  0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数
+func ParseAutoDiscountMessage(zeroRule uint8, zeroFee float64, lang string) string {
+	switch zeroRule {
+	case 1:
+		return translate(zeroRule, lang) + "：（" + fmt.Sprintf("%.2f", zeroFee) + "）"
+	case 2:
+		return translate(zeroRule, lang) + "：（" + fmt.Sprintf("%.2f", zeroFee) + "）"
+	case 3:
+		return translate(zeroRule, lang) + "：（" + fmt.Sprintf("%.2f", zeroFee) + "）"
+	case 4:
+		return translate(zeroRule, lang) + "：（" + fmt.Sprintf("%.2f", zeroFee) + "）"
+	}
+	return ""
+}
+
+// "优惠折扣自动抹零-抹分"
+func translate(zeroRule uint8, lang string) string {
+	switch zeroRule {
+	case 1:
+		return i18n.Translate(lang, "优惠折扣自动抹零-抹分")
+	case 2:
+		return i18n.Translate(lang, "优惠折扣自动抹零-抹角")
+	case 3:
+		return i18n.Translate(lang, "优惠折扣自动抹零-四舍五入保留一位小数")
+	case 4:
+		return i18n.Translate(lang, "优惠折扣自动抹零-四舍五入保留整数")
+	}
+	return ""
+}
+
 // 判断销售订单是否已经结账
 func (model *SaleOrder) IsSettled() bool {
 	return model.Status == constant.SaleOrderStatusFinish

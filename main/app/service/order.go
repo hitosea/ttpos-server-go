@@ -3886,6 +3886,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 				DiscountAmount:        decimal.NewFromFloat(saleOrder.CustomDiscountFee).Round(2).InexactFloat64(),
 				MemberDiscountAmount:  saleOrder.MemberDiscountFee,
 				Amount:                saleOrder.GetAmount(),
+				AutoDiscountMessage:   saleOrder.GetAutoDiscountMessage(*shopCart.SaleBill.SaleBillSetting, ctx.GetLanguage()),
 			},
 		}
 		saleOrderList = append(saleOrderList, order)
