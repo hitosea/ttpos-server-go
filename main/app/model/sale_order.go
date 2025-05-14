@@ -99,6 +99,11 @@ func (model *SaleOrder) IsAutoCheckoutZeroDiscount(setting SaleBillSetting) bool
 
 // 获取自动抹零信息
 func (model *SaleOrder) GetAutoDiscountMessage(setting SaleBillSetting, lang string) string {
+	// 如果抹零金额为0，则不显示自动抹零信息
+	if model.ZeroFee == 0 {
+		return ""
+	}
+
 	if model.IsAutoZeroDiscount(setting) {
 		return ParseAutoDiscountMessage(uint8(setting.ZeroRule), model.ZeroFee, lang)
 	}
