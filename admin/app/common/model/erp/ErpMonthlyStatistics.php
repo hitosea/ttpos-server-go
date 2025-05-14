@@ -300,7 +300,6 @@ class ErpMonthlyStatistics extends BaseModel
             ->field('p.name as name,bom.create_time as create_time')
             ->leftJoin('product_package p', 'bom.product_package_uuid = p.uuid')
             ->whereNotIn('bom.uuid', $bomUuidList)
-            ->where('bom.product_flavor_uuid', '>', 0)
             ->where('p.create_time', '<=', $startTime)
             ->group('bom.product_package_uuid')
             ->limit(10)
