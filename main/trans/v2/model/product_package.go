@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strings"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	pkgUtils "ttpos-server-go/pkg/utils"
@@ -72,7 +73,7 @@ func NewProductPackage(product *v1.Product, db *gorm.DB) (*model.ProductPackage,
 	productBoms = append(productBoms, flavorBoms...)
 	productBoms = append(productBoms, sauceBoms...)
 
-	productPackageAttributeGroups, err := NewProductPackageAttributeGroup(uint64(product.ProductID), productAttrGroups)
+	productPackageAttributeGroups, err := NewProductPackageAttributeGroup(db, product.ProductAttr, uint64(product.ProductID), productAttrGroups)
 	if err != nil {
 		return nil, errors.WithMessage(err, "NewProductPackageAttributeGroup failed")
 	}
@@ -126,8 +127,51 @@ func NewProductPackage(product *v1.Product, db *gorm.DB) (*model.ProductPackage,
 	return m, nil
 }
 
-func NewProductPackageAttributeGroup(productPackageUuid uint64, productAttrGroup []*v1.ProductAttrGroup) ([]model.ProductPackageAttributeGroup, error) {
+func NewProductPackageAttributeGroup(db *gorm.DB, productAttrJson string, productPackageUuid uint64, productAttrGroup []*v1.ProductAttrGroup) ([]model.ProductPackageAttributeGroup, error) {
 	productPackageAttributeGroups := make([]model.ProductPackageAttributeGroup, 0)
+	isOldVersion := false
+	if len(productAttrJson) > 10 && !strings.Contains(productAttrJson, "attribute_ids") { // 保证只有这个特殊版本的数据才执行这个代码分支
+		for _, attrGroup := range productAttrGroup {
+			if len(attrGroup.AttributeIDs) == 0 {
+				isOldVersion = true
+			}
+		}
+	}
+
+	// 兼容版本，如果productAttrGroup.AttributeIDs为空，则从jjjfood_product_attribute和jjjfood_product_attribute_group表查询数据
+	if isOldVersion {
+		// 通过商品id查询商品属性组
+		productAttributeGroups, err := repository.NewCommonRepo(db).GetProductAttributeGroupListByProductID(productPackageUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "获取商品属性组失败")
+		}
+
+		productAttrGroupList := make([]*v1.ProductAttrGroup, 0)
+		for _, attrGroup := range productAttributeGroups {
+			attributeIDs := make([]int, 0)
+			defaultSelect := make([]int, 0)
+			for _, attr := range attrGroup.ProductAttributes {
+				if attr.ProductID != uint(productPackageUuid) {
+					continue
+				}
+				attributeIDs = append(attributeIDs, int(attr.AttributeID))
+				defaultSelect = append(defaultSelect, int(attr.DefaultSelect))
+			}
+
+			productAttrGroupList = append(productAttrGroupList, &v1.ProductAttrGroup{
+				ParentID:               int(attrGroup.AttributeID),
+				DefaultSelect:          defaultSelect,
+				AttributeIDs:           attributeIDs,
+				AttributeMaxSelect:     int(attrGroup.AttributeMaxSelect),
+				AttributeOpenMaxSelect: int(attrGroup.AttributeOpenMaxSelect),
+				AttributeRequired:      int(attrGroup.AttributeRequired),
+			})
+		}
+
+		// 用新转换的数据覆盖就数据
+		productAttrGroup = productAttrGroupList
+	}
+
 	for _, attrGroup := range productAttrGroup {
 		uuid, err := pkgUtils.GetID()
 		if err != nil {

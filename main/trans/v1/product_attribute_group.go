@@ -21,6 +21,8 @@ type ProductAttributeGroup struct {
 	AppID                  uint   `gorm:"default:0;comment:应用ID"`
 	CreateTime             int64  `gorm:"autoCreateTime;comment:创建时间"`
 	UpdateTime             int64  `gorm:"autoUpdateTime;comment:更新时间"`
+
+	ProductAttributes []*ProductAttribute `gorm:"foreignKey:GroupAttributeID;references:GroupAttributeID"`
 }
 
 type ProductAttributeGroupRepository interface {

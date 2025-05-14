@@ -12,6 +12,7 @@ type ICommonRepo interface {
 	GetProductTax(productID uint64, taxType uint) (*v1.ProductTax, error)
 	GetProductSKUs(productID uint64) ([]*v1.ProductSKU, error)
 	GetProductSpecList() ([]*v1.Spec, error)
+	GetProductAttributeGroupListByProductID(productID uint64) ([]*v1.ProductAttributeGroup, error)
 }
 
 func NewCommonRepo(db *gorm.DB) ICommonRepo {
@@ -52,4 +53,13 @@ func (s *CommonRepoImpl) GetProductSKUs(productID uint64) ([]*v1.ProductSKU, err
 		return nil, errors.WithMessage(err)
 	}
 	return productSKUs, nil
+}
+
+// GetProductAttributeGroupListByProductID 获取商品属性组列表
+func (s *CommonRepoImpl) GetProductAttributeGroupListByProductID(productID uint64) ([]*v1.ProductAttributeGroup, error) {
+	var productAttributeGroups []*v1.ProductAttributeGroup
+	if err := s.db.Preload("ProductAttributes").Where("product_id = ?", productID).Find(&productAttributeGroups).Error; err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productAttributeGroups, nil
 }
