@@ -313,8 +313,8 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 
 	db.Table(statisticsProductTable).
 		Select(
-			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) AS product_name",
-			"JSON_UNQUOTE(JSON_EXTRACT(pb.name, '$."+language+"')) AS flavor_name",
+			"CASE WHEN pp.name IS NOT NULL AND pp.name != '' THEN JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) ELSE '' END AS product_name",
+			"CASE WHEN pb.name IS NOT NULL AND pb.name != '' THEN JSON_UNQUOTE(JSON_EXTRACT(pb.name, '$."+language+"')) ELSE '' END AS flavor_name",
 			"pb.price AS sale_price",
 			"SUM(sp.product_num) AS sale_num",
 			"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
