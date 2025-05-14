@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
@@ -17,6 +18,7 @@ type ISaleBillRepo interface {
 	GetSaleBillListPage(pageNo, pageSize int, opts ...DBOption) ([]*model.SaleBill, int64, error)
 	GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error)
 	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
+	GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error) // 获取销售订单的拆单序号。用于操作日志展示
 	UpdateSaleBill(saleBill *model.SaleBill) error
 	UpdateSaleBillRecord(saleBill model.SaleBill) error
 	UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error
@@ -111,6 +113,40 @@ func (r *saleBillRepo) GetSaleBillByDeviceUuid(deviceUuid uint64) (*model.SaleBi
 		return nil, errors.WithMessage(err)
 	}
 	return &saleBill, nil
+}
+
+func (r *saleBillRepo) GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error) {
+	saleBill, err := r.GetSaleBill(
+		CommonRepo.WhereByUuid(saleBillUuid),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+		),
+	)
+	if err != nil {
+		// 如果销售账单不存在，返回-1 . 表示销售账单不存在或已经删除，则不展示这条订单操作记录
+		if strings.Contains(err.Error(), gorm.ErrRecordNotFound.Error()) {
+			return -1, nil
+		}
+		return 0, errors.WithMessage(err)
+	}
+	saleOrder := saleBill.GetSaleOrder(saleOrderUuid)
+	if saleOrder == nil {
+		// 如果销售订单不存在，返回-1 . 表示销售订单不存在或已经删除，则不展示这条订单操作记录
+		return -1, nil
+	}
+	if !saleBill.IsSplit() {
+		// 如果销售单没有拆单，返回0。操作记录不显示拆单序号前缀
+		return 0, nil
+	}
+
+	// 获取销售单的拆单序号
+	return saleOrder.GetIndex(), nil
 }
 
 func (r *saleBillRepo) UpdateSaleBill(saleBill *model.SaleBill) error {

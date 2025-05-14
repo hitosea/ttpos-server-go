@@ -1214,10 +1214,14 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 	language := ctx.GetLanguage()
 
 	for _, record := range orderRecordLists {
-		desc := s.getActionDescription(ctx, record, language)
+		actionDescription := s.getActionDescription(ctx, record, language)
+		if actionDescription.HideLog {
+			// 隐藏. 日志关联的订单已经被删除，故因此该订单的操作记录
+			continue
+		}
 		actionText := s.getActionText(record, language)
-		if desc != "" {
-			actionText = actionText + ": " + desc
+		if actionDescription.Desc != "" {
+			actionText = actionDescription.SplitMessage + actionText + ": " + actionDescription.Desc
 		}
 		realName := record.Operator.RealName
 		if record.Source == constant.SourceH5 {
