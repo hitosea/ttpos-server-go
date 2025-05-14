@@ -101,9 +101,6 @@
         PorductApi.takeCatParentList({}, true)
           .then((res) => {
             self.loading = false;
-            // console.log(res.data);
-            // Object.assign(self.category, res.data.list);
-            // console.log(self.category)
             this.category = res.data.list;
           })
           .catch((error) => {

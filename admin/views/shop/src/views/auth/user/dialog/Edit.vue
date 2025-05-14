@@ -156,7 +156,6 @@
               confirm_password: obj.confirm_password,
               access_id: obj.access_id,
             };
-            console.log(obj);
             self.form.role_id = res.data.role_arr;
           })
           .catch((error) => {

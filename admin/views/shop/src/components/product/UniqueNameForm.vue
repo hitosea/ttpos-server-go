@@ -276,12 +276,10 @@
 
   const focusLanguageKey = ref('');
   const handleFocus = (languageKey) => {
-    console.log('handleFocus', languageKey);
     focusLanguageKey.value = languageKey;
   };
 
   const handleBlur = async (languageKey) => {
-    console.log('handleBlur', languageKey);
     await nextTick();
     await new Promise((resolve) => setTimeout(resolve, 300));
     if (translateLoading.value) return;
