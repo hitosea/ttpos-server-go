@@ -4,8 +4,7 @@
     	时间：2019-10-26
     	描述：产品分类-修改
     -->
-  <el-dialog title="修改分类" v-model="dialogVisible" @close="dialogFormVisible" :close-on-click-modal="false"
-    :close-on-press-escape="false">
+  <el-dialog title="修改分类" v-model="dialogVisible" @close="dialogFormVisible" :close-on-click-modal="false" :close-on-press-escape="false">
     <el-form size="small" :model="form" label-position="top" :rules="formRules" ref="form">
       <el-form-item label="父级分类" :label-width="formLabelWidth">
         <el-select v-model="form.parent_id" label="无">
@@ -21,7 +20,7 @@
       <el-form-item label="分类图片" prop="image_id" :label-width="formLabelWidth">
         <el-row>
           <el-button type="primary" @click="openUpload">选择图片</el-button>
-          <div v-if="form.image_id!=''" class="img">
+          <div v-if="form.image_id != ''" class="img">
             <img :src="file_path" width="100" height="100" />
           </div>
         </el-row>
@@ -31,10 +30,10 @@
       </el-form-item>
     </el-form>
     <template #footer>
-    <div class="dialog-footer">
-      <el-button @click="dialogFormVisible">取 消</el-button>
-      <el-button type="primary" @click="addUser" :loading="loading">确 定</el-button>
-    </div>
+      <div class="dialog-footer">
+        <el-button @click="dialogFormVisible">取 消</el-button>
+        <el-button type="primary" @click="addUser" :loading="loading">确 定</el-button>
+      </div>
     </template>
     <!--上传图片组件-->
     <Upload v-if="isupload" :isupload="isupload" :type="type" @returnImgs="returnImgsFunc">上传图片</Upload>
@@ -46,7 +45,7 @@
   import Upload from '@/components/file/Upload.vue';
   export default {
     components: {
-      Upload
+      Upload,
     },
     data() {
       return {
@@ -56,27 +55,34 @@
           category_id: 0,
           name: '',
           image_id: '',
-          sort: ''
+          sort: '',
         },
         file_path: '',
         formRules: {
-          name: [{
-            required: true,
-            message: '请输入分类名称',
-            trigger: 'blur'
-          }],
-          image_id: [{
-            required: true,
-            message: '请上传分类图片',
-            trigger: 'blur'
-          }],
-          sort: [{
-            required: true,
-            message: '分类排序不能为空'
-          }, {
-            type: 'number',
-            message: '分类排序必须为数字'
-          }]
+          name: [
+            {
+              required: true,
+              message: '请输入分类名称',
+              trigger: 'blur',
+            },
+          ],
+          image_id: [
+            {
+              required: true,
+              message: '请上传分类图片',
+              trigger: 'blur',
+            },
+          ],
+          sort: [
+            {
+              required: true,
+              message: '分类排序不能为空',
+            },
+            {
+              type: 'number',
+              message: '分类排序必须为数字',
+            },
+          ],
         },
         /*左边长度*/
         formLabelWidth: '120px',
@@ -101,19 +107,16 @@
     },
     methods: {
       /*获取父级分类*/
-      getParentCategory: function() {
+      getParentCategory: function () {
         let self = this;
         PorductApi.storeCatParentList({}, true)
-            .then(res => {
-              self.loading = false;
-              // console.log(res.data);
-              // Object.assign(self.category, res.data.list);
-              // console.log(self.category)
-              this.category = res.data.list;
-            })
-            .catch(error => {
-              self.loading = false;
-            });
+          .then((res) => {
+            self.loading = false;
+            this.category = res.data.list;
+          })
+          .catch((error) => {
+            self.loading = false;
+          });
       },
       /*修改用户*/
       addUser() {
@@ -122,16 +125,18 @@
         self.$refs.form.validate((valid) => {
           if (valid) {
             self.loading = true;
-            PorductApi.takeCatEdit(params, true).then(data => {
-              self.loading = false;
-              this.$ElMessage({
-                message: '保存成功',
-                type: 'success'
+            PorductApi.takeCatEdit(params, true)
+              .then((data) => {
+                self.loading = false;
+                this.$ElMessage({
+                  message: '保存成功',
+                  type: 'success',
+                });
+                self.dialogFormVisible(true);
+              })
+              .catch((error) => {
+                self.loading = false;
               });
-              self.dialogFormVisible(true);
-            }).catch(error => {
-              self.loading = false;
-            });
           }
         });
       },
@@ -140,13 +145,13 @@
         if (e) {
           this.$emit('closeDialog', {
             type: 'success',
-            openDialog: false
-          })
+            openDialog: false,
+          });
         } else {
           this.$emit('closeDialog', {
             type: 'error',
-            openDialog: false
-          })
+            openDialog: false,
+          });
         }
       },
       /*上传*/
@@ -162,8 +167,7 @@
         }
         this.isupload = false;
       },
-
-    }
+    },
   };
 </script>
 
