@@ -61,6 +61,17 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 		logger.Logger.Error("获取门店设置失败", zap.Error(err))
 		fmt.Println("获取门店设置失败", zap.Error(err))
 	}
+
+	// 获取打印机设置
+	printerSetting, err := setting.GetPrinterSetting(ctx, nil)
+	if err != nil {
+		logger.Logger.Error("获取打印机设置失败", zap.Error(err))
+		fmt.Println("获取打印机设置失败", zap.Error(err))
+	}
+
+	// 设置语言
+	ctx.SetLanguage(printerSetting.DefaultLanguage)
+
 	// Initialize the pointer to avoid nil dereference
 	reqPrinterData := &template.PrintingBusinessData{}
 	// 获取参数
