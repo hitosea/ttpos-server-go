@@ -110,7 +110,7 @@ class Printer extends BaseModel
             'printerType',
         ])->hasWhere('printerType', function($q) {
             $q->where('key', '<>', 'FEI_E_YUN_TAG');
-        })->order(['sort' => 'asc'])->select();
+        })->where('printer.is_usb', 0)->order(['sort' => 'asc'])->select();
 
         foreach ($list as $item) {
             $printerType = [ 'value' => '', 'text' => '' ];
@@ -176,6 +176,7 @@ class Printer extends BaseModel
                     'text' => $item['printerType']['name_text'] ?? '',
                 ],
                 'sort' => $item['sort'],
+                'is_usb' => $item['is_usb'],
                 'create_time' => $item['create_time'],
                 'printer_config' => $item['printer_config'],
                 'is_use' => $item['is_use']

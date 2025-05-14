@@ -9,6 +9,7 @@ import (
 	"websocket/config"
 	"websocket/pkg/cache"
 	"websocket/pkg/database"
+	"websocket/pkg/logger"
 	"websocket/service"
 
 	"github.com/jinzhu/copier"
@@ -30,6 +31,11 @@ var rootCommand = &cobra.Command{
 		var cacheConfig cache.Config
 		_ = copier.Copy(&cacheConfig, &config.Redis)
 		cache.Init(cacheConfig)
+
+		// 初始化日志系统
+		if err := logger.Init(); err != nil {
+			log.Fatalf("Failed to initialize logger: %v", err)
+		}
 
 	},
 	Run: func(cmd *cobra.Command, args []string) {
