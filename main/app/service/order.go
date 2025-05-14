@@ -1220,6 +1220,9 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			continue
 		}
 		actionText := s.getActionText(record, language)
+		if record.Action == constant.OrderCheckoutDiscount && actionDescription.IsAutoCheckoutZero {
+			actionText = i18n.Translate(language, "结账自动抹零")
+		}
 		if actionDescription.Desc != "" {
 			actionText = actionDescription.SplitMessage + actionText + ": " + actionDescription.Desc
 		}
@@ -7249,6 +7252,43 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	saleOrderPaymentAmount := saleOrder.PaymentAmount
 	saleOrderChangeAmount := saleOrder.ChangeAmount
 	go func() {
+
+		// 结账前，发布"抹零"事件。如果优惠折扣自动抹零且抹零金额大于0，则发布"抹零"事件。
+		if saleOrder.IsAutoZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroFee > 0 {
+			event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountSaleOrderPayload{
+				BasePayload: event.BasePayload{ // 订单抹零
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  req.SaleBillUuid,
+					SaleOrderUuid: req.SaleOrderUuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				DiscountType:    constant.DiscountOperationLogTypeZeroSaleOrder,
+				RoundingType:    int(saleOrder.ZeroRule),
+				SpecialDiscount: saleOrder.ZeroFee, // ZeroFee这个字段是算好的抹零优惠金额。先计算好订单应付金额，再根据抹零规格进行抹零得到的结果
+				IsAuto:          true,
+			})
+		}
+
+		// 结账前，发布"结账抹零"事件。如果结账自动抹零且抹零金额大于0，则发布"结账抹零"事件
+		if saleOrder.IsAutoCheckoutZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroCheckoutFee > 0 {
+			s.bus.PublishCheckoutZeroSaleOrderEvent(event.CheckoutZeroSaleOrderPayload{
+				BasePayload: event.BasePayload{ // 结账抹零
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  req.SaleBillUuid,
+					SaleOrderUuid: req.SaleOrderUuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				Operation:       constant.OrderCheckoutDiscountAdd,
+				RoundingType:    int(saleOrder.ZeroCheckoutRule),
+				SpecialDiscount: saleOrder.ZeroCheckoutFee,
+				IsAuto:          true,
+			})
+		}
+
 		payTypes := make([]event.PayType, 0)
 		for _, paymentOrder := range infoResp.PaymentOrders.List {
 			payTypes = append(payTypes, event.PayType{

@@ -24,12 +24,14 @@ type DiscountPayload struct {
 	SpecialDiscount float64 `json:"special_discount"` // 优惠金额。整单打折后的优惠金额=会员折扣后的订单应收金额-订单应收金额
 	RoundingRate    float64 `json:"rounding_rate"`    // 打折率。如八折，则打折率是20； 如30%off，则打折率是30。统一展示格式为“优惠折扣：折扣-80%（￥50）”，无论是百分比打折还是百分比减免，都统一展示为百分比减免。
 	RoundingType    int     `json:"rounding_type"`    // 抹零规则 1:抹分 2:抹角 3:四舍五入保留一位小数 4:四舍五入到整数
+	IsAuto          bool    `json:"is_auto"`          // 是否自动抹零
 }
 
 type ActionDescription struct {
-	Desc         string `json:"desc"`          // 行为描述
-	SplitMessage string `json:"split_message"` // 拆单前缀
-	HideLog      bool   `json:"hide_log"`      // 是否隐藏日志
+	Desc               string `json:"desc"`                  // 行为描述
+	SplitMessage       string `json:"split_message"`         // 拆单前缀
+	HideLog            bool   `json:"hide_log"`              // 是否隐藏日志
+	IsAutoCheckoutZero bool   `json:"is_auto_checkout_zero"` // 是否自动结账抹零
 }
 
 func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrderOperationRecord, language string) ActionDescription {
@@ -150,10 +152,14 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 						if orderIndex == -1 {
 							return ActionDescription{HideLog: true}
 						}
-						splitMessage = " (" + i18n.Translate(language, "拆单") + strconv.Itoa(orderIndex) + ")"
+						splitMessage = "(" + i18n.Translate(language, "拆单") + strconv.Itoa(orderIndex) + ")"
 					}
 				}
-				desc = i18n.Translate(language, "抹零") + "-" + i18n.Translate(language, roundingTypeMap[discount.RoundingType]) +
+				zeroName := i18n.Translate(language, "抹零")
+				if discount.IsAuto {
+					zeroName = i18n.Translate(language, "自动抹零")
+				}
+				desc = zeroName + "-" + i18n.Translate(language, roundingTypeMap[discount.RoundingType]) +
 					" (" + s.settingSrv.SymbolPosition(ctx, discount.SpecialDiscount) + ")"
 			}
 			return ActionDescription{Desc: desc, SplitMessage: splitMessage}
@@ -233,6 +239,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		var orderCheckoutDiscount event.CheckoutZeroSaleOrderPayload
 		if err := json.Unmarshal([]byte(log.Data), &orderCheckoutDiscount); err == nil {
 			var desc string
+			var splitMessage string
 			if orderCheckoutDiscount.Operation == constant.OrderCheckoutDiscountCancel {
 				desc = i18n.Translate(language, "自动取消")
 				if orderCheckoutDiscount.Reason != "" {
@@ -248,7 +255,21 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 				desc = i18n.Translate(language, discountTypeMap[orderCheckoutDiscount.RoundingType]) +
 					" (" + s.settingSrv.SymbolPosition(ctx, orderCheckoutDiscount.SpecialDiscount) + ")"
 			}
-			return ActionDescription{Desc: desc, SplitMessage: ""}
+			// 获取订单拆单序号
+			{
+				orderIndex, err := repository.NewSaleBillRepo(ctx.GetDB()).GetSaleOrderIndexByUuid(log.SaleBillUuid, log.SaleOrderUuid)
+				if err != nil {
+					ctx.Log().Info(fmt.Sprintf("GetSaleOrderIndexByUuid 获取订单拆单序号失败.err:%v", err))
+					return ActionDescription{Desc: "", SplitMessage: ""}
+				}
+				if orderIndex != 0 {
+					if orderIndex == -1 {
+						return ActionDescription{HideLog: true}
+					}
+					splitMessage = "(" + i18n.Translate(language, "拆单") + strconv.Itoa(orderIndex) + ")"
+				}
+			}
+			return ActionDescription{Desc: desc, SplitMessage: splitMessage, IsAutoCheckoutZero: orderCheckoutDiscount.IsAuto}
 		}
 	case constant.OrderSplitOrder: // 拆单
 		var splitOrder event.SplitOrderPayload
