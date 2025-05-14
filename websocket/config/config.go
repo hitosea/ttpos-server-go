@@ -50,7 +50,7 @@ func logConf(opt copier.Option) {
 		Dir:           "log",
 		Level:         "debug",
 		MaxSize:       500,
-		MaxBackup:     14,
+		MaxBackup:     7,
 		CleanSchedule: "0 0 * * *",
 	}
 	copier.CopyWithOption(&Log, LogConf{
