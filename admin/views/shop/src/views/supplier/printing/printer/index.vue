@@ -61,6 +61,7 @@
       v-if="open_edit"
       :open_edit="open_edit"
       :printer_id="printerId"
+      :is_usb="is_usb"
       @close="
         (e) => {
           open_edit = false;
@@ -101,6 +102,7 @@
         /*是否打开编辑弹窗*/
         open_edit: false,
         printerId: 0,
+        is_usb: 0,
         /*当前编辑的对象*/
         userModel: {},
       };
@@ -147,6 +149,7 @@
       /*打开编辑*/
       editClick(item) {
         this.printerId = item.printer_id;
+        this.is_usb = item.is_usb;
         this.open_edit = true;
       },
 
