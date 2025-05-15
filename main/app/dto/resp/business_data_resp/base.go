@@ -107,12 +107,14 @@ type BusinessDataAll struct {
 	PeakHourList         []PeakHour            `json:"peak_hour_list"`         // 高峰时间
 	CategoryList         []Category            `json:"category_list"`          // 分类列表
 	PercentageList       []Percentage          `json:"percentage_list"`        // 税收百分比对象列表
+	OpeningHours         string                `json:"opening_hours"`          // 营业时间
 }
 
 // 营业数据 - 按支付方式
 type BusinessDataPaymentMethod struct {
 	TotalReceivedPrice   float64               `json:"total_received_price"`   // 总实收金额
 	PaymentMethodIncomes []PaymentMethodIncome `json:"payment_method_incomes"` // 支付方式
+	OpeningHours         string                `json:"opening_hours"`          // 营业时间
 }
 
 // 营业数据 - 按商品分类
@@ -122,11 +124,13 @@ type BusinessDataProductCategory struct {
 	TotalReceivedPrice   float64               `json:"total_received_price"`   // 总实收金额
 	CategoryList         []Category            `json:"category_list"`          // 分类列表
 	PaymentMethodIncomes []PaymentMethodIncome `json:"payment_method_incomes"` // 支付方式
+	OpeningHours         string                `json:"opening_hours"`          // 营业时间
 }
 
 // 营业数据 - 按商品
 type BusinessDataProduct struct {
-	Products []Product `json:"products"` // 商品列表
+	Products     []Product `json:"products"`      // 商品列表
+	OpeningHours string    `json:"opening_hours"` // 营业时间
 }
 
 // 营业数据 - 按区域

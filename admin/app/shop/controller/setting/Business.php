@@ -52,13 +52,13 @@ class Business extends Controller
         $update_style_time = $old_dish_card_style != $data['dish_card_style'];
         $opening_hours = $data['opening_hours'] ?? '';
         if ($opening_hours != '') {
-            $opening_hours = explode('-', $opening_hours);
-            if (count($opening_hours) != 2) {
+            $opening_hours_arr = explode('-', $opening_hours);
+            if (count($opening_hours_arr) != 2) {
                 return $this->renderError('营业时间格式错误');
             }
             // 验证时间格式：如：08:00-22:00，时间格式为：HH:MM
-            $start_time = $opening_hours[0];
-            $end_time = $opening_hours[1];
+            $start_time = $opening_hours_arr[0];
+            $end_time = $opening_hours_arr[1];
             // 验证开始时间
             if (!preg_match('/^([01][0-9]|2[0-3]):([0-5][0-9])$/', $start_time)) {
                 return $this->renderError('开始时间格式不正确');

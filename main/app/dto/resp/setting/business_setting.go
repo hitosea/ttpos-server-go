@@ -19,6 +19,7 @@ type Business struct {
 	DishCardStyle             string                      `json:"dish_card_style"`              // 菜品卡片样式 0-无图模式 1-图片模式
 	DishCardStyleTime         string                      `json:"dish_card_style_time"`         // 菜品卡片样式最后更新时间
 	IsInvoice                 string                      `json:"is_invoice"`                   // 开票信息 0-不需要填写 1-需要填写
+	OpeningHours              string                      `json:"opening_hours"`                // 营业时间 18:00-02:00
 }
 
 func (resp *Business) IsAutoClearDesk() bool {
