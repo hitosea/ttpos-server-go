@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"strings"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -337,6 +338,19 @@ func NewSauceProductBom(db *gorm.DB, product *v1.Product) ([]model.ProductBom, e
 		defaultSelect, err := productFeed.GetDefaultSelect()
 		if err != nil {
 			return nil, errors.WithMessage(err, "productFeed.GetDefaultSelect() failed")
+		}
+
+		// 兼容版本，如果productFeed.FeedName中不包含"feed_id"，则从jjjfood_product_feed表中取
+		if !strings.Contains(productFeed.FeedName, "\"feed_id\"") && productFeed.FeedID == 0 {
+			fmt.Println("兼容旧版本-------- productFeed.FeedName", productFeed.FeedName)
+			feed, err := repository.NewCommonRepo(db).GetProductFeedIdByProductFeedID(productFeed.ProductFeedID)
+			if err != nil {
+				return nil, errors.WithMessage(err, "GetFeedIdByProductFeedID failed")
+			}
+			productFeed.FeedID = feed.FeedID
+			productFeed.Price = feed.Price
+			productFeed.StockNum = feed.StockNum
+			productFeed.DefaultSelect = feed.DefaultSelect
 		}
 
 		// 生成新的雪花uuid
