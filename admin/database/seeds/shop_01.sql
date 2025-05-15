@@ -529,6 +529,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_desk` (
     `qrcode_token` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '二维码图片URL的token,判断二维码链接是否有效,token相同则二维码链接有效',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单UUID,销售账单ID,一个桌台只能绑定一个销售账单，一个单结束后才能绑定下一个单',
     `device_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '平板设备uuid, 0-未绑定',
+    `is_open_default_people_num` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启默认人数, 0-否 1-是',
+    `default_people_num` INT(10) NOT NULL DEFAULT 0 COMMENT '默认人数',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

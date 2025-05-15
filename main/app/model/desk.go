@@ -28,15 +28,17 @@ type DeskType struct {
 // Desk 桌台信息表,定义桌台的相关信息 ttpos_desk
 type Desk struct {
 	BaseModel
-	DeskNo       string `gorm:"column:desk_no;type:varchar(255);comment:桌位编号;NOT NULL" json:"desk_no"`
-	RegionUuid   uint64 `gorm:"column:region_uuid;type:bigint(20) unsigned;default:0;comment:桌台区域ID;NOT NULL" json:"region_uuid"`
-	TypeUuid     uint64 `gorm:"column:type_uuid;type:bigint(20) unsigned;default:0;comment:桌台类型ID;NOT NULL" json:"type_uuid"`
-	Sort         uint   `gorm:"column:sort;type:int(11);default:0;comment:排序序号;NOT NULL" json:"sort"`
-	Status       uint   `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-未开台 1-已开台;NOT NULL" json:"status"`
-	IsDisable    uint   `gorm:"column:is_disable;type:tinyint(1);default:0;comment:是否禁用, 0-否 1-是;NOT NULL" json:"is_disable"`
-	QrcodeToken  string `gorm:"column:qrcode_token;type:varchar(255);comment:二维码图片URL的token,判断二维码链接是否有效,token相同则二维码链接有效;NOT NULL" json:"qrcode_token"`
-	SaleBillUuid uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单UUID,销售账单ID,一个桌台只能绑定一个销售账单，一个单结束后才能绑定下一个单;NOT NULL" json:"sale_bill_uuid"`
-	DeviceUuid   uint64 `gorm:"column:device_uuid;type:bigint(20) unsigned;default:0;comment:平板设备uuid, 0-未绑定;NOT NULL" json:"device_uuid"`
+	DeskNo                 string `gorm:"column:desk_no;type:varchar(255);comment:桌位编号;NOT NULL" json:"desk_no"`
+	RegionUuid             uint64 `gorm:"column:region_uuid;type:bigint(20) unsigned;default:0;comment:桌台区域ID;NOT NULL" json:"region_uuid"`
+	TypeUuid               uint64 `gorm:"column:type_uuid;type:bigint(20) unsigned;default:0;comment:桌台类型ID;NOT NULL" json:"type_uuid"`
+	Sort                   uint   `gorm:"column:sort;type:int(11);default:0;comment:排序序号;NOT NULL" json:"sort"`
+	Status                 uint   `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-未开台 1-已开台;NOT NULL" json:"status"`
+	IsDisable              uint   `gorm:"column:is_disable;type:tinyint(1);default:0;comment:是否禁用, 0-否 1-是;NOT NULL" json:"is_disable"`
+	QrcodeToken            string `gorm:"column:qrcode_token;type:varchar(255);comment:二维码图片URL的token,判断二维码链接是否有效,token相同则二维码链接有效;NOT NULL" json:"qrcode_token"`
+	SaleBillUuid           uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单UUID,销售账单ID,一个桌台只能绑定一个销售账单，一个单结束后才能绑定下一个单;NOT NULL" json:"sale_bill_uuid"`
+	DeviceUuid             uint64 `gorm:"column:device_uuid;type:bigint(20) unsigned;default:0;comment:平板设备uuid, 0-未绑定;NOT NULL" json:"device_uuid"`
+	DefaultPeopleNum       uint   `gorm:"column:default_people_num;type:int(11);default:0;comment:默认人数;NOT NULL" json:"default_people_num"`
+	IsOpenDefaultPeopleNum uint   `gorm:"column:is_open_default_people_num;type:int(1);default:0;comment:是否开启默认人数, 0-否 1-是;NOT NULL" json:"is_open_default_people_num"`
 
 	SaleBill *SaleBill   `gorm:"foreignKey:SaleBillUuid;references:uuid"` // 销售账单
 	Device   *Device     `gorm:"foreignKey:DeviceUuid;references:uuid"`   // 关联绑定设备
@@ -191,23 +193,25 @@ func (model *Desk) GetDeskResp() resp.Desk {
 	}
 
 	return resp.Desk{
-		Uuid:          model.Uuid,
-		DeskNo:        model.DeskNo,
-		CustomerCount: model.getCustomerCount(),
-		Status:        model.Status,
-		IsLock:        model.getLockStatus(),
-		IsBuffet:      model.getIsBuffet(),
-		IsWait:        model.GetIsWaitClearStatus(),
-		Time:          model.getTime(),
-		Price:         model.getSaleBillAmount(),
-		Remark:        model.getSaleBillRemark(),
-		TypeUuid:      model.TypeUuid,
-		RegionUuid:    model.RegionUuid,
-		SaleBillUuid:  model.SaleBillUuid,
-		SaleOrderUuid: saleOrderUuid,
-		IsSplitOrder:  isSplitOrder,
-		UpdateTime:    time.Now().Unix(),
-		LockTime:      lockTime,
-		IsDisabled:    model.IsDisable == constant.DeskDisable,
+		Uuid:                   model.Uuid,
+		DeskNo:                 model.DeskNo,
+		CustomerCount:          model.getCustomerCount(),
+		Status:                 model.Status,
+		IsLock:                 model.getLockStatus(),
+		IsBuffet:               model.getIsBuffet(),
+		IsWait:                 model.GetIsWaitClearStatus(),
+		Time:                   model.getTime(),
+		Price:                  model.getSaleBillAmount(),
+		Remark:                 model.getSaleBillRemark(),
+		TypeUuid:               model.TypeUuid,
+		RegionUuid:             model.RegionUuid,
+		SaleBillUuid:           model.SaleBillUuid,
+		SaleOrderUuid:          saleOrderUuid,
+		IsSplitOrder:           isSplitOrder,
+		UpdateTime:             time.Now().Unix(),
+		LockTime:               lockTime,
+		IsDisabled:             model.IsDisable == constant.DeskDisable,
+		DefaultPeopleNum:       model.DefaultPeopleNum,
+		IsOpenDefaultPeopleNum: model.IsOpenDefaultPeopleNum == constant.Yes,
 	}
 }

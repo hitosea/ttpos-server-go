@@ -3,24 +3,26 @@ package resp
 import "ttpos-server-go/app/dto"
 
 type Desk struct {
-	Uuid          uint64  `json:"uuid"`            // 桌台UUID
-	DeskNo        string  `json:"desk_no"`         // 桌台名称
-	CustomerCount uint    `json:"customer_count"`  // 桌台人数
-	Status        uint    `json:"status"`          // 桌台状态  0-未开台 1-已开台
-	IsLock        bool    `json:"is_lock"`         // 是否锁单
-	IsBuffet      bool    `json:"is_buffet"`       // 是否自助餐
-	IsWait        bool    `json:"is_wait"`         // 是否待清台
-	Time          int64   `json:"time"`            // 桌台用餐时间（秒）
-	LockTime      int64   `json:"lock_time"`       // 锁单时间
-	Price         float64 `json:"price"`           // 桌台价格
-	Remark        string  `json:"remark"`          // 桌台备注
-	TypeUuid      uint64  `json:"type_uuid"`       // 桌台类型ID
-	RegionUuid    uint64  `json:"region_uuid"`     // 桌台区域ID
-	SaleBillUuid  uint64  `json:"sale_bill_uuid"`  // 销售账单UUID
-	SaleOrderUuid uint64  `json:"sale_order_uuid"` // 第一个销售订单UUID
-	IsSplitOrder  bool    `json:"is_split_order"`  // 是否拆单
-	UpdateTime    int64   `json:"update_time"`     // 更新时间
-	IsDisabled    bool    `json:"-"`               // 是否被禁用
+	Uuid                   uint64  `json:"uuid"`                       // 桌台UUID
+	DeskNo                 string  `json:"desk_no"`                    // 桌台名称
+	CustomerCount          uint    `json:"customer_count"`             // 桌台人数
+	Status                 uint    `json:"status"`                     // 桌台状态  0-未开台 1-已开台
+	IsLock                 bool    `json:"is_lock"`                    // 是否锁单
+	IsBuffet               bool    `json:"is_buffet"`                  // 是否自助餐
+	IsWait                 bool    `json:"is_wait"`                    // 是否待清台
+	Time                   int64   `json:"time"`                       // 桌台用餐时间（秒）
+	LockTime               int64   `json:"lock_time"`                  // 锁单时间
+	Price                  float64 `json:"price"`                      // 桌台价格
+	Remark                 string  `json:"remark"`                     // 桌台备注
+	TypeUuid               uint64  `json:"type_uuid"`                  // 桌台类型ID
+	RegionUuid             uint64  `json:"region_uuid"`                // 桌台区域ID
+	SaleBillUuid           uint64  `json:"sale_bill_uuid"`             // 销售账单UUID
+	SaleOrderUuid          uint64  `json:"sale_order_uuid"`            // 第一个销售订单UUID
+	IsSplitOrder           bool    `json:"is_split_order"`             // 是否拆单
+	UpdateTime             int64   `json:"update_time"`                // 更新时间
+	IsDisabled             bool    `json:"-"`                          // 是否被禁用
+	DefaultPeopleNum       uint    `json:"default_people_num"`         // 默认人数
+	IsOpenDefaultPeopleNum bool    `json:"is_open_default_people_num"` // 是否开启默认人数
 }
 
 type DeskNo struct {
