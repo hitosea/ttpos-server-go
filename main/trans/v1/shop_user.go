@@ -86,10 +86,10 @@ func (s *ShopUserService) ConvertShopUser() error {
 			IsSuper:             int(shopUser.IsSuper),
 			UserType:            int(shopUser.UserType),
 			IsDisable:           int(shopUser.IsStatus),
-			BindKey:             shopUser.BindKey,
-			CashierOnline:       int(shopUser.CashierOnline),
-			CashierLoginTime:    shopUser.CashierLoginTime,
-			DutyNo:              shopUser.DutyNo,
+			//BindKey:             shopUser.BindKey,
+			//CashierOnline:       int(shopUser.CashierOnline),
+			//CashierLoginTime:    shopUser.CashierLoginTime,
+			//DutyNo:              shopUser.DutyNo,
 		})
 		if err != nil {
 			return errors.WithMessage(err)

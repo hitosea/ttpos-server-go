@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"ttpos-server-go/app/printer/printer_tasks"
 	"ttpos-server-go/config"
 	"ttpos-server-go/docs"
 	"ttpos-server-go/i18n"
@@ -107,9 +106,15 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	c := cron.New(cron.WithSeconds())
 
 	// 1秒检查打印
-	_, _ = c.AddFunc("*/1 * * * * *", func() {
-		printer_tasks.NewPrinterTask(dbm, cache).Execute()
-	})
+	// _, _ = c.AddFunc("*/1 * * * * *", func() {
+	// 	printer_tasks.NewPrinterTask(dbm, cache).Execute()
+	// })
+
+	// NOTE: 舍弃5分钟自动切换
+	// 1分钟检查Usb打印是否在线
+	// _, _ = c.AddFunc("0 */2 * * * *", func() {
+	// 	tasks.NewUsbPrintTask(dbm, cache).Execute()
+	// })
 
 	// 启动定时器
 	c.Start()

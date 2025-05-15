@@ -77,9 +77,12 @@ func StructToStruct(data interface{}, newdata interface{}, filtrationKeys ...str
 }
 
 // JsonToStr 对象转换成字符串
-func JsonToStr(data interface{}) (string, error) {
+func JsonToStr(data interface{}) string {
 	result, err := json.Marshal(data)
-	return string(result), err
+	if err != nil {
+		return ""
+	}
+	return string(result)
 }
 
 // NumToStr 数字转字符串

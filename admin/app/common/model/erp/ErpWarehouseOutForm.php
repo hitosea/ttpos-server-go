@@ -109,10 +109,10 @@ class ErpWarehouseOutForm extends BaseModel
 
         // 起始时间
         if ($startTime && $endTime) {
-            $model = $model->where('ErpWarehouseOutForm.create_time', 'between', [$startTime, $endTime]);
+            $model = $model->where('ErpWarehouseOutForm.update_time', 'between', [$startTime, $endTime]);
         }
 
-        $paginate = $model->order('ErpWarehouseOutForm.create_time desc')->paginate($params);
+        $paginate = $model->order('ErpWarehouseOutForm.update_time desc')->paginate($params);
 
         foreach ($paginate->items() as $item) {
             $product = [

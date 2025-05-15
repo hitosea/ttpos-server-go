@@ -302,14 +302,14 @@ func (s *PurchaseService) GetMaterial(productUuid uint64) model.Material {
 func (s *PurchaseService) ConvertPurchaseForm() error {
 	var (
 		oldOrders       []PurchaseOrder
-		newOrders       []*model.PurchaseForm
-		newOrderDetails []*model.PurchaseFormItem
-		newOrderLogs    []*model.PurchaseFormLog
+		newOrders       []model.PurchaseForm
+		newOrderDetails []model.PurchaseFormItem
+		newOrderLogs    []model.PurchaseFormLog
 	)
 
 	s.db.Preload("PurchaseOrderDetail").Preload("PurchaseOrderOperationLog").Find(&oldOrders)
 	for _, oldOrder := range oldOrders {
-		newOrders = append(newOrders, &model.PurchaseForm{
+		newOrders = append(newOrders, model.PurchaseForm{
 			BaseModel: model.BaseModel{
 				ID:         uint(oldOrder.ID),
 				Uuid:       uint64(oldOrder.ID),
@@ -342,7 +342,7 @@ func (s *PurchaseService) ConvertPurchaseForm() error {
 				materialType = 1
 				materialUuid = material.Uuid
 			}
-			newOrderDetails = append(newOrderDetails, &model.PurchaseFormItem{
+			newOrderDetails = append(newOrderDetails, model.PurchaseFormItem{
 				BaseModel: model.BaseModel{
 					ID:         uint(oldDetail.ID),
 					Uuid:       uint64(oldDetail.ID),
@@ -364,7 +364,7 @@ func (s *PurchaseService) ConvertPurchaseForm() error {
 
 		for _, oldLog := range oldOrder.PurchaseOrderOperationLog {
 			uuid, _ := utils.GetID()
-			newOrderLogs = append(newOrderLogs, &model.PurchaseFormLog{
+			newOrderLogs = append(newOrderLogs, model.PurchaseFormLog{
 				BaseModel: model.BaseModel{
 					Uuid:       uuid,
 					CreateTime: oldLog.CreateTime,
@@ -407,7 +407,7 @@ func (s *PurchaseService) ConvertPurchaseForm() error {
 func (s *PurchaseService) ConvertWarehouseForm() error {
 	var (
 		records    []InventoryRecord
-		newRecords []*model.WarehouseForm
+		newRecords []model.WarehouseForm
 	)
 	s.db.Preload("Product").
 		Preload("PurchaseOrder").
@@ -416,90 +416,91 @@ func (s *PurchaseService) ConvertWarehouseForm() error {
 		Find(&records)
 	for _, record := range records {
 		// 迁移采购入库
-		if record.Type == 10 && record.PurchaseOrder != nil {
-			for _, purchaseOrderDetail := range record.PurchaseOrder.PurchaseOrderDetail {
-				uuid, err := utils.GetID()
-				if err != nil {
-					return err
-				}
-				productBomUuid := uint64(0)
-				materialUuid := uint64(0)
-				if s.GetProductPackage(uint64(purchaseOrderDetail.ProductID)).ID > 0 {
-					productBomUuid = uint64(purchaseOrderDetail.ProductSkuID)
-				}
-				// productPackage := s.GetProductPackage(uint64(purchaseOrderDetail.ProductID))
-				// if productPackage.ID > 0 {
-				// 	// productBomUuid = uint64(purchaseOrderDetail.ProductSkuID)
-				// 	productBomUuid = productPackage.GetFlavorProductBom().Uuid
-				// }
-
-				if s.GetMaterial(uint64(purchaseOrderDetail.ProductID)).ID > 0 {
-					materialUuid = uint64(purchaseOrderDetail.ProductID)
-				}
-
-				newRecords = append(newRecords, &model.WarehouseForm{
-					BaseModel: model.BaseModel{
-						Uuid:       uuid,
-						CreateTime: record.InTime,
-						UpdateTime: record.InTime,
-						DeleteTime: record.DeleteTime,
-					},
-					FormNo:            record.Number,
-					Scene:             WarehouseFormSceneMap[record.Type],
-					Num:               int(purchaseOrderDetail.EstimatePurchaseNum),
-					Remark:            record.Remark,
-					Status:            WarehouseFormStatus[record.Status],
-					ProductBomUuid:    productBomUuid,
-					MaterialUuid:      materialUuid,
-					PurchaseOrderUuid: uint64(record.PurchaseOrderID),
-					OperatorUuid:      uint64(record.OperatorID),
-					RevokeTime:        int(record.RevokeTime),
-				})
-			}
-		}
-
-		uuid, err := utils.GetID()
-		if err != nil {
-			return err
-		}
-		productBomUuid := uint64(0)
-		materialUuid := uint64(0)
-		if record.Product != nil {
-			if record.Product.Type == 10 {
-				productBom := s.GetProductBom(uint64(record.ProductSkuID))
-				if productBom.ID > 0 {
-					productBomUuid = productBom.Uuid
-				} else {
-					productBomUuid, err = s.CreateProductBom(uint64(record.ProductID), uint64(record.ProductSkuID), record.ProductSkuName)
+		if record.Type == 10 {
+			if record.PurchaseOrder != nil {
+				for _, purchaseOrderDetail := range record.PurchaseOrder.PurchaseOrderDetail {
+					uuid, err := utils.GetID()
 					if err != nil {
-						return errors.WithMessage(err, "创建商品规格失败")
+						return err
 					}
-				}
-				// productBomUuid = uint64(record.ProductSkuID)
-			} else {
-				materialUuid = uint64(record.ProductID)
-			}
-		}
-		newRecords = append(newRecords, &model.WarehouseForm{
-			BaseModel: model.BaseModel{
-				Uuid:       uuid,
-				CreateTime: record.InTime,
-				UpdateTime: record.InTime,
-				DeleteTime: record.DeleteTime,
-			},
-			FormNo:            record.Number,
-			Scene:             WarehouseFormSceneMap[record.Type],
-			Num:               int(record.Num),
-			Remark:            record.Remark,
-			Status:            WarehouseFormStatus[record.Status],
-			ProductBomUuid:    productBomUuid,
-			MaterialUuid:      materialUuid,
-			PurchaseOrderUuid: uint64(record.PurchaseOrderID),
-			OperatorUuid:      uint64(record.OperatorID),
-			RevokeTime:        int(record.RevokeTime),
-		})
-	}
+					productBomUuid := uint64(0)
+					materialUuid := uint64(0)
+					if s.GetProductPackage(uint64(purchaseOrderDetail.ProductID)).ID > 0 {
+						productBomUuid = uint64(purchaseOrderDetail.ProductSkuID)
+					}
+					// productPackage := s.GetProductPackage(uint64(purchaseOrderDetail.ProductID))
+					// if productPackage.ID > 0 {
+					// 	// productBomUuid = uint64(purchaseOrderDetail.ProductSkuID)
+					// 	productBomUuid = productPackage.GetFlavorProductBom().Uuid
+					// }
 
+					if s.GetMaterial(uint64(purchaseOrderDetail.ProductID)).ID > 0 {
+						materialUuid = uint64(purchaseOrderDetail.ProductID)
+					}
+
+					newRecords = append(newRecords, model.WarehouseForm{
+						BaseModel: model.BaseModel{
+							Uuid:       uuid,
+							CreateTime: record.InTime,
+							UpdateTime: record.InTime,
+							DeleteTime: record.DeleteTime,
+						},
+						FormNo:            record.Number,
+						Scene:             WarehouseFormSceneMap[record.Type],
+						Num:               int(purchaseOrderDetail.EstimatePurchaseNum),
+						Remark:            record.Remark,
+						Status:            WarehouseFormStatus[record.Status],
+						ProductBomUuid:    productBomUuid,
+						MaterialUuid:      materialUuid,
+						PurchaseOrderUuid: uint64(record.PurchaseOrderID),
+						OperatorUuid:      uint64(record.OperatorID),
+						RevokeTime:        int(record.RevokeTime),
+					})
+				}
+			}
+		} else {
+			uuid, err := utils.GetID()
+			if err != nil {
+				return err
+			}
+			productBomUuid := uint64(0)
+			materialUuid := uint64(0)
+			if record.Product != nil {
+				if record.Product.Type == 10 {
+					productBom := s.GetProductBom(uint64(record.ProductSkuID))
+					if productBom.ID > 0 {
+						productBomUuid = productBom.Uuid
+					} else {
+						productBomUuid, err = s.CreateProductBom(uint64(record.ProductID), uint64(record.ProductSkuID), record.ProductSkuName)
+						if err != nil {
+							return errors.WithMessage(err, "创建商品规格失败")
+						}
+					}
+					// productBomUuid = uint64(record.ProductSkuID)
+				} else {
+					materialUuid = uint64(record.ProductID)
+				}
+			}
+			newRecords = append(newRecords, model.WarehouseForm{
+				BaseModel: model.BaseModel{
+					Uuid:       uuid,
+					CreateTime: record.InTime,
+					UpdateTime: record.InTime,
+					DeleteTime: record.DeleteTime,
+				},
+				FormNo:            record.Number,
+				Scene:             WarehouseFormSceneMap[record.Type],
+				Num:               int(record.Num),
+				Remark:            record.Remark,
+				Status:            WarehouseFormStatus[record.Status],
+				ProductBomUuid:    productBomUuid,
+				MaterialUuid:      materialUuid,
+				PurchaseOrderUuid: uint64(record.PurchaseOrderID),
+				OperatorUuid:      uint64(record.OperatorID),
+				RevokeTime:        int(record.RevokeTime),
+			})
+		}
+	}
 	if len(newRecords) > 0 {
 		if err := s.targetDB.Create(newRecords).Error; err != nil {
 			return err

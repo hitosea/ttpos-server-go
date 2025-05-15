@@ -33,12 +33,12 @@
         <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort"></el-input-number>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('默认开桌数')" :label-width="formLabelWidth">
-        <el-radio-group v-model="form.default_open_table">
+        <el-radio-group v-model="form.is_open_default_people_num">
           <el-radio :label="1">{{ $t('开启') }}</el-radio>
           <el-radio :label="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
-        <template v-if="form.default_open_table == 1">
-          <el-input-number class="mt4" :controls="false" :min="0" :max="99" v-model.number="form.default_open_table_num"></el-input-number>
+        <template v-if="form.is_open_default_people_num == 1">
+          <el-input-number class="mt4" :controls="false" :min="1" :max="999" v-model.number="form.default_people_num"></el-input-number>
           <div class="tips">{{ $t('默认桌台人数仅非自助餐类型生效') }}</div>
         </template>
       </el-form-item>
@@ -66,8 +66,8 @@
           area_id: '',
           type_id: '',
           sort: null,
-          default_open_table: 0,
-          default_open_table_num: 0,
+          is_open_default_people_num: 0,
+          default_people_num: 999,
         },
         formRules: {
           area_id: [

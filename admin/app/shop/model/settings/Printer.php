@@ -73,7 +73,10 @@ class Printer extends PrinterModel
         $data['name'] = $data['printer_name'] ?? '';
         $data['copies'] = $data['print_times'] ?? 0;
         $data['printer_type_uuid'] = $type['uuid'];
-        $data['config_json'] = json_encode($data[$printerType], JSON_UNESCAPED_UNICODE);
+        if (!empty($data[$printerType]) && $this->is_usb != 1) {
+            $data['config_json'] = json_encode($data[$printerType], JSON_UNESCAPED_UNICODE);
+        }
+
         if (!$this->save($data)) {
             return false;
         }

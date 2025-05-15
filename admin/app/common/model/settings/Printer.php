@@ -85,7 +85,19 @@ class Printer extends BaseModel
      */
     public static function getAll($shop_supplier_id = 0)
     {
-        $printerList = (new static)->order(['sort' => 'asc'])->select()->toArray();
+        $printerList = (new static)->order(['sort' => 'asc'])
+            // NOTE: 舍弃5分钟自动切换
+            // ->where(function ($query) {
+            //     $query->where(function ($q) {
+            //         $q->where('is_usb', 0);
+            //     })->whereOr(function ($q) {
+            //         $q->where('is_usb', 1)->where('status', 1);
+            //     })->whereOr(function ($q) {
+            //         $q->where('last_heartbeat_time', ">=", time() - 300);
+            //     });
+            // })  
+            ->select()
+            ->toArray();
         //
         $text = __('自带');
         //
@@ -110,7 +122,7 @@ class Printer extends BaseModel
             'printerType',
         ])->hasWhere('printerType', function($q) {
             $q->where('key', '<>', 'FEI_E_YUN_TAG');
-        })->where('printer.is_usb', 0)->order(['sort' => 'asc'])->select();
+        })->order(['sort' => 'asc'])->select();
 
         foreach ($list as $item) {
             $printerType = [ 'value' => '', 'text' => '' ];

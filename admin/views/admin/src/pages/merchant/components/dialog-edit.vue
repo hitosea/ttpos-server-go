@@ -116,6 +116,12 @@
             <el-radio :value="0">{{ $t('关闭') }}</el-radio>
           </el-radio-group>
         </el-form-item>
+        <el-form-item :label="$t('短信服务')" prop="is_open_buffet">
+          <el-radio-group v-model="formData.is_open_buffet">
+            <el-radio :value="1">{{ $t('开启') }}</el-radio>
+            <el-radio :value="0">{{ $t('关闭') }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item :label="$t('扫码点餐接单')" prop="is_accept_scan_order">
           <el-radio-group v-model="formData.is_accept_scan_order">
             <el-radio :value="1">{{ $t('开启') }}</el-radio>
@@ -232,6 +238,18 @@
             style="width: 100%"
           ></el-input-number>
           <!-- <div class=" text-[#ccc] w-full">{{ $t('最大999') }}</div> -->
+        </el-form-item>
+        <el-form-item :label="$t('短信额度')" prop="kitchen_limit">
+          <el-input-number
+            v-model="formData.kitchen_limit"
+            :controls="false"
+            :min="100"
+            :max="9999999"
+            clearable
+            :placeholder="$t('请输入短信额度')"
+            style="width: 100%"
+          ></el-input-number>
+          <div class="text-[#ccc] w-full">{{ $t('最小额度为100，短信额度的最大值为9,999,999，默认为200') }}</div>
         </el-form-item>
         <el-form-item :label="$t('时区')" prop="timezone">
           <el-select v-model="formData.timezone" :placeholder="$t('请选择时区')" @change="handleZoneChange" clearable style="min-width: 200px">
