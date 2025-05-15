@@ -34,10 +34,10 @@ type ActionDescription struct {
 	IsAutoCheckoutZero bool   `json:"is_auto_checkout_zero"` // 是否自动结账抹零
 }
 
-func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrderOperationRecord, language string) ActionDescription {
+func getSplitMessage(ctx context.Context, log model.SaleOrderOperationRecord, language string) ActionDescription {
 	var splitMessage string
-	// 获取订单拆单序号
-	{
+	// 获取订单拆单序号。只有改价、折扣、取消折扣、免单、结账手动抹零需要获取订单拆单序号
+	if log.Action == constant.OrderChangePrice || log.Action == constant.OrderDiscount || log.Action == constant.OrderCancelDiscount || log.Action == constant.OrderFreeSale || log.Action == constant.OrderCheckoutDiscount {
 		orderIndex, err := repository.NewSaleBillRepo(ctx.GetDB()).GetSaleOrderIndexByUuid(log.SaleBillUuid, log.SaleOrderUuid)
 		if err != nil {
 			ctx.Log().Info(fmt.Sprintf("GetSaleOrderIndexByUuid 获取订单拆单序号失败.err:%v", err))
@@ -50,6 +50,16 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 			splitMessage = "(" + i18n.Translate(language, "拆单") + strconv.Itoa(orderIndex) + ")"
 		}
 	}
+	return ActionDescription{Desc: "", SplitMessage: splitMessage}
+}
+
+func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrderOperationRecord, language string) ActionDescription {
+	var splitMessage string
+	res := getSplitMessage(ctx, log, language)
+	if res.HideLog {
+		return res
+	}
+	splitMessage = res.SplitMessage
 	switch log.Action {
 	case constant.OrderOpenTable: // 开台
 		var openTable event.OpenDeskPayload
