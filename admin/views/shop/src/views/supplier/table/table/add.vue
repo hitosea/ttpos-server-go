@@ -38,7 +38,7 @@
           <el-radio :label="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
         <template v-if="form.is_open_default_people_num == 1">
-          <el-input-number class="mt4" :controls="false" :min="0" :max="99" v-model.number="form.default_people_num"></el-input-number>
+          <el-input-number class="mt4" :controls="false" :min="1" :max="999" v-model.number="form.default_people_num"></el-input-number>
           <div class="tips">{{ $t('默认桌台人数仅非自助餐类型生效') }}</div>
         </template>
       </el-form-item>
@@ -67,7 +67,7 @@
           type_id: '',
           sort: null,
           is_open_default_people_num: 0,
-          default_people_num: 0,
+          default_people_num: 999,
         },
         formRules: {
           area_id: [
