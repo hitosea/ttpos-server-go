@@ -309,7 +309,7 @@ class Material extends BaseModel
             return false;
         }
         // 商品名称唯一性
-        if (CheckService::checkNameExist('product', $product_name, 0)) {
+        if (CheckService::checkNameExist('product', $product_name, 0, $this['product_id'] ?? 0)) {
             $this->error = '商品名称已存在';
             return false;
         }

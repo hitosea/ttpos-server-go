@@ -164,7 +164,7 @@ func (s *StockService) ConvertWarehouseOut() error {
 						}
 					}
 				} else {
-					materialUuid = uint64(record.ProductSkuID)
+					materialUuid = uint64(record.ProductID)
 				}
 			}
 			newItems = append(newItems, model.WarehouseOutFormItem{

@@ -456,7 +456,7 @@
           // 处理sku中的规格
           let isError = false;
           params.sku.map((item, index) => {
-            if (!item.spec_id) {
+            if (!item.spec_id && params.type == 10) {
               isError = true;
             }
             params.sku[index].spec_name = JSON.stringify(item.spec_name);

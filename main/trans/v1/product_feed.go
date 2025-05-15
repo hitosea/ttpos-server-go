@@ -25,3 +25,19 @@ type ProductFeedMaterial struct {
 	AppID          int     `gorm:"default:0;comment:应用id"`
 	CreateTime     int     `gorm:"not null;default:0;comment:创建时间"`
 }
+
+// ProductFeed 产品加料表 `jjjfood_product_feed`
+type ProductFeed struct {
+	ProductFeedID  int     `gorm:"primaryKey;autoIncrement;comment:ID"`
+	ProductID      int     `gorm:"default:0;comment:产品id"`
+	FeedID         int     `gorm:"default:0;comment:加料ID"`
+	FeedName       string  `gorm:"type:varchar(2000);not null;default:'';comment:属性名"`
+	Price          float64 `gorm:"type:decimal(12,2);not null;default:0.00;comment:价格"`
+	StockNum       int     `gorm:"default:0;comment:库存数量"`
+	DefaultSelect  int     `gorm:"default:0;comment:默认勾选 0-否 1-是"`
+	ShopSupplierID int     `gorm:"not null;default:0;comment:门店id"`
+	Sort           int     `gorm:"not null;default:0;comment:排序"`
+	AppID          int     `gorm:"not null;default:0;comment:应用id"`
+	CreateTime     int     `gorm:"not null;comment:创建时间"`
+	UpdateTime     int     `gorm:"not null;default:0;comment:更新时间"`
+}

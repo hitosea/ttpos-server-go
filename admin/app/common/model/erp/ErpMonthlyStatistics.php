@@ -291,18 +291,19 @@ class ErpMonthlyStatistics extends BaseModel
         $endTime = strtotime($end_time);
 
         $bomUuidList = ErpWarehouseOutFormItem::where('scene', 0)
-            ->where('create_time', 'between', [$startTime, $endTime])
+            ->where('update_time', 'between', [$startTime, $endTime])
             ->where('status', 1)
             ->group('product_bom_uuid')
+            ->order('update_time desc')
             ->column('product_bom_uuid');
 
         $rows = ProductBom::alias('bom')
             ->field('p.name as name,bom.create_time as create_time')
             ->leftJoin('product_package p', 'bom.product_package_uuid = p.uuid')
             ->whereNotIn('bom.uuid', $bomUuidList)
-            ->where('bom.product_flavor_uuid', '>', 0)
             ->where('p.create_time', '<=', $startTime)
             ->group('bom.product_package_uuid')
+            ->order('bom.id desc')
             ->limit(10)
             ->select();
 
