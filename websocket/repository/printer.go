@@ -15,7 +15,7 @@ func NewPrinterRepository(dbm *database.DBManager) *PrinterRepository {
 
 func (r *PrinterRepository) GetUsbList(companyUuid uint64) []model.Printer {
 	var Printers []model.Printer
-	r.dbm.GetDB(companyUuid).Model(&model.Printer{}).Where("is_usb = ?", 1).Find(&Printers)
+	r.dbm.GetDB(companyUuid).Model(&model.Printer{}).Where("is_usb = ?", 1).Where("delete_time = ?", 0).Find(&Printers)
 	return Printers
 }
 
@@ -28,6 +28,11 @@ func (r *PrinterRepository) GetUsbListByStatus(companyUuid uint64, status int) [
 // 更新
 func (r *PrinterRepository) Update(companyUuid uint64, id uint, vars map[string]interface{}) error {
 	return r.dbm.GetDB(companyUuid).Model(&model.Printer{}).Where("id = ?", id).Updates(vars).Error
+}
+
+// 更新
+func (r *PrinterRepository) UpdateBySourceDeviceSn(companyUuid uint64, id uint, sourceDeviceSn string, vars map[string]interface{}) error {
+	return r.dbm.GetDB(companyUuid).Model(&model.Printer{}).Where("id = ?", id).Where("source_device_sn = ?", sourceDeviceSn).Updates(vars).Error
 }
 
 // 创建

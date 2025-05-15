@@ -59,7 +59,7 @@ func (h *PrinterHandler) GetPrinterList(c *gin.Context) {
 		helper.HandleValidationError(c, err, req, dto.PageReqMessage)
 		return
 	}
-	resp, err := h.printerLogSrv.GetPrinterList(ctx, req)
+	resp, err := h.printerLogSrv.GetPrinterLogList(ctx, req)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return

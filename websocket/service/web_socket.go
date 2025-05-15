@@ -338,7 +338,7 @@ func checkPrinterHeartbeatTimeout() {
 			for _, printer := range printers {
 				// 如果打印机状态为在线，且最后心跳时间超过8秒，则更新为离线
 				if printer.Status == 1 && (currentTime-printer.LastHeartbeatTime) > 8 {
-					if err := repo.Update(companyUuid, printer.ID, map[string]interface{}{
+					if err := repo.UpdateBySourceDeviceSn(companyUuid, printer.ID, conn.DeviceId, map[string]interface{}{
 						"status": 0,
 					}); err != nil {
 						fmt.Printf("Error updating printer status to offline: %v\n", err)
@@ -384,9 +384,8 @@ func reportPrinterData(newConn *ConnectionInfo, clientMessage ClientMessage) {
 		for _, usb := range dbUsbList {
 			// 如果不在新列表中且状态为在线，则更新为离线
 			if !printerConfigMap[usb.ConfigJson] && usb.Status == 1 {
-				if err := repo.Update(newConn.CompanyUuid, usb.ID, map[string]interface{}{
-					"status":              0,
-					"last_heartbeat_time": uint(time.Now().Unix()),
+				if err := repo.UpdateBySourceDeviceSn(newConn.CompanyUuid, usb.ID, newConn.DeviceId, map[string]interface{}{
+					"status": 0,
 				}); err != nil {
 					fmt.Printf("Error updating usb print: %v\n", err)
 				}
@@ -413,6 +412,7 @@ func reportPrinterData(newConn *ConnectionInfo, clientMessage ClientMessage) {
 				if err := repo.Update(newConn.CompanyUuid, dbUsb.ID, map[string]interface{}{
 					"status":              1,
 					"last_heartbeat_time": uint(time.Now().Unix()),
+					"source_device_sn":    newConn.DeviceId,
 				}); err != nil {
 					fmt.Printf("Error updating usb print: %v\n", err)
 				}
@@ -441,15 +441,18 @@ func reportPrinterData(newConn *ConnectionInfo, clientMessage ClientMessage) {
 				}
 				// 新打印机，创建记录
 				if err := repo.Create(newConn.CompanyUuid, model.Printer{
-					Uuid:            uuid,
-					Name:            usbPrinter.Name,
-					PrinterTypeUuid: printerType.Uuid,
-					ConfigJson:      printerJson,
-					Copies:          1,
-					Sort:            0,
-					IsUsb:           1,
-					CreateTime:      uint(time.Now().Unix()),
-					UpdateTime:      uint(time.Now().Unix()),
+					Uuid:              uuid,
+					Name:              usbPrinter.Name,
+					PrinterTypeUuid:   printerType.Uuid,
+					ConfigJson:        printerJson,
+					Copies:            1,
+					Sort:              0,
+					IsUsb:             1,
+					SourceDeviceSn:    newConn.DeviceId,
+					CreateTime:        uint(time.Now().Unix()),
+					UpdateTime:        uint(time.Now().Unix()),
+					Status:            1,
+					LastHeartbeatTime: uint(time.Now().Unix()),
 				}); err != nil {
 					fmt.Printf("Error creating usb print: %v\n", err)
 				}

@@ -14,14 +14,17 @@ type Printer struct {
 	Copies            uint   `gorm:"column:copies;type:int(11) unsigned;default:0;comment:打印份数;NOT NULL" json:"copies"`
 	Sort              uint   `gorm:"column:sort;type:int(11) unsigned;default:0;comment:排序;NOT NULL" json:"sort"`
 	IsUsb             int    `gorm:"column:is_usb;type:tinyint(1);default:0;comment:是否usb;NOT NULL" json:"is_usb"`
+	Status            int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态,1-在线 0-离线;NOT NULL" json:"status"`
 	LastHeartbeatTime uint   `gorm:"column:last_heartbeat_time;type:int(10) unsigned;default:0;comment:最后心跳时间;NOT NULL" json:"last_heartbeat_time"`
+	SourceDeviceSn    string `gorm:"column:source_device_sn;type:varchar(255);comment:源设备SN;NOT NULL" json:"source_device_sn"`
 
 	PrinterType *PrinterType `gorm:"foreignKey:PrinterTypeUuid;references:Uuid"` // 关联 printer_type
 }
 
 type PrinterConfigJson struct {
-	IP      string `json:"IP"`
-	PORT    string `json:"PORT"`
+	IP   string `json:"IP"`
+	PORT string `json:"PORT"`
+	// 商米打印机信息
 	APP_ID  string `json:"APP_ID"`
 	APP_KEY string `json:"APP_KEY"`
 	SN      string `json:"SN"`

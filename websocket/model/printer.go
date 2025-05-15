@@ -11,6 +11,7 @@ type Printer struct {
 	IsUsb             int    `gorm:"column:is_usb;type:int(1);default:0;comment:是否usb;NOT NULL" json:"is_usb"`
 	Status            int    `gorm:"column:status;type:int(1);default:0;comment:状态 0-离线 1-在线;NOT NULL" json:"status"`
 	LastHeartbeatTime uint   `gorm:"column:last_heartbeat_time;type:int(10) unsigned;default:0;comment:最后心跳时间;NOT NULL" json:"last_heartbeat_time"`
+	SourceDeviceSn    string `gorm:"column:source_device_sn;type:varchar(255);default:'';comment:来源设备SN;NOT NULL" json:"source_device_sn"`
 	CreateTime        uint   `gorm:"autoCreateTime;column:create_time;type:int(10) unsigned;comment:创建时间;NOT NULL" json:"create_time"`
 	UpdateTime        uint   `gorm:"autoUpdateTime;column:update_time;type:int(10) unsigned;comment:更新时间;NOT NULL" json:"update_time"`
 	DeleteTime        uint   `gorm:"column:delete_time;type:int(10) unsigned;default:0;comment:删除时间;NOT NULL" json:"delete_time"`

@@ -31,11 +31,17 @@ class AddIsUsbToPrinter extends Migrator
         if (!$table->hasColumn('is_usb')) {
             $table->addColumn('is_usb', 'integer', ['default' => 0, 'comment' => '是否usb', 'after' => 'sort']);
         }
+        if (!$table->hasColumn('is_enable_usb')) {
+            $table->addColumn('is_enable_usb', 'integer', ['default' => 0, 'comment' => '是否启用usb', 'after' => 'is_usb']);
+        }
         if (!$table->hasColumn('status')) {
-            $table->addColumn('status', 'integer', ['default' => 1, 'comment' => '状态, 0-离线 1-在线', 'after' => 'is_usb']);
+            $table->addColumn('status', 'integer', ['default' => 1, 'comment' => '状态, 0-离线 1-在线', 'after' => 'is_enable_usb']);
         }
         if (!$table->hasColumn('last_heartbeat_time')) {
             $table->addColumn('last_heartbeat_time', 'integer', ['default' => 0, 'comment' => '最后心跳时间', 'after' => 'status']);
+        }
+        if (!$table->hasColumn('source_device_sn')) {
+            $table->addColumn('source_device_sn', 'string', ['default' => '', 'comment' => '来源设备SN', 'after' => 'last_heartbeat_time']);
         }
         $table->update();
     }

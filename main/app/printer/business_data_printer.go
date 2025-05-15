@@ -95,6 +95,7 @@ func (p *PrinterRepoImpl) PrintingBusinessData(
 		PrinterType:      settingPrinterInfo.PrinterType,
 		PrinterConfig:    settingPrinterInfo.PrinterConfig,
 		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
+		IsUsbPrinter:     settingPrinterInfo.IsUsbPrinter,
 	}, nil
 }
 
