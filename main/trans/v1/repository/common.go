@@ -13,6 +13,7 @@ type ICommonRepo interface {
 	GetProductSKUs(productID uint64) ([]*v1.ProductSKU, error)
 	GetProductSpecList() ([]*v1.Spec, error)
 	GetProductAttributeGroupListByProductID(productID uint64) ([]*v1.ProductAttributeGroup, error)
+	GetProductFeedIdByProductFeedID(productFeedID int) (v1.ProductFeed, error)
 }
 
 func NewCommonRepo(db *gorm.DB) ICommonRepo {
@@ -62,4 +63,13 @@ func (s *CommonRepoImpl) GetProductAttributeGroupListByProductID(productID uint6
 		return nil, errors.WithMessage(err)
 	}
 	return productAttributeGroups, nil
+}
+
+// GetProductFeedIdByProductFeedID 获取小料id
+func (s *CommonRepoImpl) GetProductFeedIdByProductFeedID(productFeedID int) (v1.ProductFeed, error) {
+	var feed v1.ProductFeed
+	if err := s.db.Where("product_feed_id = ?", productFeedID).First(&feed).Error; err != nil {
+		return v1.ProductFeed{}, errors.WithMessage(err)
+	}
+	return feed, nil
 }
