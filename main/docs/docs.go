@@ -498,7 +498,7 @@ const docTemplate = `{
                     "200": {
                         "description": "桌台详情",
                         "schema": {
-                            "$ref": "#/definitions/resp.DeskInfoResp"
+                            "$ref": "#/definitions/resp.Desk"
                         }
                     },
                     "404": {
@@ -4046,7 +4046,7 @@ const docTemplate = `{
                     "200": {
                         "description": "桌台详情",
                         "schema": {
-                            "$ref": "#/definitions/resp.DeskInfoResp"
+                            "$ref": "#/definitions/resp.Desk"
                         }
                     },
                     "404": {
@@ -16049,6 +16049,10 @@ const docTemplate = `{
                     "description": "最小订单金额",
                     "type": "number"
                 },
+                "opening_hours": {
+                    "description": "营业时间",
+                    "type": "string"
+                },
                 "payment_method_incomes": {
                     "description": "支付方式",
                     "type": "array",
@@ -16430,6 +16434,10 @@ const docTemplate = `{
         "business_data_resp.BusinessDataPaymentMethod": {
             "type": "object",
             "properties": {
+                "opening_hours": {
+                    "description": "营业时间",
+                    "type": "string"
+                },
                 "payment_method_incomes": {
                     "description": "支付方式",
                     "type": "array",
@@ -16446,6 +16454,10 @@ const docTemplate = `{
         "business_data_resp.BusinessDataProduct": {
             "type": "object",
             "properties": {
+                "opening_hours": {
+                    "description": "营业时间",
+                    "type": "string"
+                },
                 "products": {
                     "description": "商品列表",
                     "type": "array",
@@ -16464,6 +16476,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/business_data_resp.Category"
                     }
+                },
+                "opening_hours": {
+                    "description": "营业时间",
+                    "type": "string"
                 },
                 "payment_method_incomes": {
                     "description": "支付方式",
@@ -17162,7 +17178,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "time_type": {
-                    "description": "时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)",
+                    "description": "时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月, 5 营业时间)",
                     "type": "integer"
                 }
             }
@@ -17191,7 +17207,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "time_type": {
-                    "description": "时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)",
+                    "description": "时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月, 5 营业时间)",
                     "type": "integer"
                 }
             }
@@ -19509,6 +19525,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.SystemSetting"
                         }
                     ]
+                },
+                "usb_printer": {
+                    "description": "自带打印机设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.UsbPrinterList"
+                        }
+                    ]
                 }
             }
         },
@@ -19651,6 +19675,10 @@ const docTemplate = `{
                     "description": "桌台人数",
                     "type": "integer"
                 },
+                "default_people_num": {
+                    "description": "默认人数",
+                    "type": "integer"
+                },
                 "desk_no": {
                     "description": "桌台名称",
                     "type": "string"
@@ -19661,6 +19689,10 @@ const docTemplate = `{
                 },
                 "is_lock": {
                     "description": "是否锁单",
+                    "type": "boolean"
+                },
+                "is_open_default_people_num": {
+                    "description": "是否开启默认人数",
                     "type": "boolean"
                 },
                 "is_split_order": {
@@ -21984,6 +22016,10 @@ const docTemplate = `{
                     "description": "是否是收银机自带打印机",
                     "type": "boolean"
                 },
+                "is_usb_printer": {
+                    "description": "是否是usb打印机",
+                    "type": "boolean"
+                },
                 "print_method": {
                     "description": "打印方式 1文本打印, 2图片打印'",
                     "type": "integer"
@@ -23765,6 +23801,43 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.UsbPrinter": {
+            "type": "object",
+            "properties": {
+                "m_name": {
+                    "description": "厂商名称",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "打印机名称",
+                    "type": "string"
+                },
+                "pid": {
+                    "description": "打印机PID"
+                },
+                "sn": {
+                    "description": "打印机SN",
+                    "type": "string"
+                },
+                "vid": {
+                    "description": "打印机VID"
+                }
+            }
+        },
+        "resp.UsbPrinterList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.UsbPrinter"
+                    }
+                },
+                "selected_sn": {
+                    "type": "string"
+                }
+            }
+        },
         "setting.AddClockItem": {
             "type": "object",
             "properties": {
@@ -23974,6 +24047,10 @@ const docTemplate = `{
                 },
                 "no_clear_table": {
                     "description": "结账后不清台 0-清台 1-不清台",
+                    "type": "string"
+                },
+                "opening_hours": {
+                    "description": "营业时间 18:00-02:00",
                     "type": "string"
                 },
                 "qr_code": {

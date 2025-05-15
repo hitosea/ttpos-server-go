@@ -102,6 +102,9 @@ definitions:
       min_order_price:
         description: 最小订单金额
         type: number
+      opening_hours:
+        description: 营业时间
+        type: string
       payment_method_incomes:
         description: 支付方式
         items:
@@ -367,6 +370,9 @@ definitions:
     type: object
   business_data_resp.BusinessDataPaymentMethod:
     properties:
+      opening_hours:
+        description: 营业时间
+        type: string
       payment_method_incomes:
         description: 支付方式
         items:
@@ -378,6 +384,9 @@ definitions:
     type: object
   business_data_resp.BusinessDataProduct:
     properties:
+      opening_hours:
+        description: 营业时间
+        type: string
       products:
         description: 商品列表
         items:
@@ -391,6 +400,9 @@ definitions:
         items:
           $ref: '#/definitions/business_data_resp.Category'
         type: array
+      opening_hours:
+        description: 营业时间
+        type: string
       payment_method_incomes:
         description: 支付方式
         items:
@@ -863,7 +875,7 @@ definitions:
         description: 查询开始时间戳
         type: integer
       time_type:
-        description: 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)
+        description: 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月, 5 营业时间)
         type: integer
     type: object
   req.BusinessDataPrinterReq:
@@ -884,7 +896,7 @@ definitions:
         description: 统计类型 (0 全部, 1 按支付方式, 2 按商品分类, 3 按商品)
         type: integer
       time_type:
-        description: 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)
+        description: 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月, 5 营业时间)
         type: integer
     type: object
   req.BusinessDataRankProductReq:
@@ -2486,6 +2498,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.SystemSetting'
         description: 系统设置
+      usb_printer:
+        allOf:
+        - $ref: '#/definitions/resp.UsbPrinterList'
+        description: 自带打印机设置
     type: object
   resp.CashierLoginResp:
     properties:
@@ -2584,6 +2600,9 @@ definitions:
       customer_count:
         description: 桌台人数
         type: integer
+      default_people_num:
+        description: 默认人数
+        type: integer
       desk_no:
         description: 桌台名称
         type: string
@@ -2592,6 +2611,9 @@ definitions:
         type: boolean
       is_lock:
         description: 是否锁单
+        type: boolean
+      is_open_default_people_num:
+        description: 是否开启默认人数
         type: boolean
       is_split_order:
         description: 是否拆单
@@ -4126,6 +4148,9 @@ definitions:
       is_cashier_printer:
         description: 是否是收银机自带打印机
         type: boolean
+      is_usb_printer:
+        description: 是否是usb打印机
+        type: boolean
       print_method:
         description: 打印方式 1文本打印, 2图片打印'
         type: integer
@@ -5304,6 +5329,31 @@ definitions:
         description: 未下单商品数量
         type: integer
     type: object
+  resp.UsbPrinter:
+    properties:
+      m_name:
+        description: 厂商名称
+        type: string
+      name:
+        description: 打印机名称
+        type: string
+      pid:
+        description: 打印机PID
+      sn:
+        description: 打印机SN
+        type: string
+      vid:
+        description: 打印机VID
+    type: object
+  resp.UsbPrinterList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.UsbPrinter'
+        type: array
+      selected_sn:
+        type: string
+    type: object
   setting.AddClockItem:
     properties:
       action:
@@ -5454,6 +5504,9 @@ definitions:
         type: string
       no_clear_table:
         description: 结账后不清台 0-清台 1-不清台
+        type: string
+      opening_hours:
+        description: 营业时间 18:00-02:00
         type: string
       qr_code:
         description: 电子菜单二维码校验失效值，6位数数字
@@ -6199,7 +6252,7 @@ paths:
         "200":
           description: 桌台详情
           schema:
-            $ref: '#/definitions/resp.DeskInfoResp'
+            $ref: '#/definitions/resp.Desk'
         "404":
           description: 未找到
       security:
@@ -8279,7 +8332,7 @@ paths:
         "200":
           description: 桌台详情
           schema:
-            $ref: '#/definitions/resp.DeskInfoResp'
+            $ref: '#/definitions/resp.Desk'
         "404":
           description: 未找到
       security:
