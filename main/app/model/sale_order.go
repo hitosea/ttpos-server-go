@@ -424,7 +424,7 @@ func (model *SaleOrder) NewReverseSettleMemberPointLog(points float64) *MemberPo
 }
 
 // 创建退货单
-func (model *SaleOrder) NewReturnOrder(lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]uint, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
+func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]uint, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
 	returnOrderUuid, _ := utils.GetID()
 
 	// 如果退款类型为整单退款，则退款金额=订单最终应收金额-已退款金额
@@ -608,6 +608,7 @@ func (model *SaleOrder) NewReturnOrder(lang string, saleOrderProducts []*SaleOrd
 		RefundReason:        "退款",
 		ReturnOrderAmounts:  returnOrderAmounts,
 		ReturnOrderProducts: returnOrderProducts,
+		DutyNo:              dutyNo,
 	}, nil
 }
 

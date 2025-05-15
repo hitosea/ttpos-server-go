@@ -1210,6 +1210,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			RefundAmount:        order.Amount,
 			ReturnOrderAmounts:  returnOrderAmounts,
 			IsReverseSettlement: 1,
+			DutyNo:              ctx.GetStaff().DutyNo,
 		})
 		if err != nil {
 			return errors.WithMessage(errors2.ErrInternal, err.Error())
@@ -1444,6 +1445,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		AccountNo:          refundReq.AccountNo,
 		AccountName:        refundReq.AccountName,
 		ReturnOrderAmounts: returnOrderAmounts, // 关联创建退款金额
+		DutyNo:             ctx.GetStaff().DutyNo,
 	}
 
 	// 是否存在QrPromptPay支付

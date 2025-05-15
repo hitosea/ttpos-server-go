@@ -1838,6 +1838,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_order` (
     `bank_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '银行编码 - 当存在QR PromptPay的时候需要传',
     `account_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '账号 - 当存在QR PromptPay的时候需要传',
     `account_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '账户名称 - 当存在QR PromptPay的时候需要传',
+    `duty_no` varchar(255) NOT NULL DEFAULT '' COMMENT '当班编号',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

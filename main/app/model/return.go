@@ -15,6 +15,7 @@ type ReturnOrder struct {
 	BankCode            string  `gorm:"column:bank_code;type:varchar(255);comment:银行编码 - 当存在QR PromptPay的时候需要传;NOT NULL" json:"bank_code"`
 	AccountNo           string  `gorm:"column:account_no;type:varchar(255);comment:账号 - 当存在QR PromptPay的时候需要传;NOT NULL" json:"account_no"`
 	AccountName         string  `gorm:"column:account_name;type:varchar(255);comment:账户名称 - 当存在QR PromptPay的时候需要传;NOT NULL" json:"account_name"`
+	DutyNo              string  `gorm:"column:duty_no;type:varchar(255);comment:当班编号;NOT NULL" json:"duty_no"`
 
 	ReturnOrderAmounts  []ReturnOrderAmount   `gorm:"foreignKey:ReturnOrderUuid;references:uuid"`
 	ReturnOrderProducts []*ReturnOrderProduct `gorm:"foreignKey:ReturnOrderUuid;references:uuid"`
