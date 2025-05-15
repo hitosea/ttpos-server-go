@@ -1825,5 +1825,12 @@
     "服务费计算": "Service fee calculation",
     "请选择服务费计算": "Please select service fee calculation",
     "商品价格合计": "Total product price",
-    "商品惠后价": "Discounted product price"
+    "商品惠后价": "Discounted product price",
+    "营业时间": "Business Hours",
+    "开始时间": "Start Time",
+    "结束时间": "End Time",
+    "这是桌台备注，非桌台/桌台没有备注的则不显示，需要换行显示": "This is a table remark. If there are no remarks for non-table/table, it will not be displayed and needs to be shown in a new line.",
+    "默认开桌数": "Default Open Tables",
+    "默认桌台人数仅非自助餐类型生效": "Default table occupancy is only effective for non-buffet types",
+    "请选择营业时间": "Please select business hours"
 }
