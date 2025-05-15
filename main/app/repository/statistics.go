@@ -115,11 +115,11 @@ var (
 		"MIN(CASE WHEN t.order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS min_order_amount",
 		"MAX(CASE WHEN t.order_amount > 0 AND t.is_meger = 0 THEN t.order_amount ELSE NULL END) AS max_order_amount",
 		"SUM(t.avg_order_amount) / SUM(IF(t.is_meger = 0, 1, 0)) AS avg_order_amount",
-		"MIN(CASE WHEN t.desk_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",
+		"MIN(CASE WHEN t.desk_uuid > 0 AND t.desk_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS min_desk_order_amount",
 		"MAX(CASE WHEN t.desk_uuid > 0 AND t.desk_order_amount > 0 AND t.is_meger = 0 THEN t.desk_order_amount ELSE NULL END) AS max_desk_order_amount",
 		"SUM(t.avg_desk_order_amount) / COUNT(CASE WHEN t.desk_uuid > 0 AND t.is_meger = 0 THEN 1 END) AS avg_desk_order_amount",
-		"MIN(CASE WHEN t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",
-		"MAX(CASE WHEN t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",
+		"MIN(CASE WHEN t.desk_uuid = 0 AND t.instant_order_amount >= 0 AND t.is_special = 0 AND t.is_meger = 0 THEN t.instant_order_amount ELSE NULL END) AS min_instant_order_amount",
+		"MAX(CASE WHEN t.desk_uuid = 0 AND t.instant_order_amount > 0 THEN t.instant_order_amount ELSE NULL END) AS max_instant_order_amount",
 		"SUM(t.avg_instant_order_amount) / COUNT(CASE WHEN t.desk_uuid = 0 AND t.is_meger = 0 THEN 1 END) AS avg_instant_order_amount",
 	}
 )
@@ -275,7 +275,6 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 			Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
 			Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
 			Group("IF(pc.parent_uuid = 0, pp.category_uuid, pc.parent_uuid)").
-			Where("ppc.parent_uuid = 0").
 			Find(&result)
 	} else {
 		db.Table(statisticsProductTable).
@@ -314,8 +313,8 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 
 	db.Table(statisticsProductTable).
 		Select(
-			"JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) AS product_name",
-			"JSON_UNQUOTE(JSON_EXTRACT(pb.name, '$."+language+"')) AS flavor_name",
+			"CASE WHEN pp.name IS NOT NULL AND pp.name != '' THEN JSON_UNQUOTE(JSON_EXTRACT(pp.name, '$."+language+"')) ELSE '' END AS product_name",
+			"CASE WHEN pb.name IS NOT NULL AND pb.name != '' THEN JSON_UNQUOTE(JSON_EXTRACT(pb.name, '$."+language+"')) ELSE '' END AS flavor_name",
 			"pb.price AS sale_price",
 			"SUM(sp.product_num) AS sale_num",
 			"SUM(sp.product_final_price * sp.product_num) AS sale_amount",

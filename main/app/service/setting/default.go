@@ -470,6 +470,16 @@ func (s *Srv) parseCashierSetting(values string, key string) ([]byte, error) {
 			jsonMap["is_auto_order"] = "0"
 		}
 	}
+
+	// 处理 auto_order_limit
+	if autoOrderLimit, ok := jsonMap["auto_order_limit"]; ok {
+		if numVal, ok := autoOrderLimit.(float64); ok {
+			jsonMap["auto_order_limit"] = strconv.Itoa(int(numVal))
+		} else if strVal, ok := autoOrderLimit.(int); ok {
+			jsonMap["auto_order_limit"] = strconv.Itoa(strVal)
+		}
+	}
+
 	// 重新序列化为JSON
 	modifiedJSON, err := json.Marshal(jsonMap)
 	if err != nil {

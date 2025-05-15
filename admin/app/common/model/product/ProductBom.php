@@ -303,7 +303,7 @@ class ProductBom extends BaseModel
         }
 
         // 搜索库存
-        $stockNum = $params['stock_num'] ?? '';
+        $stockNum = isset($params['stock_num']) ? trim($params['stock_num']) : '';
         if ($stockNum) {
             $where = "(stock_num < :stock_num)";
             if (!$whereSql) {
@@ -338,11 +338,12 @@ class ProductBom extends BaseModel
         }
 
         // 排序
-        $sort = $params['sort'] ?? '';
-        $orderSql = ' ORDER BY update_time DESC';
+        $sort = isset($params['sort']) ? trim($params['sort']) : '';
+        $orderSql = ' ORDER BY ';
         if ($sort && in_array($sort, ['asc', 'desc'])) {
-            $orderSql = " ORDER BY stock_num {$sort}";
+            $orderSql .= "stock_num {$sort},";
         }
+        $orderSql .= "update_time DESC";
 
         $querySql = "SELECT " . implode(',', [
             'type',
