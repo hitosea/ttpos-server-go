@@ -36,8 +36,10 @@ type ActionDescription struct {
 
 func getSplitMessage(ctx context.Context, log model.SaleOrderOperationRecord, language string) ActionDescription {
 	var splitMessage string
-	// 获取订单拆单序号。只有改价、折扣、取消折扣、免单、结账手动抹零需要获取订单拆单序号
-	if log.Action == constant.OrderChangePrice || log.Action == constant.OrderDiscount || log.Action == constant.OrderCancelDiscount || log.Action == constant.OrderFreeSale || log.Action == constant.OrderCheckoutDiscount {
+	// 获取订单拆单序号。只有折扣、取消折扣、免单、结账手动抹零需要获取订单拆单序号
+	if log.Action == constant.OrderDiscount || log.Action == constant.OrderCancelDiscount || log.Action == constant.OrderFreeSale || log.Action == constant.OrderCheckoutDiscount {
+		// // 获取订单拆单序号。只有改价、折扣、取消折扣、免单、结账手动抹零需要获取订单拆单序号
+		// if log.Action == constant.OrderChangePrice || log.Action == constant.OrderDiscount || log.Action == constant.OrderCancelDiscount || log.Action == constant.OrderFreeSale || log.Action == constant.OrderCheckoutDiscount {
 		orderIndex, err := repository.NewSaleBillRepo(ctx.GetDB()).GetSaleOrderIndexByUuid(log.SaleBillUuid, log.SaleOrderUuid)
 		if err != nil {
 			ctx.Log().Info(fmt.Sprintf("GetSaleOrderIndexByUuid 获取订单拆单序号失败.err:%v", err))
@@ -45,6 +47,11 @@ func getSplitMessage(ctx context.Context, log model.SaleOrderOperationRecord, la
 		}
 		if orderIndex != 0 {
 			if orderIndex == -1 {
+				// // 如果订单拆单序号为-1，且这条日志是改价日志，不隐藏日志也不显示拆单前缀
+				// if log.Action == constant.OrderChangePrice {
+				// 	return ActionDescription{Desc: "", SplitMessage: ""}
+				// }
+				// 如果订单拆单序号为-1，则隐藏日志
 				return ActionDescription{HideLog: true}
 			}
 			splitMessage = "(" + i18n.Translate(language, "拆单") + strconv.Itoa(orderIndex) + ")"
