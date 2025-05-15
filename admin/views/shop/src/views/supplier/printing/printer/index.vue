@@ -22,9 +22,15 @@
           <el-table-column fixed="right" :label="$t('操作')" width="120">
             <template #default="scope">
               <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/supplier/printing/printer/edit'">{{ $t('编辑') }}</el-button>
-              <el-button @click="deleteClick(scope.row)" type="primary" :disabled="scope.row.is_use == 1" link size="small" v-auth="'/supplier/printing/printer/delete'">{{
-                $t('删除')
-              }}</el-button>
+              <el-button
+                @click="deleteClick(scope.row)"
+                type="primary"
+                :disabled="scope.row.is_use == 1 || scope.row.is_usb == 1"
+                link
+                size="small"
+                v-auth="'/supplier/printing/printer/delete'"
+                >{{ $t('删除') }}</el-button
+              >
             </template>
           </el-table-column>
         </el-table>
