@@ -1579,5 +1579,11 @@
     "服务费计算": "Hizmet bedeli hesaplama",
     "请选择服务费计算": "Lütfen hizmet bedeli hesaplamasını seçin",
     "商品价格合计": "Ürün fiyat toplamı",
-    "商品惠后价": "İndirim sonrası ürün fiyatı"
+    "商品惠后价": "İndirim sonrası ürün fiyatı",
+    "营业时间": "Çalışma saatleri",
+    "开始时间": "Başlangıç Zamanı",
+    "结束时间": "Bitiş Zamanı",
+    "这是桌台备注，非桌台/桌台没有备注的则不显示，需要换行显示": "Bu masa notudur, masa/dışmasa için herhangi bir not yoksa gösterilmez, yeni satıra geçiş yapılmalıdır",
+    "默认开桌数": "Varsayılan Açık Masa Sayısı",
+    "默认桌台人数仅非自助餐类型生效": "Varsayılan masa sayısı yalnızca açık büfe olmayan türlerde geçerlidir"
 }
