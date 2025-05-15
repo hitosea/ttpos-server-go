@@ -8745,17 +8745,40 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 		return nil, errors.WithMessage(errUpdateSaleBill)
 	}
 
-	// 发布“撤销拆单”操作事件
+	// 发布“拆单”操作事件
 	go func() {
-		s.bus.PublishCancelSplitOrderEvent(event.CancelSplitOrderPayload{
-			BasePayload: event.BasePayload{ // 撤销拆单
-				Ctx:          ctx,
-				CompanyUuid:  ctx.GetCompanyUuid(),
-				Source:       ctx.GetSource(),
-				SaleBillUuid: saleBill.Uuid,
-				OperatorUuid: int64(ctx.GetStaffUuid()),
-			},
-		})
+		var orders []event.Order
+		for i, order := range shopCart.SaleOrderList {
+			orders = append(orders, event.Order{
+				SaleOrderUuid: order.Uuid,
+				OrderName:     fmt.Sprintf("%d", i+1),
+				Amount:        order.AmountInfo.Amount,
+			})
+		}
+		if len(orders) == 1 {
+			// 发布“撤销拆单”操作事件
+			s.bus.PublishCancelSplitOrderEvent(event.CancelSplitOrderPayload{
+				BasePayload: event.BasePayload{ // 撤销拆单
+					Ctx:          ctx,
+					CompanyUuid:  ctx.GetCompanyUuid(),
+					Source:       ctx.GetSource(),
+					SaleBillUuid: saleBill.Uuid,
+					OperatorUuid: int64(ctx.GetStaffUuid()),
+				},
+			})
+		} else {
+			// 发布“拆单”操作事件
+			s.bus.PublishSplitOrderEvent(event.SplitOrderPayload{
+				BasePayload: event.BasePayload{ // 拆单
+					Ctx:          ctx,
+					CompanyUuid:  ctx.GetCompanyUuid(),
+					Source:       ctx.GetSource(),
+					SaleBillUuid: saleBill.Uuid,
+					OperatorUuid: int64(ctx.GetStaffUuid()),
+				},
+				Orders: orders,
+			})
+		}
 	}()
 
 	return shopCart, nil
@@ -8824,6 +8847,19 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 			}
 		}
 	}
+
+	// 发布“撤销拆单”操作事件
+	go func() {
+		s.bus.PublishCancelSplitOrderEvent(event.CancelSplitOrderPayload{
+			BasePayload: event.BasePayload{ // 撤销拆单
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: saleBill.Uuid,
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
+	}()
 
 	// 获取账单信息
 	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
