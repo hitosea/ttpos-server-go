@@ -1223,8 +1223,11 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 		if record.Action == constant.OrderCheckoutDiscount && actionDescription.IsAutoCheckoutZero {
 			actionText = i18n.Translate(language, "结账自动抹零")
 		}
+		if actionDescription.SplitMessage != "" {
+			actionText = actionDescription.SplitMessage + actionText
+		}
 		if actionDescription.Desc != "" {
-			actionText = actionDescription.SplitMessage + actionText + ": " + actionDescription.Desc
+			actionText = actionText + ": " + actionDescription.Desc
 		}
 		realName := record.Operator.RealName
 		if record.Source == constant.SourceH5 {
@@ -7478,6 +7481,24 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 
 	// 发布"免单"事件
 	go func() {
+		// 结账前，发布"抹零"事件。如果优惠折扣自动抹零且抹零金额大于0，则发布"抹零"事件。
+		if saleOrder.IsAutoZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroFee > 0 {
+			event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountSaleOrderPayload{
+				BasePayload: event.BasePayload{ // 订单抹零
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  req.SaleBillUuid,
+					SaleOrderUuid: req.SaleOrderUuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				DiscountType:    constant.DiscountOperationLogTypeZeroSaleOrder,
+				RoundingType:    int(saleOrder.ZeroRule),
+				SpecialDiscount: saleOrder.ZeroFee, // ZeroFee这个字段是算好的抹零优惠金额。先计算好订单应付金额，再根据抹零规格进行抹零得到的结果
+				IsAuto:          true,
+			})
+		}
+
 		s.bus.PublishFreeSaleOrderEvent(event.FreeSaleOrderPayload{
 			BasePayload: event.BasePayload{ // 免单
 				Ctx:           ctx,
