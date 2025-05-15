@@ -1172,6 +1172,8 @@ class Setting extends BaseModel
                     'dish_card_style_time' => '0',
                     // 开票信息 0-不需要填写 1-需要填写
                     'is_invoice' => '0',
+                    // 营业时间
+                    'opening_hours' => '00:00-23:59',
                 ],
             ],
         ];

@@ -652,6 +652,13 @@
               font24: true,
             },
             {
+              name: $t('这是桌台备注，非桌台/桌台没有备注的则不显示，需要换行显示'),
+              label: '',
+              big: true,
+              typeShow: '3',
+              right: false,
+            },
+            {
               name: $t('收银员'),
               label: $t('张三'),
             },
@@ -887,6 +894,13 @@
               label: '',
               hide: 2,
               font24: true,
+            },
+            {
+              name: $t('这是桌台备注，非桌台/桌台没有备注的则不显示，需要换行显示'),
+              label: '',
+              big: true,
+              typeShow: '3',
+              right: false,
             },
             {
               name: $t('订单号'),
