@@ -438,10 +438,40 @@ func (s *deskSrv) createDeskBuffetOrder(ctx context.Context, req req.DeskOrderCr
 
 	// 验证自助餐顾客类型是否存在
 	for _, buffetCustomerType := range req.BuffetCustomerTypes {
+		if buffetCustomerType.MealNum == 0 {
+			// 如果顾客类型没有指定用餐人数，则跳过
+			continue
+		}
 		_, err := repository.NewBuffetRepo(s.dbm.GetDB(dbId)).GetBuffetCustomerTypeInfo(repository.NewCommonRepo().WhereByUuid(buffetCustomerType.Uuid))
 		if err != nil {
 			return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "自助餐顾客类型不存在")
 		}
+	}
+	// 验证自助餐套餐是否选择了自助餐顾客类型
+	{
+		buffetUuids := make([]uint64, 0)
+		for _, buffetUuid := range req.BuffetUuids {
+			selectedBuffet := false // 是否选择这个自助餐套餐，默认是不选择，当选择的顾客类型中任意一个是该自助餐套餐的顾客类型时，则选择该自助餐套餐
+			for _, buffetCustomerType := range req.BuffetCustomerTypes {
+				if buffetCustomerType.MealNum == 0 {
+					// 如果顾客类型没有指定用餐人数，则跳过
+					continue
+				}
+				_, exist, err := repository.NewBuffetRepo(s.dbm.GetDB(dbId)).GetBuffetCustomerTypePriceInfo(buffetUuid, buffetCustomerType.Uuid)
+				if err != nil {
+					return resp.CreateDeskOrderResp{}, errors.WithMessage(err, "获取自助餐顾客类型价格信息失败")
+				}
+				// 如果存在，则选择该自助餐套餐
+				if exist {
+					selectedBuffet = true
+				}
+			}
+			// 如果选择了该自助餐套餐，则添加到列表中
+			if selectedBuffet {
+				buffetUuids = append(buffetUuids, buffetUuid)
+			}
+		}
+		req.BuffetUuids = buffetUuids
 	}
 
 	return s.orderSrv.CreateDeskOrder(ctx, req)

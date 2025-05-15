@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"strings"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -16,10 +17,11 @@ type IBuffetRepo interface {
 	GetBuffetInfo(opts ...DBOption) (model.BuffetPackage, error)                         // 获取自助餐详情
 	GetBuffetCustomerTypeInfo(opts ...DBOption) (model.BuffetCustomerType, error)        // 获取自助餐顾客类型详情
 	GetBuffetCustomerTypePrice(opts ...DBOption) (model.BuffetCustomerTypePrice, error)  // 获取自助餐顾客类型价格
-	UpdateBuffetInfo(buffet model.BuffetPackage) error                                   // 更新自助餐信息
-	AddActualSaleNum(buffetUuid uint64, saleNum uint) error                              // 更新自助餐
-	SubActualSaleNum(buffetUuid uint64, saleNum uint) error                              // 更新自助餐销量
-	CreateBuffet(buffet model.BuffetPackage) error                                       // 创建自助餐
+	GetBuffetCustomerTypePriceInfo(buffetUuid uint64, buffetCustomerTypeUuid uint64) (*model.BuffetCustomerTypePrice, bool, error)
+	UpdateBuffetInfo(buffet model.BuffetPackage) error      // 更新自助餐信息
+	AddActualSaleNum(buffetUuid uint64, saleNum uint) error // 更新自助餐
+	SubActualSaleNum(buffetUuid uint64, saleNum uint) error // 更新自助餐销量
+	CreateBuffet(buffet model.BuffetPackage) error          // 创建自助餐
 }
 
 func NewBuffetRepo(db *gorm.DB) IBuffetRepo {
@@ -184,6 +186,22 @@ func (r *BuffetRepoImpl) GetBuffetCustomerTypePrice(opts ...DBOption) (model.Buf
 
 	err := db.First(&buffetCustomerTypePrice).Error
 	return buffetCustomerTypePrice, errors.WithMessage(err)
+}
+
+// GetBuffetCustomerTypePriceInfo 获取自助餐顾客类型价格详情
+func (r *BuffetRepoImpl) GetBuffetCustomerTypePriceInfo(buffetUuid uint64, buffetCustomerTypeUuid uint64) (*model.BuffetCustomerTypePrice, bool, error) {
+	buffetCustomerTypePrice, err := r.GetBuffetCustomerTypePrice(
+		CommonRepo.WhereByBuffetPackageUuid(buffetUuid),
+		CommonRepo.WhereByCustomerTypeUuid(buffetCustomerTypeUuid),
+		CommonRepo.WhereBySoftDelete(),
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, false, nil
+		}
+		return nil, false, errors.WithMessage(err)
+	}
+	return &buffetCustomerTypePrice, true, nil
 }
 
 // UpdateBuffetInfo 更新自助餐信息
