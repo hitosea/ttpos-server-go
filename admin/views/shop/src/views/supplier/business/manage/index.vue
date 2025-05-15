@@ -122,17 +122,8 @@
           <el-radio :label="1">{{ $t('图片模式') }}</el-radio>
         </el-radio-group>
       </el-form-item>
-      <el-form-item for="no_click" :label="$t('营业时间')" prop="opening_hours" :rules="[{ required: true, message: '' }]">
-        <el-time-picker
-          class="max-w460"
-          v-model="form.opening_hours"
-          is-range
-          value-format="HH:mm"
-          format="HH:mm"
-          range-separator="~"
-          :start-placeholder="$t('开始时间')"
-          :end-placeholder="$t('结束时间')"
-        />
+      <el-form-item for="no_click" :label="$t('营业时间')" prop="opening_hours" :rules="[{ required: true, message: $t('请选择营业时间') }]">
+        <TimePicker v-model="form.opening_hours" @update:modelValue="updateOpeningHours" />
       </el-form-item>
     </el-form>
     <!--提交-->
@@ -178,7 +169,7 @@
   import ManageFreeReason from './ManageFreeReason.vue';
   import ManageRefundReason from './ManageRefundReason.vue';
   import Qrcode from './Qrcode.vue';
-
+  import TimePicker from '@/components/time-picker/index.vue';
   const { currency } = useUserStore();
   export default {
     components: {
@@ -186,6 +177,7 @@
       ManageFreeReason,
       ManageRefundReason,
       Qrcode,
+      TimePicker,
     },
     data() {
       return {
@@ -396,6 +388,10 @@
       closeQrcode() {
         let self = this;
         self.isqrcode = false;
+      },
+
+      updateOpeningHours(value) {
+        this.form.opening_hours = value;
       },
     },
   };
