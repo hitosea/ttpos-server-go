@@ -175,6 +175,7 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 		}
 
 		// 获取旧的打印机UUID
+		// todo: 暂时不需要
 		// for _, sprinter := range printerSetting.CashierPrinter {
 		// 	if sprinter.Key == ctx.GetDeviceSn() {
 		// 		if sprinter.PrinterUsbId != "0" && sprinter.PrinterUsbId != "" {
@@ -206,7 +207,6 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 			}
 			isUpdate = true
 		} else if len(reportReq.List) > 0 && lastNewUsb.Uuid != 0 {
-			fmt.Println(utils.ToJsonString(lastNewUsb))
 			isExist := false
 			for i, sprinter := range printerSetting.CashierPrinter {
 				if sprinter.Key == ctx.GetDeviceSn() {
