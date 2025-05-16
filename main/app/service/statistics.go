@@ -37,6 +37,7 @@ type IStatisticsSrv interface {
 	CountFreePayment(ctx context.Context, req CountReq) CountFreePaymentResp                          // 统计免单支付
 	CountFreePaymentDays(ctx context.Context, req CountReq, days []string) []CountFreePaymentDaysResp // 统计免单支付天数
 	CountExport(ctx context.Context, req CountReq) (CountExportResp, error)                           // 统计导出
+	CountShiftRefundAmount(ctx context.Context, req CountReq) float64                                 // 统计班次退款金额
 	RankProduct(ctx context.Context, req CountReq) []CountProductRankResp                             // 统计商品排行
 	SaveSale(ctx context.Context, req SaveSaleReq) error                                              // 保存销售
 	SaveMember(ctx context.Context, req SaveMemberReq) error                                          // 保存会员
@@ -1183,6 +1184,7 @@ type CountReq struct {
 	CategoryUuid   uint64 `json:"category_uuid"`    // 分类UUID -1=全都
 	ProductName    string `json:"product_name"`     // 商品名称
 	Timezone       string `json:"timezone"`         // 时区
+	StaffUuid      uint64 `json:"staff_uuid"`       // 操作员UUID
 }
 
 // buildCountOpts 构建统计选项
@@ -1647,4 +1649,14 @@ func (s *statisticsSrv) CountExport(ctx context.Context, req CountReq) (CountExp
 		Days: days,
 		Data: data,
 	}, nil
+}
+
+// CountShiftRefundAmount 统计班次退款金额
+func (s *statisticsSrv) CountShiftRefundAmount(ctx context.Context, req CountReq) float64 {
+	commonRepo := repository.NewCommonRepoImpl()
+	returnOrderRepo := repository.NewReturnOrderRepoImpl(ctx.GetDB())
+	return returnOrderRepo.SumRefundAmount(
+		commonRepo.WhereByDutyNo(req.DutyNo),
+		commonRepo.WhereBySoftDelete(),
+	)
 }

@@ -246,3 +246,18 @@ type BusinessDataExportPayment struct {
 	TotalOrderNum      int64   `json:"total_order_num"`
 	TotalPaymentAmount float64 `json:"total_payment_amount"`
 }
+
+// 营业数据 - 班次退款金额
+type BusinessDataShiftRefundAmount struct {
+	RefundAmount float64 `json:"refund_amount"` // 退款金额
+}
+
+// 营业数据 - 全部
+type BusinessDataHome struct {
+	TotalReceivedPrice     float64    `json:"total_received_price"`      // 总实收金额
+	TotalUserDiscountMoney float64    `json:"total_user_discount_money"` // 总会员折扣
+	TotalDiscountMoney     float64    `json:"total_discount_money"`      // 总优惠折扣
+	TotalRefundMoney       float64    `json:"total_refund_money"`        // 总退款金额
+	TotalOrderNum          int        `json:"total_order_num"`           // 总订单数
+	MemberData             MemberData `json:"member_data"`               // 会员数据
+}

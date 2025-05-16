@@ -58,7 +58,7 @@ func (r *printerRepo) WithPrinterType() DBOption {
 
 func (r *printerRepo) GetUsbList() []model.Printer {
 	var Printers []model.Printer
-	r.db.Model(&model.Printer{}).Where("is_usb = ?", 1).Where("delete_time = ?", 0).Find(&Printers)
+	r.db.Model(&model.Printer{}).Where("is_usb = ?", 1).Where("delete_time = ?", 0).Order("id DESC").Find(&Printers)
 	return Printers
 }
 

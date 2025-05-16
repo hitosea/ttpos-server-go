@@ -2042,4 +2042,13 @@ return [
     "并发生成 " => "Concurrent generation",
     "桌台使用中，无法禁用" => "The table is in use and cannot be disabled",
     "库存已超99999999" => "Inventory exceeds 99999999",
+    "等级权重不能为空" => "Level weight cannot be empty",
+    "未存在迁移库" => "Migration database does not exist",
+    "-商品惠后价 " => "-Product discounted price",
+    "自带打印机" => "Built-in printer",
+    "营业时间格式错误" => "Business hours format error",
+    "开始时间格式不正确" => "Start time format is incorrect",
+    "结束时间格式不正确" => "End time format is incorrect",
+    "历史用餐订单" => "Historical dining orders",
+    "退款记录目的地创建失败" => "Failed to create refund record destination",
 ];

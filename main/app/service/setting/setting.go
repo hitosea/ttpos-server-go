@@ -705,7 +705,7 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 	err = json.Unmarshal(modifiedJSON, &cashier)
 	if err != nil {
 		ctx.Log().Error("解析各端-收银机设置失败 - 02", zap.Error(err))
-		return cashier, errors.New("解析各端-收银机设置失败 - 02 " + err.Error())
+		return cashier, errors.New("解析各端-收银机设置失败 - 02" + err.Error())
 	}
 
 	// 滚动图/视频处理

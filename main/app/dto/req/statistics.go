@@ -57,6 +57,7 @@ type BusinessDataCountReq struct {
 	CategoryType   int    `form:"category_type"`    // 分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)
 	DutyNo         string `form:"duty_no"`          // 班次编号
 	NotQueryFree   bool   `form:"not_query_free"`   // 是否不查询免费使用场景
+	StaffUuid      uint64 `form:"staff_uuid"`       // 操作员UUID
 }
 
 // GetParam 获取参数

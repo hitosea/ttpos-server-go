@@ -45,6 +45,7 @@ class UserShiftSnapshot extends BaseModel
             $detail = $detail->toArray();
         }
 
+        // 请求营业数据
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/business', [
             'duty_no' => $detail['shift_no'],
             'query_start_time' => $detail['start_time'],
@@ -65,6 +66,27 @@ class UserShiftSnapshot extends BaseModel
         }
         $businessData = $res['data'];
 
+        // 请求班次退款金额
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/shift_refund_amount', [
+            'staff_uuid' => $detail['staff_uuid'],
+            'query_start_time' => $detail['start_time'],
+            'query_end_time' => $detail['end_time'],
+        ], [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+            'Content-Type: application/json',
+        ]);
+        if (!$res) {
+            $this->error = '请求失败';
+            return false;
+        }
+        $res = json_decode($res, true);
+        if (($res['code'] ?? -1) != 0) {
+            $this->error = $res['message'] ?? '请求失败';
+            return false;
+        }
+        $refundData = $res['data'];
+
         $detail['order'] = [
             'received_price' => $businessData['total_received_price'], // 实收金额
             'service_money' => $businessData['total_service_money'], // 服务费
@@ -73,7 +95,7 @@ class UserShiftSnapshot extends BaseModel
             'product_num' => $businessData['total_product_num'], // 商品数量
             'discount_money' => $businessData['total_discount_money'], // 优惠折扣
             'user_discount_money' => $businessData['total_user_discount_money'], // 会员折扣
-            'refund_money' => $businessData['total_refund_money'], // 退款
+            'refund_money' => $refundData['refund_amount'], // 退款
             'recharge_amount' => $businessData['member_data']['recharge_amount'], // 充值金额
             'gift_money' => $businessData['member_data']['gift_money'], // 赠送金额
             'gift_points' => $businessData['member_data']['gift_points'], // 赠送积分

@@ -12,10 +12,10 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
-	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 )
 
@@ -62,7 +62,14 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 	printerRepo := repository.NewPrinterRepo(ctx.GetDB())
 	dbUsbList := printerRepo.GetUsbList()
 	selectedUuid := uint64(0)
-	oldSelectedUuid := uint64(0)
+	// oldSelectedUuid := uint64(0)
+	lastNewUsb := model.Printer{}
+
+	// 优化：创建已有打印机映射，避免多次循环查询
+	dbUsbMap := make(map[string]model.Printer)
+	for _, usb := range dbUsbList {
+		dbUsbMap[usb.ConfigJson] = usb
+	}
 
 	// 更新打印机状态
 	{
@@ -82,17 +89,14 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 					}); err != nil {
 						fmt.Printf("Error updating usb print: %v\n", err)
 					}
+					// 打印日志
+					logger.Logger.Info(fmt.Sprintf("更新打印机状态为离线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒", ctx.GetCompanyUuid(), ctx.GetDeviceSn(), usb.Uuid, usb.Name, uint(time.Now().Unix())))
 				}
 			}
 		}
 
 		// 有新的打印机数据，遍历处理
 		if len(reportReq.List) > 0 {
-			// 优化：创建已有打印机映射，避免多次循环查询
-			dbUsbMap := make(map[string]model.Printer)
-			for _, usb := range dbUsbList {
-				dbUsbMap[usb.ConfigJson] = usb
-			}
 			// 处理每个上报的USB打印机
 			for _, usbPrinter := range reportReq.List {
 				printerJson := utils.JsonToStr(usbPrinter)
@@ -105,8 +109,12 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 					}); err != nil {
 						fmt.Printf("Error updating usb print: %v\n", err)
 					}
-					if reportReq.SelectedSn == usbPrinter.Sn {
-						selectedUuid = dbUsb.Uuid
+					// if reportReq.SelectedSn == usbPrinter.Sn {
+					// 	selectedUuid = dbUsb.Uuid
+					// }
+					// 打印日志
+					if dbUsb.Status == 0 {
+						logger.Logger.Info(fmt.Sprintf("更新打印机状态为在线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒", ctx.GetCompanyUuid(), ctx.GetDeviceSn(), dbUsb.Uuid, dbUsb.Name, uint(time.Now().Unix())))
 					}
 				} else {
 					uuid, _ := utils.GetID()
@@ -126,8 +134,8 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 						fmt.Printf("Error: printer type XPRINTER_LAN not found\n")
 						return resp.PrinterReportResp{}, errors.ErrInternal
 					}
-					// 新打印机，创建记录
-					if err := printerRepo.Create(ctx.GetCompanyUuid(), model.Printer{
+					// 更新映射
+					dbUsbMap[printerJson] = model.Printer{
 						BaseModel: model.BaseModel{
 							Uuid:       uuid,
 							CreateTime: time.Now().Unix(),
@@ -142,12 +150,17 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 						SourceDeviceSn:    ctx.GetDeviceSn(),
 						Status:            1,
 						LastHeartbeatTime: uint(time.Now().Unix()),
-					}); err != nil {
+					}
+					// 新打印机，创建记录
+					if err := printerRepo.Create(ctx.GetCompanyUuid(), dbUsbMap[printerJson]); err != nil {
 						fmt.Printf("Error creating usb print: %v\n", err)
 					}
-					if reportReq.SelectedSn == usbPrinter.Sn {
-						selectedUuid = uuid
-					}
+					lastNewUsb = dbUsbMap[printerJson]
+					// if reportReq.SelectedSn == usbPrinter.Sn {
+					// 	selectedUuid = uuid
+					// }
+					// 打印日志
+					logger.Logger.Info(fmt.Sprintf("新增打印机: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒", ctx.GetCompanyUuid(), ctx.GetDeviceSn(), uuid, usbPrinter.Name, uint(time.Now().Unix())))
 				}
 			}
 		}
@@ -162,16 +175,17 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 		}
 
 		// 获取旧的打印机UUID
-		for _, sprinter := range printerSetting.CashierPrinter {
-			if sprinter.Key == ctx.GetDeviceSn() {
-				if sprinter.PrinterUsbId != "0" && sprinter.PrinterUsbId != "" {
-					oldSelectedUuid, _ = strconv.ParseUint(sprinter.PrinterUsbId, 10, 64)
-				} else {
-					oldSelectedUuid, _ = strconv.ParseUint(sprinter.PrinterId, 10, 64)
-				}
-				break
-			}
-		}
+		// todo: 暂时不需要
+		// for _, sprinter := range printerSetting.CashierPrinter {
+		// 	if sprinter.Key == ctx.GetDeviceSn() {
+		// 		if sprinter.PrinterUsbId != "0" && sprinter.PrinterUsbId != "" {
+		// 			oldSelectedUuid, _ = strconv.ParseUint(sprinter.PrinterUsbId, 10, 64)
+		// 		} else {
+		// 			oldSelectedUuid, _ = strconv.ParseUint(sprinter.PrinterId, 10, 64)
+		// 		}
+		// 		break
+		// 	}
+		// }
 
 		// 更新打印设置
 		isUpdate := false
@@ -192,15 +206,24 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 				})
 			}
 			isUpdate = true
-		} else {
+		} else if len(reportReq.List) > 0 && lastNewUsb.Uuid != 0 {
+			isExist := false
 			for i, sprinter := range printerSetting.CashierPrinter {
-				if sprinter.Key == ctx.GetDeviceSn() && sprinter.PrinterUsbId != "0" {
-					printerSetting.CashierPrinter[i].PrinterUsbId = "0"
-					selectedUuid, _ = strconv.ParseUint(sprinter.PrinterId, 10, 64)
-					isUpdate = true
+				if sprinter.Key == ctx.GetDeviceSn() {
+					printerSetting.CashierPrinter[i].PrinterUsbId = strconv.FormatUint(lastNewUsb.Uuid, 10)
+					isExist = true
 					break
 				}
 			}
+			if !isExist {
+				printerSetting.CashierPrinter = append(printerSetting.CashierPrinter, respSetting.CashierPrinterItem{
+					Key:          ctx.GetDeviceSn(),
+					PrinterId:    "0",
+					PrinterUsbId: strconv.FormatUint(lastNewUsb.Uuid, 10),
+				})
+			}
+			// selectedUuid = lastNewUsb.Uuid
+			isUpdate = true
 		}
 		if isUpdate {
 			repository.NewSettingRepo(ctx.GetDB()).Updates(constant.SettingPrinter, utils.ToJson(printerSetting))
@@ -208,29 +231,30 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 		}
 
 		// 结果
-		result := resp.PrinterReportResp{}
-		if selectedUuid != 0 {
-			printer, err := printerRepo.GetPrinter(printerRepo.WhereUuid(selectedUuid))
-			if err == nil {
-				result.NewPrinterName = printer.Name
-				result.NewPrinterSn = printer.GetConfigJson().SN
-			} else {
-				result.NewPrinterName = i18n.Translate(ctx.GetLanguage(), "自带打印机")
-				result.NewPrinterSn = ""
-			}
-		}
-		if oldSelectedUuid != 0 {
-			printer, err := printerRepo.GetPrinter(printerRepo.WhereUuid(oldSelectedUuid))
-			if err == nil {
-				result.OldPrinterName = printer.Name
-				result.OldPrinterSn = printer.GetConfigJson().SN
-			} else {
-				result.OldPrinterName = i18n.Translate(ctx.GetLanguage(), "自带打印机")
-				result.OldPrinterSn = ""
-			}
-		}
+		// todo: 暂时不需要
+		// result := resp.PrinterReportResp{}
+		// if selectedUuid != 0 {
+		// 	printer, err := printerRepo.GetPrinter(printerRepo.WhereUuid(selectedUuid))
+		// 	if err == nil {
+		// 		result.NewPrinterName = printer.Name
+		// 		result.NewPrinterSn = printer.GetConfigJson().SN
+		// 	} else {
+		// 		result.NewPrinterName = i18n.Translate(ctx.GetLanguage(), "自带打印机")
+		// 		result.NewPrinterSn = ""
+		// 	}
+		// }
+		// if oldSelectedUuid != 0 {
+		// 	printer, err := printerRepo.GetPrinter(printerRepo.WhereUuid(oldSelectedUuid))
+		// 	if err == nil {
+		// 		result.OldPrinterName = printer.Name
+		// 		result.OldPrinterSn = printer.GetConfigJson().SN
+		// 	} else {
+		// 		result.OldPrinterName = i18n.Translate(ctx.GetLanguage(), "自带打印机")
+		// 		result.OldPrinterSn = ""
+		// 	}
+		// }
 
 		// 返回数据
-		return result, nil
+		return resp.PrinterReportResp{}, nil
 	}
 }
