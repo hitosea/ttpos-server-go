@@ -3878,15 +3878,16 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 
 		// 填写订单信息
 		order := resp.SaleOrder{
-			Uuid:               saleOrder.Uuid,
-			OrderNo:            saleOrder.OrderNo,
-			Status:             saleOrder.Status,
-			ProductNum:         productNum,
-			ProductList:        productList,
-			IsDiscount:         saleOrder.IsManualDiscount(uint8(shopCart.SaleBill.SaleBillSetting.ZeroRule)),
-			IsMemberDiscount:   saleOrder.IsMemberDiscount(),
-			CustomDiscountRate: saleOrder.CustomDiscountRate,
-			ZeroRule:           saleOrder.ZeroRule,
+			Uuid:                saleOrder.Uuid,
+			OrderNo:             saleOrder.OrderNo,
+			Status:              saleOrder.Status,
+			ProductNum:          productNum,
+			ProductList:         productList,
+			IsDiscount:          saleOrder.IsManualDiscount(uint8(shopCart.SaleBill.SaleBillSetting.ZeroRule)),
+			IsMemberDiscount:    saleOrder.IsMemberDiscount(),
+			CustomDiscountRate:  saleOrder.CustomDiscountRate,
+			ZeroRule:            saleOrder.ZeroRule,
+			AutoDiscountMessage: saleOrder.GetAutoDiscountMessage(*shopCart.SaleBill.SaleBillSetting, ctx.GetLanguage()),
 			// 订单金额信息
 			AmountInfo: resp.AmountInfo{
 				ProductOriginalAmount: saleOrder.ProductOriginalAmount,
@@ -3896,7 +3897,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 				DiscountAmount:        decimal.NewFromFloat(saleOrder.CustomDiscountFee).Round(2).InexactFloat64(),
 				MemberDiscountAmount:  saleOrder.MemberDiscountFee,
 				Amount:                saleOrder.GetAmount(),
-				AutoDiscountMessage:   saleOrder.GetAutoDiscountMessage(*shopCart.SaleBill.SaleBillSetting, ctx.GetLanguage()),
 			},
 		}
 		saleOrderList = append(saleOrderList, order)
