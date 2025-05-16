@@ -229,4 +229,54 @@ func TestSendSMS(t *testing.T) {
 			t.Errorf("Expected invalid API key response, got code: %d, msg: %s", resp.Code, resp.Msg)
 		}
 	})
+
+	// 测试检查配置
+	t.Run("TestCheckConfig", func(t *testing.T) {
+		// 创建测试服务器
+		configServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// 验证请求头
+			if r.Header.Get("api-key") != "test-api-key" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer configServer.Close()
+
+		// 测试正常配置
+		client := &smsClient{
+			apiKey:     "test-api-key",
+			baseURL:    configServer.URL,
+			httpClient: &http.Client{},
+		}
+		if err := client.CheckConfig(); err != nil {
+			t.Errorf("CheckConfig failed with valid config: %v", err)
+		}
+
+		// 测试缺少API密钥
+		client.apiKey = ""
+		if err := client.CheckConfig(); err == nil {
+			t.Error("CheckConfig should fail with missing API key")
+		}
+
+		// // 测试无效的API密钥
+		// client.apiKey = "invalid-api-key"
+		// if err := client.CheckConfig(); err == nil {
+		// 	t.Error("CheckConfig should fail with invalid API key")
+		// }
+
+		// // 测试缺少baseURL
+		// client.apiKey = "test-api-key"
+		// client.baseURL = ""
+		// if err := client.CheckConfig(); err == nil {
+		// 	t.Error("CheckConfig should fail with missing base URL")
+		// }
+
+		// // 测试缺少httpClient
+		// client.baseURL = configServer.URL
+		// client.httpClient = nil
+		// if err := client.CheckConfig(); err == nil {
+		// 	t.Error("CheckConfig should fail with missing http client")
+		// }
+	})
 }

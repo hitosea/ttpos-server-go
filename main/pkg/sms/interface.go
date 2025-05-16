@@ -12,4 +12,6 @@ type SMSClient interface {
 	SendMemberOrderRefundSMS(phone, language string, params *MemberOrderRefundRequest) (*SMSResponse, error)
 	// QuerySMSStatus 查询短信状态
 	QuerySMSStatus(messageIDs string) (*SMSResponse, error)
+	// CheckConfig 检查客户端配置是否正确
+	CheckConfig() error
 }

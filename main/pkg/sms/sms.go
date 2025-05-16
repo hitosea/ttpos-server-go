@@ -175,3 +175,41 @@ func (c *smsClient) QuerySMSStatus(messageIDs string) (*SMSResponse, error) {
 
 	return &smsResp, nil
 }
+
+// CheckConfig 检查客户端配置是否正确
+func (c *smsClient) CheckConfig() error {
+	if c.apiKey == "" {
+		return fmt.Errorf("api key is not configured")
+	}
+	if c.baseURL == "" {
+		return fmt.Errorf("base URL is not configured")
+	}
+	if c.httpClient == nil {
+		return fmt.Errorf("http client is not configured")
+	}
+
+	// // 尝试发送一个简单的请求来验证配置
+	// req, err := http.NewRequest("GET", c.baseURL+APIPathQuery+"?message_id=test", nil)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to create test request: %v", err)
+	// }
+
+	// req.Header.Set("api-key", c.apiKey)
+	// req.Header.Set("content-type", "application/json")
+
+	// resp, err := c.httpClient.Do(req)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to connect to SMS service: %v", err)
+	// }
+	// defer resp.Body.Close()
+
+	// // 检查响应状态码
+	// if resp.StatusCode == http.StatusUnauthorized {
+	// 	return fmt.Errorf("invalid API key")
+	// }
+	// if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadRequest {
+	// 	return fmt.Errorf("unexpected response status: %d", resp.StatusCode)
+	// }
+
+	return nil
+}

@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/validator"
 	"ttpos-server-go/router"
 
@@ -53,6 +54,13 @@ var rootCommand = &cobra.Command{
 		// 初始化Redis分布式并发锁
 		lock.InitRedisLock(cacheConfig)
 		lock.NewSystemLock()
+
+		// 初始化短信客户端
+		sms.InitClient(config.SMS.APIKey, config.SMS.BaseURL)
+		// 检查短信客户端配置
+		if err := sms.GetSMSClient().CheckConfig(); err != nil {
+			logger.Logger.Info("Failed to check SMS client config", zap.Error(err))
+		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		defer logger.Logger.Sync()
