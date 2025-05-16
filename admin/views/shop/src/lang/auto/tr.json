@@ -1586,5 +1586,6 @@
     "这是桌台备注，非桌台/桌台没有备注的则不显示，需要换行显示": "Bu masa notudur, masa/dışmasa için herhangi bir not yoksa gösterilmez, yeni satıra geçiş yapılmalıdır",
     "默认开桌数": "Varsayılan Açık Masa Sayısı",
     "默认桌台人数仅非自助餐类型生效": "Varsayılan masa sayısı yalnızca açık büfe olmayan türlerde geçerlidir",
-    "请选择营业时间": "Lütfen çalışma saatlerini seçin"
+    "请选择营业时间": "Lütfen çalışma saatlerini seçin",
+    "默认开桌人数必须大于等于1": "Varsayılan masa açılış kişi sayısı 1 veya daha fazla olmalıdır"
 }
