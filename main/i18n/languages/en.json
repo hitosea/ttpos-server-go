@@ -2220,7 +2220,7 @@
   "解析各端-扫码H5设置失败": "Parse Each End-Scan QR Code H5 Setting Failed",
   "解析各端-扫码H5设置失败 - 01": "Parsing each terminal - Scan H5 setup failed - 01",
   "解析各端-收银机设置失败": "Analysis for each terminal - Pos machine setup failed",
-  "解析各端-收银机设置失败 - 02": "Parse each terminal - Cash register setup failed - 02",
+  "解析各端-收银机设置失败 - 02": "Terminal parsing - Cash register setup failed - 02",
   "解析各端-点餐助手设置失败": "Failed to parse order assistant settings on each terminal",
   "解析各端-点餐助手设置失败 - 01": "Parsing each terminal - Order Assistant setup failed - 01",
   "解析各端-点餐助手设置失败 - 02": "Parse each terminal - Order assistant setup failed - 02",
