@@ -1170,6 +1170,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 
 		// 退款现金金额
 		var refundCashAmount float64
+		var currencyUnit string
 		for _, paymentOrder := range order.PaymentOrders {
 			// 标记删除
 			if err := paymentOrderRepo.Update(paymentOrder.Uuid, map[string]any{
@@ -1188,6 +1189,8 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 				PaymentMethodUuid: paymentOrder.PaymentMethodUuid,
 				Amount:            amount,
 			})
+
+			currencyUnit = paymentOrder.CurrencyUnit
 		}
 
 		if err := repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
@@ -1211,6 +1214,8 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			ReturnOrderAmounts:  returnOrderAmounts,
 			IsReverseSettlement: 1,
 			DutyNo:              ctx.GetStaff().DutyNo,
+			Unit:                currencyUnit,
+			RefundReason:        "反结账",
 		})
 		if err != nil {
 			return errors.WithMessage(errors2.ErrInternal, err.Error())
@@ -1295,6 +1300,7 @@ func (s *rechargeOrderSrv) getPaymentRecords(paymentOrders []model.PaymentOrder,
 			PaymentName:       paymentOrder.PaymentMethodName,
 			PaymentAmount:     paymentAmount,
 			RefundableAmount:  refundableAmount,
+			CurrencyUnit:      paymentOrder.CurrencyUnit,
 		})
 	}
 
@@ -1361,8 +1367,10 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	paymentRecords := s.getPaymentRecords(order.PaymentOrders, order.ReturnOrders)
 	// 可退款金额
 	var refundableAmount float64
+	var currencyUnit string
 	for _, record := range paymentRecords {
 		refundableAmount = utils.DecimalAdd(refundableAmount, record.RefundableAmount)
+		currencyUnit = record.CurrencyUnit
 	}
 	if refundableAmount <= 0 {
 		return errors.New("无法退款")
@@ -1446,6 +1454,8 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		AccountName:        refundReq.AccountName,
 		ReturnOrderAmounts: returnOrderAmounts, // 关联创建退款金额
 		DutyNo:             ctx.GetStaff().DutyNo,
+		Unit:               currencyUnit,
+		RefundReason:       "退款",
 	}
 
 	// 是否存在QrPromptPay支付
