@@ -607,7 +607,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			img.LineFeed(1)
 			img.SetAlignment(pkg.AlignCenter)
 			img.SetTextLineHeight(35)
-			img.AppendText(t.base.Translate("请用") + " " + paymentMethod.PaymentName + " " + t.base.Translate("扫一扫支付"))
+			img.AppendText(t.base.Translate("请用") + " " + paymentMethod.Name + " " + t.base.Translate("扫一扫支付"))
 			img.LineFeed(1)
 			if paymentMethod.IsLianLianPay() {
 				llPaymentOrder, err := repository.NewLlPaymentOrderRepo(db).GetPaymentOrder(
