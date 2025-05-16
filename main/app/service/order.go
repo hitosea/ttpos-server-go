@@ -6138,7 +6138,14 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 	planAutoFlavorProduct := make(map[uint64]AutoFlavorProduct) // 必点方案ID => 自动加购的商品列表. 用于记录每个必点方案的自动加购商品
 
 	// 查询到购物车信息
-	shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+	var shopCartInfo *ro.ShopCartRepo
+	var err error
+	if h5AutoAdd {
+		// 如果是H5自动加购时，查询未删除的所有商品（主要是要包含h5加购但未下单的商品）
+		shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithNotDeleted())
+	} else {
+		shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+	}
 	if err != nil {
 		return nil, false, errors.WithMessage(err, "repository.NewOrderRepo(db).GetOrderCartInfo failed", fmt.Sprintf("saleBillUuid:%d", saleBillUuid))
 	}

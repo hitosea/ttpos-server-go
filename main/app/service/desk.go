@@ -284,12 +284,14 @@ func (s *deskSrv) GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *
 		if err != nil {
 			return resp.H5DeskPing{}, errors.WithMessage(err)
 		}
-		deskMustPlanList, err := s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid)
-		if err != nil {
-			return resp.H5DeskPing{}, errors.WithMessage(err)
-		}
-		res.MustPlans = resp.ProductMustPlanList{
-			List: deskMustPlanList,
+		if shopCartInfo.SaleBill.IsShowMustPlan() {
+			deskMustPlanList, err := s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid)
+			if err != nil {
+				return resp.H5DeskPing{}, errors.WithMessage(err)
+			}
+			res.MustPlans = resp.ProductMustPlanList{
+				List: deskMustPlanList,
+			}
 		}
 	}
 	// 必点商品列表
