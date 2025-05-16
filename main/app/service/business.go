@@ -34,6 +34,7 @@ type IBusinessSrv interface {
 	Count7Days(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataCount7Days, error)                                     // 统计7天
 	CountExport(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataExport, error)                                        // 统计导出
 	RankProduct(ctx context.Context, req req.BusinessDataRankProductReq) (*business_data_resp.BusinessDataProductRank, error)                             // 统计商品排行
+	CountShiftRefundAmount(ctx context.Context, req req.BusinessDataCountReq) *business_data_resp.BusinessDataShiftRefundAmount                           // 统计班次退款金额
 }
 
 // businessSrv 收银服务结构体
@@ -762,4 +763,13 @@ func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCount
 		Days: exportData.Days,
 		Data: exportDataList,
 	}, nil
+}
+
+// CountShiftRefundAmount 统计班次退款金额
+func (s *businessSrv) CountShiftRefundAmount(ctx context.Context, req req.BusinessDataCountReq) *business_data_resp.BusinessDataShiftRefundAmount {
+	refundAmount := s.statisticsSrv.CountShiftRefundAmount(ctx, CountReq{DutyNo: req.DutyNo})
+
+	return &business_data_resp.BusinessDataShiftRefundAmount{
+		RefundAmount: refundAmount,
+	}
 }

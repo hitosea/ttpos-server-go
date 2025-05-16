@@ -243,6 +243,28 @@ func (h *statisticsHandler) CountExport(c *gin.Context) {
 	helper.Success(c, exportData)
 }
 
+// CountShiftRefundAmount 统计班次退款金额
+// @Summary 统计班次退款金额
+// @Description 统计班次退款金额
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataCountReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataShiftRefundAmount} "统计数据"
+// @Router /shop/statistics/shift_refund_amount [get]
+func (h *statisticsHandler) CountShiftRefundAmount(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataCountReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	refundAmount := h.businessSrv.CountShiftRefundAmount(ctx, countReq)
+
+	helper.Success(c, refundAmount)
+}
+
 func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -262,14 +284,15 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		privateApi.GET("/statistics/business", wrapper.CountBusiness)                // 统计营业数据
-		privateApi.GET("/statistics/payment_method", wrapper.CountPaymentMethod)     // 统计支付方式
-		privateApi.GET("/statistics/product_category", wrapper.CountProductCategory) // 统计商品分类
-		privateApi.GET("/statistics/product", wrapper.CountProduct)                  // 统计商品
-		privateApi.GET("/statistics/area", wrapper.CountArea)                        // 统计区域
-		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)         // 统计商品排行
-		privateApi.GET("/statistics/product_sales", wrapper.CountProductSales)       // 统计商品销售
-		privateApi.GET("/statistics/7days", wrapper.Count7Days)                      // 统计7天
-		privateApi.GET("/statistics/export", wrapper.CountExport)                    // 统计导出
+		privateApi.GET("/statistics/business", wrapper.CountBusiness)                     // 统计营业数据
+		privateApi.GET("/statistics/payment_method", wrapper.CountPaymentMethod)          // 统计支付方式
+		privateApi.GET("/statistics/product_category", wrapper.CountProductCategory)      // 统计商品分类
+		privateApi.GET("/statistics/product", wrapper.CountProduct)                       // 统计商品
+		privateApi.GET("/statistics/area", wrapper.CountArea)                             // 统计区域
+		privateApi.GET("/statistics/product_rank", wrapper.CountProductRank)              // 统计商品排行
+		privateApi.GET("/statistics/product_sales", wrapper.CountProductSales)            // 统计商品销售
+		privateApi.GET("/statistics/7days", wrapper.Count7Days)                           // 统计7天
+		privateApi.GET("/statistics/export", wrapper.CountExport)                         // 统计导出
+		privateApi.GET("/statistics/shift_refund_amount", wrapper.CountShiftRefundAmount) // 统计班次退款金额
 	}
 }

@@ -130,6 +130,8 @@ func (s *staffShiftSrv) GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, erro
 		DutyNo: log.ShiftNo,
 	})
 
+	refundAmount := s.statisticsSrv.CountShiftRefundAmount(ctx, CountReq{DutyNo: log.ShiftNo})
+
 	var paymentMethodIncomeList = make([]resp.PaymentMethodIncome, 0)
 	for _, payment := range paymentData.PaymentList {
 		paymentMethodIncomeList = append(paymentMethodIncomeList, resp.PaymentMethodIncome{
@@ -149,7 +151,7 @@ func (s *staffShiftSrv) GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, erro
 		WithdrawCash:      log.WithdrawCash,
 		DepositCash:       log.DepositCash,
 		CurrentCashTotal:  cashBox.GetBalance(), // 当前钱箱现金总计（钱箱余额）。 未交班时从钱箱表中获取数据，交班后将当前钱箱现金总计（钱箱余额）记录到交班表中
-		RefundAmount:      saleData.TotalRefundAmount,
+		RefundAmount:      refundAmount,
 		PaymentMethodIncome: resp.PaymentMethodIncomeList{
 			List: paymentMethodIncomeList,
 		},
@@ -534,6 +536,11 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		DutyNo: log.ShiftNo,
 	})
 
+	// 交班退款
+	refundAmount := s.statisticsSrv.CountShiftRefundAmount(ctx, CountReq{
+		DutyNo: log.ShiftNo,
+	})
+
 	// 会员数量, 根据当班记录的开始和结束时间
 	queryEndTime := time.Now().Unix()
 	if log.ShiftEndTime > 0 {
@@ -556,7 +563,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		TotalUserDiscountMoney: saleData.TotalDiscountMember,
 		TotalDiscountMoney:     saleData.TotalDiscount,
 		TotalFreeOrderPrice:    saleData.TotalFreeAmount,
-		TotalRefundMoney:       saleData.TotalRefundAmount,
+		TotalRefundMoney:       refundAmount,
 		TotalOrderNum:          int(saleData.TotalOrderNum),
 		TotalPeopleNum:         int(saleData.TotalMealNum),
 		TotalProductNum:        int(saleData.TotalProductNum),
@@ -741,6 +748,9 @@ func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.
 		})
 	}
 
+	// 统计退款金额
+	refundAmount := s.statisticsSrv.CountShiftRefundAmount(ctx, CountReq{DutyNo: log.ShiftNo})
+
 	userIsDelete := 0
 	if log.Staff.IsDelete() {
 		userIsDelete = 1
@@ -794,7 +804,7 @@ func (s *staffShiftSrv) CreateShiftSnapshot(ctx context.Context, shiftLog model.
 			ReceivedPrice:        businessData.TotalReceivedPrice,
 			ProductNum:           businessData.TotalProductNum,
 			UserDiscountMoney:    businessData.TotalUserDiscountMoney,
-			RefundMoney:          businessData.TotalRefundMoney,
+			RefundMoney:          refundAmount,
 			TotalOrderNum:        businessData.TotalOrderNum,
 			TotalTableNum:        businessData.TotalTableNum,
 			TotalPeopleNum:       businessData.TotalPeopleNum,

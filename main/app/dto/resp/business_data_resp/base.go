@@ -246,3 +246,8 @@ type BusinessDataExportPayment struct {
 	TotalOrderNum      int64   `json:"total_order_num"`
 	TotalPaymentAmount float64 `json:"total_payment_amount"`
 }
+
+// 营业数据 - 班次退款金额
+type BusinessDataShiftRefundAmount struct {
+	RefundAmount float64 `json:"refund_amount"` // 退款金额
+}
