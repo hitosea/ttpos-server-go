@@ -1,0 +1,37 @@
+package sms
+
+// MemberConsumptionRequest 会员消费请求参数
+type MemberConsumptionRequest struct {
+	Company        string  `json:"company"`
+	Consumption    float64 `json:"consumption"`
+	MemberPay      float64 `json:"member_pay"`
+	IncreasePoints float64 `json:"increase_points"`
+	Balance        float64 `json:"balance"`
+	PointsBalance  float64 `json:"points_balance"`
+}
+
+// MemberRechargeRequest 会员充值请求参数
+type MemberRechargeRequest struct {
+	Company       string  `json:"company"`
+	Recharge      float64 `json:"recharge"`
+	BonusMoney    float64 `json:"bonus_money"`
+	BonusPoints   float64 `json:"bonus_points"`
+	Balance       float64 `json:"balance"`
+	PointsBalance float64 `json:"points_balance"`
+}
+
+// MemberRechargeRefundRequest 会员充值退款请求参数
+type MemberRechargeRefundRequest struct {
+	Company        string  `json:"company"`
+	RechargeRefund float64 `json:"recharge_refund"`
+	Balance        float64 `json:"balance"`
+	PointsBalance  float64 `json:"points_balance"`
+}
+
+// MemberOrderRefundRequest 会员用餐订单退款请求参数
+type MemberOrderRefundRequest struct {
+	Company       string  `json:"company"`
+	OrderRefund   float64 `json:"order_refund"`
+	Balance       float64 `json:"balance"`
+	PointsBalance float64 `json:"points_balance"`
+}
