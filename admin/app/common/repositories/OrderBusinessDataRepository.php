@@ -270,7 +270,7 @@ class OrderBusinessDataRepository
     }
     public function getBusinessData($type = 1)
     {
-        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/business', [
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/statistics/home', [
             'query_start_time' => $this->startTime,
             'query_end_time' => $this->endTime,
         ], [

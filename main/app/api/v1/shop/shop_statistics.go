@@ -35,7 +35,7 @@ func (h *statisticsHandler) CountBusiness(c *gin.Context) {
 		helper.HandleValidationError(c, err, countReq, nil)
 		return
 	}
-	businessData, err := h.businessSrv.CountBusiness(ctx, countReq, service.WithIsShop())
+	businessData, err := h.businessSrv.CountBusiness(ctx, countReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -265,6 +265,31 @@ func (h *statisticsHandler) CountShiftRefundAmount(c *gin.Context) {
 	helper.Success(c, refundAmount)
 }
 
+// CountHome 统计首页
+// @Summary 统计首页
+// @Description 统计首页
+// @Tags 商家端.营业数据
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.BusinessDataCountReq true "统计参数"
+// @Success 200 {object} dto.Response{data=business_data_resp.BusinessDataHome} "统计数据"
+// @Router /shop/statistics/home [get]
+func (h *statisticsHandler) CountHome(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var countReq req.BusinessDataCountReq
+	if err := c.ShouldBindQuery(&countReq); err != nil {
+		helper.HandleValidationError(c, err, countReq, nil)
+		return
+	}
+	homeData, err := h.businessSrv.CountHome(ctx, countReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, homeData)
+}
+
 func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -294,5 +319,6 @@ func RegisterStatisticsHandlers(router gin.IRouter, dbm *database.DBManager, cac
 		privateApi.GET("/statistics/7days", wrapper.Count7Days)                           // 统计7天
 		privateApi.GET("/statistics/export", wrapper.CountExport)                         // 统计导出
 		privateApi.GET("/statistics/shift_refund_amount", wrapper.CountShiftRefundAmount) // 统计班次退款金额
+		privateApi.GET("/statistics/home", wrapper.CountHome)                             // 统计首页
 	}
 }

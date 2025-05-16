@@ -35,6 +35,7 @@ type IBusinessSrv interface {
 	CountExport(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataExport, error)                                        // 统计导出
 	RankProduct(ctx context.Context, req req.BusinessDataRankProductReq) (*business_data_resp.BusinessDataProductRank, error)                             // 统计商品排行
 	CountShiftRefundAmount(ctx context.Context, req req.BusinessDataCountReq) *business_data_resp.BusinessDataShiftRefundAmount                           // 统计班次退款金额
+	CountHome(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataHome, error)                                            // 统计首页
 }
 
 // businessSrv 收银服务结构体
@@ -772,4 +773,48 @@ func (s *businessSrv) CountShiftRefundAmount(ctx context.Context, req req.Busine
 	return &business_data_resp.BusinessDataShiftRefundAmount{
 		RefundAmount: refundAmount,
 	}
+}
+
+// CountHome 统计首页
+func (s *businessSrv) CountHome(ctx context.Context, req req.BusinessDataCountReq) (*business_data_resp.BusinessDataHome, error) {
+	// 销售数据
+	saleData := s.statisticsSrv.CountSale(ctx, CountReq{
+		TimeType:       req.TimeType,
+		QueryStartTime: int64(req.QueryStartTime),
+		QueryEndTime:   int64(req.QueryEndTime),
+		CategoryType:   req.CategoryType,
+		DutyNo:         req.DutyNo,
+	})
+
+	// 会员数量
+	memberNum := s.statisticsSrv.CountMemberNum(ctx, CountReq{
+		TimeType:       req.TimeType,
+		QueryStartTime: int64(req.QueryStartTime),
+		QueryEndTime:   int64(req.QueryEndTime),
+	})
+
+	// 首页数据
+	var businessData = business_data_resp.BusinessDataHome{
+		TotalReceivedPrice:     saleData.TotalReceivedAmount,
+		TotalUserDiscountMoney: saleData.TotalDiscountMember,
+		TotalDiscountMoney:     saleData.TotalDiscount,
+		TotalRefundMoney:       saleData.TotalRefundAmount,
+		TotalOrderNum:          int(saleData.TotalOrderNum),
+		MemberData: func() business_data_resp.MemberData {
+			memberData := s.statisticsSrv.CountMember(ctx, CountReq{
+				TimeType:       req.TimeType,
+				QueryStartTime: int64(req.QueryStartTime),
+				QueryEndTime:   int64(req.QueryEndTime),
+				CategoryType:   req.CategoryType,
+			})
+			return business_data_resp.MemberData{
+				RechargeAmount: memberData.TotalRechargeAmount,
+				GiftMoney:      memberData.TotalGiveAmount,
+				GiftPoints:     memberData.TotalGivePoint,
+				UserCount:      int(memberNum),
+			}
+		}(),
+	}
+
+	return &businessData, nil
 }
