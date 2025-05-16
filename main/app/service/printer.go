@@ -62,7 +62,7 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 	printerRepo := repository.NewPrinterRepo(ctx.GetDB())
 	dbUsbList := printerRepo.GetUsbList()
 	selectedUuid := uint64(0)
-	oldSelectedUuid := uint64(0)
+	// oldSelectedUuid := uint64(0)
 	lastNewUsb := model.Printer{}
 
 	// 优化：创建已有打印机映射，避免多次循环查询
@@ -175,16 +175,16 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 		}
 
 		// 获取旧的打印机UUID
-		for _, sprinter := range printerSetting.CashierPrinter {
-			if sprinter.Key == ctx.GetDeviceSn() {
-				if sprinter.PrinterUsbId != "0" && sprinter.PrinterUsbId != "" {
-					oldSelectedUuid, _ = strconv.ParseUint(sprinter.PrinterUsbId, 10, 64)
-				} else {
-					oldSelectedUuid, _ = strconv.ParseUint(sprinter.PrinterId, 10, 64)
-				}
-				break
-			}
-		}
+		// for _, sprinter := range printerSetting.CashierPrinter {
+		// 	if sprinter.Key == ctx.GetDeviceSn() {
+		// 		if sprinter.PrinterUsbId != "0" && sprinter.PrinterUsbId != "" {
+		// 			oldSelectedUuid, _ = strconv.ParseUint(sprinter.PrinterUsbId, 10, 64)
+		// 		} else {
+		// 			oldSelectedUuid, _ = strconv.ParseUint(sprinter.PrinterId, 10, 64)
+		// 		}
+		// 		break
+		// 	}
+		// }
 
 		// 更新打印设置
 		isUpdate := false
@@ -222,7 +222,7 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 					PrinterUsbId: strconv.FormatUint(lastNewUsb.Uuid, 10),
 				})
 			}
-			selectedUuid = lastNewUsb.Uuid
+			// selectedUuid = lastNewUsb.Uuid
 			isUpdate = true
 		}
 		if isUpdate {
