@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"encoding/json"
+	"fmt"
+	"time"
+)
 
 // Company 集团表 ttpos_company
 type Company struct {
@@ -65,6 +69,19 @@ func (model *CompanySetting) GetIsOpenH5Order() bool {
 // SmsEnabled 短信功能是否开启
 func (model *CompanySetting) SmsEnabled() bool {
 	return model.EnableSms == 1 && model.SmsQuota > 0
+}
+
+// GetDefaultLanguage 获取默认语言
+func (model *CompanySetting) GetDefaultLanguage() string {
+	languages := make([]string, 0)
+	if err := json.Unmarshal([]byte(model.Languages), &languages); err != nil {
+		fmt.Println("GetDefaultLanguage error", err)
+		return "en"
+	}
+	if len(languages) > 0 {
+		return languages[0]
+	}
+	return "en"
 }
 
 // CompanyStaff saas库保存的集团员工关联表 ttpos_company_staff
