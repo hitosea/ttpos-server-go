@@ -2052,4 +2052,5 @@ return [
     "历史用餐订单" => "Geçmiş yemek siparişleri",
     "退款记录目的地创建失败" => "İade kaydı hedefi oluşturulamadı",
     "调整后的额度不可低于当前商户真实剩余短信额度" => "Ayarlanan limit, mevcut satıcının gerçek kalan SMS limitinden düşük olamaz",
+    "规格不能为空" => "Özellikler boş bırakılamaz",
 ];
