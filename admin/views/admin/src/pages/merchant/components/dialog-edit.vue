@@ -117,7 +117,7 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="$t('短信服务')" prop="enable_sms">
-          <el-radio-group v-model="formData.enable_sms" @change="handleChangeSms">
+          <el-radio-group v-model="formData.enable_sms" @click="handleChangeSms">
             <el-radio :value="1">{{ $t('开启') }}</el-radio>
             <el-radio :value="0">{{ $t('关闭') }}</el-radio>
           </el-radio-group>
@@ -243,11 +243,12 @@
           <el-input-number
             v-model="formData.sms_quota"
             :controls="false"
-            :min="0"
-            :max="9999999"
             clearable
             :placeholder="$t('请输入短信额度')"
             style="width: 100%"
+            :min="0"
+            :max="9999999"
+            @blur="handleSmsQuotaInput"
           ></el-input-number>
           <div class="text-[#ccc] w-full">{{ $t('最小额度为0，短信额度的最大值为9,999,999，默认为200') }}</div>
         </el-form-item>
@@ -489,7 +490,23 @@
     formData.value.sms_quota = 200;
   };
 
+  const handleSmsQuotaInput = (value: number | undefined) => {
+    if (value === undefined) return;
+    setTimeout(() => {
+      if (value < 0) {
+        formData.value.sms_quota = 0;
+      } else if (value > 9999999) {
+        formData.value.sms_quota = 9999999;
+      }
+    }, 300);
+  };
+
   const handleSubmit = () => {
+    if (formData.value.enable_sms === 1 && formData.value.sms_quota != null && (formData.value.sms_quota < 0 || formData.value.sms_quota > 9999999)) {
+      message.error($t('输入内容不合规，请重新输入'));
+      formData.value.sms_quota = 0;
+      return;
+    }
     formElement.value?.validate(async (valid: boolean) => {
       if (!valid) {
         setTimeout(() => {
@@ -599,7 +616,7 @@
         is_accept_scan_order: props.detail?.is_accept_scan_order || 0, //
         is_open_local_print: props.detail?.is_open_local_print || 0, //
         enable_sms: props.detail?.enable_sms || 0, //
-        sms_quota: props.detail?.sms_quota || 200, //
+        sms_quota: props.detail?.sms_quota || 0, //
         table_limit: props.detail?.table_limit == -1 ? undefined : props.detail?.table_limit || undefined, //
         printer_limit: props.detail?.printer_limit == -1 ? undefined : props.detail?.printer_limit || undefined, //
       };
