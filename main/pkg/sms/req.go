@@ -30,8 +30,8 @@ type MemberRechargeRefundRequest struct {
 
 // MemberOrderRefundRequest 会员用餐订单退款请求参数
 type MemberOrderRefundRequest struct {
-	Company       string  `json:"company"`
-	OrderRefund   float64 `json:"order_refund"`
-	Balance       float64 `json:"balance"`
-	PointsBalance float64 `json:"points_balance"`
+	Company       string  `json:"company"`        // 公司名称
+	OrderRefund   float64 `json:"order_refund"`   // 退回的会员余额.比如退款17元，其中10元退回会员余额，7元退回现金。那短信这里是填10元
+	Balance       float64 `json:"balance"`        // 退款后，会员余额
+	PointsBalance float64 `json:"points_balance"` // 退款后，积分余额
 }

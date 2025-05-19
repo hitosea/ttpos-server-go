@@ -1759,6 +1759,39 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		return nil
 	})
 
+	// 发送短信
+	go func() {
+		// 获取最新的会员信息
+		member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+		if err != nil {
+			ctx.Log().Info("停止发送短信（退款），获取会员失败", zap.Error(errors.WithMessage(err)))
+		} else {
+			refundAmount := float64(0)
+			for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
+				if returnOrderAmount.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
+					refundAmount = returnOrderAmount.Amount
+					break
+				}
+			}
+			if refundAmount > 0 {
+				ctx.SetDB(db)
+				if member != nil && member.Phone != "" {
+					smsReq := sms.MemberOrderRefundRequest{
+						Company:       ctx.GetCompany().Name,
+						OrderRefund:   refundAmount,
+						Balance:       member.GetBalanceAll(),
+						PointsBalance: member.GetPoints(),
+					}
+					if err := s.smsSrv.SendMemberOrderRefundSMS(ctx, member.Phone, &smsReq); err != nil {
+						ctx.Log().Info("发送退款短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+					} else {
+						ctx.Log().Info("发送退款短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+					}
+				}
+			}
+		}
+	}()
+
 	if publishChangeMemberBalance {
 		// 发布“会员余额变动”事件
 		go func() {
