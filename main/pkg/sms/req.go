@@ -3,11 +3,11 @@ package sms
 // MemberConsumptionRequest 会员消费请求参数
 type MemberConsumptionRequest struct {
 	Company        string  `json:"company"`
-	Consumption    float64 `json:"consumption"`
-	MemberPay      float64 `json:"member_pay"`
-	IncreasePoints float64 `json:"increase_points"`
-	Balance        float64 `json:"balance"`
-	PointsBalance  float64 `json:"points_balance"`
+	Consumption    float64 `json:"consumption"`     // 消费金额
+	MemberPay      float64 `json:"member_pay"`      // 会员支付的金额
+	IncreasePoints float64 `json:"increase_points"` // 增加的积分
+	Balance        float64 `json:"balance"`         // 消费后，会员余额
+	PointsBalance  float64 `json:"points_balance"`  // 消费后，积分余额
 }
 
 // MemberRechargeRequest 会员充值请求参数

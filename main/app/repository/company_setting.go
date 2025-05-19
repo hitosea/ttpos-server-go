@@ -9,7 +9,7 @@ import (
 
 type ICompanySettingRepo interface {
 	Get() model.CompanySetting
-	UpdateSmsQuota(companyID uint, quota int) error // 扣减公司的短信余额
+	UpdateSmsQuota(companyUuid uint64, quota int) error // 扣减公司的短信余额
 }
 
 func NewCompanySettingRepo(db *gorm.DB) ICompanySettingRepo {
@@ -30,8 +30,8 @@ func (r *companySettingRepo) Get() model.CompanySetting {
 	return companySetting
 }
 
-func (r *companySettingRepo) UpdateSmsQuota(companyID uint, quota int) error {
-	if err := r.db.Model(&model.CompanySetting{}).Where("company_id = ?", companyID).Update("sms_quota", gorm.Expr("sms_quota - ?", quota)).Error; err != nil {
+func (r *companySettingRepo) UpdateSmsQuota(companyUuid uint64, quota int) error {
+	if err := r.db.Model(&model.CompanySetting{}).Where("company_uuid = ?", companyUuid).Update("sms_quota", gorm.Expr("sms_quota - ?", quota)).Error; err != nil {
 		return errors.WithMessage(err, "failed to update SMS quota")
 	}
 	return nil

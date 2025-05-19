@@ -31,6 +31,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
@@ -146,15 +147,30 @@ type orderSrv struct {
 	paymentMethodSrv IPaymentMethodSrv
 	memberSrv        IMemberSrv
 	cashBoxSrv       ICashBoxSrv
+	smsSrv           ISmsSrv
+}
+
+type ISrvOption struct {
+	SmsSrv ISmsSrv
+}
+
+func WithSmsSrv(dbm *database.DBManager) func(option *ISrvOption) {
+	return func(option *ISrvOption) {
+		option.SmsSrv = NewSMSSrv(dbm)
+	}
 }
 
 // NewOrderSrv 创建订单服务实例
-func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv) IOrderSrv {
-	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv)
+func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv, opts ...func(option *ISrvOption)) IOrderSrv {
+	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, opts...)
 }
 
 // NewOrderSrvImpl 创建订单服务实例实现
-func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv) IOrderSrv {
+func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv, opts ...func(option *ISrvOption)) IOrderSrv {
+	option := &ISrvOption{}
+	for _, opt := range opts {
+		opt(option)
+	}
 	return &orderSrv{
 		bus:              event.NewSystemBus(),
 		dbm:              dbm,
@@ -165,6 +181,7 @@ func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv s
 		paymentMethodSrv: paymentMethodSrv,
 		memberSrv:        memberSrv,
 		cashBoxSrv:       cashBoxSrv,
+		smsSrv:           option.SmsSrv,
 	}
 }
 
@@ -7256,6 +7273,47 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 
 	// 该订单的所有出库记录都标记已出库。将预出库的状态改为已出库
 	repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormItemRecordsStatus(saleOrder.Uuid)
+
+	// 发送结账短信
+	if saleOrder.ConsumerUuid != 0 {
+		member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+		if err != nil {
+			ctx.Log().Info("停止发送短信，获取会员失败", zap.Error(errors.WithMessage(err)))
+		} else {
+			go func() {
+				ctx.SetDB(db)
+				var memberPaymentOrder *resp.PaymentOrder
+				for _, paymentOrder := range infoResp.PaymentOrders.List {
+					if paymentOrder.PaymentMethodCode == constant.PaymentMethodCodeBalance {
+						memberPaymentOrder = &paymentOrder
+						break
+					}
+				}
+
+				if member != nil && member.Phone != "" {
+					smsReq := sms.MemberConsumptionRequest{
+						Company:        ctx.GetCompany().Name,
+						Consumption:    saleOrder.FinalPrice,
+						IncreasePoints: saleOrder.GiftPoints,
+						Balance:        member.GetBalanceAll(),
+						PointsBalance:  member.GetPoints() + saleOrder.GiftPoints, // 会员积分=会员积分+本次增加的积分。 此时积分还未增加到会员表中
+					}
+					if memberPaymentOrder != nil {
+						smsReq.MemberPay = memberPaymentOrder.Amount
+					} else {
+						// 没有余额支付单，则认为没有会员余额支付,MemberPay=0
+						smsReq.MemberPay = 0
+					}
+
+					if err := s.smsSrv.SendMemberConsumptionSMS(ctx, member.Phone, &smsReq); err != nil {
+						ctx.Log().Info("发送结账短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+					} else {
+						ctx.Log().Info("发送结账短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+					}
+				}
+			}()
+		}
+	}
 
 	// 发布"结账"事件
 	originSaleOrderAmount := saleOrder.GetOriginAmountValue()
