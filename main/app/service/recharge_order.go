@@ -576,7 +576,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 		} else {
 			go func() {
 				ctx.SetDB(db)
-				if member != nil && member.Phone != "" {
+				if member != nil {
 					smsReq := sms.MemberRechargeRequest{
 						Company:       ctx.GetCompany().Name,
 						Recharge:      order.RechargeAmount,

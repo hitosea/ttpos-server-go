@@ -1775,7 +1775,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			}
 			if refundAmount > 0 {
 				ctx.SetDB(db)
-				if member != nil && member.Phone != "" {
+				if member != nil {
 					smsReq := sms.MemberOrderRefundRequest{
 						Company:       ctx.GetCompany().Name,
 						OrderRefund:   refundAmount,
@@ -2403,6 +2403,41 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 					},
 				})
 			}()
+
+			// 发送短信
+			if isUseMember {
+				go func() {
+					// 获取最新的会员信息
+					member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+					if err != nil {
+						ctx.Log().Info("停止发送短信（消费反结账），获取会员失败", zap.Error(errors.WithMessage(err)))
+					} else {
+						refundAmount := float64(0)
+						for _, paymentOrder := range saleOrder.PaymentOrders {
+							// 如果是余额支付，则退款到余额
+							if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
+								refundAmount = paymentOrder.BalanceAmount + paymentOrder.GiftBalanceAmount
+							}
+						}
+						if refundAmount > 0 {
+							ctx.SetDB(db)
+							if member != nil {
+								smsReq := sms.MemberOrderRefundRequest{
+									Company:       ctx.GetCompany().Name,
+									OrderRefund:   refundAmount,
+									Balance:       member.GetBalanceAll(),
+									PointsBalance: member.GetPoints(),
+								}
+								if err := s.smsSrv.SendMemberOrderRefundSMS(ctx, member.Phone, &smsReq); err != nil {
+									ctx.Log().Info("发送退款短信失败（消费反结账）", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+								} else {
+									ctx.Log().Info("发送退款短信成功（消费反结账）", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+								}
+							}
+						}
+					}
+				}()
+			}
 		}
 
 		go func() {
@@ -7323,7 +7358,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 					}
 				}
 
-				if member != nil && member.Phone != "" {
+				if member != nil {
 					smsReq := sms.MemberConsumptionRequest{
 						Company:        ctx.GetCompany().Name,
 						Consumption:    saleOrder.FinalPrice,
