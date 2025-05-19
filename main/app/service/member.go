@@ -242,22 +242,16 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 	}
 
 	logRepo := repository.NewMemberBalanceLogRepo(tx)
-	if changeReq.Scene == constant.MemberBalanceLogRechargeReverse { // 删除充值记录
-		if err := logRepo.ReverseSettleDelete(changeReq.MemberUuid, changeReq.RelatedUuid, constant.MemberBalanceLogRecharge); err != nil {
-			return errors.WithMessage(err, "记录明细失败")
-		}
-	} else {
-		// 余额明细
-		if _, err := logRepo.Create(model.MemberBalanceLog{
-			MemberUuid:  changeReq.MemberUuid,
-			Scene:       changeReq.Scene,
-			Money:       utils.DecimalAdd(changeReq.Money, changeReq.GiftMoney),
-			GiftMoney:   changeReq.GiftMoney,
-			Describe:    changeReq.Describe,
-			RelatedUuid: changeReq.RelatedUuid,
-		}); err != nil {
-			return errors.WithMessage(err, "记录明细失败")
-		}
+	// 余额明细
+	if _, err := logRepo.Create(model.MemberBalanceLog{
+		MemberUuid:  changeReq.MemberUuid,
+		Scene:       changeReq.Scene,
+		Money:       utils.DecimalAdd(changeReq.Money, changeReq.GiftMoney),
+		GiftMoney:   changeReq.GiftMoney,
+		Describe:    changeReq.Describe,
+		RelatedUuid: changeReq.RelatedUuid,
+	}); err != nil {
+		return errors.WithMessage(err, "记录明细失败")
 	}
 	return nil
 }

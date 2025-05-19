@@ -1256,6 +1256,19 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			OnlyDelete:              true,
 		})
 	}()
+
+	// 发布“会员余额变动”事件
+	go func() {
+		s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
+			BasePayload: event.BasePayload{ // 会员余额变动
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
+	}()
+
 	return nil
 }
 
