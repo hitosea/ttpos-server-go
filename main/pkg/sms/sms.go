@@ -167,32 +167,6 @@ func (c *smsClient) SendSMS(req *SendSMSRequest) (*SMSResponse, error) {
 	return &smsResp, nil
 }
 
-// QuerySMSStatus 查询短信状态
-func (c *smsClient) QuerySMSStatus(messageIDs string) (*SMSResponse, error) {
-	url := fmt.Sprintf("%s%s?message_id=%s", c.baseURL, APIPathQuery, messageIDs)
-
-	httpReq, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("create request failed: %v", err)
-	}
-
-	httpReq.Header.Set("api-key", c.apiKey)
-	httpReq.Header.Set("content-type", "application/json")
-
-	resp, err := c.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("send request failed: %v", err)
-	}
-	defer resp.Body.Close()
-
-	var smsResp SMSResponse
-	if err := json.NewDecoder(resp.Body).Decode(&smsResp); err != nil {
-		return nil, fmt.Errorf("decode response failed: %v", err)
-	}
-
-	return &smsResp, nil
-}
-
 // CheckConfig 检查客户端配置是否正确
 func (c *smsClient) CheckConfig() error {
 	if c.apiKey == "" {
