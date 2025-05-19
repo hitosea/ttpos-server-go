@@ -7,12 +7,13 @@ return [
         'HttpEnd' => [],
         'LogLevel' => [],
         'LogWrite' => [],
-        'CashierPaySuccess' => [
-            \app\cashier\event\PaySuccess::class
-        ],
         /*用户等级*/
         'UserGrade' => [
             \app\job\event\UserGrade::class
+        ],
+        /*用户充值*/
+        'UserRecharge' => [
+            \app\job\event\UserRecharge::class
         ],
         /*任务调度*/
         'JobScheduler' => [
