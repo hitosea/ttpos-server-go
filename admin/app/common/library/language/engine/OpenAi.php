@@ -6,7 +6,7 @@ class OpenAi
 {
 
     // const URL = "http://103.63.139.229:8088/api/translate";
-    const URL = "https://aitrans.keli.vip/translate";
+    const URL = "https://aitrans.ttpos.com/translate";
     const CURL_TIMEOUT = 10000;
     const CONNECT_TIMEOUT = 10;
 
