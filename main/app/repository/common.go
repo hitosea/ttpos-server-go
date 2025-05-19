@@ -23,6 +23,13 @@ func NotDeleted(db *gorm.DB) *gorm.DB {
 }
 
 func Like(keyword string) string {
+	specialChars := []string{"%", "_", "\\\\", "[", "]", "^", "|", "$", "(", ")"}
+
+	keyword = strings.TrimSpace(keyword)
+	for _, char := range specialChars {
+		keyword = strings.ReplaceAll(keyword, char, "\\"+char)
+	}
+
 	return "%" + keyword + "%"
 }
 
