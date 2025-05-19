@@ -24,6 +24,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
@@ -59,13 +60,14 @@ type rechargeOrderSrv struct {
 	settingSrv       setting.ISrv
 	cashBoxSrv       ICashBoxSrv
 	memberSrv        IMemberSrv
+	smsSrv           ISmsSrv
 }
 
-func NewRechargeOrderSrv(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv) IRechargeOrderSrv {
-	return NewRechargeOrderSrvImpl(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv)
+func NewRechargeOrderSrv(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv, smsSrv ISmsSrv) IRechargeOrderSrv {
+	return NewRechargeOrderSrvImpl(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv, smsSrv)
 }
 
-func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv) IRechargeOrderSrv {
+func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv, smsSrv ISmsSrv) IRechargeOrderSrv {
 	return &rechargeOrderSrv{
 		dbm:              dbm,
 		bus:              event.NewSystemBus(),
@@ -74,6 +76,7 @@ func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, payment
 		settingSrv:       settingSrv,
 		cashBoxSrv:       cashBoxSrv,
 		memberSrv:        memberSrv,
+		smsSrv:           smsSrv,
 	}
 }
 
@@ -439,13 +442,14 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 	var confirmResp resp.ConfirmRechargeOrder
 
 	companyUuid := ctx.GetCompanyUuid()
-	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
+	db := s.dbm.GetDB(companyUuid)
+	memberRepo := repository.NewMemberRepo(db)
 	member := memberRepo.GetMember(memberRepo.WhereUuid(confirmReq.MemberUuid))
 	if member.Uuid == 0 {
 		return confirmResp, errors.New("会员不存在")
 	}
 
-	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
+	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(db)
 	order := rechargeOrderRepo.GetRechargeOrder(
 		rechargeOrderRepo.WhereUuid(confirmReq.RechargeOrderUuid),
 		rechargeOrderRepo.WithPaymentOrders(),
@@ -479,7 +483,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 
 	var memberPointsChanged bool
 
-	err := s.dbm.GetDB(companyUuid).Transaction(func(tx *gorm.DB) error {
+	err := db.Transaction(func(tx *gorm.DB) error {
 		ctx.SetDB(tx)
 		err := repository.NewMemberRechargeOrderRepo(tx).Update(order.Uuid, updates)
 		if err != nil {
@@ -562,6 +566,34 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 			logger.Logger.Error("打印充值单失败", zap.Error(err))
 		}
 	}()
+
+	// 发送结账短信
+	{
+		// 获取最新的会员信息
+		member, err := repository.NewMemberRepo(db).GetMemberByUuid(confirmReq.MemberUuid)
+		if err != nil {
+			ctx.Log().Info("停止发送短信（充值），获取会员失败", zap.Error(errors.WithMessage(err)))
+		} else {
+			go func() {
+				ctx.SetDB(db)
+				if member != nil && member.Phone != "" {
+					smsReq := sms.MemberRechargeRequest{
+						Company:       ctx.GetCompany().Name,
+						Recharge:      order.RechargeAmount,
+						BonusMoney:    order.GiftAmount,
+						BonusPoints:   order.GiftPoint,
+						Balance:       member.GetBalanceAll(),
+						PointsBalance: member.GetPoints(),
+					}
+					if err := s.smsSrv.SendMemberRechargeSMS(ctx, member.Phone, &smsReq); err != nil {
+						ctx.Log().Info("发送充值短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+					} else {
+						ctx.Log().Info("发送充值短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+					}
+				}
+			}()
+		}
+	}
 
 	// 发布“会员余额变动”事件
 	go func() {
