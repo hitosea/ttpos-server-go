@@ -26,6 +26,10 @@ const (
 	APIPathSend = "/api/sms/send"
 	// APIPathQuery 查询短信状态API路径
 	APIPathQuery = "/api/sms/query"
+	// APIPathHealth 健康检查API路径
+	APIPathHealth = "/api/health"
+	// APIPathCheckKey API密钥检查路径
+	APIPathCheckKey = "/api/sms/check_api_key"
 )
 
 // 响应码常量

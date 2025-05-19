@@ -27,9 +27,10 @@ type SMSResponse struct {
 
 // smsClient 短信客户端实现
 type smsClient struct {
-	apiKey     string
-	baseURL    string
-	httpClient *http.Client
+	apiKey      string
+	projectName string
+	baseURL     string
+	httpClient  *http.Client
 }
 
 var (
@@ -38,12 +39,13 @@ var (
 )
 
 // InitClient 初始化短信客户端
-func InitClient(apiKey, baseURL string) {
+func InitClient(apiKey, baseURL, projectName string) {
 	once.Do(func() {
 		instance = &smsClient{
-			apiKey:     apiKey,
-			baseURL:    baseURL,
-			httpClient: &http.Client{},
+			apiKey:      apiKey,
+			projectName: projectName,
+			baseURL:     baseURL,
+			httpClient:  &http.Client{},
 		}
 	})
 }
@@ -71,7 +73,9 @@ func (c *smsClient) SendMemberConsumptionSMS(phone, language string, params *Mem
 			"points_balance":  params.PointsBalance,
 		},
 	}
-	logger.Logger.Info("发送会员消费短信", zap.Any("req", req))
+	if logger.Logger != nil {
+		logger.Logger.Info("发送会员消费短信", zap.Any("req", req))
+	}
 	return c.SendSMS(req)
 }
 
@@ -90,7 +94,9 @@ func (c *smsClient) SendMemberRechargeSMS(phone, language string, params *Member
 			"points_balance": params.PointsBalance,
 		},
 	}
-	logger.Logger.Info("发送会员充值短信", zap.Any("req", req))
+	if logger.Logger != nil {
+		logger.Logger.Info("发送会员充值短信", zap.Any("req", req))
+	}
 	return c.SendSMS(req)
 }
 
@@ -107,7 +113,9 @@ func (c *smsClient) SendMemberRechargeRefundSMS(phone, language string, params *
 			"points_balance":  params.PointsBalance,
 		},
 	}
-	logger.Logger.Info("发送会员充值退款短信", zap.Any("req", req))
+	if logger.Logger != nil {
+		logger.Logger.Info("发送会员充值退款短信", zap.Any("req", req))
+	}
 	return c.SendSMS(req)
 }
 
@@ -124,7 +132,9 @@ func (c *smsClient) SendMemberOrderRefundSMS(phone, language string, params *Mem
 			"points_balance": params.PointsBalance,
 		},
 	}
-	logger.Logger.Info("发送会员用餐订单退款短信", zap.Any("req", req))
+	if logger.Logger != nil {
+		logger.Logger.Info("发送会员用餐订单退款短信", zap.Any("req", req))
+	}
 	return c.SendSMS(req)
 }
 
@@ -191,32 +201,50 @@ func (c *smsClient) CheckConfig() error {
 	if c.baseURL == "" {
 		return fmt.Errorf("base URL is not configured")
 	}
+	if c.projectName == "" {
+		return fmt.Errorf("project name is not configured")
+	}
 	if c.httpClient == nil {
 		return fmt.Errorf("http client is not configured")
 	}
 
-	// // 尝试发送一个简单的请求来验证配置
-	// req, err := http.NewRequest("GET", c.baseURL+APIPathQuery+"?message_id=test", nil)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to create test request: %v", err)
-	// }
+	// 检查服务健康状态
+	healthReq, err := http.NewRequest("GET", c.baseURL+APIPathHealth, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create health check request: %v", err)
+	}
 
-	// req.Header.Set("api-key", c.apiKey)
-	// req.Header.Set("content-type", "application/json")
+	healthResp, err := c.httpClient.Do(healthReq)
+	if err != nil {
+		return fmt.Errorf("failed to connect to SMS service: %v", err)
+	}
+	defer healthResp.Body.Close()
 
-	// resp, err := c.httpClient.Do(req)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to connect to SMS service: %v", err)
-	// }
-	// defer resp.Body.Close()
+	if healthResp.StatusCode != http.StatusOK {
+		return fmt.Errorf("SMS service is not healthy, status code: %d", healthResp.StatusCode)
+	}
 
-	// // 检查响应状态码
-	// if resp.StatusCode == http.StatusUnauthorized {
-	// 	return fmt.Errorf("invalid API key")
-	// }
-	// if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadRequest {
-	// 	return fmt.Errorf("unexpected response status: %d", resp.StatusCode)
-	// }
+	// 验证 API key
+	checkKeyURL := fmt.Sprintf("%s%s?project_name=%s&api_key=%s", c.baseURL, APIPathCheckKey, c.projectName, c.apiKey)
+	keyReq, err := http.NewRequest("GET", checkKeyURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create API key check request: %v", err)
+	}
+
+	keyResp, err := c.httpClient.Do(keyReq)
+	if err != nil {
+		return fmt.Errorf("failed to check API key: %v", err)
+	}
+	defer keyResp.Body.Close()
+
+	var smsResp SMSResponse
+	if err := json.NewDecoder(keyResp.Body).Decode(&smsResp); err != nil {
+		return fmt.Errorf("failed to decode API key check response: %v", err)
+	}
+
+	if smsResp.Code != ResponseCodeSuccess {
+		return fmt.Errorf("invalid API key, code: %d, msg: %s. project name: %s, API key: %s", smsResp.Code, smsResp.Msg, c.projectName, c.apiKey)
+	}
 
 	return nil
 }

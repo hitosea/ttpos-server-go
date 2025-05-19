@@ -41,7 +41,7 @@ func TestSendSMS(t *testing.T) {
 	defer server.Close()
 
 	// 初始化客户端
-	InitClient("test-api-key", server.URL)
+	InitClient("test-api-key", server.URL, "ttpos")
 
 	// 测试会员充值短信
 	t.Run("TestSendMemberRechargeSMS", func(t *testing.T) {
@@ -234,20 +234,42 @@ func TestSendSMS(t *testing.T) {
 	t.Run("TestCheckConfig", func(t *testing.T) {
 		// 创建测试服务器
 		configServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// 验证请求头
-			if r.Header.Get("api-key") != "test-api-key" {
-				w.WriteHeader(http.StatusUnauthorized)
+			// 健康检查接口
+			if r.URL.Path == APIPathHealth {
+				w.WriteHeader(http.StatusOK)
 				return
 			}
-			w.WriteHeader(http.StatusOK)
+
+			// API key 检查接口
+			if r.URL.Path == APIPathCheckKey {
+				projectName := r.URL.Query().Get("project_name")
+				apiKey := r.URL.Query().Get("api_key")
+
+				if projectName != "ttpos" || apiKey != "test-api-key" {
+					json.NewEncoder(w).Encode(SMSResponse{
+						Code: ResponseCodeInvalidAPIKey,
+						Msg:  "Invalid API Key",
+					})
+					return
+				}
+
+				json.NewEncoder(w).Encode(SMSResponse{
+					Code: ResponseCodeSuccess,
+					Msg:  "Exists",
+				})
+				return
+			}
+
+			w.WriteHeader(http.StatusNotFound)
 		}))
 		defer configServer.Close()
 
 		// 测试正常配置
 		client := &smsClient{
-			apiKey:     "test-api-key",
-			baseURL:    configServer.URL,
-			httpClient: &http.Client{},
+			apiKey:      "test-api-key",
+			baseURL:     configServer.URL,
+			projectName: "ttpos",
+			httpClient:  &http.Client{},
 		}
 		if err := client.CheckConfig(); err != nil {
 			t.Errorf("CheckConfig failed with valid config: %v", err)
@@ -257,26 +279,57 @@ func TestSendSMS(t *testing.T) {
 		client.apiKey = ""
 		if err := client.CheckConfig(); err == nil {
 			t.Error("CheckConfig should fail with missing API key")
+		} else if err.Error() != "api key is not configured" {
+			t.Errorf("Expected error message 'api key is not configured', got: %v", err)
 		}
 
-		// // 测试无效的API密钥
-		// client.apiKey = "invalid-api-key"
-		// if err := client.CheckConfig(); err == nil {
-		// 	t.Error("CheckConfig should fail with invalid API key")
-		// }
+		// 测试无效的API密钥
+		client.apiKey = "invalid-api-key"
+		if err := client.CheckConfig(); err == nil {
+			t.Error("CheckConfig should fail with invalid API key")
+		} else if err.Error() != "invalid API key, code: 401, msg: Invalid API Key. project name: ttpos, API key: invalid-api-key" {
+			t.Errorf("Expected error message about invalid API key, got: %v", err)
+		}
 
-		// // 测试缺少baseURL
-		// client.apiKey = "test-api-key"
-		// client.baseURL = ""
-		// if err := client.CheckConfig(); err == nil {
-		// 	t.Error("CheckConfig should fail with missing base URL")
-		// }
+		// 测试缺少baseURL
+		client.apiKey = "test-api-key"
+		client.baseURL = ""
+		if err := client.CheckConfig(); err == nil {
+			t.Error("CheckConfig should fail with missing base URL")
+		} else if err.Error() != "base URL is not configured" {
+			t.Errorf("Expected error message 'base URL is not configured', got: %v", err)
+		}
 
-		// // 测试缺少httpClient
-		// client.baseURL = configServer.URL
-		// client.httpClient = nil
-		// if err := client.CheckConfig(); err == nil {
-		// 	t.Error("CheckConfig should fail with missing http client")
-		// }
+		// 测试缺少projectName
+		client.baseURL = configServer.URL
+		client.projectName = ""
+		if err := client.CheckConfig(); err == nil {
+			t.Error("CheckConfig should fail with missing project name")
+		} else if err.Error() != "project name is not configured" {
+			t.Errorf("Expected error message 'project name is not configured', got: %v", err)
+		}
+
+		// 测试缺少httpClient
+		client.projectName = "ttpos"
+		client.httpClient = nil
+		if err := client.CheckConfig(); err == nil {
+			t.Error("CheckConfig should fail with missing http client")
+		} else if err.Error() != "http client is not configured" {
+			t.Errorf("Expected error message 'http client is not configured', got: %v", err)
+		}
+
+		// 测试健康检查失败
+		unhealthyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+		defer unhealthyServer.Close()
+
+		client.httpClient = &http.Client{}
+		client.baseURL = unhealthyServer.URL
+		if err := client.CheckConfig(); err == nil {
+			t.Error("CheckConfig should fail when health check fails")
+		} else if err.Error() != "SMS service is not healthy, status code: 500" {
+			t.Errorf("Expected error message about unhealthy service, got: %v", err)
+		}
 	})
 }

@@ -163,11 +163,13 @@ func migrateDatabaseConf(opt copier.Option) {
 
 func smsConf(opt copier.Option) {
 	SMS = SMSConf{
-		BaseURL: "",
-		APIKey:  "",
+		BaseURL:     "",
+		APIKey:      "",
+		ProjectName: "",
 	}
 	copier.CopyWithOption(&SMS, SMSConf{
-		BaseURL: viper.GetString("SMS_BASE_URL"),
-		APIKey:  viper.GetString("SMS_API_KEY"),
+		BaseURL:     viper.GetString("SMS_BASE_URL"),
+		APIKey:      viper.GetString("SMS_API_KEY"),
+		ProjectName: viper.GetString("SMS_PROJECT_NAME"),
 	}, opt)
 }

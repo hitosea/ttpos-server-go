@@ -113,6 +113,12 @@ curl --request POST \
 curl -XGET "http://127.0.0.1:8080/api/sms/query?message_id=G183FE43F437E343EHMDP1009"
 ```
 
-#### 其他说明
+###### 3、查询是否存在api key
+```curl
+curl "http://192.168.100.245:8787/api/sms/check_api_key?project_name=ttpos&api_key=6Q76zPZMrc6KRhGLt4ilBJCoBEKqJSpZT74K3sIXJvz4gpD33Wsd78V7rxq72j8R"
+```
 
-用户发送短信后，如果未收到回执，没5分钟回自动查询短信状态
+###### 4、检测服务是否健康，返回healthy表示健康
+```curl
+curl http://192.168.100.245:8787/api/health
+```

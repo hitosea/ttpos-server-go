@@ -24,8 +24,6 @@ type ISmsSrv interface {
 	SendMemberRechargeRefundSMS(ctx context.Context, phone string, params *sms.MemberRechargeRefundRequest) error
 	// SendMemberOrderRefundSMS 发送会员用餐订单退款短信
 	SendMemberOrderRefundSMS(ctx context.Context, phone string, params *sms.MemberOrderRefundRequest) error
-	// CheckConfig 检查短信服务配置是否正确
-	CheckConfig(ctx context.Context) error
 }
 
 // smsSrv 短信服务实现
@@ -272,9 +270,4 @@ func (s *smsSrv) SendMemberOrderRefundSMS(ctx context.Context, phone string, par
 	}
 
 	return nil
-}
-
-// CheckConfig 检查短信服务配置是否正确
-func (s *smsSrv) CheckConfig(ctx context.Context) error {
-	return s.client.CheckConfig()
 }

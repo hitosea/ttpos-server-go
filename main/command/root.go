@@ -56,7 +56,7 @@ var rootCommand = &cobra.Command{
 		lock.NewSystemLock()
 
 		// 初始化短信客户端
-		sms.InitClient(config.SMS.APIKey, config.SMS.BaseURL)
+		sms.InitClient(config.SMS.APIKey, config.SMS.BaseURL, config.SMS.ProjectName)
 		// 检查短信客户端配置
 		if err := sms.GetSMSClient().CheckConfig(); err != nil {
 			logger.Logger.Info("Failed to check SMS client config", zap.Error(err))

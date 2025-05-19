@@ -65,6 +65,7 @@ type MigrateDatabaseConf struct {
 }
 
 type SMSConf struct {
-	BaseURL string // 基础URL
-	APIKey  string // API密钥
+	BaseURL     string // 基础URL
+	APIKey      string // API密钥
+	ProjectName string // 项目名称
 }
