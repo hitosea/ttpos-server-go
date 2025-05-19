@@ -114,13 +114,13 @@ func (model *SaleOrder) GetAutoDiscountMessage(setting SaleBillSetting, lang str
 func ParseAutoDiscountMessage(zeroRule uint8, zeroFee float64, lang string) string {
 	switch zeroRule {
 	case 1:
-		return translate(zeroRule, lang) + "：（" + fmt.Sprintf("%.2f", zeroFee) + "）"
+		return translate(zeroRule, lang) + "：" + fmt.Sprintf("%.2f", zeroFee)
 	case 2:
-		return translate(zeroRule, lang) + "：（" + fmt.Sprintf("%.2f", zeroFee) + "）"
+		return translate(zeroRule, lang) + "：" + fmt.Sprintf("%.2f", zeroFee)
 	case 3:
-		return translate(zeroRule, lang) + "：（" + fmt.Sprintf("%.2f", zeroFee) + "）"
+		return translate(zeroRule, lang) + "：" + fmt.Sprintf("%.2f", zeroFee)
 	case 4:
-		return translate(zeroRule, lang) + "：（" + fmt.Sprintf("%.2f", zeroFee) + "）"
+		return translate(zeroRule, lang) + "：" + fmt.Sprintf("%.2f", zeroFee)
 	}
 	return ""
 }
