@@ -76,7 +76,17 @@ func (model *CompanySetting) GetDefaultLanguage() string {
 	languages := make([]string, 0)
 	if err := json.Unmarshal([]byte(model.Languages), &languages); err != nil {
 		fmt.Println("GetDefaultLanguage error", err)
-		return "en"
+		tmp := ""
+		err = json.Unmarshal([]byte(model.Languages), &tmp)
+		if err != nil {
+			fmt.Println("GetDefaultLanguage error1", err)
+			return "en"
+		}
+		err = json.Unmarshal([]byte(tmp), &languages)
+		if err != nil {
+			fmt.Println("GetDefaultLanguage error2", err)
+			return "en"
+		}
 	}
 	if len(languages) > 0 {
 		return languages[0]
