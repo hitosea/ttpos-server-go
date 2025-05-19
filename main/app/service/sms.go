@@ -103,6 +103,19 @@ func (s *smsSrv) checkQuotaAndFormatPhone(ctx context.Context, phone string) (st
 	return formattedPhone, language, ctx.GetCompany().Name, nil
 }
 
+// 扣减短信额度. 同时扣减saas库和商家库的短信额度
+func (s *smsSrv) deductQuota(ctx context.Context, companyUuid uint64) error {
+	if err := repository.NewCompanySettingRepo(ctx.GetDB()).UpdateSmsQuota(companyUuid, 1); err != nil {
+		err := fmt.Errorf("failed to update SMS quota: %v", err)
+		return errors.WithMessage(err, "扣减短信额度失败")
+	}
+	if err := repository.NewCompanySettingRepo(s.dbm.GetDB(0)).UpdateSmsQuota(companyUuid, 1); err != nil {
+		err := fmt.Errorf("failed to update saas SMS quota: %v", err)
+		return errors.WithMessage(err, "saas扣减短信额度失败")
+	}
+	return nil
+}
+
 // SendMemberConsumptionSMS 发送会员消费短信
 func (s *smsSrv) SendMemberConsumptionSMS(ctx context.Context, phone string, params *sms.MemberConsumptionRequest) error {
 	company := ctx.GetCompany()
@@ -137,8 +150,7 @@ func (s *smsSrv) SendMemberConsumptionSMS(ctx context.Context, phone string, par
 
 	// 如果发送成功，扣减额度
 	if resp.Code == sms.ResponseCodeSuccess {
-		if err := repository.NewCompanySettingRepo(ctx.GetDB()).UpdateSmsQuota(company.Uuid, 1); err != nil {
-			err := fmt.Errorf("failed to update SMS quota: %v", err)
+		if err := s.deductQuota(ctx, company.Uuid); err != nil {
 			return errors.WithMessage(err, "扣减短信额度失败")
 		}
 	} else {
@@ -178,8 +190,7 @@ func (s *smsSrv) SendMemberRechargeSMS(ctx context.Context, phone string, params
 
 	// 如果发送成功，扣减额度
 	if resp.Code == sms.ResponseCodeSuccess {
-		if err := repository.NewCompanySettingRepo(ctx.GetDB()).UpdateSmsQuota(company.Uuid, 1); err != nil {
-			err := fmt.Errorf("failed to update SMS quota: %v", err)
+		if err := s.deductQuota(ctx, company.Uuid); err != nil {
 			return errors.WithMessage(err, "扣减短信额度失败")
 		}
 	} else {
@@ -219,8 +230,7 @@ func (s *smsSrv) SendMemberRechargeRefundSMS(ctx context.Context, phone string, 
 
 	// 如果发送成功，扣减额度
 	if resp.Code == sms.ResponseCodeSuccess {
-		if err := repository.NewCompanySettingRepo(ctx.GetDB()).UpdateSmsQuota(company.Uuid, 1); err != nil {
-			err := fmt.Errorf("failed to update SMS quota: %v", err)
+		if err := s.deductQuota(ctx, company.Uuid); err != nil {
 			return errors.WithMessage(err, "扣减短信额度失败")
 		}
 	} else {
@@ -260,8 +270,7 @@ func (s *smsSrv) SendMemberOrderRefundSMS(ctx context.Context, phone string, par
 
 	// 如果发送成功，扣减额度
 	if resp.Code == sms.ResponseCodeSuccess {
-		if err := repository.NewCompanySettingRepo(ctx.GetDB()).UpdateSmsQuota(company.Uuid, 1); err != nil {
-			err := fmt.Errorf("failed to update SMS quota: %v", err)
+		if err := s.deductQuota(ctx, company.Uuid); err != nil {
 			return errors.WithMessage(err, "扣减短信额度失败")
 		}
 	} else {
