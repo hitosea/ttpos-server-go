@@ -98,9 +98,14 @@ class Printer extends BaseModel
             // })  
             ->select()
             ->toArray();
+       
+        // 添加USB标识
+        foreach ($printerList as &$printer) {
+            $printer['printer_name'] = $printer['printer_name'] . ($printer['is_usb'] == 1 ? ' (USB)' : '');
+        }
+
         //
         $text = __('自带');
-        //
         $cashierDevices = BindRecord::alias('a')
             ->where('source', BindRecord::SOURCE_CASHIER)
             ->whereIn('brand', BindRecord::BRANDS_PRINTS)
@@ -109,6 +114,7 @@ class Printer extends BaseModel
             ->order('id')
             ->select()
             ->toArray();
+            
         //
         return array_merge($cashierDevices, $printerList);
     }

@@ -26,10 +26,12 @@ class Printing extends PrintingModel
                 'id' => $item['id'],
                 'name' => $item['name'],
                 'printer_name_text' => self::getPrinterNameText($item['printingItem']),
+                'printer_list' => self::getPrinterList($item['printingItem']),
                 'print_type' => self::PRINT_MODE_REVERSE_MAP[$item['print_mode']],
                 'print_method' => self::PRINT_METHOD_REVERSE_MAP[$item['print_method']],
                 'is_open' => $item['status'],
                 'create_time' => $item['create_time'],
+                'is_usb' => $item['is_usb'],
             ];
         }
 
