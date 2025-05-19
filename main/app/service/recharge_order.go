@@ -1653,6 +1653,33 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+
+	// 发送短信
+	if deductionMoney > 0 {
+		go func() {
+			// 获取最新的会员信息
+			member, err := repository.NewMemberRepo(db).GetMemberByUuid(order.Member.Uuid)
+			if err != nil {
+				ctx.Log().Info("停止发送短信（充值退款），获取会员失败", zap.Error(errors.WithMessage(err)))
+			} else {
+				ctx.SetDB(db)
+				if member != nil {
+					smsReq := sms.MemberRechargeRefundRequest{
+						Company:        ctx.GetCompany().Name,
+						RechargeRefund: deductionMoney,
+						Balance:        member.GetBalanceAll(),
+						PointsBalance:  member.GetPoints(),
+					}
+					if err := s.smsSrv.SendMemberRechargeRefundSMS(ctx, member.Phone, &smsReq); err != nil {
+						ctx.Log().Info("发送充值退款短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+					} else {
+						ctx.Log().Info("发送充值退款短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+					}
+				}
+			}
+		}()
+	}
+
 	// 发布“统计”事件
 	go func() {
 		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{
