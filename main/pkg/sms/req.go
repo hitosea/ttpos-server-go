@@ -22,10 +22,10 @@ type MemberRechargeRequest struct {
 
 // MemberRechargeRefundRequest 会员充值退款请求参数
 type MemberRechargeRefundRequest struct {
-	Company        string  `json:"company"`
-	RechargeRefund float64 `json:"recharge_refund"`
-	Balance        float64 `json:"balance"`
-	PointsBalance  float64 `json:"points_balance"`
+	Company        string  `json:"company"`         // 公司名称
+	RechargeRefund float64 `json:"recharge_refund"` // 充值退款金额
+	Balance        float64 `json:"balance"`         // 退款后，会员余额
+	PointsBalance  float64 `json:"points_balance"`  // 退款后，积分余额
 }
 
 // MemberOrderRefundRequest 会员用餐订单退款请求参数

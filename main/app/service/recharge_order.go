@@ -1284,6 +1284,32 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		go s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), order.MemberUuid)
 	}
 
+	// 发送短信
+	{
+		// 获取最新的会员信息
+		member, err := repository.NewMemberRepo(db).GetMemberByUuid(order.Member.Uuid)
+		if err != nil {
+			ctx.Log().Info("停止发送短信（充值反结账），获取会员失败", zap.Error(errors.WithMessage(err)))
+		} else {
+			go func() {
+				ctx.SetDB(db)
+				if member != nil && member.Phone != "" {
+					smsReq := sms.MemberRechargeRefundRequest{
+						Company:        ctx.GetCompany().Name,
+						RechargeRefund: order.RechargeAmount + order.GiftAmount,
+						Balance:        member.GetBalanceAll(),
+						PointsBalance:  member.GetPoints(),
+					}
+					if err := s.smsSrv.SendMemberRechargeRefundSMS(ctx, member.Phone, &smsReq); err != nil {
+						ctx.Log().Info("发送充值反结账短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+					} else {
+						ctx.Log().Info("发送充值反结账短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+					}
+				}
+			}()
+		}
+	}
+
 	// 发布“统计”事件
 	go func() {
 		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{
