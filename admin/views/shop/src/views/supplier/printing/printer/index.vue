@@ -15,7 +15,12 @@
       <div class="table-wrap">
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
           <el-table-column prop="printer_id" label="ID"></el-table-column>
-          <el-table-column prop="printer_name" :label="$t('打印机名称')"></el-table-column>
+          <el-table-column prop="printer_name" :label="$t('打印机名称')">
+            <template #default="scope">
+              {{ scope.row.printer_name }}
+              <el-tag v-if="scope.row.is_usb == 1" size="small" type="warning">USB</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="printer_type.text" :label="$t('打印机类型')"></el-table-column>
           <el-table-column prop="sort" :label="$t('排序')"></el-table-column>
           <el-table-column prop="create_time" :label="$t('添加时间')"></el-table-column>
