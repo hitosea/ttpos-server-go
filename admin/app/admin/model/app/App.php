@@ -82,6 +82,8 @@ class App extends AppModel
             "su.printer_limit",
             "su.languages",
             "su.timezone",
+            "su.enable_sms",
+            "su.sms_quota",
         ];
         //
         $countWhere = 'where 1 = 1';
