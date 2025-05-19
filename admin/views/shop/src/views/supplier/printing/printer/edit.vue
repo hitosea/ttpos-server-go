@@ -118,7 +118,15 @@
       </div>
 
       <el-form-item for="no_click" :label="$t('打印联数')" prop="print_times" :rules="[{ required: true, message: $t('请输入打印联数') }]">
-        <el-input-number :controls="false" :min="0" :max="10" :placeholder="$t('请输入打印联数')" v-model.number="form.print_times" autocomplete="off"></el-input-number>
+        <el-input-number
+          :controls="false"
+          :min="1"
+          :max="10"
+          :precision="0"
+          :placeholder="$t('请输入打印联数')"
+          v-model.number="form.print_times"
+          autocomplete="off"
+        ></el-input-number>
         <div class="tips">{{ $t('同一订单，打印的次数') }}</div>
       </el-form-item>
 
