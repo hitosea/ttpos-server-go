@@ -1,1 +1,0 @@
-import{d as e}from"./index-BhVwkbwN.js";import{z as r,y as o}from"./vue-D2gAKiOu.js";import"./element-Cy_APTMj.js";const t=e({},[["render",function(e,t){return o(),r("div",null,"Home")}]]);export{t as default};

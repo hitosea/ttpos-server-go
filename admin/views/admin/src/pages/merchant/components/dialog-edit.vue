@@ -246,8 +246,6 @@
             clearable
             :placeholder="$t('请输入短信额度')"
             style="width: 100%"
-            :min="0"
-            :max="9999999"
             @blur="handleSmsQuotaInput"
           ></el-input-number>
           <div class="text-[#ccc] w-full">{{ $t('最小额度为0，短信额度的最大值为9,999,999，默认为200') }}</div>
