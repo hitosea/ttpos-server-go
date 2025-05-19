@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 // SendSMSRequest 发送短信请求结构体
@@ -68,6 +71,7 @@ func (c *smsClient) SendMemberConsumptionSMS(phone, language string, params *Mem
 			"points_balance":  params.PointsBalance,
 		},
 	}
+	logger.Logger.Info("发送会员消费短信", zap.Any("req", req))
 	return c.SendSMS(req)
 }
 
@@ -86,6 +90,7 @@ func (c *smsClient) SendMemberRechargeSMS(phone, language string, params *Member
 			"points_balance": params.PointsBalance,
 		},
 	}
+	logger.Logger.Info("发送会员充值短信", zap.Any("req", req))
 	return c.SendSMS(req)
 }
 
@@ -102,6 +107,7 @@ func (c *smsClient) SendMemberRechargeRefundSMS(phone, language string, params *
 			"points_balance":  params.PointsBalance,
 		},
 	}
+	logger.Logger.Info("发送会员充值退款短信", zap.Any("req", req))
 	return c.SendSMS(req)
 }
 
@@ -118,6 +124,7 @@ func (c *smsClient) SendMemberOrderRefundSMS(phone, language string, params *Mem
 			"points_balance": params.PointsBalance,
 		},
 	}
+	logger.Logger.Info("发送会员用餐订单退款短信", zap.Any("req", req))
 	return c.SendSMS(req)
 }
 

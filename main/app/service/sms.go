@@ -136,10 +136,6 @@ func (s *smsSrv) SendMemberConsumptionSMS(ctx context.Context, phone string, par
 		err := fmt.Errorf("failed to send SMS: %v", err)
 		return errors.WithMessage(err, "发送短信失败")
 	}
-	if resp.Code != sms.ResponseCodeSuccess {
-		err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
-		return errors.WithMessage(err, "发送短信失败")
-	}
 
 	// 如果发送成功，扣减额度
 	if resp.Code == sms.ResponseCodeSuccess {
@@ -147,6 +143,9 @@ func (s *smsSrv) SendMemberConsumptionSMS(ctx context.Context, phone string, par
 			err := fmt.Errorf("failed to update SMS quota: %v", err)
 			return errors.WithMessage(err, "扣减短信额度失败")
 		}
+	} else {
+		err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
+		return errors.WithMessage(err, "发送短信失败")
 	}
 
 	return nil
@@ -185,6 +184,9 @@ func (s *smsSrv) SendMemberRechargeSMS(ctx context.Context, phone string, params
 			err := fmt.Errorf("failed to update SMS quota: %v", err)
 			return errors.WithMessage(err, "扣减短信额度失败")
 		}
+	} else {
+		err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
+		return errors.WithMessage(err, "发送短信失败")
 	}
 
 	return nil
@@ -223,6 +225,9 @@ func (s *smsSrv) SendMemberRechargeRefundSMS(ctx context.Context, phone string, 
 			err := fmt.Errorf("failed to update SMS quota: %v", err)
 			return errors.WithMessage(err, "扣减短信额度失败")
 		}
+	} else {
+		err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
+		return errors.WithMessage(err, "发送短信失败")
 	}
 
 	return nil
@@ -261,6 +266,9 @@ func (s *smsSrv) SendMemberOrderRefundSMS(ctx context.Context, phone string, par
 			err := fmt.Errorf("failed to update SMS quota: %v", err)
 			return errors.WithMessage(err, "扣减短信额度失败")
 		}
+	} else {
+		err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
+		return errors.WithMessage(err, "发送短信失败")
 	}
 
 	return nil
