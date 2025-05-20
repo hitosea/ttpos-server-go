@@ -116,6 +116,12 @@
             <el-radio :value="0">{{ $t('关闭') }}</el-radio>
           </el-radio-group>
         </el-form-item>
+        <el-form-item :label="$t('短信服务')" prop="enable_sms">
+          <el-radio-group v-model="formData.enable_sms" @click="handleChangeSms">
+            <el-radio :value="1">{{ $t('开启') }}</el-radio>
+            <el-radio :value="0">{{ $t('关闭') }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item :label="$t('扫码点餐接单')" prop="is_accept_scan_order">
           <el-radio-group v-model="formData.is_accept_scan_order">
             <el-radio :value="1">{{ $t('开启') }}</el-radio>
@@ -233,6 +239,17 @@
           ></el-input-number>
           <!-- <div class=" text-[#ccc] w-full">{{ $t('最大999') }}</div> -->
         </el-form-item>
+        <el-form-item :label="$t('短信额度')" prop="sms_quota" v-if="formData.enable_sms == 1">
+          <el-input-number
+            v-model="formData.sms_quota"
+            :controls="false"
+            clearable
+            :placeholder="$t('请输入短信额度')"
+            style="width: 100%"
+            @blur="handleSmsQuotaInput"
+          ></el-input-number>
+          <div class="text-[#ccc] w-full">{{ $t('最小额度为0，短信额度的最大值为9,999,999，默认为200') }}</div>
+        </el-form-item>
         <el-form-item :label="$t('时区')" prop="timezone">
           <el-select v-model="formData.timezone" :placeholder="$t('请选择时区')" @change="handleZoneChange" clearable style="min-width: 200px">
             <el-option v-for="item in timeZoneList" :key="item.key" :value="item.key" :label="item.value" />
@@ -324,6 +341,8 @@
     is_open_buffet: 0, // 是否开启自助餐: 0不开启, 1开启
     is_accept_scan_order: 0, // 是否开启扫码点餐接单: 0不开启, 1开启
     is_open_local_print: 0, // 是否开启本地打印服务: 0不开启, 1开启（v1.1.0）
+    enable_sms: 0, // 是否开启短信服务: 0不开启, 1开启
+    sms_quota: 200, // 短信额度
   });
 
   const limitTable = ref(false);
@@ -356,6 +375,8 @@
     is_open_buffet: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
     is_accept_scan_order: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
     is_open_local_print: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
+    enable_sms: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
+    sms_quota: [{ required: true, message: $t('请输入短信额度'), trigger: 'blur' }],
     printer_limit: [
       {
         required: true,
@@ -463,7 +484,27 @@
     formElement.value?.validateField('printer_limit').catch(() => {});
   };
 
+  const handleChangeSms = () => {
+    formData.value.sms_quota = 200;
+  };
+
+  const handleSmsQuotaInput = (value: number | undefined) => {
+    if (value === undefined) return;
+    setTimeout(() => {
+      if (value < 0) {
+        formData.value.sms_quota = 0;
+      } else if (value > 9999999) {
+        formData.value.sms_quota = 9999999;
+      }
+    }, 300);
+  };
+
   const handleSubmit = () => {
+    if (formData.value.enable_sms === 1 && formData.value.sms_quota != null && (formData.value.sms_quota < 0 || formData.value.sms_quota > 9999999)) {
+      message.error($t('输入内容不合规，请重新输入'));
+      formData.value.sms_quota = 0;
+      return;
+    }
     formElement.value?.validate(async (valid: boolean) => {
       if (!valid) {
         setTimeout(() => {
@@ -572,6 +613,8 @@
         is_open_buffet: props.detail?.is_open_buffet || 0, //
         is_accept_scan_order: props.detail?.is_accept_scan_order || 0, //
         is_open_local_print: props.detail?.is_open_local_print || 0, //
+        enable_sms: props.detail?.enable_sms || 0, //
+        sms_quota: props.detail?.sms_quota || 0, //
         table_limit: props.detail?.table_limit == -1 ? undefined : props.detail?.table_limit || undefined, //
         printer_limit: props.detail?.printer_limit == -1 ? undefined : props.detail?.printer_limit || undefined, //
       };

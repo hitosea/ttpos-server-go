@@ -11,7 +11,6 @@
         </el-form-item>
         <el-form-item :label="$t('起始时间')">
           <div class="block">
-            <span class="demonstration"></span>
             <el-date-picker
               size="small"
               v-model="searchForm.create_time"
@@ -125,6 +124,7 @@
   import StatisticsApi from '@/api/statistics.js';
   import detail from './detail.vue';
   import { languageStore } from '@/store/model/language.js';
+  import dayjs from '@/utils/dayjs';
   const { currency } = useUserStore();
   const languageTag = languageStore().language;
   const { token } = useUserStore();
@@ -156,7 +156,9 @@
       };
     },
 
-    created() {
+    async mounted() {
+      this.searchForm.create_time = [dayjs(), dayjs()];
+      await this.$nextTick();
       this.getData();
     },
     methods: {

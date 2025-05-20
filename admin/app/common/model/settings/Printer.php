@@ -85,10 +85,27 @@ class Printer extends BaseModel
      */
     public static function getAll($shop_supplier_id = 0)
     {
-        $printerList = (new static)->order(['sort' => 'asc'])->select()->toArray();
+        $printerList = (new static)->order(['sort' => 'asc'])
+            // NOTE: 舍弃5分钟自动切换
+            // ->where(function ($query) {
+            //     $query->where(function ($q) {
+            //         $q->where('is_usb', 0);
+            //     })->whereOr(function ($q) {
+            //         $q->where('is_usb', 1)->where('status', 1);
+            //     })->whereOr(function ($q) {
+            //         $q->where('last_heartbeat_time', ">=", time() - 300);
+            //     });
+            // })  
+            ->select()
+            ->toArray();
+       
+        // 添加USB标识
+        foreach ($printerList as &$printer) {
+            $printer['printer_name'] = $printer['printer_name'] . ($printer['is_usb'] == 1 ? ' (USB)' : '');
+        }
+
         //
         $text = __('自带');
-        //
         $cashierDevices = BindRecord::alias('a')
             ->where('source', BindRecord::SOURCE_CASHIER)
             ->whereIn('brand', BindRecord::BRANDS_PRINTS)
@@ -97,6 +114,7 @@ class Printer extends BaseModel
             ->order('id')
             ->select()
             ->toArray();
+            
         //
         return array_merge($cashierDevices, $printerList);
     }
@@ -176,6 +194,7 @@ class Printer extends BaseModel
                     'text' => $item['printerType']['name_text'] ?? '',
                 ],
                 'sort' => $item['sort'],
+                'is_usb' => $item['is_usb'],
                 'create_time' => $item['create_time'],
                 'printer_config' => $item['printer_config'],
                 'is_use' => $item['is_use']

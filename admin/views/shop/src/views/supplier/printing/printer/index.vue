@@ -15,16 +15,27 @@
       <div class="table-wrap">
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
           <el-table-column prop="printer_id" label="ID"></el-table-column>
-          <el-table-column prop="printer_name" :label="$t('打印机名称')"></el-table-column>
+          <el-table-column prop="printer_name" :label="$t('打印机名称')">
+            <template #default="scope">
+              {{ scope.row.printer_name }}
+              <el-tag v-if="scope.row.is_usb == 1" size="small" type="warning">USB</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="printer_type.text" :label="$t('打印机类型')"></el-table-column>
           <el-table-column prop="sort" :label="$t('排序')"></el-table-column>
           <el-table-column prop="create_time" :label="$t('添加时间')"></el-table-column>
           <el-table-column fixed="right" :label="$t('操作')" width="120">
             <template #default="scope">
               <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/supplier/printing/printer/edit'">{{ $t('编辑') }}</el-button>
-              <el-button @click="deleteClick(scope.row)" type="primary" :disabled="scope.row.is_use == 1" link size="small" v-auth="'/supplier/printing/printer/delete'">{{
-                $t('删除')
-              }}</el-button>
+              <el-button
+                @click="deleteClick(scope.row)"
+                type="primary"
+                :disabled="scope.row.is_use == 1 || scope.row.is_usb == 1"
+                link
+                size="small"
+                v-auth="'/supplier/printing/printer/delete'"
+                >{{ $t('删除') }}</el-button
+              >
             </template>
           </el-table-column>
         </el-table>
@@ -61,6 +72,7 @@
       v-if="open_edit"
       :open_edit="open_edit"
       :printer_id="printerId"
+      :is_usb="is_usb"
       @close="
         (e) => {
           open_edit = false;
@@ -101,6 +113,7 @@
         /*是否打开编辑弹窗*/
         open_edit: false,
         printerId: 0,
+        is_usb: 0,
         /*当前编辑的对象*/
         userModel: {},
       };
@@ -147,6 +160,7 @@
       /*打开编辑*/
       editClick(item) {
         this.printerId = item.printer_id;
+        this.is_usb = item.is_usb;
         this.open_edit = true;
       },
 

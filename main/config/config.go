@@ -16,6 +16,7 @@ var JWT JWTConf
 var Captcha CaptchaConf
 var Encrypt EncryptConf
 var Log LogConf
+var SMS SMSConf
 
 func Init() error {
 	// 加载 .env 文件
@@ -33,6 +34,7 @@ func Init() error {
 	redisConf(opt)    // Redis
 	jwtConf(opt)      // JWT
 	logConf(opt)      // 日志
+	smsConf(opt)      // 短信
 
 	migrateDatabaseConf(opt) // 迁移数据库
 
@@ -156,5 +158,18 @@ func migrateDatabaseConf(opt copier.Option) {
 		MigrateOldDBPassword: viper.GetString("MIGRATE_OLD_DB_PASSWORD"),
 		MigrateOldDBDatabase: viper.GetString("MIGRATE_OLD_DB_DATABASE"),
 		MigrateOldDBPrefix:   viper.GetString("MIGRATE_OLD_DB_PREFIX"),
+	}, opt)
+}
+
+func smsConf(opt copier.Option) {
+	SMS = SMSConf{
+		BaseURL:     "",
+		APIKey:      "",
+		ProjectName: "",
+	}
+	copier.CopyWithOption(&SMS, SMSConf{
+		BaseURL:     viper.GetString("SMS_BASE_URL"),
+		APIKey:      viper.GetString("SMS_API_KEY"),
+		ProjectName: viper.GetString("SMS_PROJECT_NAME"),
 	}, opt)
 }

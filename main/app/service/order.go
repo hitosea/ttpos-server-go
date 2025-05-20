@@ -31,6 +31,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
@@ -146,15 +147,30 @@ type orderSrv struct {
 	paymentMethodSrv IPaymentMethodSrv
 	memberSrv        IMemberSrv
 	cashBoxSrv       ICashBoxSrv
+	smsSrv           ISmsSrv
+}
+
+type ISrvOption struct {
+	SmsSrv ISmsSrv
+}
+
+func WithSmsSrv(dbm *database.DBManager) func(option *ISrvOption) {
+	return func(option *ISrvOption) {
+		option.SmsSrv = NewSMSSrv(dbm)
+	}
 }
 
 // NewOrderSrv 创建订单服务实例
-func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv) IOrderSrv {
-	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv)
+func NewOrderSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv, opts ...func(option *ISrvOption)) IOrderSrv {
+	return NewOrderSrvImpl(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, opts...)
 }
 
 // NewOrderSrvImpl 创建订单服务实例实现
-func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv) IOrderSrv {
+func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, mustPlanSrv IMustPlanSrv, paymentMethodSrv IPaymentMethodSrv, memberSrv IMemberSrv, cashBoxSrv ICashBoxSrv, opts ...func(option *ISrvOption)) IOrderSrv {
+	option := &ISrvOption{}
+	for _, opt := range opts {
+		opt(option)
+	}
 	return &orderSrv{
 		bus:              event.NewSystemBus(),
 		dbm:              dbm,
@@ -165,6 +181,7 @@ func NewOrderSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv s
 		paymentMethodSrv: paymentMethodSrv,
 		memberSrv:        memberSrv,
 		cashBoxSrv:       cashBoxSrv,
+		smsSrv:           option.SmsSrv,
 	}
 }
 
@@ -430,6 +447,13 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, 
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	// 服务费计算基准，默认是商品惠后价
+	serviceFeeBase := uint(constant.SaleBillSettingServiceFeeBasePrice)
+	if serviceFeeSetting.ServiceFeeBase == settingResp.ServiceFeeBaseAmount {
+		serviceFeeBase = uint(constant.SaleBillSettingServiceFeeBaseAmount)
+	}
+
 	saleBillSetting := model.SaleBillSetting{
 		SaleBillUuid:     saleBillUuid,
 		ServiceFeeType:   serviceFeeType,
@@ -441,6 +465,7 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, 
 		IsStatGift:       isStatGift,
 		IsStatFree:       isStatFree,
 		ServiceApply:     serviceApply,
+		ServiceFeeBase:   serviceFeeBase,
 	}
 
 	return &saleBillSetting, nil
@@ -1206,10 +1231,20 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 	language := ctx.GetLanguage()
 
 	for _, record := range orderRecordLists {
-		desc := s.getActionDescription(ctx, record, language)
+		actionDescription := s.getActionDescription(ctx, record, language)
+		if actionDescription.HideLog {
+			// 隐藏. 日志关联的订单已经被删除，故因此该订单的操作记录
+			continue
+		}
 		actionText := s.getActionText(record, language)
-		if desc != "" {
-			actionText = actionText + ": " + desc
+		if record.Action == constant.OrderCheckoutDiscount && actionDescription.IsAutoCheckoutZero {
+			actionText = i18n.Translate(language, "结账自动抹零")
+		}
+		if actionDescription.SplitMessage != "" {
+			actionText = actionDescription.SplitMessage + actionText
+		}
+		if actionDescription.Desc != "" {
+			actionText = actionText + ": " + actionDescription.Desc
 		}
 		realName := record.Operator.RealName
 		if record.Source == constant.SourceH5 {
@@ -1590,7 +1625,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	canReturnAmount := saleOrder.GetCanReturnAmount()
 
 	// 创建退款单
-	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetComstomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
+	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetStaff().DutyNo, ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetComstomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
 	if err != nil {
 		return errors.WithMessage(err), constant.CodeFail
 	}
@@ -1723,6 +1758,39 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 
 		return nil
 	})
+
+	// 发送短信
+	go func() {
+		// 获取最新的会员信息
+		member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+		if err != nil {
+			ctx.Log().Info("停止发送短信（退款），获取会员失败", zap.Error(errors.WithMessage(err)))
+		} else {
+			refundAmount := float64(0)
+			for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
+				if returnOrderAmount.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
+					refundAmount = returnOrderAmount.Amount
+					break
+				}
+			}
+			if refundAmount > 0 {
+				ctx.SetDB(db)
+				if member != nil {
+					smsReq := sms.MemberOrderRefundRequest{
+						Company:       ctx.GetCompany().Name,
+						OrderRefund:   refundAmount,
+						Balance:       member.GetBalanceAll(),
+						PointsBalance: member.GetPoints(),
+					}
+					if err := s.smsSrv.SendMemberOrderRefundSMS(ctx, member.Phone, &smsReq); err != nil {
+						ctx.Log().Info("发送退款短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+					} else {
+						ctx.Log().Info("发送退款短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+					}
+				}
+			}
+		}
+	}()
 
 	if publishChangeMemberBalance {
 		// 发布“会员余额变动”事件
@@ -2335,6 +2403,41 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 					},
 				})
 			}()
+
+			// 发送短信
+			if isUseMember {
+				go func() {
+					// 获取最新的会员信息
+					member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+					if err != nil {
+						ctx.Log().Info("停止发送短信（消费反结账），获取会员失败", zap.Error(errors.WithMessage(err)))
+					} else {
+						refundAmount := float64(0)
+						for _, paymentOrder := range saleOrder.PaymentOrders {
+							// 如果是余额支付，则退款到余额
+							if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
+								refundAmount = paymentOrder.BalanceAmount + paymentOrder.GiftBalanceAmount
+							}
+						}
+						if refundAmount > 0 {
+							ctx.SetDB(db)
+							if member != nil {
+								smsReq := sms.MemberOrderRefundRequest{
+									Company:       ctx.GetCompany().Name,
+									OrderRefund:   refundAmount,
+									Balance:       member.GetBalanceAll(),
+									PointsBalance: member.GetPoints(),
+								}
+								if err := s.smsSrv.SendMemberOrderRefundSMS(ctx, member.Phone, &smsReq); err != nil {
+									ctx.Log().Info("发送退款短信失败（消费反结账）", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+								} else {
+									ctx.Log().Info("发送退款短信成功（消费反结账）", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+								}
+							}
+						}
+					}
+				}()
+			}
 		}
 
 		go func() {
@@ -3860,15 +3963,16 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 
 		// 填写订单信息
 		order := resp.SaleOrder{
-			Uuid:               saleOrder.Uuid,
-			OrderNo:            saleOrder.OrderNo,
-			Status:             saleOrder.Status,
-			ProductNum:         productNum,
-			ProductList:        productList,
-			IsDiscount:         saleOrder.IsManualDiscount(uint8(shopCart.SaleBill.SaleBillSetting.ZeroRule)),
-			IsMemberDiscount:   saleOrder.IsMemberDiscount(),
-			CustomDiscountRate: saleOrder.CustomDiscountRate,
-			ZeroRule:           saleOrder.ZeroRule,
+			Uuid:                saleOrder.Uuid,
+			OrderNo:             saleOrder.OrderNo,
+			Status:              saleOrder.Status,
+			ProductNum:          productNum,
+			ProductList:         productList,
+			IsDiscount:          saleOrder.IsManualDiscount(uint8(shopCart.SaleBill.SaleBillSetting.ZeroRule)),
+			IsMemberDiscount:    saleOrder.IsMemberDiscount(),
+			CustomDiscountRate:  saleOrder.CustomDiscountRate,
+			ZeroRule:            saleOrder.ZeroRule,
+			AutoDiscountMessage: saleOrder.GetAutoDiscountMessage(*shopCart.SaleBill.SaleBillSetting, ctx.GetLanguage()),
 			// 订单金额信息
 			AmountInfo: resp.AmountInfo{
 				ProductOriginalAmount: saleOrder.ProductOriginalAmount,
@@ -3955,17 +4059,23 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 					}
 				}
 				if isAutoAdd {
-					if finish {
+					opts = append(opts, repository.WithCanCloseMustPlanView()) // 设置可以关闭必点弹窗
+					return s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
+				} else {
+					productMustPlanList = &resp.ProductMustPlanList{
+						List: mustPlan.List,
+					}
+
+					// 如果在可以关闭必点弹窗的场景下，且已经自动加购完成
+					if option.CanCloseMustPlanView && finish {
 						// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
 						err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(saleBillUuid)
 						if err != nil {
 							return nil, errors.WithMessage(err)
 						}
-					}
-					return s.GetOrderCartInfo(ctx, saleBillUuid, opts...)
-				} else {
-					productMustPlanList = &resp.ProductMustPlanList{
-						List: mustPlan.List,
+						// 清空必点方案, 不给前端返回必点数据
+						productMustPlanList = nil
+
 					}
 				}
 			}
@@ -5078,8 +5188,8 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 	}
 	// 检查税费类型是否改变：商品含税、商品未含税
 	if oldSetting.TaxFeeType != newSetting.TaxFeeType {
-		oldTaxFeeType := parseTaxFeeType(oldSetting.TaxFeeType)
-		newTaxFeeType := parseTaxFeeType(newSetting.TaxFeeType)
+		oldTaxFeeType := parseTaxFeeType(ctx.GetLanguage(), oldSetting.TaxFeeType)
+		newTaxFeeType := parseTaxFeeType(ctx.GetLanguage(), newSetting.TaxFeeType)
 		res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, resp.Product{
 			Uuid: oldSetting.Uuid,
 			LocaleName: dto.LocaleResponse{
@@ -5204,14 +5314,14 @@ func parseServiceFeeType(language string, serviceFeeType uint) string {
 	}
 }
 
-func parseTaxFeeType(taxFeeType uint) string {
+func parseTaxFeeType(language string, taxFeeType uint) string {
 	switch taxFeeType {
 	case constant.TaxFeeTypeTax:
-		return "商品已含税"
+		return i18n.Translate(language, "商品已含税")
 	case constant.TaxFeeTypeNoTax:
-		return "商品未含税"
+		return i18n.Translate(language, "商品未含税")
 	default:
-		return "关闭消费税"
+		return i18n.Translate(language, "关闭消费税")
 	}
 }
 
@@ -6014,7 +6124,7 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 	return cartInfo, nil
 }
 
-type InstanceAutoFlavorProduct map[uint64]*resp.InstantMustPlanProduct
+type InstanceAutoFlavorProduct map[uint64]resp.ProductAutoAddReq
 
 // InstantOrderMustPlan 获取点餐必点方案
 func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, bool, error) {
@@ -6048,14 +6158,14 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	// 遍历得到要自动加购的商品
 	for i, plan := range mustPlanList {
 		// product_bom_uuid => *resp.InstantMustPlanProduct
-		autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProduct) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
+		autoFlavorProduct := make(map[uint64]resp.ProductAutoAddReq) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
 		for j, product := range plan.Products.List {
 			if product.IsAutoAdd {
 				planProduct := mustPlanList[i].Products.List[j].Product
 				productFlavorBomUuid := planProduct.Flavors.List[0].Uuid
 				productFlavorStockNum := planProduct.Flavors.List[0].StockNum
 				if productFlavorStockNum > 0 {
-					autoFlavorProduct[productFlavorBomUuid] = &planProduct
+					autoFlavorProduct[productFlavorBomUuid] = product.ProductAutoAddReq
 				}
 			}
 		}
@@ -6103,7 +6213,7 @@ func (s *orderSrv) InstantOrderMustPlan(ctx context.Context, deviceSn string) (*
 	return mustPlan, isAutoAdd, nil
 }
 
-type AutoFlavorProduct map[uint64]*resp.InstantMustPlanProductStat
+type AutoFlavorProduct map[uint64]resp.ProductAutoAddReq
 
 func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64, mealNum uint, h5AutoAdd bool, noAutoAdd bool) (*resp.InstantProductMustPlanResp, bool, error) {
 	db := ctx.GetDB()
@@ -6113,7 +6223,14 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 	planAutoFlavorProduct := make(map[uint64]AutoFlavorProduct) // 必点方案ID => 自动加购的商品列表. 用于记录每个必点方案的自动加购商品
 
 	// 查询到购物车信息
-	shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+	var shopCartInfo *ro.ShopCartRepo
+	var err error
+	if h5AutoAdd {
+		// 如果是H5自动加购时，查询未删除的所有商品（主要是要包含h5加购但未下单的商品）
+		shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid, repository.WithNotDeleted())
+	} else {
+		shopCartInfo, err = repository.NewOrderRepo(db).GetOrderCartInfo(saleBillUuid)
+	}
 	if err != nil {
 		return nil, false, errors.WithMessage(err, "repository.NewOrderRepo(db).GetOrderCartInfo failed", fmt.Sprintf("saleBillUuid:%d", saleBillUuid))
 	}
@@ -6133,14 +6250,15 @@ func (s *orderSrv) DeskOrderMustPlan(ctx context.Context, saleBillUuid uint64, s
 	// 遍历得到要自动加购的商品
 	for i, plan := range mustPlanList {
 		// product_bom_uuid => *resp.InstantMustPlanProduct
-		autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProductStat) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
+		autoFlavorProduct := make(map[uint64]resp.ProductAutoAddReq) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
 		for j, product := range plan.Products.List {
 			if product.IsAutoAdd {
 				planProduct := mustPlanList[i].Products.List[j].Product
 				productFlavorBomUuid := planProduct.Flavors.List[0].Uuid
 				productFlavorStockNum := planProduct.Flavors.List[0].StockNum
 				if productFlavorStockNum > 0 {
-					autoFlavorProduct[productFlavorBomUuid] = &mustPlanList[i].Products.List[j]
+					product.ProductAutoAddReq.Num = mustPlanList[i].Products.List[j].MustNum // 商品数量
+					autoFlavorProduct[productFlavorBomUuid] = product.ProductAutoAddReq
 				}
 			}
 		}
@@ -6215,16 +6333,18 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, plan
 		saleBillUuid := uint64(0)
 		saleOrderUuid := uint64(0)
 		for mustPlanUuid, autoFlavorProduct := range planAutoFlavorProduct {
-			for flavorUuid, _ := range autoFlavorProduct {
+			for flavorUuid, autoAddReq := range autoFlavorProduct {
 				if saleBillUuid != 0 {
 					ctx.Log().Debug("新建的销售账单号", zap.Any("saleBillUuid", saleBillUuid))
 				}
 				ctx.Log().Debug("添加商品", zap.Any("flavorUuid", flavorUuid))
 				shopCart, errAdd := s.InstantOrderCartProductAdd(ctx, req.OrderCartProductAddReq{
-					SaleBillUuid:  saleBillUuid,
-					SaleOrderUuid: saleOrderUuid,
-					FlavorUuid:    flavorUuid,
-					MustPlanUuid:  mustPlanUuid,
+					SaleBillUuid:      saleBillUuid,
+					SaleOrderUuid:     saleOrderUuid,
+					FlavorUuid:        autoAddReq.FlavorUuid,
+					AttributeUuidList: autoAddReq.AttributeUuidList,
+					SauceUuidList:     autoAddReq.SauceUuidList,
+					MustPlanUuid:      mustPlanUuid,
 				})
 				if errAdd != nil {
 					return nil, errAdd
@@ -6240,6 +6360,32 @@ func autoAddSaleOrderProduct(ctx context.Context, db *gorm.DB, s *orderSrv, plan
 	} else {
 		// 如果有未挂单的点餐销售账单。未有这个需求，暂时不做
 	}
+
+	// 如果购物车信息为空，则返回空
+	if shopCartInfo == nil {
+		return nil, nil
+	}
+
+	// 如果已经完成了必点，则关闭必点弹窗
+	finish := true
+	if shopCartInfo.MustPlans != nil {
+		for _, plan := range shopCartInfo.MustPlans.List {
+			if plan.NeedNum != 0 {
+				finish = false
+			}
+		}
+	}
+
+	if finish {
+		// 关闭必点弹窗
+		shopCartInfo.MustPlans = nil
+		// 如果已经自动加购完成，则不在显示必点方案.并更新sale_bill为已完成必点
+		err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(shopCartInfo.SaleBillUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+	}
+
 	return shopCartInfo, nil
 }
 
@@ -6247,11 +6393,13 @@ func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, planAutoFla
 	productParams := make([]req.ProductParams, 0)
 
 	for mustPlanUuid, autoFlavorProduct := range planAutoFlavorProduct {
-		for flavorUuid, stat := range autoFlavorProduct {
+		for flavorUuid, autoAddReq := range autoFlavorProduct {
 			productParams = append(productParams, req.ProductParams{
-				FlavorProductBomUuid: flavorUuid,
-				MustPlanUuid:         mustPlanUuid,
-				Num:                  stat.MustNum,
+				FlavorProductBomUuid:            flavorUuid,
+				ProductPackageAttributeUuidList: autoAddReq.AttributeUuidList,
+				SauceProductBomUuidList:         autoAddReq.SauceUuidList,
+				MustPlanUuid:                    mustPlanUuid,
+				Num:                             autoAddReq.Num,
 			})
 		}
 	}
@@ -6292,14 +6440,14 @@ func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (
 	// 遍历得到要自动加购的商品
 	for i, plan := range mustPlanList {
 		// product_bom_uuid => *resp.InstantMustPlanProduct
-		autoFlavorProduct := make(map[uint64]*resp.InstantMustPlanProduct) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
+		autoFlavorProduct := make(map[uint64]resp.ProductAutoAddReq) // 有自动加购的必选计划，且能自动加购的商品列表。要求只有一个规格，没有的商品才会自动加购
 		for j, product := range plan.Products.List {
 			if product.IsAutoAdd {
 				planProduct := mustPlanList[i].Products.List[j].Product
 				productFlavorBomUuid := planProduct.Flavors.List[0].Uuid
 				productFlavorStockNum := planProduct.Flavors.List[0].StockNum
 				if productFlavorStockNum > 0 {
-					autoFlavorProduct[productFlavorBomUuid] = &planProduct
+					autoFlavorProduct[productFlavorBomUuid] = product.ProductAutoAddReq
 				}
 			}
 		}
@@ -6418,14 +6566,15 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			qrcodeUrl = paymentMethod.QrcodeFile.GetUrl(baseUrl)
 		}
 		methodItem := resp.PaymentMethodItem{
-			Source:      paymentMethod.Source,
-			SourceText:  paymentMethod.GetSourceText(ctx.GetLanguage()),
-			Uuid:        paymentMethod.Uuid,
-			PaymentName: paymentMethod.PaymentName,
-			FeePercent:  paymentMethod.FeePercent,
-			Logo:        logoUrl,
-			Qrcode:      qrcodeUrl,
-			Code:        paymentMethod.Code,
+			Source:        paymentMethod.Source,
+			SourceText:    paymentMethod.GetSourceText(ctx.GetLanguage()),
+			Uuid:          paymentMethod.Uuid,
+			PaymentName:   paymentMethod.GetPaymentName(),
+			PaymentMethod: paymentMethod.GetName(),
+			FeePercent:    paymentMethod.FeePercent,
+			Logo:          logoUrl,
+			Qrcode:        qrcodeUrl,
+			Code:          paymentMethod.Code,
 		}
 		methodItems = append(methodItems, methodItem)
 
@@ -6460,6 +6609,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 				CommissionFee:         commissionFee,
 				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission),
 				ZeroAmount:            zeroFee, // 只有没有手续费时且支付方式不需要手续费才会抹零
+				IsAutoZero:            saleOrder.IsAutoCheckoutZeroDiscount(*saleBill.SaleBillSetting),
 				ZeroRule:              saleOrder.ZeroCheckoutRule,
 				PaymentMethodUuid:     methodItem.Uuid,
 			}
@@ -7192,11 +7342,89 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	// 该订单的所有出库记录都标记已出库。将预出库的状态改为已出库
 	repository.NewWarehouseFormRepo(db).UpdateWarehouseOutFormItemRecordsStatus(saleOrder.Uuid)
 
+	// 发送结账短信
+	if saleOrder.ConsumerUuid != 0 {
+		member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+		if err != nil {
+			ctx.Log().Info("停止发送短信，获取会员失败", zap.Error(errors.WithMessage(err)))
+		} else {
+			go func() {
+				ctx.SetDB(db)
+				var memberPaymentOrder *resp.PaymentOrder
+				for _, paymentOrder := range infoResp.PaymentOrders.List {
+					if paymentOrder.PaymentMethodCode == constant.PaymentMethodCodeBalance {
+						memberPaymentOrder = &paymentOrder
+						break
+					}
+				}
+
+				if member != nil {
+					smsReq := sms.MemberConsumptionRequest{
+						Company:        ctx.GetCompany().Name,
+						Consumption:    saleOrder.FinalPrice,
+						IncreasePoints: saleOrder.GiftPoints,
+						Balance:        member.GetBalanceAll(),
+						PointsBalance:  member.GetPoints() + saleOrder.GiftPoints, // 会员积分=会员积分+本次增加的积分。 此时积分还未增加到会员表中
+					}
+					if memberPaymentOrder != nil {
+						smsReq.MemberPay = memberPaymentOrder.Amount
+					} else {
+						// 没有余额支付单，则认为没有会员余额支付,MemberPay=0
+						smsReq.MemberPay = 0
+					}
+
+					if err := s.smsSrv.SendMemberConsumptionSMS(ctx, member.Phone, &smsReq); err != nil {
+						ctx.Log().Info("发送结账短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+					} else {
+						ctx.Log().Info("发送结账短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+					}
+				}
+			}()
+		}
+	}
+
 	// 发布"结账"事件
 	originSaleOrderAmount := saleOrder.GetOriginAmountValue()
 	saleOrderPaymentAmount := saleOrder.PaymentAmount
 	saleOrderChangeAmount := saleOrder.ChangeAmount
 	go func() {
+
+		// 结账前，发布"抹零"事件。如果优惠折扣自动抹零且抹零金额大于0，则发布"抹零"事件。
+		if saleOrder.IsAutoZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroFee > 0 {
+			event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountSaleOrderPayload{
+				BasePayload: event.BasePayload{ // 订单抹零
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  req.SaleBillUuid,
+					SaleOrderUuid: req.SaleOrderUuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				DiscountType:    constant.DiscountOperationLogTypeZeroSaleOrder,
+				RoundingType:    int(saleOrder.ZeroRule),
+				SpecialDiscount: saleOrder.ZeroFee, // ZeroFee这个字段是算好的抹零优惠金额。先计算好订单应付金额，再根据抹零规格进行抹零得到的结果
+				IsAuto:          true,
+			})
+		}
+
+		// 结账前，发布"结账抹零"事件。如果结账自动抹零且抹零金额大于0，则发布"结账抹零"事件
+		if saleOrder.IsAutoCheckoutZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroCheckoutFee > 0 {
+			s.bus.PublishCheckoutZeroSaleOrderEvent(event.CheckoutZeroSaleOrderPayload{
+				BasePayload: event.BasePayload{ // 结账抹零
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  req.SaleBillUuid,
+					SaleOrderUuid: req.SaleOrderUuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				Operation:       constant.OrderCheckoutDiscountAdd,
+				RoundingType:    int(saleOrder.ZeroCheckoutRule),
+				SpecialDiscount: saleOrder.ZeroCheckoutFee,
+				IsAuto:          true,
+			})
+		}
+
 		payTypes := make([]event.PayType, 0)
 		for _, paymentOrder := range infoResp.PaymentOrders.List {
 			payTypes = append(payTypes, event.PayType{
@@ -7386,6 +7614,24 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 
 	// 发布"免单"事件
 	go func() {
+		// 结账前，发布"抹零"事件。如果优惠折扣自动抹零且抹零金额大于0，则发布"抹零"事件。
+		if saleOrder.IsAutoZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroFee > 0 {
+			event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountSaleOrderPayload{
+				BasePayload: event.BasePayload{ // 订单抹零
+					Ctx:           ctx,
+					CompanyUuid:   ctx.GetCompanyUuid(),
+					Source:        ctx.GetSource(),
+					SaleBillUuid:  req.SaleBillUuid,
+					SaleOrderUuid: req.SaleOrderUuid,
+					OperatorUuid:  int64(ctx.GetStaffUuid()),
+				},
+				DiscountType:    constant.DiscountOperationLogTypeZeroSaleOrder,
+				RoundingType:    int(saleOrder.ZeroRule),
+				SpecialDiscount: saleOrder.ZeroFee, // ZeroFee这个字段是算好的抹零优惠金额。先计算好订单应付金额，再根据抹零规格进行抹零得到的结果
+				IsAuto:          true,
+			})
+		}
+
 		s.bus.PublishFreeSaleOrderEvent(event.FreeSaleOrderPayload{
 			BasePayload: event.BasePayload{ // 免单
 				Ctx:           ctx,
@@ -8632,17 +8878,40 @@ func (s *orderSrv) InstantOrderSaleOrderDelete(ctx context.Context, request req.
 		return nil, errors.WithMessage(errUpdateSaleBill)
 	}
 
-	// 发布“撤销拆单”操作事件
+	// 发布“拆单”操作事件
 	go func() {
-		s.bus.PublishCancelSplitOrderEvent(event.CancelSplitOrderPayload{
-			BasePayload: event.BasePayload{ // 撤销拆单
-				Ctx:          ctx,
-				CompanyUuid:  ctx.GetCompanyUuid(),
-				Source:       ctx.GetSource(),
-				SaleBillUuid: saleBill.Uuid,
-				OperatorUuid: int64(ctx.GetStaffUuid()),
-			},
-		})
+		var orders []event.Order
+		for i, order := range shopCart.SaleOrderList {
+			orders = append(orders, event.Order{
+				SaleOrderUuid: order.Uuid,
+				OrderName:     fmt.Sprintf("%d", i+1),
+				Amount:        order.AmountInfo.Amount,
+			})
+		}
+		if len(orders) == 1 {
+			// 发布“撤销拆单”操作事件
+			s.bus.PublishCancelSplitOrderEvent(event.CancelSplitOrderPayload{
+				BasePayload: event.BasePayload{ // 撤销拆单
+					Ctx:          ctx,
+					CompanyUuid:  ctx.GetCompanyUuid(),
+					Source:       ctx.GetSource(),
+					SaleBillUuid: saleBill.Uuid,
+					OperatorUuid: int64(ctx.GetStaffUuid()),
+				},
+			})
+		} else {
+			// 发布“拆单”操作事件
+			s.bus.PublishSplitOrderEvent(event.SplitOrderPayload{
+				BasePayload: event.BasePayload{ // 拆单
+					Ctx:          ctx,
+					CompanyUuid:  ctx.GetCompanyUuid(),
+					Source:       ctx.GetSource(),
+					SaleBillUuid: saleBill.Uuid,
+					OperatorUuid: int64(ctx.GetStaffUuid()),
+				},
+				Orders: orders,
+			})
+		}
 	}()
 
 	return shopCart, nil
@@ -8711,6 +8980,19 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 			}
 		}
 	}
+
+	// 发布“撤销拆单”操作事件
+	go func() {
+		s.bus.PublishCancelSplitOrderEvent(event.CancelSplitOrderPayload{
+			BasePayload: event.BasePayload{ // 撤销拆单
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: saleBill.Uuid,
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
+	}()
 
 	// 获取账单信息
 	saleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)

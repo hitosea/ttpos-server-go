@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"database/sql"
+
 	"gorm.io/gorm"
 
 	"ttpos-server-go/app/errors"
@@ -16,6 +18,7 @@ type IReturnOrderRepo interface {
 	GetReturnOrderAmount(opts ...DBOption) (model.ReturnOrderAmount, error) // 获取退货金额
 	UpdateReturnOrder(opts []DBOption, order model.ReturnOrder) error
 	UpdateReturnOrderAmount(opts []DBOption, amount model.ReturnOrderAmount) error
+	SumRefundAmount(opts ...DBOption) float64 // 统计退款金额
 
 	WhereUuid(uuid uint64) DBOption                                   // 通过uuid查询
 	WhereMerchantRefundOrderNo(merchantRefundOrderNo string) DBOption // 通过商户退货单号查询
@@ -82,6 +85,17 @@ func (r *returnOrderRepo) GetReturnOrderAmount(opts ...DBOption) (model.ReturnOr
 	}
 	err := db.First(&amount).Error
 	return amount, errors.WithMessage(err)
+}
+
+// SumRefundAmount 统计退款金额
+func (r *returnOrderRepo) SumRefundAmount(opts ...DBOption) float64 {
+	var amount sql.NullFloat64
+	db := r.db
+	for _, w := range opts {
+		db = w(db)
+	}
+	db.Model(&model.ReturnOrder{}).Select("SUM(refund_amount) as amount").Find(&amount)
+	return amount.Float64
 }
 
 func (r *returnOrderRepo) UpdateReturnOrder(opts []DBOption, order model.ReturnOrder) error {

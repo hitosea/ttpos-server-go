@@ -130,16 +130,17 @@ type DeskInfo struct {
 
 // SaleOrder 购物车销售订单信息
 type SaleOrder struct {
-	Uuid               uint64     `json:"uuid"`
-	OrderNo            string     `json:"order_no"`
-	Status             uint       `json:"status"`               // 订单状态, 0-未结账 1-已结账
-	IsDiscount         bool       `json:"is_discount"`          // 是否存在折扣 true:存在 false:不存在
-	IsMemberDiscount   bool       `json:"is_member_discount"`   // 是否存在会员优惠折扣 true:存在 false:不存在
-	CustomDiscountRate float64    `json:"custom_discount_rate"` // 订单改价折扣率
-	ZeroRule           uint8      `json:"zero_rule"`            // 订单抹零规则
-	ProductList        []Product  `json:"product_list"`         // 商品列表
-	ProductNum         int        `json:"product_num"`          // 商品数量
-	AmountInfo         AmountInfo `json:"amount_info"`
+	Uuid                uint64     `json:"uuid"`
+	OrderNo             string     `json:"order_no"`
+	Status              uint       `json:"status"`                // 订单状态, 0-未结账 1-已结账
+	IsDiscount          bool       `json:"is_discount"`           // 是否存在折扣 true:存在 false:不存在
+	IsMemberDiscount    bool       `json:"is_member_discount"`    // 是否存在会员优惠折扣 true:存在 false:不存在
+	CustomDiscountRate  float64    `json:"custom_discount_rate"`  // 订单改价折扣率
+	ZeroRule            uint8      `json:"zero_rule"`             // 订单抹零规则
+	AutoDiscountMessage string     `json:"auto_discount_message"` // 优惠折扣-自动抹零信息. 如"优惠折扣自动抹零-抹分" "优惠折扣自动抹零-抹角" "优惠折扣自动抹零-四舍五入保留一位小数" "优惠折扣自动抹零-四舍五入保留整数"
+	ProductList         []Product  `json:"product_list"`          // 商品列表
+	ProductNum          int        `json:"product_num"`           // 商品数量
+	AmountInfo          AmountInfo `json:"amount_info"`
 }
 
 // Product 购物车商品

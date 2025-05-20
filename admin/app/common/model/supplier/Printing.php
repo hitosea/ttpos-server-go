@@ -128,6 +128,26 @@ class Printing extends BaseModel
     }
 
     /**
+     * 获取打印机
+     */
+    public static function getPrinterList($printingItemList)
+    {
+        if (empty($printingItemList)) {
+            return '';
+        }
+
+        $printerList = [];
+        foreach ($printingItemList as $item) {
+            $printer = $item['printer'] ?? null;
+            if ($printer) {
+                $printerList[] = $printer;
+            }
+        }
+
+        return $printerList;
+    }
+
+    /**
      * 获取打印机名称
      */
     public static function getPrinterNameText($printingItemList)
@@ -142,7 +162,7 @@ class Printing extends BaseModel
             if (!$printer) {
                 $printerList[] = '-';
             } else {
-                $printerList[] = $printer['printer_name'];
+                $printerList[] = $printer['printer_name'].'('.($printer['is_usb'] == 1 ? 'USB' : '').')';
             }
         }
 

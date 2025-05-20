@@ -31,7 +31,7 @@
           <div class="box-text-box" v-for="(items, indexs) in item" :key="indexs">
             <!-- 左边的字段 -->
             <div
-              v-if="items.name"
+              v-if="items.name && items.left != false"
               class="text-box"
               :class="[
                 items.bold ? 'font-bold' : '',
@@ -76,6 +76,7 @@
                 ]"
               >
                 {{ items.label }}
+                <img v-if="items.img" src="@/assets/img/dashed.svg" alt="" class="dashed" />
               </p>
             </div>
           </div>
@@ -345,12 +346,15 @@
   import { languageStore } from '@/store/model/language';
   import { useUserStore } from '@/store';
   const cloudBasic = languageStore().getCloudBasic().cloudBasic;
+  const languageKey = languageStore().getLanguageKey().language;
   const { userInfo } = useUserStore();
+
   export default {
     data() {
       return {
         userInfo,
         cloudBasic: cloudBasic,
+        languageKey: languageKey,
         brand: '',
         dialogWidth: '',
         loading: false,
@@ -648,6 +652,13 @@
               font24: true,
             },
             {
+              name: $t('这是桌台备注，非桌台/桌台没有备注的则不显示，需要换行显示'),
+              label: '',
+              big: true,
+              typeShow: '3',
+              right: false,
+            },
+            {
               name: $t('收银员'),
               label: $t('张三'),
             },
@@ -883,6 +894,13 @@
               label: '',
               hide: 2,
               font24: true,
+            },
+            {
+              name: $t('这是桌台备注，非桌台/桌台没有备注的则不显示，需要换行显示'),
+              label: '',
+              big: true,
+              typeShow: '3',
+              right: false,
             },
             {
               name: $t('订单号'),
@@ -1450,11 +1468,18 @@
               name: $t('电话：') + '02-15-1441414',
               label: '',
             },
-            {
-              name: ' ',
-              label: ' ',
-            },
-
+            // languageKey == "ja"的时候才才插入这个对象 ,
+            languageKey.value == 'ja'
+              ? {
+                  name: ' ',
+                  label: '担当者',
+                  img: true,
+                  big: true,
+                  left: false,
+                }
+              : '',
+          ],
+          [
             {
               name: $t('*保管注意事項'),
               label: '',
@@ -2537,6 +2562,9 @@
 
   .text-box-r-p2 {
     text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
   }
 
   .font-bold {

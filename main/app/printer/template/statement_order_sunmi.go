@@ -247,6 +247,11 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		printer.SetCharacterSize(1, 1)
 		printer.SetPrintModes(false, false, false)
 		printer.SetAlignment(pkg.AlignLeft)
+		// 桌台备注
+		if saleBill.Remark != "" {
+			printer.AppendText(saleBill.Remark)
+			printer.LineFeed(1)
+		}
 		printer.AppendText(t.base.Translate("收银员") + ": " + saleOrder.CashierName)
 		printer.LineFeed()
 		if payTime != "" {
@@ -549,7 +554,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 			for _, paymentOrder := range saleOrder.PaymentOrders {
 				printer.PrintInColumns(
 					t.base.Translate("支付方式"),
-					paymentOrder.PaymentMethodName,
+					paymentOrder.PaymentMethod.GetName(),
 				)
 				printer.PrintInColumns(
 					t.base.Translate("实收金额"),

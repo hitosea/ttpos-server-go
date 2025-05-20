@@ -11,6 +11,7 @@ import (
 	"websocket/constant"
 	"websocket/model"
 	"websocket/pkg/database"
+	"websocket/pkg/logger"
 	"websocket/repository"
 	"websocket/utils"
 
@@ -29,6 +30,7 @@ var WsClients []ConnectionInfo
 // 初始化函数，启动定时检查心跳超时的连接
 func init() {
 	go checkHeartbeatTimeout()
+	go checkPrinterHeartbeatTimeout()
 }
 
 // Message represents a generic message structure
@@ -42,9 +44,9 @@ type PushMessage struct {
 
 // ClientMessage represents a generic message structure
 type ClientMessage struct {
-	Type  string `json:"type"`
-	Event string `json:"event"`
-	MsgId any    `json:"msg_id,omitempty"`
+	Type  string      `json:"type"`
+	MsgId any         `json:"msg_id,omitempty"`
+	Data  interface{} `json:"data"`
 }
 
 // ConnectionInfo represents a generic message structure
@@ -55,6 +57,14 @@ type ConnectionInfo struct {
 	StaffUuid     uint64 `json:"staff_uuid"`
 	LastHeartbeat string `json:"last_heartbeat"`
 	ws            *websocket.Conn
+}
+
+type UsbPrinter struct {
+	M_name string `json:"m_name"`
+	Name   string `json:"name"`
+	Pid    any    `json:"pid"`
+	Sn     string `json:"sn"`
+	Vid    any    `json:"vid"`
 }
 
 // HandleConnections 处理连接
@@ -212,7 +222,6 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 // handleMessage 处理消息
 func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 	// 解析消息
-	msgId := uint(0)
 	clientMessage := ClientMessage{}
 	err := json.Unmarshal(msg, &clientMessage)
 	if err != nil {
@@ -221,6 +230,7 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 	}
 
 	// 将字符串转换为uint
+	msgId := uint(0)
 	switch v := clientMessage.MsgId.(type) {
 	case float64:
 		msgId = uint(v)
@@ -254,17 +264,6 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 		} else {
 			fmt.Println("Heartbeat message DeviceId - 在线: ", newConn.DeviceId)
 		}
-		// todo 暂时不回复心跳消息
-		// 发送回复消息
-		// message := PushMessage{
-		// 	Event: "reply_heartbeat",
-		// 	State: constant.CodeSuccess,
-		// 	Msg:   "Reply successfully",
-		// }
-		// err := ws.WriteMessage(websocket.TextMessage, getMsgData(message))
-		// if err != nil {
-		// 	fmt.Println("Error writing message:", err)
-		// }
 		return
 	}
 
@@ -275,17 +274,12 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 		if err != nil {
 			fmt.Printf("Error updating message status: %v\n", err)
 		}
-		// todo 暂时不回复心跳消息
-		// message := PushMessage{
-		// 	Event: "reply",
-		// 	State: constant.CodeSuccess,
-		// 	Msg:   "Reply successfully",
-		// }
-		// err = ws.WriteMessage(websocket.TextMessage, getMsgData(message))
-		// if err != nil {
-		// 	fmt.Printf("Error sending message to client: %v\n", err)
-		// }
 		return
+	}
+
+	// 上报Usb打印机数据
+	if clientMessage.Type == "usb_print_report" && newConn.SourceClient == "cashier" {
+		reportPrinterData(newConn, clientMessage)
 	}
 }
 
@@ -309,12 +303,162 @@ func checkHeartbeatTimeout() {
 				}
 				// 检查是否超过2分钟没有心跳
 				if time.Since(lastHeartbeat) > 2*time.Minute {
-					fmt.Printf("断开超时2分钟没有心跳的连接: %s, 最后心跳时间: %s\n", conn.DeviceId, conn.LastHeartbeat)
+					fmt.Printf("断开超时2分钟没有心跳的连接: %s, 最后心跳时间: %s", conn.DeviceId, conn.LastHeartbeat)
 					// 关闭连接
 					conn.ws.Close()
 					// 从列表中移除
 					WsClients = slices.Delete(WsClients, i, i+1)
 				}
+			}
+		}
+	}
+}
+
+// checkPrinterHeartbeatTimeout 检查打印机心跳超时并更新状态为离线
+func checkPrinterHeartbeatTimeout() {
+	// 每5秒检查一次
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		// 创建打印机仓库
+		repo := repository.NewPrinterRepository(database.Instance)
+		// 获取所有公司ID - 从现有连接中提取
+		companyUuids := make(map[uint64]ConnectionInfo)
+		for _, conn := range WsClients {
+			companyUuids[conn.CompanyUuid] = conn
+		}
+		// 遍历每个公司
+		for companyUuid, conn := range companyUuids {
+			// 获取该公司的所有USB打印机
+			printers := repo.GetUsbListByStatus(companyUuid, 1)
+			// 当前时间戳
+			currentTime := uint(time.Now().Unix())
+			// 遍历所有打印机
+			for _, printer := range printers {
+				// 如果打印机状态为在线，且最后心跳时间超过8秒，则更新为离线
+				if printer.Status == 1 && (currentTime-printer.LastHeartbeatTime) > 8 {
+					if err := repo.UpdateBySourceDeviceSn(companyUuid, printer.ID, conn.DeviceId, map[string]interface{}{
+						"status": 0,
+					}); err != nil {
+						fmt.Printf("Error updating printer status to offline: %v\n", err)
+					} else {
+						logger.Logger.Info(fmt.Sprintf("更新打印机状态为离线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒", companyUuid, conn.DeviceId, printer.Uuid, printer.Name, printer.LastHeartbeatTime))
+						fmt.Printf("更新打印机状态为离线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", companyUuid, conn.DeviceId, printer.Uuid, printer.Name, printer.LastHeartbeatTime)
+					}
+				}
+			}
+		}
+	}
+}
+
+// 上报打印机数据
+func reportPrinterData(newConn *ConnectionInfo, clientMessage ClientMessage) {
+	// 根据Data的类型进行不同的处理
+	dataJson, err := json.Marshal(clientMessage.Data)
+	if err != nil {
+		fmt.Println("Error marshaling array data:", err)
+		return
+	}
+
+	// 解析Data为UsbPrinter数组
+	usbPrinters := []UsbPrinter{}
+	err = json.Unmarshal(dataJson, &usbPrinters)
+	if err != nil {
+		fmt.Println("Error unmarshaling array data:", err)
+		return
+	}
+
+	// 已有记录
+	repo := repository.NewPrinterRepository(database.Instance)
+	dbUsbList := repo.GetUsbList(newConn.CompanyUuid)
+
+	// 更新为离线
+	if len(dbUsbList) > 0 {
+		// 优化：创建配置JSON映射以快速查找打印机，避免嵌套循环
+		printerConfigMap := make(map[string]bool)
+		for _, printer := range usbPrinters {
+			printerConfigMap[utils.JsonToStr(printer)] = true
+		}
+		// 检查数据库中的打印机是否在新上报列表中
+		for _, usb := range dbUsbList {
+			// 如果不在新列表中且状态为在线，则更新为离线
+			if !printerConfigMap[usb.ConfigJson] && usb.Status == 1 {
+				if err := repo.UpdateBySourceDeviceSn(newConn.CompanyUuid, usb.ID, newConn.DeviceId, map[string]interface{}{
+					"status": 0,
+				}); err != nil {
+					fmt.Printf("Error updating usb print: %v\n", err)
+				}
+				// 打印日志
+				logger.Logger.Info(fmt.Sprintf("更新打印机状态为离线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒", newConn.CompanyUuid, newConn.DeviceId, usb.Uuid, usb.Name, usb.LastHeartbeatTime))
+				fmt.Printf("更新打印机状态为离线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", newConn.CompanyUuid, newConn.DeviceId, usb.Uuid, usb.Name, usb.LastHeartbeatTime)
+			}
+		}
+	}
+
+	// 有新的打印机数据，遍历处理
+	if len(usbPrinters) > 0 {
+		// 优化：创建已有打印机映射，避免多次循环查询
+		dbUsbMap := make(map[string]model.Printer)
+		for _, usb := range dbUsbList {
+			dbUsbMap[usb.ConfigJson] = usb
+		}
+
+		// 处理每个上报的USB打印机
+		for _, usbPrinter := range usbPrinters {
+			printerJson := utils.JsonToStr(usbPrinter)
+			if dbUsb, exists := dbUsbMap[printerJson]; exists {
+				// 已存在的打印机，更新状态
+				if err := repo.Update(newConn.CompanyUuid, dbUsb.ID, map[string]interface{}{
+					"status":              1,
+					"last_heartbeat_time": uint(time.Now().Unix()),
+					"source_device_sn":    newConn.DeviceId,
+				}); err != nil {
+					fmt.Printf("Error updating usb print: %v\n", err)
+				}
+				// 打印日志
+				if dbUsb.Status == 0 {
+					logger.Logger.Info(fmt.Sprintf("更新打印机状态为在线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒", newConn.CompanyUuid, newConn.DeviceId, dbUsb.Uuid, dbUsb.Name, uint(time.Now().Unix())))
+					fmt.Printf("更新打印机状态为在线: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", newConn.CompanyUuid, newConn.DeviceId, dbUsb.Uuid, dbUsb.Name, uint(time.Now().Unix()))
+				}
+			} else {
+				uuid := utils.GetID()
+				printerTypeKey := constant.PRINTER_TYPE_XPRINTER_LAN
+				// 区分类型
+				if usbPrinter.Vid.(float64) == 1137 && usbPrinter.Pid.(float64) == 85 {
+					if usbPrinter.M_name == "Zhuhai Howbest Label Printer Co.,Ltd." {
+						printerTypeKey = constant.PRINTER_TYPE_GP_C200IV
+					}
+					if usbPrinter.M_name == "ZHU HAI HOWBEST Receipt Printer Co.,Ltd." {
+						printerTypeKey = constant.PRINTER_TYPE_GP_D300I
+					}
+				}
+				// 获取打印机类型(只查询一次)
+				printerType := repository.NewPrinterTypeRepository(database.Instance).GetRecordByKey(newConn.CompanyUuid, printerTypeKey)
+				if printerType.ID == 0 {
+					fmt.Printf("Error: printer type XPRINTER_LAN not found\n")
+					return
+				}
+				// 新打印机，创建记录
+				if err := repo.Create(newConn.CompanyUuid, model.Printer{
+					Uuid:              uuid,
+					Name:              usbPrinter.Name,
+					PrinterTypeUuid:   printerType.Uuid,
+					ConfigJson:        printerJson,
+					Copies:            1,
+					Sort:              0,
+					IsUsb:             1,
+					SourceDeviceSn:    newConn.DeviceId,
+					CreateTime:        uint(time.Now().Unix()),
+					UpdateTime:        uint(time.Now().Unix()),
+					Status:            1,
+					LastHeartbeatTime: uint(time.Now().Unix()),
+				}); err != nil {
+					fmt.Printf("Error creating usb print: %v\n", err)
+				}
+				// 打印日志
+				logger.Logger.Info(fmt.Sprintf("新增打印机: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒", newConn.CompanyUuid, newConn.DeviceId, uuid, usbPrinter.Name, uint(time.Now().Unix())))
+				fmt.Printf("新增打印机: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", newConn.CompanyUuid, newConn.DeviceId, uuid, usbPrinter.Name, uint(time.Now().Unix()))
 			}
 		}
 	}

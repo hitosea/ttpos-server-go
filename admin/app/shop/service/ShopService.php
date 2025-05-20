@@ -79,7 +79,7 @@ class ShopService
         $data = [
             'top_data' => [
                 // 商品总量
-                'product_total' => $businessData['total_product_num'],
+                'product_total' => 0,
                 // 用户总量
                 'user_total' => $businessData['member_data']['user_count'],
                 // 订单总量

@@ -274,6 +274,11 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.SetFontWeight(1)
 		img.SetFontSize(20)
 		img.SetAlignment(pkg.AlignLeft)
+		// 桌台备注
+		if saleBill.Remark != "" {
+			img.AppendText(saleBill.Remark)
+			img.LineFeed(1)
+		}
 		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银员"), saleOrder.CashierName))
 		img.LineFeed(1)
 		if payTime != "" {
@@ -548,7 +553,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			for _, paymentOrder := range saleOrder.PaymentOrders {
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: 280, Align: pkg.AlignLeft},
-					pkg.ColumnConfig{Text: paymentOrder.PaymentMethodName, Width: 0, Align: pkg.AlignRight},
+					pkg.ColumnConfig{Text: paymentOrder.PaymentMethod.GetName(), Width: 0, Align: pkg.AlignRight},
 				)
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: t.base.Translate("实收金额"), Width: 280, Align: pkg.AlignLeft},
@@ -602,7 +607,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			img.LineFeed(1)
 			img.SetAlignment(pkg.AlignCenter)
 			img.SetTextLineHeight(35)
-			img.AppendText(t.base.Translate("请用") + " " + paymentMethod.PaymentName + " " + t.base.Translate("扫一扫支付"))
+			img.AppendText(t.base.Translate("请用") + " " + paymentMethod.Name + " " + t.base.Translate("扫一扫支付"))
 			img.LineFeed(1)
 			if paymentMethod.IsLianLianPay() {
 				llPaymentOrder, err := repository.NewLlPaymentOrderRepo(db).GetPaymentOrder(

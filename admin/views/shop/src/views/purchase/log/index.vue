@@ -117,6 +117,7 @@
 <script>
   import PurchaseApi from '@/api/purchase.js';
   import Aselect from '@/components/a-select/index.vue';
+  import dayjs from '@/utils/dayjs';
   export default {
     components: {
       Aselect,
@@ -141,7 +142,11 @@
         searchLoading: '',
       };
     },
-    mounted() {
+
+    async mounted() {
+      // js获取当天时间 日期格式 YYYY-MM-DD
+      this.searchForm.date = [dayjs(), dayjs()];
+      await this.$nextTick();
       this.getData();
     },
     methods: {

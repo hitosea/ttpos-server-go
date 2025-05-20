@@ -168,7 +168,7 @@ func (model *SaleOrderProduct) GetServiceFee() float64 {
 
 // 获取销售订单商品的原始服务费(折前价)。服务费=销售订单商品的服务费*销售订单商品的数量
 func (model *SaleOrderProduct) GetOriginServiceFee(serviceFeeRate float64, taxFeeType int) float64 {
-	serviceFee := model.calcServiceFee(model.SalePrice, serviceFeeRate, taxFeeType) // 服务费（折前）
+	serviceFee := model.calcServiceFee(model.SalePrice, serviceFeeRate, taxFeeType, WithOriginPrice()) // 服务费（折前）
 	return decimal.NewFromFloat(serviceFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
 }
 

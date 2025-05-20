@@ -871,7 +871,8 @@ class Setting extends BaseModel
                     'apply_scope' => '1', // 适用范围 1-全部 2-部分
                     'apply_scope_ordering' => '0', // 适用范围-点餐 0-关闭 1-开启
                     'apply_scope_table' => '0', // 适用范围-桌台 0-关闭 1-开启
-                    'apply_scope_table_list' => [], // 适用范围-桌台id列表
+                    'apply_scope_table_list' => [], // 适用范围-桌台id列表,
+                    'service_fee_base' => '0', // 服务费基础 "0"-商品惠后价 "1"-商品价格合计
                 ],
             ],
             SettingEnum::CASHIER => [
@@ -1171,6 +1172,8 @@ class Setting extends BaseModel
                     'dish_card_style_time' => '0',
                     // 开票信息 0-不需要填写 1-需要填写
                     'is_invoice' => '0',
+                    // 营业时间
+                    'opening_hours' => '',
                 ],
             ],
         ];

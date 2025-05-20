@@ -24,7 +24,7 @@
       </el-form-item>
 
       <!-- 飞鹅打印机 -->
-      <div v-if="form.printer_type == 'FEI_E_YUN'">
+      <div v-if="form.printer_type == 'FEI_E_YUN' && is_usb != 1">
         <el-form-item for="no_click" label="USER" prop="FEI_E_YUN.USER" :rules="[{ required: true, message: ' ' }]">
           <el-input v-model="form.FEI_E_YUN.USER"></el-input>
           <div class="tips">{{ $t('飞鹅云后台注册用户名') }}</div>
@@ -42,7 +42,7 @@
       </div>
 
       <!-- 飞鹅打印机 -->
-      <div v-if="form.printer_type == 'FEI_E_YUN_TAG'">
+      <div v-if="form.printer_type == 'FEI_E_YUN_TAG' && is_usb != 1">
         <el-form-item for="no_click" label="USER" prop="FEI_E_YUN_TAG.USER" :rules="[{ required: true, message: ' ' }]">
           <el-input v-model="form.FEI_E_YUN_TAG.USER"></el-input>
           <div class="tips">{{ $t('飞鹅云后台注册用户名') }}</div>
@@ -60,7 +60,7 @@
       </div>
 
       <!-- 365云打印 -->
-      <div v-if="form.printer_type == 'PRINT_CENTER'">
+      <div v-if="form.printer_type == 'PRINT_CENTER' && is_usb != 1">
         <el-form-item for="no_click" :label="$t('打印机编号')" prop="PRINT_CENTER.deviceNo" :rules="[{ required: true, message: ' ' }]">
           <el-input v-model="form.PRINT_CENTER.deviceNo"></el-input>
         </el-form-item>
@@ -71,7 +71,7 @@
       </div>
 
       <!-- 商米打印 -->
-      <div v-if="form.printer_type == 'SUNMI_LAN'">
+      <div v-if="form.printer_type == 'SUNMI_LAN' && is_usb != 1">
         <el-form-item for="no_click" :label="$t('打印机IP')" prop="SUNMI_LAN.IP" :rules="[{ required: true, message: ' ' }]">
           <el-input v-model="form.SUNMI_LAN.IP"></el-input>
         </el-form-item>
@@ -82,7 +82,7 @@
       </div>
 
       <!-- 商米云打印 -->
-      <div v-if="form.printer_type == 'SUNMI_CLOUD'">
+      <div v-if="form.printer_type == 'SUNMI_CLOUD' && is_usb != 1">
         <el-form-item for="no_click" :label="$t('打印机APPID')" prop="SUNMI_CLOUD.APP_ID" :rules="[{ required: true, message: ' ' }]">
           <el-input v-model="form.SUNMI_CLOUD.APP_ID"></el-input>
         </el-form-item>
@@ -96,7 +96,7 @@
       </div>
 
       <!-- 芯烨打印 -->
-      <div v-if="form.printer_type == 'XPRINTER_LAN' || form.printer_type == 'XPRINTER_WIFI'">
+      <div v-if="(form.printer_type == 'XPRINTER_LAN' || form.printer_type == 'XPRINTER_WIFI') && is_usb != 1">
         <el-form-item for="no_click" :label="$t('打印机IP')" prop="XPRINTER_LAN.IP" :rules="[{ required: true, message: ' ' }]">
           <el-input v-model="form.XPRINTER_LAN.IP"></el-input>
         </el-form-item>
@@ -107,7 +107,7 @@
       </div>
 
       <!-- CODESOFT打印 -->
-      <div v-if="form.printer_type == 'CODESOFT_LAN' || form.printer_type == 'CODESOFT_WIFI'">
+      <div v-if="(form.printer_type == 'CODESOFT_LAN' || form.printer_type == 'CODESOFT_WIFI') && is_usb != 1">
         <el-form-item for="no_click" :label="$t('打印机IP')" prop="CODESOFT_LAN.IP" :rules="[{ required: true, message: ' ' }]">
           <el-input v-model="form.CODESOFT_LAN.IP"></el-input>
         </el-form-item>
@@ -118,7 +118,15 @@
       </div>
 
       <el-form-item for="no_click" :label="$t('打印联数')" prop="print_times" :rules="[{ required: true, message: $t('请输入打印联数') }]">
-        <el-input-number :controls="false" :min="0" :max="10" :placeholder="$t('请输入打印联数')" v-model.number="form.print_times" autocomplete="off"></el-input-number>
+        <el-input-number
+          :controls="false"
+          :min="1"
+          :max="10"
+          :precision="0"
+          :placeholder="$t('请输入打印联数')"
+          v-model.number="form.print_times"
+          autocomplete="off"
+        ></el-input-number>
         <div class="tips">{{ $t('同一订单，打印的次数') }}</div>
       </el-form-item>
 
@@ -143,7 +151,7 @@
 
   export default {
     name: 'SupplierPrintingPrinterEdit',
-    props: ['printer_id', 'open_edit'],
+    props: ['printer_id', 'open_edit', 'is_usb'],
     created() {
       this.dialogVisible = this.open_edit;
       this.form.printer_id = this.printer_id;

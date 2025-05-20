@@ -6,6 +6,7 @@ use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\common\model\shop\BindRecord;
 use app\common\enum\settings\SettingEnum;
+use app\common\service\websocket\Websocket;
 use app\shop\model\settings\Printer as PrinterModel;
 use app\shop\model\settings\Setting as SettingModel;
 
@@ -50,6 +51,36 @@ class Printing extends Controller
         // 收银机设置
         if (isset($postData['cashier_open']) && isset($postData['cashier_printer'])) {
             $printerSettings['cashier_open'] = $postData['cashier_open'];
+            // 更新
+            foreach ($postData['cashier_printer'] as $key => $value) {
+                $printerId = 0;
+                foreach ($printerSettings['cashier_printer'] as $k => $v) {
+                    if ($value['key'] == $v['key']) {
+                        $printerId = $v['printer_id'];
+                    }
+                }
+                if (PrinterModel::where("uuid", $value['printer_id'])->value('is_usb') == 1) {
+                    $postData['cashier_printer'][$key]['printer_id'] = $printerId;
+                    $postData['cashier_printer'][$key]['printer_usb_id'] = $value['printer_id'];
+                } else if (isset($printerSettings['cashier_printer'][$key]['printer_usb_id'])) {
+                    // 推送消息 通知
+                    $sourceDevice = PrinterModel::where("uuid", $printerSettings['cashier_printer'][$key]['printer_usb_id'])->find();
+                    $targetDevice = PrinterModel::where("uuid", $value['printer_id'])->find();
+                    if ($sourceDevice) {
+                        Websocket::pushAppointClient(request()->appId, Websocket::SOURCE_CASHIER, $sourceDevice['source_device_sn'], Websocket::UPDATE_SELECTED_PRINTER, 0, [
+                            'type' => 'update',
+                            'update_time' => time(),
+                            'old_printer_name' => $sourceDevice['name'],
+                            'old_printer_sn' => $sourceDevice['printer_config']['sn'] ?? '',
+                            'new_printer_name' => $targetDevice['name'] ?? __('自带打印机'),
+                            'new_printer_sn' => $targetDevice['printer_config']['sn'] ?? '',
+                        ]);
+                    }
+                    // 
+                    unset($postData['cashier_printer'][$key]['printer_usb_id']);
+                }
+            }
+            //
             $printerSettings['cashier_printer'] = $postData['cashier_printer'];
         }
         // 打印语言（收银）
@@ -117,6 +148,23 @@ class Printing extends Controller
             ->toArray();
         //
         $vars['values'] = SettingModel::getSupplierItem(SettingEnum::PRINTER, $this->store['user']['shop_supplier_id']);
+
+        // NOTE: 舍弃5分钟自动切换
+        // foreach ($vars['values']['cashier_printer'] ?? [] as $key => $value) {
+        //     if (isset($value['printer_usb_id']) && $value['printer_usb_id'] != '' && $value['printer_usb_id'] != 0) {
+        //         $usbPrinter = PrinterModel::where("uuid", $value['printer_usb_id'])->where('source_device_sn', $value['key'])->where('is_usb', 1)->find();
+        //         if ($usbPrinter && ($usbPrinter['status'] == 1 || (time() - $usbPrinter['last_heartbeat_time'] < 300))) {
+        //             $vars['values']['cashier_printer'][$key]['printer_id'] = $value['printer_usb_id'];
+        //         }
+        //     }
+        // }
+       
+        // usb 设备回显
+        foreach ($vars['values']['cashier_printer'] ?? [] as $key => $value) {
+            if (isset($value['printer_usb_id']) && $value['printer_usb_id'] != '' && $value['printer_usb_id'] != 0) {
+                $vars['values']['cashier_printer'][$key]['printer_id'] = $value['printer_usb_id'];
+            }
+        }
         //
         return $this->renderSuccess('', $vars);
     }

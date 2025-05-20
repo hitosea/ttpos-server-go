@@ -368,6 +368,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		printerType            string
 		printerCashierDeviceSn string
 		isCashierPrinter       bool // 是否收银机自带打印机
+		isUsbPrinter           bool // 是否usb打印机
 	)
 
 	// 收银机开启
@@ -376,7 +377,12 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		// 收银机机绑定的打印机key
 		for _, cashierPrinter := range printerSetting.CashierPrinter {
 			if cashierPrinter.Key == deviceSn {
-				printerId = cashierPrinter.PrinterId // 如果是18位纯数字，说明是普通打印机
+				if cashierPrinter.PrinterUsbId != "" && cashierPrinter.PrinterUsbId != "0" {
+					printerId = cashierPrinter.PrinterUsbId
+					isUsbPrinter = true
+				} else {
+					printerId = cashierPrinter.PrinterId // 如果是18位纯数字，说明是普通打印机
+				}
 				break
 			}
 		}
@@ -424,6 +430,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		IsCashierPrinter:       isCashierPrinter,
 		IsCashierOpen:          isCashierOpen,
 		PrinterCashierDeviceSn: printerCashierDeviceSn,
+		IsUsbPrinter:           isUsbPrinter,
 	}, nil
 }
 
@@ -698,7 +705,7 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 	err = json.Unmarshal(modifiedJSON, &cashier)
 	if err != nil {
 		ctx.Log().Error("解析各端-收银机设置失败 - 02", zap.Error(err))
-		return cashier, errors.New("解析各端-收银机设置失败 - 02 " + err.Error())
+		return cashier, errors.New("解析各端-收银机设置失败 - 02" + err.Error())
 	}
 
 	// 滚动图/视频处理
@@ -1332,6 +1339,10 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 			DeviceRemark:           device.Remark,
 			ClientVersion:          clientVersion,
 			ServerVersion:          utils.GetVersion("version.json"),
+		},
+		UsbPrinter: resp.UsbPrinterList{
+			List:       make([]resp.UsbPrinter, 0),
+			SelectedSn: "",
 		},
 	}, nil
 

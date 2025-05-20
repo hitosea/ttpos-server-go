@@ -262,7 +262,6 @@
         select_product_ids.value.push(item.product_id);
       });
     }
-    console.log(select_product_ids.value);
     openProductSelector.value = true;
   };
 

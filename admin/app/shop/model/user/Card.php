@@ -39,9 +39,13 @@ class Card extends CardModel
     public function getDeleteList($data)
     {
         $model = $this->onlyTrashed();
-
+        // 搜索关键词
         if (isset($data['card_name']) && $data['card_name']) {
             $model = $model->like('name', $data['card_name']);
+        }
+        // 搜索时间段
+        if (isset($data['date']) && is_array($data['date']) && count($data['date']) == 2) {
+            $model = $model->where('delete_time', 'between', [strtotime($data['date'][0]), strtotime($data['date'][1]) + 86399]);
         }
 
         $list = $model->order(['create_time' => 'desc'])->paginate($data);

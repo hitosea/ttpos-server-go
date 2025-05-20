@@ -32,6 +32,16 @@
       <el-form-item for="no_click" :label="$t('排序')" prop="sort" :label-width="formLabelWidth">
         <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort"></el-input-number>
       </el-form-item>
+      <el-form-item for="no_click" :label="$t('默认开桌数')" :label-width="formLabelWidth">
+        <el-radio-group v-model="form.is_open_default_people_num">
+          <el-radio :label="1">{{ $t('开启') }}</el-radio>
+          <el-radio :label="0">{{ $t('关闭') }}</el-radio>
+        </el-radio-group>
+        <template v-if="form.is_open_default_people_num == 1">
+          <el-input-number class="mt4" :controls="false" :min="0" :max="999" v-model.number="form.default_people_num"></el-input-number>
+          <div class="tips">{{ $t('默认桌台人数仅非自助餐类型生效') }}</div>
+        </template>
+      </el-form-item>
     </el-form>
     <template #footer>
       <div class="dialog-footer">
@@ -56,6 +66,8 @@
           area_id: '',
           type_id: '',
           sort: null,
+          is_open_default_people_num: 0,
+          default_people_num: 999,
         },
         formRules: {
           area_id: [
@@ -96,6 +108,13 @@
       addUser() {
         const self = this;
         const params = self.form;
+        if (self.form.default_people_num < 1) {
+          self.$ElMessage({
+            message: self.$t('默认开桌人数必须大于等于1'),
+            type: 'error',
+          });
+          return;
+        }
         self.$refs.formRef.validate((valid) => {
           if (valid) {
             self.loading = true;

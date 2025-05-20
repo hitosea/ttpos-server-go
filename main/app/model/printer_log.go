@@ -108,3 +108,11 @@ func (model *PrinterLog) IsCashierPrinter() bool {
 		constant.PrinterTypeCodesoftWifi,
 	}, model.PrinterType)
 }
+
+// 是否usb打印机
+func (model *PrinterLog) IsUsbPrinter() bool {
+	if model.Printer == nil {
+		return false
+	}
+	return model.Printer.IsUsb == 1
+}

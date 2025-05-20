@@ -11,6 +11,8 @@ import (
 // IPrinterRepo 打印机
 type IPrinterRepo interface {
 	GetPrinterList() ([]model.Printer, error)
+	GetUsbPrinterList() ([]model.Printer, error)
+	GetPrinter(uuid uint) (model.Printer, error)
 	UpdatePrinter(id uint, printer model.Printer) error
 	CreatePrinter(printer model.Printer) (uint, error)
 	DeletePrinter(id uint) error
@@ -49,4 +51,27 @@ func (r *PrinterRepoImpl) CreatePrinter(printer model.Printer) (uint, error) {
 // DeletePrinter 软删除打印机
 func (r *PrinterRepoImpl) DeletePrinter(uuid uint) error {
 	return r.db.Model(&model.Printer{}).Where("uuid = ?", uuid).Update("delete_time", uint(time.Now().Unix())).Error
+}
+
+// 获取 usb 打印机，心跳时间超过5分钟的打印机
+func (r *PrinterRepoImpl) GetUsbPrinterList() ([]model.Printer, error) {
+	var printers []model.Printer
+	currentTime := uint(time.Now().Unix())
+	heartbeatTimeThreshold := currentTime - 300 // 5分钟 (300秒)
+	//
+	err := r.db.Model(&model.Printer{}).
+		Where("delete_time = ?", 0).
+		Where("is_usb = ?", 1).
+		Where("status = ?", 0).
+		Where("last_heartbeat_time < ?", heartbeatTimeThreshold).
+		Find(&printers).Error
+	//
+	return printers, errors.WithMessage(err)
+}
+
+// GetPrinter 获取打印机
+func (r *PrinterRepoImpl) GetPrinter(uuid uint) (model.Printer, error) {
+	var printer model.Printer
+	err := r.db.Model(&model.Printer{}).Where("uuid = ?", uuid).First(&printer).Error
+	return printer, errors.WithMessage(err)
 }

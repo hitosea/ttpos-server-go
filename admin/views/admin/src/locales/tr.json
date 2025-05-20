@@ -351,5 +351,10 @@
     "税务对接": "Vergi entegrasyonu",
     "请上传LOGO": "Lütfen LOGO yükleyin",
     "请选择税务对接": "Lütfen vergi entegrasyonunu seçin",
-    "请选择授权开始时间": "Lütfen yetkilendirme başlangıç ​​zamanını seçin"
+    "请选择授权开始时间": "Lütfen yetkilendirme başlangıç ​​zamanını seçin",
+    "短信服务": "SMS Hizmeti",
+    "短信额度": "SMS Kotası",
+    "请输入短信额度": "Lütfen SMS kotasını giriniz",
+    "最小额度为0，短信额度的最大值为9,999,999，默认为200": "Asgari kota 0'dır, SMS kotasının maksimum değeri 9.999.999 olup, varsayılan olarak 200'dür",
+    "输入内容不合规，请重新输入": "Girdi içeriği uygun değil, lütfen tekrar girin"
 }

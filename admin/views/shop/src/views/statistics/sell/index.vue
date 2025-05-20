@@ -235,7 +235,6 @@
   };
 
   const sortChange = (column) => {
-    console.log(column);
     searchForm.value.sort_field = column.prop;
     if (column.order == 'descending') {
       searchForm.value.sort_type = 'desc';

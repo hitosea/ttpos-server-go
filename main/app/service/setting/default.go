@@ -238,6 +238,7 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 		DishCardStyle:     "0",      // 菜品卡片样式 0-无图模式 1-图片模式
 		DishCardStyleTime: "0",      // 菜品卡片样式最后更新时间
 		IsInvoice:         "0",      // 开票信息 0-不需要填写 1-需要填写
+		OpeningHours:      "",       // 营业时间 00:00-23:59
 	}
 
 }

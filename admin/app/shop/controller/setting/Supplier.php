@@ -214,6 +214,7 @@ class Supplier extends Controller
         $apply_scope_ordering = $data['apply_scope_ordering'] ?? '0';
         $apply_scope_table = $data['apply_scope_table'] ?? '0';
         $apply_scope_table_list = $data['apply_scope_table_list'] ?? [];
+        $service_fee_base = $data['service_fee_base'] ?? '0';
         if (!in_array($charge_type, ['1', '2'])) {
             return $this->renderError('服务费类型错误');
         }
@@ -266,6 +267,7 @@ class Supplier extends Controller
             'apply_scope_ordering' => $apply_scope_ordering, // 适用范围-点餐 0-关闭 1-开启
             'apply_scope_table' => $apply_scope_table, // 适用范围-桌台 0-关闭 1-开启
             'apply_scope_table_list' => $apply_scope_table_list, // 台位uuid列表
+            'service_fee_base' => "$service_fee_base", // 服务费基础 "0"-商品惠后价 "1"-商品价格合计
         ];
 
         if ($charge_type == '1') {

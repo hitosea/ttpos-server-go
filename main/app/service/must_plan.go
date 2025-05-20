@@ -20,7 +20,7 @@ type IMustPlanSrv interface {
 	GetProductMustPlans(ctx context.Context, deskUuid uint64) ([]*model.ProductMustPlan, error)                                                                                                          // 获取桌台的必选方案model列表
 	GetDeskMustPlanProductPackageList(ctx context.Context, deskUuid uint64) ([]*model.ProductPackage, error)                                                                                             // 获取桌台的必点ProductPackage列表
 	GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCartMustProductInfo ro.MustPlanProductInfo, options ...func(option *CheckOption)) ([]resp.InstantProductMustPlan, error)                // 获取点餐的必点方案列表
-	GetDeskMustPlanList(ctx context.Context, mealNum uint, shopCartMustProductInfo ro.MustPlanProductInfo, deskUuid uint64, options ...func(option *CheckOption)) ([]resp.InstantProductMustPlan, error) // 获取桌台的必点方案列表
+	GetDeskMustPlanList(ctx context.Context, mealNum uint, shopCartMustProductInfo ro.MustPlanProductInfo, deskUuid uint64, options ...func(option *CheckOption)) ([]resp.InstantProductMustPlan, error) // 获取桌台的各个必点方案的点购情况，如是否满足必点、还差多少个
 	GetMustPlanUuidByProductPackage(ctx context.Context, saleBillUuid, productPackageUuid uint64, deskUuid uint64) (uint64, error)                                                                       // 通过商品包获取必点方案uuid
 }
 
@@ -219,12 +219,21 @@ func (s *mustPlanSrv) getInstantMustPlanProductList(ctx context.Context, mustPla
 			if productPackage == nil {
 				continue
 			}
+
+			canAutoAdd, productAutoAddReq := planItem.ProductPackage.IsNoSelectProduct()
+			isAutoAdd := mustPlan.IsAutoCart() && canAutoAdd
+			var autoAddReq resp.ProductAutoAddReq
+			if isAutoAdd {
+				autoAddReq = *productAutoAddReq
+			}
+
 			productStat := resp.InstantMustPlanProductStat{
-				Product:     *productPackage,
-				IsAutoAdd:   mustPlan.IsAutoCart() && planItem.ProductPackage.IsNoSelectProduct(), // 必点方案勾选自动加购且商品是无选择商品
-				SelectedNum: 0,                                                                    // 该商品已经点的数量。展示给前端之前判断购物车内是否已经点了该商品，加上已点数量
-				MustNum:     1,                                                                    // 该商品要求必点数量
-				NeedNum:     1,                                                                    // 该商品还需点点数量。展示给前端之前判断购物车内是否已经点了该商品，减已点数量
+				Product:           *productPackage,
+				IsAutoAdd:         isAutoAdd, // 必点方案勾选自动加购且商品是无选择商品
+				ProductAutoAddReq: autoAddReq,
+				SelectedNum:       0, // 该商品已经点的数量。展示给前端之前判断购物车内是否已经点了该商品，加上已点数量
+				MustNum:           1, // 该商品要求必点数量
+				NeedNum:           1, // 该商品还需点点数量。展示给前端之前判断购物车内是否已经点了该商品，减已点数量
 			}
 			productList = append(productList, productStat)
 		}
@@ -456,12 +465,21 @@ func (s *mustPlanSrv) getIDeskMustPlanProductList(ctx context.Context, mustPlan 
 				if productPackage == nil {
 					continue
 				}
+
+				canAutoAdd, productAutoAddReq := planItem.ProductPackage.IsNoSelectProduct()
+				isAutoAdd := mustPlan.IsAutoCart() && canAutoAdd
+				var autoAddReq resp.ProductAutoAddReq
+				if isAutoAdd {
+					autoAddReq = *productAutoAddReq
+				}
+
 				productStat := resp.InstantMustPlanProductStat{
-					Product:     *productPackage,
-					IsAutoAdd:   mustPlan.IsAutoCart() && planItem.ProductPackage.IsNoSelectProduct(), // 必点方案勾选自动加购且商品是无选择商品
-					SelectedNum: 0,                                                                    // 该商品已经点的数量。展示给前端之前判断购物车内是否已经点了该商品，加上已点数量
-					MustNum:     1,                                                                    // 该商品要求必点数量
-					NeedNum:     1,                                                                    // 该商品还需点点数量。展示给前端之前判断购物车内是否已经点了该商品，减已点数量
+					Product:           *productPackage,
+					IsAutoAdd:         isAutoAdd, // 必点方案勾选自动加购且商品是无选择商品
+					ProductAutoAddReq: autoAddReq,
+					SelectedNum:       0, // 该商品已经点的数量。展示给前端之前判断购物车内是否已经点了该商品，加上已点数量
+					MustNum:           1, // 该商品要求必点数量
+					NeedNum:           1, // 该商品还需点点数量。展示给前端之前判断购物车内是否已经点了该商品，减已点数量
 				}
 				productList = append(productList, productStat)
 			}
@@ -494,12 +512,21 @@ func (s *mustPlanSrv) getIDeskMustPlanProductList(ctx context.Context, mustPlan 
 				if productPackage == nil {
 					continue
 				}
+
+				canAutoAdd, productAutoAddReq := planItem.ProductPackage.IsNoSelectProduct()
+				isAutoAdd := mustPlan.IsAutoCart() && canAutoAdd
+				var autoAddReq resp.ProductAutoAddReq
+				if isAutoAdd {
+					autoAddReq = *productAutoAddReq
+				}
+
 				productStat := resp.InstantMustPlanProductStat{
-					Product:     *productPackage,
-					IsAutoAdd:   mustPlan.IsAutoCart() && planItem.ProductPackage.IsNoSelectProduct(), // 必点方案勾选自动加购且商品是无选择商品
-					SelectedNum: 0,                                                                    // 该商品已经点的数量。展示给前端之前判断购物车内是否已经点了该商品，加上已点数量
-					MustNum:     1 * personNum,                                                        // 该商品要求必点数量
-					NeedNum:     1 * personNum,                                                        // 该商品还需点点数量。展示给前端之前判断购物车内是否已经点了该商品，减已点数量
+					Product:           *productPackage,
+					IsAutoAdd:         isAutoAdd, // 必点方案勾选自动加购且商品是无选择商品
+					ProductAutoAddReq: autoAddReq,
+					SelectedNum:       0,             // 该商品已经点的数量。展示给前端之前判断购物车内是否已经点了该商品，加上已点数量
+					MustNum:           1 * personNum, // 该商品要求必点数量
+					NeedNum:           1 * personNum, // 该商品还需点点数量。展示给前端之前判断购物车内是否已经点了该商品，减已点数量
 				}
 				productList = append(productList, productStat)
 			}

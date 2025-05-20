@@ -15,6 +15,7 @@ type CheckoutZeroSaleOrderPayload struct {
 	RoundingType    int     `json:"rounding_type"`    // 抹零规则。0-实款实收 1-抹分 2-抹角 5-抹元
 	SpecialDiscount float64 `json:"special_discount"` // 优惠金额
 	Reason          string  `json:"reason"`           // 原因(撤销时使用)
+	IsAuto          bool    `json:"is_auto"`          // 是否自动抹零
 }
 
 func (payload *CheckoutZeroSaleOrderPayload) ToJsonString() string {
