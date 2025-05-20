@@ -248,7 +248,6 @@ class App extends AppModel
             // 平台
             $this->save($save_data);
 
-            $supplierModel = SupplierModel::where('company_uuid', '=', $this['uuid'])->find();
             // 商户
             if (isset($data['logo'])) unset($data['logo']);
             $data['is_open_h5'] = $data['is_open_scan'] ?? 0;
