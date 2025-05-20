@@ -42,7 +42,7 @@
             class="mt4"
             :controls="false"
             :min="1"
-            :max="99"
+            :max="999"
             :precision="0"
             :placeholder="$t('请输入默认开桌人数')"
             v-model.number="form.default_people_num"
