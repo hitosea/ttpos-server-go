@@ -650,6 +650,7 @@
               label: '',
               hide: 2,
               font24: true,
+              right: false,
             },
             {
               name: $t('这是桌台备注，非桌台/桌台没有备注的则不显示，需要换行显示'),
@@ -894,6 +895,7 @@
               label: '',
               hide: 2,
               font24: true,
+              right: false,
             },
             {
               name: $t('这是桌台备注，非桌台/桌台没有备注的则不显示，需要换行显示'),
@@ -1496,6 +1498,7 @@
               name: $t('桌位: A01 (4人)'),
               label: '',
               font24: true,
+              right: false,
             },
             {
               name: $t('订单号'),
