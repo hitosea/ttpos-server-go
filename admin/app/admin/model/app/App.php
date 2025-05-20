@@ -255,9 +255,6 @@ class App extends AppModel
             $data['is_open_h5_order'] = $data['is_accept_scan_order'] ?? 0;
             if (($data['enable_sms'] ?? 0) == 0) {
                 $data['sms_quota'] = 0;
-            } elseif ($supplierModel->sms_quota > $data['sms_quota']) {
-                $this->error = '调整后的额度不可低于当前商户真实剩余短信额度';
-                return false;
             }
             SupplierModel::where('company_uuid', '=', $this['uuid'])->find()?->save($data);
 
