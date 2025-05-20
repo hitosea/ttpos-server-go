@@ -26,6 +26,7 @@ thread_cache_size = 256
 query_cache_size = 384M
 tmp_table_size = 2048M
 sql-mode=NO_ENGINE_SUBSTITUTION,STRICT_TRANS_TABLES
+group_concat_max_len = 1M
 
 max_connections = 65535
 max_connect_errors = 100
