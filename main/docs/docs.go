@@ -14582,6 +14582,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/sms/member-recharge": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "发送会员充值短信",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.发送会员充值短信"
+                ],
+                "summary": "发送会员充值短信",
+                "parameters": [
+                    {
+                        "description": "提交发送会员充值短信参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.SendMemberRechargeSMS"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/statistics/7days": {
             "get": {
                 "security": [
@@ -18667,6 +18706,32 @@ const docTemplate = `{
                 }
             }
         },
+        "req.SendMemberRechargeSMS": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "number"
+                },
+                "bonus_money": {
+                    "type": "number"
+                },
+                "bonus_points": {
+                    "type": "number"
+                },
+                "company": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "points_balance": {
+                    "type": "number"
+                },
+                "recharge": {
+                    "type": "number"
+                }
+            }
+        },
         "req.ShiftDepositReq": {
             "type": "object",
             "properties": {
@@ -22039,7 +22104,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "amount": {
-                    "description": "实收金额",
+                    "description": "实收金额（含手续费）",
                     "type": "number"
                 },
                 "disabled_cancel": {
