@@ -7388,8 +7388,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	saleOrderChangeAmount := saleOrder.ChangeAmount
 	go func() {
 
-		// 结账前，发布"抹零"事件。如果优惠折扣自动抹零且抹零金额大于0，则发布"抹零"事件。
-		if saleOrder.IsAutoZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroFee > 0 {
+		// 结账前，发布"抹零"事件。如果优惠折扣自动抹零且抹零金额不为0，则发布"抹零"事件。
+		if saleOrder.IsAutoZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroFee != 0 {
 			event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountSaleOrderPayload{
 				BasePayload: event.BasePayload{ // 订单抹零
 					Ctx:           ctx,
@@ -7406,8 +7406,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			})
 		}
 
-		// 结账前，发布"结账抹零"事件。如果结账自动抹零且抹零金额大于0，则发布"结账抹零"事件
-		if saleOrder.IsAutoCheckoutZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroCheckoutFee > 0 {
+		// 结账前，发布"结账抹零"事件。如果结账自动抹零且抹零金额不为0，则发布"结账抹零"事件
+		if saleOrder.IsAutoCheckoutZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroCheckoutFee != 0 {
 			s.bus.PublishCheckoutZeroSaleOrderEvent(event.CheckoutZeroSaleOrderPayload{
 				BasePayload: event.BasePayload{ // 结账抹零
 					Ctx:           ctx,
@@ -7613,8 +7613,8 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 
 	// 发布"免单"事件
 	go func() {
-		// 结账前，发布"抹零"事件。如果优惠折扣自动抹零且抹零金额大于0，则发布"抹零"事件。
-		if saleOrder.IsAutoZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroFee > 0 {
+		// 结账前，发布"抹零"事件。如果优惠折扣自动抹零且抹零金额不为0，则发布"抹零"事件。
+		if saleOrder.IsAutoZeroDiscount(*saleBill.SaleBillSetting) && saleOrder.ZeroFee != 0 {
 			event.NewSystemBus().PublishDiscountZeroSaleOrderEvent(event.DiscountSaleOrderPayload{
 				BasePayload: event.BasePayload{ // 订单抹零
 					Ctx:           ctx,
