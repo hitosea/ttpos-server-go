@@ -22,7 +22,7 @@
           <el-input v-model="form.name" :placeholder="$t('请输入方案名称')"></el-input>
         </el-form-item>
         <el-form-item for="no_click" :label="$t('使用渠道')" prop="use_channel" :rules="[{ required: true, message: $t('请选择使用渠道') }]">
-          <el-checkbox-group v-model="form.use_channel">
+          <el-checkbox-group v-model="form.use_channel" @change="handleUseChannelChange">
             <el-checkbox label="10" size="small">
               {{ $t('点餐方式') }}
             </el-checkbox>
@@ -290,6 +290,17 @@
     openProductSelector.value = false;
   };
 
+  const handleUseChannelChange = (e) => {
+    if (e.indexOf('20') != -1) {
+      form.value.table_area_ids = [];
+      if ((props.area_list.length > 0 && form.value.table_area_ids.length == 0) || !props.editData?.id) {
+        props.area_list.map((item) => {
+          form.value.table_area_ids.push(item.area_id);
+        });
+      }
+    }
+  };
+
   const handleClose = (e) => {
     emit('close', e);
   };
@@ -341,12 +352,6 @@
         disabledRadio.value = true;
       } else {
         disabledRadio.value = false;
-        form.value.table_area_ids = [];
-        if ((props.area_list.length > 0 && form.value.table_area_ids.length == 0) || !props.editData?.id) {
-          props.area_list.map((item) => {
-            form.value.table_area_ids.push(item.area_id);
-          });
-        }
       }
     }
   );
