@@ -114,13 +114,19 @@
 
         <el-form-item for="no_click" v-if="form.type == 10" :label="$t('打印机')" prop="printer_id" :rules="[{ required: true, message: $t('请选择打印机') }]">
           <el-select v-model="form.printer_id" :placeholder="$t('请选择')" multiple>
-            <el-option v-for="(item, index) in type" :key="index" :label="item.printer_name" :value="item.printer_id"></el-option>
+            <el-option v-for="(item, index) in type" :key="index" :label="item.printer_name + (item.is_usb == 1 ? ' (USB)' : '')" :value="item.printer_id">
+              {{ item.printer_name }}
+              <el-tag v-if="item.is_usb == 1" size="small" type="warning">USB</el-tag>
+            </el-option>
           </el-select>
         </el-form-item>
 
         <el-form-item for="no_click" v-if="form.type == 20" :label="$t('打印机')" prop="printer_id" :rules="[{ required: true, message: $t('请选择打印机') }]">
           <el-select v-model="form.printer_id" :placeholder="$t('请选择')" multiple>
-            <el-option v-for="(item, index) in typeTag" :key="index" :label="item.printer_name" :value="item.printer_id"></el-option>
+            <el-option v-for="(item, index) in typeTag" :key="index" :label="item.printer_name + (item.is_usb == 1 ? ' (USB)' : '')" :value="item.printer_id">
+              {{ item.printer_name }}
+              <el-tag v-if="item.is_usb == 1" size="small" type="warning">USB</el-tag>
+            </el-option>
           </el-select>
         </el-form-item>
 
