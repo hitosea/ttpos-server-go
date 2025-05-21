@@ -1856,6 +1856,23 @@ definitions:
         description: h5订单ID
         type: integer
     type: object
+  req.SendMemberRechargeSMS:
+    properties:
+      balance:
+        type: number
+      bonus_money:
+        type: number
+      bonus_points:
+        type: number
+      company:
+        type: string
+      phone:
+        type: string
+      points_balance:
+        type: number
+      recharge:
+        type: number
+    type: object
   req.ShiftDepositReq:
     properties:
       deposit_cash:
@@ -4091,7 +4108,7 @@ definitions:
   resp.PaymentOrder:
     properties:
       amount:
-        description: 实收金额
+        description: 实收金额（含手续费）
         type: number
       disabled_cancel:
         description: 禁止撤销，false-不禁止；true-禁止
@@ -14569,6 +14586,30 @@ paths:
       summary: 提交交班
       tags:
       - 商家端.交班
+  /shop/sms/member-recharge:
+    post:
+      consumes:
+      - application/json
+      description: 发送会员充值短信
+      parameters:
+      - description: 提交发送会员充值短信参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.SendMemberRechargeSMS'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 发送会员充值短信
+      tags:
+      - 商家端.发送会员充值短信
   /shop/statistics/7days:
     get:
       consumes:

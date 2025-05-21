@@ -21,6 +21,14 @@ type Printer struct {
 	PrinterType *PrinterType `gorm:"foreignKey:PrinterTypeUuid;references:Uuid"` // 关联 printer_type
 }
 
+// 是否usb打印机
+func (model *Printer) IsUsbPrinter() bool {
+	if model == nil {
+		return false
+	}
+	return model.IsUsb == 1
+}
+
 type PrinterConfigJson struct {
 	IP   string `json:"IP"`
 	PORT string `json:"PORT"`

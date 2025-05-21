@@ -4,8 +4,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-
-	"github.com/spf13/viper"
 )
 
 // File 文件库记录表 ttpos_file
@@ -35,11 +33,7 @@ func (model *File) SetNil() {
 // GetUrl 获取地址。file_url + save_name + url_param
 func (model *File) GetUrl(baseUrl string) string {
 	videoExtensions := []string{".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv", ".webm", ".m4v", ".mpeg", ".3gp"}
-	driver := viper.GetString("STORAGE_DRIVER")
-	if driver == "" {
-		driver = "local"
-	}
-	if model.Storage == "local" && (model.UrlParam != "" || driver == "local") {
+	if model.Storage == "local" && model.UrlParam == "" {
 		saveName := model.SaveName
 		if model.FileType == ".video" || slices.Contains(videoExtensions, "."+filepath.Ext(saveName)) {
 			return baseUrl + "uploads/" + saveName

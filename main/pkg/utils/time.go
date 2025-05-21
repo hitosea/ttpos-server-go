@@ -251,8 +251,8 @@ func (t Timezone) OpeningHoursStartEndUnix(openingHours string) (int64, int64) {
 	// 获取今天的日期
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 
-	// 检查是否跨天（结束时间小于开始时间）
-	isCrossingDay := endHour < startHour || (endHour == startHour && endMin < startMin)
+	// 检查是否跨天（结束时间小于等于开始时间）
+	isCrossingDay := endHour <= startHour || (endHour == startHour && endMin <= startMin)
 
 	// 构建开始和结束时间
 	var startTime, endTime time.Time
@@ -260,11 +260,11 @@ func (t Timezone) OpeningHoursStartEndUnix(openingHours string) (int64, int64) {
 		// 如果未跨天内，默认显示昨天的营业时间
 		yesterday := today.AddDate(0, 0, -1)
 		startTime = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), startHour, startMin, 0, 0, loc)
-		endTime = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), endHour, endMin, 59, 0, loc)
+		endTime = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), endHour, endMin, 0, 0, loc)
 	} else {
 		yesterday := today.AddDate(0, 0, -1)
 		startTime = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), startHour, startMin, 0, 0, loc)
-		endTime = time.Date(today.Year(), today.Month(), today.Day(), endHour, endMin, 59, 0, loc)
+		endTime = time.Date(today.Year(), today.Month(), today.Day(), endHour, endMin, 0, 0, loc)
 	}
 
 	return startTime.Unix(), endTime.Unix()

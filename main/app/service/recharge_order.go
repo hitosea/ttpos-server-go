@@ -649,7 +649,7 @@ func (s *rechargeOrderSrv) confirmRechargeOrderResp(companyUuid uint64, recharge
 	}
 }
 
-// 打印充值订单
+// PrintTicket 打印充值订单
 func (s *rechargeOrderSrv) PrintTicket(ctx context.Context, printRechargeOrderReq req.PrintRechargeOrderReq) (*resp.PrinterData, error) {
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	order := rechargeOrderRepo.GetRechargeOrder(
@@ -1320,6 +1320,19 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			OnlyDelete:              true,
 		})
 	}()
+
+	// 发布“会员余额变动”事件
+	go func() {
+		s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
+			BasePayload: event.BasePayload{ // 会员余额变动
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
+	}()
+
 	return nil
 }
 

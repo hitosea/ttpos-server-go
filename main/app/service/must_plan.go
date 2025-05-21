@@ -42,9 +42,9 @@ func NewMustPlanSrvImpl(dbm *database.DBManager) IMustPlanSrv {
 }
 
 type CheckOption struct {
-	Scene                   uint                    // 检查场景. 1-下单场景 2-结账场景
-	SaleBillUuid            uint64                  // 桌台自助餐场景下，将必点商品价格记为0元
-	SeletedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
+	Scene                    uint                    // 检查场景. 1-下单场景 2-结账场景
+	SaleBillUuid             uint64                  // 桌台自助餐场景下，将必点商品价格记为0元
+	SelectedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
 }
 
 const (
@@ -70,13 +70,13 @@ func WithSaleBillUuid(saleBillUuid uint64) func(option *CheckOption) {
 	}
 }
 
-func WithSeletedMustPlanProductsCheckOption(seletedMustPlanProducts *ro.MustPlanProductInfo) func(option *CheckOption) {
+func WithSelectedMustPlanProductsCheckOption(selectedMustPlanProducts *ro.MustPlanProductInfo) func(option *CheckOption) {
 	return func(option *CheckOption) {
-		option.SeletedMustPlanProducts = seletedMustPlanProducts
+		option.SelectedMustPlanProducts = selectedMustPlanProducts
 	}
 }
 
-// 获取点餐的必点方案列表，用于获取各个必点方案的点餐情况
+// GetInstantMustPlanList 获取点餐的必点方案列表，用于获取各个必点方案的点餐情况
 func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, shopCartMustProductInfo ro.MustPlanProductInfo, options ...func(option *CheckOption)) ([]resp.InstantProductMustPlan, error) {
 	option := &CheckOption{}
 	for _, optionFunc := range options {
@@ -282,7 +282,7 @@ func (s *mustPlanSrv) GetProductMustPlans(ctx context.Context, deskUuid uint64) 
 	return productMustPlans, nil
 }
 
-// 获取桌台的必点ProductPackage列表
+// GetDeskMustPlanProductPackageList 获取桌台的必点ProductPackage列表
 func (s *mustPlanSrv) GetDeskMustPlanProductPackageList(ctx context.Context, deskUuid uint64) ([]*model.ProductPackage, error) {
 	productMustPlans, err := s.GetProductMustPlans(ctx, deskUuid)
 	if err != nil {
@@ -297,17 +297,17 @@ func (s *mustPlanSrv) GetDeskMustPlanProductPackageList(ctx context.Context, des
 	return productPackageList, nil
 }
 
-// 获取桌台的各个必点方案的点购情况，如是否满足必点、还差多少个
+// GetDeskMustPlanList 获取桌台的各个必点方案的点购情况，如是否满足必点、还差多少个
 func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, shopCartMustProductInfo ro.MustPlanProductInfo, deskUuid uint64, options ...func(option *CheckOption)) ([]resp.InstantProductMustPlan, error) {
 	option := &CheckOption{}
 	for _, optionFunc := range options {
 		optionFunc(option)
 	}
 
-	if option.SeletedMustPlanProducts != nil {
+	if option.SelectedMustPlanProducts != nil {
 		// 将新加购的商品与已经加购的商品合并
 		// MustPlanUuid => ProductPackageUuid => num
-		for mustPlanUuid, productPackageMap := range *option.SeletedMustPlanProducts {
+		for mustPlanUuid, productPackageMap := range *option.SelectedMustPlanProducts {
 			for productPackageUuid, num := range productPackageMap {
 				if _, ok := shopCartMustProductInfo[mustPlanUuid]; !ok {
 					shopCartMustProductInfo[mustPlanUuid] = make(map[uint64]uint)
@@ -553,7 +553,7 @@ func (s *mustPlanSrv) getIDeskMustPlanProductList(ctx context.Context, mustPlan 
 	return productList
 }
 
-// 通过productPackageUuid判断该商品包是哪个必点方案的
+// GetMustPlanUuidByProductPackage 通过productPackageUuid判断该商品包是哪个必点方案的
 func (s *mustPlanSrv) GetMustPlanUuidByProductPackage(ctx context.Context, saleBillUuid, productPackageUuid uint64, deskUuid uint64) (uint64, error) {
 	// 用product_package_uuid在ttpos_product_must_plan_item表中查询
 	db := s.dbm.GetDB(ctx.GetDbId())

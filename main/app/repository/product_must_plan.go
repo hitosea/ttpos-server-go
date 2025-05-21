@@ -13,7 +13,7 @@ import (
 type IProductMustPlanRepo interface {
 	GetProductMustPlanList(ctx context.Context, opts ...DBOption) ([]*model.ProductMustPlan, error)
 	GetProductMustPlanListAllInfos(ctx context.Context) ([]*model.ProductMustPlan, error)
-	// 通过uuid列表获取产品必点方案列表
+	// GetProductMustPlanListByUuids 通过uuid列表获取产品必点方案列表
 	GetProductMustPlanListByUuids(uuids []uint64) ([]model.ProductMustPlan, error)
 	GetProductMustPlanByRegionUuid(regionUuid uint64) ([]model.ProductMustPlan, error)
 	GetProductMustPlanListDeskInfos(ctx context.Context) ([]*model.ProductMustPlan, error)
@@ -96,7 +96,7 @@ func (r *ProductMustPlanRepoImpl) CreateProductMustPlanRegion(planRegions []mode
 	return err
 }
 
-// 获取搜索必点商品方案列表的数据信息
+// GetProductMustPlanListAllInfos 获取搜索必点商品方案列表的数据信息
 func (r *ProductMustPlanRepoImpl) GetProductMustPlanListAllInfos(ctx context.Context) ([]*model.ProductMustPlan, error) {
 	productMustPlans, err := r.GetProductMustPlanList(ctx,
 		CommonRepo.WhereBySoftDelete(),
@@ -138,7 +138,7 @@ func (r *ProductMustPlanRepoImpl) GetProductMustPlanListAllInfos(ctx context.Con
 	return productMustPlans, nil
 }
 
-// 获取搜索必点商品方案列表的数据信息
+// GetProductMustPlanListDeskInfos 获取搜索必点商品方案列表的数据信息
 func (r *ProductMustPlanRepoImpl) GetProductMustPlanListDeskInfos(ctx context.Context) ([]*model.ProductMustPlan, error) {
 	productMustPlans, err := r.GetProductMustPlanList(ctx,
 		CommonRepo.WhereBySoftDelete(),

@@ -29,7 +29,7 @@ func NewProductPrinterRepoImpl(db *gorm.DB) IProductPrinterRepo {
 
 func (r *productPrinterRepo) GetProductPrinters(opts ...DBOption) ([]model.ProductPrinter, error) {
 	var printers []model.ProductPrinter
-	db := r.db.Model(&model.ProductPrinter{})
+	db := r.db.Model(&model.ProductPrinter{}).Scopes(NotDeleted)
 
 	for _, opt := range opts {
 		db = opt(db)

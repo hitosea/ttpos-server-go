@@ -96,18 +96,22 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			if printType == constant.PrinterProductTypeBackFood {
 				data := p.getPrintReturnProductContent(printerItem, billInfo, newProducts)
 				if data != "" {
-
 					// 添加打印日志，依赖打印日志服务
 					_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
 						PrinterType:   printerType,
 						PrinterConfig: printerItem.Printer.ConfigJson,
 						PrintCopies:   printerItem.Printer.Copies,
 					}, model.PrinterLog{
-						PrintMethod:        printMethod,
-						RelatedType:        0,
-						RelatedUuid:        saleBillUuid,
-						PrinterUuid:        printerItem.PrinterUuid,
-						CashierDeviceId:    "",
+						PrintMethod: printMethod,
+						RelatedType: 0,
+						RelatedUuid: saleBillUuid,
+						PrinterUuid: printerItem.PrinterUuid,
+						CashierDeviceId: func() string {
+							if printerItem.Printer != nil && printerItem.Printer.IsUsbPrinter() {
+								return printerItem.Printer.SourceDeviceSn
+							}
+							return ""
+						}(),
 						DataType:           constant.PrinterTemplateReturnDish,
 						Data:               data,
 						Type:               1,
@@ -133,11 +137,16 @@ func (p *PrinterRepoImpl) PrintingDishes(
 							PrinterConfig: printerItem.Printer.ConfigJson,
 							PrintCopies:   printerItem.Printer.Copies,
 						}, model.PrinterLog{
-							PrintMethod:        printMethod,
-							RelatedType:        0,
-							RelatedUuid:        saleBillUuid,
-							PrinterUuid:        printerItem.PrinterUuid,
-							CashierDeviceId:    "",
+							PrintMethod: printMethod,
+							RelatedType: 0,
+							RelatedUuid: saleBillUuid,
+							PrinterUuid: printerItem.PrinterUuid,
+							CashierDeviceId: func() string {
+								if printerItem.Printer != nil && printerItem.Printer.IsUsbPrinter() {
+									return printerItem.Printer.SourceDeviceSn
+								}
+								return ""
+							}(),
 							DataType:           constant.PrinterTemplateOneDishOneMenu,
 							Data:               data,
 							Type:               1,
@@ -155,16 +164,20 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			// 整单打印
 			data := p.getPrintProductContent(productPrinter, printerItem, billInfo, newProducts)
 			if data != "" {
-
 				// 添加打印日志，依赖打印日志服务
 				_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
 					PrinterType: printerType,
 				}, model.PrinterLog{
-					PrintMethod:        printMethod,
-					RelatedType:        0,
-					RelatedUuid:        saleBillUuid,
-					PrinterUuid:        printerItem.PrinterUuid,
-					CashierDeviceId:    "",
+					PrintMethod: printMethod,
+					RelatedType: 0,
+					RelatedUuid: saleBillUuid,
+					PrinterUuid: printerItem.PrinterUuid,
+					CashierDeviceId: func() string {
+						if printerItem.Printer != nil && printerItem.Printer.IsUsbPrinter() {
+							return printerItem.Printer.SourceDeviceSn
+						}
+						return ""
+					}(),
 					DataType:           constant.PrinterTemplateEntireOrder,
 					Data:               data,
 					Type:               1,

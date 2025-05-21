@@ -166,6 +166,7 @@
             <el-input-number
               v-model="formData.table_limit"
               :controls="false"
+              :precision="0"
               :min="0"
               :max="999"
               clearable
@@ -181,6 +182,7 @@
             <el-input-number
               v-model="formData.printer_limit"
               :controls="false"
+              :precision="0"
               :min="0"
               :max="999"
               clearable
@@ -195,6 +197,7 @@
           <el-input-number
             v-model="formData.cash_limit"
             :controls="false"
+            :precision="0"
             :min="0"
             :max="999"
             clearable
@@ -207,6 +210,7 @@
           <el-input-number
             v-model="formData.tablet_limit"
             :controls="false"
+            :precision="0"
             :min="0"
             :max="999"
             clearable
@@ -219,6 +223,7 @@
           <el-input-number
             v-model="formData.assistant_limit"
             :controls="false"
+            :precision="0"
             :min="0"
             :max="999"
             clearable
@@ -231,6 +236,7 @@
           <el-input-number
             v-model="formData.kitchen_limit"
             :controls="false"
+            :precision="0"
             :min="0"
             :max="999"
             clearable
@@ -244,10 +250,9 @@
             v-model="formData.sms_quota"
             :controls="false"
             clearable
+            :precision="0"
             :placeholder="$t('请输入短信额度')"
             style="width: 100%"
-            :min="0"
-            :max="9999999"
             @blur="handleSmsQuotaInput"
           ></el-input-number>
           <div class="text-[#ccc] w-full">{{ $t('最小额度为0，短信额度的最大值为9,999,999，默认为200') }}</div>

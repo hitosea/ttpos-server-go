@@ -30,7 +30,7 @@ var WsClients []ConnectionInfo
 // 初始化函数，启动定时检查心跳超时的连接
 func init() {
 	go checkHeartbeatTimeout()
-	go checkPrinterHeartbeatTimeout()
+	// go checkPrinterHeartbeatTimeout()
 }
 
 // Message represents a generic message structure

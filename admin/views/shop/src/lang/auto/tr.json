@@ -1587,5 +1587,7 @@
     "默认开桌数": "Varsayılan Açık Masa Sayısı",
     "默认桌台人数仅非自助餐类型生效": "Varsayılan masa sayısı yalnızca açık büfe olmayan türlerde geçerlidir",
     "请选择营业时间": "Lütfen çalışma saatlerini seçin",
-    "默认开桌人数必须大于等于1": "Varsayılan masa açılış kişi sayısı 1 veya daha fazla olmalıdır"
+    "默认开桌人数必须大于等于1": "Varsayılan masa açılış kişi sayısı 1 veya daha fazla olmalıdır",
+    "默认开桌人数": "Varsayılan masa açılış kişi sayısı",
+    "请输入默认开桌人数": "Varsayılan masa açılış kişi sayısını girin"
 }

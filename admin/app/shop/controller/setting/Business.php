@@ -430,6 +430,10 @@ class Business extends Controller
         $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?: 0;
         $app_id = $this->store['app']['app_id'] ?: 0;
         $ret = SettingModel::getSupplierItem($key, $shop_supplier_id, $app_id);
+        // 门店营业时间
+        if ($key == SettingEnum::BUSINESS && $ret['opening_hours'] == '') {
+            $ret['opening_hours'] = '00:00-23:59';
+        }
         //
         $free_tag_count = FreeTag::count();
         //

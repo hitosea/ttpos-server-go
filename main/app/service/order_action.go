@@ -22,8 +22,8 @@ import (
 )
 
 type ActionCookingOption struct {
-	CalcAndSaveSaleBill     bool
-	SeletedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
+	CalcAndSaveSaleBill      bool
+	SelectedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
 }
 
 func withCalcAndSaveSaleBill() func(option *ActionCookingOption) {
@@ -32,9 +32,9 @@ func withCalcAndSaveSaleBill() func(option *ActionCookingOption) {
 	}
 }
 
-func WithSeletedMustPlanProductsActionCookingOption(seletedMustPlanProducts *ro.MustPlanProductInfo) func(option *ActionCookingOption) {
+func WithSelectedMustPlanProductsActionCookingOption(selectedMustPlanProducts *ro.MustPlanProductInfo) func(option *ActionCookingOption) {
 	return func(option *ActionCookingOption) {
-		option.SeletedMustPlanProducts = seletedMustPlanProducts
+		option.SelectedMustPlanProducts = selectedMustPlanProducts
 	}
 }
 
@@ -72,9 +72,9 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		// 对商品进行送厨检查: 检查商品是否删除、下架、库存是否充足、规格价格变动、小料的价格变动、超过限购、必点为选择
 		var checkServiceRes *resp.OrderCheckServiceRes
 		var errCheck error
-		if option.SeletedMustPlanProducts != nil {
+		if option.SelectedMustPlanProducts != nil {
 			// 平板端加购并送厨时，将平板加购的商品注入到checkOrder中
-			checkServiceRes, errCheck = s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSeletedMustPlanProducts(option.SeletedMustPlanProducts))
+			checkServiceRes, errCheck = s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSelectedMustPlanProducts(option.SelectedMustPlanProducts))
 		} else {
 			// 限购检查只检查未送厨的商品
 			uuids := make([]uint64, 0)
@@ -245,7 +245,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 	return nil, nil
 }
 
-// 加购
+// ActionAdd 加购
 func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) error {
 	db := ctx.GetDB()
 
@@ -275,16 +275,16 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 	}
 
 	// MustPlanUuid => ProductPackageUuid => num
-	seletedMustPlanProducts := make(ro.MustPlanProductInfo)
+	selectedMustPlanProducts := make(ro.MustPlanProductInfo)
 	for _, product := range request.Products {
-		if seletedMustPlanProducts[product.MustPlanUuid] == nil {
-			seletedMustPlanProducts[product.MustPlanUuid] = make(map[uint64]uint)
+		if selectedMustPlanProducts[product.MustPlanUuid] == nil {
+			selectedMustPlanProducts[product.MustPlanUuid] = make(map[uint64]uint)
 		}
 		flavorProductBom, err := repository.NewProductBomRepo(ctx.GetDB()).GetFlavorProductBomByUuid(product.FlavorProductBomUuid)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
-		seletedMustPlanProducts[product.MustPlanUuid][flavorProductBom.ProductPackageUuid] = product.Num
+		selectedMustPlanProducts[product.MustPlanUuid][flavorProductBom.ProductPackageUuid] = product.Num
 	}
 	// 送厨相关
 	{
@@ -297,7 +297,7 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 		}
 
 		// 送厨
-		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, 0, false, withCalcAndSaveSaleBill(), WithSeletedMustPlanProductsActionCookingOption(&seletedMustPlanProducts)) // 平板端加购并送厨
+		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, 0, false, withCalcAndSaveSaleBill(), WithSelectedMustPlanProductsActionCookingOption(&selectedMustPlanProducts)) // 平板端加购并送厨
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}

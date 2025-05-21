@@ -135,7 +135,6 @@ func (p *PrinterRepoImpl) getProductPrinterList(widthPrintMode int) ([]model.Pro
 	printers, err := productPrinterRepo.GetProductPrinters(
 		productPrinterRepo.WhereStatus(constant.ProductPrinterStatusOpen),
 		productPrinterRepo.WidthPrintMode(widthPrintMode),
-		repository.CommonRepo.WhereBySoftDelete(),
 		repository.CommonRepo.Preload(repository.WithPreload{
 			Query: "ProductPrinterRegions",
 			Args: []any{

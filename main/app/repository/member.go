@@ -60,7 +60,7 @@ func (r *memberRepo) GetMemberLevels() []model.MemberLevel {
 	return levels
 }
 
-// GetMemberLevels 获取会员等级
+// GetMemberLevelsAllColumns 获取会员等级
 func (r *memberRepo) GetMemberLevelsAllColumns() []model.MemberLevel {
 	var levels []model.MemberLevel
 	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Order("priority asc, create_time asc").Find(&levels)

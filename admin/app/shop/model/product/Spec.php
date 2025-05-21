@@ -7,6 +7,7 @@ use app\common\model\product\ProductBom;
 use app\common\service\websocket\Websocket;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\product\Spec as SpecModel;
+use app\shop\model\product\ProductBom as ProductProductBom;
 
 /**
  * 规格/属性(组)模型
@@ -110,6 +111,8 @@ class Spec extends SpecModel
         $data['name'] = $name;
         $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($name, $this['multi_language_name_uuid']);
         $this->save($data);
+        // 修改关联商品的规格名称
+        ProductProductBom::where('product_flavor_uuid', $this['uuid'])->update(['name' => $name]);
         return true;
     }
 

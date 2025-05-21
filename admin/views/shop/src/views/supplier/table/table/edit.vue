@@ -32,13 +32,21 @@
       <el-form-item for="no_click" :label="$t('排序')" prop="sort" :label-width="formLabelWidth">
         <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort"></el-input-number>
       </el-form-item>
-      <el-form-item for="no_click" :label="$t('默认开桌数')" :label-width="formLabelWidth">
+      <el-form-item for="no_click" :label="$t('默认开桌人数')" :label-width="formLabelWidth">
         <el-radio-group v-model="form.is_open_default_people_num">
           <el-radio :label="1">{{ $t('开启') }}</el-radio>
           <el-radio :label="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
         <template v-if="form.is_open_default_people_num == 1">
-          <el-input-number class="mt4" :controls="false" :min="0" :max="999" v-model.number="form.default_people_num"></el-input-number>
+          <el-input-number
+            class="mt4"
+            :controls="false"
+            :min="1"
+            :max="999"
+            :precision="0"
+            :placeholder="$t('请输入默认开桌人数')"
+            v-model.number="form.default_people_num"
+          ></el-input-number>
           <div class="tips">{{ $t('默认桌台人数仅非自助餐类型生效') }}</div>
         </template>
       </el-form-item>
@@ -68,7 +76,7 @@
           type_id: '',
           sort: null,
           is_open_default_people_num: 0,
-          default_people_num: 999,
+          default_people_num: null,
         },
         file_path: '',
         formRules: {
@@ -105,7 +113,7 @@
       this.form.table_id = this.editform.model.table_id;
       this.form.table_no = this.editform.model.table_no;
       this.form.is_open_default_people_num = this.editform.model.is_open_default_people_num;
-      this.form.default_people_num = this.editform.model.default_people_num;
+      this.form.default_people_num = this.editform.model.default_people_num == 0 ? null : this.editform.model.default_people_num;
 
       this.type.map((item) => {
         if (item.type_id == this.editform.model.type_id) {
@@ -125,7 +133,7 @@
       addUser() {
         const self = this;
         const params = self.form;
-        if (self.form.default_people_num < 1) {
+        if (self.form.default_people_num < 1 && self.form.is_open_default_people_num == 1) {
           self.$ElMessage({
             message: self.$t('默认开桌人数必须大于等于1'),
             type: 'error',
