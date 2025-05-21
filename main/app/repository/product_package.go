@@ -39,7 +39,7 @@ func (r *productPackageRepoImpl) GetProductPackage(opts ...DBOption) (*model.Pro
 	return &productPackage, nil
 }
 
-// 查询商品包库存信息
+// GetProductPackageBoms 查询商品包库存信息
 func (r *productPackageRepoImpl) GetProductPackageBoms(productPackageUuid uint64) (*model.ProductPackage, error) {
 	productPackage, err := r.GetProductPackage(
 		CommonRepo.WhereByUuid(productPackageUuid),

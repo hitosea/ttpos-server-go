@@ -434,7 +434,7 @@ func (s *Srv) getDefaultServiceCharge() setting.ServiceCharge {
 	}
 }
 
-func (s *Srv) parseCashierSetting(values string, key string) ([]byte, error) {
+func (s *Srv) parseCashierSetting(values string) ([]byte, error) {
 	// 解析json字符串为map进行处理
 	var jsonMap map[string]interface{}
 	err := json.Unmarshal([]byte(values), &jsonMap)

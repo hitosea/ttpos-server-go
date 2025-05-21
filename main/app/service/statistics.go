@@ -527,7 +527,7 @@ type CountCategoryResp struct {
 	CategoryList []CountCategoryListResp `json:"category_list"`  // 分类列表
 }
 
-// CountCategoryResp 统计分类响应
+// CountCategoryListResp 统计分类响应
 type CountCategoryListResp struct {
 	CategoryName string  `json:"category_name"` // 分类名称
 	SaleNum      int64   `json:"sale_num"`      // 销售数量
@@ -745,7 +745,7 @@ type CountProductRankResp struct {
 	SaleAmount  float64 `json:"sale_amount"`  // 销售金额
 }
 
-// CountProductRank 统计商品排行
+// RankProduct 统计商品排行
 func (s *statisticsSrv) RankProduct(ctx context.Context, req CountReq) []CountProductRankResp {
 	opts := s.buildCountOpts(ctx, req)
 	productData := repository.NewStatisticsRepo(ctx.GetDB()).RankProduct(req.RankType, ctx.GetLanguage(), opts...)

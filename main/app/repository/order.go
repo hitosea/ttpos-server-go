@@ -93,7 +93,7 @@ func (r *orderRepo) CreateSaleBillSetting(model model.SaleBillSetting) (model.Sa
 	return model, nil
 }
 
-// 更新销售账单设置
+// UpdateSaleBillSetting 更新销售账单设置
 func (r *orderRepo) UpdateSaleBillSetting(obj model.SaleBillSetting) (model.SaleBillSetting, error) {
 	err := r.db.Model(&model.SaleBillSetting{}).Where("uuid = ?", obj.Uuid).Updates(map[string]interface{}{
 		"service_fee_type":   obj.ServiceFeeType,
@@ -129,7 +129,7 @@ func (r *orderRepo) GetSaleBill(opts ...DBOption) (model.SaleBill, error) {
 	return saleBill, nil
 }
 
-// 查询orderNo是否存在
+// IsOrderNoExists 查询orderNo是否存在
 func (r *orderRepo) IsOrderNoExists(orderNo string) (bool, error) {
 	var countSaleBill int64
 	var countSaleOrder int64
@@ -582,70 +582,70 @@ const (
 
 type OrderCartInfoOptionFunc func(option *OrderCartInfoOption)
 
-// 查询H5未下单的商品
+// WithUnorderedH5Product 查询H5未下单的商品
 func WithUnorderedH5Product() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.UnorderedH5Product = UnorderedH5Product
 	}
 }
 
-// 查询H5已下单的商品
+// WithOrderedH5Product 查询H5已下单的商品
 func WithOrderedH5Product() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.UnorderedH5Product = OrderedH5Product
 	}
 }
 
-// 查询H5已下单的商品和被拒单的商品
+// WithOrderedH5ProductWithReject 查询H5已下单的商品和被拒单的商品
 func WithOrderedH5ProductWithReject() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.UnorderedH5Product = OrderedH5ProductWithReject
 	}
 }
 
-// 指定某个h5订单
+// WithH5OrderUuid 指定某个h5订单
 func WithH5OrderUuid(h5OrderUuid uint64) OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.H5OrderUuid = h5OrderUuid
 	}
 }
 
-// 查询未被删除的商品
+// WithNotDeleted 查询未被删除的商品
 func WithNotDeleted() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.NotDeleted = true
 	}
 }
 
-// 过滤结束状态
+// FilterEndStatus 过滤结束状态
 func FilterEndStatus() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.FilterEndStatus = true
 	}
 }
 
-// 不查询必点信息
+// WithNoQueryMustPlan 不查询必点信息
 func WithNoQueryMustPlan() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.NoQueryMustPlan = true
 	}
 }
 
-// 是否是H5自动添加的商品.如果需要自动加购时，加购的商品应该为未下单商品
+// WithH5AutoAdd 是否是H5自动添加的商品.如果需要自动加购时，加购的商品应该为未下单商品
 func WithH5AutoAdd() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.H5AutoAdd = true
 	}
 }
 
-// 是否不自动添加的商品。如果为true，则不自动加购的商品，平板上操作时不自动加购
+// WithNoAutoAdd 是否不自动添加的商品。如果为true，则不自动加购的商品，平板上操作时不自动加购
 func WithNoAutoAdd() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.NoAutoAdd = true
 	}
 }
 
-// 是否可以关闭必点弹窗
+// WithCanCloseMustPlanView 是否可以关闭必点弹窗
 func WithCanCloseMustPlanView() OrderCartInfoOptionFunc {
 	return func(option *OrderCartInfoOption) {
 		option.CanCloseMustPlanView = true

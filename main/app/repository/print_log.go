@@ -44,7 +44,6 @@ type IPrinterLogRepo interface {
 
 	GetPrinter(opts ...DBOption) *model.Printer
 
-	//
 	Update(uuid uint64, vars map[string]any) error
 	UpdateByWhere(vars map[string]any, opts ...DBOption) error
 	BatchUpdate(logs []model.PrinterLog) error
