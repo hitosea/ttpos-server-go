@@ -264,7 +264,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		}
 
 		// 创建销售订单
-		saleOrder, errCreateSaleOrder := createSaleOrder(tx, saleBillSetting, saleBill.Uuid, orderNo)
+		saleOrder, errCreateSaleOrder := createSaleOrder(ctx, tx, saleBillSetting, saleBill.Uuid, orderNo)
 		if errCreateSaleOrder != nil {
 			return errCreateSaleOrder
 		}
@@ -322,9 +322,13 @@ func IsToday(timestamp int64) bool {
 	return time.Unix(timestamp, 0).Format("20060102") == time.Now().Format("20060102")
 }
 
-func createSaleOrder(db *gorm.DB, saleBillSetting *model.SaleBillSetting, saleBillUuid uint64, saleBillOrderNo string) (*model.SaleOrder, error) {
+func createSaleOrder(ctx context.Context, db *gorm.DB, saleBillSetting *model.SaleBillSetting, saleBillUuid uint64, saleBillOrderNo string) (*model.SaleOrder, error) {
 	// 创建销售订单
 	saleOrderObj := model.NewSaleOrder(saleBillUuid, saleBillOrderNo, *saleBillSetting)
+	// 设置收银员信息
+	staff := ctx.GetStaff()
+	saleOrderObj.SetCashier(staff.Uuid, staff.GetUserName())
+	//
 	saleOrder, err := repository.NewOrderRepo(db).CreateSaleOrder(*saleOrderObj)
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -7784,7 +7788,7 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 创建销售订单
-		if _, errCreateSaleOrder := createSaleOrder(db, saleBill.SaleBillSetting, saleBill.Uuid, orderNo); errCreateSaleOrder != nil {
+		if _, errCreateSaleOrder := createSaleOrder(ctx, db, saleBill.SaleBillSetting, saleBill.Uuid, orderNo); errCreateSaleOrder != nil {
 			return errors.WithMessage(errCreateSaleOrder, fmt.Sprintf("新建拆单失败,saleBill.Uuid:%v, orderNo:%v", saleBill.Uuid, orderNo))
 		}
 
