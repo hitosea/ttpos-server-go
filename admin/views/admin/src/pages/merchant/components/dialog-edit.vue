@@ -166,6 +166,7 @@
             <el-input-number
               v-model="formData.table_limit"
               :controls="false"
+              :precision="0"
               :min="0"
               :max="999"
               clearable
