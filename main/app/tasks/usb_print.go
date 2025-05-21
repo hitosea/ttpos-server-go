@@ -28,7 +28,7 @@ type usbPrintTask struct {
 	cache cache.Cache
 }
 
-// 创建新的秒级任务
+// NewUsbPrintTask 创建新的秒级任务
 func NewUsbPrintTask(dbm *database.DBManager, cache cache.Cache) *usbPrintTask {
 	return &usbPrintTask{
 		dbm:   dbm,
@@ -36,7 +36,7 @@ func NewUsbPrintTask(dbm *database.DBManager, cache cache.Cache) *usbPrintTask {
 	}
 }
 
-// 执行任务
+// Execute 执行任务
 func (t *usbPrintTask) Execute() {
 	// 根据 APP 表实例化数据库连接，并左关联 CompanySetting
 	prefix := config.Database.TablePrefix

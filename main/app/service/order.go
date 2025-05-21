@@ -355,7 +355,7 @@ func parseServiceFeeRate(ServiceChargeRate string) (float64, error) {
 	return serviceFeeValue, nil
 }
 
-// CreateSaleBillSetting 创建销售账单设置
+// NewSaleBillSetting 创建销售账单设置
 func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, deskUuid uint64) (*model.SaleBillSetting, error) {
 	// 获取服务费设置
 	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(ctx)
@@ -471,7 +471,7 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, 
 	return &saleBillSetting, nil
 }
 
-// 判断该销售账单是否在服务费应用范围内
+// IsServiceFeeApply 判断该销售账单是否在服务费应用范围内
 func (s *orderSrv) IsServiceFeeApply(ctx context.Context, deskUuid uint64) (uint, error) {
 	// 是否是全部应用
 	serviceFeeSetting, err := s.settingSrv.GetServiceFeeSetting(ctx)
@@ -666,7 +666,7 @@ func (s *orderSrv) createOrderNo(db *gorm.DB, orderSource string) (string, error
 	return orderNo, nil
 }
 
-// GetCashierOrderList 获取订单列表
+// GetOrderLists 获取订单列表
 func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error) {
 	orderRepo := repository.NewOrderRepo(s.dbm.GetDB(ctx.GetDbId()))
 	// 获取列表源数据
@@ -1297,7 +1297,7 @@ func (s *orderSrv) IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (
 	return billInfo, nil
 }
 
-// 拒绝某销售账单的所有未接单h5订单
+// RejectAllH5Order 拒绝某销售账单的所有未接单h5订单
 func (s *orderSrv) RejectAllH5Order(ctx context.Context, saleBillUuid uint64) error {
 	db := ctx.GetDB()
 	// 获取所有待接单的h5订单
@@ -1314,11 +1314,11 @@ func (s *orderSrv) RejectAllH5Order(ctx context.Context, saleBillUuid uint64) er
 	return nil
 }
 
-// 将商机的所有待接单的h5订单都拒单
+// RejectAllH5OrderInShop 将商家的所有待接单的h5订单都拒单
 func (s *orderSrv) RejectAllH5OrderInShop(ctx context.Context) error {
 	db := ctx.GetDB()
 	// 查询所有还在进行中的桌台账单
-	saleBills, err := repository.NewSaleBillRepo(db).GetDeskSaleBillUnpay()
+	saleBills, err := repository.NewSaleBillRepo(db).GetDeskSaleBillUnPay()
 	if err != nil {
 		return errors.WithMessage(err)
 	}
@@ -1532,10 +1532,10 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	}
 
 	returnType := constant.ReturnOrderRefundTypeTotal
-	saleOrderProducts := make([]*model.SaleOrderProduct, 0)                        // 退款商品列表
-	saleOrderBuffetComstomerTypes := make([]*model.SaleOrderBuffetCustomerType, 0) // 退款自助餐顾客列表
-	saleOrderBuffetDelayProducts := make([]*model.SaleOrderBuffetDelayProduct, 0)  // 退款自助餐延迟商品列表
-	numMap := make(map[uint64]uint)                                                // 每个退款商品的退货数量
+	saleOrderProducts := make([]*model.SaleOrderProduct, 0)                       // 退款商品列表
+	saleOrderBuffetCustomerTypes := make([]*model.SaleOrderBuffetCustomerType, 0) // 退款自助餐顾客列表
+	saleOrderBuffetDelayProducts := make([]*model.SaleOrderBuffetDelayProduct, 0) // 退款自助餐延迟商品列表
+	numMap := make(map[uint64]uint)                                               // 每个退款商品的退货数量
 	// 整单退款
 	if len(req.Products) == 0 {
 		returnType = constant.ReturnOrderRefundTypeTotal
@@ -1552,7 +1552,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		for _, saleOrderProduct := range saleOrder.SaleOrderBuffetCustomerTypes {
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
 			if canReturnNum > 0 {
-				saleOrderBuffetComstomerTypes = append(saleOrderBuffetComstomerTypes, saleOrderProduct)
+				saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderProduct)
 				numMap[saleOrderProduct.Uuid] = canReturnNum
 			}
 		}
@@ -1588,13 +1588,13 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			}
 		}
 
-		saleOrderBuffetComstomerTypeList := saleOrder.GetSaleOrderBuffetComstomerTypeList(saleOrderProductUuids)
-		for _, saleOrderProduct := range saleOrderBuffetComstomerTypeList {
+		saleOrderBuffetCustomerTypeList := saleOrder.GetSaleOrderBuffetComstomerTypeList(saleOrderProductUuids)
+		for _, saleOrderProduct := range saleOrderBuffetCustomerTypeList {
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
 			if canReturnNum > 0 {
 				num := numMap[saleOrderProduct.Uuid] // 退货数量
 				if num <= canReturnNum {
-					saleOrderBuffetComstomerTypes = append(saleOrderBuffetComstomerTypes, saleOrderProduct)
+					saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderProduct)
 				} else {
 					return errors.WithMessage(errors.New("2退货数量超过可退货数量")), constant.CodeFail
 				}
@@ -1617,7 +1617,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	}
 
 	// 如果退款类型为部分退款，则必须有可退货的商品。整单退款则可以没有可退货的商品，可能已经退完商品了但还有手续费没有退
-	if len(saleOrderProducts) == 0 && len(saleOrderBuffetComstomerTypes) == 0 && len(saleOrderBuffetDelayProducts) == 0 && returnType == constant.ReturnOrderRefundTypePart {
+	if len(saleOrderProducts) == 0 && len(saleOrderBuffetCustomerTypes) == 0 && len(saleOrderBuffetDelayProducts) == 0 && returnType == constant.ReturnOrderRefundTypePart {
 		return errors.WithMessage(errors.New("没有可退货的商品")), constant.CodeFail
 	}
 
@@ -1625,7 +1625,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	canReturnAmount := saleOrder.GetCanReturnAmount()
 
 	// 创建退款单
-	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetStaff().DutyNo, ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetComstomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
+	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetStaff().DutyNo, ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetCustomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
 	if err != nil {
 		return errors.WithMessage(err), constant.CodeFail
 	}
@@ -1841,7 +1841,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			})
 		}
 	}
-	for _, saleOrderProduct := range saleOrderBuffetComstomerTypes {
+	for _, saleOrderProduct := range saleOrderBuffetCustomerTypes {
 		if num, exists := numMap[saleOrderProduct.Uuid]; exists && num > 0 {
 			products = append(products, event.OrderProduct{
 				OrderProductId: saleOrderProduct.Uuid,
@@ -1922,7 +1922,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	return nil, 0
 }
 
-// ReReturnReq 重新退款
+// ReReturnOrder 重新退款
 func (s *orderSrv) ReReturnOrder(ctx context.Context, req req.OrderReReturnReq) (error, int) {
 	// 禁止并发操作
 	if ctx.NoLock() {
@@ -3473,7 +3473,7 @@ func (s *orderSrv) OrderChangePopulation(ctx context.Context, req req.OrderChang
 	}()
 
 	// 修改订单商品人数
-	if err := orderRepo.ChangePopulation(req.SaleBillUuid, int(req.Population)); err != nil {
+	if err := orderRepo.ChangePopulation(req.SaleBillUuid, req.Population); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -3660,7 +3660,7 @@ func (s *orderSrv) OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuf
 	{
 		newSaleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
 		if err != nil {
-			return nil, errors.WithMessage(err, "repository.NewOrderRepo(db).GetSaleBillAllInfo faile")
+			return nil, errors.WithMessage(err, "repository.NewOrderRepo(db).GetSaleBillAllInfo failed")
 		}
 		if err := s.CalcAndSaveSaleBill(ctx, db, newSaleBill); err != nil {
 			return nil, errors.WithMessage(err)
@@ -4103,7 +4103,7 @@ func (s *orderSrv) GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid
 	return saleBillUuid, saleOrderUuid, nil
 }
 
-// 点餐页面，往购物车添加商品。
+// InstantOrderCartProductAdd 点餐页面，往购物车添加商品。
 func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	// 当不填销售账单ID时，表示要新建一个销售账单
 	if request.SaleBillUuid == 0 {
@@ -4298,7 +4298,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				return nil, errors.WithMessage(err)
 			}
 			ctx.Log().Debug("获取到必点方案uuid", zap.Any("mustPlanUuid", mustPlanUuid))
-			// 判断该必点方案是不是这个sale_biil的
+			// 判断该必点方案是不是这个sale_bill的
 			shopCartInfo, err := repository.NewOrderRepo(db).GetOrderCartInfo(innerParams.SaleBillUuid)
 			if err != nil {
 				return nil, errors.WithMessage(err)
@@ -4785,11 +4785,11 @@ func (s *orderSrv) skipCheck(saleOrderProduct *model.SaleOrderProduct) bool {
 }
 
 type CheckOrderOptions struct {
-	CheckType               int                     // 1:送厨检查 2:结账检查
-	IsH5Check               bool                    // 是否是H5检查
-	SeletedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
-	SaleOrderProudctUuids   []uint64                // h5端下单场景下，只检查本次下单的商品是否超过限购
-	H5OrderUuid             uint64                  // h5端下单场景下，当h5订单接单时，当h5订单商品金额有变化时更新该h5订单商品金额
+	CheckType                int                     // 1:送厨检查 2:结账检查
+	IsH5Check                bool                    // 是否是H5检查
+	SelectedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
+	SaleOrderProductUuids    []uint64                // h5端下单场景下，只检查本次下单的商品是否超过限购
+	H5OrderUuid              uint64                  // h5端下单场景下，当h5订单接单时，当h5订单商品金额有变化时更新该h5订单商品金额
 }
 
 const (
@@ -4797,14 +4797,14 @@ const (
 	CheckTypeCheckout = 2 // 2:结账检查
 )
 
-// 送厨检查
+// WithCheckTypeCooking 送厨检查
 func WithCheckTypeCooking() func(*CheckOrderOptions) {
 	return func(options *CheckOrderOptions) {
 		options.CheckType = CheckTypeCooking
 	}
 }
 
-// 结账检查
+// WithCheckTypeCheckout 结账检查
 func WithCheckTypeCheckout() func(*CheckOrderOptions) {
 	return func(options *CheckOrderOptions) {
 		options.CheckType = CheckTypeCheckout
@@ -4817,15 +4817,15 @@ func WithIsH5Check() func(*CheckOrderOptions) {
 	}
 }
 
-func WithSeletedMustPlanProducts(seletedMustPlanProducts *ro.MustPlanProductInfo) func(*CheckOrderOptions) {
+func WithSelectedMustPlanProducts(selectedMustPlanProducts *ro.MustPlanProductInfo) func(*CheckOrderOptions) {
 	return func(options *CheckOrderOptions) {
-		options.SeletedMustPlanProducts = seletedMustPlanProducts
+		options.SelectedMustPlanProducts = selectedMustPlanProducts
 	}
 }
 
 func WithSaleOrderProductUuid(saleOrderProductUuids ...uint64) func(*CheckOrderOptions) {
 	return func(options *CheckOrderOptions) {
-		options.SaleOrderProudctUuids = saleOrderProductUuids
+		options.SaleOrderProductUuids = saleOrderProductUuids
 	}
 }
 
@@ -4876,8 +4876,8 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 				instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCheckout())
 			} else {
 				// 检查送厨
-				if options.SeletedMustPlanProducts != nil {
-					instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCheckout(), WithSeletedMustPlanProductsCheckOption(options.SeletedMustPlanProducts))
+				if options.SelectedMustPlanProducts != nil {
+					instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCheckout(), WithSelectedMustPlanProductsCheckOption(options.SelectedMustPlanProducts))
 				} else {
 					// 检查结账
 					instantMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithCheckSceneCooking())
@@ -5039,7 +5039,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 		// 只检查本次下单的商品是否超过限购
 		productPackageUuids := make([]uint64, 0)
 		for _, saleOrderProduct := range saleOrderProductAll {
-			if options.SaleOrderProudctUuids != nil && slices.Contains(options.SaleOrderProudctUuids, saleOrderProduct.Uuid) {
+			if options.SaleOrderProductUuids != nil && slices.Contains(options.SaleOrderProductUuids, saleOrderProduct.Uuid) {
 				productPackageUuids = append(productPackageUuids, saleOrderProduct.ProductPackageUuid)
 			}
 		}
@@ -5057,7 +5057,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			productPackageUuid := saleOrderProduct.ProductPackageUuid
 			// 在h5端下单场景下，只检查本次下单的商品是否超过限购
 			// 在收银端送厨场景下，只检查本次送厨的商品是否超过限购
-			if options.SaleOrderProudctUuids != nil && len(productPackageUuids) > 0 && !slices.Contains(productPackageUuids, saleOrderProduct.ProductPackageUuid) {
+			if options.SaleOrderProductUuids != nil && len(productPackageUuids) > 0 && !slices.Contains(productPackageUuids, saleOrderProduct.ProductPackageUuid) {
 				continue
 			}
 			productPackageMap[productPackageUuid] = saleOrderProduct.ProductPackage
@@ -6627,7 +6627,6 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	return infoResp, nil
 }
 
-// InstantOrderPaymentQrcode
 func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.InstantOrderPaymentQrcodeReq) (*resp.InstantOrderPaymentQrcodeInfoResp, error) {
 	// 加锁
 	if ctx.NoLock() {
@@ -7005,7 +7004,7 @@ func (s *orderSrv) getSaleOrderProductWithoutWarehouseOutForm(ctx context.Contex
 	return list, nil
 }
 
-// 完成销售账单
+// FinishSaleBill 完成销售账单
 func (s *orderSrv) FinishSaleBill(ctx context.Context, saleBill *model.SaleBill, businessSetting settingResp.Business, db *gorm.DB) error {
 	// 更新销售账单
 	updateSaleBill := false
@@ -7606,7 +7605,7 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 		PayMethodList: resp.PayMethodList{
 			List: []resp.PayMethod{
 				{
-					Name: "免单",
+					Name: i18n.Translate(ctx.GetLanguage(), "免单"),
 				},
 			},
 		},
@@ -8260,7 +8259,7 @@ func (s *orderSrv) moveBuffetDelayProduct(ctx context.Context, saleBill *model.S
 	return waitUpdateBuffetDelayProductMap, waitCreateBuffetDelayProductMap, nil
 }
 
-// InstantOrderSaleOrderMoveProduct 从一个销售订单移动商品到另一个销售订单
+// SaleOrderMoveProduct 从一个销售订单移动商品到另一个销售订单
 // 第一种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中有签名一样的商品，该商品数量增加移动数量
 // 第二种移动方式：原销售订单商品数量小于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
 // 第三种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
@@ -8485,11 +8484,11 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 		for _, plan := range mustPlanList {
 			if plan.NeedNum > 0 {
 				// 判断商品是否售罄。如果售罄，则允许“确认必点”
-				isSaleout, err := planProductSaleout(ctx, &plan)
+				isSoldOut, err := planProductSoldOut(ctx, &plan)
 				if err != nil {
 					return false, nil, errors.WithMessage(err)
 				}
-				if isSaleout {
+				if isSoldOut {
 					break // 所有的未满足必点的商品都没有库存时，允许“确认必点”
 				} else {
 					ctx.Log().Info("确认必点商品失败，必点商品未点", zap.Any("plan name", plan.Name))
@@ -8526,7 +8525,7 @@ func (s *orderSrv) InstantOrderMustPlanConfirm(ctx context.Context, req req.Inst
 	return true, nil, nil
 }
 
-func planProductSaleout(ctx context.Context, plan *resp.InstantProductMustPlan) (bool, error) {
+func planProductSoldOut(ctx context.Context, plan *resp.InstantProductMustPlan) (bool, error) {
 	// 如果是可选商品. 只有必点方案的所有商品都无库存时才返回true
 	if plan.MustRule == constant.ProductMustPlanMustRuleAny {
 		isSaleOut := true
@@ -8567,7 +8566,7 @@ func planProductSaleout(ctx context.Context, plan *resp.InstantProductMustPlan) 
 	return isSaleOut, nil
 }
 
-// InstantOrderCheck 订单检查
+// OrderCheck 订单检查
 func (s *orderSrv) OrderCheck(ctx context.Context, req req.InstantOrderCheckReq) (*resp.OrderCheckServiceRes, error) {
 	if ctx.NoLock() {
 		s.lock.LockUuid(req.SaleBillUuid)

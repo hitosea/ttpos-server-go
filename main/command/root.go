@@ -79,7 +79,7 @@ var rootCommand = &cobra.Command{
 	},
 }
 
-// 执行命令
+// Execute 执行命令
 func Execute() {
 	rootCommand.CompletionOptions.DisableDefaultCmd = true
 	if err := rootCommand.Execute(); err != nil {

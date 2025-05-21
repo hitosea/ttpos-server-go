@@ -28,8 +28,8 @@ func NewOrderProductBomRepoImpl(db *gorm.DB) IOrderProductBomRepo {
 }
 
 // CreateBatch 批量创建
-func (o *orderProductBomRepo) CreateBatch(boms []*model.SaleOrderProductBom) error {
-	return o.db.Create(&boms).Error
+func (r *orderProductBomRepo) CreateBatch(boms []*model.SaleOrderProductBom) error {
+	return r.db.Create(&boms).Error
 }
 
 // UpdateSaleOrderProductBomRecord 更新销售订单商品BOM记录

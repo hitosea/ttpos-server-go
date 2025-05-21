@@ -62,17 +62,17 @@ func (r *printerRepo) GetUsbList() []model.Printer {
 	return Printers
 }
 
-// 更新
+// Update 更新
 func (r *printerRepo) Update(id uint, vars map[string]interface{}) error {
 	return r.db.Model(&model.Printer{}).Where("id = ?", id).Updates(vars).Error
 }
 
-// 更新
+// UpdateBySourceDeviceSn 更新
 func (r *printerRepo) UpdateBySourceDeviceSn(id uint, sourceDeviceSn string, vars map[string]interface{}) error {
 	return r.db.Model(&model.Printer{}).Where("id = ?", id).Where("source_device_sn = ?", sourceDeviceSn).Updates(vars).Error
 }
 
-// 创建
+// Create 创建
 func (r *printerRepo) Create(companyUuid uint64, printer model.Printer) error {
 	return r.db.Create(&printer).Error
 }

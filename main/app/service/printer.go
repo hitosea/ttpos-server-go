@@ -40,7 +40,7 @@ func NewPrinterSrvImpl(dbm *database.DBManager, cache cache.Cache) IPrinterSrv {
 	}
 }
 
-// 获取打印档口列表
+// GetProductPrinterList 获取打印档口列表
 func (s *printerSrv) GetProductPrinterList(ctx context.Context) (resp.ProductPrinterList, error) {
 	productPrinterRepo := repository.NewProductPrinterRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	printers, err := productPrinterRepo.GetProductPrinters(productPrinterRepo.WhereStatus(constant.ProductPrinterStatusOpen))
@@ -57,7 +57,7 @@ func (s *printerSrv) GetProductPrinterList(ctx context.Context) (resp.ProductPri
 	return resp.ProductPrinterList{List: productPrinters}, nil
 }
 
-// usb 上报打印
+// UsbPrinterReport 上报打印
 func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrinterReportReq) (resp.PrinterReportResp, error) {
 	printerRepo := repository.NewPrinterRepo(ctx.GetDB())
 	dbUsbList := printerRepo.GetUsbList()
