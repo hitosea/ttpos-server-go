@@ -244,6 +244,7 @@
             v-model="formData.sms_quota"
             :controls="false"
             clearable
+            :precision="0"
             :placeholder="$t('请输入短信额度')"
             style="width: 100%"
             @blur="handleSmsQuotaInput"
