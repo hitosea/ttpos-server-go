@@ -181,6 +181,7 @@
             <el-input-number
               v-model="formData.printer_limit"
               :controls="false"
+              :precision="0"
               :min="0"
               :max="999"
               clearable
@@ -195,6 +196,7 @@
           <el-input-number
             v-model="formData.cash_limit"
             :controls="false"
+            :precision="0"
             :min="0"
             :max="999"
             clearable
@@ -207,6 +209,7 @@
           <el-input-number
             v-model="formData.tablet_limit"
             :controls="false"
+            :precision="0"
             :min="0"
             :max="999"
             clearable
@@ -219,6 +222,7 @@
           <el-input-number
             v-model="formData.assistant_limit"
             :controls="false"
+            :precision="0"
             :min="0"
             :max="999"
             clearable
@@ -231,6 +235,7 @@
           <el-input-number
             v-model="formData.kitchen_limit"
             :controls="false"
+            :precision="0"
             :min="0"
             :max="999"
             clearable
