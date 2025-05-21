@@ -326,6 +326,23 @@ func filterOtherClientProducts(unCookingSaleOrderProducts []*model.SaleOrderProd
 func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) (any, error) {
 	db := ctx.GetDB()
 	res := make(map[string]any)
+
+	// 如果加购并送厨中的商品中有必点方案uuid，说明用户已经在平板端完成了必点，则关闭该销售账单的必点弹窗
+	if request.Products != nil {
+		for _, product := range request.Products {
+			if product.MustPlanUuid != 0 {
+				if err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(request.SaleBillUuid); err != nil {
+					return nil, errors.WithMessage(err)
+				}
+				// 设置已经完成自动加购
+				if err := repository.NewSaleBillRepo(db).UpdateSaleBillAutoAddMustProduct(request.SaleBillUuid); err != nil {
+					return nil, errors.WithMessage(err, "标记自动加购完成失败")
+				}
+				break
+			}
+		}
+	}
+
 	saleBill, _ := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if saleBill.IsEndStatus() {
 		return res, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))
