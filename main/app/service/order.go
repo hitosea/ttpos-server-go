@@ -7605,7 +7605,7 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 		PayMethodList: resp.PayMethodList{
 			List: []resp.PayMethod{
 				{
-					Name: "免单",
+					Name: i18n.Translate(ctx.GetLanguage(), "免单"),
 				},
 			},
 		},
