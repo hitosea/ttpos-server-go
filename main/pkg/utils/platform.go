@@ -13,6 +13,16 @@ func GetPlatform(userAgent string) int {
 		return 2
 	case strings.Contains(strings.ToLower(userAgent), "mobile"):
 		return 3
+	case strings.Contains(strings.ToLower(userAgent), "fuchsia"):
+		return 4
+	case strings.Contains(strings.ToLower(userAgent), "ios"):
+		return 5
+	case strings.Contains(strings.ToLower(userAgent), "linux"):
+		return 6
+	case strings.Contains(strings.ToLower(userAgent), "macos"):
+		return 7
+	case strings.Contains(strings.ToLower(userAgent), "windows"):
+		return 8
 	default:
 		return 0
 	}
