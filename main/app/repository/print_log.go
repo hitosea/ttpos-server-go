@@ -233,6 +233,7 @@ func (r *printerLogRepo) GetShiftPrinterData(deviceSn string, opts ...DBOption) 
 				}
 				return string(configJson)
 			}(),
+			PrintingTime: printerLog.PrintingTime,
 		}
 	}
 

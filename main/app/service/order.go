@@ -5413,6 +5413,14 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		ctx.AddLock()
 	}
 
+	// 助手端下单校验高级密码
+	// 只有助手端的请求，且不只检查送厨时
+	//if ctx.GetSource() == constant.SourceAssistant && !req.IsCheckCooking {
+	//	if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password, setting.WithIsAssistantCheckOrder()); err != nil {
+	//		return nil, nil, errors.WithMessage(err)
+	//	}
+	//}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 从http的header中获取h5_order_uuid
@@ -5452,7 +5460,14 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 
 	// 送厨
 	if len(unCookingSaleOrderProducts) > 0 {
-		checkServiceRes, err := s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0, false) // 购物车送厨商品
+		var checkServiceRes *resp.OrderCheckServiceRes
+		var err error
+		// 助手端，仅检查送厨时
+		if ctx.GetSource() == constant.SourceAssistant && req.IsCheckCooking {
+			checkServiceRes, err = s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0, false, WithOnlyCheckCooking()) // 购物车送厨检查
+		} else {
+			checkServiceRes, err = s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0, false) // 购物车送厨商品
+		}
 		if err != nil {
 			return nil, nil, err
 		}
@@ -5566,8 +5581,22 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 
 	// 如果退菜数量等于该商品的数量，则标记该商品为退菜并在商品的退菜原因列表中添加退菜原因
 	if saleOrderProduct.Num == req.Num {
-		saleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
-		returnSaleOrderProduct = saleOrderProduct
+		// 尝试获取相同签名的商品，如果有，将两个商品合并。该商品可能已经退过菜
+		newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(saleOrderProduct.SaleOrderUuid)
+		newSaleOrderProduct.SetNum(req.Num)
+		newSaleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
+		sameSignSaleOrderProduct := saleOrder.GetSaleOrderProductBySign(newSaleOrderProduct.Sign)
+		//sameSignSaleOrderProduct := saleOrder.GetSaleOrderProductBySign(saleOrderProduct.Sign)
+		if sameSignSaleOrderProduct != nil {
+			// 有相同签名的商品。将两个商品合并，数量相加
+			sameSignSaleOrderProduct.SetNum(sameSignSaleOrderProduct.Num + req.Num)
+			returnSaleOrderProduct = sameSignSaleOrderProduct
+			saleOrderProduct.SetDelete() // 标记该商品为删除
+			saleOrderProduct.SetUpdate() // 标记该商品需要更新
+		} else {
+			saleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
+			returnSaleOrderProduct = saleOrderProduct
+		}
 	} else {
 		// 如果退菜数量小于该商品的数量，则新建一个销售订单商品并在新商品的退菜原因列表中添加退菜原因
 		// 1. 修改原商品的数量

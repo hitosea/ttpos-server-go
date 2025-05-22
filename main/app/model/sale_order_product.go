@@ -561,6 +561,9 @@ func (model *SaleOrderProduct) SetCancelInfo(reason string, reasons []*SaleOrder
 	defer model.SetUpdate() // 标记该model需要更新
 	model.CancelTime = time.Now().Unix()
 	model.CancelReason = reason
+	for index, _ := range reasons {
+		reasons[index].SaleOrderProductUuid = model.Uuid // 设置退菜原因的销售订单商品
+	}
 	model.CancelReasons = append(model.CancelReasons, reasons...)
 	model.ProductionOrderUuid = 0            // 取消生产订单关联
 	model.Sign = model.GenerateProductSign() // 更新签名

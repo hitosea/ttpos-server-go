@@ -257,6 +257,7 @@ func (s *Srv) getDefaultAssistant(languageList []dto.LanguageItem) setting.Assis
 			RemainColor:      []string{"#E50028", "#F2A000"},     // 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
 			DefaultMode:      "0",                                // 默认模式 0-服务员模式 1-顾客模式
 			IsAutoLockScreen: "1",                                // 是否开启自动锁屏 0-关闭 1-开启
+			IsCheckOrder:     "0",                                // 是否开启下单校验高级密码 0-关闭 1-开启. 默认关闭
 			AutoLockScreen:   "300",                              // 自动锁屏（秒），默认5分钟
 			LanguageList:     languageList,                       // 语言列表
 			Language:         []string{defaultLanguage},          // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
