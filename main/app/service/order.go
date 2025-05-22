@@ -5415,11 +5415,11 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 
 	// 助手端下单校验高级密码
 	// 只有助手端的请求，且不只检查送厨时
-	if ctx.GetSource() == constant.SourceAssistant && !req.IsCheckCooking {
-		if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password, setting.WithIsAssistantCheckOrder()); err != nil {
-			return nil, nil, errors.WithMessage(err)
-		}
-	}
+	//if ctx.GetSource() == constant.SourceAssistant && !req.IsCheckCooking {
+	//	if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password, setting.WithIsAssistantCheckOrder()); err != nil {
+	//		return nil, nil, errors.WithMessage(err)
+	//	}
+	//}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 
