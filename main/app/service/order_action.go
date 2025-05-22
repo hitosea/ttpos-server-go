@@ -24,6 +24,7 @@ import (
 type ActionCookingOption struct {
 	CalcAndSaveSaleBill      bool
 	SelectedMustPlanProducts *ro.MustPlanProductInfo // 桌台已经选择的必点商品。使用场景仅用于平板加购并送厨时，将新加购的商品构建为该对象
+	OnlyCheckCooking         bool                    // 是否是仅检查送厨，不进行实际送厨。场景：助手端开启下单校验高级密码时，先检查送厨，再实际送厨。检查送厨时不进行实际送厨
 }
 
 func withCalcAndSaveSaleBill() func(option *ActionCookingOption) {
@@ -35,6 +36,12 @@ func withCalcAndSaveSaleBill() func(option *ActionCookingOption) {
 func WithSelectedMustPlanProductsActionCookingOption(selectedMustPlanProducts *ro.MustPlanProductInfo) func(option *ActionCookingOption) {
 	return func(option *ActionCookingOption) {
 		option.SelectedMustPlanProducts = selectedMustPlanProducts
+	}
+}
+
+func WithOnlyCheckCooking() func(option *ActionCookingOption) {
+	return func(option *ActionCookingOption) {
+		option.OnlyCheckCooking = true
 	}
 }
 
@@ -98,6 +105,11 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 			} else {
 				return checkServiceRes, nil
 			}
+		}
+
+		// 如果只检查送厨，则在此直接返回return nil, nil
+		if option.OnlyCheckCooking {
+			return nil, nil
 		}
 
 		// 构建送厨单

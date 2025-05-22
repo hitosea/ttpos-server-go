@@ -5413,6 +5413,14 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		ctx.AddLock()
 	}
 
+	// 助手端下单校验高级密码
+	// 只有助手端的请求，且不只检查送厨时
+	if ctx.GetSource() == constant.SourceAssistant && !req.IsCheckCooking {
+		if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password, setting.WithIsAssistantCheckOrder()); err != nil {
+			return nil, nil, errors.WithMessage(err)
+		}
+	}
+
 	db := s.dbm.GetDB(ctx.GetDbId())
 
 	// 从http的header中获取h5_order_uuid
@@ -5452,7 +5460,14 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 
 	// 送厨
 	if len(unCookingSaleOrderProducts) > 0 {
-		checkServiceRes, err := s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0, false) // 购物车送厨商品
+		var checkServiceRes *resp.OrderCheckServiceRes
+		var err error
+		// 助手端，仅检查送厨时
+		if ctx.GetSource() == constant.SourceAssistant && req.IsCheckCooking {
+			checkServiceRes, err = s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0, false, WithOnlyCheckCooking()) // 购物车送厨检查
+		} else {
+			checkServiceRes, err = s.ActionCooking(ctx, req.IgnoreMust, saleBill, unCookingSaleOrderProducts, 0, false) // 购物车送厨商品
+		}
 		if err != nil {
 			return nil, nil, err
 		}
