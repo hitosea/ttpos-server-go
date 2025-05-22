@@ -1100,6 +1100,7 @@ class Setting extends BaseModel
                     'language' => [$defaultLanguage],
                     // 默认语言
                     'default_language' => $defaultLanguage,
+                    'is_check_order' => '0', // 下单校验高级密码不能为空 '0'-关闭 '1'-开启
                 ],
             ],
             SettingEnum::BUFFET => [
