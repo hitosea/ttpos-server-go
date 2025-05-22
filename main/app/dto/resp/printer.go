@@ -11,6 +11,7 @@ type PrinterData struct {
 	PrinterConfig    string `json:"printer_config"`     // 打印机.配置
 	IsCashierPrinter bool   `json:"is_cashier_printer"` // 是否是收银机自带打印机
 	IsUsbPrinter     bool   `json:"is_usb_printer"`     // 是否是usb打印机
+	PrintingTime     int64  `json:"printing_time"`      // 打印耗时
 }
 
 type PrinterDataList struct {

@@ -1413,6 +1413,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     `reason` VARCHAR(255) DEFAULT '' COMMENT '原因',
     `printer_time` INT(11) NOT NULL DEFAULT 0 COMMENT '打印时间',
     `first_execution` INT(10) NOT NULL DEFAULT 0 COMMENT '是否首次执行打印 1-是 0-否',
+    `printing_time` INT(11) NOT NULL DEFAULT 0 COMMENT '打印耗时(毫秒)',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

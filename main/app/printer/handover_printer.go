@@ -98,6 +98,7 @@ func (p *PrinterRepoImpl) PrintingHandoverOrder(
 		PrinterConfig:    settingPrinterInfo.PrinterConfig,
 		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
 		IsUsbPrinter:     settingPrinterInfo.IsUsbPrinter,
+		PrintingTime:     printerLogData.PrintingTime,
 	}, nil
 }
 

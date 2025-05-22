@@ -360,6 +360,7 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 			}(),
 			IsCashierPrinter: log.IsCashierPrinter(),
 			IsUsbPrinter:     log.IsUsbPrinter(),
+			PrintingTime:     log.PrintingTime,
 		})
 	}
 
@@ -419,6 +420,7 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 			}
 			return string(configJson)
 		}(),
+		PrintingTime: printerLog.PrintingTime,
 	}, nil
 }
 
@@ -449,6 +451,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	printerLogData.PrinterTime = time.Now().Unix()
 	var printerLog model.PrinterLog
 	copier.Copy(&printerLog, printerLogData)
+	printerLog.PrintingTime = printerLog.CalculationTime()
 	printerLog.Data = printerLog.CompressData()
 	printerLog, err := printerLogRepo.Create(printerLog)
 	if err != nil {
@@ -516,6 +519,7 @@ func (s *printerLogSrv) GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (
 		PrinterType:      settingPrinterInfo.PrinterType,
 		PrinterConfig:    settingPrinterInfo.PrinterConfig,
 		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
+		PrintingTime:     200,
 	}, nil
 }
 
@@ -569,5 +573,6 @@ func (s *printerLogSrv) GetOldOrderPrinterConfig(ctx context.Context, data strin
 		PrinterType:      settingPrinterInfo.PrinterType,
 		PrinterConfig:    settingPrinterInfo.PrinterConfig,
 		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
+		PrintingTime:     200,
 	}, nil
 }

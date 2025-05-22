@@ -59,6 +59,9 @@ class Test extends Command
     protected function execute(Input $input, Output $output)
     {
 
+        // (int)ceil(intval(strlen($content) / $speed) / 1000)
+        dump((int)ceil(intval(367400 / 30) / 1000));
+        die;
         request()->appId = 1724054105;
         
         // 订单列表
