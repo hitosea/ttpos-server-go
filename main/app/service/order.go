@@ -5581,8 +5581,22 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 
 	// 如果退菜数量等于该商品的数量，则标记该商品为退菜并在商品的退菜原因列表中添加退菜原因
 	if saleOrderProduct.Num == req.Num {
-		saleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
-		returnSaleOrderProduct = saleOrderProduct
+		// 尝试获取相同签名的商品，如果有，将两个商品合并。该商品可能已经退过菜
+		newSaleOrderProduct := saleOrderProduct.CopyOrderProduct(saleOrderProduct.SaleOrderUuid)
+		newSaleOrderProduct.SetNum(req.Num)
+		newSaleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
+		sameSignSaleOrderProduct := saleOrder.GetSaleOrderProductBySign(newSaleOrderProduct.Sign)
+		//sameSignSaleOrderProduct := saleOrder.GetSaleOrderProductBySign(saleOrderProduct.Sign)
+		if sameSignSaleOrderProduct != nil {
+			// 有相同签名的商品。将两个商品合并，数量相加
+			sameSignSaleOrderProduct.SetNum(sameSignSaleOrderProduct.Num + req.Num)
+			returnSaleOrderProduct = sameSignSaleOrderProduct
+			saleOrderProduct.SetDelete() // 标记该商品为删除
+			saleOrderProduct.SetUpdate() // 标记该商品需要更新
+		} else {
+			saleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
+			returnSaleOrderProduct = saleOrderProduct
+		}
 	} else {
 		// 如果退菜数量小于该商品的数量，则新建一个销售订单商品并在新商品的退菜原因列表中添加退菜原因
 		// 1. 修改原商品的数量
