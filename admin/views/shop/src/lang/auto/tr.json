@@ -1589,5 +1589,6 @@
     "请选择营业时间": "Lütfen çalışma saatlerini seçin",
     "默认开桌人数必须大于等于1": "Varsayılan masa açılış kişi sayısı 1 veya daha fazla olmalıdır",
     "默认开桌人数": "Varsayılan masa açılış kişi sayısı",
-    "请输入默认开桌人数": "Varsayılan masa açılış kişi sayısını girin"
+    "请输入默认开桌人数": "Varsayılan masa açılış kişi sayısını girin",
+    "下单校验高级密码": "Sipariş fazla parola doğrulaması"
 }
