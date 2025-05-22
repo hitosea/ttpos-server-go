@@ -3,6 +3,11 @@ package setting
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/copier"
+	"github.com/nahid/gohttp"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
 	"regexp"
 	"slices"
 	"strconv"
@@ -20,15 +25,6 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
-
-	"github.com/nahid/gohttp"
-
-	//"github.com/nahid/gohttp"
-
-	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/copier"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 type GetSettingReq struct {
@@ -698,7 +694,7 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 	isSetIsShowAssistantSoldOut := strings.Contains(st.Values, "is_show_assistant_sold_out")
 
 	// 解析json字符串为map进行处理
-	modifiedJSON, err := s.parseCashierSetting(st.Values, constant.SettingCashier)
+	modifiedJSON, err := s.parseCashierSetting(st.Values)
 	if err != nil {
 		return cashier, err
 	}
@@ -830,7 +826,7 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 	// 如果设置了 is_show_assistant_sold_out，则读取解析后的数据，否则读取默认设置
 	cashierSet := s.getSettingByKey(ctx, constant.SettingCashier)
 	if strings.Contains(cashierSet.Values, "\"is_show_assistant_sold_out\"") {
-		modifiedJSON, err := s.parseCashierSetting(cashierSet.Values, constant.SettingCashier)
+		modifiedJSON, err := s.parseCashierSetting(cashierSet.Values)
 		if err != nil {
 			return assistant, err
 		}
@@ -999,7 +995,7 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 	// 如果设置了 is_show_scan_sold_out，则读取解析后的数据，否则读取默认设置
 	cashierSet := s.getSettingByKey(ctx, constant.SettingCashier)
 	if strings.Contains(cashierSet.Values, "\"is_show_scan_sold_out\"") {
-		modifiedJSON, err := s.parseCashierSetting(cashierSet.Values, constant.SettingCashier)
+		modifiedJSON, err := s.parseCashierSetting(cashierSet.Values)
 		if err != nil {
 			return defaultH5, err
 		}

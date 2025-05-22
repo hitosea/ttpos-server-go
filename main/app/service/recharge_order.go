@@ -649,7 +649,7 @@ func (s *rechargeOrderSrv) confirmRechargeOrderResp(companyUuid uint64, recharge
 	}
 }
 
-// 打印充值订单
+// PrintTicket 打印充值订单
 func (s *rechargeOrderSrv) PrintTicket(ctx context.Context, printRechargeOrderReq req.PrintRechargeOrderReq) (*resp.PrinterData, error) {
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	order := rechargeOrderRepo.GetRechargeOrder(

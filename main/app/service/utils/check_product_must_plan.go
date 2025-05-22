@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-// 桌台的必点商品规则
+// Rule 桌台的必点商品规则
 type Rule struct {
 	// 全选必点方案
 	// product_must_plan_uuid => product_package_uuid => num  这个全选必点方案1里每个商品要求的商品数量
@@ -23,12 +23,12 @@ type Rule struct {
 	EachOrderProductPlan map[uint64]uint
 }
 
-// 桌台在各方案的选购情况
+// Check 桌台在各方案的选购情况
 type Check struct {
-	// roduct_must_plan_uuid => product_package_uuid => num  这个全选必点方案里每个商品已经点的数量
+	// product_must_plan_uuid => product_package_uuid => num  这个全选必点方案里每个商品已经点的数量
 	//                        => product_package_uuid => num
 	//                        => product_package_uuid => num
-	// roduct_must_plan_uuid => product_package_uuid => num  这个全选必点方案里每个商品已经点的数量
+	// product_must_plan_uuid => product_package_uuid => num  这个全选必点方案里每个商品已经点的数量
 	//                        => product_package_uuid => num
 	//                        => product_package_uuid => num
 	// 判断以上哪个全选方案的哪些商品没有点够数量

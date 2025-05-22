@@ -197,7 +197,7 @@ func (r *commonRepo) WhereByIsShowKitchen(isShow uint) DBOption {
 	}
 }
 
-// WhereByIsH5 根据是否显示H5端查询
+// WhereByIsShowH5 根据是否显示H5端查询
 func (r *commonRepo) WhereByIsShowH5(isShow uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_show_h5 = ?", isShow)
@@ -483,28 +483,28 @@ func (r *commonRepo) WhereBySign(sign string) DBOption {
 	}
 }
 
-// 根据员工UUID查询
+// WhereByStaffUuid 根据员工UUID查询
 func (r *commonRepo) WhereByStaffUuid(staffUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("staff_uuid = ?", staffUuid)
 	}
 }
 
-// 根据交班编号查询
+// WhereByShiftNo 根据交班编号查询
 func (r *commonRepo) WhereByShiftNo(shiftNo string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("shift_no = ?", shiftNo)
 	}
 }
 
-// 根据未处理查询
+// WhereByProcessedNot 根据未处理查询
 func (r *commonRepo) WhereByProcessedNot() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("processed = ?", constant.MemberPointLogOrBalanceProcessedNot)
 	}
 }
 
-// 根据退款时间查询
+// WhereByRefundTime 根据退款时间查询
 func (r *commonRepo) WhereByRefundTime(refundTime int64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("refund_time = ?", refundTime)

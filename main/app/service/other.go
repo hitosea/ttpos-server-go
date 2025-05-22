@@ -14,8 +14,8 @@ import (
 
 type IOtherSrv interface {
 	Generate() (*resp.Captcha, error)
-	GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoodReasonResps, error)      // CheckAnswer 检查答案是否正确 string, answer string) bool
-	GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFreeOrderReasonResps, error) // CheckAnswer 检查答案是否正确 string, answer string) bool
+	GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoodReasonResps, error)
+	GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFreeOrderReasonResps, error)
 }
 
 func NewOtherSrv(dbm *database.DBManager, cache cache.Cache) IOtherSrv {

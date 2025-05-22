@@ -133,7 +133,7 @@
       addUser() {
         const self = this;
         const params = self.form;
-        if (self.form.default_people_num < 1) {
+        if (self.form.default_people_num < 1 && self.form.is_open_default_people_num == 1) {
           self.$ElMessage({
             message: self.$t('默认开桌人数必须大于等于1'),
             type: 'error',

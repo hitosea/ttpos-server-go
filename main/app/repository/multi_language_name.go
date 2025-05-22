@@ -1,4 +1,3 @@
-// 定义多语言名称仓库接口
 package repository
 
 import (
@@ -44,7 +43,7 @@ func (r *MultiLanguageNameRepoImpl) GetMultiLanguageName(opts ...DBOption) (*mod
 	return &multiLanguageName, errors.WithMessage(err)
 }
 
-// GetMultiLanguageName 获取多语言名称
+// GetMultiLanguageNameByUuid 获取多语言名称
 func (r *MultiLanguageNameRepoImpl) GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error) {
 	multiLanguageName, err := r.GetMultiLanguageName(
 		CommonRepo.WhereByUuid(uuid),
