@@ -19,7 +19,7 @@ func HttpPost(url string, payload map[string]interface{}, headers map[string]str
 	// 创建请求
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payloadBytes))
 	if err != nil {
-		fmt.Println("Failed to create request: %v", err)
+		fmt.Printf("Failed to create request: %v", err)
 		log.Printf("Failed to create request: %v", err)
 		return nil, err
 	}
@@ -33,14 +33,14 @@ func HttpPost(url string, payload map[string]interface{}, headers map[string]str
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Failed to send request: %v", err)
+		fmt.Printf("Failed to send request: %v", err)
 		log.Printf("Failed to send request: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 	// 检查状态码
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Received non-OK response: %s %s", resp.Status, url)
+		fmt.Printf("Received non-OK response: %s %s", resp.Status, url)
 		log.Printf("Received non-OK response: %s %s", resp.Status, url)
 		return nil, fmt.Errorf("received non-OK response: %s", resp.Status)
 	}
@@ -48,7 +48,7 @@ func HttpPost(url string, payload map[string]interface{}, headers map[string]str
 	var result map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		fmt.Println("Failed to decode response: %v", err)
+		fmt.Printf("Failed to decode response: %v", err)
 		log.Printf("Failed to decode response: %v", err)
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func HttpGet(url string, payload map[string]interface{}, headers map[string]stri
 	// 创建请求
 	req, err := http.NewRequest("GET", url+query, nil)
 	if err != nil {
-		fmt.Println("Failed to create request: %v", err)
+		fmt.Printf("Failed to create request: %v", err)
 		log.Printf("Failed to create request: %v", err)
 		return nil, err
 	}
@@ -82,14 +82,14 @@ func HttpGet(url string, payload map[string]interface{}, headers map[string]stri
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Failed to send request: %v", err)
+		fmt.Printf("Failed to send request: %v", err)
 		log.Printf("Failed to send request: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 	// 检查状态码
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Received non-OK response: %s %s", resp.Status, url)
+		fmt.Printf("Received non-OK response: %s %s", resp.Status, url)
 		log.Printf("Received non-OK response: %s %s", resp.Status, url)
 		return nil, fmt.Errorf("received non-OK response: %s", resp.Status)
 	}
@@ -97,7 +97,7 @@ func HttpGet(url string, payload map[string]interface{}, headers map[string]stri
 	var result map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
-		fmt.Println("Failed to decode response: %v", err)
+		fmt.Printf("Failed to decode response: %v", err)
 		log.Printf("Failed to decode response: %v", err)
 		return nil, err
 	}
