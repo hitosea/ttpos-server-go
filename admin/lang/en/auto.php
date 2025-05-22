@@ -2053,4 +2053,6 @@ return [
     "退款记录目的地创建失败" => "Failed to create refund record destination",
     "调整后的额度不可低于当前商户真实剩余短信额度" => "The adjusted limit cannot be lower than the current merchant's actual remaining SMS limit",
     "规格不能为空" => "Specifications cannot be empty",
+    "下单校验高级密码不能为空" => "Order verification advanced password cannot be empty",
+    "-关闭 " => "-Close",
 ];
