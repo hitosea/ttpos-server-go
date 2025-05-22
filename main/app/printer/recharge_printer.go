@@ -88,6 +88,7 @@ func (p *PrinterRepoImpl) PrintingRechargeOrder(
 		PrinterConfig:    settingPrinterInfo.PrinterConfig,
 		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
 		IsUsbPrinter:     settingPrinterInfo.IsUsbPrinter,
+		PrintingTime:     printerLogData.PrintingTime,
 	}, nil
 }
 
