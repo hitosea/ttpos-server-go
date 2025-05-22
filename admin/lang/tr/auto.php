@@ -2042,4 +2042,10 @@ return [
     "并发生成 " => "Eş Zamanlı Oluşturma",
     "桌台使用中，无法禁用" => "Masa kullanılıyor, devre dışı bırakılamaz",
     "库存已超99999999" => "Stok 99999999'u aştı",
+    "等级权重不能为空" => "Derece ağırlığı boş olamaz",
+    "未存在迁移库" => "Geçiş veritabanı mevcut değil",
+    "下单校验高级密码不能为空" => "Sipariş doğrulama üst düzey şifre boş olamaz",
+    "-关闭 " => "-Kapat",
+    "历史用餐订单" => "Geçmiş yemek siparişleri",
+    "退款记录目的地创建失败" => "İade kaydı hedefi oluşturulamadı",
 ];
