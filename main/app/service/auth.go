@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"go.uber.org/zap"
 	"regexp"
 	"slices"
 	"time"
@@ -15,6 +14,8 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 
 	"github.com/jinzhu/copier"
 	"github.com/spf13/viper"
@@ -654,14 +655,15 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 			}
 			// 判断权限
-			_, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, auth.CompanyUuid)
+			permissions, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, auth.CompanyUuid)
 			if err != nil {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			}
 			// ToDo 记得做完数据迁移后开放
-			//if !slices.Contains(permissions, urlPath) {
-			//	return company, companySetting, staff, errors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
-			//}
+			permission := constant.CashierPermissions[auth.UrlPath]
+			if permission != "" && !slices.Contains(permissions, permission) {
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
+			}
 		}
 	case constant.SourceAssistant: // 点餐助手端
 		{
