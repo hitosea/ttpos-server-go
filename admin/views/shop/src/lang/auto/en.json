@@ -1821,5 +1821,6 @@
     "规格/单位/加料": "Specifications/Unit/Add-ons",
     "添加失败，请检查系统的语言设置。": "Failed to add, please check the system language settings.",
     "历史用餐订单": "Historical dining orders",
-    "请选择必点类型": "Please select a must-order type"
+    "请选择必点类型": "Please select a must-order type",
+    "下单校验高级密码": "Advanced password verification for order placement"
 }

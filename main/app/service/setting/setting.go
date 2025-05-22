@@ -21,12 +21,9 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 
-	"github.com/nahid/gohttp"
-
-	//"github.com/nahid/gohttp"
-
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
+	"github.com/nahid/gohttp"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -61,7 +58,7 @@ type ISrv interface {
 	GetTaxRateSetting(ctx context.Context) (setting.TaxRate, error)                                                                       // 获取税率设置
 	VerifyPassword(ctx context.Context, source string, typ string, password string) bool                                                  // 收银机验证密码
 	UpdateSetting(ctx context.Context, settingKey string, values any) error                                                               // 更新设置
-	VerifyAdvancedPassword(ctx context.Context, password string) error                                                                    // 验证高级密码
+	VerifyAdvancedPassword(ctx context.Context, password string, options ...func(option *VerifyAdvancedPasswordOption)) error             // 验证高级密码
 	CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error)                                 // 检查更新
 	EditAcceptOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptOrderSetting) error                                          // 修改自动接单设置
 	EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error                                                   // 修改系统设置

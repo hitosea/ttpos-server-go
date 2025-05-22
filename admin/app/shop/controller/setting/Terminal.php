@@ -565,6 +565,11 @@ class Terminal extends Controller
         if ($is_remain_color && empty($data['remain_color'])) {
             return $this->renderError('时长颜色不能为空');
         }
+        //
+        $is_check_order = $data['is_check_order'] ?? '0';
+        if ($is_check_order && empty($data['is_check_order'])) {
+            return $this->renderError('下单校验高级密码不能为空');
+        }
         if (empty($data['language'])) {
             return $this->renderError('常用语言不能为空');
         }
@@ -581,6 +586,7 @@ class Terminal extends Controller
             'auto_lock_screen' => $data['auto_lock_screen'] ?? '300', // 自动锁屏 5分钟
             'language' => $data['language'] ?? [], // 常用语言
             'default_language' => $data['default_language'] ?? 'en', // 默认语言
+            'is_check_order' => "$is_check_order", // 下单校验高级密码不能为空 '0'-关闭 '1'-开启
         ];
         // 当开启剩余时长颜色时，才会更新时长颜色
         if ($is_remain_color) {

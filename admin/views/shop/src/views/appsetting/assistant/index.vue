@@ -31,6 +31,13 @@
           <el-button @click="setPassword($t('高级设置密码'))" type="primary" link size="small">{{ $t('设置密码') }}</el-button>
         </el-form-item>
 
+        <el-form-item for="no_click" :label="$t('下单校验高级密码')">
+          <el-radio-group v-model="form.is_check_order">
+            <el-radio label="1">{{ $t('开') }}</el-radio>
+            <el-radio label="0">{{ $t('关') }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
         <el-form-item for="no_click" :label="$t('锁屏密码')" prop="password" :rules="[{ required: true, message: '', trigger: 'chenge' }]">
           <el-input class="max-w460" v-model="lockPassword" type="password" disabled></el-input>
           <el-button @click="setPassword($t('锁屏密码'))" type="primary" link size="small">{{ $t('设置密码') }}</el-button>
@@ -153,6 +160,7 @@
           remain_color: ['', ''],
           bind_list: [],
           support_function: [],
+          is_check_order: '0',
         },
         onlineList: [], //  在线设备列表
         offlineList: [], //离线设备列表

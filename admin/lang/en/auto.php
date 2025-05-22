@@ -2042,4 +2042,10 @@ return [
     "并发生成 " => "Concurrent generation",
     "桌台使用中，无法禁用" => "The table is in use and cannot be disabled",
     "库存已超99999999" => "Inventory exceeds 99999999",
+    "等级权重不能为空" => "Level weight cannot be empty",
+    "未存在迁移库" => "Migration database does not exist",
+    "下单校验高级密码不能为空" => "Order verification advanced password cannot be empty",
+    "-关闭 " => "-Close",
+    "历史用餐订单" => "Historical dining orders",
+    "退款记录目的地创建失败" => "Failed to create refund record destination",
 ];
