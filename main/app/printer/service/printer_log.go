@@ -21,6 +21,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"ttpos-server-go/app/printer/printer_tasks"
 
@@ -535,7 +536,7 @@ func (s *printerLogSrv) PrinterReport(ctx context.Context, req req.PrinterReport
 			BaseModel: model.BaseModel{
 				Uuid: report.Uuid,
 			},
-			Status: report.Status,
+			Status: utils.IfInt(report.Status == 0, constant.PrinterLogStatusEnd, constant.PrinterLogStatusSuccess),
 			Reason: report.Reason,
 		})
 	}
