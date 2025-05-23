@@ -11,6 +11,7 @@ import (
 	"websocket/pkg/database"
 	"websocket/pkg/logger"
 	"websocket/service"
+	"websocket/utils"
 
 	"github.com/jinzhu/copier"
 	"github.com/spf13/cobra"
@@ -37,6 +38,7 @@ var rootCommand = &cobra.Command{
 			log.Fatalf("Failed to initialize logger: %v", err)
 		}
 
+		utils.InitIdGenerator()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		// redis 订阅

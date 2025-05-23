@@ -67,6 +67,19 @@ type UsbPrinter struct {
 	Vid    any    `json:"vid"`
 }
 
+type LanPrinter struct {
+	Ip     string `json:"ip"`
+	Port   int    `json:"port"`
+	Status int    `json:"status"`
+	Remark string `json:"remark"`
+}
+
+// getMsgData 获取消息数据
+func getMsgData(msg PushMessage) []byte {
+	jsonData, _ := json.Marshal(msg)
+	return jsonData
+}
+
 // HandleConnections 处理连接
 func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
@@ -106,12 +119,6 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 		// 处理消息
 		handleMessage(ws, msg, newConn)
 	}
-}
-
-// getMsgData 获取消息数据
-func getMsgData(msg PushMessage) []byte {
-	jsonData, _ := json.Marshal(msg)
-	return jsonData
 }
 
 // handleConnectionSuccess 处理连接成功
@@ -279,7 +286,12 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 
 	// 上报Usb打印机数据
 	if clientMessage.Type == "usb_print_report" && newConn.SourceClient == "cashier" {
-		reportPrinterData(newConn, clientMessage)
+		reportUsbPrinter(newConn, clientMessage)
+	}
+
+	// 上报Lan打印机数据
+	if clientMessage.Type == "lan_print_report" && newConn.SourceClient == "cashier" {
+		reportLanPrinter(newConn, clientMessage)
 	}
 }
 
@@ -352,8 +364,8 @@ func checkPrinterHeartbeatTimeout() {
 	}
 }
 
-// 上报打印机数据
-func reportPrinterData(newConn *ConnectionInfo, clientMessage ClientMessage) {
+// 上报USB打印机数据
+func reportUsbPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 	// 根据Data的类型进行不同的处理
 	dataJson, err := json.Marshal(clientMessage.Data)
 	if err != nil {
@@ -459,6 +471,81 @@ func reportPrinterData(newConn *ConnectionInfo, clientMessage ClientMessage) {
 				// 打印日志
 				logger.Logger.Info(fmt.Sprintf("新增打印机: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒", newConn.CompanyUuid, newConn.DeviceId, uuid, usbPrinter.Name, uint(time.Now().Unix())))
 				fmt.Printf("新增打印机: CompanyUuid=%d, DeviceSN=%s, PrinterUuid=%d, Name=%s, 最后心跳时间: %d秒\n", newConn.CompanyUuid, newConn.DeviceId, uuid, usbPrinter.Name, uint(time.Now().Unix()))
+			}
+		}
+	}
+}
+
+// 上报Lan打印机数据
+func reportLanPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
+	// 根据Data的类型进行不同的处理
+	dataJson, err := json.Marshal(clientMessage.Data)
+	if err != nil {
+		fmt.Println("Error marshaling array data:", err)
+		return
+	}
+
+	// 解析Data为LanPrinter数组
+	lanPrinters := []LanPrinter{}
+	err = json.Unmarshal(dataJson, &lanPrinters)
+	if err != nil {
+		fmt.Println("Error unmarshaling array data:", err)
+		return
+	}
+
+	// 已有记录
+	repo := repository.NewLanPrinterScanRepository(database.Instance)
+	dbLanList := repo.GetList(newConn.CompanyUuid)
+
+	// 更新为离线
+	if len(dbLanList) > 0 {
+		// 优化：创建配置JSON映射以快速查找打印机，避免嵌套循环
+		printerConfigMap := make(map[string]bool)
+		for _, printer := range lanPrinters {
+			printerConfigMap[printer.Ip] = true
+		}
+		// 检查数据库中的打印机是否在新上报列表中
+		for _, lanPrinter := range dbLanList {
+			// 如果不在新列表中且状态为在线，则更新为离线
+			if !printerConfigMap[lanPrinter.Ip] && lanPrinter.Status == 1 {
+				if err := repo.Update(newConn.CompanyUuid, lanPrinter.ID, map[string]interface{}{
+					"status": 0,
+				}); err != nil {
+					fmt.Printf("Error updating usb print: %v\n", err)
+				}
+			}
+		}
+	}
+
+	// 有新的打印机数据，遍历处理
+	if len(lanPrinters) > 0 {
+		// 优化：创建已有打印机映射，避免多次循环查询
+		dbLanMap := make(map[string]model.LanPrinterScan)
+		for _, lanPrinter := range dbLanList {
+			dbLanMap[lanPrinter.Ip] = lanPrinter
+		}
+		// 处理每个上报的Lan打印机
+		for _, lanPrinter := range lanPrinters {
+			if dbLan, exists := dbLanMap[lanPrinter.Ip]; exists {
+				// 已存在的打印机，更新状态
+				if err := repo.Update(newConn.CompanyUuid, dbLan.ID, map[string]interface{}{
+					"status":           1,
+					"source_device_sn": newConn.DeviceId,
+				}); err != nil {
+					fmt.Printf("Error updating usb print: %v\n", err)
+				}
+			} else if lanPrinter.Ip != "" && lanPrinter.Port != 0 {
+				if err := repo.Create(newConn.CompanyUuid, model.LanPrinterScan{
+					Uuid:           utils.GetID(),
+					Ip:             lanPrinter.Ip,
+					Port:           lanPrinter.Port,
+					SourceDeviceSn: newConn.DeviceId,
+					CreateTime:     uint(time.Now().Unix()),
+					UpdateTime:     uint(time.Now().Unix()),
+					Status:         1,
+				}); err != nil {
+					fmt.Printf("Error creating usb print: %v\n", err)
+				}
 			}
 		}
 	}

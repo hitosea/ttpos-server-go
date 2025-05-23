@@ -4,6 +4,7 @@ namespace app\shop\controller\setting;
 
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
+use app\common\service\websocket\Websocket;
 use app\shop\model\settings\Printer as PrinterModel;
 
 
@@ -25,6 +26,16 @@ class Printer extends Controller
     {
         $model = new PrinterModel;
         $list = $model->getList($this->postData(), $this->store['user']['shop_supplier_id']);
+        // 推送配置更新
+        Websocket::pushClient(
+            request()->appId, 
+            Websocket::SOURCE_CASHIER, 
+            Websocket::SOURCE_All, 
+            Websocket::GET_LAN_PRINTER, 
+            0,
+            []
+        );
+        // 
         return $this->renderSuccess('', compact('list'));
     }
 

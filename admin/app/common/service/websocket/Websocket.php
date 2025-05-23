@@ -27,6 +27,7 @@ class Websocket
     const UPDATE_BUFFET = 'update_buffet';                          // 更新自助餐
     const UPDATE_DESK = 'update_desk';                              // 更新桌台
     const UPDATE_DESK_TYPE = 'update_desk_type';                    // 更新桌台类型
+    const GET_LAN_PRINTER = 'get_lan_printer';                      // 获取Lan打印机
 
     /**
      * 推送消息到WebSocket服务器
