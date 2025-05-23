@@ -2101,4 +2101,18 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_member_payment` (
     INDEX idx_payment_method_uuid (payment_method_uuid)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '会员支付统计表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_lan_printer_scan` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT 'uuid',
+  `ip` varchar(255) NOT NULL DEFAULT '' COMMENT 'ip',
+  `port` int(11) NOT NULL DEFAULT 0 COMMENT '端口',
+  `status` int(11) NOT NULL DEFAULT 0 COMMENT '状态 0: 离线 1: 在线',
+  `remark` varchar(255) NOT NULL DEFAULT '' COMMENT '备注',
+  `source_device_sn` varchar(255) NOT NULL COMMENT '来源设备SN',
+  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='局域网打印机扫描表';
+
 SET FOREIGN_KEY_CHECKS = 1;

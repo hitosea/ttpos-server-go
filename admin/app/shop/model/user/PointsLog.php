@@ -22,7 +22,8 @@ class PointsLog extends PointsLogModel
             $model = $model->where('log.scene', '=', (int)$query['scene']);
         }
         // 搜索关键词
-        if (!empty($query['keyword'])) {
+        $query['keyword'] = $query['keyword'] ?? '';
+        if ($query['keyword'] !== '') {
             $keyword = trim($query['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
                 $query->like('user.id|user.phone|user.nickname', $keyword);

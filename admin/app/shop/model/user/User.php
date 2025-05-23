@@ -47,8 +47,9 @@ class User extends UserModel
     public static function getList($data)
     {
         $model = new static();
+        $data['keyword'] = $data['keyword'] ?? '';
         // 搜索关键词
-        if (!empty($data['keyword'])) {
+        if ($data['keyword'] !== '') {
             $keyword = trim($data['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
                 $query->like('id|phone|nickname', $keyword);

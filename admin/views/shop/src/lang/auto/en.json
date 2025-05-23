@@ -1835,5 +1835,6 @@
     "请选择营业时间": "Please select business hours",
     "默认开桌人数必须大于等于1": "The default number of people for opening a table must be equal to or greater than 1",
     "默认开桌人数": "Default table setup number",
-    "请输入默认开桌人数": "Please enter the default table setup number"
+    "请输入默认开桌人数": "Please enter the default table setup number",
+    "下单校验高级密码": "Advanced password verification for order placement"
 }
