@@ -659,7 +659,6 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			if err != nil {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			}
-			// ToDo 记得做完数据迁移后开放
 			permission := constant.CashierPermissions[auth.UrlPath]
 			if permission != "" && !slices.Contains(permissions, permission) {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
@@ -683,6 +682,15 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			// 检查收银机设置-桌台用餐是否开启
 			if !s.isTableOpen(ctx, auth.UrlPath) {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
+			}
+			// 判断权限
+			permissions, err := s.roleAccessSrv.GetApiPermission(staff.Uuid, auth.CompanyUuid)
+			if err != nil {
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
+			}
+			permission := constant.AssistantPermissions[auth.UrlPath]
+			if permission != "" && !slices.Contains(permissions, permission) {
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			}
 		}
 	case constant.SourceTablet: // 平板端
