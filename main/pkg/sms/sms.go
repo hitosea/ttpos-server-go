@@ -8,6 +8,8 @@ import (
 	"sync"
 	"ttpos-server-go/pkg/logger"
 
+	"crypto/tls"
+
 	"go.uber.org/zap"
 )
 
@@ -41,11 +43,18 @@ var (
 // InitClient 初始化短信客户端
 func InitClient(apiKey, baseURL, projectName string) {
 	once.Do(func() {
+		// 创建自定义的 TLS 配置
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, // 跳过证书验证
+			},
+		}
+
 		instance = &smsClient{
 			apiKey:      apiKey,
 			projectName: projectName,
 			baseURL:     baseURL,
-			httpClient:  &http.Client{},
+			httpClient:  &http.Client{Transport: tr},
 		}
 	})
 }
