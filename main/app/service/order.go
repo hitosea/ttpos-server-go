@@ -6459,7 +6459,7 @@ func autoAddSaleOrderProductToDesk(ctx context.Context, s *orderSrv, planAutoFla
 		IsH5Product:   isH5AutoAdd,
 	}, saleBill)
 	if errAdd != nil {
-		return errors.WithMessage(errAdd)
+		ctx.Log().Info("自动加购必选商品失败", zap.Error(errAdd))
 	}
 	// 更新sale_bill为自动加购完成
 	saleBill.AutoAddMustProduct = constant.AutoAddMustProductNo
