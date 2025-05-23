@@ -5118,9 +5118,23 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 					IsCancel:      product.IsCancelProduct(),
 				})
 			}
+
+			// 按商品名LocaleName进行去重。如果购物车中有两个同名LocaleName的商品，那当库存不足时会有两个重复的
+			list := make([]resp.Product, 0)
+			{
+				listMap := make(map[string]resp.Product)
+				for _, product := range products {
+					key := product.LocaleName.ToJson()
+					listMap[key] = product
+				}
+				for _, product := range listMap {
+					list = append(list, product)
+				}
+			}
+
 			res := &resp.OrderCheckServiceRes{
 				Code:          code,
-				OrderCheckRes: resp.OrderCheckRes{Products: &resp.CartProductList{List: products}},
+				OrderCheckRes: resp.OrderCheckRes{Products: &resp.CartProductList{List: list}},
 			}
 			return res, nil
 		}

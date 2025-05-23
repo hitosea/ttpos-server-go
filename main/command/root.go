@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/sms"
+	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/validator"
 	"ttpos-server-go/router"
 
@@ -45,6 +46,9 @@ var rootCommand = &cobra.Command{
 
 		// 自定义验证规则
 		validator.Init()
+
+		// 初始化id生成器
+		utils.InitIdGenerator()
 
 		// 初始化全局缓存引擎
 		var cacheConfig cache.Config

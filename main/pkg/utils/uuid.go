@@ -17,7 +17,7 @@ var (
 )
 
 // 初始化id生成器
-func init() {
+func InitIdGenerator() {
 	// 创建ID生成器实例
 	idGenerator = goid.NewID()
 	// 获取SERVER_ID并验证有效性
@@ -35,7 +35,6 @@ func init() {
 func InitSonyFlakeId() {
 	st := sonyflake.Settings{}
 	sonyFlake = sonyflake.NewSonyflake(st)
-	return
 }
 
 // GetID 获取全局 Uuid 的函数
