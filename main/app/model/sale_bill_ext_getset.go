@@ -353,13 +353,13 @@ func (model *SaleBill) GetBuffetEndTime() int64 {
 
 // 获取总的退款金额
 func (model *SaleBill) GetTotalRefundAmount() float64 {
-	refundAmount := 0.0
+	refundAmount := decimal.NewFromFloat(0)
 	for _, saleOrder := range model.SaleOrders {
 		for _, refundOrder := range saleOrder.ReturnOrders {
-			refundAmount += refundOrder.RefundAmount
+			refundAmount = refundAmount.Add(decimal.NewFromFloat(refundOrder.RefundAmount))
 		}
 	}
-	return refundAmount
+	return refundAmount.InexactFloat64()
 }
 
 // GetPaymentAmount 获取账单的付款金额 = 订单金额 - 退款金额

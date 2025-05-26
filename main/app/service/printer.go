@@ -123,8 +123,9 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 					if usbPrinter.Vid.(float64) == 1137 && usbPrinter.Pid.(float64) == 85 {
 						if usbPrinter.M_name == "Zhuhai Howbest Label Printer Co.,Ltd." {
 							printerTypeKey = constant.PRINTER_TYPE_GP_C200IV
-						}
-						if usbPrinter.M_name == "ZHU HAI HOWBEST Receipt Printer Co.,Ltd." {
+						} else if usbPrinter.M_name == "ZHU HAI HOWBEST Receipt Printer Co.,Ltd." {
+							printerTypeKey = constant.PRINTER_TYPE_GP_D300I
+						} else {
 							printerTypeKey = constant.PRINTER_TYPE_GP_D300I
 						}
 					}
