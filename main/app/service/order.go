@@ -9059,6 +9059,9 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 		saleOrder.SetMemberDiscount(*member)
 	}
 	saleOrder.SetAllDiscountCancel()
+	// 更新销售账单是否拆单的字段
+	saleBill.SetIsSplitOrder(len(saleBill.SaleOrders)-1 > 1)
+
 	// 重新计算销售订单金额
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
