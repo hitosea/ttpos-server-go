@@ -17948,6 +17948,14 @@ const docTemplate = `{
                     "description": "是否忽略必点方案",
                     "type": "boolean"
                 },
+                "is_check_cooking": {
+                    "description": "是否只进行送厨检查，而不进行实际的送厨。场景：助手端开启下单校验高级密码时，先检查送厨，再实际送厨。检查送厨时不进行实际送厨",
+                    "type": "boolean"
+                },
+                "password": {
+                    "description": "高级密码后台开启的时候才传",
+                    "type": "string"
+                },
                 "sale_bill_uuid": {
                     "description": "销售账单ID",
                     "type": "integer"
@@ -22241,6 +22249,10 @@ const docTemplate = `{
                     "description": "打印机.类型 打印机类型 (SUNMI_LAN:商米打印机, SUNMI_CLOUD:商米打印机-云, XPRINTER_LAN:芯烨-有线 , XPRINTER_WIFI:芯烨-WIFI , CASHIER:收银机自带打印机)",
                     "type": "string"
                 },
+                "printing_time": {
+                    "description": "打印耗时",
+                    "type": "integer"
+                },
                 "uuid": {
                     "description": "打印日志Uuid",
                     "type": "integer"
@@ -24100,6 +24112,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "is_auto_send": {
+                    "type": "string"
+                },
+                "is_check_order": {
+                    "description": "下单校验高级密码 0-关闭 1-开启。默认关闭",
                     "type": "string"
                 },
                 "is_remain_color": {

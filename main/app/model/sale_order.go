@@ -236,6 +236,7 @@ func (model *SaleOrder) GetCustomerList() []resp.Product {
 			UnitPrice:       orderBuffetCustomer.SalePrice,
 			CanReturnNum:    orderBuffetCustomer.GetCanReturnNum(),
 			CanReturnAmount: orderBuffetCustomer.GetCanReturnPrice(),
+			CreateTime:      orderBuffetCustomer.CreateTime,
 		}
 		productList = append(productList, product)
 	}
@@ -281,6 +282,7 @@ func (model *SaleOrder) GetDelayProductList() []resp.Product {
 			UnitPrice:       delayProduct.Price,
 			CanReturnNum:    delayProduct.GetCanReturnNum(),
 			CanReturnAmount: delayProduct.GetCanReturnPrice(),
+			CreateTime:      delayProduct.CreateTime,
 		}
 		productList = append(productList, product)
 	}
@@ -336,6 +338,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			IsAccept:            saleOrderProduct.IsAcceptOrderProduct(),
 			UnitPrice:           saleOrderProduct.SalePrice,
 			IsShowKitchen:       saleOrderProduct.ProductPackage.IsShowKitchen,
+			CreateTime:          saleOrderProduct.CreateTime,
 		}
 		if saleOrderProduct.ProductionOrderProduct != nil {
 			if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {
