@@ -529,19 +529,36 @@ func (s *printerLogSrv) PrinterReport(ctx context.Context, req req.PrinterReport
 	if err := req.Validate(); err != nil {
 		return err
 	}
+	// 获取现有的打印日志
+	printerLogRepo := repository.NewPrinterLogRepo(ctx.GetDB())
+	existingLogs, err := printerLogRepo.GetByUuids(req.Uuids())
+	if err != nil {
+		return errors.WithMessage(err, "获取打印日志失败")
+	}
+	// 创建UUID到现有日志的映射
+	existingLogMap := make(map[uint64]*model.PrinterLog)
+	for i := range existingLogs {
+		existingLogMap[existingLogs[i].Uuid] = &existingLogs[i]
+	}
 	// 更新打印日志
 	printerLogs := []model.PrinterLog{}
 	for _, report := range req.Data {
+		// 获取当前Num值并自增1
+		currentNum := 1
+		if existingLog, exists := existingLogMap[report.Uuid]; exists {
+			currentNum = existingLog.Num + 1
+		}
 		printerLogs = append(printerLogs, model.PrinterLog{
 			BaseModel: model.BaseModel{
 				Uuid: report.Uuid,
 			},
+			Num:    currentNum,
 			Status: utils.IfInt(report.Status == 0, constant.PrinterLogStatusEnd, constant.PrinterLogStatusSuccess),
 			Reason: report.Reason,
 		})
 	}
 	//
-	err := repository.NewPrinterLogRepo(ctx.GetDB()).BatchUpdate(printerLogs)
+	err = printerLogRepo.BatchUpdate(printerLogs)
 	if err != nil {
 		return errors.WithMessage(err, "更新打印日志失败")
 	}

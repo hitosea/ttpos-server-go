@@ -100,7 +100,13 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	r := gin.New()
 	// 添加中间件
 	r.Use(middleware.Cors())
-	r.Use(gin.Logger(), middleware.Recovery(logger.Logger, config.Server.Mode))
+	// 添加请求参数日志中间件
+	if config.Server.Mode == "debug" {
+		r.Use(middleware.Recovery(logger.Logger, config.Server.Mode))
+		r.Use(middleware.RequestLogger(logger.Logger))
+	} else {
+		r.Use(gin.Logger(), middleware.Recovery(logger.Logger, config.Server.Mode))
+	}
 	// 注册 Swagger 路由
 	// 允许自定义Swagger文档链接
 	docs.SwaggerInfo.BasePath = "/api/v1"
