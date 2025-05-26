@@ -375,7 +375,24 @@ class OrderScheme extends BaseModel
      */
     public function del()
     {
-        return $this->delete();
+        $this->startTrans();
+        try {
+            $productList = OrderSchemeProduct::where('product_must_plan_uuid', $this->uuid)->select();
+            foreach ($productList as $product) {
+                $product->delete();
+            }
+            $areaList = OrderSchemeArea::where('product_must_plan_uuid', $this->uuid)->select();
+            foreach ($areaList as $area) {
+                $area->delete();
+            }
+            $this->delete();
+            $this->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollback();
+            $this->error = $e->getMessage();
+            return false;
+        }
     }
 
     /**
