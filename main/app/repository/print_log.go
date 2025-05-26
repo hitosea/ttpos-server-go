@@ -395,6 +395,7 @@ func (r *printerLogRepo) BatchUpdate(logs []model.PrinterLog) error {
 		err := tx.Model(&model.PrinterLog{}).Where("uuid = ?", log.Uuid).Updates(map[string]interface{}{
 			"status": log.Status,
 			"reason": log.Reason,
+			"num":    log.Num,
 		}).Error
 
 		if err != nil {

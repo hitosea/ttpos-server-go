@@ -157,11 +157,11 @@ func (s *printerLogSrv) GetPrinterLogList(ctx context.Context, req req.PrinterLi
 			})
 		case 2: // 补打成功
 			queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
-				return db.Where("status = ? AND num > 0", 2)
+				return db.Where("status = ? AND num > 1", 2)
 			})
 		case 3: // 补打失败
 			queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
-				return db.Where("status = ? AND num > 0", 0)
+				return db.Where("status = ? AND num > 1", 0)
 			})
 		}
 	}
@@ -268,14 +268,14 @@ func (s *printerLogSrv) GetPrinterLogList(ctx context.Context, req req.PrinterLi
 			StatusText: func() string {
 				switch log.Status {
 				case 0:
-					if log.Num > 0 {
+					if log.Num > 1 {
 						return i18n.Translate(language, "补打失败")
 					}
 					return i18n.Translate(language, "失败")
 				case 1:
 					return i18n.Translate(language, "进行中")
 				case 2:
-					if log.Num > 0 {
+					if log.Num > 1 {
 						return i18n.Translate(language, "补打成功")
 					}
 					return i18n.Translate(language, "成功")
@@ -529,19 +529,36 @@ func (s *printerLogSrv) PrinterReport(ctx context.Context, req req.PrinterReport
 	if err := req.Validate(); err != nil {
 		return err
 	}
+	// 获取现有的打印日志
+	printerLogRepo := repository.NewPrinterLogRepo(ctx.GetDB())
+	existingLogs, err := printerLogRepo.GetByUuids(req.Uuids())
+	if err != nil {
+		return errors.WithMessage(err, "获取打印日志失败")
+	}
+	// 创建UUID到现有日志的映射
+	existingLogMap := make(map[uint64]*model.PrinterLog)
+	for i := range existingLogs {
+		existingLogMap[existingLogs[i].Uuid] = &existingLogs[i]
+	}
 	// 更新打印日志
 	printerLogs := []model.PrinterLog{}
 	for _, report := range req.Data {
+		// 获取当前Num值并自增1
+		currentNum := 1
+		if existingLog, exists := existingLogMap[report.Uuid]; exists {
+			currentNum = existingLog.Num + 1
+		}
 		printerLogs = append(printerLogs, model.PrinterLog{
 			BaseModel: model.BaseModel{
 				Uuid: report.Uuid,
 			},
+			Num:    currentNum,
 			Status: utils.IfInt(report.Status == 0, constant.PrinterLogStatusEnd, constant.PrinterLogStatusSuccess),
 			Reason: report.Reason,
 		})
 	}
 	//
-	err := repository.NewPrinterLogRepo(ctx.GetDB()).BatchUpdate(printerLogs)
+	err = printerLogRepo.BatchUpdate(printerLogs)
 	if err != nil {
 		return errors.WithMessage(err, "更新打印日志失败")
 	}
