@@ -80,6 +80,8 @@
         formInline: {
           date: '',
         },
+
+        searchLoading: null,
       };
     },
     async mounted() {
@@ -125,6 +127,16 @@
           })
           .catch((error) => {});
       },
+
+      /*搜索查询*/
+      onSearch() {
+        clearTimeout(this.searchLoading);
+        this.searchLoading = setTimeout(() => {
+          this.curPage = 1;
+          this.getTableList();
+        }, 200);
+      },
+
       /*搜索查询*/
       onSubmit() {
         let self = this;

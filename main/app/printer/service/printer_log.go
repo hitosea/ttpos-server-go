@@ -157,11 +157,11 @@ func (s *printerLogSrv) GetPrinterLogList(ctx context.Context, req req.PrinterLi
 			})
 		case 2: // 补打成功
 			queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
-				return db.Where("status = ? AND num > 0", 2)
+				return db.Where("status = ? AND num > 1", 2)
 			})
 		case 3: // 补打失败
 			queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
-				return db.Where("status = ? AND num > 0", 0)
+				return db.Where("status = ? AND num > 1", 0)
 			})
 		}
 	}
@@ -268,14 +268,14 @@ func (s *printerLogSrv) GetPrinterLogList(ctx context.Context, req req.PrinterLi
 			StatusText: func() string {
 				switch log.Status {
 				case 0:
-					if log.Num > 0 {
+					if log.Num > 1 {
 						return i18n.Translate(language, "补打失败")
 					}
 					return i18n.Translate(language, "失败")
 				case 1:
 					return i18n.Translate(language, "进行中")
 				case 2:
-					if log.Num > 0 {
+					if log.Num > 1 {
 						return i18n.Translate(language, "补打成功")
 					}
 					return i18n.Translate(language, "成功")
