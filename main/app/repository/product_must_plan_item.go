@@ -72,5 +72,14 @@ func (r *ProductMustPlanItemRepo) GetProductMustPlanItemByPackageUuid(packageUui
 		),
 	)
 
-	return items, errors.WithMessage(err)
+	// 过滤掉已删除必点方案的商品。避免ProductMustPlanItem未删除，ProductMustPlan已删除的情况
+	list := make([]model.ProductMustPlanItem, 0)
+	for _, item := range items {
+		if item.ProductMustPlan.IsDelete() {
+			continue
+		}
+		list = append(list, item)
+	}
+
+	return list, errors.WithMessage(err)
 }
