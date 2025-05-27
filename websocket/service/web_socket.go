@@ -299,8 +299,10 @@ func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
 		}
 		if !isOnline {
 			fmt.Println("Heartbeat message DeviceId - 离线: ", newConn.DeviceId)
+			logger.Logger.Info(fmt.Sprintf("Heartbeat message DeviceId - 离线: %s", newConn.DeviceId))
 		} else {
 			fmt.Println("Heartbeat message DeviceId - 在线: ", newConn.DeviceId)
+			logger.Logger.Info(fmt.Sprintf("Heartbeat message DeviceId - 在线: %s", newConn.DeviceId))
 		}
 		return
 	}
@@ -480,6 +482,7 @@ func reportUsbPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 				printerType := repository.NewPrinterTypeRepository(database.Instance).GetRecordByKey(newConn.CompanyUuid, printerTypeKey)
 				if printerType.ID == 0 {
 					fmt.Printf("Error: printer type XPRINTER_LAN not found\n")
+					logger.Logger.Error(fmt.Sprintf("Error: printer type XPRINTER_LAN not found\n"))
 					return
 				}
 				// 新打印机，创建记录
@@ -564,6 +567,7 @@ func reportLanPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 					"source_device_sn": newConn.DeviceId,
 				}); err != nil {
 					fmt.Printf("Error updating usb print: %v\n", err)
+					logger.Logger.Error(fmt.Sprintf("Error updating usb print: %v\n", err))
 				}
 			} else if lanPrinter.Ip != "" && lanPrinter.Port != 0 {
 				if err := repo.Create(newConn.CompanyUuid, model.LanPrinterScan{
@@ -576,6 +580,7 @@ func reportLanPrinter(newConn *ConnectionInfo, clientMessage ClientMessage) {
 					Status:         1,
 				}); err != nil {
 					fmt.Printf("Error creating usb print: %v\n", err)
+					logger.Logger.Error(fmt.Sprintf("Error creating usb print: %v\n", err))
 				}
 			}
 		}
@@ -614,6 +619,7 @@ func PushClient(messageData MessageData) {
 			})
 			if err != nil {
 				fmt.Printf("Error creating WebSocket message: %v\n", err)
+				logger.Logger.Error(fmt.Sprintf("Error creating WebSocket message: %v\n", err))
 				continue
 			}
 
@@ -628,6 +634,7 @@ func PushClient(messageData MessageData) {
 			err = conn.ws.WriteMessage(websocket.TextMessage, getMsgData(message))
 			if err != nil {
 				fmt.Printf("Error sending message to client: %v\n", err)
+				logger.Logger.Error(fmt.Sprintf("Error sending message to client: %v\n", err))
 			} else {
 				fmt.Println("推送消息:", utils.StructToJson(map[string]interface{}{
 					"SourceClient": conn.SourceClient,
@@ -638,6 +645,7 @@ func PushClient(messageData MessageData) {
 					"Data":         messageData.Data,
 					"MsgId":        int(id),
 				}))
+				logger.Logger.Info(fmt.Sprintf("推送消息: SourceClient=%s, CompanyUuid=%d, DeviceId=%s, Event=%s, State=%d, Data=%s, MsgId=%d", conn.SourceClient, messageData.CompanyUuid, conn.DeviceId, messageData.MessageType, constant.CodeSuccess, utils.StructToJson(messageData.Data), id))
 			}
 		}
 	}
