@@ -252,42 +252,42 @@ func (r *productRepo) WithProductBomsProductSauceMultiLanguageName() DBOption {
 // WithProductPackageAttributeGroup 预加载产品包装属性组
 func (r *productRepo) WithProductPackageAttributeGroup() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("ProductPackageAttributeGroups")
+		return db.Preload("ProductPackageAttributeGroups", "delete_time = ?", constant.NotDeleted)
 	}
 }
 
 // WithProductPackageAttributeGroupProductAttributeGroup 预加载产品包装属性组产品属性组
 func (r *productRepo) WithProductPackageAttributeGroupProductAttributeGroup() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("ProductPackageAttributeGroups.ProductAttributeGroup")
+		return db.Preload("ProductPackageAttributeGroups.ProductAttributeGroup", "delete_time = ?", constant.NotDeleted)
 	}
 }
 
 // WithProductPackageAttributeGroupProductAttributeGroupMultiLanguageName 预加载产品包装属性组产品属性组多语言名称
 func (r *productRepo) WithProductPackageAttributeGroupProductAttributeGroupMultiLanguageName() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("ProductPackageAttributeGroups.ProductAttributeGroup.MultiLanguageName")
+		return db.Preload("ProductPackageAttributeGroups.ProductAttributeGroup.MultiLanguageName", "delete_time = ?", constant.NotDeleted)
 	}
 }
 
 // WithProductPackageAttributeGroupProductPackageAttributes 预加载产品包装属性组产品包装属性
 func (r *productRepo) WithProductPackageAttributeGroupProductPackageAttributes() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("ProductPackageAttributeGroups.ProductPackageAttributes")
+		return db.Preload("ProductPackageAttributeGroups.ProductPackageAttributes", "delete_time = ?", constant.NotDeleted)
 	}
 }
 
 // WithProductPackageAttributeGroupProductPackageAttributesAttribute 预加载产品包装属性组产品包装属性属性
 func (r *productRepo) WithProductPackageAttributeGroupProductPackageAttributesAttribute() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("ProductPackageAttributeGroups.ProductPackageAttributes.Attribute")
+		return db.Preload("ProductPackageAttributeGroups.ProductPackageAttributes.Attribute", "delete_time = ?", constant.NotDeleted)
 	}
 }
 
 // WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName 预加载产品包装属性组产品包装属性属性多语言名称
 func (r *productRepo) WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Preload("ProductPackageAttributeGroups.ProductPackageAttributes.Attribute.MultiLanguageName")
+		return db.Preload("ProductPackageAttributeGroups.ProductPackageAttributes.Attribute.MultiLanguageName", "delete_time = ?", constant.NotDeleted)
 	}
 }
 
