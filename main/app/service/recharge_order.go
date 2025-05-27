@@ -594,9 +594,8 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 			}()
 		}
 	}
-
-	// 发布“会员余额变动”事件
 	go func() {
+		// 发布“会员余额变动”事件
 		s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
 			BasePayload: event.BasePayload{ // 会员余额变动
 				Ctx:          ctx,
@@ -605,10 +604,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 				OperatorUuid: int64(ctx.GetStaffUuid()),
 			},
 		})
-	}()
-
-	// 发布“会员积分变动”事件
-	go func() {
+		// 发布“会员积分变动”事件
 		s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
 			BasePayload: event.BasePayload{ // 会员积分变动
 				Ctx:          ctx,
@@ -1321,10 +1317,19 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		})
 	}()
 
-	// 发布“会员余额变动”事件
 	go func() {
+		// 发布“会员余额变动”事件
 		s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
 			BasePayload: event.BasePayload{ // 会员余额变动
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
+		// 发布“会员积分变动”事件
+		s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
+			BasePayload: event.BasePayload{ // 会员积分变动
 				Ctx:          ctx,
 				CompanyUuid:  ctx.GetCompanyUuid(),
 				Source:       ctx.GetSource(),
