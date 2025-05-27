@@ -1606,7 +1606,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 
 	lianLianPayCount := returnOrder.GetLianLianPayCount()
 
-	var publishChangeMemberBalance, publishChangeMemberPoints bool
+	var publishChangeMemberBalance, publishChangeMemberPoints, isExistCashPay bool
 	// 创建
 	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db) // 否则 s.memberSrv.HandleMemberBalance会事务失效
@@ -1675,6 +1675,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			}
 			// 如果退款金额为现金，则更新钱箱
 			if returnOrderAmount.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+				isExistCashPay = true
 				// 存现金，更新钱箱
 				ctx.SetDB(db)
 				if err := s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
@@ -1850,6 +1851,10 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			SaleBillUuid: saleBill.Uuid,
 		})
 	}()
+
+	if isExistCashPay {
+		return nil, constant.CodeSuccessOpenCashBox
+	}
 
 	return nil, 0
 }
