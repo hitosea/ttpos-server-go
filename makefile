@@ -51,6 +51,11 @@ dev: debug
 	fi
 	cd main && ${HOME}/go/bin/fresh -c ./fresh.conf
 
+# 开启mysql端口
+mysql-open:
+	$(call update_env_and_run)
+	chmod +x ./.sh && ./.sh mysql open
+
 # 运行数据库迁移
 migrate:
 	chmod +x ./.sh && ./.sh think migrate:run
