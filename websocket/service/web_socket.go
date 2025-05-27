@@ -259,14 +259,9 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 
 // handleMessage 处理消息
 func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
-	// 尝试修复常见的JSON格式问题
-	fixedMsg := fixJSONFormat(msg)
-	if string(fixedMsg) != string(msg) {
-		fmt.Printf("修复JSON格式 [DeviceId: %s]: %s -> %s\n", newConn.DeviceId, string(msg), string(fixedMsg))
-	}
 	// 解析消息
 	clientMessage := ClientMessage{}
-	err := json.Unmarshal(fixedMsg, &clientMessage)
+	err := json.Unmarshal(fixJSONFormat(msg), &clientMessage)
 	if err != nil {
 		fmt.Printf("WebSocket JSON解析错误 [DeviceId: %s]: %v\n", newConn.DeviceId, err)
 		return
