@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 	"websocket/config"
 	"websocket/constant"
@@ -78,6 +79,36 @@ type LanPrinter struct {
 func getMsgData(msg PushMessage) []byte {
 	jsonData, _ := json.Marshal(msg)
 	return jsonData
+}
+
+// fixJSONFormat 修复常见的JSON格式问题
+func fixJSONFormat(data []byte) []byte {
+	str := string(data)
+	// 去除前后空白字符
+	str = strings.TrimSpace(str)
+	// 如果不是以 { 开头，可能不是JSON，直接返回
+	if !strings.HasPrefix(str, "{") {
+		return data
+	}
+	// 修复常见问题：键没有双引号
+	str = strings.ReplaceAll(str, "{type:", `{"type":`)
+	str = strings.ReplaceAll(str, ", type:", `, "type":`)
+	str = strings.ReplaceAll(str, ",type:", `, "type":`)
+	// 修复msg_id没有双引号
+	str = strings.ReplaceAll(str, "{msg_id:", `{"msg_id":`)
+	str = strings.ReplaceAll(str, ", msg_id:", `, "msg_id":`)
+	str = strings.ReplaceAll(str, ",msg_id:", `, "msg_id":`)
+	// 修复data没有双引号
+	str = strings.ReplaceAll(str, "{data:", `{"data":`)
+	str = strings.ReplaceAll(str, ", data:", `, "data":`)
+	str = strings.ReplaceAll(str, ",data:", `, "data":`)
+	// 修复值没有双引号的问题（仅对字符串值）
+	// 例如：{"type": reply} -> {"type": "reply"}
+	str = strings.ReplaceAll(str, `: reply`, `: "reply"`)
+	str = strings.ReplaceAll(str, `: heartbeat`, `: "heartbeat"`)
+	str = strings.ReplaceAll(str, `: usb_print_report`, `: "usb_print_report"`)
+	str = strings.ReplaceAll(str, `: lan_print_report`, `: "lan_print_report"`)
+	return []byte(str)
 }
 
 // HandleConnections 处理连接
@@ -228,11 +259,16 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 
 // handleMessage 处理消息
 func handleMessage(ws *websocket.Conn, msg []byte, newConn *ConnectionInfo) {
+	// 尝试修复常见的JSON格式问题
+	fixedMsg := fixJSONFormat(msg)
+	if string(fixedMsg) != string(msg) {
+		fmt.Printf("修复JSON格式 [DeviceId: %s]: %s -> %s\n", newConn.DeviceId, string(msg), string(fixedMsg))
+	}
 	// 解析消息
 	clientMessage := ClientMessage{}
-	err := json.Unmarshal(msg, &clientMessage)
+	err := json.Unmarshal(fixedMsg, &clientMessage)
 	if err != nil {
-		fmt.Println("WebSocket Error parsing message:", err)
+		fmt.Printf("WebSocket JSON解析错误 [DeviceId: %s]: %v\n", newConn.DeviceId, err)
 		return
 	}
 
