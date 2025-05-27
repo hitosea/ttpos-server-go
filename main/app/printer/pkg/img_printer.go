@@ -1353,7 +1353,7 @@ func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) st
 		}
 
 		// 生成打印数据
-		printData := string([]byte{29, 118, 48, 0}) + i.GetBytesFromBitMap(rotatedImage)
+		printData := string([]byte{0x1B, 0x40}) + string([]byte{29, 118, 48, 0}) + i.GetBytesFromBitMap(rotatedImage)
 		data = append(data, printData)
 	}
 
