@@ -51,7 +51,7 @@ class Attribute extends AttributeModel
                     FROM {$prefix}product_package_attribute pp
                     LEFT JOIN {$prefix}product_package_attribute_group pag ON pp.product_package_attribute_group_uuid = pag.uuid
                     LEFT JOIN {$prefix}product_package product ON pag.product_package_uuid = product.uuid
-                    WHERE product.delete_time = 0
+                    WHERE product.delete_time = 0 AND pp.delete_time = 0 AND pag.delete_time = 0
                     GROUP BY pp.attribute_uuid
                 ) pa
             ", 'a.uuid = pa.attribute_uuid');
