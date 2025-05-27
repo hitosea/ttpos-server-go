@@ -1292,7 +1292,6 @@ func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) st
 		imageSrc = "./tmp/printer/dishes_img.png"
 	}
 	//
-	var data []string
 	maxHeight := 2200
 	height := i.TextTotalHeight + i.TextLineHeight
 	headHeight := int(i.TextLineHeight/2) - 10
@@ -1306,6 +1305,8 @@ func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) st
 	heights = append(heights, height)
 
 	// 处理每一个分割的区域
+	var data []string
+	data = append(data, string([]byte{0x1B, 0x40}))
 	for key, h := range heights {
 		h = int(h)
 
@@ -1353,7 +1354,7 @@ func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) st
 		}
 
 		// 生成打印数据
-		printData := string([]byte{0x1B, 0x40}) + string([]byte{29, 118, 48, 0}) + i.GetBytesFromBitMap(rotatedImage)
+		printData := string([]byte{29, 118, 48, 0}) + i.GetBytesFromBitMap(rotatedImage)
 		data = append(data, printData)
 	}
 
