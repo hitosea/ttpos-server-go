@@ -107,6 +107,7 @@ class Printer extends BaseModel
         //
         $text = __('自带');
         $cashierDevices = BindRecord::alias('a')
+            ->where("delete_time", 0)
             ->where('source', BindRecord::SOURCE_CASHIER)
             ->whereIn('brand', BindRecord::BRANDS_PRINTS)
             ->field("a.device_id as printer_id")
