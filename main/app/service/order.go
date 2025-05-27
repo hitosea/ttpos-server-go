@@ -2433,7 +2433,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 									Balance:       member.GetBalanceAll(),
 									PointsBalance: member.GetPoints(),
 								}
-								if err := s.smsSrv.SendMemberOrderRefundSMS(ctx, member.Phone, &smsReq); err != nil {
+								if err := s.smsSrv.SendMemberOrderRefundSMS(newCtx, member.Phone, &smsReq); err != nil {
 									ctx.Log().Info("发送退款短信失败（消费反结账）", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
 								} else {
 									ctx.Log().Info("发送退款短信成功（消费反结账）", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
