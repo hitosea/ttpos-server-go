@@ -7,7 +7,9 @@ const (
 )
 
 const (
-	CodeSuccess = 0 // 成功
+	//
+	CodeSuccessOpenCashBox = 200 // 成功-并打开钱箱
+	CodeSuccess            = 0   // 成功
 
 	CodeFail         = -1  // 失败
 	CodeSystemError  = -2  // 系统错误
