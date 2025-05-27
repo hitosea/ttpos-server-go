@@ -165,6 +165,7 @@ type Product struct {
 	AboutBuffet         AboutBuffet        `json:"about_buffet"`          // 自助餐信息
 	IsShowKitchen       uint               `json:"is_show_kitchen"`       // 是否在厨显端显示
 	// 后端使用，前端不返回
+	CreateTime         int64   `json:"-"` // 创建时间（点餐助手未送厨）
 	SendKitchenTime    int64   `json:"-"` // 送厨时间
 	H5OrderTime        int64   `json:"-"` // h5下单时间
 	IsH5OrderNeedAudit bool    `json:"-"` // h5订单是否需审核

@@ -36,7 +36,7 @@ type PrintItem struct {
 
 type CashierPrinterItem struct {
 	Key          string `json:"key"`            // 收银机设备ID
-	PrinterId    string `json:"printer_id"`     // 收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符
+	PrinterId    any    `json:"printer_id"`     // 收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符
 	PrinterUsbId string `json:"printer_usb_id"` // 收银机设备SN
 }
 

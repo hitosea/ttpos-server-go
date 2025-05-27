@@ -78,7 +78,7 @@ func (t *usbPrintTask) Execute() {
 						isUpdate = true
 						// 推送更新打印机列表
 						fmt.Println("打印机离线五分钟", printer.SourceDeviceSn)
-						uuid, err := strconv.ParseUint(printerSetting.CashierPrinter[i].PrinterId, 10, 64)
+						uuid, err := strconv.ParseUint(utils.Uint64OrStringToString(printerSetting.CashierPrinter[i].PrinterId), 10, 64)
 						if err != nil {
 							logger.Logger.Error("打印机ID格式错误", zap.Error(err))
 							fmt.Println("打印机ID格式错误", zap.Error(err))

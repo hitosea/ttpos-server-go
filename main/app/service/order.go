@@ -9794,7 +9794,7 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 
 	// 按送厨时间排序
 	sort.Slice(res.Products.List, func(i, j int) bool {
-		return res.Products.List[i].SendKitchenTime < res.Products.List[j].SendKitchenTime
+		return res.Products.List[i].CreateTime < res.Products.List[j].CreateTime
 	})
 
 	// 获取销售账单信息并计算未送厨商品总金额
