@@ -335,6 +335,16 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 
 	if len(defaultPrinter.CashierPrinter) == 0 {
 		defaultPrinter.CashierPrinter = make([]setting.CashierPrinterItem, 0)
+	} else {
+		handledCashierPrinters := make([]setting.CashierPrinterItem, 0)
+		for _, item := range defaultPrinter.CashierPrinter {
+			handledCashierPrinters = append(handledCashierPrinters, setting.CashierPrinterItem{
+				Key:          item.Key,
+				PrinterId:    utils.Uint64OrStringToString(item.PrinterId),
+				PrinterUsbId: item.PrinterUsbId,
+			})
+		}
+		defaultPrinter.CashierPrinter = handledCashierPrinters
 	}
 	if len(defaultPrinter.LanguageList) == 0 {
 		defaultPrinter.LanguageList = make([]dto.LanguageItem, 0)
@@ -378,7 +388,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 					printerId = cashierPrinter.PrinterUsbId
 					isUsbPrinter = true
 				} else {
-					printerId = cashierPrinter.PrinterId // 如果是18位纯数字，说明是普通打印机
+					printerId = utils.Uint64OrStringToString(cashierPrinter.PrinterId) // 如果是18位纯数字，说明是普通打印机
 				}
 				break
 			}

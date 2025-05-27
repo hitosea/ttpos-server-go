@@ -24339,8 +24339,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "printer_id": {
-                    "description": "收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符",
-                    "type": "string"
+                    "description": "收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符"
                 },
                 "printer_usb_id": {
                     "description": "收银机设备SN",
