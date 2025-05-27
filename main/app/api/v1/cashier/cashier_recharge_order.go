@@ -219,7 +219,7 @@ func (h *RechargeOrderHandler) RechargeOrderRefund(c *gin.Context) {
 		appErr := errors.AppError{}
 		if pkgerrors.As(err, &appErr) {
 			if appErr.GetCode() == constant.CodeSuccessOpenCashBox {
-				helper.Success(c, gin.H{"open_cash_box": true})
+				helper.Success(c, gin.H{"is_open_cash_box": true})
 				return
 			}
 		}

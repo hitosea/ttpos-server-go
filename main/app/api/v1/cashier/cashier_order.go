@@ -168,7 +168,7 @@ func (h *OrderHandler) ReturnOrder(c *gin.Context) {
 		return
 	}
 	if codeFail == constant.CodeSuccessOpenCashBox {
-		helper.Success(c, gin.H{"open_cash_box": true})
+		helper.Success(c, gin.H{"is_open_cash_box": true})
 		return
 	}
 	// 返回结果
