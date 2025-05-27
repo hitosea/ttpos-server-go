@@ -2411,8 +2411,10 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 			// 发送短信
 			if isUseMember {
 				go func() {
+					newCtx := ctx.Copy()
+					newCtx.SetDB(s.dbm.GetDB(newCtx.GetDbId()))
 					// 获取最新的会员信息
-					member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+					member, err := repository.NewMemberRepo(newCtx.GetDB()).GetMemberByUuid(saleOrder.ConsumerUuid)
 					if err != nil {
 						ctx.Log().Info("停止发送短信（消费反结账），获取会员失败", zap.Error(errors.WithMessage(err)))
 					} else {
@@ -2424,7 +2426,6 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 							}
 						}
 						if refundAmount > 0 {
-							ctx.SetDB(db)
 							if member != nil {
 								smsReq := sms.MemberOrderRefundRequest{
 									Company:       ctx.GetCompany().Name,
