@@ -2311,8 +2311,11 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 		if err := repository.NewSaleBillRepo(db).UpdateSaleBillRecord(*saleBill); err != nil {
 			return errors.WithMessage(err)
 		}
+
+		giftPointsMap := make(map[uint64]float64) // sale_order_uuid -> gift_points
 		// 更新销售订单
 		for _, saleOrder := range saleBill.SaleOrders {
+			giftPointsMap[saleOrder.Uuid] = saleOrder.GiftPoints // 清空之前记录的赠送积分
 			// 将结账才记录的值清空
 			saleOrder.ClearSettleInfo()
 			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
@@ -2367,7 +2370,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 			}
 			// 退积分
 			if saleOrder.ConsumerUuid != 0 {
-				points := saleOrder.GiftPoints
+				points := giftPointsMap[saleOrder.Uuid]
 				member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
 				if err != nil {
 					return errors.WithMessage(err)
