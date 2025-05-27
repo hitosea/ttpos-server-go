@@ -46,6 +46,7 @@ services:
       - ./docker/mysql/data:/var/lib/mysql
       - ./docker/mysql/conf.d:/etc/mysql/conf.d
       - ./docker/mysql/repassword.sh:/etc/mysql/repassword.sh
+      - ./docker/mysql/permissions.sh:/etc/mysql/permissions.sh
       - ./docker/mysql/create_saas.sh:/etc/mysql/create_saas.sh
     environment:
       MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
