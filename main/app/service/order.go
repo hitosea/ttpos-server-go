@@ -1645,7 +1645,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 
 	lianLianPayCount := returnOrder.GetLianLianPayCount()
 
-	var publishChangeMemberBalance, publishChangeMemberPoints bool
+	var publishChangeMemberBalance, publishChangeMemberPoints, isExistCashPay bool
 	// 创建
 	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db) // 否则 s.memberSrv.HandleMemberBalance会事务失效
@@ -1714,6 +1714,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			}
 			// 如果退款金额为现金，则更新钱箱
 			if returnOrderAmount.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+				isExistCashPay = true
 				// 存现金，更新钱箱
 				ctx.SetDB(db)
 				if err := s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
@@ -1922,6 +1923,10 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			SaleBillUuid: saleBill.Uuid,
 		})
 	}()
+
+	if isExistCashPay {
+		return nil, constant.CodeSuccessOpenCashBox
+	}
 
 	return nil, 0
 }
@@ -2411,8 +2416,10 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 			// 发送短信
 			if isUseMember {
 				go func() {
+					newCtx := ctx.Copy()
+					newCtx.SetDB(s.dbm.GetDB(newCtx.GetDbId()))
 					// 获取最新的会员信息
-					member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+					member, err := repository.NewMemberRepo(newCtx.GetDB()).GetMemberByUuid(saleOrder.ConsumerUuid)
 					if err != nil {
 						ctx.Log().Info("停止发送短信（消费反结账），获取会员失败", zap.Error(errors.WithMessage(err)))
 					} else {
@@ -2424,7 +2431,6 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 							}
 						}
 						if refundAmount > 0 {
-							ctx.SetDB(db)
 							if member != nil {
 								smsReq := sms.MemberOrderRefundRequest{
 									Company:       ctx.GetCompany().Name,
@@ -2432,7 +2438,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 									Balance:       member.GetBalanceAll(),
 									PointsBalance: member.GetPoints(),
 								}
-								if err := s.smsSrv.SendMemberOrderRefundSMS(ctx, member.Phone, &smsReq); err != nil {
+								if err := s.smsSrv.SendMemberOrderRefundSMS(newCtx, member.Phone, &smsReq); err != nil {
 									ctx.Log().Info("发送退款短信失败（消费反结账）", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
 								} else {
 									ctx.Log().Info("发送退款短信成功（消费反结账）", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))

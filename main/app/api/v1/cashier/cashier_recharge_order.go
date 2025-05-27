@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
+	pkgerrors "github.com/pkg/errors"
 )
 
 // RechargeOrderHandler 充值订单处理程序
@@ -215,6 +216,13 @@ func (h *RechargeOrderHandler) RechargeOrderRefund(c *gin.Context) {
 	}
 	err := h.rechargeOrderSrv.RechargeOrderRefund(helper.GetContext(c), orderRefundReq)
 	if err != nil {
+		appErr := errors.AppError{}
+		if pkgerrors.As(err, &appErr) {
+			if appErr.GetCode() == constant.CodeSuccessOpenCashBox {
+				helper.Success(c, gin.H{"is_open_cash_box": true})
+				return
+			}
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
