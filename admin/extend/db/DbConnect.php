@@ -17,7 +17,7 @@ class DbConnect
         $mysql = $config['connections']['mysql'];
         $mysql['database'] = $dbName;
         $mysql['username'] = env('DB_USERNAME');
-        $mysql['password'] = env('DB_ROOT_PASSWORD');
+        $mysql['password'] = env('DB_PASSWORD');
         $config['connections'] = array_merge($config['connections'], [$dbName => $mysql]);
         if ($forceDefault) {
             $config['default'] = $connection;

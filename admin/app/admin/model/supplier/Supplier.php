@@ -60,7 +60,7 @@ class Supplier extends SupplierModel
         //
         $host = env('DB_HOST');
         $port = env('DB_PORT');
-        $pdo = new PDO("mysql:host={$host};port={$port}", env('DB_USERNAME'), env('DB_ROOT_PASSWORD'));
+        $pdo = new PDO("mysql:host={$host};port={$port}", env('DB_USERNAME'), env('DB_PASSWORD'));
 
         // 检测数据库
         $databaseName = $username = 'shop' . $this->uuid;
@@ -78,7 +78,7 @@ class Supplier extends SupplierModel
         try {
             return $this->initShopBaseData($data);
         } catch (\Throwable $th) {
-            $pdo = new PDO("mysql:host=" . env('DB_HOST') . ";port=" . env('DB_PORT'), env('DB_USERNAME'), env('DB_ROOT_PASSWORD'));
+            $pdo = new PDO("mysql:host=" . env('DB_HOST') . ";port=" . env('DB_PORT'), env('DB_USERNAME'), env('DB_PASSWORD'));
             if ($pdo->query("SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = '{$databaseName}'")->fetchColumn()) {
                 $pdo->exec("DROP DATABASE IF EXISTS {$databaseName}");
             }
@@ -99,7 +99,7 @@ class Supplier extends SupplierModel
         $host = env('DB_HOST');
         $port = env('DB_PORT');
         $prefix = env('DB_PREFIX');
-        $pdo = new PDO("mysql:host={$host};port={$port}", env('DB_USERNAME'), env('DB_ROOT_PASSWORD'));
+        $pdo = new PDO("mysql:host={$host};port={$port}", env('DB_USERNAME'), env('DB_PASSWORD'));
         // 检测数据库
         $databaseName = 'shop' . $companyUuid;
         $pdo->exec("use {$databaseName}");
