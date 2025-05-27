@@ -1486,6 +1486,8 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 
 	lianLianPayCount := returnOrder.GetLianLianPayCount()
 
+	var isExistCashPay bool
+
 	err := db.Transaction(func(tx *gorm.DB) error {
 		ctx.SetDB(tx)
 
@@ -1583,6 +1585,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 
 		// 退还现金
 		if refundCashMoney > 0 {
+			isExistCashPay = true
 			if err := s.cashBoxSrv.UpdateBalance(ctx, UpdateCashBalanceParam{
 				Amount:    -refundCashMoney,
 				Scene:     constant.CashBoxLogSceneRefund,
@@ -1605,6 +1608,11 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			MemberRechargeOrderUuid: order.Uuid,
 		})
 	}()
+
+	if isExistCashPay {
+		return errors.NewWithCode(constant.CodeSuccessOpenCashBox, "请求成功")
+	}
+
 	return nil
 }
 
