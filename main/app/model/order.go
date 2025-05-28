@@ -148,11 +148,12 @@ type SaleBillSetting struct {
 	ServiceFeeValue float64 `gorm:"column:service_fee_value;type:decimal(12,2);default:0;comment:服务费值,服务费类型为1时,服务费值为固定金额,服务费类型为2和3时,服务费值为%比例" json:"service_fee_value"`
 	TaxFeeType      uint    `gorm:"column:tax_fee_type;type:tinyint(1);default:0;comment:税费类型, 0-关闭消费税 1-商品未含税 2-商品已含税" json:"tax_fee_type"`
 	ServiceApply    uint    `gorm:"column:service_apply;type:tinyint(1);default:0;comment:是否收取服务费，0-不收取 1-收取。根据后台的服务费应用范围决定" json:"service_apply"`
+	ServiceFeeBase  uint    `gorm:"column:service_fee_base;type:tinyint(1);default:0;comment:服务费计算基准, 0-商品惠后价 1-商品价格合计" json:"service_fee_base"`
 
 	// 优惠和抹零设置
 	DiscountType     uint `gorm:"column:discount_type;type:tinyint(1);default:0;comment:打折类型, 0-百分比打折% 1-百分比直接减免% off" json:"discount_type"`
 	ZeroRule         uint `gorm:"column:zero_rule;type:tinyint(1);default:0;comment:优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数" json:"zero_rule"`
-	ZeroCheckoutRule uint `gorm:"column:zero_checkout_rule;type:tinyint(1);default:0;comment:结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元" json:"zero_checkout_rule"`
+	ZeroCheckoutRule uint `gorm:"column:zero_checkout_rule;type:tinyint(1);default:0;comment:结账抹零, 0-实款实收 1-抹分 2-抹角 5-抹元" json:"zero_checkout_rule"`
 
 	// 统计设置
 	IsStatGift uint `gorm:"column:is_stat_gift;type:tinyint(1);default:0;comment:是否统计赠菜金额, 0-不计入总销售额、优惠折扣 1-计入总销售额、优惠折扣" json:"is_stat_gift"`

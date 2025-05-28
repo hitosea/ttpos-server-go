@@ -1,14 +1,11 @@
 name: Go Build & Docker Push
 on:
+  workflow_dispatch:
+
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
-      inputs:
-        branch: 
-          description: 'branch (e.g., release)'
-          required: true
-          default: 'release'
+  
 
 env:
   # Go编译配置

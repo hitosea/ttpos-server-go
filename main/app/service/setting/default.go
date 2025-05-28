@@ -238,6 +238,7 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 		DishCardStyle:     "0",      // 菜品卡片样式 0-无图模式 1-图片模式
 		DishCardStyleTime: "0",      // 菜品卡片样式最后更新时间
 		IsInvoice:         "0",      // 开票信息 0-不需要填写 1-需要填写
+		OpeningHours:      "",       // 营业时间 00:00-23:59
 	}
 
 }
@@ -434,7 +435,7 @@ func (s *Srv) getDefaultServiceCharge() setting.ServiceCharge {
 	}
 }
 
-func (s *Srv) parseCashierSetting(values string, key string) ([]byte, error) {
+func (s *Srv) parseCashierSetting(values string) ([]byte, error) {
 	// 解析json字符串为map进行处理
 	var jsonMap map[string]interface{}
 	err := json.Unmarshal([]byte(values), &jsonMap)

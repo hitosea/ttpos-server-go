@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
+	"ttpos-server-go/app/printer/pkg/images"
 	"ttpos-server-go/config"
 )
 
@@ -170,7 +171,7 @@ func (t *invoiceImgTemplate) GetPrintContent(
 		for key, paymentOrder := range saleOrder.PaymentOrders {
 			img.SetTextLineHeight(40)
 			img.PrintInColumns(
-				pkg.ColumnConfig{Text: paymentOrder.PaymentMethodName, Width: 320, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 20},
+				pkg.ColumnConfig{Text: paymentOrder.PaymentMethod.GetName(), Width: 320, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 20},
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(paymentOrder.Amount), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 20},
 			)
 			if key < len(saleOrder.PaymentOrders)-1 {
@@ -258,7 +259,20 @@ func (t *invoiceImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 	}
 	img.LineFeed(1, 40)
+	// 担当者：
+	if t.base.Lang == "ja" {
+		// img.SetTextLineHeight(50)
+		// img.SetAlignment(pkg.AlignLeft)
+		// img.AppendText("                                   担当者")
+		img.SetTextLineHeight(10)
+		img.SetAlignment(pkg.AlignRight)
+		img.AppendEmbeddedImg(images.PersonInChargeImg, 317, false, -40) // -53
+		img.AppendSplitLine()
+		img.RecoverDefaultTextLineHeight()
+		img.LineFeed(1)
+	}
 	//
+	img.SetAlignment(pkg.AlignLeft)
 	img.AppendText("*" + t.base.Translate("保管注意事项"))
 	img.LineFeed(1)
 	img.AppendText(t.base.Translate("如需保管时请将印刷页面朝内折叠"))

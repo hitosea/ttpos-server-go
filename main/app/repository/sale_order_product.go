@@ -33,7 +33,7 @@ func NewSaleOrderProductRepo(db *gorm.DB) ISaleOrderProductRepo {
 	return &saleOrderProductRepo{db: db}
 }
 
-// 创建销售订单商品及BOM、属性
+// CreateSaleOrderProductAndBomAndAttribute 创建销售订单商品及BOM、属性
 func (r *saleOrderProductRepo) CreateSaleOrderProductAndBomAndAttribute(obj model.SaleOrderProduct) (uint64, error) {
 	db := r.db
 	// 创建销售订单商品
@@ -59,7 +59,7 @@ func (r *saleOrderProductRepo) CreateSaleOrderProductAndBomAndAttribute(obj mode
 	return obj.Uuid, nil
 }
 
-// 创建销售订单商品
+// CreateSaleOrderProduct 创建销售订单商品
 func (r *saleOrderProductRepo) CreateSaleOrderProduct(model *model.SaleOrderProduct) (uint64, error) {
 	db := r.db
 	if err := db.Create(&model).Error; err != nil {
@@ -68,7 +68,7 @@ func (r *saleOrderProductRepo) CreateSaleOrderProduct(model *model.SaleOrderProd
 	return model.Uuid, nil
 }
 
-// 更新销售订单商品
+// UpdateSaleOrderProduct 更新销售订单商品
 func (r *saleOrderProductRepo) UpdateSaleOrderProduct(model *model.SaleOrderProduct) error {
 	db := r.db
 	if err := db.Model(&model).Updates(model).Error; err != nil {
@@ -77,7 +77,7 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProduct(model *model.SaleOrderProd
 	return nil
 }
 
-// 更新销售订单商品
+// UpdateSaleOrderProductByMap 更新销售订单商品
 func (r *saleOrderProductRepo) UpdateSaleOrderProductByMap(uuid uint64, vars map[string]any) error {
 	db := r.db
 	if err := db.Model(&model.SaleOrderProduct{}).Where("uuid = ?", uuid).Updates(vars).Error; err != nil {
@@ -107,7 +107,7 @@ func (r *saleOrderProductRepo) UpdateOrCreateSaleOrderProductRecord(obj model.Sa
 	return nil
 }
 
-// 批量更新销售订单商品
+// UpdateSaleOrderProductList 批量更新销售订单商品
 func (r *saleOrderProductRepo) UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error {
 	db := r.db
 
@@ -134,7 +134,7 @@ func (r *saleOrderProductRepo) UpdateSaleOrderProductList(models []*model.SaleOr
 	return nil
 }
 
-// 根据uuid获取销售订单商品
+// GetSaleOrderProductByUuid 根据uuid获取销售订单商品
 func (r *saleOrderProductRepo) GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error) {
 	db := r.db
 	var model model.SaleOrderProduct
@@ -144,7 +144,7 @@ func (r *saleOrderProductRepo) GetSaleOrderProductByUuid(uuid uint64) (*model.Sa
 	return &model, nil
 }
 
-// 批量创建销售订单商品原因
+// CreateSaleOrderProductReasons 批量创建销售订单商品原因
 func (r *saleOrderProductRepo) CreateSaleOrderProductReasons(
 	saleOrderUuid uint64,
 	saleOrderProductUuid uint64,
@@ -177,7 +177,7 @@ func (r *saleOrderProductRepo) CreateSaleOrderProductReasons(
 	return db.Create(&reasons).Error
 }
 
-// 批量删除销售订单商品原因
+// DeleteSaleOrderProductReasons 批量删除销售订单商品原因
 func (r *saleOrderProductRepo) DeleteSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string) error {
 	switch source {
 	case constant.ProductReasonTypeReturnFood:
@@ -197,7 +197,7 @@ func (r *saleOrderProductRepo) DeleteSaleOrderProductReasons(saleOrderUuid uint6
 	}
 }
 
-// 批量删除销售订单商品。delete_time赋值为当前时间
+// DeleteSaleOrderProductList 批量删除销售订单商品。delete_time赋值为当前时间
 func (r *saleOrderProductRepo) DeleteSaleOrderProductList(models []*model.SaleOrderProduct) error {
 	uuids := make([]uint64, 0)
 	for _, model := range models {
@@ -207,7 +207,7 @@ func (r *saleOrderProductRepo) DeleteSaleOrderProductList(models []*model.SaleOr
 	return r.db.Model(&model.SaleOrderProduct{}).Where("uuid in (?)", uuids).Update("delete_time", now).Error
 }
 
-// 根据销售账单uuid删除销售订单商品。delete_time赋值为当前时间
+// DeleteSaleOrderProductBySaleBillUuid 根据销售账单uuid删除销售订单商品。delete_time赋值为当前时间
 func (r *saleOrderProductRepo) DeleteSaleOrderProductBySaleBillUuid(saleBillUuid uint64) error {
 	now := time.Now().Unix()
 	return r.db.Model(&model.SaleOrderProduct{}).Where("sale_bill_uuid = ?", saleBillUuid).Update("delete_time", now).Error

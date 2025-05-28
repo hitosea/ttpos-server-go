@@ -197,6 +197,11 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.SetCharacterSize(1, 1)
 		printer.SetPrintModes(false, false, false)
 		printer.SetAlignment(pkg.AlignLeft)
+		// 桌台备注
+		if saleBill.Remark != "" {
+			printer.AppendText(saleBill.Remark)
+			printer.LineFeed(1)
+		}
 		printer.AppendText(t.base.Translate("收银员") + ": " + saleOrder.CashierName)
 		printer.LineFeed()
 		if payTime != "" {
@@ -474,7 +479,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		}
 		if len(saleOrder.PaymentOrders) > 0 {
 			for _, paymentOrder := range saleOrder.PaymentOrders {
-				printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), "", paymentOrder.PaymentMethodName, width, 20, 0, 28))
+				printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), "", paymentOrder.PaymentMethod.GetName(), width, 20, 0, 28))
 				printer.LineFeed()
 				printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(paymentOrder.Amount), width, 34))
 				if saleOrder.ChangeAmount > 0 && paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {

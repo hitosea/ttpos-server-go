@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     `service_fee_type` INT(10) NOT NULL DEFAULT 0 COMMENT '服务费类型, 0-免服务费 1-按固定金额 2-按比例-不收取税费 3-按比例-收取税费。如果服务费收费应用范围不包括该账单，则该账单的服务费类型为0',
     `service_fee_value` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '服务费值,服务费类型为1时,服务费值为固定金额,服务费类型为2和3时,服务费值为%比例',
     `service_apply` INT(10) NOT NULL DEFAULT 0 COMMENT '是否收取服务费，0-不收取 1-收取。根据后台的服务费应用范围决定',
+    `service_fee_base` INT(10) NOT NULL DEFAULT 0 COMMENT '服务费计算基准, 0-商品惠后价 1-商品价格合计',
     `tax_fee_type` INT(10) NOT NULL DEFAULT 0 COMMENT '税费类型, 0-关闭消费税 1-商品未含税 2-商品已含税',
     `zero_rule` INT(10) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数',
     `zero_checkout_rule` INT(10) NOT NULL DEFAULT 0 COMMENT '结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元',
@@ -528,6 +529,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_desk` (
     `qrcode_token` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '二维码图片URL的token,判断二维码链接是否有效,token相同则二维码链接有效',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单UUID,销售账单ID,一个桌台只能绑定一个销售账单，一个单结束后才能绑定下一个单',
     `device_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '平板设备uuid, 0-未绑定',
+    `is_open_default_people_num` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启默认人数, 0-否 1-是',
+    `default_people_num` INT(10) NOT NULL DEFAULT 0 COMMENT '默认人数',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1365,6 +1368,11 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer` (
     `name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '打印机名称',
     `printer_type_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印机类型ID',
     `config_json` TEXT COMMENT '打印机json配置',
+    `is_usb` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否usb 0-否 1-是',
+    `is_enable_usb` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '是否启用usb 0-否 1-是',
+    `status` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '状态 0-离线 1-在线',  
+    `last_heartbeat_time` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '最后心跳时间',
+    `source_device_sn` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '来源设备SN',
     `copies` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印份数',
     `sort` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
@@ -1405,6 +1413,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     `reason` VARCHAR(255) DEFAULT '' COMMENT '原因',
     `printer_time` INT(11) NOT NULL DEFAULT 0 COMMENT '打印时间',
     `first_execution` INT(10) NOT NULL DEFAULT 0 COMMENT '是否首次执行打印 1-是 0-否',
+    `printing_time` INT(11) NOT NULL DEFAULT 0 COMMENT '打印耗时(毫秒)',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1837,6 +1846,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_order` (
     `bank_code` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '银行编码 - 当存在QR PromptPay的时候需要传',
     `account_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '账号 - 当存在QR PromptPay的时候需要传',
     `account_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '账户名称 - 当存在QR PromptPay的时候需要传',
+    `duty_no` varchar(255) NOT NULL DEFAULT '' COMMENT '当班编号',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -2090,5 +2100,19 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_member_payment` (
     INDEX idx_complete_time (complete_time),
     INDEX idx_payment_method_uuid (payment_method_uuid)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '会员支付统计表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_lan_printer_scan` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT 'uuid',
+  `ip` varchar(255) NOT NULL DEFAULT '' COMMENT 'ip',
+  `port` int(11) NOT NULL DEFAULT 0 COMMENT '端口',
+  `status` int(11) NOT NULL DEFAULT 0 COMMENT '状态 0: 离线 1: 在线',
+  `remark` varchar(255) NOT NULL DEFAULT '' COMMENT '备注',
+  `source_device_sn` varchar(255) NOT NULL COMMENT '来源设备SN',
+  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='局域网打印机扫描表';
 
 SET FOREIGN_KEY_CHECKS = 1;

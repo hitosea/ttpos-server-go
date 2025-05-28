@@ -99,6 +99,8 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 		PrinterType:      settingPrinterInfo.PrinterType,
 		PrinterConfig:    settingPrinterInfo.PrinterConfig,
 		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
+		IsUsbPrinter:     settingPrinterInfo.IsUsbPrinter,
+		PrintingTime:     printerLogData.PrintingTime,
 	}, nil
 }
 

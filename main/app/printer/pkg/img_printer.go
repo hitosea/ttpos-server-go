@@ -18,6 +18,7 @@ import (
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/printer/pkg/fonts"
+	"ttpos-server-go/app/printer/pkg/images"
 	"ttpos-server-go/app/printer/pkg/rabbit"
 	"ttpos-server-go/config"
 
@@ -145,7 +146,7 @@ func (i *ImgFont) createImg() {
 func (i *ImgFont) GetFontPath(char string) string {
 	// 中文
 	chiPattern := regexp.MustCompile(`[\x{4E00}-\x{9FFF}\x{FF01}\x{FF0C}\x{FF08}\x{FF09}\x{FF1A}\x{FF5E}\x{2014}]`)
-	if chiPattern.MatchString(char) || char == "。" || char == "、" || char == "-" || char == "￥" || char == "；" || char == "？" || char == "＋" || char == "：" {
+	if char != "ー" && (chiPattern.MatchString(char) || char == "。" || char == "、" || char == "-" || char == "￥" || char == "；" || char == "？" || char == "＋" || char == "：") {
 		return fonts.FontZH
 	}
 
@@ -163,7 +164,7 @@ func (i *ImgFont) GetFontPath(char string) string {
 
 	// 日文
 	japPattern := regexp.MustCompile(`[\p{Hiragana}\p{Katakana}\p{Han}★]+`)
-	if japPattern.MatchString(char) {
+	if char == "ー" || japPattern.MatchString(char) {
 		return fonts.FontJA
 	}
 
@@ -794,6 +795,120 @@ func (i *ImgFont) AppendImg(imgPath string, size int, isRoundness bool, topHeigh
 	// 计算图片位置 (水平居中)
 	x := (i.ImageWidth - width) / 2
 
+	// 计算图片位置 (居右显示)
+	if i.Alignment == AlignRight {
+		x = i.ImageWidth - width - i.ImagePadding
+	}
+
+	// 将图片绘制到目标图像上
+	draw.Draw(
+		i.Image,
+		image.Rect(x, i.TextTotalHeight+topHeight, x+width, i.TextTotalHeight+topHeight+height),
+		srcImg,
+		image.Point{0, 0},
+		draw.Over,
+	)
+
+	// 更新文本总高度和最后一行已使用宽度
+	i.TextTotalHeight += height + topHeight
+	i.TextLastLineUsedWidth += width
+
+	// 添加换行
+	i.LineFeed(1)
+
+	return i
+}
+
+// AppendEmbeddedImg 添加嵌入式图片
+func (i *ImgFont) AppendEmbeddedImg(imageName string, size int, isRoundness bool, topHeight int) *ImgFont {
+	// 从嵌入式资源读取图片数据
+	imgData, err := images.GetImageData(imageName)
+	if err != nil {
+		fmt.Println("读取嵌入式图片失败:", err)
+		return i
+	}
+
+	// 解码图片
+	srcImg, _, err := image.Decode(bytes.NewReader(imgData))
+	if err != nil {
+		fmt.Println("解码图片失败:", err)
+		return i
+	}
+
+	// 获取原始图片尺寸
+	width := srcImg.Bounds().Dx()
+	height := srcImg.Bounds().Dy()
+
+	// 调整图片大小
+	if size > 0 {
+		ratio := float64(width) / float64(height)
+		width = size
+		height = int(float64(size) / ratio)
+
+		// 创建新的调整大小后的图片
+		rectangle := image.Rect(0, 0, width, height)
+		resizedImg := image.NewRGBA(rectangle)
+
+		// 使用resize包来调整图片大小
+		resized := resize.Resize(uint(width), uint(height), srcImg, resize.Lanczos3)
+
+		// 转换为RGBA图像
+		if rgba, ok := resized.(*image.RGBA); ok {
+			resizedImg = rgba
+		} else {
+			// 手动复制像素
+			for y := 0; y < height; y++ {
+				for x := 0; x < width; x++ {
+					resizedImg.Set(x, y, resized.At(x, y))
+				}
+			}
+		}
+
+		srcImg = resizedImg
+	}
+
+	// 处理圆角
+	if isRoundness {
+		// 创建圆形模板
+		mask := image.NewRGBA(image.Rect(0, 0, width, height))
+
+		// 填充透明背景
+		draw.Draw(mask, mask.Bounds(), image.Transparent, image.Point{}, draw.Src)
+
+		// 使用简单方法实现圆形裁剪
+		r := float64(width) / 2
+		centerX := float64(width) / 2
+		centerY := float64(height) / 2
+
+		// 遍历每个像素，将圆形区域内的像素设置为不透明
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				// 计算点到圆心的距离
+				dx := float64(x) - centerX
+				dy := float64(y) - centerY
+				distance := math.Sqrt(dx*dx + dy*dy)
+
+				// 如果点在圆内，设置为不透明
+				if distance <= r {
+					mask.SetRGBA(x, y, color.RGBA{255, 255, 255, 255})
+				}
+			}
+		}
+
+		// 将裁剪后的图像绘制到新图像上
+		roundedImg := image.NewRGBA(image.Rect(0, 0, width, height))
+		draw.DrawMask(roundedImg, roundedImg.Bounds(), srcImg, image.Point{}, mask, image.Point{}, draw.Over)
+		srcImg = roundedImg
+	}
+
+	// 计算图片位置 (水平居中)
+	x := (i.ImageWidth - width) / 2
+
+	// 计算图片位置 (居右显示)
+	if i.Alignment == AlignRight {
+		x = i.ImageWidth - width - i.ImagePadding
+	}
+
 	// 将图片绘制到目标图像上
 	draw.Draw(
 		i.Image,
@@ -1177,7 +1292,6 @@ func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) st
 		imageSrc = "./tmp/printer/dishes_img.png"
 	}
 	//
-	var data []string
 	maxHeight := 2200
 	height := i.TextTotalHeight + i.TextLineHeight
 	headHeight := int(i.TextLineHeight/2) - 10
@@ -1191,6 +1305,8 @@ func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) st
 	heights = append(heights, height)
 
 	// 处理每一个分割的区域
+	var data []string
+	data = append(data, string([]byte{0x1B, 0x40}))
 	for key, h := range heights {
 		h = int(h)
 

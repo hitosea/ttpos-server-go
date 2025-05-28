@@ -198,6 +198,8 @@ if [ $# -gt 0 ]; then
         run_exec php "chmod +x ./bin/license.so"
         run_exec php "chmod +x ./bin/license_arm.so"
         # 
+        run_exec db "sh /etc/mysql/permissions.sh"
+        # 
         $COMPOSE restart
         #
         echo -e "${OK} ${GreenBG} 安装完成 ${Font}"

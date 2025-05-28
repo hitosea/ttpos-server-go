@@ -24,6 +24,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
@@ -59,13 +60,14 @@ type rechargeOrderSrv struct {
 	settingSrv       setting.ISrv
 	cashBoxSrv       ICashBoxSrv
 	memberSrv        IMemberSrv
+	smsSrv           ISmsSrv
 }
 
-func NewRechargeOrderSrv(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv) IRechargeOrderSrv {
-	return NewRechargeOrderSrvImpl(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv)
+func NewRechargeOrderSrv(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv, smsSrv ISmsSrv) IRechargeOrderSrv {
+	return NewRechargeOrderSrvImpl(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv, smsSrv)
 }
 
-func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv) IRechargeOrderSrv {
+func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, paymentMethodSrv IPaymentMethodSrv, settingSrv setting.ISrv, cashBoxSrv ICashBoxSrv, memberSrv IMemberSrv, smsSrv ISmsSrv) IRechargeOrderSrv {
 	return &rechargeOrderSrv{
 		dbm:              dbm,
 		bus:              event.NewSystemBus(),
@@ -74,6 +76,7 @@ func NewRechargeOrderSrvImpl(dbm *database.DBManager, cache cache.Cache, payment
 		settingSrv:       settingSrv,
 		cashBoxSrv:       cashBoxSrv,
 		memberSrv:        memberSrv,
+		smsSrv:           smsSrv,
 	}
 }
 
@@ -439,13 +442,14 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 	var confirmResp resp.ConfirmRechargeOrder
 
 	companyUuid := ctx.GetCompanyUuid()
-	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
+	db := s.dbm.GetDB(companyUuid)
+	memberRepo := repository.NewMemberRepo(db)
 	member := memberRepo.GetMember(memberRepo.WhereUuid(confirmReq.MemberUuid))
 	if member.Uuid == 0 {
 		return confirmResp, errors.New("会员不存在")
 	}
 
-	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(companyUuid))
+	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(db)
 	order := rechargeOrderRepo.GetRechargeOrder(
 		rechargeOrderRepo.WhereUuid(confirmReq.RechargeOrderUuid),
 		rechargeOrderRepo.WithPaymentOrders(),
@@ -479,7 +483,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 
 	var memberPointsChanged bool
 
-	err := s.dbm.GetDB(companyUuid).Transaction(func(tx *gorm.DB) error {
+	err := db.Transaction(func(tx *gorm.DB) error {
 		ctx.SetDB(tx)
 		err := repository.NewMemberRechargeOrderRepo(tx).Update(order.Uuid, updates)
 		if err != nil {
@@ -563,8 +567,35 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 		}
 	}()
 
-	// 发布“会员余额变动”事件
+	// 发送结账短信
+	{
+		// 获取最新的会员信息
+		member, err := repository.NewMemberRepo(db).GetMemberByUuid(confirmReq.MemberUuid)
+		if err != nil {
+			ctx.Log().Info("停止发送短信（充值），获取会员失败", zap.Error(errors.WithMessage(err)))
+		} else {
+			go func() {
+				ctx.SetDB(db)
+				if member != nil {
+					smsReq := sms.MemberRechargeRequest{
+						Company:       ctx.GetCompany().Name,
+						Recharge:      order.RechargeAmount,
+						BonusMoney:    order.GiftAmount,
+						BonusPoints:   order.GiftPoint,
+						Balance:       member.GetBalanceAll(),
+						PointsBalance: member.GetPoints(),
+					}
+					if err := s.smsSrv.SendMemberRechargeSMS(ctx, member.Phone, &smsReq); err != nil {
+						ctx.Log().Info("发送充值短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+					} else {
+						ctx.Log().Info("发送充值短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+					}
+				}
+			}()
+		}
+	}
 	go func() {
+		// 发布“会员余额变动”事件
 		s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
 			BasePayload: event.BasePayload{ // 会员余额变动
 				Ctx:          ctx,
@@ -573,10 +604,7 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 				OperatorUuid: int64(ctx.GetStaffUuid()),
 			},
 		})
-	}()
-
-	// 发布“会员积分变动”事件
-	go func() {
+		// 发布“会员积分变动”事件
 		s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
 			BasePayload: event.BasePayload{ // 会员积分变动
 				Ctx:          ctx,
@@ -617,7 +645,7 @@ func (s *rechargeOrderSrv) confirmRechargeOrderResp(companyUuid uint64, recharge
 	}
 }
 
-// 打印充值订单
+// PrintTicket 打印充值订单
 func (s *rechargeOrderSrv) PrintTicket(ctx context.Context, printRechargeOrderReq req.PrintRechargeOrderReq) (*resp.PrinterData, error) {
 	rechargeOrderRepo := repository.NewMemberRechargeOrderRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	order := rechargeOrderRepo.GetRechargeOrder(
@@ -1170,6 +1198,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 
 		// 退款现金金额
 		var refundCashAmount float64
+		var currencyUnit string
 		for _, paymentOrder := range order.PaymentOrders {
 			// 标记删除
 			if err := paymentOrderRepo.Update(paymentOrder.Uuid, map[string]any{
@@ -1188,6 +1217,8 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 				PaymentMethodUuid: paymentOrder.PaymentMethodUuid,
 				Amount:            amount,
 			})
+
+			currencyUnit = paymentOrder.CurrencyUnit
 		}
 
 		if err := repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
@@ -1210,6 +1241,9 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			RefundAmount:        order.Amount,
 			ReturnOrderAmounts:  returnOrderAmounts,
 			IsReverseSettlement: 1,
+			DutyNo:              ctx.GetStaff().DutyNo,
+			Unit:                currencyUnit,
+			RefundReason:        "反结账",
 		})
 		if err != nil {
 			return errors.WithMessage(errors2.ErrInternal, err.Error())
@@ -1246,6 +1280,32 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		go s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), order.MemberUuid)
 	}
 
+	// 发送短信
+	{
+		// 获取最新的会员信息
+		member, err := repository.NewMemberRepo(db).GetMemberByUuid(order.Member.Uuid)
+		if err != nil {
+			ctx.Log().Info("停止发送短信（充值反结账），获取会员失败", zap.Error(errors.WithMessage(err)))
+		} else {
+			go func() {
+				ctx.SetDB(db)
+				if member != nil && member.Phone != "" {
+					smsReq := sms.MemberRechargeRefundRequest{
+						Company:        ctx.GetCompany().Name,
+						RechargeRefund: order.RechargeAmount + order.GiftAmount,
+						Balance:        member.GetBalanceAll(),
+						PointsBalance:  member.GetPoints(),
+					}
+					if err := s.smsSrv.SendMemberRechargeRefundSMS(ctx, member.Phone, &smsReq); err != nil {
+						ctx.Log().Info("发送充值反结账短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+					} else {
+						ctx.Log().Info("发送充值反结账短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+					}
+				}
+			}()
+		}
+	}
+
 	// 发布“统计”事件
 	go func() {
 		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{
@@ -1257,10 +1317,19 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 		})
 	}()
 
-	// 发布“会员余额变动”事件
 	go func() {
+		// 发布“会员余额变动”事件
 		s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
 			BasePayload: event.BasePayload{ // 会员余额变动
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
+		// 发布“会员积分变动”事件
+		s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
+			BasePayload: event.BasePayload{ // 会员积分变动
 				Ctx:          ctx,
 				CompanyUuid:  ctx.GetCompanyUuid(),
 				Source:       ctx.GetSource(),
@@ -1307,6 +1376,7 @@ func (s *rechargeOrderSrv) getPaymentRecords(paymentOrders []model.PaymentOrder,
 			PaymentName:       paymentOrder.PaymentMethodName,
 			PaymentAmount:     paymentAmount,
 			RefundableAmount:  refundableAmount,
+			CurrencyUnit:      paymentOrder.CurrencyUnit,
 		})
 	}
 
@@ -1373,8 +1443,10 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	paymentRecords := s.getPaymentRecords(order.PaymentOrders, order.ReturnOrders)
 	// 可退款金额
 	var refundableAmount float64
+	var currencyUnit string
 	for _, record := range paymentRecords {
 		refundableAmount = utils.DecimalAdd(refundableAmount, record.RefundableAmount)
+		currencyUnit = record.CurrencyUnit
 	}
 	if refundableAmount <= 0 {
 		return errors.New("无法退款")
@@ -1457,6 +1529,9 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		AccountNo:          refundReq.AccountNo,
 		AccountName:        refundReq.AccountName,
 		ReturnOrderAmounts: returnOrderAmounts, // 关联创建退款金额
+		DutyNo:             ctx.GetStaff().DutyNo,
+		Unit:               currencyUnit,
+		RefundReason:       "退款",
 	}
 
 	// 是否存在QrPromptPay支付
@@ -1599,6 +1674,33 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+
+	// 发送短信
+	if deductionMoney > 0 {
+		go func() {
+			// 获取最新的会员信息
+			member, err := repository.NewMemberRepo(db).GetMemberByUuid(order.Member.Uuid)
+			if err != nil {
+				ctx.Log().Info("停止发送短信（充值退款），获取会员失败", zap.Error(errors.WithMessage(err)))
+			} else {
+				ctx.SetDB(db)
+				if member != nil {
+					smsReq := sms.MemberRechargeRefundRequest{
+						Company:        ctx.GetCompany().Name,
+						RechargeRefund: deductionMoney,
+						Balance:        member.GetBalanceAll(),
+						PointsBalance:  member.GetPoints(),
+					}
+					if err := s.smsSrv.SendMemberRechargeRefundSMS(ctx, member.Phone, &smsReq); err != nil {
+						ctx.Log().Info("发送充值退款短信失败", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq), zap.Error(errors.WithMessage(err)))
+					} else {
+						ctx.Log().Info("发送充值退款短信成功", zap.String("phone", member.Phone), zap.Any("smsReq", smsReq))
+					}
+				}
+			}
+		}()
+	}
+
 	// 发布“统计”事件
 	go func() {
 		s.bus.PublishStatisticsMemberEvent(event.StatisticsMemberPayload{

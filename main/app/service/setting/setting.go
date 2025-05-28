@@ -335,6 +335,16 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 
 	if len(defaultPrinter.CashierPrinter) == 0 {
 		defaultPrinter.CashierPrinter = make([]setting.CashierPrinterItem, 0)
+	} else {
+		handledCashierPrinters := make([]setting.CashierPrinterItem, 0)
+		for _, item := range defaultPrinter.CashierPrinter {
+			handledCashierPrinters = append(handledCashierPrinters, setting.CashierPrinterItem{
+				Key:          item.Key,
+				PrinterId:    utils.Uint64OrStringToString(item.PrinterId),
+				PrinterUsbId: item.PrinterUsbId,
+			})
+		}
+		defaultPrinter.CashierPrinter = handledCashierPrinters
 	}
 	if len(defaultPrinter.LanguageList) == 0 {
 		defaultPrinter.LanguageList = make([]dto.LanguageItem, 0)
@@ -365,6 +375,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		printerType            string
 		printerCashierDeviceSn string
 		isCashierPrinter       bool // 是否收银机自带打印机
+		isUsbPrinter           bool // 是否usb打印机
 	)
 
 	// 收银机开启
@@ -373,7 +384,12 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		// 收银机机绑定的打印机key
 		for _, cashierPrinter := range printerSetting.CashierPrinter {
 			if cashierPrinter.Key == deviceSn {
-				printerId = cashierPrinter.PrinterId // 如果是18位纯数字，说明是普通打印机
+				if cashierPrinter.PrinterUsbId != "" && cashierPrinter.PrinterUsbId != "0" {
+					printerId = cashierPrinter.PrinterUsbId
+					isUsbPrinter = true
+				} else {
+					printerId = utils.Uint64OrStringToString(cashierPrinter.PrinterId) // 如果是18位纯数字，说明是普通打印机
+				}
 				break
 			}
 		}
@@ -421,6 +437,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		IsCashierPrinter:       isCashierPrinter,
 		IsCashierOpen:          isCashierOpen,
 		PrinterCashierDeviceSn: printerCashierDeviceSn,
+		IsUsbPrinter:           isUsbPrinter,
 	}, nil
 }
 
@@ -688,14 +705,14 @@ func (s *Srv) GetCashierSetting(ctx context.Context, languageList []dto.Language
 	isSetIsShowAssistantSoldOut := strings.Contains(st.Values, "is_show_assistant_sold_out")
 
 	// 解析json字符串为map进行处理
-	modifiedJSON, err := s.parseCashierSetting(st.Values, constant.SettingCashier)
+	modifiedJSON, err := s.parseCashierSetting(st.Values)
 	if err != nil {
 		return cashier, err
 	}
 	err = json.Unmarshal(modifiedJSON, &cashier)
 	if err != nil {
 		ctx.Log().Error("解析各端-收银机设置失败 - 02", zap.Error(err))
-		return cashier, errors.New("解析各端-收银机设置失败 - 02 " + err.Error())
+		return cashier, errors.New("解析各端-收银机设置失败 - 02" + err.Error())
 	}
 
 	// 滚动图/视频处理
@@ -820,7 +837,7 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 	// 如果设置了 is_show_assistant_sold_out，则读取解析后的数据，否则读取默认设置
 	cashierSet := s.getSettingByKey(ctx, constant.SettingCashier)
 	if strings.Contains(cashierSet.Values, "\"is_show_assistant_sold_out\"") {
-		modifiedJSON, err := s.parseCashierSetting(cashierSet.Values, constant.SettingCashier)
+		modifiedJSON, err := s.parseCashierSetting(cashierSet.Values)
 		if err != nil {
 			return assistant, err
 		}
@@ -989,7 +1006,7 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 	// 如果设置了 is_show_scan_sold_out，则读取解析后的数据，否则读取默认设置
 	cashierSet := s.getSettingByKey(ctx, constant.SettingCashier)
 	if strings.Contains(cashierSet.Values, "\"is_show_scan_sold_out\"") {
-		modifiedJSON, err := s.parseCashierSetting(cashierSet.Values, constant.SettingCashier)
+		modifiedJSON, err := s.parseCashierSetting(cashierSet.Values)
 		if err != nil {
 			return defaultH5, err
 		}
@@ -1329,6 +1346,10 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 			DeviceRemark:           device.Remark,
 			ClientVersion:          clientVersion,
 			ServerVersion:          utils.GetVersion("version.json"),
+		},
+		UsbPrinter: resp.UsbPrinterList{
+			List:       make([]resp.UsbPrinter, 0),
+			SelectedSn: "",
 		},
 	}, nil
 

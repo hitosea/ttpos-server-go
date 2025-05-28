@@ -636,18 +636,3 @@ type H5BuffetCustomerType struct {
 	CreateTime     string `json:"create_time"`
 	UpdateTime     string `json:"update_time"`
 }
-
-type H5CategoryList struct {
-	List []H5Category `json:"list"`
-}
-
-type H5Category struct {
-	NameText     string `json:"name_text"`
-	PathNameText string `json:"path_name_text"`
-	CategoryId   int    `json:"category_id"`
-	IsSpecial    int    `json:"is_special"`
-	Name         string `json:"name"`
-	ParentId     int    `json:"parent_id"`
-	ProductCount string `json:"product_count"`
-	ProductNum   int    `json:"product_num"`
-}

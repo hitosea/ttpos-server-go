@@ -24,6 +24,7 @@ type BaseHandler struct {
 	otherSrv         service.IOtherSrv
 	printerLogSrv    printerService.IPrinterLogSrv
 	staffShiftSrv    service.IStaffShiftSrv
+	printerSrv       service.IPrinterSrv
 }
 
 // GetBase 基本信息
@@ -509,6 +510,31 @@ func (h *BaseHandler) ShiftPrinter(c *gin.Context) {
 	helper.Success(c, printerData, "发送成功")
 }
 
+// UsbPrinterReport usb 打印机上报
+// @Summary usb 打印机上报
+// @Description usb 打印机上报
+// @Tags 收银端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.UsbPrinterReportReq true "usb 打印机上报参数"
+// @Success 200 {object} dto.Response{data=resp.PrinterData} "打印数据"
+// @Router /cashier/usb/printer/report [post]
+func (h *BaseHandler) UsbPrinterReport(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var reportReq req.UsbPrinterReportReq
+	if err := c.ShouldBindJSON(&reportReq); err != nil {
+		helper.HandleValidationError(c, err, reportReq, nil)
+		return
+	}
+	data, err := h.printerSrv.UsbPrinterReport(ctx, reportReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, data)
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -521,6 +547,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	statisticsSrv := service.NewStatisticsSrv()
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+	printerSrv := service.NewPrinterSrv(dbm, cache)
 
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 
@@ -531,6 +558,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		otherSrv:         otherSrv,
 		printerLogSrv:    printerLogSrv,
 		staffShiftSrv:    staffShiftSrv,
+		printerSrv:       printerSrv,
 	}
 
 	// 需要认证
@@ -562,5 +590,8 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.POST("/shift/withdraw", wrapper.ShiftWithdraw) // 取钱
 		privateApi.POST("/shift/deposit", wrapper.ShiftDeposit)   // 存钱
 		privateApi.POST("/shift/printer", wrapper.ShiftPrinter)   // 打印
+
+		// usb 打印
+		privateApi.POST("/usb/printer/report", wrapper.UsbPrinterReport) // 交班打印
 	}
 }

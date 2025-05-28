@@ -1,6 +1,8 @@
 package resp
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/dto"
+)
 
 // 创建点餐订单响应
 type CreateInstantOrderResp struct {
@@ -57,12 +59,21 @@ type ProductPackageList struct {
 	List []InstantMustPlanProductStat `json:"list"`
 }
 
+// ProductAutoAddReq 自动加购商品请求参数
+type ProductAutoAddReq struct {
+	FlavorUuid        uint64   `json:"flavor_uuid"`    // 某个规格商品ID
+	SauceUuidList     []uint64 `json:"sauce_uuid"`     // 小料ID列表
+	AttributeUuidList []uint64 `json:"attribute_uuid"` // 属性ID列表
+	Num               uint     `json:"num"`            // 加购数量
+}
+
 type InstantMustPlanProductStat struct {
-	Product     InstantMustPlanProduct `json:"product"`
-	IsAutoAdd   bool                   `json:"is_auto_add"`  // 是否是自动加购的商品。是则自动加入购物车，并且不显示在“必选方案”的弹框中
-	SelectedNum uint                   `json:"selected_num"` // 已选数量
-	MustNum     uint                   `json:"must_num"`     // 这个商品必选点的数量。还需点数量=must_num-selected_num
-	NeedNum     uint                   `json:"need_num"`     // 这个商品还需要点的数量。还需点数量=must_num-selected_num
+	Product           InstantMustPlanProduct `json:"product"`
+	IsAutoAdd         bool                   `json:"is_auto_add"`          // 是否是自动加购的商品。是则自动加入购物车
+	ProductAutoAddReq ProductAutoAddReq      `json:"product_auto_add_req"` // 自动加购商品请求参数
+	SelectedNum       uint                   `json:"selected_num"`         // 已选数量
+	MustNum           uint                   `json:"must_num"`             // 这个商品必选点的数量。还需点数量=must_num-selected_num
+	NeedNum           uint                   `json:"need_num"`             // 这个商品还需要点的数量。还需点数量=must_num-selected_num
 }
 type InstantMustPlanProduct struct {
 	Uuid            uint64             `json:"uuid"`             // 商品product_package的uuid
@@ -211,6 +222,7 @@ type PaymentMethodAmount struct {
 	UnpaidAmount          float64 `json:"unpaid_amount"`            // 未收金额。用于显示在金额输入框，默认显示未收金额。未收金额=应收金额-实付金额。实付金额指去掉手续费为这笔订单支付的金额
 	ZeroAmount            float64 `json:"zero_amount"`              // 抹零金额。当支付方式为有手续费时，结账抹零金额为0。
 	ZeroRule              uint8   `json:"zero_rule"`                // 结账抹零规格。0-实款实收 1-抹分 2-抹角 3-抹元. 当支付方式为有手续费时，值为0 实款实收
+	IsAutoZero            bool    `json:"is_auto_zero"`             // 是否是自动抹零
 	PaymentMethodUuid     uint64  `json:"payment_method_uuid"`      // 支付方式uuid。表示这个amount信息是当前端选择这个支付方式时显示的
 	CommissionFee         float64 `json:"commission_fee"`           // 已付款的手续费。用于显示最终应收，前端显示的最终应收=应收金额+已付款的手续费+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）
 }

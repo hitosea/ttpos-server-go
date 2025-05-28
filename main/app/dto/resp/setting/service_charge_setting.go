@@ -11,7 +11,13 @@ type ServiceCharge struct {
 	ApplyScopeOrdering  string  `json:"apply_scope_ordering"`   // 适用范围-点餐 0-关闭 1-开启
 	ApplyScopeTable     string  `json:"apply_scope_table"`      // 适用范围-桌台 0-关闭 1-开启
 	ApplyScopeTableList []int64 `json:"apply_scope_table_list"` // 适用范围-桌台id列表
+	ServiceFeeBase      string  `json:"service_fee_base"`       // 服务费计算基准 0-商品惠后价 1-商品价格合计
 }
+
+const (
+	ServiceFeeBasePrice  = "0" // 商品惠后价
+	ServiceFeeBaseAmount = "1" // 商品价格合计
+)
 
 const (
 	ApplyScopeAll           = "1" // 应用范围-全部

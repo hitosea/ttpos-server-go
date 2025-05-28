@@ -21,6 +21,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"ttpos-server-go/app/printer/printer_tasks"
 
@@ -34,7 +35,7 @@ import (
 type IPrinterLogSrv interface {
 	AddLog(ctx context.Context, printer resp.PrinterInfo, printerLogData model.PrinterLog, controlDeviceId string) (model.PrinterLog, error) // 添加打印日志
 	GetPrinterBase(ctx context.Context) (*resp.PrinterBaseResp, error)                                                                       // 获取基础数据
-	GetPrinterList(ctx context.Context, req req.PrinterListReq) (*resp.PrinterListPaginationResp, error)                                     // 获取打印列表
+	GetPrinterLogList(ctx context.Context, req req.PrinterListReq) (*resp.PrinterListPaginationResp, error)                                  // 获取打印列表
 	GetPrinterData(ctx context.Context) (*resp.PrinterDataList, error)                                                                       // 获取打印数据
 	PrinterPrint(ctx context.Context, req req.PrinterPrintReq) (*resp.PrinterData, error)                                                    // 打印
 	PrinterReport(ctx context.Context, req req.PrinterReportReqs) error                                                                      // 打印报告
@@ -120,8 +121,8 @@ func (s *printerLogSrv) GetPrinterBase(ctx context.Context) (*resp.PrinterBaseRe
 	}, nil
 }
 
-// GetPrinterList 获取打印列表
-func (s *printerLogSrv) GetPrinterList(ctx context.Context, req req.PrinterListReq) (*resp.PrinterListPaginationResp, error) {
+// GetPrinterLogList 获取打印列表
+func (s *printerLogSrv) GetPrinterLogList(ctx context.Context, req req.PrinterListReq) (*resp.PrinterListPaginationResp, error) {
 	// 获取打印日志
 	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 
@@ -156,11 +157,11 @@ func (s *printerLogSrv) GetPrinterList(ctx context.Context, req req.PrinterListR
 			})
 		case 2: // 补打成功
 			queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
-				return db.Where("status = ? AND num > 0", 2)
+				return db.Where("status = ? AND num > 1", 2)
 			})
 		case 3: // 补打失败
 			queryOpts = append(queryOpts, func(db *gorm.DB) *gorm.DB {
-				return db.Where("status = ? AND num > 0", 0)
+				return db.Where("status = ? AND num > 1", 0)
 			})
 		}
 	}
@@ -267,14 +268,14 @@ func (s *printerLogSrv) GetPrinterList(ctx context.Context, req req.PrinterListR
 			StatusText: func() string {
 				switch log.Status {
 				case 0:
-					if log.Num > 0 {
+					if log.Num > 1 {
 						return i18n.Translate(language, "补打失败")
 					}
 					return i18n.Translate(language, "失败")
 				case 1:
 					return i18n.Translate(language, "进行中")
 				case 2:
-					if log.Num > 0 {
+					if log.Num > 1 {
 						return i18n.Translate(language, "补打成功")
 					}
 					return i18n.Translate(language, "成功")
@@ -359,6 +360,8 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 				return string(configJson)
 			}(),
 			IsCashierPrinter: log.IsCashierPrinter(),
+			IsUsbPrinter:     log.IsUsbPrinter(),
+			PrintingTime:     log.PrintingTime,
 		})
 	}
 
@@ -401,6 +404,7 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 		PrintMethod:      printerLog.PrintMethod,
 		PrinterType:      printerLog.PrinterType,
 		IsCashierPrinter: printerLog.IsCashierPrinter(),
+		IsUsbPrinter:     printerLog.IsUsbPrinter(),
 		Copies: func() uint {
 			if printerLog.Printer == nil {
 				return 1
@@ -417,6 +421,7 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 			}
 			return string(configJson)
 		}(),
+		PrintingTime: printerLog.PrintingTime,
 	}, nil
 }
 
@@ -447,6 +452,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	printerLogData.PrinterTime = time.Now().Unix()
 	var printerLog model.PrinterLog
 	copier.Copy(&printerLog, printerLogData)
+	printerLog.PrintingTime = printerLog.CalculationTime()
 	printerLog.Data = printerLog.CompressData()
 	printerLog, err := printerLogRepo.Create(printerLog)
 	if err != nil {
@@ -514,6 +520,7 @@ func (s *printerLogSrv) GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (
 		PrinterType:      settingPrinterInfo.PrinterType,
 		PrinterConfig:    settingPrinterInfo.PrinterConfig,
 		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
+		PrintingTime:     200,
 	}, nil
 }
 
@@ -522,19 +529,36 @@ func (s *printerLogSrv) PrinterReport(ctx context.Context, req req.PrinterReport
 	if err := req.Validate(); err != nil {
 		return err
 	}
+	// 获取现有的打印日志
+	printerLogRepo := repository.NewPrinterLogRepo(ctx.GetDB())
+	existingLogs, err := printerLogRepo.GetByUuids(req.Uuids())
+	if err != nil {
+		return errors.WithMessage(err, "获取打印日志失败")
+	}
+	// 创建UUID到现有日志的映射
+	existingLogMap := make(map[uint64]*model.PrinterLog)
+	for i := range existingLogs {
+		existingLogMap[existingLogs[i].Uuid] = &existingLogs[i]
+	}
 	// 更新打印日志
 	printerLogs := []model.PrinterLog{}
 	for _, report := range req.Data {
+		// 获取当前Num值并自增1
+		currentNum := 1
+		if existingLog, exists := existingLogMap[report.Uuid]; exists {
+			currentNum = existingLog.Num + 1
+		}
 		printerLogs = append(printerLogs, model.PrinterLog{
 			BaseModel: model.BaseModel{
 				Uuid: report.Uuid,
 			},
-			Status: report.Status,
+			Num:    currentNum,
+			Status: utils.IfInt(report.Status == 0, constant.PrinterLogStatusEnd, constant.PrinterLogStatusSuccess),
 			Reason: report.Reason,
 		})
 	}
 	//
-	err := repository.NewPrinterLogRepo(ctx.GetDB()).BatchUpdate(printerLogs)
+	err = printerLogRepo.BatchUpdate(printerLogs)
 	if err != nil {
 		return errors.WithMessage(err, "更新打印日志失败")
 	}
@@ -567,5 +591,6 @@ func (s *printerLogSrv) GetOldOrderPrinterConfig(ctx context.Context, data strin
 		PrinterType:      settingPrinterInfo.PrinterType,
 		PrinterConfig:    settingPrinterInfo.PrinterConfig,
 		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
+		PrintingTime:     200,
 	}, nil
 }

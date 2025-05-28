@@ -10,6 +10,8 @@ type PrinterData struct {
 	PrinterType      string `json:"printer_type"`       // 打印机.类型 打印机类型 (SUNMI_LAN:商米打印机, SUNMI_CLOUD:商米打印机-云, XPRINTER_LAN:芯烨-有线 , XPRINTER_WIFI:芯烨-WIFI , CASHIER:收银机自带打印机)
 	PrinterConfig    string `json:"printer_config"`     // 打印机.配置
 	IsCashierPrinter bool   `json:"is_cashier_printer"` // 是否是收银机自带打印机
+	IsUsbPrinter     bool   `json:"is_usb_printer"`     // 是否是usb打印机
+	PrintingTime     int64  `json:"printing_time"`      // 打印耗时
 }
 
 type PrinterDataList struct {
@@ -49,4 +51,11 @@ type PrinterBase struct {
 type PrinterBaseResp struct {
 	PrinterList  []PrinterBase `json:"printer_list"`      // 打印机列表
 	PrinterTypes []PrinterBase `json:"printer_type_list"` // 打印类型列表
+}
+
+type PrinterReportResp struct {
+	OldPrinterName string `json:"old_printer_name"` // 旧打印机名称
+	OldPrinterSn   string `json:"old_printer_sn"`   // 旧打印机SN
+	NewPrinterName string `json:"new_printer_name"` // 新打印机名称
+	NewPrinterSn   string `json:"new_printer_sn"`   // 新打印机SN
 }

@@ -27,7 +27,7 @@ type saleOrderProductReasonRepoImpl struct {
 	db *gorm.DB
 }
 
-// CreateSaleOrderProductReason 创建销售订单商品原因
+// CreateSaleOrderProductReasons 创建销售订单商品原因
 func (r *saleOrderProductReasonRepoImpl) CreateSaleOrderProductReasons(reasons []*model.SaleOrderProductReason) error {
 	for _, reason := range reasons {
 		reason.SetNil()

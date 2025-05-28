@@ -44,7 +44,6 @@ type IPrinterLogRepo interface {
 
 	GetPrinter(opts ...DBOption) *model.Printer
 
-	//
 	Update(uuid uint64, vars map[string]any) error
 	UpdateByWhere(vars map[string]any, opts ...DBOption) error
 	BatchUpdate(logs []model.PrinterLog) error
@@ -129,7 +128,7 @@ func (r *printerLogRepo) GetPrinterData(deviceSn string, opts ...DBOption) ([]mo
 		r.WithPrinterPrinterType(),
 		r.WhereType(1),
 		r.WhereStatus(1),
-		r.WhereLimit(5),
+		r.WhereLimit(20),
 		r.WhereFirstExecution(0),
 		func(db *gorm.DB) *gorm.DB {
 			// 相同设备的
@@ -217,6 +216,7 @@ func (r *printerLogRepo) GetShiftPrinterData(deviceSn string, opts ...DBOption) 
 			PrintMethod:      printerLog.PrintMethod,
 			PrinterType:      printerLog.PrinterType,
 			IsCashierPrinter: printerLog.IsCashierPrinter(),
+			IsUsbPrinter:     printerLog.IsUsbPrinter(),
 			Copies: func() uint {
 				if printerLog.Printer == nil {
 					return 1
@@ -233,6 +233,7 @@ func (r *printerLogRepo) GetShiftPrinterData(deviceSn string, opts ...DBOption) 
 				}
 				return string(configJson)
 			}(),
+			PrintingTime: printerLog.PrintingTime,
 		}
 	}
 
@@ -394,6 +395,7 @@ func (r *printerLogRepo) BatchUpdate(logs []model.PrinterLog) error {
 		err := tx.Model(&model.PrinterLog{}).Where("uuid = ?", log.Uuid).Updates(map[string]interface{}{
 			"status": log.Status,
 			"reason": log.Reason,
+			"num":    log.Num,
 		}).Error
 
 		if err != nil {

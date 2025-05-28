@@ -22,7 +22,7 @@
               :start-placeholder="$t('开始日期')"
               :end-placeholder="$t('结束日期')"
               clearable
-              @change="onSearch"
+              @change="dateChange"
             ></el-date-picker>
           </div>
         </el-form-item>
@@ -147,9 +147,12 @@
   const cascader = ref(null);
 
   const timeTypeChange = () => {
-    datePickRef.value.dateStar = '';
-    datePickRef.value.dateEnd = '';
     searchForm.value.date = ['', ''];
+    onSearch();
+  };
+
+  const dateChange = () => {
+    searchForm.value.time_type = '-1';
     onSearch();
   };
 
@@ -162,6 +165,7 @@
 
   const onSearch = () => {
     clearTimeout(searchLoading.value);
+
     searchLoading.value = setTimeout(() => {
       curPage.value = 1;
       getData();
@@ -235,7 +239,6 @@
   };
 
   const sortChange = (column) => {
-    console.log(column);
     searchForm.value.sort_field = column.prop;
     if (column.order == 'descending') {
       searchForm.value.sort_type = 'desc';

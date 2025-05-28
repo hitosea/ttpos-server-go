@@ -47,8 +47,9 @@ class User extends UserModel
     public static function getList($data)
     {
         $model = new static();
+        $data['keyword'] = $data['keyword'] ?? '';
         // 搜索关键词
-        if (!empty($data['keyword'])) {
+        if ($data['keyword'] !== '') {
             $keyword = trim($data['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
                 $query->like('id|phone|nickname', $keyword);
@@ -216,14 +217,22 @@ class User extends UserModel
      */
     public function recharge($storeUserName, $source, $data)
     {
+        $result = false;
         if ($source == 0) {
-            return $this->rechargeToBalance($storeUserName, $data['balance']);
+            $result = $this->rechargeToBalance($storeUserName, $data['balance']);
         } elseif ($source == 1) {
-            return $this->rechargeToPoints($storeUserName, $data['points']);
+            $result = $this->rechargeToPoints($storeUserName, $data['points']);
         } elseif ($source == 2) {
-            return $this->rechargeToBalance($storeUserName, $data['balance']) && $this->rechargeToPoints($storeUserName, $data['points']);
+            $result = ($this->rechargeToBalance($storeUserName, $data['balance']) && $this->rechargeToPoints($storeUserName, $data['points']));
+            if ($result && $this['phone']) {
+                // 发送充值短信
+                $data['uuid'] = $this['uuid'];
+                $data['token'] = request()->header('token');
+                $data['language'] = request()->header('language');
+                event('UserRecharge', $data);
+            }
         }
-        return false;
+        return $result;
     }
 
     /**

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 // 源类型
@@ -51,6 +52,8 @@ const (
 	UPDATE_REFUND_STATE = "update_refund_state"
 	// 更新厨显 data = {"update_time": 1742971471}
 	UPDATE_KITCHEN = "update_kitchen"
+	// 更新打印机 data = {"update_time": 1742971471, "printer_uuid": 1, "type": "update | delete"}
+	UPDATE_SELECTED_PRINTER = "update_selected_printer"
 )
 
 // Push sends a POST request to the WebSocket server with specific parameters.
@@ -68,7 +71,25 @@ func PushClient(company_uuid uint64, source_client, device_id, message_type stri
 		key := fmt.Sprintf("%d:%s:%s:%s", company_uuid, source_client, device_id, message_type)
 		md5Sum := fmt.Sprintf("%x", md5.Sum([]byte(key)))
 		cacheKey = fmt.Sprintf("ws_msg:%s", md5Sum)
-	} else if message_type != PRINT_DATA {
+	} else if message_type == PRINT_DATA {
+		key := fmt.Sprintf("%d:%s:%s:%s", company_uuid, source_client, device_id, message_type)
+		var updateTime string
+		// 安全地获取更新时间，支持多种可能的键名和类型
+		if updateTimeVal, exists := data["update_times"]; exists {
+			switch v := updateTimeVal.(type) {
+			case int64:
+				updateTime = strconv.FormatInt(v, 10)
+			case int:
+				updateTime = strconv.FormatInt(int64(v), 10)
+			case string:
+				updateTime = v
+			default:
+				updateTime = fmt.Sprintf("%v", v)
+			}
+		}
+		md5Sum := fmt.Sprintf("%x", md5.Sum(append([]byte(key), []byte(updateTime)...)))
+		cacheKey = fmt.Sprintf("ws_msg:%s", md5Sum)
+	} else {
 		key := fmt.Sprintf("%d:%s:%s:%s", company_uuid, source_client, device_id, message_type)
 		md5Sum := fmt.Sprintf("%x", md5.Sum(append([]byte(key), jsonData...)))
 		cacheKey = fmt.Sprintf("ws_msg:%s", md5Sum)
@@ -91,14 +112,14 @@ func PushClient(company_uuid uint64, source_client, device_id, message_type stri
 	}
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		fmt.Println("Failed to marshal payload: %v", err)
+		fmt.Printf("Failed to marshal payload: %v", err)
 		log.Printf("Failed to marshal payload: %v", err)
 		return err
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payloadBytes))
 	if err != nil {
-		fmt.Println("Failed to create request: %v", err)
+		fmt.Printf("Failed to create request: %v", err)
 		log.Printf("Failed to create request: %v", err)
 		return err
 	}
@@ -107,14 +128,14 @@ func PushClient(company_uuid uint64, source_client, device_id, message_type stri
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Failed to send request: %v", err)
+		fmt.Printf("Failed to send request: %v", err)
 		log.Printf("Failed to send request: %v", err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Received non-OK response: %s %s", resp.Status, url)
+		fmt.Printf("Received non-OK response: %s %s", resp.Status, url)
 		log.Printf("Received non-OK response: %s %s", resp.Status, url)
 		return fmt.Errorf("received non-OK response: %s", resp.Status)
 	}

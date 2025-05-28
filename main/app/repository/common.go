@@ -23,6 +23,13 @@ func NotDeleted(db *gorm.DB) *gorm.DB {
 }
 
 func Like(keyword string) string {
+	specialChars := []string{"%", "_", "\\\\", "[", "]", "^", "|", "$", "(", ")"}
+
+	keyword = strings.TrimSpace(keyword)
+	for _, char := range specialChars {
+		keyword = strings.ReplaceAll(keyword, char, "\\"+char)
+	}
+
 	return "%" + keyword + "%"
 }
 
@@ -66,6 +73,8 @@ type ICommonRepo interface {
 	WhereByRefundTime(refundTime int64) DBOption                        // 根据退款时间查询
 	WhereByDutyNo(dutyNo string) DBOption                               // 根据班次编号查询
 	WhereByShiftLogUuid(shiftLogUuid uint64) DBOption                   // 根据交班记录UUID查询
+	WhereByAction(action string) DBOption                               // 根据操作查询
+	WhereByOperatorUuid(operatorUuid uint64) DBOption                   // 根据操作员UUID查询
 	WhereLikeByName(name string) DBOption                               // 根据名称查询
 	WhereBetweenByCreateTime(startTime int64, endTime int64) DBOption   // 根据创建时间查询
 	WhereBetweenByCompleteTime(startTime int64, endTime int64) DBOption // 根据完成时间查询
@@ -188,7 +197,7 @@ func (r *commonRepo) WhereByIsShowKitchen(isShow uint) DBOption {
 	}
 }
 
-// WhereByIsH5 根据是否显示H5端查询
+// WhereByIsShowH5 根据是否显示H5端查询
 func (r *commonRepo) WhereByIsShowH5(isShow uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_show_h5 = ?", isShow)
@@ -474,28 +483,28 @@ func (r *commonRepo) WhereBySign(sign string) DBOption {
 	}
 }
 
-// 根据员工UUID查询
+// WhereByStaffUuid 根据员工UUID查询
 func (r *commonRepo) WhereByStaffUuid(staffUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("staff_uuid = ?", staffUuid)
 	}
 }
 
-// 根据交班编号查询
+// WhereByShiftNo 根据交班编号查询
 func (r *commonRepo) WhereByShiftNo(shiftNo string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("shift_no = ?", shiftNo)
 	}
 }
 
-// 根据未处理查询
+// WhereByProcessedNot 根据未处理查询
 func (r *commonRepo) WhereByProcessedNot() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("processed = ?", constant.MemberPointLogOrBalanceProcessedNot)
 	}
 }
 
-// 根据退款时间查询
+// WhereByRefundTime 根据退款时间查询
 func (r *commonRepo) WhereByRefundTime(refundTime int64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("refund_time = ?", refundTime)
@@ -528,5 +537,19 @@ func (r *commonRepo) WhereByDutyNo(dutyNo string) DBOption {
 func (r *commonRepo) WhereByShiftLogUuid(shiftLogUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("shift_log_uuid = ?", shiftLogUuid)
+	}
+}
+
+// WhereByAction 根据操作查询
+func (r *commonRepo) WhereByAction(action string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("action = ?", action)
+	}
+}
+
+// WhereByOperatorUuid 根据操作员UUID查询
+func (r *commonRepo) WhereByOperatorUuid(operatorUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("operator_uuid = ?", operatorUuid)
 	}
 }

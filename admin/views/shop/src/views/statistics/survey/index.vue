@@ -385,6 +385,7 @@
   import datePick from '@/components/datePick/datePick.vue';
   import { languageStore } from '@/store/model/language.js';
   import { useUserStore } from '@/store';
+  import dayjs from '@/utils/dayjs';
   const languageTag = languageStore().language;
   const { token } = useUserStore();
   const { computedSupplier } = useUserStore();
@@ -418,7 +419,9 @@
         regionData: [],
       };
     },
-    created() {
+    async mounted() {
+      this.searchForm.date = [dayjs(), dayjs()];
+      await this.$nextTick();
       /*获取列表*/
       this.getParams();
     },

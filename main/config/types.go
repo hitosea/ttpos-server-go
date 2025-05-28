@@ -63,3 +63,9 @@ type MigrateDatabaseConf struct {
 	MigrateOldDBDatabase string // 主数据库，如果是sqlite3，则为文件路径
 	MigrateOldDBPrefix   string // 表名前缀
 }
+
+type SMSConf struct {
+	BaseURL     string // 基础URL
+	APIKey      string // API密钥
+	ProjectName string // 项目名称
+}

@@ -109,11 +109,11 @@ func (model *SaleOrder) GetUnpaidAmount() float64 {
 
 // 获取总的退款金额
 func (model *SaleOrder) GetTotalRefundAmount() float64 {
-	refundAmount := 0.0
+	refundAmount := decimal.NewFromFloat(0)
 	for _, refundOrder := range model.ReturnOrders {
-		refundAmount += refundOrder.RefundAmount
+		refundAmount = refundAmount.Add(decimal.NewFromFloat(refundOrder.RefundAmount))
 	}
-	return refundAmount
+	return refundAmount.InexactFloat64()
 }
 
 // 返回销售订单商品

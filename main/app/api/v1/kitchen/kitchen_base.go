@@ -153,7 +153,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		authSrv:    authSrv,
 		deviceSrv:  deviceSrv,
 		settingSrv: settingSrv,
-		pinterSrv:  service.NewPrinterSrv(dbm),
+		pinterSrv:  service.NewPrinterSrv(dbm, cache),
 	}
 
 	// 需要认证

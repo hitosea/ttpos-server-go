@@ -122,6 +122,9 @@
           <el-radio :label="1">{{ $t('图片模式') }}</el-radio>
         </el-radio-group>
       </el-form-item>
+      <el-form-item for="no_click" :label="$t('营业时间')" prop="opening_hours" :rules="[{ required: true, message: $t('请选择营业时间') }]">
+        <TimePicker v-model="form.opening_hours" @update:modelValue="updateOpeningHours" />
+      </el-form-item>
     </el-form>
     <!--提交-->
     <div class="common-button-wrapper">
@@ -166,7 +169,7 @@
   import ManageFreeReason from './ManageFreeReason.vue';
   import ManageRefundReason from './ManageRefundReason.vue';
   import Qrcode from './Qrcode.vue';
-
+  import TimePicker from '@/components/time-picker/index.vue';
   const { currency } = useUserStore();
   export default {
     components: {
@@ -174,6 +177,7 @@
       ManageFreeReason,
       ManageRefundReason,
       Qrcode,
+      TimePicker,
     },
     data() {
       return {
@@ -192,6 +196,7 @@
           no_clear_table: 1,
           is_need_password: 1,
           dish_card_style: 1,
+          opening_hours: '',
         },
         formRules: {
           zeroing_method: [
@@ -330,6 +335,10 @@
             self.form.is_need_password = Number(data.data.vars.values.is_need_password) || 0;
 
             self.form.dish_card_style = Number(data.data.vars.values.dish_card_style) || 0;
+            // 营业时间 格式：00:00-23:59 转为[00:00, 23:59]
+            self.form.opening_hours = data.data.vars.values.opening_hours
+              ? [data.data.vars.values.opening_hours.split('-')[0], data.data.vars.values.opening_hours.split('-')[1]]
+              : [];
 
             self.freeTagCount = Number(data.data.free_tag_count) || 0;
             self.returnReasonCount = Number(data.data.return_reason_count) || 0;
@@ -345,6 +354,7 @@
       onSubmit() {
         let self = this;
         let params = JSON.parse(JSON.stringify(self.form));
+        params.opening_hours = params.opening_hours.join('-');
         self.$refs.form.validate((valid) => {
           if (valid) {
             self.loading = true;
@@ -378,6 +388,10 @@
       closeQrcode() {
         let self = this;
         self.isqrcode = false;
+      },
+
+      updateOpeningHours(value) {
+        this.form.opening_hours = value;
       },
     },
   };

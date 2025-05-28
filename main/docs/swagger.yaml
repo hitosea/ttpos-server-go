@@ -102,6 +102,9 @@ definitions:
       min_order_price:
         description: 最小订单金额
         type: number
+      opening_hours:
+        description: 营业时间
+        type: string
       payment_method_incomes:
         description: 支付方式
         items:
@@ -365,8 +368,33 @@ definitions:
       total_payment_amount:
         type: number
     type: object
+  business_data_resp.BusinessDataHome:
+    properties:
+      member_data:
+        allOf:
+        - $ref: '#/definitions/business_data_resp.MemberData'
+        description: 会员数据
+      total_discount_money:
+        description: 总优惠折扣
+        type: number
+      total_order_num:
+        description: 总订单数
+        type: integer
+      total_received_price:
+        description: 总实收金额
+        type: number
+      total_refund_money:
+        description: 总退款金额
+        type: number
+      total_user_discount_money:
+        description: 总会员折扣
+        type: number
+    type: object
   business_data_resp.BusinessDataPaymentMethod:
     properties:
+      opening_hours:
+        description: 营业时间
+        type: string
       payment_method_incomes:
         description: 支付方式
         items:
@@ -378,6 +406,9 @@ definitions:
     type: object
   business_data_resp.BusinessDataProduct:
     properties:
+      opening_hours:
+        description: 营业时间
+        type: string
       products:
         description: 商品列表
         items:
@@ -391,6 +422,9 @@ definitions:
         items:
           $ref: '#/definitions/business_data_resp.Category'
         type: array
+      opening_hours:
+        description: 营业时间
+        type: string
       payment_method_incomes:
         description: 支付方式
         items:
@@ -413,6 +447,12 @@ definitions:
         items:
           $ref: '#/definitions/business_data_resp.ProductRank'
         type: array
+    type: object
+  business_data_resp.BusinessDataShiftRefundAmount:
+    properties:
+      refund_amount:
+        description: 退款金额
+        type: number
     type: object
   business_data_resp.Category:
     properties:
@@ -862,8 +902,11 @@ definitions:
       queryStartTime:
         description: 查询开始时间戳
         type: integer
+      staffUuid:
+        description: 操作员UUID
+        type: integer
       timeType:
-        description: 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)
+        description: 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月, 5 营业时间)
         type: integer
     type: object
   req.BusinessDataPrinterReq:
@@ -884,7 +927,7 @@ definitions:
         description: 统计类型 (0 全部, 1 按支付方式, 2 按商品分类, 3 按商品)
         type: integer
       time_type:
-        description: 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)
+        description: 时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月, 5 营业时间)
         type: integer
     type: object
   req.BusinessDataRankProductReq:
@@ -1226,7 +1269,7 @@ definitions:
   req.OrderCartProductAddReq:
     properties:
       attribute_uuid:
-        description: 规格ID
+        description: 属性ID列表
         items:
           type: integer
         type: array
@@ -1246,7 +1289,7 @@ definitions:
         description: 销售订单ID。可选，参数不填时默认加购到第一个销售订单中
         type: integer
       sauce_uuid:
-        description: 小料ID
+        description: 小料ID列表
         items:
           type: integer
         type: array
@@ -1274,6 +1317,12 @@ definitions:
       ignore_must:
         description: 是否忽略必点方案
         type: boolean
+      is_check_cooking:
+        description: 是否只进行送厨检查，而不进行实际的送厨。场景：助手端开启下单校验高级密码时，先检查送厨，再实际送厨。检查送厨时不进行实际送厨
+        type: boolean
+      password:
+        description: 高级密码后台开启的时候才传
+        type: string
       sale_bill_uuid:
         description: 销售账单ID
         type: integer
@@ -1959,6 +2008,33 @@ definitions:
     - is_show_sold_out
     - menu_show_sold_out
     type: object
+  req.UsbPrinterReportPrinterData:
+    properties:
+      m_name:
+        description: 厂商名称
+        type: string
+      name:
+        description: 打印机名称
+        type: string
+      pid:
+        description: 打印机PID
+      sn:
+        description: 打印机SN
+        type: string
+      vid:
+        description: 打印机VID
+    type: object
+  req.UsbPrinterReportReq:
+    properties:
+      list:
+        description: 所有在线的USB打印机数据
+        items:
+          $ref: '#/definitions/req.UsbPrinterReportPrinterData'
+        type: array
+      selected_sn:
+        description: 选择的打印机SN
+        type: string
+    type: object
   req.VerifyPasswordReq:
     properties:
       password:
@@ -2472,6 +2548,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.SystemSetting'
         description: 系统设置
+      usb_printer:
+        allOf:
+        - $ref: '#/definitions/resp.UsbPrinterList'
+        description: 自带打印机设置
     type: object
   resp.CashierLoginResp:
     properties:
@@ -2570,6 +2650,9 @@ definitions:
       customer_count:
         description: 桌台人数
         type: integer
+      default_people_num:
+        description: 默认人数
+        type: integer
       desk_no:
         description: 桌台名称
         type: string
@@ -2578,6 +2661,9 @@ definitions:
         type: boolean
       is_lock:
         description: 是否锁单
+        type: boolean
+      is_open_default_people_num:
+        description: 是否开启默认人数
         type: boolean
       is_split_order:
         description: 是否拆单
@@ -3120,7 +3206,7 @@ definitions:
   resp.InstantMustPlanProductStat:
     properties:
       is_auto_add:
-        description: 是否是自动加购的商品。是则自动加入购物车，并且不显示在“必选方案”的弹框中
+        description: 是否是自动加购的商品。是则自动加入购物车
         type: boolean
       must_num:
         description: 这个商品必选点的数量。还需点数量=must_num-selected_num
@@ -3130,6 +3216,10 @@ definitions:
         type: integer
       product:
         $ref: '#/definitions/resp.InstantMustPlanProduct'
+      product_auto_add_req:
+        allOf:
+        - $ref: '#/definitions/resp.ProductAutoAddReq'
+        description: 自动加购商品请求参数
       selected_num:
         description: 已选数量
         type: integer
@@ -3935,6 +4025,9 @@ definitions:
       commission_fee:
         description: 已付款的手续费。用于显示最终应收，前端显示的最终应收=应收金额+已付款的手续费+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）
         type: number
+      is_auto_zero:
+        description: 是否是自动抹零
+        type: boolean
       payment_method_uuid:
         description: 支付方式uuid。表示这个amount信息是当前端选择这个支付方式时显示的
         type: integer
@@ -3992,8 +4085,11 @@ definitions:
       logo:
         description: logo
         type: string
+      payment_method:
+        description: 支付方式
+        type: string
       payment_name:
-        description: 支付方式名称
+        description: 支付名称
         type: string
       qrcode:
         description: 二维码
@@ -4102,6 +4198,9 @@ definitions:
       is_cashier_printer:
         description: 是否是收银机自带打印机
         type: boolean
+      is_usb_printer:
+        description: 是否是usb打印机
+        type: boolean
       print_method:
         description: 打印方式 1文本打印, 2图片打印'
         type: integer
@@ -4112,6 +4211,9 @@ definitions:
         description: 打印机.类型 打印机类型 (SUNMI_LAN:商米打印机, SUNMI_CLOUD:商米打印机-云, XPRINTER_LAN:芯烨-有线
           , XPRINTER_WIFI:芯烨-WIFI , CASHIER:收银机自带打印机)
         type: string
+      printing_time:
+        description: 打印耗时
+        type: integer
       uuid:
         description: 打印日志Uuid
         type: integer
@@ -4251,6 +4353,25 @@ definitions:
       max_select:
         description: 最大可选的属性数量。0时不限制选择数量
         type: integer
+    type: object
+  resp.ProductAutoAddReq:
+    properties:
+      attribute_uuid:
+        description: 属性ID列表
+        items:
+          type: integer
+        type: array
+      flavor_uuid:
+        description: 某个规格商品ID
+        type: integer
+      num:
+        description: 加购数量
+        type: integer
+      sauce_uuid:
+        description: 小料ID列表
+        items:
+          type: integer
+        type: array
     type: object
   resp.ProductFlavor:
     properties:
@@ -4805,6 +4926,9 @@ definitions:
     type: object
   resp.RefundRechargeOrderPaymentRecord:
     properties:
+      currency_unit:
+        description: 金额单位
+        type: string
       payment_amount:
         description: 支付金额
         type: number
@@ -4851,6 +4975,10 @@ definitions:
     properties:
       amount_info:
         $ref: '#/definitions/resp.AmountInfo'
+      auto_discount_message:
+        description: 优惠折扣-自动抹零信息. 如"优惠折扣自动抹零-抹分" "优惠折扣自动抹零-抹角" "优惠折扣自动抹零-四舍五入保留一位小数"
+          "优惠折扣自动抹零-四舍五入保留整数"
+        type: string
       custom_discount_rate:
         description: 订单改价折扣率
         type: number
@@ -5261,6 +5389,31 @@ definitions:
         description: 未下单商品数量
         type: integer
     type: object
+  resp.UsbPrinter:
+    properties:
+      m_name:
+        description: 厂商名称
+        type: string
+      name:
+        description: 打印机名称
+        type: string
+      pid:
+        description: 打印机PID
+      sn:
+        description: 打印机SN
+        type: string
+      vid:
+        description: 打印机VID
+    type: object
+  resp.UsbPrinterList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.UsbPrinter'
+        type: array
+      selected_sn:
+        type: string
+    type: object
   setting.AddClockItem:
     properties:
       action:
@@ -5294,6 +5447,9 @@ definitions:
         description: 是否开启自动锁屏 0-关闭 1-开启
         type: string
       is_auto_send:
+        type: string
+      is_check_order:
+        description: 下单校验高级密码 0-关闭 1-开启。默认关闭
         type: string
       is_remain_color:
         description: 是否开启剩余时长颜色 0-关闭 1-开启
@@ -5412,6 +5568,9 @@ definitions:
       no_clear_table:
         description: 结账后不清台 0-清台 1-不清台
         type: string
+      opening_hours:
+        description: 营业时间 18:00-02:00
+        type: string
       qr_code:
         description: 电子菜单二维码校验失效值，6位数数字
         type: string
@@ -5449,6 +5608,8 @@ definitions:
         type: string
       printer_id:
         description: 收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符
+      printer_usb_id:
+        description: 收银机设备SN
         type: string
     type: object
   setting.CashierResp:
@@ -6153,7 +6314,7 @@ paths:
         "200":
           description: 桌台详情
           schema:
-            $ref: '#/definitions/resp.DeskInfoResp'
+            $ref: '#/definitions/resp.Desk'
         "404":
           description: 未找到
       security:
@@ -8233,7 +8394,7 @@ paths:
         "200":
           description: 桌台详情
           schema:
-            $ref: '#/definitions/resp.DeskInfoResp'
+            $ref: '#/definitions/resp.Desk'
         "404":
           description: 未找到
       security:
@@ -12894,6 +13055,35 @@ paths:
       summary: 统计商品分类
       tags:
       - 收银端.营业数据
+  /cashier/usb/printer/report:
+    post:
+      consumes:
+      - application/json
+      description: usb 打印机上报
+      parameters:
+      - description: usb 打印机上报参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.UsbPrinterReportReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 打印数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.PrinterData'
+              type: object
+      security:
+      - JwtToken: []
+      summary: usb 打印机上报
+      tags:
+      - 收银端.基础信息
   /cashier/verify_advanced_password:
     post:
       consumes:
@@ -14547,6 +14737,35 @@ paths:
       summary: 统计导出
       tags:
       - 商家端.营业数据
+  /shop/statistics/home:
+    get:
+      consumes:
+      - application/json
+      description: 统计首页
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.BusinessDataCountReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/business_data_resp.BusinessDataHome'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 统计首页
+      tags:
+      - 商家端.营业数据
   /shop/statistics/payment_method:
     get:
       consumes:
@@ -14690,6 +14909,35 @@ paths:
       security:
       - JwtToken: []
       summary: 统计商品销售
+      tags:
+      - 商家端.营业数据
+  /shop/statistics/shift_refund_amount:
+    get:
+      consumes:
+      - application/json
+      description: 统计班次退款金额
+      parameters:
+      - description: 统计参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.BusinessDataCountReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 统计数据
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/business_data_resp.BusinessDataShiftRefundAmount'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 统计班次退款金额
       tags:
       - 商家端.营业数据
   /tablet/base:

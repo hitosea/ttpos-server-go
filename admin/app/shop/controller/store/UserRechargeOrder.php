@@ -2,11 +2,12 @@
 
 namespace app\shop\controller\store;
 
+use app\common\model\order\RechargeOrder;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
-use app\common\model\order\UserRechargeOrder as UserRechargeOrderModel;
 use app\shop\service\order\UserRechargeExportService;
 use help\HttpHelp;
+use app\shop\model\shop\User as ShopUser;
 
 /**
  * 充值订单（v1.1.0）
@@ -248,6 +249,15 @@ class UserRechargeOrder extends Controller
             return $this->renderSuccess('', compact('info', 'pay_list'));
         }
 
+        $token = request()->header('token');
+        $order = RechargeOrder::where('uuid', $data['id'])->find();
+        if ($order) {
+            $orderToken = ShopUser::getUserTokenByDutyNo($order['duty_no']);
+            if ($orderToken) {
+                $token = $orderToken;
+            }
+        }
+
         // 请求提交充值订单退款接口
         $res = HttpHelp::postRequest('http://nginx/api/v1/shop/recharge_order/refund', json_encode([
             'uuid' => intval($data['id']),
@@ -257,7 +267,7 @@ class UserRechargeOrder extends Controller
             'account_no' => $data['account_no'] ?? '',
             'account_name' => $data['account_name'] ?? '',
         ]), [
-            'Authorization: Bearer ' . request()->header('token'),
+            'Authorization: Bearer ' . $token,
             'Accept-Language: ' . request()->header('language'),
             'Content-Type: application/json; charset=utf-8',
         ]);

@@ -33,9 +33,9 @@ func withCalcAndSaveSaleBill() func(option *ActionCookingOption) {
 	}
 }
 
-func WithSeletedMustPlanProductsActionCookingOption(seletedMustPlanProducts *ro.MustPlanProductInfo) func(option *ActionCookingOption) {
+func WithSelectedMustPlanProductsActionCookingOption(selectedMustPlanProducts *ro.MustPlanProductInfo) func(option *ActionCookingOption) {
 	return func(option *ActionCookingOption) {
-		option.SelectedMustPlanProducts = seletedMustPlanProducts
+		option.SelectedMustPlanProducts = selectedMustPlanProducts
 	}
 }
 
@@ -81,7 +81,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		var errCheck error
 		if option.SelectedMustPlanProducts != nil {
 			// 平板端加购并送厨时，将平板加购的商品注入到checkOrder中
-			checkServiceRes, errCheck = s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSeletedMustPlanProducts(option.SelectedMustPlanProducts))
+			checkServiceRes, errCheck = s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSelectedMustPlanProducts(option.SelectedMustPlanProducts))
 		} else {
 			// 限购检查只检查未送厨的商品
 			uuids := make([]uint64, 0)
@@ -257,7 +257,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 	return nil, nil
 }
 
-// 加购
+// ActionAdd 加购
 func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) error {
 	db := ctx.GetDB()
 
@@ -287,16 +287,16 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 	}
 
 	// MustPlanUuid => ProductPackageUuid => num
-	seletedMustPlanProducts := make(ro.MustPlanProductInfo)
+	selectedMustPlanProducts := make(ro.MustPlanProductInfo)
 	for _, product := range request.Products {
-		if seletedMustPlanProducts[product.MustPlanUuid] == nil {
-			seletedMustPlanProducts[product.MustPlanUuid] = make(map[uint64]uint)
+		if selectedMustPlanProducts[product.MustPlanUuid] == nil {
+			selectedMustPlanProducts[product.MustPlanUuid] = make(map[uint64]uint)
 		}
 		flavorProductBom, err := repository.NewProductBomRepo(ctx.GetDB()).GetFlavorProductBomByUuid(product.FlavorProductBomUuid)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
-		seletedMustPlanProducts[product.MustPlanUuid][flavorProductBom.ProductPackageUuid] = product.Num
+		selectedMustPlanProducts[product.MustPlanUuid][flavorProductBom.ProductPackageUuid] = product.Num
 	}
 	// 送厨相关
 	{
@@ -309,7 +309,7 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 		}
 
 		// 送厨
-		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, 0, false, withCalcAndSaveSaleBill(), WithSeletedMustPlanProductsActionCookingOption(&seletedMustPlanProducts)) // 平板端加购并送厨
+		checkServiceRes, err := s.ActionCooking(ctx, ignoreMust, saleBill, unCookingSaleOrderProducts, 0, false, withCalcAndSaveSaleBill(), WithSelectedMustPlanProductsActionCookingOption(&selectedMustPlanProducts)) // 平板端加购并送厨
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -338,6 +338,23 @@ func filterOtherClientProducts(unCookingSaleOrderProducts []*model.SaleOrderProd
 func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) (any, error) {
 	db := ctx.GetDB()
 	res := make(map[string]any)
+
+	// 如果加购并送厨中的商品中有必点方案uuid，说明用户已经在平板端完成了必点，则关闭该销售账单的必点弹窗
+	if request.Products != nil {
+		for _, product := range request.Products {
+			if product.MustPlanUuid != 0 {
+				if err := repository.NewSaleBillRepo(db).UpdateSaleBillShowMustPlan(request.SaleBillUuid); err != nil {
+					return nil, errors.WithMessage(err)
+				}
+				// 设置已经完成自动加购
+				if err := repository.NewSaleBillRepo(db).UpdateSaleBillAutoAddMustProduct(request.SaleBillUuid); err != nil {
+					return nil, errors.WithMessage(err, "标记自动加购完成失败")
+				}
+				break
+			}
+		}
+	}
+
 	saleBill, _ := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if saleBill.IsEndStatus() {
 		return res, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))

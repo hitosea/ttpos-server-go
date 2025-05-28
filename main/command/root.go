@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"ttpos-server-go/app/printer/printer_tasks"
 	"ttpos-server-go/config"
 	"ttpos-server-go/docs"
 	"ttpos-server-go/i18n"
@@ -14,6 +13,8 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/sms"
+	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/validator"
 	"ttpos-server-go/router"
 
@@ -46,6 +47,9 @@ var rootCommand = &cobra.Command{
 		// 自定义验证规则
 		validator.Init()
 
+		// 初始化id生成器
+		utils.InitIdGenerator()
+
 		// 初始化全局缓存引擎
 		var cacheConfig cache.Config
 		_ = copier.Copy(&cacheConfig, &config.Redis)
@@ -54,6 +58,13 @@ var rootCommand = &cobra.Command{
 		// 初始化Redis分布式并发锁
 		lock.InitRedisLock(cacheConfig)
 		lock.NewSystemLock()
+
+		// 初始化短信客户端
+		sms.InitClient(config.SMS.APIKey, config.SMS.BaseURL, config.SMS.ProjectName)
+		// 检查短信客户端配置
+		if err := sms.GetSMSClient().CheckConfig(); err != nil {
+			logger.Logger.Info("Failed to check SMS client config", zap.Error(err))
+		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		defer logger.Logger.Sync()
@@ -72,7 +83,7 @@ var rootCommand = &cobra.Command{
 	},
 }
 
-// 执行命令
+// Execute 执行命令
 func Execute() {
 	rootCommand.CompletionOptions.DisableDefaultCmd = true
 	if err := rootCommand.Execute(); err != nil {
@@ -89,7 +100,13 @@ func initializeExternalService(dbm *database.DBManager, cache cache.Cache) {
 	r := gin.New()
 	// 添加中间件
 	r.Use(middleware.Cors())
-	r.Use(gin.Logger(), middleware.Recovery(logger.Logger, config.Server.Mode))
+	// 添加请求参数日志中间件
+	if config.Server.Mode == "debug" {
+		r.Use(middleware.Recovery(logger.Logger, config.Server.Mode))
+		r.Use(middleware.RequestLogger(logger.Logger))
+	} else {
+		r.Use(gin.Logger(), middleware.Recovery(logger.Logger, config.Server.Mode))
+	}
 	// 注册 Swagger 路由
 	// 允许自定义Swagger文档链接
 	docs.SwaggerInfo.BasePath = "/api/v1"
@@ -107,9 +124,15 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	c := cron.New(cron.WithSeconds())
 
 	// 1秒检查打印
-	_, _ = c.AddFunc("*/1 * * * * *", func() {
-		printer_tasks.NewPrinterTask(dbm, cache).Execute()
-	})
+	// _, _ = c.AddFunc("*/1 * * * * *", func() {
+	// 	printer_tasks.NewPrinterTask(dbm, cache).Execute()
+	// })
+
+	// NOTE: 舍弃5分钟自动切换
+	// 1分钟检查Usb打印是否在线
+	// _, _ = c.AddFunc("0 */2 * * * *", func() {
+	// 	tasks.NewUsbPrintTask(dbm, cache).Execute()
+	// })
 
 	// 启动定时器
 	c.Start()

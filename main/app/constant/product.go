@@ -151,3 +151,9 @@ const (
 	ProductionOrderProductColumnSaleBill = "sale_bill_uuid"
 	ProductionOrderProductColumnCategory = "first_category_uuid"
 )
+
+// 服务费计算基准
+const (
+	SaleBillSettingServiceFeeBasePrice  = 0 // 商品惠后价
+	SaleBillSettingServiceFeeBaseAmount = 1 // 商品价格合计
+)

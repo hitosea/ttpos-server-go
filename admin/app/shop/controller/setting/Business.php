@@ -50,6 +50,27 @@ class Business extends Controller
         $setting = SettingModel::getItem(SettingEnum::BUSINESS);
         $old_dish_card_style = $setting['dish_card_style'] ?? 0;
         $update_style_time = $old_dish_card_style != $data['dish_card_style'];
+        $opening_hours = $data['opening_hours'] ?? '';
+        if ($opening_hours != '') {
+            $opening_hours_arr = explode('-', $opening_hours);
+            if (count($opening_hours_arr) != 2) {
+                return $this->renderError('营业时间格式错误');
+            }
+            // 验证时间格式：如：08:00-22:00，时间格式为：HH:MM
+            $start_time = $opening_hours_arr[0];
+            $end_time = $opening_hours_arr[1];
+            // 验证开始时间
+            if (!preg_match('/^([01][0-9]|2[0-3]):([0-5][0-9])$/', $start_time)) {
+                return $this->renderError('开始时间格式不正确');
+            }
+            
+            // 验证结束时间
+            if (!preg_match('/^([01][0-9]|2[0-3]):([0-5][0-9])$/', $end_time)) {
+                return $this->renderError('结束时间格式不正确');
+            }
+
+            $data['opening_hours'] = $opening_hours;
+        }
         $arr = [
             'zeroing_method' => $data['zeroing_method'] ?? 0,
             'checkout_zeroing_method' => $data['checkout_zeroing_method'] ?? 0,
@@ -60,6 +81,7 @@ class Business extends Controller
             'dish_card_style' => $data['dish_card_style'] ?? 0,
             'discount_method' => $data['discount_method'] ?? 10,
             'is_invoice' => $data['is_invoice'] ?? 0,
+            'opening_hours' => $opening_hours,
         ];
         if ($update_style_time) {
             $arr['dish_card_style_time'] = time() . '';
@@ -408,6 +430,10 @@ class Business extends Controller
         $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?: 0;
         $app_id = $this->store['app']['app_id'] ?: 0;
         $ret = SettingModel::getSupplierItem($key, $shop_supplier_id, $app_id);
+        // 门店营业时间
+        if ($key == SettingEnum::BUSINESS && $ret['opening_hours'] == '') {
+            $ret['opening_hours'] = '00:00-23:59';
+        }
         //
         $free_tag_count = FreeTag::count();
         //

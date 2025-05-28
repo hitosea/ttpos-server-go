@@ -41,6 +41,10 @@ class CardRecord extends CardRecordModel
             });
         }
 
+        // 搜索时间段
+        if (isset($data['date']) && $data['date'] != '') {
+            $model = $model->where('r.create_time', 'between', [strtotime($data['date'][0]), strtotime($data['date'][1]) + 86399]);
+        }
         $list = $model->paginate($data) ?: [];
 
         foreach ($list as $key => &$item) {

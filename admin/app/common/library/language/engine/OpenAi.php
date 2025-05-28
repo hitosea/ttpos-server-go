@@ -2,11 +2,13 @@
 
 namespace app\common\library\language\engine;
 
+use think\facade\Log;
+
 class OpenAi
 {
 
     // const URL = "http://103.63.139.229:8088/api/translate";
-    const URL = "https://aitrans.keli.vip/translate";
+    const URL = "https://aitrans.ttpos.com/translate";
     const CURL_TIMEOUT = 10000;
     const CONNECT_TIMEOUT = 10;
 
@@ -61,7 +63,7 @@ class OpenAi
     public function forward($data)
     {
         try {
-            $jsonData = json_encode($data);
+            $jsonData = json_encode($data, JSON_UNESCAPED_UNICODE);
             $ret = $this->request(self::URL, 'post', $jsonData, true);
             $res = json_decode($ret, true);
             return $res;
@@ -111,8 +113,14 @@ class OpenAi
         if (1 == strpos("$" . $url, "https://")) {
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1); 
         }
         list($content, $status) = [curl_exec($curl), curl_getinfo($curl), curl_close($curl)];
+        if ($content === false) {
+            Log::error('Curl error: ' . curl_error($curl));
+            Log::error('Curl error number: ' . curl_errno($curl));
+            Log::error('Curl info: ' . print_r(curl_getinfo($curl), true));
+        }
         $content = trim(substr($content, $status['header_size']));
         return (intval($status["http_code"]) === 200) ? $content : false;
     }

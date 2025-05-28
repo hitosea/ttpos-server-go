@@ -8,6 +8,7 @@ use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
 use app\shop\service\order\ExportService;
 use app\shop\model\order\Order as OrderModel;
+use app\shop\model\shop\User as ShopUser;
 
 /**
  * 订单操作
@@ -253,6 +254,14 @@ class Operate extends Controller
         $requeustData['bank_code'] = $data['bank_code'] ?? '';
         $requeustData['account_no'] = $data['account_no'] ?? '';
         $requeustData['account_name'] = $data['account_name'] ?? '';
+
+        $saleBill = OrderModel::where('uuid', $data['sale_bill_uuid'])->find();
+        if ($saleBill) {
+            $token = ShopUser::getUserTokenByDutyNo($saleBill['duty_no']);
+            if ($token) {
+                $requeustHeader[0] = 'Authorization: Bearer ' . $token;
+            }
+        }
 
         $res = HttpHelp::postRequest('http://nginx/api/v1/shop/order/return', json_encode($requeustData), $requeustHeader);
         if (!$res) {

@@ -191,8 +191,8 @@ func (s *roleAccessSrv) GetApiPermission(staffUuid, companyUuid uint64) ([]strin
 	}
 	var permissions []string
 	for _, access := range accesses {
-		if !slices.Contains(permissions, access.ApiPath) {
-			permissions = append(permissions, access.ApiPath)
+		if !slices.Contains(permissions, access.Path) {
+			permissions = append(permissions, access.Path)
 		}
 	}
 	return permissions, nil

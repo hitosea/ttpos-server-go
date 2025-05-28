@@ -45,7 +45,7 @@ class AddIsSuperToCompanyStaff extends Migrator
         foreach (Db::name('company')->where('delete_time', 0)->column('uuid') as $appid) {
             $mysql['database'] = 'shop' . $appid;
             $mysql['username'] = env('DB_USERNAME');
-            $mysql['password'] = env('DB_ROOT_PASSWORD');
+            $mysql['password'] = env('DB_PASSWORD');
             $config['connections'][$default] = $mysql;
             Config::set($config, 'database');
             $dbs = Db::connect(Db::getConfig('default'), true);

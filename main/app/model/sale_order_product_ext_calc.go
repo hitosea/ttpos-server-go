@@ -15,6 +15,7 @@ type CalcOption struct {
 	H5OrderUuid           uint64           // 指定一个h5订单uuid
 	H5CheckLimit          bool             // 是否是在h5端检查限购的场景
 	SaleOrderProductUuids []uint64         // 指定一个或多个销售订单商品,仅检查这个或这些销售订单商品是否超过限购
+	ServiceFeeBase        uint             // 服务费计算基准, 0-商品惠后价 1-商品价格合计
 }
 
 const (
@@ -111,6 +112,13 @@ func WithSaleOrderProductUuid(saleOrderProductUuids ...uint64) func(option *Calc
 	}
 }
 
+// 设置服务费计算基准为商品价格合计
+func WithServiceFeeBaseAmount() func(option *CalcOption) {
+	return func(option *CalcOption) {
+		option.ServiceFeeBase = constant.SaleBillSettingServiceFeeBaseAmount
+	}
+}
+
 func (model *SaleOrderProduct) CalcSaleOrderProduct(setting SaleBillSetting, options ...func(option *CalcOption)) SaleOrderProductCalc {
 	defer model.SetUpdate() // 标记该记录要更新
 	serviceFeeRate := setting.GetServiceFeeRate()
@@ -121,14 +129,20 @@ func (model *SaleOrderProduct) CalcSaleOrderProduct(setting SaleBillSetting, opt
 	for _, optionFunc := range options {
 		optionFunc(option)
 	}
-	if option.IsLatestPrice {
-		return model.calcLastestSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+
+	// 如果服务费计算基准为商品价格合计，则需要使用商品价格合计计算服务费
+	if setting.ServiceFeeBase == constant.SaleBillSettingServiceFeeBaseAmount {
+		options = append(options, WithServiceFeeBaseAmount())
 	}
-	return model.calcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType)
+
+	if option.IsLatestPrice {
+		return model.calcLastestSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType, options...)
+	}
+	return model.calcSaleOrderProduct(serviceFeeRate, taxFeeType, serviceFeeType, options...)
 }
 
 // 计算销售订单商品的所有计算值字段
-func (model *SaleOrderProduct) calcSaleOrderProduct(serviceFeeRate float64, taxFeeType int, serviceFeeType int) SaleOrderProductCalc {
+func (model *SaleOrderProduct) calcSaleOrderProduct(serviceFeeRate float64, taxFeeType int, serviceFeeType int, options ...func(option *CalcOption)) SaleOrderProductCalc {
 	calc := SaleOrderProductCalc{}
 	// 开始计算
 	calc.SaucePrice = model.calcSaucePrice()
@@ -149,11 +163,11 @@ func (model *SaleOrderProduct) calcSaleOrderProduct(serviceFeeRate float64, taxF
 	model.DiscountFee = calc.DiscountFee
 	calc.TaxFee = model.calcTaxFee(model.Price, taxFeeType)
 	model.TaxFee = calc.TaxFee
-	calc.ServiceFee = model.calcServiceFee(model.Price, serviceFeeRate, taxFeeType)
+	calc.ServiceFee = model.calcServiceFee(model.Price, serviceFeeRate, taxFeeType, options...)
 	model.ServiceFee = calc.ServiceFee
-	calc.ServiceTaxFee = model.calcServiceTaxFee(model.Price, serviceFeeRate, taxFeeType, serviceFeeType)
+	calc.ServiceTaxFee = model.calcServiceTaxFee(model.Price, serviceFeeRate, taxFeeType, serviceFeeType, options...)
 	model.ServiceTaxFee = calc.ServiceTaxFee
-	calc.TotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType)
+	calc.TotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType, options...)
 	model.TotalPrice = calc.TotalPrice
 	calc.OriginTotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType, WithOriginPrice())
 	model.OriginTotalPrice = calc.OriginTotalPrice
@@ -161,7 +175,7 @@ func (model *SaleOrderProduct) calcSaleOrderProduct(serviceFeeRate float64, taxF
 }
 
 // 计算销售订单商品的所有计算值字段。从后台获取最新的价格
-func (model *SaleOrderProduct) calcLastestSaleOrderProduct(serviceFeeRate float64, taxFeeType int, serviceFeeType int) SaleOrderProductCalc {
+func (model *SaleOrderProduct) calcLastestSaleOrderProduct(serviceFeeRate float64, taxFeeType int, serviceFeeType int, options ...func(option *CalcOption)) SaleOrderProductCalc {
 	// 设置最新的商品会员折扣设置，即是否开启会员折扣
 	model.OpenMemberDiscount = model.ProductPackage.OpenDiscount
 
@@ -183,11 +197,11 @@ func (model *SaleOrderProduct) calcLastestSaleOrderProduct(serviceFeeRate float6
 	model.DiscountFee = calc.DiscountFee
 	calc.TaxFee = model.calcTaxFee(model.Price, taxFeeType)
 	model.TaxFee = calc.TaxFee
-	calc.ServiceFee = model.calcServiceFee(model.Price, serviceFeeRate, taxFeeType)
+	calc.ServiceFee = model.calcServiceFee(model.Price, serviceFeeRate, taxFeeType, options...)
 	model.ServiceFee = calc.ServiceFee
-	calc.ServiceTaxFee = model.calcServiceTaxFee(model.Price, serviceFeeRate, taxFeeType, serviceFeeType)
+	calc.ServiceTaxFee = model.calcServiceTaxFee(model.Price, serviceFeeRate, taxFeeType, serviceFeeType, options...)
 	model.ServiceTaxFee = calc.ServiceTaxFee
-	calc.TotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType)
+	calc.TotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType, options...)
 	model.TotalPrice = calc.TotalPrice
 	calc.OriginTotalPrice = model.calcTotalPrice(serviceFeeRate, taxFeeType, serviceFeeType, WithOriginPrice())
 	model.OriginTotalPrice = calc.OriginTotalPrice
@@ -325,10 +339,25 @@ func (model *SaleOrderProduct) calcOriginTaxFee(taxFeeType int) float64 {
 }
 
 // 服务费（单商品）,0-固定服务费 大于0-按比例收服务费；商品已含税时，服务费=(最终单价-商品税费)*服务费比例；商品未含税时，服务费=最终单价*服务费比例
-func (model *SaleOrderProduct) calcServiceFee(price float64, serviceFeeRate float64, taxFeeType int) float64 {
-	// 如果商品赠送，则不计算服务费
-	if model.IsGiftProduct() {
-		return 0
+func (model *SaleOrderProduct) calcServiceFee(price float64, serviceFeeRate float64, taxFeeType int, options ...func(option *CalcOption)) float64 {
+	option := &CalcOption{}
+	for _, optionFunc := range options {
+		optionFunc(option)
+	}
+
+	// 如果服务费计算基准为商品惠后价，则赠品不计算服务费
+	if option.ServiceFeeBase == constant.SaleBillSettingServiceFeeBasePrice {
+		// 如果商品赠送，则不计算服务费
+		if !option.IsOriginPrice { // 如果是计算原始价格，则赠品要计算服务费. 且服务费计算基准无论是什么都要计算服务费，按原价计算服务费
+			if model.IsGiftProduct() {
+				return 0
+			}
+		}
+	}
+
+	// 如果服务费计算基准为商品价格合计，则price价格应该是ProductPrice '原始单价（单商品）,规格原价+小料价'
+	if !option.IsOriginPrice && option.ServiceFeeBase == constant.SaleBillSettingServiceFeeBaseAmount {
+		price = model.ProductPrice
 	}
 
 	// 服务费关闭时，不收取服务费。视为服务费比例为0，不收取
@@ -369,11 +398,11 @@ func (model *SaleOrderProduct) calcServiceFee(price float64, serviceFeeRate floa
 // 计算订单商品的服务费税费。
 // 当不收取服务费税费时，服务费税费为0
 // 当收取服务费税费时，服务费税费=订单商品服务费*商品消费税税率
-func (model *SaleOrderProduct) calcServiceTaxFee(price float64, serviceFeeRate float64, taxFeeType int, serviceFeeType int) float64 {
+func (model *SaleOrderProduct) calcServiceTaxFee(price float64, serviceFeeRate float64, taxFeeType int, serviceFeeType int, options ...func(option *CalcOption)) float64 {
 	// 当服务费收费税费且开启税费时
 	if serviceFeeType == constant.SaleBillSettingServiceFeeTypePercentTax && taxFeeType != constant.TaxFeeTypeNone {
 		// 服务费税费=订单商品服务费*商品消费税税率
-		serviceFee := model.calcServiceFee(price, serviceFeeRate, taxFeeType) // 计算订单商品服务费。price可能是折后价，也可能是折前价。当计算订单金额（折前）时，price是折前价；当计算订单应收金额时，price是折后价。
+		serviceFee := model.calcServiceFee(price, serviceFeeRate, taxFeeType, options...) // 计算订单商品服务费。price可能是折后价，也可能是折前价。当计算订单金额（折前）时，price是折前价；当计算订单应收金额时，price是折后价。
 		serviceTaxFee := decimal.NewFromFloat(serviceFee).Mul(decimal.NewFromFloat(model.TaxRate))
 		// fmt.Println("订单商品服务费", serviceFee, "税费", serviceTaxFee.InexactFloat64(), serviceTaxFee.Truncate(3).Round(2).InexactFloat64())
 		return serviceTaxFee.Truncate(3).Round(2).InexactFloat64()
@@ -407,21 +436,21 @@ func (model *SaleOrderProduct) calcTotalPrice(serviceFeeRate float64, taxFeeType
 	// 商品未含税时，单个商品最终应收金额=最终价格（折后价）+服务费+商品税费+服务费税费
 	if taxFeeType == constant.TaxFeeTypeNoTax {
 		totalPrice := decimal.NewFromFloat(price).Add(
-			decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType))).Add(
+			decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType, options...))).Add(
 			decimal.NewFromFloat(model.calcTaxFee(price, taxFeeType))).Add(
-			decimal.NewFromFloat(model.calcServiceTaxFee(price, serviceFeeRate, taxFeeType, serviceFeeType)))
+			decimal.NewFromFloat(model.calcServiceTaxFee(price, serviceFeeRate, taxFeeType, serviceFeeType, options...)))
 		return totalPrice.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 当商品已含税时，单个商品最终应收金额=最终价格（折后价）+ 服务费 + 服务费税费
 	if taxFeeType == constant.TaxFeeTypeTax {
 		totalPrice := decimal.NewFromFloat(price).Add(
-			decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType))).Add(
-			decimal.NewFromFloat(model.calcServiceTaxFee(price, serviceFeeRate, taxFeeType, serviceFeeType)))
+			decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType, options...))).Add(
+			decimal.NewFromFloat(model.calcServiceTaxFee(price, serviceFeeRate, taxFeeType, serviceFeeType, options...)))
 		return totalPrice.Truncate(3).Round(2).InexactFloat64()
 	}
 	// 如果不收取税费时，单个商品最终应收金额=最终价格（折后价）+ 服务费
 	totalPrice := decimal.NewFromFloat(price).Add(
-		decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType)))
+		decimal.NewFromFloat(model.calcServiceFee(price, serviceFeeRate, taxFeeType, options...)))
 	return totalPrice.Truncate(3).Round(2).InexactFloat64()
 }
 

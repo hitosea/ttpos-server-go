@@ -49,6 +49,7 @@ class ProductImportsValidate extends  BaseValidate
         'deduct_stock_type.in' => '库存计算方式必须是1和2',
         'product_unit.require' => '商品单位不能为空',
         'unit_id.require' => '商品单位不能为空',
+        'spec_id.require' => '规格不能为空',
         'spec_name.require' => '规格名称不能为空',
         'img_name.require' => '图片名称不能为空',
         'product_stock.require' => '库存数量不能为空',

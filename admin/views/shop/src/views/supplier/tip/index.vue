@@ -46,6 +46,14 @@
           </el-form-item>
         </template>
 
+        <!--服务费计算-->
+        <el-form-item class="mt-24" :label="$t('服务费计算')" prop="apply_scope" :rules="[{ required: true, message: $t('请选择服务费计算') }]">
+          <div>
+            <el-radio v-model="form.service_fee_base" :label="'0'" true-label>{{ $t('商品惠后价') }}</el-radio>
+            <el-radio v-model="form.service_fee_base" :label="'1'">{{ $t('商品价格合计') }}</el-radio>
+          </div>
+        </el-form-item>
+
         <!-- 应用范围 -->
         <el-form-item class="mt-24" :label="$t('应用范围')" prop="apply_scope" :rules="[{ required: true, message: $t('请选择应用范围') }]">
           <div>

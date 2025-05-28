@@ -66,3 +66,14 @@ type ShiftPrinterReq struct {
 type EditDeviceRemarkReq struct {
 	Remark string `json:"remark"` // 机器备注
 }
+
+// SendMemberRechargeSMS
+type SendMemberRechargeSMS struct {
+	Company       string  `json:"company"`
+	Phone         string  `json:"phone"`
+	Recharge      float64 `json:"recharge"`
+	BonusMoney    float64 `json:"bonus_money"`
+	BonusPoints   float64 `json:"bonus_points"`
+	Balance       float64 `json:"balance"`
+	PointsBalance float64 `json:"points_balance"`
+}

@@ -111,6 +111,8 @@ export interface ShowAddType {
   is_open_buffet?: number; // 是否开启自助餐: 0不开启, 1开启
   is_accept_scan_order?: number; // 是否开启扫码点餐接单: 0不开启, 1开启
   is_open_local_print?: number; // 是否开启本地打印服务: 0不开启, 1开启（v1.1.0）
+  enable_sms?: number; // 是否开启短信服务: 0不开启, 1开启
+  sms_quota?: number; // 短信额度
 }
 
 // 添加商家

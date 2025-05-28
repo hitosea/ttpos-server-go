@@ -6,6 +6,7 @@ use help\ValidateHelp;
 use app\common\model\shop\User as UserModel;
 use app\common\model\shop\Access as AccessModel;
 use app\common\model\shop\LoginLog as LoginLogModel;
+use app\common\model\shop\UserShiftLog;
 use app\shop\model\settings\Setting as SettingModel;
 
 /**
@@ -139,5 +140,33 @@ class User extends UserModel
     public static function getUser($data)
     {
         return (new static())->where('uuid', '=', $data['uid'])->with(['app'])->find();
+    }
+
+    /**
+     * 获取用户token
+     */
+    public static function getUserTokenByDutyNo($dutyNo)
+    {
+        $shiftLog = UserShiftLog::where('shift_no', $dutyNo)->find();
+        if (!$shiftLog) {
+            return '';
+        }
+        $user = self::where('uuid', $shiftLog['staff_uuid'])->find();
+        if ($shiftLog['status'] == 0 && $user) {
+            return signToken($user['uuid'], 'shop', '', md5($user->password), $user['company_uuid']);
+        }
+        if ($user && $user['bind_key']) {
+            $user = self::where([
+                ['bind_key', '=', $user['bind_key']],
+                ['cashier_online', '=', 1],
+                ['cashier_login_time', '>', 0],
+                ['duty_no', '<>', ''],
+            ])->find();
+            if ($user) {
+                return signToken($user['uuid'], 'shop', '', md5($user->password), $user['company_uuid']);
+            }
+        }
+        
+        return '';
     }
 }

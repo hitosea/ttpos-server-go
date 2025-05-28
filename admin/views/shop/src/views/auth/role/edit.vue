@@ -197,7 +197,6 @@
                 });
               });
             });
-            console.log(self.upCheckedKeysMap);
 
             if (self.form.parent_id == 0) {
               self.form.parent_id = 0 + '';

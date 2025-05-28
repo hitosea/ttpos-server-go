@@ -498,7 +498,7 @@ const docTemplate = `{
                     "200": {
                         "description": "桌台详情",
                         "schema": {
-                            "$ref": "#/definitions/resp.DeskInfoResp"
+                            "$ref": "#/definitions/resp.Desk"
                         }
                     },
                     "404": {
@@ -4046,7 +4046,7 @@ const docTemplate = `{
                     "200": {
                         "description": "桌台详情",
                         "schema": {
-                            "$ref": "#/definitions/resp.DeskInfoResp"
+                            "$ref": "#/definitions/resp.Desk"
                         }
                     },
                     "404": {
@@ -12004,6 +12004,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/usb/printer/report": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "usb 打印机上报",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.基础信息"
+                ],
+                "summary": "usb 打印机上报",
+                "parameters": [
+                    {
+                        "description": "usb 打印机上报参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UsbPrinterReportReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "打印数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.PrinterData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/verify_advanced_password": {
             "post": {
                 "security": [
@@ -14774,6 +14825,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/statistics/home": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "统计首页",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.营业数据"
+                ],
+                "summary": "统计首页",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BusinessDataCountReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/business_data_resp.BusinessDataHome"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/statistics/payment_method": {
             "get": {
                 "security": [
@@ -15020,6 +15122,57 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/business_data_resp.BusinessDataCountProductSalesPagination"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/statistics/shift_refund_amount": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "统计班次退款金额",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.营业数据"
+                ],
+                "summary": "统计班次退款金额",
+                "parameters": [
+                    {
+                        "description": "统计参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.BusinessDataCountReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "统计数据",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/business_data_resp.BusinessDataShiftRefundAmount"
                                         }
                                     }
                                 }
@@ -16037,6 +16190,10 @@ const docTemplate = `{
                     "description": "最小订单金额",
                     "type": "number"
                 },
+                "opening_hours": {
+                    "description": "营业时间",
+                    "type": "string"
+                },
                 "payment_method_incomes": {
                     "description": "支付方式",
                     "type": "array",
@@ -16415,9 +16572,46 @@ const docTemplate = `{
                 }
             }
         },
+        "business_data_resp.BusinessDataHome": {
+            "type": "object",
+            "properties": {
+                "member_data": {
+                    "description": "会员数据",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/business_data_resp.MemberData"
+                        }
+                    ]
+                },
+                "total_discount_money": {
+                    "description": "总优惠折扣",
+                    "type": "number"
+                },
+                "total_order_num": {
+                    "description": "总订单数",
+                    "type": "integer"
+                },
+                "total_received_price": {
+                    "description": "总实收金额",
+                    "type": "number"
+                },
+                "total_refund_money": {
+                    "description": "总退款金额",
+                    "type": "number"
+                },
+                "total_user_discount_money": {
+                    "description": "总会员折扣",
+                    "type": "number"
+                }
+            }
+        },
         "business_data_resp.BusinessDataPaymentMethod": {
             "type": "object",
             "properties": {
+                "opening_hours": {
+                    "description": "营业时间",
+                    "type": "string"
+                },
                 "payment_method_incomes": {
                     "description": "支付方式",
                     "type": "array",
@@ -16434,6 +16628,10 @@ const docTemplate = `{
         "business_data_resp.BusinessDataProduct": {
             "type": "object",
             "properties": {
+                "opening_hours": {
+                    "description": "营业时间",
+                    "type": "string"
+                },
                 "products": {
                     "description": "商品列表",
                     "type": "array",
@@ -16452,6 +16650,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/business_data_resp.Category"
                     }
+                },
+                "opening_hours": {
+                    "description": "营业时间",
+                    "type": "string"
                 },
                 "payment_method_incomes": {
                     "description": "支付方式",
@@ -16483,6 +16685,15 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/business_data_resp.ProductRank"
                     }
+                }
+            }
+        },
+        "business_data_resp.BusinessDataShiftRefundAmount": {
+            "type": "object",
+            "properties": {
+                "refund_amount": {
+                    "description": "退款金额",
+                    "type": "number"
                 }
             }
         },
@@ -17149,8 +17360,12 @@ const docTemplate = `{
                     "description": "查询开始时间戳",
                     "type": "integer"
                 },
+                "staffUuid": {
+                    "description": "操作员UUID",
+                    "type": "integer"
+                },
                 "timeType": {
-                    "description": "时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)",
+                    "description": "时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月, 5 营业时间)",
                     "type": "integer"
                 }
             }
@@ -17179,7 +17394,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "time_type": {
-                    "description": "时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月)",
+                    "description": "时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月, 5 营业时间)",
                     "type": "integer"
                 }
             }
@@ -17666,7 +17881,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "attribute_uuid": {
-                    "description": "规格ID",
+                    "description": "属性ID列表",
                     "type": "array",
                     "items": {
                         "type": "integer"
@@ -17693,7 +17908,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "sauce_uuid": {
-                    "description": "小料ID",
+                    "description": "小料ID列表",
                     "type": "array",
                     "items": {
                         "type": "integer"
@@ -17732,6 +17947,14 @@ const docTemplate = `{
                 "ignore_must": {
                     "description": "是否忽略必点方案",
                     "type": "boolean"
+                },
+                "is_check_cooking": {
+                    "description": "是否只进行送厨检查，而不进行实际的送厨。场景：助手端开启下单校验高级密码时，先检查送厨，再实际送厨。检查送厨时不进行实际送厨",
+                    "type": "boolean"
+                },
+                "password": {
+                    "description": "高级密码后台开启的时候才传",
+                    "type": "string"
                 },
                 "sale_bill_uuid": {
                     "description": "销售账单ID",
@@ -18696,6 +18919,45 @@ const docTemplate = `{
                 }
             }
         },
+        "req.UsbPrinterReportPrinterData": {
+            "type": "object",
+            "properties": {
+                "m_name": {
+                    "description": "厂商名称",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "打印机名称",
+                    "type": "string"
+                },
+                "pid": {
+                    "description": "打印机PID"
+                },
+                "sn": {
+                    "description": "打印机SN",
+                    "type": "string"
+                },
+                "vid": {
+                    "description": "打印机VID"
+                }
+            }
+        },
+        "req.UsbPrinterReportReq": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "所有在线的USB打印机数据",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.UsbPrinterReportPrinterData"
+                    }
+                },
+                "selected_sn": {
+                    "description": "选择的打印机SN",
+                    "type": "string"
+                }
+            }
+        },
         "req.VerifyPasswordReq": {
             "type": "object",
             "required": [
@@ -19480,6 +19742,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.SystemSetting"
                         }
                     ]
+                },
+                "usb_printer": {
+                    "description": "自带打印机设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.UsbPrinterList"
+                        }
+                    ]
                 }
             }
         },
@@ -19622,6 +19892,10 @@ const docTemplate = `{
                     "description": "桌台人数",
                     "type": "integer"
                 },
+                "default_people_num": {
+                    "description": "默认人数",
+                    "type": "integer"
+                },
                 "desk_no": {
                     "description": "桌台名称",
                     "type": "string"
@@ -19632,6 +19906,10 @@ const docTemplate = `{
                 },
                 "is_lock": {
                     "description": "是否锁单",
+                    "type": "boolean"
+                },
+                "is_open_default_people_num": {
+                    "description": "是否开启默认人数",
                     "type": "boolean"
                 },
                 "is_split_order": {
@@ -20490,7 +20768,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "is_auto_add": {
-                    "description": "是否是自动加购的商品。是则自动加入购物车，并且不显示在“必选方案”的弹框中",
+                    "description": "是否是自动加购的商品。是则自动加入购物车",
                     "type": "boolean"
                 },
                 "must_num": {
@@ -20503,6 +20781,14 @@ const docTemplate = `{
                 },
                 "product": {
                     "$ref": "#/definitions/resp.InstantMustPlanProduct"
+                },
+                "product_auto_add_req": {
+                    "description": "自动加购商品请求参数",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ProductAutoAddReq"
+                        }
+                    ]
                 },
                 "selected_num": {
                     "description": "已选数量",
@@ -21705,6 +21991,10 @@ const docTemplate = `{
                     "description": "已付款的手续费。用于显示最终应收，前端显示的最终应收=应收金额+已付款的手续费+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）",
                     "type": "number"
                 },
+                "is_auto_zero": {
+                    "description": "是否是自动抹零",
+                    "type": "boolean"
+                },
                 "payment_method_uuid": {
                     "description": "支付方式uuid。表示这个amount信息是当前端选择这个支付方式时显示的",
                     "type": "integer"
@@ -21781,8 +22071,12 @@ const docTemplate = `{
                     "description": "logo",
                     "type": "string"
                 },
+                "payment_method": {
+                    "description": "支付方式",
+                    "type": "string"
+                },
                 "payment_name": {
-                    "description": "支付方式名称",
+                    "description": "支付名称",
                     "type": "string"
                 },
                 "qrcode": {
@@ -21939,6 +22233,10 @@ const docTemplate = `{
                     "description": "是否是收银机自带打印机",
                     "type": "boolean"
                 },
+                "is_usb_printer": {
+                    "description": "是否是usb打印机",
+                    "type": "boolean"
+                },
                 "print_method": {
                     "description": "打印方式 1文本打印, 2图片打印'",
                     "type": "integer"
@@ -21950,6 +22248,10 @@ const docTemplate = `{
                 "printer_type": {
                     "description": "打印机.类型 打印机类型 (SUNMI_LAN:商米打印机, SUNMI_CLOUD:商米打印机-云, XPRINTER_LAN:芯烨-有线 , XPRINTER_WIFI:芯烨-WIFI , CASHIER:收银机自带打印机)",
                     "type": "string"
+                },
+                "printing_time": {
+                    "description": "打印耗时",
+                    "type": "integer"
                 },
                 "uuid": {
                     "description": "打印日志Uuid",
@@ -22157,6 +22459,33 @@ const docTemplate = `{
                 "max_select": {
                     "description": "最大可选的属性数量。0时不限制选择数量",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.ProductAutoAddReq": {
+            "type": "object",
+            "properties": {
+                "attribute_uuid": {
+                    "description": "属性ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "flavor_uuid": {
+                    "description": "某个规格商品ID",
+                    "type": "integer"
+                },
+                "num": {
+                    "description": "加购数量",
+                    "type": "integer"
+                },
+                "sauce_uuid": {
+                    "description": "小料ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
@@ -22991,6 +23320,10 @@ const docTemplate = `{
         "resp.RefundRechargeOrderPaymentRecord": {
             "type": "object",
             "properties": {
+                "currency_unit": {
+                    "description": "金额单位",
+                    "type": "string"
+                },
                 "payment_amount": {
                     "description": "支付金额",
                     "type": "number"
@@ -23057,6 +23390,10 @@ const docTemplate = `{
             "properties": {
                 "amount_info": {
                     "$ref": "#/definitions/resp.AmountInfo"
+                },
+                "auto_discount_message": {
+                    "description": "优惠折扣-自动抹零信息. 如\"优惠折扣自动抹零-抹分\" \"优惠折扣自动抹零-抹角\" \"优惠折扣自动抹零-四舍五入保留一位小数\" \"优惠折扣自动抹零-四舍五入保留整数\"",
+                    "type": "string"
                 },
                 "custom_discount_rate": {
                     "description": "订单改价折扣率",
@@ -23693,6 +24030,43 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.UsbPrinter": {
+            "type": "object",
+            "properties": {
+                "m_name": {
+                    "description": "厂商名称",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "打印机名称",
+                    "type": "string"
+                },
+                "pid": {
+                    "description": "打印机PID"
+                },
+                "sn": {
+                    "description": "打印机SN",
+                    "type": "string"
+                },
+                "vid": {
+                    "description": "打印机VID"
+                }
+            }
+        },
+        "resp.UsbPrinterList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.UsbPrinter"
+                    }
+                },
+                "selected_sn": {
+                    "type": "string"
+                }
+            }
+        },
         "setting.AddClockItem": {
             "type": "object",
             "properties": {
@@ -23738,6 +24112,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "is_auto_send": {
+                    "type": "string"
+                },
+                "is_check_order": {
+                    "description": "下单校验高级密码 0-关闭 1-开启。默认关闭",
                     "type": "string"
                 },
                 "is_remain_color": {
@@ -23904,6 +24282,10 @@ const docTemplate = `{
                     "description": "结账后不清台 0-清台 1-不清台",
                     "type": "string"
                 },
+                "opening_hours": {
+                    "description": "营业时间 18:00-02:00",
+                    "type": "string"
+                },
                 "qr_code": {
                     "description": "电子菜单二维码校验失效值，6位数数字",
                     "type": "string"
@@ -23957,7 +24339,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "printer_id": {
-                    "description": "收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符",
+                    "description": "收银机设备ID（32位字符串），或者printer表的Uuid uint64 20个字符"
+                },
+                "printer_usb_id": {
+                    "description": "收银机设备SN",
                     "type": "string"
                 }
             }

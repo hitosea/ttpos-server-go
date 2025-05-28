@@ -351,5 +351,10 @@
     "税务对接": "Tax Integration",
     "请上传LOGO": "Please upload the LOGO",
     "请选择税务对接": "Please select tax integration",
-    "请选择授权开始时间": "Please select the authorization start time"
+    "请选择授权开始时间": "Please select the authorization start time",
+    "短信服务": "SMS Service",
+    "短信额度": "SMS Quota",
+    "请输入短信额度": "Please enter the SMS quota",
+    "最小额度为0，短信额度的最大值为9,999,999，默认为200": "The minimum quota is 0, the maximum SMS quota is 9,999,999, and the default is 200",
+    "输入内容不合规，请重新输入": "Input content is non-compliant, please re-enter"
 }

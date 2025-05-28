@@ -197,7 +197,6 @@
 
         setTimeout(() => {
           const errorItems = document.querySelectorAll('.el-form-item__error');
-          console.log(errorItems);
           if (errorItems.length > 0) {
             const firstErrorItem = errorItems[0];
             firstErrorItem.scrollIntoView({ behavior: 'smooth', block: 'center' });

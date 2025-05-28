@@ -89,7 +89,7 @@ func (h *DeskHandler) GetDeskList(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data query req.DeskInfoReq true "详情参数"
-// @Success 200 {object} resp.DeskInfoResp "桌台详情"
+// @Success 200 {object} resp.Desk "桌台详情"
 // @Failure 404 {object} nil "未找到"
 // @Router /assistant/desk/info [get]
 func (h *DeskHandler) GetDeskInfo(c *gin.Context) {
@@ -1482,7 +1482,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
 	memberSrv := service.NewMemberSrv(dbm)
-	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv)
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
 
 	// 创建处理程序
 	wrapper := DeskHandler{

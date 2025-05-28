@@ -32,10 +32,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-// 请求超时
-const REQUEST_TIME_OUT = 10
+// RequestTimeOut 请求超时
+const RequestTimeOut = 10
 
-// LianLianPaymentRepo 连连支付仓库
+// LianLianPaymentResp 连连支付仓库
 type LianLianPaymentResp struct {
 	CallbackUrl     string `json:"callback_url"`      // 回调地址
 	CreatedAt       string `json:"created_at"`        // 创建时间
@@ -152,7 +152,7 @@ func (p *PaymentRepo) CreatePayment(
 	response, err := p.postRequest(url, jsonStr, map[string]string{
 		"Content-Type": "application/json; charset=utf-8",
 		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
-	}, REQUEST_TIME_OUT)
+	}, RequestTimeOut)
 	if err != nil {
 		return nil, errors.New("连连支付失败：404")
 	}
@@ -228,7 +228,7 @@ func (p *PaymentRepo) CreatePayment(
 	return paymentOrder, nil
 }
 
-// GetValidPaymentOrder 获取有效的支付订单
+// GetValidPaymentOrderByUuid 获取有效的支付订单
 func (p *PaymentRepo) GetValidPaymentOrderByUuid(
 	relatedType int,
 	relatedUuid uint64,
@@ -260,8 +260,7 @@ func (p *PaymentRepo) GetValidPaymentOrderByUuid(
 	return nil, nil
 }
 
-// Refund 创建退款
-// LianLianPaymentRepo 连连支付仓库
+// PaymentServiceRefundReq 连连支付仓库
 type PaymentServiceRefundReq struct {
 	PaymentOrderUuid      uint64  // 支付订单UUID
 	RelatedType           int     // 支付订单类型
@@ -323,7 +322,7 @@ func (p *PaymentRepo) Refund(serviceRefundReq PaymentServiceRefundReq) (*LianLia
 	response, err := p.postRequest(p.payServiceUrl+"/api/receipts/lianlianRefund", jsonStr, map[string]string{
 		"Content-Type": "application/json; charset=utf-8",
 		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
-	}, REQUEST_TIME_OUT)
+	}, RequestTimeOut)
 	if err != nil {
 		return nil, errors.New(err.Error())
 	}

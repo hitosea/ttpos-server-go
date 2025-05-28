@@ -111,6 +111,9 @@ class Setting extends SettingModel
         }
         // 删除全局缓存
         Cache::tag('common_get_settingLanguages')->clear();
+        if ($appId && Cache::has('{common_get_settingLanguages}_' . 'common_setting_languages' . $appId)) {
+            Cache::delete('{common_get_settingLanguages}_' . 'common_setting_languages' . $appId);
+        }
         // 删除收银机缓存
         Cache::tag('cashier')->clear();
 

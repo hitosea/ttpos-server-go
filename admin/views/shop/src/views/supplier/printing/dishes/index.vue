@@ -18,8 +18,9 @@
           <el-table-column prop="name" :label="$t('名称')"></el-table-column>
           <el-table-column prop="printer_name_text" :label="$t('打印机')">
             <template #default="scope">
-              <div>
-                {{ scope.row?.delete_time > 0 ? '-' : scope.row.printer_name_text }}
+              <div v-for="item in scope.row.printer_list" :key="item.id">
+                {{ item.printer_name }}
+                <el-tag v-if="item.is_usb == 1" size="small" type="warning">USB</el-tag>
               </div>
             </template>
           </el-table-column>

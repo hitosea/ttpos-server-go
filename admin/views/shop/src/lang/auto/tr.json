@@ -1576,5 +1576,19 @@
     "添加失败，请检查系统的语言设置。": "Ekleme başarısız oldu, lütfen sistem dil ayarlarını kontrol edin.",
     "历史用餐订单": "Geçmiş yemek siparişleri",
     "请选择必点类型": "Lütfen gerekli öğe türünü seçin",
-    "下单校验高级密码": "Sipariş onayı için üst düzey şifre"
+    "服务费计算": "Hizmet bedeli hesaplama",
+    "请选择服务费计算": "Lütfen hizmet bedeli hesaplamasını seçin",
+    "商品价格合计": "Ürün fiyat toplamı",
+    "商品惠后价": "İndirim sonrası ürün fiyatı",
+    "营业时间": "Çalışma saatleri",
+    "开始时间": "Başlangıç Zamanı",
+    "结束时间": "Bitiş Zamanı",
+    "这是桌台备注，非桌台/桌台没有备注的则不显示，需要换行显示": "Bu masa notudur, masa/dışmasa için herhangi bir not yoksa gösterilmez, yeni satıra geçiş yapılmalıdır",
+    "默认开桌数": "Varsayılan Açık Masa Sayısı",
+    "默认桌台人数仅非自助餐类型生效": "Varsayılan masa sayısı yalnızca açık büfe olmayan türlerde geçerlidir",
+    "请选择营业时间": "Lütfen çalışma saatlerini seçin",
+    "默认开桌人数必须大于等于1": "Varsayılan masa açılış kişi sayısı 1 veya daha fazla olmalıdır",
+    "默认开桌人数": "Varsayılan masa açılış kişi sayısı",
+    "请输入默认开桌人数": "Varsayılan masa açılış kişi sayısını girin",
+    "下单校验高级密码": "Sipariş fazla parola doğrulaması"
 }

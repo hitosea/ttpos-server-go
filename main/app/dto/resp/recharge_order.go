@@ -116,6 +116,7 @@ type RefundRechargeOrderPaymentRecord struct {
 	PaymentName       string  `json:"payment_name"`      // 支付方式名称
 	PaymentAmount     float64 `json:"payment_amount"`    // 支付金额
 	RefundableAmount  float64 `json:"refundable_amount"` // 剩余可退款金额
+	CurrencyUnit      string  `json:"currency_unit"`     // 金额单位
 }
 
 type RechargeOrderRefundInfo struct {

@@ -97,6 +97,13 @@ type ProductPrinterList struct {
 	List []ProductPrinter `json:"list"`
 }
 
+// NewProductPrinterList 创建新的ProductPrinterList实例，确保List字段为空数组而非nil
+func NewProductPrinterList() ProductPrinterList {
+	return ProductPrinterList{
+		List: make([]ProductPrinter, 0),
+	}
+}
+
 type Company struct {
 	Uuid           uint64 `json:"uuid"`              // 商家UUID
 	Name           string `json:"name"`              // 商家名称
@@ -187,9 +194,23 @@ type SystemSetting struct {
 	ServerVersion          string `json:"server_version"`             // 服务端版本
 }
 
+type UsbPrinter struct {
+	M_name string `json:"m_name"` // 厂商名称
+	Name   string `json:"name"`   // 打印机名称
+	Pid    any    `json:"pid"`    // 打印机PID
+	Sn     string `json:"sn"`     // 打印机SN
+	Vid    any    `json:"vid"`    // 打印机VID
+}
+
+type UsbPrinterList struct {
+	List       []UsbPrinter `json:"list"`
+	SelectedSn string       `json:"selected_sn"`
+}
+
 type CashierBaseSetting struct {
 	AcceptOrder AcceptOrderSetting `json:"accept_order"` // 接单设置
 	System      SystemSetting      `json:"system"`       // 系统设置
+	UsbPrinter  UsbPrinterList     `json:"usb_printer"`  // 自带打印机设置
 }
 
 // ShiftInfo 交班信息

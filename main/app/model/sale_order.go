@@ -87,6 +87,59 @@ func (model *SaleOrder) GetIndex() int {
 	return model.index
 }
 
+// 判断订单是不是优惠折扣自动抹零。如果SaleBillSetting中的自动抹零规格与订单的自动抹零规格不一致，则返回false
+func (model *SaleOrder) IsAutoZeroDiscount(setting SaleBillSetting) bool {
+	return model.ZeroRule == uint8(setting.ZeroRule)
+}
+
+// 判断订单是不是结账自动抹零。如果SaleBillSetting中的结账抹零规格与订单的结账抹零规格不一致，则返回false
+func (model *SaleOrder) IsAutoCheckoutZeroDiscount(setting SaleBillSetting) bool {
+	return model.ZeroCheckoutRule == uint8(setting.ZeroCheckoutRule)
+}
+
+// 获取自动抹零信息
+func (model *SaleOrder) GetAutoDiscountMessage(setting SaleBillSetting, lang string) string {
+	// 如果抹零金额为0，则不显示自动抹零信息
+	if model.ZeroFee == 0 {
+		return ""
+	}
+
+	if model.IsAutoZeroDiscount(setting) {
+		return ParseAutoDiscountMessage(uint8(setting.ZeroRule), model.ZeroFee, lang)
+	}
+	return ""
+}
+
+// 解析自动抹零信息.  0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数
+func ParseAutoDiscountMessage(zeroRule uint8, zeroFee float64, lang string) string {
+	switch zeroRule {
+	case 1:
+		return translate(zeroRule, lang) + "：" + fmt.Sprintf("%.2f", zeroFee)
+	case 2:
+		return translate(zeroRule, lang) + "：" + fmt.Sprintf("%.2f", zeroFee)
+	case 3:
+		return translate(zeroRule, lang) + "：" + fmt.Sprintf("%.2f", zeroFee)
+	case 4:
+		return translate(zeroRule, lang) + "：" + fmt.Sprintf("%.2f", zeroFee)
+	}
+	return ""
+}
+
+// "优惠折扣自动抹零-抹分"
+func translate(zeroRule uint8, lang string) string {
+	switch zeroRule {
+	case 1:
+		return i18n.Translate(lang, "优惠折扣自动抹零-抹分")
+	case 2:
+		return i18n.Translate(lang, "优惠折扣自动抹零-抹角")
+	case 3:
+		return i18n.Translate(lang, "优惠折扣自动抹零-四舍五入保留一位小数")
+	case 4:
+		return i18n.Translate(lang, "优惠折扣自动抹零-四舍五入保留整数")
+	}
+	return ""
+}
+
 // 判断销售订单是否已经结账
 func (model *SaleOrder) IsSettled() bool {
 	return model.Status == constant.SaleOrderStatusFinish
@@ -183,6 +236,7 @@ func (model *SaleOrder) GetCustomerList() []resp.Product {
 			UnitPrice:       orderBuffetCustomer.SalePrice,
 			CanReturnNum:    orderBuffetCustomer.GetCanReturnNum(),
 			CanReturnAmount: orderBuffetCustomer.GetCanReturnPrice(),
+			CreateTime:      orderBuffetCustomer.CreateTime,
 		}
 		productList = append(productList, product)
 	}
@@ -228,6 +282,7 @@ func (model *SaleOrder) GetDelayProductList() []resp.Product {
 			UnitPrice:       delayProduct.Price,
 			CanReturnNum:    delayProduct.GetCanReturnNum(),
 			CanReturnAmount: delayProduct.GetCanReturnPrice(),
+			CreateTime:      delayProduct.CreateTime,
 		}
 		productList = append(productList, product)
 	}
@@ -283,6 +338,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			IsAccept:            saleOrderProduct.IsAcceptOrderProduct(),
 			UnitPrice:           saleOrderProduct.SalePrice,
 			IsShowKitchen:       saleOrderProduct.ProductPackage.IsShowKitchen,
+			CreateTime:          saleOrderProduct.CreateTime,
 		}
 		if saleOrderProduct.ProductionOrderProduct != nil {
 			if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {
@@ -371,7 +427,7 @@ func (model *SaleOrder) NewReverseSettleMemberPointLog(points float64) *MemberPo
 }
 
 // 创建退货单
-func (model *SaleOrder) NewReturnOrder(lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]uint, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
+func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]uint, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
 	returnOrderUuid, _ := utils.GetID()
 
 	// 如果退款类型为整单退款，则退款金额=订单最终应收金额-已退款金额
@@ -555,6 +611,7 @@ func (model *SaleOrder) NewReturnOrder(lang string, saleOrderProducts []*SaleOrd
 		RefundReason:        "退款",
 		ReturnOrderAmounts:  returnOrderAmounts,
 		ReturnOrderProducts: returnOrderProducts,
+		DutyNo:              dutyNo,
 	}, nil
 }
 

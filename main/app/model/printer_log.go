@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
+	"math"
 	"slices"
 	"strings"
 	"ttpos-server-go/app/constant"
@@ -28,6 +29,7 @@ type PrinterLog struct {
 	ReadDeviceId       string `gorm:"column:read_device_id;type:varchar(255);comment:读取设备id;NOT NULL" json:"read_device_id"`
 	ProductPrinterUuid uint64 `gorm:"column:product_printer_uuid;type:bigint(20) unsigned;default:0;comment:商品打印UUID;NOT NULL" json:"product_printer_uuid"`
 	PrinterType        string `gorm:"column:printer_type;type:varchar(50);default:'';comment:打印机类型;NOT NULL" json:"printer_type"`
+	PrintingTime       int64  `gorm:"column:printing_time;type:int(11);default:0;comment:打印耗时;NOT NULL" json:"printing_time"`
 
 	Printer             *Printer             `gorm:"foreignKey:PrinterUuid;references:Uuid"`        // 关联 printer
 	SaleBill            *SaleBill            `gorm:"foreignKey:RelatedUuid;references:Uuid"`        // 关联 sale_order
@@ -107,4 +109,34 @@ func (model *PrinterLog) IsCashierPrinter() bool {
 		constant.PrinterTypeCodesoftLan,
 		constant.PrinterTypeCodesoftWifi,
 	}, model.PrinterType)
+}
+
+// 是否usb打印机
+func (model *PrinterLog) IsUsbPrinter() bool {
+	if model.Printer == nil {
+		return false
+	}
+	return model.Printer.IsUsb == 1
+}
+
+// 计算打印耗时
+func (model *PrinterLog) CalculationTime() int64 {
+	//
+	t := int64(200)
+	speed := 200
+	//
+	if model.PrinterType == constant.PrinterTypeXPrinterWifi {
+		speed = 85
+	} else if model.PrinterType == constant.PrinterTypeCodesoftWifi {
+		speed = 70
+	} else if model.PrinterType == constant.PrinterTypeCodesoftLan {
+		speed = 90
+	}
+	//
+	t = int64(math.Ceil(float64(len(model.Data)) / float64(speed)))
+	//
+	if t < 200 {
+		return 200
+	}
+	return t
 }

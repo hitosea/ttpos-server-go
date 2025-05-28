@@ -3,6 +3,7 @@ package model
 import (
 	"slices"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/resp"
 
 	"github.com/shopspring/decimal"
 )
@@ -215,16 +216,33 @@ func (model *ProductPackage) IsUp() bool {
 
 // 是否是无选择的商品。即可以直接加购不需要弹出弹框再选择的商品
 // 这类商品只有一个商品规格、没有商品属性、没有商品加料
-func (model *ProductPackage) IsNoSelectProduct() bool {
+func (model *ProductPackage) IsNoSelectProduct() (bool, *resp.ProductAutoAddReq) {
 	// 只有一个商品规格、没有加料
 	if len(model.ProductBoms) > 1 {
-		return false
+		return false, nil
 	}
+
+	// 单规格、单属性组（必选），仅有一个属性时，商品可以自动加购
+	if len(model.ProductPackageAttributeGroups) == 1 {
+		attributeGroup := model.ProductPackageAttributeGroups[0]
+		if attributeGroup.IsMustBool() {
+			if len(attributeGroup.ProductPackageAttributes) == 1 {
+				return true, &resp.ProductAutoAddReq{
+					FlavorUuid:        model.GetFlavorProductBom().Uuid,
+					AttributeUuidList: []uint64{attributeGroup.ProductPackageAttributes[0].Uuid},
+				}
+			}
+		}
+	}
+
+	// 不满足“ 单规格、单属性组（必选），仅有一个属性”时，商品只要有属性就是不能自动加购
 	// 没有商品属性
 	if len(model.ProductPackageAttributeGroups) > 0 {
-		return false
+		return false, nil
 	}
-	return true
+	return true, &resp.ProductAutoAddReq{
+		FlavorUuid: model.GetFlavorProductBom().Uuid,
+	}
 }
 
 func (model *ProductPackage) GetMinPrice() float64 {

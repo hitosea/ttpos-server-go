@@ -86,7 +86,7 @@ func (r *saleOrderPeakTimeRepo) Record(recordType string, saleBill *model.SaleBi
 	return nil
 }
 
-// 获取高峰时段
+// GetMaxRecord 获取高峰时段
 func (r *saleOrderPeakTimeRepo) GetMaxRecord(timezone string, startTime, endTime uint, cashierUuid uint64) ([]business_data_resp.PeakHour, error) {
 	// 获取开始时间和结束时间的时间对象
 	startTimeObj := time.Unix(int64(startTime), 0)

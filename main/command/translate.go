@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var URL = "http://103.63.139.229:8088/api/translate"
+var URL = "https://aitrans.ttpos.com/translate"
 
 func init() {
 	rootCommand.AddCommand(translateCmd)
@@ -170,13 +170,8 @@ func processGroup(texts []string) {
 	}
 
 	if result["code"].(float64) == 200 {
-		data := result["data"].(string)
-		var translations []map[string]string
-		err = json.Unmarshal([]byte(data), &translations)
-		if err != nil {
-			fmt.Printf("Error parsing translations: %v\n", err)
-			return
-		}
+		// 直接使用data数组，不需要转换为字符串
+		translations := result["data"].([]interface{})
 
 		for _, lang := range i18n.GetLanguageList() {
 			filename := fmt.Sprintf("./i18n/languages/%s.json", lang)
@@ -193,19 +188,20 @@ func processGroup(texts []string) {
 				continue
 			}
 
-			// UpdateBalance existing keys and collect new entries
+			// 更新现有键并收集新条目
 			newEntries := make(map[string]string)
 			for _, trans := range translations {
-				key := trans["key"]
+				transMap := trans.(map[string]interface{})
+				key := transMap["key"].(string)
 				langKey := lang
 				if lang == "zhtw" {
 					langKey = "zh-TW"
 				}
-				if val, ok := trans[langKey]; ok {
+				if val, ok := transMap[langKey]; ok {
 					if lang == "zh" {
-						newEntries[val] = val
+						newEntries[val.(string)] = val.(string)
 					} else {
-						newEntries[key] = val
+						newEntries[key] = val.(string)
 					}
 				}
 			}

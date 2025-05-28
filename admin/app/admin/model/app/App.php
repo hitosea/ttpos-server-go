@@ -82,6 +82,8 @@ class App extends AppModel
             "su.printer_limit",
             "su.languages",
             "su.timezone",
+            "su.enable_sms",
+            "su.sms_quota",
         ];
         //
         $countWhere = 'where 1 = 1';
@@ -250,6 +252,9 @@ class App extends AppModel
             if (isset($data['logo'])) unset($data['logo']);
             $data['is_open_h5'] = $data['is_open_scan'] ?? 0;
             $data['is_open_h5_order'] = $data['is_accept_scan_order'] ?? 0;
+            if (($data['enable_sms'] ?? 0) == 0) {
+                $data['sms_quota'] = 0;
+            }
             SupplierModel::where('company_uuid', '=', $this['uuid'])->find()?->save($data);
 
             // 用户
@@ -287,7 +292,7 @@ class App extends AppModel
         $host = env('DB_HOST');
         $port = env('DB_PORT');
         $prefix = env('DB_PREFIX');
-        $pdo = new PDO("mysql:host={$host};port={$port}", env('DB_USERNAME'), env('DB_ROOT_PASSWORD'));
+        $pdo = new PDO("mysql:host={$host};port={$port}", env('DB_USERNAME'), env('DB_PASSWORD'));
         $databaseName = 'shop' . $this->uuid;
         $pdo->exec("use {$databaseName}");
         $res = $pdo->exec("UPDATE {$prefix}company SET delete_time = $deleteTime WHERE uuid = {$this->uuid}");

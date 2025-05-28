@@ -68,9 +68,9 @@ func StructToStruct(data interface{}, newdata interface{}, filtrationKeys ...str
 }
 
 // JsonToStr 对象转换成字符串
-func JsonToStr(data interface{}) (string, error) {
-	result, err := json.Marshal(data)
-	return string(result), err
+func JsonToStr(data interface{}) string {
+	result, _ := json.Marshal(data)
+	return string(result)
 }
 
 // StructToMap 结构体转map

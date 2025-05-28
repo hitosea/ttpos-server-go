@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
@@ -17,6 +18,7 @@ type ISaleBillRepo interface {
 	GetSaleBillListPage(pageNo, pageSize int, opts ...DBOption) ([]*model.SaleBill, int64, error)
 	GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error)
 	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
+	GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error) // 获取销售订单的拆单序号。用于操作日志展示
 	UpdateSaleBill(saleBill *model.SaleBill) error
 	UpdateSaleBillRecord(saleBill model.SaleBill) error
 	UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error
@@ -27,7 +29,7 @@ type ISaleBillRepo interface {
 	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                     // 获取销售账单的自助餐商品列表
 	GetSaleBillRecord(uuid uint64) (*model.SaleBill, error)
 	DeleteSaleBill(saleBillUuid uint64) error         // 软删除销售账单
-	GetDeskSaleBillUnpay() ([]*model.SaleBill, error) // 获取所有未付款的桌台账单
+	GetDeskSaleBillUnPay() ([]*model.SaleBill, error) // 获取所有未付款的桌台账单
 	GetCompleteTotal() (int64, error)                 // 获取总数量
 }
 
@@ -100,7 +102,7 @@ func (r *saleBillRepo) GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error) {
 	return &saleBill, nil
 }
 
-// 通过deviceSn查询点餐页面未挂单、未结账的账单
+// GetSaleBillByDeviceUuid 通过deviceSn查询点餐页面未挂单、未结账的账单
 func (r *saleBillRepo) GetSaleBillByDeviceUuid(deviceUuid uint64) (*model.SaleBill, error) {
 	saleBill, err := r.GetSaleBill(
 		CommonRepo.WhereBySoftDelete(),
@@ -113,11 +115,45 @@ func (r *saleBillRepo) GetSaleBillByDeviceUuid(deviceUuid uint64) (*model.SaleBi
 	return &saleBill, nil
 }
 
+func (r *saleBillRepo) GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error) {
+	saleBill, err := r.GetSaleBill(
+		CommonRepo.WhereByUuid(saleBillUuid),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+		),
+	)
+	if err != nil {
+		// 如果销售账单不存在，返回-1 . 表示销售账单不存在或已经删除，则不展示这条订单操作记录
+		if strings.Contains(err.Error(), gorm.ErrRecordNotFound.Error()) {
+			return -1, nil
+		}
+		return 0, errors.WithMessage(err)
+	}
+	saleOrder := saleBill.GetSaleOrder(saleOrderUuid)
+	if saleOrder == nil {
+		// 如果销售订单不存在，返回-1 . 表示销售订单不存在或已经删除，则不展示这条订单操作记录
+		return -1, nil
+	}
+	if !saleBill.IsSplit() {
+		// 如果销售单没有拆单，返回0。操作记录不显示拆单序号前缀
+		return 0, nil
+	}
+
+	// 获取销售单的拆单序号
+	return saleOrder.GetIndex(), nil
+}
+
 func (r *saleBillRepo) UpdateSaleBill(saleBill *model.SaleBill) error {
 	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBill.Uuid).Updates(saleBill).Error
 }
 
-// 仅更新sale_bill表
+// UpdateSaleBillRecord 仅更新sale_bill表
 func (r *saleBillRepo) UpdateSaleBillRecord(saleBill model.SaleBill) error {
 	saleBill.SetNil() // 将关联对象置空，为了不更新这些关联的对象
 	if saleBill.NoPrimaryKey() {
@@ -141,7 +177,7 @@ func (r *saleBillRepo) UpdateSaleBillShowMustPlan(saleBillUuid uint64) error {
 	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Update("show_must_plan", constant.SaleBillShowMustPlanNo).Error
 }
 
-// 设置账单已经完成自动加购
+// UpdateSaleBillAutoAddMustProduct 设置账单已经完成自动加购
 func (r *saleBillRepo) UpdateSaleBillAutoAddMustProduct(saleBillUuid uint64) error {
 	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Update("auto_add_must_product", 0).Error
 }
@@ -250,8 +286,8 @@ func (r *saleBillRepo) DeleteSaleBill(saleBillUuid uint64) error {
 	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Update("delete_time", time.Now().Unix()).Error
 }
 
-// 获取所有待付款的桌台账单
-func (r *saleBillRepo) GetDeskSaleBillUnpay() ([]*model.SaleBill, error) {
+// GetDeskSaleBillUnPay 获取所有待付款的桌台账单
+func (r *saleBillRepo) GetDeskSaleBillUnPay() ([]*model.SaleBill, error) {
 	saleBills, err := r.GetSaleBillList(
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByStatus(constant.SaleBillStatusPending),
@@ -263,7 +299,7 @@ func (r *saleBillRepo) GetDeskSaleBillUnpay() ([]*model.SaleBill, error) {
 	return saleBills, nil
 }
 
-// 获取总数量
+// GetCompleteTotal 获取总数量
 func (r *saleBillRepo) GetCompleteTotal() (int64, error) {
 	var total int64
 	err := r.db.Model(&model.SaleBill{}).Where("delete_time = 0").Where("status = ?", constant.SaleBillStatusComplete).Count(&total).Error

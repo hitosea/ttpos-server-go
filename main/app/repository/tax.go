@@ -16,7 +16,7 @@ func NewTaxRepo(db *gorm.DB) ITaxRepo {
 	return NewTaxRepoImpl(db)
 }
 
-// NewRoleRepoImpl 创建新的角色仓库实现
+// NewTaxRepoImpl 创建新的角色仓库实现
 func NewTaxRepoImpl(db *gorm.DB) *TaxRepoImpl {
 	return &TaxRepoImpl{db: db}
 }

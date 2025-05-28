@@ -57,3 +57,17 @@ func (req PrinterReportReqs) Uuids() []uint64 {
 	}
 	return uuids
 }
+
+type UsbPrinterReportPrinterData struct {
+	M_name string `json:"m_name"` // 厂商名称
+	Name   string `json:"name"`   // 打印机名称
+	Pid    any    `json:"pid"`    // 打印机PID
+	Sn     string `json:"sn"`     // 打印机SN
+	Vid    any    `json:"vid"`    // 打印机VID
+}
+
+// UsbPrinterReportReq usb 打印机上报
+type UsbPrinterReportReq struct {
+	List       []UsbPrinterReportPrinterData `json:"list"`        // 所有在线的USB打印机数据
+	SelectedSn string                        `json:"selected_sn"` // 选择的打印机SN
+}

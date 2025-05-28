@@ -28,14 +28,15 @@ class BalanceLog extends BalanceLogModel
         $data = array_merge($params, $query);
         $model = $this->alias('log')->field('log.*');
         // 搜索关键词
-        if (!empty($query['keyword'])) {
+        $query['keyword'] = $query['keyword'] ?? '';
+        if ($query['keyword'] !== '') {
             $keyword = trim($query['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
                 $query->like('user.id|user.phone|user.nickname', $keyword);
             });
         }
         // 搜索时间段
-        if (isset($data['date']) && $data['date'] != '') {
+        if (isset($data['date']) && is_array($data['date']) && count($data['date']) == 2) {
             $model = $model->where('log.create_time', 'between', [strtotime($data['date'][0]), strtotime($data['date'][1]) + 86399]);
         }
         // 余额变动场景

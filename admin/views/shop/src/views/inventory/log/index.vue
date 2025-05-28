@@ -11,7 +11,6 @@
         </el-form-item>
         <el-form-item :label="$t('起始时间')">
           <div class="block">
-            <span class="demonstration"></span>
             <el-date-picker
               size="small"
               v-model="searchForm.date"
@@ -112,6 +111,7 @@
 <script>
   import InventoryApi from '@/api/inventory.js';
   import Aselect from '@/components/a-select/index.vue';
+  import dayjs from '@/utils/dayjs';
   export default {
     components: {
       Aselect,
@@ -135,7 +135,9 @@
         searchLoading: '',
       };
     },
-    mounted() {
+    async mounted() {
+      this.searchForm.date = [dayjs(), dayjs()];
+      await this.$nextTick();
       this.getData();
     },
     methods: {
