@@ -45,14 +45,16 @@ func NewProductionSrvImpl(dbm *database.DBManager) IProductionSrv {
 
 // GetProductListByOrder 根据订单获取送厨商品
 func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.ProductionListReq) (resp.ProductionListWithPagination, error) {
-	productPackageUuids, emptyRes, err := s.getProductPackageUuids(ctx)
+	productPackageUuids, saleBillUuids, emptyRes, err := s.getProductPackageUuidsAndSaleBillUuids(ctx)
 	if err != nil || len(productPackageUuids) == 0 {
 		return emptyRes, err
 	}
 	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	statusOpt := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusCooking)
 	productPackageUuidOpt := productionRepo.WhereProductPackageUuidIn(productPackageUuids)
-	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnSaleBill, req.PageNo, req.PageSize, statusOpt, productPackageUuidOpt)
+	saleBillUuidOpt := productionRepo.WhereSaleBillUuidIn(saleBillUuids)
+
+	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnSaleBill, req.PageNo, req.PageSize, statusOpt, productPackageUuidOpt, saleBillUuidOpt)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}
@@ -61,11 +63,11 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 		uuids = append(uuids, limitedProduct.SaleBillUuid)
 	}
 	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt,
-		productPackageUuidOpt, productionRepo.WhereSaleBillUuidIn(uuids))
+		productPackageUuidOpt, saleBillUuidOpt, productionRepo.WhereSaleBillUuidIn(uuids))
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}
-	finishedList, err := s.getLatestFinishedList(productionRepo, productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished), productPackageUuidOpt)
+	finishedList, err := s.getLatestFinishedList(productionRepo, productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished), productPackageUuidOpt, saleBillUuidOpt)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}
@@ -81,8 +83,8 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	}, nil
 }
 
-func (s *productionSrv) getProductPackageUuids(ctx context.Context) ([]uint64, resp.ProductionListWithPagination, error) {
-	var productPackageUuids []uint64
+func (s *productionSrv) getProductPackageUuidsAndSaleBillUuids(ctx context.Context) ([]uint64, []uint64, resp.ProductionListWithPagination, error) {
+	var productPackageUuids, saleBillUuids []uint64
 	emptyResp := resp.ProductionListWithPagination{
 		List: make([]resp.ProductionGroup, 0),
 		FinishedList: resp.ProductionList{
@@ -93,31 +95,37 @@ func (s *productionSrv) getProductPackageUuids(ctx context.Context) ([]uint64, r
 	deviceRepo := repository.NewDeviceRepo(db)
 	device, err := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()), deviceRepo.WhereSource(ctx.GetSource()))
 	if err != nil {
-		return productPackageUuids, emptyResp, errors.ErrInternal
+		return productPackageUuids, saleBillUuids, emptyResp, errors.ErrInternal
 	}
 	if device.ProductPrinterUuid == 0 {
-		return productPackageUuids, emptyResp, nil
+		return productPackageUuids, saleBillUuids, emptyResp, nil
 	}
 	productPrinterRepo := repository.NewProductPrinterRepo(db)
 	productPackageUuids, err = productPrinterRepo.GetProductPackageUuids(productPrinterRepo.WhereProductPrinterUuid(device.ProductPrinterUuid))
 	if err != nil {
-		return productPackageUuids, emptyResp, errors.ErrInternal
+		return productPackageUuids, saleBillUuids, emptyResp, errors.ErrInternal
 	}
-	return productPackageUuids, emptyResp, nil
+	saleBillUuids, err = productPrinterRepo.GetProductionSaleBillUuid(device.ProductPrinterUuid)
+	if err != nil {
+		return productPackageUuids, saleBillUuids, emptyResp, errors.ErrInternal
+	}
+	return productPackageUuids, saleBillUuids, emptyResp, nil
 }
 
 // GetProductListByCategory 根据订单获取送厨商品
 func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.ProductionListByCategoryReq) (resp.ProductionListWithPagination, error) {
-	productPackageUuids, emptyRes, err := s.getProductPackageUuids(ctx)
+	productPackageUuids, saleBillUuids, emptyRes, err := s.getProductPackageUuidsAndSaleBillUuids(ctx)
 	if err != nil || len(productPackageUuids) == 0 {
 		return emptyRes, err
 	}
 	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	statusOpt := productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusCooking)
 	productPackageUuidOpt := productionRepo.WhereProductPackageUuidIn(productPackageUuids)
+	saleBillUuidOpt := productionRepo.WhereSaleBillUuidIn(saleBillUuids)
 	dbOptions := []repository.DBOption{
 		statusOpt,
 		productPackageUuidOpt,
+		saleBillUuidOpt,
 	}
 	if req.CategoryUuid != 0 {
 		dbOptions = append(dbOptions, productionRepo.WhereProductFirstCategoryUuidIn([]uint64{req.CategoryUuid}))
@@ -132,7 +140,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 	}
 
 	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt,
-		productPackageUuidOpt, productionRepo.WhereProductFirstCategoryUuidIn(uuids), productionRepo.WithProductCategory(), productionRepo.WithProductCategoryMultiLanguageName())
+		productPackageUuidOpt, saleBillUuidOpt, productionRepo.WhereProductFirstCategoryUuidIn(uuids), productionRepo.WithProductCategory(), productionRepo.WithProductCategoryMultiLanguageName())
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
 	}
@@ -164,7 +172,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 		}
 		groups = append(groups, group)
 	}
-	finishedList, err := s.getLatestFinishedList(productionRepo, productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished), productPackageUuidOpt)
+	finishedList, err := s.getLatestFinishedList(productionRepo, productionRepo.WhereProductStatus(constant.ProductionOrderProductStatusFinished), productPackageUuidOpt, saleBillUuidOpt)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
 	}
@@ -181,8 +189,8 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 }
 
 // 最近上菜历史
-func (s *productionSrv) getLatestFinishedList(repo repository.IProductionOrderRepo, statusOpt repository.DBOption, opts ...repository.DBOption) (resp.ProductionList, error) {
-	_, products, err := repo.GetProducts(3, repository.FinishedTimeDesc, statusOpt, opts...)
+func (s *productionSrv) getLatestFinishedList(productionRepo repository.IProductionOrderRepo, statusOpt repository.DBOption, opts ...repository.DBOption) (resp.ProductionList, error) {
+	_, products, err := productionRepo.GetProducts(3, repository.FinishedTimeDesc, statusOpt, opts...)
 	if err != nil {
 		return resp.ProductionList{}, errors.ErrInternal
 	}
