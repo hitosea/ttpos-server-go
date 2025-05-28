@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/lock"
 
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -117,165 +118,165 @@ func (s *smsSrv) deductQuota(ctx context.Context, companyUuid uint64) error {
 
 // SendMemberConsumptionSMS 发送会员消费短信
 func (s *smsSrv) SendMemberConsumptionSMS(ctx context.Context, phone string, params *sms.MemberConsumptionRequest) error {
-	// company := ctx.GetCompany()
-	// // 禁止并发操作
-	// if ctx.NoLock() {
-	// 	lock.NewSystemLock().LockUuid(company.Uuid)
-	// 	defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-	// 	ctx.AddLock()
-	// }
+	company := ctx.GetCompany()
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(company.Uuid)
+		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
+		ctx.AddLock()
+	}
 
-	// formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
-	// if err != nil {
-	// 	return err
-	// }
+	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
+	if err != nil {
+		return err
+	}
 
-	// // 获取公司名称
-	// if params.Company == "" {
-	// 	params.Company = companyName
-	// }
+	// 获取公司名称
+	if params.Company == "" {
+		params.Company = companyName
+	}
 
-	// // 如果增加的积分和会员支付的金额都为0，则不发送短信
-	// if params.IncreasePoints == 0 && params.MemberPay == 0 {
-	// 	return errors.WithMessage(errors.New("增加的积分和会员支付的金额都为0，不发送短信"))
-	// }
+	// 如果增加的积分和会员支付的金额都为0，则不发送短信
+	if params.IncreasePoints == 0 && params.MemberPay == 0 {
+		return errors.WithMessage(errors.New("增加的积分和会员支付的金额都为0，不发送短信"))
+	}
 
-	// // 发送短信
-	// resp, err := s.client.SendMemberConsumptionSMS(formattedPhone, language, params)
-	// if err != nil {
-	// 	err := fmt.Errorf("failed to send SMS: %v", err)
-	// 	return errors.WithMessage(err, "发送短信失败")
-	// }
+	// 发送短信
+	resp, err := s.client.SendMemberConsumptionSMS(formattedPhone, language, params)
+	if err != nil {
+		err := fmt.Errorf("failed to send SMS: %v", err)
+		return errors.WithMessage(err, "发送短信失败")
+	}
 
-	// // 如果发送成功，扣减额度
-	// if resp.Code == sms.ResponseCodeSuccess {
-	// 	if err := s.deductQuota(ctx, company.Uuid); err != nil {
-	// 		return errors.WithMessage(err, "扣减短信额度失败")
-	// 	}
-	// } else {
-	// 	err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
-	// 	return errors.WithMessage(err, "发送短信失败")
-	// }
+	// 如果发送成功，扣减额度
+	if resp.Code == sms.ResponseCodeSuccess {
+		if err := s.deductQuota(ctx, company.Uuid); err != nil {
+			return errors.WithMessage(err, "扣减短信额度失败")
+		}
+	} else {
+		err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
+		return errors.WithMessage(err, "发送短信失败")
+	}
 
 	return nil
 }
 
 // SendMemberRechargeSMS 发送会员充值短信
 func (s *smsSrv) SendMemberRechargeSMS(ctx context.Context, phone string, params *sms.MemberRechargeRequest) error {
-	// company := ctx.GetCompany()
-	// // 禁止并发操作
-	// if ctx.NoLock() {
-	// 	lock.NewSystemLock().LockUuid(company.Uuid)
-	// 	defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-	// 	ctx.AddLock()
-	// }
+	company := ctx.GetCompany()
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(company.Uuid)
+		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
+		ctx.AddLock()
+	}
 
-	// formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
-	// if err != nil {
-	// 	return err
-	// }
+	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
+	if err != nil {
+		return err
+	}
 
-	// // 获取公司名称
-	// if params.Company == "" {
-	// 	params.Company = companyName
-	// }
+	// 获取公司名称
+	if params.Company == "" {
+		params.Company = companyName
+	}
 
-	// // 发送短信
-	// resp, err := s.client.SendMemberRechargeSMS(formattedPhone, language, params)
-	// if err != nil {
-	// 	err := fmt.Errorf("failed to send SMS: %v", err)
-	// 	return errors.WithMessage(err, "发送短信失败")
-	// }
+	// 发送短信
+	resp, err := s.client.SendMemberRechargeSMS(formattedPhone, language, params)
+	if err != nil {
+		err := fmt.Errorf("failed to send SMS: %v", err)
+		return errors.WithMessage(err, "发送短信失败")
+	}
 
-	// // 如果发送成功，扣减额度
-	// if resp.Code == sms.ResponseCodeSuccess {
-	// 	if err := s.deductQuota(ctx, company.Uuid); err != nil {
-	// 		return errors.WithMessage(err, "扣减短信额度失败")
-	// 	}
-	// } else {
-	// 	err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
-	// 	return errors.WithMessage(err, "发送短信失败")
-	// }
+	// 如果发送成功，扣减额度
+	if resp.Code == sms.ResponseCodeSuccess {
+		if err := s.deductQuota(ctx, company.Uuid); err != nil {
+			return errors.WithMessage(err, "扣减短信额度失败")
+		}
+	} else {
+		err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
+		return errors.WithMessage(err, "发送短信失败")
+	}
 
 	return nil
 }
 
 // SendMemberRechargeRefundSMS 发送会员充值退款短信
 func (s *smsSrv) SendMemberRechargeRefundSMS(ctx context.Context, phone string, params *sms.MemberRechargeRefundRequest) error {
-	// company := ctx.GetCompany()
-	// // 禁止并发操作
-	// if ctx.NoLock() {
-	// 	lock.NewSystemLock().LockUuid(company.Uuid)
-	// 	defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-	// 	ctx.AddLock()
-	// }
+	company := ctx.GetCompany()
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(company.Uuid)
+		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
+		ctx.AddLock()
+	}
 
-	// formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
-	// if err != nil {
-	// 	return err
-	// }
+	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
+	if err != nil {
+		return err
+	}
 
-	// // 获取公司名称
-	// if params.Company == "" {
-	// 	params.Company = companyName
-	// }
+	// 获取公司名称
+	if params.Company == "" {
+		params.Company = companyName
+	}
 
-	// // 发送短信
-	// resp, err := s.client.SendMemberRechargeRefundSMS(formattedPhone, language, params)
-	// if err != nil {
-	// 	err := fmt.Errorf("failed to send SMS: %v", err)
-	// 	return errors.WithMessage(err, "发送短信失败")
-	// }
+	// 发送短信
+	resp, err := s.client.SendMemberRechargeRefundSMS(formattedPhone, language, params)
+	if err != nil {
+		err := fmt.Errorf("failed to send SMS: %v", err)
+		return errors.WithMessage(err, "发送短信失败")
+	}
 
-	// // 如果发送成功，扣减额度
-	// if resp.Code == sms.ResponseCodeSuccess {
-	// 	if err := s.deductQuota(ctx, company.Uuid); err != nil {
-	// 		return errors.WithMessage(err, "扣减短信额度失败")
-	// 	}
-	// } else {
-	// 	err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
-	// 	return errors.WithMessage(err, "发送短信失败")
-	// }
+	// 如果发送成功，扣减额度
+	if resp.Code == sms.ResponseCodeSuccess {
+		if err := s.deductQuota(ctx, company.Uuid); err != nil {
+			return errors.WithMessage(err, "扣减短信额度失败")
+		}
+	} else {
+		err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
+		return errors.WithMessage(err, "发送短信失败")
+	}
 
 	return nil
 }
 
 // SendMemberOrderRefundSMS 发送会员用餐订单退款短信
 func (s *smsSrv) SendMemberOrderRefundSMS(ctx context.Context, phone string, params *sms.MemberOrderRefundRequest) error {
-	// company := ctx.GetCompany()
-	// // 禁止并发操作
-	// if ctx.NoLock() {
-	// 	lock.NewSystemLock().LockUuid(company.Uuid)
-	// 	defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-	// 	ctx.AddLock()
-	// }
+	company := ctx.GetCompany()
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(company.Uuid)
+		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
+		ctx.AddLock()
+	}
 
-	// formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
-	// if err != nil {
-	// 	return err
-	// }
+	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
+	if err != nil {
+		return err
+	}
 
-	// // 获取公司名称
-	// if params.Company == "" {
-	// 	params.Company = companyName
-	// }
+	// 获取公司名称
+	if params.Company == "" {
+		params.Company = companyName
+	}
 
-	// // 发送短信
-	// resp, err := s.client.SendMemberOrderRefundSMS(formattedPhone, language, params)
-	// if err != nil {
-	// 	err := fmt.Errorf("failed to send SMS: %v", err)
-	// 	return errors.WithMessage(err, "发送短信失败")
-	// }
+	// 发送短信
+	resp, err := s.client.SendMemberOrderRefundSMS(formattedPhone, language, params)
+	if err != nil {
+		err := fmt.Errorf("failed to send SMS: %v", err)
+		return errors.WithMessage(err, "发送短信失败")
+	}
 
-	// // 如果发送成功，扣减额度
-	// if resp.Code == sms.ResponseCodeSuccess {
-	// 	if err := s.deductQuota(ctx, company.Uuid); err != nil {
-	// 		return errors.WithMessage(err, "扣减短信额度失败")
-	// 	}
-	// } else {
-	// 	err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
-	// 	return errors.WithMessage(err, "发送短信失败")
-	// }
+	// 如果发送成功，扣减额度
+	if resp.Code == sms.ResponseCodeSuccess {
+		if err := s.deductQuota(ctx, company.Uuid); err != nil {
+			return errors.WithMessage(err, "扣减短信额度失败")
+		}
+	} else {
+		err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
+		return errors.WithMessage(err, "发送短信失败")
+	}
 
 	return nil
 }
