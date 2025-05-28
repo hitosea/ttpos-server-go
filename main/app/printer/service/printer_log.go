@@ -521,6 +521,7 @@ func (s *printerLogSrv) GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (
 		PrinterConfig:    settingPrinterInfo.PrinterConfig,
 		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
 		PrintingTime:     200,
+		IsUsbPrinter:     settingPrinterInfo.IsUsbPrinter,
 	}, nil
 }
 
