@@ -105,7 +105,7 @@ func (s *smsSrv) checkQuotaAndFormatPhone(ctx context.Context, phone string) (st
 
 // 扣减短信额度. 同时扣减saas库和商家库的短信额度
 func (s *smsSrv) deductQuota(ctx context.Context, companyUuid uint64) error {
-	if err := repository.NewCompanySettingRepo(ctx.GetDB()).UpdateSmsQuota(companyUuid, 1); err != nil {
+	if err := repository.NewCompanySettingRepo(s.dbm.GetDB(ctx.GetCompanyUuid())).UpdateSmsQuota(companyUuid, 1); err != nil {
 		err := fmt.Errorf("failed to update SMS quota: %v", err)
 		return errors.WithMessage(err, "扣减短信额度失败")
 	}

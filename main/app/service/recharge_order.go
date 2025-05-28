@@ -575,7 +575,6 @@ func (s *rechargeOrderSrv) ConfirmRechargeOrder(ctx context.Context, confirmReq 
 			ctx.Log().Info("停止发送短信（充值），获取会员失败", zap.Error(errors.WithMessage(err)))
 		} else {
 			go func() {
-				ctx.SetDB(db)
 				if member != nil {
 					smsReq := sms.MemberRechargeRequest{
 						Company:       ctx.GetCompany().Name,
@@ -1288,7 +1287,6 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			ctx.Log().Info("停止发送短信（充值反结账），获取会员失败", zap.Error(errors.WithMessage(err)))
 		} else {
 			go func() {
-				ctx.SetDB(db)
 				if member != nil && member.Phone != "" {
 					smsReq := sms.MemberRechargeRefundRequest{
 						Company:        ctx.GetCompany().Name,
