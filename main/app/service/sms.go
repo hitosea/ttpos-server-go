@@ -6,6 +6,8 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
+	srvSetting "ttpos-server-go/app/service/setting"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/lock"
 
 	"ttpos-server-go/pkg/context"
@@ -97,7 +99,16 @@ func (s *smsSrv) checkQuotaAndFormatPhone(ctx context.Context, phone string) (st
 	}
 
 	// 选择语言
-	defaultLanguage := setting.GetDefaultLanguage()
+	// 获取门店设置
+	settingSvr := srvSetting.NewSrvImpl(s.dbm, cache.Global)
+	storeSetting, err := settingSvr.GetStoreSetting(ctx)
+	if err != nil {
+		return "", "", "", errors.WithMessage(err, "获取门店设置失败")
+	}
+	var defaultLanguage string
+	if len(storeSetting.Language) > 0 {
+		defaultLanguage = storeSetting.Language[0].Name
+	}
 	language := s.selectLanguage(defaultLanguage)
 
 	return formattedPhone, language, ctx.GetCompany().Name, nil
