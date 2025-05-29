@@ -77,7 +77,7 @@ type ProductPrinter struct {
 	Name               string `gorm:"column:name;type:varchar(100);comment:名称.厨显上叫档口;NOT NULL" json:"name"`
 	Status             int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态,1-open开启 1、0-close关闭;NOT NULL" json:"status"`
 	PrintMode          int    `gorm:"column:print_mode;type:tinyint(2);default:0;comment:打印模式,0-payment付款打印 1-kitchen送厨打印;NOT NULL" json:"print_mode"`
-	PrintMethod        int    `gorm:"column:print_method;type:tinyint(2);default:0;comment:打印方式,0-order整单打印 1-item按一菜一单打印;NOT NULL" json:"print_method"`
+	PrintMethod        int    `gorm:"column:print_method;type:tinyint(2);default:0;comment:打印方式,-1-全选 0-order整单打印 1-item按一菜一单打印;NOT NULL" json:"print_method"`
 	PrintProductSelect int    `gorm:"column:print_product_select;type:tinyint(2);default:0;comment:打印商品选择,0-category按商品分类 1-tag按打印标签;NOT NULL" json:"print_product_select"`
 	PrintModeScene     int    `gorm:"column:print_mode_scene;type:tinyint(2);default:0;comment:打印模式场景,0-merge合并 1-separate分开;NOT NULL" json:"print_mode_scene"`
 	Copies             uint   `gorm:"column:copies;type:int(11) unsigned;default:1;comment:打印份数;NOT NULL" json:"copies"`

@@ -38,19 +38,22 @@ class Printing extends BaseModel
     ];
 
     // 打印方式
+    const PRINT_METHOD = -1; // 全选
     const PRINT_METHOD_ALL = 10; // 整单打印
     const PRINT_METHID_ONE = 40; // 按一菜一单打印
 
     // 打印方式字段映射
     const PRINT_METHOD_MAP = [
+        self::PRINT_METHOD => -1,
         self::PRINT_METHOD_ALL => 0,
         self::PRINT_METHID_ONE => 1,
     ];
 
     // 打印方式字段反向映射
     const PRINT_METHOD_REVERSE_MAP = [
-        self::PRINT_METHOD_ALL,
-        self::PRINT_METHID_ONE,
+        -1 => self::PRINT_METHOD,
+        0 => self::PRINT_METHOD_ALL,
+        1 => self::PRINT_METHID_ONE,
     ];
 
     // 打印商品选择
