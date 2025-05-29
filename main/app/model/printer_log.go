@@ -30,12 +30,27 @@ type PrinterLog struct {
 	ProductPrinterUuid uint64 `gorm:"column:product_printer_uuid;type:bigint(20) unsigned;default:0;comment:商品打印UUID;NOT NULL" json:"product_printer_uuid"`
 	PrinterType        string `gorm:"column:printer_type;type:varchar(50);default:'';comment:打印机类型;NOT NULL" json:"printer_type"`
 	PrintingTime       int64  `gorm:"column:printing_time;type:int(11);default:0;comment:打印耗时;NOT NULL" json:"printing_time"`
+	Copies             uint   `gorm:"column:copies;type:int(11) unsigned;default:0;comment:打印份数;NOT NULL" json:"print_copies"`
 
 	Printer             *Printer             `gorm:"foreignKey:PrinterUuid;references:Uuid"`        // 关联 printer
 	SaleBill            *SaleBill            `gorm:"foreignKey:RelatedUuid;references:Uuid"`        // 关联 sale_order
 	SaleOrder           *SaleOrder           `gorm:"foreignKey:RelatedUuid;references:Uuid"`        // 关联 sale_order
 	ProductPrinter      *ProductPrinter      `gorm:"foreignKey:ProductPrinterUuid;references:Uuid"` // 关联 sale_order
 	MemberRechargeOrder *MemberRechargeOrder `gorm:"foreignKey:RelatedUuid;references:Uuid"`        // 关联 sale_order
+}
+
+// GetCopies 获取打印份数
+func (model *PrinterLog) GetCopies() uint {
+	if model.Copies > 0 {
+		return model.Copies
+	}
+	if model.Printer == nil {
+		return 1
+	}
+	if model.Printer.Copies == 0 {
+		return model.Printer.Copies
+	}
+	return 1
 }
 
 // 压缩数据

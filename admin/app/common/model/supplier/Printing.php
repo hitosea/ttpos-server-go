@@ -210,6 +210,7 @@ class Printing extends BaseModel
             'id' => $this['id'],
             'name' => $this['name'],
             'is_open' => $this['status'],
+            'copies' => $this['copies'],
             'print_type' => self::PRINT_MODE_REVERSE_MAP[$this['print_mode']],
             'print_method' => self::PRINT_METHOD_REVERSE_MAP[$this['print_method']],
             'product_method' => self::PRINT_PRODUCT_SELECT_REVERSE_MAP[$this['print_product_select']],

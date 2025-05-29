@@ -217,12 +217,7 @@ func (r *printerLogRepo) GetShiftPrinterData(deviceSn string, opts ...DBOption) 
 			PrinterType:      printerLog.PrinterType,
 			IsCashierPrinter: printerLog.IsCashierPrinter(),
 			IsUsbPrinter:     printerLog.IsUsbPrinter(),
-			Copies: func() uint {
-				if printerLog.Printer == nil {
-					return 1
-				}
-				return printerLog.Printer.Copies
-			}(),
+			Copies:           printerLog.GetCopies(),
 			PrinterConfig: func() string {
 				if printerLog.Printer == nil {
 					return ""

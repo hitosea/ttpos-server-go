@@ -60,6 +60,7 @@ class Printing extends PrintingModel
             // 添加商品打印(档口)
             $this->save([
                 'name' => $data['name'], // 名称
+                'copies' => $data['copies'] ?? 1, // 打印份数
                 'status' => intval($data['is_open']), // 是否开启: 0开启 1关闭
                 'print_mode' => self::PRINT_MODE_MAP[intval($data['print_type'])], // 打印模式
                 'print_method' => self::PRINT_METHOD_MAP[intval($data['print_method'])], // 打印方式
@@ -166,6 +167,7 @@ class Printing extends PrintingModel
 
             $this->save([
                 'name' => $data['name'], // 名称
+                'copies' => $data['copies'] ?? 1, // 打印份数
                 'status' => intval($data['is_open']), // 是否开启: 0开启 1关闭
                 'print_mode' => self::PRINT_MODE_MAP[intval($data['print_type'])], // 打印模式
                 'print_method' => self::PRINT_METHOD_MAP[intval($data['print_method'])], // 打印方式

@@ -99,7 +99,7 @@ func (t *printerTask) sendPrinter(companyUuid uint64) {
 func (t *printerTask) ExecutePrinter(companyUuid uint64, printerLog model.PrinterLog) {
 	printerLog.Num = printerLog.Num + 1
 	if printerLog.Printer != nil {
-		copies := printerLog.Printer.Copies
+		copies := printerLog.Copies
 		if copies == 0 {
 			copies = 1
 		}

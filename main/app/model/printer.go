@@ -80,6 +80,7 @@ type ProductPrinter struct {
 	PrintMethod        int    `gorm:"column:print_method;type:tinyint(2);default:0;comment:打印方式,0-order整单打印 1-item按一菜一单打印;NOT NULL" json:"print_method"`
 	PrintProductSelect int    `gorm:"column:print_product_select;type:tinyint(2);default:0;comment:打印商品选择,0-category按商品分类 1-tag按打印标签;NOT NULL" json:"print_product_select"`
 	PrintModeScene     int    `gorm:"column:print_mode_scene;type:tinyint(2);default:0;comment:打印模式场景,0-merge合并 1-separate分开;NOT NULL" json:"print_mode_scene"`
+	Copies             uint   `gorm:"column:copies;type:int(11) unsigned;default:1;comment:打印份数;NOT NULL" json:"copies"`
 
 	// 关联模型
 	ProductPrinterRegions      []*ProductPrinterRegion      `gorm:"foreignKey:ProductPrinterUuid;references:Uuid"`

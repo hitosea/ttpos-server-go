@@ -107,6 +107,7 @@ class Printing extends Controller
     public function edit($id)
     {
         $param = $this->postData();
+        /** @var PrintingModel $model */
         $model = PrintingModel::detail($id, [
             'printingItem',
             'printingRegion',

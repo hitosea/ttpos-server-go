@@ -342,12 +342,7 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 			Uuid:        log.Uuid,
 			Data:        log.Data,
 			PrintMethod: log.PrintMethod,
-			Copies: func() uint {
-				if log.Printer == nil {
-					return 1
-				}
-				return log.Printer.Copies
-			}(),
+			Copies:      log.GetCopies(),
 			PrinterType: log.PrinterType,
 			PrinterConfig: func() string {
 				if log.Printer == nil {
@@ -405,12 +400,7 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 		PrinterType:      printerLog.PrinterType,
 		IsCashierPrinter: printerLog.IsCashierPrinter(),
 		IsUsbPrinter:     printerLog.IsUsbPrinter(),
-		Copies: func() uint {
-			if printerLog.Printer == nil {
-				return 1
-			}
-			return printerLog.Printer.Copies
-		}(),
+		Copies:           printerLog.GetCopies(),
 		PrinterConfig: func() string {
 			if printerLog.Printer == nil {
 				return ""
