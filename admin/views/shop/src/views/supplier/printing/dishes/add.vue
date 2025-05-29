@@ -50,18 +50,17 @@
 
         <el-form-item for="no_click" :label="$t('打印方式')" prop="print_method" :rules="[{ required: true, message: '' }]">
           <div>
-            <el-radio-group
-              v-model="form.print_method"
+            <el-checkbox-group
+              v-model="printMethod"
               @change="
                 () => {
-                  form.is_open_one_food = 0;
                   form.print_select = 1;
                 }
               "
             >
-              <el-radio :label="10">{{ $t('整单打印') }}</el-radio>
-              <el-radio :label="40">{{ $t('按一菜一单打印') }}</el-radio>
-            </el-radio-group>
+              <el-checkbox :disabled="printMethod.includes(10) && printMethod.length == 1" :label="10">{{ $t('整单打印') }}</el-checkbox>
+              <el-checkbox :disabled="printMethod.includes(40) && printMethod.length == 1" :label="40">{{ $t('按一菜一单打印') }}</el-checkbox>
+            </el-checkbox-group>
           </div>
         </el-form-item>
 
@@ -130,49 +129,16 @@
           </el-select>
         </el-form-item>
 
-        <!-- <el-form-item for="no_click" v-if="form.product_type == 0 && form.print_method == 20" :label="$t('商品分类')"
-          prop="category_id" :rules="[{ required: true, message: '请选择商品分类' }]">
-          <el-select v-model="form.category_id" multiple :placeholder="$t('请选择')">
-            <el-option v-for="item in storeList" :key="item.category_id" :label="item.name_text"
-              :value="item.category_id + ''"></el-option>
-          </el-select>
-        </el-form-item>
-
-        <el-form-item for="no_click" v-if="form.product_type == 1 && form.print_method == 20" :label="$t('商品分类')"
-          prop="category_id" :rules="[{ required: true, message: $t('请选择商品分类') }]">
-          <el-select v-model="form.category_id" multiple :placeholder="$t('请选择')">
-            <el-option v-for="item in storeList" :key="item.category_id" :label="item.name_text"
-              :value="item.category_id + ''"></el-option>
-          </el-select>
-        </el-form-item>
-
-        <el-form-item for="no_click" v-if="form.print_method == 30" :label="$t('打印标签')" prop="label_id">
-          <el-select v-model="form.label_id" multiple :placeholder="$t('请选择')">
-            <el-option v-for="item in labelList" :key="item.label_id" :label="item.label_name_text"
-              :value="item.label_id + ''"></el-option>
-          </el-select>
-          <div class="tips">{{ $t('不选择打印全部') }}</div>
-        </el-form-item>
-
-        <el-form-item for="no_click" v-if="form.print_method == 20 || form.print_method == 30" :label="$t('按一菜一单打印')"
-          prop="is_open_one_food" :rules="[{ required: true, message: '' }]">
-          <div>
-            <el-radio v-model="form.is_open_one_food" :label="0">{{ $t('关闭') }}</el-radio>
-            <el-radio v-model="form.is_open_one_food" :label="1">{{ $t('开启') }}</el-radio>
-          </div>
-        </el-form-item> -->
-
-        <el-form-item
-          for="no_click"
-          v-if="form.print_method == 40 || form.is_open_one_food == 1"
-          :label="$t('打印')"
-          prop="print_select"
-          :rules="[{ required: true, message: '' }]"
-        >
+        <el-form-item for="no_click" v-if="printMethod.includes(40)" :label="$t('打印')" prop="print_select" :rules="[{ required: true, message: '' }]">
           <div>
             <el-radio v-model="form.print_select" :label="1">{{ $t('合并') }}</el-radio>
             <el-radio v-model="form.print_select" :label="2">{{ $t('分开') }}</el-radio>
           </div>
+        </el-form-item>
+
+        <!--打印联数-->
+        <el-form-item for="no_click" :label="$t('打印联数')" prop="copies" :rules="[{ required: true, message: '' }]">
+          <el-input-number v-model="form.copies" :min="1" :max="10" :controls="false" :precision="0" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -201,6 +167,7 @@
         /*切换菜单*/
         // activeIndex: '1',
         /*form表单数据*/
+        printMethod: [10],
         form: {
           name: '',
           is_open: 1,
@@ -212,10 +179,10 @@
           type: 10,
           print_method: 10,
           label_id: [],
-          is_open_one_food: 0,
           print_select: 1,
           product_method: 1,
           product_ids: [],
+          copies: 1,
         },
         loading: false,
         dialogVisible: false,
@@ -240,22 +207,7 @@
       this.dialogVisible = this.open_add;
       this.getAreaData();
     },
-    // watch: {
-    //     'categoryIds': {
-    //         handler(val) {
-    //             this.form.category_id = [];
-    //             this.categoryIds.map(h=>{
-    //                 if (h[1]) {
-    //                     this.form.category_id.push(h[1])
-    //                 }
-    //             })
-    //             //
-    //             this.$refs?.form?.validate(_=>{})
-    //         },
-    //         deep: true,
-    //         immediate: true,
-    //     }
-    // },
+
     computed: {
       printProductsDisplayByCategory() {
         const selectedCategoryIds = this.printProductsDataByCategory.map((item) => item.category_id);
@@ -286,6 +238,24 @@
         return this.labelList
           .filter((item) => selectedPrintTagIds.includes(item.label_id))
           .map((item) => ({ ...item, count: this.printProductsDataByPrintTag.filter((val) => val.label_id == item.label_id).length }));
+      },
+    },
+    watch: {
+      printMethod: {
+        handler(newVal) {
+          const has10 = newVal.includes(10);
+          const has40 = newVal.includes(40);
+
+          if (has10 && has40) {
+            this.form.print_method = -1;
+          } else if (has10) {
+            this.form.print_method = 10;
+          } else if (has40) {
+            this.form.print_method = 40;
+          }
+        },
+        immediate: true,
+        deep: true,
       },
     },
     methods: {
