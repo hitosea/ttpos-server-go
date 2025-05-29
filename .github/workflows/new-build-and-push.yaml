@@ -61,8 +61,8 @@ jobs:
         id: build-and-push
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
-          context: ./${{ matrix.program }}
-          file: Dockerfile
+          context: ./
+          file: ./${{ matrix.program }}/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/ttpos-server-${{ matrix.program == 'main' &&  'go' || matrix.program }}:${{ env.IMAGE_TAG_PREFIX }}${{steps.build.outputs.COMMIT_ID }}
