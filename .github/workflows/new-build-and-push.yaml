@@ -6,7 +6,7 @@ env:
   REGISTRY: hub.hitosea.com
   IMAGE_NAME: ttpos-server
   BRANCH: ${{ github.event_name == 'push' && github.ref || github.event.inputs.branch }}
-  IMAGE_TAG_PREFIX: ${{ github.event_name == 'push' && '' || 'test1-' }}
+  IMAGE_TAG_PREFIX: ${{ github.event_name == 'push' && '' || 'test-' }}
 
 on:
   push:
