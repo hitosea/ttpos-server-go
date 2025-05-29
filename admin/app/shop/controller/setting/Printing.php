@@ -56,7 +56,7 @@ class Printing extends Controller
                 $printerId = 0;
                 foreach ($printerSettings['cashier_printer'] as $k => $v) {
                     if ($value['key'] == $v['key']) {
-                        $printerId = $v['printer_id'];
+                        $printerId = $v['printer_id'] ?? 0;
                     }
                 }
                 if (PrinterModel::where("uuid", $value['printer_id'] ?? '')->value('is_usb') == 1) {
