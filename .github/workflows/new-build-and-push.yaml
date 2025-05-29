@@ -19,7 +19,8 @@ on:
         required: true
         type: choice
         options:
-          - "new-test"
+          - "test"
+          - ""
 
 
 jobs:
