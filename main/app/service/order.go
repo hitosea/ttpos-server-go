@@ -7417,7 +7417,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 						Consumption:    saleOrder.FinalPrice,
 						IncreasePoints: saleOrder.GiftPoints,
 						Balance:        member.GetBalanceAll(),
-						PointsBalance:  member.GetPoints() + saleOrder.GiftPoints, // 会员积分=会员积分+本次增加的积分。 此时积分还未增加到会员表中
+						PointsBalance:  decimal.NewFromFloat(member.GetPoints()).Add(decimal.NewFromFloat(saleOrder.GiftPoints)).Round(2).InexactFloat64(), // 会员积分=会员积分+本次增加的积分。 此时积分还未增加到会员表中
 					}
 					if memberPaymentOrder != nil {
 						smsReq.MemberPay = memberPaymentOrder.Amount
