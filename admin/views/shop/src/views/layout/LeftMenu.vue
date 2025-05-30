@@ -201,6 +201,14 @@
               }
             });
           }
+          if (newVal.meta.topTree == '/home') {
+            this.menuList.map((item, index) => {
+              if (item.name == '首页') {
+                this.active_menu = index;
+              }
+              this.$emit('selectMenu', null);
+            });
+          }
         },
         deep: true,
         immediate: true,
