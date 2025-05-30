@@ -1,0 +1,261 @@
+<template>
+  <div class="user">
+    <!--搜索表单-->
+    <div class="common-seach-wrap flex">
+      <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
+        <el-form-item :label="$t('活动名称')">
+          <el-input v-model="formInline.card_name" :placeholder="$t('请输入活动名称')" @input="onSearch"></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button size="small" type="primary" icon="Search" class="search-button" @click="onSearch">
+            {{ $t('查询') }}
+          </el-button>
+        </el-form-item>
+      </el-form>
+      <!--添加等级-->
+      <div class="common-level-rail">
+        <el-button size="small" type="primary" @click="addClick" icon="Plus" v-auth="'/marketing/activity/add'">{{ $t('新增活动') }} </el-button>
+      </div>
+    </div>
+    <!--内容-->
+    <div class="product-content">
+      <div class="table-wrap">
+        <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
+          <el-table-column prop="card_name" :label="$t('活动名称')"></el-table-column>
+          <el-table-column prop="expire" :label="$t('活动类型')">
+            <template #default="scope">
+              <span v-if="scope.row.expire > 0">{{ scope.row.expire }}月</span>
+              <span v-else>{{ $t('永久有效') }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="money" :label="$t('活动奖品')">
+            <template #default="scope">
+              {{ this.$formatPrice(scope.row.money) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="discount" :label="$t('创建时间')">
+            <template #default="scope">
+              <span v-if="scope.row.is_discount > 0">{{ Number(scope.row.discount || 0) }}%</span>
+              <span v-else>{{ $t('无') }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="status" :label="$t('状态')">
+            <template #default="scope">
+              <el-switch
+                :disabled="!this.$filter.isAuth('/card/card/state')"
+                :model-value="scope.row.status == 0 ? true : false"
+                @click="handleChange(scope.row)"
+                :loading="loading"
+              />
+            </template>
+          </el-table-column>
+
+          <el-table-column prop="create_time" :label="$t('活动时间')"></el-table-column>
+          <el-table-column fixed="right" :label="$t('操作')" width="160">
+            <template #default="scope">
+              <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/marketing/activity/edit'">{{ $t('编辑') }} </el-button>
+              <el-button @click="deleteClick(scope.row)" type="primary" link size="small" v-auth="'/marketing/activity/disable'">{{ $t('失效') }} </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+      <!--分页-->
+      <div class="pagination">
+        <el-pagination
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          background
+          :current-page="curPage"
+          :page-size="pageSize"
+          layout="total, prev, pager, next, jumper"
+          :total="totalDataNumber"
+        >
+        </el-pagination>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  import Aselect from '@/components/a-select/index.vue';
+  import CardApi from '@/api/card.js';
+  import { useUserStore } from '@/store/index';
+  const { computedSupplier } = useUserStore();
+  const supplier = computedSupplier().supplier;
+  const app_id = supplier.value?.app_id || 0;
+  export default {
+    components: {
+      Aselect,
+    },
+    data() {
+      return {
+        app_id: app_id,
+        /*是否加载完成*/
+        loading: true,
+        /*列表数据*/
+        tableData: [],
+        /*一页多少条*/
+        pageSize: 10,
+        /*一共多少条数据*/
+        totalDataNumber: 0,
+        /*当前是第几页*/
+        curPage: 1,
+        /*横向表单数据模型*/
+        formInline: {
+          card_name: '',
+          status: '',
+        },
+        /*是否打开编辑弹窗*/
+        open_edit: false,
+        /*当前编辑的对象*/
+        userModel: {},
+        searchLoading: '',
+      };
+    },
+    created() {
+      /*获取列表*/
+      this.getTableList();
+    },
+    methods: {
+      handleChange(row) {
+        if (!this.$filter.isAuth('/card/card/state')) {
+          return;
+        }
+        let self = this;
+        let war = $t('确认要禁用吗?');
+        if (row.status == 1) {
+          war = $t('确认要启用吗?');
+        }
+        ElMessageBox.confirm(war, $t('提示'), { type: 'warning' }).then(() => {
+          self.loading = true;
+          let Params = {};
+
+          (Params.card_id = row.card_id),
+            CardApi.setStatus(Params, true)
+              .then((data) => {
+                this.$ElMessage({
+                  message: $t('操作成功'),
+                  type: 'success',
+                });
+                self.loading = false;
+                self.getTableList();
+              })
+              .catch((error) => {
+                console.log(error);
+                self.loading = false;
+              });
+        });
+      },
+
+      /*换行*/
+      keepTextStyle(val) {
+        let str = val.replace(/(\\r\\n)/g, '<br/>');
+        return str;
+      },
+
+      /*选择第几页*/
+      handleCurrentChange(val) {
+        let self = this;
+        self.curPage = val;
+        self.loading = true;
+        self.getTableList();
+      },
+
+      /*每页多少条*/
+      handleSizeChange(val) {
+        this.curPage = 1;
+        this.pageSize = val;
+        this.getTableList();
+      },
+
+      /*获取列表*/
+      getTableList() {
+        let self = this;
+        let Params = self.formInline;
+        Params.page = self.curPage;
+        Params.list_rows = self.pageSize;
+        self.loading = true;
+        CardApi.cardlist(Params, true)
+          .then((data) => {
+            self.loading = false;
+            self.tableData = data.data.list.data;
+            self.totalDataNumber = data.data.list.total;
+          })
+          .catch((error) => {});
+      },
+
+      /*搜索查询*/
+      onSearch() {
+        clearTimeout(this.searchLoading);
+        this.searchLoading = setTimeout(() => {
+          this.curPage = 1;
+          this.getTableList();
+        }, 200);
+      },
+
+      /*打开添加*/
+      addClick() {
+        this.$router.push('/' + this.app_id + '/marketing/activity/add');
+      },
+      /*打开编辑*/
+      editClick(item) {
+        this.$router.push({
+          path: '/' + this.app_id + '/marketing/activity/edit',
+          query: {
+            card_id: item.card_id,
+          },
+        });
+      },
+      /*打开编辑*/
+      putClick(item) {
+        this.userModel = item;
+        this.open_edit = true;
+      },
+
+      /*关闭弹窗*/
+      closeDialogFunc(e, f) {
+        if (f == 'edit') {
+          this.open_edit = e.openDialog;
+          if (e.type == 'success') {
+            this.getTableList();
+          }
+        }
+      },
+      /*删除用户*/
+      deleteClick(row) {
+        let self = this;
+        ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
+          confirmButtonText: $t('确定'),
+          cancelButtonText: $t('取消'),
+          type: 'warning',
+        })
+          .then(() => {
+            self.loading = true;
+            CardApi.deletecard(
+              {
+                card_id: row.card_id,
+              },
+              true
+            )
+              .then((data) => {
+                self.loading = false;
+                if (data.code == 1) {
+                  this.$ElMessage({
+                    message: data.msg,
+                    type: 'success',
+                  });
+                  self.getTableList();
+                } else {
+                  ElMessage.error($t('操作失败'));
+                }
+              })
+              .catch((error) => {
+                self.loading = false;
+              });
+          })
+          .catch(() => {});
+      },
+    },
+  };
+</script>

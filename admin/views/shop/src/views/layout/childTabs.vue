@@ -55,6 +55,27 @@
         },
       });
     }
+
+    /*优惠券管理*/
+    if (tab_type.value == 'couponmanage') {
+      router.push({
+        path: '/' + app_id.value + '/marketing/coupon/index',
+        query: {
+          type: e.name,
+        },
+      });
+    }
+
+    /*活动管理*/
+    if (tab_type.value == 'activitymanage') {
+      router.push({
+        path: '/' + app_id.value + '/marketing/activity/index',
+        query: {
+          type: e.name,
+        },
+      });
+    }
+
     /*会员卡管理*/
     if (tab_type.value == 'cardmanage') {
       router.push({

@@ -46,12 +46,7 @@
         </el-table-column>
         <el-table-column prop="refund_num_updata" :label="$t('退菜数量')">
           <template #default="scope">
-            <el-input-number
-              :min="0"
-              :max="Number(scope.row.total_num)"
-              :placeholder="$t('请输入')"
-              v-model.number="scope.row.refund_num_updata"
-            ></el-input-number>
+            <el-input-number :min="0" :max="Number(scope.row.total_num)" :placeholder="$t('请输入')" v-model.number="scope.row.refund_num_updata"></el-input-number>
           </template>
         </el-table-column>
         <el-table-column :label="$t('退款金额')" align="right">
@@ -61,7 +56,7 @@
                 <span v-if="currency.unit_position == '0'">
                   {{ currency.unit }}
                 </span>
-                {{ this.$formatPrice(Number(scope.row.refund_num_updata) * (Number(scope.row.price))) }}
+                {{ this.$formatPrice(Number(scope.row.refund_num_updata) * Number(scope.row.price)) }}
                 <span v-if="currency.unit_position == '1'">
                   {{ currency.unit }}
                 </span>
@@ -202,7 +197,7 @@
       this.form.order_id = this.order_id;
       this.form.sub_order_id = this.sub_order_id;
       this.form.pay_price = this.$priceTwo(this.pay_price);
-      this.language =  languageStore()?.getLanguageKey().language.value
+      this.language = languageStore()?.getLanguageKey().language.value;
       // this.getData();
       this.getStoreRefundInfo();
     },
@@ -331,10 +326,13 @@
       getStoreRefundInfo() {
         let self = this;
         self.loading = true;
-        OrderApi.getStoreRefund({ 
-          sale_bill_uuid: this.form.order_id,
-          sale_order_uuid: this.sub_order_id,
-        }, true)
+        OrderApi.getStoreRefund(
+          {
+            sale_bill_uuid: this.form.order_id,
+            sale_order_uuid: this.sub_order_id,
+          },
+          true
+        )
           .then((data) => {
             self.loading = false;
             self.form.pay_price = this.$priceTwo(data.data.can_return_amount);
