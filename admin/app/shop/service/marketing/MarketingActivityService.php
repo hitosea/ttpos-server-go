@@ -17,8 +17,8 @@ class MarketingActivityService
     public function create($data)
     {
         $validate = Validate::rule([
-            'name' => 'require|max:50',
-            'description' => 'require|max:100',
+            'name' => 'require|max:2000',
+            'description' => 'require|max:5000',
             'start_time' => 'require|string',
             'end_time' => 'require|string|gt:start_time',
             'reward_condition_amount' => 'require|float|egt:0.01',

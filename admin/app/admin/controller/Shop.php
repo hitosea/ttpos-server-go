@@ -135,7 +135,7 @@ class Shop extends Controller
 
     /**
      * @Apidoc\Title("编辑商家")
-     * @Apidoc\Method("get,post")
+     * @Apidoc\Method("GET,POST")
      * @Apidoc\Url("/api/admin/shop/edit")
      * @Apidoc\Param("app_id", type="int", require=true, default="", desc="主键")
      * @Apidoc\Param("name", type="string", require=true, default="", desc="商家名称")

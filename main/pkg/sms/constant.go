@@ -10,6 +10,8 @@ const (
 	TemplateMemberRechargeRefund = "member_recharge_refund"
 	// TemplateMemberOrderRefund 会员用餐订单退款模板ID
 	TemplateMemberOrderRefund = "member_order_refund"
+	// TemplateMemberSendCode 会员发送验证码模板ID
+	TemplateMemberSendCode = "member_send_code"
 )
 
 // 语言常量

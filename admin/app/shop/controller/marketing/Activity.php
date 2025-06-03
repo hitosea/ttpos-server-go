@@ -67,7 +67,7 @@ class Activity extends Controller
 
     /**
      * @Apidoc\Title("创建邀请有礼活动")
-     * @Apidoc\Method ("GET, POST")
+     * @Apidoc\Method ("GET,POST")
      * @Apidoc\Desc("GET请求为创建页面，POST请求为创建保存")
      * @Apidoc\Url ("/index.php/shop/marketing.activity/add")
      * @Apidoc\Param("name", type="string", require=true, desc="活动名称（json多语言）", mock="{'th':'测试'}")

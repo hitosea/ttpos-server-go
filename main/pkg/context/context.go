@@ -38,6 +38,7 @@ type Context interface {
 	GetRequestUuid() string                  // 获取请求ID
 	GetToken() string                        // 获取请求ID
 	Copy() Context                           // 复制一个ctx实例。避免在协程中修改上下文导致主进程的ctx被修改
+	GetCFIPCountry() string                  // 获取CF-IPCountry
 }
 type ContextImpl struct {
 	context.Context
@@ -58,6 +59,7 @@ type ContextImpl struct {
 	hasLock        bool                 // 是否已经上锁
 	log            *zap.Logger
 	db             *gorm.DB
+	cfIPCountry    string // CF-IPCountry
 }
 
 type Option func(*ContextImpl)
@@ -296,4 +298,9 @@ func (c *ContextImpl) GetRequestUuid() string {
 // GetToken 获取token
 func (c *ContextImpl) GetToken() string {
 	return strings.SplitN(c.cc.GetHeader("Authorization"), " ", 2)[1]
+}
+
+// GetCFIPCountry 获取CF-IPCountry
+func (c *ContextImpl) GetCFIPCountry() string {
+	return c.cc.GetHeader("CF-IPCountry")
 }
