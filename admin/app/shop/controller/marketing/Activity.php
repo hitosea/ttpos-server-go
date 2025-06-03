@@ -133,7 +133,13 @@ class Activity extends Controller
             if (!$result) {
                 return $this->renderError('活动不存在');
             }
-            return $this->renderSuccess('', ['detail' => $result]);
+            $url = env('MEMBER_BASE_URL') . "/home?cid={$request->appId}";
+            $qrCode = new QrCode($url);
+            return $this->renderSuccess('', [
+                'detail' => $result,
+                'qr_code_url' => $url,
+                'qr_code' => (new PngWriter())->write($qrCode)->getDataUri()
+            ]);
         }
         // 
         $data = $request->post();
