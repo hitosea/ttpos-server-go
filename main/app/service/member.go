@@ -114,7 +114,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 func (s *memberSrv) GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember {
 	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
 	member := memberRepo.GetMember(memberRepo.WhereUuid(memberUuid),
-		memberRepo.WithMemberCard(), memberRepo.WithMemberCardType(), memberRepo.WithMemberLevel())
+		memberRepo.WithMemberCard(), memberRepo.WithMemberCardType(), memberRepo.WithMemberLevel(), memberRepo.WithMemberBalanceLog())
 
 	var cardName string
 	if member.MemberCard != nil && member.MemberCard.MemberCardType != nil {
@@ -124,14 +124,16 @@ func (s *memberSrv) GetRechargeMember(companyUuid uint64, memberUuid uint64) res
 	if member.MemberLevel != nil {
 		level = member.MemberLevel.Name
 	}
+
 	return resp.RechargeMember{
-		Uuid:     member.Uuid,
-		Nickname: member.Nickname,
-		Card:     resp.Card{Name: cardName},
-		Level:    resp.Level{Name: level},
-		Balance:  member.GetBalanceAll(),
-		Points:   member.GetPoints(),
-		Phone:    member.Phone,
+		Uuid:          member.Uuid,
+		Nickname:      member.Nickname,
+		Card:          resp.Card{Name: cardName},
+		Level:         resp.Level{Name: level},
+		Balance:       member.GetBalanceAll(),
+		Points:        member.GetPoints(),
+		Phone:         member.Phone,
+		RechargeMoney: member.GetRechargeMoney(),
 	}
 }
 
@@ -306,13 +308,14 @@ func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMe
 
 	return &resp.MemberDiscountResp{
 		Member: resp.RechargeMember{
-			Uuid:     member.Uuid,
-			Nickname: member.Nickname,
-			Card:     resp.Card{Name: cardName},
-			Level:    resp.Level{Name: levelName},
-			Balance:  member.GetBalanceAll(),
-			Points:   member.GetPoints(),
-			Phone:    member.Phone,
+			Uuid:          member.Uuid,
+			Nickname:      member.Nickname,
+			Card:          resp.Card{Name: cardName},
+			Level:         resp.Level{Name: levelName},
+			Balance:       member.GetBalanceAll(),
+			Points:        member.GetPoints(),
+			Phone:         member.Phone,
+			RechargeMoney: member.GetRechargeMoney(),
 		},
 		HasPassword:     member.HasPassword(),
 		DiscountedPrice: memberDiscountFee,

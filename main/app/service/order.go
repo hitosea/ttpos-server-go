@@ -6570,12 +6570,13 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	var memberInfo *resp.MemberInfo
 	if saleOrder.Member != nil {
 		memberInfo = &resp.MemberInfo{
-			Uuid:     saleOrder.ConsumerUuid,
-			Nickname: saleOrder.GetMemberName(),
-			Card:     resp.CardInfo{Name: saleOrder.Member.GetMemberCardName()},
-			Level:    resp.LevelInfo{Name: saleOrder.Member.GetMemberLevelName()},
-			Balance:  saleOrder.Member.GetBalanceAll(),
-			Points:   saleOrder.Member.GetPoints(),
+			Uuid:          saleOrder.ConsumerUuid,
+			Nickname:      saleOrder.GetMemberName(),
+			Card:          resp.CardInfo{Name: saleOrder.Member.GetMemberCardName()},
+			Level:         resp.LevelInfo{Name: saleOrder.Member.GetMemberLevelName()},
+			Balance:       saleOrder.Member.GetBalanceAll(),
+			Points:        saleOrder.Member.GetPoints(),
+			RechargeMoney: saleOrder.Member.GetRechargeMoney(),
 		}
 	}
 	paymentOrders := make([]resp.PaymentOrder, 0)

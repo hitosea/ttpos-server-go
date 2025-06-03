@@ -1358,6 +1358,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 				Query: "SaleOrders.Member.MemberCard.MemberCardType",
 			},
 			WithPreload{
+				Query: "SaleOrders.Member.MemberBalanceLog",
+			},
+			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts",
 				Args: []any{
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),

@@ -2,6 +2,7 @@ package model
 
 import (
 	"time"
+	"ttpos-server-go/app/constant"
 
 	"github.com/shopspring/decimal"
 )
@@ -27,8 +28,9 @@ type Member struct {
 	MemberLevelUuid              uint64  `gorm:"column:member_level_uuid;type:bigint(20) unsigned;default:0;comment:会员等级ID;NOT NULL" json:"member_level_uuid"`
 	MemberCardUuid               uint64  `gorm:"column:member_card_uuid;type:bigint(20) unsigned;default:0;comment:会员卡片ID;NOT NULL" json:"member_card_uuid"`
 
-	MemberLevel *MemberLevel `gorm:"foreignKey:MemberLevelUuid;references:Uuid"`
-	MemberCard  *MemberCard  `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
+	MemberLevel      *MemberLevel       `gorm:"foreignKey:MemberLevelUuid;references:Uuid"`
+	MemberCard       *MemberCard        `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
+	MemberBalanceLog []MemberBalanceLog `gorm:"foreignKey:MemberUuid;references:Uuid"`
 }
 
 func (model *Member) SetNil() {
@@ -178,6 +180,25 @@ func (model *Member) GetMemberCardDiscountRate() float64 {
 
 func (model *Member) HasPassword() bool {
 	return model.Password != ""
+}
+
+// 获取会员的累计充值金额，用于展示在前端。
+// 累计充值金额=客户端充值金额+后台充值金额-反结账金额
+func (model *Member) GetRechargeMoney() float64 {
+	var rechargeMoney decimal.Decimal
+	for _, log := range model.MemberBalanceLog {
+		if log.Scene == constant.MemberBalanceLogRecharge || log.Scene == constant.MemberBalanceLogAdmin {
+			var addMoney = decimal.NewFromFloat(log.Money).Sub(decimal.NewFromFloat(log.GiftMoney))
+			rechargeMoney = rechargeMoney.Add(addMoney)
+		} else if log.Scene == constant.MemberBalanceLogRechargeReverse {
+			var money = decimal.NewFromFloat(log.Money).Mul(decimal.NewFromFloat(-1))
+			var giftMoney = decimal.NewFromFloat(log.GiftMoney).Mul(decimal.NewFromFloat(-1))
+			var deductMoney = money.Sub(giftMoney)
+			rechargeMoney = rechargeMoney.Sub(deductMoney)
+		}
+	}
+
+	return rechargeMoney.InexactFloat64()
 }
 
 // MemberLevel 会员等级表 `ttpos_member_level`
