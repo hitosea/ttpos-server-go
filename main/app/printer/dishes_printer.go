@@ -77,9 +77,6 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			newProducts = append(newProducts, product)
 		}
 
-		// 是否整单打印
-		isCompleteOrderPrinter := productPrinter.PrintMethod == constant.No
-
 		// 循环下拉选中的打印机一个个打印
 		for _, printerItem := range productPrinter.ProductPrinterItems {
 			// 判断是否删除
@@ -100,7 +97,6 @@ func (p *PrinterRepoImpl) PrintingDishes(
 					_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
 						PrinterType:   printerType,
 						PrinterConfig: printerItem.Printer.ConfigJson,
-						PrintCopies:   printerItem.Printer.Copies,
 					}, model.PrinterLog{
 						PrintMethod: printMethod,
 						RelatedType: 0,
@@ -117,6 +113,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 						Type:               1,
 						FirstExecution:     0,
 						ProductPrinterUuid: productPrinter.Uuid,
+						Copies:             productPrinter.Copies,
 					}, "")
 					if err != nil {
 						logger.Logger.Error("添加打印日志失败", zap.Error(err))
@@ -125,17 +122,16 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				}
 				continue
 			}
+
 			// 一菜一单打印
-			if !isCompleteOrderPrinter {
+			if productPrinter.PrintMethod == constant.Yes || productPrinter.PrintMethod == constant.All {
 				for _, product := range newProducts {
-					data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, product)
-					if data != "" {
+					if data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, product); data != "" {
 
 						// 添加打印日志，依赖打印日志服务
 						_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
 							PrinterType:   printerType,
 							PrinterConfig: printerItem.Printer.ConfigJson,
-							PrintCopies:   printerItem.Printer.Copies,
 						}, model.PrinterLog{
 							PrintMethod: printMethod,
 							RelatedType: 0,
@@ -152,6 +148,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 							Type:               1,
 							FirstExecution:     0,
 							ProductPrinterUuid: productPrinter.Uuid,
+							Copies:             productPrinter.Copies,
 						}, "")
 						if err != nil {
 							logger.Logger.Error("添加打印日志失败", zap.Error(err))
@@ -159,11 +156,13 @@ func (p *PrinterRepoImpl) PrintingDishes(
 
 					}
 				}
-				continue
+				if productPrinter.PrintMethod != constant.All {
+					continue
+				}
 			}
+
 			// 整单打印
-			data := p.getPrintProductContent(productPrinter, printerItem, billInfo, newProducts)
-			if data != "" {
+			if data := p.getPrintProductContent(productPrinter, printerItem, billInfo, newProducts); data != "" {
 				// 添加打印日志，依赖打印日志服务
 				_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
 					PrinterType: printerType,
@@ -183,11 +182,11 @@ func (p *PrinterRepoImpl) PrintingDishes(
 					Type:               1,
 					FirstExecution:     0,
 					ProductPrinterUuid: productPrinter.Uuid,
+					Copies:             productPrinter.Copies,
 				}, "")
 				if err != nil {
 					logger.Logger.Error("添加打印日志失败", zap.Error(err))
 				}
-
 			}
 		}
 	}

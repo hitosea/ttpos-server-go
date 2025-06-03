@@ -9,7 +9,6 @@ use app\common\model\shop\OptLog;
 use app\shop\service\AuthService;
 use app\common\enum\http\StatusCode;
 use app\controller as BaseController;
-use app\common\model\settings\Setting;
 use app\common\exception\BaseException;
 use app\common\enum\settings\SettingEnum;
 use app\shop\model\shop\User as UserModel;
@@ -101,7 +100,7 @@ class Controller extends BaseController
      * 验证登录状态
      */
     private function checkLogin()
-    {
+    { 
         // 验证当前请求是否在白名单
         if (in_array($this->routeUri, $this->allowAllAction)) {
             return true;

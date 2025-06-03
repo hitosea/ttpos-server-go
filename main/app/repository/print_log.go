@@ -49,6 +49,7 @@ type IPrinterLogRepo interface {
 	BatchUpdate(logs []model.PrinterLog) error
 
 	Create(printerLog model.PrinterLog) (model.PrinterLog, error)
+	Delete7DaysAgo() error
 }
 
 func NewPrinterLogRepo(db *gorm.DB) IPrinterLogRepo {
@@ -217,12 +218,7 @@ func (r *printerLogRepo) GetShiftPrinterData(deviceSn string, opts ...DBOption) 
 			PrinterType:      printerLog.PrinterType,
 			IsCashierPrinter: printerLog.IsCashierPrinter(),
 			IsUsbPrinter:     printerLog.IsUsbPrinter(),
-			Copies: func() uint {
-				if printerLog.Printer == nil {
-					return 1
-				}
-				return printerLog.Printer.Copies
-			}(),
+			Copies:           printerLog.GetCopies(),
 			PrinterConfig: func() string {
 				if printerLog.Printer == nil {
 					return ""
@@ -258,7 +254,7 @@ func (r *printerLogRepo) GetByUuids(uuids []uint64) ([]model.PrinterLog, error) 
 		return printerLogs, nil
 	}
 
-	err := r.db.Model(&model.PrinterLog{}).Scopes(NotDeleted).Where("uuid IN (?)", uuids).Find(&printerLogs).Error
+	err := r.db.Model(&model.PrinterLog{}).Scopes(NotDeleted).Select("id", "uuid", "num", "status", "reason").Where("uuid IN (?)", uuids).Find(&printerLogs).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -410,4 +406,9 @@ func (r *printerLogRepo) BatchUpdate(logs []model.PrinterLog) error {
 func (r *printerLogRepo) Create(printerLog model.PrinterLog) (model.PrinterLog, error) {
 	err := r.db.Model(&model.PrinterLog{}).Create(&printerLog).Error
 	return printerLog, errors.WithMessage(err)
+}
+
+// 删除7天前的数据 - 从数据库上删除
+func (r *printerLogRepo) Delete7DaysAgo() error {
+	return r.db.Model(&model.PrinterLog{}).Where("create_time < ?", time.Now().Add(time.Duration(-7*24)*time.Hour).Unix()).Delete(&model.PrinterLog{}).Error
 }

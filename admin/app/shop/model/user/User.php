@@ -11,6 +11,7 @@ use app\shop\model\user\PointsLog as PointsLogModel;
 use app\common\enum\user\pointsLog\PointsLogSceneEnum;
 use app\shop\model\user\BalanceLog as BalanceLogModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum as SceneEnum;
+use app\common\library\helper;
 
 /**
  * 用户模型
@@ -68,7 +69,7 @@ class User extends UserModel
             $model = $model->where('gender', '=', (int)$data['gender']);
         }
         // 获取用户列表
-        $paginate = $model->with(['grade', 'memberCard' => ['card']])
+        $paginate = $model->with(['grade', 'memberCard' => ['card'], 'memberBalanceLog'])
             ->field('*, nickname as nickName')
             ->order(['create_time' => 'desc'])
             ->hidden(['open_id', 'union_id', 'password'])
@@ -79,6 +80,43 @@ class User extends UserModel
             if ($item['memberCard'] && isset($item['memberCard']['card'])) {
                 $item['card'] = $item['memberCard']['card'];
             }
+            // 累计充值金额
+            $rechargeMoney = '0.00'; 
+            // 净充值金额
+            $netRechargeMoney = '0.00';
+            foreach ($item['memberBalanceLog'] as $log) {
+                // 客户端充值、后台充值
+                if ($log['scene']['value'] == SceneEnum::RECHARGE || $log['scene']['value'] == SceneEnum::ADMIN) {
+                    $addMoney = helper::bcsub($log['money'], $log['gift_money'], 2);
+                    // 累计充值金额
+                    $rechargeMoney = helper::bcadd($rechargeMoney, $addMoney, 2);
+                    // 净充值金额
+                    $netRechargeMoney = helper::bcadd($netRechargeMoney, $addMoney, 2);
+                }
+                // 反结账
+                if ($log['scene']['value'] == SceneEnum::RECHARGE_REVERSE) {
+                    // 转为正数
+                    $money = helper::bcmul($log['money'], -1, 2);
+                    $giftMoney = helper::bcmul($log['gift_money'], -1, 2);
+                    // 扣减金额
+                    $deductMoney = helper::bcsub($money, $giftMoney, 2);
+                    // 累计充值金额
+                    $rechargeMoney = helper::bcsub($rechargeMoney, $deductMoney, 2);
+                    // 净充值金额
+                    $netRechargeMoney = helper::bcsub($netRechargeMoney, $deductMoney, 2);
+                }
+                // 退款
+                if ($log['scene']['value'] == SceneEnum::RECHARGE_REFUND) {
+                    // 转为正数
+                    $deductMoney = helper::bcmul($log['money'], -1, 2);
+                    // 净充值金额扣减
+                    $netRechargeMoney = helper::bcsub($netRechargeMoney, $deductMoney, 2);
+                }
+            }
+            $item['recharge_money'] = $rechargeMoney;
+            $item['net_recharge_money'] = $netRechargeMoney;
+
+            unset($item['memberBalanceLog']);
         }
 
         return $paginate;

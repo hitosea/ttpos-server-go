@@ -1,0 +1,192 @@
+<template>
+  <!--
+          
+          时间：2019-10-25
+          描述：会员-用户列表
+      -->
+  <div class="user">
+    <!--搜索表单-->
+    <div class="common-seach-wrap flex">
+      <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
+        <el-form-item :label="$t('优惠券名称')">
+          <el-input v-model="formInline.keyword" :placeholder="$t('优惠券名称')" @input="onSearch"></el-input>
+        </el-form-item>
+        <el-form-item :label="$t('优惠券类型')">
+          <a-select v-model:value="formInline.grade_id" :placeholder="$t('优惠券类型')" @change="onSearch">
+            <el-option :label="$t('全部')" value="0"></el-option>
+            <el-option v-for="(item, index) in gradeList" :key="index" :label="item.name" :value="item.grade_id"></el-option>
+          </a-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button size="small" type="primary" icon="Search" class="search-button" @click="onSearch">
+            {{ $t('查询') }}
+          </el-button>
+        </el-form-item>
+      </el-form>
+      <div class="common-level-rail">
+        <el-button type="primary" v-auth="'/card/user/user/add'" icon="Plus" @click="addMenber">{{ $t('添加优惠券') }}</el-button>
+      </div>
+    </div>
+    <!--内容-->
+    <div class="product-content">
+      <div class="table-wrap">
+        <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
+          <el-table-column type="index" width="45" :label="$t('序号')" header-align="center" align="center" :index="indexMethod"></el-table-column>
+          <el-table-column prop="nickName" :label="$t('优惠券名称')"></el-table-column>
+
+          <el-table-column prop="gender" :label="$t('优惠券类型')">
+            <template #default="scope">
+              <span v-if="scope.row.gender == 0">{{ $t('女') }}</span>
+              <span v-else-if="scope.row.gender == 1">{{ $t('男') }}</span>
+              <span v-else>{{ $t('保密') }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="" :label="$t('金额')">
+            <template #default="scope">
+              <span v-if="scope.row.card_id == 0">-</span>
+              <span v-else>{{ scope.row.card?.card_name }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="" :label="$t('有效日期')">
+            <template #default="scope">
+              <span v-if="scope.row.grade_id == 0">{{ $t('无等级') }}</span>
+              <span v-else>{{ scope.row.grade?.name }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="balance" :label="$t('适用时间')">
+            <template #default="scope">
+              {{ $formatPrice(scope.row.balance) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="gift_balance" :label="$t('数量（张）')">
+            <template #default="scope">
+              {{ $formatPrice(scope.row.gift_balance) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="points" :label="$t('添加時間')">
+            <template #default="scope">
+              {{ $priceTwo(scope.row.points) }}
+            </template>
+          </el-table-column>
+          <el-table-column fixed="right" :label="$t('操作')" width="80">
+            <template #default="scope">
+              <el-button @click="editClick(scope.row)" type="primary" link size="small">{{ $t('编辑') }}</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!--分页-->
+      <div class="pagination">
+        <el-pagination
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          background
+          :current-page="curPage"
+          :page-size="pageSize"
+          layout="total, prev, pager, next, jumper"
+          :total="totalDataNumber"
+        ></el-pagination>
+      </div>
+    </div>
+
+    <AddEdit v-if="open_addDdit" :title="title" :editData="editData" :open="open_addDdit" :gradeList="gradeList" :editform="editform" @closeDialog="closeAddMenber"> </AddEdit>
+  </div>
+</template>
+
+<script setup>
+  import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
+  import UserApi from '@/api/user.js';
+  import AddEdit from './dialog/addEdit.vue';
+
+  // 获取全局属性
+  const { proxy } = getCurrentInstance();
+  const { $t, $formatPrice, $priceTwo } = proxy;
+
+  // 响应式数据
+  const loading = ref(true);
+  const tableData = ref([]);
+  const pageSize = ref(10);
+  const totalDataNumber = ref(0);
+  const curPage = ref(1);
+
+  const formInline = reactive({
+    keyword: '',
+    grade_id: '',
+    reg_date: '',
+  });
+
+  const open_addDdit = ref(false);
+  const gradeList = ref([]);
+  const editform = ref({});
+  const title = ref('');
+  const editData = ref('');
+  const searchLoading = ref('');
+
+  // 方法
+  const handleCurrentChange = (val) => {
+    curPage.value = val;
+    loading.value = true;
+    getTableList();
+  };
+
+  const handleSizeChange = (val) => {
+    curPage.value = 1;
+    pageSize.value = val;
+    getTableList();
+  };
+
+  const indexMethod = (index) => {
+    return index + 1 + (curPage.value - 1) * pageSize.value;
+  };
+
+  const getTableList = () => {
+    const params = { ...formInline };
+    params.page = curPage.value;
+    params.list_rows = pageSize.value;
+    loading.value = true;
+
+    UserApi.userlist(params, true)
+      .then((data) => {
+        loading.value = false;
+        tableData.value = data.data.list.data;
+        totalDataNumber.value = data.data.list.total;
+        gradeList.value = data.data.grade;
+      })
+      .catch((error) => {
+        loading.value = false;
+      });
+  };
+
+  const addMenber = () => {
+    title.value = $t('添加优惠券');
+    open_addDdit.value = true;
+  };
+
+  const closeAddMenber = (e) => {
+    open_addDdit.value = false;
+    editData.value = '';
+    if (e == 1) {
+      getTableList();
+    }
+  };
+
+  const onSearch = () => {
+    clearTimeout(searchLoading.value);
+    searchLoading.value = setTimeout(() => {
+      curPage.value = 1;
+      getTableList();
+    }, 200);
+  };
+
+  const editClick = (item) => {
+    title.value = $t('编辑优惠券');
+    editData.value = item;
+    open_addDdit.value = true;
+  };
+
+  // 生命周期
+  onMounted(() => {
+    getTableList();
+  });
+</script>

@@ -14,7 +14,14 @@
       "
     >
     </ProductSelector>
-    <el-dialog class="product-add" @close="handleClose" v-model="dialogVisible" :close-on-click-modal="false" :close-on-press-escape="false" :title="$t('编辑商品打印')">
+    <el-dialog
+      class="product-add"
+      @close="handleClose"
+      v-model="dialogVisible"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      :title="isCopy ? $t('添加商品打印') : $t('编辑商品打印')"
+    >
       <!--form表单-->
       <el-form size="small" ref="formRef" :model="form" label-position="top">
         <!--添加门店-->
@@ -24,7 +31,7 @@
           prop="name"
           :rules="[
             { required: true, message: $t('请输入名称') },
-            { validator: uniqueNameValidator('supplier_printing', form.id, 'SINGLE'), trigger: 'blur' },
+            { validator: uniqueNameValidator('supplier_printing', isCopy == false ? form.id : undefined, 'SINGLE'), trigger: 'blur' },
           ]"
           ><el-input v-model="form.name" :placeholder="$t('请输入名称')"></el-input
         ></el-form-item>
@@ -50,18 +57,17 @@
 
         <el-form-item for="no_click" :label="$t('打印方式')" prop="print_method" :rules="[{ required: true, message: '' }]">
           <div>
-            <el-radio-group
-              v-model="form.print_method"
+            <el-checkbox-group
+              v-model="printMethod"
               @change="
                 () => {
-                  form.is_open_one_food = 0;
                   form.print_select = 1;
                 }
               "
             >
-              <el-radio :label="10">{{ $t('整单打印') }}</el-radio>
-              <el-radio :label="40">{{ $t('按一菜一单打印') }}</el-radio>
-            </el-radio-group>
+              <el-checkbox :disabled="printMethod.includes(10) && printMethod.length == 1" :label="10">{{ $t('整单打印') }}</el-checkbox>
+              <el-checkbox :disabled="printMethod.includes(40) && printMethod.length == 1" :label="40">{{ $t('按一菜一单打印') }}</el-checkbox>
+            </el-checkbox-group>
           </div>
         </el-form-item>
 
@@ -123,50 +129,17 @@
             </el-option>
           </el-select>
         </el-form-item>
-        <!--
-        <el-form-item for="no_click" v-if="form.product_type == 0 && form.print_method == 20" :label="$t('商品分类')"
-          prop="category_id" :rules="[{ required: true, message: '请选择商品分类' }]">
-          <el-select v-model="form.category_id" multiple :placeholder="$t('请选择')">
-            <el-option v-for="item in storeList" :key="item.category_id" :label="item.name_text"
-              :value="item.category_id + ''"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item for="no_click" v-if="form.product_type == 1 && form.print_method == 20" :label="$t('商品分类')"
-          prop="category_id" :rules="[{ required: true, message: $t('请选择商品分类') }]">
-          <el-select v-model="form.category_id" multiple :placeholder="$t('请选择')">
-            <el-option v-for="item in storeList" :key="item.category_id" :label="item.name_text"
-              :value="item.category_id + ''"></el-option>
-          </el-select>
-        </el-form-item>
 
-        <el-form-item for="no_click" v-if="form.print_method == 30" :label="$t('打印标签')" prop="label_id">
-          <el-select v-model="form.label_id" multiple :placeholder="$t('请选择')">
-            <el-option v-for="item in labelList" :key="item.label_id" :label="item.label_name_text"
-              :value="item.label_id + ''"></el-option>
-          </el-select>
-          <div class="tips">{{ $t('不选择打印全部') }}</div>
-        </el-form-item>
-
-        <el-form-item for="no_click" v-if="form.print_method == 20 || form.print_method == 30" :label="$t('按一菜一单打印')"
-          prop="is_open_one_food" :rules="[{ required: true, message: '' }]">
-          <div>
-          <el-radio v-model="form.is_open_one_food" :label="0">{{ $t('关闭') }}</el-radio>
-          <el-radio v-model="form.is_open_one_food" :label="1">{{ $t('开启') }}</el-radio>
-        </div>
-      </el-form-item>
-      -->
-
-        <el-form-item
-          for="no_click"
-          v-if="form.print_method == 40 || form.is_open_one_food == 1"
-          :label="$t('打印')"
-          prop="print_select"
-          :rules="[{ required: true, message: '' }]"
-        >
+        <el-form-item for="no_click" v-if="printMethod.includes(40)" :label="$t('打印')" prop="print_select" :rules="[{ required: true, message: '' }]">
           <div>
             <el-radio v-model="form.print_select" :label="1">{{ $t('合并') }}</el-radio>
             <el-radio v-model="form.print_select" :label="2">{{ $t('分开') }}</el-radio>
           </div>
+        </el-form-item>
+
+        <!--打印联数-->
+        <el-form-item for="no_click" :label="$t('打印联数')" prop="copies" :rules="[{ required: true, message: '' }]">
+          <el-input-number v-model="form.copies" :min="1" :max="10" :controls="false" :precision="0" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -193,6 +166,7 @@
       return {
         /*切换菜单*/
         // activeIndex: '1',
+        printMethod: [10],
         /*form表单数据*/
         form: {
           name: '',
@@ -205,10 +179,10 @@
           type: 10,
           print_method: 10,
           label_id: [],
-          is_open_one_food: 0,
           print_select: 1,
           product_method: 1,
           product_ids: [],
+          copies: 1,
         },
         loading: false,
         type: [],
@@ -229,7 +203,7 @@
         printProductsDataByPrintTag: [],
       };
     },
-    props: ['editId', 'open_edit'],
+    props: ['editId', 'open_edit', 'isCopy'],
     created() {
       this.dialogVisible = this.open_edit;
       this.getAreaData();
@@ -283,6 +257,24 @@
           .map((item) => ({ ...item, count: this.printProductsDataByPrintTag.filter((val) => val.label_id == item.label_id).length }));
       },
     },
+    watch: {
+      printMethod: {
+        handler(newVal) {
+          const has10 = newVal.includes(10);
+          const has40 = newVal.includes(40);
+
+          if (has10 && has40) {
+            this.form.print_method = -1;
+          } else if (has10) {
+            this.form.print_method = 10;
+          } else if (has40) {
+            this.form.print_method = 40;
+          }
+        },
+        immediate: true,
+        deep: true,
+      },
+    },
     methods: {
       getData() {
         const self = this;
@@ -292,7 +284,23 @@
             Object.assign(self.form, data.data.model);
             // FIXME: 后端返回的printer_id是字符串数组，前端需要转换成数字数组
             self.form.printer_id = self.form.printer_id.map((id) => parseInt(id));
-
+            // 复制时，名称后面加副本
+            if (self.isCopy == true) {
+              self.form.is_open = 0;
+              if (self.form.name.indexOf(self.$t('副本')) == -1) {
+                self.form.name = self.form.name + '-' + self.$t('副本');
+              } else {
+                self.form.name = self.form.name + self.$t('副本');
+              }
+            }
+            // 打印方式
+            if (self.form.print_method == -1) {
+              self.printMethod = [10, 40];
+            } else if (self.form.print_method == 10) {
+              self.printMethod = [10];
+            } else if (self.form.print_method == 40) {
+              self.printMethod = [40];
+            }
             if (self.form.product_method == 1) {
               self.printProductsDataByCategory = Array.isArray(data.data.model.product_ids) ? data.data.model.product_ids : [];
             }
@@ -373,7 +381,9 @@
       onSubmit() {
         const self = this;
         let form = self.form;
-        form.id = self.id;
+        if (self.isCopy == false) {
+          form.id = self.id;
+        }
         //
         if (!form.print_method == 20) {
           form.category_id = [];
@@ -389,18 +399,33 @@
         self.$refs.formRef.validate((valid) => {
           if (valid) {
             self.loading = true;
-            SupplierApi.EditPrinting(form, true)
-              .then(() => {
-                self.loading = false;
-                self.$ElMessage({
-                  message: self.$t('保存成功'),
-                  type: 'success',
+            if (this.isCopy == false) {
+              SupplierApi.EditPrinting(form, true)
+                .then(() => {
+                  self.loading = false;
+                  self.$ElMessage({
+                    message: self.$t('保存成功'),
+                    type: 'success',
+                  });
+                  self.$emit('close', 1);
+                })
+                .catch(() => {
+                  self.loading = false;
                 });
-                self.$emit('close', 1);
-              })
-              .catch(() => {
-                self.loading = false;
-              });
+            } else {
+              SupplierApi.addPrinting(form, true)
+                .then(() => {
+                  self.loading = false;
+                  self.$ElMessage({
+                    message: self.$t('添加成功'),
+                    type: 'success',
+                  });
+                  self.$emit('close', 1);
+                })
+                .catch(() => {
+                  self.loading = false;
+                });
+            }
           }
         });
       },

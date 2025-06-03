@@ -11,9 +11,10 @@ import (
 )
 
 type IMemberRepo interface {
-	WithMemberLevel() DBOption    // Member 预加载会员等级
-	WithMemberCard() DBOption     // Member 预加载会员卡
-	WithMemberCardType() DBOption // Member 预加载会员卡.卡类型
+	WithMemberLevel() DBOption      // Member 预加载会员等级
+	WithMemberCard() DBOption       // Member 预加载会员卡
+	WithMemberCardType() DBOption   // Member 预加载会员卡.卡类型
+	WithMemberBalanceLog() DBOption // Member 预加载会员余额变动记录
 
 	WhereUuid(uuid uint64) DBOption // Uuid 条件
 
@@ -193,6 +194,13 @@ func (r *memberRepo) WithMemberCardType() DBOption {
 	}
 }
 
+// WithMemberBalanceLog Member 预加载会员余额变动记录
+func (r *memberRepo) WithMemberBalanceLog() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MemberBalanceLog")
+	}
+}
+
 // WhereUuid Uuid 条件
 func (r *memberRepo) WhereUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -201,7 +209,7 @@ func (r *memberRepo) WhereUuid(uuid uint64) DBOption {
 }
 
 func (r *memberRepo) GetMemberInfoForSaleOrder(ctx context.Context, memberUuid uint64) (*model.Member, error) {
-	member := r.GetMember(r.WhereUuid(memberUuid), r.WithMemberCardType(), r.WithMemberLevel())
+	member := r.GetMember(r.WhereUuid(memberUuid), r.WithMemberCardType(), r.WithMemberLevel(), r.WithMemberBalanceLog())
 	if member.Uuid == 0 {
 		return nil, errors.New("会员不存在")
 	}

@@ -37,9 +37,14 @@
             </template>
           </el-table-column> -->
                     <el-table-column prop="nickName" :label="$t('昵称')"></el-table-column>
-                    <el-table-column prop="balance" :label="$t('用户余额')">
+                    <el-table-column prop="balance" :label="$t('主账户余额')" width="120">
                         <template #default="scope">
-                            <span class="orange">￥{{ scope.row.balance }}</span>
+                            <span class="orange">￥{{ this.$formatPrice(scope.row.balance) }}</span>
+                        </template>
+                    </el-table-column>
+                    <el-table-column prop="balance" :label="$t('赠送账户余额')" width="120">
+                        <template #default="scope">
+                            <span class="orange">￥{{ this.$formatPrice(scope.row.gift_balance) }}</span>
                         </template>
                     </el-table-column>
                     <el-table-column prop="" :label="$t('会员卡')">
@@ -49,7 +54,7 @@
                         </template>
                     </el-table-column>
                     <el-table-column prop="grade.name" :label="$t('会员等级')"></el-table-column>
-                    <el-table-column prop="pay_money" :label="$t('累积消费金额')"></el-table-column>
+                    <el-table-column prop="pay_money" :label="$t('累积消费金额')" width="120"></el-table-column>
                     <el-table-column prop="gender" :label="$t('性别')" width="50">
                         <template #default="scope">
                             <span v-if="scope.row.gender == 1">{{ $t('男') }}</span>
@@ -63,7 +68,7 @@
               <el-button type="primary" size="" @click="selectUser(scope.row)">选择</el-button>
             </template>
           </el-table-column> -->
-                    <el-table-column type="selection" width="45"></el-table-column>
+                    <el-table-column type="selection" width="45" fixed="right"></el-table-column>
                 </el-table>
             </div>
 

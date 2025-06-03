@@ -1426,7 +1426,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_printer` (
     `name` varchar(100) NOT NULL DEFAULT '' COMMENT '名称.厨显上叫档口',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态,1-open开启 1、0-close关闭',
     `print_mode` INT(10) NOT NULL DEFAULT 0 COMMENT '打印模式,0-payment付款打印 1-kitchen送厨打印',
-    `print_method` INT(10) NOT NULL DEFAULT 0 COMMENT '打印方式,0-order整单打印 1-item按一菜一单打印',
+    `print_method` INT(10) NOT NULL DEFAULT 0 COMMENT '打印方式,-1-全选 0-order整单打印 1-item按一菜一单打印',
     `print_product_select` INT(10) NOT NULL DEFAULT 0 COMMENT '打印商品选择,0-category按商品分类 1-tag按打印标签',
     `print_mode_scene` INT(10) NOT NULL DEFAULT 0 COMMENT '打印模式场景,0-merge合并 1-separate分开',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',

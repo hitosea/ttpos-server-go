@@ -79,6 +79,7 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 		Data:            printContent,
 		Type:            1,
 		FirstExecution:  firstExecution,
+		Copies:          settingPrinterInfo.Copies,
 	}, "")
 	if err != nil {
 		logger.Logger.Error("添加打印日志失败", zap.Error(err))

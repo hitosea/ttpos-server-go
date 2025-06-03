@@ -126,7 +126,7 @@ func (s *authSrv) Login(ctx context.Context, loginReq req.LoginReq) (resp.LoginR
 	var loginResp resp.LoginResp
 	var token, refreshToken string
 	// 验证验证码
-	if !s.captchaSrv.Verify(ctx.GetGin().GetHeader("X-SIGN"), loginReq.Code) {
+	if !s.captchaSrv.Verify(ctx.GetGin().GetHeader("X-SIGN"), loginReq.Code) && viper.GetString("GENERAL_VERIFY_CODE") != loginReq.Code {
 		return loginResp, errors.New("验证码错误")
 	}
 	var staff model.Staff

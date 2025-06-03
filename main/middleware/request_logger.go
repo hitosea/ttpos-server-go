@@ -102,7 +102,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 
 		// 如果是表单请求，也打印表单字段
 		if c.Request.Method == "POST" || c.Request.Method == "PUT" || c.Request.Method == "PATCH" {
-			if err := c.Request.ParseForm(); err == nil && len(c.Request.Form) > 0 {
+			if len(c.Request.Form) > 0 {
 				fmt.Printf("\n--- 解析的表单字段 ---\n")
 				for key, values := range c.Request.Form {
 					for _, value := range values {
@@ -112,7 +112,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 			}
 
 			// 解析多部分表单
-			if err := c.Request.ParseMultipartForm(32 << 20); err == nil && c.Request.MultipartForm != nil {
+			if c.Request.MultipartForm != nil {
 				if len(c.Request.MultipartForm.Value) > 0 {
 					fmt.Printf("\n--- 多部分表单字段 ---\n")
 					for key, values := range c.Request.MultipartForm.Value {
@@ -133,7 +133,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 			}
 		}
 
-		// fmt.Printf("=== 结束 ===\n")
+		fmt.Printf("=== 结束 ===\n")
 
 		c.Next()
 	}

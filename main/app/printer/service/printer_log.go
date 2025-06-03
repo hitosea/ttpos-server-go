@@ -342,12 +342,7 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 			Uuid:        log.Uuid,
 			Data:        log.Data,
 			PrintMethod: log.PrintMethod,
-			Copies: func() uint {
-				if log.Printer == nil {
-					return 1
-				}
-				return log.Printer.Copies
-			}(),
+			Copies:      log.GetCopies(),
 			PrinterType: log.PrinterType,
 			PrinterConfig: func() string {
 				if log.Printer == nil {
@@ -405,12 +400,7 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 		PrinterType:      printerLog.PrinterType,
 		IsCashierPrinter: printerLog.IsCashierPrinter(),
 		IsUsbPrinter:     printerLog.IsUsbPrinter(),
-		Copies: func() uint {
-			if printerLog.Printer == nil {
-				return 1
-			}
-			return printerLog.Printer.Copies
-		}(),
+		Copies:           printerLog.GetCopies(),
 		PrinterConfig: func() string {
 			if printerLog.Printer == nil {
 				return ""
@@ -459,14 +449,6 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 		logger.Logger.Error("保存数据打印日志失败", zap.Error(err))
 		return model.PrinterLog{}, errors.WithMessage(err)
 	}
-
-	// 只保留7天的数据
-	go func() {
-		err = printerLogRepo.UpdateByWhere(map[string]any{"delete_time": time.Now().Unix()}, printerLogRepo.WhereCreatedBefore(7))
-		if err != nil {
-			logger.Logger.Error("删除n天前的打印日志失败", zap.Error(err))
-		}
-	}()
 
 	// 进行队列打印
 	if viper.GetString("CHECK_PRINT") == "false" || printerLog.Type == constant.PrinterLogTypeDefault {

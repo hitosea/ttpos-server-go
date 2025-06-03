@@ -14,6 +14,7 @@ import (
 	"ttpos-server-go/pkg/database"
 
 	"github.com/gin-gonic/gin"
+	pkgerrors "github.com/pkg/errors"
 )
 
 type RechargeOrderHandler struct {
@@ -142,6 +143,13 @@ func (h *RechargeOrderHandler) RechargeOrderRefund(c *gin.Context) {
 	}
 	err := h.rechargeOrderSrv.RechargeOrderRefund(helper.GetContext(c), orderRefundReq)
 	if err != nil {
+		appErr := errors.AppError{}
+		if pkgerrors.As(err, &appErr) {
+			if appErr.GetCode() == constant.CodeSuccessOpenCashBox {
+				helper.Success(c, gin.H{})
+				return
+			}
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}

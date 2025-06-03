@@ -142,6 +142,14 @@ class User extends BaseModel
     }
 
     /**
+     * 关联会员余额变动记录表
+     */
+    public function memberBalanceLog()
+    {
+        return $this->hasMany('app\\common\\model\\user\\BalanceLog', 'member_uuid', 'uuid');
+    }
+
+    /**
      * 获取用户信息
      */
     public static function detail($where, $includeDeleted = false)
