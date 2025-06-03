@@ -74,12 +74,18 @@
             <el-radio :value="0">{{ $t('关闭') }}</el-radio>
           </el-radio-group>
         </el-form-item>
-        <!-- <el-form-item :label="$t('税务对接')" prop="is_open_tax">
-          <el-radio-group v-model="formData.is_open_tax">
+        <el-form-item :label="$t('优惠券')" prop="is_open_coupon">
+          <el-radio-group v-model="formData.is_open_coupon">
             <el-radio :value="1">{{ $t('开启') }}</el-radio>
             <el-radio :value="0">{{ $t('关闭') }}</el-radio>
           </el-radio-group>
-        </el-form-item> -->
+        </el-form-item>
+        <el-form-item :label="$t('营销活动')" prop="is_open_marketing">
+          <el-radio-group v-model="formData.is_open_marketing">
+            <el-radio :value="1">{{ $t('开启') }}</el-radio>
+            <el-radio :value="0">{{ $t('关闭') }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item :label="$t('会员')" prop="is_open_member">
           <el-radio-group v-model="formData.is_open_member">
             <el-radio :value="1">{{ $t('开启') }}</el-radio>
@@ -350,6 +356,8 @@
     is_open_local_print: 0, // 是否开启本地打印服务: 0不开启, 1开启（v1.1.0）
     enable_sms: 0, // 是否开启短信服务: 0不开启, 1开启
     sms_quota: 200, // 短信额度
+    is_open_coupon: 0, // 是否开启优惠券: 0不开启, 1开启
+    is_open_marketing: 0, // 是否开启营销活动: 0不开启, 1开启
   });
 
   const limitTable = ref(false);
@@ -384,6 +392,8 @@
     is_open_local_print: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
     enable_sms: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
     sms_quota: [{ required: true, message: $t('请输入短信额度'), trigger: 'blur' }],
+    is_open_coupon: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
+    is_open_marketing: [{ required: true, message: $t('请选择'), trigger: 'blur' }],
     printer_limit: [
       {
         required: true,
@@ -624,6 +634,8 @@
         sms_quota: props.detail?.sms_quota || 0, //
         table_limit: props.detail?.table_limit == -1 ? undefined : props.detail?.table_limit || undefined, //
         printer_limit: props.detail?.printer_limit == -1 ? undefined : props.detail?.printer_limit || undefined, //
+        is_open_coupon: props.detail?.is_open_coupon || 0, //
+        is_open_marketing: props.detail?.is_open_marketing || 0, //
       };
       props.detail?.printer_limit == -1 ? (limitPrinter.value = true) : (limitPrinter.value = false);
       props.detail?.table_limit == -1 ? (limitTable.value = true) : (limitTable.value = false);
