@@ -367,9 +367,9 @@ func (model *SaleOrder) SetGiftPointsRate(giftPointsRate float64) {
 // CalcMemberPoint 计算会员积分. 会员积分=订单最终应收金额*积分赠送比例
 func (model *SaleOrder) CalcMemberPoint(finalPrice ...float64) float64 {
 	if len(finalPrice) > 0 {
-		return decimal.NewFromFloat(finalPrice[0]).Mul(decimal.NewFromFloat(model.GiftPointsRate)).InexactFloat64()
+		return decimal.NewFromFloat(finalPrice[0]).Mul(decimal.NewFromFloat(model.GiftPointsRate)).Round(2).InexactFloat64()
 	}
-	return decimal.NewFromFloat(model.FinalPrice).Mul(decimal.NewFromFloat(model.GiftPointsRate)).InexactFloat64()
+	return decimal.NewFromFloat(model.FinalPrice).Mul(decimal.NewFromFloat(model.GiftPointsRate)).Round(2).InexactFloat64()
 }
 
 // 发放消费积分
