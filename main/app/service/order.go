@@ -1779,7 +1779,6 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				}
 			}
 			if refundAmount > 0 {
-				ctx.SetDB(db)
 				if member != nil {
 					smsReq := sms.MemberOrderRefundRequest{
 						Company:       ctx.GetCompany().Name,
@@ -7404,7 +7403,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			ctx.Log().Info("停止发送短信，获取会员失败", zap.Error(errors.WithMessage(err)))
 		} else {
 			go func() {
-				ctx.SetDB(db)
 				var memberPaymentOrder *resp.PaymentOrder
 				for _, paymentOrder := range infoResp.PaymentOrders.List {
 					if paymentOrder.PaymentMethodCode == constant.PaymentMethodCodeBalance {
@@ -7419,7 +7417,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 						Consumption:    saleOrder.FinalPrice,
 						IncreasePoints: saleOrder.GiftPoints,
 						Balance:        member.GetBalanceAll(),
-						PointsBalance:  member.GetPoints() + saleOrder.GiftPoints, // 会员积分=会员积分+本次增加的积分。 此时积分还未增加到会员表中
+						PointsBalance:  decimal.NewFromFloat(member.GetPoints()).Add(decimal.NewFromFloat(saleOrder.GiftPoints)).Round(2).InexactFloat64(), // 会员积分=会员积分+本次增加的积分。 此时积分还未增加到会员表中
 					}
 					if memberPaymentOrder != nil {
 						smsReq.MemberPay = memberPaymentOrder.Amount
