@@ -171,7 +171,7 @@
     router.push({
       path: '/' + app_id + '/marketing/activity/edit',
       query: {
-        card_id: item.card_id,
+        uuid: item.uuid,
       },
     });
   };

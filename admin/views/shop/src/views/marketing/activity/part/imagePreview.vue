@@ -8,11 +8,9 @@
             <div class="logo-wrapper">
               <img :src="userInfo.logoUrl" />
             </div>
-            <h3 class="item-title">
-              {{ $t('麥樂寶  (泰國分店)') }}
-            </h3>
-            <p class="item-desc"> 您的好友 张总，邀请你成为商家会员，共享商家多样优惠您的好友 </p>
-            <img src="@/assets/img/activeImgTop.svg" alt="" class="item-qrcode" />
+            <h3 class="item-title"> {{ imgName }} </h3>
+            <p class="item-desc"> {{ imgDescription }} </p>
+            <img :src="qrcode" alt="" class="item-qrcode" />
             <p class="item-qrcode-desc"> {{ $t('到店消费时出示此二维码') }} </p>
             <img src="@/assets/img/activeImgTop.svg" alt="" class="item-img" />
           </div>
@@ -26,11 +24,9 @@
             <div class="logo-wrapper">
               <img :src="userInfo.logoUrl" />
             </div>
-            <h3 class="item-title">
-              {{ $t('麥樂寶  (泰國分店)') }}
-            </h3>
-            <p class="item-desc"> 您的好友 张总，邀请你成为商家会员，共享商家多样优惠您的好友 </p>
-            <img src="@/assets/img/activeImgTop.svg" alt="" class="item-qrcode" />
+            <h3 class="item-title"> {{ imgName }} </h3>
+            <p class="item-desc"> {{ imgDescription }} </p>
+            <img :src="qrcode" alt="" class="item-qrcode" />
             <p class="item-qrcode-desc"> {{ $t('到店消费时出示此二维码') }} </p>
             <img src="@/assets/img/activeImgTop.svg" alt="" class="item-img" />
           </div>
@@ -49,7 +45,25 @@
 <script setup>
   import { useUserStore } from '@/store';
   import html2canvas from 'html2canvas';
-  import { ref } from 'vue';
+  import { ref, defineProps } from 'vue';
+  const props = defineProps({
+    form: {
+      type: Object,
+      default: () => {},
+    },
+    qrcode: {
+      type: String,
+      default: '',
+    },
+    imgName: {
+      type: String,
+      default: '',
+    },
+    imgDescription: {
+      type: String,
+      default: '',
+    },
+  });
 
   const { userInfo } = useUserStore();
   const previewImageVisible = ref(false);
@@ -161,6 +175,7 @@
             font-style: normal;
             font-weight: 600;
             margin-bottom: 16px;
+            padding: 0 18px;
           }
           .item-desc {
             color: #100a05;
@@ -263,6 +278,7 @@
             font-style: normal;
             font-weight: 600;
             margin-bottom: 36px;
+            padding: 0 30px;
           }
           .item-desc {
             color: #100a05;
@@ -271,7 +287,7 @@
             font-style: normal;
             font-weight: 400;
             margin-bottom: 16px;
-            padding: 0 18px;
+            padding: 0 30px;
           }
           .item-qrcode {
             width: 140px;

@@ -76,7 +76,7 @@
 </template>
 
 <script setup>
-  import { ref, reactive, nextTick, getCurrentInstance } from 'vue';
+  import { ref, reactive, nextTick, getCurrentInstance, watch } from 'vue';
   import { useLanguageStore } from '@/store';
   import IndexApi from '@/api/index.js';
 
@@ -87,6 +87,9 @@
   const { proxy } = getCurrentInstance();
 
   const languageStore = useLanguageStore();
+  const languageKeys = ref(languageStore.currentLanguage);
+
+  const emit = defineEmits(['nowLangeData']);
 
   const props = defineProps({
     singleLanguage: {
@@ -137,6 +140,12 @@
       type: Number,
       required: false,
       default: undefined,
+    },
+    //是否验证唯一性
+    isUnique: {
+      type: Boolean,
+      required: false,
+      default: true,
     },
     apiSource: {
       type: String,
@@ -245,6 +254,7 @@
   };
 
   const handleValidateUnique = async () => {
+    if (!props.isUnique) return true;
     const params = {
       name: form,
       source: props.apiSource,
@@ -287,6 +297,17 @@
       focusLanguageKey.value = '';
     }
   };
+
+  watch(
+    () => form,
+    (newVal) => {
+      emit('nowLangeData', newVal[languageKeys.value]);
+    },
+    {
+      immediate: true,
+      deep: true,
+    }
+  );
 
   defineExpose({
     validate: validate,
