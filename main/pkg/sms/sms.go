@@ -147,6 +147,23 @@ func (c *smsClient) SendMemberOrderRefundSMS(phone, language string, params *Mem
 	return c.SendSMS(req)
 }
 
+// SendMemberCodeSMS 发送会员验证码短信
+func (c *smsClient) SendMemberCodeSMS(phone, language string, params *MemberSendCodeRequest) (*SMSResponse, error) {
+	req := &SendSMSRequest{
+		TemplateID: TemplateMemberSendCode,
+		Phone:      phone,
+		Language:   language,
+		Params: map[string]interface{}{
+			"company": params.Company,
+			"code":    params.Code,
+		},
+	}
+	if logger.Logger != nil {
+		logger.Logger.Info("发送会员验证码短信", zap.Any("req", req))
+	}
+	return c.SendSMS(req)
+}
+
 // SendSMS 发送短信
 func (c *smsClient) SendSMS(req *SendSMSRequest) (*SMSResponse, error) {
 	jsonData, err := json.Marshal(req)

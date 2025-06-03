@@ -26,6 +26,8 @@ type ISmsSrv interface {
 	SendMemberRechargeRefundSMS(ctx context.Context, phone string, params *sms.MemberRechargeRefundRequest) error
 	// SendMemberOrderRefundSMS 发送会员用餐订单退款短信
 	SendMemberOrderRefundSMS(ctx context.Context, phone string, params *sms.MemberOrderRefundRequest) error
+	// SendMemberCodeSMS 发送会员验证码短信
+	SendMemberCodeSMS(ctx context.Context, phone string, params *sms.MemberSendCodeRequest) error
 }
 
 // smsSrv 短信服务实现
@@ -274,6 +276,46 @@ func (s *smsSrv) SendMemberOrderRefundSMS(ctx context.Context, phone string, par
 
 	// 发送短信
 	resp, err := s.client.SendMemberOrderRefundSMS(formattedPhone, language, params)
+	if err != nil {
+		err := fmt.Errorf("failed to send SMS: %v", err)
+		return errors.WithMessage(err, "发送短信失败")
+	}
+
+	// 如果发送成功，扣减额度
+	if resp.Code == sms.ResponseCodeSuccess {
+		if err := s.deductQuota(ctx, company.Uuid); err != nil {
+			return errors.WithMessage(err, "扣减短信额度失败")
+		}
+	} else {
+		err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
+		return errors.WithMessage(err, "发送短信失败")
+	}
+
+	return nil
+}
+
+// SendMemberCodeSMS 发送会员发送验证码短信
+func (s *smsSrv) SendMemberCodeSMS(ctx context.Context, phone string, params *sms.MemberSendCodeRequest) error {
+	company := ctx.GetCompany()
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(company.Uuid)
+		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
+		ctx.AddLock()
+	}
+
+	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
+	if err != nil {
+		return err
+	}
+
+	// 获取公司名称
+	if params.Company == "" {
+		params.Company = companyName
+	}
+
+	// 发送短信
+	resp, err := s.client.SendMemberCodeSMS(formattedPhone, language, params)
 	if err != nil {
 		err := fmt.Errorf("failed to send SMS: %v", err)
 		return errors.WithMessage(err, "发送短信失败")

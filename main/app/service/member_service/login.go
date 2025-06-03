@@ -2,13 +2,19 @@ package member_service
 
 import (
 	"errors"
+	"fmt"
+	"math/rand"
 	"strings"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/dto/resp/member_resp"
+	"ttpos-server-go/app/service"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/sms"
 )
 
 type ILoginSrv interface {
@@ -17,24 +23,28 @@ type ILoginSrv interface {
 }
 
 type loginSrv struct {
-	dbm   *database.DBManager
-	cache cache.Cache
+	dbm    *database.DBManager
+	cache  cache.Cache
+	smsSrv service.ISmsSrv
 }
 
 func NewLoginSrv(
 	dbm *database.DBManager,
 	cache cache.Cache,
+	smsSrv service.ISmsSrv,
 ) ILoginSrv {
-	return NewLoginSrvImpl(dbm, cache)
+	return NewLoginSrvImpl(dbm, cache, smsSrv)
 }
 
 func NewLoginSrvImpl(
 	dbm *database.DBManager,
 	cache cache.Cache,
+	smsSrv service.ISmsSrv,
 ) ILoginSrv {
 	return &loginSrv{
-		dbm:   dbm,
-		cache: cache,
+		dbm:    dbm,
+		cache:  cache,
+		smsSrv: smsSrv,
 	}
 }
 
@@ -98,11 +108,23 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 	} else {
 		return errors.New("区号格式不正确")
 	}
-
-	// 判断 req.Phone 是否是手机号
-	// if !utils.IsPhone(req.Phone) {
-	// 	return errors.New("手机号格式不正确")
-	// }
-
+	// 生成验证码
+	code := fmt.Sprintf("%06d", rand.Intn(1000000)) // 生成6位随机数字验证码，范围：000000-999999
+	// 如果是否debug模式，则打印验证码
+	if config.Server.Mode == "debug" {
+		fmt.Println("code", code)
+	}
+	// 设置缓存key
+	cacheKey := fmt.Sprintf("member:login:code:%s:%s:%d", req.AreaCode, req.Phone, req.CompanyUuid)
+	// 将验证码存储到缓存中，设置5分钟过期
+	if err := s.cache.Set(cacheKey, code, 1*time.Minute); err != nil {
+		return fmt.Errorf("存储验证码失败: %v", err)
+	}
+	// 发送验证码短信
+	if err := s.smsSrv.SendMemberCodeSMS(ctx, req.Phone, &sms.MemberSendCodeRequest{
+		Code: code,
+	}); err != nil {
+		return fmt.Errorf("发送验证码短信失败: %v", err)
+	}
 	return nil
 }

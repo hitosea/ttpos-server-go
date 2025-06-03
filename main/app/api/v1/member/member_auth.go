@@ -4,6 +4,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req/member_req"
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/member_service"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -65,7 +66,7 @@ func (h *AuthHandler) SendCode(c *gin.Context) {
 }
 
 func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
-	loginSrv := member_service.NewLoginSrv(dbm, cache)
+	loginSrv := member_service.NewLoginSrv(dbm, cache, service.NewSMSSrv(dbm))
 
 	wrapper := &AuthHandler{
 		loginSrv: loginSrv,
