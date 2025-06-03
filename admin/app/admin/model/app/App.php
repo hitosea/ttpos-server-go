@@ -41,8 +41,6 @@ class App extends AppModel
      */
     public function getList($param)
     {
-        $prefix = Env::get('DB_PREFIX');
-        $shopType = $param['shop_type'] ?? 0;
         $status = $param['status'] ?? 0;
         $keyword = $param['keyword'] ?? '';
         $appId = $param['app_id'] ?? 0;
@@ -72,6 +70,8 @@ class App extends AppModel
             "su.company_uuid as shop_supplier_id",
             "su.is_open_member",
             "su.is_open_tablet",
+            "su.is_open_coupon",
+            "su.is_open_marketing",
             "su.is_open_h5 as is_open_scan",
             "su.is_open_assistant",
             "su.is_open_kitchen_kds",
@@ -231,7 +231,7 @@ class App extends AppModel
                 $user_data['password'] = salt_hash($data['password']);
             }
             //
-            $shop_user = CompanyStaff::withoutGlobalScope()->where('company_uuid', '=', $this['uuid'])->find();
+            $shop_user = CompanyStaff::withoutGlobalScope()->where('company_uuid', '=', $this['uuid'])->order('is_super', 'desc')->find();
             if ($shop_user['phone'] != $data['link_phone']) {
                 if (CompanyStaff::checkPhoneExist($data['link_phone'])) {
                     $this->error = '联系电话已存在';

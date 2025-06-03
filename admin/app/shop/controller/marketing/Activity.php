@@ -7,7 +7,9 @@ use think\Request;
 use Endroid\QrCode\QrCode;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
+use app\common\enum\http\StatusCode;
 use Endroid\QrCode\Writer\PngWriter;
+use app\common\exception\BaseException;
 use app\shop\service\marketing\MarketingActivityService;
 
 /**
@@ -22,6 +24,15 @@ class Activity extends Controller
     public function __construct(App $app)
     {
         parent::__construct($app);
+        // 验证功能是否开启
+        if ((request()->userInfo['supplier']['is_open_member'] ?? 0) != 1) {
+            throw new BaseException(['msg' => '该营销活动需商家开通会员中心功能，请联系销售代表处理', 'code' => StatusCode::ERROR]);
+        }
+        // 验证功能是否开启
+        if ((request()->userInfo['supplier']['is_open_marketing'] ?? 0) != 1) {
+            throw new BaseException(['msg' => '该营销活动需商家开通营销活动功能，请联系销售代表处理', 'code' => StatusCode::ERROR]);
+        }
+        // 
         $this->service = new MarketingActivityService();
     }
 

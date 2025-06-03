@@ -15,8 +15,15 @@ class MarketingActivity extends BaseModel
     // 追加属性
     protected $append = [
         'status',
-        'status_text'
+        'status_text',
+        'name_text'
     ];
+
+    // 活动名称
+    public function getNameTextAttr($value, $data)
+    {
+        return extractLanguage($data['name'] ?? '');
+    }
 
     /**
      * 获取状态文字

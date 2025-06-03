@@ -142,6 +142,8 @@ class MarketingActivityService
             },
         ])->order('create_time desc')->field('
             uuid, 
+            name,
+            type,
             start_time, 
             end_time, 
             reward_condition_amount, 
