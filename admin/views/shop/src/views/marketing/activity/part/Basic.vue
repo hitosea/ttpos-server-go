@@ -3,87 +3,97 @@
     <!--基本信息-->
     <div class="common-form">{{ $t('基本信息') }}</div>
     <el-form-item for="no_click" :rules="[{ required: true, message: $t('请输入活动名称') }]" prop="model.card_name">
-      <UniqueNameForm ref="uniqueNameFormRef" :labelPrefix="$t('活动名称')" width="460px" :maxlength="50" />
+      <UniqueNameForm ref="activityNameFormRef" :labelPrefix="$t('活动名称')" width="460px" :maxlength="50" />
     </el-form-item>
     <el-form-item for="no_click" :rules="[{ required: true, message: $t('请输入活动文案') }]" prop="model.card_name">
-      <UniqueNameForm ref="uniqueNameFormRef" :labelPrefix="$t('活动文案')" width="460px" :maxlength="100" />
+      <UniqueNameForm ref="activityDescriptionFormRef" :labelPrefix="$t('活动文案')" width="460px" :maxlength="100" />
     </el-form-item>
     <el-form-item for="no_click" :label="$t('活动时间')" :rules="[{ required: true, message: $t('请选择活动时间') }]" prop="model.card_name">
-      <el-date-picker class="max-w460" v-model="form.model.activity_time" type="daterange" range-separator="~" start-placeholder="开始日期" end-placeholder="结束日期" />
+      <el-date-picker class="max-w460" v-model="activityTime" type="daterange" range-separator="~" start-placeholder="开始日期" end-placeholder="结束日期" />
     </el-form-item>
     <el-form-item for="no_click" :label="$t('活动奖品')" :rules="[{ required: true, message: $t('请选择活动奖品') }]" prop="model.card_name">
-      <el-radio-group v-model="form.model.is_discount">
+      <el-radio-group v-model="rewardType">
         <el-radio :label="0">{{ $t('优惠券（当前仅支持选择优惠券）') }}</el-radio>
       </el-radio-group>
     </el-form-item>
   </div>
 </template>
 
-<script>
+<script setup>
+  import { ref, inject, watch } from 'vue';
+  import { ElMessage } from 'element-plus';
   import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
 
-  export default {
-    components: {
-      UniqueNameForm,
-    },
-    data() {
-      return {
-        isupload: false,
-        open_add: false,
-      };
-    },
-    inject: ['form'],
-    created() {},
-    methods: {
-      chooseCardType(e) {
-        this.form.model.card_style = e;
-      },
-      /*添加优惠券*/
-      addCoupon() {
-        if (this.form.model.open_coupons.length >= 15) {
-          ElMessage.error('您已经选择了十五张优惠券，若要更换请删除其他优惠券！');
-          return;
-        }
+  // 注入form数据
+  const form = inject('form');
 
-        this.open_add = true;
-      },
-      /*关闭优惠券*/
-      closeProductDialogFunc(e) {
-        let self = this;
-        self.open_add = e.openDialog;
-        if (e.type == 'success') {
-          let params = {
-            coupon_id: e.params.coupon_id,
-            name: e.params.name,
-            number: 1,
-            color: e.params.color,
-            discount: e.params.discount,
-            reduce_price: e.params.reduce_price,
-            coupon_type: e.params.coupon_type,
-            min_price: e.params.min_price,
-          };
-          self.form.model.open_coupons.push(params);
-        }
-      },
-      delcoupon(item) {
-        let self = this;
-        let n = self.form.model.open_coupons.indexOf(item);
-        self.form.model.open_coupons.splice(n, 1);
-      },
-      /*上传*/
-      openUpload(e) {
-        this.type = e;
-        this.isupload = true;
-      },
-      /*获取图片*/
-      returnImgsFunc(e) {
-        if (e != null && e.length > 0) {
-          this.form.model.default_style = e[0].file_path;
-        }
-        this.isupload = false;
-      },
-    },
+  // 响应式数据
+  const isupload = ref(false);
+  const open_add = ref(false);
+  const type = ref('');
+  const activityTime = ref([]);
+  const rewardType = ref(0);
+
+  // 引用
+  const activityNameFormRef = ref(null);
+  const activityDescriptionFormRef = ref(null);
+
+  // 方法定义
+  const chooseCardType = (e) => {
+    form.model.card_style = e;
   };
+
+  // 添加优惠券
+  const addCoupon = () => {
+    if (form.model.open_coupons.length >= 15) {
+      ElMessage.error('您已经选择了十五张优惠券，若要更换请删除其他优惠券！');
+      return;
+    }
+    open_add.value = true;
+  };
+
+  // 关闭优惠券
+  const closeProductDialogFunc = (e) => {
+    open_add.value = e.openDialog;
+    if (e.type == 'success') {
+      let params = {
+        coupon_id: e.params.coupon_id,
+        name: e.params.name,
+        number: 1,
+        color: e.params.color,
+        discount: e.params.discount,
+        reduce_price: e.params.reduce_price,
+        coupon_type: e.params.coupon_type,
+        min_price: e.params.min_price,
+      };
+      form.model.open_coupons.push(params);
+    }
+  };
+
+  // 删除优惠券
+  const delcoupon = (item) => {
+    let n = form.model.open_coupons.indexOf(item);
+    form.model.open_coupons.splice(n, 1);
+  };
+
+  // 上传
+  const openUpload = (e) => {
+    type.value = e;
+    isupload.value = true;
+  };
+
+  // 获取图片
+  const returnImgsFunc = (e) => {
+    if (e != null && e.length > 0) {
+      form.model.default_style = e[0].file_path;
+    }
+    isupload.value = false;
+  };
+
+  watch(activityTime, (newVal) => {
+    form.start_time = newVal[0];
+    form.end_time = newVal[1];
+  });
 </script>
 
 <style lang="scss">

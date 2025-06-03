@@ -4,7 +4,7 @@
     <el-form size="small" ref="formRef" class="product-form" :model="form" label-position="top" label-width="180px">
       <div class="product-form-wrapper">
         <div class="product-form-left">
-          <ImagePreview></ImagePreview>
+          <ImagePreview :image="form.image_base64"></ImagePreview>
         </div>
         <!--分割线-->
         <div class="product-form-line"></div>
@@ -29,7 +29,7 @@
   import { ref, reactive, provide, onMounted, getCurrentInstance } from 'vue';
   import { useRouter } from 'vue-router';
   import { ElMessage } from 'element-plus';
-  import CardApi from '@/api/card.js';
+  import MarketingApi from '@/api/marketing.js';
   import Basic from './part/Basic.vue';
   import Set from './part/set.vue';
   import { useUserStore } from '@/store/index';
@@ -51,51 +51,29 @@
 
   // 表单数据
   const form = reactive({
-    model: {
-      card_name: '',
-      type_id: 1,
-      card_style: '',
-      sort: null,
-      is_discount: 0,
-      discount: 0,
-      open_points: 0,
-      open_points_num: 0,
-      open_coupon: 0,
-      open_coupons: [],
-      month_points: 0,
-      month_points_num: 0,
-      month_coupon: 0,
-      month_coupons: [],
-      expire: 0,
-      money: 0,
-      stock: '',
-      status: 0,
-      content: '',
-      sub_card: 0,
-      sub_num: 0,
-      default_style: '',
-      is_default: 0,
-    },
-    subList: [],
-    /*副卡*/
-    image: [],
-    /*会员卡类型*/
-    typeList: [],
-    /*优惠券*/
-    couponList: [],
+    name: '',
+    description: '',
+    start_time: '',
+    end_time: '',
+    reward_condition_amount: 0,
+    reward_condition_num: 0,
+    reward_type: 0,
+    prize_list: [],
+    image_base64: '',
   });
+
+  const qrcode = ref('');
 
   // 向子组件提供数据
   provide('form', form);
   provide('image', form.image);
-  provide('subList', form.subList);
 
   // 方法
   const getBaseData = () => {
-    CardApi.getBaseData({}, true)
+    MarketingApi.activityAddGet({}, true)
       .then((res) => {
         loading.value = false;
-        Object.assign(form, res.data);
+        qrcode.value = res.data.qrcode;
       })
       .catch((error) => {
         loading.value = false;
@@ -165,6 +143,8 @@
     .product-form-left {
       flex-shrink: 0;
       width: 312px;
+      height: 100%;
+      overflow-y: auto;
     }
 
     .product-form-line {

@@ -68,14 +68,24 @@
               <span v-else>{{ scope.row.grade?.name }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="balance" :label="$t('主账户余额')">
+          <el-table-column prop="balance" :label="$t('主账户余额')" width="160">
             <template #default="scope">
               {{ this.$formatPrice(scope.row.balance) }}
             </template>
           </el-table-column>
-          <el-table-column prop="gift_balance" :label="$t('赠送账户余额')">
+          <el-table-column prop="gift_balance" :label="$t('赠送账户余额')" width="160">
             <template #default="scope">
               {{ this.$formatPrice(scope.row.gift_balance) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="recharge_money" :label="$t('累计充值金额')" width="160">
+            <template #default="scope">
+              {{ this.$formatPrice(scope.row.recharge_money) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="net_recharge_money" :label="$t('净充值金额')" width="160">
+            <template #default="scope">
+              {{ this.$formatPrice(scope.row.net_recharge_money) }}
             </template>
           </el-table-column>
           <el-table-column prop="points" :label="$t('积分')">

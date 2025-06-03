@@ -86,11 +86,7 @@ class DateHelp
         // 计算佛历年份
         $thaiYear = intval(date('Y', $timestamp)) + $thaiOffset;
         // 获取月份和日期
-        if (strstr($datetime,'/')) {
-            $result = $thaiYear . '/' . date('m/d H:i:s', $timestamp);
-        } else {
-            $result = $thaiYear . '-' . date('m-d H:i:s', $timestamp);
-        }
+        $result = $thaiYear . '-' . date('m-d H:i:s', $timestamp);
         // 
         return is_int($datetime) ? strtotime($result) : $result;
     }
