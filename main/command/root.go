@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"ttpos-server-go/app/tasks"
 	"ttpos-server-go/config"
 	"ttpos-server-go/docs"
 	"ttpos-server-go/i18n"
@@ -76,7 +77,7 @@ var rootCommand = &cobra.Command{
 		event.NewSystemBus()
 
 		// 定时器
-		// initializeTimers(dbm, cache.Global)
+		initializeTimers(dbm, cache.Global)
 
 		// 外网服务
 		initializeExternalService(dbm, cache.Global)
@@ -133,6 +134,11 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	// _, _ = c.AddFunc("0 */2 * * * *", func() {
 	// 	tasks.NewUsbPrintTask(dbm, cache).Execute()
 	// })
+
+	// 删除7天前的打印日志
+	_, _ = c.AddFunc("0 6 * * *", func() {
+		tasks.NewDelPrintTask(dbm, cache).Execute()
+	})
 
 	// 启动定时器
 	c.Start()
