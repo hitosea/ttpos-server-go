@@ -88,11 +88,8 @@ class Activity extends Controller
     {
         if ($request->isGet()) {
             $url = env('MEMBER_BASE_URL') . "/home?cid={$request->appId}";
-            $qrCode = new QrCode($url);
-            return $this->renderSuccess('', [
-                'qr_code_url' => $url,
-                'qr_code' => (new PngWriter())->write($qrCode)->getDataUri()
-            ]);
+            $qrCode = (new PngWriter())->write(new QrCode($url))->getDataUri();
+            return $this->renderSuccess('', ['qr_code_url' => $url, 'qr_code' => $qrCode]);
         }
         $data = $request->post();
         $result = $this->service->create($data);
@@ -172,6 +169,7 @@ class Activity extends Controller
      * @Apidoc\Url ("/index.php/shop/marketing.activity/record")
      * @Apidoc\Query("activity_uuid", type="string", require=false, desc="活动uuid")
      * @Apidoc\Query("keyword", type="string", require=false, desc="暱稱/手機號/ID")
+     * @Apidoc\Query(ref="pageParam")
      * @Apidoc\Returned("list", type="array", desc="奖励记录列表", children={
      *      @Apidoc\Returned("uuid", type="string", desc="记录uuid"),
      *      @Apidoc\Returned("member_uuid", type="string", desc="会员uuid"),

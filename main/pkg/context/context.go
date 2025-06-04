@@ -13,33 +13,38 @@ import (
 )
 
 type Context interface {
-	GetLanguage() string                     // 获取语言
-	SetLanguage(language string)             // 设置语言
-	GetCompanyUuid() uint64                  // 获取商家ID
-	GetDbId() uint64                         // 获取商家ID
-	GetGin() *gin.Context                    // 获取gin上下文
-	GetContext() context.Context             // 获取上下文
-	GetSource() string                       // 获取请求来源
-	GetCompany() model.Company               // 获取商家信息
-	GetCompanySetting() model.CompanySetting // 获取商家设置
-	GetStaff() model.Staff                   // 获取员工信息
-	GetStaffUuid() uint64                    // 获取员工uuid
-	GetAssistantUuid() uint64                // 获取员工uuid(助手端)
-	GetDeviceSn() string                     // 获取设备SN
-	GetDeviceUuid() uint64                   // 获取设备uuid
-	GetDeskUuid() uint64                     // 获取桌台ID
-	GetH5OrderUuid() string                  // 获取H5订单ID
-	NoLock() bool                            // 判断上文中是否已经加锁
-	AddLock()                                // 在上下文中标记是否已经加锁 todo 改名为SetLock
-	Log() *zap.Logger                        // 获取日志实例
-	SetDB(tx *gorm.DB)                       // 设置gorm.DB
-	SetCompanyUuid(uuid uint64)              // 设置商家ID
-	GetDB() *gorm.DB                         // 获取gorm.DB
-	GetRequestUuid() string                  // 获取请求ID
-	GetToken() string                        // 获取请求ID
-	Copy() Context                           // 复制一个ctx实例。避免在协程中修改上下文导致主进程的ctx被修改
-	GetCFIPCountry() string                  // 获取CF-IPCountry
+	GetLanguage() string                                   // 获取语言
+	SetLanguage(language string)                           // 设置语言
+	GetCompanyUuid() uint64                                // 获取商家ID
+	GetDbId() uint64                                       // 获取商家ID
+	GetGin() *gin.Context                                  // 获取gin上下文
+	GetContext() context.Context                           // 获取上下文
+	GetSource() string                                     // 获取请求来源
+	GetCompany() model.Company                             // 获取商家信息
+	GetCompanySetting() model.CompanySetting               // 获取商家设置
+	GetStaff() model.Staff                                 // 获取员工信息
+	GetStaffUuid() uint64                                  // 获取员工uuid
+	GetAssistantUuid() uint64                              // 获取员工uuid(助手端)
+	GetDeviceSn() string                                   // 获取设备SN
+	GetDeviceUuid() uint64                                 // 获取设备uuid
+	GetDeskUuid() uint64                                   // 获取桌台ID
+	GetH5OrderUuid() string                                // 获取H5订单ID
+	NoLock() bool                                          // 判断上文中是否已经加锁
+	AddLock()                                              // 在上下文中标记是否已经加锁 todo 改名为SetLock
+	Log() *zap.Logger                                      // 获取日志实例
+	SetDB(tx *gorm.DB)                                     // 设置gorm.DB
+	SetCompanyUuid(uuid uint64)                            // 设置商家ID
+	SetCompanySetting(companySetting model.CompanySetting) // 设置商家设置
+	SetCompany(company model.Company)                      // 设置商家
+	GetDB() *gorm.DB                                       // 获取gorm.DB
+	GetRequestUuid() string                                // 获取请求ID
+	GetToken() string                                      // 获取请求ID
+	Copy() Context                                         // 复制一个ctx实例。避免在协程中修改上下文导致主进程的ctx被修改
+	GetCfIPCountry() string                                // 获取CF-IPCountry
+	GetMember() model.Member                               // 获取会员信息
+	GetMemberUuid() uint64                                 // 获取会员uuid
 }
+
 type ContextImpl struct {
 	context.Context
 	cc             *gin.Context         // gin context。记录当前请求的上下文
@@ -50,6 +55,8 @@ type ContextImpl struct {
 	companySetting model.CompanySetting // 商家设置信息
 	staff          model.Staff          // 员工信息，如果是点餐助手，应该是收银员
 	staffUuid      uint64               // 员工uuid
+	member         model.Member         // 会员信息
+	memberUuid     uint64               // 会员uuid
 	assistantUuid  uint64               // 员工uuid(助手端)
 	deskUuid       uint64               // 桌台ID
 	deviceSn       string               // 设备序列号。用于唯一标识一个设备。如识别是哪个收银机，以找到收银机的未挂单点餐账单
@@ -59,7 +66,6 @@ type ContextImpl struct {
 	hasLock        bool                 // 是否已经上锁
 	log            *zap.Logger
 	db             *gorm.DB
-	cfIPCountry    string // CF-IPCountry
 }
 
 type Option func(*ContextImpl)
@@ -130,6 +136,18 @@ func WithStaffUuid(staffUuid uint64) Option {
 	}
 }
 
+func WithMember(member model.Member) Option {
+	return func(ctx *ContextImpl) {
+		ctx.member = member
+	}
+}
+
+func WithMemberUuid(memberUuid uint64) Option {
+	return func(ctx *ContextImpl) {
+		ctx.memberUuid = memberUuid
+	}
+}
+
 func WithAssistantUuid(assistantUuid uint64) Option {
 	return func(ctx *ContextImpl) {
 		ctx.assistantUuid = assistantUuid
@@ -193,6 +211,8 @@ func (c *ContextImpl) Copy() Context {
 		WithLogger(c.log),
 		WithGinContext(c.cc),
 		WithContext(c.Context),
+		WithMember(c.member),
+		WithMemberUuid(c.memberUuid),
 	)
 }
 
@@ -244,6 +264,14 @@ func (c *ContextImpl) GetStaffUuid() uint64 {
 	return c.staffUuid
 }
 
+func (c *ContextImpl) GetMember() model.Member {
+	return c.member
+}
+
+func (c *ContextImpl) GetMemberUuid() uint64 {
+	return c.memberUuid
+}
+
 func (c *ContextImpl) GetAssistantUuid() uint64 {
 	return c.assistantUuid
 }
@@ -280,6 +308,14 @@ func (c *ContextImpl) SetCompanyUuid(uuid uint64) {
 	c.companyUuid = uuid
 }
 
+func (c *ContextImpl) SetCompany(company model.Company) {
+	c.company = company
+}
+
+func (c *ContextImpl) SetCompanySetting(companySetting model.CompanySetting) {
+	c.companySetting = companySetting
+}
+
 // GetDB 获取gorm实例
 func (c *ContextImpl) GetDB() *gorm.DB {
 	if c.db == nil {
@@ -300,7 +336,7 @@ func (c *ContextImpl) GetToken() string {
 	return strings.SplitN(c.cc.GetHeader("Authorization"), " ", 2)[1]
 }
 
-// GetCFIPCountry 获取CF-IPCountry
-func (c *ContextImpl) GetCFIPCountry() string {
+// GetCfIPCountry 获取CF-IPCountry
+func (c *ContextImpl) GetCfIPCountry() string {
 	return c.cc.GetHeader("CF-IPCountry")
 }

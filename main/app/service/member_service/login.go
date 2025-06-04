@@ -8,26 +8,39 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req/member_req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/member_resp"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/auth"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/sms"
 )
 
+const (
+	CodeCacheKey = "member:login:code:%s:%d"
+	CodeCacheTTL = 90 * time.Second
+)
+
+// ILoginSrv 会员登录相关服务接口
+// 获取登录信息、发送验证码、登录
 type ILoginSrv interface {
 	GetLoginInfo(ctx context.Context, req member_req.MemberLoginInfoReq) (member_resp.MemberLoginInfoResp, error) // 获取登录信息
 	SendCode(ctx context.Context, req member_req.MemberSendCodeReq) error                                         // 发送验证码
+	Login(ctx context.Context, req member_req.MemberLoginReq) (resp.LoginResp, error)                             // 登录
 }
 
+// loginSrv 会员登录服务实现
 type loginSrv struct {
 	dbm    *database.DBManager
 	cache  cache.Cache
 	smsSrv service.ISmsSrv
 }
 
+// NewLoginSrv 创建会员登录服务实例
 func NewLoginSrv(
 	dbm *database.DBManager,
 	cache cache.Cache,
@@ -36,6 +49,7 @@ func NewLoginSrv(
 	return NewLoginSrvImpl(dbm, cache, smsSrv)
 }
 
+// NewLoginSrvImpl 创建会员登录服务实现
 func NewLoginSrvImpl(
 	dbm *database.DBManager,
 	cache cache.Cache,
@@ -48,10 +62,17 @@ func NewLoginSrvImpl(
 	}
 }
 
-// GetLoginInfo 获取登录信息
+// GetLoginInfo 获取登录信息，用于获取区号列表
+// 参数：ctx 上下文，req 登录信息请求
+// 返回：登录信息响应，错误信息
 func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginInfoReq) (member_resp.MemberLoginInfoResp, error) {
+	db := s.dbm.GetDB(req.CompanyUuid)
+	if db == nil {
+		return member_resp.MemberLoginInfoResp{}, errors.New("商家不存在")
+	}
+
 	// 获取国家代码并转换为大写
-	countryCode := strings.ToUpper(ctx.GetCFIPCountry())
+	countryCode := strings.ToUpper(ctx.GetCfIPCountry())
 
 	// 定义国家代码到区号的映射
 	countryToAreaCode := map[string]string{
@@ -75,38 +96,40 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 		areaCodes = append([]string{areaCode}, areaCodes...)
 	}
 
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(req.CompanyUuid)
+	if err != nil {
+		return member_resp.MemberLoginInfoResp{}, errors.New("商家不存在")
+	}
 	return member_resp.MemberLoginInfoResp{
 		CompanyUuid: req.CompanyUuid,
+		CompanyName: company.Name,
 		AreaCode:    areaCodes,
 	}, nil
 }
 
-// 发送验证码
+// SendCode 发送验证码
+// 参数：ctx 上下文，req 发送验证码请求
+// 返回：错误信息
 func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeReq) error {
-	// 判断 req.CompanyUuid 是否存在
-	if req.CompanyUuid == 0 {
-		return errors.New("商家ID不能为空")
+	if err := req.Validate(); err != nil {
+		return err
 	}
-	if s.dbm.GetDB(req.CompanyUuid) == nil {
+	db := s.dbm.GetDB(req.CompanyUuid)
+	if db == nil {
 		return errors.New("商家不存在")
 	}
-	// 判断 req.Phone 是否是手机号
-	if req.AreaCode == constant.ChinaPrefix {
-		if len(req.Phone) != 11 {
-			return errors.New("手机号格式不正确")
-		}
-		if req.Phone[0] != '1' {
-			return errors.New("手机号格式不正确")
-		}
-	} else if req.AreaCode == constant.ThailandPrefix {
-		if len(req.Phone) != 10 {
-			return errors.New("手机号格式不正确")
-		}
-		if req.Phone[0] != '0' {
-			return errors.New("手机号格式不正确")
-		}
-	} else {
-		return errors.New("区号格式不正确")
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(req.CompanyUuid)
+	if err != nil || company.IsExpired() || company.IsDelete() {
+		return errors.New("无法使用该功能，请联系商家")
+	}
+	companySetting := repository.NewCompanySettingRepo(db).Get()
+	if companySetting.IsOpenMember != 1 {
+		return errors.New("未开启会员功能，请联系商家")
+	}
+	// 验证手机号是否存在
+	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
+	if err != nil || member.IsDelete() {
+		return errors.New("会员不存在")
 	}
 	// 生成验证码
 	code := fmt.Sprintf("%06d", rand.Intn(1000000)) // 生成6位随机数字验证码，范围：000000-999999
@@ -115,16 +138,66 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 		fmt.Println("code", code)
 	}
 	// 设置缓存key
-	cacheKey := fmt.Sprintf("member:login:code:%s:%s:%d", req.AreaCode, req.Phone, req.CompanyUuid)
+	cacheKey := fmt.Sprintf(CodeCacheKey, req.Phone, req.CompanyUuid)
 	// 将验证码存储到缓存中，设置5分钟过期
-	if err := s.cache.Set(cacheKey, code, 1*time.Minute); err != nil {
+	if err := s.cache.Set(cacheKey, code, CodeCacheTTL); err != nil {
 		return fmt.Errorf("存储验证码失败: %v", err)
 	}
 	// 发送验证码短信
+	ctx.SetCompanyUuid(req.CompanyUuid)
+	ctx.SetCompany(*company)
+	ctx.SetCompanySetting(companySetting)
 	if err := s.smsSrv.SendMemberCodeSMS(ctx, req.Phone, &sms.MemberSendCodeRequest{
 		Code: code,
 	}); err != nil {
 		return fmt.Errorf("发送验证码短信失败: %v", err)
 	}
 	return nil
+}
+
+// Login 登录
+// 参数：ctx 上下文，req 登录请求
+// 返回：登录响应，错误信息
+func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (resp.LoginResp, error) {
+	if err := req.Validate(); err != nil {
+		return resp.LoginResp{}, err
+	}
+	db := s.dbm.GetDB(req.CompanyUuid)
+	if db == nil {
+		return resp.LoginResp{}, errors.New("商家不存在")
+	}
+
+	// 验证验证码
+	cacheKey := fmt.Sprintf(CodeCacheKey, req.Phone, req.CompanyUuid)
+	code, ok := s.cache.Get(cacheKey)
+	if !ok || code == "" || code.(string) != req.Code {
+		if config.Server.Mode != "debug" || req.Code != "123456" {
+			return resp.LoginResp{}, errors.New("验证码不正确")
+		}
+	}
+	s.cache.Del(cacheKey)
+
+	// 验证手机号是否存在
+	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
+	if err != nil || member.IsDelete() {
+		return resp.LoginResp{}, errors.New("会员不存在")
+	}
+	// 生成token
+	claims := auth.Claims{
+		Source:      constant.SourceMember,
+		CompanyUuid: req.CompanyUuid,
+		MemberUuid:  member.Uuid,
+	}
+	token, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
+	if err != nil {
+		return resp.LoginResp{}, errors.New("生成token失败")
+	}
+	refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+	if err != nil {
+		return resp.LoginResp{}, errors.New("生成refresh_token失败")
+	}
+	return resp.LoginResp{
+		Token:        token,
+		RefreshToken: refreshToken,
+	}, nil
 }

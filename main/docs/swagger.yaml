@@ -601,6 +601,18 @@ definitions:
       message:
         type: string
     type: object
+  member_req.MemberLoginReq:
+    properties:
+      code:
+        description: 验证码
+        type: string
+      company_uuid:
+        description: 集团ID
+        type: integer
+      phone:
+        description: 手机号
+        type: string
+    type: object
   member_req.MemberSendCodeReq:
     properties:
       area_code:
@@ -620,6 +632,12 @@ definitions:
         items:
           type: string
         type: array
+      company_uuid:
+        description: 集团UUID
+        type: integer
+    type: object
+  member_resp.MemberMarketingActivityResp:
+    properties:
       company_uuid:
         description: 集团UUID
         type: integer
@@ -13992,6 +14010,33 @@ paths:
       summary: 验证高级密码
       tags:
       - 厨显端.基础信息
+  /member/login:
+    post:
+      consumes:
+      - application/json
+      description: 登录
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/member_req.MemberLoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      summary: 登录
+      tags:
+      - 会员端.认证
   /member/login_info:
     get:
       consumes:
@@ -14017,6 +14062,31 @@ paths:
       summary: 获取登陆信息
       tags:
       - 会员端.认证
+  /member/marketing_activity:
+    get:
+      consumes:
+      - application/json
+      description: 获取营销活动
+      parameters:
+      - description: 集团ID
+        in: query
+        name: company_uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/member_resp.MemberMarketingActivityResp'
+              type: object
+      summary: 获取营销活动
+      tags:
+      - 会员端.营销活动
   /member/send_code:
     post:
       consumes:

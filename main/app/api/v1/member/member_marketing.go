@@ -1,0 +1,66 @@
+package member
+
+import (
+	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req/member_req"
+	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/member_service"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/middleware"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
+
+	"github.com/gin-gonic/gin"
+)
+
+// AuthHandler 认证鉴权控制器
+type MarketingHandler struct {
+	marketingSrv member_service.IMarketingSrv
+}
+
+// MarketingActivity 获取营销活动
+// @Summary 获取营销活动
+// @Description 获取营销活动
+// @Tags 会员端.营销活动
+// @Accept json
+// @Produce json
+// @param data query member_req.MemberMarketingActivityReq true "详情参数"
+// @Success 200 {object} dto.Response{data=member_resp.MemberMarketingActivityResp}
+// @Router /member/marketing_activity [get]
+func (h *MarketingHandler) MarketingActivity(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	marketingActivityReq := member_req.MemberMarketingActivityReq{}
+	if err := c.ShouldBindQuery(&marketingActivityReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	marketingActivityResp, err := h.marketingSrv.MarketingActivity(ctx, marketingActivityReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, marketingActivityResp)
+}
+
+func RegisterMarketingHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+	// 初始化服务
+	captchaSrv := service.NewCaptchaSrv(cache)
+	settingSrv := setting.NewSrv(dbm, cache)
+	roleAccessSrv := service.NewRoleAccessSrv(dbm)
+	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
+	cashBoxSrv := service.NewCashBoxSrv(dbm)
+	statisticsSrv := service.NewStatisticsSrv()
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+	// 初始化处理器
+	marketingSrv := member_service.NewMarketingSrv(dbm, cache)
+	wrapper := &MarketingHandler{
+		marketingSrv: marketingSrv,
+	}
+	// 需要认证
+	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
+	{
+		privateApi.GET("/marketing_activity", wrapper.MarketingActivity) // 获取营销活动
+	}
+}

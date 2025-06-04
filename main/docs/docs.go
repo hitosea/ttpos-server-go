@@ -13543,6 +13543,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/login": {
+            "post": {
+                "description": "登录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.认证"
+                ],
+                "summary": "登录",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.MemberLoginReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.LoginResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/member/login_info": {
             "get": {
                 "description": "获取登陆信息",
@@ -13577,6 +13623,49 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/member_resp.MemberLoginInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/member/marketing_activity": {
+            "get": {
+                "description": "获取营销活动",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.营销活动"
+                ],
+                "summary": "获取营销活动",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "集团ID",
+                        "name": "company_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/member_resp.MemberMarketingActivityResp"
                                         }
                                     }
                                 }
@@ -16982,6 +17071,23 @@ const docTemplate = `{
                 }
             }
         },
+        "member_req.MemberLoginReq": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "验证码",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "集团ID",
+                    "type": "integer"
+                },
+                "phone": {
+                    "description": "手机号",
+                    "type": "string"
+                }
+            }
+        },
         "member_req.MemberSendCodeReq": {
             "type": "object",
             "properties": {
@@ -17009,6 +17115,15 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "company_uuid": {
+                    "description": "集团UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "member_resp.MemberMarketingActivityResp": {
+            "type": "object",
+            "properties": {
                 "company_uuid": {
                     "description": "集团UUID",
                     "type": "integer"

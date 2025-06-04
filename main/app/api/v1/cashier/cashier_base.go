@@ -535,6 +535,21 @@ func (h *BaseHandler) UsbPrinterReport(c *gin.Context) {
 	helper.Success(c, data)
 }
 
+// 解密活动二维码
+// @Summary 解密活动二维码
+// @Description 解密活动二维码
+// @Tags 收银端.基础信息
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.DecryptQrCodeReq true "解密活动二维码参数"
+// @Success 200 {object} dto.Response{data=resp.DecryptQrCodeResp}
+// @Router /cashier/decrypt_qr_code [post]
+func (h *BaseHandler) DecryptQrCode(c *gin.Context) {
+	// ctx := helper.GetContext(c)
+
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)

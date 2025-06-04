@@ -65,6 +65,30 @@ func (h *AuthHandler) SendCode(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// Login 登录
+// @Summary 登录
+// @Description 登录
+// @Tags 会员端.认证
+// @Accept json
+// @Produce json
+// @param data body member_req.MemberLoginReq true "详情参数"
+// @Success 200 {object} dto.Response{data=resp.LoginResp}
+// @Router /member/login [post]
+func (h *AuthHandler) Login(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	loginReq := member_req.MemberLoginReq{}
+	if err := c.ShouldBindJSON(&loginReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	loginResp, err := h.loginSrv.Login(ctx, loginReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeLoginFailed, err)
+		return
+	}
+	helper.Success(c, loginResp)
+}
+
 func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	loginSrv := member_service.NewLoginSrv(dbm, cache, service.NewSMSSrv(dbm))
 
@@ -76,12 +100,6 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	{
 		publicApi.GET("/login_info", wrapper.LoginInfo)
 		publicApi.POST("/send_code", wrapper.SendCode)
+		publicApi.POST("/login", wrapper.Login)
 	}
-
-	// // 需要认证
-	// privateApi := router.Group("", middleware.Auth(authSrv, dbm))
-	// {
-	// 	privateApi.GET("/refresh_token", wrapper.RefreshToken) // 刷新token
-	// 	privateApi.POST("/logout", wrapper.Logout)             // 退出登录
-	// }
 }

@@ -101,6 +101,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		memberGroup := apiV1.Group("/member")
 		{
 			member.RegisterAuthHandlers(memberGroup, dbm, cache)
+			member.RegisterMarketingHandlers(memberGroup, dbm, cache)
 		}
 
 	}

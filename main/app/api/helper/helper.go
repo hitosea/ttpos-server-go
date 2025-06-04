@@ -194,6 +194,19 @@ func GetRequestUuid(c *gin.Context) string {
 	return c.GetString(jwt.RequestUuid)
 }
 
+func GetMemberUuid(c *gin.Context) uint64 {
+	return c.GetUint64(jwt.MemberUuid)
+}
+
+func GetMember(c *gin.Context) model.Member {
+	if val, exists := c.Get(jwt.Member); exists {
+		if member, ok := val.(model.Member); ok {
+			return member
+		}
+	}
+	return model.Member{}
+}
+
 // GetLanguage 获取语言
 func GetLanguage(c *gin.Context) string {
 	return i18n.GetAcceptLanguage(c)
@@ -242,6 +255,8 @@ func GetContext(c *gin.Context) context.Context {
 		context.WithCompany(GetCompany(c)),               // 在上下文中添加公司信息
 		context.WithStaff(GetStaff(c)),                   // 在上下文中添加员工信息
 		context.WithStaffUuid(GetStaffUuid(c)),           // 在上下文中添加员工Uuid
+		context.WithMember(GetMember(c)),                 // 在上下文中添加会员信息
+		context.WithMemberUuid(GetMemberUuid(c)),         // 在上下文中添加会员Uuid
 		context.WithAssistantUuid(GetAssistantUuid(c)),   // 在上下文中添加员工Uuid(助手端)
 		context.WithCompanySetting(GetCompanySetting(c)), // 在上下文中添加公司设置信息
 		context.WithDeskUuid(GetDeskUuid(c)),             // 在上下文中添加桌台ID信息

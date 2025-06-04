@@ -22,6 +22,7 @@ type IMemberRepo interface {
 	GetMemberList(opts ...DBOption) ([]*model.Member, error)
 	GetMemberRecord(opts ...DBOption) (*model.Member, error)   // 获取会员
 	GetMemberByUuid(uuid uint64) (*model.Member, error)        // 根据uuid获取会员
+	GetMemberByPhone(phone string) (*model.Member, error)      // 根据手机号获取会员
 	GetMembersByUuids(uuids []uint64) ([]*model.Member, error) // 根据uuid列表获取会员列表
 	GetMemberLevels() []model.MemberLevel                      // 获取会员等级
 	GetMemberLevelsAllColumns() []model.MemberLevel            // 获取会员等级所有列
@@ -166,6 +167,16 @@ func (r *memberRepo) GetMemberByUuid(uuid uint64) (*model.Member, error) {
 		return nil, errors.WithMessage(err, "查询会员失败", utils.NumToStr(uuid))
 	}
 	return member, nil
+}
+
+// GetMemberByPhone 根据手机号查询会员
+func (r *memberRepo) GetMemberByPhone(phone string) (*model.Member, error) {
+	var member model.Member
+	err := r.db.Model(&model.Member{}).Scopes(NotDeleted).Where("phone = ?", phone).First(&member).Error
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询会员失败", phone)
+	}
+	return &member, nil
 }
 
 // Update 更新会员信息
