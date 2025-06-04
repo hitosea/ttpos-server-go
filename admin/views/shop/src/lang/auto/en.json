@@ -1903,5 +1903,15 @@
     "编辑优惠券": "Edit Coupon",
     "所有记录": "All Records",
     "记录类型": "Record Type",
-    "剩余有效张数": "Remaining Valid Count"
+    "剩余有效张数": "Remaining Valid Count",
+    "邀请有礼": "Invitation with a gift",
+    "发放记录": "Distribution record",
+    "请输入奖励条件": "Please enter reward conditions",
+    "营销活动": "Marketing campaign",
+    "营销管理": "Marketing Management",
+    "失效后将不可恢复，活动变为已结束状态，确定将该活动失效?": "Once expired, it cannot be recovered and the event will be marked as ended. Are you sure you want to expire this event?",
+    "失效营销活动": "Expired marketing event",
+    "失效成功": "Expired successfully",
+    "选择优惠券": "Select coupon",
+    "邀请您参加": "We invite you to participate"
 }

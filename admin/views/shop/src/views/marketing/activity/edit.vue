@@ -34,7 +34,6 @@
   import Basic from './part/Basic.vue';
   import Set from './part/set.vue';
   import ImagePreview from './part/imagePreview.vue';
-  import { nextTick } from 'vue';
 
   // 获取路由实例
   const route = useRoute();
@@ -52,9 +51,9 @@
     description: '',
     start_time: '',
     end_time: '',
-    reward_condition_amount: 0,
+    reward_condition_amount: null,
     is_open_reward_limit: [],
-    reward_limit: 0,
+    reward_limit: null,
     reward_condition_num: 0,
     reward_type: 0,
     prize_list: [
@@ -99,9 +98,17 @@
         form.reward_limit = res.data.detail.reward_limit;
         form.reward_condition_num = res.data.detail.reward_condition_num;
         form.reward_type = res.data.detail.reward_type;
-        form.prize_list = res.data.detail.prize_list;
         form.image_base64 = res.data.detail.image_base64;
         qrcode.value = res.data.qr_code;
+        if (res.data.detail.prizes.length > 0) {
+          form.prize_list = [];
+          res.data.detail.prizes.forEach((item) => {
+            form.prize_list.push({
+              prize_type: item.prize_type,
+              prize_uuid: item.uuid,
+            });
+          });
+        }
       })
       .catch((error) => {
         loading.value = false;
@@ -110,27 +117,22 @@
   };
 
   // 提交表单
-  const onSubmit = () => {
+  const onSubmit = async () => {
+    const params = JSON.parse(JSON.stringify(form));
+    params.uuid = uuid.value;
+    const _name = BasicRef.value.$refs.activityNameFormRef.data;
+    params.name = JSON.stringify(_name);
+    const _description = BasicRef.value.$refs.activityDescriptionFormRef.data;
+    params.description = JSON.stringify(_description);
+    params.is_open_reward_limit = params.is_open_reward_limit.length > 0 ? 1 : 0;
+
+    // 验证表单
+    const validUniqueName = await BasicRef.value.$refs.activityNameFormRef.validate();
+    const validUniqueDescription = await BasicRef.value.$refs.activityDescriptionFormRef.validate();
     formRef.value.validate((valid) => {
-      if (valid) {
-        let params = { ...form.model };
-        params.card_id = card_id.value;
-        params.start_time = form.start_time;
-        params.end_time = form.end_time;
-        params.reward_type = form.reward_type;
-
-        if (params.is_discount == 0) {
-          params.discount = 0;
-        }
-
+      if (valid && validUniqueName && validUniqueDescription) {
         save_loading.value = true;
-        MarketingApi.editActivity(
-          {
-            card_id: card_id.value,
-            params: JSON.stringify(params),
-          },
-          true
-        )
+        MarketingApi.activityEdit(params, true)
           .then((data) => {
             save_loading.value = false;
             ElMessage({

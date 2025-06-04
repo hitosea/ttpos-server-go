@@ -75,9 +75,12 @@
     align-items: start;
     gap: 8px;
     width: 100%;
-    :deep(.el-radio.el-radio--small) {
-      height: 30px;
-      width: 100%;
+  }
+  :deep(.el-radio.el-radio--small) {
+    height: 30px;
+    width: 100%;
+    .el-radio__input.is-checked + .el-radio__label {
+      color: #100a05;
     }
   }
 </style>

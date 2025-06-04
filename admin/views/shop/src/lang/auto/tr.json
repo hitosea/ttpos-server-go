@@ -1657,5 +1657,15 @@
     "编辑优惠券": "Kuponu düzenle",
     "所有记录": "Tüm kayıtlar",
     "记录类型": "Kayıt türü",
-    "剩余有效张数": "Kalan geçerli kupon sayısı"
+    "剩余有效张数": "Kalan geçerli kupon sayısı",
+    "邀请有礼": "Davet için hediye",
+    "发放记录": "Verbeyle ilgili kayıt",
+    "请输入奖励条件": "Lütfen ödül koşullarını girin",
+    "营销活动": "Pazarlama kampanyası",
+    "营销管理": "Pazarlama yönetimi",
+    "失效后将不可恢复，活动变为已结束状态，确定将该活动失效?": "Geçersiz hale getirildikten sonra geri alınamaz, etkinlik 'Tamamlandı' statüsüne geçer. Bu etkinliği geçersiz kılmak istediğinizden emin misiniz?",
+    "失效营销活动": "Geçersiz pazarlama etkinliği",
+    "失效成功": "Başarıyla geçersiz kılındı",
+    "选择优惠券": "Kupon seç",
+    "邀请您参加": "Sizi katılmaya davet ediyoruz"
 }

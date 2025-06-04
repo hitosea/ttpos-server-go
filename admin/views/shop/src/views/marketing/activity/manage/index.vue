@@ -39,14 +39,14 @@
 
           <el-table-column :label="$t('活动时间')" width="200">
             <template #default="scope">
-              <span>{{ timestampToTime(scope.row.start_time) }} ~ {{ timestampToTime(scope.row.end_time) }}</span>
+              <span>{{ scope.row.start_time }} ~ {{ scope.row.end_time }}</span>
             </template>
           </el-table-column>
           <el-table-column fixed="right" :label="$t('操作')" width="200">
             <template #default="scope">
               <el-button @click="sendClick(scope.row)" type="primary" link size="small">{{ $t('发放记录') }} </el-button>
               <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/marketing/activity/edit'">{{ $t('编辑') }} </el-button>
-              <el-button @click="deleteClick(scope.row)" type="primary" link size="small" v-auth="'/marketing/activity/disable'">{{ $t('失效') }} </el-button>
+              <el-button @click="disableClick(scope.row)" type="primary" link size="small" v-auth="'/marketing/activity/disable'">{{ $t('失效') }} </el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -72,10 +72,8 @@
   import { ref, reactive, onMounted } from 'vue';
   import { useRouter } from 'vue-router';
   import { ElMessageBox } from 'element-plus';
-  import Aselect from '@/components/a-select/index.vue';
   import MarketingApi from '@/api/marketing.js';
   import { useUserStore } from '@/store/index';
-  import { DTime } from '@/utils/DateTime.js';
 
   // 获取路由实例
   const router = useRouter();
@@ -92,8 +90,6 @@
   const totalDataNumber = ref(0);
   const curPage = ref(1);
   const searchLoading = ref('');
-  const open_edit = ref(false);
-  const userModel = ref({});
 
   // 表单数据
   const formInline = reactive({
@@ -176,33 +172,22 @@
     });
   };
 
-  const putClick = (item) => {
-    userModel.value = item;
-    open_edit.value = true;
-  };
-
-  // 时间戳转成时间格式
-  const timestampToTime = (timestamp) => {
-    return DTime(timestamp, 'yyyy-MM-dd HH:mm:ss');
-  };
-
-  const closeDialogFunc = (e, f) => {
-    if (f == 'edit') {
-      open_edit.value = e.openDialog;
-      if (e.type == 'success') {
-        getTableList();
-      }
-    }
-  };
-
-  const deleteClick = (row) => {
-    ElMessageBox.confirm(window.$t('删除后不可恢复，确认删除吗?'), window.$t('提示'), {
+  const disableClick = (row) => {
+    ElMessageBox.confirm(window.$t('失效后将不可恢复，活动变为已结束状态，确定将该活动失效?'), window.$t('失效营销活动'), {
       confirmButtonText: window.$t('确定'),
       cancelButtonText: window.$t('取消'),
       type: 'warning',
     })
       .then(() => {
         // 这里可以添加具体的删除API调用
+        MarketingApi.activityDisable({ uuid: row.uuid }, true)
+          .then((res) => {
+            ElMessage.success(window.$t('失效成功'));
+            getTableList();
+          })
+          .catch((error) => {
+            loading.value = false;
+          });
       })
       .catch(() => {});
   };

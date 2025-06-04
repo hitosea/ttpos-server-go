@@ -4,7 +4,7 @@
     <el-form size="small" ref="formRef" class="product-form" :model="form" label-position="top" label-width="180px">
       <div class="product-form-wrapper">
         <div class="product-form-left">
-          <ImagePreview :qrcode="qrcode" :imgName="imgName" :imgDescription="imgDescription"></ImagePreview>
+          <ImagePreview ref="ImagePreviewRef" :qrcode="qrcode" :imgName="imgName" :imgDescription="imgDescription"></ImagePreview>
         </div>
         <!--分割线-->
         <div class="product-form-line"></div>
@@ -50,16 +50,16 @@
   const SetRef = ref();
   const formContainer = ref();
   const loading = ref(false);
-
+  const ImagePreviewRef = ref();
   // 表单数据
   const form = reactive({
     name: '',
     description: '',
     start_time: '',
     end_time: '',
-    reward_condition_amount: 0,
+    reward_condition_amount: null,
     is_open_reward_limit: [],
-    reward_limit: 0,
+    reward_limit: null,
     reward_condition_num: 0,
     reward_type: 0,
     prize_list: [
@@ -107,6 +107,7 @@
     params.description = JSON.stringify(_description);
 
     params.is_open_reward_limit = params.is_open_reward_limit.length > 0 ? 1 : 0;
+
     // 验证表单
     const validUniqueName = await BasicRef.value.$refs.activityNameFormRef.validate();
     const validUniqueDescription = await BasicRef.value.$refs.activityDescriptionFormRef.validate();

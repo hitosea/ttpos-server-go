@@ -13,6 +13,7 @@
         @nowLangeData="imgName"
       />
     </el-form-item>
+    <el-divider border-style="dashed" />
     <el-form-item for="no_click" :rules="[{ required: true, message: $t('请输入活动文案') }]">
       <UniqueNameForm
         ref="activityDescriptionFormRef"
@@ -29,8 +30,9 @@
       :label="$t('活动时间')"
       :rules="[
         {
+          required: true,
           validator: () => {
-            return activityTime.length > 0 ? true : false;
+            return form.start_time && form.end_time ? true : false;
           },
           message: $t('请选择活动时间'),
         },
@@ -47,10 +49,13 @@
         end-placeholder="结束日期"
       />
     </el-form-item>
-    <el-form-item for="no_click" :label="$t('活动奖品')" :rules="[{ required: true, message: $t('请选择活动奖品') }]" prop="reward_type">
+    <el-form-item class="flex-box" for="no_click" :label="$t('活动奖品')" :rules="[{ required: true, message: $t('请选择活动奖品') }]">
       <el-radio-group v-model="rewardType">
         <el-radio :label="0">{{ $t('优惠券（当前仅支持选择优惠券）') }}</el-radio>
       </el-radio-group>
+      <div>
+        <span class="select-coupon-btn" @click="selectCoupon">{{ $t('选择优惠券') }}</span>
+      </div>
     </el-form-item>
   </div>
 </template>
@@ -58,7 +63,7 @@
 <script setup>
   import { ref, inject, watch } from 'vue';
   import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
-  import { DTime } from '@/utils/DateTime.js';
+
   // 注入form数据
   const form = inject('form');
 
@@ -101,9 +106,13 @@
   const imgDescription = (data) => {
     emit('imgDescription', data);
   };
+
+  const selectCoupon = () => {
+    console.log('selectCoupon');
+  };
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
   .edit_container {
     font-family: 'Avenir', Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -194,5 +203,29 @@
 
   .active.card {
     border: 2px solid #4aa3f7;
+  }
+  :deep(.el-radio.el-radio--small) {
+    height: 30px;
+    width: 100%;
+    .el-radio__input.is-checked + .el-radio__label {
+      color: #100a05;
+    }
+  }
+
+  .flex-box {
+    :deep(.el-form-item__content) {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+  }
+
+  .select-coupon-btn {
+    color: #ffbe00;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    cursor: pointer;
   }
 </style>
