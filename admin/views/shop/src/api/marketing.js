@@ -26,6 +26,10 @@ let MarketingApi = {
         return request._post('/shop/marketing.activity/disable', data, errorback);
     },
 
+    /*活动记录*/
+    activityRecord(data, errorback) {
+        return request._get('/shop/marketing.activity/record', data, errorback);
+    },
 };
 
 export default MarketingApi;

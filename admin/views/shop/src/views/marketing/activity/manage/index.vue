@@ -65,6 +65,7 @@
         </el-pagination>
       </div>
     </div>
+    <record-dialog v-if="recordDialogVisible" :recordDialogVisible="recordDialogVisible" :recordUuid="recordUuid" @update:recordDialogVisible="recordDialogVisible = $event" />
   </div>
 </template>
 
@@ -74,7 +75,7 @@
   import { ElMessageBox } from 'element-plus';
   import MarketingApi from '@/api/marketing.js';
   import { useUserStore } from '@/store/index';
-
+  import recordDialog from './recordDialog.vue';
   // 获取路由实例
   const router = useRouter();
 
@@ -90,7 +91,8 @@
   const totalDataNumber = ref(0);
   const curPage = ref(1);
   const searchLoading = ref('');
-
+  const recordDialogVisible = ref(false);
+  const recordUuid = ref('');
   // 表单数据
   const formInline = reactive({
     card_name: '',
@@ -159,8 +161,9 @@
     router.push('/' + app_id + '/marketing/activity/add');
   };
 
-  const sendClick = (item) => {
-    // 发放记录逻辑
+  const sendClick = (row) => {
+    recordUuid.value = row.uuid;
+    recordDialogVisible.value = true;
   };
 
   const editClick = (item) => {
