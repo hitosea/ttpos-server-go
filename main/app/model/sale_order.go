@@ -55,6 +55,11 @@ type SaleOrder struct {
 	ZeroFee          float64 `gorm:"column:zero_fee;type:decimal(12,2);default:0;comment:优惠折扣抹零金额" json:"zero_fee"`
 	ZeroCheckoutRule uint8   `gorm:"column:zero_checkout_rule;type:tinyint(1);default:0;comment:结账抹零, 0-实款实收 1-抹分 2-抹角 5-抹元（为了整体无歧义，抹元使用5）" json:"zero_checkout_rule"`
 
+	// 积分抵扣相关
+	PayPoints          float64 `gorm:"column:pay_points;type:decimal(12,2);default:0;comment:抵扣积分,用了多少积分进行抵扣" json:"pay_points"`
+	PayPointsAmount    float64 `gorm:"column:pay_points_amount;type:decimal(12,2);default:0;comment:抵扣金额,积分 抵扣了多少金额" json:"pay_points_amount"`
+	PointsExchangeRate float64 `gorm:"column:points_exchange_rate;type:decimal(12,4);default:0;comment:积分抵扣汇率,1积分抵扣多少元" json:"points_exchange_rate"`
+
 	// 结账完成后才记录的字段
 	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额=订单总金额+支付手续费" json:"payment_amount"`
 	ChangeAmount         float64 `gorm:"column:change_amount;type:decimal(12,2);default:0;comment:找零金额,结账完成后才记录" json:"change_amount"`
@@ -65,6 +70,7 @@ type SaleOrder struct {
 	GiftPoints           float64 `gorm:"column:gift_points;type:decimal(12,2);default:0;comment:赠送积分,应收金额amount*积分赠送比例" json:"gift_points"`
 	GiftPointsRate       float64 `gorm:"column:gift_points_rate;type:decimal(12,4);default:0;comment:赠送积分比例,取值范围0-1。结账后记录，不受后台改变" json:"gift_points_rate"`
 	MemberBalance        float64 `gorm:"column:member_balance;type:decimal(12,2);default:0;comment:会员余额,会员消费本单后剩余的余额" json:"member_balance"`
+	Unit                 string  `gorm:"column:unit;type:varchar(255);default:0;comment:金额的单位,$-美元 ￥-人民币,用于显示订单金额价值" json:"unit"`
 
 	// 关联对象
 	PaymentOrders                []*PaymentOrder                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 支付订单，也叫付款单
@@ -80,6 +86,11 @@ type SaleOrder struct {
 
 	// 虚拟字段，用于标记当前子单是第几个
 	index int `gorm:"-" json:"index,omitempty"`
+}
+
+// 获取积分抵扣后的应收金额。等于Amount-PayPointsAmount
+func (model *SaleOrder) GetPointsExchangeAmount() float64 {
+	return decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(model.PayPointsAmount)).Round(2).InexactFloat64()
 }
 
 // 获取销售订单的序号
@@ -156,6 +167,7 @@ func (model *SaleOrder) ClearSettleInfo() {
 	model.GiftPoints = 0
 	model.GiftPointsRate = 0
 	model.MemberBalance = 0
+	model.Unit = ""
 }
 
 // 插入销售订单商品，如果商品已存在，则更新
@@ -387,7 +399,7 @@ func (model *SaleOrder) HandleMemberPoints(member *Member) {
 // 累计会员的消费金额、消费次数
 func (model *SaleOrder) AccumulateMemberConsumeAmountAndTimes(member *Member) {
 	model.Member = member // 使用最新的会员信息。避免该会员的积分信息已经被更新过
-	model.Member.AccumulateConsumeAmount(model.GetAmount())
+	model.Member.AccumulateConsumeAmount(model.GetPointsExchangeAmount())
 }
 
 // 创建积分变动记录
@@ -732,4 +744,5 @@ type FinalAmount struct {
 	FinalPrice           float64 // 最终应收金额
 	PaymentCommissionFee float64 // 支付手续费
 	GiftAmount           float64 // 赠菜金额
+	Unit                 string  // 金额的单位,$-美元 ￥-人民币,用于显示订单金额价值
 }

@@ -93,6 +93,11 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `custom_amount` DECIMAL(12, 2) NOT NULL DEFAULT -1 COMMENT '整单改价金额。改价后，应收金额=整单改价金额，前端优先显示改价后的金额，改价金额不能为负数。当为-1时，表示不改价，显示amount改收金额',
     `zero_rule` INT(10) NOT NULL DEFAULT 0 COMMENT '优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数',
     `zero_checkout_rule` INT(10) NOT NULL DEFAULT 0 COMMENT '结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元',
+    -- 积分抵扣相关
+    `pay_points` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '抵扣积分,用了多少积分进行抵扣',
+    `pay_points_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '抵扣金额,积分 抵扣了多少金额',
+    `points_exchange_rate` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '积分抵扣汇率,1积分抵扣多少元',
+    
     -- 结账完成后才记录的字段
     `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '已支付金额,关联付款单的支付金额之和。',
     `change_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '找零金额,结账完成后才记录',
@@ -103,6 +108,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `gift_points` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送积分. 赠送积分=应收金额amount*积分赠送比例.',
     `gift_points_rate` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '赠送积分比例. 取值范围0-1。结账后记录，不受后台改变',
     `member_balance`  DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员余额.会员消费本单后剩余的余额',
+    `unit` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '积分抵扣金额的单位,$-美元 ￥-人民币,用于显示订单当时积分抵扣的金额价值',
     -- 收银员名称
     `cashier_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银员名称',
     -- 关联ID
@@ -130,6 +136,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     `is_stat_gift` INT(10) NOT NULL DEFAULT 0 COMMENT '是否统计赠菜金额, 0-不计入总销售额、优惠折扣 1-计入总销售额、优惠折扣',
     `is_stat_free` INT(10) NOT NULL DEFAULT 0 COMMENT '是否统计免单金额, 0-不计入总销售额、优惠折扣、服务费、税费 1-计入总销售额、优惠折扣、服务费、税费',
     `discount_type` INT(10) NOT NULL DEFAULT 0 COMMENT '打折类型, 0-百分比打折% 1-百分比直接减免% off',
+    `open_points_exchange` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启积分抵扣, 0-不开启 1-开启',
+    `points_exchange_rate` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '积分抵扣汇率,1积分抵扣多少元',
+    `auto_points_exchange` INT(10) NOT NULL DEFAULT 0 COMMENT '积分抵扣类型,0-手动抵扣 1-自动抵扣',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

@@ -19,6 +19,9 @@ type Points struct {
 	Discount           DiscountItem `json:"discount"`             // 积分抵扣
 	Describe           string       `json:"describe"`             // 充值说明
 	DeductOrder        string       `json:"deduct_order"`
+	OpenPointsExchange string       `json:"open_points_exchange"` // 是否开启积分抵扣，“1”开启，“0”关闭
+	PointsExchangeRate string       `json:"points_exchange_rate"` // 积分汇率，每积分抵扣的金额，可输入大于0的两位小数
+	AutoPointsExchange string       `json:"auto_points_exchange"` // 是否开启自动抵扣，“1”开启，“0”关闭
 }
 
 // 解析扣款顺序
@@ -129,6 +132,44 @@ func (p *Points) GetGiftRatio() float64 {
 	}
 	ratio := p.getGiftRatio()
 	return ratio
+}
+
+// getOpenPointsExchange 解析是否开启积分抵扣
+func (p *Points) GetOpenPointsExchange() bool {
+	if p.OpenPointsExchange == "1" {
+		return true
+	}
+	return false
+}
+
+// 获取每积分抵扣金额。当未开启积分抵扣时，积分抵扣金额为0
+func (p *Points) GetPointsExchangeRate() float64 {
+	// 如果未开启积分抵扣时，积分抵扣金额为0
+	if !p.GetOpenPointsExchange() {
+		return 0
+	}
+	rate := p.getPointsExchangeRate()
+	return rate
+}
+
+// getPointsExchangeRate 解析积分汇率, 每积分抵扣的金额，可输入大于0的两位小数
+func (p *Points) getPointsExchangeRate() float64 {
+	if p.PointsExchangeRate == "" {
+		return 0
+	}
+	rate, err := strconv.ParseFloat(p.PointsExchangeRate, 64)
+	if err != nil {
+		return 0
+	}
+	return rate
+}
+
+// 是否开启自动抵扣
+func (p *Points) IsAutoPointsExchange() bool {
+	if p.AutoPointsExchange == "1" {
+		return true
+	}
+	return false
 }
 
 type DiscountItem struct {

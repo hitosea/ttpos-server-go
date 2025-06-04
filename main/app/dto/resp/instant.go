@@ -167,10 +167,20 @@ type Attribute struct {
 
 // 销售订单的支付页信息
 type InstantOrderPaymentInfoResp struct {
-	MemberInfo     *MemberInfo             `json:"member_info,omitempty"` // 会员信息。如果订单选择了会员，则返回会员信息
-	PaymentOrders  PaymentInfoList         `json:"payment_orders"`        // 支付订单列表
-	PaymentMethods PaymentMethodList       `json:"payment_methods"`       // 支付方式列表
-	Amounts        PaymentMethodAmountList `json:"amounts"`               // 支付方式列表及订单金额信息
+	MemberInfo     *MemberInfo             `json:"member_info,omitempty"`     // 会员信息。如果订单选择了会员，则返回会员信息
+	PaymentOrders  PaymentInfoList         `json:"payment_orders"`            // 支付订单列表
+	PaymentMethods PaymentMethodList       `json:"payment_methods"`           // 支付方式列表
+	Amounts        PaymentMethodAmountList `json:"amounts"`                   // 支付方式列表及订单金额信息
+	PointsExchange PointsExchangeInfo      `json:"points_exchange,omitempty"` // 积分抵扣信息
+}
+
+type PointsExchangeInfo struct {
+	MaxPoints          float64 `json:"max_points"`           // 最大可抵扣积分。不能大于（订单应收/积分抵扣比例）。不能大于会员余额
+	PointsExchangeRate float64 `json:"points_exchange_rate"` // 积分抵扣比例。1个积分抵扣多少金额
+	PayPoints          float64 `json:"pay_points"`           // 已抵扣积分
+	PayPointsAmount    float64 `json:"pay_points_amount"`    // 已抵扣金额
+	OpenPointsExchange bool    `json:"open_points_exchange"` // 是否开启积分抵扣。用于前端显示积分抵扣信息。
+	CanChangePoints    bool    `json:"can_change_points"`    // 是否可以修改抵扣积分的数量。用于前端置灰修改按钮。
 }
 
 // GetZeroAmount 获取结账抹零金额
