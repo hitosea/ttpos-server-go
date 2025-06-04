@@ -13,6 +13,7 @@ type IProductBomRepo interface {
 	GetProductBoms(opts ...DBOption) ([]*model.ProductBom, error)
 	GetFlavorProductBomByUuid(uuid uint64) (*model.ProductBom, error)
 	GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
+	GetProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
 	UpdateProductBomStockNum(warehouseOutFormItems []*model.WarehouseOutFormItem) error // 更新规格商品或小料的库存数量
 	UpdateProductBoms(productBoms []*model.ProductBom) error                            // 更新ProductBom
 	CreateProductBoms(productBoms []model.ProductBom) error                             // 创建ProductBom
@@ -85,6 +86,16 @@ func (r *productBomRepoImpl) GetSauceProductBomsByUuids(uuids []uint64) ([]*mode
 		CommonRepo.Preload(WithPreload{
 			Query: "ProductSauce.MultiLanguageName",
 		}),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBoms, nil
+}
+
+func (r *productBomRepoImpl) GetProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error) {
+	productBoms, err := r.GetProductBoms(
+		CommonRepo.WhereInUuids(uuids),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)

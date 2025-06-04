@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/resp/product_resp"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -4124,6 +4125,29 @@ func (s *orderSrv) GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid
 	return saleBillUuid, saleOrderUuid, nil
 }
 
+// 获取商品详情
+func (s *orderSrv) GetProductDetail(ctx context.Context, productPackageUuid uint64) (product_resp.Product, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	productRepo := repository.NewProductRepo(db)
+	commonRepo := repository.NewCommonRepo()
+	products, _, err := productRepo.GetProductListWithPagination(
+		1,
+		10,
+		commonRepo.WhereByUuid(productPackageUuid),
+	)
+
+	if err != nil {
+		return product_resp.Product{}, errors.WithMessage(err)
+	}
+	if len(products) == 0 {
+		return product_resp.Product{}, errors.WithMessage(errors.New("商品不存在"), "商品不存在")
+	}
+
+	formatProducts := FormatProducts(ctx, products)
+	return formatProducts[0], nil
+}
+
 // InstantOrderCartProductAdd 点餐页面，往购物车添加商品。
 func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	// 当不填销售账单ID时，表示要新建一个销售账单
@@ -4145,6 +4169,44 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 			ctx.Log().Debug("添加商品时点餐订单创建成功", zap.Any("order info", order))
 			request.SaleBillUuid = order.SaleBillUuid
 			request.SaleOrderUuid = order.SaleOrderUuid
+		}
+	}
+
+	// 判断商品价格是否与后台设置的最新价格不一致
+	// 查询商品规格的最新价格
+	// 查询所选加料的最新价格
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	if request.Price != 0 {
+		uuids := make([]uint64, 0)
+		uuids = append(uuids, request.FlavorUuid)
+		uuids = append(uuids, request.SauceUuidList...)
+		productBoms, err := repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		lastestPrice := decimal.NewFromFloat(0)
+		for _, productBom := range productBoms {
+			lastestPrice = lastestPrice.Add(decimal.NewFromFloat(productBom.Price))
+		}
+		if lastestPrice.Cmp(decimal.NewFromFloat(request.Price)) != 0 {
+			// 获取最新的商品详情
+			productPackageUuid := productBoms[0].ProductPackageUuid
+			product, err := s.GetProductDetail(ctx, productPackageUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			// 更新购物车中的商品价格
+			s.OrderCheck(ctx, req.InstantOrderCheckReq{
+				SaleBillUuid:  request.SaleBillUuid,
+				SaleOrderUuid: request.SaleOrderUuid,
+				IgnoreMust:    true,
+			})
+			return &resp.ShopCart{
+				Product: &product,
+				Message: i18n.Translate(ctx.GetLanguage(), "商品价格信息发生变化，请确认后下单"),
+			}, nil
 		}
 	}
 
