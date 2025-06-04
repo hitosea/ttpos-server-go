@@ -286,7 +286,7 @@ func MemberAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFu
 		}
 		companySetting := repository.NewCompanySettingRepo(dbm.GetDB(claims.CompanyUuid)).Get()
 		if companySetting.IsOpenMember != 1 {
-			helper.Fail(c, constant.CodeTokenInvalid, "未开启会员功能，请联系商家")
+			helper.Fail(c, constant.CodeTokenInvalid, "商家未开通会员功能")
 			c.Abort()
 			return
 		}
