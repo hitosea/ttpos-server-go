@@ -66,6 +66,7 @@ func execute() {
 			!strings.Contains(path, "trans") &&
 			!strings.Contains(path, "old_model") &&
 			!strings.Contains(path, "command") &&
+			!strings.Contains(path, "request_logger") &&
 			!strings.Contains(path, "model") {
 			content, err := ioutil.ReadFile(path)
 			if err != nil {

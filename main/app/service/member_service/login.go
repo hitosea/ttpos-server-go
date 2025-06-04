@@ -95,11 +95,17 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 		// 将匹配的区号放在第一位
 		areaCodes = append([]string{areaCode}, areaCodes...)
 	}
-
+	// 获取商家信息
 	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(req.CompanyUuid)
 	if err != nil {
 		return member_resp.MemberLoginInfoResp{}, errors.New("商家不存在")
 	}
+	// 获取商家设置
+	companySetting := repository.NewCompanySettingRepo(db).Get()
+	if companySetting.IsOpenMember != 1 {
+		return member_resp.MemberLoginInfoResp{}, errors.New("商家未开通会员功能")
+	}
+	// 返回
 	return member_resp.MemberLoginInfoResp{
 		CompanyUuid: req.CompanyUuid,
 		CompanyName: company.Name,
@@ -124,12 +130,12 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 	}
 	companySetting := repository.NewCompanySettingRepo(db).Get()
 	if companySetting.IsOpenMember != 1 {
-		return errors.New("未开启会员功能，请联系商家")
+		return errors.New("商家未开通会员功能")
 	}
 	// 验证手机号是否存在
 	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
 	if err != nil || member.IsDelete() {
-		return errors.New("会员不存在")
+		return errors.New("该手机号未在该商家进行注册")
 	}
 	// 生成验证码
 	code := fmt.Sprintf("%06d", rand.Intn(1000000)) // 生成6位随机数字验证码，范围：000000-999999

@@ -286,11 +286,10 @@ func MemberAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFu
 		}
 		companySetting := repository.NewCompanySettingRepo(dbm.GetDB(claims.CompanyUuid)).Get()
 		if companySetting.IsOpenMember != 1 {
-			helper.Fail(c, constant.CodeTokenInvalid, "未开启会员功能，请联系商家")
+			helper.Fail(c, constant.CodeTokenInvalid, "商家未开通会员功能")
 			c.Abort()
 			return
 		}
-
 		// 将用户信息存储到上下文
 		c.Set(jwt.Source, jwt.SourceMember)
 		c.Set(jwt.CompanyUuid, claims.CompanyUuid)         // 商家Uuid
