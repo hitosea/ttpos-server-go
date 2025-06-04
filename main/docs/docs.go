@@ -2789,6 +2789,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/member/card_types": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "会员卡类型列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.会员"
+                ],
+                "summary": "会员卡类型列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.MemberCardTypeList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/member/check_password": {
             "get": {
                 "security": [
@@ -3906,14 +3946,7 @@ const docTemplate = `{
                     "收银端.基础信息"
                 ],
                 "summary": "解密活动二维码",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
+                "responses": {}
             }
         },
         "/cashier/desk/change": {

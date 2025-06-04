@@ -7740,6 +7740,28 @@ paths:
       summary: 添加会员
       tags:
       - 点餐助手端.会员
+  /assistant/member/card_types:
+    get:
+      consumes:
+      - application/json
+      description: 会员卡类型列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.MemberCardTypeList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 会员卡类型列表
+      tags:
+      - 点餐助手端.会员
   /assistant/member/check_password:
     get:
       consumes:
@@ -8394,11 +8416,7 @@ paths:
       description: 解密活动二维码
       produces:
       - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
+      responses: {}
       security:
       - JwtToken: []
       summary: 解密活动二维码
