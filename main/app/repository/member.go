@@ -25,12 +25,15 @@ type IMemberRepo interface {
 	GetMemberByPhone(phone string) (*model.Member, error)      // 根据手机号获取会员
 	GetMembersByUuids(uuids []uint64) ([]*model.Member, error) // 根据uuid列表获取会员列表
 	GetMemberLevels() []model.MemberLevel                      // 获取会员等级
+	GetCardTypes() []model.MemberCardType                      // 获取会员卡类型
+	GetCheckCardType(uuid uint64) model.MemberCardType         // 获取会员卡类型
 	GetMemberLevelsAllColumns() []model.MemberLevel            // 获取会员等级所有列
 	SearchMember(keyword string) []model.Member                // 关键字搜索会员
 	CheckMemberExists(phone string) bool                       // 根据手机号检查是否存在
 	CheckLevelExists(uuid uint64) bool                         // 根据Uuid检查等级是否存在
 
-	CreateMember(member model.Member) error              // 添加会员
+	CreateMember(member *model.Member) error             // 添加会员
+	CreateMemberCard(memberCard *model.MemberCard) error // 给会员发卡
 	CreateMemberAndMemberCard(member model.Member) error // 添加会员并发放会员卡。仅用于数据迁移
 	Update(uuid uint64, vars map[string]any) error       // 更新会员信息
 
@@ -62,6 +65,13 @@ func (r *memberRepo) GetMemberLevels() []model.MemberLevel {
 	return levels
 }
 
+// GetCardTypes 获取会员卡类型
+func (r *memberRepo) GetCardTypes() []model.MemberCardType {
+	var cardTypes []model.MemberCardType
+	r.db.Model(&model.MemberCardType{}).Scopes(NotDeleted).Where("status = ?", constant.CardTypeEnable).Order("sort asc").Find(&cardTypes)
+	return cardTypes
+}
+
 // GetMemberLevelsAllColumns 获取会员等级
 func (r *memberRepo) GetMemberLevelsAllColumns() []model.MemberLevel {
 	var levels []model.MemberLevel
@@ -78,8 +88,15 @@ func (r *memberRepo) SearchMember(keyword string) []model.Member {
 }
 
 // CreateMember 添加会员
-func (r *memberRepo) CreateMember(member model.Member) error {
-	return r.db.Create(&member).Error
+func (r *memberRepo) CreateMember(member *model.Member) error {
+	err := r.db.Create(member).Error
+	return err
+}
+
+// CreateMemberCard 给会员发卡
+func (r *memberRepo) CreateMemberCard(memberCard *model.MemberCard) error {
+	err := r.db.Create(memberCard).Error
+	return err
 }
 
 // CreateMemberAndMemberCard 添加会员并发放会员卡。仅用于数据迁移
@@ -108,6 +125,13 @@ func (r *memberRepo) CheckLevelExists(uuid uint64) bool {
 	var exists uint64
 	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Where("uuid = ?", uuid).Select("uuid").Scan(&exists)
 	return exists > 0
+}
+
+// GetCheckCardType 获取会员卡类型
+func (r *memberRepo) GetCheckCardType(uuid uint64) model.MemberCardType {
+	var cardType model.MemberCardType
+	r.db.Model(&model.MemberCardType{}).Scopes(NotDeleted).Where("uuid = ? AND status = ?", uuid, constant.CardTypeEnable).Find(&cardType)
+	return cardType
 }
 
 // GetMember 查询会员

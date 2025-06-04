@@ -968,6 +968,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member` (
     `accumulated_recharge_amount` DECIMAL(14, 2) NOT NULL DEFAULT 0 COMMENT '累计充值金额',
     `member_level_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员等级ID',
     `member_card_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员卡片ID',
+    `member_card_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员卡号',
+    `referrer_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '推荐人ID',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
