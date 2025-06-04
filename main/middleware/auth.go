@@ -290,7 +290,6 @@ func MemberAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFu
 			c.Abort()
 			return
 		}
-
 		// 将用户信息存储到上下文
 		c.Set(jwt.Source, jwt.SourceMember)
 		c.Set(jwt.CompanyUuid, claims.CompanyUuid)         // 商家Uuid

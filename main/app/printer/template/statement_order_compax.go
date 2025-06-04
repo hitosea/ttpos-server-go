@@ -411,6 +411,12 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		}
 	}
 
+	// 会员积分抵扣
+	if saleOrder.PayPointsAmount > 0 && saleOrder.PayPoints > 0 {
+		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("会员积分抵扣"), t.base.GetPriceAndUnit(saleOrder.PayPointsAmount)))
+		printer.LineFeed(1)
+	}
+
 	// 抹零
 	if checkOutZeroFee := saleOrder.GetCheckOutZeroFee(); checkOutZeroFee > 0 {
 		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手动抹零"), t.base.GetPriceAndUnit(checkOutZeroFee)))
