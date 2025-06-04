@@ -2,101 +2,117 @@
   <div class="basic-setting-content pl16 pr16">
     <!--基本信息-->
     <div class="common-form">{{ $t('基本信息') }}</div>
-    <el-form-item for="no_click" :rules="[{ required: true, message: $t('请输入活动名称') }]" prop="model.card_name">
-      <UniqueNameForm ref="activityNameFormRef" :labelPrefix="$t('活动名称')" width="460px" :maxlength="50" />
+    <el-form-item for="no_click" :rules="[{ required: true, message: $t('请输入活动名称') }]">
+      <UniqueNameForm
+        ref="activityNameFormRef"
+        :labelPrefix="$t('活动名称')"
+        width="460px"
+        :maxlength="50"
+        :overrideLanguages="form.name"
+        :isUnique="false"
+        @nowLangeData="imgName"
+      />
     </el-form-item>
-    <el-form-item for="no_click" :rules="[{ required: true, message: $t('请输入活动文案') }]" prop="model.card_name">
-      <UniqueNameForm ref="activityDescriptionFormRef" :labelPrefix="$t('活动文案')" width="460px" :maxlength="100" />
+    <el-divider border-style="dashed" />
+    <el-form-item for="no_click" :rules="[{ required: true, message: $t('请输入活动文案') }]">
+      <UniqueNameForm
+        ref="activityDescriptionFormRef"
+        :labelPrefix="$t('活动文案')"
+        width="460px"
+        :maxlength="100"
+        :overrideLanguages="form.description"
+        :isUnique="false"
+        @nowLangeData="imgDescription"
+      />
     </el-form-item>
-    <el-form-item for="no_click" :label="$t('活动时间')" :rules="[{ required: true, message: $t('请选择活动时间') }]" prop="model.card_name">
-      <el-date-picker class="max-w460" v-model="activityTime" type="daterange" range-separator="~" start-placeholder="开始日期" end-placeholder="结束日期" />
+    <el-form-item
+      for="no_click"
+      :label="$t('活动时间')"
+      :rules="[
+        {
+          required: true,
+          validator: () => {
+            return form.start_time && form.end_time ? true : false;
+          },
+          message: $t('请选择活动时间'),
+        },
+      ]"
+      prop="start_time"
+    >
+      <el-date-picker
+        class="max-w460"
+        v-model="activityTime"
+        type="datetimerange"
+        value-format="YYYY-MM-DD HH:mm:ss"
+        range-separator="~"
+        start-placeholder="开始日期"
+        end-placeholder="结束日期"
+      />
     </el-form-item>
-    <el-form-item for="no_click" :label="$t('活动奖品')" :rules="[{ required: true, message: $t('请选择活动奖品') }]" prop="model.card_name">
+    <el-form-item class="flex-box" for="no_click" :label="$t('活动奖品')" :rules="[{ required: true, message: $t('请选择活动奖品') }]">
       <el-radio-group v-model="rewardType">
         <el-radio :label="0">{{ $t('优惠券（当前仅支持选择优惠券）') }}</el-radio>
       </el-radio-group>
+      <div>
+        <span class="select-coupon-btn" @click="selectCoupon">{{ $t('选择优惠券') }}</span>
+      </div>
     </el-form-item>
   </div>
 </template>
 
 <script setup>
   import { ref, inject, watch } from 'vue';
-  import { ElMessage } from 'element-plus';
   import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
 
   // 注入form数据
   const form = inject('form');
 
   // 响应式数据
-  const isupload = ref(false);
-  const open_add = ref(false);
-  const type = ref('');
   const activityTime = ref([]);
   const rewardType = ref(0);
 
+  const props = defineProps({
+    dateTime: {
+      type: Array,
+      default: () => [],
+    },
+  });
   // 引用
   const activityNameFormRef = ref(null);
   const activityDescriptionFormRef = ref(null);
 
-  // 方法定义
-  const chooseCardType = (e) => {
-    form.model.card_style = e;
-  };
+  const emit = defineEmits(['imgName', 'imgDescription']);
 
-  // 添加优惠券
-  const addCoupon = () => {
-    if (form.model.open_coupons.length >= 15) {
-      ElMessage.error('您已经选择了十五张优惠券，若要更换请删除其他优惠券！');
-      return;
+  watch(
+    props.dateTime,
+    (newVal) => {
+      activityTime.value = [newVal[0], newVal[1]];
+    },
+    {
+      immediate: true,
+      deep: true,
     }
-    open_add.value = true;
-  };
-
-  // 关闭优惠券
-  const closeProductDialogFunc = (e) => {
-    open_add.value = e.openDialog;
-    if (e.type == 'success') {
-      let params = {
-        coupon_id: e.params.coupon_id,
-        name: e.params.name,
-        number: 1,
-        color: e.params.color,
-        discount: e.params.discount,
-        reduce_price: e.params.reduce_price,
-        coupon_type: e.params.coupon_type,
-        min_price: e.params.min_price,
-      };
-      form.model.open_coupons.push(params);
-    }
-  };
-
-  // 删除优惠券
-  const delcoupon = (item) => {
-    let n = form.model.open_coupons.indexOf(item);
-    form.model.open_coupons.splice(n, 1);
-  };
-
-  // 上传
-  const openUpload = (e) => {
-    type.value = e;
-    isupload.value = true;
-  };
-
-  // 获取图片
-  const returnImgsFunc = (e) => {
-    if (e != null && e.length > 0) {
-      form.model.default_style = e[0].file_path;
-    }
-    isupload.value = false;
-  };
+  );
 
   watch(activityTime, (newVal) => {
     form.start_time = newVal[0];
     form.end_time = newVal[1];
   });
+
+  const imgName = (data) => {
+    emit('imgName', data);
+  };
+
+  const imgDescription = (data) => {
+    emit('imgDescription', data);
+  };
+
+  const selectCoupon = () => {
+    console.log('selectCoupon');
+  };
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
   .edit_container {
     font-family: 'Avenir', Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -187,5 +203,29 @@
 
   .active.card {
     border: 2px solid #4aa3f7;
+  }
+  :deep(.el-radio.el-radio--small) {
+    height: 30px;
+    width: 100%;
+    .el-radio__input.is-checked + .el-radio__label {
+      color: #100a05;
+    }
+  }
+
+  .flex-box {
+    :deep(.el-form-item__content) {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+  }
+
+  .select-coupon-btn {
+    color: #ffbe00;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 400;
+    cursor: pointer;
   }
 </style>

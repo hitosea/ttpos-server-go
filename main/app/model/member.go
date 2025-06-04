@@ -27,6 +27,8 @@ type Member struct {
 	AccumulatedRechargeAmount    float64 `gorm:"column:accumulated_recharge_amount;type:decimal(12,2);default:0.00;comment:累计充值金额;NOT NULL" json:"accumulated_recharge_amount"`
 	MemberLevelUuid              uint64  `gorm:"column:member_level_uuid;type:bigint(20) unsigned;default:0;comment:会员等级ID;NOT NULL" json:"member_level_uuid"`
 	MemberCardUuid               uint64  `gorm:"column:member_card_uuid;type:bigint(20) unsigned;default:0;comment:会员卡片ID;NOT NULL" json:"member_card_uuid"`
+	MemberCardNo                 string  `gorm:"column:member_card_no;type:varchar(255);comment:会员卡号;NOT NULL" json:"member_card_no"`
+	ReferrerUuid                 uint64  `gorm:"column:referrer_uuid;type:bigint(20) unsigned;default:0;comment:推荐人ID;NOT NULL" json:"referrer_uuid"`
 
 	MemberLevel      *MemberLevel       `gorm:"foreignKey:MemberLevelUuid;references:Uuid"`
 	MemberCard       *MemberCard        `gorm:"foreignKey:MemberCardUuid;references:Uuid"`

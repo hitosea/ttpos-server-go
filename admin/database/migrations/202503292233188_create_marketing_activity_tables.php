@@ -11,10 +11,10 @@ class CreateMarketingActivityTables extends Migrator
         if (!$this->hasTable('marketing_activity')) {
             $table = $this->table('marketing_activity', ['comment' => '会员营销-活动表']);
             $table->addColumn('uuid', 'biginteger', ['default' => 0, 'comment' => '活动唯一ID'])
-                ->addColumn('name', 'string', ['limit' => 50, 'default' => '', 'comment' => '活动名称'])
+                ->addColumn('name', 'string', ['limit' => 2000, 'default' => '', 'comment' => '活动名称'])
                 ->addColumn('type', 'integer', ['limit' => 1, 'default' => 0, 'comment' => '活动类型 0邀请有礼 1积分商城'])
                 ->addColumn('multi_language_name_uuid', 'biginteger', ['default' => 0, 'comment' => '活动名称多语言uuid'])
-                ->addColumn('description', 'string', ['limit' => 100, 'default' => '', 'comment' => '活动文案'])
+                ->addColumn('description', 'string', ['limit' => 5000, 'default' => '', 'comment' => '活动文案'])
                 ->addColumn('multi_language_desc_uuid', 'biginteger', ['default' => 0, 'comment' => '活动文案多语言uuid'])
                 ->addColumn('start_time', 'integer', ['default' => 0, 'comment' => '活动开始时间'])
                 ->addColumn('end_time', 'integer', ['default' => 0, 'comment' => '活动结束时间'])

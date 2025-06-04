@@ -10,6 +10,8 @@ type SMSClient interface {
 	SendMemberRechargeRefundSMS(phone, language string, params *MemberRechargeRefundRequest) (*SMSResponse, error)
 	// SendMemberOrderRefundSMS 发送会员用餐订单退款短信
 	SendMemberOrderRefundSMS(phone, language string, params *MemberOrderRefundRequest) (*SMSResponse, error)
+	// SendMemberCodeSMS 发送会员验证码短信
+	SendMemberCodeSMS(phone, language string, params *MemberSendCodeRequest) (*SMSResponse, error)
 	// CheckConfig 检查客户端配置是否正确
 	CheckConfig() error
 }

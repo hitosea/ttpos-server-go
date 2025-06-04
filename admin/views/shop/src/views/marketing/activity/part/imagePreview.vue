@@ -8,11 +8,12 @@
             <div class="logo-wrapper">
               <img :src="userInfo.logoUrl" />
             </div>
-            <h3 class="item-title">
-              {{ $t('麥樂寶  (泰國分店)') }}
-            </h3>
-            <p class="item-desc"> 您的好友 张总，邀请你成为商家会员，共享商家多样优惠您的好友 </p>
-            <img src="@/assets/img/activeImgTop.svg" alt="" class="item-qrcode" />
+            <h3 class="item-title"> {{ userInfo.shopName || '点餐系统连锁总店' }} </h3>
+            <h4 class="item-subtitle">
+              {{ $t('邀请您参加') }} <span>{{ imgName }}</span>
+            </h4>
+            <p class="item-desc"> {{ imgDescription }} </p>
+            <img :src="qrcode" alt="" class="item-qrcode" />
             <p class="item-qrcode-desc"> {{ $t('到店消费时出示此二维码') }} </p>
             <img src="@/assets/img/activeImgTop.svg" alt="" class="item-img" />
           </div>
@@ -26,11 +27,12 @@
             <div class="logo-wrapper">
               <img :src="userInfo.logoUrl" />
             </div>
-            <h3 class="item-title">
-              {{ $t('麥樂寶  (泰國分店)') }}
-            </h3>
-            <p class="item-desc"> 您的好友 张总，邀请你成为商家会员，共享商家多样优惠您的好友 </p>
-            <img src="@/assets/img/activeImgTop.svg" alt="" class="item-qrcode" />
+            <h3 class="item-title"> {{ userInfo.shopName || '点餐系统连锁总店' }} </h3>
+            <h4 class="item-subtitle">
+              {{ $t('邀请您参加') }} <span>{{ imgName }}</span>
+            </h4>
+            <p class="item-desc"> {{ imgDescription }} </p>
+            <img :src="qrcode" alt="" class="item-qrcode" />
             <p class="item-qrcode-desc"> {{ $t('到店消费时出示此二维码') }} </p>
             <img src="@/assets/img/activeImgTop.svg" alt="" class="item-img" />
           </div>
@@ -38,8 +40,8 @@
       </div>
     </div>
     <div class="image-preview-btn-wrapper">
-      <el-button class="image-preview-btn" @click="previewImage"> {{ $t('预览') }} </el-button>
-      <el-button class="image-preview-btn" type="primary" @click="downloadImage"> {{ $t('保存图片') }} </el-button>
+      <el-button class="image-preview-btn" @click="previewImage" :loading="loading"> {{ $t('预览') }} </el-button>
+      <el-button class="image-preview-btn" type="primary" @click="downloadImage" :loading="loading"> {{ $t('保存图片') }} </el-button>
     </div>
     <el-dialog v-model="previewImageVisible" :title="$t('预览')" width="560">
       <img :src="previewImageUrl" alt="" class="preview-image" />
@@ -49,45 +51,67 @@
 <script setup>
   import { useUserStore } from '@/store';
   import html2canvas from 'html2canvas';
-  import { ref } from 'vue';
+  import { ref, defineProps } from 'vue';
+  const props = defineProps({
+    form: {
+      type: Object,
+      default: () => {},
+    },
+    qrcode: {
+      type: String,
+      default: '',
+    },
+    imgName: {
+      type: String,
+      default: '',
+    },
+    imgDescription: {
+      type: String,
+      default: '',
+    },
+  });
 
   const { userInfo } = useUserStore();
   const previewImageVisible = ref(false);
   const previewImageUrl = ref('');
-  const downloadImage = () => {
+  const loading = ref(false);
+  //div 转换为base64
+  const convertToBase64 = async () => {
     const imagePreviewItem = document.getElementById('image-preview-item');
-    html2canvas(imagePreviewItem, {
-      useCORS: true,
-      allowTaint: true,
-      scale: 1,
-    })
-      .then((canvas) => {
-        const imgUrl = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = imgUrl;
-        a.download = 'image.png';
-        a.click();
-      })
-      .catch((err) => {
-        console.log(err);
+    try {
+      const canvas = await html2canvas(imagePreviewItem, {
+        useCORS: true,
+        allowTaint: true,
+        scale: 1,
       });
+      return canvas.toDataURL('image/png');
+    } catch (err) {
+      console.log(err);
+      throw err;
+    }
   };
 
-  const previewImage = () => {
-    const imagePreviewItem = document.getElementById('image-preview-item');
-    html2canvas(imagePreviewItem, {
-      useCORS: true,
-      allowTaint: true,
-      scale: 1,
-    })
-      .then((canvas) => {
-        previewImageUrl.value = canvas.toDataURL('image/png');
-        previewImageVisible.value = true;
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+  const downloadImage = async () => {
+    loading.value = true;
+    const imgUrl = await convertToBase64();
+    const a = document.createElement('a');
+    a.href = imgUrl;
+    a.download = 'image.png';
+    a.click();
+    loading.value = false;
   };
+
+  const previewImage = async () => {
+    loading.value = true;
+    const imgUrl = await convertToBase64();
+    previewImageUrl.value = imgUrl;
+    previewImageVisible.value = true;
+    loading.value = false;
+  };
+
+  defineExpose({
+    convertToBase64,
+  });
 </script>
 <style lang="scss" scoped>
   .image-preview-wrapper {
@@ -128,7 +152,7 @@
           position: relative;
           z-index: 2;
           width: 197px;
-          min-height: 320px;
+          min-height: 290px;
           border-radius: 12px 12px 0 0;
           background: #fff;
           margin: 0 auto;
@@ -160,7 +184,23 @@
             font-size: 12px;
             font-style: normal;
             font-weight: 600;
+            margin-bottom: 4px;
+            padding: 0 18px;
+          }
+          .item-subtitle {
+            color: rgba(36, 22, 11, 0.65);
+            text-align: center;
+            font-size: 8px;
+            font-style: normal;
+            font-weight: 400;
             margin-bottom: 16px;
+            padding: 0 18px;
+            span {
+              color: #ffbe00;
+              font-size: 9px;
+              font-style: normal;
+              font-weight: 600;
+            }
           }
           .item-desc {
             color: #100a05;
@@ -174,7 +214,7 @@
           .item-qrcode {
             width: 96px;
             height: 96px;
-            margin: 0 auto;
+            margin: 0 auto 4px;
             display: block;
           }
           .item-qrcode-desc {
@@ -262,7 +302,23 @@
             font-size: 18px;
             font-style: normal;
             font-weight: 600;
+            margin-bottom: 8px;
+            padding: 0 30px;
+          }
+          .item-subtitle {
+            color: rgba(36, 22, 11, 0.65);
+            text-align: center;
+            font-size: 13px;
+            font-style: normal;
+            font-weight: 400;
             margin-bottom: 36px;
+            padding: 0 18px;
+            span {
+              color: #ffbe00;
+              font-size: 14px;
+              font-style: normal;
+              font-weight: 600;
+            }
           }
           .item-desc {
             color: #100a05;
@@ -271,7 +327,7 @@
             font-style: normal;
             font-weight: 400;
             margin-bottom: 16px;
-            padding: 0 18px;
+            padding: 0 30px;
           }
           .item-qrcode {
             width: 140px;

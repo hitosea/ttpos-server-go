@@ -1,7 +1,7 @@
 <template>
   <div class="basic-setting-content pl16 pr16">
     <div class="common-form">{{ $t('规则设置') }}</div>
-    <el-form-item for="no_click" :label="$t('奖励条件')" :rules="[{ required: true, message: $t('请选择奖励条件') }]" prop="reward_condition_amount">
+    <el-form-item for="no_click" :label="$t('奖励条件')" :rules="[{ required: true, message: $t('请输入奖励条件') }]" prop="reward_condition_amount">
       <el-radio-group v-model="rewardCondition">
         <el-radio :label="0"
           >{{ $t('推荐会员入会并消费') }}
@@ -28,7 +28,7 @@
       <div class="gray9">{{ $t('为了避免会员滥用活动获取不正当利益，建议勾选限定次数以规避潜在风险。') }}</div>
     </el-form-item>
 
-    <el-form-item for="no_click" :label="$t('次数限制')" :rules="[{ required: true, message: $t('请输入次数限制') }]" prop="reward_limit">
+    <el-form-item for="no_click" v-if="form.is_open_reward_limit == 1" :label="$t('次数限制')" :rules="[{ required: true, message: $t('请输入次数限制') }]" prop="reward_limit">
       <el-radio-group v-model="rewardLimit" class="flex-box">
         <el-radio :label="0"
           >{{ $t('限制活动有效期内每个会员最多获取奖品') }}
@@ -75,9 +75,12 @@
     align-items: start;
     gap: 8px;
     width: 100%;
-    :deep(.el-radio.el-radio--small) {
-      height: 30px;
-      width: 100%;
+  }
+  :deep(.el-radio.el-radio--small) {
+    height: 30px;
+    width: 100%;
+    .el-radio__input.is-checked + .el-radio__label {
+      color: #100a05;
     }
   }
 </style>

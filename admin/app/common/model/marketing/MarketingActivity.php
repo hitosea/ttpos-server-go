@@ -16,8 +16,20 @@ class MarketingActivity extends BaseModel
     protected $append = [
         'status',
         'status_text',
-        'name_text'
+        'name_text',
     ];
+
+    // 获取开始时间文字
+    public function getStartTimeAttr($value, $data)
+    {
+        return date('Y-m-d H:i:s', $data['start_time'] ?? 0);
+    }
+
+    // 获取结束时间文字
+    public function getEndTimeAttr($value, $data)
+    {
+        return date('Y-m-d H:i:s', $data['end_time'] ?? 0);
+    }
 
     // 活动名称
     public function getNameTextAttr($value, $data)

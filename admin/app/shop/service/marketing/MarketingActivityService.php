@@ -17,17 +17,22 @@ class MarketingActivityService
     public function create($data)
     {
         $validate = Validate::rule([
-            'name' => 'require|max:50',
-            'description' => 'require|max:100',
+            'name' => 'require|max:2000',
+            'description' => 'require|max:5000',
             'start_time' => 'require|string',
             'end_time' => 'require|string|gt:start_time',
             'reward_condition_amount' => 'require|float|egt:0.01',
             'is_open_reward_limit' => 'require|integer|in:0,1',
-            'reward_limit' => 'require|integer|egt:1',
             'prize_list' => 'require|array|min:1',
         ]);
         if (!$validate->check($data)) {
             return ['code'=>1, 'msg'=>$validate->getError()];
+        }
+        // 如果开启了奖励次数限制，再校验 reward_limit
+        if (isset($data['is_open_reward_limit']) && $data['is_open_reward_limit'] == 1) {
+            if (!isset($data['reward_limit']) || !is_numeric($data['reward_limit']) || $data['reward_limit'] < 1) {
+                return ['code'=>1, 'msg'=>'奖励次数限制必须大于等于1'];
+            }
         }
         // 检查时间合法性
         if ($data['start_time'] < time()) {
@@ -190,10 +195,10 @@ class MarketingActivityService
      */
     public function getRecord($params)
     {
-   
-        return MarketingActivityRecord::alias('record')
-            ->field('record.uuid, record.activity_uuid, record.member_uuid, m.nickname, m.phone, record.reward_count, record.last_reward_time')
-            ->join('member m', 'record.member_uuid = m.uuid')
+        $page = $params['page'] ?? 1;
+        $pageSize = $params['list_rows'] ?? 10;
+        // 
+        $query =  MarketingActivityRecord::alias('record')
             ->where('record.delete_time', 0)
             ->when(isset($params['activity_uuid']) && !empty($params['activity_uuid']),function($query) use ($params){
                 $query->where('record.activity_uuid', $params['activity_uuid']);
@@ -204,9 +209,17 @@ class MarketingActivityService
                         ->whereOr('m.phone', 'like', '%'.$params['keyword'].'%')
                         ->whereOr('m.id', 'like', '%'.$params['keyword'].'%');
                 });
-            })
-            ->order('record.create_time desc')
-            ->select();
+            });
+        // 
+        $list = $query->order('record.create_time desc')->page($page, $pageSize)->select();
+        $total = $query->count();
+        return [
+            'current_page' => $page,
+            'data' => $list,
+            'per_page' => $pageSize,
+            'total' => $total,
+            'last_page' => ceil($total / $pageSize),
+        ];
     }
 
     /**

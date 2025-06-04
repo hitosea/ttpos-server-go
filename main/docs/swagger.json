@@ -2783,6 +2783,46 @@
                 }
             }
         },
+        "/assistant/member/card_types": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "会员卡类型列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.会员"
+                ],
+                "summary": "会员卡类型列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.MemberCardTypeList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/assistant/member/check_password": {
             "get": {
                 "security": [
@@ -3877,6 +3917,57 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/decrypt/activity/qr_code": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "解密活动二维码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.基础信息"
+                ],
+                "summary": "解密活动二维码",
+                "parameters": [
+                    {
+                        "description": "解密活动二维码参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DecryptQrCodeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.DecryptQrCodeResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -8672,6 +8763,46 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/member/card_types": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "会员卡类型列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.会员"
+                ],
+                "summary": "会员卡类型列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.MemberCardTypeList"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -13591,6 +13722,172 @@
                 }
             }
         },
+        "/member/login": {
+            "post": {
+                "description": "登录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.认证"
+                ],
+                "summary": "登录",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.MemberLoginReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.LoginResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/member/login_info": {
+            "get": {
+                "description": "获取登陆信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.认证"
+                ],
+                "summary": "获取登陆信息",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "集团ID",
+                        "name": "company_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/member_resp.MemberLoginInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/member/marketing_activity": {
+            "get": {
+                "description": "获取营销活动",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.营销活动"
+                ],
+                "summary": "获取营销活动",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "集团ID",
+                        "name": "company_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/member_resp.MemberMarketingActivityResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/member/send_code": {
+            "post": {
+                "description": "发送验证码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.认证"
+                ],
+                "summary": "发送验证码",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.MemberSendCodeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/menu/base": {
             "get": {
                 "security": [
@@ -16953,6 +17250,85 @@
                 }
             }
         },
+        "member_req.MemberLoginReq": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "验证码",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "集团ID",
+                    "type": "integer"
+                },
+                "phone": {
+                    "description": "手机号",
+                    "type": "string"
+                }
+            }
+        },
+        "member_req.MemberSendCodeReq": {
+            "type": "object",
+            "properties": {
+                "area_code": {
+                    "description": "区号",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "集团ID",
+                    "type": "integer"
+                },
+                "phone": {
+                    "description": "手机号",
+                    "type": "string"
+                }
+            }
+        },
+        "member_resp.MemberLoginInfoResp": {
+            "type": "object",
+            "properties": {
+                "area_code": {
+                    "description": "地区码数组，如 [\"+86\", \"+1\", \"+44\"]",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "company_name": {
+                    "description": "集团名称",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "集团UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "member_resp.MemberMarketingActivityResp": {
+            "type": "object",
+            "properties": {
+                "desc": {
+                    "description": "活动描述",
+                    "type": "string"
+                },
+                "end_time": {
+                    "description": "活动结束时间",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "活动名称",
+                    "type": "string"
+                },
+                "qr_code": {
+                    "description": "活动二维码-base64",
+                    "type": "string"
+                },
+                "start_time": {
+                    "description": "活动开始时间",
+                    "type": "integer"
+                }
+            }
+        },
         "product_resp.Product": {
             "type": "object",
             "properties": {
@@ -17276,6 +17652,14 @@
                 "phone"
             ],
             "properties": {
+                "card_no": {
+                    "description": "会员卡号",
+                    "type": "string"
+                },
+                "card_type_uuid": {
+                    "description": "会员卡类型Uuid",
+                    "type": "integer"
+                },
                 "level_uuid": {
                     "description": "会员等级Uuid",
                     "type": "integer"
@@ -17295,6 +17679,10 @@
                     "description": "手机号",
                     "type": "string",
                     "maxLength": 20
+                },
+                "referrer_uuid": {
+                    "description": "推荐人Uuid",
+                    "type": "integer"
                 }
             }
         },
@@ -17559,6 +17947,18 @@
                 "recharge_order_uuid": {
                     "description": "充值订单Uuid",
                     "type": "integer"
+                }
+            }
+        },
+        "req.DecryptQrCodeReq": {
+            "type": "object",
+            "required": [
+                "sign"
+            ],
+            "properties": {
+                "sign": {
+                    "description": "活动二维码sign",
+                    "type": "string"
                 }
             }
         },
@@ -19950,6 +20350,23 @@
                 }
             }
         },
+        "resp.DecryptQrCodeResp": {
+            "type": "object",
+            "properties": {
+                "activity_uuid": {
+                    "type": "integer"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "uuid": {
+                    "type": "integer"
+                }
+            }
+        },
         "resp.Desk": {
             "type": "object",
             "properties": {
@@ -21140,6 +21557,33 @@
                 },
                 "token": {
                     "type": "string"
+                }
+            }
+        },
+        "resp.MemberCardType": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "等级名称",
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "等级Uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.MemberCardTypeList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MemberCardType"
+                    }
                 }
             }
         },

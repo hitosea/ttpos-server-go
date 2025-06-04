@@ -10,21 +10,23 @@ const (
 	MemberPointLogSceneRechargeGive          = 70  // 充值赠送
 	MemberPointLogSceneRechargeReverse       = 80  // 充值反结账
 	MemberPointLogSceneDeduct                = 90  // 扣减
-	MemberPointLogScenePointsExchange        = 100 // 积分抵扣
-	MemberPointLogScenePointsExchangeReverse = 110 // 积分抵扣反结账
+	MemberPointLogSceneCashierOrAssistant    = 100 // 收银机、点餐助手发卡赠送
+	MemberPointLogScenePointsExchange        = 110 // 积分抵扣
+	MemberPointLogScenePointsExchangeReverse = 120 // 积分抵扣反结账
 )
 
 // 场景,10-用户充值 20-用户消费 30-管理员操作 40-订单退款 50-余额提现 60-订单反结账 70-充值反结账 80-充值退款 90-扣减
 const (
-	MemberBalanceLogRecharge        = 10 // 用户充值
-	MemberBalanceLogConsume         = 20 // 用户消费
-	MemberBalanceLogAdmin           = 30 // 管理员操作
-	MemberBalanceLogRefund          = 40 // 订单退款
-	MemberBalanceLogCash            = 50 // 余额提现
-	MemberBalanceLogReverse         = 60 // 订单反结账
-	MemberBalanceLogRechargeReverse = 70 // 充值反结账
-	MemberBalanceLogRechargeRefund  = 80 // 充值退款
-	MemberBalanceLogDeduct          = 90 // 扣减
+	MemberBalanceLogRecharge           = 10  // 用户充值
+	MemberBalanceLogConsume            = 20  // 用户消费
+	MemberBalanceLogAdmin              = 30  // 管理员操作
+	MemberBalanceLogRefund             = 40  // 订单退款
+	MemberBalanceLogCash               = 50  // 余额提现
+	MemberBalanceLogReverse            = 60  // 订单反结账
+	MemberBalanceLogRechargeReverse    = 70  // 充值反结账
+	MemberBalanceLogRechargeRefund     = 80  // 充值退款
+	MemberBalanceLogDeduct             = 90  // 扣减
+	MemberBalanceLogCashierOrAssistant = 100 // 收银机、点餐助手发卡赠送
 )
 
 // 变更类型(10后台管理员设置 20自动升级)
@@ -53,4 +55,9 @@ const (
 	MemberGenderFemale  = 0 // 女
 	MemberGenderMale    = 1 // 男
 	MemberGenderUnknown = 2 // 未知
+)
+
+const (
+	CardTypeDisable = 1
+	CardTypeEnable  = 0
 )

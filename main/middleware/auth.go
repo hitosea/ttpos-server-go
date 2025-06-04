@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/auth"
@@ -40,59 +41,6 @@ func Auth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
 			return
 		}
 		ParseJwt(c, authHeader, authSrv, dbm)
-		c.Next()
-	}
-}
-
-func DeskAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		deskTokenHeader := c.GetHeader("Authorization") // 桌台二维码的token
-
-		if deskTokenHeader == "" {
-			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
-			c.Abort()
-			return
-		}
-		parts := strings.SplitN(deskTokenHeader, " ", 2)
-		if !(len(parts) == 2 && parts[0] == "Bearer") {
-			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
-			c.Abort()
-			return
-		}
-		token, err := auth.DecodeDeskToken(parts[1])
-		if err != nil {
-			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
-			c.Abort()
-			return
-		}
-		ParseDeskToken(c, token, authSrv, dbm)
-		c.Next()
-	}
-}
-
-func BusinessMenu(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		menuHeader := c.GetHeader("Authorization") // 电子菜单二维码的token
-
-		if menuHeader == "" {
-			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
-			c.Abort()
-			return
-		}
-		parts := strings.SplitN(menuHeader, " ", 2)
-		if !(len(parts) == 2 && parts[0] == "Bearer") {
-			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
-			c.Abort()
-			return
-		}
-		token, err := auth.DecodeMenuToken(parts[1])
-		if err != nil {
-			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
-			c.Abort()
-			return
-		}
-
-		ParseMenuToken(c, token, authSrv, dbm)
 		c.Next()
 	}
 }
@@ -194,6 +142,32 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 	c.Set(jwt.DB, dbm.GetDB(claims.CompanyUuid)) // 数据库连接
 }
 
+func DeskAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		deskTokenHeader := c.GetHeader("Authorization") // 桌台二维码的token
+
+		if deskTokenHeader == "" {
+			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
+			c.Abort()
+			return
+		}
+		parts := strings.SplitN(deskTokenHeader, " ", 2)
+		if !(len(parts) == 2 && parts[0] == "Bearer") {
+			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
+			c.Abort()
+			return
+		}
+		token, err := auth.DecodeDeskToken(parts[1])
+		if err != nil {
+			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
+			c.Abort()
+			return
+		}
+		ParseDeskToken(c, token, authSrv, dbm)
+		c.Next()
+	}
+}
+
 func ParseDeskToken(c *gin.Context, token *auth.DeskToken, authSrv service.IAuthSrv, dbm *database.DBManager) {
 	ctx := context.NewContext(context.WithDeskUuid(token.DeskUuid), context.WithCompanyUuid(token.CompanyUuid))
 
@@ -213,6 +187,33 @@ func ParseDeskToken(c *gin.Context, token *auth.DeskToken, authSrv service.IAuth
 	c.Set(jwt.DB, dbm.GetDB(token.CompanyUuid))        // 数据库连接
 }
 
+func BusinessMenu(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		menuHeader := c.GetHeader("Authorization") // 电子菜单二维码的token
+
+		if menuHeader == "" {
+			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
+			c.Abort()
+			return
+		}
+		parts := strings.SplitN(menuHeader, " ", 2)
+		if !(len(parts) == 2 && parts[0] == "Bearer") {
+			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
+			c.Abort()
+			return
+		}
+		token, err := auth.DecodeMenuToken(parts[1])
+		if err != nil {
+			helper.Fail(c, constant.CodeTokenInvalid, "二维码已失效，请联系商家")
+			c.Abort()
+			return
+		}
+
+		ParseMenuToken(c, token, authSrv, dbm)
+		c.Next()
+	}
+}
+
 func ParseMenuToken(c *gin.Context, token *auth.MenuToken, authSrv service.IAuthSrv, dbm *database.DBManager) {
 	ctx := context.NewContext(context.WithCompanyUuid(token.CompanyUuid))
 	// 用户鉴权, 查询desk表判断qrcode_token值是否相同
@@ -229,4 +230,76 @@ func ParseMenuToken(c *gin.Context, token *auth.MenuToken, authSrv service.IAuth
 	c.Set(jwt.CompanySetting, *company.CompanySetting) // 商家设置信息
 	c.Set(jwt.DB, dbm.GetDB(token.CompanyUuid))        // 数据库连接
 	fmt.Println(fmt.Sprintf("ParseMenuToken companyUuid: %d", token.CompanyUuid))
+}
+
+// MemberAuth
+func MemberAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		memberTokenHeader := c.GetHeader("Authorization")
+		if memberTokenHeader == "" {
+			helper.Fail(c, constant.CodeTokenInvalid, "Token无效, 请重新登录")
+			c.Abort()
+			return
+		}
+		parts := strings.SplitN(memberTokenHeader, " ", 2)
+		if !(len(parts) == 2 && parts[0] == "Bearer") {
+			helper.Fail(c, constant.CodeTokenInvalid, "Token无效, 请重新登录")
+			c.Abort()
+			return
+		}
+		// 验证token
+		claims, err := auth.ParseToken(parts[1], config.JWT.Secret)
+		if err != nil {
+			helper.Fail(c, constant.CodeTokenInvalid, "登录失效，请重新登录")
+			c.Abort()
+			return
+		}
+		//
+		urlPath := c.Request.URL.Path
+		if !regexp.MustCompile(`^/api/v\d+/` + claims.Source).Match([]byte(urlPath)) {
+			helper.Fail(c, constant.CodeAccessDenied, "用户信息错误")
+			c.Abort()
+			return
+		}
+		//
+		if strings.HasSuffix(urlPath, "/refresh_token") && !claims.IsRefreshToken {
+			helper.Fail(c, constant.CodeTokenInvalid, "无效的refresh_token")
+			c.Abort()
+			return
+		} else if !strings.HasSuffix(urlPath, "/refresh_token") && claims.IsRefreshToken {
+			helper.Fail(c, constant.CodeTokenInvalid, "无效的token")
+			c.Abort()
+			return
+		}
+		// 验证会员是否存在
+		member, err := repository.NewMemberRepo(dbm.GetDB(claims.CompanyUuid)).GetMemberByUuid(claims.MemberUuid)
+		if err != nil || member.IsDelete() {
+			helper.Fail(c, constant.CodeTokenInvalid, "会员不存在")
+			c.Abort()
+			return
+		}
+		company, err := repository.NewCompanyRepo(dbm.GetDB(claims.CompanyUuid)).GetCompanyInfoByUuid(claims.CompanyUuid)
+		if err != nil || company.IsExpired() || company.IsDelete() {
+			helper.Fail(c, constant.CodeTokenInvalid, "无法使用该功能，请联系商家")
+			c.Abort()
+			return
+		}
+		companySetting := repository.NewCompanySettingRepo(dbm.GetDB(claims.CompanyUuid)).Get()
+		if companySetting.IsOpenMember != 1 {
+			helper.Fail(c, constant.CodeTokenInvalid, "未开启会员功能，请联系商家")
+			c.Abort()
+			return
+		}
+
+		// 将用户信息存储到上下文
+		c.Set(jwt.Source, jwt.SourceMember)
+		c.Set(jwt.CompanyUuid, claims.CompanyUuid)         // 商家Uuid
+		c.Set(jwt.MemberUuid, claims.MemberUuid)           // 会员Uuid
+		c.Set(jwt.Member, *member)                         // 会员信息
+		c.Set(jwt.Company, *company)                       // 商家信息
+		c.Set(jwt.CompanySetting, *company.CompanySetting) // 商家设置信息
+		c.Set(jwt.DB, dbm.GetDB(claims.CompanyUuid))       // 数据库连接
+		//
+		c.Next()
+	}
 }

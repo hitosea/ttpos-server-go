@@ -4,10 +4,13 @@ import "ttpos-server-go/app/model"
 
 // AddMemberReq 添加会员请求
 type AddMemberReq struct {
-	LevelUuid uint64 `json:"level_uuid" binding:"required"`                    // 会员等级Uuid
-	Phone     string `json:"phone" binding:"required,max=20"`                  // 手机号
-	Nickname  string `json:"nickname" binding:"omitempty,max=50"`              // 昵称
-	Password  string `json:"password" binding:"omitempty,number,min=4,max=16"` // 密码
+	Nickname     string `json:"nickname" binding:"omitempty,max=50"`              // 昵称
+	Phone        string `json:"phone" binding:"required,max=20"`                  // 手机号
+	Password     string `json:"password" binding:"omitempty,number,min=4,max=16"` // 密码
+	LevelUuid    uint64 `json:"level_uuid" binding:"required"`                    // 会员等级Uuid
+	CardTypeUuid uint64 `json:"card_type_uuid"`                                   // 会员卡类型Uuid
+	CardNo       string `json:"card_no"`                                          // 会员卡号
+	ReferrerUuid uint64 `json:"referrer_uuid"`                                    // 推荐人Uuid
 }
 
 // AddMemberReqMessage 添加会员错误提示

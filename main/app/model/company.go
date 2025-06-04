@@ -71,7 +71,7 @@ func (model *CompanySetting) SmsEnabled() bool {
 	return model.EnableSms == 1 && model.SmsQuota > 0
 }
 
-// GetDefaultLanguage 获取默认语言
+// GetDefaultLanguage 获取默认语言。 注意：这是admin端的显示的第一个语言
 func (model *CompanySetting) GetDefaultLanguage() string {
 	languages := make([]string, 0)
 	if err := json.Unmarshal([]byte(model.Languages), &languages); err != nil {
