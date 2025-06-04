@@ -5,7 +5,6 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/service"
-	"ttpos-server-go/app/service/member_service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
@@ -16,7 +15,7 @@ import (
 
 // AuthHandler 认证鉴权控制器
 type MarketingHandler struct {
-	marketingSrv member_service.IMarketingSrv
+	marketingActivitySrv service.IMarketingActivitySrv
 }
 
 // MarketingActivity 获取营销活动
@@ -35,7 +34,7 @@ func (h *MarketingHandler) MarketingActivity(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	marketingActivityResp, err := h.marketingSrv.MarketingActivity(ctx, marketingActivityReq)
+	marketingActivityResp, err := h.marketingActivitySrv.MarketingActivity(ctx, marketingActivityReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -54,9 +53,9 @@ func RegisterMarketingHandlers(router gin.IRouter, dbm *database.DBManager, cach
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	// 初始化处理器
-	marketingSrv := member_service.NewMarketingSrv(dbm, cache)
+	marketingActivitySrv := service.NewMarketingActivitySrv(dbm, cache)
 	wrapper := &MarketingHandler{
-		marketingSrv: marketingSrv,
+		marketingActivitySrv: marketingActivitySrv,
 	}
 	// 需要认证
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))

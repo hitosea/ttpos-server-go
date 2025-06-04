@@ -18,13 +18,14 @@ import (
 
 // BaseHandler 基础相关控制器
 type BaseHandler struct {
-	authSrv          service.IAuthSrv
-	settingSrv       setting.ISrv
-	paymentMethodSrv service.IPaymentMethodSrv
-	otherSrv         service.IOtherSrv
-	printerLogSrv    printerService.IPrinterLogSrv
-	staffShiftSrv    service.IStaffShiftSrv
-	printerSrv       service.IPrinterSrv
+	authSrv              service.IAuthSrv
+	settingSrv           setting.ISrv
+	paymentMethodSrv     service.IPaymentMethodSrv
+	otherSrv             service.IOtherSrv
+	printerLogSrv        printerService.IPrinterLogSrv
+	staffShiftSrv        service.IStaffShiftSrv
+	printerSrv           service.IPrinterSrv
+	marketingActivitySrv service.IMarketingActivitySrv
 }
 
 // GetBase 基本信息
@@ -544,10 +545,20 @@ func (h *BaseHandler) UsbPrinterReport(c *gin.Context) {
 // @Security JwtToken
 // @param data body req.DecryptQrCodeReq true "解密活动二维码参数"
 // @Success 200 {object} dto.Response{data=resp.DecryptQrCodeResp}
-// @Router /cashier/decrypt_qr_code [post]
+// @Router /cashier/decrypt/activity/qr_code [post]
 func (h *BaseHandler) DecryptQrCode(c *gin.Context) {
-	// ctx := helper.GetContext(c)
-
+	ctx := helper.GetContext(c)
+	var decryptQrCodeReq req.DecryptQrCodeReq
+	if err := c.ShouldBindJSON(&decryptQrCodeReq); err != nil {
+		helper.HandleValidationError(c, err, decryptQrCodeReq, nil)
+		return
+	}
+	decryptQrCodeResp, err := h.marketingActivitySrv.DecryptQrCode(ctx, decryptQrCodeReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, decryptQrCodeResp)
 }
 
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -563,17 +574,18 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	printerSrv := service.NewPrinterSrv(dbm, cache)
-
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
+	marketingActivitySrv := service.NewMarketingActivitySrv(dbm, cache)
 
 	wrapper := &BaseHandler{
-		authSrv:          authSrv,
-		settingSrv:       settingSrv,
-		paymentMethodSrv: paymentMethodSrv,
-		otherSrv:         otherSrv,
-		printerLogSrv:    printerLogSrv,
-		staffShiftSrv:    staffShiftSrv,
-		printerSrv:       printerSrv,
+		authSrv:              authSrv,
+		settingSrv:           settingSrv,
+		paymentMethodSrv:     paymentMethodSrv,
+		otherSrv:             otherSrv,
+		printerLogSrv:        printerLogSrv,
+		staffShiftSrv:        staffShiftSrv,
+		printerSrv:           printerSrv,
+		marketingActivitySrv: marketingActivitySrv,
 	}
 
 	// 需要认证
@@ -608,5 +620,8 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 
 		// usb 打印
 		privateApi.POST("/usb/printer/report", wrapper.UsbPrinterReport) // 交班打印
+
+		// 活动二维码
+		privateApi.POST("/decrypt/activity/qr_code", wrapper.DecryptQrCode) // 解密活动二维码
 	}
 }

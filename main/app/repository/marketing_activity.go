@@ -14,6 +14,7 @@ import (
 // QrCodeParams 二维码参数
 type QrCodeParams struct {
 	Type         uint64 `json:"t"`       // 活动类型
+	CompanyUuid  uint64 `json:"c_uuid"`  // 公司uuid
 	MemberUuid   uint64 `json:"m_uuid"`  // 会员uuid
 	ActivityUuid uint64 `json:"mc_uuid"` // 营销活动uuid
 }
@@ -40,9 +41,9 @@ func NewMarketingActivityRepo(db *gorm.DB) IMarketingActivityRepo {
 }
 
 // GetActivity 获取营销活动
-func (r *MarketingActivityRepo) GetActivity(companyUuid uint64) (*model.MarketingActivity, error) {
+func (r *MarketingActivityRepo) GetActivity(uuid uint64) (*model.MarketingActivity, error) {
 	var activity model.MarketingActivity
-	err := r.db.Where("company_uuid = ? AND delete_time = ?", companyUuid, 0).First(&activity).Error
+	err := r.db.Where("uuid = ? AND delete_time = ?", uuid, 0).First(&activity).Error
 	if err != nil {
 		return nil, err
 	}

@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 // MarketingActivity 营销活动模型
 type MarketingActivity struct {
 	BaseModel
@@ -20,6 +22,11 @@ type MarketingActivity struct {
 	Records           []*MarketingActivityRecord `gorm:"foreignKey:ActivityUuid;references:Uuid" json:"records"`
 	MultiLanguageName *MultiLanguageName         `gorm:"foreignKey:Uuid;references:MultiLanguageNameUuid" json:"multi_language_name"`
 	MultiLanguageDesc *MultiLanguageName         `gorm:"foreignKey:Uuid;references:MultiLanguageDescUuid" json:"multi_language_desc"`
+}
+
+// 是否正在进行中
+func (m *MarketingActivity) IsValid() bool {
+	return m.IsInvalid == 0 && time.Now().Unix() > int64(m.StartTime) && time.Now().Unix() < int64(m.EndTime)
 }
 
 // MarketingActivityPrize 营销活动奖品模型
