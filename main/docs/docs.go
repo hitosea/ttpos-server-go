@@ -18370,6 +18370,10 @@ const docTemplate = `{
                     "description": "操作类型。add: 加购，sub: 减购. 不填，默认是加购",
                     "type": "string"
                 },
+                "price": {
+                    "description": "商品价格。可选，当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格",
+                    "type": "number"
+                },
                 "sale_bill_uuid": {
                     "description": "销售账单ID。可选，参数不填时表示要新建销售账单，添加商品后创建点餐销售账单。",
                     "type": "integer"
@@ -18834,6 +18838,10 @@ const docTemplate = `{
                 "bank_code": {
                     "description": "退款账户信息",
                     "type": "string"
+                },
+                "points": {
+                    "description": "手动退款积分",
+                    "type": "number"
                 },
                 "products": {
                     "description": "退款商品UUID列表. 如果为空，则退款所有商品,即整单退款",
@@ -20360,15 +20368,19 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "activity_uuid": {
+                    "description": "活动uuid",
                     "type": "integer"
                 },
                 "nickname": {
+                    "description": "会员昵称",
                     "type": "string"
                 },
                 "phone": {
+                    "description": "会员手机号",
                     "type": "string"
                 },
                 "uuid": {
+                    "description": "会员uuid",
                     "type": "integer"
                 }
             }
@@ -20626,6 +20638,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.ProductMustPlanList"
+                        }
+                    ]
+                },
+                "product": {
+                    "description": "商品信息。 当加购商品时商品价格变化时，返回最新的商品信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.Product"
                         }
                     ]
                 },
@@ -20905,6 +20925,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.BuffetProductList"
+                        }
+                    ]
+                },
+                "product": {
+                    "description": "商品信息。 当加购商品时商品价格变化时，返回最新的商品信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.Product"
                         }
                     ]
                 },
@@ -22303,6 +22331,14 @@ const docTemplate = `{
                 "can_return_amount": {
                     "description": "可退款金额. 可退款金额=订单最终应收金额-已退款金额",
                     "type": "number"
+                },
+                "deductible_points": {
+                    "description": "可扣除积分",
+                    "type": "number"
+                },
+                "manual_return_points": {
+                    "description": "是否可以手动退款积分",
+                    "type": "boolean"
                 },
                 "payment_records": {
                     "description": "支付记录",
@@ -24193,6 +24229,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.ProductMustPlanList"
+                        }
+                    ]
+                },
+                "product": {
+                    "description": "商品信息。 当加购商品时商品价格变化时，返回最新的商品信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.Product"
                         }
                     ]
                 },

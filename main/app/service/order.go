@@ -1545,6 +1545,10 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		return errors.WithMessage(errors.New("找不到销售订单")), constant.CodeFail
 	}
 
+	if req.Points > saleOrder.GetManualReturnPoints() {
+		return errors.WithMessage(errors.New("退款积分不能大于最大可退积分")), constant.CodeFail
+	}
+
 	returnType := constant.ReturnOrderRefundTypeTotal
 	saleOrderProducts := make([]*model.SaleOrderProduct, 0)                       // 退款商品列表
 	saleOrderBuffetCustomerTypes := make([]*model.SaleOrderBuffetCustomerType, 0) // 退款自助餐顾客列表
@@ -1746,26 +1750,49 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		}
 		// 退积分
 		if saleOrder.ConsumerUuid > 0 {
-			refundAmount := returnOrder.RefundAmount // 退款金额
-			// 积分赠送比例
-			integralGiveRate := saleOrder.GiftPointsRate
-			// 退积分=退款金额*积分赠送比例
-			points := decimal.NewFromFloat(refundAmount).Mul(decimal.NewFromFloat(integralGiveRate)).Truncate(2).InexactFloat64()
-			member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
-			if err != nil {
-				return errors.WithMessage(err)
-			}
-			// 更新会员积分
-			if points > 0 {
-				if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
-					"frozen_point": member.FrozenPoint - points, // 扣减积分
-				}); err != nil {
+			// 手动退积分
+			if saleOrder.CanManualReturnPoints() {
+				if req.Points > 0 {
+					points := req.Points
+					// 开始手动退积分
+					member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+					if err != nil {
+						return errors.WithMessage(err)
+					}
+					if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
+						"frozen_point": member.FrozenPoint - points, // 扣减积分
+					}); err != nil {
+						return errors.WithMessage(err)
+					}
+					// 创建积分变动记录
+					memberPointLog := saleOrder.NewRefundMemberPointLog(-points)
+					if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
+						return errors.WithMessage(err)
+					}
+				}
+			} else {
+				// 自动退积分
+				refundAmount := returnOrder.RefundAmount // 退款金额
+				// 积分赠送比例
+				integralGiveRate := saleOrder.GiftPointsRate
+				// 退积分=退款金额*积分赠送比例
+				points := decimal.NewFromFloat(refundAmount).Mul(decimal.NewFromFloat(integralGiveRate)).Truncate(2).InexactFloat64()
+				member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+				if err != nil {
 					return errors.WithMessage(err)
 				}
-				// 创建积分变动记录
-				memberPointLog := saleOrder.NewRefundMemberPointLog(-points)
-				if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
-					return errors.WithMessage(err)
+				// 更新会员积分
+				if points > 0 {
+					if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
+						"frozen_point": member.FrozenPoint - points, // 扣减积分
+					}); err != nil {
+						return errors.WithMessage(err)
+					}
+					// 创建积分变动记录
+					memberPointLog := saleOrder.NewRefundMemberPointLog(-points)
+					if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
+						return errors.WithMessage(err)
+					}
 				}
 			}
 			publishChangeMemberPoints = true
