@@ -273,8 +273,7 @@ class Access extends BaseModel
         if (isset($licenses['sale']) && $licenses['sale'] == 1) {
             return $array;
         }
-        // 移除未授权erp权限-access_id为1711006072，1711009130的元素，并重置数组键值
-        // 移除云上部署无自助餐权限
+
         // 暂时去掉外卖管理
         $array = array_filter($array, function ($value) {
             return (!isset($value['uuid']) || ($value['uuid'] != 1711006072 && $value['uuid'] != 1711009130))
@@ -343,6 +342,24 @@ class Access extends BaseModel
             // 授权无扫码点餐接单权限
             if (isset($licenses['is_open_h5_order']) && $licenses['is_open_h5_order'] == 0) {
                 if ($value['uuid'] == 1724320522) {
+                    continue;
+                }
+            }
+            // 授权无优惠券权限
+            if (($licenses['is_open_coupon'] ?? 0) == 0) {
+                if ($value['uuid'] == 1731155609 || $value['uuid'] == 1731155610) {
+                    continue;
+                }
+            }
+            // 授权无营销活动权限
+            if (($licenses['is_open_marketing'] ?? 0) == 0 || ($licenses['is_open_member'] ?? 0) == 0) {
+                if ($value['uuid'] == 1731155710 || $value['uuid'] == 1731155711) {
+                    continue;
+                }
+            }
+            // 授权无会员卡权限
+            if (($licenses['is_open_coupon'] ?? 0) == 0 && (($licenses['is_open_marketing'] ?? 0) == 0 || ($licenses['is_open_member'] ?? 0) == 0)) {
+                if ($value['uuid'] == 1731155608) {
                     continue;
                 }
             }
