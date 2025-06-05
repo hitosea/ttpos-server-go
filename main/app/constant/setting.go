@@ -19,6 +19,7 @@ const (
 	SettingKitchen        = "kitchen"          // 各端-厨显设置
 	SettingAssistant      = "assistant"        // 各端-点餐助手设置
 	SettingBuffet         = "buffet"           // 自助餐-自助餐设置
+	SettingPointsRule     = "points_rule"      // 积分规则设置
 	SettingCloudBasic     = "cloud_basic"      // 云端-基础信息
 )
 

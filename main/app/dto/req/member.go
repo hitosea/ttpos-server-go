@@ -11,6 +11,7 @@ type AddMemberReq struct {
 	CardTypeUuid uint64 `json:"card_type_uuid"`                                   // 会员卡类型Uuid
 	CardNo       string `json:"card_no"`                                          // 会员卡号
 	ReferrerUuid uint64 `json:"referrer_uuid"`                                    // 推荐人Uuid
+	ActivityUuid uint64 `json:"activity_uuid"`                                    // 营销活动Uuid
 }
 
 // AddMemberReqMessage 添加会员错误提示

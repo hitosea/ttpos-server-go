@@ -5,6 +5,7 @@ namespace app\shop\model\user;
 use app\common\library\helper;
 use app\shop\model\user\User as UserModel;
 use app\common\model\user\Grade as GradeModel;
+use think\facade\Cache;
 
 /**
  * 用户会员等级模型
@@ -58,6 +59,11 @@ class Grade extends GradeModel
         $data['priority'] = $data['weight'];
         $data['open_point'] = $data['open_points'];
         $data['upgrade_point'] = $data['upgrade_points'];
+
+        $lastGrade = $this->getLastGrade();
+        $data['points_rate'] = $lastGrade['points_rate'];
+        $data['points_quantity'] = $lastGrade['points_quantity'];
+
         return $this->save($data);
     }
 

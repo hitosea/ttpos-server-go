@@ -62,7 +62,7 @@ func NewMemberRepoImpl(db *gorm.DB) IMemberRepo {
 // GetMemberLevels 获取会员等级
 func (r *memberRepo) GetMemberLevels() []model.MemberLevel {
 	var levels []model.MemberLevel
-	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Select("uuid, name, priority, create_time").Order("priority asc, create_time asc").Find(&levels)
+	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Select("uuid, name, priority, create_time, points_rate, points_quantity").Order("priority asc, create_time asc").Find(&levels)
 	return levels
 }
 

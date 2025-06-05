@@ -3,7 +3,7 @@
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class AddColumnMemberCardNoAndRefererUuidToMember extends Migrator
+class AddColumnPointsRateAndPointsQuantityToMemberLevel extends Migrator
 {
     /**
      * Change Method.
@@ -28,12 +28,13 @@ class AddColumnMemberCardNoAndRefererUuidToMember extends Migrator
      */
     public function change()
     {
-        $table = $this->table('member');
-        if (!$table->hasColumn('referrer_uuid')) {
-            $table->addColumn('referrer_uuid', 'biginteger', ['default' => 0, 'null' => false, 'comment' => '推荐人Uuid', 'after' => 'member_card_uuid']);
+        // 会员等级赠送积分规则设置的值
+        $table = $this->table('member_level');
+        if (!$table->hasColumn('points_quantity')) {
+            $table->addColumn('points_quantity', 'string', ['default' => '', 'null' => false, 'comment' => '购物赠送积分按照桌台人数赠送时的数量', 'after' => 'remark']);
         }
-        if (!$table->hasColumn('member_card_no')) {
-            $table->addColumn('member_card_no', 'string', ['default' => '', 'null' => false, 'comment' => '会员卡号', 'after' => 'member_card_uuid']);
+        if (!$table->hasColumn('points_rate')) {
+            $table->addColumn('points_rate', 'string', ['default' => '', 'null' => false, 'comment' => '购物赠送积分按照付款金额比例赠送时的比例', 'after' => 'remark']);
         }
         $table->update();
     }

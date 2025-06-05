@@ -102,7 +102,15 @@ class Grade extends BaseModel
      */
     public function getLists()
     {
-        return $this->field('uuid, name, priority, create_time')->order(['priority' => 'asc', 'create_time' => 'asc'])->select();
+        return $this->field('uuid, name, priority, create_time, points_rate, points_quantity')->order(['priority' => 'asc', 'create_time' => 'asc'])->select();
+    }
+
+    /**
+     * 按照权重获取最后一个会员等级
+     */
+    public function getLastGrade()
+    {
+        return $this->field('uuid, name, priority, create_time, points_rate, points_quantity')->order(['priority' => 'desc', 'create_time' => 'asc'])->find();
     }
 
     /**

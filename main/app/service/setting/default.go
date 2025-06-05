@@ -368,6 +368,35 @@ func (s *Srv) getDefaultPoints() setting.Points {
 			"b) 您在本平台参加特定活动也可使用积分,详细使用规则以具体活动时的规则为准;\n" +
 			"c) 积分的数值精确到个位(小数点后全部舍弃,不进行四舍五入)\n" +
 			"d) 买家在完成该笔交易(订单状态为“已签收”)后才能得到此笔交易的相应积分,如购买商品参加店铺其他优惠,则优惠的金额部分不享受积分获取;",
+		ShoppingGiftRules: []setting.ShoppingGiftRule{
+			{
+				Type:                     setting.RuleTypePaymentAmount,
+				IsOpen:                   "0",
+				IsMemberLevelRelated:     "0",
+				Value:                    "",
+				PaymentAmountRequirement: "",
+				MealType:                 []string{},
+				BalancePaymentGetPoints:  "0",
+				RefundReturnPoints:       "0",
+				MemberLevels:             []setting.MemberLevelItem{},
+			},
+			{
+				Type:                     setting.RuleTypeDesk,
+				IsOpen:                   "0",
+				IsMemberLevelRelated:     "0",
+				Value:                    "",
+				PaymentAmountRequirement: "",
+				MealType:                 []string{},
+				BalancePaymentGetPoints:  "0",
+				RefundReturnPoints:       "0",
+				MemberLevels:             []setting.MemberLevelItem{},
+			},
+		},
+		Exchange: setting.PointsExchange{
+			OpenPointsExchange: "0",
+			PointsExchangeRate: "",
+			AutoPointsExchange: "0",
+		},
 	}
 }
 

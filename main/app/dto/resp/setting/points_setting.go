@@ -9,19 +9,48 @@ import (
 
 // Points 积分设置
 type Points struct {
-	DeductionOrder     string       `json:"deduction_order"`      // 扣款顺序 1-先主账户后赠送账户 2-先赠送账户后主账户 3-按比例
-	DeductRatioMain    string       `json:"deduct_ratio_main"`    // 主账户扣款比例0-100
-	DeductRatioGift    string       `json:"deduct_ratio_gift"`    // 赠送账户扣款比例0-100
-	PointsName         string       `json:"points_name"`          // 积分名称自定义
-	IsShoppingGift     string       `json:"is_shopping_gift"`     // 是否开启购物送积分
-	GiftRatio          string       `json:"gift_ratio"`           // 积分赠送比例
-	IsShoppingDiscount string       `json:"is_shopping_discount"` // 是否允许下单使用积分抵扣
-	Discount           DiscountItem `json:"discount"`             // 积分抵扣
-	Describe           string       `json:"describe"`             // 充值说明
-	DeductOrder        string       `json:"deduct_order"`
-	OpenPointsExchange string       `json:"open_points_exchange"` // 是否开启积分抵扣，“1”开启，“0”关闭
-	PointsExchangeRate string       `json:"points_exchange_rate"` // 积分汇率，每积分抵扣的金额，可输入大于0的两位小数
-	AutoPointsExchange string       `json:"auto_points_exchange"` // 是否开启自动抵扣，“1”开启，“0”关闭
+	DeductionOrder     string             `json:"deduction_order"`      // 扣款顺序 1-先主账户后赠送账户 2-先赠送账户后主账户 3-按比例
+	DeductRatioMain    string             `json:"deduct_ratio_main"`    // 主账户扣款比例0-100
+	DeductRatioGift    string             `json:"deduct_ratio_gift"`    // 赠送账户扣款比例0-100
+	PointsName         string             `json:"points_name"`          // 积分名称自定义
+	IsShoppingGift     string             `json:"is_shopping_gift"`     // 是否开启购物送积分
+	GiftRatio          string             `json:"gift_ratio"`           // 积分赠送比例
+	IsShoppingDiscount string             `json:"is_shopping_discount"` // 是否允许下单使用积分抵扣
+	Discount           DiscountItem       `json:"discount"`             // 积分抵扣
+	Describe           string             `json:"describe"`             // 充值说明
+	DeductOrder        string             `json:"deduct_order"`
+	OpenPointsExchange string             `json:"open_points_exchange"` // 是否开启积分抵扣，“1”开启，“0”关闭
+	PointsExchangeRate string             `json:"points_exchange_rate"` // 积分汇率，每积分抵扣的金额，可输入大于0的两位小数
+	AutoPointsExchange string             `json:"auto_points_exchange"` // 是否开启自动抵扣，“1”开启，“0”关闭
+	ShoppingGiftRules  []ShoppingGiftRule `json:"shopping_gift_rules"`  // 购物赠送积分规则
+	Exchange           PointsExchange     `json:"exchange"`             // 积分抵扣消费
+}
+
+const RuleTypePaymentAmount = "payment_amount" // 按付款金额比例赠送
+const RuleTypeDesk = "desk"                    // 按桌台人数赠送
+
+type ShoppingGiftRule struct {
+	Type                     string            `json:"type"`                       // 类型: payment_amount - 按付款金额比例赠送; desk - 按桌台人数赠送
+	IsOpen                   string            `json:"is_open"`                    // 是否开启: "1" - 开启; "0" - 关闭
+	IsMemberLevelRelated     string            `json:"is_member_level_related"`    // 是否按会员等级赠送: "1" - 是; "0" - 否
+	Value                    string            `json:"value"`                      // 积分比例、积分数量
+	PaymentAmountRequirement string            `json:"payment_amount_requirement"` // 付款金额要求
+	MealType                 []string          `json:"meal_type"`                  // 就餐类型: buffet - 自助餐; non-buffet - 非自助餐
+	BalancePaymentGetPoints  string            `json:"balance_payment_get_points"` // 会员余额支付是否赠送: "1" - 是; "0" - 否
+	RefundReturnPoints       string            `json:"refund_return_points"`       // 退款自动扣积分: "1" - 是; "0" - 否
+	MemberLevels             []MemberLevelItem `json:"member_levels"`              // 会员等级
+}
+
+type MemberLevelItem struct {
+	Uuid  uint64 `json:"uuid"`  // 会员等级Uuid
+	Name  string `json:"name"`  // 会员等级名称
+	Value string `json:"value"` // 积分比例/积分数量，在后台修改时，根据type去设置对应会员等级的points_rate或者points_quantity
+}
+
+type PointsExchange struct {
+	OpenPointsExchange string `json:"open_points_exchange"` // 会员积分抵扣订单金额
+	PointsExchangeRate string `json:"points_exchange_rate"` // 每积分抵扣应付金额
+	AutoPointsExchange string `json:"auto_points_exchange"` // 是否自动抵扣
 }
 
 // 解析扣款顺序
