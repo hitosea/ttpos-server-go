@@ -20,17 +20,18 @@ type IMemberRepo interface {
 
 	GetMember(opts ...DBOption) model.Member // 获取会员
 	GetMemberList(opts ...DBOption) ([]*model.Member, error)
-	GetMemberRecord(opts ...DBOption) (*model.Member, error)   // 获取会员
-	GetMemberByUuid(uuid uint64) (*model.Member, error)        // 根据uuid获取会员
-	GetMemberByPhone(phone string) (*model.Member, error)      // 根据手机号获取会员
-	GetMembersByUuids(uuids []uint64) ([]*model.Member, error) // 根据uuid列表获取会员列表
-	GetMemberLevels() []model.MemberLevel                      // 获取会员等级
-	GetCardTypes() []model.MemberCardType                      // 获取会员卡类型
-	GetCheckCardType(uuid uint64) model.MemberCardType         // 获取会员卡类型
-	GetMemberLevelsAllColumns() []model.MemberLevel            // 获取会员等级所有列
-	SearchMember(keyword string) []model.Member                // 关键字搜索会员
-	CheckMemberExists(phone string) bool                       // 根据手机号检查是否存在
-	CheckLevelExists(uuid uint64) bool                         // 根据Uuid检查等级是否存在
+	GetMemberRecord(opts ...DBOption) (*model.Member, error)            // 获取会员
+	GetMemberByUuid(uuid uint64) (*model.Member, error)                 // 根据uuid获取会员
+	GetMemberByReferrerUuid(referrerUuid uint64) (*model.Member, error) // 根据uuid获取会员
+	GetMemberByPhone(phone string) (*model.Member, error)               // 根据手机号获取会员
+	GetMembersByUuids(uuids []uint64) ([]*model.Member, error)          // 根据uuid列表获取会员列表
+	GetMemberLevels() []model.MemberLevel                               // 获取会员等级
+	GetCardTypes() []model.MemberCardType                               // 获取会员卡类型
+	GetCheckCardType(uuid uint64) model.MemberCardType                  // 获取会员卡类型
+	GetMemberLevelsAllColumns() []model.MemberLevel                     // 获取会员等级所有列
+	SearchMember(keyword string) []model.Member                         // 关键字搜索会员
+	CheckMemberExists(phone string) bool                                // 根据手机号检查是否存在
+	CheckLevelExists(uuid uint64) bool                                  // 根据Uuid检查等级是否存在
 
 	CreateMember(member *model.Member) error             // 添加会员
 	CreateMemberCard(memberCard *model.MemberCard) error // 给会员发卡
@@ -189,6 +190,15 @@ func (r *memberRepo) GetMemberByUuid(uuid uint64) (*model.Member, error) {
 	member, err := r.GetMemberRecord(r.WhereUuid(uuid))
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询会员失败", utils.NumToStr(uuid))
+	}
+	return member, nil
+}
+
+// GetMemberByReferrerUuid 根据推荐人uuid查询会员
+func (r *memberRepo) GetMemberByReferrerUuid(referrerUuid uint64) (*model.Member, error) {
+	member, err := r.GetMemberRecord(r.WhereUuid(referrerUuid))
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询会员失败", utils.NumToStr(referrerUuid))
 	}
 	return member, nil
 }

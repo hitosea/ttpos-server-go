@@ -3,7 +3,7 @@
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class CreateMarketingActivityTables extends Migrator
+class CreateMarketingActivityTable extends Migrator
 {
     public function change()
     {
