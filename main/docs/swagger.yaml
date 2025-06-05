@@ -625,6 +625,30 @@ definitions:
         description: 手机号
         type: string
     type: object
+  member_resp.CompanyInfoResp:
+    properties:
+      logo:
+        description: 公司logo
+        type: string
+      name:
+        description: 公司名称
+        type: string
+      uuid:
+        description: 公司UUID
+        type: integer
+    type: object
+  member_resp.MemberInfoResp:
+    properties:
+      nickname:
+        description: 会员昵称
+        type: string
+      phone:
+        description: 会员手机号
+        type: string
+      uuid:
+        description: 会员UUID
+        type: integer
+    type: object
   member_resp.MemberLoginInfoResp:
     properties:
       area_code:
@@ -638,6 +662,25 @@ definitions:
       company_uuid:
         description: 集团UUID
         type: integer
+      logo:
+        description: 集团logo
+        type: string
+    type: object
+  member_resp.MemberMarketingActivityListResp:
+    properties:
+      company:
+        allOf:
+        - $ref: '#/definitions/member_resp.CompanyInfoResp'
+        description: 公司信息
+      list:
+        description: 活动列表
+        items:
+          $ref: '#/definitions/member_resp.MemberMarketingActivityResp'
+        type: array
+      member_info:
+        allOf:
+        - $ref: '#/definitions/member_resp.MemberInfoResp'
+        description: 会员信息
     type: object
   member_resp.MemberMarketingActivityResp:
     properties:
@@ -14300,11 +14343,6 @@ paths:
       consumes:
       - application/json
       description: 获取营销活动
-      parameters:
-      - description: 集团ID
-        in: query
-        name: company_uuid
-        type: integer
       produces:
       - application/json
       responses:
@@ -14315,7 +14353,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/member_resp.MemberMarketingActivityResp'
+                  $ref: '#/definitions/member_resp.MemberMarketingActivityListResp'
               type: object
       summary: 获取营销活动
       tags:

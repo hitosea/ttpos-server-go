@@ -18,6 +18,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/sms"
+	"ttpos-server-go/pkg/utils"
 )
 
 const (
@@ -105,10 +106,14 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 	if companySetting.IsOpenMember != 1 {
 		return member_resp.MemberLoginInfoResp{}, errors.New("商家未开通会员功能")
 	}
+	if companySetting.IsOpenMarketing != 1 {
+		return member_resp.MemberLoginInfoResp{}, errors.New("二维码已失效")
+	}
 	// 返回
 	return member_resp.MemberLoginInfoResp{
 		CompanyUuid: req.CompanyUuid,
 		CompanyName: company.Name,
+		Logo:        utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.Copy().GetGin().Request), true),
 		AreaCode:    areaCodes,
 	}, nil
 }

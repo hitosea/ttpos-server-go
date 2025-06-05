@@ -48,6 +48,25 @@ class UpdateShopAccessAndRoleV220Table extends Migrator
             ['uuid' => 1731155720, 'name' => '发放记录', 'path' => '/marketing/activity/record', 'api_path' => '/marketing.activity/record', 'parent_uuid' => 1731155711, 'sort' => 2, 'is_route' => 1,  'is_menu' => 1, 'is_show' => 1, 'is_supplier' => 1,  'create_time' => time(), 'update_time' => time()],
         ];
         $this->updateOrInsertData('access', 'uuid', $shopAccessData);
+        // 店长角色
+        $manager = $db->name('role')->where('name', '=', 'Store Manager')->find();
+        if ($manager && isset($manager['uuid'])) {
+            $managerRoleData = [
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155608', 'create_time' => time()],
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155609', 'create_time' => time()],
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155610', 'create_time' => time()],
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155611', 'create_time' => time()],
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155612', 'create_time' => time()],
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155620', 'create_time' => time()],
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155710', 'create_time' => time()],
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155711', 'create_time' => time()],
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155712', 'create_time' => time()],
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155713', 'create_time' => time()],
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155714', 'create_time' => time()],
+                ['uuid' => createUuid(), 'role_uuid' => $manager['uuid'], 'access_uuid' => '1731155720', 'create_time' => time()],
+            ];
+            $this->updateOrInsertData('role_access', ['role_uuid', 'access_uuid'], $managerRoleData);
+        }
     }
 
     /**

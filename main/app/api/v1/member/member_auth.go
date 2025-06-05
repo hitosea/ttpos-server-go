@@ -35,7 +35,7 @@ func (h *AuthHandler) LoginInfo(c *gin.Context) {
 	}
 	loginResp, err := h.loginSrv.GetLoginInfo(ctx, loginReq)
 	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeLoginFailed, err)
+		helper.ErrorWithDetail(c, constant.CodeUnauthorized, err)
 		return
 	}
 	helper.Success(c, loginResp)

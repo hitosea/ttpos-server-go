@@ -4,9 +4,10 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/base64"
+	"encoding/base32"
 	"fmt"
 	"io"
+	"strings"
 )
 
 var aesSecretKey = []byte("TTPOS-HITOSEA-SECRET-KEY-HERE!!!")
@@ -30,14 +31,26 @@ func EncryptAesString(text string) (string, error) {
 	}
 	// 加密
 	ciphertext := aesGCM.Seal(nonce, nonce, []byte(text), nil)
-	// 返回base64编码的密文
-	return base64.StdEncoding.EncodeToString(ciphertext), nil
+	// 使用Base32编码并转为小写
+	encoded := base32.StdEncoding.EncodeToString(ciphertext)
+	// 移除填充字符
+	encoded = strings.TrimRight(encoded, "=")
+	return strings.ToLower(encoded), nil
 }
 
 // DecryptAesString 解密字符串
 func DecryptAesString(cryptoText string) (string, error) {
-	// 解码base64
-	ciphertext, err := base64.StdEncoding.DecodeString(cryptoText)
+	// 将小写转回大写
+	cryptoText = strings.ToUpper(cryptoText)
+
+	// 添加必要的填充
+	padding := len(cryptoText) % 8
+	if padding > 0 {
+		cryptoText += strings.Repeat("=", 8-padding)
+	}
+
+	// 解码base32
+	ciphertext, err := base32.StdEncoding.DecodeString(cryptoText)
 	if err != nil {
 		return "", err
 	}

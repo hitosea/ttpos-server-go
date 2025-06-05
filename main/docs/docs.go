@@ -13830,14 +13830,6 @@ const docTemplate = `{
                     "会员端.营销活动"
                 ],
                 "summary": "获取营销活动",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "集团ID",
-                        "name": "company_uuid",
-                        "in": "query"
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -13850,7 +13842,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/member_resp.MemberMarketingActivityResp"
+                                            "$ref": "#/definitions/member_resp.MemberMarketingActivityListResp"
                                         }
                                     }
                                 }
@@ -17290,6 +17282,40 @@ const docTemplate = `{
                 }
             }
         },
+        "member_resp.CompanyInfoResp": {
+            "type": "object",
+            "properties": {
+                "logo": {
+                    "description": "公司logo",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "公司名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "公司UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "member_resp.MemberInfoResp": {
+            "type": "object",
+            "properties": {
+                "nickname": {
+                    "description": "会员昵称",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "会员手机号",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "会员UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "member_resp.MemberLoginInfoResp": {
             "type": "object",
             "properties": {
@@ -17307,6 +17333,38 @@ const docTemplate = `{
                 "company_uuid": {
                     "description": "集团UUID",
                     "type": "integer"
+                },
+                "logo": {
+                    "description": "集团logo",
+                    "type": "string"
+                }
+            }
+        },
+        "member_resp.MemberMarketingActivityListResp": {
+            "type": "object",
+            "properties": {
+                "company": {
+                    "description": "公司信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/member_resp.CompanyInfoResp"
+                        }
+                    ]
+                },
+                "list": {
+                    "description": "活动列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/member_resp.MemberMarketingActivityResp"
+                    }
+                },
+                "member_info": {
+                    "description": "会员信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/member_resp.MemberInfoResp"
+                        }
+                    ]
                 }
             }
         },

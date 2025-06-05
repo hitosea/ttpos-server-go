@@ -40,6 +40,8 @@ type CompanySetting struct {
 	LinkName         string `gorm:"column:link_name;type:varchar(50);comment:联系人;NOT NULL" json:"link_name"`
 	LinkPhone        string `gorm:"column:link_phone;type:varchar(25);comment:联系电话;NOT NULL" json:"link_phone"`
 	SaleStock        int    `gorm:"column:sale_stock;type:int(11);default:0;comment:进销存: 0不开启, 1开启;NOT NULL" json:"sale_stock"`
+	IsOpenCoupon     int    `gorm:"column:is_open_coupon;type:int(11);default:0;comment:是否开启优惠券: 0不开启, 1开启;NOT NULL" json:"is_open_coupon"`
+	IsOpenMarketing  int    `gorm:"column:is_open_marketing;type:int(11);default:0;comment:是否开启营销: 0不开启, 1开启;NOT NULL" json:"is_open_marketing"`
 	IsOpenMember     int    `gorm:"column:is_open_member;type:int(11);default:0;comment:是否开启会员: 0不开启, 1开启;NOT NULL" json:"is_open_member"`
 	IsOpenTablet     int    `gorm:"column:is_open_tablet;type:int(11);default:0;comment:是否开启平板: 0不开启, 1开启;NOT NULL" json:"is_open_tablet"`
 	IsOpenH5         int    `gorm:"column:is_open_h5;type:int(11);default:0;comment:是否开启扫码H5: 0不开启, 1开启;NOT NULL" json:"is_open_scan"`

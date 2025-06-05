@@ -62,6 +62,11 @@
               <span v-else>{{ scope.row.card?.card_name }}</span>
             </template>
           </el-table-column>
+          <el-table-column prop="member_card_no" :label="$t('会员卡号')">
+            <template #default="scope">
+              {{ scope.row.member_card_no || '-' }}
+            </template>
+          </el-table-column>
           <el-table-column prop="" :label="$t('会员等级')">
             <template #default="scope">
               <span v-if="scope.row.grade_id == 0">{{ $t('无等级') }}</span>
