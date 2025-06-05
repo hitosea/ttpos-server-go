@@ -652,7 +652,7 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
 		if errors.Is(err, errors.ErrProductPriceChanged) {
-			helper.ErrorWithData(c, constant.CodeOrderCheckProductPriceChanged, res, errors.New(i18n.Translate(ctx.GetLanguage(), err.Error())))
+			helper.ErrorWithData(c, constant.CodeOrderCheckProductPriceChanged, res, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), err.Error())))
 			return
 		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
