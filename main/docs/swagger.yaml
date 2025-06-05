@@ -1367,6 +1367,9 @@ definitions:
       operation:
         description: '操作类型。add: 加购，sub: 减购. 不填，默认是加购'
         type: string
+      price:
+        description: 商品价格。可选，当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格
+        type: number
       sale_bill_uuid:
         description: 销售账单ID。可选，参数不填时表示要新建销售账单，添加商品后创建点餐销售账单。
         type: integer
@@ -2733,12 +2736,16 @@ definitions:
   resp.DecryptQrCodeResp:
     properties:
       activity_uuid:
+        description: 活动uuid
         type: integer
       nickname:
+        description: 会员昵称
         type: string
       phone:
+        description: 会员手机号
         type: string
       uuid:
+        description: 会员uuid
         type: integer
     type: object
   resp.Desk:
@@ -5278,10 +5285,17 @@ definitions:
       is_lock:
         description: 购物车是否锁定 true:锁定 false:未锁定
         type: boolean
+      message:
+        description: 提示信息。 当加购商品时商品价格变化时，返回提示信息
+        type: string
       must_plans:
         allOf:
         - $ref: '#/definitions/resp.ProductMustPlanList'
         description: 必点方案列表信息
+      product:
+        allOf:
+        - $ref: '#/definitions/product_resp.Product'
+        description: 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
       sale_bill_uuid:
         description: 销售账单ID
         type: integer
@@ -11638,7 +11652,7 @@ paths:
       - JwtToken: []
       summary: 取消订单
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/delete:
     delete:
       consumes:
@@ -11662,7 +11676,7 @@ paths:
       - JwtToken: []
       summary: 删除订单
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/info:
     get:
       consumes:
@@ -11690,7 +11704,7 @@ paths:
       - JwtToken: []
       summary: 获取订单详情
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/invoice:
     get:
       consumes:
@@ -11723,7 +11737,7 @@ paths:
       - JwtToken: []
       summary: 获取发票信息
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/print:
     post:
       consumes:
@@ -11752,7 +11766,7 @@ paths:
       - JwtToken: []
       summary: 打印小票
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/print/invoice:
     post:
       consumes:
@@ -11781,7 +11795,7 @@ paths:
       - JwtToken: []
       summary: 打印发票
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/return:
     post:
       consumes:
@@ -11805,7 +11819,7 @@ paths:
       - JwtToken: []
       summary: 退款订单
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/open_cash_box_printer_config:
     get:
       consumes:
@@ -12094,7 +12108,7 @@ paths:
       - JwtToken: []
       summary: 获取订单列表
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/order/print:
     post:
       consumes:
@@ -12209,7 +12223,7 @@ paths:
       - JwtToken: []
       summary: 获取退款信息
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
     post:
       consumes:
       - application/json
