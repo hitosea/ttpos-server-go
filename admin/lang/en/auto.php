@@ -516,7 +516,7 @@ return [
     "请设置生日" => "Please set birthday",
     "文章不存在" => "Article does not exist",
     "门店不一致" => "Stores are inconsistent",
-    "活动不存在" => "Activity does not exist",
+    "活动不存在" => "Event does not exist",
     "卓位不存在" => "Zhuo position does not exist",
     "支付宝收入" => "Alipay revenue",
     "订单已结束" => "Order ended",
