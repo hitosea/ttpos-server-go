@@ -378,40 +378,19 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 				continue
 			}
 
-			// 查询是否存在记录
-			consumption, err := repository.NewMarketingActivityConsumptionRepo(db).GetByActivityAndReferrerAndConsumer(
-				activity.Uuid,
-				saleOrder.Member.ReferrerUuid,
-				saleOrder.ConsumerUuid,
-			)
-			if err != nil {
-				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetByActivityAndReferrerAndConsumer failed", zap.Any("activityUuid", saleOrder.Member.ActivityUuid), zap.Error(err))
-				continue
-			}
-			if consumption != nil {
-				// 存在则更新金额
-				err = repository.NewMarketingActivityConsumptionRepo(db).UpdateAmount(
-					consumption.Uuid,
+			// 发送奖励一
+			{
+				// 记录消费金额
+				err = repository.NewMarketingActivityConsumptionRepo(db).CreateOrUpdateConsumption(
+					activity.Uuid,
+					saleOrder.Member.ReferrerUuid,
+					saleOrder.ConsumerUuid,
 					saleOrder.PaymentAmount,
 				)
 				if err != nil {
-					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, UpdateAmount failed", zap.Any("consumption", consumption), zap.Error(err))
-				}
-			} else {
-				// 不存在则新增
-				err = repository.NewMarketingActivityConsumptionRepo(db).CreateConsumption(&model.MarketingActivityConsumption{
-					ActivityUuid:      activity.Uuid,
-					ReferrerUuid:      saleOrder.Member.ReferrerUuid,
-					ConsumerUuid:      saleOrder.ConsumerUuid,
-					ConsumptionAmount: saleOrder.PaymentAmount,
-				})
-				if err != nil {
 					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
 				}
-			}
-
-			// 发放奖励
-			{
+				// 发放奖励
 				activitySendReward := repository.NewMarketingActivityRepo(db).SendReward(activity.Uuid, saleOrder.Member.ReferrerUuid)
 				if activitySendReward != nil {
 					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
@@ -422,12 +401,25 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 			{
 				referrer, err := repository.NewMemberRepo(db).GetMemberByReferrerUuid(saleOrder.Member.ReferrerUuid)
 				if err != nil {
+					fmt.Println(err)
 					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetMemberByReferrerUuid failed", zap.Any("referrerUuid", saleOrder.Member.ReferrerUuid), zap.Error(err))
 					continue
 				}
 				if referrer.IsExistActivityAndReferrer() {
-					activitySendReward := repository.NewMarketingActivityRepo(db).SendReward(referrer.ActivityUuid, referrer.ReferrerUuid)
-					if activitySendReward != nil {
+					// 记录消费金额
+					err = repository.NewMarketingActivityConsumptionRepo(db).CreateOrUpdateConsumption(
+						referrer.ActivityUuid,
+						referrer.ReferrerUuid,
+						saleOrder.ConsumerUuid,
+						saleOrder.PaymentAmount,
+					)
+					if err != nil {
+						logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
+					}
+					// 发放奖励
+					err = repository.NewMarketingActivityRepo(db).SendReward(referrer.ActivityUuid, referrer.ReferrerUuid)
+					if err != nil {
+						fmt.Println(err)
 						logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
 					}
 				}

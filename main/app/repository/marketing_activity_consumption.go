@@ -2,13 +2,17 @@ package repository
 
 import (
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/logger"
 
+	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type IMarketingActivityConsumptionRepo interface {
 	// CreateConsumption 创建消费记录
 	CreateConsumption(consumption *model.MarketingActivityConsumption) error
+	// 创建与更新记录
+	CreateOrUpdateConsumption(activityUuid, referrerUuid, consumerUuid uint64, amount float64) error
 	// GetByActivityAndReferrer 根据活动ID、推荐人ID获取消费记录
 	GetByActivityAndReferrer(activityUuid, referrerUuid uint64) (*model.MarketingActivityConsumption, error)
 	// GetByActivityAndReferrerAndConsumer 根据活动ID、推荐人ID和消费者ID获取消费记录
@@ -36,6 +40,44 @@ func NewMarketingActivityConsumptionRepo(db *gorm.DB) IMarketingActivityConsumpt
 // CreateConsumption 创建消费记录
 func (r *MarketingActivityConsumptionRepo) CreateConsumption(consumption *model.MarketingActivityConsumption) error {
 	err := r.db.Create(consumption).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// CreateOrUpdateConsumption 创建与更新记录
+func (r *MarketingActivityConsumptionRepo) CreateOrUpdateConsumption(activityUuid, referrerUuid, consumerUuid uint64, amount float64) error {
+	// 查询是否存在记录
+	consumption, err := r.GetByActivityAndReferrerAndConsumer(
+		activityUuid,
+		referrerUuid,
+		consumerUuid,
+	)
+	if err != nil {
+		return err
+	}
+	if consumption != nil {
+		// 存在则更新金额
+		err = r.UpdateAmount(
+			consumption.Uuid,
+			amount,
+		)
+		if err != nil {
+			logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, UpdateAmount failed", zap.Any("consumption", consumption), zap.Error(err))
+		}
+	} else {
+		// 不存在则新增
+		err = r.CreateConsumption(&model.MarketingActivityConsumption{
+			ActivityUuid:      activityUuid,
+			ReferrerUuid:      referrerUuid,
+			ConsumerUuid:      consumerUuid,
+			ConsumptionAmount: amount,
+		})
+		if err != nil {
+			logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("activityUuid", activityUuid), zap.Any("referrerUuid", referrerUuid), zap.Any("consumerUuid", consumerUuid), zap.Error(err))
+		}
+	}
 	if err != nil {
 		return err
 	}

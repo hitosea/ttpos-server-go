@@ -58,7 +58,7 @@ func (r *MarketingActivityRepo) GetActivity(uuid uint64) (*model.MarketingActivi
 // GetActivityAndPrizes 获取营销活动与奖励
 func (r *MarketingActivityRepo) GetActivityAndPrizes(uuid uint64) (*model.MarketingActivity, error) {
 	var activity model.MarketingActivity
-	err := r.db.Where("uuid = ? AND delete_time = ?", uuid, 0).Preload("Prizes").First(&activity).Error
+	err := r.db.Where("uuid = ? AND delete_time = ?", uuid, 0).Preload("Prizes.Coupon").First(&activity).Error
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +103,15 @@ func (r *MarketingActivityRepo) GenerateQrCode(params *QrCodeParams) (string, er
 	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(qr), nil
 }
 
+// 计算奖励次数
+func (r *MarketingActivityRepo) calculateRewardCount(consumptionAmount, rewardConditionAmount float64) int {
+	if rewardConditionAmount <= 0 {
+		return 0
+	}
+	// 向下取整，确保不会超过实际消费金额对应的奖励次数
+	return int(consumptionAmount / rewardConditionAmount)
+}
+
 // SendReward 发放奖励
 func (r *MarketingActivityRepo) SendReward(activityUuid, memberUuid uint64) error {
 	// 获取活动信息
@@ -119,17 +128,13 @@ func (r *MarketingActivityRepo) SendReward(activityUuid, memberUuid uint64) erro
 		return fmt.Errorf("activity is invalid")
 	}
 
-	// 检查是否开启奖励次数限制
-	if activity.IsOpenRewardLimit == 1 {
-		// 获取会员的奖励记录
-		rewardCount, err := NewMarketingActivityRecordRepo(r.db).GetRewardCount(activityUuid, memberUuid)
-		if err != nil {
-			return err
-		}
-		// 如果已经达到奖励次数限制，则不再发放奖励
-		if rewardCount >= activity.RewardLimit {
-			return fmt.Errorf("reward limit reached")
-		}
+	// 检查是否开启奖励次数限制, 如果已经达到奖励次数限制，则不再发放奖励
+	rewardCount, err := NewMarketingActivityRecordRepo(r.db).GetRewardCount(activityUuid, memberUuid)
+	if err != nil {
+		return err
+	}
+	if activity.IsOpenRewardLimit == 1 && rewardCount >= activity.RewardLimit {
+		return fmt.Errorf("reward limit reached")
 	}
 
 	// 获取推荐人的总消费金额
@@ -138,34 +143,52 @@ func (r *MarketingActivityRepo) SendReward(activityUuid, memberUuid uint64) erro
 		return err
 	}
 
-	// 检查是否达到奖励条件金额
-	if consumptionAmount < activity.RewardConditionAmount {
-		return fmt.Errorf("consumption amount not reached")
+	// 计算应该发放的奖励次数
+	rewardCountToGive := r.calculateRewardCount(consumptionAmount, activity.RewardConditionAmount) - int(rewardCount)
+	if rewardCountToGive <= 0 {
+		return fmt.Errorf("no reward to give")
 	}
 
-	// 发放奖励
-	record := &model.MarketingActivityRecord{
-		ActivityUuid:   activityUuid,
-		MemberUuid:     memberUuid,
-		RewardCount:    1,
-		LastRewardTime: time.Now().Unix(),
+	// 发放优惠券
+	marketingCoupon := &model.MarketingCoupon{}
+	if len(activity.Prizes) > 0 && activity.Prizes[0] != nil && activity.Prizes[0].Coupon != nil {
+		marketingCoupon = activity.Prizes[0].Coupon
 	}
 
-	// 如果有奖品，则设置奖品ID
-	if len(activity.Prizes) > 0 {
-		record.PrizeUuid = activity.Prizes[0].PrizeUuid
-	}
+	// 循环发放多次奖励
+	for i := 0; i < rewardCountToGive; i++ {
+		// 创建奖励记录
+		err = NewMarketingActivityRecordRepo(r.db).CreateRecord(&model.MarketingActivityRecord{
+			ActivityUuid:   activityUuid,
+			MemberUuid:     memberUuid,
+			RewardCount:    1,
+			LastRewardTime: time.Now().Unix(),
+			PrizeUuid: func() uint64 {
+				if len(activity.Prizes) > 0 && activity.Prizes[0] != nil {
+					return activity.Prizes[0].PrizeUuid
+				}
+				return 0
+			}(),
+		})
+		if err != nil {
+			return err
+		}
 
-	// 创建奖励记录
-	err = NewMarketingActivityRecordRepo(r.db).CreateRecord(record)
-	if err != nil {
-		return err
-	}
-
-	// 更新消费记录的奖励状态
-	err = NewMarketingActivityConsumptionRepo(r.db).UpdateRewardStatus(activityUuid, memberUuid)
-	if err != nil {
-		return err
+		// 只有当优惠券存在时才创建会员优惠券
+		if marketingCoupon != nil && marketingCoupon.Uuid != 0 {
+			err = NewMemberCouponRepo(r.db).CreateMemberCoupon(&model.MemberCoupon{
+				MemberUuid: memberUuid,
+				Type:       1,
+				Status:     0,
+				CouponUuid: marketingCoupon.Uuid,
+				Amount:     marketingCoupon.Amount,
+				StartTime:  time.Now().Unix(),
+				EndTime:    time.Now().AddDate(0, 0, marketingCoupon.ValidityPeriod).Unix(),
+			})
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

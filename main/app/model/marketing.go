@@ -2,6 +2,13 @@ package model
 
 import "time"
 
+type MarketingCoupon struct {
+	BaseModel
+	Uuid           uint64  `gorm:"column:uuid;type:biginteger;default:0;comment:优惠券唯一ID" json:"uuid"`
+	Amount         float64 `gorm:"column:amount;type:decimal(14,2);default:0;comment:优惠券金额" json:"amount"`
+	ValidityPeriod int     `gorm:"column:validity_period;type:int;default:0;comment:活动奖励后N个自然日内有效" json:"validity_period"`
+}
+
 // MarketingActivity 营销活动模型
 type MarketingActivity struct {
 	BaseModel
@@ -31,13 +38,14 @@ func (m *MarketingActivity) IsValid() bool {
 
 // MarketingActivityPrize 营销活动奖品模型
 type MarketingActivityPrize struct {
-	Uuid         uint64 `gorm:"column:uuid;type:biginteger;default:0;comment:礼品唯一ID" json:"uuid"`
-	ActivityUuid uint64 `gorm:"column:activity_uuid;type:biginteger;default:0;comment:活动uuid" json:"activity_uuid"`
-	PrizeType    int    `gorm:"column:prize_type;type:tinyint(1);default:0;comment:奖品类型 1优惠券 2未知" json:"prize_type"`
-	PrizeUuid    uint64 `gorm:"column:prize_uuid;type:biginteger;default:0;comment:奖品uuid" json:"prize_uuid"`
-	CreateTime   int    `gorm:"column:create_time;type:int;default:0;comment:创建时间" json:"create_time"`
-	UpdateTime   int    `gorm:"column:update_time;type:int;default:0;comment:更新时间" json:"update_time"`
-	DeleteTime   int    `gorm:"column:delete_time;type:int;default:0;comment:删除时间" json:"delete_time"`
+	Uuid         uint64           `gorm:"column:uuid;type:biginteger;default:0;comment:礼品唯一ID" json:"uuid"`
+	ActivityUuid uint64           `gorm:"column:activity_uuid;type:biginteger;default:0;comment:活动uuid" json:"activity_uuid"`
+	PrizeType    int              `gorm:"column:prize_type;type:tinyint(1);default:0;comment:奖品类型 1优惠券 2未知" json:"prize_type"`
+	PrizeUuid    uint64           `gorm:"column:prize_uuid;type:biginteger;default:0;comment:奖品uuid" json:"prize_uuid"`
+	CreateTime   int              `gorm:"column:create_time;type:int;default:0;comment:创建时间" json:"create_time"`
+	UpdateTime   int              `gorm:"column:update_time;type:int;default:0;comment:更新时间" json:"update_time"`
+	DeleteTime   int              `gorm:"column:delete_time;type:int;default:0;comment:删除时间" json:"delete_time"`
+	Coupon       *MarketingCoupon `gorm:"foreignKey:Uuid;references:PrizeUuid" json:"coupon"`
 }
 
 // MarketingActivityRecord 营销活动记录模型
