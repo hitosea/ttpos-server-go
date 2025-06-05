@@ -106,6 +106,9 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 	if companySetting.IsOpenMember != 1 {
 		return member_resp.MemberLoginInfoResp{}, errors.New("商家未开通会员功能")
 	}
+	if companySetting.IsOpenMarketing != 1 {
+		return member_resp.MemberLoginInfoResp{}, errors.New("二维码已失效")
+	}
 	// 返回
 	return member_resp.MemberLoginInfoResp{
 		CompanyUuid: req.CompanyUuid,
