@@ -8,6 +8,8 @@ use app\common\enum\user\grade\ChangeTypeEnum;
 use app\common\model\user\Grade as GradeModel;
 use app\shop\model\user\GradeLog as GradeLogModel;
 use app\shop\model\user\PointsLog as PointsLogModel;
+use app\shop\model\user\Card as CardModel;
+use app\shop\model\user\CardRecord as CardRecordModel;
 use app\common\enum\user\pointsLog\PointsLogSceneEnum;
 use app\shop\model\user\BalanceLog as BalanceLogModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum as SceneEnum;
@@ -146,6 +148,8 @@ class User extends UserModel
         $gender = $data['gender'] ?? null;
         $gradeId = $data['grade_id'] ?? GradeModel::getDefaultGradeId();
         $birthday = $data['birthday'] ?? null;
+        $cardUuid = $data['card_uuid'] ?? '';
+        $cardNumber = $data['card_number'] ?? '';
 
         if (!$nickName || !$mobile) {
             $this->error = !$nickName ? '昵称不能为空' : '手机号不能为空';
@@ -162,23 +166,57 @@ class User extends UserModel
             $this->error = '密码必须为4-16位纯数字';
             return false;
         }
+        if (!$cardUuid && $cardNumber) {
+            $this->error = '请选择会员卡';
+            return false;
+        }
 
+        // 检查会员是否已存在
         $user = $this->where('phone', '=', $mobile)->find();
-
         if ($user) {
             $this->error = '会员已存在';
             return false;
         }
 
-        return $this->save([
-            'uuid' => createUuid(),
-            'nickname' => $nickName,
-            'phone' => $mobile,
-            'password' => $password ? md5($password) : '',
-            'gender' => $gender, //性别
-            'member_level_uuid' => $gradeId, //默认等级
-            'birthday' => $birthday ? strtotime($birthday) : 0, //生日
-        ]);
+        // 检查会员卡是否存在
+        $card = null;
+        if ($cardUuid) {
+            $card = CardModel::detail($cardUuid);
+            if (!$card) {
+                $this->error = '会员卡不存在';
+                return false;
+            }
+        }
+
+        return $this->transaction(function () use ($nickName, $mobile, $password, $gender, $gradeId, $birthday, $card, $cardNumber) {
+            $userUuid = createUuid();
+            $user = $this->save([
+                'uuid' => $userUuid,
+                'nickname' => $nickName,
+                'phone' => $mobile,
+                'password' => $password ? md5($password) : '',
+                'gender' => $gender, //性别
+                'member_level_uuid' => $gradeId, //默认等级
+                'birthday' => $birthday ? strtotime($birthday) : 0, //生日
+            ]);
+            if (!$user) {
+                return false;
+            }
+            if ($card) {
+                $model = new CardModel();
+                $result = $model->put([
+                    'card_id' => $card['uuid'],
+                    'user_ids' => [
+                        [ 'uuid' => $userUuid, 'card_number' => $cardNumber ]
+                    ],
+                ]);
+                if (!$result) {
+                    $this->error = $model->getError();
+                    return false;
+                }
+            }
+            return true;
+        });
     }
 
     /**
