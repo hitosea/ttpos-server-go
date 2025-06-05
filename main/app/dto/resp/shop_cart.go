@@ -21,7 +21,6 @@ type ShopCart struct {
 	UpdateTime    int64                `json:"update_time"`          // 更新时间
 
 	Product *product_resp.Product `json:"product,omitempty"` // 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
-	Message string                `json:"message,omitempty"` // 提示信息。 当加购商品时商品价格变化时，返回提示信息
 }
 
 // H5CartSendProduct 扫码h5购物车已下单品

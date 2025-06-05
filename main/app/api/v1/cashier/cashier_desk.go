@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -650,6 +651,10 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 	// 添加商品。 若没有点餐账单则新建一个
 	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
+		if errors.Is(err, errors.ErrProductPriceChanged) {
+			helper.ErrorWithData(c, constant.CodeOrderCheckProductPriceChanged, res, errors.New(i18n.Translate(ctx.GetLanguage(), err.Error())))
+			return
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
