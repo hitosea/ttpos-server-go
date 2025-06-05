@@ -1,33 +1,40 @@
 <template>
   <el-dialog :title="$t('查看发放记录')" v-model="dialogVisible" @close="handleClose" :close-on-click-modal="false" :close-on-press-escape="false">
-    <div class="record-dialog-wrapper">
-      <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
-        <el-form-item :label="$t('活动名称')">
-          <el-input v-model="formInline.card_name" :placeholder="$t('请输入活动名称')" @input="onSearch"></el-input>
-        </el-form-item>
-        <el-form-item>
-          <el-button size="small" type="primary" icon="Search" class="search-button" @click="onSearch">
-            {{ $t('查询') }}
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </div>
-    <el-table :data="tableData" style="width: 100%">
-      <el-table-column prop="nickname" :label="$t('发放对象')" />
-      <el-table-column prop="last_reward_time" :label="$t('发放时间')" />
-    </el-table>
-    <!--分页-->
-    <div class="pagination">
-      <el-pagination
-        @size-change="handleSizeChange"
-        @current-change="handleCurrentChange"
-        background
-        :current-page="curPage"
-        :page-size="pageSize"
-        layout="total, prev, pager, next, jumper"
-        :total="totalDataNumber"
-      >
-      </el-pagination>
+    <div>
+      <div class="record-dialog-wrapper">
+        <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
+          <el-form-item :label="$t('活动名称')">
+            <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/ID')" @input="onSearch"></el-input>
+          </el-form-item>
+          <el-form-item>
+            <el-button size="small" type="primary" icon="Search" class="search-button" @click="onSearch">
+              {{ $t('查询') }}
+            </el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+      <el-table :data="tableData" style="width: 100%">
+        <el-table-column prop="nickname" :label="$t('发放对象')">
+          <template #default="scope">
+            <span>{{ scope.row.nickname }}</span>
+            <span>({{ scope.row.member_uuid }})</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="last_reward_time" :label="$t('发放时间')" />
+      </el-table>
+      <!--分页-->
+      <div class="pagination">
+        <el-pagination
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          background
+          :current-page="curPage"
+          :page-size="pageSize"
+          layout="total, prev, pager, next, jumper"
+          :total="totalDataNumber"
+          :loading="loading"
+        ></el-pagination>
+      </div>
     </div>
   </el-dialog>
 </template>
@@ -60,13 +67,14 @@
   const searchLoading = ref();
 
   const getTableList = async () => {
-    const res = await MarketingApi.activityRecord({
-      activity_uuid: props.recordUuid,
-      keyword: formInline.value.keyword,
-      page: curPage.value,
-      list_rows: pageSize.value,
-    });
     try {
+      loading.value = true;
+      const res = await MarketingApi.activityRecord({
+        activity_uuid: props.recordUuid,
+        keyword: formInline.value.keyword,
+        page: curPage.value,
+        list_rows: pageSize.value,
+      });
       tableData.value = res.data.list.data;
       totalDataNumber.value = res.data.list.total;
     } catch (error) {
@@ -76,13 +84,23 @@
     }
   };
 
-  const handleSizeChange = (size) => {
-    pageSize.value = size;
+  /*选择第几页*/
+  const handleCurrentChange = (val) => {
+    if (curPage.value === val) {
+      return;
+    }
+    console.log(val);
+
+    curPage.value = val;
     getTableList();
   };
 
-  const handleCurrentChange = (page) => {
-    curPage.value = page;
+  /*每页多少条*/
+  const handleSizeChange = (val) => {
+    console.log(13213213213123);
+
+    curPage.value = 1;
+    pageSize.value = val;
     getTableList();
   };
 
