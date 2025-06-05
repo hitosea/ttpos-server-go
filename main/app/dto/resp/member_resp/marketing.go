@@ -14,7 +14,14 @@ type MemberInfoResp struct {
 	Phone    string `json:"phone"`    // 会员手机号
 }
 
+type CompanyInfoResp struct {
+	Uuid uint64 `json:"uuid"` // 公司UUID
+	Name string `json:"name"` // 公司名称
+	Logo string `json:"logo"` // 公司logo
+}
+
 type MemberMarketingActivityListResp struct {
 	List       []MemberMarketingActivityResp `json:"list"`        // 活动列表
 	MemberInfo MemberInfoResp                `json:"member_info"` // 会员信息
+	Company    CompanyInfoResp               `json:"company"`     // 公司信息
 }

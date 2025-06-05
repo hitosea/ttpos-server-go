@@ -18,6 +18,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/sms"
+	"ttpos-server-go/pkg/utils"
 )
 
 const (
@@ -109,6 +110,7 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 	return member_resp.MemberLoginInfoResp{
 		CompanyUuid: req.CompanyUuid,
 		CompanyName: company.Name,
+		Logo:        utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.Copy().GetGin().Request), true),
 		AreaCode:    areaCodes,
 	}, nil
 }

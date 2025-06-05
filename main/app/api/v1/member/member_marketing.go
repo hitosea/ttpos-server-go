@@ -3,7 +3,6 @@ package member
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -24,17 +23,11 @@ type MarketingHandler struct {
 // @Tags 会员端.营销活动
 // @Accept json
 // @Produce json
-// @param data query member_req.MemberMarketingActivityReq true "详情参数"
-// @Success 200 {object} dto.Response{data=member_resp.MemberMarketingActivityResp}
+// @Success 200 {object} dto.Response{data=member_resp.MemberMarketingActivityListResp}
 // @Router /member/marketing_activity [get]
 func (h *MarketingHandler) MarketingActivity(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	marketingActivityReq := member_req.MemberMarketingActivityReq{}
-	if err := c.ShouldBindQuery(&marketingActivityReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
-		return
-	}
-	marketingActivityResp, err := h.marketingActivitySrv.MarketingActivity(ctx, marketingActivityReq)
+	marketingActivityResp, err := h.marketingActivitySrv.MarketingActivity(ctx)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return

@@ -3,7 +3,6 @@ package service
 import (
 	"encoding/json"
 	"ttpos-server-go/app/dto/req"
-	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/member_resp"
 	"ttpos-server-go/app/errors"
@@ -12,11 +11,12 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/encrypt"
+	"ttpos-server-go/pkg/utils"
 )
 
 type IMarketingActivitySrv interface {
-	MarketingActivity(ctx context.Context, req member_req.MemberMarketingActivityReq) (*member_resp.MemberMarketingActivityListResp, error) // 获取营销活动
-	DecryptQrCode(ctx context.Context, req req.DecryptQrCodeReq) (*resp.DecryptQrCodeResp, error)                                           // 解密活动二维码
+	MarketingActivity(ctx context.Context) (*member_resp.MemberMarketingActivityListResp, error)  // 获取营销活动
+	DecryptQrCode(ctx context.Context, req req.DecryptQrCodeReq) (*resp.DecryptQrCodeResp, error) // 解密活动二维码
 }
 
 type marketingActivitySrv struct {
@@ -42,8 +42,9 @@ func NewMarketingActivitySrvImpl(
 }
 
 // MarketingActivity 获取营销活动
-func (s *marketingActivitySrv) MarketingActivity(ctx context.Context, req member_req.MemberMarketingActivityReq) (*member_resp.MemberMarketingActivityListResp, error) {
+func (s *marketingActivitySrv) MarketingActivity(ctx context.Context) (*member_resp.MemberMarketingActivityListResp, error) {
 	member := ctx.GetMember()
+	company := ctx.GetCompany()
 	// 获取营销活动列表
 	marketingActivityRepo := repository.NewMarketingActivityRepo(ctx.GetDB())
 	marketingActivityList, err := marketingActivityRepo.GetActivityListByNow()
@@ -55,7 +56,7 @@ func (s *marketingActivitySrv) MarketingActivity(ctx context.Context, req member
 	for _, marketingActivity := range marketingActivityList {
 		qrCode, err := marketingActivityRepo.GenerateQrCode(&repository.QrCodeParams{
 			Type:         uint64(marketingActivity.Type),
-			CompanyUuid:  req.CompanyUuid,
+			CompanyUuid:  company.Uuid,
 			MemberUuid:   member.Uuid,
 			ActivityUuid: marketingActivity.Uuid,
 		})
@@ -77,6 +78,11 @@ func (s *marketingActivitySrv) MarketingActivity(ctx context.Context, req member
 			Uuid:     member.Uuid,
 			Nickname: member.Nickname,
 			Phone:    member.Phone,
+		},
+		Company: member_resp.CompanyInfoResp{
+			Uuid: company.Uuid,
+			Name: company.Name,
+			Logo: utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.Copy().GetGin().Request), true),
 		},
 	}, nil
 }
