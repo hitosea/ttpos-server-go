@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/config"
@@ -587,16 +588,16 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		printer.LineFeed()
 		printer.SetLineSpacing(90)
 		printer.AppendText("------------------------------------------------\n")
-		// 获取商家当前的积分赠送比例
-		var giftRatio float64 = 0
+		// 获取订单的积分发放规则
+		var rule settingResp.PointsRule
 		if !saleOrder.IsPaid() {
 			pointsSetting, err := t.base.Setting.GetPointsSetting(t.base.Ctx)
 			if err == nil {
-				giftRatio = pointsSetting.GetGiftRatio()
+				rule = pointsSetting.GetPointsGiftRule(saleBill.IsBuffetSaleBill(), saleOrder.Member.MemberLevelUuid)
 			}
 		}
 		// 计算本单获取的积分
-		point := saleOrder.GetMemberSurplusPoints(giftRatio)
+		point := saleOrder.GetMemberSurplusPoints(int(saleBill.MealNum), rule)
 		balance := saleOrder.GetMemberSurplusBalance()
 		printer.AppendText(t.base.PrintText(t.base.Translate("会员剩余余额"), "", t.base.GetPriceAndUnit(balance), width, 34) + "\n")
 		printer.AppendText(t.base.PrintText(t.base.Translate("本次积分"), "", t.base.Number(point), width, 34))

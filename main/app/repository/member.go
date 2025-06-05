@@ -187,7 +187,14 @@ func (r *memberRepo) GetMemberRecord(opts ...DBOption) (*model.Member, error) {
 
 // GetMemberByUuid 根据uuid查询会员
 func (r *memberRepo) GetMemberByUuid(uuid uint64) (*model.Member, error) {
-	member, err := r.GetMemberRecord(r.WhereUuid(uuid))
+	member, err := r.GetMemberRecord(
+		r.WhereUuid(uuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MemberLevel",
+			},
+		),
+	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询会员失败", utils.NumToStr(uuid))
 	}
