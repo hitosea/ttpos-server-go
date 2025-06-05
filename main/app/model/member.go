@@ -29,15 +29,22 @@ type Member struct {
 	MemberCardUuid               uint64  `gorm:"column:member_card_uuid;type:bigint(20) unsigned;default:0;comment:会员卡片ID;NOT NULL" json:"member_card_uuid"`
 	MemberCardNo                 string  `gorm:"column:member_card_no;type:varchar(255);comment:会员卡号;NOT NULL" json:"member_card_no"`
 	ReferrerUuid                 uint64  `gorm:"column:referrer_uuid;type:bigint(20) unsigned;default:0;comment:推荐人ID;NOT NULL" json:"referrer_uuid"`
+	ActivityUuid                 uint64  `gorm:"column:activity_uuid;type:bigint(20) unsigned;default:0;comment:活动ID;NOT NULL" json:"activity_uuid"`
 
-	MemberLevel      *MemberLevel       `gorm:"foreignKey:MemberLevelUuid;references:Uuid"`
-	MemberCard       *MemberCard        `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
-	MemberBalanceLog []MemberBalanceLog `gorm:"foreignKey:MemberUuid;references:Uuid"`
+	MemberLevel       *MemberLevel       `gorm:"foreignKey:MemberLevelUuid;references:Uuid"`
+	MemberCard        *MemberCard        `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
+	MemberBalanceLog  []MemberBalanceLog `gorm:"foreignKey:MemberUuid;references:Uuid"`
+	MarketingActivity *MarketingActivity `gorm:"foreignKey:Uuid;references:ActivityUuid"`
 }
 
 func (model *Member) SetNil() {
 	model.MemberLevel = nil
 	model.MemberCard = nil
+}
+
+// 是否存在推荐人和活动ID
+func (model *Member) IsExistActivityAndReferrer() bool {
+	return model.ReferrerUuid != 0 && model.ActivityUuid != 0
 }
 
 // 累计会员的消费金额、消费次数

@@ -7741,6 +7741,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		}()
 	}
 
+	// 返回结果
 	payMethods := make([]resp.PayMethod, 0)
 	for _, paymentOrder := range infoResp.PaymentOrders.List {
 		method := resp.PayMethod{
@@ -7749,7 +7750,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		}
 		payMethods = append(payMethods, method)
 	}
-	orderFinishResp := &resp.OrderFinishResp{
+	return &resp.OrderFinishResp{
 		SaleBillUuid:  req.SaleBillUuid,
 		SaleOrderUuid: req.SaleOrderUuid,
 		AmountInfo: resp.PayAmountInfo{
@@ -7760,9 +7761,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		PayMethodList: resp.PayMethodList{
 			List: payMethods,
 		},
-	}
-
-	return orderFinishResp, nil
+	}, nil
 }
 
 // InstantOrderFree 免单

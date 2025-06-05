@@ -9372,7 +9372,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "取消订单",
                 "parameters": [
@@ -9411,7 +9411,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "删除订单",
                 "parameters": [
@@ -9450,7 +9450,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "获取订单详情",
                 "parameters": [
@@ -9495,7 +9495,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "获取发票信息",
                 "parameters": [
@@ -9551,7 +9551,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "打印小票",
                 "parameters": [
@@ -9602,7 +9602,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "打印发票",
                 "parameters": [
@@ -9653,7 +9653,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "退款订单",
                 "parameters": [
@@ -10052,7 +10052,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "获取订单列表",
                 "parameters": [
@@ -10295,7 +10295,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "获取退款信息",
                 "parameters": [
@@ -24223,6 +24223,10 @@ const docTemplate = `{
                 "is_lock": {
                     "description": "购物车是否锁定 true:锁定 false:未锁定",
                     "type": "boolean"
+                },
+                "message": {
+                    "description": "提示信息。 当加购商品时商品价格变化时，返回提示信息",
+                    "type": "string"
                 },
                 "must_plans": {
                     "description": "必点方案列表信息",

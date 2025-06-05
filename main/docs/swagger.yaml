@@ -5302,6 +5302,9 @@ definitions:
       is_lock:
         description: 购物车是否锁定 true:锁定 false:未锁定
         type: boolean
+      message:
+        description: 提示信息。 当加购商品时商品价格变化时，返回提示信息
+        type: string
       must_plans:
         allOf:
         - $ref: '#/definitions/resp.ProductMustPlanList'
@@ -11666,7 +11669,7 @@ paths:
       - JwtToken: []
       summary: 取消订单
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/delete:
     delete:
       consumes:
@@ -11690,7 +11693,7 @@ paths:
       - JwtToken: []
       summary: 删除订单
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/info:
     get:
       consumes:
@@ -11718,7 +11721,7 @@ paths:
       - JwtToken: []
       summary: 获取订单详情
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/invoice:
     get:
       consumes:
@@ -11751,7 +11754,7 @@ paths:
       - JwtToken: []
       summary: 获取发票信息
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/print:
     post:
       consumes:
@@ -11780,7 +11783,7 @@ paths:
       - JwtToken: []
       summary: 打印小票
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/print/invoice:
     post:
       consumes:
@@ -11809,7 +11812,7 @@ paths:
       - JwtToken: []
       summary: 打印发票
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/return:
     post:
       consumes:
@@ -11833,7 +11836,7 @@ paths:
       - JwtToken: []
       summary: 退款订单
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/open_cash_box_printer_config:
     get:
       consumes:
@@ -12122,7 +12125,7 @@ paths:
       - JwtToken: []
       summary: 获取订单列表
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/order/print:
     post:
       consumes:
@@ -12237,7 +12240,7 @@ paths:
       - JwtToken: []
       summary: 获取退款信息
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
     post:
       consumes:
       - application/json
