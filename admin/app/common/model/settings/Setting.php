@@ -134,7 +134,39 @@ class Setting extends BaseModel
         $shop_supplier_id == 0 && $shop_supplier_id = $static::$app_id;
         $setting = $static->select();
         $data = empty($setting) ? [] : array_column($static->collection($setting)->toArray(), null, 'key');
-        return $static->getMergeData($data, $languageList);
+
+        $data = $static->getMergeData($data, $languageList);
+
+        if ($shop_supplier_id > 0) {
+            // 购物送积分规则处理会员
+            $grades = (new Grade)->getLists();
+            $rateMemberLevels = [];
+            $quantityMemberLevels = [];
+            foreach ($grades as $grade) {
+                $rateMemberLevels[] = [
+                    "uuid" => $grade['uuid'],
+                    "name" => $grade['name'],
+                    "value" => $grade['points_rate'],
+                ];
+                $quantityMemberLevels[] = [
+                    "uuid" => $grade['uuid'],
+                    "name" => $grade['name'],
+                    "value" => $grade['points_quantity'],
+                ];
+            }
+            foreach ($data[SettingEnum::POINTS]["values"]["shopping_gift_rules"] as $k => $shoppingGiftRule) {
+                switch ($shoppingGiftRule["type"]) {
+                    case "payment_amount":
+                        $data[SettingEnum::POINTS]["values"]["shopping_gift_rules"][$k]["member_levels"] = $rateMemberLevels;
+                        break;
+                    case "desk":
+                        $data[SettingEnum::POINTS]["values"]["shopping_gift_rules"][$k]["member_levels"] = $quantityMemberLevels;
+                        break;
+                }
+            }
+        }
+
+        return $data;
     }
 
     /**
@@ -275,33 +307,6 @@ class Setting extends BaseModel
                         return $element['key'] != 'add_member';
                     }));
                 }
-            }
-        }
-
-        // 购物送积分规则处理会员
-        $grades = (new Grade)->getLists();
-        $rateMemberLevels = [];
-        $quantityMemberLevels = [];
-        foreach ($grades as $grade) {
-            $rateMemberLevels[] = [
-                "uuid" => $grade['uuid'],
-                "name" => $grade['name'],
-                "value" => $grade['points_rate'],
-            ];
-            $quantityMemberLevels[] = [
-                "uuid" => $grade['uuid'],
-                "name" => $grade['name'],
-                "value" => $grade['points_quantity'],
-            ];
-        }
-        foreach ($defaultData[SettingEnum::POINTS]["values"]["shopping_gift_rules"] as $k => $shoppingGiftRule) {
-            switch ($shoppingGiftRule["type"]) {
-                case "payment_amount":
-                    $defaultData[SettingEnum::POINTS]["values"]["shopping_gift_rules"][$k]["member_levels"] = $rateMemberLevels;
-                    break;
-                case "desk":
-                    $defaultData[SettingEnum::POINTS]["values"]["shopping_gift_rules"][$k]["member_levels"] = $quantityMemberLevels;
-                    break;
             }
         }
 

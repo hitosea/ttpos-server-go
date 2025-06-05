@@ -2,8 +2,11 @@
 
 namespace app\admin\model\app;
 
+use app\common\enum\settings\SettingEnum;
+use app\common\model\settings\Setting;
 use app\common\model\shop\SaasUser;
 use PDO;
+use think\facade\Cache;
 use think\facade\Env;
 use think\facade\Validate;
 use app\admin\model\CompanyStaff;
@@ -12,7 +15,7 @@ use hg\apidoc\annotation as Apidoc;
 use app\common\model\app\App as AppModel;
 use app\common\enum\order\OrderPayTypeEnum;
 use app\common\service\websocket\Websocket;
-use app\common\model\shop\User  as ShopStaffModel;
+use app\common\model\shop\User as ShopStaffModel;
 use app\admin\model\supplier\Supplier as SupplierModel;
 
 class App extends AppModel
@@ -273,6 +276,30 @@ class App extends AppModel
                 (new PayType([], $companyUuid))->setAppId($companyUuid)->setStatus(PayType::BALANCE_VALUE, $data['is_open_member']);
             }
 
+            // 处理会员积分设置，如果关闭了自助餐，则删除适用自助餐类型
+            if (isset($data['is_open_buffet']) && $data['is_open_buffet'] != 1) {
+                $settingModel = (new Setting([], $companyUuid));
+                $pointsSetting = $settingModel->where("key", "=", SettingEnum::POINTS)->find();
+                if ($pointsSetting) {
+                    $pointSettingValues = $pointsSetting['values'];
+                    foreach ($pointSettingValues["shopping_gift_rules"] as $k => $rule) {
+                        $newMealTypes = [];
+                        foreach ($rule["meal_type"] ?? [] as $mealType) {
+                            if ($mealType != "buffet") {
+                                $newMealTypes[] = $mealType;
+                            }
+                        }
+                        $pointSettingValues["shopping_gift_rules"][$k]["meal_type"] = $newMealTypes;
+                    }
+                    $settingModel->where("key", "=", SettingEnum::POINTS)->update(["values" => json_encode($pointSettingValues)]);
+                    // 删除系统设置缓存
+                    $key = sprintf("setting:company_id:%d", $companyUuid);
+                    if (Cache::has($key)) {
+                        Cache::delete($key);
+                    }
+                }
+            }
+
             //
             $this->commit();
             return true;
@@ -303,17 +330,17 @@ class App extends AppModel
         $this->supplier?->delete();
 
         // 软删除saas商家员工
-        $shopUsers  = SaasUser::where('company_uuid', '=', $this['uuid'])->select();
+        $shopUsers = SaasUser::where('company_uuid', '=', $this['uuid'])->select();
         foreach ($shopUsers as $shopUser) {
             $shopUser->delete();
         }
 
         // 推送配置更新
         Websocket::pushClient(
-            $this->uuid, 
-            Websocket::SOURCE_All, 
-            Websocket::SOURCE_All, 
-            Websocket::UPDATE_CONFIG, 
+            $this->uuid,
+            Websocket::SOURCE_All,
+            Websocket::SOURCE_All,
+            Websocket::UPDATE_CONFIG,
             0,
             ['update_time' => time()]
         );
