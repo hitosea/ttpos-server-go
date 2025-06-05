@@ -31,10 +31,10 @@ type Member struct {
 	ReferrerUuid                 uint64  `gorm:"column:referrer_uuid;type:bigint(20) unsigned;default:0;comment:推荐人ID;NOT NULL" json:"referrer_uuid"`
 	ActivityUuid                 uint64  `gorm:"column:activity_uuid;type:bigint(20) unsigned;default:0;comment:活动ID;NOT NULL" json:"activity_uuid"`
 
-	MemberLevel       *MemberLevel        `gorm:"foreignKey:MemberLevelUuid;references:Uuid"`
-	MemberCard        *MemberCard         `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
-	MemberBalanceLog  []MemberBalanceLog  `gorm:"foreignKey:MemberUuid;references:Uuid"`
-	MarketingActivity []MarketingActivity `gorm:"foreignKey:ActivityUuid;references:Uuid"`
+	MemberLevel       *MemberLevel       `gorm:"foreignKey:MemberLevelUuid;references:Uuid"`
+	MemberCard        *MemberCard        `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
+	MemberBalanceLog  []MemberBalanceLog `gorm:"foreignKey:MemberUuid;references:Uuid"`
+	MarketingActivity *MarketingActivity `gorm:"foreignKey:Uuid;references:ActivityUuid"`
 }
 
 func (model *Member) SetNil() {
