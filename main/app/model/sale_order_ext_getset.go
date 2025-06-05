@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/i18n"
 
@@ -623,20 +624,21 @@ func (model *SaleOrder) GetMemberSurplusBalance() float64 {
 }
 
 // 获取会员积分
-func (model *SaleOrder) GetMemberSurplusPoints(giftRatio ...float64) float64 {
+func (model *SaleOrder) GetMemberSurplusPoints(mealNum int, rule settingResp.PointsRule) float64 {
 	if model.Member == nil || model.IsFree != 0 {
 		return 0
 	} else {
 		if model.Status == constant.SaleOrderStatusFinish {
 			return model.GiftPoints
 		}
-		if len(giftRatio) == 0 {
+		if rule.Value == 0 {
 			return 0
 		}
 		// 计算本单获取的积分
-		model.SetGiftPointsRate(giftRatio[0])
+		model.SetGiftPointsRate(mealNum, rule)
 		// 计算本单应收金额
-		return model.CalcMemberPoint(model.GetPrintReceivablePrice())
+		return model.CalcMemberPoint(mealNum, rule, model.GetPrintReceivablePrice(), model.GetPrintReceivablePrice())
+
 	}
 }
 

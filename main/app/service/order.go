@@ -7316,6 +7316,18 @@ func (s *orderSrv) FinishSaleBill(ctx context.Context, saleBill *model.SaleBill,
 	return nil
 }
 
+// 获取订单的积分发放规格信息
+func (s *orderSrv) GetPointsRuleInfo(ctx context.Context, isBufferOrder bool, memberLevelUuid uint64) (*settingResp.PointsRule, error) {
+	// 获取积分设置
+	pointsSetting, err := s.settingSrv.GetPointsSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	rule := pointsSetting.GetPointsGiftRule(isBufferOrder, memberLevelUuid)
+	return &rule, nil
+}
+
 // InstantOrderPaymentFinish 完成销售订单的付款结账
 func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error) {
 	// 加锁
@@ -7455,14 +7467,21 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
-	// 计算积分
-	// 获取商家当前的积分赠送比例
+	// 获取商家的会员设置
 	pointsSetting, err := s.settingSrv.GetPointsSetting(ctx)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	// 计算本单获取的积分
-	saleOrder.SetGiftPointsRate(pointsSetting.GetGiftRatio())
+	// 计算本单获取的积分. 如果订单没有会员，则不计算
+	if saleOrder.ConsumerUuid != 0 {
+		// 计算积分
+		// 根据订单类型（自助餐订单或非自助餐订单）选择积分策略（按比例或按人数）
+		pointsRule, err := s.GetPointsRuleInfo(ctx, saleBill.IsBuffetSaleBill(), saleOrder.Member.MemberLevelUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		saleOrder.SetGiftPointsRate(int(saleBill.MealNum), *pointsRule)
+	}
 
 	// 会员余额扣费相关
 	memberBalanceAmount, memberGiftBalanceAmount := float64(0), float64(0)

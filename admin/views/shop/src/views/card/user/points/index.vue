@@ -219,20 +219,20 @@
       </template>
       <div class="common-form">{{ $t('积分抵扣') }}</div>
       <el-form-item :label="$t('会员积分抵扣订单金额')">
-        <el-radio-group v-model="form.is_shopping_gift">
+        <el-radio-group v-model="form.exchange.open_points_exchange">
           <el-radio :label="1">{{ $t('开启') }}</el-radio>
           <el-radio :label="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item :label="$t('每积分抵扣应付金额')">
-        <el-input-number :controls="false" class="max-w460" :min="0" :max="100" :placeholder="$t('请输入积分赠送')" v-model.number="form.gift_ratio"></el-input-number>
+        <el-input class="max-w460" @input="(e) => handlePointsExchangeRateInput(e)" :placeholder="$t('请输入积分赠送')" v-model="form.exchange.points_exchange_rate"></el-input>
         <span>%</span>
       </el-form-item>
 
       <el-form-item :label="$t('是否自动抵扣')">
-        <el-radio-group v-model="form.is_shopping_gift">
-          <el-radio :label="1">{{ $t('开启') }}</el-radio>
-          <el-radio :label="0">{{ $t('关闭') }}</el-radio>
+        <el-radio-group v-model="form.exchange.auto_points_exchange">
+          <el-radio label="1">{{ $t('开启') }}</el-radio>
+          <el-radio label="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <!--提交-->
@@ -294,7 +294,11 @@
               member_levels: [],
             },
           ],
-          exchange: {},
+          exchange: {
+            open_points_exchange: '0',
+            points_exchange_rate: '0',
+            auto_points_exchange: '0',
+          },
         },
         loading: false,
       };
@@ -451,7 +455,11 @@
         // 更新表单值
         this.form.shopping_gift_rules[index].value = value;
       },
-
+      handlePointsExchangeRateInput(e) {
+        let value = e;
+        value = value.replace(/[^0-9.]/g, '');
+        this.form.exchange.points_exchange_rate = value;
+      },
       handleMoneyInput(e, index) {
         let value = e;
 

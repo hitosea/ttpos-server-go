@@ -4,6 +4,8 @@ import (
 	"math"
 	"strconv"
 
+	"github.com/duke-git/lancet/v2/slice"
+
 	"github.com/shopspring/decimal"
 )
 
@@ -34,17 +36,74 @@ type ShoppingGiftRule struct {
 	IsOpen                   string            `json:"is_open"`                    // 是否开启: "1" - 开启; "0" - 关闭
 	IsMemberLevelRelated     string            `json:"is_member_level_related"`    // 是否按会员等级赠送: "1" - 是; "0" - 否
 	Value                    string            `json:"value"`                      // 积分比例、积分数量
-	PaymentAmountRequirement string            `json:"payment_amount_requirement"` // 付款金额要求
+	PaymentAmountRequirement string            `json:"payment_amount_requirement"` // 付款金额要求。如“12.56”
 	MealType                 []string          `json:"meal_type"`                  // 就餐类型: buffet - 自助餐; non-buffet - 非自助餐
 	BalancePaymentGetPoints  string            `json:"balance_payment_get_points"` // 会员余额支付是否赠送: "1" - 是; "0" - 否
 	RefundReturnPoints       string            `json:"refund_return_points"`       // 退款自动扣积分: "1" - 是; "0" - 否
 	MemberLevels             []MemberLevelItem `json:"member_levels"`              // 会员等级
 }
 
+// 是否按会员等级赠送; true: 按等级区分； false：所有会员等级相同
+func (s *ShoppingGiftRule) getIsMemberLevelRelated() bool {
+	if s.IsMemberLevelRelated == "1" {
+		return true
+	}
+	return false
+}
+
+func (s *ShoppingGiftRule) getValue() float64 {
+	if s.Value == "" {
+		return 0
+	}
+	value, _ := strconv.ParseFloat(s.Value, 64)
+	return value
+}
+
+func (s *ShoppingGiftRule) getPaymentAmountRequirement() float64 {
+	if s.PaymentAmountRequirement == "" {
+		return 0
+	}
+	value, _ := strconv.ParseFloat(s.Value, 64)
+	return value
+}
+
+// getBalancePaymentGetPoints 获取会员余额支付是否赠送, 默认是赠送
+func (s *ShoppingGiftRule) getBalancePaymentGetPoints() bool {
+	if s.BalancePaymentGetPoints == "0" {
+		return false
+	}
+	return true
+}
+
+// getType 获取规则类型. 0 - 按付款金额比例赠送; 1 - 按桌台人数赠送:
+func (s *ShoppingGiftRule) getType() uint8 {
+	if s.Type == RuleTypePaymentAmount {
+		return 0
+	} else if s.Type == RuleTypeDesk {
+		return 1
+	}
+	return 0
+}
+
+type PointsRule struct {
+	GiftPointsType           uint8   // 0 按付款金额比例赠送；1 按桌台人数赠送
+	Value                    float64 // 积分比例、积分数量
+	BalancePaymentGetPoints  bool    // 会员余额支付是否赠送
+	PaymentAmountRequirement float64 // 付款金额达到多少时，开始赠送积分。默认是0，无论多少都发放积分
+}
+
 type MemberLevelItem struct {
 	Uuid  uint64 `json:"uuid"`  // 会员等级Uuid
 	Name  string `json:"name"`  // 会员等级名称
 	Value string `json:"value"` // 积分比例/积分数量，在后台修改时，根据type去设置对应会员等级的points_rate或者points_quantity
+}
+
+func (item *MemberLevelItem) getValue() float64 {
+	if item.Value == "" {
+		return 0
+	}
+	value, _ := strconv.ParseFloat(item.Value, 64)
+	return value
 }
 
 type PointsExchange struct {
@@ -199,6 +258,56 @@ func (p *Points) IsAutoPointsExchange() bool {
 		return true
 	}
 	return false
+}
+
+// 获取订单积分赠送规则
+func (p *Points) GetPointsGiftRule(isBufferOrder bool, memberLevelUuid uint64) PointsRule {
+	var targetRule *ShoppingGiftRule
+	var buffetRule *ShoppingGiftRule    // 自助餐规格的积分发放规格
+	var nonBuffetRule *ShoppingGiftRule // 非自助餐的积分发放规格
+	for _, rule := range p.ShoppingGiftRules {
+		if slice.Contain(rule.MealType, "buffet") {
+			buffetRule = &rule
+		}
+		if slice.Contain(rule.MealType, "non-buffet") {
+			nonBuffetRule = &rule
+		}
+	}
+	if isBufferOrder {
+		targetRule = buffetRule
+	} else {
+		targetRule = nonBuffetRule
+	}
+
+	if targetRule == nil {
+		return PointsRule{
+			Value: 0, // 没有找到积分赠送规格时，0表示不赠送积分
+		}
+	}
+
+	value := targetRule.getValue() // 默认使用“所有会员等级相同”的值
+	// 如果按等级区分
+	if targetRule.getIsMemberLevelRelated() {
+		match := false // 判断是否找到对应的等级
+		for _, level := range targetRule.MemberLevels {
+			if level.Uuid == memberLevelUuid {
+				value = level.getValue() // 使用对应等级的值
+				match = true
+				break
+			}
+		}
+		// 如果没有找到对应的等级,则不赠送积分
+		if !match {
+			value = 0
+		}
+	}
+
+	return PointsRule{
+		GiftPointsType:           targetRule.getType(),                     // 按比例 或 按人数
+		Value:                    value,                                    // 比例 或 每人积分数
+		BalancePaymentGetPoints:  targetRule.getBalancePaymentGetPoints(),  // 会员余额支付是否赠送积分
+		PaymentAmountRequirement: targetRule.getPaymentAmountRequirement(), // 付款金额达到多少时，开始赠送积分。
+	}
 }
 
 type DiscountItem struct {

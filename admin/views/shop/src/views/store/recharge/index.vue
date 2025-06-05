@@ -161,13 +161,7 @@
               <div>
                 <el-button @click="detailClick(scope.row)" type="primary" link size="small" v-auth="'/store/recharge/detail'">{{ $t('详情') }} </el-button>
 
-                <el-button
-                  v-if="scope.row.extra.is_cell_refund"
-                  @click="refundClick(scope.row)"
-                  type="danger"
-                  link
-                  size="small"
-                  v-auth="'/store/recharge/refund'"
+                <el-button v-if="scope.row.extra.is_cell_refund" @click="refundClick(scope.row)" type="danger" link size="small" v-auth="'/store/recharge/refund'"
                   >{{ $t('退款') }}
                 </el-button>
 

@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/utils"
@@ -68,7 +69,7 @@ type SaleOrder struct {
 	PaymentCommissionFee float64 `gorm:"column:payment_commission_fee;type:decimal(12,2);default:0;comment:支付手续费,关联付款单的支付手续费之和" json:"payment_commission_fee"`
 	GiftAmount           float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,(销售订单赠菜商品.总最终单价)之和" json:"gift_amount"`
 	GiftPoints           float64 `gorm:"column:gift_points;type:decimal(12,2);default:0;comment:赠送积分,应收金额amount*积分赠送比例" json:"gift_points"`
-	GiftPointsRate       float64 `gorm:"column:gift_points_rate;type:decimal(12,4);default:0;comment:赠送积分比例,取值范围0-1。结账后记录，不受后台改变" json:"gift_points_rate"`
+	GiftPointsRate       float64 `gorm:"column:gift_points_rate;type:decimal(12,4);default:0;comment:赠送积分比例或每人赠送积分数量。赠送积分比例,取值范围0-1。结账后记录，不受后台改变" json:"gift_points_rate"`
 	GiftPointsType       uint8   `gorm:"column:gift_points_type;type:tinyint(1);default:0;comment:赠送积分类型, 0-按比例赠送 1-按人数固定金额赠送" json:"gift_points_type"`
 	MemberLevelName      string  `gorm:"column:member_level_name;type:varchar(255);default:'';comment:会员等级名称" json:"member_level_name"`
 	MemberBalance        float64 `gorm:"column:member_balance;type:decimal(12,2);default:0;comment:会员余额,会员消费本单后剩余的余额" json:"member_balance"`
@@ -88,6 +89,19 @@ type SaleOrder struct {
 
 	// 虚拟字段，用于标记当前子单是第几个
 	index int `gorm:"-" json:"index,omitempty"`
+}
+
+// 订单是否使用了现金支付
+func (model *SaleOrder) HasCashPayment() bool {
+	for _, paymentOrder := range model.PaymentOrders {
+		if paymentOrder.IsDelete() {
+			continue
+		}
+		if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeCash {
+			return true
+		}
+	}
+	return false
 }
 
 // 判断订单退款能否手动退积分（显示手动退积分输入框）
@@ -416,17 +430,38 @@ func (model *SaleOrder) SetMemberBalance() {
 }
 
 // 设置积分赠送比例
-func (model *SaleOrder) SetGiftPointsRate(giftPointsRate float64) {
-	model.GiftPointsRate = giftPointsRate
-	model.GiftPoints = model.CalcMemberPoint()
+func (model *SaleOrder) SetGiftPointsRate(mealNum int, rule settingResp.PointsRule) {
+	model.GiftPointsRate = rule.Value
+	model.GiftPointsType = rule.GiftPointsType
+	model.GiftPoints = model.CalcMemberPoint(mealNum, rule)
 }
 
 // CalcMemberPoint 计算会员积分. 会员积分=订单最终应收金额*积分赠送比例
-func (model *SaleOrder) CalcMemberPoint(finalPrice ...float64) float64 {
-	if len(finalPrice) > 0 {
-		return decimal.NewFromFloat(finalPrice[0]).Mul(decimal.NewFromFloat(model.GiftPointsRate)).Round(2).InexactFloat64()
+func (model *SaleOrder) CalcMemberPoint(mealNum int, rule settingResp.PointsRule, finalPrice ...float64) float64 {
+	// 如果订单使用了现金支付，且积分赠送规则中使用会员余额支付不赠送积分时，则不发放积分
+	if model.HasCashPayment() && !rule.BalancePaymentGetPoints {
+		return 0
 	}
-	return decimal.NewFromFloat(model.FinalPrice).Mul(decimal.NewFromFloat(model.GiftPointsRate)).Round(2).InexactFloat64()
+
+	// 如果积分是按人数赠送的话
+	if model.GiftPointsType == 1 {
+		// AC17:如果订单不是主单，则不发放积分.
+		if model.GetIndex() != 1 {
+			return 0
+		}
+		return decimal.NewFromInt(int64(mealNum)).Mul(decimal.NewFromFloat(model.GiftPointsRate)).Round(2).InexactFloat64()
+	}
+
+	// 如果积分是按比例赠送的话
+	baseNum := model.FinalPrice // 计算积分的基数，值为本订单的最终应收金额
+	if len(finalPrice) > 0 {
+		baseNum = finalPrice[0]
+	}
+	// 如果订单时按比例赠送，要检查订单最终应收金额是否达到阀值，达到才送积分。未达到，不送积分
+	if rule.GiftPointsType == 0 && baseNum < rule.PaymentAmountRequirement {
+		return 0
+	}
+	return decimal.NewFromFloat(baseNum).Mul(decimal.NewFromFloat(model.GiftPointsRate)).Round(2).InexactFloat64()
 }
 
 // 发放消费积分
