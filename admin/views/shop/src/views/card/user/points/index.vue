@@ -368,7 +368,22 @@
       /*保存*/
       onSubmit() {
         let self = this;
+        // 判断是否开启自助餐,只能有一个自助餐
+        let is_open_buffet = 0;
+        this.form.shopping_gift_rules.forEach((rule) => {
+          if (rule.meal_type.includes('buffet')) {
+            is_open_buffet++;
+          }
+        });
+        if (is_open_buffet > 1) {
+          this.$ElMessage({
+            message: this.$t('自助餐只可适用于一个规则'),
+            type: 'error',
+          });
+          return;
+        }
         let form = self.form;
+
         self.$refs.form.validate((valid) => {
           if (valid) {
             self.loading = true;
