@@ -26,7 +26,9 @@ class Activity extends Controller
         parent::__construct($app);
         // 验证功能是否开启
         if ((request()->userInfo['supplier']['is_open_member'] ?? 0) != 1) {
-            throw new BaseException(['msg' => '该营销活动需商家开通会员中心功能，请联系销售代表处理', 'code' => StatusCode::ERROR]);
+            if (!strstr(request()->url(), 'shop/marketing.activity/list')) {
+                throw new BaseException(['msg' => '该营销活动需商家开通会员中心功能，请联系销售代表处理', 'code' => StatusCode::ERROR]);
+            }
         }
         // 验证功能是否开启
         if ((request()->userInfo['supplier']['is_open_marketing'] ?? 0) != 1) {

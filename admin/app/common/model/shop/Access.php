@@ -352,13 +352,13 @@ class Access extends BaseModel
                 }
             }
             // 授权无营销活动权限
-            if (($licenses['is_open_marketing'] ?? 0) == 0 || ($licenses['is_open_member'] ?? 0) == 0) {
+            if (($licenses['is_open_marketing'] ?? 0) == 0 ) {
                 if ($value['uuid'] == 1731155710 || $value['uuid'] == 1731155711) {
                     continue;
                 }
             }
             // 授权无会员卡权限
-            if (($licenses['is_open_coupon'] ?? 0) == 0 && (($licenses['is_open_marketing'] ?? 0) == 0 || ($licenses['is_open_member'] ?? 0) == 0)) {
+            if (($licenses['is_open_coupon'] ?? 0) == 0 && ($licenses['is_open_marketing'] ?? 0) == 0) {
                 if ($value['uuid'] == 1731155608) {
                     continue;
                 }

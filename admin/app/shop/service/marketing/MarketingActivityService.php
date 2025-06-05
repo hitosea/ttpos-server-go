@@ -270,8 +270,8 @@ class MarketingActivityService
      */
     public function getRecord($params)
     {
-        $page = $params['page'] ?? 1;
-        $pageSize = $params['list_rows'] ?? 10;
+        $page = (int)($params['page'] ?? 1);
+        $pageSize = (int)($params['list_rows'] ?? 10);
         // 
         $query =  MarketingActivityRecord::alias('record')
             ->field('record.uuid, record.activity_uuid, record.member_uuid, record.reward_count, record.last_reward_time, record.create_time, record.update_time, m.nickname, m.phone, m.id')
@@ -288,7 +288,7 @@ class MarketingActivityService
                 });
             });
         // 
-        $list = $query->order('record.create_time desc')->page($page, $pageSize)->select();
+        $list = $query->clone(true)->order('record.create_time desc')->page($page, $pageSize)->select();
         $total = $query->count();
         return [
             'current_page' => $page,
