@@ -145,7 +145,6 @@ func checkoutSaleOrderEventHandler() {
 				}
 				// 创建积分发放记录. // 累计会员的消费金额、消费次数
 				saleOrder.HandleMemberPoints(member)
-				saleOrder.AccumulateMemberConsumeAmountAndTimes(member) // 累计会员的消费金额、消费次数
 				if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 					// 更新会员积分 // todo 可以考虑跟func (s *memberSrv) HandleMemberPoints方法合并
 					if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{

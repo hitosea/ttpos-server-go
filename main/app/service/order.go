@@ -2136,9 +2136,11 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 	// 可退款金额
 	canReturnAmount := saleOrder.GetCanReturnAmount()
 	res := &resp.OrderReturnInfoResp{
-		CanReturnAmount: canReturnAmount, // 可退款金额. 可退款金额=订单最终应收金额-已退款金额
-		PaymentRecords:  paymentRecords,
-		Products:        productList,
+		ManualReturnPoints: saleOrder.CanManualReturnPoints(), // 是否可以手动退款积分。订单是按比例赠送积分且未发生积分抵扣时，不自动退款。
+		DeductiblePoints:   saleOrder.GetManualReturnPoints(), // 可扣除积分。订单赠送的积分-已经退回的积分
+		CanReturnAmount:    canReturnAmount,                   // 可退款金额. 可退款金额=订单最终应收金额-已退款金额
+		PaymentRecords:     paymentRecords,
+		Products:           productList,
 	}
 
 	return res, nil
@@ -4175,7 +4177,6 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 	// 判断商品价格是否与后台设置的最新价格不一致
 	// 查询商品规格的最新价格
 	// 查询所选加料的最新价格
-
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	if request.Price != 0 {
@@ -4205,8 +4206,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 			})
 			return &resp.ShopCart{
 				Product: &product,
-				Message: i18n.Translate(ctx.GetLanguage(), "商品价格信息发生变化，请确认后下单"),
-			}, nil
+			}, errors.ErrProductPriceChanged
 		}
 	}
 

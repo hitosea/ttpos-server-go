@@ -69,6 +69,8 @@ type SaleOrder struct {
 	GiftAmount           float64 `gorm:"column:gift_amount;type:decimal(12,2);default:0;comment:赠菜金额,(销售订单赠菜商品.总最终单价)之和" json:"gift_amount"`
 	GiftPoints           float64 `gorm:"column:gift_points;type:decimal(12,2);default:0;comment:赠送积分,应收金额amount*积分赠送比例" json:"gift_points"`
 	GiftPointsRate       float64 `gorm:"column:gift_points_rate;type:decimal(12,4);default:0;comment:赠送积分比例,取值范围0-1。结账后记录，不受后台改变" json:"gift_points_rate"`
+	GiftPointsType       uint8   `gorm:"column:gift_points_type;type:tinyint(1);default:0;comment:赠送积分类型, 0-按比例赠送 1-按人数固定金额赠送" json:"gift_points_type"`
+	MemberLevelName      string  `gorm:"column:member_level_name;type:varchar(255);default:'';comment:会员等级名称" json:"member_level_name"`
 	MemberBalance        float64 `gorm:"column:member_balance;type:decimal(12,2);default:0;comment:会员余额,会员消费本单后剩余的余额" json:"member_balance"`
 	Unit                 string  `gorm:"column:unit;type:varchar(255);default:0;comment:金额的单位,$-美元 ￥-人民币,用于显示订单金额价值" json:"unit"`
 
@@ -82,10 +84,51 @@ type SaleOrder struct {
 	FreeReasons                  []*SaleOrderProductReason      `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	InvoiceInfo                  *SaleOrderInvoiceInfo          `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleBill                     *SaleBill                      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
-	MemberPointLog               *MemberPointLog                `gorm:"foreignKey:RelatedUuid;references:uuid"` // 关联积分变动记录.赠送积分
+	MemberPointLogs              []*MemberPointLog              `gorm:"foreignKey:RelatedUuid;references:uuid"` // 关联积分变动记录.赠送积分、退款积分、反结账积分
 
 	// 虚拟字段，用于标记当前子单是第几个
 	index int `gorm:"-" json:"index,omitempty"`
+}
+
+// 判断订单退款能否手动退积分（显示手动退积分输入框）
+func (model *SaleOrder) CanManualReturnPoints() bool {
+	// 订单使用了会员且按人数固定金额赠送积分时，显示手动退积分输入框。
+	if model.ConsumerUuid != 0 && model.GiftPointsType == 1 {
+		return true
+	}
+	// 订单使用了会员且且发生积分抵扣时，显示手动退积分输入框。
+	if model.ConsumerUuid != 0 && model.PayPoints != 0 {
+		return true
+	}
+	return false
+}
+
+// 获取销售订单已经退款的积分数量
+func (model *SaleOrder) GetReturnedPoints() float64 {
+	points := 0.0
+	for _, memberPointLog := range model.MemberPointLogs {
+		if memberPointLog.IsDelete() {
+			continue
+		}
+		if memberPointLog.Scene == constant.MemberPointLogSceneRefund {
+			points += memberPointLog.Value
+		}
+	}
+	return points
+}
+
+// 获取手动退款积分时，可退积分数量=订单赠送的积分-已经退回的积分. 如果会员积分余额不足时，可退积分数量等于会员积分余额
+func (model *SaleOrder) GetManualReturnPoints() float64 {
+	// 可退积分数量=订单赠送的积分-已经退回的积分
+	returnedPoints := model.GiftPoints - model.GetReturnedPoints()
+	if returnedPoints < 0 {
+		returnedPoints = 0
+	}
+	// 如果会员积分余额不足时，可退积分数量等于会员积分余额
+	if returnedPoints > model.Member.GetPoints() {
+		returnedPoints = model.Member.GetPoints()
+	}
+	return returnedPoints
 }
 
 // 获取积分抵扣后的应收金额。等于Amount-PayPointsAmount
@@ -166,6 +209,7 @@ func (model *SaleOrder) ClearSettleInfo() {
 	model.GiftAmount = 0
 	model.GiftPoints = 0
 	model.GiftPointsRate = 0
+	model.MemberLevelName = ""
 	model.MemberBalance = 0
 	model.Unit = ""
 }
@@ -368,6 +412,7 @@ func (model *SaleOrder) SetMemberBalance() {
 		return
 	}
 	model.MemberBalance = model.Member.GetBalanceAll()
+	model.MemberLevelName = model.Member.MemberLevel.Name
 }
 
 // 设置积分赠送比例
@@ -392,14 +437,6 @@ func (model *SaleOrder) HandleMemberPoints(member *Member) {
 		// 发放积分
 		member.ChangePoint(model.GiftPoints) // 增加积分
 	}
-	// 创建积分变动记录
-	model.MemberPointLog = model.NewMemberPointLog()
-}
-
-// 累计会员的消费金额、消费次数
-func (model *SaleOrder) AccumulateMemberConsumeAmountAndTimes(member *Member) {
-	model.Member = member // 使用最新的会员信息。避免该会员的积分信息已经被更新过
-	model.Member.AccumulateConsumeAmount(model.GetPointsExchangeAmount())
 }
 
 // 创建积分变动记录
