@@ -201,8 +201,10 @@ class User extends UserModel
         }
         if ($password) {
             $data['password'] = md5($password);
+            $this['password'] = $data['password'];
         } else {
             unset($data['password']);
+            unset($this['password']);
         }
         if ($data['birthday']) {
             $data['birthday'] = strtotime($data['birthday']);
