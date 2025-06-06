@@ -10,6 +10,7 @@ use hg\apidoc\annotation as Apidoc;
 use app\common\enum\http\StatusCode;
 use Endroid\QrCode\Writer\PngWriter;
 use app\common\exception\BaseException;
+use app\shop\service\marketing\MarketingCouponService;
 use app\shop\service\marketing\MarketingActivityService;
 
 /**
@@ -65,6 +66,33 @@ class Activity extends Controller
         $params = $request->get();
         $list = $this->service->getList($params);
         return $this->renderSuccess('', compact('list'));
+    }
+
+    /**
+     * @Apidoc\Title("获取优惠券列表")
+     * @Apidoc\Desc("获取营销活动可用的优惠券列表")
+     * @Apidoc\Method ("GET")
+     * @Apidoc\Url ("/index.php/shop/marketing.activity/couponList")
+     * @Apidoc\Query("name", type="string", require=false, desc="优惠券名称")
+     * @Apidoc\Query(ref="pageParam")
+     * @Apidoc\Returned("list", type="array", children={
+     *      @Apidoc\Returned("uuid", type="string", desc="优惠券Uuid"),
+     *      @Apidoc\Returned("sort", type="integer", desc="排序"),
+     *      @Apidoc\Returned("name", type="string", desc="优惠券名称"),
+     *      @Apidoc\Returned("type", type="string", desc="优惠券类型: deduction - 抵扣券"),
+     *      @Apidoc\Returned("amount", type="float", desc="金额"),
+     *      @Apidoc\Returned("valid_date", type="string", desc="有效日期"),
+     *      @Apidoc\Returned("valid_day_time_range", type="string", desc="适用时间"),
+     *      @Apidoc\Returned("count", type="integer", desc="数量"),
+     *      @Apidoc\Returned("create_time", type="integer", desc="添加时间"),
+     * })
+     */
+    public function couponList(Request $request)
+    {
+        $params = $request->get();
+        $params['requirement'] = 'marketing';
+        $list = (new MarketingCouponService())->getList($params);
+        return $this->renderSuccess('', $list);
     }
 
     /**

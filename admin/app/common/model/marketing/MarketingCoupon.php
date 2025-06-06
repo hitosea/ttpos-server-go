@@ -28,6 +28,27 @@ class MarketingCoupon extends BaseModel
         }
     }
 
+    // 优惠券有效日期开始时间
+    public function getValidStartTimeAttr($value, $data)
+    {
+        if ($data['requirement'] == "none") {
+            return Carbon::parse($data['valid_start_time'])->toDateString();
+        } else {
+            return "";
+        }
+    }
+
+    // 优惠券有效日期结束时间
+    public function getValidEndTimeAttr($value, $data)
+    {
+        if ($data['requirement'] == "none") {
+            return Carbon::parse($data['valid_end_time'])->toDateString();
+        } else {
+            return "";
+        }
+    }
+
+
     // 优惠券适用时间
     public function getValidDayTimeRangeAttr($value, $data)
     {
