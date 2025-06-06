@@ -2402,7 +2402,26 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 				if err != nil {
 					return errors.WithMessage(err)
 				}
+				// 如果订单有积分抵扣，则已抵扣的积分
+				if saleBill.SaleBillSetting.IsOpenPointsExchange() && saleOrder.PayPoints > 0 {
+					// 更新会员积分
+					member.FrozenPoint = member.FrozenPoint + saleOrder.PayPoints // 退回已抵扣的积分
+					if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
+						"frozen_point": member.FrozenPoint, // 退回已抵扣的积分
+					}); err != nil {
+						return errors.WithMessage(err)
+					}
+					// 创建积分变动记录
+					memberPointLog := saleOrder.NewReverseSettleExchangeMemberPointLog(saleOrder.PayPoints)
+					if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
+						return errors.WithMessage(err)
+					}
+				}
 				if points > 0 {
+					// 如果会员积分余额不足时，仅扣完余额
+					if member.GetPoints() < points {
+						points = member.GetPoints()
+					}
 					// 更新会员积分
 					if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
 						"frozen_point": member.FrozenPoint - points, // 扣减积分

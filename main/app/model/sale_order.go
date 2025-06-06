@@ -511,6 +511,18 @@ func (model *SaleOrder) NewReverseSettleMemberPointLog(points float64) *MemberPo
 	return memberPointLog
 }
 
+// 创建订单反结账退回已抵扣积分变动记录
+func (model *SaleOrder) NewReverseSettleExchangeMemberPointLog(points float64) *MemberPointLog {
+	memberPointLog := &MemberPointLog{
+		MemberUuid:  model.ConsumerUuid,
+		Scene:       constant.MemberPointLogSceneReverse,
+		Value:       points,
+		Describe:    fmt.Sprintf("抵扣反结账：%s", model.OrderNo),
+		RelatedUuid: model.Uuid,
+	}
+	return memberPointLog
+}
+
 // 创建退货单
 func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]uint, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
 	returnOrderUuid, _ := utils.GetID()
