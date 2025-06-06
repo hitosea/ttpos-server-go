@@ -23,7 +23,7 @@ import (
 
 const (
 	CodeCacheKey = "member:login:code:%s:%d"
-	CodeCacheTTL = 90 * time.Second
+	CodeCacheTTL = 5 * time.Minute
 )
 
 // ILoginSrv 会员登录相关服务接口
@@ -79,6 +79,7 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 	countryToAreaCode := map[string]string{
 		"TH": constant.ThailandPrefix, // 泰国
 		"CN": constant.ChinaPrefix,    // 中国
+		"HK": constant.ChinaPrefix,    // 中国
 	}
 
 	// 默认区号列表
