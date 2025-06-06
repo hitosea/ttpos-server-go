@@ -2,6 +2,7 @@ package resp
 
 import (
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/resp/product_resp"
 
 	"github.com/shopspring/decimal"
 )
@@ -18,6 +19,8 @@ type ShopCart struct {
 	DiningMethod  uint                 `json:"dining_method"`        // 用餐方式 0:堂食 1:打包。与Takeout重复，废弃
 	SaleOrderList []SaleOrder          `json:"sale_order_list"`      // 销售订单列表
 	UpdateTime    int64                `json:"update_time"`          // 更新时间
+
+	Product *product_resp.Product `json:"product,omitempty"` // 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
 }
 
 // H5CartSendProduct 扫码h5购物车已下单品

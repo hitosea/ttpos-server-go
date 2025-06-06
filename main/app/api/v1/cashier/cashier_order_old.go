@@ -34,7 +34,7 @@ type OrderOldHandler struct {
 // GetCashierOrderList 处理获取订单列表
 // @Summary 获取订单列表
 // @Description 获取订单列表
-// @Tags 收银端.订单
+// @Tags 收银端.历史订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -134,7 +134,7 @@ func (h *OrderOldHandler) GetCashierOrderList(c *gin.Context) {
 // GetOrderInfo 处理获取订单详情
 // @Summary 获取订单详情
 // @Description 获取订单详情
-// @Tags 收银端.订单
+// @Tags 收银端.历史订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -169,7 +169,7 @@ func (h *OrderOldHandler) GetOrderInfo(c *gin.Context) {
 // CancelOrder 处理取消订单
 // @Summary 取消订单
 // @Description 取消订单
-// @Tags 收银端.订单
+// @Tags 收银端.历史订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -208,7 +208,7 @@ func (h *OrderOldHandler) CancelOrder(c *gin.Context) {
 // DeleteOrder 处理删除订单
 // @Summary 删除订单
 // @Description 删除订单
-// @Tags 收银端.订单
+// @Tags 收银端.历史订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -247,7 +247,7 @@ func (h *OrderOldHandler) DeleteOrder(c *gin.Context) {
 // OrderPrint 打印小票
 // @Summary 打印小票
 // @Description 打印小票
-// @Tags 收银端.订单
+// @Tags 收银端.历史订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -301,7 +301,7 @@ func (h *OrderOldHandler) OrderPrint(c *gin.Context) {
 // OrderPrint 打印发票
 // @Summary 打印发票
 // @Description 打印发票
-// @Tags 收银端.订单
+// @Tags 收银端.历史订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -359,7 +359,7 @@ func (h *OrderOldHandler) OrderPrintInvoice(c *gin.Context) {
 // OrderInvoiceInfo 获取发票信息
 // @Summary 获取发票信息
 // @Description 获取发票信息
-// @Tags 收银端.订单
+// @Tags 收银端.历史订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -406,7 +406,7 @@ func (h *OrderOldHandler) OrderInvoiceInfo(c *gin.Context) {
 // ReturnOrderInfo 获取退款信息
 // @Summary 获取退款信息
 // @Description 获取退款信息
-// @Tags 收银端.订单
+// @Tags 收银端.历史订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -445,7 +445,7 @@ func (h *OrderOldHandler) ReturnOrderInfo(c *gin.Context) {
 // ReturnOrder 处理退款订单
 // @Summary 退款订单
 // @Description 退款订单
-// @Tags 收银端.订单
+// @Tags 收银端.历史订单
 // @Accept json
 // @Produce json
 // @Security JwtToken

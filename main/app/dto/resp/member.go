@@ -11,6 +11,16 @@ type MemberLevelList struct {
 	List []MemberLevel `json:"list"`
 }
 
+type MemberCardType struct {
+	Uuid  uint64  `json:"uuid"`  // 等级Uuid
+	Name  string  `json:"name"`  // 等级名称
+	Price float64 `json:"price"` //
+}
+
+type MemberCardTypeList struct {
+	List []MemberCardType `json:"list"`
+}
+
 type SearchMember struct {
 	Uuid     uint64 `json:"uuid"`     // 会员Uuid
 	Nickname string `json:"nickname"` // 会员昵称

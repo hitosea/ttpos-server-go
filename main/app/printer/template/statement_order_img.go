@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/repository"
@@ -471,6 +472,12 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		}
 	}
 
+	// 会员积分抵扣
+	if saleOrder.PayPointsAmount > 0 && saleOrder.PayPoints > 0 {
+		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("会员积分抵扣"), t.base.GetPriceAndUnit(saleOrder.PayPointsAmount)))
+		img.LineFeed(1)
+	}
+
 	// 抹零
 	if checkOutZeroFee := saleOrder.GetCheckOutZeroFee(); checkOutZeroFee > 0 {
 		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手动抹零"), t.base.GetPriceAndUnit(checkOutZeroFee)))
@@ -573,16 +580,16 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	if saleOrder.Member != nil {
 		img.AppendSplitLine()
 		img.LineFeed(1)
-		// 获取商家当前的积分赠送比例
-		var giftRatio float64 = 0
+		// 获取订单的积分发放规则
+		var rule settingResp.PointsRule
 		if !saleOrder.IsPaid() {
 			pointsSetting, err := t.base.Setting.GetPointsSetting(t.base.Ctx)
 			if err == nil {
-				giftRatio = pointsSetting.GetGiftRatio()
+				rule = pointsSetting.GetPointsGiftRule(saleBill.IsBuffetSaleBill(), saleOrder.Member.MemberLevelUuid)
 			}
 		}
 		// 计算本单获取的积分
-		point := saleOrder.GetMemberSurplusPoints(giftRatio)
+		point := saleOrder.GetMemberSurplusPoints(int(saleBill.MealNum), rule)
 		balance := saleOrder.GetMemberSurplusBalance()
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("会员剩余余额"), Width: 350, Align: pkg.AlignLeft},

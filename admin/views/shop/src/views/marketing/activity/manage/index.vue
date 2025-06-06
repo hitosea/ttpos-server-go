@@ -21,41 +21,34 @@
     <div class="product-content">
       <div class="table-wrap">
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
-          <el-table-column prop="card_name" :label="$t('活动名称')"></el-table-column>
-          <el-table-column prop="expire" :label="$t('活动类型')">
+          <el-table-column prop="name_text" :label="$t('活动名称')"></el-table-column>
+          <el-table-column prop="type" :label="$t('活动类型')">
             <template #default="scope">
-              <span v-if="scope.row.expire > 0">{{ scope.row.expire }}月</span>
-              <span v-else>{{ $t('永久有效') }}</span>
+              <span v-if="scope.row.type == 0">{{ $t('邀请有礼') }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="money" :label="$t('活动奖品')">
+          <el-table-column prop="prizes" :label="$t('活动奖品')">
             <template #default="scope">
-              {{ this.$formatPrice(scope.row.money) }}
+              <span v-if="scope.row.prizes.length > 0">{{ scope.row.prizes[0].coupon_name }}</span>
+              <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column prop="discount" :label="$t('创建时间')">
-            <template #default="scope">
-              <span v-if="scope.row.is_discount > 0">{{ Number(scope.row.discount || 0) }}%</span>
-              <span v-else>{{ $t('无') }}</span>
-            </template>
-          </el-table-column>
+          <el-table-column prop="create_time" :label="$t('创建时间')"></el-table-column>
 
-          <el-table-column prop="status" :label="$t('状态')">
+          <el-table-column prop="status_text" :label="$t('状态')"> </el-table-column>
+
+          <el-table-column :label="$t('活动时间')" width="200">
             <template #default="scope">
-              <el-switch
-                :disabled="!this.$filter.isAuth('/card/card/state')"
-                :model-value="scope.row.status == 0 ? true : false"
-                @click="handleChange(scope.row)"
-                :loading="loading"
-              />
+              <span>{{ scope.row.start_time }} ~ {{ scope.row.end_time }}</span>
             </template>
           </el-table-column>
-
-          <el-table-column prop="create_time" :label="$t('活动时间')"></el-table-column>
-          <el-table-column fixed="right" :label="$t('操作')" width="160">
+          <el-table-column fixed="right" :label="$t('操作')" width="200">
             <template #default="scope">
+              <el-button @click="sendClick(scope.row)" type="primary" link size="small">{{ $t('发放记录') }} </el-button>
               <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/marketing/activity/edit'">{{ $t('编辑') }} </el-button>
-              <el-button @click="deleteClick(scope.row)" type="primary" link size="small" v-auth="'/marketing/activity/disable'">{{ $t('失效') }} </el-button>
+              <el-button @click="disableClick(scope.row)" :disabled="scope.row.status == 2" type="primary" link size="small" v-auth="'/marketing/activity/disable'"
+                >{{ $t('失效') }}
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -74,188 +67,139 @@
         </el-pagination>
       </div>
     </div>
+    <record-dialog v-if="recordDialogVisible" :recordDialogVisible="recordDialogVisible" :recordUuid="recordUuid" @update:recordDialogVisible="recordDialogVisible = $event" />
   </div>
 </template>
 
-<script>
-  import Aselect from '@/components/a-select/index.vue';
-  import CardApi from '@/api/card.js';
+<script setup>
+  import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
+  import { useRouter } from 'vue-router';
+  import { ElMessageBox, ElMessage } from 'element-plus';
+  import MarketingApi from '@/api/marketing.js';
   import { useUserStore } from '@/store/index';
+  import recordDialog from './recordDialog.vue';
+  const { proxy } = getCurrentInstance();
+
+  // 获取路由实例
+  const router = useRouter();
+
+  // 获取用户store
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
   const app_id = supplier.value?.app_id || 0;
-  export default {
-    components: {
-      Aselect,
-    },
-    data() {
-      return {
-        app_id: app_id,
-        /*是否加载完成*/
-        loading: true,
-        /*列表数据*/
-        tableData: [],
-        /*一页多少条*/
-        pageSize: 10,
-        /*一共多少条数据*/
-        totalDataNumber: 0,
-        /*当前是第几页*/
-        curPage: 1,
-        /*横向表单数据模型*/
-        formInline: {
-          card_name: '',
-          status: '',
-        },
-        /*是否打开编辑弹窗*/
-        open_edit: false,
-        /*当前编辑的对象*/
-        userModel: {},
-        searchLoading: '',
-      };
-    },
-    created() {
-      /*获取列表*/
-      this.getTableList();
-    },
-    methods: {
-      handleChange(row) {
-        if (!this.$filter.isAuth('/card/card/state')) {
-          return;
-        }
-        let self = this;
-        let war = $t('确认要禁用吗?');
-        if (row.status == 1) {
-          war = $t('确认要启用吗?');
-        }
-        ElMessageBox.confirm(war, $t('提示'), { type: 'warning' }).then(() => {
-          self.loading = true;
-          let Params = {};
 
-          (Params.card_id = row.card_id),
-            CardApi.setStatus(Params, true)
-              .then((data) => {
-                this.$ElMessage({
-                  message: $t('操作成功'),
-                  type: 'success',
-                });
-                self.loading = false;
-                self.getTableList();
-              })
-              .catch((error) => {
-                console.log(error);
-                self.loading = false;
-              });
-        });
-      },
+  // 响应式数据
+  const loading = ref(true);
+  const tableData = ref([]);
+  const pageSize = ref(10);
+  const totalDataNumber = ref(0);
+  const curPage = ref(1);
+  const searchLoading = ref('');
+  const recordDialogVisible = ref(false);
+  const recordUuid = ref('');
+  // 表单数据
+  const formInline = reactive({
+    card_name: '',
+    status: '',
+  });
 
-      /*换行*/
-      keepTextStyle(val) {
-        let str = val.replace(/(\\r\\n)/g, '<br/>');
-        return str;
-      },
-
-      /*选择第几页*/
-      handleCurrentChange(val) {
-        let self = this;
-        self.curPage = val;
-        self.loading = true;
-        self.getTableList();
-      },
-
-      /*每页多少条*/
-      handleSizeChange(val) {
-        this.curPage = 1;
-        this.pageSize = val;
-        this.getTableList();
-      },
-
-      /*获取列表*/
-      getTableList() {
-        let self = this;
-        let Params = self.formInline;
-        Params.page = self.curPage;
-        Params.list_rows = self.pageSize;
-        self.loading = true;
-        CardApi.cardlist(Params, true)
-          .then((data) => {
-            self.loading = false;
-            self.tableData = data.data.list.data;
-            self.totalDataNumber = data.data.list.total;
-          })
-          .catch((error) => {});
-      },
-
-      /*搜索查询*/
-      onSearch() {
-        clearTimeout(this.searchLoading);
-        this.searchLoading = setTimeout(() => {
-          this.curPage = 1;
-          this.getTableList();
-        }, 200);
-      },
-
-      /*打开添加*/
-      addClick() {
-        this.$router.push('/' + this.app_id + '/marketing/activity/add');
-      },
-      /*打开编辑*/
-      editClick(item) {
-        this.$router.push({
-          path: '/' + this.app_id + '/marketing/activity/edit',
-          query: {
-            card_id: item.card_id,
-          },
-        });
-      },
-      /*打开编辑*/
-      putClick(item) {
-        this.userModel = item;
-        this.open_edit = true;
-      },
-
-      /*关闭弹窗*/
-      closeDialogFunc(e, f) {
-        if (f == 'edit') {
-          this.open_edit = e.openDialog;
-          if (e.type == 'success') {
-            this.getTableList();
-          }
-        }
-      },
-      /*删除用户*/
-      deleteClick(row) {
-        let self = this;
-        ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
-          confirmButtonText: $t('确定'),
-          cancelButtonText: $t('取消'),
-          type: 'warning',
-        })
-          .then(() => {
-            self.loading = true;
-            CardApi.deletecard(
-              {
-                card_id: row.card_id,
-              },
-              true
-            )
-              .then((data) => {
-                self.loading = false;
-                if (data.code == 1) {
-                  this.$ElMessage({
-                    message: data.msg,
-                    type: 'success',
-                  });
-                  self.getTableList();
-                } else {
-                  ElMessage.error($t('操作失败'));
-                }
-              })
-              .catch((error) => {
-                self.loading = false;
-              });
-          })
-          .catch(() => {});
-      },
-    },
+  const handleCurrentChange = (val) => {
+    curPage.value = val;
+    loading.value = true;
+    getTableList();
   };
+
+  const handleSizeChange = (val) => {
+    curPage.value = 1;
+    pageSize.value = val;
+    getTableList();
+  };
+
+  const getTableList = () => {
+    let params = { ...formInline };
+    params.page = curPage.value;
+    params.list_rows = pageSize.value;
+
+    loading.value = true;
+    MarketingApi.activityList(params, true)
+      .then((data) => {
+        loading.value = false;
+        tableData.value = data.data.list.data;
+        totalDataNumber.value = data.data.list.total;
+      })
+      .catch((error) => {
+        loading.value = false;
+      });
+  };
+
+  const onSearch = () => {
+    clearTimeout(searchLoading.value);
+    searchLoading.value = setTimeout(() => {
+      curPage.value = 1;
+      getTableList();
+    }, 200);
+  };
+
+  const memberAuth = () => {
+    if (!proxy.$filter.isAuth('/card/user/index')) {
+      ElMessage.error(proxy.$t('该营销活动需商家开通会员中心功能，请联系销售代表处理'));
+      return false;
+    }
+    return true;
+  };
+
+  const addClick = () => {
+    if (!memberAuth()) {
+      return;
+    }
+    router.push('/' + app_id + '/marketing/activity/add');
+  };
+
+  const sendClick = (row) => {
+    if (!memberAuth()) {
+      return;
+    }
+    recordUuid.value = row.uuid;
+    recordDialogVisible.value = true;
+  };
+
+  const editClick = (item) => {
+    if (!memberAuth()) {
+      return;
+    }
+    router.push({
+      path: '/' + app_id + '/marketing/activity/edit',
+      query: {
+        uuid: item.uuid,
+      },
+    });
+  };
+
+  const disableClick = (row) => {
+    if (!memberAuth()) {
+      return;
+    }
+    ElMessageBox.confirm(window.$t('失效后将不可恢复，活动变为已结束状态，确定将该活动失效?'), window.$t('失效营销活动'), {
+      confirmButtonText: window.$t('确定'),
+      cancelButtonText: window.$t('取消'),
+      type: 'warning',
+    })
+      .then(() => {
+        // 这里可以添加具体的删除API调用
+        MarketingApi.activityDisable({ uuid: row.uuid }, true)
+          .then((res) => {
+            ElMessage.success(window.$t('失效成功'));
+            getTableList();
+          })
+          .catch((error) => {
+            loading.value = false;
+          });
+      })
+      .catch(() => {});
+  };
+
+  // 组件挂载时执行
+  onMounted(() => {
+    getTableList();
+  });
 </script>

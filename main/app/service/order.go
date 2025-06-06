@@ -16,6 +16,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/resp/product_resp"
 	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -98,6 +99,7 @@ type IOrderSrv interface {
 	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                                        // 取消赠菜购物车商品
 	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, bool, error)                                                                        // 获取点餐必点方案
 	InstantOrderPaymentInfo(ctx context.Context, saleBill *model.SaleBill, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)                      // 获取结账页面信息
+	OrderPaymentPoints(ctx context.Context, req req.InstantOrderPaymentPointsReq) (*resp.InstantOrderPaymentInfoResp, error)                                                          // 设置订单的抵扣积分数量
 	InstantOrderPaymentQrcode(ctx context.Context, req req.InstantOrderPaymentQrcodeReq) (*resp.InstantOrderPaymentQrcodeInfoResp, error)                                             // 获取支付二维码
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                                                   // 给销售订单创建一个支付单
 	InstantOrderPaymentCancel(ctx context.Context, req req.InstantOrderPaymentCancelReq) (*resp.InstantOrderPaymentInfoResp, error)                                                   // 撤销一个支付单
@@ -376,6 +378,11 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, 
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+	// 获取积分设置
+	pointsSetting, err := s.settingSrv.GetPointsSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	var serviceFeeType uint
 	var serviceFeeValue float64
@@ -459,17 +466,20 @@ func (s *orderSrv) NewSaleBillSetting(ctx context.Context, saleBillUuid uint64, 
 	}
 
 	saleBillSetting := model.SaleBillSetting{
-		SaleBillUuid:     saleBillUuid,
-		ServiceFeeType:   serviceFeeType,
-		ServiceFeeValue:  serviceFeeValue,
-		TaxFeeType:       taxFeeType,
-		DiscountType:     discountType,
-		ZeroRule:         zero,
-		ZeroCheckoutRule: zeroCheckout,
-		IsStatGift:       isStatGift,
-		IsStatFree:       isStatFree,
-		ServiceApply:     serviceApply,
-		ServiceFeeBase:   serviceFeeBase,
+		SaleBillUuid:       saleBillUuid,
+		ServiceFeeType:     serviceFeeType,
+		ServiceFeeValue:    serviceFeeValue,
+		TaxFeeType:         taxFeeType,
+		DiscountType:       discountType,
+		ZeroRule:           zero,
+		ZeroCheckoutRule:   zeroCheckout,
+		IsStatGift:         isStatGift,
+		IsStatFree:         isStatFree,
+		ServiceApply:       serviceApply,
+		ServiceFeeBase:     serviceFeeBase,
+		OpenPointsExchange: utils.BoolToUint(pointsSetting.GetOpenPointsExchange()),
+		PointsExchangeRate: pointsSetting.GetPointsExchangeRate(),
+		AutoPointsExchange: utils.BoolToUint(pointsSetting.IsAutoPointsExchange()),
 	}
 
 	return &saleBillSetting, nil
@@ -1535,6 +1545,10 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		return errors.WithMessage(errors.New("找不到销售订单")), constant.CodeFail
 	}
 
+	if req.Points > saleOrder.GetManualReturnPoints() {
+		return errors.WithMessage(errors.New("退款积分不能大于最大可退积分")), constant.CodeFail
+	}
+
 	returnType := constant.ReturnOrderRefundTypeTotal
 	saleOrderProducts := make([]*model.SaleOrderProduct, 0)                       // 退款商品列表
 	saleOrderBuffetCustomerTypes := make([]*model.SaleOrderBuffetCustomerType, 0) // 退款自助餐顾客列表
@@ -1736,26 +1750,49 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		}
 		// 退积分
 		if saleOrder.ConsumerUuid > 0 {
-			refundAmount := returnOrder.RefundAmount // 退款金额
-			// 积分赠送比例
-			integralGiveRate := saleOrder.GiftPointsRate
-			// 退积分=退款金额*积分赠送比例
-			points := decimal.NewFromFloat(refundAmount).Mul(decimal.NewFromFloat(integralGiveRate)).Truncate(2).InexactFloat64()
-			member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
-			if err != nil {
-				return errors.WithMessage(err)
-			}
-			// 更新会员积分
-			if points > 0 {
-				if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
-					"frozen_point": member.FrozenPoint - points, // 扣减积分
-				}); err != nil {
+			// 手动退积分
+			if saleOrder.CanManualReturnPoints() {
+				if req.Points > 0 {
+					points := req.Points
+					// 开始手动退积分
+					member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+					if err != nil {
+						return errors.WithMessage(err)
+					}
+					if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
+						"frozen_point": member.FrozenPoint - points, // 扣减积分
+					}); err != nil {
+						return errors.WithMessage(err)
+					}
+					// 创建积分变动记录
+					memberPointLog := saleOrder.NewRefundMemberPointLog(-points)
+					if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
+						return errors.WithMessage(err)
+					}
+				}
+			} else {
+				// 自动退积分
+				refundAmount := returnOrder.RefundAmount // 退款金额
+				// 积分赠送比例
+				integralGiveRate := saleOrder.GiftPointsRate
+				// 退积分=退款金额*积分赠送比例
+				points := decimal.NewFromFloat(refundAmount).Mul(decimal.NewFromFloat(integralGiveRate)).Truncate(2).InexactFloat64()
+				member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
+				if err != nil {
 					return errors.WithMessage(err)
 				}
-				// 创建积分变动记录
-				memberPointLog := saleOrder.NewRefundMemberPointLog(-points)
-				if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
-					return errors.WithMessage(err)
+				// 更新会员积分
+				if points > 0 {
+					if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
+						"frozen_point": member.FrozenPoint - points, // 扣减积分
+					}); err != nil {
+						return errors.WithMessage(err)
+					}
+					// 创建积分变动记录
+					memberPointLog := saleOrder.NewRefundMemberPointLog(-points)
+					if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
+						return errors.WithMessage(err)
+					}
 				}
 			}
 			publishChangeMemberPoints = true
@@ -1779,7 +1816,6 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				}
 			}
 			if refundAmount > 0 {
-				ctx.SetDB(db)
 				if member != nil {
 					smsReq := sms.MemberOrderRefundRequest{
 						Company:       ctx.GetCompany().Name,
@@ -2053,17 +2089,6 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 		return nil, errors.New("找不到销售订单")
 	}
 
-	// 判断订单是否可以退款
-	// if !saleBill.IsReturnable() {
-	// 	return nil, errors.New("订单状态不允许退款")
-	// }
-
-	// 获取销售订单付款单列表
-
-	// 获取销售订单退货单列表
-
-	// 获取销售订单商品列表
-
 	products := make([]resp.OrderReturnProduct, 0)
 
 	// 获取销售订单的每个付款单的可退款金额
@@ -2127,9 +2152,11 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 	// 可退款金额
 	canReturnAmount := saleOrder.GetCanReturnAmount()
 	res := &resp.OrderReturnInfoResp{
-		CanReturnAmount: canReturnAmount, // 可退款金额. 可退款金额=订单最终应收金额-已退款金额
-		PaymentRecords:  paymentRecords,
-		Products:        productList,
+		ManualReturnPoints: saleOrder.CanManualReturnPoints(), // 是否可以手动退款积分。订单是按比例赠送积分且未发生积分抵扣时，不自动退款。
+		DeductiblePoints:   saleOrder.GetManualReturnPoints(), // 可扣除积分。订单赠送的积分-已经退回的积分
+		CanReturnAmount:    canReturnAmount,                   // 可退款金额. 可退款金额=订单最终应收金额-已退款金额
+		PaymentRecords:     paymentRecords,
+		Products:           productList,
 	}
 
 	return res, nil
@@ -2199,7 +2226,7 @@ func (s *orderSrv) GetReverseSettleInfo(ctx context.Context, req req.OrderRevers
 		SaleBillUuid:    saleBill.Uuid,
 		SaleBillNo:      saleBill.OrderNo,
 		SaleBillType:    saleBill.BillType,
-		OrderAmount:     saleBill.Amount,
+		OrderAmount:     saleBill.OriginAmount,
 		PaymentAmount:   saleBill.PaymentAmount,
 		PayMethods:      payMethods,
 		Desks:           resDesks,
@@ -4116,6 +4143,29 @@ func (s *orderSrv) GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid
 	return saleBillUuid, saleOrderUuid, nil
 }
 
+// 获取商品详情
+func (s *orderSrv) GetProductDetail(ctx context.Context, productPackageUuid uint64) (product_resp.Product, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	productRepo := repository.NewProductRepo(db)
+	commonRepo := repository.NewCommonRepo()
+	products, _, err := productRepo.GetProductListWithPagination(
+		1,
+		10,
+		commonRepo.WhereByUuid(productPackageUuid),
+	)
+
+	if err != nil {
+		return product_resp.Product{}, errors.WithMessage(err)
+	}
+	if len(products) == 0 {
+		return product_resp.Product{}, errors.WithMessage(errors.New("商品不存在"), "商品不存在")
+	}
+
+	formatProducts := FormatProducts(ctx, products)
+	return formatProducts[0], nil
+}
+
 // InstantOrderCartProductAdd 点餐页面，往购物车添加商品。
 func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
 	// 当不填销售账单ID时，表示要新建一个销售账单
@@ -4137,6 +4187,42 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 			ctx.Log().Debug("添加商品时点餐订单创建成功", zap.Any("order info", order))
 			request.SaleBillUuid = order.SaleBillUuid
 			request.SaleOrderUuid = order.SaleOrderUuid
+		}
+	}
+
+	// 判断商品价格是否与后台设置的最新价格不一致
+	// 查询商品规格的最新价格
+	// 查询所选加料的最新价格
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	if request.Price != 0 {
+		uuids := make([]uint64, 0)
+		uuids = append(uuids, request.FlavorUuid)
+		uuids = append(uuids, request.SauceUuidList...)
+		productBoms, err := repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		lastestPrice := decimal.NewFromFloat(0)
+		for _, productBom := range productBoms {
+			lastestPrice = lastestPrice.Add(decimal.NewFromFloat(productBom.Price))
+		}
+		if lastestPrice.Cmp(decimal.NewFromFloat(request.Price)) != 0 {
+			// 获取最新的商品详情
+			productPackageUuid := productBoms[0].ProductPackageUuid
+			product, err := s.GetProductDetail(ctx, productPackageUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			// 更新购物车中的商品价格
+			s.OrderCheck(ctx, req.InstantOrderCheckReq{
+				SaleBillUuid:  request.SaleBillUuid,
+				SaleOrderUuid: request.SaleOrderUuid,
+				IgnoreMust:    true,
+			})
+			return &resp.ShopCart{
+				Product: &product,
+			}, errors.ErrProductPriceChanged
 		}
 	}
 
@@ -6593,6 +6679,41 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 		}
 		paymentOrders = append(paymentOrders, order)
 	}
+
+	var pointsExchange resp.PointsExchangeInfo
+	if saleOrder.Member != nil && saleBill.SaleBillSetting.IsOpenPointsExchange() {
+		// 积分抵扣信息。
+		pointsExchangeRate := saleBill.SaleBillSetting.PointsExchangeRate
+		saleOrder.PointsExchangeRate = pointsExchangeRate
+		maxPoints := saleOrder.CaclMaxPoints()
+
+		// 如果自动抵扣积分，且未创建付款单，则更新销售订单的抵扣积分和抵扣金额
+		if saleBill.SaleBillSetting.IsAutoPointsExchange() && len(saleOrder.PaymentOrders) == 0 {
+			// 自动抵扣积分，更新销售订单的抵扣积分和抵扣金额
+			saleOrder.PayPoints = maxPoints
+			saleOrder.PointsExchangeRate = pointsExchangeRate
+			saleOrder.PayPointsAmount = saleOrder.CaclPointsExchangeAmount()
+
+			// 更新销售订单的积分抵扣信息
+			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate); err != nil {
+				return nil, errors.WithMessage(err)
+			}
+		}
+		canChangePoints := true
+		if saleBill.SaleBillSetting.IsAutoPointsExchange() || len(saleOrder.PaymentOrders) > 0 {
+			// 自动抵扣积分或已创建付款单，则不能修改抵扣积分
+			canChangePoints = false
+		}
+		pointsExchange = resp.PointsExchangeInfo{
+			MaxPoints:          maxPoints,
+			PointsExchangeRate: pointsExchangeRate,
+			PayPoints:          saleOrder.PayPoints, // 手动抵扣积分或已经生效的自动抵扣积分
+			PayPointsAmount:    saleOrder.PayPointsAmount,
+			OpenPointsExchange: saleBill.SaleBillSetting.IsOpenPointsExchange(),
+			CanChangePoints:    canChangePoints,
+		}
+	}
+
 	methodItems := make([]resp.PaymentMethodItem, 0)
 	amounts := make([]resp.PaymentMethodAmount, 0)
 
@@ -6637,7 +6758,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 
 		commissionFee := saleOrder.CalcCommissionFee()
 
-		saleOrderAmount := saleOrder.GetAmount()
+		saleOrderAmount := saleOrder.GetPointsExchangeAmount() // 积分抵扣后的应收金额
 		saleOrderOriginAmount := saleOrder.GetOriginAmountValue()
 		if commissionFee > 0 {
 			// 如果有手续费
@@ -6679,8 +6800,74 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 		PaymentOrders:  resp.PaymentInfoList{List: paymentOrders},
 		PaymentMethods: resp.PaymentMethodList{List: methodItems},
 		Amounts:        resp.PaymentMethodAmountList{List: amounts},
+		PointsExchange: pointsExchange,
 	}
 
+	return infoResp, nil
+}
+
+func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderPaymentPointsReq) (*resp.InstantOrderPaymentInfoResp, error) {
+	// 加锁
+	if ctx.NoLock() {
+		s.lock.LockUuid(req.SaleBillUuid)
+		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("无法查询到销售订单")
+	}
+
+	if !saleBill.SaleBillSetting.IsOpenPointsExchange() {
+		return nil, errors.New("未开启积分抵扣功能")
+	}
+
+	if saleOrder.Member == nil {
+		return nil, errors.New("订单没有会员")
+	}
+	if len(saleOrder.PaymentOrders) > 0 {
+		return nil, errors.New("订单已付款,无法修改积分抵扣数量")
+	}
+
+	if req.Points > saleOrder.Member.GetPoints() {
+		return nil, errors.New("积分数量超过会员积分")
+	}
+
+	// 检查积分数量是否超过最大抵扣数
+	if saleOrder.Member != nil && saleBill.SaleBillSetting.IsOpenPointsExchange() {
+		// 积分抵扣信息。
+		pointsExchangeRate := saleBill.SaleBillSetting.PointsExchangeRate
+		maxPoints := saleOrder.CaclMaxPoints()
+		if req.Points > maxPoints {
+			return nil, errors.New("积分数量超过最大抵扣数")
+		}
+
+		// 如果未创建付款单，则更新销售订单的抵扣积分和抵扣金额
+		if len(saleOrder.PaymentOrders) == 0 {
+			// 自动抵扣积分，更新销售订单的抵扣积分和抵扣金额
+			saleOrder.PayPoints = req.Points
+			saleOrder.PointsExchangeRate = pointsExchangeRate
+			saleOrder.PayPointsAmount = saleOrder.CaclPointsExchangeAmount()
+
+			// 更新销售订单的积分抵扣信息
+			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate); err != nil {
+				return nil, errors.WithMessage(err)
+			}
+		}
+	}
+
+	// 获取订单的付款信息
+	infoResp, err := s.InstantOrderPaymentInfo(ctx, saleBill, req.SaleBillUuid, req.SaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 	return infoResp, nil
 }
 
@@ -7119,6 +7306,18 @@ func (s *orderSrv) FinishSaleBill(ctx context.Context, saleBill *model.SaleBill,
 	return nil
 }
 
+// 获取订单的积分发放规格信息
+func (s *orderSrv) GetPointsRuleInfo(ctx context.Context, isBufferOrder bool, memberLevelUuid uint64) (*settingResp.PointsRule, error) {
+	// 获取积分设置
+	pointsSetting, err := s.settingSrv.GetPointsSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	rule := pointsSetting.GetPointsGiftRule(isBufferOrder, memberLevelUuid)
+	return &rule, nil
+}
+
 // InstantOrderPaymentFinish 完成销售订单的付款结账
 func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error) {
 	// 加锁
@@ -7154,6 +7353,15 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
+	// 如果开启积分抵扣，则检查会员积分是否足够
+	if saleBill.SaleBillSetting.IsOpenPointsExchange() {
+		if saleOrder.Member != nil {
+			if saleOrder.PayPoints > 0 && saleOrder.Member.GetPoints() < saleOrder.PayPoints {
+				return nil, errors.New("当前会员积分不足，请重新确认后结账")
+			}
+		}
+	}
+
 	var unpaidAmount float64  // 未付款金额
 	var commissionFee float64 // 手续费，付款已经产生的手续费
 	// 获取最小的那个未付款金额。因为可能结账抹零后已经没有未付款金额了
@@ -7183,7 +7391,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	}
 
 	// 最终应收=应收金额+手续费-结账抹零金额
-	finalAmount := decimal.NewFromFloat(saleOrder.GetAmount()).Add(decimal.NewFromFloat(commissionFee)).Sub(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee)).InexactFloat64()
+	finalAmount := decimal.NewFromFloat(saleOrder.GetPointsExchangeAmount()).Add(decimal.NewFromFloat(commissionFee)).Sub(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee)).InexactFloat64()
 
 	totalPay := float64(0) // 总付款金额=各个付款单的实收金额之和
 	for _, paymentOrder := range infoResp.PaymentOrders.List {
@@ -7226,10 +7434,10 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	// 现金支付的金额，已减掉找零的金额
 	cashAmount = saleOrder.GetCashAmount()
 
-	// // 计算抹零金额. 只有没有手续费时，才能抹零
-	// if commissionFee == 0 {
-	// 	saleOrder.SetCheckOutZeroFee()
-	// }
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 
 	// 修改订单为支付完成，并记录找零金额、最终付款金额等结算后才计算的字段
 	final := model.FinalAmount{
@@ -7239,6 +7447,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		FinalPrice:           finalAmount,
 		PaymentCommissionFee: commissionFee,
 		GiftAmount:           saleOrder.CalcGiftAmount(saleOrder.SaleOrderProducts),
+		Unit:                 currencySetting.Unit,
 	}
 	saleOrder.SetFinishStatus(final) // 设置销售订单状态为已结清
 
@@ -7248,14 +7457,21 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		return nil, errors.WithMessage(err)
 	}
 
-	// 计算积分
-	// 获取商家当前的积分赠送比例
+	// 获取商家的会员设置
 	pointsSetting, err := s.settingSrv.GetPointsSetting(ctx)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	// 计算本单获取的积分
-	saleOrder.SetGiftPointsRate(pointsSetting.GetGiftRatio())
+	// 计算本单获取的积分. 如果订单没有会员，则不计算
+	if saleOrder.ConsumerUuid != 0 {
+		// 计算积分
+		// 根据订单类型（自助餐订单或非自助餐订单）选择积分策略（按比例或按人数）
+		pointsRule, err := s.GetPointsRuleInfo(ctx, saleBill.IsBuffetSaleBill(), saleOrder.Member.MemberLevelUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		saleOrder.SetGiftPointsRate(int(saleBill.MealNum), *pointsRule)
+	}
 
 	// 会员余额扣费相关
 	memberBalanceAmount, memberGiftBalanceAmount := float64(0), float64(0)
@@ -7292,7 +7508,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		// 更新会员消费金额和消费次数
 		repository.NewMemberRepo(db).IncConsumptionAmount(saleOrder.ConsumerUuid, saleOrder.PaymentAmount)
 		repository.NewMemberRepo(db).IncConsumptionCount(saleOrder.ConsumerUuid)
-		// 处理会员升级
+		// 处理会员升级 todo 如果后面的逻辑报错，这个升级没有回滚，应该放在事务中升级
 		go s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), saleOrder.ConsumerUuid)
 	}
 
@@ -7327,6 +7543,20 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 					Scene:       constant.MemberBalanceLogConsume,
 					Describe:    fmt.Sprintf("用户消费：%s", saleOrder.OrderNo),
 					RelatedUuid: saleOrder.Uuid,
+				}); err != nil {
+					return errors.WithMessage(err)
+				}
+			}
+		}
+
+		// 如果开启积分抵扣，且使用了积分抵扣时，则更新会员的积分余额
+		if saleBill.SaleBillSetting.IsOpenPointsExchange() {
+			if saleOrder.ConsumerUuid != 0 && saleOrder.PayPoints > 0 {
+				if err := s.memberSrv.HandleMemberPoints(ctx, MemberPointsChangeReq{
+					Uuid:     saleOrder.Member.Uuid,
+					Points:   -saleOrder.PayPoints,
+					Scene:    constant.MemberPointLogScenePointsExchange,
+					Describe: fmt.Sprintf("订单积分抵扣：%s", saleOrder.OrderNo), // todo 多语言
 				}); err != nil {
 					return errors.WithMessage(err)
 				}
@@ -7405,7 +7635,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			ctx.Log().Info("停止发送短信，获取会员失败", zap.Error(errors.WithMessage(err)))
 		} else {
 			go func() {
-				ctx.SetDB(db)
 				var memberPaymentOrder *resp.PaymentOrder
 				for _, paymentOrder := range infoResp.PaymentOrders.List {
 					if paymentOrder.PaymentMethodCode == constant.PaymentMethodCodeBalance {
@@ -7420,7 +7649,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 						Consumption:    saleOrder.FinalPrice,
 						IncreasePoints: saleOrder.GiftPoints,
 						Balance:        member.GetBalanceAll(),
-						PointsBalance:  member.GetPoints() + saleOrder.GiftPoints, // 会员积分=会员积分+本次增加的积分。 此时积分还未增加到会员表中
+						PointsBalance:  decimal.NewFromFloat(member.GetPoints()).Add(decimal.NewFromFloat(saleOrder.GiftPoints)).Round(2).InexactFloat64(), // 会员积分=会员积分+本次增加的积分。 此时积分还未增加到会员表中
 					}
 					if memberPaymentOrder != nil {
 						smsReq.MemberPay = memberPaymentOrder.Amount
@@ -7521,6 +7750,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		}()
 	}
 
+	// 返回结果
 	payMethods := make([]resp.PayMethod, 0)
 	for _, paymentOrder := range infoResp.PaymentOrders.List {
 		method := resp.PayMethod{
@@ -7529,7 +7759,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		}
 		payMethods = append(payMethods, method)
 	}
-	orderFinishResp := &resp.OrderFinishResp{
+	return &resp.OrderFinishResp{
 		SaleBillUuid:  req.SaleBillUuid,
 		SaleOrderUuid: req.SaleOrderUuid,
 		AmountInfo: resp.PayAmountInfo{
@@ -7540,9 +7770,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		PayMethodList: resp.PayMethodList{
 			List: payMethods,
 		},
-	}
-
-	return orderFinishResp, nil
+	}, nil
 }
 
 // InstantOrderFree 免单

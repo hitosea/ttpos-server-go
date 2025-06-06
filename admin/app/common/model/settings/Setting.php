@@ -2,6 +2,7 @@
 
 namespace app\common\model\settings;
 
+use app\common\model\user\Grade;
 use help\IpHelp;
 use think\Model;
 use help\ImgHelp;
@@ -133,7 +134,39 @@ class Setting extends BaseModel
         $shop_supplier_id == 0 && $shop_supplier_id = $static::$app_id;
         $setting = $static->select();
         $data = empty($setting) ? [] : array_column($static->collection($setting)->toArray(), null, 'key');
-        return $static->getMergeData($data, $languageList);
+
+        $data = $static->getMergeData($data, $languageList);
+
+        if ($shop_supplier_id > 0) {
+            // 购物送积分规则处理会员
+            $grades = (new Grade)->getLists();
+            $rateMemberLevels = [];
+            $quantityMemberLevels = [];
+            foreach ($grades as $grade) {
+                $rateMemberLevels[] = [
+                    "uuid" => $grade['uuid'],
+                    "name" => $grade['name'],
+                    "value" => $grade['points_rate'],
+                ];
+                $quantityMemberLevels[] = [
+                    "uuid" => $grade['uuid'],
+                    "name" => $grade['name'],
+                    "value" => $grade['points_quantity'],
+                ];
+            }
+            foreach ($data[SettingEnum::POINTS]["values"]["shopping_gift_rules"] as $k => $shoppingGiftRule) {
+                switch ($shoppingGiftRule["type"]) {
+                    case "payment_amount":
+                        $data[SettingEnum::POINTS]["values"]["shopping_gift_rules"][$k]["member_levels"] = $rateMemberLevels;
+                        break;
+                    case "desk":
+                        $data[SettingEnum::POINTS]["values"]["shopping_gift_rules"][$k]["member_levels"] = $quantityMemberLevels;
+                        break;
+                }
+            }
+        }
+
+        return $data;
     }
 
     /**
@@ -684,6 +717,39 @@ class Setting extends BaseModel
                         "b) 您在本平台参加特定活动也可使用积分,详细使用规则以具体活动时的规则为准;\n" .
                         "c) 积分的数值精确到个位(小数点后全部舍弃,不进行四舍五入)\n" .
                         "d) 买家在完成该笔交易(订单状态为“已签收”)后才能得到此笔交易的相应积分,如购买商品参加店铺其他优惠,则优惠的金额部分不享受积分获取;",
+                    'shopping_gift_rules' => [
+                        [
+                            'type' => 'payment_amount', // 按付款金额比例赠送
+                            'is_open' => '0', // 是否开启: "1" - 开启; "0" - 关闭
+                            'is_member_level_related' => '0', // 是否按会员等级赠送: "1" - 是; "0" - 否
+                            'value' => '', // 积分比例
+                            'payment_amount_requirement' => '', // 付款金额要求
+                            'meal_type' => [ // 就餐类型: "buffet" - 自助餐; "non-buffet" - 非自助餐
+                            ],
+                            'balance_payment_get_points' => '0', // 会员余额支付是否赠送: "1" - 是; "0" - 否
+                            'refund_return_points' => '0', // 退款自动扣积分: "1" - 是; "0" - 否
+                            'member_levels' => [ // 会员等级
+                            ],
+                        ],
+                        [
+                            'type' => 'desk', // 按桌台人数赠送
+                            'is_open' => '0', // 是否开启: "1" - 开启; "0" - 关闭
+                            'is_member_level_related' => '0',  // 是否按会员等级赠送: "1" - 是; "0" - 否
+                            'value' => '', // 积分数量
+                            'payment_amount_requirement' => '', // 付款金额要求
+                            'meal_type' => [ // 就餐类型: "buffet" - 自助餐; "non-buffet" - 非自助餐
+                            ],
+                            'balance_payment_get_points' => '0', // 会员余额支付是否赠送: "1" - 是; "0" - 否
+                            'refund_return_points' => '0', // 退款自动扣积分: "1" - 是; "0" - 否
+                            'member_levels' => [ // 会员等级
+                            ],
+                        ],
+                    ],
+                    'exchange' => [
+                        'open_points_exchange' => '0', // 会员积分抵扣订单金额
+                        'points_exchange_rate' => '', // 每积分抵扣应付金额
+                        'auto_points_exchange' => '0', // 是否自动抵扣
+                    ],
                 ],
             ],
             SettingEnum::OFFICIA => [

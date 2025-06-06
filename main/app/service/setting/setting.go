@@ -893,6 +893,32 @@ func (s *Srv) GetPointsSetting(ctx context.Context) (setting.Points, error) {
 		ctx.Log().Error("合并积分设置失败", zap.Error(err))
 		return points, errors.New("合并积分设置失败")
 	}
+
+	memberRepo := repository.NewMemberRepo(ctx.GetDB())
+	memberLevels := memberRepo.GetMemberLevels()
+	var rateMemberLevels []setting.MemberLevelItem
+	var quantityMemberLevels []setting.MemberLevelItem
+	for _, level := range memberLevels {
+		rateMemberLevels = append(rateMemberLevels, setting.MemberLevelItem{
+			Uuid:  level.Uuid,
+			Name:  level.Name,
+			Value: level.PointsRate,
+		})
+		quantityMemberLevels = append(quantityMemberLevels, setting.MemberLevelItem{
+			Uuid:  level.Uuid,
+			Name:  level.Name,
+			Value: level.PointsQuantity,
+		})
+	}
+	for i, rule := range defaultPoints.ShoppingGiftRules {
+		switch rule.Type {
+		case setting.RuleTypePaymentAmount:
+			defaultPoints.ShoppingGiftRules[i].MemberLevels = rateMemberLevels
+		case setting.RuleTypeDesk:
+			defaultPoints.ShoppingGiftRules[i].MemberLevels = quantityMemberLevels
+		}
+	}
+
 	return defaultPoints, nil
 }
 

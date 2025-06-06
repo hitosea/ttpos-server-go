@@ -19,6 +19,7 @@ const (
 	SettingKitchen        = "kitchen"          // 各端-厨显设置
 	SettingAssistant      = "assistant"        // 各端-点餐助手设置
 	SettingBuffet         = "buffet"           // 自助餐-自助餐设置
+	SettingPointsRule     = "points_rule"      // 积分规则设置
 	SettingCloudBasic     = "cloud_basic"      // 云端-基础信息
 )
 
@@ -40,4 +41,11 @@ const (
 const (
 	AutoClearTable    = "0" // 自动清台
 	NotAutoClearTable = "1" // 不自动清台
+)
+
+// 积分赠送类型
+const (
+	// 积分赠送类型
+	RuleTypePaymentAmount = 0 // 按付款金额比例赠送
+	RuleTypeDesk          = 1 // 按桌台人数赠送
 )

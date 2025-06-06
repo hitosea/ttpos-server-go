@@ -4,15 +4,15 @@
     <el-form size="small" ref="formRef" class="product-form" :model="form" label-position="top" label-width="180px">
       <div class="product-form-wrapper">
         <div class="product-form-left">
-          <ImagePreview></ImagePreview>
+          <ImagePreview ref="ImagePreviewRef" :qrcode="qrcode" :imgName="imgName" :imgDescription="imgDescription"></ImagePreview>
         </div>
         <!--分割线-->
         <div class="product-form-line"></div>
         <div class="product-form-flex" ref="formContainer">
           <!--基础信息-->
-          <Basic></Basic>
+          <Basic ref="BasicRef" @imgName="imgNameChange" @imgDescription="imgDescriptionChange"></Basic>
           <!--高级设置-->
-          <Set></Set>
+          <Set ref="SetRef"></Set>
           <!--提交-->
         </div>
       </div>
@@ -26,10 +26,10 @@
 </template>
 
 <script setup>
-  import { ref, reactive, provide, onMounted, getCurrentInstance } from 'vue';
+  import { ref, reactive, provide, onMounted, getCurrentInstance, watch } from 'vue';
   import { useRouter } from 'vue-router';
   import { ElMessage } from 'element-plus';
-  import CardApi from '@/api/card.js';
+  import MarketingApi from '@/api/marketing.js';
   import Basic from './part/Basic.vue';
   import Set from './part/set.vue';
   import { useUserStore } from '@/store/index';
@@ -46,82 +46,83 @@
 
   // 响应式数据
   const formRef = ref();
+  const BasicRef = ref();
+  const SetRef = ref();
   const formContainer = ref();
   const loading = ref(false);
-
+  const ImagePreviewRef = ref();
   // 表单数据
   const form = reactive({
-    model: {
-      card_name: '',
-      type_id: 1,
-      card_style: '',
-      sort: null,
-      is_discount: 0,
-      discount: 0,
-      open_points: 0,
-      open_points_num: 0,
-      open_coupon: 0,
-      open_coupons: [],
-      month_points: 0,
-      month_points_num: 0,
-      month_coupon: 0,
-      month_coupons: [],
-      expire: 0,
-      money: 0,
-      stock: '',
-      status: 0,
-      content: '',
-      sub_card: 0,
-      sub_num: 0,
-      default_style: '',
-      is_default: 0,
-    },
-    subList: [],
-    /*副卡*/
-    image: [],
-    /*会员卡类型*/
-    typeList: [],
-    /*优惠券*/
-    couponList: [],
+    name: '',
+    description: '',
+    start_time: '',
+    end_time: '',
+    reward_condition_amount: null,
+    is_open_reward_limit: [],
+    reward_limit: null,
+    reward_condition_num: 0,
+    reward_type: 0,
+    prize_list: [
+      {
+        prize_type: 1,
+        prize_uuid: 123123123,
+      },
+    ],
+    image_base64: '',
   });
+
+  const qrcode = ref('');
+  const imgName = ref('');
+  const imgDescription = ref('');
 
   // 向子组件提供数据
   provide('form', form);
   provide('image', form.image);
-  provide('subList', form.subList);
 
   // 方法
   const getBaseData = () => {
-    CardApi.getBaseData({}, true)
+    MarketingApi.activityAddGet({}, true)
       .then((res) => {
         loading.value = false;
-        Object.assign(form, res.data);
+        qrcode.value = res.data.qr_code;
       })
       .catch((error) => {
         loading.value = false;
       });
   };
 
-  const onSubmit = () => {
-    const params = form.model;
-    if (params.is_discount == 0) params.discount = 0;
+  const imgNameChange = (data) => {
+    imgName.value = data;
+  };
+
+  const imgDescriptionChange = (data) => {
+    imgDescription.value = data;
+  };
+
+  const onSubmit = async () => {
+    const params = JSON.parse(JSON.stringify(form));
+    const _name = BasicRef.value.$refs.activityNameFormRef.data;
+    params.name = JSON.stringify(_name);
+    const _description = BasicRef.value.$refs.activityDescriptionFormRef.data;
+    params.description = JSON.stringify(_description);
+
+    params.is_open_reward_limit = params.is_open_reward_limit.length > 0 ? 1 : 0;
+
+    // 验证表单
+    const validUniqueName = await BasicRef.value.$refs.activityNameFormRef.validate();
+    const validUniqueDescription = await BasicRef.value.$refs.activityDescriptionFormRef.validate();
 
     formRef.value.validate((valid) => {
-      if (valid) {
+      if (valid && validUniqueName && validUniqueDescription) {
         loading.value = true;
-        CardApi.addcard(
-          {
-            params: JSON.stringify(params),
-          },
-          true
-        )
+        MarketingApi.activityAdd(params, true)
           .then((data) => {
             loading.value = false;
             ElMessage({
               message: $t('添加成功'),
               type: 'success',
             });
-            router.push('/' + app_id + '/card/card/index');
+            router.push('/' + app_id + '/marketing/activity/index');
           })
           .catch((error) => {
             loading.value = false;
@@ -142,9 +143,6 @@
 </script>
 
 <style lang="scss" scoped>
-  .basic-setting-content {
-  }
-
   .product-add {
     height: calc(100% - 14px);
     overflow: hidden;
@@ -165,6 +163,8 @@
     .product-form-left {
       flex-shrink: 0;
       width: 312px;
+      height: 100%;
+      overflow-y: auto;
     }
 
     .product-form-line {

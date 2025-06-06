@@ -9,7 +9,13 @@ use app\common\model\BaseModel;
 class MarketingActivityRecord extends BaseModel
 {
     protected $name = 'marketing_activity_record';
-    
+
+    // 格式化
+    public function getLastRewardTimeAttr($value, $data)
+    {
+        return date('Y-m-d H:i:s', $data['last_reward_time'] ?? 0);
+    }
+
     /**
      * 关联活动
      */

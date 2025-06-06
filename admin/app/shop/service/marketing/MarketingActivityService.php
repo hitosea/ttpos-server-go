@@ -17,22 +17,51 @@ class MarketingActivityService
     public function create($data)
     {
         $validate = Validate::rule([
-            'name' => 'require|max:50',
-            'description' => 'require|max:100',
+            'name' => 'require|max:2000',
+            'description' => 'require|max:5000',
             'start_time' => 'require|string',
             'end_time' => 'require|string|gt:start_time',
-            'reward_condition_amount' => 'require|float|egt:0.01',
+            'reward_condition_amount' => 'require|float|egt:0',
             'is_open_reward_limit' => 'require|integer|in:0,1',
-            'reward_limit' => 'require|integer|egt:1',
             'prize_list' => 'require|array|min:1',
         ]);
         if (!$validate->check($data)) {
             return ['code'=>1, 'msg'=>$validate->getError()];
         }
+        // 如果开启了奖励次数限制，再校验 reward_limit
+        if (isset($data['is_open_reward_limit']) && $data['is_open_reward_limit'] == 1) {
+            if (!isset($data['reward_limit']) || !is_numeric($data['reward_limit']) || $data['reward_limit'] < 1) {
+                return ['code'=>1, 'msg'=>'奖励次数限制必须大于等于1'];
+            }
+        }
         // 检查时间合法性
         if ($data['start_time'] < time()) {
             return ['code'=>1, 'msg'=> __('活动开始时间不能早于当前时间')];
         }
+
+        // 检查是否存在同类型的正在进行中的活动
+        $startTime = is_numeric($data['start_time']) ? $data['start_time'] : strtotime($data['start_time']);
+        $endTime = is_numeric($data['end_time']) ? $data['end_time'] : strtotime($data['end_time']);
+        $exists = MarketingActivity::where('delete_time', 0)
+            ->where('is_invalid', 0)
+            ->where('type', $data['type'] ?? 0)
+            ->where(function ($query) use ($startTime, $endTime) {
+                $query->where(function ($q) use ($startTime, $endTime) {
+                    // 新活动的开始时间在已有活动的时间范围内
+                    $q->where('start_time', '<=', $endTime)->where('end_time', '>=', $startTime);
+                })->whereOr(function ($q) use ($startTime, $endTime) {
+                    // 新活动的结束时间在已有活动的时间范围内
+                    $q->where('start_time', '<=', $endTime)->where('end_time', '>=', $startTime);
+                })->whereOr(function ($q) use ($startTime, $endTime) {
+                    // 新活动的时间范围完全包含已有活动的时间范围
+                    $q->where('start_time', '>=', $startTime)->where('end_time', '<=', $endTime);
+                });
+            })
+            ->find();
+        if ($exists) {
+            return ['code'=>1, 'msg'=> __('同一个时间内只可有一个同类型活动进行')];
+        }
+
         Db::startTrans();
         try {
             $gift = new MarketingActivity();
@@ -42,8 +71,8 @@ class MarketingActivityService
                 'multi_language_name_uuid' => (new MultiLanguageName)->saveNames($data['name']),
                 'description' => $data['description'],
                 'multi_language_desc_uuid' => (new MultiLanguageName)->saveNames($data['description']),
-                'start_time' => is_numeric($data['start_time']) ? $data['start_time'] : strtotime($data['start_time']),
-                'end_time' => is_numeric($data['end_time']) ? $data['end_time'] : strtotime($data['end_time']),
+                'start_time' => $startTime,
+                'end_time' => $endTime,
                 'reward_condition_amount' => $data['reward_condition_amount'],
                 'is_open_reward_limit' => $data['is_open_reward_limit'],
                 'reward_limit' => $data['reward_limit'],
@@ -83,19 +112,70 @@ class MarketingActivityService
    
         Db::startTrans();
         try {
-            // 活动已开始后  只能修改结束时间，开始时间及其他信息不可修改
+            // 活动已开始后  只能修改结束时间，开始时间及其他信息不可修改
             if ($gift->start_time <= time()) {
+                $endTime = is_numeric($data['end_time']) ? $data['end_time'] : strtotime($data['end_time']) ?? $gift->end_time;
+                // 检查是否存在同类型的正在进行中的活动（排除当前活动）
+                $exists = MarketingActivity::where('delete_time', 0)
+                    ->where('is_invalid', 0)
+                    ->where('type', $gift->type)
+                    ->where('uuid', '<>', $uuid)
+                    ->where(function ($query) use ($gift, $endTime) {
+                        $query->where(function ($q) use ($gift, $endTime) {
+                            // 新活动的开始时间在已有活动的时间范围内
+                            $q->where('start_time', '<=', $endTime)
+                                ->where('end_time', '>=', $gift->start_time);
+                        })->whereOr(function ($q) use ($gift, $endTime) {
+                            // 新活动的结束时间在已有活动的时间范围内
+                            $q->where('start_time', '<=', $endTime)
+                                ->where('end_time', '>=', $gift->start_time);
+                        })->whereOr(function ($q) use ($gift, $endTime) {
+                            // 新活动的时间范围完全包含已有活动的时间范围
+                            $q->where('start_time', '>=', $gift->start_time)
+                                ->where('end_time', '<=', $endTime);
+                        });
+                    })
+                    ->find();
+                if ($exists) {
+                    return ['code'=>1, 'msg'=> __('同一个时间内只可有一个同类型活动进行')];
+                }
                 $gift->save([
-                    'end_time' => is_numeric($data['end_time']) ? $data['end_time'] : strtotime($data['end_time']) ?? $gift->end_time,
+                    'end_time' => $endTime,
                 ]);
             } else {
+                $startTime = is_numeric($data['start_time']) ? $data['start_time'] : strtotime($data['start_time']) ?? $gift->start_time;
+                $endTime = is_numeric($data['end_time']) ? $data['end_time'] : strtotime($data['end_time']) ?? $gift->end_time;
+                // 检查是否存在同类型的正在进行中的活动（排除当前活动）
+                $exists = MarketingActivity::where('delete_time', 0)
+                    ->where('is_invalid', 0)
+                    ->where('type', $gift->type)
+                    ->where('uuid', '<>', $uuid)
+                    ->where(function ($query) use ($startTime, $endTime) {
+                        $query->where(function ($q) use ($startTime, $endTime) {
+                            // 新活动的开始时间在已有活动的时间范围内
+                            $q->where('start_time', '<=', $endTime)
+                                ->where('end_time', '>=', $startTime);
+                        })->whereOr(function ($q) use ($startTime, $endTime) {
+                            // 新活动的结束时间在已有活动的时间范围内
+                            $q->where('start_time', '<=', $endTime)
+                                ->where('end_time', '>=', $startTime);
+                        })->whereOr(function ($q) use ($startTime, $endTime) {
+                            // 新活动的时间范围完全包含已有活动的时间范围
+                            $q->where('start_time', '>=', $startTime)
+                                ->where('end_time', '<=', $endTime);
+                        });
+                    })
+                    ->find();
+                if ($exists) {
+                    return ['code'=>1, 'msg'=> __('同一个时间内只可有一个同类型活动进行')];
+                }
                 $gift->save([
                     'name' => $data['name'] ?? $gift->name,
                     'multi_language_name_uuid' => (new MultiLanguageName)->saveNames($data['name'] ?? $gift->name, $gift->multi_language_name_uuid),
                     'description' => $data['description'] ?? $gift->description,
                     'multi_language_desc_uuid' => (new MultiLanguageName)->saveNames($data['description'] ?? $gift->description, $gift->multi_language_desc_uuid),
-                    'start_time' => is_numeric($data['start_time']) ? $data['start_time'] : strtotime($data['start_time']) ?? $gift->start_time,
-                    'end_time' => is_numeric($data['end_time']) ? $data['end_time'] : strtotime($data['end_time']) ?? $gift->end_time,
+                    'start_time' => $startTime,
+                    'end_time' => $endTime,
                     'reward_condition_amount' => $data['reward_condition_amount'] ?? $gift->reward_condition_amount,
                     'is_open_reward_limit' => $data['is_open_reward_limit'] ?? $gift->is_open_reward_limit,
                     'reward_limit' => $data['reward_limit'] ?? $gift->reward_limit,
@@ -142,6 +222,8 @@ class MarketingActivityService
             },
         ])->order('create_time desc')->field('
             uuid, 
+            name,
+            type,
             start_time, 
             end_time, 
             reward_condition_amount, 
@@ -188,9 +270,11 @@ class MarketingActivityService
      */
     public function getRecord($params)
     {
-   
-        return MarketingActivityRecord::alias('record')
-            ->field('record.uuid, record.activity_uuid, record.member_uuid, m.nickname, m.phone, record.reward_count, record.last_reward_time')
+        $page = (int)($params['page'] ?? 1);
+        $pageSize = (int)($params['list_rows'] ?? 10);
+        // 
+        $query =  MarketingActivityRecord::alias('record')
+            ->field('record.uuid, record.activity_uuid, record.member_uuid, record.reward_count, record.last_reward_time, record.create_time, record.update_time, m.nickname, m.phone, m.id')
             ->join('member m', 'record.member_uuid = m.uuid')
             ->where('record.delete_time', 0)
             ->when(isset($params['activity_uuid']) && !empty($params['activity_uuid']),function($query) use ($params){
@@ -202,77 +286,17 @@ class MarketingActivityService
                         ->whereOr('m.phone', 'like', '%'.$params['keyword'].'%')
                         ->whereOr('m.id', 'like', '%'.$params['keyword'].'%');
                 });
-            })
-            ->order('record.create_time desc')
-            ->select();
+            });
+        // 
+        $list = $query->clone(true)->order('record.create_time desc')->page($page, $pageSize)->select();
+        $total = $query->count();
+        return [
+            'current_page' => $page,
+            'data' => $list,
+            'per_page' => $pageSize,
+            'total' => $total,
+            'last_page' => ceil($total / $pageSize),
+        ];
     }
 
-    /**
-     * 发放奖励
-     */
-    public function issue($data)
-    {
-        $validate = Validate::rule([
-            'activity_uuid' => 'require',
-            'member_uuid' => 'require',
-            'order_amount' => 'require|float|egt:0.01',
-        ]);
-        if (!$validate->check($data)) {
-            return false;
-        }
-        $activity = MarketingActivity::where('uuid', $data['activity_uuid'])->where('delete_time', 0)->find();
-        if (!$activity) return false;
-        // 校验活动有效期
-        $now = time();
-        if ($activity->start_time > $now || $activity->end_time < $now || $activity->is_invalid == 1) {
-            return false;
-        }
-        // 校验奖励条件
-        if ($data['order_amount'] < $activity->reward_condition_amount) {
-            return false;
-        }
-        // 校验奖励次数
-        $record = MarketingActivityRecord::where('activity_uuid', $data['activity_uuid'])
-            ->where('member_uuid', $data['member_uuid'])
-            ->where('delete_time', 0)
-            ->find();
-        if ($record && $record->reward_count >= $activity->reward_limit) {
-            return false;
-        }
-        // 发放奖励（这里只做记录，实际发券等业务可扩展）
-        if ($record) {
-            $record->save([
-                'reward_count' => $record->reward_count + 1,
-                'last_reward_time' => $now,
-                'update_time' => $now
-            ]);
-        } else {
-            (new MarketingActivityRecord())->save([
-                'uuid' => uniqid('', true),
-                'activity_uuid' => $data['activity_uuid'],
-                'member_uuid' => $data['member_uuid'],
-                'reward_count' => 1,
-                'last_reward_time' => $now,
-                'create_time' => $now,
-                'update_time' => $now,
-                'delete_time' => 0,
-            ]);
-        }
-        // TODO: 实际发券、通知等业务
-        return true;
-    }
-
-    /**
-     * 软删除活动
-     */
-    public function delete($uuid)
-    {
-        $gift = MarketingActivity::where('uuid', $uuid)->where('delete_time', 0)->find();
-        if (!$gift) return false;
-        $now = time();
-        $gift->save(['delete_time'=>$now]);
-        MarketingActivityPrize::where('activity_uuid', $uuid)->where('delete_time', 0)->update(['delete_time'=>$now]);
-        MarketingActivityRecord::where('activity_uuid', $uuid)->where('delete_time', 0)->update(['delete_time'=>$now]);
-        return true;
-    }
 } 

@@ -158,6 +158,21 @@ type SaleBillSetting struct {
 	// 统计设置
 	IsStatGift uint `gorm:"column:is_stat_gift;type:tinyint(1);default:0;comment:是否统计赠菜金额, 0-不计入总销售额、优惠折扣 1-计入总销售额、优惠折扣" json:"is_stat_gift"`
 	IsStatFree uint `gorm:"column:is_stat_free;type:tinyint(1);default:0;comment:是否统计免单金额, 0-不计入总销售额、优惠折扣、服务费、税费 1-计入总销售额、优惠折扣、服务费、税费" json:"is_stat_free"`
+
+	// 积分抵扣设置
+	OpenPointsExchange uint    `gorm:"column:open_points_exchange;type:tinyint(1);default:0;comment:是否开启积分抵扣, 0-不开启 1-开启" json:"open_points_exchange"`
+	PointsExchangeRate float64 `gorm:"column:points_exchange_rate;type:decimal(12,2);default:0;comment:积分汇率，每积分抵扣的金额，可输入大于0的两位小数" json:"points_exchange_rate"`
+	AutoPointsExchange uint    `gorm:"column:auto_points_exchange;type:tinyint(1);default:0;comment:积分抵扣类型,0-手动抵扣 1-自动抵扣" json:"auto_points_exchange"`
+}
+
+// 积分是否开启自动抵扣
+func (model *SaleBillSetting) IsAutoPointsExchange() bool {
+	return model.OpenPointsExchange == 1 && model.AutoPointsExchange == 1
+}
+
+// 是否开启积分抵扣
+func (model *SaleBillSetting) IsOpenPointsExchange() bool {
+	return model.OpenPointsExchange == 1
 }
 
 // 获取销售账单商品税费类型

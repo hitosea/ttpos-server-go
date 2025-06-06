@@ -37,6 +37,13 @@ type InstantOrderAddProductReq struct {
 	Product       AddProduct `json:"product"`         // 商品, 必填
 }
 
+// InstantOrderPaymentPointsReq 设置订单的抵扣积分数量请求
+type InstantOrderPaymentPointsReq struct {
+	SaleBillUuid  uint64  `json:"sale_bill_uuid"`  // 销售账单UUID, 必填
+	SaleOrderUuid uint64  `json:"sale_order_uuid"` // 销售订单UUID, 必填
+	Points        float64 `json:"points"`          // 抵扣积分数量, 必填
+}
+
 // InstantOrderPaymentInfoReq 结账页面信息请求
 type InstantOrderPaymentInfoReq struct {
 	SaleBillUuid  uint64 `json:"sale_bill_uuid"`  // 销售账单UUID, 必填

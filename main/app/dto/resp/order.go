@@ -179,9 +179,11 @@ type OrderInfosResp struct {
 }
 
 type OrderReturnInfoResp struct {
-	CanReturnAmount float64                    `json:"can_return_amount"` // 可退款金额. 可退款金额=订单最终应收金额-已退款金额
-	PaymentRecords  []OrderReturnPaymentRecord `json:"payment_records"`   // 支付记录
-	Products        []OrderReturnProduct       `json:"products"`          // 商品列表
+	CanReturnAmount    float64                    `json:"can_return_amount"`    // 可退款金额. 可退款金额=订单最终应收金额-已退款金额
+	ManualReturnPoints bool                       `json:"manual_return_points"` // 是否可以手动退款积分
+	DeductiblePoints   float64                    `json:"deductible_points"`    // 可扣除积分
+	PaymentRecords     []OrderReturnPaymentRecord `json:"payment_records"`      // 支付记录
+	Products           []OrderReturnProduct       `json:"products"`             // 商品列表
 }
 
 type OrderReturnPaymentRecord struct {

@@ -33,6 +33,9 @@ class PointsLogSceneEnum extends Enum
     // 扣减
     const DEDUCT = 90;
 
+    // 收银机、点餐助手发卡赠送
+    const CashierOrAssistant = 100;
+
     /**
      * 获取订单类型值
      */
@@ -73,6 +76,11 @@ class PointsLogSceneEnum extends Enum
                 'name' => __('扣减'),
                 'value' => self::DEDUCT,
                 'describe' => '后台管理员扣减',
+            ],
+            self::CashierOrAssistant => [
+                'name' => __('添加会员发卡'),
+                'value' => self::CashierOrAssistant,
+                'describe' => '%s管理员添加会员发卡赠送操作 [%s]',
             ],
         ];
     }

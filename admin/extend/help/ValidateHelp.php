@@ -135,4 +135,15 @@ class ValidateHelp
         // .{8,16}$ - 长度为 8 到 16 个字符
         return preg_match('/^(?:(?=.*\d)(?=.*[a-zA-Z])|(?=.*\d)(?=.*[\W_])|(?=.*[a-zA-Z])(?=.*[\W_]))(?!.*\s).{8,16}$/', $input) === 1;
     }
+
+    /**
+     * 验证会员卡号，1~48位字符，允许输入字母和数字，不允许输入特殊字符
+     *
+     * @param string $input
+     * @return bool
+     */
+    public static function validateCardNumber($input)
+    {
+        return preg_match('/^[a-zA-Z0-9]{1,48}$/', $input) === 1;
+    }
 }

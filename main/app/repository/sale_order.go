@@ -13,6 +13,7 @@ type ISaleOrderRepo interface {
 	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
 	UpdateSaleOrder(model *model.SaleOrder) error
 	UpdateSaleOrderRecord(obj model.SaleOrder) error
+	UpdateSaleOrderPointsExchange(saleOrderUuid uint64, payPoints float64, payPointsAmount float64, pointsExchangeRate float64) error // 更新销售订单的积分抵扣信息
 	CreateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateOrCreateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error
@@ -83,4 +84,12 @@ func (r *saleOrderRepo) UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error {
 
 func (r *saleOrderRepo) DeleteSaleOrder(saleOrderUuid uint64) error {
 	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Update("delete_time", time.Now().Unix()).Error
+}
+
+func (r *saleOrderRepo) UpdateSaleOrderPointsExchange(saleOrderUuid uint64, payPoints float64, payPointsAmount float64, pointsExchangeRate float64) error {
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]interface{}{
+		"pay_points":           payPoints,
+		"pay_points_amount":    payPointsAmount,
+		"points_exchange_rate": pointsExchangeRate,
+	}).Error
 }

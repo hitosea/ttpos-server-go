@@ -16,6 +16,7 @@ type OrderCartProductAddReq struct {
 	AttributeUuidList []uint64 `json:"attribute_uuid"`  // 属性ID列表
 	Operation         string   `json:"operation"`       // 操作类型。add: 加购，sub: 减购. 不填，默认是加购
 	MustPlanUuid      uint64   `json:"must_plan_uuid"`  // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
+	Price             float64  `json:"price"`           // 商品价格。可选，当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格
 	// 后端内部使用的参数
 	isH5Product bool `json:"-"` // 是否是H5商品
 }

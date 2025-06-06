@@ -7,7 +7,9 @@ use think\Request;
 use Endroid\QrCode\QrCode;
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
+use app\common\enum\http\StatusCode;
 use Endroid\QrCode\Writer\PngWriter;
+use app\common\exception\BaseException;
 use app\shop\service\marketing\MarketingActivityService;
 
 /**
@@ -22,6 +24,17 @@ class Activity extends Controller
     public function __construct(App $app)
     {
         parent::__construct($app);
+        // 验证功能是否开启
+        if ((request()->userInfo['supplier']['is_open_member'] ?? 0) != 1) {
+            if (!strstr(request()->url(), 'shop/marketing.activity/list')) {
+                throw new BaseException(['msg' => '该营销活动需商家开通会员中心功能，请联系销售代表处理', 'code' => StatusCode::ERROR]);
+            }
+        }
+        // 验证功能是否开启
+        if ((request()->userInfo['supplier']['is_open_marketing'] ?? 0) != 1) {
+            throw new BaseException(['msg' => '该营销活动需商家开通营销活动功能，请联系销售代表处理', 'code' => StatusCode::ERROR]);
+        }
+        // 
         $this->service = new MarketingActivityService();
     }
 
@@ -56,7 +69,7 @@ class Activity extends Controller
 
     /**
      * @Apidoc\Title("创建邀请有礼活动")
-     * @Apidoc\Method ("GET, POST")
+     * @Apidoc\Method ("GET,POST")
      * @Apidoc\Desc("GET请求为创建页面，POST请求为创建保存")
      * @Apidoc\Url ("/index.php/shop/marketing.activity/add")
      * @Apidoc\Param("name", type="string", require=true, desc="活动名称（json多语言）", mock="{'th':'测试'}")
@@ -77,11 +90,8 @@ class Activity extends Controller
     {
         if ($request->isGet()) {
             $url = env('MEMBER_BASE_URL') . "/home?cid={$request->appId}";
-            $qrCode = new QrCode($url);
-            return $this->renderSuccess('', [
-                'qr_code_url' => $url,
-                'qr_code' => (new PngWriter())->write($qrCode)->getDataUri()
-            ]);
+            $qrCode = (new PngWriter())->write(new QrCode($url))->getDataUri();
+            return $this->renderSuccess('', ['qr_code_url' => $url, 'qr_code' => $qrCode]);
         }
         $data = $request->post();
         $result = $this->service->create($data);
@@ -122,7 +132,13 @@ class Activity extends Controller
             if (!$result) {
                 return $this->renderError('活动不存在');
             }
-            return $this->renderSuccess('', ['detail' => $result]);
+            $url = env('MEMBER_BASE_URL') . "/home?cid={$request->appId}";
+            $qrCode = new QrCode($url);
+            return $this->renderSuccess('', [
+                'detail' => $result,
+                'qr_code_url' => $url,
+                'qr_code' => (new PngWriter())->write($qrCode)->getDataUri()
+            ]);
         }
         // 
         $data = $request->post();
@@ -155,6 +171,7 @@ class Activity extends Controller
      * @Apidoc\Url ("/index.php/shop/marketing.activity/record")
      * @Apidoc\Query("activity_uuid", type="string", require=false, desc="活动uuid")
      * @Apidoc\Query("keyword", type="string", require=false, desc="暱稱/手機號/ID")
+     * @Apidoc\Query(ref="pageParam")
      * @Apidoc\Returned("list", type="array", desc="奖励记录列表", children={
      *      @Apidoc\Returned("uuid", type="string", desc="记录uuid"),
      *      @Apidoc\Returned("member_uuid", type="string", desc="会员uuid"),

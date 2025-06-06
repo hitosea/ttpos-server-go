@@ -68,7 +68,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 
 	// 返回响应对象
 	return product_resp.ProductListWithPaginationResp{
-		List: s.formatProducts(ctx, products),
+		List: FormatProducts(ctx, products),
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
 			PageSize: req.PageSize,
@@ -77,7 +77,7 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 	}, nil
 }
 
-func (s *productSrv) formatProducts(ctx context.Context, products []model.ProductPackage) []product_resp.Product {
+func FormatProducts(ctx context.Context, products []model.ProductPackage) []product_resp.Product {
 	// 转换为响应对象
 	list := make([]product_resp.Product, 0, len(products))
 	for _, product := range products {
@@ -95,7 +95,7 @@ func (s *productSrv) formatProducts(ctx context.Context, products []model.Produc
 				if productBom.IsFlavor() {
 					flavors = append(flavors, product_resp.ProductFlavor{
 						Uuid:       productBom.Uuid,
-						LocaleName: s.localeSrv.GetLocaleNames(productBom.ProductFlavor.MultiLanguageName),
+						LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
 						Price:      productBom.Price,
 						StockNum:   int(productBom.GetStockNum()),
 						Barcode:    productBom.BarcodeValue,

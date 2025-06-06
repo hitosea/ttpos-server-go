@@ -601,6 +601,105 @@ definitions:
       message:
         type: string
     type: object
+  member_req.MemberLoginReq:
+    properties:
+      code:
+        description: 验证码
+        type: string
+      company_uuid:
+        description: 集团ID
+        type: integer
+      phone:
+        description: 手机号
+        type: string
+    type: object
+  member_req.MemberSendCodeReq:
+    properties:
+      area_code:
+        description: 区号
+        type: string
+      company_uuid:
+        description: 集团ID
+        type: integer
+      phone:
+        description: 手机号
+        type: string
+    type: object
+  member_resp.CompanyInfoResp:
+    properties:
+      logo:
+        description: 公司logo
+        type: string
+      name:
+        description: 公司名称
+        type: string
+      uuid:
+        description: 公司UUID
+        type: integer
+    type: object
+  member_resp.MemberInfoResp:
+    properties:
+      nickname:
+        description: 会员昵称
+        type: string
+      phone:
+        description: 会员手机号
+        type: string
+      uuid:
+        description: 会员UUID
+        type: integer
+    type: object
+  member_resp.MemberLoginInfoResp:
+    properties:
+      area_code:
+        description: 地区码数组，如 ["+86", "+1", "+44"]
+        items:
+          type: string
+        type: array
+      company_name:
+        description: 集团名称
+        type: string
+      company_uuid:
+        description: 集团UUID
+        type: integer
+      logo:
+        description: 集团logo
+        type: string
+    type: object
+  member_resp.MemberMarketingActivityListResp:
+    properties:
+      company:
+        allOf:
+        - $ref: '#/definitions/member_resp.CompanyInfoResp'
+        description: 公司信息
+      list:
+        description: 活动列表
+        items:
+          $ref: '#/definitions/member_resp.MemberMarketingActivityResp'
+        type: array
+      member_info:
+        allOf:
+        - $ref: '#/definitions/member_resp.MemberInfoResp'
+        description: 会员信息
+    type: object
+  member_resp.MemberMarketingActivityResp:
+    properties:
+      desc:
+        description: 活动描述
+        type: string
+      end_time:
+        description: 活动结束时间
+        type: integer
+      name:
+        description: 活动名称
+        type: string
+      qr_code:
+        description: 活动二维码-base64
+        type: string
+      start_time:
+        description: 活动开始时间
+        type: integer
+    type: object
   product_resp.Product:
     properties:
       attribute_groups:
@@ -803,6 +902,15 @@ definitions:
     type: object
   req.AddMemberReq:
     properties:
+      activity_uuid:
+        description: 营销活动Uuid
+        type: integer
+      card_no:
+        description: 会员卡号
+        type: string
+      card_type_uuid:
+        description: 会员卡类型Uuid
+        type: integer
       level_uuid:
         description: 会员等级Uuid
         type: integer
@@ -819,6 +927,9 @@ definitions:
         description: 手机号
         maxLength: 20
         type: string
+      referrer_uuid:
+        description: 推荐人Uuid
+        type: integer
     required:
     - level_uuid
     - phone
@@ -1011,6 +1122,14 @@ definitions:
         description: 充值订单Uuid
         type: integer
     type: object
+  req.DecryptQrCodeReq:
+    properties:
+      sign:
+        description: 活动二维码sign
+        type: string
+    required:
+    - sign
+    type: object
   req.DeskBuffetCustomerType:
     properties:
       meal_num:
@@ -1122,6 +1241,18 @@ definitions:
     type: object
   req.InstantOrderPaymentFinishReq:
     properties:
+      sale_bill_uuid:
+        description: 销售账单UUID, 必填
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID, 必填
+        type: integer
+    type: object
+  req.InstantOrderPaymentPointsReq:
+    properties:
+      points:
+        description: 抵扣积分数量, 必填
+        type: number
       sale_bill_uuid:
         description: 销售账单UUID, 必填
         type: integer
@@ -1282,6 +1413,9 @@ definitions:
       operation:
         description: '操作类型。add: 加购，sub: 减购. 不填，默认是加购'
         type: string
+      price:
+        description: 商品价格。可选，当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格
+        type: number
       sale_bill_uuid:
         description: 销售账单ID。可选，参数不填时表示要新建销售账单，添加商品后创建点餐销售账单。
         type: integer
@@ -1615,6 +1749,9 @@ definitions:
       bank_code:
         description: 退款账户信息
         type: string
+      points:
+        description: 手动退款积分
+        type: number
       products:
         description: 退款商品UUID列表. 如果为空，则退款所有商品,即整单退款
         items:
@@ -2645,6 +2782,21 @@ definitions:
         description: 销售订单UUID
         type: integer
     type: object
+  resp.DecryptQrCodeResp:
+    properties:
+      activity_uuid:
+        description: 活动uuid
+        type: integer
+      nickname:
+        description: 会员昵称
+        type: string
+      phone:
+        description: 会员手机号
+        type: string
+      uuid:
+        description: 会员uuid
+        type: integer
+    type: object
   resp.Desk:
     properties:
       customer_count:
@@ -2822,6 +2974,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.ProductMustPlanList'
         description: 必点方案列表
+      product:
+        allOf:
+        - $ref: '#/definitions/product_resp.Product'
+        description: 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
       sale_order_list:
         description: 销售订单列表
         items:
@@ -2984,6 +3140,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.BuffetProductList'
         description: 必点商品列表
+      product:
+        allOf:
+        - $ref: '#/definitions/product_resp.Product'
+        description: 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
       sent_kitchen:
         allOf:
         - $ref: '#/definitions/resp.H5CartSendProduct'
@@ -3274,6 +3434,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.PaymentInfoList'
         description: 支付订单列表
+      points_exchange:
+        allOf:
+        - $ref: '#/definitions/resp.PointsExchangeInfo'
+        description: 积分抵扣信息
     type: object
   resp.InstantOrderPaymentQrcodeInfoResp:
     properties:
@@ -3396,6 +3560,24 @@ definitions:
       token:
         type: string
     type: object
+  resp.MemberCardType:
+    properties:
+      name:
+        description: 等级名称
+        type: string
+      price:
+        type: number
+      uuid:
+        description: 等级Uuid
+        type: integer
+    type: object
+  resp.MemberCardTypeList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.MemberCardType'
+        type: array
+    type: object
   resp.MemberDiscountResp:
     properties:
       discounted_price:
@@ -3425,6 +3607,9 @@ definitions:
         type: string
       points:
         description: 会员积分
+        type: number
+      recharge_money:
+        description: 会员累计充值金额
         type: number
       uuid:
         description: 会员UUID
@@ -3880,6 +4065,12 @@ definitions:
       can_return_amount:
         description: 可退款金额. 可退款金额=订单最终应收金额-已退款金额
         type: number
+      deductible_points:
+        description: 可扣除积分
+        type: number
+      manual_return_points:
+        description: 是否可以手动退款积分
+        type: boolean
       payment_records:
         description: 支付记录
         items:
@@ -4164,6 +4355,27 @@ definitions:
         type: string
       uuid:
         type: integer
+    type: object
+  resp.PointsExchangeInfo:
+    properties:
+      can_change_points:
+        description: 是否可以修改抵扣积分的数量。用于前端置灰修改按钮。
+        type: boolean
+      max_points:
+        description: 最大可抵扣积分。不能大于（订单应收/积分抵扣比例）。不能大于会员余额
+        type: number
+      open_points_exchange:
+        description: 是否开启积分抵扣。用于前端显示积分抵扣信息。
+        type: boolean
+      pay_points:
+        description: 已抵扣积分
+        type: number
+      pay_points_amount:
+        description: 已抵扣金额
+        type: number
+      points_exchange_rate:
+        description: 积分抵扣比例。1个积分抵扣多少金额
+        type: number
     type: object
   resp.PrinterBase:
     properties:
@@ -4574,6 +4786,9 @@ definitions:
         type: string
       points:
         description: 会员积分
+        type: number
+      recharge_money:
+        description: 累计充值金额
         type: number
       uuid:
         description: 会员Uuid
@@ -5137,6 +5352,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.ProductMustPlanList'
         description: 必点方案列表信息
+      product:
+        allOf:
+        - $ref: '#/definitions/product_resp.Product'
+        description: 商品信息。 当加购商品时商品价格变化时，返回最新的商品信息
       sale_bill_uuid:
         description: 销售账单ID
         type: integer
@@ -7651,6 +7870,28 @@ paths:
       summary: 添加会员
       tags:
       - 点餐助手端.会员
+  /assistant/member/card_types:
+    get:
+      consumes:
+      - application/json
+      description: 会员卡类型列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.MemberCardTypeList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 会员卡类型列表
+      tags:
+      - 点餐助手端.会员
   /assistant/member/check_password:
     get:
       consumes:
@@ -8296,6 +8537,35 @@ paths:
       security:
       - JwtToken: []
       summary: 检查更新
+      tags:
+      - 收银端.基础信息
+  /cashier/decrypt/activity/qr_code:
+    post:
+      consumes:
+      - application/json
+      description: 解密活动二维码
+      parameters:
+      - description: 解密活动二维码参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.DecryptQrCodeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.DecryptQrCodeResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 解密活动二维码
       tags:
       - 收银端.基础信息
   /cashier/desk/change:
@@ -9283,6 +9553,37 @@ paths:
       security:
       - JwtToken: []
       summary: 获取结账页面信息
+      tags:
+      - 收银端.桌台.结账
+  /cashier/desk/order/payment/points:
+    post:
+      consumes:
+      - application/json
+      description: 设置订单的抵扣积分数量
+      parameters:
+      - description: 设置订单的抵扣积分数量参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InstantOrderPaymentPointsReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 结账页面信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 设置订单的抵扣积分数量
       tags:
       - 收银端.桌台.结账
   /cashier/desk/order/payment/qrcode:
@@ -11058,6 +11359,28 @@ paths:
       summary: 添加会员
       tags:
       - 收银端.会员
+  /cashier/member/card_types:
+    get:
+      consumes:
+      - application/json
+      description: 会员卡类型列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.MemberCardTypeList'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 会员卡类型列表
+      tags:
+      - 收银端.会员
   /cashier/member/check_password:
     get:
       consumes:
@@ -11389,7 +11712,7 @@ paths:
       - JwtToken: []
       summary: 取消订单
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/delete:
     delete:
       consumes:
@@ -11413,7 +11736,7 @@ paths:
       - JwtToken: []
       summary: 删除订单
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/info:
     get:
       consumes:
@@ -11441,7 +11764,7 @@ paths:
       - JwtToken: []
       summary: 获取订单详情
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/invoice:
     get:
       consumes:
@@ -11474,7 +11797,7 @@ paths:
       - JwtToken: []
       summary: 获取发票信息
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/print:
     post:
       consumes:
@@ -11503,7 +11826,7 @@ paths:
       - JwtToken: []
       summary: 打印小票
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/print/invoice:
     post:
       consumes:
@@ -11532,7 +11855,7 @@ paths:
       - JwtToken: []
       summary: 打印发票
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/old/order/return:
     post:
       consumes:
@@ -11556,7 +11879,7 @@ paths:
       - JwtToken: []
       summary: 退款订单
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/open_cash_box_printer_config:
     get:
       consumes:
@@ -11845,7 +12168,7 @@ paths:
       - JwtToken: []
       summary: 获取订单列表
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
   /cashier/order/print:
     post:
       consumes:
@@ -11960,7 +12283,7 @@ paths:
       - JwtToken: []
       summary: 获取退款信息
       tags:
-      - 收银端.订单
+      - 收银端.历史订单
     post:
       consumes:
       - application/json
@@ -13963,6 +14286,100 @@ paths:
       summary: 验证高级密码
       tags:
       - 厨显端.基础信息
+  /member/login:
+    post:
+      consumes:
+      - application/json
+      description: 登录
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/member_req.MemberLoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      summary: 登录
+      tags:
+      - 会员端.认证
+  /member/login_info:
+    get:
+      consumes:
+      - application/json
+      description: 获取登陆信息
+      parameters:
+      - description: 集团ID
+        in: query
+        name: company_uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/member_resp.MemberLoginInfoResp'
+              type: object
+      summary: 获取登陆信息
+      tags:
+      - 会员端.认证
+  /member/marketing_activity:
+    get:
+      consumes:
+      - application/json
+      description: 获取营销活动
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/member_resp.MemberMarketingActivityListResp'
+              type: object
+      summary: 获取营销活动
+      tags:
+      - 会员端.营销活动
+  /member/send_code:
+    post:
+      consumes:
+      - application/json
+      description: 发送验证码
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/member_req.MemberSendCodeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 发送验证码
+      tags:
+      - 会员端.认证
   /menu/base:
     get:
       consumes:
