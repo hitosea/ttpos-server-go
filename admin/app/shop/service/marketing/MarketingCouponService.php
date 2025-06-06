@@ -160,6 +160,11 @@ class MarketingCouponService
         if (isset($params['type'])) {
             $query->where('type', '=', $params['type']);
         }
+        // requirement
+        if (isset($params['requirement'])) {
+            $query->where('requirement', '=', $params['requirement']);
+        }
+
         $page = $params['page'] ?? 1;
         $pageSize = $params['list_rows'] ?? 10;
         $list = $query->order('sort asc, create_time desc')->page($page, $pageSize)->select();
