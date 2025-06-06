@@ -89,7 +89,7 @@ class Activity extends Controller
     public function add(Request $request)
     {
         if ($request->isGet()) {
-            $url = env('MEMBER_BASE_URL') . "/home?cid={$request->appId}";
+            $url = env('MEMBER_BASE_URL') . "/login?cid={$request->appId}";
             $qrCode = (new PngWriter())->write(new QrCode($url))->getDataUri();
             return $this->renderSuccess('', ['qr_code_url' => $url, 'qr_code' => $qrCode]);
         }
@@ -132,7 +132,7 @@ class Activity extends Controller
             if (!$result) {
                 return $this->renderError('活动不存在');
             }
-            $url = env('MEMBER_BASE_URL') . "/home?cid={$request->appId}";
+            $url = env('MEMBER_BASE_URL') . "/login?cid={$request->appId}";
             $qrCode = new QrCode($url);
             return $this->renderSuccess('', [
                 'detail' => $result,
