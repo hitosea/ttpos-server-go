@@ -2,13 +2,6 @@ package model
 
 import "time"
 
-type MarketingCoupon struct {
-	BaseModel
-	Uuid           uint64  `gorm:"column:uuid;type:biginteger;default:0;comment:优惠券唯一ID" json:"uuid"`
-	Amount         float64 `gorm:"column:amount;type:decimal(14,2);default:0;comment:优惠券金额" json:"amount"`
-	ValidityPeriod int     `gorm:"column:validity_period;type:int;default:0;comment:活动奖励后N个自然日内有效" json:"validity_period"`
-}
-
 // MarketingActivity 营销活动模型
 type MarketingActivity struct {
 	BaseModel
@@ -70,4 +63,31 @@ type MarketingActivityConsumption struct {
 	CreateTime        int     `gorm:"column:create_time;type:int;default:0;comment:创建时间" json:"create_time"`
 	UpdateTime        int     `gorm:"column:update_time;type:int;default:0;comment:更新时间" json:"update_time"`
 	DeleteTime        int     `gorm:"column:delete_time;type:int;default:0;comment:删除时间" json:"delete_time"`
+}
+
+// MarketingCoupon 会员营销-优惠券表
+type MarketingCoupon struct {
+	BaseModel
+	Name           string  `gorm:"column:name;type:varchar(50);comment:优惠券名称" json:"name"`
+	Sort           int     `gorm:"column:sort;type:int(11);default:0;comment:排序, 1-99" json:"sort"`
+	Type           string  `gorm:"column:type;type:varchar(20);comment:优惠券类型: deduction - 抵扣券" json:"type"`
+	DeductionType  string  `gorm:"column:deduction_type;type:varchar(20);comment:抵扣类型: taxed - 税后抵扣" json:"deduction_type"`
+	Amount         float64 `gorm:"column:amount;type:decimal(14,2);default:0.00;comment:优惠券金额" json:"amount"`
+	Count          int     `gorm:"column:count;type:int(11);default:0;comment:优惠券数量, 最大999999" json:"count"`
+	DayStartTime   string  `gorm:"column:day_start_time;type:varchar(5);comment:每日适用时段开始时间, hh:mm 格式" json:"day_start_time"`
+	DayEndTime     string  `gorm:"column:day_end_time;type:varchar(5);comment:每日适用时段结束时间, hh:mm 格式" json:"day_end_time"`
+	Requirement    string  `gorm:"column:requirement;type:varchar(20);comment:获得优惠券所需条件: none - 都可以获取; marketing - 营销活动" json:"requirement"`
+	ValidStartTime int     `gorm:"column:valid_start_time;type:int(11);default:0;comment:优惠券有效开始时间, requirement = none 时有效" json:"valid_start_time"`
+	ValidEndTime   int     `gorm:"column:valid_end_time;type:int(11);default:0;comment:优惠券有效结束时间, requirement = none 时有效" json:"valid_end_time"`
+	ValidDays      int     `gorm:"column:valid_days;type:int(11);default:0;comment:领取优惠券后n天内有效, requirement = marketing 时有效" json:"valid_days"`
+}
+
+// MarketingCouponRecord 会员营销-优惠券表
+type MarketingCouponRecord struct {
+	BaseModel
+	CouponUuid int64  `gorm:"column:coupon_uuid;type:bigint(20);default:0;comment:优惠券唯一ID" json:"coupon_uuid"`
+	SerialNo   string `gorm:"column:serial_no;type:varchar(255);comment:记录编号, yyMMddhhmmssxxxx, 比如2506061456550001这样, 后四位是0000到9999依次递增, 循环使用" json:"serial_no"`
+	Type       int    `gorm:"column:type;type:int(11);default:1;comment:记录类型：1-首次添加、2-调整添加、3-调整扣减" json:"type"`
+	Count      int    `gorm:"column:count;type:int(11);default:0;comment:变动数量" json:"count"`
+	LeftCount  int    `gorm:"column:left_count;type:int(11);default:0;comment:剩余有效张数" json:"left_count"`
 }

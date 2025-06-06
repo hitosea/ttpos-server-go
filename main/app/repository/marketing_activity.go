@@ -183,7 +183,7 @@ func (r *MarketingActivityRepo) SendReward(activityUuid, memberUuid uint64) erro
 				CouponUuid: marketingCoupon.Uuid,
 				Amount:     marketingCoupon.Amount,
 				StartTime:  time.Now().Unix(),
-				EndTime:    time.Now().AddDate(0, 0, marketingCoupon.ValidityPeriod).Unix(),
+				EndTime:    time.Now().AddDate(0, 0, marketingCoupon.ValidDays).Unix(),
 			})
 			if err != nil {
 				return err
