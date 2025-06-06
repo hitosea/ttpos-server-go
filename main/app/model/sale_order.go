@@ -60,6 +60,7 @@ type SaleOrder struct {
 	PayPoints          float64 `gorm:"column:pay_points;type:decimal(12,2);default:0;comment:抵扣积分,用了多少积分进行抵扣" json:"pay_points"`
 	PayPointsAmount    float64 `gorm:"column:pay_points_amount;type:decimal(12,2);default:0;comment:抵扣金额,积分 抵扣了多少金额" json:"pay_points_amount"`
 	PointsExchangeRate float64 `gorm:"column:points_exchange_rate;type:decimal(12,4);default:0;comment:积分抵扣汇率,1积分抵扣多少元" json:"points_exchange_rate"`
+	AutoPointsExchange uint    `gorm:"column:auto_points_exchange;type:tinyint(1);default:0;comment:积分抵扣类型,0-手动抵扣 1-自动抵扣" json:"auto_points_exchange"`
 
 	// 结账完成后才记录的字段
 	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额=订单总金额+支付手续费" json:"payment_amount"`
@@ -781,6 +782,12 @@ func NewSaleOrder(saleBillUuid uint64, saleBillOrderNo string, setting SaleBillS
 	// 设置默认的订单抹零规格、结账抹零规则
 	saleOrder.ZeroRule = uint8(setting.ZeroRule)
 	saleOrder.ZeroCheckoutRule = uint8(setting.ZeroCheckoutRule)
+	// 积分抵扣类型
+	if setting.IsOpenPointsExchange() {
+		saleOrder.AutoPointsExchange = setting.AutoPointsExchange
+		saleOrder.PointsExchangeRate = setting.PointsExchangeRate
+	}
+
 	return saleOrder
 }
 
