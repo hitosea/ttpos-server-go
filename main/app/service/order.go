@@ -2089,17 +2089,6 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 		return nil, errors.New("找不到销售订单")
 	}
 
-	// 判断订单是否可以退款
-	// if !saleBill.IsReturnable() {
-	// 	return nil, errors.New("订单状态不允许退款")
-	// }
-
-	// 获取销售订单付款单列表
-
-	// 获取销售订单退货单列表
-
-	// 获取销售订单商品列表
-
 	products := make([]resp.OrderReturnProduct, 0)
 
 	// 获取销售订单的每个付款单的可退款金额
@@ -6695,6 +6684,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	if saleOrder.Member != nil && saleBill.SaleBillSetting.IsOpenPointsExchange() {
 		// 积分抵扣信息。
 		pointsExchangeRate := saleBill.SaleBillSetting.PointsExchangeRate
+		saleOrder.PointsExchangeRate = pointsExchangeRate
 		maxPoints := saleOrder.CaclMaxPoints()
 
 		// 如果自动抵扣积分，且未创建付款单，则更新销售订单的抵扣积分和抵扣金额

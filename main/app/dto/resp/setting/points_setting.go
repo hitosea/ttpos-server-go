@@ -22,11 +22,8 @@ type Points struct {
 	Discount           DiscountItem       `json:"discount"`             // 积分抵扣
 	Describe           string             `json:"describe"`             // 充值说明
 	DeductOrder        string             `json:"deduct_order"`
-	OpenPointsExchange string             `json:"open_points_exchange"` // 是否开启积分抵扣，“1”开启，“0”关闭
-	PointsExchangeRate string             `json:"points_exchange_rate"` // 积分汇率，每积分抵扣的金额，可输入大于0的两位小数
-	AutoPointsExchange string             `json:"auto_points_exchange"` // 是否开启自动抵扣，“1”开启，“0”关闭
-	ShoppingGiftRules  []ShoppingGiftRule `json:"shopping_gift_rules"`  // 购物赠送积分规则
-	Exchange           PointsExchange     `json:"exchange"`             // 积分抵扣消费
+	ShoppingGiftRules  []ShoppingGiftRule `json:"shopping_gift_rules"` // 购物赠送积分规则
+	Exchange           PointsExchange     `json:"exchange"`            // 积分抵扣消费
 }
 
 const RuleTypePaymentAmount = "payment_amount" // 按付款金额比例赠送
@@ -124,9 +121,9 @@ func (item *MemberLevelItem) getValue() float64 {
 }
 
 type PointsExchange struct {
-	OpenPointsExchange string `json:"open_points_exchange"` // 会员积分抵扣订单金额
-	PointsExchangeRate string `json:"points_exchange_rate"` // 每积分抵扣应付金额
-	AutoPointsExchange string `json:"auto_points_exchange"` // 是否自动抵扣
+	OpenPointsExchange string `json:"open_points_exchange"` // 是否开启积分抵扣，“1”开启，“0”关闭
+	PointsExchangeRate string `json:"points_exchange_rate"` // 积分汇率，每积分抵扣的金额，可输入大于0的两位小数
+	AutoPointsExchange string `json:"auto_points_exchange"` // 是否开启自动抵扣，“1”开启，“0”关闭
 }
 
 // 解析扣款顺序
@@ -241,7 +238,7 @@ func (p *Points) GetGiftRatio() float64 {
 
 // getOpenPointsExchange 解析是否开启积分抵扣
 func (p *Points) GetOpenPointsExchange() bool {
-	if p.OpenPointsExchange == "1" {
+	if p.Exchange.OpenPointsExchange == "1" {
 		return true
 	}
 	return false
@@ -259,10 +256,10 @@ func (p *Points) GetPointsExchangeRate() float64 {
 
 // getPointsExchangeRate 解析积分汇率, 每积分抵扣的金额，可输入大于0的两位小数
 func (p *Points) getPointsExchangeRate() float64 {
-	if p.PointsExchangeRate == "" {
+	if p.Exchange.PointsExchangeRate == "" {
 		return 0
 	}
-	rate, err := strconv.ParseFloat(p.PointsExchangeRate, 64)
+	rate, err := strconv.ParseFloat(p.Exchange.PointsExchangeRate, 64)
 	if err != nil {
 		return 0
 	}
@@ -271,7 +268,7 @@ func (p *Points) getPointsExchangeRate() float64 {
 
 // 是否开启自动抵扣
 func (p *Points) IsAutoPointsExchange() bool {
-	if p.AutoPointsExchange == "1" {
+	if p.Exchange.AutoPointsExchange == "1" {
 		return true
 	}
 	return false
