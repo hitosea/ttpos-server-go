@@ -79,10 +79,11 @@ type MarketingCoupon struct {
 // MarketingCouponRecord 会员营销-优惠券表
 type MarketingCouponRecord struct {
 	BaseModel
-	CouponUuid int64  `gorm:"column:coupon_uuid;type:bigint(20);default:0;comment:优惠券唯一ID" json:"coupon_uuid"`
-	SerialNo   string `gorm:"column:serial_no;type:varchar(255);comment:记录编号, yyMMddhhmmssxxxx, 比如2506061456550001这样, 后四位是0000到9999依次递增, 循环使用" json:"serial_no"`
-	Type       int    `gorm:"column:type;type:int(11);default:1;comment:记录类型：1-首次添加、2-调整添加、3-调整扣减" json:"type"`
-	Count      int    `gorm:"column:count;type:int(11);default:0;comment:变动数量" json:"count"`
-	LeftCount  int    `gorm:"column:left_count;type:int(11);default:0;comment:剩余有效张数" json:"left_count"`
-	MemberUuid int64  `gorm:"column:member_uuid;type:bigint(20);default:0;comment:会员Uuid" json:"member_uuid"`
+	CouponUuid   int64  `gorm:"column:coupon_uuid;type:bigint(20);default:0;comment:优惠券唯一ID" json:"coupon_uuid"`
+	SerialNo     string `gorm:"column:serial_no;type:varchar(255);comment:记录编号, yyMMddhhmmssxxxx, 比如2506061456550001这样, 后四位是0000到9999依次递增, 循环使用" json:"serial_no"`
+	ActivityUuid int64  `gorm:"column:activity_uuid;type:bigint(20);default:0;comment:活动uuid" json:"activity_uuid"`
+	MemberUuid   int64  `gorm:"column:member_uuid;type:bigint(20);default:0;comment:会员唯一ID" json:"member_uuid"`
+	Type         int    `gorm:"column:type;type:int(11);default:1;comment:记录类型：1-首次添加、2-调整添加、3-调整扣减" json:"type"`
+	Count        int    `gorm:"column:count;type:int(11);default:0;comment:变动数量" json:"count"`
+	LeftCount    int    `gorm:"column:left_count;type:int(11);default:0;comment:剩余有效张数" json:"left_count"`
 }
