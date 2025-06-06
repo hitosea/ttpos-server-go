@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/member_resp"
@@ -45,6 +46,10 @@ func NewMarketingActivitySrvImpl(
 func (s *marketingActivitySrv) MarketingActivity(ctx context.Context) (*member_resp.MemberMarketingActivityListResp, error) {
 	member := ctx.GetMember()
 	company := ctx.GetCompany()
+	// 产品： 仍可正常登录进入商家会员服务，但是进入后toast提示：商家营销活动已结束。
+	if company.CompanySetting.IsOpenMarketing != 1 {
+		return nil, errors.NewWithCode(constant.CodeMarketingActivityInvalid, "营销活动已失效")
+	}
 	// 获取营销活动列表
 	marketingActivityRepo := repository.NewMarketingActivityRepo(ctx.GetDB())
 	marketingActivityList, err := marketingActivityRepo.GetActivityListByNow()
@@ -91,25 +96,25 @@ func (s *marketingActivitySrv) MarketingActivity(ctx context.Context) (*member_r
 func (s *marketingActivitySrv) DecryptQrCode(ctx context.Context, req req.DecryptQrCodeReq) (*resp.DecryptQrCodeResp, error) {
 	decryptQrCodeResp, err := encrypt.DecryptAesString(req.Sign)
 	if err != nil {
-		return nil, errors.WithMessage(err, "活动二维码无效")
+		return nil, errors.New("活动二维码无效")
 	}
 	// 转json
 	qrCodeParams := &repository.QrCodeParams{}
 	err = json.Unmarshal([]byte(decryptQrCodeResp), qrCodeParams)
 	if err != nil {
-		return nil, errors.WithMessage(err, "活动二维码无效")
+		return nil, errors.New("活动二维码无效")
 	}
 	// 获取活动
 	marketingActivityRepo := repository.NewMarketingActivityRepo(ctx.GetDB())
 	marketingActivity, err := marketingActivityRepo.GetActivity(qrCodeParams.ActivityUuid)
 	if err != nil || marketingActivity == nil {
-		return nil, errors.WithMessage(err, "活动二维码无效")
+		return nil, errors.New("活动二维码无效")
 	}
 	// 获取会员
 	memberRepo := repository.NewMemberRepo(ctx.GetDB())
 	member, err := memberRepo.GetMemberByUuid(qrCodeParams.MemberUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "活动二维码无效")
+		return nil, errors.New("活动二维码无效")
 	}
 	// 返回
 	return &resp.DecryptQrCodeResp{

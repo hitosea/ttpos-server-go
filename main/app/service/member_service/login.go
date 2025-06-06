@@ -97,19 +97,22 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 		// 将匹配的区号放在第一位
 		areaCodes = append([]string{areaCode}, areaCodes...)
 	}
+
 	// 获取商家信息
 	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(req.CompanyUuid)
 	if err != nil {
 		return member_resp.MemberLoginInfoResp{}, errors.New("商家不存在")
 	}
+
 	// 获取商家设置
-	companySetting := repository.NewCompanySettingRepo(db).Get()
-	if companySetting.IsOpenMember != 1 {
-		return member_resp.MemberLoginInfoResp{}, errors.New("商家未开通会员功能")
-	}
-	if companySetting.IsOpenMarketing != 1 {
-		return member_resp.MemberLoginInfoResp{}, errors.New("二维码已失效")
-	}
+	// companySetting := repository.NewCompanySettingRepo(db).Get()
+	// if companySetting.IsOpenMember != 1 {
+	// 	return member_resp.MemberLoginInfoResp{}, errors.New("商家未开通会员功能")
+	// }
+	// if companySetting.IsOpenMarketing != 1 {
+	// 	return member_resp.MemberLoginInfoResp{}, errors.New("二维码已失效")
+	// }
+
 	// 返回
 	return member_resp.MemberLoginInfoResp{
 		CompanyUuid: req.CompanyUuid,
@@ -135,12 +138,12 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 		return errors.New("无法使用该功能，请联系商家")
 	}
 	companySetting := repository.NewCompanySettingRepo(db).Get()
-	if companySetting.IsOpenMember != 1 {
-		return errors.New("商家未开通会员功能")
-	}
-	if companySetting.IsOpenMarketing != 1 {
-		return errors.New("二维码已失效")
-	}
+	// if companySetting.IsOpenMember != 1 {
+	// 	return errors.New("商家未开通会员功能")
+	// }
+	// if companySetting.IsOpenMarketing != 1 {
+	// 	return errors.New("二维码已失效")
+	// }
 	// 验证手机号是否存在
 	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
 	if err != nil || member.IsDelete() {

@@ -365,6 +365,11 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 	defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
 	//
 	db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+	// 产品： 关闭营销活动后，不限制会员的登录行为。系统需停止该商家的营销活动活动，不进行营销活动消费累积计算和奖励发放。
+	companySetting := repository.NewCompanySettingRepo(db).Get()
+	if companySetting.IsOpenMarketing != 1 {
+		return
+	}
 	//
 	for _, saleOrder := range payload.SaleBill.SaleOrders {
 		if saleOrder.ConsumerUuid != 0 && saleOrder.IsSettled() && saleOrder.Member != nil && saleOrder.Member.IsExistActivityAndReferrer() {

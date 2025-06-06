@@ -56,6 +56,11 @@ const (
 	CodeH5OrderNumLimit  = -232 // h5订单数量限制
 )
 
+// 营销活动业务错误码
+const (
+	CodeMarketingActivityInvalid = -301 // 商品某规格已下架
+)
+
 type ParseCodeOrderCheckOption struct {
 	IsH5     bool // 是否是h5端的文案
 	IsTablet bool // 是否是平板端的文案
