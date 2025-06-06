@@ -122,8 +122,8 @@ func checkoutSaleOrderEventHandler() {
 			}
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			saleOrder := payload.SaleBill.GetSaleOrder(payload.SaleOrderUuid)
-			// 如果订单有会员且开启积分赠送且赠送比例大于0，则发放积分
-			if saleOrder.ConsumerUuid != 0 && saleOrder.GiftPointsRate > 0 {
+			// 如果订单有会员且订单的赠送积分大于0，则发放积分
+			if saleOrder.ConsumerUuid != 0 && saleOrder.GiftPoints > 0 {
 				// 加锁, 避免并发问题
 				lock.NewSystemLock().LockUuid(saleOrder.ConsumerUuid)
 				defer lock.NewSystemLock().UnlockUuid(saleOrder.ConsumerUuid)
