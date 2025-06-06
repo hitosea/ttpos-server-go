@@ -167,7 +167,7 @@ class MarketingCouponService
 
         $page = $params['page'] ?? 1;
         $pageSize = $params['list_rows'] ?? 10;
-        $list = $query->order('sort asc, create_time desc')->page($page, $pageSize)->select();
+        $list = $query->clone(true)->order('sort asc, create_time desc')->page($page, $pageSize)->select();
         $total = $query->count();
         return [
             'data' => $list,
@@ -197,7 +197,7 @@ class MarketingCouponService
         $pageSize = (int)($params['list_rows'] ?? 10);
         // 
         $query = MarketingCouponRecord::with(['coupon'])->where('delete_time', 0)->field(['coupon_uuid', 'serial_no', 'type', 'count', 'left_count', 'create_time'])->order('create_time desc');
-        $list = $query->page($page, $pageSize)->select();
+        $list = $query->clone(true)->page($page, $pageSize)->select();
 
         foreach ($list as &$item) {
             $item['coupon_name'] = $item->coupon->name;
