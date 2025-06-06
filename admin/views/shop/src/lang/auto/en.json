@@ -1953,5 +1953,7 @@
     "注：不开启不可设置抵扣比例": "Note: Cannot set deduction rate without activation",
     "该营销活动需商家开通会员中心功能，请联系销售代表处理": "This marketing activity requires the merchant to activate the member center function, please contact a sales representative to handle this",
     "扣除积分": "Deduct Points",
-    "可退积分": "Refundable Points"
+    "可退积分": "Refundable Points",
+    "获取条件": "Get Conditions",
+    "请选择获取条件": "Please select the conditions to get"
 }

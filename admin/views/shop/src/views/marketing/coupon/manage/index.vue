@@ -32,42 +32,22 @@
       <div class="table-wrap">
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
           <el-table-column type="index" width="45" :label="$t('序号')" header-align="center" align="center" :index="indexMethod"></el-table-column>
-          <el-table-column prop="nickName" :label="$t('优惠券名称')"></el-table-column>
+          <el-table-column prop="name" :label="$t('优惠券名称')"></el-table-column>
 
-          <el-table-column prop="gender" :label="$t('优惠券类型')">
+          <el-table-column prop="type" :label="$t('优惠券类型')">
             <template #default="scope">
-              <span v-if="scope.row.gender == 0">{{ $t('女') }}</span>
-              <span v-else-if="scope.row.gender == 1">{{ $t('男') }}</span>
-              <span v-else>{{ $t('保密') }}</span>
+              <span v-if="scope.row.type == 'deduction'">{{ $t('折扣券') }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="" :label="$t('金额')">
+          <el-table-column prop="amount" :label="$t('金额')">
             <template #default="scope">
-              <span v-if="scope.row.card_id == 0">-</span>
-              <span v-else>{{ scope.row.card?.card_name }}</span>
+              <span v-if="scope.row.type == 'deduction'">{{ $formatPrice(scope.row.amount) }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="" :label="$t('有效日期')">
-            <template #default="scope">
-              <span v-if="scope.row.grade_id == 0">{{ $t('无等级') }}</span>
-              <span v-else>{{ scope.row.grade?.name }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="balance" :label="$t('适用时间')">
-            <template #default="scope">
-              {{ $formatPrice(scope.row.balance) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="gift_balance" :label="$t('数量（张）')">
-            <template #default="scope">
-              {{ $formatPrice(scope.row.gift_balance) }}
-            </template>
-          </el-table-column>
-          <el-table-column prop="points" :label="$t('添加時間')">
-            <template #default="scope">
-              {{ $priceTwo(scope.row.points) }}
-            </template>
-          </el-table-column>
+          <el-table-column prop="valid_date" :label="$t('有效日期')"> </el-table-column>
+          <el-table-column prop="valid_day_time_range" :label="$t('适用时间')"> </el-table-column>
+          <el-table-column prop="count" :label="$t('数量（张）')"> </el-table-column>
+          <el-table-column prop="create_time" :label="$t('添加時間')"> </el-table-column>
           <el-table-column fixed="right" :label="$t('操作')" width="80">
             <template #default="scope">
               <el-button @click="editClick(scope.row)" type="primary" link size="small">{{ $t('编辑') }}</el-button>
@@ -90,13 +70,13 @@
       </div>
     </div>
 
-    <AddEdit v-if="open_addDdit" :title="title" :editData="editData" :open="open_addDdit" :gradeList="gradeList" :editform="editform" @closeDialog="closeAddMenber"> </AddEdit>
+    <AddEdit v-if="open_addDdit" :title="title" :editData="editData" :open="open_addDdit" :editform="editform" @closeDialog="closeAddMenber"> </AddEdit>
   </div>
 </template>
 
 <script setup>
   import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
-  import UserApi from '@/api/user.js';
+  import MarketingApi from '@/api/marketing.js';
   import AddEdit from './dialog/addEdit.vue';
 
   // 获取全局属性
@@ -117,7 +97,6 @@
   });
 
   const open_addDdit = ref(false);
-  const gradeList = ref([]);
   const editform = ref({});
   const title = ref('');
   const editData = ref('');
@@ -146,12 +125,11 @@
     params.list_rows = pageSize.value;
     loading.value = true;
 
-    UserApi.userlist(params, true)
+    MarketingApi.couponList(params, true)
       .then((data) => {
         loading.value = false;
         tableData.value = data.data.list.data;
         totalDataNumber.value = data.data.list.total;
-        gradeList.value = data.data.grade;
       })
       .catch((error) => {
         loading.value = false;

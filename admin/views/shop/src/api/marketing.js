@@ -30,6 +30,28 @@ let MarketingApi = {
     activityRecord(data, errorback) {
         return request._get('/shop/marketing.activity/record', data, errorback);
     },
+
+    /*优惠券列表*/
+    couponList(data, errorback) {
+        return request._get('/shop/marketing.coupon/list', data, errorback);
+    },
+
+    /*添加优惠券*/
+    couponAddGet(data, errorback) {
+        return request._post('/shop/marketing.coupon/add', data, errorback);
+    },
+
+    /*编辑优惠券*/
+    couponEdit(data, errorback) {
+        return request._post('/shop/marketing.coupon/edit', data, errorback);
+    },
+
+    /*优惠券记录*/
+    couponRecord(data, errorback) {
+        return request._get('/shop/marketing.coupon/record', data, errorback);
+    },
+
+
 };
 
 export default MarketingApi;
