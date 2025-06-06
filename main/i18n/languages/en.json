@@ -544,7 +544,6 @@
   "发送退款短信失败（消费反结账）": "Failed to send refund SMS (consumption reverse checkout)",
   "发送退款短信成功": "Successfully sent refund SMS",
   "发送退款短信成功（消费反结账）": "Successfully sent refund message (consumption reverse accounting)",
-  "发送验证码短信失败: %v": "Failed to send verification code SMS: %v",
   "取出金额不能小于0": "The withdrawal amount cannot be less than 0",
   "取单": "Retrieve order",
   "取单号": "Order NO",

@@ -164,7 +164,7 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 	if err := s.smsSrv.SendMemberCodeSMS(ctx, req.Phone, &sms.MemberSendCodeRequest{
 		Code: code,
 	}); err != nil {
-		return fmt.Errorf("发送验证码短信失败: %v", err)
+		return err
 	}
 	return nil
 }
