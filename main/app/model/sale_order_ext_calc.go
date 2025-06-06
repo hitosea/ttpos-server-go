@@ -510,7 +510,10 @@ func (model *SaleOrder) CaclMaxPoints() float64 {
 	memberPoints := model.Member.GetPoints()
 
 	// 1. 计算最大可抵扣积分. 舍去小数点
-	maxPoints := decimal.NewFromFloat(model.GetAmount()).Div(decimal.NewFromFloat(model.PointsExchangeRate)).Truncate(0).InexactFloat64()
+	maxPoints := model.GetAmount()
+	if model.PointsExchangeRate != 0 {
+		maxPoints = decimal.NewFromFloat(model.GetAmount()).Div(decimal.NewFromFloat(model.PointsExchangeRate)).Truncate(0).InexactFloat64() // 不能除以0
+	}
 
 	// 2. 当会员积分余额充足时，最大可抵扣积分=订单应收/积分抵扣比例
 	if memberPoints >= maxPoints {
