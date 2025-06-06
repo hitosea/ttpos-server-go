@@ -14,6 +14,7 @@ use app\common\enum\user\pointsLog\PointsLogSceneEnum;
 use app\shop\model\user\BalanceLog as BalanceLogModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum as SceneEnum;
 use app\common\library\helper;
+use app\common\model\user\MemberCard;
 
 /**
  * 用户模型
@@ -252,7 +253,50 @@ class User extends UserModel
         $data['phone'] = $data['mobile'];
         $data['member_level_uuid'] = $data['grade_id'];
         // 
-        return $this->save($data);
+        $cardUuid = $data['card_uuid'] ?? '';
+        $cardNumber = $data['card_number'] ?? '';
+        if (!$cardUuid && $cardNumber) {
+            $this->error = '请选择会员卡';
+            return false;
+        }
+        // 检查会员卡是否存在
+        $card = null;
+        if ($cardUuid) {
+            $card = CardModel::detail($cardUuid);
+            if (!$card) {
+                $this->error = '会员卡不存在';
+                return false;
+            }
+        }
+        if ($cardNumber) {
+            $record = (new User)::where('uuid', '<>', $this['uuid'])->where('member_card_no', '=', $cardNumber)->find();
+            if ($record) {
+                $this->error = '卡号重复';
+                return false;
+            }
+        }
+        return $this->transaction(function () use ($card, $cardNumber, $data) {
+            if ($card) {
+                // 会员未拥有此会员卡，发卡
+                $isExist = (new MemberCard())->checkExistByUserId($this['uuid']);
+                if ($isExist?->isEmpty() || $card['uuid'] != $isExist['card_type_uuid']) {
+                    $model = new CardModel();
+                    $result = $model->put([
+                        'card_id' => $card['uuid'],
+                        'user_ids' => [
+                            [ 'uuid' => $this['uuid'], 'card_number' => $cardNumber ]
+                        ],
+                    ]);
+                    if (!$result) {
+                        $this->error = $model->getError();
+                        return false;
+                    }
+                }
+            }
+            $data['member_card_no'] = $cardNumber;
+            //
+            return $this->save($data); 
+        });
     }
 
     /**
