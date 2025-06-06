@@ -520,9 +520,9 @@ func (model *SaleOrder) CaclMaxPoints() float64 {
 		return maxPoints
 	}
 
-	// 3. 当会员积分余额不足时，最大可抵扣积分=会员积分余额
+	// 3. 当会员积分余额不足时，最大可抵扣积分=会员积分余额。只返回整数
 	if memberPoints > 0 {
-		return memberPoints
+		return decimal.NewFromFloat(memberPoints).Truncate(0).InexactFloat64()
 	}
 
 	return 0

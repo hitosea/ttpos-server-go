@@ -515,7 +515,7 @@ func (model *SaleOrder) NewReverseSettleMemberPointLog(points float64) *MemberPo
 func (model *SaleOrder) NewReverseSettleExchangeMemberPointLog(points float64) *MemberPointLog {
 	memberPointLog := &MemberPointLog{
 		MemberUuid:  model.ConsumerUuid,
-		Scene:       constant.MemberPointLogSceneReverse,
+		Scene:       constant.MemberPointLogScenePointsExchangeReverse,
 		Value:       points,
 		Describe:    fmt.Sprintf("抵扣反结账：%s", model.OrderNo),
 		RelatedUuid: model.Uuid,

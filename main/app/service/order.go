@@ -6853,7 +6853,7 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 	}
 
 	if req.Points > saleOrder.Member.GetPoints() {
-		return nil, errors.New("积分数量超过会员积分")
+		return nil, errors.New("会员可用积分不足")
 	}
 
 	// 检查积分数量是否超过最大抵扣数
@@ -6867,6 +6867,7 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 		if len(saleOrder.PaymentOrders) == 0 {
 			// 手动抵扣积分，更新销售订单的抵扣积分和抵扣金额
 			saleOrder.PayPoints = req.Points
+			saleOrder.AutoPointsExchange = 0
 			saleOrder.PayPointsAmount = saleOrder.CaclPointsExchangeAmount()
 
 			// 更新销售订单的积分抵扣信息
