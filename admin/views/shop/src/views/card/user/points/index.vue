@@ -147,13 +147,13 @@
 
       <el-divider />
 
-      <el-form-item :label="$t('按桌台人数赠送')">
+      <el-form-item :label="$t('按桌台人数赠送')" v-if="is_open_buffet == 1">
         <el-radio-group v-model="form.shopping_gift_rules[1].is_open">
           <el-radio label="1">{{ $t('开启') }}</el-radio>
           <el-radio label="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
       </el-form-item>
-      <template v-if="form.shopping_gift_rules[1].is_open == 1">
+      <template v-if="form.shopping_gift_rules[1].is_open == 1 && is_open_buffet == 1">
         <el-form-item :label="$t('是否按会员等级赠送')" prop="shopping_gift_rules.1.is_member_level_related" :rules="[{ required: true, message: ' ' }]">
           <el-radio-group v-model="form.shopping_gift_rules[1].is_member_level_related">
             <el-radio label="0">{{ $t('所有会员等级相同') }}</el-radio>
@@ -198,7 +198,7 @@
         <el-form-item :label="$t('适用就餐类型')" :rules="[{ required: true, message: ' ' }]">
           <!-- <el-checkbox-group v-model="form.shopping_gift_rules[1].meal_type">
             <el-checkbox label="non-buffet">{{ $t('非自助餐') }}</el-checkbox>
-            <el-checkbox v-if="is_open_buffet == 1" disabled label="buffet">{{ $t('自助餐') }}</el-checkbox>
+            <el-checkbox  disabled label="buffet">{{ $t('自助餐') }}</el-checkbox>
           </el-checkbox-group> -->
           <div class="lh18 mt10 gray9">
             <p> {{ $t('该规则仅支持自助餐') }}</p>
@@ -226,17 +226,23 @@
           <el-radio label="1">{{ $t('开启') }}</el-radio>
           <el-radio label="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
-      </el-form-item>
-      <el-form-item :label="$t('每积分抵扣应付金额')">
-        <el-input class="max-w460" @input="(e) => handlePointsExchangeRateInput(e)" :placeholder="$t('请输入积分赠送')" v-model="form.exchange.points_exchange_rate"></el-input>
+        <div class="lh18 mt10 gray9">
+          <p> {{ $t('注：不开启不可设置抵扣比例') }}</p>
+        </div>
       </el-form-item>
 
-      <el-form-item :label="$t('是否自动抵扣')">
-        <el-radio-group v-model="form.exchange.auto_points_exchange">
-          <el-radio label="1">{{ $t('开启') }}</el-radio>
-          <el-radio label="0">{{ $t('关闭') }}</el-radio>
-        </el-radio-group>
-      </el-form-item>
+      <template v-if="form.exchange.open_points_exchange == 1">
+        <el-form-item :label="$t('每积分抵扣应付金额')">
+          <el-input class="max-w460" @input="(e) => handlePointsExchangeRateInput(e)" :placeholder="$t('请输入')" v-model="form.exchange.points_exchange_rate"></el-input>
+        </el-form-item>
+
+        <el-form-item :label="$t('是否自动抵扣')">
+          <el-radio-group v-model="form.exchange.auto_points_exchange">
+            <el-radio label="1">{{ $t('开启') }}</el-radio>
+            <el-radio label="0">{{ $t('关闭') }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
+      </template>
       <!--提交-->
       <div class="common-button-wrapper">
         <el-button size="small" @click="getData" :loading="loading">{{ $t('重置') }}</el-button>
@@ -469,7 +475,29 @@
 
       handlePointsExchangeRateInput(e) {
         let value = e;
+
+        // 只允许输入数字和小数点
         value = value.replace(/[^0-9.]/g, '');
+
+        // 确保只有一个小数点
+        const parts = value.split('.');
+        if (parts.length > 2) {
+          value = parts[0] + '.' + parts.slice(1).join('');
+        }
+
+        // 限制最多两位小数
+        if (parts[1] && parts[1].length > 2) {
+          value = parts[0] + '.' + parts[1].substring(0, 2);
+        }
+
+        // 转换为数字进行范围检查
+        const numValue = parseFloat(value);
+        if (numValue > 9999999) {
+          value = '9999999';
+        }
+        if (numValue < 0) {
+          value = '0';
+        }
         this.form.exchange.points_exchange_rate = value;
       },
       handleMoneyInput(e, index) {

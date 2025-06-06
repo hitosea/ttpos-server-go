@@ -92,12 +92,19 @@ func (s *smsSrv) checkQuotaAndFormatPhone(ctx context.Context, phone string) (st
 		err := fmt.Errorf("SMS service is not enabled, EnableSms: %d, SmsQuota: %d", setting.EnableSms, setting.SmsQuota)
 		return "", "", "", errors.WithMessage(err, "没有开启短信或没有额度")
 	}
+	// 检查手机号格式
+	formattedPhone, language, companyName, err := s.checkFormatPhone(ctx, phone)
+	if err != nil {
+		return "", "", "", err
+	}
+	return formattedPhone, language, companyName, nil
+}
 
+func (s *smsSrv) checkFormatPhone(ctx context.Context, phone string) (string, string, string, error) {
 	// 格式化手机号
 	formattedPhone, err := s.formatPhone(phone)
 	if err != nil {
-		err := fmt.Errorf("invalid phone number: %s, err:%v", phone, err)
-		return "", "", "", errors.WithMessage(err, "手机号格式错误")
+		return "", "", "", errors.New("手机号格式错误")
 	}
 
 	// 选择语言
@@ -304,7 +311,7 @@ func (s *smsSrv) SendMemberCodeSMS(ctx context.Context, phone string, params *sm
 		ctx.AddLock()
 	}
 
-	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
+	formattedPhone, language, companyName, err := s.checkFormatPhone(ctx, phone)
 	if err != nil {
 		return err
 	}
@@ -321,12 +328,8 @@ func (s *smsSrv) SendMemberCodeSMS(ctx context.Context, phone string, params *sm
 		return errors.WithMessage(err, "发送短信失败")
 	}
 
-	// 如果发送成功，扣减额度
-	if resp.Code == sms.ResponseCodeSuccess {
-		if err := s.deductQuota(ctx, company.Uuid); err != nil {
-			return errors.WithMessage(err, "扣减短信额度失败")
-		}
-	} else {
+	// 如果发送失败，返回错误
+	if resp.Code != sms.ResponseCodeSuccess {
 		err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
 		return errors.WithMessage(err, "发送短信失败")
 	}

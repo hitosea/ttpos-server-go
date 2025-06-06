@@ -126,12 +126,19 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 		}
 	}
 
-	// 判断推荐人
+	// 判断推荐人，活动
 	var referrer model.Member
+	activityUuid := addMemberReq.ActivityUuid
 	if addMemberReq.ReferrerUuid != 0 {
 		referrer = memberRepo.GetMember(memberRepo.WhereUuid(addMemberReq.ReferrerUuid))
 		if referrer.ID == 0 {
 			return errors.New("推荐人不存在")
+		}
+		if addMemberReq.ActivityUuid == 0 {
+			activities, _ := repository.NewMarketingActivityRepo(ctx.GetDB()).GetActivityListByNow()
+			if len(activities) != 0 {
+				activityUuid = activities[0].Uuid
+			}
 		}
 	}
 
@@ -150,6 +157,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 		Gender:          constant.MemberGenderUnknown,
 		MemberCardNo:    addMemberReq.CardNo,
 		ReferrerUuid:    referrer.Uuid,
+		ActivityUuid:    activityUuid,
 	}
 	err := ctx.GetDB().Transaction(func(tx *gorm.DB) error {
 		memberRepo = repository.NewMemberRepo(tx)
