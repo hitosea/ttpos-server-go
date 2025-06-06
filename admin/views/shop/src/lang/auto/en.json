@@ -1948,5 +1948,6 @@
     "获取失败": "Failed to retrieve",
     "查看发放记录": "View distribution records",
     "发放对象": "Distribution target",
-    "发放时间": "Distribution time"
+    "发放时间": "Distribution time",
+    "该规则仅支持自助餐": "This rule only supports buffets"
 }

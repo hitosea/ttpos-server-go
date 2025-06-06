@@ -196,10 +196,13 @@
         </template>
 
         <el-form-item :label="$t('适用就餐类型')" prop="shopping_gift_rules.1.meal_type" :rules="[{ required: true, message: $t('请选择适用就餐类型') }]">
-          <el-checkbox-group v-model="form.shopping_gift_rules[1].meal_type">
+          <!-- <el-checkbox-group v-model="form.shopping_gift_rules[1].meal_type">
             <el-checkbox label="non-buffet">{{ $t('非自助餐') }}</el-checkbox>
-            <el-checkbox v-if="is_open_buffet == 1" label="buffet">{{ $t('自助餐') }}</el-checkbox>
-          </el-checkbox-group>
+            <el-checkbox v-if="is_open_buffet == 1" disabled label="buffet">{{ $t('自助餐') }}</el-checkbox>
+          </el-checkbox-group> -->
+          <div class="lh18 mt10 gray9">
+            <p> {{ $t('该规则仅支持自助餐') }}</p>
+          </div>
         </el-form-item>
 
         <el-form-item :label="$t('会员余额支付是否赠送')" prop="shopping_gift_rules.1.balance_payment_get_points" :rules="[{ required: true, message: ' ' }]">
@@ -220,8 +223,8 @@
       <div class="common-form">{{ $t('积分抵扣') }}</div>
       <el-form-item :label="$t('会员积分抵扣订单金额')">
         <el-radio-group v-model="form.exchange.open_points_exchange">
-          <el-radio :label="1">{{ $t('开启') }}</el-radio>
-          <el-radio :label="0">{{ $t('关闭') }}</el-radio>
+          <el-radio label="1">{{ $t('开启') }}</el-radio>
+          <el-radio label="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item :label="$t('每积分抵扣应付金额')">
@@ -373,13 +376,7 @@
       onSubmit() {
         let self = this;
         // 判断是否开启自助餐,只能有一个自助餐
-        let is_open_buffet = 0;
-        this.form.shopping_gift_rules.forEach((rule) => {
-          if (rule.meal_type.includes('buffet')) {
-            is_open_buffet++;
-          }
-        });
-        if (is_open_buffet > 1) {
+        if (self.form.shopping_gift_rules[1].is_open == 1 && self.form.shopping_gift_rules[0].meal_type.includes('buffet')) {
           this.$ElMessage({
             message: this.$t('自助餐只可适用于一个规则'),
             type: 'error',

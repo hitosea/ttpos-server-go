@@ -1702,5 +1702,6 @@
     "获取失败": "Alma başarısız",
     "查看发放记录": "Verilen kayıtları görüntüle",
     "发放对象": "Dağıtım hedefi",
-    "发放时间": "Dağıtım zamanı"
+    "发放时间": "Dağıtım zamanı",
+    "该规则仅支持自助餐": "Bu kural yalnızca açık büfe için geçerlidir"
 }
