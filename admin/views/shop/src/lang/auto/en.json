@@ -1949,5 +1949,9 @@
     "查看发放记录": "View distribution records",
     "发放对象": "Distribution target",
     "发放时间": "Distribution time",
-    "该规则仅支持自助餐": "This rule only supports buffets"
+    "该规则仅支持自助餐": "This rule only supports buffets",
+    "注：不开启不可设置抵扣比例": "Note: Cannot set deduction rate without activation",
+    "该营销活动需商家开通会员中心功能，请联系销售代表处理": "This marketing activity requires the merchant to activate the member center function, please contact a sales representative to handle this",
+    "扣除积分": "Deduct Points",
+    "可退积分": "Refundable Points"
 }
