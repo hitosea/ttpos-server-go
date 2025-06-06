@@ -4,12 +4,8 @@ namespace app\shop\service\marketing;
 
 use app\common\model\marketing\MarketingCoupon;
 use app\common\model\marketing\MarketingCouponRecord;
-use think\facade\Db;
+use Carbon\Carbon;
 use think\facade\Validate;
-use app\common\model\store\MultiLanguageName;
-use app\common\model\marketing\MarketingActivity;
-use app\common\model\marketing\MarketingActivityPrize;
-use app\common\model\marketing\MarketingActivityRecord;
 
 class MarketingCouponService
 {
@@ -18,25 +14,15 @@ class MarketingCouponService
      */
     public function create($data)
     {
-        $validate = Validate::rule([
-            'name' => 'require|max:2000',
-            'sort' => 'require|min:1|max:99',
-            'type' => 'string|in:deduction',
-            'deduction_type' => 'string|in:taxed',
-            'amount' => 'require|float|egt:0',
-            'count' => 'require|integer|max:999999',
-            'day_start_time' => 'require|string',
-            'day_end_time' => 'require|string|egt:day_start_time',
-            'requirement' => 'require|string|in:none,marketing',
-            'valid_start_time' => 'requireIf:requirement,none|string',
-            'valid_end_time' => 'requireIf:requirement,none|string|egt:valid_start_time',
-            'valid_days' => 'requireIf:requirement,marketing|integer|egt:0',
-        ]);
+        $validate = Validate::rule($this->couponRule());
         if (!$validate->check($data)) {
             return ['code' => 1, 'msg' => $validate->getError()];
         }
-
         $coupon = new MarketingCoupon();
+
+        $validStartTime = $data['valid_start_time'] ? strtotime($data['valid_start_time']) : 0;
+        $validEndTime = $data['valid_end_time'] ? strtotime($data['valid_end_time']) : 0;
+
         $coupon->save([
             'uuid' => createUuid(),
             'name' => $data['name'],
@@ -48,13 +34,32 @@ class MarketingCouponService
             'day_start_time' => $data['day_start_time'],
             'day_end_time' => $data['day_end_time'],
             'requirement' => $data['requirement'],
-            'valid_start_time' => $data['valid_start_time'],
-            'valid_end_time' => $data['valid_end_time'],
-            'valid_days' => $data['valid_days'],
+            'valid_start_time' => $validStartTime,
+            'valid_end_time' => $validEndTime,
+            'valid_days' => $data['valid_days'] ?? 0,
             'create_time' => time(),
             'update_time' => time(),
         ]);
+        $this->addRecord(MarketingCouponRecord::RecordTypeCreate, $coupon->uuid, $coupon->count, $coupon->count);
         return ['uuid' => $coupon->uuid];
+    }
+
+    private function couponRule(): array
+    {
+        return [
+            'name' => 'require|max:50',
+            'sort' => 'require|integer|egt:1|elt:99',
+            'type' => 'string|in:deduction',
+            'deduction_type' => 'string|in:taxed',
+            'amount' => 'require|float|egt:0',
+            'count' => 'require|integer|elt:999999',
+            'day_start_time' => 'require|dateFormat:H:i',
+            'day_end_time' => 'require|dateFormat:H:i|egt:day_start_time',
+            'requirement' => 'require|string|in:none,marketing',
+            'valid_start_time' => 'requireIf:requirement,none|dateFormat:Y-m-d',
+            'valid_end_time' => 'requireIf:requirement,none|dateFormat:Y-m-d|egt:valid_start_time',
+            'valid_days' => 'requireIf:requirement,marketing|integer|egt:0',
+        ];
     }
 
     /**
@@ -66,6 +71,15 @@ class MarketingCouponService
         if (!$coupon) {
             return ['code' => 1, 'msg' => __('优惠券不存在')];
         }
+        $validate = Validate::rule($this->couponRule());
+        if (!$validate->check($data)) {
+            return ['code' => 1, 'msg' => $validate->getError()];
+        }
+        $oldCount = $coupon->count;
+
+        $validStartTime = $data['valid_start_time'] ? strtotime($data['valid_start_time']) : $coupon->valid_start_time;
+        $validEndTime = $data['valid_end_time'] ? strtotime($data['valid_end_time']) : $coupon->valid_end_time;
+
         $coupon->save([
             'name' => $data['name'] ?? $coupon->name,
             'sort' => $data['sort'] ?? $coupon->sort,
@@ -76,13 +90,60 @@ class MarketingCouponService
             'day_start_time' => $data['day_start_time'] ?? $coupon->day_start_time,
             'day_end_time' => $data['day_end_time'] ?? $coupon->day_end_time,
             'requirement' => $data['requirement'] ?? $coupon->requirement,
-            'valid_start_time' => $data['valid_start_time'] ?? $coupon->valid_start_time,
-            'valid_end_time' => $data['valid_end_time'] ?? $coupon->valid_end_time,
+            'valid_start_time' => $validStartTime,
+            'valid_end_time' => $validEndTime,
             'valid_days' => $data['valid_days'] ?? $coupon->valid_days,
             'update_time' => time(),
         ]);
-        // ToDo 保存操作记录
+        if ($oldCount > $coupon->count) {
+            $this->addRecord(MarketingCouponRecord::RecordTypeDecrease, $coupon->uuid, $oldCount - $coupon->count, $coupon->count);
+        } else if ($oldCount < $coupon->count) {
+            $this->addRecord(MarketingCouponRecord::RecordTypeIncrease, $coupon->uuid, $coupon->count - $oldCount, $coupon->count);
+        }
         return ['uuid' => $uuid];
+    }
+
+    public function addRecord($recordType, $couponUuid, $count, $leftCount)
+    {
+        $lastRecord = MarketingCouponRecord::order('create_time', 'desc')->limit(1)->find();
+        $lastRecordSerialNo = null;
+        if (strlen($lastRecord->serial_no) == 16 ) {
+            $lastRecordSerialNo = $lastRecord->serial_no;
+        }
+        (new MarketingCouponRecord)->save([
+            'type' => $recordType,
+            'coupon_uuid' => $couponUuid,
+            'serial_no' => $this->generateTimeString($lastRecordSerialNo),
+            'uuid' => createUuid(),
+            'count' => $count,
+            'left_count' => $leftCount,
+        ]);
+    }
+
+    /**
+     * 生成时间字符串，格式：yyMMddhhmmssxxxx
+     * @param string|null $lastStr 上一个字符串，如果为null则从0001开始
+     * @return string 生成的新字符串
+     */
+    public function generateTimeString($lastStr = null)
+    {
+        $timeStr =  Carbon::now()->format('ymdHis');
+        // 处理序号部分
+        $sequence = '0001';
+        if ($lastStr !== null) {
+            // 提取上一个字符串的序号部分
+            $lastSequence = substr($lastStr, -4);
+            // 转换为数字并加1
+            $nextNum = intval($lastSequence) + 1;
+            // 如果超过9999，则从0001重新开始
+            if ($nextNum > 9999) {
+                $nextNum = 1;
+            }
+            // 格式化为4位数字，不足补0
+            $sequence = str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+        }
+        // 组合时间字符串和序号
+        return $timeStr . $sequence;
     }
 
     /**
@@ -113,7 +174,7 @@ class MarketingCouponService
     }
 
     /**
-     * 查询活动详情
+     * 查询优惠券详情
      */
     public function getDetail($uuid)
     {
@@ -121,7 +182,6 @@ class MarketingCouponService
         if (!$coupon) return null;
         return $coupon->toArray();
     }
-
 
     /**
      * 查询优惠券记录
@@ -131,7 +191,7 @@ class MarketingCouponService
         $page = (int)($params['page'] ?? 1);
         $pageSize = (int)($params['list_rows'] ?? 10);
         // 
-        $query = MarketingCouponRecord::with(['coupon'])->where('delete_time', 0)->field(['coupon_uuid', 'serial_no','type','count','left_count','create_time'])->order('create_time desc');
+        $query = MarketingCouponRecord::with(['coupon'])->where('delete_time', 0)->field(['coupon_uuid', 'serial_no', 'type', 'count', 'left_count', 'create_time'])->order('create_time desc');
         $list = $query->page($page, $pageSize)->select();
 
         foreach ($list as &$item) {

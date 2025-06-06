@@ -31,13 +31,10 @@ func (m *MarketingActivity) IsValid() bool {
 
 // MarketingActivityPrize 营销活动奖品模型
 type MarketingActivityPrize struct {
-	Uuid         uint64           `gorm:"column:uuid;type:biginteger;default:0;comment:礼品唯一ID" json:"uuid"`
+	BaseModel
 	ActivityUuid uint64           `gorm:"column:activity_uuid;type:biginteger;default:0;comment:活动uuid" json:"activity_uuid"`
 	PrizeType    int              `gorm:"column:prize_type;type:tinyint(1);default:0;comment:奖品类型 1优惠券 2未知" json:"prize_type"`
 	PrizeUuid    uint64           `gorm:"column:prize_uuid;type:biginteger;default:0;comment:奖品uuid" json:"prize_uuid"`
-	CreateTime   int              `gorm:"column:create_time;type:int;default:0;comment:创建时间" json:"create_time"`
-	UpdateTime   int              `gorm:"column:update_time;type:int;default:0;comment:更新时间" json:"update_time"`
-	DeleteTime   int              `gorm:"column:delete_time;type:int;default:0;comment:删除时间" json:"delete_time"`
 	Coupon       *MarketingCoupon `gorm:"foreignKey:Uuid;references:PrizeUuid" json:"coupon"`
 }
 
@@ -60,9 +57,6 @@ type MarketingActivityConsumption struct {
 	ConsumptionAmount float64 `gorm:"column:consumption_amount;type:decimal(14,2);default:0;comment:消费金额" json:"consumption_amount"`
 	RewardAmount      float64 `gorm:"column:reward_amount;type:decimal(14,2);default:0;comment:奖励金额" json:"reward_amount"`
 	RewardStatus      int     `gorm:"column:reward_status;type:int;default:0;comment:奖励状态 0未发放 1已发放" json:"reward_status"`
-	CreateTime        int     `gorm:"column:create_time;type:int;default:0;comment:创建时间" json:"create_time"`
-	UpdateTime        int     `gorm:"column:update_time;type:int;default:0;comment:更新时间" json:"update_time"`
-	DeleteTime        int     `gorm:"column:delete_time;type:int;default:0;comment:删除时间" json:"delete_time"`
 }
 
 // MarketingCoupon 会员营销-优惠券表
@@ -90,4 +84,5 @@ type MarketingCouponRecord struct {
 	Type       int    `gorm:"column:type;type:int(11);default:1;comment:记录类型：1-首次添加、2-调整添加、3-调整扣减" json:"type"`
 	Count      int    `gorm:"column:count;type:int(11);default:0;comment:变动数量" json:"count"`
 	LeftCount  int    `gorm:"column:left_count;type:int(11);default:0;comment:剩余有效张数" json:"left_count"`
+	MemberUuid int64  `gorm:"column:member_uuid;type:bigint(20);default:0;comment:会员Uuid" json:"member_uuid"`
 }

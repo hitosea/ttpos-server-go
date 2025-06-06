@@ -17,11 +17,12 @@ class MarketingCoupon extends BaseModel
         'valid_day_time_range',
     ];
 
+
     // 优惠券有效日期
     public function getValidDateAttr($value, $data)
     {
         if ($data['requirement'] == "none") {
-            return Carbon::create($data['valid_start_time'])->format("Y-m-d").'~'.Carbon::create($data['valid_end_time'])->format("Y-m-d");
+            return Carbon::parse($data['valid_start_time'])->toDateString().'~'.Carbon::parse($data['valid_end_time'])->toDateString();
         } else {
             return sprintf("活动奖励后%d个自然日内有效", $data['valid_days']);
         }
