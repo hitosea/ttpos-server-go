@@ -36,28 +36,24 @@ class MigratePointsSetting extends Migrator
             return;
         }
         $companySetting = $db->name("company_setting")->where("id", ">", 0)->find();
-
         $values = json_decode($existData["values"], true);
-
         if ($values["is_shopping_gift"] == "1") {
             foreach ($values["shopping_gift_rules"] as $k => $rule) {
-                if ($rule["type"] != "payment_amount") {
-                    continue;
+                $rule["meal_type"] = [];
+                if ($rule["type"] == "payment_amount") {
+                    // 按付款金额比例赠送
+                    $rule["is_open"] = "1"; // 开启
+                    $rule["is_member_level_related"] = "0"; // 不按会员等级赠送
+                    $rule["value"] = $values["gift_ratio"]; // 积分比例
+                    $rule["payment_amount_requirement"] = "0"; // 无付款金额要求
+                    // 适用就餐类型
+                    $rule["meal_type"][] = "non-buffet";
+                    // 会员余额支付赠送积分
+                    $rule["balance_payment_get_points"] = "1";
                 }
-                // 按付款金额比例赠送
-                $rule["is_open"] = "1"; // 开启
-                $rule["is_member_level_related"] = "0"; // 不按会员等级赠送
-                $rule["value"] = $values["gift_ratio"]; // 积分比例
-                $rule["payment_amount_requirement"] = "0"; // 无付款金额要求
-                // 适用就餐类型
-                $rule["meal_type"] = [
-                    "non-buffet"
-                ];
                 if ($companySetting["is_open_buffet"] == 1) {
                     $rule["meal_type"][] = "buffet";
                 }
-                // 会员余额支付赠送积分
-                $rule["balance_payment_get_points"] = "1";
                 $values["shopping_gift_rules"][$k] = $rule;
             }
             $db->name("setting")->where("key", "=", "points")->update(["values" => json_encode($values)]);

@@ -277,19 +277,23 @@ class App extends AppModel
             }
 
             // 处理会员积分设置，如果关闭了自助餐，则删除适用自助餐类型
-            if (isset($data['is_open_buffet']) && $data['is_open_buffet'] != 1) {
+            if (isset($data['is_open_buffet'])) {
                 $settingModel = (new Setting([], $companyUuid));
                 $pointsSetting = $settingModel->where("key", "=", SettingEnum::POINTS)->find();
                 if ($pointsSetting) {
                     $pointSettingValues = $pointsSetting['values'];
                     foreach ($pointSettingValues["shopping_gift_rules"] as $k => $rule) {
-                        $newMealTypes = [];
-                        foreach ($rule["meal_type"] ?? [] as $mealType) {
-                            if ($mealType != "buffet") {
-                                $newMealTypes[] = $mealType;
+                        if ($data['is_open_buffet'] != 1) {
+                            $newMealTypes = [];
+                            foreach ($rule["meal_type"] ?? [] as $mealType) {
+                                if ($mealType != "buffet") {
+                                    $newMealTypes[] = $mealType;
+                                }
                             }
+                            $pointSettingValues["shopping_gift_rules"][$k]["meal_type"] = $newMealTypes;
+                        } else if ($rule["type"] == "desk") {
+                            $pointSettingValues["shopping_gift_rules"][$k]["meal_type"] = ["buffet"];
                         }
-                        $pointSettingValues["shopping_gift_rules"][$k]["meal_type"] = $newMealTypes;
                     }
                     $settingModel->where("key", "=", SettingEnum::POINTS)->update(["values" => json_encode($pointSettingValues)]);
                     // 删除系统设置缓存

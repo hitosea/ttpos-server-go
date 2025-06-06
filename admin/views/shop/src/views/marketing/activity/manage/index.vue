@@ -46,7 +46,7 @@
             <template #default="scope">
               <el-button @click="sendClick(scope.row)" type="primary" link size="small">{{ $t('发放记录') }} </el-button>
               <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/marketing/activity/edit'">{{ $t('编辑') }} </el-button>
-              <el-button @click="disableClick(scope.row)" v-if="scope.row.status != 2" type="primary" link size="small" v-auth="'/marketing/activity/disable'"
+              <el-button @click="disableClick(scope.row)" :disabled="scope.row.status == 2" type="primary" link size="small" v-auth="'/marketing/activity/disable'"
                 >{{ $t('失效') }}
               </el-button>
             </template>
@@ -72,12 +72,14 @@
 </template>
 
 <script setup>
-  import { ref, reactive, onMounted } from 'vue';
+  import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
   import { useRouter } from 'vue-router';
-  import { ElMessageBox } from 'element-plus';
+  import { ElMessageBox, ElMessage } from 'element-plus';
   import MarketingApi from '@/api/marketing.js';
   import { useUserStore } from '@/store/index';
   import recordDialog from './recordDialog.vue';
+  const { proxy } = getCurrentInstance();
+
   // 获取路由实例
   const router = useRouter();
 
@@ -100,27 +102,6 @@
     card_name: '',
     status: '',
   });
-
-  // 方法定义
-  const handleChange = (row) => {
-    if (!window.$filter.isAuth('/card/card/state')) {
-      return;
-    }
-
-    let war = window.$t('确认要禁用吗?');
-    if (row.status == 1) {
-      war = window.$t('确认要启用吗?');
-    }
-
-    ElMessageBox.confirm(war, window.$t('提示'), { type: 'warning' }).then(() => {
-      // 这里可以添加具体的API调用
-    });
-  };
-
-  const keepTextStyle = (val) => {
-    let str = val.replace(/(\\r\\n)/g, '<br/>');
-    return str;
-  };
 
   const handleCurrentChange = (val) => {
     curPage.value = val;
@@ -159,16 +140,33 @@
     }, 200);
   };
 
+  const memberAuth = () => {
+    if (!proxy.$filter.isAuth('/card/user/index')) {
+      ElMessage.error(proxy.$t('该营销活动需商家开通会员中心功能，请联系销售代表处理'));
+      return false;
+    }
+    return true;
+  };
+
   const addClick = () => {
+    if (!memberAuth()) {
+      return;
+    }
     router.push('/' + app_id + '/marketing/activity/add');
   };
 
   const sendClick = (row) => {
+    if (!memberAuth()) {
+      return;
+    }
     recordUuid.value = row.uuid;
     recordDialogVisible.value = true;
   };
 
   const editClick = (item) => {
+    if (!memberAuth()) {
+      return;
+    }
     router.push({
       path: '/' + app_id + '/marketing/activity/edit',
       query: {
@@ -178,6 +176,9 @@
   };
 
   const disableClick = (row) => {
+    if (!memberAuth()) {
+      return;
+    }
     ElMessageBox.confirm(window.$t('失效后将不可恢复，活动变为已结束状态，确定将该活动失效?'), window.$t('失效营销活动'), {
       confirmButtonText: window.$t('确定'),
       cancelButtonText: window.$t('取消'),

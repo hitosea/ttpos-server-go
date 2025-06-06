@@ -87,7 +87,7 @@
         </el-form-item>
         <template v-if="form.shopping_gift_rules[0].is_member_level_related == 0">
           <el-form-item :label="$t('赠送积分比例')" prop="shopping_gift_rules.0.value" :rules="[{ required: true, message: $t('请输入赠送积分比例') }]">
-            <el-input class="max-w460" @input="(e) => handleValueInput(e, 0)" :placeholder="$t('请输入积分赠送')" v-model="form.shopping_gift_rules[0].value"></el-input>
+            <el-input class="max-w460" @input="(e) => handleValueInput(e, 0)" :placeholder="$t('请输入赠送积分比例')" v-model="form.shopping_gift_rules[0].value"></el-input>
             <span>%</span>
           </el-form-item>
           <el-form-item
@@ -114,8 +114,8 @@
             :prop="`shopping_gift_rules.0.member_levels.${levelIndex}.value`"
             :rules="[{ required: true, message: $t('请输入积分赠送') }]"
           >
-            <el-input class="max-w460" @input="(e) => handleMemberLevelInput(e, 0, levelIndex)" :placeholder="$t('请输入积分赠送')" v-model="item.value"></el-input>
-            <span> {{ $t('积分/人') }}</span>
+            <el-input class="max-w460" @input="(e) => handleMemberLevelsInput(e, 0, levelIndex)" :placeholder="$t('请输入积分赠送')" v-model="item.value"></el-input>
+            <span> %</span>
             <div class="lh18 mt10 gray9">
               <p> {{ $t('注：请输入大于0的数字') }}</p>
             </div>
@@ -161,9 +161,9 @@
           </el-radio-group>
         </el-form-item>
         <template v-if="form.shopping_gift_rules[1].is_member_level_related == 0">
-          <el-form-item :label="$t('赠送积分比例')" prop="shopping_gift_rules.1.value" :rules="[{ required: true, message: $t('请输入赠送积分比例') }]">
-            <el-input class="max-w460" @input="(e) => handleValueInput(e, 1)" :placeholder="$t('请输入积分赠送')" v-model="form.shopping_gift_rules[1].value"></el-input>
-            <span>%</span>
+          <el-form-item :label="$t('赠送积分')" prop="shopping_gift_rules.1.value" :rules="[{ required: true, message: $t('请输入赠送积分') }]">
+            <el-input class="max-w460" @input="(e) => handleValuesInput(e, 1)" :placeholder="$t('请输入积分赠送')" v-model="form.shopping_gift_rules[1].value"></el-input>
+            <span> {{ $t('积分/人') }}</span>
           </el-form-item>
           <el-form-item
             :label="$t('赠送积分所需付款金额')"
@@ -195,7 +195,7 @@
           </el-form-item>
         </template>
 
-        <el-form-item :label="$t('适用就餐类型')" prop="shopping_gift_rules.1.meal_type" :rules="[{ required: true, message: $t('请选择适用就餐类型') }]">
+        <el-form-item :label="$t('适用就餐类型')" :rules="[{ required: true, message: ' ' }]">
           <!-- <el-checkbox-group v-model="form.shopping_gift_rules[1].meal_type">
             <el-checkbox label="non-buffet">{{ $t('非自助餐') }}</el-checkbox>
             <el-checkbox v-if="is_open_buffet == 1" disabled label="buffet">{{ $t('自助餐') }}</el-checkbox>
@@ -229,7 +229,6 @@
       </el-form-item>
       <el-form-item :label="$t('每积分抵扣应付金额')">
         <el-input class="max-w460" @input="(e) => handlePointsExchangeRateInput(e)" :placeholder="$t('请输入积分赠送')" v-model="form.exchange.points_exchange_rate"></el-input>
-        <span>%</span>
       </el-form-item>
 
       <el-form-item :label="$t('是否自动抵扣')">
@@ -452,6 +451,22 @@
         // 更新表单值
         this.form.shopping_gift_rules[index].value = value;
       },
+
+      handleValuesInput(e, index) {
+        let value = e;
+        //只允许数字，1-9999999
+        value = value.replace(/[^0-9.]/g, '');
+        // 转换为数字进行范围检查
+        const numValue = parseFloat(value);
+        if (numValue > 9999999) {
+          value = '9999999';
+        }
+        if (numValue < 1) {
+          value = '1';
+        }
+        this.form.shopping_gift_rules[index].value = value;
+      },
+
       handlePointsExchangeRateInput(e) {
         let value = e;
         value = value.replace(/[^0-9.]/g, '');
@@ -507,6 +522,33 @@
 
         // 更新对应的会员等级积分值
         this.form.shopping_gift_rules[ruleIndex].member_levels[levelIndex].value = newValue;
+      },
+
+      handleMemberLevelsInput(e, index, levelIndex) {
+        let value = e;
+        // 只允许输入数字和小数点
+        value = value.replace(/[^0-9.]/g, '');
+
+        // 确保只有一个小数点
+        const parts = value.split('.');
+        if (parts.length > 2) {
+          value = parts[0] + '.' + parts.slice(1).join('');
+        }
+
+        // 限制最多两位小数
+        if (parts[1] && parts[1].length > 2) {
+          value = parts[0] + '.' + parts[1].substring(0, 2);
+        }
+
+        // 转换为数字进行范围检查
+        const numValue = parseFloat(value);
+        if (numValue > 100) {
+          value = '100';
+        }
+        if (numValue < 0) {
+          value = '0';
+        }
+        this.form.shopping_gift_rules[index].member_levels[levelIndex].value = value;
       },
     },
   };

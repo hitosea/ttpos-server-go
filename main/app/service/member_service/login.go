@@ -77,12 +77,12 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 
 	// 定义国家代码到区号的映射
 	countryToAreaCode := map[string]string{
-		"CN": constant.ChinaPrefix,    // 中国
 		"TH": constant.ThailandPrefix, // 泰国
+		"CN": constant.ChinaPrefix,    // 中国
 	}
 
 	// 默认区号列表
-	areaCodes := []string{constant.ChinaPrefix, constant.ThailandPrefix}
+	areaCodes := []string{constant.ThailandPrefix, constant.ChinaPrefix}
 
 	// 如果找到匹配的国家区号，将其移到第一位
 	if areaCode, exists := countryToAreaCode[countryCode]; exists {
@@ -136,6 +136,9 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 	companySetting := repository.NewCompanySettingRepo(db).Get()
 	if companySetting.IsOpenMember != 1 {
 		return errors.New("商家未开通会员功能")
+	}
+	if companySetting.IsOpenMarketing != 1 {
+		return errors.New("二维码已失效")
 	}
 	// 验证手机号是否存在
 	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
