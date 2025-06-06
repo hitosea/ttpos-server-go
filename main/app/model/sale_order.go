@@ -147,7 +147,7 @@ func (model *SaleOrder) GetManualReturnPoints() float64 {
 
 // 获取积分抵扣后的应收金额。等于Amount-PayPointsAmount
 func (model *SaleOrder) GetPointsExchangeAmount() float64 {
-	return decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(model.PayPointsAmount)).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.GetAmount()).Sub(decimal.NewFromFloat(model.PayPointsAmount)).Round(2).InexactFloat64()
 }
 
 // 获取销售订单的序号
