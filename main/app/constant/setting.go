@@ -42,3 +42,10 @@ const (
 	AutoClearTable    = "0" // 自动清台
 	NotAutoClearTable = "1" // 不自动清台
 )
+
+// 积分赠送类型
+const (
+	// 积分赠送类型
+	RuleTypePaymentAmount = 0 // 按付款金额比例赠送
+	RuleTypeDesk          = 1 // 按桌台人数赠送
+)

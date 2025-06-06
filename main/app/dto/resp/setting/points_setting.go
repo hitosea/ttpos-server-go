@@ -3,6 +3,7 @@ package setting
 import (
 	"math"
 	"strconv"
+	"ttpos-server-go/app/constant"
 
 	"github.com/duke-git/lancet/v2/slice"
 
@@ -56,6 +57,14 @@ func (s *ShoppingGiftRule) getValue() float64 {
 		return 0
 	}
 	value, _ := strconv.ParseFloat(s.Value, 64)
+
+	// 按付款金额比例赠送, value值要除以100, 因为前端传过来的是百分比0-100,计算的时候值是0-1
+	if s.getType() == constant.RuleTypePaymentAmount {
+		if value <= 0 {
+			return 0
+		}
+		return decimal.NewFromFloat(value).Div(decimal.NewFromInt(100)).Round(2).InexactFloat64()
+	}
 	return value
 }
 
@@ -63,7 +72,7 @@ func (s *ShoppingGiftRule) getPaymentAmountRequirement() float64 {
 	if s.PaymentAmountRequirement == "" {
 		return 0
 	}
-	value, _ := strconv.ParseFloat(s.Value, 64)
+	value, _ := strconv.ParseFloat(s.PaymentAmountRequirement, 64)
 	return value
 }
 
@@ -75,14 +84,22 @@ func (s *ShoppingGiftRule) getBalancePaymentGetPoints() bool {
 	return true
 }
 
+// getIsOpen 获取是否开启
+func (s *ShoppingGiftRule) getIsOpen() bool {
+	if s.IsOpen == "1" {
+		return true
+	}
+	return false
+}
+
 // getType 获取规则类型. 0 - 按付款金额比例赠送; 1 - 按桌台人数赠送:
 func (s *ShoppingGiftRule) getType() uint8 {
 	if s.Type == RuleTypePaymentAmount {
-		return 0
+		return constant.RuleTypePaymentAmount
 	} else if s.Type == RuleTypeDesk {
-		return 1
+		return constant.RuleTypeDesk
 	}
-	return 0
+	return constant.RuleTypePaymentAmount
 }
 
 type PointsRule struct {
@@ -266,6 +283,9 @@ func (p *Points) GetPointsGiftRule(isBufferOrder bool, memberLevelUuid uint64) P
 	var buffetRule *ShoppingGiftRule    // 自助餐规格的积分发放规格
 	var nonBuffetRule *ShoppingGiftRule // 非自助餐的积分发放规格
 	for _, rule := range p.ShoppingGiftRules {
+		if !rule.getIsOpen() {
+			continue
+		}
 		if slice.Contain(rule.MealType, "buffet") {
 			buffetRule = &rule
 		}
