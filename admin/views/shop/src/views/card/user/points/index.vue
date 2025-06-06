@@ -147,13 +147,13 @@
 
       <el-divider />
 
-      <el-form-item :label="$t('按桌台人数赠送')">
+      <el-form-item :label="$t('按桌台人数赠送')" v-if="is_open_buffet == 1">
         <el-radio-group v-model="form.shopping_gift_rules[1].is_open">
           <el-radio label="1">{{ $t('开启') }}</el-radio>
           <el-radio label="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
       </el-form-item>
-      <template v-if="form.shopping_gift_rules[1].is_open == 1">
+      <template v-if="form.shopping_gift_rules[1].is_open == 1 && is_open_buffet == 1">
         <el-form-item :label="$t('是否按会员等级赠送')" prop="shopping_gift_rules.1.is_member_level_related" :rules="[{ required: true, message: ' ' }]">
           <el-radio-group v-model="form.shopping_gift_rules[1].is_member_level_related">
             <el-radio label="0">{{ $t('所有会员等级相同') }}</el-radio>
@@ -198,7 +198,7 @@
         <el-form-item :label="$t('适用就餐类型')" :rules="[{ required: true, message: ' ' }]">
           <!-- <el-checkbox-group v-model="form.shopping_gift_rules[1].meal_type">
             <el-checkbox label="non-buffet">{{ $t('非自助餐') }}</el-checkbox>
-            <el-checkbox v-if="is_open_buffet == 1" disabled label="buffet">{{ $t('自助餐') }}</el-checkbox>
+            <el-checkbox  disabled label="buffet">{{ $t('自助餐') }}</el-checkbox>
           </el-checkbox-group> -->
           <div class="lh18 mt10 gray9">
             <p> {{ $t('该规则仅支持自助餐') }}</p>

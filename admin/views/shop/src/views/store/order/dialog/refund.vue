@@ -30,51 +30,59 @@
           </el-input>
           <div class="tips">{{ $t('注：确定后则为整单操作退款') }}</div>
         </el-form-item>
+        <!-- 部分退款 -->
+        <el-table v-if="form.refund_type == '2'" size="small" :data="tableData" border style="width: 100%" class="mb16" v-loading="loading">
+          <el-table-column prop="product_name_text" :label="$t('商品名称')">
+            <template #default="scope">
+              {{ scope.row.product_name_text }}
+              <span class="tips" v-if="scope.row.product_attr"> ({{ scope.row.product_attr }}) </span>
+            </template>
+          </el-table-column>
+          <el-table-column :label="$t('可退数量')">
+            <template #default="scope">
+              {{ Number(scope.row.total_num) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="refund_num_updata" :label="$t('退菜数量')">
+            <template #default="scope">
+              <el-input-number :min="0" :max="Number(scope.row.total_num)" :placeholder="$t('请输入')" v-model.number="scope.row.refund_num_updata"></el-input-number>
+            </template>
+          </el-table-column>
+          <el-table-column :label="$t('退款金额')" align="right">
+            <template #default="scope">
+              <div class="flex">
+                <p>
+                  <span v-if="currency.unit_position == '0'">
+                    {{ currency.unit }}
+                  </span>
+                  {{ this.$formatPrice(Number(scope.row.refund_num_updata) * Number(scope.row.price)) }}
+                  <span v-if="currency.unit_position == '1'">
+                    {{ currency.unit }}
+                  </span>
+                </p>
+                <p class="tips">
+                  {{ $t('可退款金额：') }}
+                  <span v-if="currency.unit_position == '0'">
+                    {{ currency.unit }}
+                  </span>
+                  {{ this.$formatPrice(Number(scope.row.total_price)) }}
+                  <span v-if="currency.unit_position == '1'">
+                    {{ currency.unit }}
+                  </span>
+                </p>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <el-form-item v-if="manual_return_points" for="no_click" :label="$t('扣除积分')" :label-width="formLabelWidth">
+          <el-input v-model="form.points" :placeholder="$t('可退款金额')" :readonly="true">
+            <template #append>
+              {{ $t('可退积分') + ' ' + deductible_points }}
+            </template>
+          </el-input>
+        </el-form-item>
       </el-form>
-      <!-- 部分退款 -->
-      <el-table v-if="form.refund_type == '2'" size="small" :data="tableData" border style="width: 100%" class="mb16" v-loading="loading">
-        <el-table-column prop="product_name_text" :label="$t('商品名称')">
-          <template #default="scope">
-            {{ scope.row.product_name_text }}
-            <span class="tips" v-if="scope.row.product_attr"> ({{ scope.row.product_attr }}) </span>
-          </template>
-        </el-table-column>
-        <el-table-column :label="$t('可退数量')">
-          <template #default="scope">
-            {{ Number(scope.row.total_num) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="refund_num_updata" :label="$t('退菜数量')">
-          <template #default="scope">
-            <el-input-number :min="0" :max="Number(scope.row.total_num)" :placeholder="$t('请输入')" v-model.number="scope.row.refund_num_updata"></el-input-number>
-          </template>
-        </el-table-column>
-        <el-table-column :label="$t('退款金额')" align="right">
-          <template #default="scope">
-            <div class="flex">
-              <p>
-                <span v-if="currency.unit_position == '0'">
-                  {{ currency.unit }}
-                </span>
-                {{ this.$formatPrice(Number(scope.row.refund_num_updata) * Number(scope.row.price)) }}
-                <span v-if="currency.unit_position == '1'">
-                  {{ currency.unit }}
-                </span>
-              </p>
-              <p class="tips">
-                {{ $t('可退款金额：') }}
-                <span v-if="currency.unit_position == '0'">
-                  {{ currency.unit }}
-                </span>
-                {{ this.$formatPrice(Number(scope.row.total_price)) }}
-                <span v-if="currency.unit_position == '1'">
-                  {{ currency.unit }}
-                </span>
-              </p>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
 
       <div class="refund-total">
         <p class="refund-total-title">{{ $t('支付记录（原路退款会按照以下顺序退回）') }}</p>
@@ -155,7 +163,10 @@
           order_id: '', //订单id
           sub_order_id: '', // 子单id
           pay_price: '', //支付金额
+          points: null,
         },
+        deductible_points: 0, //扣除积分
+        manual_return_points: false,
         tableData: [], //表格数据
         pay_list: [], //支付记录（原路退款会按照以下顺序退回）
         currency: currency, //货币
@@ -209,6 +220,7 @@
           sale_bill_uuid: this.form.order_id,
           sale_order_uuid: this.form.sub_order_id,
           refund_type: this.form.refund_type,
+          points: this.form.points,
           refund_product: [],
           refund_buffet: [],
           refund_delay: [],
@@ -337,6 +349,8 @@
             self.loading = false;
             self.form.pay_price = this.$priceTwo(data.data.can_return_amount);
             self.pay_list = data.data.payment_records;
+            self.deductible_points = data.data.deductible_points;
+            self.manual_return_points = data.data.manual_return_points;
             (data.data.products || []).map((item) => {
               this.tableData.push({
                 type: 3,
