@@ -22,7 +22,7 @@ class MarketingCoupon extends BaseModel
     public function getValidDateAttr($value, $data)
     {
         if ($data['requirement'] == "none") {
-            return Carbon::parse($data['valid_start_time'])->toDateString().'~'.Carbon::parse($data['valid_end_time'])->toDateString();
+            return date("Y-m-d", $data['valid_start_time']).'~'.date("Y-m-d", $data['valid_end_time']);
         } else {
             return sprintf("活动奖励后%d个自然日内有效", $data['valid_days']);
         }
@@ -32,7 +32,7 @@ class MarketingCoupon extends BaseModel
     public function getValidStartTimeAttr($value, $data)
     {
         if ($data['requirement'] == "none") {
-            return Carbon::parse($data['valid_start_time'])->toDateString();
+            return date("Y-m-d", $data['valid_start_time']);
         } else {
             return "";
         }
@@ -42,7 +42,7 @@ class MarketingCoupon extends BaseModel
     public function getValidEndTimeAttr($value, $data)
     {
         if ($data['requirement'] == "none") {
-            return Carbon::parse($data['valid_end_time'])->toDateString();
+            return date("Y-m-d", $data['valid_end_time']);
         } else {
             return "";
         }

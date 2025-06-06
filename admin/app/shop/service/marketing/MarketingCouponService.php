@@ -4,7 +4,6 @@ namespace app\shop\service\marketing;
 
 use app\common\model\marketing\MarketingCoupon;
 use app\common\model\marketing\MarketingCouponRecord;
-use Carbon\Carbon;
 use think\facade\Validate;
 
 class MarketingCouponService
@@ -21,7 +20,7 @@ class MarketingCouponService
         $coupon = new MarketingCoupon();
 
         $validStartTime = $data['valid_start_time'] ? strtotime($data['valid_start_time']) : 0;
-        $validEndTime = $data['valid_end_time'] ? strtotime($data['valid_end_time']) : 0;
+        $validEndTime = $data['valid_end_time'] ? strtotime($data['valid_end_time']) + 86400 - 1 : 0;
 
         $coupon->save([
             'uuid' => createUuid(),
@@ -77,8 +76,9 @@ class MarketingCouponService
         }
         $oldCount = $coupon->count;
 
+
         $validStartTime = $data['valid_start_time'] ? strtotime($data['valid_start_time']) : $coupon->valid_start_time;
-        $validEndTime = $data['valid_end_time'] ? strtotime($data['valid_end_time']) : $coupon->valid_end_time;
+        $validEndTime = $data['valid_end_time'] ? strtotime($data['valid_end_time']) + 86400 - 1 : $coupon->valid_end_time;
 
         $coupon->save([
             'name' => $data['name'] ?? $coupon->name,
@@ -107,7 +107,7 @@ class MarketingCouponService
     {
         $lastRecord = MarketingCouponRecord::order('create_time', 'desc')->limit(1)->find();
         $lastRecordSerialNo = null;
-        if (strlen($lastRecord->serial_no) == 16 ) {
+        if (strlen($lastRecord->serial_no) == 16) {
             $lastRecordSerialNo = $lastRecord->serial_no;
         }
         (new MarketingCouponRecord)->save([
@@ -127,7 +127,7 @@ class MarketingCouponService
      */
     public function generateTimeString($lastStr = null)
     {
-        $timeStr =  Carbon::now()->format('ymdHis');
+        $timeStr = date("ymdHis");
         // 处理序号部分
         $sequence = '0001';
         if ($lastStr !== null) {
