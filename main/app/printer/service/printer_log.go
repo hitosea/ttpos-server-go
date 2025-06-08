@@ -460,14 +460,6 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 		return model.PrinterLog{}, errors.WithMessage(err)
 	}
 
-	// 只保留7天的数据
-	go func() {
-		err = printerLogRepo.UpdateByWhere(map[string]any{"delete_time": time.Now().Unix()}, printerLogRepo.WhereCreatedBefore(7))
-		if err != nil {
-			logger.Logger.Error("删除n天前的打印日志失败", zap.Error(err))
-		}
-	}()
-
 	// 进行队列打印
 	if viper.GetString("CHECK_PRINT") == "false" || printerLog.Type == constant.PrinterLogTypeDefault {
 		go func() {
