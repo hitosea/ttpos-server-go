@@ -336,6 +336,14 @@ class User extends BaseModel
         return $this->save(['member_card_uuid' => $memberCardUuid]);
     }
 
+    /**
+     * 关联推荐人
+     */
+    public function referrer()
+    {
+        return $this->hasOne('app\\common\\model\\user\\User', 'uuid', 'referrer_uuid');
+    }
+
     /*
      * 添加会员
      */
