@@ -25,7 +25,7 @@
         </el-radio-group>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('金额')" prop="amount" :rules="[{ required: true, message: $t('请选择金额') }]">
-        <numInput width="m-full" :min="0" :precision="2" v-model:valueData="form.amount" :placeholder="$t('请输入')"></numInput>
+        <numInput width="m-full" :min="0" :precision="2" v-model:valueData="form.amount" :value="form.amount" :placeholder="$t('请输入')"></numInput>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('数量')" prop="count" :rules="[{ required: true, message: $t('请选择数量') }]">
         <el-input-number :controls="false" :min="0" :max="9999999" :precision="0" :placeholder="$t('请输入数量')" v-model.number="form.count"></el-input-number>
@@ -52,8 +52,8 @@
               v-if="use_time_type == 2"
               class="time-picker"
               v-model="day_time"
-              format=" HH:mm"
-              value-format=" HH:mm"
+              format="HH:mm"
+              value-format="HH:mm"
               is-range
               range-separator="~"
               :start-placeholder="$t('开始时间')"
@@ -134,17 +134,9 @@
       type: Boolean,
       default: false,
     },
-    editform: {
-      type: Object,
-      default: () => ({}),
-    },
     title: {
       type: String,
       default: '',
-    },
-    gradeList: {
-      type: Array,
-      default: () => [],
     },
     editData: {
       type: Object,
@@ -185,6 +177,27 @@
     (newVal) => {
       dialogVisible.value = newVal;
       if (newVal) {
+        if (props.editData) {
+          // 复制编辑数据到表单
+          Object.keys(form).forEach((key) => {
+            form[key] = props.editData[key];
+          });
+
+          // 处理时间显示
+          if (props.editData.day_start_time === '00:00' && props.editData.day_end_time === '23:59') {
+            use_time_type.value = 1;
+            day_time.value = [];
+          } else {
+            use_time_type.value = 2;
+            // 确保时间格式正确（添加空格以匹配format格式）
+            day_time.value = [props.editData.day_start_time ? ` ${props.editData.day_start_time}` : null, props.editData.day_end_time ? ` ${props.editData.day_end_time}` : null];
+          }
+
+          // 处理日期范围
+          if (props.editData.valid_start_time && props.editData.valid_end_time) {
+            reg_date.value = [props.editData.valid_start_time, props.editData.valid_end_time];
+          }
+        }
       }
     },
     { immediate: true }
@@ -196,7 +209,7 @@
       const params = {
         ...form,
       };
-
+      params.uuid = props.editData.uuid;
       formRef.value.validate((valid) => {
         if (valid) {
           loading.value = true;
@@ -246,12 +259,16 @@
       // 选择全天时，设置默认时间
       form.day_start_time = '00:00';
       form.day_end_time = '23:59';
-      day_time.value = null;
+      day_time.value = [];
     } else {
-      // 选择特定时间段时，清空时间
-      form.day_start_time = '';
-      form.day_end_time = '';
-      day_time.value = null;
+      // 选择特定时间段时，如果已有时间则使用已有时间，否则清空
+      if (form.day_start_time && form.day_end_time && !(form.day_start_time === '00:00' && form.day_end_time === '23:59')) {
+        day_time.value = [form.day_start_time, form.day_end_time];
+      } else {
+        form.day_start_time = '';
+        form.day_end_time = '';
+        day_time.value = [];
+      }
     }
   };
 
@@ -262,6 +279,7 @@
 
   const handleDayTimeChange = (val) => {
     if (val && val.length === 2) {
+      // 去掉可能存在的前导空格
       form.day_start_time = val[0].trim();
       form.day_end_time = val[1].trim();
     } else {

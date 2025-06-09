@@ -9,12 +9,12 @@
     <div class="common-seach-wrap flex">
       <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
         <el-form-item :label="$t('优惠券名称')">
-          <el-input v-model="formInline.keyword" :placeholder="$t('优惠券名称')" @input="onSearch"></el-input>
+          <el-input v-model="formInline.name" :placeholder="$t('优惠券名称')" @input="onSearch"></el-input>
         </el-form-item>
         <el-form-item :label="$t('优惠券类型')">
-          <a-select v-model:value="formInline.grade_id" :placeholder="$t('优惠券类型')" @change="onSearch">
-            <el-option :label="$t('全部')" value="0"></el-option>
-            <el-option v-for="(item, index) in gradeList" :key="index" :label="item.name" :value="item.grade_id"></el-option>
+          <a-select v-model:value="formInline.type" :placeholder="$t('优惠券类型')" @change="onSearch">
+            <el-option :label="$t('全部')" value=""></el-option>
+            <el-option :label="$t('折扣券')" value="deduction"></el-option>
           </a-select>
         </el-form-item>
         <el-form-item>
@@ -24,7 +24,7 @@
         </el-form-item>
       </el-form>
       <div class="common-level-rail">
-        <el-button type="primary" v-auth="'/card/user/user/add'" icon="Plus" @click="addMenber">{{ $t('添加优惠券') }}</el-button>
+        <el-button type="primary" v-auth="'/marketing/coupon/add'" icon="Plus" @click="addMenber">{{ $t('添加优惠券') }}</el-button>
       </div>
     </div>
     <!--内容-->
@@ -50,7 +50,7 @@
           <el-table-column prop="create_time" :label="$t('添加時間')"> </el-table-column>
           <el-table-column fixed="right" :label="$t('操作')" width="80">
             <template #default="scope">
-              <el-button @click="editClick(scope.row)" type="primary" link size="small">{{ $t('编辑') }}</el-button>
+              <el-button v-auth="'/marketing/coupon/edit'" @click="editClick(scope.row)" type="primary" link size="small">{{ $t('编辑') }}</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -70,7 +70,7 @@
       </div>
     </div>
 
-    <AddEdit v-if="open_addDdit" :title="title" :editData="editData" :open="open_addDdit" :editform="editform" @closeDialog="closeAddMenber"> </AddEdit>
+    <AddEdit v-if="open_addDdit" :title="title" :editData="editData" :open="open_addDdit" @closeDialog="closeAddMenber"> </AddEdit>
   </div>
 </template>
 
@@ -91,13 +91,11 @@
   const curPage = ref(1);
 
   const formInline = reactive({
-    keyword: '',
-    grade_id: '',
-    reg_date: '',
+    name: '',
+    type: '',
   });
 
   const open_addDdit = ref(false);
-  const editform = ref({});
   const title = ref('');
   const editData = ref('');
   const searchLoading = ref('');
