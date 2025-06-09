@@ -454,7 +454,7 @@ func (model *SaleOrder) CalcMemberPoint(mealNum int, rule settingResp.PointsRule
 	}
 
 	// 如果积分是按比例赠送的话
-	baseNum := model.FinalPrice // 计算积分的基数，值为本订单的最终应收金额
+	baseNum := model.GetPointsExchangeAmount() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
 	if len(finalPrice) > 0 {
 		baseNum = finalPrice[0]
 	}
