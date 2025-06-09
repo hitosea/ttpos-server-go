@@ -83,7 +83,6 @@
 
 <script>
   import MarketingApi from '@/api/marketing.js';
-  import { TimePickPanel } from 'element-plus';
   export default {
     components: {
       /*编辑组件*/

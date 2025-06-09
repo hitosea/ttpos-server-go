@@ -41,7 +41,7 @@
           </el-table-column>
           <el-table-column prop="amount" :label="$t('金额')">
             <template #default="scope">
-              <span v-if="scope.row.type == 'deduction'">{{ $formatPrice(scope.row.amount) }}</span>
+              <span>{{ $formatPrice(scope.row.amount) }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="valid_date" :label="$t('有效日期')"> </el-table-column>

@@ -250,7 +250,10 @@ class MarketingActivityService
     {
         $gift = MarketingActivity::where('uuid', $uuid)->where('delete_time', 0)->find();
         if (!$gift) return null;
-        $prizes = MarketingActivityPrize::where('activity_uuid', $uuid)->where('delete_time', 0)->select();
+        $prizes = MarketingActivityPrize::where('activity_uuid', $uuid)
+            ->where('delete_time', 0)
+            ->with('couponName')
+            ->select();
         return array_merge($gift->toArray(), ['prizes'=>$prizes]);
     }
 

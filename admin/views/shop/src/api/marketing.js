@@ -51,6 +51,10 @@ let MarketingApi = {
         return request._get('/shop/marketing.coupon/record', data, errorback);
     },
 
+    /*活动优惠券列表*/
+    activityCouponList(data, errorback) {
+        return request._get('/shop/marketing.activity/couponList', data, errorback);
+    },
 
 };
 
