@@ -39,7 +39,7 @@ class PointsLogSceneEnum extends Enum
     // 积分抵扣
     const POINTS_DEDUCT = 110;
 
-    // 积分反结账
+    // 抵扣反结账
     const POINTS_REVERSE = 120;
 
     /**
@@ -94,9 +94,9 @@ class PointsLogSceneEnum extends Enum
                 'describe' => '积分抵扣：%s',
             ],
             self::POINTS_REVERSE => [
-                'name' => __('积分反结账'),
+                'name' => __('抵扣反结账'),
                 'value' => self::POINTS_REVERSE,
-                'describe' => '积分反结账：%s',
+                'describe' => '抵扣反结账：%s',
             ],
         ];
     }
