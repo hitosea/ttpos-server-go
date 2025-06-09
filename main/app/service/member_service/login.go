@@ -198,7 +198,7 @@ func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (re
 	// 验证手机号是否存在
 	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
 	if err != nil || member.IsDelete() {
-		return resp.LoginResp{}, errors.New("会员不存在")
+		return resp.LoginResp{}, errors.New("该手机号未在该商家进行注册")
 	}
 	// 生成token
 	claims := auth.Claims{

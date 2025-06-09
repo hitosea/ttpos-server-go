@@ -2871,7 +2871,7 @@
   "验证成功": "Verification successful",
   "验证码sign": "Verification code sign",
   "验证码不正确": "Incorrect verification code",
-  "验证码不能为空": "Set the deduction points quantity parameter for the order",
+  "验证码不能为空": "Verification code can not be blank",
   "验证码错误": "Verification code is incorrect",
   "验证签名失败": "Signature verification failed",
   "验证钱箱密码参数": "Verify cash drawer password parameter",
