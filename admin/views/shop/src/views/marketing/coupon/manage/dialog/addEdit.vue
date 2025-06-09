@@ -9,7 +9,7 @@
         <el-input class="percent-w100" v-model="form.name" :maxlength="50" :placeholder="$t('请输入昵称')"></el-input>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('排序')" prop="sort">
-        <el-input-number :controls="false" :min="0" :max="999" :precision="0" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort"></el-input-number>
+        <el-input-number :controls="false" :min="1" :max="999" :precision="0" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort"></el-input-number>
       </el-form-item>
       <div class="common-form mt24">
         {{ $t('优惠券设置') }}
@@ -154,7 +154,7 @@
 
   const form = reactive({
     name: '',
-    sort: 0,
+    sort: 1,
     type: 'deduction',
     deduction_type: 'taxed',
     amount: null,

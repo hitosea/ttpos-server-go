@@ -10,7 +10,7 @@
         <div class="product-form-line"></div>
         <div class="product-form-flex" ref="formContainer">
           <!--基础信息-->
-          <Basic ref="BasicRef" @imgName="imgNameChange" @imgDescription="imgDescriptionChange" :dateTime="dateTime"></Basic>
+          <Basic ref="BasicRef" @imgName="imgNameChange" @imgDescription="imgDescriptionChange" @checkForm="checkForm" :dateTime="dateTime" :couponList="couponList"></Basic>
           <!--高级设置-->
           <Set ref="SetRef"></Set>
           <!--提交-->
@@ -27,7 +27,7 @@
 </template>
 
 <script setup>
-  import { ref, reactive, provide, onMounted } from 'vue';
+  import { ref, reactive, provide, onMounted, nextTick } from 'vue';
   import { useRoute, useRouter } from 'vue-router';
   import { ElMessage } from 'element-plus';
   import MarketingApi from '@/api/marketing.js';
@@ -45,6 +45,7 @@
   const loading = ref(true);
   const save_loading = ref(false);
   const dateTime = ref([]);
+  const couponList = ref([]);
   // 表单数据
   const form = reactive({
     name: '',
@@ -56,12 +57,7 @@
     reward_limit: null,
     reward_condition_num: 0,
     reward_type: 0,
-    prize_list: [
-      {
-        prize_type: 1,
-        prize_uuid: 123123123,
-      },
-    ],
+    prize_list: [],
     image_base64: '',
   });
 
@@ -104,10 +100,11 @@
           form.prize_list = [];
           res.data.detail.prizes.forEach((item) => {
             form.prize_list.push({
-              prize_type: item.prize_type,
-              prize_uuid: item.uuid,
+              prize_type: 1,
+              prize_uuid: item.prize_uuid,
             });
           });
+          couponList.value = res.data.detail.prizes;
         }
       })
       .catch((error) => {
@@ -125,7 +122,13 @@
     const _description = BasicRef.value.$refs.activityDescriptionFormRef.data;
     params.description = JSON.stringify(_description);
     params.is_open_reward_limit = params.is_open_reward_limit.length > 0 ? 1 : 0;
-
+    params.prize_list = [];
+    (form.prize_list || []).map((e) => {
+      params.prize_list.push({
+        prize_type: 1,
+        prize_uuid: e.prize_uuid,
+      });
+    });
     // 验证表单
     const validUniqueName = await BasicRef.value.$refs.activityNameFormRef.validate();
     const validUniqueDescription = await BasicRef.value.$refs.activityDescriptionFormRef.validate();
@@ -155,6 +158,10 @@
 
   const imgDescriptionChange = (data) => {
     imgDescription.value = data;
+  };
+
+  const checkForm = (e) => {
+    formRef.value?.validateField(e);
   };
 
   // 取消操作

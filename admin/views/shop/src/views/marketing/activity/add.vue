@@ -10,7 +10,7 @@
         <div class="product-form-line"></div>
         <div class="product-form-flex" ref="formContainer">
           <!--基础信息-->
-          <Basic ref="BasicRef" @imgName="imgNameChange" @imgDescription="imgDescriptionChange"></Basic>
+          <Basic ref="BasicRef" @imgName="imgNameChange" @imgDescription="imgDescriptionChange" @checkForm="checkForm"></Basic>
           <!--高级设置-->
           <Set ref="SetRef"></Set>
           <!--提交-->
@@ -62,12 +62,7 @@
     reward_limit: null,
     reward_condition_num: 0,
     reward_type: 0,
-    prize_list: [
-      {
-        prize_type: 1,
-        prize_uuid: 123123123,
-      },
-    ],
+    prize_list: [],
     image_base64: '',
   });
 
@@ -97,6 +92,10 @@
 
   const imgDescriptionChange = (data) => {
     imgDescription.value = data;
+  };
+
+  const checkForm = (e) => {
+    formRef.value?.validateField(e);
   };
 
   const onSubmit = async () => {
