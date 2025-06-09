@@ -1964,5 +1964,7 @@
     "调整扣减": "Adjustment Deduction",
     "活动扣减": "Event Deduction",
     "奖励领取（冻结）": "Reward Collection (Frozen)",
-    "核销扣减": "Write-off Deduction"
+    "核销扣减": "Write-off Deduction",
+    "订单积分抵扣": "Order points deduction",
+    "抵扣反结账": "Deduction after billing"
 }
