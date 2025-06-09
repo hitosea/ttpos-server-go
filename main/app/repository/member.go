@@ -84,7 +84,7 @@ func (r *memberRepo) GetMemberLevelsAllColumns() []model.MemberLevel {
 func (r *memberRepo) SearchMember(keyword string) []model.Member {
 	var members []model.Member
 	keyword = Like(keyword)
-	r.db.Model(&model.Member{}).Scopes(NotDeleted).Select("uuid, nickname, phone").Where("phone LIKE ? OR id LIKE ? OR nickname LIKE ?", keyword, keyword, keyword).Find(&members)
+	r.db.Model(&model.Member{}).Scopes(NotDeleted).Select("uuid, nickname, phone").Where("phone LIKE ? OR id LIKE ? OR nickname LIKE ?", keyword, keyword, keyword).Limit(200).Find(&members)
 	return members
 }
 

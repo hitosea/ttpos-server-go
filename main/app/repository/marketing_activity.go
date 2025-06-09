@@ -157,37 +157,54 @@ func (r *MarketingActivityRepo) SendReward(activityUuid, memberUuid uint64) erro
 
 	// 循环发放多次奖励
 	for i := 0; i < rewardCountToGive; i++ {
-		// 创建奖励记录
-		err = NewMarketingActivityRecordRepo(r.db).CreateRecord(&model.MarketingActivityRecord{
-			ActivityUuid:   activityUuid,
-			MemberUuid:     memberUuid,
-			RewardCount:    1,
-			LastRewardTime: time.Now().Unix(),
-			PrizeUuid: func() uint64 {
-				if len(activity.Prizes) > 0 && activity.Prizes[0] != nil {
-					return activity.Prizes[0].PrizeUuid
+		err = r.db.Transaction(func(tx *gorm.DB) error {
+			// 只有当优惠券存在时才创建会员优惠券
+			if marketingCoupon != nil && marketingCoupon.Uuid != 0 {
+				// 创建优惠券
+				err = NewMarketingCouponRepo(tx).DecreaseCouponQuantity(marketingCoupon.Uuid, memberUuid, activityUuid)
+				if err != nil {
+					return err
 				}
-				return 0
-			}(),
+				// 创建奖励记录
+				err = NewMarketingActivityRecordRepo(tx).CreateRecord(&model.MarketingActivityRecord{
+					ActivityUuid:   activityUuid,
+					MemberUuid:     memberUuid,
+					RewardCount:    1,
+					LastRewardTime: time.Now().Unix(),
+					PrizeUuid: func() uint64 {
+						if len(activity.Prizes) > 0 && activity.Prizes[0] != nil {
+							return activity.Prizes[0].PrizeUuid
+						}
+						return 0
+					}(),
+				})
+				if err != nil {
+					return err
+				}
+				// 创建会员优惠券
+				err = NewMemberCouponRepo(tx).CreateMemberCoupon(&model.MemberCoupon{
+					MemberUuid:     memberUuid,
+					Type:           "deduction",
+					Status:         0,
+					CouponUuid:     marketingCoupon.Uuid,
+					Name:           marketingCoupon.Name,
+					DeductionType:  marketingCoupon.DeductionType,
+					DayStartTime:   marketingCoupon.DayStartTime,
+					DayEndTime:     marketingCoupon.DayEndTime,
+					ValidStartTime: marketingCoupon.ValidStartTime,
+					ValidEndTime:   marketingCoupon.ValidEndTime,
+					Amount:         marketingCoupon.Amount,
+					StartTime:      time.Now().Unix(),
+					EndTime:        time.Now().AddDate(0, 0, marketingCoupon.ValidDays).Unix(),
+				})
+				if err != nil {
+					return err
+				}
+			}
+			return nil
 		})
 		if err != nil {
 			return err
-		}
-
-		// 只有当优惠券存在时才创建会员优惠券
-		if marketingCoupon != nil && marketingCoupon.Uuid != 0 {
-			err = NewMemberCouponRepo(r.db).CreateMemberCoupon(&model.MemberCoupon{
-				MemberUuid: memberUuid,
-				Type:       1,
-				Status:     0,
-				CouponUuid: marketingCoupon.Uuid,
-				Amount:     marketingCoupon.Amount,
-				StartTime:  time.Now().Unix(),
-				EndTime:    time.Now().AddDate(0, 0, marketingCoupon.ValidityPeriod).Unix(),
-			})
-			if err != nil {
-				return err
-			}
 		}
 	}
 

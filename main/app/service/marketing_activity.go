@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/json"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/member_resp"
@@ -71,8 +72,8 @@ func (s *marketingActivitySrv) MarketingActivity(ctx context.Context) (*member_r
 			EndTime:    int64(marketingActivity.EndTime),
 		})
 	}
-	// 返回
-	return &member_resp.MemberMarketingActivityListResp{
+
+	result := &member_resp.MemberMarketingActivityListResp{
 		List: memberMarketingActivityResp,
 		MemberInfo: member_resp.MemberInfoResp{
 			Uuid:     member.Uuid,
@@ -84,32 +85,40 @@ func (s *marketingActivitySrv) MarketingActivity(ctx context.Context) (*member_r
 			Name: company.Name,
 			Logo: utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.Copy().GetGin().Request), true),
 		},
-	}, nil
+	}
+
+	// 产品： 仍可正常登录进入商家会员服务，但是进入后toast提示：商家营销活动已结束。
+	if company.CompanySetting.IsOpenMarketing != 1 {
+		return result, errors.NewWithCode(constant.CodeMarketingActivityInvalid, "营销活动已失效")
+	}
+
+	// 返回
+	return result, nil
 }
 
 // DecryptQrCode 解密活动二维码
 func (s *marketingActivitySrv) DecryptQrCode(ctx context.Context, req req.DecryptQrCodeReq) (*resp.DecryptQrCodeResp, error) {
 	decryptQrCodeResp, err := encrypt.DecryptAesString(req.Sign)
 	if err != nil {
-		return nil, errors.WithMessage(err, "活动二维码无效")
+		return nil, errors.New("活动二维码无效")
 	}
 	// 转json
 	qrCodeParams := &repository.QrCodeParams{}
 	err = json.Unmarshal([]byte(decryptQrCodeResp), qrCodeParams)
 	if err != nil {
-		return nil, errors.WithMessage(err, "活动二维码无效")
+		return nil, errors.New("活动二维码无效")
 	}
 	// 获取活动
 	marketingActivityRepo := repository.NewMarketingActivityRepo(ctx.GetDB())
 	marketingActivity, err := marketingActivityRepo.GetActivity(qrCodeParams.ActivityUuid)
 	if err != nil || marketingActivity == nil {
-		return nil, errors.WithMessage(err, "活动二维码无效")
+		return nil, errors.New("活动二维码无效")
 	}
 	// 获取会员
 	memberRepo := repository.NewMemberRepo(ctx.GetDB())
 	member, err := memberRepo.GetMemberByUuid(qrCodeParams.MemberUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err, "活动二维码无效")
+		return nil, errors.New("活动二维码无效")
 	}
 	// 返回
 	return &resp.DecryptQrCodeResp{

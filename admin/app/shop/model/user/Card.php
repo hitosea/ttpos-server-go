@@ -63,27 +63,31 @@ class Card extends CardModel
             $this->error = "请选择会员";
             return false;
         }
+        // 检查会员卡号
+        $exists = [];
+        foreach ($userList as $userInfo) {
+            $cardNumber = $userInfo['card_number'] ?? '';
+            if ($cardNumber) {
+                // 会员卡号，1~48位字符，允许输入字母和数字，不允许输入特殊字符
+                if (!ValidateHelp::validateCardNumber($cardNumber)) {
+                    $this->error = '会员卡号只能包含字母和数字，长度为1~48位';
+                    return false;
+                }
+                // 检查会员卡号是否已存在
+                $record = (new User)::where('member_card_no', '=', $cardNumber)->where('uuid', '<>', $userInfo['uuid'])->find();
+                if ($record || in_array($cardNumber, $exists)) {
+                    $this->error = '卡号重复';
+                    return false;
+                }
+                $exists[] = $cardNumber;
+            }
+        }
+        // 发卡
         foreach ($userList as $userInfo) {
             $this->startTrans();
             try {
                 $userId = $userInfo['uuid'];
                 $cardNumber = $userInfo['card_number'] ?? '';
-                // 会员卡号
-                if ($cardNumber) {
-                    // 会员卡号，1~48位字符，允许输入字母和数字，不允许输入特殊字符
-                    if (!ValidateHelp::validateCardNumber($cardNumber)) {
-                        $this->error = '会员卡号只能包含字母和数字，长度为1~48位';
-                        return false;
-                        continue;
-                    }
-                    // 检查会员卡号是否已存在
-                    $record = CardRecordModel::where('member_no', '=', $cardNumber)->find();
-                    if ($record) {
-                        $this->error = '卡号重复';
-                        return false;
-                        continue;
-                    }
-                }
                 // 检查会员是否已拥有此会员卡
                 $isExist = (new MemberCard())->checkExistByUserId($userId);
                 if (!$isExist?->isEmpty()) {
@@ -113,7 +117,7 @@ class Card extends CardModel
                     'discount' => $detail['discount'] > 0 ? $detail['discount'] : 0,
                     'member_name' => $user['nickname'] ?? '',
                     'member_phone' => $user['phone'] ?? '',
-                    'member_no' => $cardNumber,
+                    'member_no' => $user['member_no'] ?? '',
                     'member_card_type_name' => $detail['name'],
                     'give_money' => $detail['open_money'] ? $detail['open_money_num'] : 0,
                     'give_point' => $detail['open_point'] ? $detail['open_point_num'] : 0,
@@ -133,7 +137,7 @@ class Card extends CardModel
                 if ($id) {
                     /** @var User $user */
                     $user->setMemberCardId($memberCardUuid);
-                    $user->save(['member_no' => $cardNumber]);
+                    $user->save(['member_card_no' => $cardNumber]);
                 }
                 // 赠送积分
                 if ($detail['open_point'] && $detail['open_point_num']) {
