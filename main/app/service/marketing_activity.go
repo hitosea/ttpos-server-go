@@ -87,6 +87,27 @@ func (s *marketingActivitySrv) MarketingActivity(ctx context.Context) (*member_r
 		},
 	}
 
+	// 无营销活动
+	if len(result.List) == 0 {
+		qrCode, err := marketingActivityRepo.GenerateQrCode(&repository.QrCodeParams{
+			Type:         0,
+			CompanyUuid:  company.Uuid,
+			MemberUuid:   member.Uuid,
+			ActivityUuid: 0,
+		})
+		if err != nil {
+			return nil, err
+		}
+		result.List = append(result.List, member_resp.MemberMarketingActivityResp{
+			Name:       "暂无营销活动",
+			QrCodeCode: qrCode,
+			Desc:       "暂无营销活动",
+			StartTime:  0,
+			EndTime:    0,
+		})
+		return result, errors.NewWithCode(constant.CodeMarketingActivityInvalid, "营销活动已失效")
+	}
+
 	// 产品： 仍可正常登录进入商家会员服务，但是进入后toast提示：商家营销活动已结束。
 	if company.CompanySetting.IsOpenMarketing != 1 {
 		return result, errors.NewWithCode(constant.CodeMarketingActivityInvalid, "营销活动已失效")
