@@ -26,8 +26,16 @@
         <el-input class="percent-w100" v-model="form.card_number" @input="inputCardNumber" :maxlength="48" :placeholder="$t('请输入会员卡号')"></el-input>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('推荐人')">
-        {{ form.referrer_uuid }}
-        <el-button size="small" type="primary" @click="selectReferrer">{{ $t('选择') }}</el-button>
+        <el-button size="small" type="primary" @click="selectReferrer" v-if="(form.referrer == null && editData) || !editData">{{ $t('选择') }}</el-button>
+        <template v-if="selectMenber.length > 0">
+          <el-tag v-for="tag in selectMenber" size="large" :key="tag.user_id" closable @close="handleClose(tag)">
+            {{ `${tag.phone || '-'} (${tag.nickname})` }}
+          </el-tag>
+        </template>
+
+        <template v-if="form.referrer">
+          <span>{{ `${form.referrer.phone || '-'} (${form.referrer.nickname || '-'})` }}</span>
+        </template>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('手机号')" prop="mobile" :rules="[{ required: true, message: $t('请输入手机号') }]">
         <el-input class="percent-w100" :maxlength="20" v-model="form.mobile" :placeholder="$t('请输入手机号')"></el-input>
@@ -80,6 +88,7 @@
         app_id,
         cardList: [],
         open_getuser: false,
+        selectMenber: [],
       };
     },
     props: ['open', 'editform', 'title', 'gradeList', 'editData'],
@@ -103,13 +112,18 @@
       this.getCardList();
     },
     methods: {
+      handleClose(tag) {
+        this.selectMenber = this.selectMenber.filter((item) => item.user_id !== tag.user_id);
+        this.form.referrer_uuid = '';
+      },
       selectReferrer() {
         this.open_getuser = true;
       },
       /*关闭获取用户*/
       closeGetuserFunc(e) {
         if (e && e.type != 'error') {
-          console.log(e);
+          this.selectMenber = e.params;
+          this.form.referrer_uuid = this.selectMenber[0].user_id;
         }
         this.open_getuser = false;
       },
@@ -132,6 +146,7 @@
           params.birthday = self.form.birthday;
           params.card_uuid = self.form.card_uuid;
           params.card_number = self.form.card_number;
+          params.referrer_uuid = self.form.referrer_uuid;
           self.$refs.form.validate((valid) => {
             if (valid) {
               self.loading = true;

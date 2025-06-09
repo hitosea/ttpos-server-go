@@ -1955,5 +1955,14 @@
     "扣除积分": "Deduct Points",
     "可退积分": "Refundable Points",
     "获取条件": "Get Conditions",
-    "请选择获取条件": "Please select the conditions to get"
+    "请选择获取条件": "Please select the conditions to get",
+    "请选择用户": "Please select user",
+    "推荐人": "Referrer",
+    "选择": "Select",
+    "首次添加": "First add",
+    "调整添加": "Adjust add",
+    "调整扣减": "Adjustment Deduction",
+    "活动扣减": "Event Deduction",
+    "奖励领取（冻结）": "Reward Collection (Frozen)",
+    "核销扣减": "Write-off Deduction"
 }
