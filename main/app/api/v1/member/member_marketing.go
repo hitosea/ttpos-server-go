@@ -29,6 +29,10 @@ func (h *MarketingHandler) MarketingActivity(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	marketingActivityResp, err := h.marketingActivitySrv.MarketingActivity(ctx)
 	if err != nil {
+		if marketingActivityResp != nil {
+			helper.ErrorWithData(c, constant.CodeFail, marketingActivityResp, err)
+			return
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}

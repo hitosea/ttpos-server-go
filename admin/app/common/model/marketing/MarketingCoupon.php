@@ -24,7 +24,7 @@ class MarketingCoupon extends BaseModel
         if ($data['requirement'] == "none") {
             return date("Y-m-d", $data['valid_start_time']).'~'.date("Y-m-d", $data['valid_end_time']);
         } else {
-            return sprintf("活动奖励后%d个自然日内有效", $data['valid_days']);
+            return sprintf(__("活动奖励后%d个自然日内有效"), $data['valid_days']);
         }
     }
 
