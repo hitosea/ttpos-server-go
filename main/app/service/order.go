@@ -2476,7 +2476,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 						for _, paymentOrder := range saleOrder.PaymentOrders {
 							// 如果是余额支付，则退款到余额
 							if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
-								refundAmount = paymentOrder.BalanceAmount + paymentOrder.GiftBalanceAmount
+								refundAmount = decimal.NewFromFloat(paymentOrder.BalanceAmount).Add(decimal.NewFromFloat(paymentOrder.GiftBalanceAmount)).Truncate(2).InexactFloat64()
 							}
 						}
 						if refundAmount > 0 {
