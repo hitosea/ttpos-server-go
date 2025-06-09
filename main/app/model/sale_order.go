@@ -107,15 +107,15 @@ func (model *SaleOrder) HasCashPayment() bool {
 
 // 判断订单退款能否手动退积分（显示手动退积分输入框）
 func (model *SaleOrder) CanManualReturnPoints() bool {
-	// 订单使用了会员且按人数固定金额赠送积分时，显示手动退积分输入框。
-	if model.ConsumerUuid != 0 && model.GiftPointsType == 1 {
-		return true
+	// 订单使用了会员、按比例赠送积分且未抵扣积分时，手动退积分输入框。
+	if model.ConsumerUuid != 0 && model.GiftPointsType == 0 && model.PayPoints == 0 {
+		return false
 	}
-	// 订单使用了会员且且发生积分抵扣时，显示手动退积分输入框。
-	if model.ConsumerUuid != 0 && model.PayPoints != 0 {
-		return true
+	// 订单没有会员，不显示
+	if model.ConsumerUuid == 0 {
+		return false
 	}
-	return false
+	return true
 }
 
 // 获取销售订单已经退款的积分数量

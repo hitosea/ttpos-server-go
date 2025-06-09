@@ -3,6 +3,7 @@ package event
 import (
 	"fmt"
 	"sync"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -124,6 +125,7 @@ func checkoutSaleOrderEventHandler() {
 			saleOrder := payload.SaleBill.GetSaleOrder(payload.SaleOrderUuid)
 			// 如果订单有会员且订单的赠送积分大于0，则发放积分
 			if saleOrder.ConsumerUuid != 0 && saleOrder.GiftPoints > 0 {
+				time.Sleep(time.Second)
 				// 加锁, 避免并发问题
 				lock.NewSystemLock().LockUuid(saleOrder.ConsumerUuid)
 				defer lock.NewSystemLock().UnlockUuid(saleOrder.ConsumerUuid)
