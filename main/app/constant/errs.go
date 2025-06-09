@@ -58,7 +58,7 @@ const (
 
 // 营销活动业务错误码
 const (
-	CodeMarketingActivityInvalid = -301 // 商品某规格已下架
+	CodeMarketingActivityInvalid = -301 // 营销活动已失效
 )
 
 type ParseCodeOrderCheckOption struct {
