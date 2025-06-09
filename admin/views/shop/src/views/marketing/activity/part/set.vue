@@ -2,7 +2,7 @@
   <div class="basic-setting-content pl16 pr16">
     <div class="common-form">{{ $t('规则设置') }}</div>
     <el-form-item for="no_click" :label="$t('奖励条件')" :rules="[{ required: true, message: $t('请输入奖励条件') }]" prop="reward_condition_amount">
-      <el-radio-group v-model="rewardCondition">
+      <el-radio-group v-model="rewardCondition" :disabled="status == 1">
         <el-radio :label="0"
           >{{ $t('推荐会员入会并消费') }}
           <numInput
@@ -30,7 +30,7 @@
     </el-form-item>
 
     <el-form-item for="no_click" v-if="form.is_open_reward_limit == 1" :label="$t('次数限制')" :rules="[{ required: true, message: $t('请输入次数限制') }]" prop="reward_limit">
-      <el-radio-group v-model="rewardLimit" class="flex-box">
+      <el-radio-group v-model="rewardLimit" class="flex-box" :disabled="status == 1">
         <el-radio :label="0"
           >{{ $t('限制活动有效期内每个会员最多获取奖品') }}
           <el-input-number

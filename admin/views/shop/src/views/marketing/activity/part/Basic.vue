@@ -79,11 +79,11 @@
         },
       ]"
     >
-      <el-radio-group v-model="rewardType">
+      <el-radio-group v-model="rewardType" :disabled="status == 1">
         <el-radio :label="0">{{ $t('优惠券（当前仅支持选择优惠券）') }}</el-radio>
       </el-radio-group>
       <div>
-        <span class="select-coupon-btn" @click="selectCoupon" :disabled="status == 1">{{ $t('选择优惠券') }}</span>
+        <span class="select-coupon-btn" @click="selectCoupon">{{ $t('选择优惠券') }}</span>
         <template v-if="couponList.length > 0">
           <el-tag v-for="tag in couponList" disable-transitions size="large" :key="tag.uuid" closable @close="handleClose(tag)">
             {{ `${tag.name}` }}
@@ -177,6 +177,9 @@
   };
 
   const selectCoupon = () => {
+    if (props.status == 1) {
+      return;
+    }
     openSelectCoupon.value = true;
   };
 
@@ -195,6 +198,9 @@
   };
 
   const handleClose = () => {
+    if (props.status == 1) {
+      return;
+    }
     couponList.value = [];
     form.prize_list = [];
     emit('checkForm', 'prize_list');
