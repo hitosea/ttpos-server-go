@@ -3,6 +3,7 @@ package repository
 import (
 	"fmt"
 	"time"
+	"ttpos-server-go/app/constant"
 
 	"ttpos-server-go/app/model"
 
@@ -93,8 +94,8 @@ func (r *MarketingCouponRepo) DecreaseCouponQuantity(couponId uint64, memberUuid
 			CouponUuid:   int64(couponId),
 			MemberUuid:   int64(memberUuid),
 			ActivityUuid: int64(activityUuid),
-			Type:         3, // 调整扣减
-			Count:        -1,
+			Type:         constant.CouponRecordTypeBonus, // 调整扣减
+			Count:        1,
 			LeftCount:    coupon.Count - 1,
 			SerialNo:     serialNo,
 		}

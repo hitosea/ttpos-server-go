@@ -2,6 +2,7 @@
 
 namespace app\shop\service\marketing;
 
+use app\common\model\marketing\MarketingActivityRecord;
 use app\common\model\marketing\MarketingCoupon;
 use app\common\model\marketing\MarketingCouponRecord;
 use think\facade\Validate;
@@ -157,7 +158,7 @@ class MarketingCouponService
             $query->where('name', 'like', '%' . $params['name'] . '%');
         }
         // 优惠券类型
-        if (isset($params['type'])) {
+        if (isset($params['type']) && in_array($params['type'], ['deduction'])) {
             $query->where('type', '=', $params['type']);
         }
         // requirement
@@ -196,14 +197,30 @@ class MarketingCouponService
         $page = (int)($params['page'] ?? 1);
         $pageSize = (int)($params['list_rows'] ?? 10);
         // 
-        $query = MarketingCouponRecord::with(['coupon'])->where('delete_time', 0)->field(['coupon_uuid', 'serial_no', 'type', 'count', 'left_count', 'create_time'])->order('create_time desc');
-        $list = $query->clone(true)->page($page, $pageSize)->select();
-
-        foreach ($list as &$item) {
-            $item['coupon_name'] = $item->coupon->name;
-            unset($item['coupon_uuid']);
-            unset($item['coupon']);
+        $query = MarketingCouponRecord::alias('record')->field(['record.serial_no', 'record.type as record_type', 'record.count', 'record.left_count', 'record.create_time', 'c.name as coupon_name'])
+            ->join('marketing_coupon c', 'c.uuid = record.coupon_uuid')
+            ->where('record.delete_time', 0)
+            ->when(!empty($params['coupon_name']), function ($query) use ($params) {
+                $query->where('c.name', 'like', '%' . $params['coupon_name'] . '%');
+            })
+            ->when(isset($params['coupon_type']) && in_array($params['coupon_type'], ['deduction']), function ($query) use ($params) {
+                $query->where('c.type', '=', $params['coupon_type']);
+            })
+            ->when(isset($params['record_type']) && in_array((int)$params['record_type'], [
+                    MarketingCouponRecord::RecordTypeCreate,
+                    MarketingCouponRecord::RecordTypeIncrease,
+                    MarketingCouponRecord::RecordTypeDecrease,
+                    MarketingCouponRecord::RecordTypeActivityDeduction,
+                    MarketingCouponRecord::RecordTypeBonus,
+                    MarketingCouponRecord::RecordTypeUsed,
+                ]), function ($query) use ($params) {
+                $query->where('record.type', '=', $params['record_type']);
+            });
+        // 检索：注册时间
+        if (!empty($params['create_time'][0])) {
+            $query = $query->where('record.create_time', 'between', [strtotime($params['create_time'][0]), strtotime($params['create_time'][1]) + 86399]);
         }
+        $list = $query->clone(true)->page($page, $pageSize)->order('record.create_time desc')->select();
         $total = $query->count();
         return [
             'current_page' => $page,

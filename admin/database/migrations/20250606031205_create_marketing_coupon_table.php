@@ -55,7 +55,7 @@ class CreateMarketingCouponTable extends Migrator
             $table->addColumn('uuid', 'biginteger', ['default' => 0, 'comment' => '优惠券记录唯一ID'])
                 ->addColumn('coupon_uuid', 'biginteger', ['default' => 0, 'comment' => '优惠券唯一ID'])
                 ->addColumn('serial_no', 'string', ['default' => '', 'comment' => '记录编号, yyMMddhhmmssxxxx, 比如2506061456550001这样, 后四位是0000到9999依次递增, 循环使用'])
-                ->addColumn('type', 'integer', ['default' => '1', 'comment' => '记录类型：1-首次添加、2-调整添加、3-调整扣减'])
+                ->addColumn('type', 'integer', ['default' => '1', 'comment' => '记录类型：1-首次添加、2-调整添加、3-调整扣减、4-活动扣减、5、奖励领取（冻结）、6、核销扣减'])
                 ->addColumn('count', 'integer', ['default' => 0, 'comment' => '变动数量'])
                 ->addColumn('left_count', 'integer', ['default' => 0, 'comment' => '剩余有效张数'])
                 ->addColumn('create_time', 'integer', ['default' => 0, 'comment' => '创建时间'])
