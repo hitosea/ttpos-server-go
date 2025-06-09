@@ -45,6 +45,7 @@ class MarketingActivityService
         $exists = MarketingActivity::where('delete_time', 0)
             ->where('is_invalid', 0)
             ->where('type', $data['type'] ?? 0)
+            ->where('end_time', '>', time())
             ->where(function ($query) use ($startTime, $endTime) {
                 $query->where(function ($q) use ($startTime, $endTime) {
                     // 新活动的开始时间在已有活动的时间范围内
@@ -120,6 +121,7 @@ class MarketingActivityService
                     ->where('is_invalid', 0)
                     ->where('type', $gift->type)
                     ->where('uuid', '<>', $uuid)
+                    ->where('end_time', '>', time())
                     ->where(function ($query) use ($gift, $endTime) {
                         $query->where(function ($q) use ($gift, $endTime) {
                             // 新活动的开始时间在已有活动的时间范围内
@@ -150,6 +152,7 @@ class MarketingActivityService
                     ->where('is_invalid', 0)
                     ->where('type', $gift->type)
                     ->where('uuid', '<>', $uuid)
+                    ->where('end_time', '>', time())
                     ->where(function ($query) use ($startTime, $endTime) {
                         $query->where(function ($q) use ($startTime, $endTime) {
                             // 新活动的开始时间在已有活动的时间范围内

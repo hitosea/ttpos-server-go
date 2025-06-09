@@ -70,6 +70,7 @@ func (s *marketingActivitySrv) MarketingActivity(ctx context.Context) (*member_r
 			Desc:       marketingActivity.MultiLanguageDesc.GetNameByLang(ctx.GetLanguage()),
 			StartTime:  int64(marketingActivity.StartTime),
 			EndTime:    int64(marketingActivity.EndTime),
+			IsInvalid:  utils.IfInt(company.CompanySetting.IsOpenMarketing != 1, 0, 1),
 		})
 	}
 
@@ -104,6 +105,7 @@ func (s *marketingActivitySrv) MarketingActivity(ctx context.Context) (*member_r
 			Desc:       "暂无营销活动",
 			StartTime:  0,
 			EndTime:    0,
+			IsInvalid:  1,
 		})
 		return result, errors.NewWithCode(constant.CodeMarketingActivityInvalid, "营销活动已失效")
 	}
