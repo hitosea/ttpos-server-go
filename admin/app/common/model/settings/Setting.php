@@ -278,6 +278,12 @@ class Setting extends BaseModel
             if (isset($defaultData['buffet']['values'])) {
                 $defaultData['buffet']['values']['is_open'] = '0';
             }
+            foreach ($defaultData["points"]['values']['shopping_gift_rules'] as $key => $pointsRule) {
+                $newMealType = array_values(array_filter($pointsRule, function ($item) {
+                    return $item != "buffet";
+                }));
+                $defaultData["points"]['values']['shopping_gift_rules'][$key]["meal_type"] = $newMealType;
+            }
         }
         // 总权限 - 不开启厨显 -（v1.1.1需要兼容初始化设置没有键值，但是商家端默认是开启的情况）
         if (($licenses['is_open_kitchen_kds'] ?? 0) == 0) {
@@ -315,7 +321,7 @@ class Setting extends BaseModel
 
         // v1.0.8 语言数据兼容处理
         $result = ArrayHelp::arrayMergeMultiple($defaultData, $userData);
-       
+
         //
         return $result;
     }
@@ -727,7 +733,7 @@ class Setting extends BaseModel
                             'meal_type' => [ // 就餐类型: "buffet" - 自助餐; "non-buffet" - 非自助餐
                             ],
                             'balance_payment_get_points' => '0', // 会员余额支付是否赠送: "1" - 是; "0" - 否
-                            'refund_return_points' => '0', // 退款自动扣积分: "1" - 是; "0" - 否
+                            'refund_return_points' => '1', // 退款自动扣积分: "1" - 是; "0" - 否
                             'member_levels' => [ // 会员等级
                             ],
                         ],
@@ -738,6 +744,7 @@ class Setting extends BaseModel
                             'value' => '', // 积分数量
                             'payment_amount_requirement' => '', // 付款金额要求
                             'meal_type' => [ // 就餐类型: "buffet" - 自助餐; "non-buffet" - 非自助餐
+                                "buffet"
                             ],
                             'balance_payment_get_points' => '0', // 会员余额支付是否赠送: "1" - 是; "0" - 否
                             'refund_return_points' => '0', // 退款自动扣积分: "1" - 是; "0" - 否
