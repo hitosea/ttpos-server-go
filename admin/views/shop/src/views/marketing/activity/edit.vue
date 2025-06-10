@@ -10,9 +10,17 @@
         <div class="product-form-line"></div>
         <div class="product-form-flex" ref="formContainer">
           <!--基础信息-->
-          <Basic ref="BasicRef" @imgName="imgNameChange" @imgDescription="imgDescriptionChange" @checkForm="checkForm" :dateTime="dateTime" :couponList="couponList"></Basic>
+          <Basic
+            ref="BasicRef"
+            @imgName="imgNameChange"
+            @imgDescription="imgDescriptionChange"
+            @checkForm="checkForm"
+            :dateTime="dateTime"
+            :couponList="couponList"
+            :status="status"
+          ></Basic>
           <!--高级设置-->
-          <Set ref="SetRef"></Set>
+          <Set ref="SetRef" :status="status"></Set>
           <!--提交-->
         </div>
       </div>
@@ -67,6 +75,7 @@
   const SetRef = ref(null);
   const formContainer = ref(null);
   const qrcode = ref('');
+  const status = ref(0);
 
   const imgName = ref('');
   const imgDescription = ref('');
@@ -106,6 +115,7 @@
           });
           couponList.value = res.data.detail.prizes;
         }
+        status.value = res.data.detail.status;
       })
       .catch((error) => {
         loading.value = false;

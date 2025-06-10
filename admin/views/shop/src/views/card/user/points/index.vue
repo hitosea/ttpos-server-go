@@ -136,11 +136,9 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="$t('退款自动扣积分')" prop="shopping_gift_rules.0.refund_return_points" :rules="[{ required: true, message: ' ' }]">
-          <el-radio-group v-model="form.shopping_gift_rules[0].refund_return_points">
-            <el-radio label="0">{{ $t('否') }}</el-radio>
-          </el-radio-group>
+          {{ $t('开启') }}
           <div class="lh18 mt10 gray9">
-            <p> {{ $t('该规则仅支持退款时手动输入扣减积分') }}</p>
+            <p> {{ $t('注：该规则下默认开启退款自动退积分，若开启了积分自动抵扣消费金额则需要订单退款时手动扣积分') }}</p>
           </div>
         </el-form-item>
       </template>
@@ -212,9 +210,7 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="$t('退款自动扣积分')" prop="shopping_gift_rules.1.refund_return_points" :rules="[{ required: true, message: ' ' }]">
-          <el-radio-group v-model="form.shopping_gift_rules[1].refund_return_points">
-            <el-radio label="0">{{ $t('否') }}</el-radio>
-          </el-radio-group>
+          {{ $t('关闭') }}
           <div class="lh18 mt10 gray9">
             <p> {{ $t('注：该规则仅支持退款时手动输入扣减积分') }}</p>
           </div>

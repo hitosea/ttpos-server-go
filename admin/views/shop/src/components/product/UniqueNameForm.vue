@@ -28,6 +28,7 @@
               :readonly="translateLoading || validateLoading"
               :maxlength="props.maxlength ?? 255"
               :placeholder="props.placeholder ?? $t('请输入名称')"
+              :disabled="props.disabled"
             >
             </el-input>
           </div>
@@ -55,6 +56,7 @@
               @blur="() => handleBlur(languageKey)"
               :maxlength="props.maxlength ?? 255"
               :placeholder="props.placeholder ?? $t('请输入名称')"
+              :disabled="props.disabled"
             >
             </el-input>
             <template v-if="focusLanguageKey === languageKey && form[languageKey]">
@@ -146,6 +148,11 @@
       type: Boolean,
       required: false,
       default: true,
+    },
+    disabled: {
+      type: Boolean,
+      required: false,
+      default: false,
     },
     apiSource: {
       type: String,
