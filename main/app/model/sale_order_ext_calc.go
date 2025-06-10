@@ -318,7 +318,7 @@ func (model *SaleOrder) calcProductAmount(products []*SaleOrderProduct, options 
 	sumBuffetDelayPrice := model.calcSumOrderProductBuffetDelayPrice()
 	return decimal.NewFromFloat(sumOrderProductPrice).Add(
 		decimal.NewFromFloat(sumCustomerPrice)).Add(
-		decimal.NewFromFloat(sumBuffetDelayPrice)).InexactFloat64()
+		decimal.NewFromFloat(sumBuffetDelayPrice)).Truncate(2).InexactFloat64()
 }
 
 // 计算订单产生的税费。订单税费=订单商品TaxFee之和 + 订单商品ServiceTaxFee之和 + 自助餐顾客税费之和
@@ -378,7 +378,7 @@ func (model *SaleOrder) calcCustomDiscountFee(products []*SaleOrderProduct, amou
 	customDiscountFee = customDiscountFee.Add(
 		decimal.NewFromFloat(discount)).Add(
 		decimal.NewFromFloat(zeroFee))
-	return customDiscountFee.InexactFloat64()
+	return customDiscountFee.Truncate(2).InexactFloat64()
 }
 
 // 计算销售订单会员折扣金额。销售订单会员折扣金额=订单商品会员折扣金额之和
