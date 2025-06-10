@@ -243,6 +243,7 @@ class Supplier extends SupplierModel
                 'is_show_assistant' => 1,
                 'is_show_member_recharge' => 0,
                 'sort' => 0,
+                'default_img' => '',
                 'create_time' => time(),
                 'update_time' => time(),
             ],
@@ -257,6 +258,7 @@ class Supplier extends SupplierModel
                 'is_show_assistant' => 1,
                 'is_show_member_recharge' => 0,
                 'sort' => 0,
+                'default_img' => '',
                 'create_time' => time(),
                 'update_time' => time(),
             ],
@@ -271,6 +273,7 @@ class Supplier extends SupplierModel
                 'is_show_assistant' => 1,
                 'is_show_member_recharge' => 0,
                 'sort' => 0,
+                'default_img' => '',
                 'create_time' => time(),
                 'update_time' => time(),
             ],
@@ -278,7 +281,7 @@ class Supplier extends SupplierModel
         foreach ($paymentMethodList as $paymentMethodItem) {
             $pdo->exec($this->getInsertSql($prefix . 'payment_method', $paymentMethodItem, [
                 'uuid', 'name', 'code', 'payment_name', 'source', 'is_show_cashier', 'is_show_assistant',
-                'is_show_member_recharge', 'status', 'sort', 'create_time', 'update_time',
+                'is_show_member_recharge', 'status', 'sort', 'default_img', 'create_time', 'update_time',
             ]));
         }
     }
