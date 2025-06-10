@@ -10,6 +10,7 @@
         :maxlength="50"
         :overrideLanguages="form.name"
         :isUnique="false"
+        :disabled="status == 1"
         @nowLangeData="imgName"
       />
     </el-form-item>
@@ -18,6 +19,7 @@
       <UniqueNameForm
         ref="activityDescriptionFormRef"
         :labelPrefix="$t('活动文案')"
+        :disabled="status == 1"
         width="460px"
         :maxlength="100"
         :overrideLanguages="form.description"
@@ -40,29 +42,63 @@
       prop="start_time"
     >
       <el-date-picker
+        v-if="status == 0 || status == null"
         class="max-w460"
         v-model="activityTime"
         type="datetimerange"
         value-format="YYYY-MM-DD HH:mm:ss"
+        format="YYYY-MM-DD HH:mm:ss"
         range-separator="~"
-        start-placeholder="开始日期"
-        end-placeholder="结束日期"
+        :start-placeholder="$t('开始日期')"
+        :end-placeholder="$t('结束日期')"
+        :disabledDate="status == 0 ? disabledDate : null"
+      />
+      <el-date-picker
+        v-if="status == 1"
+        v-model="form.end_time"
+        type="datetime"
+        value-format="YYYY-MM-DD HH:mm:ss"
+        format="YYYY-MM-DD HH:mm:ss"
+        :placeholder="$t('结束日期')"
+        class="max-w460 w100"
+        :disabledDate="disabledDate"
       />
     </el-form-item>
-    <el-form-item class="flex-box" for="no_click" :label="$t('活动奖品')" :rules="[{ required: true, message: $t('请选择活动奖品') }]">
-      <el-radio-group v-model="rewardType">
+    <el-form-item
+      class="flex-box"
+      for="no_click"
+      :label="$t('活动奖品')"
+      prop="prize_list"
+      :rules="[
+        {
+          required: true,
+          validator: () => {
+            return form.prize_list.length > 0 ? true : false;
+          },
+          message: $t('请选择活动奖品'),
+        },
+      ]"
+    >
+      <el-radio-group v-model="rewardType" :disabled="status == 1">
         <el-radio :label="0">{{ $t('优惠券（当前仅支持选择优惠券）') }}</el-radio>
       </el-radio-group>
       <div>
         <span class="select-coupon-btn" @click="selectCoupon">{{ $t('选择优惠券') }}</span>
+        <template v-if="couponList.length > 0">
+          <el-tag v-for="tag in couponList" disable-transitions size="large" :key="tag.uuid" closable @close="handleClose(tag)">
+            {{ `${tag.name}` }}
+          </el-tag>
+        </template>
       </div>
     </el-form-item>
   </div>
+  <SelectCouponDialog :open="openSelectCoupon" v-if="openSelectCoupon" @close="closeSelectCoupon" />
 </template>
 
 <script setup>
   import { ref, inject, watch } from 'vue';
   import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
+  import SelectCouponDialog from './dialog.vue';
 
   // 注入form数据
   const form = inject('form');
@@ -70,18 +106,27 @@
   // 响应式数据
   const activityTime = ref([]);
   const rewardType = ref(0);
-
+  const openSelectCoupon = ref(false);
   const props = defineProps({
     dateTime: {
       type: Array,
       default: () => [],
     },
+    couponList: {
+      type: Array,
+      default: () => [],
+    },
+    status: {
+      type: Number,
+      default: null,
+    },
   });
   // 引用
   const activityNameFormRef = ref(null);
   const activityDescriptionFormRef = ref(null);
+  const couponList = ref([]);
 
-  const emit = defineEmits(['imgName', 'imgDescription']);
+  const emit = defineEmits(['imgName', 'imgDescription', 'checkForm']);
 
   watch(
     props.dateTime,
@@ -94,9 +139,33 @@
     }
   );
 
+  watch(
+    props.couponList,
+    (newVal) => {
+      couponList.value = [];
+      newVal.map((e) => {
+        couponList.value.push({
+          name: e.coupon_name,
+          uuid: e.prize_uuid,
+        });
+      });
+    },
+    {
+      immediate: true,
+      deep: true,
+    }
+  );
+
   watch(activityTime, (newVal) => {
-    form.start_time = newVal[0];
-    form.end_time = newVal[1];
+    console.log(newVal);
+
+    if (newVal) {
+      form.start_time = newVal[0];
+      form.end_time = newVal[1];
+    } else {
+      form.start_time = '';
+      form.end_time = '';
+    }
   });
 
   const imgName = (data) => {
@@ -108,7 +177,38 @@
   };
 
   const selectCoupon = () => {
-    console.log('selectCoupon');
+    if (props.status == 1) {
+      return;
+    }
+    openSelectCoupon.value = true;
+  };
+
+  const closeSelectCoupon = (e) => {
+    openSelectCoupon.value = false;
+    if (e) {
+      form.prize_list = [];
+      form.prize_list.push({
+        prize_type: 1,
+        prize_uuid: e.uuid,
+      });
+      couponList.value = [];
+      couponList.value.push(e);
+    }
+    emit('checkForm', 'prize_list');
+  };
+
+  const handleClose = () => {
+    if (props.status == 1) {
+      return;
+    }
+    couponList.value = [];
+    form.prize_list = [];
+    emit('checkForm', 'prize_list');
+  };
+
+  // 禁用今天之前的日期
+  const disabledDate = (time) => {
+    return time.getTime() < Date.now() - 8.64e7; // 8.64e7 是一天的毫秒数，减去它是为了包含今天
   };
 </script>
 
@@ -227,5 +327,8 @@
     font-style: normal;
     font-weight: 400;
     cursor: pointer;
+  }
+  :deep(.w100) {
+    width: 460px;
   }
 </style>

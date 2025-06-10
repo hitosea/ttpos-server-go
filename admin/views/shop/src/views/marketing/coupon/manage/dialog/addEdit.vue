@@ -5,71 +5,105 @@
         {{ $t('基础信息') }}
       </div>
       <!--店员修改-->
-      <el-form-item for="no_click" :label="$t('名称')" prop="nick_name" :rules="[{ required: true, message: $t('请输入昵称') }]">
-        <el-input class="percent-w100" v-model="form.nick_name" :maxlength="50" :placeholder="$t('请输入昵称')"></el-input>
+      <el-form-item for="no_click" :label="$t('名称')" prop="name" :rules="[{ required: true, message: $t('请输入昵称') }]">
+        <el-input class="percent-w100" v-model="form.name" :maxlength="50" :placeholder="$t('请输入昵称')"></el-input>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('排序')" prop="sort">
-        <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort"></el-input-number>
+        <el-input-number :controls="false" :min="1" :max="999" :precision="0" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort"></el-input-number>
       </el-form-item>
       <div class="common-form mt24">
         {{ $t('优惠券设置') }}
       </div>
-      <el-form-item for="no_click" :label="$t('优惠券类型')" prop="coupon_type" :rules="[{ required: true, message: $t('请选择优惠券类型') }]">
-        <el-radio-group v-model="form.coupon_type">
-          <el-radio :label="1">{{ $t('折扣券') }}</el-radio>
+      <el-form-item for="no_click" :label="$t('优惠券类型')" prop="type" :rules="[{ required: true, message: $t('请选择优惠券类型') }]">
+        <el-radio-group v-model="form.type">
+          <el-radio label="deduction">{{ $t('折扣券') }}</el-radio>
         </el-radio-group>
       </el-form-item>
-      <el-form-item for="no_click" :label="$t('抵扣类型')" prop="deduct_type" :rules="[{ required: true, message: $t('请选择抵扣类型') }]">
-        <el-radio-group v-model="form.deduct_type">
-          <el-radio :label="1">{{ $t('税后折扣') }}</el-radio>
+      <el-form-item for="no_click" :label="$t('抵扣类型')" prop="deduction_type" :rules="[{ required: true, message: $t('请选择抵扣类型') }]">
+        <el-radio-group v-model="form.deduction_type">
+          <el-radio label="taxed">{{ $t('税后折扣') }}</el-radio>
         </el-radio-group>
       </el-form-item>
-      <el-form-item for="no_click" :label="$t('金额')" prop="service_charge" :rules="[{ required: true, message: $t('请选择金额') }]">
-        <numInput width="m-full" :min="0" :precision="2" v-model:valueData="form.service_charge" :value="form.service_charge" :placeholder="$t('请输入')"></numInput>
+      <el-form-item for="no_click" :label="$t('金额')" prop="amount" :rules="[{ required: true, message: $t('请选择金额') }]">
+        <numInput width="m-full" :min="0" :precision="2" v-model:valueData="form.amount" :value="form.amount" :placeholder="$t('请输入')"></numInput>
       </el-form-item>
-      <el-form-item for="no_click" :label="$t('数量')" prop="quantity" :rules="[{ required: true, message: $t('请选择数量') }]">
-        <el-input class="percent-w100" v-model="form.quantity" :placeholder="$t('请输入数量')"></el-input>
+      <el-form-item for="no_click" :label="$t('数量')" prop="count" :rules="[{ required: true, message: $t('请选择数量') }]">
+        <el-input-number :controls="false" :min="0" :max="9999999" :precision="0" :placeholder="$t('请输入数量')" v-model.number="form.count"></el-input-number>
       </el-form-item>
-      <el-form-item for="no_click" :label="$t('适用时间')" prop="use_time_type" :rules="[{ required: true, message: $t('请选择适用时间') }]">
-        <el-radio-group v-model="form.use_time_type">
+      <el-form-item
+        for="no_click"
+        :label="$t('适用时间')"
+        prop="day_start_time"
+        :rules="[
+          {
+            required: true,
+            validator: () => {
+              return (form.day_start_time && form.day_end_time) || use_time_type == 1 ? true : false;
+            },
+            message: $t('请选择适用时间'),
+          },
+        ]"
+      >
+        <el-radio-group v-model="use_time_type" class="time-box-radio" @change="handleUseTimeTypeChange">
           <el-radio :label="1">{{ $t('全天') }}</el-radio>
-          <el-radio :label="2">{{ $t('特定时间段') }}</el-radio>
+          <el-radio :label="2">
+            {{ $t('特定时间段') }}
+            <el-time-picker
+              v-if="use_time_type == 2"
+              class="time-picker"
+              v-model="day_time"
+              format="HH:mm"
+              value-format="HH:mm"
+              is-range
+              range-separator="~"
+              :start-placeholder="$t('开始时间')"
+              :end-placeholder="$t('结束时间')"
+              @change="handleDayTimeChange"
+            />
+          </el-radio>
         </el-radio-group>
       </el-form-item>
       <div class="common-form mt24">
         {{ $t('优惠券条件') }}
       </div>
-      <el-form-item for="no_click" :label="$t('适用人群')" prop="user_type" :rules="[{ required: true, message: $t('请选择适用人群') }]">
-        <el-radio-group v-model="form.user_type">
-          <el-radio :label="1">{{ $t('所有人可用') }}</el-radio>
+      <el-form-item
+        for="no_click"
+        :label="$t('获取条件')"
+        prop="requirement"
+        :rules="[
+          {
+            required: true,
+            validator: () => {
+              return (form.requirement == 'none' && reg_date.length > 0) || (form.requirement == 'marketing' && form.valid_days > 0) ? true : false;
+            },
+            message: $t('请选择获取条件'),
+          },
+        ]"
+      >
+        <el-radio-group v-model="form.requirement" class="flex-box-radio">
+          <el-radio label="none">
+            {{ $t('所有人可用') }}
+            <el-date-picker
+              v-if="form.requirement == 'none'"
+              v-model="reg_date"
+              type="daterange"
+              value-format="YYYY-MM-DD"
+              range-separator="~"
+              :start-placeholder="$t('开始日期')"
+              :end-placeholder="$t('结束日期')"
+              clearable
+              @change="handleRegDateChange"
+            ></el-date-picker>
+          </el-radio>
+          <el-radio label="marketing">
+            {{ $t('通过营销活动获取') }}
+            <div class="flex-box" v-if="form.requirement == 'marketing'">
+              <div class="span-text-left"> {{ $t('活动奖励后') }}</div>
+              <el-input-number :controls="false" :min="0" :max="999" :precision="0" v-model="form.valid_days" :placeholder="$t('请输入')"></el-input-number>
+              <div class="span-text">{{ $t('个自然日内有效') }}</div>
+            </div>
+          </el-radio>
         </el-radio-group>
-      </el-form-item>
-
-      <el-form-item for="no_click" :label="$t('有效时间')" prop="reg_date" :rules="[{ required: true, message: $t('请选择有效时间') }]">
-        <el-date-picker
-          v-model="form.reg_date"
-          type="daterange"
-          value-format="YYYY-MM-DD"
-          range-separator="~"
-          :start-placeholder="$t('开始日期')"
-          :end-placeholder="$t('结束日期')"
-          clearable
-        ></el-date-picker>
-      </el-form-item>
-
-      <div class="common-form mt24">
-        {{ $t('获取途径') }}
-      </div>
-      <el-form-item for="no_click" :label="$t('获取途径')" prop="get_type" :rules="[{ required: true, message: $t('请选择获取途径') }]">
-        <el-radio-group v-model="form.get_type">
-          <el-radio :label="1">{{ $t('通过营销活动获取') }}</el-radio>
-        </el-radio-group>
-      </el-form-item>
-
-      <el-form-item class="flex-box" for="no_click" :label="$t('有效日期')" prop="activity_after" :rules="[{ required: true, message: $t('请选择有效日期') }]">
-        <div class="span-text-left"> {{ $t('活动奖励后') }}</div>
-        <el-input-number :controls="false" :min="0" :max="999" :precision="0" v-model="form.activity_after" :placeholder="$t('请输入')"></el-input-number>
-        <div class="span-text">{{ $t('个自然日内有效') }}</div>
       </el-form-item>
     </el-form>
     <template #footer>
@@ -84,9 +118,8 @@
 <script setup>
   import { ref, reactive, watch, getCurrentInstance } from 'vue';
   import { ElMessage } from 'element-plus';
-  import UserApi from '@/api/user.js';
   import { useUserStore } from '@/store';
-
+  import MarketingApi from '@/api/marketing.js';
   // 获取全局属性
   const { proxy } = getCurrentInstance();
   const { $t } = proxy;
@@ -94,7 +127,6 @@
   // 获取store
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
-  const app_id = supplier.value?.app_id || 0;
 
   // Props
   const props = defineProps({
@@ -102,17 +134,9 @@
       type: Boolean,
       default: false,
     },
-    editform: {
-      type: Object,
-      default: () => ({}),
-    },
     title: {
       type: String,
       default: '',
-    },
-    gradeList: {
-      type: Array,
-      default: () => [],
     },
     editData: {
       type: Object,
@@ -129,25 +153,23 @@
   const loading = ref(false);
 
   const form = reactive({
-    nick_name: '',
-    sort: 0,
-    coupon_type: 1,
-    deduct_type: 1,
-    service_charge: 0,
-    quantity: '',
-    use_time_type: 1,
-    user_type: 1,
-    reg_date: '',
-    get_type: 1,
-    activity_after: 0,
-    gender: 2,
-    mobile: '',
-    grade_id: 1,
-    password: '',
-    birthday: '',
+    name: '',
+    sort: 1,
+    type: 'deduction',
+    deduction_type: 'taxed',
+    amount: null,
+    count: null,
+    requirement: 'none',
+    day_start_time: '00:00',
+    day_end_time: '23:59',
+    valid_start_time: '',
+    valid_end_time: '',
+    valid_days: null,
   });
 
-  const gradeSelectList = ref([]);
+  const use_time_type = ref(1);
+  const reg_date = ref([]);
+  const day_time = ref([]);
 
   // 监听props变化
   watch(
@@ -156,15 +178,25 @@
       dialogVisible.value = newVal;
       if (newVal) {
         if (props.editData) {
-          Object.assign(form, JSON.parse(JSON.stringify(props.editData)));
-          form.nick_name = props.editData.nickName;
-        }
+          // 复制编辑数据到表单
+          Object.keys(form).forEach((key) => {
+            form[key] = props.editData[key];
+          });
 
-        if (props.gradeList && props.gradeList.length > 0) {
-          gradeSelectList.value = props.gradeList.map((item) => ({
-            grade_id: item.grade_id,
-            name: item.name,
-          }));
+          // 处理时间显示
+          if (props.editData.day_start_time === '00:00' && props.editData.day_end_time === '23:59') {
+            use_time_type.value = 1;
+            day_time.value = [];
+          } else {
+            use_time_type.value = 2;
+            // 确保时间格式正确（添加空格以匹配format格式）
+            day_time.value = [props.editData.day_start_time ? ` ${props.editData.day_start_time}` : null, props.editData.day_end_time ? ` ${props.editData.day_end_time}` : null];
+          }
+
+          // 处理日期范围
+          if (props.editData.valid_start_time && props.editData.valid_end_time) {
+            reg_date.value = [props.editData.valid_start_time, props.editData.valid_end_time];
+          }
         }
       }
     },
@@ -175,19 +207,13 @@
   const onSubmit = () => {
     if (props.editData) {
       const params = {
-        user_id: form.user_id,
-        nick_name: form.nick_name,
-        gender: form.gender,
-        grade_id: form.grade_id,
-        mobile: form.mobile,
-        password: form.password,
-        birthday: form.birthday,
+        ...form,
       };
-
+      params.uuid = props.editData.uuid;
       formRef.value.validate((valid) => {
         if (valid) {
           loading.value = true;
-          UserApi.edituser(params, true)
+          MarketingApi.couponEdit(params, true)
             .then((data) => {
               loading.value = false;
               ElMessage({
@@ -206,7 +232,7 @@
       formRef.value.validate((valid) => {
         if (valid) {
           loading.value = true;
-          UserApi.adduser(params, true)
+          MarketingApi.couponAddGet(params, true)
             .then((data) => {
               loading.value = false;
               ElMessage({
@@ -227,6 +253,40 @@
     dialogVisible.value = false;
     emit('closeDialog', e);
   };
+
+  const handleUseTimeTypeChange = (val) => {
+    if (val === 1) {
+      // 选择全天时，设置默认时间
+      form.day_start_time = '00:00';
+      form.day_end_time = '23:59';
+      day_time.value = [];
+    } else {
+      // 选择特定时间段时，如果已有时间则使用已有时间，否则清空
+      if (form.day_start_time && form.day_end_time && !(form.day_start_time === '00:00' && form.day_end_time === '23:59')) {
+        day_time.value = [form.day_start_time, form.day_end_time];
+      } else {
+        form.day_start_time = '';
+        form.day_end_time = '';
+        day_time.value = [];
+      }
+    }
+  };
+
+  const handleRegDateChange = (e) => {
+    form.valid_start_time = e[0];
+    form.valid_end_time = e[1];
+  };
+
+  const handleDayTimeChange = (val) => {
+    if (val && val.length === 2) {
+      // 去掉可能存在的前导空格
+      form.day_start_time = val[0].trim();
+      form.day_end_time = val[1].trim();
+    } else {
+      form.day_start_time = '';
+      form.day_end_time = '';
+    }
+  };
 </script>
 
 <style scoped lang="scss">
@@ -243,18 +303,43 @@
     margin-bottom: 16px;
   }
 
+  :deep(.flex-box-radio.el-radio-group) {
+    flex-wrap: nowrap;
+    font-display: auto;
+    flex-direction: column;
+    width: 100%;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 10px;
+    .el-radio.el-radio--small {
+      height: auto;
+      width: 100%;
+      justify-content: flex-start;
+      align-items: flex-start;
+      .el-radio__label {
+        width: 100%;
+        gap: 10px;
+        display: flex;
+        flex-direction: column;
+      }
+      .el-radio__input {
+        margin-top: 10px !important;
+      }
+    }
+  }
+  .time-box-radio {
+    width: 100%;
+    .el-radio.el-radio--small {
+      height: auto;
+    }
+  }
   .flex-box {
-    :deep(.el-form-item__content) {
-      flex-wrap: nowrap;
-      flex-direction: row;
-    }
-    .span-text-left {
-      margin-right: 10px;
-      flex-shrink: 0;
-    }
-    .span-text {
-      margin-left: 10px;
-      flex-shrink: 0;
-    }
+    display: flex;
+    width: 100%;
+    gap: 10px;
+    color: #333;
+  }
+  :deep(.time-picker) {
+    margin-left: 10px !important;
   }
 </style>

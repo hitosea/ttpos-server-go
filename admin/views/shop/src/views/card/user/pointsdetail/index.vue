@@ -219,6 +219,12 @@
         if (result.includes('充值')) {
           result = result.replace('充值', $t('充值'));
         }
+        if (result.includes('订单积分抵扣')) {
+          result = result.replace('订单积分抵扣', $t('订单积分抵扣'));
+        }
+        if (result.includes('抵扣反结账')) {
+          result = result.replace('抵扣反结账', $t('抵扣反结账'));
+        }
         return result;
       },
     },

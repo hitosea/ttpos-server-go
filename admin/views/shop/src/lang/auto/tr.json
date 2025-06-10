@@ -1703,5 +1703,22 @@
     "查看发放记录": "Verilen kayıtları görüntüle",
     "发放对象": "Dağıtım hedefi",
     "发放时间": "Dağıtım zamanı",
-    "该规则仅支持自助餐": "Bu kural yalnızca açık büfe için geçerlidir"
+    "该规则仅支持自助餐": "Bu kural yalnızca açık büfe için geçerlidir",
+    "注：不开启不可设置抵扣比例": "Not: Açılmadan, indirim oranı ayarlanamaz",
+    "该营销活动需商家开通会员中心功能，请联系销售代表处理": "Bu pazarlama faaliyeti için satıcının üye merkezi işlevini açması gereklidir. Lütfen satış temsilcisi ile iletişime geçin",
+    "扣除积分": "Puanları düş",
+    "可退积分": "İade edilebilir puan",
+    "获取条件": "Koşulları al",
+    "请选择获取条件": "Koşulları almak için lütfen seçin",
+    "请选择用户": "Kullanıcı seçiniz",
+    "推荐人": "Tavsiye eden kişi",
+    "选择": "Seç",
+    "首次添加": "İlk ekleme",
+    "调整添加": "Eklemeyi ayarla",
+    "调整扣减": "Düzenleme kesintisi",
+    "活动扣减": "Etkinlik indirimi",
+    "奖励领取（冻结）": "Ödül alımı (dondurma)",
+    "核销扣减": "Yazılı kesinti",
+    "订单积分抵扣": "Sipariş puanı indirimi",
+    "抵扣反结账": "İade faturalandırma"
 }

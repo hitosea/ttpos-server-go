@@ -636,8 +636,13 @@ func (model *SaleOrder) GetMemberSurplusPoints(mealNum int, rule settingResp.Poi
 		}
 		// 计算本单获取的积分
 		model.SetGiftPointsRate(mealNum, rule)
+		// 如果是免单，返回0积分
+		if model.IsFreeSaleOrder() {
+			return 0
+		}
 		// 计算本单应收金额
-		return model.CalcMemberPoint(mealNum, rule, model.GetPrintReceivablePrice(), model.GetPrintReceivablePrice())
+		baseNum := model.GetPointsExchangeAmount() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
+		return model.CalcMemberPoint(mealNum, rule, baseNum)
 
 	}
 }

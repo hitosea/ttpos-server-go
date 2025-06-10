@@ -145,13 +145,13 @@ func (model *Member) GetBalanceAll() float64 {
 // 获取会员的余额，用于展示在前端。
 // 会员余额=余额+冻结余额
 func (model *Member) GetBalance() float64 {
-	return decimal.NewFromFloat(model.Balance).Add(decimal.NewFromFloat(model.FrozenBalance)).InexactFloat64()
+	return decimal.NewFromFloat(model.Balance).Add(decimal.NewFromFloat(model.FrozenBalance)).Truncate(2).InexactFloat64()
 }
 
 // 获取会员的赠送余额，用于展示在前端。
 // 会员赠送余额=赠送余额+冻结赠送余额
 func (model *Member) GetGiftBalance() float64 {
-	return decimal.NewFromFloat(model.GiftBalance).Add(decimal.NewFromFloat(model.FrozenGiftBalance)).InexactFloat64()
+	return decimal.NewFromFloat(model.GiftBalance).Add(decimal.NewFromFloat(model.FrozenGiftBalance)).Truncate(2).InexactFloat64()
 }
 
 func (model *Member) GetMemberCardName() string {

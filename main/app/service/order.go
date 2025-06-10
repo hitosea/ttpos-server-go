@@ -2402,7 +2402,26 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 				if err != nil {
 					return errors.WithMessage(err)
 				}
+				// 如果订单有积分抵扣，则已抵扣的积分
+				if saleBill.SaleBillSetting.IsOpenPointsExchange() && saleOrder.PayPoints > 0 {
+					// 更新会员积分
+					member.FrozenPoint = member.FrozenPoint + saleOrder.PayPoints // 退回已抵扣的积分
+					if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
+						"frozen_point": member.FrozenPoint, // 退回已抵扣的积分
+					}); err != nil {
+						return errors.WithMessage(err)
+					}
+					// 创建积分变动记录
+					memberPointLog := saleOrder.NewReverseSettleExchangeMemberPointLog(saleOrder.PayPoints)
+					if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
+						return errors.WithMessage(err)
+					}
+				}
 				if points > 0 {
+					// 如果会员积分余额不足时，仅扣完余额
+					if member.GetPoints() < points {
+						points = member.GetPoints()
+					}
 					// 更新会员积分
 					if err := repository.NewMemberRepo(db).Update(saleOrder.ConsumerUuid, map[string]any{
 						"frozen_point": member.FrozenPoint - points, // 扣减积分
@@ -2457,7 +2476,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 						for _, paymentOrder := range saleOrder.PaymentOrders {
 							// 如果是余额支付，则退款到余额
 							if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
-								refundAmount = paymentOrder.BalanceAmount + paymentOrder.GiftBalanceAmount
+								refundAmount = decimal.NewFromFloat(paymentOrder.BalanceAmount).Add(decimal.NewFromFloat(paymentOrder.GiftBalanceAmount)).Truncate(2).InexactFloat64()
 							}
 						}
 						if refundAmount > 0 {
@@ -6683,30 +6702,27 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	var pointsExchange resp.PointsExchangeInfo
 	if saleOrder.Member != nil && saleBill.SaleBillSetting.IsOpenPointsExchange() {
 		// 积分抵扣信息。
-		pointsExchangeRate := saleBill.SaleBillSetting.PointsExchangeRate
-		saleOrder.PointsExchangeRate = pointsExchangeRate
 		maxPoints := saleOrder.CaclMaxPoints()
 
 		// 如果自动抵扣积分，且未创建付款单，则更新销售订单的抵扣积分和抵扣金额
-		if saleBill.SaleBillSetting.IsAutoPointsExchange() && len(saleOrder.PaymentOrders) == 0 {
+		if saleBill.SaleBillSetting.IsOpenPointsExchange() && saleOrder.AutoPointsExchange == 1 && len(saleOrder.PaymentOrders) == 0 {
 			// 自动抵扣积分，更新销售订单的抵扣积分和抵扣金额
 			saleOrder.PayPoints = maxPoints
-			saleOrder.PointsExchangeRate = pointsExchangeRate
 			saleOrder.PayPointsAmount = saleOrder.CaclPointsExchangeAmount()
 
 			// 更新销售订单的积分抵扣信息
-			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate); err != nil {
+			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate, 1); err != nil {
 				return nil, errors.WithMessage(err)
 			}
 		}
 		canChangePoints := true
-		if saleBill.SaleBillSetting.IsAutoPointsExchange() || len(saleOrder.PaymentOrders) > 0 {
-			// 自动抵扣积分或已创建付款单，则不能修改抵扣积分
+		if saleBill.SaleBillSetting.IsOpenPointsExchange() && len(saleOrder.PaymentOrders) > 0 {
+			// 已创建付款单，则不能修改抵扣积分
 			canChangePoints = false
 		}
 		pointsExchange = resp.PointsExchangeInfo{
 			MaxPoints:          maxPoints,
-			PointsExchangeRate: pointsExchangeRate,
+			PointsExchangeRate: saleOrder.PointsExchangeRate,
 			PayPoints:          saleOrder.PayPoints, // 手动抵扣积分或已经生效的自动抵扣积分
 			PayPointsAmount:    saleOrder.PayPointsAmount,
 			OpenPointsExchange: saleBill.SaleBillSetting.IsOpenPointsExchange(),
@@ -6837,13 +6853,11 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 	}
 
 	if req.Points > saleOrder.Member.GetPoints() {
-		return nil, errors.New("积分数量超过会员积分")
+		return nil, errors.New("会员可用积分不足")
 	}
 
 	// 检查积分数量是否超过最大抵扣数
 	if saleOrder.Member != nil && saleBill.SaleBillSetting.IsOpenPointsExchange() {
-		// 积分抵扣信息。
-		pointsExchangeRate := saleBill.SaleBillSetting.PointsExchangeRate
 		maxPoints := saleOrder.CaclMaxPoints()
 		if req.Points > maxPoints {
 			return nil, errors.New("积分数量超过最大抵扣数")
@@ -6851,13 +6865,13 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 
 		// 如果未创建付款单，则更新销售订单的抵扣积分和抵扣金额
 		if len(saleOrder.PaymentOrders) == 0 {
-			// 自动抵扣积分，更新销售订单的抵扣积分和抵扣金额
+			// 手动抵扣积分，更新销售订单的抵扣积分和抵扣金额
 			saleOrder.PayPoints = req.Points
-			saleOrder.PointsExchangeRate = pointsExchangeRate
+			saleOrder.AutoPointsExchange = 0
 			saleOrder.PayPointsAmount = saleOrder.CaclPointsExchangeAmount()
 
 			// 更新销售订单的积分抵扣信息
-			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate); err != nil {
+			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate, 0); err != nil {
 				return nil, errors.WithMessage(err)
 			}
 		}

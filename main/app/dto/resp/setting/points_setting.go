@@ -55,12 +55,12 @@ func (s *ShoppingGiftRule) getValue() float64 {
 	}
 	value, _ := strconv.ParseFloat(s.Value, 64)
 
-	// 按付款金额比例赠送, value值要除以100, 因为前端传过来的是百分比0-100,计算的时候值是0-1
+	// 按付款金额比例赠送, value值的格式99.99，要除以100, 因为前端传过来的是百分比0-100,计算的时候值是0-1
 	if s.getType() == constant.RuleTypePaymentAmount {
 		if value <= 0 {
 			return 0
 		}
-		return decimal.NewFromFloat(value).Div(decimal.NewFromInt(100)).Round(2).InexactFloat64()
+		return decimal.NewFromFloat(value).Div(decimal.NewFromInt(100)).Round(4).InexactFloat64()
 	}
 	return value
 }

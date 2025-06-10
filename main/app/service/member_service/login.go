@@ -23,7 +23,7 @@ import (
 
 const (
 	CodeCacheKey = "member:login:code:%s:%d"
-	CodeCacheTTL = 90 * time.Second
+	CodeCacheTTL = 5 * time.Minute
 )
 
 // ILoginSrv 会员登录相关服务接口
@@ -79,6 +79,7 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 	countryToAreaCode := map[string]string{
 		"TH": constant.ThailandPrefix, // 泰国
 		"CN": constant.ChinaPrefix,    // 中国
+		"HK": constant.ChinaPrefix,    // 中国
 	}
 
 	// 默认区号列表
@@ -96,19 +97,22 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 		// 将匹配的区号放在第一位
 		areaCodes = append([]string{areaCode}, areaCodes...)
 	}
+
 	// 获取商家信息
 	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(req.CompanyUuid)
 	if err != nil {
 		return member_resp.MemberLoginInfoResp{}, errors.New("商家不存在")
 	}
+
 	// 获取商家设置
-	companySetting := repository.NewCompanySettingRepo(db).Get()
-	if companySetting.IsOpenMember != 1 {
-		return member_resp.MemberLoginInfoResp{}, errors.New("商家未开通会员功能")
-	}
-	if companySetting.IsOpenMarketing != 1 {
-		return member_resp.MemberLoginInfoResp{}, errors.New("二维码已失效")
-	}
+	// companySetting := repository.NewCompanySettingRepo(db).Get()
+	// if companySetting.IsOpenMember != 1 {
+	// 	return member_resp.MemberLoginInfoResp{}, errors.New("商家未开通会员功能")
+	// }
+	// if companySetting.IsOpenMarketing != 1 {
+	// 	return member_resp.MemberLoginInfoResp{}, errors.New("二维码已失效")
+	// }
+
 	// 返回
 	return member_resp.MemberLoginInfoResp{
 		CompanyUuid: req.CompanyUuid,
@@ -134,12 +138,12 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 		return errors.New("无法使用该功能，请联系商家")
 	}
 	companySetting := repository.NewCompanySettingRepo(db).Get()
-	if companySetting.IsOpenMember != 1 {
-		return errors.New("商家未开通会员功能")
-	}
-	if companySetting.IsOpenMarketing != 1 {
-		return errors.New("二维码已失效")
-	}
+	// if companySetting.IsOpenMember != 1 {
+	// 	return errors.New("商家未开通会员功能")
+	// }
+	// if companySetting.IsOpenMarketing != 1 {
+	// 	return errors.New("二维码已失效")
+	// }
 	// 验证手机号是否存在
 	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
 	if err != nil || member.IsDelete() {
@@ -194,7 +198,7 @@ func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (re
 	// 验证手机号是否存在
 	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
 	if err != nil || member.IsDelete() {
-		return resp.LoginResp{}, errors.New("会员不存在")
+		return resp.LoginResp{}, errors.New("该手机号未在该商家进行注册")
 	}
 	// 生成token
 	claims := auth.Claims{

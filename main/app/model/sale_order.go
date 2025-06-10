@@ -60,6 +60,7 @@ type SaleOrder struct {
 	PayPoints          float64 `gorm:"column:pay_points;type:decimal(12,2);default:0;comment:抵扣积分,用了多少积分进行抵扣" json:"pay_points"`
 	PayPointsAmount    float64 `gorm:"column:pay_points_amount;type:decimal(12,2);default:0;comment:抵扣金额,积分 抵扣了多少金额" json:"pay_points_amount"`
 	PointsExchangeRate float64 `gorm:"column:points_exchange_rate;type:decimal(12,4);default:0;comment:积分抵扣汇率,1积分抵扣多少元" json:"points_exchange_rate"`
+	AutoPointsExchange uint    `gorm:"column:auto_points_exchange;type:tinyint(1);default:0;comment:积分抵扣类型,0-手动抵扣 1-自动抵扣" json:"auto_points_exchange"`
 
 	// 结账完成后才记录的字段
 	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额=订单总金额+支付手续费" json:"payment_amount"`
@@ -106,15 +107,15 @@ func (model *SaleOrder) HasCashPayment() bool {
 
 // 判断订单退款能否手动退积分（显示手动退积分输入框）
 func (model *SaleOrder) CanManualReturnPoints() bool {
-	// 订单使用了会员且按人数固定金额赠送积分时，显示手动退积分输入框。
-	if model.ConsumerUuid != 0 && model.GiftPointsType == 1 {
-		return true
+	// 订单使用了会员、按比例赠送积分且未抵扣积分时，手动退积分输入框。
+	if model.ConsumerUuid != 0 && model.GiftPointsType == 0 && model.PayPoints == 0 {
+		return false
 	}
-	// 订单使用了会员且且发生积分抵扣时，显示手动退积分输入框。
-	if model.ConsumerUuid != 0 && model.PayPoints != 0 {
-		return true
+	// 订单没有会员，不显示
+	if model.ConsumerUuid == 0 {
+		return false
 	}
-	return false
+	return true
 }
 
 // 获取销售订单已经退款的积分数量
@@ -453,7 +454,7 @@ func (model *SaleOrder) CalcMemberPoint(mealNum int, rule settingResp.PointsRule
 	}
 
 	// 如果积分是按比例赠送的话
-	baseNum := model.FinalPrice // 计算积分的基数，值为本订单的最终应收金额
+	baseNum := model.GetPointsExchangeAmount() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
 	if len(finalPrice) > 0 {
 		baseNum = finalPrice[0]
 	}
@@ -505,6 +506,18 @@ func (model *SaleOrder) NewReverseSettleMemberPointLog(points float64) *MemberPo
 		Scene:       constant.MemberPointLogSceneReverse,
 		Value:       points,
 		Describe:    fmt.Sprintf("订单反结账：%s", model.OrderNo),
+		RelatedUuid: model.Uuid,
+	}
+	return memberPointLog
+}
+
+// 创建订单反结账退回已抵扣积分变动记录
+func (model *SaleOrder) NewReverseSettleExchangeMemberPointLog(points float64) *MemberPointLog {
+	memberPointLog := &MemberPointLog{
+		MemberUuid:  model.ConsumerUuid,
+		Scene:       constant.MemberPointLogScenePointsExchangeReverse,
+		Value:       points,
+		Describe:    fmt.Sprintf("抵扣反结账：%s", model.OrderNo),
 		RelatedUuid: model.Uuid,
 	}
 	return memberPointLog
@@ -781,6 +794,12 @@ func NewSaleOrder(saleBillUuid uint64, saleBillOrderNo string, setting SaleBillS
 	// 设置默认的订单抹零规格、结账抹零规则
 	saleOrder.ZeroRule = uint8(setting.ZeroRule)
 	saleOrder.ZeroCheckoutRule = uint8(setting.ZeroCheckoutRule)
+	// 积分抵扣类型
+	if setting.IsOpenPointsExchange() {
+		saleOrder.AutoPointsExchange = setting.AutoPointsExchange
+		saleOrder.PointsExchangeRate = setting.PointsExchangeRate
+	}
+
 	return saleOrder
 }
 

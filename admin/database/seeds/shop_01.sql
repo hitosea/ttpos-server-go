@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `pay_points` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '抵扣积分,用了多少积分进行抵扣',
     `pay_points_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '抵扣金额,积分 抵扣了多少金额',
     `points_exchange_rate` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '积分抵扣汇率,1积分抵扣多少元',
+    `auto_points_exchange` INT(10) NOT NULL DEFAULT 0 COMMENT '积分抵扣类型,0-手动抵扣 1-自动抵扣',
     
     -- 结账完成后才记录的字段
     `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '已支付金额,关联付款单的支付金额之和。',

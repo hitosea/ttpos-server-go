@@ -2,7 +2,7 @@
   <div class="basic-setting-content pl16 pr16">
     <div class="common-form">{{ $t('规则设置') }}</div>
     <el-form-item for="no_click" :label="$t('奖励条件')" :rules="[{ required: true, message: $t('请输入奖励条件') }]" prop="reward_condition_amount">
-      <el-radio-group v-model="rewardCondition">
+      <el-radio-group v-model="rewardCondition" :disabled="status == 1">
         <el-radio :label="0"
           >{{ $t('推荐会员入会并消费') }}
           <numInput
@@ -13,6 +13,7 @@
             v-model:valueData="form.reward_condition_amount"
             :value="form.reward_condition_amount"
             :placeholder="$t('请输入')"
+            :disabled="status == 1"
           ></numInput
         ></el-radio>
       </el-radio-group>
@@ -20,7 +21,7 @@
       <div class="gray9">{{ $t('注：老会员推荐好友入会并消费，好友再邀请的新会员消费，也能为老会员累计奖励。') }}</div>
     </el-form-item>
     <el-form-item for="no_click" :label="$t('奖励限制')">
-      <el-checkbox-group v-model="form.is_open_reward_limit">
+      <el-checkbox-group v-model="form.is_open_reward_limit" :disabled="status == 1">
         <el-checkbox :label="$t('限定每个会员获得奖励次数')" :value="1">
           {{ $t('限定每个会员获得奖励次数') }}
         </el-checkbox>
@@ -29,10 +30,18 @@
     </el-form-item>
 
     <el-form-item for="no_click" v-if="form.is_open_reward_limit == 1" :label="$t('次数限制')" :rules="[{ required: true, message: $t('请输入次数限制') }]" prop="reward_limit">
-      <el-radio-group v-model="rewardLimit" class="flex-box">
+      <el-radio-group v-model="rewardLimit" class="flex-box" :disabled="status == 1">
         <el-radio :label="0"
           >{{ $t('限制活动有效期内每个会员最多获取奖品') }}
-          <el-input-number :controls="false" :min="0" :max="999" class="max-w140" :placeholder="$t('请输入次数限制')" v-model.number="form.reward_limit"></el-input-number>
+          <el-input-number
+            :controls="false"
+            :min="0"
+            :max="999"
+            class="max-w140"
+            :placeholder="$t('请输入次数限制')"
+            v-model.number="form.reward_limit"
+            :disabled="status == 1"
+          ></el-input-number>
           <div class="text-gray9">{{ $t('次') }}</div>
         </el-radio>
       </el-radio-group>
@@ -50,6 +59,12 @@
     },
     created() {},
     inject: ['form'],
+    props: {
+      status: {
+        type: Number,
+        default: null,
+      },
+    },
     methods: {},
   };
 </script>

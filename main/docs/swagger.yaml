@@ -7398,6 +7398,37 @@ paths:
       summary: 获取结账页面信息
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/order/payment/points:
+    post:
+      consumes:
+      - application/json
+      description: 设置订单的抵扣积分数量
+      parameters:
+      - description: 设置订单的抵扣积分数量参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InstantOrderPaymentPointsReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 结账页面信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 设置订单的抵扣积分数量
+      tags:
+      - 收银端.桌台.结账
   /assistant/desk/order/payment/qrcode:
     get:
       consumes:
@@ -10850,6 +10881,37 @@ paths:
       summary: 获取结账页面信息
       tags:
       - 收银端.点餐.结账
+  /cashier/instant/order/payment/points:
+    post:
+      consumes:
+      - application/json
+      description: 设置订单的抵扣积分数量
+      parameters:
+      - description: 设置订单的抵扣积分数量参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InstantOrderPaymentPointsReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 结账页面信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 设置订单的抵扣积分数量
+      tags:
+      - 收银端.桌台.结账
   /cashier/instant/order/payment/qrcode:
     get:
       consumes:

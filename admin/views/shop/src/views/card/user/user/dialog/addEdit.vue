@@ -25,7 +25,18 @@
       <el-form-item for="no_click" :label="$t('会员卡号')">
         <el-input class="percent-w100" v-model="form.card_number" @input="inputCardNumber" :maxlength="48" :placeholder="$t('请输入会员卡号')"></el-input>
       </el-form-item>
+      <el-form-item for="no_click" :label="$t('推荐人')">
+        <el-button size="small" type="primary" @click="selectReferrer" v-if="(form.referrer == null && editData) || !editData">{{ $t('选择') }}</el-button>
+        <template v-if="selectMenber.length > 0">
+          <el-tag v-for="tag in selectMenber" size="large" :key="tag.user_id" closable @close="handleClose(tag)">
+            {{ `${tag.phone || '-'} (${tag.nickname})` }}
+          </el-tag>
+        </template>
 
+        <template v-if="form.referrer">
+          <span>{{ `${form.referrer.phone || '-'} (${form.referrer.nickname || '-'})` }}</span>
+        </template>
+      </el-form-item>
       <el-form-item for="no_click" :label="$t('手机号')" prop="mobile" :rules="[{ required: true, message: $t('请输入手机号') }]">
         <el-input class="percent-w100" :maxlength="20" v-model="form.mobile" :placeholder="$t('请输入手机号')"></el-input>
       </el-form-item>
@@ -44,14 +55,20 @@
       </div>
     </template>
   </el-dialog>
+  <!--选择用户-->
+  <GetUser :is_open="open_getuser" @close="closeGetuserFunc" :is_single="true"></GetUser>
 </template>
 <script>
   import UserApi from '@/api/user.js';
   import { useUserStore } from '@/store';
+  import GetUser from '@/components/user/GetUser.vue';
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
   const app_id = supplier.value?.app_id || 0;
   export default {
+    components: {
+      GetUser,
+    },
     data() {
       return {
         dialogVisible: false,
@@ -64,11 +81,14 @@
           birthday: '',
           card_uuid: '',
           card_number: '',
+          referrer_uuid: '',
         },
         loading: false,
         gradeSelectList: [],
         app_id,
         cardList: [],
+        open_getuser: false,
+        selectMenber: [],
       };
     },
     props: ['open', 'editform', 'title', 'gradeList', 'editData'],
@@ -79,6 +99,7 @@
         this.form.nick_name = this.editData.nickName;
         this.form.card_uuid = this.editData.memberCard?.card?.card_id || '';
         this.form.card_number = this.editData.member_card_no;
+        this.form.referrer_uuid = this.editData.referrer_uuid;
       }
       if (this.gradeList && this.gradeList.length > 0) {
         this.gradeList.map((item) => {
@@ -91,6 +112,21 @@
       this.getCardList();
     },
     methods: {
+      handleClose(tag) {
+        this.selectMenber = this.selectMenber.filter((item) => item.user_id !== tag.user_id);
+        this.form.referrer_uuid = '';
+      },
+      selectReferrer() {
+        this.open_getuser = true;
+      },
+      /*关闭获取用户*/
+      closeGetuserFunc(e) {
+        if (e && e.type != 'error') {
+          this.selectMenber = e.params;
+          this.form.referrer_uuid = this.selectMenber[0].user_id;
+        }
+        this.open_getuser = false;
+      },
       inputCardNumber(e) {
         //1~48位字符，允许输入字母和数字，不允许输入特殊字符
         this.$nextTick(() => {
@@ -110,6 +146,7 @@
           params.birthday = self.form.birthday;
           params.card_uuid = self.form.card_uuid;
           params.card_number = self.form.card_number;
+          params.referrer_uuid = self.form.referrer_uuid;
           self.$refs.form.validate((valid) => {
             if (valid) {
               self.loading = true;
