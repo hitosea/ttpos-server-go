@@ -108,7 +108,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,(销售订单赠菜商品.总最终单价)之和',
     `gift_points` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送积分. 赠送积分=应收金额amount*积分赠送比例.',
     `gift_points_rate` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '赠送积分比例. 取值范围0-1。结账后记录，不受后台改变',
+    `gift_points_type` INT(10) NOT NULL DEFAULT 0 COMMENT '赠送积分类型, 0-按比例赠送 1-按人数固定金额赠送',
     `member_balance`  DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员余额.会员消费本单后剩余的余额',
+    `member_level_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员等级名称',
     `unit` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '积分抵扣金额的单位,$-美元 ￥-人民币,用于显示订单当时积分抵扣的金额价值',
     -- 收银员名称
     `cashier_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银员名称',
