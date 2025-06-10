@@ -50,6 +50,7 @@ class MigratePointsSetting extends Migrator
                     $rule["meal_type"][] = "non-buffet";
                     // 会员余额支付赠送积分
                     $rule["balance_payment_get_points"] = "1";
+                    $rule["refund_return_points"] = "1"; // 退款自动退积分
                 }
                 if ($companySetting["is_open_buffet"] == 1) {
                     $rule["meal_type"][] = "buffet";

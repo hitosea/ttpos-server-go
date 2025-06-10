@@ -21,6 +21,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/duke-git/lancet/v2/slice"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
 	"github.com/nahid/gohttp"
@@ -893,7 +894,11 @@ func (s *Srv) GetPointsSetting(ctx context.Context) (setting.Points, error) {
 		ctx.Log().Error("合并积分设置失败", zap.Error(err))
 		return points, errors.New("合并积分设置失败")
 	}
-
+	companySetting, err := s.GetCompanySetting(ctx)
+	if err != nil {
+		ctx.Log().Error("合并积分设置失败", zap.Error(err))
+		return points, errors.New("获取商家信息失败")
+	}
 	memberRepo := repository.NewMemberRepo(ctx.GetDB())
 	memberLevels := memberRepo.GetMemberLevels()
 	var rateMemberLevels []setting.MemberLevelItem
@@ -911,6 +916,13 @@ func (s *Srv) GetPointsSetting(ctx context.Context) (setting.Points, error) {
 		})
 	}
 	for i, rule := range defaultPoints.ShoppingGiftRules {
+		if companySetting.IsOpenBuffet == 0 { // 未开启自助餐
+			newMealType := slice.Filter(rule.MealType, func(index int, item string) bool {
+				return item != "buffet"
+			})
+			defaultPoints.ShoppingGiftRules[i].MealType = newMealType
+		}
+
 		switch rule.Type {
 		case setting.RuleTypePaymentAmount:
 			defaultPoints.ShoppingGiftRules[i].MemberLevels = rateMemberLevels

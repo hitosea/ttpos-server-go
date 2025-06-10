@@ -17487,6 +17487,10 @@ const docTemplate = `{
                     "description": "活动结束时间",
                     "type": "integer"
                 },
+                "is_invalid": {
+                    "description": "活动状态 0-未失效 1-已失效",
+                    "type": "integer"
+                },
                 "name": {
                     "description": "活动名称",
                     "type": "string"
