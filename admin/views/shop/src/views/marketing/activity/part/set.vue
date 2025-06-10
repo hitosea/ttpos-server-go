@@ -35,6 +35,7 @@
           >{{ $t('限制活动有效期内每个会员最多获取奖品') }}
           <el-input-number
             :controls="false"
+            :precision="0"
             :min="0"
             :max="999"
             class="max-w140"
