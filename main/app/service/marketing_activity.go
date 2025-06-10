@@ -70,7 +70,7 @@ func (s *marketingActivitySrv) MarketingActivity(ctx context.Context) (*member_r
 			Desc:       marketingActivity.MultiLanguageDesc.GetNameByLang(ctx.GetLanguage()),
 			StartTime:  int64(marketingActivity.StartTime),
 			EndTime:    int64(marketingActivity.EndTime),
-			IsInvalid:  utils.IfInt(company.CompanySetting.IsOpenMarketing != 1, 0, 1),
+			IsInvalid:  utils.IfInt(company.CompanySetting.IsOpenMarketing != 1, 1, 0),
 		})
 	}
 
