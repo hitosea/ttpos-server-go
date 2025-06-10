@@ -52,6 +52,9 @@
         :start-placeholder="$t('开始日期')"
         :end-placeholder="$t('结束日期')"
         :disabledDate="status == 0 ? disabledDate : null"
+        :disabled-hours="(role, date) => (role === 'start' && status == 0 ? dHours() : [])"
+        :disabled-minutes="(role, date) => (role === 'start' && status == 0 ? dMinutes() : [])"
+        :disabled-seconds="(role, date) => (role === 'start' && status == 0 ? dSeconds() : [])"
       />
       <el-date-picker
         v-if="status == 1"
@@ -62,6 +65,9 @@
         :placeholder="$t('结束日期')"
         class="max-w460 w100"
         :disabledDate="disabledDate"
+        :disabled-hours="disabledHours"
+        :disabled-minutes="disabledMinutes"
+        :disabled-seconds="disabledSeconds"
       />
     </el-form-item>
     <el-form-item
@@ -96,7 +102,7 @@
 </template>
 
 <script setup>
-  import { ref, inject, watch } from 'vue';
+  import { ref, inject, watch, computed } from 'vue';
   import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
   import SelectCouponDialog from './dialog.vue';
 
@@ -208,7 +214,62 @@
 
   // 禁用今天之前的日期
   const disabledDate = (time) => {
-    return time.getTime() < Date.now() - 8.64e7; // 8.64e7 是一天的毫秒数，减去它是为了包含今天
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return time.getTime() < today.getTime();
+  };
+
+  // 禁用小时
+  const dHours = () => {
+    const now = new Date();
+    const hours = [];
+    for (let i = 0; i < 24; i++) {
+      if (i < now.getHours()) {
+        hours.push(i);
+      }
+    }
+    return hours;
+  };
+
+  // 禁用分钟和秒数
+  const dMinutes = () => {
+    const now = new Date();
+    const minutes = [];
+    for (let i = 0; i < 60; i++) {
+      if (i < now.getMinutes()) {
+        minutes.push(i);
+      }
+    }
+    return minutes;
+  };
+
+  const dSeconds = () => {
+    const now = new Date();
+    const seconds = [];
+    for (let i = 0; i < 60; i++) {
+      if (i < now.getSeconds()) {
+        seconds.push(i);
+      }
+      return seconds;
+    }
+  };
+
+  // 禁用小时
+  const disabledHours = () => {
+    const now = new Date();
+    return Array.from({ length: now.getHours() }, (_, i) => i);
+  };
+
+  // 禁用分钟
+  const disabledMinutes = (hour) => {
+    const now = new Date();
+    return hour === now.getHours() ? Array.from({ length: now.getMinutes() }, (_, i) => i) : [];
+  };
+
+  // 禁用秒
+  const disabledSeconds = (hour, minute) => {
+    const now = new Date();
+    return hour === now.getHours() && minute === now.getMinutes() ? Array.from({ length: now.getSeconds() }, (_, i) => i) : [];
   };
 </script>
 

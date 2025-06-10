@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '订单编号',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '订单状态, 0-未结账 1-已结账',
+    `device_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '设备ID,用于标识订单来源设备.来源h5时，device_id为h5',
     -- 订单数据变动时要重新计算的字段
     `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总会员折扣金额。总会员折扣金额=(订单商品.会员折扣金额)之和',
     `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '总自定义折扣金额。总自定义折扣金额=(订单商品.自定义折扣金额)之和',
@@ -108,7 +109,9 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `gift_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠菜金额,(销售订单赠菜商品.总最终单价)之和',
     `gift_points` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '赠送积分. 赠送积分=应收金额amount*积分赠送比例.',
     `gift_points_rate` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '赠送积分比例. 取值范围0-1。结账后记录，不受后台改变',
+    `gift_points_type` INT(10) NOT NULL DEFAULT 0 COMMENT '赠送积分类型, 0-按比例赠送 1-按人数固定金额赠送',
     `member_balance`  DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员余额.会员消费本单后剩余的余额',
+    `member_level_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '会员等级名称',
     `unit` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '积分抵扣金额的单位,$-美元 ￥-人民币,用于显示订单当时积分抵扣的金额价值',
     -- 收银员名称
     `cashier_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '收银员名称',
@@ -240,6 +243,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
     `num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量。不能减为0，当数量为1再减时，标记删除',
     `image_file_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品图片ID',
+    `device_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '设备ID,用于标识订单来源设备.来源h5时，device_id为h5',
     -- 价格信息
     `flavor_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '规格原价（单商品）,仅某规格商品的原价',
     `sauce_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '小料价（单商品）,所有小料的价格之和',
