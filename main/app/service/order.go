@@ -326,7 +326,11 @@ func IsToday(timestamp int64) bool {
 
 func createSaleOrder(ctx context.Context, db *gorm.DB, saleBillSetting *model.SaleBillSetting, saleBillUuid uint64, saleBillOrderNo string) (*model.SaleOrder, error) {
 	// 创建销售订单
-	saleOrderObj := model.NewSaleOrder(saleBillUuid, saleBillOrderNo, *saleBillSetting)
+	deviceSn := ctx.GetDeviceSn()
+	if ctx.GetSource() == jwt.SourceH5 {
+		deviceSn = jwt.SourceH5 // 扫码h5订单，设备sn为h5
+	}
+	saleOrderObj := model.NewSaleOrder(deviceSn, saleBillUuid, saleBillOrderNo, *saleBillSetting)
 	// 设置收银员信息
 	staff := ctx.GetStaff()
 	saleOrderObj.SetCashier(staff.Uuid, staff.GetUserName())
@@ -568,7 +572,7 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 		return resp.CreateDeskOrderResp{}, errors.WithMessage(err)
 	}
 	// 构建销售订单
-	saleOrder := model.NewSaleOrder(saleBill.Uuid, saleBill.OrderNo, *saleBillSetting)
+	saleOrder := model.NewSaleOrder(ctx.GetDeviceSn(), saleBill.Uuid, saleBill.OrderNo, *saleBillSetting)
 
 	// 获取自助餐信息
 	buffetList, err := repository.NewBuffetRepo(db).GetBuffetListByUuids(req.BuffetUuids)
@@ -4383,7 +4387,12 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if params.IsH5Product {
 			isAcceptOrder = constant.OrderProductIsAcceptOrderUnAccept // 未接单
 		}
+		deviceSn := ctx.GetDeviceSn()
+		if ctx.GetSource() == jwt.SourceH5 {
+			deviceSn = jwt.SourceH5 // 扫码h5订单，设备sn为h5
+		}
 		saleOrderProduct := model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
+			DeviceId:               deviceSn,
 			Name:                   productPackage.Name,
 			OpenMemberDiscount:     productPackage.OpenDiscount,
 			TaxRate:                productPackage.TaxRate(innerParams.DiningMethod),

@@ -23,6 +23,7 @@ type SaleOrder struct {
 	IsFree      uint   `gorm:"column:is_free;comment:是否免单, 0-否 1-是" json:"is_free"`
 	FreeReason  string `gorm:"column:free_reason;comment:免单原因" json:"free_reason"`
 	CashierName string `gorm:"column:cashier_name;type:varchar(255);default:'';comment:收银员名称" json:"cashier_name"`
+	DeviceId    string `gorm:"column:device_id;type:varchar(255);default:'';comment:设备ID,用于标识订单来源设备.来源h5时，device_id为h5" json:"device_id"`
 
 	// 关联ID字段
 	ConsumerUuid uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
@@ -782,12 +783,13 @@ func (model *SaleOrder) ValidateOrderStatus() error {
 	return nil
 }
 
-func NewSaleOrder(saleBillUuid uint64, saleBillOrderNo string, setting SaleBillSetting) *SaleOrder {
+func NewSaleOrder(deviceId string, saleBillUuid uint64, saleBillOrderNo string, setting SaleBillSetting) *SaleOrder {
 	uuid, _ := utils.GetID()
 	saleOrder := &SaleOrder{
 		BaseModel:    BaseModel{Uuid: uuid},
 		SaleBillUuid: saleBillUuid,
 		OrderNo:      saleBillOrderNo,
+		DeviceId:     deviceId,
 	}
 	// 设置服务费初始值
 	saleOrder.SetInitServiceFee(setting)

@@ -26,6 +26,7 @@ type SaleOrderProduct struct {
 	Num        uint   `gorm:"column:num;type:int(11);not null;default:0;comment:'商品数量。不能减为0，当数量为1再减时，标记删除'" json:"num"`
 	Remark     string `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'备注，顾客对商品的备注信息'" json:"remark"`
 	IsBuffet   uint   `gorm:"column:is_buffet;type:tinyint(1);not null;default:0;comment:'是否为自助餐商品,0-否 1-是. 如果是自助餐商品，则sale_price为0'" json:"is_buffet"`
+	DeviceId   string `gorm:"column:device_id;type:varchar(255);not null;default:'';comment:'设备ID,用于标识订单来源设备.来源h5时，device_id为h5的device_id'" json:"device_id"`
 	// 状态相关字段
 	Status        uint `gorm:"column:status;type:tinyint(1);not null;default:0;comment:'状态, 0-未送厨 1-已送厨'" json:"status"`
 	IsRequire     uint `gorm:"column:is_require;type:tinyint(1);not null;default:0;comment:'是否必点商品 0-否 1-是。用于在前端显示必点图标'" json:"is_require"`
@@ -1007,6 +1008,7 @@ func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string) string {
 
 // 点餐时录入的原始数据
 type DefaultSaleOrderProduct struct {
+	DeviceId               string // 设备ID,用于标识订单来源设备.来源h5时，device_id为h5的device_id
 	Name                   string
 	OpenMemberDiscount     uint
 	TaxRate                float64
@@ -1064,6 +1066,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		BaseModel: BaseModel{
 			Uuid: saleOrderProductUuid,
 		},
+		DeviceId:                   def.DeviceId,
 		Name:                       def.Name,
 		Remark:                     def.Remark,
 		FlavorName:                 def.Flavor.Name,
