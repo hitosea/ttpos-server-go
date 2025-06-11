@@ -451,8 +451,6 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	printerLogData.Status = constant.PrinterLogStatusInProgress
 	// 获取商家设置，判断是否开启本地打印
 	companySetting := ctx.GetCompanySetting()
-	// 获取打印日志仓库
-	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
 
 	// 如果是商米云打印 - 就都队列打印
 	if printer.PrinterType == constant.PrinterTypeSunmiCloud && companySetting.IsOpenLocalPrint == 0 {
@@ -471,6 +469,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	if tx.Error != nil {
 		return model.PrinterLog{}, errors.WithMessage(tx.Error)
 	}
+
 	// 保存打印日志数据
 	var LogData model.PrinterLogData
 	printerLogDataRepo := repository.NewPrinterLogDataRepo(tx)
@@ -483,6 +482,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 		logger.Logger.Error("保存数据打印日志数据失败", zap.Error(err))
 		return model.PrinterLog{}, errors.WithMessage(err)
 	}
+
 	// 保存日志
 	var printerLog model.PrinterLog
 	copier.Copy(&printerLog, printerLogData)
@@ -497,6 +497,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 		logger.Logger.Error("保存数据打印日志失败", zap.Error(err))
 		return model.PrinterLog{}, errors.WithMessage(err)
 	}
+
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
 		tx.Rollback()
@@ -508,19 +509,11 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	printerLog.Data = LogData.Data
 	printerLog.PrinterLogData = &LogData
 
-	// 只保留7天的数据
-	go func() {
-		err = printerLogRepo.UpdateByWhere(map[string]any{"delete_time": time.Now().Unix()}, printerLogRepo.WhereCreatedBefore(7))
-		if err != nil {
-			logger.Logger.Error("删除n天前的打印日志失败", zap.Error(err))
-		}
-	}()
-
 	// 进行队列打印
 	if viper.GetString("CHECK_PRINT") == "false" || printerLog.Type == constant.PrinterLogTypeDefault {
 		go func() {
 			if printerLog.Printer == nil {
-
+				printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
 				printerLog.Printer = printerLogRepo.GetPrinter(printerLogRepo.WhereUuid(printerLog.PrinterUuid))
 			}
 			printer_tasks.NewPrinterTask(s.dbm, cache.Global).ExecutePrinter(companyUuid, printerLog)
