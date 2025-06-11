@@ -5,11 +5,27 @@
         {{ $t('基础信息') }}
       </div>
       <!--店员修改-->
-      <el-form-item for="no_click" :label="$t('名称')" prop="name" :rules="[{ required: true, message: $t('请输入昵称') }]">
-        <el-input class="percent-w100" v-model="form.name" :maxlength="50" :placeholder="$t('请输入昵称')"></el-input>
+      <el-form-item
+        for="no_click"
+        :label="$t('名称')"
+        prop="name"
+        :rules="[
+          { required: true, message: $t('请输入优惠券名称') },
+          {
+            validator: (rule, value, callback) => {
+              if (value.trim() === '') {
+                callback(new Error($t('请输入优惠券名称')));
+              }
+              callback();
+            },
+            trigger: 'blur',
+          },
+        ]"
+      >
+        <el-input class="percent-w100" v-model="form.name" :maxlength="50" :placeholder="$t('请输入优惠券名称')"></el-input>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('排序')" prop="sort">
-        <el-input-number :controls="false" :min="1" :max="999" :precision="0" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort"></el-input-number>
+        <numInput width="m-full" :min="1" :max="99" :precision="0" :placeholder="$t('接近0，排序等级越高')" v-model:valueData="form.sort" :value="form.sort"></numInput>
       </el-form-item>
       <div class="common-form mt24">
         {{ $t('优惠券设置') }}
@@ -24,11 +40,11 @@
           <el-radio label="taxed">{{ $t('税后折扣') }}</el-radio>
         </el-radio-group>
       </el-form-item>
-      <el-form-item for="no_click" :label="$t('金额')" prop="amount" :rules="[{ required: true, message: $t('请选择金额') }]">
-        <numInput width="m-full" :min="0" :precision="2" v-model:valueData="form.amount" :value="form.amount" :placeholder="$t('请输入')"></numInput>
+      <el-form-item for="no_click" :label="$t('金额')" prop="amount" :rules="[{ required: true, message: $t('请输入优惠券金额') }]">
+        <numInput width="m-full" :min="1" :max="999999" :precision="2" v-model:valueData="form.amount" :value="form.amount" :placeholder="$t('请输入优惠券金额')"></numInput>
       </el-form-item>
-      <el-form-item for="no_click" :label="$t('数量')" prop="count" :rules="[{ required: true, message: $t('请选择数量') }]">
-        <el-input-number :controls="false" :min="0" :max="9999999" :precision="0" :placeholder="$t('请输入数量')" v-model.number="form.count"></el-input-number>
+      <el-form-item for="no_click" :label="$t('数量')" prop="count" :rules="[{ required: true, message: $t('请输入优惠券数量') }]">
+        <numInput width="m-full" :min="1" :max="999999" :precision="0" :placeholder="$t('请输入优惠券数量')" v-model:valueData="form.count" :value="form.count"></numInput>
       </el-form-item>
       <el-form-item
         for="no_click"
@@ -286,6 +302,18 @@
       form.day_start_time = '';
       form.day_end_time = '';
     }
+  };
+
+  const handleCountChange = (val) => {
+    if (val < 0) {
+      form.count = 0;
+      return;
+    }
+    if (val > 9999999) {
+      form.count = 9999999;
+      return;
+    }
+    form.count = val;
   };
 </script>
 

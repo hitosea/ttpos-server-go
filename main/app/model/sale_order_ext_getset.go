@@ -641,7 +641,7 @@ func (model *SaleOrder) GetMemberSurplusPoints(mealNum int, rule settingResp.Poi
 			return 0
 		}
 		// 计算本单应收金额
-		baseNum := model.GetPointsExchangeAmount() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
+		baseNum := model.GetFinalNoFeeAmount() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
 		return model.CalcMemberPoint(mealNum, rule, baseNum)
 
 	}
@@ -734,7 +734,8 @@ func (model *SaleOrder) SetMemberDiscountCancel() {
 	discountRate := float64(1)                  // 无折扣，1乘任何价格都等于原价
 	model.MemberDiscountRate = discountRate     // 会员折扣，无折扣
 	model.MemberCardDiscountRate = discountRate // 会员卡折扣，无折扣
-	model.ConsumerUuid = 0                      // 会员ID置空
+	model.PayPoints = 0                         // 积分抵扣金额置空
+	model.PayPointsAmount = 0                   // 积分抵扣金额置空
 	// 对商品进行打折
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		// 如果订单商品已删除，则不修改折扣. 已退菜、赠菜的商品也要修改折扣，表示退菜的金额也打折了

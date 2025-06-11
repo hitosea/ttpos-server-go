@@ -61,8 +61,11 @@
           // 获取小数点后的部分
           let decimalPart = str.split('.')[1];
           // 检查小数点后的部分是否大于两位
-          if (decimalPart.length > 2) {
-            this.valueData = Number(Number(this.valueData).toFixed(this.precision)) || '';
+          if (decimalPart.length > this.precision) {
+            // 获取整数部分和小数部分
+            let parts = str.split('.');
+            // 直接截取需要的小数位数，不进行四舍五入
+            this.valueData = parts[0] + '.' + parts[1].substring(0, this.precision);
           }
         }
         this.valueData > this.max ? (this.valueData = this.max) : (this.valueData = this.valueData);

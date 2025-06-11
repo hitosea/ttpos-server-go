@@ -165,6 +165,12 @@ func (model *SaleOrder) GetPointsExchangeAmount() float64 {
 	return decimal.NewFromFloat(model.GetAmount()).Sub(decimal.NewFromFloat(model.PayPointsAmount)).Round(2).InexactFloat64()
 }
 
+// 获取最终应收金额（不含手续费）。等于Amount-PayPointsAmount-结账抹零
+func (model *SaleOrder) GetFinalNoFeeAmount() float64 {
+	amount := decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.ZeroCheckoutFee)).Round(2).InexactFloat64() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
+	return amount
+}
+
 // 获取销售订单的序号
 func (model *SaleOrder) GetIndex() int {
 	return model.index
@@ -468,7 +474,7 @@ func (model *SaleOrder) CalcMemberPoint(mealNum int, rule settingResp.PointsRule
 	}
 
 	// 如果积分是按比例赠送的话
-	baseNum := model.GetPointsExchangeAmount() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
+	baseNum := model.GetFinalNoFeeAmount()
 	if len(finalPrice) > 0 {
 		baseNum = finalPrice[0]
 	}
