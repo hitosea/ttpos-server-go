@@ -641,7 +641,7 @@ func (model *SaleOrder) GetMemberSurplusPoints(mealNum int, rule settingResp.Poi
 			return 0
 		}
 		// 计算本单应收金额
-		baseNum := model.GetPointsExchangeAmount() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
+		baseNum := model.GetFinalNoFeeAmount() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
 		return model.CalcMemberPoint(mealNum, rule, baseNum)
 
 	}
