@@ -469,7 +469,6 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	if tx.Error != nil {
 		return model.PrinterLog{}, errors.WithMessage(tx.Error)
 	}
-
 	// 保存打印日志数据
 	var LogData model.PrinterLogData
 	printerLogDataRepo := repository.NewPrinterLogDataRepo(tx)
@@ -482,7 +481,6 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 		logger.Logger.Error("保存数据打印日志数据失败", zap.Error(err))
 		return model.PrinterLog{}, errors.WithMessage(err)
 	}
-
 	// 保存日志
 	var printerLog model.PrinterLog
 	copier.Copy(&printerLog, printerLogData)
@@ -497,7 +495,6 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 		logger.Logger.Error("保存数据打印日志失败", zap.Error(err))
 		return model.PrinterLog{}, errors.WithMessage(err)
 	}
-
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
 		tx.Rollback()
