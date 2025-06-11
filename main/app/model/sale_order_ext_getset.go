@@ -714,6 +714,8 @@ func (model *SaleOrder) setMemberDiscount(memberUuid uint64, memberDiscount, car
 func (model *SaleOrder) SetMemberDiscount(member Member) {
 	defer model.SetZeroRuleCancel()     // 设置会员折扣后，要取消订单抹零
 	defer model.SetCustomAmountCancel() // 设置会员折扣后，要取消整单改价
+	defer model.SetPayPointsCancel()    // 设置会员折扣后，要取消积分抵扣
+
 	// 修改订单的会员信息
 	model.setMemberDiscount(member.Uuid, member.GetMemberDiscountRate(), member.GetMemberCardDiscountRate())
 }
@@ -734,8 +736,8 @@ func (model *SaleOrder) SetMemberDiscountCancel() {
 	discountRate := float64(1)                  // 无折扣，1乘任何价格都等于原价
 	model.MemberDiscountRate = discountRate     // 会员折扣，无折扣
 	model.MemberCardDiscountRate = discountRate // 会员卡折扣，无折扣
-	model.PayPoints = 0                         // 积分抵扣金额置空
-	model.PayPointsAmount = 0                   // 积分抵扣金额置空
+	model.ConsumerUuid = 0                      // 会员ID置空
+	defer model.SetPayPointsCancel()            // 设置会员折扣后，要取消积分抵扣
 	// 对商品进行打折
 	for _, saleOrderProduct := range model.SaleOrderProducts {
 		// 如果订单商品已删除，则不修改折扣. 已退菜、赠菜的商品也要修改折扣，表示退菜的金额也打折了
@@ -817,6 +819,12 @@ func (model *SaleOrder) SetCustomAmountCancel() bool {
 	isChange := false
 	model.CustomAmount = constant.SaleOrderCustomAmountCancel
 	return isChange
+}
+
+// 取消积分抵扣金额
+func (model *SaleOrder) SetPayPointsCancel() {
+	model.PayPoints = 0       // 积分抵扣金额置空
+	model.PayPointsAmount = 0 // 积分抵扣金额置空
 }
 
 // 设置订单抹零规则
