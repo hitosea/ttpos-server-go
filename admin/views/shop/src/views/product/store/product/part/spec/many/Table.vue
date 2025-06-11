@@ -105,19 +105,12 @@
                 :rules="[
                   {
                     validator: (rule, value, callback) => {
-                      console.log(value);
-
-                      // 判断长度是否为12或13位
+                      // 判断长度是否为12或13位，并且只能输入数字
                       if (value && value.length !== 12 && value.length !== 13) {
-                        callback(new Error($t('长度12-13位')));
+                        callback(new Error($t('长度12-13位数字')));
                         return;
                       }
 
-                      // 判断是否为数字+字母结合
-                      if (!/^[0-9a-zA-Z]+$/.test(value)) {
-                        callback(new Error($t('只能包含数字和字母')));
-                        return;
-                      }
                       if (!scope.row.barcodeUniqueness) {
                         callback(new Error($t('商品条码重复')));
                         return;
@@ -310,7 +303,8 @@
             //处理条形码
             this.$nextTick(() => {
               if (this.form.model.sku[index].barcode) {
-                this.form.model.sku[index].barcode = item.barcode.match(/[a-zA-Z0-9]*/g).join('');
+                //只能输入纯数字
+                this.form.model.sku[index].barcode = item.barcode.match(/[0-9]*/g).join('');
               }
             });
 
