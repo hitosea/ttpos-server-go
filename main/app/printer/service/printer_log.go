@@ -506,6 +506,8 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	printerLog.Data = LogData.Data
 	printerLog.PrinterLogData = &LogData
 
+	// 只保留7天的数据 - 已改
+
 	// 进行队列打印
 	if viper.GetString("CHECK_PRINT") == "false" || printerLog.Type == constant.PrinterLogTypeDefault {
 		go func() {
