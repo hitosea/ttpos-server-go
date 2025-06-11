@@ -501,7 +501,6 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 		logger.Logger.Error("提交事务失败", zap.Error(err))
 		return model.PrinterLog{}, errors.WithMessage(err)
 	}
-
 	//关联打印日志数据
 	printerLog.Data = LogData.Data
 	printerLog.PrinterLogData = &LogData
