@@ -1,6 +1,6 @@
 <template>
-  <div class="assistant">
-    <div class="form-div" v-loading="loading">
+  <div class="assistant" v-loading="loading">
+    <div class="form-div">
       <el-form size="small" ref="form" :model="form" label-position="top">
         <el-form-item for="no_click" :label="$t('自助餐剩余时长颜色：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_remain_color">
