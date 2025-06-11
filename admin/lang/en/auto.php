@@ -2076,4 +2076,5 @@ return [
     "积分抵扣：%s" => "Points deduction: %s",
     "抵扣反结账" => "Deduction reverse settlement",
     "抵扣反结账：%s" => "Deduct Reverse Settlement: %s",
+    "输入条形码不合规，请重新检查" => "The entered barcode is invalid, please check again",
 ];

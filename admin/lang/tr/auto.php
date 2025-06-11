@@ -2076,4 +2076,5 @@ return [
     "积分抵扣：%s" => "Puanla indirim: %s",
     "抵扣反结账" => "İndirimli ters ödeme",
     "抵扣反结账：%s" => "İndirimli ters hesap kapama: %s",
+    "输入条形码不合规，请重新检查" => "Girilen barkod uygun değil, lütfen tekrar kontrol edin",
 ];

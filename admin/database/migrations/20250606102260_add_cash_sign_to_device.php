@@ -31,10 +31,16 @@ class AddCashSignToDevice extends Migrator
         $table = $this->table('device');
         if (!$table->hasColumn('cash_sign')) {
             $table->addColumn('cash_sign', 'string', ['default' => '', 'comment' => '收银终端标识', 'after' => 'user_agent']);
-            $table->addColumn('cash_box_id', 'string', ['default' => '', 'comment' => '现金箱ID', 'after' => 'cash_sign']);
-            $table->addColumn('access_token', 'string', ['default' => '', 'comment' => '访问令牌', 'after' => 'cash_box_id']);
-            $table->addColumn('queue_url', 'string', ['default' => '', 'comment' => '关联队列url', 'after' => 'access_token']);
-            $table->update();
         }
+        if (!$table->hasColumn('cash_box_id')) {
+            $table->addColumn('cash_box_id', 'string', ['default' => '', 'comment' => '现金箱ID', 'after' => 'cash_sign']);
+        }
+        if (!$table->hasColumn('access_token')) {
+            $table->addColumn('access_token', 'string', ['default' => '', 'comment' => '访问令牌', 'after' => 'cash_box_id']);
+        }
+        if (!$table->hasColumn('queue_url')) {
+            $table->addColumn('queue_url', 'string', ['default' => '', 'comment' => '关联队列url', 'after' => 'access_token']);
+        }
+        $table->update();
     }
 }

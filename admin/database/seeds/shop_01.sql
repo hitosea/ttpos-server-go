@@ -1439,6 +1439,18 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer_log` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 8 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '打印日志表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_printer_log_data` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) DEFAULT 0 COMMENT '唯一ID',
+  `log_uuid` bigint(20) DEFAULT 0 COMMENT '打印日志UUID',
+  `data` longtext DEFAULT NULL COMMENT '打印数据',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `log_id` (`log_uuid`)
+) ENGINE=InnoDB AUTO_INCREMENT=198 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='打印日志数据表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_product_printer` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品打印机ID',
@@ -2133,5 +2145,113 @@ CREATE TABLE IF NOT EXISTS `ttpos_lan_printer_scan` (
   `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='局域网打印机扫描表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_marketing_activity` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) DEFAULT 0 COMMENT '活动唯一ID',
+  `name` varchar(2500) DEFAULT '' COMMENT '活动名称',
+  `type` int(1) DEFAULT 0 COMMENT '活动类型 0邀请有礼 1积分商城',
+  `multi_language_name_uuid` bigint(20) DEFAULT 0 COMMENT '活动名称多语言uuid',
+  `description` varchar(5000) DEFAULT '' COMMENT '活动描述',
+  `multi_language_desc_uuid` bigint(20) DEFAULT 0 COMMENT '活动文案多语言uuid',
+  `start_time` int(11) DEFAULT 0 COMMENT '活动开始时间',
+  `end_time` int(11) DEFAULT 0 COMMENT '活动结束时间',
+  `reward_condition_amount` decimal(14,2) DEFAULT 0.00 COMMENT '奖励条件金额',
+  `is_open_reward_limit` int(1) DEFAULT 0 COMMENT '是否开启奖励次数限制 0否 1是',
+  `reward_limit` int(11) DEFAULT 0 COMMENT '奖励次数限制',
+  `is_invalid` int(11) DEFAULT 0 COMMENT '是否失效 0否 1是',
+  `image_base64` text DEFAULT NULL COMMENT '活动图片base64',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员营销-活动表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_marketing_activity_consumption` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) DEFAULT 0 COMMENT '消费记录唯一ID',
+  `activity_uuid` bigint(20) DEFAULT 0 COMMENT '活动uuid',
+  `referrer_uuid` bigint(20) DEFAULT 0 COMMENT '推荐人uuid',
+  `consumer_uuid` bigint(20) DEFAULT 0 COMMENT '消费人uuid',
+  `consumption_amount` decimal(14,2) DEFAULT 0.00 COMMENT '消费金额',
+  `reward_amount` decimal(14,2) DEFAULT 0.00 COMMENT '奖励金额',
+  `reward_status` int(1) DEFAULT 0 COMMENT '奖励状态 0未发放 1已发放',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='活动消费记录表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_marketing_activity_prize` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) DEFAULT 0 COMMENT '礼品唯一ID',
+  `activity_uuid` bigint(20) DEFAULT 0 COMMENT '活动uuid',
+  `prize_type` int(1) DEFAULT 0 COMMENT '奖品类型',
+  `prize_uuid` bigint(20) DEFAULT 0 COMMENT '奖品uuid',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='活动礼品表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_marketing_coupon` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) DEFAULT 0 COMMENT '优惠券唯一ID',
+  `name` varchar(50) DEFAULT '' COMMENT '优惠券名称',
+  `sort` int(11) DEFAULT 0 COMMENT '排序, 1-99',
+  `type` varchar(20) DEFAULT '' COMMENT '优惠券类型: deduction - 抵扣券',
+  `deduction_type` varchar(20) DEFAULT '' COMMENT '抵扣类型: taxed - 税后抵扣',
+  `amount` decimal(14,2) DEFAULT 0.00 COMMENT '优惠券金额',
+  `count` int(11) DEFAULT 0 COMMENT '优惠券数量, 最大999999',
+  `day_start_time` varchar(5) DEFAULT '' COMMENT '每日适用时段开始时间, hh:mm 格式',
+  `day_end_time` varchar(5) DEFAULT '' COMMENT '每日适用时段结束时间, hh:mm 格式',
+  `requirement` varchar(20) DEFAULT '' COMMENT '获得优惠券所需条件: none - 都可以获取; marketing - 营销活动',
+  `valid_start_time` int(11) DEFAULT 0 COMMENT '优惠券有效开始时间, requirement = none 时有效',
+  `valid_end_time` int(11) DEFAULT 0 COMMENT '优惠券有效结束时间, requirement = none 时有效',
+  `valid_days` int(11) DEFAULT 0 COMMENT '领取优惠券后n天内有效, requirement = marketing 时有效',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员营销-优惠券表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_marketing_coupon_record` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) DEFAULT 0 COMMENT '优惠券记录唯一ID',
+  `coupon_uuid` bigint(20) DEFAULT 0 COMMENT '优惠券唯一ID',
+  `activity_uuid` bigint(20) DEFAULT 0 COMMENT '活动uuid',
+  `serial_no` varchar(255) DEFAULT '' COMMENT '记录编号, yyMMddhhmmssxxxx, 比如2506061456550001这样, 后四位是0000到9999依次递增, 循环使用',
+  `type` int(11) DEFAULT 1 COMMENT '记录类型：1-首次添加、2-调整添加、3-调整扣减',
+  `count` int(11) DEFAULT 0 COMMENT '变动数量',
+  `left_count` int(11) DEFAULT 0 COMMENT '剩余有效张数',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  `member_uuid` bigint(20) DEFAULT 0 COMMENT '会员uuid',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=361 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员营销-优惠券记录表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_member_coupon` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) DEFAULT 0 COMMENT '唯一ID',
+  `member_uuid` bigint(20) DEFAULT 0 COMMENT '会员uuid',
+  `coupon_uuid` bigint(20) DEFAULT 0 COMMENT '优惠券uuid',
+  `name` varchar(50) DEFAULT '' COMMENT '优惠券名称',
+  `deduction_type` varchar(20) DEFAULT '' COMMENT '抵扣类型: taxed - 税后抵扣',
+  `type` varchar(20) DEFAULT '' COMMENT '优惠券类型: deduction - 抵扣券',
+  `day_start_time` varchar(5) DEFAULT '' COMMENT '每日适用时段开始时间, hh:mm 格式',
+  `day_end_time` varchar(5) DEFAULT '' COMMENT '每日适用时段结束时间, hh:mm 格式',
+  `valid_start_time` int(11) DEFAULT 0 COMMENT '优惠券有效开始时间, requirement = none 时有效',
+  `valid_end_time` int(11) DEFAULT 0 COMMENT '优惠券有效结束时间, requirement = none 时有效',
+  `amount` decimal(14,2) DEFAULT 0.00 COMMENT '优惠券面值',
+  `status` int(1) DEFAULT 0 COMMENT '优惠券状态 0未使用 1已使用',
+  `start_time` int(11) DEFAULT 0 COMMENT '优惠券开始时间',
+  `end_time` int(11) DEFAULT 0 COMMENT '优惠券结束时间',
+  `use_time` int(11) DEFAULT 0 COMMENT '优惠券使用时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=364 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员优惠券表';
 
 SET FOREIGN_KEY_CHECKS = 1;

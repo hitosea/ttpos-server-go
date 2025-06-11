@@ -51,10 +51,10 @@
         range-separator="~"
         :start-placeholder="$t('开始日期')"
         :end-placeholder="$t('结束日期')"
-        :disabledDate="status == 0 ? disabledDate : null"
-        :disabled-hours="(role, date) => (role === 'start' && status == 0 ? dHours() : [])"
-        :disabled-minutes="(role, date) => (role === 'start' && status == 0 ? dMinutes() : [])"
-        :disabled-seconds="(role, date) => (role === 'start' && status == 0 ? dSeconds() : [])"
+        :disabledDate="disabledDate"
+        :disabled-hours="(role, date) => (role === 'start' ? dHours() : [])"
+        :disabled-minutes="(role, date) => (role === 'start' ? dMinutes() : [])"
+        :disabled-seconds="(role, date) => (role === 'start' ? dSeconds() : [])"
       />
       <el-date-picker
         v-if="status == 1"

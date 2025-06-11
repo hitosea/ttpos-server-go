@@ -108,7 +108,7 @@ class MarketingCouponService
     {
         $lastRecord = MarketingCouponRecord::order('create_time', 'desc')->limit(1)->find();
         $lastRecordSerialNo = null;
-        if (strlen($lastRecord->serial_no) == 16) {
+        if ($lastRecord && strlen($lastRecord->serial_no) == 16) {
             $lastRecordSerialNo = $lastRecord->serial_no;
         }
         (new MarketingCouponRecord)->save([
