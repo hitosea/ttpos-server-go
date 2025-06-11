@@ -90,22 +90,8 @@
             <el-input class="max-w460" @input="(e) => handleValueInput(e, 0)" :placeholder="$t('请输入赠送积分比例')" v-model="form.shopping_gift_rules[0].value"></el-input>
             <span>%</span>
           </el-form-item>
-          <el-form-item
-            :label="$t('赠送积分所需付款金额')"
-            prop="shopping_gift_rules.0.payment_amount_requirement"
-            :rules="[{ required: true, message: $t('请输入赠送积分所需付款金额') }]"
-          >
-            <el-input
-              class="max-w460"
-              @input="(e) => handleMoneyInput(e, 0)"
-              :placeholder="$t('请输入金额')"
-              v-model="form.shopping_gift_rules[0].payment_amount_requirement"
-            ></el-input>
-            <div class="lh18 mt10 gray9">
-              <p>{{ $t('注：请输入大于0的数字') }}</p>
-            </div>
-          </el-form-item>
         </template>
+
         <template v-if="form.shopping_gift_rules[0].is_member_level_related == 1">
           <el-form-item
             v-for="(item, levelIndex) in form.shopping_gift_rules[0].member_levels"
@@ -121,7 +107,21 @@
             </div>
           </el-form-item>
         </template>
-
+        <el-form-item
+          :label="$t('赠送积分所需付款金额')"
+          prop="shopping_gift_rules.0.payment_amount_requirement"
+          :rules="[{ required: true, message: $t('请输入赠送积分所需付款金额') }]"
+        >
+          <el-input
+            class="max-w460"
+            @input="(e) => handleMoneyInput(e, 0)"
+            :placeholder="$t('请输入金额')"
+            v-model="form.shopping_gift_rules[0].payment_amount_requirement"
+          ></el-input>
+          <div class="lh18 mt10 gray9">
+            <p>{{ $t('注：请输入大于0的数字') }}</p>
+          </div>
+        </el-form-item>
         <el-form-item :label="$t('适用就餐类型')" prop="shopping_gift_rules.0.meal_type" :rules="[{ required: true, message: $t('请选择适用就餐类型') }]">
           <el-checkbox-group v-model="form.shopping_gift_rules[0].meal_type">
             <el-checkbox label="non-buffet">{{ $t('非自助餐') }}</el-checkbox>
@@ -162,18 +162,6 @@
           <el-form-item :label="$t('赠送积分')" prop="shopping_gift_rules.1.value" :rules="[{ required: true, message: $t('请输入赠送积分') }]">
             <el-input class="max-w460" @input="(e) => handleValuesInput(e, 1)" :placeholder="$t('请输入积分赠送')" v-model="form.shopping_gift_rules[1].value"></el-input>
             <span> {{ $t('积分/人') }}</span>
-          </el-form-item>
-          <el-form-item
-            :label="$t('赠送积分所需付款金额')"
-            prop="shopping_gift_rules.1.payment_amount_requirement"
-            :rules="[{ required: true, message: $t('请输入赠送积分所需付款金额') }]"
-          >
-            <el-input
-              class="max-w460"
-              @input="(e) => handleMoneyInput(e, 1)"
-              :placeholder="$t('请输入金额')"
-              v-model="form.shopping_gift_rules[1].payment_amount_requirement"
-            ></el-input>
           </el-form-item>
         </template>
 
