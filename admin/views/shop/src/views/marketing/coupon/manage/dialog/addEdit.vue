@@ -5,7 +5,23 @@
         {{ $t('基础信息') }}
       </div>
       <!--店员修改-->
-      <el-form-item for="no_click" :label="$t('名称')" prop="name" :rules="[{ required: true, message: $t('请输入优惠券名称') }]">
+      <el-form-item
+        for="no_click"
+        :label="$t('名称')"
+        prop="name"
+        :rules="[
+          { required: true, message: $t('请输入优惠券名称') },
+          {
+            validator: (rule, value, callback) => {
+              if (value.trim() === '') {
+                callback(new Error($t('请输入优惠券名称')));
+              }
+              callback();
+            },
+            trigger: 'blur',
+          },
+        ]"
+      >
         <el-input class="percent-w100" v-model="form.name" :maxlength="50" :placeholder="$t('请输入优惠券名称')"></el-input>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('排序')" prop="sort">
