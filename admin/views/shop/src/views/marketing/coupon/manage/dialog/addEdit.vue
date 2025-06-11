@@ -41,10 +41,10 @@
         </el-radio-group>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('金额')" prop="amount" :rules="[{ required: true, message: $t('请输入优惠券金额') }]">
-        <numInput width="m-full" :min="0" :max="999999" :precision="2" v-model:valueData="form.amount" :value="form.amount" :placeholder="$t('请输入优惠券金额')"></numInput>
+        <numInput width="m-full" :min="1" :max="999999" :precision="2" v-model:valueData="form.amount" :value="form.amount" :placeholder="$t('请输入优惠券金额')"></numInput>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('数量')" prop="count" :rules="[{ required: true, message: $t('请输入优惠券数量') }]">
-        <numInput width="m-full" :min="0" :max="999999" :precision="0" :placeholder="$t('请输入优惠券数量')" v-model:valueData="form.count" :value="form.count"></numInput>
+        <numInput width="m-full" :min="1" :max="999999" :precision="0" :placeholder="$t('请输入优惠券数量')" v-model:valueData="form.count" :value="form.count"></numInput>
       </el-form-item>
       <el-form-item
         for="no_click"
