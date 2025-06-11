@@ -1,6 +1,6 @@
 <template>
-  <div class="cash">
-    <div class="form-div" v-loading="loading">
+  <div class="cash" v-loading="loading">
+    <div class="form-div">
       <el-form size="small" ref="form" :model="form" label-position="top">
         <el-form-item for="no_click" :label="$t('轮播内容')" prop="carousel" :rules="[{ required: false, message: '' }]">
           <div class="draggable-list">

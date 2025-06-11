@@ -1,6 +1,6 @@
 <template>
-  <div class="kitchen">
-    <div class="form-div" v-loading="loading">
+  <div class="kitchen" v-loading="loading">
+    <div class="form-div">
       <el-form size="small" ref="form" :model="form" label-position="top">
         <el-form-item for="no_click" :label="$t('厨显功能：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_open">
