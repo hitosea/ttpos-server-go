@@ -93,6 +93,19 @@ type SaleOrder struct {
 	index int `gorm:"-" json:"index,omitempty"`
 }
 
+// 订单是否使用了会员余额支付
+func (model *SaleOrder) HasBalancePayment() bool {
+	for _, paymentOrder := range model.PaymentOrders {
+		if paymentOrder.IsDelete() {
+			continue
+		}
+		if paymentOrder.PaymentMethod.Code == constant.PaymentMethodCodeBalance {
+			return true
+		}
+	}
+	return false
+}
+
 // 订单是否使用了现金支付
 func (model *SaleOrder) HasCashPayment() bool {
 	for _, paymentOrder := range model.PaymentOrders {
@@ -441,14 +454,14 @@ func (model *SaleOrder) SetGiftPointsRate(mealNum int, rule settingResp.PointsRu
 // CalcMemberPoint 计算会员积分. 会员积分=订单最终应收金额*积分赠送比例
 func (model *SaleOrder) CalcMemberPoint(mealNum int, rule settingResp.PointsRule, finalPrice ...float64) float64 {
 	// 如果订单使用了现金支付，且积分赠送规则中使用会员余额支付不赠送积分时，则不发放积分
-	if model.HasCashPayment() && !rule.BalancePaymentGetPoints {
+	if model.HasBalancePayment() && !rule.BalancePaymentGetPoints {
 		return 0
 	}
 
 	// 如果积分是按人数赠送的话
 	if model.GiftPointsType == 1 {
 		// AC17:如果订单不是主单，则不发放积分.
-		if model.GetIndex() != 1 {
+		if model.GetIndex() > 1 {
 			return 0
 		}
 		return decimal.NewFromInt(int64(mealNum)).Mul(decimal.NewFromFloat(model.GiftPointsRate)).Round(2).InexactFloat64()

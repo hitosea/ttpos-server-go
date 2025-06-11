@@ -112,11 +112,15 @@ type MemberLevelItem struct {
 	Value string `json:"value"` // 积分比例/积分数量，在后台修改时，根据type去设置对应会员等级的points_rate或者points_quantity
 }
 
-func (item *MemberLevelItem) getValue() float64 {
+func (item *MemberLevelItem) getValue(ruleType uint8) float64 {
 	if item.Value == "" {
 		return 0
 	}
 	value, _ := strconv.ParseFloat(item.Value, 64)
+	if ruleType == constant.RuleTypePaymentAmount {
+		// 按付款金额比例赠送, value值的格式99.99，要除以100, 因为前端传过来的是百分比0-100,计算的时候值是0-1
+		return decimal.NewFromFloat(value).Div(decimal.NewFromInt(100)).Round(4).InexactFloat64()
+	}
 	return value
 }
 
@@ -308,7 +312,7 @@ func (p *Points) GetPointsGiftRule(isBufferOrder bool, memberLevelUuid uint64) P
 		match := false // 判断是否找到对应的等级
 		for _, level := range targetRule.MemberLevels {
 			if level.Uuid == memberLevelUuid {
-				value = level.getValue() // 使用对应等级的值
+				value = level.getValue(targetRule.getType()) // 使用对应等级的值
 				match = true
 				break
 			}

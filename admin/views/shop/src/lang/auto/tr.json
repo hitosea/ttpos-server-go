@@ -1721,5 +1721,8 @@
     "核销扣减": "Yazılı kesinti",
     "订单积分抵扣": "Sipariş puanı indirimi",
     "抵扣反结账": "İade faturalandırma",
-    "注：该规则下默认开启退款自动退积分，若开启了积分自动抵扣消费金额则需要订单退款时手动扣积分": "Not: Bu kural altında, geri ödeme otomatik puan iadesi varsayılan olarak açılır, ancak puan kullanarak harcama tutarı otomatik olarak düşüldüyse, sipariş iade edilirken elle puan düşülmesi gerekmektedir."
+    "注：该规则下默认开启退款自动退积分，若开启了积分自动抵扣消费金额则需要订单退款时手动扣积分": "Not: Bu kural altında, geri ödeme otomatik puan iadesi varsayılan olarak açılır, ancak puan kullanarak harcama tutarı otomatik olarak düşüldüyse, sipariş iade edilirken elle puan düşülmesi gerekmektedir.",
+    "请输入优惠券名称": "Kupon adını giriniz",
+    "请输入优惠券金额": "Kupon tutarını giriniz",
+    "请输入优惠券数量": "Kupon miktarını giriniz"
 }
