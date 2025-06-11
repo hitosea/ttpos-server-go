@@ -40,6 +40,61 @@ type PrinterLog struct {
 	PrinterLogData      *PrinterLogData      `gorm:"foreignKey:LogUuid;references:Uuid"`            // 关联 printer_log_data
 }
 
+// 压缩数据
+func (model *PrinterLog) CompressData() string {
+	data := model.Data
+	if data == "" {
+		return data
+	}
+	var buf bytes.Buffer
+	zw, err := gzip.NewWriterLevel(&buf, gzip.BestCompression) // 或使用gzip.DefaultCompression
+	if err != nil {
+		return ""
+	}
+	_, err = zw.Write([]byte(data))
+	if err != nil {
+		return ""
+	}
+	if err := zw.Close(); err != nil {
+		return ""
+	}
+	// 将压缩后的二进制数据转换为Base64编码的字符串
+	encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
+	return "GZIP:" + encoded
+
+}
+
+// 还原压缩的数据
+func (model *PrinterLog) DecompressData() string {
+	if model.Data == "" {
+		return ""
+	}
+	// 检查数据是否是压缩过的
+	if !strings.HasPrefix(model.Data, "GZIP:") {
+		return model.Data // 如果不是压缩过的数据，直接返回
+	}
+	// 提取Base64编码的部分
+	encoded := strings.TrimPrefix(model.Data, "GZIP:")
+	// 解码Base64
+	compressed, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return model.Data // 如果解码失败，返回原始数据
+	}
+	// 解压数据
+	zr, err := gzip.NewReader(bytes.NewReader(compressed))
+	if err != nil {
+		return model.Data
+	}
+	defer zr.Close()
+	//
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(zr)
+	if err != nil {
+		return model.Data
+	}
+	return buf.String()
+}
+
 // GetCopies 获取打印份数
 func (model *PrinterLog) GetCopies() uint {
 	if model.Copies > 0 {
@@ -100,59 +155,4 @@ func (model *PrinterLog) CalculationTime() int64 {
 		return 200
 	}
 	return t
-}
-
-// 压缩数据
-func (model *PrinterLog) CompressData() string {
-	data := model.Data
-	if data == "" {
-		return data
-	}
-	var buf bytes.Buffer
-	zw, err := gzip.NewWriterLevel(&buf, gzip.BestCompression) // 或使用gzip.DefaultCompression
-	if err != nil {
-		return ""
-	}
-	_, err = zw.Write([]byte(data))
-	if err != nil {
-		return ""
-	}
-	if err := zw.Close(); err != nil {
-		return ""
-	}
-	// 将压缩后的二进制数据转换为Base64编码的字符串
-	encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
-	return "GZIP:" + encoded
-
-}
-
-// 还原压缩的数据
-func (model *PrinterLog) DecompressData() string {
-	if model.Data == "" {
-		return ""
-	}
-	// 检查数据是否是压缩过的
-	if !strings.HasPrefix(model.Data, "GZIP:") {
-		return model.Data // 如果不是压缩过的数据，直接返回
-	}
-	// 提取Base64编码的部分
-	encoded := strings.TrimPrefix(model.Data, "GZIP:")
-	// 解码Base64
-	compressed, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil {
-		return model.Data // 如果解码失败，返回原始数据
-	}
-	// 解压数据
-	zr, err := gzip.NewReader(bytes.NewReader(compressed))
-	if err != nil {
-		return model.Data
-	}
-	defer zr.Close()
-	//
-	var buf bytes.Buffer
-	_, err = buf.ReadFrom(zr)
-	if err != nil {
-		return model.Data
-	}
-	return buf.String()
 }
