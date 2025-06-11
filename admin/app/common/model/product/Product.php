@@ -1295,7 +1295,6 @@ class Product extends BaseModel
                     'attribute'
                 ]
             ],
-            // todo 兼容
             'feed' => [
                 'productSauce' => [
                     'relatedMaterial' => [

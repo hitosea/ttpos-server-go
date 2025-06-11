@@ -64,13 +64,13 @@ class Product extends ProductModel
                 }
                 $firstError[$errorMsg1][] = $barcodeError1;
 
-                // 条码格式验证
-                $errorMsg2 = '商品条码只能为数字、字母、数字+字母组合';
+                // 条码格式验证，12或13位数字
+                $errorMsg2 = '输入条形码不合规，请重新检查';
                 $barcodeError2 = true;
                 if (!isset($firstError[$errorMsg2])) {
                     $firstError[$errorMsg2] = [];
                 }
-                if ($info['barcode'] && !preg_match('/^[0-9a-zA-Z]+$/', $info['barcode'])) {
+                if ($info['barcode'] && !preg_match('/^[0-9]{12,13}$/', $info['barcode'])) {
                     $barcodeError2 = false;
                 }
                 $firstError[$errorMsg2][] = $barcodeError2;
@@ -190,7 +190,7 @@ class Product extends ProductModel
         $data['open_discount'] = $data['is_enable_grade'] ?? 0; // 是否开启会员折扣, 0-否 1-是
         $data['price'] = $data['sku'][0]['purchase_price'] ?? 0;; // 价格
         $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
-        $data['barcode_value'] = $data['sku'][0]['barcode'] ?? 0; // 条形码值
+        $data['barcode_value'] = $data['sku'][0]['barcode'] ?? ''; // 条形码值
         $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
         $data['is_show_cashier'] = $data['is_show_cashier'] != 2 ? 1 : 0;
         $data['is_show_tablet'] = $data['is_show_tablet'] != 2 ? 1 : 0;
@@ -332,13 +332,13 @@ class Product extends ProductModel
                 }
                 $firstError[$errorMsg1][] = $barcodeError1;
 
-                // 条码格式验证
-                $errorMsg2 = '商品条码只能为数字、字母、数字+字母组合';
+                // 条码格式验证，12或13位数字
+                $errorMsg2 = '输入条形码不合规，请重新检查';
                 $barcodeError2 = true;
                 if (!isset($firstError[$errorMsg2])) {
                     $firstError[$errorMsg2] = [];
                 }
-                if ($info['barcode'] && !preg_match('/^[0-9a-zA-Z]+$/', $info['barcode'])) {
+                if ($info['barcode'] && !preg_match('/^[0-9]{12,13}$/', $info['barcode'])) {
                     $barcodeError2 = false;
                 }
                 $firstError[$errorMsg2][] = $barcodeError2;
