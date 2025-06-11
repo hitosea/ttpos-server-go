@@ -37,6 +37,7 @@ type PrinterLog struct {
 	SaleOrder           *SaleOrder           `gorm:"foreignKey:RelatedUuid;references:Uuid"`        // 关联 sale_order
 	ProductPrinter      *ProductPrinter      `gorm:"foreignKey:ProductPrinterUuid;references:Uuid"` // 关联 sale_order
 	MemberRechargeOrder *MemberRechargeOrder `gorm:"foreignKey:RelatedUuid;references:Uuid"`        // 关联 sale_order
+	PrinterLogData      *PrinterLogData      `gorm:"foreignKey:LogUuid;references:Uuid"`            // 关联 printer_log_data
 }
 
 // GetCopies 获取打印份数
@@ -51,6 +52,54 @@ func (model *PrinterLog) GetCopies() uint {
 		return model.Printer.Copies
 	}
 	return 1
+}
+
+// 是否收银打印机
+func (model *PrinterLog) IsCashierPrinter() bool {
+	return slices.Contains([]string{
+		constant.PrinterTypeCashierCompax,
+		constant.PrinterTypeCashierSunmi,
+	}, model.PrinterType) || !slices.Contains([]string{
+		constant.PrinterTypeFeiEYun,
+		constant.PrinterTypeFeiEYunTag,
+		constant.PrinterTypePrintCenter,
+		constant.PrinterTypeSunmiLan,
+		constant.PrinterTypeSunmiCloud,
+		constant.PrinterTypeXPrinterLan,
+		constant.PrinterTypeXPrinterWifi,
+		constant.PrinterTypeCodesoftLan,
+		constant.PrinterTypeCodesoftWifi,
+	}, model.PrinterType)
+}
+
+// 是否usb打印机
+func (model *PrinterLog) IsUsbPrinter() bool {
+	if model.Printer == nil {
+		return false
+	}
+	return model.Printer.IsUsb == 1
+}
+
+// 计算打印耗时
+func (model *PrinterLog) CalculationTime() int64 {
+	//
+	t := int64(200)
+	speed := 200
+	//
+	if model.PrinterType == constant.PrinterTypeXPrinterWifi {
+		speed = 85
+	} else if model.PrinterType == constant.PrinterTypeCodesoftWifi {
+		speed = 70
+	} else if model.PrinterType == constant.PrinterTypeCodesoftLan {
+		speed = 90
+	}
+	//
+	t = int64(math.Ceil(float64(len(model.Data)) / float64(speed)))
+	//
+	if t < 200 {
+		return 200
+	}
+	return t
 }
 
 // 压缩数据
@@ -106,52 +155,4 @@ func (model *PrinterLog) DecompressData() string {
 		return model.Data
 	}
 	return buf.String()
-}
-
-// 是否收银打印机
-func (model *PrinterLog) IsCashierPrinter() bool {
-	return slices.Contains([]string{
-		constant.PrinterTypeCashierCompax,
-		constant.PrinterTypeCashierSunmi,
-	}, model.PrinterType) || !slices.Contains([]string{
-		constant.PrinterTypeFeiEYun,
-		constant.PrinterTypeFeiEYunTag,
-		constant.PrinterTypePrintCenter,
-		constant.PrinterTypeSunmiLan,
-		constant.PrinterTypeSunmiCloud,
-		constant.PrinterTypeXPrinterLan,
-		constant.PrinterTypeXPrinterWifi,
-		constant.PrinterTypeCodesoftLan,
-		constant.PrinterTypeCodesoftWifi,
-	}, model.PrinterType)
-}
-
-// 是否usb打印机
-func (model *PrinterLog) IsUsbPrinter() bool {
-	if model.Printer == nil {
-		return false
-	}
-	return model.Printer.IsUsb == 1
-}
-
-// 计算打印耗时
-func (model *PrinterLog) CalculationTime() int64 {
-	//
-	t := int64(200)
-	speed := 200
-	//
-	if model.PrinterType == constant.PrinterTypeXPrinterWifi {
-		speed = 85
-	} else if model.PrinterType == constant.PrinterTypeCodesoftWifi {
-		speed = 70
-	} else if model.PrinterType == constant.PrinterTypeCodesoftLan {
-		speed = 90
-	}
-	//
-	t = int64(math.Ceil(float64(len(model.Data)) / float64(speed)))
-	//
-	if t < 200 {
-		return 200
-	}
-	return t
 }

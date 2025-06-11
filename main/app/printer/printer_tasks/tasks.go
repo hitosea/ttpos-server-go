@@ -103,7 +103,15 @@ func (t *printerTask) ExecutePrinter(companyUuid uint64, printerLog model.Printe
 		if copies == 0 {
 			copies = 1
 		}
-		content := printerLog.DecompressData()
+		content := func() string {
+			if printerLog.PrinterLogData != nil {
+				return printerLog.PrinterLogData.DecompressData()
+			}
+			if printerLog.Data != "-" && printerLog.Data != "" {
+				return printerLog.DecompressData()
+			}
+			return ""
+		}()
 		configJson := printerLog.Printer.GetConfigJson()
 		for i := uint(0); i < copies; i++ {
 			// 执行打印
