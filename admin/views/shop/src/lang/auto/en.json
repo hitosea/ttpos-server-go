@@ -1970,5 +1970,6 @@
     "注：该规则下默认开启退款自动退积分，若开启了积分自动抵扣消费金额则需要订单退款时手动扣积分": "Note: Under this rule, refunding automatically returns points by default. If you have enabled automatic point deduction for payment, you will need to manually deduct points when refunding an order.",
     "请输入优惠券名称": "Please enter the coupon name",
     "请输入优惠券金额": "Please enter the coupon amount",
-    "请输入优惠券数量": "Please enter the coupon quantity"
+    "请输入优惠券数量": "Please enter the coupon quantity",
+    "cn": "Length of 12-13 digit number"
 }

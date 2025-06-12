@@ -4,8 +4,8 @@
       <!--搜索表单-->
       <div class="common-seach-wrap flex">
         <el-form size="small" :inline="true" :model="form" class="demo-form-inline">
-          <el-form-item :label="$t('活动名称')">
-            <el-input v-model="form.name" :placeholder="$t('请输入活动名称')" @input="onSearch"></el-input>
+          <el-form-item :label="$t('优惠券名称')">
+            <el-input v-model="form.name" :placeholder="$t('请输入优惠券名称')" @input="onSearch"></el-input>
           </el-form-item>
           <el-form-item>
             <el-button size="small" type="primary" icon="Search" class="search-button" @click="onSearch">

@@ -58,12 +58,16 @@
             </template>
           </el-table-column>
           <el-table-column prop="grade.name" :label="$t('会员等级')"></el-table-column>
-          <el-table-column prop="pay_money" :label="$t('累积消费金额')" width="120"></el-table-column>
+          <el-table-column prop="pay_money" :label="$t('累积消费金额')" width="120">
+            <template #default="scope">
+              <span>{{ this.$formatPrice(scope.row.pay_money) }}</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="gender" :label="$t('性别')" width="50">
             <template #default="scope">
               <span v-if="scope.row.gender == 1">{{ $t('男') }}</span>
               <span v-else-if="scope.row.gender == 0">{{ $t('女') }}</span>
-              <span v-else-if="scope.row.gender == 2">{{ $t('未知') }}</span>
+              <span v-else-if="scope.row.gender == 2">{{ $t('保密') }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="create_time" :label="$t('注册时间')" width="140"></el-table-column>

@@ -6,6 +6,7 @@
       <UniqueNameForm
         ref="activityNameFormRef"
         :labelPrefix="$t('活动名称')"
+        :placeholder="$t('请输入活动名称')"
         width="460px"
         :maxlength="50"
         :overrideLanguages="form.name"
@@ -20,6 +21,7 @@
         ref="activityDescriptionFormRef"
         :labelPrefix="$t('活动文案')"
         :disabled="status == 1"
+        :placeholder="$t('请输入活动文案')"
         width="460px"
         :maxlength="100"
         :overrideLanguages="form.description"
