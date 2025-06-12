@@ -29,7 +29,8 @@ const (
 // 测试初始化函数
 func setupTest(t *testing.T) context.Context {
 	// 初始化存储桶
-	ctx, err := InitBucket(testBucketName, testCredentialsFile)
+	ctx := context.Background()
+	ctx, err := InitBucket(ctx, testBucketName, testCredentialsFile)
 	if err != nil {
 		t.Skipf("跳过测试：初始化存储桶失败: %v", err)
 	}
@@ -46,13 +47,14 @@ func teardownTest() {
 
 // 测试初始化存储桶
 func TestInitBucket(t *testing.T) {
-	_, err := InitBucket(testBucketName, "invalid-credentials.json")
+	ctx := context.Background()
+	_, err := InitBucket(ctx, testBucketName, "invalid-credentials.json")
 	if err == nil {
 		t.Error("期望初始化失败，但成功了")
 	}
 
 	// 测试有效的凭证文件
-	_, err = InitBucket(testBucketName, testCredentialsFile)
+	_, err = InitBucket(ctx, testBucketName, testCredentialsFile)
 	if err != nil {
 		t.Fatalf("初始化存储桶失败: %v", err)
 	}

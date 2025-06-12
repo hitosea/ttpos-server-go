@@ -17,7 +17,7 @@ var (
 )
 
 // InitBucket 初始化存储桶
-func InitBucket(bucketNameStr string, credentialsFile string) (context.Context, error) {
+func InitBucket(ctx context.Context, bucketNameStr string, credentialsFile string) (context.Context, error) {
 	if bucketNameStr == "" || credentialsFile == "" {
 		return nil, fmt.Errorf("创建存储客户端失败")
 	}
@@ -26,7 +26,6 @@ func InitBucket(bucketNameStr string, credentialsFile string) (context.Context, 
 	bucketName = bucketNameStr
 
 	// 创建存储客户端
-	ctx := context.Background()
 	bucketClient, err = storage.NewClient(ctx, option.WithCredentialsFile(credentialsFile))
 	if err != nil {
 		return nil, fmt.Errorf("创建存储客户端失败: %v", err)
@@ -122,13 +121,13 @@ func UploadFile(ctx context.Context, objectName string, file io.Reader, expirati
 		return "", fmt.Errorf("关闭写入器失败: %v", err)
 	}
 
-	// 生成签名URL，默认有效期永久（请注意：签名URL是临时的，最大有效期取决于服务帐号和设置）
-	url, err := GetSignedURL(ctx, objectName, time.Duration(expirationDays)*24*time.Hour)
-	if err != nil {
-		return "", fmt.Errorf("生成签名URL失败: %v", err)
-	}
+	// // 生成签名URL，默认有效期永久（请注意：签名URL是临时的，最大有效期取决于服务帐号和设置）
+	// url, err := GetSignedURL(ctx, objectName, time.Duration(expirationDays)*24*time.Hour)
+	// if err != nil {
+	// 	return "", fmt.Errorf("生成签名URL失败: %v", err)
+	// }
 
-	return url, nil
+	return objectName, nil
 }
 
 // GetFileExpiration 获取文件的过期时间
@@ -157,6 +156,23 @@ func DownloadFile(ctx context.Context, objectName string) (io.ReadCloser, error)
 		return nil, err
 	}
 	return reader, nil
+}
+
+// DownloadFile 从存储桶下载文件
+func DownloadFileContent(ctx context.Context, objectName string) (string, error) {
+	bucket := GetBucket(ctx)
+	obj := bucket.Object(objectName)
+	reader, err := obj.NewReader(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer reader.Close()
+
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }
 
 // DeleteFile 从存储桶删除文件

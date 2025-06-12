@@ -1,9 +1,9 @@
 package model
 
 import (
+	"context"
 	"crypto/md5"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 	"time"
@@ -34,9 +34,10 @@ func (model *PrinterLogData) SetData(companyUuid uint64, data string) string {
 
 	// 获取文件名
 	fileName := fmt.Sprintf("%d/print_data/%d.txt", companyUuid, model.LogUuid)
+	md5Key := fmt.Sprintf("%x", md5.Sum([]byte(fileName)))
 
 	// 存到redis
-	err := cache.Global.Set(fmt.Sprintf("%x", md5.Sum([]byte(fileName))), data, 3*time.Minute)
+	err := cache.Global.Set(md5Key, data, 3*time.Minute)
 	if err != nil {
 		logger.Logger.Error("存到redis失败", zap.Error(err))
 		fmt.Println("存到redis失败", err)
@@ -46,8 +47,13 @@ func (model *PrinterLogData) SetData(companyUuid uint64, data string) string {
 
 	// 上传到谷歌云
 	go func() {
+		// 设置10秒超时
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel() // 确保资源释放
+
 		// 初始化存储桶
 		ctx, err := google_bucket.InitBucket(
+			ctx,
 			config.GoogleBucket.GooglePrintBucketName,
 			config.GoogleBucket.GetGoogleApplicationCredentialsFileName(),
 		)
@@ -88,54 +94,48 @@ func (model *PrinterLogData) SetData(companyUuid uint64, data string) string {
 }
 
 func (model *PrinterLogData) GetData(isDelCache bool) string {
-	if model.Data == "" {
+	if model.Data == "" || !strings.HasSuffix(model.Data, ".txt") {
 		return model.Data
 	}
 
-	// 如果文件名是txt，则从redis或谷歌云下载
-	if strings.HasSuffix(model.Data, ".txt") {
-		md5 := fmt.Sprintf("%x", md5.Sum([]byte(model.Data)))
-		data, isExist := cache.Global.Get(md5)
-		if isExist {
-			model.Data = data.(string)
-			if isDelCache {
-				cache.Global.Del(md5)
-			}
-			return model.Data
+	// 添加缓存预热
+	md5Key := fmt.Sprintf("%x", md5.Sum([]byte(model.Data)))
+	if data, isExist := cache.Global.Get(md5Key); isExist {
+		model.Data = data.(string)
+		if isDelCache {
+			cache.Global.Del(md5Key)
 		}
-
-		// 下载文件
-		if !config.GoogleBucket.Verification() {
-			return ""
-		}
-		ctx, err := google_bucket.InitBucket(
-			config.GoogleBucket.GooglePrintBucketName,
-			config.GoogleBucket.GetGoogleApplicationCredentialsFileName(),
-		)
-		if err != nil {
-			logger.Logger.Error("初始化存储桶失败", zap.Error(err))
-			fmt.Println("初始化存储桶失败", err)
-			return ""
-		}
-		reader, err := google_bucket.DownloadFile(ctx, model.Data)
-		if err != nil {
-			logger.Logger.Error("下载文件失败", zap.Error(err))
-			fmt.Println("下载文件失败", err)
-			return ""
-		}
-		defer reader.Close()
-
-		// 读取内容
-		datas, err := io.ReadAll(reader)
-		if err != nil {
-			logger.Logger.Error("读取下载内容失败", zap.Error(err))
-			fmt.Println("读取下载内容失败", err)
-			return ""
-		}
-		return string(datas)
+		return model.Data
 	}
 
-	return model.Data
+	// 下载文件
+	if !config.GoogleBucket.Verification() {
+		return ""
+	}
+
+	// 设置10秒超时
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel() // 确保资源释放
+
+	ctx, err := google_bucket.InitBucket(
+		ctx,
+		config.GoogleBucket.GooglePrintBucketName,
+		config.GoogleBucket.GetGoogleApplicationCredentialsFileName(),
+	)
+	if err != nil {
+		logger.Logger.Error("初始化存储桶失败", zap.Error(err))
+		fmt.Println("初始化存储桶失败", err)
+		return ""
+	}
+
+	data, err := google_bucket.DownloadFileContent(ctx, model.Data)
+	if err != nil {
+		logger.Logger.Error("下载文件失败", zap.Error(err))
+		fmt.Println("下载文件失败", err)
+		return ""
+	}
+
+	return data
 }
 
 // 压缩数据
