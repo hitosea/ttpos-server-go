@@ -40,3 +40,6 @@ bin/*
 .DS_Store
 Thumbs.db
 .github/
+
+# 
+/credentials.json

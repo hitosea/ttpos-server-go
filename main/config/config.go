@@ -17,6 +17,7 @@ var Captcha CaptchaConf
 var Encrypt EncryptConf
 var Log LogConf
 var SMS SMSConf
+var GoogleBucket GoogleBucketConf
 
 func Init() error {
 	// 加载 .env 文件
@@ -29,12 +30,13 @@ func Init() error {
 
 	opt := copier.Option{IgnoreEmpty: true}
 
-	serverConf(opt)   // 服务器
-	databaseConf(opt) // 数据库
-	redisConf(opt)    // Redis
-	jwtConf(opt)      // JWT
-	logConf(opt)      // 日志
-	smsConf(opt)      // 短信
+	serverConf(opt)       // 服务器
+	databaseConf(opt)     // 数据库
+	redisConf(opt)        // Redis
+	jwtConf(opt)          // JWT
+	logConf(opt)          // 日志
+	smsConf(opt)          // 短信
+	googleBucketConf(opt) // 谷歌云
 
 	migrateDatabaseConf(opt) // 迁移数据库
 
@@ -171,5 +173,24 @@ func smsConf(opt copier.Option) {
 		BaseURL:     viper.GetString("SMS_BASE_URL"),
 		APIKey:      viper.GetString("SMS_API_KEY"),
 		ProjectName: viper.GetString("SMS_PROJECT_NAME"),
+	}, opt)
+}
+
+func googleBucketConf(opt copier.Option) {
+	GoogleBucket = GoogleBucketConf{
+		GoogleApplicationCredentialsFileName:  "",
+		GoogleApplicationBucketName:           "",
+		GoogleApplicationBucketEnv:            "",
+		GoogleApplicationUploadsBucketName:    "",
+		GoogleApplicationUploadsCatalogueName: "",
+		GooglePrintBucketName:                 "",
+	}
+	copier.CopyWithOption(&GoogleBucket, GoogleBucketConf{
+		GoogleApplicationCredentialsFileName:  viper.GetString("GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME"),
+		GoogleApplicationBucketName:           viper.GetString("GOOGLE_APPLICATION_BUCKET_NAME"),
+		GoogleApplicationBucketEnv:            viper.GetString("GOOGLE_APPLICATION_BUCKET_ENV"),
+		GoogleApplicationUploadsBucketName:    viper.GetString("GOOGLE_APPLICATION_UPLOADS_BUCKET_NAME"),
+		GoogleApplicationUploadsCatalogueName: viper.GetString("GOOGLE_APPLICATION_UPLOADS_CATALOGUE_NAME"),
+		GooglePrintBucketName:                 viper.GetString("GOOGLE_PRINT_BUCKET_NAME"),
 	}, opt)
 }

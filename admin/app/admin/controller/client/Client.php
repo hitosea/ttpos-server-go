@@ -61,6 +61,9 @@ class Client extends Controller
         $types = [1 => 'Cashier', 2 => 'Menu', 3=> 'Kitchen', 4 => 'Shop', 5 => 'Assistant'];
         //
         $credentialsPath = root_path('runtime/storage') . env('GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME');
+        if (!file_exists($credentialsPath)) {
+            $credentialsPath = '/var/certificate/' . env('GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME');
+        }
         $bucket = env('GOOGLE_APPLICATION_BUCKET_NAME');
         $env = env('GOOGLE_APPLICATION_BUCKET_ENV');
         if (!file_exists($credentialsPath) || !$bucket || !$env) {
@@ -412,6 +415,9 @@ class Client extends Controller
         $brand = $param['brand'] ?? 0;
         //
         $credentialsPath = root_path('runtime/storage') . env('GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME');
+        if (!file_exists($credentialsPath)) {
+            $credentialsPath = '/var/certificate/' . env('GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME');
+        }
         $bucket = env('GOOGLE_APPLICATION_BUCKET_NAME');
         $env = env('GOOGLE_APPLICATION_BUCKET_ENV');
         if (!file_exists($credentialsPath) || !$bucket || !$env) {
