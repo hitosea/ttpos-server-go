@@ -1779,8 +1779,16 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				refundAmount := returnOrder.RefundAmount // 退款金额
 				// 积分赠送比例
 				integralGiveRate := saleOrder.GiftPointsRate
-				// 退积分=退款金额*积分赠送比例
-				points := decimal.NewFromFloat(refundAmount).Mul(decimal.NewFromFloat(integralGiveRate)).Truncate(2).InexactFloat64()
+				//  部分退款时。退积分=退款金额*积分赠送比例
+				points := decimal.NewFromFloat(refundAmount).Mul(decimal.NewFromFloat(integralGiveRate)).Round(2).InexactFloat64()
+				// 退还积分不能超过可退积分
+				if points > saleOrder.GetManualReturnPoints() {
+					points = saleOrder.GetManualReturnPoints()
+				}
+				// 如果退款类型为整单退款，则退还积分剩余未退的积分
+				if len(req.Products) == 0 {
+					points = saleOrder.GetManualReturnPoints()
+				}
 				member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
 				if err != nil {
 					return errors.WithMessage(err)
