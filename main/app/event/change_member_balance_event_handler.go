@@ -22,7 +22,7 @@ func changeMemberBalanceEventHandler() {
 		event.NewSystemBus().SubscribeChangeMemberBalanceEvent(func(payload event.ChangeMemberBalancePayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			go func() {
-				time.Sleep(400 * time.Microsecond)
+				time.Sleep(1 * time.Second)
 				HandleMemberBalance(db)
 			}()
 		})

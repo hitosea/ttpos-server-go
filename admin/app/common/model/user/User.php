@@ -42,11 +42,7 @@ class User extends BaseModel
     }
     public function getPointsAttr($value, $data)
     {
-        if (isset($data['point'])) {
-            return floatval($data['point']);
-        } else {
-            return $value;
-        }
+        return floatval(helper::bcadd($data['point'] ?? 0, $data['frozen_point'] ?? 0, 2));
     }
     public function getMobileAttr()
     {

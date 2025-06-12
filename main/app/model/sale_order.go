@@ -167,7 +167,7 @@ func (model *SaleOrder) GetPointsExchangeAmount() float64 {
 
 // 获取最终应收金额（不含手续费）。等于Amount-PayPointsAmount-结账抹零
 func (model *SaleOrder) GetFinalNoFeeAmount() float64 {
-	amount := decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.ZeroCheckoutFee)).Round(2).InexactFloat64() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
+	amount := decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.CalcCheckOutZeroFee())).Round(2).InexactFloat64() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
 	return amount
 }
 
