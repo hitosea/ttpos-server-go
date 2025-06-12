@@ -15,7 +15,18 @@
           :label="`${props.labelPrefix}`"
           :error="formErrors.SINGLE"
           :required="true"
-          :rules="[{ required: true, message: props.placeholder ?? $t('请输入名称') }]"
+          :rules="[
+            { required: true, message: props.placeholder ?? $t('请输入名称') },
+            {
+              validator: (rule, value, callback) => {
+                if (value && value.trim() === '') {
+                  callback(new Error(props.placeholder ?? $t('请输入名称')));
+                } else {
+                  callback();
+                }
+              },
+            },
+          ]"
           prop="SINGLE"
           :validate-status="formErrors.SINGLE ? 'error' : translateLoading || validateLoading ? 'validating' : ''"
           for="no_click"
@@ -41,7 +52,18 @@
           :label="`${props.labelPrefix}(${languageStore.getLanguageValueByKey(languageKey)})`"
           :error="formErrors[languageKey]"
           :required="true"
-          :rules="[{ required: true, message: props.placeholder ?? $t('请输入名称') }]"
+          :rules="[
+            { required: true, message: props.placeholder ?? $t('请输入名称') },
+            {
+              validator: (rule, value, callback) => {
+                if (value && value.trim() === '') {
+                  callback(new Error(props.placeholder ?? $t('请输入名称')));
+                } else {
+                  callback();
+                }
+              },
+            },
+          ]"
           :prop="languageKey"
           :validate-status="formErrors[languageKey] ? 'error' : translateLoading || validateLoading ? 'validating' : ''"
           for="no_click"

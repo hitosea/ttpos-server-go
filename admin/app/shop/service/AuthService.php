@@ -100,6 +100,9 @@ class AuthService
 
         // 门店管理
         '/supplier/printerTemplate/setTemplate',
+
+        // 添加会员获取会员卡列表
+        '/card/card/getCardList'
     ];
 
     /** @var array $accessUrls 商家用户权限url */

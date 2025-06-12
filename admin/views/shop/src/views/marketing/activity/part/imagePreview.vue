@@ -186,6 +186,8 @@
             font-weight: 600;
             margin-bottom: 4px;
             padding: 0 18px;
+            white-space: pre-wrap;
+            word-break: break-all;
           }
           .item-subtitle {
             color: rgba(36, 22, 11, 0.65);
@@ -195,6 +197,8 @@
             font-weight: 400;
             margin-bottom: 16px;
             padding: 0 18px;
+            white-space: pre-wrap;
+            word-break: break-all;
             span {
               color: #ffbe00;
               font-size: 9px;
@@ -210,6 +214,8 @@
             font-weight: 400;
             margin-bottom: 12px;
             padding: 0 18px;
+            white-space: pre-wrap;
+            word-break: break-all;
           }
           .item-qrcode {
             width: 96px;
@@ -304,6 +310,8 @@
             font-weight: 600;
             margin-bottom: 8px;
             padding: 0 30px;
+            white-space: pre-wrap;
+            word-break: break-all;
           }
           .item-subtitle {
             color: rgba(36, 22, 11, 0.65);
@@ -313,6 +321,8 @@
             font-weight: 400;
             margin-bottom: 36px;
             padding: 0 18px;
+            white-space: pre-wrap;
+            word-break: break-all;
             span {
               color: #ffbe00;
               font-size: 14px;
@@ -328,6 +338,8 @@
             font-weight: 400;
             margin-bottom: 16px;
             padding: 0 30px;
+            white-space: pre-wrap;
+            word-break: break-all;
           }
           .item-qrcode {
             width: 140px;
