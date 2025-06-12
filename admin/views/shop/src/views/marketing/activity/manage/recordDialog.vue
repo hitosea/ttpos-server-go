@@ -3,7 +3,7 @@
     <div>
       <div class="record-dialog-wrapper">
         <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
-          <el-form-item :label="$t('活动名称')">
+          <el-form-item :label="$t('昵称/手机号/ID')">
             <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/ID')" @input="onSearch"></el-input>
           </el-form-item>
           <el-form-item>
