@@ -2077,4 +2077,9 @@ return [
     "抵扣反结账" => "Deduction reverse settlement",
     "抵扣反结账：%s" => "Deduct Reverse Settlement: %s",
     "输入条形码不合规，请重新检查" => "The entered barcode is invalid, please check again",
+    "活动名称不能为空" => "Activity name cannot be empty",
+    "活动描述不能为空" => "Activity description cannot be empty",
+    "开始时间不能为空" => "Start time cannot be empty",
+    "结束时间不能为空" => "End time cannot be empty",
+    "结束时间必须大于开始时间" => "End time must be later than start time",
 ];

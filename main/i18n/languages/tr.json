@@ -2872,7 +2872,7 @@
   "验证成功": "Doğrulama başarılı",
   "验证码sign": "Doğrulama kodu işareti",
   "验证码不正确": "Yanlış doğrulama kodu",
-  "验证码不能为空": "Siparişin puan indirim miktarı parametresini ayarla",
+  "验证码不能为空": "Doğrulama kodu boş olamaz",
   "验证码错误": "Doğrulama kodu hatalı",
   "验证签名失败": "İmza doğrulama başarısız",
   "验证钱箱密码参数": "Kasa şifresi parametresi doğrulaması",

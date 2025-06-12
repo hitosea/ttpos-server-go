@@ -54,9 +54,15 @@
         :start-placeholder="$t('开始日期')"
         :end-placeholder="$t('结束日期')"
         :disabledDate="disabledDate"
-        :disabled-hours="(role, date) => (role === 'start' ? dHours() : [])"
-        :disabled-minutes="(role, date) => (role === 'start' ? dMinutes() : [])"
-        :disabled-seconds="(role, date) => (role === 'start' ? dSeconds() : [])"
+        :disabled-hours="(role, date) => (role === 'start' && isTodayTemp ? dHours() : [])"
+        :disabled-minutes="(role, date) => (role === 'start' && isTodayTemp ? dMinutes() : [])"
+        :disabled-seconds="(role, date) => (role === 'start' && isTodayTemp ? dSeconds() : [])"
+        @calendar-change="(value) => {
+          if (value && value.length === 2) {
+            isTodayTemp = isToday(new Date(value[0]));
+            // TODO: 这里需要处理时间选择器的逻辑
+          }
+        }"
       />
       <el-date-picker
         v-if="status == 1"
@@ -133,6 +139,9 @@
   const activityNameFormRef = ref(null);
   const activityDescriptionFormRef = ref(null);
   const couponList = ref([]);
+  // 临时选择时间
+  const isTodayTemp = ref(false);
+
 
   const emit = defineEmits(['imgName', 'imgDescription', 'checkForm']);
 
@@ -140,6 +149,11 @@
     props.dateTime,
     (newVal) => {
       activityTime.value = [newVal[0], newVal[1]];
+      // 如果有时间选择器的逻辑需要处理
+      if (newVal && newVal.length === 2) {
+        isTodayTemp.value = isToday(new Date(newVal[0]));
+        // TODO: 这里需要处理时间选择器的逻辑
+      }
     },
     {
       immediate: true,
@@ -165,8 +179,6 @@
   );
 
   watch(activityTime, (newVal) => {
-    console.log(newVal);
-
     if (newVal) {
       form.start_time = newVal[0];
       form.end_time = newVal[1];
@@ -175,6 +187,15 @@
       form.end_time = '';
     }
   });
+
+  const isToday = (date) => {
+    const today = new Date();
+    return (
+      date.getFullYear() === today.getFullYear() &&
+      date.getMonth() === today.getMonth() &&
+      date.getDate() === today.getDate()
+    );
+  };
 
   const imgName = (data) => {
     emit('imgName', data);

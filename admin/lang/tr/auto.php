@@ -2077,4 +2077,9 @@ return [
     "抵扣反结账" => "İndirimli ters ödeme",
     "抵扣反结账：%s" => "İndirimli ters hesap kapama: %s",
     "输入条形码不合规，请重新检查" => "Girilen barkod uygun değil, lütfen tekrar kontrol edin",
+    "活动名称不能为空" => "Etkinlik adı boş olamaz",
+    "活动描述不能为空" => "Etkinlik açıklaması boş olamaz",
+    "开始时间不能为空" => "Başlangıç zamanı boş olamaz",
+    "结束时间不能为空" => "Bitiş zamanı boş olamaz",
+    "结束时间必须大于开始时间" => "Bitiş zamanı başlangıç zamanından büyük olmalıdır",
 ];

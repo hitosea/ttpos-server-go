@@ -98,7 +98,17 @@
             :key="levelIndex"
             :label="item.name"
             :prop="`shopping_gift_rules.0.member_levels.${levelIndex}.value`"
-            :rules="[{ required: true, message: $t('请输入积分赠送') }]"
+            :rules="[
+              { required: true, message: $t('请输入积分赠送') },
+              {
+                validator: (rule, value, callback) => {
+                  if (value <= 0) {
+                    callback(new Error($t('请输入大于0的数字')));
+                  }
+                  callback();
+                },
+              },
+            ]"
           >
             <el-input class="max-w460" @input="(e) => handleMemberLevelsInput(e, 0, levelIndex)" :placeholder="$t('请输入积分赠送')" v-model="item.value"></el-input>
             <span> %</span>
@@ -110,7 +120,17 @@
         <el-form-item
           :label="$t('赠送积分所需付款金额')"
           prop="shopping_gift_rules.0.payment_amount_requirement"
-          :rules="[{ required: true, message: $t('请输入赠送积分所需付款金额') }]"
+          :rules="[
+            { required: true, message: $t('请输入赠送积分所需付款金额') },
+            {
+              validator: (rule, value, callback) => {
+                if (value <= 0) {
+                  callback(new Error($t('请输入大于0的数字')));
+                }
+                callback();
+              },
+            },
+          ]"
         >
           <el-input
             class="max-w460"
@@ -159,7 +179,21 @@
           </el-radio-group>
         </el-form-item>
         <template v-if="form.shopping_gift_rules[1].is_member_level_related == 0">
-          <el-form-item :label="$t('赠送积分')" prop="shopping_gift_rules.1.value" :rules="[{ required: true, message: $t('请输入赠送积分') }]">
+          <el-form-item
+            :label="$t('赠送积分')"
+            prop="shopping_gift_rules.1.value"
+            :rules="[
+              { required: true, message: $t('请输入赠送积分') },
+              {
+                validator: (rule, value, callback) => {
+                  if (value <= 0) {
+                    callback(new Error($t('请输入大于0的数字')));
+                  }
+                  callback();
+                },
+              },
+            ]"
+          >
             <el-input class="max-w460" @input="(e) => handleValuesInput(e, 1)" :placeholder="$t('请输入积分赠送')" v-model="form.shopping_gift_rules[1].value"></el-input>
             <span> {{ $t('积分/人') }}</span>
           </el-form-item>
@@ -171,7 +205,17 @@
             :key="levelIndex"
             :label="item.name"
             :prop="`shopping_gift_rules.1.member_levels.${levelIndex}.value`"
-            :rules="[{ required: true, message: $t('请输入积分赠送') }]"
+            :rules="[
+              { required: true, message: $t('请输入积分赠送') },
+              {
+                validator: (rule, value, callback) => {
+                  if (value <= 0) {
+                    callback(new Error($t('请输入大于0的数字')));
+                  }
+                  callback();
+                },
+              },
+            ]"
           >
             <el-input class="max-w460" @input="(e) => handleMemberLevelInput(e, 1, levelIndex)" :placeholder="$t('请输入积分赠送')" v-model="item.value"></el-input>
             <span> {{ $t('积分/人') }}</span>
@@ -444,15 +488,26 @@
 
       handleValuesInput(e, index) {
         let value = e;
-        //只允许数字，1-9999999
+        // 只允许输入数字和小数点
         value = value.replace(/[^0-9.]/g, '');
+
+        // 确保只有一个小数点
+        const parts = value.split('.');
+        if (parts.length > 2) {
+          value = parts[0] + '.' + parts.slice(1).join('');
+        }
+
+        // 限制最多两位小数
+        if (parts[1] && parts[1].length > 2) {
+          value = parts[0] + '.' + parts[1].substring(0, 2);
+        }
         // 转换为数字进行范围检查
         const numValue = parseFloat(value);
         if (numValue > 9999999) {
           value = '9999999';
         }
-        if (numValue < 1) {
-          value = '1';
+        if (numValue < 0) {
+          value = '0';
         }
         this.form.shopping_gift_rules[index].value = value;
       },
@@ -508,8 +563,8 @@
         }
 
         // 不允许输入0或负数
-        if (numValue <= 0 && value !== '' && value !== '0.') {
-          value = '';
+        if (numValue < 0) {
+          value = '0';
         }
 
         // 更新表单值
@@ -518,12 +573,23 @@
 
       // 处理会员等级积分输入
       handleMemberLevelInput(value, ruleIndex, levelIndex) {
-        // 只允许输入数字
-        let newValue = value.replace(/[^0-9]/g, '');
+        // 只允许输入数字和小数点
+        value = value.replace(/[^0-9.]/g, '');
+
+        // 确保只有一个小数点
+        const parts = value.split('.');
+        if (parts.length > 2) {
+          value = parts[0] + '.' + parts.slice(1).join('');
+        }
+
+        // 限制最多两位小数
+        if (parts[1] && parts[1].length > 2) {
+          value = parts[0] + '.' + parts[1].substring(0, 2);
+        }
 
         // 限制最小值为1
-        if (newValue <= 0 && value !== '' && value !== '0.') {
-          newValue = '';
+        if (newValue < 0) {
+          newValue = '0';
         }
 
         // 限制最大值

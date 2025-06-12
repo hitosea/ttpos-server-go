@@ -91,6 +91,12 @@ class Activity extends Controller
     {
         $params = $request->get();
         $params['requirement'] = 'marketing';
+
+        // 未开启优惠券时，让列表查询为空
+        if (($request->licenses['is_open_coupon'] ?? 0) != 1) {
+            $params['requirement'] = '-null-';
+        }
+
         $list = (new MarketingCouponService())->getList($params);
         return $this->renderSuccess('', $list);
     }
