@@ -14,7 +14,7 @@
             </h4>
             <p class="item-desc"> {{ imgDescription }} </p>
             <img :src="qrcode" alt="" class="item-qrcode" />
-            <p class="item-qrcode-desc"> {{ $t('到店消费时出示此二维码') }} </p>
+            <p class="item-qrcode-desc"> {{ $t('会员扫码登录后可保存专属分享海报') }} </p>
             <img src="@/assets/img/activeImgTop.svg" alt="" class="item-img" />
           </div>
         </div>
@@ -33,7 +33,7 @@
             </h4>
             <p class="item-desc"> {{ imgDescription }} </p>
             <img :src="qrcode" alt="" class="item-qrcode" />
-            <p class="item-qrcode-desc"> {{ $t('到店消费时出示此二维码') }} </p>
+            <p class="item-qrcode-desc"> {{ $t('会员扫码登录后可保存专属分享海报') }} </p>
             <img src="@/assets/img/activeImgTop.svg" alt="" class="item-img" />
           </div>
         </div>
@@ -232,6 +232,8 @@
             text-transform: capitalize;
             margin-top: 4px;
             margin-bottom: -24px;
+            white-space: pre-wrap;
+            word-break: break-all;
           }
           .item-img {
             width: 207px;
@@ -356,6 +358,8 @@
             text-transform: capitalize;
             margin-top: 4px;
             margin-bottom: -24px;
+            white-space: pre-wrap;
+            word-break: break-all;
           }
           .item-img {
             width: 333px;

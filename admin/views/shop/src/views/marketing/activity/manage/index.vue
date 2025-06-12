@@ -4,7 +4,7 @@
     <div class="common-seach-wrap flex">
       <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
         <el-form-item :label="$t('活动名称')">
-          <el-input v-model="formInline.card_name" :placeholder="$t('请输入活动名称')" @input="onSearch"></el-input>
+          <el-input v-model="formInline.name" :placeholder="$t('请输入活动名称')" @input="onSearch"></el-input>
         </el-form-item>
         <el-form-item>
           <el-button size="small" type="primary" icon="Search" class="search-button" @click="onSearch">
@@ -101,7 +101,7 @@
   const recordUuid = ref('');
   // 表单数据
   const formInline = reactive({
-    card_name: '',
+    name: '',
     status: '',
   });
 
