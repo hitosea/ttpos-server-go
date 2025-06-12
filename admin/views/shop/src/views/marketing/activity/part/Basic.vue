@@ -149,6 +149,11 @@
     props.dateTime,
     (newVal) => {
       activityTime.value = [newVal[0], newVal[1]];
+      // 如果有时间选择器的逻辑需要处理
+      if (newVal && newVal.length === 2) {
+        isTodayTemp.value = isToday(new Date(newVal[0]));
+        // TODO: 这里需要处理时间选择器的逻辑
+      }
     },
     {
       immediate: true,
