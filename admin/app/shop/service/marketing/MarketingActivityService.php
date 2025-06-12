@@ -219,7 +219,7 @@ class MarketingActivityService
         // 
         $page = $params['page'] ?? 1;
         $pageSize = $params['list_rows'] ?? 10;
-        $list = $query->with([
+        $list = $query->clone()->with([
             'prizes' => function($query) {
                 $query->with('couponName')->field('activity_uuid, prize_type, prize_uuid')->where('delete_time', 0);
             },
@@ -236,7 +236,9 @@ class MarketingActivityService
             create_time, 
             update_time
         ')->page($page, $pageSize)->select();
+        // 
         $total = $query->count();
+        // 
         return [
             'current_page' => $page,
             'data' => $list,
