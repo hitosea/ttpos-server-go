@@ -9717,6 +9717,11 @@ func (s *orderSrv) GetOrderedH5ProductList(ctx context.Context, saleBillUuid uin
 
 // ConfirmH5Order 下单扫码h5订单
 func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64, ignoreMust bool) (any, error) {
+	if ctx.NoLock() {
+		s.lock.LockUuid(saleBillUuid)
+		defer s.lock.UnlockUuid(saleBillUuid)
+		ctx.AddLock()
+	}
 	db := s.dbm.GetDB(ctx.GetDbId())
 	res := make(map[string]any)
 	// 获取销售账单信息
@@ -9881,6 +9886,12 @@ func (s *orderSrv) AcceptH5Order(ctx context.Context, h5OrderUuid uint64, isAuto
 	}
 	if h5Order.Status != constant.H5OrderStatusOrder {
 		return nil, nil
+	}
+
+	if ctx.NoLock() {
+		s.lock.LockUuid(h5Order.SaleOrder.SaleBillUuid)
+		defer s.lock.UnlockUuid(h5Order.SaleOrder.SaleBillUuid)
+		ctx.AddLock()
 	}
 
 	// 接单,保证h5订单的商品快照信息
