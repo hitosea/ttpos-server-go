@@ -24,6 +24,12 @@ class MarketingActivityService
             'reward_condition_amount' => 'require|float|egt:0',
             'is_open_reward_limit' => 'require|integer|in:0,1',
             'prize_list' => 'require|array|min:1',
+        ])->message([
+            'name.require' => __('活动名称不能为空'),
+            'description.require' => __('活动描述不能为空'),
+            'start_time.require' => __('开始时间不能为空'),
+            'end_time.require' => __('结束时间不能为空'),
+            'end_time.gt' => __('结束时间必须大于开始时间'),
         ]);
         if (!$validate->check($data)) {
             return ['code'=>1, 'msg'=>$validate->getError()];
@@ -172,6 +178,27 @@ class MarketingActivityService
                 if ($exists) {
                     return ['code'=>1, 'msg'=> __('同一个时间内只可有一个同类型活动进行')];
                 }
+
+                // 
+                $validate = Validate::rule([
+                    'name' => 'require|max:2000',
+                    'description' => 'require|max:5000',
+                    'start_time' => 'require|string',
+                    'end_time' => 'require|string|gt:start_time',
+                    'reward_condition_amount' => 'require|float|egt:0',
+                    'is_open_reward_limit' => 'require|integer|in:0,1',
+                    'prize_list' => 'require|array|min:1',
+                ])->message([
+                    'name.require' => __('活动名称不能为空'),
+                    'description.require' => __('活动描述不能为空'),
+                    'start_time.require' => __('开始时间不能为空'),
+                    'end_time.require' => __('结束时间不能为空'),
+                    'end_time.gt' => __('结束时间必须大于开始时间'),
+                ]);
+                if (!$validate->check($data)) {
+                    return ['code'=>1, 'msg'=>$validate->getError()];
+                }
+
                 $gift->save([
                     'name' => $data['name'] ?? $gift->name,
                     'multi_language_name_uuid' => (new MultiLanguageName)->saveNames($data['name'] ?? $gift->name, $gift->multi_language_name_uuid),
