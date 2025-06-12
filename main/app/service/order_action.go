@@ -336,6 +336,12 @@ func filterOtherClientProducts(unCookingSaleOrderProducts []*model.SaleOrderProd
 
 // TabletAddAndCooking 平板端加购并送厨
 func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) (any, error) {
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
+
 	db := ctx.GetDB()
 	res := make(map[string]any)
 
