@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 type ServerConf struct {
 	Port       string // 端口
 	Mode       string // 模式：debug/release/test
@@ -68,4 +70,30 @@ type SMSConf struct {
 	BaseURL     string // 基础URL
 	APIKey      string // API密钥
 	ProjectName string // 项目名称
+}
+
+type GoogleBucketConf struct {
+	GoogleApplicationCredentialsFileName  string // 谷歌云证书文件名
+	GoogleApplicationBucketName           string // 谷歌云bucket - 安装包
+	GoogleApplicationBucketEnv            string // 谷歌云bucket - 安装包 - 环境
+	GoogleApplicationUploadsBucketName    string // 谷歌云 - 上传图片的bucket目录名称
+	GoogleApplicationUploadsCatalogueName string // 谷歌云 - 上传图片的目录名称
+	GooglePrintBucketName                 string // 谷歌云 - 打印相关的bucket
+}
+
+func (c *GoogleBucketConf) Verification() bool {
+	if c.GoogleApplicationCredentialsFileName == "" || c.GooglePrintBucketName == "" {
+		return false
+	}
+	return true
+}
+
+func (c *GoogleBucketConf) GetGoogleApplicationCredentialsFileName() string {
+	if c.Verification() {
+		if Server.Mode == "debug" {
+			return fmt.Sprintf("../docker/certificate/%s", c.GoogleApplicationCredentialsFileName)
+		}
+		return fmt.Sprintf("/var/certificate/%s", c.GoogleApplicationCredentialsFileName)
+	}
+	return ""
 }

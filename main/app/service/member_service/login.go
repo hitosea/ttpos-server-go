@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/app/dto/resp/member_resp"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/auth"
 	"ttpos-server-go/pkg/cache"
@@ -36,9 +37,10 @@ type ILoginSrv interface {
 
 // loginSrv 会员登录服务实现
 type loginSrv struct {
-	dbm    *database.DBManager
-	cache  cache.Cache
-	smsSrv service.ISmsSrv
+	dbm        *database.DBManager
+	cache      cache.Cache
+	smsSrv     service.ISmsSrv
+	settingSrv setting.ISrv
 }
 
 // NewLoginSrv 创建会员登录服务实例
@@ -46,8 +48,9 @@ func NewLoginSrv(
 	dbm *database.DBManager,
 	cache cache.Cache,
 	smsSrv service.ISmsSrv,
+	settingSrv setting.ISrv,
 ) ILoginSrv {
-	return NewLoginSrvImpl(dbm, cache, smsSrv)
+	return NewLoginSrvImpl(dbm, cache, smsSrv, settingSrv)
 }
 
 // NewLoginSrvImpl 创建会员登录服务实现
@@ -55,11 +58,13 @@ func NewLoginSrvImpl(
 	dbm *database.DBManager,
 	cache cache.Cache,
 	smsSrv service.ISmsSrv,
+	settingSrv setting.ISrv,
 ) ILoginSrv {
 	return &loginSrv{
-		dbm:    dbm,
-		cache:  cache,
-		smsSrv: smsSrv,
+		dbm:        dbm,
+		cache:      cache,
+		smsSrv:     smsSrv,
+		settingSrv: settingSrv,
 	}
 }
 
@@ -113,12 +118,17 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 	// 	return member_resp.MemberLoginInfoResp{}, errors.New("二维码已失效")
 	// }
 
+	//
+	ctx.SetCompanyUuid(req.CompanyUuid)
+	languageList, _ := s.settingSrv.GetStoreLanguageList(ctx)
+
 	// 返回
 	return member_resp.MemberLoginInfoResp{
-		CompanyUuid: req.CompanyUuid,
-		CompanyName: company.Name,
-		Logo:        utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.Copy().GetGin().Request), true),
-		AreaCode:    areaCodes,
+		CompanyUuid:  req.CompanyUuid,
+		CompanyName:  company.Name,
+		Logo:         utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.Copy().GetGin().Request), true),
+		AreaCode:     areaCodes,
+		LanguageList: languageList,
 	}, nil
 }
 

@@ -347,7 +347,7 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 					}
 					return ""
 				}
-				return log.PrinterLogData.Data
+				return log.PrinterLogData.GetData(true)
 			}(),
 			PrintMethod: log.PrintMethod,
 			Copies:      log.GetCopies(),
@@ -472,11 +472,9 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 
 	// 保存打印日志数据
 	var LogData model.PrinterLogData
-	printerLogDataRepo := repository.NewPrinterLogDataRepo(tx)
-	LogData.Data = printerLogData.Data
-	LogData.Data = LogData.CompressData()
 	LogData.LogUuid, _ = utils.GetID()
-	LogData, err := printerLogDataRepo.Create(LogData)
+	LogData.SetData(companyUuid, printerLogData.Data)
+	LogData, err := repository.NewPrinterLogDataRepo(tx).Create(LogData)
 	if err != nil {
 		tx.Rollback()
 		logger.Logger.Error("保存数据打印日志数据失败", zap.Error(err))
@@ -506,7 +504,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	}
 
 	//关联打印日志数据
-	printerLog.Data = LogData.Data
+	printerLog.Data = LogData.GetData(printerLog.FirstExecution == 1)
 	printerLog.PrinterLogData = &LogData
 
 	// 进行队列打印
@@ -624,11 +622,9 @@ func (s *printerLogSrv) GetOldOrderPrinterConfig(ctx context.Context, data strin
 		return nil, errors.WithMessage(err, "获取打印设置失败")
 	}
 	//
-	printerLog := &model.PrinterLogData{Data: data}
-	//
 	return &resp.PrinterData{
 		Uuid:             0,
-		Data:             printerLog.CompressData(),
+		Data:             utils.GzipCompressData(data),
 		PrintMethod:      2,
 		Copies:           settingPrinterInfo.Copies,
 		PrinterType:      settingPrinterInfo.PrinterType,
