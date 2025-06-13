@@ -409,7 +409,7 @@
       onSubmit() {
         let self = this;
         // 判断是否开启自助餐,只能有一个自助餐
-        if (self.form.shopping_gift_rules[1].is_open == 1 && self.form.shopping_gift_rules[0].meal_type.includes('buffet')) {
+        if (self.form.shopping_gift_rules[1].is_open == 1 && self.form.shopping_gift_rules[0].is_open == 1 && self.form.shopping_gift_rules[0].meal_type.includes('buffet') ) {
           this.$ElMessage({
             message: this.$t('自助餐只可适用于一个规则'),
             type: 'error',
