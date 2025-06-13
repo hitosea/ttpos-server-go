@@ -147,6 +147,14 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 		addMemberReq.Password = cryptor.Md5String(addMemberReq.Password)
 	}
 
+	// 卡号不能重复
+	if addMemberReq.CardNo != "" {
+		sameCardNoMember := memberRepo.GetMember(memberRepo.WhereCardNo(addMemberReq.CardNo))
+		if sameCardNoMember.ID != 0 {
+			return errors.New("卡号重复")
+		}
+	}
+
 	var memberPointsChanged, memberBalanceChanged bool
 	member := &model.Member{
 		MemberNo:        utils.RandomNumber(5), // 5位数字
