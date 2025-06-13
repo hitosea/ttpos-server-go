@@ -398,7 +398,12 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 
 			// 如果商品是自助餐商品，则价格为0元
 			if option.SaleBillUuid != 0 && buffetProductMap[productPackageUuid] {
-				productPackages[i].Product.Price = 0
+				productPackages[i].Product.Price = 0 // 自助餐商品价格为0元
+				// 自助餐商品的所有规格价格为0元
+				for j, _ := range productPackages[i].Product.Flavors.List {
+					flavor := &productPackages[i].Product.Flavors.List[j]
+					flavor.Price = 0
+				}
 			}
 		}
 
