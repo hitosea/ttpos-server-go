@@ -27,8 +27,8 @@ RUN chmod +x main
 # 使用轻量级的镜像来运行应用
 FROM ubuntu:latest
 
-# 安装必要的依赖（如有需要）
-# RUN apk add --no-cache <必要的包>
+# 安装 ca-certificates 和 curl
+RUN apt-get update && apt-get install -y ca-certificates curl
 
 # 设置工作目录
 WORKDIR /var/www
