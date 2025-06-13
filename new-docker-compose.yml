@@ -10,6 +10,7 @@ services:
       - ./docker/php/conf.d/opcache.ini:/usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
       - ./docker/php/php-fpm.d/www.conf:/usr/local/etc/php-fpm.d/www.conf
       - ./docker/php/supervisor/supervisor.conf:/etc/supervisor/conf.d/php.conf
+      - ./docker/certificate:/var/certificate
       - ./admin/:/var/www
     env_file:
       - ./.env
@@ -88,6 +89,7 @@ services:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env
       - ./main/version.json:/var/www/version.json
+      - ./docker/certificate:/var/certificate
       - ./docker/golang/logs:/var/www/log
     restart: always
     networks:

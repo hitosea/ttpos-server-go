@@ -25,3 +25,18 @@ func CreateFile(path string, content []byte, perm os.FileMode) error {
 	// 创建并写入文件
 	return os.WriteFile(path, content, perm)
 }
+
+// 创建测试用的临时文件
+func CreateTempFile(filename, content string) (*os.File, error) {
+	tmpfile, err := os.CreateTemp("", filename)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := tmpfile.Write([]byte(content)); err != nil {
+		return nil, err
+	}
+	if err := tmpfile.Close(); err != nil {
+		return nil, err
+	}
+	return tmpfile, nil
+}
