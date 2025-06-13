@@ -78,6 +78,7 @@
         :disabled-hours="disabledHours"
         :disabled-minutes="disabledMinutes"
         :disabled-seconds="disabledSeconds"
+        @change="handleChangeEnd"
       />
     </el-form-item>
     <el-form-item
@@ -278,19 +279,34 @@
   // 禁用小时
   const disabledHours = () => {
     const now = new Date();
-    return Array.from({ length: now.getHours() }, (_, i) => i);
+    const selectedDate = new Date(form.end_time);
+    // 如果是今天，才禁用当前小时之前的时间
+    if (isToday(selectedDate)) {
+      return Array.from({ length: now.getHours() }, (_, i) => i);
+    }
+    return [];
   };
 
   // 禁用分钟
   const disabledMinutes = (hour) => {
     const now = new Date();
-    return hour === now.getHours() ? Array.from({ length: now.getMinutes() }, (_, i) => i) : [];
+    const selectedDate = new Date(form.end_time);
+    // 如果是今天且是当前小时，才禁用当前分钟之前的时间
+    if (isToday(selectedDate) && hour === now.getHours()) {
+      return Array.from({ length: now.getMinutes() }, (_, i) => i);
+    }
+    return [];
   };
 
   // 禁用秒
   const disabledSeconds = (hour, minute) => {
     const now = new Date();
-    return hour === now.getHours() && minute === now.getMinutes() ? Array.from({ length: now.getSeconds() }, (_, i) => i) : [];
+    const selectedDate = new Date(form.end_time);
+    // 如果是今天且是当前小时和分钟，才禁用当前秒之前的时间
+    if (isToday(selectedDate) && hour === now.getHours() && minute === now.getMinutes()) {
+      return Array.from({ length: now.getSeconds() }, (_, i) => i);
+    }
+    return [];
   };
 
   const handleChange = (value) => {
@@ -310,6 +326,12 @@
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  };
+
+  const handleChangeEnd = (value) => {
+    if (new Date(value) < new Date()) {
+      form.end_time = setStartTime();
+    }
   };
 </script>
 
