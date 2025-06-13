@@ -57,12 +57,14 @@
         :disabled-hours="(role, date) => (role === 'start' && isTodayTemp ? dHours() : [])"
         :disabled-minutes="(role, date) => (role === 'start' && isTodayTemp ? dMinutes() : [])"
         :disabled-seconds="(role, date) => (role === 'start' && isTodayTemp ? dSeconds() : [])"
-        @calendar-change="(value) => {
-          if (value && value.length === 2) {
-            isTodayTemp = isToday(new Date(value[0]));
-            // TODO: 这里需要处理时间选择器的逻辑
+        @change="handleChange"
+        @calendar-change="
+          (value) => {
+            if (value && value.length === 2) {
+              isTodayTemp = isToday(new Date(value[0]));
+            }
           }
-        }"
+        "
       />
       <el-date-picker
         v-if="status == 1"
@@ -76,6 +78,7 @@
         :disabled-hours="disabledHours"
         :disabled-minutes="disabledMinutes"
         :disabled-seconds="disabledSeconds"
+        @change="handleChangeEnd"
       />
     </el-form-item>
     <el-form-item
@@ -110,7 +113,7 @@
 </template>
 
 <script setup>
-  import { ref, inject, watch, computed } from 'vue';
+  import { ref, inject, watch } from 'vue';
   import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
   import SelectCouponDialog from './dialog.vue';
 
@@ -118,7 +121,7 @@
   const form = inject('form');
 
   // 响应式数据
-  const activityTime = ref([]);
+  const activityTime = ref(null);
   const rewardType = ref(0);
   const openSelectCoupon = ref(false);
   const props = defineProps({
@@ -142,18 +145,12 @@
   // 临时选择时间
   const isTodayTemp = ref(false);
 
-
   const emit = defineEmits(['imgName', 'imgDescription', 'checkForm']);
 
   watch(
     props.dateTime,
     (newVal) => {
       activityTime.value = [newVal[0], newVal[1]];
-      // 如果有时间选择器的逻辑需要处理
-      if (newVal && newVal.length === 2) {
-        isTodayTemp.value = isToday(new Date(newVal[0]));
-        // TODO: 这里需要处理时间选择器的逻辑
-      }
     },
     {
       immediate: true,
@@ -190,11 +187,7 @@
 
   const isToday = (date) => {
     const today = new Date();
-    return (
-      date.getFullYear() === today.getFullYear() &&
-      date.getMonth() === today.getMonth() &&
-      date.getDate() === today.getDate()
-    );
+    return date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
   };
 
   const imgName = (data) => {
@@ -246,53 +239,99 @@
   const dHours = () => {
     const now = new Date();
     const hours = [];
-    for (let i = 0; i < 24; i++) {
-      if (i < now.getHours()) {
-        hours.push(i);
-      }
+    for (let i = 0; i < now.getHours(); i++) {
+      hours.push(i);
     }
     return hours;
   };
 
-  // 禁用分钟和秒数
+  // 禁用分钟
   const dMinutes = () => {
     const now = new Date();
-    const minutes = [];
-    for (let i = 0; i < 60; i++) {
-      if (i < now.getMinutes()) {
+    const currentHour = new Date(activityTime.value[0]).getHours();
+    // 如果是当前小时，才禁用当前分钟之前的选项
+    if (currentHour === now.getHours()) {
+      const minutes = [];
+      for (let i = 0; i < now.getMinutes(); i++) {
         minutes.push(i);
       }
+      return minutes;
     }
-    return minutes;
+    return [];
   };
 
+  // 禁用秒
   const dSeconds = () => {
     const now = new Date();
-    const seconds = [];
-    for (let i = 0; i < 60; i++) {
-      if (i < now.getSeconds()) {
+    const currentDate = new Date(activityTime.value[0]);
+    // 如果是当前小时和分钟，才禁用当前秒之前的选项
+    if (currentDate.getHours() === now.getHours() && 
+        currentDate.getMinutes() === now.getMinutes()) {
+      const seconds = [];
+      for (let i = 0; i < now.getSeconds(); i++) {
         seconds.push(i);
       }
       return seconds;
     }
+    return [];
   };
 
   // 禁用小时
   const disabledHours = () => {
     const now = new Date();
-    return Array.from({ length: now.getHours() }, (_, i) => i);
+    const selectedDate = new Date(form.end_time);
+    // 如果是今天，才禁用当前小时之前的时间
+    if (isToday(selectedDate)) {
+      return Array.from({ length: now.getHours() }, (_, i) => i);
+    }
+    return [];
   };
 
   // 禁用分钟
   const disabledMinutes = (hour) => {
     const now = new Date();
-    return hour === now.getHours() ? Array.from({ length: now.getMinutes() }, (_, i) => i) : [];
+    const selectedDate = new Date(form.end_time);
+    // 如果是今天且是当前小时，才禁用当前分钟之前的时间
+    if (isToday(selectedDate) && hour === now.getHours()) {
+      return Array.from({ length: now.getMinutes() }, (_, i) => i);
+    }
+    return [];
   };
 
   // 禁用秒
   const disabledSeconds = (hour, minute) => {
     const now = new Date();
-    return hour === now.getHours() && minute === now.getMinutes() ? Array.from({ length: now.getSeconds() }, (_, i) => i) : [];
+    const selectedDate = new Date(form.end_time);
+    // 如果是今天且是当前小时和分钟，才禁用当前秒之前的时间
+    if (isToday(selectedDate) && hour === now.getHours() && minute === now.getMinutes()) {
+      return Array.from({ length: now.getSeconds() }, (_, i) => i);
+    }
+    return [];
+  };
+
+  const handleChange = (value) => {
+    // 如果开始时间小于当前时间，则开始时间设置为当前时间
+    if (new Date(value[0]) < new Date()) {
+      form.start_time = setStartTime();
+      activityTime.value[0] = setStartTime();
+    }
+  };
+
+  const setStartTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  };
+
+  const handleChangeEnd = (value) => {
+    if (new Date(value) < new Date()) {
+      form.end_time = setStartTime();
+    }
   };
 </script>
 

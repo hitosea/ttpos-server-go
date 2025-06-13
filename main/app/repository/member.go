@@ -16,7 +16,8 @@ type IMemberRepo interface {
 	WithMemberCardType() DBOption   // Member 预加载会员卡.卡类型
 	WithMemberBalanceLog() DBOption // Member 预加载会员余额变动记录
 
-	WhereUuid(uuid uint64) DBOption // Uuid 条件
+	WhereUuid(uuid uint64) DBOption     // Uuid 条件
+	WhereCardNo(cardNo string) DBOption // 卡号条件
 
 	GetMember(opts ...DBOption) model.Member // 获取会员
 	GetMemberList(opts ...DBOption) ([]*model.Member, error)
@@ -257,6 +258,13 @@ func (r *memberRepo) WithMemberBalanceLog() DBOption {
 func (r *memberRepo) WhereUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid = ?", uuid)
+	}
+}
+
+// WhereCardNo 卡号条件
+func (r *memberRepo) WhereCardNo(cardNo string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("member_card_no = ?", cardNo)
 	}
 }
 
