@@ -50,11 +50,11 @@ func (req *MemberLoginReq) Validate() error {
 	if req.CompanyUuid == 0 {
 		return errors.New("商家ID不能为空")
 	}
-	if req.Code == "" {
-		return errors.New("验证码不能为空")
-	}
 	if req.Phone == "" {
 		return errors.New("手机号不能为空")
+	}
+	if req.Code == "" {
+		return errors.New("验证码不能为空")
 	}
 	return nil
 }
