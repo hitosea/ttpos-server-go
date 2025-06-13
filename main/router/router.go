@@ -87,7 +87,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			kitchen.RegisterCallHandlers(kitchenGroup, dbm, cache)
 			kitchen.RegisterProductHandlers(kitchenGroup, dbm, cache)
 		}
-		// 厨房端
+		// 平板端
 		tabletGroup := apiV1.Group("/tablet")
 		{
 			tablet.RegisterAuthHandlers(tabletGroup, dbm, cache)

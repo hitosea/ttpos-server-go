@@ -732,7 +732,7 @@ class Setting extends BaseModel
                             'payment_amount_requirement' => '', // 付款金额要求
                             'meal_type' => [ // 就餐类型: "buffet" - 自助餐; "non-buffet" - 非自助餐
                             ],
-                            'balance_payment_get_points' => '0', // 会员余额支付是否赠送: "1" - 是; "0" - 否
+                            'balance_payment_get_points' => '1', // 会员余额支付是否赠送: "1" - 是; "0" - 否
                             'refund_return_points' => '1', // 退款自动扣积分: "1" - 是; "0" - 否
                             'member_levels' => [ // 会员等级
                             ],
@@ -746,7 +746,7 @@ class Setting extends BaseModel
                             'meal_type' => [ // 就餐类型: "buffet" - 自助餐; "non-buffet" - 非自助餐
                                 "buffet"
                             ],
-                            'balance_payment_get_points' => '0', // 会员余额支付是否赠送: "1" - 是; "0" - 否
+                            'balance_payment_get_points' => '1', // 会员余额支付是否赠送: "1" - 是; "0" - 否
                             'refund_return_points' => '0', // 退款自动扣积分: "1" - 是; "0" - 否
                             'member_levels' => [ // 会员等级
                             ],
