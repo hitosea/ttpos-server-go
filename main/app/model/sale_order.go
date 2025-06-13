@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"math"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
@@ -140,10 +141,10 @@ func (model *SaleOrder) GetReturnedPoints() float64 {
 			continue
 		}
 		if memberPointLog.Scene == constant.MemberPointLogSceneRefund {
-			points += memberPointLog.Value
+			points += memberPointLog.Value // 负数
 		}
 	}
-	return points
+	return math.Abs(points) // 绝对值,将负数变为正数
 }
 
 // 获取手动退款积分时，可退积分数量=订单赠送的积分-已经退回的积分. 如果会员积分余额不足时，可退积分数量等于会员积分余额

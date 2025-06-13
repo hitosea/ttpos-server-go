@@ -9,6 +9,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/option"
+	"google.golang.org/api/option/internaloption"
 )
 
 var (
@@ -26,7 +27,11 @@ func InitBucket(ctx context.Context, bucketNameStr string, credentialsFile strin
 	bucketName = bucketNameStr
 
 	// 创建存储客户端
-	bucketClient, err = storage.NewClient(ctx, option.WithCredentialsFile(credentialsFile))
+	bucketClient, err = storage.NewClient(
+		ctx,
+		option.WithCredentialsFile(credentialsFile),
+		internaloption.SkipDialSettingsValidation(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("创建存储客户端失败: %v", err)
 	}
