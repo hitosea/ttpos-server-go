@@ -336,8 +336,12 @@ func filterOtherClientProducts(unCookingSaleOrderProducts []*model.SaleOrderProd
 
 type TabletAddAndCookingRes struct {
 	resp.OrderCheckRes
-	Value           *int64                  `json:"value"`             // 限制时间或限制数量。当触发错误：限制时间或限制数量时，返回限制时间或限制数量。当不限制时，返回nil
-	NewProductInfos []*product_resp.Product `json:"new_product_infos"` // 本次加购的商品列表的最新商品信息，结构与商品列表接口的商品结构相同
+	Value           *int64             `json:"value"`             // 限制时间或限制数量。当触发错误：限制时间或限制数量时，返回限制时间或限制数量。当不限制时，返回nil
+	NewProductInfos NewProductInfoList `json:"new_product_infos"` // 本次加购的商品列表的最新商品信息，结构与商品列表接口的商品结构相同
+}
+
+type NewProductInfoList struct {
+	List []*product_resp.Product `json:"list"`
 }
 
 // 判断价格是否有变动。判断前端计算的单价是否与后台设置的最新价格一致。若不一致，则返回最新价格。（不考虑打折）
@@ -405,7 +409,7 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 	}
 	if len(productInfos) > 0 {
 		return &TabletAddAndCookingRes{
-			NewProductInfos: productInfos,
+			NewProductInfos: NewProductInfoList{List: productInfos},
 		}, errors.ErrProductPriceChanged
 	}
 
