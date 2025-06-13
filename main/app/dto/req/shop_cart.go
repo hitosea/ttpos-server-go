@@ -16,7 +16,8 @@ type OrderCartProductAddReq struct {
 	AttributeUuidList []uint64 `json:"attribute_uuid"`  // 属性ID列表
 	Operation         string   `json:"operation"`       // 操作类型。add: 加购，sub: 减购. 不填，默认是加购
 	MustPlanUuid      uint64   `json:"must_plan_uuid"`  // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
-	Price             float64  `json:"price"`           // 商品价格。可选，当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格
+	Price             *float64 `json:"price"`           // 商品价格。可选，当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格
+	IsBuffet          *bool    `json:"is_buffet"`       // 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
 	// 后端内部使用的参数
 	isH5Product bool `json:"-"` // 是否是H5商品
 }
@@ -48,6 +49,8 @@ type TabletOrderCartProductAddReq struct {
 type ProductParams struct {
 	FlavorProductBomUuid            uint64   `json:"flavor_product_bom_uuid" binding:"required"` // 商品规格uuid
 	Num                             uint     `json:"num"  binding:"required"`                    // 数量数量
+	Price                           *float64 `json:"price"`                                      // 商品价格，商品单价。当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格。可选，不传时，不进行价格校验
+	IsBuffet                        *bool    `json:"is_buffet"`                                  // 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
 	SauceProductBomUuidList         []uint64 `json:"sauce_product_bom_uuid_list"`                // 加料信息
 	ProductPackageAttributeUuidList []uint64 `json:"product_package_attribute_uuid_list"`        // 属性信息
 	Operation                       string   `json:"operation"`                                  // 操作类型。add: 加购，sub: 减购

@@ -133,7 +133,7 @@ type IOrderSrv interface {
 	ActionCooking(ctx context.Context, ignoreMust bool, saleBill *model.SaleBill, unCookingSaleOrderProducts []*model.SaleOrderProduct, h5OrderUuid uint64, isAutoOrder bool, options ...func(option *ActionCookingOption)) (*resp.OrderCheckServiceRes, error) // 送厨
 	ActionAddAndCooking(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill, IgnoreMust bool) (*resp.OrderCheckServiceRes, error)                                                                                                          // 加购并送厨
 
-	TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) (any, error) // 平板端加购并送厨
+	TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) (*TabletAddAndCookingRes, error) // 平板端加购并送厨
 
 	GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error) // 获取订单会员列表
 }
@@ -4226,33 +4226,19 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 	// 查询所选加料的最新价格
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
-	if request.Price != 0 {
-		uuids := make([]uint64, 0)
-		uuids = append(uuids, request.FlavorUuid)
-		uuids = append(uuids, request.SauceUuidList...)
-		productBoms, err := repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+	if request.Price != nil {
+		productInfo, err := s.getInfo(ctx, req.ProductParams{
+			FlavorProductBomUuid:    request.FlavorUuid,
+			Price:                   request.Price,
+			IsBuffet:                request.IsBuffet,
+			SauceProductBomUuidList: request.SauceUuidList,
+		}, db)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
-		lastestPrice := decimal.NewFromFloat(0)
-		for _, productBom := range productBoms {
-			lastestPrice = lastestPrice.Add(decimal.NewFromFloat(productBom.Price))
-		}
-		if lastestPrice.Cmp(decimal.NewFromFloat(request.Price)) != 0 {
-			// 获取最新的商品详情
-			productPackageUuid := productBoms[0].ProductPackageUuid
-			product, err := s.GetProductDetail(ctx, productPackageUuid)
-			if err != nil {
-				return nil, errors.WithMessage(err)
-			}
-			// 更新购物车中的商品价格
-			s.OrderCheck(ctx, req.InstantOrderCheckReq{
-				SaleBillUuid:  request.SaleBillUuid,
-				SaleOrderUuid: request.SaleOrderUuid,
-				IgnoreMust:    true,
-			})
+		if productInfo != nil {
 			return &resp.ShopCart{
-				Product: &product,
+				Product: productInfo,
 			}, errors.ErrProductPriceChanged
 		}
 	}
@@ -4480,6 +4466,12 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			if _, ok := productPackageUuidMap[saleOrderProduct.ProductPackageUuid]; ok {
 				saleOrderProduct.SetIsBuffet()
 			}
+		}
+
+		// 暂时废弃，product.Price 一直都会是nil
+		// 判断前端传入的商品价格是否与后台设置的最新价格一致，如果不一致则加购失败，并返回最新的价格
+		if product.Price != nil && *product.Price != saleOrderProduct.ProductPrice {
+			return nil, errors.WithMessage(errors.ErrProductPriceChanged)
 		}
 
 		// 如果是平板端加购，用于不会因为签名相同而合并商品

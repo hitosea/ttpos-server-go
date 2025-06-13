@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/resp/product_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -15,8 +16,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/websocket"
 
-	"github.com/gin-gonic/gin"
-
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -334,16 +334,80 @@ func filterOtherClientProducts(unCookingSaleOrderProducts []*model.SaleOrderProd
 	return products
 }
 
+type TabletAddAndCookingRes struct {
+	resp.OrderCheckRes
+	Value           *int64                  `json:"value"`             // 限制时间或限制数量。当触发错误：限制时间或限制数量时，返回限制时间或限制数量。当不限制时，返回nil
+	NewProductInfos []*product_resp.Product `json:"new_product_infos"` // 本次加购的商品列表的最新商品信息，结构与商品列表接口的商品结构相同
+}
+
+// 判断价格是否有变动。判断前端计算的单价是否与后台设置的最新价格一致。若不一致，则返回最新价格。（不考虑打折）
+func (s *orderSrv) getInfo(ctx context.Context, product req.ProductParams, db *gorm.DB) (*product_resp.Product, error) {
+	uuids := make([]uint64, 0)
+	uuids = append(uuids, product.FlavorProductBomUuid)
+	uuids = append(uuids, product.SauceProductBomUuidList...)
+	productBoms, err := repository.NewProductBomRepo(db).GetProductBomsByUuids(uuids)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	lastestPrice := decimal.NewFromFloat(0)
+	for _, productBom := range productBoms {
+		// 如果是自助餐商品，则不记商品价格
+		if product.IsBuffet != nil && *product.IsBuffet {
+			if productBom.Uuid == product.FlavorProductBomUuid {
+				continue
+			}
+		}
+		lastestPrice = lastestPrice.Add(decimal.NewFromFloat(productBom.Price))
+	}
+	if lastestPrice.Cmp(decimal.NewFromFloat(*product.Price)) != 0 {
+		// 获取最新的商品详情
+		productPackageUuid := productBoms[0].ProductPackageUuid
+		productInfo, err := s.GetProductDetail(ctx, productPackageUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		// 如果是自助餐商品，则价格改为0元
+		if product.IsBuffet != nil && *product.IsBuffet {
+			productInfo.Price = 0
+			for index, _ := range productInfo.Flavors.List {
+				productInfo.Flavors.List[index].Price = 0
+			}
+		}
+		return &productInfo, nil
+	}
+	return nil, nil
+}
+
 // TabletAddAndCooking 平板端加购并送厨
-func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) (any, error) {
+func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) (*TabletAddAndCookingRes, error) {
 	if ctx.NoLock() {
 		s.lock.LockUuid(request.SaleBillUuid)
 		defer s.lock.UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
 
-	db := ctx.GetDB()
-	res := make(map[string]any)
+	// 判断商品价格是否与后台设置的最新价格不一致
+	// 查询商品规格的最新价格
+	// 查询所选加料的最新价格
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	productInfos := make([]*product_resp.Product, 0)
+	for _, product := range request.Products {
+		if product.Price != nil {
+			productInfo, err := s.getInfo(ctx, product, db)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			if productInfo != nil {
+				productInfos = append(productInfos, productInfo)
+			}
+		}
+	}
+	if len(productInfos) > 0 {
+		return &TabletAddAndCookingRes{
+			NewProductInfos: productInfos,
+		}, errors.ErrProductPriceChanged
+	}
 
 	// 如果加购并送厨中的商品中有必点方案uuid，说明用户已经在平板端完成了必点，则关闭该销售账单的必点弹窗
 	if request.Products != nil {
@@ -363,11 +427,11 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 
 	saleBill, _ := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
 	if saleBill.IsEndStatus() {
-		return res, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))
+		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeDeskOrderEnd, "桌台订单结束"))
 	}
 	// 判断订单状态
 	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, request.SaleOrderUuid); err != nil {
-		return res, errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
 
 	getProductNum := func(products []req.ProductParams) uint {
@@ -392,22 +456,24 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 			if tabletSetting.BuffetOrderLimit.IsLimitTime == "1" && lastOrderTime > 0 { // 限制下单间隔
 				interval, err := strconv.Atoi(tabletSetting.BuffetOrderLimit.LimitTime)
 				if err != nil {
-					return res, errors.WithMessage(err, "解析平板端设置失败")
+					return nil, errors.WithMessage(err, "解析平板端设置失败")
 				}
 				// 小于间隔时间，不可下单
 				nextTime := time.Unix(lastOrderTime, 0).Add(time.Duration(interval) * time.Minute).Unix()
 				now := time.Now().Unix()
 				if nextTime-now > 0 {
-					return gin.H{"value": nextTime - now}, errors.NewWithCode(constant.CodeH5OrderTimeLimit, "时间限制")
+					value := nextTime - now
+					return &TabletAddAndCookingRes{Value: &value}, errors.NewWithCode(constant.CodeH5OrderTimeLimit, "时间限制")
 				}
 			}
 			if tabletSetting.BuffetOrderLimit.IsLimitNum == "1" { // 限制下单最大商品总数
 				numLimit, err := strconv.Atoi(tabletSetting.BuffetOrderLimit.LimitNum)
 				if err != nil {
-					return res, errors.WithMessage(err, "解析平板端设置失败")
+					return nil, errors.WithMessage(err, "解析平板端设置失败")
 				}
 				if getProductNum(request.Products) > uint(numLimit) {
-					return gin.H{"value": numLimit}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
+					value := int64(numLimit)
+					return &TabletAddAndCookingRes{Value: &value}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
 				}
 			}
 		}
@@ -415,25 +481,33 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 			if tabletSetting.OrderLimit.IsLimitTime == "1" && lastOrderTime > 0 { // 限制下单间隔
 				interval, err := strconv.Atoi(tabletSetting.OrderLimit.LimitTime)
 				if err != nil {
-					return res, errors.WithMessage(err, "解析平板端设置失败")
+					return nil, errors.WithMessage(err, "解析平板端设置失败")
 				}
 				// 小于间隔时间，不可下单
 				nextTime := time.Unix(lastOrderTime, 0).Add(time.Duration(interval) * time.Minute).Unix()
 				now := time.Now().Unix()
 				if nextTime-now > 0 {
-					return gin.H{"value": nextTime - now}, errors.NewWithCode(constant.CodeH5OrderTimeLimit, "时间限制")
+					value := nextTime - now
+					return &TabletAddAndCookingRes{Value: &value}, errors.NewWithCode(constant.CodeH5OrderTimeLimit, "时间限制")
 				}
 			}
 			if tabletSetting.OrderLimit.IsLimitNum == "1" { // 限制下单最大商品总数
 				numLimit, err := strconv.Atoi(tabletSetting.OrderLimit.LimitNum)
 				if err != nil {
-					return res, errors.WithMessage(err, "解析平板端设置失败")
+					return nil, errors.WithMessage(err, "解析平板端设置失败")
 				}
 				if getProductNum(request.Products) > uint(numLimit) {
-					return gin.H{"value": numLimit}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
+					value := int64(numLimit)
+					return &TabletAddAndCookingRes{Value: &value}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
 				}
 			}
 		}
+	}
+
+	// 暂时不使用这两个字段
+	for index, _ := range request.Products {
+		request.Products[index].Price = nil
+		request.Products[index].IsBuffet = nil
 	}
 
 	checkServiceRes, err := s.ActionAddAndCooking(ctx, req.ProductAddReq{
@@ -446,10 +520,13 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 		if checkServiceRes.Code == constant.CodeOrderCheckProductMust && request.IgnoreMust {
 			// 必点方案未选择，且忽略必点方案
 		} else {
-			return checkServiceRes.OrderCheckRes, errors.WithMessage(errors.New(constant.ParseCodeOrderCheck(checkServiceRes.Code, constant.WithIsTablet())))
+			return &TabletAddAndCookingRes{OrderCheckRes: checkServiceRes.OrderCheckRes}, errors.WithMessage(errors.New(constant.ParseCodeOrderCheck(checkServiceRes.Code, constant.WithIsTablet())))
 		}
 	}
-	return res, err
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
 
 type ActionAddOption struct {
