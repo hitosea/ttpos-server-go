@@ -6808,6 +6808,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			}
 			amount := resp.PaymentMethodAmount{
 				SaleOrderOriginAmount: saleOrderOriginAmount,
+				SaleOrderCartAmount:   saleOrder.GetAmount(),
 				SaleOrderAmount:       saleOrderAmount,
 				CommissionFee:         commissionFee,
 				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission),

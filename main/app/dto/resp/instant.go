@@ -228,6 +228,7 @@ type PaymentMethodAmountList struct {
 }
 type PaymentMethodAmount struct {
 	SaleOrderOriginAmount float64 `json:"sale_order_origin_amount"` // 订单原价。订单原价=商品总价（折前价）+服务费（折前价）+消费税（折前价）
+	SaleOrderCartAmount   float64 `json:"sale_order_cart_amount"`   // 购物车应收金额。
 	SaleOrderAmount       float64 `json:"sale_order_amount"`        // 应收金额。
 	UnpaidAmount          float64 `json:"unpaid_amount"`            // 未收金额。用于显示在金额输入框，默认显示未收金额。未收金额=应收金额-实付金额。实付金额指去掉手续费为这笔订单支付的金额
 	ZeroAmount            float64 `json:"zero_amount"`              // 抹零金额。当支付方式为有手续费时，结账抹零金额为0。
