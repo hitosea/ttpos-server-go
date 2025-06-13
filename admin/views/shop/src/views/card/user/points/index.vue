@@ -463,23 +463,20 @@
       handleValueInput(e, index) {
         let value = e;
         // 只允许输入数字和小数点
-        value = value.replace(/[^0-9.]/g, '');
+        value = value.replace(/[^0-9]/g, '');
 
-        // 确保只有一个小数点
-        const parts = value.split('.');
-        if (parts.length > 2) {
-          value = parts[0] + '.' + parts.slice(1).join('');
-        }
-
-        // 限制最多两位小数
-        if (parts[1] && parts[1].length > 2) {
-          value = parts[0] + '.' + parts[1].substring(0, 2);
+        // 不能输入 01 001这种
+        if (value.length > 1 && value.startsWith('0')) {
+          value = value.slice(1);
         }
 
         // 转换为数字进行范围检查
         const numValue = parseFloat(value);
         if (numValue > 100) {
           value = '100';
+        }
+        if (numValue < 0) {
+          value = '0';
         }
 
         // 更新表单值
@@ -605,17 +602,11 @@
       handleMemberLevelsInput(e, index, levelIndex) {
         let value = e;
         // 只允许输入数字和小数点
-        value = value.replace(/[^0-9.]/g, '');
+        value = value.replace(/[^0-9]/g, '');
 
-        // 确保只有一个小数点
-        const parts = value.split('.');
-        if (parts.length > 2) {
-          value = parts[0] + '.' + parts.slice(1).join('');
-        }
-
-        // 限制最多两位小数
-        if (parts[1] && parts[1].length > 2) {
-          value = parts[0] + '.' + parts[1].substring(0, 2);
+        // 不能输入 01 001这种
+        if (value.length > 1 && value.startsWith('0')) {
+          value = value.slice(1);
         }
 
         // 转换为数字进行范围检查
