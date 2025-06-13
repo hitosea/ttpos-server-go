@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"crypto/md5"
 	"fmt"
 	"os"
 	"strings"
@@ -34,7 +33,7 @@ func (model *PrinterLogData) SetData(companyUuid uint64, data string) string {
 
 	// 获取文件名
 	fileName := fmt.Sprintf("%d/print_data/%d.txt", companyUuid, model.LogUuid)
-	md5Key := fmt.Sprintf("%x", md5.Sum([]byte(fileName)))
+	md5Key := strings.ReplaceAll(fileName, "/", ":")
 
 	// 存到redis
 	err := cache.Global.Set(md5Key, data, 3*time.Minute)
@@ -99,7 +98,7 @@ func (model *PrinterLogData) GetData(isDelCache bool) string {
 	}
 
 	// 添加缓存预热
-	md5Key := fmt.Sprintf("%x", md5.Sum([]byte(model.Data)))
+	md5Key := strings.ReplaceAll(model.Data, "/", ":")
 	if data, isExist := cache.Global.Get(md5Key); isExist {
 		model.Data = data.(string)
 		if isDelCache {

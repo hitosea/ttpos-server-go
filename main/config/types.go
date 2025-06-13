@@ -93,7 +93,7 @@ func (c *GoogleBucketConf) GetGoogleApplicationCredentialsFileName() string {
 		if Server.Mode == "debug" {
 			return fmt.Sprintf("../docker/certificate/%s", c.GoogleApplicationCredentialsFileName)
 		}
-		return fmt.Sprintf("/var/certificate/%s.json", c.GoogleApplicationCredentialsFileName)
+		return fmt.Sprintf("/var/certificate/%s", c.GoogleApplicationCredentialsFileName)
 	}
 	return ""
 }
