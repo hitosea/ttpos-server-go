@@ -18,11 +18,11 @@
         </el-select>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('会员卡')">
-        <el-select class="percent-w100" v-model="form.card_uuid" :placeholder="$t('请选择会员卡')">
+        <el-select class="percent-w100" v-model="form.card_uuid" :placeholder="$t('请选择会员卡')" clearable>
           <el-option v-for="(item, index) in cardList" :key="index" :label="item.name + ' ' + `(${item.price})`" :value="item.uuid"></el-option>
         </el-select>
       </el-form-item>
-      <el-form-item for="no_click" :label="$t('会员卡号')">
+      <el-form-item v-if="form.card_uuid" for="no_click" :label="$t('会员卡号')">
         <el-input class="percent-w100" v-model="form.card_number" @input="inputCardNumber" :maxlength="48" :placeholder="$t('请输入会员卡号')"></el-input>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('推荐人')">
