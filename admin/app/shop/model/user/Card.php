@@ -58,7 +58,7 @@ class Card extends CardModel
      */
     public function put($data)
     {
-        $userList = $data['user_ids'];
+        $userList = $data['user_ids'] ?? [];
         if (empty($userList)) {
             $this->error = "请选择会员";
             return false;
@@ -89,68 +89,71 @@ class Card extends CardModel
                 $userId = $userInfo['uuid'];
                 $cardNumber = $userInfo['card_number'] ?? '';
                 // 检查会员是否已拥有此会员卡
+                $isOwnCard = false;
                 $isExist = (new MemberCard())->checkExistByUserId($userId);
                 if (!$isExist?->isEmpty()) {
                     if ($data['card_id'] == $isExist['card_type_uuid']) {
-                        $this->error = "会员已拥有此会员卡";
-                        return false;
-                        continue;
+                        $isOwnCard = true;
+                    } else {
+                        // 删除会员的现有会员卡和记录
+                        MemberCard::destroy(function($query) use ($userId) {
+                            $query->where('member_uuid', '=', $userId);
+                        });
+                        CardRecordModel::destroy(function($query) use ($userId) {
+                            $query->where('member_uuid', '=', $userId);
+                        });
                     }
-    
-                    // 删除会员的现有会员卡和记录
-                    MemberCard::destroy(function($query) use ($userId) {
-                        $query->where('member_uuid', '=', $userId);
-                    });
-                    CardRecordModel::destroy(function($query) use ($userId) {
-                        $query->where('member_uuid', '=', $userId);
-                    });
                 }
     
                 $detail = self::detail($data['card_id']);
                 $user = (new User)::detail($userId);
-                //添加会员卡
-                $record = [
-                    'member_uuid' => $userId,
-                    'member_card_type_uuid' => $data['card_id'],
-                    'expire' => $detail['expire'] ? (time() + $detail['expire'] * 86400 * 30) : 0,
-                    'price' => $detail['money'],
-                    'discount' => $detail['discount'] > 0 ? $detail['discount'] : 0,
-                    'member_name' => $user['nickname'] ?? '',
-                    'member_phone' => $user['phone'] ?? '',
-                    'member_no' => $user['member_no'] ?? '',
-                    'member_card_type_name' => $detail['name'],
-                    'give_money' => $detail['open_money'] ? $detail['open_money_num'] : 0,
-                    'give_point' => $detail['open_point'] ? $detail['open_point_num'] : 0,
-                ];
-                $CardRecordModel = new CardRecordModel;
-                $CardRecordModel->save($record);
-                //
-                $memberCardUuid = createUuid();
-                $id = (new MemberCard)->add([
-                    'uuid' => $memberCardUuid,
-                    'card_type_uuid' => $data['card_id'],
-                    'member_uuid' => $userId,
-                    'expire_time' => $detail['expire'] ? (time() + $detail['expire'] * 86400 * 30) : 0,
-                    'discount' => $detail['discount'] > 0 ? $detail['discount'] : 0,
-                ]);
-                // 会员卡id
-                if ($id) {
-                    /** @var User $user */
-                    $user->setMemberCardId($memberCardUuid);
+                if (!$isOwnCard) {
+                    //添加会员卡
+                    $record = [
+                        'member_uuid' => $userId,
+                        'member_card_type_uuid' => $data['card_id'],
+                        'expire' => $detail['expire'] ? (time() + $detail['expire'] * 86400 * 30) : 0,
+                        'price' => $detail['money'],
+                        'discount' => $detail['discount'] > 0 ? $detail['discount'] : 0,
+                        'member_name' => $user['nickname'] ?? '',
+                        'member_phone' => $user['phone'] ?? '',
+                        'member_no' => $user['member_no'] ?? '',
+                        'member_card_type_name' => $detail['name'],
+                        'give_money' => $detail['open_money'] ? $detail['open_money_num'] : 0,
+                        'give_point' => $detail['open_point'] ? $detail['open_point_num'] : 0,
+                    ];
+                    $CardRecordModel = new CardRecordModel;
+                    $CardRecordModel->save($record);
+                    //
+                    $memberCardUuid = createUuid();
+                    $id = (new MemberCard)->add([
+                        'uuid' => $memberCardUuid,
+                        'card_type_uuid' => $data['card_id'],
+                        'member_uuid' => $userId,
+                        'expire_time' => $detail['expire'] ? (time() + $detail['expire'] * 86400 * 30) : 0,
+                        'discount' => $detail['discount'] > 0 ? $detail['discount'] : 0,
+                    ]);
+                    // 会员卡id
+                    if ($id) {
+                        /** @var User $user */
+                        $user->setMemberCardId($memberCardUuid);
+                        $user->save(['member_card_no' => $cardNumber]);
+                    }
+                    // 赠送积分
+                    if ($detail['open_point'] && $detail['open_point_num']) {
+                        /** @var User $user */
+                        $user->setIncPoints($detail['open_point_num'], '发会员卡获取积分');
+                    }
+                    // 赠送余额
+                    if ($detail['open_money'] && $detail['open_money_num']) {
+                        BalanceLogModel::add(BalanceLogSceneEnum::ADMIN, [
+                            'member_uuid' => $user['user_id'],
+                            'money' => helper::bcadd($detail['open_money_num'], 0), // v1.0.8显示余额明细
+                            'gift_money' => $detail['open_money_num'], // v1.0.8影响到赠送余额，而且不是主账户
+                        ], ['order_no' => '后台发放会员卡赠送']);
+                    }
+                } else {
                     $user->save(['member_card_no' => $cardNumber]);
-                }
-                // 赠送积分
-                if ($detail['open_point'] && $detail['open_point_num']) {
-                    /** @var User $user */
-                    $user->setIncPoints($detail['open_point_num'], '发会员卡获取积分');
-                }
-                // 赠送余额
-                if ($detail['open_money'] && $detail['open_money_num']) {
-                    BalanceLogModel::add(BalanceLogSceneEnum::ADMIN, [
-                        'member_uuid' => $user['user_id'],
-                        'money' => helper::bcadd($detail['open_money_num'], 0), // v1.0.8显示余额明细
-                        'gift_money' => $detail['open_money_num'], // v1.0.8影响到赠送余额，而且不是主账户
-                    ], ['order_no' => '后台发放会员卡赠送']);
                 }
                 $this->commit();
             } catch (\Exception $e) {

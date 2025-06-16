@@ -212,6 +212,44 @@ class User extends UserModel
             }
         }
 
+        $this->startTrans();
+        try {
+            $userUuid = createUuid();
+            $user = $this->save([
+                'uuid' => $userUuid,
+                'nickname' => $nickName,
+                'phone' => $mobile,
+                'password' => $password ? md5($password) : '',
+                'gender' => $gender, //性别
+                'member_level_uuid' => $gradeId, //默认等级
+                'birthday' => $birthday ? strtotime($birthday) : 0, //生日
+                'referrer_uuid' => $referrerUuid, //推荐人
+                'activity_uuid' => $activityUuid, //活动
+            ]);
+            if (!$user) {
+                throw new \Exception('添加失败');
+            }
+            if ($card) {
+                $model = new CardModel();
+                $result = $model->put([
+                    'card_id' => $card['uuid'],
+                    'user_ids' => [
+                        [ 'uuid' => $userUuid, 'card_number' => $cardNumber ]
+                    ],
+                ]);
+                if (!$result) {
+                    throw new \Exception($model->getError());
+                }
+            }
+            $this->commit();
+        } catch (\Exception $e) {
+            $this->error = $e->getMessage();
+            $this->rollback();
+            return false;
+        }
+
+        return true;
+
         return $this->transaction(function () use ($nickName, $mobile, $password, $gender, $gradeId, $birthday, $card, $cardNumber, $referrerUuid, $activityUuid) {
             $userUuid = createUuid();
             $user = $this->save([

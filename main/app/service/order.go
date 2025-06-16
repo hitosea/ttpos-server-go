@@ -7381,7 +7381,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	if saleBill.SaleBillSetting.IsOpenPointsExchange() {
 		if saleOrder.Member != nil {
 			if saleOrder.PayPoints > 0 && saleOrder.Member.GetPoints() < saleOrder.PayPoints {
-				return nil, errors.New("当前会员积分不足，请重新确认后结账")
+				return nil, errors.New("当前会员抵扣积分不足，需撤销支付后重新抵扣")
 			}
 		}
 	}
