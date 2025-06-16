@@ -385,6 +385,8 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 				continue
 			}
 
+			consumptionAmount := saleOrder.GetFinalNoFeeAmount()
+
 			// 发送奖励一
 			{
 				// 记录消费金额
@@ -392,7 +394,7 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 					activity.Uuid,
 					saleOrder.Member.ReferrerUuid,
 					saleOrder.ConsumerUuid,
-					saleOrder.PaymentAmount,
+					consumptionAmount,
 				)
 				if err != nil {
 					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
@@ -418,7 +420,7 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 						referrer.ActivityUuid,
 						referrer.ReferrerUuid,
 						saleOrder.ConsumerUuid,
-						saleOrder.PaymentAmount,
+						consumptionAmount,
 					)
 					if err != nil {
 						logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
