@@ -84,7 +84,14 @@ func (s *marketingActivitySrv) MarketingActivity(ctx context.Context) (*member_r
 		Company: member_resp.CompanyInfoResp{
 			Uuid: company.Uuid,
 			Name: company.Name,
-			Logo: utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.Copy().GetGin().Request), true),
+			Logo: func() string {
+				baseURL := utils.GetBaseURL(ctx.Copy().GetGin().Request)
+				logoBase64, err := utils.AddImageDomainAndConvertToBase64(company.Logo, baseURL, true)
+				if err != nil {
+					return utils.AddImageDomain(company.Logo, baseURL, true)
+				}
+				return logoBase64
+			}(),
 		},
 	}
 
