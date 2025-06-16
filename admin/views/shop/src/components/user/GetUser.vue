@@ -26,6 +26,7 @@
       <div class="table-wrap">
         <div class="tips">{{ $t('注：如选择已有会员卡用户，将会根据最新操作更换其会员卡') }}</div>
         <el-table
+          ref="multipleTable"
           :data="tableData"
           size="small"
           border
@@ -146,6 +147,7 @@
       };
     },
     props: {
+      detailSelection: [],
       is_open: Boolean,
       is_single: {
         type: Boolean,
@@ -205,6 +207,18 @@
             self.tableData = data.data.list.data;
             self.totalDataNumber = data.data.list.total;
             self.gradeList = data.data.grade;
+            
+            // 默认选中ID
+            if(this.detailSelection.length>0) {
+              this.$nextTick(() => {
+                this.tableData.forEach(row => {
+                  if (this.detailSelection.includes(row.id)) {
+                    this.$refs.multipleTable.toggleRowSelection(row, true);
+                    this.multipleSelection.push(row);
+                  }
+                })
+              });
+            }
           })
           .catch((error) => {
             self.loading = false;
