@@ -149,6 +149,10 @@ func (model *SaleOrder) GetReturnedPoints() float64 {
 
 // 获取手动退款积分时，可退积分数量=订单赠送的积分-已经退回的积分. 如果会员积分余额不足时，可退积分数量等于会员积分余额
 func (model *SaleOrder) GetManualReturnPoints() float64 {
+	// 订单没有会员，可退积分为0
+	if model.ConsumerUuid == 0 {
+		return 0
+	}
 	// 可退积分数量=订单赠送的积分-已经退回的积分
 	returnedPoints := model.GiftPoints - model.GetReturnedPoints()
 	if returnedPoints < 0 {
