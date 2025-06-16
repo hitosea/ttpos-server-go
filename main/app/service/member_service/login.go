@@ -124,9 +124,16 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 
 	// 返回
 	return member_resp.MemberLoginInfoResp{
-		CompanyUuid:  req.CompanyUuid,
-		CompanyName:  company.Name,
-		Logo:         utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.Copy().GetGin().Request), true),
+		CompanyUuid: req.CompanyUuid,
+		CompanyName: company.Name,
+		Logo: func() string {
+			baseURL := utils.GetBaseURL(ctx.Copy().GetGin().Request)
+			logoBase64, err := utils.AddImageDomainAndConvertToBase64(company.Logo, baseURL, true)
+			if err != nil {
+				return utils.AddImageDomain(company.Logo, baseURL, true)
+			}
+			return logoBase64
+		}(),
 		AreaCode:     areaCodes,
 		LanguageList: languageList,
 	}, nil
