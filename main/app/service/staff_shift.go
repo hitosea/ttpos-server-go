@@ -23,6 +23,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/websocket"
 
 	"github.com/duke-git/lancet/convertor"
 	"github.com/shopspring/decimal"
@@ -292,6 +293,11 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 				ctx.Log().Error("交班-创建交班快照失败", zap.Error(err))
 			}
 		}()
+
+		//
+		go websocket.PushClient(staff.CompanyUuid, websocket.SourceAssistant, websocket.SourceAll, websocket.UPDATE_CONFIG, map[string]interface{}{
+			"update_time": time.Now().Unix(),
+		})
 
 		return nil
 	})

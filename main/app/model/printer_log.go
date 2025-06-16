@@ -139,14 +139,15 @@ func (model *PrinterLog) IsUsbPrinter() bool {
 func (model *PrinterLog) CalculationTime() int64 {
 	//
 	t := int64(200)
-	speed := 190
+	speed := 200
 	//
 	if model.PrinterType == constant.PrinterTypeXPrinterWifi {
-		speed = 120
+		speed = 70
+		if model.DataType != constant.PrinterTemplateOneDishOneMenu && model.DataType != constant.PrinterTemplateEntireOrder {
+			speed = 75
+		}
 	} else if model.PrinterType == constant.PrinterTypeCodesoftWifi {
-		speed = 90
-	} else if model.PrinterType == constant.PrinterTypeCodesoftLan {
-		speed = 120
+		speed = 70
 	}
 	//
 	t = int64(math.Ceil(float64(len(model.Data)) / float64(speed)))
