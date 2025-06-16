@@ -146,7 +146,16 @@
       /*关闭获取用户*/
       closeGetuserFunc(e) {
         if (e && e.type != 'error') {
-          this.select_list = [...e.params];
+          var arr = [];
+          (e.params || [])?.forEach(row => {
+            var index = this.select_list.findIndex(item => item.id == row.id);
+            if(index !== -1) {
+              arr.push(this.select_list[index]);
+            } else {
+              arr.push(row)
+            }
+          });
+          this.select_list = arr;
         }
         this.open_getuser = false;
       },
