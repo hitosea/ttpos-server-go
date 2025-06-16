@@ -662,6 +662,11 @@ definitions:
       company_uuid:
         description: 集团UUID
         type: integer
+      language_list:
+        description: 语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
       logo:
         description: 集团logo
         type: string

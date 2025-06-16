@@ -17442,6 +17442,13 @@ const docTemplate = `{
                     "description": "集团UUID",
                     "type": "integer"
                 },
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
                 "logo": {
                     "description": "集团logo",
                     "type": "string"
