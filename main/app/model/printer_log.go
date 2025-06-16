@@ -136,7 +136,7 @@ func (model *PrinterLog) IsUsbPrinter() bool {
 }
 
 // 计算打印耗时
-func (model *PrinterLog) CalculationTime() int64 {
+func (model *PrinterLog) CalculationTime(data string) int64 {
 	//
 	t := int64(200)
 	speed := 200
@@ -150,7 +150,7 @@ func (model *PrinterLog) CalculationTime() int64 {
 		speed = 70
 	}
 	//
-	t = int64(math.Ceil(float64(len(model.Data)) / float64(speed)))
+	t = int64(math.Ceil(float64(len(data)) / float64(speed)))
 	//
 	if t < 200 {
 		return 200
