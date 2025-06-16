@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/base64"
-	"fmt"
 	"math"
 	"slices"
 	"strings"
@@ -150,9 +149,12 @@ func (model *PrinterLog) CalculationTime(data string) int64 {
 	//
 	t = int64(math.Ceil(float64(len(data)) / float64(speed)))
 	//
-	if t < 200 {
-		fmt.Println("data-len-", len(data), "speed-", speed, "t-", t)
-		return 200
+	if model.PrinterType == constant.PrinterTypeXPrinterWifi || model.PrinterType == constant.PrinterTypeCodesoftWifi {
+		if t < 1200 {
+			return 1200
+		}
+	} else if t < 300 {
+		return 300
 	}
 	return t
 }
