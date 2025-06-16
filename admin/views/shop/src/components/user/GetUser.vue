@@ -157,6 +157,10 @@
         type: Boolean,
         default: false,
       }, //是否单选
+      exclude_user_id: {
+        type: [Number, String],
+        default: '',
+      }, //排除的用户ID
     },
     watch: {
       is_open: function (n, o) {
@@ -205,6 +209,7 @@
         let params = self.formInline;
         params.page = self.curPage;
         params.list_rows = self.pageSize;
+        params.exclude_user_id = self.exclude_user_id;
         DataApi.getUser(params, true)
           .then((data) => {
             self.loading = false;

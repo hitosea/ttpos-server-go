@@ -71,6 +71,10 @@ class User extends UserModel
         if (isset($data['gender']) && $data['gender'] > -1) {
             $model = $model->where('gender', '=', (int)$data['gender']);
         }
+        // 检索：排除用户ID
+        if (isset($data['exclude_user_id']) && intval($data['exclude_user_id']) > 0) {
+            $model = $model->where('uuid', '<>', (int)$data['exclude_user_id']);
+        }
         // 获取用户列表
         $paginate = $model->with(['grade', 'memberCard' => ['card'], 'memberBalanceLog', 'referrer'])
             ->field('*, nickname as nickName')

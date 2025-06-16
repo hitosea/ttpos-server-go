@@ -56,7 +56,7 @@
     </template>
   </el-dialog>
   <!--选择用户-->
-  <GetUser :is_open="open_getuser" @close="closeGetuserFunc" :is_single="true"></GetUser>
+  <GetUser :is_open="open_getuser" :exclude_user_id="form.user_id" @close="closeGetuserFunc" :is_single="true"></GetUser>
 </template>
 <script>
   import UserApi from '@/api/user.js';
