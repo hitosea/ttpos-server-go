@@ -8179,7 +8179,7 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 		db = s.dbm.GetDB(ctx.GetDbId())
 	}
 
-	handle := func(db *gorm.DB) error {
+	err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		for _, saleOrder := range saleBill.SaleOrders {
 			// 保存订单
 			if len(saleBill.SaleOrders) == 1 {
@@ -8193,16 +8193,10 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 					return errors.WithMessage(err)
 				}
 			}
-			if option.NoTransaction {
-				fmt.Println("CalcAndSaveSaleBill 2222222222222", time.Now(), "flag")
-			}
 			// 保存订单商品
 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
 				if saleOrderProduct == nil {
 					continue
-				}
-				if saleOrderProduct.ProductionOrderUuid == 0 {
-					fmt.Println("CalcAndSaveSaleBill 222222222222211111", time.Now(), "flag")
 				}
 				// 保存订单商品。只有标记更新的商品才会更新
 				if err := repository.NewSaleOrderProductRepo(db).UpdateOrCreateSaleOrderProductRecord(*saleOrderProduct); err != nil {
@@ -8241,23 +8235,10 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 			return errors.WithMessage(err)
 		}
 		return nil
-	}
-
-	if option.NoTransaction {
-		if err := handle(db); err != nil {
-			return errors.WithMessage(err)
-		}
-	} else {
-		err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
-			if err := handle(db); err != nil {
-				return errors.WithMessage(err)
-			}
-			return nil
-		})
-		if err != nil {
-			ctx.Log().Error("更新金额失败", zap.Error(err))
-			return errors.WithMessage(err)
-		}
+	})
+	if err != nil {
+		ctx.Log().Error("更新金额失败", zap.Error(err))
+		return errors.WithMessage(err)
 	}
 	return nil
 }

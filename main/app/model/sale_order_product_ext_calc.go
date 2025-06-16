@@ -16,7 +16,6 @@ type CalcOption struct {
 	H5CheckLimit          bool             // 是否是在h5端检查限购的场景
 	SaleOrderProductUuids []uint64         // 指定一个或多个销售订单商品,仅检查这个或这些销售订单商品是否超过限购
 	ServiceFeeBase        uint             // 服务费计算基准, 0-商品惠后价 1-商品价格合计
-	NoTransaction         bool             // 是否不使用事务。默认使用事务。当不使用事务时，不标记该记录要更新
 }
 
 const (
@@ -30,12 +29,6 @@ const (
 	H5OrderStatusUnAccepted = 1 // 1-未接单的
 	H5OrderStatusAccepted   = 2 // 2-已接单的
 )
-
-func WithNoTransaction() func(option *CalcOption) {
-	return func(option *CalcOption) {
-		option.NoTransaction = true
-	}
-}
 
 // WithLastestPrice 用最新的价格信息计算订单金额
 func WithLastestPrice() func(option *CalcOption) {
