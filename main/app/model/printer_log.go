@@ -144,9 +144,9 @@ func (model *PrinterLog) CalculationTime() int64 {
 	if model.PrinterType == constant.PrinterTypeXPrinterWifi {
 		speed = 120
 	} else if model.PrinterType == constant.PrinterTypeCodesoftWifi {
-		speed = 80
+		speed = 90
 	} else if model.PrinterType == constant.PrinterTypeCodesoftLan {
-		speed = 100
+		speed = 120
 	}
 	//
 	t = int64(math.Ceil(float64(len(model.Data)) / float64(speed)))
