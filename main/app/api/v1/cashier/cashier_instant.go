@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -439,7 +440,7 @@ func (h *InstantHandler) OrderCartProductAdd(c *gin.Context) {
 	// 添加商品。 若没有点餐账单则新建一个
 	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
-		if errors.Is(err, errors.ErrProductPriceChanged) {
+		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {
 			helper.ErrorWithData(c, constant.CodeOrderCheckProductPriceChanged, res, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), err.Error())))
 			return
 		}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -462,7 +463,7 @@ func (h *DeskHandler) OrderCartProductAdd(c *gin.Context) {
 	// 添加商品。 若没有点餐账单则新建一个
 	shopCart, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
-		if errors.Is(err, errors.ErrProductPriceChanged) {
+		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {
 			res := &resp.DeskPing{
 				Product: shopCart.Product,
 			}
