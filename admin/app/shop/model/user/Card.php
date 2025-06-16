@@ -58,7 +58,7 @@ class Card extends CardModel
      */
     public function put($data)
     {
-        $userList = $data['user_ids'];
+        $userList = $data['user_ids'] ?? [];
         if (empty($userList)) {
             $this->error = "请选择会员";
             return false;
