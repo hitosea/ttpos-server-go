@@ -6880,8 +6880,16 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 			saleOrder.AutoPointsExchange = 0
 			saleOrder.PayPointsAmount = saleOrder.CaclPointsExchangeAmount()
 
-			// 更新销售订单的积分抵扣信息
-			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate, 0); err != nil {
+			if err := db.Transaction(func(tx *gorm.DB) error {
+				if err := repository.NewSaleOrderRepo(tx).SetCheckoutZeroRuleCancel(saleOrder.Uuid); err != nil {
+					return errors.WithMessage(err)
+				}
+				// 更新销售订单的积分抵扣信息
+				if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate, 0); err != nil {
+					return errors.WithMessage(err)
+				}
+				return nil
+			}); err != nil {
 				return nil, errors.WithMessage(err)
 			}
 		}
