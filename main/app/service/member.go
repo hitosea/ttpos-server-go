@@ -128,18 +128,20 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 
 	// 判断推荐人，活动
 	var referrer model.Member
-	activityUuid := addMemberReq.ActivityUuid
+	//activityUuid := addMemberReq.ActivityUuid
+	// 默认为0，不接收前端传递的活动ID
+	var activityUuid uint64
 	if addMemberReq.ReferrerUuid != 0 {
 		referrer = memberRepo.GetMember(memberRepo.WhereUuid(addMemberReq.ReferrerUuid))
 		if referrer.ID == 0 {
 			return errors.New("推荐人不存在")
 		}
-		if addMemberReq.ActivityUuid == 0 {
-			activities, _ := repository.NewMarketingActivityRepo(ctx.GetDB()).GetActivityListByNow()
-			if len(activities) != 0 {
-				activityUuid = activities[0].Uuid
-			}
+		//if addMemberReq.ActivityUuid == 0 {
+		activities, _ := repository.NewMarketingActivityRepo(ctx.GetDB()).GetActivityListByNow()
+		if len(activities) != 0 {
+			activityUuid = activities[0].Uuid
 		}
+		//}
 	}
 
 	// 处理会员密码
