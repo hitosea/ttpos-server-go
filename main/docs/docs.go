@@ -17841,7 +17841,9 @@ const docTemplate = `{
                 },
                 "card_no": {
                     "description": "会员卡号",
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 48,
+                    "minLength": 1
                 },
                 "card_type_uuid": {
                     "description": "会员卡类型Uuid",
@@ -18543,6 +18545,10 @@ const docTemplate = `{
                     "description": "某个规格商品ID",
                     "type": "integer"
                 },
+                "is_buffet": {
+                    "description": "是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用",
+                    "type": "boolean"
+                },
                 "must_plan_uuid": {
                     "description": "必点方案uuid. 可选，在必点方案弹窗中加购时填写",
                     "type": "integer"
@@ -19177,6 +19183,10 @@ const docTemplate = `{
                     "description": "商品规格uuid",
                     "type": "integer"
                 },
+                "is_buffet": {
+                    "description": "是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用",
+                    "type": "boolean"
+                },
                 "must_plan_uuid": {
                     "description": "必点方案uuid. 可选，在必点方案弹窗中加购时填写",
                     "type": "integer"
@@ -19188,6 +19198,10 @@ const docTemplate = `{
                 "operation": {
                     "description": "操作类型。add: 加购，sub: 减购",
                     "type": "string"
+                },
+                "price": {
+                    "description": "商品价格，商品单价。当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格。可选，不传时，不进行价格校验",
+                    "type": "number"
                 },
                 "product_package_attribute_uuid_list": {
                     "description": "属性信息",
@@ -22745,6 +22759,10 @@ const docTemplate = `{
                 },
                 "sale_order_amount": {
                     "description": "应收金额。",
+                    "type": "number"
+                },
+                "sale_order_cart_amount": {
+                    "description": "购物车应收金额。",
                     "type": "number"
                 },
                 "sale_order_origin_amount": {
