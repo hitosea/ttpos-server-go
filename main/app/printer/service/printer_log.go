@@ -487,7 +487,7 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 	printerLog.BaseModel.Uuid = LogData.LogUuid
 	printerLog.PrinterType = printer.PrinterType
 	printerLog.PrinterTime = time.Now().Unix()
-	printerLog.PrintingTime = printerLog.CalculationTime()
+	printerLog.PrintingTime = printerLog.CalculationTime(printerLogData.Data)
 	printerLog.Data = "-"
 	printerLog, err = repository.NewPrinterLogRepo(tx).Create(printerLog)
 	if err != nil {
