@@ -9862,14 +9862,14 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 		return res, errors.WithMessage(err, "下单扫码h5订单失败")
 	}
 
-	go func() {
+	// 自动接单
+	{
 		companySetting := ctx.GetCompanySetting()
 		if companySetting.GetIsOpenH5Order() {
 			// 判断
 			acceptOrderSetting, err := s.settingSrv.GetAcceptOrderSetting(ctx)
 			if err != nil {
 				ctx.Log().Error("获取接单设置失败", zap.Error(err))
-				return
 			}
 			totalPrice := saleBill.GetUnAcceptH5OrderProductTotalPrice(h5OrderProducts) // 未接单的h5订单商品的商品金额之和
 			if acceptOrderSetting.CanAutoOrder(totalPrice) {
@@ -9881,7 +9881,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 			// 自动接单
 			s.AcceptH5Order(ctx, h5Order.Uuid, true)
 		}
-	}()
+	}
 
 	return res, nil
 }
