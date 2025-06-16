@@ -24,7 +24,7 @@
     <!--内容-->
     <div class="product-content">
       <div class="table-wrap">
-        <div class="tips">{{ $t('注：如选择已有会员卡用户，将会根据最新操作更换其会员卡') }}</div>
+        <div v-if="isShowTips" class="tips">{{ $t('注：如选择已有会员卡用户，将会根据最新操作更换其会员卡') }}</div>
         <el-table
           ref="multipleTable"
           :data="tableData"
@@ -147,6 +147,10 @@
       };
     },
     props: {
+      isShowTips: {
+        type: Boolean,
+        default: false,
+      },
       detailSelection: [],
       is_open: Boolean,
       is_single: {

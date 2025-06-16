@@ -61,7 +61,7 @@
       </div>
     </template>
     <!--选择用户-->
-    <GetUser :is_open="open_getuser" :detailSelection="selectListID" @close="closeGetuserFunc"></GetUser>
+    <GetUser :is_open="open_getuser" :isShowTips="true" :detailSelection="selectListID" @close="closeGetuserFunc"></GetUser>
   </el-dialog>
 </template>
 
