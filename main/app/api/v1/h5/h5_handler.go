@@ -2,6 +2,7 @@ package h5
 
 import (
 	"fmt"
+	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -270,7 +271,8 @@ func (h *Handler) OrderCartProductAdd(c *gin.Context) {
 	// 添加商品。 若没有点餐账单则新建一个
 	shopCart, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params, repository.WithUnorderedH5Product())
 	if err != nil {
-		if errors.Is(err, errors.ErrProductPriceChanged) {
+		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) { //  [app/service/order.go:4264]: [app/service/order.go:4562]: [app/service/order_action.go:271]: [app/service/order_action.go:586]: 商品超过限购
+			fmt.Println("InstantOrderCartProductAdd 1111", err)
 			res := resp.H5DeskPing{
 				Product: shopCart.Product,
 			}
