@@ -17842,8 +17842,7 @@ const docTemplate = `{
                 "card_no": {
                     "description": "会员卡号",
                     "type": "string",
-                    "maxLength": 48,
-                    "minLength": 1
+                    "maxLength": 48
                 },
                 "card_type_uuid": {
                     "description": "会员卡类型Uuid",

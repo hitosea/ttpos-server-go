@@ -916,7 +916,6 @@ definitions:
       card_no:
         description: 会员卡号
         maxLength: 48
-        minLength: 1
         type: string
       card_type_uuid:
         description: 会员卡类型Uuid
