@@ -220,7 +220,7 @@ class MarketingCouponService
         if (!empty($params['create_time'][0])) {
             $query = $query->where('record.create_time', 'between', [strtotime($params['create_time'][0]), strtotime($params['create_time'][1]) + 86399]);
         }
-        $list = $query->clone(true)->page($page, $pageSize)->order('record.create_time desc')->select();
+        $list = $query->clone(true)->page($page, $pageSize)->order('record.create_time desc, record.left_count asc')->select();
         $total = $query->count();
         return [
             'current_page' => $page,
