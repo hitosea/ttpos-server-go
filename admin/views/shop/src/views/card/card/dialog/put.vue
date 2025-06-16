@@ -61,7 +61,7 @@
       </div>
     </template>
     <!--选择用户-->
-    <GetUser :is_open="open_getuser" @close="closeGetuserFunc"></GetUser>
+    <GetUser :is_open="open_getuser" :isShowTips="true" :detailSelection="selectListID" @close="closeGetuserFunc"></GetUser>
   </el-dialog>
 </template>
 
@@ -89,6 +89,14 @@
     props: ['open_edit', 'form'],
     created() {
       this.dialogVisible = this.open_edit;
+    },
+    computed: {
+      selectListID () {
+        if(this.select_list.length>0) {
+          return this.select_list.map(item => item.id);
+        }
+        return [];
+      },
     },
     methods: {
       inputCardNumber(e, index) {
@@ -138,7 +146,16 @@
       /*关闭获取用户*/
       closeGetuserFunc(e) {
         if (e && e.type != 'error') {
-          this.select_list = [...e.params];
+          var arr = [];
+          (e.params || [])?.forEach(row => {
+            var index = this.select_list.findIndex(item => item.id == row.id);
+            if(index !== -1) {
+              arr.push(this.select_list[index]);
+            } else {
+              arr.push(row)
+            }
+          });
+          this.select_list = arr;
         }
         this.open_getuser = false;
       },

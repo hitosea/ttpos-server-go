@@ -71,6 +71,10 @@ class User extends UserModel
         if (isset($data['gender']) && $data['gender'] > -1) {
             $model = $model->where('gender', '=', (int)$data['gender']);
         }
+        // 检索：排除用户ID
+        if (isset($data['exclude_user_id']) && intval($data['exclude_user_id']) > 0) {
+            $model = $model->where('uuid', '<>', (int)$data['exclude_user_id']);
+        }
         // 获取用户列表
         $paginate = $model->with(['grade', 'memberCard' => ['card'], 'memberBalanceLog', 'referrer'])
             ->field('*, nickname as nickName')
@@ -211,6 +215,44 @@ class User extends UserModel
                 $activityUuid = $activity['uuid'];
             }
         }
+
+        $this->startTrans();
+        try {
+            $userUuid = createUuid();
+            $user = $this->save([
+                'uuid' => $userUuid,
+                'nickname' => $nickName,
+                'phone' => $mobile,
+                'password' => $password ? md5($password) : '',
+                'gender' => $gender, //性别
+                'member_level_uuid' => $gradeId, //默认等级
+                'birthday' => $birthday ? strtotime($birthday) : 0, //生日
+                'referrer_uuid' => $referrerUuid, //推荐人
+                'activity_uuid' => $activityUuid, //活动
+            ]);
+            if (!$user) {
+                throw new \Exception('添加失败');
+            }
+            if ($card) {
+                $model = new CardModel();
+                $result = $model->put([
+                    'card_id' => $card['uuid'],
+                    'user_ids' => [
+                        [ 'uuid' => $userUuid, 'card_number' => $cardNumber ]
+                    ],
+                ]);
+                if (!$result) {
+                    throw new \Exception($model->getError());
+                }
+            }
+            $this->commit();
+        } catch (\Exception $e) {
+            $this->error = $e->getMessage();
+            $this->rollback();
+            return false;
+        }
+
+        return true;
 
         return $this->transaction(function () use ($nickName, $mobile, $password, $gender, $gradeId, $birthday, $card, $cardNumber, $referrerUuid, $activityUuid) {
             $userUuid = createUuid();

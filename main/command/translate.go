@@ -163,6 +163,13 @@ func processGroup(texts []string) {
 		return
 	}
 
+	defer func() {
+		if r := recover(); r != nil {
+			os.WriteFile("translate_response.log", body, os.ModePerm)
+			panic(r)
+		}
+	}()
+
 	var result map[string]interface{}
 	err = json.Unmarshal(body, &result)
 	if err != nil {

@@ -43,3 +43,5 @@ Thumbs.db
 
 # 
 /credentials.json
+
+./main/translate_response.log
