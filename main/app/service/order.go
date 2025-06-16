@@ -7538,7 +7538,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			}
 		}
 		// 更新会员消费金额和消费次数
-		repository.NewMemberRepo(db).IncConsumptionAmount(saleOrder.ConsumerUuid, saleOrder.PaymentAmount)
+		consumptionAmount := decimal.NewFromFloat(saleOrder.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee)).Truncate(2).InexactFloat64()
+		repository.NewMemberRepo(db).IncConsumptionAmount(saleOrder.ConsumerUuid, consumptionAmount)
 		repository.NewMemberRepo(db).IncConsumptionCount(saleOrder.ConsumerUuid)
 		// 处理会员升级 todo 如果后面的逻辑报错，这个升级没有回滚，应该放在事务中升级
 		go s.memberSrv.HandleMemberUpgrade(ctx.GetCompanyUuid(), saleOrder.ConsumerUuid)
