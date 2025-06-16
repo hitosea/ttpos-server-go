@@ -428,13 +428,11 @@
         }
       },
 
-      closeDialog(e, f) {
+      closeDialog(e) {
         /*关闭弹窗*/
-        if (f == 'add') {
-          this.open_add = e.openDialog;
-          if (e.type == 'success' && e.data) {
-            this.form.spec.unshift(e.data);
-          }
+        this.open_add = e.openDialog;
+        if (e.type == 'success' && e.data) {
+          this.form.spec.unshift(e.data);
         }
       },
 
