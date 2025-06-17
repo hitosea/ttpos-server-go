@@ -77,7 +77,7 @@
 
         <el-form-item v-if="manual_return_points" for="no_click" :label="$t('扣除积分')" :label-width="formLabelWidth">
           <div class="flex-row">
-            <el-input-number class="flex-1" :min="0" :max="deductible_points" :precision="2" :controls="false" v-model="form.points" :placeholder="$t('请输入扣除积分')" />
+            <el-input-number class="flex-1" :min="0" :disabled="deductible_points == 0" :max="deductible_points" :precision="2" :controls="false" v-model="form.points" :placeholder="$t('请输入扣除积分')" />
             <span>{{ $t('可退积分') + ' ' + deductible_points }}</span>
           </div>
         </el-form-item>
