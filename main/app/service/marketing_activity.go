@@ -3,6 +3,7 @@ package service
 import (
 	"encoding/json"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/member_resp"
@@ -66,8 +67,10 @@ func (s *marketingActivitySrv) MarketingActivity(ctx context.Context) (*member_r
 		}
 		memberMarketingActivityResp = append(memberMarketingActivityResp, member_resp.MemberMarketingActivityResp{
 			Name:       marketingActivity.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
-			QrCodeCode: qrCode,
+			LocaleName: marketingActivity.MultiLanguageName.GetNames(),
 			Desc:       marketingActivity.MultiLanguageDesc.GetNameByLang(ctx.GetLanguage()),
+			LocaleDesc: marketingActivity.MultiLanguageDesc.GetNames(),
+			QrCode:     qrCode,
 			StartTime:  int64(marketingActivity.StartTime),
 			EndTime:    int64(marketingActivity.EndTime),
 			IsInvalid:  utils.IfInt(company.CompanySetting.IsOpenMarketing != 1, 1, 0),
@@ -107,12 +110,30 @@ func (s *marketingActivitySrv) MarketingActivity(ctx context.Context) (*member_r
 			return nil, err
 		}
 		result.List = append(result.List, member_resp.MemberMarketingActivityResp{
-			Name:       "暂无营销活动",
-			QrCodeCode: qrCode,
-			Desc:       "暂无营销活动",
-			StartTime:  0,
-			EndTime:    0,
-			IsInvalid:  1,
+			Name: "暂无营销活动",
+			LocaleName: dto.LocaleResponse{
+				ZH:   "暂无营销活动",
+				TH:   "ไม่มีกิจกรรมการตลาด",
+				EN:   "No Marketing Activities",
+				ZHTW: "暫無行銷活動",
+				JA:   "マーケティング活動なし",
+				KO:   "마케팅 활동 없음",
+				MY:   "Tiada Aktiviti Pemasaran",
+			},
+			Desc: "暂无营销活动",
+			LocaleDesc: dto.LocaleResponse{
+				ZH:   "暂无营销活动",
+				TH:   "ไม่มีกิจกรรมการตลาด",
+				EN:   "No Marketing Activities",
+				ZHTW: "暫無行銷活動",
+				JA:   "マーケティング活動なし",
+				KO:   "마케팅 활동 없음",
+				MY:   "Tiada Aktiviti Pemasaran",
+			},
+			QrCode:    qrCode,
+			StartTime: 0,
+			EndTime:   0,
+			IsInvalid: 1,
 		})
 		return result, errors.NewWithCode(constant.CodeMarketingActivityInvalid, "营销活动已失效")
 	}

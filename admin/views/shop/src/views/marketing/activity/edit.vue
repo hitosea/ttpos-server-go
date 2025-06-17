@@ -4,7 +4,7 @@
     <el-form size="small" ref="formRef" class="product-form" :model="form" label-position="top" label-width="180px" v-if="!loading">
       <div class="product-form-wrapper">
         <div class="product-form-left">
-          <ImagePreview :qrcode="qrcode" :imgName="imgName" :imgDescription="imgDescription"></ImagePreview>
+          <ImagePreview ref="ImagePreviewRef" :qrcode="qrcode" :imgName="imgName" :imgDescription="imgDescription" @checkForm="checkFormAll"></ImagePreview>
         </div>
         <!--分割线-->
         <div class="product-form-line"></div>
@@ -76,7 +76,7 @@
   const formContainer = ref(null);
   const qrcode = ref('');
   const status = ref(0);
-
+  const ImagePreviewRef = ref(null);
   const imgName = ref('');
   const imgDescription = ref('');
   // 提供form数据给子组件
@@ -172,6 +172,17 @@
 
   const checkForm = (e) => {
     formRef.value?.validateField(e);
+  };
+
+  const checkFormAll = async () => {
+    // 验证表单
+    const validUniqueName = await BasicRef.value.$refs.activityNameFormRef.validate();
+    const validUniqueDescription = await BasicRef.value.$refs.activityDescriptionFormRef.validate();
+    formRef.value.validate((valid) => {
+      if (valid && validUniqueName && validUniqueDescription) {
+        ImagePreviewRef.value.downloadImage();
+      }
+    });
   };
 
   // 取消操作
