@@ -254,6 +254,8 @@ class BindRecord extends BaseModel
             return false;
         }
         $this->startTrans();
+
+
         try {
             // 解绑收银机
             if ($device['source'] == self::SOURCE_CASHIER) {
@@ -287,7 +289,11 @@ class BindRecord extends BaseModel
                 if ($printerSettings && isset($printerSettings['cashier_printer'])) {
                     $printerSettings['cashier_printer'] = $printerSettings['cashier_printer'] ?? [];
                     $newPrinter = array_filter($printerSettings['cashier_printer'], function ($item) use ($device) {
-                        return $item['key'] != $device['device_id'];
+                        if (isset($item['key'])) {
+                            return $item['key'] != $device['device_id'];
+                        } else {
+                            return $item['printer_id'] != $device['device_id'];
+                        }
                     });
                     $printerSettings['cashier_printer'] = $newPrinter;
                     if (!$settingModel->edit(SettingEnum::PRINTER, $printerSettings, $staff ? $staff->company_uuid : 0, 0)) {

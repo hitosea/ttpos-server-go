@@ -30,12 +30,14 @@ type PrinterLog struct {
 	ProductPrinterUuid uint64 `gorm:"column:product_printer_uuid;type:bigint(20) unsigned;default:0;comment:商品打印UUID;NOT NULL" json:"product_printer_uuid"`
 	PrinterType        string `gorm:"column:printer_type;type:varchar(50);default:'';comment:打印机类型;NOT NULL" json:"printer_type"`
 	PrintingTime       int64  `gorm:"column:printing_time;type:int(11);default:0;comment:打印耗时;NOT NULL" json:"printing_time"`
+	Copies             uint   `gorm:"column:copies;type:int(11) unsigned;default:0;comment:打印份数;NOT NULL" json:"print_copies"`
 
 	Printer             *Printer             `gorm:"foreignKey:PrinterUuid;references:Uuid"`        // 关联 printer
 	SaleBill            *SaleBill            `gorm:"foreignKey:RelatedUuid;references:Uuid"`        // 关联 sale_order
 	SaleOrder           *SaleOrder           `gorm:"foreignKey:RelatedUuid;references:Uuid"`        // 关联 sale_order
 	ProductPrinter      *ProductPrinter      `gorm:"foreignKey:ProductPrinterUuid;references:Uuid"` // 关联 sale_order
 	MemberRechargeOrder *MemberRechargeOrder `gorm:"foreignKey:RelatedUuid;references:Uuid"`        // 关联 sale_order
+	PrinterLogData      *PrinterLogData      `gorm:"foreignKey:LogUuid;references:Uuid"`            // 关联 printer_log_data
 }
 
 // 压缩数据
@@ -93,6 +95,20 @@ func (model *PrinterLog) DecompressData() string {
 	return buf.String()
 }
 
+// GetCopies 获取打印份数
+func (model *PrinterLog) GetCopies() uint {
+	if model.Copies > 0 {
+		return model.Copies
+	}
+	if model.Printer == nil {
+		return 1
+	}
+	if model.Printer.Copies == 0 {
+		return model.Printer.Copies
+	}
+	return 1
+}
+
 // 是否收银打印机
 func (model *PrinterLog) IsCashierPrinter() bool {
 	return slices.Contains([]string{
@@ -120,23 +136,25 @@ func (model *PrinterLog) IsUsbPrinter() bool {
 }
 
 // 计算打印耗时
-func (model *PrinterLog) CalculationTime() int64 {
+func (model *PrinterLog) CalculationTime(data string) int64 {
 	//
 	t := int64(200)
 	speed := 200
 	//
 	if model.PrinterType == constant.PrinterTypeXPrinterWifi {
-		speed = 85
+		speed = 70
 	} else if model.PrinterType == constant.PrinterTypeCodesoftWifi {
 		speed = 70
-	} else if model.PrinterType == constant.PrinterTypeCodesoftLan {
-		speed = 90
 	}
 	//
-	t = int64(math.Ceil(float64(len(model.Data)) / float64(speed)))
+	t = int64(math.Ceil(float64(len(data)) / float64(speed)))
 	//
-	if t < 200 {
-		return 200
+	if model.PrinterType == constant.PrinterTypeXPrinterWifi || model.PrinterType == constant.PrinterTypeCodesoftWifi {
+		if t < 1200 {
+			return 1200
+		}
+	} else if t < 300 {
+		return 300
 	}
 	return t
 }

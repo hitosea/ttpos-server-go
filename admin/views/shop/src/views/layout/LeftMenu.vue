@@ -43,7 +43,7 @@
 
 <script>
   import { useUserStore } from '@/store';
-  import { reactive, toRefs, defineComponent, nextTick, handleError } from 'vue';
+  import { reactive, toRefs, defineComponent, nextTick } from 'vue';
   import { languageStore } from '@/store/model/language.js';
   import { useRoute } from 'vue-router';
 
@@ -58,6 +58,7 @@
       const cloudBasic = language.getCloudBasic().cloudBasic;
       const { computedSupplier } = useUserStore();
       const supplier = computedSupplier().supplier;
+
       const state = reactive({
         route,
         /*传到顶部的标题*/
@@ -201,6 +202,26 @@
               }
             });
           }
+          if (newVal.meta.topTree == '/marketing/activity/add' || newVal.meta.topTree == '/marketing/activity/edit') {
+            this.menuList.map((item, index) => {
+              if (item.name == '营销管理') {
+                this.active_menu = index;
+                item.children.map((child, i) => {
+                  if (child.name == '营销活动') this.active_child = i;
+                });
+
+                this.$emit('selectMenu', false);
+              }
+            });
+          }
+          if (newVal.meta.topTree == '/home') {
+            this.menuList.map((item, index) => {
+              if (item.name == '首页') {
+                this.active_menu = index;
+              }
+              this.$emit('selectMenu', null);
+            });
+          }
         },
         deep: true,
         immediate: true,
@@ -253,6 +274,7 @@
           }
           this.active_child = index;
           // this.bus_emit('MenuName', item.name);
+
           this.$router.push(path);
         }
       },

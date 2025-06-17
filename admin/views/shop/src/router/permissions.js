@@ -68,6 +68,8 @@ export async function setupPermissions(router) {
         renderMenusArr.push(`/${app_id}/store/order/detail`);
         renderMenusArr.push(`/${app_id}/store/history_order/detail`);
         renderMenusArr.push(`/${app_id}/store/recharge/detail`);
+        renderMenusArr.push(`/${app_id}/marketing/activity/add`);
+        renderMenusArr.push(`/${app_id}/marketing/activity/edit`);
 
         //这是独立页面 end
         if (!token) {

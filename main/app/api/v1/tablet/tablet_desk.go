@@ -2,6 +2,7 @@ package tablet
 
 import (
 	"fmt"
+	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -9,6 +10,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -175,6 +177,10 @@ func (h *DeskHandler) OrderCartProductAddAndCooking(c *gin.Context) {
 	}
 	failedData, err := h.orderSrv.TabletAddAndCooking(ctx, params)
 	if err != nil {
+		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {
+			helper.ErrorWithData(c, constant.CodeOrderCheckProductPriceChanged, failedData, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), err.Error())))
+			return
+		}
 		helper.ErrorWithData(c, constant.CodeFail, failedData, err)
 		return
 	}

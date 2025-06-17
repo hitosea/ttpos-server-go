@@ -285,7 +285,13 @@ func (s *deskSrv) GetH5DeskPing(ctx context.Context, deskUuid uint64, shopCart *
 			return resp.H5DeskPing{}, errors.WithMessage(err)
 		}
 		if shopCartInfo.SaleBill.IsShowMustPlan() {
-			deskMustPlanList, err := s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid)
+			var deskMustPlanList []resp.InstantProductMustPlan
+			var err error
+			if shopCartInfo.SaleBill.IsBuffetSaleBill() {
+				deskMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid, WithSaleBillUuid(desk.SaleBillUuid))
+			} else {
+				deskMustPlanList, err = s.mustPlanSrv.GetDeskMustPlanList(ctx, shopCartInfo.SaleBill.MealNum, shopCartInfo.GetMustPlanProductInfo(), deskUuid)
+			}
 			if err != nil {
 				return resp.H5DeskPing{}, errors.WithMessage(err)
 			}

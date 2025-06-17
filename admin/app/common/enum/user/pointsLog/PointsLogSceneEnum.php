@@ -33,6 +33,15 @@ class PointsLogSceneEnum extends Enum
     // 扣减
     const DEDUCT = 90;
 
+    // 收银机、点餐助手发卡赠送
+    const CashierOrAssistant = 100;
+
+    // 积分抵扣
+    const POINTS_DEDUCT = 110;
+
+    // 抵扣反结账
+    const POINTS_REVERSE = 120;
+
     /**
      * 获取订单类型值
      */
@@ -73,6 +82,21 @@ class PointsLogSceneEnum extends Enum
                 'name' => __('扣减'),
                 'value' => self::DEDUCT,
                 'describe' => '后台管理员扣减',
+            ],
+            self::CashierOrAssistant => [
+                'name' => __('添加会员发卡'),
+                'value' => self::CashierOrAssistant,
+                'describe' => '%s管理员添加会员发卡赠送操作 [%s]',
+            ],
+            self::POINTS_DEDUCT => [
+                'name' => __('积分抵扣'),
+                'value' => self::POINTS_DEDUCT,
+                'describe' => '积分抵扣：%s',
+            ],
+            self::POINTS_REVERSE => [
+                'name' => __('抵扣反结账'),
+                'value' => self::POINTS_REVERSE,
+                'describe' => '抵扣反结账：%s',
             ],
         ];
     }

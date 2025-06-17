@@ -1973,6 +1973,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/desk/order/payment/points": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "设置订单的抵扣积分数量",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台.结账"
+                ],
+                "summary": "设置订单的抵扣积分数量",
+                "parameters": [
+                    {
+                        "description": "设置订单的抵扣积分数量参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentPointsReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "结账页面信息",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/assistant/desk/order/payment/qrcode": {
             "get": {
                 "security": [
@@ -2784,6 +2838,46 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/assistant/member/card_types": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "会员卡类型列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.会员"
+                ],
+                "summary": "会员卡类型列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.MemberCardTypeList"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -3883,6 +3977,57 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/decrypt/activity/qr_code": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "解密活动二维码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.基础信息"
+                ],
+                "summary": "解密活动二维码",
+                "parameters": [
+                    {
+                        "description": "解密活动二维码参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DecryptQrCodeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.DecryptQrCodeResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -5542,6 +5687,60 @@ const docTemplate = `{
                         "name": "sale_order_uuid",
                         "in": "query",
                         "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "结账页面信息",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/desk/order/payment/points": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "设置订单的抵扣积分数量",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台.结账"
+                ],
+                "summary": "设置订单的抵扣积分数量",
+                "parameters": [
+                    {
+                        "description": "设置订单的抵扣积分数量参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentPointsReq"
+                        }
                     }
                 ],
                 "responses": {
@@ -7752,6 +7951,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/order/payment/points": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "设置订单的抵扣积分数量",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台.结账"
+                ],
+                "summary": "设置订单的抵扣积分数量",
+                "parameters": [
+                    {
+                        "description": "设置订单的抵扣积分数量参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentPointsReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "结账页面信息",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/instant/order/payment/qrcode": {
             "get": {
                 "security": [
@@ -8629,6 +8882,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/member/card_types": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "会员卡类型列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.会员"
+                ],
+                "summary": "会员卡类型列表",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.MemberCardTypeList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/member/check_password": {
             "get": {
                 "security": [
@@ -9187,7 +9480,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "取消订单",
                 "parameters": [
@@ -9226,7 +9519,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "删除订单",
                 "parameters": [
@@ -9265,7 +9558,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "获取订单详情",
                 "parameters": [
@@ -9310,7 +9603,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "获取发票信息",
                 "parameters": [
@@ -9366,7 +9659,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "打印小票",
                 "parameters": [
@@ -9417,7 +9710,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "打印发票",
                 "parameters": [
@@ -9468,7 +9761,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "退款订单",
                 "parameters": [
@@ -9867,7 +10160,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "获取订单列表",
                 "parameters": [
@@ -10110,7 +10403,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.订单"
+                    "收银端.历史订单"
                 ],
                 "summary": "获取退款信息",
                 "parameters": [
@@ -13543,6 +13836,164 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/login": {
+            "post": {
+                "description": "登录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.认证"
+                ],
+                "summary": "登录",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.MemberLoginReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.LoginResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/member/login_info": {
+            "get": {
+                "description": "获取登陆信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.认证"
+                ],
+                "summary": "获取登陆信息",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "集团ID",
+                        "name": "company_uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/member_resp.MemberLoginInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/member/marketing_activity": {
+            "get": {
+                "description": "获取营销活动",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.营销活动"
+                ],
+                "summary": "获取营销活动",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/member_resp.MemberMarketingActivityListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/member/send_code": {
+            "post": {
+                "description": "发送验证码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.认证"
+                ],
+                "summary": "发送验证码",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.MemberSendCodeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/menu/base": {
             "get": {
                 "security": [
@@ -16905,6 +17356,162 @@ const docTemplate = `{
                 }
             }
         },
+        "member_req.MemberLoginReq": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "验证码",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "集团ID",
+                    "type": "integer"
+                },
+                "phone": {
+                    "description": "手机号",
+                    "type": "string"
+                }
+            }
+        },
+        "member_req.MemberSendCodeReq": {
+            "type": "object",
+            "properties": {
+                "area_code": {
+                    "description": "区号",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "集团ID",
+                    "type": "integer"
+                },
+                "phone": {
+                    "description": "手机号",
+                    "type": "string"
+                }
+            }
+        },
+        "member_resp.CompanyInfoResp": {
+            "type": "object",
+            "properties": {
+                "logo": {
+                    "description": "公司logo",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "公司名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "公司UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "member_resp.MemberInfoResp": {
+            "type": "object",
+            "properties": {
+                "nickname": {
+                    "description": "会员昵称",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "会员手机号",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "会员UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "member_resp.MemberLoginInfoResp": {
+            "type": "object",
+            "properties": {
+                "area_code": {
+                    "description": "地区码数组，如 [\"+86\", \"+1\", \"+44\"]",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "company_name": {
+                    "description": "集团名称",
+                    "type": "string"
+                },
+                "company_uuid": {
+                    "description": "集团UUID",
+                    "type": "integer"
+                },
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "logo": {
+                    "description": "集团logo",
+                    "type": "string"
+                }
+            }
+        },
+        "member_resp.MemberMarketingActivityListResp": {
+            "type": "object",
+            "properties": {
+                "company": {
+                    "description": "公司信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/member_resp.CompanyInfoResp"
+                        }
+                    ]
+                },
+                "list": {
+                    "description": "活动列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/member_resp.MemberMarketingActivityResp"
+                    }
+                },
+                "member_info": {
+                    "description": "会员信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/member_resp.MemberInfoResp"
+                        }
+                    ]
+                }
+            }
+        },
+        "member_resp.MemberMarketingActivityResp": {
+            "type": "object",
+            "properties": {
+                "desc": {
+                    "description": "活动描述",
+                    "type": "string"
+                },
+                "end_time": {
+                    "description": "活动结束时间",
+                    "type": "integer"
+                },
+                "is_invalid": {
+                    "description": "活动状态 0-未失效 1-已失效",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "活动名称",
+                    "type": "string"
+                },
+                "qr_code": {
+                    "description": "活动二维码-base64",
+                    "type": "string"
+                },
+                "start_time": {
+                    "description": "活动开始时间",
+                    "type": "integer"
+                }
+            }
+        },
         "product_resp.Product": {
             "type": "object",
             "properties": {
@@ -17228,6 +17835,19 @@ const docTemplate = `{
                 "phone"
             ],
             "properties": {
+                "activity_uuid": {
+                    "description": "营销活动Uuid",
+                    "type": "integer"
+                },
+                "card_no": {
+                    "description": "会员卡号",
+                    "type": "string",
+                    "maxLength": 48
+                },
+                "card_type_uuid": {
+                    "description": "会员卡类型Uuid",
+                    "type": "integer"
+                },
                 "level_uuid": {
                     "description": "会员等级Uuid",
                     "type": "integer"
@@ -17247,6 +17867,10 @@ const docTemplate = `{
                     "description": "手机号",
                     "type": "string",
                     "maxLength": 20
+                },
+                "referrer_uuid": {
+                    "description": "推荐人Uuid",
+                    "type": "integer"
                 }
             }
         },
@@ -17514,6 +18138,18 @@ const docTemplate = `{
                 }
             }
         },
+        "req.DecryptQrCodeReq": {
+            "type": "object",
+            "required": [
+                "sign"
+            ],
+            "properties": {
+                "sign": {
+                    "description": "活动二维码sign",
+                    "type": "string"
+                }
+            }
+        },
         "req.DeskBuffetCustomerType": {
             "type": "object",
             "properties": {
@@ -17673,6 +18309,23 @@ const docTemplate = `{
         "req.InstantOrderPaymentFinishReq": {
             "type": "object",
             "properties": {
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID, 必填",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.InstantOrderPaymentPointsReq": {
+            "type": "object",
+            "properties": {
+                "points": {
+                    "description": "抵扣积分数量, 必填",
+                    "type": "number"
+                },
                 "sale_bill_uuid": {
                     "description": "销售账单UUID, 必填",
                     "type": "integer"
@@ -17891,6 +18544,10 @@ const docTemplate = `{
                     "description": "某个规格商品ID",
                     "type": "integer"
                 },
+                "is_buffet": {
+                    "description": "是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用",
+                    "type": "boolean"
+                },
                 "must_plan_uuid": {
                     "description": "必点方案uuid. 可选，在必点方案弹窗中加购时填写",
                     "type": "integer"
@@ -17898,6 +18555,10 @@ const docTemplate = `{
                 "operation": {
                     "description": "操作类型。add: 加购，sub: 减购. 不填，默认是加购",
                     "type": "string"
+                },
+                "price": {
+                    "description": "商品价格。可选，当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格",
+                    "type": "number"
                 },
                 "sale_bill_uuid": {
                     "description": "销售账单ID。可选，参数不填时表示要新建销售账单，添加商品后创建点餐销售账单。",
@@ -18364,6 +19025,10 @@ const docTemplate = `{
                     "description": "退款账户信息",
                     "type": "string"
                 },
+                "points": {
+                    "description": "手动退款积分",
+                    "type": "number"
+                },
                 "products": {
                     "description": "退款商品UUID列表. 如果为空，则退款所有商品,即整单退款",
                     "type": "array",
@@ -18517,6 +19182,10 @@ const docTemplate = `{
                     "description": "商品规格uuid",
                     "type": "integer"
                 },
+                "is_buffet": {
+                    "description": "是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用",
+                    "type": "boolean"
+                },
                 "must_plan_uuid": {
                     "description": "必点方案uuid. 可选，在必点方案弹窗中加购时填写",
                     "type": "integer"
@@ -18528,6 +19197,10 @@ const docTemplate = `{
                 "operation": {
                     "description": "操作类型。add: 加购，sub: 减购",
                     "type": "string"
+                },
+                "price": {
+                    "description": "商品价格，商品单价。当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格。可选，不传时，不进行价格校验",
+                    "type": "number"
                 },
                 "product_package_attribute_uuid_list": {
                     "description": "属性信息",
@@ -19885,6 +20558,27 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.DecryptQrCodeResp": {
+            "type": "object",
+            "properties": {
+                "activity_uuid": {
+                    "description": "活动uuid",
+                    "type": "integer"
+                },
+                "nickname": {
+                    "description": "会员昵称",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "会员手机号",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "会员uuid",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.Desk": {
             "type": "object",
             "properties": {
@@ -20138,6 +20832,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.ProductMustPlanList"
+                        }
+                    ]
+                },
+                "product": {
+                    "description": "商品信息。 当加购商品时商品价格变化时，返回最新的商品信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.Product"
                         }
                     ]
                 },
@@ -20417,6 +21119,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.BuffetProductList"
+                        }
+                    ]
+                },
+                "product": {
+                    "description": "商品信息。 当加购商品时商品价格变化时，返回最新的商品信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.Product"
                         }
                     ]
                 },
@@ -20879,6 +21589,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.PaymentInfoList"
                         }
                     ]
+                },
+                "points_exchange": {
+                    "description": "积分抵扣信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.PointsExchangeInfo"
+                        }
+                    ]
                 }
             }
         },
@@ -21070,6 +21788,33 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.MemberCardType": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "等级名称",
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "等级Uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.MemberCardTypeList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MemberCardType"
+                    }
+                }
+            }
+        },
         "resp.MemberDiscountResp": {
             "type": "object",
             "properties": {
@@ -21115,6 +21860,10 @@ const docTemplate = `{
                 },
                 "points": {
                     "description": "会员积分",
+                    "type": "number"
+                },
+                "recharge_money": {
+                    "description": "会员累计充值金额",
                     "type": "number"
                 },
                 "uuid": {
@@ -21777,6 +22526,14 @@ const docTemplate = `{
                     "description": "可退款金额. 可退款金额=订单最终应收金额-已退款金额",
                     "type": "number"
                 },
+                "deductible_points": {
+                    "description": "可扣除积分",
+                    "type": "number"
+                },
+                "manual_return_points": {
+                    "description": "是否可以手动退款积分",
+                    "type": "boolean"
+                },
                 "payment_records": {
                     "description": "支付记录",
                     "type": "array",
@@ -22003,6 +22760,10 @@ const docTemplate = `{
                     "description": "应收金额。",
                     "type": "number"
                 },
+                "sale_order_cart_amount": {
+                    "description": "购物车应收金额。",
+                    "type": "number"
+                },
                 "sale_order_origin_amount": {
                     "description": "订单原价。订单原价=商品总价（折前价）+服务费（折前价）+消费税（折前价）",
                     "type": "number"
@@ -22183,6 +22944,35 @@ const docTemplate = `{
                 },
                 "uuid": {
                     "type": "integer"
+                }
+            }
+        },
+        "resp.PointsExchangeInfo": {
+            "type": "object",
+            "properties": {
+                "can_change_points": {
+                    "description": "是否可以修改抵扣积分的数量。用于前端置灰修改按钮。",
+                    "type": "boolean"
+                },
+                "max_points": {
+                    "description": "最大可抵扣积分。不能大于（订单应收/积分抵扣比例）。不能大于会员余额",
+                    "type": "number"
+                },
+                "open_points_exchange": {
+                    "description": "是否开启积分抵扣。用于前端显示积分抵扣信息。",
+                    "type": "boolean"
+                },
+                "pay_points": {
+                    "description": "已抵扣积分",
+                    "type": "number"
+                },
+                "pay_points_amount": {
+                    "description": "已抵扣金额",
+                    "type": "number"
+                },
+                "points_exchange_rate": {
+                    "description": "积分抵扣比例。1个积分抵扣多少金额",
+                    "type": "number"
                 }
             }
         },
@@ -22804,6 +23594,10 @@ const docTemplate = `{
                 },
                 "points": {
                     "description": "会员积分",
+                    "type": "number"
+                },
+                "recharge_money": {
+                    "description": "累计充值金额",
                     "type": "number"
                 },
                 "uuid": {
@@ -23633,6 +24427,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.ProductMustPlanList"
+                        }
+                    ]
+                },
+                "product": {
+                    "description": "商品信息。 当加购商品时商品价格变化时，返回最新的商品信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.Product"
                         }
                     ]
                 },

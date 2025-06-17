@@ -22,7 +22,7 @@ func changeMemberPointsEventHandler() {
 		event.NewSystemBus().SubscribeChangeMemberPointsEvent(func(payload event.ChangeMemberPointsPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			go func() {
-				time.Sleep(400 * time.Microsecond)
+				time.Sleep(1 * time.Second)
 				HandleMemberPoints(db)
 			}()
 		})

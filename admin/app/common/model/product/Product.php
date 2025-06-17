@@ -887,12 +887,14 @@ class Product extends BaseModel
                 'c2.uuid as category_parent_uuid',
                 '0 as is_material_used',
                 'p.sort as sort',
-                'p.id as id'
+                'p.id as id',
+                'pu.name as product_unit'
             ]))
             ->leftJoin('product_category c1', 'p.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
             ->leftJoin('product_bom bom', 'p.uuid = bom.product_package_uuid')
             ->leftJoin('file', 'p.image_file_uuid = file.uuid')
+            ->leftJoin('product_unit pu', 'p.unit_uuid = pu.uuid')
             ->where('bom.product_flavor_uuid', '>', 0)
             // ->where('bom.delete_time', 0)
             ->group('p.uuid')
@@ -924,12 +926,14 @@ class Product extends BaseModel
                 'c2.uuid as category_parent_uuid',
                 'count(rm.uuid) as is_material_used',
                 '0 as sort',
-                'm.id as id'
+                'm.id as id',
+                'pu.name as product_unit'
             ]))
             ->leftJoin('product_category c1', 'm.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
             ->leftJoin('file', 'm.image_uuid = file.uuid')
             ->leftJoin('related_material rm', 'm.uuid = rm.material_uuid')
+            ->leftJoin('product_unit pu', 'm.unit_uuid = pu.uuid')
             ->group('m.uuid')
             ->order('m.id', 'desc')
             ->buildSql();
@@ -1036,7 +1040,8 @@ class Product extends BaseModel
             'category_parent_uuid',
             'is_material_used',
             'sort',
-            'id'
+            'id',
+            'product_unit'
         ]) . " FROM ($productSql UNION ALL $materialSql) AS all_product";
         $orderSql = ' ORDER BY sort ASC, id DESC';
         $pageSql = " LIMIT {$offset}, {$limit}";
@@ -1085,6 +1090,13 @@ class Product extends BaseModel
                     'material_stock' => floatval($productMaterialStock),
                 ];
             }
+
+            // 单位
+            $productUnit = $row['product_unit'] ?? '';
+            $productUnitText = '';
+            if ($productUnit) {
+                $productUnitText = extractLanguage($productUnit);
+            }
             
             $list[] = [
                 'category' => [ 'path_name_text' => $pathNameText ],
@@ -1111,6 +1123,8 @@ class Product extends BaseModel
                 'type' => $row['type'],
                 'sku' => $sku,
                 'is_material_used' => $row['is_material_used'] > 0 ? 1 : 0,
+                'product_unit' => $productUnit,
+                'product_unit_text' => $productUnitText,
             ];
         }
 
@@ -1295,7 +1309,6 @@ class Product extends BaseModel
                     'attribute'
                 ]
             ],
-            // todo 兼容
             'feed' => [
                 'productSauce' => [
                     'relatedMaterial' => [

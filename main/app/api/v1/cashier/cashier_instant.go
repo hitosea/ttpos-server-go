@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -12,6 +13,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -438,6 +440,10 @@ func (h *InstantHandler) OrderCartProductAdd(c *gin.Context) {
 	// 添加商品。 若没有点餐账单则新建一个
 	res, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params)
 	if err != nil {
+		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) {
+			helper.ErrorWithData(c, constant.CodeOrderCheckProductPriceChanged, res, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), err.Error())))
+			return
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
@@ -680,6 +686,37 @@ func (h *InstantHandler) OrderPaymentQrcodeInfo(c *gin.Context) {
 	}
 	// 获取支付二维码
 	res, err := h.orderSrv.InstantOrderPaymentQrcode(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderPaymentInfo 设置订单的抵扣积分数量
+// @Summary 设置订单的抵扣积分数量
+// @Description 设置订单的抵扣积分数量
+// @Tags 收银端.桌台.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderPaymentPointsReq true "设置订单的抵扣积分数量参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/payment/points [post]
+func (h *InstantHandler) OrderPaymentPoints(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到桌台页面设置订单的抵扣积分数量接口请求")
+
+	params := req.InstantOrderPaymentPointsReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Info("设置订单的抵扣积分数量", zap.Any("params", params))
+	// 设置订单的抵扣积分数量
+	res, err := h.orderSrv.OrderPaymentPoints(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -1267,6 +1304,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品
 		privateApi.GET("/instant/order/check", wrapper.OrderCheck)                                               // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
 		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
+		privateApi.POST("/instant/order/payment/points", wrapper.OrderPaymentPoints)                             // 设置订单的抵扣积分数量
 		privateApi.POST("/instant/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
 		privateApi.POST("/instant/order/payment/cancel", wrapper.OrderPaymentCancel)                             // 撤销一个支付单
 		privateApi.POST("/instant/order/payment/finish", wrapper.OrderPaymentFinish)                             // 完成销售订单的付款结账

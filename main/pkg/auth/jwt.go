@@ -16,6 +16,7 @@ type Claims struct {
 	Source         string    `json:"source"`           // 终端
 	CompanyUuid    uint64    `json:"company_uuid"`     // 集团ID
 	StaffUuid      uint64    `json:"staff_uuid"`       // 员工ID
+	MemberUuid     uint64    `json:"member_uuid"`      // 会员ID
 	DeviceUuid     uint64    `json:"device_uuid"`      // 设备Uuid
 	DeviceId       string    `json:"device_id"`        // 设备ID
 	Assistant      Assistant `json:"assistant"`        // 点餐助手绑定的收银机信息

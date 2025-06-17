@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -13,6 +14,8 @@ type ISaleOrderRepo interface {
 	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
 	UpdateSaleOrder(model *model.SaleOrder) error
 	UpdateSaleOrderRecord(obj model.SaleOrder) error
+	UpdateSaleOrderPointsExchange(saleOrderUuid uint64, payPoints float64, payPointsAmount float64, pointsExchangeRate float64, autoPointsExchange uint) error // 更新销售订单的积分抵扣信息
+	SetCheckoutZeroRuleCancel(saleOrderUuid uint64) error                                                                                                      // 取消结账抹零
 	CreateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateOrCreateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error
@@ -83,4 +86,20 @@ func (r *saleOrderRepo) UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error {
 
 func (r *saleOrderRepo) DeleteSaleOrder(saleOrderUuid uint64) error {
 	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Update("delete_time", time.Now().Unix()).Error
+}
+
+func (r *saleOrderRepo) UpdateSaleOrderPointsExchange(saleOrderUuid uint64, payPoints float64, payPointsAmount float64, pointsExchangeRate float64, autoPointsExchange uint) error {
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]interface{}{
+		"pay_points":           payPoints,
+		"pay_points_amount":    payPointsAmount,
+		"points_exchange_rate": pointsExchangeRate,
+		"auto_points_exchange": autoPointsExchange, // 手动改过积分后，订单扣变为手动抵扣
+	}).Error
+}
+
+func (r *saleOrderRepo) SetCheckoutZeroRuleCancel(saleOrderUuid uint64) error {
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]interface{}{
+		"zero_checkout_rule": constant.SaleBillSettingCheckoutZeroingMethodNone,
+		"zero_checkout_fee":  0,
+	}).Error
 }

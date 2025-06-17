@@ -66,6 +66,7 @@ func execute() {
 			!strings.Contains(path, "trans") &&
 			!strings.Contains(path, "old_model") &&
 			!strings.Contains(path, "command") &&
+			!strings.Contains(path, "request_logger") &&
 			!strings.Contains(path, "model") {
 			content, err := ioutil.ReadFile(path)
 			if err != nil {
@@ -161,6 +162,13 @@ func processGroup(texts []string) {
 		fmt.Printf("Error reading response: %v\n", err)
 		return
 	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			os.WriteFile("translate_response.log", body, os.ModePerm)
+			panic(r)
+		}
+	}()
 
 	var result map[string]interface{}
 	err = json.Unmarshal(body, &result)

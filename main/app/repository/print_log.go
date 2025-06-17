@@ -2,6 +2,7 @@ package repository
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
@@ -15,6 +16,7 @@ import (
 
 type IPrinterLogRepo interface {
 	WithPrinter() DBOption             // 关联打印机
+	WithPrinterLogData() DBOption      // 关联打印日志数据
 	WithPrinterPrinterType() DBOption  // 关联打印机.打印机类型
 	WithSaleBill() DBOption            // 关联销售单
 	WithSaleOrder() DBOption           // 关联销售账单
@@ -126,10 +128,11 @@ func (r *printerLogRepo) GetPrinterLogList(opts ...DBOption) ([]model.PrinterLog
 func (r *printerLogRepo) GetPrinterData(deviceSn string, opts ...DBOption) ([]model.PrinterLog, error) {
 	printerLogList, err := r.GetPrinterLogList(
 		r.WithPrinter(),
+		r.WithPrinterLogData(),
 		r.WithPrinterPrinterType(),
 		r.WhereType(1),
 		r.WhereStatus(1),
-		r.WhereLimit(20),
+		r.WhereLimit(50),
 		r.WhereFirstExecution(0),
 		func(db *gorm.DB) *gorm.DB {
 			// 相同设备的
@@ -218,12 +221,7 @@ func (r *printerLogRepo) GetShiftPrinterData(deviceSn string, opts ...DBOption) 
 			PrinterType:      printerLog.PrinterType,
 			IsCashierPrinter: printerLog.IsCashierPrinter(),
 			IsUsbPrinter:     printerLog.IsUsbPrinter(),
-			Copies: func() uint {
-				if printerLog.Printer == nil {
-					return 1
-				}
-				return printerLog.Printer.Copies
-			}(),
+			Copies:           printerLog.GetCopies(),
 			PrinterConfig: func() string {
 				if printerLog.Printer == nil {
 					return ""
@@ -275,6 +273,11 @@ func (r *printerLogRepo) WithPrinter() DBOption {
 func (r *printerLogRepo) WithMemberRechargeOrder() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("MemberRechargeOrder")
+	}
+}
+func (r *printerLogRepo) WithPrinterLogData() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("PrinterLogData")
 	}
 }
 func (r *printerLogRepo) WithPrinterPrinterType() DBOption {
@@ -391,21 +394,49 @@ func (r *printerLogRepo) BatchUpdate(logs []model.PrinterLog) error {
 		return nil
 	}
 
-	tx := r.db.Begin()
-	for _, log := range logs {
-		err := tx.Model(&model.PrinterLog{}).Where("uuid = ?", log.Uuid).Updates(map[string]interface{}{
-			"status": log.Status,
-			"reason": log.Reason,
-			"num":    log.Num,
-		}).Error
+	// 每批处理的数据量
+	batchSize := 50
+
+	// 分批处理
+	for i := 0; i < len(logs); i += batchSize {
+		end := i + batchSize
+		if end > len(logs) {
+			end = len(logs)
+		}
+		batch := logs[i:end]
+
+		// 构建当前批次的 CASE WHEN 语句
+		var uuids []uint64
+		statusCases := "CASE uuid"
+		reasonCases := "CASE uuid"
+		numCases := "CASE uuid"
+
+		for _, log := range batch {
+			uuids = append(uuids, log.Uuid)
+			statusCases += fmt.Sprintf(" WHEN %d THEN %d", log.Uuid, log.Status)
+			reasonCases += fmt.Sprintf(" WHEN %d THEN '%s'", log.Uuid, log.Reason)
+			numCases += fmt.Sprintf(" WHEN %d THEN %d", log.Uuid, log.Num)
+		}
+
+		statusCases += " ELSE status END"
+		reasonCases += " ELSE reason END"
+		numCases += " ELSE num END"
+
+		// 执行当前批次的批量更新
+		err := r.db.Model(&model.PrinterLog{}).
+			Where("uuid IN (?)", uuids).
+			Updates(map[string]interface{}{
+				"status": gorm.Expr(statusCases),
+				"reason": gorm.Expr(reasonCases),
+				"num":    gorm.Expr(numCases),
+			}).Error
 
 		if err != nil {
-			tx.Rollback()
 			return errors.WithMessage(err)
 		}
 	}
 
-	return errors.WithMessage(tx.Commit().Error)
+	return nil
 }
 
 func (r *printerLogRepo) Create(printerLog model.PrinterLog) (model.PrinterLog, error) {

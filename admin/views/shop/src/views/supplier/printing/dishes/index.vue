@@ -36,15 +36,10 @@
               <div v-if="scope.row.print_method == 10">
                 {{ $t('整单打印') }}
               </div>
-              <div v-if="scope.row.print_method == 20">
-                {{ $t('按商品分类打印') }}
-              </div>
-              <div v-if="scope.row.print_method == 30">
-                {{ $t('按标签打印') }}
-              </div>
               <div v-if="scope.row.print_method == 40">
                 {{ $t('按一菜一单打印') }}
               </div>
+              <div v-if="scope.row.print_method == -1"> {{ $t('整单打印') + ',' + $t('按一菜一单打印') }} </div>
             </template>
           </el-table-column>
 
@@ -62,9 +57,10 @@
             </template>
           </el-table-column>
           <el-table-column prop="create_time" :label="$t('添加时间')"></el-table-column>
-          <el-table-column fixed="right" :label="$t('操作')" width="120">
+          <el-table-column fixed="right" :label="$t('操作')" width="200">
             <template #default="scope">
               <el-button @click="editClick(scope.row)" type="primary" link size="small" v-auth="'/supplier/printing/dishes/edit'">{{ $t('编辑') }}</el-button>
+              <el-button @click="copyClick(scope.row)" type="primary" link size="small" v-auth="'/supplier/printing/dishes/add'">{{ $t('复制') }}</el-button>
               <el-button @click="deleteClick(scope.row)" type="primary" link size="small" v-auth="'/supplier/printing/dishes/delete'">{{ $t('删除') }}</el-button>
             </template>
           </el-table-column>
@@ -102,6 +98,7 @@
       v-if="open_edit"
       :open_edit="open_edit"
       :editId="editId"
+      :isCopy="isCopy"
       @close="
         (e) => {
           open_edit = false;
@@ -116,7 +113,6 @@
 
 <script>
   import SupplierApi from '@/api/supplier.js';
-  import SettingApi from '@/api/setting.js';
   import Add from './add.vue';
   import Edit from './edit.vue';
   export default {
@@ -145,6 +141,8 @@
         editId: 0,
         /*当前编辑的对象*/
         userModel: {},
+        /*是否打开复制弹窗*/
+        isCopy: false,
       };
     },
     created() {
@@ -190,6 +188,14 @@
       editClick(item) {
         this.editId = item.id;
         this.open_edit = true;
+        this.isCopy = false;
+      },
+
+      /*打开复制*/
+      copyClick(item) {
+        this.editId = item.id;
+        this.open_edit = true;
+        this.isCopy = true;
       },
 
       /*删除用户*/

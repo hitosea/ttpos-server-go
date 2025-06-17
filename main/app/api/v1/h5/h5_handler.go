@@ -2,14 +2,17 @@ package h5
 
 import (
 	"fmt"
+	"strings"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
@@ -268,6 +271,14 @@ func (h *Handler) OrderCartProductAdd(c *gin.Context) {
 	// 添加商品。 若没有点餐账单则新建一个
 	shopCart, err := h.orderSrv.InstantOrderCartProductAdd(ctx, params, repository.WithUnorderedH5Product())
 	if err != nil {
+		if strings.Contains(err.Error(), errors.ErrProductPriceChanged.Error()) { //  [app/service/order.go:4264]: [app/service/order.go:4562]: [app/service/order_action.go:271]: [app/service/order_action.go:586]: 商品超过限购
+			fmt.Println("InstantOrderCartProductAdd 1111", err)
+			res := resp.H5DeskPing{
+				Product: shopCart.Product,
+			}
+			helper.ErrorWithData(c, constant.CodeOrderCheckProductPriceChanged, res, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), err.Error())))
+			return
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}

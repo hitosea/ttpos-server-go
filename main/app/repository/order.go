@@ -1358,6 +1358,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 				Query: "SaleOrders.Member.MemberCard.MemberCardType",
 			},
 			WithPreload{
+				Query: "SaleOrders.Member.MemberBalanceLog",
+			},
+			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts",
 				Args: []any{
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
@@ -1432,6 +1435,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			},
 			WithPreload{
 				Query: "SaleOrders.ReturnOrders",
+			},
+			WithPreload{
+				Query: "SaleOrders.MemberPointLogs",
 			},
 			// ==================== 销售账单的收银员信息 ====================
 			WithPreload{

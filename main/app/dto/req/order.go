@@ -61,6 +61,8 @@ type OrderReturnReq struct {
 	BankCode    string `json:"bank_code"`    // 银行编码 - 当存在QR PromptPay的时候需要传
 	AccountNo   string `json:"account_no"`   // 账号 - 当存在QR PromptPay的时候需要传
 	AccountName string `json:"account_name"` // 账户名称 - 当存在QR PromptPay的时候需要传
+	// 手动退款积分
+	Points float64 `json:"points"` // 积分。当手动退积分时，需要传积分数量。
 }
 
 // OrderReReturnReq 订单重新退款

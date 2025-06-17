@@ -31,8 +31,11 @@ class Apk extends Controller
         //
         $credential_path = __DIR__ .'/../../../runtime/storage/' . env('GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME');
         if (!file_exists($credential_path)) {
-            echo "Not configured.";
-            exit;
+            $credential_path = '/var/certificate/' . env('GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME');
+            if (!file_exists($credential_path)) {
+                echo "Not configured.";
+                exit;
+            }
         }
         //
         putenv("GOOGLE_APPLICATION_CREDENTIALS=" . $credential_path);
@@ -86,8 +89,11 @@ class Apk extends Controller
         //
         $credential_path = __DIR__ .'/../../../runtime/storage/' . env('GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME');
         if (!file_exists($credential_path)) {
-            echo "Not configured.";
-            exit;
+            $credential_path = '/var/certificate/' . env('GOOGLE_APPLICATION_CREDENTIALS_FILE_NAME');
+            if (!file_exists($credential_path)) {
+                echo "Not configured.";
+                exit;
+            }
         }
         //
         putenv("GOOGLE_APPLICATION_CREDENTIALS=" . $credential_path);

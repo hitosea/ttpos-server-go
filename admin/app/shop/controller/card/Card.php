@@ -252,4 +252,17 @@ class Card extends Controller
         }
         return $this->renderError($info->getError() ?: '修改失败');
     }
+
+    /**
+     * @Apidoc\Title("获取会员卡列表")
+     * @Apidoc\Method ("GET")
+     * @Apidoc\Url ("/index.php/shop/card.card/getCardList")
+     * @Apidoc\Returned("list", type="array", desc="列表")
+     */
+    public function getCardList()
+    {
+        $model = new CardModel;
+        $list = $model->getAllList();
+        return $this->renderSuccess('', compact('list'));
+    }
 }

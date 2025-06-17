@@ -2,6 +2,7 @@ package model
 
 import (
 	"time"
+	"ttpos-server-go/app/constant"
 
 	"github.com/shopspring/decimal"
 )
@@ -26,14 +27,24 @@ type Member struct {
 	AccumulatedRechargeAmount    float64 `gorm:"column:accumulated_recharge_amount;type:decimal(12,2);default:0.00;comment:累计充值金额;NOT NULL" json:"accumulated_recharge_amount"`
 	MemberLevelUuid              uint64  `gorm:"column:member_level_uuid;type:bigint(20) unsigned;default:0;comment:会员等级ID;NOT NULL" json:"member_level_uuid"`
 	MemberCardUuid               uint64  `gorm:"column:member_card_uuid;type:bigint(20) unsigned;default:0;comment:会员卡片ID;NOT NULL" json:"member_card_uuid"`
+	MemberCardNo                 string  `gorm:"column:member_card_no;type:varchar(255);comment:会员卡号;NOT NULL" json:"member_card_no"`
+	ReferrerUuid                 uint64  `gorm:"column:referrer_uuid;type:bigint(20) unsigned;default:0;comment:推荐人ID;NOT NULL" json:"referrer_uuid"`
+	ActivityUuid                 uint64  `gorm:"column:activity_uuid;type:bigint(20) unsigned;default:0;comment:活动ID;NOT NULL" json:"activity_uuid"`
 
-	MemberLevel *MemberLevel `gorm:"foreignKey:MemberLevelUuid;references:Uuid"`
-	MemberCard  *MemberCard  `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
+	MemberLevel       *MemberLevel       `gorm:"foreignKey:MemberLevelUuid;references:Uuid"`
+	MemberCard        *MemberCard        `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
+	MemberBalanceLog  []MemberBalanceLog `gorm:"foreignKey:MemberUuid;references:Uuid"`
+	MarketingActivity *MarketingActivity `gorm:"foreignKey:Uuid;references:ActivityUuid"`
 }
 
 func (model *Member) SetNil() {
 	model.MemberLevel = nil
 	model.MemberCard = nil
+}
+
+// 是否存在推荐人和活动ID
+func (model *Member) IsExistActivityAndReferrer() bool {
+	return model.ReferrerUuid != 0 && model.ActivityUuid != 0
 }
 
 // 累计会员的消费金额、消费次数
@@ -134,13 +145,13 @@ func (model *Member) GetBalanceAll() float64 {
 // 获取会员的余额，用于展示在前端。
 // 会员余额=余额+冻结余额
 func (model *Member) GetBalance() float64 {
-	return decimal.NewFromFloat(model.Balance).Add(decimal.NewFromFloat(model.FrozenBalance)).InexactFloat64()
+	return decimal.NewFromFloat(model.Balance).Add(decimal.NewFromFloat(model.FrozenBalance)).Truncate(2).InexactFloat64()
 }
 
 // 获取会员的赠送余额，用于展示在前端。
 // 会员赠送余额=赠送余额+冻结赠送余额
 func (model *Member) GetGiftBalance() float64 {
-	return decimal.NewFromFloat(model.GiftBalance).Add(decimal.NewFromFloat(model.FrozenGiftBalance)).InexactFloat64()
+	return decimal.NewFromFloat(model.GiftBalance).Add(decimal.NewFromFloat(model.FrozenGiftBalance)).Truncate(2).InexactFloat64()
 }
 
 func (model *Member) GetMemberCardName() string {
@@ -180,18 +191,39 @@ func (model *Member) HasPassword() bool {
 	return model.Password != ""
 }
 
+// 获取会员的累计充值金额，用于展示在前端。
+// 累计充值金额=客户端充值金额+后台充值金额-反结账金额
+func (model *Member) GetRechargeMoney() float64 {
+	var rechargeMoney decimal.Decimal
+	for _, log := range model.MemberBalanceLog {
+		if log.Scene == constant.MemberBalanceLogRecharge || log.Scene == constant.MemberBalanceLogAdmin {
+			var addMoney = decimal.NewFromFloat(log.Money).Sub(decimal.NewFromFloat(log.GiftMoney))
+			rechargeMoney = rechargeMoney.Add(addMoney)
+		} else if log.Scene == constant.MemberBalanceLogRechargeReverse {
+			var money = decimal.NewFromFloat(log.Money).Mul(decimal.NewFromFloat(-1))
+			var giftMoney = decimal.NewFromFloat(log.GiftMoney).Mul(decimal.NewFromFloat(-1))
+			var deductMoney = money.Sub(giftMoney)
+			rechargeMoney = rechargeMoney.Sub(deductMoney)
+		}
+	}
+
+	return rechargeMoney.InexactFloat64()
+}
+
 // MemberLevel 会员等级表 `ttpos_member_level`
 type MemberLevel struct {
 	BaseModel
-	Name         string  `gorm:"column:name;type:varchar(255);comment:等级名称;NOT NULL" json:"name"`
-	OpenMoney    int     `gorm:"column:open_money;type:tinyint(3);default:0;comment:是否开放累计消费额升级，0-否 1-是" json:"open_money"`
-	UpgradeMoney float64 `gorm:"column:upgrade_money;type:decimal(12,2);default:0.00;comment:升级条件，累计消费额;NOT NULL" json:"upgrade_money"`
-	OpenPoint    int     `gorm:"column:open_point;type:tinyint(3);default:0;comment:是否开放累计积分升级，0-否 1-是" json:"open_point"`
-	UpgradePoint float64 `gorm:"column:upgrade_point;type:decimal(12,2);default:0.00;comment:升级条件，累计积分" json:"upgrade_point"`
-	Discount     float64 `gorm:"column:discount;type:decimal(12,4);default:1;comment:等级权益,百分比折扣,单位%, 如80%为打8折，discount值为0.8;NOT NULL" json:"discount"`
-	Priority     int     `gorm:"column:priority;type:int(11);default:0;comment:等级权重，越大等级越高;NOT NULL" json:"priority"`
-	IsDefault    int     `gorm:"column:is_default;type:tinyint(1);default:0;comment:是否默认, 1-是 0-否;NOT NULL" json:"is_default"`
-	Remark       string  `gorm:"column:remark;type:varchar(255);comment:备注;NOT NULL" json:"remark"`
+	Name           string  `gorm:"column:name;type:varchar(255);comment:等级名称;NOT NULL" json:"name"`
+	OpenMoney      int     `gorm:"column:open_money;type:tinyint(3);default:0;comment:是否开放累计消费额升级，0-否 1-是" json:"open_money"`
+	UpgradeMoney   float64 `gorm:"column:upgrade_money;type:decimal(12,2);default:0.00;comment:升级条件，累计消费额;NOT NULL" json:"upgrade_money"`
+	OpenPoint      int     `gorm:"column:open_point;type:tinyint(3);default:0;comment:是否开放累计积分升级，0-否 1-是" json:"open_point"`
+	UpgradePoint   float64 `gorm:"column:upgrade_point;type:decimal(12,2);default:0.00;comment:升级条件，累计积分" json:"upgrade_point"`
+	Discount       float64 `gorm:"column:discount;type:decimal(12,4);default:1;comment:等级权益,百分比折扣,单位%, 如80%为打8折，discount值为0.8;NOT NULL" json:"discount"`
+	Priority       int     `gorm:"column:priority;type:int(11);default:0;comment:等级权重，越大等级越高;NOT NULL" json:"priority"`
+	IsDefault      int     `gorm:"column:is_default;type:tinyint(1);default:0;comment:是否默认, 1-是 0-否;NOT NULL" json:"is_default"`
+	Remark         string  `gorm:"column:remark;type:varchar(255);comment:备注;NOT NULL" json:"remark"`
+	PointsRate     string  `gorm:"column:points_rate;type:varchar(255);comment:购物赠送积分按照付款金额比例赠送时的比例;NOT NULL" json:"points_rate"`
+	PointsQuantity string  `gorm:"column:points_quantity;type:varchar(255);comment:购物赠送积分按照桌台人数赠送时的数量;NOT NULL" json:"points_quantity"`
 }
 
 func (model *MemberLevel) GetDiscount() float64 {

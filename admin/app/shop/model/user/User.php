@@ -8,9 +8,13 @@ use app\common\enum\user\grade\ChangeTypeEnum;
 use app\common\model\user\Grade as GradeModel;
 use app\shop\model\user\GradeLog as GradeLogModel;
 use app\shop\model\user\PointsLog as PointsLogModel;
+use app\shop\model\user\Card as CardModel;
 use app\common\enum\user\pointsLog\PointsLogSceneEnum;
 use app\shop\model\user\BalanceLog as BalanceLogModel;
 use app\common\enum\user\balanceLog\BalanceLogSceneEnum as SceneEnum;
+use app\common\library\helper;
+use app\common\model\user\MemberCard;
+use app\shop\model\marketing\MarketingActivity;
 
 /**
  * 用户模型
@@ -67,8 +71,12 @@ class User extends UserModel
         if (isset($data['gender']) && $data['gender'] > -1) {
             $model = $model->where('gender', '=', (int)$data['gender']);
         }
+        // 检索：排除用户ID
+        if (isset($data['exclude_user_id']) && intval($data['exclude_user_id']) > 0) {
+            $model = $model->where('uuid', '<>', (int)$data['exclude_user_id']);
+        }
         // 获取用户列表
-        $paginate = $model->with(['grade', 'memberCard' => ['card']])
+        $paginate = $model->with(['grade', 'memberCard' => ['card'], 'memberBalanceLog', 'referrer'])
             ->field('*, nickname as nickName')
             ->order(['create_time' => 'desc'])
             ->hidden(['open_id', 'union_id', 'password'])
@@ -79,6 +87,43 @@ class User extends UserModel
             if ($item['memberCard'] && isset($item['memberCard']['card'])) {
                 $item['card'] = $item['memberCard']['card'];
             }
+            // 累计充值金额
+            $rechargeMoney = '0.00'; 
+            // 净充值金额
+            $netRechargeMoney = '0.00';
+            foreach ($item['memberBalanceLog'] as $log) {
+                // 客户端充值、后台充值
+                if ($log['scene']['value'] == SceneEnum::RECHARGE || $log['scene']['value'] == SceneEnum::ADMIN) {
+                    $addMoney = helper::bcsub($log['money'], $log['gift_money'], 2);
+                    // 累计充值金额
+                    $rechargeMoney = helper::bcadd($rechargeMoney, $addMoney, 2);
+                    // 净充值金额
+                    $netRechargeMoney = helper::bcadd($netRechargeMoney, $addMoney, 2);
+                }
+                // 反结账
+                if ($log['scene']['value'] == SceneEnum::RECHARGE_REVERSE) {
+                    // 转为正数
+                    $money = helper::bcmul($log['money'], -1, 2);
+                    $giftMoney = helper::bcmul($log['gift_money'], -1, 2);
+                    // 扣减金额
+                    $deductMoney = helper::bcsub($money, $giftMoney, 2);
+                    // 累计充值金额
+                    $rechargeMoney = helper::bcsub($rechargeMoney, $deductMoney, 2);
+                    // 净充值金额
+                    $netRechargeMoney = helper::bcsub($netRechargeMoney, $deductMoney, 2);
+                }
+                // 退款
+                if ($log['scene']['value'] == SceneEnum::RECHARGE_REFUND) {
+                    // 转为正数
+                    $deductMoney = helper::bcmul($log['money'], -1, 2);
+                    // 净充值金额扣减
+                    $netRechargeMoney = helper::bcsub($netRechargeMoney, $deductMoney, 2);
+                }
+            }
+            $item['recharge_money'] = $rechargeMoney;
+            $item['net_recharge_money'] = $netRechargeMoney;
+
+            unset($item['memberBalanceLog']);
         }
 
         return $paginate;
@@ -108,6 +153,9 @@ class User extends UserModel
         $gender = $data['gender'] ?? null;
         $gradeId = $data['grade_id'] ?? GradeModel::getDefaultGradeId();
         $birthday = $data['birthday'] ?? null;
+        $cardUuid = $data['card_uuid'] ?? '';
+        $cardNumber = $data['card_number'] ?? '';
+        $referrerUuid = $data['referrer_uuid'] ?? 0;
 
         if (!$nickName || !$mobile) {
             $this->error = !$nickName ? '昵称不能为空' : '手机号不能为空';
@@ -124,23 +172,119 @@ class User extends UserModel
             $this->error = '密码必须为4-16位纯数字';
             return false;
         }
+        if (!$cardUuid && $cardNumber) {
+            $this->error = '请选择会员卡';
+            return false;
+        }
 
+        // 检查会员是否已存在
         $user = $this->where('phone', '=', $mobile)->find();
-
         if ($user) {
             $this->error = '会员已存在';
             return false;
         }
 
-        return $this->save([
-            'uuid' => createUuid(),
-            'nickname' => $nickName,
-            'phone' => $mobile,
-            'password' => $password ? md5($password) : '',
-            'gender' => $gender, //性别
-            'member_level_uuid' => $gradeId, //默认等级
-            'birthday' => $birthday ? strtotime($birthday) : 0, //生日
-        ]);
+        // 检查会员卡是否存在
+        $card = null;
+        if ($cardUuid) {
+            $card = CardModel::detail($cardUuid);
+            if (!$card) {
+                $this->error = '会员卡不存在';
+                return false;
+            }
+        }
+
+        // 检查推荐人是否存在
+        $activityUuid = 0;
+        if ($referrerUuid) {
+            $referrer = $this->where('uuid', '=', $referrerUuid)->find();
+            if (!$referrer) {
+                $this->error = '推荐人不存在';
+                return false;
+            }
+            // 查询当前有效活动
+            $activity = (new MarketingActivity())
+                ->where('delete_time', 0)
+                ->where('is_invalid', 0)
+                ->where('start_time', '<=', time())
+                ->where('end_time', '>=', time())
+                ->order('start_time', 'asc')
+                ->order('id', 'asc')
+                ->find();
+            if ($activity) {
+                $activityUuid = $activity['uuid'];
+            }
+        }
+
+        $this->startTrans();
+        try {
+            $userUuid = createUuid();
+            $user = $this->save([
+                'uuid' => $userUuid,
+                'nickname' => $nickName,
+                'phone' => $mobile,
+                'password' => $password ? md5($password) : '',
+                'gender' => $gender, //性别
+                'member_level_uuid' => $gradeId, //默认等级
+                'birthday' => $birthday ? strtotime($birthday) : 0, //生日
+                'referrer_uuid' => $referrerUuid, //推荐人
+                'activity_uuid' => $activityUuid, //活动
+            ]);
+            if (!$user) {
+                throw new \Exception('添加失败');
+            }
+            if ($card) {
+                $model = new CardModel();
+                $result = $model->put([
+                    'card_id' => $card['uuid'],
+                    'user_ids' => [
+                        [ 'uuid' => $userUuid, 'card_number' => $cardNumber ]
+                    ],
+                ]);
+                if (!$result) {
+                    throw new \Exception($model->getError());
+                }
+            }
+            $this->commit();
+        } catch (\Exception $e) {
+            $this->error = $e->getMessage();
+            $this->rollback();
+            return false;
+        }
+
+        return true;
+
+        return $this->transaction(function () use ($nickName, $mobile, $password, $gender, $gradeId, $birthday, $card, $cardNumber, $referrerUuid, $activityUuid) {
+            $userUuid = createUuid();
+            $user = $this->save([
+                'uuid' => $userUuid,
+                'nickname' => $nickName,
+                'phone' => $mobile,
+                'password' => $password ? md5($password) : '',
+                'gender' => $gender, //性别
+                'member_level_uuid' => $gradeId, //默认等级
+                'birthday' => $birthday ? strtotime($birthday) : 0, //生日
+                'referrer_uuid' => $referrerUuid, //推荐人
+                'activity_uuid' => $activityUuid, //活动
+            ]);
+            if (!$user) {
+                return false;
+            }
+            if ($card) {
+                $model = new CardModel();
+                $result = $model->put([
+                    'card_id' => $card['uuid'],
+                    'user_ids' => [
+                        [ 'uuid' => $userUuid, 'card_number' => $cardNumber ]
+                    ],
+                ]);
+                if (!$result) {
+                    $this->error = $model->getError();
+                    return false;
+                }
+            }
+            return true;
+        });
     }
 
     /**
@@ -163,8 +307,10 @@ class User extends UserModel
         }
         if ($password) {
             $data['password'] = md5($password);
+            $this['password'] = $data['password'];
         } else {
             unset($data['password']);
+            unset($this['password']);
         }
         if ($data['birthday']) {
             $data['birthday'] = strtotime($data['birthday']);
@@ -174,7 +320,70 @@ class User extends UserModel
         $data['phone'] = $data['mobile'];
         $data['member_level_uuid'] = $data['grade_id'];
         // 
-        return $this->save($data);
+        $cardUuid = $data['card_uuid'] ?? '';
+        $cardNumber = $data['card_number'] ?? '';
+        if (!$cardUuid && $cardNumber) {
+            $this->error = '请选择会员卡';
+            return false;
+        }
+        // 检查会员卡是否存在
+        $card = null;
+        if ($cardUuid) {
+            $card = CardModel::detail($cardUuid);
+            if (!$card) {
+                $this->error = '会员卡不存在';
+                return false;
+            }
+        }
+        if ($cardNumber) {
+            $record = (new User)::where('uuid', '<>', $this['uuid'])->where('member_card_no', '=', $cardNumber)->find();
+            if ($record) {
+                $this->error = '卡号重复';
+                return false;
+            }
+        }
+
+        // 检查推荐人
+        $referrerUuid = $data['referrer_uuid'] ?? 0;
+        if ($referrerUuid) {
+            if ($this->referrer_uuid > 0 && $this->referrer_uuid != $referrerUuid) {
+                $this->error = '当前会员已有推荐人';
+                return false;
+            }
+            if ($referrerUuid == $this['uuid']) {
+                $this->error = '推荐人不能是自己';
+                return false;
+            }
+            $referrer = $this->where('uuid', '=', $referrerUuid)->find();
+            if (!$referrer) {
+                $this->error = '推荐人不存在';
+                return false;
+            }
+        }
+
+        return $this->transaction(function () use ($card, $cardNumber, $data, $referrerUuid) {
+            if ($card) {
+                // 会员未拥有此会员卡，发卡
+                $isExist = (new MemberCard())->checkExistByUserId($this['uuid']);
+                if ($isExist?->isEmpty() || $card['uuid'] != $isExist['card_type_uuid']) {
+                    $model = new CardModel();
+                    $result = $model->put([
+                        'card_id' => $card['uuid'],
+                        'user_ids' => [
+                            [ 'uuid' => $this['uuid'], 'card_number' => $cardNumber ]
+                        ],
+                    ]);
+                    if (!$result) {
+                        $this->error = $model->getError();
+                        return false;
+                    }
+                }
+            }
+            $data['member_card_no'] = $cardNumber;
+            $data['referrer_uuid'] = $referrerUuid;
+            //
+            return $this->save($data); 
+        });
     }
 
     /**

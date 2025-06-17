@@ -55,7 +55,7 @@ func (model *SaleOrder) CalcCommissionFee() float64 {
 // 支付没有手续费时，销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和-结账抹零金额
 // 支付有手续费时，销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和
 func (model *SaleOrder) CalcUnPayAmount(hasCommission bool) float64 {
-	amount := model.GetAmount()
+	amount := model.GetPointsExchangeAmount()
 	if hasCommission {
 		// 销售订单各个支付单的支付金额之和
 		payOrderAmount := model.calcPayOrderAmount()
@@ -83,7 +83,7 @@ func (model *SaleOrder) SetCheckOutZeroFee() {
 
 // 计算销售订单的结账抹零金额。根据订单设置的结账抹零规则金额计算
 func (model *SaleOrder) CalcCheckOutZeroFee() float64 {
-	amount := model.GetAmount()
+	amount := model.GetPointsExchangeAmount()
 	switch model.ZeroCheckoutRule {
 	// 实款实收
 	case constant.SaleBillSettingCheckoutZeroingMethodNone:
@@ -137,6 +137,8 @@ func (model *SaleOrder) calcSaleOrder(serviceFeeType int, serviceFeeValue float6
 	model.ZeroFee = calc.ZeroFee
 	calc.CustomDiscountFee = model.calcCustomDiscountFee(products, calc.Amount)
 	model.CustomDiscountFee = calc.CustomDiscountFee
+	calc.PayPointsAmount = model.CaclPointsExchangeAmount()
+	model.PayPointsAmount = calc.PayPointsAmount // 有抵扣积分时，抵扣金额才大于0
 	// 再重新计算一次应付金额
 	calc.Amount = model.calcAmountZero(calc.Amount, calc.ZeroFee)
 	model.Amount = calc.Amount
@@ -173,7 +175,7 @@ func (model *SaleOrder) calcPayOrderAmount() float64 {
 // 最终应收=应收金额+支付手续费= 应收金额 +（各个支付订单的手续费之和+当前支付方式的手续费）- 减去结账抹零金额
 func (model *SaleOrder) calcFinallyAmount() (float64, bool) {
 	hasCommission := false
-	amount := decimal.NewFromFloat(model.GetAmount())
+	amount := decimal.NewFromFloat(model.GetPointsExchangeAmount())
 	commissionFee := decimal.NewFromFloat(0)
 	for _, paymentOrder := range model.PaymentOrders {
 		commissionFee = commissionFee.Add(decimal.NewFromFloat(paymentOrder.PaymentCommissionFee))
@@ -316,7 +318,7 @@ func (model *SaleOrder) calcProductAmount(products []*SaleOrderProduct, options 
 	sumBuffetDelayPrice := model.calcSumOrderProductBuffetDelayPrice()
 	return decimal.NewFromFloat(sumOrderProductPrice).Add(
 		decimal.NewFromFloat(sumCustomerPrice)).Add(
-		decimal.NewFromFloat(sumBuffetDelayPrice)).InexactFloat64()
+		decimal.NewFromFloat(sumBuffetDelayPrice)).Truncate(2).InexactFloat64()
 }
 
 // 计算订单产生的税费。订单税费=订单商品TaxFee之和 + 订单商品ServiceTaxFee之和 + 自助餐顾客税费之和
@@ -376,7 +378,7 @@ func (model *SaleOrder) calcCustomDiscountFee(products []*SaleOrderProduct, amou
 	customDiscountFee = customDiscountFee.Add(
 		decimal.NewFromFloat(discount)).Add(
 		decimal.NewFromFloat(zeroFee))
-	return customDiscountFee.InexactFloat64()
+	return customDiscountFee.Truncate(2).InexactFloat64()
 }
 
 // 计算销售订单会员折扣金额。销售订单会员折扣金额=订单商品会员折扣金额之和
@@ -494,7 +496,51 @@ func (model *SaleOrder) calcOriginAmount(products []*SaleOrderProduct, serviceFe
 func (model *SaleOrder) calcAmountZero(amountNum, zeroFee float64) float64 {
 	amount := decimal.NewFromFloat(amountNum)
 	amount = amount.Sub(decimal.NewFromFloat(zeroFee))
-	return amount.InexactFloat64()
+	return amount.Round(2).InexactFloat64()
+}
+
+// CaclMaxPoints 计算最大可抵扣积分
+// 1. 当会员积分余额充足时，最大可抵扣积分=订单应收/积分抵扣比例
+// 2. 当会员积分余额不足时，最大可抵扣积分=会员积分余额
+func (model *SaleOrder) CaclMaxPoints() float64 {
+	if model.Member == nil {
+		return 0 // 非会员订单，不支持积分抵扣
+	}
+
+	memberPoints := model.Member.GetPoints()
+
+	// 1. 计算最大可抵扣积分. 舍去小数点
+	maxPoints := model.GetAmount()
+	if model.PointsExchangeRate != 0 {
+		maxPoints = decimal.NewFromFloat(model.GetAmount()).Div(decimal.NewFromFloat(model.PointsExchangeRate)).Truncate(0).InexactFloat64() // 不能除以0
+	}
+
+	// 2. 当会员积分余额充足时，最大可抵扣积分=订单应收/积分抵扣比例
+	if memberPoints >= maxPoints {
+		return maxPoints
+	}
+
+	// 3. 当会员积分余额不足时，最大可抵扣积分=会员积分余额。只返回整数
+	if memberPoints > 0 {
+		return decimal.NewFromFloat(memberPoints).Truncate(0).InexactFloat64()
+	}
+
+	return 0
+}
+
+// 计算积分抵扣金额
+func (model *SaleOrder) CaclPointsExchangeAmount() float64 {
+	if model.Member == nil {
+		return 0 // 非会员订单，不支持积分抵扣
+	}
+
+	if model.PayPoints == 0 {
+		return 0 // 未抵扣积分，则抵扣金额为0
+	}
+
+	payPointsAmount := decimal.NewFromFloat(model.PayPoints).Mul(decimal.NewFromFloat(model.PointsExchangeRate)).Round(2).InexactFloat64()
+
+	return payPointsAmount
 }
 
 // 计算销售订单的订单优惠折扣抹零金额。根据订单设置的优惠折扣抹零规则金额计算
@@ -628,6 +674,7 @@ type Calc struct {
 	TaxFee                float64 `json:"tax_fee"`                 // 订单消费税
 	CustomDiscountFee     float64 `json:"custom_discount_fee"`     // 订单优惠折扣
 	MemberDiscountFee     float64 `json:"member_discount_fee"`     // 订单会员折扣
+	PayPointsAmount       float64 `json:"pay_points_amount"`       // 订单积分抵扣金额
 	Amount                float64 `json:"amount"`                  // 订单应付金额
 	OriginAmount          float64 `json:"origin_amount"`           // 订单原始应收金额
 	ZeroFee               float64 `json:"zero_fee"`                // 订单优惠折扣抹零金额

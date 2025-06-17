@@ -100,20 +100,30 @@
               <el-form-item
                 for="no_click"
                 label=""
-                :prop="`scope.row.barcodeUniqueness`"
+                :prop="`model.sku.${scope.$index}.barcode`"
                 style="margin-bottom: 0"
                 :rules="[
                   {
-                    validator: () => {
-                      return scope.row.barcodeUniqueness ? true : false;
+                    validator: (rule, value, callback) => {
+                      // 判断长度是否为12或13位，并且只能输入数字
+                      if (value && value.length !== 12 && value.length !== 13) {
+                        callback(new Error($t('长度12-13位数字')));
+                        return;
+                      }
+
+                      if (!scope.row.barcodeUniqueness) {
+                        callback(new Error($t('商品条码重复')));
+                        return;
+                      }
+                      callback();
                     },
-                    message: $t('商品条码重复'),
                     trigger: 'change',
                   },
                 ]"
               >
                 <el-input
                   v-model="scope.row.barcode"
+                  :maxlength="13"
                   @input="
                     () => {
                       scope.row.barcodeUniqueness = true;
@@ -207,7 +217,7 @@
     >
     </productList>
     <!-- 新增规格 -->
-    <Add v-if="open_add" :open_add="open_add" :addform="model" @closeDialog="closeDialog($event, 'add')"></Add>
+    <Add v-if="open_add" :open_add="open_add" :addform="model" @closeDialog="closeDialog($event)"></Add>
   </div>
 </template>
 
@@ -293,7 +303,8 @@
             //处理条形码
             this.$nextTick(() => {
               if (this.form.model.sku[index].barcode) {
-                this.form.model.sku[index].barcode = item.barcode.match(/[a-zA-Z0-9]*/g).join('');
+                //只能输入纯数字
+                this.form.model.sku[index].barcode = item.barcode.match(/[0-9]*/g).join('');
               }
             });
 
@@ -417,13 +428,11 @@
         }
       },
 
-      closeDialog(e, f) {
+      closeDialog(e) {
         /*关闭弹窗*/
-        if (f == 'add') {
-          this.open_add = e.openDialog;
-          if (e.type == 'success' && e.data) {
-            this.form.spec.unshift(e.data);
-          }
+        this.open_add = e.openDialog;
+        if (e.type == 'success' && e.data) {
+          this.form.spec.unshift(e.data);
         }
       },
 

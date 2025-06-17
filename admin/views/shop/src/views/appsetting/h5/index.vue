@@ -1,6 +1,6 @@
 <template>
-  <div class="salb">
-    <div class="form-div" v-loading="loading">
+  <div class="salb" v-loading="loading">
+    <div class="form-div">
       <el-form size="small" ref="form" :model="form" label-position="top">
         <el-form-item for="no_click" :label="$t('呼叫服务员：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_call_service">

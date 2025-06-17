@@ -167,10 +167,20 @@ type Attribute struct {
 
 // 销售订单的支付页信息
 type InstantOrderPaymentInfoResp struct {
-	MemberInfo     *MemberInfo             `json:"member_info,omitempty"` // 会员信息。如果订单选择了会员，则返回会员信息
-	PaymentOrders  PaymentInfoList         `json:"payment_orders"`        // 支付订单列表
-	PaymentMethods PaymentMethodList       `json:"payment_methods"`       // 支付方式列表
-	Amounts        PaymentMethodAmountList `json:"amounts"`               // 支付方式列表及订单金额信息
+	MemberInfo     *MemberInfo             `json:"member_info,omitempty"`     // 会员信息。如果订单选择了会员，则返回会员信息
+	PaymentOrders  PaymentInfoList         `json:"payment_orders"`            // 支付订单列表
+	PaymentMethods PaymentMethodList       `json:"payment_methods"`           // 支付方式列表
+	Amounts        PaymentMethodAmountList `json:"amounts"`                   // 支付方式列表及订单金额信息
+	PointsExchange PointsExchangeInfo      `json:"points_exchange,omitempty"` // 积分抵扣信息
+}
+
+type PointsExchangeInfo struct {
+	MaxPoints          float64 `json:"max_points"`           // 最大可抵扣积分。不能大于（订单应收/积分抵扣比例）。不能大于会员余额
+	PointsExchangeRate float64 `json:"points_exchange_rate"` // 积分抵扣比例。1个积分抵扣多少金额
+	PayPoints          float64 `json:"pay_points"`           // 已抵扣积分
+	PayPointsAmount    float64 `json:"pay_points_amount"`    // 已抵扣金额
+	OpenPointsExchange bool    `json:"open_points_exchange"` // 是否开启积分抵扣。用于前端显示积分抵扣信息。
+	CanChangePoints    bool    `json:"can_change_points"`    // 是否可以修改抵扣积分的数量。用于前端置灰修改按钮。
 }
 
 // GetZeroAmount 获取结账抹零金额
@@ -218,6 +228,7 @@ type PaymentMethodAmountList struct {
 }
 type PaymentMethodAmount struct {
 	SaleOrderOriginAmount float64 `json:"sale_order_origin_amount"` // 订单原价。订单原价=商品总价（折前价）+服务费（折前价）+消费税（折前价）
+	SaleOrderCartAmount   float64 `json:"sale_order_cart_amount"`   // 购物车应收金额。
 	SaleOrderAmount       float64 `json:"sale_order_amount"`        // 应收金额。
 	UnpaidAmount          float64 `json:"unpaid_amount"`            // 未收金额。用于显示在金额输入框，默认显示未收金额。未收金额=应收金额-实付金额。实付金额指去掉手续费为这笔订单支付的金额
 	ZeroAmount            float64 `json:"zero_amount"`              // 抹零金额。当支付方式为有手续费时，结账抹零金额为0。
@@ -236,12 +247,13 @@ type PaymentInfoList struct {
 }
 
 type MemberInfo struct {
-	Uuid     uint64    `json:"uuid"`     // 会员UUID
-	Nickname string    `json:"nickname"` // 会员名称
-	Card     CardInfo  `json:"card"`     // 会员卡信息
-	Level    LevelInfo `json:"level"`    // 会员等级
-	Balance  float64   `json:"balance"`  // 会员余额
-	Points   float64   `json:"points"`   // 会员积分
+	Uuid          uint64    `json:"uuid"`           // 会员UUID
+	Nickname      string    `json:"nickname"`       // 会员名称
+	Card          CardInfo  `json:"card"`           // 会员卡信息
+	Level         LevelInfo `json:"level"`          // 会员等级
+	Balance       float64   `json:"balance"`        // 会员余额
+	Points        float64   `json:"points"`         // 会员积分
+	RechargeMoney float64   `json:"recharge_money"` // 会员累计充值金额
 }
 
 type LevelInfo struct {

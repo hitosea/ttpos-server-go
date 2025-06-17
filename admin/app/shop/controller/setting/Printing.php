@@ -56,16 +56,16 @@ class Printing extends Controller
                 $printerId = 0;
                 foreach ($printerSettings['cashier_printer'] as $k => $v) {
                     if ($value['key'] == $v['key']) {
-                        $printerId = $v['printer_id'];
+                        $printerId = $v['printer_id'] ?? 0;
                     }
                 }
-                if (PrinterModel::where("uuid", $value['printer_id'])->value('is_usb') == 1) {
+                if (PrinterModel::where("uuid", $value['printer_id'] ?? '')->value('is_usb') == 1) {
                     $postData['cashier_printer'][$key]['printer_id'] = $printerId;
-                    $postData['cashier_printer'][$key]['printer_usb_id'] = $value['printer_id'];
+                    $postData['cashier_printer'][$key]['printer_usb_id'] = $value['printer_id'] ?? '';
                 } else if (isset($printerSettings['cashier_printer'][$key]['printer_usb_id'])) {
                     // 推送消息 通知
                     $sourceDevice = PrinterModel::where("uuid", $printerSettings['cashier_printer'][$key]['printer_usb_id'])->find();
-                    $targetDevice = PrinterModel::where("uuid", $value['printer_id'])->find();
+                    $targetDevice = PrinterModel::where("uuid", $value['printer_id'] ?? '')->find();
                     if ($sourceDevice) {
                         Websocket::pushAppointClient(request()->appId, Websocket::SOURCE_CASHIER, $sourceDevice['source_device_sn'], Websocket::UPDATE_SELECTED_PRINTER, 0, [
                             'type' => 'update',

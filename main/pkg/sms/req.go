@@ -35,3 +35,9 @@ type MemberOrderRefundRequest struct {
 	Balance       float64 `json:"balance"`        // 退款后，会员余额
 	PointsBalance float64 `json:"points_balance"` // 退款后，积分余额
 }
+
+// MemberSendCodeRequest 会员发送验证码请求参数
+type MemberSendCodeRequest struct {
+	Company string `json:"company"` // 公司名称
+	Code    string `json:"code"`    // 验证码
+}

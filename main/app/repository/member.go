@@ -11,24 +11,31 @@ import (
 )
 
 type IMemberRepo interface {
-	WithMemberLevel() DBOption    // Member 预加载会员等级
-	WithMemberCard() DBOption     // Member 预加载会员卡
-	WithMemberCardType() DBOption // Member 预加载会员卡.卡类型
+	WithMemberLevel() DBOption      // Member 预加载会员等级
+	WithMemberCard() DBOption       // Member 预加载会员卡
+	WithMemberCardType() DBOption   // Member 预加载会员卡.卡类型
+	WithMemberBalanceLog() DBOption // Member 预加载会员余额变动记录
 
-	WhereUuid(uuid uint64) DBOption // Uuid 条件
+	WhereUuid(uuid uint64) DBOption     // Uuid 条件
+	WhereCardNo(cardNo string) DBOption // 卡号条件
 
 	GetMember(opts ...DBOption) model.Member // 获取会员
 	GetMemberList(opts ...DBOption) ([]*model.Member, error)
-	GetMemberRecord(opts ...DBOption) (*model.Member, error)   // 获取会员
-	GetMemberByUuid(uuid uint64) (*model.Member, error)        // 根据uuid获取会员
-	GetMembersByUuids(uuids []uint64) ([]*model.Member, error) // 根据uuid列表获取会员列表
-	GetMemberLevels() []model.MemberLevel                      // 获取会员等级
-	GetMemberLevelsAllColumns() []model.MemberLevel            // 获取会员等级所有列
-	SearchMember(keyword string) []model.Member                // 关键字搜索会员
-	CheckMemberExists(phone string) bool                       // 根据手机号检查是否存在
-	CheckLevelExists(uuid uint64) bool                         // 根据Uuid检查等级是否存在
+	GetMemberRecord(opts ...DBOption) (*model.Member, error)            // 获取会员
+	GetMemberByUuid(uuid uint64) (*model.Member, error)                 // 根据uuid获取会员
+	GetMemberByReferrerUuid(referrerUuid uint64) (*model.Member, error) // 根据uuid获取会员
+	GetMemberByPhone(phone string) (*model.Member, error)               // 根据手机号获取会员
+	GetMembersByUuids(uuids []uint64) ([]*model.Member, error)          // 根据uuid列表获取会员列表
+	GetMemberLevels() []model.MemberLevel                               // 获取会员等级
+	GetCardTypes() []model.MemberCardType                               // 获取会员卡类型
+	GetCheckCardType(uuid uint64) model.MemberCardType                  // 获取会员卡类型
+	GetMemberLevelsAllColumns() []model.MemberLevel                     // 获取会员等级所有列
+	SearchMember(keyword string) []model.Member                         // 关键字搜索会员
+	CheckMemberExists(phone string) bool                                // 根据手机号检查是否存在
+	CheckLevelExists(uuid uint64) bool                                  // 根据Uuid检查等级是否存在
 
-	CreateMember(member model.Member) error              // 添加会员
+	CreateMember(member *model.Member) error             // 添加会员
+	CreateMemberCard(memberCard *model.MemberCard) error // 给会员发卡
 	CreateMemberAndMemberCard(member model.Member) error // 添加会员并发放会员卡。仅用于数据迁移
 	Update(uuid uint64, vars map[string]any) error       // 更新会员信息
 
@@ -56,8 +63,15 @@ func NewMemberRepoImpl(db *gorm.DB) IMemberRepo {
 // GetMemberLevels 获取会员等级
 func (r *memberRepo) GetMemberLevels() []model.MemberLevel {
 	var levels []model.MemberLevel
-	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Select("uuid, name, priority, create_time").Order("priority asc, create_time asc").Find(&levels)
+	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Select("uuid, name, priority, create_time, points_rate, points_quantity").Order("priority asc, create_time asc").Find(&levels)
 	return levels
+}
+
+// GetCardTypes 获取会员卡类型
+func (r *memberRepo) GetCardTypes() []model.MemberCardType {
+	var cardTypes []model.MemberCardType
+	r.db.Model(&model.MemberCardType{}).Scopes(NotDeleted).Where("status = ?", constant.CardTypeEnable).Order("sort asc").Find(&cardTypes)
+	return cardTypes
 }
 
 // GetMemberLevelsAllColumns 获取会员等级
@@ -71,13 +85,20 @@ func (r *memberRepo) GetMemberLevelsAllColumns() []model.MemberLevel {
 func (r *memberRepo) SearchMember(keyword string) []model.Member {
 	var members []model.Member
 	keyword = Like(keyword)
-	r.db.Model(&model.Member{}).Scopes(NotDeleted).Select("uuid, nickname, phone").Where("phone LIKE ? OR id LIKE ? OR nickname LIKE ?", keyword, keyword, keyword).Find(&members)
+	r.db.Model(&model.Member{}).Scopes(NotDeleted).Select("uuid, nickname, phone").Where("phone LIKE ? OR id LIKE ? OR nickname LIKE ?", keyword, keyword, keyword).Limit(200).Find(&members)
 	return members
 }
 
 // CreateMember 添加会员
-func (r *memberRepo) CreateMember(member model.Member) error {
-	return r.db.Create(&member).Error
+func (r *memberRepo) CreateMember(member *model.Member) error {
+	err := r.db.Create(member).Error
+	return err
+}
+
+// CreateMemberCard 给会员发卡
+func (r *memberRepo) CreateMemberCard(memberCard *model.MemberCard) error {
+	err := r.db.Create(memberCard).Error
+	return err
 }
 
 // CreateMemberAndMemberCard 添加会员并发放会员卡。仅用于数据迁移
@@ -106,6 +127,13 @@ func (r *memberRepo) CheckLevelExists(uuid uint64) bool {
 	var exists uint64
 	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Where("uuid = ?", uuid).Select("uuid").Scan(&exists)
 	return exists > 0
+}
+
+// GetCheckCardType 获取会员卡类型
+func (r *memberRepo) GetCheckCardType(uuid uint64) model.MemberCardType {
+	var cardType model.MemberCardType
+	r.db.Model(&model.MemberCardType{}).Scopes(NotDeleted).Where("uuid = ? AND status = ?", uuid, constant.CardTypeEnable).Find(&cardType)
+	return cardType
 }
 
 // GetMember 查询会员
@@ -160,11 +188,37 @@ func (r *memberRepo) GetMemberRecord(opts ...DBOption) (*model.Member, error) {
 
 // GetMemberByUuid 根据uuid查询会员
 func (r *memberRepo) GetMemberByUuid(uuid uint64) (*model.Member, error) {
-	member, err := r.GetMemberRecord(r.WhereUuid(uuid))
+	member, err := r.GetMemberRecord(
+		r.WhereUuid(uuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MemberLevel",
+			},
+		),
+	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询会员失败", utils.NumToStr(uuid))
 	}
 	return member, nil
+}
+
+// GetMemberByReferrerUuid 根据推荐人uuid查询会员
+func (r *memberRepo) GetMemberByReferrerUuid(referrerUuid uint64) (*model.Member, error) {
+	member, err := r.GetMemberRecord(r.WhereUuid(referrerUuid))
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询会员失败", utils.NumToStr(referrerUuid))
+	}
+	return member, nil
+}
+
+// GetMemberByPhone 根据手机号查询会员
+func (r *memberRepo) GetMemberByPhone(phone string) (*model.Member, error) {
+	var member model.Member
+	err := r.db.Model(&model.Member{}).Scopes(NotDeleted).Where("phone = ?", phone).First(&member).Error
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询会员失败", phone)
+	}
+	return &member, nil
 }
 
 // Update 更新会员信息
@@ -193,6 +247,13 @@ func (r *memberRepo) WithMemberCardType() DBOption {
 	}
 }
 
+// WithMemberBalanceLog Member 预加载会员余额变动记录
+func (r *memberRepo) WithMemberBalanceLog() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MemberBalanceLog")
+	}
+}
+
 // WhereUuid Uuid 条件
 func (r *memberRepo) WhereUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -200,8 +261,15 @@ func (r *memberRepo) WhereUuid(uuid uint64) DBOption {
 	}
 }
 
+// WhereCardNo 卡号条件
+func (r *memberRepo) WhereCardNo(cardNo string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("member_card_no = ?", cardNo)
+	}
+}
+
 func (r *memberRepo) GetMemberInfoForSaleOrder(ctx context.Context, memberUuid uint64) (*model.Member, error) {
-	member := r.GetMember(r.WhereUuid(memberUuid), r.WithMemberCardType(), r.WithMemberLevel())
+	member := r.GetMember(r.WhereUuid(memberUuid), r.WithMemberCardType(), r.WithMemberLevel(), r.WithMemberBalanceLog())
 	if member.Uuid == 0 {
 		return nil, errors.New("会员不存在")
 	}

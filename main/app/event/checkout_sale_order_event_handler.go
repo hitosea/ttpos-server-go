@@ -3,6 +3,7 @@ package event
 import (
 	"fmt"
 	"sync"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -115,15 +116,6 @@ func checkoutSaleOrderEventHandler() {
 			ReduceStock(db, payload.SaleBillUuid)
 		})
 
-		// 扣减会员余额
-		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
-			// db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
-			// 判断该订单的付款单中是否存在会员余额的支付方式。如果存在，则创建余额明细记录-扣减
-			// ReduceMemberBalance(db, payload.SaleBillUuid)
-		})
-
-		// 发布会员余额变动事件。 获取所有未处理的余额明细记录，计算出会员余额变动金额，更新会员余额。
-
 		// 发放积分
 		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
 			if payload.SaleOrderUuid == 0 {
@@ -131,8 +123,9 @@ func checkoutSaleOrderEventHandler() {
 			}
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			saleOrder := payload.SaleBill.GetSaleOrder(payload.SaleOrderUuid)
-			// 如果订单有会员且开启积分赠送且赠送比例大于0，则发放积分
-			if saleOrder.ConsumerUuid != 0 && saleOrder.GiftPointsRate > 0 {
+			// 如果订单有会员且订单的赠送积分大于0，则发放积分
+			if saleOrder.ConsumerUuid != 0 && saleOrder.GiftPoints > 0 {
+				time.Sleep(time.Second)
 				// 加锁, 避免并发问题
 				lock.NewSystemLock().LockUuid(saleOrder.ConsumerUuid)
 				defer lock.NewSystemLock().UnlockUuid(saleOrder.ConsumerUuid)
@@ -145,7 +138,6 @@ func checkoutSaleOrderEventHandler() {
 				}
 				// 创建积分发放记录. // 累计会员的消费金额、消费次数
 				saleOrder.HandleMemberPoints(member)
-				saleOrder.AccumulateMemberConsumeAmountAndTimes(member) // 累计会员的消费金额、消费次数
 				if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 					// 更新会员积分 // todo 可以考虑跟func (s *memberSrv) HandleMemberPoints方法合并
 					if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{
@@ -168,7 +160,7 @@ func checkoutSaleOrderEventHandler() {
 				memberSrv := service.NewMemberSrv(database.GetDBManager(config.DatabaseConf{}))
 				go memberSrv.HandleMemberUpgrade(payload.CompanyUuid, saleOrder.ConsumerUuid)
 
-				// 发布“积分变动”事件
+				// 发布"积分变动"事件
 				go HandleMemberPoints(db)
 			}
 		})
@@ -201,6 +193,10 @@ func checkoutSaleOrderEventHandler() {
 			}
 		})
 
+		// 邀请有礼活动-统计获奖
+		event.NewSystemBus().SubscribeCheckoutSaleOrderEvent(func(payload event.CheckoutSaleOrderPayload) {
+			HandleActivityConsumption(payload)
+		})
 	})
 }
 
@@ -361,5 +357,82 @@ func HandleMemberBalance(db *gorm.DB) {
 	// 记录日志
 	for nickname, info := range logMemberInfoMap {
 		logger.Logger.Info("HandleMemberBalance process, UpdateMemberBalance", zap.Any("member", nickname), zap.Any("before balance", info[0]), zap.Any("change balance", info[1]), zap.Any("after balance", info[2]), zap.Any("before balance gift", info[3]), zap.Any("change balance gift", info[4]), zap.Any("after balance gift", info[5]))
+	}
+}
+
+// 处理邀请有礼活动-统计获奖
+func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
+	// 加锁, 避免并发问题
+	lock.NewSystemLock().LockUuid(constant.LockNameActivityConsumption)
+	defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
+	//
+	db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+	// 产品： 关闭营销活动后，不限制会员的登录行为。系统需停止该商家的营销活动活动，不进行营销活动消费累积计算和奖励发放。
+	companySetting := repository.NewCompanySettingRepo(db).Get()
+	if companySetting.IsOpenMarketing != 1 {
+		return
+	}
+	//
+	for _, saleOrder := range payload.SaleBill.SaleOrders {
+		if saleOrder.ConsumerUuid != 0 && saleOrder.IsSettled() && saleOrder.Member != nil && saleOrder.Member.IsExistActivityAndReferrer() {
+			activity, err := repository.NewMarketingActivityRepo(db).GetActivity(saleOrder.Member.ActivityUuid)
+			if err != nil || activity == nil {
+				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetActivity failed", zap.Any("activityUuid", saleOrder.Member.ActivityUuid), zap.Error(err))
+				continue
+			}
+			if !activity.IsValid() {
+				// 活动无效则跳过
+				continue
+			}
+
+			consumptionAmount := saleOrder.GetFinalNoFeeAmount()
+
+			// 发送奖励一
+			{
+				// 记录消费金额
+				err = repository.NewMarketingActivityConsumptionRepo(db).CreateOrUpdateConsumption(
+					activity.Uuid,
+					saleOrder.Member.ReferrerUuid,
+					saleOrder.ConsumerUuid,
+					consumptionAmount,
+				)
+				if err != nil {
+					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
+				}
+				// 发放奖励
+				activitySendReward := repository.NewMarketingActivityRepo(db).SendReward(activity.Uuid, saleOrder.Member.ReferrerUuid)
+				if activitySendReward != nil {
+					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
+				}
+			}
+
+			// 发送奖励二
+			{
+				referrer, err := repository.NewMemberRepo(db).GetMemberByReferrerUuid(saleOrder.Member.ReferrerUuid)
+				if err != nil {
+					fmt.Println(err)
+					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetMemberByReferrerUuid failed", zap.Any("referrerUuid", saleOrder.Member.ReferrerUuid), zap.Error(err))
+					continue
+				}
+				if referrer.IsExistActivityAndReferrer() {
+					// 记录消费金额
+					err = repository.NewMarketingActivityConsumptionRepo(db).CreateOrUpdateConsumption(
+						referrer.ActivityUuid,
+						referrer.ReferrerUuid,
+						saleOrder.ConsumerUuid,
+						consumptionAmount,
+					)
+					if err != nil {
+						logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
+					}
+					// 发放奖励
+					err = repository.NewMarketingActivityRepo(db).SendReward(referrer.ActivityUuid, referrer.ReferrerUuid)
+					if err != nil {
+						fmt.Println(err)
+						logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
+					}
+				}
+			}
+		}
 	}
 }

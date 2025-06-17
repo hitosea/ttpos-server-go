@@ -1,14 +1,18 @@
 package service
 
 import (
+	"fmt"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
@@ -23,6 +27,7 @@ import (
 // IMemberSrv 定义会员服务接口
 type IMemberSrv interface {
 	GetLevels(companyUuid uint64) resp.MemberLevelList                                                             // 获取等级列表
+	GetCardTypes(companyUuid uint64) resp.MemberCardTypeList                                                       // 获取会员开类型
 	SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList                                         // 模糊搜索
 	AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error                                            // 添加会员
 	GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember                                   // 获取充值会员信息
@@ -36,6 +41,7 @@ type IMemberSrv interface {
 // memberSrv 会员服务结构体
 type memberSrv struct {
 	dbm *database.DBManager // 数据库管理器
+	bus *event.SystemEventBus
 }
 
 // NewMemberSrv 创建新的会员服务
@@ -47,6 +53,7 @@ func NewMemberSrv(dbm *database.DBManager) IMemberSrv {
 func NewMemberSrvImpl(dbm *database.DBManager) IMemberSrv {
 	return &memberSrv{
 		dbm: dbm,
+		bus: event.NewSystemBus(),
 	}
 }
 
@@ -61,6 +68,20 @@ func (s *memberSrv) GetLevels(companyUuid uint64) resp.MemberLevelList {
 	}
 	return resp.MemberLevelList{
 		List: respMemberLevels,
+	}
+}
+
+// GetCardTypes 获取会员卡
+func (s *memberSrv) GetCardTypes(companyUuid uint64) resp.MemberCardTypeList {
+	memberCardTypes := repository.NewMemberRepo(s.dbm.GetDB(companyUuid)).GetCardTypes()
+	respMemberCardTypes := make([]resp.MemberCardType, 0)
+	for _, memberLevel := range memberCardTypes {
+		var respMemberLevel resp.MemberCardType
+		copier.Copy(&respMemberLevel, memberLevel)
+		respMemberCardTypes = append(respMemberCardTypes, respMemberLevel)
+	}
+	return resp.MemberCardTypeList{
+		List: respMemberCardTypes,
 	}
 }
 
@@ -85,25 +106,190 @@ func (s *memberSrv) SearchMember(companyUuid uint64, keyword string) resp.Search
 func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error {
 	companyUuid := ctx.GetCompanyUuid()
 	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
+
+	// 判断手机号是否存在
+	if memberRepo.CheckMemberExists(addMemberReq.Phone) {
+		return errors.New("会员已存在")
+	}
+
 	// 判断等级是否存在
 	if !memberRepo.CheckLevelExists(addMemberReq.LevelUuid) {
 		return errors.New("会员等级不存在")
 	}
-	// 判断是否存在
-	if memberRepo.CheckMemberExists(addMemberReq.Phone) {
-		return errors.New("会员已存在")
+
+	// 判断会员卡
+	var cardType model.MemberCardType
+	if addMemberReq.CardTypeUuid != 0 {
+		cardType = memberRepo.GetCheckCardType(addMemberReq.CardTypeUuid)
+		if cardType.ID == 0 {
+			return errors.New("会员卡不存在")
+		}
 	}
+
+	// 判断推荐人，活动
+	var referrer model.Member
+	//activityUuid := addMemberReq.ActivityUuid
+	// 默认为0，不接收前端传递的活动ID
+	var activityUuid uint64
+	if addMemberReq.ReferrerUuid != 0 {
+		referrer = memberRepo.GetMember(memberRepo.WhereUuid(addMemberReq.ReferrerUuid))
+		if referrer.ID == 0 {
+			return errors.New("推荐人不存在")
+		}
+		//if addMemberReq.ActivityUuid == 0 {
+		activities, _ := repository.NewMarketingActivityRepo(ctx.GetDB()).GetActivityListByNow()
+		if len(activities) != 0 {
+			activityUuid = activities[0].Uuid
+		}
+		//}
+	}
+
+	// 处理会员密码
 	if addMemberReq.Password != "" {
 		addMemberReq.Password = cryptor.Md5String(addMemberReq.Password)
 	}
-	if err := memberRepo.CreateMember(model.Member{
+
+	// 卡号不能重复
+	if addMemberReq.CardNo != "" {
+		sameCardNoMember := memberRepo.GetMember(memberRepo.WhereCardNo(addMemberReq.CardNo))
+		if sameCardNoMember.ID != 0 {
+			return errors.New("卡号重复")
+		}
+	}
+
+	var memberPointsChanged, memberBalanceChanged bool
+	member := &model.Member{
 		MemberNo:        utils.RandomNumber(5), // 5位数字
 		Nickname:        addMemberReq.Nickname,
 		Phone:           addMemberReq.Phone,
 		Password:        addMemberReq.Password,
 		MemberLevelUuid: addMemberReq.LevelUuid,
 		Gender:          constant.MemberGenderUnknown,
-	}); err != nil {
+		MemberCardNo:    addMemberReq.CardNo,
+		ReferrerUuid:    referrer.Uuid,
+		ActivityUuid:    activityUuid,
+	}
+	err := ctx.GetDB().Transaction(func(tx *gorm.DB) error {
+		memberRepo = repository.NewMemberRepo(tx)
+		if err := memberRepo.CreateMember(member); err != nil {
+			return err
+		}
+		// 未发送会员卡，则返回
+		if cardType.ID == 0 {
+			return nil
+		}
+		var discount float64
+		if cardType.Discount > 0 {
+			discount = cardType.Discount
+		}
+		var expire int64
+		if cardType.Expire > 0 { // 单位是月
+			expire = time.Now().Add(time.Duration(expire*30*24) * time.Hour).Unix()
+		}
+		// 会员卡记录
+		_, err := base.NewMemberCardLogRepo(tx).CreateMemberCardLog(model.MemberCardLog{
+			Price:              cardType.Price,
+			Discount:           discount,
+			Expire:             expire,
+			MemberName:         member.Nickname,
+			MemberPhone:        member.Phone,
+			MemberNo:           member.MemberNo,
+			MemberCardTypeName: cardType.Name,
+			MemberCardTypeUuid: cardType.Uuid,
+			MemberUuid:         member.Uuid,
+		})
+		if err != nil {
+			return err
+		}
+		// 给会员发卡
+		memberCard := &model.MemberCard{
+			CardTypeUuid: cardType.Uuid,
+			MemberUuid:   member.Uuid,
+			ExpireTime:   expire,
+			Discount:     discount,
+		}
+		err = memberRepo.CreateMemberCard(memberCard)
+		if err != nil {
+			return err
+		}
+		if err = memberRepo.Update(member.Uuid, map[string]any{"member_card_uuid": memberCard.Uuid}); err != nil {
+			return err
+		}
+
+		textMap := map[string]string{
+			constant.SourceCashier:   "收银机",
+			constant.SourceAssistant: "点餐助手",
+		}
+		staffName := ctx.GetStaff().RealName
+		if ctx.GetSource() == constant.SourceAssistant {
+			staffRepo := repository.NewStaffRepo(tx)
+			staff, _ := staffRepo.GetStaff(staffRepo.WhereUuid(ctx.GetAssistantUuid()))
+			staffName = staff.RealName
+		}
+		ctx.SetDB(tx)
+		// 开卡赠送积分
+		if cardType.OpenPoint == 1 && cardType.OpenPointNum > 0 {
+			memberPointsChanged = true
+			if err = s.HandleMemberPoints(ctx, MemberPointsChangeReq{
+				Uuid:     member.Uuid,
+				Points:   cardType.OpenPointNum,
+				Scene:    constant.MemberPointLogSceneCashierOrAssistant,
+				Describe: fmt.Sprintf("%s管理员添加会员发卡赠送操作 [%s]", textMap[ctx.GetSource()], staffName),
+			}); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+		// 开卡赠送余额
+		if cardType.OpenMoney == 1 && cardType.OpenMoneyNum > 0 {
+			memberBalanceChanged = true
+			if err = s.HandleMemberBalance(ctx, MemberBalanceChangeReq{
+				MemberUuid: member.Uuid,
+				Money:      0,
+				GiftMoney:  cardType.OpenMoneyNum,
+				Scene:      constant.MemberBalanceLogCashierOrAssistant,
+				Describe:   fmt.Sprintf("%s管理员添加会员发卡赠送操作 [%s]", textMap[ctx.GetSource()], staffName),
+			}); err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+		return nil
+	})
+
+	// 发卡可能会送积分，赠送余额
+	if memberPointsChanged || memberBalanceChanged {
+		go func() {
+			if memberBalanceChanged {
+				// 发布“会员余额变动”事件
+				s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
+					BasePayload: event.BasePayload{ // 会员余额变动
+						Ctx:          ctx,
+						CompanyUuid:  ctx.GetCompanyUuid(),
+						Source:       ctx.GetSource(),
+						OperatorUuid: int64(ctx.GetStaffUuid()),
+					},
+				})
+			}
+			if memberPointsChanged {
+				s.HandleMemberUpgrade(companyUuid, member.Uuid)
+				// 发布“会员积分变动”事件
+				s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
+					BasePayload: event.BasePayload{ // 会员积分变动
+						Ctx:          ctx,
+						CompanyUuid:  ctx.GetCompanyUuid(),
+						Source:       ctx.GetSource(),
+						OperatorUuid: int64(ctx.GetStaffUuid()),
+					},
+				})
+			}
+		}()
+	}
+
+	// 存在推荐人
+	if referrer.Uuid > 0 {
+		// todo 处理后续逻辑
+	}
+
+	if err != nil {
 		ctx.Log().Error("添加会员失败", zap.Error(err))
 		return errors.WithMessage(err, "添加会员失败")
 	}
@@ -114,7 +300,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 func (s *memberSrv) GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember {
 	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
 	member := memberRepo.GetMember(memberRepo.WhereUuid(memberUuid),
-		memberRepo.WithMemberCard(), memberRepo.WithMemberCardType(), memberRepo.WithMemberLevel())
+		memberRepo.WithMemberCard(), memberRepo.WithMemberCardType(), memberRepo.WithMemberLevel(), memberRepo.WithMemberBalanceLog())
 
 	var cardName string
 	if member.MemberCard != nil && member.MemberCard.MemberCardType != nil {
@@ -124,14 +310,16 @@ func (s *memberSrv) GetRechargeMember(companyUuid uint64, memberUuid uint64) res
 	if member.MemberLevel != nil {
 		level = member.MemberLevel.Name
 	}
+
 	return resp.RechargeMember{
-		Uuid:     member.Uuid,
-		Nickname: member.Nickname,
-		Card:     resp.Card{Name: cardName},
-		Level:    resp.Level{Name: level},
-		Balance:  member.GetBalanceAll(),
-		Points:   member.GetPoints(),
-		Phone:    member.Phone,
+		Uuid:          member.Uuid,
+		Nickname:      member.Nickname,
+		Card:          resp.Card{Name: cardName},
+		Level:         resp.Level{Name: level},
+		Balance:       member.GetBalanceAll(),
+		Points:        member.GetPoints(),
+		Phone:         member.Phone,
+		RechargeMoney: member.GetRechargeMoney(),
 	}
 }
 
@@ -306,13 +494,14 @@ func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMe
 
 	return &resp.MemberDiscountResp{
 		Member: resp.RechargeMember{
-			Uuid:     member.Uuid,
-			Nickname: member.Nickname,
-			Card:     resp.Card{Name: cardName},
-			Level:    resp.Level{Name: levelName},
-			Balance:  member.GetBalanceAll(),
-			Points:   member.GetPoints(),
-			Phone:    member.Phone,
+			Uuid:          member.Uuid,
+			Nickname:      member.Nickname,
+			Card:          resp.Card{Name: cardName},
+			Level:         resp.Level{Name: levelName},
+			Balance:       member.GetBalanceAll(),
+			Points:        member.GetPoints(),
+			Phone:         member.Phone,
+			RechargeMoney: member.GetRechargeMoney(),
 		},
 		HasPassword:     member.HasPassword(),
 		DiscountedPrice: memberDiscountFee,

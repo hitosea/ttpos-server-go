@@ -35,6 +35,19 @@ func (h *MemberHandler) GetMemberLevels(c *gin.Context) {
 	helper.Success(c, h.memberSrv.GetLevels(helper.GetCompanyUuid(c)))
 }
 
+// GetMemberCardTypes 会员卡类型列表
+// @Summary 会员卡类型列表
+// @Description 会员卡类型列表
+// @Tags 收银端.会员
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response{data=resp.MemberCardTypeList}
+// @Router /cashier/member/card_types [get]
+func (h *MemberHandler) GetMemberCardTypes(c *gin.Context) {
+	helper.Success(c, h.memberSrv.GetCardTypes(helper.GetCompanyUuid(c)))
+}
+
 // SearchMember 模糊搜索会员
 // @Summary 模糊搜索会员
 // @Description 模糊搜索会员
@@ -337,6 +350,7 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm), middleware.OperationLog(staffOperationLogSrv))
 	{
 		privateApi.GET("/member/levels", wrapper.GetMemberLevels)                                      // 获取会员等级列表
+		privateApi.GET("/member/card_types", wrapper.GetMemberCardTypes)                               // 获取会员卡类型列表
 		privateApi.POST("/member/add", wrapper.AddMember)                                              // 添加会员
 		privateApi.GET("/member/search", wrapper.SearchMember)                                         // 模糊搜索会员
 		privateApi.GET("/member/recharge_member", wrapper.RechargeMember)                              // 充值会员信息

@@ -40,3 +40,8 @@ bin/*
 .DS_Store
 Thumbs.db
 .github/
+
+# 
+/credentials.json
+
+./main/translate_response.log

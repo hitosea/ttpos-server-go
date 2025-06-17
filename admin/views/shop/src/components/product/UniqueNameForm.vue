@@ -15,7 +15,18 @@
           :label="`${props.labelPrefix}`"
           :error="formErrors.SINGLE"
           :required="true"
-          :rules="[{ required: true, message: props.placeholder ?? $t('请输入名称') }]"
+          :rules="[
+            { required: true, message: props.placeholder ?? $t('请输入名称') },
+            {
+              validator: (rule, value, callback) => {
+                if (value && value.trim() === '') {
+                  callback(new Error(props.placeholder ?? $t('请输入名称')));
+                } else {
+                  callback();
+                }
+              },
+            },
+          ]"
           prop="SINGLE"
           :validate-status="formErrors.SINGLE ? 'error' : translateLoading || validateLoading ? 'validating' : ''"
           for="no_click"
@@ -28,6 +39,7 @@
               :readonly="translateLoading || validateLoading"
               :maxlength="props.maxlength ?? 255"
               :placeholder="props.placeholder ?? $t('请输入名称')"
+              :disabled="props.disabled"
             >
             </el-input>
           </div>
@@ -40,7 +52,18 @@
           :label="`${props.labelPrefix}(${languageStore.getLanguageValueByKey(languageKey)})`"
           :error="formErrors[languageKey]"
           :required="true"
-          :rules="[{ required: true, message: props.placeholder ?? $t('请输入名称') }]"
+          :rules="[
+            { required: true, message: props.placeholder ?? $t('请输入名称') },
+            {
+              validator: (rule, value, callback) => {
+                if (value && value.trim() === '') {
+                  callback(new Error(props.placeholder ?? $t('请输入名称')));
+                } else {
+                  callback();
+                }
+              },
+            },
+          ]"
           :prop="languageKey"
           :validate-status="formErrors[languageKey] ? 'error' : translateLoading || validateLoading ? 'validating' : ''"
           for="no_click"
@@ -55,6 +78,7 @@
               @blur="() => handleBlur(languageKey)"
               :maxlength="props.maxlength ?? 255"
               :placeholder="props.placeholder ?? $t('请输入名称')"
+              :disabled="props.disabled"
             >
             </el-input>
             <template v-if="focusLanguageKey === languageKey && form[languageKey]">
@@ -76,7 +100,7 @@
 </template>
 
 <script setup>
-  import { ref, reactive, nextTick, getCurrentInstance } from 'vue';
+  import { ref, reactive, nextTick, getCurrentInstance, watch } from 'vue';
   import { useLanguageStore } from '@/store';
   import IndexApi from '@/api/index.js';
 
@@ -87,6 +111,9 @@
   const { proxy } = getCurrentInstance();
 
   const languageStore = useLanguageStore();
+  const languageKeys = ref(languageStore.currentLanguage);
+
+  const emit = defineEmits(['nowLangeData']);
 
   const props = defineProps({
     singleLanguage: {
@@ -137,6 +164,17 @@
       type: Number,
       required: false,
       default: undefined,
+    },
+    //是否验证唯一性
+    isUnique: {
+      type: Boolean,
+      required: false,
+      default: true,
+    },
+    disabled: {
+      type: Boolean,
+      required: false,
+      default: false,
     },
     apiSource: {
       type: String,
@@ -245,6 +283,7 @@
   };
 
   const handleValidateUnique = async () => {
+    if (!props.isUnique) return true;
     const params = {
       name: form,
       source: props.apiSource,
@@ -287,6 +326,17 @@
       focusLanguageKey.value = '';
     }
   };
+
+  watch(
+    () => form,
+    (newVal) => {
+      emit('nowLangeData', newVal[languageKeys.value]);
+    },
+    {
+      immediate: true,
+      deep: true,
+    }
+  );
 
   defineExpose({
     validate: validate,

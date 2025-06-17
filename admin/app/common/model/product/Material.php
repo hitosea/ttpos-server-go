@@ -253,6 +253,16 @@ class Material extends BaseModel
             $this->error = '商品图片不存在';
             return false;
         }
+        // 条码格式验证，12或13位数字
+        $barcode = $data['sku'][0]['barcode'] ?? '';
+        if ($barcode && !preg_match('/^[0-9]{12,13}$/', $barcode)) {
+            $this->error = '输入条形码不合规，请重新检查';
+            return false;
+        }
+        if ($barcode && CheckService::checkNameExist('product_bom_barcode', $barcode, 0)) {
+            $this->error = '商品条码已存在';
+            return false;
+        }
         $data = $this->sanitizeProductData($data);
         //
         return Db::transaction(function () use($data, $product_name, $imageIds) {
@@ -265,7 +275,7 @@ class Material extends BaseModel
             $data['unit_uuid'] = $data['unit_id'] ?? 0;
             $data['price'] = $data['sku'][0]['purchase_price'] ?? 0;;
             $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
-            $data['barcode_value'] = $data['sku'][0]['barcode'] ?? 0; // 条形码值
+            $data['barcode_value'] = $data['sku'][0]['barcode'] ?? ''; // 条形码值
             $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
 
             // 保存材料
@@ -324,6 +334,16 @@ class Material extends BaseModel
             $this->error = '商品图片不存在';
             return false;
         }
+        // 条码格式验证，12或13位数字
+        $barcode = $data['sku'][0]['barcode'] ?? '';
+        if ($barcode && !preg_match('/^[0-9]{12,13}$/', $barcode)) {
+            $this->error = '输入条形码不合规，请重新检查';
+            return false;
+        }
+        if ($barcode && CheckService::checkNameExist('product_bom_barcode', $barcode, 0, $this['product_id'] ?? 0)) {
+            $this->error = '商品条码已存在';
+            return false;
+        }
         $data = $this->sanitizeProductData($data);
         //
 
@@ -337,7 +357,7 @@ class Material extends BaseModel
             $data['unit_uuid'] = $data['unit_id'] ?? 0;
             $data['price'] = $data['sku'][0]['purchase_price'] ?? 0;;
             $data['stock_num'] = $data['sku'][0]['material_stock'] ?? 0; // 库存数量
-            $data['barcode_value'] = $data['sku'][0]['barcode'] ?? 0; // 条形码值
+            $data['barcode_value'] = $data['sku'][0]['barcode'] ?? ''; // 条形码值
             $data['status'] = $data['product_status'] == 10 ? 1 : 0; // 状态, 1-上架 0-下架
 
             $oldStockNum = floatval($this->stock_num); // 旧库存

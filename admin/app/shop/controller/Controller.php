@@ -9,7 +9,6 @@ use app\common\model\shop\OptLog;
 use app\shop\service\AuthService;
 use app\common\enum\http\StatusCode;
 use app\controller as BaseController;
-use app\common\model\settings\Setting;
 use app\common\exception\BaseException;
 use app\common\enum\settings\SettingEnum;
 use app\shop\model\shop\User as UserModel;
@@ -101,7 +100,7 @@ class Controller extends BaseController
      * 验证登录状态
      */
     private function checkLogin()
-    {
+    { 
         // 验证当前请求是否在白名单
         if (in_array($this->routeUri, $this->allowAllAction)) {
             return true;
@@ -157,7 +156,8 @@ class Controller extends BaseController
             ],
             'app' => $user->app,
             'supplier' => $user->supplier()->field('
-                company_uuid as app_id, company_uuid, sale_stock, cash_limit, kitchen_limit, tablet_limit, assistant_limit, is_open_member, is_open_tablet,languages,
+                company_uuid as app_id, company_uuid, sale_stock, cash_limit, kitchen_limit, tablet_limit, assistant_limit, 
+                is_open_member, is_open_tablet, is_open_coupon, is_open_marketing, languages,
                 is_open_h5 as is_open_scan, is_open_assistant, is_open_kitchen_kds, is_open_buffet, table_limit, printer_limit, timezone
             ')->find(),
         ];

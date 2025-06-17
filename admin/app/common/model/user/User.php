@@ -42,11 +42,7 @@ class User extends BaseModel
     }
     public function getPointsAttr($value, $data)
     {
-        if (isset($data['point'])) {
-            return floatval($data['point']);
-        } else {
-            return $value;
-        }
+        return floatval(helper::bcadd($data['point'] ?? 0, $data['frozen_point'] ?? 0, 2));
     }
     public function getMobileAttr()
     {
@@ -139,6 +135,14 @@ class User extends BaseModel
     public function cardRecord()
     {
         return $this->hasOne('app\\common\\model\\user\\CardRecord', 'user_id', 'user_id');
+    }
+
+    /**
+     * 关联会员余额变动记录表
+     */
+    public function memberBalanceLog()
+    {
+        return $this->hasMany('app\\common\\model\\user\\BalanceLog', 'member_uuid', 'uuid');
     }
 
     /**
@@ -326,6 +330,14 @@ class User extends BaseModel
     public function setMemberCardId($memberCardUuid)
     {
         return $this->save(['member_card_uuid' => $memberCardUuid]);
+    }
+
+    /**
+     * 关联推荐人
+     */
+    public function referrer()
+    {
+        return $this->hasOne('app\\common\\model\\user\\User', 'uuid', 'referrer_uuid');
     }
 
     /*

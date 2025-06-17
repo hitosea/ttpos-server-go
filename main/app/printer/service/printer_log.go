@@ -339,15 +339,18 @@ func (s *printerLogSrv) GetPrinterData(ctx context.Context) (*resp.PrinterDataLi
 	printerDataList := make([]resp.PrinterData, 0, len(printerLogList))
 	for _, log := range printerLogList {
 		printerDataList = append(printerDataList, resp.PrinterData{
-			Uuid:        log.Uuid,
-			Data:        log.Data,
-			PrintMethod: log.PrintMethod,
-			Copies: func() uint {
-				if log.Printer == nil {
-					return 1
+			Uuid: log.Uuid,
+			Data: func() string {
+				if log.PrinterLogData == nil {
+					if log.Data != "-" && log.Data != "" {
+						return log.Data
+					}
+					return ""
 				}
-				return log.Printer.Copies
+				return log.PrinterLogData.GetData(true)
 			}(),
+			PrintMethod: log.PrintMethod,
+			Copies:      log.GetCopies(),
 			PrinterType: log.PrinterType,
 			PrinterConfig: func() string {
 				if log.Printer == nil {
@@ -375,6 +378,7 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 	printerLog := printerLogRepo.GetPrinterLog(
 		printerLogRepo.WhereUuid(req.Uuid),
 		printerLogRepo.WithPrinter(),
+		printerLogRepo.WithPrinterLogData(),
 	)
 	if printerLog.PrinterUuid > 0 && (printerLog.Printer == nil || printerLog.Printer.IsDelete()) {
 		return nil, errors.New("打印失败，打印机已不存在")
@@ -387,30 +391,45 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 	}
 
 	// 去除开箱指令
-	data := printerLog.DecompressData()
-	dataLen := len(data)
-	if dataLen >= 10 {
-		if strings.HasSuffix(data, "1b700019fa") {
-			data = data[:dataLen-10]
-		} else if strings.HasSuffix(data, "1014010001") {
-			data = data[:dataLen-10]
+	if printerLog.PrinterLogData != nil {
+		data := printerLog.PrinterLogData.DecompressData()
+		dataLen := len(data)
+		if dataLen >= 10 {
+			if strings.HasSuffix(data, "1b700019fa") {
+				data = data[:dataLen-10]
+			} else if strings.HasSuffix(data, "1014010001") {
+				data = data[:dataLen-10]
+			}
 		}
+		printerLog.PrinterLogData.Data = data
+	} else if printerLog.Data != "-" && printerLog.Data != "" {
+		data := printerLog.DecompressData()
+		dataLen := len(data)
+		if dataLen >= 10 {
+			if strings.HasSuffix(data, "1b700019fa") {
+				data = data[:dataLen-10]
+			} else if strings.HasSuffix(data, "1014010001") {
+				data = data[:dataLen-10]
+			}
+		}
+		printerLog.Data = data
 	}
-	printerLog.Data = data
 
 	return &resp.PrinterData{
-		Uuid:             req.Uuid,
-		Data:             printerLog.CompressData(),
+		Uuid: req.Uuid,
+		Data: func() string {
+			if printerLog.PrinterLogData != nil {
+				return printerLog.PrinterLogData.CompressData()
+			} else if printerLog.Data != "-" && printerLog.Data != "" {
+				return printerLog.CompressData()
+			}
+			return ""
+		}(),
 		PrintMethod:      printerLog.PrintMethod,
 		PrinterType:      printerLog.PrinterType,
 		IsCashierPrinter: printerLog.IsCashierPrinter(),
 		IsUsbPrinter:     printerLog.IsUsbPrinter(),
-		Copies: func() uint {
-			if printerLog.Printer == nil {
-				return 1
-			}
-			return printerLog.Printer.Copies
-		}(),
+		Copies:           printerLog.GetCopies(),
 		PrinterConfig: func() string {
 			if printerLog.Printer == nil {
 				return ""
@@ -428,8 +447,6 @@ func (s *printerLogSrv) PrinterPrint(ctx context.Context, req req.PrinterPrintRe
 // AddLog 添加打印日志
 func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, printerLogData model.PrinterLog, controlDeviceId string) (model.PrinterLog, error) {
 	companyUuid := ctx.GetCompanyUuid()
-	// 获取打印日志仓库
-	printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
 	// 标记进行中
 	printerLogData.Status = constant.PrinterLogStatusInProgress
 	// 获取商家设置，判断是否开启本地打印
@@ -447,23 +464,54 @@ func (s *printerLogSrv) AddLog(ctx context.Context, printer resp.PrinterInfo, pr
 		printerLogData.Reason = "打印机不存在"
 	}
 
-	// 保存数据
-	printerLogData.PrinterType = printer.PrinterType
-	printerLogData.PrinterTime = time.Now().Unix()
+	// 开启事务
+	tx := s.dbm.GetDB(companyUuid).Begin()
+	if tx.Error != nil {
+		return model.PrinterLog{}, errors.WithMessage(tx.Error)
+	}
+
+	// 保存打印日志数据
+	var LogData model.PrinterLogData
+	LogData.LogUuid, _ = utils.GetID()
+	LogData.SetData(companyUuid, printerLogData.Data)
+	LogData, err := repository.NewPrinterLogDataRepo(tx).Create(LogData)
+	if err != nil {
+		tx.Rollback()
+		logger.Logger.Error("保存数据打印日志数据失败", zap.Error(err))
+		return model.PrinterLog{}, errors.WithMessage(err)
+	}
+
+	// 保存日志
 	var printerLog model.PrinterLog
 	copier.Copy(&printerLog, printerLogData)
-	printerLog.PrintingTime = printerLog.CalculationTime()
-	printerLog.Data = printerLog.CompressData()
-	printerLog, err := printerLogRepo.Create(printerLog)
+	printerLog.BaseModel.Uuid = LogData.LogUuid
+	printerLog.PrinterType = printer.PrinterType
+	printerLog.PrinterTime = time.Now().Unix()
+	printerLog.PrintingTime = printerLog.CalculationTime(printerLogData.Data)
+	printerLog.Data = "-"
+	printerLog, err = repository.NewPrinterLogRepo(tx).Create(printerLog)
 	if err != nil {
+		tx.Rollback()
 		logger.Logger.Error("保存数据打印日志失败", zap.Error(err))
 		return model.PrinterLog{}, errors.WithMessage(err)
 	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		logger.Logger.Error("提交事务失败", zap.Error(err))
+		return model.PrinterLog{}, errors.WithMessage(err)
+	}
+
+	//关联打印日志数据
+	printerLog.Data = LogData.GetData(printerLog.FirstExecution == 1)
+	printerLog.PrinterLogData = &LogData
 
 	// 进行队列打印
 	if viper.GetString("CHECK_PRINT") == "false" || printerLog.Type == constant.PrinterLogTypeDefault {
 		go func() {
 			if printerLog.Printer == nil {
+				printerLogRepo := repository.NewPrinterLogRepo(s.dbm.GetDB(companyUuid))
 				printerLog.Printer = printerLogRepo.GetPrinter(printerLogRepo.WhereUuid(printerLog.PrinterUuid))
 			}
 			printer_tasks.NewPrinterTask(s.dbm, cache.Global).ExecutePrinter(companyUuid, printerLog)
@@ -513,6 +561,7 @@ func (s *printerLogSrv) GetStaticOpenCashBoxPrinterConfig(ctx context.Context) (
 		PrinterConfig:    settingPrinterInfo.PrinterConfig,
 		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
 		PrintingTime:     200,
+		IsUsbPrinter:     settingPrinterInfo.IsUsbPrinter,
 	}, nil
 }
 
@@ -573,11 +622,9 @@ func (s *printerLogSrv) GetOldOrderPrinterConfig(ctx context.Context, data strin
 		return nil, errors.WithMessage(err, "获取打印设置失败")
 	}
 	//
-	printerLog := &model.PrinterLog{Data: data}
-	//
 	return &resp.PrinterData{
 		Uuid:             0,
-		Data:             printerLog.CompressData(),
+		Data:             utils.GzipCompressData(data),
 		PrintMethod:      2,
 		Copies:           settingPrinterInfo.Copies,
 		PrinterType:      settingPrinterInfo.PrinterType,

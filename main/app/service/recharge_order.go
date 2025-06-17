@@ -1290,7 +1290,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 				if member != nil && member.Phone != "" {
 					smsReq := sms.MemberRechargeRefundRequest{
 						Company:        ctx.GetCompany().Name,
-						RechargeRefund: order.RechargeAmount + order.GiftAmount,
+						RechargeRefund: decimal.NewFromFloat(order.RechargeAmount).Add(decimal.NewFromFloat(order.GiftAmount)).Truncate(2).InexactFloat64(),
 						Balance:        member.GetBalanceAll(),
 						PointsBalance:  member.GetPoints(),
 					}
@@ -1455,7 +1455,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 		return errors.New("退款金额不能大于实付金额")
 	}
 	// 本次退款要从会员主账户扣除的金额
-	deductionMoney := utils.DecimalSub(order.RechargeAmount, order.RefundAmount)
+	deductionMoney := decimal.NewFromFloat(order.RechargeAmount).Sub(decimal.NewFromFloat(order.RefundAmount)).Truncate(2).InexactFloat64()
 	if refundMoney < deductionMoney {
 		deductionMoney = refundMoney
 	}

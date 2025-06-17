@@ -3,6 +3,7 @@ package constant
 const (
 	SourceShop      = "shop"      // 商家
 	SourceCashier   = "cashier"   // 收银机
+	SourceMember    = "member"    // 会员端
 	SourceTablet    = "tablet"    // 平板端
 	SourceKitchen   = "kitchen"   // 厨显端
 	SourceAssistant = "assistant" // 点餐助手
@@ -11,6 +12,7 @@ const (
 
 var SourceTextMap = map[string]string{
 	SourceCashier:   "收银端",
+	SourceMember:    "会员端",
 	SourceAssistant: "点餐助手",
 	SourceShop:      "商家后台",
 	SourceTablet:    "平板端",
