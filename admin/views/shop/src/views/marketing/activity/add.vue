@@ -105,6 +105,11 @@
     formRef.value.validate((valid) => {
       if (valid && validUniqueName && validUniqueDescription) {
         ImagePreviewRef.value.downloadImage();
+      } else {
+        ElMessage({
+          message: $t('请完善输入信息'),
+          type: 'error',
+        });
       }
     });
   };
