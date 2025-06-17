@@ -71,7 +71,7 @@
             <el-table-column prop="create_time" fixed="right" :label="$t('报损数量')" width="180">
               <template #default="scope">
                 <el-form-item label="" prop="num" style="margin-top: 16px" :rules="[{ required: true, message: $t('请输入') }]">
-                  <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('请输入')" v-model.number="form.num"></el-input-number>
+                  <el-input-number :controls="false" :min="0" :placeholder="$t('请输入')" v-model.number="form.num"></el-input-number>
                 </el-form-item>
               </template>
             </el-table-column>
