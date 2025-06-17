@@ -1725,5 +1725,9 @@
     "请输入优惠券名称": "Kupon adını giriniz",
     "请输入优惠券金额": "Kupon tutarını giriniz",
     "请输入优惠券数量": "Kupon miktarını giriniz",
-    "cn": "12-13 haneli sayı uzunluğu"
+    "cn": "12-13 haneli sayı uzunluğu",
+    "请输入大于0的数字": "Lütfen 0'dan büyük bir sayı girin",
+    "会员扫码登录后可保存专属分享海报": "Üye, QR kodunu tarayarak oturum açtıktan sonra özel paylaşım afişini kaydedebilir",
+    "下载图片": "Resim indir",
+    "长度12-13位数字": "Uzunluk 12-13 basamaklı sayı"
 }

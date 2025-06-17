@@ -41,7 +41,7 @@
     </div>
     <div class="image-preview-btn-wrapper">
       <el-button class="image-preview-btn" @click="previewImage" :loading="loading"> {{ $t('预览') }} </el-button>
-      <el-button class="image-preview-btn" type="primary" @click="checkForm" :loading="loading"> {{ $t('保存图片') }} </el-button>
+      <el-button class="image-preview-btn" type="primary" @click="checkForm" :loading="loading"> {{ $t('下载图片') }} </el-button>
     </div>
     <el-dialog v-model="previewImageVisible" :title="$t('预览')" width="560">
       <img :src="previewImageUrl" alt="" class="preview-image" />
