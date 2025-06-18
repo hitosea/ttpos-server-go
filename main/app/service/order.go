@@ -4874,11 +4874,17 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
 
+	// test: 记录耗时
+	start := time.Now() // 记录开始时间
+
 	// 获取新的桌台数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	duration := time.Since(start) // 计算耗时
+	fmt.Printf("[耗时监控] GetOrderCartInfo saleBillUuid=%d, 耗时=%v\n", request.SaleBillUuid, duration)
 	ctx.Log().Debug("获取新的账单数据")
 
 	return info, nil
