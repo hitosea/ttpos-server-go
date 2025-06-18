@@ -14,20 +14,20 @@ type ProductionOrder struct {
 // ProductionOrderProduct 生产单商品 `ttpos_production_order_product`
 type ProductionOrderProduct struct {
 	BaseModel
-	Name                  string `gorm:"column:name;type:varchar(255);comment:名称;NOT NULL" json:"name"`
-	Num                   uint   `gorm:"column:num;type:int(11);default:0;comment:商品数量;NOT NULL" json:"num"`
-	FlavorName            string `gorm:"column:flavor_name;type:text;comment:规格名称,不随后台改变;" json:"flavor_name"`
-	ProductAttributeNames string `gorm:"column:product_attribute_names;type:varchar(255);comment:商品属性名称,多个属性名用逗号分隔,不随后台改变;NOT NULL" json:"product_attribute_names"`
-	ProductSaucesNames    string `gorm:"column:product_sauces_names;type:varchar(255);comment:商品加料名称,多个加料名用逗号分隔,不随后台改变;NOT NULL" json:"product_sauces_names"`
-	Status                int    `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-待制作 1-制作中 2-已完成 3-已退菜;NOT NULL" json:"status"`
-	Remark                string `gorm:"column:remark;type:varchar(255);comment:商品备注;NOT NULL" json:"remark"`
-	HasMaterial           int    `gorm:"column:has_material;type:tinyint(1);default:0;comment:是否无原料, 0-无原料,商品没有关联原料 1-有原料;NOT NULL" json:"has_material"`
-	SaleBillUuid          uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单ID;NOT NULL" json:"sale_bill_uuid"`
-	ProductPackageUuid    uint64 `gorm:"column:product_package_uuid;type:bigint(20) unsigned;default:0;comment:商品包ID;NOT NULL" json:"product_package_uuid"`
-	SaleOrderProductUuid  uint64 `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;default:0;comment:销售订单商品ID;NOT NULL" json:"sale_order_product_uuid"`
-	ProductionOrderUuid   uint64 `gorm:"column:production_order_uuid;type:bigint(20) unsigned;default:0;comment:生产订单ID;NOT NULL" json:"production_order_uuid"`
-	FirstCategoryUuid     uint64 `gorm:"column:first_category_uuid;type:bigint(20) unsigned;default:0;comment:一级分类ID;NOT NULL" json:"first_category_uuid"`
-	FinishedTime          uint   `gorm:"column:finished_time;type:int(10) unsigned;default:0;comment:完成时间(时间戳);NOT NULL" json:"finished_time"`
+	Name                  string  `gorm:"column:name;type:varchar(255);comment:名称;NOT NULL" json:"name"`
+	Num                   float64 `gorm:"column:num;type:decimal(12,2);default:0;comment:商品数量;NOT NULL" json:"num"`
+	FlavorName            string  `gorm:"column:flavor_name;type:text;comment:规格名称,不随后台改变;" json:"flavor_name"`
+	ProductAttributeNames string  `gorm:"column:product_attribute_names;type:varchar(255);comment:商品属性名称,多个属性名用逗号分隔,不随后台改变;NOT NULL" json:"product_attribute_names"`
+	ProductSaucesNames    string  `gorm:"column:product_sauces_names;type:varchar(255);comment:商品加料名称,多个加料名用逗号分隔,不随后台改变;NOT NULL" json:"product_sauces_names"`
+	Status                int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-待制作 1-制作中 2-已完成 3-已退菜;NOT NULL" json:"status"`
+	Remark                string  `gorm:"column:remark;type:varchar(255);comment:商品备注;NOT NULL" json:"remark"`
+	HasMaterial           int     `gorm:"column:has_material;type:tinyint(1);default:0;comment:是否无原料, 0-无原料,商品没有关联原料 1-有原料;NOT NULL" json:"has_material"`
+	SaleBillUuid          uint64  `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单ID;NOT NULL" json:"sale_bill_uuid"`
+	ProductPackageUuid    uint64  `gorm:"column:product_package_uuid;type:bigint(20) unsigned;default:0;comment:商品包ID;NOT NULL" json:"product_package_uuid"`
+	SaleOrderProductUuid  uint64  `gorm:"column:sale_order_product_uuid;type:bigint(20) unsigned;default:0;comment:销售订单商品ID;NOT NULL" json:"sale_order_product_uuid"`
+	ProductionOrderUuid   uint64  `gorm:"column:production_order_uuid;type:bigint(20) unsigned;default:0;comment:生产订单ID;NOT NULL" json:"production_order_uuid"`
+	FirstCategoryUuid     uint64  `gorm:"column:first_category_uuid;type:bigint(20) unsigned;default:0;comment:一级分类ID;NOT NULL" json:"first_category_uuid"`
+	FinishedTime          uint    `gorm:"column:finished_time;type:int(10) unsigned;default:0;comment:完成时间(时间戳);NOT NULL" json:"finished_time"`
 
 	ProductionOrderMaterials []*ProductionOrderMaterial `gorm:"foreignKey:ProductionOrderProductUuid;references:Uuid" json:"production_order_materials"`
 	SaleOrderProduct         SaleOrderProduct           `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid" json:"sale_order_product"`

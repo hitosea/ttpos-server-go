@@ -151,7 +151,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 	case constant.OrderProductMove: // 转菜
 		var productMove event.ChangeDeskSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &productMove); err == nil {
-			desc := fmt.Sprintf("%s (%s) *%d(%s%s)", productMove.ProductName.GetLocale(language), productMove.ProductAttr.GetLocale(language), productMove.TotalNum, i18n.Translate(language, "转至"), productMove.ToTableNo)
+			desc := fmt.Sprintf("%s (%s) *%f(%s%s)", productMove.ProductName.GetLocale(language), productMove.ProductAttr.GetLocale(language), productMove.TotalNum, i18n.Translate(language, "转至"), productMove.ToTableNo)
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderDiscount: // 优惠折扣

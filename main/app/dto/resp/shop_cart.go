@@ -103,13 +103,13 @@ type AmountInfo struct {
 	DiscountAmount        float64 `json:"discount_amount"`        // 优惠折扣金额(整单打折优惠金额+订单抹零金额)
 	MemberDiscountAmount  float64 `json:"member_discount_amount"` // 会员优惠折扣金额
 	Amount                float64 `json:"amount"`                 // 总金额。商品未含税时，总金额=商品金额(折后)+服务费+税费。商品已含税时，总金额=商品金额（折后，含商品消费税）+服务费+税费（只有服务费税）
-	ProductNum            uint    `json:"product_num"`            // 总数量，用于点餐助手、平板端、h5
+	ProductNum            float64 `json:"product_num"`            // 总数量，用于点餐助手、平板端、h5
 }
 
 // SimpleAmountInfo 简单金额信息。 用于h5购物车、点餐助手
 type SimpleAmountInfo struct {
 	ProductAmount float64 `json:"product_amount"` // 商品金额(折后价)
-	ProductNum    uint    `json:"product_num"`    // 总数量，用于点餐助手、h5
+	ProductNum    float64 `json:"product_num"`    // 总数量，用于点餐助手、h5
 }
 
 // BuffetInfo 自助餐信息
@@ -153,8 +153,8 @@ type Product struct {
 	MustPlanUuid        uint64             `json:"must_plan_uuid"`        // 必点方案uuid
 	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称。商品名称、自助餐名称、自助餐加钟名称
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
-	Num                 uint               `json:"num"`                   // 数量
-	FinishedNum         uint               `json:"finished_num"`          // 制作完成数量
+	Num                 float64            `json:"num"`                   // 数量
+	FinishedNum         float64            `json:"finished_num"`          // 制作完成数量
 	UnitPrice           float64            `json:"unit_price"`            // 单价（折前）
 	SalePrice           float64            `json:"price"`                 // 原价. 原价=单价*数量
 	DiscountPrice       float64            `json:"discount_price"`        // 折扣价,折后。折扣价不等于原价时，前端要显示出折扣价。单价(折后)*数量

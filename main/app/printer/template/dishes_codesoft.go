@@ -373,11 +373,11 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
-			exportation := func(num uint) {
+			exportation := func(num float64) {
 				// 设置行间距
 				printer.SetLineSpacing(60)
 				printer.SetCharacterSize(2, 2)
-				printer.PrintInColumns(productName, fmt.Sprintf("%d", num))
+				printer.PrintInColumns(productName, fmt.Sprintf("%f", num))
 				printer.SetCharacterSize(1, 2)
 				printer.RestoreDefaultLineSpacing()
 				printer.LineFeed()

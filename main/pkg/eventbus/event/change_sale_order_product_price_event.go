@@ -16,7 +16,7 @@ type ChangeSaleOrderProductPricePayload struct {
 	ProductId      uint64             `json:"product_id"`       // 产品ID
 	ProductName    dto.LocaleResponse `json:"product_name"`     // 产品名称
 	ProductAttr    dto.LocaleResponse `json:"product_attr"`     // 产品属性
-	TotalNum       uint               `json:"total_num"`        // 数量
+	TotalNum       float64            `json:"total_num"`        // 数量
 	Price          float64            `json:"price"`            // 价格，单价
 }
 

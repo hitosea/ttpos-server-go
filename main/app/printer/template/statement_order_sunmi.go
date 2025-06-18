@@ -291,7 +291,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 
 	// 赠品金额 / 商品数量
 	freeMoney := float64(0)
-	productNum := uint(0)
+	productNum := float64(0)
 	printer.SetupColumns(
 		[]int{320, pkg.AlignLeft, 0},
 		[]int{120, pkg.AlignCenter, 0},
@@ -302,7 +302,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		if orderBuffetCustomer.IsDelete() {
 			continue
 		}
-		productNum += orderBuffetCustomer.Num
+		productNum += float64(orderBuffetCustomer.Num)
 		buffetNameText := orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang)
 		if orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name != "" {
 			buffetNameText += "\n(" + orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name + ")"
@@ -322,7 +322,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		if delay.IsDelete() {
 			continue
 		}
-		productNum += delay.Num
+		productNum += float64(delay.Num)
 		discountPrice := delay.GetAmount()
 		printer.PrintInColumns(
 			delay.Name,

@@ -51,8 +51,8 @@ type InstantProductMustPlan struct {
 	MustRule     int                `json:"must_rule"`      // 必点规则.0-固定商品 1-可选商品
 	CanChangeNum bool               `json:"can_change_num"` // 顾客可修改必点数量
 	MealNum      uint               `json:"meal_num"`       // 就餐人数
-	SelectedNum  uint               `json:"selected_num"`   // 已选数量。已选择xx份
-	NeedNum      uint               `json:"need_num"`       // 这个商品还需要点的数量。还差xx份
+	SelectedNum  float64            `json:"selected_num"`   // 已选数量。已选择xx份
+	NeedNum      float64            `json:"need_num"`       // 这个商品还需要点的数量。还差xx份
 	Products     ProductPackageList `json:"products"`       // 商品列表
 }
 type ProductPackageList struct {
@@ -64,16 +64,16 @@ type ProductAutoAddReq struct {
 	FlavorUuid        uint64   `json:"flavor_uuid"`    // 某个规格商品ID
 	SauceUuidList     []uint64 `json:"sauce_uuid"`     // 小料ID列表
 	AttributeUuidList []uint64 `json:"attribute_uuid"` // 属性ID列表
-	Num               uint     `json:"num"`            // 加购数量
+	Num               float64  `json:"num"`            // 加购数量
 }
 
 type InstantMustPlanProductStat struct {
 	Product           InstantMustPlanProduct `json:"product"`
 	IsAutoAdd         bool                   `json:"is_auto_add"`          // 是否是自动加购的商品。是则自动加入购物车
 	ProductAutoAddReq ProductAutoAddReq      `json:"product_auto_add_req"` // 自动加购商品请求参数
-	SelectedNum       uint                   `json:"selected_num"`         // 已选数量
-	MustNum           uint                   `json:"must_num"`             // 这个商品必选点的数量。还需点数量=must_num-selected_num
-	NeedNum           uint                   `json:"need_num"`             // 这个商品还需要点的数量。还需点数量=must_num-selected_num
+	SelectedNum       float64                `json:"selected_num"`         // 已选数量
+	MustNum           float64                `json:"must_num"`             // 这个商品必选点的数量。还需点数量=must_num-selected_num
+	NeedNum           float64                `json:"need_num"`             // 这个商品还需要点的数量。还需点数量=must_num-selected_num
 }
 type InstantMustPlanProduct struct {
 	Uuid            uint64             `json:"uuid"`             // 商品product_package的uuid

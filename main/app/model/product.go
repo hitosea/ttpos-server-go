@@ -115,6 +115,7 @@ type ProductPackage struct {
 	ImageName             string `gorm:"default:'';column:image_name;comment:'图片名称'"`
 	ImageFileUuid         uint64 `gorm:"default:0;column:image_file_uuid;comment:'图片UUID'"`
 	DeductStockType       uint   `gorm:"default:0;column:deduct_stock_type;comment:'库存计算方法, 0-下单减库存 1-付款减库存'"`
+	NumType               uint   `gorm:"default:0;column:num_type;comment:'数量计算方法, 0-整数 1-小数'"`
 	UnitUuid              uint64 `gorm:"default:0;column:unit_uuid;comment:'单位UUID'"`
 	DineTaxUuid           uint64 `gorm:"default:0;column:dine_tax_uuid;comment:'堂食税UUID'"`
 	CategoryUuid          uint64 `gorm:"default:0;column:category_uuid;comment:'类别UUID'"`
@@ -312,13 +313,13 @@ func (model *RelatedMaterial) SetNil() {
 }
 
 // GetDecreaseNum 获取减少的库存数量. 减少的库存数量 = 材料用量 * 商品数量
-func (model *RelatedMaterial) GetDecreaseNum(productNum uint) float64 {
-	return decimal.NewFromFloat(model.Num).Mul(decimal.NewFromInt(int64(productNum))).InexactFloat64()
+func (model *RelatedMaterial) GetDecreaseNum(productNum float64) float64 {
+	return decimal.NewFromFloat(model.Num).Mul(decimal.NewFromFloat(productNum)).Round(2).InexactFloat64() // todo 思考是否需要四舍五入？？
 }
 
 // IsStockShortage 判断库存是否不足
-func (model *ProductBom) IsStockShortage(productNum uint) bool {
-	return model.GetStockNum() < float64(productNum)
+func (model *ProductBom) IsStockShortage(productNum float64) bool {
+	return model.GetStockNum() < productNum
 }
 
 // IsPriceChanged 判断商品价格是否变动

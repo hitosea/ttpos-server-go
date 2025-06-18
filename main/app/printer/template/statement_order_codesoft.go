@@ -309,14 +309,14 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 	}
 	// 赠品金额 / 商品数量
 	freeMoney := float64(0)
-	productNum := uint(0)
+	productNum := float64(0)
 	printer.SetLineSpacing(70)
 	// 自助餐顾客类型
 	for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
 		if orderBuffetCustomer.IsDelete() {
 			continue
 		}
-		productNum += orderBuffetCustomer.Num
+		productNum += float64(orderBuffetCustomer.Num)
 		buffetNameText := orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang)
 		if orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name != "" {
 			buffetNameText += "\n(" + orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name + ")"
@@ -341,7 +341,7 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 		if delay.IsDelete() {
 			continue
 		}
-		productNum += delay.Num
+		productNum += float64(delay.Num)
 		discountPrice := delay.GetAmount()
 		printer.AppendText(t.base.PrintText(
 			delay.Name,

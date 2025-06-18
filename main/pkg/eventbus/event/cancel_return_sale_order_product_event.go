@@ -16,7 +16,7 @@ type CancelReturnSaleOrderProductPayload struct {
 	ProductId      uint64             `json:"product_id"`       // 商品ID
 	ProductName    dto.LocaleResponse `json:"product_name"`     // 商品名称
 	ProductAttr    dto.LocaleResponse `json:"product_attr"`     // 商品属性
-	Num            uint               `json:"num"`              // 退菜数量
+	Num            float64            `json:"num"`              // 退菜数量
 	ParentId       uint64             `json:"parent_id"`        // 父订单ID
 	OrderName      uint64             `json:"order_name"`       // 订单名称
 	Sign           string             `json:"sign"`             // 签名

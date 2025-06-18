@@ -420,7 +420,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
-			exportation := func(num uint) {
+			exportation := func(num float64) {
 				// 设置行间距
 				if printerType == PrinterTypeXPrinterWifi {
 					printer.SetLineSpacing(120)
@@ -428,7 +428,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 					printer.SetLineSpacing(60)
 				}
 				printer.SetCharacterSize(2, 2)
-				printer.PrintInColumns(productName, "x"+fmt.Sprintf("%d", num))
+				printer.PrintInColumns(productName, "x"+fmt.Sprintf("%f", num))
 				printer.SetCharacterSize(1, 2)
 				printer.RestoreDefaultLineSpacing()
 

@@ -76,8 +76,8 @@ type OrderReReturnReq struct {
 }
 
 type OrderReturnProduct struct {
-	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品UUID
-	Num                  int    `json:"num"`                     // 退款数量
+	SaleOrderProductUuid uint64  `json:"sale_order_product_uuid"` // 销售订单商品UUID
+	Num                  float64 `json:"num"`                     // 退款数量
 }
 
 // OrderReverseSettleInfoReq 获取反结账弹窗信息

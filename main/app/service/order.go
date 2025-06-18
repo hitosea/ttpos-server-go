@@ -881,7 +881,7 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 				products = append(products, &resp.OrderExportInfoProduct{
 					Name:       orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(language),
 					AttrName:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-					Num:        orderBuffetCustomer.Num,
+					Num:        float64(orderBuffetCustomer.Num),
 					TotalPrice: orderBuffetCustomer.GetDiscountPriceWithVAT(),
 				})
 			}
@@ -893,7 +893,7 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 				products = append(products, &resp.OrderExportInfoProduct{
 					Name:       delayProduct.Name,
 					AttrName:   "",
-					Num:        delayProduct.Num,
+					Num:        float64(delayProduct.Num),
 					TotalPrice: delayProduct.GetAmount(),
 				})
 			}
@@ -1062,7 +1062,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 						TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 					},
 					Price:            orderBuffetCustomer.SalePrice,
-					Num:              orderBuffetCustomer.Num, // 这种类型顾客多少个，如老人这个类型2人
+					Num:              float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
 					SalePrice:        orderBuffetCustomer.GetDiscountPriceWithVAT(model.WithOriginPrice()),
 					TotalPrice:       orderBuffetCustomer.GetDiscountPriceWithVAT(),
 					RefundAmount:     -orderBuffetCustomer.GetReturnPrice(),
@@ -1094,7 +1094,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 						TR:   delayProduct.Name,
 					},
 					LocaleAttributeName: dto.LocaleResponse{},
-					Num:                 delayProduct.Num, // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
+					Num:                 float64(delayProduct.Num), // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
 					Price:               delayProduct.Price,
 					SalePrice:           delayProduct.GetAmount(),
 					TotalPrice:          delayProduct.GetAmount(),
@@ -1557,7 +1557,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	saleOrderProducts := make([]*model.SaleOrderProduct, 0)                       // 退款商品列表
 	saleOrderBuffetCustomerTypes := make([]*model.SaleOrderBuffetCustomerType, 0) // 退款自助餐顾客列表
 	saleOrderBuffetDelayProducts := make([]*model.SaleOrderBuffetDelayProduct, 0) // 退款自助餐延迟商品列表
-	numMap := make(map[uint64]uint)                                               // 每个退款商品的退货数量
+	numMap := make(map[uint64]float64)                                            // 每个退款商品的退货数量
 	// 整单退款
 	if len(req.Products) == 0 {
 		returnType = constant.ReturnOrderRefundTypeTotal
@@ -1575,7 +1575,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
 			if canReturnNum > 0 {
 				saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderProduct)
-				numMap[saleOrderProduct.Uuid] = canReturnNum
+				numMap[saleOrderProduct.Uuid] = float64(canReturnNum)
 			}
 		}
 
@@ -1583,7 +1583,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
 			if canReturnNum > 0 {
 				saleOrderBuffetDelayProducts = append(saleOrderBuffetDelayProducts, saleOrderProduct)
-				numMap[saleOrderProduct.Uuid] = canReturnNum
+				numMap[saleOrderProduct.Uuid] = float64(canReturnNum)
 			}
 		}
 	}
@@ -1594,7 +1594,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		saleOrderProductUuids := make([]uint64, 0)
 		for _, product := range req.Products {
 			saleOrderProductUuids = append(saleOrderProductUuids, product.SaleOrderProductUuid)
-			numMap[product.SaleOrderProductUuid] = uint(product.Num)
+			numMap[product.SaleOrderProductUuid] = product.Num
 		}
 		// 注意：要判断订单商品是否还有可退货数量
 		saleOrderProductList := saleOrder.GetSaleOrderProductList(saleOrderProductUuids)
@@ -1615,7 +1615,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
 			if canReturnNum > 0 {
 				num := numMap[saleOrderProduct.Uuid] // 退货数量
-				if num <= canReturnNum {
+				if uint(num) <= canReturnNum {
 					saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderProduct)
 				} else {
 					return errors.WithMessage(errors.New("2退货数量超过可退货数量")), constant.CodeFail
@@ -1628,7 +1628,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
 			if canReturnNum > 0 {
 				num := numMap[saleOrderProduct.Uuid] // 退货数量
-				if num <= canReturnNum {
+				if num <= float64(canReturnNum) {
 					saleOrderBuffetDelayProducts = append(saleOrderBuffetDelayProducts, saleOrderProduct)
 				} else {
 					return errors.WithMessage(errors.New("3退货数量超过可退货数量")), constant.CodeFail
@@ -2114,9 +2114,9 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 			SaleOrderProductUuid: buffetCustomer.Uuid,
 			LocaleName:           buffetCustomer.LocaleName,
 			LocaleAttributeName:  buffetCustomer.LocaleAttributeName,
-			Num:                  buffetCustomer.CanReturnNum,    // 自助餐顾客类型可退货数量
-			Price:                buffetCustomer.TotalPrice,      // 自助餐顾客类型总价（单个商品、折后）
-			CanReturnAmount:      buffetCustomer.CanReturnAmount, // 自助餐顾客类型可退款金额
+			Num:                  float64(buffetCustomer.CanReturnNum), // 自助餐顾客类型可退货数量
+			Price:                buffetCustomer.TotalPrice,            // 自助餐顾客类型总价（单个商品、折后）
+			CanReturnAmount:      buffetCustomer.CanReturnAmount,       // 自助餐顾客类型可退款金额
 			CurrencyUnit:         currencyUnit,
 		})
 	}
@@ -2128,9 +2128,9 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 			SaleOrderProductUuid: delayProduct.Uuid,
 			LocaleName:           delayProduct.LocaleName,
 			LocaleAttributeName:  delayProduct.LocaleAttributeName,
-			Num:                  delayProduct.CanReturnNum,    // 加钟商品可退货数量
-			Price:                delayProduct.UnitPrice,       // 加钟商品单价
-			CanReturnAmount:      delayProduct.CanReturnAmount, // 加钟商品可退款金额
+			Num:                  float64(delayProduct.CanReturnNum), // 加钟商品可退货数量
+			Price:                delayProduct.UnitPrice,             // 加钟商品单价
+			CanReturnAmount:      delayProduct.CanReturnAmount,       // 加钟商品可退款金额
 			CurrencyUnit:         currencyUnit,
 		})
 	}
@@ -2880,7 +2880,7 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 					continue
 				}
 				if product, ok := listMap[saleOrderProduct.Sign]; !ok {
-					productPrice := decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromUint64(uint64(saleOrderProduct.Num))).InexactFloat64()
+					productPrice := decimal.NewFromFloat(saleOrderProduct.Price).Mul(saleOrderProduct.GetNumDecimal()).InexactFloat64()
 					newProduct := resp.Product{
 						LocaleName:    saleOrderProduct.MultiLanguageName.GetNames(),
 						Num:           saleOrderProduct.Num,
@@ -2889,7 +2889,7 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 					}
 					listMap[saleOrderProduct.Sign] = newProduct
 				} else {
-					productPrice := decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromUint64(uint64(saleOrderProduct.Num)))
+					productPrice := decimal.NewFromFloat(saleOrderProduct.Price).Mul(saleOrderProduct.GetNumDecimal())
 					price := productPrice.Add(decimal.NewFromFloat(product.SalePrice)).InexactFloat64()
 					product.Num += saleOrderProduct.Num
 					product.SalePrice = price
@@ -4243,6 +4243,10 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 		}
 	}
 
+	num := 1.0
+	if request.Num != nil {
+		num = *request.Num
+	}
 	// 往销售账单里添加商品
 	shopCart, err := s.OrderCartProductAdd(ctx, req.ProductAddReq{
 		SaleBillUuid:  request.SaleBillUuid,
@@ -4250,7 +4254,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 		Products: []req.ProductParams{
 			{
 				FlavorProductBomUuid:            request.FlavorUuid,
-				Num:                             1,
+				Num:                             num,
 				SauceProductBomUuidList:         request.SauceUuidList,
 				ProductPackageAttributeUuidList: request.AttributeUuidList,
 				Operation:                       request.Operation,
@@ -4640,11 +4644,11 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 
 	// 修改销售订单商品数量
 	beforeNum := saleOrderProduct.Num
-	saleOrderProduct.Num = uint(request.Num)
+	saleOrderProduct.Num = request.Num
 	ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
 	// 检查商品销售库存是否充足
-	if uint(request.Num) > beforeNum {
+	if request.Num > beforeNum {
 		status, message := saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
 		if status != constant.CodeSuccess {
 			return nil, errors.WithMessage(errors.New(message))
@@ -4664,7 +4668,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	// 检查限购
 	{
 		// 如果是减数量，则不检查限购. 只有加数量时，才检查限购
-		if uint(request.Num) > beforeNum {
+		if request.Num > beforeNum {
 			limitProducts, err := s.getBuffetProductLimitList(ctx, request.SaleBillUuid)
 			if err != nil {
 				return nil, errors.WithMessage(err)
@@ -4683,7 +4687,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 
 	// 商品数量不能超过999个
 	// 如果是减数量，则不检查限购. 只有加数量时，才检查限购999个
-	if uint(request.Num) > beforeNum {
+	if request.Num > beforeNum {
 		if request.Num > constant.ProductNumMax {
 			ctx.Log().Error("商品数量不能超过999个", zap.Any("request", request))
 			return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
@@ -4764,9 +4768,9 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 	// 商品的签名
 	sign := saleOrderProduct.Sign
 	saleOrderProductList := saleBill.GetSaleOrderProductBySign(sign)
-	productNum := 0
+	productNum := float64(0)
 	for _, saleOrderProduct := range saleOrderProductList {
-		productNum += int(saleOrderProduct.Num)
+		productNum += saleOrderProduct.Num
 	}
 	operation := "add"
 	if productNum > request.Num {
@@ -4796,7 +4800,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 	// 检查商品销售库存是否充足
 	if operation == "add" {
 		saleOrderProduct.Num = saleOrderProduct.Num + 1
-		request.Num = int(saleOrderProduct.Num)
+		request.Num = saleOrderProduct.Num
 		ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
 		status, message := saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
@@ -4818,7 +4822,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 			return res, nil
 		}
 		saleOrderProduct.Num = num
-		request.Num = int(saleOrderProduct.Num)
+		request.Num = saleOrderProduct.Num
 		ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 	}
 	// 计算商品数据。折扣、税费、服务
@@ -4835,7 +4839,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 	// 检查限购
 	{
 		// 如果是减数量，则不检查限购. 只有加数量时，才检查限购
-		if uint(request.Num) > beforeNum {
+		if request.Num > beforeNum {
 			limitProducts, err := s.getBuffetProductLimitList(ctx, request.SaleBillUuid)
 			if err != nil {
 				return nil, errors.WithMessage(err)
@@ -4849,7 +4853,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 
 	// 商品数量不能超过999个
 	// 如果是减数量，则不检查限购. 只有加数量时，才检查限购999个
-	if uint(request.Num) > beforeNum {
+	if request.Num > beforeNum {
 		if request.Num > constant.ProductNumMax {
 			ctx.Log().Error("商品数量不能超过999个", zap.Any("request", request))
 			return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
@@ -4964,7 +4968,7 @@ func WithH5OrderUuid(h5OrderUuid uint64) func(*CheckOrderOptions) {
 
 type FlavorNum struct {
 	SaleOrderProduct *model.SaleOrderProduct
-	Num              uint // 销售订单中该规格商品的数量
+	Num              float64 // 销售订单中该规格商品的数量
 }
 
 func (f *FlavorNum) IsStockShortage() bool {
@@ -5157,7 +5161,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 	// 检查限购
 	{
 		// product_package_uuid => num
-		numMap := make(map[uint64]uint) // key为商品包uuid value为已购买数量
+		numMap := make(map[uint64]float64) // key为商品包uuid value为已购买数量
 		// product_package_uuid => ProductPackage
 		productPackageMap := make(map[uint64]*model.ProductPackage) // key为商品包uuid, value为ProductPackage
 		// product_package_uuid => SaleOrderProduct
@@ -5207,7 +5211,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			if limitNum == 0 {
 				continue
 			}
-			if num > limitNum {
+			if num > float64(limitNum) {
 				statusMap[constant.CodeOrderCheckProductLimitOut] = append(statusMap[constant.CodeOrderCheckProductLimitOut], saleOrderProductMap[productPackageUuid])
 			}
 		}
@@ -5300,7 +5304,7 @@ func (s *orderSrv) checkBuffetCustomerTypePriceChanged(ctx context.Context, sale
 						MY:   buffetCustomer.Name,
 						TR:   buffetCustomer.Name,
 					},
-					Num:       buffetCustomer.Num,
+					Num:       float64(buffetCustomer.Num),
 					SalePrice: buffetCustomer.SalePrice,
 				}
 				res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, customer)
@@ -5711,7 +5715,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	returnFoodReasonList := saleOrderProduct.NewSaleOrderProductReasonList(returnFoodReason)
 
 	var returnSaleOrderProduct *model.SaleOrderProduct
-	var keepNum uint
+	var keepNum float64
 	// 提前获取属性和属性列表
 	productAttr := saleOrderProduct.GetAttributeName()
 	productAttrList := saleOrderProduct.GetAttributeNameList()
@@ -8149,15 +8153,15 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 	return cartInfo, nil
 }
 
-func MoreThanMoveNum(saleOrderProductNum, moveNum uint) bool {
+func MoreThanMoveNum(saleOrderProductNum, moveNum float64) bool {
 	return saleOrderProductNum > moveNum
 }
 
-func LessThanMoveNum(saleOrderProduct *model.SaleOrderProduct, moveNum uint) bool {
+func LessThanMoveNum(saleOrderProduct *model.SaleOrderProduct, moveNum float64) bool {
 	return saleOrderProduct.Num < moveNum
 }
 
-func EqualMoveNum(saleOrderProductNum, moveNum uint) bool {
+func EqualMoveNum(saleOrderProductNum, moveNum float64) bool {
 	return saleOrderProductNum == moveNum
 }
 func IsSameSignature[T any](sign string, toSaleOrderProductSignMap map[string]*T) bool {
@@ -8305,7 +8309,7 @@ func (s *orderSrv) getMoveProductInfo(ctx context.Context, saleOrderFrom *model.
 // 第二种移动方式：修改原销售订单商品数量，更新记录，重新计算订单金额；新建目标销售订单商品，计算金额，表插入记录，数组增加这条记录，计算订单金额
 // 第三种移动方式：删除原销售订单商品，更新表记录，重新计算原订单金额；修改目标销售订单商品数量，更新记录，重新计算订单金额
 // 第四种移动方式：修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；目标销售订单的商品数组增加这条记录，重新计算订单金额
-func (s *orderSrv) moveSaleOrderProduct(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, saleOrderProducts []*model.SaleOrderProduct, moveNumMap map[uint64]uint) (map[uint64]*model.SaleOrderProduct, map[uint64]*model.SaleOrderProduct, error) {
+func (s *orderSrv) moveSaleOrderProduct(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, saleOrderProducts []*model.SaleOrderProduct, moveNumMap map[uint64]float64) (map[uint64]*model.SaleOrderProduct, map[uint64]*model.SaleOrderProduct, error) {
 	// 需要更新的销售订单商品
 	waitUpdateSaleOrderProductMap := make(map[uint64]*model.SaleOrderProduct)
 	// 需要新建的销售订单商品
@@ -8400,7 +8404,7 @@ func (s *orderSrv) moveSaleOrderProduct(ctx context.Context, saleBill *model.Sal
 }
 
 // moveBuffetCustomer 移动自助餐顾客
-func (s *orderSrv) moveBuffetCustomer(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, buffetCustomers []*model.SaleOrderBuffetCustomerType, moveNumMap map[uint64]uint) (map[uint64]*model.SaleOrderBuffetCustomerType, map[uint64]*model.SaleOrderBuffetCustomerType, error) {
+func (s *orderSrv) moveBuffetCustomer(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, buffetCustomers []*model.SaleOrderBuffetCustomerType, moveNumMap map[uint64]float64) (map[uint64]*model.SaleOrderBuffetCustomerType, map[uint64]*model.SaleOrderBuffetCustomerType, error) {
 	// 需要更新的销售订单顾客
 	waitUpdateBuffetCustomerMap := make(map[uint64]*model.SaleOrderBuffetCustomerType)
 	// 需要新建的销售订单顾客
@@ -8421,33 +8425,33 @@ func (s *orderSrv) moveBuffetCustomer(ctx context.Context, saleBill *model.SaleB
 		if !ok {
 			return nil, nil, errors.WithMessage(errors.New("顾客可能移动到其他销售订单中"), fmt.Sprintf("buffetCustomer_uuid:%d", buffetCustomer.Uuid))
 		}
-		if moveCustomerNum > buffetCustomer.Num {
+		if moveCustomerNum > float64(buffetCustomer.Num) {
 			return nil, nil, errors.WithMessage(errors.New("移动数量大于销售订单商品数量"), fmt.Sprintf("sale_order_product_uuid:%d", buffetCustomer.Uuid))
 		}
 		hasHandle := false // 是否已经处理过。因为一个顾客被一个处理方式处理过后，可能又满足多种移动方式，所以需要一个标志来判断是否已经处理过
 		// 第一种移动方式：原销售订单顾客数量大于移动数量，则原销售订单顾客数量减少移动数量，目标销售订单中有签名一样的顾客，该顾客数量增加移动数量
-		if !hasHandle && MoreThanMoveNum(buffetCustomer.Num, moveCustomerNum) && IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
+		if !hasHandle && MoreThanMoveNum(float64(buffetCustomer.Num), float64(moveCustomerNum)) && IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动顾客，第一种移动方式", zap.Any("from", buffetCustomer.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", buffetCustomer.Uuid), zap.Any("buffetCustomer", buffetCustomer.Name))
 			// 修改原销售订单顾客数量，更新记录，重新计算订单金额
-			buffetCustomer.Num -= moveCustomerNum
+			buffetCustomer.Num -= uint(moveCustomerNum)
 			// 修改目标销售订单顾客数量，更新记录，重新计算订单金额
-			toBuffetCustomerSignMap[buffetCustomer.GetSign()].Num += moveCustomerNum
+			toBuffetCustomerSignMap[buffetCustomer.GetSign()].Num += uint(moveCustomerNum)
 			// 记录到待更新列表中
 			waitUpdateBuffetCustomerMap[buffetCustomer.Uuid] = buffetCustomer
 			waitUpdateBuffetCustomerMap[toBuffetCustomerSignMap[buffetCustomer.GetSign()].Uuid] = toBuffetCustomerSignMap[buffetCustomer.GetSign()]
 		}
 
 		// 第二种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
-		if !hasHandle && MoreThanMoveNum(buffetCustomer.Num, moveCustomerNum) && !IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
+		if !hasHandle && MoreThanMoveNum(float64(buffetCustomer.Num), float64(moveCustomerNum)) && !IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动顾客，第二种移动方式", zap.Any("from", buffetCustomer.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", buffetCustomer.Uuid), zap.Any("buffetCustomer", buffetCustomer.Name))
 			ctx.Log().Debug("移动顾客", zap.Any("原销售订单商品修改前数量", buffetCustomer.Num))
 			// 修改原销售订单商品数量，更新记录，重新计算订单金额
-			buffetCustomer.Num -= moveCustomerNum
+			buffetCustomer.Num -= uint(moveCustomerNum)
 			// 新建一个销售订单商品，该商品数量为移动数量
 			newBuffetCustomer := buffetCustomer.CopyBuffetCustomer(saleOrderTo.Uuid)
-			newBuffetCustomer.Num = moveCustomerNum
+			newBuffetCustomer.Num = uint(moveCustomerNum)
 			// 计算商品数据。折扣、税费、服务
 			newBuffetCustomer.CustomDiscountRate = saleOrderTo.CustomDiscountRate
 			newBuffetCustomer.CalcSaleOrderBuffetCustomerType(*saleBill.SaleBillSetting)
@@ -8460,20 +8464,20 @@ func (s *orderSrv) moveBuffetCustomer(ctx context.Context, saleBill *model.SaleB
 		}
 
 		// 第三种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
-		if !hasHandle && EqualMoveNum(buffetCustomer.Num, moveCustomerNum) && IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
+		if !hasHandle && EqualMoveNum(float64(buffetCustomer.Num), float64(moveCustomerNum)) && IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动商品，第三种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", buffetCustomer.Uuid), zap.Any("buffetCustomer", buffetCustomer.Name))
 			// 删除原销售订单商品，更新表记录，重新计算原订单金额；
 			buffetCustomer.DeleteTime = time.Now().Unix()
 			// 修改目标销售订单商品数量，更新记录，重新计算订单金额
-			toBuffetCustomerSignMap[buffetCustomer.GetSign()].Num += moveCustomerNum
+			toBuffetCustomerSignMap[buffetCustomer.GetSign()].Num += uint(moveCustomerNum)
 			// 记录到待更新列表中
 			waitUpdateBuffetCustomerMap[buffetCustomer.Uuid] = buffetCustomer
 			waitUpdateBuffetCustomerMap[toBuffetCustomerSignMap[buffetCustomer.GetSign()].Uuid] = toBuffetCustomerSignMap[buffetCustomer.GetSign()]
 		}
 
 		// 第四种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
-		if !hasHandle && EqualMoveNum(buffetCustomer.Num, moveCustomerNum) && !IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
+		if !hasHandle && EqualMoveNum(float64(buffetCustomer.Num), float64(moveCustomerNum)) && !IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动商品，第四种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", buffetCustomer.Uuid), zap.Any("buffetCustomer", buffetCustomer.Name))
 			// 修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；
@@ -8492,7 +8496,7 @@ func (s *orderSrv) moveBuffetCustomer(ctx context.Context, saleBill *model.SaleB
 }
 
 // moveBuffetCustomer 移动加钟商品
-func (s *orderSrv) moveBuffetDelayProduct(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, delayProducts []*model.SaleOrderBuffetDelayProduct, moveNumMap map[uint64]uint) (map[uint64]*model.SaleOrderBuffetDelayProduct, map[uint64]*model.SaleOrderBuffetDelayProduct, error) {
+func (s *orderSrv) moveBuffetDelayProduct(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, delayProducts []*model.SaleOrderBuffetDelayProduct, moveNumMap map[uint64]float64) (map[uint64]*model.SaleOrderBuffetDelayProduct, map[uint64]*model.SaleOrderBuffetDelayProduct, error) {
 	// 需要更新的销售订单加钟商品
 	waitUpdateBuffetDelayProductMap := make(map[uint64]*model.SaleOrderBuffetDelayProduct)
 	// 需要新建的销售订单加钟商品
@@ -8513,34 +8517,34 @@ func (s *orderSrv) moveBuffetDelayProduct(ctx context.Context, saleBill *model.S
 		if !ok {
 			return nil, nil, errors.WithMessage(errors.New("加钟商品可能移动到其他销售订单中"), fmt.Sprintf("buffetCustomer_uuid:%d", delayProduct.Uuid))
 		}
-		if moveCustomerNum > delayProduct.Num {
+		if moveCustomerNum > float64(delayProduct.Num) {
 			return nil, nil, errors.WithMessage(errors.New("移动数量大于加钟商品数量"), fmt.Sprintf("sale_order_product_uuid:%d", delayProduct.Uuid))
 		}
 
 		hasHandle := false // 是否已经处理过。因为一个加钟商品被一个处理方式处理过后，可能又满足多种移动方式，所以需要一个标志来判断是否已经处理过
 		// 第一种移动方式：原销售订单加钟商品数量大于移动数量，则原销售订单加钟商品数量减少移动数量，目标销售订单中有签名一样的加钟商品，该加钟商品数量增加移动数量
-		if !hasHandle && MoreThanMoveNum(delayProduct.Num, moveCustomerNum) && IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
+		if !hasHandle && MoreThanMoveNum(float64(delayProduct.Num), float64(moveCustomerNum)) && IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动加钟商品，第一种移动方式", zap.Any("from", delayProduct.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", delayProduct.Uuid), zap.Any("delayProduct", delayProduct.Name))
 			// 修改原销售订单加钟商品数量，更新记录，重新计算订单金额
-			delayProduct.Num -= moveCustomerNum
+			delayProduct.Num -= uint(moveCustomerNum)
 			// 修改目标销售订单加钟商品数量，更新记录，重新计算订单金额
-			toBuffetDelayProductSignMap[delayProduct.GetSign()].Num += moveCustomerNum
+			toBuffetDelayProductSignMap[delayProduct.GetSign()].Num += uint(moveCustomerNum)
 			// 记录到待更新列表中
 			waitUpdateBuffetDelayProductMap[delayProduct.Uuid] = delayProduct
 			waitUpdateBuffetDelayProductMap[toBuffetDelayProductSignMap[delayProduct.GetSign()].Uuid] = toBuffetDelayProductSignMap[delayProduct.GetSign()]
 		}
 
 		// 第二种移动方式：原加钟商品数量大于移动数量，则原加钟商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个加钟商品，该商品数量为移动数量
-		if !hasHandle && MoreThanMoveNum(delayProduct.Num, moveCustomerNum) && !IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
+		if !hasHandle && MoreThanMoveNum(float64(delayProduct.Num), float64(moveCustomerNum)) && !IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动加钟商品，第二种移动方式", zap.Any("from", delayProduct.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", delayProduct.Uuid), zap.Any("delayProduct", delayProduct.Name))
 			ctx.Log().Debug("移动加钟商品", zap.Any("原加钟商品修改前数量", delayProduct.Num))
 			// 修改原加钟商品数量，更新记录，重新计算订单金额
-			delayProduct.Num -= moveCustomerNum
+			delayProduct.Num -= uint(moveCustomerNum)
 			// 新建一个加钟商品，该商品数量为移动数量
 			newBuffetCustomer := delayProduct.CopyBuffetDelayProduct(saleOrderTo.Uuid)
-			newBuffetCustomer.Num = moveCustomerNum
+			newBuffetCustomer.Num = uint(moveCustomerNum)
 			// 在目标销售订单中新建一个加钟商品
 			saleOrderTo.SaleOrderBuffetDelayProducts = append(saleOrderTo.SaleOrderBuffetDelayProducts, newBuffetCustomer)
 			// 记录到待更新列表中
@@ -8550,20 +8554,20 @@ func (s *orderSrv) moveBuffetDelayProduct(ctx context.Context, saleBill *model.S
 		}
 
 		// 第三种移动方式：原加钟商品数量等于移动数量，则原加钟商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
-		if !hasHandle && EqualMoveNum(delayProduct.Num, moveCustomerNum) && IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
+		if !hasHandle && EqualMoveNum(float64(delayProduct.Num), float64(moveCustomerNum)) && IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动加钟商品，第三种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", delayProduct.Uuid), zap.Any("delayProduct", delayProduct.Name))
 			// 删除原加钟商品，更新表记录，重新计算原订单金额；
 			delayProduct.DeleteTime = time.Now().Unix()
 			// 修改目标加钟商品数量，更新记录，重新计算订单金额
-			toBuffetDelayProductSignMap[delayProduct.GetSign()].Num += moveCustomerNum
+			toBuffetDelayProductSignMap[delayProduct.GetSign()].Num += uint(moveCustomerNum)
 			// 记录到待更新列表中
 			waitUpdateBuffetDelayProductMap[delayProduct.Uuid] = delayProduct
 			waitUpdateBuffetDelayProductMap[toBuffetDelayProductSignMap[delayProduct.GetSign()].Uuid] = toBuffetDelayProductSignMap[delayProduct.GetSign()]
 		}
 
 		// 第四种移动方式：原加钟商品数量等于移动数量，则原加钟商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个加钟商品，该商品数量为移动数量
-		if !hasHandle && EqualMoveNum(delayProduct.Num, moveCustomerNum) && !IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
+		if !hasHandle && EqualMoveNum(float64(delayProduct.Num), float64(moveCustomerNum)) && !IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动加钟商品，第四种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", delayProduct.Uuid), zap.Any("delayProduct", delayProduct.Name))
 			// 修改原加钟商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；
@@ -8607,7 +8611,7 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 	saleOrderTo := saleBill.GetSaleOrder(req.To)
 
 	// 构建移动到订单商品的map结构
-	moveProductMap := make(map[uint64]uint)
+	moveProductMap := make(map[uint64]float64)
 	for _, moveProduct := range req.Products {
 		moveProductMap[moveProduct.Uuid] = moveProduct.Num
 	}
@@ -8617,7 +8621,7 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 		return nil, errors.WithMessage(err)
 	}
 
-	moveNumMap := make(map[uint64]uint)
+	moveNumMap := make(map[uint64]float64)
 	for _, moveProduct := range req.Products {
 		moveNumMap[moveProduct.Uuid] = moveProduct.Num
 	}
@@ -9057,7 +9061,7 @@ func (s *orderSrv) getMoveProductList(saleOrderFrom *model.SaleOrder) []req.Move
 		}
 		moveProductList = append(moveProductList, req.MoveProduct{
 			Uuid: saleOrderBuffetCustomer.Uuid,
-			Num:  saleOrderBuffetCustomer.Num,
+			Num:  float64(saleOrderBuffetCustomer.Num),
 		})
 	}
 	// 获取要移动的加钟商品
@@ -9067,7 +9071,7 @@ func (s *orderSrv) getMoveProductList(saleOrderFrom *model.SaleOrder) []req.Move
 		}
 		moveProductList = append(moveProductList, req.MoveProduct{
 			Uuid: buffetDelayProduct.Uuid,
-			Num:  buffetDelayProduct.Num,
+			Num:  float64(buffetDelayProduct.Num),
 		})
 	}
 	return moveProductList
@@ -9662,7 +9666,7 @@ func (s *orderSrv) GetMustPlanList(ctx context.Context, saleBillUuid uint64) (re
 	if err != nil {
 		return resp.ProductMustPlanList{}, errors.ErrInternal
 	}
-	list, err := s.mustPlanSrv.GetDeskMustPlanList(ctx, saleBill.MealNum, make(map[uint64]map[uint64]uint), saleBill.DeskUuid)
+	list, err := s.mustPlanSrv.GetDeskMustPlanList(ctx, saleBill.MealNum, make(map[uint64]map[uint64]float64), saleBill.DeskUuid)
 	if err != nil {
 		return resp.ProductMustPlanList{}, errors.WithMessage(err)
 	}
@@ -9772,7 +9776,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 				if err != nil {
 					return res, errors.WithMessage(err, "解析H5设置失败")
 				}
-				if saleBill.GetUnOrderH5OrderProductNum() > uint(numLimit) {
+				if saleBill.GetUnOrderH5OrderProductNum() > float64(numLimit) {
 					return gin.H{"value": numLimit}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
 				}
 			}
@@ -9795,7 +9799,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 				if err != nil {
 					return res, errors.WithMessage(err, "解析H5设置失败")
 				}
-				if saleBill.GetUnOrderH5OrderProductNum() > uint(numLimit) {
+				if saleBill.GetUnOrderH5OrderProductNum() > float64(numLimit) {
 					return gin.H{"value": numLimit}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
 				}
 			}
@@ -10104,7 +10108,7 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shop
 	}
 
 	// 统计已送厨商品并按送厨时间分组
-	productNum := uint(0)
+	productNum := float64(0)
 	productGroup := make(map[int64]map[string]resp.Product)
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {

@@ -2,6 +2,8 @@ package ro
 
 import (
 	"ttpos-server-go/app/model"
+
+	"github.com/shopspring/decimal"
 )
 
 type ShopCartRepo struct {
@@ -20,12 +22,12 @@ func (ro *ShopCartRepo) IsDeskShopCart() bool {
 }
 
 // 描述购物车中某个必点方案的某个商品已经选购了多少个
-type MustPlanProductInfo map[uint64]map[uint64]uint // MustPlanUuid => ProductPackageUuid => num
+type MustPlanProductInfo map[uint64]map[uint64]float64 // MustPlanUuid => ProductPackageUuid => num
 
 // 获取购物车中的必点商品信息
 func (ro *ShopCartRepo) GetMustPlanProductInfo() MustPlanProductInfo {
 	// MustPlanUuid => ProductPackageUuid => num
-	dataMap := make(map[uint64]map[uint64]uint)
+	dataMap := make(map[uint64]map[uint64]float64)
 	for _, saleOrder := range ro.SaleBill.SaleOrders {
 		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
 			mustPlanUuid := saleOrderProduct.MustPlanUuid
@@ -36,12 +38,12 @@ func (ro *ShopCartRepo) GetMustPlanProductInfo() MustPlanProductInfo {
 			if _, ok := dataMap[mustPlanUuid]; ok {
 				if num, exist := dataMap[mustPlanUuid][productPackageUuid]; exist {
 					// 累加必点商品数量
-					dataMap[mustPlanUuid][productPackageUuid] = num + saleOrderProduct.Num
+					dataMap[mustPlanUuid][productPackageUuid] = decimal.NewFromFloat(num).Add(saleOrderProduct.GetNumDecimal()).Truncate(2).InexactFloat64()
 				} else {
 					dataMap[mustPlanUuid][productPackageUuid] = saleOrderProduct.Num
 				}
 			} else {
-				dataMap[mustPlanUuid] = make(map[uint64]uint)
+				dataMap[mustPlanUuid] = make(map[uint64]float64)
 				dataMap[mustPlanUuid][productPackageUuid] = saleOrderProduct.Num
 			}
 		}

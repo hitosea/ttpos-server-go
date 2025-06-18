@@ -290,7 +290,7 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 	selectedMustPlanProducts := make(ro.MustPlanProductInfo)
 	for _, product := range request.Products {
 		if selectedMustPlanProducts[product.MustPlanUuid] == nil {
-			selectedMustPlanProducts[product.MustPlanUuid] = make(map[uint64]uint)
+			selectedMustPlanProducts[product.MustPlanUuid] = make(map[uint64]float64)
 		}
 		flavorProductBom, err := repository.NewProductBomRepo(ctx.GetDB()).GetFlavorProductBomByUuid(product.FlavorProductBomUuid)
 		if err != nil {
@@ -438,12 +438,12 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 		return nil, errors.WithMessage(err)
 	}
 
-	getProductNum := func(products []req.ProductParams) uint {
-		var num uint
+	getProductNum := func(products []req.ProductParams) float64 {
+		num := decimal.NewFromFloat(0)
 		for _, product := range products {
-			num = num + product.Num
+			num = num.Add(decimal.NewFromFloat(product.Num))
 		}
-		return num
+		return num.Truncate(2).InexactFloat64()
 	}
 	// 平板端下单限制
 	tabletSetting, _ := s.settingSrv.GetTabletSetting(ctx, []dto.LanguageItem{})
@@ -475,7 +475,7 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 				if err != nil {
 					return nil, errors.WithMessage(err, "解析平板端设置失败")
 				}
-				if getProductNum(request.Products) > uint(numLimit) {
+				if getProductNum(request.Products) > float64(numLimit) {
 					value := int64(numLimit)
 					return &TabletAddAndCookingRes{Value: &value}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
 				}
@@ -500,7 +500,7 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 				if err != nil {
 					return nil, errors.WithMessage(err, "解析平板端设置失败")
 				}
-				if getProductNum(request.Products) > uint(numLimit) {
+				if getProductNum(request.Products) > float64(numLimit) {
 					value := int64(numLimit)
 					return &TabletAddAndCookingRes{Value: &value}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
 				}

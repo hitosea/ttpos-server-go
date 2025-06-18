@@ -21,12 +21,12 @@ type SaleOrderProduct struct {
 	BaseModel
 
 	// 基本信息字段
-	Name       string `gorm:"column:name;type:varchar(255);not null;default:'';comment:'商品名称'" json:"name"`
-	FlavorName string `gorm:"column:flavor_name;type:varchar(255);not null;default:'';comment:'规格名称'" json:"flavor_name"`
-	Num        uint   `gorm:"column:num;type:int(11);not null;default:0;comment:'商品数量。不能减为0，当数量为1再减时，标记删除'" json:"num"`
-	Remark     string `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'备注，顾客对商品的备注信息'" json:"remark"`
-	IsBuffet   uint   `gorm:"column:is_buffet;type:tinyint(1);not null;default:0;comment:'是否为自助餐商品,0-否 1-是. 如果是自助餐商品，则sale_price为0'" json:"is_buffet"`
-	DeviceId   string `gorm:"column:device_id;type:varchar(255);not null;default:'';comment:'设备ID,用于标识订单来源设备.来源h5时，device_id为h5的device_id'" json:"device_id"`
+	Name       string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:'商品名称'" json:"name"`
+	FlavorName string  `gorm:"column:flavor_name;type:varchar(255);not null;default:'';comment:'规格名称'" json:"flavor_name"`
+	Num        float64 `gorm:"column:num;type:int(11);not null;default:0;comment:'商品数量。不能减为0，当数量为1再减时，标记删除'" json:"num"`
+	Remark     string  `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'备注，顾客对商品的备注信息'" json:"remark"`
+	IsBuffet   uint    `gorm:"column:is_buffet;type:tinyint(1);not null;default:0;comment:'是否为自助餐商品,0-否 1-是. 如果是自助餐商品，则sale_price为0'" json:"is_buffet"`
+	DeviceId   string  `gorm:"column:device_id;type:varchar(255);not null;default:'';comment:'设备ID,用于标识订单来源设备.来源h5时，device_id为h5的device_id'" json:"device_id"`
 	// 状态相关字段
 	Status        uint `gorm:"column:status;type:tinyint(1);not null;default:0;comment:'状态, 0-未送厨 1-已送厨'" json:"status"`
 	IsRequire     uint `gorm:"column:is_require;type:tinyint(1);not null;default:0;comment:'是否必点商品 0-否 1-是。用于在前端显示必点图标'" json:"is_require"`
@@ -142,43 +142,47 @@ func (model *SaleOrderProduct) GetTotalTaxFee() float64 {
 
 // 获取销售订单商品的税费。税费=销售订单商品的税费*销售订单商品的数量
 func (model *SaleOrderProduct) GetTaxFee() float64 {
-	return decimal.NewFromFloat(model.TaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).Truncate(3).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.TaxFee).Mul(model.GetNumDecimal()).Truncate(3).Round(2).InexactFloat64()
 }
 
 // 获取销售订单商品的原始税费(折前价)。税费=销售订单商品的税费*销售订单商品的数量
 func (model *SaleOrderProduct) GetOriginTaxFee(taxFeeType int) float64 {
 	taxFee := model.calcOriginTaxFee(taxFeeType) // 税费（折前）
-	return decimal.NewFromFloat(taxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+	return decimal.NewFromFloat(taxFee).Mul(model.GetNumDecimal()).InexactFloat64()
+}
+
+func (model *SaleOrderProduct) GetNumDecimal() decimal.Decimal {
+	return decimal.NewFromFloat(model.Num)
 }
 
 // 获取销售订单商品的服务费税费。服务费税费=销售订单商品的服务费税费*销售订单商品的数量
 func (model *SaleOrderProduct) GetServiceTaxFee() float64 {
-	return decimal.NewFromFloat(model.ServiceTaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).Truncate(3).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.ServiceTaxFee).Mul(model.GetNumDecimal()).Truncate(3).Round(2).InexactFloat64()
 }
 
 // 获取销售订单商品的服务费税费。服务费税费=销售订单商品的服务费税费*销售订单商品的数量
 func (model *SaleOrderProduct) GetOriginServiceTaxFee(serviceFeeRate float64, taxFeeType int, serviceFeeType int) float64 {
 	serviceTaxFee := model.calcServiceTaxFee(model.calcSalePrice(), serviceFeeRate, taxFeeType, serviceFeeType) // 服务费（折前）
-	return decimal.NewFromFloat(serviceTaxFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+	return decimal.NewFromFloat(serviceTaxFee).Mul(model.GetNumDecimal()).InexactFloat64()
 }
 
 // 获取销售订单商品的服务费。服务费=销售订单商品的服务费*销售订单商品的数量
 func (model *SaleOrderProduct) GetServiceFee() float64 {
-	return decimal.NewFromFloat(model.ServiceFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+	return decimal.NewFromFloat(model.ServiceFee).Mul(model.GetNumDecimal()).InexactFloat64()
 }
 
 // 获取销售订单商品的原始服务费(折前价)。服务费=销售订单商品的服务费*销售订单商品的数量
 func (model *SaleOrderProduct) GetOriginServiceFee(serviceFeeRate float64, taxFeeType int) float64 {
 	serviceFee := model.calcServiceFee(model.SalePrice, serviceFeeRate, taxFeeType, WithOriginPrice()) // 服务费（折前）
-	return decimal.NewFromFloat(serviceFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+	return decimal.NewFromFloat(serviceFee).Mul(model.GetNumDecimal()).InexactFloat64()
 }
 
 func (model *SaleOrderProduct) GetMemberDiscountFee() float64 {
-	return decimal.NewFromFloat(model.MemberDiscountFee).Mul(decimal.NewFromUint64(uint64(model.Num))).InexactFloat64()
+	return decimal.NewFromFloat(model.MemberDiscountFee).Mul(model.GetNumDecimal()).InexactFloat64()
 }
 
 func (model *SaleOrderProduct) GetCustomDiscountFee() float64 {
-	return decimal.NewFromFloat(model.CustomDiscountFee).Mul(decimal.NewFromUint64(uint64(model.Num))).Truncate(3).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.CustomDiscountFee).Mul(model.GetNumDecimal()).Truncate(3).Round(2).InexactFloat64()
 }
 
 // 获取销售订单商品的未含税价格。
@@ -246,23 +250,23 @@ func (model *SaleOrderProduct) SetFlavorPrice(flavorPrice float64) {
 }
 
 // GetCanReturnNum 获取销售订单商品的可退货数量. 可退货数量=订单商品数量-已退货数量
-func (model *SaleOrderProduct) GetCanReturnNum() uint {
+func (model *SaleOrderProduct) GetCanReturnNum() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, returnOrderProduct := range model.ReturnOrderProducts {
-		amount = amount.Add(decimal.NewFromFloat(float64(returnOrderProduct.Num)))
+		amount = amount.Add(decimal.NewFromFloat(returnOrderProduct.Num))
 	}
-	num := float64(model.Num) - amount.InexactFloat64()
+	num := decimal.NewFromFloat(model.Num).Sub(amount).Truncate(2).InexactFloat64()
 	// 如果可退货数量小于0，则返回0
 	// 这个判断很有必要，否则会出现可退货数量为负数的情况但uint是无符号的，结果会得到一个很大的数。如2-14=18446744073709551604
 	if num < 0 {
 		return 0
 	}
-	return uint(num)
+	return num
 }
 
 // GetReturnNum 获取销售订单商品的已退货数量. 已退货数量=订单商品数量-可退货数量
-func (model *SaleOrderProduct) GetReturnNum() uint {
-	return model.Num - model.GetCanReturnNum()
+func (model *SaleOrderProduct) GetReturnNum() float64 {
+	return decimal.NewFromFloat(model.Num).Sub(decimal.NewFromFloat(model.GetCanReturnNum())).Truncate(2).InexactFloat64()
 }
 
 // GetReturnPrice 获取销售订单商品的已退金额。已退金额=订单商品金额*已退货数量
@@ -706,7 +710,7 @@ func (model *SaleOrderProduct) GetCancelReasons() []*SaleOrderProductReason {
 }
 
 // 设置销售订单商品的数量
-func (model *SaleOrderProduct) SetNum(num uint) {
+func (model *SaleOrderProduct) SetNum(num float64) {
 	defer model.SetUpdate() // 标记该model需要更新
 	model.Num = num
 }
@@ -781,7 +785,7 @@ func (model *SaleOrderProduct) ChangeProductPrice(price float64) {
 // 获取商品销售价(折前价)
 func (model *SaleOrderProduct) GetSalePrice() float64 {
 	// 销售价*数量
-	salePrice := decimal.NewFromFloat(model.SalePrice).Mul(decimal.NewFromFloat(float64(model.Num))).Truncate(2).InexactFloat64()
+	salePrice := decimal.NewFromFloat(model.SalePrice).Mul(model.GetNumDecimal()).Truncate(2).InexactFloat64()
 	return salePrice
 }
 
@@ -802,27 +806,27 @@ func (model *SaleOrderProduct) GetFinalSalePrice() float64 {
 
 // 获取商品的最终售价（*数量）。商品的最终售价*数量
 func (model *SaleOrderProduct) GetProductFinalSalePrice() float64 {
-	return decimal.NewFromFloat(model.GetFinalSalePrice()).Mul(decimal.NewFromUint64(uint64(model.Num))).Truncate(3).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.GetFinalSalePrice()).Mul(model.GetNumDecimal()).Truncate(3).Round(2).InexactFloat64()
 }
 
 // 获取商品总金额（折前价）（商品原价）
 func (model *SaleOrderProduct) GetTotalProductPrice() float64 {
 	// 金额*数量
-	price := decimal.NewFromFloat(model.ProductPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Truncate(3).Round(2).InexactFloat64()
+	price := decimal.NewFromFloat(model.ProductPrice).Mul(model.GetNumDecimal()).Truncate(3).Round(2).InexactFloat64()
 	return price
 }
 
 // 获取商品总金额（折后价）
 func (model *SaleOrderProduct) GetTotalPrice() float64 {
 	// 金额*数量
-	price := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Truncate(3).Round(2).InexactFloat64()
+	price := decimal.NewFromFloat(model.TotalPrice).Mul(model.GetNumDecimal()).Truncate(3).Round(2).InexactFloat64()
 	return price
 }
 
 // 获取商品总小料价格（折后价）
 func (model *SaleOrderProduct) GetTotalSaucePrice() float64 {
 	// 金额*数量
-	price := decimal.NewFromFloat(model.SaucePrice).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	price := decimal.NewFromFloat(model.SaucePrice).Mul(model.GetNumDecimal()).Round(2).InexactFloat64()
 	return price
 }
 
@@ -834,14 +838,14 @@ func (model *SaleOrderProduct) GetTotalPriceOrigin() float64 {
 		originTotalPrice = model.GetTotalPrice()
 	}
 	// 金额*数量
-	price := decimal.NewFromFloat(originTotalPrice).Mul(decimal.NewFromFloat(float64(model.Num))).Truncate(3).Round(2).InexactFloat64()
+	price := decimal.NewFromFloat(originTotalPrice).Mul(model.GetNumDecimal()).Truncate(3).Round(2).InexactFloat64()
 	return price
 }
 
 // 获取最终价格（折后价）
 func (model *SaleOrderProduct) GetPrice() float64 {
 	// 最终价格*数量
-	price := decimal.NewFromFloat(model.Price).Mul(decimal.NewFromFloat(float64(model.Num))).Round(2).InexactFloat64()
+	price := decimal.NewFromFloat(model.Price).Mul(model.GetNumDecimal()).Round(2).InexactFloat64()
 	return price
 }
 
@@ -1024,9 +1028,9 @@ type DefaultSaleOrderProduct struct {
 	Sauces                 []Sauce
 	Flavor                 Flavor
 	Attribute              []Attribute
-	IsAcceptOrder          uint   // 是否接单
-	Num                    uint   // 数量
-	Remark                 string // 备注
+	IsAcceptOrder          uint    // 是否接单
+	Num                    float64 // 数量
+	Remark                 string  // 备注
 }
 
 func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *ProductPackage, operation string) *SaleOrderProduct {

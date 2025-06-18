@@ -198,7 +198,7 @@ func (model *SaleOrder) calcSumOrderProductSalePrice(products []*SaleOrderProduc
 			continue
 		}
 		// SalePrice * Num
-		saleProductSalePrice := decimal.NewFromFloat(orderProduct.SalePrice).Mul(decimal.NewFromUint64(uint64(orderProduct.Num)))
+		saleProductSalePrice := decimal.NewFromFloat(orderProduct.SalePrice).Mul(orderProduct.GetNumDecimal())
 		sumSalePrice = sumSalePrice.Add(saleProductSalePrice)
 	}
 	return sumSalePrice.InexactFloat64()
@@ -235,7 +235,7 @@ func (model *SaleOrder) calcSumOrderProductPrice(products []*SaleOrderProduct, o
 			productPrice = orderProduct.GetSalePriceUnit()
 		}
 		// price * num
-		price := decimal.NewFromFloat(productPrice).Mul(decimal.NewFromUint64(uint64(orderProduct.Num)))
+		price := decimal.NewFromFloat(productPrice).Mul(orderProduct.GetNumDecimal())
 		sumPrice = sumPrice.Add(price)
 	}
 	return sumPrice.Round(2).InexactFloat64()

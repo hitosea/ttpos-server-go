@@ -310,8 +310,8 @@ func (model *SaleOrder) GetCustomerList() []resp.Product {
 				MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 				TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 			},
-			Num:           orderBuffetCustomer.Num, // 这种类型顾客多少个，如老人这个类型2人
-			FinishedNum:   orderBuffetCustomer.Num,
+			Num:           float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
+			FinishedNum:   float64(orderBuffetCustomer.Num),
 			SalePrice:     orderBuffetCustomer.GetOriginPrice(),
 			DiscountPrice: orderBuffetCustomer.GetDiscountPrice(),
 			TotalPrice:    orderBuffetCustomer.TotalPrice,
@@ -359,8 +359,8 @@ func (model *SaleOrder) GetDelayProductList() []resp.Product {
 				TR:   delayProduct.Name,
 			},
 			LocaleAttributeName: dto.LocaleResponse{},
-			Num:                 delayProduct.Num, // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
-			FinishedNum:         delayProduct.Num,
+			Num:                 float64(delayProduct.Num), // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
+			FinishedNum:         float64(delayProduct.Num),
 			SalePrice:           delayProduct.Price,
 			DiscountPrice:       delayProduct.Price, // 加钟商品没有优惠价
 			Status:              1,                  // 添加后标记送厨状态，不可修改
@@ -549,7 +549,7 @@ func (model *SaleOrder) NewReverseSettleExchangeMemberPointLog(points float64) *
 }
 
 // 创建退货单
-func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]uint, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
+func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]float64, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
 	returnOrderUuid, _ := utils.GetID()
 
 	// 如果退款类型为整单退款，则退款金额=订单最终应收金额-已退款金额

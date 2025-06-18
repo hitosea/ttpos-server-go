@@ -257,7 +257,7 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 
 		page++
 		for _, order := range oldOrders {
-			var orderProductNum int
+			var orderProductNum float64
 			var orderProductPrice decimal.Decimal
 			var orderProductOriginPrice decimal.Decimal
 			var orderProductSalePrice decimal.Decimal
@@ -265,9 +265,9 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 			var orderServiceFee decimal.Decimal
 			var orderServiceTax decimal.Decimal
 			var orderDiscount decimal.Decimal
-			var orderGiftNum int
+			var orderGiftNum float64
 			var orderGiftAmount decimal.Decimal
-			var orderFreeNum int
+			var orderFreeNum float64
 			var orderFreeAmount decimal.Decimal
 			var orderPaymentAmount decimal.Decimal
 			var orderPaymentBalance decimal.Decimal
@@ -342,8 +342,8 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 			// 商品销售价
 			for _, orderProduct := range order.OrderProducts {
 				if orderProduct.IsReturn == 0 {
-					totalNum := orderProduct.TotalNum
-					totalNumDec := decimal.NewFromFloat(float64(totalNum))
+					totalNum := float64(orderProduct.TotalNum)
+					totalNumDec := decimal.NewFromFloat(totalNum)
 					orderProductNum += totalNum
 
 					productPrice := decimal.NewFromFloat(orderProduct.ProductPrice)
@@ -421,8 +421,8 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 
 			// 自助餐顾客
 			for _, orderBuffetCustomer := range order.OrderBuffetCustomers {
-				totalNum := orderBuffetCustomer.Num
-				totalNumDec := decimal.NewFromFloat(float64(totalNum))
+				totalNum := float64(orderBuffetCustomer.Num)
+				totalNumDec := decimal.NewFromFloat(totalNum)
 				orderProductNum += totalNum
 
 				productPrice := decimal.NewFromFloat(orderBuffetCustomer.Price)
@@ -463,8 +463,8 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 			}
 
 			for _, orderDelay := range order.OrderDelays {
-				totalNum := orderDelay.Num
-				totalNumDec := decimal.NewFromFloat(float64(totalNum))
+				totalNum := float64(orderDelay.Num)
+				totalNumDec := decimal.NewFromFloat(totalNum)
 				orderProductNum += totalNum
 
 				productPrice := decimal.NewFromFloat(orderDelay.Price)

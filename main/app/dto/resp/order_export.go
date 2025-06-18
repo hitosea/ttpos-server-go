@@ -6,7 +6,7 @@ import "ttpos-server-go/app/dto"
 type OrderExportInfoProduct struct {
 	Name       string  `json:"name"`        // 商品名称
 	AttrName   string  `json:"attr_name"`   // 商品规格(属性名称)
-	Num        uint    `json:"num"`         // 商品数量
+	Num        float64 `json:"num"`         // 商品数量
 	TotalPrice float64 `json:"total_price"` // 商品总价
 }
 
