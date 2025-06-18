@@ -59,12 +59,18 @@ func (r *productPrinterRepo) GetProductionSaleBillUuid(productPrinterUuid uint64
 	var deskRegionUuids []uint64
 	r.db.Model(&model.ProductPrinterRegion{}).Scopes(NotDeleted).Where("product_printer_uuid = ?", productPrinterUuid).Pluck("desk_region_uuid", &deskRegionUuids)
 	var deskUuids []uint64
-	r.db.Model(&model.Desk{}).Scopes(NotDeleted).Where("region_uuid in (?)", deskRegionUuids).Pluck("uuid", &deskUuids)
-	if slices.Contains(deskRegionUuids, 0) {
-		deskUuids = append(deskUuids, 0)
+	if len(deskRegionUuids) != 0 {
+		r.db.Model(&model.Desk{}).Scopes(NotDeleted).Where("region_uuid in (?)", deskRegionUuids).Pluck("uuid", &deskUuids)
+		if slices.Contains(deskRegionUuids, 0) {
+			deskUuids = append(deskUuids, 0)
+		}
 	}
 	var uuids []uint64
-	err := r.db.Model(&model.SaleBill{}).Scopes(NotDeleted).Where("desk_uuid in (?)", deskUuids).Pluck("uuid", &uuids).Error
+	query := r.db.Model(&model.SaleBill{}).Scopes(NotDeleted)
+	if len(deskUuids) != 0 {
+		query = query.Where("desk_uuid in (?)", deskUuids)
+	}
+	err := query.Pluck("uuid", &uuids).Error
 	if err != nil {
 		return nil, err
 	}

@@ -279,7 +279,7 @@ class Setting extends BaseModel
                 $defaultData['buffet']['values']['is_open'] = '0';
             }
             foreach ($defaultData["points"]['values']['shopping_gift_rules'] as $key => $pointsRule) {
-                $newMealType = array_values(array_filter($pointsRule, function ($item) {
+                $newMealType = array_values(array_filter($pointsRule["meal_type"], function ($item) {
                     return $item != "buffet";
                 }));
                 $defaultData["points"]['values']['shopping_gift_rules'][$key]["meal_type"] = $newMealType;
