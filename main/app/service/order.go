@@ -3969,6 +3969,9 @@ func (s *orderSrv) GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn stri
 
 // GetOrderCartInfo 获取点餐购物车信息
 func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error) {
+	// test: 记录耗时
+	start := time.Now() // 记录开始时间
+
 	// 追加请求头参数，从http的header中获取h5_order_uuid
 	h5OrderUuid := context.GetH5OrderUuid(ctx)
 	if h5OrderUuid != 0 {
@@ -4156,6 +4159,9 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			shopCartInfo.MustPlans = productMustPlanList
 		}
 	}
+
+	duration := time.Since(start) // 计算耗时
+	fmt.Printf("[耗时监控] GetOrderCartInfo saleBillUuid=%d, 耗时=%v\n", saleBillUuid, duration)
 
 	return shopCartInfo, nil
 }
@@ -4874,17 +4880,11 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
 
-	// test: 记录耗时
-	start := time.Now() // 记录开始时间
-
 	// 获取新的桌台数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-
-	duration := time.Since(start) // 计算耗时
-	fmt.Printf("[耗时监控] GetOrderCartInfo saleBillUuid=%d, 耗时=%v\n", request.SaleBillUuid, duration)
 	ctx.Log().Debug("获取新的账单数据")
 
 	return info, nil
