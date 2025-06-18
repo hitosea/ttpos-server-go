@@ -17498,6 +17498,12 @@ const docTemplate = `{
                     "description": "活动状态 0-未失效 1-已失效",
                     "type": "integer"
                 },
+                "locale_desc": {
+                    "$ref": "#/definitions/dto.LocaleResponse"
+                },
+                "locale_name": {
+                    "$ref": "#/definitions/dto.LocaleResponse"
+                },
                 "name": {
                     "description": "活动名称",
                     "type": "string"
