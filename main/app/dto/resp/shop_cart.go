@@ -154,6 +154,7 @@ type Product struct {
 	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称。商品名称、自助餐名称、自助餐加钟名称
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 float64            `json:"num"`                   // 数量
+	NumType             uint               `json:"num_type"`              // 数量计算方法 0-整数 1-小数
 	FinishedNum         float64            `json:"finished_num"`          // 制作完成数量
 	UnitPrice           float64            `json:"unit_price"`            // 单价（折前）
 	SalePrice           float64            `json:"price"`                 // 原价. 原价=单价*数量

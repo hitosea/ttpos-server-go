@@ -155,6 +155,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage) []prod
 			LocaleName:          product.MultiLanguageName.GetNames(),
 			Unit:                product.ProductUnit.MultiLanguageName.GetNames(),
 			Price:               minPrice,
+			NumType:             product.NumType,
 			LimitNum:            product.LimitNum,
 			CategoryUuid:        product.CategoryUuid,
 			FirstCategoryUuid:   product.ProductCategory.GetFirstCategoryUuid(),
