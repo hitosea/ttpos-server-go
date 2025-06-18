@@ -1288,6 +1288,9 @@ func (r *orderRepo) GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, err
 
 // GetSaleBillAllInfo 获取销售账单所有信息
 func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error) {
+	// test: 记录耗时
+	start := time.Now() // 记录开始时间
+
 	info, err := r.GetSaleBill(
 		CommonRepo.Preload(
 			WithPreload{
@@ -1447,6 +1450,10 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByUuid(saleBillUuid),
 	)
+
+	duration := time.Since(start) // 计算耗时
+	fmt.Printf("[耗时监控] GetSaleBillAllInfo saleBillUuid=%d, 耗时=%v\n", saleBillUuid, duration)
+
 	if err != nil {
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
 	}

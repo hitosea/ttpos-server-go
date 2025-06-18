@@ -18,7 +18,9 @@
       "[x]",
       "NOTE",
       "todo",
-      "ToDo"
+      "ToDo",
+      "test:",
+      "TEST:"
     ],
     "todo-tree.highlights.useColourScheme": true,
     "todo-tree.tree.expanded": true,
