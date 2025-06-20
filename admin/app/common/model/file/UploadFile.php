@@ -112,6 +112,7 @@ class UploadFile extends BaseModel
         // 查询列表数据
         return $model->with(['upload_group'])
             ->where(['is_user' => 0])
+            ->where('delete_time', 0)
             ->order(['id' => 'desc'])
             ->paginate($pageSize);
     }
