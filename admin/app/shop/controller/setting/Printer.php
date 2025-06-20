@@ -4,6 +4,7 @@ namespace app\shop\controller\setting;
 
 use app\shop\controller\Controller;
 use hg\apidoc\annotation as Apidoc;
+use app\common\model\shop\BindRecord;
 use app\common\service\websocket\Websocket;
 use app\shop\model\settings\Printer as PrinterModel;
 
@@ -63,7 +64,9 @@ class Printer extends Controller
     public function add()
     {
         if ($this->request->isGet()) {
-            return  $this->type();
+            $cashierList = BindRecord::getCashierList();
+            $printerType = PrinterModel::getPrinterTypeList();
+            return  $this->renderSuccess('', compact('cashierList', 'printerType'));
         }
         // 新增记录
         $model = new PrinterModel;
@@ -101,7 +104,8 @@ class Printer extends Controller
             'value' => $detail['printerType']['key'] ?? '',
         ];
         $printerType = PrinterModel::getPrinterTypeList();
-        return $this->renderSuccess('', compact('detail', 'printerType'));
+        $cashierList = BindRecord::getCashierList();
+        return $this->renderSuccess('', compact('detail', 'printerType', 'cashierList'));
     }
 
     /**
@@ -119,6 +123,8 @@ class Printer extends Controller
     public function edit($printer_id)
     {
         if ($this->request->isGet()) {
+            $cashierList = BindRecord::getCashierList();
+
             return $this->detail($printer_id);
         }
         /** @var PrinterModel $model */

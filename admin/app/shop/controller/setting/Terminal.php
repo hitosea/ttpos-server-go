@@ -107,6 +107,7 @@ class Terminal extends Controller
             'is_open_cashier_password' => $data['is_open_cashier_password'] ?? 0, // 是否开启钱箱密码 0-关闭 1-开启
             'language' => $data['language'] ?? [], // 常用语言
             'default_language' => $data['default_language'] ?? 'en', // 默认语言
+            'main_cashier_uuid' => $data['main_cashier_uuid'] ?? '', // 主收银机uuid
         ];
         // 当开启剩余时长颜色时，才会更新时长颜色
         if ($is_remain_color) {
