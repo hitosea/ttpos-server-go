@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/trans/handler"
 
 	"github.com/duke-git/lancet/v2/cryptor"
@@ -65,6 +66,9 @@ var migrateDataCmd = &cobra.Command{
 		if err := logger.Init(); err != nil {
 			log.Fatalf("Failed to initialize logger: %v", err)
 		}
+
+		// 初始化id生成器
+		utils.InitIdGenerator()
 
 		//确认
 		fmt.Printf("%s 输入要迁移的旧公司ID继续: %s", blueColor, resetColor)
