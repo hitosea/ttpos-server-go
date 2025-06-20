@@ -256,7 +256,7 @@
             item.create_time +
             ' ' +
             $t('操作人：') +
-            (item.real_name ? item.real_name + (item.username ? `(${item.username})` : '') : item.username || ''),
+            (item.real_name ? item.real_name + (item.username ? `(${item.username})` : '') : item.username || '') + ' ' + item.client,
           color: '#0bbd87',
         });
       });
