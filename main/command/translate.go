@@ -67,6 +67,8 @@ func execute() {
 			!strings.Contains(path, "old_model") &&
 			!strings.Contains(path, "command") &&
 			!strings.Contains(path, "request_logger") &&
+			!strings.Contains(path, "marketing_activity.go") &&
+			!strings.Contains(path, "bucket.go") &&
 			!strings.Contains(path, "model") {
 			content, err := ioutil.ReadFile(path)
 			if err != nil {
@@ -118,6 +120,7 @@ func execute() {
 	chineseTexts = filteredTexts
 
 	// 打印提取的中文数量
+	fmt.Println(chineseTexts)
 	fmt.Println(len(chineseTexts))
 
 	// 分组处理

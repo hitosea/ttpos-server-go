@@ -146,7 +146,7 @@ func (i *ImgFont) createImg() {
 func (i *ImgFont) GetFontPath(char string) string {
 	// 中文
 	chiPattern := regexp.MustCompile(`[\x{4E00}-\x{9FFF}\x{FF01}\x{FF0C}\x{FF08}\x{FF09}\x{FF1A}\x{FF5E}\x{2014}]`)
-	if char != "ー" && (chiPattern.MatchString(char) || char == "。" || char == "、" || char == "-" || char == "￥" || char == "；" || char == "？" || char == "＋" || char == "：") {
+	if char != "ー" && (chiPattern.MatchString(char) || char == "【" || char == "】" || char == "。" || char == "、" || char == "-" || char == "￥" || char == "；" || char == "？" || char == "＋" || char == "：") {
 		return fonts.FontZH
 	}
 
