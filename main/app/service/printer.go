@@ -70,6 +70,12 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 		dbUsbMap[usb.ConfigJson] = usb
 	}
 
+	// 获取打印设置
+	printerSetting, err := setting.NewSrv(s.dbm, s.cache).GetPrinterSetting(ctx, nil)
+	if err != nil {
+		return resp.PrinterReportResp{}, errors.ErrInternal
+	}
+
 	// 更新打印机状态
 	{
 		// 更新为离线
@@ -115,6 +121,16 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 					// 如果只有一个打印机，则选中这个打印机
 					if len(reportReq.List) == 1 {
 						lastNewUsb = dbUsb
+					} else {
+						for _, sprinter := range printerSetting.CashierPrinter {
+							if sprinter.Key == ctx.GetDeviceSn() {
+								if sprinter.PrinterUsbId == "0" || sprinter.PrinterUsbId == "" {
+									sprinter.PrinterUsbId = strconv.FormatUint(dbUsb.Uuid, 10)
+									lastNewUsb = dbUsb
+								}
+								break
+							}
+						}
 					}
 				} else {
 					uuid, _ := utils.GetID()
@@ -166,11 +182,6 @@ func (s *printerSrv) UsbPrinterReport(ctx context.Context, reportReq req.UsbPrin
 
 	// 更新打印设置
 	{
-		// 获取打印设置
-		printerSetting, err := setting.NewSrv(s.dbm, s.cache).GetPrinterSetting(ctx, nil)
-		if err != nil {
-			return resp.PrinterReportResp{}, errors.ErrInternal
-		}
 
 		// 更新打印设置
 		isUpdate := false
