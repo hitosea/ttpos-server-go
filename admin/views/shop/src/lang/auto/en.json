@@ -1977,5 +1977,8 @@
     "下载图片": "Download image",
     "长度12-13位数字": "Length is 12-13 digits",
     "请完善输入信息": "Please complete the input information",
-    "请输入扣除积分": "Please enter the points to be deducted"
+    "请输入扣除积分": "Please enter the points to be deducted",
+    "设为主收银机": "Set as main cash register",
+    "打印关联收银机": "Print associated cash register",
+    "选择打印机所关联的收银机": "Select the cash register associated with the printer"
 }

@@ -1731,5 +1731,8 @@
     "下载图片": "Resim indir",
     "长度12-13位数字": "Uzunluk 12-13 basamaklı sayı",
     "请完善输入信息": "Girdi bilgilerini tamamlayın",
-    "请输入扣除积分": "Lütfen düşülecek puanları girin"
+    "请输入扣除积分": "Lütfen düşülecek puanları girin",
+    "设为主收银机": "Ana yazar kasa olarak ayarla",
+    "打印关联收银机": "İlişkili yazar kasayı yazdır",
+    "选择打印机所关联的收银机": "Yazıcıya bağlı yazar kasayı seçin"
 }
