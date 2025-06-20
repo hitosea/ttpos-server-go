@@ -42,7 +42,7 @@ func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier
 			OrderMethod: setting.OrderMethod{
 				IsCashierOrder: "1",
 				IsTableOrder:   "1",
-			},                                                 // 用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）
+			}, // 用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）
 			Server:        setting.Server{IP: ip, Port: port}, // 收银机服务器连接
 			IsRemainColor: "1",                                // 是否开启剩余时长颜色 0-关闭 1-开启
 			RemainColor:   []string{"#E50028", "#F2A000"},     // 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
@@ -212,7 +212,7 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 		}, {
 			Key:  "5",
 			Name: i18n.Translate(language, "抹元"),
-		}},                         // 结账自动抹零方式列表
+		}}, // 结账自动抹零方式列表
 		ZeroingMethod:         "0", // 优惠折扣自动抹零方式
 		CheckoutZeroingMethod: "0", // 结账自动抹零方式
 		GiftMethodList: []setting.GiftMethodItem{{
@@ -221,7 +221,7 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 		}, {
 			Key:  "20",
 			Name: i18n.Translate(language, "不计入总销售额、优惠折扣"),
-		}},               // 赠菜计算方式列表
+		}}, // 赠菜计算方式列表
 		GiftMethod: "10", // 赠菜计算方式
 		FreeMethodList: []setting.FreeMethodItem{{
 			Key:  "10",
@@ -229,7 +229,7 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 		}, {
 			Key:  "20",
 			Name: i18n.Translate(language, "不计入总销售额、优惠折扣、服务费、税费"),
-		}},                          // 免单计算方式列表
+		}}, // 免单计算方式列表
 		FreeMethod:        "10",     // 免单计算方式
 		DiscountMethod:    "10",     // 折扣计算方式 10-按百分比 20-直接减免
 		QrCode:            "123456", // 电子菜单二维码校验失效值，6位数数字
@@ -294,7 +294,7 @@ func (s *Srv) getDefaultStore(language string) setting.Store {
 				Key:   "Europe/Istanbul",
 				Value: "（UTC+3:00）" + i18n.Translate(language, "安卡拉"),
 			},
-		},                              // 时区列表
+		}, // 时区列表
 		Language: []dto.LanguageItem{}, // 语言列表
 	}
 }
@@ -331,7 +331,7 @@ func (s *Srv) getDefaultPrinter(language string, languageList []dto.LanguageItem
 		}, {
 			Key:  "2",
 			Name: i18n.Translate(language, "图片打印"),
-		}},                   // 打印方式列表 （1-文本打印 2-图片打印 ）
+		}}, // 打印方式列表 （1-文本打印 2-图片打印 ）
 		DefaultCalendar: "1", // 日历类型 （1-公历 2-农历 3-佛历 4-伊斯兰历 5-犹太历 ）
 	}
 }
@@ -352,12 +352,12 @@ func (s *Srv) getDefaultRecharge() setting.Recharge {
 // 默认积分设置
 func (s *Srv) getDefaultPoints() setting.Points {
 	return setting.Points{
-		DeductionOrder:     "1",    // 扣款顺序 1-先主账户后赠送账户 2-先赠送账户后主账户 3-按比例
-		DeductRatioMain:    "100",  // 主账户扣款比例0-100
-		DeductRatioGift:    "0",    // 赠送账户扣款比例0-100
-		PointsName:         "积分", // 积分名称自定义
-		IsShoppingGift:     "0",    // 是否开启购物送积分
-		GiftRatio:          "100",  // 积分赠送比例
+		DeductionOrder:     "1",   // 扣款顺序 1-先主账户后赠送账户 2-先赠送账户后主账户 3-按比例
+		DeductRatioMain:    "100", // 主账户扣款比例0-100
+		DeductRatioGift:    "0",   // 赠送账户扣款比例0-100
+		PointsName:         "积分",  // 积分名称自定义
+		IsShoppingGift:     "0",   // 是否开启购物送积分
+		GiftRatio:          "100", // 积分赠送比例
 		IsShoppingDiscount: "0",
 		Discount: setting.DiscountItem{
 			DiscountRatio:  "0.01",
@@ -415,7 +415,7 @@ func (s *Srv) getDefaultSysAdminConfig() setting.SysAdminConfig {
 func (s *Srv) getDefaultSysConfig() setting.SysConfig {
 	return setting.SysConfig{
 		ShopName:    "XXX shop", // 商城名称
-		CashierName: "收银台",   // 收银台名称
+		CashierName: "收银台",      // 收银台名称
 	}
 }
 
@@ -507,6 +507,15 @@ func (s *Srv) parseCashierSetting(values string) ([]byte, error) {
 			jsonMap["auto_order_limit"] = strconv.Itoa(int(numVal))
 		} else if strVal, ok := autoOrderLimit.(int); ok {
 			jsonMap["auto_order_limit"] = strconv.Itoa(strVal)
+		}
+	}
+
+	// 处理 menu_show_sold_out
+	if menuShowSoldOut, ok := jsonMap["menu_show_sold_out"]; ok {
+		if numVal, ok := menuShowSoldOut.(float64); ok {
+			jsonMap["menu_show_sold_out"] = strconv.Itoa(int(numVal))
+		} else if strVal, ok := menuShowSoldOut.(int); ok {
+			jsonMap["menu_show_sold_out"] = strconv.Itoa(strVal)
 		}
 	}
 
