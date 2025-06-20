@@ -360,7 +360,7 @@ class Order extends OrderModel
             // 
             $subOrder[] = [
                 'bill_type' => $subItem['order_source'] == 10 ? 0 : 1,
-                'dining_method' => $subItem['order_type'],
+                'dining_method' => $subItem['order_type'] == 0 ? 1 : 0,
                 'finish_time' => $subItem['pay_time'],
                 'free_reason' => [
                     'zh' => $subItem['free_remark'],
@@ -431,7 +431,7 @@ class Order extends OrderModel
             'buffet_names' => implode(',', $buffetNames),
             'cancel_reason' => $detail['cancel_remark'],
             'cashier_name' => $detail['cashier']['real_name'] ??  $detail['cashier']['user_name'] ?? '-',
-            'dining_method' => $detail['order_type'],
+            'dining_method' => $detail['order_type'] == 0 ? 1 : 0,
             'finish_time' => $detail['pay_time'],
             'create_time' => $detail['create_time'],
             'is_buffet' => $detail['is_buffet'] == 1 ? true : false,

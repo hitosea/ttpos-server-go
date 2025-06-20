@@ -2,13 +2,13 @@
 
 namespace app\common\service\order;
 
-use app\common\model\shop\BindRecord;
+use app\common\model_old\shop\BindRecord;
 use app\common\enum\settings\SettingEnum;
 use app\common\enum\settings\PrinterTypeEnum;
 use app\shop\model_old\order\Order as OrderModel;
 use app\common\template\invoice\ImgInvoiceTemplate;
 use app\common\template\invoice\SunmiInvoiceTemplate;
-use app\common\model\settings\Setting as SettingModel;
+use app\common\model_old\settings\Setting as SettingModel;
 use app\common\template\invoice\CompaxInvoiceTemplate;
 use app\common\template\invoice\CodesoftInvoiceTemplate;
 use app\common\template\invoice\XprinterInvoiceTemplate;
