@@ -4156,7 +4156,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			shopCartInfo.MustPlans = productMustPlanList
 		}
 	}
-
 	return shopCartInfo, nil
 }
 

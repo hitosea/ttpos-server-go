@@ -101,7 +101,6 @@ services:
     image: hub.hitosea.com/ttpos-server/ttpos-server-websocket:${IMAGE_VERSION}
     volumes:
       - .env:/var/.env
-      - ./docker/websocket/log:/var/www/log
     restart: always
     networks:
       saas-network:
