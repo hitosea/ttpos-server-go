@@ -334,12 +334,6 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 					orderExtendPrice = orderExtendPrice.Sub(decimal.NewFromFloat(order.ConsumptionTaxMoney))
 				}
 
-				// 高老九
-				if s.sourceCompanyUuid == 1724054088 {
-					if order.ConsumptionTaxType == 2 {
-						noOrderRefundTax = orderRefundTax
-					}
-				}
 			} else {
 				// todo
 				// 等于子订单的 orderProductTax， orderRefundTax
