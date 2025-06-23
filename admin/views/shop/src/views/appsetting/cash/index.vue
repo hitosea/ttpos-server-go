@@ -173,6 +173,7 @@
               <SvgIcon class="form-icon" name="man"></SvgIcon>
             </el-tooltip>
             <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
+            <el-checkbox v-if="item.platform != 0" :model-value="item.is_main == 1" @change="setMain(item)" style="margin-left: 20px" size="small">{{ $t('设为主收银机') }}</el-checkbox>
           </div>
           <p v-else>{{ $t('暂无设备') }}</p>
         </el-form-item>
@@ -409,6 +410,7 @@
         this.sortOne();
         let params = JSON.parse(JSON.stringify(self.form));
         //绑定的设备不用提清空
+        params.main_cashier_uuid = params.bind_list.find((bind) => bind.is_main == 1)?.uuid || '';
         params.bind_list = [];
         self.loading = true;
         Terminal.saveTerminal(params, true)
@@ -484,6 +486,15 @@
         this.form.carousel.sort((a, b) => {
           return a.sort - b.sort; // 按照数值大小进行排序
         });
+      },
+      setMain(item) {
+        let self = this;
+        self.form.bind_list.map((bind) => {
+          if (bind.id != item.id) {
+            bind.is_main = 0;
+          }
+        });
+        item.is_main = item.is_main == 1 ? 0 : 1;
       },
     },
   };

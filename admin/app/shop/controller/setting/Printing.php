@@ -130,35 +130,9 @@ class Printing extends Controller
      */
     public function fetchData()
     {
-        //
         $vars['printerList'] = PrinterModel::getAll($this->store['user']['shop_supplier_id']);
-        //
-        $vars['cashierList'] = BindRecord::alias('a')->where('source', BindRecord::SOURCE_CASHIER)
-            // 云部署方式 - 不显示网页端
-            // todo 无网页版本-先注释
-            // ->when(env('IS_CLOUD_DEPLOY', false), function ($q) {
-            //     $q->where('platform', 'Android');
-            //     // ->whereIn('brand', BindRecord::BRANDS_ALL)
-            // })
-            ->field("a.device_id as cashier_key")
-            ->field("CONCAT(if(remark='', '-', remark), ' (', a.device_id, ')') cashier_name")
-            ->order('id')
-            ->where("delete_time", 0) // 加了软删除，需要这个条件
-            ->select()
-            ->toArray();
-        //
+        $vars['cashierList'] = BindRecord::getCashierList();
         $vars['values'] = SettingModel::getSupplierItem(SettingEnum::PRINTER, $this->store['user']['shop_supplier_id']);
-
-        // NOTE: 舍弃5分钟自动切换
-        // foreach ($vars['values']['cashier_printer'] ?? [] as $key => $value) {
-        //     if (isset($value['printer_usb_id']) && $value['printer_usb_id'] != '' && $value['printer_usb_id'] != 0) {
-        //         $usbPrinter = PrinterModel::where("uuid", $value['printer_usb_id'])->where('source_device_sn', $value['key'])->where('is_usb', 1)->find();
-        //         if ($usbPrinter && ($usbPrinter['status'] == 1 || (time() - $usbPrinter['last_heartbeat_time'] < 300))) {
-        //             $vars['values']['cashier_printer'][$key]['printer_id'] = $value['printer_usb_id'];
-        //         }
-        //     }
-        // }
-       
         // usb 设备回显
         foreach ($vars['values']['cashier_printer'] ?? [] as $key => $value) {
             if (isset($value['printer_usb_id']) && $value['printer_usb_id'] != '' && $value['printer_usb_id'] != 0) {
