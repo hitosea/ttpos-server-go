@@ -947,7 +947,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 				productRefundNum := 0
 				for _, refundProduct := range saleProduct.ReturnOrderProducts {
 					productRefundNum += int(refundProduct.Num)
-					orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee)).Add(decimal.NewFromFloat(saleProduct.ServiceTaxFee)).Mul(decimal.NewFromFloat(float64(refundProduct.Num)))
+					orderRefundTax = orderRefundTax.Add(
+						decimal.NewFromFloat(saleProduct.TaxFee).Add(
+							decimal.NewFromFloat(saleProduct.ServiceTaxFee),
+						).Mul(decimal.NewFromFloat(float64(refundProduct.Num))),
+					)
 					if isFeeType {
 						noOrderRefundTax = noOrderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
 					}
@@ -1023,7 +1027,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			productRefundNum := 0
 			for _, refundProduct := range saleBuffetCustomerType.ReturnOrderProducts {
 				productRefundNum += int(refundProduct.Num)
-				orderRefundTax = orderRefundTax.Add(decimal.NewFromFloat(saleBuffetCustomerType.TaxFee)).Add(decimal.NewFromFloat(saleBuffetCustomerType.ServiceTaxFee)).Mul(decimal.NewFromFloat(float64(refundProduct.Num)))
+				orderRefundTax = orderRefundTax.Add(
+					decimal.NewFromFloat(saleBuffetCustomerType.TaxFee).Add(
+						decimal.NewFromFloat(saleBuffetCustomerType.ServiceTaxFee),
+					).Mul(decimal.NewFromFloat(float64(refundProduct.Num))),
+				)
 				if isFeeType {
 					noOrderRefundTax = noOrderRefundTax.Add(decimal.NewFromFloat(saleBuffetCustomerType.TaxFee))
 				}
