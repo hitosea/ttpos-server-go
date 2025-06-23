@@ -47,7 +47,7 @@
             <div class="pb16">
               <span class="gray9">{{ $t('支付方式：') }}</span>
               <span>
-                {{ item.name }}
+                {{ item.name }} {{ item.source_text ? `(${item.source_text})` : '' }}
               </span>
             </div>
           </el-col>
@@ -256,7 +256,7 @@
             item.create_time +
             ' ' +
             $t('操作人：') +
-            (item.real_name ? item.real_name + (item.username ? `(${item.username})` : '') : item.username || ''),
+            (item.real_name ? item.real_name + (item.username ? `(${item.username})` : '') : item.username || '') + ' ' + item.client,
           color: '#0bbd87',
         });
       });

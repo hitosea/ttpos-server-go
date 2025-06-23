@@ -63,7 +63,7 @@ func (s *StatisticsProductService) convertProduct(offset int, limit int) error {
             IF(rp.is_free != 0, rp.total_num, 0)  as give_num,
             IF(a.is_free != 0, rp.total_num, 0)  as free_num,  
             rp.refund_num as refund_num,    
-            a.pay_time as complete_time,
+            a.create_time as complete_time,
             a.create_time as create_time
         FROM jjjfood_order a
         LEFT JOIN jjjfood_order_product rp ON a.order_id = rp.order_id

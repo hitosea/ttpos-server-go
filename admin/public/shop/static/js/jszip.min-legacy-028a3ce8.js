@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:admin/public/shop/static/js/jszip.min-legacy-028a3ce8.js
 !function(){function e(t){return e="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(e){return typeof e}:function(e){return e&&"function"==typeof Symbol&&e.constructor===Symbol&&e!==Symbol.prototype?"symbol":typeof e},e(t)}System.register(["./element-legacy-20d06bfa.js","./index-legacy-1e51a17e.js"],(function(t,r){"use strict";var n,i,a;return{setters:[function(e){n=e.c,i=e.a},function(e){a=e.i}],execute:function(){var r={exports:{}};
+========
+!function(){function e(t){return e="function"==typeof Symbol&&"symbol"==typeof Symbol.iterator?function(e){return typeof e}:function(e){return e&&"function"==typeof Symbol&&e.constructor===Symbol&&e!==Symbol.prototype?"symbol":typeof e},e(t)}System.register(["./element-legacy-20d06bfa.js","./index-legacy-c42b2bbf.js"],(function(t,r){"use strict";var n,i,a;return{setters:[function(e){n=e.c,i=e.a},function(e){a=e.i}],execute:function(){var r={exports:{}};
+>>>>>>>> release-fix-migrate-data:admin/public/shop/static/js/jszip.min-legacy-7b44d058.js
 /*!
 
 			JSZip v3.10.1 - A JavaScript class for generating and reading zip files

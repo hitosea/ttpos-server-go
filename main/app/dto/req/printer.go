@@ -36,9 +36,6 @@ func (req PrinterReportReqs) Validate() error {
 		return errors.New("打印报告数据不能为空")
 	}
 	for _, report := range req.Data {
-		if report.Uuid == 0 {
-			return errors.New("打印UUID不能为空")
-		}
 		if report.Status != 0 && report.Status != 1 {
 			return errors.New("打印状态错误")
 		}

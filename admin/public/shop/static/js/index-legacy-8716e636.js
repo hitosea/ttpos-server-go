@@ -1,1 +1,5 @@
+<<<<<<<< HEAD:admin/public/shop/static/js/index-legacy-8716e636.js
 System.register(["./index-legacy-1e51a17e.js","./vue-legacy-b5f00880.js","./element-legacy-20d06bfa.js"],(function(e,n){"use strict";var t,u,c,i,r,s;return{setters:[function(e){t=e.u},function(e){u=e.aB,c=e.x,i=e.y,r=e.a3,s=e.B},null],execute:function(){e("default",{__name:"index",setup:function(e){var n=t(),o=u(),l=function(){n.setLock(!1),o.push("/home")};return function(e,n){return c(),i("div",null,[n[0]||(n[0]=r(" 锁屏 ")),s("button",{onClick:l},"解锁")])}}})}}}));
+========
+System.register(["./index-legacy-c42b2bbf.js","./vue-legacy-b5f00880.js","./element-legacy-20d06bfa.js"],(function(e,n){"use strict";var t,u,c,i,r,s;return{setters:[function(e){t=e.u},function(e){u=e.aB,c=e.x,i=e.y,r=e.a3,s=e.B},null],execute:function(){e("default",{__name:"index",setup:function(e){var n=t(),o=u(),l=function(){n.setLock(!1),o.push("/home")};return function(e,n){return c(),i("div",null,[n[0]||(n[0]=r(" 锁屏 ")),s("button",{onClick:l},"解锁")])}}})}}}));
+>>>>>>>> release-fix-migrate-data:admin/public/shop/static/js/index-legacy-61b12c3a.js

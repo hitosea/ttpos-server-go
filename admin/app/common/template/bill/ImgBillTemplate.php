@@ -158,12 +158,16 @@ class ImgBillTemplate extends BaseTemplate
         else if ($template == 3) {
             // 打印logo
             if ($this->setting) {
-                $storeSetting = $this->setting[SettingEnum::STORE]['values'] ?? [];
-                $printer->setTextLineHeight(25);
-                $printer->setAlignment(ImgFont::ALIGN_CENTER);
-                $whiteBackgroundWithBlackTextLogoPath = Supplier::getWhiteBackgroundWithBlackTextLogoPath($order['app_id'], 'http://nginx' . ImgHelp::removeImageDomain($storeSetting['logoUrl'] ?? ''));
-                $printer->appendImg($whiteBackgroundWithBlackTextLogoPath, 150, false, -25);
-                $printer->lineFeed(1);
+                try {
+                    $storeSetting = $this->setting[SettingEnum::STORE]['values'] ?? [];
+                    $printer->setTextLineHeight(25);
+                    $printer->setAlignment(ImgFont::ALIGN_CENTER);
+                    $whiteBackgroundWithBlackTextLogoPath = Supplier::getWhiteBackgroundWithBlackTextLogoPath($order['app_id'], 'http://nginx' . ImgHelp::removeImageDomain($storeSetting['logoUrl'] ?? ''));
+                    $printer->appendImg($whiteBackgroundWithBlackTextLogoPath, 150, false, -25);
+                    $printer->lineFeed(1);
+                } catch (\Throwable $th) {
+                    //throw $th;
+                }
             }
             //
             $printer->lineFeed(1, 10);

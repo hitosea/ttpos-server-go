@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:admin/public/shop/static/js/jszip.min-f152abfd.js
 import{c as e,a as t}from"./element-6025a1da.js";import{i as r}from"./index-cb932748.js";var n={exports:{}};
+========
+import{c as e,a as t}from"./element-6025a1da.js";import{i as r}from"./index-62f9e1e7.js";var n={exports:{}};
+>>>>>>>> release-fix-migrate-data:admin/public/shop/static/js/jszip.min-2ebb1aed.js
 /*!
 
 JSZip v3.10.1 - A JavaScript class for generating and reading zip files
