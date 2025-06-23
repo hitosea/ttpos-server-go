@@ -5095,16 +5095,20 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 				// 如果是送厨检查
 				status, message = saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
 
-				{
-					flavorBomUuid := saleOrderProduct.GetFlavorBomUuid()
-					if _, ok := productBomNumMap[flavorBomUuid]; !ok {
-						productBomNumMap[flavorBomUuid] = &FlavorNum{
-							SaleOrderProduct: saleOrderProduct,
-							Num:              saleOrderProduct.Num,
+				// 只检查未送厨的商品
+				if !saleOrderProduct.IsCookingProduct() {
+					// 只要是未送厨的商品，都需要检查
+					{
+						flavorBomUuid := saleOrderProduct.GetFlavorBomUuid()
+						if _, ok := productBomNumMap[flavorBomUuid]; !ok {
+							productBomNumMap[flavorBomUuid] = &FlavorNum{
+								SaleOrderProduct: saleOrderProduct,
+								Num:              saleOrderProduct.Num,
+							}
+						} else {
+							flavorNum := productBomNumMap[flavorBomUuid]
+							flavorNum.Num += saleOrderProduct.Num
 						}
-					} else {
-						flavorNum := productBomNumMap[flavorBomUuid]
-						flavorNum.Num += saleOrderProduct.Num
 					}
 				}
 			}
