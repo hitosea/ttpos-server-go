@@ -224,3 +224,12 @@ type BuffetProduct struct {
 	Name  string `json:"name"`  // 商品名称. 不用于前端展示，仅用于开发核对接口数据是否正确
 	Limit uint   `json:"limit"` // 限购数量， 限购数量=单人限购数量*用餐人数
 }
+
+type ProductPackageDetail struct {
+	Sign string  `json:"sign"` // 签名,格式为：商品规格uuid:属性uuid1,属性uuid2,属性uuid3:加料uuid1,加料uuid2,加料uuid3。属性和加料的uuid要按从小到大排序
+	Num  float64 `json:"num"`  // 数量
+}
+
+type ProductPackageDetailRes struct {
+	List []ProductPackageDetail `json:"list"` // 数据
+}

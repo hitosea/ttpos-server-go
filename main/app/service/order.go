@@ -135,7 +135,8 @@ type IOrderSrv interface {
 
 	TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) (*TabletAddAndCookingRes, error) // 平板端加购并送厨
 
-	GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error) // 获取订单会员列表
+	GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error)                       // 获取订单会员列表
+	GetProductPackageDetail(ctx context.Context, req req.GetProductPackageDetailReq) (*resp.ProductPackageDetailRes, error) // 获取商品选购详情
 }
 
 // orderSrv 订单服务结构
@@ -4604,6 +4605,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}
+	return nil, nil
 	ctx.Log().Debug("获取到账单信息成功")
 
 	// 判断订单状态
@@ -10213,4 +10215,10 @@ func (s *orderSrv) GetOrderMemberList(ctx context.Context, saleBillUuid uint64) 
 		List:  list,
 		Extra: extra,
 	}, nil
+}
+
+func (s *orderSrv) GetProductPackageDetail(ctx context.Context, req req.GetProductPackageDetailReq) (*resp.ProductPackageDetailRes, error) {
+	// db := ctx.GetDB()
+
+	return nil, nil
 }

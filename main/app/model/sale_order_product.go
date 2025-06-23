@@ -9,6 +9,7 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
@@ -1184,4 +1185,58 @@ func (model *SaleOrderProduct) GetAttributeNames() string {
 		}
 	}
 	return strings.Join(attributeNames, "; ")
+}
+
+// 获取销售订单商品的属性uuid列表
+func (model *SaleOrderProduct) GetAttributeUuidList() []uint64 {
+	attributeUuidList := make([]uint64, 0)
+	for _, attribute := range model.SaleOrderProductAttributes {
+		attributeUuidList = append(attributeUuidList, attribute.ProductAttributeUuid)
+	}
+	sort.Slice(attributeUuidList, func(i, j int) bool {
+		return attributeUuidList[i] < attributeUuidList[j]
+	})
+	return attributeUuidList
+}
+
+// 获取销售订单商品的加料uuid列表
+func (model *SaleOrderProduct) GetBomUuidList() []uint64 {
+	bomUuidList := make([]uint64, 0)
+	for _, bom := range model.SaleOrderProductBoms {
+		if !bom.IsSauce() {
+			continue
+		}
+		bomUuidList = append(bomUuidList, bom.ProductBomUuid)
+	}
+	sort.Slice(bomUuidList, func(i, j int) bool {
+		return bomUuidList[i] < bomUuidList[j]
+	})
+	return bomUuidList
+}
+
+// 生成规格属性加料签名。格式为：商品规格uuid:属性uuid1,属性uuid2,属性uuid3:加料uuid1,加料uuid2,加料uuid3。属性和加料的uuid要按从小到大排序
+func (model *SaleOrderProduct) GenerateProductPackageSign() string {
+	flavorUuid := model.GetFlavorBomUuid()
+	attributeUuidList := model.GetAttributeUuidList()
+	bomUuidList := model.GetBomUuidList()
+
+	// 转换成字符串
+	attributeUuidStringList := make([]string, 0)
+	bomUuidStringList := make([]string, 0)
+	for _, uuid := range attributeUuidList {
+		attributeUuidStringList = append(attributeUuidStringList, strconv.FormatUint(uuid, 10))
+	}
+	for _, uuid := range bomUuidList {
+		bomUuidStringList = append(bomUuidStringList, strconv.FormatUint(uuid, 10))
+	}
+
+	return utils.GenerateProductPackageSign(flavorUuid, attributeUuidStringList, bomUuidStringList)
+}
+
+// 获取商品选购详情
+func (model *SaleOrderProduct) GetProductPackageDetail() resp.ProductPackageDetail {
+	return resp.ProductPackageDetail{
+		Sign: model.GenerateProductPackageSign(),
+		Num:  model.Num,
+	}
 }

@@ -39,6 +39,12 @@ type ProductAddReq struct {
 	IsH5Product   bool            `json:"is_h5_product"`   // 是否是H5商品
 }
 
+type GetProductPackageDetailReq struct {
+	SaleBillUuid       uint64 `json:"sale_bill_uuid"`       // 销售账单ID
+	SaleOrderUuid      uint64 `json:"sale_order_uuid"`      // 销售订单ID
+	ProductPackageUuid uint64 `json:"product_package_uuid"` // 商品包uuid
+}
+
 type TabletOrderCartProductAddReq struct {
 	SaleBillUuid  uint64          `json:"sale_bill_uuid" binding:"required"`      // 销售账单ID。
 	SaleOrderUuid uint64          `json:"sale_order_uuid" binding:"required"`     // 销售订单ID。

@@ -559,6 +559,22 @@ func (h *Handler) GetDeskPing(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetProductPackageDetail 获取商品选购详情
+// @Summary 获取商品选购详情
+// @Description 获取商品选购详情
+// @Tags 扫码点餐
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query req.GetProductPackageDetailReq true "商品选购详情参数"
+// @Success 200 {object} dto.Response{data=Res}
+// @Failure 404 {object} nil "未找到"
+// @Router /h5/product/package/detail [get]
+func (h *Handler) GetProductPackageDetail(c *gin.Context) {
+	// ctx := helper.GetContext(c)
+
+}
+
 // RegisterH5Handlers 注册扫码h5路由
 func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -608,5 +624,7 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 		privateApi.GET("/desk/order/buffet/product/list", wrapper.GetDeskBuffetProductList)        // 获取自助餐商品列表
 		privateApi.POST("/desk/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)             // 确认必点商品
 		privateApi.GET("/desk/ping", wrapper.GetDeskPing)                                          // 定时获取桌台信息
+		// 通过product_package_uuid获取该商品的选购详情，如某个规格属性加料的组合被选购了多少各
+		privateApi.GET("/product/package/detail", wrapper.GetProductPackageDetail) // 获取商品选购详情
 	}
 }
