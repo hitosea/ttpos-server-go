@@ -60,10 +60,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	}
 
 	// 打印方式
-	printMethod := constant.PrinterLogPrintMethodText
-	if p.printerSetting.PrintMethod == "2" {
-		printMethod = constant.PrinterLogPrintMethodImage
-	}
+	printMethod := p.SetPrinterMethod(settingPrinterInfo.PrintMethod)
 
 	// 打印日志服务
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
@@ -145,7 +142,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	}
 
 	// 图片打印
-	if p.printerSetting.PrintMethod == "2" {
+	if p.IsImagePrinterMethod() {
 		return template.NewStatementOrderImgTemplate(base).GetPrintContent(
 			printType,
 			tmp,
