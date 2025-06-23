@@ -86,9 +86,9 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			// 打印方式
 			var printMethod int
 			if printerItem.Printer != nil {
-				printMethod = p.SetPrinterMethod(printerItem.Printer.PrintMethod)
+				printMethod = p.SetPrinterMethod(printerItem.Printer.PrintMethod, true)
 			} else {
-				printMethod = p.GetPrinterMethod()
+				printMethod = p.GetPrinterMethod(true)
 			}
 
 			// 退菜单打印
@@ -217,7 +217,7 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 	)
 
 	// 图片打印
-	if p.IsImagePrinterMethod() {
+	if p.IsImagePrinterMethod(true) {
 		t := template.NewDishesImgTemplate(base)
 		return t.CompleteOrder(tmp, printerItem, saleBill, products)
 	}
@@ -267,7 +267,7 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 	)
 
 	// 图片打印
-	if p.IsImagePrinterMethod() {
+	if p.IsImagePrinterMethod(true) {
 		t := template.NewDishesImgTemplate(base)
 		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
 	}
@@ -314,7 +314,7 @@ func (p *PrinterRepoImpl) getPrintReturnProductContent(
 	)
 
 	// 图片打印
-	if p.printerSetting.KitchenPrintMethod == "2" {
+	if p.IsImagePrinterMethod(true) {
 		t := template.NewDishesImgTemplate(base)
 		return t.ReturnMenuTemplate(printerItem, saleBill, products)
 	}

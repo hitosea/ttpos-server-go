@@ -218,27 +218,37 @@ func decompress(data string) (string, error) {
 }
 
 // 获取打印机打印方式
-func (p *PrinterRepoImpl) SetPrinterMethod(printMethod int) int {
-	p.printMethod = printMethod
-	if p.printMethod != 0 {
-		p.printerSetting.PrintMethod = strconv.Itoa(printMethod)
+func (p *PrinterRepoImpl) SetPrinterMethod(printMethod int, isKitchen ...bool) int {
+	if printMethod != 0 {
+		p.printMethod = printMethod
+		if len(isKitchen) > 0 && isKitchen[0] {
+			p.printerSetting.KitchenPrintMethod = strconv.Itoa(printMethod)
+		} else {
+			p.printerSetting.PrintMethod = strconv.Itoa(printMethod)
+		}
 	}
-	return p.GetPrinterMethod()
+	return p.GetPrinterMethod(isKitchen...)
 }
 
 // 获取打印机打印方式
-func (p *PrinterRepoImpl) GetPrinterMethod() int {
+func (p *PrinterRepoImpl) GetPrinterMethod(isKitchen ...bool) int {
 	if p.printMethod != 0 {
 		return p.printMethod
 	}
 	printMethod := constant.PrinterLogPrintMethodText
-	if p.printerSetting.PrintMethod == "2" {
-		printMethod = constant.PrinterLogPrintMethodImage
+	if len(isKitchen) > 0 && isKitchen[0] {
+		if p.printerSetting.KitchenPrintMethod == "2" {
+			printMethod = constant.PrinterLogPrintMethodImage
+		}
+	} else {
+		if p.printerSetting.PrintMethod == "2" {
+			printMethod = constant.PrinterLogPrintMethodImage
+		}
 	}
 	return printMethod
 }
 
 // 获取打印机打印方式
-func (p *PrinterRepoImpl) IsImagePrinterMethod() bool {
-	return p.GetPrinterMethod() == constant.PrinterLogPrintMethodImage
+func (p *PrinterRepoImpl) IsImagePrinterMethod(isKitchen ...bool) bool {
+	return p.GetPrinterMethod(isKitchen...) == constant.PrinterLogPrintMethodImage
 }

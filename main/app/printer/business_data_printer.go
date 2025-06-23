@@ -126,7 +126,7 @@ func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 	}
 
 	// 图片打印
-	if p.printerSetting.PrintMethod == "2" {
+	if p.IsImagePrinterMethod() {
 		return template.NewBusinessDataImgTemplate(base).GetPrintContent(businessData, startTime, endTime)
 	}
 
