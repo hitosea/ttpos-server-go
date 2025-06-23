@@ -47,7 +47,7 @@
             <div class="pb16">
               <span class="gray9">{{ $t('支付方式：') }}</span>
               <span>
-                {{ item.name }}
+                {{ item.name }} {{ item.source_text ? `(${item.source_text})` : '' }}
               </span>
             </div>
           </el-col>

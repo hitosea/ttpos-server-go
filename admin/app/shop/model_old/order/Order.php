@@ -437,7 +437,7 @@ class Order extends OrderModel
             'is_buffet' => $detail['is_buffet'] == 1 ? true : false,
             'is_split' => count($detail['subOrder']) > 0 ? true : false,
             'member_names' => implode(',', $member_names),
-            'member_uuids' => implode(',', $member_uuids),
+            'member_uuids' => implode(',', array_unique($member_uuids)),
             'order_amount' => $detail['order_price'],
             'order_no' => $detail['order_no'],
             'pay_types' => $payTypes,
