@@ -53,12 +53,6 @@ func (p *PrinterRepoImpl) PrintingDishes(
 	// 打印日志服务
 	pinterLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
-	// 打印方式
-	printMethod := constant.PrinterLogPrintMethodText
-	if p.printerSetting.KitchenPrintMethod == "2" {
-		printMethod = constant.PrinterLogPrintMethodImage
-	}
-
 	// 循环商品打印机
 	for _, productPrinter := range productPrinters {
 		// 区域对的上才走
@@ -87,6 +81,14 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			var printerType string
 			if printerItem.Printer != nil && printerItem.Printer.PrinterType != nil {
 				printerType = printerItem.Printer.PrinterType.Key
+			}
+
+			// 打印方式
+			var printMethod int
+			if printerItem.Printer != nil {
+				printMethod = p.SetPrinterMethod(printerItem.Printer.PrintMethod)
+			} else {
+				printMethod = p.GetPrinterMethod()
 			}
 
 			// 退菜单打印
@@ -215,7 +217,7 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 	)
 
 	// 图片打印
-	if p.printerSetting.KitchenPrintMethod == "2" {
+	if p.IsImagePrinterMethod() {
 		t := template.NewDishesImgTemplate(base)
 		return t.CompleteOrder(tmp, printerItem, saleBill, products)
 	}
@@ -265,7 +267,7 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 	)
 
 	// 图片打印
-	if p.printerSetting.KitchenPrintMethod == "2" {
+	if p.IsImagePrinterMethod() {
 		t := template.NewDishesImgTemplate(base)
 		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
 	}

@@ -134,6 +134,12 @@
         <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort" autocomplete="off"></el-input-number>
       </el-form-item>
 
+      <el-form-item for="no_click" :label="$t('打印方式')" prop="print_method">
+        <el-select v-model="form.print_method" :placeholder="$t('选择打印方式')" style="width: 100%" clearable>
+          <el-option :label="$t('文本打印')" :value="1"></el-option>
+          <el-option :label="$t('图片打印')" :value="2"></el-option>
+        </el-select>
+      </el-form-item>
       <!--提交-->
     </el-form>
     <template #footer>
@@ -164,6 +170,7 @@
         form: {
           printer_name: '',
           printer_type: '',
+          print_method: '',
           sort: null,
           print_times: 1,
           FEI_E_YUN: {
@@ -234,6 +241,7 @@
               return;
             }
             self.loading = true;
+            self.form.print_method = self.form.print_method || 0;
             SettingApi.addPrinter(self.form, true)
               .then(() => {
                 self.loading = false;

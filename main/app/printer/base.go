@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
@@ -43,6 +44,7 @@ type PrinterRepoImpl struct {
 	storeSetting    respSetting.Store
 	printerSetting  respSetting.Printer
 	currencySetting respSetting.Currency
+	printMethod     int
 	Lang            string // 可选语言参数
 }
 
@@ -213,4 +215,30 @@ func decompress(data string) (string, error) {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+// 获取打印机打印方式
+func (p *PrinterRepoImpl) SetPrinterMethod(printMethod int) int {
+	p.printMethod = printMethod
+	if p.printMethod != 0 {
+		p.printerSetting.PrintMethod = strconv.Itoa(printMethod)
+	}
+	return p.GetPrinterMethod()
+}
+
+// 获取打印机打印方式
+func (p *PrinterRepoImpl) GetPrinterMethod() int {
+	if p.printMethod != 0 {
+		return p.printMethod
+	}
+	printMethod := constant.PrinterLogPrintMethodText
+	if p.printerSetting.PrintMethod == "2" {
+		printMethod = constant.PrinterLogPrintMethodImage
+	}
+	return printMethod
+}
+
+// 获取打印机打印方式
+func (p *PrinterRepoImpl) IsImagePrinterMethod() bool {
+	return p.GetPrinterMethod() == constant.PrinterLogPrintMethodImage
 }
