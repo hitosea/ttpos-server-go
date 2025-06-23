@@ -1,5 +1,0 @@
-<<<<<<<< HEAD:admin/public/shop/static/js/fullreduce-legacy-2f561e23.js
-System.register(["./index-legacy-1e51a17e.js"],(function(e,t){"use strict";var u;return{setters:[function(e){u=e.r}],execute:function(){e("F",{getList:function(e,t){return u._post("/shop/plus.fullreduce/index",e,t)},add:function(e,t){return u._post("/shop/plus.fullreduce/add",e,t)},edit:function(e,t){return u._post("/shop/plus.fullreduce/edit",e,t)},del:function(e,t){return u._post("/shop/plus.fullreduce/delete",e,t)}})}}}));
-========
-System.register(["./index-legacy-c42b2bbf.js"],(function(e,t){"use strict";var u;return{setters:[function(e){u=e.r}],execute:function(){e("F",{getList:function(e,t){return u._post("/shop/plus.fullreduce/index",e,t)},add:function(e,t){return u._post("/shop/plus.fullreduce/add",e,t)},edit:function(e,t){return u._post("/shop/plus.fullreduce/edit",e,t)},del:function(e,t){return u._post("/shop/plus.fullreduce/delete",e,t)}})}}}));
->>>>>>>> release-fix-migrate-data:admin/public/shop/static/js/fullreduce-legacy-b560f7ef.js
