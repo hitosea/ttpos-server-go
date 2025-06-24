@@ -308,9 +308,10 @@ class Order extends Controller
         if ($this->request->isGet()) {
             $payment_records = $model->payTypeCellRefundMoneys();
             $can_return_amount = array_sum(array_column($payment_records, 'can_return_amount'));
-            // $products = $model->getOrderProductList();
             $products = [];
-            return $this->renderSuccess('', compact('payment_records', 'products', 'can_return_amount'));
+            $manual_return_points = false;
+            $deductible_points = 0;
+            return $this->renderSuccess('', compact('payment_records', 'products', 'manual_return_points', 'can_return_amount', 'deductible_points'));
         }
         if ($model?->orderRefund($params)) {
             return $this->renderSuccess('操作成功');

@@ -630,6 +630,7 @@ func (s *printerLogSrv) GetOldOrderPrinterConfig(ctx context.Context, data strin
 		PrinterType:      settingPrinterInfo.PrinterType,
 		PrinterConfig:    settingPrinterInfo.PrinterConfig,
 		IsCashierPrinter: settingPrinterInfo.IsCashierPrinter,
+		IsUsbPrinter:     settingPrinterInfo.IsUsbPrinter,
 		PrintingTime:     200,
 	}, nil
 }

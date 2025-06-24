@@ -206,13 +206,15 @@ func (JOrderDelay) TableName() string {
 
 // 库存服务
 type StatisticsSaleService struct {
-	db       *gorm.DB
-	targetDB *gorm.DB
+	db                *gorm.DB
+	targetDB          *gorm.DB
+	sourceCompanyUuid uint64
+	targetCompanyUuid uint64
 }
 
 // 实例化库存服务
-func NewStatisticsSaleService(db *gorm.DB, targetDB *gorm.DB) *StatisticsSaleService {
-	return &StatisticsSaleService{db: db, targetDB: targetDB}
+func NewStatisticsSaleService(db *gorm.DB, targetDB *gorm.DB, sourceCompanyUuid uint64, targetCompanyUuid uint64) *StatisticsSaleService {
+	return &StatisticsSaleService{db: db, targetDB: targetDB, sourceCompanyUuid: sourceCompanyUuid, targetCompanyUuid: targetCompanyUuid}
 }
 
 // 迁移销售统计
@@ -320,8 +322,18 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 
 			// 商品消费税
 			if order.IsFree != 2 {
-				orderProductTax = orderProductTax.Add(decimal.NewFromFloat(order.ConsumptionTaxMoney))
+
+				if order.ConsumptionTaxType == 2 {
+					orderProductTax = orderProductTax.Add(decimal.NewFromFloat(order.ConsumptionTaxMoney))
+				}
+
 				orderRefundTax = decimal.NewFromFloat(order.RefundConsumptionTax)
+
+				// 消费税为0
+				if order.TotalProductConsumptionTax <= 0 {
+					orderExtendPrice = orderExtendPrice.Sub(decimal.NewFromFloat(order.ConsumptionTaxMoney))
+				}
+
 			} else {
 				// todo
 				// 等于子订单的 orderProductTax， orderRefundTax
@@ -337,7 +349,10 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 				// 等于子订单的
 			}
 
-			orderProductPrice = orderProductPrice.Add(decimal.NewFromFloat(order.TotalProductPrice))
+			// 商品价格
+			if order.IsFree != 2 {
+				orderProductPrice = orderProductPrice.Add(decimal.NewFromFloat(order.TotalProductPrice))
+			}
 
 			// 商品销售价
 			for _, orderProduct := range order.OrderProducts {
@@ -346,10 +361,15 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 					totalNumDec := decimal.NewFromFloat(float64(totalNum))
 					orderProductNum += totalNum
 
-					productPrice := decimal.NewFromFloat(orderProduct.ProductPrice)
-					if isFeeType || (orderProduct.TaxCalcType == 2 && orderProduct.ConsumptionTax > 0 && orderProduct.ProductOriginalConsumptionTax == 0) {
-						productPrice = productPrice.Sub(decimal.NewFromFloat(orderProduct.ConsumptionTax))
+					// 减去赠菜不计入的价格
+					if order.IsFree != 2 && orderProduct.IsFree == 2 {
+						orderProductPrice = orderProductPrice.Sub(decimal.NewFromFloat(orderProduct.TotalProductPrice))
 					}
+
+					// productPrice := decimal.NewFromFloat(orderProduct.ProductPrice)
+					// if isFeeType || (orderProduct.TaxCalcType == 2 && orderProduct.ConsumptionTax > 0 && orderProduct.ProductOriginalConsumptionTax == 0) {
+					// 	productPrice = productPrice.Sub(decimal.NewFromFloat(orderProduct.ConsumptionTax))
+					// }
 
 					orderProductSalePrice = orderProductSalePrice.Add(decimal.NewFromFloat(orderProduct.ProductPrice).Mul(totalNumDec))
 
@@ -363,7 +383,9 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 					}
 
 					// 减去商品服务费消费税
-					orderProductTax = orderProductTax.Sub(productServiceTax)
+					if orderProduct.IsFree == 2 {
+						orderProductTax = orderProductTax.Sub(productServiceTax)
+					}
 
 					// 减去退款商品服务费
 					if order.IsFree < 2 {
@@ -415,8 +437,11 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 				}
 			}
 
-			if noOrderRefundTax.GreaterThan(decimal.Zero) {
-				orderExtendPrice = orderExtendPrice.Sub(noOrderRefundTax)
+			// 不等于高老九
+			if s.sourceCompanyUuid != 1724054088 {
+				if noOrderRefundTax.GreaterThan(decimal.Zero) {
+					orderExtendPrice = orderExtendPrice.Sub(noOrderRefundTax)
+				}
 			}
 
 			// 自助餐顾客

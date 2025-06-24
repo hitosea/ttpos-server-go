@@ -387,7 +387,7 @@ func Run(sourceDB *gorm.DB, targetDB *gorm.DB, targetSassDB *gorm.DB, sourceComp
 	}
 
 	// 销售统计
-	statisticsSaleService := v1.NewStatisticsSaleService(sourceDB, targetDB)
+	statisticsSaleService := v1.NewStatisticsSaleService(sourceDB, targetDB, uint64(sourceCompanyId), targetCompanyUuid)
 	err = statisticsSaleService.ConvertStatisticsSale()
 	if err != nil {
 		return errors.WithMessage(err)

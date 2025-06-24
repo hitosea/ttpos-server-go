@@ -2,6 +2,7 @@
 
 namespace app\common\model\settings;
 
+use think\facade\Cache;
 use app\common\model\BaseModel;
 use think\model\concern\SoftDelete;
 use app\common\model\shop\BindRecord;
@@ -26,6 +27,26 @@ class Printer extends BaseModel
      */
     protected $append = ['printer_id', 'printer_name', 'printer_config', 'print_times'];
 
+    /**
+     * 分类更新后推送通知
+     */
+    public static function onAfterWrite()
+    {
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 0), null);
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 1), null);
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -1), null);
+    }
+
+    /**
+     * 分类删除后推送通知
+     */
+    public static function onAfterDelete()
+    {
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 0), null);
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 1), null);
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -1), null);
+    }
+    
     /**
      * 兼容字段
      */

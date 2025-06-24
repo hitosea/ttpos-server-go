@@ -10,6 +10,7 @@ use think\facade\Request;
 use app\common\model\shop\User;
 use app\common\model_old\shop\User as UserOld;
 use app\common\model\settings\Setting as SettingModel;
+use app\common\model_old\settings\Setting as SettingOldModel;
 
 // 应用公共文件
 
@@ -261,6 +262,7 @@ function extractLanguage($json)
         //
         return  $json;
     } catch (\Throwable $th) {
+        trace($th->getMessage());
         return $json;
     }
 }
@@ -280,6 +282,12 @@ function getSettingLanguages($companyUuid = 0)
         } else {
             $shopInfo = UserOld::getShopInfo('', true);
         }
+        $companyUuid = $shopInfo['company_uuid'] ?? 0;
+        if (!$languages = Cache::get('{common_get_settingLanguages}_' . 'common_setting_languages' . $companyUuid)) {
+            $languages = SettingOldModel::getSupplierLanguage($companyUuid);
+            Cache::tag('common_get_settingLanguages')->set('{common_get_settingLanguages}_' . 'common_setting_languages' . $companyUuid, $languages);
+        }
+        return $languages;
     } else {
         if ($companyUuid) {
             if (!($shopInfo = Cache::get('{common_get_settingLanguages}_' . 'common_shop_info' . $companyUuid)) || !Cache::get('{firstshop}_' . 'first_shop_info')) {
@@ -289,13 +297,13 @@ function getSettingLanguages($companyUuid = 0)
         } else {
             $shopInfo = User::getShopInfo('', true);
         }
+        $companyUuid = $shopInfo['company_uuid'] ?? 0;
+        if (!$languages = Cache::get('{common_get_settingLanguages}_' . 'common_setting_languages' . $companyUuid)) {
+            $languages = SettingModel::getSupplierLanguage($companyUuid);
+            Cache::tag('common_get_settingLanguages')->set('{common_get_settingLanguages}_' . 'common_setting_languages' . $companyUuid, $languages);
+        }
+        return $languages;
     }
-    $companyUuid = $shopInfo['company_uuid'] ?? 0;
-    if (!$languages = Cache::get('{common_get_settingLanguages}_' . 'common_setting_languages' . $companyUuid)) {
-        $languages = SettingModel::getSupplierLanguage($companyUuid);
-        Cache::tag('common_get_settingLanguages')->set('{common_get_settingLanguages}_' . 'common_setting_languages' . $companyUuid, $languages);
-    }
-    return $languages;
 }
 
 /**

@@ -49,4 +49,5 @@ type PrinterInfo struct {
 	IsCashierOpen          bool   // 是否开启打印
 	PrinterCashierDeviceSn string // 执行打印的收银机设备ID
 	IsUsbPrinter           bool   // 是否usb打印机
+	PrintMethod            int    // 打印方式 1文本打印, 2图片打印
 }
