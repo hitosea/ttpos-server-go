@@ -146,6 +146,37 @@ export const asyncRoutes: RouteRecordRaw[] = [
         ],
       },
       {
+        path: '/takeout',
+        redirect: { path: '/takeout/setting' }, // 重定向
+        meta: {
+          title: $t('外送管理'),
+        },
+        children: [
+          {
+            path: 'setting',
+            component: () => import('@/pages/takeout/setting.vue'),
+            meta: {
+              title: $t('外送设置'),
+            },
+          },
+          {
+            path: 'shop',
+            component: () => import('@/pages/takeout/shop.vue'),
+            meta: {
+              title: $t('外送商家'),
+            },
+          },
+          {
+            path: 'order',
+            component: () => import('@/pages/takeout/order.vue'),
+            meta: {
+              title: $t('外送台单'),
+            },
+          },
+        ],
+      },
+
+      {
         path: '/settings',
         component: () => import('@/pages/settings/index.vue'),
         meta: {

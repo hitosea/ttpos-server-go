@@ -140,6 +140,32 @@
       ],
     },
     {
+      icon: 'takeaway-fill',
+      title: $t('外送管理'),
+      path: '/takeout',
+      permission: ['admin_client.client_index'],
+      children: [
+        {
+          icon: '',
+          title: $t('外送设置'),
+          path: '/takeout/setting',
+          permission: ['admin_client.client_index'],
+        },
+        {
+          icon: '',
+          title: $t('外送商家'),
+          path: '/takeout/shop',
+          permission: ['admin_client.client_index'],
+        },
+        {
+          icon: '',
+          title: $t('外送台单'),
+          path: '/takeout/order',
+          permission: ['admin_client.client_index'],
+        },
+      ],
+    },
+    {
       icon: 'settings',
       title: $t('系统设置'),
       path: '/settings',
