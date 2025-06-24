@@ -80,6 +80,11 @@ class SettingEnum extends Enum
     const PLATFORM_BRAND = 'platform_brand';
     // 语言的快照
     const LANGUAGE_SNAPSHOT_V108 = 'language_snapshot_v108';
+    // 外送设置
+    const DELIVERY_CONFIG = 'delivery_config';
+
+    // 外送渠道
+    const DELIVERY_CHANNELS = ["SKootar", "Grab"];
 
     /**
      * 获取订单类型值
@@ -218,6 +223,10 @@ class SettingEnum extends Enum
             self::BUSINESS => [
                 'value' => self::BUSINESS,
                 'describe' => __('门店业务设置'),
+            ],
+            self::DELIVERY_CONFIG => [
+                'value' => self::DELIVERY_CONFIG,
+                'describe' => __('外送设置'),
             ],
         ];
     }
