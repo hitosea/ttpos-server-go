@@ -302,6 +302,8 @@ func (p *PrinterRepoImpl) getPrintReturnProductContent(
 	saleBill model.SaleBill,
 	products printer_model.Products,
 ) string {
+	tmp := p.GetPrinterTemplate(constant.PrinterTemplateReturnDish)
+
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
 		p.ctx,
@@ -316,13 +318,13 @@ func (p *PrinterRepoImpl) getPrintReturnProductContent(
 	// 图片打印
 	if p.IsImagePrinterMethod(true) {
 		t := template.NewDishesImgTemplate(base)
-		return t.ReturnMenuTemplate(printerItem, saleBill, products)
+		return t.ReturnMenuTemplate(tmp, printerItem, saleBill, products)
 	}
 
 	// 商米和芯烨打印机
 	if printerItem.Printer != nil {
 		t := template.NewDishesXprinterTemplate(base)
-		return t.ReturnMenuTemplate(printerItem, saleBill, products)
+		return t.ReturnMenuTemplate(tmp, printerItem, saleBill, products)
 	}
 	return ""
 }

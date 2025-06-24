@@ -1856,7 +1856,7 @@ export const previewData = {
     [
       {
         name: `!!!(${$t('退')})` + $t('商品名称商品名称品名称商品名称商品名称品名称'),
-        label: '[-5]',
+        label: '-5',
         font22: true,
         flexWidth: true,
       },
@@ -1867,7 +1867,7 @@ export const previewData = {
       },
       {
         name: `!!!(${$t('退')})` + $t('商品名称商品名称'),
-        label: '[-2]',
+        label: '-2',
         font22: true,
         flexWidth: true,
       },

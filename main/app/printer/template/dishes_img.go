@@ -7,6 +7,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/printer_model"
+	"ttpos-server-go/pkg/utils"
 )
 
 // dishesImgTemplate 图片菜品打印模板
@@ -412,6 +413,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 
 // ReturnMenuTemplate 退菜单模版
 func (t *dishesImgTemplate) ReturnMenuTemplate(
+	tmp int,
 	printerItem *model.ProductPrinterItem,
 	order model.SaleBill,
 	products printer_model.Products,
@@ -436,11 +438,15 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 	img.SetImagePadding(0) // 确保没有填充
 	img.SetFontWeight(5)
 	img.SetFontSize(30)
-	img.AppendText("***************************")
-	img.LineFeed(1, 40)
+	if tmp == 2 {
+		img.AppendText("***************************")
+		img.LineFeed(1, 40)
+	}
 	img.AppendText(t.base.Translate("退菜单"))
-	img.LineFeed(1, 48)
-	img.AppendText("***************************")
+	if tmp == 2 {
+		img.LineFeed(1, 48)
+		img.AppendText("***************************")
+	}
 	img.LineFeed(1, 68)
 
 	// 桌号
@@ -492,8 +498,9 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 				buffetText = t.base.Translate("自助餐") + "-"
 			}
 		}
+
 		// 产品名称
-		productName := "!!! (" + t.base.Translate("退") + ") " + buffetText + product.ProductName.GetLocale(t.base.Lang)
+		productName := utils.IfString(tmp == 2, "!!!", "") + "(" + t.base.Translate("退") + ") " + buffetText + product.ProductName.GetLocale(t.base.Lang)
 		if t.base.Lang == "my" {
 			img.SetTextLineHeight(90)
 		} else {
@@ -502,7 +509,8 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 		img.LineFeed(1, 12)
 
 		// 打印产品名称和数量
-		totalNum := fmt.Sprintf("【-%s】", fmt.Sprintf("%d", product.TotalNum))
+		totalNum := utils.IfString(tmp == 2, fmt.Sprintf("-%v", product.TotalNum), fmt.Sprintf("X%v", product.TotalNum))
+
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
 			pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
@@ -558,21 +566,24 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 	}
 
 	// 换行
-	img.LineFeed(1)
-	//
-	img.SetFontWeight(5)
-	img.SetFontSize(30)
-	img.SetAlignment(pkg.AlignCenter)
-	img.AppendText("***************************")
-	img.LineFeed(1, 40)
-	img.AppendText(t.base.Translate("请停止制作以上菜品！"))
-	img.LineFeed(1, 48)
-	img.AppendText("***************************")
+	if tmp == 2 {
+		img.LineFeed(1, 80)
+		img.SetFontWeight(5)
+		img.SetFontSize(30)
+		img.SetAlignment(pkg.AlignCenter)
+		img.AppendText("***************************")
+		img.LineFeed(1, 40)
+		img.AppendText(t.base.Translate("请停止制作以上菜品！"))
+		img.LineFeed(1, 48)
+		img.AppendText("***************************")
+	} else {
+		img.LineFeed(1, 50)
+	}
 
 	// 设置行间距
 	img.SetTextLineHeight(50)
 	// 换行
-	img.LineFeed(2)
+	img.LineFeed(3)
 	//
 	return img.Save("", !t.base.IsSunMi, 0)
 }

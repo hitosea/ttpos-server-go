@@ -125,7 +125,7 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 			// 产品名称
 			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
 			// 打印产品名称和数量
-			totalNum := fmt.Sprintf("%d", product.TotalNum)
+			totalNum := fmt.Sprintf("%v", product.TotalNum)
 			// 打印产品名称和数量
 			printer.PrintInColumns(productName, totalNum)
 
@@ -238,7 +238,7 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 			// 产品名称
 			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
 			// 打印产品名称和数量
-			totalNum := fmt.Sprintf("%d", product.TotalNum)
+			totalNum := fmt.Sprintf("%v", product.TotalNum)
 			// 设置行间距
 			if t.base.IsMyText(productName) {
 				printer.SetLineSpacing(80)
@@ -405,6 +405,7 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 
 			// 根据打印选择执行打印
 			if productPrinter.PrintModeScene == 1 {
+				// todo 这里需要修改, 判断类型
 				for i := 0; i < int(product.TotalNum); i++ {
 					exportation(1)
 				}
@@ -503,6 +504,7 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 
 			// 根据打印选择执行打印
 			if productPrinter.PrintModeScene == 1 {
+				// todo 这里需要修改, 判断类型
 				for i := 0; i < int(product.TotalNum); i++ {
 					exportation(1)
 				}
