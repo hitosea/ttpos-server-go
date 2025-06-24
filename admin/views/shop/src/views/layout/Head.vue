@@ -8,7 +8,7 @@
             <img :src="cloudBasic?.base?.brand_logo_long" />
           </template>
           <template v-else>
-            <img src="@/assets/logo_svg.svg" />
+            <img src="@/assets/TTPOS-logo.png" />
           </template>
         </span>
       </div>

@@ -3,10 +3,7 @@
     <div class="login-main">
       <el-form :model="ruleForm" :rules="rules" ref="ruleForm" label-position="left" label-width="0px" class="demo-ruleForm login-container d-b-c">
         <div class="flex-1 login-box">
-          <h3 class="title title-pr" style="margin-bottom: 16px">
-            <template v-if="brand == 'JBC'">JBCレジ · {{ $t('后台管理系统') }}</template>
-            <template v-if="brand == 'TTPOS'">TTPOS · {{ $t('后台管理系统') }}</template>
-          </h3>
+          <h3 class="title title-pr" style="margin-bottom: 16px">TTPOS · {{ $t('后台管理系统') }}</h3>
 
           <!--用户名-->
           <el-form-item prop="account">
@@ -115,8 +112,6 @@
   import configObj from '@/config';
   import autoTips from '@/components/autoTips/autoTips.vue';
   import SvgIcon from '@/components/svg-icon/SvgIcon.vue';
-  import logoImg from '@/assets/logo.svg';
-  import TTPOSLogoImg from '@/assets/TTPOS-logo.png';
   import { EEUIRELOAD } from '@/utils/platform.js';
 
   const { menu } = configObj;
@@ -238,9 +233,7 @@
         isCloudDeploy: isCloudDeploy,
         accredit: accredit,
         macData: macData,
-        logoImg: logoImg,
-        TTPOSLogoImg: TTPOSLogoImg,
-        brand: 'JBC',
+        brand: 'TTPOS',
         captchaImg: '',
         captchaImgLoading: false,
         captchaSign: '',
