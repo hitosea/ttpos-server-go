@@ -11,6 +11,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/websocket"
 
@@ -281,7 +282,10 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 // Finish 完成制作
 func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
-	product, _ := productionRepo.GetProduct(productionRepo.WhereProductUuid(productUuid))
+	product, _ := productionRepo.GetProduct(
+		productionRepo.WhereProductUuid(productUuid),
+		productionRepo.WithSaleOrderProduct(),
+	)
 	if product.Uuid == 0 {
 		return errors.New("订单商品不存在")
 	}
@@ -294,6 +298,34 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 	}); err != nil {
 		return errors.ErrInternal
 	}
+	// 完成制作事件
+	go func() {
+		if product.SaleOrderProduct.ID == 0 {
+			return
+		}
+		event.NewSystemBus().PublishFinishMenuEvent(event.FinishMenuPayload{
+			BasePayload: event.BasePayload{
+				Ctx:           ctx,
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  product.SaleBillUuid,
+				SaleOrderUuid: product.SaleOrderProductUuid,
+			},
+			Products: event.Products{
+				{
+					OrderProductId:  product.Uuid,
+					ProductId:       product.ProductPackageUuid,
+					ProductName:     product.SaleOrderProduct.MultiLanguageName.GetNames(),
+					ProductAttr:     product.SaleOrderProduct.GetAttributeName(),
+					ProductAttrList: product.SaleOrderProduct.GetAttributeNameList(),
+					TotalNum:        product.SaleOrderProduct.Num,
+					NumType:         product.SaleOrderProduct.NumType,
+					IsBuffet:        product.SaleOrderProduct.IsBuffet == 1,
+					Remark:          product.SaleOrderProduct.Remark,
+				},
+			},
+		})
+	}()
 	// 完成制作后，推送更新厨显
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
 		"update_time": time.Now().Unix(),

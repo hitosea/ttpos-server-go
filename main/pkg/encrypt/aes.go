@@ -8,12 +8,18 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"ttpos-server-go/config"
 )
 
-var aesSecretKey = []byte("TTPOS-HITOSEA-SECRET-KEY-HERE!!!")
+var aesSecretKey = []byte("")
 
 // EncryptAesString 加密字符串
 func EncryptAesString(text string) (string, error) {
+	if config.Encrypt.AesSecretKey != "" {
+		aesSecretKey = []byte(config.Encrypt.AesSecretKey)
+	} else {
+		aesSecretKey = []byte("TTPOS-HITOSEA-SECRET-KEY-HERE!!!")
+	}
 	// 创建cipher
 	block, err := aes.NewCipher(aesSecretKey)
 	if err != nil {

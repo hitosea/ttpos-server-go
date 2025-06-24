@@ -91,7 +91,7 @@ code 为0表成功，非0表示失败
 ```curl
 curl --request POST \
   --url http://192.168.100.245:8787/api/sms/send \
-  --header 'api-key: 6Q76zPZMrc6KRhGLt4ilBJCoBEKqJSpZT74K3sIXJvz4gpD33Wsd78V7rxq72j8R' \
+  --header 'api-key: ????? \
   --header 'content-type: application/json' \
   --data '{
   "template_id":"member_recharge",
@@ -110,12 +110,12 @@ curl --request POST \
 
 ###### 2、查询短信状态，仅限容器内部，message_id可传递多个，以英文逗号分隔
 ```curl
-curl -XGET "http://127.0.0.1:8080/api/sms/query?message_id=G183FE43F437E343EHMDP1009"
+curl -XGET "http://127.0.0.1:8080/api/sms/query?message_id=?????"
 ```
 
 ###### 3、查询是否存在api key
 ```curl
-curl "http://192.168.100.245:8787/api/sms/check_api_key?project_name=ttpos&api_key=6Q76zPZMrc6KRhGLt4ilBJCoBEKqJSpZT74K3sIXJvz4gpD33Wsd78V7rxq72j8R"
+curl "http://192.168.100.245:8787/api/sms/check_api_key?project_name=ttpos&api_key=?????"
 ```
 
 ###### 4、检测服务是否健康，返回healthy表示健康

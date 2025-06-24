@@ -17,7 +17,7 @@ import (
 
 /**
  * 菜品打印
- * @param int printType 打印类型 -1-为退菜打印 0-付款打印 1-送厨打印
+ * @param int printType 打印类型 -2-为出菜单打印 -1-为退菜打印 0-付款打印 1-送厨打印
  */
 func (p *PrinterRepoImpl) PrintingDishes(
 	printType int,
@@ -91,11 +91,42 @@ func (p *PrinterRepoImpl) PrintingDishes(
 				printMethod = p.GetPrinterMethod(true)
 			}
 
+			// 出菜单打印
+			if printType == constant.PrinterProductTypeOutMenu {
+				data := p.getPrintProductOutMenuContent(productPrinter, printerItem, billInfo, newProducts)
+				if data != "" {
+					_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
+						PrinterType:   printerType,
+						PrinterConfig: printerItem.Printer.ConfigJson,
+					}, model.PrinterLog{
+						PrintMethod: printMethod,
+						RelatedType: 0,
+						RelatedUuid: saleBillUuid,
+						PrinterUuid: printerItem.PrinterUuid,
+						CashierDeviceId: func() string {
+							if printerItem.Printer != nil && printerItem.Printer.IsUsbPrinter() {
+								return printerItem.Printer.SourceDeviceSn
+							}
+							return ""
+						}(),
+						DataType:           constant.PrinterTemplateOutMenu,
+						Data:               data,
+						Type:               1,
+						FirstExecution:     0,
+						ProductPrinterUuid: productPrinter.Uuid,
+						Copies:             productPrinter.Copies,
+					}, "")
+					if err != nil {
+						logger.Logger.Error("添加打印日志失败", zap.Error(err))
+					}
+				}
+				continue
+			}
+
 			// 退菜单打印
 			if printType == constant.PrinterProductTypeBackFood {
 				data := p.getPrintReturnProductContent(printerItem, billInfo, newProducts)
 				if data != "" {
-					// 添加打印日志，依赖打印日志服务
 					_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
 						PrinterType:   printerType,
 						PrinterConfig: printerItem.Printer.ConfigJson,
@@ -120,7 +151,6 @@ func (p *PrinterRepoImpl) PrintingDishes(
 					if err != nil {
 						logger.Logger.Error("添加打印日志失败", zap.Error(err))
 					}
-
 				}
 				continue
 			}
@@ -129,8 +159,6 @@ func (p *PrinterRepoImpl) PrintingDishes(
 			if productPrinter.PrintMethod == constant.Yes || productPrinter.PrintMethod == constant.All {
 				for _, product := range newProducts {
 					if data := p.getPrintProductOneContent(productPrinter, printerItem, billInfo, product); data != "" {
-
-						// 添加打印日志，依赖打印日志服务
 						_, err = pinterLogSrv.AddLog(p.ctx, resp.PrinterInfo{
 							PrinterType:   printerType,
 							PrinterConfig: printerItem.Printer.ConfigJson,
@@ -155,7 +183,6 @@ func (p *PrinterRepoImpl) PrintingDishes(
 						if err != nil {
 							logger.Logger.Error("添加打印日志失败", zap.Error(err))
 						}
-
 					}
 				}
 				if productPrinter.PrintMethod != constant.All {
@@ -326,5 +353,55 @@ func (p *PrinterRepoImpl) getPrintReturnProductContent(
 		t := template.NewDishesXprinterTemplate(base)
 		return t.ReturnMenuTemplate(tmp, printerItem, saleBill, products)
 	}
+	return ""
+}
+
+// 构建订单菜品（出菜单）打印的内容
+func (p *PrinterRepoImpl) getPrintProductOutMenuContent(
+	productPrinter model.ProductPrinter,
+	printerItem *model.ProductPrinterItem,
+	saleBill model.SaleBill,
+	products printer_model.Products,
+) string {
+	tmp := p.GetPrinterTemplate(constant.PrinterTemplateEntireOrder)
+
+	// 创建打印机实例
+	base := template.NewPrinterTemplate(
+		p.ctx,
+		p.setting,
+		&p.storeSetting,
+		&p.printerSetting,
+		&p.currencySetting,
+		false,
+		p.Lang,
+	)
+
+	// 图片打印
+	if p.IsImagePrinterMethod(true) {
+		t := template.NewDishesImgTemplate(base)
+		return t.CompleteOrder(tmp, printerItem, saleBill, products)
+	}
+
+	// 获取打印机类型
+	var printerType string
+	if printerItem.Printer != nil && printerItem.Printer.PrinterType != nil {
+		printerType = printerItem.Printer.PrinterType.Key
+	}
+
+	// CODESOFT 打印机
+	if printerItem.Printer != nil && slices.Contains([]string{
+		constant.PrinterTypeCodesoftLan,
+		constant.PrinterTypeCodesoftWifi,
+	}, printerType) {
+		t := template.NewDishesCodesoftTemplate(base)
+		return t.CompleteOrder(tmp, printerItem, saleBill, products)
+	}
+
+	// 商米和芯烨打印机
+	if printerItem.Printer != nil {
+		t := template.NewDishesXprinterTemplate(base)
+		return t.CompleteOrder(tmp, printerItem, saleBill, products)
+	}
+
 	return ""
 }

@@ -1,0 +1,42 @@
+package event
+
+import (
+	"sync"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/printer"
+	"ttpos-server-go/app/printer/printer_model"
+	"ttpos-server-go/pkg/eventbus/event"
+
+	"github.com/jinzhu/copier"
+)
+
+var once_finish_menu_event_handler sync.Once
+
+// init 自动注册"添加销售账单记录"事件处理器
+func init() {
+	// 只初始化一次
+	finishMenuEventHandler()
+}
+
+// finishMenuEventHandler "完成制作"事件处理器
+func finishMenuEventHandler() {
+	once_finish_menu_event_handler.Do(func() {
+
+		// 创建送厨单打印记录
+		event.NewSystemBus().SubscribeFinishMenuEvent(func(payload event.FinishMenuPayload) {
+			if len(payload.Products) == 0 {
+				return
+			}
+			go func() {
+				products := printer_model.Products{}
+				copier.Copy(&products, payload.Products)
+				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
+					constant.PrinterProductTypeOutMenu,
+					payload.SaleBillUuid,
+					products,
+				)
+			}()
+		})
+
+	})
+}

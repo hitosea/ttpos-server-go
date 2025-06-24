@@ -26,6 +26,7 @@ type IProductionOrderRepo interface {
 	WhereSource(source string) DBOption                                                                                         // 来源条件
 	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption                                                                    // 生产商品分类Uuid条件
 	SaleBillUuidOpt() DBOption                                                                                                  // 历史上菜条件
+	WithSaleOrderProduct() DBOption                                                                                             // 关联销售订单商品
 	WithProductCategory() DBOption                                                                                              // 关联商品分类
 	WithProductCategoryMultiLanguageName() DBOption                                                                             // 关联商品分类多语言
 	UpdateProduct(opts []DBOption, vars map[string]any) error                                                                   // 更新送厨商品
@@ -239,6 +240,13 @@ func (r *productionRepo) WhereProductFirstCategoryUuidIn(uuids []uint64) DBOptio
 func (r *productionRepo) WithSaleBill() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("SaleBill")
+	}
+}
+
+// WithSaleOrderProduct 关联销售订单商品
+func (r *productionRepo) WithSaleOrderProduct() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("SaleOrderProduct.MultiLanguageName")
 	}
 }
 
