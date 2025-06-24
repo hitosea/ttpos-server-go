@@ -51,7 +51,7 @@
     </template>
 
     <!--数量计算方法-->
-    <el-form-item for="no_click" :label="$t('计价方式：')" v-if="form.model.type == 10">
+    <el-form-item for="no_click" :label="$t('计价方式：')" v-if="form.model.type == 10" :rules="[{ required: true, message: $t('选择计价方式') }]">
       <el-radio-group v-model="form.model.num_type">
         <el-radio :label="0">{{ $t('整数') }}</el-radio>
         <el-radio :label="1">{{ $t('小数') }}</el-radio>
