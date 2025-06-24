@@ -308,7 +308,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		//
 		printer.AppendText(t.base.PrintText(
 			productName,
-			fmt.Sprintf("%s*%d", t.base.Amount(productPrice), item.Num),
+			fmt.Sprintf("%s*%v", t.base.Amount(productPrice), item.Num),
 			t.base.GetPriceAndUnit(productTotalPrice),
 			currencyWidth,
 			leftWidth,
@@ -330,14 +330,14 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 	printer.SetAlignment(pkg.AlignRight)
 	if temp == 3 {
 		printer.AppendText(t.base.PrintText(
-			t.base.Translate("商品数量")+": "+fmt.Sprintf("%d", productNum),
+			t.base.Translate("商品数量")+": "+t.base.FloatToString(productNum),
 			"",
 			t.base.Translate("商品金额")+": "+t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount),
 			currencyWidth,
 		))
 		printer.LineFeed()
 	} else {
-		printer.AppendText(t.base.Translate("商品数量") + ": " + fmt.Sprintf("%d", productNum))
+		printer.AppendText(t.base.Translate("商品数量") + ": " + t.base.FloatToString(productNum))
 		printer.LineFeed()
 		printer.AppendText(t.base.Translate("商品金额") + ": " + t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount))
 		printer.LineFeed()

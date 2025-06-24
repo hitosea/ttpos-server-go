@@ -373,7 +373,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.SetTextLineHeight(45)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: productName, Width: 310, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(productPrice), item.Num), Width: 120, Align: pkg.AlignCenter},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%v", t.base.Amount(productPrice), item.Num), Width: 120, Align: pkg.AlignCenter},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(productTotalPrice), Width: 0, Align: pkg.AlignRight},
 		)
 		img.RecoverDefaultTextLineHeight()
@@ -388,12 +388,12 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	img.SetAlignment(pkg.AlignRight)
 	if temp == 3 {
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %d", t.base.Translate("商品数量"), productNum), Width: 250, Align: pkg.AlignLeft},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %v", t.base.Translate("商品数量"), productNum), Width: 250, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount)), Width: 0, Align: pkg.AlignRight},
 		)
 	} else {
 		img.SetAlignment(pkg.AlignRight)
-		img.AppendText(fmt.Sprintf("%s: %d", t.base.Translate("商品数量"), productNum))
+		img.AppendText(fmt.Sprintf("%s: %v", t.base.Translate("商品数量"), productNum))
 		img.LineFeed(1)
 		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount)))
 		img.LineFeed(1)
