@@ -440,7 +440,12 @@
         this.titleName = this.title;
       }
       if (this.title == $t('退菜单')) {
-        this.details = previewData.eleven;
+        if (this.mode == 1) {
+          this.details = previewData.eleven;
+        }
+        if (this.mode == 2) {
+          this.details = previewData.thirteen;
+        }
         this.storeShow = false;
         this.titleName = $t('桌位: ') + 'A01';
       }
