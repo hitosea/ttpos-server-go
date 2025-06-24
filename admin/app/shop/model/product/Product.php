@@ -184,6 +184,7 @@ class Product extends ProductModel
         $data['takeout_tax_uuid'] = $takeoutTaxUuid; // 外带税类UUID
         $data['printer_tag_uuid'] = $data['label_id'] ?? 0; // 打印机标签UUID
         $data['deduct_stock_type'] = $data['deduct_stock_type'] == 10 ? 1 : 0; // 库存计算方法, 0-付款减库存 1-下单减库存 （deduct_stock_type 库存计算方式(10下单减库存 20付款减库存)）
+        $data['num_type'] = $data['num_type'] ?? 0; // 数量计算方法, 0-整数 1-小数
         $data['sauce_required'] = $data['feed_required'] ?? 0; // 是否必选小料, 0-否 1-是
         $data['sauce_max_selection'] = $data['feed_max_select'] ?? 0; // 小料最大选择数量
         $data['describe'] = $data['selling_point'] ?? ''; // 商品卖点
@@ -478,6 +479,7 @@ class Product extends ProductModel
             'image_name' => $data['img_name'] ?? '', // 产品包图片名称
             'image_file_uuid' => $fileId, // 产品包图片文件id
             'deduct_stock_type' => $data['deduct_stock_type'] == 10 ? 1 : 0, // 扣库存类型: 10-下单减库存, 20-付款减库存
+            'num_type' => $data['num_type'] ?? 0, // 数量计算方法, 0-整数 1-小数
             'unit_uuid' => $data['unit_id'], // 单位uuid
             'dine_tax_uuid' => $dineTaxUuid, // 堂食税类id
             'takeout_tax_uuid' => $takeoutTaxUuid, // 外带税类id

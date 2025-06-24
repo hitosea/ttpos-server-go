@@ -50,6 +50,14 @@
       </el-form-item>
     </template>
 
+    <!--数量计算方法-->
+    <el-form-item for="no_click" :label="$t('计价方式：')" v-if="form.model.type == 10">
+      <el-radio-group v-model="form.model.num_type">
+        <el-radio :label="0">{{ $t('整数') }}</el-radio>
+        <el-radio :label="1">{{ $t('小数') }}</el-radio>
+      </el-radio-group>
+    </el-form-item>
+
     <el-form-item
       for="no_click"
       v-if="form.model.type == 10"
@@ -66,10 +74,10 @@
       prop="model"
     >
       <el-checkbox v-model="form.model.is_show_cashier" :true-label="1" :false-label="2" :label="$t('收银机')" size="large" />
-      <el-checkbox v-if="is_open_tablet" v-model="form.model.is_show_tablet" :true-label="1" :false-label="2" :label="$t('平板')" size="large" />
+      <el-checkbox v-if="is_open_tablet" v-model="form.model.is_show_tablet" :true-label="1" :false-label="2" :label="$t('平板')" size="large" :disabled="form.model.num_type == 1" />
       <el-checkbox v-if="is_open_kitchen_kds" v-model="form.model.is_show_kitchen" :true-label="1" :false-label="2" :label="$t('厨显')" size="large" />
-      <el-checkbox v-if="is_open_assistant" v-model="form.model.is_show_assistant" :true-label="1" :false-label="2" :label="$t('点餐助手')" size="large" />
-      <el-checkbox v-if="is_open_assistant" v-model="form.model.is_show_h5" :true-label="1" :false-label="2" :label="$t('扫码点餐')" size="large" />
+      <el-checkbox v-if="is_open_assistant" v-model="form.model.is_show_assistant" :true-label="1" :false-label="2" :label="$t('点餐助手')" size="large" :disabled="form.model.num_type == 1" />
+      <el-checkbox v-if="is_open_assistant" v-model="form.model.is_show_h5" :true-label="1" :false-label="2" :label="$t('扫码点餐')" size="large" :disabled="form.model.num_type == 1" />
     </el-form-item>
 
     <el-form-item v-if="form.model.type == 10" for="no_click" :label="$t('商品排序：')">
@@ -251,6 +259,15 @@
         },
         immediate: true,
         deep: true,
+      },
+      'form.model.num_type': {
+        handler(val) {
+          if (val == 1) {
+            this.form.model.is_show_tablet = 2;
+            this.form.model.is_show_assistant = 2;
+            this.form.model.is_show_h5 = 2;
+          }
+        },
       },
     },
     methods: {

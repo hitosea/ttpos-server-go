@@ -89,6 +89,7 @@ class Product extends Controller
      *   @Apidoc\Param("selling_point", type="string", require=true, desc="商品卖点"),
      *   @Apidoc\Param("spec_type", type="int", require=true, desc="产品规格(10单规格 20多规格)"),
      *   @Apidoc\Param("deduct_stock_type", type="int", require=true, desc="库存计算方式(10下单减库存 20付款减库存)"),
+     *   @Apidoc\Param("num_type", type="int", require=true, desc="数量计算方法, 0-整数 1-小数"),
      *   @Apidoc\Param("is_alone_grade", type="int", require=true, desc="会员折扣设置(0默认等级折扣 1单独设置折扣)"),
      *   @Apidoc\Param("sku", type="array", require=true, desc="商品sku", children={
      *      @Apidoc\Param("spec_sku_id", type="string", require=true, desc="规格id"),
@@ -295,6 +296,7 @@ class Product extends Controller
      *      @Apidoc\Param("product_name", type="string",  default="get", default="简体中文:饮料", require=true, desc="商品名称"),
      *      @Apidoc\Param("category_name", type="string", require=true, default="分类/主分类", desc="所属分类"),
      *      @Apidoc\Param("deduct_stock_type", type="string", require=true, default="1", desc="库存计算方式"),
+     *      @Apidoc\Param("num_type", type="string", require=true, default="1", desc="数量计算方法, 1-整数 2-小数"),
      *      @Apidoc\Param("product_unit", type="string", require=true, default="个", desc="商品单位"),
      *      @Apidoc\Param("spec_name", type="string", require=true, default="规格", desc="规格名称"),
      *      @Apidoc\Param("img_name", type="string", require=true, default="图片名称", desc="图片名称"),
@@ -318,6 +320,7 @@ class Product extends Controller
      *      @Apidoc\Param("product_name", type="string",  default="get", default="{'zh':'饮料'}", require=true, desc="商品名称"),
      *      @Apidoc\Param("category_name", type="string", require=true, default="分类/主分类", desc="所属分类"),
      *      @Apidoc\Param("deduct_stock_type", type="string", require=true, default="10", desc="库存计算方式(10下单减库存 20付款减库存)"),
+     *      @Apidoc\Param("num_type", type="string", require=true, default="1", desc="数量计算方法, 1-整数 2-小数"),
      *      @Apidoc\Param("product_unit", type="string", require=true, default="个", desc="商品单位"),
      *      @Apidoc\Param("spec_name", type="string", require=true, default="规格", desc="规格名称"),
      *      @Apidoc\Param("img_name", type="string", require=true, default="图片名称", desc="图片名称"),
@@ -392,7 +395,11 @@ class Product extends Controller
                     $val['is_show_tablet'] = strstr($val['shows'], '2') ? 1 : 2;
                     $val['is_show_kitchen'] = strstr($val['shows'], '3') ? 1 : 2;
                     $val['is_show_assistant'] = strstr($val['shows'], '4') ? 1 : 2;
-                    $val['is_show_h5'] = strstr($val['shows'], '5') ? 1 : 2;
+                    $val['is_show_h5'] = strstr($val['shows'], '5') ? 1 : 2; 
+                    // 按小数计价，不在助手、平板、扫码端显示
+                    if ($val['num_type'] == 2 && ($val['is_show_tablet']!= 2 ||  $val['is_show_assistant'] != 2 ||  $val['is_show_h5'] != 2)) {
+                        return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('按小数计价只能显示到收银机和厨显'), $val);
+                    }
                     //
                     $productName = [];
                     foreach (explode("\n",  $val['product_name']) as $name) {
@@ -407,6 +414,7 @@ class Product extends Controller
                     }
                     $val['product_name'] = json_encode($productName, JSON_UNESCAPED_UNICODE);
                 } else {
+                    $val['num_type'] = strstr($val['num_type'], '1') ? 0 : 1; // excel内容中1表示整数计价，2表示小数计价；对应数据库值0表示整数，1表示小数
                     $productName = json_decode($val['product_name'], true);
                     if (!$productName) {
                         return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('商品名称格式错误'), $val);
