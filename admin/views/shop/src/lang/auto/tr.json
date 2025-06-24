@@ -1734,5 +1734,6 @@
     "请输入扣除积分": "Lütfen düşülecek puanları girin",
     "设为主收银机": "Ana yazar kasa olarak ayarla",
     "打印关联收银机": "İlişkili yazar kasayı yazdır",
-    "选择打印机所关联的收银机": "Yazıcıya bağlı yazar kasayı seçin"
+    "选择打印机所关联的收银机": "Yazıcıya bağlı yazar kasayı seçin",
+    "选择打印方式": "Yazdırma yöntemini seçin"
 }
