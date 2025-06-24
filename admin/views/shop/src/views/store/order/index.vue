@@ -416,37 +416,7 @@
           },
         });
       },
-      /*核销*/
-      verifyClick(row) {
-        let self = this;
-        let extract_form = {};
-        ElMessageBox.confirm('确定要核销吗?', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning',
-        })
-          .then(() => {
-            extract_form.order_id = row.order_id;
-            OrderApi.storeExtract(extract_form, true)
-              .then((data) => {
-                self.loading = false;
-                this.$ElMessage({
-                  message: $t('操作成功'),
-                  type: 'success',
-                });
-                self.getData();
-              })
-              .catch((error) => {
-                self.loading = false;
-              });
-          })
-          .catch(() => {
-            this.$ElMessage({
-              type: 'info',
-              message: '已取消核销',
-            });
-          });
-      },
+
       getLogistics(row) {
         let self = this;
         let Params = {
@@ -548,52 +518,6 @@
           if (e.type == 'success') {
             this.getData();
           }
-        }
-      },
-      patType(arr) {
-        let result = '-';
-        if (arr && arr.length > 0) {
-          let nameArr = [];
-          (arr || []).map((item) => {
-            nameArr.push(item.name);
-          });
-          result = nameArr.join(',');
-        }
-        return result;
-      },
-
-      tableNo(arr) {
-        let result = '-';
-        if (arr && arr.length > 0) {
-          let nameArr = [];
-          (arr || []).map((item) => {
-            nameArr.push(item.table_no);
-          });
-          result = nameArr.join('+');
-        }
-        return result;
-      },
-
-      uniqueUsers(e) {
-        let userIds = new Set(); // 使用 Set 来存储唯一的 user_id
-        let result = e
-          .filter((item) => {
-            if (item.user && !userIds.has(item.user.user_id)) {
-              userIds.add(item.user.user_id);
-              return true; // 保留这个用户
-            }
-            return false; // 过滤掉重复的用户
-          })
-          .map((item) => item.user); // 返回去重后的用户对象
-        if (result.length > 0) {
-          let idArr = [];
-          (result || []).map((item) => {
-            idArr.push(item.user_id);
-          });
-          idArr.join(',');
-          return this.$t('会员ID') + ' (' + idArr.toString() + ')';
-        } else {
-          return '-';
         }
       },
     },
