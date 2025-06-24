@@ -802,10 +802,10 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 	// 销售订单
 	for _, saleOrder := range saleBill.SaleOrders {
 		var (
-			orderProductNum           int
-			orderGiveNum              int
-			orderFreeNum              int
-			orderRefundNum            int
+			orderProductNum           float64
+			orderGiveNum              float64
+			orderFreeNum              float64
+			orderRefundNum            float64
 			orderProductPrice         decimal.Decimal
 			orderProductOriginPrice   decimal.Decimal
 			orderProductSalePrice     decimal.Decimal
@@ -873,24 +873,24 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 		for _, saleProduct := range saleOrder.SaleOrderProducts {
 			if saleProduct.CancelTime == 0 {
 				// 统计商品数量
-				productNum := int(saleProduct.Num)
-				productNumDec := decimal.NewFromFloat(float64(productNum))
+				productNum := saleProduct.Num
+				productNumDec := decimal.NewFromFloat(productNum)
 				orderProductNum += productNum
 
 				productFinalPrice := decimal.NewFromFloat(saleProduct.TotalPrice)
 
 				// 统计赠送商品数量
-				productGiveNum := 0
+				productGiveNum := 0.0
 				if saleProduct.GiftTime > 0 {
-					productGiveNum = int(saleProduct.Num)
+					productGiveNum = productNum
 					orderGiveNum += productGiveNum
 					productFinalPrice = decimal.Zero
 				}
 
 				// 统计免单商品数据
-				productFreeNum := 0
+				productFreeNum := 0.0
 				if isFree {
-					productFreeNum = int(saleProduct.Num)
+					productFreeNum = productNum
 					productFinalPrice = decimal.Zero
 				}
 
@@ -944,19 +944,21 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 					}
 				}
 
-				productRefundNum := 0
+				productRefundNum := 0.0
 				for _, refundProduct := range saleProduct.ReturnOrderProducts {
-					productRefundNum += int(refundProduct.Num)
+					productRefundNum += refundProduct.Num
 					orderRefundTax = orderRefundTax.Add(
 						decimal.NewFromFloat(saleProduct.TaxFee).Add(
 							decimal.NewFromFloat(saleProduct.ServiceTaxFee),
-						).Mul(decimal.NewFromFloat(float64(refundProduct.Num))),
+						).Mul(decimal.NewFromFloat(refundProduct.Num)),
 					)
 					if isFeeType {
 						noOrderRefundTax = noOrderRefundTax.Add(decimal.NewFromFloat(saleProduct.TaxFee))
 					}
 					if !isFixServiceFee {
-						orderRefundServiceFee = orderRefundServiceFee.Add(decimal.NewFromFloat(saleProduct.ServiceFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+						orderRefundServiceFee = orderRefundServiceFee.Add(
+							decimal.NewFromFloat(saleProduct.ServiceFee).Mul(decimal.NewFromFloat(refundProduct.Num)),
+						)
 					}
 				}
 
@@ -990,8 +992,8 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 		// 统计自助餐
 		for _, saleBuffetCustomerType := range saleOrder.SaleOrderBuffetCustomerTypes {
 			// 统计商品数量
-			productNum := int(saleBuffetCustomerType.Num)
-			productNumDec := decimal.NewFromFloat(float64(productNum))
+			productNum := float64(saleBuffetCustomerType.Num)
+			productNumDec := decimal.NewFromFloat(productNum)
 			orderProductNum += productNum
 
 			// 统计: 商品定价(折扣前)、商品税、服务费、服务费税
@@ -1024,19 +1026,21 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			productSalePrice := decimal.NewFromFloat(saleBuffetCustomerType.SalePrice)
 			orderProductSalePrice = orderProductSalePrice.Add(productSalePrice.Mul(productNumDec))
 
-			productRefundNum := 0
+			productRefundNum := 0.0
 			for _, refundProduct := range saleBuffetCustomerType.ReturnOrderProducts {
-				productRefundNum += int(refundProduct.Num)
+				productRefundNum += refundProduct.Num
 				orderRefundTax = orderRefundTax.Add(
 					decimal.NewFromFloat(saleBuffetCustomerType.TaxFee).Add(
 						decimal.NewFromFloat(saleBuffetCustomerType.ServiceTaxFee),
-					).Mul(decimal.NewFromFloat(float64(refundProduct.Num))),
+					).Mul(decimal.NewFromFloat(refundProduct.Num)),
 				)
 				if isFeeType {
 					noOrderRefundTax = noOrderRefundTax.Add(decimal.NewFromFloat(saleBuffetCustomerType.TaxFee))
 				}
 				if !isFixServiceFee {
-					orderRefundServiceFee = orderRefundServiceFee.Add(decimal.NewFromFloat(saleBuffetCustomerType.ServiceFee).Mul(decimal.NewFromFloat(float64(refundProduct.Num))))
+					orderRefundServiceFee = orderRefundServiceFee.Add(
+						decimal.NewFromFloat(saleBuffetCustomerType.ServiceFee).Mul(decimal.NewFromFloat(refundProduct.Num)),
+					)
 				}
 			}
 
@@ -1046,8 +1050,8 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 		// 统计加钟
 		for _, saleBuffetDelayProduct := range saleOrder.SaleOrderBuffetDelayProducts {
 			// 统计商品数量
-			productNum := int(saleBuffetDelayProduct.Num)
-			productNumDec := decimal.NewFromFloat(float64(productNum))
+			productNum := float64(saleBuffetDelayProduct.Num)
+			productNumDec := decimal.NewFromFloat(productNum)
 			orderProductNum += productNum
 
 			// 统计: 商品定价(折扣前)、商品税、服务费、服务费税
@@ -1071,9 +1075,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			productSalePrice := decimal.NewFromFloat(saleBuffetDelayProduct.Price)
 			orderProductSalePrice = orderProductSalePrice.Add(productSalePrice.Mul(productNumDec))
 
-			productRefundNum := 0
+			productRefundNum := 0.0
 			for _, refundProduct := range saleBuffetDelayProduct.ReturnOrderProducts {
-				productRefundNum += int(refundProduct.Num)
+				productRefundNum += refundProduct.Num
 			}
 
 			orderRefundNum += productRefundNum
