@@ -131,7 +131,7 @@
           </el-table-column>
           <el-table-column prop="finish_time" :label="$t('支付时间')">
             <template #default="scope">
-              {{ scope.row.finish_time }}
+              {{ scope.row.finish_time || '-' }}
             </template>
           </el-table-column>
           <el-table-column prop="order_amount" :label="$t('订单金额')" width="140" show-overflow-tooltip>
