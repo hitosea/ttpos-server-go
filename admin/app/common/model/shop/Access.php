@@ -297,6 +297,10 @@ class Access extends BaseModel
             if ($value['uuid'] == 1626688443) {
                 continue;
             }
+            // 暂时去掉收银交班权限
+            if ($value['uuid'] == 1704881155) {
+                continue;
+            }
             // 授权无进销存权限
             if (isset($licenses['sale']) && $licenses['sale'] == 0) {
                 if ($value['uuid'] == 1711006072 || $value['uuid'] == 1711009130) {
