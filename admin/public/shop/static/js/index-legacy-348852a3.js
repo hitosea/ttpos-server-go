@@ -1,0 +1,1 @@
+System.register(["./index-legacy-65b62bb6.js","./vue-legacy-b5f00880.js","./element-legacy-20d06bfa.js"],(function(e,n){"use strict";var t,u,r,s;return{setters:[function(e){t=e._},function(e){u=e.x,r=e.y,s=e.P},null],execute:function(){e("default",t({data:function(){return{name:"sfsfsf"}}},[["render",function(e,n,t,c,f,i){return u(),r("div",null," 我是独立页面"+s(f.name),1)}]]))}}}));
