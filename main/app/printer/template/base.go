@@ -302,6 +302,11 @@ func (p *printerTemplate) Number(amount float64) string {
 	return integerPart
 }
 
+// FloatToString 浮点数转字符串
+func (p *printerTemplate) FloatToString(num float64) string {
+	return fmt.Sprintf("%v", num)
+}
+
 // GetLogoAddr 获取logo地址
 func (p *printerTemplate) GetLogoAddr() string {
 	if p.StoreSetting == nil || p.StoreSetting.LogoURL == "" {

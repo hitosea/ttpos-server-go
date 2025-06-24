@@ -1890,6 +1890,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				ProductAttr:     saleOrderProduct.GetAttributeName(),
 				ProductAttrList: saleOrderProduct.GetAttributeNameList(),
 				TotalNum:        num,
+				NumType:         saleOrderProduct.NumType,
 				IsBuffet:        saleOrderProduct.IsBuffet == 1,
 				Remark:          saleOrderProduct.Remark,
 			})
@@ -4405,6 +4406,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			CustomDiscountRate:     innerParams.CustomDiscountRate,
 			Sauces:                 sauces,
 			Num:                    product.Num,
+			NumType:                productPackage.NumType,
 			Flavor: model.Flavor{
 				Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
 				Price:          flavorProductBom.Price,

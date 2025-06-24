@@ -11,6 +11,7 @@ type OrderProduct struct {
 	ProductAttr     dto.LocaleResponse   `json:"product_attr"`     // 商品属性
 	ProductAttrList []dto.LocaleResponse `json:"product_attrs"`    // 商品属性, 包含规格、属性、小料
 	TotalNum        float64              `json:"total_num"`        // 总数量
+	NumType         uint                 `json:"num_type"`         // 数量计算方法, 0-整数 1-小数
 	IsBuffet        bool                 `json:"is_buffet"`        // 是否自助餐
 	Remark          string               `json:"remark"`           // 备注
 	Reason          dto.LocaleResponse   `json:"reason"`           // 退菜原因

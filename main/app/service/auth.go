@@ -847,9 +847,6 @@ func (s *authSrv) BindCashier(ctx context.Context, bindReq req.BindCashierReq) (
 	if err != nil {
 		return newToken, refreshToken, errors.New("生成refresh_token失败")
 	}
-	// ToDo 记得删除
-	fmt.Println("bind cashier token:", newToken)
-	fmt.Println("bind cashier refresh_token:", newRefreshToken)
 	return newToken, newRefreshToken, nil
 }
 

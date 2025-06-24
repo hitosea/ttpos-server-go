@@ -233,6 +233,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 				ProductAttr:     unCookingSaleOrderProduct.GetAttributeName(),
 				ProductAttrList: unCookingSaleOrderProduct.GetAttributeNameList(),
 				TotalNum:        unCookingSaleOrderProduct.Num,
+				NumType:         unCookingSaleOrderProduct.NumType,
 				IsBuffet:        unCookingSaleOrderProduct.IsBuffet == 1,
 				Remark:          unCookingSaleOrderProduct.Remark,
 			})
