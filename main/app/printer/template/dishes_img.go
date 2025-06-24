@@ -118,7 +118,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 		// 产品名称
 		productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
 		// 打印产品名称和数量
-		totalNum := "x" + fmt.Sprintf("%d", product.TotalNum)
+		totalNum := "x" + t.base.FloatToString(product.TotalNum)
 		if tmp == 2 {
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
@@ -239,7 +239,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
-			exportation := func(num int) {
+			exportation := func(num float64) {
 				if t.base.Lang == "my" {
 					img.SetTextLineHeight(90)
 				} else {
@@ -248,7 +248,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 				img.LineFeed(1, 12)
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
-					pkg.ColumnConfig{Text: "x" + fmt.Sprintf("%d", num), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
+					pkg.ColumnConfig{Text: "x" + t.base.FloatToString(num), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
 				)
 				if t.base.Lang == "my" {
 					img.LineFeed(1, 12)
@@ -285,12 +285,12 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 			}
 
 			// 根据打印选择执行打印
-			if productPrinter.PrintModeScene == 1 {
+			if productPrinter.PrintModeScene == 1 && product.NumType == 0 {
 				for i := 0; i < int(product.TotalNum); i++ {
-					exportation(1)
+					exportation(1.0)
 				}
 			} else {
-				exportation(int(product.TotalNum))
+				exportation(product.TotalNum)
 			}
 			// 标记已打印
 			isPrinter = true
@@ -343,7 +343,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
-			exportation := func(num int) {
+			exportation := func(num float64) {
 				if t.base.Lang == "my" {
 					img.SetTextLineHeight(90)
 				} else {
@@ -352,7 +352,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 				img.LineFeed(1, 12)
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
-					pkg.ColumnConfig{Text: "x" + fmt.Sprintf("%d", num), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
+					pkg.ColumnConfig{Text: "x" + t.base.FloatToString(num), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
 				)
 				if t.base.Lang == "my" {
 					img.LineFeed(1, 12)
@@ -389,12 +389,12 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 			}
 
 			// 根据打印选择执行打印
-			if productPrinter.PrintModeScene == 1 {
+			if productPrinter.PrintModeScene == 1 && product.NumType == 0 {
 				for i := 0; i < int(product.TotalNum); i++ {
-					exportation(1)
+					exportation(1.0)
 				}
 			} else {
-				exportation(int(product.TotalNum))
+				exportation(product.TotalNum)
 			}
 			// 标记已打印
 			isPrinter = true
@@ -509,7 +509,7 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 		img.LineFeed(1, 12)
 
 		// 打印产品名称和数量
-		totalNum := utils.IfString(tmp == 2, fmt.Sprintf("-%v", product.TotalNum), fmt.Sprintf("X%v", product.TotalNum))
+		totalNum := utils.IfString(tmp == 2, fmt.Sprintf("-%s", t.base.FloatToString(product.TotalNum)), fmt.Sprintf("X%s", t.base.FloatToString(product.TotalNum)))
 
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},

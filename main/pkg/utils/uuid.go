@@ -10,7 +10,6 @@ import (
 )
 
 // 参考：https://jicki.cn/golang-web-note-10/
-// todo: 验证id是否会重复，重启多次后id是否会重复；时间偏移是否会重复
 var (
 	sonyFlake   *sonyflake.Sonyflake
 	idGenerator *goid.ID
