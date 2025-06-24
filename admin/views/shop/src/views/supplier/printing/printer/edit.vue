@@ -140,7 +140,12 @@
         </el-select>
       </el-form-item>
 
-
+      <el-form-item for="no_click" :label="$t('打印方式')" prop="print_method">
+        <el-select v-model="form.print_method" :placeholder="$t('选择打印方式')" style="width: 100%" clearable>
+          <el-option :label="$t('文本打印')" :value="1"></el-option>
+          <el-option :label="$t('图片打印')" :value="2"></el-option>
+        </el-select>
+      </el-form-item>
       <!--提交-->
     </el-form>
     <template #footer>
@@ -174,6 +179,7 @@
           printer_name: '',
           printer_type: '',
           source_device_sn: '',
+          print_method: '',
           sort: 1,
           print_times: 1,
           FEI_E_YUN: {
@@ -235,6 +241,7 @@
             self.form.printer_id = detail.printer_id;
             self.form.print_times = detail.print_times;
             self.form.source_device_sn = detail.source_device_sn;
+            self.form.print_method = detail.print_method || '';
             if (detail.printer_type.value == 'FEI_E_YUN') {
               self.form.FEI_E_YUN.USER = detail.printer_config.USER;
               self.form.FEI_E_YUN.UKEY = detail.printer_config.UKEY;
@@ -291,6 +298,7 @@
             }
             self.loading = true;
             self.form.source_device_sn = self.form.source_device_sn || '';
+            self.form.print_method = self.form.print_method || 0;
             SettingApi.editPrinter(self.form, true)
               .then(() => {
                 self.loading = false;

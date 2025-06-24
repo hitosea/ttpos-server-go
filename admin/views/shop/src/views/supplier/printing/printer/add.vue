@@ -140,6 +140,12 @@
         </el-select>
       </el-form-item>
 
+      <el-form-item for="no_click" :label="$t('打印方式')" prop="print_method">
+        <el-select v-model="form.print_method" :placeholder="$t('选择打印方式')" style="width: 100%" clearable>
+          <el-option :label="$t('文本打印')" :value="1"></el-option>
+          <el-option :label="$t('图片打印')" :value="2"></el-option>
+        </el-select>
+      </el-form-item>
       <!--提交-->
     </el-form>
     <template #footer>
@@ -170,6 +176,7 @@
         form: {
           printer_name: '',
           printer_type: '',
+          print_method: '',
           sort: null,
           print_times: 1,
           source_device_sn: '',
@@ -244,6 +251,7 @@
             }
             self.loading = true;
             self.form.source_device_sn = self.form.source_device_sn || '';
+            self.form.print_method = self.form.print_method || 0;
             SettingApi.addPrinter(self.form, true)
               .then(() => {
                 self.loading = false;
