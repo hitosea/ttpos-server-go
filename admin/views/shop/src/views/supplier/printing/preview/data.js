@@ -6,7 +6,7 @@ export const previewData = {
     [
       {
         name: $t('当班编号'),
-        label: 202401253695842521,
+        label: 2024012536958425,
       },
       {
         name: $t('交班人'),
@@ -309,7 +309,7 @@ export const previewData = {
       },
       {
         name: $t('订单号'),
-        label: 202401253695842521,
+        label: 2024012536958425,
       },
     ],
     [
@@ -545,7 +545,7 @@ export const previewData = {
       },
       {
         name: $t('订单号'),
-        label: 202401253695842521,
+        label: 2024012536958425,
         typeShow: '1,2',
       },
       {
@@ -559,7 +559,7 @@ export const previewData = {
         typeShow: '3',
       },
       {
-        name: $t('订单号：') + 202401253695842521,
+        name: $t('订单号：') + 2024012536958425,
         label: '',
         typeShow: '3',
         right: false,
@@ -954,7 +954,7 @@ export const previewData = {
     [
       {
         name: $t('订单号'),
-        label: 202401253695842521,
+        label: 2024012536958425,
         font16Small: true,
       },
       {
@@ -1140,7 +1140,7 @@ export const previewData = {
       },
       {
         name: $t('订单号'),
-        label: 202401253695842521,
+        label: 2024012536958425,
       },
       {
         name: $t('收银员'),
@@ -1268,7 +1268,7 @@ export const previewData = {
     [
       {
         name: $t('当班编号'),
-        label: 202401253695842521,
+        label: 2024012536958425,
       },
       {
         name: $t('交班人'),
@@ -1541,7 +1541,7 @@ export const previewData = {
     [
       {
         name: $t('订单号'),
-        label: 202401253695842521,
+        label: 2024012536958425,
         font16Small: true,
       },
       {
@@ -1590,7 +1590,7 @@ export const previewData = {
     [
       {
         name: $t('当班编号'),
-        label: 202401253695842521,
+        label: 2024012536958425,
       },
       {
         name: $t('交班人'),
@@ -1837,7 +1837,7 @@ export const previewData = {
     [
       {
         name: $t('订单号'),
-        label: 202401253695842521,
+        label: 2024012536958425,
         font16Small: true,
       },
       {
@@ -1879,6 +1879,46 @@ export const previewData = {
         right: false,
         font18Small: true,
         flexWidth: 3,
+      },
+    ],
+  ],
+  fourteen: [
+    [
+      {
+        name: $t('订单号'),
+        label: 2024012536958425,
+        font16Small: true,
+      },
+      {
+        name: $t('时间'),
+        label: '2023/12/15 14:00:21',
+        font16Small: true,
+      },
+    ],
+    [
+      {
+        name: $t('商品'),
+        label: $t('数量'),
+        font17Normal: true,
+      },
+    ],
+    [
+      {
+        name: $t('商品名称商品名称品名称商品名称商品名称品名称'),
+        label: 'X5',
+        font22: true,
+        flexWidth: true,
+      },
+      {
+        name: `${$t('少冰')}` + '\n' + `${$t('加珍珠')}` + '\n' + $t('这是备注这是备注这是备注'),
+        font18Small: true,
+        flexWidth: true,
+      },
+      {
+        name: $t('商品名称商品名称'),
+        label: 'X2',
+        font22: true,
+        flexWidth: true,
       },
     ],
   ],
