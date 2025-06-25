@@ -71,7 +71,7 @@ func (s *SpecService) ConvertSpec() error {
 				UpdateTime: spec.CreateTime,
 			},
 			Name:                  spec.SpecName,
-			MultiLanguageNameUuid: uint(id),
+			MultiLanguageNameUuid: id,
 			MultiLanguageName:     languageName,
 		}
 		_, err = base.NewProductFlavorRepo(s.targetDB).CreateProductFlavor(flavor)

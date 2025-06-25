@@ -12,7 +12,7 @@ import (
 type ProductFlavor struct {
 	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
-	MultiLanguageNameUuid uint   `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }
@@ -22,7 +22,7 @@ type ProductSauce struct {
 	BaseModel
 	Name                  string  `gorm:"default:'';column:name;comment:'名称'"`
 	Price                 float64 `gorm:"default:0;column:price;comment:'价格'"`
-	MultiLanguageNameUuid uint    `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	MultiLanguageNameUuid uint64  `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 
 	MultiLanguageName MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	SauceMaterials    []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`             // 小料的组成材料

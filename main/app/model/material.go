@@ -4,9 +4,9 @@ package model
 type Material struct {
 	BaseModel
 	Name                  string  `gorm:"default:'';column:name;comment:'原料名称'"`
-	MultiLanguageNameUuid uint    `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称ID'"`
+	MultiLanguageNameUuid uint64  `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称ID'"`
 	CategoryUuid          uint64  `gorm:"default:0;column:category_uuid;comment:'类别ID'"`
-	SupplierUuid          uint    `gorm:"default:0;column:supplier_uuid;comment:'供应商ID'"`
+	SupplierUuid          uint64  `gorm:"default:0;column:supplier_uuid;comment:'供应商ID'"`
 	ImageUuid             uint64  `gorm:"default:0;column:image_uuid;comment:'图片ID'"`
 	ImageName             string  `gorm:"default:'';column:image_name;comment:'图片名称'"`
 	UnitUuid              uint64  `gorm:"default:0;column:unit_uuid;comment:'单位ID'"`
