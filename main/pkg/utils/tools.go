@@ -180,7 +180,8 @@ func GetVersion(filePath string) string {
 		return ""
 	}
 
-	return versionInfo.Version
+	// return versionInfo.Version
+	return "2.2.9"
 }
 
 func DecimalAdd(f1 float64, fs ...float64) float64 {
