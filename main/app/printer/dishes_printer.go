@@ -379,7 +379,7 @@ func (p *PrinterRepoImpl) getPrintProductOutMenuContent(
 	// 图片打印
 	if p.IsImagePrinterMethod(true) {
 		t := template.NewDishesImgTemplate(base)
-		return t.CompleteOrder(tmp, printerItem, saleBill, products)
+		return t.OutMenuTemplate(tmp, printerItem, saleBill, products)
 	}
 
 	// 获取打印机类型
