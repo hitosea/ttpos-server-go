@@ -48,7 +48,7 @@ func Init() error {
 		EncryptHeader: "encrypt",
 		ClientID:      "encrypt_id",
 		ClientKey:     "client_key",
-		AesSecretKey:  "aes_secret_key",
+		AesSecretKey:  "",
 	}
 
 	return nil
