@@ -109,7 +109,6 @@ services:
     volumes:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env
-      - ./main/version.json:/var/www/version.json
       - ./docker/certificate:/var/certificate
     restart: always
     networks:

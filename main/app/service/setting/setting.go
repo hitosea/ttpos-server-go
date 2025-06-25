@@ -1386,7 +1386,7 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 			DeviceId:               ctx.GetDeviceSn(),
 			DeviceRemark:           device.Remark,
 			ClientVersion:          clientVersion,
-			ServerVersion:          utils.GetVersion("version.json"),
+			ServerVersion:          utils.GetVersion(),
 		},
 		UsbPrinter: resp.UsbPrinterList{
 			List:       make([]resp.UsbPrinter, 0),

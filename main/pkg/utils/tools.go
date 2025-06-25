@@ -2,13 +2,12 @@ package utils
 
 import (
 	"bytes"
-	"encoding/json"
 	"net/http"
 	"net/url"
-	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"ttpos-server-go/version"
 
 	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
@@ -166,21 +165,9 @@ func RemoveDomain(fileUrl string) string {
 	return newURL
 }
 
-// GetVersion 从指定路径读取version.json文件并返回版本号
-func GetVersion(filePath string) string {
-	// 读取version.json文件
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return ""
-	}
-
-	// 解析JSON
-	var versionInfo VersionInfo
-	if err := json.Unmarshal(data, &versionInfo); err != nil {
-		return ""
-	}
-
-	return versionInfo.Version
+// GetVersion 并返回版本号
+func GetVersion() string {
+	return version.Version
 }
 
 func DecimalAdd(f1 float64, fs ...float64) float64 {
