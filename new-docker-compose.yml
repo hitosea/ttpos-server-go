@@ -88,7 +88,6 @@ services:
     volumes:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env
-      - ./main/version.json:/var/www/version.json
       - ./docker/certificate:/var/certificate
       - ./docker/golang/logs:/var/www/log
     restart: always

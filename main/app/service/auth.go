@@ -455,7 +455,7 @@ func (s *authSrv) AssistantBase(ctx context.Context) (resp.AssistantBase, error)
 		Printer:       printerSetting,
 		Kitchen:       kitchenSettingResp,
 		ClientVersion: clientVersion,
-		ServerVersion: utils.GetVersion("version.json"),
+		ServerVersion: utils.GetVersion(),
 	}, nil
 }
 
@@ -501,7 +501,7 @@ func (s *authSrv) TabletBase(ctx context.Context) (resp.TabletBase, error) {
 	}
 	return resp.TabletBase{
 		RealName:      ctx.GetStaff().RealName,
-		ServerVersion: utils.GetVersion("version.json"),
+		ServerVersion: utils.GetVersion(),
 		ClientVersion: clientVersion,
 		Buffet:        buffetSetting,
 		CloudBasic:    cloudBasicSetting,
@@ -575,7 +575,7 @@ func (s *authSrv) KitchenBase(ctx context.Context) (resp.KitchenBase, error) {
 		Currency:      currencySetting,
 		Business:      businessSetting,
 		Kitchen:       kitchenSettingResp,
-		ServerVersion: utils.GetVersion("version.json"),
+		ServerVersion: utils.GetVersion(),
 		ClientVersion: clientVersion,
 	}, nil
 }
