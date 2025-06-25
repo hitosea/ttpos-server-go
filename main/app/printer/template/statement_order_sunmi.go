@@ -9,7 +9,6 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/config"
-	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
 )
@@ -106,6 +105,8 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		if saleBill.DeskUuid > 0 {
 			if t.base.Lang == "my" || t.base.IsMy(saleBill.SerialNo) {
 				printer.SetLineSpacing(80)
+			} else {
+				printer.SetLineSpacing(70)
 			}
 			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
 			printer.LineFeed(1)
@@ -162,6 +163,8 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 					printer.LineFeed()
 				}
 				printer.SetLineSpacing(80)
+			} else {
+				printer.SetLineSpacing(70)
 			}
 			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
 			printer.LineFeed()
@@ -236,6 +239,8 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		if saleBill.DeskUuid > 0 {
 			if t.base.Lang == "my" || t.base.IsMy(saleBill.SerialNo) {
 				printer.SetLineSpacing(80)
+			} else {
+				printer.SetLineSpacing(70)
 			}
 			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
 			printer.LineFeed()
@@ -289,8 +294,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	}
 	printer.AppendText("------------------------------------------------\n")
 
-	// 赠品金额 / 商品数量
-	freeMoney := float64(0)
+	// 商品数量
 	productNum := float64(0)
 	printer.SetupColumns(
 		[]int{320, pkg.AlignLeft, 0},
@@ -318,48 +322,26 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		printer.SetLineSpacing(40)
 	}
 	// 添加加钟商品
-	for _, delay := range saleOrder.SaleOrderBuffetDelayProducts {
-		if delay.IsDelete() {
-			continue
-		}
-		productNum += float64(delay.Num)
-		discountPrice := delay.GetAmount()
+	buffetDelayProducts, num := t.base.MergeSaleOrderBuffetDelayProducts(saleOrder)
+	productNum += num
+	for _, delay := range buffetDelayProducts {
 		printer.PrintInColumns(
-			delay.Name,
-			fmt.Sprintf("%s*%d", t.base.Amount(delay.Price), delay.Num),
-			t.base.GetPriceAndUnit(discountPrice),
+			delay.DelayName,
+			fmt.Sprintf("%s*%d", t.base.Amount(delay.DelayPrice), delay.DelayNum),
+			t.base.GetPriceAndUnit(delay.DelayTotalPrice),
 		)
 		printer.SetLineSpacing(20)
 		printer.LineFeed()
 		printer.SetLineSpacing(40)
 	}
 	// 商品列表
-	for _, item := range saleOrder.SaleOrderProducts {
-		if item.IsDelete() || item.IsUnCookingProduct() || item.IsUnAcceptOrderBool() || item.IsCancelProduct() {
-			continue
-		}
-		if item.IsBuffetProduct() && item.GetTotalSaucePrice() <= 0 {
-			continue
-		}
-		// 商品数量
-		productNum += item.Num
-		productPrice := utils.IfFloat64(item.IsBuffetProduct(), item.SaucePrice, item.SalePrice)
-		productTotalPrice := utils.IfFloat64(item.IsBuffetProduct(), item.GetTotalSaucePrice(), item.GetSalePrice()) // 商品原价
-		// 赠品
-		var gift string
-		if item.IsGiftBool() {
-			gift = "(" + t.base.Translate("赠") + ") "
-			freeMoney += item.GetTotalProductPrice()
-			productTotalPrice = 0
-		}
-		// 商品名称
-		productAttr := item.GetAttributeNamesByLang(t.base.Lang)
-		productName := gift + item.MultiLanguageName.GetNameByLang(t.base.Lang) + "\n(" + productAttr + ")"
-		//
+	products, num := t.base.MergeSaleOrderProduct(saleOrder)
+	productNum += num
+	for _, product := range products {
 		printer.PrintInColumns(
-			productName,
-			fmt.Sprintf("%s*%v", t.base.Amount(productPrice), item.Num),
-			t.base.GetPriceAndUnit(productTotalPrice),
+			product.ProductName,
+			fmt.Sprintf("%s*%v", t.base.Amount(product.ProductPrice), product.ProductNum),
+			t.base.GetPriceAndUnit(product.ProductTotalPrice),
 		)
 		printer.SetLineSpacing(20)
 		printer.LineFeed()

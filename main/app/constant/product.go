@@ -141,6 +141,12 @@ const (
 	SaleOrderProductIsBuffetNo  = No  // 否, 不是自助餐商品
 )
 
+// 是否为计量商品
+const (
+	SaleOrderProductIsMeteringYes = Yes // 是, 计价商品
+	SaleOrderProductIsMeteringNo  = No  // 否, 不是计价商品
+)
+
 // 商品打印状态
 const (
 	ProductPrinterStatusOpen  = 1 // 开启
