@@ -4607,7 +4607,6 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}
-	return nil, nil
 	ctx.Log().Debug("获取到账单信息成功")
 
 	// 判断订单状态
