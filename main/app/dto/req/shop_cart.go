@@ -40,9 +40,9 @@ type ProductAddReq struct {
 }
 
 type GetProductPackageDetailReq struct {
-	SaleBillUuid       uint64 `json:"sale_bill_uuid"`       // 销售账单ID
-	SaleOrderUuid      uint64 `json:"sale_order_uuid"`      // 销售订单ID
-	ProductPackageUuid uint64 `json:"product_package_uuid"` // 商品包uuid
+	SaleBillUuid       uint64 `form:"sale_bill_uuid"`       // 销售账单ID
+	SaleOrderUuid      uint64 `form:"sale_order_uuid"`      // 销售订单ID
+	ProductPackageUuid uint64 `form:"product_package_uuid"` // 商品包uuid
 }
 
 type TabletOrderCartProductAddReq struct {

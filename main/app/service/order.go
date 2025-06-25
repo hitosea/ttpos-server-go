@@ -4600,7 +4600,6 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	}
 
 	// 检查商品销售库存是否充足
-	// todo
 	ctx.Log().Debug("获取账单信息")
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
@@ -10223,7 +10222,19 @@ func (s *orderSrv) GetOrderMemberList(ctx context.Context, saleBillUuid uint64) 
 }
 
 func (s *orderSrv) GetProductPackageDetail(ctx context.Context, req req.GetProductPackageDetailReq) (*resp.ProductPackageDetailRes, error) {
-	// db := ctx.GetDB()
+	db := ctx.GetDB()
+	// 获取销售订单中h5未下单的销售订单商品
+	saleOrderProducts, err := repository.NewSaleOrderProductRepo(db).GetProductPackageDetail(req.SaleBillUuid, req.SaleOrderUuid, req.ProductPackageUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取商品包详情失败")
+	}
 
-	return nil, nil
+	productPackageDetailList := make([]resp.ProductPackageDetail, 0)
+
+	for _, saleOrderProduct := range saleOrderProducts {
+		productPackageDetail := saleOrderProduct.GetProductPackageDetail()
+		productPackageDetailList = append(productPackageDetailList, productPackageDetail)
+	}
+
+	return &resp.ProductPackageDetailRes{List: productPackageDetailList}, nil
 }

@@ -571,8 +571,21 @@ func (h *Handler) GetDeskPing(c *gin.Context) {
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/product/package/detail [get]
 func (h *Handler) GetProductPackageDetail(c *gin.Context) {
-	// ctx := helper.GetContext(c)
-
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.GetProductPackageDetailReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("获取商品选购详情", zap.Any("params", params))
+	productPackage, err := h.orderSrv.GetProductPackageDetail(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, productPackage)
 }
 
 // RegisterH5Handlers 注册扫码h5路由

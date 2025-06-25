@@ -1239,7 +1239,9 @@ func (model *SaleOrderProduct) GenerateProductPackageSign() string {
 // 获取商品选购详情
 func (model *SaleOrderProduct) GetProductPackageDetail() resp.ProductPackageDetail {
 	return resp.ProductPackageDetail{
-		Sign: model.GenerateProductPackageSign(),
-		Num:  model.Num,
+		FlavorUuid:     model.GetFlavorBomUuid(),
+		AttributesUuid: model.GetAttributeUuidList(),
+		SaucesUuid:     model.GetBomUuidList(),
+		Num:            model.Num, // 数量
 	}
 }

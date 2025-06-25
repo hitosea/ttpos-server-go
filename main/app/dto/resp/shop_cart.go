@@ -226,8 +226,10 @@ type BuffetProduct struct {
 }
 
 type ProductPackageDetail struct {
-	Sign string  `json:"sign"` // 签名,格式为：商品规格uuid:属性uuid1,属性uuid2,属性uuid3:加料uuid1,加料uuid2,加料uuid3。属性和加料的uuid要按从小到大排序
-	Num  float64 `json:"num"`  // 数量
+	FlavorUuid     uint64   `json:"flavor_uuid"`     // 商品规格uuid
+	AttributesUuid []uint64 `json:"attributes_uuid"` // 商品属性uuid列表
+	SaucesUuid     []uint64 `json:"sauces_uuid"`     // 商品加料uuid列表
+	Num            float64  `json:"num"`             // 数量
 }
 
 type ProductPackageDetailRes struct {
