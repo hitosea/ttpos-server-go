@@ -363,6 +363,8 @@ func clearCache(companyUuid uint64) error {
 		c.Del(ctx, "sync_setting_"+constant.SettingCloudBasic)
 		c.Del(ctx, fmt.Sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", companyUuid, 0))
 		c.Del(ctx, fmt.Sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", companyUuid, 1))
+		c.Del(ctx, fmt.Sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", companyUuid, -1))
+		c.Del(ctx, fmt.Sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", companyUuid, -2))
 	}
 
 	if client != nil {

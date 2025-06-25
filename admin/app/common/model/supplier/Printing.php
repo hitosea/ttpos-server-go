@@ -96,6 +96,7 @@ class Printing extends BaseModel
         Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 0), null);
         Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 1), null);
         Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -1), null);
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -2), null);
     }
 
     /**
@@ -106,6 +107,7 @@ class Printing extends BaseModel
         Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 0), null);
         Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, 1), null);
         Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -1), null);
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", self::$app_id, -2), null);
     }
 
     /**

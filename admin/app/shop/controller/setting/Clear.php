@@ -140,6 +140,7 @@ class Clear extends Controller
         Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", $app_id, 0), null);
         Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", $app_id, 1), null);
         Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", $app_id, -1), null);
+        Cache::set(sprintf("PRODUCT_PRINTER_LIST_v2:%d:%d", $app_id, -2), null);
     }
 
     /**
