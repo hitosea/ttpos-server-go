@@ -2255,4 +2255,32 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_coupon` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=364 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员优惠券表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_member_coupon_use_record` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) DEFAULT 0 COMMENT '唯一ID',
+  `member_uuid` bigint(20) DEFAULT 0 COMMENT '会员uuid',
+  `coupon_uuid` bigint(20) DEFAULT 0 COMMENT '优惠券uuid',
+  `use_order_uuid` bigint(20) DEFAULT 0 COMMENT '优惠券使用订单uuid',
+  `use_order_amount` decimal(14,2) DEFAULT 0.00 COMMENT '优惠券使用订单金额',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=364 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员优惠券使用记录表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_marketing_activity_record` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) DEFAULT 0 COMMENT '记录唯一ID',
+  `activity_uuid` bigint(20) DEFAULT 0 COMMENT '活动uuid',
+  `prize_uuid` bigint(20) DEFAULT 0 COMMENT '奖品uuid',
+  `member_uuid` bigint(20) DEFAULT 0 COMMENT '会员uuid',
+  `reward_count` int(11) DEFAULT 0 COMMENT '已获得奖励次数',
+  `last_reward_time` int(11) DEFAULT 0 COMMENT '最后一次获得奖励时间',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=364 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='活动奖励发放记录表';
+
+
 SET FOREIGN_KEY_CHECKS = 1;
