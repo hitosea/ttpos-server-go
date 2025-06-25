@@ -5,7 +5,7 @@ use think\facade\Log;
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class AddPrinterTemplateV230 extends Migrator
+class AddPrinterTemplateV231 extends Migrator
 {
     /**
      * Change Method.
@@ -35,7 +35,7 @@ class AddPrinterTemplateV230 extends Migrator
         $printerTemplateList = [
             [
                 'id' => 10,
-                'uuid' => 10,
+                'uuid' => 11,
                 'name' => '出菜单',
                 'template' => 1,
                 'create_time' => time(),
@@ -45,7 +45,7 @@ class AddPrinterTemplateV230 extends Migrator
 
         foreach ($printerTemplateList as $item) {
             // 判断重复
-            $printerTemplate = $db->name('printer_template')->where('uuid', $item['uuid'])->find();
+            $printerTemplate = $db->name('printer_template')->where('id', $item['id'])->find();
             if ($printerTemplate) {
                 continue;
             }
