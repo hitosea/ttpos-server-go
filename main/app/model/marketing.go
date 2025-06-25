@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-// MarketingActivity 营销活动模型
+// MarketingActivity 营销活动模型 `ttpos_marketing_activity`
 type MarketingActivity struct {
 	BaseModel
 	Name                  string  `gorm:"column:name;type:varchar(2500);default:'';comment:活动名称" json:"name"`
@@ -29,7 +29,7 @@ func (m *MarketingActivity) IsValid() bool {
 	return m.IsInvalid == 0 && time.Now().Unix() > int64(m.StartTime) && time.Now().Unix() < int64(m.EndTime)
 }
 
-// MarketingActivityPrize 营销活动奖品模型
+// MarketingActivityPrize 营销活动奖品模型 `ttpos_marketing_activity_prize`
 type MarketingActivityPrize struct {
 	BaseModel
 	ActivityUuid uint64           `gorm:"column:activity_uuid;type:biginteger;default:0;comment:活动uuid" json:"activity_uuid"`
@@ -38,7 +38,7 @@ type MarketingActivityPrize struct {
 	Coupon       *MarketingCoupon `gorm:"foreignKey:Uuid;references:PrizeUuid" json:"coupon"`
 }
 
-// MarketingActivityRecord 营销活动记录模型
+// MarketingActivityRecord 营销活动记录模型 `ttpos_marketing_activity_record`
 type MarketingActivityRecord struct {
 	BaseModel
 	ActivityUuid   uint64 `gorm:"column:activity_uuid;type:biginteger;default:0;comment:活动uuid" json:"activity_uuid"`
@@ -48,7 +48,7 @@ type MarketingActivityRecord struct {
 	LastRewardTime int64  `gorm:"column:last_reward_time;type:int;default:0;comment:最后一次获得奖励时间" json:"last_reward_time"`
 }
 
-// 营销活动消费记录表
+// 营销活动消费记录表 `ttpos_marketing_activity_consumption`
 type MarketingActivityConsumption struct {
 	BaseModel
 	ActivityUuid      uint64  `gorm:"column:activity_uuid;type:biginteger;default:0;comment:活动uuid" json:"activity_uuid"`
@@ -59,7 +59,7 @@ type MarketingActivityConsumption struct {
 	RewardStatus      int     `gorm:"column:reward_status;type:int;default:0;comment:奖励状态 0未发放 1已发放" json:"reward_status"`
 }
 
-// MarketingCoupon 会员营销-优惠券表
+// MarketingCoupon 会员营销-优惠券表 `ttpos_marketing_coupon`
 type MarketingCoupon struct {
 	BaseModel
 	Name           string  `gorm:"column:name;type:varchar(50);comment:优惠券名称" json:"name"`
@@ -76,7 +76,7 @@ type MarketingCoupon struct {
 	ValidDays      int     `gorm:"column:valid_days;type:int(11);default:0;comment:领取优惠券后n天内有效, requirement = marketing 时有效" json:"valid_days"`
 }
 
-// MarketingCouponRecord 会员营销-优惠券表
+// MarketingCouponRecord 会员营销-优惠券表 `ttpos_marketing_coupon_record`
 type MarketingCouponRecord struct {
 	BaseModel
 	CouponUuid   int64  `gorm:"column:coupon_uuid;type:bigint(20);default:0;comment:优惠券唯一ID" json:"coupon_uuid"`

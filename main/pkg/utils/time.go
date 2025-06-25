@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -268,4 +269,37 @@ func (t Timezone) OpeningHoursStartEndUnix(openingHours string) (int64, int64) {
 	}
 
 	return startTime.Unix(), endTime.Unix()
+}
+
+// IsTimeInRange 判断给定时间是否在指定时间范围内
+func IsTimeInRange(targetTime, startTime, endTime string) (bool, error) {
+	if targetTime == "" || startTime == "" || endTime == "" {
+		return false, fmt.Errorf("invalid time format")
+	}
+	// 定义时间布局
+	const timeLayout = "15:04"
+
+	// 解析输入时间
+	target, err := time.Parse(timeLayout, targetTime)
+	if err != nil {
+		return false, fmt.Errorf("invalid target time format: %w", err)
+	}
+
+	start, err := time.Parse(timeLayout, startTime)
+	if err != nil {
+		return false, fmt.Errorf("invalid start time format: %w", err)
+	}
+
+	end, err := time.Parse(timeLayout, endTime)
+	if err != nil {
+		return false, fmt.Errorf("invalid end time format: %w", err)
+	}
+
+	// 判断目标时间是否等于开始时间或结束时间，是则返回true
+	if targetTime == startTime || targetTime == endTime {
+		return true, nil
+	}
+
+	// 判断目标时间是否在范围内
+	return target.After(start.Add(-time.Minute)) && target.Before(end.Add(time.Minute)), nil
 }

@@ -99,8 +99,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `pay_points_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '抵扣金额,积分 抵扣了多少金额',
     `points_exchange_rate` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '积分抵扣汇率,1积分抵扣多少元',
     `auto_points_exchange` INT(10) NOT NULL DEFAULT 0 COMMENT '积分抵扣类型,0-手动抵扣 1-自动抵扣',
-    
     -- 结账完成后才记录的字段
+    `coupon_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '优惠券抵扣金额,抵扣了多少金额',
     `payment_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '已支付金额,关联付款单的支付金额之和。',
     `change_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '找零金额,结账完成后才记录',
     `zero_checkout_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '结账抹零金额。',
@@ -125,6 +125,22 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_sale_order_coupon` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单优惠券ID',
+    `coupon_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '优惠券抵扣金额，实际抵扣金额',
+    `coupon_origin_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '优惠券原始金额(面值)',
+    `coupon_requirement` VARCHAR(20) DEFAULT '' COMMENT '优惠券的类型，none-所有人可用，但一个saleBill只能用一张优惠券;marketing-会员通过营销活动获的优惠券；',
+    `member_coupon_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '会员的优惠券uuid,表示该订单使用会员的哪个优惠券。none时有值',
+    `marketing_coupon_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '营销优惠券uuid,表示该订单使用营销的哪个优惠券。marketing时有值',
+    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单优惠券表';
+
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',

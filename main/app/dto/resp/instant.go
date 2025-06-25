@@ -168,10 +168,39 @@ type Attribute struct {
 // 销售订单的支付页信息
 type InstantOrderPaymentInfoResp struct {
 	MemberInfo     *MemberInfo             `json:"member_info,omitempty"`     // 会员信息。如果订单选择了会员，则返回会员信息
+	CouponList     *CouponList             `json:"coupon_list"`               // 优惠券列表
 	PaymentOrders  PaymentInfoList         `json:"payment_orders"`            // 支付订单列表
 	PaymentMethods PaymentMethodList       `json:"payment_methods"`           // 支付方式列表
 	Amounts        PaymentMethodAmountList `json:"amounts"`                   // 支付方式列表及订单金额信息
 	PointsExchange PointsExchangeInfo      `json:"points_exchange,omitempty"` // 积分抵扣信息
+}
+
+type CouponList struct {
+	List []Coupon `json:"list"`
+}
+
+type Coupon struct {
+	Uuid              uint64                `json:"uuid"`             // 优惠券UUID
+	Name              string                `json:"name"`             // 优惠券名称
+	Requirement       string                `json:"type"`             // 优惠券类型 none-无门槛（任何人可以使用） marketing-会员账户里的优惠券，营销活动获得
+	Amount            float64               `json:"amount"`           // 优惠券金额
+	Count             int                   `json:"count"`            // 优惠券数量
+	IsSelected        bool                  `json:"is_selected"`      // 是否选中
+	IsAvailable       bool                  `json:"is_available"`     // 是否可用
+	DayStartTime      string                `json:"day_start_time"`   // 每日适用时段开始时间, hh:mm 格式。00:00-23:59表示全天可用
+	DayEndTime        string                `json:"day_end_time"`     // 每日适用时段结束时间, hh:mm 格式。00:00-23:59表示全天可用
+	ValidStartTime    string                `json:"valid_start_time"` // 优惠券有效期，开始时间 格式：YYYY-MM-DD
+	ValidEndTime      string                `json:"valid_end_time"`   // 优惠券有效期，结束时间 格式：YYYY-MM-DD
+	CouponList        []*SampleMemberCoupon `json:"coupon_list"`      // 会员优惠券列表。列表的长度即为优惠券数量Count
+	ValidEndTimestamp int64                 `json:"-"`                // 优惠券有效期结束时间戳,仅用于排序
+}
+
+type SampleMemberCoupon struct {
+	Uuid       uint64 `json:"uuid"`        // 会员优惠券UUID
+	Name       string `json:"name"`        // 会员优惠券名称
+	CouponUuid uint64 `json:"coupon_uuid"` // 优惠券UUID
+	StartTime  int64  `gorm:"column:start_time;type:bigint(20);not null;comment:优惠券开始时间" json:"start_time"`
+	EndTime    int64  `gorm:"column:end_time;type:bigint(20);not null;comment:优惠券结束时间" json:"end_time"`
 }
 
 type PointsExchangeInfo struct {

@@ -6660,6 +6660,153 @@ func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (
 	return shopCart, nil
 }
 
+// GetValidMemberCouponList 获取有效的会员优惠券列表,包括通用优惠券和会员优惠券
+func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint64) (*resp.CouponList, error) {
+	// 获取门店设置
+	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	shopTimeZone := storeSetting.TimeZone
+	layout := "2006-01-02"
+
+	timezone := utils.SetTimezone(shopTimeZone)
+	coupons := make(map[uint64]resp.Coupon, 0)
+	// 查询本店所有none类型的优惠券，按创建时间排序
+	commonCouponList, err := repository.NewMarketingCouponRepo(ctx.GetDB()).GetValidCouponList()
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询通用优惠券列表失败")
+	}
+
+	for _, coupon := range commonCouponList {
+		endTime := timezone.FormatUnixTime(int64(coupon.ValidEndTime), layout)
+		endTimestamp, _ := timezone.FormatTimeToUnix(endTime) // 优惠券到期时间戳
+		coupons[coupon.Uuid] = resp.Coupon{
+			Uuid:              coupon.Uuid,
+			Name:              coupon.Name,
+			Requirement:       coupon.Requirement,
+			Amount:            coupon.Amount,
+			Count:             1,     // 通用优惠券数量为1
+			IsSelected:        false, // 默认未选中，另外在判断是否被选中
+			IsAvailable:       false, // 另外再判断是否在使用时段内
+			DayStartTime:      coupon.DayStartTime,
+			DayEndTime:        coupon.DayEndTime,
+			ValidStartTime:    timezone.FormatUnixTime(int64(coupon.ValidStartTime), layout),
+			ValidEndTime:      endTime,
+			ValidEndTimestamp: endTimestamp,
+		}
+	}
+
+	// 如果订单使用了会员，查询会员有效期内的优惠券列表
+	if memberUuid != 0 {
+		memberCouponList, err := repository.NewMemberCouponRepo(ctx.GetDB()).GetValidMemberCouponList(memberUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "查询会员优惠券列表失败")
+		}
+		// 根据CouponUuid分类，然后再根据有效期分类（开始时间日期和结束时间日期相同的合并）
+		// key规则， CouponUuid_开始时间日期_结束时间日期
+		couponMap := make(map[string][]*model.MemberCoupon, 0)
+
+		for _, coupon := range memberCouponList {
+
+			startTime := timezone.FormatUnixTime(coupon.StartTime, layout)
+			endTime := timezone.FormatUnixTime(coupon.EndTime, layout)
+			key := fmt.Sprintf("%d_%s_%s", coupon.CouponUuid, startTime, endTime)
+			if _, ok := couponMap[key]; !ok {
+				couponMap[key] = make([]*model.MemberCoupon, 0)
+			}
+
+			couponMap[key] = append(couponMap[key], coupon)
+
+		}
+
+		for _, memberCouponList := range couponMap {
+			var targetCoupon *model.MemberCoupon // 先到期的优惠券
+			for _, coupon := range memberCouponList {
+				if targetCoupon == nil {
+					targetCoupon = coupon
+				} else {
+					if coupon.EndTime < targetCoupon.EndTime {
+						targetCoupon = coupon
+					}
+				}
+			}
+			startTime := timezone.FormatUnixTime(targetCoupon.StartTime, layout)
+			endTime := timezone.FormatUnixTime(targetCoupon.EndTime, layout)
+			endTimestamp, _ := timezone.FormatTimeToUnix(endTime) // 优惠券到期时间戳
+
+			sampleMemberCouponList := make([]*resp.SampleMemberCoupon, 0)
+			for _, memberCoupon := range memberCouponList {
+				sampleMemberCouponList = append(sampleMemberCouponList, &resp.SampleMemberCoupon{
+					Uuid:       memberCoupon.Uuid,
+					Name:       memberCoupon.Name,
+					CouponUuid: memberCoupon.CouponUuid,
+					StartTime:  memberCoupon.StartTime,
+					EndTime:    memberCoupon.EndTime,
+				})
+
+			}
+			coupons[targetCoupon.Uuid] = resp.Coupon{
+				Uuid:              targetCoupon.Uuid,
+				Name:              targetCoupon.MarketingCoupon.Name,
+				Requirement:       targetCoupon.MarketingCoupon.Requirement,
+				Amount:            targetCoupon.MarketingCoupon.Amount,
+				Count:             len(memberCouponList), // 会员优惠券数量为1
+				IsSelected:        false,                 // 默认未选中，另外在判断是否被选中
+				IsAvailable:       false,                 // 另外再判断是否在使用时段内
+				DayStartTime:      targetCoupon.MarketingCoupon.DayStartTime,
+				DayEndTime:        targetCoupon.MarketingCoupon.DayEndTime,
+				ValidStartTime:    startTime,
+				ValidEndTime:      endTime,
+				ValidEndTimestamp: endTimestamp,
+				CouponList:        sampleMemberCouponList,
+			}
+		}
+	}
+	// 判断是否被选中
+	selectedCouponUuid := uint64(0)
+	for _, coupon := range coupons {
+		if coupon.Uuid == selectedCouponUuid {
+			coupon.IsSelected = true
+			break
+		}
+	}
+	// 判断是否在使用时段内
+	nowTime := timezone.FormatUnixTime(timezone.NowUnix(), "15:04")
+	for _, coupon := range coupons {
+		isAvailable, err := utils.IsTimeInRange(nowTime, coupon.DayStartTime, coupon.DayEndTime)
+		if err != nil {
+			ctx.Log().Info("判断是否在使用时段内失败", zap.Error(err))
+			continue
+		}
+		if isAvailable {
+			coupon.IsAvailable = true
+		}
+	}
+
+	// 重新排序，通用优惠券在前，会员优惠券在后。通用优惠券再按先到期的排在前面，会员优惠券再按先到期的排在前面
+	// 先分组，再排序
+	commonCouponArray := make([]resp.Coupon, 0)
+	memberCouponArray := make([]resp.Coupon, 0)
+	for _, coupon := range coupons {
+		if coupon.Requirement == constant.CouponRequirementNone {
+			commonCouponArray = append(commonCouponArray, coupon)
+		} else if coupon.Requirement == constant.CouponRequirementMember {
+			memberCouponArray = append(memberCouponArray, coupon)
+		}
+	}
+	// 按ValidEndTimestamp时间戳排序，大的再前
+	sort.Slice(commonCouponArray, func(i, j int) bool {
+		return commonCouponArray[i].ValidEndTimestamp > commonCouponArray[j].ValidEndTimestamp
+	})
+	sort.Slice(memberCouponArray, func(i, j int) bool {
+		return memberCouponArray[i].ValidEndTimestamp > memberCouponArray[j].ValidEndTimestamp
+	})
+
+	return &resp.CouponList{List: append(commonCouponArray, memberCouponArray...)}, nil
+}
+
 // InstantOrderPaymentInfo 获取结账页面信息
 func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.SaleBill, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error) {
 	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
@@ -6702,6 +6849,12 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			RechargeMoney: saleOrder.Member.GetRechargeMoney(),
 		}
 	}
+
+	couponList, err := s.GetValidMemberCouponList(ctx, saleOrder.ConsumerUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询会员优惠券列表失败")
+	}
+
 	paymentOrders := make([]resp.PaymentOrder, 0)
 	for _, paymentOrder := range saleOrder.PaymentOrders {
 		order := resp.PaymentOrder{
@@ -6832,6 +6985,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 
 	infoResp := &resp.InstantOrderPaymentInfoResp{
 		MemberInfo:     memberInfo,
+		CouponList:     couponList,
 		PaymentOrders:  resp.PaymentInfoList{List: paymentOrders},
 		PaymentMethods: resp.PaymentMethodList{List: methodItems},
 		Amounts:        resp.PaymentMethodAmountList{List: amounts},

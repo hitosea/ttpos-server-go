@@ -567,7 +567,7 @@ func (h *Handler) GetDeskPing(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data query req.GetProductPackageDetailReq true "商品选购详情参数"
-// @Success 200 {object} dto.Response{data=Res}
+// @Success 200 {object} dto.Response{data=resp.ProductPackageDetailRes}
 // @Failure 404 {object} nil "未找到"
 // @Router /h5/product/package/detail [get]
 func (h *Handler) GetProductPackageDetail(c *gin.Context) {

@@ -13,6 +13,10 @@ import (
 type IMarketingCouponRepo interface {
 	// DecreaseCouponQuantity 减少优惠券数量
 	DecreaseCouponQuantity(couponId uint64, memberUuid uint64, activityUuid uint64) error
+	// GetCoupons 获取店铺优惠券列表
+	GetCoupons(opts ...DBOption) ([]*model.MarketingCoupon, error)
+	// GetValidCouponList 获取商家还可用的none类型优惠卷（所有人可用的）
+	GetValidCouponList() ([]*model.MarketingCoupon, error)
 }
 
 // MarketingCouponRepo 营销优惠券仓库
@@ -105,4 +109,36 @@ func (r *MarketingCouponRepo) DecreaseCouponQuantity(couponId uint64, memberUuid
 		//
 		return nil
 	})
+}
+
+// GetCoupons 获取店铺优惠券列表
+func (r *MarketingCouponRepo) GetCoupons(opts ...DBOption) ([]*model.MarketingCoupon, error) {
+	coupons := make([]*model.MarketingCoupon, 0)
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.Find(&coupons)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return coupons, nil
+}
+
+// GetValidCouponList 获取商家还可用的none类型优惠卷（所有人可用的）
+func (r *MarketingCouponRepo) GetValidCouponList() ([]*model.MarketingCoupon, error) {
+	coupons, err := r.GetCoupons(
+		CommonRepo.WhereBySoftDelete(),                                // 未删除
+		CommonRepo.WhereByCountGtZero(),                               // 优惠券数量大于0
+		CommonRepo.WhereByRequirement(constant.CouponRequirementNone), // 任何人可用
+		CommonRepo.SortWithSort("ASC"),                                // 按照sort升序
+		CommonRepo.WhereByValidTime(),                                 // 是否在有效期内
+	)
+	if err != nil {
+		return nil, err
+	}
+	return coupons, nil
 }

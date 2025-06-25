@@ -1,5 +1,6 @@
 package model
 
+// 会员优惠券 `ttpos_member_coupon`
 type MemberCoupon struct {
 	BaseModel
 	MemberUuid     uint64  `gorm:"column:member_uuid;type:bigint(20);not null;comment:会员uuid" json:"member_uuid"`
@@ -16,8 +17,11 @@ type MemberCoupon struct {
 	StartTime      int64   `gorm:"column:start_time;type:bigint(20);not null;comment:优惠券开始时间" json:"start_time"`
 	EndTime        int64   `gorm:"column:end_time;type:bigint(20);not null;comment:优惠券结束时间" json:"end_time"`
 	UseTime        int64   `gorm:"column:use_time;type:bigint(20);not null;comment:优惠券使用时间" json:"use_time"`
+
+	MarketingCoupon *MarketingCoupon `gorm:"foreignKey:CouponUuid;references:Uuid" json:"marketing_coupon"`
 }
 
+// 会员优惠券使用记录 `ttpos_member_coupon_use_record`
 type MemberCouponUseRecord struct {
 	BaseModel
 	MemberUuid     uint64  `gorm:"column:member_uuid;type:bigint(20);not null;comment:会员uuid" json:"member_uuid"`

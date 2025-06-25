@@ -9,3 +9,9 @@ const (
 	CouponRecordTypeBonus                        // 奖励领取（冻结）
 	CouponRecordTypeUsed                         // 核销扣减
 )
+
+// requirement
+const (
+	CouponRequirementNone   = "none"      // 任何人可用的优惠券
+	CouponRequirementMember = "marketing" // 会员
+)
