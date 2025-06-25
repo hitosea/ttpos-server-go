@@ -30,7 +30,9 @@ func finishMenuEventHandler() {
 			go func() {
 				products := printer_model.Products{}
 				copier.Copy(&products, payload.Products)
-				printer.NewPrinterRepo(payload.Ctx, "").PrintingDishes(
+				repo := printer.NewPrinterRepo(payload.Ctx, "")
+				repo.SetFinishedTime(payload.FinishedTime)
+				repo.PrintingDishes(
 					constant.PrinterProductTypeOutMenu,
 					payload.SaleBillUuid,
 					products,

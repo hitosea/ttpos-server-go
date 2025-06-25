@@ -363,7 +363,7 @@ func (p *PrinterRepoImpl) getPrintProductOutMenuContent(
 	saleBill model.SaleBill,
 	products printer_model.Products,
 ) string {
-	tmp := p.GetPrinterTemplate(constant.PrinterTemplateEntireOrder)
+	tmp := p.GetPrinterTemplate(constant.PrinterTemplateOutMenu)
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -379,28 +379,13 @@ func (p *PrinterRepoImpl) getPrintProductOutMenuContent(
 	// 图片打印
 	if p.IsImagePrinterMethod(true) {
 		t := template.NewDishesImgTemplate(base)
-		return t.OutMenuTemplate(tmp, printerItem, saleBill, products)
-	}
-
-	// 获取打印机类型
-	var printerType string
-	if printerItem.Printer != nil && printerItem.Printer.PrinterType != nil {
-		printerType = printerItem.Printer.PrinterType.Key
-	}
-
-	// CODESOFT 打印机
-	if printerItem.Printer != nil && slices.Contains([]string{
-		constant.PrinterTypeCodesoftLan,
-		constant.PrinterTypeCodesoftWifi,
-	}, printerType) {
-		t := template.NewDishesCodesoftTemplate(base)
-		return t.CompleteOrder(tmp, printerItem, saleBill, products)
+		return t.OutMenuTemplate(tmp, printerItem, saleBill, products, p.GetFinishedTime())
 	}
 
 	// 商米和芯烨打印机
 	if printerItem.Printer != nil {
 		t := template.NewDishesXprinterTemplate(base)
-		return t.CompleteOrder(tmp, printerItem, saleBill, products)
+		return t.OutMenuTemplate(tmp, printerItem, saleBill, products, p.GetFinishedTime())
 	}
 
 	return ""
