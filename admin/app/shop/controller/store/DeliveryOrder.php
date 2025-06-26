@@ -7,14 +7,14 @@ use hg\apidoc\annotation as Apidoc;
 
 
 /**
- * 订单管理
+ * 外送订单管理
  * @Apidoc\Group("order")
  * @Apidoc\Sort(4)
  */
 class DeliveryOrder extends Controller
 {
     /**
-     * @Apidoc\Title("订单列表")
+     * @Apidoc\Title("外送订单列表")
      * @Apidoc\Method ("POST")
      * @Apidoc\Url ("/index.php/shop/store.DeliveryOrder/index")
      * @Apidoc\Param("time_type", type="int", require=false, default="", desc="时间类型 0-全都 1-今天 2-昨天 3-本周")
@@ -59,7 +59,7 @@ class DeliveryOrder extends Controller
 
 
     /**
-     * @Apidoc\Title("订单详情")
+     * @Apidoc\Title("外送订单详情")
      * @Apidoc\Method ("POST")
      * @Apidoc\Url ("/index.php/shop/store.DeliveryOrder/detail")
      * @Apidoc\Param("sale_bill_uuid", type="int", require=true, default="", desc="销售账单UUID")

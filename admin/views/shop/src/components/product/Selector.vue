@@ -89,6 +89,7 @@
             </el-form-item>
           </el-form>
         </div>
+
         <div class="product-selector-table">
           <el-auto-resizer>
             <template #default="{ height, width }">
@@ -104,7 +105,8 @@
                 @select="handleSelect"
                 @select-all="handleSelectAll"
               >
-                <el-table-column type="selection" width="40" />
+                <!-- 添加 selectable 属性控制是否可选 -->
+                <el-table-column type="selection" width="40" :selectable="selectable" />
                 <el-table-column prop="product_name_text" :label="$t('商品名称')" />
               </el-table>
             </template>
@@ -152,6 +154,10 @@
     selectedProductIds: {
       type: Array,
       default: () => [],
+    },
+    maxCount: {
+      type: Number,
+      default: Infinity,
     },
   });
 
@@ -398,8 +404,6 @@
   };
 
   const reset = () => {
-    // categoriesTreeRef.value?.setCheckedKeys([0]);
-    // printTagsTreeRef.value?.setCheckedKeys([0]);
     selectedProductsTmp.value = [];
   };
 
@@ -410,59 +414,83 @@
 
   const productsTableRef = ref(null);
 
-  // const handleSelectionChange = (val) => {
-  //   switch (props.selectorType) {
-  //     case 'category':
-  //       {
-  //         handleCategoriesSelectionChange(val);
-  //         handleCategoriesTreeExpandByRowSelection(val);
-  //       }
-  //       break;
-  //     case 'label':
-  //       {
-  //         handlePrintTagsSelectionChange(val);
-  //         handlePrintTagsTreeExpandByRowSelection(val);
-  //       }
-  //       break;
-  //     default:
-  //       {
-  //         handleCategoriesSelectionChange(val);
-  //         handleCategoriesTreeExpandByRowSelection(val);
-  //       }
-  //       break;
-  //   }
-  // };
+  // 添加选择控制函数
+  const selectable = (row) => {
+    // 如果当前行已选中，始终可操作（允许取消）
+    if (selectedProductsTmp.value.some((item) => item.product_id === row.product_id)) {
+      return true;
+    }
+    // 未选中时检查是否达到最大数量
+    return selectedProductsTmp.value.length < props.maxCount;
+  };
 
   const handleSelect = (data, node) => {
     const isChecked = data.some((item) => item.product_id === node.product_id);
+
     if (isChecked) {
+      // 检查是否超过最大数量
+      if (selectedProductsTmp.value.length >= props.maxCount) {
+        // 超过则取消选中并提示
+        productsTableRef.value.toggleRowSelection(node, false);
+        proxy.$message.warning(proxy.$t('最多只能选择{0}个商品', [props.maxCount]));
+        return;
+      }
+
+      // 未超过则添加
       if (selectedProductsTmp.value.every((item) => item.product_id !== node.product_id)) {
         selectedProductsTmp.value.push(node);
       }
     } else {
+      // 取消选中
       selectedProductsTmp.value = selectedProductsTmp.value.filter((item) => item.product_id !== node.product_id);
     }
-
-    toggleRowSelection(false);
   };
 
-  const handleSelectAll = (data) => {
-    switch (props.selectorType) {
-      case 'category':
-        {
-          handleCategoryTableSelectAll(data);
-        }
-        break;
-      case 'label':
-        {
-          handlePrintTagsTableSelectAll(data);
-        }
-        break;
-      default:
-        {
-          handleCategoryTableSelectAll(data);
-        }
-        break;
+  const handleSelectAll = (selection) => {
+    if (selection.length === 0) {
+      // 取消全选
+      selectedProductsTmp.value = selectedProductsTmp.value.filter((item) => !productsTableData.value.some((p) => p.product_id === item.product_id));
+      return;
+    }
+
+    // 计算可添加的数量
+    const currentSelectedCount = selectedProductsTmp.value.length;
+    const canSelectCount = props.maxCount - currentSelectedCount;
+
+    if (canSelectCount <= 0) {
+      // 已满则提示
+      proxy.$message.warning(proxy.$t('最多只能选择{0}个商品', [props.maxCount]));
+      // 清除全选状态
+      nextTick(() => productsTableRef.value.clearSelection());
+      return;
+    }
+
+    // 获取当前页未选中的商品
+    const currentPageUnselected = productsTableData.value.filter((item) => !selectedProductsTmp.value.some((p) => p.product_id === item.product_id));
+
+    // 实际可添加的商品
+    const toSelect = currentPageUnselected.slice(0, canSelectCount);
+
+    // 添加选中的商品
+    toSelect.forEach((item) => {
+      if (!selectedProductsTmp.value.some((p) => p.product_id === item.product_id)) {
+        selectedProductsTmp.value.push(item);
+      }
+    });
+
+    // 如果实际添加数量小于当前页未选数量，需要调整选中状态
+    if (toSelect.length < currentPageUnselected.length) {
+      nextTick(() => {
+        // 清除全选状态
+        productsTableRef.value.clearSelection();
+        // 重新设置选中状态
+        productsTableData.value.forEach((row) => {
+          if (selectedProductsTmp.value.some((item) => item.product_id === row.product_id)) {
+            productsTableRef.value.toggleRowSelection(row, true);
+          }
+        });
+      });
+      proxy.$message.warning(proxy.$t('最多只能选择{0}个商品，已为您选择{1}个', [props.maxCount, toSelect.length]));
     }
   };
 
@@ -591,19 +619,6 @@
     toggleRowSelection(false);
   };
 
-  // const handleCategoriesTreeExpandByRowSelection = async (val) => {
-  //   if (!val.length) {
-  //     categoriesTreeExpandedKeys.value = [0];
-  //     return;
-  //   }
-  //   for (const item of val) {
-  //     const pid = getCategoryPid(item.category_id);
-  //     if (typeof pid !== 'number') continue;
-  //     if (categoriesTreeExpandedKeys.value.includes(pid)) continue;
-  //     categoriesTreeExpandedKeys.value.push(pid);
-  //   }
-  // };
-
   const handlePrintTagsTreeCurrentChange = async ({ id }) => {
     if (id === printTagsTreeCurrentKey.value) return;
     printTagsTreeCurrentKey.value = id;
@@ -677,19 +692,6 @@
 
     toggleRowSelection(false);
   };
-
-  // const handlePrintTagsTreeExpandByRowSelection = async (val) => {
-  //   if (!val.length) {
-  //     printTagsTreeExpandedKeys.value = [0];
-  //     return;
-  //   }
-  //   for (const item of val) {
-  //     const pid = getPrintTagPid(item.label_id);
-  //     if (typeof pid !== 'number') continue;
-  //     if (printTagsTreeExpandedKeys.value.includes(pid)) continue;
-  //     printTagsTreeExpandedKeys.value.push(pid);
-  //   }
-  // };
 </script>
 
 <style lang="scss" scoped>

@@ -18,7 +18,7 @@ axios.defaults.timeout = 60000; //请求超时
 axios.interceptors.request.use(
     async (config) => {
         // 是否加密的接口
-        let encryptArr = ['/shop/passport/login', '/shop/passport/saasEditPassword', '/shop/passport/editPass'];
+        let encryptArr = [ '/shop/passport/saasEditPassword', '/shop/passport/editPass'];
         if (encryptArr.includes(config.url)) {
             config.encrypt = true;
         }

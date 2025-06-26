@@ -28,5 +28,9 @@
     "todo-tree.tree.showCountsInTree": true,
     "files.exclude": {
       "**/trans/**/*test.go": true
-    }
+    },
+    "cSpell.words": [
+      "ttpos",
+      "zhtw"
+    ]
   }

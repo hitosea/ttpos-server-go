@@ -13,7 +13,7 @@
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('订单类型：') }}</span>
-              {{ detail.bill_type == 1 ? $t('点餐订单') : $t('桌台订单')}}
+              {{ detail.bill_type == 1 ? $t('点餐订单') : $t('桌台订单') }}
             </div>
           </el-col>
           <el-col :span="6">
@@ -93,7 +93,8 @@
           </el-col>
           <el-col :span="6" v-if="detail.is_buffet == 1">
             <div class="pb16">
-              <span class="gray9">{{ $t('自助餐：') }}</span>{{ detail.buffet_names }}
+              <span class="gray9">{{ $t('自助餐：') }}</span
+              >{{ detail.buffet_names }}
             </div>
           </el-col>
           <el-col :span="6" v-if="detail.status == 2">
@@ -202,7 +203,6 @@
           <el-table-column prop="product_price" :label="$t('商品总价')">
             <template #default="scope">
               <div>
-                
                 <template v-if="scope.row.total_price != scope.row.sale_price">
                   <span class="text-line-through" v-if="scope.row.sale_price">
                     <template v-if="currency.unit_position == '0'">
@@ -243,9 +243,7 @@
                     {{ currency.vices?.vice_unit }}
                   </template>
                 </span>
-                <span class="tips" v-if="Number(scope.row.refund_amount) > 0">
-                  （{{ $t('退款：') + currency.unit + this.$formatPrice(scope.row.refund_amount) }}）
-                </span>
+                <span class="tips" v-if="Number(scope.row.refund_amount) > 0"> （{{ $t('退款：') + currency.unit + this.$formatPrice(scope.row.refund_amount) }}） </span>
               </div>
             </template>
           </el-table-column>
@@ -259,8 +257,8 @@
           <el-timeline-item v-for="(activity, index) in activities" placement="top" :key="index" :color="activity.color" :hollow="activity.hollow" :timestamp="activity.timestamp">
             <div class="flex">
               {{ activity.content }}
-              <template v-if="(activity.pay_type || []).length > 0">&nbsp;
-                (<span class="flex" v-for="(item, itemIndex) in activity.pay_type" :key="itemIndex">
+              <template v-if="(activity.pay_type || []).length > 0"
+                >&nbsp; (<span class="flex" v-for="(item, itemIndex) in activity.pay_type" :key="itemIndex">
                   <span>{{ item.name }}:{{ item.unit + this.$formatPrice(item.refund_money) }}</span>
                   <el-tag v-if="item.refund_status == '0'" class="cupon" type="danger" @click="handleRetry(item)">{{ $t('退款失败，重试') }}</el-tag>
                   <el-tooltip v-if="item.value == '90333'" placement="bottom" trigger="click">
@@ -271,8 +269,8 @@
                       <div> {{ $t('账号') }}{{ $t('：') }}{{ item.account_name }} </div>
                     </template>
                   </el-tooltip>
-                  <span v-if="itemIndex < (activity.pay_type || []).length - 1">、</span>
-                </span>)
+                  <span v-if="itemIndex < (activity.pay_type || []).length - 1">、</span> </span
+                >)
               </template>
             </div>
           </el-timeline-item>
@@ -294,14 +292,22 @@
       </div>
     </div>
     <div class="common-button-wrapper">
-      <el-button size="small" @click="cancelFunc">{{ $t('返回')  }}</el-button>
+      <el-button size="small" @click="cancelFunc">{{ $t('返回') }}</el-button>
       <el-button v-if="extra?.is_cell_refund" @click="refundClick(detail)" type="danger" size="small" v-auth="'/store/operate/refund'">{{ $t('退款') }}</el-button>
       <el-button v-if="extra?.is_cell_cancel" @click="cancelClick(detail)" type="danger" size="small" v-auth="'/store/operate/order_cancel'">{{ $t('取消') }} </el-button>
       <el-button v-if="extra?.is_cell_delete" @click="delClick(detail)" type="danger" size="small" v-auth="'/store/order/delete'">{{ $t('删除') }} </el-button>
     </div>
     <!--处理-->
     <Cancel v-if="open_edit" :open_edit="open_edit" :order_no="order_no" :order_id="sale_bill_uuid" @closeDialog="closeDialogFunc($event, 'edit')"> </Cancel>
-    <refund v-if="open_refund" :open_edit="open_refund" :order_no="order_no" :order_id="sale_bill_uuid" :sub_order_id="sale_order_uuid" :pay_price="pay_price" @closeDialog="closerefundDialogFunc($event, 'edit')"></refund>
+    <refund
+      v-if="open_refund"
+      :open_edit="open_refund"
+      :order_no="order_no"
+      :order_id="sale_bill_uuid"
+      :sub_order_id="sale_order_uuid"
+      :pay_price="pay_price"
+      @closeDialog="closerefundDialogFunc($event, 'edit')"
+    ></refund>
     <refundAgain v-if="open_refundAgain" :open_edit="open_refundAgain" :refundOrder="refundOrder" @closeDialog="closerefundAgainDialogFunc($event)"> </refundAgain>
   </div>
 </template>
@@ -389,7 +395,7 @@
       };
     },
     created() {
-      this.language =  languageStore()?.getLanguageKey().language.value
+      this.language = languageStore()?.getLanguageKey().language.value;
       this.pageParams = JSON.parse(JSON.stringify(languageStore().getPageParams().pageParams.value));
       languageStore().setPageParams({});
 
@@ -451,7 +457,7 @@
             self.loading = false;
           });
       },
-     
+
       /*取消*/
       cancelFunc() {
         languageStore().setPageParams(this.pageParams);

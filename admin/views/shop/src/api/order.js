@@ -87,6 +87,11 @@ let OrderApi = {
   postRechargeOrderRefundAgain(data, errorback) {
     return request._post('/shop/store.UserRechargeOrder/refundAgain', data, errorback);
   },
+
+  //外卖订单列表
+  postTakeoutOrderList(data, errorback) {
+    return request._post('/shop/store.DeliveryOrder/index', data, errorback);
+  },
 };
 
 export default OrderApi;
