@@ -476,7 +476,7 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder) ([]M
 		productAttr := item.GetAttributeNamesByLang(p.Lang)
 		productName := gift + item.MultiLanguageName.GetNameByLang(p.Lang) + "\n(" + productAttr + ")"
 		// 按产品名称分组累加
-		key := fmt.Sprintf("%s(%v)", productName, productPrice)
+		key := fmt.Sprintf("%s(%v)(%v)", productName, productPrice, productTotalPrice)
 		if _, exists := productMap[key]; exists {
 			// 如果产品名称已存在，则累加数量和总价
 			productMap[key].ProductNum += item.Num
