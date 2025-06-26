@@ -13,7 +13,9 @@ use app\common\model\product\Spec as SpecModel;
 use app\common\model\product\Unit as UnitModel;
 use app\shop\model\product\Product as ProductModel;
 use app\common\model\product\Material as MaterialModel;
+use app\common\model\product\ProductRecommend;
 use app\shop\model\product\Category as CategoryModel;
+use app\shop\validate\ProductPackageRecommendValidate;
 
 /**
  * 店内商品
@@ -590,6 +592,61 @@ class Product extends Controller
     {
         $model = new ProductModel;
         if (!$model->batchUpdateTax($this->postData())) {
+            return $this->renderError($model->getError() ?: '操作失败');
+        }
+        return $this->renderSuccess('操作成功');
+    }
+
+    /**
+     * @Apidoc\Title("商品推荐")
+     * @Apidoc\Desc("get请求是获取；post请求是提交修改")
+     * @Apidoc\Method ("GET,POST")
+     * @Apidoc\Url ("/index.php/shop/product.store.product/recommend")
+     * @Apidoc\Returned("status", type="int", desc="状态")
+     * @Apidoc\Returned("title", type="string", desc="推荐标题")
+     * @Apidoc\Returned("product_packages", type="array", desc="商品列表")
+     * @Apidoc\Returned("product_packages[].uuid", type="string", desc="商品UUID")
+     * @Apidoc\Returned("product_packages[].sort", type="int", desc="排序")
+     * @Apidoc\Returned("product_packages[].name", type="string", desc="商品名称")
+     */
+    public function recommend(ProductPackageRecommendValidate $validate)
+    {
+        $model = new ProductRecommend();
+        $data = $model->where('delete_time', 0)->hidden(['id', 'uuid', 'create_time', 'update_time', 'delete_time'])->find();
+        if ($this->request->isGet()) {
+            if (!is_null($data)) {
+                $json = json_decode($data['product_packages'], true);
+                $productPackageUuids = array_column($json, 'uuid');
+                // 获取商品和语言
+                $productPackages = ProductModel::with('MultiLanguageName')->where('uuid', 'in', $productPackageUuids)->select();
+                $map = [];
+                foreach ($productPackages as $productPackage) {
+                    $map[$productPackage['uuid']] = $productPackage;
+                }
+                foreach ($json as $k => $item) {
+                    $defaultNames = ["en_name" => "", "zh_name" => "", "zh_tw_name" => "", "th_name" => "", "my_name" => "", "ja_name" => "", "ko_name" => "", "tr_name" => ""];
+                    $productPackage = $map[$item['uuid']];
+                    if (!is_null($productPackage) && !is_null($productPackage->MultiLanguageName)) {
+                        $defaultNames = $productPackage->MultiLanguageName->hidden(['id', 'uuid', 'create_time', 'update_time', 'delete_time'])->toArray();
+                    }
+                    $lang = checkDetect();
+                    $json[$k]['name'] = $defaultNames[($lang == 'zhtw' ? 'zh_tw' : $lang).'_name'];
+                }
+                $data['product_packages'] = $json;
+            }
+            return $this->renderSuccess('操作成功', $data);
+        }
+
+        $param = $validate->goCheck('save');
+
+        if (is_null($data)) {
+            $data = $model;
+        }
+        $data->status = intval($param['status']);
+        $data->title = $param['title'];
+        $data->product_packages = json_encode($param['product_packages']);
+
+        if (!$data->save()) {
             return $this->renderError($model->getError() ?: '操作失败');
         }
         return $this->renderSuccess('操作成功');

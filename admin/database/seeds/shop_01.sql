@@ -2302,4 +2302,17 @@ CREATE TABLE IF NOT EXISTS `ttpos_marketing_activity_record` (
 ) ENGINE=InnoDB AUTO_INCREMENT=364 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='活动奖励发放记录表';
 
 
+CREATE TABLE IF NOT EXISTS `ttpos_package_recommend` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) DEFAULT 0 COMMENT '唯一ID',
+  `status` int(1) DEFAULT 0 COMMENT '是否开启推荐 0否 1是',
+  `title` varchar(30) DEFAULT '' COMMENT '推荐标题',
+  `packages` text DEFAULT NULL COMMENT '推荐商品，对象数组',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品推荐';
+
+
 SET FOREIGN_KEY_CHECKS = 1;
