@@ -6662,7 +6662,7 @@ func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (
 }
 
 // GetValidMemberCouponList 获取有效的会员优惠券列表,包括通用优惠券和会员优惠券
-func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint64) (*resp.CouponList, error) {
+func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint64, selectedCouponUuid uint64, hasPay, hasCommonCoupon bool) (*resp.CouponList, error) {
 	// 获取门店设置
 	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
 	if err != nil {
@@ -6673,7 +6673,7 @@ func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint
 	layout := "2006-01-02"
 
 	timezone := utils.SetTimezone(shopTimeZone)
-	coupons := make(map[uint64]resp.Coupon, 0)
+	coupons := make(map[uint64]*resp.Coupon, 0)
 	// 查询本店所有none类型的优惠券，按创建时间排序
 	commonCouponList, err := repository.NewMarketingCouponRepo(ctx.GetDB()).GetValidCouponList()
 	if err != nil {
@@ -6683,7 +6683,7 @@ func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint
 	for _, coupon := range commonCouponList {
 		endTime := timezone.FormatUnixTime(int64(coupon.ValidEndTime), layout)
 		endTimestamp, _ := timezone.FormatTimeToUnix(endTime) // 优惠券到期时间戳
-		coupons[coupon.Uuid] = resp.Coupon{
+		coupons[coupon.Uuid] = &resp.Coupon{
 			Uuid:              coupon.Uuid,
 			Name:              coupon.Name,
 			Requirement:       coupon.Requirement,
@@ -6748,7 +6748,7 @@ func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint
 				})
 
 			}
-			coupons[targetCoupon.Uuid] = resp.Coupon{
+			coupons[targetCoupon.Uuid] = &resp.Coupon{
 				Uuid:              targetCoupon.Uuid,
 				Name:              targetCoupon.MarketingCoupon.Name,
 				Requirement:       targetCoupon.MarketingCoupon.Requirement,
@@ -6766,7 +6766,6 @@ func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint
 		}
 	}
 	// 判断是否被选中
-	selectedCouponUuid := uint64(0)
 	for _, coupon := range coupons {
 		if coupon.Uuid == selectedCouponUuid {
 			coupon.IsSelected = true
@@ -6786,15 +6785,31 @@ func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint
 		}
 	}
 
+	// 如果已经产生了支付，则全部优惠券不可选，置灰
+	if hasPay {
+		for _, coupon := range coupons {
+			coupon.IsAvailable = false
+		}
+	}
+
+	// 如果sale_bill已经使用通用优惠券（所有人可用），则通用优惠券不可选，置灰
+	if hasCommonCoupon {
+		for _, coupon := range coupons {
+			if coupon.Requirement == constant.CouponRequirementNone {
+				coupon.IsAvailable = false
+			}
+		}
+	}
+
 	// 重新排序，通用优惠券在前，会员优惠券在后。通用优惠券再按先到期的排在前面，会员优惠券再按先到期的排在前面
 	// 先分组，再排序
 	commonCouponArray := make([]resp.Coupon, 0)
 	memberCouponArray := make([]resp.Coupon, 0)
 	for _, coupon := range coupons {
 		if coupon.Requirement == constant.CouponRequirementNone {
-			commonCouponArray = append(commonCouponArray, coupon)
+			commonCouponArray = append(commonCouponArray, *coupon)
 		} else if coupon.Requirement == constant.CouponRequirementMember {
-			memberCouponArray = append(memberCouponArray, coupon)
+			memberCouponArray = append(memberCouponArray, *coupon)
 		}
 	}
 	// 按ValidEndTimestamp时间戳排序，大的再前
@@ -6850,8 +6865,14 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			RechargeMoney: saleOrder.Member.GetRechargeMoney(),
 		}
 	}
-
-	couponList, err := s.GetValidMemberCouponList(ctx, saleOrder.ConsumerUuid)
+	selectedCouponUuid := saleOrder.GetSelectedCouponUuid()
+	// saleBill 是否使用了通用优惠券
+	hasCommonCoupon, selectedCouponSaleOrderUuid := saleBill.IsCommonCouponUsed()
+	// 如果使用通用优惠券的销售订单是当前订单，则通用优惠券可选，可以切换或取消通用优惠券。
+	if selectedCouponSaleOrderUuid == saleOrderUuid {
+		hasCommonCoupon = false
+	}
+	couponList, err := s.GetValidMemberCouponList(ctx, saleOrder.ConsumerUuid, selectedCouponUuid, len(saleOrder.PaymentOrders) > 0, hasCommonCoupon)
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询会员优惠券列表失败")
 	}

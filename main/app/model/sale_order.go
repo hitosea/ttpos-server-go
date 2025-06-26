@@ -95,6 +95,19 @@ type SaleOrder struct {
 	index int `gorm:"-" json:"index,omitempty"`
 }
 
+// 获取已选择的优惠券uuid
+func (model *SaleOrder) GetSelectedCouponUuid() uint64 {
+	if model.HasCoupon() {
+		if model.Coupons[0].MarketingCouponUuid != 0 {
+			return model.Coupons[0].MarketingCouponUuid
+		}
+		if model.Coupons[0].MemberCouponUuid != 0 {
+			return model.Coupons[0].MemberCouponUuid
+		}
+	}
+	return 0
+}
+
 // 销售订单是否使用了优惠券
 func (model *SaleOrder) HasCoupon() bool {
 	for _, coupon := range model.Coupons {
@@ -110,7 +123,7 @@ func (model *SaleOrder) HasCouponByUuid(couponUuid uint64, couponRequirement str
 	for _, coupon := range model.Coupons {
 		if !coupon.IsDelete() {
 			if couponRequirement == constant.CouponRequirementNone {
-				if coupon.MarketingCouponUuid == couponUuid && coupon.CouponRequirement == constant.CouponRequirementMember {
+				if coupon.MarketingCouponUuid == couponUuid && coupon.CouponRequirement == constant.CouponRequirementNone {
 					return true
 				}
 			}
@@ -129,7 +142,7 @@ func (model *SaleOrder) GetCouponByUuid(couponUuid uint64, couponRequirement str
 	for _, coupon := range model.Coupons {
 		if !coupon.IsDelete() {
 			if couponRequirement == constant.CouponRequirementNone {
-				if coupon.MarketingCouponUuid == couponUuid && coupon.CouponRequirement == constant.CouponRequirementMember {
+				if coupon.MarketingCouponUuid == couponUuid && coupon.CouponRequirement == constant.CouponRequirementNone {
 					return coupon
 				}
 			}
