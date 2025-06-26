@@ -490,7 +490,7 @@ class Product extends ProductModel
             'is_show_kitchen' => $data['is_show_kitchen'] != 2 ? 1 : 0, // 是否显示厨房: 10-显示, 20-隐藏
             'is_show_assistant' => $data['is_show_assistant'] != 2 ? 1 : 0, // 是否显示助手: 10-显示, 20-隐藏,
             'is_show_h5' => $data['is_show_h5'] != 2 ? 1 : 0, // 是否显示h5: 10-显示, 20-隐藏
-            'is_show_delivery' => $data['is_show_delivery'] != 2 ? 1 : 0, // 是否显示外送: 1-显示, 0-隐藏
+            'is_show_delivery' => ($data['is_show_delivery'] ?? 1) != 2 ? 1 : 0, // 是否显示外送: 1-显示, 0-隐藏
             'sort' => $data['product_sort'], // 排序
             'limit_num' => $data['limit_num'], // 限购数量,
             'sauce_required' => $data['feed_required'], // 是否必选加料: 0-否, 1-是,
