@@ -1333,6 +1333,93 @@ func (r *orderRepo) GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, err
 
 // GetSaleBillAllInfo 获取销售账单所有信息
 func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error) {
+	startTime := time.Now()
+
+	multiLanguageNameUuids := []uint64{}
+	// saleBillName := model.GetTableName("sale_bill")
+	// saleBillSettingName := model.GetTableName("sale_bill_setting")
+
+	// 查询销售账单
+	var saleBill *model.SaleBill
+	db := r.db.Model(&model.SaleBill{}).
+		Where("uuid = ?", saleBillUuid).
+		Where("delete_time = ?", constant.NotDeleted).
+		// ==================== 销售账单的收银员信息 ====================
+		Preload("Cashier").
+		// ==================== 销售账单的账单设置 ====================
+		Preload("SaleBillSetting").
+		// ==================== 销售账单的订单信息 ====================
+		Preload("SaleOrders", func(db *gorm.DB) *gorm.DB {
+			return db.Where("delete_time = ?", constant.NotDeleted)
+		})
+	if result := db.First(&saleBill); result.Error != nil {
+		return saleBill, fmt.Errorf("GetSaleBill: %v", result.Error)
+	}
+	// 查询桌台
+	if saleBill.DeskUuid != 0 {
+		if desk, err := NewDeskRepo(r.db).GetCacheDesk(saleBill.DeskUuid); err == nil {
+			saleBill.Desk = &desk
+		} else {
+			return saleBill, fmt.Errorf("GetSaleBill: %v", err)
+		}
+	}
+	// 查询自助餐套餐1
+	if saleBill.BuffetPackage1Uuid != 0 {
+		if buffetPackage1, err := NewBuffetPackageRepo(r.db).GetCacheBuffetPackage(saleBill.BuffetPackage1Uuid); err == nil {
+			multiLanguageNameUuids = append(multiLanguageNameUuids, buffetPackage1.MultiLanguageNameUuid)
+			// 加载自助餐套餐1顾客类型价格。用于判断顾客价格是否改变
+			// buffetCustomerTypePrices := buffetPackage1.BuffetCustomerTypePrices // 顾客类型价格
+			// // 加载自助餐套餐1商品bom。用于判断加购的商品是否属于自助餐套餐1
+			// buffetProducts := buffetPackage1.BuffetProducts
+
+			saleBill.BuffetPackage1 = &buffetPackage1
+		} else {
+			return saleBill, fmt.Errorf("GetSaleBill: %v", err)
+		}
+	}
+	// 查询自助餐套餐2
+	if saleBill.BuffetPackage2Uuid != 0 {
+		if buffetPackage2, err := NewBuffetPackageRepo(r.db).GetCacheBuffetPackage(saleBill.BuffetPackage2Uuid); err == nil {
+			multiLanguageNameUuids = append(multiLanguageNameUuids, buffetPackage2.MultiLanguageNameUuid)
+			// // 加载自助餐套餐2顾客类型价格。用于判断顾客价格是否改变
+			// buffetCustomerTypePrices := buffetPackage2.BuffetCustomerTypePrices // 顾客类型价格
+			// // 加载自助餐套餐2商品bom。用于判断加购的商品是否属于自助餐套餐2
+			// buffetProducts := buffetPackage2.BuffetProducts
+
+			saleBill.BuffetPackage2 = &buffetPackage2
+		} else {
+			return saleBill, fmt.Errorf("GetSaleBill: %v", err)
+		}
+	}
+	// 查询语言
+	if len(multiLanguageNameUuids) > 0 {
+		var multiLanguageNames []model.MultiLanguageName
+		db = r.db.Model(&model.MultiLanguageName{}).Where("uuid in ?", multiLanguageNameUuids)
+		if result := db.Find(&multiLanguageNames); result.Error != nil {
+			return saleBill, fmt.Errorf("GetSaleBill: %v", result.Error)
+		}
+		for _, multiLanguageName := range multiLanguageNames {
+			if saleBill.BuffetPackage1 != nil && saleBill.BuffetPackage1.MultiLanguageNameUuid == multiLanguageName.Uuid {
+				saleBill.BuffetPackage1.MultiLanguageName = multiLanguageName
+			}
+			if saleBill.BuffetPackage2 != nil && saleBill.BuffetPackage2.MultiLanguageNameUuid == multiLanguageName.Uuid {
+				saleBill.BuffetPackage2.MultiLanguageName = multiLanguageName
+			}
+		}
+	}
+
+	// // 查询桌台
+	// db = r.db.Model(&model.MultiLanguageName{}).
+	// 	Where("uuid in ?", saleBill.DeskUuid, saleBill.BuffetPackage1Uuid, saleBill.BuffetPackage2Uuid).
+	// 	Where("delete_time = ?", constant.NotDeleted)
+	// if result := db.Find(&saleBill); result.Error != nil {
+	// 	return saleBill, fmt.Errorf("GetSaleBill: %v", result.Error)
+	// }
+
+	fmt.Println(utils.ToJsonString(saleBill))
+	fmt.Printf("GetSaleBillAllInfo 第一次查询耗时: %v\n", time.Since(startTime))
+
+	queryStartTime := time.Now()
 	info, err := r.GetSaleBill(
 		CommonRepo.Preload(
 			WithPreload{
@@ -1519,6 +1606,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByUuid(saleBillUuid),
 	)
+	fmt.Printf("GetSaleBillAllInfo 第二次查询耗时: %v\n", time.Since(queryStartTime))
+	fmt.Printf("GetSaleBillAllInfo 总耗时: %v\n", time.Since(startTime))
+
 	if err != nil {
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
 	}

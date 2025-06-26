@@ -313,7 +313,7 @@ function createUuid()
 {
     static $snowflake = null;
     if ($snowflake === null) {
-        $snowflake = new SnowflakeHelp(1);
+        $snowflake = new SnowflakeHelp(env('SERVER_ID', 1));
     }
     return $snowflake->next();
 }
