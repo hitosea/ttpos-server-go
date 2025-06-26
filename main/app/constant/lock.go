@@ -10,5 +10,5 @@ package constant
 const (
 	LockNameMemberPoints        = 3652949106400001 // 会员积分锁. 避免多个事件并发处理积分变动
 	LockNameMemberBalance       = 3652949106400002 // 会员余额锁. 避免多个事件并发处理会员余额
-	LockNameActivityConsumption = 3652949106400003 // 会员余额锁. 避免多个事件并发处理会员余额
+	LockNameActivityConsumption = 3652949106400003 // 会员营销活动消费锁. 避免多个事件并发处理会员营销活动消费
 )

@@ -667,6 +667,37 @@ func (h *InstantHandler) OrderPaymentInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderPaymentCoupon 选择或取消优惠券
+// @Summary 选择或取消优惠券
+// @Description 选择或取消优惠券
+// @Tags 收银端.点餐.结账
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.InstantOrderPaymentCouponReq true "选择或取消优惠券参数"
+// @Success 200 {object} dto.Response{data=resp.InstantOrderPaymentInfoResp} "结账页面信息"
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/instant/order/payment/coupon [post]
+func (h *InstantHandler) OrderPaymentCoupon(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	ctx.Log().Debug("收到点餐页面选择或取消优惠券接口请求")
+
+	var couponReq req.InstantOrderPaymentCouponReq
+	if err := c.ShouldBindJSON(&couponReq); err != nil {
+		helper.HandleValidationError(c, err, couponReq, nil)
+		return
+	}
+	ctx.Log().Info("选择或取消优惠券", zap.Any("params", couponReq))
+	// 选择或取消优惠券
+	res, err := h.orderSrv.OrderPaymentCoupon(ctx, couponReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderPaymentQrcode 获取支付方式的二维码信息
 // @Summary 获取支付方式的二维码信息
 // @Description 获取支付方式的二维码信息
@@ -1304,6 +1335,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/instant/order/must_plan/confirm", wrapper.OrderMustPlanConfirm)                        // 确认必点商品
 		privateApi.GET("/instant/order/check", wrapper.OrderCheck)                                               // 订单检查。场景：1、点击结账按钮时，检查订单是否可以结账
 		privateApi.GET("/instant/order/payment/info", wrapper.OrderPaymentInfo)                                  // 获取结账页面信息
+		privateApi.POST("/instant/order/payment/coupon", wrapper.OrderPaymentCoupon)                             // 选择或取消优惠券
 		privateApi.POST("/instant/order/payment/points", wrapper.OrderPaymentPoints)                             // 设置订单的抵扣积分数量
 		privateApi.POST("/instant/order/payment/create", wrapper.OrderPaymentCreate)                             // 创建一个支付单
 		privateApi.POST("/instant/order/payment/cancel", wrapper.OrderPaymentCancel)                             // 撤销一个支付单

@@ -1331,11 +1331,18 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			WithPreload{
 				Query: "SaleBillSetting",
 			},
+			// ==================== 销售账单的优惠券信息 ====================
 			WithPreload{
 				Query: "SaleOrders.Coupons",
 				Args: []any{
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
+			},
+			WithPreload{
+				Query: "SaleOrders.Coupons.MarketingCoupon",
+			},
+			WithPreload{
+				Query: "SaleOrders.Coupons.MemberCoupon",
 			},
 			// ==================== 销售账单的订单信息 ====================
 			WithPreload{

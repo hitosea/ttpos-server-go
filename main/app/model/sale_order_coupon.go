@@ -14,9 +14,14 @@ type SaleOrderCoupon struct {
 	MemberCouponUuid    uint64  `gorm:"column:member_coupon_uuid;type:bigint(20);default:0;comment:会员的优惠券uuid,表示该订单使用会员的哪个优惠券。none时有值" json:"member_coupon_uuid"`
 	MarketingCouponUuid uint64  `gorm:"column:marketing_coupon_uuid;type:bigint(20);default:0;comment:营销优惠券uuid,表示该订单使用营销的哪个优惠券。marketing时有值" json:"marketing_coupon_uuid"`
 	SaleOrderUuid       uint64  `gorm:"column:sale_order_uuid;type:bigint(20);default:0;comment:销售订单ID" json:"sale_order_uuid"`
+
+	MemberCoupon    *MemberCoupon    `gorm:"foreignKey:MemberCouponUuid;references:Uuid" json:"member_coupon"`
+	MarketingCoupon *MarketingCoupon `gorm:"foreignKey:MarketingCouponUuid;references:Uuid" json:"marketing_coupon"`
 }
 
 func (model *SaleOrderCoupon) SetNil() {
+	model.MemberCoupon = nil
+	model.MarketingCoupon = nil
 }
 
 func NewSaleOrderCoupon(saleOrderUuid uint64, couponUuid uint64, couponRequirement string, couponAmount float64) *SaleOrderCoupon {
