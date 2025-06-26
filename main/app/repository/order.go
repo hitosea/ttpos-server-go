@@ -755,12 +755,27 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					),
 					CommonRepo.Preload(
 						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+							Args: []any{
+								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+									return db.Order("product_attribute_uuid asc")
+								}),
+							},
+						},
+					),
+					CommonRepo.Preload(
+						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
 						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+							Args: []any{
+								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+									return db.Order("product_bom_uuid asc")
+								}),
+							},
 						},
 					),
 					CommonRepo.Preload(
@@ -851,12 +866,27 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					),
 					CommonRepo.Preload(
 						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+							Args: []any{
+								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+									return db.Order("product_attribute_uuid asc")
+								}),
+							},
+						},
+					),
+					CommonRepo.Preload(
+						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
 						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+							Args: []any{
+								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+									return db.Order("product_bom_uuid asc")
+								}),
+							},
 						},
 					),
 					CommonRepo.Preload(
@@ -944,12 +974,27 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 				),
 				CommonRepo.Preload(
 					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+						Args: []any{
+							CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+								return db.Order("product_attribute_uuid asc")
+							}),
+						},
+					},
+				),
+				CommonRepo.Preload(
+					WithPreload{
 						Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
 					},
 				),
 				CommonRepo.Preload(
 					WithPreload{
 						Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+						Args: []any{
+							CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+								return db.Order("product_bom_uuid asc")
+							}),
+						},
 					},
 				),
 				CommonRepo.Preload(
@@ -1417,9 +1462,23 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+				Args: []any{
+					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+						return db.Order("product_attribute_uuid asc")
+					}),
+				},
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
+			},
+			WithPreload{
+				// 用于检查商品包是否下架
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+				Args: []any{
+					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+						return db.Order("product_bom_uuid asc")
+					}),
+				},
 			},
 			WithPreload{
 				// 用于检查商品包是否下架
