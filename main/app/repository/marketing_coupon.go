@@ -16,6 +16,11 @@ type IMarketingCouponRepo interface {
 	GetCoupons(opts ...DBOption) ([]*model.MarketingCoupon, error)                        //获取店铺优惠券列表
 	GetValidCouponList() ([]*model.MarketingCoupon, error)                                // 获取商家还可用的none类型优惠卷（所有人可用的）
 	GetCouponByUuid(uuid uint64) (*model.MarketingCoupon, error)                          // 获取优惠券
+	GetCouponLeftCount(uuid uint64) (int, error)                                          // 查询营销优惠券的剩余数量
+	CreateMarketingCouponRecord(marketingCouponRecord model.MarketingCouponRecord) error  // 添加营销优惠券使用记录
+	CreateMemberCouponRecord(couponId uint64, memberUuid uint64, leftCount int) error     // 创建会员优惠券记录（核销扣减）
+	CreateCommonCouponRecord(couponId uint64, leftCount int) error                        // 创建通用优惠券记录（核销扣减）
+	UpdateCommonCouponCount(couponId uint64) error                                        // 通用优惠券核销，数量减1
 }
 
 // MarketingCouponRepo 营销优惠券仓库
@@ -94,9 +99,9 @@ func (r *MarketingCouponRepo) DecreaseCouponQuantity(couponId uint64, memberUuid
 				CreateTime: time.Now().Unix(),
 				UpdateTime: time.Now().Unix(),
 			},
-			CouponUuid:   int64(couponId),
-			MemberUuid:   int64(memberUuid),
-			ActivityUuid: int64(activityUuid),
+			CouponUuid:   couponId,
+			MemberUuid:   memberUuid,
+			ActivityUuid: activityUuid,
 			Type:         constant.CouponRecordTypeBonus, // 调整扣减
 			Count:        1,
 			LeftCount:    coupon.Count - 1,
@@ -163,4 +168,57 @@ func (r *MarketingCouponRepo) GetCouponByUuid(uuid uint64) (*model.MarketingCoup
 		return nil, err
 	}
 	return coupon, nil
+}
+
+// 查询营销优惠券的剩余数量
+func (r *MarketingCouponRepo) GetCouponLeftCount(uuid uint64) (int, error) {
+	var count int
+	err := r.db.Model(&model.MarketingCoupon{}).Where("uuid = ?", uuid).Select("count").Scan(&count).Error
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// CreateMarketingCouponRecord 创建营销优惠券记录
+func (r *MarketingCouponRepo) CreateMarketingCouponRecord(marketingCouponRecord model.MarketingCouponRecord) error {
+	return r.db.Create(&marketingCouponRecord).Error
+}
+
+// CreateMemberCouponRecord 创建会员优惠券记录（核销扣减）
+func (r *MarketingCouponRepo) CreateMemberCouponRecord(couponId uint64, memberUuid uint64, leftCount int) error {
+	serialNo, err := r.generateSerialNo(r.db)
+	if err != nil {
+		return err
+	}
+	marketingCouponRecord := model.MarketingCouponRecord{
+		CouponUuid: couponId,
+		SerialNo:   serialNo,
+		MemberUuid: memberUuid,
+		Type:       constant.CouponRecordTypeUsed, // 核销扣减
+		Count:      1,
+		LeftCount:  leftCount,
+	}
+	return r.db.Create(&marketingCouponRecord).Error
+}
+
+// CreateCommonCouponRecord 创建通用优惠券记录（核销扣减）
+func (r *MarketingCouponRepo) CreateCommonCouponRecord(couponId uint64, leftCount int) error {
+	serialNo, err := r.generateSerialNo(r.db)
+	if err != nil {
+		return err
+	}
+	marketingCouponRecord := model.MarketingCouponRecord{
+		CouponUuid: couponId,
+		SerialNo:   serialNo,
+		Type:       constant.CouponRecordTypeUsed, // 核销扣减
+		Count:      1,
+		LeftCount:  leftCount,
+	}
+	return r.db.Create(&marketingCouponRecord).Error
+}
+
+// UpdateCommonCouponCount 更新通用优惠券数量
+func (r *MarketingCouponRepo) UpdateCommonCouponCount(couponId uint64) error {
+	return r.db.Model(&model.MarketingCoupon{}).Where("uuid = ?", couponId).Update("count", gorm.Expr("count - 1")).Error
 }

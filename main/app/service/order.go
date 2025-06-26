@@ -7613,6 +7613,91 @@ func (s *orderSrv) GetPointsRuleInfo(ctx context.Context, isBufferOrder bool, me
 	return &rule, nil
 }
 
+// 核销优惠券
+func (s *orderSrv) VerifyCoupon(ctx context.Context, saleOrder *model.SaleOrder, db *gorm.DB) error {
+	if !saleOrder.HasCoupon() {
+		return nil
+	}
+	coupon := saleOrder.Coupons[0] // 目前一个订单只支持一个优惠券
+
+	// 获取门店设置
+	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	timezone := utils.SetTimezone(storeSetting.TimeZone)
+	nowTime := timezone.Now().Format("HH:mm")
+	// 使用营销会员优惠券时
+	if coupon.CouponRequirement == constant.CouponRequirementMember {
+		if saleOrder.ConsumerUuid == 0 {
+			return errors.New("订单未使用会员，无法核销营销会员优惠券")
+		}
+		memberCoupon, errMemberCoupon := repository.NewMemberCouponRepo(db).GetMemberCouponByUuid(coupon.MemberCouponUuid)
+		if errMemberCoupon != nil {
+			return errors.WithMessage(errMemberCoupon)
+		}
+		// 判断优惠券是否可用
+		if err := memberCoupon.IsAvailable(saleOrder.ConsumerUuid, nowTime); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 核销优惠券
+		if err := repository.NewMemberCouponRepo(db).VerifyMemberCoupon(coupon.MemberCouponUuid); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 添加会员优惠券使用记录
+		if err := repository.NewMemberCouponRepo(db).CreateMemberCouponRecord(model.MemberCouponUseRecord{
+			MemberUuid:     saleOrder.ConsumerUuid,
+			CouponUuid:     coupon.MemberCouponUuid,
+			UseOrderUuid:   saleOrder.Uuid,
+			UseOrderAmount: saleOrder.CouponAmount,
+		}); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 添加会员优惠券使用记录
+		if err := repository.NewMarketingCouponRepo(db).CreateMarketingCouponRecord(model.MarketingCouponRecord{
+			BaseModel:    model.BaseModel{},
+			CouponUuid:   coupon.MemberCouponUuid,
+			SerialNo:     "",
+			ActivityUuid: 0,
+			MemberUuid:   saleOrder.ConsumerUuid,
+			Type:         constant.CouponRecordTypeUsed,
+			Count:        0,
+			LeftCount:    0,
+		}); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 添加营销会员优惠券使用记录
+		// 查询营销优惠券的剩余数量
+		marketingCouponUuid := coupon.MemberCoupon.CouponUuid
+		marketingCouponLeftCount, errMarketingCouponLeftCount := repository.NewMarketingCouponRepo(db).GetCouponLeftCount(marketingCouponUuid)
+		if errMarketingCouponLeftCount != nil {
+			return errors.WithMessage(errMarketingCouponLeftCount)
+		}
+		if err := repository.NewMarketingCouponRepo(db).CreateMemberCouponRecord(marketingCouponUuid, saleOrder.ConsumerUuid, marketingCouponLeftCount); err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+
+	// 使用通用优惠券（所有人可用）时
+	if coupon.CouponRequirement == constant.CouponRequirementNone {
+		commonCoupon, err := repository.NewMarketingCouponRepo(db).GetCouponByUuid(coupon.MarketingCouponUuid)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		if err := commonCoupon.IsAvailable(nowTime); err != nil {
+			return errors.WithMessage(err)
+		}
+		commonCoupon.Count = commonCoupon.Count - 1
+		if err := repository.NewMarketingCouponRepo(db).CreateCommonCouponRecord(commonCoupon.Uuid, commonCoupon.Count); err != nil {
+			return errors.WithMessage(err, "创建通用优惠券使用记录失败")
+		}
+		if err := repository.NewMarketingCouponRepo(db).UpdateCommonCouponCount(commonCoupon.Uuid); err != nil {
+			return errors.WithMessage(err, "减1通用优惠券数量失败")
+		}
+	}
+	return nil
+}
+
 // InstantOrderPaymentFinish 完成销售订单的付款结账
 func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error) {
 	// 加锁
@@ -7876,6 +7961,13 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			}); err != nil {
 				return errors.WithMessage(err)
 			}
+		}
+		// 核销优惠券
+		// 加锁, 避免并发问题
+		lock.NewSystemLock().LockUuid(constant.LockNameActivityConsumption)
+		defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
+		if err := s.VerifyCoupon(ctx, saleOrder, db); err != nil {
+			return errors.WithMessage(err)
 		}
 		return nil
 	}); err != nil {
