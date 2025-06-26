@@ -11,13 +11,7 @@ class DeliveryValidate extends  BaseValidate
 {
     //定义验证规则
     protected $rule =   [
-        'channel|外送渠道' => ['require', 'checkChannel'],
-        'basic_fee|外送基础服务费' => 'require',
-        'base_delivery_fee|起步配送费' => 'require',
-        'rider_acceptance_timeout|骑手未接单取消时间' => 'require|between:1,60', // 骑手未接单多少分钟后自动取消订单（1-60分钟）
-        'distance_range|距离范围' => ['require', 'array', 'min:1', "checkDistanceRange"],
-
-        'uuid' => 'require|checkIdExist',
+        'uuid' => 'require|integer|checkIdExist',
         'channels' => ['require', 'array', 'min:1', 'checkCompanyChannels']
     ];
 
@@ -33,20 +27,20 @@ class DeliveryValidate extends  BaseValidate
     }
 
     // 合并后的验证方法
-    protected function checkDistanceRange($value)
+    protected function checkDistanceRange($value, $rule, $data = [])
     {
         $prevEnd = null;
         $hasUnlimited = false;
 
         foreach ($value as $index => $item) {
+
+            if (!isset($item['price_per_km']) || !is_float($item['price_per_km']) && !is_int($item['price_per_km'])) {
+                return "距离范围单价错误";
+            }
+
             // 检查无限范围元素后面是否还有元素
             if ($hasUnlimited) {
                 return "距离范围设置了无限范围，后面不能再有其他范围";
-            }
-
-            // 如果不是第一个元素，检查 start 是否等于前一个的 end
-            if ($prevEnd !== null && $item['start'] != $prevEnd) {
-                return "距离范围的起始值必须等于前一个范围的结束值";
             }
 
             // 检查无限范围设置
@@ -57,23 +51,13 @@ class DeliveryValidate extends  BaseValidate
             }
 
             // 非无限范围必须设置 end
-            if (!isset($item['end']) || $item['end'] === '') {
-                return "距离范围不是无限范围，必须设置结束值";
-            }
-
-            // 检查 end 是否是数字
-            if (!is_numeric($item['end'])) {
-                return "距离范围的结束值必须是数字";
-            }
-
-            // 检查 end 是否大于等于0
-            if ($item['end'] < 0) {
-                return "距离范围的结束值必须大于等于0";
+            if (!isset($item['end']) || !is_float($item['end']) || !($item['end'] > 0)) {
+                return "距离范围不是最大范围，必须设置结束距离，且必须大于0";
             }
 
             // 检查 end 是否大于 start
-            if ($item['end'] <= $item['start']) {
-                return "距离范围的结束值必须大于起始值";
+            if ($item['end'] < $prevEnd) {
+                return "距离范围的结束距离必须大于上一个结束距离";
             }
 
             $prevEnd = $item['end'];
@@ -82,7 +66,7 @@ class DeliveryValidate extends  BaseValidate
         return true;
     }
 
-    protected function checkCompanyChannels($value)
+    protected function checkCompanyChannels($value, $rule, $data = [])
     {
         foreach ($value as $index => $item) {
             if (!isset($item['channel'])) {
@@ -91,21 +75,23 @@ class DeliveryValidate extends  BaseValidate
             if (($err = $this->checkChannel($item['channel'])) !== true) {
                 return $err;
             }
-            if (!isset($item['config_type'])) {
-                return "参数同步方式必填";
+            if (!empty(($data['uuid'] ?? 0))) {
+                if (!isset($item['config_type'])) {
+                    return "参数同步方式必填";
+                }
+                if (!in_array($item['config_type'], ['auto_sync', 'manual'])) {
+                    return "参数同步方式仅支持自动同步和手动设置";
+                }
             }
-            if (!in_array($item['config_type'], ['auto_sync', 'manual'])) {
-                return "参数同步方式仅支持自动同步和手动设置";
-            }
-            
+
             if (!isset($item['basic_fee'])) {
                 return "外送基础服务费必填";
             }
-           
+
             if (!isset($item['base_delivery_fee'])) {
                 return "起步配送费必填";
             }
-        
+
             if (!isset($item['rider_acceptance_timeout'])) {
                 return "骑手未接单取消时间必填";
             }
@@ -115,7 +101,7 @@ class DeliveryValidate extends  BaseValidate
             if (!isset($item['distance_range']) || !is_array($item['distance_range']) || count($item['distance_range']) == 0) {
                 return "距离范围参数错误";
             }
-            if (($err = $this->checkDistanceRange($item['distance_range'])) !== true) {
+            if (($err = $this->checkDistanceRange($item['distance_range'], $rule)) !== true) {
                 return $err;
             }
         }
@@ -140,11 +126,7 @@ class DeliveryValidate extends  BaseValidate
 
     protected $scene = [
         'edit' => [
-            'channel',
-            'basic_fee',
-            'base_delivery_fee',
-            'rider_acceptance_timeout',
-            'distance_range',
+            'channels',
         ],
         "uuid" => [
             'uuid'

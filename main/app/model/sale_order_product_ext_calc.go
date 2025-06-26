@@ -505,8 +505,14 @@ func (model *SaleOrderProduct) calcLastestProductPrice() float64 {
 	return productPrice.InexactFloat64()
 }
 
+// 是否为自助餐商品
 func (model *SaleOrderProduct) IsBuffetProduct() bool {
 	return model.IsBuffet == constant.SaleOrderProductIsBuffetYes
+}
+
+// 是否为计量商品
+func (model *SaleOrderProduct) IsMetering() bool {
+	return model.NumType == constant.SaleOrderProductIsMeteringYes
 }
 
 // 计算商品销售价。

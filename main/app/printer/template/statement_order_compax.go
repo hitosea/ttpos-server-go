@@ -9,7 +9,6 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/config"
-	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
 )
@@ -233,8 +232,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.AppendText("------------------------------------------------")
 	}
-	// 赠品金额 / 商品数量
-	freeMoney := float64(0)
+	// 商品数量
 	productNum := float64(0)
 	printer.SetLineSpacing(35)
 	// 自助餐顾客类型
@@ -263,16 +261,13 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.SetLineSpacing(35)
 	}
 	// 添加加钟商品
-	for _, delay := range saleOrder.SaleOrderBuffetDelayProducts {
-		if delay.IsDelete() {
-			continue
-		}
-		productNum += float64(delay.Num)
-		discountPrice := delay.GetAmount()
+	buffetDelayProducts, num := t.base.MergeSaleOrderBuffetDelayProducts(saleOrder)
+	productNum += num
+	for _, delay := range buffetDelayProducts {
 		printer.AppendText(t.base.PrintText(
-			delay.Name,
-			fmt.Sprintf("%s*%d", t.base.Amount(delay.Price), delay.Num),
-			t.base.GetPriceAndUnit(discountPrice),
+			delay.DelayName,
+			fmt.Sprintf("%s*%d", t.base.Amount(delay.DelayPrice), delay.DelayNum),
+			t.base.GetPriceAndUnit(delay.DelayTotalPrice),
 			currencyWidth,
 			leftWidth,
 			centerWidth,
@@ -284,39 +279,20 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.SetLineSpacing(35)
 	}
 	// 商品列表
-	for key, item := range saleOrder.SaleOrderProducts {
-		if item.IsDelete() || item.IsUnCookingProduct() || item.IsUnAcceptOrderBool() || item.IsCancelProduct() {
-			continue
-		}
-		if item.IsBuffetProduct() && item.GetTotalSaucePrice() <= 0 {
-			continue
-		}
-		// 商品数量
-		productNum += item.Num
-		productPrice := utils.IfFloat64(item.IsBuffetProduct(), item.SaucePrice, item.ProductPrice)
-		productTotalPrice := utils.IfFloat64(item.IsBuffetProduct(), item.GetTotalSaucePrice(), item.GetTotalProductPrice()) // 商品原价
-		// 赠品
-		var gift string
-		if item.IsGiftBool() {
-			gift = "(" + t.base.Translate("赠") + ") "
-			freeMoney += item.GetTotalProductPrice()
-			productTotalPrice = 0
-		}
-		// 商品名称
-		productAttr := item.GetAttributeNamesByLang(t.base.Lang)
-		productName := gift + item.MultiLanguageName.GetNameByLang(t.base.Lang) + "\n(" + productAttr + ")"
-		//
+	products, num := t.base.MergeSaleOrderProduct(saleOrder)
+	productNum += num
+	for key, product := range products {
 		printer.AppendText(t.base.PrintText(
-			productName,
-			fmt.Sprintf("%s*%v", t.base.Amount(productPrice), item.Num),
-			t.base.GetPriceAndUnit(productTotalPrice),
+			product.ProductName,
+			fmt.Sprintf("%s*%v", t.base.Amount(product.ProductPrice), product.ProductNum),
+			t.base.GetPriceAndUnit(product.ProductTotalPrice),
 			currencyWidth,
 			leftWidth,
 			centerWidth,
 			rightWidth,
 		))
 		printer.LineFeed()
-		if key != len(saleOrder.SaleOrderProducts)-1 {
+		if key != len(products)-1 {
 			printer.SetLineSpacing(10)
 			printer.LineFeed(3)
 		}

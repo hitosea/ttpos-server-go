@@ -20,18 +20,17 @@ class Delivery extends Controller
 
     /**
      * @Apidoc\Title("外送设置")
-     * @Apidoc\Desc("get请求是获取，返回一个对象数组，包含多个渠道；post请求是提交修改，只能提交一个渠道")
+     * @Apidoc\Desc("get请求是获取，返回数组；post请求是提交修改，传递{channels:[渠道配置列表]}")
      * @Apidoc\Method("GET,POST")
      * @Apidoc\Url("/api/admin/delivery/index")
-     * @Apidoc\Param("channel", type="string", require=true, desc="配送渠道名称，例如：SKootar")
-     * @Apidoc\Param("basic_fee", type="decimal", require=true, desc="基础服务费")
-     * @Apidoc\Param("base_delivery_fee", type="decimal", require=true, desc="基础配送费")
-     * @Apidoc\Param("rider_acceptance_timeout", type="int", require=true, desc="骑手接单超时时间（单位：分钟）")
-     * @Apidoc\Param("distance_range", type="array", require=true, desc="距离区间配置")
-     * @Apidoc\Param("distance_range[].start", type="int", require=true, desc="区间起始公里数")
-     * @Apidoc\Param("distance_range[].end", type="int", require=true, desc="区间结束公里数")
-     * @Apidoc\Param("distance_range[].price_per_km", type="decimal", require=true, desc="每公里价格")
-     * @Apidoc\Param("distance_range[].is_unlimited", type="bool", require=true, desc="是否为无限区间")
+     * @Apidoc\Param("channels[].channel", type="string", require=true, desc="配送渠道名称")
+     * @Apidoc\Param("channels[].basic_fee", type="decimal", require=true, desc="基础服务费")
+     * @Apidoc\Param("channels[].base_delivery_fee", type="decimal", require=true, desc="起步配送费")
+     * @Apidoc\Param("channels[].rider_acceptance_timeout", type="int", require=true, desc="骑手未接单取消时间：分钟，1-60")
+     * @Apidoc\Param("channels[].distance_range", type="array", require=true, desc="距离范围配置")
+     * @Apidoc\Param("channels[].distance_range[].end", type="int", require=true, desc="结束距离")
+     * @Apidoc\Param("channels[].distance_range[].is_unlimited", type="boolean", require=true, desc="是否最大范围")
+     * @Apidoc\Param("channels[].distance_range[].price_per_km", type="decimal", require=true, desc="每公里价格")
      */
     public function index(DeliveryValidate $validate)
     {
@@ -41,30 +40,16 @@ class Delivery extends Controller
         $param = $validate->goCheck('edit');
         $deliverySetting = SettingModel::where(['key' => SettingEnum::DELIVERY_CONFIG])->find();
 
-        $channels = [];
-        if (!is_null($deliverySetting)) {
-            $channels = $deliverySetting->values;
-        }
-        $exists = false;
-        foreach ($channels as $k => $item) {
-            if ($item["channel"] == $param["channel"]) {
-                $channels[$k] = $param;
-                $exists = true;
-            }
-        }
-        if (!$exists) {
-            $channels[] = $param;
-        }
         if (is_null($deliverySetting)) {
             SettingModel::insert([
                 "key" => SettingEnum::DELIVERY_CONFIG,
                 "describe" => "外送设置",
-                "values" => json_encode($channels)
+                "values" => json_encode($param['channels'])
             ]);
         } else {
             $deliverySetting->save([
                 'describe' => SettingEnum::data()[SettingEnum::DELIVERY_CONFIG]['describe'],
-                'values' =>  $channels,
+                'values' =>  $param['channels'],
             ]);
             // 获取 company_setting 表，如果设置了自动同步，需要更新，以及对应的商家数据库
             $companySettings = Supplier::select();
@@ -72,13 +57,15 @@ class Delivery extends Controller
                 if (!$companySetting || !$companySetting->delivery_config) {
                     continue;
                 }
-                $deliveryConfig = json_decode($companySetting->delivery_config, true);
-                foreach ($deliveryConfig as $k => $channel) {
-                    if ($channel["channel"] == $param["channel"] && $channel["config_type"] == "auto_sync") {
-                        $deliveryConfig[$k] = $param + ["config_type" => "auto_sync"];
+                $companyChannels = json_decode($companySetting->delivery_config, true);
+                foreach ($companyChannels as $k => $companyChannel) {
+                    foreach($param['channels'] as $paramChannel) {
+                        if ($companyChannel["channel"] == $paramChannel["channel"] && $companyChannel["config_type"] == "auto_sync") {
+                            $companyChannels[$k] = $paramChannel + ["config_type" => "auto_sync"];
+                        }
                     }
                 }
-                $companySetting->save(['delivery_config' => json_encode($deliveryConfig)]);
+                $companySetting->save(['delivery_config' => json_encode($companyChannels)]);
             }
         }
         return $this->renderSuccess('操作成功');
@@ -126,7 +113,6 @@ class Delivery extends Controller
                 'rider_acceptance_timeout' => 0,
                 'distance_range' => [
                     [
-                        'start' => 0,
                         'end' => 0,
                         'price_per_km' => 0,
                         'is_unlimited' => false,
@@ -291,14 +277,14 @@ class Delivery extends Controller
      * @Apidoc\Url("/api/admin/delivery/company")
      * @Apidoc\Param("uuid", type="biginteger", require=true, desc="商家唯一标识")
      * @Apidoc\Param("channels", type="array", require=true, desc="外送渠道配置列表")
-     * @Apidoc\Param("channels[].config_type", type="string", require=true, desc="配置类型，如 auto_sync-自动同步；manual-手动设置")
      * @Apidoc\Param("channels[].channel", type="string", require=true, desc="配送渠道名称")
+     * @Apidoc\Param("channels[].config_type", type="string", require=true, desc="配置类型，如 auto_sync-自动同步；manual-手动设置")
      * @Apidoc\Param("channels[].basic_fee", type="decimal", require=true, desc="基础服务费")
-     * @Apidoc\Param("channels[].base_delivery_fee", type="decimal", require=true, desc="基础配送费")
-     * @Apidoc\Param("channels[].rider_acceptance_timeout", type="int", require=true, desc="骑手接单超时时间（分钟）")
-     * @Apidoc\Param("channels[].distance_range", type="array", require=true, desc="距离区间配置")
-     * @Apidoc\Param("channels[].distance_range[].start", type="int", require=true, desc="区间起始公里数")
-     * @Apidoc\Param("channels[].distance_range[].end", type="int", require=true, desc="区间结束公里数")
+     * @Apidoc\Param("channels[].base_delivery_fee", type="decimal", require=true, desc="起步配送费")
+     * @Apidoc\Param("channels[].rider_acceptance_timeout", type="int", require=true, desc="骑手未接单取消时间：分钟，1-60")
+     * @Apidoc\Param("channels[].distance_range", type="array", require=true, desc="距离范围配置")
+     * @Apidoc\Param("channels[].distance_range[].end", type="int", require=true, desc="结束距离")
+     * @Apidoc\Param("channels[].distance_range[].is_unlimited", type="boolean", require=true, desc="是否最大范围")
      * @Apidoc\Param("channels[].distance_range[].price_per_km", type="decimal", require=true, desc="每公里价格")
      */
     public function company(DeliveryValidate $validate)

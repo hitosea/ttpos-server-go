@@ -284,7 +284,7 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
 	product, _ := productionRepo.GetProduct(
 		productionRepo.WhereProductUuid(productUuid),
-		productionRepo.WithSaleOrderProduct(),
+		productionRepo.WithSaleOrderProductAll(),
 	)
 	if product.Uuid == 0 {
 		return errors.New("订单商品不存在")
@@ -292,9 +292,12 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 	if product.Status != constant.ProductionOrderProductStatusCooking {
 		return errors.New("订单商品未送厨")
 	}
+
+	finishedTime := time.Now().Unix()
+
 	if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(productUuid)}, map[string]any{
 		"status":        constant.ProductionOrderProductStatusFinished,
-		"finished_time": time.Now().Unix(),
+		"finished_time": finishedTime,
 	}); err != nil {
 		return errors.ErrInternal
 	}
@@ -311,6 +314,7 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 				SaleBillUuid:  product.SaleBillUuid,
 				SaleOrderUuid: product.SaleOrderProductUuid,
 			},
+			FinishedTime: finishedTime,
 			Products: event.Products{
 				{
 					OrderProductId:  product.Uuid,

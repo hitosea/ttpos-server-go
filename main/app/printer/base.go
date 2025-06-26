@@ -34,6 +34,8 @@ type PPrinterRepo interface {
 	PrintingRechargeOrder(order model.MemberRechargeOrder, FirstExecution int) (*resp.PrinterData, error)
 	PrintingHandoverOrder(log *model.StaffShiftLog, businessData *business_data_resp.BusinessDataAll, FirstExecution int, openMoneybox bool, deviceSnId ...string) (*resp.PrinterData, error)
 	PrintingBusinessData(businessData *template.PrintingBusinessData, startTime int64, endTime int64, deviceSnId ...string) (*resp.PrinterData, error)
+	SetFinishedTime(finishedTime int64) // 设置完成时间
+	GetFinishedTime() int64             // 获取完成时间
 }
 
 type PrinterRepoImpl struct {
@@ -46,6 +48,7 @@ type PrinterRepoImpl struct {
 	currencySetting respSetting.Currency
 	printMethod     int
 	Lang            string // 可选语言参数
+	finishedTime    int64  // 完成时间
 }
 
 func NewPrinterRepo(ctx context.Context, langs ...string) PPrinterRepo {
@@ -137,7 +140,6 @@ func (p *PrinterRepoImpl) getProductPrinterList(widthPrintMode int) ([]model.Pro
 	printers, err := productPrinterRepo.GetProductPrinters(
 		productPrinterRepo.WhereStatus(constant.ProductPrinterStatusOpen),
 		productPrinterRepo.WidthPrintMode(widthPrintMode),
-		repository.CommonRepo.WhereBySoftDelete(),
 		repository.CommonRepo.Preload(repository.WithPreload{
 			Query: "ProductPrinterRegions",
 			Args: []any{
@@ -264,4 +266,14 @@ func (p *PrinterRepoImpl) GetPrinterMethod(isKitchen ...bool) int {
 // 获取打印机打印方式
 func (p *PrinterRepoImpl) IsImagePrinterMethod(isKitchen ...bool) bool {
 	return p.GetPrinterMethod(isKitchen...) == constant.PrinterLogPrintMethodImage
+}
+
+// 设置完成时间
+func (p *PrinterRepoImpl) SetFinishedTime(finishedTime int64) {
+	p.finishedTime = finishedTime
+}
+
+// 获取完成时间
+func (p *PrinterRepoImpl) GetFinishedTime() int64 {
+	return p.finishedTime
 }

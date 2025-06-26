@@ -11,7 +11,8 @@ const EventFinishMenu EventName = "Event_Finish_Menu"
 // FinishMenuPayload 完成制作事件数据结构
 type FinishMenuPayload struct {
 	BasePayload
-	Products Products `json:"products"` // 商品列表
+	Products     Products `json:"products"`      // 商品列表
+	FinishedTime int64    `json:"finished_time"` // 完成时间
 }
 
 func (payload *FinishMenuPayload) ToJsonString() string {
