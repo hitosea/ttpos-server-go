@@ -17,6 +17,9 @@
           </el-radio-group>
         </el-form-item>
 
+        <el-form-item :label="$t('外卖序号')">
+          <el-input size="small" v-model="searchForm.serial_no" :placeholder="$t('外卖序号')" @input="onSearch"></el-input>
+        </el-form-item>
         <el-form-item :label="$t('订单号')">
           <el-input size="small" v-model="searchForm.order_no" :placeholder="$t('订单号')" @input="onSearch"></el-input>
         </el-form-item>
@@ -38,8 +41,8 @@
               <el-option :label="$t('下单时间')" :value="0"></el-option>
               <el-option :label="$t('完成时间')" :value="1"></el-option>
               <template #tag>
-                <span v-if="searchForm.time_mode.includes(0)">{{ $t('开台时间') }}</span>
-                <span v-if="searchForm.time_mode.includes(1) && !searchForm.time_mode.includes(0)">{{ $t('支付时间') }}</span>
+                <span v-if="searchForm.time_mode.includes(0)">{{ $t('下单时间') }}</span>
+                <span v-if="searchForm.time_mode.includes(1) && !searchForm.time_mode.includes(0)">{{ $t('完成时间') }}</span>
                 <span v-if="!searchForm.time_mode.includes(1) && !searchForm.time_mode.includes(0)">{{ $t('请选择') }}</span>
               </template>
             </el-select>
@@ -78,7 +81,7 @@
               </span>
             </template>
           </el-tab-pane>
-          <el-tab-pane :label="$t('待付款')" name="payment">
+          <el-tab-pane :label="$t('待付款')" name="pending_payment">
             <template #label>
               <span>
                 {{ $t('待付款') }}
@@ -86,7 +89,7 @@
               </span>
             </template>
           </el-tab-pane>
-          <el-tab-pane :label="$t('待配送')" name="payment">
+          <el-tab-pane :label="$t('待配送')" name="awaiting_delivery">
             <template #label>
               <span>
                 {{ $t('待配送') }}
@@ -94,7 +97,7 @@
               </span>
             </template>
           </el-tab-pane>
-          <el-tab-pane :label="$t('配送中')" name="payment">
+          <el-tab-pane :label="$t('配送中')" name="delivering">
             <template #label>
               <span>
                 {{ $t('配送中') }}
@@ -102,7 +105,7 @@
               </span>
             </template>
           </el-tab-pane>
-          <el-tab-pane :label="$t('已取消')" name="cancel">
+          <el-tab-pane :label="$t('已取消')" name="cancelled">
             <template #label>
               <span>
                 {{ $t('已取消') }}
@@ -132,9 +135,9 @@
               {{ scope.row.create_time }}
             </template>
           </el-table-column>
-          <el-table-column prop="finish_time" :label="$t('支付时间')">
+          <el-table-column prop="pay_time" :label="$t('支付时间')">
             <template #default="scope">
-              {{ scope.row.finish_time }}
+              {{ scope.row.pay_time }}
             </template>
           </el-table-column>
           <el-table-column prop="order_amount" :label="$t('订单金额')" width="140" show-overflow-tooltip>
@@ -169,21 +172,17 @@
               <span v-else class="gray9">-</span>
             </template>
           </el-table-column>
-          <el-table-column prop="pay_type_name" :label="$t('配送费')" show-overflow-tooltip>
+          <el-table-column prop="delivery_fee" :label="$t('配送费')" show-overflow-tooltip>
             <template #default="scope">
-              <span v-if="scope.row.status == 1 || (scope.row.sale_orders && scope.row.sale_orders.map((item) => item.status == 1).includes(true))">{{
-                scope.row.pay_type_name
-              }}</span>
-              <span v-else class="gray9">-</span>
+              <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
+              {{ this.$formatPrice(scope.row.delivery_fee) }}
+              <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
             </template>
           </el-table-column>
 
-          <el-table-column prop="pay_type_name" :label="$t('支付方式')" show-overflow-tooltip>
+          <el-table-column prop="payment_method" :label="$t('支付方式')" show-overflow-tooltip>
             <template #default="scope">
-              <span v-if="scope.row.status == 1 || (scope.row.sale_orders && scope.row.sale_orders.map((item) => item.status == 1).includes(true))">{{
-                scope.row.pay_type_name
-              }}</span>
-              <span v-else class="gray9">-</span>
+              <span class="gray9">{{ scope.row.payment_method }}</span>
             </template>
           </el-table-column>
 
@@ -384,7 +383,7 @@
         Params.page = self.curPage;
         Params.list_rows = self.pageSize;
         self.loading = true;
-        OrderApi.storeOrderlist(Params, true)
+        OrderApi.postTakeoutOrderList(Params, true)
           .then((res) => {
             self.tableData = res.data.list;
             self.tableData.map((item) => {
