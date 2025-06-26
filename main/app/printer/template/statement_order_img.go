@@ -314,8 +314,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	img.LineFeed(1, 40)
 	img.SetTextLineHeight(50)
 
-	// 赠品金额 / 商品数量
-	freeMoney := float64(0)
+	// 商品数量
 	productNum := uint(0)
 	// 自助餐顾客类型
 	for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
@@ -335,49 +334,27 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		)
 	}
 	// 添加加钟商品
-	for _, delay := range saleOrder.SaleOrderBuffetDelayProducts {
-		if delay.IsDelete() {
-			continue
-		}
-		productNum += delay.Num
-		originPrice := delay.GetAmount()
+	buffetDelayProducts, num := t.base.MergeSaleOrderBuffetDelayProducts(saleOrder)
+	productNum += num
+	for _, delay := range buffetDelayProducts {
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: delay.Name, Width: 310, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(delay.Price), saleBill.MealNum), Width: 120, Align: pkg.AlignCenter},
-			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(originPrice), Width: 0, Align: pkg.AlignRight},
+			pkg.ColumnConfig{Text: delay.DelayName, Width: 310, Align: pkg.AlignLeft},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(delay.DelayPrice), delay.DelayNum), Width: 120, Align: pkg.AlignCenter},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(delay.DelayTotalPrice), Width: 0, Align: pkg.AlignRight},
 		)
 	}
 	// 商品列表
-	for key, item := range saleOrder.SaleOrderProducts {
-		if item.IsDelete() || item.IsUnCookingProduct() || item.IsUnAcceptOrderBool() || item.IsCancelProduct() {
-			continue
-		}
-		if item.IsBuffetProduct() && item.GetTotalSaucePrice() <= 0 {
-			continue
-		}
-		// 商品数量
-		productNum += item.Num
-		productPrice := utils.IfFloat64(item.IsBuffetProduct(), item.SaucePrice, item.SalePrice)
-		productTotalPrice := utils.IfFloat64(item.IsBuffetProduct(), item.GetTotalSaucePrice(), item.GetSalePrice()) // 商品原价
-		// 赠品
-		var gift string
-		if item.IsGiftBool() {
-			gift = "(" + t.base.Translate("赠") + ") "
-			freeMoney += item.GetTotalProductPrice()
-			productTotalPrice = 0
-		}
-		// 商品名称
-		productAttr := item.GetAttributeNamesByLang(t.base.Lang)
-		productName := gift + item.MultiLanguageName.GetNameByLang(t.base.Lang) + "\n(" + productAttr + ")"
-		//
+	products, num := t.base.MergeSaleOrderProduct(saleOrder)
+	productNum += num
+	for key, product := range products {
 		img.SetTextLineHeight(45)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: productName, Width: 310, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Amount(productPrice), item.Num), Width: 120, Align: pkg.AlignCenter},
-			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(productTotalPrice), Width: 0, Align: pkg.AlignRight},
+			pkg.ColumnConfig{Text: product.ProductName, Width: 310, Align: pkg.AlignLeft},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%v", t.base.Amount(product.ProductPrice), product.ProductNum), Width: 120, Align: pkg.AlignCenter},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(product.ProductTotalPrice), Width: 0, Align: pkg.AlignRight},
 		)
 		img.RecoverDefaultTextLineHeight()
-		if key != len(saleOrder.SaleOrderProducts)-1 {
+		if key != len(products)-1 {
 			img.LineFeed(1, 10)
 		}
 	}
@@ -388,12 +365,12 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	img.SetAlignment(pkg.AlignRight)
 	if temp == 3 {
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %d", t.base.Translate("商品数量"), productNum), Width: 250, Align: pkg.AlignLeft},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %v", t.base.Translate("商品数量"), productNum), Width: 250, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount)), Width: 0, Align: pkg.AlignRight},
 		)
 	} else {
 		img.SetAlignment(pkg.AlignRight)
-		img.AppendText(fmt.Sprintf("%s: %d", t.base.Translate("商品数量"), productNum))
+		img.AppendText(fmt.Sprintf("%s: %v", t.base.Translate("商品数量"), productNum))
 		img.LineFeed(1)
 		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount)))
 		img.LineFeed(1)
