@@ -11,6 +11,7 @@ import (
 	"time"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
 	respSetting "ttpos-server-go/app/dto/resp/setting"
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
@@ -41,6 +42,22 @@ type PrintingBusinessData struct {
 	PaymentMethod   *business_data_resp.BusinessDataPaymentMethod   `json:"business_data_payment_method"`   // 支付方式数据
 	ProductCategory *business_data_resp.BusinessDataProductCategory `json:"business_data_product_category"` // 产品类别数据
 	Product         *business_data_resp.BusinessDataProduct         `json:"business_data_product"`          // 产品数据
+}
+
+// MergeSaleOrderBuffetDelayProducts 合并加钟商品数据
+type MergeSaleOrderBuffetDelayProducts struct {
+	DelayName       string  `json:"delay_name"`
+	DelayPrice      float64 `json:"delay_price"`
+	DelayNum        uint    `json:"delay_num"`
+	DelayTotalPrice float64 `json:"delay_total_price"`
+}
+
+// MergeSaleOrderProduct 合并销售订单商品数据
+type MergeSaleOrderProduct struct {
+	ProductName       string  `json:"product_name"`
+	ProductPrice      float64 `json:"product_price"`
+	ProductNum        uint    `json:"product_num"`
+	ProductTotalPrice float64 `json:"product_total_price"`
 }
 
 // printerTemplate 模板基类
@@ -396,4 +413,87 @@ func (p *printerTemplate) GetQrcodeAddr(qrcodeURL string) string {
 	}
 
 	return outputPath
+}
+
+// 合并加钟商品数据
+func (p *printerTemplate) MergeSaleOrderBuffetDelayProducts(saleOrder *model.SaleOrder) ([]MergeSaleOrderBuffetDelayProducts, uint) {
+	num := uint(0)
+	delayMap := make(map[string]*MergeSaleOrderBuffetDelayProducts)
+	delays := make([]MergeSaleOrderBuffetDelayProducts, 0)
+	for _, delay := range saleOrder.SaleOrderBuffetDelayProducts {
+		if delay.IsDelete() {
+			continue
+		}
+		num += delay.Num
+		originPrice := delay.GetAmount()
+		key := fmt.Sprintf("%s(%v)", delay.Name, originPrice)
+		// 按产品名称分组累加
+		if _, exists := delayMap[key]; exists {
+			// 如果产品名称已存在，则累加数量和总价
+			delayMap[key].DelayNum += delay.Num
+			delayMap[key].DelayTotalPrice += originPrice
+		} else {
+			// 如果产品名称不存在，则创建新记录
+			delayMap[key] = &MergeSaleOrderBuffetDelayProducts{
+				DelayName:       delay.Name,
+				DelayPrice:      delay.Price,
+				DelayNum:        delay.Num,
+				DelayTotalPrice: originPrice,
+			}
+		}
+	}
+	// 将map转换为slice
+	for _, delay := range delayMap {
+		delays = append(delays, *delay)
+	}
+	return delays, num
+}
+
+// 合并销售订单商品数据
+func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder) ([]MergeSaleOrderProduct, uint) {
+	productNum := uint(0)
+	productMap := make(map[string]*MergeSaleOrderProduct)
+	products := make([]MergeSaleOrderProduct, 0)
+	for _, item := range saleOrder.SaleOrderProducts {
+		if item.IsDelete() || item.IsUnCookingProduct() || item.IsUnAcceptOrderBool() || item.IsCancelProduct() {
+			continue
+		}
+		if item.IsBuffetProduct() && item.GetTotalSaucePrice() <= 0 {
+			continue
+		}
+		// 商品数量
+		productNum += item.Num
+		// 商品价格
+		productPrice := utils.IfFloat64(item.IsBuffetProduct(), item.SaucePrice, item.SalePrice)
+		productTotalPrice := utils.IfFloat64(item.IsBuffetProduct(), item.GetTotalSaucePrice(), item.GetSalePrice()) // 商品原价
+		// 赠品
+		var gift string
+		if item.IsGiftBool() {
+			gift = "(" + p.Translate("赠") + ") "
+			productTotalPrice = 0
+		}
+		// 商品名称
+		productAttr := item.GetAttributeNamesByLang(p.Lang)
+		productName := gift + item.MultiLanguageName.GetNameByLang(p.Lang) + "\n(" + productAttr + ")"
+		// 按产品名称分组累加
+		key := fmt.Sprintf("%s(%v)", productName, productPrice)
+		if _, exists := productMap[key]; exists {
+			// 如果产品名称已存在，则累加数量和总价
+			productMap[key].ProductNum += item.Num
+			productMap[key].ProductTotalPrice += productTotalPrice
+		} else {
+			// 如果产品名称不存在，则创建新记录
+			productMap[key] = &MergeSaleOrderProduct{
+				ProductName:       productName,
+				ProductPrice:      productPrice,
+				ProductNum:        item.Num,
+				ProductTotalPrice: productTotalPrice,
+			}
+		}
+	}
+	// 将map转换为slice
+	for _, product := range productMap {
+		products = append(products, *product)
+	}
+	return products, productNum
 }
