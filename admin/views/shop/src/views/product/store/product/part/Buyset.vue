@@ -103,6 +103,15 @@
         size="large"
         :disabled="form.model.num_type == 1"
       />
+      <el-checkbox
+        v-if="is_open_delivery"
+        v-model="form.model.is_show_delivery"
+        :true-label="1"
+        :false-label="2"
+        :label="$t('外送')"
+        size="large"
+        :disabled="form.model.num_type == 1"
+      />
     </el-form-item>
 
     <el-form-item v-if="form.model.type == 10" for="no_click" :label="$t('商品排序：')">
@@ -232,6 +241,7 @@
   const is_open_assistant = supplier.value?.is_open_assistant || 0;
   const is_open_kitchen_kds = supplier.value?.is_open_kitchen_kds || 0;
   const is_open_member = supplier.value?.is_open_member || 0;
+  const is_open_delivery = supplier.value?.delivery_status || 0;
   export default {
     data() {
       return {
@@ -246,6 +256,7 @@
         is_open_assistant: is_open_assistant,
         is_open_kitchen_kds: is_open_kitchen_kds,
         is_open_member: is_open_member,
+        is_open_delivery: is_open_delivery,
         baseSale: baseSale,
         showMore: false,
       };
@@ -291,6 +302,7 @@
             this.form.model.is_show_tablet = 2;
             this.form.model.is_show_assistant = 2;
             this.form.model.is_show_h5 = 2;
+            this.form.model.is_show_delivery = 2;
           }
         },
       },

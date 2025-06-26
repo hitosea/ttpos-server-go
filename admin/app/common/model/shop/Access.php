@@ -356,7 +356,7 @@ class Access extends BaseModel
                 }
             }
             // 授权无营销活动权限
-            if (($licenses['is_open_marketing'] ?? 0) == 0 ) {
+            if (($licenses['is_open_marketing'] ?? 0) == 0) {
                 if ($value['uuid'] == 1731155710 || $value['uuid'] == 1731155711) {
                     continue;
                 }
@@ -364,6 +364,12 @@ class Access extends BaseModel
             // 授权无会员卡权限
             if (($licenses['is_open_coupon'] ?? 0) == 0 && ($licenses['is_open_marketing'] ?? 0) == 0) {
                 if ($value['uuid'] == 1731155608) {
+                    continue;
+                }
+            }
+            // 未开启外送，看不到外送订单
+            if (($licenses['is_open_delivery'] ?? 0) == 0) {
+                if ($value['uuid'] == 1741590679) {
                     continue;
                 }
             }

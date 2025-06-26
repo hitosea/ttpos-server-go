@@ -51,7 +51,7 @@ class DeliveryValidate extends  BaseValidate
             }
 
             // 非无限范围必须设置 end
-            if (!isset($item['end']) || !is_float($item['end']) || !($item['end'] > 0)) {
+            if (!isset($item['end']) || !is_float($item['end']) && !is_int($item['end']) || !($item['end'] > 0)) {
                 return "距离范围不是最大范围，必须设置结束距离，且必须大于0";
             }
 

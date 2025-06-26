@@ -1248,6 +1248,8 @@ class Setting extends BaseModel
                     'is_invoice' => '0',
                     // 营业时间
                     'opening_hours' => '',
+                    // 外送商品价格比例
+                    'delivery_price_ratio' => 100,
                 ],
             ],
         ];
