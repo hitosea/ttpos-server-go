@@ -71,6 +71,15 @@ class Business extends Controller
 
             $data['opening_hours'] = $opening_hours;
         }
+
+        $deliveryPriceRation = intval($data['delivery_price_ratio'] ?? 0);
+        if ($deliveryPriceRation == 0 || !($deliveryPriceRation > 0 && $deliveryPriceRation <= 300)) {
+            return $this->renderError('外送商品价格错误');
+        }
+        if ($setting['delivery_price_ratio'] != $deliveryPriceRation && $this->store['supplier']['status'] != 1) {
+            return $this->renderError('当前没有权限使用此功能');
+        }
+
         $arr = [
             'zeroing_method' => $data['zeroing_method'] ?? 0,
             'checkout_zeroing_method' => $data['checkout_zeroing_method'] ?? 0,
@@ -82,6 +91,7 @@ class Business extends Controller
             'discount_method' => $data['discount_method'] ?? 10,
             'is_invoice' => $data['is_invoice'] ?? 0,
             'opening_hours' => $opening_hours,
+            'delivery_price_ratio' => $deliveryPriceRation,
         ];
         if ($update_style_time) {
             $arr['dish_card_style_time'] = time() . '';
@@ -131,6 +141,23 @@ class Business extends Controller
         $token = $auth->generateToken($arr);
         $qrCode = new QrCode(env('EMENU_BASE_URL') . "/home?token={$token}");
 
+        return $this->renderSuccess('', (new PngWriter())->write($qrCode)->getDataUri());
+    }
+
+    /**
+     * 会员端二维码
+     * @Apidoc\Title("会员端二维码")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/setting.Business/companyQrcode")
+     * @Apidoc\Returned()
+     */
+    public function companyQrcode()
+    {
+        if ($this->store['supplier']['is_open_member'] != 1) {
+            return $this->renderError('当前没有权限使用此功能');
+        }
+        $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?: 0;
+        $qrCode = new QrCode(env('MEMBER_BASE_URL') . "/login?cid={$shop_supplier_id}");
         return $this->renderSuccess('', (new PngWriter())->write($qrCode)->getDataUri());
     }
 

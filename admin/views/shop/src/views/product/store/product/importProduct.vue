@@ -294,6 +294,7 @@
                   <el-checkbox v-model="scope.row.is_show_kitchen" :true-label="1" :false-label="2" :label="$t('厨显')" />
                   <el-checkbox v-model="scope.row.is_show_assistant" :true-label="1" :false-label="2" :label="$t('点餐助手')" :disabled="scope.row.num_type === 1"/>
                   <el-checkbox v-model="scope.row.is_show_h5" :true-label="1" :false-label="2" :label="$t('扫码点餐')" :disabled="scope.row.num_type === 1"/>
+                  <el-checkbox v-if="showDelivery" v-model="scope.row.is_show_delivery" :true-label="1" :false-label="2" :label="$t('外送')" :disabled="scope.row.num_type === 1"/>
                 </div>
               </template>
             </el-table-column>
@@ -362,6 +363,10 @@
   const languageList = languageStore().getLanguageList().languageList.value;
   const language = languageStore().getLanguageKey().language.value;
 
+  import { useUserStore } from '@/store/index';
+  const { computedSupplier } = useUserStore();
+  const supplier = computedSupplier().supplier;
+  const showDelivery = (supplier.value?.delivery_status || 0) == 1;
   //
   export default {
     components: { SvgIcon, mInput },
@@ -387,6 +392,7 @@
         pageSize: 10,
         totalDataNumber: 0,
         nowTableData: [],
+        showDelivery: showDelivery,
       };
     },
     watch: {
@@ -398,6 +404,7 @@
               row.is_show_tablet = 2
               row.is_show_assistant = 2
               row.is_show_h5 = 2
+              row.is_show_delivery = 2
             }
           })
         },
@@ -659,6 +666,7 @@
           is_show_kitchen: 1, // 是否显示在送厨端 1-显示 2-不显示
           is_show_assistant: 1, // 是否显示在点餐助手 1-显示 2-不显示
           is_show_h5: 1, // 是否显示在h5 1-显示 2-不显示
+          is_show_delivery: 1, // 是否显示在外送 1-显示 2-不显示
           product_sort: '0', // 商品排序
           limit_num: 0, // 限购数量
           is_enable_grade: '1', // 会员折扣

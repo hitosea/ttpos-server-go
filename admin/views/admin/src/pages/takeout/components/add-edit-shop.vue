@@ -9,261 +9,209 @@
     @close="handleClose()"
   >
     <div class="max-h-[75vh] overflow-auto pr-4">
-      <el-form :model="formData" :rules="formRules" ref="formElement" label-position="top" label-width="auto">
-        <el-form-item :label="$t('选择商家')" prop="name">
-          <el-select v-model="formData.name" type="text" filterable maxlength="100" clearable :placeholder="$t('请选择商家')">
-            <el-option value="1" label="商家1" />
-            <el-option value="2" label="商家2" />
+      <el-form :model="formData" ref="formElement" label-position="top" label-width="auto">
+        <el-form-item :label="$t('选择商家')" prop="uuid" :rules="[{ required: true, message: $t('请选择商家'), trigger: 'blur' }]">
+          <el-select v-model="formData.uuid" type="text" filterable :disabled="hasEdit" :placeholder="$t('请选择商家')">
+            <el-option class="!h-auto" :disabled="item.channel_names.length > 0" v-for="item in companyList" :key="item.uuid" :value="item.uuid" :label="item.name">
+              <div>
+                <p class="">{{ item.name }}</p>
+                <p class="text-xs text-[#999]" :class="item.channel_names.length == 0 ? 'mb-2' : ''">ID: {{ item.uuid }}</p>
+                <p class="text-xs text-[#999] mb-2" v-if="item.channel_names.length > 0">{{ $t('已添加，渠道：') }} {{ item.channel_names.join(',') }}</p>
+              </div>
+            </el-option>
           </el-select>
         </el-form-item>
-        <el-form-item :label="$t('外送渠道')" prop="takeout">
-          <el-checkbox-group v-model="formData.takeout">
-            <el-checkbox value="1" :label="$t('SKootar')" />
-            <el-checkbox value="2" :label="$t('Grab')" />
+        <el-form-item :label="$t('外送渠道')" prop="takeout" :rules="[{ required: true, message: $t('请选择外送渠道'), trigger: 'blur' }]">
+          <el-checkbox-group v-model="formData.takeout" @change="handleTakeoutChange">
+            <el-checkbox v-for="item in channels" :key="item.value" :value="item.value" :label="$t(item.name)" />
           </el-checkbox-group>
         </el-form-item>
-        <div class="rounded p-4 border border-[#dcdfe6]">
-          <h3 class="text-base font-bold mb-4">{{ $t('SKootar 渠道参数设置') }}</h3>
-          <el-form-item :label="$t('参数同步方式')" prop="takeout">
-            <el-radio-group v-model="formData.takeout">
-              <el-radio value="1" :label="$t('自动同步默认')" />
-              <el-radio value="2" :label="$t('手动设置')" />
-            </el-radio-group>
-          </el-form-item>
-          <el-row :gutter="24">
-            <el-col :span="8">
-              <el-form-item :label="$t('外送基础服务费')" prop="takeout">
-                <el-input-number
-                  class="!w-full"
-                  v-model="formData.base_service_fee"
-                  :controls="false"
-                  :precision="2"
-                  :min="0"
-                  :max="999999"
-                  :placeholder="$t('请输入外送基础服务费')"
-                ></el-input-number>
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item :label="$t('起步配送费')" prop="takeout">
-                <el-input-number
-                  class="!w-full"
-                  v-model="formData.starting_fee"
-                  :controls="false"
-                  :precision="2"
-                  :min="0"
-                  :max="999999"
-                  :placeholder="$t('请输入起步配送费')"
-                ></el-input-number>
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item :label="$t('骑手未接单取消时间')" prop="takeout">
-                <el-input-number
-                  class="!w-full"
-                  v-model="formData.time"
-                  :controls="false"
-                  :precision="0"
-                  :min="0"
-                  :max="999999"
-                  :placeholder="$t('请输入骑手未接单取消时间')"
-                ></el-input-number>
-                <div class="text-[#ccc] w-full text-xs mt-1">{{ $t('骑手未接单多少分钟后自动取消订单（1-60分钟）') }}</div>
-              </el-form-item>
-            </el-col>
-          </el-row>
+        <div class="flex flex-col gap-4">
+          <div class="rounded p-4 bg-[#f9f9f9]" v-for="(item, index) in formData.channels" :key="item.channel">
+            <h3 class="text-base font-bold mb-4">{{ item.channel }} {{ $t('渠道参数设置') }}</h3>
+            <el-form-item :label="$t('参数同步方式')" prop="takeout">
+              <el-radio-group v-model="item.config_type" @change="handleConfigTypeChange(index, item.channel)">
+                <el-radio value="auto_sync" :label="$t('自动同步默认')" />
+                <el-radio value="manual" :label="$t('手动设置')" />
+              </el-radio-group>
+            </el-form-item>
+            <el-row :gutter="24">
+              <el-col :span="8">
+                <el-form-item
+                  :label="$t('外送基础服务费')"
+                  :prop="'channels.' + index + '.basic_fee'"
+                  :rules="[{ required: true, message: $t('请输入外送基础服务费'), trigger: 'blur' }]"
+                >
+                  <el-input-number
+                    class="!w-full"
+                    v-model="item.basic_fee"
+                    :controls="false"
+                    :disabled="item.config_type === 'auto_sync'"
+                    :precision="2"
+                    :min="0"
+                    :max="999999"
+                    :placeholder="$t('请输入外送基础服务费')"
+                  ></el-input-number>
+                </el-form-item>
+              </el-col>
+              <el-col :span="8">
+                <el-form-item
+                  :label="$t('起步配送费')"
+                  :prop="'channels.' + index + '.base_delivery_fee'"
+                  :rules="[{ required: true, message: $t('请输入起步配送费'), trigger: 'blur' }]"
+                >
+                  <el-input-number
+                    class="!w-full"
+                    v-model="item.base_delivery_fee"
+                    :controls="false"
+                    :disabled="item.config_type === 'auto_sync'"
+                    :precision="2"
+                    :min="0"
+                    :max="999999"
+                    :placeholder="$t('请输入起步配送费')"
+                  ></el-input-number>
+                </el-form-item>
+              </el-col>
+              <el-col :span="8">
+                <el-form-item
+                  :label="$t('骑手未接单取消时间')"
+                  :prop="'channels.' + index + '.rider_acceptance_timeout'"
+                  :rules="[{ required: true, message: $t('请输入骑手未接单取消时间'), trigger: 'blur' }]"
+                >
+                  <el-input-number
+                    class="!w-full"
+                    v-model="item.rider_acceptance_timeout"
+                    :controls="false"
+                    :disabled="item.config_type === 'auto_sync'"
+                    :precision="0"
+                    :min="0"
+                    :max="999999"
+                    :placeholder="$t('请输入骑手未接单取消时间')"
+                  ></el-input-number>
+                  <div class="text-[#ccc] w-full text-xs mt-1">{{ $t('骑手未接单多少分钟后自动取消订单（1-60分钟）') }}</div>
+                </el-form-item>
+              </el-col>
+            </el-row>
 
-          <h3 class="text-base font-bold mb-4">{{ $t('距离范围设置') }}</h3>
-          <!-- 距离范围设置 -->
-          <div class="flex flex-col gap-4">
-            <el-card class="w-full" shadow="hover" v-for="(item, index) in formData.distance_range_setting" :key="index">
-              <el-row justify="space-between" align="middle" class="mb-4 mt-2">
-                <h3 class="text-base font-bold">{{ $t('距离范围1') }}</h3>
-                <el-button class="!mr-0" type="danger" @click="removeDistanceRange(index)">{{ $t('删除') }}</el-button>
-              </el-row>
-              <el-row :gutter="24">
-                <el-col :span="8">
-                  <el-form-item :label="$t('起始距离 (公里)')" prop="takeout">
-                    <el-input-number
-                      class="!w-full"
-                      v-model="item.starting_distance"
-                      :controls="false"
-                      :precision="1"
-                      :min="0"
-                      :max="999999"
-                      :placeholder="$t('请输入起始距离 (公里)')"
-                    ></el-input-number>
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item :label="$t('结束距离 (公里)')" prop="takeout">
-                    <div class="flex items-center gap-2 !w-full">
-                      <el-input-number
-                        class="flex-1"
-                        v-model="item.ending_distance"
-                        :controls="false"
-                        :precision="1"
-                        :min="0"
-                        :max="999999"
-                        :placeholder="$t('请输入结束距离 (公里)')"
-                      ></el-input-number>
-                      <el-checkbox v-model="checked1" :label="$t('最大')" />
-                    </div>
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item :label="$t('单价 (元/公里)')" prop="takeout">
-                    <el-input-number
-                      class="!w-full"
-                      v-model="item.unit_price"
-                      :controls="false"
-                      :precision="2"
-                      :min="0"
-                      :max="999999"
-                      :placeholder="$t('请输入单价 (元/公里)')"
-                    ></el-input-number>
-                  </el-form-item>
-                </el-col>
-              </el-row>
-            </el-card>
-            <el-button class="!mr-0" @click="addDistanceRange" icon="plus">{{ $t('添加范围距离') }}</el-button>
-          </div>
-        </div>
-
-        <div class="rounded p-4 border border-[#dcdfe6] mt-4">
-          <h3 class="text-base font-bold mb-4">{{ $t('Grab 渠道参数设置') }}</h3>
-          <el-form-item :label="$t('参数同步方式')" prop="takeout">
-            <el-radio-group v-model="formData.takeout">
-              <el-radio value="1" :label="$t('自动同步默认')" />
-              <el-radio value="2" :label="$t('手动设置')" />
-            </el-radio-group>
-          </el-form-item>
-          <el-row :gutter="24">
-            <el-col :span="8">
-              <el-form-item :label="$t('外送基础服务费')" prop="takeout">
-                <el-input-number
-                  class="!w-full"
-                  v-model="formData.base_service_fee"
-                  :controls="false"
-                  :precision="2"
-                  :min="0"
-                  :max="999999"
-                  :placeholder="$t('请输入外送基础服务费')"
-                ></el-input-number>
+            <h3 class="text-base font-bold mb-4">{{ $t('距离范围设置') }}</h3>
+            <!-- 距离范围设置 -->
+            <div class="flex flex-col gap-4">
+              <el-form-item
+                :prop="'channels.' + index + '.distance_range'"
+                :rules="[
+                  {
+                    required: true,
+                    trigger: 'blur',
+                    validator: (_rule: any, value: any, callback: any) => {
+                      if (value.length === 0) {
+                        callback(new Error($t('请至少添加一个距离范围')));
+                      } else {
+                        callback();
+                      }
+                    },
+                  },
+                ]"
+              >
+                <div class="w-full rounded p-4 bg-[#f3f3f3]" v-for="(distanceRange, distanceRangeIndex) in item.distance_range" :key="distanceRangeIndex">
+                  <el-row justify="space-between" align="middle" class="mb-4 mt-2">
+                    <h3 class="text-base font-bold">{{ $t('距离范围') }} {{ distanceRangeIndex + 1 }}</h3>
+                    <el-button v-if="item.config_type === 'manual'" class="!mr-0" type="danger" @click="removeDistanceRange(index, distanceRangeIndex)">{{ $t('删除') }}</el-button>
+                  </el-row>
+                  <el-row :gutter="24">
+                    <el-col :span="12">
+                      <el-form-item
+                        :label="$t('结束距离 (公里)')"
+                        :prop="'channels.' + index + '.distance_range.' + distanceRangeIndex + '.end'"
+                        :rules="[
+                          {
+                            required: true,
+                            trigger: 'blur',
+                            validator: (_rule: any, value: any, callback: any) => {
+                              if (!value) {
+                                callback(new Error($t('请输入结束距离')));
+                              }
+                              if (value < (distanceRangeIndex === 0 ? 0 : item.distance_range[distanceRangeIndex - 1].end || 0)) {
+                                callback(new Error($t('结束距离必须大于前一个范围的结束距离')));
+                              } else {
+                                callback();
+                              }
+                            },
+                          },
+                        ]"
+                      >
+                        <div class="flex items-center gap-2 !w-full">
+                          <el-input-number
+                            class="flex-1"
+                            v-model="distanceRange.end"
+                            :controls="false"
+                            :disabled="distanceRange.is_unlimited || item.config_type === 'auto_sync'"
+                            :precision="1"
+                            :min="distanceRangeIndex === 0 ? 0 : item.distance_range[distanceRangeIndex - 1].end || 0"
+                            :max="999999"
+                            :placeholder="$t('请输入结束距离 (公里)')"
+                          ></el-input-number>
+                          <el-checkbox
+                            v-if="distanceRangeIndex === item.distance_range.length - 1"
+                            v-model="distanceRange.is_unlimited"
+                            :disabled="item.config_type === 'auto_sync'"
+                            :label="$t('最大')"
+                          />
+                        </div>
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                      <el-form-item
+                        :label="$t('单价 (元/公里)')"
+                        :prop="'channels.' + index + '.distance_range.' + distanceRangeIndex + '.price_per_km'"
+                        :rules="[
+                          {
+                            required: true,
+                            trigger: 'blur',
+                            validator: (_rule: any, value: any, callback: any) => {
+                              if (!value) {
+                                callback(new Error($t('请输入单价')));
+                              } else {
+                                callback();
+                              }
+                            },
+                          },
+                        ]"
+                      >
+                        <el-input-number
+                          class="!w-full"
+                          v-model="distanceRange.price_per_km"
+                          :controls="false"
+                          :disabled="item.config_type === 'auto_sync'"
+                          :precision="2"
+                          :min="0"
+                          :max="999999"
+                          :placeholder="$t('请输入单价 (元/公里)')"
+                        ></el-input-number>
+                      </el-form-item>
+                    </el-col>
+                  </el-row>
+                </div>
               </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item :label="$t('起步配送费')" prop="takeout">
-                <el-input-number
-                  class="!w-full"
-                  v-model="formData.starting_fee"
-                  :controls="false"
-                  :precision="2"
-                  :min="0"
-                  :max="999999"
-                  :placeholder="$t('请输入起步配送费')"
-                ></el-input-number>
-              </el-form-item>
-            </el-col>
-            <el-col :span="8">
-              <el-form-item :label="$t('骑手未接单取消时间')" prop="takeout">
-                <el-input-number
-                  class="!w-full"
-                  v-model="formData.time"
-                  :controls="false"
-                  :precision="0"
-                  :min="0"
-                  :max="999999"
-                  :placeholder="$t('请输入骑手未接单取消时间')"
-                ></el-input-number>
-                <div class="text-[#ccc] w-full text-xs mt-1">{{ $t('骑手未接单多少分钟后自动取消订单（1-60分钟）') }}</div>
-              </el-form-item>
-            </el-col>
-          </el-row>
-
-          <h3 class="text-base font-bold mb-4">{{ $t('距离范围设置') }}</h3>
-          <!-- 距离范围设置 -->
-          <div class="flex flex-col gap-4">
-            <el-card class="w-full" shadow="hover" v-for="(item, index) in formData.distance_range_setting" :key="index">
-              <el-row justify="space-between" align="middle" class="mb-4 mt-2">
-                <h3 class="text-base font-bold">{{ $t('距离范围1') }}</h3>
-                <el-button class="!mr-0" type="danger" @click="removeDistanceRange(index)">{{ $t('删除') }}</el-button>
-              </el-row>
-              <el-row :gutter="24">
-                <el-col :span="8">
-                  <el-form-item :label="$t('起始距离 (公里)')" prop="takeout">
-                    <el-input-number
-                      class="!w-full"
-                      v-model="item.starting_distance"
-                      :controls="false"
-                      :precision="1"
-                      :min="0"
-                      :max="999999"
-                      :placeholder="$t('请输入起始距离 (公里)')"
-                    ></el-input-number>
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item :label="$t('结束距离 (公里)')" prop="takeout">
-                    <div class="flex items-center gap-2 !w-full">
-                      <el-input-number
-                        class="flex-1"
-                        v-model="item.ending_distance"
-                        :controls="false"
-                        :precision="1"
-                        :min="0"
-                        :max="999999"
-                        :placeholder="$t('请输入结束距离 (公里)')"
-                      ></el-input-number>
-                      <el-checkbox v-model="checked1" :label="$t('最大')" />
-                    </div>
-                  </el-form-item>
-                </el-col>
-                <el-col :span="8">
-                  <el-form-item :label="$t('单价 (元/公里)')" prop="takeout">
-                    <el-input-number
-                      class="!w-full"
-                      v-model="item.unit_price"
-                      :controls="false"
-                      :precision="2"
-                      :min="0"
-                      :max="999999"
-                      :placeholder="$t('请输入单价 (元/公里)')"
-                    ></el-input-number>
-                  </el-form-item>
-                </el-col>
-              </el-row>
-            </el-card>
-            <el-button class="!mr-0" @click="addDistanceRange" icon="plus">{{ $t('添加范围距离') }}</el-button>
+              <el-button v-if="item.config_type === 'manual'" class="!mr-0" @click="addDistanceRange(index)" icon="plus">{{ $t('添加范围距离') }}</el-button>
+            </div>
           </div>
         </div>
       </el-form>
     </div>
     <template #footer>
       <el-button @click="handleClose()">{{ $t('取消') }}</el-button>
-      <el-button type="primary" @click="handleSubmit()">{{ $t('确定') }}</el-button>
+      <el-button type="primary" @click="handleSubmit()" :loading="formLoading">{{ $t('确定') }}</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue';
+  import { ref, watch } from 'vue';
   import { $t } from '@/i18n';
-  const formData = ref({
-    name: '',
-    takeout: [],
-    distance_range_setting: [
-      {
-        starting_distance: 0,
-        ending_distance: 0,
-        unit_price: 0,
-      },
-    ],
-  });
-  const formRules = ref({
-    name: [{ required: true, message: $t('请选择商家'), trigger: 'blur' }],
-  });
-  const formElement = ref();
+  import { addEditCompany, getCompanySelect, type TakeoutShopSelectData, getChannels, type TakeoutShopData, type TakeoutShopAddEditDataItem } from '@/api/takeout/shop';
+  import { getTakeoutSetting, type TakeoutSettingData } from '@/api/takeout/setting';
+  const emits = defineEmits(['update:show', 'getList']);
+
   const props = defineProps({
     show: {
       type: Boolean,
@@ -273,31 +221,142 @@
       type: Boolean,
       default: false,
     },
+    editData: {
+      type: Object,
+      default: () => ({}),
+    },
   });
 
+  const companyList = ref<TakeoutShopSelectData[]>([]);
+  const formData = ref({
+    uuid: '',
+    takeout: [],
+    channels: [] as TakeoutShopAddEditDataItem[],
+  });
+  const formElement = ref();
+  const channels = ref<TakeoutShopData[]>([]);
+  const takeoutSettingData = ref<TakeoutSettingData[]>([]);
+  const formLoading = ref(false);
+
+  watch(
+    () => props.show,
+    () => {
+      if (props.show) {
+        getCompanyListData();
+        getChannelsData();
+        getTakeoutSettingData();
+        if (props.hasEdit) {
+          formData.value = {
+            uuid: props.editData.uuid,
+            takeout: props.editData.channel_names,
+            channels: props.editData.delivery_config,
+          };
+        }
+      }
+    },
+  );
+
   const handleClose = () => {
+    clearForm();
     emits('update:show', false);
   };
 
+  const clearForm = () => {
+    setTimeout(() => {
+      formElement.value.resetFields();
+      formData.value = {
+        uuid: '',
+        takeout: [],
+        channels: [] as TakeoutShopAddEditDataItem[],
+      };
+    }, 300);
+  };
+
   const handleSubmit = () => {
-    formElement.value.validate((valid: boolean) => {
+    formElement.value.validate(async (valid: boolean) => {
       if (valid) {
-        console.log(formData.value);
+        try {
+          formLoading.value = true;
+          await addEditCompany({
+            uuid: Number(formData.value.uuid),
+            channels: formData.value.channels,
+          });
+          handleClose();
+          emits('getList');
+        } catch (error) {
+          console.error('添加失败:', error);
+        } finally {
+          formLoading.value = false;
+        }
       }
     });
   };
 
-  const removeDistanceRange = (index: number) => {
-    formData.value.distance_range_setting.splice(index, 1);
+  const removeDistanceRange = (index: number, distanceRangeIndex: number) => {
+    formData.value.channels[index].distance_range.splice(distanceRangeIndex, 1);
   };
 
-  const addDistanceRange = () => {
-    formData.value.distance_range_setting.push({
-      starting_distance: 0,
-      ending_distance: 0,
-      unit_price: 0,
+  const addDistanceRange = (index: number) => {
+    formData.value.channels[index].distance_range.push({
+      end: 0,
+      price_per_km: 0,
+      is_unlimited: false,
+    });
+    formElement.value.validateField('channels.' + index + '.distance_range');
+  };
+
+  const getCompanyListData = async () => {
+    try {
+      const res = await getCompanySelect();
+      companyList.value = res.data?.list?.data || [];
+    } catch (error) {
+      console.error('获取渠道失败:', error);
+    }
+  };
+
+  const getChannelsData = async () => {
+    try {
+      const res = await getChannels({ configured: 1 });
+      channels.value = res.data || [];
+    } catch (error) {
+      console.error('获取渠道失败:', error);
+    }
+  };
+
+  const getTakeoutSettingData = async () => {
+    try {
+      const res = await getTakeoutSetting();
+      takeoutSettingData.value = res?.data || [];
+    } catch (error) {
+      console.error('获取设置失败:', error);
+    }
+  };
+
+  const handleTakeoutChange = (val: string[]) => {
+    // 以val为基准，对比formData.value.channels，如果存在，就从formData.value.channels中删除
+    formData.value.channels = formData.value.channels.filter((item) => val.includes(item.channel));
+    // formData.value.channels 如果不存在，从takeoutSettingData.value中获取添加
+    val.forEach((item) => {
+      if (!formData.value.channels.some((channel) => channel.channel === item)) {
+        const settingData = JSON.parse(JSON.stringify(takeoutSettingData.value.find((setting) => setting.channel === item)));
+        formData.value.channels.push({
+          channel: item,
+          config_type: 'auto_sync',
+          basic_fee: settingData?.basic_fee || 0,
+          base_delivery_fee: settingData?.base_delivery_fee || 0,
+          rider_acceptance_timeout: settingData?.rider_acceptance_timeout || 0,
+          distance_range: settingData?.distance_range || [],
+        });
+      }
     });
   };
 
-  const emits = defineEmits(['update:show']);
+  const handleConfigTypeChange = (index: number, channel: string) => {
+    // 如果config_type为auto_sync，distance_range设置为takeoutSettingData.value中对应channel的distance_range
+    if (formData.value.channels[index].config_type === 'auto_sync') {
+      console.log(takeoutSettingData.value.find((setting) => setting.channel === channel)?.distance_range);
+      formData.value.channels[index] = JSON.parse(JSON.stringify(takeoutSettingData.value.find((setting) => setting.channel === channel)));
+      formData.value.channels[index].config_type = 'auto_sync';
+    }
+  };
 </script>

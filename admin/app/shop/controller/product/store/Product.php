@@ -202,6 +202,7 @@ class Product extends Controller
      *   @Apidoc\Param("is_show_kitchen", type="int", require=true, desc="是否显示在厨显(1显示 2不显示)"),
      *   @Apidoc\Param("is_show_assistant", type="int", require=true, desc="是否显示在点餐助手(1显示 2不显示)（v1.0.5）"),
      *   @Apidoc\Param("is_show_h5", type="int", require=true, desc="是否显示在h5(1显示 2不显示)（v1.0.7）"),
+     *   @Apidoc\Param("is_show_delivery", type="int", require=true, desc="是否显示在外送(1显示 2不显示)（v2.3.0）"),
      *   @Apidoc\Param("sales_initial", type="int", require=true, desc="初始销量"),
      *   @Apidoc\Param("product_sort", type="int", require=true, desc="产品排序(数字越小越靠前)"),
      *   @Apidoc\Param("limit_num", type="int", require=true, desc="限购数量0为不限"),
@@ -340,6 +341,7 @@ class Product extends Controller
      *      @Apidoc\Param("is_show_kitchen", type="int", desc="是否显示在送厨端 1-显示 2-不显示"),
      *      @Apidoc\Param("is_show_assistant", type="int", desc="是否显示在点餐助手 1-显示 2-不显示"),
      *      @Apidoc\Param("is_show_h5", type="int", desc="是否显示在h5 1-显示 2-不显示"),
+     *      @Apidoc\Param("is_show_delivery", type="int", desc="是否显示在外送 1-显示 2-不显示"),
      *      @Apidoc\Param("category_id", type="int", desc="所选的分类Id"),
      *      @Apidoc\Param("unit_id", type="int", desc="所选的单位Id"),
      *      @Apidoc\Param("spec_id", type="int", desc="所选的规格Id"),
@@ -395,10 +397,15 @@ class Product extends Controller
                     $val['is_show_tablet'] = strstr($val['shows'], '2') ? 1 : 2;
                     $val['is_show_kitchen'] = strstr($val['shows'], '3') ? 1 : 2;
                     $val['is_show_assistant'] = strstr($val['shows'], '4') ? 1 : 2;
-                    $val['is_show_h5'] = strstr($val['shows'], '5') ? 1 : 2; 
+                    $val['is_show_h5'] = strstr($val['shows'], '5') ? 1 : 2;
+                    $val['is_show_delivery'] = strstr($val['shows'], '6') ? 1 : 2;
                     // 按小数计价，不在助手、平板、扫码端显示
-                    if ($val['num_type'] == 2 && ($val['is_show_tablet']!= 2 ||  $val['is_show_assistant'] != 2 ||  $val['is_show_h5'] != 2)) {
+                    if ($val['num_type'] == 2 && ($val['is_show_tablet'] != 2 ||  $val['is_show_assistant'] != 2 ||  $val['is_show_h5'] != 2 ||  $val['is_show_delivery'] != 2)) {
                         return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('按小数计价只能显示到收银机和厨显'), $val);
+                    }
+                    // 
+                    if ($this->store['supplier']['delivery_status'] != 1 && $val['is_show_delivery'] != 2) {
+                        return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('未配置外送渠道，无法选择在外送显示'), $val);
                     }
                     //
                     $productName = [];

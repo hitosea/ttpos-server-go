@@ -154,10 +154,9 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 	if err != nil || company.IsExpired() || company.IsDelete() {
 		return errors.New("无法使用该功能，请联系商家")
 	}
-	companySetting := repository.NewCompanySettingRepo(db).Get()
-	// if companySetting.IsOpenMember != 1 {
-	// 	return errors.New("商家未开通会员功能")
-	// }
+	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
+		return errors.New("商家会员服务已失效")
+	}
 	// if companySetting.IsOpenMarketing != 1 {
 	// 	return errors.New("二维码已失效")
 	// }
@@ -181,7 +180,7 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 	// 发送验证码短信
 	ctx.SetCompanyUuid(req.CompanyUuid)
 	ctx.SetCompany(*company)
-	ctx.SetCompanySetting(companySetting)
+	ctx.SetCompanySetting(*company.CompanySetting)
 	if err := s.smsSrv.SendMemberCodeSMS(ctx, req.Phone, &sms.MemberSendCodeRequest{
 		Code: code,
 	}); err != nil {
@@ -200,6 +199,14 @@ func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (re
 	db := s.dbm.GetDB(req.CompanyUuid)
 	if db == nil {
 		return resp.LoginResp{}, errors.New("商家不存在")
+	}
+
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(req.CompanyUuid)
+	if err != nil || company.IsExpired() || company.IsDelete() {
+		return resp.LoginResp{}, errors.New("无法使用该功能，请联系商家")
+	}
+	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
+		return resp.LoginResp{}, errors.New("商家会员服务已失效")
 	}
 
 	// 验证验证码

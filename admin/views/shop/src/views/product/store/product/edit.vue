@@ -205,6 +205,8 @@
           is_show_assistant: 1,
           /*H5是否显示*/
           is_show_h5: 1,
+          /*外送是否显示*/
+          is_show_delivery: 1,
           /*初始销量*/
           sales_initial: 0,
           /*商品排序，默认100*/
