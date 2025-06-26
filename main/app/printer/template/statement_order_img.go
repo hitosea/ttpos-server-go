@@ -455,6 +455,12 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 	}
 
+	// 优惠券抵扣
+	if couponExchangeAmount := saleOrder.CalcCouponExchangeAmount(); couponExchangeAmount > 0 {
+		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("优惠券抵扣"), t.base.GetPriceAndUnit(couponExchangeAmount)))
+		img.LineFeed(1)
+	}
+
 	// 抹零
 	if checkOutZeroFee := saleOrder.GetCheckOutZeroFee(); checkOutZeroFee > 0 {
 		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手动抹零"), t.base.GetPriceAndUnit(checkOutZeroFee)))
