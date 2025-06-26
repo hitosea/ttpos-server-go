@@ -89,10 +89,63 @@ type SaleOrder struct {
 	FreeReasons                  []*SaleOrderProductReason      `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	InvoiceInfo                  *SaleOrderInvoiceInfo          `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleBill                     *SaleBill                      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
-	MemberPointLogs              []*MemberPointLog              `gorm:"foreignKey:RelatedUuid;references:uuid"` // 关联积分变动记录.赠送积分、退款积分、反结账积分
-
+	MemberPointLogs              []*MemberPointLog              `gorm:"foreignKey:RelatedUuid;references:uuid"`   // 关联积分变动记录.赠送积分、退款积分、反结账积分
+	Coupons                      []*SaleOrderCoupon             `gorm:"foreignKey:SaleOrderUuid;references:uuid"` // 订单使用的优惠券
 	// 虚拟字段，用于标记当前子单是第几个
 	index int `gorm:"-" json:"index,omitempty"`
+}
+
+// 销售订单是否使用了优惠券
+func (model *SaleOrder) HasCoupon() bool {
+	for _, coupon := range model.Coupons {
+		if !coupon.IsDelete() {
+			return true
+		}
+	}
+	return false
+}
+
+// 判断这个优惠券是否已经应用到该销售订单
+func (model *SaleOrder) HasCouponByUuid(couponUuid uint64, couponRequirement string) bool {
+	for _, coupon := range model.Coupons {
+		if !coupon.IsDelete() {
+			if couponRequirement == constant.CouponRequirementNone {
+				if coupon.MarketingCouponUuid == couponUuid && coupon.CouponRequirement == constant.CouponRequirementMember {
+					return true
+				}
+			}
+			if couponRequirement == constant.CouponRequirementMember {
+				if coupon.MemberCouponUuid == couponUuid && coupon.CouponRequirement == constant.CouponRequirementMember {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// 获取优惠券
+func (model *SaleOrder) GetCouponByUuid(couponUuid uint64, couponRequirement string) *SaleOrderCoupon {
+	for _, coupon := range model.Coupons {
+		if !coupon.IsDelete() {
+			if couponRequirement == constant.CouponRequirementNone {
+				if coupon.MarketingCouponUuid == couponUuid && coupon.CouponRequirement == constant.CouponRequirementMember {
+					return coupon
+				}
+			}
+			if couponRequirement == constant.CouponRequirementMember {
+				if coupon.MemberCouponUuid == couponUuid && coupon.CouponRequirement == constant.CouponRequirementMember {
+					return coupon
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// 新增一个优惠券
+func (model *SaleOrder) AddCoupon(couponUuid uint64, couponRequirement string, couponAmount float64) {
+	model.Coupons = append(model.Coupons, NewSaleOrderCoupon(model.Uuid, couponUuid, couponRequirement, couponAmount))
 }
 
 // 订单是否使用了会员余额支付
@@ -166,14 +219,20 @@ func (model *SaleOrder) GetManualReturnPoints() float64 {
 	return returnedPoints
 }
 
+// 订单金额。积分抵扣后、优惠券抵扣后的金额
+func (model *SaleOrder) GetAmountValue() float64 {
+	// 积分抵扣后的金额-优惠券抵扣金额
+	return decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.CalcCouponExchangeAmount())).Round(2).InexactFloat64()
+}
+
 // 获取积分抵扣后的应收金额。等于Amount-PayPointsAmount
 func (model *SaleOrder) GetPointsExchangeAmount() float64 {
 	return decimal.NewFromFloat(model.GetAmount()).Sub(decimal.NewFromFloat(model.PayPointsAmount)).Round(2).InexactFloat64()
 }
 
-// 获取最终应收金额（不含手续费）。等于Amount-PayPointsAmount-结账抹零
+// 获取最终应收金额（不含手续费）。等于Amount-积分抵扣金额-优惠券抵扣金额-结账抹零
 func (model *SaleOrder) GetFinalNoFeeAmount() float64 {
-	amount := decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.CalcCheckOutZeroFee())).Round(2).InexactFloat64() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
+	amount := decimal.NewFromFloat(model.GetAmountValue()).Sub(decimal.NewFromFloat(model.CalcCheckOutZeroFee())).Round(2).InexactFloat64() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
 	return amount
 }
 

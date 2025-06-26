@@ -73,6 +73,13 @@ func (r *InstantOrderPaymentInfoReq) Parse(c *gin.Context) error {
 	return nil
 }
 
+type InstantOrderPaymentCouponReq struct {
+	SaleBillUuid      uint64 `json:"sale_bill_uuid"`     // 销售账单UUID, 必填
+	SaleOrderUuid     uint64 `json:"sale_order_uuid"`    // 销售订单UUID, 必填
+	CouponUuid        uint64 `json:"coupon_uuid"`        // 优惠券UUID, 必填。通用优惠券或会员优惠券的uuid
+	CouponRequirement string `json:"coupon_requirement"` // 优惠券类型, 必填。通用优惠券“none”或会员优惠券“marketing”
+}
+
 // InstantOrderPaymentCreateReq 创建一个支付单请求
 type InstantOrderPaymentCreateReq struct {
 	SaleBillUuid      uint64  `json:"sale_bill_uuid"`      // 销售账单UUID, 必填

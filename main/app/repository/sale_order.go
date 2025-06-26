@@ -12,6 +12,7 @@ import (
 type ISaleOrderRepo interface {
 	GetSaleOrder(opts ...DBOption) (model.SaleOrder, error)
 	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
+	GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, error)
 	UpdateSaleOrder(model *model.SaleOrder) error
 	UpdateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderPointsExchange(saleOrderUuid uint64, payPoints float64, payPointsAmount float64, pointsExchangeRate float64, autoPointsExchange uint) error // 更新销售订单的积分抵扣信息
@@ -52,6 +53,12 @@ func (r *saleOrderRepo) GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error
 		return nil, errors.WithMessage(err)
 	}
 	return &order, nil
+}
+
+func (r *saleOrderRepo) GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, error) {
+	var memberUuid uint64
+	err := r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Select("consumer_uuid").Scan(&memberUuid).Error
+	return memberUuid, errors.WithMessage(err)
 }
 
 func (r *saleOrderRepo) UpdateSaleOrder(model *model.SaleOrder) error {

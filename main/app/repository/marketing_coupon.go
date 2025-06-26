@@ -11,12 +11,11 @@ import (
 )
 
 type IMarketingCouponRepo interface {
-	// DecreaseCouponQuantity 减少优惠券数量
-	DecreaseCouponQuantity(couponId uint64, memberUuid uint64, activityUuid uint64) error
-	// GetCoupons 获取店铺优惠券列表
-	GetCoupons(opts ...DBOption) ([]*model.MarketingCoupon, error)
-	// GetValidCouponList 获取商家还可用的none类型优惠卷（所有人可用的）
-	GetValidCouponList() ([]*model.MarketingCoupon, error)
+	DecreaseCouponQuantity(couponId uint64, memberUuid uint64, activityUuid uint64) error // 减少优惠券数量
+	GetCoupon(opts ...DBOption) (*model.MarketingCoupon, error)                           // 获取优惠券
+	GetCoupons(opts ...DBOption) ([]*model.MarketingCoupon, error)                        //获取店铺优惠券列表
+	GetValidCouponList() ([]*model.MarketingCoupon, error)                                // 获取商家还可用的none类型优惠卷（所有人可用的）
+	GetCouponByUuid(uuid uint64) (*model.MarketingCoupon, error)                          // 获取优惠券
 }
 
 // MarketingCouponRepo 营销优惠券仓库
@@ -111,6 +110,18 @@ func (r *MarketingCouponRepo) DecreaseCouponQuantity(couponId uint64, memberUuid
 	})
 }
 
+// GetCoupon 获取优惠券
+func (r *MarketingCouponRepo) GetCoupon(opts ...DBOption) (*model.MarketingCoupon, error) {
+	coupons, err := r.GetCoupons(opts...)
+	if err != nil {
+		return nil, err
+	}
+	if len(coupons) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	return coupons[0], nil
+}
+
 // GetCoupons 获取店铺优惠券列表
 func (r *MarketingCouponRepo) GetCoupons(opts ...DBOption) ([]*model.MarketingCoupon, error) {
 	coupons := make([]*model.MarketingCoupon, 0)
@@ -141,4 +152,15 @@ func (r *MarketingCouponRepo) GetValidCouponList() ([]*model.MarketingCoupon, er
 		return nil, err
 	}
 	return coupons, nil
+}
+
+// GetCouponByUuid 获取优惠券信息
+func (r *MarketingCouponRepo) GetCouponByUuid(uuid uint64) (*model.MarketingCoupon, error) {
+	coupon, err := r.GetCoupon(
+		CommonRepo.WhereByUuid(uuid),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return coupon, nil
 }

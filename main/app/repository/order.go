@@ -1331,6 +1331,12 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			WithPreload{
 				Query: "SaleBillSetting",
 			},
+			WithPreload{
+				Query: "SaleOrders.Coupons",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
 			// ==================== 销售账单的订单信息 ====================
 			WithPreload{
 				Query: "SaleOrders.PaymentOrders",
