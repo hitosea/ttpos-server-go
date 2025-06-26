@@ -6879,7 +6879,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	if selectedCouponSaleOrderUuid == saleOrderUuid {
 		hasCommonCoupon = false
 	}
-	couponList, err := s.GetValidMemberCouponList(ctx, saleOrder.ConsumerUuid, selectedCouponUuid, len(saleOrder.PaymentOrders) > 0, hasCommonCoupon, saleOrder.GetAmountValue())
+	couponList, err := s.GetValidMemberCouponList(ctx, saleOrder.ConsumerUuid, selectedCouponUuid, len(saleOrder.PaymentOrders) > 0, hasCommonCoupon, saleOrder.GetPointsExchangeAmount())
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询会员优惠券列表失败")
 	}
@@ -6914,6 +6914,12 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate, 1); err != nil {
 				return nil, errors.WithMessage(err)
 			}
+
+			// 自动抵扣积分,取消所有优惠券
+			saleOrder.SetPointsCouponCancel()
+			if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
+				return nil, errors.WithMessage(err, "取消销售订单所有优惠券失败")
+			}
 		}
 		canChangePoints := true
 		if saleBill.SaleBillSetting.IsOpenPointsExchange() && len(saleOrder.PaymentOrders) > 0 {
@@ -6927,11 +6933,6 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			PayPointsAmount:    saleOrder.PayPointsAmount,
 			OpenPointsExchange: saleBill.SaleBillSetting.IsOpenPointsExchange(),
 			CanChangePoints:    canChangePoints,
-		}
-		// 取消所有优惠券
-		saleOrder.SetPointsCouponCancel()
-		if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
-			return nil, errors.WithMessage(err, "取消销售订单所有优惠券失败")
 		}
 	}
 
@@ -7004,12 +7005,13 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 				zeroFee = 0
 				hasCommission = true
 			}
+			unpaidAmount := saleOrder.CalcCouponExchangeAmount()
 			amount := resp.PaymentMethodAmount{
 				SaleOrderOriginAmount: saleOrderOriginAmount,
 				SaleOrderCartAmount:   saleOrder.GetAmount(),
 				SaleOrderAmount:       saleOrderAmount,
 				CommissionFee:         commissionFee,
-				CouponExchangeAmount:  saleOrder.CalcCouponExchangeAmount(),
+				CouponExchangeAmount:  unpaidAmount,
 				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission),
 				ZeroAmount:            zeroFee, // 只有没有手续费时且支付方式不需要手续费才会抹零
 				IsAutoZero:            saleOrder.IsAutoCheckoutZeroDiscount(*saleBill.SaleBillSetting),
@@ -7032,7 +7034,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	return infoResp, nil
 }
 
-// OrderPaymentCoupon
+// OrderPaymentCoupon 使用优惠券 或 取消优惠券
 func (s *orderSrv) OrderPaymentCoupon(ctx context.Context, req req.InstantOrderPaymentCouponReq) (*resp.InstantOrderPaymentInfoResp, error) {
 	// 加锁
 	if ctx.NoLock() {
@@ -7053,11 +7055,13 @@ func (s *orderSrv) OrderPaymentCoupon(ctx context.Context, req req.InstantOrderP
 	}
 
 	// 获取优惠券信息，判断该优惠券是否是属于该会员的
+	couponOriginAmount := 0.0
 	if req.CouponRequirement == constant.CouponRequirementNone {
-		_, err := repository.NewMarketingCouponRepo(db).GetCouponByUuid(req.CouponUuid)
+		marketingCoupon, err := repository.NewMarketingCouponRepo(db).GetCouponByUuid(req.CouponUuid)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
+		couponOriginAmount = marketingCoupon.Amount
 	} else if req.CouponRequirement == constant.CouponRequirementMember {
 		memberUuid, errSaleOrder := repository.NewSaleOrderRepo(db).GetSaleOrderMemberUuid(req.SaleOrderUuid)
 		if errSaleOrder != nil {
@@ -7070,6 +7074,7 @@ func (s *orderSrv) OrderPaymentCoupon(ctx context.Context, req req.InstantOrderP
 		if memberCoupon.MemberUuid != memberUuid {
 			return nil, errors.WithMessage(errors.New("优惠券不属于该会员"))
 		}
+		couponOriginAmount = memberCoupon.Amount
 	}
 
 	hasCoupon := saleOrder.HasCoupon()
@@ -7083,7 +7088,7 @@ func (s *orderSrv) OrderPaymentCoupon(ctx context.Context, req req.InstantOrderP
 		} else {
 			// 否则则修改sale_order_coupon表中的记录为新选择的优惠券
 			coupon := saleOrder.Coupons[0]
-			coupon.ReplaceCoupon(req.CouponUuid, req.CouponRequirement)
+			coupon.ReplaceCoupon(req.CouponUuid, req.CouponRequirement, couponOriginAmount)
 		}
 	} else {
 		// 如果未使用优惠券，则在sale_order_coupon表中增加一条记录
@@ -7106,6 +7111,9 @@ func (s *orderSrv) OrderPaymentCoupon(ctx context.Context, req req.InstantOrderP
 	}
 
 	db.Transaction(func(tx *gorm.DB) error {
+		// 选择优惠券后，将积分自动抵扣失效改为手动抵扣
+		saleOrder.AutoPointsExchange = 0
+
 		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 			return errors.WithMessage(err)
 		}
@@ -7664,7 +7672,7 @@ func (s *orderSrv) VerifyCoupon(ctx context.Context, saleOrder *model.SaleOrder,
 		return errors.WithMessage(err)
 	}
 	timezone := utils.SetTimezone(storeSetting.TimeZone)
-	nowTime := timezone.Now().Format("HH:mm")
+	nowTime := timezone.Now().Format("15:04")
 	// 使用营销会员优惠券时
 	if coupon.CouponRequirement == constant.CouponRequirementMember {
 		if saleOrder.ConsumerUuid == 0 {

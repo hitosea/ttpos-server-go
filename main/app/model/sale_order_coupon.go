@@ -54,8 +54,9 @@ func (model *SaleOrderCoupon) IsMemberCoupon() bool {
 }
 
 // 更换优惠券
-func (model *SaleOrderCoupon) ReplaceCoupon(couponUuid uint64, couponRequirement string) {
+func (model *SaleOrderCoupon) ReplaceCoupon(couponUuid uint64, couponRequirement string, couponOriginAmount float64) {
 	model.CouponRequirement = couponRequirement
+	model.CouponOriginAmount = couponOriginAmount
 	if couponRequirement == constant.CouponRequirementNone {
 		model.MarketingCouponUuid = couponUuid
 		model.MemberCouponUuid = 0

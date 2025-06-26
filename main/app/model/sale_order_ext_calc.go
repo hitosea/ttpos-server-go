@@ -549,6 +549,9 @@ func (model *SaleOrder) CalcCouponExchangeAmount() float64 {
 		return 0 // 未使用优惠券，则抵扣金额为0
 	}
 	coupon := model.Coupons[0]
+	if coupon.IsDelete() {
+		return 0 // 优惠券已删除，则抵扣金额为0
+	}
 	couponOriginAmount := coupon.CouponOriginAmount // 优惠券原始金额(面值)
 	// 如果积分抵扣之后的订单金额大于优惠券面值，则抵扣金额为优惠券面值，否则抵扣金额为积分抵扣之后的订单金额
 	amount := model.GetPointsExchangeAmount() // 积分抵扣后的订单金额

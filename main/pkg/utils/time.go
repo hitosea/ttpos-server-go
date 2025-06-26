@@ -282,17 +282,17 @@ func IsTimeInRange(targetTime, startTime, endTime string) (bool, error) {
 	// 解析输入时间
 	target, err := time.Parse(timeLayout, targetTime)
 	if err != nil {
-		return false, fmt.Errorf("invalid target time format: %w", err)
+		return false, fmt.Errorf("target time: %s, invalid target time format: %w", targetTime, err)
 	}
 
 	start, err := time.Parse(timeLayout, startTime)
 	if err != nil {
-		return false, fmt.Errorf("invalid start time format: %w", err)
+		return false, fmt.Errorf("start time: %s,  invalid start time format: %w", startTime, err)
 	}
 
 	end, err := time.Parse(timeLayout, endTime)
 	if err != nil {
-		return false, fmt.Errorf("invalid end time format: %w", err)
+		return false, fmt.Errorf("end time: %s, invalid end time format: %w", endTime, err)
 	}
 
 	// 判断目标时间是否等于开始时间或结束时间，是则返回true
