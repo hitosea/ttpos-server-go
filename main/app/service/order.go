@@ -9751,6 +9751,11 @@ func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMembe
 	}
 
 	saleOrder.SetMemberDiscountCancel()
+	// 取消会员优惠券
+	saleOrder.SetMemberCouponCancel()
+	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderMemberDiscountCancel(saleOrder.Uuid); err != nil {
+		return nil, errors.WithMessage(err, "取消销售订单会员优惠券失败")
+	}
 
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
@@ -9814,6 +9819,11 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 	}
 
 	saleOrder.SetMemberDiscount(*member)
+	// 取消会员优惠券
+	saleOrder.SetMemberCouponCancel()
+	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderMemberDiscountCancel(saleOrder.Uuid); err != nil {
+		return nil, false, errors.WithMessage(err, "取消销售订单会员优惠券失败")
+	}
 
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, false, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")

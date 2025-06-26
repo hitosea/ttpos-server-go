@@ -49,7 +49,7 @@ func (model *SaleOrderCoupon) IsCommonCoupon() bool {
 }
 
 // 是否是会员营销优惠券
-func (model *SaleOrderCoupon) IsMarketingCoupon() bool {
+func (model *SaleOrderCoupon) IsMemberCoupon() bool {
 	return model.CouponRequirement == constant.CouponRequirementMember
 }
 

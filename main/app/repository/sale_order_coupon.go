@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -9,6 +11,7 @@ import (
 type ISaleOrderCouponRepo interface {
 	CreateSaleOrderCoupon(saleOrderCoupon model.SaleOrderCoupon) error // 创建销售订单优惠券
 	UpdateSaleOrderCoupon(saleOrderCoupon model.SaleOrderCoupon) error // 更新销售订单优惠券 更换优惠券或删除优惠券
+	UpdateSaleOrderMemberDiscountCancel(saleOrderUuid uint64) error    // 当订单取消会员时，删除销售订单中已经选中的会员优惠券
 }
 
 func NewSaleOrderCouponRepo(db *gorm.DB) ISaleOrderCouponRepo {
@@ -34,6 +37,14 @@ func (r *saleOrderCouponRepo) CreateSaleOrderCoupon(saleOrderCoupon model.SaleOr
 func (r *saleOrderCouponRepo) UpdateSaleOrderCoupon(saleOrderCoupon model.SaleOrderCoupon) error {
 	saleOrderCoupon.SetNil()
 	if err := r.db.Save(&saleOrderCoupon).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// 软删除已经选中的会员优惠券
+func (r *saleOrderCouponRepo) UpdateSaleOrderMemberDiscountCancel(saleOrderUuid uint64) error {
+	if err := r.db.Model(&model.SaleOrderCoupon{}).Where("sale_order_uuid = ? AND coupon_requirement = ?", saleOrderUuid, constant.CouponRequirementMember).Update("delete_time", time.Now().Unix()).Error; err != nil {
 		return err
 	}
 	return nil
