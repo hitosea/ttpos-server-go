@@ -6662,7 +6662,7 @@ func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (
 }
 
 // GetValidMemberCouponList 获取有效的会员优惠券列表,包括通用优惠券和会员优惠券
-func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint64, selectedCouponUuid uint64, hasPay, hasCommonCoupon bool) (*resp.CouponList, error) {
+func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint64, selectedCouponUuid uint64, hasPay, hasCommonCoupon bool, saleOrderAmount float64) (*resp.CouponList, error) {
 	// 获取门店设置
 	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
 	if err != nil {
@@ -6785,6 +6785,13 @@ func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint
 		}
 	}
 
+	// 积分抵扣后，订单应收为0时，则全部优惠券不可选，置灰
+	if saleOrderAmount <= 0 {
+		for _, coupon := range coupons {
+			coupon.IsAvailable = false
+		}
+	}
+
 	// 如果已经产生了支付，则全部优惠券不可选，置灰
 	if hasPay {
 		for _, coupon := range coupons {
@@ -6872,7 +6879,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	if selectedCouponSaleOrderUuid == saleOrderUuid {
 		hasCommonCoupon = false
 	}
-	couponList, err := s.GetValidMemberCouponList(ctx, saleOrder.ConsumerUuid, selectedCouponUuid, len(saleOrder.PaymentOrders) > 0, hasCommonCoupon)
+	couponList, err := s.GetValidMemberCouponList(ctx, saleOrder.ConsumerUuid, selectedCouponUuid, len(saleOrder.PaymentOrders) > 0, hasCommonCoupon, saleOrder.GetAmountValue())
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询会员优惠券列表失败")
 	}
@@ -6920,6 +6927,11 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			PayPointsAmount:    saleOrder.PayPointsAmount,
 			OpenPointsExchange: saleBill.SaleBillSetting.IsOpenPointsExchange(),
 			CanChangePoints:    canChangePoints,
+		}
+		// 取消所有优惠券
+		saleOrder.SetPointsCouponCancel()
+		if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
+			return nil, errors.WithMessage(err, "取消销售订单所有优惠券失败")
 		}
 	}
 
@@ -7167,6 +7179,11 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 				saleOrder.SetCheckoutZeroRuleCancel() // 取消抹零，修改saleBill中的数据
 				if err := repository.NewSaleOrderRepo(tx).SetCheckoutZeroRuleCancel(saleOrder.Uuid); err != nil {
 					return errors.WithMessage(err)
+				}
+				// 取消所有优惠券
+				saleOrder.SetPointsCouponCancel()
+				if err := repository.NewSaleOrderCouponRepo(tx).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
+					return errors.WithMessage(err, "取消销售订单所有优惠券失败")
 				}
 				// 更新销售订单的积分抵扣信息
 				if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate, 0); err != nil {
