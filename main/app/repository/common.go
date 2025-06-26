@@ -435,14 +435,14 @@ func (r *commonRepo) WhereByCountGtZero() DBOption {
 func (r *commonRepo) WhereByValidTime() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		nowTimestamp := time.Now().Unix()
-		return db.Where("valid_start_time >= ? AND valid_end_time <= ?", nowTimestamp, nowTimestamp)
+		return db.Where("valid_start_time <= ? AND valid_end_time >= ?", nowTimestamp, nowTimestamp)
 	}
 }
 
 func (r *commonRepo) WhereByStartTimeEndTime() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		nowTimestamp := time.Now().Unix()
-		return db.Where("start_time >= ? AND end_time <= ?", nowTimestamp, nowTimestamp)
+		return db.Where("start_time <= ? AND end_time >= ?", nowTimestamp, nowTimestamp)
 	}
 }
 
