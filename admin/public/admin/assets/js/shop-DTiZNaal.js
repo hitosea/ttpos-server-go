@@ -1,0 +1,1 @@
+import{f as e,e as n}from"./index-B3yUOGQQ.js";function r(n){return e("delivery/channels",{params:n})}function a(n){return e("delivery/companyList",{params:n})}function t(e){return n("delivery/updateStatus",{uuid:e})}function u(){return e("delivery/companySelect")}function i(e){return n("delivery/company",e)}export{i as a,r as b,a as c,u as g,t as u};
