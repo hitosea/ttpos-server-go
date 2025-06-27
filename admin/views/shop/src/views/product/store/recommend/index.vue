@@ -170,4 +170,7 @@
   .box-card {
     margin-top: 24px;
   }
+  .common-button-wrapper {
+    border-top: none;
+  }
 </style>
