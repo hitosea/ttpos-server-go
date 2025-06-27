@@ -12,7 +12,7 @@
             <el-option :label="$t('首次添加')" value="1"></el-option>
             <el-option :label="$t('调整添加')" value="2"></el-option>
             <el-option :label="$t('调整扣减')" value="3"></el-option>
-            <el-option :label="$t('活动扣减')" value="4"></el-option>
+            <el-option :label="$t('反结账退还')" value="4"></el-option>
             <el-option :label="$t('奖励领取（冻结）')" value="5"></el-option>
             <el-option :label="$t('核销扣减')" value="6"></el-option>
           </a-select>
