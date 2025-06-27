@@ -1647,12 +1647,22 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 
 	// 可退款金额
 	canReturnAmount := saleOrder.GetCanReturnAmount()
+	// 可退的会员消费金额
+	canReturnMemberConsumptionAmount := saleOrder.GetCanReturnMemberConsumptionAmount()
 
 	// 创建退款单
 	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetStaff().DutyNo, ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetCustomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
 	if err != nil {
 		return errors.WithMessage(err), constant.CodeFail
 	}
+
+	// 本次退款的会员累计消费金额。=退款金额
+	returnOrderMemberConsumptionAmount := returnOrder.RefundAmount
+	if returnOrderMemberConsumptionAmount > canReturnMemberConsumptionAmount {
+		// 本次退款的会员累计消费金额不能大于可退的会员消费金额
+		returnOrderMemberConsumptionAmount = canReturnMemberConsumptionAmount
+	}
+
 	// 是否存在QrPromptPay支付
 	if returnOrder.IsExistQrPromptPay() {
 		if req.BankCode == "" || req.AccountNo == "" || req.AccountName == "" {
@@ -1812,6 +1822,17 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			publishChangeMemberPoints = true
 		}
 
+		// 退会员的累计消费金额。退款后减少会员的累计消费金额
+		if saleOrder.ConsumerUuid > 0 {
+			// 减少会员累计消费金额
+			if err := repository.NewMemberRepo(db).DecConsumptionAmount(saleOrder.ConsumerUuid, returnOrderMemberConsumptionAmount); err != nil {
+				return errors.WithMessage(err)
+			}
+			// 如果是整单退款，则减少会员累计消费次数
+			if len(req.Products) == 0 {
+
+			}
+		}
 		return nil
 	})
 
@@ -2401,17 +2422,20 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 						return errors.WithMessage(err)
 					}
 				}
-				if isUseMember {
-					// 更新会员消费金额
-					repository.NewMemberRepo(db).DecConsumptionAmount(saleOrder.ConsumerUuid, paymentOrder.Amount)
+			}
+			// 退会员的累计消费金额
+			if isUseMember {
+				// 减少会员累计消费金额
+				if err := repository.NewMemberRepo(db).DecConsumptionAmount(saleOrder.ConsumerUuid, saleOrder.GetCanReturnMemberConsumptionAmountMax()); err != nil {
+					return errors.WithMessage(err)
+				}
+				// 减少会员累计消费次数
+				if err := repository.NewMemberRepo(db).DecConsumptionCount(saleOrder.ConsumerUuid); err != nil {
+					return errors.WithMessage(err)
 				}
 			}
-			if isUseMember {
-				// 更新会员消费次数
-				repository.NewMemberRepo(db).DecConsumptionCount(saleOrder.ConsumerUuid)
-			}
 			// 退积分
-			if saleOrder.ConsumerUuid != 0 {
+			if isUseMember {
 				points := giftPointsMap[saleOrder.Uuid]
 				member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
 				if err != nil {

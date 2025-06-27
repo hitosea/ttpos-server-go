@@ -638,13 +638,7 @@ func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProd
 			continue
 		}
 		// 商品总金额=退货商品数量*商品最终单价
-		// 商品金额=退货商品数量*商品最终单价
-		// 未含税时，商品总金额=商品金额 + 商品税费 + 服务费 + 服务费税费
-		// 已含税时，商品总金额=商品金额 + 服务费 + 服务费税费
-		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromInt(int64(num)))
-		// 如果商品未含税，则要再加上商品税费
-		// price := saleOrderProduct.TotalPrice + saleOrderProduct.TaxFee + saleOrderProduct.ServiceTaxFee
-		productTotalAmount = decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromInt(int64(num)))
+		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromFloat(num))
 		returnOrderProducts = append(returnOrderProducts, &ReturnOrderProduct{
 			SaleOrderUuid:        model.Uuid,
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
@@ -655,7 +649,7 @@ func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProd
 			ProductPrice:         saleOrderProduct.Price,
 			TaxRate:              saleOrderProduct.TaxRate,
 			Num:                  num,
-			ProductTotalAmount:   productTotalAmount.InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
+			ProductTotalAmount:   productTotalAmount.Round(2).InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
 		})
 		returnAmount = returnAmount.Add(productTotalAmount)
 	}
@@ -667,24 +661,18 @@ func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProd
 			continue
 		}
 		// 商品总金额=退货商品数量*商品最终单价
-		// 商品金额=退货商品数量*商品最终单价
-		// 未含税时，商品总金额=商品金额 + 商品税费 + 服务费 + 服务费税费
-		// 已含税时，商品总金额=商品金额 + 服务费 + 服务费税费
-		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromInt(int64(num)))
-		// 如果商品未含税，则要再加上商品税费
-		// price := saleOrderProduct.TotalPrice + saleOrderProduct.TaxFee + saleOrderProduct.ServiceTaxFee
-		productTotalAmount = decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromInt(int64(num)))
+		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromFloat(num))
 		returnOrderProducts = append(returnOrderProducts, &ReturnOrderProduct{
 			SaleOrderUuid:        model.Uuid,
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
 			ReturnOrderUuid:      returnOrderUuid,
-			ProductType:          constant.ReturnOrderProductTypeSaleOrderProduct,
+			ProductType:          constant.ReturnOrderProductTypeSaleOrderBuffetCustomer,
 			ProductPackageUuid:   saleOrderProduct.BuffetPackageUuid,
 			ProductName:          saleOrderProduct.Name,
 			ProductPrice:         saleOrderProduct.Price,
 			TaxRate:              saleOrderProduct.TaxRate,
 			Num:                  num,
-			ProductTotalAmount:   productTotalAmount.InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
+			ProductTotalAmount:   productTotalAmount.Round(2).InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
 		})
 		returnAmount = returnAmount.Add(productTotalAmount)
 	}
@@ -696,23 +684,17 @@ func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProd
 			continue
 		}
 		// 商品总金额=退货商品数量*商品最终单价
-		// 商品金额=退货商品数量*商品最终单价
-		// 未含税时，商品总金额=商品金额 + 商品税费 + 服务费 + 服务费税费
-		// 已含税时，商品总金额=商品金额 + 服务费 + 服务费税费
-		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromInt(int64(num)))
-		// 如果商品未含税，则要再加上商品税费
-		// price := saleOrderProduct.TotalPrice + saleOrderProduct.TaxFee + saleOrderProduct.ServiceTaxFee
-		productTotalAmount = decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromInt(int64(num)))
+		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromFloat(num))
 		returnOrderProducts = append(returnOrderProducts, &ReturnOrderProduct{
 			SaleOrderUuid:        model.Uuid,
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
 			ReturnOrderUuid:      returnOrderUuid,
-			ProductType:          constant.ReturnOrderProductTypeSaleOrderProduct,
+			ProductType:          constant.ReturnOrderProductTypeBuffetAddTimeProduct,
 			ProductPackageUuid:   saleOrderProduct.BuffetDelayUuid,
 			ProductName:          saleOrderProduct.Name,
 			ProductPrice:         saleOrderProduct.Price,
 			Num:                  num,
-			ProductTotalAmount:   productTotalAmount.InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
+			ProductTotalAmount:   productTotalAmount.Round(2).InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
 		})
 		returnAmount = returnAmount.Add(productTotalAmount)
 	}
