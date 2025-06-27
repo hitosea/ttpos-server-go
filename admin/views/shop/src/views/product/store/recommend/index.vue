@@ -152,23 +152,24 @@
     if (!list) {
       return;
     }
-    // 以 form.value.product_packages 为基准，如果 list 中有 form.value.product_packages 中没有的，就添加到 form.value.product_packages 中
+
+    // 以 list 为基准，如果 list 中没有 form.value.product_packages 有的，先把 UUID放进一个数组
+    const uuidsNow = list.map((item) => Number(item.uuid));
+    const uuidsOld = form.value.product_packages.map((item) => Number(item.uuid));
+    const uuidsRemove = uuidsOld.filter((item) => !uuidsNow.includes(item));
+    const uuidsAdd = uuidsNow.filter((item) => !uuidsOld.includes(item));
+
+    // 删除 form.value.product_packages 中 uuidsRemove
+    uuidsRemove.forEach((item) => {
+      form.value.product_packages = form.value.product_packages.filter((item2) => item2.uuid !== item);
+    });
+    //以 uuidsAdd 为基准， list 添加 form.value.product_packages 中没有的
     list.forEach((item) => {
-      if (!form.value.product_packages.some((item2) => Number(item2.uuid) === Number(item.uuid))) {
-        form.value.product_packages.push({
-          uuid: Number(item.uuid),
-          name: item.product_name_text,
-          sort: null,
-        });
+      if (uuidsAdd.includes(item.uuid)) {
+        form.value.product_packages.push({ uuid: item.uuid, name: item.product_name_text, sort: null });
       }
     });
 
-    // 以 form.value.product_packages 为基准，如果 form.value.product_packages 中有 list 中没有的，就从 form.value.product_packages 中删除
-    form.value.product_packages.forEach((item) => {
-      if (!list.some((item2) => Number(item2.uuid) === Number(item.uuid))) {
-        form.value.product_packages.splice(form.value.product_packages.indexOf(item), 1);
-      }
-    });
     formRef.value.validateField('product_packages');
   };
 
