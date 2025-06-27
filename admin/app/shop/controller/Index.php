@@ -467,6 +467,7 @@ class Index extends Controller
      * @Apidoc\Url ("/index.php/shop/index/productList")
      * @Apidoc\Param("type", type="string", default="product", require=false, desc="类型： all-所有, product-按产品，materials-按材料")
      * @Apidoc\Param("num_type", type="int", default="0", require=false, desc="类型： 0-所有, 1-整数计量, 2-小数计量")
+     * @Apidoc\Param("show_delivery_required", type="int", default="0", require=false, desc="是否是外送推荐商品:0-否；1-是")
      * @Apidoc\Param("mode", type="string", default="all", require=false, desc="模式： all-所有, category-按分类，label-按打印标签 ; 当它不等于all时会过滤掉所有不绑定分类或者打印标签的商品")
      * @Apidoc\Param("product_name", type="string", require=false, desc="按商品名称查询")
      * @Apidoc\Param("category_ids", type="int", default="", require=false, desc="按分类id查询，多个按逗号分隔")
@@ -497,6 +498,7 @@ class Index extends Controller
         $categoryIds = $params['category_ids'] ?? '';
         $labelIds = $params['label_ids'] ?? '';
         $numType = intval($params['num_type'] ?? 0);
+        $showDeliveryRequired = intval($params['show_delivery_required'] ?? 0);
         $commonFields = [
             'p.uuid',
             'p.uuid as product_id',
@@ -519,7 +521,7 @@ class Index extends Controller
             '0 as label_id',
             '"material" as source_type'
         ]);
-        $applyConditions = function ($query) use ($categoryIds, $labelIds, $productName, $mode, $numType) {
+        $applyConditions = function ($query) use ($categoryIds, $labelIds, $productName, $mode, $numType, $showDeliveryRequired) {
             if ($categoryIds) {
                 $query->whereIn('category_uuid', explode(',', $categoryIds));
             }
@@ -543,6 +545,10 @@ class Index extends Controller
                 } else if ($numType == 2) { // 小数计量
                     $query->where('num_type', 1);
                 }
+            }
+
+            if ($showDeliveryRequired != 0) {
+                $query->where('is_show_delivery', 1);
             }
 
             return $query;

@@ -2,7 +2,7 @@
   <div class="product-list" v-loading="loading">
     <div data-v-164f2ab7="" class="common-form">{{ $t('推荐商品管理') }}</div>
     <p class="gray9">{{ $t('设置店铺推荐商品，提升商品曝光度和销量') }}</p>
-    <el-card class="box-card" shadow="none">
+    <el-card class="box-card" shadow="never">
       <el-form label-position="top" ref="formRef" :model="form" size="small">
         <el-form-item :label="$t('是否开启推荐')" prop="status" :rules="[{ required: true, message: $t('请选择是否开启推荐') }]">
           <el-radio-group v-model="form.status">
@@ -50,6 +50,7 @@
       :open="openProductSelector"
       @close="handleProductSelectorClose"
       selectorType="all"
+      :showDeliveryRequired="1"
       :selectedProductIds="selectedProductIds"
     >
     </ProductSelector>
@@ -57,10 +58,10 @@
 </template>
 
 <script setup>
-  import { ref, onMounted } from 'vue';
+  import { ref, onMounted, getCurrentInstance } from 'vue';
   import ProductApi from '@/api/product';
   import ProductSelector from '@/components/product/Selector.vue';
-
+  const { proxy } = getCurrentInstance();
   const openProductSelector = ref(false);
 
   const formRef = ref(null);
@@ -76,7 +77,7 @@
 
   const validateProductPackages = (_rule, value, callback) => {
     if (value.length < 3) {
-      callback(new Error(this.$t('至少选择3个商品')));
+      callback(new Error(proxy.$t('至少选择3个商品')));
     } else {
       callback();
     }
@@ -84,11 +85,11 @@
 
   const validateSort = (_rule, value, callback, index) => {
     if (value === null) {
-      callback(new Error(this.$t('请输入排序')));
+      callback(new Error(proxy.$t('请输入排序')));
     }
     // 排序不能重复
     else if (form.value.product_packages.some((item) => item.sort === value && item.uuid !== form.value.product_packages[index].uuid)) {
-      callback(new Error(this.$t('排序不能重复')));
+      callback(new Error(proxy.$t('排序不能重复')));
     } else {
       callback();
     }
@@ -98,12 +99,18 @@
     formRef.value.validate((valid) => {
       if (valid) {
         loading.value = true;
-        ProductApi.setRecommend(form.value)
+        ProductApi.setRecommend(form.value, true)
           .then((res) => {
-            console.log(res);
+            proxy.$ElMessage({
+              message: proxy.$t('操作成功'),
+              type: 'success',
+            });
           })
           .catch((error) => {
-            console.log(error);
+            proxy.$ElMessage({
+              message: error.msg,
+              type: 'error',
+            });
           })
           .finally(() => {
             loading.value = false;
@@ -122,6 +129,10 @@
     ProductApi.getRecommend()
       .then((res) => {
         form.value = res.data;
+        form.value.product_packages.forEach((item) => {
+          item.uuid = Number(item.uuid);
+          item.sort = Number(item.sort);
+        });
       })
       .catch((error) => {
         console.log(error);
@@ -169,5 +180,8 @@
 <style scoped lang="scss">
   .box-card {
     margin-top: 24px;
+  }
+  .common-button-wrapper {
+    border-top: none;
   }
 </style>

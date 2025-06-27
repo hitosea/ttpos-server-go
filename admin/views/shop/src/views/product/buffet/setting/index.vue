@@ -7,28 +7,6 @@
           <el-radio label="0">{{ $t('关') }}</el-radio>
         </el-radio-group>
       </el-form-item>
-      <!-- TODO 改到添加自助餐哪里 2024年05月27日14:22:20
-                 <el-form-item :label="$t('平板自助餐时间')" :rules="[{ required: true, message: '' }]">
-                <el-radio-group v-model="form.is_remain_continue">
-                    <el-radio label="1">{{ $t('开') }}</el-radio>
-                    <el-radio label="0">{{ $t('关') }}</el-radio>
-                </el-radio-group>
-            </el-form-item> 
-            <template v-if="form.is_remain_continue == '1'">
-                <el-form-item label="" :rules="[{ required: true, message: $t('请输入时间') }]" prop="remain_continue_time">
-                    {{ $t('剩余') }}
-                    <el-input-number :controls="false" :precision="0" :min="0" :max="999" style="width: 200px !important;margin: 0 4px;" :placeholder="$t('请输入时间')"
-                        v-model.number="form.remain_continue_time"></el-input-number>
-                    {{ $t('分') }}{{ $t('不可继续点单') }}
-                </el-form-item>
-                <el-form-item label="" :rules="[{ required: true, message: $t('请输入时间') }]" prop="remain_continue_notice_time">
-                    {{ $t('剩余') }}
-                    <el-input-number :controls="false" :precision="0" :min="0" :max="999" style="width: 200px !important;margin: 0 4px;" :placeholder="$t('请输入时间')"
-                        v-model.number="form.remain_continue_notice_time"></el-input-number>
-                    {{ $t('分') }}{{ $t('提醒不可继续点单') }}
-                </el-form-item>
-            </template>
-            -->
 
       <el-form-item
         v-if="this.is_open_tablet || this.is_open_scan"

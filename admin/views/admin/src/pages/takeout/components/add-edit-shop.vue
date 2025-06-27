@@ -95,7 +95,7 @@
 
             <h3 class="text-base font-bold mb-4">{{ $t('距离范围设置') }}</h3>
             <!-- 距离范围设置 -->
-            <div class="flex flex-col gap-4">
+            <div class="flex flex-col">
               <el-form-item
                 :prop="'channels.' + index + '.distance_range'"
                 :rules="[
@@ -112,84 +112,88 @@
                   },
                 ]"
               >
-                <div class="w-full rounded p-4 bg-[#f3f3f3]" v-for="(distanceRange, distanceRangeIndex) in item.distance_range" :key="distanceRangeIndex">
-                  <el-row justify="space-between" align="middle" class="mb-4 mt-2">
-                    <h3 class="text-base font-bold">{{ $t('距离范围') }} {{ distanceRangeIndex + 1 }}</h3>
-                    <el-button v-if="item.config_type === 'manual'" class="!mr-0" type="danger" @click="removeDistanceRange(index, distanceRangeIndex)">{{ $t('删除') }}</el-button>
-                  </el-row>
-                  <el-row :gutter="24">
-                    <el-col :span="12">
-                      <el-form-item
-                        :label="$t('结束距离 (公里)')"
-                        :prop="'channels.' + index + '.distance_range.' + distanceRangeIndex + '.end'"
-                        :rules="[
-                          {
-                            required: true,
-                            trigger: 'blur',
-                            validator: (_rule: any, value: any, callback: any) => {
-                              if (!value) {
-                                callback(new Error($t('请输入结束距离')));
-                              }
-                              if (value < (distanceRangeIndex === 0 ? 0 : item.distance_range[distanceRangeIndex - 1].end || 0)) {
-                                callback(new Error($t('结束距离必须大于前一个范围的结束距离')));
-                              } else {
-                                callback();
-                              }
+                <div class="flex flex-col gap-3 w-full">
+                  <div class="w-full rounded p-4 bg-[#f3f3f3]" v-for="(distanceRange, distanceRangeIndex) in item.distance_range" :key="distanceRangeIndex">
+                    <el-row justify="space-between" align="middle" class="mb-4 mt-2">
+                      <h3 class="text-base font-bold">{{ $t('距离范围') }} {{ distanceRangeIndex + 1 }}</h3>
+                      <el-icon v-if="item.config_type === 'manual'" class="!mr-0 cursor-pointer text-gray-500 text-lg" @click="removeDistanceRange(index, distanceRangeIndex)">
+                        <Delete />
+                      </el-icon>
+                    </el-row>
+                    <el-row :gutter="24">
+                      <el-col :span="12">
+                        <el-form-item
+                          :label="$t('结束距离 (公里)')"
+                          :prop="'channels.' + index + '.distance_range.' + distanceRangeIndex + '.end'"
+                          :rules="[
+                            {
+                              required: true,
+                              trigger: 'blur',
+                              validator: (_rule: any, value: any, callback: any) => {
+                                if (!value) {
+                                  callback(new Error($t('请输入结束距离')));
+                                }
+                                if (distanceRangeIndex > 0 && value <= item.distance_range[distanceRangeIndex - 1].end) {
+                                  callback(new Error($t('结束距离必须大于前一个范围的结束距离')));
+                                } else {
+                                  callback();
+                                }
+                              },
                             },
-                          },
-                        ]"
-                      >
-                        <div class="flex items-center gap-2 !w-full">
+                          ]"
+                        >
+                          <div class="flex items-center gap-2 !w-full">
+                            <el-input-number
+                              class="flex-1"
+                              v-model="distanceRange.end"
+                              :controls="false"
+                              :disabled="distanceRange.is_unlimited || item.config_type === 'auto_sync'"
+                              :precision="1"
+                              :min="distanceRangeIndex === 0 ? 0 : item.distance_range[distanceRangeIndex - 1].end || 0"
+                              :max="999999"
+                              :placeholder="$t('请输入结束距离 (公里)')"
+                            ></el-input-number>
+                            <el-checkbox
+                              v-if="distanceRangeIndex === item.distance_range.length - 1"
+                              v-model="distanceRange.is_unlimited"
+                              :disabled="item.config_type === 'auto_sync'"
+                              :label="$t('最大')"
+                            />
+                          </div>
+                        </el-form-item>
+                      </el-col>
+                      <el-col :span="12">
+                        <el-form-item
+                          :label="$t('单价 (元/公里)')"
+                          :prop="'channels.' + index + '.distance_range.' + distanceRangeIndex + '.price_per_km'"
+                          :rules="[
+                            {
+                              required: true,
+                              trigger: 'blur',
+                              validator: (_rule: any, value: any, callback: any) => {
+                                if (!value) {
+                                  callback(new Error($t('请输入单价')));
+                                } else {
+                                  callback();
+                                }
+                              },
+                            },
+                          ]"
+                        >
                           <el-input-number
-                            class="flex-1"
-                            v-model="distanceRange.end"
+                            class="!w-full"
+                            v-model="distanceRange.price_per_km"
                             :controls="false"
-                            :disabled="distanceRange.is_unlimited || item.config_type === 'auto_sync'"
-                            :precision="1"
-                            :min="distanceRangeIndex === 0 ? 0 : item.distance_range[distanceRangeIndex - 1].end || 0"
-                            :max="999999"
-                            :placeholder="$t('请输入结束距离 (公里)')"
-                          ></el-input-number>
-                          <el-checkbox
-                            v-if="distanceRangeIndex === item.distance_range.length - 1"
-                            v-model="distanceRange.is_unlimited"
                             :disabled="item.config_type === 'auto_sync'"
-                            :label="$t('最大')"
-                          />
-                        </div>
-                      </el-form-item>
-                    </el-col>
-                    <el-col :span="12">
-                      <el-form-item
-                        :label="$t('单价 (元/公里)')"
-                        :prop="'channels.' + index + '.distance_range.' + distanceRangeIndex + '.price_per_km'"
-                        :rules="[
-                          {
-                            required: true,
-                            trigger: 'blur',
-                            validator: (_rule: any, value: any, callback: any) => {
-                              if (!value) {
-                                callback(new Error($t('请输入单价')));
-                              } else {
-                                callback();
-                              }
-                            },
-                          },
-                        ]"
-                      >
-                        <el-input-number
-                          class="!w-full"
-                          v-model="distanceRange.price_per_km"
-                          :controls="false"
-                          :disabled="item.config_type === 'auto_sync'"
-                          :precision="2"
-                          :min="0"
-                          :max="999999"
-                          :placeholder="$t('请输入单价 (元/公里)')"
-                        ></el-input-number>
-                      </el-form-item>
-                    </el-col>
-                  </el-row>
+                            :precision="2"
+                            :min="0"
+                            :max="999999"
+                            :placeholder="$t('请输入单价 (元/公里)')"
+                          ></el-input-number>
+                        </el-form-item>
+                      </el-col>
+                    </el-row>
+                  </div>
                 </div>
               </el-form-item>
               <el-button v-if="item.config_type === 'manual'" class="!mr-0" @click="addDistanceRange(index)" icon="plus">{{ $t('添加范围距离') }}</el-button>

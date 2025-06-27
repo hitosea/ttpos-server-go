@@ -642,6 +642,12 @@ class Product extends Controller
         if (is_null($data)) {
             $data = $model;
         }
+
+        $count = ProductModel::where('uuid', 'in', array_column($param['product_packages'], 'uuid'))->where('is_show_delivery', 1)->where('delete_time', 0)->count();
+        if ($count != count($param['product_packages'])) {
+            return $this->renderError('只能选择在外送显示的商品');
+        }
+
         $data->status = intval($param['status']);
         $data->title = $param['title'];
         $data->product_packages = json_encode($param['product_packages']);
