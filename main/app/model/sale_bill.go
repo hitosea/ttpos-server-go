@@ -369,7 +369,10 @@ func (model *SaleBill) ValidateOrderStatus(source string, operation string, sale
 
 	// 锁定订单 - 白名单
 	if model.IsLockStatus() && !slices.Contains([]string{constant.OrderSettle}, operation) {
-		return errors.New("订单已被锁定，请解锁后重新操作")
+		// 收银端可以操作折扣
+		if source != constant.SourceCashier || !slices.Contains([]string{constant.OrderDiscount, constant.OrderCancelDiscount}, operation) {
+			return errors.New("订单已被锁定，请解锁后重新操作")
+		}
 	}
 	// 账单已退款，不能操作
 	if model.Status == constant.SaleBillStatusCanceled {

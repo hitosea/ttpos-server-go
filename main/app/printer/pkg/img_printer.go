@@ -153,7 +153,7 @@ func (i *ImgFont) GetFontPath(char string) string {
 	// 泰语
 	thaiPattern := regexp.MustCompile(`[\p{Thai}]`)
 	if thaiPattern.MatchString(char) || strings.Contains(char, "฿") {
-		return fonts.FontTH
+		return fonts.FontTHExt
 	}
 
 	// 韩语
