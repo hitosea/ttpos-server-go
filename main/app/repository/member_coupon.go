@@ -8,18 +8,23 @@ import (
 )
 
 type IMemberCouponRepo interface {
-	GetMemberCoupon(opts ...DBOption) (*model.MemberCoupon, error)                 // 获取会员优惠券
-	GetMemberCouponList(opts ...DBOption) ([]*model.MemberCoupon, error)           // 获取会员优惠券列表
-	GetMemberCouponRecord(opts ...DBOption) (*model.MemberCouponUseRecord, error)  // 获取会员优惠券
-	GetMemberCouponByUuid(uuid uint64) (*model.MemberCoupon, error)                // 根据uuid获取会员优惠券
-	GetMembersByUuids(uuids []uint64) ([]*model.MemberCoupon, error)               // 根据uuid列表获取会员优惠券列表
-	GetValidMemberCouponList(memberUuid uint64) ([]*model.MemberCoupon, error)     // 获取会员有效期内的优惠券列表
+	IMemberCouponQuery
 	CreateMemberCoupon(memberCoupon *model.MemberCoupon) error                     // 添加会员优惠券
 	CreateMemberCouponRecord(memberCouponRecord model.MemberCouponUseRecord) error // 添加会员优惠券使用记录
 	DeleteMemberCouponRecord(memberCouponUuid uint64) error                        // 删除会员优惠券使用记录
 	Update(uuid uint64, vars map[string]any) error                                 // 更新会员优惠券信息
 	VerifyMemberCoupon(uuid uint64) error                                          // 核销会员优惠券
 	CancelVerifyMemberCoupon(uuid uint64) error                                    // 取消核销会员优惠券
+}
+
+// IMemberCouponQuery 会员优惠券查询接口,查询单独定义一个接口，方便后续扩展缓存
+type IMemberCouponQuery interface {
+	GetMemberCoupon(opts ...DBOption) (*model.MemberCoupon, error)                // 获取会员优惠券
+	GetMemberCouponList(opts ...DBOption) ([]*model.MemberCoupon, error)          // 获取会员优惠券列表
+	GetMemberCouponRecord(opts ...DBOption) (*model.MemberCouponUseRecord, error) // 获取会员优惠券
+	GetMemberCouponByUuid(uuid uint64) (*model.MemberCoupon, error)               // 根据uuid获取会员优惠券
+	GetMembersByUuids(uuids []uint64) ([]*model.MemberCoupon, error)              // 根据uuid列表获取会员优惠券列表
+	GetValidMemberCouponList(memberUuid uint64) ([]*model.MemberCoupon, error)    // 获取会员有效期内的优惠券列表
 }
 
 func NewMemberCouponRepo(db *gorm.DB) IMemberCouponRepo {

@@ -11,18 +11,23 @@ import (
 )
 
 type IMarketingCouponRepo interface {
+	IMarketingCouponQuery
 	DecreaseCouponQuantity(couponId uint64, memberUuid uint64, activityUuid uint64) error        // 减少优惠券数量
-	GetCoupon(opts ...DBOption) (*model.MarketingCoupon, error)                                  // 获取优惠券
-	GetCoupons(opts ...DBOption) ([]*model.MarketingCoupon, error)                               //获取店铺优惠券列表
-	GetValidCouponList() ([]*model.MarketingCoupon, error)                                       // 获取商家还可用的none类型优惠卷（所有人可用的）
-	GetCouponByUuid(uuid uint64) (*model.MarketingCoupon, error)                                 // 获取优惠券
-	GetCouponLeftCount(uuid uint64) (int, error)                                                 // 查询营销优惠券的剩余数量
 	CreateMarketingCouponRecord(marketingCouponRecord model.MarketingCouponRecord) error         // 添加营销优惠券使用记录
 	CreateMemberCouponRecord(marketingCouponUuid uint64, memberUuid uint64, leftCount int) error // 创建会员优惠券记录（核销扣减）
 	CreateCommonCouponRecord(marketingCouponUuid uint64, leftCount int) error                    // 创建通用优惠券记录（核销扣减）
 	CreateCommonCouponRecordCancel(marketingCouponUuid uint64, leftCount int) error              // 创建通用优惠券记录（反结账退还）
 	UpdateCommonCouponCount(marketingCouponUuid uint64) error                                    // 通用优惠券核销，数量减1
 	UpdateCommonCouponCountCancel(marketingCouponUuid uint64) error                              // 通用优惠券取消核销，数量加1，反结账场景
+}
+
+// IMarketingCouponQuery 营销优惠券查询接口,查询单独定义一个接口，方便后续扩展缓存
+type IMarketingCouponQuery interface {
+	GetCoupon(opts ...DBOption) (*model.MarketingCoupon, error)    // 获取优惠券
+	GetCoupons(opts ...DBOption) ([]*model.MarketingCoupon, error) //获取店铺优惠券列表
+	GetValidCouponList() ([]*model.MarketingCoupon, error)         // 获取商家还可用的none类型优惠卷（所有人可用的）
+	GetCouponByUuid(uuid uint64) (*model.MarketingCoupon, error)   // 获取优惠券
+	GetCouponLeftCount(uuid uint64) (int, error)                   // 查询营销优惠券的剩余数量
 }
 
 // MarketingCouponRepo 营销优惠券仓库
