@@ -2016,7 +2016,7 @@ export const previewData = {
       },
       {
         name: $t('手机号码'),
-        label: '13800138000',
+        label: '138****8000',
       },
       {
         name: $t('收货地址'),
