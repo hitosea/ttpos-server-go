@@ -5112,7 +5112,14 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 		// 某个规格的商品 => 商品数量
 		productBomNumMap := make(map[uint64]*FlavorNum)
 
-		for _, saleOrderProduct := range saleOrderProductAll {
+		var saleOrderProductsList []*model.SaleOrderProduct
+		if ctx.GetSource() == constant.SourceTablet {
+			// 如果是平板端，去掉非本次加购的商品. 非本次加购的商品不进行送厨检查，如库存检查等
+			saleOrderProductsList = filterOtherClientProducts(saleOrderProductAll)
+		} else {
+			saleOrderProductsList = saleOrderProductAll
+		}
+		for _, saleOrderProduct := range saleOrderProductsList {
 			// 跳过检查
 			if s.skipCheck(saleOrderProduct) {
 				continue
