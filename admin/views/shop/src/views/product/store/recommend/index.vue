@@ -15,11 +15,11 @@
             <el-input v-model="form.title" :maxlength="30" :placeholder="$t('请输入推荐标题')" type="textarea" :rows="2" show-word-limit></el-input>
           </el-form-item>
           <el-form-item :label="$t('选择商品') + `(${form.product_packages.length}/15)`" prop="product_packages" :rules="[{ required: true, validator: validateProductPackages }]">
-            <el-button type="primary" @click="openProductSelectorDialog">选择商品</el-button>
+            <el-button type="primary" @click="openProductSelectorDialog">{{ $t('选择商品') }}</el-button>
           </el-form-item>
           <el-table :data="form.product_packages" size="small">
-            <el-table-column prop="name" label="商品名称"></el-table-column>
-            <el-table-column prop="sort" label="排序">
+            <el-table-column prop="name" :label="$t('商品名称')"></el-table-column>
+            <el-table-column prop="sort" :label="$t('排序')">
               <template #default="scope">
                 <el-form-item
                   :prop="`product_packages.${scope.$index}.sort`"
@@ -29,7 +29,7 @@
                 </el-form-item>
               </template>
             </el-table-column>
-            <el-table-column prop="action" label="操作">
+            <el-table-column prop="action" :label="$t('操作')">
               <template #default="scope">
                 <el-button type="danger" link @click="removeProduct(scope.$index)">{{ $t('移除') }}</el-button>
               </template>
@@ -76,7 +76,7 @@
 
   const validateProductPackages = (_rule, value, callback) => {
     if (value.length < 3) {
-      callback(new Error('至少选择3个商品'));
+      callback(new Error(this.$t('至少选择3个商品')));
     } else {
       callback();
     }
@@ -84,11 +84,11 @@
 
   const validateSort = (_rule, value, callback, index) => {
     if (value === null) {
-      callback(new Error('请输入排序'));
+      callback(new Error(this.$t('请输入排序')));
     }
     // 排序不能重复
     else if (form.value.product_packages.some((item) => item.sort === value && item.uuid !== form.value.product_packages[index].uuid)) {
-      callback(new Error('排序不能重复'));
+      callback(new Error(this.$t('排序不能重复')));
     } else {
       callback();
     }
