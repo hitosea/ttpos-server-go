@@ -16,7 +16,7 @@
               ]"
             >
             </flieUpload>
-            <el-table size="small" :data="form.carousel" border style="width: 100%" v-loading="loading">
+            <el-table size="small" :data="form.carousel" border v-loading="loading">
               <el-table-column prop="real_name" :label="$t('图片名称')"></el-table-column>
               <el-table-column prop="sort" :label="$t('排序')">
                 <template #default="scope">
@@ -172,9 +172,9 @@
               </template>
               <SvgIcon class="form-icon" name="man"></SvgIcon>
             </el-tooltip>
-            <div class="w600">
+            <div class="device-btn-box">
                 <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
-                <el-checkbox v-if="item.platform != 0" :model-value="item.is_main == 1" @change="setMain(item)" style="margin-left: 20px" size="small">{{ $t('设为主收银机') }}</el-checkbox>
+                <el-checkbox class="ml20" v-if="item.platform != 0" :model-value="item.is_main == 1" @change="setMain(item)" size="small">{{ $t('设为主收银机') }}</el-checkbox>
             </div>
           </div>
           <p v-else>{{ $t('暂无设备') }}</p>
@@ -184,9 +184,9 @@
             <div class="max-w460 input-ss">
               <autoTips :tooltipMaxWidth="460" :content="(item.remark ? item.remark : '') + `(${item.key})`">{{ (item.remark ? item.remark : '') + `(${item.key})` }}</autoTips>
             </div>
-            <div class="w600">  
+            <div class="device-btn-box">  
                 <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
-                <el-checkbox v-if="item.platform != 0" :model-value="item.is_main == 1" @change="setMain(item)" style="margin-left: 20px" size="small">{{ $t('设为主收银机') }}</el-checkbox>
+                <el-checkbox class="ml20" v-if="item.platform != 0" :model-value="item.is_main == 1" @change="setMain(item)" size="small">{{ $t('设为主收银机') }}</el-checkbox>
             </div>
           </div>
           <p v-else>{{ $t('暂无设备') }}</p>
@@ -579,7 +579,7 @@
         }
       }
     }
-    .w600 {
+    .device-btn-box {
       width: 660px;
     }
   }

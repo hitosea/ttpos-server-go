@@ -2241,7 +2241,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_marketing_coupon_record` (
   `coupon_uuid` bigint(20) DEFAULT 0 COMMENT '优惠券唯一ID',
   `activity_uuid` bigint(20) DEFAULT 0 COMMENT '活动uuid',
   `serial_no` varchar(255) DEFAULT '' COMMENT '记录编号, yyMMddhhmmssxxxx, 比如2506061456550001这样, 后四位是0000到9999依次递增, 循环使用',
-  `type` int(11) DEFAULT 1 COMMENT '记录类型：1-首次添加、2-调整添加、3-调整扣减、4-活动扣减(作废)、5、奖励领取（冻结）、6、核销扣减',
+  `type` int(11) DEFAULT 1 COMMENT '记录类型：1-首次添加、2-调整添加、3-调整扣减、4-反结账退还、5、奖励领取（冻结）、6、核销扣减',
   `count` int(11) DEFAULT 0 COMMENT '变动数量',
   `left_count` int(11) DEFAULT 0 COMMENT '剩余有效张数',
   `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
