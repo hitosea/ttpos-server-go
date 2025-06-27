@@ -99,7 +99,7 @@
           <div class="w-full rounded p-4 bg-[#f3f3f3]" v-for="(distanceRange, distanceRangeIndex) in item.distance_range" :key="distanceRangeIndex">
             <el-row justify="space-between" align="middle" class="mb-4 mt-2">
               <h3 class="text-base font-bold">{{ $t('距离范围') }} {{ distanceRangeIndex + 1 }}</h3>
-              <el-button class="!mr-0" type="danger" @click="removeDistanceRange(index, distanceRangeIndex)">{{ $t('删除') }}</el-button>
+              <el-icon class="!mr-0 cursor-pointer text-gray-500 text-lg" @click="removeDistanceRange(index, distanceRangeIndex)"><Delete /></el-icon>
             </el-row>
             <el-row :gutter="24">
               <el-col :span="12">
