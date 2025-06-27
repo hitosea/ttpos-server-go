@@ -2451,6 +2451,42 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 				}
 			}
 
+			// 退优惠券。如果订单使用了优惠券，需要将优惠券退还给会员。如果使用了通用优惠券，则通用优惠券余量+1并生成记录
+			if saleOrder.HasCoupon() {
+				// 加锁, 避免并发问题,避免数量+1重复或失效
+				lock.NewSystemLock().LockUuid(constant.LockNameActivityConsumption)
+				defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
+				for _, coupon := range saleOrder.Coupons {
+					if !coupon.IsDelete() {
+						if coupon.IsCommonCoupon() {
+							commonCoupon, err := repository.NewMarketingCouponRepo(db).GetCouponByUuid(coupon.MarketingCouponUuid)
+							if err != nil {
+								return errors.WithMessage(err)
+							}
+							commonCoupon.Count = commonCoupon.Count + 1
+							// 取消核销通用优惠券，数量+1
+							if err := repository.NewMarketingCouponRepo(db).UpdateCommonCouponCountCancel(coupon.MarketingCouponUuid); err != nil {
+								return errors.WithMessage(err)
+							}
+							// 创建通用优惠券记录，记录类型：反结账退还
+							if err := repository.NewMarketingCouponRepo(db).CreateCommonCouponRecordCancel(coupon.MarketingCouponUuid, commonCoupon.Count); err != nil {
+								return errors.WithMessage(err)
+							}
+						}
+						if coupon.IsMemberCoupon() {
+							// 取消核销会员优惠券
+							if err := repository.NewMemberCouponRepo(db).CancelVerifyMemberCoupon(coupon.MemberCouponUuid); err != nil {
+								return errors.WithMessage(err)
+							}
+							// 删除会员优惠券使用记录
+							if err := repository.NewMemberCouponRepo(db).DeleteMemberCouponRecord(coupon.MemberCouponUuid); err != nil {
+								return errors.WithMessage(err)
+							}
+						}
+					}
+				}
+			}
+
 			// 发布“会员余额变动”事件
 			go func() {
 				s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{

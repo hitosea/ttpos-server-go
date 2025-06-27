@@ -16,8 +16,10 @@ type IMemberCouponRepo interface {
 	GetValidMemberCouponList(memberUuid uint64) ([]*model.MemberCoupon, error)     // 获取会员有效期内的优惠券列表
 	CreateMemberCoupon(memberCoupon *model.MemberCoupon) error                     // 添加会员优惠券
 	CreateMemberCouponRecord(memberCouponRecord model.MemberCouponUseRecord) error // 添加会员优惠券使用记录
+	DeleteMemberCouponRecord(memberCouponUuid uint64) error                        // 删除会员优惠券使用记录
 	Update(uuid uint64, vars map[string]any) error                                 // 更新会员优惠券信息
 	VerifyMemberCoupon(uuid uint64) error                                          // 核销会员优惠券
+	CancelVerifyMemberCoupon(uuid uint64) error                                    // 取消核销会员优惠券
 }
 
 func NewMemberCouponRepo(db *gorm.DB) IMemberCouponRepo {
@@ -116,6 +118,11 @@ func (r *memberCouponRepo) CreateMemberCouponRecord(memberCouponRecord model.Mem
 	return r.db.Create(&memberCouponRecord).Error
 }
 
+// DeleteMemberCouponRecord 删除会员优惠券使用记录,软删除
+func (r *memberCouponRepo) DeleteMemberCouponRecord(memberCouponUuid uint64) error {
+	return r.db.Model(&model.MemberCouponUseRecord{}).Where("coupon_uuid = ?", memberCouponUuid).Update("delete_time", time.Now().Unix()).Error
+}
+
 // Update 更新会员优惠券信息
 func (r *memberCouponRepo) Update(uuid uint64, vars map[string]any) error {
 	return r.db.Model(&model.MemberCoupon{}).Where("uuid = ?", uuid).Updates(vars).Error
@@ -126,5 +133,13 @@ func (r *memberCouponRepo) VerifyMemberCoupon(uuid uint64) error {
 	return r.Update(uuid, map[string]any{
 		"status":   1,
 		"use_time": time.Now().Unix(),
+	})
+}
+
+// 取消核销会员优惠券，反结账退还优惠券场景
+func (r *memberCouponRepo) CancelVerifyMemberCoupon(uuid uint64) error {
+	return r.Update(uuid, map[string]any{
+		"status":   0,
+		"use_time": 0,
 	})
 }

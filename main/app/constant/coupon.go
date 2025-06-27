@@ -1,13 +1,13 @@
 package constant
 
-// 记录类型：1-首次添加、2-调整添加、3-调整扣减、4-活动扣减(废弃)、5、奖励领取（冻结）、6、核销扣减
+// 记录类型：1-首次添加、2-调整添加、3-调整扣减、4-反结账退还、5、奖励领取（冻结）、6、核销扣减
 const (
-	CouponRecordTypeCreate            = 1 // 首次添加
-	CouponRecordTypeIncrease          = 2 // 调整添加
-	CouponRecordTypeDecrease          = 3 // 调整扣减
-	CouponRecordTypeActivityDeduction = 4 // 活动扣减 （该类型已废弃）
-	CouponRecordTypeBonus             = 5 // 奖励领取（冻结）
-	CouponRecordTypeUsed              = 6 // 核销扣减
+	CouponRecordTypeCreate        = 1 // 首次添加
+	CouponRecordTypeIncrease      = 2 // 调整添加
+	CouponRecordTypeDecrease      = 3 // 调整扣减
+	CouponRecordTypeReverseSettle = 4 // 反结账退还
+	CouponRecordTypeBonus         = 5 // 奖励领取（冻结）
+	CouponRecordTypeUsed          = 6 // 核销扣减
 )
 
 // requirement
