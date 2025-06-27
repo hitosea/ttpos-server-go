@@ -57,10 +57,10 @@
 </template>
 
 <script setup>
-  import { ref, onMounted } from 'vue';
+  import { ref, onMounted, getCurrentInstance } from 'vue';
   import ProductApi from '@/api/product';
   import ProductSelector from '@/components/product/Selector.vue';
-
+  const { proxy } = getCurrentInstance();
   const openProductSelector = ref(false);
 
   const formRef = ref(null);
@@ -76,7 +76,7 @@
 
   const validateProductPackages = (_rule, value, callback) => {
     if (value.length < 3) {
-      callback(new Error(this.$t('至少选择3个商品')));
+      callback(new Error(proxy.$t('至少选择3个商品')));
     } else {
       callback();
     }
@@ -84,11 +84,11 @@
 
   const validateSort = (_rule, value, callback, index) => {
     if (value === null) {
-      callback(new Error(this.$t('请输入排序')));
+      callback(new Error(proxy.$t('请输入排序')));
     }
     // 排序不能重复
     else if (form.value.product_packages.some((item) => item.sort === value && item.uuid !== form.value.product_packages[index].uuid)) {
-      callback(new Error(this.$t('排序不能重复')));
+      callback(new Error(proxy.$t('排序不能重复')));
     } else {
       callback();
     }
