@@ -1761,5 +1761,10 @@
     "是否开启推荐": "Öneriyi etkinleştirmek istiyor musunuz?",
     "请选择是否开启推荐": "Tavsiyeyi açmak isteyip istemediğinizi seçin",
     "推荐标题": "Önerilen Başlık",
-    "请输入推荐标题": "Lütfen önerilen başlığı girin"
+    "请输入推荐标题": "Lütfen önerilen başlığı girin",
+    "会员端": "Üye Tarafı",
+    "复制链接": "Bağlantıyı Kopyala",
+    "外送商品价格": "Dışarı Servis Ürün Fiyatı",
+    "请输入外送商品价格": "Lütfen dışarı servis ürün fiyatını giriniz",
+    "商品原价": "Ürün Orijinal Fiyatı"
 }

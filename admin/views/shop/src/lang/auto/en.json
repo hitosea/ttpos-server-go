@@ -2007,5 +2007,10 @@
     "是否开启推荐": "Would you like to enable recommendations?",
     "请选择是否开启推荐": "Please select whether to enable recommendations",
     "推荐标题": "Recommended Title",
-    "请输入推荐标题": "Please enter the recommended title"
+    "请输入推荐标题": "Please enter the recommended title",
+    "会员端": "Member Side",
+    "复制链接": "Copy Link",
+    "外送商品价格": "Delivery Product Price",
+    "请输入外送商品价格": "Please enter the delivery product price",
+    "商品原价": "Original Product Price"
 }
