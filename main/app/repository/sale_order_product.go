@@ -10,19 +10,25 @@ import (
 )
 
 type ISaleOrderProductRepo interface {
+	ISaleOrderProductQueryRepo
 	CreateSaleOrderProduct(model *model.SaleOrderProduct) (uint64, error)
 	CreateSaleOrderProductAndBomAndAttribute(model model.SaleOrderProduct) (uint64, error)
 	UpdateSaleOrderProduct(model *model.SaleOrderProduct) error
 	UpdateSaleOrderProductByMap(uuid uint64, vars map[string]any) error
 	UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error
-	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
 	UpdateSaleOrderProductRecord(model model.SaleOrderProduct) error
 	UpdateOrCreateSaleOrderProductRecord(obj model.SaleOrderProduct) error
 	CreateSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string, returnFoodReasons [][2]uint64) error
 	DeleteSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string) error
-	DeleteSaleOrderProductList(models []*model.SaleOrderProduct) error                                                               // 批量删除销售订单商品。delete_time赋值为当前时间
-	DeleteSaleOrderProductBySaleBillUuid(saleBillUuid uint64) error                                                                  // 根据销售账单uuid删除销售订单商品。delete_time赋值为当前时间
-	Update(data map[string]interface{}, opts ...DBOption) error                                                                      // 更新订单商品
+	DeleteSaleOrderProductList(models []*model.SaleOrderProduct) error // 批量删除销售订单商品。delete_time赋值为当前时间
+	DeleteSaleOrderProductBySaleBillUuid(saleBillUuid uint64) error    // 根据销售账单uuid删除销售订单商品。delete_time赋值为当前时间
+	Update(data map[string]interface{}, opts ...DBOption) error        // 更新订单商品
+}
+
+// ISaleOrderProductQueryRepo 销售订单商品查询
+
+type ISaleOrderProductQueryRepo interface {
+	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
 	GetProductPackageDetail(saleBillUuid uint64, saleOrderUuid uint64, productPackageUuid uint64) ([]*model.SaleOrderProduct, error) // 获取商品选购详情
 }
 

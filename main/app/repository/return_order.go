@@ -10,12 +10,11 @@ import (
 )
 
 type IReturnOrderRepo interface {
-	CreateReturnOrder(order model.ReturnOrder) (model.ReturnOrder, error)   // 创建退货单
-	CreateReturnOrderRecord(order model.ReturnOrder) (uint64, error)        // 创建退货单
-	CreateReturnOrderAmount(amounts []model.ReturnOrderAmount) error        // 创建退货金额
-	CreateReturnOrderProduct(products []*model.ReturnOrderProduct) error    // 创建退货商品
-	GetReturnOrder(opts ...DBOption) (model.ReturnOrder, error)             // 获取退货单
-	GetReturnOrderAmount(opts ...DBOption) (model.ReturnOrderAmount, error) // 获取退货金额
+	IReturnOrderQueryRepo
+	CreateReturnOrder(order model.ReturnOrder) (model.ReturnOrder, error) // 创建退货单
+	CreateReturnOrderRecord(order model.ReturnOrder) (uint64, error)      // 创建退货单
+	CreateReturnOrderAmount(amounts []model.ReturnOrderAmount) error      // 创建退货金额
+	CreateReturnOrderProduct(products []*model.ReturnOrderProduct) error  // 创建退货商品
 	UpdateReturnOrder(opts []DBOption, order model.ReturnOrder) error
 	UpdateReturnOrderAmount(opts []DBOption, amount model.ReturnOrderAmount) error
 	SumRefundAmount(opts ...DBOption) float64 // 统计退款金额
@@ -25,6 +24,12 @@ type IReturnOrderRepo interface {
 
 	WithReturnOrder() DBOption // 预加载退货单
 	WithPaymentMethod() DBOption
+}
+
+// IReturnOrderQueryRepo 退货单查询仓库接口
+type IReturnOrderQueryRepo interface {
+	GetReturnOrder(opts ...DBOption) (model.ReturnOrder, error)             // 获取退货单
+	GetReturnOrderAmount(opts ...DBOption) (model.ReturnOrderAmount, error) // 获取退货金额
 }
 
 func NewReturnOrderRepo(db *gorm.DB) IReturnOrderRepo {

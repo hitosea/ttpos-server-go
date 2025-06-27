@@ -9,6 +9,20 @@ import (
 )
 
 type IWarehouseFormRepo interface {
+	IWarehouseFormQueryRepo
+	CreateWarehouseOutFormRecord(obj model.WarehouseOutForm) error              // 创建出库单记录
+	CreateWarehouseFormRecord(obj model.WarehouseForm) error                    // 创建入库单记录
+	CreateWarehouseOutFormItemRecord(obj model.WarehouseOutFormItem) error      // 创建出库单记录
+	CreateWarehouseOutFormItemRecords(list []*model.WarehouseOutFormItem) error // 批量创建出库单明细记录
+	CreateWarehouseFormItemRecords(list []*model.WarehouseFormItem) error       // 批量创建入库单明细记录
+	UpdateWarehouseOutFormItemRecordsStatus(saleOrderUuid uint64) error         // 更新该销售订单的所有出库单记录为已出库
+	UpdateWarehouseOutFormItemRecordsReduceStock(saleBillUuid uint64) error     // 更新该销售账单的所有出库单记录为已扣减库存
+	UpdateWarehouseFormItemRecordsAddStock(saleBillUuid uint64) error           // 更新该销售账单的所有入库单记录为已加库存
+	UpdateWarehouseOutFormRecord(obj model.WarehouseOutForm) error              // 更新出库单记录
+	UpdateWarehouseOutFormItemRecord(obj model.WarehouseOutFormItem) error      // 更新出库单明细记录
+}
+
+type IWarehouseFormQueryRepo interface {
 	GetWarehouseForm(opts ...DBOption) (*model.WarehouseForm, error)                                    // 获取入库单
 	GetWarehouseOutForms(opts ...DBOption) ([]*model.WarehouseOutForm, error)                           // 获取出库单
 	GetWarehouseOutFormsBySaleBillUuid(saleBillUuid uint64) ([]*model.WarehouseOutForm, error)          // 获取该销售账单的所有出库单记录
@@ -18,16 +32,6 @@ type IWarehouseFormRepo interface {
 	GetWarehouseOutFormItemBySaleBillUuid(saleBillUuid uint64) ([]*model.WarehouseOutFormItem, error)   // 获取该销售账单的所有出库单记录
 	GetWarehouseOutFormItemNotProcessed(saleBillUuid uint64) ([]*model.WarehouseOutFormItem, error)     // 获取该销售账单的所有未减库存的出库单记录
 	GetWarehouseFormItemNotProcessed(saleBillUuid uint64) ([]*model.WarehouseFormItem, error)           // 获取该销售账单的所有未加库存的入库单记录
-	CreateWarehouseOutFormRecord(obj model.WarehouseOutForm) error                                      // 创建出库单记录
-	CreateWarehouseFormRecord(obj model.WarehouseForm) error                                            // 创建入库单记录
-	CreateWarehouseOutFormItemRecord(obj model.WarehouseOutFormItem) error                              // 创建出库单记录
-	CreateWarehouseOutFormItemRecords(list []*model.WarehouseOutFormItem) error                         // 批量创建出库单明细记录
-	CreateWarehouseFormItemRecords(list []*model.WarehouseFormItem) error                               // 批量创建入库单明细记录
-	UpdateWarehouseOutFormItemRecordsStatus(saleOrderUuid uint64) error                                 // 更新该销售订单的所有出库单记录为已出库
-	UpdateWarehouseOutFormItemRecordsReduceStock(saleBillUuid uint64) error                             // 更新该销售账单的所有出库单记录为已扣减库存
-	UpdateWarehouseFormItemRecordsAddStock(saleBillUuid uint64) error                                   // 更新该销售账单的所有入库单记录为已加库存
-	UpdateWarehouseOutFormRecord(obj model.WarehouseOutForm) error                                      // 更新出库单记录
-	UpdateWarehouseOutFormItemRecord(obj model.WarehouseOutFormItem) error                              // 更新出库单明细记录
 }
 
 type warehouseFormRepoImpl struct {

@@ -9,10 +9,15 @@ import (
 )
 
 type IMemberBalanceLogRepo interface {
+	IMemberBalanceLogQueryRepo
 	Create(log model.MemberBalanceLog) (model.MemberBalanceLog, error)            // 创建会员积分日志
-	GetMemberBalanceLogList(opts ...DBOption) ([]*model.MemberBalanceLog, error)  // 获取会员余额日志列表
-	GetMemberBalanceLogNotProcessed() ([]*model.MemberBalanceLog, error)          // 获取未处理的会员余额日志. 用于处理会员余额变动
 	ReverseSettleDelete(memberUuid uint64, saleOrderUuid uint64, scene int) error // 反结账时删除充值记录
+}
+
+// IMemberBalanceLogQueryRepo 会员余额日志查询
+type IMemberBalanceLogQueryRepo interface {
+	GetMemberBalanceLogList(opts ...DBOption) ([]*model.MemberBalanceLog, error) // 获取会员余额日志列表
+	GetMemberBalanceLogNotProcessed() ([]*model.MemberBalanceLog, error)         // 获取未处理的会员余额日志. 用于处理会员余额变动
 }
 
 func NewMemberBalanceLogRepo(db *gorm.DB) IMemberBalanceLogRepo {

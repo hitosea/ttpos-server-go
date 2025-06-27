@@ -10,30 +10,25 @@ import (
 
 // IProductRepo 定义商品仓库接口
 type IProductRepo interface {
-	GetProductListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表
-	GetProductPackageListByUuids(uuids []uint64) ([]model.ProductPackage, error)                                    // 通过uuid列表获取商品列表
-	GetProductCategoryList(opts ...DBOption) ([]model.ProductCategory, error)                                       // 获取产品类别列表
-	GetProduct(opts ...DBOption) (model.ProductPackage, error)                                                      // 获取商品详情
-	GetProductFlavor(opts ...DBOption) (model.ProductFlavor, error)                                                 // 获取商品口味详情
-	GetProductBom(opts ...DBOption) (model.ProductBom, error)                                                       // 获取商品BOM详情
-	WithMultiLanguageName() DBOption                                                                                // 预加载多语言名称
-	WithProductUnit() DBOption                                                                                      // 预加载产品单位
-	WithProductUnitMultiLanguageName() DBOption                                                                     // 预加载产品单位多语言名称
-	WithProductBoms() DBOption                                                                                      // 预加载产品Boms
-	WithProductBomsProductFlavor() DBOption                                                                         // 预加载产品Boms产品口味
-	WithProductBomsProductFlavorMultiLanguageName() DBOption                                                        // 预加载产品Boms产品口味多语言名称
-	WithProductBomsProductSauce() DBOption                                                                          // 预加载产品Boms产品酱料
-	WithProductBomsProductSauceMultiLanguageName() DBOption                                                         // 预加载产品Boms产品酱料多语言名称
-	WithProductPackageAttributeGroup() DBOption                                                                     // 预加载产品包装属性组
-	WithProductPackageAttributeGroupProductAttributeGroup() DBOption                                                // 预加载产品包装属性组产品属性组
-	WithProductPackageAttributeGroupProductAttributeGroupMultiLanguageName() DBOption                               // 预加载产品包装属性组产品属性组多语言名称
-	WithProductPackageAttributeGroupProductPackageAttributes() DBOption                                             // 预加载产品包装属性组产品包装属性
-	WithProductPackageAttributeGroupProductPackageAttributesAttribute() DBOption                                    // 预加载产品包装属性组产品包装属性属性
-	WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName() DBOption                   // 预加载产品包装属性组产品包装属性属性多语言名称
-	WithProductPackageImageFile() DBOption                                                                          // 预加载产品包的图片信息
-	WithProductCategory() DBOption                                                                                  // 预加载分类
-	WithDineTax() DBOption                                                                                          // 预加载堂食税
-	WithTakeoutTax() DBOption                                                                                       // 预加载外卖税
+	IProductQueryRepo
+	WithMultiLanguageName() DBOption                                                              // 预加载多语言名称
+	WithProductUnit() DBOption                                                                    // 预加载产品单位
+	WithProductUnitMultiLanguageName() DBOption                                                   // 预加载产品单位多语言名称
+	WithProductBoms() DBOption                                                                    // 预加载产品Boms
+	WithProductBomsProductFlavor() DBOption                                                       // 预加载产品Boms产品口味
+	WithProductBomsProductFlavorMultiLanguageName() DBOption                                      // 预加载产品Boms产品口味多语言名称
+	WithProductBomsProductSauce() DBOption                                                        // 预加载产品Boms产品酱料
+	WithProductBomsProductSauceMultiLanguageName() DBOption                                       // 预加载产品Boms产品酱料多语言名称
+	WithProductPackageAttributeGroup() DBOption                                                   // 预加载产品包装属性组
+	WithProductPackageAttributeGroupProductAttributeGroup() DBOption                              // 预加载产品包装属性组产品属性组
+	WithProductPackageAttributeGroupProductAttributeGroupMultiLanguageName() DBOption             // 预加载产品包装属性组产品属性组多语言名称
+	WithProductPackageAttributeGroupProductPackageAttributes() DBOption                           // 预加载产品包装属性组产品包装属性
+	WithProductPackageAttributeGroupProductPackageAttributesAttribute() DBOption                  // 预加载产品包装属性组产品包装属性属性
+	WithProductPackageAttributeGroupProductPackageAttributesAttributeMultiLanguageName() DBOption // 预加载产品包装属性组产品包装属性属性多语言名称
+	WithProductPackageImageFile() DBOption                                                        // 预加载产品包的图片信息
+	WithProductCategory() DBOption                                                                // 预加载分类
+	WithDineTax() DBOption                                                                        // 预加载堂食税
+	WithTakeoutTax() DBOption                                                                     // 预加载外卖税
 
 	WithProductPackage() DBOption                                                                           // 沽清 预加载产品
 	WithProductPackageMultiLanguageName() DBOption                                                          // 沽清 预加载产品多语言
@@ -43,6 +38,16 @@ type IProductRepo interface {
 	WhereBomUuid(uuid uint64) DBOption                                                                      // 沽清 产品 uuid 查询条件
 	WhereBomIsSoldOut() DBOption                                                                            // 沽清 产品是否售罄
 	UpdateProductBomSoldOut(opts []DBOption, vars map[string]any) error                                     // 沽清 更新产品售罄状态
+}
+
+// IProductQueryRepo 商品查询仓库接口
+type IProductQueryRepo interface {
+	GetProductListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductPackage, int64, error) // 分页获取商品列表
+	GetProductPackageListByUuids(uuids []uint64) ([]model.ProductPackage, error)                                    // 通过uuid列表获取商品列表
+	GetProductCategoryList(opts ...DBOption) ([]model.ProductCategory, error)                                       // 获取产品类别列表
+	GetProduct(opts ...DBOption) (model.ProductPackage, error)                                                      // 获取商品详情
+	GetProductFlavor(opts ...DBOption) (model.ProductFlavor, error)                                                 // 获取商品口味详情
+	GetProductBom(opts ...DBOption) (model.ProductBom, error)                                                       // 获取商品BOM详情
 }
 
 // productRepo 商品仓库

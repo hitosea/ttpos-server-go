@@ -9,6 +9,10 @@ import (
 
 // IProductMustPlanItemRepo 定义必点方案商品仓库接口
 type IProductMustPlanItemRepo interface {
+	IProductMustPlanItemQueryRepo
+}
+
+type IProductMustPlanItemQueryRepo interface {
 	GetProductMustPlanItem(opts ...DBOption) (model.ProductMustPlanItem, error)                  // 查询单个必点方案商品
 	GetProductMustPlanItemList(opts ...DBOption) ([]model.ProductMustPlanItem, error)            // 查询必点方案商品列表
 	GetProductMustPlanItemByPackageUuid(packageUuid uint64) ([]model.ProductMustPlanItem, error) // 通过商品包uuid查询必点方案商品

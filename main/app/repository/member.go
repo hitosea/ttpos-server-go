@@ -11,6 +11,7 @@ import (
 )
 
 type IMemberRepo interface {
+	IMemberQueryRepo
 	WithMemberLevel() DBOption      // Member 预加载会员等级
 	WithMemberCard() DBOption       // Member 预加载会员卡
 	WithMemberCardType() DBOption   // Member 预加载会员卡.卡类型
@@ -19,6 +20,22 @@ type IMemberRepo interface {
 	WhereUuid(uuid uint64) DBOption     // Uuid 条件
 	WhereCardNo(cardNo string) DBOption // 卡号条件
 
+	CreateMember(member *model.Member) error             // 添加会员
+	CreateMemberCard(memberCard *model.MemberCard) error // 给会员发卡
+	CreateMemberAndMemberCard(member model.Member) error // 添加会员并发放会员卡。仅用于数据迁移
+	Update(uuid uint64, vars map[string]any) error       // 更新会员信息
+
+	GetMemberInfoForSaleOrder(ctx context.Context, memberUuid uint64) (*model.Member, error) // 获取会员信息，用于销售订单结账时
+	UpdateProcessed(uuids []uint64) error                                                    // 更新会员积分日志为已处理
+
+	IncConsumptionAmount(uuid uint64, amount float64) error // 增加会员消费金额
+	IncConsumptionCount(uuid uint64) error                  // 增加会员消费次数
+	DecConsumptionAmount(uuid uint64, amount float64) error // 减少会员消费金额
+	DecConsumptionCount(uuid uint64) error                  // 减少会员消费次数
+}
+
+// IMemberQueryRepo 会员查询
+type IMemberQueryRepo interface {
 	GetMember(opts ...DBOption) model.Member // 获取会员
 	GetMemberList(opts ...DBOption) ([]*model.Member, error)
 	GetMemberRecord(opts ...DBOption) (*model.Member, error)            // 获取会员
@@ -33,19 +50,6 @@ type IMemberRepo interface {
 	SearchMember(keyword string) []model.Member                         // 关键字搜索会员
 	CheckMemberExists(phone string) bool                                // 根据手机号检查是否存在
 	CheckLevelExists(uuid uint64) bool                                  // 根据Uuid检查等级是否存在
-
-	CreateMember(member *model.Member) error             // 添加会员
-	CreateMemberCard(memberCard *model.MemberCard) error // 给会员发卡
-	CreateMemberAndMemberCard(member model.Member) error // 添加会员并发放会员卡。仅用于数据迁移
-	Update(uuid uint64, vars map[string]any) error       // 更新会员信息
-
-	GetMemberInfoForSaleOrder(ctx context.Context, memberUuid uint64) (*model.Member, error) // 获取会员信息，用于销售订单结账时
-	UpdateProcessed(uuids []uint64) error                                                    // 更新会员积分日志为已处理
-
-	IncConsumptionAmount(uuid uint64, amount float64) error // 增加会员消费金额
-	IncConsumptionCount(uuid uint64) error                  // 增加会员消费次数
-	DecConsumptionAmount(uuid uint64, amount float64) error // 减少会员消费金额
-	DecConsumptionCount(uuid uint64) error                  // 减少会员消费次数
 }
 
 func NewMemberRepo(db *gorm.DB) IMemberRepo {

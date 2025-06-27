@@ -8,11 +8,15 @@ import (
 )
 
 type IProductPackageRepo interface {
+	IProductPackageQueryRepo
+	CreateProductPackage(productPackage *model.ProductPackage) error
+}
+
+type IProductPackageQueryRepo interface {
 	GetProductPackage(opts ...DBOption) (*model.ProductPackage, error)
 	GetProductPackageBoms(productPackageUuid uint64) (*model.ProductPackage, error) // 获取商品包的库存信息
 	GetProductPackageBaseInfoByBomUuid(flavorBomUuid uint64) (*model.ProductBom, error)
 	GetProductPackageListByUuids(uuids []uint64) ([]*model.ProductPackage, error)
-	CreateProductPackage(productPackage *model.ProductPackage) error
 }
 
 type productPackageRepoImpl struct {

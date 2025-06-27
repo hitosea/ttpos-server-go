@@ -15,15 +15,7 @@ import (
 
 // IDeskRepo 桌台
 type IDeskRepo interface {
-	GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
-	GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) // 通过桌台ID获取桌台信息和销售账单信息
-	GetClientDeskList(source string, status, isBuffet, pageNo, pageSize int) ([]model.Desk, int64, error)
-	GetDesk(opts ...DBOption) (model.Desk, error) // 获取桌台
-	GetDesks(opts ...DBOption) ([]*model.Desk, error)
-	GetSaleBillUuidAndSaleOrderUuid(deskUuid uint64) (uint64, uint64, error) // 获取桌台的账单uuid和第一子单的uuid
-	GetAvailableDeskList() ([]*model.Desk, error)                            // 获取所有空闲的桌台
-	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error)       //
-	GetDeskRecord(deskUuid uint64) (*model.Desk, error)                      // 通过uuid获取桌台的记录信息
+	IDeskQueryRepo
 	UpdateDesk(deskUuid uint64, desk model.Desk) error
 	UpdateDeskRecord(desk model.Desk) error
 	UpdateDeskByMap(deskUuid uint64, vars map[string]any) error // 更新桌台
@@ -34,6 +26,19 @@ type IDeskRepo interface {
 	WhereUuid(uuid uint64) DBOption
 	WhereDeviceUuid(uuid uint64) DBOption
 	WhereIsDisable(isDisable int) DBOption
+}
+
+// IDeskQueryRepo 桌台查询
+type IDeskQueryRepo interface {
+	GetDeskList(pageNo, pageSize int) ([]model.Desk, int64, error)
+	GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) // 通过桌台ID获取桌台信息和销售账单信息
+	GetClientDeskList(source string, status, isBuffet, pageNo, pageSize int) ([]model.Desk, int64, error)
+	GetDesk(opts ...DBOption) (model.Desk, error) // 获取桌台
+	GetDesks(opts ...DBOption) ([]*model.Desk, error)
+	GetSaleBillUuidAndSaleOrderUuid(deskUuid uint64) (uint64, uint64, error) // 获取桌台的账单uuid和第一子单的uuid
+	GetAvailableDeskList() ([]*model.Desk, error)                            // 获取所有空闲的桌台
+	GetDeskInfo(deskUuid uint64, opts ...DBOption) (model.Desk, error)       //
+	GetDeskRecord(deskUuid uint64) (*model.Desk, error)                      // 通过uuid获取桌台的记录信息
 }
 
 func NewDeskRepo(db *gorm.DB) IDeskRepo {

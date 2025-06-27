@@ -10,9 +10,7 @@ import (
 )
 
 type ISaleOrderRepo interface {
-	GetSaleOrder(opts ...DBOption) (model.SaleOrder, error)
-	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
-	GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, error)
+	ISaleOrderQueryRepo
 	UpdateSaleOrder(model *model.SaleOrder) error
 	UpdateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderPointsExchange(saleOrderUuid uint64, payPoints float64, payPointsAmount float64, pointsExchangeRate float64, autoPointsExchange uint) error // 更新销售订单的积分抵扣信息
@@ -21,6 +19,13 @@ type ISaleOrderRepo interface {
 	UpdateOrCreateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error
 	DeleteSaleOrder(saleOrderUuid uint64) error
+}
+
+// ISaleOrderQueryRepo 销售账单查询
+type ISaleOrderQueryRepo interface {
+	GetSaleOrder(opts ...DBOption) (model.SaleOrder, error)
+	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
+	GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, error)
 }
 
 type saleOrderRepo struct {
