@@ -2013,5 +2013,21 @@
     "外送商品价格": "Delivery Product Price",
     "请输入外送商品价格": "Please enter the delivery product price",
     "商品原价": "Original Product Price",
-    "累计消费金额": "Total consumption amount"
+    "累计消费金额": "Total consumption amount",
+    "至少选择3个商品": "Select at least 3 items",
+    "排序不能重复": "Sorting cannot be duplicated",
+    "外送销售": "Delivery sales",
+    "顾客通过在线外卖下单的订单总额": "Total amount of orders placed by customers through online delivery",
+    "外送营收": "Delivery revenue",
+    "顾客通过在线外卖下单的订单总额-外卖订单退款总额-配送费": "Total amount of orders placed by customers via online delivery - total amount of delivery order refunds - delivery fee",
+    "外送退款": "Delivery refund",
+    "外送配送费": "Delivery fee",
+    "外送点餐": "Delivery order",
+    "客户备注：": "Customer note:",
+    "不要香菜和辣椒！到了就敲门，外卖放在门口就行！！！": "No cilantro and peppers, please! Knock on the door when you arrive, just leave the delivery at the door!",
+    "手机号码": "Mobile number",
+    "收货地址": "Delivery address",
+    "这是收货地址这是收货地址这是收货地址这是收货地址这是收货地址": "This is the delivery address, this is the delivery address, this is the delivery address, this is the delivery address, this is the delivery address.",
+    "外送单": "Delivery order",
+    "外卖: 001": "Takeout: 001"
 }

@@ -46,13 +46,12 @@
               {{ items.name }}
             </div>
             <!-- 右边的字段 -->
-            <div v-if="items.label" class="text-box text-box-r" :class="items.num ? 'flex-end' : ''">
+            <div v-if="items.label" class="text-box text-box-r" :class="[items.flexWidthRight ? 'flexWidthRight' : '', items.num ? 'flex-end' : '']">
               <p
                 class="text-box-r-p1"
                 :class="[
                   items.bold ? 'font-bold' : '',
                   items.big ? 'font-big' : '',
-                  items.flexWidth ? 'flexWidth' : '',
                   items.font500 ? 'font-500' : '',
                   items.font700 ? 'font-700' : '',
                   items.textCenter ? 'text-center' : '',
@@ -67,7 +66,6 @@
                 :class="[
                   items.bold ? 'font-bold' : '',
                   items.big ? 'font-big' : '',
-                  items.flexWidth ? 'flexWidth' : '',
                   items.font18 ? 'font18' : '',
                   items.font500 ? 'font-500' : '',
                   items.font700 ? 'font-700' : '',
@@ -173,6 +171,15 @@
           <h4>
             {{ $t('店铺名称') }}
           </h4>
+        </template>
+        <template v-if="title == $t('外送单')">
+          <h2>
+            {{ $t('店铺名称') }}
+          </h2>
+          <img :src="userInfo.logoUrl" alt="" class="logo" />
+          <h2 class="font24" :class="mode != 1 ? 'mb-8' : 'mb-24'">
+            {{ titleName }}
+          </h2>
         </template>
 
         <p
@@ -285,13 +292,12 @@
             >
             </div>
             <!-- 右边的字段 -->
-            <div v-if="items.right != false && mode != items.hide" class="text-box text-box-r" :class="items.num ? 'flex-end' : ''">
+            <div v-if="items.right != false && mode != items.hide" class="text-box text-box-r" :class="[items.flexWidthRight ? 'flexWidthRight' : '', items.num ? 'flex-end' : '']">
               <p
                 class="text-box-r-p1"
                 :class="[
                   items.bold ? 'font-bold' : '',
                   items.big ? 'font-big' : '',
-                  items.flexWidth ? 'flexWidth' : '',
                   items.font24 ? 'font24' : '',
                   items.font22 ? 'font22' : '',
                   items.font18Small ? 'font18Small' : '',
@@ -311,7 +317,6 @@
                 :class="[
                   items.bold ? 'font-bold' : '',
                   items.big ? 'font-big' : '',
-                  items.flexWidth ? 'flexWidth' : '',
                   items.font24 ? 'font24' : '',
                   items.font22 ? 'font22' : '',
                   items.font18Small ? 'font18Small' : '',
@@ -332,7 +337,7 @@
           <img src="@/assets/QRcode.svg" alt="" class="code" />
           <p>{{ $t('请用 Wechat 扫一扫支付') }}</p>
         </div>
-        <div class="brand-box" :class="title == $t('预结账单') ? 'border-top' : ''" v-if="title == $t('结账单') || title == $t('预结账单')"
+        <div class="brand-box" :class="title == $t('预结账单') ? 'border-top' : ''" v-if="title == $t('结账单') || title == $t('预结账单') || title == $t('外送单')"
           >{{ $t('感谢您的光临！本店由') }}{{ brand }}{{ $t('系统提供支持') }}</div
         >
         <template v-if="title == $t('退菜单') && mode == 2">
@@ -459,6 +464,11 @@
         this.details = previewData.fourteen;
         this.storeShow = false;
         this.titleName = $t('桌号/序号/外卖: A01 (4人)');
+      }
+      if (this.title == $t('外送单')) {
+        this.details = previewData.fifteen;
+        this.storeShow = false;
+        this.titleName = $t('外卖: 001');
       }
     },
     methods: {
@@ -795,6 +805,10 @@
   }
 
   .flexWidth {
+    flex: 4;
+  }
+
+  .flexWidthRight {
     flex: 4;
   }
 
