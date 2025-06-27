@@ -692,6 +692,15 @@ class Order extends BaseModelOrder
             'free_order_price' => $data['total_free_order_price'],
             'free_order_num' => $data['total_free_order_num'],
             'recharge_amount' => $data['member_data']['recharge_amount'],
+            // ToDo 外送数据来源
+            'delivery_order_amount' => 0, // 外送订单总额
+            'delivery_order_revenue' => 0, // 外送营收
+            'delivery_order_refund_amount' => 0, // 外送订单退款
+            'delivery_fee' => 0, // 配送费
+            'delivery_order_num' => 0, // 外送订单数
+            'delivery_min_order_price' => 0, // 外送最小金额
+            'delivery_max_order_price' => 0, // 外送最大金额
+            'delivery_avg_order_price' => 0, // 外送平均订单金额
             'total_order_num' => $data['total_order_num'],
             'min_order_price' => $data['min_order_price'],
             'max_order_price' => $data['max_order_price'],
@@ -1911,7 +1920,7 @@ class Order extends BaseModelOrder
         $orderProductModel = (new OrderProductModel);
         $orderProductModel->save($inArr);
         //
-        OrderProductModel::where('order_product_id', $orderProductModel->order_product_id)->update(['main_order_product_id' => $orderProductModel->order_product_id ]);
+        OrderProductModel::where('order_product_id', $orderProductModel->order_product_id)->update(['main_order_product_id' => $orderProductModel->order_product_id]);
         //
         if ($price != $front_price) {
             $data['tablet_product_name_text'] = ProductSkuModel::getNameById($data['product_sku_id']);
@@ -3072,7 +3081,7 @@ class Order extends BaseModelOrder
         if (!$res) {
             $this->error = '请求失败';
             return false;
-        } 
+        }
         $result = json_decode($res, true);
         if (($result['code'] ?? -1) != 0) {
             $this->error = $result['message'] ?? '请求失败';
