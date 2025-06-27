@@ -457,17 +457,17 @@ func (model *SaleOrderProduct) CheckCookingProduct(lang string) (int, string) {
 			}
 		}
 		if bom.ProductBom.IsSauce() {
-			// 商品已经沽清
+			// 小料已经沽清
 			if bom.ProductBom.IsSoldOutStatus() {
 				return constant.CodeOrderCheckProductStockZero, "小料已经售罄"
 			}
-			// 商品已经下架
+			// 小料已经下架
 			if bom.ProductBom.IsDown() {
-				return constant.CodeOrderCheckProductFlavorDown, "小料已经下架"
+				return constant.CodeOrderCheckProductSauceDown, "小料已经下架"
 			}
-			// 商品已经删除
+			// 小料已经删除
 			if bom.ProductBom.IsDelete() {
-				return constant.CodeOrderCheckProductFlavorDown, "小料已经删除"
+				return constant.CodeOrderCheckProductSauceDown, "小料已经删除"
 			}
 			// 下单商品数量超过库存数量
 			// 每个订单商品一个小料只消耗一个小料库存

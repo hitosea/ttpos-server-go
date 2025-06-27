@@ -12,6 +12,7 @@ type IProductBomRepo interface {
 	GetProductBom(opts ...DBOption) (*model.ProductBom, error)
 	GetProductBoms(opts ...DBOption) ([]*model.ProductBom, error)
 	GetFlavorProductBomByUuid(uuid uint64) (*model.ProductBom, error)
+	GetSauceProductBomByUuid(uuid uint64) (*model.ProductBom, error) // 获取小料商品信息
 	GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
 	GetProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
 	UpdateProductBomStockNum(warehouseOutFormItems []*model.WarehouseOutFormItem) error // 更新规格商品或小料的库存数量
@@ -80,8 +81,23 @@ func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.Prod
 	return productBom, nil
 }
 
+// GetSauceProductBomByUuid 获取小料商品信息
+func (r *productBomRepoImpl) GetSauceProductBomByUuid(uuid uint64) (*model.ProductBom, error) {
+	productBom, err := r.GetProductBom(
+		CommonRepo.WhereByUuid(uuid),
+		CommonRepo.Preload(WithPreload{
+			Query: "ProductSauce.MultiLanguageName",
+		}),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBom, nil
+}
+
 func (r *productBomRepoImpl) GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error) {
 	productBoms, err := r.GetProductBoms(
+		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereInUuids(uuids),
 		CommonRepo.Preload(WithPreload{
 			Query: "ProductSauce.MultiLanguageName",

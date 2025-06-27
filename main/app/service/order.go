@@ -4402,6 +4402,26 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			if errSauceProductBomList != nil {
 				return nil, errSauceProductBomList
 			}
+			if len(sauceProductBomList) != len(product.SauceProductBomUuidList) {
+				sauceUuidMap := make(map[uint64]struct{})
+				for _, uuid := range product.SauceProductBomUuidList {
+					sauceUuidMap[uuid] = struct{}{}
+				}
+				for _, bom := range sauceProductBomList {
+					delete(sauceUuidMap, bom.Uuid)
+				}
+				names := make([]string, 0)
+				for uuid := range sauceUuidMap {
+					bom, err := repository.NewProductBomRepo(db).GetSauceProductBomByUuid(uuid)
+					if err != nil {
+						return nil, errors.WithMessage(err)
+					}
+					sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+					names = append(names, sauceName)
+				}
+				tipStr := i18n.Translate(ctx.GetLanguage(), "加料已删除")
+				return nil, errors.New(strings.Join(names, ",") + tipStr)
+			}
 			for i, bom := range sauceProductBomList {
 				sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
 				if bom.GetStockNum() < float64(product.Num) {
