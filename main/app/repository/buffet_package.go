@@ -1,12 +1,8 @@
 package repository
 
 import (
-	"fmt"
-	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/pkg/cache"
-	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -14,8 +10,6 @@ import (
 // IBuffetPackageRepo 自助餐套餐
 type IBuffetPackageRepo interface {
 	GetBuffetPackage(opts ...DBOption) (model.BuffetPackage, error) // 获取自助餐套餐
-	GetCacheBuffetPackage(uuid uint64) (model.BuffetPackage, error) // 获取缓存自助餐套餐
-	WhereUuid(uuid uint64) DBOption                                 // 通过uuid查询
 }
 
 func NewBuffetPackageRepo(db *gorm.DB) IBuffetPackageRepo {
@@ -47,22 +41,4 @@ func (r *BuffetPackageRepoImpl) GetBuffetPackage(opts ...DBOption) (model.Buffet
 	}
 	err := db.First(&buffetPackage).Error
 	return buffetPackage, errors.WithMessage(err)
-}
-
-// GetCacheBuffetPackage 获取自助餐套餐
-func (r *BuffetPackageRepoImpl) GetCacheBuffetPackage(uuid uint64) (model.BuffetPackage, error) {
-	cacheKey := fmt.Sprintf("BUFFET_PACKAGE_CACHE:%v", uuid)
-	cacheValue, ok := cache.Global.Get(cacheKey)
-	if ok {
-		buffetPackage := model.BuffetPackage{}
-		utils.JsonToStruct(cacheValue.(string), &buffetPackage)
-		return buffetPackage, nil
-	} else {
-		buffetPackage, err := r.GetBuffetPackage(r.WhereUuid(uuid))
-		if err != nil {
-			return model.BuffetPackage{}, errors.WithMessage(err)
-		}
-		cache.Global.Set(cacheKey, utils.ToJson(buffetPackage), 6*time.Hour)
-		return buffetPackage, nil
-	}
 }

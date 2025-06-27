@@ -8,9 +8,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/config"
-	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
-	"ttpos-server-go/pkg/utils"
 
 	"gorm.io/gorm"
 )
@@ -21,7 +19,6 @@ type IDeskRepo interface {
 	GetDeskAndSaleBillByDeskUuid(deskUuid uint64) (model.Desk, error) // 通过桌台ID获取桌台信息和销售账单信息
 	GetClientDeskList(source string, status, isBuffet, pageNo, pageSize int) ([]model.Desk, int64, error)
 	GetDesk(opts ...DBOption) (model.Desk, error) // 获取桌台
-	GetCacheDesk(uuid uint64) (model.Desk, error) // 获取缓存桌台
 	GetDesks(opts ...DBOption) ([]*model.Desk, error)
 	GetSaleBillUuidAndSaleOrderUuid(deskUuid uint64) (uint64, uint64, error) // 获取桌台的账单uuid和第一子单的uuid
 	GetAvailableDeskList() ([]*model.Desk, error)                            // 获取所有空闲的桌台
@@ -128,24 +125,6 @@ func (r *deskRepo) GetDesk(opts ...DBOption) (model.Desk, error) {
 	}
 	err := db.First(&desk).Error
 	return desk, errors.WithMessage(err)
-}
-
-// GetCacheDesk 获取缓存桌台
-func (r *deskRepo) GetCacheDesk(uuid uint64) (model.Desk, error) {
-	cacheKey := fmt.Sprintf("DESK_CACHE:%v", uuid)
-	cacheValue, ok := cache.Global.Get(cacheKey)
-	if ok {
-		desk := model.Desk{}
-		utils.JsonToStruct(cacheValue.(string), &desk)
-		return desk, nil
-	} else {
-		desk, err := r.GetDesk(r.WhereUuid(uuid))
-		if err != nil {
-			return model.Desk{}, errors.WithMessage(err)
-		}
-		cache.Global.Set(cacheKey, utils.ToJson(desk), 10*time.Hour)
-		return desk, nil
-	}
 }
 
 func (r *deskRepo) GetDesks(opts ...DBOption) ([]*model.Desk, error) {

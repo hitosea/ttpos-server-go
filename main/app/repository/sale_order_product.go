@@ -24,6 +24,7 @@ type ISaleOrderProductRepo interface {
 	DeleteSaleOrderProductBySaleBillUuid(saleBillUuid uint64) error                                                                  // 根据销售账单uuid删除销售订单商品。delete_time赋值为当前时间
 	Update(data map[string]interface{}, opts ...DBOption) error                                                                      // 更新订单商品
 	GetProductPackageDetail(saleBillUuid uint64, saleOrderUuid uint64, productPackageUuid uint64) ([]*model.SaleOrderProduct, error) // 获取商品选购详情
+	GetSaleOrderProducts(opts ...DBOption) ([]*model.SaleOrderProduct, error)                                                        // 根据销售订单uuid获取销售订单商品
 }
 
 type saleOrderProductRepo struct {

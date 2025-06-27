@@ -1335,6 +1335,7 @@ func (r *orderRepo) GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, err
 func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error) {
 	startTime := time.Now()
 
+	cacheDataRepo := NewCacheDataRepo(r.db)
 	multiLanguageNameUuids := []uint64{}
 	// saleBillName := model.GetTableName("sale_bill")
 	// saleBillSettingName := model.GetTableName("sale_bill_setting")
@@ -1349,15 +1350,42 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 		// ==================== 销售账单的账单设置 ====================
 		Preload("SaleBillSetting").
 		// ==================== 销售账单的订单信息 ====================
-		Preload("SaleOrders", func(db *gorm.DB) *gorm.DB {
-			return db.Where("delete_time = ?", constant.NotDeleted)
-		})
+		Preload("SaleOrders", CommonRepo.DBOption(CommonRepo.WhereBySoftDelete())).
+		// ==================== 销售账单的优惠券信息 ====================
+		Preload("SaleOrders.Coupons", CommonRepo.DBOption(CommonRepo.WhereBySoftDelete())).
+		Preload("SaleOrders.Coupons.MarketingCoupon").
+		Preload("SaleOrders.Coupons.MemberCoupon").
+		// ==================== 销售账单的支付单信息 ====================
+		Preload("SaleOrders.PaymentOrders",
+			CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+			CommonRepo.DBOption(CommonRepo.WhereByStatus(constant.PaymentOrderStatusPaid)),
+		).
+		Preload("SaleOrders.PaymentOrders.PaymentMethod").
+		Preload("SaleOrders.PaymentOrders.ReturnOrderAmounts").
+		Preload("SaleOrders.PaymentOrders.ReturnOrderAmounts.PaymentMethod").
+		// ==================== 销售账单的会员信息 ====================
+		Preload("SaleOrders.Member.MemberLevel").
+		Preload("SaleOrders.Member.MemberCard.MemberCardType").
+		Preload("SaleOrders.Member.MemberBalanceLog").
+		// ==================== 销售账单的退款信息 ====================
+		Preload("SaleOrders.SaleOrderProducts", CommonRepo.DBOption(CommonRepo.WhereBySoftDelete())).
+		Preload("SaleOrders.SaleOrderProducts.ReturnOrderProducts")
+		// Preload("SaleOrders.SaleOrderProducts.ProductPackage").
+		// Preload("SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName")
+
 	if result := db.First(&saleBill); result.Error != nil {
 		return saleBill, fmt.Errorf("GetSaleBill: %v", result.Error)
 	}
+
+	// _, err := cacheDataRepo.GetCacheAllProductPackage(saleBill.BuffetPackage1Uuid)
+	// if err != nil {
+	// 	return saleBill, fmt.Errorf("GetSaleBill: %v", err)
+	// }
+	// // fmt.Println(len(productPackages))
+
 	// 查询桌台
 	if saleBill.DeskUuid != 0 {
-		if desk, err := NewDeskRepo(r.db).GetCacheDesk(saleBill.DeskUuid); err == nil {
+		if desk, err := NewCacheDataRepo(r.db).GetCacheDesk(saleBill.DeskUuid); err == nil {
 			saleBill.Desk = &desk
 		} else {
 			return saleBill, fmt.Errorf("GetSaleBill: %v", err)
@@ -1365,13 +1393,23 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 	}
 	// 查询自助餐套餐1
 	if saleBill.BuffetPackage1Uuid != 0 {
-		if buffetPackage1, err := NewBuffetPackageRepo(r.db).GetCacheBuffetPackage(saleBill.BuffetPackage1Uuid); err == nil {
+		if buffetPackage1, err := cacheDataRepo.GetCacheBuffetPackage(saleBill.BuffetPackage1Uuid); err == nil {
 			multiLanguageNameUuids = append(multiLanguageNameUuids, buffetPackage1.MultiLanguageNameUuid)
 			// 加载自助餐套餐1顾客类型价格。用于判断顾客价格是否改变
-			// buffetCustomerTypePrices := buffetPackage1.BuffetCustomerTypePrices // 顾客类型价格
-			// // 加载自助餐套餐1商品bom。用于判断加购的商品是否属于自助餐套餐1
-			// buffetProducts := buffetPackage1.BuffetProducts
+			buffetCustomerTypePrices, err := cacheDataRepo.GetCacheBuffetCustomerTypePrices(buffetPackage1.Uuid)
+			if err != nil {
+				return saleBill, fmt.Errorf("GetSaleBill: %v", err)
+			}
+			buffetPackage1.BuffetCustomerTypePrices = buffetCustomerTypePrices
 
+			// 加载自助餐套餐1商品。用于判断加购的商品是否属于自助餐套餐1
+			buffetProducts, err := cacheDataRepo.GetCacheBuffetProducts(buffetPackage1.Uuid)
+			if err != nil {
+				return saleBill, fmt.Errorf("GetSaleBill: %v", err)
+			}
+			buffetPackage1.BuffetProducts = buffetProducts
+
+			// 赋值自助餐套餐1
 			saleBill.BuffetPackage1 = &buffetPackage1
 		} else {
 			return saleBill, fmt.Errorf("GetSaleBill: %v", err)
@@ -1379,18 +1417,48 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 	}
 	// 查询自助餐套餐2
 	if saleBill.BuffetPackage2Uuid != 0 {
-		if buffetPackage2, err := NewBuffetPackageRepo(r.db).GetCacheBuffetPackage(saleBill.BuffetPackage2Uuid); err == nil {
+		if buffetPackage2, err := cacheDataRepo.GetCacheBuffetPackage(saleBill.BuffetPackage2Uuid); err == nil {
 			multiLanguageNameUuids = append(multiLanguageNameUuids, buffetPackage2.MultiLanguageNameUuid)
-			// // 加载自助餐套餐2顾客类型价格。用于判断顾客价格是否改变
-			// buffetCustomerTypePrices := buffetPackage2.BuffetCustomerTypePrices // 顾客类型价格
-			// // 加载自助餐套餐2商品bom。用于判断加购的商品是否属于自助餐套餐2
-			// buffetProducts := buffetPackage2.BuffetProducts
+			// 加载自助餐套餐2顾客类型价格。用于判断顾客价格是否改变
+			buffetCustomerTypePrices, err := cacheDataRepo.GetCacheBuffetCustomerTypePrices(buffetPackage2.Uuid)
+			if err != nil {
+				return saleBill, fmt.Errorf("GetSaleBill: %v", err)
+			}
+			buffetPackage2.BuffetCustomerTypePrices = buffetCustomerTypePrices
 
+			// 加载自助餐套餐2商品。用于判断加购的商品是否属于自助餐套餐2
+			buffetProducts, err := cacheDataRepo.GetCacheBuffetProducts(buffetPackage2.Uuid)
+			if err != nil {
+				return saleBill, fmt.Errorf("GetSaleBill: %v", err)
+			}
+			buffetPackage2.BuffetProducts = buffetProducts
+
+			// 赋值自助餐套餐2
 			saleBill.BuffetPackage2 = &buffetPackage2
 		} else {
 			return saleBill, fmt.Errorf("GetSaleBill: %v", err)
 		}
 	}
+	// 查询销售订单商品
+	if len(saleBill.SaleOrders) > 0 {
+		saleOrderProducts, err := NewSaleOrderProductRepo(r.db).GetSaleOrderProducts(
+			CommonRepo.WhereBySaleBillUuid(saleBillUuid),
+			CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+		)
+		if err != nil {
+			return saleBill, fmt.Errorf("GetSaleBill: %v", err)
+		}
+		for _, saleOrderProduct := range saleOrderProducts {
+			for _, saleOrder := range saleBill.SaleOrders {
+				if saleOrder.Uuid == saleOrderProduct.SaleOrderUuid {
+					multiLanguageNameUuids = append(multiLanguageNameUuids, saleOrderProduct.MultiLanguageNameUuid)
+					// 赋值销售订单商品
+					saleOrder.SaleOrderProducts = append(saleOrder.SaleOrderProducts, saleOrderProduct)
+				}
+			}
+		}
+	}
+
 	// 查询语言
 	if len(multiLanguageNameUuids) > 0 {
 		var multiLanguageNames []model.MultiLanguageName
@@ -1405,18 +1473,18 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			if saleBill.BuffetPackage2 != nil && saleBill.BuffetPackage2.MultiLanguageNameUuid == multiLanguageName.Uuid {
 				saleBill.BuffetPackage2.MultiLanguageName = multiLanguageName
 			}
+			// 商品多语言名称
+			for _, saleOrder := range saleBill.SaleOrders {
+				for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+					if saleOrderProduct.MultiLanguageNameUuid == multiLanguageName.Uuid {
+						saleOrderProduct.MultiLanguageName = &multiLanguageName
+					}
+				}
+			}
 		}
 	}
 
-	// // 查询桌台
-	// db = r.db.Model(&model.MultiLanguageName{}).
-	// 	Where("uuid in ?", saleBill.DeskUuid, saleBill.BuffetPackage1Uuid, saleBill.BuffetPackage2Uuid).
-	// 	Where("delete_time = ?", constant.NotDeleted)
-	// if result := db.Find(&saleBill); result.Error != nil {
-	// 	return saleBill, fmt.Errorf("GetSaleBill: %v", result.Error)
-	// }
-
-	fmt.Println(utils.ToJsonString(saleBill))
+	// fmt.Println(utils.ToJsonString(saleBill))
 	fmt.Printf("GetSaleBillAllInfo 第一次查询耗时: %v\n", time.Since(startTime))
 
 	queryStartTime := time.Now()

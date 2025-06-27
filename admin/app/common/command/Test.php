@@ -59,8 +59,13 @@ class Test extends Command
     protected function execute(Input $input, Output $output)
     {
 
-        // (int)ceil(intval(strlen($content) / $speed) / 1000)
-        dump((int)ceil(intval(367400 / 30) / 1000));
+      
+        $s = microtime(true);
+        $res = Db::table('shop8609817471094784.ttpos_sale_order_product')->where('sale_bill_uuid', 3672098170077185)->select();
+
+        dump( $res );
+        $e = microtime(true);
+        dump( $e - $s );
         die;
         request()->appId = 1724054105;
         
