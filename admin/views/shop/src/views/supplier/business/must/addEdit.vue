@@ -200,6 +200,7 @@
     @close="handleProductSelectorClose"
     selectorType="all"
     type="product"
+    num_type="1"
     :selectedProductIds="select_product_ids"
   >
   </ProductSelector>

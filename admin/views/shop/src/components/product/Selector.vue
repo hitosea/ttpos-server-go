@@ -151,6 +151,11 @@
       type: String,
       default: '',
     },
+    // 计量类型：0-所有；1-整数；2-小数
+    num_type: {
+      type: Number,
+      default: 0,
+    },
     selectedProductIds: {
       type: Array,
       default: () => [],
@@ -373,6 +378,7 @@
           category_ids,
           label_ids,
           type: props.type,
+          num_type: props.num_type,
         },
         true
       );
