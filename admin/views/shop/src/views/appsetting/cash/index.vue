@@ -172,8 +172,10 @@
               </template>
               <SvgIcon class="form-icon" name="man"></SvgIcon>
             </el-tooltip>
-            <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
-            <el-checkbox v-if="item.platform != 0" :model-value="item.is_main == 1" @change="setMain(item)" style="margin-left: 20px" size="small">{{ $t('设为主收银机') }}</el-checkbox>
+            <div class="w600">
+                <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
+                <el-checkbox v-if="item.platform != 0" :model-value="item.is_main == 1" @change="setMain(item)" style="margin-left: 20px" size="small">{{ $t('设为主收银机') }}</el-checkbox>
+            </div>
           </div>
           <p v-else>{{ $t('暂无设备') }}</p>
         </el-form-item>
@@ -182,7 +184,10 @@
             <div class="max-w460 input-ss">
               <autoTips :tooltipMaxWidth="460" :content="(item.remark ? item.remark : '') + `(${item.key})`">{{ (item.remark ? item.remark : '') + `(${item.key})` }}</autoTips>
             </div>
-            <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
+            <div class="w600">  
+                <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
+                <el-checkbox v-if="item.platform != 0" :model-value="item.is_main == 1" @change="setMain(item)" style="margin-left: 20px" size="small">{{ $t('设为主收银机') }}</el-checkbox>
+            </div>
           </div>
           <p v-else>{{ $t('暂无设备') }}</p>
         </el-form-item>
@@ -573,6 +578,9 @@
           margin-left: 8px;
         }
       }
+    }
+    .w600 {
+      width: 660px;
     }
   }
 </style>
