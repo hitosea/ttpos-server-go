@@ -113,7 +113,7 @@ func (r *memberCouponRepo) CreateMemberCoupon(memberCoupon *model.MemberCoupon) 
 
 // CreateMemberCouponRecord 添加会员优惠券使用记录
 func (r *memberCouponRepo) CreateMemberCouponRecord(memberCouponRecord model.MemberCouponUseRecord) error {
-	return r.db.Create(memberCouponRecord).Error
+	return r.db.Create(&memberCouponRecord).Error
 }
 
 // Update 更新会员优惠券信息
