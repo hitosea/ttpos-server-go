@@ -1753,5 +1753,13 @@
     "配送费": "Teslimat Ücreti",
     "出菜单": "Menü çıkışı",
     "桌号/序号/外卖: A01 (4人)": "Masa/Numara/Paket Servis: A01 (4 kişi)",
-    "请停止制作以上菜品！": "Yukarıdaki yemeklerin yapımını durdurun lütfen!"
+    "请停止制作以上菜品！": "Yukarıdaki yemeklerin yapımını durdurun lütfen!",
+    "反结账退还": "Ödeme iptali ve iade",
+    "商品推荐": "Ürün Tavsiyesi",
+    "推荐商品管理": "Önerilen Ürün Yönetimi",
+    "设置店铺推荐商品，提升商品曝光度和销量": "Mağaza önerilen ürünlerini ayarlayın, ürün görünürlüğünü ve satışlarını artırın",
+    "是否开启推荐": "Öneriyi etkinleştirmek istiyor musunuz?",
+    "请选择是否开启推荐": "Tavsiyeyi açmak isteyip istemediğinizi seçin",
+    "推荐标题": "Önerilen Başlık",
+    "请输入推荐标题": "Lütfen önerilen başlığı girin"
 }
