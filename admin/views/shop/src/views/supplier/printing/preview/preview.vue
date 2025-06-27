@@ -468,7 +468,7 @@
       if (this.title == $t('外送单')) {
         this.details = previewData.fifteen;
         this.storeShow = false;
-        this.titleName = $t('外卖: 001');
+        this.titleName = $t('外卖: 0001');
       }
     },
     methods: {

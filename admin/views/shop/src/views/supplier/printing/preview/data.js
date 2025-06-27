@@ -1926,7 +1926,7 @@ export const previewData = {
     [
       {
         name: $t('订单号'),
-        label: 2024012536958425,
+        label: 'TP2024012536958425',
       },
       {
         name: $t('时间'),
