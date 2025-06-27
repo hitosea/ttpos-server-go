@@ -25,7 +25,7 @@
           <el-button class="!mr-0" type="primary" :disabled="isFetching" @click="handleSearch">{{ $t('查询') }}</el-button>
         </el-form-item>
         <el-form-item>
-          <el-button v-permission="" icon="download" @click="handleExport">{{ $t('导出报表') }}</el-button>
+          <el-button icon="download" @click="handleExport">{{ $t('导出报表') }}</el-button>
         </el-form-item>
       </el-form>
     </div>

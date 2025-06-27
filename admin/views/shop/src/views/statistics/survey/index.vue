@@ -193,7 +193,53 @@
           {{ this.$formatPrice(detail.recharge_amount || 0) }}
         </h4>
       </div>
+
+      <div class="data-box">
+        <div class="data-box-title">
+          <h3>{{ $t('外送销售') }}</h3>
+          <el-tooltip class="item" effect="dark" placement="bottom">
+            <template #content>
+              <span>{{ $t('顾客通过在线外卖下单的订单总额') }}</span>
+            </template>
+            <SvgIcon class="data-box-icon" name="icon6"></SvgIcon>
+          </el-tooltip>
+        </div>
+        <h4>
+          {{ this.$formatPrice(detail.delivery_order_amount || 0) }}
+        </h4>
+      </div>
+      <div class="data-box">
+        <div class="data-box-title">
+          <h3>{{ $t('外送营收') }}</h3>
+          <el-tooltip class="item" effect="dark" placement="bottom">
+            <template #content>
+              <span>{{ $t('顾客通过在线外卖下单的订单总额-外卖订单退款总额-配送费') }}</span>
+            </template>
+            <SvgIcon class="data-box-icon" name="icon6"></SvgIcon>
+          </el-tooltip>
+        </div>
+        <h4>
+          {{ this.$formatPrice(detail.delivery_order_revenue || 0) }}
+        </h4>
+      </div>
+      <div class="data-box">
+        <div class="data-box-title">
+          <h3>{{ $t('外送退款') }}</h3>
+        </div>
+        <h4>
+          {{ this.$formatPrice(detail.delivery_order_refund_amount || 0) }}
+        </h4>
+      </div>
+      <div class="data-box">
+        <div class="data-box-title">
+          <h3>{{ $t('外送配送费') }}</h3>
+        </div>
+        <h4>
+          {{ this.$formatPrice(detail.delivery_fee || 0) }}
+        </h4>
+      </div>
     </div>
+
 
     <div class="area-data">
       <div class="area-data-item">
@@ -302,6 +348,28 @@
                 <h3>{{ $t('平均订单金额') }}</h3>
                 <h4>
                   {{ this.$formatPrice(detail.cashier_avg_order_price || 0) }}
+                </h4>
+              </div>
+            </div>
+          </div>
+          <div class="box-main">
+            <h4>{{ $t('外送点餐') }}</h4>
+            <div class="main-body">
+              <div class="main-div">
+                <h3>{{ $t('订单数') }}</h3>
+                <h4>{{ this.$formatPrice(detail.delivery_order_num || 0) }}</h4>
+              </div>
+
+              <div class="main-div">
+                <h3>{{ $t('最小/大订单金额') }}</h3>
+                <h4>
+                  {{ this.$formatPrice(detail.delivery_min_order_price || 0) + '/' + this.$formatPrice(detail.delivery_max_order_price || 0) }}
+                </h4>
+              </div>
+              <div class="main-div">
+                <h3>{{ $t('平均订单金额') }}</h3>
+                <h4>
+                  {{ this.$formatPrice(detail.delivery_avg_order_price || 0) }}
                 </h4>
               </div>
             </div>
