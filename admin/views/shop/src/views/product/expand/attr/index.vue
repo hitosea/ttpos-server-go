@@ -97,7 +97,6 @@
         :selectedProductIds="model?.product_ids ?? []"
       >
       </ProductSelector>
-
       <GroupManager v-if="openGroupManager" :open="openGroupManager" @close="handleGroupManagerClose" />
     </div>
   </div>

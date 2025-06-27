@@ -93,6 +93,11 @@
               {{ this.$formatPrice(scope.row.net_recharge_money) }}
             </template>
           </el-table-column>
+          <el-table-column prop="accumulated_consumption_amount" :label="$t('累计消费金额')" width="160">
+            <template #default="scope">
+              {{ this.$formatPrice(scope.row.accumulated_consumption_amount) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="points" :label="$t('积分')">
             <template #default="scope">
               {{ this.$priceTwo(scope.row.points) }}

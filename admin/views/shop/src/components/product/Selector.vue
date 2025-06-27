@@ -151,6 +151,11 @@
       type: String,
       default: '',
     },
+    // 计量类型：0-所有；1-整数；2-小数
+    num_type: {
+      type: Number,
+      default: 0,
+    },
     selectedProductIds: {
       type: Array,
       default: () => [],
@@ -373,6 +378,7 @@
           category_ids,
           label_ids,
           type: props.type,
+          num_type: props.num_type,
         },
         true
       );
@@ -432,7 +438,10 @@
       if (selectedProductsTmp.value.length >= props.maxCount) {
         // 超过则取消选中并提示
         productsTableRef.value.toggleRowSelection(node, false);
-        proxy.$message.warning(proxy.$t('最多只能选择{0}个商品', [props.maxCount]));
+        proxy.$ElMessage({
+          message: proxy.$t('最多只能选择' + props.maxCount + $t('个商品')),
+          type: 'warning',
+        });
         return;
       }
 
@@ -459,7 +468,10 @@
 
     if (canSelectCount <= 0) {
       // 已满则提示
-      proxy.$message.warning(proxy.$t('最多只能选择{0}个商品', [props.maxCount]));
+      proxy.$ElMessage({
+        message: proxy.$t('最多只能选择' + props.maxCount + $t('个商品')),
+        type: 'warning',
+      });
       // 清除全选状态
       nextTick(() => productsTableRef.value.clearSelection());
       return;
@@ -490,7 +502,10 @@
           }
         });
       });
-      proxy.$message.warning(proxy.$t('最多只能选择{0}个商品，已为您选择{1}个', [props.maxCount, toSelect.length]));
+      proxy.$ElMessage({
+        message: proxy.$t('最多只能选择' + props.maxCount + $t('个商品')),
+        type: 'warning',
+      });
     }
   };
 

@@ -252,6 +252,10 @@ let SettingApi = {
     return request._post('/shop/setting.Business/qrcode', data, errorback);
   },
 
+  getCompanyQrcode(data, errorback) {
+    return request._post('/shop/setting.Business/companyQrcode', data, errorback);
+  },
+
   /*免单/赠菜原因*/
   getFreeTag(data, errorback) {
     return request._get('/shop/setting.Business/freeTag', data, errorback);

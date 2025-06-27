@@ -353,6 +353,13 @@ class OrderScheme extends BaseModel
                     $product->force()->delete();
                 }
                 $productIds = is_array($params['product_ids']) ? $params['product_ids'] : explode(',', $params['product_ids']);
+
+                $numType0Count = Product::where('uuid', 'in', $productIds)->where('num_type', 0)->count();
+                if ($numType0Count != count($productIds)) {
+                    $this->error = '必点方案不能包含按小数计价商品';
+                    return false;
+                }
+
                 $productData = array_map(fn($id) => [
                     'product_must_plan_uuid' => $this->uuid,
                     'product_package_uuid' => $id,
