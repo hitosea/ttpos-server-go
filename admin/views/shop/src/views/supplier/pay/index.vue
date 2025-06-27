@@ -2,40 +2,6 @@
   <div class="supplier">
     <!--内容-->
     <div class="supplier-content">
-      <!--
-        2024年11月13日11:25:50 v1.0.9 去掉了这里  
-      <div class="switch-box">
-        <div class="switch-main">
-          <p>{{ $t('现金：') }}</p>
-          <el-switch
-            :disabled="!this.$filter.isAuth('/supplier/pay/state')"
-            :model-value="payment.is_cash"
-            :active-value="'1'"
-            :inactive-value="'0'"
-            @click="changePay('is_cash', payment.is_cash)"
-          ></el-switch>
-        </div>
-        <div class="switch-main" v-if="is_open_member == '1'">
-          <p>{{ $t('余额：') }}</p>
-          <el-switch
-            :disabled="!this.$filter.isAuth('/supplier/pay/state')"
-            :model-value="payment.is_balance"
-            :active-value="'1'"
-            :inactive-value="'0'"
-            @click="changePay('is_balance', payment.is_balance)"
-          ></el-switch>
-        </div>
-        <div class="switch-main">
-          <p>{{ $t('其他方式：') }}</p>
-          <el-switch
-            :disabled="!this.$filter.isAuth('/supplier/pay/state')"
-            :model-value="payment.is_other"
-            :active-value="'1'"
-            :inactive-value="'0'"
-            @click="changePay('is_other', payment.is_other)"
-          ></el-switch>
-        </div>
-      </div> -->
       <div class="common-level-rail">
         <el-button size="small" type="primary" @click="addClick" v-auth="'/supplier/pay/add'">{{ $t('添加') }}</el-button>
       </div>

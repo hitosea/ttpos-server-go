@@ -159,7 +159,7 @@
 
 <script>
   import PorductApi from '@/api/product.js';
-  import ProductSelector from '@/components/product/selector.vue';
+  import ProductSelector from '@/components/product/Selector.vue';
   import { useUserStore } from '@/store/index';
   import { languageStore } from '@/store/model/language';
   import defaultImg from '@/assets/img/default.png';
