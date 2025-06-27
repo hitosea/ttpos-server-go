@@ -152,7 +152,11 @@
       default: '',
     },
     // 计量类型：0-所有；1-整数；2-小数
-    num_type: {
+    numType: {
+      type: Number,
+      default: 0,
+    },
+    showDeliveryRequired: {
       type: Number,
       default: 0,
     },
@@ -378,7 +382,8 @@
           category_ids,
           label_ids,
           type: props.type,
-          num_type: props.num_type,
+          num_type: props.numType,
+          show_delivery_required: props.showDeliveryRequired,
         },
         true
       );

@@ -50,6 +50,7 @@
       :open="openProductSelector"
       @close="handleProductSelectorClose"
       selectorType="all"
+      :showDeliveryRequired="1"
       :selectedProductIds="selectedProductIds"
     >
     </ProductSelector>
