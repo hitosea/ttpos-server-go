@@ -17,7 +17,7 @@
         </el-form-item>
       </el-form>
       <div>
-        <el-button class="!mr-0" v-permission="" type="primary" icon="plus" @click="handleAdd">{{ $t('添加商家') }}</el-button>
+        <el-button class="!mr-0" v-permission="['admin_delivery_company']" type="primary" icon="plus" @click="handleAdd">{{ $t('添加商家') }}</el-button>
       </div>
     </div>
     <!-- 表格 -->
@@ -37,12 +37,19 @@
       </el-table-column>
       <el-table-column prop="delivery_status" :label="$t('状态')" min-width="120">
         <template #default="scope">
-          <el-switch :model-value="scope.row.delivery_status" :loading="editLoading" :active-value="1" :inactive-value="0" @change="handleStatus(scope.row)"></el-switch>
+          <el-switch
+            v-permission="['admin_shop_updateStatus']"
+            :model-value="scope.row.delivery_status"
+            :loading="editLoading"
+            :active-value="1"
+            :inactive-value="0"
+            @change="handleStatus(scope.row)"
+          ></el-switch>
         </template>
       </el-table-column>
       <el-table-column fixed="right" :label="$t('操作')" width="150">
         <template #default="scope">
-          <el-button type="primary" link @click="handleEdit(scope.row)">
+          <el-button type="primary" v-permission="['admin_delivery_company']" link @click="handleEdit(scope.row)">
             {{ $t('编辑') }}
           </el-button>
         </template>
