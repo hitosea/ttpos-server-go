@@ -867,6 +867,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			if !isSateGive && saleOrder.CustomAmount == constant.SaleOrderCustomAmountCancel {
 				orderDiscount = orderDiscount.Sub(orderGiveAmount)
 			}
+			if isSateGive && saleOrder.CustomAmount != constant.SaleOrderCustomAmountCancel {
+				orderDiscount = orderDiscount.Add(orderGiveAmount)
+			}
 		}
 
 		// 销售商品
