@@ -864,8 +864,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			orderDiscount = orderDiscount.Add(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee))
 			orderServiceFee = decimal.NewFromFloat(saleOrder.ServiceFee)
 			// 赠菜不计入优惠折扣
-			if !isSateGive {
+			if !isSateGive && saleOrder.CustomAmount == constant.SaleOrderCustomAmountCancel {
 				orderDiscount = orderDiscount.Sub(orderGiveAmount)
+			}
+			if isSateGive && saleOrder.CustomAmount != constant.SaleOrderCustomAmountCancel {
+				orderDiscount = orderDiscount.Add(orderGiveAmount)
 			}
 		}
 
