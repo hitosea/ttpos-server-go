@@ -114,6 +114,23 @@ func (c *redisCache) Get(key string) (interface{}, bool) {
 	return val, true
 }
 
+func (c *redisCache) GetBytes(key string) ([]byte, bool) {
+	ctx := context.Background()
+	if c.clusterClient != nil {
+		val, err := c.clusterClient.Get(ctx, key).Bytes()
+		if err != nil {
+			return nil, false
+
+		}
+		return val, true
+	}
+	val, err := c.client.Get(ctx, key).Bytes()
+	if err != nil {
+		return nil, false
+	}
+	return val, true
+}
+
 func (c *redisCache) Del(key ...string) {
 	if c.clusterClient != nil {
 		c.clusterClient.Del(context.Background(), key...)

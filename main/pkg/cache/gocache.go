@@ -28,6 +28,10 @@ func (c *goCache) Get(key string) (interface{}, bool) {
 	return c.cache.Get(key)
 }
 
+func (c *goCache) GetBytes(key string) ([]byte, bool) {
+	return nil, false
+}
+
 func (c *goCache) Del(keys ...string) {
 	for _, key := range keys {
 		c.cache.Delete(key)
