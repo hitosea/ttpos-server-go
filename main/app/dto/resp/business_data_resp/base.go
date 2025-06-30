@@ -199,7 +199,7 @@ type BusinessDataExportItem struct {
 	Day                 string  `json:"day"`
 	TotalSaleAmount     float64 `json:"total_sale_amount"`     // 总销售额
 	TotalReceivedAmount float64 `json:"total_received_amount"` // 实收金额
-	TotalProductNum     int64   `json:"total_product_num"`     // 商品数量
+	TotalProductNum     float64 `json:"total_product_num"`     // 商品数量
 	TotalMemberNum      int64   `json:"total_member_num"`      // 新增会员数
 	TotalDiscountMember float64 `json:"total_discount_member"` // 会员折扣
 	TotalBusinessAmount float64 `json:"total_business_amount"` // 营业收入
@@ -210,9 +210,9 @@ type BusinessDataExportItem struct {
 	TotalDiscount       float64 `json:"total_discount"`        // 优惠折扣
 	TotalDiscountRatio  float64 `json:"total_discount_ratio"`  // 优惠折扣占比
 	TotalGiftAmount     float64 `json:"total_gift_amount"`     // 赠菜总额
-	TotalGiftNum        int64   `json:"total_gift_num"`        // 赠菜数量
+	TotalGiftNum        float64 `json:"total_gift_num"`        // 赠菜数量
 	TotalFreeAmount     float64 `json:"total_free_amount"`     // 免单总额
-	TotalFreeNum        int64   `json:"total_free_num"`        // 免单数量
+	TotalFreeNum        float64 `json:"total_free_num"`        // 免单数量
 	TotalRechargeAmount float64 `json:"total_recharge_amount"` // 充值金额
 	// ToDo 外送数据来源
 	TotalDeliveryOrderAmount       float64                     `json:"total_delivery_order_amount"`        // 外送订单总额

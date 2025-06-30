@@ -63,7 +63,7 @@ type CountSaleResp struct {
 	TotalReceivedAmount      float64 `json:"total_received_amount"`        // 总实收金额
 	TotalProductPrice        float64 `json:"total_product_price"`          // 总商品原价
 	TotalProductOriginPrice  float64 `json:"total_product_origin_price"`   // 总原商品金额
-	TotalProductNum          int64   `json:"total_product_num"`            // 总商品数量
+	TotalProductNum          float64 `json:"total_product_num"`            // 总商品数量
 	TotalDiscountMember      float64 `json:"total_discount_member"`        // 总会员折扣
 	TotalBusinessAmount      float64 `json:"total_business_amount"`        // 总营业收入
 	TotalServiceFee          float64 `json:"total_service_fee"`            // 总服务费
@@ -73,9 +73,9 @@ type CountSaleResp struct {
 	TotalDiscount            float64 `json:"total_discount"`               // 总优惠折扣
 	TotalDiscountRatio       float64 `json:"total_discount_ratio"`         // 总优惠折扣率
 	TotalGiftAmount          float64 `json:"total_gift_amount"`            // 总赠菜金额
-	TotalGiftNum             int64   `json:"total_gift_num"`               // 总赠菜数量
+	TotalGiftNum             float64 `json:"total_gift_num"`               // 总赠菜数量
 	TotalFreeAmount          float64 `json:"total_free_amount"`            // 总免单金额
-	TotalFreeNum             int64   `json:"total_free_num"`               // 总免单数量
+	TotalFreeNum             float64 `json:"total_free_num"`               // 总免单数量
 	TotalOrderNum            int64   `json:"total_order_num"`              // 总订单数量
 	TotalDeskNum             int64   `json:"total_desk_num"`               // 总桌台数量
 	TotalMealNum             int64   `json:"total_meal_num"`               // 总用餐人数
@@ -123,7 +123,7 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 		TotalReceivedAmount:      totalReceivedAmount.Round(2).InexactFloat64(),
 		TotalProductPrice:        saleData.TotalProductPrice.Float64,
 		TotalProductOriginPrice:  saleData.TotalProductOriginPrice.Float64,
-		TotalProductNum:          saleData.TotalProductNum.Int64,
+		TotalProductNum:          saleData.TotalProductNum.Float64,
 		TotalDiscountMember:      saleData.TotalDiscountMember.Float64,
 		TotalBusinessAmount:      totalBusinessAmount.Round(2).InexactFloat64(),
 		TotalServiceFee:          saleData.TotalServiceFee.Float64,
@@ -133,9 +133,9 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 		TotalDiscount:            saleData.TotalDiscount.Float64,
 		TotalDiscountRatio:       discountRatio.Round(2).InexactFloat64(),
 		TotalGiftAmount:          saleData.TotalGiftAmount.Float64,
-		TotalGiftNum:             saleData.TotalGiftNum.Int64,
+		TotalGiftNum:             saleData.TotalGiftNum.Float64,
 		TotalFreeAmount:          saleData.TotalFreeAmount.Float64,
-		TotalFreeNum:             saleData.TotalFreeNum.Int64,
+		TotalFreeNum:             saleData.TotalFreeNum.Float64,
 		TotalOrderNum:            saleData.TotalOrderNum.Int64,
 		TotalDeskNum:             saleData.TotalDeskNum.Int64,
 		TotalMealNum:             saleData.TotalMealNum.Int64,
@@ -194,9 +194,9 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			minInstantOrderAmount    decimal.Decimal
 			maxInstantOrderAmount    decimal.Decimal
 			avgInstantOrderAmount    decimal.Decimal
-			totalProductNum          int64
-			totalGiveNum             int64
-			totalFreeNum             int64
+			totalProductNum          decimal.Decimal
+			totalGiveNum             decimal.Decimal
+			totalFreeNum             decimal.Decimal
 			totalOrderNum            int64
 			totalDeskNum             int64
 			totalMealNum             int64
@@ -235,9 +235,9 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 			minInstantOrderAmount = decimal.NewFromFloat(saleResult.MinInstantOrderAmount.Float64).Round(2)
 			maxInstantOrderAmount = decimal.NewFromFloat(saleResult.MaxInstantOrderAmount.Float64).Round(2)
 			avgInstantOrderAmount = decimal.NewFromFloat(saleResult.AvgInstantOrderAmount.Float64).Round(2)
-			totalProductNum = saleResult.TotalProductNum.Int64
-			totalGiveNum = saleResult.TotalGiftNum.Int64
-			totalFreeNum = saleResult.TotalFreeNum.Int64
+			totalProductNum = decimal.NewFromFloat(saleResult.TotalProductNum.Float64).Round(2)
+			totalGiveNum = decimal.NewFromFloat(saleResult.TotalGiftNum.Float64).Round(2)
+			totalFreeNum = decimal.NewFromFloat(saleResult.TotalFreeNum.Float64).Round(2)
 			totalOrderNum = saleResult.TotalOrderNum.Int64
 			totalDeskNum = saleResult.TotalDeskNum.Int64
 			totalMealNum = saleResult.TotalMealNum.Int64
@@ -258,7 +258,7 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 				TotalSaleAmount:          totalSaleAmount.InexactFloat64(),
 				TotalReceivedAmount:      totalReceivedAmount.InexactFloat64(),
 				TotalProductPrice:        totalProductPrice.InexactFloat64(),
-				TotalProductNum:          totalProductNum,
+				TotalProductNum:          totalProductNum.InexactFloat64(),
 				TotalDiscountMember:      totalDiscountMember.InexactFloat64(),
 				TotalBusinessAmount:      totalBusinessAmount.InexactFloat64(),
 				TotalServiceFee:          totalServiceFee.InexactFloat64(),
@@ -268,9 +268,9 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 				TotalDiscount:            totalDiscount.InexactFloat64(),
 				TotalDiscountRatio:       totalDiscountRatio.InexactFloat64(),
 				TotalGiftAmount:          totalGiveAmount.InexactFloat64(),
-				TotalGiftNum:             totalGiveNum,
+				TotalGiftNum:             totalGiveNum.InexactFloat64(),
 				TotalFreeAmount:          totalFreeAmount.InexactFloat64(),
-				TotalFreeNum:             totalFreeNum,
+				TotalFreeNum:             totalFreeNum.InexactFloat64(),
 				TotalOrderNum:            totalOrderNum,
 				TotalDeskNum:             totalDeskNum,
 				TotalMealNum:             totalMealNum,
@@ -565,7 +565,7 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 type CountProductResp struct {
 	ProductName string  `json:"product_name"` // 商品名称
 	SalePrice   float64 `json:"sale_price"`   // 销售单价
-	SaleNum     int64   `json:"sale_num"`     // 销售数量
+	SaleNum     float64 `json:"sale_num"`     // 销售数量
 	SaleAmount  float64 `json:"sale_amount"`  // 销售金额
 }
 
@@ -579,7 +579,7 @@ func (s *statisticsSrv) CountProduct(ctx context.Context, req CountReq) []CountP
 		list = append(list, CountProductResp{
 			ProductName: product.ProductName.String + "（" + product.FlavorName.String + "）",
 			SalePrice:   product.SalePrice.Float64,
-			SaleNum:     product.SaleNum.Int64,
+			SaleNum:     product.SaleNum.Float64,
 			SaleAmount:  product.SaleAmount.Float64,
 		})
 	}
@@ -741,7 +741,7 @@ func (s *statisticsSrv) CountUnpaidOrder(ctx context.Context, req CountReq) Coun
 // CountProductRankResp 统计商品排行响应
 type CountProductRankResp struct {
 	ProductName string  `json:"product_name"` // 商品名称
-	SaleNum     int64   `json:"sale_num"`     // 销售数量
+	SaleNum     float64 `json:"sale_num"`     // 销售数量
 	SaleAmount  float64 `json:"sale_amount"`  // 销售金额
 }
 
@@ -753,7 +753,7 @@ func (s *statisticsSrv) RankProduct(ctx context.Context, req CountReq) []CountPr
 	for _, product := range productData {
 		list = append(list, CountProductRankResp{
 			ProductName: product.ProductName.String,
-			SaleNum:     product.SaleNum.Int64,
+			SaleNum:     product.SaleNum.Float64,
 			SaleAmount:  product.SaleAmount.Float64,
 		})
 	}
@@ -1382,10 +1382,10 @@ type CountProductSaleResp struct {
 type CountProductSale struct {
 	ProductName           string  `json:"product_name"`
 	CategoryName          string  `json:"category_name"`
-	TotalSaleNum          int64   `json:"total_sale_num"`
+	TotalSaleNum          float64 `json:"total_sale_num"`
 	TotalOriginSaleAmount float64 `json:"total_origin_sale_amount"`
 	TotalActualSaleAmount float64 `json:"total_actual_sale_amount"`
-	TotalGiveNum          int64   `json:"total_give_num"`
+	TotalGiveNum          float64 `json:"total_give_num"`
 	TotalBusinessAmount   float64 `json:"total_business_amount"`
 }
 
@@ -1413,10 +1413,10 @@ func (s *statisticsSrv) CountProductSale(ctx context.Context, req CountReq) Coun
 		data = append(data, CountProductSale{
 			ProductName:           productSale.ProductName.String,
 			CategoryName:          categoryName,
-			TotalSaleNum:          productSale.SaleNum.Int64,
+			TotalSaleNum:          productSale.SaleNum.Float64,
 			TotalOriginSaleAmount: productSale.OriginSaleAmount.Float64,
 			TotalActualSaleAmount: productSale.ActualSaleAmount.Float64,
-			TotalGiveNum:          productSale.GiveNum.Int64,
+			TotalGiveNum:          productSale.GiveNum.Float64,
 			TotalBusinessAmount:   productSale.BusinessAmount.Float64,
 		})
 	}
@@ -1500,16 +1500,16 @@ type CountExportData struct {
 	TotalServiceFee       float64                  `json:"total_service_fee"`
 	TotalPaymentFee       float64                  `json:"total_payment_fee"`
 	TotalTax              float64                  `json:"total_tax"`
-	TotalProductNum       int64                    `json:"total_product_num"`
+	TotalProductNum       float64                  `json:"total_product_num"`
 	TotalMemberNum        int64                    `json:"total_member_num"`
 	TotalDiscountMember   float64                  `json:"total_discount_member"`
 	TotalDiscount         float64                  `json:"total_discount"`
 	TotalDiscountRatio    float64                  `json:"total_discount_ratio"`
 	TotalRefundAmount     float64                  `json:"total_refund_amount"`
 	TotalGiftAmount       float64                  `json:"total_gift_amount"`
-	TotalGiftNum          int64                    `json:"total_gift_num"`
+	TotalGiftNum          float64                  `json:"total_gift_num"`
 	TotalFreeAmount       float64                  `json:"total_free_amount"`
-	TotalFreeNum          int64                    `json:"total_free_num"`
+	TotalFreeNum          float64                  `json:"total_free_num"`
 	TotalReceivedAmount   float64                  `json:"total_received_amount"`
 	TotalOrderNum         int64                    `json:"total_order_num"`
 	MinOrderAmount        float64                  `json:"min_order_amount"`

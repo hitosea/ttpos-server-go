@@ -17236,7 +17236,7 @@ const docTemplate = `{
                 },
                 "total_free_num": {
                     "description": "免单数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "total_gift_amount": {
                     "description": "赠菜总额",
@@ -17244,7 +17244,7 @@ const docTemplate = `{
                 },
                 "total_gift_num": {
                     "description": "赠菜数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "total_instant_order_num": {
                     "description": "点餐方式-订单数",
@@ -17268,7 +17268,7 @@ const docTemplate = `{
                 },
                 "total_product_num": {
                     "description": "商品数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "total_received_amount": {
                     "description": "实收金额",

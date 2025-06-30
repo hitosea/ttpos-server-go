@@ -111,7 +111,7 @@ type StatisticsSaleData struct {
 	TotalReceivedAmount     sql.NullFloat64 `gorm:"column:total_received_amount;comment:总实收金额"`
 	TotalProductPrice       sql.NullFloat64 `gorm:"column:total_product_price;comment:总商品原价"`
 	TotalProductOriginPrice sql.NullFloat64 `gorm:"column:total_product_origin_price;comment:总原商品金额"`
-	TotalProductNum         sql.NullInt64   `gorm:"column:total_product_num;comment:总商品数量"`
+	TotalProductNum         sql.NullFloat64 `gorm:"column:total_product_num;comment:总商品数量"`
 	TotalDiscountMember     sql.NullFloat64 `gorm:"column:total_discount_member;comment:总会员折扣"`
 	TotalBusinessAmount     sql.NullFloat64 `gorm:"column:total_business_amount;comment:总营业收入"`
 	TotalServiceFee         sql.NullFloat64 `gorm:"column:total_service_fee;comment:总服务费"`
@@ -120,9 +120,9 @@ type StatisticsSaleData struct {
 	TotalRefundAmount       sql.NullFloat64 `gorm:"column:total_refund_amount;comment:总退款金额"`
 	TotalDiscount           sql.NullFloat64 `gorm:"column:total_discount;comment:总优惠折扣"`
 	TotalGiftAmount         sql.NullFloat64 `gorm:"column:total_gift_amount;comment:总赠菜金额"`
-	TotalGiftNum            sql.NullInt64   `gorm:"column:total_gift_num;comment:总赠菜数量"`
+	TotalGiftNum            sql.NullFloat64 `gorm:"column:total_gift_num;comment:总赠菜数量"`
 	TotalFreeAmount         sql.NullFloat64 `gorm:"column:total_free_amount;comment:总免单金额"`
-	TotalFreeNum            sql.NullInt64   `gorm:"column:total_free_num;comment:总免单数量"`
+	TotalFreeNum            sql.NullFloat64 `gorm:"column:total_free_num;comment:总免单数量"`
 	TotalOrderNum           sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
 	TotalDeskNum            sql.NullInt64   `gorm:"column:total_desk_num;comment:总桌台数量"`
 	TotalDeskOrderAmount    sql.NullFloat64 `gorm:"column:total_desk_order_amount;comment:总桌台订单金额"`
@@ -184,7 +184,7 @@ type StatisticsProductData struct {
 	ProductName        sql.NullString  `gorm:"column:product_name;comment:商品名称"`
 	FlavorName         sql.NullString  `gorm:"column:flavor_name;comment:规格名称"`
 	SalePrice          sql.NullFloat64 `gorm:"column:sale_price;comment:销售单价"`
-	SaleNum            sql.NullInt64   `gorm:"column:sale_num;comment:销售数量"`
+	SaleNum            sql.NullFloat64 `gorm:"column:sale_num;comment:销售数量"`
 	SaleAmount         sql.NullFloat64 `gorm:"column:sale_amount;comment:销售金额"`
 }
 
@@ -238,10 +238,10 @@ type StatisticsProductSaleData struct {
 	ProductName        sql.NullString  `gorm:"column:product_name;comment:商品名称"`
 	CategoryParentName sql.NullString  `gorm:"column:category_parent_name;comment:分类父级名称"`
 	CategoryName       sql.NullString  `gorm:"column:category_name;comment:分类名称"`
-	SaleNum            sql.NullInt64   `gorm:"column:sale_num;comment:销售数量"`
+	SaleNum            sql.NullFloat64 `gorm:"column:sale_num;comment:销售数量"`
 	OriginSaleAmount   sql.NullFloat64 `gorm:"column:origin_sale_amount;comment:原价销售金额"`
 	ActualSaleAmount   sql.NullFloat64 `gorm:"column:actual_sale_amount;comment:实际销售金额"`
-	GiveNum            sql.NullInt64   `gorm:"column:give_num;comment:赠菜数量"`
+	GiveNum            sql.NullFloat64 `gorm:"column:give_num;comment:赠菜数量"`
 	BusinessAmount     sql.NullFloat64 `gorm:"column:business_amount;comment:营业收入"`
 }
 
