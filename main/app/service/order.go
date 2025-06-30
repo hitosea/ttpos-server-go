@@ -1213,7 +1213,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			MemberNames:   strings.Join(totalMemberNames, ","),
 			MemberUuids:   strings.Join(totalMemberUuids, ","),
 			CashierName:   saleBill.CashierName,
-			IsBuffet:      saleBill.IsBuffet == 1,
+			IsBuffet:      saleBill.IsBuffet == constant.SaleBillIsBuffetYes,
 			BuffetNames:   saleBill.GetBuffetNames(ctx.GetLanguage()),
 			CancelReason:  saleBill.Reason,
 			PayTypes:      saleBill.GetPayTypes(ctx.GetLanguage(), req.SaleOrderUuid),

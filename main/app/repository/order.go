@@ -1338,8 +1338,6 @@ func (r *orderRepo) GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, err
 
 // GetSaleBillAllInfo 获取销售账单所有信息
 func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error) {
-	startTime := time.Now()
-
 	cacheDataRepo := NewCacheDataRepo(r.db)
 	multiLanguageNameUuids := []uint64{}
 
@@ -1436,28 +1434,6 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 					}),
 				},
 			},
-			// ==================== 销售账单的自助餐信息 ====================
-			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.ReturnOrderProducts",
-				Args: []any{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-				},
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetCustomerTypePrice.BuffetCustomerType",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetDelayProducts",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetDelayProducts.ReturnOrderProducts",
-				Args: []any{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-				},
-			},
 			// ==================== 销售账单的退款信息 ====================
 			WithPreload{
 				Query: "SaleOrders.ReturnOrders",
@@ -1474,7 +1450,6 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 		return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
 	}
 
-	fmt.Printf("GetSaleBillAllInfo 第一次查询耗时: %v\n", time.Since(startTime))
 	// ==================== 查询桌台信息 ====================
 	// 查询桌台
 	if saleBill.DeskUuid != 0 {
@@ -1538,6 +1513,53 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 		productBomUuids := []uint64{}
 		productAttributeUuids := []uint64{}
 		for _, saleOrder := range saleBill.SaleOrders {
+
+			// 查询自助餐套餐1、2
+			if saleBill.IsBuffet == constant.SaleBillIsBuffetYes {
+				// 查询自助餐套餐1、2顾客类型
+				saleOrderBuffetCustomerTypes, err := NewSaleOrderBuffetCustomerTypeRepo(r.db).GetSaleOrderBuffetCustomerTypes(
+					CommonRepo.Preload(
+						WithPreload{
+							Query: "BuffetPackage.MultiLanguageName",
+						},
+						WithPreload{
+							Query: "BuffetCustomerTypePrice.BuffetCustomerType",
+						},
+						WithPreload{
+							Query: "ReturnOrderProducts",
+							Args: []any{
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+							},
+						},
+					),
+					CommonRepo.WhereBySaleOrderUuid(saleOrder.Uuid),
+					CommonRepo.WhereBySoftDelete(),
+				)
+				if err != nil {
+					return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+				}
+				saleOrder.SaleOrderBuffetCustomerTypes = saleOrderBuffetCustomerTypes
+
+				// 查询自助餐套餐加钟
+				saleOrderBuffetDelayProducts, err := NewSaleOrderBuffetDelayProductRepo(r.db).GetSaleOrderBuffetDelayProducts(
+					CommonRepo.Preload(
+						WithPreload{
+							Query: "ReturnOrderProducts",
+							Args: []any{
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+							},
+						},
+					),
+					CommonRepo.WhereBySaleOrderUuid(saleOrder.Uuid),
+					CommonRepo.WhereBySoftDelete(),
+				)
+				if err != nil {
+					return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+				}
+				saleOrder.SaleOrderBuffetDelayProducts = saleOrderBuffetDelayProducts
+			}
+
+			// 查询商品包、商品BOM、商品属性
 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
 				if saleOrderProduct.ProductPackageUuid != 0 {
 					multiLanguageNameUuids = append(multiLanguageNameUuids, saleOrderProduct.MultiLanguageNameUuid)
@@ -1607,8 +1629,6 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 		}
 	}
 
-	fmt.Printf("GetSaleBillAllInfo 第二次查询耗时: %v\n", time.Since(startTime))
-
 	// 查询语言
 	if len(multiLanguageNameUuids) > 0 {
 		var multiLanguageNames []model.MultiLanguageName
@@ -1633,12 +1653,8 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			}
 		}
 	}
-
-	fmt.Printf("GetSaleBillAllInfo 第一次查询耗时: %v\n", time.Since(startTime))
 	return &saleBill, nil
-	// fmt.Println(utils.ToJsonString(saleBill))
 
-	queryStartTime := time.Now()
 	info, err := r.GetSaleBill(
 		CommonRepo.Preload(
 			WithPreload{
@@ -1825,9 +1841,6 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByUuid(saleBillUuid),
 	)
-	fmt.Printf("GetSaleBillAllInfo 第二次查询耗时: %v\n", time.Since(queryStartTime))
-	fmt.Printf("GetSaleBillAllInfo 总耗时: %v\n", time.Since(startTime))
-
 	if err != nil {
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)
 	}
