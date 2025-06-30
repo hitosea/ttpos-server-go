@@ -62,7 +62,7 @@
         </el-col>
         <el-col :span="8" class="mb-2">
           <p class="text-sm">{{ $t('结清状态') }}</p>
-          <p class="text-lg font-bold text-green-500">是</p>
+          <p class="text-lg font-bold text-green-500"> {{ $t('是') }}</p>
         </el-col>
       </el-row>
     </el-card>
