@@ -34,6 +34,7 @@
   "删除文件失败: %v": "Datei löschen fehlgeschlagen: %v",
   "判断是否在使用时段内失败": "Fehler bei der Überprüfung, ob innerhalb des Nutzungszeitraums",
   "加料已删除": "Zusatz-Zutat wurde gelöscht",
+  "加料材料库存不足": "Nicht genügend Vorrat an Zusatz-Zutaten",
   "区号格式不正确": "Vorwahlformat ist nicht korrekt",
   "卡号重复": "Kartennummer doppelt",
   "原始JSON: %s\\n": "Original JSON: %s\\n",

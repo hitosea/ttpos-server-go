@@ -464,6 +464,7 @@
   "加料已下架": "Ekstra malzemeler satıştan kaldırıldı",
   "加料已删除": "Ek malzeme silindi",
   "加料库存不足": "Yetersiz dolum envanteri",
+  "加料材料库存不足": "Ek malzeme stoğu yetersiz",
   "加料超出可选限制": "Ekstra malzeme seçilebilir limiti aşıyor",
   "加购商品时判断商品是不是必点商品": "Ürünün, alışveriş sepetine eklendiğinde gerekli bir madde olup olmadığını kontrol edin",
   "加购商品时判断商品是不是必点商品时，查询必点商品失败": "Ürün eklerken ürünün zorunlu ürün olup olmadığını kontrol etmede zorunlu ürün sorgulaması başarısız",

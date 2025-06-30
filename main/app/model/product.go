@@ -308,9 +308,12 @@ type RelatedMaterial struct {
 	RelatedUuid  uint64  `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:'物料清单BOM的ID'"`
 	MaterialUuid uint64  `gorm:"column:material_uuid;type:bigint(20) unsigned;default:0;comment:'原料ID'"`
 	Num          float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:'材料用量,可小数'"`
+
+	Material *Material `gorm:"foreignKey:material_uuid;references:uuid" json:"material"`
 }
 
 func (model *RelatedMaterial) SetNil() {
+	model.Material = nil
 }
 
 // GetDecreaseNum 获取减少的库存数量. 减少的库存数量 = 材料用量 * 商品数量
@@ -320,6 +323,27 @@ func (model *RelatedMaterial) GetDecreaseNum(productNum float64) float64 {
 
 // IsStockShortage 判断库存是否不足
 func (model *ProductBom) IsStockShortage(productNum float64) bool {
+	return model.GetStockNum() < productNum
+}
+
+// IsStockShortageWithMaterial 判断库存是否不足,检查材料库存
+func (model *ProductBom) IsStockShortageWithMaterial(productNum float64) bool {
+	// 如果是关联材料的规格，则检查关联材料的库存
+	if model.IsFlavor() {
+		for _, material := range model.FlavorMaterials {
+			if material.Material.StockNum < material.GetDecreaseNum(productNum) {
+				return true
+			}
+		}
+	}
+	// 如果是关联材料的小料，则检查关联材料的库存
+	if model.IsSauce() {
+		for _, material := range model.ProductSauce.SauceMaterials {
+			if material.Material.StockNum < material.GetDecreaseNum(productNum) {
+				return true
+			}
+		}
+	}
 	return model.GetStockNum() < productNum
 }
 

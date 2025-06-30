@@ -4394,6 +4394,14 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if flavorProductBom.GetStockNum() < float64(product.Num) {
 			return nil, errors.WithMessage(errors.New("库存不足"))
 		}
+		// 如果商品规格关联了材料，检查材料库存是否充足
+		if len(flavorProductBom.FlavorMaterials) > 0 {
+			for _, flavorMaterial := range flavorProductBom.FlavorMaterials {
+				if flavorMaterial.Material.StockNum < flavorMaterial.GetDecreaseNum(product.Num) {
+					return nil, errors.WithMessage(errors.New("材料库存不足"))
+				}
+			}
+		}
 
 		// 获取加料信息
 		sauceProductBoms := make(map[uint64]*model.ProductBom)
@@ -4424,8 +4432,16 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			}
 			for i, bom := range sauceProductBomList {
 				sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
-				if bom.GetStockNum() < float64(product.Num) {
+				if bom.GetStockNum() < product.Num {
 					return nil, errors.WithMessage(errors.New("加料库存不足"))
+				}
+				// 检查加料材料库存是否充足
+				if len(bom.ProductSauce.SauceMaterials) > 0 {
+					for _, sauceMaterial := range bom.ProductSauce.SauceMaterials {
+						if sauceMaterial.Material.StockNum < sauceMaterial.GetDecreaseNum(product.Num) {
+							return nil, errors.WithMessage(errors.New("加料材料库存不足"))
+						}
+					}
 				}
 			}
 		}
@@ -5056,7 +5072,7 @@ type FlavorNum struct {
 func (f *FlavorNum) IsStockShortage() bool {
 	for _, saleOrderProductBom := range f.SaleOrderProduct.SaleOrderProductBoms {
 		if saleOrderProductBom.IsFlavor() {
-			return saleOrderProductBom.ProductBom.IsStockShortage(f.Num)
+			return saleOrderProductBom.ProductBom.IsStockShortageWithMaterial(f.Num)
 		}
 	}
 	return false
