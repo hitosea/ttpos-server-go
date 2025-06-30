@@ -28,6 +28,32 @@ func (c *goCache) Get(key string) (interface{}, bool) {
 	return c.cache.Get(key)
 }
 
+func (c *goCache) GetBytes(key string) ([]byte, bool) {
+	return nil, false
+}
+
+func (c *goCache) GetBatchBytes(keys []string) (map[string][]byte, []string) {
+	result := make(map[string][]byte)
+	var missedKeys []string
+
+	for _, key := range keys {
+		if val, found := c.cache.Get(key); found {
+			switch v := val.(type) {
+			case []byte:
+				result[key] = v
+			case string:
+				result[key] = []byte(v)
+			default:
+				missedKeys = append(missedKeys, key)
+			}
+		} else {
+			missedKeys = append(missedKeys, key)
+		}
+	}
+
+	return result, missedKeys
+}
+
 func (c *goCache) Del(keys ...string) {
 	for _, key := range keys {
 		c.cache.Delete(key)

@@ -160,6 +160,7 @@ class Buffet extends Controller
                 // 如果是新增
                 if (isset($clock['action']) && $clock['action'] == 'add') {
                     unset($clock['action']);
+                    $clock['status'] = 1;
                     $delayModel->save($clock);
                     continue;
                 }
