@@ -1,1 +1,0 @@
-import{e as t}from"./index-BN_P7b6g.js";function e(e,a={"Content-Type":"multipart/form-data"}){return t("/file.Upload/image",e,{headers:a})}function a(e,a={"Content-Type":"multipart/form-data"}){return t("/client.client/upload",e,{headers:a})}export{e as f,a as u};

@@ -1,1 +1,0 @@
-System.register(["./element-legacy-20d06bfa.js","./vue-legacy-b5f00880.js"],(function(e,t){"use strict";var n,c;return{setters:[function(e){n=e.g},function(e){c=e.aC}],execute:function(){e("r",n(c))}}}));
