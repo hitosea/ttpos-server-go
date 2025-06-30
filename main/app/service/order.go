@@ -4808,12 +4808,10 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
 	// 获取新的桌台数据
-	startTime := time.Now()
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	fmt.Printf("OrderCartProductNum elapsed: %v\n", time.Since(startTime))
 	ctx.Log().Debug("获取新的账单数据")
 	return info, nil
 }
