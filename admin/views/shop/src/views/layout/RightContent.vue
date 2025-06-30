@@ -13,7 +13,7 @@
 </template>
 
 <script setup>
-  import ChildTabs from '@/views/layout/ChildTabs.vue';
+  import ChildTabs from '@/views/layout/childTabs.vue';
   import { useRoute } from 'vue-router';
   const route = useRoute();
   const emit = defineEmits(['selectMenu']);
