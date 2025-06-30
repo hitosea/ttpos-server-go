@@ -1,7 +1,7 @@
 <template>
   <div class="p-4 bg-white rounded min-h-full">
     <el-form :model="formData" ref="formElement" label-position="top" label-width="124px">
-      <div class="bg-[#f9f9f9] rounded p-4 mb-6 border border-[#ccc]" v-for="(item, index) in formData" :key="index">
+      <div class="bg-[#fff] rounded p-4 mb-6 border border-[#dcdfe6]" v-for="(item, index) in formData" :key="index">
         <div class="text-lg font-bold mb-4">{{ item.channel }} {{ $t('基础设置') }}</div>
         <el-row :gutter="24">
           <el-col :span="8">
@@ -95,96 +95,113 @@
         </el-row>
         <div class="text-lg font-bold mb-4">{{ $t('距离范围设置') }}</div>
         <!-- 距离范围设置 -->
-        <div class="flex flex-col gap-4">
-          <div class="w-full rounded p-4 bg-[#f3f3f3]" v-for="(distanceRange, distanceRangeIndex) in item.distance_range" :key="distanceRangeIndex">
-            <el-row justify="space-between" align="middle" class="mb-4 mt-2">
-              <h3 class="text-base font-bold">{{ $t('距离范围') }} {{ distanceRangeIndex + 1 }}</h3>
-              <el-icon class="!mr-0 cursor-pointer text-gray-500 text-lg" @click="removeDistanceRange(index, distanceRangeIndex)"><Delete /></el-icon>
-            </el-row>
-            <el-row :gutter="24">
-              <el-col :span="12">
-                <el-form-item
-                  :label="$t('结束距离 (公里)')"
-                  :prop="`${index}.distance_range.${distanceRangeIndex}.end`"
-                  :rules="[
-                    {
-                      required: true,
-                      trigger: 'blur',
-                      validator: (_rule: any, value: any, callback: any) => {
-                        // 检查是否为空
-                        if (!value) {
-                          callback(new Error($t('请输入结束距离')));
-                          return;
-                        }
-
-                        // 如果不是第一个距离范围，检查是否大于前一个结束距离
-                        if (distanceRangeIndex > 0) {
-                          const prevEnd = formData[index]?.distance_range?.[distanceRangeIndex - 1]?.end;
-                          if (prevEnd !== undefined && Number(value) <= Number(prevEnd)) {
-                            callback(new Error($t('结束距离必须大于上一个结束距离')));
+        <el-form-item
+          :prop="`${index}.distance_range`"
+          :rules="[
+            {
+              required: true,
+              trigger: 'blur',
+              validator: (_rule: any, value: any, callback: any) => {
+                if (value.length === 0) {
+                  callback(new Error($t('请至少添加一个距离范围')));
+                } else {
+                  callback();
+                }
+              },
+            },
+          ]"
+        >
+          <div class="flex flex-col gap-4 w-full">
+            <div class="w-full rounded p-4 bg-[#f9f9f9]" v-for="(distanceRange, distanceRangeIndex) in item.distance_range" :key="distanceRangeIndex">
+              <el-row justify="space-between" align="middle" class="mb-4 mt-2">
+                <h3 class="text-base font-bold">{{ $t('距离范围') }} {{ distanceRangeIndex + 1 }}</h3>
+                <el-icon class="!mr-0 cursor-pointer text-gray-500 text-lg" @click="removeDistanceRange(index, distanceRangeIndex)"><Delete /></el-icon>
+              </el-row>
+              <el-row :gutter="24">
+                <el-col :span="12">
+                  <el-form-item
+                    :label="$t('结束距离 (公里)')"
+                    :prop="`${index}.distance_range.${distanceRangeIndex}.end`"
+                    :rules="[
+                      {
+                        required: true,
+                        trigger: 'blur',
+                        validator: (_rule: any, value: any, callback: any) => {
+                          // 检查是否为空
+                          if (!value) {
+                            callback(new Error($t('请输入结束距离')));
                             return;
                           }
-                        }
-                        callback();
-                      },
-                    },
-                  ]"
-                >
-                  <div class="flex items-center gap-2 !w-full">
-                    <el-input-number
-                      class="flex-1"
-                      v-model="distanceRange.end"
-                      :controls="false"
-                      :precision="1"
-                      :min="distanceRangeIndex === 0 ? 0 : (formData[index].distance_range && formData[index].distance_range[distanceRangeIndex - 1].end) || 0"
-                      :max="999999"
-                      :disabled="distanceRange.is_unlimited"
-                      :placeholder="$t('请输入结束距离 (公里)')"
-                    ></el-input-number>
-                    <el-checkbox
-                      v-model="distanceRange.is_unlimited"
-                      :true-label="true"
-                      :false-label="false"
-                      :label="$t('最大')"
-                      @change="handleIsUnlimitedChange(index, distanceRangeIndex)"
-                      v-if="distanceRangeIndex === (formData[index].distance_range && formData[index].distance_range?.length - 1)"
-                    />
-                  </div>
-                </el-form-item>
-              </el-col>
-              <el-col :span="12">
-                <el-form-item
-                  :label="$t('单价 (元/公里)')"
-                  :prop="`${index}.distance_range.${distanceRangeIndex}.price_per_km`"
-                  :rules="[
-                    {
-                      required: true,
-                      trigger: 'blur',
-                      validator: (_rule: any, value: any, callback: any) => {
-                        if (!value) {
-                          callback(new Error($t('请输入单价')));
-                        } else {
+
+                          // 如果不是第一个距离范围，检查是否大于前一个结束距离
+                          if (distanceRangeIndex > 0) {
+                            const prevEnd = formData[index]?.distance_range?.[distanceRangeIndex - 1]?.end;
+                            if (prevEnd !== undefined && Number(value) <= Number(prevEnd)) {
+                              callback(new Error($t('结束距离必须大于上一个结束距离')));
+                              return;
+                            }
+                          }
                           callback();
-                        }
+                        },
                       },
-                    },
-                  ]"
-                >
-                  <el-input-number
-                    class="!w-full"
-                    v-model="distanceRange.price_per_km"
-                    :controls="false"
-                    :precision="2"
-                    :min="0"
-                    :max="999999"
-                    :placeholder="$t('请输入单价 (元/公里)')"
-                  ></el-input-number>
-                </el-form-item>
-              </el-col>
-            </el-row>
+                    ]"
+                  >
+                    <div class="flex items-center gap-2 !w-full">
+                      <el-input-number
+                        class="flex-1"
+                        v-model="distanceRange.end"
+                        :controls="false"
+                        :precision="1"
+                        :min="distanceRangeIndex === 0 ? 0 : (formData[index].distance_range && formData[index].distance_range[distanceRangeIndex - 1].end) || 0"
+                        :max="999999"
+                        :disabled="distanceRange.is_unlimited"
+                        :placeholder="$t('请输入结束距离 (公里)')"
+                      ></el-input-number>
+                      <el-checkbox
+                        v-model="distanceRange.is_unlimited"
+                        :true-label="true"
+                        :false-label="false"
+                        :label="$t('最大')"
+                        @change="handleIsUnlimitedChange(index, distanceRangeIndex)"
+                        v-if="distanceRangeIndex === (formData[index].distance_range && formData[index].distance_range?.length - 1)"
+                      />
+                    </div>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item
+                    :label="$t('单价 (元/公里)')"
+                    :prop="`${index}.distance_range.${distanceRangeIndex}.price_per_km`"
+                    :rules="[
+                      {
+                        required: true,
+                        trigger: 'blur',
+                        validator: (_rule: any, value: any, callback: any) => {
+                          if (!value) {
+                            callback(new Error($t('请输入单价')));
+                          } else {
+                            callback();
+                          }
+                        },
+                      },
+                    ]"
+                  >
+                    <el-input-number
+                      class="!w-full"
+                      v-model="distanceRange.price_per_km"
+                      :controls="false"
+                      :precision="2"
+                      :min="0"
+                      :max="999999"
+                      :placeholder="$t('请输入单价 (元/公里)')"
+                    ></el-input-number>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </div>
           </div>
-        </div>
-        <el-button class="mt-4 w-full" @click="addDistanceRange(index)" icon="plus">{{ $t('添加范围距离') }}</el-button>
+        </el-form-item>
+        <el-button class="w-full" type="primary" plain @click="addDistanceRange(index)" icon="plus">{{ $t('添加范围距离') }}</el-button>
       </div>
     </el-form>
     <div class="border-t border-[#eee] flex items-center justify-center p-4 mt-4">
@@ -257,11 +274,15 @@
     formData.value[index].distance_range?.forEach((item) => {
       item.is_unlimited = false;
     });
+    // 校验距离范围表单
+    formElement.value.validateField(`${index}.distance_range`);
   };
 
   // 删除距离范围
   const removeDistanceRange = (index: number, distanceRangeIndex: number) => {
     formData.value[index].distance_range?.splice(distanceRangeIndex, 1);
+    // 校验距离范围表单
+    formElement.value.validateField(`${index}.distance_range`);
   };
 
   // 处理is_unlimited变化
