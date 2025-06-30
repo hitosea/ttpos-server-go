@@ -11,7 +11,7 @@ import (
 
 type ISaleOrderRepo interface {
 	ISaleOrderQueryRepo
-	UpdateSaleOrder(model *model.SaleOrder) error
+	UpdateSaleOrder(obj *model.SaleOrder) error
 	UpdateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderPointsExchange(saleOrderUuid uint64, payPoints float64, payPointsAmount float64, pointsExchangeRate float64, autoPointsExchange uint) error // 更新销售订单的积分抵扣信息
 	SetCheckoutZeroRuleCancel(saleOrderUuid uint64) error                                                                                                      // 取消结账抹零
@@ -66,8 +66,8 @@ func (r *saleOrderRepo) GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, er
 	return memberUuid, errors.WithMessage(err)
 }
 
-func (r *saleOrderRepo) UpdateSaleOrder(model *model.SaleOrder) error {
-	return r.db.Model(model).Save(model).Error
+func (r *saleOrderRepo) UpdateSaleOrder(obj *model.SaleOrder) error {
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", obj.Uuid).Updates(obj).Error
 }
 
 func (r *saleOrderRepo) UpdateSaleOrderRecord(obj model.SaleOrder) error {
