@@ -36,6 +36,9 @@ class ExceptionHandler extends Handle
             } else if (strstr($e->getMessage(), '1305 SAVEPOINT trans2 does not exist')) {
                 $this->code = 0;
                 $this->message = "网络繁忙";
+            } else if (strstr($e->getMessage(), 'Duplicate entry')) {
+                $this->code = 0;
+                $this->message = "主键重复";
             } else {
                 $this->code = 0;
                 $this->message = $e->getMessage();

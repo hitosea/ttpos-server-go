@@ -20,4 +20,5 @@ error.log
 /fonts
 generated_image.png
 /tmp
-
+public/admin
+public/shop

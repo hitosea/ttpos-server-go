@@ -1554,79 +1554,79 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 		}
 	}
 	// 查询销售订单商品
-	// if len(saleBill.SaleOrders) > 0 {
-	// 	productPackageUuids := []uint64{}
-	// 	productBomUuids := []uint64{}
-	// 	productAttributeUuids := []uint64{}
-	// 	for _, saleOrder := range saleBill.SaleOrders {
-	// 		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-	// 			if saleOrderProduct.ProductPackageUuid != 0 {
-	// 				multiLanguageNameUuids = append(multiLanguageNameUuids, saleOrderProduct.MultiLanguageNameUuid)
-	// 				productPackageUuids = append(productPackageUuids, saleOrderProduct.ProductPackageUuid)
-	// 				if len(saleOrderProduct.SaleOrderProductBoms) > 0 {
-	// 					for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
-	// 						productBomUuids = append(productBomUuids, saleOrderProductBom.ProductBomUuid)
-	// 					}
-	// 				}
-	// 				if len(saleOrderProduct.SaleOrderProductAttributes) > 0 {
-	// 					for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
-	// 						productAttributeUuids = append(productAttributeUuids, saleOrderProductAttribute.ProductAttributeUuid)
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 		// 商品包
-	// 		if len(productPackageUuids) > 0 {
-	// 			productPackages, err := cacheDataRepo.GetCacheAllProductPackageByUuids(productPackageUuids)
-	// 			if err != nil {
-	// 				return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
-	// 			}
-	// 			for _, productPackage := range productPackages {
-	// 				for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-	// 					if saleOrderProduct.ProductPackageUuid == productPackage.Uuid {
-	// 						saleOrderProduct.ProductPackage = productPackage
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 		// 商品BOM
-	// 		if len(productBomUuids) > 0 {
-	// 			productBoms, err := cacheDataRepo.GetCacheAllProductBomByUuids(productBomUuids)
-	// 			if err != nil {
-	// 				return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
-	// 			}
-	// 			for _, productBom := range productBoms {
-	// 				for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-	// 					if len(saleOrderProduct.SaleOrderProductBoms) > 0 {
-	// 						for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
-	// 							if saleOrderProductBom.ProductBomUuid == productBom.Uuid {
-	// 								saleOrderProductBom.ProductBom = *productBom
-	// 							}
-	// 						}
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 		// 商品属性
-	// 		if len(productAttributeUuids) > 0 {
-	// 			productAttributes, err := cacheDataRepo.GetCacheAllProductAttributeByUuids(productAttributeUuids)
-	// 			if err != nil {
-	// 				return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
-	// 			}
-	// 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-	// 				if len(saleOrderProduct.SaleOrderProductAttributes) > 0 {
-	// 					for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
-	// 						for _, productAttribute := range productAttributes {
-	// 							if saleOrderProductAttribute.ProductAttributeUuid == productAttribute.Uuid {
-	// 								saleOrderProductAttribute.ProductAttribute = *productAttribute
-	// 							}
-	// 						}
-	// 					}
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
+	if len(saleBill.SaleOrders) > 0 {
+		productPackageUuids := []uint64{}
+		productBomUuids := []uint64{}
+		productAttributeUuids := []uint64{}
+		for _, saleOrder := range saleBill.SaleOrders {
+			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+				if saleOrderProduct.ProductPackageUuid != 0 {
+					// multiLanguageNameUuids = append(multiLanguageNameUuids, saleOrderProduct.MultiLanguageNameUuid)
+					productPackageUuids = append(productPackageUuids, saleOrderProduct.ProductPackageUuid)
+					if len(saleOrderProduct.SaleOrderProductBoms) > 0 {
+						for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
+							productBomUuids = append(productBomUuids, saleOrderProductBom.ProductBomUuid)
+						}
+					}
+					if len(saleOrderProduct.SaleOrderProductAttributes) > 0 {
+						for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
+							productAttributeUuids = append(productAttributeUuids, saleOrderProductAttribute.ProductAttributeUuid)
+						}
+					}
+				}
+			}
+			// 商品包
+			if len(productPackageUuids) > 0 {
+				productPackages, err := cacheDataRepo.GetCacheAllProductPackageByUuids(productPackageUuids)
+				if err != nil {
+					return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+				}
+				for _, productPackage := range productPackages {
+					for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+						if saleOrderProduct.ProductPackageUuid == productPackage.Uuid {
+							saleOrderProduct.ProductPackage = productPackage
+						}
+					}
+				}
+			}
+			// 商品BOM
+			if len(productBomUuids) > 0 {
+				productBoms, err := cacheDataRepo.GetCacheAllProductBomByUuids(productBomUuids)
+				if err != nil {
+					return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+				}
+				for _, productBom := range productBoms {
+					for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+						if len(saleOrderProduct.SaleOrderProductBoms) > 0 {
+							for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
+								if saleOrderProductBom.ProductBomUuid == productBom.Uuid {
+									saleOrderProductBom.ProductBom = *productBom
+								}
+							}
+						}
+					}
+				}
+			}
+			// 商品属性
+			if len(productAttributeUuids) > 0 {
+				productAttributes, err := cacheDataRepo.GetCacheAllProductAttributeByUuids(productAttributeUuids)
+				if err != nil {
+					return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+				}
+				for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+					if len(saleOrderProduct.SaleOrderProductAttributes) > 0 {
+						for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
+							for _, productAttribute := range productAttributes {
+								if saleOrderProductAttribute.ProductAttributeUuid == productAttribute.Uuid {
+									saleOrderProductAttribute.ProductAttribute = *productAttribute
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 
 	// 查询语言
 	// if len(multiLanguageNameUuids) > 0 {

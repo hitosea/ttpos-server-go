@@ -2082,4 +2082,7 @@ return [
     "开始时间不能为空" => "Başlangıç zamanı boş olamaz",
     "结束时间不能为空" => "Bitiş zamanı boş olamaz",
     "结束时间必须大于开始时间" => "Bitiş zamanı başlangıç zamanından büyük olmalıdır",
+    "主键重复" => "Birincil anahtar tekrarlandı",
+    "时钟回拨，拒绝生成ID" => "Saat geri alındı, ID oluşturulması reddedildi",
+    "时钟回拨过大，拒绝生成ID" => "Saat geri çok fazla alındı, ID oluşturulması reddedildi",
 ];
