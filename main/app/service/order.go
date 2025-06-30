@@ -4684,6 +4684,8 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 		ctx.AddLock()
 	}
 
+	startTime := time.Now()
+
 	option := &repository.OrderCartInfoOption{}
 	for _, opt := range opts {
 		opt(option)
@@ -4811,6 +4813,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
 
+	fmt.Println(fmt.Sprintf("OrderCartProductNum elapsed: %dms", time.Since(startTime).Milliseconds()))
 	// 获取新的桌台数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
