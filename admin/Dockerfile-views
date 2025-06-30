@@ -18,7 +18,7 @@ RUN  pnpm run build
 
 
 FROM nginx:alpine
-ADD public /var/www/
+ADD public /var/www/public
 WORKDIR /var/www/public
 COPY --from=build /app/admin/admin ./admin
 COPY --from=build /app/shop/dist ./shop
