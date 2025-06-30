@@ -4,6 +4,10 @@ ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 RUN corepack prepare pnpm
 
+#使用国内镜像
+RUN pnpm i -g nrm
+RUN nrm use taobao
+
 WORKDIR /app
 ADD views .
 
