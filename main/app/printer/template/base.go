@@ -425,6 +425,7 @@ func (p *printerTemplate) MergeSaleOrderBuffetDelayProducts(saleOrder *model.Sal
 	num := 0.0
 	delayMap := make(map[string]*MergeSaleOrderBuffetDelayProducts)
 	delays := make([]MergeSaleOrderBuffetDelayProducts, 0)
+	keyOrder := make([]string, 0)
 	for _, delay := range saleOrder.SaleOrderBuffetDelayProducts {
 		if delay.IsDelete() {
 			continue
@@ -445,11 +446,13 @@ func (p *printerTemplate) MergeSaleOrderBuffetDelayProducts(saleOrder *model.Sal
 				DelayNum:        delay.Num,
 				DelayTotalPrice: originPrice,
 			}
+			// 记录key首次出现的顺序
+			keyOrder = append(keyOrder, key)
 		}
 	}
 	// 将map转换为slice
-	for _, delay := range delayMap {
-		delays = append(delays, *delay)
+	for _, key := range keyOrder {
+		delays = append(delays, *delayMap[key])
 	}
 	return delays, num
 }
@@ -459,6 +462,7 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder) ([]M
 	productNum := 0.0
 	productMap := make(map[string]*MergeSaleOrderProduct)
 	products := make([]MergeSaleOrderProduct, 0)
+	keyOrder := make([]string, 0)
 	for _, item := range saleOrder.SaleOrderProducts {
 		if item.IsDelete() || item.IsUnCookingProduct() || item.IsUnAcceptOrderBool() || item.IsCancelProduct() {
 			continue
@@ -494,11 +498,13 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder) ([]M
 				ProductNum:        item.Num,
 				ProductTotalPrice: productTotalPrice,
 			}
+			// 记录key首次出现的顺序
+			keyOrder = append(keyOrder, key)
 		}
 	}
-	// 将map转换为slice
-	for _, product := range productMap {
-		products = append(products, *product)
+	// 按照首次出现的顺序将map转换为slice
+	for _, key := range keyOrder {
+		products = append(products, *productMap[key])
 	}
 	return products, productNum
 }

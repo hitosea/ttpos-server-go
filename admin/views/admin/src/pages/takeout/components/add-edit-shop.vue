@@ -27,7 +27,7 @@
           </el-checkbox-group>
         </el-form-item>
         <div class="flex flex-col gap-4">
-          <div class="rounded p-4 bg-[#f9f9f9]" v-for="(item, index) in formData.channels" :key="item.channel">
+          <div class="rounded p-4 bg-[#fff] border border-[#dcdfe6]" v-for="(item, index) in formData.channels" :key="item.channel">
             <h3 class="text-base font-bold mb-4">{{ item.channel }} {{ $t('渠道参数设置') }}</h3>
             <el-form-item :label="$t('参数同步方式')" prop="takeout">
               <el-radio-group v-model="item.config_type" @change="handleConfigTypeChange(index, item.channel)">
@@ -113,7 +113,7 @@
                 ]"
               >
                 <div class="flex flex-col gap-3 w-full">
-                  <div class="w-full rounded p-4 bg-[#f3f3f3]" v-for="(distanceRange, distanceRangeIndex) in item.distance_range" :key="distanceRangeIndex">
+                  <div class="w-full rounded p-4 bg-[#f9f9f9]" v-for="(distanceRange, distanceRangeIndex) in item.distance_range" :key="distanceRangeIndex">
                     <el-row justify="space-between" align="middle" class="mb-4 mt-2">
                       <h3 class="text-base font-bold">{{ $t('距离范围') }} {{ distanceRangeIndex + 1 }}</h3>
                       <el-icon v-if="item.config_type === 'manual'" class="!mr-0 cursor-pointer text-gray-500 text-lg" @click="removeDistanceRange(index, distanceRangeIndex)">
@@ -196,7 +196,7 @@
                   </div>
                 </div>
               </el-form-item>
-              <el-button v-if="item.config_type === 'manual'" class="!mr-0" @click="addDistanceRange(index)" icon="plus">{{ $t('添加范围距离') }}</el-button>
+              <el-button v-if="item.config_type === 'manual'" type="primary" plain class="!mr-0" @click="addDistanceRange(index)" icon="plus">{{ $t('添加范围距离') }}</el-button>
             </div>
           </div>
         </div>
@@ -298,6 +298,7 @@
 
   const removeDistanceRange = (index: number, distanceRangeIndex: number) => {
     formData.value.channels[index].distance_range.splice(distanceRangeIndex, 1);
+    formElement.value.validateField('channels.' + index + '.distance_range');
   };
 
   const addDistanceRange = (index: number) => {

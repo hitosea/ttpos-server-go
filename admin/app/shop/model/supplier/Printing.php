@@ -176,8 +176,10 @@ class Printing extends PrintingModel
             ]);
             $this->commit();
             return true;
-        } catch (\Exception $e) {
-            $this->error = $e->getMessage();
+        } catch (\Exception $th) {
+            trace($th->getMessage());
+            trace($th->getTraceAsString()); 
+            $this->error = "更新失败";
             $this->rollback();
             return false;
         }

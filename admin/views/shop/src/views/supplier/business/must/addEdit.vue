@@ -209,7 +209,7 @@
   import { ref, computed, onMounted, getCurrentInstance, watch } from 'vue';
   import { uniqueNameValidator } from '@/utils/form.js';
   import SvgIcon from '@/components/svg-icon/SvgIcon.vue';
-  import ProductSelector from '@/components/product/selector.vue';
+  import ProductSelector from '@/components/product/Selector.vue';
   import SettingApi from '@/api/setting.js';
 
   const { proxy } = getCurrentInstance();

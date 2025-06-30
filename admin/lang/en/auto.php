@@ -2082,4 +2082,7 @@ return [
     "开始时间不能为空" => "Start time cannot be empty",
     "结束时间不能为空" => "End time cannot be empty",
     "结束时间必须大于开始时间" => "End time must be later than start time",
+    "主键重复" => "Primary key duplicated",
+    "时钟回拨，拒绝生成ID" => "Clock rollback, ID generation refused",
+    "时钟回拨过大，拒绝生成ID" => "Clock rollback is too large, ID generation refused",
 ];
