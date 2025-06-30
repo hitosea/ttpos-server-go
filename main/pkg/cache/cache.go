@@ -11,6 +11,8 @@ import (
 type Cache interface {
 	Set(key string, value interface{}, expiration time.Duration) error
 	Get(key string) (interface{}, bool)
+	GetBytes(key string) ([]byte, bool)
+	GetBatchBytes(keys []string) (map[string][]byte, []string)
 	Del(keys ...string)
 	GetClient() *redis.Client
 	GetClusterClient() *redis.ClusterClient
