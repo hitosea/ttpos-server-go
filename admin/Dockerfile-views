@@ -7,6 +7,7 @@ RUN corepack prepare pnpm
 #使用国内镜像
 RUN pnpm i -g nrm
 RUN nrm use taobao
+RUN npx update-browserslist-db@latest
 
 WORKDIR /app
 ADD views .
