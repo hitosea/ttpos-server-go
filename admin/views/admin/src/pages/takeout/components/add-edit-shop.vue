@@ -27,7 +27,7 @@
           </el-checkbox-group>
         </el-form-item>
         <div class="flex flex-col gap-4">
-          <div class="rounded p-4 bg-[#f9f9f9]" v-for="(item, index) in formData.channels" :key="item.channel">
+          <div class="rounded p-4 bg-[#f9f9f9] border border-[#ccc]" v-for="(item, index) in formData.channels" :key="item.channel">
             <h3 class="text-base font-bold mb-4">{{ item.channel }} {{ $t('渠道参数设置') }}</h3>
             <el-form-item :label="$t('参数同步方式')" prop="takeout">
               <el-radio-group v-model="item.config_type" @change="handleConfigTypeChange(index, item.channel)">

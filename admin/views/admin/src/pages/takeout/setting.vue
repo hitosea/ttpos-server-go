@@ -1,7 +1,7 @@
 <template>
   <div class="p-4 bg-white rounded min-h-full">
     <el-form :model="formData" ref="formElement" label-position="top" label-width="124px">
-      <div class="bg-[#f9f9f9] rounded p-4 mb-6" v-for="(item, index) in formData" :key="index">
+      <div class="bg-[#f9f9f9] rounded p-4 mb-6 border border-[#ccc]" v-for="(item, index) in formData" :key="index">
         <div class="text-lg font-bold mb-4">{{ item.channel }} {{ $t('基础设置') }}</div>
         <el-row :gutter="24">
           <el-col :span="8">
