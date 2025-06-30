@@ -54,11 +54,11 @@ class SnowflakeHelp
                 $timestamp = $this->timestamp(); // 重新获取时间戳
                 // 如果仍然小于上次时间戳，抛出异常
                 if ($timestamp < $this->_lastTimestamp) {
-                    throw new Exception("时钟回拨，拒绝生成ID，回拨时间: " . $clockDiff . "ms");
+                    throw new Exception("时钟回拨，拒绝生成ID");
                 }
             } else {
                 // 时钟回拨超过5毫秒，可能是系统时间被调整，抛出异常
-                throw new Exception("时钟回拨过大，拒绝生成ID，回拨时间: " . $clockDiff . "ms");
+                throw new Exception("时钟回拨过大，拒绝生成ID");
             }
         }
         
