@@ -123,46 +123,42 @@ func (model *SaleBill) AfterUpdate(tx *gorm.DB) (err error) {
 			return nil
 		}
 	}
-	go func() {
-		if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
-			if model.DeskUuid > 0 {
-				// 推送订单更新
-				go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
-					"sale_bill_uuid": model.Uuid,
-					"desk_uuid":      model.DeskUuid,
-					"update_time":    model.BaseModel.UpdateTime,
-				})
-				// 推送桌台更新
-				go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, map[string]interface{}{
-					"desk_uuid":   model.DeskUuid,
-					"update_time": model.BaseModel.UpdateTime,
-				})
-			} else {
-				go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
-					"sale_bill_uuid": model.Uuid,
-					"desk_uuid":      model.DeskUuid,
-					"update_time":    model.BaseModel.UpdateTime,
-				})
-			}
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		if model.DeskUuid > 0 {
+			// 推送订单更新
+			go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
+				"sale_bill_uuid": model.Uuid,
+				"desk_uuid":      model.DeskUuid,
+				"update_time":    model.BaseModel.UpdateTime,
+			})
+			// 推送桌台更新
+			go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, map[string]interface{}{
+				"desk_uuid":   model.DeskUuid,
+				"update_time": model.BaseModel.UpdateTime,
+			})
+		} else {
+			go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
+				"sale_bill_uuid": model.Uuid,
+				"desk_uuid":      model.DeskUuid,
+				"update_time":    model.BaseModel.UpdateTime,
+			})
 		}
-	}()
+	}
 	return nil
 }
 
 // CustomerCall - AfterCreate 新增客户呼叫后的逻辑 - 推送订单更新
 func (model *CustomerCall) AfterCreate(tx *gorm.DB) (err error) {
-	go func() {
-		if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
-			data := map[string]interface{}{
-				"customer_call_uuid": model.Uuid,
-				"desk_uuid":          model.DeskUuid,
-				"update_time":        model.BaseModel.UpdateTime,
-			}
-			go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
-			go websocket.PushClient(companyUuid, websocket.SourceAssistant, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
-			go websocket.PushClient(companyUuid, websocket.SourceKitchen, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		data := map[string]interface{}{
+			"customer_call_uuid": model.Uuid,
+			"desk_uuid":          model.DeskUuid,
+			"update_time":        model.BaseModel.UpdateTime,
 		}
-	}()
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+		go websocket.PushClient(companyUuid, websocket.SourceAssistant, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+		go websocket.PushClient(companyUuid, websocket.SourceKitchen, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+	}
 	return nil
 }
 
@@ -171,66 +167,58 @@ func (model *PrinterLog) AfterCreate(tx *gorm.DB) (err error) {
 	if model.Type != 1 || model.Data == "" {
 		return
 	}
-	go func() {
-		if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
-			go websocket.PushClient(
-				companyUuid,
-				websocket.SourceCashier,
-				utils.IfString(model.CashierDeviceId != "", model.CashierDeviceId, websocket.SourceAll),
-				websocket.PRINT_DATA,
-				map[string]interface{}{
-					"print_log_uuid": model.Uuid,
-					"update_time":    model.BaseModel.UpdateTime,
-				},
-			)
-		}
-	}()
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		go websocket.PushClient(
+			companyUuid,
+			websocket.SourceCashier,
+			utils.IfString(model.CashierDeviceId != "", model.CashierDeviceId, websocket.SourceAll),
+			websocket.PRINT_DATA,
+			map[string]interface{}{
+				"print_log_uuid": model.Uuid,
+				"update_time":    model.BaseModel.UpdateTime,
+			},
+		)
+	}
 	return nil
 }
 
 // H5Order - AfterCreate 新增H5订单后的逻辑 - 推送订单更新
 func (model *H5Order) AfterCreate(tx *gorm.DB) (err error) {
-	go func() {
-		if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
-			data := map[string]interface{}{
-				"customer_call_uuid": model.Uuid,
-				"h5_order_uuid":      model.Uuid,
-				"desk_uuid":          model.DeskUuid,
-				"update_time":        model.BaseModel.UpdateTime,
-			}
-			go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.H5_ORDER, data)
-			go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		data := map[string]interface{}{
+			"customer_call_uuid": model.Uuid,
+			"h5_order_uuid":      model.Uuid,
+			"desk_uuid":          model.DeskUuid,
+			"update_time":        model.BaseModel.UpdateTime,
 		}
-	}()
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.H5_ORDER, data)
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+	}
 	return nil
 }
 
 // H5Order - AfterUpdate 更新H5订单后的逻辑 - 推送订单更新
 func (model *H5Order) AfterUpdate(tx *gorm.DB) (err error) {
-	go func() {
-		if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
-			data := map[string]interface{}{
-				"h5_order_uuid": model.Uuid,
-				"desk_uuid":     model.DeskUuid,
-				"update_time":   model.BaseModel.UpdateTime,
-			}
-			go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.H5_ORDER, data)
-			go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		data := map[string]interface{}{
+			"h5_order_uuid": model.Uuid,
+			"desk_uuid":     model.DeskUuid,
+			"update_time":   model.BaseModel.UpdateTime,
 		}
-	}()
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.H5_ORDER, data)
+		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
+	}
 	return nil
 }
 
 // Desk - AfterUpdate 更新桌台后的逻辑 - 推送桌台更新
 func (model *Desk) AfterUpdate(tx *gorm.DB) (err error) {
-	go func() {
-		if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
-			data := map[string]interface{}{
-				"desk_uuid":   model.BaseModel.Uuid,
-				"update_time": model.BaseModel.UpdateTime,
-			}
-			go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, data)
+	if companyUuid := model.getCompanyUuid(tx); companyUuid > 0 {
+		data := map[string]interface{}{
+			"desk_uuid":   model.BaseModel.Uuid,
+			"update_time": model.BaseModel.UpdateTime,
 		}
-	}()
+		go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, data)
+	}
 	return nil
 }
