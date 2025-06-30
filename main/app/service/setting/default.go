@@ -31,7 +31,6 @@ func (s *Srv) getIPAndPort() (string, string) {
 // 默认收银机设置
 func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier {
 	var defaultLanguage = i18n.LanguageEN
-	ip, port := s.getIPAndPort()
 	if len(languageList) > 0 {
 		defaultLanguage = languageList[0].Name
 	}
@@ -43,9 +42,8 @@ func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier
 				IsCashierOrder: "1",
 				IsTableOrder:   "1",
 			}, // 用餐方式 收银-is_cashier_order（0-关闭 1-开启） 桌台-is_table_order（0-关闭 1-开启）
-			Server:        setting.Server{IP: ip, Port: port}, // 收银机服务器连接
-			IsRemainColor: "1",                                // 是否开启剩余时长颜色 0-关闭 1-开启
-			RemainColor:   []string{"#E50028", "#F2A000"},     // 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
+			IsRemainColor: "1",                            // 是否开启剩余时长颜色 0-关闭 1-开启
+			RemainColor:   []string{"#E50028", "#F2A000"}, // 剩余时长颜色 10分钟-红色(#E50028) 20分钟-黄色(#F2A000)
 
 			IsOpenCashierPassword: "1", // 是否开启钱箱密码 0-关闭 1-开启
 
