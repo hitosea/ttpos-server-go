@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"time"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/constant/jwt"
@@ -41,9 +40,7 @@ func Auth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		startTime := time.Now()
 		ParseJwt(c, authHeader, authSrv, dbm)
-		fmt.Println(fmt.Sprintf("ParseJwt elapsed: %dms", time.Since(startTime).Milliseconds()))
 		c.Next()
 	}
 }

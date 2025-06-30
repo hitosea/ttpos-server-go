@@ -646,12 +646,16 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 	switch auth.Source {
 	case constant.SourceCashier: // 收银端
 		{
+			cashierSetting, err := s.GetCashierSetting(ctx)
+			if err != nil {
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeSystemError, "系统错误，请稍候再试")
+			}
 			// 检查收银机设置-收银用餐是否开启
-			if !s.isCashierOpen(ctx, auth.UrlPath) {
+			if !s.isCashierOpen(ctx, cashierSetting, auth.UrlPath) {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "收银用餐已关闭，请选择其他用餐方式")
 			}
 			// 检查收银机设置-桌台用餐是否开启
-			if !s.isTableOpen(ctx, auth.UrlPath) {
+			if !s.isTableOpen(ctx, cashierSetting, auth.UrlPath) {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 			}
 			// 判断权限
@@ -666,6 +670,10 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 		}
 	case constant.SourceAssistant: // 点餐助手端
 		{
+			cashierSetting, err := s.GetCashierSetting(ctx)
+			if err != nil {
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeSystemError, "系统错误，请稍候再试")
+			}
 			if companySetting.IsOpenAssistant != 1 {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeFunctionDisabled, "当前尚未开启点餐助手功能，如有需要，请联系销售代表")
 			}
@@ -680,12 +688,16 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				}
 			}
 			// 检查收银机设置-桌台用餐是否开启
-			if !s.isTableOpen(ctx, auth.UrlPath) {
+			if !s.isTableOpen(ctx, cashierSetting, auth.UrlPath) {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 			}
 		}
 	case constant.SourceTablet: // 平板端
 		{
+			cashierSetting, err := s.GetCashierSetting(ctx)
+			if err != nil {
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeSystemError, "系统错误，请稍候再试")
+			}
 			if companySetting.IsOpenTablet != 1 {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeFunctionDisabled, "当前尚未开启平板点餐功能，如有需要，请联系销售代表")
 			}
@@ -698,7 +710,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				}
 			}
 			// 检查收银机设置-桌台用餐是否开启
-			if !s.isTableOpen(ctx, auth.UrlPath) {
+			if !s.isTableOpen(ctx, cashierSetting, auth.UrlPath) {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "桌台用餐已关闭，请选择其他用餐方式")
 			}
 		}
@@ -760,13 +772,17 @@ func (s *authSrv) AuthMenu(ctx context.Context, qrcodeToken string) (*model.Comp
 	return company, nil
 }
 
-// 检查收银机设置-收银用餐是否开启
-func (s *authSrv) isCashierOpen(ctx context.Context, pathUrl string) bool {
+func (s *authSrv) GetCashierSetting(ctx context.Context) (*setting2.Cashier, error) {
 	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
 	if err != nil {
-		fmt.Println(err)
-		return false
+		return nil, err
 	}
+	return &cashierSetting, nil
+}
+
+// 检查收银机设置-收银用餐是否开启
+func (s *authSrv) isCashierOpen(ctx context.Context, cashierSetting *setting2.Cashier, pathUrl string) bool {
+	// 检查收银用餐是否开启
 	if cashierSetting.OrderMethod.IsCashierOrder != "1" && regexp.MustCompile(`^/api/v\d+/cashier/instant/`).Match([]byte(pathUrl)) {
 		return false
 	}
@@ -774,11 +790,7 @@ func (s *authSrv) isCashierOpen(ctx context.Context, pathUrl string) bool {
 }
 
 // 检查收银机设置-桌台用餐是否开启
-func (s *authSrv) isTableOpen(ctx context.Context, pathUrl string) bool {
-	cashierSetting, err := s.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
-	if err != nil {
-		return false
-	}
+func (s *authSrv) isTableOpen(ctx context.Context, cashierSetting *setting2.Cashier, pathUrl string) bool {
 	if cashierSetting.OrderMethod.IsTableOrder != "1" &&
 		(slices.Contains([]string{constant.SourceAssistant, constant.SourceTablet}, ctx.GetSource()) ||
 			(ctx.GetSource() == constant.SourceCashier && regexp.MustCompile(`^/api/v\d+/cashier/desk/`).Match([]byte(pathUrl)))) {
