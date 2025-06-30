@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -16,6 +17,21 @@ type DBOption func(*gorm.DB) *gorm.DB
 type WithPreload struct {
 	Query string
 	Args  []interface{}
+}
+
+// getCompanyUuid 从数据库名称中提取公司UUID
+func GetCompanyUuid(db *gorm.DB) uint64 {
+	var dbName string
+	db.Raw("SELECT DATABASE()").Scan(&dbName)
+	if len(dbName) > 4 && strings.HasPrefix(dbName, "shop") {
+		uuidStr := strings.TrimPrefix(dbName, "shop")
+		uuid, err := strconv.ParseUint(uuidStr, 10, 64)
+		if err == nil {
+			return uuid
+		}
+	}
+	// todo sqlite - 离线版本要重新考虑
+	return 0
 }
 
 // NotDeleted 筛选未被删除的

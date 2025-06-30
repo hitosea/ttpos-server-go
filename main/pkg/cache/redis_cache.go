@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -129,6 +130,73 @@ func (c *redisCache) GetBytes(key string) ([]byte, bool) {
 		return nil, false
 	}
 	return val, true
+}
+
+func (c *redisCache) GetBatchBytes(keys []string) (map[string][]byte, []string) {
+	ctx := context.Background()
+	result := make(map[string][]byte)
+	var missedKeys []string
+
+	if c.clusterClient != nil {
+		vals, err := c.clusterClient.MGet(ctx, keys...).Result()
+		if err != nil {
+			return result, keys
+		}
+
+		// 处理结果
+		for i, key := range keys {
+			if i < len(vals) && vals[i] != nil {
+				// 将值转换为字节数组
+				switch v := vals[i].(type) {
+				case string:
+					result[key] = []byte(v)
+				case []byte:
+					result[key] = v
+				default:
+					// 如果不是字符串或字节数组，则尝试JSON序列化
+					bytes, err := json.Marshal(v)
+					if err != nil {
+						missedKeys = append(missedKeys, key)
+						continue
+					}
+					result[key] = bytes
+				}
+			} else {
+				missedKeys = append(missedKeys, key)
+			}
+		}
+	} else {
+		// 对于单机模式，我们可以使用MGet
+		vals, err := c.client.MGet(ctx, keys...).Result()
+		if err != nil {
+			return result, keys
+		}
+
+		// 处理结果
+		for i, key := range keys {
+			if i < len(vals) && vals[i] != nil {
+				// 将值转换为字节数组
+				switch v := vals[i].(type) {
+				case string:
+					result[key] = []byte(v)
+				case []byte:
+					result[key] = v
+				default:
+					// 如果不是字符串或字节数组，则尝试JSON序列化
+					bytes, err := json.Marshal(v)
+					if err != nil {
+						missedKeys = append(missedKeys, key)
+						continue
+					}
+					result[key] = bytes
+				}
+			} else {
+				missedKeys = append(missedKeys, key)
+			}
+		}
+	}
+
+	return result, missedKeys
 }
 
 func (c *redisCache) Del(key ...string) {
