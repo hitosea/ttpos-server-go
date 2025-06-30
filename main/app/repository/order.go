@@ -1341,7 +1341,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 	startTime := time.Now()
 
 	cacheDataRepo := NewCacheDataRepo(r.db)
-	multiLanguageNameUuids := []uint64{}
+	// multiLanguageNameUuids := []uint64{}
 
 	// 查询销售账单
 	saleBill, err := r.GetSaleBill(
@@ -1386,38 +1386,38 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 				},
 			},
 			// ==================== 销售账单的优惠券信息 ====================
-			WithPreload{
-				Query: "SaleOrders.Coupons",
-				Args: []any{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-				},
-			},
-			WithPreload{
-				Query: "SaleOrders.Coupons.MarketingCoupon",
-			},
-			WithPreload{
-				Query: "SaleOrders.Coupons.MemberCoupon",
-			},
+			// WithPreload{
+			// 	Query: "SaleOrders.Coupons",
+			// 	Args: []any{
+			// 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+			// 	},
+			// },
+			// WithPreload{
+			// 	Query: "SaleOrders.Coupons.MarketingCoupon",
+			// },
+			// WithPreload{
+			// 	Query: "SaleOrders.Coupons.MemberCoupon",
+			// },
 			// ==================== 销售账单的订单信息 ====================
-			WithPreload{
-				Query: "SaleOrders.PaymentOrders",
-				Args: []any{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-					CommonRepo.DBOption(CommonRepo.WhereByStatus(constant.PaymentOrderStatusPaid)),
-				},
-			},
-			WithPreload{
-				Query: "SaleOrders.PaymentOrders.PaymentMethod",
-			},
-			WithPreload{
-				Query: "SaleOrders.PaymentOrders.ReturnOrderAmounts",
-				Args: []any{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-				},
-			},
-			WithPreload{
-				Query: "SaleOrders.PaymentOrders.ReturnOrderAmounts.PaymentMethod",
-			},
+			// WithPreload{
+			// 	Query: "SaleOrders.PaymentOrders",
+			// 	Args: []any{
+			// 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+			// 		CommonRepo.DBOption(CommonRepo.WhereByStatus(constant.PaymentOrderStatusPaid)),
+			// 	},
+			// },
+			// WithPreload{
+			// 	Query: "SaleOrders.PaymentOrders.PaymentMethod",
+			// },
+			// WithPreload{
+			// 	Query: "SaleOrders.PaymentOrders.ReturnOrderAmounts",
+			// 	Args: []any{
+			// 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+			// 	},
+			// },
+			// WithPreload{
+			// 	Query: "SaleOrders.PaymentOrders.ReturnOrderAmounts.PaymentMethod",
+			// },
 			WithPreload{
 				Query: "SaleOrders.Member.MemberLevel",
 			},
@@ -1440,6 +1440,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 				},
 			},
 			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
+			},
+			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.CancelReasons",
 			},
 			WithPreload{
@@ -1459,27 +1462,27 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 					}),
 				},
 			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.ReturnOrderProducts",
-				Args: []any{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-				},
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetCustomerTypePrice.BuffetCustomerType",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetDelayProducts",
-			},
-			WithPreload{
-				Query: "SaleOrders.SaleOrderBuffetDelayProducts.ReturnOrderProducts",
-				Args: []any{
-					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-				},
-			},
+			// WithPreload{
+			// 	Query: "SaleOrders.SaleOrderBuffetCustomerTypes.ReturnOrderProducts",
+			// 	Args: []any{
+			// 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+			// 	},
+			// },
+			// WithPreload{
+			// 	Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",
+			// },
+			// WithPreload{
+			// 	Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetCustomerTypePrice.BuffetCustomerType",
+			// },
+			// WithPreload{
+			// 	Query: "SaleOrders.SaleOrderBuffetDelayProducts",
+			// },
+			// WithPreload{
+			// 	Query: "SaleOrders.SaleOrderBuffetDelayProducts.ReturnOrderProducts",
+			// 	Args: []any{
+			// 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+			// 	},
+			// },
 			WithPreload{
 				Query: "SaleOrders.ReturnOrders",
 			},
@@ -1505,7 +1508,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 	// 查询自助餐套餐1
 	if saleBill.BuffetPackage1Uuid != 0 {
 		if buffetPackage1, err := cacheDataRepo.GetCacheBuffetPackage(saleBill.BuffetPackage1Uuid); err == nil {
-			multiLanguageNameUuids = append(multiLanguageNameUuids, buffetPackage1.MultiLanguageNameUuid)
+			// multiLanguageNameUuids = append(multiLanguageNameUuids, buffetPackage1.MultiLanguageNameUuid)
 			// 加载自助餐套餐1顾客类型价格。用于判断顾客价格是否改变
 			buffetCustomerTypePrices, err := cacheDataRepo.GetCacheBuffetCustomerTypePrices(buffetPackage1.Uuid)
 			if err != nil {
@@ -1529,7 +1532,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 	// 查询自助餐套餐2
 	if saleBill.BuffetPackage2Uuid != 0 {
 		if buffetPackage2, err := cacheDataRepo.GetCacheBuffetPackage(saleBill.BuffetPackage2Uuid); err == nil {
-			multiLanguageNameUuids = append(multiLanguageNameUuids, buffetPackage2.MultiLanguageNameUuid)
+			// multiLanguageNameUuids = append(multiLanguageNameUuids, buffetPackage2.MultiLanguageNameUuid)
 			// 加载自助餐套餐2顾客类型价格。用于判断顾客价格是否改变
 			buffetCustomerTypePrices, err := cacheDataRepo.GetCacheBuffetCustomerTypePrices(buffetPackage2.Uuid)
 			if err != nil {
@@ -1551,104 +1554,104 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 		}
 	}
 	// 查询销售订单商品
-	if len(saleBill.SaleOrders) > 0 {
-		productPackageUuids := []uint64{}
-		productBomUuids := []uint64{}
-		productAttributeUuids := []uint64{}
-		for _, saleOrder := range saleBill.SaleOrders {
-			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-				if saleOrderProduct.ProductPackageUuid != 0 {
-					multiLanguageNameUuids = append(multiLanguageNameUuids, saleOrderProduct.MultiLanguageNameUuid)
-					productPackageUuids = append(productPackageUuids, saleOrderProduct.ProductPackageUuid)
-					if len(saleOrderProduct.SaleOrderProductBoms) > 0 {
-						for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
-							productBomUuids = append(productBomUuids, saleOrderProductBom.ProductBomUuid)
-						}
-					}
-					if len(saleOrderProduct.SaleOrderProductAttributes) > 0 {
-						for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
-							productAttributeUuids = append(productAttributeUuids, saleOrderProductAttribute.ProductAttributeUuid)
-						}
-					}
-				}
-			}
-			// 商品包
-			if len(productPackageUuids) > 0 {
-				productPackages, err := cacheDataRepo.GetCacheAllProductPackageByUuids(productPackageUuids)
-				if err != nil {
-					return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
-				}
-				for _, productPackage := range productPackages {
-					for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-						if saleOrderProduct.ProductPackageUuid == productPackage.Uuid {
-							saleOrderProduct.ProductPackage = productPackage
-						}
-					}
-				}
-			}
-			// 商品BOM
-			if len(productBomUuids) > 0 {
-				productBoms, err := cacheDataRepo.GetCacheAllProductBomByUuids(productBomUuids)
-				if err != nil {
-					return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
-				}
-				for _, productBom := range productBoms {
-					for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-						if len(saleOrderProduct.SaleOrderProductBoms) > 0 {
-							for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
-								if saleOrderProductBom.ProductBomUuid == productBom.Uuid {
-									saleOrderProductBom.ProductBom = *productBom
-								}
-							}
-						}
-					}
-				}
-			}
-			// 商品属性
-			if len(productAttributeUuids) > 0 {
-				productAttributes, err := cacheDataRepo.GetCacheAllProductAttributeByUuids(productAttributeUuids)
-				if err != nil {
-					return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
-				}
-				for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-					if len(saleOrderProduct.SaleOrderProductAttributes) > 0 {
-						for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
-							for _, productAttribute := range productAttributes {
-								if saleOrderProductAttribute.ProductAttributeUuid == productAttribute.Uuid {
-									saleOrderProductAttribute.ProductAttribute = *productAttribute
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+	// if len(saleBill.SaleOrders) > 0 {
+	// 	productPackageUuids := []uint64{}
+	// 	productBomUuids := []uint64{}
+	// 	productAttributeUuids := []uint64{}
+	// 	for _, saleOrder := range saleBill.SaleOrders {
+	// 		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+	// 			if saleOrderProduct.ProductPackageUuid != 0 {
+	// 				multiLanguageNameUuids = append(multiLanguageNameUuids, saleOrderProduct.MultiLanguageNameUuid)
+	// 				productPackageUuids = append(productPackageUuids, saleOrderProduct.ProductPackageUuid)
+	// 				if len(saleOrderProduct.SaleOrderProductBoms) > 0 {
+	// 					for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
+	// 						productBomUuids = append(productBomUuids, saleOrderProductBom.ProductBomUuid)
+	// 					}
+	// 				}
+	// 				if len(saleOrderProduct.SaleOrderProductAttributes) > 0 {
+	// 					for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
+	// 						productAttributeUuids = append(productAttributeUuids, saleOrderProductAttribute.ProductAttributeUuid)
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 		// 商品包
+	// 		if len(productPackageUuids) > 0 {
+	// 			productPackages, err := cacheDataRepo.GetCacheAllProductPackageByUuids(productPackageUuids)
+	// 			if err != nil {
+	// 				return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+	// 			}
+	// 			for _, productPackage := range productPackages {
+	// 				for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+	// 					if saleOrderProduct.ProductPackageUuid == productPackage.Uuid {
+	// 						saleOrderProduct.ProductPackage = productPackage
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 		// 商品BOM
+	// 		if len(productBomUuids) > 0 {
+	// 			productBoms, err := cacheDataRepo.GetCacheAllProductBomByUuids(productBomUuids)
+	// 			if err != nil {
+	// 				return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+	// 			}
+	// 			for _, productBom := range productBoms {
+	// 				for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+	// 					if len(saleOrderProduct.SaleOrderProductBoms) > 0 {
+	// 						for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
+	// 							if saleOrderProductBom.ProductBomUuid == productBom.Uuid {
+	// 								saleOrderProductBom.ProductBom = *productBom
+	// 							}
+	// 						}
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 		// 商品属性
+	// 		if len(productAttributeUuids) > 0 {
+	// 			productAttributes, err := cacheDataRepo.GetCacheAllProductAttributeByUuids(productAttributeUuids)
+	// 			if err != nil {
+	// 				return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+	// 			}
+	// 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+	// 				if len(saleOrderProduct.SaleOrderProductAttributes) > 0 {
+	// 					for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
+	// 						for _, productAttribute := range productAttributes {
+	// 							if saleOrderProductAttribute.ProductAttributeUuid == productAttribute.Uuid {
+	// 								saleOrderProductAttribute.ProductAttribute = *productAttribute
+	// 							}
+	// 						}
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	// 查询语言
-	if len(multiLanguageNameUuids) > 0 {
-		var multiLanguageNames []model.MultiLanguageName
-		db := r.db.Model(&model.MultiLanguageName{}).Where("uuid in ?", multiLanguageNameUuids)
-		if result := db.Find(&multiLanguageNames); result.Error != nil {
-			return &saleBill, fmt.Errorf("GetSaleBill: %v", result.Error)
-		}
-		for _, multiLanguageName := range multiLanguageNames {
-			if saleBill.BuffetPackage1 != nil && saleBill.BuffetPackage1.MultiLanguageNameUuid == multiLanguageName.Uuid {
-				saleBill.BuffetPackage1.MultiLanguageName = multiLanguageName
-			}
-			if saleBill.BuffetPackage2 != nil && saleBill.BuffetPackage2.MultiLanguageNameUuid == multiLanguageName.Uuid {
-				saleBill.BuffetPackage2.MultiLanguageName = multiLanguageName
-			}
-			// 商品多语言名称
-			for _, saleOrder := range saleBill.SaleOrders {
-				for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-					if saleOrderProduct.MultiLanguageNameUuid == multiLanguageName.Uuid {
-						saleOrderProduct.MultiLanguageName = &multiLanguageName
-					}
-				}
-			}
-		}
-	}
+	// if len(multiLanguageNameUuids) > 0 {
+	// 	var multiLanguageNames []model.MultiLanguageName
+	// 	db := r.db.Model(&model.MultiLanguageName{}).Where("uuid in ?", multiLanguageNameUuids)
+	// 	if result := db.Find(&multiLanguageNames); result.Error != nil {
+	// 		return &saleBill, fmt.Errorf("GetSaleBill: %v", result.Error)
+	// 	}
+	// 	for _, multiLanguageName := range multiLanguageNames {
+	// 		if saleBill.BuffetPackage1 != nil && saleBill.BuffetPackage1.MultiLanguageNameUuid == multiLanguageName.Uuid {
+	// 			saleBill.BuffetPackage1.MultiLanguageName = multiLanguageName
+	// 		}
+	// 		if saleBill.BuffetPackage2 != nil && saleBill.BuffetPackage2.MultiLanguageNameUuid == multiLanguageName.Uuid {
+	// 			saleBill.BuffetPackage2.MultiLanguageName = multiLanguageName
+	// 		}
+	// 		// 商品多语言名称
+	// 		for _, saleOrder := range saleBill.SaleOrders {
+	// 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+	// 				if saleOrderProduct.MultiLanguageNameUuid == multiLanguageName.Uuid {
+	// 					saleOrderProduct.MultiLanguageName = &multiLanguageName
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	fmt.Printf("GetSaleBillAllInfo 第一次查询耗时: %v\n", time.Since(startTime))
 	// fmt.Println(utils.ToJsonString(saleBill))
