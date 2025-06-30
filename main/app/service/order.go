@@ -4427,8 +4427,9 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 					sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
 					names = append(names, sauceName)
 				}
-				tipStr := i18n.Translate(ctx.GetLanguage(), "加料已删除")
-				return nil, errors.New(strings.Join(names, ",") + tipStr)
+				tipStrPrefix := i18n.Translate(ctx.GetLanguage(), "加料")
+				tipStr := i18n.Translate(ctx.GetLanguage(), "已下架，请重新选择其他加料")
+				return nil, errors.New(tipStrPrefix + " " + strings.Join(names, ",") + " " + tipStr)
 			}
 			for i, bom := range sauceProductBomList {
 				sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
@@ -5203,6 +5204,9 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			} else {
 				// 如果是送厨检查
 				status, message = saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
+				if status == constant.CodeOrderCheckProductSauceDown {
+					return nil, errors.New(message)
+				}
 
 				// 只检查未送厨的商品
 				if !saleOrderProduct.IsCookingProduct() {

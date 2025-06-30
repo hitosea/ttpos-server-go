@@ -97,7 +97,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		}
 		if errCheck != nil {
 			ctx.Log().Error("检查商品失败", zap.Error(errCheck))
-			return nil, errors.New("检查商品失败")
+			return nil, errors.WithMessage(errCheck)
 		}
 		if checkServiceRes != nil {
 			if checkServiceRes.Code == constant.CodeOrderCheckProductMust && ignoreMust {

@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/jinzhu/copier"
@@ -463,11 +464,17 @@ func (model *SaleOrderProduct) CheckCookingProduct(lang string) (int, string) {
 			}
 			// 小料已经下架
 			if bom.ProductBom.IsDown() {
-				return constant.CodeOrderCheckProductSauceDown, "小料已经下架"
+				sauceName := bom.ProductBom.ProductSauce.MultiLanguageName.GetNameByLang(lang)
+				tipsPrefix := i18n.Translate(lang, "加料")
+				tipsPostfix := i18n.Translate(lang, "已下架，请重新选择其他加料") // "已下架，请重新选择其他加料"
+				return constant.CodeOrderCheckProductSauceDown, fmt.Sprintf("%s %s %s", tipsPrefix, sauceName, tipsPostfix)
 			}
 			// 小料已经删除
 			if bom.ProductBom.IsDelete() {
-				return constant.CodeOrderCheckProductSauceDown, "小料已经删除"
+				sauceName := bom.ProductBom.ProductSauce.MultiLanguageName.GetNameByLang(lang)
+				tipsPrefix := i18n.Translate(lang, "加料")
+				tipsPostfix := i18n.Translate(lang, "已下架，请重新选择其他加料") // "已下架，请重新选择其他加料"
+				return constant.CodeOrderCheckProductSauceDown, fmt.Sprintf("%s %s %s", tipsPrefix, sauceName, tipsPostfix)
 			}
 			// 下单商品数量超过库存数量
 			// 每个订单商品一个小料只消耗一个小料库存
