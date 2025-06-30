@@ -88,6 +88,11 @@ func (r *CacheDataRepoImpl) GetCacheBuffetCustomerTypePrices(buffetPackageUuid u
 	// 缓存未命中，从数据库查询
 	prices, err := NewBuffetCustomerTypePricesRepo(r.db).GetBuffetCustomerTypePrices(
 		CommonRepo.WhereByBuffetPackageUuid(buffetPackageUuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "MultiLanguageName",
+			},
+		),
 	)
 
 	if err != nil {
