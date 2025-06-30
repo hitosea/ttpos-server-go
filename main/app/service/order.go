@@ -4791,7 +4791,6 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 			return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
 		}
 	}
-	startTime := time.Now()
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
@@ -4808,16 +4807,14 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	}); err != nil {
 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
-	fmt.Printf("OrderCartProductNum elapsed: %v\n", time.Since(startTime))
 	// 获取新的桌台数据
+	startTime := time.Now()
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-	fmt.Printf("OrderCartProductNum elapsed2: %v\n", time.Since(startTime))
+	fmt.Printf("OrderCartProductNum elapsed: %v\n", time.Since(startTime))
 	ctx.Log().Debug("获取新的账单数据")
-	fmt.Printf("OrderCartProductNum elapsed3: %v\n", time.Since(startTime))
-
 	return info, nil
 }
 
