@@ -76,9 +76,14 @@ func (r *productBomRepoImpl) GetProductBoms(opts ...DBOption) ([]*model.ProductB
 func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.ProductBom, error) {
 	productBom, err := r.GetProductBom(
 		CommonRepo.WhereByUuid(uuid),
-		CommonRepo.Preload(WithPreload{
-			Query: "ProductFlavor.MultiLanguageName",
-		}),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "ProductFlavor.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "FlavorMaterials.Material",
+			},
+		),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -104,9 +109,14 @@ func (r *productBomRepoImpl) GetSauceProductBomsByUuids(uuids []uint64) ([]*mode
 	productBoms, err := r.GetProductBoms(
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereInUuids(uuids),
-		CommonRepo.Preload(WithPreload{
-			Query: "ProductSauce.MultiLanguageName",
-		}),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "ProductSauce.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductSauce.SauceMaterials.Material",
+			},
+		),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)

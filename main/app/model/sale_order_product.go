@@ -435,7 +435,7 @@ func (model *SaleOrderProduct) CheckCookingProduct(lang string) (int, string) {
 				return constant.CodeOrderCheckProductStockZero, "商品已经沽清"
 			}
 			// 下单商品数量超过库存数量
-			if bom.ProductBom.IsStockShortage(model.Num) {
+			if bom.ProductBom.IsStockShortageWithMaterial(model.Num) {
 				productInfoString := model.GetNameAndFlavorName()
 				return constant.CodeOrderCheckProductStockZero, fmt.Sprintf("%s 库存不足", productInfoString.GetLocale(lang))
 			}
@@ -471,7 +471,7 @@ func (model *SaleOrderProduct) CheckCookingProduct(lang string) (int, string) {
 			}
 			// 下单商品数量超过库存数量
 			// 每个订单商品一个小料只消耗一个小料库存
-			if bom.ProductBom.IsStockShortage(1) {
+			if bom.ProductBom.IsStockShortageWithMaterial(1) {
 				return constant.CodeOrderCheckProductStockZero, "下单小料数量超过库存数量"
 			}
 		}
