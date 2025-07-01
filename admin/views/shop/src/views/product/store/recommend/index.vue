@@ -145,7 +145,6 @@
   const openProductSelectorDialog = () => {
     // 如果 form.value.product_packages 为空，selectedProductIds.value 为空
     selectedProductIds.value = form.value.product_packages.map((item) => Number(item.uuid)) || [];
-    console.log(selectedProductIds.value);
     openProductSelector.value = true;
   };
 

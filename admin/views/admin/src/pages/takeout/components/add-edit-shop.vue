@@ -265,6 +265,7 @@
     emits('update:show', false);
   };
 
+  // 清空表单
   const clearForm = () => {
     setTimeout(() => {
       formElement.value.resetFields();
@@ -276,6 +277,7 @@
     }, 300);
   };
 
+  // 提交表单
   const handleSubmit = () => {
     formElement.value.validate(async (valid: boolean) => {
       if (valid) {
@@ -296,11 +298,13 @@
     });
   };
 
+  // 删除距离范围
   const removeDistanceRange = (index: number, distanceRangeIndex: number) => {
     formData.value.channels[index].distance_range.splice(distanceRangeIndex, 1);
     formElement.value.validateField('channels.' + index + '.distance_range');
   };
 
+  // 添加距离范围
   const addDistanceRange = (index: number) => {
     formData.value.channels[index].distance_range.push({
       end: 0,
@@ -310,6 +314,7 @@
     formElement.value.validateField('channels.' + index + '.distance_range');
   };
 
+  // 获取商家列表
   const getCompanyListData = async () => {
     try {
       const res = await getCompanySelect();
@@ -319,6 +324,7 @@
     }
   };
 
+  // 获取渠道列表
   const getChannelsData = async () => {
     try {
       const res = await getChannels({ configured: 1 });
@@ -328,6 +334,7 @@
     }
   };
 
+  // 获取设置列表
   const getTakeoutSettingData = async () => {
     try {
       const res = await getTakeoutSetting();
@@ -337,6 +344,7 @@
     }
   };
 
+  // 外送渠道变化
   const handleTakeoutChange = (val: string[]) => {
     // 以val为基准，对比formData.value.channels，如果存在，就从formData.value.channels中删除
     formData.value.channels = formData.value.channels.filter((item) => val.includes(item.channel));
@@ -356,6 +364,7 @@
     });
   };
 
+  // 参数设置变化
   const handleConfigTypeChange = (index: number, channel: string) => {
     // 如果config_type为auto_sync，distance_range设置为takeoutSettingData.value中对应channel的distance_range
     if (formData.value.channels[index].config_type === 'auto_sync') {
