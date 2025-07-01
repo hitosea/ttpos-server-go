@@ -166,7 +166,7 @@ class Activity extends Controller
             if (!$result) {
                 return $this->renderError('活动不存在');
             }
-            $url = env('MEMBER_BASE_URL') . "/login?cid={$request->appId}";
+            $url = env('MEMBER_BASE_URL') . "/login?cid={$request->appId}&aid={$uuid}";
             $qrCode = new QrCode($url);
             return $this->renderSuccess('', [
                 'detail' => $result,
