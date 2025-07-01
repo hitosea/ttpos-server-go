@@ -126,7 +126,11 @@ class UserShiftLog extends Controller
             return $this->renderError($snapshotModel->getError());
         }
         $salesInfo = $detail['salesInfo'] ?? [];
-        
+        // 
+        if (isset($detail['abnormal'])) {
+            $detail['abnormal']['refund_times'] = $detail['abnormal']['refund_time'] ?? 0;
+        }
+        // 
         return $this->renderSuccess('', compact('detail', 'salesInfo'));
     }
 
