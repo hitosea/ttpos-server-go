@@ -530,7 +530,7 @@ type CountCategoryResp struct {
 // CountCategoryListResp 统计分类响应
 type CountCategoryListResp struct {
 	CategoryName string  `json:"category_name"` // 分类名称
-	SaleNum      int64   `json:"sale_num"`      // 销售数量
+	SaleNum      float64 `json:"sale_num"`      // 销售数量
 	SaleAmount   float64 `json:"sale_amount"`   // 销售金额
 }
 
@@ -550,7 +550,7 @@ func (s *statisticsSrv) CountCategory(ctx context.Context, req CountReq) CountCa
 		}
 		list = append(list, CountCategoryListResp{
 			CategoryName: categoryName,
-			SaleNum:      category.SaleNum.Int64,
+			SaleNum:      category.SaleNum.Float64,
 			SaleAmount:   category.SaleAmount.Float64,
 		})
 	}
@@ -591,7 +591,7 @@ type CountAreaResp struct {
 	AreaName           string  `json:"area_name"`            // 区域名称
 	AreaSaleAmount     float64 `json:"area_sale_amount"`     // 区域销售额
 	AreaBusinessAmount float64 `json:"area_business_amount"` // 区域营业收入
-	AreaProductNum     int64   `json:"area_product_num"`     // 区域商品数量
+	AreaProductNum     float64 `json:"area_product_num"`     // 区域商品数量
 }
 
 // CountArea 统计区域
@@ -605,7 +605,7 @@ func (s *statisticsSrv) CountArea(ctx context.Context, req CountReq) []CountArea
 			AreaName:           area.AreaName.String,
 			AreaSaleAmount:     area.AreaSaleAmount.Float64,
 			AreaBusinessAmount: area.AreaBusinessAmount.Float64,
-			AreaProductNum:     area.AreaProductNum.Int64,
+			AreaProductNum:     area.AreaProductNum.Float64,
 		})
 	}
 	return list
@@ -635,7 +635,7 @@ func (s *statisticsSrv) CountAreaDays(ctx context.Context, req CountReq, days []
 				AreaName:           result.AreaName.String,
 				AreaSaleAmount:     result.AreaSaleAmount.Float64,
 				AreaBusinessAmount: result.AreaBusinessAmount.Float64,
-				AreaProductNum:     result.AreaProductNum.Int64,
+				AreaProductNum:     result.AreaProductNum.Float64,
 			})
 		}
 		list = append(list, CountAreaDaysResp{
@@ -1534,7 +1534,7 @@ type CountExportAreaData struct {
 	AreaName           string  `json:"area_name"`            // 区域名称
 	AreaSaleAmount     float64 `json:"area_sale_amount"`     // 区域销售额
 	AreaBusinessAmount float64 `json:"area_business_amount"` // 区域营业收入
-	AreaProductNum     int64   `json:"area_product_num"`     // 区域商品数量
+	AreaProductNum     float64 `json:"area_product_num"`     // 区域商品数量
 }
 
 // CountExportPaymentData 统计导出支付数据
