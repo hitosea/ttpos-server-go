@@ -86,10 +86,12 @@
   const channels = ref<TakeoutShopData[]>([]);
   const companyList = ref<TakeoutShopSelectData[]>([]);
 
+  // 查询
   const handleSearch = () => {
     getTakeoutOrderData();
   };
 
+  // 获取订单数据
   const getTakeoutOrderData = async () => {
     isFetching.value = true;
     try {
@@ -102,6 +104,7 @@
     }
   };
 
+  // 获取商家列表
   const getCompanyListData = async () => {
     try {
       const res = await getCompanySelect();
@@ -111,6 +114,7 @@
     }
   };
 
+  // 获取渠道列表
   const getChannelsData = async () => {
     try {
       const res = await getChannels({ configured: 0 });
@@ -119,6 +123,8 @@
       console.error('获取渠道失败:', error);
     }
   };
+
+  // 导出
   const handleExport = () => {};
 
   onMounted(() => {

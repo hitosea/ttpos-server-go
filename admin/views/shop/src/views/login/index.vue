@@ -430,6 +430,7 @@
           });
       },
 
+      // 切换语言
       setLanguage(e) {
         if (e == this.languageTag) return;
         ElMessageBox.confirm($t('切换语言需要刷新后生效，是否确定刷新?'), $t('提示'), {

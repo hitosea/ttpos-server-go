@@ -87,22 +87,26 @@
 
   const tableData = ref<TakeoutShopListDataItem[]>([]);
 
+  // 查询
   const handleSearch = () => {
     isFetching.value = true;
     getCompanyListData();
   };
 
+  // 添加
   const handleAdd = () => {
     addEditShow.value = true;
     hasEdit.value = false;
   };
 
+  // 编辑
   const handleEdit = (row: any) => {
     editData.value = row;
     hasEdit.value = true;
     addEditShow.value = true;
   };
 
+  // 状态
   const handleStatus = async (row: any) => {
     try {
       editLoading.value = true;
@@ -116,11 +120,13 @@
     }
   };
 
+  // 分页
   const handlePageChange = (page: number) => {
     currentPage.value = page;
     handleSearch();
   };
 
+  // 获取渠道列表
   const getChannelsData = async () => {
     try {
       const res = await getChannels({ configured: 0 });
@@ -130,6 +136,7 @@
     }
   };
 
+  // 获取商家列表
   const getCompanyListData = async () => {
     isFetching.value = true;
     try {
