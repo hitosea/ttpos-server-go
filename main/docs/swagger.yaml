@@ -4914,7 +4914,7 @@ definitions:
         description: 送厨商品名称
       num:
         description: 送厨商品数量
-        type: integer
+        type: number
       product_attribute_names:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -4954,7 +4954,7 @@ definitions:
         description: 分页信息
       send_kitchen_num:
         description: 送厨商品数量，用于厨显来菜提醒
-        type: integer
+        type: number
     type: object
   resp.RechargeMember:
     properties:
