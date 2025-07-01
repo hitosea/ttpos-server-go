@@ -82,7 +82,7 @@
     </el-dialog>
 
     <div class="language-box">
-      <el-dropdown trigger="click" @command="setLanguage">
+      <el-dropdown trigger="click" @command="setLanguage" @visible-change="handleVisibleChange">
         <span class="el-dropdown-link">
           <SvgIcon class="data-box-icon" name="language"></SvgIcon>{{ languageNow }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
         </span>
@@ -125,6 +125,7 @@
   const macData = language.getMacData().macData;
   const languageTag = languageStore().language;
   const languageList = language.getLanguageList().languageList;
+  const languageListOrigin = language.getLanguageListOrigin().languageListOrigin;
   const userInfo = computedUserInfo().userInfo;
   export default {
     components: {
@@ -226,6 +227,7 @@
         language: language,
         languageNow: languageNow,
         languageList: languageList,
+        languageListOrigin: languageListOrigin,
         languageTag: languageTag,
         accredit: accredit,
         userInfo: userInfo,
@@ -445,6 +447,12 @@
               message: $t('已取消'),
             });
           });
+      },
+
+      handleVisibleChange(visible) {
+        if (visible && this.languageList.length === 0) {
+          languageStore().setLanguageList(this.languageListOrigin);
+        }
       },
 
       handleFocus() {

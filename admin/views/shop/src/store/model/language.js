@@ -46,6 +46,48 @@ export const languageStore = defineStore({
         value: 'မြန်မာဘာသာ',
       },
     ],
+    languageListOrigin: [
+      {
+        key: 'en',
+        name: 'en',
+        value: 'English',
+      },
+      {
+        key: 'zh',
+        name: 'zh',
+        value: '简体中文',
+      },
+      {
+        key: 'zhtw',
+        name: 'zhtw',
+        value: '繁體中文',
+      },
+      {
+        key: 'th',
+        name: 'th',
+        value: 'ภาษาไทย',
+      },
+      {
+        key: 'ja',
+        name: 'ja',
+        value: '日本語です',
+      },
+      {
+        key: 'ko',
+        name: 'ko',
+        value: '한국어',
+      },
+      {
+        key: 'tr',
+        name: 'tr',
+        value: 'Türkçe',
+      },
+      {
+        key: 'my',
+        name: 'my',
+        value: 'မြန်မာဘာသာ',
+      },
+    ],
     languageData: {
       en: '',
       zh: '',
@@ -200,6 +242,13 @@ export const languageStore = defineStore({
       return {
         languageList: computed(() => {
           return this.languageList;
+        }),
+      };
+    },
+    getLanguageListOrigin() {
+      return {
+        languageListOrigin: computed(() => {
+          return this.languageListOrigin;
         }),
       };
     },
