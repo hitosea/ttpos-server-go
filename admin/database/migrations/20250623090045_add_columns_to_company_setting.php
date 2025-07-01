@@ -33,7 +33,7 @@ class AddColumnsToCompanySetting extends Migrator
     {
         $table = $this->table('company_setting');
         if (!$table->hasColumn('delivery_config')) {
-            $table->addColumn('delivery_config', 'text', ['default' => '', 'comment' => '外送配置', 'after' => 'address']);
+            $table->addColumn('delivery_config', 'text', ['comment' => '外送配置', 'after' => 'address']);
         }
         if (!$table->hasColumn('delivery_status')) {
             $table->addColumn('delivery_status', 'integer', ['default' => '0', 'comment' => '外送配置状态：0-关,1-开', 'after' => 'address']);
