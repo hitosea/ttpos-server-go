@@ -748,7 +748,7 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 
 		// 打印产品名称和数量
 		printer.SetCharacterSize(2, 2)
-		totalNum := utils.IfString(tmp == 2, fmt.Sprintf("-%v", product.TotalNum), fmt.Sprintf("X%v", product.TotalNum))
+		totalNum := utils.IfString(tmp == 2, "-", "x") + t.base.FloatToString(product.TotalNum)
 		printer.PrintInColumns(productName, totalNum)
 		printer.SetCharacterSize(1, 1)
 
@@ -963,7 +963,7 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 
 		// 打印产品名称和数量
 		printer.SetCharacterSize(2, 2)
-		totalNum := fmt.Sprintf("X%v", product.TotalNum)
+		totalNum := "X" + t.base.FloatToString(product.TotalNum)
 		printer.PrintInColumns(productName, totalNum)
 		printer.SetCharacterSize(1, 1)
 
