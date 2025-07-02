@@ -251,10 +251,26 @@ class Product extends Controller
     {
         /** @var ProductModel $model */
         $model = ProductModel::detail($product_id);
-        if (!$model->setStatus($state)) {
-            return $this->renderError('操作失败');
+        if ($model) {
+            if (!$model->setStatus($state)) {
+                return $this->renderError('操作失败');
+            }
+            return $this->renderSuccess('操作成功');
         }
-        return $this->renderSuccess('操作成功');
+        /** @var MaterialModel $model */
+        $material = MaterialModel::detail($product_id);
+        if ($material) {
+            if ($state != 10 && $material->relatedMaterial()->count() > 0) {
+                return $this->renderError('该材料已被使用，无法操作');
+            }
+            $res = $material->save(['status' => $state == 10 ? 1 : 0]);
+            if ($res === false) {
+                return $this->renderError('操作失败');
+            }
+            return $this->renderSuccess('操作成功');
+        }
+        // 
+        return $this->renderError('操作失败');
     }
 
     /**
