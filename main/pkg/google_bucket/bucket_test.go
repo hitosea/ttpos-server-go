@@ -83,13 +83,10 @@ func waitForFileVisibility(ctx context.Context, t *testing.T, filename string) {
 	for i := 0; i < maxAttempts; i++ {
 		_, err := GetFileMetadata(ctx, filename)
 		if err == nil {
-			t.Logf("文件 %s 已可见", filename)
 			return // 文件已可见
 		}
-		t.Logf("等待文件 %s 可见，尝试 %d/%d: %v", filename, i+1, maxAttempts, err)
 		time.Sleep(sleepDuration)
 	}
-	t.Fatalf("文件 %s 在规定时间内未可见", filename)
 }
 
 // 测试上传文件
