@@ -1158,7 +1158,7 @@ func (h *InstantHandler) OrderUseMember(c *gin.Context) {
 		return
 	}
 	if isCustomAmountAndZero {
-		helper.FailWithData(c, constant.CodeMemberWarn, res, nil, "改价/抹零已失效，请重新进行改价/抹零操作")
+		helper.FailWithData(c, constant.CodeSuccess, res, nil, "改价/抹零已失效，请重新进行改价/抹零操作")
 		return
 	}
 	helper.Success(c, res)

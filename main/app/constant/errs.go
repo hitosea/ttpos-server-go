@@ -115,11 +115,6 @@ const (
 	CodeReturnOrderBank = -401 // 请选择银行
 )
 
-// 会员业务提示
-const (
-	CodeMemberWarn = 200 // 提示“改价/抹零已失效，请重新进行改价/抹零操作”
-)
-
 // 营销活动业务错误码
 const (
 	CodeMarketingActivityInvalid = -501 // 营销活动已失效
