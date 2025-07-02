@@ -121,6 +121,7 @@
     formRef.value.validate((valid) => {
       if (valid && validUniqueName && validUniqueDescription) {
         loading.value = true;
+        // 首次点击预览，下载图片,确定的时候
         if (!isAdd.value) {
           MarketingApi.activityAdd(params, true)
             .then((data) => {
@@ -147,30 +148,33 @@
             .catch((error) => {
               loading.value = false;
             });
-        } else {
-          params.uuid = uuid.value;
-          MarketingApi.activityEdit(params, true)
-            .then((data) => {
-              loading.value = false;
-              if (type == 'download') {
-                nextTick(() => {
-                  ImagePreviewRef.value.downloadImage();
-                });
-              } else if (type == 'preview') {
-                nextTick(() => {
-                  callback(true);
-                });
-              } else {
+        }
+        // 非首次点击预览，下载图片,确定的时候
+        else {
+          if (type == 'download') {
+            nextTick(() => {
+              ImagePreviewRef.value.downloadImage();
+            });
+          } else if (type == 'preview') {
+            nextTick(() => {
+              callback(true);
+            });
+          } else {
+            params.uuid = uuid.value;
+            loading.value = true;
+            MarketingApi.activityEdit(params, true)
+              .then((data) => {
+                loading.value = false;
                 ElMessage({
                   message: $t('添加成功'),
                   type: 'success',
                 });
                 router.push('/' + app_id + '/marketing/activity/index');
-              }
-            })
-            .catch((error) => {
-              loading.value = false;
-            });
+              })
+              .catch((error) => {
+                loading.value = false;
+              });
+          }
         }
       } else {
         callback(false);
