@@ -124,9 +124,10 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 			// 产品名称
 			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
 			// 打印产品名称和数量
-			productNum := t.base.FloatToString(product.TotalNum)
+			productNum := "x" + t.base.FloatToString(product.TotalNum)
 			if len(productNum) >= 3 {
-				printer.AppendText(t.base.PrintText(productName, "", productNum, 47))
+				w := 20 - (len(productNum) - 4)
+				printer.AppendText(t.base.PrintText(productName, "", productNum, w, w, 0, 0, 2))
 				printer.LineFeed()
 			} else {
 				printer.PrintInColumns(productName, productNum)
@@ -241,7 +242,7 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 			// 产品名称
 			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
 			// 打印产品名称和数量
-			productNum := t.base.FloatToString(product.TotalNum)
+			productNum := "x" + t.base.FloatToString(product.TotalNum)
 			// 设置行间距
 			if t.base.IsMyText(productName) {
 				printer.SetLineSpacing(80)
@@ -249,28 +250,11 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 				printer.SetLineSpacing(68)
 			}
 			// 打印产品名称和数量
-			if len(productNum) == 4 {
+			if len(productNum) >= 3 {
+				w := 20 - (len(productNum) - 4)
 				printer.AppendText(t.base.PrintText(
-					productName,
-					"",
-					productNum,
-					19,
-					19,
-					0,
-					0,
-					2,
-				))
-				printer.LineFeed()
-			} else if len(productNum) == 3 {
-				printer.AppendText(t.base.PrintText(
-					productName,
-					"",
-					productNum,
-					20,
-					20,
-					0,
-					0,
-					2,
+					productName, "", productNum,
+					w, w, 0, 0, 2,
 				))
 				printer.LineFeed()
 			} else {
@@ -406,29 +390,12 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 				printer.SetLineSpacing(60)
 				printer.SetCharacterSize(2, 2)
 				//
-				productNum := t.base.FloatToString(num)
-				if len(productNum) == 4 {
+				productNum := "x" + t.base.FloatToString(num)
+				if len(productNum) >= 3 {
+					w := 20 - (len(productNum) - 4)
 					printer.AppendText(t.base.PrintText(
-						productName,
-						"",
-						productNum,
-						19,
-						19,
-						0,
-						0,
-						2,
-					))
-					printer.LineFeed()
-				} else if len(productNum) == 3 {
-					printer.AppendText(t.base.PrintText(
-						productName,
-						"",
-						productNum,
-						20,
-						20,
-						0,
-						0,
-						2,
+						productName, "", productNum,
+						w, w, 0, 0, 2,
 					))
 					printer.LineFeed()
 				} else {
@@ -534,29 +501,12 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 				printer.SetLineSpacing(60)
 				printer.SetCharacterSize(2, 2)
 				//
-				productNum := t.base.FloatToString(num)
-				if len(productNum) == 4 {
+				productNum := "x" + t.base.FloatToString(num)
+				if len(productNum) >= 3 {
+					w := 20 - (len(productNum) - 4)
 					printer.AppendText(t.base.PrintText(
-						productName,
-						"",
-						productNum,
-						19,
-						19,
-						0,
-						0,
-						2,
-					))
-					printer.LineFeed()
-				} else if len(productNum) == 3 {
-					printer.AppendText(t.base.PrintText(
-						productName,
-						"",
-						productNum,
-						20,
-						20,
-						0,
-						0,
-						2,
+						productName, "", productNum,
+						w, w, 0, 0, 2,
 					))
 					printer.LineFeed()
 				} else {
