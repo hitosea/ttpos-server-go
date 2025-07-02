@@ -97,7 +97,7 @@
         <p class="copy-link" @click="handleCopyLink">{{ $t('复制链接') }}</p>
       </el-form-item>
 
-      <el-form-item :label="$t('外送商品价格')" v-auth="'/card/user/index'">
+      <el-form-item :label="$t('外送商品价格')" v-if="showDelivery" v-auth="'/card/user/index'">
         <el-input-number
           class="max-w320"
           v-model="form.delivery_price_ratio"
@@ -188,6 +188,10 @@
   import ManageRefundReason from './ManageRefundReason.vue';
   import Qrcode from './Qrcode.vue';
   import TimePicker from '@/components/time-picker/index.vue';
+
+  const { computedSupplier } = useUserStore();
+  const supplier = computedSupplier().supplier;
+  const showDelivery = (supplier.value?.delivery_status || 0) == 1;
   const { currency } = useUserStore();
   export default {
     components: {
@@ -199,6 +203,7 @@
     },
     data() {
       return {
+        showDelivery: showDelivery,
         currency: currency,
         loading: false,
         openFreeReasonDialog: false,
@@ -216,7 +221,7 @@
           is_need_password: 1,
           dish_card_style: 1,
           opening_hours: '',
-          delivery_price_ratio: 1,
+          delivery_price_ratio: 100,
         },
         company_link: '',
         formRules: {
@@ -360,7 +365,7 @@
             self.form.opening_hours = data.data.vars.values.opening_hours
               ? [data.data.vars.values.opening_hours.split('-')[0], data.data.vars.values.opening_hours.split('-')[1]]
               : [];
-            self.form.delivery_price_ratio = Number(data.data.vars.values.delivery_price_ratio) || 1;
+            self.form.delivery_price_ratio = Number(data.data.vars.values.delivery_price_ratio) || 100;
 
             self.freeTagCount = Number(data.data.free_tag_count) || 0;
             self.returnReasonCount = Number(data.data.return_reason_count) || 0;

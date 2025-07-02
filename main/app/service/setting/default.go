@@ -228,15 +228,16 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 			Key:  "20",
 			Name: i18n.Translate(language, "不计入总销售额、优惠折扣、服务费、税费"),
 		}}, // 免单计算方式列表
-		FreeMethod:        "10",     // 免单计算方式
-		DiscountMethod:    "10",     // 折扣计算方式 10-按百分比 20-直接减免
-		QrCode:            "123456", // 电子菜单二维码校验失效值，6位数数字
-		NoClearTable:      "0",      // 结账后不清台 0-清台 1-不清台
-		IsNeedPassword:    "1",      // 取消订单/退菜 0-无需密码 1-需要密码
-		DishCardStyle:     "0",      // 菜品卡片样式 0-无图模式 1-图片模式
-		DishCardStyleTime: "0",      // 菜品卡片样式最后更新时间
-		IsInvoice:         "0",      // 开票信息 0-不需要填写 1-需要填写
-		OpeningHours:      "",       // 营业时间 00:00-23:59
+		FreeMethod:         "10",     // 免单计算方式
+		DiscountMethod:     "10",     // 折扣计算方式 10-按百分比 20-直接减免
+		QrCode:             "123456", // 电子菜单二维码校验失效值，6位数数字
+		NoClearTable:       "0",      // 结账后不清台 0-清台 1-不清台
+		IsNeedPassword:     "1",      // 取消订单/退菜 0-无需密码 1-需要密码
+		DishCardStyle:      "0",      // 菜品卡片样式 0-无图模式 1-图片模式
+		DishCardStyleTime:  "0",      // 菜品卡片样式最后更新时间
+		IsInvoice:          "0",      // 开票信息 0-不需要填写 1-需要填写
+		OpeningHours:       "",       // 营业时间 00:00-23:59
+		DeliveryPriceRatio: 100,      // 外送商品价格和商品原价比例
 	}
 
 }
@@ -269,7 +270,7 @@ func (s *Srv) getDefaultAssistant(languageList []dto.LanguageItem) setting.Assis
 // 默认商城设置
 func (s *Srv) getDefaultStore(language string) setting.Store {
 	return setting.Store{
-		Name:          "XXX shop",                 // 商城名称
+		Name:          "Shop",                     // 商城名称
 		AvatarURL:     "image/user/avatarUrl.png", //默认头像
 		LogoURL:       "image/diy/logo.png",       //商城logo
 		ZeroingMethod: "0",                        // 抹零方式，0-不抹零 1-抹分 2-抹角 3-四舍五入到角 4-四舍五入到元
@@ -401,19 +402,19 @@ func (s *Srv) getDefaultPoints() setting.Points {
 // 默认系统设置
 func (s *Srv) getDefaultSysAdminConfig() setting.SysAdminConfig {
 	return setting.SysAdminConfig{
-		BrandName:     "XXX shop",                   // 商城名称
+		BrandName:     "Shop",                       // 商城名称
 		BrandLogo:     "/image/logo/jbc_64_64.png",  // 商城背景图
 		BrandLogoLong: "/image/logo/jbc_146_40.png", // 商城logo
 		BrowserLogo:   "/image/logo/jbc_146_40.png", // 浏览器LOGO
-		BrowserTitle:  "XXX shop",                   // 浏览器标题
+		BrowserTitle:  "Shop",                       // 浏览器标题
 	}
 }
 
 // 默认系统设置
 func (s *Srv) getDefaultSysConfig() setting.SysConfig {
 	return setting.SysConfig{
-		ShopName:    "XXX shop", // 商城名称
-		CashierName: "收银台",      // 收银台名称
+		ShopName:    "Shop", // 商城名称
+		CashierName: "收银台",  // 收银台名称
 	}
 }
 

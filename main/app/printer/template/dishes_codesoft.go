@@ -124,9 +124,14 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 			// 产品名称
 			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
 			// 打印产品名称和数量
-			totalNum := t.base.FloatToString(product.TotalNum)
-			// 打印产品名称和数量
-			printer.PrintInColumns(productName, totalNum)
+			productNum := "x" + t.base.FloatToString(product.TotalNum)
+			if len(productNum) >= 3 {
+				w := 20 - (len(productNum) - 4)
+				printer.AppendText(t.base.PrintText(productName, "", productNum, w, w, 0, 0, 2))
+				printer.LineFeed()
+			} else {
+				printer.PrintInColumns(productName, productNum)
+			}
 
 			// 设置字符大小和行间距
 			printer.SetCharacterSize(1, 1)
@@ -237,16 +242,24 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 			// 产品名称
 			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
 			// 打印产品名称和数量
-			totalNum := t.base.FloatToString(product.TotalNum)
+			productNum := "x" + t.base.FloatToString(product.TotalNum)
 			// 设置行间距
 			if t.base.IsMyText(productName) {
 				printer.SetLineSpacing(80)
 			} else {
 				printer.SetLineSpacing(68)
 			}
-
 			// 打印产品名称和数量
-			printer.PrintInColumns(productName, totalNum)
+			if len(productNum) >= 3 {
+				w := 20 - (len(productNum) - 4)
+				printer.AppendText(t.base.PrintText(
+					productName, "", productNum,
+					w, w, 0, 0, 2,
+				))
+				printer.LineFeed()
+			} else {
+				printer.PrintInColumns(productName, productNum)
+			}
 			// 设置字符大小和行间距
 			printer.SetCharacterSize(1, 1)
 			printer.SetLineSpacing(50)
@@ -376,7 +389,19 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 				// 设置行间距
 				printer.SetLineSpacing(60)
 				printer.SetCharacterSize(2, 2)
-				printer.PrintInColumns(productName, t.base.FloatToString(num))
+				//
+				productNum := "x" + t.base.FloatToString(num)
+				if len(productNum) >= 3 {
+					w := 20 - (len(productNum) - 4)
+					printer.AppendText(t.base.PrintText(
+						productName, "", productNum,
+						w, w, 0, 0, 2,
+					))
+					printer.LineFeed()
+				} else {
+					printer.PrintInColumns(productName, productNum)
+				}
+				//
 				printer.SetCharacterSize(1, 2)
 				printer.RestoreDefaultLineSpacing()
 				printer.LineFeed()
@@ -475,7 +500,19 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 				// 设置行间距
 				printer.SetLineSpacing(60)
 				printer.SetCharacterSize(2, 2)
-				printer.PrintInColumns(productName, t.base.FloatToString(num))
+				//
+				productNum := "x" + t.base.FloatToString(num)
+				if len(productNum) >= 3 {
+					w := 20 - (len(productNum) - 4)
+					printer.AppendText(t.base.PrintText(
+						productName, "", productNum,
+						w, w, 0, 0, 2,
+					))
+					printer.LineFeed()
+				} else {
+					printer.PrintInColumns(productName, productNum)
+				}
+				//
 				printer.SetCharacterSize(1, 2)
 				printer.RestoreDefaultLineSpacing()
 				printer.LineFeed()

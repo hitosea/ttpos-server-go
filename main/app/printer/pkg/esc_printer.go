@@ -345,6 +345,8 @@ func (p *Printers) AppendTextWithReturn(text string, isReturn bool) string {
 
 // AppendText 添加文本（可选参数isReturn，默认为false）
 func (p *Printers) AppendText(text string, isReturn ...bool) string {
+	text = NewPrintTextHelper().FilterCharacter(text)
+	//
 	returnResult := false
 	if len(isReturn) > 0 {
 		returnResult = isReturn[0]

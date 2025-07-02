@@ -1,6 +1,7 @@
 package shop
 
 import (
+	"strconv"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -9,6 +10,7 @@ import (
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/sms"
@@ -20,6 +22,7 @@ import (
 type BaseHandler struct {
 	staffShiftSrv service.IStaffShiftSrv
 	smsSrv        service.ISmsSrv
+	settingSrv    setting.ISrv
 }
 
 // SubmitShift 提交交班
@@ -46,6 +49,29 @@ func (h *BaseHandler) SubmitShift(c *gin.Context) {
 		return
 	}
 	helper.Success(c, info, "交班成功")
+}
+
+// GetRemainingSmsQuota 获取商家剩余短信额度
+func (h *BaseHandler) GetRemainingSmsQuota(c *gin.Context) {
+	cid := c.Query("cid")
+	if cid == "" {
+		helper.Fail(c, constant.CodeFail, "店铺ID参数错误")
+		return
+	}
+	companyUuid, err := strconv.ParseUint(cid, 10, 64)
+	if err != nil {
+		helper.Fail(c, constant.CodeFail, "店铺ID参数值错误")
+		return
+	}
+	ctx := context.NewContext(
+		context.WithCompanyUuid(companyUuid),
+	)
+	companySetting, err := h.settingSrv.GetCompanySetting(ctx)
+	if err != nil {
+		helper.Fail(c, constant.CodeFail, "获取店铺信息错误")
+		return
+	}
+	helper.Success(c, gin.H{"remaining_sms_quota": companySetting.SmsQuota}, "ok")
 }
 
 // SendMemberRechargeSMS 发送会员充值短信
@@ -98,6 +124,13 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	wrapper := BaseHandler{
 		staffShiftSrv: staffShiftSrv,
 		smsSrv:        smsSrv,
+		settingSrv:    settingSrv,
+	}
+
+	// 不需要认证，获取商家剩余短信额度
+	publicApi := router.Group("")
+	{
+		publicApi.GET("remaining_sms_quota", wrapper.GetRemainingSmsQuota)
 	}
 
 	// 需要认证

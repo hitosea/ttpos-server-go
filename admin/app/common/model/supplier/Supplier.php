@@ -310,7 +310,7 @@ class Supplier extends BaseModel
             $company = App::where('uuid', $companyUuid)->find();
             $logo = $company->logo ?: '';
             (new SettingModel)->edit(SettingEnum::STORE, [
-                'name' => $data['name'],
+                'name' => $company['name'],
                 'logoUrl' => ImgHelp::removeImageDomain($logo),
                 'time_zone' => $data['timezone'] ?? '',
                 'phone' => $data['link_phone'] ?? '',

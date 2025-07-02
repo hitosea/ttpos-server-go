@@ -76,7 +76,7 @@ class Business extends Controller
         if ($deliveryPriceRation == 0 || !($deliveryPriceRation > 0 && $deliveryPriceRation <= 300)) {
             return $this->renderError('外送商品价格错误');
         }
-        if ($setting['delivery_price_ratio'] != $deliveryPriceRation && $this->store['supplier']['status'] != 1) {
+        if ($setting['delivery_price_ratio'] != $deliveryPriceRation && $this->store['supplier']['delivery_status'] != 1) {
             return $this->renderError('当前没有权限使用此功能');
         }
 
