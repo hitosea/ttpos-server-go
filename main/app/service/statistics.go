@@ -874,7 +874,12 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 
 		// 销售商品
 		for _, saleProduct := range saleOrder.SaleOrderProducts {
+			// 如果商品已取消，则不统计
 			if saleProduct.CancelTime == 0 {
+				// 如果商品未接单，则不统计
+				if !saleProduct.IsAcceptOrderProduct() {
+					continue
+				}
 				// 统计商品数量
 				productNum := int(saleProduct.Num)
 				productNumDec := decimal.NewFromFloat(float64(productNum))
