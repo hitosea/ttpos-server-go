@@ -493,7 +493,7 @@ class Setting extends BaseModel
                 'describe' => '商城设置',
                 'values' => [
                     // 商城名称
-                    'name' => $storeName ?: 'XXX shop',
+                    'name' => $storeName ?: 'Shop',
                     // 是否开启短信验证
                     'sms_open' => true,
                     // 是否记录日志
@@ -754,11 +754,11 @@ class Setting extends BaseModel
                 'key' => 'sys_admin_config',
                 'describe' => '系统设置',
                 'values' => [
-                    'brand_name' => 'XXX shop', // 商城名称
+                    'brand_name' => 'Shop', // 商城名称
                     'brand_logo' => '/image/logo/jbc_64_64.png', // 商城背景图
                     'brand_logo_long' => '/image/logo/jbc_146_40.png', // 商城logo
                     'browser_logo' => '/image/logo/jbc_146_40.png', // 浏览器LOGO
-                    'browser_title' => 'XXX shop', // 浏览器标题
+                    'browser_title' => 'Shop', // 浏览器标题
                     'expiration_reminder' => 0, // 商城logo
                 ]
             ],
@@ -766,7 +766,7 @@ class Setting extends BaseModel
                 'key' => 'sys_config',
                 'describe' => '系统设置',
                 'values' => [
-                    'shop_name' => 'XXX shop', // 商城名称
+                    'shop_name' => 'Shop', // 商城名称
                     'shop_bg_img' => '',        // 商城背景图
                     'shop_logo_img' => '',      // 商城logo
                     'cashier_name' => '收银台',  // 收银台名称

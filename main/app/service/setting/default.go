@@ -270,7 +270,7 @@ func (s *Srv) getDefaultAssistant(languageList []dto.LanguageItem) setting.Assis
 // 默认商城设置
 func (s *Srv) getDefaultStore(language string) setting.Store {
 	return setting.Store{
-		Name:          "XXX shop",                 // 商城名称
+		Name:          "Shop",                     // 商城名称
 		AvatarURL:     "image/user/avatarUrl.png", //默认头像
 		LogoURL:       "image/diy/logo.png",       //商城logo
 		ZeroingMethod: "0",                        // 抹零方式，0-不抹零 1-抹分 2-抹角 3-四舍五入到角 4-四舍五入到元
@@ -402,19 +402,19 @@ func (s *Srv) getDefaultPoints() setting.Points {
 // 默认系统设置
 func (s *Srv) getDefaultSysAdminConfig() setting.SysAdminConfig {
 	return setting.SysAdminConfig{
-		BrandName:     "XXX shop",                   // 商城名称
+		BrandName:     "Shop",                       // 商城名称
 		BrandLogo:     "/image/logo/jbc_64_64.png",  // 商城背景图
 		BrandLogoLong: "/image/logo/jbc_146_40.png", // 商城logo
 		BrowserLogo:   "/image/logo/jbc_146_40.png", // 浏览器LOGO
-		BrowserTitle:  "XXX shop",                   // 浏览器标题
+		BrowserTitle:  "Shop",                       // 浏览器标题
 	}
 }
 
 // 默认系统设置
 func (s *Srv) getDefaultSysConfig() setting.SysConfig {
 	return setting.SysConfig{
-		ShopName:    "XXX shop", // 商城名称
-		CashierName: "收银台",      // 收银台名称
+		ShopName:    "Shop", // 商城名称
+		CashierName: "收银台",  // 收银台名称
 	}
 }
 
