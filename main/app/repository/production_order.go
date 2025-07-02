@@ -31,11 +31,11 @@ type IProductionOrderRepo interface {
 
 // IProductionOrderQueryRepo 生产订单查询仓库接口
 type IProductionOrderQueryRepo interface {
-	GetProductionOrder(opts ...DBOption) (*model.ProductionOrder, error)                                                        // 获取生产订单
-	GetProduct(opts ...DBOption) (*model.ProductionOrderProduct, error)                                                         // 获取生产订单商品
-	GetLimitedProducts(column string, pageNo, pageSize int, opts ...DBOption) ([]model.ProductionOrderProduct, int64, error)    // 分页获取账单ID、分类ID
-	GetLimitedHistoryProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error)                                         // 历史获取销售账单Uuid
-	GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (int64, []model.ProductionOrderProduct, error) // 获取生产订单商品
+	GetProductionOrder(opts ...DBOption) (*model.ProductionOrder, error)                                                          // 获取生产订单
+	GetProduct(opts ...DBOption) (*model.ProductionOrderProduct, error)                                                           // 获取生产订单商品
+	GetLimitedProducts(column string, pageNo, pageSize int, opts ...DBOption) ([]model.ProductionOrderProduct, int64, error)      // 分页获取账单ID、分类ID
+	GetLimitedHistoryProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error)                                           // 历史获取销售账单Uuid
+	GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (float64, []model.ProductionOrderProduct, error) // 获取生产订单商品
 }
 
 type productionRepo struct {
@@ -87,12 +87,13 @@ const (
 	FinishedTimeDesc string = "finished_time desc"
 )
 
-func (r *productionRepo) GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (int64, []model.ProductionOrderProduct, error) {
+func (r *productionRepo) GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (float64, []model.ProductionOrderProduct, error) {
 	var productionOrderProducts []model.ProductionOrderProduct
 	db := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted)
 	db = statusOpt(db).Session(&gorm.Session{})
-	var total int64
-	db.Count(&total)
+	var total float64
+	// 统计商品数量总和
+	db.Select("SUM(num) as total").Scan(&total)
 
 	for _, opt := range opts {
 		db = opt(db)

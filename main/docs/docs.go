@@ -23944,7 +23944,7 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "送厨商品数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "product_attribute_names": {
                     "description": "商品属性",
@@ -24008,7 +24008,7 @@ const docTemplate = `{
                 },
                 "send_kitchen_num": {
                     "description": "送厨商品数量，用于厨显来菜提醒",
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },

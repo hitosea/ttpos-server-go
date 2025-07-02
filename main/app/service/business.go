@@ -523,7 +523,7 @@ func (s *businessSrv) CountArea(ctx context.Context, req req.BusinessDataCountRe
 			Name:               area.AreaName,
 			TotalSales:         area.AreaSaleAmount,
 			TotalReceivedPrice: area.AreaBusinessAmount,
-			TotalProductNum:    int(area.AreaProductNum),
+			TotalProductNum:    area.AreaProductNum,
 		})
 	}
 

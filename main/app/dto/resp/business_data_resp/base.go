@@ -143,7 +143,7 @@ type Area struct {
 	Name               string  `json:"name"`                 // 区域名称
 	TotalSales         float64 `json:"total_sales"`          // 总销售额
 	TotalReceivedPrice float64 `json:"total_received_price"` // 总实收金额
-	TotalProductNum    int     `json:"total_product_num"`    // 总商品数
+	TotalProductNum    float64 `json:"total_product_num"`    // 总商品数
 }
 
 // 营业数据 - 商品排行
@@ -246,7 +246,7 @@ type BusinessDataExportArea struct {
 	AreaName           string  `json:"area_name"`            // 区域名称
 	AreaSaleAmount     float64 `json:"area_sale_amount"`     // 区域销售额
 	AreaBusinessAmount float64 `json:"area_business_amount"` // 区域营业收入
-	AreaProductNum     int64   `json:"area_product_num"`     // 区域商品数量
+	AreaProductNum     float64 `json:"area_product_num"`     // 区域商品数量
 }
 
 // 营业数据 - 导出 - 支付

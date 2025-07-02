@@ -174,7 +174,7 @@ type StatisticsCategoryData struct {
 	CategoryParentName sql.NullString  `gorm:"column:category_parent_name;comment:分类父级名称"`
 	CategoryUuid       sql.NullInt64   `gorm:"column:category_uuid;comment:分类uuid"`
 	CategoryName       sql.NullString  `gorm:"column:category_name;comment:分类名称"`
-	SaleNum            sql.NullInt64   `gorm:"column:sale_num;comment:销售数量"`
+	SaleNum            sql.NullFloat64 `gorm:"column:sale_num;comment:销售数量"`
 	SaleAmount         sql.NullFloat64 `gorm:"column:sale_amount;comment:销售金额"`
 }
 
@@ -193,7 +193,7 @@ type StatisticsAreaData struct {
 	AreaName           sql.NullString  `gorm:"column:area_name;comment:区域名称"`
 	AreaSaleAmount     sql.NullFloat64 `gorm:"column:area_sale_amount;comment:区域销售额"`
 	AreaBusinessAmount sql.NullFloat64 `gorm:"column:area_business_amount;comment:区域营业收入"`
-	AreaProductNum     sql.NullInt64   `gorm:"column:area_product_num;comment:区域商品数量"`
+	AreaProductNum     sql.NullFloat64 `gorm:"column:area_product_num;comment:区域商品数量"`
 }
 
 // StatisticsAreaDaysData 区域天数统计数据

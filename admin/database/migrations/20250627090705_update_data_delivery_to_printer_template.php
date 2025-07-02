@@ -1,13 +1,12 @@
 <?php
 
-use think\facade\Db;
 use think\migration\Migrator;
-use think\migration\db\Column;
 
-class AddColumnsToCompanySetting extends Migrator
+class UpdateDataDeliveryToPrinterTemplate extends Migrator
 {
     // 迁移目标
     const TARGET = 'all';
+    
     /**
      * Change Method.
      *
@@ -32,12 +31,9 @@ class AddColumnsToCompanySetting extends Migrator
     public function change()
     {
         $table = $this->table('company_setting');
-        if (!$table->hasColumn('delivery_config')) {
-            $table->addColumn('delivery_config', 'text', ['comment' => '外送配置', 'after' => 'address']);
+        if ($table->hasColumn('delivery_config')) {
+            $table->changeColumn('delivery_config', 'text', ['comment' => '外送配置', 'after' => 'address']);
+            $table->update();
         }
-        if (!$table->hasColumn('delivery_status')) {
-            $table->addColumn('delivery_status', 'integer', ['default' => '0', 'comment' => '外送配置状态：0-关,1-开', 'after' => 'address']);
-        }
-        $table->update();
     }
 }

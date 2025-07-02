@@ -17,7 +17,7 @@ type ProductionItem struct {
 	SerialNo              string             `json:"serial_no"`               // 序列号
 	Uuid                  uint64             `json:"uuid"`                    // 送厨商品Uuid
 	LocaleName            dto.LocaleResponse `json:"locale_name"`             // 送厨商品名称
-	Num                   uint               `json:"num"`                     // 送厨商品数量
+	Num                   float64            `json:"num"`                     // 送厨商品数量
 	CreateTime            int64              `json:"create_time"`             // 送厨时间
 	FinishedTime          int64              `json:"finished_time"`           // 完成时间
 	ProductAttributeNames dto.LocaleResponse `json:"product_attribute_names"` // 商品属性
@@ -26,7 +26,7 @@ type ProductionItem struct {
 
 // ProductionListWithPagination 商品列表响应
 type ProductionListWithPagination struct {
-	SendKitchenNum int64             `json:"send_kitchen_num"` // 送厨商品数量，用于厨显来菜提醒
+	SendKitchenNum float64           `json:"send_kitchen_num"` // 送厨商品数量，用于厨显来菜提醒
 	List           []ProductionGroup `json:"list"`             // 分组列表
 	FinishedList   ProductionList    `json:"finished_list"`    // 最近三个上菜历史
 	Meta           dto.PageResponse  `json:"meta"`             // 分页信息

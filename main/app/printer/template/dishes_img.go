@@ -118,7 +118,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 		// 产品名称
 		productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
 		// 打印产品名称和数量
-		totalNum := "x" + fmt.Sprintf("%v", product.TotalNum)
+		totalNum := "x" + t.base.FloatToString(product.TotalNum)
 		if tmp == 2 {
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
@@ -248,7 +248,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 				img.LineFeed(1, 12)
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
-					pkg.ColumnConfig{Text: "x" + fmt.Sprintf("%v", num), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
+					pkg.ColumnConfig{Text: "x" + t.base.FloatToString(num), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
 				)
 				if t.base.Lang == "my" {
 					img.LineFeed(1, 12)
@@ -352,7 +352,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 				img.LineFeed(1, 12)
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
-					pkg.ColumnConfig{Text: "x" + fmt.Sprintf("%f", num), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
+					pkg.ColumnConfig{Text: "x" + t.base.FloatToString(num), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
 				)
 				if t.base.Lang == "my" {
 					img.LineFeed(1, 12)
@@ -509,7 +509,7 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 		img.LineFeed(1, 12)
 
 		// 打印产品名称和数量
-		totalNum := utils.IfString(tmp == 2, fmt.Sprintf("-%v", product.TotalNum), fmt.Sprintf("X%v", product.TotalNum))
+		totalNum := utils.IfString(tmp == 2, "-", "x") + t.base.FloatToString(product.TotalNum)
 
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
@@ -681,7 +681,7 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 		img.LineFeed(1, 12)
 
 		// 打印产品名称和数量
-		totalNum := fmt.Sprintf("X%v", product.TotalNum)
+		totalNum := "X" + t.base.FloatToString(product.TotalNum)
 
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
