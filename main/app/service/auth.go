@@ -667,6 +667,13 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			if permission != "" && !slices.Contains(permissions, permission) {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			}
+			// 已交班，只能打印交班单、退出登录、获取基本信息、轮询打印数据，轮询未处理消息、获取广告
+			if staff.DutyNo == "" && !slices.Contains([]string{
+				"/api/v1/cashier/shift/printer", "/api/v1/cashier/logout", "/api/v1/cashier/base",
+				"/api/v1/cashier/print_data", "/api/v1/cashier/call/unprocessed_notice", "/api/v1/cashier/ad",
+			}, auth.UrlPath) {
+				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenExpired, "当前班次不存在")
+			}
 		}
 	case constant.SourceAssistant: // 点餐助手端
 		{

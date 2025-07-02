@@ -24703,6 +24703,14 @@ const docTemplate = `{
                     "description": "优惠券UUID",
                     "type": "integer"
                 },
+                "day_end_time": {
+                    "description": "每日适用时段结束时间, hh:mm 格式。00:00-23:59表示全天可用",
+                    "type": "string"
+                },
+                "day_start_time": {
+                    "description": "每日适用时段开始时间, hh:mm 格式。00:00-23:59表示全天可用",
+                    "type": "string"
+                },
                 "end_time": {
                     "type": "integer"
                 },
