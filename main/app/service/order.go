@@ -6770,6 +6770,14 @@ func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if !companySetting.GetIsOpenCoupon() {
+		// 未开启优惠券
+		return nil, nil
+	}
 
 	shopTimeZone := storeSetting.TimeZone
 	layout := "2006-01-02"
@@ -6784,7 +6792,6 @@ func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint
 
 	for _, coupon := range commonCouponList {
 		endTime := timezone.FormatUnixTime(int64(coupon.ValidEndTime), layout)
-		endTimestamp, _ := timezone.FormatTimeToUnix(endTime) // 优惠券到期时间戳
 		coupons[coupon.Uuid] = &resp.Coupon{
 			Uuid:              coupon.Uuid,
 			Name:              coupon.Name,
@@ -6797,7 +6804,7 @@ func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint
 			DayEndTime:        coupon.DayEndTime,
 			ValidStartTime:    timezone.FormatUnixTime(int64(coupon.ValidStartTime), layout),
 			ValidEndTime:      endTime,
-			ValidEndTimestamp: endTimestamp,
+			ValidEndTimestamp: int64(coupon.ValidEndTime),
 		}
 	}
 

@@ -63,6 +63,11 @@ type CompanySetting struct {
 	Address          string `gorm:"column:address;type:varchar(255);comment:联系地址;NOT NULL" json:"address"`
 }
 
+// GetIsOpenCoupon 是否开启优惠券
+func (model *CompanySetting) GetIsOpenCoupon() bool {
+	return model.IsOpenCoupon == 1
+}
+
 // GetIsOpenH5Order 是否开启扫码点餐接单
 func (model *CompanySetting) GetIsOpenH5Order() bool {
 	return model.IsOpenH5Order == 1
