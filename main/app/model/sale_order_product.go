@@ -794,7 +794,7 @@ func (model *SaleOrderProduct) ChangeProductPrice(price float64) {
 // 获取商品销售价(折前价)
 func (model *SaleOrderProduct) GetSalePrice() float64 {
 	// 销售价*数量
-	salePrice := decimal.NewFromFloat(model.SalePrice).Mul(model.GetNumDecimal()).Truncate(2).InexactFloat64()
+	salePrice := decimal.NewFromFloat(model.SalePrice).Mul(model.GetNumDecimal()).Round(2).InexactFloat64()
 	return salePrice
 }
 
