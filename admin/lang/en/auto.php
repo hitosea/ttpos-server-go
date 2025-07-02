@@ -2085,4 +2085,5 @@ return [
     "主键重复" => "Primary key duplicated",
     "时钟回拨，拒绝生成ID" => "Clock rollback, ID generation refused",
     "时钟回拨过大，拒绝生成ID" => "Clock rollback is too large, ID generation refused",
+    "该材料已被使用，无法操作" => "This material has already been used and cannot be operated on",
 ];

@@ -2085,4 +2085,5 @@ return [
     "主键重复" => "Birincil anahtar tekrarlandı",
     "时钟回拨，拒绝生成ID" => "Saat geri alındı, ID oluşturulması reddedildi",
     "时钟回拨过大，拒绝生成ID" => "Saat geri çok fazla alındı, ID oluşturulması reddedildi",
+    "该材料已被使用，无法操作" => "Bu malzeme zaten kullanıldı, işlem yapılamaz",
 ];
