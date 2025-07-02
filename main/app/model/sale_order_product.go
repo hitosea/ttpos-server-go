@@ -659,15 +659,15 @@ func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 		trNames = append(trNames, reason.MultiLanguageName.TrName)
 	}
 	// 添加自定义的退菜原因
-	if model.CancelReason != "" {
-		zhNames = append(zhNames, model.CancelReason)
-		thNames = append(thNames, model.CancelReason)
-		enNames = append(enNames, model.CancelReason)
-		zhtwNames = append(zhtwNames, model.CancelReason)
-		jaNames = append(jaNames, model.CancelReason)
-		koNames = append(koNames, model.CancelReason)
-		myNames = append(myNames, model.CancelReason)
-		trNames = append(trNames, model.CancelReason)
+	if model.GiftReason != "" {
+		zhNames = append(zhNames, model.GiftReason)
+		thNames = append(thNames, model.GiftReason)
+		enNames = append(enNames, model.GiftReason)
+		zhtwNames = append(zhtwNames, model.GiftReason)
+		jaNames = append(jaNames, model.GiftReason)
+		koNames = append(koNames, model.GiftReason)
+		myNames = append(myNames, model.GiftReason)
+		trNames = append(trNames, model.GiftReason)
 	}
 	reasonDto := dto.LocaleResponse{
 		ZH:   strings.Join(zhNames, "、"),
