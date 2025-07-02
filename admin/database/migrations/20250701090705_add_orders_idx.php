@@ -2,11 +2,8 @@
 
 use think\migration\Migrator;
 
-class UpdateDataDeliveryToPrinterTemplate extends Migrator
+class AddOrdersIdx extends Migrator
 {
-    // 迁移目标
-    const TARGET = 'all';
-    
     /**
      * Change Method.
      *
@@ -30,26 +27,35 @@ class UpdateDataDeliveryToPrinterTemplate extends Migrator
      */
     public function change()
     {
-        $table = $this->table('ttpos_sale_order');
-        if (!$table->hasIndex('idx_tso_bill_qry')) {
-            $table->addIndex(['delete_time','sale_bill_uuid'], ['name' => 'idx_tso_bill_qry']);
+        try {
+            $table = $this->table('sale_order');
+            if (!$table->hasIndexByName('idx_tso_bill_qry')) {
+                $table->addIndex(['delete_time','sale_bill_uuid'], ['name' => 'idx_tso_bill_qry']);
+                $table->update();
+            }
+            $table = $this->table('sale_order_product');
+            if (!$table->hasIndexByName('idx_tsop_order_qry')) {
+                $table->addIndex(['delete_time','sale_order_uuid'], ['name' => 'idx_tsop_order_qry']);
+                $table->update();
+            }
+            $table = $this->table('sale_order_coupon');
+            if (!$table->hasIndexByName('idx_tsoc_order_qry')) {
+                $table->addIndex(['delete_time','sale_order_uuid'], ['name' => 'idx_tsoc_order_qry']);
+                $table->update();
+            }
+            $table = $this->table('payment_order');
+            if (!$table->hasIndexByName('idx_tpo_order_qry')) {
+                $table->addIndex(['delete_time','related_uuid'], ['name' => 'idx_tpo_order_qry']);
+                $table->update();
+            }
+            $table = $this->table('sale_order_buffet_customer_type');
+            if (!$table->hasIndexByName('idx_tsobcf_order_qry')) {
+                $table->addIndex(['delete_time','sale_order_uuid'], ['name' => 'idx_tsobcf_order_qry']);
+                $table->update();
+            }
+        } catch (\Exception $e) {
+            trace($e->getMessage(), 'error');
+            throw $e;
         }
-        $table = $this->table('ttpos_sale_order_product');
-        if (!$table->hasIndex('idx_tsop_order_qry')) {
-            $table->addIndex(['delete_time','sale_order_uuid'], ['name' => 'idx_tsop_order_qry']);
-        }
-        $table = $this->table('ttpos_sale_order_coupon');
-        if (!$table->hasIndex('idx_tsoc_order_qry')) {
-            $table->addIndex(['delete_time','sale_order_uuid'], ['name' => 'idx_tsoc_order_qry']);
-        }
-        $table = $this->table('ttpos_payment_order');
-        if (!$table->hasIndex('idx_tpo_order_qry')) {
-            $table->addIndex(['delete_time','sale_order_uuid'], ['name' => 'idx_tpo_order_qry']);
-        }
-        $table = $this->table('ttpos_sale_order_buffet_customer_type');
-        if (!$table->hasIndex('idx_tsobcf_order_qry')) {
-            $table->addIndex(['delete_time','sale_order_uuid'], ['name' => 'idx_tsobcf_order_qry']);
-        }
-
     }
 }
