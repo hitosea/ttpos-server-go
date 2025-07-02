@@ -16776,7 +16776,7 @@ const docTemplate = `{
                 },
                 "total_product_num": {
                     "description": "总商品数",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "total_received_price": {
                     "description": "总实收金额",
@@ -17114,7 +17114,7 @@ const docTemplate = `{
                 },
                 "area_product_num": {
                     "description": "区域商品数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "area_sale_amount": {
                     "description": "区域销售额",
@@ -24664,7 +24664,7 @@ const docTemplate = `{
                 },
                 "product_num": {
                     "description": "商品数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "status": {
                     "description": "订单状态, 0-未结账 1-已结账",

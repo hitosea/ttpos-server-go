@@ -31,7 +31,7 @@
     <div class="product-content">
       <div class="table-wrap">
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
-          <el-table-column type="index" width="45" :label="$t('序号')" header-align="center" align="center" :index="indexMethod"></el-table-column>
+          <el-table-column prop="sort" :label="$t('排序')" width="80"></el-table-column>
           <el-table-column prop="name" :label="$t('优惠券名称')"></el-table-column>
 
           <el-table-column prop="type" :label="$t('优惠券类型')">
@@ -111,10 +111,6 @@
     curPage.value = 1;
     pageSize.value = val;
     getTableList();
-  };
-
-  const indexMethod = (index) => {
-    return index + 1 + (curPage.value - 1) * pageSize.value;
   };
 
   const getTableList = () => {

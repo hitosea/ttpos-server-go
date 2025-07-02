@@ -174,13 +174,17 @@
     formRef.value?.validateField(e);
   };
 
-  const checkFormAll = async () => {
+  const checkFormAll = async (type, callback) => {
     // 验证表单
     const validUniqueName = await BasicRef.value.$refs.activityNameFormRef.validate();
     const validUniqueDescription = await BasicRef.value.$refs.activityDescriptionFormRef.validate();
     formRef.value.validate((valid) => {
       if (valid && validUniqueName && validUniqueDescription) {
-        ImagePreviewRef.value.downloadImage();
+        if (type == 'download') {
+          ImagePreviewRef.value.downloadImage();
+        } else if (type == 'preview') {
+          callback(true);
+        }
       } else {
         ElMessage({
           message: $t('请完善输入信息'),

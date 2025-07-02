@@ -41,7 +41,7 @@
     </div>
     <div class="image-preview-btn-wrapper">
       <el-button class="image-preview-btn" @click="previewImage" :loading="loading"> {{ $t('预览') }} </el-button>
-      <el-button class="image-preview-btn" type="primary" @click="checkForm" :loading="loading"> {{ $t('下载图片') }} </el-button>
+      <el-button class="image-preview-btn" type="primary" @click="checkForm('download', callback)" :loading="loading"> {{ $t('下载图片') }} </el-button>
     </div>
     <el-dialog v-model="previewImageVisible" :title="$t('预览')" width="560">
       <img :src="previewImageUrl" alt="" class="preview-image" />
@@ -73,7 +73,6 @@
 
   const emit = defineEmits(['checkForm']);
 
-
   const { userInfo } = useUserStore();
   const previewImageVisible = ref(false);
   const previewImageUrl = ref('');
@@ -95,8 +94,8 @@
   };
 
   //验证表单
-  const checkForm = async () => {
-    await emit('checkForm');
+  const checkForm = async (type, callback) => {
+    await emit('checkForm', type, callback);
   };
 
   const downloadImage = async () => {
@@ -111,11 +110,17 @@
   };
 
   const previewImage = async () => {
-    loading.value = true;
-    const imgUrl = await convertToBase64();
-    previewImageUrl.value = imgUrl;
-    previewImageVisible.value = true;
-    loading.value = false;
+    // 需要验证表单
+    await emit('checkForm', 'preview', async (valid) => {
+      if (!valid) {
+        return;
+      }
+      loading.value = true;
+      const imgUrl = await convertToBase64();
+      previewImageUrl.value = imgUrl;
+      previewImageVisible.value = true;
+      loading.value = false;
+    });
   };
 
   defineExpose({
