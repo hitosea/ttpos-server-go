@@ -157,7 +157,6 @@ func (r *MarketingCouponRepo) GetValidCouponList() ([]*model.MarketingCoupon, er
 		CommonRepo.WhereBySoftDelete(),                                // 未删除
 		CommonRepo.WhereByCountGtZero(),                               // 优惠券数量大于0
 		CommonRepo.WhereByRequirement(constant.CouponRequirementNone), // 任何人可用
-		CommonRepo.SortWithSort("ASC"),                                // 按照sort升序
 		CommonRepo.WhereByValidTime(),                                 // 是否在有效期内
 	)
 	if err != nil {

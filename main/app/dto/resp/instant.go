@@ -180,27 +180,37 @@ type CouponList struct {
 }
 
 type Coupon struct {
-	Uuid              uint64                `json:"uuid"`             // 优惠券UUID
-	Name              string                `json:"name"`             // 优惠券名称
-	Requirement       string                `json:"type"`             // 优惠券类型 none-无门槛（任何人可以使用） marketing-会员账户里的优惠券，营销活动获得
-	Amount            float64               `json:"amount"`           // 优惠券金额
-	Count             int                   `json:"count"`            // 优惠券数量
-	IsSelected        bool                  `json:"is_selected"`      // 是否选中
-	IsAvailable       bool                  `json:"is_available"`     // 是否可用
-	DayStartTime      string                `json:"day_start_time"`   // 每日适用时段开始时间, hh:mm 格式。00:00-23:59表示全天可用
-	DayEndTime        string                `json:"day_end_time"`     // 每日适用时段结束时间, hh:mm 格式。00:00-23:59表示全天可用
-	ValidStartTime    string                `json:"valid_start_time"` // 优惠券有效期，开始时间 格式：YYYY-MM-DD
-	ValidEndTime      string                `json:"valid_end_time"`   // 优惠券有效期，结束时间 格式：YYYY-MM-DD
-	CouponList        []*SampleMemberCoupon `json:"coupon_list"`      // 会员优惠券列表。列表的长度即为优惠券数量Count
-	ValidEndTimestamp int64                 `json:"-"`                // 优惠券有效期结束时间戳,仅用于排序
+	Uuid           uint64                `json:"uuid"`             // 优惠券UUID
+	Name           string                `json:"name"`             // 优惠券名称
+	Requirement    string                `json:"type"`             // 优惠券类型 none-无门槛（任何人可以使用） marketing-会员账户里的优惠券，营销活动获得
+	Amount         float64               `json:"amount"`           // 优惠券金额
+	Count          int                   `json:"count"`            // 优惠券数量
+	IsSelected     bool                  `json:"is_selected"`      // 是否选中
+	IsAvailable    bool                  `json:"is_available"`     // 是否可用
+	DayStartTime   string                `json:"day_start_time"`   // 每日适用时段开始时间, hh:mm 格式。00:00-23:59表示全天可用
+	DayEndTime     string                `json:"day_end_time"`     // 每日适用时段结束时间, hh:mm 格式。00:00-23:59表示全天可用
+	ValidStartTime string                `json:"valid_start_time"` // 优惠券有效期，开始时间 格式：YYYY-MM-DD
+	ValidEndTime   string                `json:"valid_end_time"`   // 优惠券有效期，结束时间 格式：YYYY-MM-DD
+	CouponList     []*SampleMemberCoupon `json:"coupon_list"`      // 会员优惠券列表。列表的长度即为优惠券数量Count
+	Sort           SortParam             `json:"-"`                // 排序参数,仅用于排序
+}
+
+type SortParam struct {
+	IsAvailable       bool   `json:"is_available"`        // 优惠券是否可用。true-可用，false-不可用。在有效期内，且在使用时段内。none在前，marketing在后
+	Type              string `json:"type"`                // 优惠券类型。none-通用，marketing-会员。none在前，marketing在后
+	ValidEndTimestamp int64  `json:"valid_end_timestamp"` // 优惠券有效期结束时间戳，先到期的排前面
+	Sort              int    `json:"sort"`                // 优惠券排序，小的在前
+	CouponUuid        uint64 `json:"coupon_uuid"`         // 优惠券UUID。小的在前，即先创建的优惠券在前
 }
 
 type SampleMemberCoupon struct {
-	Uuid       uint64 `json:"uuid"`        // 会员优惠券UUID
-	Name       string `json:"name"`        // 会员优惠券名称
-	CouponUuid uint64 `json:"coupon_uuid"` // 优惠券UUID
-	StartTime  int64  `gorm:"column:start_time;type:bigint(20);not null;comment:优惠券开始时间" json:"start_time"`
-	EndTime    int64  `gorm:"column:end_time;type:bigint(20);not null;comment:优惠券结束时间" json:"end_time"`
+	Uuid         uint64 `json:"uuid"`        // 会员优惠券UUID
+	Name         string `json:"name"`        // 会员优惠券名称
+	CouponUuid   uint64 `json:"coupon_uuid"` // 优惠券UUID
+	StartTime    int64  `gorm:"column:start_time;type:bigint(20);not null;comment:优惠券开始时间" json:"start_time"`
+	EndTime      int64  `gorm:"column:end_time;type:bigint(20);not null;comment:优惠券结束时间" json:"end_time"`
+	DayStartTime string `json:"day_start_time"` // 每日适用时段开始时间, hh:mm 格式。00:00-23:59表示全天可用
+	DayEndTime   string `json:"day_end_time"`   // 每日适用时段结束时间, hh:mm 格式。00:00-23:59表示全天可用
 }
 
 type PointsExchangeInfo struct {

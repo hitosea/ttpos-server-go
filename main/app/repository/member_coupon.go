@@ -104,7 +104,6 @@ func (r *memberCouponRepo) GetValidMemberCouponList(memberUuid uint64) ([]*model
 		CommonRepo.WhereByMemberUuid(memberUuid), // 根据会员UUID查询
 		CommonRepo.WhereByStartTimeEndTime(),     // 是否在有效期内
 		CommonRepo.WhereByStatus(0),              // 未使用
-		CommonRepo.SortWithCreateTime("desc"),    // 按创建时间降序
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "MarketingCoupon",
