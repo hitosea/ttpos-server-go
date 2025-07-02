@@ -142,7 +142,7 @@ type SaleOrder struct {
 	ZeroRule            uint8      `json:"zero_rule"`             // 订单抹零规则
 	AutoDiscountMessage string     `json:"auto_discount_message"` // 优惠折扣-自动抹零信息. 如"优惠折扣自动抹零-抹分" "优惠折扣自动抹零-抹角" "优惠折扣自动抹零-四舍五入保留一位小数" "优惠折扣自动抹零-四舍五入保留整数"
 	ProductList         []Product  `json:"product_list"`          // 商品列表
-	ProductNum          int        `json:"product_num"`           // 商品数量
+	ProductNum          float64    `json:"product_num"`           // 商品数量
 	AmountInfo          AmountInfo `json:"amount_info"`
 }
 

@@ -4086,13 +4086,13 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		}
 
 		// 商品计数
-		productNum := 0
+		productNum := 0.0
 		for _, product := range productList {
 			// 退菜的商品不计入
 			if product.IsCancel {
 				continue
 			}
-			productNum += int(product.Num)
+			productNum += product.Num
 		}
 
 		// 填写订单信息
@@ -4100,7 +4100,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			Uuid:                saleOrder.Uuid,
 			OrderNo:             saleOrder.OrderNo,
 			Status:              saleOrder.Status,
-			ProductNum:          productNum,
+			ProductNum:          decimal.NewFromFloat(productNum).Truncate(2).InexactFloat64(),
 			ProductList:         productList,
 			IsDiscount:          saleOrder.IsManualDiscount(uint8(shopCart.SaleBill.SaleBillSetting.ZeroRule)),
 			IsMemberDiscount:    saleOrder.IsMemberDiscount(),
