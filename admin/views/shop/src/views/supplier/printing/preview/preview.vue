@@ -519,7 +519,7 @@
 
       modeChange(e) {
         this.mode = e;
-        if (this.title == $t('发票') && e == 1) {
+        if (this.title == $t('发票')) {
           if (e == 1) {
             this.details = previewData.seven;
           }
