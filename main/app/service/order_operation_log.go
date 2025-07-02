@@ -80,8 +80,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		if err := json.Unmarshal([]byte(log.Data), &sendKitchen); err == nil {
 			var desc []string
 			for _, product := range sendKitchen.Products {
-				desc = append(desc, product.ProductName.GetLocale(language)+" ("+product.ProductAttr.GetLocale(language)+") *"+
-					strconv.Itoa(int(product.TotalNum)))
+				desc = append(desc, product.ProductName.GetLocale(language)+" ("+product.ProductAttr.GetLocale(language)+") *"+utils.FormatFloat(product.TotalNum))
 			}
 			descStr := strings.Join(desc, "、")
 			return ActionDescription{Desc: descStr, SplitMessage: ""}
@@ -90,7 +89,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		var returnProduct event.CancelSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &returnProduct); err == nil {
 			desc := returnProduct.ProductName.GetLocale(language) + " (" + returnProduct.ProductAttr.GetLocale(language) + ")*" +
-				strconv.Itoa(int(returnProduct.TotalNum)) +
+				utils.FormatFloat(returnProduct.TotalNum) +
 				" (" + i18n.Translate(language, "原因") + ": "
 			reason := returnProduct.Reason.GetLocale(language)
 			if reason != "" {
@@ -109,7 +108,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		var cancelRefundProduct event.CancelReturnSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &cancelRefundProduct); err == nil {
 			desc := cancelRefundProduct.ProductName.GetLocale(language) + " (" + cancelRefundProduct.ProductAttr.GetLocale(language) + ") *" +
-				strconv.Itoa(int(cancelRefundProduct.Num))
+				utils.FormatFloat(cancelRefundProduct.Num)
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderChangeTable: // 转台
@@ -123,7 +122,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		var changePrice event.ChangeSaleOrderProductPricePayload
 		if err := json.Unmarshal([]byte(log.Data), &changePrice); err == nil {
 			desc := changePrice.ProductName.GetLocale(language) + " (" + changePrice.ProductAttr.GetLocale(language) + ") *" +
-				strconv.Itoa(int(changePrice.TotalNum)) + " (" + s.settingSrv.SymbolPosition(ctx, changePrice.Price) + ")"
+				utils.FormatFloat(changePrice.TotalNum) + " (" + s.settingSrv.SymbolPosition(ctx, changePrice.Price) + ")"
 			return ActionDescription{Desc: desc, SplitMessage: splitMessage}
 		}
 	case constant.OrderUpdateMealNum: // 修改桌台就餐人数
@@ -137,14 +136,14 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 	case constant.OrderProductFree: // 赠菜
 		var productFree event.GiftSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &productFree); err == nil {
-			desc := productFree.ProductName.GetLocale(language) + " (" + productFree.ProductAttr.GetLocale(language) + ") *" + strconv.Itoa(int(productFree.TotalNum)) +
+			desc := productFree.ProductName.GetLocale(language) + " (" + productFree.ProductAttr.GetLocale(language) + ") *" + utils.FormatFloat(productFree.TotalNum) +
 				" (" + s.settingSrv.SymbolPosition(ctx, productFree.TotalPrice) + ")"
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderCancelProductFree: // 取消赠菜
 		var cancelProductFree event.CancelGiftSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &cancelProductFree); err == nil {
-			desc := cancelProductFree.ProductName.GetLocale(language) + " (" + cancelProductFree.ProductAttr.GetLocale(language) + ") *" + strconv.Itoa(int(cancelProductFree.TotalNum)) +
+			desc := cancelProductFree.ProductName.GetLocale(language) + " (" + cancelProductFree.ProductAttr.GetLocale(language) + ") *" + utils.FormatFloat(cancelProductFree.TotalNum) +
 				" (" + s.settingSrv.SymbolPosition(ctx, cancelProductFree.TotalPrice) + ")"
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
@@ -233,11 +232,11 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 			var desc []string
 			for _, product := range refundPayload.Products {
 				item := product.ProductName.GetLocale(language) + " (" + product.ProductAttr.GetLocale(language) + ") *" +
-					strconv.Itoa(int(product.TotalNum))
+					utils.FormatFloat(product.TotalNum)
 				// 如果商品属性为空，则去掉括弧（）
 				if product.ProductAttr.IsNull() {
 					item = product.ProductName.GetLocale(language) + " *" +
-						strconv.Itoa(int(product.TotalNum))
+						utils.FormatFloat(product.TotalNum)
 				}
 				desc = append(desc, item)
 			}
