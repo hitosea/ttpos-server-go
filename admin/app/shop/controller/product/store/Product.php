@@ -627,6 +627,9 @@ class Product extends Controller
      */
     public function recommend(ProductPackageRecommendValidate $validate)
     {
+        if (request()->licenses['is_open_delivery'] == 0) {
+            return $this->renderError('当前没有权限使用此功能');
+        }
         $model = new ProductRecommend();
         $data = $model->where('delete_time', 0)->hidden(['id', 'uuid', 'create_time', 'update_time', 'delete_time'])->find();
         if ($this->request->isGet()) {

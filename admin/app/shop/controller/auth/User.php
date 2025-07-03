@@ -177,12 +177,6 @@ class User extends Controller
      */
     public function getRoleList()
     {
-
-        // $arr = [1,2,3];
-
-        // dd(array_slice($arr, 1));
-
-
         $user = $this->store['user'];
         $supplier = $this->store['supplier'];
         $menus = [];
