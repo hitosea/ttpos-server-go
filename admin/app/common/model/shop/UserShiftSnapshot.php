@@ -2,6 +2,7 @@
 
 namespace app\common\model\shop;
 
+use app\common\library\helper;
 use app\common\model\BaseModel;
 use app\common\model\shop\UserShiftLog;
 use help\HttpHelp;
@@ -171,5 +172,25 @@ class UserShiftSnapshot extends BaseModel
         ]);
 
         return $detail;
+    }
+
+    /**
+     * 计算营业收入
+     */
+    public function calcBusinessIncome($detail) {
+        if (isset($detail['order'])) {
+            $balance = 0;
+            if (isset($detail['order']['incomes'])) {
+                foreach ($detail['order']['incomes'] as $income) {
+                    if ($income['pay_type'] == 10) {
+                        $balance = helper::bcadd($balance, $income['price'], 2);
+                    }
+                }
+            }
+            // 营业收入 = 实收金额-税费 + 现金收入
+            return helper::bcadd(helper::bcsub($detail['order']['received_price'], $detail['order']['consumption_tax_money'], 2), $balance, 2);
+        }
+
+        return 0;
     }
 }

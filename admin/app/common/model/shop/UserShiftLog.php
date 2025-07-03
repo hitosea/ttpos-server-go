@@ -113,7 +113,7 @@ class UserShiftLog extends BaseModel
      */
     public function snapshot()
     {
-        return $this->belongsTo('app\\common\\model\\shop\\UserShiftSnapshot', 'id', 'shift_log_id');
+        return $this->belongsTo('app\\common\\model\\shop\\UserShiftSnapshot', 'uuid', 'shift_log_uuid');
     }
 
     /**
@@ -143,9 +143,12 @@ class UserShiftLog extends BaseModel
         }
 
         $orderSort = ['a.create_time' => 'desc'];
-        $list = $model->with(['user' => function ($query) {
-            $query->field('uuid, uuid as shop_user_id, username as user_name, IF(real_name = "", username, real_name) as real_name');
-        }])
+        $list = $model->with([
+                'user' => function ($query) {
+                    $query->field('uuid, uuid as shop_user_id, username as user_name, IF(real_name = "", username, real_name) as real_name');
+                },
+                'snapshot',
+            ])
             ->field("a.*")
             ->where('a.status', 1)
             ->order($orderSort)
@@ -154,6 +157,13 @@ class UserShiftLog extends BaseModel
             // 时间处理
             $list[$key]['shift_start_time'] = $item['shift_start_time'] ? DateHelp::formatTimeHis($item['shift_start_time']) : '-';
             $list[$key]['shift_end_time'] = $item['shift_end_time'] ? DateHelp::formatTimeHis($item['shift_end_time']) : '-';
+            // 
+            $list[$key]['total_income'] = 0;
+            if ($item['snapshot']) {
+                $content = $item['snapshot']['content'];
+                $content = json_decode($content, true);
+                $list[$key]['total_income'] = $item['snapshot']->calcBusinessIncome($content);
+            }
         }
         return $list;
     }
