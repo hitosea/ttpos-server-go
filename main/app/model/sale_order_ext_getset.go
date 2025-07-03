@@ -582,7 +582,7 @@ func (model *SaleOrder) GetPercentageList() []map[string]string {
 		taxRate := fmt.Sprintf("%.0f", orderBuffetCustomer.TaxRate*100)
 		// 累加相同税率的税费和总价
 		taxRateMap[taxRate] += orderBuffetCustomer.GetTotalTaxFee()
-		totalPriceMap[taxRate] += orderBuffetCustomer.Price
+		totalPriceMap[taxRate] += orderBuffetCustomer.GetDiscountPrice()
 	}
 
 	// 商品列表
