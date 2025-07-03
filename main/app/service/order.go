@@ -1115,6 +1115,10 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 				if saleOrderProduct.IsDelete() {
 					continue
 				}
+				// 过滤掉未接单的商品
+				if !saleOrderProduct.IsAcceptOrderProduct() {
+					continue
+				}
 				imageUrl := ""
 				if saleOrderProduct.ImageFile != nil {
 					imageUrl = saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))

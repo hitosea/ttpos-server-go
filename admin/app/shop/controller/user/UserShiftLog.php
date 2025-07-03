@@ -125,6 +125,9 @@ class UserShiftLog extends Controller
         if ($detail === false) {
             return $this->renderError($snapshotModel->getError());
         }
+        //
+        $detail['total_income'] = $snapshotModel->calcBusinessIncome($detail);
+        // 
         $salesInfo = $detail['salesInfo'] ?? [];
         
         return $this->renderSuccess('', compact('detail', 'salesInfo'));

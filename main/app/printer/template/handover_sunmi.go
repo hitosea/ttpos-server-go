@@ -395,7 +395,7 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 			printer.SetPrintModes(false, false, false)
 			printer.LineFeed(1)
 			printer.SetAlignment(pkg.AlignLeft)
-			printer.PrintInColumns(t.base.Translate("合计"), t.base.GetPriceAndUnit(businessData.TotalReceivedPrice))
+			printer.PrintInColumns(t.base.Translate("合计"), t.base.GetPriceAndUnit(percentage.TotalPrice))
 			printer.LineFeed(1)
 			printer.SetAlignment(pkg.AlignRight)
 			if t.base.Lang == "ja" {

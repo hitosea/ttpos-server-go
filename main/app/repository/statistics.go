@@ -15,6 +15,8 @@ type IStatisticsRepo interface {
 	CountPayment(opts ...DBOption) []model.StatisticsPaymentData                                                               // 统计支付
 	CountPaymentDays(opts ...DBOption) []model.StatisticsPaymentDaysData                                                       // 统计支付天数
 	CountTax(opts ...DBOption) []model.StatisticsTaxData                                                                       // 统计税类
+	CountBuffetTax(opts ...DBOption) []model.StatisticsTaxData                                                                 // 统计自助餐税类
+	CountBuffetDelayTax(opts ...DBOption) []model.StatisticsTaxData                                                            // 统计自助餐加钟税类
 	CountCategory(categoryType int, language string, opts ...DBOption) (orderNum int64, result []model.StatisticsCategoryData) // 统计分类
 	CountProduct(language string, opts ...DBOption) []model.StatisticsProductData                                              // 统计商品
 	CountArea(opts ...DBOption) []model.StatisticsAreaData                                                                     // 统计区域
@@ -34,9 +36,13 @@ type IStatisticsRepo interface {
 	SaveSale(sales []model.StatisticsSale) error                                                                               // 保存销售
 	SavePayment(payments []model.StatisticsPayment) error                                                                      // 保存支付
 	SaveProduct(products []model.StatisticsProduct) error                                                                      // 保存商品
+	SaveCustomerType(customerTypes []model.StatisticsCustomerType) error                                                       // 保存客户类型
+	SaveDelay(delays []model.StatisticsDelay) error                                                                            // 保存加钟
 	DeleteSale(saleBillUuid uint64) error                                                                                      // 删除销售
 	DeletePayment(saleBillUuid uint64) error                                                                                   // 删除支付
 	DeleteProduct(saleBillUuid uint64) error                                                                                   // 删除商品
+	DeleteCustomerType(saleBillUuid uint64) error                                                                              // 删除客户类型
+	DeleteDelay(saleBillUuid uint64) error                                                                                     // 删除加钟
 	SaveMember(member model.StatisticsMember) error                                                                            // 保存会员
 	SaveMembers(members []model.StatisticsMember) error                                                                        // 保存会员
 	SaveMemberPayment(payments []model.StatisticsMemberPayment) error                                                          // 保存会员支付
@@ -222,7 +228,7 @@ func (r *StatisticsRepo) CountPaymentDays(opts ...DBOption) []model.StatisticsPa
 	return result
 }
 
-// CountTax 统计税类
+// CountTax 统计商品税类
 func (r *StatisticsRepo) CountTax(opts ...DBOption) []model.StatisticsTaxData {
 	var result []model.StatisticsTaxData
 	db := r.db
@@ -231,6 +237,44 @@ func (r *StatisticsRepo) CountTax(opts ...DBOption) []model.StatisticsTaxData {
 	}
 
 	db.Model(&model.StatisticsProduct{}).
+		Select(
+			"tax_rate",
+			"SUM((product_price + tax_fee) * (product_num - refund_num)) AS total_product_amount",
+			"SUM(tax_fee * (product_num - refund_num)) AS total_tax_fee",
+		).Group("tax_rate").
+		Find(&result)
+
+	return result
+}
+
+// CountBuffetTax 统计自助餐税类
+func (r *StatisticsRepo) CountBuffetTax(opts ...DBOption) []model.StatisticsTaxData {
+	var result []model.StatisticsTaxData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	db.Model(&model.StatisticsCustomerType{}).
+		Select(
+			"tax_rate",
+			"SUM((product_price + tax_fee) * (product_num - refund_num)) AS total_product_amount",
+			"SUM(tax_fee * (product_num - refund_num)) AS total_tax_fee",
+		).Group("tax_rate").
+		Find(&result)
+
+	return result
+}
+
+// CountBuffetDelayTax 统计自助餐加钟税类
+func (r *StatisticsRepo) CountBuffetDelayTax(opts ...DBOption) []model.StatisticsTaxData {
+	var result []model.StatisticsTaxData
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	db.Model(&model.StatisticsDelay{}).
 		Select(
 			"tax_rate",
 			"SUM((product_price + tax_fee) * (product_num - refund_num)) AS total_product_amount",
@@ -529,6 +573,26 @@ func (r *StatisticsRepo) SaveProduct(products []model.StatisticsProduct) error {
 // DeleteProduct 删除商品
 func (r *StatisticsRepo) DeleteProduct(saleBillUuid uint64) error {
 	return r.db.Where("sale_bill_uuid = ?", saleBillUuid).Delete(&model.StatisticsProduct{}).Error
+}
+
+// SaveCustomerType 保存客户类型
+func (r *StatisticsRepo) SaveCustomerType(customerTypes []model.StatisticsCustomerType) error {
+	return r.db.Create(&customerTypes).Error
+}
+
+// DeleteCustomerType 删除客户类型
+func (r *StatisticsRepo) DeleteCustomerType(saleBillUuid uint64) error {
+	return r.db.Where("sale_bill_uuid = ?", saleBillUuid).Delete(&model.StatisticsCustomerType{}).Error
+}
+
+// SaveDelay 保存加钟
+func (r *StatisticsRepo) SaveDelay(delays []model.StatisticsDelay) error {
+	return r.db.Create(&delays).Error
+}
+
+// DeleteDelay 删除加钟
+func (r *StatisticsRepo) DeleteDelay(saleBillUuid uint64) error {
+	return r.db.Where("sale_bill_uuid = ?", saleBillUuid).Delete(&model.StatisticsDelay{}).Error
 }
 
 // CountUnpaidOrder 统计未结订单

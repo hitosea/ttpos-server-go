@@ -428,7 +428,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 				img.LineFeed(1)
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: t.base.Translate("合计"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
-					pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.TotalReceivedPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+					pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(percentage.TotalPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 				)
 				img.SetAlignment(pkg.AlignRight)
 				if t.base.Lang == "ja" {
