@@ -620,10 +620,12 @@ class Product extends Controller
      * @Apidoc\Url ("/index.php/shop/product.store.product/recommend")
      * @Apidoc\Returned("status", type="int", desc="状态")
      * @Apidoc\Returned("title", type="string", desc="推荐标题")
-     * @Apidoc\Returned("product_packages", type="array", desc="商品列表")
-     * @Apidoc\Returned("product_packages[].uuid", type="string", desc="商品UUID")
-     * @Apidoc\Returned("product_packages[].sort", type="int", desc="排序")
-     * @Apidoc\Returned("product_packages[].name", type="string", desc="商品名称")
+     * @Apidoc\Returned("product_packages", type="array", desc="商品列表", children={
+     *      @Apidoc\Param("uuid", type="string", desc="商品UUID"),
+     *      @Apidoc\Param("sort", type="int", desc="排序"),
+     *      @Apidoc\Param("name", type="string", desc="商品名称"),
+     * }),
+     * @Apidoc\Returned()
      */
     public function recommend(ProductPackageRecommendValidate $validate)
     {

@@ -23,14 +23,17 @@ class Delivery extends Controller
      * @Apidoc\Desc("get请求是获取，返回数组；post请求是提交修改，传递{channels:[渠道配置列表]}")
      * @Apidoc\Method("GET,POST")
      * @Apidoc\Url("/api/admin/delivery/index")
-     * @Apidoc\Param("channels[].channel", type="string", require=true, desc="配送渠道名称")
-     * @Apidoc\Param("channels[].basic_fee", type="decimal", require=true, desc="基础服务费")
-     * @Apidoc\Param("channels[].base_delivery_fee", type="decimal", require=true, desc="起步配送费")
-     * @Apidoc\Param("channels[].rider_acceptance_timeout", type="int", require=true, desc="骑手未接单取消时间：分钟，1-60")
-     * @Apidoc\Param("channels[].distance_range", type="array", require=true, desc="距离范围配置")
-     * @Apidoc\Param("channels[].distance_range[].end", type="int", require=true, desc="结束距离")
-     * @Apidoc\Param("channels[].distance_range[].is_unlimited", type="boolean", require=true, desc="是否最大范围")
-     * @Apidoc\Param("channels[].distance_range[].price_per_km", type="decimal", require=true, desc="每公里价格")
+     * @Apidoc\Param("channels", type="array", require=true, desc="外送渠道列表", children={
+     *      @Apidoc\Param("channel", type="string", require=true, desc="配送渠道名称"),
+     *      @Apidoc\Param("basic_fee", type="decimal", require=true, desc="基础服务费"),
+     *      @Apidoc\Param("base_delivery_fee", type="decimal", require=true, desc="起步配送费"),
+     *      @Apidoc\Param("rider_acceptance_timeout", type="int", require=true, desc="骑手未接单取消时间：分钟，1-60"),
+     *      @Apidoc\Param("distance_range", type="array", require=true, desc="距离范围配置", children={
+     *          @Apidoc\Param("end", type="int", require=true, desc="结束距离"),
+     *          @Apidoc\Param("is_unlimited", type="boolean", require=true, desc="是否最大范围"),
+     *          @Apidoc\Param("price_per_km", type="decimal", require=true, desc="每公里价格"),
+     *      }),
+     * })
      */
     public function index(DeliveryValidate $validate)
     {
@@ -129,9 +132,10 @@ class Delivery extends Controller
      * @Apidoc\Method("GET")
      * @Apidoc\Url("/api/admin/delivery/channels")
      * @Apidoc\Param("configured", type="int", default="0", desc="是否仅获取设置的渠道：0-否；1-是")
-     * @Apidoc\Returned(type="array", desc="外送渠道选项")
-     * @Apidoc\Returned("name", type="string", desc="渠道名称")
-     * @Apidoc\Returned("value", type="string", desc="渠道值")
+     * @Apidoc\Returned(type="array", desc="外送渠道选项", children={
+     *      @Apidoc\Returned("name", type="string", desc="渠道名称"),
+     *      @Apidoc\Returned("value", type="string", desc="渠道值"),
+     * })
      */
     public function channels()
     {
@@ -176,19 +180,20 @@ class Delivery extends Controller
      * @Apidoc\Returned("uuid", type="biginteger", desc="商家ID")
      * @Apidoc\Returned("name", type="string", desc="商家名称")
      * @Apidoc\Returned("delivery_status", type="int", desc="外送状态，0为关闭，1为开启")
-     * @Apidoc\Returned("delivery_config", type="array", desc="外送渠道配置列表")
-     * @Apidoc\Returned("delivery_config[].channel", type="string", desc="配送渠道名称")
-     * @Apidoc\Returned("delivery_config[].basic_fee", type="decimal", desc="基础服务费")
-     * @Apidoc\Returned("delivery_config[].base_delivery_fee", type="decimal", desc="基础配送费")
-     * @Apidoc\Returned("delivery_config[].rider_acceptance_timeout", type="int", desc="骑手接单超时时间（分钟）")
-     * @Apidoc\Returned("delivery_config[].distance_range", type="array", desc="距离区间配置")
-     * @Apidoc\Returned("delivery_config[].distance_range[].start", type="int", desc="区间起始公里数")
-     * @Apidoc\Returned("delivery_config[].distance_range[].end", type="int", desc="区间结束公里数")
-     * @Apidoc\Returned("delivery_config[].distance_range[].price_per_km", type="decimal", desc="每公里价格")
-     * @Apidoc\Returned("delivery_config[].distance_range[].is_unlimited", type="bool", desc="是否为无限区间")
-     * @Apidoc\Returned("delivery_config[].config_type", type="string", desc="配置类型：auto_sync-自动同步；manual手动设置")
-     * @Apidoc\Returned("channel_names", type="array", desc="渠道名称，分号分隔")
-     * @Apidoc\Returned("channel_config_types", type="array", desc="配置类型：auto_sync-自动同步；manual手动设置，分号分隔")
+     * @Apidoc\Returned("delivery_config", type="array", desc="外送渠道配置列表", children={
+     * @Apidoc\Returned("channel", type="string", desc="配送渠道名称"),
+     *      @Apidoc\Returned("basic_fee", type="decimal", desc="基础服务费"),
+     *      @Apidoc\Returned("base_delivery_fee", type="decimal", desc="基础配送费"),
+     *      @Apidoc\Returned("rider_acceptance_timeout", type="int", desc="骑手接单超时时间（分钟）"),
+     *      @Apidoc\Returned("distance_range", type="array", desc="距离区间配置", children={
+     *          @Apidoc\Returned("end", type="int", desc="区间结束公里数"),
+     *          @Apidoc\Returned("price_per_km", type="decimal", desc="每公里价格"),
+     *          @Apidoc\Returned("is_unlimited", type="bool", desc="是否为无限区间"),
+     *      }),
+     *     @Apidoc\Returned("config_type", type="string", desc="配置类型：auto_sync-自动同步；manual手动设置"),
+     *     @Apidoc\Returned("channel_names", type="array", desc="渠道名称，分号分隔", children={}),
+     *     @Apidoc\Returned("channel_config_types", type="array", desc="配置类型：auto_sync-自动同步；manual手动设置，分号分隔", children={}),
+     * })
      */
     public function companyList()
     {
@@ -223,10 +228,11 @@ class Delivery extends Controller
      * @Apidoc\Param("keyword", type="string", default="", desc="商家名称")
      * @Apidoc\Param("channel", type="string", default="", desc="外送渠道：SKootar") 
      * @Apidoc\Param(ref="pageParam")
-     * @Apidoc\Returned(type="array", desc="商家列表")
-     * @Apidoc\Returned("uuid", type="biginteger", desc="商家ID")
-     * @Apidoc\Returned("name", type="string", desc="商家名称")
-     * @Apidoc\Returned("channel_names", type="array", desc="商家已配置的外送渠道名称列表，如果长度不为空，表示已配置")
+     * @Apidoc\Returned(type="array", desc="商家列表", children={
+     *      @Apidoc\Returned("uuid", type="biginteger", desc="商家ID"),
+     *      @Apidoc\Returned("name", type="string", desc="商家名称"),
+     *      @Apidoc\Returned("channel_names", type="array", desc="商家已配置的外送渠道名称列表，如果长度不为空，表示已配置"),
+     * })
      */
     public function companySelect()
     {
@@ -270,22 +276,24 @@ class Delivery extends Controller
         return $this->renderSuccess('操作成功');
     }
 
-    /**
+   /**
      * @Apidoc\Title("添加\修改商家外送配置")
      * @Apidoc\Desc("")
      * @Apidoc\Method("POST")
      * @Apidoc\Url("/api/admin/delivery/company")
      * @Apidoc\Param("uuid", type="biginteger", require=true, desc="商家唯一标识")
-     * @Apidoc\Param("channels", type="array", require=true, desc="外送渠道配置列表")
-     * @Apidoc\Param("channels[].channel", type="string", require=true, desc="配送渠道名称")
-     * @Apidoc\Param("channels[].config_type", type="string", require=true, desc="配置类型，如 auto_sync-自动同步；manual-手动设置")
-     * @Apidoc\Param("channels[].basic_fee", type="decimal", require=true, desc="基础服务费")
-     * @Apidoc\Param("channels[].base_delivery_fee", type="decimal", require=true, desc="起步配送费")
-     * @Apidoc\Param("channels[].rider_acceptance_timeout", type="int", require=true, desc="骑手未接单取消时间：分钟，1-60")
-     * @Apidoc\Param("channels[].distance_range", type="array", require=true, desc="距离范围配置")
-     * @Apidoc\Param("channels[].distance_range[].end", type="int", require=true, desc="结束距离")
-     * @Apidoc\Param("channels[].distance_range[].is_unlimited", type="boolean", require=true, desc="是否最大范围")
-     * @Apidoc\Param("channels[].distance_range[].price_per_km", type="decimal", require=true, desc="每公里价格")
+     * @Apidoc\Param("channels", type="array", require=true, desc="外送渠道配置列表", children={
+     *      @Apidoc\Param("channel", type="string", require=true, desc="配送渠道名称"),
+     *      @Apidoc\Param("config_type", type="string", require=true, desc="配置类型，如 auto_sync-自动同步；manual-手动设置"),
+     *      @Apidoc\Param("basic_fee", type="decimal", require=true, desc="基础服务费"),
+     *      @Apidoc\Param("base_delivery_fee", type="decimal", require=true, desc="起步配送费"),
+     *      @Apidoc\Param("rider_acceptance_timeout", type="int", require=true, desc="骑手未接单取消时间：分钟，1-60"),
+     *      @Apidoc\Param("distance_range", type="array", require=true, desc="距离范围配置", children={
+     *          @Apidoc\Param("end", type="int", require=true, desc="结束距离"),
+     *          @Apidoc\Param("is_unlimited", type="boolean", require=true, desc="是否最大范围"),
+     *          @Apidoc\Param("price_per_km", type="decimal", require=true, desc="每公里价格"),
+     *      }), 
+     * }) 
      */
     public function company(DeliveryValidate $validate)
     {
@@ -322,28 +330,32 @@ class Delivery extends Controller
      * @Apidoc\Param("uuid", type="biginteger", require=true, desc="商家ID")
      * @Apidoc\Param("channel", type="string", require=false, desc="外送渠道")
      * @Apidoc\Param("month", type="string", require=false, desc="统计月份")
-     * @Apidoc\Returned("list", type="object", desc="分页订单列表")
-     * @Apidoc\Returned("list.total", type="int", desc="总记录数")
-     * @Apidoc\Returned("list.per_page", type="int", desc="每页数量")
-     * @Apidoc\Returned("list.current_page", type="int", desc="当前页码")
-     * @Apidoc\Returned("list.last_page", type="int", desc="最后一页页码")
-     * @Apidoc\Returned("list.data", type="array", desc="订单数据列表")
-     * @Apidoc\Returned("list.data[].uuid", type="biginteger", desc="商家ID")
-     * @Apidoc\Returned("list.data[].name", type="string", desc="商家名称")
-     * @Apidoc\Returned("list.data[].channel", type="string", desc="外送渠道")
-     * @Apidoc\Returned("list.data[].order_no", type="string", desc="订单号")
-     * @Apidoc\Returned("list.data[].delivery_fee", type="decimal", desc="订单配送费")
-     * @Apidoc\Returned("list.data[].distance", type="decimal", desc="距离（公里）")
-     * @Apidoc\Returned("list.data[].basic_fee", type="decimal", desc="基础服务费")
-     * @Apidoc\Returned("list.data[].base_delivery_fee", type="decimal", desc="起步配送费")
-     * @Apidoc\Returned("list.data[].price_per_km", type="decimal", desc="距离单价")
-     * @Apidoc\Returned("aggregate", type="object", desc="汇总信息")
-     * @Apidoc\Returned("aggregate.order_count", type="int", desc="总订单数")
-     * @Apidoc\Returned("aggregate.delivery_fee", type="string", desc="总配送费")
-     * @Apidoc\Returned("aggregate.channels", type="array", desc="各渠道配送费")
-     * @Apidoc\Returned("aggregate.channels[].channel", type="string", desc="渠道名称")
-     * @Apidoc\Returned("aggregate.channels[].fee", type="string", desc="渠道配送费")
-     * @Apidoc\Returned("aggregate.status", type="string", desc="结清状态：settle-已结清；unsettle-未结清")
+     * 
+     * @Apidoc\Returned("list", type="object", desc="分页订单列表", children={
+     *      @Apidoc\Returned("total", type="int", desc="总记录数"),
+     *      @Apidoc\Returned("per_page", type="int", desc="每页数量"),
+     *      @Apidoc\Returned("current_page", type="int", desc="当前页码"),
+     *      @Apidoc\Returned("last_page", type="int", desc="最后一页页码"),
+     *      @Apidoc\Returned("data", type="array", desc="订单数据列表", children={
+     *          @Apidoc\Returned("uuid", type="biginteger", desc="商家ID"),
+     *          @Apidoc\Returned("name", type="string", desc="商家名称"),
+     *          @Apidoc\Returned("channel", type="string", desc="外送渠道"),
+     *          @Apidoc\Returned("order_no", type="string", desc="订单号"),
+     *          @Apidoc\Returned("delivery_fee", type="decimal", desc="订单配送费"),
+     *          @Apidoc\Returned("distance", type="decimal", desc="距离（公里）"),
+     *          @Apidoc\Returned("basic_fee", type="decimal", desc="基础服务费"),
+     *          @Apidoc\Returned("base_delivery_fee", type="decimal", desc="起步配送费"),
+     *          @Apidoc\Returned("price_per_km", type="decimal", desc="距离单价"),
+     *      }),
+     *      @Apidoc\Returned("aggregate", type="object", desc="汇总信息", children={
+     *          @Apidoc\Returned("order_count", type="int", desc="总订单数"),
+     *          @Apidoc\Returned("delivery_fee", type="string", desc="总配送费"),
+     *          @Apidoc\Returned("channels", type="array", desc="各渠道配送费"),
+     *          @Apidoc\Returned("channel", type="string", desc="渠道名称"),
+     *          @Apidoc\Returned("fee", type="string", desc="渠道配送费"),
+     *          @Apidoc\Returned("status", type="string", desc="结清状态：settle-已结清；unsettle-未结清"),    
+     *      }),
+     * })
      */
     public function ledger()
     {
