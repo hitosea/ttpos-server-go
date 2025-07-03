@@ -87,6 +87,7 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 
 	// 用户鉴权
 	ctx := context.NewContext(
+		context.WithGinContext(c.Copy()),
 		context.WithSource(claims.Source),
 		context.WithCompanyUuid(claims.CompanyUuid),
 		context.WithDeviceUuid(claims.DeviceUuid),
@@ -108,6 +109,11 @@ func ParseJwt(c *gin.Context, authHeader string, authSrv service.IAuthSrv, dbm *
 		var appErr errors.AppError
 		if builtinerrors.As(err, &appErr) {
 			code := appErr.GetCode()
+			if code == constant.CodeCashierHandedOver { // 已交班
+				helper.ErrorWithData(c, code, appErr.GetData(), err)
+				c.Abort()
+				return
+			}
 			if code == constant.CodeTokenInvalid && appErr.GetData() != nil {
 				helper.ErrorWithData(c, constant.CodeAccessDenied, appErr.GetData(), err)
 				c.Abort()

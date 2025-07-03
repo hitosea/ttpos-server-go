@@ -26,6 +26,7 @@ import (
 	"ttpos-server-go/pkg/websocket"
 
 	"github.com/duke-git/lancet/convertor"
+	"github.com/duke-git/lancet/v2/cryptor"
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -37,6 +38,7 @@ type IStaffShiftSrv interface {
 	CreateWorkingLog(staff model.Staff) (model.StaffShiftLog, error)
 	GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, error)                          // 获取交班信息
 	SubmitShift(ctx context.Context, req req.SubmitShiftReq) (*resp.ShiftSubmit, error) // 提交交班
+	GetCachedSubmitShift(ctx context.Context) (*resp.ShiftSubmit, error)                // 提交交班
 	ShiftWithdraw(ctx context.Context, req req.ShiftWithdrawReq) error
 	ShiftDeposit(ctx context.Context, req req.ShiftDepositReq) error
 	ShiftPrinter(ctx context.Context, req req.ShiftPrinterReq, firstExecution int, openMoneybox bool, staffs ...model.Staff) (*resp.PrinterData, error)
@@ -157,6 +159,20 @@ func (s *staffShiftSrv) GetShiftInfo(ctx context.Context) (*resp.ShiftInfo, erro
 			List: paymentMethodIncomeList,
 		},
 	}, nil
+}
+
+// GetShiftInfo 获取缓存交班信息
+func (s *staffShiftSrv) GetCachedSubmitShift(ctx context.Context) (*resp.ShiftSubmit, error) {
+	cacheKey := cryptor.Md5String(ctx.GetGin().GetHeader("Authorization"))
+	if ss, exists := s.cache.Get(cacheKey); exists {
+		if val, ok := ss.(string); ok {
+			var shiftSubmitInfo resp.ShiftSubmit
+			if err := json.Unmarshal([]byte(val), &shiftSubmitInfo); err == nil {
+				return &shiftSubmitInfo, nil
+			}
+		}
+	}
+	return nil, nil
 }
 
 // SubmitShift 提交交班
@@ -306,12 +322,12 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 		return nil, err
 	}
 
-	return &resp.ShiftSubmit{
+	shiftSubmitInfo := resp.ShiftSubmit{
 		CashIncome:   cashAmount,
 		CashTakenOut: withdrawCash.InexactFloat64(),
 		CashLeft:     currentCashTotal.InexactFloat64(),
 		DutyNo:       staff.DutyNo,
-		PrinterData: func() *resp.PrinterData {
+		PrinterData: func() resp.PrinterData {
 			printerData, err := s.ShiftPrinter(ctx, req.ShiftPrinterReq{
 				WithdrawCash: withdrawCash.InexactFloat64(),
 				LeaveCash:    currentCashTotal.InexactFloat64(),
@@ -319,11 +335,17 @@ func (s *staffShiftSrv) SubmitShift(ctx context.Context, reqs req.SubmitShiftReq
 			}, utils.IfInt(reqs.IsBackground, 0, 1), true, staff)
 			if err != nil {
 				fmt.Println(err)
-				return &resp.PrinterData{}
+				return resp.PrinterData{}
 			}
-			return printerData
+			return *printerData
 		}(),
-	}, nil
+	}
+	cacheKey := cryptor.Md5String(ctx.GetGin().GetHeader("Authorization"))
+	// 缓存交班数据12小时
+	if err = s.cache.Set(cacheKey, shiftSubmitInfo, 12*time.Hour); err != nil {
+		logger.Logger.Error("cache shiftSubmitInfo error", zap.Error(err))
+	}
+	return &shiftSubmitInfo, nil
 }
 
 // GetCashierReport 获取报备信息

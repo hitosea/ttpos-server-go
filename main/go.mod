@@ -6,6 +6,7 @@ toolchain go1.23.5
 
 require (
 	cloud.google.com/go/storage v1.55.0
+	github.com/Masterminds/semver v1.5.0
 	github.com/ace-zhaoy/go-id v1.0.6
 	github.com/disintegration/imaging v1.6.2
 	github.com/duke-git/lancet/v2 v2.3.4

@@ -668,11 +668,19 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeUnauthorized, "当前无权限，请联系管理员")
 			}
 			// 已交班，只能打印交班单、退出登录、获取基本信息、轮询打印数据，轮询未处理消息、获取广告
-			if staff.DutyNo == "" && !slices.Contains([]string{
-				"/api/v1/cashier/shift/printer", "/api/v1/cashier/logout", "/api/v1/cashier/base",
-				"/api/v1/cashier/print_data", "/api/v1/cashier/call/unprocessed_notice", "/api/v1/cashier/ad",
-			}, auth.UrlPath) {
-				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenExpired, "当前班次不存在")
+			if staff.DutyNo == "" && !slices.Contains([]string{"/api/v1/cashier/shift/printer", "/api/v1/cashier/logout"}, auth.UrlPath) {
+				// 判断客户端版本，低于 2.3 的就返回 -101，直接退出
+				// 高于等于的就返-108，能弹出来交班弹窗
+				if ctx.Version(context.GreaterThen, "2.3.0") || ctx.Version(context.Equal, "2.3.0") { // 高于等于 2.3.0
+					// 获取缓存
+					if cachedSubmitShift, err := s.shiftSrv.GetCachedSubmitShift(ctx); err != nil {
+						return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenExpired, "当前班次不存在")
+					} else {
+						return company, companySetting, staff, desk, errors.NewWithCodeAndData(constant.CodeCashierHandedOver, *cachedSubmitShift, "已交班")
+					}
+				} else { // 低于 2.3.0
+					return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenExpired, "当前班次不存在")
+				}
 			}
 		}
 	case constant.SourceAssistant: // 点餐助手端
