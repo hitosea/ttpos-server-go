@@ -277,7 +277,7 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 			printer.SetPrintModes(false, false, false)
 			printer.LineFeed(1)
 			printer.SetAlignment(pkg.AlignLeft)
-			printer.AppendText(t.base.PrintText(t.base.Translate("合计"), "", t.base.GetPriceAndUnit(businessData.TotalReceivedPrice), width))
+			printer.AppendText(t.base.PrintText(t.base.Translate("合计"), "", t.base.GetPriceAndUnit(percentage.TotalPrice), width))
 			printer.LineFeed(1)
 			printer.SetAlignment(pkg.AlignRight)
 			if t.base.Lang == "ja" {
