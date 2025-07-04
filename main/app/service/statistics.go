@@ -1076,9 +1076,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			productServiceFee := decimal.NewFromFloat(saleBuffetCustomerType.ServiceFee)
 			productServiceTax := decimal.NewFromFloat(saleBuffetCustomerType.ServiceTaxFee)
 
-			freeNum := 0
+			freeNum := 0.0
 			if isFree {
-				freeNum = int(saleBuffetCustomerType.Num)
+				freeNum = float64(saleBuffetCustomerType.Num)
 				if isStatFree {
 					orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
 					orderProductTax = orderProductTax.Add(productTax.Mul(productNumDec))
@@ -1150,9 +1150,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			saleProductNoTax := productPrice
 			orderProductOriginPrice = orderProductOriginPrice.Add(saleProductNoTax.Mul(productNumDec))
 
-			freeNum := 0
+			freeNum := 0.0
 			if isFree {
-				freeNum = int(saleBuffetDelayProduct.Num)
+				freeNum = float64(saleBuffetDelayProduct.Num)
 				if isStatFree {
 					orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
 					if saleOrder.CustomDiscountRate != 1 {
