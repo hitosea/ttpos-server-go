@@ -133,6 +133,8 @@
           item.uuid = Number(item.uuid);
           item.sort = Number(item.sort);
         });
+        // 验证一下表单
+        formRef.value.validate();
       })
       .catch((error) => {
         console.log(error);

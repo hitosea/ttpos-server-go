@@ -177,7 +177,17 @@
           }
         }
       } else {
-        callback(false);
+        // 验证失败的逻辑
+        if (callback && typeof callback === 'function') {
+          callback(false);
+        }
+        // 验证失败页面滑动到错误位置
+        nextTick(() => {
+          const errorField = document.querySelector('.is-error');
+          if (errorField) {
+            errorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
       }
     });
   };

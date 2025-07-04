@@ -158,6 +158,14 @@
             save_loading.value = false;
             console.error('保存失败:', error);
           });
+      } else {
+        // 验证失败页面滑动到错误位置
+        nextTick(() => {
+          const errorField = document.querySelector('.is-error');
+          if (errorField) {
+            errorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
       }
     });
   };
