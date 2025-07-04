@@ -409,7 +409,7 @@
       onSubmit() {
         let self = this;
         // 判断是否开启自助餐,只能有一个自助餐
-        if (self.form.shopping_gift_rules[1].is_open == 1 && self.form.shopping_gift_rules[0].is_open == 1 && self.form.shopping_gift_rules[0].meal_type.includes('buffet') ) {
+        if (self.form.shopping_gift_rules[1].is_open == 1 && self.form.shopping_gift_rules[0].is_open == 1 && self.form.shopping_gift_rules[0].meal_type.includes('buffet')) {
           this.$ElMessage({
             message: this.$t('自助餐只可适用于一个规则'),
             type: 'error',
@@ -439,6 +439,7 @@
           }
         });
       },
+
       handleDeductRatioMainInput(value) {
         const main = value > 100 ? 100 : value < 0 ? 0 : value;
         this.form.deduct_ratio_main = main;
@@ -460,164 +461,90 @@
         }
       },
 
-      handleValueInput(e, index) {
-        let value = e;
-        // 只允许输入数字和小数点
-        value = value.replace(/[^0-9]/g, '');
+      // 通用输入处理函数
+      processInput(value, options = {}) {
+        const { allowDecimal = false, maxValue = 100, minValue = 0, maxDecimals = 0 } = options;
 
-        // 不能输入 01 001这种
-        if (value.length > 1 && value.startsWith('0')) {
-          value = value.slice(1);
+        // 只允许输入数字和小数点
+        let processed = value.replace(allowDecimal ? /[^0-9.]/g : /[^0-9]/g, '');
+
+        // 处理以0开头的数字
+        if (processed.length > 1 && processed.startsWith('0') && !processed.startsWith('0.')) {
+          processed = processed.slice(1);
+        }
+
+        // 处理小数部分
+        if (allowDecimal) {
+          const parts = processed.split('.');
+          if (parts.length > 2) {
+            processed = parts[0] + '.' + parts.slice(1).join('');
+          }
+          if (parts[1] && parts[1].length > maxDecimals) {
+            processed = parts[0] + '.' + parts[1].substring(0, maxDecimals);
+          }
         }
 
         // 转换为数字进行范围检查
-        const numValue = parseFloat(value);
-        if (numValue > 100) {
-          value = '100';
+        const numValue = parseFloat(processed) || 0;
+        if (numValue > maxValue) {
+          return maxValue.toString();
         }
-        if (numValue < 0) {
-          value = '0';
+        if (numValue < minValue) {
+          return minValue.toString();
         }
 
-        // 更新表单值
-        this.form.shopping_gift_rules[index].value = value;
+        return processed;
+      },
+
+      handleValueInput(e, index) {
+        this.form.shopping_gift_rules[index].value = this.processInput(e, {
+          maxValue: 100,
+          minValue: 0,
+        });
       },
 
       handleValuesInput(e, index) {
-        let value = e;
-        // 只允许输入数字和小数点
-        value = value.replace(/[^0-9.]/g, '');
-
-        // 确保只有一个小数点
-        const parts = value.split('.');
-        if (parts.length > 2) {
-          value = parts[0] + '.' + parts.slice(1).join('');
-        }
-
-        // 限制最多两位小数
-        if (parts[1] && parts[1].length > 2) {
-          value = parts[0] + '.' + parts[1].substring(0, 2);
-        }
-        // 转换为数字进行范围检查
-        const numValue = parseFloat(value);
-        if (numValue > 9999999) {
-          value = '9999999';
-        }
-        if (numValue < 0) {
-          value = '0';
-        }
-        this.form.shopping_gift_rules[index].value = value;
+        this.form.shopping_gift_rules[index].value = this.processInput(e, {
+          allowDecimal: true,
+          maxValue: 9999999,
+          minValue: 0,
+          maxDecimals: 2,
+        });
       },
 
       handlePointsExchangeRateInput(e) {
-        let value = e;
-
-        // 只允许输入数字和小数点
-        value = value.replace(/[^0-9.]/g, '');
-
-        // 确保只有一个小数点
-        const parts = value.split('.');
-        if (parts.length > 2) {
-          value = parts[0] + '.' + parts.slice(1).join('');
-        }
-
-        // 限制最多两位小数
-        if (parts[1] && parts[1].length > 2) {
-          value = parts[0] + '.' + parts[1].substring(0, 2);
-        }
-
-        // 转换为数字进行范围检查
-        const numValue = parseFloat(value);
-        if (numValue > 9999999) {
-          value = '9999999';
-        }
-        if (numValue < 0) {
-          value = '0';
-        }
-        this.form.exchange.points_exchange_rate = value;
+        this.form.exchange.points_exchange_rate = this.processInput(e, {
+          allowDecimal: true,
+          maxValue: 9999999,
+          minValue: 0,
+          maxDecimals: 2,
+        });
       },
       handleMoneyInput(e, index) {
-        let value = e;
-
-        // 只允许输入数字和小数点
-        value = value.replace(/[^0-9.]/g, '');
-
-        // 确保只有一个小数点
-        const parts = value.split('.');
-        if (parts.length > 2) {
-          value = parts[0] + '.' + parts.slice(1).join('');
-        }
-
-        // 限制最多两位小数
-        if (parts[1] && parts[1].length > 2) {
-          value = parts[0] + '.' + parts[1].substring(0, 2);
-        }
-
-        // 转换为数字进行范围检查
-        const numValue = parseFloat(value);
-        if (numValue > 9999999) {
-          value = '9999999';
-        }
-
-        // 不允许输入0或负数
-        if (numValue < 0) {
-          value = '0';
-        }
-
-        // 更新表单值
-        this.form.shopping_gift_rules[index].payment_amount_requirement = value;
+        this.form.shopping_gift_rules[index].payment_amount_requirement = this.processInput(e, {
+          allowDecimal: true,
+          maxValue: 9999999,
+          minValue: 0,
+          maxDecimals: 2,
+        });
       },
 
-      // 处理会员等级积分输入
       handleMemberLevelInput(value, ruleIndex, levelIndex) {
-        // 只允许输入数字和小数点
-        value = value.replace(/[^0-9.]/g, '');
-
-        // 确保只有一个小数点
-        const parts = value.split('.');
-        if (parts.length > 2) {
-          value = parts[0] + '.' + parts.slice(1).join('');
-        }
-
-        // 限制最多两位小数
-        if (parts[1] && parts[1].length > 2) {
-          value = parts[0] + '.' + parts[1].substring(0, 2);
-        }
-
-        // 限制最小值为1
-        if (newValue < 0) {
-          newValue = '0';
-        }
-
-        // 限制最大值
-        const numValue = parseInt(newValue);
-        if (numValue > 9999999) {
-          newValue = '9999999';
-        }
-
-        // 更新对应的会员等级积分值
-        this.form.shopping_gift_rules[ruleIndex].member_levels[levelIndex].value = newValue;
+        const processed = this.processInput(value, {
+          allowDecimal: true,
+          maxValue: 9999999,
+          minValue: 0,
+          maxDecimals: 2,
+        });
+        this.form.shopping_gift_rules[ruleIndex].member_levels[levelIndex].value = processed;
       },
 
       handleMemberLevelsInput(e, index, levelIndex) {
-        let value = e;
-        // 只允许输入数字和小数点
-        value = value.replace(/[^0-9]/g, '');
-
-        // 不能输入 01 001这种
-        if (value.length > 1 && value.startsWith('0')) {
-          value = value.slice(1);
-        }
-
-        // 转换为数字进行范围检查
-        const numValue = parseFloat(value);
-        if (numValue > 100) {
-          value = '100';
-        }
-        if (numValue < 0) {
-          value = '0';
-        }
-        this.form.shopping_gift_rules[index].member_levels[levelIndex].value = value;
+        const processed = this.processInput(e, {
+          maxValue: 100,
+          minValue: 0,
+        });
+        this.form.shopping_gift_rules[index].member_levels[levelIndex].value = processed;
       },
     },
   };
