@@ -79,6 +79,50 @@ type StatisticsProduct struct {
 	RefundTime         int64   `gorm:"column:refund_time;type:bigint(20);default:0;comment:退款时间;NOT NULL" json:"refund_time"`
 }
 
+// StatisticsCustomerType 客户类型统计表 statistics_customer_type
+type StatisticsCustomerType struct {
+	BaseModel
+	SaleBillUuid                uint64  `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单uuid;NOT NULL" json:"sale_bill_uuid"`
+	SaleOrderUuid               uint64  `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单uuid;NOT NULL" json:"sale_order_uuid"`
+	DutyNo                      string  `gorm:"column:duty_no;type:varchar(64);comment:当班编号;NOT NULL" json:"duty_no"`
+	DeskUuid                    uint64  `gorm:"column:desk_uuid;type:bigint(20) unsigned;default:0;comment:桌台uuid;NOT NULL" json:"desk_uuid"`
+	BuffetPackageUuid           uint64  `gorm:"column:buffet_package_uuid;type:bigint(20) unsigned;default:0;comment:自助餐套餐ID;NOT NULL" json:"buffet_package_uuid"`
+	BuffetCustomerTypePriceUuid uint64  `gorm:"column:buffet_customer_type_price_uuid;type:bigint(20) unsigned;default:0;comment:自助餐客户类型价格ID;NOT NULL" json:"buffet_customer_type_price_uuid"`
+	ProductPrice                float64 `gorm:"column:product_price;type:decimal(14,2);default:0.00;comment:销售价,未含税价格（折前）;NOT NULL" json:"product_price"`
+	ProductSalePrice            float64 `gorm:"column:product_sale_price;type:decimal(14,2);default:0.00;comment:原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变;NOT NULL" json:"product_sale_price"`
+	ProductNum                  int     `gorm:"column:product_num;type:int(11);default:0;comment:商品数量;NOT NULL" json:"product_num"`
+	TaxRate                     float64 `gorm:"column:tax_rate;type:decimal(14,2);default:0.00;comment:税率;NOT NULL" json:"tax_rate"`
+	TaxFee                      float64 `gorm:"column:tax_fee;type:decimal(14,2);default:0.00;comment:税费;NOT NULL" json:"tax_fee"`
+	ServiceFee                  float64 `gorm:"column:service_fee;type:decimal(14,2);default:0.00;comment:服务费;NOT NULL" json:"service_fee"`
+	ServiceTax                  float64 `gorm:"column:service_tax;type:decimal(14,2);default:0.00;comment:服务税;NOT NULL" json:"service_tax"`
+	GiveNum                     int     `gorm:"column:give_num;type:int(11);default:0;comment:增菜数量;NOT NULL" json:"give_num"`
+	FreeNum                     int     `gorm:"column:free_num;type:int(11);default:0;comment:免单数量;NOT NULL" json:"free_num"`
+	RefundNum                   int     `gorm:"column:refund_num;type:int(11);default:0;comment:退款数量;NOT NULL" json:"refund_num"`
+	CompleteTime                int64   `gorm:"column:complete_time;type:bigint(20);default:0;comment:完成时间;NOT NULL" json:"complete_time"`
+	RefundTime                  int64   `gorm:"column:refund_time;type:bigint(20);default:0;comment:退款时间;NOT NULL" json:"refund_time"`
+}
+
+// StatisticsDelay 加钟统计表 statistics_delay
+type StatisticsDelay struct {
+	BaseModel
+	SaleBillUuid    uint64  `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;default:0;comment:销售账单uuid;NOT NULL" json:"sale_bill_uuid"`
+	SaleOrderUuid   uint64  `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;default:0;comment:销售订单uuid;NOT NULL" json:"sale_order_uuid"`
+	DutyNo          string  `gorm:"column:duty_no;type:varchar(64);comment:当班编号;NOT NULL" json:"duty_no"`
+	DeskUuid        uint64  `gorm:"column:desk_uuid;type:bigint(20) unsigned;default:0;comment:桌台uuid;NOT NULL" json:"desk_uuid"`
+	BuffetDelayUuid uint64  `gorm:"column:buffet_delay_uuid;type:bigint(20) unsigned;default:0;comment:自助餐加钟价格ID;NOT NULL" json:"buffet_delay_uuid"`
+	ProductPrice    float64 `gorm:"column:product_price;type:decimal(14,2);default:0.00;comment:价格,下单时固定不受后台改变，结账时再检查是否改变;NOT NULL" json:"product_price"`
+	ProductNum      int     `gorm:"column:product_num;type:int(11);default:0;comment:商品数量;NOT NULL" json:"product_num"`
+	TaxRate         float64 `gorm:"column:tax_rate;type:decimal(14,2);default:0.00;comment:税率;NOT NULL" json:"tax_rate"`
+	TaxFee          float64 `gorm:"column:tax_fee;type:decimal(14,2);default:0.00;comment:税费;NOT NULL" json:"tax_fee"`
+	ServiceFee      float64 `gorm:"column:service_fee;type:decimal(14,2);default:0.00;comment:服务费;NOT NULL" json:"service_fee"`
+	ServiceTax      float64 `gorm:"column:service_tax;type:decimal(14,2);default:0.00;comment:服务税;NOT NULL" json:"service_tax"`
+	GiveNum         int     `gorm:"column:give_num;type:int(11);default:0;comment:增菜数量;NOT NULL" json:"give_num"`
+	FreeNum         int     `gorm:"column:free_num;type:int(11);default:0;comment:免单数量;NOT NULL" json:"free_num"`
+	RefundNum       int     `gorm:"column:refund_num;type:int(11);default:0;comment:退款数量;NOT NULL" json:"refund_num"`
+	CompleteTime    int64   `gorm:"column:complete_time;type:bigint(20);default:0;comment:完成时间;NOT NULL" json:"complete_time"`
+	RefundTime      int64   `gorm:"column:refund_time;type:bigint(20);default:0;comment:退款时间;NOT NULL" json:"refund_time"`
+}
+
 // StatisticsMember 会员统计表 ttpos_statistics_member
 type StatisticsMember struct {
 	BaseModel

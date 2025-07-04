@@ -620,13 +620,18 @@ class Product extends Controller
      * @Apidoc\Url ("/index.php/shop/product.store.product/recommend")
      * @Apidoc\Returned("status", type="int", desc="状态")
      * @Apidoc\Returned("title", type="string", desc="推荐标题")
-     * @Apidoc\Returned("product_packages", type="array", desc="商品列表")
-     * @Apidoc\Returned("product_packages[].uuid", type="string", desc="商品UUID")
-     * @Apidoc\Returned("product_packages[].sort", type="int", desc="排序")
-     * @Apidoc\Returned("product_packages[].name", type="string", desc="商品名称")
+     * @Apidoc\Returned("product_packages", type="array", desc="商品列表", children={
+     *      @Apidoc\Param("uuid", type="string", desc="商品UUID"),
+     *      @Apidoc\Param("sort", type="int", desc="排序"),
+     *      @Apidoc\Param("name", type="string", desc="商品名称"),
+     * }),
+     * @Apidoc\Returned()
      */
     public function recommend(ProductPackageRecommendValidate $validate)
     {
+        if (request()->licenses['is_open_delivery'] == 0) {
+            return $this->renderError('当前没有权限使用此功能');
+        }
         $model = new ProductRecommend();
         $data = $model->where('delete_time', 0)->hidden(['id', 'uuid', 'create_time', 'update_time', 'delete_time'])->find();
         if ($this->request->isGet()) {
@@ -646,9 +651,13 @@ class Product extends Controller
                         $defaultNames = $productPackage->MultiLanguageName->hidden(['id', 'uuid', 'create_time', 'update_time', 'delete_time'])->toArray();
                     }
                     $lang = checkDetect();
-                    $json[$k]['name'] = $defaultNames[($lang == 'zhtw' ? 'zh_tw' : $lang).'_name'];
+                    $json[$k]['name'] = $defaultNames[($lang == 'zhtw' ? 'zh_tw' : $lang) . '_name'];
                 }
                 $data['product_packages'] = $json;
+            } else {
+                $data['status'] = 0;
+                $data['title'] = '';
+                $data['product_packages'] = [];
             }
             return $this->renderSuccess('操作成功', $data);
         }
