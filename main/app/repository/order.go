@@ -296,7 +296,9 @@ func (r *orderRepo) getOrderListDBOption(param GetCashierOrderListWithPagination
 			case constant.OrderDateTypeWeek: // 本周
 				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeThisWeek)
 			}
-			db = db.Where("create_time BETWEEN ? AND ?", startTime, endTime)
+			// db = db.Where("create_time BETWEEN ? AND ?", startTime, endTime)
+			param.QueryStartTime = uint(startTime)
+			param.QueryEndTime = uint(endTime)
 		}
 		// 日期范围
 		if param.QueryStartTime != 0 || param.QueryEndTime != 0 {
