@@ -4703,7 +4703,9 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	// 检查商品销售库存是否充足
 	ctx.Log().Debug("获取账单信息")
 	// 获取销售账单信息
+	statsTime := time.Now()
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	fmt.Println("获取销售账单信息耗时", time.Since(statsTime))
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}
@@ -4795,6 +4797,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 			return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
 		}
 	}
+	statsTime2 := time.Now()
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
@@ -4811,11 +4814,18 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	}); err != nil {
 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
+
+	fmt.Println("保存数据耗时", time.Since(statsTime2))
+
+	statsTime3 := time.Now()
 	// 获取新的桌台数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+	fmt.Println("获取新的桌台数据数据耗时", time.Since(statsTime3))
+
+	fmt.Println("总耗时", time.Since(statsTime))
 	ctx.Log().Debug("获取新的账单数据")
 	return info, nil
 }
