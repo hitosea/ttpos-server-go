@@ -363,7 +363,7 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 		printer.PrintInColumns(t.base.Translate("税费"), t.base.GetPriceAndUnit(businessData.TotalTaxMoney))
 		printer.LineFeed(1)
 		printer.SetAlignment(pkg.AlignLeft)
-		printer.PrintInColumns(t.base.Translate("商品数量"), strconv.Itoa(businessData.TotalProductNum))
+		printer.PrintInColumns(t.base.Translate("商品数量"), utils.FormatFloat(businessData.TotalProductNum))
 		printer.LineFeed(1)
 		printer.PrintInColumns(t.base.Translate("优惠折扣"), t.base.GetPriceAndUnit(businessData.TotalDiscountMoney))
 		printer.LineFeed(1)

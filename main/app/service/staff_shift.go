@@ -594,7 +594,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		TotalRefundMoney:        refundAmount,
 		TotalOrderNum:           int(saleData.TotalOrderNum),
 		TotalPeopleNum:          int(saleData.TotalMealNum),
-		TotalProductNum:         int(saleData.TotalProductNum),
+		TotalProductNum:         saleData.TotalProductNum,
 		TotalTableNum:           int(saleData.TotalDeskNum),
 		AvgOrderPrice:           saleData.AvgOrderAmount,
 		MinOrderPrice:           saleData.MinOrderAmount,
@@ -668,7 +668,7 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 			for _, v := range categoryData.CategoryList {
 				categoryList = append(categoryList, business_data_resp.Category{
 					Name:     v.CategoryName,
-					SalesNum: int(v.SaleNum),
+					SalesNum: v.SaleNum,
 					Prices:   v.SaleAmount,
 				})
 			}

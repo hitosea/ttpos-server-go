@@ -3,7 +3,6 @@ package template
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
@@ -243,7 +242,7 @@ func (t *handoverCompaxTemplate) GetPrintContent(
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("税费"), "", t.base.GetPriceAndUnit(businessData.TotalTaxMoney), width-differenceWidth))
 		printer.LineFeed(1)
-		printer.AppendText(t.base.PrintText(t.base.Translate("商品数量"), "", strconv.Itoa(businessData.TotalProductNum), width-utils.IfInt(t.base.Lang == "th", 1, 0)))
+		printer.AppendText(t.base.PrintText(t.base.Translate("商品数量"), "", utils.FormatFloat(businessData.TotalProductNum), width-utils.IfInt(t.base.Lang == "th", 1, 0)))
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("优惠折扣"), "", t.base.GetPriceAndUnit(businessData.TotalDiscountMoney), width-differenceWidth))
 		printer.LineFeed(1)

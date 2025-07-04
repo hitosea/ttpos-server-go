@@ -150,7 +150,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("税费"), "", t.base.GetPriceAndUnit(businessData.All.TotalTaxMoney), width))
 		printer.LineFeed(1)
-		printer.AppendText(t.base.PrintText(t.base.Translate("商品数量"), "", strconv.Itoa(businessData.All.TotalProductNum), width))
+		printer.AppendText(t.base.PrintText(t.base.Translate("商品数量"), "", utils.FormatFloat(businessData.All.TotalProductNum), width))
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("优惠折扣"), "", t.base.GetPriceAndUnit(businessData.All.TotalDiscountMoney), width))
 		printer.LineFeed(1)

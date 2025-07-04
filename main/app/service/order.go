@@ -5649,7 +5649,7 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 					ProductBomUuid:       saleOrderProductBom.ProductBomUuid,
 					SaleOrderProductUuid: cookingDeductSaleOrderProduct.Uuid,
 					SaleOrderUuid:        cookingDeductSaleOrderProduct.SaleOrderUuid,
-					Num:                  int(cookingDeductSaleOrderProduct.Num),
+					Num:                  cookingDeductSaleOrderProduct.Num,
 					ProductBomMaterials:  productBomMaterials,
 				})
 			}

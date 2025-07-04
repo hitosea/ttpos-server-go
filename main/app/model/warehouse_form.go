@@ -131,7 +131,7 @@ type Product struct {
 	SaleOrderProductUuid uint64                 `json:"sale_order_product_uuid"` // 销售订单商品uuid
 	ProductBomUuid       uint64                 `json:"product_bom_uuid"`        // 规格商品或小料的uuid
 	SaleOrderUuid        uint64                 `json:"sale_order_uuid"`         // 销售订单uuid
-	Num                  int                    `json:"num"`                     // 数量
+	Num                  float64                `json:"num"`                     // 数量
 	ProductBomMaterials  []*ProductBomMaterials `json:"product_bom_materials"`   // 规格商品或小料的材料
 }
 
@@ -180,7 +180,7 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64,
 		items = append(items, &WarehouseOutFormItem{
 			WarehouseOutFormUuid: form.Uuid,
 			ProductBomUuid:       item.ProductBomUuid,
-			Num:                  float64(item.Num),
+			Num:                  item.Num,
 			Scene:                constant.WarehouseOutFormSceneSales, // 销售出库
 			Status:               status,
 			SaleOrderUuid:        item.SaleOrderUuid,

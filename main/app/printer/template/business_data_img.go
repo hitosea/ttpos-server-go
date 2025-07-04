@@ -166,7 +166,7 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("商品数量"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: strconv.Itoa(businessData.All.TotalProductNum), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: utils.FormatFloat(businessData.All.TotalProductNum), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("优惠折扣"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},

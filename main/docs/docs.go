@@ -16909,7 +16909,7 @@ const docTemplate = `{
                 },
                 "total_give_product_num": {
                     "description": "总赠菜数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "total_give_product_price": {
                     "description": "总赠菜金额",
@@ -16933,7 +16933,7 @@ const docTemplate = `{
                 },
                 "total_product_num": {
                     "description": "总商品数",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "total_product_price": {
                     "description": "总原商品金额 (未含税的总商品金额)",
@@ -17034,7 +17034,7 @@ const docTemplate = `{
                 },
                 "give_product_num": {
                     "description": "赠菜数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "original_sales_price": {
                     "description": "原价销售额",
@@ -17046,7 +17046,7 @@ const docTemplate = `{
                 },
                 "sales_num": {
                     "description": "销售数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "sales_price": {
                     "description": "实际销售金额",
@@ -17455,7 +17455,7 @@ const docTemplate = `{
                 },
                 "sales_num": {
                     "description": "销售数量",
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -17548,7 +17548,7 @@ const docTemplate = `{
                 },
                 "sales_num": {
                     "description": "销售数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "subtotal": {
                     "description": "小计",
@@ -17565,7 +17565,7 @@ const docTemplate = `{
                 },
                 "sales_num": {
                     "description": "销售数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "sales_price": {
                     "description": "销售金额",

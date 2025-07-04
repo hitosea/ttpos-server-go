@@ -171,7 +171,7 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 		)
 		printer.PrintInColumns(t.base.Translate("税费"), t.base.GetPriceAndUnit(businessData.All.TotalTaxMoney))
 		printer.LineFeed(1)
-		printer.PrintInColumns(t.base.Translate("商品数量"), strconv.Itoa(businessData.All.TotalProductNum))
+		printer.PrintInColumns(t.base.Translate("商品数量"), utils.FormatFloat(businessData.All.TotalProductNum))
 		printer.LineFeed(1)
 		printer.PrintInColumns(t.base.Translate("优惠折扣"), t.base.GetPriceAndUnit(businessData.All.TotalDiscountMoney))
 		printer.LineFeed(1)

@@ -16903,7 +16903,7 @@
                 },
                 "total_give_product_num": {
                     "description": "总赠菜数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "total_give_product_price": {
                     "description": "总赠菜金额",
@@ -16927,7 +16927,7 @@
                 },
                 "total_product_num": {
                     "description": "总商品数",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "total_product_price": {
                     "description": "总原商品金额 (未含税的总商品金额)",
@@ -17028,7 +17028,7 @@
                 },
                 "give_product_num": {
                     "description": "赠菜数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "original_sales_price": {
                     "description": "原价销售额",
@@ -17040,7 +17040,7 @@
                 },
                 "sales_num": {
                     "description": "销售数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "sales_price": {
                     "description": "实际销售金额",
@@ -17449,7 +17449,7 @@
                 },
                 "sales_num": {
                     "description": "销售数量",
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -17542,7 +17542,7 @@
                 },
                 "sales_num": {
                     "description": "销售数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "subtotal": {
                     "description": "小计",
@@ -17559,7 +17559,7 @@
                 },
                 "sales_num": {
                     "description": "销售数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "sales_price": {
                     "description": "销售金额",

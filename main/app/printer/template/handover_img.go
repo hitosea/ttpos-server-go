@@ -3,7 +3,6 @@ package template
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
@@ -384,7 +383,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("商品数量"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: strconv.Itoa(businessData.TotalProductNum), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: utils.FormatFloat(businessData.TotalProductNum), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("优惠折扣"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
