@@ -133,7 +133,7 @@
                                 if (!value) {
                                   callback(new Error($t('请输入结束距离')));
                                 }
-                                if (distanceRangeIndex > 0 && value <= item.distance_range[distanceRangeIndex - 1].end) {
+                                if (distanceRangeIndex > 0 && value <= item.distance_range[distanceRangeIndex - 1].end && !distanceRange.is_unlimited) {
                                   callback(new Error($t('结束距离必须大于前一个范围的结束距离')));
                                 } else {
                                   callback();
@@ -158,6 +158,7 @@
                               v-model="distanceRange.is_unlimited"
                               :disabled="item.config_type === 'auto_sync'"
                               :label="$t('最大')"
+                              @change="handleIsUnlimitedChange(index, distanceRangeIndex)"
                             />
                           </div>
                         </el-form-item>
@@ -321,6 +322,10 @@
       price_per_km: 0,
       is_unlimited: false,
     });
+    // 所有的is_unlimited设置为false
+    formData.value.channels[index].distance_range?.forEach((item) => {
+      item.is_unlimited = false;
+    });
     formElement.value.validateField('channels.' + index + '.distance_range');
   };
 
@@ -382,5 +387,12 @@
       formData.value.channels[index] = JSON.parse(JSON.stringify(takeoutSettingData.value.find((setting) => setting.channel === channel)));
       formData.value.channels[index].config_type = 'auto_sync';
     }
+  };
+
+  // 处理is_unlimited变化
+  const handleIsUnlimitedChange = (index: number, distanceRangeIndex: number) => {
+    if (!formData.value.channels[index].distance_range || !formData.value.channels[index].distance_range[distanceRangeIndex]) return;
+    const distanceRange = formData.value.channels[index].distance_range[distanceRangeIndex];
+    distanceRange.end = distanceRange.is_unlimited ? 999999 : 0;
   };
 </script>

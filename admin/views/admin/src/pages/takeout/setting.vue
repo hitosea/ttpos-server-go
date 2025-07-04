@@ -136,7 +136,7 @@
                           // 如果不是第一个距离范围，检查是否大于前一个结束距离
                           if (distanceRangeIndex > 0) {
                             const prevEnd = formData[index]?.distance_range?.[distanceRangeIndex - 1]?.end;
-                            if (prevEnd !== undefined && Number(value) <= Number(prevEnd)) {
+                            if (prevEnd !== undefined && Number(value) <= Number(prevEnd) && !distanceRange.is_unlimited) {
                               callback(new Error($t('结束距离必须大于上一个结束距离')));
                               return;
                             }
