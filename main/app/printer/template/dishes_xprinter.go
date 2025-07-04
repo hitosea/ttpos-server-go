@@ -764,6 +764,7 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 	)
 
 	// 处理产品
+	refundText := utils.IfString(t.base.Lang == "tr", "iptal", t.base.Translate("退"))
 	for _, product := range products {
 		// 设置行间距
 		printer.SetLineSpacing(45)
@@ -775,7 +776,7 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 			}
 		}
 		// 产品名称
-		productName := utils.IfString(tmp == 2, "!!!", "") + "(" + t.base.Translate("退") + ") " + buffetText + product.ProductName.GetLocale(t.base.Lang)
+		productName := utils.IfString(tmp == 2, "!!!", "") + "(" + refundText + ") " + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 		// 设置字符大小和行间距
 		if printerType == PrinterTypeXPrinterWifi {
