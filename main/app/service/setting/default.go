@@ -402,11 +402,11 @@ func (s *Srv) getDefaultPoints() setting.Points {
 // 默认系统设置
 func (s *Srv) getDefaultSysAdminConfig() setting.SysAdminConfig {
 	return setting.SysAdminConfig{
-		BrandName:     "Shop",                       // 商城名称
-		BrandLogo:     "/image/logo/jbc_64_64.png",  // 商城背景图
-		BrandLogoLong: "/image/logo/jbc_146_40.png", // 商城logo
-		BrowserLogo:   "/image/logo/jbc_146_40.png", // 浏览器LOGO
-		BrowserTitle:  "Shop",                       // 浏览器标题
+		BrandName:     "Shop",                         // 商城名称
+		BrandLogo:     "/image/logo/ttpos_64_64.png",  // 商城背景图
+		BrandLogoLong: "/image/logo/ttpos_146_40.png", // 商城logo
+		BrowserLogo:   "/image/logo/ttpos_64_64.png",  // 浏览器LOGO
+		BrowserTitle:  "Shop",                         // 浏览器标题
 	}
 }
 
