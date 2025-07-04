@@ -108,7 +108,9 @@
             name: item.name,
           });
         });
-        this.form.grade_id = this.gradeSelectList[0].grade_id;
+        if (!this.editData) {
+          this.form.grade_id = this.gradeSelectList[0].grade_id;
+        }
       }
       this.getCardList();
     },
