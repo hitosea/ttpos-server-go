@@ -210,10 +210,11 @@
 </template>
 
 <script setup lang="ts">
-  import { ref, watch } from 'vue';
+  import { ref, watch, nextTick } from 'vue';
   import { $t } from '@/i18n';
   import { addEditCompany, getCompanySelect, type TakeoutShopSelectData, getChannels, type TakeoutShopData, type TakeoutShopAddEditDataItem } from '@/api/takeout/shop';
   import { getTakeoutSetting, type TakeoutSettingData } from '@/api/takeout/setting';
+  import { message } from '@/utils/feedback';
   const emits = defineEmits(['update:show', 'getList']);
 
   const props = defineProps({
@@ -289,11 +290,20 @@
           });
           handleClose();
           emits('getList');
+          message.success($t('保存成功'));
         } catch (error) {
           console.error('添加失败:', error);
         } finally {
           formLoading.value = false;
         }
+      } else {
+        // 验证失败页面滑动到错误位置
+        nextTick(() => {
+          const errorField = document.querySelector('.is-error');
+          if (errorField) {
+            errorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
       }
     });
   };

@@ -205,14 +205,14 @@
       </div>
     </el-form>
     <div class="border-t border-[#eee] flex items-center justify-center p-4 mt-4">
-      <el-button>{{ $t('重置') }}</el-button>
+      <el-button @click="handleReset">{{ $t('重置') }}</el-button>
       <el-button :loading="formLoading" type="primary" @click="handleSubmit">{{ $t('保存') }}</el-button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-  import { ref, onMounted } from 'vue';
+  import { ref, onMounted, nextTick } from 'vue';
   import { $t } from '@/i18n';
   import { getTakeoutSetting, fetchTakeoutSetting, type TakeoutSettingData } from '@/api/takeout/setting';
   import { message } from '@/utils/feedback';
@@ -247,6 +247,14 @@
         } finally {
           formLoading.value = false;
         }
+      } else {
+        // 验证失败页面滑动到错误位置
+        nextTick(() => {
+          const errorField = document.querySelector('.is-error');
+          if (errorField) {
+            errorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
       }
     });
   };
@@ -261,6 +269,11 @@
     } finally {
       formLoading.value = false;
     }
+  };
+
+  const handleReset = () => {
+    formElement.value.resetFields();
+    getTakeoutSettingData();
   };
 
   // 添加距离范围
