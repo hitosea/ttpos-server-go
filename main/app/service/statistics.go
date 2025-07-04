@@ -1,6 +1,7 @@
 package service
 
 import (
+	"sort"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -508,6 +509,8 @@ func (s *statisticsSrv) CountTax(ctx context.Context, req CountReq) []CountTaxRe
 	opts := s.buildCountOpts(ctx, req)
 	opts = append(opts, repository.NewCommonRepo().WhereByRefundTime(0))
 	taxData := repository.NewStatisticsRepo(ctx.GetDB()).CountTax(opts...)
+	buffetTaxData := repository.NewStatisticsRepo(ctx.GetDB()).CountBuffetTax(opts...)
+	buffetDelayTaxData := repository.NewStatisticsRepo(ctx.GetDB()).CountBuffetDelayTax(opts...)
 
 	var list []CountTaxResp
 	for _, tax := range taxData {
@@ -518,6 +521,60 @@ func (s *statisticsSrv) CountTax(ctx context.Context, req CountReq) []CountTaxRe
 			TotalProductAmount: tax.TotalProductAmount.Float64,
 		})
 	}
+
+	for _, tax := range buffetTaxData {
+		if !slice.ContainBy(list, func(item CountTaxResp) bool {
+			rate := decimal.NewFromFloat(tax.TaxRate.Float64).Mul(decimal.NewFromInt(100)).InexactFloat64()
+			return item.TaxRate == rate
+		}) {
+			rate := decimal.NewFromFloat(tax.TaxRate.Float64).Mul(decimal.NewFromInt(100)).InexactFloat64()
+			list = append(list, CountTaxResp{
+				TaxRate:            rate,
+				TotalTaxFee:        tax.TotalTaxFee.Float64,
+				TotalProductAmount: tax.TotalProductAmount.Float64,
+			})
+		} else {
+			for i, item := range list {
+				rate := decimal.NewFromFloat(tax.TaxRate.Float64).Mul(decimal.NewFromInt(100)).InexactFloat64()
+				if item.TaxRate == rate {
+					incTaxFee := decimal.NewFromFloat(tax.TotalTaxFee.Float64)
+					incProductAmount := decimal.NewFromFloat(tax.TotalProductAmount.Float64)
+					item.TotalTaxFee = decimal.NewFromFloat(item.TotalTaxFee).Add(incTaxFee).InexactFloat64()
+					item.TotalProductAmount = decimal.NewFromFloat(item.TotalProductAmount).Add(incProductAmount).InexactFloat64()
+					list[i] = item
+				}
+			}
+		}
+	}
+
+	for _, tax := range buffetDelayTaxData {
+		if !slice.ContainBy(list, func(item CountTaxResp) bool {
+			rate := decimal.NewFromFloat(tax.TaxRate.Float64).Mul(decimal.NewFromInt(100)).InexactFloat64()
+			return item.TaxRate == rate
+		}) {
+			rate := decimal.NewFromFloat(tax.TaxRate.Float64).Mul(decimal.NewFromInt(100)).InexactFloat64()
+			list = append(list, CountTaxResp{
+				TaxRate:            rate,
+				TotalTaxFee:        tax.TotalTaxFee.Float64,
+				TotalProductAmount: tax.TotalProductAmount.Float64,
+			})
+		} else {
+			for i, item := range list {
+				rate := decimal.NewFromFloat(tax.TaxRate.Float64).Mul(decimal.NewFromInt(100)).InexactFloat64()
+				if item.TaxRate == rate {
+					incTaxFee := decimal.NewFromFloat(tax.TotalTaxFee.Float64)
+					incProductAmount := decimal.NewFromFloat(tax.TotalProductAmount.Float64)
+					item.TotalTaxFee = decimal.NewFromFloat(item.TotalTaxFee).Add(incTaxFee).InexactFloat64()
+					item.TotalProductAmount = decimal.NewFromFloat(item.TotalProductAmount).Add(incProductAmount).InexactFloat64()
+					list[i] = item
+				}
+			}
+		}
+	}
+
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].TaxRate < list[j].TaxRate
+	})
 
 	return list
 }
@@ -780,6 +837,8 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 	statisticsRepo.DeleteSale(req.SaleBillUuid)
 	statisticsRepo.DeletePayment(req.SaleBillUuid)
 	statisticsRepo.DeleteProduct(req.SaleBillUuid)
+	statisticsRepo.DeleteCustomerType(req.SaleBillUuid)
+	statisticsRepo.DeleteDelay(req.SaleBillUuid)
 
 	if req.OnlyDelete {
 		return nil
@@ -795,9 +854,11 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 	saleBill.CalcAll()
 
 	var (
-		sales    []model.StatisticsSale
-		payments []model.StatisticsPayment
-		products []model.StatisticsProduct
+		sales         []model.StatisticsSale
+		payments      []model.StatisticsPayment
+		products      []model.StatisticsProduct
+		customerTypes []model.StatisticsCustomerType
+		delays        []model.StatisticsDelay
 	)
 	// 销售订单
 	for _, saleOrder := range saleBill.SaleOrders {
@@ -874,7 +935,12 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 
 		// 销售商品
 		for _, saleProduct := range saleOrder.SaleOrderProducts {
+			// 如果商品已取消，则不统计
 			if saleProduct.CancelTime == 0 {
+				// 如果商品未接单，则不统计
+				if !saleProduct.IsAcceptOrderProduct() {
+					continue
+				}
 				// 统计商品数量
 				productNum := saleProduct.Num
 				productNumDec := decimal.NewFromFloat(productNum)
@@ -1010,7 +1076,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			productServiceFee := decimal.NewFromFloat(saleBuffetCustomerType.ServiceFee)
 			productServiceTax := decimal.NewFromFloat(saleBuffetCustomerType.ServiceTaxFee)
 
+			freeNum := 0
 			if isFree {
+				freeNum = int(saleBuffetCustomerType.Num)
 				if isStatFree {
 					orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
 					orderProductTax = orderProductTax.Add(productTax.Mul(productNumDec))
@@ -1048,6 +1116,25 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			}
 
 			orderRefundNum += productRefundNum
+
+			customerTypes = append(customerTypes, model.StatisticsCustomerType{
+				SaleBillUuid:                saleBill.Uuid,
+				SaleOrderUuid:               saleOrder.Uuid,
+				DutyNo:                      saleBill.DutyNo,
+				DeskUuid:                    saleBill.DeskUuid,
+				BuffetPackageUuid:           saleBuffetCustomerType.BuffetPackageUuid,
+				BuffetCustomerTypePriceUuid: saleBuffetCustomerType.BuffetCustomerTypePriceUuid,
+				ProductPrice:                productPrice.InexactFloat64(),
+				ProductSalePrice:            productSalePrice.InexactFloat64(),
+				ProductNum:                  productNum,
+				TaxRate:                     saleBuffetCustomerType.TaxRate,
+				TaxFee:                      productTax.InexactFloat64(),
+				ServiceFee:                  saleBuffetCustomerType.ServiceFee,
+				ServiceTax:                  saleBuffetCustomerType.ServiceTaxFee,
+				FreeNum:                     freeNum,
+				RefundNum:                   productRefundNum,
+				CompleteTime:                saleBill.FinishTime,
+			})
 		}
 
 		// 统计加钟
@@ -1063,7 +1150,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			saleProductNoTax := productPrice
 			orderProductOriginPrice = orderProductOriginPrice.Add(saleProductNoTax.Mul(productNumDec))
 
+			freeNum := 0
 			if isFree {
+				freeNum = int(saleBuffetDelayProduct.Num)
 				if isStatFree {
 					orderProductPrice = orderProductPrice.Add(productPrice.Mul(productNumDec))
 					if saleOrder.CustomDiscountRate != 1 {
@@ -1084,6 +1173,19 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			}
 
 			orderRefundNum += productRefundNum
+
+			delays = append(delays, model.StatisticsDelay{
+				SaleBillUuid:    saleBill.Uuid,
+				SaleOrderUuid:   saleOrder.Uuid,
+				DutyNo:          saleBill.DutyNo,
+				DeskUuid:        saleBill.DeskUuid,
+				BuffetDelayUuid: saleBuffetDelayProduct.BuffetDelayUuid,
+				ProductPrice:    productPrice.InexactFloat64(),
+				ProductNum:      productNum,
+				FreeNum:         freeNum,
+				RefundNum:       productRefundNum,
+				CompleteTime:    saleBill.FinishTime,
+			})
 
 		}
 
@@ -1175,6 +1277,20 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 
 	if len(products) > 0 {
 		err := statisticsRepo.SaveProduct(products)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(customerTypes) > 0 {
+		err := statisticsRepo.SaveCustomerType(customerTypes)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(delays) > 0 {
+		err := statisticsRepo.SaveDelay(delays)
 		if err != nil {
 			return err
 		}
