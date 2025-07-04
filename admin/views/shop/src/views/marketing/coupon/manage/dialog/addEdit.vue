@@ -99,7 +99,7 @@
         <el-radio-group v-model="form.requirement" class="flex-box-radio">
           <el-radio label="none">
             {{ $t('所有人可用') }}
-           <el-date-picker
+            <el-date-picker
               v-if="form.requirement == 'none'"
               v-model="reg_date"
               type="daterange"
@@ -107,7 +107,7 @@
               range-separator="~"
               :start-placeholder="$t('开始日期')"
               :end-placeholder="$t('结束日期')"
-              :disabledDate="disabledDate"
+              :disabledDate="props.editData.uuid ? disabledDateEdit : disabledDate"
               clearable
               @change="handleRegDateChange"
             ></el-date-picker>
@@ -322,6 +322,15 @@
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return time.getTime() < today.getTime();
+  };
+
+  const disabledDateEdit = (time) => {
+    // props.editData.valid_start_time 前一天 与 现在时间比较，谁比较靠前，按那个日期禁用
+    const valid_start_time = new Date(props.editData.valid_start_time);
+    valid_start_time.setDate(valid_start_time.getDate() - 1);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return time.getTime() < valid_start_time.getTime() || !valid_start_time.getTime() ? time.getTime() < today.getTime() : time.getTime() < valid_start_time.getTime();
   };
 </script>
 

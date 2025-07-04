@@ -70,7 +70,7 @@
       </div>
     </div>
 
-    <AddEdit v-if="open_addDdit" :title="title" :editData="editData" :open="open_addDdit" @closeDialog="closeAddMenber"> </AddEdit>
+    <AddEdit v-if="open_addEdit" :title="title" :editData="editData" :open="open_addEdit" @closeDialog="closeAddMenber"> </AddEdit>
   </div>
 </template>
 
@@ -95,7 +95,7 @@
     type: '',
   });
 
-  const open_addDdit = ref(false);
+  const open_addEdit = ref(false);
   const title = ref('');
   const editData = ref('');
   const searchLoading = ref('');
@@ -132,11 +132,11 @@
 
   const addMenber = () => {
     title.value = $t('添加优惠券');
-    open_addDdit.value = true;
+    open_addEdit.value = true;
   };
 
   const closeAddMenber = (e) => {
-    open_addDdit.value = false;
+    open_addEdit.value = false;
     editData.value = '';
     if (e == 1) {
       getTableList();
@@ -154,7 +154,7 @@
   const editClick = (item) => {
     title.value = $t('编辑优惠券');
     editData.value = item;
-    open_addDdit.value = true;
+    open_addEdit.value = true;
   };
 
   // 生命周期
