@@ -646,6 +646,10 @@ class Product extends Controller
                 }
                 foreach ($json as $k => $item) {
                     $defaultNames = ["en_name" => "", "zh_name" => "", "zh_tw_name" => "", "th_name" => "", "my_name" => "", "ja_name" => "", "ko_name" => "", "tr_name" => ""];
+                    if (!isset($map[$item['uuid']])) {
+                        unset($json[$k]);
+                        continue;
+                    }
                     $productPackage = $map[$item['uuid']];
                     if (!is_null($productPackage) && !is_null($productPackage->MultiLanguageName)) {
                         $defaultNames = $productPackage->MultiLanguageName->hidden(['id', 'uuid', 'create_time', 'update_time', 'delete_time'])->toArray();
