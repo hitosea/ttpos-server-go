@@ -62,7 +62,7 @@ class Delivery extends Controller
                 }
                 $companyChannels = json_decode($companySetting->delivery_config, true);
                 foreach ($companyChannels as $k => $companyChannel) {
-                    foreach($param['channels'] as $paramChannel) {
+                    foreach ($param['channels'] as $paramChannel) {
                         if ($companyChannel["channel"] == $paramChannel["channel"] && $companyChannel["config_type"] == "auto_sync") {
                             $companyChannels[$k] = $paramChannel + ["config_type" => "auto_sync"];
                         }
@@ -276,7 +276,7 @@ class Delivery extends Controller
         return $this->renderSuccess('操作成功');
     }
 
-   /**
+    /**
      * @Apidoc\Title("添加\修改商家外送配置")
      * @Apidoc\Desc("")
      * @Apidoc\Method("POST")

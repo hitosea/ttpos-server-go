@@ -651,9 +651,13 @@ class Product extends Controller
                         $defaultNames = $productPackage->MultiLanguageName->hidden(['id', 'uuid', 'create_time', 'update_time', 'delete_time'])->toArray();
                     }
                     $lang = checkDetect();
-                    $json[$k]['name'] = $defaultNames[($lang == 'zhtw' ? 'zh_tw' : $lang).'_name'];
+                    $json[$k]['name'] = $defaultNames[($lang == 'zhtw' ? 'zh_tw' : $lang) . '_name'];
                 }
                 $data['product_packages'] = $json;
+            } else {
+                $data['status'] = 0;
+                $data['title'] = '';
+                $data['product_packages'] = [];
             }
             return $this->renderSuccess('操作成功', $data);
         }
