@@ -21,6 +21,15 @@ export const useUserStore = defineStore('main', {
   },
   getters: {},
   actions: {
+    setMenus(data) {
+      this.menus = data;
+      setStorage(JSON.stringify(data), menu);
+    },
+    setRenderMenus(data) {
+      this.renderMenus = data;
+      setStorage(JSON.stringify(data), renderMenu);
+    },
+
     computedSupplier() {
       return {
         supplier: computed(() => {
@@ -28,6 +37,15 @@ export const useUserStore = defineStore('main', {
         }),
       };
     },
+
+    computedMenus() {
+      return {
+        menus: computed(() => {
+          return getStorage(menu);
+        }),
+      };
+    },
+
     computedRenderMenus() {
       return {
         renderMenus: computed(() => {

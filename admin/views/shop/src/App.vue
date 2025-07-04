@@ -90,10 +90,12 @@
   import autoTips from '@/components/autoTips/autoTips.vue';
   import { getSessionStorage, setSessionStorage } from '@/utils/base.js';
   import configObj from '@/config';
-  import { getStorage } from '@/utils/storageData';
+  import { getStorage, setStorage } from '@/utils/storageData';
   import { createdAuth } from '@/utils/createdAuth.js';
   import { EEUIRELOAD } from '@/utils/platform.js';
   import { v4 as uuidv4 } from 'uuid';
+  import { handRouterTable, handMenuData } from '@/utils/router';
+  import AuthApi from '@/api/auth.js';
 
   const existingUuid = localStorage.getItem('uuid');
   if (!existingUuid) {
@@ -102,7 +104,7 @@
   }
 
   const { menu } = configObj;
-  const { userInfo, changeUserInfo } = useUserStore();
+  const { userInfo, changeUserInfo, setMenus, setRenderMenus, menus } = useUserStore();
 
   const useLockscreen = useLockscreenStore();
   const expireShow = computed(() => useLockscreen.expire);
@@ -344,9 +346,35 @@
       .catch((error) => {});
   };
 
-  onMounted(() => {
+  const refreshRouter = async () => {
+    const result = await AuthApi.getRoleList({ token: userInfo.token });
+    let renderMenusList = handMenuData(JSON.parse(JSON.stringify(result.data.menus)));
+    let menusList = handRouterTable(JSON.parse(JSON.stringify(result.data.menus)));
+    let appId = userInfo.AppID;
+    renderMenusList.forEach((item) => {
+      item.path = appId + item.path;
+      item.redirect_name && (item.redirect_name = '/' + appId + item.redirect_name);
+      item.children?.forEach((child) => {
+        child.path = '/' + appId + child.path;
+        child.redirect_name && (child.redirect_name = '/' + appId + child.redirect_name);
+        child.children?.forEach((childItem) => {
+          childItem.path = '/' + appId + childItem.path;
+          childItem.redirect_name && (childItem.redirect_name = '/' + appId + childItem.redirect_name);
+        });
+      });
+    });
+    //
+    setMenus(menusList);
+    setRenderMenus(renderMenusList);
+    if (menus.length && menus.length != menusList.length) {
+      EEUIRELOAD();
+    }
+  };
+
+  onMounted(async () => {
     if (userInfo) {
-      getBaes();
+      await refreshRouter();
+      await getBaes();
     }
   });
 
