@@ -39,6 +39,28 @@ func (h *MarketingHandler) MarketingActivity(c *gin.Context) {
 	helper.Success(c, marketingActivityResp)
 }
 
+// MarketingActivity 获取营销活动列表
+// @Summary 获取营销活动列表
+// @Description 获取营销活动列表
+// @Tags 会员端.营销活动
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.Response{data=member_resp.MemberMarketingActivityListResp}
+// @Router /member/marketing_activity_list [get]
+func (h *MarketingHandler) MarketingActivityList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	marketingActivityResp, err := h.marketingActivitySrv.MarketingActivityList(ctx)
+	if err != nil {
+		if marketingActivityResp != nil {
+			helper.ErrorWithData(c, constant.CodeFail, marketingActivityResp, err)
+			return
+		}
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, marketingActivityResp)
+}
+
 func RegisterMarketingHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -57,6 +79,7 @@ func RegisterMarketingHandlers(router gin.IRouter, dbm *database.DBManager, cach
 	// 需要认证
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
-		privateApi.GET("/marketing_activity", wrapper.MarketingActivity) // 获取营销活动
+		privateApi.GET("/marketing_activity", wrapper.MarketingActivity)          // 获取营销活动
+		privateApi.GET("/marketing_activity_list", wrapper.MarketingActivityList) // 获取营销活动列表
 	}
 }

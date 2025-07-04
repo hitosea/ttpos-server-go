@@ -21,16 +21,12 @@ type QrCodeParams struct {
 }
 
 type IMarketingActivityRepo interface {
-	// GetActivity 获取营销活动
-	GetActivity(uuid uint64) (*model.MarketingActivity, error)
-	// GetActivityAndPrizes 获取营销活动与奖励
-	GetActivityAndPrizes(uuid uint64) (*model.MarketingActivity, error)
-	// GetActivityListByNow 获取正在进行中的营销活动列表
-	GetActivityListByNow() ([]*model.MarketingActivity, error)
-	// GenerateQrCode 生成二维码
-	GenerateQrCode(params *QrCodeParams) (string, error)
-	// SendReward 发放奖励
-	SendReward(activityUuid, memberUuid uint64) error
+	GetActivity(uuid uint64) (*model.MarketingActivity, error)                            // 获取营销活动
+	GetActivityAndPrizes(uuid uint64) (*model.MarketingActivity, error)                   // 获取营销活动与奖励
+	GetMemberClientActivityList(dbOption ...DBOption) ([]*model.MarketingActivity, error) // 获取会员端营销活动列表
+	GetActivityListByNow() ([]*model.MarketingActivity, error)                            // 获取正在进行中的营销活动列表
+	GenerateQrCode(params *QrCodeParams) (string, error)                                  // 生成二维码
+	SendReward(activityUuid, memberUuid uint64) error                                     // 发放奖励
 }
 
 // MarketingActivityRepo 营销活动仓库
@@ -53,6 +49,23 @@ func (r *MarketingActivityRepo) GetActivity(uuid uint64) (*model.MarketingActivi
 		return nil, err
 	}
 	return &activity, nil
+}
+
+// GetActivityList 获取营销活动列表
+func (r *MarketingActivityRepo) GetMemberClientActivityList(opts ...DBOption) ([]*model.MarketingActivity, error) {
+	activities := make([]*model.MarketingActivity, 0)
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.Find(&activities)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return activities, nil
 }
 
 // GetActivityAndPrizes 获取营销活动与奖励

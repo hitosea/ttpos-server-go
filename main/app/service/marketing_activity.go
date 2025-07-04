@@ -17,8 +17,9 @@ import (
 )
 
 type IMarketingActivitySrv interface {
-	MarketingActivity(ctx context.Context) (*member_resp.MemberMarketingActivityListResp, error)  // 获取营销活动
-	DecryptQrCode(ctx context.Context, req req.DecryptQrCodeReq) (*resp.DecryptQrCodeResp, error) // 解密活动二维码
+	MarketingActivity(ctx context.Context) (*member_resp.MemberMarketingActivityListResp, error)     // 获取营销活动
+	MarketingActivityList(ctx context.Context) (*member_resp.MemberMarketingActivityListResp, error) // 获取营销活动列表
+	DecryptQrCode(ctx context.Context, req req.DecryptQrCodeReq) (*resp.DecryptQrCodeResp, error)    // 解密活动二维码
 }
 
 type marketingActivitySrv struct {
@@ -177,5 +178,30 @@ func (s *marketingActivitySrv) DecryptQrCode(ctx context.Context, req req.Decryp
 		Nickname:     member.Nickname,
 		Phone:        member.Phone,
 		ActivityUuid: marketingActivity.Uuid,
+	}, nil
+}
+
+// MarketingActivityList 获取营销活动列表
+func (s *marketingActivitySrv) MarketingActivityList(ctx context.Context) (*member_resp.MemberMarketingActivityListResp, error) {
+	company := ctx.GetCompany()
+	marketingActivityRepo := repository.NewMarketingActivityRepo(ctx.GetDB())
+	marketingActivityList, err := marketingActivityRepo.GetMemberClientActivityList()
+	if err != nil {
+		return nil, err
+	}
+	memberMarketingActivityResp := make([]member_resp.MemberMarketingActivityResp, 0)
+	for _, marketingActivity := range marketingActivityList {
+		memberMarketingActivityResp = append(memberMarketingActivityResp, member_resp.MemberMarketingActivityResp{
+			Name:       marketingActivity.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+			LocaleName: marketingActivity.MultiLanguageName.GetNames(),
+			Desc:       marketingActivity.MultiLanguageDesc.GetNameByLang(ctx.GetLanguage()),
+			LocaleDesc: marketingActivity.MultiLanguageDesc.GetNames(),
+			StartTime:  int64(marketingActivity.StartTime),
+			EndTime:    int64(marketingActivity.EndTime),
+			IsInvalid:  utils.IfInt(company.CompanySetting.IsOpenMarketing != 1, 1, 0),
+		})
+	}
+	return &member_resp.MemberMarketingActivityListResp{
+		List: memberMarketingActivityResp,
 	}, nil
 }
