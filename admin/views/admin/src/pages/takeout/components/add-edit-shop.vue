@@ -164,7 +164,7 @@
                       </el-col>
                       <el-col :span="12">
                         <el-form-item
-                          :label="$t('单价 (元/公里)')"
+                          :label="$t('单价')"
                           :prop="'channels.' + index + '.distance_range.' + distanceRangeIndex + '.price_per_km'"
                           :rules="[
                             {
@@ -188,7 +188,7 @@
                             :precision="2"
                             :min="0"
                             :max="999999"
-                            :placeholder="$t('请输入单价 (元/公里)')"
+                            :placeholder="$t('请输入单价')"
                           ></el-input-number>
                         </el-form-item>
                       </el-col>

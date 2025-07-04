@@ -155,7 +155,7 @@
                         :min="distanceRangeIndex === 0 ? 0 : (formData[index].distance_range && formData[index].distance_range[distanceRangeIndex - 1].end) || 0"
                         :max="999999"
                         :disabled="distanceRange.is_unlimited"
-                        :placeholder="$t('请输入结束距离 (公里)')"
+                        :placeholder="$t('请输入结束距离')"
                       ></el-input-number>
                       <el-checkbox
                         v-model="distanceRange.is_unlimited"
@@ -170,7 +170,7 @@
                 </el-col>
                 <el-col :span="12">
                   <el-form-item
-                    :label="$t('单价 (元/公里)')"
+                    :label="$t('单价')"
                     :prop="`${index}.distance_range.${distanceRangeIndex}.price_per_km`"
                     :rules="[
                       {
@@ -193,7 +193,7 @@
                       :precision="2"
                       :min="0"
                       :max="999999"
-                      :placeholder="$t('请输入单价 (元/公里)')"
+                      :placeholder="$t('请输入单价')"
                     ></el-input-number>
                   </el-form-item>
                 </el-col>
