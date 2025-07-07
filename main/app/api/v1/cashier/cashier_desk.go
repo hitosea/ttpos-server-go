@@ -1156,6 +1156,17 @@ func (h *DeskHandler) OrderPaymentFinish(c *gin.Context) {
 	// 桌台销售订单的付款结账
 	res, err := h.orderSrv.InstantOrderPaymentFinish(ctx, params)
 	if err != nil {
+		if strings.Contains(err.Error(), "请刷新优惠券列表") {
+			// 获取销售订单的付款信息
+			res, err := h.orderSrv.InstantOrderPaymentInfo(ctx, nil, params.SaleBillUuid, params.SaleOrderUuid)
+			if err != nil {
+				helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+				return
+			}
+			// 返回结果
+			helper.ErrorWithData(c, constant.CodeCouponInvalid, res, fmt.Errorf("所选优惠券已失效"))
+			return
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}

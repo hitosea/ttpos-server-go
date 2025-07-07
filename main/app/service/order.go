@@ -7042,6 +7042,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	}
 	// 获取销售账单信息
 	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
 	if saleBill == nil {
 		var errSaleBill error
 		saleBill, errSaleBill = repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
@@ -8227,6 +8228,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
 				return nil, errors.WithMessage(err, "取消销售订单会员优惠券失败")
 			}
+			return nil, errors.WithMessage(err, "请刷新优惠券列表")
 		}
 		return nil, errors.WithMessage(err)
 	}
