@@ -5,16 +5,7 @@
       <el-radio-group v-model="rewardCondition" :disabled="status == 1">
         <el-radio :label="0"
           >{{ $t('推荐会员入会并消费') }}
-          <numInput
-            class="w-267"
-            width="m-full"
-            :min="0"
-            :precision="2"
-            v-model:valueData="form.reward_condition_amount"
-            :value="form.reward_condition_amount"
-            :placeholder="$t('请输入')"
-            :disabled="status == 1"
-          ></numInput
+          <numInput class="w-267" width="m-full" :min="0" :precision="2" v-model="form.reward_condition_amount" :placeholder="$t('请输入')" :disabled="status == 1"></numInput
         ></el-radio>
       </el-radio-group>
 

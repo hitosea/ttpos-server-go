@@ -18,22 +18,14 @@
         <template v-if="form.charge_type == '1'">
           <el-form-item :label="$t('金额')" prop="service_charge">
             <span v-if="currency.unit_position == '0'">{{ currency.unit }}</span>
-            <numInput class="max-w460" :min="0" :precision="2" v-model:valueData="form.service_charge" :value="form.service_charge" :placeholder="$t('请输入')"></numInput>
+            <numInput class="max-w460" :min="0" :precision="2" v-model="form.service_charge" :placeholder="$t('请输入')"></numInput>
             <span v-if="currency.unit_position == '1'">{{ currency.unit }}</span>
             <div class="tips">{{ $t('收银/桌台订单所需要增加的服务费') }}</div>
           </el-form-item>
         </template>
         <template v-if="form.charge_type == '2'">
           <el-form-item prop="service_charge_rate">
-            <numInput
-              class="max-w460"
-              :min="0"
-              :max="100"
-              :precision="2"
-              v-model:valueData="form.service_charge_rate"
-              :value="form.service_charge_rate"
-              :placeholder="$t('请输入')"
-            ></numInput>
+            <numInput class="max-w460" :min="0" :max="100" :precision="2" v-model="form.service_charge_rate" :placeholder="$t('请输入')"></numInput>
             <span>%</span>
             <div class="tips">{{ $t('收银/桌台订单所需要增加的服务费') }}</div>
           </el-form-item>
