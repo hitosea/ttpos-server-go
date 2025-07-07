@@ -1,11 +1,12 @@
 package service
 
 import (
-	"go.uber.org/zap"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 type RequestLog struct {
@@ -40,7 +41,7 @@ func NewStaffOperationLogSrvImpl(dbm *database.DBManager, authSrv IAuthSrv) ISta
 	return &staffOperationLogSrv{
 		dbm:          dbm,
 		authSrv:      authSrv,
-		excludedApis: make([]string, 0), // ToDo 完善要过滤掉的接口
+		excludedApis: make([]string, 0), // TODO 完善要过滤掉的接口
 	}
 }
 
@@ -50,7 +51,7 @@ func (s *staffOperationLogSrv) GetExcludedApis() []string {
 
 func (s *staffOperationLogSrv) GetAccessName(companyId uint64, urlPath string) string {
 	accessRepo := repository.NewAccessRepo(s.dbm.GetDB(companyId))
-	access := accessRepo.GetAccess(accessRepo.WhereApiPath(urlPath)) // ToDo 完善权限迁移
+	access := accessRepo.GetAccess(accessRepo.WhereApiPath(urlPath)) // TODO 完善权限迁移
 	return access.Name
 }
 

@@ -2,16 +2,15 @@ package middleware
 
 import (
 	"bytes"
-	"github.com/gin-gonic/gin"
 	"io"
 	"net/url"
 	"slices"
 	"ttpos-server-go/app/constant/jwt"
 
+	"github.com/gin-gonic/gin"
+
 	"ttpos-server-go/app/service"
 )
-
-// ToDo 在需要记录操作日志的地方加上这个中间件
 
 func OperationLog(operationLogSrv service.IStaffOperationLogSrv) gin.HandlerFunc {
 	return func(c *gin.Context) {

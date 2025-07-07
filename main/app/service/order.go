@@ -220,7 +220,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		return resp.CreateInstantOrderResp{}, errors.New("有待支付、未挂单的订单")
 	}
 	if err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
-		// todo
+		// TODO
 		// // 判断是否有待支付、未挂单的订单
 		// commonRepo := repository.NewCommonRepo()
 		// orderRepo := repository.NewOrderRepo(tx)
@@ -1518,7 +1518,7 @@ func (s *orderSrv) DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid ui
 	// 检查是否有已送厨的商品，如果有，则标记production_order_product.status为消单退菜（制作中消单退菜、制作完成消单退菜）
 	// 如果已送厨商品还在制作中，通知厨房取消制作
 	doingProductList := make([]uint64, 0) // 制作中的商品uuid列表 sale_order_product_uuid
-	// todo 获取还在制作中的商品
+	// TODO 获取还在制作中的商品
 
 	// 发布事件，通知厨房取消制作
 	event.NewSystemBus().PublishCancelDoingProductEvent(event.CancelDoingProductPayload{SaleOrderProductUuids: doingProductList})
@@ -5758,7 +5758,8 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid, deskUu
 			ProductAttributeNames: attributeName.ToJson(),
 			Status:                constant.ProductionOrderProductStatusCooking,
 			Remark:                unCookingSaleOrderProduct.Remark,
-			//HasMaterial:              unCookingSaleOrderProduct, todo
+			// TODO 植焕
+			//HasMaterial:              unCookingSaleOrderProduct,
 			ProductionOrderMaterials: unCookingSaleOrderProduct.GetMaterialBom(), // 获取这个商品各个材料的用量
 		}
 		productionOrderProducts = append(productionOrderProducts, &productionOrderProduct)
@@ -6148,13 +6149,13 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 	// 将商品添加到目标桌台的销售订单中
 	targetSaleOrder.SaleOrderProducts = append(targetSaleOrder.SaleOrderProducts, saleOrderProduct)
 
-	// todo
+	// TODO
 	// 如果商品已经送厨且未完成出餐，要为这个商品生成一个目标桌台的送厨单并从原桌台的送厨单中删除该商品
 
-	// todo
+	// TODO
 	// 如果商品已经送厨且已完成出餐，要为这个商品生成一个目标桌台的送厨单并完成出餐，并从原桌台的送厨单中删除该商品。考虑到该商品制作完成后，在厨显撤回制作完成，此时该商品不应该在原桌台的送厨单上
 
-	// todo 重新生成订单商品签名
+	// TODO 重新生成订单商品签名
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 重新计算原桌台的销售账单
@@ -8176,7 +8177,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 					Uuid:     saleOrder.Member.Uuid,
 					Points:   -saleOrder.PayPoints,
 					Scene:    constant.MemberPointLogScenePointsExchange,
-					Describe: fmt.Sprintf("订单积分抵扣：%s", saleOrder.OrderNo), // todo 多语言
+					Describe: fmt.Sprintf("订单积分抵扣：%s", saleOrder.OrderNo),
 				}); err != nil {
 					return errors.WithMessage(err)
 				}
@@ -9877,7 +9878,7 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 		}
 
 		if len(moveProductList) > 0 {
-			// todo 优化减少重复查询
+			// NOTE 优化减少重复查询
 			_, err := s.SaleOrderMoveProduct(ctx, moveProductReq, true)
 			if err != nil {
 				ctx.Log().Error("移动商品失败", zap.Error(err))

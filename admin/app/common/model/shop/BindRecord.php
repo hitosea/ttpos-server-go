@@ -375,7 +375,7 @@ class BindRecord extends BaseModel
     {
         return  self::alias('a')->where('source', self::SOURCE_CASHIER)
             // 云部署方式 - 不显示网页端
-            // todo 无网页版本-先注释
+            // NOTE 无网页版本-先注释
             // ->when(env('IS_CLOUD_DEPLOY', false), function ($q) {
             //     $q->where('platform', '<>', 0);
             // })

@@ -30,7 +30,7 @@ func GetCompanyUuid(db *gorm.DB) uint64 {
 			return uuid
 		}
 	}
-	// todo sqlite - 离线版本要重新考虑
+	// NOTE sqlite - 离线版本要重新考虑
 	return 0
 }
 

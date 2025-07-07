@@ -25,12 +25,6 @@ class ChenkRequest
             }
         }
 
-        //检测所有请求参数是否有sql注入的风险
-        // todo v1.0.8产品要求，暂时不抛出异常
-        // if ($this->is_exist_sql_inject()) {
-            // throw new BaseException(['msg' => '监听到存在SQL注入的风险</br>请调整后重新操作！']);
-        // }
-
         // 解密内容
         $headerEncrypt = $request->header('encrypt');
         $encrypt = $headerEncrypt ? JsEncrypt::pgpParseStr($headerEncrypt) : '';

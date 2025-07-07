@@ -886,7 +886,7 @@ func (model *SaleOrderProduct) StatusValue() int {
 // 获取该订单商品的材料组成及用量。
 // 如一个珍珠奶茶加料珍珠，则计算成分珍珠、奶、茶等各个原材料等用量
 func (model *SaleOrderProduct) GetMaterialBom() []*ProductionOrderMaterial {
-	return nil // todo
+	return nil // TODO 植焕
 }
 
 // 获取商品的名称。格式：`商品名 (规格名)`

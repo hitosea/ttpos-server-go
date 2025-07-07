@@ -286,7 +286,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 
 	// 存在推荐人
 	if referrer.Uuid > 0 {
-		// todo 处理后续逻辑
+		// TODO 处理后续逻辑
 	}
 
 	if err != nil {

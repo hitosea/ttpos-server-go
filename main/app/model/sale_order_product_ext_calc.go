@@ -269,7 +269,7 @@ func (model *SaleOrderProduct) calcCustomDiscountFee() float64 {
 	//（1-自定义折扣率）
 	discount := decimal.NewFromFloat(1).Sub(decimal.NewFromFloat(customDiscountRate))
 	// 会员折扣价*（1-自定义折扣率）
-	// todo 不能用这种方式计算自定义折扣金额，因为会因为四舍五入导致计算错误。
+	// TODO 不能用这种方式计算自定义折扣金额，因为会因为四舍五入导致计算错误。
 	// 自定义折扣费 = 商品销售价-会员折扣价
 	customDiscountFee := memberDiscountPrice.Mul(discount)
 	return customDiscountFee.Truncate(3).Round(2).InexactFloat64()

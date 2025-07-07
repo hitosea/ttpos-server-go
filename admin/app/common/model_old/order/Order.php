@@ -1579,7 +1579,6 @@ class Order extends BaseModelOrder
         if ($order['discount_change_price'] > 0 || $order['discount_change_price'] == -1) { // -1 改价为0元
             $order_discount_change_price = $order['discount_change_price'] == -1 ? 0 : $order['discount_change_price'];
 
-            //            $discount_money = $order_price - $order_discount_change_price;    // TODO 不用原价减，先注释
             $change_discount_money = $pay_price - $order_discount_change_price;    // 应付 - 改价的优惠
             $discount_money = $change_discount_money + $discount_money; // 加上之前的优惠
             $pay_price = $order_discount_change_price;
@@ -6096,7 +6095,7 @@ class Order extends BaseModelOrder
             $order_id = 0;
             $list = (new ProductModel)->getBaseList(['shop_supplier_id' => $order->shop_supplier_id, 'order_id' => $order_id], false, array_keys($scheme_must_page_product_ids));
             $buffetProductArr = Order::getOrderBuffetProductArr($order_id);
-            $productList = Order::handleBuffetProductIndex($list, $buffetProductArr, $meal_num); // TODO
+            $productList = Order::handleBuffetProductIndex($list, $buffetProductArr, $meal_num); 
         }
         $param['list_rows'] = 100;
         $model = new AssistantProductModel;

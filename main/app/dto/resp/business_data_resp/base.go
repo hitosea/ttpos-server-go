@@ -214,7 +214,7 @@ type BusinessDataExportItem struct {
 	TotalFreeAmount     float64 `json:"total_free_amount"`     // 免单总额
 	TotalFreeNum        float64 `json:"total_free_num"`        // 免单数量
 	TotalRechargeAmount float64 `json:"total_recharge_amount"` // 充值金额
-	// ToDo 外送数据来源
+	// TODO 外送数据来源
 	TotalDeliveryOrderAmount       float64                     `json:"total_delivery_order_amount"`        // 外送订单总额
 	TotalDeliveryOrderRevenue      float64                     `json:"total_delivery_order_revenue"`       // 外送营收
 	TotalDeliveryOrderRefundAmount float64                     `json:"total_delivery_order_refund_amount"` // 外送订单退款

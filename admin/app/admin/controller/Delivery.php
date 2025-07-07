@@ -364,7 +364,6 @@ class Delivery extends Controller
             return $this->renderError('请选择商家');
         }
 
-        // ToDo 获取数据
         return $this->renderSuccess('', []);
     }
 }

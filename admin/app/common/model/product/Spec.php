@@ -93,21 +93,7 @@ class Spec extends BaseModel
      */
     public function updateSpec($data)
     {
-        // todo v1.0.8需求变更，暂时不需要
-        // if ($data) {
-        //     $addData = [];
-        //     foreach ($data as $item) {
-        //         if ($item['spec_name']) {
-        //             $isExit = $this->where('spec_name', '=', $item['spec_name'])->count();
-        //             if ($isExit == 0) {
-        //                 $addData[] = [
-        //                     'spec_name' => $item['spec_name'],
-        //                 ];
-        //             }
-        //         }
-        //     }
-        //     $addData && $this->saveAll($addData);
-        // }
+        
     }
 
     /**
@@ -165,7 +151,7 @@ class Spec extends BaseModel
      */
     public function isUseWithProduct($spec_id)
     {
-        // todo 兼容 兼容旧数据，先删除产品已删除的关联数据
+        // TODO 兼容 兼容旧数据，先删除产品已删除的关联数据
         // ProductSku::where('product_id', 'in', function ($query) {
         //     $query->name('product')->field('product_id');
         // })->delete();
