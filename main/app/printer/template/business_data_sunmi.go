@@ -105,7 +105,7 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.AppendText("------------------------------------------------\n")
 		for _, category := range businessData.ProductCategory.CategoryList {
-			printer.PrintInColumns(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices))
+			printer.PrintInColumns(category.Name, t.base.FloatToString(category.SalesNum), t.base.GetPriceAndUnit(category.Prices))
 			printer.LineFeed(1)
 		}
 		printer.AppendText("------------------------------------------------\n")
@@ -115,7 +115,7 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 			[]int{0, pkg.AlignRight, 0},
 		)
 		if businessData.ProductCategory.SalesNum > 0 {
-			printer.PrintInColumns(t.base.Translate("销售笔数"), fmt.Sprintf("%d", businessData.ProductCategory.SalesNum))
+			printer.PrintInColumns(t.base.Translate("销售笔数"), fmt.Sprintf("%v", businessData.ProductCategory.SalesNum))
 			printer.LineFeed(1)
 		}
 		//
@@ -145,7 +145,7 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.AppendText("------------------------------------------------\n")
 		for _, product := range businessData.Product.Products {
-			printer.PrintInColumns(product.Name, fmt.Sprintf("%s*%d", t.base.Number(product.Price), product.SalesNum), t.base.GetPriceAndUnit(product.Subtotal))
+			printer.PrintInColumns(product.Name, fmt.Sprintf("%s*%v", t.base.Number(product.Price), product.SalesNum), t.base.GetPriceAndUnit(product.Subtotal))
 			printer.LineFeed(1)
 		}
 	} else if businessData.All != nil {
@@ -342,7 +342,7 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 		totalPayPrice := decimal.NewFromFloat(0)
 		for _, income := range businessData.All.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
-				printer.PrintInColumns(income.Name, fmt.Sprintf("%d", income.OrderNum), t.base.GetPriceAndUnit(income.Amount))
+				printer.PrintInColumns(income.Name, fmt.Sprintf("%v", income.OrderNum), t.base.GetPriceAndUnit(income.Amount))
 				printer.LineFeed()
 				totalPayPrice = totalPayPrice.Add(decimal.NewFromFloat(income.Amount).Round(2))
 			}
@@ -374,7 +374,7 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 			[]int{0, pkg.AlignRight, 0},
 		)
 		for _, peak := range businessData.All.PeakHourList {
-			printer.PrintInColumns(peak.TimePeriod, fmt.Sprintf("%d", peak.OrderNum), t.base.GetPriceAndUnit(peak.Amount))
+			printer.PrintInColumns(peak.TimePeriod, fmt.Sprintf("%v", peak.OrderNum), t.base.GetPriceAndUnit(peak.Amount))
 			printer.LineFeed(1)
 		}
 		printer.LineFeed(4)

@@ -109,7 +109,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		}
 		printer.AppendText("\n------------------------------------------------\n")
 		//
-		printer.AppendText(t.base.PrintText(t.base.Translate("销售笔数"), "", fmt.Sprintf("%d", businessData.ProductCategory.SalesNum), width))
+		printer.AppendText(t.base.PrintText(t.base.Translate("销售笔数"), "", fmt.Sprintf("%v", businessData.ProductCategory.SalesNum), width))
 		printer.LineFeed()
 		printer.LineFeed()
 		//
@@ -135,7 +135,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.AppendText("\n------------------------------------------------")
 		for _, product := range businessData.Product.Products {
-			printer.AppendText(t.base.PrintText(product.Name, fmt.Sprintf("%s*%d", t.base.Number(product.Price), product.SalesNum), t.base.GetPriceAndUnit(product.Subtotal), width-differenceWidth, 26, 16, 16))
+			printer.AppendText(t.base.PrintText(product.Name, fmt.Sprintf("%s*%v", t.base.Number(product.Price), product.SalesNum), t.base.GetPriceAndUnit(product.Subtotal), width-differenceWidth, 26, 16, 16))
 			printer.LineFeed()
 			printer.LineFeed()
 		}
@@ -276,7 +276,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		totalPayPrice := decimal.NewFromFloat(0)
 		for _, income := range businessData.All.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
-				printer.AppendText(t.base.PrintText(income.Name, fmt.Sprintf("%d", income.OrderNum), t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
+				printer.AppendText(t.base.PrintText(income.Name, fmt.Sprintf("%v", income.OrderNum), t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
 				printer.LineFeed()
 				totalPayPrice = totalPayPrice.Add(decimal.NewFromFloat(income.Amount).Round(2))
 			}
@@ -292,7 +292,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(1)
 		for _, peak := range businessData.All.PeakHourList {
-			printer.AppendText(t.base.PrintText(peak.TimePeriod, fmt.Sprintf("%d", peak.OrderNum), t.base.GetPriceAndUnit(peak.Amount), width, 26, 10, 18))
+			printer.AppendText(t.base.PrintText(peak.TimePeriod, fmt.Sprintf("%v", peak.OrderNum), t.base.GetPriceAndUnit(peak.Amount), width, 26, 10, 18))
 			printer.LineFeed(1)
 		}
 	}

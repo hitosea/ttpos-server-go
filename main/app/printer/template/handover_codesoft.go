@@ -209,7 +209,7 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 		printer.SetLineSpacing(100)
 		printer.LineFeed()
 		for _, category := range businessData.CategoryList {
-			printer.AppendText(t.base.PrintText(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
+			printer.AppendText(t.base.PrintText(category.Name, t.base.FloatToString(category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
 			printer.LineFeed()
 		}
 		if t.base.Lang == "th" {
@@ -412,7 +412,7 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 		printer.SetLineSpacing(100)
 		printer.LineFeed()
 		for _, category := range businessData.CategoryList {
-			printer.AppendText(t.base.PrintText(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
+			printer.AppendText(t.base.PrintText(category.Name, t.base.FloatToString(category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
 			printer.LineFeed()
 		}
 		if t.base.Lang == "th" {

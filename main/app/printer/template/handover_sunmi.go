@@ -275,7 +275,7 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed()
 		for _, category := range businessData.CategoryList {
-			printer.PrintInColumns(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices))
+			printer.PrintInColumns(category.Name, t.base.FloatToString(category.SalesNum), t.base.GetPriceAndUnit(category.Prices))
 			printer.LineFeed()
 		}
 		// 汇总
@@ -546,7 +546,7 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(1)
 		for _, category := range businessData.CategoryList {
-			printer.PrintInColumns(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices))
+			printer.PrintInColumns(category.Name, t.base.FloatToString(category.SalesNum), t.base.GetPriceAndUnit(category.Prices))
 			printer.LineFeed(1)
 		}
 		// 汇总

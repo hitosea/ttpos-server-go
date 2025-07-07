@@ -313,7 +313,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 			}
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: category.Name, Width: 280, Align: pkg.AlignLeft, FontWeight: 1},
-				pkg.ColumnConfig{Text: t.base.Amount(float64(category.SalesNum)), Width: 120, Align: pkg.AlignCenter, FontWeight: 1},
+				pkg.ColumnConfig{Text: t.base.FloatToString(category.SalesNum), Width: 120, Align: pkg.AlignCenter, FontWeight: 1},
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(category.Prices), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 			)
 		}
@@ -594,7 +594,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 			}
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: category.Name, Width: 280, Align: pkg.AlignLeft, FontWeight: 1},
-				pkg.ColumnConfig{Text: fmt.Sprintf("%d", category.SalesNum), Width: 120, Align: pkg.AlignCenter, FontWeight: 1},
+				pkg.ColumnConfig{Text: t.base.FloatToString(category.SalesNum), Width: 120, Align: pkg.AlignCenter, FontWeight: 1},
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(category.Prices), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 			)
 		}

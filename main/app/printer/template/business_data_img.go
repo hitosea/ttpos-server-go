@@ -93,7 +93,7 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		for _, category := range businessData.ProductCategory.CategoryList {
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: category.Name, Width: 300, Align: pkg.AlignLeft, FontWeight: 2},
-				pkg.ColumnConfig{Text: fmt.Sprintf("%d", category.SalesNum), Width: 96, Align: pkg.AlignRight, FontWeight: 2},
+				pkg.ColumnConfig{Text: t.base.FloatToString(category.SalesNum), Width: 96, Align: pkg.AlignRight, FontWeight: 2},
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(category.Prices), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 			)
 		}
@@ -102,7 +102,7 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		img.AppendSplitLine(pkg.WithLineFeed(true))
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: t.base.Translate("销售笔数"), Width: 300, Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%d", businessData.ProductCategory.SalesNum), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%v", businessData.ProductCategory.SalesNum), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.RecoverDefaultTextLineHeight()
 		for _, income := range businessData.ProductCategory.PaymentMethodIncomes {
@@ -138,7 +138,7 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		for _, product := range businessData.Product.Products {
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: product.Name, Width: 300, Align: pkg.AlignLeft},
-				pkg.ColumnConfig{Text: fmt.Sprintf("%s*%d", t.base.Number(product.Price), product.SalesNum), Width: 120, Align: pkg.AlignRight},
+				pkg.ColumnConfig{Text: fmt.Sprintf("%s*%v", t.base.Number(product.Price), product.SalesNum), Width: 120, Align: pkg.AlignRight},
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(product.Subtotal), Width: 0, Align: pkg.AlignRight},
 			)
 		}
@@ -345,7 +345,7 @@ func (t *businessDataImgTemplate) GetPrintContent(
 			if income.Code != constant.PaymentMethodCodeFreePay {
 				img.PrintInColumns(
 					pkg.ColumnConfig{Text: income.Name, Width: utils.IfInt(isTrThEn, 230, 270), Align: pkg.AlignLeft, FontWeight: 2},
-					pkg.ColumnConfig{Text: fmt.Sprintf("%d", income.OrderNum), Width: 96, Align: pkg.AlignLeft, FontWeight: 2},
+					pkg.ColumnConfig{Text: fmt.Sprintf("%v", income.OrderNum), Width: 96, Align: pkg.AlignLeft, FontWeight: 2},
 					pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(income.Amount), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 				)
 				totalPayPrice = totalPayPrice.Add(decimal.NewFromFloat(income.Amount).Round(2))
@@ -370,7 +370,7 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		for _, peak := range businessData.All.PeakHourList {
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: peak.TimePeriod, Width: utils.IfInt(isTrThEn, 230, 270), Align: pkg.AlignLeft, FontWeight: 2},
-				pkg.ColumnConfig{Text: fmt.Sprintf("%d", peak.OrderNum), Width: 96, Align: pkg.AlignLeft, FontWeight: 2},
+				pkg.ColumnConfig{Text: fmt.Sprintf("%v", peak.OrderNum), Width: 96, Align: pkg.AlignLeft, FontWeight: 2},
 				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(peak.Amount), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 			)
 		}

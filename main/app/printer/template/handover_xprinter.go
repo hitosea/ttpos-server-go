@@ -197,7 +197,7 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 		printer.SetLineSpacing(100)
 		printer.LineFeed()
 		for _, category := range businessData.CategoryList {
-			printer.AppendText(t.base.PrintText(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
+			printer.AppendText(t.base.PrintText(category.Name, t.base.FloatToString(category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
 			printer.LineFeed()
 		}
 		printer.SetLineSpacing(90)
@@ -382,7 +382,7 @@ func (t *handoverXprinterTemplate) GetPrintContent(
 		printer.SetLineSpacing(100)
 		printer.LineFeed()
 		for _, category := range businessData.CategoryList {
-			printer.AppendText(t.base.PrintText(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
+			printer.AppendText(t.base.PrintText(category.Name, t.base.FloatToString(category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
 			printer.LineFeed()
 		}
 		// 汇总
