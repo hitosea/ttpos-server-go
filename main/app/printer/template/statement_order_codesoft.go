@@ -307,14 +307,14 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 		printer.AppendText("\n------------------------------------------------\n")
 	}
 	// 商品数量
-	productNum := float64(0)
+	productNum := decimal.NewFromFloat(0)
 	printer.SetLineSpacing(70)
 	// 自助餐顾客类型
 	for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
 		if orderBuffetCustomer.IsDelete() {
 			continue
 		}
-		productNum += float64(orderBuffetCustomer.Num)
+		productNum = productNum.Add(decimal.NewFromFloat(float64(orderBuffetCustomer.Num)).Round(2))
 		buffetNameText := orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang)
 		if orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name != "" {
 			buffetNameText += "\n(" + orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name + ")"
@@ -336,7 +336,7 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 	}
 	// 添加加钟商品
 	buffetDelayProducts, num := t.base.MergeSaleOrderBuffetDelayProducts(saleOrder)
-	productNum += num
+	productNum = productNum.Add(decimal.NewFromFloat(num).Round(2))
 	for _, delay := range buffetDelayProducts {
 		printer.AppendText(t.base.PrintText(
 			delay.DelayName,
@@ -354,7 +354,7 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 	}
 	// 商品列表
 	products, num := t.base.MergeSaleOrderProduct(saleOrder)
-	productNum += num
+	productNum = productNum.Add(decimal.NewFromFloat(num).Round(2))
 	for _, product := range products {
 		printer.AppendText(t.base.PrintText(
 			product.ProductName,
@@ -379,14 +379,14 @@ func (t *statementOrderCodesoftTemplate) GetPrintContent(
 	printer.SetAlignment(pkg.AlignRight)
 	if temp == 3 {
 		printer.AppendText(t.base.PrintText(
-			t.base.Translate("商品数量")+": "+t.base.FloatToString(productNum),
+			t.base.Translate("商品数量")+": "+t.base.FloatToString(productNum.Round(2).InexactFloat64()),
 			"",
 			t.base.Translate("商品金额")+": "+t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount),
 			width,
 		))
 		printer.LineFeed()
 	} else {
-		printer.AppendText(t.base.Translate("商品数量") + ": " + t.base.FloatToString(productNum))
+		printer.AppendText(t.base.Translate("商品数量") + ": " + t.base.FloatToString(productNum.Round(2).InexactFloat64()))
 		printer.LineFeed()
 		printer.AppendText(t.base.Translate("商品金额") + ": " + t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount))
 		printer.LineFeed()

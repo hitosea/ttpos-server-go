@@ -8,6 +8,8 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/shopspring/decimal"
 )
 
 // businessDataXprinterTemplate 商米打印模板
@@ -271,16 +273,16 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), t.base.Translate("订单数"), t.base.Translate("金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 16))
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(1)
-		var totalPayPrice float64 = 0
+		totalPayPrice := decimal.NewFromFloat(0)
 		for _, income := range businessData.All.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
 				printer.AppendText(t.base.PrintText(income.Name, fmt.Sprintf("%d", income.OrderNum), t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
 				printer.LineFeed()
-				totalPayPrice += income.Amount
+				totalPayPrice = totalPayPrice.Add(decimal.NewFromFloat(income.Amount).Round(2))
 			}
 		}
-		if totalPayPrice > 0 {
-			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice), width, 26, 10, 18))
+		if totalPayPrice.GreaterThan(decimal.NewFromFloat(0)) {
+			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice.Round(2).InexactFloat64()), width, 26, 10, 18))
 			printer.LineFeed(1)
 		}
 		// 高峰时间

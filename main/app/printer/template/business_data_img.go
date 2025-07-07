@@ -8,6 +8,8 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/shopspring/decimal"
 )
 
 // businessDataImgTemplate 图片订单打印模板
@@ -338,7 +340,7 @@ func (t *businessDataImgTemplate) GetPrintContent(
 			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(t.base.Lang == "en", 220, 180), Align: pkg.AlignLeft, FontWeight: 2},
 			pkg.ColumnConfig{Text: t.base.Translate("金额"), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 		)
-		totalPayPrice := float64(0)
+		totalPayPrice := decimal.NewFromFloat(0)
 		for _, income := range businessData.All.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
 				img.PrintInColumns(
@@ -346,14 +348,14 @@ func (t *businessDataImgTemplate) GetPrintContent(
 					pkg.ColumnConfig{Text: fmt.Sprintf("%d", income.OrderNum), Width: 96, Align: pkg.AlignLeft, FontWeight: 2},
 					pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(income.Amount), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 				)
-				totalPayPrice += income.Amount
+				totalPayPrice = totalPayPrice.Add(decimal.NewFromFloat(income.Amount).Round(2))
 			}
 		}
-		if totalPayPrice > 0 {
+		if totalPayPrice.GreaterThan(decimal.NewFromFloat(0)) {
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: t.base.Translate("总金额"), Width: utils.IfInt(isTrThEn, 230, 270), Align: pkg.AlignLeft, FontWeight: 2},
 				pkg.ColumnConfig{Text: "", Width: 96, Align: pkg.AlignLeft, FontWeight: 2},
-				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(totalPayPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
+				pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(totalPayPrice.Round(2).InexactFloat64()), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 			)
 		}
 		img.AppendSplitLine()
