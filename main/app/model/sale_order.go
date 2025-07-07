@@ -92,7 +92,7 @@ type SaleOrder struct {
 	MemberPointLogs              []*MemberPointLog              `gorm:"foreignKey:RelatedUuid;references:uuid"`   // 关联积分变动记录.赠送积分、退款积分、反结账积分
 	Coupons                      []*SaleOrderCoupon             `gorm:"foreignKey:SaleOrderUuid;references:uuid"` // 订单使用的优惠券
 	// 虚拟字段，用于标记当前子单是第几个
-	index int `gorm:"-" json:"index,omitempty"`
+	index int `gorm:"-"`
 }
 
 // 获取已选择的优惠券uuid

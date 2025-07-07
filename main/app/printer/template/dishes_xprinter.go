@@ -15,7 +15,7 @@ type dishesXprinterTemplate struct {
 	base *printerTemplate
 }
 
-// NewdishesXprinterTemplate 创建新的xprinter菜品打印模板
+// NewDishesXprinterTemplate 创建新的xprinter菜品打印模板
 func NewDishesXprinterTemplate(
 	base *printerTemplate,
 ) *dishesXprinterTemplate {

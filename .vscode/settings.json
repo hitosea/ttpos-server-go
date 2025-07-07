@@ -22,7 +22,7 @@
     "todo-tree.tree.scanMode": "workspace only",
     "todo-tree.tree.buttons.export": true,
 
-    // ===== 文件排除 =====
+    // ===== 文件排除显示 =====
     "files.exclude": {
       "**/trans/**/*test.go": true
     },
@@ -30,6 +30,19 @@
     // ===== 拼写检查 =====
     "cSpell.words": [
       "ttpos",
-      "zhtw"
-    ]
+      "zhtw",
+      "eventbus", "gormio", "shopspring", "gorm",  "cryptor",
+      "tinyint", "varchar", "lianlian",
+      "Sunmi", "Xprinter", "Compax", "Codesoft", "Printnr",
+      "Qrcode", "Wechat", "jinzhu", "Boms",
+      "ขอบคุณที่แวะมาหากัน", "สนับสนุนโดย",
+      "Ziyaretiniz", "için", "teşekkür", "ederiz",
+      "mağaza", "tarafından", "Sistem", "iptal",
+      "destek", "sağlar", "ကုန်စည်", "ပမာဏ",
+    ],
+
+    // ===== Go语言配置 =====
+    "gopls": {
+      "ui.diagnostic.staticcheck": false,   // 禁用静态分析检查
+    },
   }
