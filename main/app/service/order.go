@@ -6888,8 +6888,8 @@ func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint
 				Count:          len(memberCouponList), // 会员优惠券数量为1
 				IsSelected:     false,                 // 默认未选中，另外在判断是否被选中
 				IsAvailable:    false,                 // 另外再判断是否在使用时段内
-				DayStartTime:   targetCoupon.DayStartTime,
-				DayEndTime:     targetCoupon.DayEndTime,
+				DayStartTime:   targetCoupon.MarketingCoupon.DayStartTime,
+				DayEndTime:     targetCoupon.MarketingCoupon.DayEndTime,
 				ValidStartTime: startTime,
 				ValidEndTime:   endTime,
 				CouponList:     sampleMemberCouponList,
