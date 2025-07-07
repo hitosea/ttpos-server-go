@@ -284,11 +284,6 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 		}()
 	}
 
-	// 存在推荐人
-	if referrer.Uuid > 0 {
-		// TODO 处理后续逻辑
-	}
-
 	if err != nil {
 		ctx.Log().Error("添加会员失败", zap.Error(err))
 		return errors.WithMessage(err, "添加会员失败")
