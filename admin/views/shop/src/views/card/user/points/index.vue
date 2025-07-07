@@ -282,12 +282,14 @@
 <script>
   import PointsApi from '@/api/points.js';
   import { useUserStore } from '@/store/index';
+  import { ProcessInput } from '@/utils/formatPrice.js';
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
   const is_open_buffet = supplier.value?.is_open_buffet || 0;
   export default {
     data() {
       return {
+        ProcessInput,
         is_open_buffet: is_open_buffet,
         form: {
           deduct_order: 1,
@@ -469,50 +471,15 @@
         }
       },
 
-      // 通用输入处理函数
-      processInput(value, options = {}) {
-        const { allowDecimal = false, maxValue = 100, minValue = 0, maxDecimals = 0 } = options;
-
-        // 只允许输入数字和小数点
-        let processed = value.replace(allowDecimal ? /[^0-9.]/g : /[^0-9]/g, '');
-
-        // 处理以0开头的数字
-        if (processed.length > 1 && processed.startsWith('0') && !processed.startsWith('0.')) {
-          processed = processed.slice(1);
-        }
-
-        // 处理小数部分
-        if (allowDecimal) {
-          const parts = processed.split('.');
-          if (parts.length > 2) {
-            processed = parts[0] + '.' + parts.slice(1).join('');
-          }
-          if (parts[1] && parts[1].length > maxDecimals) {
-            processed = parts[0] + '.' + parts[1].substring(0, maxDecimals);
-          }
-        }
-
-        // 转换为数字进行范围检查
-        const numValue = parseFloat(processed) || 0;
-        if (numValue > maxValue) {
-          return maxValue.toString();
-        }
-        if (numValue < minValue) {
-          return minValue.toString();
-        }
-
-        return processed;
-      },
-
       handleValueInput(e, index) {
-        this.form.shopping_gift_rules[index].value = this.processInput(e, {
+        this.form.shopping_gift_rules[index].value = this.ProcessInput(e, {
           maxValue: 100,
           minValue: 0,
         });
       },
 
       handleValuesInput(e, index) {
-        this.form.shopping_gift_rules[index].value = this.processInput(e, {
+        this.form.shopping_gift_rules[index].value = this.ProcessInput(e, {
           allowDecimal: true,
           maxValue: 9999999,
           minValue: 0,
@@ -521,7 +488,7 @@
       },
 
       handlePointsExchangeRateInput(e) {
-        this.form.exchange.points_exchange_rate = this.processInput(e, {
+        this.form.exchange.points_exchange_rate = this.ProcessInput(e, {
           allowDecimal: true,
           maxValue: 9999999,
           minValue: 0,
@@ -529,7 +496,7 @@
         });
       },
       handleMoneyInput(e, index) {
-        this.form.shopping_gift_rules[index].payment_amount_requirement = this.processInput(e, {
+        this.form.shopping_gift_rules[index].payment_amount_requirement = this.ProcessInput(e, {
           allowDecimal: true,
           maxValue: 9999999,
           minValue: 0,
@@ -538,7 +505,7 @@
       },
 
       handleMemberLevelInput(value, ruleIndex, levelIndex) {
-        const processed = this.processInput(value, {
+        const processed = this.ProcessInput(value, {
           allowDecimal: true,
           maxValue: 9999999,
           minValue: 0,
@@ -548,7 +515,7 @@
       },
 
       handleMemberLevelsInput(e, index, levelIndex) {
-        const processed = this.processInput(e, {
+        const processed = this.ProcessInput(e, {
           maxValue: 100,
           minValue: 0,
         });
