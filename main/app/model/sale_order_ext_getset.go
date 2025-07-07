@@ -777,6 +777,16 @@ func (model *SaleOrder) SetMemberDiscountCancel() {
 	}
 }
 
+// 删除销售订单中所有优惠券
+func (model *SaleOrder) SetAllCouponCancel() {
+	for _, coupon := range model.Coupons {
+		if coupon.IsDelete() {
+			continue
+		}
+		coupon.SetDelete()
+	}
+}
+
 // 当订单取消会员时，删除销售订单中已经选中的会员优惠券
 func (model *SaleOrder) SetMemberCouponCancel() {
 	for _, coupon := range model.Coupons {
