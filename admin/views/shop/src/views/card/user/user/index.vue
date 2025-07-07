@@ -6,7 +6,7 @@
       -->
   <div class="user">
     <!--搜索表单-->
-    <div class="common-seach-wrap flex">
+    <div class="common-search-wrap flex">
       <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
         <el-form-item :label="$t('会员等级')">
           <a-select v-model:value="formInline.grade_id" :placeholder="$t('选择等级')" @change="onSearch">

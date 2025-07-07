@@ -1,8 +1,7 @@
 <template>
-
   <div class="user">
     <!--搜索表单-->
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
         <el-form-item label="昵称">
           <el-input v-model="formInline.search" placeholder="请输入昵称"></el-input>
@@ -10,9 +9,7 @@
         <el-form-item label="注册时间">
           <div class="block">
             <span class="demonstration"></span>
-            <el-date-picker v-model="formInline.value1" type="daterange" range-separator="至" start-placeholder="开始日期"
-              end-placeholder="结束日期">
-            </el-date-picker>
+            <el-date-picker v-model="formInline.value1" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"> </el-date-picker>
           </div>
         </el-form-item>
         <el-form-item>
@@ -47,13 +44,18 @@
 
       <!--分页-->
       <div class="pagination">
-        <el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange" background :current-page="curPage"
-          :page-size="pageSize" layout="total, prev, pager, next, jumper"
-          :total="totalDataNumber">
+        <el-pagination
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          background
+          :current-page="curPage"
+          :page-size="pageSize"
+          layout="total, prev, pager, next, jumper"
+          :total="totalDataNumber"
+        >
         </el-pagination>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -76,14 +78,13 @@
         /*横向表单数据模型*/
         formInline: {
           search: '',
-          value1: ''
+          value1: '',
         },
       };
     },
     created() {
       /*获取列表*/
       this.getTableList();
-
     },
     methods: {
       /*选择第几页*/
@@ -107,13 +108,13 @@
         let Params = self.formInline;
         Params.page = self.curPage;
         Params.list_rows = self.pageSize;
-        PlanApi.log(Params, true).then(data => {
-          self.loading = false;
-          self.tableData = data.data.list.data;
-          self.totalDataNumber = data.data.list.total;
-        }).catch(error => {
-
-        });
+        PlanApi.log(Params, true)
+          .then((data) => {
+            self.loading = false;
+            self.tableData = data.data.list.data;
+            self.totalDataNumber = data.data.list.total;
+          })
+          .catch((error) => {});
       },
 
       /*搜索查询*/
@@ -122,7 +123,6 @@
         self.loading = true;
         self.getTableList();
       },
-    }
+    },
   };
 </script>
-

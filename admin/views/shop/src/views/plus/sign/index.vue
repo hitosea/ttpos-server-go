@@ -4,7 +4,7 @@
     时间：2020-06-04
     描述：插件中心-签到有礼
   -->
-  <div class="common-seach-wrap">
+  <div class="common-search-wrap">
     <el-tabs v-model="activeName">
       <el-tab-pane label="签到设置" name="setting"> </el-tab-pane>
       <el-tab-pane label="签到记录" name="receive"> </el-tab-pane>

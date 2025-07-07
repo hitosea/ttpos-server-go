@@ -6,7 +6,7 @@
   -->
   <div class="user">
     <!--搜索表单-->
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item label="">
           <el-radio-group v-model="searchForm.time_type" class="radio-search" @change="timeTypeChange">
@@ -217,7 +217,7 @@
       :order_id="order_id"
       :sub_order_id="sub_order_id"
       :pay_price="pay_price"
-      @closeDialog="closerefundDialogFunc($event, 'edit')"
+      @closeDialog="closeRefundDialogFunc($event, 'edit')"
     >
     </refund>
   </div>
@@ -512,7 +512,7 @@
         }
       },
       /*关闭弹窗*/
-      closerefundDialogFunc(e, f) {
+      closeRefundDialogFunc(e, f) {
         if (f == 'edit') {
           this.open_refund = e.openDialog;
           if (e.type == 'success') {

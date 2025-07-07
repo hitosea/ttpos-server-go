@@ -1,6 +1,6 @@
 <template>
   <div class="buffet-list">
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('状态')">
           <a-select size="small" v-model:value="searchForm.status" :placeholder="$t('全部状态')" clearable @change="onSearch">
@@ -276,7 +276,7 @@
   };
 </script>
 <style lang="scss" scoped>
-  .common-seach-wrap {
+  .common-search-wrap {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0;

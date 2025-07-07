@@ -1,6 +1,6 @@
 <template>
   <div class="log-list">
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('类型')">
           <a-select size="small" v-model:value="searchForm.type" :placeholder="$t('所有类型')" @change="onSearch">
@@ -294,7 +294,7 @@
   };
 </script>
 <style lang="scss" scoped>
-  .common-seach-wrap {
+  .common-search-wrap {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0;

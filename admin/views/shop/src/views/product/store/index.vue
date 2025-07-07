@@ -2,7 +2,7 @@
   <!--
       	描述：商品-店内商品
       -->
-  <div class="common-seach-wrap">
+  <div class="common-search-wrap">
     <!--商品管理-->
     <productindex v-if="activeName == 'productindex'"></productindex>
     <!--分类管理-->

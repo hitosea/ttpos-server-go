@@ -401,7 +401,7 @@
     }
   }
 
-  .common-seach-wrap {
+  .common-search-wrap {
     &.flex {
       display: flex;
       justify-content: space-between;

@@ -1,7 +1,7 @@
 <template>
   <!--内容-->
   <div class="product-content" v-loading="loading">
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <!--订单进度-->
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('起始时间')">
@@ -239,7 +239,6 @@
         </h4>
       </div>
     </div>
-
 
     <div class="area-data">
       <div class="area-data-item">

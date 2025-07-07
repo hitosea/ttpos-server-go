@@ -83,7 +83,7 @@
       v-if="is_open_batch_download_qrcode"
       :open="is_open_batch_download_qrcode"
       :include="form.apply_scope_table_list"
-      :Dtype="Dtype"
+      :DType="DType"
       @close="closeDownloadQrcode"
       @selectTable="selectTable"
     >
@@ -105,7 +105,7 @@
         currency: currency,
         loading: false,
         is_open_batch_download_qrcode: false,
-        Dtype: 'service',
+        DType: 'service',
         tableList: [],
         allTableList: [],
         form: {

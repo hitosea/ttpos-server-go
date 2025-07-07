@@ -1,7 +1,7 @@
 <template>
   <div class="user">
     <!--搜索表单-->
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item>
           <el-input size="small" v-model="searchForm.search" :placeholder="$t('用户名')" @input="onSearch"></el-input>
