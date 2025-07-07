@@ -78,7 +78,6 @@
           formattedValue = formattedValue.slice(1);
         }
 
-        console.log(this.precision, 'precision');
         //如果precision为0，
         if (this.precision === 0) {
           formattedValue = formattedValue.replace(/\./g, '');
@@ -91,18 +90,17 @@
             formattedValue = `${integer}.${decimal.slice(0, this.precision)}`;
           }
         }
+
         // 处理最小最大值
         const numValue = parseFloat(formattedValue);
-        console.log(numValue, 'numValue');
         if (!isNaN(numValue)) {
           if (numValue > this.max) {
             formattedValue = this.max.toString();
-            console.log(formattedValue, 'max');
           } else if (numValue < this.min) {
             formattedValue = this.min.toString();
-            console.log(formattedValue, 'min');
           }
         }
+        console.log(formattedValue, 'formattedValue');
         // 触发更新
         this.$emit('update:modelValue', formattedValue);
       },
@@ -118,6 +116,7 @@
     display: flex;
     flex-direction: row;
     align-items: center;
+    width: 100%;
   }
   .icon-plus {
     cursor: pointer;

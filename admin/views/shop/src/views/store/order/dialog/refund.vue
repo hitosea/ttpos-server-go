@@ -48,9 +48,9 @@
               <numInput
                 :min="0"
                 :max="Number(scope.row.total_num)"
-                :precision="scope.row.num_type == '1' ? 2 : 0"
+                :precision="scope.row.num_type == 1 ? 2 : 0"
                 :placeholder="$t('请输入')"
-                v-model.number="scope.row.refund_num_updata"
+                v-model="scope.row.refund_num_updata"
                 :controls="true"
               ></numInput>
             </template>
