@@ -27,38 +27,18 @@
           </div>
         </template>
         <el-radio-group v-model="form.deduct_order">
-          <el-radio :label="1">{{ $t('先主账户后赠送账户') }}</el-radio>
-          <el-radio :label="2">{{ $t('先赠送账户后主账户') }}</el-radio>
-          <el-radio :label="3">{{ $t('按比例') }}</el-radio>
+          <el-radio :value="1">{{ $t('先主账户后赠送账户') }}</el-radio>
+          <el-radio :value="2">{{ $t('先赠送账户后主账户') }}</el-radio>
+          <el-radio :value="3">{{ $t('按比例') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <template v-if="form.deduct_order == 3">
         <el-form-item :label="$t('主账户')" prop="deduct_ratio_main" :rules="[{ required: true, message: $t('请输入主账户比例') }]">
-          <el-input-number
-            :controls="false"
-            class="max-w460"
-            :min="0"
-            :max="100"
-            :precision="2"
-            :placeholder="$t('请输入主账户比例')"
-            v-model.number="form.deduct_ratio_main"
-            @input="handleDeductRatioMainInput"
-            @change="handleDeductRatioChange"
-          ></el-input-number>
+          <numInput :controls="false" class="max-w460" :min="0" :max="100" :precision="2" :placeholder="$t('请输入主账户比例')" v-model="form.deduct_ratio_main"></numInput>
           <span>%</span>
         </el-form-item>
         <el-form-item :label="$t('赠送账户')" prop="deduct_ratio_gift" :rules="[{ required: true, message: $t('请输入赠送账户比例') }]">
-          <el-input-number
-            :controls="false"
-            class="max-w460"
-            :min="0"
-            :max="100"
-            :precision="2"
-            :placeholder="$t('请输入赠送账户比例')"
-            v-model.number="form.deduct_ratio_gift"
-            @input="handleDeductRatioGiftInput"
-            @change="handleDeductRatioChange"
-          ></el-input-number>
+          <numInput :controls="false" class="max-w460" :min="0" :max="100" :precision="2" :placeholder="$t('请输入赠送账户比例')" v-model="form.deduct_ratio_gift"></numInput>
           <span>%</span>
         </el-form-item>
       </template>
@@ -70,8 +50,8 @@
       <div class="common-form">{{ $t('购物赠送积分规则') }}</div>
       <el-form-item :label="$t('按付款金额比例赠送')">
         <el-radio-group v-model="form.shopping_gift_rules[0].is_open">
-          <el-radio label="1">{{ $t('开启') }}</el-radio>
-          <el-radio label="0">{{ $t('关闭') }}</el-radio>
+          <el-radio value="1">{{ $t('开启') }}</el-radio>
+          <el-radio value="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
         <div class="lh18 mt10 gray9">
           <p>{{ $t('例：订单付款金额（100.00元）*积分赠送比例（100%）=实际赠送的积分（100积分）') }}</p>
@@ -81,13 +61,13 @@
       <template v-if="form.shopping_gift_rules[0].is_open == 1">
         <el-form-item :label="$t('是否按会员等级赠送')" prop="shopping_gift_rules.0.is_member_level_related" :rules="[{ required: true, message: $t('请选择是否按会员等级赠送') }]">
           <el-radio-group v-model="form.shopping_gift_rules[0].is_member_level_related">
-            <el-radio label="0">{{ $t('所有会员等级相同') }}</el-radio>
-            <el-radio label="1">{{ $t('按等级区分') }}</el-radio>
+            <el-radio value="0">{{ $t('所有会员等级相同') }}</el-radio>
+            <el-radio value="1">{{ $t('按等级区分') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <template v-if="form.shopping_gift_rules[0].is_member_level_related == 0">
           <el-form-item :label="$t('赠送积分比例')" prop="shopping_gift_rules.0.value" :rules="[{ required: true, message: $t('请输入赠送积分比例') }]">
-            <el-input class="max-w460" @input="(e) => handleValueInput(e, 0)" :placeholder="$t('请输入赠送积分比例')" v-model="form.shopping_gift_rules[0].value"></el-input>
+            <numInput :min="0" :max="100" :precision="0" class="max-w460" :placeholder="$t('请输入赠送积分比例')" v-model="form.shopping_gift_rules[0].value"></numInput>
             <span>%</span>
           </el-form-item>
         </template>
@@ -110,7 +90,7 @@
               },
             ]"
           >
-            <el-input class="max-w460" @input="(e) => handleMemberLevelsInput(e, 0, levelIndex)" :placeholder="$t('请输入积分赠送')" v-model="item.value"></el-input>
+            <numInput :min="0" :max="100" :precision="0" class="max-w460" :placeholder="$t('请输入积分赠送')" v-model="item.value"></numInput>
             <span> %</span>
             <div class="lh18 mt10 gray9">
               <p> {{ $t('注：请输入大于0的数字') }}</p>
@@ -132,27 +112,29 @@
             },
           ]"
         >
-          <el-input
+          <numInput
+            :min="0"
+            :max="9999999"
+            :precision="2"
             class="max-w460"
-            @input="(e) => handleMoneyInput(e, 0)"
             :placeholder="$t('请输入金额')"
             v-model="form.shopping_gift_rules[0].payment_amount_requirement"
-          ></el-input>
+          ></numInput>
           <div class="lh18 mt10 gray9">
             <p>{{ $t('注：请输入大于0的数字') }}</p>
           </div>
         </el-form-item>
         <el-form-item :label="$t('适用就餐类型')" prop="shopping_gift_rules.0.meal_type" :rules="[{ required: true, message: $t('请选择适用就餐类型') }]">
           <el-checkbox-group v-model="form.shopping_gift_rules[0].meal_type">
-            <el-checkbox label="non-buffet">{{ $t('非自助餐') }}</el-checkbox>
-            <el-checkbox v-if="is_open_buffet == 1" label="buffet">{{ $t('自助餐') }}</el-checkbox>
+            <el-checkbox value="non-buffet">{{ $t('非自助餐') }}</el-checkbox>
+            <el-checkbox v-if="is_open_buffet == 1" value="buffet">{{ $t('自助餐') }}</el-checkbox>
           </el-checkbox-group>
         </el-form-item>
 
         <el-form-item :label="$t('会员余额支付是否赠送')" prop="shopping_gift_rules.0.balance_payment_get_points" :rules="[{ required: true, message: ' ' }]">
           <el-radio-group v-model="form.shopping_gift_rules[0].balance_payment_get_points">
-            <el-radio label="1">{{ $t('是') }}</el-radio>
-            <el-radio label="0">{{ $t('否') }}</el-radio>
+            <el-radio value="1">{{ $t('是') }}</el-radio>
+            <el-radio value="0">{{ $t('否') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="$t('退款自动扣积分')" prop="shopping_gift_rules.0.refund_return_points" :rules="[{ required: true, message: ' ' }]">
@@ -167,15 +149,15 @@
 
       <el-form-item :label="$t('按桌台人数赠送')" v-if="is_open_buffet == 1">
         <el-radio-group v-model="form.shopping_gift_rules[1].is_open">
-          <el-radio label="1">{{ $t('开启') }}</el-radio>
-          <el-radio label="0">{{ $t('关闭') }}</el-radio>
+          <el-radio value="1">{{ $t('开启') }}</el-radio>
+          <el-radio value="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <template v-if="form.shopping_gift_rules[1].is_open == 1 && is_open_buffet == 1">
         <el-form-item :label="$t('是否按会员等级赠送')" prop="shopping_gift_rules.1.is_member_level_related" :rules="[{ required: true, message: ' ' }]">
           <el-radio-group v-model="form.shopping_gift_rules[1].is_member_level_related">
-            <el-radio label="0">{{ $t('所有会员等级相同') }}</el-radio>
-            <el-radio label="1">{{ $t('按等级区分') }}</el-radio>
+            <el-radio value="0">{{ $t('所有会员等级相同') }}</el-radio>
+            <el-radio value="1">{{ $t('按等级区分') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <template v-if="form.shopping_gift_rules[1].is_member_level_related == 0">
@@ -194,7 +176,7 @@
               },
             ]"
           >
-            <el-input class="max-w460" @input="(e) => handleValuesInput(e, 1)" :placeholder="$t('请输入积分赠送')" v-model="form.shopping_gift_rules[1].value"></el-input>
+            <numInput :min="0" :max="9999999" :precision="2" class="max-w460" :placeholder="$t('请输入积分赠送')" v-model="form.shopping_gift_rules[1].value"></numInput>
             <span> {{ $t('积分/人') }}</span>
           </el-form-item>
         </template>
@@ -217,7 +199,7 @@
               },
             ]"
           >
-            <el-input class="max-w460" @input="(e) => handleMemberLevelInput(e, 1, levelIndex)" :placeholder="$t('请输入积分赠送')" v-model="item.value"></el-input>
+            <numInput :min="0" :max="9999999" :precision="2" class="max-w460" :placeholder="$t('请输入积分赠送')" v-model="item.value"></numInput>
             <span> {{ $t('积分/人') }}</span>
             <div class="lh18 mt10 gray9">
               <p> {{ $t('注：请输入大于0的数字') }}</p>
@@ -237,8 +219,8 @@
 
         <el-form-item :label="$t('会员余额支付是否赠送')" prop="shopping_gift_rules.1.balance_payment_get_points" :rules="[{ required: true, message: ' ' }]">
           <el-radio-group v-model="form.shopping_gift_rules[1].balance_payment_get_points">
-            <el-radio label="1">{{ $t('是') }}</el-radio>
-            <el-radio label="0">{{ $t('否') }}</el-radio>
+            <el-radio value="1">{{ $t('是') }}</el-radio>
+            <el-radio value="0">{{ $t('否') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="$t('退款自动扣积分')" prop="shopping_gift_rules.1.refund_return_points" :rules="[{ required: true, message: ' ' }]">
@@ -251,8 +233,8 @@
       <div class="common-form">{{ $t('积分抵扣') }}</div>
       <el-form-item :label="$t('会员积分抵扣订单金额')">
         <el-radio-group v-model="form.exchange.open_points_exchange">
-          <el-radio label="1">{{ $t('开启') }}</el-radio>
-          <el-radio label="0">{{ $t('关闭') }}</el-radio>
+          <el-radio value="1">{{ $t('开启') }}</el-radio>
+          <el-radio value="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
         <div class="lh18 mt10 gray9">
           <p> {{ $t('注：不开启不可设置抵扣比例') }}</p>
@@ -261,13 +243,13 @@
 
       <template v-if="form.exchange.open_points_exchange == 1">
         <el-form-item :label="$t('每积分抵扣应付金额')">
-          <el-input class="max-w460" @input="(e) => handlePointsExchangeRateInput(e)" :placeholder="$t('请输入')" v-model="form.exchange.points_exchange_rate"></el-input>
+          <numInput :min="0" :max="9999999" :precision="2" class="max-w460" :placeholder="$t('请输入')" v-model="form.exchange.points_exchange_rate"></numInput>
         </el-form-item>
 
         <el-form-item :label="$t('是否自动抵扣')">
           <el-radio-group v-model="form.exchange.auto_points_exchange">
-            <el-radio label="1">{{ $t('开启') }}</el-radio>
-            <el-radio label="0">{{ $t('关闭') }}</el-radio>
+            <el-radio value="1">{{ $t('开启') }}</el-radio>
+            <el-radio value="0">{{ $t('关闭') }}</el-radio>
           </el-radio-group>
         </el-form-item>
       </template>
@@ -282,14 +264,12 @@
 <script>
   import PointsApi from '@/api/points.js';
   import { useUserStore } from '@/store/index';
-  import { ProcessInput } from '@/utils/formatPrice.js';
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
   const is_open_buffet = supplier.value?.is_open_buffet || 0;
   export default {
     data() {
       return {
-        ProcessInput,
         is_open_buffet: is_open_buffet,
         form: {
           deduct_order: 1,
@@ -448,78 +428,6 @@
             });
           }
         });
-      },
-
-      handleDeductRatioMainInput(value) {
-        const main = value > 100 ? 100 : value < 0 ? 0 : value;
-        this.form.deduct_ratio_main = main;
-        this.form.deduct_ratio_gift = 100 - main;
-      },
-      handleDeductRatioGiftInput(value) {
-        const gift = value > 100 ? 100 : value < 0 ? 0 : value;
-        this.form.deduct_ratio_gift = gift;
-        this.form.deduct_ratio_main = 100 - gift;
-      },
-      handleDeductRatioChange() {
-        const main = this.form.deduct_ratio_main > 100 ? 100 : this.form.deduct_ratio_main < 0 ? 0 : this.form.deduct_ratio_main;
-        const gift = 100 - main;
-        if (this.form.deduct_ratio_main !== main) {
-          this.form.deduct_ratio_main = main;
-        }
-        if (this.form.deduct_ratio_gift !== gift) {
-          this.form.deduct_ratio_gift = gift;
-        }
-      },
-
-      handleValueInput(e, index) {
-        this.form.shopping_gift_rules[index].value = this.ProcessInput(e, {
-          maxValue: 100,
-          minValue: 0,
-        });
-      },
-
-      handleValuesInput(e, index) {
-        this.form.shopping_gift_rules[index].value = this.ProcessInput(e, {
-          allowDecimal: true,
-          maxValue: 9999999,
-          minValue: 0,
-          maxDecimals: 2,
-        });
-      },
-
-      handlePointsExchangeRateInput(e) {
-        this.form.exchange.points_exchange_rate = this.ProcessInput(e, {
-          allowDecimal: true,
-          maxValue: 9999999,
-          minValue: 0,
-          maxDecimals: 2,
-        });
-      },
-      handleMoneyInput(e, index) {
-        this.form.shopping_gift_rules[index].payment_amount_requirement = this.ProcessInput(e, {
-          allowDecimal: true,
-          maxValue: 9999999,
-          minValue: 0,
-          maxDecimals: 2,
-        });
-      },
-
-      handleMemberLevelInput(value, ruleIndex, levelIndex) {
-        const processed = this.ProcessInput(value, {
-          allowDecimal: true,
-          maxValue: 9999999,
-          minValue: 0,
-          maxDecimals: 2,
-        });
-        this.form.shopping_gift_rules[ruleIndex].member_levels[levelIndex].value = processed;
-      },
-
-      handleMemberLevelsInput(e, index, levelIndex) {
-        const processed = this.ProcessInput(e, {
-          maxValue: 100,
-          minValue: 0,
-        });
-        this.form.shopping_gift_rules[index].member_levels[levelIndex].value = processed;
       },
     },
   };

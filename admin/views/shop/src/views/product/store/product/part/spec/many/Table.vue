@@ -53,7 +53,7 @@
           <el-table-column v-if="baseSale == '1'" :label="$t('采购单价')" minWidth="140">
             <template #default="scope">
               <el-form-item for="no_click" label="" style="margin-bottom: 0">
-                <el-input :placeholder="$t('请输入采购单价')" @input="(e) => handleChangePurchasePrice(e, scope.$index)" v-model="scope.row.purchase_price"></el-input>
+                <numInput :min="0" :max="1000000" :precision="2" :placeholder="$t('请输入采购单价')" v-model="scope.row.purchase_price"></numInput>
               </el-form-item>
             </template>
           </el-table-column>
@@ -74,12 +74,14 @@
                   },
                 ]"
               >
-                <el-input
+                <numInput
                   :disabled="scope.row.material.length > 0"
+                  :min="0"
+                  :max="99999999"
+                  :precision="2"
                   :placeholder="$t('请输入库存')"
-                  @input="(e) => handleChangeStockNum(e, scope.$index)"
                   v-model="scope.row.stock_num"
-                ></el-input>
+                ></numInput>
               </el-form-item>
             </template>
           </el-table-column>
@@ -139,7 +141,7 @@
                   },
                 ]"
               >
-                <el-input :placeholder="$t('请输入商品价格')" @input="(e) => handleChangeProductPrice(e, scope.$index)" v-model="scope.row.product_price"></el-input>
+                <numInput :min="0" :max="1000000" :precision="2" :placeholder="$t('请输入商品价格')" v-model="scope.row.product_price"></numInput>
               </el-form-item>
             </template>
           </el-table-column>
@@ -209,7 +211,6 @@
   import { useUserStore } from '@/store';
   import Type from './Type.vue';
   import Add from '../../../../../expand/spec/add.vue';
-  import { ProcessInput } from '@/utils/formatPrice.js';
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
   const baseSale = supplier.value?.sale_stock || 0;
@@ -230,7 +231,6 @@
         languageObj[item.key] = [];
       });
       return {
-        ProcessInput,
         languageList: languageList,
         languageKey: languageKey,
         restaurants: [],
@@ -430,39 +430,6 @@
             if (items[key]) {
               this.form.model.sku[index].spec_name[item.key] = items[key];
             }
-          });
-        });
-      },
-
-      handleChangePurchasePrice(e, index) {
-        this.$nextTick(() => {
-          this.form.model.sku[index].purchase_price = this.ProcessInput(e, {
-            allowDecimal: true,
-            minValue: 0,
-            maxValue: 1000000,
-            maxDecimals: 2,
-          });
-        });
-      },
-
-      handleChangeStockNum(e, index) {
-        this.$nextTick(() => {
-          this.form.model.sku[index].stock_num = this.ProcessInput(e, {
-            allowDecimal: true,
-            minValue: 0,
-            maxValue: 99999999,
-            maxDecimals: 2,
-          });
-        });
-      },
-
-      handleChangeProductPrice(e, index) {
-        this.$nextTick(() => {
-          this.form.model.sku[index].product_price = this.ProcessInput(e, {
-            allowDecimal: true,
-            minValue: 0,
-            maxValue: 1000000,
-            maxDecimals: 2,
           });
         });
       },
