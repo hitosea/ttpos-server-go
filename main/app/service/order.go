@@ -3401,6 +3401,12 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 		return nil, errors.New("销售订单不存在")
 	}
 
+	// 取消会员优惠券
+	saleOrder.SetMemberCouponCancel()
+	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
+		return nil, errors.WithMessage(err, "取消销售订单优惠券失败")
+	}
+
 	// 在折扣之前计算会员打折后金额。必须在设置折扣之前获取，否则amount值已经改变了
 	memberDiscountAmount := saleOrder.GetMemberDiscountAmount()
 	// 设置整单折扣率
@@ -8459,6 +8465,12 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 		return nil, errors.WithMessage(err)
 	}
 
+	// 取消会员优惠券
+	saleOrder.SetMemberCouponCancel()
+	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
+		return nil, errors.WithMessage(err, "取消销售订单优惠券失败")
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		// 创建免单原因
 		if len(freeOrderReasons) > 0 {
@@ -9972,7 +9984,7 @@ func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMembe
 	saleOrder.SetMemberDiscountCancel()
 	// 取消会员优惠券
 	saleOrder.SetMemberCouponCancel()
-	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderMemberDiscountCancel(saleOrder.Uuid); err != nil {
+	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
 		return nil, errors.WithMessage(err, "取消销售订单会员优惠券失败")
 	}
 
@@ -10040,7 +10052,7 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 	saleOrder.SetMemberDiscount(*member)
 	// 取消会员优惠券
 	saleOrder.SetMemberCouponCancel()
-	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderMemberDiscountCancel(saleOrder.Uuid); err != nil {
+	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
 		return nil, false, errors.WithMessage(err, "取消销售订单会员优惠券失败")
 	}
 
