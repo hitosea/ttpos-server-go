@@ -45,7 +45,14 @@
           </el-table-column>
           <el-table-column prop="refund_num_updata" :label="$t('退菜数量')">
             <template #default="scope">
-              <el-input-number :min="0" :max="Number(scope.row.total_num)" :placeholder="$t('请输入')" v-model.number="scope.row.refund_num_updata"></el-input-number>
+              <numInput
+                :min="0"
+                :max="Number(scope.row.total_num)"
+                :precision="scope.row.num_type == '1' ? 2 : 0"
+                :placeholder="$t('请输入')"
+                v-model.number="scope.row.refund_num_updata"
+                :controls="true"
+              ></numInput>
             </template>
           </el-table-column>
           <el-table-column :label="$t('退款金额')" align="right">
@@ -332,6 +339,7 @@
                 refund_money: item.consumption_tax_pay_price * Number(item.refund_num), //已退价钱
                 id: item.order_product_id, //id
                 refund_num_updata: 0, //提交退款的数量
+                num_type: item.num_type,
               });
             });
           })
@@ -366,6 +374,7 @@
                 price: item.price, // 商品单价
                 id: item.sale_order_product_uuid, //id
                 refund_num_updata: 0, //提交退款的数量
+                num_type: item.num_type, //数量类型
               });
             });
           })
