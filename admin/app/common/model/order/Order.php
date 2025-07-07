@@ -1495,8 +1495,6 @@ class Order extends BaseModelOrder
         // 改价（直接决定pay_price）
         if ($order['discount_change_price'] > 0 || $order['discount_change_price'] == -1) { // -1 改价为0元
             $order_discount_change_price = $order['discount_change_price'] == -1 ? 0 : $order['discount_change_price'];
-
-            //            $discount_money = $order_price - $order_discount_change_price;    // TODO 不用原价减，先注释
             $change_discount_money = $pay_price - $order_discount_change_price;    // 应付 - 改价的优惠
             $discount_money = $change_discount_money + $discount_money; // 加上之前的优惠
             $pay_price = $order_discount_change_price;

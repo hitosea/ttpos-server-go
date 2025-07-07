@@ -29,7 +29,7 @@
               </el-input>
             </div>
           </el-form-item>
-          <!-- TODO 验证码 -->
+          <!--  验证码 -->
           <el-form-item prop="verifycode" style="line-height: 0px">
             <div class="flex-1 verifycode">
               <div class="left-img-input" style="max-width: 264px; float: left">

@@ -5523,12 +5523,6 @@ class Order extends BaseModelOrder
      */
     public function unlock()
     {
-        // TODO 如果需要自助餐解锁要把锁定时间补偿
-        //        $now = time();
-        //        if ($this->is_buffet && $this->buffet_expired_time != -1 && $this->buffet_expired_time > $now) {
-        //            $fill_time = $now - $this->lock_time;
-        //            $this->buffet_expired_time = $this->buffet_expired_time + $fill_time;
-        //        }
         if ($this->parent_id == 0) {
             $this->is_lock = 0;
             return $this->save();
