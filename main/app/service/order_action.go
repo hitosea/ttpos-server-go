@@ -297,7 +297,11 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
-		selectedMustPlanProducts[product.MustPlanUuid][flavorProductBom.ProductPackageUuid] = product.Num
+		if _, ok := selectedMustPlanProducts[product.MustPlanUuid][flavorProductBom.ProductPackageUuid]; ok {
+			selectedMustPlanProducts[product.MustPlanUuid][flavorProductBom.ProductPackageUuid] += product.Num // 如果已经存在该商品，则累计增加数量
+		} else {
+			selectedMustPlanProducts[product.MustPlanUuid][flavorProductBom.ProductPackageUuid] = product.Num // 如果不存在该商品，则新增
+		}
 	}
 	// 送厨相关
 	{
