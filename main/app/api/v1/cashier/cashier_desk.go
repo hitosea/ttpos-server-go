@@ -1164,7 +1164,7 @@ func (h *DeskHandler) OrderPaymentFinish(c *gin.Context) {
 				return
 			}
 			// 返回结果
-			helper.ErrorWithData(c, constant.CodeCouponInvalid, res, fmt.Errorf("所选优惠券已失效"))
+			helper.ErrorWithData(c, constant.CodeCouponInvalid, res, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), "优惠券信息变化，请重新确认。")))
 			return
 		}
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
