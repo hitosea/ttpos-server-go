@@ -201,6 +201,7 @@ type OrderReturnProduct struct {
 	LocaleName           dto.LocaleResponse `json:"locale_name"`             // 产品名称
 	LocaleAttributeName  dto.LocaleResponse `json:"locale_attribute_name"`   // 属性名称
 	Num                  float64            `json:"num"`                     // 数量。可退货数量=订单商品数量-已退货数量
+	NumType              uint               `json:"num_type"`                // 数量类型 0-整数 1-小数
 	Price                float64            `json:"price"`                   // 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。
 	CanReturnAmount      float64            `json:"can_return_amount"`       // 可退款金额. 可退款金额=订单商品数量*最终单价
 	CurrencyUnit         string             `json:"currency_unit"`           // 货币单位
