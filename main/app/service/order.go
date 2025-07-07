@@ -780,6 +780,9 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 			if len(bill.SaleOrders) > 0 {
 				order := bill.SaleOrders[0]
 				if order.ConsumerUuid > 0 {
+					if order.Member == nil {
+						logger.Logger.Info("member is nil", zap.Any("order", order))
+					}
 					consumerUuids = append(consumerUuids, strconv.FormatUint(uint64(order.Member.ID), 10))
 				}
 				if order.IsFree == 1 {
