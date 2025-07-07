@@ -110,10 +110,10 @@ func (model *MarketingCoupon) IsAvailable(nowTime string) error {
 // 判断优惠券是否过期
 func (model *MarketingCoupon) IsExpire() bool {
 	nowTimestamp := time.Now().Unix()
-	if model.ValidStartTime >= int(nowTimestamp) && int(nowTimestamp) <= model.ValidEndTime {
-		return true
+	if model.ValidStartTime <= int(nowTimestamp) && int(nowTimestamp) <= model.ValidEndTime {
+		return false
 	}
-	return false
+	return true
 }
 
 // 判断优惠券是否已经使用
