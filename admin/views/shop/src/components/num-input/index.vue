@@ -1,5 +1,13 @@
 <template>
-  <el-input :model-value="modelValue" type="text" :placeholder="placeholder" @input="handleInput" :class="width"> </el-input>
+  <div :class="width" class="flex-num-input">
+    <div v-if="controls" class="icon-plus" @click="handlePlus">
+      <el-icon><Plus /></el-icon>
+    </div>
+    <el-input :class="controls ? 'controls-input' : ''" :model-value="modelValue" type="text" :placeholder="placeholder" @input="handleInput"> </el-input>
+    <div v-if="controls" class="icon-minus" @click="handleMinus">
+      <el-icon><Minus /></el-icon>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -30,8 +38,34 @@
         type: Number,
         default: 4,
       },
+      controls: {
+        type: Boolean,
+        default: false,
+      },
     },
     methods: {
+      handleMinus() {
+        let newValue = Number(this.modelValue) - 1;
+        // Round to the specified precision to avoid floating point issues
+        if (this.precision > 0) {
+          const factor = Math.pow(10, this.precision);
+          newValue = Math.round(newValue * factor) / factor;
+        }
+        // Ensure the value doesn't go below min
+        newValue = Math.max(newValue, this.min);
+        this.$emit('update:modelValue', newValue);
+      },
+      handlePlus() {
+        let newValue = Number(this.modelValue) + 1;
+        // Round to the specified precision to avoid floating point issues
+        if (this.precision > 0) {
+          const factor = Math.pow(10, this.precision);
+          newValue = Math.round(newValue * factor) / factor;
+        }
+        // Ensure the value doesn't exceed max
+        newValue = Math.min(newValue, this.max);
+        this.$emit('update:modelValue', newValue);
+      },
       handleInput(value) {
         // 只允许数字和小数点
         let formattedValue = value
@@ -44,6 +78,7 @@
           formattedValue = formattedValue.slice(1);
         }
 
+        console.log(this.precision, 'precision');
         //如果precision为0，
         if (this.precision === 0) {
           formattedValue = formattedValue.replace(/\./g, '');
@@ -56,17 +91,18 @@
             formattedValue = `${integer}.${decimal.slice(0, this.precision)}`;
           }
         }
-
         // 处理最小最大值
         const numValue = parseFloat(formattedValue);
+        console.log(numValue, 'numValue');
         if (!isNaN(numValue)) {
           if (numValue > this.max) {
             formattedValue = this.max.toString();
+            console.log(formattedValue, 'max');
           } else if (numValue < this.min) {
             formattedValue = this.min.toString();
+            console.log(formattedValue, 'min');
           }
         }
-
         // 触发更新
         this.$emit('update:modelValue', formattedValue);
       },
@@ -74,8 +110,43 @@
   };
 </script>
 
-<style scoped>
+<style scoped lang="scss">
   .m-full {
     width: 100%;
+  }
+  .flex-num-input {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+  .icon-plus {
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    border-right: none;
+    border-radius: 4px 0 0 4px;
+  }
+  .icon-minus {
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    border-left: none;
+    border-radius: 0 4px 4px 0;
+  }
+  .controls-input {
+    border-radius: 0 !important;
+    :deep(.el-input__wrapper) {
+      border-radius: 0 !important;
+    }
   }
 </style>
