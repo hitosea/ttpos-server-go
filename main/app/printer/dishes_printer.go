@@ -104,7 +104,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 						RelatedUuid: saleBillUuid,
 						PrinterUuid: printerItem.PrinterUuid,
 						CashierDeviceId: func() string {
-							if printerItem.Printer != nil && printerItem.Printer.IsUsbPrinter() {
+							if printerItem.Printer != nil {
 								return printerItem.Printer.SourceDeviceSn
 							}
 							return ""
@@ -136,7 +136,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 						RelatedUuid: saleBillUuid,
 						PrinterUuid: printerItem.PrinterUuid,
 						CashierDeviceId: func() string {
-							if printerItem.Printer != nil && printerItem.Printer.IsUsbPrinter() {
+							if printerItem.Printer != nil {
 								return printerItem.Printer.SourceDeviceSn
 							}
 							return ""
@@ -168,7 +168,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 							RelatedUuid: saleBillUuid,
 							PrinterUuid: printerItem.PrinterUuid,
 							CashierDeviceId: func() string {
-								if printerItem.Printer != nil && printerItem.Printer.IsUsbPrinter() {
+								if printerItem.Printer != nil {
 									return printerItem.Printer.SourceDeviceSn
 								}
 								return ""
@@ -201,7 +201,7 @@ func (p *PrinterRepoImpl) PrintingDishes(
 					RelatedUuid: saleBillUuid,
 					PrinterUuid: printerItem.PrinterUuid,
 					CashierDeviceId: func() string {
-						if printerItem.Printer != nil && printerItem.Printer.IsUsbPrinter() {
+						if printerItem.Printer != nil {
 							return printerItem.Printer.SourceDeviceSn
 						}
 						return ""
