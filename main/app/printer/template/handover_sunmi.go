@@ -10,6 +10,8 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/shopspring/decimal"
 )
 
 // handoverSunmiTemplate 图片订单打印模板
@@ -105,16 +107,16 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 			[]int{120, pkg.AlignLeft, 0},
 			[]int{0, pkg.AlignRight, 0},
 		)
-		totalPayPrice := float64(0)
+		totalPayPrice := decimal.NewFromFloat(0)
 		for _, income := range businessData.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
 				printer.PrintInColumns(income.Name, fmt.Sprintf("%d", income.OrderNum), t.base.GetPriceAndUnit(income.Amount))
 				printer.LineFeed()
-				totalPayPrice += income.Amount
+				totalPayPrice = totalPayPrice.Add(decimal.NewFromFloat(income.Amount).Round(2))
 			}
 		}
-		if totalPayPrice > 0 {
-			printer.PrintInColumns(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice))
+		if totalPayPrice.GreaterThan(decimal.NewFromFloat(0)) {
+			printer.PrintInColumns(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice.Round(2).InexactFloat64()))
 			printer.LineFeed(1)
 		}
 		// 其他费用
@@ -273,7 +275,7 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed()
 		for _, category := range businessData.CategoryList {
-			printer.PrintInColumns(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices))
+			printer.PrintInColumns(category.Name, t.base.FloatToString(category.SalesNum), t.base.GetPriceAndUnit(category.Prices))
 			printer.LineFeed()
 		}
 		// 汇总
@@ -496,16 +498,16 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 			[]int{120, pkg.AlignLeft, 0},
 			[]int{0, pkg.AlignRight, 0},
 		)
-		totalPayPrice := float64(0)
+		totalPayPrice := decimal.NewFromFloat(0)
 		for _, income := range businessData.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
 				printer.PrintInColumns(income.Name, fmt.Sprintf("%d", income.OrderNum), t.base.GetPriceAndUnit(income.Amount))
 				printer.LineFeed()
-				totalPayPrice += income.Amount
+				totalPayPrice = totalPayPrice.Add(decimal.NewFromFloat(income.Amount).Round(2))
 			}
 		}
-		if totalPayPrice > 0 {
-			printer.PrintInColumns(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice))
+		if totalPayPrice.GreaterThan(decimal.NewFromFloat(0)) {
+			printer.PrintInColumns(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice.Round(2).InexactFloat64()))
 			printer.LineFeed(1)
 		}
 		// 高峰时间
@@ -544,7 +546,7 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(1)
 		for _, category := range businessData.CategoryList {
-			printer.PrintInColumns(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices))
+			printer.PrintInColumns(category.Name, t.base.FloatToString(category.SalesNum), t.base.GetPriceAndUnit(category.Prices))
 			printer.LineFeed(1)
 		}
 		// 汇总

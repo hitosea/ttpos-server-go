@@ -789,7 +789,7 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 		printer.SetCharacterSize(2, 2)
 		productNum := utils.IfString(tmp == 2, "-", "x") + t.base.FloatToString(product.TotalNum)
 		if len(productNum) >= 3 {
-			w := 20 - (len(productNum) - 4)
+			w := 20 - (len(productNum) - 3)
 			printer.AppendText(t.base.PrintText(
 				productName, "", productNum,
 				w, w, 0, 0, 2,

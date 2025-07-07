@@ -886,7 +886,7 @@ func (model *SaleOrderProduct) StatusValue() int {
 // 获取该订单商品的材料组成及用量。
 // 如一个珍珠奶茶加料珍珠，则计算成分珍珠、奶、茶等各个原材料等用量
 func (model *SaleOrderProduct) GetMaterialBom() []*ProductionOrderMaterial {
-	return nil // todo
+	return nil // TODO 植焕
 }
 
 // 获取商品的名称。格式：`商品名 (规格名)`
@@ -990,10 +990,14 @@ func getLocaleResponse(nameList []dto.LocaleResponse, div string) dto.LocaleResp
 	return attributeResultNames
 }
 
-func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string) string {
+func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string, showSku ...bool) string {
 	var flavorName string
 	var sauceNames []string
 	var attributeNames []string
+	isShowSku := true
+	if len(showSku) > 0 {
+		isShowSku = showSku[0]
+	}
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
 		if saleOrderProductBom.IsFlavor() {
 			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(lang)
@@ -1009,10 +1013,14 @@ func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string) string {
 	}
 	// 根据规格生成字符串。`(规格；属性；小料)`
 	nameList := make([]string, 0)
-	nameList = append(nameList, flavorName)
-	if len(attributeNames) > 0 {
-		nameList = append(nameList, attributeNames...)
+	// 是否显示sku
+	if isShowSku {
+		nameList = append(nameList, flavorName)
+		if len(attributeNames) > 0 {
+			nameList = append(nameList, attributeNames...)
+		}
 	}
+	// 小料
 	if len(sauceNames) > 0 {
 		nameList = append(nameList, sauceNames...)
 	}

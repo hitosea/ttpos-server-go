@@ -458,7 +458,7 @@ func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
 	// 获取第一个销售订单
 	saleOrder := model.SaleOrders[0]
 	// 获取未下单的h5订单商品
-	h5OrderProducts := saleOrder.GetH5CartProductList() // todo 为什么会有已下单的h5订单商品？
+	h5OrderProducts := saleOrder.GetH5CartProductList() // FIXME 为什么会有已下单的h5订单商品？
 	// 过滤掉已下单的h5订单商品
 	newH5OrderProducts := make([]*SaleOrderProduct, 0)
 	for _, h5OrderProduct := range h5OrderProducts {

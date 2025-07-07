@@ -17199,7 +17199,7 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "total_delivery_order_amount": {
-                    "description": "ToDo 外送数据来源",
+                    "description": "TODO 外送数据来源",
                     "type": "number"
                 },
                 "total_delivery_order_num": {
@@ -23009,6 +23009,10 @@ const docTemplate = `{
                 "num": {
                     "description": "数量。可退货数量=订单商品数量-已退货数量",
                     "type": "number"
+                },
+                "num_type": {
+                    "description": "数量类型 0-整数 1-小数",
+                    "type": "integer"
                 },
                 "price": {
                     "description": "最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。",

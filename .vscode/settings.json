@@ -6,29 +6,28 @@
       "**/node_modules/**": true,
       "**/vendor": true
     },
-    "dart.previewFlutterUiGuides": true,
+
+    // ===== Todo Tree 插件配置 =====
     "todo-tree.general.statusBar": "total",
-    "todo-tree.general.tags": [
-      "BUG",
-      "HACK",
-      "FIXME",
-      "TODO",
-      "XXX",
-      "[ ]",
-      "[x]",
-      "NOTE",
-      "todo",
-      "ToDo",
-      "test:",
-      "TEST:"
-    ],
+    "todo-tree.general.automaticGitRefreshInterval": 5,
+    "todo-tree.general.periodicRefreshInterval": 1,
+    "todo-tree.general.showActivityBarBadge": true,
+    "todo-tree.general.tags": ["BUG", "NOTE", "FIXME", "TODO", "HACK"],
     "todo-tree.highlights.useColourScheme": true,
     "todo-tree.tree.expanded": true,
     "todo-tree.tree.groupedByTag": true,
     "todo-tree.tree.showCountsInTree": true,
+    "todo-tree.tree.tagsOnly": false,
+    "todo-tree.tree.disableCompactFolders": true,
+    "todo-tree.tree.scanMode": "workspace only",
+    "todo-tree.tree.buttons.export": true,
+
+    // ===== 文件排除 =====
     "files.exclude": {
       "**/trans/**/*test.go": true
     },
+
+    // ===== 拼写检查 =====
     "cSpell.words": [
       "ttpos",
       "zhtw"

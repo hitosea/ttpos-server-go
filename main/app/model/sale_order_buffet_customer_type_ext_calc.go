@@ -152,7 +152,7 @@ func (model *SaleOrderBuffetCustomerType) calcProductPriceNoneTax(price float64,
 		// （1+消费税税率）
 		percent := decimal.NewFromFloat(1).Add(decimal.NewFromFloat(model.TaxRate))
 		// 商品原价/（1+消费税税率）
-		// todo 不能用这种方式计算未含税原价，因为会因为四舍五入导致计算错误。
+		// TODO 不能用这种方式计算未含税原价，因为会因为四舍五入导致计算错误。
 		// 未含税原价 = 商品原价- 商品税费
 		productPriceNoneTax := decimal.NewFromFloat(price).Div(percent)
 		return productPriceNoneTax.Round(2).InexactFloat64()

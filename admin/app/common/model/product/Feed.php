@@ -126,23 +126,6 @@ class Feed extends BaseModel
     public function getAllList($shop_supplier_id)
     {
         return $this->order(['create_time' => 'desc'])->select();
-        // todo 兼容
-        // $prefix = env('DB_PREFIX');
-        // return $this->alias('feed')
-        //     ->with(['material'])
-        //     ->field('feed.*')
-        //     ->field("IF(pf.feed_count IS NULL, 0, 1) AS is_used")
-        //     ->field("IFNULL(pf.product_ids, '') AS product_ids")
-        //     ->leftJoin("
-        //     (
-        //         SELECT pf.feed_id, GROUP_CONCAT(DISTINCT product.product_id) AS product_ids, COUNT(DISTINCT pf.feed_id) AS feed_count
-        //         FROM {$prefix}product_feed pf
-        //         LEFT JOIN {$prefix}product_package product ON pf.product_id = product.product_id
-        //         WHERE product.delete_time = 0
-        //         GROUP BY pf.feed_id
-        //     ) pf
-        // ", 'feed.feed_id = pf.feed_id')
-        //     ->order(['sort' => 'asc', 'create_time' => 'desc'])->select();
     }
 
     /**

@@ -10,8 +10,8 @@
     <!--减库存方式-->
     <el-form-item for="no_click" :label="$t('库存计算方式：')" v-if="form.model.type == 10">
       <el-radio-group v-model="form.model.deduct_stock_type">
-        <el-radio :label="10">{{ $t('下单减库存') }}</el-radio>
-        <el-radio :label="20">{{ $t('付款减库存') }}</el-radio>
+        <el-radio :value="10">{{ $t('下单减库存') }}</el-radio>
+        <el-radio :value="20">{{ $t('付款减库存') }}</el-radio>
       </el-radio-group>
     </el-form-item>
 

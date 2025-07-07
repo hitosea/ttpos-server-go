@@ -692,7 +692,7 @@ class Order extends BaseModelOrder
             'free_order_price' => $data['total_free_order_price'],
             'free_order_num' => $data['total_free_order_num'],
             'recharge_amount' => $data['member_data']['recharge_amount'],
-            // ToDo 外送数据来源
+            // TODO 外送数据来源
             'delivery_order_amount' => 0, // 外送订单总额
             'delivery_order_revenue' => 0, // 外送营收
             'delivery_order_refund_amount' => 0, // 外送订单退款
@@ -1495,8 +1495,6 @@ class Order extends BaseModelOrder
         // 改价（直接决定pay_price）
         if ($order['discount_change_price'] > 0 || $order['discount_change_price'] == -1) { // -1 改价为0元
             $order_discount_change_price = $order['discount_change_price'] == -1 ? 0 : $order['discount_change_price'];
-
-            //            $discount_money = $order_price - $order_discount_change_price;    // TODO 不用原价减，先注释
             $change_discount_money = $pay_price - $order_discount_change_price;    // 应付 - 改价的优惠
             $discount_money = $change_discount_money + $discount_money; // 加上之前的优惠
             $pay_price = $order_discount_change_price;
@@ -5281,12 +5279,6 @@ class Order extends BaseModelOrder
      */
     public function unlock()
     {
-        // TODO 如果需要自助餐解锁要把锁定时间补偿
-        //        $now = time();
-        //        if ($this->is_buffet && $this->buffet_expired_time != -1 && $this->buffet_expired_time > $now) {
-        //            $fill_time = $now - $this->lock_time;
-        //            $this->buffet_expired_time = $this->buffet_expired_time + $fill_time;
-        //        }
         if ($this->parent_id == 0) {
             $this->is_lock = 0;
             return $this->save();
@@ -5853,7 +5845,7 @@ class Order extends BaseModelOrder
             $order_id = 0;
             $list = (new ProductModel)->getBaseList(['order_id' => $order_id], false, array_keys($scheme_must_page_product_ids));
             $buffetProductArr = Order::getOrderBuffetProductArr($order_id);
-            $productList = Order::handleBuffetProductIndex($list, $buffetProductArr, $meal_num); // TODO
+            $productList = Order::handleBuffetProductIndex($list, $buffetProductArr, $meal_num);
         }
         $param['list_rows'] = 100;
         $model = new AssistantProductModel;
