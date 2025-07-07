@@ -2,7 +2,7 @@
   <!--
       	描述：桌位管理
       -->
-  <div class="common-seach-wrap">
+  <div class="common-search-wrap">
     <!--会员管理-->
     <user v-if="activeName == 'user'"></user>
     <!--等级管理-->

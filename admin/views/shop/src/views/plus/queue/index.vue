@@ -2,18 +2,18 @@
   <!--
       	描述：桌位管理
       -->
-  <div class="common-seach-wrap">
+  <div class="common-search-wrap">
     <!--排队取号-->
-    <record v-if="activeName=='record'"></record>
+    <record v-if="activeName == 'record'"></record>
     <!--桌号类型-->
-    <tables v-if="activeName=='tables'"></tables>
+    <tables v-if="activeName == 'tables'"></tables>
     <!--排队设置-->
-    <setting v-if="activeName=='setting'"></setting>
+    <setting v-if="activeName == 'setting'"></setting>
   </div>
 </template>
 <script>
   import { reactive, toRefs, defineComponent } from 'vue';
-  import { useUserStore } from "@/store";
+  import { useUserStore } from '@/store';
   import record from './record/index.vue';
   import tables from './table/index.vue';
   import setting from './setting/index.vue';
@@ -24,12 +24,12 @@
       setting,
     },
     setup() {
-     const { bus_emit, bus_off, bus_on } = useUserStore();
-    const state = reactive({
- 		  bus_emit,
-      bus_off,
-      bus_on,
-  /*是否加载完成*/
+      const { bus_emit, bus_off, bus_on } = useUserStore();
+      const state = reactive({
+        bus_emit,
+        bus_off,
+        bus_on,
+        /*是否加载完成*/
         loading: true,
         form: {},
         /*参数*/
@@ -37,35 +37,35 @@
         /*当前选中*/
         activeName: '',
         /*切换数组原始数据*/
-        sourceList: [{
+        sourceList: [
+          {
             key: 'record',
             value: '取号记录',
-            path: '/plus/queue/record/index'
+            path: '/plus/queue/record/index',
           },
           {
-           key: 'tables',
-           value: '桌号管理',
-           path: '/plus/queue/table/index'
+            key: 'tables',
+            value: '桌号管理',
+            path: '/plus/queue/table/index',
           },
           {
-           key: 'setting',
-           value: '取号设置',
-           path: '/plus/queue/setting/index'
+            key: 'setting',
+            value: '取号设置',
+            path: '/plus/queue/setting/index',
           },
-
         ],
         /*权限筛选后的数据*/
         tabList: [],
-        paramsFlag: false
-})
+        paramsFlag: false,
+      });
       return {
-       ...toRefs(state),
-     };
+        ...toRefs(state),
+      };
     },
     created() {
       this.tabList = this.authFilter();
-      if(this.tabList.length>0){
-        this.activeName=this.tabList[0].key;
+      if (this.tabList.length > 0) {
+        this.activeName = this.tabList[0].key;
       }
 
       if (this.$route.query.type != null) {
@@ -73,27 +73,23 @@
       }
 
       /*监听传插件的值*/
-      this.bus_on('activeValue', res =>
-      {
+      this.bus_on('activeValue', (res) => {
         this.activeName = res;
       });
       //发送类别切换
       let params = {
-          active: this.activeName,
-          list: this.tabList,
-          tab_type: 'queuemanage',
-      }
+        active: this.activeName,
+        list: this.tabList,
+        tab_type: 'queuemanage',
+      };
       this.bus_emit('tabData', params);
-
-
     },
     beforeUnmount() {
-     //发送类别切换
-     this.bus_emit('tabData', { active: null, tab_type:'queuemanage',list: [] });
-    this.bus_off('activeValue');
+      //发送类别切换
+      this.bus_emit('tabData', { active: null, tab_type: 'queuemanage', list: [] });
+      this.bus_off('activeValue');
     },
     methods: {
-    
       /*权限过滤*/
       authFilter() {
         let list = [];
@@ -105,8 +101,7 @@
         }
         return list;
       },
-
-    }
+    },
   });
 </script>
 

@@ -110,7 +110,7 @@
     <Edit v-if="open_edit" :open_edit="open_edit" :editform="categoryModel" :type="type_list" :area_list="area_list" @closeDialog="closeDialogFunc($event, 'edit')"></Edit>
 
     <Qrcode :open="isqrcode" :code_id="code_id" :code_name="code_name" @close="closeQrcode"></Qrcode>
-    <DownloadQrcode v-if="is_open_batch_download_qrcode" :open="is_open_batch_download_qrcode" :Dtype="Dtype" @close="closeDownloadQrcode"> </DownloadQrcode>
+    <DownloadQrcode v-if="is_open_batch_download_qrcode" :open="is_open_batch_download_qrcode" :DType="DType" @close="closeDownloadQrcode"> </DownloadQrcode>
   </div>
 </template>
 
@@ -170,7 +170,7 @@
         is_open_scan: is_open_scan,
 
         is_open_batch_download_qrcode: false,
-        Dtype: '',
+        DType: '',
         app_id: app_id,
       };
     },
@@ -235,11 +235,11 @@
 
       batchDownloadQrcode(e) {
         this.is_open_batch_download_qrcode = true;
-        this.Dtype = e;
+        this.DType = e;
       },
       closeDownloadQrcode(e) {
         this.is_open_batch_download_qrcode = false;
-        this.Dtype = '';
+        this.DType = '';
         if (e) {
           this.getData();
         }

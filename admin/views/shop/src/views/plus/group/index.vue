@@ -2,18 +2,18 @@
   <!--
       	描述：商品-店内商品
       -->
-  <div class="common-seach-wrap">
+  <div class="common-search-wrap">
     <!--团购订单-->
-    <order v-if="activeName=='order'"></order>
+    <order v-if="activeName == 'order'"></order>
     <!--团购管理-->
-    <groupIndex v-if="activeName=='group'"></groupIndex>
+    <groupIndex v-if="activeName == 'group'"></groupIndex>
     <!--团购设置-->
-    <setting v-if="activeName=='setting'"></setting>
+    <setting v-if="activeName == 'setting'"></setting>
   </div>
 </template>
 <script>
   import { reactive, toRefs, defineComponent } from 'vue';
-  import { useUserStore } from "@/store";
+  import { useUserStore } from '@/store';
   import setting from './setting/Index.vue';
   import groupIndex from './group/Index.vue';
   import order from './order/Index.vue';
@@ -29,7 +29,7 @@
         bus_emit,
         bus_off,
         bus_on,
- /*是否加载完成*/
+        /*是否加载完成*/
         loading: true,
         form: {},
         /*参数*/
@@ -37,38 +37,36 @@
         /*当前选中*/
         activeName: '',
         /*切换数组原始数据*/
-      sourceList: [
-        {
+        sourceList: [
+          {
             key: 'order',
             value: '团购订单',
-            path:'/plus/group/order/index'
-        },
-        {
+            path: '/plus/group/order/index',
+          },
+          {
             key: 'group',
             value: '团购管理',
-            path:'/plus/group/group/index'
-        },
-        {
+            path: '/plus/group/group/index',
+          },
+          {
             key: 'setting',
             value: '团购设置',
-            path:'/plus/group/setting/index'
-        },
-      ],
+            path: '/plus/group/setting/index',
+          },
+        ],
         /*权限筛选后的数据*/
-        tabList:[],
-        paramsFlag: false
-      })
-       return {
+        tabList: [],
+        paramsFlag: false,
+      });
+      return {
         ...toRefs(state),
       };
-
-       
     },
 
     created() {
       this.tabList = this.authFilter();
-      if(this.tabList.length>0){
-        this.activeName=this.tabList[0].key;
+      if (this.tabList.length > 0) {
+        this.activeName = this.tabList[0].key;
       }
 
       if (this.$route.query.type != null) {
@@ -76,24 +74,21 @@
       }
 
       /*监听传插件的值*/
-      this.bus_on('activeValue', res =>
-      {
+      this.bus_on('activeValue', (res) => {
         this.activeName = res;
       });
       //发送类别切换
       let params = {
-          active: this.activeName,
-          list: this.tabList,
-          tab_type: 'plusgroup',
-      }
+        active: this.activeName,
+        list: this.tabList,
+        tab_type: 'plusgroup',
+      };
       this.bus_emit('tabData', params);
-
-
     },
     beforeUnmount() {
-     //发送类别切换
-    this.bus_emit('tabData', { active: null, tab_type:'plusgroup',list: [] });
-    this.bus_off('activeValue');
+      //发送类别切换
+      this.bus_emit('tabData', { active: null, tab_type: 'plusgroup', list: [] });
+      this.bus_off('activeValue');
     },
     methods: {
       /*权限过滤*/
@@ -107,8 +102,7 @@
         }
         return list;
       },
-
-    }
+    },
   });
 </script>
 

@@ -13,7 +13,7 @@ type SaleOrderOperationRecord struct {
 	H5OrderUuid   uint64 `gorm:"column:h5_order_uuid;type:bigint(20) unsigned;default:0;comment:h5订单Uuid;NOT NULL" json:"h5_order_uuid"`
 	OperatorUuid  uint64 `gorm:"column:operator_uuid;type:bigint(20) unsigned;default:0;comment:操作员ID;NOT NULL" json:"operator_uuid"`
 
-	dutyNo string `gorm:"-" json:"duty_no,omitempty"`
+	dutyNo string `gorm:"-"`
 
 	Operator Staff `gorm:"foreignKey:OperatorUuid;references:uuid"`
 }

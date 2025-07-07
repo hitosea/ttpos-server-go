@@ -2,7 +2,7 @@
   <!--
       	描述：营销管理
       -->
-  <div class="common-seach-wrap">
+  <div class="common-search-wrap">
     <!--优惠券管理-->
     <manage v-if="activeName == 'manage'"></manage>
     <!--优惠券记录-->

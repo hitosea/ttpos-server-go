@@ -2,16 +2,16 @@
   <!--
       	描述：收银台管理
       -->
-  <div class="common-seach-wrap">
+  <div class="common-search-wrap">
     <!--收银员-->
-    <user v-if="activeName=='user'"></user>
+    <user v-if="activeName == 'user'"></user>
     <!--设置-->
-    <setting v-if="activeName=='setting'"></setting>
+    <setting v-if="activeName == 'setting'"></setting>
   </div>
 </template>
 <script>
   import { reactive, toRefs, defineComponent } from 'vue';
-  import { useUserStore } from "@/store";
+  import { useUserStore } from '@/store';
   import user from './user/index.vue';
   import setting from './setting/index.vue';
   export default defineComponent({
@@ -22,7 +22,7 @@
     setup() {
       const { bus_emit, bus_off, bus_on } = useUserStore();
       const state = reactive({
-         bus_emit,
+        bus_emit,
         bus_off,
         bus_on,
 
@@ -36,30 +36,28 @@
         /*切换数组原始数据*/
         sourceList: [
           {
-           key: 'user',
-           value: '收银员',
-           path: '/plus/cashier/user/index'
+            key: 'user',
+            value: '收银员',
+            path: '/plus/cashier/user/index',
           },
           {
-           key: 'setting',
-           value: '基础设置',
-           path: '/plus/cashier/setting/index'
+            key: 'setting',
+            value: '基础设置',
+            path: '/plus/cashier/setting/index',
           },
-          
         ],
         /*权限筛选后的数据*/
         tabList: [],
-        paramsFlag: false
-      })
+        paramsFlag: false,
+      });
       return {
         ...toRefs(state),
       };
-
     },
     created() {
-       this.tabList = this.authFilter();
-      if(this.tabList.length>0){
-        this.activeName=this.tabList[0].key;
+      this.tabList = this.authFilter();
+      if (this.tabList.length > 0) {
+        this.activeName = this.tabList[0].key;
       }
 
       if (this.$route.query.type != null) {
@@ -67,22 +65,21 @@
       }
 
       /*监听传插件的值*/
-      this.bus_on('activeValue', res =>
-      {
+      this.bus_on('activeValue', (res) => {
         this.activeName = res;
       });
       //发送类别切换
       let params = {
-          active: this.activeName,
-          list: this.tabList,
-          tab_type: 'cashier',
-      }
+        active: this.activeName,
+        list: this.tabList,
+        tab_type: 'cashier',
+      };
       this.bus_emit('tabData', params);
     },
     beforeUnmount() {
-     //发送类别切换
-     this.bus_emit('tabData', { active: null, tab_type:'cashier',list: [] });
-     this.bus_off('activeValue');
+      //发送类别切换
+      this.bus_emit('tabData', { active: null, tab_type: 'cashier', list: [] });
+      this.bus_off('activeValue');
     },
     methods: {
       /*权限过滤*/
@@ -96,8 +93,7 @@
         }
         return list;
       },
-
-    }
+    },
   });
 </script>
 

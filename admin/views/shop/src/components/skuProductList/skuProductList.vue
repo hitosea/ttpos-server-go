@@ -1,6 +1,6 @@
 <template>
   <el-dialog :title="$t('选择商品')" width="80%" v-model="dialogVisible" @close="dialogFormVisible" append-to-body :close-on-click-modal="false" :close-on-press-escape="false">
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('商品类型')">
           <a-select size="small" v-model:value="searchForm.material_type" clearable :placeholder="$t('全部商品')">
@@ -364,7 +364,7 @@
   };
 </script>
 <style lang="scss" scoped>
-  .common-seach-wrap {
+  .common-search-wrap {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0;

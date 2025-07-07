@@ -79,7 +79,7 @@
                 },
               ]"
             >
-              <numInput :min="0" :max="100" :precision="2" v-model:valueData="item.tax_rate" :value="item.tax_rate" :placeholder="$t('请输入税率')"></numInput>
+              <numInput :min="0" :max="100" :precision="2" v-model="item.tax_rate" :placeholder="$t('请输入税率')"></numInput>
             </el-form-item>
             <span class="span-p">%</span>
             <el-icon class="delete-icon" :class="unDelete ? 'delete-icon-none' : ''" @click="handleDelete(index)">
