@@ -6903,6 +6903,7 @@ func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint
 	for _, coupon := range coupons {
 		if coupon.Uuid == selectedCouponUuid {
 			coupon.IsSelected = true
+			coupon.IsAvailable = true // 被选择的优惠券即使不在使用时段内也应该可以操作
 			break
 		}
 	}
@@ -8142,6 +8143,8 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	// 记录会员余额
 	saleOrder.SetMemberBalance()
 
+	needCancelCoupon := false // 是否需要取消优惠券
+
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db)
 		if cashPaymentOrder != nil {
@@ -8213,10 +8216,18 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 		lock.NewSystemLock().LockUuid(constant.LockNameActivityConsumption)
 		defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
 		if err := s.VerifyCoupon(ctx, saleOrder, db); err != nil {
+			needCancelCoupon = true
 			return errors.WithMessage(err)
 		}
 		return nil
 	}); err != nil {
+		if needCancelCoupon {
+			// 取消会员优惠券
+			saleOrder.SetMemberCouponCancel()
+			if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
+				return nil, errors.WithMessage(err, "取消销售订单会员优惠券失败")
+			}
+		}
 		return nil, errors.WithMessage(err)
 	}
 
