@@ -81,7 +81,7 @@ const processInput = (value, options = {}) => {
   const { allowDecimal = false, maxValue = 100, minValue = 0, maxDecimals = 0 } = options;
 
   // 只允许输入数字和小数点
-  let processed = value.replace(allowDecimal ? /[^0-9.]/g : /[^0-9]/g, '');
+  let processed = value.toString().replace(allowDecimal ? /[^0-9.]/g : /[^0-9]/g, '');
 
   // 处理以0开头的数字
   if (processed.length > 1 && processed.startsWith('0') && !processed.startsWith('0.')) {

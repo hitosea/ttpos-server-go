@@ -53,15 +53,7 @@
           <el-table-column v-if="baseSale == '1'" :label="$t('采购单价')" minWidth="140">
             <template #default="scope">
               <el-form-item for="no_click" label="" style="margin-bottom: 0">
-                <el-input-number
-                  type="number"
-                  :placeholder="$t('请输入采购单价')"
-                  size="small"
-                  :min="0"
-                  :max="1000000"
-                  :controls="false"
-                  v-model="scope.row.purchase_price"
-                ></el-input-number>
+                <el-input :placeholder="$t('请输入采购单价')" @input="(e) => handleChangePurchasePrice(e, scope.$index)" v-model="scope.row.purchase_price"></el-input>
               </el-form-item>
             </template>
           </el-table-column>
@@ -75,23 +67,19 @@
                 :rules="[
                   {
                     validator: () => {
-                      return typeof scope.row.stock_num == 'number' && scope.row.stock_num >= 0 ? true : false;
+                      return scope.row.stock_num ? true : false;
                     },
                     message: $t('请输入库存'),
                     trigger: 'change',
                   },
                 ]"
               >
-                <el-input-number
-                  type="number"
+                <el-input
                   :disabled="scope.row.material.length > 0"
                   :placeholder="$t('请输入库存')"
-                  size="small"
-                  :min="0"
-                  :max="99999999"
-                  :controls="false"
+                  @input="(e) => handleChangeStockNum(e, scope.$index)"
                   v-model="scope.row.stock_num"
-                ></el-input-number>
+                ></el-input>
               </el-form-item>
             </template>
           </el-table-column>
@@ -144,21 +132,14 @@
                 :rules="[
                   {
                     validator: () => {
-                      return typeof scope.row.product_price == 'number' && scope.row.product_price >= 0 ? true : false;
+                      return scope.row.product_price ? true : false;
                     },
                     message: $t('请输入商品价格'),
+                    trigger: 'change',
                   },
                 ]"
               >
-                <el-input-number
-                  type="number"
-                  :placeholder="$t('请输入商品价格')"
-                  size="small"
-                  :min="0"
-                  :max="1000000"
-                  :controls="false"
-                  v-model="scope.row.product_price"
-                ></el-input-number>
+                <el-input :placeholder="$t('请输入商品价格')" @input="(e) => handleChangeProductPrice(e, scope.$index)" v-model="scope.row.product_price"></el-input>
               </el-form-item>
             </template>
           </el-table-column>
@@ -228,6 +209,7 @@
   import { useUserStore } from '@/store';
   import Type from './Type.vue';
   import Add from '../../../../../expand/spec/add.vue';
+  import { ProcessInput } from '@/utils/formatPrice.js';
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
   const baseSale = supplier.value?.sale_stock || 0;
@@ -248,6 +230,7 @@
         languageObj[item.key] = [];
       });
       return {
+        ProcessInput,
         languageList: languageList,
         languageKey: languageKey,
         restaurants: [],
@@ -295,10 +278,10 @@
 
           // 用材料的库存来计算这个规格的库存
           (val.model.sku || []).map((item, index) => {
-            //无材料的时候库存取整
-            if ((item.material || []).length == 0) {
-              this.form.model.sku[index].stock_num = Number(String(item.stock_num).replace(/(\.\d{0,0})\d*/, '$1'));
-            }
+            //无材料的时候库存取整；2025年07月07日14:22:32；2.3.0 - 商家后台/收银机 -小计商品下单数量：50.5 - 库存/销量未记录为：50.5
+            // if ((item.material || []).length == 0) {
+            //   this.form.model.sku[index].stock_num = Number(String(item.stock_num).replace(/(\.\d{0,0})\d*/, '$1'));
+            // }
 
             //处理条形码
             this.$nextTick(() => {
@@ -447,6 +430,39 @@
             if (items[key]) {
               this.form.model.sku[index].spec_name[item.key] = items[key];
             }
+          });
+        });
+      },
+
+      handleChangePurchasePrice(e, index) {
+        this.$nextTick(() => {
+          this.form.model.sku[index].purchase_price = this.ProcessInput(e, {
+            allowDecimal: true,
+            minValue: 0,
+            maxValue: 1000000,
+            maxDecimals: 2,
+          });
+        });
+      },
+
+      handleChangeStockNum(e, index) {
+        this.$nextTick(() => {
+          this.form.model.sku[index].stock_num = this.ProcessInput(e, {
+            allowDecimal: true,
+            minValue: 0,
+            maxValue: 99999999,
+            maxDecimals: 4,
+          });
+        });
+      },
+
+      handleChangeProductPrice(e, index) {
+        this.$nextTick(() => {
+          this.form.model.sku[index].product_price = this.ProcessInput(e, {
+            allowDecimal: true,
+            minValue: 0,
+            maxValue: 1000000,
+            maxDecimals: 2,
           });
         });
       },
