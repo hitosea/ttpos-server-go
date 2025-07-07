@@ -7,7 +7,7 @@
         <!-- 退款类型 -->
         <el-form-item for="no_click" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.refund_type">
-            <el-radio label="1">{{ $t('整单退款') }}</el-radio>
+            <el-radio value="1">{{ $t('整单退款') }}</el-radio>
             <!-- <el-radio label="2">{{ $t('部分退款') }}</el-radio> -->
           </el-radio-group>
         </el-form-item>
