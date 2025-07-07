@@ -451,7 +451,7 @@
             allowDecimal: true,
             minValue: 0,
             maxValue: 99999999,
-            maxDecimals: 4,
+            maxDecimals: 2,
           });
         });
       },

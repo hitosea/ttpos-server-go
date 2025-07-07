@@ -4,8 +4,8 @@
       <el-form size="small" ref="form" :model="form" label-position="top">
         <el-form-item for="no_click" :label="$t('自助餐剩余时长颜色：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_remain_color">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
 
@@ -33,8 +33,8 @@
 
         <el-form-item for="no_click" :label="$t('下单校验高级密码')">
           <el-radio-group v-model="form.is_check_order">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
 
@@ -54,8 +54,8 @@
 
         <el-form-item for="no_click" :label="$t('自动锁屏')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_auto_lock_screen">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item for="no_click" v-if="form.is_auto_lock_screen == '1'" label="" prop="auto_lock_screen" :rules="[{ required: true, message: '' }]">
@@ -68,7 +68,7 @@
 
         <el-form-item for="no_click" :label="$t('常用语言')" prop="language" :rules="[{ required: true, message: $t('请选择常用语言') }]">
           <el-checkbox-group v-model="form.language">
-            <el-checkbox v-for="item in languageList" v-show="item.key" :key="item.key" :label="item.key" :disabled="form.language.length == 1 && form.language.includes(item.key)">
+            <el-checkbox v-for="item in languageList" v-show="item.key" :key="item.key" :value="item.key" :disabled="form.language.length == 1 && form.language.includes(item.key)">
               {{ item.value }}
             </el-checkbox>
           </el-checkbox-group>
