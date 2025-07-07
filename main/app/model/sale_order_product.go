@@ -277,13 +277,13 @@ func (model *SaleOrderProduct) GetReturnPrice() float64 {
 	if model.GetReturnNum() == 0 {
 		return 0
 	}
-	returnPrice := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromUint64(uint64(model.GetReturnNum()))).Truncate(3).Round(2).InexactFloat64()
+	returnPrice := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromFloat(model.GetReturnNum())).Truncate(3).Round(2).InexactFloat64()
 	return returnPrice
 }
 
 // GetCanReturnPrice 获取销售订单商品的可退货金额. 可退货金额=订单商品金额-已退货金额
 func (model *SaleOrderProduct) GetCanReturnPrice() float64 {
-	return decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromUint64(uint64(model.GetCanReturnNum()))).Truncate(3).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromFloat(model.GetCanReturnNum())).Truncate(3).Round(2).InexactFloat64()
 }
 
 func (model *SaleOrderProduct) IsCurrentDeskProduct() bool {
