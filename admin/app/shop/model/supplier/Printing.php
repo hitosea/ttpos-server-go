@@ -114,20 +114,27 @@ class Printing extends PrintingModel
     /**
      * 修改
      */
-    public function edit($data)
+    public function edit($data, $index = 0)
     {
         $detail = $this->where('name', '=', $data['name'])->where('id', '<>', $this['id'])->find();
         if ($detail) {
             $this->error = '名称已存在';
             return false;
         }
+  
         // 开启事务
         $this->startTrans();
         try {
             // 删除
             $this['printingItem']->delete();
-            $this['printingProductItem']->delete();
             $this['printingRegion']->delete();
+
+            // 物理删除打印的商品
+            $this->printingProductItem()->withTrashed()->chunk(500, function ($items) {
+                foreach ($items as $item) {
+                    $item->force(true)->delete();
+                }
+            });
 
             // 添加商品打印详情
             $itemList = [];
@@ -177,10 +184,18 @@ class Printing extends PrintingModel
             $this->commit();
             return true;
         } catch (\Exception $th) {
+            $this->rollback();
             trace($th->getMessage());
             trace($th->getTraceAsString()); 
+            // 
+            if (strpos($th->getMessage(), 'Duplicate entry') !== false) {
+                if ($index > 10) {
+                    $this->error = "更新失败";
+                    return false;
+                }
+                return $this->edit($data, $index + 1);
+            }
             $this->error = "更新失败";
-            $this->rollback();
             return false;
         }
     }
