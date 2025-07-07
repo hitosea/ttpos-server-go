@@ -459,7 +459,7 @@ func (p *printerTemplate) MergeSaleOrderBuffetDelayProducts(saleOrder *model.Sal
 }
 
 // 合并销售订单商品数据
-func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder) ([]MergeSaleOrderProduct, float64) {
+func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder, isShowSku bool) ([]MergeSaleOrderProduct, float64) {
 	productNum := decimal.NewFromFloat(0)
 	productMap := make(map[string]*MergeSaleOrderProduct)
 	products := make([]MergeSaleOrderProduct, 0)
@@ -483,8 +483,11 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder) ([]M
 			productTotalPrice = 0
 		}
 		// 商品名称
-		productAttr := item.GetAttributeNamesByLang(p.Lang)
-		productName := gift + item.MultiLanguageName.GetNameByLang(p.Lang) + "\n(" + productAttr + ")"
+		productAttr := item.GetAttributeNamesByLang(p.Lang, isShowSku)
+		productName := gift + item.MultiLanguageName.GetNameByLang(p.Lang)
+		if productAttr != "" {
+			productName = productName + "\n(" + productAttr + ")"
+		}
 		// 按产品名称分组累加
 		key := fmt.Sprintf("%s(%v)(%v)", productName, productPrice, item.ProductPackageUuid)
 		if _, exists := productMap[key]; exists {

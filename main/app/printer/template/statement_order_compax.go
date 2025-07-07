@@ -65,7 +65,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567)
-	if temp != 3 {
+	if temp != 3 && temp != 4 {
 		printer.SetAlignment(pkg.AlignLeft)
 		if printType == constant.PrinterTemplateInvoice {
 			printer.AppendText(t.base.Translate("发票"))
@@ -146,7 +146,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.AppendText(t.base.PrintText(t.base.Translate("收银员"), "", saleOrder.CashierName, width))
 		printer.LineFeed()
 		printer.LineFeed()
-	} else if temp == 3 {
+	} else if temp == 3 || temp == 4 {
 		//
 		printer.SetCharacterSize(2, 2)
 		printer.SetPrintModes(true, true, false)
@@ -215,7 +215,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 	centerWidth := 16
 	rightWidth := 16
 	printer.LineFeed()
-	if temp == 3 {
+	if temp == 3 || temp == 4 {
 		printer.AppendText("------------------------------------------------")
 	} else {
 		printer.SetPrintModes(true, false, false)
@@ -279,7 +279,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.SetLineSpacing(35)
 	}
 	// 商品列表
-	products, num := t.base.MergeSaleOrderProduct(saleOrder)
+	products, num := t.base.MergeSaleOrderProduct(saleOrder, temp != 4)
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(2))
 	for key, product := range products {
 		printer.AppendText(t.base.PrintText(
@@ -304,7 +304,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 	printer.SetLineSpacing(45)
 	printer.LineFeed()
 	printer.SetAlignment(pkg.AlignRight)
-	if temp == 3 {
+	if temp == 3 || temp == 4 {
 		printer.AppendText(t.base.PrintText(
 			t.base.Translate("商品数量")+": "+t.base.FloatToString(productNum.Round(2).InexactFloat64()),
 			"",
@@ -341,7 +341,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 	if !saleOrder.IsFreeSaleOrder() && saleOrder.CustomDiscountFee != 0 {
 		if saleOrder.CustomDiscountFee != 0 {
 			ratio := ""
-			if temp == 3 {
+			if temp == 3 || temp == 4 {
 				// 计算折扣率：折扣金额 / 原始金额 * 100
 				discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
 				ratio = fmt.Sprintf(" (%s%% OFF)", t.base.Number(discountRate.InexactFloat64()))
@@ -361,7 +361,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		oldCardDiscount := float64(100)
 		gradeEquity := float64(100)
 		cardDiscount := float64(100)
-		if temp == 3 {
+		if temp == 3 || temp == 4 {
 			if saleOrder.MemberDiscountRate != 0 {
 				gradeEquity = saleOrder.MemberDiscountRate * 100
 				oldGradeEquity = gradeEquity
@@ -422,7 +422,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 	}
 
 	// 分隔
-	if temp == 3 {
+	if temp == 3 || temp == 4 {
 		printer.AppendText("------------------------------------------------")
 	}
 

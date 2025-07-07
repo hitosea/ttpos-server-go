@@ -990,10 +990,14 @@ func getLocaleResponse(nameList []dto.LocaleResponse, div string) dto.LocaleResp
 	return attributeResultNames
 }
 
-func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string) string {
+func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string, showSku ...bool) string {
 	var flavorName string
 	var sauceNames []string
 	var attributeNames []string
+	isShowSku := true
+	if len(showSku) > 0 {
+		isShowSku = showSku[0]
+	}
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
 		if saleOrderProductBom.IsFlavor() {
 			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(lang)
@@ -1009,10 +1013,14 @@ func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string) string {
 	}
 	// 根据规格生成字符串。`(规格；属性；小料)`
 	nameList := make([]string, 0)
-	nameList = append(nameList, flavorName)
-	if len(attributeNames) > 0 {
-		nameList = append(nameList, attributeNames...)
+	// 是否显示sku
+	if isShowSku {
+		nameList = append(nameList, flavorName)
+		if len(attributeNames) > 0 {
+			nameList = append(nameList, attributeNames...)
+		}
 	}
+	// 小料
 	if len(sauceNames) > 0 {
 		nameList = append(nameList, sauceNames...)
 	}
