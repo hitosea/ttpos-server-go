@@ -39,6 +39,16 @@
           .replace(/\.{2,}/g, '.')
           .replace(/(\..*)\./g, '$1');
 
+        // 处理以0开头的数字
+        if (formattedValue.length > 1 && formattedValue.startsWith('0') && !formattedValue.startsWith('0.')) {
+          formattedValue = formattedValue.slice(1);
+        }
+
+        //如果precision为0，
+        if (this.precision === 0) {
+          formattedValue = formattedValue.replace(/\./g, '');
+        }
+
         // 处理小数位数
         if (formattedValue.includes('.')) {
           const [integer, decimal] = formattedValue.split('.');
