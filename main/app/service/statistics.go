@@ -935,6 +935,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 
 		// 销售商品
 		for _, saleProduct := range saleOrder.SaleOrderProducts {
+			if saleProduct.IsDelete() {
+				continue
+			}
 			// 如果商品已取消，则不统计
 			if saleProduct.CancelTime == 0 {
 				// 如果商品未接单，则不统计
@@ -1060,6 +1063,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 
 		// 统计自助餐
 		for _, saleBuffetCustomerType := range saleOrder.SaleOrderBuffetCustomerTypes {
+			if saleBuffetCustomerType.IsDelete() {
+				continue
+			}
 			// 统计商品数量
 			productNum := float64(saleBuffetCustomerType.Num)
 			productNumDec := decimal.NewFromFloat(productNum)
@@ -1139,6 +1145,9 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 
 		// 统计加钟
 		for _, saleBuffetDelayProduct := range saleOrder.SaleOrderBuffetDelayProducts {
+			if saleBuffetDelayProduct.IsDelete() {
+				continue
+			}
 			// 统计商品数量
 			productNum := float64(saleBuffetDelayProduct.Num)
 			productNumDec := decimal.NewFromFloat(productNum)
