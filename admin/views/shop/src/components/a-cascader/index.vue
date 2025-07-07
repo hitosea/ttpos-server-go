@@ -24,8 +24,8 @@
       default: {},
     },
     value: {
-      type: Array,
-      default: [],
+      type: String,
+      default: '',
     },
   });
   const emit = defineEmits(['update:value', 'change']);
