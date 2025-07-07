@@ -295,7 +295,7 @@ export const previewData = {
         name: $t('这是桌台备注，非桌台/桌台没有备注的则不显示，需要换行显示'),
         label: '',
         big: true,
-        typeShow: '3',
+        typeShow: '3,4',
         right: false,
       },
       {
@@ -326,8 +326,14 @@ export const previewData = {
         name: $t('（赠）') + $t('商品名称商品名称品名称商品名称商品名称品名称') + `(${$t('少冰、')}${$t('加珍珠')})`,
         num: '24*12',
         label: '￥350',
+        typeShow: '1,2,3',
       },
-
+      {
+        name: $t('（赠）') + $t('商品名称商品名称品名称商品名称商品名称品名称'),
+        num: '24*12',
+        label: '￥350',
+        typeShow: '4',
+      },
       {
         name: $t('商品名称商品名称'),
         num: '55*2',
@@ -348,7 +354,7 @@ export const previewData = {
       {
         name: $t('商品数量') + $t('：') + '14',
         label: $t('商品金额') + $t('：') + '￥410',
-        typeShow: '3',
+        typeShow: '3,4',
       },
       {
         name: '',
@@ -372,23 +378,23 @@ export const previewData = {
       {
         name: '',
         label: $t('优惠折扣') + $t('：') + '￥50（4.28% OFF）',
-        typeShow: '3',
+        typeShow: '3,4',
         left: false,
       },
       {
         name: '',
         label: $t('会员优惠') + $t('：') + '￥3',
-        typeShow: '1,2,3',
+        typeShow: '1,2,3,4',
       },
       {
         name: '',
         label: $t('会员折扣') + $t('：') + $t('3.8折'),
-        typeShow: '3',
+        typeShow: '3,4',
       },
       {
         name: '',
         label: $t('会员卡折扣') + $t('：') + $t('3.8折'),
-        typeShow: '3',
+        typeShow: '3,4',
       },
       {
         name: '',
@@ -398,17 +404,17 @@ export const previewData = {
       {
         name: '',
         label: $t('退款金额') + $t('：') + '￥3',
-        typeShow: '1,3',
+        typeShow: '1,3,4',
       },
       {
         name: '',
         label: $t('支付手续费') + $t('：') + '￥3',
-        typeShow: '1,3',
+        typeShow: '1,3,4',
       },
       {
         name: '',
         label: $t('手动抹零') + $t('：') + '￥1.15',
-        typeShow: '1,2,3',
+        typeShow: '1,2,3,4',
       },
       {
         typeShow: '1',
@@ -425,7 +431,7 @@ export const previewData = {
     ],
     [
       {
-        allHide: '3',
+        allHide: '3,4',
         name: $t('合计应收'),
         label: '￥410',
         big: true,
@@ -435,17 +441,17 @@ export const previewData = {
       {
         name: '',
         label: $t('合计(其中VAT)'),
-        allHide: '1,3',
+        allHide: '1,3,4',
       },
       {
         name: $t('VAT（10%）'),
         label: '100.00 (9.09)',
-        typeShow: '1,3',
+        typeShow: '1,3,4',
       },
       {
         name: $t('VAT（8%）'),
         label: '98.90 (7.36)',
-        typeShow: '1,3',
+        typeShow: '1,3,4',
       },
       {
         name: $t('VAT（10%）'),
@@ -497,17 +503,17 @@ export const previewData = {
       {
         name: $t('支付方式'),
         label: $t('微信支付'),
-        typeShow: '3',
+        typeShow: '3,4',
       },
       {
         name: $t('实收金额'),
         label: '￥410',
-        typeShow: '3',
+        typeShow: '3,4',
       },
       {
         name: $t('找零'),
         label: '0.1',
-        typeShow: '3',
+        typeShow: '3,4',
       },
     ],
     [
@@ -518,7 +524,7 @@ export const previewData = {
       {
         name: $t('本次积分'),
         label: '410',
-        typeShow: '1,3',
+        typeShow: '1,3,4',
       },
       {
         name: $t('本次积分'),
@@ -540,7 +546,7 @@ export const previewData = {
         name: $t('这是桌台备注，非桌台/桌台没有备注的则不显示，需要换行显示'),
         label: '',
         big: true,
-        typeShow: '3',
+        typeShow: '3,4',
         right: false,
       },
       {
@@ -556,12 +562,12 @@ export const previewData = {
       {
         name: $t('收银员：') + $t('张三'),
         label: '',
-        typeShow: '3',
+        typeShow: '3,4',
       },
       {
         name: $t('订单号：') + 2024012536958425,
         label: '',
-        typeShow: '3',
+        typeShow: '3,4',
         right: false,
       },
     ],
@@ -579,6 +585,13 @@ export const previewData = {
         name: $t('（赠）') + $t('商品名称商品名称品名称商品名称商品名称品名称') + `(${$t('少冰、')}${$t('加珍珠')})`,
         num: '24*12',
         label: '￥50',
+        typeShow: '1,2,3',
+      },
+      {
+        name: $t('（赠）') + $t('商品名称商品名称品名称商品名称商品名称品名称'),
+        num: '24*12',
+        label: '￥50',
+        typeShow: '4',
       },
       {
         name: $t('商品名称商品名称'),
@@ -600,7 +613,7 @@ export const previewData = {
       {
         name: $t('商品数量') + $t('：') + '14',
         label: $t('商品金额') + $t('：') + '￥410',
-        typeShow: '3',
+        typeShow: '3,4',
       },
       {
         name: '',
@@ -609,12 +622,12 @@ export const previewData = {
       {
         name: '',
         label: $t('VAT（10%）') + $t('：') + '￥50',
-        typeShow: '2,3',
+        typeShow: '2,3,4',
       },
       {
         name: '',
         label: $t('VAT（8%）') + $t('：') + '￥50',
-        typeShow: '2,3',
+        typeShow: '2,3,4',
       },
       {
         name: '',
@@ -624,28 +637,28 @@ export const previewData = {
       {
         name: '',
         label: $t('优惠折扣') + $t('：') + '￥6.99（9.9% OFF）',
-        typeShow: '3',
+        typeShow: '3,4',
         left: false,
       },
       {
         name: '',
         label: $t('会员优惠') + $t('：') + '￥3',
-        typeShow: '1,2,3',
+        typeShow: '1,2,3,4',
       },
       {
         name: '',
         label: $t('会员折扣') + $t('：') + $t('3.8折'),
-        typeShow: '3',
+        typeShow: '3,4',
       },
       {
         name: '',
         label: $t('会员卡折扣') + $t('：') + $t('3.8折'),
-        typeShow: '3',
+        typeShow: '3,4',
       },
       {
         name: '',
         label: $t('手动抹零') + $t('：') + '￥1.15',
-        typeShow: '1,2,3',
+        typeShow: '1,2,3,4',
       },
       {
         typeShow: '1,2',
@@ -656,7 +669,7 @@ export const previewData = {
     ],
     [
       {
-        allHide: '3',
+        allHide: '3,4',
         name: $t('合计应收'),
         label: '￥410',
         big: true,
@@ -681,12 +694,12 @@ export const previewData = {
       {
         name: $t('VAT（10%）'),
         label: '￥100.00 (￥9.09)',
-        typeShow: '2,3',
+        typeShow: '2,3,4',
       },
       {
         name: $t('VAT（8%）'),
         label: '￥98.90 (￥7.36)',
-        typeShow: '2,3',
+        typeShow: '2,3,4',
       },
     ],
   ],
