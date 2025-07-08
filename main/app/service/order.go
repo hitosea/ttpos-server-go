@@ -5889,7 +5889,9 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	// 如果退菜商品是下单减库存的商品，则需要创建入库单
 	var warehouseForm *model.WarehouseForm
 	if returnSaleOrderProduct.DeductStockType == constant.ProductPackageDeductStockTypeCooking {
-		productList, err := s.getDecreaseStockList(ctx, []*model.SaleOrderProduct{returnSaleOrderProduct})
+		currentReturnSaleOrderProduct := *returnSaleOrderProduct
+		currentReturnSaleOrderProduct.Num = req.Num // 退菜数量,仅入库本次退菜的数量
+		productList, err := s.getDecreaseStockList(ctx, []*model.SaleOrderProduct{&currentReturnSaleOrderProduct})
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
