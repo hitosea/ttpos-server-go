@@ -3,7 +3,7 @@
     <div v-if="controls" class="icon-plus" @click="handlePlus">
       <el-icon><Plus /></el-icon>
     </div>
-    <el-input :class="controls ? 'controls-input' : ''" :model-value="modelValue" type="text" :placeholder="placeholder" @input="handleInput"> </el-input>
+    <el-input :class="controls ? 'controls-input' : ''" :disabled="disabled" :model-value="modelValue" type="text" :placeholder="placeholder" @input="handleInput"> </el-input>
     <div v-if="controls" class="icon-minus" @click="handleMinus">
       <el-icon><Minus /></el-icon>
     </div>
@@ -42,9 +42,16 @@
         type: Boolean,
         default: false,
       },
+      disabled: {
+        type: Boolean,
+        default: false,
+      },
     },
     methods: {
       handleMinus() {
+        if (this.disabled) {
+          return;
+        }
         let newValue = Number(this.modelValue) - 1;
         // Round to the specified precision to avoid floating point issues
         if (this.precision > 0) {
@@ -56,6 +63,9 @@
         this.$emit('update:modelValue', newValue);
       },
       handlePlus() {
+        if (this.disabled) {
+          return;
+        }
         let newValue = Number(this.modelValue) + 1;
         // Round to the specified precision to avoid floating point issues
         if (this.precision > 0) {
@@ -67,6 +77,9 @@
         this.$emit('update:modelValue', newValue);
       },
       handleInput(value) {
+        if (this.disabled) {
+          return;
+        }
         // 只允许数字和小数点
         let formattedValue = value
           .replace(/[^0-9.]/g, '')
@@ -100,7 +113,6 @@
             formattedValue = this.min.toString();
           }
         }
-        console.log(formattedValue, 'formattedValue');
         // 触发更新
         this.$emit('update:modelValue', formattedValue);
       },
