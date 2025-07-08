@@ -129,7 +129,11 @@ class UserShiftLog extends Controller
         $detail['total_income'] = $snapshotModel->calcBusinessIncome($detail);
         // 
         $salesInfo = $detail['salesInfo'] ?? [];
-        
+        // 
+        if (isset($detail['abnormal'])) {
+            $detail['abnormal']['refund_times'] = $detail['abnormal']['refund_time'] ?? 0;
+        }
+        // 
         return $this->renderSuccess('', compact('detail', 'salesInfo'));
     }
 

@@ -1,1 +1,0 @@
-System.register([],(function(e,t){"use strict";return{execute:function(){var e=document.createElement("style");e.textContent=".svg-icon{vertical-align:-.1em;fill:currentColor;overflow:hidden}\n",document.head.appendChild(e)}}}));

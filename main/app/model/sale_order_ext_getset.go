@@ -410,6 +410,34 @@ func (model *SaleOrder) GetCanReturnAmount() float64 {
 	return decimal.NewFromFloat(model.PaymentAmount).Sub(decimal.NewFromFloat(model.GetReturnAmount())).Round(2).InexactFloat64()
 }
 
+// 本单最多可退的会员累计消费金额。=销售订单应收-结账抹零金额。 销售订单应收=购物车应收-积分抵扣金额-优惠券抵扣金额
+func (model *SaleOrder) GetCanReturnMemberConsumptionAmountMax() float64 {
+	return decimal.NewFromFloat(model.GetAmountValue()).Sub(decimal.NewFromFloat(model.ZeroCheckoutFee)).Round(2).InexactFloat64()
+}
+
+// 剩余可退的会员累计消费金额，不能小于0。=本单最多可退的会员累计消费金额-已退的会员累计消费金额。 已退的会员累计消费金额=本单的退款商品表中商品的金额之和
+func (model *SaleOrder) GetCanReturnMemberConsumptionAmount() float64 {
+	// 已经退的累计消费金额=本单的退款商品表中商品的金额之和
+	returnAmount := model.GetReturnProductAmount()
+	// 本单最多可退的会员累计消费金额
+	maxReturnAmount := model.GetCanReturnMemberConsumptionAmountMax()
+	// 不能小于0
+	if returnAmount > maxReturnAmount {
+		returnAmount = maxReturnAmount
+	}
+	// 剩余可退的会员累计消费金额
+	return decimal.NewFromFloat(maxReturnAmount).Sub(decimal.NewFromFloat(returnAmount)).Round(2).InexactFloat64()
+}
+
+// 订单的退款商品累计的金额
+func (model *SaleOrder) GetReturnProductAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, returnOrder := range model.ReturnOrders {
+		amount = amount.Add(decimal.NewFromFloat(returnOrder.RefundAmount))
+	}
+	return amount.Round(2).InexactFloat64()
+}
+
 // GetOriginAmount 获取订单没打折之前的订单应收金额。原订单应收金额=现应收金额+会员折扣金额+优惠折扣金额
 func (model *SaleOrder) GetOriginAmount() float64 {
 	//原订单应收金额=现应收金额+会员折扣金额+优惠折扣金额
@@ -746,6 +774,38 @@ func (model *SaleOrder) SetMemberDiscountCancel() {
 		}
 		saleOrderProduct.SetMemberDiscountInfo(discountRate, discountRate)
 		saleOrderProduct.SetUpdate()
+	}
+}
+
+// 删除销售订单中所有优惠券
+func (model *SaleOrder) SetAllCouponCancel() {
+	for _, coupon := range model.Coupons {
+		if coupon.IsDelete() {
+			continue
+		}
+		coupon.SetDelete()
+	}
+}
+
+// 当订单取消会员时，删除销售订单中已经选中的会员优惠券
+func (model *SaleOrder) SetMemberCouponCancel() {
+	for _, coupon := range model.Coupons {
+		if coupon.IsDelete() {
+			continue
+		}
+		if coupon.IsMemberCoupon() {
+			coupon.SetDelete()
+		}
+	}
+}
+
+// 当订单取消积分时，删除销售订单中已经选中的积分优惠券
+func (model *SaleOrder) SetPointsCouponCancel() {
+	for _, coupon := range model.Coupons {
+		if coupon.IsDelete() {
+			continue
+		}
+		coupon.SetDelete()
 	}
 }
 

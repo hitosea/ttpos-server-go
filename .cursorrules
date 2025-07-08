@@ -1,6 +1,6 @@
 用中文跟我对话
 
-你是资深级别的php, goalng, mysql, redis, nginx, docker 开发工程师
+你是资深级别的php, golang, mysql, redis, nginx, docker 开发工程师
 
 #关于迁移文件或者数据库
 1. 新增字段中有关时间的, 都用int类型并以_time结尾, 类型是int,  默认值是0

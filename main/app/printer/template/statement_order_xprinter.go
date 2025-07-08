@@ -63,7 +63,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567)
-	if temp != 3 {
+	if temp != 3 && temp != 4 {
 		printer.SetAlignment(pkg.AlignLeft)
 		if printType == constant.PrinterTemplateInvoice {
 			printer.AppendText(t.base.Translate("发票"))
@@ -164,7 +164,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		printer.SetLineSpacing(60)
 		printer.LineFeed()
 		printer.SetLineSpacing(90)
-	} else if temp == 3 {
+	} else if temp == 3 || temp == 4 {
 		//
 		printer.SetCharacterSize(2, 2)
 		printer.SetPrintModes(true, true, false)
@@ -291,7 +291,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	leftWidth = 25
 	centerWidth := 16
 	rightWidth := 16
-	if temp == 3 {
+	if temp == 3 || temp == 4 {
 		printer.AppendText("------------------------------------------------\n")
 		printer.SetLineSpacing(25)
 		printer.LineFeed()
@@ -311,13 +311,13 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		printer.AppendText("\n------------------------------------------------\n")
 	}
 	// 商品数量
-	productNum := uint(0)
+	productNum := decimal.NewFromFloat(0)
 	// 自助餐顾客类型
 	for _, orderBuffetCustomer := range saleOrder.SaleOrderBuffetCustomerTypes {
 		if orderBuffetCustomer.IsDelete() {
 			continue
 		}
-		productNum += orderBuffetCustomer.Num
+		productNum = productNum.Add(decimal.NewFromFloat(float64(orderBuffetCustomer.Num)).Round(2))
 		buffetNameText := orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang)
 		if orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name != "" {
 			buffetNameText += "\n(" + orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name + ")"
@@ -339,7 +339,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	}
 	// 添加加钟商品
 	buffetDelayProducts, num := t.base.MergeSaleOrderBuffetDelayProducts(saleOrder)
-	productNum += num
+	productNum = productNum.Add(decimal.NewFromFloat(num).Round(2))
 	for _, delay := range buffetDelayProducts {
 		printer.AppendText(t.base.PrintText(
 			delay.DelayName,
@@ -356,8 +356,8 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		printer.SetLineSpacing(90)
 	}
 	// 商品列表
-	products, num := t.base.MergeSaleOrderProduct(saleOrder)
-	productNum += num
+	products, num := t.base.MergeSaleOrderProduct(saleOrder, temp != 4)
+	productNum = productNum.Add(decimal.NewFromFloat(num).Round(2))
 	for _, product := range products {
 		printer.AppendText(t.base.PrintText(
 			product.ProductName,
@@ -380,16 +380,16 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	printer.LineFeed()
 	printer.SetLineSpacing(90)
 	printer.SetAlignment(pkg.AlignRight)
-	if temp == 3 {
+	if temp == 3 || temp == 4 {
 		printer.AppendText(t.base.PrintText(
-			t.base.Translate("商品数量")+": "+fmt.Sprintf("%v", productNum),
+			t.base.Translate("商品数量")+": "+t.base.FloatToString(productNum.Round(2).InexactFloat64()),
 			"",
 			t.base.Translate("商品金额")+": "+t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount),
 			width,
 		))
 		printer.LineFeed()
 	} else {
-		printer.AppendText(t.base.Translate("商品数量") + ": " + fmt.Sprintf("%v", productNum))
+		printer.AppendText(t.base.Translate("商品数量") + ": " + t.base.FloatToString(productNum.Round(2).InexactFloat64()))
 		printer.LineFeed()
 		printer.AppendText(t.base.Translate("商品金额") + ": " + t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount))
 		printer.LineFeed()
@@ -417,7 +417,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	if !saleOrder.IsFreeSaleOrder() && saleOrder.CustomDiscountFee != 0 {
 		if saleOrder.CustomDiscountFee != 0 {
 			ratio := ""
-			if temp == 3 {
+			if temp == 3 || temp == 4 {
 				// 计算折扣率：折扣金额 / 原始金额 * 100
 				discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
 				ratio = fmt.Sprintf(" (%s%% OFF)", t.base.Number(discountRate.InexactFloat64()))
@@ -437,7 +437,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		oldCardDiscount := float64(100)
 		gradeEquity := float64(100)
 		cardDiscount := float64(100)
-		if temp == 3 {
+		if temp == 3 || temp == 4 {
 			if saleOrder.MemberDiscountRate != 0 {
 				gradeEquity = saleOrder.MemberDiscountRate * 100
 				oldGradeEquity = gradeEquity
@@ -470,6 +470,12 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 		printer.LineFeed(1)
 	}
 
+	// 优惠券抵扣
+	if couponExchangeAmount := saleOrder.CalcCouponExchangeAmount(); couponExchangeAmount > 0 {
+		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("优惠券抵扣"), t.base.GetPriceAndUnit(couponExchangeAmount)))
+		printer.LineFeed(1)
+	}
+
 	// 抹零
 	if checkOutZeroFee := saleOrder.GetCheckOutZeroFee(); checkOutZeroFee > 0 {
 		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手动抹零"), t.base.GetPriceAndUnit(checkOutZeroFee)))
@@ -492,7 +498,7 @@ func (t *statementOrderXprinterTemplate) GetPrintContent(
 	}
 
 	// 分隔
-	if temp == 3 {
+	if temp == 3 || temp == 4 {
 		printer.SetLineSpacing(30)
 		printer.AppendText("------------------------------------------------\n")
 	}

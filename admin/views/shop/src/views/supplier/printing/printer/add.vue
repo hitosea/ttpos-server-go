@@ -134,6 +134,12 @@
         <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort" autocomplete="off"></el-input-number>
       </el-form-item>
 
+      <el-form-item for="no_click" :label="$t('打印关联收银机')" prop="is_main" v-if="is_usb != 1">
+        <el-select v-model="form.source_device_sn" :placeholder="$t('选择打印机所关联的收银机')" style="width: 100%" clearable>
+          <el-option v-for="(item, index) in cashierList" :key="index" :label="item.cashier_name" :value="item.cashier_key"> </el-option>
+        </el-select>
+      </el-form-item>
+
       <el-form-item for="no_click" :label="$t('打印方式')" prop="print_method">
         <el-select v-model="form.print_method" :placeholder="$t('选择打印方式')" style="width: 100%" clearable>
           <el-option :label="$t('文本打印')" :value="1"></el-option>
@@ -173,6 +179,7 @@
           print_method: '',
           sort: null,
           print_times: 1,
+          source_device_sn: '',
           FEI_E_YUN: {
             USER: '',
             UKEY: '',
@@ -208,6 +215,7 @@
         loading: false,
 
         type: [],
+        cashierList: [],
         dialogVisible: false,
       };
     },
@@ -217,6 +225,7 @@
         SettingApi.printerType({}, true)
           .then((data) => {
             this.type = data.data.printerType;
+            this.cashierList = data.data.cashierList;
           })
           .catch(() => {});
       },
@@ -241,6 +250,7 @@
               return;
             }
             self.loading = true;
+            self.form.source_device_sn = self.form.source_device_sn || '';
             self.form.print_method = self.form.print_method || 0;
             SettingApi.addPrinter(self.form, true)
               .then(() => {

@@ -170,7 +170,10 @@ class User extends Controller
     }
 
     /**
-     * 获取角色菜单信息
+     * @Apidoc\Title("获取角色菜单信息")
+     * @Apidoc\Method ("GET")
+     * @Apidoc\Url ("/index.php/shop/auth.user/getRoleList")
+     * @Apidoc\Returned()
      */
     public function getRoleList()
     {
@@ -205,11 +208,15 @@ class User extends Controller
         $menus = $model->removeCustomAccess($menus);
         // 订单管理
         $app = AppModel::where('uuid', request()->appId)->find();
-        if ($app->old_company_id) {
+        if ($app->old_company_id) { // 1.0版本商户
             foreach ($menus as $key => $val) {
                 if ($val['uuid'] == 1626506017) {
                     $menu = $menus[$key]['children'][0] ?? [];
+                    // 如果有用餐订单，则增加历史用餐订单，后面的则
                     if ($menu) {
+                        // 用餐订单外的其他子菜单
+                        $otherChildren = array_values(array_slice($menus[$key]['children'], 1));
+                        // 插入历史用餐订单
                         $menu['name'] = "历史用餐订单";
                         $menu['path'] = "/store/history_order/index";
                         $menu['api_path'] = "/store/history_order/index";
@@ -218,11 +225,10 @@ class User extends Controller
                         $menu['uuid'] = 1734320550;
                         $menu['children'][0]['path'] = "/store/history_order/detail";
                         $menu['children'][0]['api_path'] = "/store/history_order/detail";
-                        // 
-                        $menuOne = $menus[$key]['children'][1] ?? [];
                         $menus[$key]['children'][1] = $menu;
-                        if ($menuOne) {
-                            $menus[$key]['children'][2] = $menuOne;
+                        // 其他同级子菜单依次排到后面
+                        for ($i = 0; $i < count($otherChildren); $i++) {
+                            $menus[$key]['children'][2 + $i] = $otherChildren[$i];
                         }
                     }
                 }

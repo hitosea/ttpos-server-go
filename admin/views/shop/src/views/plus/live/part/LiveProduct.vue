@@ -13,7 +13,7 @@
     :close-on-press-escape="false"
     width="900px"
   >
-    <div class="common-seach-wrap" style="margin-bottom: 10px">
+    <div class="common-search-wrap" style="margin-bottom: 10px">
       <el-button type="primary" size="small" icon="Plus" @click="addClick">导入商品</el-button>
     </div>
 

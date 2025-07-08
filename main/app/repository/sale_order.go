@@ -10,9 +10,8 @@ import (
 )
 
 type ISaleOrderRepo interface {
-	GetSaleOrder(opts ...DBOption) (model.SaleOrder, error)
-	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
-	UpdateSaleOrder(model *model.SaleOrder) error
+	ISaleOrderQueryRepo
+	UpdateSaleOrder(obj *model.SaleOrder) error
 	UpdateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderPointsExchange(saleOrderUuid uint64, payPoints float64, payPointsAmount float64, pointsExchangeRate float64, autoPointsExchange uint) error // 更新销售订单的积分抵扣信息
 	SetCheckoutZeroRuleCancel(saleOrderUuid uint64) error                                                                                                      // 取消结账抹零
@@ -20,6 +19,13 @@ type ISaleOrderRepo interface {
 	UpdateOrCreateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderSoftDeleteByUuid(uuid uint64) error
 	DeleteSaleOrder(saleOrderUuid uint64) error
+}
+
+// ISaleOrderQueryRepo 销售账单查询
+type ISaleOrderQueryRepo interface {
+	GetSaleOrder(opts ...DBOption) (model.SaleOrder, error)
+	GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error)
+	GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, error)
 }
 
 type saleOrderRepo struct {
@@ -54,8 +60,14 @@ func (r *saleOrderRepo) GetSaleOrderByUuid(uuid uint64) (*model.SaleOrder, error
 	return &order, nil
 }
 
-func (r *saleOrderRepo) UpdateSaleOrder(model *model.SaleOrder) error {
-	return r.db.Model(model).Save(model).Error
+func (r *saleOrderRepo) GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, error) {
+	var memberUuid uint64
+	err := r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Select("consumer_uuid").Scan(&memberUuid).Error
+	return memberUuid, errors.WithMessage(err)
+}
+
+func (r *saleOrderRepo) UpdateSaleOrder(obj *model.SaleOrder) error {
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", obj.Uuid).Updates(obj).Error
 }
 
 func (r *saleOrderRepo) UpdateSaleOrderRecord(obj model.SaleOrder) error {

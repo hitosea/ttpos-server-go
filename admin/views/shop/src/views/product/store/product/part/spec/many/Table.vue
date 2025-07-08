@@ -50,22 +50,14 @@
             </template>
           </el-table-column>
 
-          <el-table-column v-if="baseSale == '1'" :label="$t('采购单价')" minWidth="140">
+          <el-table-column v-if="baseSale == '1'" :label="$t('采购单价')" minWidth="160">
             <template #default="scope">
               <el-form-item for="no_click" label="" style="margin-bottom: 0">
-                <el-input-number
-                  type="number"
-                  :placeholder="$t('请输入采购单价')"
-                  size="small"
-                  :min="0"
-                  :max="1000000"
-                  :controls="false"
-                  v-model="scope.row.purchase_price"
-                ></el-input-number>
+                <numInput :min="0" :max="1000000" :precision="2" :placeholder="$t('请输入采购单价')" v-model="scope.row.purchase_price"></numInput>
               </el-form-item>
             </template>
           </el-table-column>
-          <el-table-column :label="'*' + $t('库存')" minWidth="140">
+          <el-table-column :label="'*' + $t('库存')" minWidth="160">
             <template #default="scope">
               <el-form-item
                 for="no_click"
@@ -74,28 +66,35 @@
                 :prop="`scope.row.stock_num`"
                 :rules="[
                   {
-                    validator: () => {
-                      return typeof scope.row.stock_num == 'number' && scope.row.stock_num >= 0 ? true : false;
+                    validator: (rule, value, callback) => {
+                      if (!scope.row.stock_num) {
+                        callback(new Error($t('请输入库存')));
+                        return;
+                      }
+                      if (form.model.num_type == 0) {
+                        if (!Number.isInteger(Number(scope.row.stock_num))) {
+                          callback(new Error($t('请输入整数')));
+                          return;
+                        }
+                      }
+                      callback();
                     },
-                    message: $t('请输入库存'),
                     trigger: 'change',
                   },
                 ]"
               >
-                <el-input-number
-                  type="number"
+                <numInput
                   :disabled="scope.row.material.length > 0"
-                  :placeholder="$t('请输入库存')"
-                  size="small"
                   :min="0"
                   :max="99999999"
-                  :controls="false"
+                  :precision="2"
+                  :placeholder="$t('请输入库存')"
                   v-model="scope.row.stock_num"
-                ></el-input-number>
+                ></numInput>
               </el-form-item>
             </template>
           </el-table-column>
-          <el-table-column v-if="baseSale == '1'" :label="$t('商品条码')" minWidth="140">
+          <el-table-column v-if="baseSale == '1'" :label="$t('商品条码')" minWidth="160">
             <template #default="scope">
               <el-form-item
                 for="no_click"
@@ -134,7 +133,7 @@
               </el-form-item>
             </template>
           </el-table-column>
-          <el-table-column :label="'*' + $t('商品价格')" minWidth="140">
+          <el-table-column :label="'*' + $t('商品价格')" minWidth="160">
             <template #default="scope">
               <el-form-item
                 for="no_click"
@@ -144,21 +143,14 @@
                 :rules="[
                   {
                     validator: () => {
-                      return typeof scope.row.product_price == 'number' && scope.row.product_price >= 0 ? true : false;
+                      return scope.row.product_price ? true : false;
                     },
                     message: $t('请输入商品价格'),
+                    trigger: 'change',
                   },
                 ]"
               >
-                <el-input-number
-                  type="number"
-                  :placeholder="$t('请输入商品价格')"
-                  size="small"
-                  :min="0"
-                  :max="1000000"
-                  :controls="false"
-                  v-model="scope.row.product_price"
-                ></el-input-number>
+                <numInput :min="0" :max="1000000" :precision="2" :placeholder="$t('请输入商品价格')" v-model="scope.row.product_price"></numInput>
               </el-form-item>
             </template>
           </el-table-column>
@@ -295,10 +287,10 @@
 
           // 用材料的库存来计算这个规格的库存
           (val.model.sku || []).map((item, index) => {
-            //无材料的时候库存取整
-            if ((item.material || []).length == 0) {
-              this.form.model.sku[index].stock_num = Number(String(item.stock_num).replace(/(\.\d{0,0})\d*/, '$1'));
-            }
+            //无材料的时候库存取整；2025年07月07日14:22:32；2.3.0 - 商家后台/收银机 -小计商品下单数量：50.5 - 库存/销量未记录为：50.5
+            // if ((item.material || []).length == 0) {
+            //   this.form.model.sku[index].stock_num = Number(String(item.stock_num).replace(/(\.\d{0,0})\d*/, '$1'));
+            // }
 
             //处理条形码
             this.$nextTick(() => {

@@ -26,8 +26,8 @@ type H5OrderInfo struct {
 
 type H5OrderItem struct {
 	H5OrderInfo
-	DeskRegionUuid uint64 `json:"desk_region_uuid"` // 桌台区域Uuid
-	Num            uint   `json:"num"`              // 商品数量
+	DeskRegionUuid uint64  `json:"desk_region_uuid"` // 桌台区域Uuid
+	Num            float64 `json:"num"`              // 商品数量
 }
 
 type H5OrderDetail struct {
@@ -38,7 +38,7 @@ type H5OrderDetail struct {
 
 type ProductItem struct {
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品名称多语言
-	Num        uint               `json:"num"`         // 数量
+	Num        float64            `json:"num"`         // 数量
 	TotalPrice float64            `json:"total_price"` // 总价
 }
 

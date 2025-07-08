@@ -9,11 +9,16 @@ import (
 )
 
 type IMemberPointLogRepo interface {
-	Create(log model.MemberPointLog) (model.MemberPointLog, error)       // 创建会员积分日志
+	IMemberPointLogQueryRepo
+	Create(log model.MemberPointLog) (model.MemberPointLog, error) // 创建会员积分日志
+	UpdateProcessed(uuids []uint64) error                          // 更新会员积分日志为已处理
+}
+
+// IMemberPointLogQueryRepo 会员积分日志查询
+type IMemberPointLogQueryRepo interface {
 	GetMemberPoint(opts ...DBOption) (*model.MemberPointLog, error)      // 获取会员积分日志
 	GetMemberPointList(opts ...DBOption) ([]model.MemberPointLog, error) // 获取会员积分日志列表
 	GetMemberPointLogNotProcessed() ([]model.MemberPointLog, error)      // 获取未处理的会员积分日志. 用于处理积分变动
-	UpdateProcessed(uuids []uint64) error                                // 更新会员积分日志为已处理
 }
 
 func NewMemberPointLogRepo(db *gorm.DB) IMemberPointLogRepo {

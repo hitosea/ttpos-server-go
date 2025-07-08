@@ -3,7 +3,9 @@
 namespace app\shop\service\marketing;
 
 use think\facade\Db;
+use Endroid\QrCode\QrCode;
 use think\facade\Validate;
+use Endroid\QrCode\Writer\PngWriter;
 use app\common\model\store\MultiLanguageName;
 use app\common\model\marketing\MarketingActivity;
 use app\common\model\marketing\MarketingActivityPrize;
@@ -99,8 +101,17 @@ class MarketingActivityService
                     'update_time' => time(),
                 ]);
             }
+
             Db::commit();
-            return ['uuid' => $gift->uuid];
+            // 
+            $appId = request()->appId;
+            $url = env('MEMBER_BASE_URL') . "/login?cid={$appId}&aid={$gift->uuid}";
+            $qrCode = new QrCode($url);
+            return [
+                'uuid' => $gift->uuid,
+                'qr_code_url' => $url,
+                'qr_code' => (new PngWriter())->write($qrCode)->getDataUri()
+            ];
         } catch (\Exception $e) {
             Db::rollback();
             return ['code'=>1, 'msg'=> __('创建失败:').$e->getMessage()];

@@ -11,6 +11,8 @@ import (
 type Cache interface {
 	Set(key string, value interface{}, expiration time.Duration) error
 	Get(key string) (interface{}, bool)
+	GetBytes(key string) ([]byte, bool)
+	GetBatchBytes(keys []string) (map[string][]byte, []string)
 	Del(keys ...string)
 	GetClient() *redis.Client
 	GetClusterClient() *redis.ClusterClient
@@ -37,7 +39,7 @@ func NewCache(cacheType CacheType, config Config) Cache {
 	case Redis:
 		return newRedisCache(config)
 	case GoCache:
-		return newGoCache(config) // ToDo 可能还是得换 sqlite或其他支持落盘的缓存引擎，否则离线版挂了的话，缓存就没有了
+		return newGoCache(config) // TODO 可能还是得换 sqlite或其他支持落盘的缓存引擎，否则离线版挂了的话，缓存就没有了
 	default:
 		return newRedisCache(config) // 默认使用redis-cache
 	}

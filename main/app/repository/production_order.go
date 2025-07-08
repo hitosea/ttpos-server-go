@@ -9,27 +9,33 @@ import (
 )
 
 type IProductionOrderRepo interface {
-	GetProductionOrder(opts ...DBOption) (*model.ProductionOrder, error)                                                        // 获取生产订单
-	GetProduct(opts ...DBOption) (*model.ProductionOrderProduct, error)                                                         // 获取生产订单商品
-	CreateProductionOrder(order *model.ProductionOrder) error                                                                   // 创建生产订单
-	GetLimitedProducts(column string, pageNo, pageSize int, opts ...DBOption) ([]model.ProductionOrderProduct, int64, error)    // 分页获取账单ID、分类ID
-	GetLimitedHistoryProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error)                                         // 历史获取销售账单Uuid
-	GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (int64, []model.ProductionOrderProduct, error) // 获取生产订单商品
-	WhereProductStatus(status uint) DBOption                                                                                    // 生产商品状态
-	WhereUuid(uuid uint64) DBOption                                                                                             // Uuid 条件
-	WhereProductPackageUuidIn(uuids []uint64) DBOption                                                                          // 商品ID条件
-	WhereProductFinishedTime(finishedTime int64) DBOption                                                                       // 生产商品完成时间条件
-	WhereProductUuid(uuid uint64) DBOption                                                                                      // 生产商品Uuid条件
-	WhereSaleOrderProductUuid(uuid uint64) DBOption                                                                             // 生产商品销售订单uuid条件
-	WhereSaleBillUuidIn(uuids []uint64) DBOption                                                                                // 销售账单uuid条件
-	WhereSaleBillUuid(uuid uint64) DBOption                                                                                     // 销售账单uuid条件
-	WhereSource(source string) DBOption                                                                                         // 来源条件
-	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption                                                                    // 生产商品分类Uuid条件
-	SaleBillUuidOpt() DBOption                                                                                                  // 历史上菜条件
-	WithProductCategory() DBOption                                                                                              // 关联商品分类
-	WithProductCategoryMultiLanguageName() DBOption                                                                             // 关联商品分类多语言
-	UpdateProduct(opts []DBOption, vars map[string]any) error                                                                   // 更新送厨商品
-	UpdateOrder(opts []DBOption, vars map[string]any) error                                                                     // 更新送厨单
+	IProductionOrderQueryRepo
+	CreateProductionOrder(order *model.ProductionOrder) error // 创建生产订单
+	WhereProductStatus(status uint) DBOption                  // 生产商品状态
+	WhereUuid(uuid uint64) DBOption                           // Uuid 条件
+	WhereProductPackageUuidIn(uuids []uint64) DBOption        // 商品ID条件
+	WhereProductFinishedTime(finishedTime int64) DBOption     // 生产商品完成时间条件
+	WhereProductUuid(uuid uint64) DBOption                    // 生产商品Uuid条件
+	WhereSaleOrderProductUuid(uuid uint64) DBOption           // 生产商品销售订单uuid条件
+	WhereSaleBillUuidIn(uuids []uint64) DBOption              // 销售账单uuid条件
+	WhereSaleBillUuid(uuid uint64) DBOption                   // 销售账单uuid条件
+	WhereSource(source string) DBOption                       // 来源条件
+	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption  // 生产商品分类Uuid条件
+	SaleBillUuidOpt() DBOption                                // 历史上菜条件
+	WithSaleOrderProductAll() DBOption                        // 关联销售订单商品
+	WithProductCategory() DBOption                            // 关联商品分类
+	WithProductCategoryMultiLanguageName() DBOption           // 关联商品分类多语言
+	UpdateProduct(opts []DBOption, vars map[string]any) error // 更新送厨商品
+	UpdateOrder(opts []DBOption, vars map[string]any) error   // 更新送厨单
+}
+
+// IProductionOrderQueryRepo 生产订单查询仓库接口
+type IProductionOrderQueryRepo interface {
+	GetProductionOrder(opts ...DBOption) (*model.ProductionOrder, error)                                                          // 获取生产订单
+	GetProduct(opts ...DBOption) (*model.ProductionOrderProduct, error)                                                           // 获取生产订单商品
+	GetLimitedProducts(column string, pageNo, pageSize int, opts ...DBOption) ([]model.ProductionOrderProduct, int64, error)      // 分页获取账单ID、分类ID
+	GetLimitedHistoryProducts(opts ...DBOption) ([]model.ProductionOrderProduct, error)                                           // 历史获取销售账单Uuid
+	GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (float64, []model.ProductionOrderProduct, error) // 获取生产订单商品
 }
 
 type productionRepo struct {
@@ -81,12 +87,13 @@ const (
 	FinishedTimeDesc string = "finished_time desc"
 )
 
-func (r *productionRepo) GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (int64, []model.ProductionOrderProduct, error) {
+func (r *productionRepo) GetProducts(limit int, orderBy string, statusOpt DBOption, opts ...DBOption) (float64, []model.ProductionOrderProduct, error) {
 	var productionOrderProducts []model.ProductionOrderProduct
 	db := r.db.Model(&model.ProductionOrderProduct{}).Scopes(NotDeleted)
 	db = statusOpt(db).Session(&gorm.Session{})
-	var total int64
-	db.Count(&total)
+	var total float64
+	// 统计商品数量总和
+	db.Select("SUM(num) as total").Scan(&total)
 
 	for _, opt := range opts {
 		db = opt(db)
@@ -239,6 +246,22 @@ func (r *productionRepo) WhereProductFirstCategoryUuidIn(uuids []uint64) DBOptio
 func (r *productionRepo) WithSaleBill() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("SaleBill")
+	}
+}
+
+// WithSaleOrderProductAll 关联销售订单商品
+func (r *productionRepo) WithSaleOrderProductAll() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("SaleOrderProduct.MultiLanguageName").
+			Preload("SaleOrderProduct.SaleOrderProductBoms").
+			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom").
+			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor").
+			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductFlavor.MultiLanguageName").
+			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductSauce").
+			Preload("SaleOrderProduct.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName").
+			Preload("SaleOrderProduct.SaleOrderProductAttributes").
+			Preload("SaleOrderProduct.SaleOrderProductAttributes.ProductAttribute").
+			Preload("SaleOrderProduct.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName")
 	}
 }
 

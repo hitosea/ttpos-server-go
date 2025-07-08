@@ -14,16 +14,16 @@ class Language
 {
     // 当前文件语言集
     // zh: 中文 | zhtw: 繁体中文 | en: 英文 | th: 泰文 | ja: 日文 | tr: 土耳其文 | ko：韩语 | my: 缅甸语
-    private $targetFiles = ['zh', 'zhtw', 'en', 'th', 'ja', 'tr', 'ko', 'my'];
+    private $targetFiles = ['zh', 'zhtw', 'en', 'th', 'ja', 'tr', 'ko', 'my', 'de'];
 
     // 谷歌语言集
-    private $googleTargetFiles = ['zh', 'zh-TW', 'en', 'th', 'ja', 'tr', 'ko', 'my'];
+    private $googleTargetFiles = ['zh', 'zh-TW', 'en', 'th', 'ja', 'tr', 'ko', 'my', 'de'];
 
     // 有道语言集
-    private $youdaoTargetFiles = ['zh-CHS', 'zh-CHT', 'en', 'th', 'ja', 'tr', 'ko', 'my'];
+    private $youdaoTargetFiles = ['zh-CHS', 'zh-CHT', 'en', 'th', 'ja', 'tr', 'ko', 'my', 'de'];
 
     // Ai语言集
-    private $aiTargetFiles = ['zh', 'zh-TW', 'en', 'th', 'ja', 'tr', 'ko', 'my'];
+    private $aiTargetFiles = ['zh', 'zh-TW', 'en', 'th', 'ja', 'tr', 'ko', 'my', 'de'];
 
     // 当前语言文件路径
     private $langFilePath = 'lang/';
@@ -236,7 +236,7 @@ class Language
      * @param [type] $tr
      * @return void
      */
-    public function aiTranslate($targets = [], $texts = [], $tr = null, $from = 'cn')
+    public function aiTranslate($targets = [], $texts = [], $tr = null, $from = 'zh')
     {
         if (empty($targets) || empty($texts) || empty($tr)) {
             return;
@@ -259,17 +259,23 @@ class Language
         $uniqueLangTexts = array_values(array_unique(array_merge(...array_values($langTexts))));
         $textChunks = array_chunk($uniqueLangTexts, 10); // 新词分块，一次请求多少个词
         foreach ($textChunks as $chunk) {
-            $trans = $tr->translate($chunk, $from); // 翻译
-            // 解析翻译结果
-            foreach ($trans as $translation) {
-                if ((count($translation) - 1) < count($this->targetFiles)) {
-                    throw new \Exception("ai translate return error");
-                }
-                foreach ($targets as $lang => $target) {
-                    if (isset($translation[$target])) {
-                        $translationsByLang[$lang][$translation['key']] = $translation[$target];
+            try {
+                $trans = $tr->translate($chunk, $from); // 翻译
+                // 解析翻译结果
+                foreach ($trans as $translation) {
+                    if ((count($translation) - 1) < count($this->targetFiles)) {
+                        throw new \Exception("ai translate return error");
+                    }
+                    foreach ($targets as $lang => $target) {
+                        if (isset($translation[$target])) {
+                            $translationsByLang[$lang][$translation['key']] = $translation[$target];
+                        }
                     }
                 }
+
+                dump($chunk);
+            } catch (\Exception $e) {
+                dump($e);
             }
         }
 

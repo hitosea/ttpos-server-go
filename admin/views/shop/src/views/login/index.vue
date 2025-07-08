@@ -3,10 +3,7 @@
     <div class="login-main">
       <el-form :model="ruleForm" :rules="rules" ref="ruleForm" label-position="left" label-width="0px" class="demo-ruleForm login-container d-b-c">
         <div class="flex-1 login-box">
-          <h3 class="title title-pr" style="margin-bottom: 16px">
-            <template v-if="brand == 'JBC'">JBCレジ · {{ $t('后台管理系统') }}</template>
-            <template v-if="brand == 'TTPOS'">TTPOS · {{ $t('后台管理系统') }}</template>
-          </h3>
+          <h3 class="title title-pr" style="margin-bottom: 16px">TTPOS · {{ $t('后台管理系统') }}</h3>
 
           <!--用户名-->
           <el-form-item prop="account">
@@ -32,7 +29,7 @@
               </el-input>
             </div>
           </el-form-item>
-          <!-- TODO 验证码 -->
+          <!--  验证码 -->
           <el-form-item prop="verifycode" style="line-height: 0px">
             <div class="flex-1 verifycode">
               <div class="left-img-input" style="max-width: 264px; float: left">
@@ -85,7 +82,7 @@
     </el-dialog>
 
     <div class="language-box">
-      <el-dropdown trigger="click" @command="setLanguage">
+      <el-dropdown trigger="click" @command="setLanguage" @visible-change="handleVisibleChange">
         <span class="el-dropdown-link">
           <SvgIcon class="data-box-icon" name="language"></SvgIcon>{{ languageNow }}<el-icon class="el-icon--right"><arrow-down /></el-icon>
         </span>
@@ -115,8 +112,6 @@
   import configObj from '@/config';
   import autoTips from '@/components/autoTips/autoTips.vue';
   import SvgIcon from '@/components/svg-icon/SvgIcon.vue';
-  import logoImg from '@/assets/logo.svg';
-  import TTPOSLogoImg from '@/assets/TTPOS-logo.png';
   import { EEUIRELOAD } from '@/utils/platform.js';
 
   const { menu } = configObj;
@@ -130,6 +125,7 @@
   const macData = language.getMacData().macData;
   const languageTag = languageStore().language;
   const languageList = language.getLanguageList().languageList;
+  const languageListOrigin = language.getLanguageListOrigin().languageListOrigin;
   const userInfo = computedUserInfo().userInfo;
   export default {
     components: {
@@ -231,6 +227,7 @@
         language: language,
         languageNow: languageNow,
         languageList: languageList,
+        languageListOrigin: languageListOrigin,
         languageTag: languageTag,
         accredit: accredit,
         userInfo: userInfo,
@@ -238,9 +235,7 @@
         isCloudDeploy: isCloudDeploy,
         accredit: accredit,
         macData: macData,
-        logoImg: logoImg,
-        TTPOSLogoImg: TTPOSLogoImg,
-        brand: 'JBC',
+        brand: 'TTPOS',
         captchaImg: '',
         captchaImgLoading: false,
         captchaSign: '',
@@ -435,6 +430,7 @@
           });
       },
 
+      // 切换语言
       setLanguage(e) {
         if (e == this.languageTag) return;
         ElMessageBox.confirm($t('切换语言需要刷新后生效，是否确定刷新?'), $t('提示'), {
@@ -452,6 +448,12 @@
               message: $t('已取消'),
             });
           });
+      },
+
+      handleVisibleChange(visible) {
+        if (visible && this.languageList.length === 0) {
+          languageStore().setLanguageList(this.languageListOrigin);
+        }
       },
 
       handleFocus() {

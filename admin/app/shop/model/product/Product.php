@@ -184,6 +184,7 @@ class Product extends ProductModel
         $data['takeout_tax_uuid'] = $takeoutTaxUuid; // 外带税类UUID
         $data['printer_tag_uuid'] = $data['label_id'] ?? 0; // 打印机标签UUID
         $data['deduct_stock_type'] = $data['deduct_stock_type'] == 10 ? 1 : 0; // 库存计算方法, 0-付款减库存 1-下单减库存 （deduct_stock_type 库存计算方式(10下单减库存 20付款减库存)）
+        $data['num_type'] = $data['num_type'] ?? 0; // 数量计算方法, 0-整数 1-小数
         $data['sauce_required'] = $data['feed_required'] ?? 0; // 是否必选小料, 0-否 1-是
         $data['sauce_max_selection'] = $data['feed_max_select'] ?? 0; // 小料最大选择数量
         $data['describe'] = $data['selling_point'] ?? ''; // 商品卖点
@@ -472,12 +473,17 @@ class Product extends ProductModel
                 $takeoutTaxUuid = $item['tax_category_id'];
             }
         }
+
+        // 是否显示外送
+        $isShowDelivery = isset($data['is_show_delivery']) ? ($data['is_show_delivery'] == 0 ? 2 : $data['is_show_delivery']) : 2;
+
         // 更新产品包
         $this->save([
             'name' => $data['product_name'], // 产品包名称
             'image_name' => $data['img_name'] ?? '', // 产品包图片名称
             'image_file_uuid' => $fileId, // 产品包图片文件id
             'deduct_stock_type' => $data['deduct_stock_type'] == 10 ? 1 : 0, // 扣库存类型: 10-下单减库存, 20-付款减库存
+            'num_type' => $data['num_type'] ?? 0, // 数量计算方法, 0-整数 1-小数
             'unit_uuid' => $data['unit_id'], // 单位uuid
             'dine_tax_uuid' => $dineTaxUuid, // 堂食税类id
             'takeout_tax_uuid' => $takeoutTaxUuid, // 外带税类id
@@ -488,6 +494,7 @@ class Product extends ProductModel
             'is_show_kitchen' => $data['is_show_kitchen'] != 2 ? 1 : 0, // 是否显示厨房: 10-显示, 20-隐藏
             'is_show_assistant' => $data['is_show_assistant'] != 2 ? 1 : 0, // 是否显示助手: 10-显示, 20-隐藏,
             'is_show_h5' => $data['is_show_h5'] != 2 ? 1 : 0, // 是否显示h5: 10-显示, 20-隐藏
+            'is_show_delivery' => $isShowDelivery != 2 ? 1 : 0, // 是否显示外送: 1-显示, 0-隐藏
             'sort' => $data['product_sort'], // 排序
             'limit_num' => $data['limit_num'], // 限购数量,
             'sauce_required' => $data['feed_required'], // 是否必选加料: 0-否, 1-是,

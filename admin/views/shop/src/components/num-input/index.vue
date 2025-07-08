@@ -1,17 +1,26 @@
 <template>
-  <el-input v-model="valueData" type="text" :placeholder="placeholder" @input="changeTax" :class="width"> </el-input>
+  <div :class="width" class="flex-num-input">
+    <div v-if="controls" class="icon-plus" @click="handlePlus">
+      <el-icon><Plus /></el-icon>
+    </div>
+    <el-input :class="controls ? 'controls-input' : ''" :disabled="disabled" :model-value="modelValue" type="text" :placeholder="placeholder" @input="handleInput"> </el-input>
+    <div v-if="controls" class="icon-minus" @click="handleMinus">
+      <el-icon><Minus /></el-icon>
+    </div>
+  </div>
 </template>
+
 <script>
   export default {
+    name: 'NumInput',
     props: {
-      value: {
-        type: String,
-        required: true,
+      modelValue: {
+        type: [String, Number],
         default: '',
       },
       placeholder: {
         type: String,
-        default: $t('请输入'),
+        default: () => $t('请输入'),
       },
       width: {
         type: String,
@@ -29,54 +38,126 @@
         type: Number,
         default: 4,
       },
-    },
-    data() {
-      return {
-        valueData: '',
-      };
-    },
-    watch: {
-      value: {
-        handler(newVal) {
-          this.valueData = newVal;
-        },
-        deep: true,
-        immediate: true,
+      controls: {
+        type: Boolean,
+        default: false,
+      },
+      disabled: {
+        type: Boolean,
+        default: false,
       },
     },
-
     methods: {
-      changeTax() {
-        var regex = /^[0-9]+(\.[0-9]+)?$/;
-        if (!regex.test(this.valueData)) {
-          this.valueData = this.valueData
-            .replace(/[^0-9.]/g, '')
-            .replace(/\.{2,}/g, '.')
-            .replace(/(\..*)\./g, '$1');
+      handleMinus() {
+        if (this.disabled) {
+          return;
         }
-        // 将数字转换为字符串
-        let str = this.valueData.toString();
-        // 检查字符串是否包含小数点
-        if (str.includes('.')) {
-          // 获取小数点后的部分
-          let decimalPart = str.split('.')[1];
-          // 检查小数点后的部分是否大于两位
-          if (decimalPart.length > this.precision) {
-            // 获取整数部分和小数部分
-            let parts = str.split('.');
-            // 直接截取需要的小数位数，不进行四舍五入
-            this.valueData = parts[0] + '.' + parts[1].substring(0, this.precision);
+        let newValue = Number(this.modelValue) - 1;
+        // Round to the specified precision to avoid floating point issues
+        if (this.precision > 0) {
+          const factor = Math.pow(10, this.precision);
+          newValue = Math.round(newValue * factor) / factor;
+        }
+        // Ensure the value doesn't go below min
+        newValue = Math.max(newValue, this.min);
+        this.$emit('update:modelValue', newValue);
+      },
+      handlePlus() {
+        if (this.disabled) {
+          return;
+        }
+        let newValue = Number(this.modelValue) + 1;
+        // Round to the specified precision to avoid floating point issues
+        if (this.precision > 0) {
+          const factor = Math.pow(10, this.precision);
+          newValue = Math.round(newValue * factor) / factor;
+        }
+        // Ensure the value doesn't exceed max
+        newValue = Math.min(newValue, this.max);
+        this.$emit('update:modelValue', newValue);
+      },
+      handleInput(value) {
+        if (this.disabled) {
+          return;
+        }
+        // 只允许数字和小数点
+        let formattedValue = value
+          .replace(/[^0-9.]/g, '')
+          .replace(/\.{2,}/g, '.')
+          .replace(/(\..*)\./g, '$1');
+
+        // 处理以0开头的数字
+        if (formattedValue.length > 1 && formattedValue.startsWith('0') && !formattedValue.startsWith('0.')) {
+          formattedValue = formattedValue.slice(1);
+        }
+
+        //如果precision为0，
+        if (this.precision === 0) {
+          formattedValue = formattedValue.replace(/\./g, '');
+        }
+
+        // 处理小数位数
+        if (formattedValue.includes('.')) {
+          const [integer, decimal] = formattedValue.split('.');
+          if (decimal && decimal.length > this.precision) {
+            formattedValue = `${integer}.${decimal.slice(0, this.precision)}`;
           }
         }
-        this.valueData > this.max ? (this.valueData = this.max) : (this.valueData = this.valueData);
-        this.valueData < this.min ? (this.valueData = this.min) : (this.valueData = this.valueData);
-        this.$emit('update:valueData', this.valueData);
+
+        // 处理最小最大值
+        const numValue = parseFloat(formattedValue);
+        if (!isNaN(numValue)) {
+          if (numValue > this.max) {
+            formattedValue = this.max.toString();
+          } else if (numValue < this.min) {
+            formattedValue = this.min.toString();
+          }
+        }
+        // 触发更新
+        this.$emit('update:modelValue', formattedValue);
       },
     },
   };
 </script>
-<style scoped>
+
+<style scoped lang="scss">
   .m-full {
     width: 100%;
+  }
+  .flex-num-input {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+  }
+  .icon-plus {
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    border-right: none;
+    border-radius: 4px 0 0 4px;
+  }
+  .icon-minus {
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    border-left: none;
+    border-radius: 0 4px 4px 0;
+  }
+  .controls-input {
+    border-radius: 0 !important;
+    :deep(.el-input__wrapper) {
+      border-radius: 0 !important;
+    }
   }
 </style>

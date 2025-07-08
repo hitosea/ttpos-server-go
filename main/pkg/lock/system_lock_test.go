@@ -3,10 +3,11 @@ package lock
 import (
 	"context"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"sync"
 	"testing"
 	"ttpos-server-go/pkg/cache"
+
+	"github.com/redis/go-redis/v9"
 )
 
 func TestOpenDesk(t *testing.T) {
@@ -15,11 +16,6 @@ func TestOpenDesk(t *testing.T) {
 		//Host:     "192.168.100.69",
 		//Port:     "6379",
 		//Password: "",
-		//DB:       1,
-
-		Host:     "156.255.90.128,156.255.90.128,156.255.90.128,156.255.90.101,156.255.90.101,156.255.90.101,156.255.90.227,156.255.90.227,156.255.90.227",
-		Port:     "7001,7002,7003,7001,7002,7003,7001,7002,7003",
-		Password: "sass@123.com!",
 		//DB:       1,
 	})
 	var wg sync.WaitGroup

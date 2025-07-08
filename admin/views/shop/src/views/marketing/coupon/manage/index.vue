@@ -6,7 +6,7 @@
       -->
   <div class="user">
     <!--搜索表单-->
-    <div class="common-seach-wrap flex">
+    <div class="common-search-wrap flex">
       <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
         <el-form-item :label="$t('优惠券名称')">
           <el-input v-model="formInline.name" :placeholder="$t('优惠券名称')" @input="onSearch"></el-input>
@@ -31,7 +31,7 @@
     <div class="product-content">
       <div class="table-wrap">
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
-          <el-table-column type="index" width="45" :label="$t('序号')" header-align="center" align="center" :index="indexMethod"></el-table-column>
+          <el-table-column prop="sort" :label="$t('排序')" width="80"></el-table-column>
           <el-table-column prop="name" :label="$t('优惠券名称')"></el-table-column>
 
           <el-table-column prop="type" :label="$t('优惠券类型')">
@@ -70,7 +70,7 @@
       </div>
     </div>
 
-    <AddEdit v-if="open_addDdit" :title="title" :editData="editData" :open="open_addDdit" @closeDialog="closeAddMenber"> </AddEdit>
+    <AddEdit v-if="open_addEdit" :title="title" :editData="editData" :open="open_addEdit" @closeDialog="closeAddMenber"> </AddEdit>
   </div>
 </template>
 
@@ -95,7 +95,7 @@
     type: '',
   });
 
-  const open_addDdit = ref(false);
+  const open_addEdit = ref(false);
   const title = ref('');
   const editData = ref('');
   const searchLoading = ref('');
@@ -111,10 +111,6 @@
     curPage.value = 1;
     pageSize.value = val;
     getTableList();
-  };
-
-  const indexMethod = (index) => {
-    return index + 1 + (curPage.value - 1) * pageSize.value;
   };
 
   const getTableList = () => {
@@ -136,11 +132,11 @@
 
   const addMenber = () => {
     title.value = $t('添加优惠券');
-    open_addDdit.value = true;
+    open_addEdit.value = true;
   };
 
   const closeAddMenber = (e) => {
-    open_addDdit.value = false;
+    open_addEdit.value = false;
     editData.value = '';
     if (e == 1) {
       getTableList();
@@ -158,7 +154,7 @@
   const editClick = (item) => {
     title.value = $t('编辑优惠券');
     editData.value = item;
-    open_addDdit.value = true;
+    open_addEdit.value = true;
   };
 
   // 生命周期

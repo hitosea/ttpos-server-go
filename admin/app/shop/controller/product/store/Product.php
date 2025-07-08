@@ -13,7 +13,9 @@ use app\common\model\product\Spec as SpecModel;
 use app\common\model\product\Unit as UnitModel;
 use app\shop\model\product\Product as ProductModel;
 use app\common\model\product\Material as MaterialModel;
+use app\common\model\product\ProductRecommend;
 use app\shop\model\product\Category as CategoryModel;
+use app\shop\validate\ProductPackageRecommendValidate;
 
 /**
  * 店内商品
@@ -89,6 +91,7 @@ class Product extends Controller
      *   @Apidoc\Param("selling_point", type="string", require=true, desc="商品卖点"),
      *   @Apidoc\Param("spec_type", type="int", require=true, desc="产品规格(10单规格 20多规格)"),
      *   @Apidoc\Param("deduct_stock_type", type="int", require=true, desc="库存计算方式(10下单减库存 20付款减库存)"),
+     *   @Apidoc\Param("num_type", type="int", require=true, desc="数量计算方法, 0-整数 1-小数"),
      *   @Apidoc\Param("is_alone_grade", type="int", require=true, desc="会员折扣设置(0默认等级折扣 1单独设置折扣)"),
      *   @Apidoc\Param("sku", type="array", require=true, desc="商品sku", children={
      *      @Apidoc\Param("spec_sku_id", type="string", require=true, desc="规格id"),
@@ -201,6 +204,7 @@ class Product extends Controller
      *   @Apidoc\Param("is_show_kitchen", type="int", require=true, desc="是否显示在厨显(1显示 2不显示)"),
      *   @Apidoc\Param("is_show_assistant", type="int", require=true, desc="是否显示在点餐助手(1显示 2不显示)（v1.0.5）"),
      *   @Apidoc\Param("is_show_h5", type="int", require=true, desc="是否显示在h5(1显示 2不显示)（v1.0.7）"),
+     *   @Apidoc\Param("is_show_delivery", type="int", require=true, desc="是否显示在外送(1显示 2不显示)（v2.3.0）"),
      *   @Apidoc\Param("sales_initial", type="int", require=true, desc="初始销量"),
      *   @Apidoc\Param("product_sort", type="int", require=true, desc="产品排序(数字越小越靠前)"),
      *   @Apidoc\Param("limit_num", type="int", require=true, desc="限购数量0为不限"),
@@ -247,10 +251,26 @@ class Product extends Controller
     {
         /** @var ProductModel $model */
         $model = ProductModel::detail($product_id);
-        if (!$model->setStatus($state)) {
-            return $this->renderError('操作失败');
+        if ($model) {
+            if (!$model->setStatus($state)) {
+                return $this->renderError('操作失败');
+            }
+            return $this->renderSuccess('操作成功');
         }
-        return $this->renderSuccess('操作成功');
+        /** @var MaterialModel $model */
+        $material = MaterialModel::detail($product_id);
+        if ($material) {
+            if ($state != 10 && $material->relatedMaterial()->count() > 0) {
+                return $this->renderError('该材料已被使用，无法操作');
+            }
+            $res = $material->save(['status' => $state == 10 ? 1 : 0]);
+            if ($res === false) {
+                return $this->renderError('操作失败');
+            }
+            return $this->renderSuccess('操作成功');
+        }
+        // 
+        return $this->renderError('操作失败');
     }
 
     /**
@@ -295,6 +315,7 @@ class Product extends Controller
      *      @Apidoc\Param("product_name", type="string",  default="get", default="简体中文:饮料", require=true, desc="商品名称"),
      *      @Apidoc\Param("category_name", type="string", require=true, default="分类/主分类", desc="所属分类"),
      *      @Apidoc\Param("deduct_stock_type", type="string", require=true, default="1", desc="库存计算方式"),
+     *      @Apidoc\Param("num_type", type="string", require=true, default="1", desc="数量计算方法, 1-整数 2-小数"),
      *      @Apidoc\Param("product_unit", type="string", require=true, default="个", desc="商品单位"),
      *      @Apidoc\Param("spec_name", type="string", require=true, default="规格", desc="规格名称"),
      *      @Apidoc\Param("img_name", type="string", require=true, default="图片名称", desc="图片名称"),
@@ -318,6 +339,7 @@ class Product extends Controller
      *      @Apidoc\Param("product_name", type="string",  default="get", default="{'zh':'饮料'}", require=true, desc="商品名称"),
      *      @Apidoc\Param("category_name", type="string", require=true, default="分类/主分类", desc="所属分类"),
      *      @Apidoc\Param("deduct_stock_type", type="string", require=true, default="10", desc="库存计算方式(10下单减库存 20付款减库存)"),
+     *      @Apidoc\Param("num_type", type="string", require=true, default="1", desc="数量计算方法, 1-整数 2-小数"),
      *      @Apidoc\Param("product_unit", type="string", require=true, default="个", desc="商品单位"),
      *      @Apidoc\Param("spec_name", type="string", require=true, default="规格", desc="规格名称"),
      *      @Apidoc\Param("img_name", type="string", require=true, default="图片名称", desc="图片名称"),
@@ -337,6 +359,7 @@ class Product extends Controller
      *      @Apidoc\Param("is_show_kitchen", type="int", desc="是否显示在送厨端 1-显示 2-不显示"),
      *      @Apidoc\Param("is_show_assistant", type="int", desc="是否显示在点餐助手 1-显示 2-不显示"),
      *      @Apidoc\Param("is_show_h5", type="int", desc="是否显示在h5 1-显示 2-不显示"),
+     *      @Apidoc\Param("is_show_delivery", type="int", desc="是否显示在外送 1-显示 2-不显示"),
      *      @Apidoc\Param("category_id", type="int", desc="所选的分类Id"),
      *      @Apidoc\Param("unit_id", type="int", desc="所选的单位Id"),
      *      @Apidoc\Param("spec_id", type="int", desc="所选的规格Id"),
@@ -393,6 +416,15 @@ class Product extends Controller
                     $val['is_show_kitchen'] = strstr($val['shows'], '3') ? 1 : 2;
                     $val['is_show_assistant'] = strstr($val['shows'], '4') ? 1 : 2;
                     $val['is_show_h5'] = strstr($val['shows'], '5') ? 1 : 2;
+                    $val['is_show_delivery'] = strstr($val['shows'], '6') ? 1 : 2;
+                    // 按小数计价，不在助手、平板、扫码端显示
+                    if ($val['num_type'] == 2 && ($val['is_show_tablet'] != 2 ||  $val['is_show_assistant'] != 2 ||  $val['is_show_h5'] != 2 ||  $val['is_show_delivery'] != 2)) {
+                        return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('按小数计价只能显示到收银机和厨显'), $val);
+                    }
+                    // 
+                    if ($this->store['supplier']['delivery_status'] != 1 && $val['is_show_delivery'] != 2) {
+                        return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('未配置外送渠道，无法选择在外送显示'), $val);
+                    }
                     //
                     $productName = [];
                     foreach (explode("\n",  $val['product_name']) as $name) {
@@ -407,6 +439,7 @@ class Product extends Controller
                     }
                     $val['product_name'] = json_encode($productName, JSON_UNESCAPED_UNICODE);
                 } else {
+                    $val['num_type'] = strstr($val['num_type'], '1') ? 0 : 1; // excel内容中1表示整数计价，2表示小数计价；对应数据库值0表示整数，1表示小数
                     $productName = json_decode($val['product_name'], true);
                     if (!$productName) {
                         return $this->renderError(__('行') . '[' . ($val['row'] ?? 1) . ']: ' . __('商品名称格式错误'), $val);
@@ -575,6 +608,80 @@ class Product extends Controller
     {
         $model = new ProductModel;
         if (!$model->batchUpdateTax($this->postData())) {
+            return $this->renderError($model->getError() ?: '操作失败');
+        }
+        return $this->renderSuccess('操作成功');
+    }
+
+    /**
+     * @Apidoc\Title("商品推荐")
+     * @Apidoc\Desc("get请求是获取；post请求是提交修改")
+     * @Apidoc\Method ("GET,POST")
+     * @Apidoc\Url ("/index.php/shop/product.store.product/recommend")
+     * @Apidoc\Returned("status", type="int", desc="状态")
+     * @Apidoc\Returned("title", type="string", desc="推荐标题")
+     * @Apidoc\Returned("product_packages", type="array", desc="商品列表", children={
+     *      @Apidoc\Param("uuid", type="string", desc="商品UUID"),
+     *      @Apidoc\Param("sort", type="int", desc="排序"),
+     *      @Apidoc\Param("name", type="string", desc="商品名称"),
+     * }),
+     * @Apidoc\Returned()
+     */
+    public function recommend(ProductPackageRecommendValidate $validate)
+    {
+        if (request()->licenses['is_open_delivery'] == 0) {
+            return $this->renderError('当前没有权限使用此功能');
+        }
+        $model = new ProductRecommend();
+        $data = $model->where('delete_time', 0)->hidden(['id', 'uuid', 'create_time', 'update_time', 'delete_time'])->find();
+        if ($this->request->isGet()) {
+            if (!is_null($data)) {
+                $json = json_decode($data['product_packages'], true);
+                $productPackageUuids = array_column($json, 'uuid');
+                // 获取商品和语言
+                $productPackages = ProductModel::with('MultiLanguageName')->where('uuid', 'in', $productPackageUuids)->select();
+                $map = [];
+                foreach ($productPackages as $productPackage) {
+                    $map[$productPackage['uuid']] = $productPackage;
+                }
+                foreach ($json as $k => $item) {
+                    $defaultNames = ["en_name" => "", "zh_name" => "", "zh_tw_name" => "", "th_name" => "", "my_name" => "", "ja_name" => "", "ko_name" => "", "tr_name" => ""];
+                    if (!isset($map[$item['uuid']])) {
+                        unset($json[$k]);
+                        continue;
+                    }
+                    $productPackage = $map[$item['uuid']];
+                    if (!is_null($productPackage) && !is_null($productPackage->MultiLanguageName)) {
+                        $defaultNames = $productPackage->MultiLanguageName->hidden(['id', 'uuid', 'create_time', 'update_time', 'delete_time'])->toArray();
+                    }
+                    $lang = checkDetect();
+                    $json[$k]['name'] = $defaultNames[($lang == 'zhtw' ? 'zh_tw' : $lang) . '_name'];
+                }
+                $data['product_packages'] = $json;
+            } else {
+                $data['status'] = 0;
+                $data['title'] = '';
+                $data['product_packages'] = [];
+            }
+            return $this->renderSuccess('操作成功', $data);
+        }
+
+        $param = $validate->goCheck('save');
+
+        if (is_null($data)) {
+            $data = $model;
+        }
+
+        $count = ProductModel::where('uuid', 'in', array_column($param['product_packages'], 'uuid'))->where('is_show_delivery', 1)->where('delete_time', 0)->count();
+        if ($count != count($param['product_packages'])) {
+            return $this->renderError('只能选择在外送显示的商品');
+        }
+
+        $data->status = intval($param['status']);
+        $data->title = $param['title'];
+        $data->product_packages = json_encode($param['product_packages']);
+
+        if (!$data->save()) {
             return $this->renderError($model->getError() ?: '操作失败');
         }
         return $this->renderSuccess('操作成功');

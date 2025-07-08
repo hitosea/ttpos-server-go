@@ -115,9 +115,9 @@ type UnsentKitchenInfo struct {
 }
 
 type SentKitchenProduct struct {
-	ProductPackageUuid uint64 `json:"product_package_uuid"`     // 商品Uuid
-	SentKitchenNum     uint   `json:"sent_kitchen_product_num"` // 已送厨商品数量
-	FinishedNum        uint   `json:"finished_num"`             // 制作完成数量
+	ProductPackageUuid uint64  `json:"product_package_uuid"`     // 商品Uuid
+	SentKitchenNum     float64 `json:"sent_kitchen_product_num"` // 已送厨商品数量
+	FinishedNum        float64 `json:"finished_num"`             // 制作完成数量
 }
 type SentKitchenProductList struct {
 	List []SentKitchenProduct `json:"list"`

@@ -7,8 +7,8 @@
         <!-- 退款类型 -->
         <el-form-item for="no_click" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.refund_type">
-            <el-radio label="1">{{ $t('整单退款') }}</el-radio>
-            <el-radio label="2">{{ $t('部分退款') }}</el-radio>
+            <el-radio value="1">{{ $t('整单退款') }}</el-radio>
+            <el-radio value="2">{{ $t('部分退款') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <!-- 整单退款 -->
@@ -45,7 +45,14 @@
           </el-table-column>
           <el-table-column prop="refund_num_updata" :label="$t('退菜数量')">
             <template #default="scope">
-              <el-input-number :min="0" :max="Number(scope.row.total_num)" :placeholder="$t('请输入')" v-model.number="scope.row.refund_num_updata"></el-input-number>
+              <numInput
+                :min="0"
+                :max="Number(scope.row.total_num)"
+                :precision="scope.row.num_type == 1 ? 2 : 0"
+                :placeholder="$t('请输入')"
+                v-model="scope.row.refund_num_updata"
+                :controls="true"
+              ></numInput>
             </template>
           </el-table-column>
           <el-table-column :label="$t('退款金额')" align="right">
@@ -77,7 +84,16 @@
 
         <el-form-item v-if="manual_return_points" for="no_click" :label="$t('扣除积分')" :label-width="formLabelWidth">
           <div class="flex-row">
-            <el-input-number class="flex-1" :min="0" :disabled="deductible_points == 0" :max="deductible_points" :precision="2" :controls="false" v-model="form.points" :placeholder="$t('请输入扣除积分')" />
+            <el-input-number
+              class="flex-1"
+              :min="0"
+              :disabled="deductible_points == 0"
+              :max="deductible_points"
+              :precision="2"
+              :controls="false"
+              v-model="form.points"
+              :placeholder="$t('请输入扣除积分')"
+            />
             <span>{{ $t('可退积分') + ' ' + deductible_points }}</span>
           </div>
         </el-form-item>
@@ -144,11 +160,8 @@
   const { currency } = useUserStore();
   import { languageStore } from '@/store/model/language';
   import OrderApi from '@/api/order.js';
-  import draggable from 'vuedraggable';
   export default {
-    components: {
-      draggable,
-    },
+    components: {},
     data() {
       return {
         loading: false, //加载状态
@@ -326,6 +339,7 @@
                 refund_money: item.consumption_tax_pay_price * Number(item.refund_num), //已退价钱
                 id: item.order_product_id, //id
                 refund_num_updata: 0, //提交退款的数量
+                num_type: item.num_type,
               });
             });
           })
@@ -360,6 +374,7 @@
                 price: item.price, // 商品单价
                 id: item.sale_order_product_uuid, //id
                 refund_num_updata: 0, //提交退款的数量
+                num_type: item.num_type, //数量类型
               });
             });
           })

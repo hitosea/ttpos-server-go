@@ -11,16 +11,18 @@ import (
 
 // IProductMustPlanRepo 产品必点方案
 type IProductMustPlanRepo interface {
-	GetProductMustPlanList(ctx context.Context, opts ...DBOption) ([]*model.ProductMustPlan, error)
-	GetProductMustPlanListAllInfos(ctx context.Context) ([]*model.ProductMustPlan, error)
-	// GetProductMustPlanListByUuids 通过uuid列表获取产品必点方案列表
-	GetProductMustPlanListByUuids(uuids []uint64) ([]model.ProductMustPlan, error)
-	GetProductMustPlanByRegionUuid(regionUuid uint64) ([]model.ProductMustPlan, error)
-	GetProductMustPlanListDeskInfos(ctx context.Context) ([]*model.ProductMustPlan, error)
-
+	IProductMustPlanQueryRepo
 	CreateProductMustPlan(plan *model.ProductMustPlan) (*model.ProductMustPlan, error)
 	CreateProductMustPlanItem(planItems []model.ProductMustPlanItem) error
 	CreateProductMustPlanRegion(planRegions []model.ProductMustPlanRegion) error
+}
+
+type IProductMustPlanQueryRepo interface {
+	GetProductMustPlanList(ctx context.Context, opts ...DBOption) ([]*model.ProductMustPlan, error)
+	GetProductMustPlanListAllInfos(ctx context.Context) ([]*model.ProductMustPlan, error)
+	GetProductMustPlanListByUuids(uuids []uint64) ([]model.ProductMustPlan, error) //  通过uuid列表获取产品必点方案列表
+	GetProductMustPlanByRegionUuid(regionUuid uint64) ([]model.ProductMustPlan, error)
+	GetProductMustPlanListDeskInfos(ctx context.Context) ([]*model.ProductMustPlan, error)
 }
 
 func NewProductMustPlanRepo(db *gorm.DB) IProductMustPlanRepo {

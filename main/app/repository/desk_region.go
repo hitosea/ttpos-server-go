@@ -10,10 +10,15 @@ import (
 
 // IDeskRegionRepo 桌台区域
 type IDeskRegionRepo interface {
-	GetDeskRegionList() ([]model.DeskRegion, error)
+	IDeskRegionQueryRepo
 	UpdateDeskRegion(uuid uint, deskRegion model.DeskRegion) error
 	CreateDeskRegion(deskRegion model.DeskRegion) (uint64, error)
 	DeleteDeskRegion(uuid uint) error
+}
+
+// IDeskRegionQueryRepo 桌台区域查询
+type IDeskRegionQueryRepo interface {
+	GetDeskRegionList() ([]model.DeskRegion, error)
 }
 
 func NewDeskRegionRepo(db *gorm.DB) IDeskRegionRepo {

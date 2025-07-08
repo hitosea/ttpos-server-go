@@ -13,22 +13,27 @@ import (
 )
 
 type ISaleBillRepo interface {
+	ISaleBillQueryRepo
+	UpdateSaleBill(saleBill *model.SaleBill) error
+	UpdateSaleBillRecord(saleBill model.SaleBill) error
+	UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error
+	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error       // 确认必点
+	UpdateSaleBillAutoAddMustProduct(saleBillUuid uint64) error // 完成自动加购
+	DeleteSaleBill(saleBillUuid uint64) error                   // 软删除销售账单
+}
+
+// ISaleBillQueryRepo 销售账单的查询接口。
+type ISaleBillQueryRepo interface {
 	GetSaleBill(opts ...DBOption) (model.SaleBill, error)
 	GetSaleBillList(opts ...DBOption) ([]*model.SaleBill, error)
 	GetSaleBillListPage(pageNo, pageSize int, opts ...DBOption) ([]*model.SaleBill, int64, error)
 	GetSaleBillByUuid(uuid uint64) (*model.SaleBill, error)
 	GetSaleBillByDeviceUuid(deviceSn uint64) (*model.SaleBill, error)
-	GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error) // 获取销售订单的拆单序号。用于操作日志展示
-	UpdateSaleBill(saleBill *model.SaleBill) error
-	UpdateSaleBillRecord(saleBill model.SaleBill) error
-	UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error
-	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error                                          // 确认必点
-	UpdateSaleBillAutoAddMustProduct(saleBillUuid uint64) error                                    // 完成自动加购
+	GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error)                       // 获取销售订单的拆单序号。用于操作日志展示
 	GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
 	GetInstantSaleBillLatest() (*model.SaleBill, error)                                            // 获取最新的一条点餐销售账单
 	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                     // 获取销售账单的自助餐商品列表
 	GetSaleBillRecord(uuid uint64) (*model.SaleBill, error)
-	DeleteSaleBill(saleBillUuid uint64) error         // 软删除销售账单
 	GetDeskSaleBillUnPay() ([]*model.SaleBill, error) // 获取所有未付款的桌台账单
 	GetCompleteTotal() (int64, error)                 // 获取总数量
 }

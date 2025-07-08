@@ -82,7 +82,7 @@ type OrderProduct struct {
 	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 产品名称
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 口味名称
 	Price               float64            `json:"price"`                 // 单价. 折前价
-	Num                 uint               `json:"num"`                   // 数量
+	Num                 float64            `json:"num"`                   // 数量
 	SalePrice           float64            `json:"sale_price"`            // 销售价 (折前价) (划线价格) 当 sale_price 不等于 total_price 时才显示
 	TotalPrice          float64            `json:"total_price"`           // 最终总价(折后价)
 	RefundAmount        float64            `json:"refund_amount"`         // 退款金额
@@ -200,7 +200,8 @@ type OrderReturnProduct struct {
 	SaleOrderProductUuid uint64             `json:"sale_order_product_uuid"` // 销售订单商品ID
 	LocaleName           dto.LocaleResponse `json:"locale_name"`             // 产品名称
 	LocaleAttributeName  dto.LocaleResponse `json:"locale_attribute_name"`   // 属性名称
-	Num                  uint               `json:"num"`                     // 数量。可退货数量=订单商品数量-已退货数量
+	Num                  float64            `json:"num"`                     // 数量。可退货数量=订单商品数量-已退货数量
+	NumType              uint               `json:"num_type"`                // 数量类型 0-整数 1-小数
 	Price                float64            `json:"price"`                   // 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。
 	CanReturnAmount      float64            `json:"can_return_amount"`       // 可退款金额. 可退款金额=订单商品数量*最终单价
 	CurrencyUnit         string             `json:"currency_unit"`           // 货币单位

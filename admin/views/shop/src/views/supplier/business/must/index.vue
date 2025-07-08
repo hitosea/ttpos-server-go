@@ -1,6 +1,6 @@
 <template>
   <div class="must-list">
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('状态')">
           <a-select size="small" v-model:value="searchForm.status" :placeholder="$t('方案状态')" @change="onSearch">
@@ -228,7 +228,7 @@
     overflow: auto;
     height: 100%;
   }
-  .common-seach-wrap {
+  .common-search-wrap {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0;

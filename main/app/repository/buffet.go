@@ -8,8 +8,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// IBuffetRepo 桌台
+// IBuffetRepo 自助餐
 type IBuffetRepo interface {
+	IBuffetQueryRepo
+	UpdateBuffetInfo(buffet model.BuffetPackage) error      // 更新自助餐信息
+	AddActualSaleNum(buffetUuid uint64, saleNum uint) error // 更新自助餐
+	SubActualSaleNum(buffetUuid uint64, saleNum uint) error // 更新自助餐销量
+	CreateBuffet(buffet model.BuffetPackage) error          // 创建自助餐
+}
+
+// IBuffetQueryRepo 自助餐查询
+type IBuffetQueryRepo interface {
 	GetBuffetList(pageNo, pageSize int, opts ...DBOption) ([]*model.BuffetPackage, int64, error)
 	GetBuffetListNoPage(opts ...DBOption) ([]*model.BuffetPackage, error)
 	GetBuffetListInDeskOpen(pageNo, pageSize int) ([]*model.BuffetPackage, int64, error) // 获取自助餐列表（桌台开台）
@@ -18,17 +27,13 @@ type IBuffetRepo interface {
 	GetBuffetCustomerTypeInfo(opts ...DBOption) (model.BuffetCustomerType, error)        // 获取自助餐顾客类型详情
 	GetBuffetCustomerTypePrice(opts ...DBOption) (model.BuffetCustomerTypePrice, error)  // 获取自助餐顾客类型价格
 	GetBuffetCustomerTypePriceInfo(buffetUuid uint64, buffetCustomerTypeUuid uint64) (*model.BuffetCustomerTypePrice, bool, error)
-	UpdateBuffetInfo(buffet model.BuffetPackage) error      // 更新自助餐信息
-	AddActualSaleNum(buffetUuid uint64, saleNum uint) error // 更新自助餐
-	SubActualSaleNum(buffetUuid uint64, saleNum uint) error // 更新自助餐销量
-	CreateBuffet(buffet model.BuffetPackage) error          // 创建自助餐
 }
 
 func NewBuffetRepo(db *gorm.DB) IBuffetRepo {
 	return NewBuffetRepoImpl(db)
 }
 
-// NewBuffetRepoImpl 创建新的桌台仓库实现
+// NewBuffetRepoImpl 创建新的自助餐仓库实现
 func NewBuffetRepoImpl(db *gorm.DB) *BuffetRepoImpl {
 	return &BuffetRepoImpl{db: db}
 }

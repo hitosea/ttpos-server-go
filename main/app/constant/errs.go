@@ -18,14 +18,15 @@ const (
 	CodeTimeoutError = -5  // 超时错误
 	UnknownError     = -99 // 未知错误
 
-	CodeUnauthorized    = -100 // 未授权
-	CodeTokenExpired    = -101 // Token过期
-	CodeTokenInvalid    = -102 // Token无效
-	CodeAccessDenied    = -103 // 拒绝访问
-	CodeAccountDisabled = -104 // 账号已禁用
-	CodeNeedLogin       = -105 // 需要登录
-	CodeLoginFailed     = -106 // 登录失败
-	CodeCashierNotLogin = -107 // 点餐助手绑定的收银机未登录
+	CodeUnauthorized      = -100 // 未授权
+	CodeTokenExpired      = -101 // Token过期
+	CodeTokenInvalid      = -102 // Token无效
+	CodeAccessDenied      = -103 // 拒绝访问
+	CodeAccountDisabled   = -104 // 账号已禁用
+	CodeNeedLogin         = -105 // 需要登录
+	CodeLoginFailed       = -106 // 登录失败
+	CodeCashierNotLogin   = -107 // 点餐助手绑定的收银机未登录
+	CodeCashierHandedOver = -108 // 已交班
 
 	CodeCashierOrderMethodNotOpen = -110 //
 	CodeCashierLoginLimit         = -111 // 收银机登录已达上限
@@ -46,6 +47,7 @@ const (
 	CodeOrderCheckProductMust         = -203 // 未选择必点商品
 	CodeOrderCheckProductPriceChanged = -204 // 商品价格已变动
 	CodeOrderCheckProductLimitOut     = -205 // 商品超出限购
+	CodeOrderCheckProductSauceDown    = -208 // 商品某小料已下架
 	// 结账检查
 	CodeOrderCheckProductUnCooking = -206 // 有商品未送厨
 	// 关闭桌台检查
@@ -54,11 +56,9 @@ const (
 
 	CodeH5OrderTimeLimit = -231 // h5订单时间限制
 	CodeH5OrderNumLimit  = -232 // h5订单数量限制
-)
 
-// 营销活动业务错误码
-const (
-	CodeMarketingActivityInvalid = -301 // 营销活动已失效
+	// 优惠券已经失效
+	CodeCouponInvalid = -233
 )
 
 type ParseCodeOrderCheckOption struct {
@@ -119,7 +119,7 @@ const (
 	CodeReturnOrderBank = -401 // 请选择银行
 )
 
-// 会员业务提示
+// 营销活动业务错误码
 const (
-	CodeMemberWarn = 200 // 提示“改价/抹零已失效，请重新进行改价/抹零操作”
+	CodeMarketingActivityInvalid = -501 // 营销活动已失效
 )

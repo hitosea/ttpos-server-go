@@ -131,7 +131,7 @@ type Product struct {
 	SaleOrderProductUuid uint64                 `json:"sale_order_product_uuid"` // 销售订单商品uuid
 	ProductBomUuid       uint64                 `json:"product_bom_uuid"`        // 规格商品或小料的uuid
 	SaleOrderUuid        uint64                 `json:"sale_order_uuid"`         // 销售订单uuid
-	Num                  int                    `json:"num"`                     // 数量
+	Num                  float64                `json:"num"`                     // 数量
 	ProductBomMaterials  []*ProductBomMaterials `json:"product_bom_materials"`   // 规格商品或小料的材料
 }
 
@@ -159,8 +159,8 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64,
 	newForm := func() *WarehouseOutForm {
 		uuid, _ := utils.GetID()
 		form := &WarehouseOutForm{BaseModel: BaseModel{Uuid: uuid}}
-		form.FormNo = "CK" + time.Now().Format("20060102150405") // todo: 根据原先的编号规则生成
-		form.Scene = constant.WarehouseOutFormSceneSales         // 销售出库
+		form.FormNo = "CK" + time.Now().Format("20060102150405")
+		form.Scene = constant.WarehouseOutFormSceneSales // 销售出库
 		form.AssociatedOrderUuid = saleBillUuid
 		form.OperatorUuid = staffUuid
 		return form
@@ -180,7 +180,7 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64,
 		items = append(items, &WarehouseOutFormItem{
 			WarehouseOutFormUuid: form.Uuid,
 			ProductBomUuid:       item.ProductBomUuid,
-			Num:                  float64(item.Num),
+			Num:                  item.Num,
 			Scene:                constant.WarehouseOutFormSceneSales, // 销售出库
 			Status:               status,
 			SaleOrderUuid:        item.SaleOrderUuid,
@@ -219,8 +219,8 @@ func NewWarehouseOutForm(list ProductList, isCheckout bool, saleBillUuid uint64,
 func NewWarehouseForm(list ProductList, saleBillUuid uint64) *WarehouseForm {
 	uuid, _ := utils.GetID()
 	form := &WarehouseForm{BaseModel: BaseModel{Uuid: uuid}}
-	form.FormNo = "RK" + time.Now().Format("20060102150405") // todo: 根据原先的编号规则生成
-	form.Scene = constant.WarehouseFormSceneReturn           // 退菜入库
+	form.FormNo = "RK" + time.Now().Format("20060102150405")
+	form.Scene = constant.WarehouseFormSceneReturn // 退菜入库
 
 	items := make([]*WarehouseFormItem, 0)
 	// 规格商品或小料出库记录

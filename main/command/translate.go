@@ -13,6 +13,7 @@ import (
 	"strings"
 	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -64,9 +65,12 @@ func execute() {
 			strings.HasSuffix(path, ".go") &&
 			!strings.HasSuffix(path, "docs.go") &&
 			!strings.Contains(path, "trans") &&
+			!strings.Contains(path, "_test.go") &&
 			!strings.Contains(path, "old_model") &&
 			!strings.Contains(path, "command") &&
 			!strings.Contains(path, "request_logger") &&
+			!strings.Contains(path, "marketing_activity.go") &&
+			!strings.Contains(path, "bucket.go") &&
 			!strings.Contains(path, "model") {
 			content, err := ioutil.ReadFile(path)
 			if err != nil {
@@ -110,6 +114,9 @@ func execute() {
 	filteredTexts := make(map[string]string)
 	for text := range chineseTexts {
 		if _, exists := zhData[text]; !exists {
+			if strings.Contains(text, "\\n") {
+				continue
+			}
 			filteredTexts[text] = ""
 		}
 	}
@@ -118,10 +125,11 @@ func execute() {
 	chineseTexts = filteredTexts
 
 	// 打印提取的中文数量
+	fmt.Println(utils.ToJsonString(chineseTexts))
 	fmt.Println(len(chineseTexts))
 
 	// 分组处理
-	groupSize := 5
+	groupSize := 10
 	textGroup := make([]string, 0, groupSize)
 	for text := range chineseTexts {
 		textGroup = append(textGroup, text)
@@ -166,7 +174,7 @@ func processGroup(texts []string) {
 	defer func() {
 		if r := recover(); r != nil {
 			os.WriteFile("translate_response.log", body, os.ModePerm)
-			panic(r)
+			execute()
 		}
 	}()
 

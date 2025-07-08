@@ -12,5 +12,7 @@ return [
     // 授权
     // app\common\middleware\License::class,
     //安全验证
-    app\common\middleware\ChenkRequest::class
+    app\common\middleware\ChenkRequest::class,
+    // 删除缓存
+    // app\shop\middleware\DeleteCache::class
 ];

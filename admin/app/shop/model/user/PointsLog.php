@@ -34,7 +34,9 @@ class PointsLog extends PointsLogModel
             $model = $model->where('log.create_time', 'between', [strtotime($query['date'][0]), strtotime($query['date'][1]) + 86399]);
         }
         // 获取列表数据
-        $list = $model->with(['user'])
+        $list = $model->with(['user' => function ($query) {
+                $query->withTrashed();
+            }])
             ->alias('log')
             ->field('log.*')
             ->join('member user', 'user.uuid = log.member_uuid')

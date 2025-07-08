@@ -5,11 +5,12 @@ namespace app\shop\model\settings;
 use help\ImgHelp;
 use help\ImageHelp;
 use think\facade\Cache;
+use app\common\model\app\App;
+use app\common\model\shop\BindRecord;
 use app\common\model\supplier\Supplier;
 use app\common\enum\settings\SettingEnum;
-use app\common\model\app\App;
-use app\common\model\settings\Setting as SettingModel;
 use app\common\service\websocket\Websocket;
+use app\common\model\settings\Setting as SettingModel;
 
 class Setting extends SettingModel
 {
@@ -103,6 +104,10 @@ class Setting extends SettingModel
                     ]);
                 }
             }
+        }
+        // 更新主收银机
+        if ($key == SettingEnum::CASHIER && isset($values['main_cashier_uuid'])) {
+            (new BindRecord)->setMainCashier($values['main_cashier_uuid']);
         }
         // 删除系统设置缓存
         $key = sprintf("setting:company_id:%d", $appId);

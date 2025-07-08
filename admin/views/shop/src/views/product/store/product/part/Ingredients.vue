@@ -16,9 +16,9 @@
         <!--加料-->
         <template v-if="form.model.product_feed.length > 0">
           <div class="table-checkbox">
-            <div> <el-checkbox v-model="form.model.feed_required" size="large" :true-label="1" :false-label="0" :label="$t('必选')" /></div>
+            <div> <el-checkbox v-model="form.model.feed_required" size="large" :true-value="1" :false-value="0" :label="$t('必选')" /></div>
             <div class="table-c-item">
-              <el-checkbox v-model="form.model.feed_open_max_select" size="large" :true-label="1" :false-label="0" :label="$t('最多可选')" @change="checkDefaultSelect" />
+              <el-checkbox v-model="form.model.feed_open_max_select" size="large" :true-value="1" :false-value="0" :label="$t('最多可选')" @change="checkDefaultSelect" />
               <el-input-number
                 v-if="form.model.feed_open_max_select == '1'"
                 @input="checkDefaultSelect()"
@@ -59,7 +59,7 @@
                     },
                   ]"
                 >
-                  <el-input-number :controls="false" :min="0" :max="1000000" :placeholder="$t('请输入价格')" v-model.number="scope.row.price"></el-input-number>
+                  <numInput :controls="false" :min="0" :max="1000000" :precision="2" :placeholder="$t('请输入价格')" v-model="scope.row.price"></numInput>
                 </el-form-item>
               </template>
             </el-table-column>
@@ -79,14 +79,15 @@
                     },
                   ]"
                 >
-                  <el-input-number
+                  <numInput
                     :controls="false"
                     :disabled="scope.row.material.length > 0"
                     :min="0"
                     :max="99999999"
+                    :precision="0"
                     :placeholder="$t('请填写库存数量')"
-                    v-model.number="scope.row.stock_num"
-                  ></el-input-number>
+                    v-model="scope.row.stock_num"
+                  ></numInput>
                 </el-form-item>
               </template>
             </el-table-column>
@@ -105,7 +106,7 @@
                     },
                   ]"
                 >
-                  <el-checkbox @change="checkDefaultSelect" v-model="scope.row.default_select" size="large" :true-label="1" :false-label="0" />
+                  <el-checkbox @change="checkDefaultSelect" v-model="scope.row.default_select" size="large" :true-value="1" :false-value="0" />
                 </el-form-item>
               </template>
             </el-table-column>

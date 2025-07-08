@@ -246,7 +246,7 @@ class Operate extends Controller
         foreach ($refundProduct as $item) {
             $requeustData['products'][] = [
                 'sale_order_product_uuid' => intval($item['order_product_id']),
-                'num' => intval($item['refund_num']),
+                'num' => floatval($item['refund_num']),
             ];
         }
 

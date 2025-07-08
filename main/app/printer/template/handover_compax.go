@@ -3,13 +3,14 @@ package template
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/shopspring/decimal"
 )
 
 // handoverCompaxTemplate 图片订单打印模板
@@ -91,18 +92,18 @@ func (t *handoverCompaxTemplate) GetPrintContent(
 		printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), t.base.Translate("订单数"), t.base.Translate("金额"), width, 26-utils.IfInt(isTrThEn, 4, 0), 20, 16))
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(1)
-		totalPayPrice := float64(0)
+		totalPayPrice := decimal.NewFromFloat(0)
 		for key, income := range businessData.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
 				printer.AppendText(t.base.PrintText(income.Name, fmt.Sprintf("%d", income.OrderNum), t.base.GetPriceAndUnit(income.Amount), width-differenceWidth, 26, 10, 18))
 				if key != len(businessData.PaymentMethodIncomes)-1 {
 					printer.LineFeed(1)
 				}
-				totalPayPrice += income.Amount
+				totalPayPrice = totalPayPrice.Add(decimal.NewFromFloat(income.Amount).Round(2))
 			}
 		}
-		if totalPayPrice > 0 {
-			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice), width-differenceWidth, 26, 10, 18))
+		if totalPayPrice.GreaterThan(decimal.NewFromFloat(0)) {
+			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice.Round(2).InexactFloat64()), width-differenceWidth, 26, 10, 18))
 			printer.LineFeed(1)
 		}
 		// 其他费用
@@ -199,7 +200,7 @@ func (t *handoverCompaxTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.SetLineSpacing(40)
 		for _, category := range businessData.CategoryList {
-			printer.AppendText(t.base.PrintText(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width-differenceWidth, leftWidth, centerWidth, rightWidth))
+			printer.AppendText(t.base.PrintText(category.Name, t.base.FloatToString(category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width-differenceWidth, leftWidth, centerWidth, rightWidth))
 			printer.LineFeed()
 			printer.SetLineSpacing(45)
 		}
@@ -243,7 +244,7 @@ func (t *handoverCompaxTemplate) GetPrintContent(
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("税费"), "", t.base.GetPriceAndUnit(businessData.TotalTaxMoney), width-differenceWidth))
 		printer.LineFeed(1)
-		printer.AppendText(t.base.PrintText(t.base.Translate("商品数量"), "", strconv.Itoa(businessData.TotalProductNum), width-utils.IfInt(t.base.Lang == "th", 1, 0)))
+		printer.AppendText(t.base.PrintText(t.base.Translate("商品数量"), "", utils.FormatFloat(businessData.TotalProductNum), width-utils.IfInt(t.base.Lang == "th", 1, 0)))
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("优惠折扣"), "", t.base.GetPriceAndUnit(businessData.TotalDiscountMoney), width-differenceWidth))
 		printer.LineFeed(1)
@@ -348,18 +349,18 @@ func (t *handoverCompaxTemplate) GetPrintContent(
 		printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), t.base.Translate("订单数"), t.base.Translate("金额"), width, 26-utils.IfInt(isTrThEn, 4, 0), 20, 14))
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(1)
-		var totalPayPrice float64 = 0
+		totalPayPrice := decimal.NewFromFloat(0)
 		for key, income := range businessData.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
 				printer.AppendText(t.base.PrintText(income.Name, fmt.Sprintf("%d", income.OrderNum), t.base.GetPriceAndUnit(income.Amount), width-differenceWidth, 26, 10, 18))
 				if key != len(businessData.PaymentMethodIncomes)-1 {
 					printer.LineFeed(1)
 				}
-				totalPayPrice += income.Amount
+				totalPayPrice = totalPayPrice.Add(decimal.NewFromFloat(income.Amount).Round(2))
 			}
 		}
-		if totalPayPrice > 0 {
-			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice), width-differenceWidth, 26, 10, 18))
+		if totalPayPrice.GreaterThan(decimal.NewFromFloat(0)) {
+			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice.Round(2).InexactFloat64()), width-differenceWidth, 26, 10, 18))
 			printer.LineFeed(1)
 		}
 		// 高峰时间
@@ -380,7 +381,7 @@ func (t *handoverCompaxTemplate) GetPrintContent(
 		printer.SetLineSpacing(40)
 		printer.LineFeed()
 		for _, category := range businessData.CategoryList {
-			printer.AppendText(t.base.PrintText(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width-differenceWidth, leftWidth, centerWidth, rightWidth))
+			printer.AppendText(t.base.PrintText(category.Name, t.base.FloatToString(category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width-differenceWidth, leftWidth, centerWidth, rightWidth))
 			printer.LineFeed()
 			printer.SetLineSpacing(45)
 		}

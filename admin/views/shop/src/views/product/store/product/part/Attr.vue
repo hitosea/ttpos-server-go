@@ -20,13 +20,13 @@
                   typeof item.attribute_name === 'string' ? JSON.parse(item.attribute_name || '{}')[languageKey] : item.attribute_name ? item.attribute_name[languageKey] : '-'
                 }}
               </div>
-              <div> <el-checkbox v-model="item.attribute_required" size="large" :true-label="1" :false-label="0" :label="$t('必选')" /></div>
+              <div> <el-checkbox v-model="item.attribute_required" size="large" :true-value="1" :false-value="0" :label="$t('必选')" /></div>
               <div class="table-c-item">
                 <el-checkbox
                   v-model="item.attribute_open_max_select"
                   size="large"
-                  :true-label="1"
-                  :false-label="0"
+                  :true-value="1"
+                  :false-value="0"
                   :label="$t('最多可选')"
                   @change="checkDefaultSelect(index, item.attribute_value)"
                 />
@@ -74,8 +74,8 @@
                       @change="checkDefaultSelect(index, item.attribute_value)"
                       v-model="item.default_select[scope.$index]"
                       size="large"
-                      :true-label="1"
-                      :false-label="0"
+                      :true-value="1"
+                      :false-value="0"
                     />
                   </el-form-item>
                 </template>

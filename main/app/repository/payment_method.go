@@ -11,6 +11,7 @@ import (
 
 // IPaymentMethodRepo 定义仓库接口
 type IPaymentMethodRepo interface {
+	IPaymentMethodQueryRepo
 	WhereUuid(uuid uint64) DBOption       // uuid条件
 	WhereCashier() DBOption               // 在收银端结账显示
 	WhereCashierMemberRecharge() DBOption // 收银端充值时显示
@@ -20,13 +21,16 @@ type IPaymentMethodRepo interface {
 	WithLogoFile() DBOption   // 关联logo文件
 	WithQrcodeFile() DBOption // 关联二维码文件
 
+	CreatePaymentMethod(paymentMethod model.PaymentMethod) error // 创建支付方式
+}
+
+// IPaymentMethodQueryRepo 定义仓库查询接口
+type IPaymentMethodQueryRepo interface {
 	GetPaymentMethod(opts ...DBOption) model.PaymentMethod
 	GetPaymentMethodError(opts ...DBOption) (*model.PaymentMethod, error)
 	GetPaymentMethodByUuid(uuid uint64) (*model.PaymentMethod, error)
 	GetPaymentMethodList(opts ...DBOption) []*model.PaymentMethod
 	GetPaymentMethodsByCtx(ctx context.Context) []*model.PaymentMethod // 获取收银机支付页面的支付方式列表
-
-	CreatePaymentMethod(paymentMethod model.PaymentMethod) error // 创建支付方式
 }
 
 // paymentMethodRepo 仓库

@@ -4,14 +4,18 @@ namespace app\common\model\shop;
 
 
 use app\common\model\BaseModel;
+use think\model\concern\SoftDelete;
 
 /**
  * 应用模型
  */
 class RoleAccess extends BaseModel
 {
+    use SoftDelete;
     protected $name = 'role_access';
     protected $pk = 'id';
+    protected $deleteTime = 'delete_time';
+    protected $defaultSoftDelete = 0;
 
     /**
      * 追加属性

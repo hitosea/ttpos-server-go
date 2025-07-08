@@ -1,6 +1,6 @@
 <template>
   <div class="recharge">
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item label="">
           <el-radio-group v-model="searchForm.time_type" class="radio-search" @change="timeTypeChange">

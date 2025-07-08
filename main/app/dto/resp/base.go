@@ -1,6 +1,7 @@
 package resp
 
 import (
+	"encoding/json"
 	"strconv"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/resp/setting"
@@ -241,9 +242,14 @@ type CashierReportResp struct {
 
 // ShiftSubmit 交班提交
 type ShiftSubmit struct {
-	CashIncome   float64      `json:"cash_income"`    // 本班现金收入
-	CashTakenOut float64      `json:"cash_taken_out"` // 本班取出现金
-	CashLeft     float64      `json:"cash_left"`      // 本班遗留现金
-	DutyNo       string       `json:"duty_no"`        // 班次编号
-	PrinterData  *PrinterData `json:"printer_data"`   // 打印数据
+	CashIncome   float64     `json:"cash_income"`    // 本班现金收入
+	CashTakenOut float64     `json:"cash_taken_out"` // 本班取出现金
+	CashLeft     float64     `json:"cash_left"`      // 本班遗留现金
+	DutyNo       string      `json:"duty_no"`        // 班次编号
+	PrinterData  PrinterData `json:"printer_data"`   // 打印数据
+}
+
+// 实现 BinaryMarshaler
+func (ss ShiftSubmit) MarshalBinary() ([]byte, error) {
+	return json.Marshal(ss)
 }

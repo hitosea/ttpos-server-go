@@ -129,9 +129,15 @@
         ></el-input-number>
         <div class="tips">{{ $t('同一订单，打印的次数') }}</div>
       </el-form-item>
-
+  
       <el-form-item for="no_click" :label="$t('排序')" prop="sort" :rules="[{ required: true, message: $t('接近0，排序等级越高') }]">
         <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort" autocomplete="off"></el-input-number>
+      </el-form-item>
+
+      <el-form-item for="no_click" :label="$t('打印关联收银机')" prop="is_main" v-if="is_usb != 1">
+        <el-select v-model="form.source_device_sn" :placeholder="$t('选择打印机所关联的收银机')" style="width: 100%" clearable>
+          <el-option v-for="(item, index) in cashierList" :key="index" :label="item.cashier_name" :value="item.cashier_key"> </el-option>
+        </el-select>
       </el-form-item>
 
       <el-form-item for="no_click" :label="$t('打印方式')" prop="print_method">
@@ -172,6 +178,7 @@
           printer_id: '',
           printer_name: '',
           printer_type: '',
+          source_device_sn: '',
           print_method: '',
           sort: 1,
           print_times: 1,
@@ -210,6 +217,7 @@
         loading: false,
         dialogVisible: false,
         type: [],
+        cashierList: [],
       };
     },
     methods: {
@@ -226,11 +234,13 @@
           .then((data) => {
             let detail = data.data.detail;
             self.type = data.data.printerType;
+            self.cashierList = data.data.cashierList;
             self.form.printer_name = detail.printer_name;
             self.form.printer_type = detail.printer_type.value;
             self.form.sort = detail.sort;
             self.form.printer_id = detail.printer_id;
             self.form.print_times = detail.print_times;
+            self.form.source_device_sn = detail.source_device_sn;
             self.form.print_method = detail.print_method || '';
             if (detail.printer_type.value == 'FEI_E_YUN') {
               self.form.FEI_E_YUN.USER = detail.printer_config.USER;
@@ -287,6 +297,7 @@
               return;
             }
             self.loading = true;
+            self.form.source_device_sn = self.form.source_device_sn || '';
             self.form.print_method = self.form.print_method || 0;
             SettingApi.editPrinter(self.form, true)
               .then(() => {

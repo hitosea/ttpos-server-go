@@ -51,8 +51,8 @@ type InstantProductMustPlan struct {
 	MustRule     int                `json:"must_rule"`      // 必点规则.0-固定商品 1-可选商品
 	CanChangeNum bool               `json:"can_change_num"` // 顾客可修改必点数量
 	MealNum      uint               `json:"meal_num"`       // 就餐人数
-	SelectedNum  uint               `json:"selected_num"`   // 已选数量。已选择xx份
-	NeedNum      uint               `json:"need_num"`       // 这个商品还需要点的数量。还差xx份
+	SelectedNum  float64            `json:"selected_num"`   // 已选数量。已选择xx份
+	NeedNum      float64            `json:"need_num"`       // 这个商品还需要点的数量。还差xx份
 	Products     ProductPackageList `json:"products"`       // 商品列表
 }
 type ProductPackageList struct {
@@ -64,16 +64,16 @@ type ProductAutoAddReq struct {
 	FlavorUuid        uint64   `json:"flavor_uuid"`    // 某个规格商品ID
 	SauceUuidList     []uint64 `json:"sauce_uuid"`     // 小料ID列表
 	AttributeUuidList []uint64 `json:"attribute_uuid"` // 属性ID列表
-	Num               uint     `json:"num"`            // 加购数量
+	Num               float64  `json:"num"`            // 加购数量
 }
 
 type InstantMustPlanProductStat struct {
 	Product           InstantMustPlanProduct `json:"product"`
 	IsAutoAdd         bool                   `json:"is_auto_add"`          // 是否是自动加购的商品。是则自动加入购物车
 	ProductAutoAddReq ProductAutoAddReq      `json:"product_auto_add_req"` // 自动加购商品请求参数
-	SelectedNum       uint                   `json:"selected_num"`         // 已选数量
-	MustNum           uint                   `json:"must_num"`             // 这个商品必选点的数量。还需点数量=must_num-selected_num
-	NeedNum           uint                   `json:"need_num"`             // 这个商品还需要点的数量。还需点数量=must_num-selected_num
+	SelectedNum       float64                `json:"selected_num"`         // 已选数量
+	MustNum           float64                `json:"must_num"`             // 这个商品必选点的数量。还需点数量=must_num-selected_num
+	NeedNum           float64                `json:"need_num"`             // 这个商品还需要点的数量。还需点数量=must_num-selected_num
 }
 type InstantMustPlanProduct struct {
 	Uuid            uint64             `json:"uuid"`             // 商品product_package的uuid
@@ -168,10 +168,49 @@ type Attribute struct {
 // 销售订单的支付页信息
 type InstantOrderPaymentInfoResp struct {
 	MemberInfo     *MemberInfo             `json:"member_info,omitempty"`     // 会员信息。如果订单选择了会员，则返回会员信息
+	CouponList     *CouponList             `json:"coupon_list"`               // 优惠券列表
 	PaymentOrders  PaymentInfoList         `json:"payment_orders"`            // 支付订单列表
 	PaymentMethods PaymentMethodList       `json:"payment_methods"`           // 支付方式列表
 	Amounts        PaymentMethodAmountList `json:"amounts"`                   // 支付方式列表及订单金额信息
 	PointsExchange PointsExchangeInfo      `json:"points_exchange,omitempty"` // 积分抵扣信息
+}
+
+type CouponList struct {
+	List []Coupon `json:"list"`
+}
+
+type Coupon struct {
+	Uuid           uint64                `json:"uuid"`             // 优惠券UUID
+	Name           string                `json:"name"`             // 优惠券名称
+	Requirement    string                `json:"type"`             // 优惠券类型 none-无门槛（任何人可以使用） marketing-会员账户里的优惠券，营销活动获得
+	Amount         float64               `json:"amount"`           // 优惠券金额
+	Count          int                   `json:"count"`            // 优惠券数量
+	IsSelected     bool                  `json:"is_selected"`      // 是否选中
+	IsAvailable    bool                  `json:"is_available"`     // 是否可用
+	DayStartTime   string                `json:"day_start_time"`   // 每日适用时段开始时间, hh:mm 格式。00:00-23:59表示全天可用
+	DayEndTime     string                `json:"day_end_time"`     // 每日适用时段结束时间, hh:mm 格式。00:00-23:59表示全天可用
+	ValidStartTime string                `json:"valid_start_time"` // 优惠券有效期，开始时间 格式：YYYY-MM-DD
+	ValidEndTime   string                `json:"valid_end_time"`   // 优惠券有效期，结束时间 格式：YYYY-MM-DD
+	CouponList     []*SampleMemberCoupon `json:"coupon_list"`      // 会员优惠券列表。列表的长度即为优惠券数量Count
+	Sort           SortParam             `json:"-"`                // 排序参数,仅用于排序
+}
+
+type SortParam struct {
+	IsAvailable       bool   `json:"is_available"`        // 优惠券是否可用。true-可用，false-不可用。在有效期内，且在使用时段内。none在前，marketing在后
+	Type              string `json:"type"`                // 优惠券类型。none-通用，marketing-会员。none在前，marketing在后
+	ValidEndTimestamp int64  `json:"valid_end_timestamp"` // 优惠券有效期结束时间戳，先到期的排前面
+	Sort              int    `json:"sort"`                // 优惠券排序，小的在前
+	CouponUuid        uint64 `json:"coupon_uuid"`         // 优惠券UUID。小的在前，即先创建的优惠券在前
+}
+
+type SampleMemberCoupon struct {
+	Uuid         uint64 `json:"uuid"`        // 会员优惠券UUID
+	Name         string `json:"name"`        // 会员优惠券名称
+	CouponUuid   uint64 `json:"coupon_uuid"` // 优惠券UUID
+	StartTime    int64  `gorm:"column:start_time;type:bigint(20);not null;comment:优惠券开始时间" json:"start_time"`
+	EndTime      int64  `gorm:"column:end_time;type:bigint(20);not null;comment:优惠券结束时间" json:"end_time"`
+	DayStartTime string `json:"day_start_time"` // 每日适用时段开始时间, hh:mm 格式。00:00-23:59表示全天可用
+	DayEndTime   string `json:"day_end_time"`   // 每日适用时段结束时间, hh:mm 格式。00:00-23:59表示全天可用
 }
 
 type PointsExchangeInfo struct {
@@ -235,6 +274,7 @@ type PaymentMethodAmount struct {
 	ZeroRule              uint8   `json:"zero_rule"`                // 结账抹零规格。0-实款实收 1-抹分 2-抹角 3-抹元. 当支付方式为有手续费时，值为0 实款实收
 	IsAutoZero            bool    `json:"is_auto_zero"`             // 是否是自动抹零
 	PaymentMethodUuid     uint64  `json:"payment_method_uuid"`      // 支付方式uuid。表示这个amount信息是当前端选择这个支付方式时显示的
+	CouponExchangeAmount  float64 `json:"coupon_exchange_amount"`   // 优惠券抵扣金额
 	CommissionFee         float64 `json:"commission_fee"`           // 已付款的手续费。用于显示最终应收，前端显示的最终应收=应收金额+已付款的手续费+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）
 }
 

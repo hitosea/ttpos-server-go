@@ -96,7 +96,9 @@
             /*规格类别,默认10单规格，20多规格*/
             spec_type: 20,
             /*库存计算方式,默认20付款减库存，10下单减库存*/
-            deduct_stock_type: 20,
+            deduct_stock_type: 10,
+            /*数量计算方法, 0-整数 1-小数*/
+            num_type: 0,
             /*检查用户等级*/
             is_alone_grade: 0,
             sku: [
@@ -139,6 +141,8 @@
             is_show_assistant: 1,
             /*H5是否显示*/
             is_show_h5: 1,
+            /*外送是否显示*/
+            is_show_delivery: 1,
             /*初始销量*/
             sales_initial: 0,
             /*商品排序，默认100*/

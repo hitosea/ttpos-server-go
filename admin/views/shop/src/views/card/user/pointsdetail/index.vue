@@ -1,7 +1,7 @@
 <template>
   <div class="user">
     <!--搜索表单-->
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
         <el-form-item :label="$t('变更场景')">
           <a-select v-model:value="formInline.scene" :placeholder="$t('请选择')" @change="onSearch">

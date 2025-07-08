@@ -1,6 +1,6 @@
 <template>
   <el-dialog :title="$t('选择用户')" v-model="dialogVisible" @close="cancelFunc" append-to-body :close-on-click-modal="false" :close-on-press-escape="false" width="800px">
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
         <el-form-item :label="$t('等级')">
           <el-select v-model="formInline.grade_id" :placeholder="$t('请选择')" style="width: 120px">
@@ -216,16 +216,16 @@
             self.tableData = data.data.list.data;
             self.totalDataNumber = data.data.list.total;
             self.gradeList = data.data.grade;
-            
+
             // 默认选中ID
-            if(this.detailSelection.length>0) {
+            if (this.detailSelection.length > 0) {
               this.$nextTick(() => {
-                this.tableData.forEach(row => {
+                this.tableData.forEach((row) => {
                   if (this.detailSelection.includes(row.id)) {
                     this.$refs.multipleTable.toggleRowSelection(row, true);
                     this.multipleSelection.push(row);
                   }
-                })
+                });
               });
             }
           })

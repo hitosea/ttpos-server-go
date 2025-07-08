@@ -17,7 +17,7 @@ type CancelGiftSaleOrderProductPayload struct {
 	ProductName    dto.LocaleResponse `json:"product_name"`     // 商品名称
 	ProductAttr    dto.LocaleResponse `json:"product_attr"`     // 商品属性
 	ProductPrice   float64            `json:"product_price"`    // 商品价格
-	TotalNum       uint               `json:"total_num"`        // 总数量
+	TotalNum       float64            `json:"total_num"`        // 总数量
 	TotalPrice     float64            `json:"total_price"`      // 总价格
 	ParentId       uint64             `json:"parent_id"`        // 销售账单uuid
 	OrderName      uint64             `json:"order_name"`       // 销售订单uuid

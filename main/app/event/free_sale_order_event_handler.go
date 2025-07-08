@@ -49,6 +49,7 @@ func freeSaleOrderEventHandler() {
 					ProductAttr:     saleOrderProduct.GetAttributeName(),
 					ProductAttrList: saleOrderProduct.GetAttributeNameList(),
 					TotalNum:        saleOrderProduct.Num,
+					NumType:         saleOrderProduct.NumType,
 					IsBuffet:        saleOrderProduct.IsBuffet == 1,
 					Remark:          saleOrderProduct.Remark,
 				})

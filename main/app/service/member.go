@@ -284,11 +284,6 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 		}()
 	}
 
-	// 存在推荐人
-	if referrer.Uuid > 0 {
-		// todo 处理后续逻辑
-	}
-
 	if err != nil {
 		ctx.Log().Error("添加会员失败", zap.Error(err))
 		return errors.WithMessage(err, "添加会员失败")
@@ -511,7 +506,7 @@ func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMe
 func (s *memberSrv) calcOrderAmount(ctx context.Context, member *model.Member, saleBill *model.SaleBill, saleOrder *model.SaleOrder) float64 {
 	saleOrder.SetMemberDiscount(*member)
 
-	for i, _ := range saleOrder.SaleOrderProducts {
+	for i := range saleOrder.SaleOrderProducts {
 		saleOrderProduct := saleOrder.SaleOrderProducts[i]
 		if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
 			continue
@@ -560,7 +555,7 @@ func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.Che
 
 	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 
-		for index, _ := range saleOrder.SaleOrderProducts {
+		for index := range saleOrder.SaleOrderProducts {
 			saleOrderProduct := saleOrder.SaleOrderProducts[index]
 			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
 				continue

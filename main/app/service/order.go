@@ -52,53 +52,54 @@ import (
 
 // IOrderSrv 定义订单服务接口
 type IOrderSrv interface {
-	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                                                                      // 创建点餐订单
-	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                                                                // 创建桌台订单
-	GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error)                                                                                    // 获取订单列表
-	ExportOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderExportListPaginationResp, error)                                                                           // 导出订单列表
-	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                                                             // 获取订单详情
-	GetRecordList(ctx context.Context, saleBillUuid uint64, h5OrderUuid uint64) ([]resp.OrderOperationLog, error)                                                                     // 获取订单操作日志
-	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                                                                    // 取消订单
-	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                                                    // 删除订单
-	ReturnOrder(ctx context.Context, req req.OrderReturnReq) (error, int)                                                                                                             // 退款订单
-	ReReturnOrder(ctx context.Context, req req.OrderReReturnReq) (error, int)                                                                                                         // 重新退款
-	GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error)                                                                            // 获取退款信息
-	GetReverseSettleInfo(ctx context.Context, req req.OrderReverseSettleInfoReq) (*resp.OrderReverseSettleInfoResp, error)                                                            // 获取反结账信息
-	ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error                                                                                                           // 反结账
-	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                                                               // 判断桌台是否可取消
-	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                                                       // 挂单
-	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                                                      // 显示订单
-	InstantHideOrderList(ctx context.Context, req req.HideSaleBillListReq) (*resp.InstantHideOrderListResp, error)                                                                    // 获取挂单订单列表
-	OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*resp.ShopCart, error)                                                                                                // 打包
-	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)                                      // 删除订单商品
-	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                                                          // 修改订单商品价格
-	OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error)                                                                                      // 修改订单金额
-	OrderDiscount(ctx context.Context, req req.OrderDiscountReq) (*resp.ShopCart, error)                                                                                              // 修改订单折扣
-	OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) (*resp.ShopCart, error)                                                                                              // 修改订单抹零规则
-	OrderDiscountCancel(ctx context.Context, req req.OrderDiscountCancelReq) (*resp.ShopCart, error)                                                                                  // 取消点餐订单所有优惠折扣，包括改价、打折、抹零
-	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                                              // 修改订单人数
-	GetOrderChangeBuffet(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (resp.OrderBuffetResp, error)                                                                // 自助餐信息
-	OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuffetReq) (*resp.ShopCart, error)                                                                                      // 调整自助餐
-	OrderChangeBuffetClock(ctx context.Context, req req.OrderChangeBuffetClockReq) (*resp.ShopCart, error)                                                                            // 调整自助餐
-	OrderDeskBuffetProductList(ctx context.Context, req req.OrderChangeBuffetProductListReq) (*resp.BuffetProductList, error)                                                         // 获取桌台的自助餐商品列表
-	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                                                  // 通过桌台uuid获取到销售账单信息
-	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                                        // 修改订单商品备注
-	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64, deskUuid uint64) (*model.SaleBillSetting, error)                                                     // 创建销售账单设置
-	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                                                          // 通过设备SN获取点餐购物车信息
-	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                                                   // 获取购物车信息
-	InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                           // 向购物车添加商品
-	GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid uint64) (uint64, uint64, error)                                                                                     // 获取销售账单uuid和销售订单uuid
-	OrderCartProductAdd(ctx context.Context, request req.ProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                                           // 修改购物车商品数量
-	OrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                                      // 修改购物车商品数量
-	AssistantOrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                         // 修改购物车商品数量
-	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)                                       // 送厨购物车商品
-	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                                               // 退菜购物车商品
-	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                                     // 退菜购物车商品
-	InstantOrderCartProductChangeDesk(ctx context.Context, req req.OrderCartProductChangeDeskReq) (*resp.ShopCart, error)                                                             // 转菜购物车商品
-	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProductGivingReq) (*resp.ShopCart, error)                                                                     // 取消赠菜购物车商品
-	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                                        // 取消赠菜购物车商品
-	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, bool, error)                                                                        // 获取点餐必点方案
-	InstantOrderPaymentInfo(ctx context.Context, saleBill *model.SaleBill, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error)                      // 获取结账页面信息
+	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                                                 // 创建点餐订单
+	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                                           // 创建桌台订单
+	GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error)                                                               // 获取订单列表
+	ExportOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderExportListPaginationResp, error)                                                      // 导出订单列表
+	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                                        // 获取订单详情
+	GetRecordList(ctx context.Context, saleBillUuid uint64, h5OrderUuid uint64) ([]resp.OrderOperationLog, error)                                                // 获取订单操作日志
+	CancelOrder(ctx context.Context, req req.OrderCancelReq) error                                                                                               // 取消订单
+	DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid uint64, saleOrderUuid uint64) error                                                               // 删除订单
+	ReturnOrder(ctx context.Context, req req.OrderReturnReq) (error, int)                                                                                        // 退款订单
+	ReReturnOrder(ctx context.Context, req req.OrderReReturnReq) (error, int)                                                                                    // 重新退款
+	GetReturnOrderInfo(ctx context.Context, req req.OrderReturnInfoReq) (*resp.OrderReturnInfoResp, error)                                                       // 获取退款信息
+	GetReverseSettleInfo(ctx context.Context, req req.OrderReverseSettleInfoReq) (*resp.OrderReverseSettleInfoResp, error)                                       // 获取反结账信息
+	ReverseSettle(ctx context.Context, req req.OrderReverseSettleReq) error                                                                                      // 反结账
+	IsCellCancelOrder(ctx context.Context, saleBillUuid uint64) (model.SaleBill, error)                                                                          // 判断桌台是否可取消
+	HideOrder(ctx context.Context, saleBillUuid uint64) (*resp.ShopCart, error)                                                                                  // 挂单
+	ShowOrder(ctx context.Context, req req.OrderShowReq) (*resp.ShopCart, error)                                                                                 // 显示订单
+	InstantHideOrderList(ctx context.Context, req req.HideSaleBillListReq) (*resp.InstantHideOrderListResp, error)                                               // 获取挂单订单列表
+	OrderTakeout(ctx context.Context, req req.OrderTakeoutReq) (*resp.ShopCart, error)                                                                           // 打包
+	OrderProductDelete(ctx context.Context, dbId uint64, staffUuid uint64, source string, req req.OrderProductDeleteReq) (*resp.ShopCart, error)                 // 删除订单商品
+	OrderProductChangePrice(ctx context.Context, req req.OrderProductChangePriceReq) (*resp.ShopCart, error)                                                     // 修改订单商品价格
+	OrderAmountChange(ctx context.Context, req req.OrderAmountChangeReq) (*resp.ShopCart, error)                                                                 // 修改订单金额
+	OrderDiscount(ctx context.Context, req req.OrderDiscountReq) (*resp.ShopCart, error)                                                                         // 修改订单折扣
+	OrderZeroRule(ctx context.Context, req req.OrderZeroRuleReq) (*resp.ShopCart, error)                                                                         // 修改订单抹零规则
+	OrderDiscountCancel(ctx context.Context, req req.OrderDiscountCancelReq) (*resp.ShopCart, error)                                                             // 取消点餐订单所有优惠折扣，包括改价、打折、抹零
+	OrderChangePopulation(ctx context.Context, req req.OrderChangePopulationReq) (*resp.ShopCart, error)                                                         // 修改订单人数
+	GetOrderChangeBuffet(ctx context.Context, saleBillUuid uint64, saleOrderUuid uint64) (resp.OrderBuffetResp, error)                                           // 自助餐信息
+	OrderChangeBuffet(ctx context.Context, req req.OrderChangeBuffetReq) (*resp.ShopCart, error)                                                                 // 调整自助餐
+	OrderChangeBuffetClock(ctx context.Context, req req.OrderChangeBuffetClockReq) (*resp.ShopCart, error)                                                       // 调整自助餐
+	OrderDeskBuffetProductList(ctx context.Context, req req.OrderChangeBuffetProductListReq) (*resp.BuffetProductList, error)                                    // 获取桌台的自助餐商品列表
+	GetSaleBillByDeskId(ctx context.Context) (model.SaleBill, error)                                                                                             // 通过桌台uuid获取到销售账单信息
+	OrderProductRemark(ctx context.Context, req req.OrderProductRemarkReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                   // 修改订单商品备注
+	CreateSaleBillSetting(ctx context.Context, db *gorm.DB, saleBillUuid uint64, deskUuid uint64) (*model.SaleBillSetting, error)                                // 创建销售账单设置
+	GetOrderCartInfoByDeviceSn(ctx context.Context, deviceSn string) (*resp.ShopCart, error)                                                                     // 通过设备SN获取点餐购物车信息
+	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                              // 获取购物车信息
+	InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)      // 向购物车添加商品
+	GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid uint64) (uint64, uint64, error)                                                                // 获取销售账单uuid和销售订单uuid
+	OrderCartProductAdd(ctx context.Context, request req.ProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                      // 修改购物车商品数量
+	OrderCartProductNum(ctx context.Context, req req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                 // 修改购物车商品数量
+	AssistantOrderCartProductNum(ctx context.Context, request req.OrderCartProductNumReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)    // 修改购物车商品数量
+	InstantOrderCartProductCooking(ctx context.Context, req req.OrderCartProductCookingReq) (*resp.ShopCart, *resp.OrderCheckServiceRes, error)                  // 送厨购物车商品
+	InstantOrderCartProductReturning(ctx context.Context, req req.OrderCartProductReturningReq) (*resp.ShopCart, error)                                          // 退菜购物车商品
+	InstantOrderCartProductCancelReturning(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                // 退菜购物车商品
+	InstantOrderCartProductChangeDesk(ctx context.Context, req req.OrderCartProductChangeDeskReq) (*resp.ShopCart, error)                                        // 转菜购物车商品
+	InstantOrderCartProductGiving(ctx context.Context, req req.OrderCartProductGivingReq) (*resp.ShopCart, error)                                                // 取消赠菜购物车商品
+	InstantOrderCartProductCancelGiving(ctx context.Context, req req.OrderCartProduct) (*resp.ShopCart, error)                                                   // 取消赠菜购物车商品
+	InstantOrderMustPlan(ctx context.Context, deviceSn string) (*resp.InstantProductMustPlanResp, bool, error)                                                   // 获取点餐必点方案
+	InstantOrderPaymentInfo(ctx context.Context, saleBill *model.SaleBill, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error) // 获取结账页面信息
+	OrderPaymentCoupon(ctx context.Context, req req.InstantOrderPaymentCouponReq) (*resp.InstantOrderPaymentInfoResp, error)
 	OrderPaymentPoints(ctx context.Context, req req.InstantOrderPaymentPointsReq) (*resp.InstantOrderPaymentInfoResp, error)                                                          // 设置订单的抵扣积分数量
 	InstantOrderPaymentQrcode(ctx context.Context, req req.InstantOrderPaymentQrcodeReq) (*resp.InstantOrderPaymentQrcodeInfoResp, error)                                             // 获取支付二维码
 	InstantOrderPaymentCreate(ctx context.Context, req req.InstantOrderPaymentCreateReq) (*resp.InstantOrderPaymentInfoResp, error)                                                   // 给销售订单创建一个支付单
@@ -135,7 +136,8 @@ type IOrderSrv interface {
 
 	TabletAddAndCooking(ctx context.Context, request req.TabletOrderCartProductAddReq) (*TabletAddAndCookingRes, error) // 平板端加购并送厨
 
-	GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error) // 获取订单会员列表
+	GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error)                       // 获取订单会员列表
+	GetProductPackageDetail(ctx context.Context, req req.GetProductPackageDetailReq) (*resp.ProductPackageDetailRes, error) // 获取商品选购详情
 }
 
 // orderSrv 订单服务结构
@@ -218,7 +220,7 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 		return resp.CreateInstantOrderResp{}, errors.New("有待支付、未挂单的订单")
 	}
 	if err := repository.NewCommonRepo().Transaction(db, func(tx *gorm.DB) error {
-		// todo
+		// TODO
 		// // 判断是否有待支付、未挂单的订单
 		// commonRepo := repository.NewCommonRepo()
 		// orderRepo := repository.NewOrderRepo(tx)
@@ -778,6 +780,9 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 			if len(bill.SaleOrders) > 0 {
 				order := bill.SaleOrders[0]
 				if order.ConsumerUuid > 0 {
+					if order.Member == nil {
+						logger.Logger.Info("member is nil", zap.Any("order", order))
+					}
 					consumerUuids = append(consumerUuids, strconv.FormatUint(uint64(order.Member.ID), 10))
 				}
 				if order.IsFree == 1 {
@@ -881,7 +886,7 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 				products = append(products, &resp.OrderExportInfoProduct{
 					Name:       orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(language),
 					AttrName:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
-					Num:        orderBuffetCustomer.Num,
+					Num:        float64(orderBuffetCustomer.Num),
 					TotalPrice: orderBuffetCustomer.GetDiscountPriceWithVAT(),
 				})
 			}
@@ -893,7 +898,7 @@ func (s *orderSrv) ExportOrderLists(ctx context.Context, req req.OrderListReq) (
 				products = append(products, &resp.OrderExportInfoProduct{
 					Name:       delayProduct.Name,
 					AttrName:   "",
-					Num:        delayProduct.Num,
+					Num:        float64(delayProduct.Num),
 					TotalPrice: delayProduct.GetAmount(),
 				})
 			}
@@ -1062,7 +1067,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 						TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 					},
 					Price:            orderBuffetCustomer.SalePrice,
-					Num:              orderBuffetCustomer.Num, // 这种类型顾客多少个，如老人这个类型2人
+					Num:              float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
 					SalePrice:        orderBuffetCustomer.GetDiscountPriceWithVAT(model.WithOriginPrice()),
 					TotalPrice:       orderBuffetCustomer.GetDiscountPriceWithVAT(),
 					RefundAmount:     -orderBuffetCustomer.GetReturnPrice(),
@@ -1094,7 +1099,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 						TR:   delayProduct.Name,
 					},
 					LocaleAttributeName: dto.LocaleResponse{},
-					Num:                 delayProduct.Num, // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
+					Num:                 float64(delayProduct.Num), // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
 					Price:               delayProduct.Price,
 					SalePrice:           delayProduct.GetAmount(),
 					TotalPrice:          delayProduct.GetAmount(),
@@ -1215,7 +1220,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 			MemberNames:   strings.Join(totalMemberNames, ","),
 			MemberUuids:   strings.Join(totalMemberUuids, ","),
 			CashierName:   saleBill.CashierName,
-			IsBuffet:      saleBill.IsBuffet == 1,
+			IsBuffet:      saleBill.IsBuffet == constant.SaleBillIsBuffetYes,
 			BuffetNames:   saleBill.GetBuffetNames(ctx.GetLanguage()),
 			CancelReason:  saleBill.Reason,
 			PayTypes:      saleBill.GetPayTypes(ctx.GetLanguage(), req.SaleOrderUuid),
@@ -1516,7 +1521,7 @@ func (s *orderSrv) DeleteOrder(ctx context.Context, dbId uint64, saleBillUuid ui
 	// 检查是否有已送厨的商品，如果有，则标记production_order_product.status为消单退菜（制作中消单退菜、制作完成消单退菜）
 	// 如果已送厨商品还在制作中，通知厨房取消制作
 	doingProductList := make([]uint64, 0) // 制作中的商品uuid列表 sale_order_product_uuid
-	// todo 获取还在制作中的商品
+	// TODO 获取还在制作中的商品
 
 	// 发布事件，通知厨房取消制作
 	event.NewSystemBus().PublishCancelDoingProductEvent(event.CancelDoingProductPayload{SaleOrderProductUuids: doingProductList})
@@ -1561,7 +1566,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 	saleOrderProducts := make([]*model.SaleOrderProduct, 0)                       // 退款商品列表
 	saleOrderBuffetCustomerTypes := make([]*model.SaleOrderBuffetCustomerType, 0) // 退款自助餐顾客列表
 	saleOrderBuffetDelayProducts := make([]*model.SaleOrderBuffetDelayProduct, 0) // 退款自助餐延迟商品列表
-	numMap := make(map[uint64]uint)                                               // 每个退款商品的退货数量
+	numMap := make(map[uint64]float64)                                            // 每个退款商品的退货数量
 	// 整单退款
 	if len(req.Products) == 0 {
 		returnType = constant.ReturnOrderRefundTypeTotal
@@ -1579,7 +1584,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
 			if canReturnNum > 0 {
 				saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderProduct)
-				numMap[saleOrderProduct.Uuid] = canReturnNum
+				numMap[saleOrderProduct.Uuid] = float64(canReturnNum)
 			}
 		}
 
@@ -1587,7 +1592,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
 			if canReturnNum > 0 {
 				saleOrderBuffetDelayProducts = append(saleOrderBuffetDelayProducts, saleOrderProduct)
-				numMap[saleOrderProduct.Uuid] = canReturnNum
+				numMap[saleOrderProduct.Uuid] = float64(canReturnNum)
 			}
 		}
 	}
@@ -1598,7 +1603,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 		saleOrderProductUuids := make([]uint64, 0)
 		for _, product := range req.Products {
 			saleOrderProductUuids = append(saleOrderProductUuids, product.SaleOrderProductUuid)
-			numMap[product.SaleOrderProductUuid] = uint(product.Num)
+			numMap[product.SaleOrderProductUuid] = product.Num
 		}
 		// 注意：要判断订单商品是否还有可退货数量
 		saleOrderProductList := saleOrder.GetSaleOrderProductList(saleOrderProductUuids)
@@ -1619,7 +1624,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
 			if canReturnNum > 0 {
 				num := numMap[saleOrderProduct.Uuid] // 退货数量
-				if num <= canReturnNum {
+				if uint(num) <= canReturnNum {
 					saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderProduct)
 				} else {
 					return errors.WithMessage(errors.New("2退货数量超过可退货数量")), constant.CodeFail
@@ -1632,7 +1637,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			canReturnNum := saleOrderProduct.GetCanReturnNum() // 可退货数量
 			if canReturnNum > 0 {
 				num := numMap[saleOrderProduct.Uuid] // 退货数量
-				if num <= canReturnNum {
+				if num <= float64(canReturnNum) {
 					saleOrderBuffetDelayProducts = append(saleOrderBuffetDelayProducts, saleOrderProduct)
 				} else {
 					return errors.WithMessage(errors.New("3退货数量超过可退货数量")), constant.CodeFail
@@ -1649,12 +1654,22 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 
 	// 可退款金额
 	canReturnAmount := saleOrder.GetCanReturnAmount()
+	// 可退的会员消费金额
+	canReturnMemberConsumptionAmount := saleOrder.GetCanReturnMemberConsumptionAmount()
 
 	// 创建退款单
 	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetStaff().DutyNo, ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetCustomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
 	if err != nil {
 		return errors.WithMessage(err), constant.CodeFail
 	}
+
+	// 本次退款的会员累计消费金额。=退款金额
+	returnOrderMemberConsumptionAmount := returnOrder.RefundAmount
+	if returnOrderMemberConsumptionAmount > canReturnMemberConsumptionAmount {
+		// 本次退款的会员累计消费金额不能大于可退的会员消费金额
+		returnOrderMemberConsumptionAmount = canReturnMemberConsumptionAmount
+	}
+
 	// 是否存在QrPromptPay支付
 	if returnOrder.IsExistQrPromptPay() {
 		if req.BankCode == "" || req.AccountNo == "" || req.AccountName == "" {
@@ -1814,6 +1829,17 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			publishChangeMemberPoints = true
 		}
 
+		// 退会员的累计消费金额。退款后减少会员的累计消费金额
+		if saleOrder.ConsumerUuid > 0 {
+			// 减少会员累计消费金额
+			if err := repository.NewMemberRepo(db).DecConsumptionAmount(saleOrder.ConsumerUuid, returnOrderMemberConsumptionAmount); err != nil {
+				return errors.WithMessage(err)
+			}
+			// 如果是整单退款，则减少会员累计消费次数
+			if len(req.Products) == 0 {
+
+			}
+		}
 		return nil
 	})
 
@@ -1893,6 +1919,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				ProductAttr:     saleOrderProduct.GetAttributeName(),
 				ProductAttrList: saleOrderProduct.GetAttributeNameList(),
 				TotalNum:        num,
+				NumType:         saleOrderProduct.NumType,
 				IsBuffet:        saleOrderProduct.IsBuffet == 1,
 				Remark:          saleOrderProduct.Remark,
 			})
@@ -2118,9 +2145,9 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 			SaleOrderProductUuid: buffetCustomer.Uuid,
 			LocaleName:           buffetCustomer.LocaleName,
 			LocaleAttributeName:  buffetCustomer.LocaleAttributeName,
-			Num:                  buffetCustomer.CanReturnNum,    // 自助餐顾客类型可退货数量
-			Price:                buffetCustomer.TotalPrice,      // 自助餐顾客类型总价（单个商品、折后）
-			CanReturnAmount:      buffetCustomer.CanReturnAmount, // 自助餐顾客类型可退款金额
+			Num:                  float64(buffetCustomer.CanReturnNum), // 自助餐顾客类型可退货数量
+			Price:                buffetCustomer.TotalPrice,            // 自助餐顾客类型总价（单个商品、折后）
+			CanReturnAmount:      buffetCustomer.CanReturnAmount,       // 自助餐顾客类型可退款金额
 			CurrencyUnit:         currencyUnit,
 		})
 	}
@@ -2132,9 +2159,9 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 			SaleOrderProductUuid: delayProduct.Uuid,
 			LocaleName:           delayProduct.LocaleName,
 			LocaleAttributeName:  delayProduct.LocaleAttributeName,
-			Num:                  delayProduct.CanReturnNum,    // 加钟商品可退货数量
-			Price:                delayProduct.UnitPrice,       // 加钟商品单价
-			CanReturnAmount:      delayProduct.CanReturnAmount, // 加钟商品可退款金额
+			Num:                  float64(delayProduct.CanReturnNum), // 加钟商品可退货数量
+			Price:                delayProduct.UnitPrice,             // 加钟商品单价
+			CanReturnAmount:      delayProduct.CanReturnAmount,       // 加钟商品可退款金额
 			CurrencyUnit:         currencyUnit,
 		})
 	}
@@ -2149,6 +2176,7 @@ func (s *orderSrv) GetReturnOrderInfo(ctx context.Context, req req.OrderReturnIn
 			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
 			Num:                  saleOrderProduct.GetCanReturnNum(), // 可退货数量=订单商品数量-已退货数量
+			NumType:              saleOrderProduct.NumType,
 			Price:                saleOrderProduct.TotalPrice,
 			CanReturnAmount:      saleOrderProduct.GetCanReturnPrice(),
 			CurrencyUnit:         currencyUnit,
@@ -2402,17 +2430,20 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 						return errors.WithMessage(err)
 					}
 				}
-				if isUseMember {
-					// 更新会员消费金额
-					repository.NewMemberRepo(db).DecConsumptionAmount(saleOrder.ConsumerUuid, paymentOrder.Amount)
+			}
+			// 退会员的累计消费金额
+			if isUseMember {
+				// 减少会员累计消费金额
+				if err := repository.NewMemberRepo(db).DecConsumptionAmount(saleOrder.ConsumerUuid, saleOrder.GetCanReturnMemberConsumptionAmountMax()); err != nil {
+					return errors.WithMessage(err)
+				}
+				// 减少会员累计消费次数
+				if err := repository.NewMemberRepo(db).DecConsumptionCount(saleOrder.ConsumerUuid); err != nil {
+					return errors.WithMessage(err)
 				}
 			}
-			if isUseMember {
-				// 更新会员消费次数
-				repository.NewMemberRepo(db).DecConsumptionCount(saleOrder.ConsumerUuid)
-			}
 			// 退积分
-			if saleOrder.ConsumerUuid != 0 {
+			if isUseMember {
 				points := giftPointsMap[saleOrder.Uuid]
 				member, err := repository.NewMemberRepo(db).GetMemberByUuid(saleOrder.ConsumerUuid)
 				if err != nil {
@@ -2448,6 +2479,42 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 					memberPointLog := saleOrder.NewReverseSettleMemberPointLog(-points)
 					if _, err := repository.NewMemberPointLogRepo(db).Create(*memberPointLog); err != nil {
 						return errors.WithMessage(err)
+					}
+				}
+			}
+
+			// 退优惠券。如果订单使用了优惠券，需要将优惠券退还给会员。如果使用了通用优惠券，则通用优惠券余量+1并生成记录
+			if saleOrder.HasCoupon() {
+				// 加锁, 避免并发问题,避免数量+1重复或失效
+				lock.NewSystemLock().LockUuid(constant.LockNameActivityConsumption)
+				defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
+				for _, coupon := range saleOrder.Coupons {
+					if !coupon.IsDelete() {
+						if coupon.IsCommonCoupon() {
+							commonCoupon, err := repository.NewMarketingCouponRepo(db).GetCouponByUuid(coupon.MarketingCouponUuid)
+							if err != nil {
+								return errors.WithMessage(err)
+							}
+							commonCoupon.Count = commonCoupon.Count + 1
+							// 取消核销通用优惠券，数量+1
+							if err := repository.NewMarketingCouponRepo(db).UpdateCommonCouponCountCancel(coupon.MarketingCouponUuid); err != nil {
+								return errors.WithMessage(err)
+							}
+							// 创建通用优惠券记录，记录类型：反结账退还
+							if err := repository.NewMarketingCouponRepo(db).CreateCommonCouponRecordCancel(coupon.MarketingCouponUuid, commonCoupon.Count); err != nil {
+								return errors.WithMessage(err)
+							}
+						}
+						if coupon.IsMemberCoupon() {
+							// 取消核销会员优惠券
+							if err := repository.NewMemberCouponRepo(db).CancelVerifyMemberCoupon(coupon.MemberCouponUuid); err != nil {
+								return errors.WithMessage(err)
+							}
+							// 删除会员优惠券使用记录
+							if err := repository.NewMemberCouponRepo(db).DeleteMemberCouponRecord(coupon.MemberCouponUuid); err != nil {
+								return errors.WithMessage(err)
+							}
+						}
 					}
 				}
 			}
@@ -2884,7 +2951,7 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 					continue
 				}
 				if product, ok := listMap[saleOrderProduct.Sign]; !ok {
-					productPrice := decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromUint64(uint64(saleOrderProduct.Num))).InexactFloat64()
+					productPrice := decimal.NewFromFloat(saleOrderProduct.Price).Mul(saleOrderProduct.GetNumDecimal()).InexactFloat64()
 					newProduct := resp.Product{
 						LocaleName:    saleOrderProduct.MultiLanguageName.GetNames(),
 						Num:           saleOrderProduct.Num,
@@ -2893,7 +2960,7 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 					}
 					listMap[saleOrderProduct.Sign] = newProduct
 				} else {
-					productPrice := decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromUint64(uint64(saleOrderProduct.Num)))
+					productPrice := decimal.NewFromFloat(saleOrderProduct.Price).Mul(saleOrderProduct.GetNumDecimal())
 					price := productPrice.Add(decimal.NewFromFloat(product.SalePrice)).InexactFloat64()
 					product.Num += saleOrderProduct.Num
 					product.SalePrice = price
@@ -3335,6 +3402,12 @@ func (s *orderSrv) OrderDiscount(ctx context.Context, req req.OrderDiscountReq) 
 	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
 	if saleOrder == nil {
 		return nil, errors.New("销售订单不存在")
+	}
+
+	// 取消会员优惠券
+	saleOrder.SetAllCouponCancel()
+	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
+		return nil, errors.WithMessage(err, "取消销售订单优惠券失败")
 	}
 
 	// 在折扣之前计算会员打折后金额。必须在设置折扣之前获取，否则amount值已经改变了
@@ -4027,13 +4100,13 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 		}
 
 		// 商品计数
-		productNum := 0
+		productNum := 0.0
 		for _, product := range productList {
 			// 退菜的商品不计入
 			if product.IsCancel {
 				continue
 			}
-			productNum += int(product.Num)
+			productNum += product.Num
 		}
 
 		// 填写订单信息
@@ -4041,7 +4114,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			Uuid:                saleOrder.Uuid,
 			OrderNo:             saleOrder.OrderNo,
 			Status:              saleOrder.Status,
-			ProductNum:          productNum,
+			ProductNum:          decimal.NewFromFloat(productNum).Truncate(2).InexactFloat64(),
 			ProductList:         productList,
 			IsDiscount:          saleOrder.IsManualDiscount(uint8(shopCart.SaleBill.SaleBillSetting.ZeroRule)),
 			IsMemberDiscount:    saleOrder.IsMemberDiscount(),
@@ -4160,7 +4233,6 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			shopCartInfo.MustPlans = productMustPlanList
 		}
 	}
-
 	return shopCartInfo, nil
 }
 
@@ -4247,6 +4319,10 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 		}
 	}
 
+	num := 1.0
+	if request.Num != nil {
+		num = *request.Num
+	}
 	// 往销售账单里添加商品
 	shopCart, err := s.OrderCartProductAdd(ctx, req.ProductAddReq{
 		SaleBillUuid:  request.SaleBillUuid,
@@ -4254,7 +4330,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 		Products: []req.ProductParams{
 			{
 				FlavorProductBomUuid:            request.FlavorUuid,
-				Num:                             1,
+				Num:                             num,
 				SauceProductBomUuidList:         request.SauceUuidList,
 				ProductPackageAttributeUuidList: request.AttributeUuidList,
 				Operation:                       request.Operation,
@@ -4314,23 +4390,32 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
+		productPackage := productBom.ProductPackage
+		productName := productPackage.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+
 		if productBom.IsDelete() {
-			return nil, errors.New("商品规格已经删除")
+			return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品规格已经删除")))
 		}
 		// 商品已经下架
 		if productBom.IsProductPackageDown() {
-			return nil, errors.New("商品已经下架")
+			return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品已经下架")))
 		}
-
-		productPackage := productBom.ProductPackage
 
 		// 获取某商品规格信息
 		flavorProductBom, errFlavorProductBom := repository.NewProductBomRepo(db).GetFlavorProductBomByUuid(product.FlavorProductBomUuid)
 		if errFlavorProductBom != nil {
-			return nil, errFlavorProductBom
+			return nil, errors.WithMessage(errFlavorProductBom)
 		}
 		if flavorProductBom.GetStockNum() < float64(product.Num) {
-			return nil, errors.WithMessage(errors.New("库存不足"))
+			return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
+		}
+		// 如果商品规格关联了材料，检查材料库存是否充足
+		if len(flavorProductBom.FlavorMaterials) > 0 {
+			for _, flavorMaterial := range flavorProductBom.FlavorMaterials {
+				if flavorMaterial.Material.StockNum < flavorMaterial.GetDecreaseNum(product.Num) {
+					return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "材料库存不足")))
+				}
+			}
 		}
 
 		// 获取加料信息
@@ -4338,12 +4423,42 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if len(product.SauceProductBomUuidList) > 0 {
 			sauceProductBomList, errSauceProductBomList := repository.NewProductBomRepo(db).GetSauceProductBomsByUuids(product.SauceProductBomUuidList)
 			if errSauceProductBomList != nil {
-				return nil, errSauceProductBomList
+				return nil, errors.WithMessage(errSauceProductBomList)
+			}
+			if len(sauceProductBomList) != len(product.SauceProductBomUuidList) {
+				sauceUuidMap := make(map[uint64]struct{})
+				for _, uuid := range product.SauceProductBomUuidList {
+					sauceUuidMap[uuid] = struct{}{}
+				}
+				for _, bom := range sauceProductBomList {
+					delete(sauceUuidMap, bom.Uuid)
+				}
+				names := make([]string, 0)
+				for uuid := range sauceUuidMap {
+					bom, err := repository.NewProductBomRepo(db).GetSauceProductBomByUuid(uuid)
+					if err != nil {
+						return nil, errors.WithMessage(err)
+					}
+					sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+					names = append(names, sauceName)
+				}
+				tipStrPrefix := i18n.Translate(ctx.GetLanguage(), "加料")
+				tipStr := i18n.Translate(ctx.GetLanguage(), "已下架，请重新选择其他加料")
+				return nil, errors.New(tipStrPrefix + " " + strings.Join(names, ",") + " " + tipStr)
 			}
 			for i, bom := range sauceProductBomList {
 				sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
-				if bom.GetStockNum() < float64(product.Num) {
-					return nil, errors.WithMessage(errors.New("加料库存不足"))
+				sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+				if bom.GetStockNum() < product.Num {
+					return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
+				}
+				// 检查加料材料库存是否充足
+				if len(bom.ProductSauce.SauceMaterials) > 0 {
+					for _, sauceMaterial := range bom.ProductSauce.SauceMaterials {
+						if sauceMaterial.Material.StockNum < sauceMaterial.GetDecreaseNum(product.Num) {
+							return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "加料材料库存不足")))
+						}
+					}
 				}
 			}
 		}
@@ -4353,7 +4468,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if len(product.ProductPackageAttributeUuidList) > 0 {
 			productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(product.ProductPackageAttributeUuidList)
 			if errProductAttributeList != nil {
-				return nil, errProductAttributeList
+				return nil, errors.WithMessage(errProductAttributeList)
 			}
 			for i, attribute := range productAttributeList {
 				productAttributes[attribute.Uuid] = productAttributeList[i]
@@ -4405,6 +4520,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			CustomDiscountRate:     innerParams.CustomDiscountRate,
 			Sauces:                 sauces,
 			Num:                    product.Num,
+			NumType:                productPackage.NumType,
 			Flavor: model.Flavor{
 				Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
 				Price:          flavorProductBom.Price,
@@ -4485,7 +4601,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
 			// 商品数量不能超过999个
 			if saleOrderProduct.Num > constant.ProductNumMax {
-				return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
+				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品数量不能超过999个")))
 			}
 		} else {
 			// 查询是否存在签名相同的订单商品
@@ -4502,7 +4618,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 					orderProduct.SetUpdate()
 					saleOrderProducts = append(saleOrderProducts, orderProduct)
 					if saleOrderProduct.Num > constant.ProductNumMax {
-						return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
+						return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品数量不能超过999个")))
 					}
 					// 检查商品是否超过限购
 					status, message := orderProduct.CheckCookingProduct(ctx.GetLanguage())
@@ -4524,7 +4640,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
 				// 商品数量不能超过999个
 				if saleOrderProduct.Num > constant.ProductNumMax {
-					return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
+					return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品数量不能超过999个")))
 				}
 			}
 		}
@@ -4583,7 +4699,6 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 		defer lock.NewSystemLock().UnlockUuid(request.SaleBillUuid)
 		ctx.AddLock()
 	}
-
 	option := &repository.OrderCartInfoOption{}
 	for _, opt := range opts {
 		opt(option)
@@ -4598,7 +4713,6 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	}
 
 	// 检查商品销售库存是否充足
-	// todo
 	ctx.Log().Debug("获取账单信息")
 	// 获取销售账单信息
 	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
@@ -4644,11 +4758,11 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 
 	// 修改销售订单商品数量
 	beforeNum := saleOrderProduct.Num
-	saleOrderProduct.Num = uint(request.Num)
+	saleOrderProduct.Num = request.Num
 	ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
 	// 检查商品销售库存是否充足
-	if uint(request.Num) > beforeNum {
+	if request.Num > beforeNum {
 		status, message := saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
 		if status != constant.CodeSuccess {
 			return nil, errors.WithMessage(errors.New(message))
@@ -4668,7 +4782,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	// 检查限购
 	{
 		// 如果是减数量，则不检查限购. 只有加数量时，才检查限购
-		if uint(request.Num) > beforeNum {
+		if request.Num > beforeNum {
 			limitProducts, err := s.getBuffetProductLimitList(ctx, request.SaleBillUuid)
 			if err != nil {
 				return nil, errors.WithMessage(err)
@@ -4687,19 +4801,17 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 
 	// 商品数量不能超过999个
 	// 如果是减数量，则不检查限购. 只有加数量时，才检查限购999个
-	if uint(request.Num) > beforeNum {
+	if request.Num > beforeNum {
 		if request.Num > constant.ProductNumMax {
 			ctx.Log().Error("商品数量不能超过999个", zap.Any("request", request))
 			return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
 		}
 	}
-
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(saleOrderProduct); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单商品成功")
-
 		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
 		}
@@ -4711,14 +4823,12 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 	}); err != nil {
 		return nil, errors.WithMessage(err, "修改商品数量时，保存数据失败")
 	}
-
 	// 获取新的桌台数据
 	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid, opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
 	ctx.Log().Debug("获取新的账单数据")
-
 	return info, nil
 }
 
@@ -4768,9 +4878,9 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 	// 商品的签名
 	sign := saleOrderProduct.Sign
 	saleOrderProductList := saleBill.GetSaleOrderProductBySign(sign)
-	productNum := 0
+	productNum := float64(0)
 	for _, saleOrderProduct := range saleOrderProductList {
-		productNum += int(saleOrderProduct.Num)
+		productNum += saleOrderProduct.Num
 	}
 	operation := "add"
 	if productNum > request.Num {
@@ -4800,7 +4910,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 	// 检查商品销售库存是否充足
 	if operation == "add" {
 		saleOrderProduct.Num = saleOrderProduct.Num + 1
-		request.Num = int(saleOrderProduct.Num)
+		request.Num = saleOrderProduct.Num
 		ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 
 		status, message := saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
@@ -4822,7 +4932,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 			return res, nil
 		}
 		saleOrderProduct.Num = num
-		request.Num = int(saleOrderProduct.Num)
+		request.Num = saleOrderProduct.Num
 		ctx.Log().Debug("修改商品数量", zap.Any("num", saleOrderProduct.Num))
 	}
 	// 计算商品数据。折扣、税费、服务
@@ -4839,7 +4949,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 	// 检查限购
 	{
 		// 如果是减数量，则不检查限购. 只有加数量时，才检查限购
-		if uint(request.Num) > beforeNum {
+		if request.Num > beforeNum {
 			limitProducts, err := s.getBuffetProductLimitList(ctx, request.SaleBillUuid)
 			if err != nil {
 				return nil, errors.WithMessage(err)
@@ -4853,7 +4963,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 
 	// 商品数量不能超过999个
 	// 如果是减数量，则不检查限购. 只有加数量时，才检查限购999个
-	if uint(request.Num) > beforeNum {
+	if request.Num > beforeNum {
 		if request.Num > constant.ProductNumMax {
 			ctx.Log().Error("商品数量不能超过999个", zap.Any("request", request))
 			return nil, errors.WithMessage(errors.New("商品数量不能超过999个"))
@@ -4968,13 +5078,13 @@ func WithH5OrderUuid(h5OrderUuid uint64) func(*CheckOrderOptions) {
 
 type FlavorNum struct {
 	SaleOrderProduct *model.SaleOrderProduct
-	Num              uint // 销售订单中该规格商品的数量
+	Num              float64 // 销售订单中该规格商品的数量
 }
 
 func (f *FlavorNum) IsStockShortage() bool {
 	for _, saleOrderProductBom := range f.SaleOrderProduct.SaleOrderProductBoms {
 		if saleOrderProductBom.IsFlavor() {
-			return saleOrderProductBom.ProductBom.IsStockShortage(f.Num)
+			return saleOrderProductBom.ProductBom.IsStockShortageWithMaterial(f.Num)
 		}
 	}
 	return false
@@ -5050,7 +5160,14 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 		// 某个规格的商品 => 商品数量
 		productBomNumMap := make(map[uint64]*FlavorNum)
 
-		for _, saleOrderProduct := range saleOrderProductAll {
+		var saleOrderProductsList []*model.SaleOrderProduct
+		if ctx.GetSource() == constant.SourceTablet {
+			// 如果是平板端，去掉非本次加购的商品. 非本次加购的商品不进行送厨检查，如库存检查等
+			saleOrderProductsList = filterOtherClientProducts(saleOrderProductAll)
+		} else {
+			saleOrderProductsList = saleOrderProductAll
+		}
+		for _, saleOrderProduct := range saleOrderProductsList {
 			// 跳过检查
 			if s.skipCheck(saleOrderProduct) {
 				continue
@@ -5098,6 +5215,9 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			} else {
 				// 如果是送厨检查
 				status, message = saleOrderProduct.CheckCookingProduct(ctx.GetLanguage())
+				if status == constant.CodeOrderCheckProductSauceDown {
+					return nil, errors.New(message)
+				}
 
 				// 只检查未送厨的商品
 				if !saleOrderProduct.IsCookingProduct() {
@@ -5165,7 +5285,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 	// 检查限购
 	{
 		// product_package_uuid => num
-		numMap := make(map[uint64]uint) // key为商品包uuid value为已购买数量
+		numMap := make(map[uint64]float64) // key为商品包uuid value为已购买数量
 		// product_package_uuid => ProductPackage
 		productPackageMap := make(map[uint64]*model.ProductPackage) // key为商品包uuid, value为ProductPackage
 		// product_package_uuid => SaleOrderProduct
@@ -5215,7 +5335,7 @@ func (s *orderSrv) checkOrder(ctx context.Context, ignoreMust bool, db *gorm.DB,
 			if limitNum == 0 {
 				continue
 			}
-			if num > limitNum {
+			if num > float64(limitNum) {
 				statusMap[constant.CodeOrderCheckProductLimitOut] = append(statusMap[constant.CodeOrderCheckProductLimitOut], saleOrderProductMap[productPackageUuid])
 			}
 		}
@@ -5308,7 +5428,7 @@ func (s *orderSrv) checkBuffetCustomerTypePriceChanged(ctx context.Context, sale
 						MY:   buffetCustomer.Name,
 						TR:   buffetCustomer.Name,
 					},
-					Num:       buffetCustomer.Num,
+					Num:       float64(buffetCustomer.Num),
 					SalePrice: buffetCustomer.SalePrice,
 				}
 				res.OrderCheckRes.Products.List = append(res.OrderCheckRes.Products.List, customer)
@@ -5541,7 +5661,7 @@ func (s *orderSrv) getDecreaseStockList(ctx context.Context, cookingDeductSaleOr
 					ProductBomUuid:       saleOrderProductBom.ProductBomUuid,
 					SaleOrderProductUuid: cookingDeductSaleOrderProduct.Uuid,
 					SaleOrderUuid:        cookingDeductSaleOrderProduct.SaleOrderUuid,
-					Num:                  int(cookingDeductSaleOrderProduct.Num),
+					Num:                  cookingDeductSaleOrderProduct.Num,
 					ProductBomMaterials:  productBomMaterials,
 				})
 			}
@@ -5649,7 +5769,8 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid, deskUu
 			ProductAttributeNames: attributeName.ToJson(),
 			Status:                constant.ProductionOrderProductStatusCooking,
 			Remark:                unCookingSaleOrderProduct.Remark,
-			//HasMaterial:              unCookingSaleOrderProduct, todo
+			// TODO 植焕
+			//HasMaterial:              unCookingSaleOrderProduct,
 			ProductionOrderMaterials: unCookingSaleOrderProduct.GetMaterialBom(), // 获取这个商品各个材料的用量
 		}
 		productionOrderProducts = append(productionOrderProducts, &productionOrderProduct)
@@ -5719,7 +5840,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	returnFoodReasonList := saleOrderProduct.NewSaleOrderProductReasonList(returnFoodReason)
 
 	var returnSaleOrderProduct *model.SaleOrderProduct
-	var keepNum uint
+	var keepNum float64
 	// 提前获取属性和属性列表
 	productAttr := saleOrderProduct.GetAttributeName()
 	productAttrList := saleOrderProduct.GetAttributeNameList()
@@ -5770,7 +5891,9 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	// 如果退菜商品是下单减库存的商品，则需要创建入库单
 	var warehouseForm *model.WarehouseForm
 	if returnSaleOrderProduct.DeductStockType == constant.ProductPackageDeductStockTypeCooking {
-		productList, err := s.getDecreaseStockList(ctx, []*model.SaleOrderProduct{returnSaleOrderProduct})
+		currentReturnSaleOrderProduct := *returnSaleOrderProduct
+		currentReturnSaleOrderProduct.Num = req.Num // 退菜数量,仅入库本次退菜的数量
+		productList, err := s.getDecreaseStockList(ctx, []*model.SaleOrderProduct{&currentReturnSaleOrderProduct})
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -6039,13 +6162,13 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 	// 将商品添加到目标桌台的销售订单中
 	targetSaleOrder.SaleOrderProducts = append(targetSaleOrder.SaleOrderProducts, saleOrderProduct)
 
-	// todo
+	// TODO
 	// 如果商品已经送厨且未完成出餐，要为这个商品生成一个目标桌台的送厨单并从原桌台的送厨单中删除该商品
 
-	// todo
+	// TODO
 	// 如果商品已经送厨且已完成出餐，要为这个商品生成一个目标桌台的送厨单并完成出餐，并从原桌台的送厨单中删除该商品。考虑到该商品制作完成后，在厨显撤回制作完成，此时该商品不应该在原桌台的送厨单上
 
-	// todo 重新生成订单商品签名
+	// TODO 重新生成订单商品签名
 
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 重新计算原桌台的销售账单
@@ -6659,6 +6782,262 @@ func (s *orderSrv) InstantOrderMustPlan2(ctx context.Context, deviceSn string) (
 	return shopCart, nil
 }
 
+// GetValidMemberCouponList 获取有效的会员优惠券列表,包括通用优惠券和会员优惠券
+func (s *orderSrv) GetValidMemberCouponList(ctx context.Context, memberUuid uint64, selectedCouponUuid uint64, hasPay, hasCommonCoupon bool, saleOrderAmount float64) (*resp.CouponList, error) {
+	// 获取门店设置
+	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if !companySetting.GetIsOpenCoupon() {
+		// 未开启优惠券
+		return nil, nil
+	}
+
+	shopTimeZone := storeSetting.TimeZone
+	layout := "2006-01-02"
+
+	timezone := utils.SetTimezone(shopTimeZone)
+	coupons := make(map[uint64]*resp.Coupon, 0) // key为coupon_uuid value为Coupon有效期内的优惠券，包括通用优惠券和会员优惠券
+	// 查询本店所有none类型的优惠券
+	commonCouponList, err := repository.NewMarketingCouponRepo(ctx.GetDB()).GetValidCouponList()
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询通用优惠券列表失败")
+	}
+
+	for _, coupon := range commonCouponList {
+		endTime := timezone.FormatUnixTime(int64(coupon.ValidEndTime), layout)
+		coupons[coupon.Uuid] = &resp.Coupon{
+			Uuid:           coupon.Uuid,
+			Name:           coupon.Name,
+			Requirement:    coupon.Requirement,
+			Amount:         coupon.Amount,
+			Count:          1,     // 通用优惠券数量为1
+			IsSelected:     false, // 默认未选中，另外在判断是否被选中
+			IsAvailable:    false, // 另外再判断是否在使用时段内
+			DayStartTime:   coupon.DayStartTime,
+			DayEndTime:     coupon.DayEndTime,
+			ValidStartTime: timezone.FormatUnixTime(int64(coupon.ValidStartTime), layout),
+			ValidEndTime:   endTime,
+			Sort: resp.SortParam{
+				Type:              coupon.Requirement,
+				ValidEndTimestamp: int64(coupon.ValidEndTime),
+				Sort:              coupon.Sort,
+				CouponUuid:        coupon.Uuid,
+			},
+		}
+	}
+
+	// 如果订单使用了会员，查询会员有效期内的优惠券列表
+	if memberUuid != 0 {
+		memberCouponList, err := repository.NewMemberCouponRepo(ctx.GetDB()).GetValidMemberCouponList(memberUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "查询会员优惠券列表失败")
+		}
+		// 根据CouponUuid分类，然后再根据有效期和时段分类（有效期开始时间、结束时间、使用时段开始时间、使用时段结束时间相同的合并）
+		// key规则， CouponUuid_有效期开始时间_有效期结束时间_使用时段开始时间_使用时段结束时间
+		couponMap := make(map[string][]*model.MemberCoupon, 0)
+
+		for _, coupon := range memberCouponList {
+
+			startTime := timezone.FormatUnixTime(coupon.StartTime, layout)
+			endTime := timezone.FormatUnixTime(coupon.EndTime, layout)
+			key := fmt.Sprintf("%d_%s_%s_%s_%s", coupon.CouponUuid, startTime, endTime, coupon.DayStartTime, coupon.DayEndTime)
+			if _, ok := couponMap[key]; !ok {
+				couponMap[key] = make([]*model.MemberCoupon, 0)
+			}
+
+			couponMap[key] = append(couponMap[key], coupon)
+
+		}
+
+		for _, memberCouponList := range couponMap {
+			var targetCoupon *model.MemberCoupon // 同一个key的优惠券列表中，先到期的优惠券
+			for _, coupon := range memberCouponList {
+				if targetCoupon == nil {
+					targetCoupon = coupon
+				} else {
+					if coupon.EndTime < targetCoupon.EndTime {
+						targetCoupon = coupon
+					}
+				}
+			}
+			startTime := timezone.FormatUnixTime(targetCoupon.StartTime, layout)
+			endTime := timezone.FormatUnixTime(targetCoupon.EndTime, layout)
+
+			// sampleMemberCouponList 列表指收音机中某个会员优惠券是由这个列表中的会员优惠券聚合而成
+			sampleMemberCouponList := make([]*resp.SampleMemberCoupon, 0)
+			for _, memberCoupon := range memberCouponList {
+				sampleMemberCouponList = append(sampleMemberCouponList, &resp.SampleMemberCoupon{
+					Uuid:         memberCoupon.Uuid,
+					Name:         memberCoupon.Name,
+					CouponUuid:   memberCoupon.CouponUuid,
+					StartTime:    memberCoupon.StartTime,
+					EndTime:      memberCoupon.EndTime,
+					DayStartTime: memberCoupon.DayStartTime,
+					DayEndTime:   memberCoupon.DayEndTime,
+				})
+			}
+
+			// 添加一个聚合好的会员优惠券
+			coupons[targetCoupon.Uuid] = &resp.Coupon{
+				Uuid:           targetCoupon.Uuid,
+				Name:           targetCoupon.MarketingCoupon.Name,
+				Requirement:    targetCoupon.MarketingCoupon.Requirement,
+				Amount:         targetCoupon.Amount,
+				Count:          len(memberCouponList), // 会员优惠券数量为1
+				IsSelected:     false,                 // 默认未选中，另外在判断是否被选中
+				IsAvailable:    false,                 // 另外再判断是否在使用时段内
+				DayStartTime:   targetCoupon.MarketingCoupon.DayStartTime,
+				DayEndTime:     targetCoupon.MarketingCoupon.DayEndTime,
+				ValidStartTime: startTime,
+				ValidEndTime:   endTime,
+				CouponList:     sampleMemberCouponList,
+				Sort: resp.SortParam{
+					Type:              targetCoupon.MarketingCoupon.Requirement,
+					ValidEndTimestamp: targetCoupon.EndTime,
+					Sort:              targetCoupon.MarketingCoupon.Sort,
+					CouponUuid:        targetCoupon.Uuid,
+				},
+			}
+		}
+	}
+	// 判断是否被选中
+	for _, coupon := range coupons {
+		if coupon.Uuid == selectedCouponUuid {
+			coupon.IsSelected = true
+			coupon.IsAvailable = true // 被选择的优惠券即使不在使用时段内也应该可以操作
+			break
+		}
+	}
+	// 判断是否在使用时段内
+	nowTime := timezone.FormatUnixTime(timezone.NowUnix(), "15:04")
+	for _, coupon := range coupons {
+		isAvailable, err := utils.IsTimeInRange(nowTime, coupon.DayStartTime, coupon.DayEndTime)
+		if err != nil {
+			ctx.Log().Info("判断是否在使用时段内失败", zap.Error(err))
+			continue
+		}
+		if isAvailable {
+			coupon.IsAvailable = true
+			coupon.Sort.IsAvailable = true
+		}
+	}
+
+	// 积分抵扣后，订单应收为0时，则全部优惠券不可选，置灰
+	if saleOrderAmount <= 0 {
+		for _, coupon := range coupons {
+			coupon.IsAvailable = false
+		}
+	}
+
+	// 如果已经产生了支付，则全部优惠券不可选，置灰
+	if hasPay {
+		for _, coupon := range coupons {
+			coupon.IsAvailable = false
+		}
+	}
+
+	// 如果sale_bill已经使用通用优惠券（所有人可用），则通用优惠券不可选，置灰
+	if hasCommonCoupon {
+		for _, coupon := range coupons {
+			if coupon.Requirement == constant.CouponRequirementNone {
+				coupon.IsAvailable = false
+			}
+		}
+	}
+
+	// 重新排序
+	commonCouponArray := make([]resp.Coupon, 0)
+	memberCouponArray := make([]resp.Coupon, 0)
+	for _, coupon := range coupons {
+		if coupon.Requirement == constant.CouponRequirementNone {
+			commonCouponArray = append(commonCouponArray, *coupon)
+		} else if coupon.Requirement == constant.CouponRequirementMember {
+			memberCouponArray = append(memberCouponArray, *coupon)
+		}
+	}
+	couponList := s.SortCouponList(&resp.CouponList{List: append(commonCouponArray, memberCouponArray...)})
+
+	return couponList, nil
+}
+
+// SortCouponList 排序优惠券列表
+// 规则1. 按是否在可用时间段内分组：可用、不可用，可用在前。 可用：指优惠券在有效期内，且在使用时段内
+// 规则2. 按是否为通用优惠券分组：通用、会员，通用在前。 通用：指优惠券的requirement为none
+// 规则3. 同一组内按有效期排序：先到期的在前
+// 规则4. 到期时间相同的，按sort排序
+// 规则5. sort相同的，按CouponUuid排序（创建时间排序）
+func (s *orderSrv) SortCouponList(couponList *resp.CouponList) *resp.CouponList {
+	// 可用组
+	availableCouponList := make([]resp.Coupon, 0)
+	// 不可用组
+	unavailableCouponList := make([]resp.Coupon, 0)
+	for _, coupon := range couponList.List {
+		if coupon.Sort.IsAvailable {
+			availableCouponList = append(availableCouponList, coupon)
+		} else {
+			unavailableCouponList = append(unavailableCouponList, coupon)
+		}
+	}
+
+	// 规则2. 按是否为通用优惠券分组：通用、会员，通用在前。 通用：指优惠券的requirement为none
+	filterFn := func(couponList []resp.Coupon) ([]resp.Coupon, []resp.Coupon) {
+		commonCouponList := make([]resp.Coupon, 0)
+		memberCouponList := make([]resp.Coupon, 0)
+		for _, coupon := range couponList {
+			if coupon.Requirement == constant.CouponRequirementNone {
+				commonCouponList = append(commonCouponList, coupon)
+			} else if coupon.Requirement == constant.CouponRequirementMember {
+				memberCouponList = append(memberCouponList, coupon)
+			}
+		}
+		return commonCouponList, memberCouponList
+	}
+
+	// 排序函数. 先规格3，再规格4，再规格5
+	sortFn := func(couponList []resp.Coupon) []resp.Coupon {
+		// 对“可用组中的通用优惠券组”进行排序。先按ValidEndTimestamp时间戳排序，小的在前；再对ValidEndTimestamp相同的情况，按Sort排序；再对Sort相同的情况，按CouponUuid排序
+		sort.Slice(couponList, func(i, j int) bool {
+			if couponList[i].Sort.ValidEndTimestamp == couponList[j].Sort.ValidEndTimestamp {
+				if couponList[i].Sort.Sort == couponList[j].Sort.Sort {
+					return couponList[i].Sort.CouponUuid < couponList[j].Sort.CouponUuid
+				}
+				return couponList[i].Sort.Sort < couponList[j].Sort.Sort
+			}
+			return couponList[i].Sort.ValidEndTimestamp < couponList[j].Sort.ValidEndTimestamp
+		})
+		return couponList
+	}
+
+	// 对可用组进行规格2分组
+	// commonAvailableCouponList 可用组中的通用优惠券组
+	// memberAvailableCouponList 可用组中的会员优惠券组
+	commonAvailableCouponList, memberAvailableCouponList := filterFn(availableCouponList)
+
+	commonAvailableCouponList = sortFn(commonAvailableCouponList)
+	memberAvailableCouponList = sortFn(memberAvailableCouponList)
+
+	// 对不可用组进行规格2分组
+	// commonUnavailableCouponList 不可用组中的通用优惠券组
+	// memberUnavailableCouponList 不可用组中的会员优惠券组
+	commonUnavailableCouponList, memberUnavailableCouponList := filterFn(unavailableCouponList)
+
+	commonUnavailableCouponList = sortFn(commonUnavailableCouponList)
+	memberUnavailableCouponList = sortFn(memberUnavailableCouponList)
+
+	list := append(commonAvailableCouponList, memberAvailableCouponList...)
+	list = append(list, commonUnavailableCouponList...)
+	list = append(list, memberUnavailableCouponList...)
+	return &resp.CouponList{
+		List: list,
+	}
+}
+
 // InstantOrderPaymentInfo 获取结账页面信息
 func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.SaleBill, saleBillUuid uint64, saleOrderUuid uint64) (*resp.InstantOrderPaymentInfoResp, error) {
 	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
@@ -6670,6 +7049,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	}
 	// 获取销售账单信息
 	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
 	if saleBill == nil {
 		var errSaleBill error
 		saleBill, errSaleBill = repository.NewOrderRepo(db).GetSaleBillAllInfo(saleBillUuid)
@@ -6701,6 +7081,18 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			RechargeMoney: saleOrder.Member.GetRechargeMoney(),
 		}
 	}
+	selectedCouponUuid := saleOrder.GetSelectedCouponUuid()
+	// saleBill 是否使用了通用优惠券
+	hasCommonCoupon, selectedCouponSaleOrderUuid := saleBill.IsCommonCouponUsed()
+	// 如果使用通用优惠券的销售订单是当前订单，则通用优惠券可选，可以切换或取消通用优惠券。
+	if selectedCouponSaleOrderUuid == saleOrderUuid {
+		hasCommonCoupon = false
+	}
+	couponList, err := s.GetValidMemberCouponList(ctx, saleOrder.ConsumerUuid, selectedCouponUuid, len(saleOrder.PaymentOrders) > 0, hasCommonCoupon, saleOrder.GetPointsExchangeAmount())
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询会员优惠券列表失败")
+	}
+
 	paymentOrders := make([]resp.PaymentOrder, 0)
 	for _, paymentOrder := range saleOrder.PaymentOrders {
 		order := resp.PaymentOrder{
@@ -6730,6 +7122,12 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 			// 更新销售订单的积分抵扣信息
 			if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate, 1); err != nil {
 				return nil, errors.WithMessage(err)
+			}
+
+			// 自动抵扣积分,取消所有优惠券
+			saleOrder.SetPointsCouponCancel()
+			if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
+				return nil, errors.WithMessage(err, "取消销售订单所有优惠券失败")
 			}
 		}
 		canChangePoints := true
@@ -6791,14 +7189,16 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 
 		commissionFee := saleOrder.CalcCommissionFee()
 
-		saleOrderAmount := saleOrder.GetPointsExchangeAmount() // 积分抵扣后的应收金额
+		saleOrderAmount := saleOrder.GetAmountValue() // 积分抵扣后的应收金额
 		saleOrderOriginAmount := saleOrder.GetOriginAmountValue()
 		if commissionFee > 0 {
 			// 如果有手续费
 			amount := resp.PaymentMethodAmount{
 				SaleOrderOriginAmount: saleOrderOriginAmount,
+				SaleOrderCartAmount:   saleOrder.GetAmount(),
 				SaleOrderAmount:       saleOrderAmount,
 				CommissionFee:         commissionFee,
+				CouponExchangeAmount:  saleOrder.CalcCouponExchangeAmount(),
 				UnpaidAmount:          saleOrder.CalcUnPayAmount(true),
 				ZeroAmount:            0, // 只有没有手续费时才会抹零
 				ZeroRule:              constant.SaleBillSettingCheckoutZeroingMethodNone,
@@ -6814,11 +7214,13 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 				zeroFee = 0
 				hasCommission = true
 			}
+			unpaidAmount := saleOrder.CalcCouponExchangeAmount()
 			amount := resp.PaymentMethodAmount{
 				SaleOrderOriginAmount: saleOrderOriginAmount,
 				SaleOrderCartAmount:   saleOrder.GetAmount(),
 				SaleOrderAmount:       saleOrderAmount,
 				CommissionFee:         commissionFee,
+				CouponExchangeAmount:  unpaidAmount,
 				UnpaidAmount:          saleOrder.CalcUnPayAmount(hasCommission),
 				ZeroAmount:            zeroFee, // 只有没有手续费时且支付方式不需要手续费才会抹零
 				IsAutoZero:            saleOrder.IsAutoCheckoutZeroDiscount(*saleBill.SaleBillSetting),
@@ -6831,6 +7233,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 
 	infoResp := &resp.InstantOrderPaymentInfoResp{
 		MemberInfo:     memberInfo,
+		CouponList:     couponList,
 		PaymentOrders:  resp.PaymentInfoList{List: paymentOrders},
 		PaymentMethods: resp.PaymentMethodList{List: methodItems},
 		Amounts:        resp.PaymentMethodAmountList{List: amounts},
@@ -6838,6 +7241,107 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	}
 
 	return infoResp, nil
+}
+
+// OrderPaymentCoupon 使用优惠券 或 取消优惠券
+func (s *orderSrv) OrderPaymentCoupon(ctx context.Context, req req.InstantOrderPaymentCouponReq) (*resp.InstantOrderPaymentInfoResp, error) {
+	// 加锁
+	if ctx.NoLock() {
+		s.lock.LockUuid(req.SaleBillUuid)
+		defer s.lock.UnlockUuid(req.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(req.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errSaleBill
+	}
+
+	saleOrder := saleBill.GetSaleOrder(req.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.New("无法查询到销售订单")
+	}
+
+	// 获取优惠券信息，判断该优惠券是否是属于该会员的
+	couponOriginAmount := 0.0
+	if req.CouponRequirement == constant.CouponRequirementNone {
+		marketingCoupon, err := repository.NewMarketingCouponRepo(db).GetCouponByUuid(req.CouponUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		couponOriginAmount = marketingCoupon.Amount
+	} else if req.CouponRequirement == constant.CouponRequirementMember {
+		memberUuid, errSaleOrder := repository.NewSaleOrderRepo(db).GetSaleOrderMemberUuid(req.SaleOrderUuid)
+		if errSaleOrder != nil {
+			return nil, errors.WithMessage(errSaleBill)
+		}
+		memberCoupon, errMemberCoupon := repository.NewMemberCouponRepo(db).GetMemberCouponByUuid(req.CouponUuid)
+		if errMemberCoupon != nil {
+			return nil, errors.WithMessage(errMemberCoupon)
+		}
+		if memberCoupon.MemberUuid != memberUuid {
+			return nil, errors.WithMessage(errors.New("优惠券不属于该会员"))
+		}
+		couponOriginAmount = memberCoupon.Amount
+	}
+
+	hasCoupon := saleOrder.HasCoupon()
+	// 判断该销售订单是否已经使用了优惠券，一个订单只能使用一个优惠券
+	// 如果使用了优惠券，
+	if hasCoupon {
+		if saleOrder.HasCouponByUuid(req.CouponUuid, req.CouponRequirement) {
+			// 判断是否是同一个优惠券，如果是，删除该优惠券使用记录，表示取消选择
+			coupon := saleOrder.GetCouponByUuid(req.CouponUuid, req.CouponRequirement)
+			coupon.SetDelete()
+		} else {
+			// 否则则修改sale_order_coupon表中的记录为新选择的优惠券
+			coupon := saleOrder.Coupons[0]
+			coupon.ReplaceCoupon(req.CouponUuid, req.CouponRequirement, couponOriginAmount)
+		}
+	} else {
+		// 如果未使用优惠券，则在sale_order_coupon表中增加一条记录
+		var couponAmount float64
+		if req.CouponRequirement == constant.CouponRequirementMember {
+			memberCoupon, err := repository.NewMemberCouponRepo(db).GetMemberCouponByUuid(req.CouponUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			couponAmount = memberCoupon.Amount
+		} else if req.CouponRequirement == constant.CouponRequirementNone {
+			marketingCoupon, err := repository.NewMarketingCouponRepo(db).GetCouponByUuid(req.CouponUuid)
+			if err != nil {
+				return nil, errors.WithMessage(err)
+			}
+			couponAmount = marketingCoupon.Amount
+		}
+
+		saleOrder.AddCoupon(req.CouponUuid, req.CouponRequirement, couponAmount)
+	}
+
+	db.Transaction(func(tx *gorm.DB) error {
+		// 选择优惠券后，将积分自动抵扣失效改为手动抵扣
+		saleOrder.AutoPointsExchange = 0
+
+		if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
+			return errors.WithMessage(err)
+		}
+		if hasCoupon {
+			// 更新优惠券使用记录: 更换应用于订单的优惠券 或 软删除优惠券
+			if err := repository.NewSaleOrderCouponRepo(tx).UpdateSaleOrderCoupon(*saleOrder.Coupons[0]); err != nil {
+				return err
+			}
+		} else {
+			// 新增优惠券使用记录
+			if err := repository.NewSaleOrderCouponRepo(tx).CreateSaleOrderCoupon(*saleOrder.Coupons[0]); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	// 获取支付结账页面信息
+	return s.InstantOrderPaymentInfo(ctx, saleBill, req.SaleBillUuid, req.SaleOrderUuid)
 }
 
 func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderPaymentPointsReq) (*resp.InstantOrderPaymentInfoResp, error) {
@@ -6867,7 +7371,7 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 		return nil, errors.New("订单没有会员")
 	}
 	if len(saleOrder.PaymentOrders) > 0 {
-		return nil, errors.New("订单已付款,无法修改积分抵扣数量")
+		return nil, errors.New("订单已付款，无法修改积分抵扣数量")
 	}
 
 	if req.Points > saleOrder.Member.GetPoints() {
@@ -6892,6 +7396,11 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 				saleOrder.SetCheckoutZeroRuleCancel() // 取消抹零，修改saleBill中的数据
 				if err := repository.NewSaleOrderRepo(tx).SetCheckoutZeroRuleCancel(saleOrder.Uuid); err != nil {
 					return errors.WithMessage(err)
+				}
+				// 取消所有优惠券
+				saleOrder.SetPointsCouponCancel()
+				if err := repository.NewSaleOrderCouponRepo(tx).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
+					return errors.WithMessage(err, "取消销售订单所有优惠券失败")
 				}
 				// 更新销售订单的积分抵扣信息
 				if err := repository.NewSaleOrderRepo(tx).UpdateSaleOrderPointsExchange(saleOrder.Uuid, saleOrder.PayPoints, saleOrder.PayPointsAmount, saleOrder.PointsExchangeRate, 0); err != nil {
@@ -7359,6 +7868,91 @@ func (s *orderSrv) GetPointsRuleInfo(ctx context.Context, isBufferOrder bool, me
 	return &rule, nil
 }
 
+// 核销优惠券
+func (s *orderSrv) VerifyCoupon(ctx context.Context, saleOrder *model.SaleOrder, db *gorm.DB) error {
+	if !saleOrder.HasCoupon() {
+		return nil
+	}
+	coupon := saleOrder.Coupons[0] // 目前一个订单只支持一个优惠券
+
+	// 获取门店设置
+	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	timezone := utils.SetTimezone(storeSetting.TimeZone)
+	nowTime := timezone.Now().Format("15:04")
+	// 使用营销会员优惠券时
+	if coupon.CouponRequirement == constant.CouponRequirementMember {
+		if saleOrder.ConsumerUuid == 0 {
+			return errors.New("订单未使用会员，无法核销营销会员优惠券")
+		}
+		memberCoupon, errMemberCoupon := repository.NewMemberCouponRepo(db).GetMemberCouponByUuid(coupon.MemberCouponUuid)
+		if errMemberCoupon != nil {
+			return errors.WithMessage(errMemberCoupon)
+		}
+		// 判断优惠券是否可用
+		if err := memberCoupon.IsAvailable(saleOrder.ConsumerUuid, nowTime); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 核销优惠券
+		if err := repository.NewMemberCouponRepo(db).VerifyMemberCoupon(coupon.MemberCouponUuid); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 添加会员优惠券使用记录
+		if err := repository.NewMemberCouponRepo(db).CreateMemberCouponRecord(model.MemberCouponUseRecord{
+			MemberUuid:     saleOrder.ConsumerUuid,
+			CouponUuid:     coupon.MemberCouponUuid,
+			UseOrderUuid:   saleOrder.Uuid,
+			UseOrderAmount: saleOrder.CouponAmount,
+		}); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 添加会员优惠券使用记录
+		if err := repository.NewMarketingCouponRepo(db).CreateMarketingCouponRecord(model.MarketingCouponRecord{
+			BaseModel:    model.BaseModel{},
+			CouponUuid:   coupon.MemberCouponUuid,
+			SerialNo:     "",
+			ActivityUuid: 0,
+			MemberUuid:   saleOrder.ConsumerUuid,
+			Type:         constant.CouponRecordTypeUsed,
+			Count:        0,
+			LeftCount:    0,
+		}); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 添加营销会员优惠券使用记录
+		// 查询营销优惠券的剩余数量
+		marketingCouponUuid := coupon.MemberCoupon.CouponUuid
+		marketingCouponLeftCount, errMarketingCouponLeftCount := repository.NewMarketingCouponRepo(db).GetCouponLeftCount(marketingCouponUuid)
+		if errMarketingCouponLeftCount != nil {
+			return errors.WithMessage(errMarketingCouponLeftCount)
+		}
+		if err := repository.NewMarketingCouponRepo(db).CreateMemberCouponRecord(marketingCouponUuid, saleOrder.ConsumerUuid, marketingCouponLeftCount); err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+
+	// 使用通用优惠券（所有人可用）时
+	if coupon.CouponRequirement == constant.CouponRequirementNone {
+		commonCoupon, err := repository.NewMarketingCouponRepo(db).GetCouponByUuid(coupon.MarketingCouponUuid)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		if err := commonCoupon.IsAvailable(nowTime); err != nil {
+			return errors.WithMessage(err)
+		}
+		commonCoupon.Count = commonCoupon.Count - 1
+		if err := repository.NewMarketingCouponRepo(db).CreateCommonCouponRecord(commonCoupon.Uuid, commonCoupon.Count); err != nil {
+			return errors.WithMessage(err, "创建通用优惠券使用记录失败")
+		}
+		if err := repository.NewMarketingCouponRepo(db).UpdateCommonCouponCount(commonCoupon.Uuid); err != nil {
+			return errors.WithMessage(err, "减1通用优惠券数量失败")
+		}
+	}
+	return nil
+}
+
 // InstantOrderPaymentFinish 完成销售订单的付款结账
 func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.InstantOrderPaymentFinishReq) (*resp.OrderFinishResp, error) {
 	// 加锁
@@ -7432,7 +8026,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	}
 
 	// 最终应收=应收金额+手续费-结账抹零金额
-	finalAmount := decimal.NewFromFloat(saleOrder.GetPointsExchangeAmount()).Add(decimal.NewFromFloat(commissionFee)).Sub(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee)).InexactFloat64()
+	finalAmount := decimal.NewFromFloat(saleOrder.GetAmountValue()).Add(decimal.NewFromFloat(commissionFee)).Sub(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee)).InexactFloat64()
 
 	totalPay := float64(0) // 总付款金额=各个付款单的实收金额之和
 	for _, paymentOrder := range infoResp.PaymentOrders.List {
@@ -7547,7 +8141,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			}
 		}
 		// 更新会员消费金额和消费次数
-		consumptionAmount := decimal.NewFromFloat(saleOrder.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee)).Truncate(2).InexactFloat64()
+		consumptionAmount := decimal.NewFromFloat(saleOrder.GetAmountValue()).Sub(decimal.NewFromFloat(saleOrder.ZeroCheckoutFee)).Truncate(2).InexactFloat64()
 		repository.NewMemberRepo(db).IncConsumptionAmount(saleOrder.ConsumerUuid, consumptionAmount)
 		repository.NewMemberRepo(db).IncConsumptionCount(saleOrder.ConsumerUuid)
 		// 处理会员升级 todo 如果后面的逻辑报错，这个升级没有回滚，应该放在事务中升级
@@ -7556,6 +8150,14 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 
 	// 记录会员余额
 	saleOrder.SetMemberBalance()
+
+	needCancelCoupon := false // 是否需要取消优惠券
+
+	// 加锁, 避免并发问题
+	if saleOrder.HasCoupon() {
+		lock.NewSystemLock().LockUuid(constant.LockNameActivityConsumption)
+		defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
+	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db)
@@ -7598,7 +8200,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 					Uuid:     saleOrder.Member.Uuid,
 					Points:   -saleOrder.PayPoints,
 					Scene:    constant.MemberPointLogScenePointsExchange,
-					Describe: fmt.Sprintf("订单积分抵扣：%s", saleOrder.OrderNo), // todo 多语言
+					Describe: fmt.Sprintf("订单积分抵扣：%s", saleOrder.OrderNo),
 				}); err != nil {
 					return errors.WithMessage(err)
 				}
@@ -7623,8 +8225,21 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 				return errors.WithMessage(err)
 			}
 		}
+		// 核销优惠券
+		if err := s.VerifyCoupon(ctx, saleOrder, db); err != nil {
+			needCancelCoupon = true
+			return errors.WithMessage(err)
+		}
 		return nil
 	}); err != nil {
+		if needCancelCoupon {
+			// 取消优惠券
+			saleOrder.SetAllCouponCancel()
+			if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
+				return nil, errors.WithMessage(err, "取消销售订单会员优惠券失败")
+			}
+			return nil, errors.WithMessage(err, "请刷新优惠券列表")
+		}
 		return nil, errors.WithMessage(err)
 	}
 
@@ -7871,6 +8486,12 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 	if err != nil {
 		return nil, errors.WithMessage(err)
+	}
+
+	// 取消优惠券
+	saleOrder.SetAllCouponCancel()
+	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
+		return nil, errors.WithMessage(err, "取消销售订单优惠券失败")
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
@@ -8157,15 +8778,15 @@ func (s *orderSrv) InstantOrderSaleOrderCreate(ctx context.Context, req req.Inst
 	return cartInfo, nil
 }
 
-func MoreThanMoveNum(saleOrderProductNum, moveNum uint) bool {
+func MoreThanMoveNum(saleOrderProductNum, moveNum float64) bool {
 	return saleOrderProductNum > moveNum
 }
 
-func LessThanMoveNum(saleOrderProduct *model.SaleOrderProduct, moveNum uint) bool {
+func LessThanMoveNum(saleOrderProduct *model.SaleOrderProduct, moveNum float64) bool {
 	return saleOrderProduct.Num < moveNum
 }
 
-func EqualMoveNum(saleOrderProductNum, moveNum uint) bool {
+func EqualMoveNum(saleOrderProductNum, moveNum float64) bool {
 	return saleOrderProductNum == moveNum
 }
 func IsSameSignature[T any](sign string, toSaleOrderProductSignMap map[string]*T) bool {
@@ -8313,7 +8934,7 @@ func (s *orderSrv) getMoveProductInfo(ctx context.Context, saleOrderFrom *model.
 // 第二种移动方式：修改原销售订单商品数量，更新记录，重新计算订单金额；新建目标销售订单商品，计算金额，表插入记录，数组增加这条记录，计算订单金额
 // 第三种移动方式：删除原销售订单商品，更新表记录，重新计算原订单金额；修改目标销售订单商品数量，更新记录，重新计算订单金额
 // 第四种移动方式：修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；目标销售订单的商品数组增加这条记录，重新计算订单金额
-func (s *orderSrv) moveSaleOrderProduct(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, saleOrderProducts []*model.SaleOrderProduct, moveNumMap map[uint64]uint) (map[uint64]*model.SaleOrderProduct, map[uint64]*model.SaleOrderProduct, error) {
+func (s *orderSrv) moveSaleOrderProduct(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, saleOrderProducts []*model.SaleOrderProduct, moveNumMap map[uint64]float64) (map[uint64]*model.SaleOrderProduct, map[uint64]*model.SaleOrderProduct, error) {
 	// 需要更新的销售订单商品
 	waitUpdateSaleOrderProductMap := make(map[uint64]*model.SaleOrderProduct)
 	// 需要新建的销售订单商品
@@ -8408,7 +9029,7 @@ func (s *orderSrv) moveSaleOrderProduct(ctx context.Context, saleBill *model.Sal
 }
 
 // moveBuffetCustomer 移动自助餐顾客
-func (s *orderSrv) moveBuffetCustomer(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, buffetCustomers []*model.SaleOrderBuffetCustomerType, moveNumMap map[uint64]uint) (map[uint64]*model.SaleOrderBuffetCustomerType, map[uint64]*model.SaleOrderBuffetCustomerType, error) {
+func (s *orderSrv) moveBuffetCustomer(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, buffetCustomers []*model.SaleOrderBuffetCustomerType, moveNumMap map[uint64]float64) (map[uint64]*model.SaleOrderBuffetCustomerType, map[uint64]*model.SaleOrderBuffetCustomerType, error) {
 	// 需要更新的销售订单顾客
 	waitUpdateBuffetCustomerMap := make(map[uint64]*model.SaleOrderBuffetCustomerType)
 	// 需要新建的销售订单顾客
@@ -8429,33 +9050,33 @@ func (s *orderSrv) moveBuffetCustomer(ctx context.Context, saleBill *model.SaleB
 		if !ok {
 			return nil, nil, errors.WithMessage(errors.New("顾客可能移动到其他销售订单中"), fmt.Sprintf("buffetCustomer_uuid:%d", buffetCustomer.Uuid))
 		}
-		if moveCustomerNum > buffetCustomer.Num {
+		if moveCustomerNum > float64(buffetCustomer.Num) {
 			return nil, nil, errors.WithMessage(errors.New("移动数量大于销售订单商品数量"), fmt.Sprintf("sale_order_product_uuid:%d", buffetCustomer.Uuid))
 		}
 		hasHandle := false // 是否已经处理过。因为一个顾客被一个处理方式处理过后，可能又满足多种移动方式，所以需要一个标志来判断是否已经处理过
 		// 第一种移动方式：原销售订单顾客数量大于移动数量，则原销售订单顾客数量减少移动数量，目标销售订单中有签名一样的顾客，该顾客数量增加移动数量
-		if !hasHandle && MoreThanMoveNum(buffetCustomer.Num, moveCustomerNum) && IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
+		if !hasHandle && MoreThanMoveNum(float64(buffetCustomer.Num), float64(moveCustomerNum)) && IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动顾客，第一种移动方式", zap.Any("from", buffetCustomer.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", buffetCustomer.Uuid), zap.Any("buffetCustomer", buffetCustomer.Name))
 			// 修改原销售订单顾客数量，更新记录，重新计算订单金额
-			buffetCustomer.Num -= moveCustomerNum
+			buffetCustomer.Num -= uint(moveCustomerNum)
 			// 修改目标销售订单顾客数量，更新记录，重新计算订单金额
-			toBuffetCustomerSignMap[buffetCustomer.GetSign()].Num += moveCustomerNum
+			toBuffetCustomerSignMap[buffetCustomer.GetSign()].Num += uint(moveCustomerNum)
 			// 记录到待更新列表中
 			waitUpdateBuffetCustomerMap[buffetCustomer.Uuid] = buffetCustomer
 			waitUpdateBuffetCustomerMap[toBuffetCustomerSignMap[buffetCustomer.GetSign()].Uuid] = toBuffetCustomerSignMap[buffetCustomer.GetSign()]
 		}
 
 		// 第二种移动方式：原销售订单商品数量大于移动数量，则原销售订单商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
-		if !hasHandle && MoreThanMoveNum(buffetCustomer.Num, moveCustomerNum) && !IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
+		if !hasHandle && MoreThanMoveNum(float64(buffetCustomer.Num), float64(moveCustomerNum)) && !IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动顾客，第二种移动方式", zap.Any("from", buffetCustomer.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", buffetCustomer.Uuid), zap.Any("buffetCustomer", buffetCustomer.Name))
 			ctx.Log().Debug("移动顾客", zap.Any("原销售订单商品修改前数量", buffetCustomer.Num))
 			// 修改原销售订单商品数量，更新记录，重新计算订单金额
-			buffetCustomer.Num -= moveCustomerNum
+			buffetCustomer.Num -= uint(moveCustomerNum)
 			// 新建一个销售订单商品，该商品数量为移动数量
 			newBuffetCustomer := buffetCustomer.CopyBuffetCustomer(saleOrderTo.Uuid)
-			newBuffetCustomer.Num = moveCustomerNum
+			newBuffetCustomer.Num = uint(moveCustomerNum)
 			// 计算商品数据。折扣、税费、服务
 			newBuffetCustomer.CustomDiscountRate = saleOrderTo.CustomDiscountRate
 			newBuffetCustomer.CalcSaleOrderBuffetCustomerType(*saleBill.SaleBillSetting)
@@ -8468,20 +9089,20 @@ func (s *orderSrv) moveBuffetCustomer(ctx context.Context, saleBill *model.SaleB
 		}
 
 		// 第三种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
-		if !hasHandle && EqualMoveNum(buffetCustomer.Num, moveCustomerNum) && IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
+		if !hasHandle && EqualMoveNum(float64(buffetCustomer.Num), float64(moveCustomerNum)) && IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动商品，第三种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", buffetCustomer.Uuid), zap.Any("buffetCustomer", buffetCustomer.Name))
 			// 删除原销售订单商品，更新表记录，重新计算原订单金额；
 			buffetCustomer.DeleteTime = time.Now().Unix()
 			// 修改目标销售订单商品数量，更新记录，重新计算订单金额
-			toBuffetCustomerSignMap[buffetCustomer.GetSign()].Num += moveCustomerNum
+			toBuffetCustomerSignMap[buffetCustomer.GetSign()].Num += uint(moveCustomerNum)
 			// 记录到待更新列表中
 			waitUpdateBuffetCustomerMap[buffetCustomer.Uuid] = buffetCustomer
 			waitUpdateBuffetCustomerMap[toBuffetCustomerSignMap[buffetCustomer.GetSign()].Uuid] = toBuffetCustomerSignMap[buffetCustomer.GetSign()]
 		}
 
 		// 第四种移动方式：原销售订单商品数量等于移动数量，则原销售订单商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个销售订单商品，该商品数量为移动数量
-		if !hasHandle && EqualMoveNum(buffetCustomer.Num, moveCustomerNum) && !IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
+		if !hasHandle && EqualMoveNum(float64(buffetCustomer.Num), float64(moveCustomerNum)) && !IsSameSignature(buffetCustomer.GetSign(), toBuffetCustomerSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动商品，第四种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", buffetCustomer.Uuid), zap.Any("buffetCustomer", buffetCustomer.Name))
 			// 修改原销售订单商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；
@@ -8500,7 +9121,7 @@ func (s *orderSrv) moveBuffetCustomer(ctx context.Context, saleBill *model.SaleB
 }
 
 // moveBuffetCustomer 移动加钟商品
-func (s *orderSrv) moveBuffetDelayProduct(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, delayProducts []*model.SaleOrderBuffetDelayProduct, moveNumMap map[uint64]uint) (map[uint64]*model.SaleOrderBuffetDelayProduct, map[uint64]*model.SaleOrderBuffetDelayProduct, error) {
+func (s *orderSrv) moveBuffetDelayProduct(ctx context.Context, saleBill *model.SaleBill, saleOrderFrom, saleOrderTo *model.SaleOrder, delayProducts []*model.SaleOrderBuffetDelayProduct, moveNumMap map[uint64]float64) (map[uint64]*model.SaleOrderBuffetDelayProduct, map[uint64]*model.SaleOrderBuffetDelayProduct, error) {
 	// 需要更新的销售订单加钟商品
 	waitUpdateBuffetDelayProductMap := make(map[uint64]*model.SaleOrderBuffetDelayProduct)
 	// 需要新建的销售订单加钟商品
@@ -8521,34 +9142,34 @@ func (s *orderSrv) moveBuffetDelayProduct(ctx context.Context, saleBill *model.S
 		if !ok {
 			return nil, nil, errors.WithMessage(errors.New("加钟商品可能移动到其他销售订单中"), fmt.Sprintf("buffetCustomer_uuid:%d", delayProduct.Uuid))
 		}
-		if moveCustomerNum > delayProduct.Num {
+		if moveCustomerNum > float64(delayProduct.Num) {
 			return nil, nil, errors.WithMessage(errors.New("移动数量大于加钟商品数量"), fmt.Sprintf("sale_order_product_uuid:%d", delayProduct.Uuid))
 		}
 
 		hasHandle := false // 是否已经处理过。因为一个加钟商品被一个处理方式处理过后，可能又满足多种移动方式，所以需要一个标志来判断是否已经处理过
 		// 第一种移动方式：原销售订单加钟商品数量大于移动数量，则原销售订单加钟商品数量减少移动数量，目标销售订单中有签名一样的加钟商品，该加钟商品数量增加移动数量
-		if !hasHandle && MoreThanMoveNum(delayProduct.Num, moveCustomerNum) && IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
+		if !hasHandle && MoreThanMoveNum(float64(delayProduct.Num), float64(moveCustomerNum)) && IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动加钟商品，第一种移动方式", zap.Any("from", delayProduct.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", delayProduct.Uuid), zap.Any("delayProduct", delayProduct.Name))
 			// 修改原销售订单加钟商品数量，更新记录，重新计算订单金额
-			delayProduct.Num -= moveCustomerNum
+			delayProduct.Num -= uint(moveCustomerNum)
 			// 修改目标销售订单加钟商品数量，更新记录，重新计算订单金额
-			toBuffetDelayProductSignMap[delayProduct.GetSign()].Num += moveCustomerNum
+			toBuffetDelayProductSignMap[delayProduct.GetSign()].Num += uint(moveCustomerNum)
 			// 记录到待更新列表中
 			waitUpdateBuffetDelayProductMap[delayProduct.Uuid] = delayProduct
 			waitUpdateBuffetDelayProductMap[toBuffetDelayProductSignMap[delayProduct.GetSign()].Uuid] = toBuffetDelayProductSignMap[delayProduct.GetSign()]
 		}
 
 		// 第二种移动方式：原加钟商品数量大于移动数量，则原加钟商品数量减少移动数量，目标销售订单中没有签名一样的商品，则新建一个加钟商品，该商品数量为移动数量
-		if !hasHandle && MoreThanMoveNum(delayProduct.Num, moveCustomerNum) && !IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
+		if !hasHandle && MoreThanMoveNum(float64(delayProduct.Num), float64(moveCustomerNum)) && !IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动加钟商品，第二种移动方式", zap.Any("from", delayProduct.SaleOrderUuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", delayProduct.Uuid), zap.Any("delayProduct", delayProduct.Name))
 			ctx.Log().Debug("移动加钟商品", zap.Any("原加钟商品修改前数量", delayProduct.Num))
 			// 修改原加钟商品数量，更新记录，重新计算订单金额
-			delayProduct.Num -= moveCustomerNum
+			delayProduct.Num -= uint(moveCustomerNum)
 			// 新建一个加钟商品，该商品数量为移动数量
 			newBuffetCustomer := delayProduct.CopyBuffetDelayProduct(saleOrderTo.Uuid)
-			newBuffetCustomer.Num = moveCustomerNum
+			newBuffetCustomer.Num = uint(moveCustomerNum)
 			// 在目标销售订单中新建一个加钟商品
 			saleOrderTo.SaleOrderBuffetDelayProducts = append(saleOrderTo.SaleOrderBuffetDelayProducts, newBuffetCustomer)
 			// 记录到待更新列表中
@@ -8558,20 +9179,20 @@ func (s *orderSrv) moveBuffetDelayProduct(ctx context.Context, saleBill *model.S
 		}
 
 		// 第三种移动方式：原加钟商品数量等于移动数量，则原加钟商品从原销售订单中移除，目标销售订单中有签名一样的商品，该商品数量增加移动数量
-		if !hasHandle && EqualMoveNum(delayProduct.Num, moveCustomerNum) && IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
+		if !hasHandle && EqualMoveNum(float64(delayProduct.Num), float64(moveCustomerNum)) && IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动加钟商品，第三种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", delayProduct.Uuid), zap.Any("delayProduct", delayProduct.Name))
 			// 删除原加钟商品，更新表记录，重新计算原订单金额；
 			delayProduct.DeleteTime = time.Now().Unix()
 			// 修改目标加钟商品数量，更新记录，重新计算订单金额
-			toBuffetDelayProductSignMap[delayProduct.GetSign()].Num += moveCustomerNum
+			toBuffetDelayProductSignMap[delayProduct.GetSign()].Num += uint(moveCustomerNum)
 			// 记录到待更新列表中
 			waitUpdateBuffetDelayProductMap[delayProduct.Uuid] = delayProduct
 			waitUpdateBuffetDelayProductMap[toBuffetDelayProductSignMap[delayProduct.GetSign()].Uuid] = toBuffetDelayProductSignMap[delayProduct.GetSign()]
 		}
 
 		// 第四种移动方式：原加钟商品数量等于移动数量，则原加钟商品从原销售订单中移除，目标销售订单中没有签名一样的商品，则新建一个加钟商品，该商品数量为移动数量
-		if !hasHandle && EqualMoveNum(delayProduct.Num, moveCustomerNum) && !IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
+		if !hasHandle && EqualMoveNum(float64(delayProduct.Num), float64(moveCustomerNum)) && !IsSameSignature(delayProduct.GetSign(), toBuffetDelayProductSignMap) {
 			hasHandle = true
 			ctx.Log().Debug("移动加钟商品，第四种移动方式", zap.Any("from", saleOrderFrom.Uuid), zap.Any("to", saleOrderTo.Uuid), zap.Any("product uuid", delayProduct.Uuid), zap.Any("delayProduct", delayProduct.Name))
 			// 修改原加钟商品的销售订单uuid为目标销售订单的uuid，使用目标销售订单的折扣优惠，更新记录，重新计算原订单金额；
@@ -8615,7 +9236,7 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 	saleOrderTo := saleBill.GetSaleOrder(req.To)
 
 	// 构建移动到订单商品的map结构
-	moveProductMap := make(map[uint64]uint)
+	moveProductMap := make(map[uint64]float64)
 	for _, moveProduct := range req.Products {
 		moveProductMap[moveProduct.Uuid] = moveProduct.Num
 	}
@@ -8625,7 +9246,7 @@ func (s *orderSrv) SaleOrderMoveProduct(ctx context.Context, req req.InstantOrde
 		return nil, errors.WithMessage(err)
 	}
 
-	moveNumMap := make(map[uint64]uint)
+	moveNumMap := make(map[uint64]float64)
 	for _, moveProduct := range req.Products {
 		moveNumMap[moveProduct.Uuid] = moveProduct.Num
 	}
@@ -9065,7 +9686,7 @@ func (s *orderSrv) getMoveProductList(saleOrderFrom *model.SaleOrder) []req.Move
 		}
 		moveProductList = append(moveProductList, req.MoveProduct{
 			Uuid: saleOrderBuffetCustomer.Uuid,
-			Num:  saleOrderBuffetCustomer.Num,
+			Num:  float64(saleOrderBuffetCustomer.Num),
 		})
 	}
 	// 获取要移动的加钟商品
@@ -9075,7 +9696,7 @@ func (s *orderSrv) getMoveProductList(saleOrderFrom *model.SaleOrder) []req.Move
 		}
 		moveProductList = append(moveProductList, req.MoveProduct{
 			Uuid: buffetDelayProduct.Uuid,
-			Num:  buffetDelayProduct.Num,
+			Num:  float64(buffetDelayProduct.Num),
 		})
 	}
 	return moveProductList
@@ -9292,7 +9913,7 @@ func (s *orderSrv) InstantOrderSaleOrderDeleteAll(ctx context.Context, request r
 		}
 
 		if len(moveProductList) > 0 {
-			// todo 优化减少重复查询
+			// NOTE 优化减少重复查询
 			_, err := s.SaleOrderMoveProduct(ctx, moveProductReq, true)
 			if err != nil {
 				ctx.Log().Error("移动商品失败", zap.Error(err))
@@ -9384,6 +10005,11 @@ func (s *orderSrv) OrderMemberCancel(ctx context.Context, request req.OrderMembe
 	}
 
 	saleOrder.SetMemberDiscountCancel()
+	// 取消优惠券
+	saleOrder.SetAllCouponCancel()
+	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
+		return nil, errors.WithMessage(err, "取消销售订单会员优惠券失败")
+	}
 
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
@@ -9447,6 +10073,11 @@ func (s *orderSrv) OrderUseMember(ctx context.Context, request req.CheckMemberPa
 	}
 
 	saleOrder.SetMemberDiscount(*member)
+	// 取消优惠券
+	saleOrder.SetAllCouponCancel()
+	if err := repository.NewSaleOrderCouponRepo(db).UpdateSaleOrderCouponCancelAll(saleOrder.Uuid); err != nil {
+		return nil, false, errors.WithMessage(err, "取消销售订单会员优惠券失败")
+	}
 
 	if err := s.CalcAndSaveSaleBill(ctx, db, saleBill); err != nil {
 		return nil, false, errors.WithMessage(err, "s.CalcAndSaveSaleBill failed")
@@ -9670,7 +10301,7 @@ func (s *orderSrv) GetMustPlanList(ctx context.Context, saleBillUuid uint64) (re
 	if err != nil {
 		return resp.ProductMustPlanList{}, errors.ErrInternal
 	}
-	list, err := s.mustPlanSrv.GetDeskMustPlanList(ctx, saleBill.MealNum, make(map[uint64]map[uint64]uint), saleBill.DeskUuid)
+	list, err := s.mustPlanSrv.GetDeskMustPlanList(ctx, saleBill.MealNum, make(map[uint64]map[uint64]float64), saleBill.DeskUuid)
 	if err != nil {
 		return resp.ProductMustPlanList{}, errors.WithMessage(err)
 	}
@@ -9780,7 +10411,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 				if err != nil {
 					return res, errors.WithMessage(err, "解析H5设置失败")
 				}
-				if saleBill.GetUnOrderH5OrderProductNum() > uint(numLimit) {
+				if saleBill.GetUnOrderH5OrderProductNum() > float64(numLimit) {
 					return gin.H{"value": numLimit}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
 				}
 			}
@@ -9803,7 +10434,7 @@ func (s *orderSrv) ConfirmH5Order(ctx context.Context, saleBillUuid uint64, sale
 				if err != nil {
 					return res, errors.WithMessage(err, "解析H5设置失败")
 				}
-				if saleBill.GetUnOrderH5OrderProductNum() > uint(numLimit) {
+				if saleBill.GetUnOrderH5OrderProductNum() > float64(numLimit) {
 					return gin.H{"value": numLimit}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
 				}
 			}
@@ -10112,7 +10743,7 @@ func (s *orderSrv) GetSentKitchen(ctx context.Context, saleBillUuid uint64, shop
 	}
 
 	// 统计已送厨商品并按送厨时间分组
-	productNum := uint(0)
+	productNum := float64(0)
 	productGroup := make(map[int64]map[string]resp.Product)
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
@@ -10218,4 +10849,22 @@ func (s *orderSrv) GetOrderMemberList(ctx context.Context, saleBillUuid uint64) 
 		List:  list,
 		Extra: extra,
 	}, nil
+}
+
+func (s *orderSrv) GetProductPackageDetail(ctx context.Context, req req.GetProductPackageDetailReq) (*resp.ProductPackageDetailRes, error) {
+	db := ctx.GetDB()
+	// 获取销售订单中h5未下单的销售订单商品
+	saleOrderProducts, err := repository.NewSaleOrderProductRepo(db).GetProductPackageDetail(req.SaleBillUuid, req.SaleOrderUuid, req.ProductPackageUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取商品包详情失败")
+	}
+
+	productPackageDetailList := make([]resp.ProductPackageDetail, 0)
+
+	for _, saleOrderProduct := range saleOrderProducts {
+		productPackageDetail := saleOrderProduct.GetProductPackageDetail()
+		productPackageDetailList = append(productPackageDetailList, productPackageDetail)
+	}
+
+	return &resp.ProductPackageDetailRes{List: productPackageDetailList}, nil
 }

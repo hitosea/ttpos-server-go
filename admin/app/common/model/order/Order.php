@@ -692,6 +692,15 @@ class Order extends BaseModelOrder
             'free_order_price' => $data['total_free_order_price'],
             'free_order_num' => $data['total_free_order_num'],
             'recharge_amount' => $data['member_data']['recharge_amount'],
+            // TODO 外送数据来源
+            'delivery_order_amount' => 0, // 外送订单总额
+            'delivery_order_revenue' => 0, // 外送营收
+            'delivery_order_refund_amount' => 0, // 外送订单退款
+            'delivery_fee' => 0, // 配送费
+            'delivery_order_num' => 0, // 外送订单数
+            'delivery_min_order_price' => 0, // 外送最小金额
+            'delivery_max_order_price' => 0, // 外送最大金额
+            'delivery_avg_order_price' => 0, // 外送平均订单金额
             'total_order_num' => $data['total_order_num'],
             'min_order_price' => $data['min_order_price'],
             'max_order_price' => $data['max_order_price'],
@@ -1486,8 +1495,6 @@ class Order extends BaseModelOrder
         // 改价（直接决定pay_price）
         if ($order['discount_change_price'] > 0 || $order['discount_change_price'] == -1) { // -1 改价为0元
             $order_discount_change_price = $order['discount_change_price'] == -1 ? 0 : $order['discount_change_price'];
-
-            //            $discount_money = $order_price - $order_discount_change_price;    // TODO 不用原价减，先注释
             $change_discount_money = $pay_price - $order_discount_change_price;    // 应付 - 改价的优惠
             $discount_money = $change_discount_money + $discount_money; // 加上之前的优惠
             $pay_price = $order_discount_change_price;
@@ -1911,7 +1918,7 @@ class Order extends BaseModelOrder
         $orderProductModel = (new OrderProductModel);
         $orderProductModel->save($inArr);
         //
-        OrderProductModel::where('order_product_id', $orderProductModel->order_product_id)->update(['main_order_product_id' => $orderProductModel->order_product_id ]);
+        OrderProductModel::where('order_product_id', $orderProductModel->order_product_id)->update(['main_order_product_id' => $orderProductModel->order_product_id]);
         //
         if ($price != $front_price) {
             $data['tablet_product_name_text'] = ProductSkuModel::getNameById($data['product_sku_id']);
@@ -3072,7 +3079,7 @@ class Order extends BaseModelOrder
         if (!$res) {
             $this->error = '请求失败';
             return false;
-        } 
+        }
         $result = json_decode($res, true);
         if (($result['code'] ?? -1) != 0) {
             $this->error = $result['message'] ?? '请求失败';
@@ -5272,12 +5279,6 @@ class Order extends BaseModelOrder
      */
     public function unlock()
     {
-        // TODO 如果需要自助餐解锁要把锁定时间补偿
-        //        $now = time();
-        //        if ($this->is_buffet && $this->buffet_expired_time != -1 && $this->buffet_expired_time > $now) {
-        //            $fill_time = $now - $this->lock_time;
-        //            $this->buffet_expired_time = $this->buffet_expired_time + $fill_time;
-        //        }
         if ($this->parent_id == 0) {
             $this->is_lock = 0;
             return $this->save();
@@ -5844,7 +5845,7 @@ class Order extends BaseModelOrder
             $order_id = 0;
             $list = (new ProductModel)->getBaseList(['order_id' => $order_id], false, array_keys($scheme_must_page_product_ids));
             $buffetProductArr = Order::getOrderBuffetProductArr($order_id);
-            $productList = Order::handleBuffetProductIndex($list, $buffetProductArr, $meal_num); // TODO
+            $productList = Order::handleBuffetProductIndex($list, $buffetProductArr, $meal_num);
         }
         $param['list_rows'] = 100;
         $model = new AssistantProductModel;

@@ -1,9 +1,10 @@
 package repository
 
 import (
-	"gorm.io/gorm"
 	"slices"
 	"ttpos-server-go/app/model"
+
+	"gorm.io/gorm"
 )
 
 type IProductPrinterRepo interface {
@@ -90,7 +91,7 @@ func (r *productPrinterRepo) WhereProductPrinterUuid(uuid uint64) DBOption {
 }
 
 func (r *productPrinterRepo) WidthPrintMode(printMode int) DBOption {
-	if printMode == -1 {
+	if printMode == -1 || printMode == -2 {
 		return func(db *gorm.DB) *gorm.DB {
 			return db
 		}

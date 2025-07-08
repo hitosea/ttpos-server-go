@@ -8,11 +8,16 @@ import (
 )
 
 type IProductPackageRepo interface {
+	IProductPackageQueryRepo
+	CreateProductPackage(productPackage *model.ProductPackage) error
+}
+
+type IProductPackageQueryRepo interface {
 	GetProductPackage(opts ...DBOption) (*model.ProductPackage, error)
+	GetProductPackageList(opts ...DBOption) ([]*model.ProductPackage, error)
 	GetProductPackageBoms(productPackageUuid uint64) (*model.ProductPackage, error) // 获取商品包的库存信息
 	GetProductPackageBaseInfoByBomUuid(flavorBomUuid uint64) (*model.ProductBom, error)
 	GetProductPackageListByUuids(uuids []uint64) ([]*model.ProductPackage, error)
-	CreateProductPackage(productPackage *model.ProductPackage) error
 }
 
 type productPackageRepoImpl struct {
@@ -21,6 +26,24 @@ type productPackageRepoImpl struct {
 
 func NewProductPackageRepo(db *gorm.DB) IProductPackageRepo {
 	return &productPackageRepoImpl{db: db}
+}
+
+func (r *productPackageRepoImpl) GetProductPackageList(opts ...DBOption) ([]*model.ProductPackage, error) {
+	var productPackages []*model.ProductPackage
+	db := r.db
+
+	db = db.Model(&model.ProductPackage{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.Find(&productPackages)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return productPackages, nil
 }
 
 func (r *productPackageRepoImpl) GetProductPackage(opts ...DBOption) (*model.ProductPackage, error) {
@@ -65,6 +88,8 @@ func (r *productPackageRepoImpl) GetProductPackageBaseInfoByBomUuid(flavorBomUui
 		CommonRepo.WhereByUuid(flavorBomUuid),
 		CommonRepo.Preload(WithPreload{Query: "ProductPackage.TakeoutTax"}),
 		CommonRepo.Preload(
+			WithPreload{Query: "ProductPackage.MultiLanguageName"},
+			WithPreload{Query: "ProductPackage.ProductCategory"},
 			WithPreload{Query: "ProductPackage.DineTax"},
 			WithPreload{Query: "ProductFlavor.MultiLanguageName"},
 		),

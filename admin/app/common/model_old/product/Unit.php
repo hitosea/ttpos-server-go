@@ -50,7 +50,7 @@ class Unit extends BaseModel
      */
     public function updateUnit($unit_name, $shop_supplier_id)
     {
-        // todo 不用再次校验单位新增，单位添加是已固定单位，先注释掉
+        // NOTE 不用再次校验单位新增，单位添加是已固定单位，先注释掉
         // if ($unit_name) {
         //     $isExit = $this->where('unit_name', '=', $unit_name)
         //         ->where('shop_supplier_id', '=', $shop_supplier_id)

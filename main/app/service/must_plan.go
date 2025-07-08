@@ -122,7 +122,7 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 			continue
 		}
 		// 获取购物车中已经点了多个这个必点方案的商品
-		selectedNum := uint(0)
+		selectedNum := float64(0)
 		productPackageMap, ok := shopCartMustProductInfo[plan.Uuid]
 		if ok {
 			for i, productPackage := range productPackageList {
@@ -167,7 +167,7 @@ func (s *mustPlanSrv) GetInstantMustPlanList(ctx context.Context, db *gorm.DB, s
 		}
 		// 如果必点方案是可选商品，NeedNum的取值要么是1 要么是0
 		// 当selectedNum>0时，NeedNum为0
-		needNum := uint(0)
+		needNum := float64(0)
 		if plan.GetMustRule() == constant.ProductMustPlanMustRuleAny {
 			if selectedNum > 0 {
 				needNum = 0
@@ -310,7 +310,7 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 		for mustPlanUuid, productPackageMap := range *option.SelectedMustPlanProducts {
 			for productPackageUuid, num := range productPackageMap {
 				if _, ok := shopCartMustProductInfo[mustPlanUuid]; !ok {
-					shopCartMustProductInfo[mustPlanUuid] = make(map[uint64]uint)
+					shopCartMustProductInfo[mustPlanUuid] = make(map[uint64]float64)
 				}
 				shopCartMustProductInfo[mustPlanUuid][productPackageUuid] += num
 			}
@@ -366,7 +366,7 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 		}
 
 		// 获取购物车中已经点了多个这个必点方案的商品
-		selectedNum := uint(0)
+		selectedNum := float64(0)
 		productPackageMap, ok := shopCartMustProductInfo[plan.Uuid]
 		if ok {
 			for _, productPackage := range productPackages {
@@ -377,7 +377,7 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 			}
 		}
 		// 获取购物车中各个必点商品已经点了多少个，还差多少个
-		mustMap := make(map[uint64]uint) // product_package_uuid => num 每个必点商品还差多少个
+		mustMap := make(map[uint64]float64) // product_package_uuid => num 每个必点商品还差多少个
 		for i, productPackage := range productPackages {
 			productPackageUuid := productPackage.Product.Uuid
 			num := productPackageMap[productPackageUuid] // 该商品已点xx个
@@ -409,13 +409,13 @@ func (s *mustPlanSrv) GetDeskMustPlanList(ctx context.Context, mealNum uint, sho
 
 		// 如果必点方案是可选商品
 		// 当selectedNum>=桌台人数时，NeedNum为0
-		needNum := uint(0)
+		needNum := float64(0)
 		// 可选商品、每人必点
 		if plan.GetMustRule() == constant.ProductMustPlanMustRuleAny && plan.GetMustType() == constant.ProductMustPlanMustTypeEachPerson {
-			if selectedNum >= mealNum {
+			if selectedNum >= float64(mealNum) {
 				needNum = 0
 			} else {
-				needNum = mealNum - selectedNum
+				needNum = float64(mealNum) - selectedNum
 			}
 		}
 		// 可选商品、每单必点
@@ -529,9 +529,9 @@ func (s *mustPlanSrv) getIDeskMustPlanProductList(ctx context.Context, mustPlan 
 					Product:           *productPackage,
 					IsAutoAdd:         isAutoAdd, // 必点方案勾选自动加购且商品是无选择商品
 					ProductAutoAddReq: autoAddReq,
-					SelectedNum:       0,             // 该商品已经点的数量。展示给前端之前判断购物车内是否已经点了该商品，加上已点数量
-					MustNum:           1 * personNum, // 该商品要求必点数量
-					NeedNum:           1 * personNum, // 该商品还需点点数量。展示给前端之前判断购物车内是否已经点了该商品，减已点数量
+					SelectedNum:       0,                      // 该商品已经点的数量。展示给前端之前判断购物车内是否已经点了该商品，加上已点数量
+					MustNum:           1 * float64(personNum), // 该商品要求必点数量
+					NeedNum:           1 * float64(personNum), // 该商品还需点点数量。展示给前端之前判断购物车内是否已经点了该商品，减已点数量
 				}
 				productList = append(productList, productStat)
 			}

@@ -1,7 +1,7 @@
 <template>
   <div class="user">
     <!--搜索表单-->
-    <div class="common-seach-wrap flex">
+    <div class="common-search-wrap flex">
       <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
         <el-form-item :label="$t('活动名称')">
           <el-input v-model="formInline.name" :placeholder="$t('请输入活动名称')" @input="onSearch"></el-input>

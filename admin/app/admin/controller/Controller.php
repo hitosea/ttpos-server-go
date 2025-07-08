@@ -54,6 +54,10 @@ class Controller extends BaseController
         // 获取安装包
         '/admin/apk/download',
         '/admin/apk/preDownload',
+        // 外送渠道
+        '/admin/delivery/channels'.
+        // 可选商家列表 
+        '/admin/delivery/companySelect'
     ];
 
     /**

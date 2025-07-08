@@ -16,7 +16,7 @@
           </el-form-item>
           <canvas ref="qrCanvas" style="display: none"></canvas>
           <img class="qr-code" :src="modifiedQRUrl" style="width: 200px; margin: auto" />
-          <p class="click-button" @click="handleClick">
+          <p v-if="type === 'menu'" class="click-button" @click="handleClick">
             {{ $t('更新二维码') }}
           </p>
         </el-form>
@@ -54,7 +54,7 @@
         userInfo,
       };
     },
-    props: ['open'],
+    props: ['open', 'type'],
     watch: {
       open: function (n, o) {
         this.dialogVisible = this.open;
@@ -67,34 +67,47 @@
     methods: {
       getCode(e) {
         self.loading = true;
-        SettingApi.getBusinessQrcode(
-          {
-            action: e,
-          },
-          true
-        )
-          .then((data) => {
-            self.loading = false;
-            this.QRUrl = data.data;
-            this.modifyQRCode();
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
+        if (this.type === 'menu') {
+          SettingApi.getBusinessQrcode(
+            {
+              action: e,
+            },
+            true
+          )
+            .then((data) => {
+              self.loading = false;
+              this.QRUrl = data.data;
+              this.modifyQRCode();
+            })
+            .catch((error) => {
+              self.loading = false;
+            });
+        } else {
+          SettingApi.getCompanyQrcode(
+            {
+              action: e,
+            },
+            true
+          )
+            .then((data) => {
+              self.loading = false;
+              this.QRUrl = data.data;
+              this.modifyQRCode();
+            })
+            .catch((error) => {
+              self.loading = false;
+            });
+        }
       },
 
       qrcodeClick() {
-        // let baseUrl = window.location.protocol + '//' + window.location.host;
-        // let params = {
-        //   id: this.code_id,
-        //   source: this.source,
-        //   token: this.token,
-        // };
-        // window.location.href = baseUrl + '/index.php/shop/store.table.table/download?' + qs.stringify(params);
-        // 创建一个临时的a标签用于下载
         const link = document.createElement('a');
         link.href = this.modifiedQRUrl;
-        link.download = `${this.userInfo.shopName}_qrcode.png`; // 设置下载文件名
+        if (this.type === 'menu') {
+          link.download = `${this.userInfo.shopName}_menu_qrcode.png`; // 设置下载文件名
+        } else {
+          link.download = `${this.userInfo.shopName}_company_qrcode.png`; // 设置下载文件名
+        }
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -160,10 +173,16 @@
           ctx.fillStyle = 'black';
           ctx.font = '40px Arial';
           ctx.textAlign = 'center';
-          ctx.fillText(self.$t('电子菜单'), canvas.width / 2, 64);
+          if (this.type === 'menu') {
+            ctx.fillText(self.$t('电子菜单'), canvas.width / 2, 64);
+          }
 
           // 绘制二维码
-          ctx.drawImage(img, 80, 80);
+          if (this.type === 'menu') {
+            ctx.drawImage(img, 80, 80);
+          } else {
+            ctx.drawImage(img, 80, 55);
+          }
 
           // 绘制底部文字
           ctx.font = '54px Arial';

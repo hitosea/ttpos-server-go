@@ -23,14 +23,14 @@
                       {
                         required: true,
                         validator: () => {
-                          return scope.row.sort >= 0 && typeof scope.row.sort == 'number' ? true : false;
+                          return scope.row.sort ? true : false;
                         },
                         message: $t('请输入排序'),
                       },
                     ]"
                     prop="scope.row.sort"
                   >
-                    <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="scope.row.sort"></el-input-number>
+                    <numInput :controls="false" :min="0" :max="999" :precision="0" :placeholder="$t('接近0，排序等级越高')" v-model="scope.row.sort"></numInput>
                   </el-form-item>
                 </template>
               </el-table-column>
@@ -54,34 +54,34 @@
 
         <el-form-item for="no_click" :label="$t('呼叫服务员：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_call_service">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
 
         <el-form-item for="no_click" :label="$t('顾客可开桌：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_customer_order">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item for="no_click" :label="$t('声音提醒：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_voice_remind">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
 
         <el-form-item for="no_click" v-if="is_open_buffet" :label="$t('自助餐下单限制：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_buffet_order_limit" @change="handleChangeBuff">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
 
         <template v-if="form.is_buffet_order_limit == '1'">
           <el-form-item for="no_click" label="" :rules="[{ required: true, message: '' }]">
-            <el-checkbox v-model="form.buffet_order_limit.is_limit_time" :disabled="form.buffet_order_limit.is_limit_num == '0'" true-label="1" false-label="0">{{
+            <el-checkbox v-model="form.buffet_order_limit.is_limit_time" :disabled="form.buffet_order_limit.is_limit_num == '0'" true-value="1" false-value="0">{{
               $t('时间限制')
             }}</el-checkbox>
             <template v-if="form.buffet_order_limit.is_limit_time == '1'">
@@ -100,7 +100,7 @@
           </el-form-item>
 
           <el-form-item for="no_click" label="" :rules="[{ required: true, message: '' }]">
-            <el-checkbox v-model="form.buffet_order_limit.is_limit_num" :disabled="form.buffet_order_limit.is_limit_time == '0'" true-label="1" false-label="0">{{
+            <el-checkbox v-model="form.buffet_order_limit.is_limit_num" :disabled="form.buffet_order_limit.is_limit_time == '0'" true-value="1" false-value="0">{{
               $t('数量限制')
             }}</el-checkbox>
             <template v-if="form.buffet_order_limit.is_limit_num == '1'">
@@ -120,13 +120,13 @@
 
         <el-form-item for="no_click" :label="is_open_buffet ? $t('非自助餐下单限制：') : $t('下单限制：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_order_limit" @change="handleChangeOrder">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <template v-if="form.is_order_limit == '1'">
           <el-form-item for="no_click" label="" :rules="[{ required: true, message: '' }]">
-            <el-checkbox v-model="form.order_limit.is_limit_time" :disabled="form.order_limit.is_limit_num == '0'" true-label="1" false-label="0">{{ $t('时间限制') }}</el-checkbox>
+            <el-checkbox v-model="form.order_limit.is_limit_time" :disabled="form.order_limit.is_limit_num == '0'" true-value="1" false-value="0">{{ $t('时间限制') }}</el-checkbox>
             <template v-if="form.order_limit.is_limit_time == '1'">
               <el-input-number
                 :controls="false"
@@ -143,7 +143,7 @@
           </el-form-item>
 
           <el-form-item for="no_click" label="" :rules="[{ required: true, message: '' }]">
-            <el-checkbox v-model="form.order_limit.is_limit_num" :disabled="form.order_limit.is_limit_time == '0'" true-label="1" false-label="0">{{ $t('数量限制') }}</el-checkbox>
+            <el-checkbox v-model="form.order_limit.is_limit_num" :disabled="form.order_limit.is_limit_time == '0'" true-value="1" false-value="0">{{ $t('数量限制') }}</el-checkbox>
             <template v-if="form.order_limit.is_limit_num == '1'">
               <el-input-number
                 :controls="false"
@@ -166,7 +166,7 @@
 
         <el-form-item for="no_click" :label="$t('常用语言')" prop="language" :rules="[{ required: true, message: $t('请选择常用语言') }]">
           <el-checkbox-group v-model="form.language">
-            <el-checkbox v-for="item in languageList" v-show="item.key" :key="item.key" :label="item.key" :disabled="form.language.length == 1 && form.language.includes(item.key)">
+            <el-checkbox v-for="item in languageList" v-show="item.key" :key="item.key" :value="item.key" :disabled="form.language.length == 1 && form.language.includes(item.key)">
               {{ item.value }}
             </el-checkbox>
           </el-checkbox-group>

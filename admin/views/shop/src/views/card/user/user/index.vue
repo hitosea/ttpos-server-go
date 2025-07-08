@@ -6,7 +6,7 @@
       -->
   <div class="user">
     <!--搜索表单-->
-    <div class="common-seach-wrap flex">
+    <div class="common-search-wrap flex">
       <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
         <el-form-item :label="$t('会员等级')">
           <a-select v-model:value="formInline.grade_id" :placeholder="$t('选择等级')" @change="onSearch">
@@ -91,6 +91,11 @@
           <el-table-column prop="net_recharge_money" :label="$t('净充值金额')" width="160">
             <template #default="scope">
               {{ this.$formatPrice(scope.row.net_recharge_money) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="accumulated_consumption_amount" :label="$t('累计消费金额')" width="160">
+            <template #default="scope">
+              {{ this.$formatPrice(scope.row.accumulated_consumption_amount) }}
             </template>
           </el-table-column>
           <el-table-column prop="points" :label="$t('积分')">

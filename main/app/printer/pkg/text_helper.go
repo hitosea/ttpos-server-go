@@ -192,7 +192,7 @@ func (h *PrintTextHelper) FilterCharacter(text string) string {
 // PrintText 获取格式化的打印文本
 func (h *PrintTextHelper) PrintText(
 	leftText, centerText, rightText string,
-	total int, leftNum, centerNum, rightNum, intervalNum int,
+	total, leftNum, centerNum, rightNum, intervalNum int,
 ) string {
 	if leftText == "" {
 		leftText = ""

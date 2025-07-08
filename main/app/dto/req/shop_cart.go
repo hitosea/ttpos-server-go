@@ -15,6 +15,7 @@ type OrderCartProductAddReq struct {
 	SauceUuidList     []uint64 `json:"sauce_uuid"`      // 小料ID列表
 	AttributeUuidList []uint64 `json:"attribute_uuid"`  // 属性ID列表
 	Operation         string   `json:"operation"`       // 操作类型。add: 加购，sub: 减购. 不填，默认是加购
+	Num               *float64 `json:"num"`             // 商品数量。可选，不填时，默认是1。
 	MustPlanUuid      uint64   `json:"must_plan_uuid"`  // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
 	Price             *float64 `json:"price"`           // 商品价格。可选，当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格
 	IsBuffet          *bool    `json:"is_buffet"`       // 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
@@ -38,6 +39,12 @@ type ProductAddReq struct {
 	IsH5Product   bool            `json:"is_h5_product"`   // 是否是H5商品
 }
 
+type GetProductPackageDetailReq struct {
+	SaleBillUuid       uint64 `form:"sale_bill_uuid"`       // 销售账单ID
+	SaleOrderUuid      uint64 `form:"sale_order_uuid"`      // 销售订单ID
+	ProductPackageUuid uint64 `form:"product_package_uuid"` // 商品包uuid
+}
+
 type TabletOrderCartProductAddReq struct {
 	SaleBillUuid  uint64          `json:"sale_bill_uuid" binding:"required"`      // 销售账单ID。
 	SaleOrderUuid uint64          `json:"sale_order_uuid" binding:"required"`     // 销售订单ID。
@@ -48,7 +55,7 @@ type TabletOrderCartProductAddReq struct {
 // ProductParams 商品参数
 type ProductParams struct {
 	FlavorProductBomUuid            uint64   `json:"flavor_product_bom_uuid" binding:"required"` // 商品规格uuid
-	Num                             uint     `json:"num"  binding:"required"`                    // 数量数量
+	Num                             float64  `json:"num"  binding:"required"`                    // 数量数量
 	Price                           *float64 `json:"price"`                                      // 商品价格，商品单价。当商品价格与后台设置的最新价格不一致时，加购失败并返回最新价格。可选，不传时，不进行价格校验
 	IsBuffet                        *bool    `json:"is_buffet"`                                  // 是否是自助餐商品。可选，不填时，表示不判断是不是最新价格。该参数仅在判断价格时使用
 	SauceProductBomUuidList         []uint64 `json:"sauce_product_bom_uuid_list"`                // 加料信息
@@ -60,10 +67,10 @@ type ProductParams struct {
 
 // OrderCartProductNumReq 修改购物车商品数量请求参数
 type OrderCartProductNumReq struct {
-	SaleBillUuid         uint64 `json:"sale_bill_uuid"`          // 销售账单ID
-	SaleOrderUuid        uint64 `json:"sale_order_uuid"`         // 销售订单ID
-	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
-	Num                  int    `json:"num"`                     // 数量
+	SaleBillUuid         uint64  `json:"sale_bill_uuid"`          // 销售账单ID
+	SaleOrderUuid        uint64  `json:"sale_order_uuid"`         // 销售订单ID
+	SaleOrderProductUuid uint64  `json:"sale_order_product_uuid"` // 销售订单商品ID
+	Num                  float64 `json:"num"`                     // 数量
 }
 
 // OrderCartProductCookingReq 送厨购物车商品请求参数
@@ -85,7 +92,7 @@ type OrderCartProductReturningReq struct {
 	SaleBillUuid         uint64   `json:"sale_bill_uuid"`          // 销售账单ID
 	SaleOrderUuid        uint64   `json:"sale_order_uuid"`         // 销售订单ID
 	SaleOrderProductUuid uint64   `json:"sale_order_product_uuid"` // 销售订单商品ID
-	Num                  uint     `json:"num"`                     // 退菜数量
+	Num                  float64  `json:"num"`                     // 退菜数量
 	Reason               string   `json:"reason"`                  // 退菜原因
 	Password             string   `json:"password"`                // 高级密码 后台开启的时候才传
 	ReturnIds            []uint64 `json:"return_ids"`              // 退菜标签ids

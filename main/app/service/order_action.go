@@ -97,7 +97,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		}
 		if errCheck != nil {
 			ctx.Log().Error("检查商品失败", zap.Error(errCheck))
-			return nil, errors.New("检查商品失败")
+			return nil, errors.WithMessage(errCheck)
 		}
 		if checkServiceRes != nil {
 			if checkServiceRes.Code == constant.CodeOrderCheckProductMust && ignoreMust {
@@ -233,6 +233,7 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 				ProductAttr:     unCookingSaleOrderProduct.GetAttributeName(),
 				ProductAttrList: unCookingSaleOrderProduct.GetAttributeNameList(),
 				TotalNum:        unCookingSaleOrderProduct.Num,
+				NumType:         unCookingSaleOrderProduct.NumType,
 				IsBuffet:        unCookingSaleOrderProduct.IsBuffet == 1,
 				Remark:          unCookingSaleOrderProduct.Remark,
 			})
@@ -290,13 +291,17 @@ func (s *orderSrv) ActionAddAndCooking(ctx context.Context, request req.ProductA
 	selectedMustPlanProducts := make(ro.MustPlanProductInfo)
 	for _, product := range request.Products {
 		if selectedMustPlanProducts[product.MustPlanUuid] == nil {
-			selectedMustPlanProducts[product.MustPlanUuid] = make(map[uint64]uint)
+			selectedMustPlanProducts[product.MustPlanUuid] = make(map[uint64]float64)
 		}
 		flavorProductBom, err := repository.NewProductBomRepo(ctx.GetDB()).GetFlavorProductBomByUuid(product.FlavorProductBomUuid)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
-		selectedMustPlanProducts[product.MustPlanUuid][flavorProductBom.ProductPackageUuid] = product.Num
+		if _, ok := selectedMustPlanProducts[product.MustPlanUuid][flavorProductBom.ProductPackageUuid]; ok {
+			selectedMustPlanProducts[product.MustPlanUuid][flavorProductBom.ProductPackageUuid] += product.Num // 如果已经存在该商品，则累计增加数量
+		} else {
+			selectedMustPlanProducts[product.MustPlanUuid][flavorProductBom.ProductPackageUuid] = product.Num // 如果不存在该商品，则新增
+		}
 	}
 	// 送厨相关
 	{
@@ -438,12 +443,12 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 		return nil, errors.WithMessage(err)
 	}
 
-	getProductNum := func(products []req.ProductParams) uint {
-		var num uint
+	getProductNum := func(products []req.ProductParams) float64 {
+		num := decimal.NewFromFloat(0)
 		for _, product := range products {
-			num = num + product.Num
+			num = num.Add(decimal.NewFromFloat(product.Num))
 		}
-		return num
+		return num.Truncate(2).InexactFloat64()
 	}
 	// 平板端下单限制
 	tabletSetting, _ := s.settingSrv.GetTabletSetting(ctx, []dto.LanguageItem{})
@@ -475,7 +480,7 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 				if err != nil {
 					return nil, errors.WithMessage(err, "解析平板端设置失败")
 				}
-				if getProductNum(request.Products) > uint(numLimit) {
+				if getProductNum(request.Products) > float64(numLimit) {
 					value := int64(numLimit)
 					return &TabletAddAndCookingRes{Value: &value}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
 				}
@@ -500,7 +505,7 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 				if err != nil {
 					return nil, errors.WithMessage(err, "解析平板端设置失败")
 				}
-				if getProductNum(request.Products) > uint(numLimit) {
+				if getProductNum(request.Products) > float64(numLimit) {
 					value := int64(numLimit)
 					return &TabletAddAndCookingRes{Value: &value}, errors.NewWithCode(constant.CodeH5OrderNumLimit, "数量限制")
 				}

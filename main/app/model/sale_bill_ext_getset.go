@@ -458,7 +458,7 @@ func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
 	// 获取第一个销售订单
 	saleOrder := model.SaleOrders[0]
 	// 获取未下单的h5订单商品
-	h5OrderProducts := saleOrder.GetH5CartProductList() // todo 为什么会有已下单的h5订单商品？
+	h5OrderProducts := saleOrder.GetH5CartProductList() // FIXME 为什么会有已下单的h5订单商品？
 	// 过滤掉已下单的h5订单商品
 	newH5OrderProducts := make([]*SaleOrderProduct, 0)
 	for _, h5OrderProduct := range h5OrderProducts {
@@ -471,20 +471,20 @@ func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
 }
 
 // 获取未下单的h5订单商品数量
-func (model *SaleBill) GetUnOrderH5OrderProductNum() uint {
-	var num uint
+func (model *SaleBill) GetUnOrderH5OrderProductNum() float64 {
+	num := decimal.NewFromFloat(0)
 	products := model.GetUnOrderH5OrderProduct()
 	for _, product := range products {
-		num += product.Num
+		num = num.Add(product.GetNumDecimal())
 	}
-	return num
+	return num.Truncate(2).InexactFloat64()
 }
 
 // 获取未接单的h5订单商品的商品金额之和
 func (model *SaleBill) GetUnAcceptH5OrderProductTotalPrice(h5OrderProducts []*SaleOrderProduct) float64 {
 	totalPrice := decimal.NewFromFloat(0)
 	for _, h5OrderProduct := range h5OrderProducts {
-		totalPrice = totalPrice.Add(decimal.NewFromFloat(h5OrderProduct.Price).Mul(decimal.NewFromInt(int64(h5OrderProduct.Num))))
+		totalPrice = totalPrice.Add(decimal.NewFromFloat(h5OrderProduct.Price).Mul(h5OrderProduct.GetNumDecimal()))
 	}
 	return totalPrice.Truncate(2).InexactFloat64()
 }
@@ -495,7 +495,7 @@ func (model *SaleBill) GetSaleOrderProductOverLimit(limitProducts map[uint64]uin
 
 	saleOrderProductAll := model.GetSaleOrderProductAll(options...)
 	// product_package_uuid => num
-	numMap := make(map[uint64]uint) // key为商品包uuid value为已购买数量
+	numMap := make(map[uint64]float64) // key为商品包uuid value为已购买数量
 	// product_package_uuid => ProductPackage
 	productPackageMap := make(map[uint64]*ProductPackage) // key为商品包uuid value为已购买数量
 	// product_package_uuid => SaleOrderProduct
@@ -512,7 +512,7 @@ func (model *SaleBill) GetSaleOrderProductOverLimit(limitProducts map[uint64]uin
 		}
 		productPackageUuid := saleOrderProduct.ProductPackageUuid
 		productPackageMap[productPackageUuid] = saleOrderProduct.ProductPackage
-		numMap[productPackageUuid] = numMap[productPackageUuid] + saleOrderProduct.Num
+		numMap[productPackageUuid] = decimal.NewFromFloat(numMap[productPackageUuid]).Add(saleOrderProduct.GetNumDecimal()).Truncate(2).InexactFloat64()
 		saleOrderProductMap[productPackageUuid] = saleOrderProduct
 	}
 
@@ -530,7 +530,7 @@ func (model *SaleBill) GetSaleOrderProductOverLimit(limitProducts map[uint64]uin
 			}
 			continue
 		}
-		if num > limitNum {
+		if num > float64(limitNum) {
 			products = append(products, saleOrderProductMap[productPackageUuid])
 		}
 	}
@@ -596,7 +596,9 @@ func (model *SaleBill) SetReverseSettle() {
 	// 销售订单状态变为未结账状态
 	// 销售订单的所有付款单都退款，并生成退款单
 	model.Status = constant.SaleBillStatusPending
+	model.FinishTime = 0 // 反结账后支付时间finish_time置0
 	for _, saleOrder := range model.SaleOrders {
+		saleOrder.FinishTime = 0 // 反结账后支付时间finish_time置0
 		saleOrder.Status = constant.SaleOrderStatusPending
 		for _, paymentOrder := range saleOrder.PaymentOrders {
 			if !paymentOrder.PaymentMethod.IsLianLianPay() {

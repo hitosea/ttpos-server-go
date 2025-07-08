@@ -102,7 +102,7 @@
   </div>
 </template>
 <script>
-  import ProductSelector from '@/components/product/selector.vue';
+  import ProductSelector from '@/components/product/Selector.vue';
   import upImages from './components/upImages.vue';
   import typeChange from './components/typeChange.vue';
   import taxChange from './components/taxChange.vue';

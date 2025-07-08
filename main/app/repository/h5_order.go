@@ -11,14 +11,7 @@ import (
 
 // IH5OrderRepo 接单
 type IH5OrderRepo interface {
-	PaginateGetH5Order(pageNo, pageSize int, opts ...DBOption) ([]model.H5Order, int64, error)
-	GetH5Order(opts ...DBOption) (*model.H5Order, error)
-	GetH5OrderList(opts ...DBOption) ([]*model.H5Order, error)                  // 获取h5订单列表
-	GetH5OrderProductCount(h5OrderUuid uint64) (int64, error)                   // 获取h5订单的商品数量
-	GetH5OrderDetailOrdered(uuid uint64) (*model.H5Order, error)                // 获取接单详情，只获取已下单商品
-	GetH5OrderListBySaleBillUuid(saleBillUuid uint64) ([]*model.H5Order, error) // 获取销售账单的所有待接单h5订单列表
-	GetH5OrderUuids(opts ...DBOption) ([]uint64, error)
-	GetH5OrderCount(opts ...DBOption) (int64, error)
+	IH5OrderQueryRepo
 	Update(data map[string]interface{}, opts ...DBOption) error // 更新订单商品
 	UpdateH5Order(qrcodeOrderUuid uint64, vars map[string]any) error
 	UpdateH5OrderRecord(obj model.H5Order) error // 更新接单记录
@@ -45,17 +38,28 @@ type IH5OrderRepo interface {
 	WithH5OrderProductSaleOrderProductMultiLanguageName() DBOption // 关联扫码订单商品关联销售订单商品关联多语言
 	WithCashier() DBOption                                         // 关联收银员
 
-	// 扫码订单商品相关
-
-	GetH5OrderProducts(opts ...DBOption) ([]*model.H5OrderProduct, error)                           // 扫码订单商品
-	GetH5OrderProductsBySaleBillUuidAndAccept(saleBillUuid uint64) ([]*model.H5OrderProduct, error) // 获取同一个销售账单，已接单的，h5订单商品
-	GetH5OrderDetail(h5OrderUuid uint64, isNeedAudit bool) (*model.H5Order, error)                  // 扫码订单详情
-	CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (*model.H5OrderProduct, error)        // 快照销售订单商品
+	CreateH5OrderProduct(h5OrderProduct model.H5OrderProduct) (*model.H5OrderProduct, error) // 快照销售订单商品
 
 	WhereSaleBillUuid(uuid uint64) DBOption // 扫码订单商品销售账单Uuid条件
 
 	WithSaleOrderProduct() DBOption // 关联销售订单商品
 	WithH5Order() DBOption          // 关联扫码订单
+}
+
+// IH5OrderQueryRepo 扫码订单查询
+type IH5OrderQueryRepo interface {
+	PaginateGetH5Order(pageNo, pageSize int, opts ...DBOption) ([]model.H5Order, int64, error)
+	GetH5Order(opts ...DBOption) (*model.H5Order, error)
+	GetH5OrderList(opts ...DBOption) ([]*model.H5Order, error)                  // 获取h5订单列表
+	GetH5OrderProductCount(h5OrderUuid uint64) (int64, error)                   // 获取h5订单的商品数量
+	GetH5OrderDetailOrdered(uuid uint64) (*model.H5Order, error)                // 获取接单详情，只获取已下单商品
+	GetH5OrderListBySaleBillUuid(saleBillUuid uint64) ([]*model.H5Order, error) // 获取销售账单的所有待接单h5订单列表
+	GetH5OrderUuids(opts ...DBOption) ([]uint64, error)
+	GetH5OrderCount(opts ...DBOption) (int64, error)
+	// 扫码订单商品相关
+	GetH5OrderProducts(opts ...DBOption) ([]*model.H5OrderProduct, error)                           // 扫码订单商品
+	GetH5OrderProductsBySaleBillUuidAndAccept(saleBillUuid uint64) ([]*model.H5OrderProduct, error) // 获取同一个销售账单，已接单的，h5订单商品
+	GetH5OrderDetail(h5OrderUuid uint64, isNeedAudit bool) (*model.H5Order, error)                  // 扫码订单详情
 }
 
 func NewH5OrderRepo(db *gorm.DB) IH5OrderRepo {

@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/disintegration/imaging"
+	"github.com/shopspring/decimal"
 )
 
 // 打印类型
@@ -56,7 +57,7 @@ type MergeSaleOrderBuffetDelayProducts struct {
 type MergeSaleOrderProduct struct {
 	ProductName       string  `json:"product_name"`
 	ProductPrice      float64 `json:"product_price"`
-	ProductNum        uint    `json:"product_num"`
+	ProductNum        float64 `json:"product_num"`
 	ProductTotalPrice float64 `json:"product_total_price"`
 }
 
@@ -319,6 +320,11 @@ func (p *printerTemplate) Number(amount float64) string {
 	return integerPart
 }
 
+// FloatToString 浮点数转字符串
+func (p *printerTemplate) FloatToString(num float64) string {
+	return fmt.Sprintf("%v", num)
+}
+
 // GetLogoAddr 获取logo地址
 func (p *printerTemplate) GetLogoAddr() string {
 	if p.StoreSetting == nil || p.StoreSetting.LogoURL == "" {
@@ -416,15 +422,16 @@ func (p *printerTemplate) GetQrcodeAddr(qrcodeURL string) string {
 }
 
 // 合并加钟商品数据
-func (p *printerTemplate) MergeSaleOrderBuffetDelayProducts(saleOrder *model.SaleOrder) ([]MergeSaleOrderBuffetDelayProducts, uint) {
-	num := uint(0)
+func (p *printerTemplate) MergeSaleOrderBuffetDelayProducts(saleOrder *model.SaleOrder) ([]MergeSaleOrderBuffetDelayProducts, float64) {
+	num := decimal.NewFromFloat(0)
 	delayMap := make(map[string]*MergeSaleOrderBuffetDelayProducts)
 	delays := make([]MergeSaleOrderBuffetDelayProducts, 0)
+	keyOrder := make([]string, 0)
 	for _, delay := range saleOrder.SaleOrderBuffetDelayProducts {
 		if delay.IsDelete() {
 			continue
 		}
-		num += delay.Num
+		num = num.Add(decimal.NewFromFloat(float64(delay.Num)).Round(2))
 		originPrice := delay.GetAmount()
 		key := fmt.Sprintf("%s(%v)", delay.Name, originPrice)
 		// 按产品名称分组累加
@@ -440,20 +447,23 @@ func (p *printerTemplate) MergeSaleOrderBuffetDelayProducts(saleOrder *model.Sal
 				DelayNum:        delay.Num,
 				DelayTotalPrice: originPrice,
 			}
+			// 记录key首次出现的顺序
+			keyOrder = append(keyOrder, key)
 		}
 	}
 	// 将map转换为slice
-	for _, delay := range delayMap {
-		delays = append(delays, *delay)
+	for _, key := range keyOrder {
+		delays = append(delays, *delayMap[key])
 	}
-	return delays, num
+	return delays, num.Round(2).InexactFloat64()
 }
 
 // 合并销售订单商品数据
-func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder) ([]MergeSaleOrderProduct, uint) {
-	productNum := uint(0)
+func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder, isShowSku bool) ([]MergeSaleOrderProduct, float64) {
+	productNum := decimal.NewFromFloat(0)
 	productMap := make(map[string]*MergeSaleOrderProduct)
 	products := make([]MergeSaleOrderProduct, 0)
+	keyOrder := make([]string, 0)
 	for _, item := range saleOrder.SaleOrderProducts {
 		if item.IsDelete() || item.IsUnCookingProduct() || item.IsUnAcceptOrderBool() || item.IsCancelProduct() {
 			continue
@@ -462,7 +472,7 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder) ([]M
 			continue
 		}
 		// 商品数量
-		productNum += item.Num
+		productNum = productNum.Add(decimal.NewFromFloat(item.Num).Round(2))
 		// 商品价格
 		productPrice := utils.IfFloat64(item.IsBuffetProduct(), item.SaucePrice, item.SalePrice)
 		productTotalPrice := utils.IfFloat64(item.IsBuffetProduct(), item.GetTotalSaucePrice(), item.GetSalePrice()) // 商品原价
@@ -473,14 +483,17 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder) ([]M
 			productTotalPrice = 0
 		}
 		// 商品名称
-		productAttr := item.GetAttributeNamesByLang(p.Lang)
-		productName := gift + item.MultiLanguageName.GetNameByLang(p.Lang) + "\n(" + productAttr + ")"
+		productAttr := item.GetAttributeNamesByLang(p.Lang, isShowSku)
+		productName := gift + item.MultiLanguageName.GetNameByLang(p.Lang)
+		if productAttr != "" {
+			productName = productName + "\n(" + productAttr + ")"
+		}
 		// 按产品名称分组累加
 		key := fmt.Sprintf("%s(%v)(%v)", productName, productPrice, item.ProductPackageUuid)
 		if _, exists := productMap[key]; exists {
 			// 如果产品名称已存在，则累加数量和总价
-			productMap[key].ProductNum += item.Num
-			productMap[key].ProductTotalPrice += productTotalPrice
+			productMap[key].ProductNum = decimal.NewFromFloat(productMap[key].ProductNum).Add(decimal.NewFromFloat(item.Num).Round(2)).InexactFloat64()
+			productMap[key].ProductTotalPrice = decimal.NewFromFloat(productMap[key].ProductTotalPrice).Add(decimal.NewFromFloat(productTotalPrice).Round(2)).InexactFloat64()
 		} else {
 			// 如果产品名称不存在，则创建新记录
 			productMap[key] = &MergeSaleOrderProduct{
@@ -489,11 +502,13 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder) ([]M
 				ProductNum:        item.Num,
 				ProductTotalPrice: productTotalPrice,
 			}
+			// 记录key首次出现的顺序
+			keyOrder = append(keyOrder, key)
 		}
 	}
-	// 将map转换为slice
-	for _, product := range productMap {
-		products = append(products, *product)
+	// 按照首次出现的顺序将map转换为slice
+	for _, key := range keyOrder {
+		products = append(products, *productMap[key])
 	}
-	return products, productNum
+	return products, productNum.Round(2).InexactFloat64()
 }

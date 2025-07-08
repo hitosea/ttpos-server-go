@@ -8,15 +8,21 @@ import (
 )
 
 type IProductBomRepo interface {
+	IProductBomQueryRepo
 	CreateProductBom(productBom model.ProductBom) (*model.ProductBom, error)
-	GetProductBom(opts ...DBOption) (*model.ProductBom, error)
-	GetProductBoms(opts ...DBOption) ([]*model.ProductBom, error)
-	GetFlavorProductBomByUuid(uuid uint64) (*model.ProductBom, error)
-	GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
-	GetProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
 	UpdateProductBomStockNum(warehouseOutFormItems []*model.WarehouseOutFormItem) error // 更新规格商品或小料的库存数量
 	UpdateProductBoms(productBoms []*model.ProductBom) error                            // 更新ProductBom
 	CreateProductBoms(productBoms []model.ProductBom) error                             // 创建ProductBom
+}
+
+// IProductBomQueryRepo 定义仓库查询接口
+type IProductBomQueryRepo interface {
+	GetProductBom(opts ...DBOption) (*model.ProductBom, error)
+	GetProductBoms(opts ...DBOption) ([]*model.ProductBom, error)
+	GetFlavorProductBomByUuid(uuid uint64) (*model.ProductBom, error)
+	GetSauceProductBomByUuid(uuid uint64) (*model.ProductBom, error) // 获取小料商品信息
+	GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
+	GetProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
 }
 
 type productBomRepoImpl struct {
@@ -70,8 +76,33 @@ func (r *productBomRepoImpl) GetProductBoms(opts ...DBOption) ([]*model.ProductB
 func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.ProductBom, error) {
 	productBom, err := r.GetProductBom(
 		CommonRepo.WhereByUuid(uuid),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "ProductFlavor.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "FlavorMaterials",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "FlavorMaterials.Material",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return productBom, nil
+}
+
+// GetSauceProductBomByUuid 获取小料商品信息
+func (r *productBomRepoImpl) GetSauceProductBomByUuid(uuid uint64) (*model.ProductBom, error) {
+	productBom, err := r.GetProductBom(
+		CommonRepo.WhereByUuid(uuid),
 		CommonRepo.Preload(WithPreload{
-			Query: "ProductFlavor.MultiLanguageName",
+			Query: "ProductSauce.MultiLanguageName",
 		}),
 	)
 	if err != nil {
@@ -82,10 +113,16 @@ func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.Prod
 
 func (r *productBomRepoImpl) GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error) {
 	productBoms, err := r.GetProductBoms(
+		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereInUuids(uuids),
-		CommonRepo.Preload(WithPreload{
-			Query: "ProductSauce.MultiLanguageName",
-		}),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "ProductSauce.MultiLanguageName",
+			},
+			WithPreload{
+				Query: "ProductSauce.SauceMaterials.Material",
+			},
+		),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)

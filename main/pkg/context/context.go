@@ -9,7 +9,16 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
+	"github.com/Masterminds/semver"
 	"github.com/gin-gonic/gin"
+)
+
+type Operator string
+
+const (
+	LessThen    Operator = "<"
+	GreaterThen Operator = ">"
+	Equal       Operator = "="
 )
 
 type Context interface {
@@ -43,6 +52,7 @@ type Context interface {
 	GetCfIPCountry() string                                // 获取CF-IPCountry
 	GetMember() model.Member                               // 获取会员信息
 	GetMemberUuid() uint64                                 // 获取会员uuid
+	Version(op Operator, version string) bool              // 比较版本
 }
 
 type ContextImpl struct {
@@ -339,4 +349,25 @@ func (c *ContextImpl) GetToken() string {
 // GetCfIPCountry 获取CF-IPCountry
 func (c *ContextImpl) GetCfIPCountry() string {
 	return c.cc.GetHeader("CF-IPCountry")
+}
+
+// 版本小于指定版本
+func (c *ContextImpl) Version(op Operator, version string) bool {
+	v1, err := semver.NewVersion(c.cc.GetHeader("Client-Version"))
+	if err != nil {
+		return false
+	}
+	v2, err := semver.NewVersion(version)
+	if err != nil {
+		return false
+	}
+	switch op {
+	case GreaterThen:
+		return v1.GreaterThan(v2)
+	case LessThen:
+		return v1.LessThan(v2)
+	case Equal:
+		return v1.Equal(v2)
+	}
+	return false
 }

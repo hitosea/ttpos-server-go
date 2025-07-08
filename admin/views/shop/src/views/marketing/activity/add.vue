@@ -19,14 +19,14 @@
 
       <div class="common-button-wrapper">
         <el-button size="small" @click="cancelFunc">{{ $t('取消') }}</el-button>
-        <el-button size="small" type="primary" @click="onSubmit" :loading="loading">{{ $t('确定') }}</el-button>
+        <el-button size="small" type="primary" @click="onSubmit('submit')" :loading="loading">{{ $t('确定') }}</el-button>
       </div>
     </el-form>
   </div>
 </template>
 
 <script setup>
-  import { ref, reactive, provide, onMounted, getCurrentInstance } from 'vue';
+  import { ref, reactive, provide, onMounted, getCurrentInstance, nextTick } from 'vue';
   import { useRouter } from 'vue-router';
   import { ElMessage } from 'element-plus';
   import MarketingApi from '@/api/marketing.js';
@@ -69,6 +69,8 @@
   const qrcode = ref('');
   const imgName = ref('');
   const imgDescription = ref('');
+  const isAdd = ref(false);
+  const uuid = ref(0);
 
   // 向子组件提供数据
   provide('form', form);
@@ -98,23 +100,12 @@
     formRef.value?.validateField(e);
   };
 
-  const checkFormAll = async () => {
-    // 验证表单
-    const validUniqueName = await BasicRef.value.$refs.activityNameFormRef.validate();
-    const validUniqueDescription = await BasicRef.value.$refs.activityDescriptionFormRef.validate();
-    formRef.value.validate((valid) => {
-      if (valid && validUniqueName && validUniqueDescription) {
-        ImagePreviewRef.value.downloadImage();
-      } else {
-        ElMessage({
-          message: $t('请完善输入信息'),
-          type: 'error',
-        });
-      }
-    });
+  const checkFormAll = async (e, callback) => {
+    // 验证表单保存之后下载图片
+    onSubmit(e, callback);
   };
 
-  const onSubmit = async () => {
+  const onSubmit = async (type, callback) => {
     const params = JSON.parse(JSON.stringify(form));
     const _name = BasicRef.value.$refs.activityNameFormRef.data;
     params.name = JSON.stringify(_name);
@@ -130,18 +121,73 @@
     formRef.value.validate((valid) => {
       if (valid && validUniqueName && validUniqueDescription) {
         loading.value = true;
-        MarketingApi.activityAdd(params, true)
-          .then((data) => {
-            loading.value = false;
-            ElMessage({
-              message: $t('添加成功'),
-              type: 'success',
+        // 首次点击预览，下载图片,确定的时候
+        if (!isAdd.value) {
+          MarketingApi.activityAdd(params, true)
+            .then((data) => {
+              loading.value = false;
+              isAdd.value = true;
+              uuid.value = data.data.uuid;
+              qrcode.value = data.data.qr_code;
+              if (type == 'download') {
+                nextTick(() => {
+                  ImagePreviewRef.value.downloadImage();
+                });
+              } else if (type == 'preview') {
+                nextTick(() => {
+                  callback(true);
+                });
+              } else {
+                ElMessage({
+                  message: $t('添加成功'),
+                  type: 'success',
+                });
+                router.push('/' + app_id + '/marketing/activity/index');
+              }
+            })
+            .catch((error) => {
+              loading.value = false;
             });
-            router.push('/' + app_id + '/marketing/activity/index');
-          })
-          .catch((error) => {
-            loading.value = false;
-          });
+        }
+        // 非首次点击预览，下载图片,确定的时候
+        else {
+          if (type == 'download') {
+            nextTick(() => {
+              ImagePreviewRef.value.downloadImage();
+            });
+          } else if (type == 'preview') {
+            nextTick(() => {
+              callback(true);
+            });
+          } else {
+            params.uuid = uuid.value;
+            loading.value = true;
+            MarketingApi.activityEdit(params, true)
+              .then((data) => {
+                loading.value = false;
+                ElMessage({
+                  message: $t('添加成功'),
+                  type: 'success',
+                });
+                router.push('/' + app_id + '/marketing/activity/index');
+              })
+              .catch((error) => {
+                loading.value = false;
+              });
+          }
+        }
+      } else {
+        // 验证失败的逻辑
+        if (callback && typeof callback === 'function') {
+          callback(false);
+        }
+        // 验证失败页面滑动到错误位置
+        nextTick(() => {
+          const errorField = document.querySelector('.is-error');
+          if (errorField) {
+            errorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
       }
     });
   };

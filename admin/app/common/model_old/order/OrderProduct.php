@@ -387,7 +387,7 @@ class OrderProduct extends BaseModel
         $orderProductNum = !$this->order_id ? 0 : OrderProductModel::where('order_id', $this->order_id)
             // 下单减库存
             ->when($this->deduct_stock_type == DeductStockTypeEnum::CREATE, function ($q) use ($product_source) {
-                $q->where('is_send_kitchen', 0)->where('add_source', $product_source);  // TODO 未送厨商品区分终端来源
+                $q->where('is_send_kitchen', 0)->where('add_source', $product_source);  
             })
             //
             ->where('order_product_id', '<>', $this->order_product_id)
@@ -1491,7 +1491,7 @@ class OrderProduct extends BaseModel
             $result[$sendKitchenTime]['take_date'] = $orderProduct['send_kitchen_time'] > 0 ? date('H:i:s', $orderProduct['send_kitchen_time']) : 0;
             if ($is_reject == 1) {
                 $result[$sendKitchenTime]['is_take'] = -1;
-                $result[$sendKitchenTime]['take_date'] = date('H:i:s', $orderProduct['reject_time']);   // TODO update_time可能不准确
+                $result[$sendKitchenTime]['take_date'] = date('H:i:s', $orderProduct['reject_time']);   
             } else {
                 $result[$sendKitchenTime]['is_take'] = $batch_time ? 1 : 0;
             }

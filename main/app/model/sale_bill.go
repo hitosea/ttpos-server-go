@@ -89,6 +89,24 @@ type SaleBill struct {
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
 }
 
+// 销售账单是否已经使用了通用优惠券
+func (model *SaleBill) IsCommonCouponUsed() (bool, uint64) {
+	for _, saleOrder := range model.SaleOrders {
+		if saleOrder.IsDelete() {
+			continue
+		}
+		for _, coupon := range saleOrder.Coupons {
+			if coupon.IsDelete() {
+				continue
+			}
+			if coupon.IsCommonCoupon() {
+				return true, saleOrder.Uuid
+			}
+		}
+	}
+	return false, 0
+}
+
 // 获取销售账单的自助餐商品列表。key为自助餐商品包uuid，value为true
 func (model *SaleBill) GetBuffetProductMap() map[uint64]bool {
 	productPackageUuidMap := make(map[uint64]bool) // 自助餐商品包uuid

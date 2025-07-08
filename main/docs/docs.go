@@ -1812,6 +1812,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/assistant/desk/order/payment/coupon": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "选择或取消优惠券",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "点餐助手端.桌台"
+                ],
+                "summary": "选择或取消优惠券",
+                "parameters": [
+                    {
+                        "description": "选择或取消优惠券参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentCouponReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "结账页面信息",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/assistant/desk/order/payment/create": {
             "post": {
                 "security": [
@@ -1988,7 +2042,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.桌台.结账"
+                    "点餐助手端.桌台"
                 ],
                 "summary": "设置订单的抵扣积分数量",
                 "parameters": [
@@ -3083,7 +3137,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "关键字搜索：uuid\\phone，前端处理前后空格",
+                        "description": "关键字搜索",
                         "name": "keyword",
                         "in": "query"
                     }
@@ -5553,6 +5607,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/desk/order/payment/coupon": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "选择或取消优惠券",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.桌台.结账"
+                ],
+                "summary": "选择或取消优惠券",
+                "parameters": [
+                    {
+                        "description": "选择或取消优惠券参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentCouponReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "结账页面信息",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/desk/order/payment/create": {
             "post": {
                 "security": [
@@ -7790,6 +7898,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/instant/order/payment/coupon": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "选择或取消优惠券",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.点餐.结账"
+                ],
+                "summary": "选择或取消优惠券",
+                "parameters": [
+                    {
+                        "description": "选择或取消优惠券参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.InstantOrderPaymentCouponReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "结账页面信息",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.InstantOrderPaymentInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/cashier/instant/order/payment/create": {
             "post": {
                 "security": [
@@ -9438,7 +9600,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "关键字搜索：uuid\\phone，前端处理前后空格",
+                        "description": "关键字搜索",
                         "name": "keyword",
                         "in": "query"
                     }
@@ -13045,6 +13207,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/h5/product/package/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品选购详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "扫码点餐"
+                ],
+                "summary": "获取商品选购详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "商品包uuid",
+                        "name": "productPackageUuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售账单ID",
+                        "name": "saleBillUuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "销售订单ID",
+                        "name": "saleOrderUuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ProductPackageDetailRes"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
         "/h5/remark": {
             "post": {
                 "security": [
@@ -16551,7 +16776,7 @@ const docTemplate = `{
                 },
                 "total_product_num": {
                     "description": "总商品数",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "total_received_price": {
                     "description": "总实收金额",
@@ -16684,7 +16909,7 @@ const docTemplate = `{
                 },
                 "total_give_product_num": {
                     "description": "总赠菜数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "total_give_product_price": {
                     "description": "总赠菜金额",
@@ -16708,7 +16933,7 @@ const docTemplate = `{
                 },
                 "total_product_num": {
                     "description": "总商品数",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "total_product_price": {
                     "description": "总原商品金额 (未含税的总商品金额)",
@@ -16809,7 +17034,7 @@ const docTemplate = `{
                 },
                 "give_product_num": {
                     "description": "赠菜数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "original_sales_price": {
                     "description": "原价销售额",
@@ -16821,7 +17046,7 @@ const docTemplate = `{
                 },
                 "sales_num": {
                     "description": "销售数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "sales_price": {
                     "description": "实际销售金额",
@@ -16889,7 +17114,7 @@ const docTemplate = `{
                 },
                 "area_product_num": {
                     "description": "区域商品数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "area_sale_amount": {
                     "description": "区域销售额",
@@ -16907,34 +17132,55 @@ const docTemplate = `{
                         "$ref": "#/definitions/business_data_resp.BusinessDataExportArea"
                     }
                 },
+                "avg_delivery_order_amount": {
+                    "description": "外送点餐-平均订单金额",
+                    "type": "number"
+                },
                 "avg_desk_order_amount": {
+                    "description": "桌台方式-平均订单金额",
                     "type": "number"
                 },
                 "avg_instant_order_amount": {
+                    "description": "点餐方式-平均订单金额",
                     "type": "number"
                 },
                 "avg_order_amount": {
+                    "description": "平均订单金额",
                     "type": "number"
                 },
                 "day": {
                     "type": "string"
                 },
+                "max_delivery_order_amount": {
+                    "description": "外送点餐-最大订单金额",
+                    "type": "number"
+                },
                 "max_desk_order_amount": {
+                    "description": "桌台方式-最大订单金额",
                     "type": "number"
                 },
                 "max_instant_order_amount": {
+                    "description": "点餐方式-最大订单金额",
                     "type": "number"
                 },
                 "max_order_amount": {
+                    "description": "最大订单金额",
+                    "type": "number"
+                },
+                "min_delivery_order_amount": {
+                    "description": "外送点餐-最小订单金额",
                     "type": "number"
                 },
                 "min_desk_order_amount": {
+                    "description": "桌台方式-最小订单金额",
                     "type": "number"
                 },
                 "min_instant_order_amount": {
+                    "description": "点餐方式-最小订单金额",
                     "type": "number"
                 },
                 "min_order_amount": {
+                    "description": "最小订单金额",
                     "type": "number"
                 },
                 "payment_list": {
@@ -16945,63 +17191,107 @@ const docTemplate = `{
                     }
                 },
                 "total_business_amount": {
+                    "description": "营业收入",
+                    "type": "number"
+                },
+                "total_delivery_fee": {
+                    "description": "配送费",
+                    "type": "number"
+                },
+                "total_delivery_order_amount": {
+                    "description": "TODO 外送数据来源",
+                    "type": "number"
+                },
+                "total_delivery_order_num": {
+                    "description": "外送点餐-订单数",
+                    "type": "integer"
+                },
+                "total_delivery_order_refund_amount": {
+                    "description": "外送订单退款",
+                    "type": "number"
+                },
+                "total_delivery_order_revenue": {
+                    "description": "外送营收",
                     "type": "number"
                 },
                 "total_desk_num": {
+                    "description": "总桌台数",
                     "type": "integer"
                 },
                 "total_discount": {
+                    "description": "优惠折扣",
                     "type": "number"
                 },
                 "total_discount_member": {
+                    "description": "会员折扣",
                     "type": "number"
                 },
                 "total_discount_ratio": {
+                    "description": "优惠折扣占比",
                     "type": "number"
                 },
                 "total_free_amount": {
+                    "description": "免单总额",
                     "type": "number"
                 },
                 "total_free_num": {
-                    "type": "integer"
+                    "description": "免单数量",
+                    "type": "number"
                 },
                 "total_gift_amount": {
+                    "description": "赠菜总额",
                     "type": "number"
                 },
                 "total_gift_num": {
-                    "type": "integer"
+                    "description": "赠菜数量",
+                    "type": "number"
                 },
                 "total_instant_order_num": {
+                    "description": "点餐方式-订单数",
                     "type": "integer"
                 },
                 "total_meal_num": {
+                    "description": "桌台方式-人数",
                     "type": "integer"
                 },
                 "total_member_num": {
+                    "description": "新增会员数",
                     "type": "integer"
                 },
                 "total_order_num": {
+                    "description": "合计订单数",
                     "type": "integer"
                 },
                 "total_payment_fee": {
+                    "description": "支付手续费",
                     "type": "number"
                 },
                 "total_product_num": {
-                    "type": "integer"
+                    "description": "商品数量",
+                    "type": "number"
                 },
                 "total_received_amount": {
+                    "description": "实收金额",
+                    "type": "number"
+                },
+                "total_recharge_amount": {
+                    "description": "充值金额",
                     "type": "number"
                 },
                 "total_refund_amount": {
+                    "description": "退款金额",
                     "type": "number"
                 },
                 "total_sale_amount": {
+                    "description": "总销售额",
                     "type": "number"
                 },
                 "total_service_fee": {
+                    "description": "服务费",
                     "type": "number"
                 },
                 "total_tax": {
+                    "description": "税费",
                     "type": "number"
                 }
             }
@@ -17010,15 +17300,19 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "payment_code": {
+                    "description": "支付编码",
                     "type": "integer"
                 },
                 "payment_name": {
+                    "description": "支付名称",
                     "type": "string"
                 },
                 "total_order_num": {
+                    "description": "总订单数",
                     "type": "integer"
                 },
                 "total_payment_amount": {
+                    "description": "总支付金额",
                     "type": "number"
                 }
             }
@@ -17161,7 +17455,7 @@ const docTemplate = `{
                 },
                 "sales_num": {
                     "description": "销售数量",
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -17254,7 +17548,7 @@ const docTemplate = `{
                 },
                 "sales_num": {
                     "description": "销售数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "subtotal": {
                     "description": "小计",
@@ -17271,7 +17565,7 @@ const docTemplate = `{
                 },
                 "sales_num": {
                     "description": "销售数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "sales_price": {
                     "description": "销售金额",
@@ -17568,6 +17862,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "num_type": {
+                    "description": "商品数量计算方法 0-整数 1-小数",
+                    "type": "integer"
                 },
                 "price": {
                     "description": "商品价格",
@@ -18287,6 +18585,27 @@ const docTemplate = `{
                 }
             }
         },
+        "req.InstantOrderPaymentCouponReq": {
+            "type": "object",
+            "properties": {
+                "coupon_requirement": {
+                    "description": "优惠券类型, 必填。通用优惠券“none”或会员优惠券“marketing”",
+                    "type": "string"
+                },
+                "coupon_uuid": {
+                    "description": "优惠券UUID, 必填。通用优惠券或会员优惠券的uuid",
+                    "type": "integer"
+                },
+                "sale_bill_uuid": {
+                    "description": "销售账单UUID, 必填",
+                    "type": "integer"
+                },
+                "sale_order_uuid": {
+                    "description": "销售订单UUID, 必填",
+                    "type": "integer"
+                }
+            }
+        },
         "req.InstantOrderPaymentCreateReq": {
             "type": "object",
             "properties": {
@@ -18490,7 +18809,7 @@ const docTemplate = `{
             "properties": {
                 "num": {
                     "description": "移动数量, 必填",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "uuid": {
                     "description": "销售订单商品UUID, 必填. 也能是顾客uuid、加钟uuid",
@@ -18557,6 +18876,10 @@ const docTemplate = `{
                 "must_plan_uuid": {
                     "description": "必点方案uuid. 可选，在必点方案弹窗中加购时填写",
                     "type": "integer"
+                },
+                "num": {
+                    "description": "商品数量。可选，不填时，默认是1。",
+                    "type": "number"
                 },
                 "operation": {
                     "description": "操作类型。add: 加购，sub: 减购. 不填，默认是加购",
@@ -18666,7 +18989,7 @@ const docTemplate = `{
             "properties": {
                 "num": {
                     "description": "数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "sale_bill_uuid": {
                     "description": "销售账单ID",
@@ -18687,7 +19010,7 @@ const docTemplate = `{
             "properties": {
                 "num": {
                     "description": "退菜数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "password": {
                     "description": "高级密码 后台开启的时候才传",
@@ -19008,7 +19331,7 @@ const docTemplate = `{
             "properties": {
                 "num": {
                     "description": "退款数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "sale_order_product_uuid": {
                     "description": "销售订单商品UUID",
@@ -19198,7 +19521,7 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "数量数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "operation": {
                     "description": "操作类型。add: 加购，sub: 减购",
@@ -19784,7 +20107,7 @@ const docTemplate = `{
                 },
                 "product_num": {
                     "description": "总数量，用于点餐助手、平板端、h5",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "product_origin_amount": {
                     "description": "商品金额(原价)",
@@ -20551,6 +20874,73 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.Coupon": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "优惠券金额",
+                    "type": "number"
+                },
+                "count": {
+                    "description": "优惠券数量",
+                    "type": "integer"
+                },
+                "coupon_list": {
+                    "description": "会员优惠券列表。列表的长度即为优惠券数量Count",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.SampleMemberCoupon"
+                    }
+                },
+                "day_end_time": {
+                    "description": "每日适用时段结束时间, hh:mm 格式。00:00-23:59表示全天可用",
+                    "type": "string"
+                },
+                "day_start_time": {
+                    "description": "每日适用时段开始时间, hh:mm 格式。00:00-23:59表示全天可用",
+                    "type": "string"
+                },
+                "is_available": {
+                    "description": "是否可用",
+                    "type": "boolean"
+                },
+                "is_selected": {
+                    "description": "是否选中",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "优惠券名称",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "优惠券类型 none-无门槛（任何人可以使用） marketing-会员账户里的优惠券，营销活动获得",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "优惠券UUID",
+                    "type": "integer"
+                },
+                "valid_end_time": {
+                    "description": "优惠券有效期，结束时间 格式：YYYY-MM-DD",
+                    "type": "string"
+                },
+                "valid_start_time": {
+                    "description": "优惠券有效期，开始时间 格式：YYYY-MM-DD",
+                    "type": "string"
+                }
+            }
+        },
+        "resp.CouponList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Coupon"
+                    }
+                }
+            }
+        },
         "resp.CreateDeskOrderResp": {
             "type": "object",
             "properties": {
@@ -21305,7 +21695,7 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "商品数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "order_time": {
                     "description": "h5订单下单时间",
@@ -21489,11 +21879,11 @@ const docTemplate = `{
                 },
                 "must_num": {
                     "description": "这个商品必选点的数量。还需点数量=must_num-selected_num",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "need_num": {
                     "description": "这个商品还需要点的数量。还需点数量=must_num-selected_num",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "product": {
                     "$ref": "#/definitions/resp.InstantMustPlanProduct"
@@ -21508,7 +21898,7 @@ const docTemplate = `{
                 },
                 "selected_num": {
                     "description": "已选数量",
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -21569,6 +21959,14 @@ const docTemplate = `{
                     "allOf": [
                         {
                             "$ref": "#/definitions/resp.PaymentMethodAmountList"
+                        }
+                    ]
+                },
+                "coupon_list": {
+                    "description": "优惠券列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CouponList"
                         }
                     ]
                 },
@@ -21656,7 +22054,7 @@ const docTemplate = `{
                 },
                 "need_num": {
                     "description": "这个商品还需要点的数量。还差xx份",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "products": {
                     "description": "商品列表",
@@ -21668,7 +22066,7 @@ const docTemplate = `{
                 },
                 "selected_num": {
                     "description": "已选数量。已选择xx份",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "uuid": {
                     "description": "方案uuid",
@@ -22489,7 +22887,7 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "price": {
                     "description": "单价. 折前价",
@@ -22610,6 +23008,10 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "数量。可退货数量=订单商品数量-已退货数量",
+                    "type": "number"
+                },
+                "num_type": {
+                    "description": "数量类型 0-整数 1-小数",
                     "type": "integer"
                 },
                 "price": {
@@ -22752,6 +23154,10 @@ const docTemplate = `{
             "properties": {
                 "commission_fee": {
                     "description": "已付款的手续费。用于显示最终应收，前端显示的最终应收=应收金额+已付款的手续费+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）",
+                    "type": "number"
+                },
+                "coupon_exchange_amount": {
+                    "description": "优惠券抵扣金额",
                     "type": "number"
                 },
                 "is_auto_zero": {
@@ -23157,7 +23563,7 @@ const docTemplate = `{
                 },
                 "finished_num": {
                     "description": "制作完成数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "is_buffet": {
                     "description": "是否是自助餐",
@@ -23201,6 +23607,10 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "数量",
+                    "type": "number"
+                },
+                "num_type": {
+                    "description": "数量计算方法 0-整数 1-小数",
                     "type": "integer"
                 },
                 "price": {
@@ -23274,7 +23684,7 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "加购数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "sauce_uuid": {
                     "description": "小料ID列表",
@@ -23323,7 +23733,7 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "total_price": {
                     "description": "总价",
@@ -23350,6 +23760,45 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.InstantProductMustPlan"
+                    }
+                }
+            }
+        },
+        "resp.ProductPackageDetail": {
+            "type": "object",
+            "properties": {
+                "attributes_uuid": {
+                    "description": "商品属性uuid列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "flavor_uuid": {
+                    "description": "商品规格uuid",
+                    "type": "integer"
+                },
+                "num": {
+                    "description": "数量",
+                    "type": "number"
+                },
+                "sauces_uuid": {
+                    "description": "商品加料uuid列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "resp.ProductPackageDetailRes": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "数据",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.ProductPackageDetail"
                     }
                 }
             }
@@ -23499,7 +23948,7 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "送厨商品数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "product_attribute_names": {
                     "description": "商品属性",
@@ -23563,7 +24012,7 @@ const docTemplate = `{
                 },
                 "send_kitchen_num": {
                     "description": "送厨商品数量，用于厨显来菜提醒",
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -24219,7 +24668,7 @@ const docTemplate = `{
                 },
                 "product_num": {
                     "description": "商品数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "status": {
                     "description": "订单状态, 0-未结账 1-已结账",
@@ -24248,6 +24697,37 @@ const docTemplate = `{
                 },
                 "company_tax_number": {
                     "type": "string"
+                }
+            }
+        },
+        "resp.SampleMemberCoupon": {
+            "type": "object",
+            "properties": {
+                "coupon_uuid": {
+                    "description": "优惠券UUID",
+                    "type": "integer"
+                },
+                "day_end_time": {
+                    "description": "每日适用时段结束时间, hh:mm 格式。00:00-23:59表示全天可用",
+                    "type": "string"
+                },
+                "day_start_time": {
+                    "description": "每日适用时段开始时间, hh:mm 格式。00:00-23:59表示全天可用",
+                    "type": "string"
+                },
+                "end_time": {
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "会员优惠券名称",
+                    "type": "string"
+                },
+                "start_time": {
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "会员优惠券UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -24295,7 +24775,7 @@ const docTemplate = `{
             "properties": {
                 "finished_num": {
                     "description": "制作完成数量",
-                    "type": "integer"
+                    "type": "number"
                 },
                 "product_package_uuid": {
                     "description": "商品Uuid",
@@ -24303,7 +24783,7 @@ const docTemplate = `{
                 },
                 "sent_kitchen_product_num": {
                     "description": "已送厨商品数量",
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -24474,7 +24954,7 @@ const docTemplate = `{
                 },
                 "product_num": {
                     "description": "总数量，用于点餐助手、h5",
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -25043,6 +25523,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/setting.CheckoutZeroingMethodItem"
                     }
+                },
+                "delivery_price_ratio": {
+                    "description": "外送商品价格和商品原价比例",
+                    "type": "integer"
                 },
                 "discount_method": {
                     "description": "折扣计算方式 10-按百分比 20-直接减免",

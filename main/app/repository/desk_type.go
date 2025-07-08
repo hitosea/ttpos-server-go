@@ -10,10 +10,15 @@ import (
 
 // IDeskTypeRepo 桌台
 type IDeskTypeRepo interface {
-	GetDeskTypeList() ([]model.DeskType, error)
+	IDeskTypeQueryRepo
 	UpdateDeskType(uuid uint, deskType model.DeskType) error
 	CreateDeskType(deskType model.DeskType) (uint64, error)
 	DeleteDeskType(uuid uint) error
+}
+
+// IDeskTypeQueryRepo 桌台查询
+type IDeskTypeQueryRepo interface {
+	GetDeskTypeList() ([]model.DeskType, error)
 }
 
 func NewDeskTypeRepo(db *gorm.DB) IDeskTypeRepo {

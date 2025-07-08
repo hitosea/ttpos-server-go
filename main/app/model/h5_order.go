@@ -81,7 +81,7 @@ func (model *H5Order) Handle(staffUuid uint64, lang string, status uint) {
 func (model *H5Order) CalcProductTotalPrice() float64 {
 	totalPrice := decimal.NewFromFloat(0)
 	for _, h5OrderProduct := range model.H5OrderProducts {
-		totalPrice = totalPrice.Add(decimal.NewFromFloat(h5OrderProduct.Price).Mul(decimal.NewFromInt(int64(h5OrderProduct.Num))))
+		totalPrice = totalPrice.Add(decimal.NewFromFloat(h5OrderProduct.Price).Mul(decimal.NewFromFloat(h5OrderProduct.Num)))
 	}
 	return totalPrice.Truncate(2).InexactFloat64()
 }
@@ -108,7 +108,7 @@ type H5OrderProduct struct {
 	Name          string  `gorm:"column:name;type:varchar(255);comment:商品名称.接单和拒单后从sale_order_product表获取，不再改变;NOT NULL" json:"name"`
 	Price         float64 `gorm:"column:price;type:decimal(12,2);default:0;comment:最终单价（折后价）。接单和拒单后从sale_order_product表获取，不再改变;NOT NULL" json:"price"`
 	SalePrice     float64 `gorm:"column:sale_price;type:decimal(12,2);default:0;comment:销售价（折前价）。接单和拒单后从sale_order_product表获取，不再改变;NOT NULL" json:"sale_price"`
-	Num           uint    `gorm:"column:num;type:int(11);default:0;comment:最终商品数量.接单和拒单后从sale_order_product表获取，不再改变;NOT NULL" json:"num"`
+	Num           float64 `gorm:"column:num;type:decimal(12,2);default:0;comment:最终商品数量.接单和拒单后从sale_order_product表获取，不再改变;NOT NULL" json:"num"`
 	AttributeText string  `gorm:"column:attribute_text;type:varchar(500);comment:商品属性文本。接单和拒单后从sale_order_product表获取，不再改变;NOT NULL" json:"attribute_text"`
 	Remark        string  `gorm:"column:remark;type:varchar(255);comment:备注。接单和拒单后从sale_order_product表获取，不再改变;NOT NULL" json:"remark"`
 

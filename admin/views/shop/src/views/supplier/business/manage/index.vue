@@ -86,10 +86,28 @@
       </el-form-item>
 
       <el-form-item :label="$t('电子菜单')">
-        <el-button @click="downloadFile()" type="primary">{{ $t('二维码') }}</el-button>
+        <el-button @click="downloadFile('menu')" type="primary">{{ $t('二维码') }}</el-button>
         <div class="tips">
           {{ $t('仅用于显示商品，无法点餐下单') }}
         </div>
+      </el-form-item>
+
+      <el-form-item :label="$t('会员端')" v-auth="'/card/user/index'">
+        <el-button @click="downloadFile('member')" type="primary">{{ $t('二维码') }}</el-button>
+        <p class="copy-link" @click="handleCopyLink">{{ $t('复制链接') }}</p>
+      </el-form-item>
+
+      <el-form-item :label="$t('外送商品价格')" v-if="showDelivery" v-auth="'/card/user/index'">
+        <el-input-number
+          class="max-w320"
+          v-model="form.delivery_price_ratio"
+          :controls="false"
+          :min="0"
+          :max="300"
+          :precision="0"
+          :placeholder="$t('请输入外送商品价格')"
+        ></el-input-number>
+        <p class="ml8"> % {{ $t('商品原价') }} </p>
       </el-form-item>
 
       <el-form-item for="no_click" :label="$t('结账后不清台')" prop="no_clear_table" :rules="[{ required: true, message: '' }]">
@@ -160,7 +178,7 @@
   >
   </ManageRefundReason>
 
-  <Qrcode :open="isqrcode" @close="closeQrcode"></Qrcode>
+  <Qrcode :open="isQrcode" @close="closeQrcode" :type="qrcodeType"></Qrcode>
 </template>
 <script>
   import SettingApi from '@/api/setting.js';
@@ -170,6 +188,10 @@
   import ManageRefundReason from './ManageRefundReason.vue';
   import Qrcode from './Qrcode.vue';
   import TimePicker from '@/components/time-picker/index.vue';
+
+  const { computedSupplier } = useUserStore();
+  const supplier = computedSupplier().supplier;
+  const showDelivery = (supplier.value?.delivery_status || 0) == 1;
   const { currency } = useUserStore();
   export default {
     components: {
@@ -181,11 +203,13 @@
     },
     data() {
       return {
+        showDelivery: showDelivery,
         currency: currency,
         loading: false,
         openFreeReasonDialog: false,
         openRefundReasonDialog: false,
-        isqrcode: false,
+        isQrcode: false,
+        qrcodeType: '',
         form: {
           zeroing_method: 0,
           checkout_zeroing_method: 0,
@@ -197,7 +221,9 @@
           is_need_password: 1,
           dish_card_style: 1,
           opening_hours: '',
+          delivery_price_ratio: 100,
         },
+        company_link: '',
         formRules: {
           zeroing_method: [
             {
@@ -339,9 +365,11 @@
             self.form.opening_hours = data.data.vars.values.opening_hours
               ? [data.data.vars.values.opening_hours.split('-')[0], data.data.vars.values.opening_hours.split('-')[1]]
               : [];
+            self.form.delivery_price_ratio = Number(data.data.vars.values.delivery_price_ratio) || 100;
 
             self.freeTagCount = Number(data.data.free_tag_count) || 0;
             self.returnReasonCount = Number(data.data.return_reason_count) || 0;
+            self.company_link = data.data.company_link;
 
             self.$nextTick(() => {
               self.$refs.form.validate();
@@ -380,14 +408,32 @@
         this.openRefundReasonDialog = true;
       },
 
-      downloadFile() {
+      downloadFile(type) {
         let self = this;
-        self.isqrcode = true;
+        self.isQrcode = true;
+        self.qrcodeType = type;
+      },
+
+      handleCopyLink() {
+        this.$copyText(this.company_link).then(
+          () => {
+            this.$ElMessage({
+              message: this.$t('复制成功'),
+              type: 'success',
+            });
+          },
+          () => {
+            this.$ElMessage({
+              message: this.$t('复制失败'),
+              type: 'error',
+            });
+          }
+        );
       },
 
       closeQrcode() {
         let self = this;
-        self.isqrcode = false;
+        self.isQrcode = false;
       },
 
       updateOpeningHours(value) {
@@ -424,5 +470,13 @@
   .line-24 {
     line-height: 24px;
     margin-top: 6px;
+  }
+  .copy-link {
+    color: #409eff;
+    cursor: pointer;
+    margin-left: 16px;
+  }
+  .max-w320 {
+    max-width: 320px;
   }
 </style>

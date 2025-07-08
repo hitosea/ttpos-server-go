@@ -10,6 +10,7 @@ import (
 
 // IPaymentOrderRepo 定义仓库接口
 type IPaymentOrderRepo interface {
+	IPaymentOrderQueryRepo
 	WhereRelatedUuid(uuid uint64) DBOption
 	WhereRelatedUuids(uuids []uint64) DBOption
 	WhereStatus(status uint) DBOption
@@ -20,6 +21,15 @@ type IPaymentOrderRepo interface {
 	WithPaymentMethod() DBOption       // 关联支付方式
 	WithMemberRechargeOrder() DBOption // 关联会员充值订单
 
+	UpdatePaymentOrderRecord(paymentOrder model.PaymentOrder) error
+	Create(order model.PaymentOrder) (model.PaymentOrder, error)   // 创建支付订单
+	UpdateOrCreatePaymentOrderRecord(obj model.PaymentOrder) error // 没有主键时创建，有主键时更新
+	Update(uuid uint64, vars map[string]any) error                 // 更新支付订单金额
+	CreateRefundOrderRecord(refundOrder model.RefundOrder) error   // 创建退款单
+}
+
+// IPaymentOrderQueryRepo 定义仓库查询接口
+type IPaymentOrderQueryRepo interface {
 	GetPaymentOrder(opts ...DBOption) (model.PaymentOrder, error)      // 获取详细信息
 	GetPaymentOrderInfo(opts ...DBOption) (*model.PaymentOrder, error) // 获取详细信息
 	GetPaymentOrderList(opts ...DBOption) ([]model.PaymentOrder, error)
@@ -27,11 +37,6 @@ type IPaymentOrderRepo interface {
 
 	GetPaymentOrderRecord(paymentOrderUuid uint64) (*model.PaymentOrder, error)
 	GetPaymentOrderListBySaleOrderUuid(saleOrderUuid uint64) ([]*model.PaymentOrder, error)
-	UpdatePaymentOrderRecord(paymentOrder model.PaymentOrder) error
-	Create(order model.PaymentOrder) (model.PaymentOrder, error)   // 创建支付订单
-	UpdateOrCreatePaymentOrderRecord(obj model.PaymentOrder) error // 没有主键时创建，有主键时更新
-	Update(uuid uint64, vars map[string]any) error                 // 更新支付订单金额
-	CreateRefundOrderRecord(refundOrder model.RefundOrder) error   // 创建退款单
 }
 
 // paymentOrderRepo 仓库

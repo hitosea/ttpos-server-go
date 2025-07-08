@@ -13,16 +13,16 @@ type StatisticsSale struct {
 	ProductPrice         float64 `gorm:"column:product_price;type:decimal(14,2);default:0.00;comment:商品原价: 不含税;NOT NULL" json:"product_price"`
 	ProductOriginPrice   float64 `gorm:"column:product_origin_price;type:decimal(14,2);default:0.00;comment:原商品金额;NOT NULL" json:"product_origin_price"`
 	ProductSalePrice     float64 `gorm:"column:product_sale_price;type:decimal(14,2);default:0.00;comment:商品销售价;NOT NULL" json:"product_sale_price"`
-	ProductNum           int     `gorm:"column:product_num;type:int(11);default:0;comment:商品数量;NOT NULL" json:"product_num"`
+	ProductNum           float64 `gorm:"column:product_num;type:decimal(14,2);default:0.00;comment:商品数量;NOT NULL" json:"product_num"`
 	ProductTax           float64 `gorm:"column:product_tax;type:decimal(14,2);default:0.00;comment:商品税;NOT NULL" json:"product_tax"`
 	ServiceFee           float64 `gorm:"column:service_fee;type:decimal(14,2);default:0.00;comment:服务费;NOT NULL" json:"service_fee"`
 	ServiceTax           float64 `gorm:"column:service_tax;type:decimal(14,2);default:0.00;comment:服务税;NOT NULL" json:"service_tax"`
 	Discount             float64 `gorm:"column:discount;type:decimal(14,2);default:0.00;comment:优惠折扣;NOT NULL" json:"discount"`
 	DiscountMember       float64 `gorm:"column:discount_member;type:decimal(14,2);default:0.00;comment:会员折扣;NOT NULL" json:"discount_member"`
 	GiftAmount           float64 `gorm:"column:gift_amount;type:decimal(14,2);default:0.00;comment:赠菜金额;NOT NULL" json:"gift_amount"`
-	GiftNum              int     `gorm:"column:gift_num;type:int(11);default:0;comment:赠菜数量;NOT NULL" json:"gift_num"`
+	GiftNum              float64 `gorm:"column:gift_num;type:decimal(14,2);default:0.00;comment:赠菜数量;NOT NULL" json:"gift_num"`
 	FreeAmount           float64 `gorm:"column:free_amount;type:decimal(14,2);default:0.00;comment:免单金额;NOT NULL" json:"free_amount"`
-	FreeNum              int     `gorm:"column:free_num;type:int(11);default:0;comment:免单数量;NOT NULL" json:"free_num"`
+	FreeNum              float64 `gorm:"column:free_num;type:decimal(14,2);default:0.00;comment:免单数量;NOT NULL" json:"free_num"`
 	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(14,2);default:0.00;comment:支付金额;NOT NULL" json:"payment_amount"`
 	PaymentFee           float64 `gorm:"column:payment_fee;type:decimal(14,2);default:0.00;comment:支付手续费;NOT NULL" json:"payment_fee"`
 	PaymentBalance       float64 `gorm:"column:payment_balance;type:decimal(14,2);default:0.00;comment:支付余额;NOT NULL" json:"payment_balance"`
@@ -67,14 +67,14 @@ type StatisticsProduct struct {
 	ProductFinalPrice  float64 `gorm:"column:product_final_price;type:decimal(14,2);default:0.00;comment:商品最终单价;NOT NULL" json:"product_final_price"`
 	FlavorPrice        float64 `gorm:"column:flavor_price;type:decimal(14,2);default:0.00;comment:商品原价(仅规格);NOT NULL" json:"flavor_price"`
 	SaucePrice         float64 `gorm:"column:sauce_price;type:decimal(14,2);default:0.00;comment:加料价格;NOT NULL" json:"sauce_price"`
-	ProductNum         int     `gorm:"column:product_num;type:int(11);default:0;comment:商品数量;NOT NULL" json:"product_num"`
+	ProductNum         float64 `gorm:"column:product_num;type:decimal(14,2);default:0.00;comment:商品数量;NOT NULL" json:"product_num"`
 	TaxRate            float64 `gorm:"column:tax_rate;type:decimal(14,2);default:0.00;comment:税率;NOT NULL" json:"tax_rate"`
 	TaxFee             float64 `gorm:"column:tax_fee;type:decimal(14,2);default:0.00;comment:税费;NOT NULL" json:"tax_fee"`
 	ServiceFee         float64 `gorm:"column:service_fee;type:decimal(14,2);default:0.00;comment:服务费;NOT NULL" json:"service_fee"`
 	ServiceTax         float64 `gorm:"column:service_tax;type:decimal(14,2);default:0.00;comment:服务税;NOT NULL" json:"service_tax"`
-	GiveNum            int     `gorm:"column:give_num;type:int(11);default:0;comment:增菜数量;NOT NULL" json:"give_num"`
-	FreeNum            int     `gorm:"column:free_num;type:int(11);default:0;comment:免单数量;NOT NULL" json:"free_num"`
-	RefundNum          int     `gorm:"column:refund_num;type:int(11);default:0;comment:退款数量;NOT NULL" json:"refund_num"`
+	GiveNum            float64 `gorm:"column:give_num;type:decimal(14,2);default:0.00;comment:赠菜数量;NOT NULL" json:"give_num"`
+	FreeNum            float64 `gorm:"column:free_num;type:decimal(14,2);default:0.00;comment:免单数量;NOT NULL" json:"free_num"`
+	RefundNum          float64 `gorm:"column:refund_num;type:decimal(14,2);default:0.00;comment:退款数量;NOT NULL" json:"refund_num"`
 	CompleteTime       int64   `gorm:"column:complete_time;type:bigint(20);default:0;comment:完成时间;NOT NULL" json:"complete_time"`
 	RefundTime         int64   `gorm:"column:refund_time;type:bigint(20);default:0;comment:退款时间;NOT NULL" json:"refund_time"`
 }
@@ -90,14 +90,14 @@ type StatisticsCustomerType struct {
 	BuffetCustomerTypePriceUuid uint64  `gorm:"column:buffet_customer_type_price_uuid;type:bigint(20) unsigned;default:0;comment:自助餐客户类型价格ID;NOT NULL" json:"buffet_customer_type_price_uuid"`
 	ProductPrice                float64 `gorm:"column:product_price;type:decimal(14,2);default:0.00;comment:销售价,未含税价格（折前）;NOT NULL" json:"product_price"`
 	ProductSalePrice            float64 `gorm:"column:product_sale_price;type:decimal(14,2);default:0.00;comment:原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变;NOT NULL" json:"product_sale_price"`
-	ProductNum                  int     `gorm:"column:product_num;type:int(11);default:0;comment:商品数量;NOT NULL" json:"product_num"`
+	ProductNum                  float64 `gorm:"column:product_num;type:decimal(14,2);default:0.00;comment:商品数量;NOT NULL" json:"product_num"`
 	TaxRate                     float64 `gorm:"column:tax_rate;type:decimal(14,2);default:0.00;comment:税率;NOT NULL" json:"tax_rate"`
 	TaxFee                      float64 `gorm:"column:tax_fee;type:decimal(14,2);default:0.00;comment:税费;NOT NULL" json:"tax_fee"`
 	ServiceFee                  float64 `gorm:"column:service_fee;type:decimal(14,2);default:0.00;comment:服务费;NOT NULL" json:"service_fee"`
 	ServiceTax                  float64 `gorm:"column:service_tax;type:decimal(14,2);default:0.00;comment:服务税;NOT NULL" json:"service_tax"`
-	GiveNum                     int     `gorm:"column:give_num;type:int(11);default:0;comment:增菜数量;NOT NULL" json:"give_num"`
-	FreeNum                     int     `gorm:"column:free_num;type:int(11);default:0;comment:免单数量;NOT NULL" json:"free_num"`
-	RefundNum                   int     `gorm:"column:refund_num;type:int(11);default:0;comment:退款数量;NOT NULL" json:"refund_num"`
+	GiveNum                     float64 `gorm:"column:give_num;type:decimal(14,2);default:0.00;comment:赠菜数量;NOT NULL" json:"give_num"`
+	FreeNum                     float64 `gorm:"column:free_num;type:decimal(14,2);default:0.00;comment:免单数量;NOT NULL" json:"free_num"`
+	RefundNum                   float64 `gorm:"column:refund_num;type:decimal(14,2);default:0.00;comment:退款数量;NOT NULL" json:"refund_num"`
 	CompleteTime                int64   `gorm:"column:complete_time;type:bigint(20);default:0;comment:完成时间;NOT NULL" json:"complete_time"`
 	RefundTime                  int64   `gorm:"column:refund_time;type:bigint(20);default:0;comment:退款时间;NOT NULL" json:"refund_time"`
 }
@@ -111,14 +111,14 @@ type StatisticsDelay struct {
 	DeskUuid        uint64  `gorm:"column:desk_uuid;type:bigint(20) unsigned;default:0;comment:桌台uuid;NOT NULL" json:"desk_uuid"`
 	BuffetDelayUuid uint64  `gorm:"column:buffet_delay_uuid;type:bigint(20) unsigned;default:0;comment:自助餐加钟价格ID;NOT NULL" json:"buffet_delay_uuid"`
 	ProductPrice    float64 `gorm:"column:product_price;type:decimal(14,2);default:0.00;comment:价格,下单时固定不受后台改变，结账时再检查是否改变;NOT NULL" json:"product_price"`
-	ProductNum      int     `gorm:"column:product_num;type:int(11);default:0;comment:商品数量;NOT NULL" json:"product_num"`
+	ProductNum      float64 `gorm:"column:product_num;type:decimal(14,2);default:0.00;comment:商品数量;NOT NULL" json:"product_num"`
 	TaxRate         float64 `gorm:"column:tax_rate;type:decimal(14,2);default:0.00;comment:税率;NOT NULL" json:"tax_rate"`
 	TaxFee          float64 `gorm:"column:tax_fee;type:decimal(14,2);default:0.00;comment:税费;NOT NULL" json:"tax_fee"`
 	ServiceFee      float64 `gorm:"column:service_fee;type:decimal(14,2);default:0.00;comment:服务费;NOT NULL" json:"service_fee"`
 	ServiceTax      float64 `gorm:"column:service_tax;type:decimal(14,2);default:0.00;comment:服务税;NOT NULL" json:"service_tax"`
-	GiveNum         int     `gorm:"column:give_num;type:int(11);default:0;comment:增菜数量;NOT NULL" json:"give_num"`
-	FreeNum         int     `gorm:"column:free_num;type:int(11);default:0;comment:免单数量;NOT NULL" json:"free_num"`
-	RefundNum       int     `gorm:"column:refund_num;type:int(11);default:0;comment:退款数量;NOT NULL" json:"refund_num"`
+	GiveNum         float64 `gorm:"column:give_num;type:decimal(14,2);default:0.00;comment:赠菜数量;NOT NULL" json:"give_num"`
+	FreeNum         float64 `gorm:"column:free_num;type:decimal(14,2);default:0.00;comment:免单数量;NOT NULL" json:"free_num"`
+	RefundNum       float64 `gorm:"column:refund_num;type:decimal(14,2);default:0.00;comment:退款数量;NOT NULL" json:"refund_num"`
 	CompleteTime    int64   `gorm:"column:complete_time;type:bigint(20);default:0;comment:完成时间;NOT NULL" json:"complete_time"`
 	RefundTime      int64   `gorm:"column:refund_time;type:bigint(20);default:0;comment:退款时间;NOT NULL" json:"refund_time"`
 }
@@ -155,7 +155,7 @@ type StatisticsSaleData struct {
 	TotalReceivedAmount     sql.NullFloat64 `gorm:"column:total_received_amount;comment:总实收金额"`
 	TotalProductPrice       sql.NullFloat64 `gorm:"column:total_product_price;comment:总商品原价"`
 	TotalProductOriginPrice sql.NullFloat64 `gorm:"column:total_product_origin_price;comment:总原商品金额"`
-	TotalProductNum         sql.NullInt64   `gorm:"column:total_product_num;comment:总商品数量"`
+	TotalProductNum         sql.NullFloat64 `gorm:"column:total_product_num;comment:总商品数量"`
 	TotalDiscountMember     sql.NullFloat64 `gorm:"column:total_discount_member;comment:总会员折扣"`
 	TotalBusinessAmount     sql.NullFloat64 `gorm:"column:total_business_amount;comment:总营业收入"`
 	TotalServiceFee         sql.NullFloat64 `gorm:"column:total_service_fee;comment:总服务费"`
@@ -164,9 +164,9 @@ type StatisticsSaleData struct {
 	TotalRefundAmount       sql.NullFloat64 `gorm:"column:total_refund_amount;comment:总退款金额"`
 	TotalDiscount           sql.NullFloat64 `gorm:"column:total_discount;comment:总优惠折扣"`
 	TotalGiftAmount         sql.NullFloat64 `gorm:"column:total_gift_amount;comment:总赠菜金额"`
-	TotalGiftNum            sql.NullInt64   `gorm:"column:total_gift_num;comment:总赠菜数量"`
+	TotalGiftNum            sql.NullFloat64 `gorm:"column:total_gift_num;comment:总赠菜数量"`
 	TotalFreeAmount         sql.NullFloat64 `gorm:"column:total_free_amount;comment:总免单金额"`
-	TotalFreeNum            sql.NullInt64   `gorm:"column:total_free_num;comment:总免单数量"`
+	TotalFreeNum            sql.NullFloat64 `gorm:"column:total_free_num;comment:总免单数量"`
 	TotalOrderNum           sql.NullInt64   `gorm:"column:total_order_num;comment:总订单数量"`
 	TotalDeskNum            sql.NullInt64   `gorm:"column:total_desk_num;comment:总桌台数量"`
 	TotalDeskOrderAmount    sql.NullFloat64 `gorm:"column:total_desk_order_amount;comment:总桌台订单金额"`
@@ -218,7 +218,7 @@ type StatisticsCategoryData struct {
 	CategoryParentName sql.NullString  `gorm:"column:category_parent_name;comment:分类父级名称"`
 	CategoryUuid       sql.NullInt64   `gorm:"column:category_uuid;comment:分类uuid"`
 	CategoryName       sql.NullString  `gorm:"column:category_name;comment:分类名称"`
-	SaleNum            sql.NullInt64   `gorm:"column:sale_num;comment:销售数量"`
+	SaleNum            sql.NullFloat64 `gorm:"column:sale_num;comment:销售数量"`
 	SaleAmount         sql.NullFloat64 `gorm:"column:sale_amount;comment:销售金额"`
 }
 
@@ -228,7 +228,7 @@ type StatisticsProductData struct {
 	ProductName        sql.NullString  `gorm:"column:product_name;comment:商品名称"`
 	FlavorName         sql.NullString  `gorm:"column:flavor_name;comment:规格名称"`
 	SalePrice          sql.NullFloat64 `gorm:"column:sale_price;comment:销售单价"`
-	SaleNum            sql.NullInt64   `gorm:"column:sale_num;comment:销售数量"`
+	SaleNum            sql.NullFloat64 `gorm:"column:sale_num;comment:销售数量"`
 	SaleAmount         sql.NullFloat64 `gorm:"column:sale_amount;comment:销售金额"`
 }
 
@@ -237,7 +237,7 @@ type StatisticsAreaData struct {
 	AreaName           sql.NullString  `gorm:"column:area_name;comment:区域名称"`
 	AreaSaleAmount     sql.NullFloat64 `gorm:"column:area_sale_amount;comment:区域销售额"`
 	AreaBusinessAmount sql.NullFloat64 `gorm:"column:area_business_amount;comment:区域营业收入"`
-	AreaProductNum     sql.NullInt64   `gorm:"column:area_product_num;comment:区域商品数量"`
+	AreaProductNum     sql.NullFloat64 `gorm:"column:area_product_num;comment:区域商品数量"`
 }
 
 // StatisticsAreaDaysData 区域天数统计数据
@@ -282,10 +282,10 @@ type StatisticsProductSaleData struct {
 	ProductName        sql.NullString  `gorm:"column:product_name;comment:商品名称"`
 	CategoryParentName sql.NullString  `gorm:"column:category_parent_name;comment:分类父级名称"`
 	CategoryName       sql.NullString  `gorm:"column:category_name;comment:分类名称"`
-	SaleNum            sql.NullInt64   `gorm:"column:sale_num;comment:销售数量"`
+	SaleNum            sql.NullFloat64 `gorm:"column:sale_num;comment:销售数量"`
 	OriginSaleAmount   sql.NullFloat64 `gorm:"column:origin_sale_amount;comment:原价销售金额"`
 	ActualSaleAmount   sql.NullFloat64 `gorm:"column:actual_sale_amount;comment:实际销售金额"`
-	GiveNum            sql.NullInt64   `gorm:"column:give_num;comment:赠菜数量"`
+	GiveNum            sql.NullFloat64 `gorm:"column:give_num;comment:赠菜数量"`
 	BusinessAmount     sql.NullFloat64 `gorm:"column:business_amount;comment:营业收入"`
 }
 

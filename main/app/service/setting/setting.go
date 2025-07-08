@@ -1083,7 +1083,11 @@ func (s *Srv) GetH5Setting(ctx context.Context, languageList []dto.LanguageItem)
 
 // GetCompanySetting 获取公司设置
 func (s *Srv) GetCompanySetting(ctx context.Context) (model.CompanySetting, error) {
-	companySettingRepo := repository.NewCompanySettingRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	if db == nil {
+		return model.CompanySetting{}, errors.New("db not found")
+	}
+	companySettingRepo := repository.NewCompanySettingRepo(db)
 	return companySettingRepo.Get(), nil
 }
 
@@ -1386,7 +1390,7 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 			DeviceId:               ctx.GetDeviceSn(),
 			DeviceRemark:           device.Remark,
 			ClientVersion:          clientVersion,
-			ServerVersion:          utils.GetVersion("version.json"),
+			ServerVersion:          utils.GetVersion(),
 		},
 		UsbPrinter: resp.UsbPrinterList{
 			List:       make([]resp.UsbPrinter, 0),

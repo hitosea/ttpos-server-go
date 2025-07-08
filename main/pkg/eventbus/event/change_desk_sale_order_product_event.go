@@ -16,7 +16,7 @@ type ChangeDeskSaleOrderProductPayload struct {
 	ProductId      uint64             `json:"product_id"`       // 商品ID
 	ProductName    dto.LocaleResponse `json:"product_name"`     // 商品名称
 	ProductAttr    dto.LocaleResponse `json:"product_attr"`     // 商品属性
-	TotalNum       uint               `json:"total_num"`        // 总数量
+	TotalNum       float64            `json:"total_num"`        // 总数量
 	ToOrderId      uint64             `json:"to_order_id"`      // 目标订单ID
 	ToTableId      uint64             `json:"to_table_id"`      // 目标桌台ID
 	ToTableNo      string             `json:"to_table_no"`      // 目标桌台编号

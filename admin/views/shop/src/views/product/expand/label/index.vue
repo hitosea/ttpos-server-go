@@ -73,7 +73,7 @@
 
 <script>
   import ProductApi from '@/api/product.js';
-  import ProductSelector from '@/components/product/selector.vue';
+  import ProductSelector from '@/components/product/Selector.vue';
   import Add from './add.vue';
   import Edit from './edit.vue';
 

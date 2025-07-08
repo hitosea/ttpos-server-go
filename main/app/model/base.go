@@ -6,6 +6,7 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
@@ -23,6 +24,12 @@ type BaseModel struct {
 	DeleteTime    int64  `gorm:"column:delete_time;type:int(10);default:0;comment:'删除时间(时间戳)'"`
 	isUpdate      bool   // 用于判断该model是否需要更新
 	operateSource string // 虚拟字段，用于标记添加来源
+}
+
+// DBTableName 获取表名
+func GetTableName(table string) string {
+	prefix := config.Database.TablePrefix
+	return prefix + table
 }
 
 // NoPrimaryKey 判断是否无主键
@@ -85,7 +92,7 @@ func (model *BaseModel) getCompanyUuid(tx *gorm.DB) uint64 {
 			return uuid
 		}
 	}
-	// todo sqlite - 离线版本要重新考虑
+	// NOTE sqlite - 离线版本要重新考虑
 	return 0
 }
 

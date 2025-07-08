@@ -12,7 +12,7 @@ use app\common\library\language\Language;
 
 // 语言翻译
 // ./cmd think lang
-// ./cmd think lang --text=萨达撒萨达撒萨达 --channel=youdao
+// ./cmd think lang --text=萨达撒萨达撒萨达 --channel=ai
 class Lang extends Command
 {
     protected function configure()
@@ -45,6 +45,7 @@ class Lang extends Command
         }
         // 语言翻译
         $targets = $lang->getTargets($channel);
+        $output->writeln("count: " . count($texts));
         $lang->commandExecute($targets, $texts, $channel);
         $output->writeln('#####翻译完成#####');
     }

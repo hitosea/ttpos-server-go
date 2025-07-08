@@ -15,13 +15,31 @@ import (
 
 // IOrderRepo 定义订单仓库接口
 type IOrderRepo interface {
-	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                                               // 创建销售单
-	CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error)                                                          // 创建销售账单设置
-	UpdateSaleBillSetting(obj model.SaleBillSetting) (model.SaleBillSetting, error)                                                            // 更新销售账单设置
+	IOrderQueryRepo
+	CreateSaleBill(model model.SaleBill) (model.SaleBill, error)                                                               // 创建销售单
+	CreateSaleBillSetting(model model.SaleBillSetting) (model.SaleBillSetting, error)                                          // 创建销售账单设置
+	UpdateSaleBillSetting(obj model.SaleBillSetting) (model.SaleBillSetting, error)                                            // 更新销售账单设置
+	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                            // 创建订单
+	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error)      // 创建销售订单自助餐顾客类型
+	DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error                                                              // 删除销售订单自助餐顾客类型
+	CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error)      // 创建销售订单自助餐加钟
+	UpdateSaleOrderBuffetDelayProductRecord(model model.SaleOrderBuffetDelayProduct) error                                     // 更新销售订单自助餐加钟
+	CancelOrder(ctx context.Context, saleBillUuid uint64, deskUuid uint64, reason string) error                                // 取消订单
+	CancelDeskOrder(ctx context.Context, deskUuid uint64, reason string) error                                                 // 取消桌台订单
+	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                               // 删除订单
+	HideOrder(saleBillUuid uint64) error                                                                                       // 隐藏订单
+	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                           // 删除订单产品
+	ChangePopulation(saleBillUuid uint64, population int) error                                                                // 修改订单人数
+	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error               // 修改订单商品备注
+	SetLock(saleBillUuid uint64, isLock bool) error                                                                            // 设置订单锁定状态
+	SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) (*model.SaleOrderInvoiceInfo, error) // 设置订单发票信息
+}
+
+// IOrderQueryRepo 订单查询
+type IOrderQueryRepo interface {
 	GetSaleBill(opts ...DBOption) (model.SaleBill, error)                                                                                      // 获取销售单
 	IsOrderNoExists(orderNo string) (bool, error)                                                                                              // 查询orderNo是否存在
 	GetInstantSaleBill(deviceUuid uint64) (*model.SaleBill, error)                                                                             // 获取待支付且未挂单的点餐订单
-	CreateSaleOrder(model model.SaleOrder) (model.SaleOrder, error)                                                                            // 创建订单
 	GetOrderListWithPagination(pageNo int, pageSize int, opts ...DBOption) ([]model.SaleBill, int64, error)                                    // 获取订单列表
 	GetOrderNum(opts ...DBOption) (int64, error)                                                                                               // 获取订单数量
 	GetCashierOrderListWithPagination(param GetCashierOrderListWithPaginationType, tz string) ([]model.SaleBill, int64, DBOption, error)       // 获取收银的订单列表
@@ -36,25 +54,12 @@ type IOrderRepo interface {
 	GetSaleBillInfoAndPaymentOrders(saleBillUuid uint64, saleOrderUuid uint64, saleOrderPaymentUuid uint64) (model.SaleBill, error)            // 获取销售账单详细信息-包含商品信息
 	GetSaleOrderProductListBySaleOrderProductUuids(saleOrderProductUuids []uint64) ([]model.SaleOrderProduct, error)                           // 根据销售订单商品uuid列表获取销售订单商品列表
 	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                                      // 获取销售账单详细信息-丰富的-几乎包含所有的关联
-	CreateSaleOrderBuffetCustomerType(model model.SaleOrderBuffetCustomerType) (model.SaleOrderBuffetCustomerType, error)                      // 创建销售订单自助餐顾客类型
-	DeleteSaleOrderBuffetCustomerType(saleOrderUuid uint64) error                                                                              // 删除销售订单自助餐顾客类型
-	CreateSaleOrderBuffetDelayProduct(model model.SaleOrderBuffetDelayProduct) (model.SaleOrderBuffetDelayProduct, error)                      // 创建销售订单自助餐加钟
-	UpdateSaleOrderBuffetDelayProductRecord(model model.SaleOrderBuffetDelayProduct) error                                                     // 更新销售订单自助餐加钟
-	CancelOrder(ctx context.Context, saleBillUuid uint64, deskUuid uint64, reason string) error                                                // 取消订单
-	CancelDeskOrder(ctx context.Context, deskUuid uint64, reason string) error                                                                 // 取消桌台订单
-	DeleteOrder(saleBillUuid uint64, saleOrderUuid uint64) error                                                                               // 删除订单
 	IsPartiallyPaid(param any) bool                                                                                                            // 判断是否存在部分支付
-	HideOrder(saleBillUuid uint64) error                                                                                                       // 隐藏订单
-	DeleteOrderProduct(saleBillUuid uint64, saleOrderUuid uint64, saleOrderProductUuid uint64) error                                           // 删除订单产品
 	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                                             // 查询销售订单的所有bom
-	ChangePopulation(saleBillUuid uint64, population int) error                                                                                // 修改订单人数
-	ChangeProductRemark(saleBillUuid uint64, saleOrderUuid uint64, orderProductUuid uint64, remark string) error                               // 修改订单商品备注
 	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                                           // 获取销售账单所有信息
 	GetSaleBillWithProducts(saleBillUuid uint64) (*model.SaleBill, error)                                                                      // 获取销售账单所有商品信息
 	HasShowOrder(deviceUuid uint64) (uint64, error)                                                                                            // 判断该设备是否有未挂单的点餐订单
 	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                                            // 获取销售账单记录
-	SetLock(saleBillUuid uint64, isLock bool) error                                                                                            // 设置订单锁定状态
-	SaveOrUpdateInvoiceInfo(saleOrderUuid uint64, invoiceInfo model.SaleOrderInvoiceInfo) (*model.SaleOrderInvoiceInfo, error)                 // 设置订单发票信息
 	GetInvoiceInfo(saleOrderUuid uint64) (*model.SaleOrderInvoiceInfo, error)                                                                  // 获取订单发票信息
 }
 
@@ -230,7 +235,7 @@ func (r *orderRepo) GetOrderListWithPagination(pageNo int, pageSize int, opts ..
 	}
 
 	// 获取列表
-	err := db.Count(&total).Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&orders).Error
+	err := db.Count(&total).Offset((pageNo - 1) * pageSize).Limit(pageSize).Debug().Find(&orders).Error
 
 	return orders, total, errors.WithMessage(err)
 }
@@ -291,7 +296,9 @@ func (r *orderRepo) getOrderListDBOption(param GetCashierOrderListWithPagination
 			case constant.OrderDateTypeWeek: // 本周
 				startTime, endTime, _ = utils.SetTimezone(tz).GetTimeRange(utils.DayTypeThisWeek)
 			}
-			db = db.Where("create_time BETWEEN ? AND ?", startTime, endTime)
+			// db = db.Where("create_time BETWEEN ? AND ?", startTime, endTime)
+			param.QueryStartTime = uint(startTime)
+			param.QueryEndTime = uint(endTime)
 		}
 		// 日期范围
 		if param.QueryStartTime != 0 || param.QueryEndTime != 0 {
@@ -755,12 +762,27 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					),
 					CommonRepo.Preload(
 						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+							Args: []any{
+								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+									return db.Order("product_attribute_uuid asc")
+								}),
+							},
+						},
+					),
+					CommonRepo.Preload(
+						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
 						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+							Args: []any{
+								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+									return db.Order("product_bom_uuid asc")
+								}),
+							},
 						},
 					),
 					CommonRepo.Preload(
@@ -851,12 +873,27 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 					),
 					CommonRepo.Preload(
 						WithPreload{
+							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+							Args: []any{
+								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+									return db.Order("product_attribute_uuid asc")
+								}),
+							},
+						},
+					),
+					CommonRepo.Preload(
+						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
 						},
 					),
 					CommonRepo.Preload(
 						WithPreload{
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+							Args: []any{
+								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+									return db.Order("product_bom_uuid asc")
+								}),
+							},
 						},
 					),
 					CommonRepo.Preload(
@@ -944,12 +981,27 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 				),
 				CommonRepo.Preload(
 					WithPreload{
+						Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+						Args: []any{
+							CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+								return db.Order("product_attribute_uuid asc")
+							}),
+						},
+					},
+				),
+				CommonRepo.Preload(
+					WithPreload{
 						Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
 					},
 				),
 				CommonRepo.Preload(
 					WithPreload{
 						Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+						Args: []any{
+							CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+								return db.Order("product_bom_uuid asc")
+							}),
+						},
 					},
 				),
 				CommonRepo.Preload(
@@ -1287,6 +1339,326 @@ func (r *orderRepo) GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, err
 }
 
 // GetSaleBillAllInfo 获取销售账单所有信息
+func (r *orderRepo) GetCacheSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error) {
+	cacheDataRepo := NewCacheDataRepo(r.db)
+	multiLanguageNameUuids := []uint64{}
+
+	// 查询销售账单
+	saleBill, err := r.GetSaleBill(
+		CommonRepo.Preload(
+			// ==================== 销售账单的收银员信息 ====================
+			WithPreload{
+				Query: "Cashier",
+			},
+			// ==================== 销售账单的账单设置 ====================
+			WithPreload{
+				Query: "SaleBillSetting",
+			},
+			WithPreload{
+				Query: "SaleOrders",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			// ==================== 销售账单的优惠券信息 ====================
+			WithPreload{
+				Query: "SaleOrders.Coupons",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.Coupons.MarketingCoupon",
+			},
+			WithPreload{
+				Query: "SaleOrders.Coupons.MemberCoupon",
+			},
+			// ==================== 销售账单的支付信息 ====================
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					CommonRepo.DBOption(CommonRepo.WhereByStatus(constant.PaymentOrderStatusPaid)),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders.PaymentMethod",
+			},
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders.ReturnOrderAmounts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.PaymentOrders.ReturnOrderAmounts.PaymentMethod",
+			},
+			// ==================== 销售账单的会员信息 ====================
+			WithPreload{
+				Query: "SaleOrders.Member.MemberLevel",
+			},
+			WithPreload{
+				Query: "SaleOrders.Member.MemberCard.MemberCardType",
+			},
+			WithPreload{
+				Query: "SaleOrders.Member.MemberBalanceLog",
+			},
+			// ==================== 销售账单的商品信息 ====================
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ReturnOrderProducts",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.CancelReasons",
+			},
+			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+				Args: []any{
+					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+						return db.Order("product_attribute_uuid asc")
+					}),
+				},
+			},
+			WithPreload{
+				// 用于检查商品包是否下架
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+				Args: []any{
+					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+						return db.Order("product_bom_uuid asc")
+					}),
+				},
+			},
+			// ==================== 销售账单的退款信息 ====================
+			WithPreload{
+				Query: "SaleOrders.ReturnOrders",
+			},
+			// ==================== 销售账单的会员积分信息 ====================
+			WithPreload{
+				Query: "SaleOrders.MemberPointLogs",
+			},
+		),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByUuid(saleBillUuid),
+	)
+	if err != nil {
+		return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+	}
+
+	// ==================== 查询桌台信息 ====================
+	// 查询桌台
+	if saleBill.DeskUuid != 0 {
+		if desk, err := cacheDataRepo.GetCacheDesk(saleBill.DeskUuid); err == nil {
+			saleBill.Desk = &desk
+		} else {
+			return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+		}
+	}
+	// 查询自助餐套餐1
+	if saleBill.BuffetPackage1Uuid != 0 {
+		if buffetPackage1, err := cacheDataRepo.GetCacheBuffetPackage(saleBill.BuffetPackage1Uuid); err == nil {
+			multiLanguageNameUuids = append(multiLanguageNameUuids, buffetPackage1.MultiLanguageNameUuid)
+			// 加载自助餐套餐1顾客类型价格。用于判断顾客价格是否改变
+			buffetCustomerTypePrices, err := cacheDataRepo.GetCacheBuffetCustomerTypePrices(buffetPackage1.Uuid)
+			if err != nil {
+				return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+			}
+			buffetPackage1.BuffetCustomerTypePrices = buffetCustomerTypePrices
+
+			// 加载自助餐套餐1商品。用于判断加购的商品是否属于自助餐套餐1
+			buffetProducts, err := cacheDataRepo.GetCacheBuffetProducts(buffetPackage1.Uuid)
+			if err != nil {
+				return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+			}
+			buffetPackage1.BuffetProducts = buffetProducts
+
+			// 赋值自助餐套餐1
+			saleBill.BuffetPackage1 = &buffetPackage1
+		} else {
+			return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+		}
+	}
+	// 查询自助餐套餐2
+	if saleBill.BuffetPackage2Uuid != 0 {
+		if buffetPackage2, err := cacheDataRepo.GetCacheBuffetPackage(saleBill.BuffetPackage2Uuid); err == nil {
+			multiLanguageNameUuids = append(multiLanguageNameUuids, buffetPackage2.MultiLanguageNameUuid)
+			// 加载自助餐套餐2顾客类型价格。用于判断顾客价格是否改变
+			buffetCustomerTypePrices, err := cacheDataRepo.GetCacheBuffetCustomerTypePrices(buffetPackage2.Uuid)
+			if err != nil {
+				return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+			}
+			buffetPackage2.BuffetCustomerTypePrices = buffetCustomerTypePrices
+
+			// 加载自助餐套餐2商品。用于判断加购的商品是否属于自助餐套餐2
+			buffetProducts, err := cacheDataRepo.GetCacheBuffetProducts(buffetPackage2.Uuid)
+			if err != nil {
+				return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+			}
+			buffetPackage2.BuffetProducts = buffetProducts
+
+			// 赋值自助餐套餐2
+			saleBill.BuffetPackage2 = &buffetPackage2
+		} else {
+			return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+		}
+	}
+	// 查询销售订单商品
+	if len(saleBill.SaleOrders) > 0 {
+		productPackageUuids := []uint64{}
+		productBomUuids := []uint64{}
+		productAttributeUuids := []uint64{}
+		for _, saleOrder := range saleBill.SaleOrders {
+
+			// 查询自助餐套餐1、2
+			if saleBill.IsBuffet == constant.SaleBillIsBuffetYes {
+				// 查询自助餐套餐1、2顾客类型
+				saleOrderBuffetCustomerTypes, err := NewSaleOrderBuffetCustomerTypeRepo(r.db).GetSaleOrderBuffetCustomerTypes(
+					CommonRepo.Preload(
+						WithPreload{
+							Query: "BuffetPackage.MultiLanguageName",
+						},
+						WithPreload{
+							Query: "BuffetCustomerTypePrice.BuffetCustomerType",
+						},
+						WithPreload{
+							Query: "ReturnOrderProducts",
+							Args: []any{
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+							},
+						},
+					),
+					CommonRepo.WhereBySaleOrderUuid(saleOrder.Uuid),
+					CommonRepo.WhereBySoftDelete(),
+				)
+				if err != nil {
+					return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+				}
+				saleOrder.SaleOrderBuffetCustomerTypes = saleOrderBuffetCustomerTypes
+
+				// 查询自助餐套餐加钟
+				saleOrderBuffetDelayProducts, err := NewSaleOrderBuffetDelayProductRepo(r.db).GetSaleOrderBuffetDelayProducts(
+					CommonRepo.Preload(
+						WithPreload{
+							Query: "ReturnOrderProducts",
+							Args: []any{
+								CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+							},
+						},
+					),
+					CommonRepo.WhereBySaleOrderUuid(saleOrder.Uuid),
+					CommonRepo.WhereBySoftDelete(),
+				)
+				if err != nil {
+					return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+				}
+				saleOrder.SaleOrderBuffetDelayProducts = saleOrderBuffetDelayProducts
+			}
+
+			// 查询商品包、商品BOM、商品属性
+			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+				if saleOrderProduct.ProductPackageUuid != 0 {
+					multiLanguageNameUuids = append(multiLanguageNameUuids, saleOrderProduct.MultiLanguageNameUuid)
+					productPackageUuids = append(productPackageUuids, saleOrderProduct.ProductPackageUuid)
+					if len(saleOrderProduct.SaleOrderProductBoms) > 0 {
+						for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
+							productBomUuids = append(productBomUuids, saleOrderProductBom.ProductBomUuid)
+						}
+					}
+					if len(saleOrderProduct.SaleOrderProductAttributes) > 0 {
+						for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
+							productAttributeUuids = append(productAttributeUuids, saleOrderProductAttribute.ProductAttributeUuid)
+						}
+					}
+				}
+			}
+			// 商品包
+			if len(productPackageUuids) > 0 {
+				productPackages, err := cacheDataRepo.GetCacheAllProductPackageByUuids(productPackageUuids)
+				if err != nil {
+					return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+				}
+				for _, productPackage := range productPackages {
+					for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+						if saleOrderProduct.ProductPackageUuid == productPackage.Uuid {
+							saleOrderProduct.ProductPackage = productPackage
+						}
+					}
+				}
+			}
+			// 商品BOM
+			if len(productBomUuids) > 0 {
+				productBoms, err := cacheDataRepo.GetCacheAllProductBomByUuids(productBomUuids)
+				if err != nil {
+					return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+				}
+				for _, productBom := range productBoms {
+					for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+						if len(saleOrderProduct.SaleOrderProductBoms) > 0 {
+							for _, saleOrderProductBom := range saleOrderProduct.SaleOrderProductBoms {
+								if saleOrderProductBom.ProductBomUuid == productBom.Uuid {
+									saleOrderProductBom.ProductBom = *productBom
+								}
+							}
+						}
+					}
+				}
+			}
+			// 商品属性
+			if len(productAttributeUuids) > 0 {
+				productAttributes, err := cacheDataRepo.GetCacheAllProductAttributeByUuids(productAttributeUuids)
+				if err != nil {
+					return &saleBill, fmt.Errorf("GetSaleBill: %v", err)
+				}
+				for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+					if len(saleOrderProduct.SaleOrderProductAttributes) > 0 {
+						for _, saleOrderProductAttribute := range saleOrderProduct.SaleOrderProductAttributes {
+							for _, productAttribute := range productAttributes {
+								if saleOrderProductAttribute.ProductAttributeUuid == productAttribute.Uuid {
+									saleOrderProductAttribute.ProductAttribute = *productAttribute
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 查询语言
+	if len(multiLanguageNameUuids) > 0 {
+		var multiLanguageNames []model.MultiLanguageName
+		db := r.db.Model(&model.MultiLanguageName{}).Where("uuid in ?", multiLanguageNameUuids)
+		if result := db.Find(&multiLanguageNames); result.Error != nil {
+			return &saleBill, fmt.Errorf("GetSaleBill: %v", result.Error)
+		}
+		for _, multiLanguageName := range multiLanguageNames {
+			if saleBill.BuffetPackage1 != nil && saleBill.BuffetPackage1.MultiLanguageNameUuid == multiLanguageName.Uuid {
+				saleBill.BuffetPackage1.MultiLanguageName = multiLanguageName
+			}
+			if saleBill.BuffetPackage2 != nil && saleBill.BuffetPackage2.MultiLanguageNameUuid == multiLanguageName.Uuid {
+				saleBill.BuffetPackage2.MultiLanguageName = multiLanguageName
+			}
+			// 商品多语言名称
+			for _, saleOrder := range saleBill.SaleOrders {
+				for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+					if saleOrderProduct.MultiLanguageNameUuid == multiLanguageName.Uuid {
+						saleOrderProduct.MultiLanguageName = &multiLanguageName
+					}
+				}
+			}
+		}
+	}
+	return &saleBill, nil
+}
+
+// GetSaleBillAllInfo 获取销售账单所有信息
 func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error) {
 	info, err := r.GetSaleBill(
 		CommonRepo.Preload(
@@ -1330,6 +1702,19 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			// ==================== 销售账单的账单设置 ====================
 			WithPreload{
 				Query: "SaleBillSetting",
+			},
+			// ==================== 销售账单的优惠券信息 ====================
+			WithPreload{
+				Query: "SaleOrders.Coupons",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "SaleOrders.Coupons.MarketingCoupon",
+			},
+			WithPreload{
+				Query: "SaleOrders.Coupons.MemberCoupon",
 			},
 			// ==================== 销售账单的订单信息 ====================
 			WithPreload{
@@ -1404,9 +1789,23 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
+				Args: []any{
+					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+						return db.Order("product_attribute_uuid asc")
+					}),
+				},
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes.ProductAttribute.MultiLanguageName",
+			},
+			WithPreload{
+				// 用于检查商品包是否下架
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms",
+				Args: []any{
+					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
+						return db.Order("product_bom_uuid asc")
+					}),
+				},
 			},
 			WithPreload{
 				// 用于检查商品包是否下架
@@ -1419,10 +1818,10 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.MultiLanguageName",
 			},
 			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials",
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.FlavorMaterials.Material",
 			},
 			WithPreload{
-				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.SauceMaterials",
+				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductBoms.ProductBom.ProductSauce.SauceMaterials.Material",
 			},
 			WithPreload{
 				Query: "SaleOrders.SaleOrderBuffetCustomerTypes.BuffetPackage.MultiLanguageName",

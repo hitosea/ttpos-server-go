@@ -40,7 +40,7 @@ definitions:
         type: string
       total_product_num:
         description: 总商品数
-        type: integer
+        type: number
       total_received_price:
         description: 总实收金额
         type: number
@@ -134,7 +134,7 @@ definitions:
         type: number
       total_give_product_num:
         description: 总赠菜数量
-        type: integer
+        type: number
       total_give_product_price:
         description: 总赠菜金额
         type: number
@@ -152,7 +152,7 @@ definitions:
         type: integer
       total_product_num:
         description: 总商品数
-        type: integer
+        type: number
       total_product_price:
         description: 总原商品金额 (未含税的总商品金额)
         type: number
@@ -224,7 +224,7 @@ definitions:
         type: string
       give_product_num:
         description: 赠菜数量
-        type: integer
+        type: number
       original_sales_price:
         description: 原价销售额
         type: number
@@ -233,7 +233,7 @@ definitions:
         type: string
       sales_num:
         description: 销售数量
-        type: integer
+        type: number
       sales_price:
         description: 实际销售金额
         type: number
@@ -279,7 +279,7 @@ definitions:
         type: string
       area_product_num:
         description: 区域商品数量
-        type: integer
+        type: number
       area_sale_amount:
         description: 区域销售额
         type: number
@@ -291,25 +291,43 @@ definitions:
         items:
           $ref: '#/definitions/business_data_resp.BusinessDataExportArea'
         type: array
+      avg_delivery_order_amount:
+        description: 外送点餐-平均订单金额
+        type: number
       avg_desk_order_amount:
+        description: 桌台方式-平均订单金额
         type: number
       avg_instant_order_amount:
+        description: 点餐方式-平均订单金额
         type: number
       avg_order_amount:
+        description: 平均订单金额
         type: number
       day:
         type: string
+      max_delivery_order_amount:
+        description: 外送点餐-最大订单金额
+        type: number
       max_desk_order_amount:
+        description: 桌台方式-最大订单金额
         type: number
       max_instant_order_amount:
+        description: 点餐方式-最大订单金额
         type: number
       max_order_amount:
+        description: 最大订单金额
+        type: number
+      min_delivery_order_amount:
+        description: 外送点餐-最小订单金额
         type: number
       min_desk_order_amount:
+        description: 桌台方式-最小订单金额
         type: number
       min_instant_order_amount:
+        description: 点餐方式-最小订单金额
         type: number
       min_order_amount:
+        description: 最小订单金额
         type: number
       payment_list:
         description: 支付列表
@@ -317,55 +335,97 @@ definitions:
           $ref: '#/definitions/business_data_resp.BusinessDataExportPayment'
         type: array
       total_business_amount:
+        description: 营业收入
+        type: number
+      total_delivery_fee:
+        description: 配送费
+        type: number
+      total_delivery_order_amount:
+        description: TODO 外送数据来源
+        type: number
+      total_delivery_order_num:
+        description: 外送点餐-订单数
+        type: integer
+      total_delivery_order_refund_amount:
+        description: 外送订单退款
+        type: number
+      total_delivery_order_revenue:
+        description: 外送营收
         type: number
       total_desk_num:
+        description: 总桌台数
         type: integer
       total_discount:
+        description: 优惠折扣
         type: number
       total_discount_member:
+        description: 会员折扣
         type: number
       total_discount_ratio:
+        description: 优惠折扣占比
         type: number
       total_free_amount:
+        description: 免单总额
         type: number
       total_free_num:
-        type: integer
+        description: 免单数量
+        type: number
       total_gift_amount:
+        description: 赠菜总额
         type: number
       total_gift_num:
-        type: integer
+        description: 赠菜数量
+        type: number
       total_instant_order_num:
+        description: 点餐方式-订单数
         type: integer
       total_meal_num:
+        description: 桌台方式-人数
         type: integer
       total_member_num:
+        description: 新增会员数
         type: integer
       total_order_num:
+        description: 合计订单数
         type: integer
       total_payment_fee:
+        description: 支付手续费
         type: number
       total_product_num:
-        type: integer
+        description: 商品数量
+        type: number
       total_received_amount:
+        description: 实收金额
+        type: number
+      total_recharge_amount:
+        description: 充值金额
         type: number
       total_refund_amount:
+        description: 退款金额
         type: number
       total_sale_amount:
+        description: 总销售额
         type: number
       total_service_fee:
+        description: 服务费
         type: number
       total_tax:
+        description: 税费
         type: number
     type: object
   business_data_resp.BusinessDataExportPayment:
     properties:
       payment_code:
+        description: 支付编码
         type: integer
       payment_name:
+        description: 支付名称
         type: string
       total_order_num:
+        description: 总订单数
         type: integer
       total_payment_amount:
+        description: 总支付金额
         type: number
     type: object
   business_data_resp.BusinessDataHome:
@@ -464,7 +524,7 @@ definitions:
         type: number
       sales_num:
         description: 销售数量
-        type: integer
+        type: number
     type: object
   business_data_resp.MemberData:
     properties:
@@ -530,7 +590,7 @@ definitions:
         type: number
       sales_num:
         description: 销售数量
-        type: integer
+        type: number
       subtotal:
         description: 小计
         type: number
@@ -542,7 +602,7 @@ definitions:
         type: string
       sales_num:
         description: 销售数量
-        type: integer
+        type: number
       sales_price:
         description: 销售金额
         type: number
@@ -744,6 +804,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 商品名称
+      num_type:
+        description: 商品数量计算方法 0-整数 1-小数
+        type: integer
       price:
         description: 商品价格
         type: number
@@ -1234,6 +1297,21 @@ definitions:
         description: 销售订单UUID, 必填
         type: integer
     type: object
+  req.InstantOrderPaymentCouponReq:
+    properties:
+      coupon_requirement:
+        description: 优惠券类型, 必填。通用优惠券“none”或会员优惠券“marketing”
+        type: string
+      coupon_uuid:
+        description: 优惠券UUID, 必填。通用优惠券或会员优惠券的uuid
+        type: integer
+      sale_bill_uuid:
+        description: 销售账单UUID, 必填
+        type: integer
+      sale_order_uuid:
+        description: 销售订单UUID, 必填
+        type: integer
+    type: object
   req.InstantOrderPaymentCreateReq:
     properties:
       payment_amount:
@@ -1378,7 +1456,7 @@ definitions:
     properties:
       num:
         description: 移动数量, 必填
-        type: integer
+        type: number
       uuid:
         description: 销售订单商品UUID, 必填. 也能是顾客uuid、加钟uuid
         type: integer
@@ -1426,6 +1504,9 @@ definitions:
       must_plan_uuid:
         description: 必点方案uuid. 可选，在必点方案弹窗中加购时填写
         type: integer
+      num:
+        description: 商品数量。可选，不填时，默认是1。
+        type: number
       operation:
         description: '操作类型。add: 加购，sub: 减购. 不填，默认是加购'
         type: string
@@ -1504,7 +1585,7 @@ definitions:
     properties:
       num:
         description: 数量
-        type: integer
+        type: number
       sale_bill_uuid:
         description: 销售账单ID
         type: integer
@@ -1519,7 +1600,7 @@ definitions:
     properties:
       num:
         description: 退菜数量
-        type: integer
+        type: number
       password:
         description: 高级密码 后台开启的时候才传
         type: string
@@ -1749,7 +1830,7 @@ definitions:
     properties:
       num:
         description: 退款数量
-        type: integer
+        type: number
       sale_order_product_uuid:
         description: 销售订单商品UUID
         type: integer
@@ -1878,7 +1959,7 @@ definitions:
         type: integer
       num:
         description: 数量数量
-        type: integer
+        type: number
       operation:
         description: '操作类型。add: 加购，sub: 减购'
         type: string
@@ -2298,7 +2379,7 @@ definitions:
         type: number
       product_num:
         description: 总数量，用于点餐助手、平板端、h5
-        type: integer
+        type: number
       product_origin_amount:
         description: 商品金额(原价)
         type: number
@@ -2795,6 +2876,54 @@ definitions:
           type: string
         type: array
     type: object
+  resp.Coupon:
+    properties:
+      amount:
+        description: 优惠券金额
+        type: number
+      count:
+        description: 优惠券数量
+        type: integer
+      coupon_list:
+        description: 会员优惠券列表。列表的长度即为优惠券数量Count
+        items:
+          $ref: '#/definitions/resp.SampleMemberCoupon'
+        type: array
+      day_end_time:
+        description: 每日适用时段结束时间, hh:mm 格式。00:00-23:59表示全天可用
+        type: string
+      day_start_time:
+        description: 每日适用时段开始时间, hh:mm 格式。00:00-23:59表示全天可用
+        type: string
+      is_available:
+        description: 是否可用
+        type: boolean
+      is_selected:
+        description: 是否选中
+        type: boolean
+      name:
+        description: 优惠券名称
+        type: string
+      type:
+        description: 优惠券类型 none-无门槛（任何人可以使用） marketing-会员账户里的优惠券，营销活动获得
+        type: string
+      uuid:
+        description: 优惠券UUID
+        type: integer
+      valid_end_time:
+        description: 优惠券有效期，结束时间 格式：YYYY-MM-DD
+        type: string
+      valid_start_time:
+        description: 优惠券有效期，开始时间 格式：YYYY-MM-DD
+        type: string
+    type: object
+  resp.CouponList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.Coupon'
+        type: array
+    type: object
   resp.CreateDeskOrderResp:
     properties:
       sale_bill_uuid:
@@ -3275,7 +3404,7 @@ definitions:
         type: integer
       num:
         description: 商品数量
-        type: integer
+        type: number
       order_time:
         description: h5订单下单时间
         type: integer
@@ -3392,10 +3521,10 @@ definitions:
         type: boolean
       must_num:
         description: 这个商品必选点的数量。还需点数量=must_num-selected_num
-        type: integer
+        type: number
       need_num:
         description: 这个商品还需要点的数量。还需点数量=must_num-selected_num
-        type: integer
+        type: number
       product:
         $ref: '#/definitions/resp.InstantMustPlanProduct'
       product_auto_add_req:
@@ -3404,7 +3533,7 @@ definitions:
         description: 自动加购商品请求参数
       selected_num:
         description: 已选数量
-        type: integer
+        type: number
     type: object
   resp.InstantOrderMember:
     properties:
@@ -3444,6 +3573,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/resp.PaymentMethodAmountList'
         description: 支付方式列表及订单金额信息
+      coupon_list:
+        allOf:
+        - $ref: '#/definitions/resp.CouponList'
+        description: 优惠券列表
       member_info:
         allOf:
         - $ref: '#/definitions/resp.MemberInfo'
@@ -3498,14 +3631,14 @@ definitions:
         type: string
       need_num:
         description: 这个商品还需要点的数量。还差xx份
-        type: integer
+        type: number
       products:
         allOf:
         - $ref: '#/definitions/resp.ProductPackageList'
         description: 商品列表
       selected_num:
         description: 已选数量。已选择xx份
-        type: integer
+        type: number
       uuid:
         description: 方案uuid
         type: integer
@@ -4056,7 +4189,7 @@ definitions:
         description: 产品名称
       num:
         description: 数量
-        type: integer
+        type: number
       price:
         description: 单价. 折前价
         type: number
@@ -4140,6 +4273,9 @@ definitions:
         description: 产品名称
       num:
         description: 数量。可退货数量=订单商品数量-已退货数量
+        type: number
+      num_type:
+        description: 数量类型 0-整数 1-小数
         type: integer
       price:
         description: 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。
@@ -4237,6 +4373,9 @@ definitions:
     properties:
       commission_fee:
         description: 已付款的手续费。用于显示最终应收，前端显示的最终应收=应收金额+已付款的手续费+（当前支付方式的手续费费率*当前支付方式的金额输入框的值）
+        type: number
+      coupon_exchange_amount:
+        description: 优惠券抵扣金额
         type: number
       is_auto_zero:
         description: 是否是自动抹零
@@ -4525,7 +4664,7 @@ definitions:
         type: number
       finished_num:
         description: 制作完成数量
-        type: integer
+        type: number
       is_buffet:
         description: 是否是自助餐
         type: boolean
@@ -4554,6 +4693,9 @@ definitions:
         type: integer
       num:
         description: 数量
+        type: number
+      num_type:
+        description: 数量计算方法 0-整数 1-小数
         type: integer
       price:
         description: 原价. 原价=单价*数量
@@ -4603,7 +4745,7 @@ definitions:
         type: integer
       num:
         description: 加购数量
-        type: integer
+        type: number
       sauce_uuid:
         description: 小料ID列表
         items:
@@ -4634,7 +4776,7 @@ definitions:
         description: 商品名称多语言
       num:
         description: 数量
-        type: integer
+        type: number
       total_price:
         description: 总价
         type: number
@@ -4652,6 +4794,33 @@ definitions:
         description: 必点方案列表
         items:
           $ref: '#/definitions/resp.InstantProductMustPlan'
+        type: array
+    type: object
+  resp.ProductPackageDetail:
+    properties:
+      attributes_uuid:
+        description: 商品属性uuid列表
+        items:
+          type: integer
+        type: array
+      flavor_uuid:
+        description: 商品规格uuid
+        type: integer
+      num:
+        description: 数量
+        type: number
+      sauces_uuid:
+        description: 商品加料uuid列表
+        items:
+          type: integer
+        type: array
+    type: object
+  resp.ProductPackageDetailRes:
+    properties:
+      list:
+        description: 数据
+        items:
+          $ref: '#/definitions/resp.ProductPackageDetail'
         type: array
     type: object
   resp.ProductPackageList:
@@ -4748,7 +4917,7 @@ definitions:
         description: 送厨商品名称
       num:
         description: 送厨商品数量
-        type: integer
+        type: number
       product_attribute_names:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -4788,7 +4957,7 @@ definitions:
         description: 分页信息
       send_kitchen_num:
         description: 送厨商品数量，用于厨显来菜提醒
-        type: integer
+        type: number
     type: object
   resp.RechargeMember:
     properties:
@@ -5237,7 +5406,7 @@ definitions:
         type: array
       product_num:
         description: 商品数量
-        type: integer
+        type: number
       status:
         description: 订单状态, 0-未结账 1-已结账
         type: integer
@@ -5257,6 +5426,28 @@ definitions:
         type: string
       company_tax_number:
         type: string
+    type: object
+  resp.SampleMemberCoupon:
+    properties:
+      coupon_uuid:
+        description: 优惠券UUID
+        type: integer
+      day_end_time:
+        description: 每日适用时段结束时间, hh:mm 格式。00:00-23:59表示全天可用
+        type: string
+      day_start_time:
+        description: 每日适用时段开始时间, hh:mm 格式。00:00-23:59表示全天可用
+        type: string
+      end_time:
+        type: integer
+      name:
+        description: 会员优惠券名称
+        type: string
+      start_time:
+        type: integer
+      uuid:
+        description: 会员优惠券UUID
+        type: integer
     type: object
   resp.SearchMember:
     properties:
@@ -5288,13 +5479,13 @@ definitions:
     properties:
       finished_num:
         description: 制作完成数量
-        type: integer
+        type: number
       product_package_uuid:
         description: 商品Uuid
         type: integer
       sent_kitchen_product_num:
         description: 已送厨商品数量
-        type: integer
+        type: number
     type: object
   resp.SentKitchenProductGroup:
     properties:
@@ -5403,7 +5594,7 @@ definitions:
         type: number
       product_num:
         description: 总数量，用于点餐助手、h5
-        type: integer
+        type: number
     type: object
   resp.SoldOut:
     properties:
@@ -5778,6 +5969,9 @@ definitions:
         items:
           $ref: '#/definitions/setting.CheckoutZeroingMethodItem'
         type: array
+      delivery_price_ratio:
+        description: 外送商品价格和商品原价比例
+        type: integer
       discount_method:
         description: 折扣计算方式 10-按百分比 20-直接减免
         type: string
@@ -7330,6 +7524,37 @@ paths:
       summary: 撤销一个支付单
       tags:
       - 点餐助手端.桌台
+  /assistant/desk/order/payment/coupon:
+    post:
+      consumes:
+      - application/json
+      description: 选择或取消优惠券
+      parameters:
+      - description: 选择或取消优惠券参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InstantOrderPaymentCouponReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 结账页面信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 选择或取消优惠券
+      tags:
+      - 点餐助手端.桌台
   /assistant/desk/order/payment/create:
     post:
       consumes:
@@ -7453,7 +7678,7 @@ paths:
       - JwtToken: []
       summary: 设置订单的抵扣积分数量
       tags:
-      - 收银端.桌台.结账
+      - 点餐助手端.桌台
   /assistant/desk/order/payment/qrcode:
     get:
       consumes:
@@ -8061,7 +8286,7 @@ paths:
       - application/json
       description: 模糊搜索会员
       parameters:
-      - description: 关键字搜索：uuid\phone，前端处理前后空格
+      - description: 关键字搜索
         in: query
         name: keyword
         type: string
@@ -9518,6 +9743,37 @@ paths:
       summary: 撤销一个支付单
       tags:
       - 收银端.桌台.结账
+  /cashier/desk/order/payment/coupon:
+    post:
+      consumes:
+      - application/json
+      description: 选择或取消优惠券
+      parameters:
+      - description: 选择或取消优惠券参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InstantOrderPaymentCouponReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 结账页面信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 选择或取消优惠券
+      tags:
+      - 收银端.桌台.结账
   /cashier/desk/order/payment/create:
     post:
       consumes:
@@ -10813,6 +11069,37 @@ paths:
       summary: 撤销一个支付单
       tags:
       - 收银端.点餐.结账
+  /cashier/instant/order/payment/coupon:
+    post:
+      consumes:
+      - application/json
+      description: 选择或取消优惠券
+      parameters:
+      - description: 选择或取消优惠券参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.InstantOrderPaymentCouponReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 结账页面信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.InstantOrderPaymentInfoResp'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 选择或取消优惠券
+      tags:
+      - 收银端.点餐.结账
   /cashier/instant/order/payment/create:
     post:
       consumes:
@@ -11755,7 +12042,7 @@ paths:
       - application/json
       description: 模糊搜索会员
       parameters:
-      - description: 关键字搜索：uuid\phone，前端处理前后空格
+      - description: 关键字搜索
         in: query
         name: keyword
         type: string
@@ -13906,6 +14193,43 @@ paths:
       security:
       - JwtToken: []
       summary: 获取收银产品列表
+      tags:
+      - 扫码点餐
+  /h5/product/package/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品选购详情
+      parameters:
+      - description: 商品包uuid
+        in: query
+        name: productPackageUuid
+        type: integer
+      - description: 销售账单ID
+        in: query
+        name: saleBillUuid
+        type: integer
+      - description: 销售订单ID
+        in: query
+        name: saleOrderUuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ProductPackageDetailRes'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 获取商品选购详情
       tags:
       - 扫码点餐
   /h5/remark:

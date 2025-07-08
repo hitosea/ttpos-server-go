@@ -326,7 +326,7 @@ type MemberRechargeOrder struct {
 	BaseModel
 	OrderNo          string  `gorm:"column:order_no;type:varchar(255);comment:充值订单编号;NOT NULL" json:"order_no"`
 	DutyNo           string  `gorm:"column:duty_no;type:varchar(64);comment:当班编号;NOT NULL" json:"duty_no"`
-	Status           int     `gorm:"column:status;type:tinyint(2);default:0;comment:状态,0-pending待支付 1-paid已支付 2-canceled已取消;NOT NULL" json:"status"`
+	Status           int     `gorm:"column:status;type:tinyint(2);default:0;comment:状态,0-pending待付款 1-paid已完成 2-canceled已取消;NOT NULL" json:"status"`
 	Amount           float64 `gorm:"column:amount;type:decimal(12,2);default:0.00;comment:交易金额=充值金额+手续费;NOT NULL" json:"amount"`
 	RefundMoney      float64 `gorm:"column:refund_money;type:decimal(12,2);default:0.00;comment:退款金额，不大于amount;NOT NULL" json:"refund_money"`
 	ChargeDue        float64 `gorm:"column:charge_due;type:decimal(12,2);default:0.00;comment:找零;NOT NULL" json:"charge_due"`

@@ -1,14 +1,14 @@
 <template>
   <div class="product-list">
     <!--搜索表单-->
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-tabs v-model="activeName" @tab-change="handleClick">
         <el-tab-pane label="上架中" name="sell"></el-tab-pane>
         <el-tab-pane label="下架" name="lower">
           <template #label>
             <span>
               下架
-              <el-tag size="">{{product_count.lower}}</el-tag>
+              <el-tag size="">{{ product_count.lower }}</el-tag>
             </span>
           </template>
         </el-tab-pane>
@@ -20,7 +20,7 @@
             <template v-for="cat in categoryList" :key="cat.category_id">
               <el-option :value="cat.category_id" :label="cat.name"></el-option>
               <template v-for="cat_c in cat.child" :key="cat_c.category_id">
-                <el-option :value="cat_c.category_id" :label="cat_c.name">|—{{cat_c.name}}</el-option>
+                <el-option :value="cat_c.category_id" :label="cat_c.name">|—{{ cat_c.name }}</el-option>
               </template>
             </template>
           </el-select>
@@ -61,8 +61,10 @@
           <el-table-column fixed="right" label="操作" width="160">
             <template #default="scope">
               <el-button @click="editClick(scope.row)" type="text" size="small" v-auth="'/product/takeaway/product/edit'">编辑</el-button>
-              <el-button @click="undercarriage(scope.row,20)" type="text" size="small" v-auth="'/product/takeaway/product/state'" v-if="scope.row.product_status.value!=20">下架</el-button>
-              <el-button @click="undercarriage(scope.row,10)" type="text" size="small" v-auth="'/product/takeaway/product/state'" v-else>上架</el-button>
+              <el-button @click="undercarriage(scope.row, 20)" type="text" size="small" v-auth="'/product/takeaway/product/state'" v-if="scope.row.product_status.value != 20"
+                >下架</el-button
+              >
+              <el-button @click="undercarriage(scope.row, 10)" type="text" size="small" v-auth="'/product/takeaway/product/state'" v-else>上架</el-button>
               <el-button @click="deleteClick(scope.row)" type="text" size="small" v-auth="'/product/takeaway/product/delete'">删除</el-button>
             </template>
           </el-table-column>
@@ -85,163 +87,157 @@
 </template>
 
 <script>
-import PorductApi from '@/api/product.js';
-export default {
-  components: {},
-  data() {
-    return {
-      /*切换菜单*/
-      activeName: 'sell',
-      /*切换选中值*/
-      activeIndex: '0',
-      /*是否正在加载*/
-      loading: true,
-      /*一页多少条*/
-      pageSize: 10,
-      /*一共多少条数据*/
-      totalDataNumber: 0,
-      /*当前是第几页*/
-      curPage: 1,
-      /*搜索参数*/
-      searchForm: {
-        product_name: '',
-        category_id: ''
+  import PorductApi from '@/api/product.js';
+  export default {
+    components: {},
+    data() {
+      return {
+        /*切换菜单*/
+        activeName: 'sell',
+        /*切换选中值*/
+        activeIndex: '0',
+        /*是否正在加载*/
+        loading: true,
+        /*一页多少条*/
+        pageSize: 10,
+        /*一共多少条数据*/
+        totalDataNumber: 0,
+        /*当前是第几页*/
+        curPage: 1,
+        /*搜索参数*/
+        searchForm: {
+          product_name: '',
+          category_id: '',
+        },
+        /*列表数据*/
+        tableData: [],
+        /*全部分类*/
+        categoryList: [],
+        /*商品统计*/
+        product_count: {},
+      };
+    },
+    created() {
+      /*获取列表*/
+      this.getData();
+    },
+    methods: {
+      /*选择第几页*/
+      handleCurrentChange(val) {
+        let self = this;
+        self.loading = true;
+        self.curPage = val;
+        self.getData();
       },
-      /*列表数据*/
-      tableData: [],
-      /*全部分类*/
-      categoryList: [],
-      /*商品统计*/
-      product_count: {}
-    };
-  },
-  created() {
-    /*获取列表*/
-    this.getData();
-  },
-  methods: {
-    /*选择第几页*/
-    handleCurrentChange(val) {
-      let self = this;
-      self.loading = true;
-      self.curPage = val;
-      self.getData();
-    },
 
-    /*每页多少条*/
-    handleSizeChange(val) {
-      this.pageSize = val;
-      this.getData();
-    },
+      /*每页多少条*/
+      handleSizeChange(val) {
+        this.pageSize = val;
+        this.getData();
+      },
 
-    /*切换菜单*/
-    handleClick(tab, event) {
-      let self = this;
-      self.curPage = 1;
-      self.getData();
-    },
+      /*切换菜单*/
+      handleClick(tab, event) {
+        let self = this;
+        self.curPage = 1;
+        self.getData();
+      },
 
-    /*获取列表*/
-    getData() {
-      let self = this;
-      let Params = self.searchForm;
-      Params.page = self.curPage;
-      Params.list_rows = self.pageSize;
-      Params.type = self.activeName;
-      self.loading = true;
-      PorductApi.takeProductList(Params, true)
-        .then(data => {
-          self.loading = false;
-          self.tableData = data.data.list.data;
-          self.categoryList = data.data.category;
-          self.totalDataNumber = data.data.list.total;
-          self.product_count = data.data.product_count;
-        })
-        .catch(error => {
-          self.loading = false;
+      /*获取列表*/
+      getData() {
+        let self = this;
+        let Params = self.searchForm;
+        Params.page = self.curPage;
+        Params.list_rows = self.pageSize;
+        Params.type = self.activeName;
+        self.loading = true;
+        PorductApi.takeProductList(Params, true)
+          .then((data) => {
+            self.loading = false;
+            self.tableData = data.data.list.data;
+            self.categoryList = data.data.category;
+            self.totalDataNumber = data.data.list.total;
+            self.product_count = data.data.product_count;
+          })
+          .catch((error) => {
+            self.loading = false;
+          });
+      },
+
+      /*搜索查询*/
+      onSubmit() {
+        this.curPage = 1;
+        this.getData();
+      },
+
+      /*打开添加*/
+      addClick() {
+        this.$router.push('/product/takeaway/product/add');
+      },
+
+      /*打开编辑*/
+      editClick(row) {
+        this.$router.push({
+          path: '/product/takeaway/product/edit',
+          query: {
+            product_id: row.product_id,
+            scene: 'edit',
+          },
         });
-    },
-
-    /*搜索查询*/
-    onSubmit() {
-      this.curPage = 1;
-      this.getData();
-    },
-
-    /*打开添加*/
-    addClick() {
-      this.$router.push('/product/takeaway/product/add');
-    },
-
-    /*打开编辑*/
-    editClick(row) {
-      this.$router.push({
-        path: '/product/takeaway/product/edit',
-        query: {
-          product_id: row.product_id,
-          scene: 'edit'
+      },
+      /* 强制下架上架*/
+      undercarriage(row, state) {
+        let self = this;
+        let war = '';
+        let war_ = '';
+        if (state == 20) {
+          (war = '强制下架'), (war_ = '下架');
+        } else if (state == 10) {
+          (war = '重新上架'), (war_ = '上架');
         }
-      });
-    },
-    /* 强制下架上架*/
-    undercarriage(row,state){
-      let self = this;
-      let war="";
-      let war_='';
-      if(state==20){
-        war="强制下架",
-        war_='下架'
-      }else if(state==10){
-        war="重新上架",
-        war_='上架'
-      }
-      ElMessageBox.confirm("确认要"+war+"吗?", '提示', {
-          type: 'warning'
-        })
-        .then(() => {
+        ElMessageBox.confirm('确认要' + war + '吗?', '提示', {
+          type: 'warning',
+        }).then(() => {
           PorductApi.takeStateProduct({
             product_id: row.product_id,
-            state
-          }).then(data => {
+            state,
+          }).then((data) => {
             this.$ElMessage({
-              message: war_+'成功',
-              type: 'success'
+              message: war_ + '成功',
+              type: 'success',
             });
             self.getData();
           });
         });
-    },
-    /*打开复制*/
-    copyClick(row) {
-      this.$router.push({
-        path: '/product/product/edit',
-        query: {
-          product_id: row.product_id,
-          scene: 'copy'
-        }
-      });
-    },
+      },
+      /*打开复制*/
+      copyClick(row) {
+        this.$router.push({
+          path: '/product/product/edit',
+          query: {
+            product_id: row.product_id,
+            scene: 'copy',
+          },
+        });
+      },
 
-    /*删除*/
-    deleteClick: function(row) {
-      let self = this;
-     ElMessageBox.confirm('删除后不可恢复，确认删除吗？', '提示', {
-          type: 'warning'
-        })
-        .then(() => {
+      /*删除*/
+      deleteClick: function (row) {
+        let self = this;
+        ElMessageBox.confirm('删除后不可恢复，确认删除吗？', '提示', {
+          type: 'warning',
+        }).then(() => {
           PorductApi.takeDelProduct({
-            product_id: row.product_id
-          }).then(data => {
+            product_id: row.product_id,
+          }).then((data) => {
             this.$ElMessage({
               message: '删除成功',
-              type: 'success'
+              type: 'success',
             });
             self.getData();
           });
         });
-    }
-  }
-};
+      },
+    },
+  };
 </script>
-
-

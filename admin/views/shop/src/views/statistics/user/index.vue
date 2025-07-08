@@ -1,7 +1,7 @@
 <template>
   <div class="statistics-member">
     <!--搜索表单-->
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('收银员')">
           <a-select size="small" v-model:value="searchForm.user_id" :placeholder="$t('请选择')" filterable clearable @change="onSearch">

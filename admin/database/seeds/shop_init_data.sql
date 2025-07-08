@@ -47,6 +47,7 @@ INSERT INTO `ttpos_printer_template` (`id`, `uuid`, `name`, `template`, `create_
 INSERT INTO `ttpos_printer_template` (`id`, `uuid`, `name`, `template`, `create_time`, `update_time`) VALUES (7, 7, '发票', 1, @nowTime, @nowTime);
 INSERT INTO `ttpos_printer_template` (`id`, `uuid`, `name`, `template`, `create_time`, `update_time`) VALUES (8, 8, '充值单', 1, @nowTime, @nowTime);
 INSERT INTO `ttpos_printer_template` (`id`, `uuid`, `name`, `template`, `create_time`, `update_time`) VALUES (9, 9, '退菜单', 1, @nowTime, @nowTime);
+INSERT INTO `ttpos_printer_template` (`id`, `uuid`, `name`, `template`, `create_time`, `update_time`) VALUES (10, 10, '出菜单', 1, @nowTime, @nowTime);
 COMMIT;
 
 -- ----------------------------

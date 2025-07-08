@@ -6,14 +6,14 @@
   -->
   <div class="user">
     <!--搜索表单-->
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item label="">
           <el-radio-group v-model="searchForm.time_type" class="radio-search" @change="timeTypeChange">
-            <el-radio-button :label="1">{{ $t('今天') }}</el-radio-button>
-            <el-radio-button :label="2">{{ $t('昨天') }}</el-radio-button>
-            <el-radio-button :label="3">{{ $t('本周') }}</el-radio-button>
-            <el-radio-button :label="0">{{ $t('全部') }}</el-radio-button>
+            <el-radio-button :value="1">{{ $t('今天') }}</el-radio-button>
+            <el-radio-button :value="2">{{ $t('昨天') }}</el-radio-button>
+            <el-radio-button :value="3">{{ $t('本周') }}</el-radio-button>
+            <el-radio-button :value="0">{{ $t('全部') }}</el-radio-button>
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="$t('订单类型')">
@@ -131,7 +131,7 @@
           </el-table-column>
           <el-table-column prop="finish_time" :label="$t('支付时间')">
             <template #default="scope">
-              {{ scope.row.finish_time }}
+              {{ scope.row.finish_time || '-' }}
             </template>
           </el-table-column>
           <el-table-column prop="order_amount" :label="$t('订单金额')" width="140" show-overflow-tooltip>
@@ -217,7 +217,7 @@
       :order_id="order_id"
       :sub_order_id="sub_order_id"
       :pay_price="pay_price"
-      @closeDialog="closerefundDialogFunc($event, 'edit')"
+      @closeDialog="closeRefundDialogFunc($event, 'edit')"
     >
     </refund>
   </div>
@@ -416,37 +416,7 @@
           },
         });
       },
-      /*核销*/
-      verifyClick(row) {
-        let self = this;
-        let extract_form = {};
-        ElMessageBox.confirm('确定要核销吗?', '提示', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'warning',
-        })
-          .then(() => {
-            extract_form.order_id = row.order_id;
-            OrderApi.storeExtract(extract_form, true)
-              .then((data) => {
-                self.loading = false;
-                this.$ElMessage({
-                  message: $t('操作成功'),
-                  type: 'success',
-                });
-                self.getData();
-              })
-              .catch((error) => {
-                self.loading = false;
-              });
-          })
-          .catch(() => {
-            this.$ElMessage({
-              type: 'info',
-              message: '已取消核销',
-            });
-          });
-      },
+
       getLogistics(row) {
         let self = this;
         let Params = {
@@ -542,58 +512,12 @@
         }
       },
       /*关闭弹窗*/
-      closerefundDialogFunc(e, f) {
+      closeRefundDialogFunc(e, f) {
         if (f == 'edit') {
           this.open_refund = e.openDialog;
           if (e.type == 'success') {
             this.getData();
           }
-        }
-      },
-      patType(arr) {
-        let result = '-';
-        if (arr && arr.length > 0) {
-          let nameArr = [];
-          (arr || []).map((item) => {
-            nameArr.push(item.name);
-          });
-          result = nameArr.join(',');
-        }
-        return result;
-      },
-
-      tableNo(arr) {
-        let result = '-';
-        if (arr && arr.length > 0) {
-          let nameArr = [];
-          (arr || []).map((item) => {
-            nameArr.push(item.table_no);
-          });
-          result = nameArr.join('+');
-        }
-        return result;
-      },
-
-      uniqueUsers(e) {
-        let userIds = new Set(); // 使用 Set 来存储唯一的 user_id
-        let result = e
-          .filter((item) => {
-            if (item.user && !userIds.has(item.user.user_id)) {
-              userIds.add(item.user.user_id);
-              return true; // 保留这个用户
-            }
-            return false; // 过滤掉重复的用户
-          })
-          .map((item) => item.user); // 返回去重后的用户对象
-        if (result.length > 0) {
-          let idArr = [];
-          (result || []).map((item) => {
-            idArr.push(item.user_id);
-          });
-          idArr.join(',');
-          return this.$t('会员ID') + ' (' + idArr.toString() + ')';
-        } else {
-          return '-';
         }
       },
     },

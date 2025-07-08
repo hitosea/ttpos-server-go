@@ -105,7 +105,7 @@ type ReturnOrderProduct struct {
 	ProductName          string  `gorm:"column:product_name;comment:商品名称" json:"product_name"`
 	ProductPrice         float64 `gorm:"column:product_price;comment:商品单价" json:"product_price"`
 	TaxRate              float64 `gorm:"column:tax_rate;comment:税率,根据结账时税率计算" json:"tax_rate"`
-	Num                  uint    `gorm:"column:num;comment:商品数量" json:"num"`
+	Num                  float64 `gorm:"column:num;comment:商品数量" json:"num"`
 	ProductDiscount      float64 `gorm:"column:product_discount;comment:商品折扣" json:"product_discount"`
 	ProductTotalAmount   float64 `gorm:"column:product_total_amount;comment:商品总金额" json:"product_total_amount"`
 }

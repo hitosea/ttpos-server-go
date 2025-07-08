@@ -101,7 +101,7 @@
         selectedTableIds: [],
       };
     },
-    props: ['open', 'Dtype', 'include'],
+    props: ['open', 'DType', 'include'],
 
     created() {
       this.dialogVisible = this.open;

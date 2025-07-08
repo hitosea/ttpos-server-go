@@ -6,7 +6,7 @@
     -->
   <div class="product-list">
     <!--搜索表单-->
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('商品类型')">
           <a-select size="small" v-model:value="material_type" clearable :placeholder="$t('全部类型')" @change="onSearch">
@@ -159,7 +159,7 @@
 
 <script>
   import PorductApi from '@/api/product.js';
-  import ProductSelector from '@/components/product/selector.vue';
+  import ProductSelector from '@/components/product/Selector.vue';
   import { useUserStore } from '@/store/index';
   import { languageStore } from '@/store/model/language';
   import defaultImg from '@/assets/img/default.png';
@@ -462,7 +462,7 @@
 </script>
 
 <style scoped>
-  .common-seach-wrap {
+  .common-search-wrap {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0;

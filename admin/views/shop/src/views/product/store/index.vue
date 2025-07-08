@@ -2,13 +2,15 @@
   <!--
       	描述：商品-店内商品
       -->
-  <div class="common-seach-wrap">
+  <div class="common-search-wrap">
     <!--商品管理-->
     <productindex v-if="activeName == 'productindex'"></productindex>
     <!--分类管理-->
     <categoryindex v-if="activeName == 'categoryindex'"></categoryindex>
     <!-- 特色管理 -->
     <featureindex v-if="activeName == 'featureindex'"></featureindex>
+    <!-- 推荐管理 -->
+    <recommendindex v-if="activeName == 'recommendindex'"></recommendindex>
   </div>
 </template>
 <script>
@@ -17,11 +19,13 @@
   import categoryindex from './category/index.vue';
   import productindex from './product/index.vue';
   import featureindex from './feature/index.vue';
+  import recommendindex from './recommend/index.vue';
   export default defineComponent({
     components: {
       categoryindex,
       productindex,
       featureindex,
+      recommendindex,
     },
     setup() {
       const { bus_emit, bus_off, bus_on } = useUserStore();
@@ -52,6 +56,11 @@
             key: 'featureindex',
             value: $t('特色分类'),
             path: '/product/store/feature/index',
+          },
+          {
+            key: 'recommendindex',
+            value: $t('商品推荐'),
+            path: '/product/store/recommend/index',
           },
         ],
         /*权限筛选后的数据*/

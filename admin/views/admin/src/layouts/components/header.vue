@@ -3,10 +3,7 @@
     <div class="flex items-center gap-1 w-[180px]">
       <el-image :src="settingConfig?.brand_logo_long" style="width: 146px; height: 40px" class="flex items-center justify-center">
         <template #error>
-          <div class="flex gap-1">
-            <img class="block" src="@/assets/img/logo.svg" alt="" />
-            <img class="block" src="@/assets/img/logo-title.svg" alt="" />
-          </div>
+          <img class="block" src="@/assets/img/logo-title.svg" alt="" />
         </template>
       </el-image>
     </div>

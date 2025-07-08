@@ -94,6 +94,15 @@
     created() {},
     mounted() {
       this.myEcharts();
+      window.addEventListener('resize', this.handleResize, { passive: true });
+    },
+    beforeUnmount() {
+      // Clean up the chart instance when component is unmounted
+      if (myChart) {
+        myChart.dispose();
+        myChart = null;
+      }
+      window.removeEventListener('resize', this.handleResize, { passive: true });
     },
     methods: {
       /*切换*/
@@ -106,10 +115,32 @@
         this.getData();
       },
 
+      /* Handle window resize */
+      handleResize() {
+        if (myChart) {
+          myChart.resize();
+        }
+      },
+
       /*创建图表对象*/
       myEcharts() {
         // 基于准备好的dom，初始化echarts实例
-        myChart = echarts.init(document.getElementById('TransactionChart'));
+        const chartDom = document.getElementById('TransactionChart');
+        if (!chartDom) return;
+
+        // Dispose existing chart if it exists
+        if (myChart) {
+          myChart.dispose();
+        }
+
+        myChart = echarts.init(chartDom, null, {
+          renderer: 'canvas',
+          useDirtyRect: false,
+        });
+
+        // Set wheel event to be passive
+        myChart.getZr().on('mousewheel', function () {}, { passive: true });
+
         /*获取列表*/
         this.getData();
       },

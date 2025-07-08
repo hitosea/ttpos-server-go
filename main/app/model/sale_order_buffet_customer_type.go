@@ -98,7 +98,7 @@ func (model *SaleOrderBuffetCustomerType) GetOriginServiceFee(serviceFeeRate flo
 func (model *SaleOrderBuffetCustomerType) GetCanReturnNum() uint {
 	amount := decimal.NewFromFloat(0)
 	for _, returnOrderProduct := range model.ReturnOrderProducts {
-		amount = amount.Add(decimal.NewFromFloat(float64(returnOrderProduct.Num)))
+		amount = amount.Add(decimal.NewFromFloat(returnOrderProduct.Num))
 	}
 	num := float64(model.Num) - amount.InexactFloat64()
 	// 如果可退货数量小于0，则返回0

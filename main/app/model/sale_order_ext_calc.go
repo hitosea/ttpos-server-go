@@ -55,7 +55,7 @@ func (model *SaleOrder) CalcCommissionFee() float64 {
 // 支付没有手续费时，销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和-结账抹零金额
 // 支付有手续费时，销售订单未付款的金额 = 应收金额-销售订单各个支付单的支付金额之和
 func (model *SaleOrder) CalcUnPayAmount(hasCommission bool) float64 {
-	amount := model.GetPointsExchangeAmount()
+	amount := model.GetAmountValue()
 	if hasCommission {
 		// 销售订单各个支付单的支付金额之和
 		payOrderAmount := model.calcPayOrderAmount()
@@ -83,7 +83,7 @@ func (model *SaleOrder) SetCheckOutZeroFee() {
 
 // 计算销售订单的结账抹零金额。根据订单设置的结账抹零规则金额计算
 func (model *SaleOrder) CalcCheckOutZeroFee() float64 {
-	amount := model.GetPointsExchangeAmount()
+	amount := model.GetAmountValue()
 	switch model.ZeroCheckoutRule {
 	// 实款实收
 	case constant.SaleBillSettingCheckoutZeroingMethodNone:
@@ -175,7 +175,7 @@ func (model *SaleOrder) calcPayOrderAmount() float64 {
 // 最终应收=应收金额+支付手续费= 应收金额 +（各个支付订单的手续费之和+当前支付方式的手续费）- 减去结账抹零金额
 func (model *SaleOrder) calcFinallyAmount() (float64, bool) {
 	hasCommission := false
-	amount := decimal.NewFromFloat(model.GetPointsExchangeAmount())
+	amount := decimal.NewFromFloat(model.GetAmountValue())
 	commissionFee := decimal.NewFromFloat(0)
 	for _, paymentOrder := range model.PaymentOrders {
 		commissionFee = commissionFee.Add(decimal.NewFromFloat(paymentOrder.PaymentCommissionFee))
@@ -198,7 +198,7 @@ func (model *SaleOrder) calcSumOrderProductSalePrice(products []*SaleOrderProduc
 			continue
 		}
 		// SalePrice * Num
-		saleProductSalePrice := decimal.NewFromFloat(orderProduct.SalePrice).Mul(decimal.NewFromUint64(uint64(orderProduct.Num)))
+		saleProductSalePrice := decimal.NewFromFloat(orderProduct.SalePrice).Mul(orderProduct.GetNumDecimal())
 		sumSalePrice = sumSalePrice.Add(saleProductSalePrice)
 	}
 	return sumSalePrice.InexactFloat64()
@@ -235,7 +235,7 @@ func (model *SaleOrder) calcSumOrderProductPrice(products []*SaleOrderProduct, o
 			productPrice = orderProduct.GetSalePriceUnit()
 		}
 		// price * num
-		price := decimal.NewFromFloat(productPrice).Mul(decimal.NewFromUint64(uint64(orderProduct.Num)))
+		price := decimal.NewFromFloat(productPrice).Mul(orderProduct.GetNumDecimal())
 		sumPrice = sumPrice.Add(price)
 	}
 	return sumPrice.Round(2).InexactFloat64()
@@ -541,6 +541,25 @@ func (model *SaleOrder) CaclPointsExchangeAmount() float64 {
 	payPointsAmount := decimal.NewFromFloat(model.PayPoints).Mul(decimal.NewFromFloat(model.PointsExchangeRate)).Round(2).InexactFloat64()
 
 	return payPointsAmount
+}
+
+// 计算优惠券抵扣金额
+func (model *SaleOrder) CalcCouponExchangeAmount() float64 {
+	if len(model.Coupons) == 0 {
+		return 0 // 未使用优惠券，则抵扣金额为0
+	}
+	coupon := model.Coupons[0]
+	if coupon.IsDelete() {
+		return 0 // 优惠券已删除，则抵扣金额为0
+	}
+	couponOriginAmount := coupon.CouponOriginAmount // 优惠券原始金额(面值)
+	// 如果积分抵扣之后的订单金额大于优惠券面值，则抵扣金额为优惠券面值，否则抵扣金额为积分抵扣之后的订单金额
+	amount := model.GetPointsExchangeAmount() // 积分抵扣后的订单金额
+	if amount > couponOriginAmount {
+		return couponOriginAmount
+	} else {
+		return amount
+	}
 }
 
 // 计算销售订单的订单优惠折扣抹零金额。根据订单设置的优惠折扣抹零规则金额计算

@@ -55,6 +55,7 @@ func checkoutSaleOrderEventHandler() {
 					ProductAttr:     saleOrderProduct.GetAttributeName(),
 					ProductAttrList: saleOrderProduct.GetAttributeNameList(),
 					TotalNum:        saleOrderProduct.Num,
+					NumType:         saleOrderProduct.NumType,
 					IsBuffet:        saleOrderProduct.IsBuffet == 1,
 					Remark:          saleOrderProduct.Remark,
 				})
@@ -139,7 +140,7 @@ func checkoutSaleOrderEventHandler() {
 				// 创建积分发放记录. // 累计会员的消费金额、消费次数
 				saleOrder.HandleMemberPoints(member)
 				if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-					// 更新会员积分 // todo 可以考虑跟func (s *memberSrv) HandleMemberPoints方法合并
+					// 更新会员积分
 					if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{
 						"frozen_point": member.FrozenPoint,
 					}); err != nil {

@@ -72,7 +72,7 @@ class Spec extends BaseModel
      */
     public function updateSpec($data)
     {
-        // todo v1.0.8需求变更，暂时不需要
+        // NOTE v1.0.8需求变更，暂时不需要
         // if ($data) {
         //     $addData = [];
         //     foreach ($data as $item) {

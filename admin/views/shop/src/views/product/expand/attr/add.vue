@@ -4,8 +4,8 @@
     <el-form size="small" :model="form" label-position="top" ref="formRef">
       <el-form-item>
         <el-radio-group v-model="type">
-          <el-radio :label="1">{{ $t('属性组') }}</el-radio>
-          <el-radio :label="2">{{ $t('属性值') }}</el-radio>
+          <el-radio :value="1">{{ $t('属性组') }}</el-radio>
+          <el-radio :value="2">{{ $t('属性值') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <template v-if="type === 2">
@@ -30,7 +30,7 @@
         </el-form-item>
       </template>
 
-      <UniqueNameForm ref="uniqueNameFormRef" :labelPrefix="$t('属性名称')" apiSource="attribute" :parent_id="type == '2' ? form.parent_id : '0'" />
+      <UniqueNameForm ref="uniqueNameFormRef" :labelPrefix="$t('属性名称')" apiSource="attribute" :parent_id="type == '2' ? form.parent_id : 0" />
     </el-form>
     <template #footer>
       <div class="dialog-footer">

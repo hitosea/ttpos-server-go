@@ -278,14 +278,23 @@
                 </el-form-item>
               </template>
             </el-table-column>
+            <el-table-column prop="num_type" width="120" :label="`*${$t('计价方式')}`">
+              <template #default="scope">
+                <el-radio-group v-model="scope.row.num_type">
+                  <el-radio label="1">{{ $t('整数') }}</el-radio>
+                  <el-radio label="2">{{ $t('小数') }}</el-radio>
+                </el-radio-group>
+              </template>
+            </el-table-column>
             <el-table-column prop="shows" width="120" :label="`*${$t('显示')}`">
               <template #default="scope">
                 <div>
                   <el-checkbox v-model="scope.row.is_show_cashier" :true-label="1" :false-label="2" :label="$t('收银机')" />
-                  <el-checkbox v-model="scope.row.is_show_tablet" :true-label="1" :false-label="2" :label="$t('平板')" />
+                  <el-checkbox v-model="scope.row.is_show_tablet" :true-label="1" :false-label="2" :label="$t('平板')" :disabled="scope.row.num_type === 1"/>
                   <el-checkbox v-model="scope.row.is_show_kitchen" :true-label="1" :false-label="2" :label="$t('厨显')" />
-                  <el-checkbox v-model="scope.row.is_show_assistant" :true-label="1" :false-label="2" :label="$t('点餐助手')" />
-                  <el-checkbox v-model="scope.row.is_show_h5" :true-label="1" :false-label="2" :label="$t('扫码点餐')" />
+                  <el-checkbox v-model="scope.row.is_show_assistant" :true-label="1" :false-label="2" :label="$t('点餐助手')" :disabled="scope.row.num_type === 1"/>
+                  <el-checkbox v-model="scope.row.is_show_h5" :true-label="1" :false-label="2" :label="$t('扫码点餐')" :disabled="scope.row.num_type === 1"/>
+                  <el-checkbox v-if="showDelivery" v-model="scope.row.is_show_delivery" :true-label="1" :false-label="2" :label="$t('外送')" :disabled="scope.row.num_type === 1"/>
                 </div>
               </template>
             </el-table-column>
@@ -354,6 +363,10 @@
   const languageList = languageStore().getLanguageList().languageList.value;
   const language = languageStore().getLanguageKey().language.value;
 
+  import { useUserStore } from '@/store/index';
+  const { computedSupplier } = useUserStore();
+  const supplier = computedSupplier().supplier;
+  const showDelivery = (supplier.value?.delivery_status || 0) == 1;
   //
   export default {
     components: { SvgIcon, mInput },
@@ -379,16 +392,25 @@
         pageSize: 10,
         totalDataNumber: 0,
         nowTableData: [],
+        showDelivery: showDelivery,
       };
     },
     watch: {
       tableData: {
         handler(newVal) {
           this.totalDataNumber = newVal.length || 0;
+          newVal.forEach(row => {
+            if (row.num_type === '2') {
+              row.is_show_tablet = 2
+              row.is_show_assistant = 2
+              row.is_show_h5 = 2
+              row.is_show_delivery = 2
+            }
+          })
         },
         deep: true,
         immediate: true,
-      },
+      }
     },
     computed: {},
 
@@ -550,10 +572,11 @@
                 product_status: item[9] || '0', // 商品状态
                 product_ratin_tax_type: item[10] || '', // 堂食税类
                 product_takeout_tax_type: item[11] || '', // 外带税类
-                shows: item[12] || '', // 显示
-                product_sort: item[13] || '0', // 商品排序
-                limit_num: item[14] || '', // 限购数量
-                is_enable_grade: item[15] || '0', // 会员折扣
+                num_type: item[12] || '1', // 计价方式 
+                shows: item[13] || '', // 显示
+                product_sort: item[14] || '0', // 商品排序
+                limit_num: item[15] || '', // 限购数量
+                is_enable_grade: item[16] || '0', // 会员折扣
                 row: index,
               });
             }
@@ -627,6 +650,7 @@
           product_name_is_exist,
           category_id: [this.categoryList[0]?.category_id] || '', // 所属分类
           deduct_stock_type: 10, // 库存计算方式
+          num_type: 0, // 数量计算方法, 0-整数 1-小数
           unit_id: this.unitList[0]?.unit_id || '', // 商品单位
           spec_id: this.specList[0]?.spec_id || '', // 规格名称
           img_name: '', // 图片名称
@@ -642,6 +666,7 @@
           is_show_kitchen: 1, // 是否显示在送厨端 1-显示 2-不显示
           is_show_assistant: 1, // 是否显示在点餐助手 1-显示 2-不显示
           is_show_h5: 1, // 是否显示在h5 1-显示 2-不显示
+          is_show_delivery: 1, // 是否显示在外送 1-显示 2-不显示
           product_sort: '0', // 商品排序
           limit_num: 0, // 限购数量
           is_enable_grade: '1', // 会员折扣

@@ -130,13 +130,13 @@ class Order extends Controller
         if (!empty($time)) {
             $queryStartTime = strtotime($time[0]);
             $queryEndTime = strtotime($time[1]) + 86399;
-            $timeMode = $data['time_mode'] ?: [];
-            if (in_array(0, $timeMode)) {
-                $enableCreateTime = true;
-            }
-            if (in_array(1, $timeMode)) {
-                $enablePayTime = true;
-            }
+        }
+        $timeMode = $data['time_mode'] ?: [];
+        if (in_array(0, $timeMode)) {
+            $enableCreateTime = true;
+        }
+        if (in_array(1, $timeMode)) {
+            $enablePayTime = true;
         }
         // 搜索订单状态
         $status = [

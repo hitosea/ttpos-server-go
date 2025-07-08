@@ -65,6 +65,7 @@ type SaleOrder struct {
 	AutoPointsExchange uint    `gorm:"column:auto_points_exchange;type:tinyint(1);default:0;comment:积分抵扣类型,0-手动抵扣 1-自动抵扣" json:"auto_points_exchange"`
 
 	// 结账完成后才记录的字段
+	CouponAmount         float64 `gorm:"column:coupon_amount;type:decimal(12,2);default:0;comment:优惠券抵扣金额，实际抵扣金额" json:"coupon_amount"`
 	PaymentAmount        float64 `gorm:"column:payment_amount;type:decimal(12,2);default:0;comment:支付金额,支付金额=订单总金额+支付手续费" json:"payment_amount"`
 	ChangeAmount         float64 `gorm:"column:change_amount;type:decimal(12,2);default:0;comment:找零金额,结账完成后才记录" json:"change_amount"`
 	ZeroCheckoutFee      float64 `gorm:"column:zero_checkout_fee;type:decimal(12,2);default:0;comment:结账抹零金额" json:"zero_checkout_fee"`
@@ -88,10 +89,76 @@ type SaleOrder struct {
 	FreeReasons                  []*SaleOrderProductReason      `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	InvoiceInfo                  *SaleOrderInvoiceInfo          `gorm:"foreignKey:SaleOrderUuid;references:uuid"`
 	SaleBill                     *SaleBill                      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
-	MemberPointLogs              []*MemberPointLog              `gorm:"foreignKey:RelatedUuid;references:uuid"` // 关联积分变动记录.赠送积分、退款积分、反结账积分
-
+	MemberPointLogs              []*MemberPointLog              `gorm:"foreignKey:RelatedUuid;references:uuid"`   // 关联积分变动记录.赠送积分、退款积分、反结账积分
+	Coupons                      []*SaleOrderCoupon             `gorm:"foreignKey:SaleOrderUuid;references:uuid"` // 订单使用的优惠券
 	// 虚拟字段，用于标记当前子单是第几个
-	index int `gorm:"-" json:"index,omitempty"`
+	index int `gorm:"-"`
+}
+
+// 获取已选择的优惠券uuid
+func (model *SaleOrder) GetSelectedCouponUuid() uint64 {
+	if model.HasCoupon() {
+		if model.Coupons[0].MarketingCouponUuid != 0 {
+			return model.Coupons[0].MarketingCouponUuid
+		}
+		if model.Coupons[0].MemberCouponUuid != 0 {
+			return model.Coupons[0].MemberCouponUuid
+		}
+	}
+	return 0
+}
+
+// 销售订单是否使用了优惠券
+func (model *SaleOrder) HasCoupon() bool {
+	for _, coupon := range model.Coupons {
+		if !coupon.IsDelete() {
+			return true
+		}
+	}
+	return false
+}
+
+// 判断这个优惠券是否已经应用到该销售订单
+func (model *SaleOrder) HasCouponByUuid(couponUuid uint64, couponRequirement string) bool {
+	for _, coupon := range model.Coupons {
+		if !coupon.IsDelete() {
+			if couponRequirement == constant.CouponRequirementNone {
+				if coupon.MarketingCouponUuid == couponUuid && coupon.CouponRequirement == constant.CouponRequirementNone {
+					return true
+				}
+			}
+			if couponRequirement == constant.CouponRequirementMember {
+				if coupon.MemberCouponUuid == couponUuid && coupon.CouponRequirement == constant.CouponRequirementMember {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// 获取优惠券
+func (model *SaleOrder) GetCouponByUuid(couponUuid uint64, couponRequirement string) *SaleOrderCoupon {
+	for _, coupon := range model.Coupons {
+		if !coupon.IsDelete() {
+			if couponRequirement == constant.CouponRequirementNone {
+				if coupon.MarketingCouponUuid == couponUuid && coupon.CouponRequirement == constant.CouponRequirementNone {
+					return coupon
+				}
+			}
+			if couponRequirement == constant.CouponRequirementMember {
+				if coupon.MemberCouponUuid == couponUuid && coupon.CouponRequirement == constant.CouponRequirementMember {
+					return coupon
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// 新增一个优惠券
+func (model *SaleOrder) AddCoupon(couponUuid uint64, couponRequirement string, couponAmount float64) {
+	model.Coupons = append(model.Coupons, NewSaleOrderCoupon(model.Uuid, couponUuid, couponRequirement, couponAmount))
 }
 
 // 订单是否使用了会员余额支付
@@ -165,14 +232,20 @@ func (model *SaleOrder) GetManualReturnPoints() float64 {
 	return returnedPoints
 }
 
+// 订单金额。积分抵扣后、优惠券抵扣后的金额
+func (model *SaleOrder) GetAmountValue() float64 {
+	// 积分抵扣后的金额-优惠券抵扣金额
+	return decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.CalcCouponExchangeAmount())).Round(2).InexactFloat64()
+}
+
 // 获取积分抵扣后的应收金额。等于Amount-PayPointsAmount
 func (model *SaleOrder) GetPointsExchangeAmount() float64 {
 	return decimal.NewFromFloat(model.GetAmount()).Sub(decimal.NewFromFloat(model.PayPointsAmount)).Round(2).InexactFloat64()
 }
 
-// 获取最终应收金额（不含手续费）。等于Amount-PayPointsAmount-结账抹零
+// 获取最终应收金额（不含手续费）。等于Amount-积分抵扣金额-优惠券抵扣金额-结账抹零
 func (model *SaleOrder) GetFinalNoFeeAmount() float64 {
-	amount := decimal.NewFromFloat(model.GetPointsExchangeAmount()).Sub(decimal.NewFromFloat(model.CalcCheckOutZeroFee())).Round(2).InexactFloat64() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
+	amount := decimal.NewFromFloat(model.GetAmountValue()).Sub(decimal.NewFromFloat(model.CalcCheckOutZeroFee())).Round(2).InexactFloat64() // 计算积分的基数，值为本订单的应收金额(已减积分抵扣金额)
 	return amount
 }
 
@@ -310,8 +383,8 @@ func (model *SaleOrder) GetCustomerList() []resp.Product {
 				MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 				TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 			},
-			Num:           orderBuffetCustomer.Num, // 这种类型顾客多少个，如老人这个类型2人
-			FinishedNum:   orderBuffetCustomer.Num,
+			Num:           float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
+			FinishedNum:   float64(orderBuffetCustomer.Num),
 			SalePrice:     orderBuffetCustomer.GetOriginPrice(),
 			DiscountPrice: orderBuffetCustomer.GetDiscountPrice(),
 			TotalPrice:    orderBuffetCustomer.TotalPrice,
@@ -359,8 +432,8 @@ func (model *SaleOrder) GetDelayProductList() []resp.Product {
 				TR:   delayProduct.Name,
 			},
 			LocaleAttributeName: dto.LocaleResponse{},
-			Num:                 delayProduct.Num, // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
-			FinishedNum:         delayProduct.Num,
+			Num:                 float64(delayProduct.Num), // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
+			FinishedNum:         float64(delayProduct.Num),
 			SalePrice:           delayProduct.Price,
 			DiscountPrice:       delayProduct.Price, // 加钟商品没有优惠价
 			Status:              1,                  // 添加后标记送厨状态，不可修改
@@ -415,6 +488,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
+			NumType:             saleOrderProduct.NumType,
 			SalePrice:           saleOrderProduct.GetSalePrice(),
 			DiscountPrice:       saleOrderProduct.GetProductFinalSalePrice(),
 			Status:              saleOrderProduct.StatusValue(),
@@ -549,7 +623,7 @@ func (model *SaleOrder) NewReverseSettleExchangeMemberPointLog(points float64) *
 }
 
 // 创建退货单
-func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]uint, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
+func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]float64, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
 	returnOrderUuid, _ := utils.GetID()
 
 	// 如果退款类型为整单退款，则退款金额=订单最终应收金额-已退款金额
@@ -564,13 +638,7 @@ func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProd
 			continue
 		}
 		// 商品总金额=退货商品数量*商品最终单价
-		// 商品金额=退货商品数量*商品最终单价
-		// 未含税时，商品总金额=商品金额 + 商品税费 + 服务费 + 服务费税费
-		// 已含税时，商品总金额=商品金额 + 服务费 + 服务费税费
-		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromInt(int64(num)))
-		// 如果商品未含税，则要再加上商品税费
-		// price := saleOrderProduct.TotalPrice + saleOrderProduct.TaxFee + saleOrderProduct.ServiceTaxFee
-		productTotalAmount = decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromInt(int64(num)))
+		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromFloat(num))
 		returnOrderProducts = append(returnOrderProducts, &ReturnOrderProduct{
 			SaleOrderUuid:        model.Uuid,
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
@@ -581,7 +649,7 @@ func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProd
 			ProductPrice:         saleOrderProduct.Price,
 			TaxRate:              saleOrderProduct.TaxRate,
 			Num:                  num,
-			ProductTotalAmount:   productTotalAmount.InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
+			ProductTotalAmount:   productTotalAmount.Round(2).InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
 		})
 		returnAmount = returnAmount.Add(productTotalAmount)
 	}
@@ -593,24 +661,18 @@ func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProd
 			continue
 		}
 		// 商品总金额=退货商品数量*商品最终单价
-		// 商品金额=退货商品数量*商品最终单价
-		// 未含税时，商品总金额=商品金额 + 商品税费 + 服务费 + 服务费税费
-		// 已含税时，商品总金额=商品金额 + 服务费 + 服务费税费
-		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromInt(int64(num)))
-		// 如果商品未含税，则要再加上商品税费
-		// price := saleOrderProduct.TotalPrice + saleOrderProduct.TaxFee + saleOrderProduct.ServiceTaxFee
-		productTotalAmount = decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromInt(int64(num)))
+		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.TotalPrice).Mul(decimal.NewFromFloat(num))
 		returnOrderProducts = append(returnOrderProducts, &ReturnOrderProduct{
 			SaleOrderUuid:        model.Uuid,
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
 			ReturnOrderUuid:      returnOrderUuid,
-			ProductType:          constant.ReturnOrderProductTypeSaleOrderProduct,
+			ProductType:          constant.ReturnOrderProductTypeSaleOrderBuffetCustomer,
 			ProductPackageUuid:   saleOrderProduct.BuffetPackageUuid,
 			ProductName:          saleOrderProduct.Name,
 			ProductPrice:         saleOrderProduct.Price,
 			TaxRate:              saleOrderProduct.TaxRate,
 			Num:                  num,
-			ProductTotalAmount:   productTotalAmount.InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
+			ProductTotalAmount:   productTotalAmount.Round(2).InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
 		})
 		returnAmount = returnAmount.Add(productTotalAmount)
 	}
@@ -622,23 +684,17 @@ func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProd
 			continue
 		}
 		// 商品总金额=退货商品数量*商品最终单价
-		// 商品金额=退货商品数量*商品最终单价
-		// 未含税时，商品总金额=商品金额 + 商品税费 + 服务费 + 服务费税费
-		// 已含税时，商品总金额=商品金额 + 服务费 + 服务费税费
-		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromInt(int64(num)))
-		// 如果商品未含税，则要再加上商品税费
-		// price := saleOrderProduct.TotalPrice + saleOrderProduct.TaxFee + saleOrderProduct.ServiceTaxFee
-		productTotalAmount = decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromInt(int64(num)))
+		productTotalAmount := decimal.NewFromFloat(saleOrderProduct.Price).Mul(decimal.NewFromFloat(num))
 		returnOrderProducts = append(returnOrderProducts, &ReturnOrderProduct{
 			SaleOrderUuid:        model.Uuid,
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
 			ReturnOrderUuid:      returnOrderUuid,
-			ProductType:          constant.ReturnOrderProductTypeSaleOrderProduct,
+			ProductType:          constant.ReturnOrderProductTypeBuffetAddTimeProduct,
 			ProductPackageUuid:   saleOrderProduct.BuffetDelayUuid,
 			ProductName:          saleOrderProduct.Name,
 			ProductPrice:         saleOrderProduct.Price,
 			Num:                  num,
-			ProductTotalAmount:   productTotalAmount.InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
+			ProductTotalAmount:   productTotalAmount.Round(2).InexactFloat64(), // 商品总金额=退货商品数量*商品最终单价
 		})
 		returnAmount = returnAmount.Add(productTotalAmount)
 	}

@@ -17,7 +17,7 @@ type GiftSaleOrderProductPayload struct {
 	ProductName    dto.LocaleResponse `json:"product_name"`     // 商品名称
 	ProductAttr    dto.LocaleResponse `json:"product_attr"`     // 商品属性
 	ProductPrice   float64            `json:"product_price"`    // 商品价格
-	TotalNum       uint               `json:"total_num"`        // 总数量
+	TotalNum       float64            `json:"total_num"`        // 总数量
 	TotalPrice     float64            `json:"total_price"`      // 总价格
 	FreeTagIds     []uint64           `json:"free_tag_ids"`     // 赠菜原因ID
 	FreeRemark     string             `json:"free_remark"`      // 赠菜自定义原因

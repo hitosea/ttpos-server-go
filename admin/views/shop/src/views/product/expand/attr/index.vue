@@ -88,9 +88,15 @@
       <Edit v-if="open_edit" :open_edit="open_edit" :editform="model" @closeDialog="closeDialogFunc($event, 'edit')"> </Edit>
 
       <!-- 商品选择器 -->
-      <ProductSelector v-if="openProductSelector" :open="openProductSelector" @close="handleProductSelectorClose" selectorType="all" :selectedProductIds="model?.product_ids ?? []">
+      <ProductSelector
+        maxCount="10"
+        v-if="openProductSelector"
+        :open="openProductSelector"
+        @close="handleProductSelectorClose"
+        selectorType="all"
+        :selectedProductIds="model?.product_ids ?? []"
+      >
       </ProductSelector>
-
       <GroupManager v-if="openGroupManager" :open="openGroupManager" @close="handleGroupManagerClose" />
     </div>
   </div>

@@ -3,18 +3,9 @@
     <div class="common-form">{{ $t('规则设置') }}</div>
     <el-form-item for="no_click" :label="$t('奖励条件')" :rules="[{ required: true, message: $t('请输入奖励条件') }]" prop="reward_condition_amount">
       <el-radio-group v-model="rewardCondition" :disabled="status == 1">
-        <el-radio :label="0"
+        <el-radio :label="0" class="flex-row"
           >{{ $t('推荐会员入会并消费') }}
-          <numInput
-            class="w-267"
-            width="m-full"
-            :min="0"
-            :precision="2"
-            v-model:valueData="form.reward_condition_amount"
-            :value="form.reward_condition_amount"
-            :placeholder="$t('请输入')"
-            :disabled="status == 1"
-          ></numInput
+          <numInput class="w-267" width="m-full" :min="0" :precision="2" v-model="form.reward_condition_amount" :placeholder="$t('请输入')" :disabled="status == 1"></numInput
         ></el-radio>
       </el-radio-group>
 
@@ -73,11 +64,10 @@
 <style lang="scss" scoped>
   .w-267 {
     width: 267px;
-    margin-left: 40px;
   }
   .max-w140 {
     max-width: 140px;
-    margin-left: 40px;
+    margin-left: 8px;
   }
   .text-gray9 {
     display: inline-block;
@@ -97,6 +87,16 @@
     width: 100%;
     .el-radio__input.is-checked + .el-radio__label {
       color: #100a05;
+    }
+  }
+  .flex-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    :deep(.el-radio__label) {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
   }
 </style>

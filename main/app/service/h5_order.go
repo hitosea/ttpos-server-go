@@ -11,7 +11,6 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/eventbus/event"
 
 	"github.com/shopspring/decimal"
 )
@@ -25,7 +24,6 @@ type IH5OrderSrv interface {
 }
 
 type h5OrderSrv struct {
-	bus      *event.SystemEventBus
 	dbm      *database.DBManager
 	orderSrv IOrderSrv
 }
@@ -88,7 +86,7 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 	}
 	items := make([]resp.H5OrderItem, 0, len(orders))
 	for _, order := range orders {
-		var num uint
+		var num float64
 		var price float64
 		if order.Status == constant.H5OrderStatusOrder { // 如果订单状态是1（待处理），读取关联的销售订单商品
 			for _, product := range order.SaleOrderProducts {
@@ -104,7 +102,7 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 					return nil, errors.WithMessage(errors.New("获取h5订单详情失败"), err.Error())
 				}
 				for _, product := range products {
-					totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromInt(int64(product.Num))).Truncate(2).InexactFloat64()
+					totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromFloat(product.Num)).Truncate(2).InexactFloat64()
 					amount = amount.Add(decimal.NewFromFloat(totalPrice))
 				}
 				price += amount.InexactFloat64()
@@ -112,7 +110,7 @@ func (s *h5OrderSrv) GetH5OrderList(ctx context.Context, listReq req.H5OrderList
 		} else if slices.Contains([]uint{constant.H5OrderStatusAccepted, constant.H5OrderStatusRejected}, order.Status) { // 如果订单状态是2（已接单），3（已拒单），读取关联的扫码订单商品
 			for _, product := range order.H5OrderProducts {
 				num = num + product.Num
-				totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromInt(int64(product.Num))).Truncate(2).InexactFloat64()
+				totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromFloat(product.Num)).Truncate(2).InexactFloat64()
 				price = price + totalPrice
 			}
 		}
@@ -190,7 +188,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (
 			}
 			for _, product := range products {
 				if product.IsAccepted() {
-					totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromInt(int64(product.Num))).Truncate(2).InexactFloat64()
+					totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromFloat(product.Num)).Truncate(2).InexactFloat64()
 					acceptedProducts = append(acceptedProducts, resp.ProductItem{
 						LocaleName: product.SaleOrderProduct.MultiLanguageName.GetNames(),
 						Num:        product.Num,
@@ -202,7 +200,7 @@ func (s *h5OrderSrv) GetH5OrderDetail(ctx context.Context, h5OrderUuid uint64) (
 		}
 	} else { // 已接单、拒单
 		for _, product := range h5Order.H5OrderProducts {
-			totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromInt(int64(product.Num))).Truncate(2).InexactFloat64()
+			totalPrice := decimal.NewFromFloat(product.Price).Mul(decimal.NewFromFloat(product.Num)).Truncate(2).InexactFloat64()
 			newProducts = append(newProducts, resp.ProductItem{
 				LocaleName: product.SaleOrderProduct.MultiLanguageName.GetNames(),
 				Num:        product.Num,

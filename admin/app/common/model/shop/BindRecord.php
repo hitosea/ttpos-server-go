@@ -367,4 +367,32 @@ class BindRecord extends BaseModel
     {
         return self::withoutGlobalScope()->where('key', $deviceId)->value('brand') ?: '';
     }
+
+    /**
+     * 获取收银机列表
+     */
+    public static function getCashierList()
+    {
+        return  self::alias('a')->where('source', self::SOURCE_CASHIER)
+            // 云部署方式 - 不显示网页端
+            // NOTE 无网页版本-先注释
+            // ->when(env('IS_CLOUD_DEPLOY', false), function ($q) {
+            //     $q->where('platform', '<>', 0);
+            // })
+            ->field("a.device_id as cashier_key")
+            ->field("CONCAT(if(remark='', '-', remark), ' (', a.device_id, ')') cashier_name")
+            ->order('id')
+            ->where("delete_time", 0) // 加了软删除，需要这个条件
+            ->select()
+            ->toArray();
+    }
+
+    /**
+     * 设置主收银机 - 先清空所有主收银机
+     */
+    public function setMainCashier($uuid)
+    {
+        $this->where('source', self::SOURCE_CASHIER)->where('is_main', 1)->update(['is_main' => 0]);
+        return $this->where('source', self::SOURCE_CASHIER)->where('uuid', $uuid)->update(['is_main' => 1]);
+    }
 }

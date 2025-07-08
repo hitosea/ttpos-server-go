@@ -12,7 +12,7 @@ import (
 type ProductFlavor struct {
 	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'名称'"`
-	MultiLanguageNameUuid uint   `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 }
@@ -22,7 +22,7 @@ type ProductSauce struct {
 	BaseModel
 	Name                  string  `gorm:"default:'';column:name;comment:'名称'"`
 	Price                 float64 `gorm:"default:0;column:price;comment:'价格'"`
-	MultiLanguageNameUuid uint    `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	MultiLanguageNameUuid uint64  `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
 
 	MultiLanguageName MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	SauceMaterials    []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`             // 小料的组成材料
@@ -115,6 +115,7 @@ type ProductPackage struct {
 	ImageName             string `gorm:"default:'';column:image_name;comment:'图片名称'"`
 	ImageFileUuid         uint64 `gorm:"default:0;column:image_file_uuid;comment:'图片UUID'"`
 	DeductStockType       uint   `gorm:"default:0;column:deduct_stock_type;comment:'库存计算方法, 0-下单减库存 1-付款减库存'"`
+	NumType               uint   `gorm:"default:0;column:num_type;comment:'数量计算方法, 0-整数 1-小数'"`
 	UnitUuid              uint64 `gorm:"default:0;column:unit_uuid;comment:'单位UUID'"`
 	DineTaxUuid           uint64 `gorm:"default:0;column:dine_tax_uuid;comment:'堂食税UUID'"`
 	CategoryUuid          uint64 `gorm:"default:0;column:category_uuid;comment:'类别UUID'"`
@@ -128,6 +129,7 @@ type ProductPackage struct {
 	IsShowKitchen         uint   `gorm:"default:0;column:is_show_kitchen;comment:'是否在厨房设备显示, 0-否 1-是'"`
 	IsShowAssistant       uint   `gorm:"default:0;column:is_show_assistant;comment:'是否在助手设备显示, 0-否 1-是'"`
 	IsShowH5              uint   `gorm:"default:0;column:is_show_h5;comment:'是否在H5设备显示, 0-否 1-是'"`
+	IsShowDelivery        uint   `gorm:"default:0;column:is_show_delivery;comment:'是否在外送显示, 0-否 1-是'"`
 	Sort                  uint   `gorm:"default:0;column:sort;comment:'排序'"`
 	LimitNum              uint   `gorm:"default:0;column:limit_num;comment:'限购数量'"`
 	Describe              string `gorm:"default:'';column:describe;comment:'卖点描述'"`
@@ -306,19 +308,43 @@ type RelatedMaterial struct {
 	RelatedUuid  uint64  `gorm:"column:related_uuid;type:bigint(20) unsigned;default:0;comment:'物料清单BOM的ID'"`
 	MaterialUuid uint64  `gorm:"column:material_uuid;type:bigint(20) unsigned;default:0;comment:'原料ID'"`
 	Num          float64 `gorm:"column:num;type:decimal(12,4);default:0;comment:'材料用量,可小数'"`
+
+	Material *Material `gorm:"foreignKey:material_uuid;references:uuid" json:"material"`
 }
 
 func (model *RelatedMaterial) SetNil() {
+	model.Material = nil
 }
 
 // GetDecreaseNum 获取减少的库存数量. 减少的库存数量 = 材料用量 * 商品数量
-func (model *RelatedMaterial) GetDecreaseNum(productNum uint) float64 {
-	return decimal.NewFromFloat(model.Num).Mul(decimal.NewFromInt(int64(productNum))).InexactFloat64()
+func (model *RelatedMaterial) GetDecreaseNum(productNum float64) float64 {
+	return decimal.NewFromFloat(model.Num).Mul(decimal.NewFromFloat(productNum)).Round(2).InexactFloat64()
 }
 
 // IsStockShortage 判断库存是否不足
-func (model *ProductBom) IsStockShortage(productNum uint) bool {
-	return model.GetStockNum() < float64(productNum)
+func (model *ProductBom) IsStockShortage(productNum float64) bool {
+	return model.GetStockNum() < productNum
+}
+
+// IsStockShortageWithMaterial 判断库存是否不足,检查材料库存
+func (model *ProductBom) IsStockShortageWithMaterial(productNum float64) bool {
+	// 如果是关联材料的规格，则检查关联材料的库存
+	if model.IsFlavor() {
+		for _, material := range model.FlavorMaterials {
+			if material.Material.StockNum < material.GetDecreaseNum(productNum) {
+				return true
+			}
+		}
+	}
+	// 如果是关联材料的小料，则检查关联材料的库存
+	if model.IsSauce() {
+		for _, material := range model.ProductSauce.SauceMaterials {
+			if material.Material.StockNum < material.GetDecreaseNum(productNum) {
+				return true
+			}
+		}
+	}
+	return model.GetStockNum() < productNum
 }
 
 // IsPriceChanged 判断商品价格是否变动

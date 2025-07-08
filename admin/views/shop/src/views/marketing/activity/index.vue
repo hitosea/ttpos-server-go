@@ -2,7 +2,7 @@
   <!--
       	描述：营销活动管理
       -->
-  <div class="common-seach-wrap">
+  <div class="common-search-wrap">
     <!--活动管理-->
     <manage v-if="activeName == 'manage'"></manage>
   </div>

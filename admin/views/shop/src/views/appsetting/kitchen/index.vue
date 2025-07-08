@@ -4,30 +4,30 @@
       <el-form size="small" ref="form" :model="form" label-position="top">
         <el-form-item for="no_click" :label="$t('厨显功能：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_open">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
           <div class="tips">{{ $t('关闭后将不在平板/扫码H5/点餐助手体现商品制作状态，且不将商品显示在厨显设备（不影响送厨打印）') }}</div>
         </el-form-item>
 
         <el-form-item for="no_click" :label="$t('来菜提醒：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_come_dish">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
 
         <el-form-item for="no_click" :label="$t('顾客呼叫提醒：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_call_service">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
 
         <el-form-item for="no_click" :label="$t('等待时长颜色：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_wait_color">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item for="no_click" v-if="form.is_wait_color == 1" label="" :rules="[{ required: true, message: '' }]">
@@ -54,7 +54,7 @@
 
         <el-form-item for="no_click" :label="$t('常用语言')" prop="language" :rules="[{ required: true, message: $t('请选择常用语言') }]">
           <el-checkbox-group v-model="form.language">
-            <el-checkbox v-for="item in languageList" v-show="item.key" :key="item.key" :label="item.key" :disabled="form.language.length == 1 && form.language.includes(item.key)">
+            <el-checkbox v-for="item in languageList" v-show="item.key" :key="item.key" :value="item.key" :disabled="form.language.length == 1 && form.language.includes(item.key)">
               {{ item.value }}
             </el-checkbox>
           </el-checkbox-group>

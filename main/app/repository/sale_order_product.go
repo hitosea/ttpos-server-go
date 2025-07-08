@@ -10,12 +10,12 @@ import (
 )
 
 type ISaleOrderProductRepo interface {
+	ISaleOrderProductQueryRepo
 	CreateSaleOrderProduct(model *model.SaleOrderProduct) (uint64, error)
 	CreateSaleOrderProductAndBomAndAttribute(model model.SaleOrderProduct) (uint64, error)
 	UpdateSaleOrderProduct(model *model.SaleOrderProduct) error
 	UpdateSaleOrderProductByMap(uuid uint64, vars map[string]any) error
 	UpdateSaleOrderProductList(models []*model.SaleOrderProduct) error
-	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
 	UpdateSaleOrderProductRecord(model model.SaleOrderProduct) error
 	UpdateOrCreateSaleOrderProductRecord(obj model.SaleOrderProduct) error
 	CreateSaleOrderProductReasons(saleOrderUuid uint64, saleOrderProductUuid uint64, source string, returnFoodReasons [][2]uint64) error
@@ -25,12 +25,36 @@ type ISaleOrderProductRepo interface {
 	Update(data map[string]interface{}, opts ...DBOption) error        // 更新订单商品
 }
 
+// ISaleOrderProductQueryRepo 销售订单商品查询
+
+type ISaleOrderProductQueryRepo interface {
+	GetSaleOrderProductByUuid(uuid uint64) (*model.SaleOrderProduct, error)
+	GetProductPackageDetail(saleBillUuid uint64, saleOrderUuid uint64, productPackageUuid uint64) ([]*model.SaleOrderProduct, error) // 获取商品选购详情
+	GetSaleOrderProducts(opts ...DBOption) ([]*model.SaleOrderProduct, error)                                                        // 根据销售订单uuid获取销售订单商品
+}
+
 type saleOrderProductRepo struct {
 	db *gorm.DB
 }
 
 func NewSaleOrderProductRepo(db *gorm.DB) ISaleOrderProductRepo {
 	return &saleOrderProductRepo{db: db}
+}
+
+func (r *saleOrderProductRepo) GetSaleOrderProducts(opts ...DBOption) ([]*model.SaleOrderProduct, error) {
+	var saleOrderProducts []*model.SaleOrderProduct
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	result := db.Find(&saleOrderProducts)
+	if result.Error != nil {
+		return saleOrderProducts, result.Error
+	}
+
+	return saleOrderProducts, nil
 }
 
 // CreateSaleOrderProductAndBomAndAttribute 创建销售订单商品及BOM、属性
@@ -224,4 +248,27 @@ func (r *saleOrderProductRepo) Update(data map[string]interface{}, opts ...DBOpt
 	err := db.Updates(data).Error
 
 	return errors.WithMessage(err)
+}
+
+func (r *saleOrderProductRepo) GetProductPackageDetail(saleBillUuid uint64, saleOrderUuid uint64, productPackageUuid uint64) ([]*model.SaleOrderProduct, error) {
+	models, err := r.GetSaleOrderProducts(
+		CommonRepo.WhereBySaleBillUuid(saleBillUuid),
+		CommonRepo.WhereBySaleOrderUuid(saleOrderUuid),
+		CommonRepo.WhereByProductPackageUuid(productPackageUuid),
+		CommonRepo.WhereByH5OrderUuid(0), // 未下单的h5商品
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "SaleOrderProductAttributes",
+			},
+			WithPreload{
+				Query: "SaleOrderProductBoms",
+			},
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return models, nil
 }

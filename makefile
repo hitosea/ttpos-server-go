@@ -84,3 +84,35 @@ translate:
 # 运行数据库迁移
 migrate-data:
 	cd main && go run ./main.go migrate-data $(ARGS)
+
+# 更新版本号
+update-version:
+	@echo "更新版本号..."
+	@CURRENT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
+	if [ -z "$(VERSION)" ] && [ -z "$(COMMIT_SHA)" ] && [ -z "$(BUILD_TIME)" ]; then \
+		echo "请提供至少一个参数: VERSION 或 BUILD_TIME"; \
+		echo "示例: make update-version VERSION=2.3.1 BUILD_TIME=2023-10-15"; \
+		echo "注意: COMMIT_SHA 将自动使用当前最新的Git提交哈希值"; \
+		echo "快速更新版本: make bump-version"; \
+		cd main && go run ./main.go version; \
+	else \
+		cd main && go run ./main.go version \
+		$(if $(VERSION),--version=$(VERSION),) \
+		--commit=$$CURRENT_COMMIT \
+		$(if $(BUILD_TIME),--build-time=$(BUILD_TIME),); \
+	fi
+
+# 快速增加版本号
+bump-version:
+	@echo "快速增加版本号..."
+	@CURRENT_VERSION=$$(grep 'Version.*=.*"' main/version/version.go | sed 's/.*"\(.*\)".*/\1/'); \
+	MAJOR=$$(echo $$CURRENT_VERSION | cut -d. -f1); \
+	MINOR=$$(echo $$CURRENT_VERSION | cut -d. -f2); \
+	PATCH=$$(echo $$CURRENT_VERSION | cut -d. -f3); \
+	NEW_PATCH=$$((PATCH + 1)); \
+	NEW_VERSION="$$MAJOR.$$MINOR.$$NEW_PATCH"; \
+	CURRENT_DATE=$$(date +%Y-%m-%d); \
+	CURRENT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
+	echo "当前版本: $$CURRENT_VERSION, 新版本: $$NEW_VERSION"; \
+	cd main && go run ./main.go version --version=$$NEW_VERSION --commit=$$CURRENT_COMMIT --build-time=$$CURRENT_DATE
+

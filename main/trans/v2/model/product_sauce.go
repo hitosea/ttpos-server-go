@@ -68,7 +68,7 @@ func NewProductSauce(feed *v1.Feed) (*model.ProductSauce, error) {
 		},
 		Name:                  languageName.ToJson(),
 		Price:                 feed.Price,
-		MultiLanguageNameUuid: uint(languageName.Uuid),
+		MultiLanguageNameUuid: languageName.Uuid,
 		MultiLanguageName:     *languageName,
 		SauceMaterials:        sauceMaterials,
 	}

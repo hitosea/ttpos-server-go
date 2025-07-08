@@ -2,7 +2,9 @@ package repository
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 	"ttpos-server-go/app/constant"
 
 	"gorm.io/gorm"
@@ -15,6 +17,21 @@ type DBOption func(*gorm.DB) *gorm.DB
 type WithPreload struct {
 	Query string
 	Args  []interface{}
+}
+
+// getCompanyUuid 从数据库名称中提取公司UUID
+func GetCompanyUuid(db *gorm.DB) uint64 {
+	var dbName string
+	db.Raw("SELECT DATABASE()").Scan(&dbName)
+	if len(dbName) > 4 && strings.HasPrefix(dbName, "shop") {
+		uuidStr := strings.TrimPrefix(dbName, "shop")
+		uuid, err := strconv.ParseUint(uuidStr, 10, 64)
+		if err == nil {
+			return uuid
+		}
+	}
+	// NOTE sqlite - 离线版本要重新考虑
+	return 0
 }
 
 // NotDeleted 筛选未被删除的
@@ -42,8 +59,11 @@ type ICommonRepo interface {
 	WhereBySaleBillUuid(uuid uint64) DBOption                           // 根据销售单UUID查询
 	WhereByAssociatedOrderUuid(uuid uint64) DBOption                    // 根据关联订单UUID查询
 	WhereBySaleOrderUuid(uuid uint64) DBOption                          // 根据销售订单UUID查询
+	WhereByH5OrderUuid(uuid uint64) DBOption                            // 根据h5订单UUID查询
+	WhereByMemberUuid(uuid uint64) DBOption                             // 根据会员UUID查询
 	WhereByNotRevoked() DBOption                                        // 未撤销的出库记录
 	WhereByStatus(status uint) DBOption                                 // 根据状态查询
+	WhereByRequirement(requirement string) DBOption                     // 根据requirement查询
 	WhereByIsShowCashier(isShowCashier uint) DBOption                   // 根据是否显示收银机查询
 	WhereByIsShowAssistant(isShow uint) DBOption                        // 根据是否显示点餐助手端查询
 	WhereByIsShowTablet(isShow uint) DBOption                           // 根据是否显示平板端查询
@@ -93,6 +113,9 @@ type ICommonRepo interface {
 	IncrementNum(num uint) clause.Expr                                  // 增加商品数量
 	DecrementNum(num uint) clause.Expr                                  // 减少商品数量
 	WhereByProductIsAccept() DBOption                                   // 根据商品是否接单查询
+	WhereByCountGtZero() DBOption                                       // 根据count大于零查询
+	WhereByValidTime() DBOption                                         // 是否在有效期内
+	WhereByStartTimeEndTime() DBOption                                  // 是否在有效期内
 	DBOption(opt DBOption) func(*gorm.DB) *gorm.DB                      // 将DBOption转为func(*gorm.DB) *gorm.DB
 	Transaction(db *gorm.DB, fn func(tx *gorm.DB) error) error          // 事务
 }
@@ -180,6 +203,13 @@ func (r *commonRepo) WhereByIsShowCashier(isShowCashier uint) DBOption {
 func (r *commonRepo) WhereByIsShowAssistant(isShow uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_show_assistant = ?", isShow)
+	}
+}
+
+// WhereByRequirement 根据requirement查询
+func (r *commonRepo) WhereByRequirement(requirement string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("requirement = ?", requirement)
 	}
 }
 
@@ -412,6 +442,26 @@ func (r *commonRepo) WhereByProductIsAccept() DBOption {
 	}
 }
 
+func (r *commonRepo) WhereByCountGtZero() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("count > 0")
+	}
+}
+
+func (r *commonRepo) WhereByValidTime() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		nowTimestamp := time.Now().Unix()
+		return db.Where("valid_start_time <= ? AND valid_end_time >= ?", nowTimestamp, nowTimestamp)
+	}
+}
+
+func (r *commonRepo) WhereByStartTimeEndTime() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		nowTimestamp := time.Now().Unix()
+		return db.Where("start_time <= ? AND end_time >= ?", nowTimestamp, nowTimestamp)
+	}
+}
+
 // SortWithID 根据ID排序
 func (r *commonRepo) SortWithID(order string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -466,6 +516,20 @@ func (r *commonRepo) Preload(preloads ...WithPreload) DBOption {
 func (r *commonRepo) WhereBySaleOrderUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("sale_order_uuid = ?", uuid)
+	}
+}
+
+// WhereByH5OrderUuid 根据h5订单UUID查询
+func (r *commonRepo) WhereByH5OrderUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("h5_order_uuid = ?", uuid)
+	}
+}
+
+// WhereByMemberUuid 根据会员UUID查询
+func (r *commonRepo) WhereByMemberUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("member_uuid = ?", uuid)
 	}
 }
 

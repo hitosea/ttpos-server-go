@@ -59,8 +59,8 @@
 
       <el-form-item for="no_click" :label="$t('限制用餐时间')" prop="is_time_limit" :rules="[{ required: true, message: '' }]">
         <el-radio-group v-model="form.is_time_limit">
-          <el-radio :label="0">{{ $t('不限制') }}</el-radio>
-          <el-radio :label="1">{{ $t('限制') }}</el-radio>
+          <el-radio :value="0">{{ $t('不限制') }}</el-radio>
+          <el-radio :value="1">{{ $t('限制') }}</el-radio>
         </el-radio-group>
       </el-form-item>
 
@@ -71,21 +71,21 @@
 
       <el-form-item for="no_click" :label="$t('状态')" prop="status" :rules="[{ required: true, message: '' }]">
         <el-radio-group v-model="form.status">
-          <el-radio :label="1">{{ $t('开启') }}</el-radio>
-          <el-radio :label="0">{{ $t('关闭') }}</el-radio>
+          <el-radio :value="1">{{ $t('开启') }}</el-radio>
+          <el-radio :value="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
       </el-form-item>
 
       <el-form-item for="no_click" :label="$t('组合')" prop="is_comb" :rules="[{ required: true, message: '' }]">
         <el-radio-group v-model="form.is_comb">
-          <el-radio :label="1">{{ $t('开启') }}</el-radio>
-          <el-radio :label="0">{{ $t('关闭') }}</el-radio>
+          <el-radio :value="1">{{ $t('开启') }}</el-radio>
+          <el-radio :value="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item v-if="this.is_open_tablet || this.is_open_scan" for="no_click" :label="nameReturn()" :rules="[{ required: true, message: '' }]">
         <el-radio-group v-model="form.is_remain_continue">
-          <el-radio :label="1">{{ $t('开') }}</el-radio>
-          <el-radio :label="0">{{ $t('关') }}</el-radio>
+          <el-radio :value="1">{{ $t('开') }}</el-radio>
+          <el-radio :value="0">{{ $t('关') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <template v-if="form.is_remain_continue == '1'">
@@ -202,10 +202,10 @@
                 <autoTips :content="item.product_name_text">{{ item.product_name_text }}</autoTips>
               </div>
               <div class="select-check">
-                <el-checkbox v-model="item.is_show_cashier" :true-label="1" :false-label="2" :label="$t('收银机')" size="large" />
-                <el-checkbox v-if="is_open_tablet" v-model="item.is_show_tablet" :true-label="1" :false-label="2" :label="$t('平板')" size="large" />
-                <el-checkbox v-if="is_open_kitchen_kds" v-model="item.is_show_kitchen" :true-label="1" :false-label="2" :label="$t('厨显')" size="large" />
-                <el-checkbox v-if="is_open_assistant" v-model="item.is_show_assistant" :true-label="1" :false-label="2" :label="$t('点餐助手')" size="large" />
+                <el-checkbox v-model="item.is_show_cashier" :true-value="1" :false-value="2" :label="$t('收银机')" size="large" />
+                <el-checkbox v-if="is_open_tablet" v-model="item.is_show_tablet" :true-value="1" :false-value="2" :label="$t('平板')" size="large" />
+                <el-checkbox v-if="is_open_kitchen_kds" v-model="item.is_show_kitchen" :true-value="1" :false-value="2" :label="$t('厨显')" size="large" />
+                <el-checkbox v-if="is_open_assistant" v-model="item.is_show_assistant" :true-value="1" :false-value="2" :label="$t('点餐助手')" size="large" />
               </div>
               <el-icon class="select-icon" @click="deleteOne(index, item.product_id)">
                 <CircleCloseFilled />
@@ -230,8 +230,8 @@
         ]"
       >
         <el-radio-group v-model="form.buy_limit_status">
-          <el-radio :label="1">{{ $t('开启') }}</el-radio>
-          <el-radio :label="0">{{ $t('关闭') }}</el-radio>
+          <el-radio :value="1">{{ $t('开启') }}</el-radio>
+          <el-radio :value="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
         <div class="limit-list" v-if="form.buy_limit_status == 1">
           <el-button type="primary" @click="selectList('limit')" :disabled="!limit_ids">{{ $t('选中商品') }}</el-button>

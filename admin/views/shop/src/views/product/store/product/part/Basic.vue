@@ -9,8 +9,8 @@
     <div class="common-form">{{ $t('基本信息') }}</div>
     <el-form-item :label="$t('类型：')" v-if="baseSale == '1'">
       <el-radio-group v-model="form.model.type" :disabled="disableChangeType" @change="changeType">
-        <el-radio :label="10">{{ $t('成品') }}</el-radio>
-        <el-radio :label="20">{{ $t('材料') }}</el-radio>
+        <el-radio :value="10">{{ $t('成品') }}</el-radio>
+        <el-radio :value="20">{{ $t('材料') }}</el-radio>
       </el-radio-group>
     </el-form-item>
 
@@ -38,16 +38,15 @@
 
     <el-form-item for="no_click" :label="$t('商品图片：')" prop="model.image">
       <div class="draggable-list">
-        <draggable class="wrapper" v-model="form.model.image">
-          <transition-group>
-            <div class="item" v-for="(item, index) in form.model.image" :key="item.file_path">
-              <img v-img-url="item.file_path" />
-              <a href="javascript:void(0);" class="delete-btn" @click.stop="deleteImg(index)"
-                ><el-icon> <Close /> </el-icon
-              ></a>
-            </div>
-          </transition-group>
-        </draggable>
+        <transition-group>
+          <div class="item" v-for="(item, index) in form.model.image" :key="item.file_path">
+            <img v-img-url="item.file_path" />
+            <a href="javascript:void(0);" class="delete-btn" @click.stop="deleteImg(index)"
+              ><el-icon> <Close /> </el-icon
+            ></a>
+          </div>
+        </transition-group>
+
         <div v-if="form.model.image.length == 0" class="item img-select" @click="openProductUpload">
           <el-icon>
             <Plus />

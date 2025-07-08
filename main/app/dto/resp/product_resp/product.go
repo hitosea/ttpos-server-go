@@ -8,6 +8,7 @@ type Product struct {
 	LocaleName          dto.LocaleResponse        `json:"locale_name"`           // 商品名称
 	Image               string                    `json:"image"`                 // 商品图片
 	Unit                dto.LocaleResponse        `json:"unit"`                  // 商品单位
+	NumType             uint                      `json:"num_type"`              // 商品数量计算方法 0-整数 1-小数
 	Price               float64                   `json:"price"`                 // 商品价格
 	CategoryUuid        uint64                    `json:"category_uuid"`         // 商品类别UUID
 	FirstCategoryUuid   uint64                    `json:"first_category_uuid"`   // 商品一级类别UUID

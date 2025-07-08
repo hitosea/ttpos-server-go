@@ -16,7 +16,7 @@
               ]"
             >
             </flieUpload>
-            <el-table size="small" :data="form.carousel" border style="width: 100%" v-loading="loading">
+            <el-table size="small" :data="form.carousel" border v-loading="loading">
               <el-table-column prop="real_name" :label="$t('图片名称')"></el-table-column>
               <el-table-column prop="sort" :label="$t('排序')">
                 <template #default="scope">
@@ -60,16 +60,16 @@
           <el-checkbox
             v-model="form.order_method.is_cashier_order"
             :disabled="form.order_method.is_table_order == '0'"
-            true-label="1"
-            false-label="0"
+            true-value="1"
+            false-value="0"
             :label="$t('点餐')"
             size="large"
           ></el-checkbox>
           <el-checkbox
             v-model="form.order_method.is_table_order"
             :disabled="form.order_method.is_cashier_order == '0'"
-            true-label="1"
-            false-label="0"
+            true-value="1"
+            false-value="0"
             :label="$t('桌台')"
             size="large"
           ></el-checkbox>
@@ -84,8 +84,8 @@
 
         <el-form-item for="no_click" v-if="is_open_buffet" :label="$t('自助餐剩余时长颜色：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_remain_color">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
 
@@ -113,8 +113,8 @@
 
         <el-form-item for="no_click" :label="$t('钱箱密码')" prop="is_open_cashier_password" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_open_cashier_password">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
 
@@ -125,8 +125,8 @@
 
         <el-form-item for="no_click" :label="$t('自动锁屏')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_auto_lock_screen">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <template v-if="form.is_auto_lock_screen == '1'">
@@ -145,7 +145,7 @@
 
         <el-form-item for="no_click" :label="$t('常用语言')" prop="language" :rules="[{ required: true, message: $t('请选择常用语言') }]">
           <el-checkbox-group v-model="form.language">
-            <el-checkbox v-for="item in languageList" v-show="item.key" :key="item.key" :label="item.key" :disabled="form.language.length == 1 && form.language.includes(item.key)">
+            <el-checkbox v-for="item in languageList" v-show="item.key" :key="item.key" :value="item.key" :disabled="form.language.length == 1 && form.language.includes(item.key)">
               {{ item.value }}
             </el-checkbox>
           </el-checkbox-group>
@@ -172,7 +172,10 @@
               </template>
               <SvgIcon class="form-icon" name="man"></SvgIcon>
             </el-tooltip>
-            <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
+            <div class="device-btn-box">
+              <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
+              <el-checkbox class="ml20" v-if="item.platform != 0" :model-value="item.is_main == 1" @change="setMain(item)" size="small">{{ $t('设为主收银机') }}</el-checkbox>
+            </div>
           </div>
           <p v-else>{{ $t('暂无设备') }}</p>
         </el-form-item>
@@ -181,7 +184,10 @@
             <div class="max-w460 input-ss">
               <autoTips :tooltipMaxWidth="460" :content="(item.remark ? item.remark : '') + `(${item.key})`">{{ (item.remark ? item.remark : '') + `(${item.key})` }}</autoTips>
             </div>
-            <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
+            <div class="device-btn-box">
+              <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
+              <el-checkbox class="ml20" v-if="item.platform != 0" :model-value="item.is_main == 1" @change="setMain(item)" size="small">{{ $t('设为主收银机') }}</el-checkbox>
+            </div>
           </div>
           <p v-else>{{ $t('暂无设备') }}</p>
         </el-form-item>
@@ -409,6 +415,7 @@
         this.sortOne();
         let params = JSON.parse(JSON.stringify(self.form));
         //绑定的设备不用提清空
+        params.main_cashier_uuid = params.bind_list.find((bind) => bind.is_main == 1)?.uuid || '';
         params.bind_list = [];
         self.loading = true;
         Terminal.saveTerminal(params, true)
@@ -484,6 +491,15 @@
         this.form.carousel.sort((a, b) => {
           return a.sort - b.sort; // 按照数值大小进行排序
         });
+      },
+      setMain(item) {
+        let self = this;
+        self.form.bind_list.map((bind) => {
+          if (bind.id != item.id) {
+            bind.is_main = 0;
+          }
+        });
+        item.is_main = item.is_main == 1 ? 0 : 1;
       },
     },
   };
@@ -562,6 +578,9 @@
           margin-left: 8px;
         }
       }
+    }
+    .device-btn-box {
+      width: 660px;
     }
   }
 </style>

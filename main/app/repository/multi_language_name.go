@@ -10,11 +10,15 @@ import (
 
 // IMultiLanguageNameRepo 定义多语言名称仓库接口
 type IMultiLanguageNameRepo interface {
-	GetMultiLanguageName(opts ...DBOption) (*model.MultiLanguageName, error)
-	GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error)            // 获取多语言名称
+	IMultiLanguageNameQueryRepo
 	CreateMultiLanguageName(multiLanguageName model.MultiLanguageName) (uint64, error)  // 创建多语言名称
 	UpdateMultiLanguageName(id uint64, multiLanguageName model.MultiLanguageName) error // 更新多语言名称
 	DeleteMultiLanguageName(id uint64) error                                            // 删除多语言名称
+}
+
+type IMultiLanguageNameQueryRepo interface {
+	GetMultiLanguageName(opts ...DBOption) (*model.MultiLanguageName, error)
+	GetMultiLanguageNameByUuid(uuid uint64) (model.MultiLanguageName, error) // 获取多语言名称
 }
 
 // NewMultiLanguageNameRepoImpl 创建新的多语言名称仓库

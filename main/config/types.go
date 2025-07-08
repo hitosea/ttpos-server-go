@@ -47,6 +47,7 @@ type EncryptConf struct {
 	EncryptHeader string // 请求头x-encrypt
 	ClientID      string // 请求头x-encrypt字段client_id
 	ClientKey     string // 请求头x-encrypt字段client_key
+	AesSecretKey  string // 服务端公钥
 }
 
 type LogConf struct {

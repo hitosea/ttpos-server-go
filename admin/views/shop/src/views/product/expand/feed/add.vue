@@ -104,6 +104,7 @@
       };
     },
     props: ['open_add', 'addform'],
+    emits: ['closeDialog'],
     created() {
       this.dialogVisible = this.open_add;
     },
