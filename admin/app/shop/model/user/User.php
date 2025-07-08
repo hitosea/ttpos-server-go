@@ -253,38 +253,6 @@ class User extends UserModel
         }
 
         return true;
-
-        return $this->transaction(function () use ($nickName, $mobile, $password, $gender, $gradeId, $birthday, $card, $cardNumber, $referrerUuid, $activityUuid) {
-            $userUuid = createUuid();
-            $user = $this->save([
-                'uuid' => $userUuid,
-                'nickname' => $nickName,
-                'phone' => $mobile,
-                'password' => $password ? md5($password) : '',
-                'gender' => $gender, //性别
-                'member_level_uuid' => $gradeId, //默认等级
-                'birthday' => $birthday ? strtotime($birthday) : 0, //生日
-                'referrer_uuid' => $referrerUuid, //推荐人
-                'activity_uuid' => $activityUuid, //活动
-            ]);
-            if (!$user) {
-                return false;
-            }
-            if ($card) {
-                $model = new CardModel();
-                $result = $model->put([
-                    'card_id' => $card['uuid'],
-                    'user_ids' => [
-                        [ 'uuid' => $userUuid, 'card_number' => $cardNumber ]
-                    ],
-                ]);
-                if (!$result) {
-                    $this->error = $model->getError();
-                    return false;
-                }
-            }
-            return true;
-        });
     }
 
     /**
