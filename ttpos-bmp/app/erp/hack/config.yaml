@@ -4,6 +4,7 @@
 gfcli:
   gen:
     dao:
+      #todo 修改为erp 数据库
       - link: "mysql:root:12345678@tcp(127.0.0.1:3306)/test"
         descriptionTag: true
 

@@ -1,0 +1,15 @@
+
+# CLI tool, only in development environment.
+# https://goframe.org/docs/cli
+gfcli:
+  gen:
+    dao:
+      - link: "mysql:fixme"
+        descriptionTag: true
+        removePrefix: "ttpos_"
+
+
+  docker:
+    build: "-a amd64 -s linux -p temp -ew"
+    tagPrefixes:
+      - hub.hitosea.com/ttpos-bmp-manager

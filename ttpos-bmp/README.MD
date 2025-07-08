@@ -1,5 +1,2 @@
-# GoFrame Template For MonoRepo
+# 业务中台模块
 
-Quick Start: 
-- https://goframe.org/quick
-- https://goframe.org/docs/design/project-mono-repo
