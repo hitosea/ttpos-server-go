@@ -2134,4 +2134,5 @@ return [
     "未开启自助餐" => "Buffet ist nicht aktiviert",
     "请选择自助餐" => "Bitte wählen Sie ein Buffet aus",
     "平板结束时间提醒不能为空" => "Die Erinnerung an die Tablet-Endzeit darf nicht leer sein.",
+    "角色不存在" => "Rolle existiert nicht",
 ];

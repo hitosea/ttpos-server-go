@@ -2126,4 +2126,5 @@ return [
     "距离范围参数错误" => "Distance range parameter error",
     "外送渠道未设置" => "Delivery channel is not set",
     "请选择商家" => "Please select a merchant",
+    "角色不存在" => "Role does not exist",
 ];

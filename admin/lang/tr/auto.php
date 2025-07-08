@@ -2126,4 +2126,5 @@ return [
     "距离范围参数错误" => "Mesafe aralığı parametresi hatalı",
     "外送渠道未设置" => "Dışarıdan sipariş kanalı ayarlanmadı",
     "请选择商家" => "Lütfen satıcıyı seçin",
+    "角色不存在" => "Rol mevcut değil",
 ];

@@ -208,12 +208,24 @@ class Role extends RoleModel
 
     public function del($role_id)
     {
+        $role = self::where('uuid', $role_id)->find();
+        if (!$role) {
+            $this->error = '角色不存在';
+            return false;
+        }
+        
         //如果角色下有用户，则不能删除
-        if (UserRoleModel::getUserRoleCount($role_id) > 0) {
+        if (UserRoleModel::getUserRoleCount($role['uuid']) > 0) {
             $this->error = '当前角色下存在用户，不允许删除';
             return false;
         }
-        RoleAccess::destroy(['role_uuid', '=', $role_id]);
-        return self::destroy(['uuid', '=', $role_id]);
+        return $role->transaction(function () use ($role) {
+            if (!RoleAccess::destroy(function ($query) use ($role) {
+                $query->where('role_uuid', $role['uuid']);
+            })) {
+                return false;
+            }
+            return $role->delete();
+        });
     }
 }
