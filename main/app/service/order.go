@@ -8154,7 +8154,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	needCancelCoupon := false // 是否需要取消优惠券
 
 	// 加锁, 避免并发问题
-	if len(saleOrder.Coupons) > 0 {
+	if saleOrder.HasCoupon() {
 		lock.NewSystemLock().LockUuid(constant.LockNameActivityConsumption)
 		defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
 	}
