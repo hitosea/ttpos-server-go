@@ -65,6 +65,12 @@ export interface TakeoutShopAddEditDataItem {
   }>;
 }
 
+export interface CanTakeoutShopListData {
+  list_rows?: number;
+  keyword?: string;
+  configured?: number;
+}
+
 // 获取渠道
 export function getChannels(params: { configured?: number }) {
   return $get<TakeoutShopData[]>('delivery/channels', { params });
@@ -83,8 +89,8 @@ export function updateStatus(uuid: number) {
 }
 
 // 获取可选商家列表
-export function getCompanySelect() {
-  return $get<{ list?: HttpResponsePage<TakeoutShopSelectData[]> }>('delivery/companySelect');
+export function getCompanySelect(params: CanTakeoutShopListData) {
+  return $get<{ list?: HttpResponsePage<TakeoutShopSelectData[]> }>('delivery/companySelect', { params });
 }
 
 // 添加\修改商家外送配置

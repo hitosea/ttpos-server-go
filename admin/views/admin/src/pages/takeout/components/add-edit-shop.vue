@@ -11,7 +11,7 @@
     <div class="max-h-[75vh] overflow-auto pr-4">
       <el-form :model="formData" ref="formElement" label-position="top" label-width="auto">
         <el-form-item :label="$t('选择商家')" prop="uuid" :rules="[{ required: true, message: $t('请选择商家'), trigger: 'blur' }]">
-          <el-select v-model="formData.uuid" type="text" filterable :disabled="hasEdit" :placeholder="$t('请选择商家')">
+          <el-select v-model="formData.uuid" type="text" filterable remote :remote-method="remoteMethod" :disabled="hasEdit" :placeholder="$t('请选择商家')">
             <el-option class="!h-auto" :disabled="item.channel_names.length > 0" v-for="item in companyList" :key="item.uuid" :value="item.uuid" :label="item.name">
               <div>
                 <p class="">{{ item.name }}</p>
@@ -257,7 +257,7 @@
     () => props.show,
     () => {
       if (props.show) {
-        getCompanyListData();
+        // getCompanyListData('');
         getChannelsData();
         getTakeoutSettingData();
         if (props.hasEdit) {
@@ -338,10 +338,17 @@
     formElement.value.validateField('channels.' + index + '.distance_range');
   };
 
+  // 远程搜索
+  const remoteMethod = (keyword: string) => {
+    setTimeout(() => {
+      getCompanyListData(keyword);
+    }, 200);
+  };
+
   // 获取商家列表
-  const getCompanyListData = async () => {
+  const getCompanyListData = async (keyword: string) => {
     try {
-      const res = await getCompanySelect();
+      const res = await getCompanySelect({ keyword: keyword, list_rows: 50 });
       companyList.value = res.data?.list?.data || [];
     } catch (error) {
       console.error('获取渠道失败:', error);
