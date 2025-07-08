@@ -739,6 +739,7 @@
   "商家ID必须为整数": "Händler-ID muss eine ganze Zahl sein",
   "商家id不存在!": "Händler-ID existiert nicht!",
   "商家不存在": "Händler existiert nicht",
+  "商家会员服务已关闭": "Händlermitgliederservice wurde geschlossen",
   "商家会员服务已失效": "Händlermitgliederservice ist abgelaufen",
   "商家名称不能超过100个字符": "Der Name des Geschäfts darf maximal 100 Zeichen lang sein",
   "商家名称已存在": "Händlername existiert bereits",

@@ -8286,7 +8286,7 @@ paths:
       - application/json
       description: 模糊搜索会员
       parameters:
-      - description: 关键字搜索：uuid\phone，前端处理前后空格
+      - description: 关键字搜索
         in: query
         name: keyword
         type: string
@@ -12042,7 +12042,7 @@ paths:
       - application/json
       description: 模糊搜索会员
       parameters:
-      - description: 关键字搜索：uuid\phone，前端处理前后空格
+      - description: 关键字搜索
         in: query
         name: keyword
         type: string

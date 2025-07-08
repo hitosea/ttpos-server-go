@@ -3137,7 +3137,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "关键字搜索：uuid\\phone，前端处理前后空格",
+                        "description": "关键字搜索",
                         "name": "keyword",
                         "in": "query"
                     }
@@ -9600,7 +9600,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "关键字搜索：uuid\\phone，前端处理前后空格",
+                        "description": "关键字搜索",
                         "name": "keyword",
                         "in": "query"
                     }
