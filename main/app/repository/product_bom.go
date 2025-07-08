@@ -81,6 +81,12 @@ func (r *productBomRepoImpl) GetFlavorProductBomByUuid(uuid uint64) (*model.Prod
 				Query: "ProductFlavor.MultiLanguageName",
 			},
 			WithPreload{
+				Query: "FlavorMaterials",
+				Args: []interface{}{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
 				Query: "FlavorMaterials.Material",
 			},
 		),

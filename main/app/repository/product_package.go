@@ -88,6 +88,7 @@ func (r *productPackageRepoImpl) GetProductPackageBaseInfoByBomUuid(flavorBomUui
 		CommonRepo.WhereByUuid(flavorBomUuid),
 		CommonRepo.Preload(WithPreload{Query: "ProductPackage.TakeoutTax"}),
 		CommonRepo.Preload(
+			WithPreload{Query: "ProductPackage.MultiLanguageName"},
 			WithPreload{Query: "ProductPackage.ProductCategory"},
 			WithPreload{Query: "ProductPackage.DineTax"},
 			WithPreload{Query: "ProductFlavor.MultiLanguageName"},
