@@ -68,11 +68,13 @@ class SurveyService
         $sheet->setCellValue('A' . ($index = $index + 1), __('免单折扣/免单数量'));
         $sheet->setCellValue('A' . ($index = $index + 1), __('实收金额'));
         // v2.3.0新增 充值、外送数据
-        $sheet->setCellValue('A' . ($index = $index + 1), __('充值金额'));
-        $sheet->setCellValue('A' . ($index = $index + 1), __('外送销售'));
-        $sheet->setCellValue('A' . ($index = $index + 1), __('外送营收'));
-        $sheet->setCellValue('A' . ($index = $index + 1), __('外送退款'));
-        $sheet->setCellValue('A' . ($index = $index + 1), __('外送配送费'));
+        if (request()->licenses['is_open_delivery'] == 1) {
+            $sheet->setCellValue('A' . ($index = $index + 1), __('充值金额'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('外送销售'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('外送营收'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('外送退款'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('外送配送费'));
+        }
         // ------区域数据--------
         $sheet->setCellValue('A' . ($index = $regionRow = $index + 1), __('区域数据'));
         foreach ($allRegionData as $data) {
@@ -98,13 +100,14 @@ class SurveyService
         $sheet->setCellValue('A' . ($index = $index + 1), __('最小订单金额'));
         $sheet->setCellValue('A' . ($index = $index + 1), __('最大订单金额'));
         $sheet->setCellValue('A' . ($index = $index + 1), __('平均订单金额'));
-        // v2.3.0新增 外送数据
-        $sheet->setCellValue('A' . ($index = $index + 1), __('外送点餐'));
-        $sheet->setCellValue('A' . ($index = $index + 1), __('订单数'));
-        $sheet->setCellValue('A' . ($index = $index + 1), __('最小订单金额'));
-        $sheet->setCellValue('A' . ($index = $index + 1), __('最大订单金额'));
-        $sheet->setCellValue('A' . ($index = $index + 1), __('平均订单金额'));
-
+        // v2.3.0新增 外送数据 
+        if (request()->licenses['is_open_delivery'] == 1) {
+            $sheet->setCellValue('A' . ($index = $index + 1), __('外送点餐'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('订单数'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('最小订单金额'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('最大订单金额'));
+            $sheet->setCellValue('A' . ($index = $index + 1), __('平均订单金额'));
+        }
         $sheet->setCellValue('A' . ($index = $payRow = $index + 1), __('支付数据'));
         // 纵向的支付数据
         $paymentType = array_values($list)[0]['payment_list'];
@@ -143,13 +146,14 @@ class SurveyService
             $sheet->setCellValue($columnLetter . ($index = $index + 1), Helper::number2($data['total_gift_amount']) . "/" . Helper::number2($data['total_gift_num']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
             $sheet->setCellValue($columnLetter . ($index = $index + 1), Helper::number2($data['total_free_amount']) . "/" . Helper::number2($data['total_free_num']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
             $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_received_amount']); //实收金额
-
-            // v2.3.0新增 充值、外送数据
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_recharge_amount']); // 充值
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_delivery_order_amount']); // 外送销售
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_delivery_order_revenue']); // 外送营收
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_delivery_order_refund_amount']); // 外送退款
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_delivery_fee']); // 外送配送费
+            // v2.3.0新增 充值、外送数据 
+            if (request()->licenses['is_open_delivery'] == 1) {
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_recharge_amount']); // 充值
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_delivery_order_amount']); // 外送销售
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_delivery_order_revenue']); // 外送营收
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_delivery_order_refund_amount']); // 外送退款
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_delivery_fee']); // 外送配送费
+            }
             // ------区域数据--------
             $sheet->setCellValue($columnLetter . ($index = $index + 1), ''); // 区域数据 - 空白行
             foreach ($allRegionData as $region) {
@@ -181,11 +185,13 @@ class SurveyService
             $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['min_instant_order_amount']); //最小订单金额
             $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['max_instant_order_amount']); //最大订单金额
             $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['avg_instant_order_amount']); //平均订单金额
-            // v2.3.0新增 外送订单
-            $sheet->setCellValue($columnLetter . ($index = $index + 2), $data['total_delivery_order_num']); // 外送订单数
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['min_delivery_order_amount']); // 外送最小订单金额
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['max_delivery_order_amount']); // 外送最大订单金额
-            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['avg_delivery_order_amount']); // 外送平均订单金额
+            // v2.3.0新增 外送订单 
+            if (request()->licenses['is_open_delivery'] == 1) {
+                $sheet->setCellValue($columnLetter . ($index = $index + 2), $data['total_delivery_order_num']); // 外送订单数
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['min_delivery_order_amount']); // 外送最小订单金额
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['max_delivery_order_amount']); // 外送最大订单金额
+                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['avg_delivery_order_amount']); // 外送平均订单金额
+            }
             // 支付数据
             $payColumnIndex = $index + 1;
             foreach ($data['payment_list'] as $value) {
