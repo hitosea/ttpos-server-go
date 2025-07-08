@@ -84,7 +84,7 @@
                     :disabled="scope.row.material.length > 0"
                     :min="0"
                     :max="99999999"
-                    :precision="4"
+                    :precision="0"
                     :placeholder="$t('请填写库存数量')"
                     v-model="scope.row.stock_num"
                   ></numInput>
