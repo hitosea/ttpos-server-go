@@ -506,7 +506,7 @@ func (s *memberSrv) GetMemberDiscount(ctx context.Context, discountReq req.GetMe
 func (s *memberSrv) calcOrderAmount(ctx context.Context, member *model.Member, saleBill *model.SaleBill, saleOrder *model.SaleOrder) float64 {
 	saleOrder.SetMemberDiscount(*member)
 
-	for i, _ := range saleOrder.SaleOrderProducts {
+	for i := range saleOrder.SaleOrderProducts {
 		saleOrderProduct := saleOrder.SaleOrderProducts[i]
 		if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
 			continue
@@ -555,7 +555,7 @@ func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.Che
 
 	err = repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 
-		for index, _ := range saleOrder.SaleOrderProducts {
+		for index := range saleOrder.SaleOrderProducts {
 			saleOrderProduct := saleOrder.SaleOrderProducts[index]
 			if saleOrderProduct.IsDelete() || saleOrderProduct.IsCancelProduct() || !saleOrderProduct.IsAcceptOrderBool() {
 				continue

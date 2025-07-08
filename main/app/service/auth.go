@@ -651,7 +651,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeSystemError, "系统错误，请稍候再试")
 			}
 			// 检查收银机设置-收银用餐是否开启
-			if !s.isCashierOpen(ctx, cashierSetting, auth.UrlPath) {
+			if !s.isCashierOpen(cashierSetting, auth.UrlPath) {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "收银用餐已关闭，请选择其他用餐方式")
 			}
 			// 检查收银机设置-桌台用餐是否开启
@@ -796,7 +796,7 @@ func (s *authSrv) GetCashierSetting(ctx context.Context) (*setting2.Cashier, err
 }
 
 // 检查收银机设置-收银用餐是否开启
-func (s *authSrv) isCashierOpen(ctx context.Context, cashierSetting *setting2.Cashier, pathUrl string) bool {
+func (s *authSrv) isCashierOpen(cashierSetting *setting2.Cashier, pathUrl string) bool {
 	// 检查收银用餐是否开启
 	if cashierSetting.OrderMethod.IsCashierOrder != "1" && regexp.MustCompile(`^/api/v\d+/cashier/instant/`).Match([]byte(pathUrl)) {
 		return false

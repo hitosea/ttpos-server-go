@@ -12,7 +12,6 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
-	errors2 "ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
@@ -196,6 +195,9 @@ func (s *rechargeOrderSrv) CreateRechargeOrder(ctx context.Context, rechargeReq 
 					"member_uuid":     rechargeReq.MemberUuid,
 					"staff_uuid":      ctx.GetStaffUuid(),
 				})
+				if err != nil {
+					return errors.WithMessage(err)
+				}
 				err = repository.NewMemberRechargeOperationRepo(tx).AddLog(model.MemberRechargeOrderOperationLog{
 					OperatorName:      ctx.GetStaff().RealName,
 					OperatorEmail:     ctx.GetStaff().Username,
@@ -403,7 +405,7 @@ func (s *rechargeOrderSrv) CancelPaymentMethod(ctx context.Context, cancelReq re
 		"delete_time": time.Now().Unix(),
 	}); err != nil {
 		logger.Logger.Error("标记支付订单失败", zap.Error(err))
-		return orderResp, errors2.ErrInternal
+		return orderResp, errors.ErrInternal
 	}
 
 	// 更新现金支付订单
@@ -776,7 +778,7 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 	rechargeOrders, total, err := rechargeOrderRepo.PaginateGetRechargeOrder(listReq.PageNo, listReq.PageSize, options...)
 
 	if err != nil {
-		return resp.RechargeOrderList{}, errors2.ErrInternal
+		return resp.RechargeOrderList{}, errors.ErrInternal
 	}
 
 	items := make([]resp.RechargeOrderItem, 0, len(rechargeOrders))
@@ -1093,7 +1095,7 @@ func (s *rechargeOrderSrv) CancelRechargeOrder(ctx context.Context, uuid uint64)
 		return nil
 	})
 	if err != nil {
-		return errors2.ErrInternal
+		return errors.ErrInternal
 	}
 	return nil
 }
@@ -1204,7 +1206,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 				"status":      constant.PaymentOrderStatusRefund,
 				"delete_time": time.Now().Unix(),
 			}); err != nil {
-				return errors.WithMessage(errors2.ErrInternal, err.Error())
+				return errors.WithMessage(errors.ErrInternal, err.Error())
 			}
 
 			amount := paymentOrder.Amount
@@ -1245,7 +1247,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			RefundReason:        "反结账",
 		})
 		if err != nil {
-			return errors.WithMessage(errors2.ErrInternal, err.Error())
+			return errors.WithMessage(errors.ErrInternal, err.Error())
 		}
 
 		if refundCashAmount > 0 {
@@ -1265,7 +1267,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 			"refund_money": 0,
 			"charge_due":   0,
 		}); err != nil {
-			return errors.WithMessage(errors2.ErrInternal)
+			return errors.WithMessage(errors.ErrInternal)
 		}
 
 		return nil
@@ -1570,7 +1572,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			"refund_amount": utils.DecimalAdd(order.RefundAmount, deductionMoney),
 		})
 		if err != nil {
-			return errors2.ErrInternal
+			return errors.ErrInternal
 		}
 
 		// 添加操作日志
@@ -1584,7 +1586,7 @@ func (s *rechargeOrderSrv) RechargeOrderRefund(ctx context.Context, refundReq re
 			RechargeOrderUuid: order.Uuid,
 		})
 		if err != nil {
-			return errors2.ErrInternal
+			return errors.ErrInternal
 		}
 
 		var paymentOrderUuid uint64
