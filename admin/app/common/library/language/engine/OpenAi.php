@@ -32,7 +32,7 @@ class OpenAi
      * @return array
      * @throws \Exception
      */
-    public function translate($q, $from = 'cn')
+    public function translate($q, $from = 'zh')
     {
         try {
             $data = ['data' => []];

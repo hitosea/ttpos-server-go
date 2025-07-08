@@ -21,12 +21,12 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 		clientIP := c.ClientIP()
 		userAgent := c.Request.UserAgent()
 		fmt.Printf("\n\n\n")
-		fmt.Printf("方法: %s\n", method)
-		fmt.Printf("URI: %s\n", uri)
-		fmt.Printf("客户端IP: %s\n", clientIP)
-		fmt.Printf("User-Agent: %s\n", userAgent)
+		fmt.Println("方法: ", method)
+		fmt.Println("URI: ", uri)
+		fmt.Println("客户端IP: ", clientIP)
+		fmt.Println("User-Agent: ", userAgent)
 		// 打印请求头
-		fmt.Printf("=== 请求头 ===\n")
+		fmt.Println("=== 请求头 ===")
 		for name, values := range c.Request.Header {
 			for _, value := range values {
 				fmt.Printf("%s: %s\n", name, value)
@@ -34,7 +34,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 		}
 		// 打印URL查询参数
 		if len(c.Request.URL.RawQuery) > 0 {
-			fmt.Printf("=== URL查询参数 ===\n")
+			fmt.Println("=== URL查询参数 ===")
 			queryParams, _ := url.ParseQuery(c.Request.URL.RawQuery)
 			for key, values := range queryParams {
 				for _, value := range values {
@@ -57,7 +57,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 				c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 				contentType := c.GetHeader("Content-Type")
-				fmt.Printf("=== 请求体 (Content-Type: %s) ===\n", contentType)
+				fmt.Println("=== 请求体 (Content-Type: ", contentType, ") ===")
 
 				switch {
 				case strings.Contains(contentType, "application/json"):
@@ -67,7 +67,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 						jsonBytes, _ := json.MarshalIndent(jsonData, "", "  ")
 						fmt.Printf("%s\n", string(jsonBytes))
 					} else {
-						fmt.Printf("原始JSON: %s\n", string(bodyBytes))
+						fmt.Println("原始JSON: ", string(bodyBytes))
 					}
 
 				case strings.Contains(contentType, "application/x-www-form-urlencoded"):
@@ -80,21 +80,21 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 							}
 						}
 					} else {
-						fmt.Printf("原始表单数据: %s\n", string(bodyBytes))
+						fmt.Println("原始表单数据: ", string(bodyBytes))
 					}
 
 				case strings.Contains(contentType, "multipart/form-data"):
 					// 多部分表单数据
 					fmt.Printf("多部分表单数据 (文件上传等)\n")
 					// 这里可以进一步解析multipart数据，但比较复杂
-					fmt.Printf("数据长度: %d bytes\n", len(bodyBytes))
+					fmt.Println("数据长度: ", len(bodyBytes), "bytes")
 
 				default:
 					// 其他格式，直接输出原始数据
 					if len(bodyBytes) < 1000 { // 只打印较小的数据
-						fmt.Printf("原始数据: %s\n", string(bodyBytes))
+						fmt.Println("原始数据: ", string(bodyBytes))
 					} else {
-						fmt.Printf("数据长度: %d bytes (太大，不显示)\n", len(bodyBytes))
+						fmt.Println("数据长度: ", len(bodyBytes), "bytes (太大，不显示)")
 					}
 				}
 			}
@@ -103,7 +103,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 		// 如果是表单请求，也打印表单字段
 		if c.Request.Method == "POST" || c.Request.Method == "PUT" || c.Request.Method == "PATCH" {
 			if len(c.Request.Form) > 0 {
-				fmt.Printf("\n--- 解析的表单字段 ---\n")
+				fmt.Println("\n--- 解析的表单字段 ---")
 				for key, values := range c.Request.Form {
 					for _, value := range values {
 						fmt.Printf("%s: %s\n", key, value)
@@ -114,7 +114,7 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 			// 解析多部分表单
 			if c.Request.MultipartForm != nil {
 				if len(c.Request.MultipartForm.Value) > 0 {
-					fmt.Printf("\n--- 多部分表单字段 ---\n")
+					fmt.Println("\n--- 多部分表单字段 ---")
 					for key, values := range c.Request.MultipartForm.Value {
 						for _, value := range values {
 							fmt.Printf("%s: %s\n", key, value)
@@ -123,40 +123,17 @@ func RequestLogger(logger *zap.Logger) gin.HandlerFunc {
 				}
 
 				if len(c.Request.MultipartForm.File) > 0 {
-					fmt.Printf("\n--- 上传文件 ---\n")
+					fmt.Println("\n--- 上传文件 ---")
 					for key, files := range c.Request.MultipartForm.File {
 						for _, file := range files {
-							fmt.Printf("%s: %s (大小: %d bytes)\n", key, file.Filename, file.Size)
+							fmt.Println(key, file.Filename, file.Size)
 						}
 					}
 				}
 			}
 		}
 
-		fmt.Printf("=== 结束 ===\n")
-
-		c.Next()
-	}
-}
-
-// SimpleRequestLogger 简化版本的请求日志中间件
-func SimpleRequestLogger() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		fmt.Printf("[%s] %s - %s\n", c.Request.Method, c.Request.RequestURI, c.ClientIP())
-
-		// 打印查询参数
-		if len(c.Request.URL.RawQuery) > 0 {
-			fmt.Printf("查询参数: %s\n", c.Request.URL.RawQuery)
-		}
-
-		// 打印请求体（仅适用于小数据）
-		if c.Request.Body != nil {
-			bodyBytes, err := io.ReadAll(c.Request.Body)
-			if err == nil && len(bodyBytes) > 0 && len(bodyBytes) < 500 {
-				c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-				fmt.Printf("请求体: %s\n", string(bodyBytes))
-			}
-		}
+		fmt.Println("=== 结束 ===")
 
 		c.Next()
 	}
