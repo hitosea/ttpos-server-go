@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/encrypt"
 
@@ -48,7 +49,7 @@ func NewMarketingActivityRepo(db *gorm.DB) IMarketingActivityRepo {
 // GetActivity 获取营销活动
 func (r *MarketingActivityRepo) GetActivity(uuid uint64) (*model.MarketingActivity, error) {
 	var activity model.MarketingActivity
-	err := r.db.Where("uuid = ? AND delete_time = ?", uuid, 0).First(&activity).Error
+	err := r.db.Where("uuid = ? AND delete_time = ?", uuid, constant.NotDeleted).First(&activity).Error
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +59,10 @@ func (r *MarketingActivityRepo) GetActivity(uuid uint64) (*model.MarketingActivi
 // GetActivityAndPrizes 获取营销活动与奖励
 func (r *MarketingActivityRepo) GetActivityAndPrizes(uuid uint64) (*model.MarketingActivity, error) {
 	var activity model.MarketingActivity
-	err := r.db.Where("uuid = ? AND delete_time = ?", uuid, 0).Preload("Prizes.Coupon").First(&activity).Error
+	err := r.db.Where("uuid = ? AND delete_time = ?", uuid, constant.NotDeleted).
+		Preload("Prizes", NotDeleted).
+		Preload("Prizes.Coupon", NotDeleted).
+		First(&activity).Error
 	if err != nil {
 		return nil, err
 	}
@@ -69,10 +73,10 @@ func (r *MarketingActivityRepo) GetActivityAndPrizes(uuid uint64) (*model.Market
 func (r *MarketingActivityRepo) GetActivityListByNow() ([]*model.MarketingActivity, error) {
 	var activities []*model.MarketingActivity
 	db := r.db.Model(&model.MarketingActivity{}).
-		Preload("Prizes").
+		Preload("Prizes", NotDeleted).
 		Preload("MultiLanguageName").
 		Preload("MultiLanguageDesc").
-		Where("delete_time = ? AND start_time <= ? AND end_time >= ? AND is_invalid = ?", 0, time.Now().Unix(), time.Now().Unix(), 0).
+		Where("delete_time = ? AND start_time <= ? AND end_time >= ? AND is_invalid = ?", constant.NotDeleted, time.Now().Unix(), time.Now().Unix(), 0).
 		Order("start_time DESC").
 		Order("end_time DESC")
 	err := db.Find(&activities).Error
