@@ -154,8 +154,10 @@ func (r *MarketingActivityRepo) SendReward(activityUuid, memberUuid uint64) erro
 	}
 
 	// 最多等于奖励次数限制
-	if rewardCountToGive > int(activity.RewardLimit) {
-		rewardCountToGive = int(activity.RewardLimit)
+	if activity.IsOpenRewardLimit == 1 {
+		if rewardCountToGive > int(activity.RewardLimit) {
+			rewardCountToGive = int(activity.RewardLimit)
+		}
 	}
 
 	// 发放优惠券
