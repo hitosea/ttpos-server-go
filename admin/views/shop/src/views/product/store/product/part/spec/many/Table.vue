@@ -66,10 +66,19 @@
                 :prop="`scope.row.stock_num`"
                 :rules="[
                   {
-                    validator: () => {
-                      return scope.row.stock_num ? true : false;
+                    validator: (rule, value, callback) => {
+                      if (!scope.row.stock_num) {
+                        callback(new Error($t('请输入库存')));
+                        return;
+                      }
+                      if (form.model.num_type == 0) {
+                        if (!Number.isInteger(Number(scope.row.stock_num))) {
+                          callback(new Error($t('请输入整数')));
+                          return;
+                        }
+                      }
+                      callback();
                     },
-                    message: $t('请输入库存'),
                     trigger: 'change',
                   },
                 ]"

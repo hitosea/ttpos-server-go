@@ -3,8 +3,8 @@
     <el-form class="form-setting" size="small" ref="form" :model="form" label-position="top" v-loading="loading">
       <el-form-item :label="$t('自助餐')" :rules="[{ required: true, message: '' }]">
         <el-radio-group v-model="form.is_open">
-          <el-radio label="1">{{ $t('开') }}</el-radio>
-          <el-radio label="0">{{ $t('关') }}</el-radio>
+          <el-radio value="1">{{ $t('开') }}</el-radio>
+          <el-radio value="0">{{ $t('关') }}</el-radio>
         </el-radio-group>
       </el-form-item>
 
@@ -29,8 +29,8 @@
 
       <el-form-item :label="$t('用餐时间到后可继续选购非自助餐商品')" :rules="[{ required: true, message: '' }]">
         <el-radio-group v-model="form.is_buy_continue">
-          <el-radio label="1">{{ $t('开') }}</el-radio>
-          <el-radio label="0">{{ $t('关') }}</el-radio>
+          <el-radio value="1">{{ $t('开') }}</el-radio>
+          <el-radio value="0">{{ $t('关') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item
@@ -82,8 +82,8 @@
 
       <el-form-item :label="$t('加钟')" :rules="[{ required: true, message: '' }]">
         <el-radio-group v-model="form.is_add_clock" @change="handleChange">
-          <el-radio label="1">{{ $t('开') }}</el-radio>
-          <el-radio label="0">{{ $t('关') }}</el-radio>
+          <el-radio value="1">{{ $t('开') }}</el-radio>
+          <el-radio value="0">{{ $t('关') }}</el-radio>
         </el-radio-group>
         <div class="limit-list" v-if="form.is_add_clock == 1">
           <el-button type="primary" @click="add">{{ $t('添加') }}</el-button>

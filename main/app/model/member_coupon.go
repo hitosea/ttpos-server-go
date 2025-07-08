@@ -58,10 +58,10 @@ func (model *MemberCoupon) IsAvailable(memberUuid uint64, nowTime string) error 
 // 判断优惠券是否过期
 func (model *MemberCoupon) IsExpire() bool {
 	nowTimestamp := time.Now().Unix()
-	if model.StartTime >= nowTimestamp && nowTimestamp <= model.EndTime {
-		return true
+	if model.StartTime <= nowTimestamp && nowTimestamp <= model.EndTime {
+		return false
 	}
-	return false
+	return true
 }
 
 // 判断优惠券是否已经使用

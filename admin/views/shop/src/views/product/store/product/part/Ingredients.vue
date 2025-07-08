@@ -59,7 +59,7 @@
                     },
                   ]"
                 >
-                  <el-input-number :controls="false" :min="0" :max="1000000" :placeholder="$t('请输入价格')" v-model.number="scope.row.price"></el-input-number>
+                  <numInput :controls="false" :min="0" :max="1000000" :precision="2" :placeholder="$t('请输入价格')" v-model="scope.row.price"></numInput>
                 </el-form-item>
               </template>
             </el-table-column>
@@ -79,14 +79,15 @@
                     },
                   ]"
                 >
-                  <el-input-number
+                  <numInput
                     :controls="false"
                     :disabled="scope.row.material.length > 0"
                     :min="0"
                     :max="99999999"
+                    :precision="4"
                     :placeholder="$t('请填写库存数量')"
-                    v-model.number="scope.row.stock_num"
-                  ></el-input-number>
+                    v-model="scope.row.stock_num"
+                  ></numInput>
                 </el-form-item>
               </template>
             </el-table-column>

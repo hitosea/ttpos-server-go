@@ -6,8 +6,8 @@
       <el-form label-position="top" ref="formRef" :model="form" size="small">
         <el-form-item :label="$t('是否开启推荐')" prop="status" :rules="[{ required: true, message: $t('请选择是否开启推荐') }]">
           <el-radio-group v-model="form.status">
-            <el-radio :label="1">{{ $t('开启') }}</el-radio>
-            <el-radio :label="0">{{ $t('关闭') }}</el-radio>
+            <el-radio :value="1">{{ $t('开启') }}</el-radio>
+            <el-radio :value="0">{{ $t('关闭') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <template v-if="form.status === 1">

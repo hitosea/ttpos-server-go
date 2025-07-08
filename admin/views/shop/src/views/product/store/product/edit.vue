@@ -53,7 +53,7 @@
 
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="() => onSubmit(1)"> {{ $t('确定') }}</el-button>
+          <el-button type="primary" @click="() => onSubmit(1)" :loading="save_loading"> {{ $t('确定') }}</el-button>
         </div>
       </template>
     </el-dialog>
