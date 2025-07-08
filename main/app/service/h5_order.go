@@ -11,7 +11,6 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
-	"ttpos-server-go/pkg/eventbus/event"
 
 	"github.com/shopspring/decimal"
 )
@@ -25,7 +24,6 @@ type IH5OrderSrv interface {
 }
 
 type h5OrderSrv struct {
-	bus      *event.SystemEventBus
 	dbm      *database.DBManager
 	orderSrv IOrderSrv
 }
