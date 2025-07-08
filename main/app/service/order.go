@@ -7371,7 +7371,7 @@ func (s *orderSrv) OrderPaymentPoints(ctx context.Context, req req.InstantOrderP
 		return nil, errors.New("订单没有会员")
 	}
 	if len(saleOrder.PaymentOrders) > 0 {
-		return nil, errors.New("订单已付款,无法修改积分抵扣数量")
+		return nil, errors.New("订单已付款，无法修改积分抵扣数量")
 	}
 
 	if req.Points > saleOrder.Member.GetPoints() {

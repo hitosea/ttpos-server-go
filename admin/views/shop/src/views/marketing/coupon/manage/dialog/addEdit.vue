@@ -96,7 +96,7 @@
           },
         ]"
       >
-        <el-radio-group v-model="form.requirement" class="flex-box-radio">
+        <el-radio-group v-model="form.requirement" class="flex-box-radio" :disabled="props.editData.uuid">
           <el-radio label="none">
             {{ $t('所有人可用') }}
             <el-date-picker

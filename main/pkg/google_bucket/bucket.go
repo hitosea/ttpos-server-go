@@ -300,35 +300,6 @@ func DeleteFilesWithPrefix(ctx context.Context, prefix string) error {
 	return nil
 }
 
-// SetBucketLifecycle 设置存储桶生命周期规则
-func SetBucketLifecycle(ctx context.Context, days int) error {
-	bucket := GetBucket(ctx)
-
-	// 创建生命周期规则
-	lifecycle := storage.Lifecycle{
-		Rules: []storage.LifecycleRule{
-			{
-				Action: storage.LifecycleAction{
-					Type: storage.DeleteAction,
-				},
-				Condition: storage.LifecycleCondition{
-					AgeInDays: int64(days),
-				},
-			},
-		},
-	}
-
-	// 更新存储桶生命周期
-	_, err := bucket.Update(ctx, storage.BucketAttrsToUpdate{
-		Lifecycle: &lifecycle,
-	})
-	if err != nil {
-		return fmt.Errorf("设置存储桶生命周期失败: %v", err)
-	}
-
-	return nil
-}
-
 // GetBucketLifecycle 获取存储桶生命周期规则
 func GetBucketLifecycle(ctx context.Context) (storage.Lifecycle, error) {
 	bucket := GetBucket(ctx)

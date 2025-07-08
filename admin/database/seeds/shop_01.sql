@@ -1139,7 +1139,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_recharge_order` (
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '充值订单ID',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '充值订单编号',
     `duty_no` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '当班编号',
-    `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态,0-pending待支付 1-paid已支付 2-canceled已取消',
+    `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态,0-pending待付款 1-paid已完成 2-canceled已取消',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '交易金额=充值金额+手续费',
     `refund_money` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '退款金额，不大于amount',
     `charge_due` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '找零',

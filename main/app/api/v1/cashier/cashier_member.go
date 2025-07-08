@@ -55,7 +55,7 @@ func (h *MemberHandler) GetMemberCardTypes(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param keyword query string false "关键字搜索：uuid\phone，前端处理前后空格"
+// @param keyword query string false "关键字搜索"
 // @Success 200 {object} dto.Response{data=resp.SearchMemberList}
 // @Router /cashier/member/search [get]
 func (h *MemberHandler) SearchMember(c *gin.Context) {
