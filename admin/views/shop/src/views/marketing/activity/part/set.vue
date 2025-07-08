@@ -67,7 +67,7 @@
   }
   .max-w140 {
     max-width: 140px;
-    margin-left: 40px;
+    margin-left: 8px;
   }
   .text-gray9 {
     display: inline-block;
