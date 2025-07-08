@@ -67,9 +67,9 @@ class SurveyService
         $sheet->setCellValue('A' . ($index = $index + 1), __('赠菜折扣/赠菜数量'));
         $sheet->setCellValue('A' . ($index = $index + 1), __('免单折扣/免单数量'));
         $sheet->setCellValue('A' . ($index = $index + 1), __('实收金额'));
+        $sheet->setCellValue('A' . ($index = $index + 1), __('充值金额'));
         // v2.3.0新增 充值、外送数据
-        if (request()->licenses['is_open_delivery'] == 1) {
-            $sheet->setCellValue('A' . ($index = $index + 1), __('充值金额'));
+        if (request()->licenses['is_open_delivery'] == 1) { 
             $sheet->setCellValue('A' . ($index = $index + 1), __('外送销售'));
             $sheet->setCellValue('A' . ($index = $index + 1), __('外送营收'));
             $sheet->setCellValue('A' . ($index = $index + 1), __('外送退款'));
@@ -146,9 +146,9 @@ class SurveyService
             $sheet->setCellValue($columnLetter . ($index = $index + 1), Helper::number2($data['total_gift_amount']) . "/" . Helper::number2($data['total_gift_num']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
             $sheet->setCellValue($columnLetter . ($index = $index + 1), Helper::number2($data['total_free_amount']) . "/" . Helper::number2($data['total_free_num']))->getStyle($columnLetter . $index)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_RIGHT);
             $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_received_amount']); //实收金额
+            $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_recharge_amount']); // 充值
             // v2.3.0新增 充值、外送数据 
-            if (request()->licenses['is_open_delivery'] == 1) {
-                $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_recharge_amount']); // 充值
+            if (request()->licenses['is_open_delivery'] == 1) { 
                 $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_delivery_order_amount']); // 外送销售
                 $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_delivery_order_revenue']); // 外送营收
                 $sheet->setCellValue($columnLetter . ($index = $index + 1), $data['total_delivery_order_refund_amount']); // 外送退款
