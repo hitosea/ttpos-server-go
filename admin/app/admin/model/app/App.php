@@ -172,6 +172,7 @@ class App extends AppModel
             ->when($keyword, function ($q) use ($keyword) { // 商家名称关键字
                 $q->where(function ($qq) use ($keyword) {
                     $qq->like('app.name', $keyword);
+                    $qq->orLike('app.uuid', $keyword);
                 });
             })
             ->when($channel && $configured, function ($q) use ($channel) { // 外送渠道
