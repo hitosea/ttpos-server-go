@@ -194,7 +194,7 @@
         </h4>
       </div>
 
-      <div class="data-box">
+      <div class="data-box" v-if="delivery_status == '1'">
         <div class="data-box-title">
           <h3>{{ $t('外送销售') }}</h3>
           <el-tooltip class="item" effect="dark" placement="bottom">
@@ -208,7 +208,7 @@
           {{ this.$formatPrice(detail.delivery_order_amount || 0) }}
         </h4>
       </div>
-      <div class="data-box">
+      <div class="data-box" v-if="delivery_status == '1'">
         <div class="data-box-title">
           <h3>{{ $t('外送营收') }}</h3>
           <el-tooltip class="item" effect="dark" placement="bottom">
@@ -222,7 +222,7 @@
           {{ this.$formatPrice(detail.delivery_order_revenue || 0) }}
         </h4>
       </div>
-      <div class="data-box">
+      <div class="data-box" v-if="delivery_status == '1'">
         <div class="data-box-title">
           <h3>{{ $t('外送退款') }}</h3>
         </div>
@@ -230,7 +230,7 @@
           {{ this.$formatPrice(detail.delivery_order_refund_amount || 0) }}
         </h4>
       </div>
-      <div class="data-box">
+      <div class="data-box" v-if="delivery_status == '1'">
         <div class="data-box-title">
           <h3>{{ $t('外送配送费') }}</h3>
         </div>
@@ -351,7 +351,7 @@
               </div>
             </div>
           </div>
-          <div class="box-main">
+          <div class="box-main" v-if="delivery_status == '1'">
             <h4>{{ $t('外送点餐') }}</h4>
             <div class="main-body">
               <div class="main-div">
@@ -458,6 +458,7 @@
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
   const is_open_member = supplier.value?.is_open_member || 0;
+  const delivery_status = supplier.value?.delivery_status || 0;
   export default {
     components: { datePick },
     data() {
@@ -482,6 +483,7 @@
         searchLoading: '',
         languageTag: languageTag,
         is_open_member: is_open_member,
+        delivery_status: delivery_status,
         token,
         regionData: [],
       };
