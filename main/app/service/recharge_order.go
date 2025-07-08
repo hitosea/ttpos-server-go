@@ -1262,7 +1262,7 @@ func (s *rechargeOrderSrv) RechargeOrderReverseSettle(ctx context.Context, uuid 
 
 		if err := repository.NewMemberRechargeOrderRepo(tx).Update(order.Uuid, map[string]any{
 			"status":       constant.RechargeOrderStatusPending,
-			"payment_time": time.Now().Unix(),
+			"payment_time": 0,
 			"amount":       0,
 			"refund_money": 0,
 			"charge_due":   0,
