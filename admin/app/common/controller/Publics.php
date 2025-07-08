@@ -7,6 +7,7 @@ use think\facade\Db;
 use think\facade\Cache;
 use app\common\tasks\Task;
 use app\controller as BaseController;
+use think\cache\driver\Redis;
 
 /**
  * 公共类接口
@@ -40,15 +41,16 @@ class Publics extends BaseController
     {
         $token =  request()->get("token");
         if (!$token || $token != env('HEALTH_TOKEN')) {
-            return "unhealthy";
+            return "env unhealthy";
         }
         $result = Db::connect()->query('SELECT 1');
         if (!$result) {
-            return "unhealthy";
-        } 
-        if (!Cache::set($token, "healthy") || !Cache::delete($token)){
-            return "unhealthy";
-        } 
+            return "db unhealthy";
+        }
+        // 默认认为使用Redis缓存数据
+        if (!Cache::set($token, "healthy") || !Cache::delete($token)) {
+            return "cache unhealthy";
+        }
         return "healthy";
     }
 }
