@@ -8153,6 +8153,12 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 
 	needCancelCoupon := false // 是否需要取消优惠券
 
+	// 加锁, 避免并发问题
+	if len(saleOrder.Coupons) > 0 {
+		lock.NewSystemLock().LockUuid(constant.LockNameActivityConsumption)
+		defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db)
 		if cashPaymentOrder != nil {
@@ -8220,9 +8226,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			}
 		}
 		// 核销优惠券
-		// 加锁, 避免并发问题
-		lock.NewSystemLock().LockUuid(constant.LockNameActivityConsumption)
-		defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
 		if err := s.VerifyCoupon(ctx, saleOrder, db); err != nil {
 			needCancelCoupon = true
 			return errors.WithMessage(err)
