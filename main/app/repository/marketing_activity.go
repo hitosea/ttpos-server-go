@@ -148,16 +148,20 @@ func (r *MarketingActivityRepo) SendReward(activityUuid, memberUuid uint64) erro
 	}
 
 	// 计算应该发放的奖励次数
-	rewardCountToGive := r.calculateRewardCount(consumptionAmount, activity.RewardConditionAmount) - int(rewardCount)
+	rewardCountToGive := r.calculateRewardCount(consumptionAmount, activity.RewardConditionAmount)
 	if rewardCountToGive <= 0 {
 		return fmt.Errorf("no reward to give")
 	}
-
 	// 最多等于奖励次数限制
 	if activity.IsOpenRewardLimit == 1 {
 		if rewardCountToGive > int(activity.RewardLimit) {
 			rewardCountToGive = int(activity.RewardLimit)
 		}
+	}
+	// 计算应该发放的奖励次数，减去已经发放的奖励次数
+	rewardCountToGive = rewardCountToGive - int(rewardCount)
+	if rewardCountToGive < 0 {
+		rewardCountToGive = 0
 	}
 
 	// 发放优惠券
