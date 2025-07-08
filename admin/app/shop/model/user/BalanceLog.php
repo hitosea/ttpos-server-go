@@ -48,7 +48,9 @@ class BalanceLog extends BalanceLogModel
             $model = $model->where('log.user_id', '=', (int)$data['user_id']);
         }
         // 获取列表数据
-        $list = $model->with(['user'])
+        $list = $model->with(['user' => function ($query) {
+                $query->withTrashed();
+            }])
             ->join('member user', 'user.uuid = log.member_uuid')
             ->order(['log.create_time' => 'desc'])
             ->paginate($query);
