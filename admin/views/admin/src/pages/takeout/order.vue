@@ -109,6 +109,8 @@
     try {
       const res = await getCompanySelect();
       companyList.value = res.data?.list?.data || [];
+      // 过滤掉未配置外送渠道的商家
+      companyList.value = companyList.value.filter((item) => item.channel_names.length > 0);
     } catch (error) {
       console.error('获取渠道失败:', error);
     }
