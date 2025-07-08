@@ -596,8 +596,9 @@ func (model *SaleBill) SetReverseSettle() {
 	// 销售订单状态变为未结账状态
 	// 销售订单的所有付款单都退款，并生成退款单
 	model.Status = constant.SaleBillStatusPending
-	model.FinishTime = 0
+	model.FinishTime = 0 // 反结账后支付时间finish_time置0
 	for _, saleOrder := range model.SaleOrders {
+		saleOrder.FinishTime = 0 // 反结账后支付时间finish_time置0
 		saleOrder.Status = constant.SaleOrderStatusPending
 		for _, paymentOrder := range saleOrder.PaymentOrders {
 			if !paymentOrder.PaymentMethod.IsLianLianPay() {
