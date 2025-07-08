@@ -107,7 +107,8 @@ type SaleOrderProduct struct {
 	ProductMustPlan            *ProductMustPlan             `gorm:"foreignKey:MustPlanUuid;references:uuid"`
 
 	// 内部字段
-	operation string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
+	operation        string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
+	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
 }
 
 // 获取商品包的规格uuid
@@ -235,6 +236,7 @@ func (model *SaleOrderProduct) SetAcceptOrderProduct() {
 
 // 将未下单的h5订单商品变为已下单的h5订单商品
 func (model *SaleOrderProduct) SetH5OrderProduct(h5OrderUuid uint64) {
+	model.unOrderH5Product = true // 标记为未下单的h5订单商品
 	model.H5OrderUuid = h5OrderUuid
 	model.Sign = model.GenerateProductSign() // 更新签名
 	// model.H5OrderProductUuid = h5OrderProductUuid
@@ -772,6 +774,10 @@ func (model *SaleOrderProduct) IsH5OrderProductBool() bool {
 
 // 是否是H5未下单商品。 未接单且无h5订单uuid
 func (model *SaleOrderProduct) IsUnOrderH5OrderProduct() bool {
+	if model.unOrderH5Product {
+		// 如果是特别标记的未下单的h5订单商品，返回true。此类商品此时正在下单的处理程序中
+		return true
+	}
 	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept && model.H5OrderUuid == 0
 }
 
