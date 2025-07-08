@@ -159,8 +159,6 @@
                       ></el-input-number>
                       <el-checkbox
                         v-model="distanceRange.is_unlimited"
-                        :true-label="true"
-                        :false-label="false"
                         :label="$t('最大')"
                         @change="handleIsUnlimitedChange(index, distanceRangeIndex)"
                         v-if="distanceRangeIndex === (formData[index].distance_range && formData[index].distance_range?.length - 1)"
@@ -201,7 +199,15 @@
             </div>
           </div>
         </el-form-item>
-        <el-button class="w-full" type="primary" plain @click="addDistanceRange(index)" icon="plus">{{ $t('添加范围距离') }}</el-button>
+        <el-button
+          class="w-full"
+          type="primary"
+          :disabled="item.distance_range?.map((distanceRange) => distanceRange.is_unlimited).includes(true)"
+          plain
+          @click="addDistanceRange(index)"
+          icon="plus"
+          >{{ $t('添加范围距离') }}</el-button
+        >
       </div>
     </el-form>
     <div class="border-t border-[#eee] flex items-center justify-center p-4 mt-4">

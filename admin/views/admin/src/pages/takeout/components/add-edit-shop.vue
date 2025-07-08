@@ -197,7 +197,16 @@
                   </div>
                 </div>
               </el-form-item>
-              <el-button v-if="item.config_type === 'manual'" type="primary" plain class="!mr-0" @click="addDistanceRange(index)" icon="plus">{{ $t('添加范围距离') }}</el-button>
+              <el-button
+                v-if="item.config_type === 'manual'"
+                :disabled="item.distance_range?.map((distanceRange) => distanceRange.is_unlimited).includes(true)"
+                type="primary"
+                plain
+                class="!mr-0"
+                @click="addDistanceRange(index)"
+                icon="plus"
+                >{{ $t('添加范围距离') }}</el-button
+              >
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@
     <div class="flex justify-between">
       <el-form :inline="true">
         <el-form-item>
-          <el-select v-model="searchParams.uuid" type="text" filterable :placeholder="$t('请选择商家')">
+          <el-select v-model="searchParams.uuid" type="text" filterable :placeholder="$t('请选择商家')" clearable>
             <el-option class="!h-auto" v-for="item in companyList" :key="item.uuid" :value="item.uuid" :label="item.name">
               <div>
                 <p class="">{{ item.name }}</p>
