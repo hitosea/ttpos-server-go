@@ -203,7 +203,6 @@
         searchLoading: '',
 
         open_import_product: false,
-        batch_title: '',
         batch_type: '',
 
         openProductSelector: false,
@@ -414,27 +413,25 @@
         this.$router.push({ path: '/' + this.app_id + '/product/store/product/importProduct' });
       },
 
-      //   上传图片
+      // 批量操作
       openBatch(e) {
         this.batch_type = e;
-        if (e == 1) {
-          this.batch_title = '修改图片';
-          this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { title: this.batch_title, type: this.batch_type } });
-        }
-        if (e == 2) {
-          this.batch_title = '修改分类';
-          this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { title: this.batch_title, type: this.batch_type } });
-        }
-        if (e == 3) {
-          this.batch_title = '修改税类';
-          this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { title: this.batch_title, type: this.batch_type } });
-        }
-        if (e == 4) {
-          this.openProductSelector = true;
-        }
-        if (e == 5) {
-          this.batch_title = '商品批量导入';
-          this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { title: this.batch_title, type: this.batch_type } });
+        switch (e) {
+          case 1:
+            this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
+            break;
+          case 2:
+            this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
+            break;
+          case 3:
+            this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
+            break;
+          case 4:
+            this.openProductSelector = true;
+            break;
+          case 5:
+            this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
+            break;
         }
       },
 
