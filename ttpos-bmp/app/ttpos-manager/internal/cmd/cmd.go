@@ -2,12 +2,11 @@ package cmd
 
 import (
 	"context"
-
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcmd"
-
 	"ttpos-bmp/app/ttpos-manager/internal/controller/hello"
+	"ttpos-bmp/app/ttpos-manager/internal/logic"
 )
 
 var (
@@ -16,6 +15,9 @@ var (
 		Usage: "main",
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
+
+			logic.InitRpc(ctx)
+
 			s := g.Server()
 			s.Group("/", func(group *ghttp.RouterGroup) {
 				group.Middleware(ghttp.MiddlewareHandlerResponse)

@@ -18,3 +18,7 @@ make conf
 8. 注册路由，对外暴露接口，比如这个项目是编写cmd.go文件。
 9. 在main.go中 加入一行 \_ "project-name/internal/logic" （只需写一次）
 10. 在main.go中加入一行 \_ "github.com/gogf/gf/contrib/drivers/mysql/v2" （如果你使用的是mysql；只需写一次）
+
+### gRpc 注意
+1. 初始化时，通过make pbentity 生成数据库实体映射的 protobuf 文件
+2. 修改 protobuf 文件，增加方法，通过make pb 生成对应的 go 文件。 注意生成的ctrl 目前有问题，需要手动修改。

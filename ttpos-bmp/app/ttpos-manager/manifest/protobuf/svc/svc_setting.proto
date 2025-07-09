@@ -1,0 +1,16 @@
+syntax = "proto3";
+import "setting.proto";
+
+package svc;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/rpc/v1/svc";
+
+
+
+service SettingSvc {
+  rpc GetSetting(GetReq) returns (v1.Setting);
+}
+
+message GetReq {
+  string Key = 1; // 设置项标示
+}

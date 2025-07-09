@@ -1,0 +1,32 @@
+# https://goframe.org/docs/web/server-config-file-template
+server:
+  address:     ":14001"
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+
+# https://goframe.org/docs/core/glog-config
+logger:
+  level : "all"
+  stdout: true
+
+# https://goframe.org/docs/core/gdb-config-file
+database:
+  default:
+  link: "mysql:root:passwod@tcp(localhost:13306)/saas"
+
+grpc:
+  name:            "ttpos-manager"
+  address:            ":14002"
+  logPath:          "./log"
+  logStdout:        true
+  errorLogEnabled:  true
+  accessLogEnabled: true
+  errorStack:       true
+
+nacos:
+  server:
+    ip: localhost
+    port: 8848
+  config:
+    dataId: ttpos-manager.yaml
+    group: DEFAULT_GROUP

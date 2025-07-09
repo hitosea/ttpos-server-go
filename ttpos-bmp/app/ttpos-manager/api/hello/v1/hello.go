@@ -2,6 +2,7 @@ package v1
 
 import (
 	"github.com/gogf/gf/v2/frame/g"
+	v1 "ttpos-bmp/app/ttpos-manager/api/rpc/v1"
 )
 
 type HelloReq struct {
@@ -9,4 +10,14 @@ type HelloReq struct {
 }
 type HelloRes struct {
 	g.Meta `mime:"text/html" example:"string"`
+}
+
+type GetSettingReq struct {
+	g.Meta `path:"/setting" tags:"Setting" method:"get" summary:"read setting"`
+	Key    string
+}
+
+type GetSettingRes struct {
+	g.Meta `mime:"application/json" example:"string"`
+	v1.Setting
 }

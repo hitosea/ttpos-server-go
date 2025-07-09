@@ -12,4 +12,5 @@ import (
 
 type IHelloV1 interface {
 	Hello(ctx context.Context, req *v1.HelloReq) (res *v1.HelloRes, err error)
+	GetSetting(ctx context.Context, req *v1.GetSettingReq) (res *v1.GetSettingRes, err error)
 }

@@ -18,3 +18,19 @@ cli.install:
   		echo "GoFame CLI is not installed, start proceeding auto installation..."; \
 		make cli; \
 	fi;
+
+
+
+# 启动 Docker 容器（使用项目名 ttpos-bmp 并加载 ../.env）
+.PHONY: docker
+docker:
+	@# 指定项目名 -p ttpos-bmp
+	@set -o allexport; \
+	source ../.env && docker compose -p ttpos-bmp -f ./docker-compose.yml up -d ;\
+	set +o allexport
+
+
+# 构建并运行 ttpos-manager 服务
+.PHONY: run-manager
+run-manager:
+	@cd app/ttpos-manager && gf run main.go
