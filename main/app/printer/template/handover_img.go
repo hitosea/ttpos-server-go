@@ -171,8 +171,12 @@ func (t *handoverImgTemplate) GetPrintContent(
 		img.LineFeed(1, 12)
 		img.SetTextLineHeight(34)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("免单金额"), Width: 320, Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.Translate("免单金额"), Width: 380, Align: pkg.AlignLeft, FontWeight: 1},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.TotalFreeOrderPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+		)
+		img.PrintInColumns(
+			pkg.ColumnConfig{Text: t.base.Translate("赠菜金额"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.TotalGiveProductPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		// 退款
 		img.SetTextLineHeight(40)
@@ -402,8 +406,12 @@ func (t *handoverImgTemplate) GetPrintContent(
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.TotalRefundMoney), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("免单金额"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.Translate("免单金额"), Width: 380, Align: pkg.AlignLeft, FontWeight: 1},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.TotalFreeOrderPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+		)
+		img.PrintInColumns(
+			pkg.ColumnConfig{Text: t.base.Translate("赠菜金额"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.TotalGiveProductPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.LineFeed(1, 10)
 		if t.base.Lang == "my" {

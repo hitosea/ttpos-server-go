@@ -164,6 +164,8 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalFreeOrderPrice), width))
 		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("赠菜金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalGiveProductPrice), width))
+		printer.LineFeed(1)
 		printer.SetPrintModes(true, true, false)
 		printer.SetCharacterSize(2, 1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("实收金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalReceivedPrice), width))
