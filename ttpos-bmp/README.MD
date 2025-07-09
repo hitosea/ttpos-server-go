@@ -6,4 +6,17 @@
  - 消息中间件 RocketMQ , 支持延迟消息
  - 微服务通讯及远程调用 gRPC
 
+## INSTALL
+```shell
+go mod tidy
+#生成配置，依赖上级目录生成的 .env 文件
+make conf
+```
 
+## 运行
+```shell
+# 管理模块
+make run.manager
+# 门店模块
+make run.shop
+```

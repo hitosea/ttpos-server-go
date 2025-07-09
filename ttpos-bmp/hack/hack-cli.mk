@@ -31,6 +31,11 @@ docker:
 
 
 # 构建并运行 ttpos-manager 服务
-.PHONY: run-manager
-run-manager:
+.PHONY: run.manager
+run.manager:
 	@cd app/ttpos-manager && gf run main.go
+
+# 构建并运行 ttpos-shop 服务
+.PHONY: run.shop
+run.shop:
+	@cd app/ttpos-shop && gf run main.go:
