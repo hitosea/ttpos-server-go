@@ -1,0 +1,30 @@
+
+# CLI tool, only in development environment.
+# https://goframe.org/docs/cli
+gfcli:
+  gen:
+    pbentity:
+        link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/saas"
+        path: "manifest/protobuf"
+        removePrefix: "ttpos_"
+        #tables: "order,products"
+        package: "ttpos-bmp/app/ttpos-manager/api/rpc/v1"
+    pb:
+        api: "api/rpc/v1"
+        ctrl: "internal/controller"
+    dao:
+      - link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/saas"
+        descriptionTag: true
+        removePrefix: "ttpos_"
+
+  run:
+    path: "./bin"
+    extra: ""
+    args: "all"
+    watchPaths:
+      - api/*.go
+      - internal/*.go
+  docker:
+    build: "-a amd64 -s linux -p temp -ew"
+    tagPrefixes:
+      - hub.hitosea.com/ttpos-bmp-shop

@@ -1,6 +1,6 @@
 # https://goframe.org/docs/web/server-config-file-template
 server:
-  address:     ":14001"
+  address:     ":14011"
   openapiPath: "/api.json"
   swaggerPath: "/swagger"
 
@@ -15,8 +15,8 @@ database:
   link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/saas"
 
 grpc:
-  name:            "ttpos-manager"
-  address:            ":14002"
+  name:            "ttpos-shop"
+  address:            ":14012"
   logPath:          "./log"
   logStdout:        true
   errorLogEnabled:  true

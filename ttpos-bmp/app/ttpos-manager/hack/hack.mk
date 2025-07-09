@@ -73,14 +73,3 @@ pb: cli.install
 .PHONY: pbentity
 pbentity: cli.install
 	@gf gen pbentity
-
-# 加载环境变量并替换数据库连接配置
-.PHONY: conf
-conf:
-	# 加载上级目录的.env文件（兼容文件不存在的情况）
-	@set -o allexport; \
-	# 替换config.yaml中的数据库连接字符串
-	# 匹配以空格开头的link行，替换为新的连接格式
-	source ../../../.env && sed -i '' "s|link: \".*|link: \"mysql:root:$$DB_ROOT_PASSWORD@tcp(localhost:$$DB_PORT_OPEN)/saas\"|" hack/config.yaml; \
-	source ../../../.env && sed -i '' "s|^[[:space:]]*link: \".*|  link: \"mysql:root:$$DB_ROOT_PASSWORD@tcp(localhost:$$DB_PORT_OPEN)/saas\"|" manifest/config/config.yaml; \
-	set +o allexport
