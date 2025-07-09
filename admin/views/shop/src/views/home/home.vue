@@ -17,7 +17,7 @@
 
         <dataBox v-if="is_open_member == '1'" :title="$t('会员数')" :content="$t('当前会员总数')" :value="this.$formatPrice(top_data.user_total || 0)"></dataBox>
 
-        <dataBox :title="$t('订单数')" :content="$t('所有的订单数，包含待付款、已取消、已完成')" :value="top_data.order_total || 0"></dataBox>
+        <dataBox :title="$t('订单数')" :content="$t('所有的订单数，包含待付款、已取消、已完成')" :value="this.$formatPrice(top_data.order_total || 0)"></dataBox>
 
         <dataBox :title="$t('退款金额')" :content="$t('订单退款的金额（反结账不计入在此）')" :value="this.$formatPrice(top_data.refund_money || 0)"></dataBox>
       </div>
@@ -46,7 +46,11 @@
             :yesterdayData="$t('昨日：') + today_data.new_user_total?.ytd"
           ></gridContent>
 
-          <gridContent :title="$t('订单数')" :value="today_data.order_total?.tday" :yesterdayData="$t('昨日：') + today_data.order_total?.ytd"></gridContent>
+          <gridContent
+            :title="$t('订单数')"
+            :value="this.$formatPrice(today_data.order_total?.tday || 0)"
+            :yesterdayData="$t('昨日：') + this.$formatPrice(today_data.order_total?.ytd || 0)"
+          ></gridContent>
 
           <gridContent
             :title="$t('退款金额')"
