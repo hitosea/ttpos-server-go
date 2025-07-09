@@ -418,18 +418,23 @@
         this.batch_type = e;
         switch (e) {
           case 1:
+            // 修改图片
             this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
             break;
           case 2:
+            // 修改分类
             this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
             break;
           case 3:
+            // 修改税类
             this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
             break;
           case 4:
+            // 删除
             this.openProductSelector = true;
             break;
           case 5:
+            // 商品批量导入
             this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
             break;
         }
