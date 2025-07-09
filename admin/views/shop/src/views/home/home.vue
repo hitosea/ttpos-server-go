@@ -89,7 +89,7 @@
   import Transaction from '@/views/home/part/Transaction.vue';
   import SvgIcon from '@/components/svg-icon/SvgIcon.vue';
   import { useUserStore } from '@/store';
-  import dataBox from './part/dataBox.vue';
+  import dataBox from '@/components/dataBox/dataBox.vue';
   import gridContent from './part/product/gridContent.vue';
   import centerRBox from './part/centerRBox.vue';
   const { userInfo, computedRenderMenus, computedSupplier } = useUserStore();

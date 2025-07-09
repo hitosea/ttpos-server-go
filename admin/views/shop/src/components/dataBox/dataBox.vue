@@ -2,7 +2,7 @@
   <div class="data-box">
     <div class="data-box-title">
       <h3>{{ title }}</h3>
-      <el-tooltip class="item" effect="dark" :content="content" placement="bottom">
+      <el-tooltip v-if="content" class="item" effect="dark" :content="content" placement="bottom">
         <template #content>
           <div v-html="content"></div>
         </template>
