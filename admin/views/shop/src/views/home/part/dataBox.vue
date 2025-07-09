@@ -19,11 +19,11 @@
       default: '',
     },
     content: {
-      type: String,
+      type: [String, Number],
       default: '',
     },
     value: {
-      type: String,
+      type: [String, Number],
       default: '',
     },
   });
