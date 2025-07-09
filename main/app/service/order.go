@@ -10716,6 +10716,9 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 
 	// 按送厨时间排序
 	sort.Slice(res.Products.List, func(i, j int) bool {
+		if res.Products.List[i].CreateTime == res.Products.List[j].CreateTime {
+			return res.Products.List[i].Uuid < res.Products.List[j].Uuid
+		}
 		return res.Products.List[i].CreateTime < res.Products.List[j].CreateTime
 	})
 
