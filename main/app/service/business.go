@@ -123,6 +123,8 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			TotalPeopleNum:          int(saleData.TotalMealNum),
 			TotalProductNum:         saleData.TotalProductNum,
 			TotalTableNum:           int(saleData.TotalDeskNum),
+			TotalGiveProductPrice:   saleData.TotalGiftAmount,
+			TotalGiveProductNum:     saleData.TotalGiftNum,
 			AvgOrderPrice:           saleData.AvgOrderAmount,
 			MinOrderPrice:           saleData.MinOrderAmount,
 			MaxOrderPrice:           saleData.MaxOrderAmount,
