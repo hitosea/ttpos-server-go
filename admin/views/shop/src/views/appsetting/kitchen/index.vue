@@ -79,7 +79,7 @@
               <span>{{ $t('打印机：') }}</span>
               <el-select v-model="item.related_printer_uuid" :placeholder="$t('请选择打印机')">
                 <el-option :value="0" :label="$t('不打印')">{{ $t('不打印') }}</el-option>
-                <el-option v-for="item in printerList" :key="item.uuid" :value="item.uuid" :label="item.name">{{ item.name }}</el-option>
+                <el-option v-for="item in printerList" :key="item.uuid" :value="item.uuid" :label="item.printer_name">{{ item.printer_name }}</el-option>
               </el-select>
               <el-tooltip effect="dark" placement="bottom">
                 <template #content>
@@ -109,7 +109,7 @@
               <span>{{ $t('打印机：') }}</span>
               <el-select v-model="item.related_printer_uuid" :placeholder="$t('请选择打印机')">
                 <el-option :value="0" :label="$t('不打印')">{{ $t('不打印') }}</el-option>
-                <el-option v-for="item in printerList" :key="item.uuid" :value="item.uuid" :label="item.name">{{ item.name }}</el-option>
+                <el-option v-for="item in printerList" :key="item.uuid" :value="item.uuid" :label="item.printer_name">{{ item.printer_name }}</el-option>
               </el-select>
               <el-tooltip effect="dark" placement="bottom">
                 <template #content>
