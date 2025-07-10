@@ -82,6 +82,20 @@
               </template>
               <SvgIcon class="form-icon" name="man"></SvgIcon>
             </el-tooltip>
+            <div class="device-btn-box">
+              <span>{{ $t('打印机：') }}</span>
+              <el-select v-model="item.related_printer_uuid" :placeholder="$t('请选择打印机')">
+                <el-option :value="0" :label="$t('不打印')">{{ $t('不打印') }}</el-option>
+                <el-option v-for="item in printerList" :key="item.uuid" :value="item.uuid" :label="item.name">{{ item.name }}</el-option>
+              </el-select>
+              <el-tooltip effect="dark" placement="bottom">
+                <template #content>
+                  <p>{{ $t('选择用于打印出菜单的打印机') }}</p>
+                </template>
+                <SvgIcon class="tip-icon" name="icon6"></SvgIcon>
+              </el-tooltip>
+            </div>
+
             <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
           </div>
           <p v-else>{{ $t('暂无设备') }}</p>
@@ -91,6 +105,20 @@
             <div class="max-w460 input-ss">
               <autoTips :tooltipMaxWidth="460" :content="(item.remark ? item.remark : '') + `(${item.key})`">{{ (item.remark ? item.remark : '') + `(${item.key})` }}</autoTips>
             </div>
+            <div class="device-btn-box">
+              <span>{{ $t('打印机：') }}</span>
+              <el-select v-model="item.related_printer_uuid" :placeholder="$t('请选择打印机')">
+                <el-option :value="0" :label="$t('不打印')">{{ $t('不打印') }}</el-option>
+                <el-option v-for="item in printerList" :key="item.uuid" :value="item.uuid" :label="item.name">{{ item.name }}</el-option>
+              </el-select>
+              <el-tooltip effect="dark" placement="bottom">
+                <template #content>
+                  <p>{{ $t('选择用于打印出菜单的打印机') }}</p>
+                </template>
+                <SvgIcon class="tip-icon" name="icon6"></SvgIcon>
+              </el-tooltip>
+            </div>
+
             <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
           </div>
           <p v-else>{{ $t('暂无设备') }}</p>
@@ -157,6 +185,7 @@
         open: false,
         loading: false,
         password: '',
+        printerList: [],
       };
     },
     created() {
@@ -210,6 +239,7 @@
                 self.offlineList.push(item);
               }
             });
+            self.printerList = data.data.vars.values.printer_list;
           })
           .catch((error) => {
             self.loading = false;
@@ -218,8 +248,29 @@
       onSubmit() {
         let self = this;
         let params = JSON.parse(JSON.stringify(self.form));
-        //绑定的设备不用提清空
+
+        //绑定的清空,只需要提交绑定的打印机ID和设备UUID
         params.bind_list = [];
+        //在线设备绑定的打印机ID
+        if (self.onlineList.length > 0) {
+          self.onlineList.map((item) => {
+            params.bind_list.push({
+              uuid: item.uuid,
+              related_printer_uuid: item.related_printer_uuid,
+            });
+          });
+        }
+        //离线设备绑定的打印机ID
+        if (self.offlineList.length > 0) {
+          self.offlineList.map((item) => {
+            params.bind_list.push({
+              uuid: item.uuid,
+              related_printer_uuid: item.related_printer_uuid,
+            });
+          });
+        }
+        console.log(params);
+
         self.loading = true;
         Terminal.saveKitchen(params, true)
           .then((data) => {
@@ -322,6 +373,20 @@
           width: 30px;
           height: 30px;
           margin-left: 8px;
+          flex-shrink: 0;
+        }
+        .device-btn-box {
+          display: flex;
+          margin: 0 16px;
+          span {
+            flex-shrink: 0;
+            margin: 0;
+          }
+          .tip-icon {
+            margin-left: 8px;
+            width: 32px;
+            height: 32px;
+          }
         }
       }
     }
