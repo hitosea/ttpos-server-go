@@ -11,6 +11,7 @@ type IDeviceRepo interface {
 	WhereSn(deviceId string) DBOption   // sn/device_id 条件
 	WhereUuid(uuid uint64) DBOption     // uuid 条件
 	WhereSource(source string) DBOption // 来源（cashier、tablet、kitchen、assistant）条件
+	WhereMain() DBOption                // 主设备条件
 
 	GetDevice(opts ...DBOption) (model.Device, error)       // 获取设备 - 不包含软删除
 	GetDeviceAll(opts ...DBOption) (model.Device, error)    // 获取设备 - 所以 - 包含软删除
@@ -99,6 +100,12 @@ func (r *deviceRepo) WhereSn(deviceId string) DBOption {
 func (r *deviceRepo) WhereSource(source string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("source = ?", source)
+	}
+}
+
+func (r *deviceRepo) WhereMain() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_main = 1")
 	}
 }
 

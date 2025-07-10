@@ -109,6 +109,15 @@ class Setting extends SettingModel
         if ($key == SettingEnum::CASHIER && isset($values['main_cashier_uuid'])) {
             (new BindRecord)->setMainCashier($values['main_cashier_uuid']);
         }
+        // 更新厨显
+        if ($key == SettingEnum::KITCHEN && isset($values['bind_list'])) {
+            if (!is_array($values['bind_list'])) {
+                $values['bind_list'] = [];
+            }
+            foreach ($values['bind_list'] as $relatedPrinter) {
+                (new BindRecord)->setKitchenRelatedPrinterUuid($relatedPrinter['uuid'] ?? 0, $relatedPrinter['related_printer_uuid'] ?? 0);
+            }
+        }
         // 删除系统设置缓存
         $key = sprintf("setting:company_id:%d", $appId);
         if (Cache::has($key)) {
