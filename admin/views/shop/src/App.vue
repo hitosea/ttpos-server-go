@@ -85,6 +85,7 @@
   import ko from 'element-plus/es/locale/lang/ko';
   import ja from 'element-plus/es/locale/lang/ja';
   import tr from 'element-plus/es/locale/lang/tr';
+  import sv from 'element-plus/es/locale/lang/sv';
   import my from '@/lang/component/my';
   import { message } from '@/utils/message.js';
   import autoTips from '@/components/autoTips/autoTips.vue';
@@ -147,6 +148,9 @@
   }
   if (language.value == 'tr') {
     locale.value = tr;
+  }
+  if (language.value == 'sv') {
+    locale.value = sv;
   }
   const state = reactive({});
   // let timer;
