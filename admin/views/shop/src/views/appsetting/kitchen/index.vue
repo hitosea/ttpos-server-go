@@ -236,7 +236,6 @@
             self.form.bind_list.map((item) => {
               // 如果 related_printer_uuid 不为0，并且不在 printerList 中，就把 related_printer_uuid 设置为 0
               if (item.related_printer_uuid > 0 && !self.printerList.some((printer) => printer.uuid === item.related_printer_uuid)) {
-                console.log(item);
                 item.related_printer_uuid = 0;
               }
               // 如果 finally_login_id 大于 0，就添加到 onlineList，否则添加到 offlineList
