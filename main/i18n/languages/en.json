@@ -1213,7 +1213,7 @@
   "报损数量大于剩余库存数量": "Report damage quantity is greater than the inventory quantity",
   "抹元": "Mo Yuan",
   "抹分": "Erase points",
-  "抹角": "Erase corner",
+  "抹角": "​Drop the decimals​",
   "抹零": "Rounding",
   "抹零规则错误": "Rounding rule error",
   "拆分的加钟数量不能超出原订单加钟数量": "The number of extra hours split cannot exceed the original order's extra hours",
