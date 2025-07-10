@@ -596,7 +596,6 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 // OutMenuTemplate 出菜单模版
 func (t *dishesImgTemplate) OutMenuTemplate(
 	tmp int,
-	printerItem *model.ProductPrinterItem,
 	order model.SaleBill,
 	products printer_model.Products,
 	finishedTime int64,
