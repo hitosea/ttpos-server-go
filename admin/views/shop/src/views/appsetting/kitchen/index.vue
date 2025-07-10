@@ -84,7 +84,7 @@
             </el-tooltip>
             <div class="device-btn-box">
               <span>{{ $t('打印机：') }}</span>
-              <el-select v-model="item.related_printer_uuid" :placeholder="$t('请选择打印机')" clearable>
+              <el-select v-model="item.related_printer_uuid" :placeholder="$t('请选择打印机')">
                 <el-option :value="0" :label="$t('不打印')">{{ $t('不打印') }}</el-option>
                 <el-option v-for="item in printerList" :key="item.uuid" :value="item.uuid" :label="item.name">{{ item.name }}</el-option>
               </el-select>
@@ -107,7 +107,7 @@
             </div>
             <div class="device-btn-box">
               <span>{{ $t('打印机：') }}</span>
-              <el-select v-model="item.related_printer_uuid" :placeholder="$t('请选择打印机')" clearable>
+              <el-select v-model="item.related_printer_uuid" :placeholder="$t('请选择打印机')">
                 <el-option :value="0" :label="$t('不打印')">{{ $t('不打印') }}</el-option>
                 <el-option v-for="item in printerList" :key="item.uuid" :value="item.uuid" :label="item.name">{{ item.name }}</el-option>
               </el-select>
