@@ -2035,5 +2035,9 @@
     "模板4": "Template 4",
     "请输入整数": "Please enter an integer",
     "商品已含税（原商品金额+实收服务费+实收服务税费+实收支付手续费）": "The product is tax-included (original product amount + received service fee + received service tax fee + received payment handling fee)",
-    "商品未含税（原商品金额+实收服务费+实收商品及服务税费+实收支付手续费）": "Product is tax-excluded (original product amount + collected service fee + collected goods and services tax + collected payment fee)"
+    "商品未含税（原商品金额+实收服务费+实收商品及服务税费+实收支付手续费）": "Product is tax-excluded (original product amount + collected service fee + collected goods and services tax + collected payment fee)",
+    "打印机：": "Printer:",
+    "不打印": "Do not print",
+    "选择用于打印出菜单的打印机": "Select the printer used for menu printing",
+    "批量修改整单折扣商品": "Batch modify entire order discount items"
 }
