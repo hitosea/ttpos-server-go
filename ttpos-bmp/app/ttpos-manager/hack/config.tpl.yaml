@@ -5,12 +5,12 @@ gfcli:
   gen:
     pbentity:
         link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/saas"
-        path: "manifest/protobuf"
+        path: "manifest/protobuf/manager"
         removePrefix: "ttpos_"
         #tables: "order,products"
-        package: "ttpos-bmp/app/ttpos-manager/api/rpc/v1"
+        package: "ttpos-bmp/app/ttpos-manager/api/rpc/manager"
     pb:
-        api: "api/rpc/v1"
+        api: "api/rpc"
         ctrl: "internal/controller"
     dao:
       - link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/saas"

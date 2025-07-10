@@ -1,5 +1,5 @@
 syntax = "proto3";
-import "setting.proto";
+import "manager/setting.proto";
 
 package svc;
 
@@ -8,7 +8,7 @@ option go_package = "ttpos-bmp/app/ttpos-manager/api/rpc/v1/svc";
 
 
 service SettingSvc {
-  rpc GetSetting(GetReq) returns (v1.Setting);
+  rpc GetSetting(GetReq) returns (manager.Setting);
 }
 
 message GetReq {

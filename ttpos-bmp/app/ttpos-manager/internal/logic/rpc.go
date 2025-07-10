@@ -5,8 +5,8 @@ import (
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"google.golang.org/grpc"
-	"ttpos-bmp/app/ttpos-manager/api/rpc/v1/svc"
-	svcSetting "ttpos-bmp/app/ttpos-manager/internal/controller/rpc/v1"
+	"ttpos-bmp/app/ttpos-manager/api/rpc/svc"
+	svcSetting "ttpos-bmp/app/ttpos-manager/internal/controller/rpc"
 	"ttpos-bmp/internal/pkg/nacos/service"
 )
 

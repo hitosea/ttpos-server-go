@@ -2,7 +2,7 @@ package v1
 
 import (
 	"github.com/gogf/gf/v2/frame/g"
-	v1 "ttpos-bmp/app/ttpos-manager/api/rpc/v1"
+	"ttpos-bmp/app/ttpos-manager/api/rpc/manager"
 )
 
 type HelloReq struct {
@@ -19,5 +19,5 @@ type GetSettingReq struct {
 
 type GetSettingRes struct {
 	g.Meta `mime:"application/json" example:"string"`
-	v1.Setting
+	manager.Setting
 }
