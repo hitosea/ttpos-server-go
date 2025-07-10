@@ -1787,5 +1787,11 @@
     "外卖: 0001": "Paket Servis: 0001",
     "外送订单": "Dışarı Sipariş",
     "模板4": "Şablon 4",
-    "请输入整数": "Lütfen bir tam sayı girin"
+    "请输入整数": "Lütfen bir tam sayı girin",
+    "商品已含税（原商品金额+实收服务费+实收服务税费+实收支付手续费）": "Ürün, vergi dahil (orijinal ürün tutarı + alınan hizmet ücreti + alınan hizmet vergi ücreti + alınan ödeme işlem ücreti)",
+    "商品未含税（原商品金额+实收服务费+实收商品及服务税费+实收支付手续费）": "Ürün vergisizdir (orijinal ürün tutarı + alınan hizmet ücreti + alınan ürün ve hizmet vergisi + alınan işlem ücreti)",
+    "打印机：": "Yazıcı:",
+    "不打印": "Yazdırma",
+    "选择用于打印出菜单的打印机": "Menüyü yazdırmak için kullanılacak yazıcıyı seçin",
+    "批量修改整单折扣商品": "Toplu olarak tüm fatura indirim ürünlerini değiştirin"
 }

@@ -225,8 +225,9 @@ class Delivery extends Controller
      * @Apidoc\Desc("")
      * @Apidoc\Method("GET")
      * @Apidoc\Url("/api/admin/delivery/companySelect")
-     * @Apidoc\Param("keyword", type="string", default="", desc="商家名称")
+     * @Apidoc\Param("keyword", type="string", default="", desc="商家名称/uuid")
      * @Apidoc\Param("channel", type="string", default="", desc="外送渠道：SKootar") 
+     * @Apidoc\Param("configured", type="string", default="", desc="是否只获取已配置外送渠道：0-否；1-是") 
      * @Apidoc\Param(ref="pageParam")
      * @Apidoc\Returned(type="array", desc="商家列表", children={
      *      @Apidoc\Returned("uuid", type="biginteger", desc="商家ID"),
@@ -236,7 +237,8 @@ class Delivery extends Controller
      */
     public function companySelect()
     {
-        $param = array_merge($this->getData(), ["configured" => false]);
+        $param = $this->getData();
+        $param = array_merge($param, ["configured" => ($param['configured'] ?? '0') == '1']);
         $list = (new AppModel)->getDeliveryList($param)?->toArray();
         if (!empty($list["data"])) {
             foreach ($list["data"] as $k => $item) {

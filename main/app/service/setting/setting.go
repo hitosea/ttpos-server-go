@@ -184,7 +184,7 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 	err := json.Unmarshal([]byte(jsonStr), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析商城设置失败-01", zap.Error(err))
-		return store, errors.New("解析商城设置失败-01 " + err.Error())
+		return store, errors.New("解析商城设置失败-01" + err.Error())
 	}
 	// 处理language数组中的key字段
 	if language, ok := jsonMap["language"].([]interface{}); ok {
@@ -212,13 +212,13 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 	modifiedJSON, err := json.Marshal(jsonMap)
 	if err != nil {
 		ctx.Log().Error("重新序列化JSON失败", zap.Error(err))
-		return store, errors.New("重新序列化JSON失败 " + err.Error())
+		return store, errors.New("重新序列化JSON失败" + err.Error())
 	}
 
 	err = json.Unmarshal(modifiedJSON, &store)
 	if err != nil {
 		ctx.Log().Error("解析商城设置失败", zap.Error(err))
-		return store, errors.New("解析商城设置失败 " + err.Error())
+		return store, errors.New("解析商城设置失败" + err.Error())
 	}
 	if store.IPWhiteList != "" {
 		store.IPWhiteList = viper.GetString("PAY_SERVICE_IP")
@@ -268,7 +268,7 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 	err = json.Unmarshal([]byte(jsonStr), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析小票打印机设置失败", zap.Error(err))
-		return printer, errors.New("解析小票打印机设置失败 " + err.Error())
+		return printer, errors.New("解析小票打印机设置失败" + err.Error())
 	}
 	// 处理 cashier_printer 字段，确保它是一个数组
 	if cashierPrinter, ok := jsonMap["cashier_printer"]; ok {
@@ -315,14 +315,14 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 	modifiedJSON, err := json.Marshal(jsonMap)
 	if err != nil {
 		ctx.Log().Error("重新序列化JSON失败", zap.Error(err))
-		return printer, errors.New("重新序列化JSON失败 " + err.Error())
+		return printer, errors.New("重新序列化JSON失败" + err.Error())
 	}
 
 	// 使用处理后的JSON解析
 	err = json.Unmarshal(modifiedJSON, &printer)
 	if err != nil {
 		ctx.Log().Error("解析小票打印机设置失败", zap.Error(err))
-		return printer, errors.New("解析小票打印机设置失败 " + err.Error())
+		return printer, errors.New("解析小票打印机设置失败" + err.Error())
 	}
 	// 过滤佛历、过滤打印方式，使用默认
 	printer.CalendarList = nil
@@ -806,7 +806,7 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 	err = json.Unmarshal([]byte(st.Values), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析点餐助手设置失败-01", zap.Error(err))
-		return assistant, errors.New("解析点餐助手设置失败-01 " + err.Error())
+		return assistant, errors.New("解析点餐助手设置失败-01" + err.Error())
 	}
 	// 处理 isShowAssistantSoldOut
 	if isShowAssistantSoldOut, ok := jsonMap["is_show_assistant_sold_out"]; ok {
@@ -820,7 +820,7 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 	modifiedJSON, err := json.Marshal(jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析点餐助手设置失败 - 重新序列化JSON失败 - 02", zap.Error(err))
-		return assistant, errors.New("解析点餐助手设置失败 - 重新序列化JSON失败 - 02 " + err.Error())
+		return assistant, errors.New("解析点餐助手设置失败 - 重新序列化JSON失败 - 02" + err.Error())
 	}
 	//
 	err = json.Unmarshal(modifiedJSON, &assistant)

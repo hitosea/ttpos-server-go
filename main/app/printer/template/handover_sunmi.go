@@ -149,6 +149,8 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 		}
 		printer.PrintInColumns(t.base.Translate("免单金额"), t.base.GetPriceAndUnit(businessData.TotalFreeOrderPrice))
 		printer.LineFeed(1)
+		printer.PrintInColumns(t.base.Translate("赠菜金额"), t.base.GetPriceAndUnit(businessData.TotalGiveProductPrice))
+		printer.LineFeed(1)
 		// 退款
 		printer.AppendText("------------------------------------------------")
 		printer.LineFeed(2)
@@ -376,6 +378,8 @@ func (t *handoverSunmiTemplate) GetPrintContent(
 		printer.PrintInColumns(t.base.Translate("退款金额"), t.base.GetPriceAndUnit(businessData.TotalRefundMoney))
 		printer.LineFeed(1)
 		printer.PrintInColumns(t.base.Translate("免单金额"), t.base.GetPriceAndUnit(businessData.TotalFreeOrderPrice))
+		printer.LineFeed(1)
+		printer.PrintInColumns(t.base.Translate("赠菜金额"), t.base.GetPriceAndUnit(businessData.TotalGiveProductPrice))
 		printer.LineFeed(1)
 		printer.SetPrintModes(true, true, false)
 		printer.SetCharacterSize(2, 1)

@@ -3,120 +3,68 @@
     <div class="operation-wrap" style="background-color: #ffffff">
       <h3 class="operation-title mb16">{{ $t('数据总览') }}</h3>
       <div class="operation-data">
-        <div class="data-box">
-          <div class="data-box-title">
-            <h3>{{ $t('实收金额') }}</h3>
-            <el-tooltip
-              class="item"
-              effect="dark"
-              :content="$t('实收金额：指订单原价扣除优惠折扣、会员折扣后的金额，包含支付手续费+会员充值金额（不包括会员余额消费金额）')"
-              placement="bottom"
-            >
-              <SvgIcon class="data-box-icon" name="icon6"></SvgIcon>
-            </el-tooltip>
-          </div>
-          <h4>{{ this.$formatPrice(top_data.total_money || 0) }}</h4>
-        </div>
-        <div class="data-box">
-          <div class="data-box-title">
-            <h3>{{ $t('优惠折扣/会员折扣') }}</h3>
-            <el-tooltip class="item" effect="dark" placement="bottom">
-              <template #content>
-                {{ $t('优惠折扣=优惠折扣总金额（包含改价、折扣比例、抹零、结账抹零）') }}<br />{{ $t('会员折扣：会员折扣总金额（包含等级折扣及会员卡折扣）') }}
-              </template>
-              <SvgIcon class="data-box-icon" name="icon6"></SvgIcon>
-            </el-tooltip>
-          </div>
-          <h4>{{ this.$formatPrice(top_data.discount_money || 0) }}/{{ this.$formatPrice(top_data.user_discount_money || 0) }}</h4>
-        </div>
-        <div class="data-box" v-if="is_open_member == '1'">
-          <div class="data-box-title">
-            <h3>{{ $t('会员数') }}</h3>
-            <el-tooltip class="item" effect="dark" :content="$t('当前会员总数')" placement="bottom">
-              <SvgIcon class="data-box-icon" name="icon6"></SvgIcon>
-            </el-tooltip>
-          </div>
-          <h4>{{ top_data.user_total || 0 }}</h4>
-        </div>
-        <div class="data-box">
-          <div class="data-box-title">
-            <h3>{{ $t('订单数') }}</h3>
-            <el-tooltip class="item" effect="dark" :content="$t('所有的订单数，包含待付款、已取消、已完成')" placement="bottom">
-              <SvgIcon class="data-box-icon" name="icon6"></SvgIcon>
-            </el-tooltip>
-          </div>
-          <h4>{{ top_data.order_total || 0 }}</h4>
-        </div>
-        <div class="data-box">
-          <div class="data-box-title">
-            <h3>{{ $t('退款金额') }}</h3>
-            <el-tooltip class="item" effect="dark" :content="$t('订单退款的金额（反结账不计入在此）')" placement="bottom">
-              <SvgIcon class="data-box-icon" name="icon6"></SvgIcon>
-            </el-tooltip>
-          </div>
-          <h4>{{ this.$formatPrice(top_data.refund_money || 0) }}</h4>
-        </div>
+        <dataBox
+          :title="$t('实收金额')"
+          :content="$t('实收金额：指订单原价扣除优惠折扣、会员折扣后的金额，包含支付手续费+会员充值金额（不包括会员余额消费金额）')"
+          :value="this.$formatPrice(top_data.total_money || 0)"
+        ></dataBox>
+
+        <dataBox
+          :title="$t('优惠折扣/会员折扣')"
+          :content="$t('优惠折扣=优惠折扣总金额（包含改价、折扣比例、抹零、结账抹零）') + `<br />` + $t('会员折扣：会员折扣总金额（包含等级折扣及会员卡折扣）')"
+          :value="this.$formatPrice(top_data.discount_money || 0) + '/' + this.$formatPrice(top_data.user_discount_money || 0)"
+        ></dataBox>
+
+        <dataBox v-if="is_open_member == '1'" :title="$t('会员数')" :content="$t('当前会员总数')" :value="this.$formatPrice(top_data.user_total || 0)"></dataBox>
+
+        <dataBox :title="$t('订单数')" :content="$t('所有的订单数，包含待付款、已取消、已完成')" :value="this.$formatPrice(top_data.order_total || 0)"></dataBox>
+
+        <dataBox :title="$t('退款金额')" :content="$t('订单退款的金额（反结账不计入在此）')" :value="this.$formatPrice(top_data.refund_money || 0)"></dataBox>
       </div>
     </div>
     <div class="operation-center mt12">
       <div class="operation-center-l">
         <h3 class="operation-title mb16">{{ $t('今日概况') }}</h3>
         <div class="operation-today">
-          <div class="grid-content">
-            <p class="des">{{ $t('实收金额') }}</p>
-            <h3>
-              {{ this.$formatPrice(today_data.order_total_price?.tday || 0) }}
-            </h3>
-            <p class="yesterday"> {{ $t('昨日：') }}{{ this.$formatPrice(today_data.order_total_price?.ytd || 0) }} </p>
-          </div>
-          <div class="grid-content">
-            <p class="des">{{ $t('优惠折扣/会员折扣') }}</p>
-            <h3> {{ this.$formatPrice(today_data.discount_money?.tday || 0) }}/{{ this.$formatPrice(today_data.user_discount_money?.tday || 0) }} </h3>
-            <p class="yesterday">
-              {{ $t('昨日：') }}{{ this.$formatPrice(today_data.discount_money?.ytd || 0) }}/{{ this.$formatPrice(today_data.user_discount_money?.ytd || 0) }}
-            </p>
-          </div>
-          <div class="grid-content" v-if="is_open_member == '1'">
-            <p class="des">
-              {{ $t('新增会员数') }}
-              <el-tooltip class="item" effect="dark" :content="$t('今日新增会员数量')" placement="bottom">
-                <SvgIcon class="data-icon" name="icon6"></SvgIcon>
-              </el-tooltip>
-            </p>
-            <h3>{{ today_data.new_user_total?.tday }}</h3>
-            <p class="yesterday"> {{ $t('昨日：') }}{{ today_data.new_user_total?.ytd }} </p>
-          </div>
-          <div class="grid-content">
-            <p class="des">{{ $t('订单数') }}</p>
-            <h3>{{ today_data.order_total?.tday }}</h3>
-            <p class="yesterday"> {{ $t('昨日：') }}{{ today_data.order_total?.ytd }} </p>
-          </div>
-          <div class="grid-content">
-            <p class="des">{{ $t('退款金额') }}</p>
-            <h3>
-              {{ this.$formatPrice(today_data.order_refund_money?.tday || 0) }}
-            </h3>
-            <p class="yesterday"> {{ $t('昨日：') }}{{ this.$formatPrice(today_data.order_refund_money?.ytd || 0) }} </p>
-          </div>
+          <gridContent
+            :title="$t('实收金额')"
+            :value="this.$formatPrice(today_data.order_total_price?.tday || 0)"
+            :yesterdayData="$t('昨日：') + this.$formatPrice(today_data.order_total_price?.ytd || 0)"
+          ></gridContent>
+
+          <gridContent
+            :title="$t('优惠折扣/会员折扣')"
+            :value="this.$formatPrice(today_data.discount_money?.tday || 0) + '/' + this.$formatPrice(today_data.user_discount_money?.tday || 0)"
+            :yesterdayData="$t('昨日：') + this.$formatPrice(today_data.discount_money?.ytd || 0) + '/' + this.$formatPrice(today_data.user_discount_money?.ytd || 0)"
+          ></gridContent>
+
+          <gridContent
+            v-if="is_open_member == '1'"
+            :title="$t('新增会员数')"
+            :tooltipContent="$t('今日新增会员数量')"
+            :value="today_data.new_user_total?.tday"
+            :yesterdayData="$t('昨日：') + today_data.new_user_total?.ytd"
+          ></gridContent>
+
+          <gridContent
+            :title="$t('订单数')"
+            :value="this.$formatPrice(today_data.order_total?.tday || 0)"
+            :yesterdayData="$t('昨日：') + this.$formatPrice(today_data.order_total?.ytd || 0)"
+          ></gridContent>
+
+          <gridContent
+            :title="$t('退款金额')"
+            :value="this.$formatPrice(today_data.order_refund_money?.tday || 0)"
+            :yesterdayData="$t('昨日：') + this.$formatPrice(today_data.order_refund_money?.ytd || 0)"
+          ></gridContent>
         </div>
       </div>
       <div class="operation-center-r">
         <h3 class="operation-title mb16">{{ $t('待办事项') }}</h3>
-        <div class="center-r-box">
-          <div class="center-r-box-t">
-            <h4>{{ $t('库存告急') }}</h4>
-            <p @click="lockStock">{{ $t('查看') }}</p>
-          </div>
-          <p class="fb">{{ wait_data?.stock?.product || 0 }}</p>
-        </div>
 
-        <div class="center-r-box" v-if="baseSale == '1'">
-          <div class="center-r-box-t">
-            <h4>{{ $t('采购单') }}</h4>
-            <p @click="lookOrder">{{ $t('查看') }}</p>
-          </div>
-          <p class="fb">{{ wait_data?.purchase?.apply || 0 }}</p>
-        </div>
+        <centerRBox :title="$t('库存告急')" :description="$t('查看')" :value="wait_data?.stock?.product || 0" @click="lockStock"></centerRBox>
+
+        <centerRBox :title="$t('采购单')" :description="$t('查看')" :value="wait_data?.purchase?.apply || 0" @click="lookOrder"></centerRBox>
       </div>
     </div>
 
@@ -141,6 +89,9 @@
   import Transaction from '@/views/home/part/Transaction.vue';
   import SvgIcon from '@/components/svg-icon/SvgIcon.vue';
   import { useUserStore } from '@/store';
+  import dataBox from '@/components/dataBox/dataBox.vue';
+  import gridContent from './part/product/gridContent.vue';
+  import centerRBox from './part/centerRBox.vue';
   const { userInfo, computedRenderMenus, computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
   const baseSale = supplier.value?.sale_stock || 0;
@@ -151,6 +102,9 @@
       Ranking,
       Transaction,
       SvgIcon,
+      dataBox,
+      gridContent,
+      centerRBox,
     },
     data() {
       return {
@@ -280,86 +234,11 @@
     gap: 12px;
   }
 
-  .grid-content {
-    border-radius: 4px;
-    padding: 16px;
-    background: #f7f9fb;
-    flex: 1;
-    min-width: calc(33.3% - 8px);
-    max-width: 30%;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .grid-content .des {
-    color: var(--el-color-black);
-    font-size: 16px;
-    font-style: normal;
-    font-weight: 400;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .grid-content .des .data-icon {
-    width: 20px;
-    height: 20px;
-    color: #ffbe00;
-  }
-
-  .grid-content h3 {
-    color: var(--el-color-black);
-    font-size: 20px;
-    font-style: normal;
-    font-weight: 700;
-    margin-bottom: 8px;
-    margin-top: auto;
-  }
-
-  .grid-content .yesterday {
-    color: var(--el-color-tips);
-    font-size: 12px;
-    font-style: normal;
-    font-weight: 400;
-  }
-
   .operation-center-r {
     flex: 3;
     border-radius: 4px;
     padding: 16px;
     background: #fff;
-  }
-
-  .center-r-box {
-    padding: 16px;
-    border-radius: 4px;
-    background: #fff1ee;
-    margin-bottom: 12px;
-    &:nth-last-child(1) {
-      margin-bottom: 0;
-    }
-  }
-
-  .center-r-box-t {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    margin-bottom: 16px;
-  }
-
-  .center-r-box-t h4 {
-    color: var(--el-color-black);
-    font-size: 16px;
-    font-weight: 400;
-  }
-
-  .center-r-box-t p {
-    color: var(--el-color-primary);
-    font-size: 14px;
-    font-weight: 400;
-    cursor: pointer;
   }
 
   .operation-title {
@@ -369,60 +248,10 @@
     text-transform: capitalize;
   }
 
-  .fb {
-    color: #ff6241;
-    font-size: 20px;
-    font-style: normal;
-    font-weight: 700;
-    line-height: normal;
-  }
-
   .operation-data {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
-  }
-
-  .data-box {
-    flex: 1;
-    padding: 16px;
-    background: #fff6de;
-    border-radius: 4px;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .data-box-title {
-    display: flex;
-    justify-content: space-between;
-  }
-
-  .data-box-title h3 {
-    font-size: 16px;
-    font-weight: 400;
-    color: var(--el-color-black);
-    margin-bottom: 16px;
-  }
-
-  .data-box h4 {
-    font-size: 20px;
-    font-weight: 700;
-    margin-top: auto;
-    color: var(--el-color-black);
-  }
-
-  .data-box:hover {
-    background: #ffbe00;
-  }
-
-  .data-box:hover .data-box-icon {
-    color: #fff;
-  }
-
-  .data-box-icon {
-    width: 24px;
-    height: 24px;
-    color: #ffbe00;
   }
 
   .home-index {

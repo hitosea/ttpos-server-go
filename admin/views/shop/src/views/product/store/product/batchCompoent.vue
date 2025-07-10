@@ -157,7 +157,20 @@
     },
     mounted() {
       this.type = this.$route.query.type;
-      this.title = $t(this.$route.query.title);
+      switch (this.type) {
+        case '1':
+          this.title = $t('修改图片');
+          break;
+        case '2':
+          this.title = $t('修改分类');
+          break;
+        case '3':
+          this.title = $t('修改税类');
+          break;
+        case '5':
+          this.title = $t('商品批量导入');
+          break;
+      }
     },
     methods: {
       dialogFormVisible() {

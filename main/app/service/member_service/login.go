@@ -155,7 +155,7 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 		return errors.New("无法使用该功能，请联系商家")
 	}
 	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
-		return errors.New("商家会员服务已失效")
+		return errors.New("商家会员服务已关闭")
 	}
 	// if companySetting.IsOpenMarketing != 1 {
 	// 	return errors.New("二维码已失效")
@@ -206,7 +206,7 @@ func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (re
 		return resp.LoginResp{}, errors.New("无法使用该功能，请联系商家")
 	}
 	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
-		return resp.LoginResp{}, errors.New("商家会员服务已失效")
+		return resp.LoginResp{}, errors.New("商家会员服务已关闭")
 	}
 
 	// 验证验证码

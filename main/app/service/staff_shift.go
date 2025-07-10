@@ -592,6 +592,8 @@ func (s *staffShiftSrv) ShiftPrinter(ctx context.Context, req req.ShiftPrinterRe
 		TotalDiscountMoney:      saleData.TotalDiscount,
 		TotalFreeOrderPrice:     saleData.TotalFreeAmount,
 		TotalRefundMoney:        refundAmount,
+		TotalGiveProductPrice:   saleData.TotalGiftAmount,
+		TotalGiveProductNum:     saleData.TotalGiftNum,
 		TotalOrderNum:           int(saleData.TotalOrderNum),
 		TotalPeopleNum:          int(saleData.TotalMealNum),
 		TotalProductNum:         saleData.TotalProductNum,

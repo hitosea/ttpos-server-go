@@ -8334,6 +8334,12 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 
 	needCancelCoupon := false // 是否需要取消优惠券
 
+	// 加锁, 避免并发问题
+	if saleOrder.HasCoupon() {
+		lock.NewSystemLock().LockUuid(constant.LockNameActivityConsumption)
+		defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
+	}
+
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		ctx.SetDB(db)
 		if cashPaymentOrder != nil {
@@ -8401,9 +8407,6 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 			}
 		}
 		// 核销优惠券
-		// 加锁, 避免并发问题
-		lock.NewSystemLock().LockUuid(constant.LockNameActivityConsumption)
-		defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
 		if err := s.VerifyCoupon(ctx, saleOrder, db); err != nil {
 			needCancelCoupon = true
 			return errors.WithMessage(err)
@@ -10894,6 +10897,9 @@ func (s *orderSrv) GetUnsentKitchen(ctx context.Context, saleBillUuid uint64, sh
 
 	// 按送厨时间排序
 	sort.Slice(res.Products.List, func(i, j int) bool {
+		if res.Products.List[i].CreateTime == res.Products.List[j].CreateTime {
+			return res.Products.List[i].Uuid < res.Products.List[j].Uuid
+		}
 		return res.Products.List[i].CreateTime < res.Products.List[j].CreateTime
 	})
 

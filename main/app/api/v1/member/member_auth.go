@@ -63,7 +63,9 @@ func (h *AuthHandler) SendCode(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{
+		"uuid": sendCodeReq.Phone,
+	})
 }
 
 // Login 登录

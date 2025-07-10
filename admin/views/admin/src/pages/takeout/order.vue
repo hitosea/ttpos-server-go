@@ -4,7 +4,7 @@
     <div class="flex justify-between">
       <el-form :inline="true">
         <el-form-item>
-          <el-select v-model="searchParams.uuid" type="text" filterable :placeholder="$t('请选择商家')">
+          <el-select v-model="searchParams.uuid" type="text" filterable remote :remote-method="remoteMethod" :placeholder="$t('请选择商家')" clearable>
             <el-option class="!h-auto" v-for="item in companyList" :key="item.uuid" :value="item.uuid" :label="item.name">
               <div>
                 <p class="">{{ item.name }}</p>
@@ -104,10 +104,17 @@
     }
   };
 
+  // 远程搜索
+  const remoteMethod = (keyword: string) => {
+    setTimeout(() => {
+      getCompanyListData(keyword);
+    }, 200);
+  };
+
   // 获取商家列表
-  const getCompanyListData = async () => {
+  const getCompanyListData = async (keyword: string) => {
     try {
-      const res = await getCompanySelect();
+      const res = await getCompanySelect({ keyword: keyword, list_rows: 50, configured: 1 });
       companyList.value = res.data?.list?.data || [];
     } catch (error) {
       console.error('获取渠道失败:', error);
@@ -128,7 +135,7 @@
   const handleExport = () => {};
 
   onMounted(() => {
-    getCompanyListData();
+    getCompanyListData('');
     getChannelsData();
   });
 </script>
