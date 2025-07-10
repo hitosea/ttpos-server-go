@@ -718,7 +718,7 @@ class Terminal extends Controller
             // 绑定设备列表
             $ret['bind_list'] = (new BindRecord)->getBindList(BindRecord::SOURCE_KITCHEN, $shopSupplierId) ?: [];
             // 打印机列表
-            $ret['printer_list'] = PrinterModel::getAll();
+            $ret['printer_list'] = PrinterModel::getAll(false);
         }
         // 点餐助手密码
         if ($key == SettingEnum::ASSISTANT) {
