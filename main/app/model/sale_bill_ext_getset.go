@@ -557,7 +557,7 @@ func (model *SaleBill) SetCashier(dutyNo string, cashierUuid uint64, cashierName
 	}
 }
 
-// 设置打包销售账单。并更新订单的税率
+// 设置打包销售账单。并更新订单的税率，更新订单商品的打包状态
 func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
 	// 如果没有改变，则不更新
 	if model.DiningMethod == diningMethod {
@@ -586,6 +586,14 @@ func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
 			}
 			taxRate := saleOrderProduct.ProductPackage.TaxRate(model.DiningMethod)
 			saleOrderProduct.SetTaxRate(taxRate)
+			// 设置打包状态
+			if method == constant.SaleBillDiningMethodTakeout {
+				saleOrderProduct.SetWrap()
+				saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign() // 重新生成签名
+			} else {
+				saleOrderProduct.SetUnwrap()
+				saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign() // 重新生成签名
+			}
 		}
 	}
 }

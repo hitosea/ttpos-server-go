@@ -69,6 +69,7 @@ type SaleOrderProduct struct {
 
 	// 赠品相关字段
 	GiftTime     int64  `gorm:"column:gift_time;type:int(10);not null;default:0;comment:'赠菜时间(时间戳),用于判断不同时间赠送的商品不合并'" json:"gift_time"`
+	WrapTime     int64  `gorm:"column:wrap_time;type:int(10);not null;default:0;comment:'打包时间(时间戳),用于判断不同时间打包的商品不合并'" json:"wrap_time"`
 	CancelTime   int64  `gorm:"column:cancel_time;type:int(10);not null;default:0;comment:'退菜时间(时间戳)'" json:"cancel_time"`
 	GiftReason   string `gorm:"column:gift_reason;type:varchar(255);not null;default:'';comment:'赠菜原因'" json:"gift_reason"`
 	CancelReason string `gorm:"column:cancel_reason;type:varchar(255);not null;default:'';comment:'退菜原因'" json:"cancel_reason"`
@@ -212,6 +213,18 @@ func (model *SaleOrderProduct) IsAddOperation() bool {
 
 func (model *SaleOrderProduct) IsSubOperation() bool {
 	return model.operation == "sub"
+}
+
+// 设置打包时间
+func (model *SaleOrderProduct) SetWrap() {
+	defer model.SetUpdate() // 标记要更新model
+	model.WrapTime = time.Now().Unix()
+}
+
+// 设置取消打包
+func (model *SaleOrderProduct) SetUnwrap() {
+	defer model.SetUpdate() // 标记要更新model
+	model.WrapTime = 0      // 取消打包，打包时间置为0。注：暂时不更新商品的签名，历史遗留问题取消赠菜也没有更新签名，如果更新签名的话可能会与未打包的商品签名一致需要合并商品。
 }
 
 // GetAcceptTime 获取接单时间
@@ -786,10 +799,6 @@ func (model *SaleOrderProduct) IsH5CartProduct() bool {
 	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept && model.H5OrderUuid == 0
 }
 
-func (model *SaleOrderProduct) IsGiftBool() bool {
-	return model.GiftTime > 0
-}
-
 func (model *SaleOrderProduct) ChangeProductPrice(price float64) {
 	model.ChangePriceTime = time.Now().Unix()
 	model.SalePrice = price
@@ -813,7 +822,7 @@ func (model *SaleOrderProduct) GetSalePriceUnit() float64 {
 
 // 获取商品的最终售价（单价）。最终售价为商品的最终单价，默认等于Price，如果免单，则等于0
 func (model *SaleOrderProduct) GetFinalSalePrice() float64 {
-	if model.IsGiftBool() {
+	if model.IsGiftProduct() {
 		return 0
 	}
 	return model.Price
@@ -872,6 +881,11 @@ func (model *SaleOrderProduct) IsMustProduct() bool {
 // 是否是赠品
 func (model *SaleOrderProduct) IsGiftProduct() bool {
 	return model.GiftTime > 0
+}
+
+// 是否是包装商品
+func (model *SaleOrderProduct) IsWrapProduct() bool {
+	return model.WrapTime > 0
 }
 
 // 是否取消商品
@@ -1135,15 +1149,16 @@ func (model *SaleOrderProduct) IsCustomPriceBool() bool {
 }
 
 // GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
-// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-退菜原因-H5OrderUuid-是否接单
+// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
 // 3 送厨
 // 4 赠菜
-// 5 退菜
-// 6 h5下单
-// 7 接单
+// 5 打包
+// 6 退菜
+// 7 h5下单
+// 8 接单
 func (model *SaleOrderProduct) GenerateProductSign() string {
 	bomIdList := make([]string, 0)
 	attributeIdList := make([]string, 0)
@@ -1163,7 +1178,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	sort.Slice(attributeIdList, func(i, j int) bool {
 		return attributeIdList[i] < attributeIdList[j]
 	})
-	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-退菜原因-H5OrderUuid-是否接单
+	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
 	bomIdListStr := strings.Join(bomIdList, ",")
 	attributeIdListStr := strings.Join(attributeIdList, ",")
 
@@ -1178,7 +1193,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	}
 	reasonStr := utils.ToJson(reason)
 
-	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%s-%d-%d",
+	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d",
 		bomIdListStr,
 		attributeIdListStr,
 		model.Remark,
@@ -1186,6 +1201,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 		model.ProductionOrderUuid,
 		model.ChangePriceTime,
 		model.GiftTime,
+		model.WrapTime,
 		reasonStr,
 		model.H5OrderUuid,
 		model.IsAcceptOrder, // 是否接单. 为了让未下单的h5商品和未送厨的商品不被合并在一起

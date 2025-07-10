@@ -89,6 +89,21 @@ type SaleBill struct {
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
 }
 
+// 是否是点餐订单
+func (model *SaleBill) IsInstantBill() bool {
+	return model.BillType == constant.SaleBillTypeInstant
+}
+
+// 是否是桌台订单
+func (model *SaleBill) IsDeskBill() bool {
+	return model.BillType == constant.SaleBillTypeDesk
+}
+
+// 是否是外送订单
+func (model *SaleBill) IsTakeoutBill() bool {
+	return model.BillType == constant.SaleBillTypeTakeout
+}
+
 // 销售账单是否已经使用了通用优惠券
 func (model *SaleBill) IsCommonCouponUsed() (bool, uint64) {
 	for _, saleOrder := range model.SaleOrders {
@@ -155,6 +170,7 @@ func (model *SaleBill) IsLockStatus() bool {
 	return model.IsLock == constant.SaleBillIsLockYes
 }
 
+// 判断销售账单是否打包
 func (model *SaleBill) IsTakeout() bool {
 	return model.DiningMethod == constant.SaleBillDiningMethodTakeout
 }

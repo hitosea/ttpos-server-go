@@ -20,8 +20,9 @@ const (
 )
 
 const (
-	SaleBillTypeInstant = 1 // 点餐
 	SaleBillTypeDesk    = 0 // 桌台
+	SaleBillTypeInstant = 1 // 点餐
+	SaleBillTypeTakeout = 2 // 外送，会员端订单
 )
 
 const (
@@ -135,6 +136,10 @@ const (
 	OrderStayOrder           = "STAY_ORDER"            // 挂单
 	OrderPickOrder           = "PICK_ORDER"            // 取单
 	OrderProductFree         = "PRODUCT_FREE"          // 赠菜
+	OrderProductWrap         = "PRODUCT_WRAP"          // 打包
+	OrderProductUnwrap       = "PRODUCT_UNWRAP"        // 取消打包
+	OrderWrapSaleBill        = "WRAP_SALE_BILL"        // 整单打包
+	OrderUnwrapSaleBill      = "UNWRAP_SALE_BILL"      // 取消整单打包
 	OrderCancelProductFree   = "CANCEL_PRODUCT_FREE"   // 取消赠菜
 	OrderProductMove         = "PRODUCT_MOVE"          // 转菜
 	OrderDiscount            = "DISCOUNT"              // 优惠折扣

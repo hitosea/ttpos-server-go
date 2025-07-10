@@ -1,5 +1,7 @@
 package model
 
+import "ttpos-server-go/app/constant"
+
 // ProductionOrder 生产单 `ttpos_production_order`
 type ProductionOrder struct {
 	BaseModel
@@ -33,6 +35,19 @@ type ProductionOrderProduct struct {
 	SaleOrderProduct         SaleOrderProduct           `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid" json:"sale_order_product"`
 	SaleBill                 SaleBill                   `gorm:"foreignKey:SaleBillUuid;references:Uuid" json:"sale_bill"`
 	ProductCategory          ProductCategory            `gorm:"foreignKey:FirstCategoryUuid;references:Uuid" json:"product_category"`
+}
+
+// 获取生产单商品的打包状态：0-堂食、1-打包
+func (p *ProductionOrderProduct) GetWrapStatus() uint {
+	// 如果商品是点餐订单的商品，则根据sale_bill是否打包来判断商品是否打包
+	if p.SaleBill.IsInstantBill() {
+		return p.SaleBill.DiningMethod
+	}
+	// 如果商品是桌台订单的商品，则根据订单商品的打包状态来判断商品是否打包
+	if p.SaleBill.IsDeskBill() && p.SaleOrderProduct.IsWrapProduct() {
+		return constant.SaleBillDiningMethodTakeout // 打包
+	}
+	return constant.SaleBillDiningMethodDineIn // 堂食
 }
 
 // ProductionOrderMaterial 生产单原料 `ttpos_production_order_material`

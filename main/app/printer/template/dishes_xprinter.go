@@ -933,7 +933,7 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 		printer.LineFeed()
 	}
 	// 桌号
-	if order.BillType == 2 {
+	if order.IsTakeoutBill() {
 		printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 	} else if order.DeskUuid > 0 {
 		// 判断文字是否包含缅甸语

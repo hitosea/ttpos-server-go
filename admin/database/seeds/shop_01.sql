@@ -305,6 +305,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `deduct_stock_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '减库存的时间(时间戳)，0-未减库存。标记是否已减库存，用于取消订单时恢复库存、避免重复减库存、避免漏减库存',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '备注，顾客对商品的备注信息',
     `gift_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '赠菜时间(时间戳),用于判断是否赠菜和不同时间赠送的商品不合并',
+    `wrap_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '打包时间(时间戳),用于判断是否打包和不同时间打包的商品不合并',
     `cancel_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '退菜时间(时间戳)',
     `gift_reason` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '赠菜原因',
     `cancel_reason` VARCHAR(500) NOT NULL DEFAULT '' COMMENT '退菜原因',

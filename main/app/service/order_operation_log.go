@@ -133,6 +133,8 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		}
 	case constant.OrderStayOrder: // 挂单 不用解析data
 	case constant.OrderPickOrder: // 取单 不用解析data
+	case constant.OrderWrapSaleBill: // 整单打包 不用解析data
+	case constant.OrderUnwrapSaleBill: // 取消整单打包 不用解析data
 	case constant.OrderProductFree: // 赠菜
 		var productFree event.GiftSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &productFree); err == nil {
@@ -145,6 +147,18 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		if err := json.Unmarshal([]byte(log.Data), &cancelProductFree); err == nil {
 			desc := cancelProductFree.ProductName.GetLocale(language) + " (" + cancelProductFree.ProductAttr.GetLocale(language) + ") *" + utils.FormatFloat(cancelProductFree.TotalNum) +
 				" (" + s.settingSrv.SymbolPosition(ctx, cancelProductFree.TotalPrice) + ")"
+			return ActionDescription{Desc: desc, SplitMessage: ""}
+		}
+	case constant.OrderProductWrap: // 打包
+		var productWrap event.WrapSaleOrderProductPayload
+		if err := json.Unmarshal([]byte(log.Data), &productWrap); err == nil {
+			desc := productWrap.ProductName.GetLocale(language) + " (" + productWrap.ProductAttr.GetLocale(language) + ") *" + utils.FormatFloat(productWrap.Num)
+			return ActionDescription{Desc: desc, SplitMessage: ""}
+		}
+	case constant.OrderProductUnwrap: // 取消打包
+		var productUnwrap event.UnwrapSaleOrderProductPayload
+		if err := json.Unmarshal([]byte(log.Data), &productUnwrap); err == nil {
+			desc := productUnwrap.ProductName.GetLocale(language) + " (" + productUnwrap.ProductAttr.GetLocale(language) + ") *" + utils.FormatFloat(productUnwrap.Num)
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderProductMove: // 转菜
@@ -300,6 +314,10 @@ func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language st
 		constant.OrderUpdateMealNum:       i18n.Translate(language, "人数"),
 		constant.OrderStayOrder:           i18n.Translate(language, "挂单"),
 		constant.OrderPickOrder:           i18n.Translate(language, "取单"),
+		constant.OrderProductWrap:         i18n.Translate(language, "打包"),
+		constant.OrderProductUnwrap:       i18n.Translate(language, "取消打包"),
+		constant.OrderWrapSaleBill:        i18n.Translate(language, "整单打包"),
+		constant.OrderUnwrapSaleBill:      i18n.Translate(language, "取消整单打包"),
 		constant.OrderProductFree:         i18n.Translate(language, "赠菜"),
 		constant.OrderCancelProductFree:   i18n.Translate(language, "取消赠菜"),
 		constant.OrderProductMove:         i18n.Translate(language, "转菜"),

@@ -478,7 +478,7 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder, isSh
 		productTotalPrice := utils.IfFloat64(item.IsBuffetProduct(), item.GetTotalSaucePrice(), item.GetSalePrice()) // 商品原价
 		// 赠品
 		var gift string
-		if item.IsGiftBool() {
+		if item.IsGiftProduct() {
 			gift = "(" + p.Translate("赠") + ") "
 			productTotalPrice = 0
 		}

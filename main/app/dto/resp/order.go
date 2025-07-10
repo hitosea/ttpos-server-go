@@ -89,6 +89,7 @@ type OrderProduct struct {
 	Status              uint               `json:"status"`                // 状态, 0-正常 1-退菜
 	Remark              string             `json:"remark"`                // 备注
 	IsGift              bool               `json:"is_gift"`               // 是否赠品, false-否 true-是
+	IsWrap              bool               `json:"is_wrap"`               // 是否打包, false-否 true-是
 	IsBuffet            bool               `json:"is_buffet"`             // 是否自助餐, false-否 true-是
 	IsBuffetCustomer    bool               `json:"is_buffet_customer"`    // 是否自助餐顾客, false-否 true-是
 	IsDelay             bool               `json:"is_delay"`              // 是否加钟, false-否 true-是

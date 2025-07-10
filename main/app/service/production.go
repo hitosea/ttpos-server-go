@@ -236,7 +236,7 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 	groups := make([]resp.ProductionGroup, 0, len(limitProducts))
 	for _, paginatedProduct := range limitProducts {
 		var group resp.ProductionGroup
-		items := make([]resp.ProductionItem, 0)
+		items := make([]resp.ProductionItem, 0) // 生产单商品列表
 		for _, product := range products {
 			if paginatedProduct.SaleBillUuid != product.SaleBillUuid {
 				continue
@@ -261,7 +261,7 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
 			item.SerialNo = product.SaleBill.SerialNo
-			item.DiningMethod = product.SaleBill.DiningMethod
+			item.DiningMethod = product.GetWrapStatus() // 订单商品的打包状态
 			items = append(items, item)
 		}
 		if group.LocaleName == nil {
@@ -272,6 +272,7 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 		}
 		if len(items) > 0 {
 			group.DiningMethod = items[0].DiningMethod
+			group.DiningMethod = products[0].SaleBill.DiningMethod // 账单的打包状态
 		}
 		groups = append(groups, group)
 	}

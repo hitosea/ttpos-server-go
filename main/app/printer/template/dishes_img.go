@@ -625,7 +625,7 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 	img.LineFeed(1, 68)
 
 	// 桌号
-	if order.BillType == 2 {
+	if order.IsTakeoutBill() {
 		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 	} else if order.DeskUuid > 0 {
 		// 判断文字是否包含缅甸语

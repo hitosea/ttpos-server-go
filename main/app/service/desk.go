@@ -541,7 +541,7 @@ func (s *deskSrv) IsCellCloseInstant(ctx context.Context, saleBillUuid uint64) (
 				Status:        int(product.Status),
 				Remark:        product.Remark,
 				IsMust:        product.IsMustProduct(),
-				IsGift:        product.IsGiftBool(),
+				IsGift:        product.IsGiftProduct(),
 				IsBuffet:      product.IsBuffet == 1,
 				IsCancel:      product.IsCancelProduct(),
 			})
