@@ -1787,5 +1787,8 @@
     "外卖: 0001": "Paket Servis: 0001",
     "外送订单": "Dışarı Sipariş",
     "模板4": "Şablon 4",
-    "请输入整数": "Lütfen bir tam sayı girin"
+    "请输入整数": "Lütfen bir tam sayı girin",
+    "打印机：": "Yazıcı:",
+    "不打印": "Yazdırma",
+    "选择用于打印出菜单的打印机": "Menüyü yazdırmak için kullanılacak yazıcıyı seçin"
 }
