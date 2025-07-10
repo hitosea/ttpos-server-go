@@ -68,6 +68,9 @@
               <el-dropdown-item @click="openBatch(3)" v-if="userInfo.isOpenTax == '1'">
                 {{ $t('修改税类') }}
               </el-dropdown-item>
+              <el-dropdown-item @click="openBatch(6)">
+                {{ $t('批量修改整单折扣商品') }}
+              </el-dropdown-item>
               <el-dropdown-item @click="openBatch(4)">
                 {{ $t('删除') }}
               </el-dropdown-item>
@@ -435,6 +438,10 @@
             break;
           case 5:
             // 商品批量导入
+            this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
+            break;
+          case 6:
+            // 批量修改整单折扣商品
             this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
             break;
         }
