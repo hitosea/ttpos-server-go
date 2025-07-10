@@ -24,10 +24,12 @@ import (
 var URL = "https://aitrans.ttpos.com/translate"
 
 var languageName string
+var num int
 
 func init() {
 	rootCommand.AddCommand(translateCmd)
-	translateCmd.Flags().StringVar(&languageName, "language-name", "", "new language file name")
+	translateCmd.Flags().StringVar(&languageName, "language-name", "", "新语言文件名")
+	translateCmd.Flags().IntVar(&num, "num", 10, "每次关键字翻译数量")
 }
 
 var translateCmd = &cobra.Command{
@@ -136,7 +138,7 @@ func execute() {
 	fmt.Println(len(chineseTexts))
 
 	// 分组处理
-	chunks := slice.Chunk(chineseTexts, 10)
+	chunks := slice.Chunk(chineseTexts, num)
 	var count = 0
 	for _, chunk := range chunks {
 		processGroup(chunk)
