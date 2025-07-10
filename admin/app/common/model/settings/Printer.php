@@ -106,19 +106,9 @@ class Printer extends BaseModel
     /**
      * 获取全部
      */
-    public static function getAll($shop_supplier_id = 0)
+    public static function getAll()
     {
         $printerList = (new static)->order(['sort' => 'asc'])
-            // NOTE: 舍弃5分钟自动切换
-            // ->where(function ($query) {
-            //     $query->where(function ($q) {
-            //         $q->where('is_usb', 0);
-            //     })->whereOr(function ($q) {
-            //         $q->where('is_usb', 1)->where('status', 1);
-            //     })->whereOr(function ($q) {
-            //         $q->where('last_heartbeat_time', ">=", time() - 300);
-            //     });
-            // })  
             ->select()
             ->toArray();
        

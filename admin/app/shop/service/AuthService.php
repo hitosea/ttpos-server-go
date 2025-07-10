@@ -102,7 +102,10 @@ class AuthService
         '/supplier/printerTemplate/setTemplate',
 
         // 添加会员获取会员卡列表
-        '/card/card/getCardList'
+        '/card/card/getCardList',
+
+        // 营销活动
+        '/marketing/activity/couponlist',
     ];
 
     /** @var array $accessUrls 商家用户权限url */

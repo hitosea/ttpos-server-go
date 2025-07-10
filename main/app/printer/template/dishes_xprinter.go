@@ -894,7 +894,7 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 // OutMenuTemplate 出菜单模版
 func (t *dishesXprinterTemplate) OutMenuTemplate(
 	tmp int,
-	printerItem *model.ProductPrinterItem,
+	mdPrinter model.Printer,
 	order model.SaleBill,
 	products printer_model.Products,
 	finishedTime int64,
@@ -912,8 +912,8 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 	}
 	// 打印机类型
 	printerType := PrinterTypeXPrinterLan
-	if printerItem.Printer != nil && printerItem.Printer.PrinterType != nil {
-		printerType = printerItem.Printer.PrinterType.Key
+	if mdPrinter.PrinterType != nil {
+		printerType = mdPrinter.PrinterType.Key
 	}
 	// 是否有打印内容
 	isPrinter := false
