@@ -411,20 +411,6 @@
 
   getData(true);
 
-  const onSubmit = () => {
-    emit('close', selectedProductsTmp.value, categories.value);
-    reset();
-  };
-
-  const reset = () => {
-    selectedProductsTmp.value = [];
-  };
-
-  const handleClose = () => {
-    emit('close');
-    reset();
-  };
-
   const productsTableRef = ref(null);
 
   // 添加选择控制函数
@@ -654,6 +640,10 @@
 
   const dialogFormVisible = () => {
     proxy.$router.go(-1);
+  };
+
+  const handleClick = () => {
+    console.log(selectedProductsTmp.value);
   };
 </script>
 
