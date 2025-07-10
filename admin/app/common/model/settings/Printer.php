@@ -106,7 +106,7 @@ class Printer extends BaseModel
     /**
      * 获取全部
      */
-    public static function getAll()
+    public static function getAll($isComesWithBind = true)
     {
         $printerList = (new static)->order(['sort' => 'asc'])
             ->select()
@@ -118,17 +118,20 @@ class Printer extends BaseModel
         }
 
         //
-        $text = __('自带');
-        $cashierDevices = BindRecord::alias('a')
-            ->where("delete_time", 0)
-            ->where('source', BindRecord::SOURCE_CASHIER)
-            ->whereIn('brand', BindRecord::BRANDS_PRINTS)
-            ->field("a.device_id as printer_id")
-            ->field("CONCAT(if(remark='', a.device_id, remark), ' ($text)') printer_name")
-            ->order('id')
-            ->select()
-            ->toArray();
-            
+        $cashierDevices = [];
+        if ($isComesWithBind) {
+            $text = __('自带');
+            $cashierDevices = BindRecord::alias('a')
+                ->where("delete_time", 0)
+                ->where('source', BindRecord::SOURCE_CASHIER)
+                ->whereIn('brand', BindRecord::BRANDS_PRINTS)
+                ->field("a.device_id as printer_id")
+                ->field("CONCAT(if(remark='', a.device_id, remark), ' ($text)') printer_name")
+                ->order('id')
+                ->select()
+                ->toArray();
+        }
+        
         //
         return array_merge($cashierDevices, $printerList);
     }
