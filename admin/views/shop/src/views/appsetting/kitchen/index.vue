@@ -74,14 +74,7 @@
             <div class="max-w460 input-ss">
               <autoTips :tooltipMaxWidth="460" :content="(item.remark ? item.remark : '') + `(${item.key})`">{{ (item.remark ? item.remark : '') + `(${item.key})` }}</autoTips>
             </div>
-            <el-tooltip class="item" effect="dark" placement="top">
-              <template #content>
-                {{ $t('姓名') }}:{{ item.shopUser?.real_name || '-' }}<br />
-                {{ $t('登录时间') }}:{{ item.finally_login_time || '-' }}<br />
-                {{ $t('设备品牌') }}:{{ item.brand || '-' }}
-              </template>
-              <SvgIcon class="form-icon" name="man"></SvgIcon>
-            </el-tooltip>
+
             <div class="device-btn-box">
               <span>{{ $t('打印机：') }}</span>
               <el-select v-model="item.related_printer_uuid" :placeholder="$t('请选择打印机')">
@@ -95,7 +88,14 @@
                 <SvgIcon class="tip-icon" name="icon6"></SvgIcon>
               </el-tooltip>
             </div>
-
+            <el-tooltip class="item" effect="dark" placement="top">
+              <template #content>
+                {{ $t('姓名') }}:{{ item.shopUser?.real_name || '-' }}<br />
+                {{ $t('登录时间') }}:{{ item.finally_login_time || '-' }}<br />
+                {{ $t('设备品牌') }}:{{ item.brand || '-' }}
+              </template>
+              <SvgIcon class="form-icon" name="man"></SvgIcon>
+            </el-tooltip>
             <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
           </div>
           <p v-else>{{ $t('暂无设备') }}</p>
