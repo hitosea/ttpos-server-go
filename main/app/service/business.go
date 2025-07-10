@@ -109,8 +109,6 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 		unpaidOrderData := s.statisticsSrv.CountUnpaidOrder(ctx, CountReq{
 			QueryStartTime: int64(printerParam.QueryStartTime),
 			QueryEndTime:   int64(printerParam.QueryEndTime),
-			CategoryType:   printerParam.CategoryType,
-			DutyNo:         ctx.GetStaff().DutyNo,
 		})
 
 		reqPrinterData.All = &business_data_resp.BusinessDataAll{
