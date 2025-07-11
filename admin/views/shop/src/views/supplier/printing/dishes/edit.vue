@@ -204,11 +204,13 @@
       };
     },
     props: ['editId', 'open_edit', 'isCopy'],
-    created() {
+     created() {
       this.dialogVisible = this.open_edit;
-      this.getAreaData();
     },
-    mounted() {},
+    async mounted() {
+        await this.getAreaData();
+        await this.getData();
+    },
     watch: {
       categoryIds: {
         handler() {
@@ -276,9 +278,10 @@
       },
     },
     methods: {
-      getData() {
+      async getData() {
         const self = this;
         this.id = this.editId;
+        self.loading = true;
         SupplierApi.getEditPrinting({ id: self.id }, true)
           .then((data) => {
             Object.assign(self.form, data.data.model);
@@ -350,12 +353,15 @@
                 this.form.printer_id.splice(index, 1);
               }
             });
+            self.loading = false;
           })
-          .catch(() => {});
+          .catch(() => {
+            self.loading = false;
+          });
       },
 
       /*获取列表*/
-      getAreaData() {
+     async getAreaData() {
         const self = this;
         self.loading = true;
         StoreApi.arealist({}, true)
@@ -371,7 +377,6 @@
               area_id: '0',
               area_name: this.$t('无区域 (点餐无桌台)'),
             });
-            this.getData();
           })
           .catch(() => {
             self.loading = false;
