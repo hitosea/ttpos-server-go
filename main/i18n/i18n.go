@@ -24,17 +24,18 @@ const (
 	LanguageTH   = "th"   // 泰语
 	LanguageTR   = "tr"   // 土耳其语
 	LanguageDE   = "de"   // 德语
+	LanguageSV   = "sv"   // 瑞典语
 )
 
 // GetLanguageList 获取语言列表
 func GetLanguageList() []string {
-	return []string{LanguageZH, LanguageZHTW, LanguageEN, LanguageJA, LanguageKO, LanguageMY, LanguageTH, LanguageTR, LanguageDE}
+	return []string{LanguageZH, LanguageZHTW, LanguageEN, LanguageJA, LanguageKO, LanguageMY, LanguageTH, LanguageTR, LanguageDE, LanguageSV}
 }
 
 // GetAcceptLanguage 获取语言
 func GetAcceptLanguage(c *gin.Context) string {
 	language := c.GetHeader(AcceptLanguage)
-	if !slices.Contains([]string{LanguageZH, LanguageZHTW, LanguageEN, LanguageJA, LanguageKO, LanguageMY, LanguageTH, LanguageTR, LanguageDE}, language) {
+	if !slices.Contains([]string{LanguageZH, LanguageZHTW, LanguageEN, LanguageJA, LanguageKO, LanguageMY, LanguageTH, LanguageTR, LanguageDE, LanguageSV}, language) {
 		language = LanguageEN
 	}
 	return language
@@ -61,7 +62,7 @@ func Init() {
 		}
 		parts := strings.SplitN(filename, ".", 2)
 		language := parts[0]
-		if !slices.Contains([]string{LanguageZH, LanguageZHTW, LanguageEN, LanguageJA, LanguageKO, LanguageMY, LanguageTH, LanguageTR}, language) {
+		if !slices.Contains([]string{LanguageZH, LanguageZHTW, LanguageEN, LanguageJA, LanguageKO, LanguageMY, LanguageTH, LanguageTR, LanguageSV}, language) {
 			continue
 		}
 		var content []byte
