@@ -2039,5 +2039,12 @@
     "打印机：": "Printer:",
     "不打印": "Do not print",
     "选择用于打印出菜单的打印机": "Select the printer used for menu printing",
-    "批量修改整单折扣商品": "Batch modify entire order discount items"
+    "批量修改整单折扣商品": "Batch modify entire order discount items",
+    "请选择活动类型": "Please select the event type",
+    "邀请消费有礼": "Invitation expenditure with gift",
+    "每次赠送积分": "Points awarded each time",
+    "请输入赠送积分数量": "Please enter the number of points to be awarded",
+    "注：满足设置条件规则后，每次所赠送的积分数量": "Note: The number of points awarded each time after meeting the set conditions",
+    "发送短信通知": "Send SMS notification",
+    "请选择是否发送短信通知": "Please choose whether to send SMS notification"
 }

@@ -1793,5 +1793,12 @@
     "打印机：": "Yazıcı:",
     "不打印": "Yazdırma",
     "选择用于打印出菜单的打印机": "Menüyü yazdırmak için kullanılacak yazıcıyı seçin",
-    "批量修改整单折扣商品": "Toplu olarak tüm fatura indirim ürünlerini değiştirin"
+    "批量修改整单折扣商品": "Toplu olarak tüm fatura indirim ürünlerini değiştirin",
+    "请选择活动类型": "Lütfen etkinlik türünü seçin",
+    "邀请消费有礼": "Davetli harcamalarda hediye var",
+    "每次赠送积分": "Her alışverişte puan verilir",
+    "请输入赠送积分数量": "Verilecek puan miktarını girin",
+    "注：满足设置条件规则后，每次所赠送的积分数量": "Not: Ayarlanan koşullar yerine getirildikten sonra her seferinde verilen puan miktarı",
+    "发送短信通知": "SMS bildirimi gönder",
+    "请选择是否发送短信通知": "SMS bildirimi gönderip göndermeyeceğinizi seçin"
 }
