@@ -336,8 +336,8 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		img.AppendSplitLine()
 		img.LineFeed(1)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: utils.IfInt(isTrThEn, 230, 270), Align: pkg.AlignLeft, FontWeight: 2},
-			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(t.base.Lang == "en", 220, 180), Align: pkg.AlignLeft, FontWeight: 2},
+			pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: utils.IfInt(isTrThEn || t.base.Lang == "sv", 230, 270), Align: pkg.AlignLeft, FontWeight: 2},
+			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(t.base.Lang == "en" || t.base.Lang == "sv", 220, 180), Align: pkg.AlignLeft, FontWeight: 2},
 			pkg.ColumnConfig{Text: t.base.Translate("金额"), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 		)
 		totalPayPrice := decimal.NewFromFloat(0)
@@ -362,9 +362,11 @@ func (t *businessDataImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 		img.SetTextLineHeight(45)
 		// 高峰时间
+		peakHoursWidth := utils.IfInt(isTrThEn, 230, 270)
+		numberWidth := utils.IfInt(t.base.Lang == "en" || t.base.Lang == "sv", 220, 180)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("高峰时间"), Width: utils.IfInt(isTrThEn, 230, 270), Align: pkg.AlignLeft, FontWeight: 2},
-			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(t.base.Lang == "en", 220, 180), Align: pkg.AlignLeft, FontWeight: 2},
+			pkg.ColumnConfig{Text: t.base.Translate("高峰时间"), Width: utils.IfInt(t.base.Lang == "sv", 200, peakHoursWidth), Align: pkg.AlignLeft, FontWeight: 2},
+			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(t.base.Lang == "sv", 220, numberWidth), Align: pkg.AlignLeft, FontWeight: 2},
 			pkg.ColumnConfig{Text: utils.IfString(t.base.Lang == "en", "Amount", t.base.Translate("订单金额")), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 		)
 		for _, peak := range businessData.All.PeakHourList {

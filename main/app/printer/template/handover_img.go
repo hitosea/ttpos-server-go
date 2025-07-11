@@ -97,16 +97,18 @@ func (t *handoverImgTemplate) GetPrintContent(
 		} else {
 			if t.base.Lang == "my" {
 				numberWidth = 180
+			} else if t.base.Lang == "sv" {
+				numberWidth = 240
 			} else {
 				numberWidth = 120
 			}
 		}
+		// 支付方式
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: utils.IfInt(isTrThEn, 220, 280), Align: pkg.AlignLeft, FontWeight: 2},
+			pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: utils.IfInt(isTrThEn || t.base.Lang == "sv", 230, 280), Align: pkg.AlignLeft, FontWeight: 2},
 			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: numberWidth, Align: pkg.AlignCenter, FontWeight: 2},
 			pkg.ColumnConfig{Text: t.base.Translate("金额"), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 		)
-		// 支付方式
 		totalPayPrice := decimal.NewFromFloat(0)
 		for key, income := range businessData.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
@@ -283,9 +285,13 @@ func (t *handoverImgTemplate) GetPrintContent(
 		img.AppendSplitLine()
 		img.LineFeed(1)
 		img.SetTextLineHeight(45)
+
+		// 高峰时间
+		peakHoursWidth := utils.IfInt(isTrThEn, 240, 300)
+		numberWidth = utils.IfInt(isTrThEn, utils.IfInt(t.base.Lang == "en", 220, 180), utils.IfInt(t.base.Lang == "my", 180, 120))
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("高峰时间"), Width: utils.IfInt(isTrThEn, 240, 300), Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(isTrThEn, utils.IfInt(t.base.Lang == "en", 220, 180), utils.IfInt(t.base.Lang == "my", 180, 120)), Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.Translate("高峰时间"), Width: utils.IfInt(t.base.Lang == "sv", 200, peakHoursWidth), Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(t.base.Lang == "sv", 220, numberWidth), Align: pkg.AlignLeft, FontWeight: 1},
 			pkg.ColumnConfig{Text: utils.IfString(t.base.Lang == "en", "Amount", t.base.Translate("订单金额")), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		for key, peak := range businessData.PeakHourList {
@@ -528,12 +534,14 @@ func (t *handoverImgTemplate) GetPrintContent(
 		} else {
 			if t.base.Lang == "my" {
 				numberWidth = 180
+			} else if t.base.Lang == "sv" {
+				numberWidth = 240
 			} else {
 				numberWidth = 120
 			}
 		}
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: utils.IfInt(isTrThEn, 220, 280), Align: pkg.AlignLeft, FontWeight: 2},
+			pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: utils.IfInt(isTrThEn || t.base.Lang == "sv", 220, 280), Align: pkg.AlignLeft, FontWeight: 2},
 			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: numberWidth, Align: pkg.AlignCenter, FontWeight: 2},
 			pkg.ColumnConfig{Text: t.base.Translate("金额"), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 		)
@@ -564,9 +572,11 @@ func (t *handoverImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 		img.SetTextLineHeight(45)
 		// 高峰时间
+		peakHoursWidth := utils.IfInt(isTrThEn, 240, 300)
+		numberWidth = utils.IfInt(isTrThEn, utils.IfInt(t.base.Lang == "en", 220, 180), utils.IfInt(t.base.Lang == "my", 180, 120))
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("高峰时间"), Width: utils.IfInt(isTrThEn, 240, 300), Align: pkg.AlignLeft, FontWeight: 1},
-			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(isTrThEn, utils.IfInt(t.base.Lang == "en", 220, 180), utils.IfInt(t.base.Lang == "my", 180, 120)), Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.Translate("高峰时间"), Width: utils.IfInt(t.base.Lang == "sv", 200, peakHoursWidth), Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(t.base.Lang == "sv", 220, numberWidth), Align: pkg.AlignLeft, FontWeight: 1},
 			pkg.ColumnConfig{Text: utils.IfString(t.base.Lang == "en", "Amount", t.base.Translate("订单金额")), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		for key, peak := range businessData.PeakHourList {
