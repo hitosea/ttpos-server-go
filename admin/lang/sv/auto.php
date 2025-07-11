@@ -2125,5 +2125,6 @@ return [
     "骑手未接单取消时间必填" => "Obligatoriskt att ange avbokningstid när ryttaren inte har accepterat beställningen",
     "骑手未接单取消时间范围1-60分钟" => "Avbokningstid för ryttare som inte accepterat order: 1–60 minuter",
     "高峰时间" => "Rusningstid",
-    "默认语言不能为空" => "Standardspråket får inte vara tomt"
+    "默认语言不能为空" => "Standardspråket får inte vara tomt",
+    "斯德哥尔摩" => "Stockholm",
 ];

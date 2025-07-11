@@ -14,16 +14,16 @@ class Language
 {
     // 当前文件语言集
     // zh: 中文 | zhtw: 繁体中文 | en: 英文 | th: 泰文 | ja: 日文 | tr: 土耳其文 | ko：韩语 | my: 缅甸语
-    private $targetFiles = ['zh', 'zhtw', 'en', 'th', 'ja', 'tr', 'ko', 'my', 'de'];
+    private $targetFiles = ['zh', 'zhtw', 'en', 'th', 'ja', 'tr', 'ko', 'my', 'de', 'sv'];
 
     // 谷歌语言集
-    private $googleTargetFiles = ['zh', 'zh-TW', 'en', 'th', 'ja', 'tr', 'ko', 'my', 'de'];
+    private $googleTargetFiles = ['zh', 'zh-TW', 'en', 'th', 'ja', 'tr', 'ko', 'my', 'de', 'sv'];
 
     // 有道语言集
-    private $youdaoTargetFiles = ['zh-CHS', 'zh-CHT', 'en', 'th', 'ja', 'tr', 'ko', 'my', 'de'];
+    private $youdaoTargetFiles = ['zh-CHS', 'zh-CHT', 'en', 'th', 'ja', 'tr', 'ko', 'my', 'de', 'sv'];
 
     // Ai语言集
-    private $aiTargetFiles = ['zh', 'zh-TW', 'en', 'th', 'ja', 'tr', 'ko', 'my', 'de'];
+    private $aiTargetFiles = ['zh', 'zh-TW', 'en', 'th', 'ja', 'tr', 'ko', 'my', 'de', 'sv'];
 
     // 当前语言文件路径
     private $langFilePath = 'lang/';
