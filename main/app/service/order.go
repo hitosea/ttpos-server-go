@@ -1065,6 +1065,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 						KO:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 						MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 						TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						SV:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 					},
 					Price:            orderBuffetCustomer.SalePrice,
 					Num:              float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
@@ -1097,6 +1098,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 						KO:   delayProduct.Name,
 						MY:   delayProduct.Name,
 						TR:   delayProduct.Name,
+						SV:   delayProduct.Name,
 					},
 					LocaleAttributeName: dto.LocaleResponse{},
 					Num:                 float64(delayProduct.Num), // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
@@ -1940,6 +1942,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 					KO:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 					MY:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 					TR:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+					SV:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 				},
 				TotalNum: num,
 			})
@@ -1959,6 +1962,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 					KO:   saleOrderProduct.Name,
 					MY:   saleOrderProduct.Name,
 					TR:   saleOrderProduct.Name,
+					SV:   saleOrderProduct.Name,
 				},
 				TotalNum: num,
 			})
@@ -5427,6 +5431,7 @@ func (s *orderSrv) checkBuffetCustomerTypePriceChanged(ctx context.Context, sale
 						KO:   buffetCustomer.Name,
 						MY:   buffetCustomer.Name,
 						TR:   buffetCustomer.Name,
+						SV:   buffetCustomer.Name,
 					},
 					Num:       float64(buffetCustomer.Num),
 					SalePrice: buffetCustomer.SalePrice,
@@ -5470,6 +5475,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 				KO:   oldTaxFeeType + " -> " + newTaxFeeType,
 				MY:   oldTaxFeeType + " -> " + newTaxFeeType,
 				TR:   oldTaxFeeType + " -> " + newTaxFeeType,
+				SV:   oldTaxFeeType + " -> " + newTaxFeeType,
 			},
 		})
 		return res, newSetting, nil
@@ -5489,6 +5495,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 				KO:   oldServiceFeeType + " -> " + newServiceFeeType,
 				MY:   oldServiceFeeType + " -> " + newServiceFeeType,
 				TR:   oldServiceFeeType + " -> " + newServiceFeeType,
+				SV:   oldServiceFeeType + " -> " + newServiceFeeType,
 			},
 		})
 		return res, newSetting, nil
@@ -5507,6 +5514,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 				KO:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 				MY:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 				TR:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				SV:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 			},
 		})
 		return res, newSetting, nil
@@ -5525,6 +5533,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 				KO:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 				MY:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 				TR:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				SV:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 			},
 		})
 		return res, newSetting, nil
@@ -5543,6 +5552,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 				KO:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 				MY:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 				TR:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				SV:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 			},
 		})
 		return res, newSetting, nil
@@ -5561,6 +5571,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 				KO:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
 				MY:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
 				TR:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
+				SV:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
 			},
 		})
 		return res, newSetting, nil
