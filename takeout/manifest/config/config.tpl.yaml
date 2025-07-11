@@ -15,7 +15,7 @@ database:
   link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
 
 grpc:
-  name:            "ttpos-manager"
+  name:            "ttpos-takeout"
   address:            ":14032"
   logPath:          "./log"
   logStdout:        true

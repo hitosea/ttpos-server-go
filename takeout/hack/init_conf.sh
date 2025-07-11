@@ -2,10 +2,9 @@
 old_dir=$OLDPWD
 cd `dirname $0`
 set -o allexport
-source ../.env
-
+source ../../.env
+app_dir=`pwd`
 # 遍历app目录下的所有子目录（假设init_conf.sh位于hack目录，app目录在上级目录）
-for app_dir in ../app/*; do
     # 仅处理目录类型
     if [ -d "$app_dir" ]; then
         # 定义模板文件路径（根据用户提供的config.tpl.yaml路径结构）
@@ -38,6 +37,5 @@ for app_dir in ../app/*; do
             echo "警告：模板文件不存在，跳过目录 $app_dir(路径：$tpl_file)"
         fi
     fi
-done
 set +o allexport
 cd $old_dir
