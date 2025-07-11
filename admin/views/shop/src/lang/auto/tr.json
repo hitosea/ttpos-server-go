@@ -1790,5 +1790,7 @@
     "请输入整数": "Lütfen bir tam sayı girin",
     "打印机：": "Yazıcı:",
     "不打印": "Yazdırma",
-    "选择用于打印出菜单的打印机": "Menüyü yazdırmak için kullanılacak yazıcıyı seçin"
+    "选择用于打印出菜单的打印机": "Menüyü yazdırmak için kullanılacak yazıcıyı seçin",
+    "商品已含税（原商品金额+实收服务费+实收服务税费+实收支付手续费）": "Ürün vergiler dahil olarak sunulmaktadır (orijinal ürün tutarı + alınan hizmet ücreti + alınan hizmet vergisi + alınan ödeme işlem ücreti)",
+    "商品未含税（原商品金额+实收服务费+实收商品及服务税费+实收支付手续费）": "Ürün vergisizdir (Orijinal ürün tutarı + Alınan hizmet ücreti + Alınan ürün ve hizmet vergisi + Alınan ödeme işlem ücreti)"
 }
