@@ -14,7 +14,7 @@
         "TR"
     ],
     "channel": "hitosea",
-    "channelUrl": "http://103.63.139.229:8088/api/translate?type=jjjshop",
+    "channelUrl": "https://aitrans.ttpos.com/translate",
     "appKey": "",
     "secretKey": "",
     "excludes": [

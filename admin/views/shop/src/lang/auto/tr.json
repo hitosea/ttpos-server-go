@@ -1800,5 +1800,9 @@
     "请输入赠送积分数量": "Verilecek puan miktarını girin",
     "注：满足设置条件规则后，每次所赠送的积分数量": "Not: Ayarlanan koşullar yerine getirildikten sonra her seferinde verilen puan miktarı",
     "发送短信通知": "SMS bildirimi gönder",
-    "请选择是否发送短信通知": "SMS bildirimi gönderip göndermeyeceğinizi seçin"
+    "请选择是否发送短信通知": "SMS bildirimi gönderip göndermeyeceğinizi seçin",
+    "整单折扣": "Tüm Sipariş İndirimi",
+    "开启整单折扣：": "Tüm Sipariş İndirimi Aç:",
+    "请选择是否开启整单折扣": "Tüm sipariş indiriminin açılıp açılmayacağını seçin",
+    "开启整单折扣时，设置折扣的商品会参与整单打折；关闭后则不再参与": "Tüm sipariş indirimi açıldığında, indirimli ürünler tüm sipariş indirimine dahil olur; kapatıldığında dahil olmaz"
 }

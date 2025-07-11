@@ -2046,5 +2046,9 @@
     "请输入赠送积分数量": "Please enter the number of points to be awarded",
     "注：满足设置条件规则后，每次所赠送的积分数量": "Note: The number of points awarded each time after meeting the set conditions",
     "发送短信通知": "Send SMS notification",
-    "请选择是否发送短信通知": "Please choose whether to send SMS notification"
+    "请选择是否发送短信通知": "Please choose whether to send SMS notification",
+    "整单折扣": "Order-wide Discount",
+    "开启整单折扣：": "Enable Order-wide Discount:",
+    "请选择是否开启整单折扣": "Please choose whether to enable order-wide discount",
+    "开启整单折扣时，设置折扣的商品会参与整单打折；关闭后则不再参与": "When order-wide discount is enabled, discounted items will participate in the order-wide discount; when disabled, they will no longer participate."
 }
