@@ -14,8 +14,8 @@
             <el-option v-for="(item, index) in gradeList" :key="index" :label="item.name" :value="item.grade_id"></el-option>
           </a-select>
         </el-form-item>
-        <el-form-item :label="$t('昵称/手机号/ID')">
-          <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/ID')" @input="onSearch"></el-input>
+        <el-form-item :label="$t('昵称/手机号/ID/会员卡号')" class="max-460">
+          <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/ID/会员卡号')" @input="onSearch"></el-input>
         </el-form-item>
         <el-form-item :label="$t('添加时间')">
           <div class="block">

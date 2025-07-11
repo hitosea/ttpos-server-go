@@ -1804,5 +1804,10 @@
     "整单折扣": "Tüm Sipariş İndirimi",
     "开启整单折扣：": "Tüm Sipariş İndirimi Aç:",
     "请选择是否开启整单折扣": "Tüm sipariş indiriminin açılıp açılmayacağını seçin",
-    "开启整单折扣时，设置折扣的商品会参与整单打折；关闭后则不再参与": "Tüm sipariş indirimi açıldığında, indirimli ürünler tüm sipariş indirimine dahil olur; kapatıldığında dahil olmaz"
+    "开启整单折扣时，设置折扣的商品会参与整单打折；关闭后则不再参与": "Tüm sipariş indirimi açıldığında, indirimli ürünler tüm sipariş indirimine dahil olur; kapatıldığında dahil olmaz",
+    "名字不能为空": "İsim boş olamaz",
+    "添加失败": "Ekleme başarısız",
+    "修改失败": "Düzenleme başarısız",
+    "昵称/手机号/ID/会员卡号": "Takma ad/Telefon numarası/ID/Üyelik kartı numarası",
+    "登录处理失败，请重试": "Giriş işlemi başarısız oldu, lütfen tekrar deneyin"
 }
