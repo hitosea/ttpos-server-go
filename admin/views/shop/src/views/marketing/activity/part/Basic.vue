@@ -87,10 +87,10 @@
         @change="handleChangeEnd"
       />
     </el-form-item>
-    <el-form-item for="no_click" :label="$t('活动奖品')">
+    <el-form-item for="no_click" :label="$t('活动奖品')" :rules="[{ required: true, message: $t('请选择活动奖品') }]">
       <el-radio-group v-model="rewardType" :disabled="status == 1">
-        <el-radio :label="0">{{ $t('优惠券') }}</el-radio>
-        <el-radio :label="1">{{ $t('积分') }}</el-radio>
+        <el-radio :value="0">{{ $t('优惠券') }}</el-radio>
+        <el-radio :value="1">{{ $t('积分') }}</el-radio>
       </el-radio-group>
     </el-form-item>
     <el-form-item

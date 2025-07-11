@@ -53,8 +53,8 @@
   const ImagePreviewRef = ref();
   // 表单数据
   const form = reactive({
-    name: '',
-    description: '',
+    name: {},
+    description: {},
     start_time: '',
     end_time: '',
     reward_condition_amount: null,
