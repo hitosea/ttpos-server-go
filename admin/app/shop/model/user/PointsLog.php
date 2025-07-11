@@ -26,7 +26,7 @@ class PointsLog extends PointsLogModel
         if ($query['keyword'] !== '') {
             $keyword = trim($query['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
-                $query->like('user.id|user.phone|user.nickname', $keyword);
+                $query->like('user.id|user.phone|user.nickname|user.member_card_no', $keyword);
             });
         }
         // 搜索时间段

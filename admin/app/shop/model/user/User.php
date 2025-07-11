@@ -56,7 +56,7 @@ class User extends UserModel
         if ($data['keyword'] !== '') {
             $keyword = trim($data['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
-                $query->like('id|phone|nickname', $keyword);
+                $query->like('id|phone|nickname|member_card_no', $keyword);
             });
         }
         // 检索：会员等级
