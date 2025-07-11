@@ -128,6 +128,7 @@ class Unit extends BaseModel
                 'my' => $unit['multiLanguageName']['my_name'],
                 'th' => $unit['multiLanguageName']['th_name'],
                 'tr' => $unit['multiLanguageName']['tr_name'],
+                'sv' => $unit['multiLanguageName']['sv_name'],
             ];
             $unit['name'] = json_encode($name);
             $unit['unit_name'] = json_encode($name);
