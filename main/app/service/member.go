@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -36,6 +37,9 @@ type IMemberSrv interface {
 	HandleMemberUpgrade(companyUuid uint64, memberUuid uint64)                                                     // 处理会员升级
 	HandleMemberPoints(ctx context.Context, changeReq MemberPointsChangeReq) error                                 // 处理会员积分
 	HandleMemberBalance(ctx context.Context, changeReq MemberBalanceChangeReq) error                               // 处理会员余额
+
+	VisitorLogin(ctx context.Context, loginReq req.VisitorLoginReq) (*resp.VisitorInfoResp, error) // 游客登录
+	BindPhone(ctx context.Context, bindReq req.VisitorBindPhoneReq) error                          // 游客绑定手机号
 }
 
 // memberSrv 会员服务结构体
@@ -259,7 +263,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 	if memberPointsChanged || memberBalanceChanged {
 		go func() {
 			if memberBalanceChanged {
-				// 发布“会员余额变动”事件
+				// 发布"会员余额变动"事件
 				s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
 					BasePayload: event.BasePayload{ // 会员余额变动
 						Ctx:          ctx,
@@ -271,7 +275,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 			}
 			if memberPointsChanged {
 				s.HandleMemberUpgrade(companyUuid, member.Uuid)
-				// 发布“会员积分变动”事件
+				// 发布"会员积分变动"事件
 				s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
 					BasePayload: event.BasePayload{ // 会员积分变动
 						Ctx:          ctx,
@@ -578,4 +582,190 @@ func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.Che
 	}
 
 	return nil
+}
+
+func (s *memberSrv) VisitorLogin(ctx context.Context, loginReq req.VisitorLoginReq) (*resp.VisitorInfoResp, error) {
+	companyUuid := loginReq.CompanyUuid
+	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
+
+	// 检查是否已存在相同设备ID的游客
+	member, err := memberRepo.GetVisitorByDeviceId(loginReq.DeviceId)
+	if err != nil {
+		if err != gorm.ErrRecordNotFound {
+			return nil, errors.WithMessage(err, "查询游客失败")
+		}
+
+		// 不存在，创建游客
+		// 获取默认会员等级
+		defaultLevelUuid := memberRepo.GetMemberLevelMinPriorityUuid()
+		if defaultLevelUuid == 0 {
+			return nil, errors.New("未找到默认会员等级")
+		}
+
+		// 生成随机昵称
+		nickname := s.generateRandomNickname()
+
+		// 创建游客会员
+		member = &model.Member{
+			MemberNo:        utils.RandomNumber(5), // 5位数字
+			Nickname:        nickname,
+			Gender:          constant.MemberGenderUnknown,
+			Phone:           "",
+			IsVisitor:       true,
+			DeviceId:        loginReq.DeviceId,
+			Password:        "",
+			MemberLevelUuid: defaultLevelUuid,
+		}
+
+		if err := memberRepo.CreateMember(member); err != nil {
+			return nil, errors.WithMessage(err, "创建游客失败")
+		}
+	}
+
+	// 游客不需要生成JWT token，直接返回基本信息
+	return &resp.VisitorInfoResp{
+		MemberUuid: member.Uuid,
+		Nickname:   member.Nickname,
+		// CompanyUuid: companyUuid,
+		// DeviceId:    member.DeviceId,
+		// Token:       "", // 游客暂时不使用token
+		// CreateTime:  member.CreateTime,
+	}, nil
+}
+
+func (s *memberSrv) BindPhone(ctx context.Context, bindReq req.VisitorBindPhoneReq) error {
+	companyUuid := ctx.GetCompanyUuid()
+	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
+
+	// 检查游客是否存在
+	member, err := memberRepo.GetMemberByUuid(bindReq.MemberUuid)
+	if err != nil {
+		return errors.WithMessage(err, "查询游客失败")
+	}
+
+	if !member.IsVisitor {
+		return errors.New("该会员不是游客")
+	}
+
+	// 检查手机号是否已被使用
+	if memberRepo.CheckMemberExists(bindReq.Phone) {
+		return errors.New("该手机号已被使用")
+	}
+
+	// 验证验证码
+	// TODO: 实现验证码验证逻辑
+
+	// 更新游客信息
+	updateMap := map[string]interface{}{
+		"phone":      bindReq.Phone,
+		"is_visitor": false,
+		"device_id":  "", // 绑定手机号后清空设备ID
+	}
+
+	if err := memberRepo.Update(bindReq.MemberUuid, updateMap); err != nil {
+		return errors.WithMessage(err, "更新游客信息失败")
+	}
+
+	return nil
+}
+
+// generateRandomNickname 生成随机昵称
+func (s *memberSrv) generateRandomNickname() string {
+	// 方案1: 使用纳秒时间戳 + 随机数 + 机器标识的组合
+	// 这样可以确保即使在高并发情况下也具有极高的唯一性
+
+	// 获取当前纳秒时间戳的后6位
+	now := time.Now().UnixNano()
+	timePart := now % 1000000 // 取后6位，范围0-999999
+
+	// 生成3位随机数
+	rand.Seed(now + int64(rand.Intn(10000))) // 使用时间戳+额外随机数作为种子
+	randomPart := rand.Intn(1000)            // 范围0-999
+
+	// 生成机器/进程标识（基于当前时间的微秒部分）
+	processPart := (now / 1000) % 100 // 范围0-99
+
+	// 组合成一个大整数
+	combined := timePart*100000 + int64(randomPart)*100 + processPart
+
+	// 将整数转换为Base62编码（0-9, a-z, A-Z）
+	nickname := s.base62Encode(combined)
+
+	// 确保长度为6位，不足则前补随机字符
+	if len(nickname) < 6 {
+		charset := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+		for len(nickname) < 6 {
+			nickname = string(charset[rand.Intn(62)]) + nickname
+		}
+	} else if len(nickname) > 6 {
+		// 如果超过6位，取后6位
+		nickname = nickname[len(nickname)-6:]
+	}
+
+	// 为了进一步确保唯一性，如果前面的算法生成重复，使用UUID方案
+	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(0))
+	if memberRepo.CheckNicknameExists(nickname) {
+		// 使用UUID + 时间戳的方案作为备选
+		nickname = s.generateUniqueNickname()
+
+		// 最后的保险：如果还是重复，添加随机后缀
+		retryCount := 0
+		for memberRepo.CheckNicknameExists(nickname) && retryCount < 10 {
+			nickname = s.generateUniqueNickname()
+			retryCount++
+		}
+	}
+
+	return nickname
+}
+
+// base62Encode 将整数编码为Base62字符串
+func (s *memberSrv) base62Encode(num int64) string {
+	if num == 0 {
+		return "0"
+	}
+
+	charset := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	base := int64(62)
+	result := ""
+
+	for num > 0 {
+		result = string(charset[num%base]) + result
+		num = num / base
+	}
+
+	return result
+}
+
+// generateUniqueNickname 生成基于UUID的唯一昵称（备选方案）
+func (s *memberSrv) generateUniqueNickname() string {
+	// 使用当前时间的哈希值
+	now := time.Now().UnixNano()
+
+	// 简单的哈希算法，使用适合int64的常数
+	hash := now
+	hash ^= hash >> 33
+	hash *= int64(0x7fffffff) // 使用较小的质数
+	hash ^= hash >> 33
+	hash *= int64(0x1ffffff) // 使用较小的质数
+	hash ^= hash >> 33
+
+	// 确保为正数
+	if hash < 0 {
+		hash = -hash
+	}
+
+	// 转换为Base62并截取6位
+	encoded := s.base62Encode(hash)
+	if len(encoded) >= 6 {
+		return encoded[:6]
+	}
+
+	// 如果不足6位，用随机字符补齐
+	charset := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	for len(encoded) < 6 {
+		encoded += string(charset[rand.Intn(62)])
+	}
+
+	return encoded
 }

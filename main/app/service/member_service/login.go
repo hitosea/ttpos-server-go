@@ -9,6 +9,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/req/member_req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/member_resp"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -21,6 +22,8 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
+
+	"gorm.io/gorm"
 )
 
 const (
@@ -325,5 +328,54 @@ func (s *loginSrv) Register(ctx context.Context, reqs member_req.MemberRegisterR
 	return member_resp.LoginResp{
 		Token:        token,
 		RefreshToken: refreshToken,
+	}, nil
+}
+
+func (s *loginSrv) VisitorLogin(ctx context.Context, loginReq req.VisitorLoginReq) (*resp.VisitorInfoResp, error) {
+	companyUuid := loginReq.CompanyUuid
+	memberRepo := repository.NewMemberRepo(s.dbm.GetDB(companyUuid))
+
+	// 检查是否已存在相同设备ID的游客
+	member, err := memberRepo.GetVisitorByDeviceId(loginReq.DeviceId)
+	if err != nil {
+		if err != gorm.ErrRecordNotFound {
+			return nil, errors.New("查询游客失败")
+		}
+
+		// 不存在，创建游客
+		// 获取默认会员等级
+		defaultLevelUuid := memberRepo.GetMemberLevelMinPriorityUuid()
+		if defaultLevelUuid == 0 {
+			return nil, errors.New("未找到默认会员等级")
+		}
+
+		// 生成随机昵称
+		nickname := "游客"
+
+		// 创建游客会员
+		member = &model.Member{
+			MemberNo:        utils.RandomNumber(5), // 5位数字
+			Nickname:        nickname,
+			Gender:          constant.MemberGenderUnknown,
+			Phone:           "",
+			IsVisitor:       true,
+			DeviceId:        loginReq.DeviceId,
+			Password:        "",
+			MemberLevelUuid: defaultLevelUuid,
+		}
+
+		if err := memberRepo.CreateMember(member); err != nil {
+			return nil, errors.New("创建游客失败")
+		}
+	}
+
+	// 游客不需要生成JWT token，直接返回基本信息
+	return &resp.VisitorInfoResp{
+		MemberUuid: member.Uuid,
+		Nickname:   member.Nickname,
+		// CompanyUuid: companyUuid,
+		DeviceId: member.DeviceId,
+		// Token:       "", // 游客暂时不使用token
+		// CreateTime:  member.CreateTime,
 	}, nil
 }
