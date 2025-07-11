@@ -7,9 +7,10 @@ import (
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/req/member_req"
-	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/member_resp"
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -32,7 +33,8 @@ const (
 type ILoginSrv interface {
 	GetLoginInfo(ctx context.Context, req member_req.MemberLoginInfoReq) (member_resp.MemberLoginInfoResp, error) // 获取登录信息
 	SendCode(ctx context.Context, req member_req.MemberSendCodeReq) error                                         // 发送验证码
-	Login(ctx context.Context, req member_req.MemberLoginReq) (resp.LoginResp, error)                             // 登录
+	Login(ctx context.Context, req member_req.MemberLoginReq) (member_resp.LoginResp, error)                      // 登录
+	Register(ctx context.Context, req member_req.MemberRegisterReq) (member_resp.LoginResp, error)                // 注册
 }
 
 // loginSrv 会员登录服务实现
@@ -109,15 +111,6 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 		return member_resp.MemberLoginInfoResp{}, errors.New("商家不存在")
 	}
 
-	// 获取商家设置
-	// companySetting := repository.NewCompanySettingRepo(db).Get()
-	// if companySetting.IsOpenMember != 1 {
-	// 	return member_resp.MemberLoginInfoResp{}, errors.New("商家未开通会员功能")
-	// }
-	// if companySetting.IsOpenMarketing != 1 {
-	// 	return member_resp.MemberLoginInfoResp{}, errors.New("二维码已失效")
-	// }
-
 	//
 	ctx.SetCompanyUuid(req.CompanyUuid)
 	languageList, _ := s.settingSrv.GetStoreLanguageList(ctx)
@@ -157,9 +150,6 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
 		return errors.New("商家会员服务已关闭")
 	}
-	// if companySetting.IsOpenMarketing != 1 {
-	// 	return errors.New("二维码已失效")
-	// }
 	// 验证手机号是否存在
 	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
 	if err != nil || member.IsDelete() {
@@ -192,21 +182,21 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 // Login 登录
 // 参数：ctx 上下文，req 登录请求
 // 返回：登录响应，错误信息
-func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (resp.LoginResp, error) {
+func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (member_resp.LoginResp, error) {
 	if err := req.Validate(); err != nil {
-		return resp.LoginResp{}, err
+		return member_resp.LoginResp{}, err
 	}
 	db := s.dbm.GetDB(req.CompanyUuid)
 	if db == nil {
-		return resp.LoginResp{}, errors.New("商家不存在")
+		return member_resp.LoginResp{}, errors.New("商家不存在")
 	}
 
 	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(req.CompanyUuid)
 	if err != nil || company.IsExpired() || company.IsDelete() {
-		return resp.LoginResp{}, errors.New("无法使用该功能，请联系商家")
+		return member_resp.LoginResp{}, errors.New("无法使用该功能，请联系商家")
 	}
 	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
-		return resp.LoginResp{}, errors.New("商家会员服务已关闭")
+		return member_resp.LoginResp{}, errors.New("商家会员服务已关闭")
 	}
 
 	// 验证验证码
@@ -214,7 +204,7 @@ func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (re
 	code, ok := s.cache.Get(cacheKey)
 	if !ok || code == "" || code.(string) != req.Code {
 		if config.Server.Mode != "debug" || req.Code != "123456" {
-			return resp.LoginResp{}, errors.New("验证码不正确")
+			return member_resp.LoginResp{}, errors.New("验证码不正确")
 		}
 	}
 	s.cache.Del(cacheKey)
@@ -222,7 +212,7 @@ func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (re
 	// 验证手机号是否存在
 	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
 	if err != nil || member.IsDelete() {
-		return resp.LoginResp{}, errors.New("该手机号未在该商家进行注册")
+		return member_resp.LoginResp{}, errors.New("该手机号未在该商家进行注册")
 	}
 	// 生成token
 	claims := auth.Claims{
@@ -232,13 +222,107 @@ func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (re
 	}
 	token, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
 	if err != nil {
-		return resp.LoginResp{}, errors.New("生成token失败")
+		return member_resp.LoginResp{}, errors.New("生成token失败")
 	}
 	refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
 	if err != nil {
-		return resp.LoginResp{}, errors.New("生成refresh_token失败")
+		return member_resp.LoginResp{}, errors.New("生成refresh_token失败")
 	}
-	return resp.LoginResp{
+	return member_resp.LoginResp{
+		Token:        token,
+		RefreshToken: refreshToken,
+	}, nil
+}
+
+// Register 注册
+// 参数：ctx 上下文，req 注册请求
+// 返回：注册响应，错误信息
+func (s *loginSrv) Register(ctx context.Context, reqs member_req.MemberRegisterReq) (member_resp.LoginResp, error) {
+	if err := reqs.Validate(); err != nil {
+		return member_resp.LoginResp{}, err
+	}
+	db := s.dbm.GetDB(reqs.CompanyUuid)
+	if db == nil {
+		return member_resp.LoginResp{}, errors.New("商家不存在")
+	}
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(reqs.CompanyUuid)
+	if err != nil || company.IsExpired() || company.IsDelete() {
+		return member_resp.LoginResp{}, errors.New("无法使用该功能，请联系商家")
+	}
+	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
+		return member_resp.LoginResp{}, errors.New("商家会员服务已关闭")
+	}
+
+	// 设置上下文
+	ctx.SetDB(db)
+	ctx.SetCompanyUuid(reqs.CompanyUuid)
+	ctx.SetCompany(*company)
+	ctx.SetCompanySetting(*company.CompanySetting)
+
+	// 验证验证码
+	cacheKey := fmt.Sprintf(CodeCacheKey, reqs.Phone, reqs.CompanyUuid)
+	code, ok := s.cache.Get(cacheKey)
+	if !ok || code == "" || code.(string) != reqs.Code {
+		if config.Server.Mode != "debug" || reqs.Code != "123456" {
+			return member_resp.LoginResp{}, errors.New("验证码不正确")
+		}
+	}
+	s.cache.Del(cacheKey)
+
+	// 验证手机号是否存在
+	if member, err := repository.NewMemberRepo(db).GetMemberByPhoneContainDeleted(reqs.Phone); err == nil {
+		if member.IsDelete() {
+			return member_resp.LoginResp{}, errors.New("该会员已被注销，可联系商家处理")
+		}
+		return member_resp.LoginResp{}, errors.New("该手机号已注册本商家会员")
+	}
+
+	// 验证推荐人手机号是否存在
+	var referrer *model.Member
+	if reqs.ReferrerPhone != "" {
+		referrer, err = repository.NewMemberRepo(db).GetMemberByPhone(reqs.ReferrerPhone)
+		if err != nil || referrer.IsDelete() {
+			return member_resp.LoginResp{}, errors.New("该推荐人不存在")
+		}
+	}
+
+	// 添加会员
+	err = service.NewMemberSrv(s.dbm).AddMember(ctx, req.AddMemberReq{
+		Phone: reqs.Phone,
+		ReferrerUuid: func() uint64 {
+			if referrer != nil {
+				return referrer.Uuid
+			}
+			return 0
+		}(),
+		Nickname:  reqs.Nickname,
+		LevelUuid: repository.NewMemberRepo(db).GetMemberLevelMinPriorityUuid(),
+	})
+	if err != nil {
+		return member_resp.LoginResp{}, err
+	}
+
+	// 获取会员信息
+	member, err := repository.NewMemberRepo(db).GetMemberByPhoneContainDeleted(reqs.Phone)
+	if err != nil {
+		return member_resp.LoginResp{}, err
+	}
+
+	// 生成token
+	claims := auth.Claims{
+		Source:      constant.SourceMember,
+		CompanyUuid: reqs.CompanyUuid,
+		MemberUuid:  member.Uuid,
+	}
+	token, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
+	if err != nil {
+		return member_resp.LoginResp{}, errors.New("生成token失败")
+	}
+	refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+	if err != nil {
+		return member_resp.LoginResp{}, errors.New("生成refresh_token失败")
+	}
+	return member_resp.LoginResp{
 		Token:        token,
 		RefreshToken: refreshToken,
 	}, nil

@@ -42,8 +42,10 @@ type IMemberQueryRepo interface {
 	GetMemberByUuid(uuid uint64) (*model.Member, error)                 // 根据uuid获取会员
 	GetMemberByReferrerUuid(referrerUuid uint64) (*model.Member, error) // 根据uuid获取会员
 	GetMemberByPhone(phone string) (*model.Member, error)               // 根据手机号获取会员
+	GetMemberByPhoneContainDeleted(phone string) (*model.Member, error) // 根据手机号获取会员 (包含已删除的会员)
 	GetMembersByUuids(uuids []uint64) ([]*model.Member, error)          // 根据uuid列表获取会员列表
 	GetMemberLevels() []model.MemberLevel                               // 获取会员等级
+	GetMemberLevelMinPriorityUuid() uint64                              // 获取会员等级权重最小的会员等级Uuid
 	GetCardTypes() []model.MemberCardType                               // 获取会员卡类型
 	GetCheckCardType(uuid uint64) model.MemberCardType                  // 获取会员卡类型
 	GetMemberLevelsAllColumns() []model.MemberLevel                     // 获取会员等级所有列
@@ -69,6 +71,13 @@ func (r *memberRepo) GetMemberLevels() []model.MemberLevel {
 	var levels []model.MemberLevel
 	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Select("uuid, name, priority, create_time, points_rate, points_quantity").Order("priority asc, create_time asc").Find(&levels)
 	return levels
+}
+
+// GetMemberLevelMinPriorityUuid 获取会员等级权重最小的会员等级Uuid
+func (r *memberRepo) GetMemberLevelMinPriorityUuid() uint64 {
+	var uuid uint64
+	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Order("priority asc, create_time asc").Select("uuid").First(&uuid)
+	return uuid
 }
 
 // GetCardTypes 获取会员卡类型
@@ -219,6 +228,16 @@ func (r *memberRepo) GetMemberByReferrerUuid(referrerUuid uint64) (*model.Member
 func (r *memberRepo) GetMemberByPhone(phone string) (*model.Member, error) {
 	var member model.Member
 	err := r.db.Model(&model.Member{}).Scopes(NotDeleted).Where("phone = ?", phone).First(&member).Error
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询会员失败", phone)
+	}
+	return &member, nil
+}
+
+// GetMemberByPhoneAndDeleted 根据手机号查询会员 (包含已删除的会员)
+func (r *memberRepo) GetMemberByPhoneContainDeleted(phone string) (*model.Member, error) {
+	var member model.Member
+	err := r.db.Model(&model.Member{}).Where("phone = ?", phone).First(&member).Error
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询会员失败", phone)
 	}

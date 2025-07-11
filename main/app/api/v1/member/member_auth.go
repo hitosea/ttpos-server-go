@@ -92,6 +92,30 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	helper.Success(c, loginResp)
 }
 
+// Register 注册
+// @Summary 注册
+// @Description 注册
+// @Tags 会员端.认证
+// @Accept json
+// @Produce json
+// @param data body member_req.MemberRegisterReq true "详情参数"
+// @Success 200 {object} dto.Response{data=member_resp.LoginResp}
+// @Router /member/register [post]
+func (h *AuthHandler) Register(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	registerReq := member_req.MemberRegisterReq{}
+	if err := c.ShouldBindJSON(&registerReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	registerResp, err := h.loginSrv.Register(ctx, registerReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, registerResp)
+}
+
 func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	loginSrv := member_service.NewLoginSrv(
 		dbm, cache,
@@ -108,5 +132,6 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		publicApi.GET("/login_info", wrapper.LoginInfo)
 		publicApi.POST("/send_code", wrapper.SendCode)
 		publicApi.POST("/login", wrapper.Login)
+		publicApi.POST("/register", wrapper.Register)
 	}
 }

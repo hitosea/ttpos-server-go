@@ -9,3 +9,8 @@ type MemberLoginInfoResp struct {
 	AreaCode     []string           `json:"area_code"`     // 地区码数组，如 ["+86", "+1", "+44"]
 	LanguageList []dto.LanguageItem `json:"language_list"` // 语言列表
 }
+
+type LoginResp struct {
+	Token        string `json:"token"`
+	RefreshToken string `json:"refresh_token"` // 刷新token，用于重新获取token
+}
