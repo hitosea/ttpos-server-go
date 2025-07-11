@@ -38,11 +38,15 @@ require (
 	golang.org/x/image v0.15.0
 	golang.org/x/text v0.25.0
 	google.golang.org/api v0.236.0
+	google.golang.org/grpc v1.72.2
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/driver/mysql v1.5.1
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.10
+	takeout v0.0.0
 )
+
+replace takeout => ../takeout
 
 require (
 	cel.dev/expr v0.20.0 // indirect

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"takeout/internal/controller/rpc"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -16,6 +17,8 @@ var (
 		Usage: "main",
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
+
+			rpc.InitRpc(ctx)
 
 			s := g.Server()
 			s.Group("/", func(group *ghttp.RouterGroup) {

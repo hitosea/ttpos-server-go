@@ -3,7 +3,7 @@ old_dir=$OLDPWD
 cd `dirname $0`
 set -o allexport
 source ../../.env
-app_dir=`pwd`
+app_dir=`dirname $(pwd)`
 # 遍历app目录下的所有子目录（假设init_conf.sh位于hack目录，app目录在上级目录）
     # 仅处理目录类型
     if [ -d "$app_dir" ]; then

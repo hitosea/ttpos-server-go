@@ -1,11 +1,12 @@
-package logic
+package rpc
 
 import (
 	"context"
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
+	"takeout/internal/controller/rpc/echo"
 )
 
-var RpcServer = new(rpcServer)
+var Server = new(rpcServer)
 
 type rpcServer struct {
 	Grpc *grpcx.GrpcServer
@@ -21,16 +22,18 @@ func (s *rpcServer) Run() {
 
 func initRpcServer() {
 	// 注册服务
-	go RpcServer.Grpc.Run()
+	echo.Register(Server.Grpc)
+
+	go Server.Grpc.Run()
 }
 
 func StopRpcServer() {
-	RpcServer.Grpc.Stop()
+	Server.Grpc.Stop()
 }
 
 func InitRpc(ctx context.Context) {
 	//加载grpc服务
-	RpcServer.Init(ctx)
+	Server.Init(ctx)
 
 	initRpcServer()
 

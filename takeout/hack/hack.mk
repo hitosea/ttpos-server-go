@@ -79,3 +79,7 @@ pbentity: cli.install
 .PHONY: conf
 conf:
 	@sh $(ROOT_DIR)/hack/init_conf.sh
+
+.PHONY: run
+run:
+	@go run $(ROOT_DIR)/main.go

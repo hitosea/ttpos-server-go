@@ -10,7 +10,7 @@ gfcli:
       #tables: "order,products"
       package: "takeout"
     pb:
-      api: "api/rpc"
+      api: "api"
       ctrl: "internal/controller"
     dao:
       - link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
