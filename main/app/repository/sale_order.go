@@ -67,7 +67,7 @@ func (r *saleOrderRepo) GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, er
 }
 
 func (r *saleOrderRepo) UpdateSaleOrder(obj *model.SaleOrder) error {
-	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", obj.Uuid).Updates(obj).Error
+	return r.db.Model(&model.SaleOrder{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(obj).Error
 }
 
 func (r *saleOrderRepo) UpdateSaleOrderRecord(obj model.SaleOrder) error {
