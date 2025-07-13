@@ -12,7 +12,6 @@ import (
 
 type ISaleOrderRepo interface {
 	ISaleOrderQueryRepo
-	UpdateSaleOrder(obj *model.SaleOrder) error
 	UpdateSaleOrderCashier(ctx context.Context, saleOrderUuid uint64, cashierUuid uint64, cashierName string) error
 	UpdateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderPointsExchange(saleOrderUuid uint64, payPoints float64, payPointsAmount float64, pointsExchangeRate float64, autoPointsExchange uint) error // 更新销售订单的积分抵扣信息
@@ -66,10 +65,6 @@ func (r *saleOrderRepo) GetSaleOrderMemberUuid(saleOrderUuid uint64) (uint64, er
 	var memberUuid uint64
 	err := r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Select("consumer_uuid").Scan(&memberUuid).Error
 	return memberUuid, errors.WithMessage(err)
-}
-
-func (r *saleOrderRepo) UpdateSaleOrder(obj *model.SaleOrder) error {
-	return r.db.Model(&model.SaleOrder{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(obj).Error
 }
 
 func (r *saleOrderRepo) UpdateSaleOrderRecord(obj model.SaleOrder) error {

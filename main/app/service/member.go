@@ -567,7 +567,7 @@ func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.Che
 		}
 
 		// 更新完整个销售订单
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errUpdate
 		}
 		return nil
