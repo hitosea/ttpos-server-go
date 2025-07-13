@@ -3587,7 +3587,7 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 			return errors.WithMessage(err)
 		}
 		// 更新完整个销售订单
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errUpdate
 		}
 		// 更新销售账单
@@ -5250,7 +5250,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单商品成功")
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单成功")
@@ -5414,7 +5414,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		}
 		ctx.Log().Debug("更新销售订单商品成功")
 
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单成功")
