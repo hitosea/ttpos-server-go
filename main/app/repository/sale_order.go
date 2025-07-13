@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/pkg/context"
 
 	"gorm.io/gorm"
 )
@@ -12,6 +13,7 @@ import (
 type ISaleOrderRepo interface {
 	ISaleOrderQueryRepo
 	UpdateSaleOrder(obj *model.SaleOrder) error
+	UpdateSaleOrderCashier(ctx context.Context, saleOrderUuid uint64, cashierUuid uint64, cashierName string) error
 	UpdateSaleOrderRecord(obj model.SaleOrder) error
 	UpdateSaleOrderPointsExchange(saleOrderUuid uint64, payPoints float64, payPointsAmount float64, pointsExchangeRate float64, autoPointsExchange uint) error // 更新销售订单的积分抵扣信息
 	SetCheckoutZeroRuleCancel(saleOrderUuid uint64) error                                                                                                      // 取消结账抹零
@@ -76,6 +78,13 @@ func (r *saleOrderRepo) UpdateSaleOrderRecord(obj model.SaleOrder) error {
 		return errors.New("销售订单没有主键")
 	}
 	return r.db.Model(&model.SaleOrder{}).Select("*").Where("uuid = ?", obj.Uuid).Updates(obj).Error
+}
+
+func (r *saleOrderRepo) UpdateSaleOrderCashier(ctx context.Context, saleOrderUuid uint64, cashierUuid uint64, cashierName string) error {
+	return r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Updates(map[string]interface{}{
+		"cashier_uuid": cashierUuid,
+		"cashier_name": cashierName,
+	}).Error
 }
 
 func (r *saleOrderRepo) CreateSaleOrderRecord(obj model.SaleOrder) error {
