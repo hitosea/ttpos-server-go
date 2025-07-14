@@ -4,5 +4,10 @@ import "ttpos-server-go/app/dto"
 
 // ProductListReq 商品列表查询
 type ProductListReq struct {
-	dto.PageReq // 分页参数
+	dto.PageReq                           // 分页参数
+	RecommendProductPackageUuids []uint64 `json:"recommend_uuids"` // 推荐商品uuid列表
+}
+
+// ProductRecommendListReq 商品推荐列表查询
+type ProductRecommendListReq struct {
 }

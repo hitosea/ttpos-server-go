@@ -1,7 +1,9 @@
 package service
 
 import (
+	"encoding/json"
 	"slices"
+	"sort"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -12,12 +14,15 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
+
+	"go.uber.org/zap"
 )
 
 // IProductSrv 定义产品服务接口
 type IProductSrv interface {
-	GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error) // 获取产品列表
-	GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error)                               // 获取产品类别列表
+	GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error)               // 获取产品列表
+	GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error)                                             // 获取产品类别列表
+	GetProductRecommendList(ctx context.Context, req req.ProductRecommendListReq) (*product_resp.ProductRecommendListResp, error) // 获取产品推荐列表
 }
 
 type productSrv struct {
@@ -47,11 +52,17 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		constant.SourceTablet:    commonRepo.WhereByIsShowTablet(1),
 		constant.SourceKitchen:   commonRepo.WhereByIsShowKitchen(1),
 		constant.SourceH5:        commonRepo.WhereByIsShowH5(1),
+		constant.SourceMember:    commonRepo.WhereByIsShowMember(1),
 	}
 	productRepo := repository.NewProductRepo(s.dbm.GetDB(dbId))
 	var dbOptions []repository.DBOption
 	if option, ok := sourceMap[ctx.GetSource()]; ok {
 		dbOptions = append(dbOptions, option)
+	}
+
+	// 如果查询推荐商品
+	if len(req.RecommendProductPackageUuids) > 0 {
+		dbOptions = append(dbOptions, commonRepo.WhereInUuids(req.RecommendProductPackageUuids))
 	}
 
 	dbOptions = append(dbOptions, commonRepo.WhereByStatus(1), commonRepo.WhereBySoftDelete(), commonRepo.SortWithSort("ASC"), commonRepo.SortWithID("DESC"))
@@ -234,4 +245,71 @@ func (s *productSrv) GetProductCategoryList(dbId uint64) (product_resp.ProductCa
 	return product_resp.ProductCategoryListResp{
 		List: list,
 	}, nil
+}
+
+// GetProductRecommendList 获取产品推荐列表
+func (s *productSrv) GetProductRecommendList(ctx context.Context, request req.ProductRecommendListReq) (*product_resp.ProductRecommendListResp, error) {
+	// 获取商机推荐信息
+	packageRecommand, err := repository.NewPackageRecommendRepo(s.dbm.GetDB(ctx.GetDbId())).GetRecommendInfo()
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取商机推荐信息失败")
+	}
+	if !packageRecommand.IsOpen() {
+		return &product_resp.ProductRecommendListResp{
+			IsOpen: false,
+		}, nil
+	}
+
+	recommendProducts, err := s.ParseRecommendInfo(packageRecommand)
+	if err != nil {
+		return nil, errors.WithMessage(err, "解析推荐商品失败")
+	}
+
+	var recommendProductUuids []uint64
+	for _, recommendProduct := range recommendProducts {
+		// string转换为uint64
+		uuid, err := utils.StringToUint64(recommendProduct.Uuid)
+		if err != nil {
+			ctx.Log().Error("字符串转换为uint64失败", zap.String("uuid", recommendProduct.Uuid), zap.Error(err))
+			continue // 跳过错误,不显示该错误的推荐商品
+		}
+		recommendProductUuids = append(recommendProductUuids, uuid)
+	}
+	// 获取产品推荐列表
+	products, err := s.GetProductList(ctx, req.ProductListReq{
+		PageReq: dto.PageReq{
+			PageNo:   1,
+			PageSize: 100,
+		},
+		RecommendProductPackageUuids: recommendProductUuids,
+	})
+	if err != nil {
+		return nil, errors.WithMessage(err, "获取产品推荐列表失败")
+	}
+
+	// 返回响应对象
+	return &product_resp.ProductRecommendListResp{
+		List:   products.List,
+		Title:  packageRecommand.Title,
+		IsOpen: packageRecommand.IsOpen(),
+	}, nil
+}
+
+// 解析商品推荐中的JSON字符串
+func (s *productSrv) ParseRecommendInfo(packageRecommend *model.PackageRecommend) ([]ProductItemInfo, error) {
+	var packageRecommendArray []ProductItemInfo
+	if err := json.Unmarshal([]byte(packageRecommend.Packages), &packageRecommendArray); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 按照sort排序, sort是字符串类型, 小的在前
+	sort.Slice(packageRecommendArray, func(i, j int) bool {
+		return packageRecommendArray[i].Sort < packageRecommendArray[j].Sort
+	})
+	return packageRecommendArray, nil
+}
+
+type ProductItemInfo struct {
+	Uuid string `json:"uuid"`
+	Name string `json:"name"`
+	Sort string `json:"sort"`
 }

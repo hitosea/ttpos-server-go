@@ -1,6 +1,9 @@
 package utils
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 // BoolToUint 将布尔值转换为无符号整数
 func BoolToUint(b bool) uint {
@@ -21,4 +24,9 @@ func Uint64OrStringToString(value any) string {
 	default:
 		return fmt.Sprintf("%v", value)
 	}
+}
+
+// StringToUint64 将字符串转换为无符号整数
+func StringToUint64(s string) (uint64, error) {
+	return strconv.ParseUint(s, 10, 64)
 }
