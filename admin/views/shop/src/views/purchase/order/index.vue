@@ -166,7 +166,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="dialogShow" :title="dialogTitle" width="420" align-center>
+    <el-dialog v-model="dialogShow" :title="dialogTitle" width="540" align-center>
       {{ dialogText }}
       <template #footer>
         <div class="dialog-footer">
@@ -493,10 +493,16 @@
     },
   };
 </script>
-<style scoped>
+<style scoped lang="scss">
   .common-search-wrap {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0;
+  }
+  .dialog-footer {
+    margin-top: -10px;
+    .el-button  {
+     margin-top: 10px;
+    }
   }
 </style>

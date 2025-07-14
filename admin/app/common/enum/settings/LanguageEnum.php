@@ -47,6 +47,10 @@ class LanguageEnum extends Enum
                 'name' => 'tr',
                 'value' => 'Türkçe',
             ],
+            [
+                'name' => 'sv',
+                'value' => 'Svenska',
+            ],
         ];
 
         if ($type == 2) {

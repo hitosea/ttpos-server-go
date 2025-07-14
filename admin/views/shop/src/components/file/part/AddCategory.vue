@@ -1,23 +1,23 @@
 <template>
 
   <el-dialog
-    title="添加分类"
+    :title="$t('添加分类')"
     v-model="dialogVisible"
     width="30%"
     :before-close="handleClose" :append-to-body="true">
     <el-form size="small" :model="form" label-position="top" ref="form" label-width="100px" class="demo-ruleForm">
       <el-form-item
-        label="分类名称"
+        :label="$t('分类名称')"
         prop="categoryname"
         :rules="[
-          { required: true, message: '名字不能为空'}
+          { required: true, message: $t('名字不能为空')}
         ]"
       >
         <el-input type="age" v-model="form.categoryname" autocomplete="off"></el-input>
       </el-form-item>
       <el-form-item>
-        <el-button size="small" @click="handleClose">取消</el-button>
-        <el-button size="small" type="primary" @click="submitForm('form')">提交</el-button>
+        <el-button size="small" @click="handleClose">{{ $t('取消') }}</el-button>
+        <el-button size="small" type="primary" @click="submitForm('form')">{{ $t('提交') }}</el-button>
       </el-form-item>
     </el-form>
 
@@ -53,13 +53,13 @@ export default {
 			let self = this;
 			FileApi.addCategory({group_name: categoryname},).then(data => {
 				this.$ElMessage({
-					message: '添加成功',
+					message: this.$t('添加成功'),
 					type: 'success'
 				});
 				self.handleClose({status:'success'});
 			})
 				.catch(error => {
-					ElMessage.error('添加失败');
+					ElMessage.error(this.$t('添加失败'));
 				});
 		},
 
@@ -72,13 +72,13 @@ export default {
 			};
 			FileApi.editCategory(param,).then(data => {
 				this.$ElMessage({
-					message: '保存成功',
+					message: this.$t('保存成功'),
 					type: 'success'
 				});
 				self.handleClose({status:'success'});
 			})
 				.catch(error => {
-					ElMessage.error('修改失败');
+					ElMessage.error(this.$t('修改失败'));
 				});
 		},
 

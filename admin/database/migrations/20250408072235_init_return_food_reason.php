@@ -31,36 +31,45 @@ class InitReturnFoodReason extends Migrator
     {
         $db = Db::connect(Db::getConfig('default'), true);
         $list = [
-            ['name' => [
-                'en_name' => 'Long waiting time',
-                'zh_name' => '等待时间长',
-                'zh_tw_name' => '等待時間長',
-                'th_name' => 'เวลารอคอยนาน',
-                'my_name' => 'စောင့်နေချိန်ရှည်',
-                'ja_name' => '待機時間が長い',
-                'ko_name' => '긴 대기 시간',
-                'tr_name' => 'bekleme süresi uzun',
-            ]],
-            ['name' => [
-                'en_name' => 'Bad taste',
-                'zh_name' => '口味不好',
-                'zh_tw_name' => '口味不好',
-                'th_name' => 'รสชาติไม่ดี',
-                'my_name' => 'အရသာမကောင်းဘူး',
-                'ja_name' => '味が悪い',
-                'ko_name' => '나쁜 맛',
-                'tr_name' => 'tadı kötü',
-            ]],
-            ['name' => [
-                'en_name' => 'Increase the quantity',
-                'zh_name' => '多点',
-                'zh_tw_name' => '多點',
-                'th_name' => 'เพิ่มจำนวน',
-                'my_name' => 'အရေအတွက်များစွာဖြစ်လိုက်သည်',
-                'ja_name' => '数量を増やす',
-                'ko_name' => '추가 수량',
-                'tr_name' => 'miktarı artırmak',
-            ]],
+            [
+                'name' => [
+                    'en_name' => 'Long waiting time',
+                    'zh_name' => '等待时间长',
+                    'zh_tw_name' => '等待時間長',
+                    'th_name' => 'เวลารอคอยนาน',
+                    'my_name' => 'စောင့်နေချိန်ရှည်',
+                    'ja_name' => '待機時間が長い',
+                    'ko_name' => '긴 대기 시간',
+                    'tr_name' => 'bekleme süresi uzun',
+                    'sv_name' => 'Lång väntetid',
+                ]
+            ],
+            [
+                'name' => [
+                    'en_name' => 'Bad taste',
+                    'zh_name' => '口味不好',
+                    'zh_tw_name' => '口味不好',
+                    'th_name' => 'รสชาติไม่ดี',
+                    'my_name' => 'အရသာမကောင်းဘူး',
+                    'ja_name' => '味が悪い',
+                    'ko_name' => '나쁜 맛',
+                    'tr_name' => 'tadı kötü',
+                    'sv_name' => 'Dålig smak',
+                ]
+            ],
+            [
+                'name' => [
+                    'en_name' => 'Increase the quantity',
+                    'zh_name' => '多点',
+                    'zh_tw_name' => '多點',
+                    'th_name' => 'เพิ่มจำนวน',
+                    'my_name' => 'အရေအတွက်များစွာဖြစ်လိုက်သည်',
+                    'ja_name' => '数量を増やす',
+                    'ko_name' => '추가 수량',
+                    'tr_name' => 'miktarı artırmak',
+                    'sv_name' => 'Öka mängd',
+                ]
+            ],
         ];
         foreach ($list as $item) {
             $resaon = $db->name('return_food_reason')->where('name', $item['name']['zh_name'])->find();

@@ -31,36 +31,45 @@ class InitFreeReason extends Migrator
     {
         $db = Db::connect(Db::getConfig('default'), true);
         $list = [
-            ['name' => [
-                'en_name' => 'Customer complaint about quality',
-                'zh_name' => '顾客投诉质量',
-                'zh_tw_name' => '顧客投訴質量',
-                'th_name' => 'ลูกค้าแจ้งเรื่องคุณภาพ',
-                'my_name' => 'ဖောက်သည် အရည်အသွေး ပယ်ဖျက်မှု',
-                'ja_name' => '顧客の品質に対する苦情',
-                'ko_name' => '고객의 품질 불만',
-                'tr_name' => 'Müşteri kalite şikayeti',
-            ]],
-            ['name' => [
-                'en_name' => 'Friendship Discount',
-                'zh_name' => '友情打折',
-                'zh_tw_name' => '友情打折',
-                'th_name' => 'ส่วนลดมิตรภาพ',
-                'my_name' => 'ငှားနေရန် ဂုဏ်ယူစရာ စျေးလျှော့',
-                'ja_name' => '友情割引',
-                'ko_name' => '우정 할인',
-                'tr_name' => 'Arkadaş İndirimi',
-            ]],
-            ['name' => [
-                'en_name' => 'temporary activity',
-                'zh_name' => '临时活动',
-                'zh_tw_name' => '臨時活動',
-                'th_name' => 'กิจกรรมชั่วคราว',
-                'my_name' => 'အချိန်ပိုင်းလုပ်ငန်း',
-                'ja_name' => '臨時活動',
-                'ko_name' => '애드혹 활동',
-                'tr_name' => 'geçici etkinlik',
-            ]],
+            [
+                'name' => [
+                    'en_name' => 'Customer complaint about quality',
+                    'zh_name' => '顾客投诉质量',
+                    'zh_tw_name' => '顧客投訴質量',
+                    'th_name' => 'ลูกค้าแจ้งเรื่องคุณภาพ',
+                    'my_name' => 'ဖောက်သည် အရည်အသွေး ပယ်ဖျက်မှု',
+                    'ja_name' => '顧客の品質に対する苦情',
+                    'ko_name' => '고객의 품질 불만',
+                    'tr_name' => 'Müşteri kalite şikayeti',
+                    'sv_name' => 'Kundkvalitetsskrivelse',
+                ]
+            ],
+            [
+                'name' => [
+                    'en_name' => 'Friendship Discount',
+                    'zh_name' => '友情打折',
+                    'zh_tw_name' => '友情打折',
+                    'th_name' => 'ส่วนลดมิตรภาพ',
+                    'my_name' => 'ငှားနေရန် ဂုဏ်ယူစရာ စျေးလျှော့',
+                    'ja_name' => '友情割引',
+                    'ko_name' => '우정 할인',
+                    'tr_name' => 'Arkadaş İndirimi',
+                    'sv_name' => 'Vännerabatt',
+                ]
+            ],
+            [
+                'name' => [
+                    'en_name' => 'temporary activity',
+                    'zh_name' => '临时活动',
+                    'zh_tw_name' => '臨時活動',
+                    'th_name' => 'กิจกรรมชั่วคราว',
+                    'my_name' => 'အချိန်ပိုင်းလုပ်ငန်း',
+                    'ja_name' => '臨時活動',
+                    'ko_name' => '애드혹 활동',
+                    'tr_name' => 'geçici etkinlik',
+                    'sv_name' => 'Tillfällig aktivitet',
+                ]
+            ],
         ];
         foreach ($list as $item) {
             $resaon = $db->name('free_reason')->where('name', $item['name']['zh_name'])->find();

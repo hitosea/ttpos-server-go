@@ -44,6 +44,7 @@ class MultiLanguageName extends BaseModel
             'ja_name'    => $names['ja'] ?? '',
             'ko_name'    => $names['ko'] ?? '',
             'tr_name'    => $names['tr'] ?? '',
+            'sv_name'    => $names['sv'] ?? '',
         ];
 
         if ($uuid) {
@@ -77,7 +78,7 @@ class MultiLanguageName extends BaseModel
 
         if ($names === null) {
             $record = $this->where('uuid', $uuid)
-                ->field('en_name,zh_name,zh_tw_name,th_name,my_name,ja_name,ko_name,tr_name')
+                ->field('en_name,zh_name,zh_tw_name,th_name,my_name,ja_name,ko_name,tr_name,sv_name')
                 ->find();
 
             if (!$record) {
@@ -93,7 +94,8 @@ class MultiLanguageName extends BaseModel
                 'my'   => $record['my_name'],
                 'ja'   => $record['ja_name'],
                 'ko'   => $record['ko_name'],
-                'tr'   => $record['tr_name']
+                'tr'   => $record['tr_name'],
+                'sv'   => $record['sv_name'],
             ], JSON_UNESCAPED_UNICODE);
 
             // 写入缓存,有效期24小时

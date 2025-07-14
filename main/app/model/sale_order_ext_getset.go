@@ -36,6 +36,7 @@ func (model *SaleOrder) GetFreeReason() dto.LocaleResponse {
 	koNames := make([]string, 0)
 	myNames := make([]string, 0)
 	trNames := make([]string, 0)
+	svNames := make([]string, 0)
 	// 遍历选择的免单原因
 	for _, reason := range model.FreeReasons {
 		if !reason.IsFreeReason() || reason.IsDelete() {
@@ -49,6 +50,7 @@ func (model *SaleOrder) GetFreeReason() dto.LocaleResponse {
 		koNames = append(koNames, reason.MultiLanguageName.KoName)
 		myNames = append(myNames, reason.MultiLanguageName.MyName)
 		trNames = append(trNames, reason.MultiLanguageName.TrName)
+		svNames = append(svNames, reason.MultiLanguageName.SvName)
 	}
 	// 添加自定义的免单原因
 	if model.FreeReason != "" {
@@ -60,6 +62,7 @@ func (model *SaleOrder) GetFreeReason() dto.LocaleResponse {
 		koNames = append(koNames, model.FreeReason)
 		myNames = append(myNames, model.FreeReason)
 		trNames = append(trNames, model.FreeReason)
+		svNames = append(svNames, model.FreeReason)
 	}
 	reasonDto := dto.LocaleResponse{
 		ZH:   strings.Join(zhNames, "、"),
@@ -70,6 +73,7 @@ func (model *SaleOrder) GetFreeReason() dto.LocaleResponse {
 		KO:   strings.Join(koNames, "、"),
 		MY:   strings.Join(myNames, "、"),
 		TR:   strings.Join(trNames, "、"),
+		SV:   strings.Join(svNames, "、"),
 	}
 	return reasonDto
 }

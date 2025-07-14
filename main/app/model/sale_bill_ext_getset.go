@@ -267,6 +267,7 @@ func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
 			KO:   fmt.Sprintf("%s+%s", name1.KO, name2.KO),
 			MY:   fmt.Sprintf("%s+%s", name1.MY, name2.MY),
 			TR:   fmt.Sprintf("%s+%s", name1.TR, name2.TR),
+			SV:   fmt.Sprintf("%s+%s", name1.SV, name2.SV),
 		}
 		return
 	}
@@ -281,6 +282,7 @@ func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
 			KO:   name1.KO,
 			MY:   name1.MY,
 			TR:   name1.TR,
+			SV:   name1.SV,
 		}
 		return
 	}
