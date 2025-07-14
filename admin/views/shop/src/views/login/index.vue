@@ -459,20 +459,11 @@
               // 尝试路由跳转
               await this.$router.push({ path: '/home' });
               
-              // 检查跳转是否成功
-              this.$nextTick(() => {
-                if (this.$route.path !== '/home') {
-                  console.warn('路由跳转未成功，当前路径:', this.$route.path);
-                  // 如果路由跳转失败，使用强制跳转
-                  window.location.href = '/home';
-                } else {
-                  console.log('路由跳转成功');
-                  // 由于路由存在缓存，导致数据更新不及时，所以需要刷新页面
-                  setTimeout(() => {
-                    location.reload();
-                  }, 100);
-                }
-              });
+              this.logining = false;
+              // 由于路由存在缓存，导致数据更新不及时，所以需要刷新页面
+              setTimeout(() => {
+                location.reload();
+              }, 100);
             } catch (error) {
               console.error('跳转过程出错:', error);
               // 出错时直接使用强制跳转
