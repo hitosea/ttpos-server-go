@@ -2055,5 +2055,7 @@
     "添加失败": "Add failed",
     "修改失败": "Modification failed",
     "昵称/手机号/ID/会员卡号": "Nickname/Phone number/ID/Membership card number",
-    "登录处理失败，请重试": "Login failed, please try again"
+    "登录处理失败，请重试": "Login failed, please try again",
+    "主账户变动数量": "Main account change amount",
+    "赠菜金额": "Complimentary Dish Amount"
 }

@@ -59,6 +59,22 @@
               </template>
             </template>
           </el-table-column>
+          <el-table-column prop="balance" :label="$t('主账户变动数量')">
+            <template #default="scope">
+              <p v-if="scope.row.main_money > 0"> +{{ this.$formatPrice(scope.row.main_money) }} </p>
+              <p v-else>
+                {{ Number(scope.row.main_money).toLocaleString('en-US') }}
+              </p>
+            </template>
+          </el-table-column>
+          <el-table-column prop="gift_money" :label="$t('赠送账户变动数量')">
+            <template #default="scope">
+              <p v-if="scope.row.gift_money > 0"> +{{ this.$formatPrice(scope.row.gift_money) }} </p>
+              <p v-else>
+                {{ Number(scope.row.gift_money).toLocaleString('en-US') }}
+              </p>
+            </template>
+          </el-table-column>
           <el-table-column prop="scene.text" :label="$t('变动场景')">
             <template #default="scope">
               <span v-if="scope.row.scene.value == 10" style="color: #409eff">{{ scope.row.scene.text }}</span>

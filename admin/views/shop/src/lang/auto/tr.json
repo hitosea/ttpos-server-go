@@ -1809,5 +1809,7 @@
     "添加失败": "Ekleme başarısız",
     "修改失败": "Düzenleme başarısız",
     "昵称/手机号/ID/会员卡号": "Takma ad/Telefon numarası/ID/Üyelik kartı numarası",
-    "登录处理失败，请重试": "Giriş işlemi başarısız oldu, lütfen tekrar deneyin"
+    "登录处理失败，请重试": "Giriş işlemi başarısız oldu, lütfen tekrar deneyin",
+    "主账户变动数量": "Ana hesap değişim miktarı",
+    "赠菜金额": "İkram Yemek Tutarı"
 }
