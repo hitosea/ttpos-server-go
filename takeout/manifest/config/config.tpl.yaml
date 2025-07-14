@@ -30,3 +30,11 @@ nacos:
   config:
     dataId: ttpos-bmp.takeout.yaml
     group: DEFAULT_GROUP
+
+app:
+  provider:
+    skootar:
+      endpoint: https://hw.skootar.com/skootar_api_dev
+      username: victor@diylink.net
+      apiKey: 20230316000000000000000000000000
+      channel: diylink

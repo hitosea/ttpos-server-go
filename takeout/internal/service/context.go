@@ -7,26 +7,26 @@ package service
 
 import (
 	"context"
-	"takeout/internal/model/input"
+	"takeout/internal/model"
 )
 
 type (
-	IEcho interface {
-		Msg(ctx context.Context, in *input.EchoMsgInput) (out *input.EcoMsgOutput, err error)
+	IContextService interface {
+		Get(ctx context.Context) *model.Context
 	}
 )
 
 var (
-	localEcho IEcho
+	localContextService IContextService
 )
 
-func Echo() IEcho {
-	if localEcho == nil {
-		panic("implement not found for interface IEcho, forgot register?")
+func ContextService() IContextService {
+	if localContextService == nil {
+		panic("implement not found for interface IContextService, forgot register?")
 	}
-	return localEcho
+	return localContextService
 }
 
-func RegisterEcho(i IEcho) {
-	localEcho = i
+func RegisterContextService(i IContextService) {
+	localContextService = i
 }

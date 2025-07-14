@@ -1,4 +1,4 @@
-package model
+package input
 
 type EchoMsgInput struct {
 	Message string

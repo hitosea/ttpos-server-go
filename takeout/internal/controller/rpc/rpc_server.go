@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"takeout/internal/controller/rpc/echo"
+	"takeout/internal/controller/rpc/takeout"
 )
 
 var Server = new(rpcServer)
@@ -23,6 +24,7 @@ func (s *rpcServer) Run() {
 func initRpcServer() {
 	// 注册服务
 	echo.Register(Server.Grpc)
+	takeout.Register(Server.Grpc)
 
 	go Server.Grpc.Run()
 }

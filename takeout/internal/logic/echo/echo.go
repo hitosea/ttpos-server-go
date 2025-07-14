@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"takeout/internal/dao"
-	"takeout/internal/model"
 	"takeout/internal/model/entity"
+	"takeout/internal/model/input"
 	"takeout/internal/service"
 )
 
@@ -21,10 +21,10 @@ func New() *sEcho {
 	return &sEcho{}
 }
 
-func (s *sEcho) Msg(ctx context.Context, in *model.EchoMsgInput) (out *model.EcoMsgOutput, err error) {
+func (s *sEcho) Msg(ctx context.Context, in *input.EchoMsgInput) (out *input.EcoMsgOutput, err error) {
 	var echoEntity = &entity.Echo{}
 	dao.Echo.Ctx(ctx).Scan(echoEntity)
-	out = &model.EcoMsgOutput{
+	out = &input.EcoMsgOutput{
 		Message: fmt.Sprintf("Hello %v: %v", in.Message, echoEntity.Msg),
 	}
 	return

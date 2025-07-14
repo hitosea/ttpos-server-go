@@ -1,0 +1,34 @@
+syntax = "proto3";
+package api;
+option go_package = "takeout/api";
+
+message Address {
+  string addressName = 1;
+  string address = 2;
+  string lat = 3;
+  string lng = 4;
+}
+
+message ResponseInfo {
+  string code = 1;
+  string message = 2;
+}
+
+message EstimatePriceReq {
+  string providerName = 1;
+  repeated Address address = 2;
+}
+
+message EstimatePriceResp {
+  ResponseInfo responseInfo = 1;
+  float normalPrice = 2;
+  float netPrice = 3;
+  float discount = 4;
+  float distance = 5;
+  int32 tripDuration = 6;
+}
+
+
+service TakeoutService {
+  rpc EstimatePrice (EstimatePriceReq) returns (EstimatePriceResp) {}
+}
