@@ -6,7 +6,9 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/resp/member_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
@@ -28,17 +30,18 @@ import (
 
 // IMemberSrv 定义会员服务接口
 type IMemberSrv interface {
-	GetLevels(companyUuid uint64) resp.MemberLevelList                                                             // 获取等级列表
-	GetCardTypes(companyUuid uint64) resp.MemberCardTypeList                                                       // 获取会员开类型
-	SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList                                         // 模糊搜索
-	AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error                                            // 添加会员
-	GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember                                   // 获取充值会员信息
-	GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (*resp.MemberDiscountResp, error) // 获取会员折扣
-	CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error                         // 使用会员优惠验证密码
-	HandleMemberUpgrade(companyUuid uint64, memberUuid uint64)                                                     // 处理会员升级
-	HandleMemberPoints(ctx context.Context, changeReq MemberPointsChangeReq) error                                 // 处理会员积分
-	HandleMemberBalance(ctx context.Context, changeReq MemberBalanceChangeReq) error                               // 处理会员余额
-	GenerateRandomNickname() string                                                                                // 生成随机昵称
+	GetLevels(companyUuid uint64) resp.MemberLevelList                                                                                 // 获取等级列表
+	GetCardTypes(companyUuid uint64) resp.MemberCardTypeList                                                                           // 获取会员开类型
+	SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList                                                             // 模糊搜索
+	AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error                                                                // 添加会员
+	GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember                                                       // 获取充值会员信息
+	GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (*resp.MemberDiscountResp, error)                     // 获取会员折扣
+	CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error                                             // 使用会员优惠验证密码
+	HandleMemberUpgrade(companyUuid uint64, memberUuid uint64)                                                                         // 处理会员升级
+	HandleMemberPoints(ctx context.Context, changeReq MemberPointsChangeReq) error                                                     // 处理会员积分
+	HandleMemberBalance(ctx context.Context, changeReq MemberBalanceChangeReq) error                                                   // 处理会员余额
+	GenerateRandomNickname() string                                                                                                    // 生成随机昵称
+	GetMemberCouponList(ctx context.Context, couponListReq member_req.CouponListReq) (member_resp.CouponListWithPaginationResp, error) // 获取优惠券列表
 }
 
 // memberSrv 会员服务结构体
@@ -635,4 +638,38 @@ func (s *memberSrv) base62Encode(num int64) string {
 	}
 
 	return result
+}
+
+// GetMemberCouponList 获取优惠券列表
+func (s *memberSrv) GetMemberCouponList(ctx context.Context, couponListReq member_req.CouponListReq) (member_resp.CouponListWithPaginationResp, error) {
+	dbId := ctx.GetDbId()
+	couponRepo := repository.NewMemberCouponRepo(s.dbm.GetDB(dbId))
+	// 处理错误
+	var coupons []*model.MemberCoupon
+	var err error
+	if couponListReq.IsHistory == 1 {
+		coupons, err = couponRepo.GetHistoryMemberCouponList(couponListReq.MemberUuid)
+	} else {
+		coupons, err = couponRepo.GetValidMemberCouponList(couponListReq.MemberUuid)
+	}
+	if err != nil {
+		return member_resp.CouponListWithPaginationResp{}, errors.WithMessage(err, "获取优惠券列表失败")
+	}
+	// 转换为响应对象
+	respMemberCoupons := make([]member_resp.Coupon, 0)
+	for _, memberCoupon := range coupons {
+		var respMemberCoupon member_resp.Coupon
+		copier.Copy(&respMemberCoupon, memberCoupon)
+		if memberCoupon.DayStartTime == "00:00" && memberCoupon.DayEndTime == "23:59" {
+			respMemberCoupon.ApplicableTimePeriod = 0
+		} else {
+			respMemberCoupon.ApplicableTimePeriod = 1
+		}
+		respMemberCoupon.Status = memberCoupon.GetStatus()
+		respMemberCoupons = append(respMemberCoupons, respMemberCoupon)
+	}
+	// 返回响应对象
+	return member_resp.CouponListWithPaginationResp{
+		List: respMemberCoupons,
+	}, nil
 }
