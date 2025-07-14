@@ -1,4 +1,4 @@
-package admin
+package saas
 
 import (
 	"gorm.io/gorm"

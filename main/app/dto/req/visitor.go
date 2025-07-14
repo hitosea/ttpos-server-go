@@ -5,16 +5,12 @@ import "errors"
 // VisitorLoginReq 游客登录请求
 type VisitorLoginReq struct {
 	CompanyUuid uint64 `json:"company_uuid" form:"company_uuid" binding:"required"` // 集团ID
-	DeviceId    string `json:"device_id" form:"device_id" binding:"required"`       // 设备ID，用于标识游客
 }
 
 // Validate 验证游客登录请求
 func (req *VisitorLoginReq) Validate() error {
 	if req.CompanyUuid == 0 {
 		return errors.New("商家ID不能为空")
-	}
-	if req.DeviceId == "" {
-		return errors.New("设备ID不能为空")
 	}
 	return nil
 }

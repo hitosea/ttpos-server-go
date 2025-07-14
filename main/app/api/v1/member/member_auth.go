@@ -3,10 +3,12 @@ package member
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/member_service"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
@@ -92,6 +94,37 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	helper.Success(c, loginResp)
 }
 
+// Login 游客登录
+// @Summary 游客登录
+// @Description 游客登录，如果游客不存在则自动创建
+// @Tags 会员端.游客
+// @Accept json
+// @Produce json
+// @param data body req.VisitorLoginReq true "游客登录参数"
+// @Success 200 {object} dto.Response{data=resp.VisitorInfoResp}
+// @Router /member/visitor/login [post]
+func (h *AuthHandler) VisitorLogin(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	loginReq := req.VisitorLoginReq{}
+	if err := c.ShouldBindJSON(&loginReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	if err := loginReq.Validate(); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	visitorInfo, err := h.loginSrv.VisitorLogin(ctx, loginReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+
+	helper.Success(c, visitorInfo)
+}
+
 // Register 注册
 // @Summary 注册
 // @Description 注册
@@ -117,14 +150,23 @@ func (h *AuthHandler) Register(c *gin.Context) {
 }
 
 func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
-	loginSrv := member_service.NewLoginSrv(
-		dbm, cache,
-		service.NewSMSSrv(dbm),
-		setting.NewSrvImpl(dbm, cache),
-	)
+	// 初始化服务
+	captchaSrv := service.NewCaptchaSrv(cache)
+	settingSrv := setting.NewSrv(dbm, cache)
+	roleAccessSrv := service.NewRoleAccessSrv(dbm)
+	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
+	cashBoxSrv := service.NewCashBoxSrv(dbm)
+	statisticsSrv := service.NewStatisticsSrv()
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
+	// 初始化处理器
 	wrapper := &AuthHandler{
-		loginSrv: loginSrv,
+		loginSrv: member_service.NewLoginSrv(
+			dbm, cache,
+			service.NewSMSSrv(dbm),
+			setting.NewSrvImpl(dbm, cache),
+		),
 	}
 
 	publicApi := router.Group("")
@@ -132,6 +174,12 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		publicApi.GET("/login_info", wrapper.LoginInfo)
 		publicApi.POST("/send_code", wrapper.SendCode)
 		publicApi.POST("/login", wrapper.Login)
-		publicApi.POST("/register", wrapper.Register)
+		publicApi.POST("/visitor/login", wrapper.VisitorLogin)
+	}
+
+	// 需要认证
+	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
+	{
+		privateApi.POST("/register", wrapper.Register)
 	}
 }

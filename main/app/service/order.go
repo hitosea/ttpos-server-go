@@ -22,9 +22,9 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
-	"ttpos-server-go/app/repository/admin"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/app/repository/saas"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -7329,7 +7329,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	methodItems := make([]resp.PaymentMethodItem, 0)
 	amounts := make([]resp.PaymentMethodAmount, 0)
 
-	paymentApp, paymentAppErr := admin.NewPaymentAppRepo(s.dbm.GetDB(0)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
+	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(s.dbm.GetDB(0)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
 	for _, paymentMethod := range paymentMethods {
 		// 不显示免单
 		if paymentMethod.Code == constant.PaymentMethodCodeFreePay {

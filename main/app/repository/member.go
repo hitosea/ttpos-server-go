@@ -351,9 +351,12 @@ func (r *memberRepo) DecConsumptionCount(uuid uint64) error {
 // GetVisitorByDeviceId 根据设备ID获取游客会员
 func (r *memberRepo) GetVisitorByDeviceId(deviceId string) (*model.Member, error) {
 	var member model.Member
-	err := r.db.Model(&model.Member{}).Where("device_id = ? AND is_visitor = ?", deviceId, true).First(&member).Error
+	err := r.db.Model(&model.Member{}).Where("device_id = ? AND is_visitor = ?", deviceId, 1).First(&member).Error
 	if err != nil {
-		return nil, errors.WithMessage(err, "查询游客会员失败", deviceId)
+		if err == gorm.ErrRecordNotFound {
+			return &member, nil
+		}
+		return nil, err
 	}
 	return &member, nil
 }
@@ -361,7 +364,7 @@ func (r *memberRepo) GetVisitorByDeviceId(deviceId string) (*model.Member, error
 // CheckVisitorExists 检查游客是否存在
 func (r *memberRepo) CheckVisitorExists(deviceId string) bool {
 	var exists uint64
-	r.db.Model(&model.Member{}).Where("device_id = ? AND is_visitor = ?", deviceId, true).Select("uuid").Scan(&exists)
+	r.db.Model(&model.Member{}).Where("device_id = ? AND is_visitor = ?", deviceId, 1).Select("uuid").Scan(&exists)
 	return exists > 0
 }
 

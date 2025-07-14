@@ -33,7 +33,8 @@ class CreateMemberToSass extends Migrator
     {
         if (!$this->hasTable('member')) {
             $table = $this->table('member', ['comment' => '会员表']);
-            $table->addColumn('company_uuid', 'integer', ['limit' => 10, 'null' => false, 'comment' => '公司ID', 'after' => 'uuid']);
+            $table->addColumn('uuid', 'biginteger', ['default' => 0, 'comment' => '唯一ID', 'after' => 'id']);
+            $table->addColumn('company_uuid', 'biginteger', ['default' => 0, 'comment' => '公司ID', 'after' => 'uuid']);
             $table->addColumn('device_id', 'string', ['limit' => 255, 'null' => false, 'comment' => '设备ID', 'after' => 'company_uuid']);
             $table->addColumn('is_visitor', 'integer', ['limit' => 1, 'null' => false, 'comment' => '是否游客 0否 1是', 'after' => 'device_id']);
             $table->addColumn('nickname', 'string', ['limit' => 255, 'default' => '', 'comment' => '昵称', 'after' => 'is_visitor']);

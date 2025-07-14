@@ -287,6 +287,9 @@ func (c *ContextImpl) GetAssistantUuid() uint64 {
 }
 
 func (c *ContextImpl) GetDeviceSn() string {
+	if c.deviceSn == "" {
+		c.deviceSn = c.cc.GetHeader("Device-Id")
+	}
 	return c.deviceSn
 }
 
