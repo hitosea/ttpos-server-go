@@ -154,10 +154,14 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 		return errors.New("商家会员服务已关闭")
 	}
 	// 验证手机号是否存在
-	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
-	if err != nil || member.IsDelete() {
+	member, err := repository.NewMemberRepo(db).GetMemberByPhoneContainDeleted(req.Phone)
+	if err != nil {
 		return errors.New("该手机号未在该商家进行注册")
 	}
+	if member.IsDelete() {
+		return errors.New("该会员已被注销，可联系商家处理")
+	}
+
 	// 生成验证码
 	code := fmt.Sprintf("%06d", rand.Intn(1000000)) // 生成6位随机数字验证码，范围：000000-999999
 	// 如果是否debug模式，则打印验证码
