@@ -14,6 +14,8 @@ type Member struct {
 	Nickname                     string  `gorm:"column:nickname;type:varchar(255);comment:昵称;NOT NULL" json:"nickname"`
 	Gender                       int     `gorm:"column:gender;type:tinyint(3);default:0;comment:性别,0-女 1-男 2-未知;NOT NULL" json:"gender"`
 	Phone                        string  `gorm:"column:phone;type:varchar(20);comment:电话号码;NOT NULL" json:"phone"`
+	IsVisitor                    bool    `gorm:"column:is_visitor;type:tinyint(1);default:0;comment:是否游客,0-否 1-是;NOT NULL" json:"is_visitor"`
+	DeviceId                     string  `gorm:"column:device_id;type:varchar(100);comment:设备ID,用于标识游客;NOT NULL" json:"device_id"`
 	Password                     string  `gorm:"column:password;type:varchar(200);comment:密码;NOT NULL" json:"password"`
 	Birthday                     int64   `gorm:"column:birthday;type:int(10);comment:生日,时间戳" json:"birthday"`
 	Point                        float64 `gorm:"column:point;type:decimal(12,2);default:0.00;comment:积分;NOT NULL" json:"point"`

@@ -17,7 +17,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
-	"ttpos-server-go/app/repository/admin"
+	"ttpos-server-go/app/repository/saas"
 	contexts "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
@@ -526,7 +526,7 @@ func (p *PaymentRepo) getPaymentInfo(paymentMethodCode int) (string, string, err
 
 // validateConfig 验证支付配置
 func (p *PaymentRepo) validateConfig(companyUuid uint64) (*model.PaymentApp, error) {
-	paymentApp, paymentAppErr := admin.NewPaymentAppRepo(p.dbm.GetDB(0)).GetPaymentAppCompanyUuid(companyUuid)
+	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(p.dbm.GetDB(0)).GetPaymentAppCompanyUuid(companyUuid)
 	// 检查支付配置
 	if paymentAppErr != nil || paymentApp == nil || paymentApp.ID == 0 {
 		return nil, errors.New("未配置支付信息")

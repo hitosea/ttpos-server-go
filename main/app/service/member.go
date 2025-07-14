@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
@@ -10,6 +11,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
+	"ttpos-server-go/app/repository/saas"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -36,6 +38,7 @@ type IMemberSrv interface {
 	HandleMemberUpgrade(companyUuid uint64, memberUuid uint64)                                                     // 处理会员升级
 	HandleMemberPoints(ctx context.Context, changeReq MemberPointsChangeReq) error                                 // 处理会员积分
 	HandleMemberBalance(ctx context.Context, changeReq MemberBalanceChangeReq) error                               // 处理会员余额
+	GenerateRandomNickname() string                                                                                // 生成随机昵称
 }
 
 // memberSrv 会员服务结构体
@@ -259,7 +262,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 	if memberPointsChanged || memberBalanceChanged {
 		go func() {
 			if memberBalanceChanged {
-				// 发布“会员余额变动”事件
+				// 发布"会员余额变动"事件
 				s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
 					BasePayload: event.BasePayload{ // 会员余额变动
 						Ctx:          ctx,
@@ -271,7 +274,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 			}
 			if memberPointsChanged {
 				s.HandleMemberUpgrade(companyUuid, member.Uuid)
-				// 发布“会员积分变动”事件
+				// 发布"会员积分变动"事件
 				s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
 					BasePayload: event.BasePayload{ // 会员积分变动
 						Ctx:          ctx,
@@ -578,4 +581,58 @@ func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.Che
 	}
 
 	return nil
+}
+
+// GenerateRandomNickname 生成随机昵称
+func (s *memberSrv) GenerateRandomNickname() string {
+	// 获取当前纳秒时间戳的后8位
+	now := time.Now().UnixNano()
+	timePart := now % 100000000 // 取后8位，范围0-99999999
+	// 生成4位随机数
+	rand.Seed(now + int64(rand.Intn(10000))) // 使用时间戳+额外随机数作为种子
+	randomPart := rand.Intn(10000)           // 范围0-9999
+	// 生成机器/进程标识（基于当前时间的微秒部分）
+	processPart := (now / 1000) % 1000 // 范围0-999
+	// 组合成一个大整数
+	combined := timePart*10000000 + int64(randomPart)*1000 + processPart
+	// 将整数转换为Base62编码（0-9, a-z, A-Z）
+	nickname := s.base62Encode(combined)
+	// 确保长度为9位，不足则前补随机字符
+	if len(nickname) < 9 {
+		charset := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+		for len(nickname) < 9 {
+			nickname = string(charset[rand.Intn(62)]) + nickname
+		}
+	} else if len(nickname) > 9 {
+		// 如果超过9位，取后9位
+		nickname = nickname[len(nickname)-9:]
+	}
+	// 为了进一步确保唯一性，如果前面的算法生成重复，使用UUID方案
+	memberRepo := saas.NewMemberRepo(s.dbm.GetDB(0))
+	if memberRepo.CheckNicknameExists(nickname) {
+		retryCount := 0
+		for memberRepo.CheckNicknameExists(nickname) && retryCount < 10 {
+			nickname = s.GenerateRandomNickname()
+			retryCount++
+		}
+	}
+	return nickname
+}
+
+// base62Encode 将整数编码为Base62字符串
+func (s *memberSrv) base62Encode(num int64) string {
+	if num == 0 {
+		return "0"
+	}
+
+	charset := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	base := int64(62)
+	result := ""
+
+	for num > 0 {
+		result = string(charset[num%base]) + result
+		num = num / base
+	}
+
+	return result
 }
