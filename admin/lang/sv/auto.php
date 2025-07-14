@@ -122,7 +122,7 @@ return [
     "交班成功" => "Skiftbyte lyckades",
     "交班编号" => "Skift-ID",
     "产品税类只能设置2条" => "Endast två produktskatter kan ställas in",
-    "人" => "Person",
+    "人" => "Pers",
     "人均" => "Genomsnitt per person",
     "人数" => "Antal personer",
     "仅作为餐饮费" => "Endast för matkostnader",
