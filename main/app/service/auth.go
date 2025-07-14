@@ -673,7 +673,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				// 高于等于的就返-108，能弹出来交班弹窗
 				if ctx.Version(context.GreaterThen, "2.3.0") || ctx.Version(context.Equal, "2.3.0") { // 高于等于 2.3.0
 					// 获取缓存
-					if cachedSubmitShift, err := s.shiftSrv.GetCachedSubmitShift(ctx); err != nil {
+					if cachedSubmitShift, err := s.shiftSrv.GetCachedSubmitShift(ctx); err != nil || cachedSubmitShift == nil {
 						return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenExpired, "当前班次不存在")
 					} else {
 						return company, companySetting, staff, desk, errors.NewWithCodeAndData(constant.CodeCashierHandedOver, *cachedSubmitShift, "已交班")
