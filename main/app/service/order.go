@@ -3149,7 +3149,7 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 			return errors.WithMessage(err)
 		}
 		// 更新完整个销售订单
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errUpdate
 		}
 		// 更新销售账单
@@ -4812,7 +4812,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单商品成功")
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单成功")
@@ -4976,7 +4976,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		}
 		ctx.Log().Debug("更新销售订单商品成功")
 
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单成功")
@@ -10118,12 +10118,21 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq, ne
 		return nil, errors.New("销售订单不存在")
 	}
 
-	// 更新用户
-	saleOrder.CashierUuid = ctx.GetStaffUuid()
+	// 更新收银员信息。当收银员信息发生变化时，才更新。且只更新收银员信息相关字段
+	needUpdateCashier := false
+	if saleOrder.CashierUuid != ctx.GetStaffUuid() {
+		saleOrder.CashierUuid = ctx.GetStaffUuid()
+		needUpdateCashier = true
+	}
 	staff := ctx.GetStaff()
-	saleOrder.CashierName = staff.GetUserName()
-	if err := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); err != nil {
-		return nil, errors.WithMessage(err)
+	if saleOrder.CashierName != staff.GetUserName() {
+		saleOrder.CashierName = staff.GetUserName()
+		needUpdateCashier = true
+	}
+	if needUpdateCashier {
+		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderCashier(ctx, saleOrder.Uuid, saleOrder.CashierUuid, saleOrder.CashierName); err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 
 	// 判断是否已支付
@@ -10180,12 +10189,21 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvo
 		return nil, errors.New("销售订单不存在")
 	}
 
-	// 更新用户
-	saleOrder.CashierUuid = ctx.GetStaffUuid()
+	// 更新收银员信息。当收银员信息发生变化时，才更新。且只更新收银员信息相关字段
+	needUpdateCashier := false
+	if saleOrder.CashierUuid != ctx.GetStaffUuid() {
+		saleOrder.CashierUuid = ctx.GetStaffUuid()
+		needUpdateCashier = true
+	}
 	staff := ctx.GetStaff()
-	saleOrder.CashierName = staff.GetUserName()
-	if err := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); err != nil {
-		return nil, errors.WithMessage(err)
+	if saleOrder.CashierName != staff.GetUserName() {
+		saleOrder.CashierName = staff.GetUserName()
+		needUpdateCashier = true
+	}
+	if needUpdateCashier {
+		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderCashier(ctx, saleOrder.Uuid, saleOrder.CashierUuid, saleOrder.CashierName); err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 
 	// 设置发票信息
