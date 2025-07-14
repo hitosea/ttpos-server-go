@@ -207,48 +207,38 @@
           }
         }
       },
-      /* 翻译 */
+      /**
+       * 翻译文本中的关键词
+       * @param {string} text 原始文本
+       * @returns {string} 翻译后的文本
+       */
       description(text) {
         let result = text;
-        if (result.includes('用户充值')) {
-          result = result.replace('用户充值', $t('用户充值'));
-        }
-        if (result.includes('用户消费')) {
-          result = result.replace('用户消费', $t('用户消费'));
-        }
-        if (result.includes('后台管理员扣减')) {
-          result = result.replace('后台管理员扣减', $t('后台管理员扣减'));
-        }
-        if (result.includes('后台管理员')) {
-          result = result.replace('后台管理员', $t('后台管理员'));
-        }
-        if (result.includes('订单退款')) {
-          result = result.replace('订单退款', $t('订单退款'));
-        }
-        if (result.includes('订单赠送')) {
-          result = result.replace('订单赠送', $t('订单赠送'));
-        }
-        if (result.includes('订单反结账')) {
-          result = result.replace('订单反结账', $t('订单反结账'));
-        }
-        if (result.includes('后台发放会员卡赠送')) {
-          result = result.replace('后台发放会员卡赠送', $t('后台发放会员卡赠送'));
-        }
-        if (result.includes('收银充值赠送积分')) {
-          result = result.replace('收银充值赠送积分', $t('收银充值赠送积分'));
-        }
-        if (result.includes('收银充值')) {
-          result = result.replace('收银充值', $t('收银充值'));
-        }
-        if (result.includes('收银机管理员操作')) {
-          result = result.replace('收银机管理员操作', $t('收银机管理员操作'));
-        }
-        if (result.includes('收银机管理员充值赠送操作')) {
-          result = result.replace('收银机管理员充值赠送操作', $t('收银机管理员充值赠送操作'));
-        }
-        if (result.includes('操作')) {
-          result = result.replace('操作', $t('操作'));
-        }
+        
+        // 翻译关键词映射表（按长度从长到短排序，避免部分替换问题）
+        const translateKeywords = [
+          '收银机管理员充值赠送操作',
+          '后台发放会员卡赠送',
+          '收银充值赠送积分',
+          '收银机管理员操作',
+          '后台管理员扣减',
+          '订单反结账',
+          '后台管理员',
+          '订单赠送',
+          '订单退款',
+          '收银充值',
+          '用户充值',
+          '用户消费',
+          '操作'
+        ];
+        
+        // 遍历关键词进行替换
+        translateKeywords.forEach(keyword => {
+          if (result.includes(keyword)) {
+            result = result.replace(new RegExp(keyword, 'g'), $t(keyword));
+          }
+        });
+        
         return result;
       },
       

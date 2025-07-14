@@ -57,12 +57,7 @@
           <el-table-column prop="scene.text" :label="$t('变动场景')">
             <template #default="scope">
               <span v-if="!scope.row.scene">-</span>
-              <span v-if="scope.row.scene.value == 10" style="color: #409eff">{{ scope.row.scene.text }}</span>
-              <span v-if="scope.row.scene.value == 20" style="color: #67c23a">{{ scope.row.scene.text }}</span>
-              <span v-if="scope.row.scene.value == 30" style="color: #f56c6c">{{ scope.row.scene.text }}</span>
-              <span v-if="scope.row.scene.value == 40" style="color: #e6a23c">{{ scope.row.scene.text }}</span>
-              <span v-if="scope.row.scene.value == 50" style="color: #e63c81">{{ scope.row.scene.text }}</span>
-              <span v-if="scope.row.scene.value == 90" style="color: #e63c81">{{ scope.row.scene.text }}</span>
+              <span v-else :style="{ color: getSceneColor(scope.row.scene.value) }">{{ scope.row.scene.text }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="describe" :label="$t('描述/说明')" show-overflow-tooltip>
@@ -207,6 +202,25 @@
         });
         
         return result;
+      },
+      
+      /**
+       * 根据场景值获取对应的颜色
+       * @param {number} value 场景值
+       * @returns {string} 颜色值
+       */
+      getSceneColor(value) {
+        // 场景颜色映射
+        const sceneColorMap = {
+          10: '#409eff', // 蓝色
+          20: '#67c23a', // 绿色
+          30: '#f56c6c', // 红色
+          40: '#e6a23c', // 橙色
+          50: '#e63c81', // 粉色
+          90: '#e63c81'  // 粉色
+        };
+        
+        return sceneColorMap[value] || '#000000'; // 默认黑色
       },
     },
   };
