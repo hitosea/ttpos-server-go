@@ -151,6 +151,52 @@ func (h *ProductHandler) Recovery(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// ConfirmReturn 厨显端确认退菜
+// @Summary 厨显端确认退菜
+// @Description 厨显端确认退菜
+// @Tags 厨显端.产品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.ProductUuid true "送厨商品Uuid参数"
+// @Router /kitchen/product/confirm_return [post]
+func (h *ProductHandler) ConfirmReturn(c *gin.Context) {
+	var productionReq req.ProductUuid
+	if err := c.ShouldBindJSON(&productionReq); err != nil {
+		helper.HandleValidationError(c, err, productionReq, nil)
+		return
+	}
+	err := h.productionSrv.ConfirmReturn(helper.GetContext(c), productionReq.ProductUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
+// ConfirmReturnAll 厨显端确认退菜整单
+// @Summary 厨显端确认退菜整单
+// @Description 厨显端确认退菜整单
+// @Tags 厨显端.产品
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.SaleBillUuid true "按订单查看送厨商品，确认整单取消时传递销售账单Uuid"
+// @Router /kitchen/product/confirm_return_all [post]
+func (h *ProductHandler) ConfirmReturnAll(c *gin.Context) {
+	var returnAllReq req.SaleBillUuid
+	if err := c.ShouldBindJSON(&returnAllReq); err != nil {
+		helper.HandleValidationError(c, err, returnAllReq, nil)
+		return
+	}
+	err := h.productionSrv.ConfirmReturnAll(helper.GetContext(c), returnAllReq.SaleBillUuid)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -180,5 +226,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/product/history", wrapper.GetHistory)                        // 获取上菜历史
 		privateApi.POST("/product/finish", wrapper.Finish)                            // 制作完成
 		privateApi.POST("/product/recovery", wrapper.Recovery)                        // 恢复制作
+		privateApi.POST("/product/confirm_return", wrapper.ConfirmReturn)             // 厨显端确认退菜
+		privateApi.POST("/product/confirm_return_all", wrapper.ConfirmReturnAll)      // 厨显端确认退菜整单
 	}
 }

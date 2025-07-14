@@ -1457,8 +1457,9 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		tx.Rollback()
 		return errors.WithMessage(builtinerrors.New("删除送厨单失败"), err.Error())
 	}
+	// 修改送厨商品数量为0，在确认整单退菜时、确认该菜品全退时，再标记为删除
 	err = productionRepo.UpdateProduct([]repository.DBOption{saleBillUuidOpt}, map[string]any{
-		"delete_time": time.Now().Unix(),
+		"num": 0,
 	})
 	if err != nil {
 		tx.Rollback()
@@ -5793,6 +5794,7 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid, deskUu
 			FirstCategoryUuid:     firstCategoryUuid,
 			ProductPackageUuid:    unCookingSaleOrderProduct.ProductPackageUuid,
 			Num:                   unCookingSaleOrderProduct.Num,
+			InitNum:               unCookingSaleOrderProduct.Num,
 			FlavorName:            unCookingSaleOrderProduct.Name,
 			ProductAttributeNames: attributeName.ToJson(),
 			Status:                constant.ProductionOrderProductStatusCooking,
@@ -5960,9 +5962,9 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 				map[string]any{"num": keepNum}); err != nil {
 				return errors.WithMessage(err)
 			}
-		} else { // 标记删除
+		} else { // 修改数量为0，在确认整单退菜时、确认该菜品全退时，再标记为删除
 			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(saleOrderProduct.Uuid)},
-				map[string]any{"delete_time": time.Now().Unix()}); err != nil {
+				map[string]any{"num": 0}); err != nil {
 				return errors.WithMessage(err)
 			}
 		}
