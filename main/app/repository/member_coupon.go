@@ -60,7 +60,7 @@ func (r *memberCouponRepo) GetMemberCouponList(opts ...DBOption) ([]*model.Membe
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.Find(&memberCoupons)
+	db.Order("id DESC").Find(&memberCoupons)
 	return memberCoupons, nil
 }
 

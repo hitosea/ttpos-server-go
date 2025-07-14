@@ -1,5 +1,7 @@
 package member_resp
 
+import "ttpos-server-go/app/dto"
+
 type Coupon struct {
 	Uuid                 uint64  `json:"uuid"`
 	Name                 string  `json:"name"`                   // 优惠券名称
@@ -14,4 +16,16 @@ type Coupon struct {
 
 type CouponListWithPaginationResp struct {
 	List []Coupon `json:"list"`
+}
+
+type PointsRecord struct {
+	Scene      int     `json:"scene"`       //场景,10-用户充值 20-订单赠送 30-管理员操作 40-退款扣除 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减
+	Value      float64 `json:"value"`       //数值,负数:减积分 正数:加积分
+	CreateTime int64   `json:"create_time"` //创建时间
+}
+
+type PointsRecordListWithPaginationResp struct {
+	List       []PointsRecord   `json:"list"`
+	Meta       dto.PageResponse `json:"meta"`
+	TotalPoint float64          `json:"total_point"` // 总积分, 用于计算总积分
 }

@@ -61,6 +61,32 @@ func (h *BenefitHandler) GetMemberCouponHistoryList(c *gin.Context) {
 	helper.Success(c, couponResp)
 }
 
+// BenefitActivity 获取我的积分记录
+// @Summary 获取我的积分记录
+// @Description 获取我的积分记录
+// @Tags 会员端.积分
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query member_req.PointsRecordListReq true "详情参数"
+// @Success 200 {object} dto.Response{data=member_resp.PointsRecordListWithPaginationResp}
+// @Router /member/points/record/list [get]
+func (h *BenefitHandler) GetMemberPointsRecordList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	pointsRecordListReq := member_req.PointsRecordListReq{}
+	if err := c.ShouldBindQuery(&pointsRecordListReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	pointsRecordListReq.MemberUuid = ctx.GetMemberUuid()
+	pointsRecordListResp, err := h.memberSrv.GetMemberPointsRecordList(ctx, pointsRecordListReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, pointsRecordListResp)
+}
+
 func RegisterBenefitHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -81,5 +107,6 @@ func RegisterBenefitHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	{
 		privateApi.GET("/coupon/list", wrapper.GetMemberCouponList)                // 获取我的优惠券
 		privateApi.GET("/coupon/history/list", wrapper.GetMemberCouponHistoryList) // 获取我的历史优惠券
+		privateApi.GET("/points/record/list", wrapper.GetMemberPointsRecordList)   // 获取我的积分记录
 	}
 }
