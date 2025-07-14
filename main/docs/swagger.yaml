@@ -952,6 +952,12 @@ definitions:
       balance:
         description: 会员余额
         type: number
+      id:
+        description: 会员ID
+        type: integer
+      is_visitor:
+        description: 是否游客
+        type: boolean
       nickname:
         description: 会员昵称
         type: string
@@ -5670,6 +5676,9 @@ definitions:
     type: object
   resp.SearchMember:
     properties:
+      member_card_no:
+        description: 会员卡号
+        type: string
       nickname:
         description: 会员昵称
         type: string
@@ -15208,6 +15217,74 @@ paths:
       summary: 获取营销活动列表
       tags:
       - 会员端.营销活动
+  /member/product/category/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取会员端产品类别列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductCategoryListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取会员端产品类别列表
+      tags:
+      - 会员端.产品列表
+  /member/product/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取会员端产品列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        required: true
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductListWithPaginationResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取会员端产品列表
+      tags:
+      - 会员端.产品列表
+  /member/product/recommend/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取会员端商家推荐商品列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductCategoryListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取会员端商家推荐商品列表
+      tags:
+      - 会员端.产品列表
   /member/register:
     post:
       consumes:

@@ -104,7 +104,7 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 	// 返回
 	return member_resp.MemberBaseInfoResp{
 		Member: member_resp.MemberResp{
-			Id:        uint64(member.ID),
+			Id:        member.ID,
 			Uuid:      member.Uuid,
 			Nickname:  member.Nickname,
 			Phone:     member.Phone,

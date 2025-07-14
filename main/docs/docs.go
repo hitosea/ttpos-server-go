@@ -14529,6 +14529,115 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/product/category/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取会员端产品类别列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.产品列表"
+                ],
+                "summary": "获取会员端产品类别列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductCategoryListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/product/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取会员端产品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.产品列表"
+                ],
+                "summary": "获取会员端产品列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductListWithPaginationResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/product/recommend/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取会员端商家推荐商品列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.产品列表"
+                ],
+                "summary": "获取会员端商家推荐商品列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductCategoryListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/member/register": {
             "post": {
                 "description": "注册",
@@ -18506,6 +18615,14 @@ const docTemplate = `{
                 "balance": {
                     "description": "会员余额",
                     "type": "number"
+                },
+                "id": {
+                    "description": "会员ID",
+                    "type": "integer"
+                },
+                "is_visitor": {
+                    "description": "是否游客",
+                    "type": "boolean"
                 },
                 "nickname": {
                     "description": "会员昵称",
@@ -25484,6 +25601,10 @@ const docTemplate = `{
         "resp.SearchMember": {
             "type": "object",
             "properties": {
+                "member_card_no": {
+                    "description": "会员卡号",
+                    "type": "string"
+                },
                 "nickname": {
                     "description": "会员昵称",
                     "type": "string"
