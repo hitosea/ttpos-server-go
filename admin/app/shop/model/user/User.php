@@ -79,6 +79,7 @@ class User extends UserModel
         $paginate = $model->with(['grade', 'memberCard' => ['card'], 'memberBalanceLog', 'referrer'])
             ->field('*, nickname as nickName')
             ->order(['create_time' => 'desc'])
+            ->where('is_visitor', 0)
             ->hidden(['open_id', 'union_id', 'password'])
             ->paginate($data);
 
