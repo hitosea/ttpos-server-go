@@ -3,7 +3,7 @@ package member
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
@@ -29,7 +29,7 @@ type BenefitHandler struct {
 // @Router /member/coupon/list [get]
 func (h *BenefitHandler) GetMemberCouponList(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	couponListReq := req.CouponListReq{}
+	couponListReq := member_req.CouponListReq{}
 	couponListReq.MemberUuid = ctx.GetMemberUuid()
 	couponResp, err := h.memberSrv.GetMemberCouponList(ctx, couponListReq)
 	if err != nil {
@@ -50,7 +50,7 @@ func (h *BenefitHandler) GetMemberCouponList(c *gin.Context) {
 // @Router /member/coupon/history/list [get]
 func (h *BenefitHandler) GetMemberCouponHistoryList(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	couponListReq := req.CouponListReq{}
+	couponListReq := member_req.CouponListReq{}
 	couponListReq.MemberUuid = ctx.GetMemberUuid()
 	couponListReq.IsHistory = 1
 	couponResp, err := h.memberSrv.GetMemberCouponList(ctx, couponListReq)
