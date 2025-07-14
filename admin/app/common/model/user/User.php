@@ -534,6 +534,9 @@ class User extends BaseModel
             $data['mode'] = 'dec';
             $data['recharge_value'] = $data['value'] ?? 0;
             return $this->rechargeToPoints($storeUserName, $data);
+        } elseif ($source == 2) {
+            $data['mode'] = 'dec';
+            return $this->operationToMainBalance($storeUserName, $data);
         }
         return false;
     }
@@ -589,6 +592,53 @@ class User extends BaseModel
                 'member_uuid' => $this['uuid'],
                 'money' => $giftMoney,
                 'gift_money' => $giftMoney,
+                'remark' => $data['remark'] ?? '',
+                'processed' => 1,
+            ], [$storeUserName]);
+        });
+        return true;
+    }
+
+    /**
+     * 操作：主账户余额
+     */
+    private function operationToMainBalance($storeUserName, $data)
+    {
+        if (!isset($data['value']) || $data['value'] === '' || $data['value'] == 0) {
+            $this->error = '请输入正确的金额';
+            return false;
+        }
+        // 判断是否是正确的金额格式（允许两位小数的数字）
+        if (!preg_match('/^-?\d+(\.\d{0,2})?$/', $data['value'])) {
+            $this->error = '请输入正确的主账户余额';
+            return false;
+        }
+        if ($data['value'] > 100000000) {
+            $this->error = '不能大于100000000';
+            return false;
+        }
+        $diffMoney = $this['balance'] - $data['value'];
+        if ($diffMoney < 0) {
+            if ($this['balance'] > 0) {
+                $this->error = '减少金额不能大于当前主账户余额';
+            } else {
+                $this->error = '主账户余额不能小于0';
+            }
+            return false;
+        }
+        $mainMoney = -$data['value'];
+        $maxLimit = 999999999;
+        if ($diffMoney > $maxLimit) {
+            $this->error = '减少后的主账户余额不能大于' . $maxLimit;
+            return false;
+        }
+        // 更新记录
+        $this->transaction(function () use ($storeUserName, $data, $diffMoney, $mainMoney) {
+            // 新增余额变动记录
+            $scene = $data['mode'] === 'dec' ? SceneEnum::DEDUCT : SceneEnum::ADMIN;
+            BalanceLogModel::add($scene, [
+                'member_uuid' => $this['uuid'],
+                'money' => $mainMoney,
                 'remark' => $data['remark'] ?? '',
                 'processed' => 1,
             ], [$storeUserName]);
