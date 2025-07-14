@@ -17,9 +17,9 @@ import (
 )
 
 type IMarketingActivitySrv interface {
-	MarketingActivity(ctx context.Context) (*member_resp.MemberMarketingActivityListResp, error)     // 获取营销活动
-	MarketingActivityList(ctx context.Context) (*member_resp.MemberMarketingActivityListResp, error) // 获取营销活动列表
-	DecryptQrCode(ctx context.Context, req req.DecryptQrCodeReq) (*resp.DecryptQrCodeResp, error)    // 解密活动二维码
+	MarketingActivity(ctx context.Context) (*member_resp.MemberMarketingActivityListResp, error)      // 获取营销活动
+	MarketingActivityList(ctx context.Context) (*member_resp.MemberMarketingActivityListsResp, error) // 获取营销活动列表
+	DecryptQrCode(ctx context.Context, req req.DecryptQrCodeReq) (*resp.DecryptQrCodeResp, error)     // 解密活动二维码
 }
 
 type marketingActivitySrv struct {
@@ -182,26 +182,39 @@ func (s *marketingActivitySrv) DecryptQrCode(ctx context.Context, req req.Decryp
 }
 
 // MarketingActivityList 获取营销活动列表
-func (s *marketingActivitySrv) MarketingActivityList(ctx context.Context) (*member_resp.MemberMarketingActivityListResp, error) {
-	company := ctx.GetCompany()
+func (s *marketingActivitySrv) MarketingActivityList(ctx context.Context) (*member_resp.MemberMarketingActivityListsResp, error) {
 	marketingActivityRepo := repository.NewMarketingActivityRepo(ctx.GetDB())
-	marketingActivityList, err := marketingActivityRepo.GetMemberClientActivityList()
+	marketingActivityList, err := marketingActivityRepo.GetMemberClientActivityList(
+		marketingActivityRepo.WithLanguage(),
+		marketingActivityRepo.WithPrizes(),
+	)
 	if err != nil {
 		return nil, err
 	}
-	memberMarketingActivityResp := make([]member_resp.MemberMarketingActivityResp, 0)
+
+	memberMarketingActivityInfoResp := make([]member_resp.MemberMarketingActivityInfoResp, 0)
 	for _, marketingActivity := range marketingActivityList {
-		memberMarketingActivityResp = append(memberMarketingActivityResp, member_resp.MemberMarketingActivityResp{
-			Name:       marketingActivity.MultiLanguageName.GetNameByLang(ctx.GetLanguage()),
+		memberMarketingActivityInfoResp = append(memberMarketingActivityInfoResp, member_resp.MemberMarketingActivityInfoResp{
+			Uuid:       marketingActivity.Uuid,
 			LocaleName: marketingActivity.MultiLanguageName.GetNames(),
-			Desc:       marketingActivity.MultiLanguageDesc.GetNameByLang(ctx.GetLanguage()),
 			LocaleDesc: marketingActivity.MultiLanguageDesc.GetNames(),
 			StartTime:  int64(marketingActivity.StartTime),
 			EndTime:    int64(marketingActivity.EndTime),
-			IsInvalid:  utils.IfInt(company.CompanySetting.IsOpenMarketing != 1, 1, 0),
+			Status:     marketingActivity.GetStatus(),
+			Prizes: func() []member_resp.MemberMarketingActivityPrizeResp {
+				prizes := make([]member_resp.MemberMarketingActivityPrizeResp, 0)
+				for _, prize := range marketingActivity.Prizes {
+					prizes = append(prizes, member_resp.MemberMarketingActivityPrizeResp{
+						Uuid:      prize.Uuid,
+						PrizeName: prize.Coupon.Name,
+					})
+				}
+				return prizes
+			}(),
 		})
 	}
-	return &member_resp.MemberMarketingActivityListResp{
-		List: memberMarketingActivityResp,
+
+	return &member_resp.MemberMarketingActivityListsResp{
+		List: memberMarketingActivityInfoResp,
 	}, nil
 }

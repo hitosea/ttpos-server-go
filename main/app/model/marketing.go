@@ -29,6 +29,23 @@ type MarketingActivity struct {
 	MultiLanguageDesc *MultiLanguageName         `gorm:"foreignKey:Uuid;references:MultiLanguageDescUuid" json:"multi_language_desc"`
 }
 
+/**
+ * 获取状态文字
+ */
+func (m *MarketingActivity) GetStatus() int {
+	if m.IsInvalid == 1 {
+		return 2
+	}
+	now := time.Now().Unix()
+	if int64(m.StartTime) > now {
+		return 0
+	} else if int64(m.EndTime) < now {
+		return 2
+	} else {
+		return 1
+	}
+}
+
 // 是否正在进行中
 func (m *MarketingActivity) IsValid() bool {
 	return m.IsInvalid == 0 && time.Now().Unix() > int64(m.StartTime) && time.Now().Unix() < int64(m.EndTime)

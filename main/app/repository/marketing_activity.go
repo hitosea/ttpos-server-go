@@ -28,6 +28,9 @@ type IMarketingActivityRepo interface {
 	GetActivityListByNow() ([]*model.MarketingActivity, error)                            // 获取正在进行中的营销活动列表
 	GenerateQrCode(params *QrCodeParams) (string, error)                                  // 生成二维码
 	SendReward(activityUuid, memberUuid uint64) error                                     // 发放奖励
+
+	WithLanguage() DBOption
+	WithPrizes() DBOption
 }
 
 // MarketingActivityRepo 营销活动仓库
@@ -39,6 +42,20 @@ type MarketingActivityRepo struct {
 func NewMarketingActivityRepo(db *gorm.DB) IMarketingActivityRepo {
 	return &MarketingActivityRepo{
 		db: db,
+	}
+}
+
+// WithLanguage 根据语言获取营销活动
+func (r *MarketingActivityRepo) WithLanguage() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MultiLanguageName").Preload("MultiLanguageDesc")
+	}
+}
+
+// WithPrizes 根据语言获取营销活动
+func (r *MarketingActivityRepo) WithPrizes() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Prizes", NotDeleted).Preload("Prizes.Coupon", NotDeleted)
 	}
 }
 
@@ -60,8 +77,10 @@ func (r *MarketingActivityRepo) GetMemberClientActivityList(opts ...DBOption) ([
 	for _, opt := range opts {
 		db = opt(db)
 	}
-
-	result := db.Find(&activities)
+	sevenDaysAgo := time.Now().AddDate(0, 0, -7).Unix() // 7天前的时间戳
+	result := db.Scopes(NotDeleted)
+	result = result.Where("start_time <= ? AND end_time >= ?", time.Now().Unix(), sevenDaysAgo)
+	result = result.Find(&activities)
 	if result.Error != nil {
 		return nil, result.Error
 	}
