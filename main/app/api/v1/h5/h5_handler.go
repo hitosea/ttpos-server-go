@@ -523,7 +523,7 @@ func (h *Handler) OrderMustPlanConfirm(c *gin.Context) {
 		return
 	}
 	if !res {
-		helper.ErrorWithDetail(c, constant.CodeOrderCheckProductMust, errors.New(fmt.Sprintf("【%s】%s", mustPlan.Name, errors.ErrMustPlanNotComplete.Error())))
+		helper.ErrorWithDetail(c, constant.CodeOrderCheckProductMust, errors.New(fmt.Sprintf("【%s】%s", mustPlan.Name, i18n.Translate(ctx.GetLanguage(), errors.ErrMustPlanNotComplete.Error()))))
 		return
 	}
 	// 返回结果
