@@ -281,9 +281,6 @@
       // 监听键盘按下事件
       document.addEventListener('keyup', this.onEnter);
       window.addEventListener('focus', this.handleFocus);
-      
-      // 监听页面可见性变化
-      document.addEventListener('visibilitychange', this.handleVisibilityChange);
 
       // 如果window.config是一个函数
       if (window.config instanceof Function) {
@@ -295,7 +292,6 @@
     destroyed() {
       document.removeEventListener('keyup', this.onEnter);
       window.removeEventListener('focus', this.handleFocus);
-      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     },
     methods: {
       onEnter(event) {
@@ -330,20 +326,20 @@
                   this.dialogVisible = true;
                   return;
                 }
-                
+
                 try {
                   // 确保登录状态更新完成
                   await afterLogin(data);
                   console.log('afterLogin 完成');
-                  
+
                   await _this.getBase();
                   console.log('getBase 完成');
-                  
+
                   // 在所有异步操作完成后再验证状态
                   this.$nextTick(() => {
                     const userStore = useUserStore();
                     const currentUser = userStore.userInfo;
-                    
+
                     if (currentUser && currentUser.token) {
                       console.log('登录状态验证成功，用户已正确登录');
                     } else {
@@ -351,7 +347,6 @@
                       // 不阻止跳转，因为getBase已经成功执行
                     }
                   });
-                  
                 } catch (error) {
                   console.error('登录后处理失败:', error);
                   this.$ElMessage({
@@ -453,26 +448,15 @@
               // 清理事件监听器
               document.removeEventListener('keyup', this.onEnter);
               document.removeEventListener('focus', this.getCode('return'));
-              
+
               console.log('准备跳转到首页，当前路径:', this.$route.path);
-              
+
               // 尝试路由跳转
               await this.$router.push({ path: '/home' });
-              
-              // 检查跳转是否成功
-              this.$nextTick(() => {
-                if (this.$route.path !== '/home') {
-                  console.warn('路由跳转未成功，当前路径:', this.$route.path);
-                  // 如果路由跳转失败，使用强制跳转
-                  window.location.href = '/home';
-                } else {
-                  console.log('路由跳转成功');
-                  // 由于路由存在缓存，导致数据更新不及时，所以需要刷新页面
-                  setTimeout(() => {
-                    location.reload();
-                  }, 100);
-                }
-              });
+
+              this.logining = false;
+              // 由于路由存在缓存，导致数据更新不及时，所以需要刷新页面
+              location.reload();
             } catch (error) {
               console.error('跳转过程出错:', error);
               // 出错时直接使用强制跳转
@@ -527,26 +511,6 @@
           //过滤验证码中的空间符号
           this.ruleForm.code = this.ruleForm.code.replace(/\s/g, '');
         });
-      },
-
-      // 处理页面可见性变化
-      handleVisibilityChange() {
-        if (!document.hidden) {
-          // 页面重新可见时，检查登录状态
-          const userStore = useUserStore();
-          const currentUser = userStore.userInfo;
-          
-          if (currentUser && currentUser.token) {
-            console.log('检测到已登录状态，准备跳转到首页');
-            // 如果已经登录，直接跳转到首页
-            this.$router.push({ path: '/home' }).catch(() => {
-              window.location.href = '/home';
-            });
-          } else {
-            // 页面长时间未活动后，刷新验证码
-            this.handleFocus();
-          }
-        }
       },
 
       // 异步获取验证码
