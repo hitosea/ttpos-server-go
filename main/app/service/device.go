@@ -134,10 +134,10 @@ func (s *deviceSrv) reachBindLimit(deviceRepo repository.IDeviceRepo, companySet
 		ErrorCode int
 	}
 	sources := map[string]Source{
-		constant.SourceCashier:   {"收银机", uint(companySetting.CashLimit), constant.CodeCashierLoginLimit},
-		constant.SourceAssistant: {"点餐助手", uint(companySetting.AssistantLimit), constant.CodeAssistantLoginLimit},
-		constant.SourceKitchen:   {"厨显", uint(companySetting.KitchenLimit), constant.CodeKitchenLoginLimit},
-		constant.SourceTablet:    {"平板", uint(companySetting.TabletLimit), constant.CodeTabletLoginLimit},
+		constant.SourceCashier:   {"收银机", uint(companySetting.CashLimit), constant.CodeCashierLoginLimit},         // "收银机登录设备已达上限，请在其他设备上退出登录或联系销售代表"
+		constant.SourceAssistant: {"点餐助手", uint(companySetting.AssistantLimit), constant.CodeAssistantLoginLimit}, // "点餐助手登录设备已达上限，请在其他设备上退出登录或联系销售代表"
+		constant.SourceKitchen:   {"厨显", uint(companySetting.KitchenLimit), constant.CodeKitchenLoginLimit},       // "厨显登录设备已达上限，请在其他设备上退出登录或联系销售代表"
+		constant.SourceTablet:    {"平板", uint(companySetting.TabletLimit), constant.CodeTabletLoginLimit},         // "平板登录设备已达上限，请在其他设备上退出登录或联系销售代表"
 	}
 	for sourceName, source := range sources {
 		if sourceName != reqSource {
