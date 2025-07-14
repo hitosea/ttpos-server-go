@@ -2034,5 +2034,8 @@
     "商品未含税（原商品金额+实收服务费+实收商品及服务税费+实收支付手续费）": "Produkten är exklusive skatt (ursprungligt produktbelopp + mottagen serviceavgift + mottagen produkt- och servicemoms + mottagen betalningsavgift)",
     "名字不能为空": "Namn får inte vara tomt",
     "添加失败": "Tillagda misslyckades",
-    "修改失败": "Ändring misslyckades"
+    "修改失败": "Ändring misslyckades",
+    "打印机：": "Skrivare:",
+    "不打印": "Skriv inte ut",
+    "选择用于打印出菜单的打印机": "Välj skrivare för att skriva ut menyn"
 }
