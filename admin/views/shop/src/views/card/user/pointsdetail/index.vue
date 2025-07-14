@@ -172,59 +172,40 @@
         }, 200);
       },
 
-      /* 翻译 */
+      /**
+       * 翻译文本中的关键词
+       * @param {string} text 原始文本
+       * @returns {string} 翻译后的文本
+       */
       description(text) {
         let result = text;
-
-        if (result.includes('退款扣除')) {
-          result = result.replace('退款扣除', $t('退款扣除'));
-        }
-        if (result.includes('订单赠送')) {
-          result = result.replace('订单赠送', $t('订单赠送'));
-        }
-        if (result.includes('退款扣除')) {
-          result = result.replace('退款扣除', $t('退款扣除'));
-        }
-        if (result.includes('发会员卡获取积分')) {
-          result = result.replace('发会员卡获取积分', $t('发会员卡获取积分'));
-        }
-        if (result.includes('邀请有礼奖励')) {
-          result = result.replace('邀请有礼奖励', $t('邀请有礼奖励'));
-        }
-        if (result.includes('撤销会员卡减少积分')) {
-          result = result.replace('撤销会员卡减少积分', $t('撤销会员卡减少积分'));
-        }
-        if (result.includes('后台管理员扣减')) {
-          result = result.replace('后台管理员扣减', $t('后台管理员扣减'));
-        }
-        if (result.includes('后台管理员')) {
-          result = result.replace('后台管理员', $t('后台管理员'));
-        }
-
-        if (result.includes('订单反结账')) {
-          result = result.replace('订单反结账', $t('订单反结账'));
-        }
-        if (result.includes('收银充值')) {
-          result = result.replace('收银充值', $t('收银充值'));
-        }
-        if (result.includes('收银机管理员操作')) {
-          result = result.replace('收银机管理员操作', $t('收银机管理员操作'));
-        }
-        if (result.includes('收银机管理员充值赠送操作')) {
-          result = result.replace('收银机管理员充值赠送操作', $t('收银机管理员充值赠送操作'));
-        }
-        if (result.includes('操作')) {
-          result = result.replace('操作', $t('操作'));
-        }
-        if (result.includes('充值')) {
-          result = result.replace('充值', $t('充值'));
-        }
-        if (result.includes('订单积分抵扣')) {
-          result = result.replace('订单积分抵扣', $t('订单积分抵扣'));
-        }
-        if (result.includes('抵扣反结账')) {
-          result = result.replace('抵扣反结账', $t('抵扣反结账'));
-        }
+        
+        // 翻译关键词映射表（按长度从长到短排序，避免部分替换问题）
+        const translateKeywords = [
+          '收银机管理员充值赠送操作',
+          '收银机管理员操作',
+          '撤销会员卡减少积分',
+          '发会员卡获取积分',
+          '后台管理员扣减',
+          '订单积分抵扣',
+          '抵扣反结账',
+          '订单反结账',
+          '邀请有礼奖励',
+          '后台管理员',
+          '订单赠送',
+          '退款扣除',
+          '收银充值',
+          '充值',
+          '操作'
+        ];
+        
+        // 遍历关键词进行替换
+        translateKeywords.forEach(keyword => {
+          if (result.includes(keyword)) {
+            result = result.replace(new RegExp(keyword, 'g'), $t(keyword));
+          }
+        });
+        
         return result;
       },
     },
