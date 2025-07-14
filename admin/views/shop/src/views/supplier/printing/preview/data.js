@@ -55,6 +55,10 @@ export const previewData = {
         label: '￥50',
       },
       {
+        name: $t('赠菜金额'),
+        label: '￥50',
+      },
+      {
         name: $t('免单金额'),
         label: '￥50',
       },
@@ -747,6 +751,10 @@ export const previewData = {
         label: '￥50',
       },
       {
+        name: $t('赠菜金额'),
+        label: '￥50.00',
+      },
+      {
         name: $t('免单金额'),
         label: '￥500',
       },
@@ -1371,6 +1379,10 @@ export const previewData = {
         label: '￥597.00',
       },
       {
+        name: $t('赠菜金额'),
+        label: '￥50.00',
+      },
+      {
         name: $t('免单金额'),
         label: '￥50.00',
       },
@@ -1691,6 +1703,10 @@ export const previewData = {
       {
         name: $t('会员折扣'),
         label: '￥597.00',
+      },
+      {
+        name: $t('赠菜金额'),
+        label: '￥50.00',
       },
       {
         name: $t('免单金额'),
