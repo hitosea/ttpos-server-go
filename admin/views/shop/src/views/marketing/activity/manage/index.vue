@@ -71,7 +71,13 @@
         </el-pagination>
       </div>
     </div>
-    <record-dialog v-if="recordDialogVisible" :recordDialogVisible="recordDialogVisible" :recordUuid="recordUuid" @update:recordDialogVisible="recordDialogVisible = $event" />
+    <record-dialog
+      v-if="recordDialogVisible"
+      :recordDialogVisible="recordDialogVisible"
+      :recordUuid="recordUuid"
+      :rewardType="rewardType"
+      @update:recordDialogVisible="recordDialogVisible = $event"
+    />
   </div>
 </template>
 
@@ -101,6 +107,7 @@
   const searchLoading = ref('');
   const recordDialogVisible = ref(false);
   const recordUuid = ref('');
+  const rewardType = ref(0);
   // 表单数据
   const formInline = reactive({
     name: '',
@@ -163,6 +170,7 @@
     if (!memberAuth()) {
       return;
     }
+    rewardType.value = row.reward_type;
     recordUuid.value = row.uuid;
     recordDialogVisible.value = true;
   };

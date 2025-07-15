@@ -1818,5 +1818,8 @@
     "营销活动赠送": "Pazarlama kampanyası hediyesi",
     "赠送账户变动数量": "Hediye hesap değişiklik miktarı",
     "当前主账户余额": "Mevcut ana hesap bakiyesi",
-    "累计消费获得积分": "Toplam harcama ile puan kazanılır"
+    "累计消费获得积分": "Toplam harcama ile puan kazanılır",
+    "累计消费获得积分满": "Toplam harcama ile puanlar tamamlandı",
+    "查看发放积分记录": "Puan dağıtım kayıtlarını görüntüle",
+    "发放积分": "Puan dağıt"
 }

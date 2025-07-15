@@ -2064,5 +2064,8 @@
     "营销活动赠送": "Marketing campaign giveaway",
     "赠送账户变动数量": "Gift account change quantity",
     "当前主账户余额": "Current main account balance",
-    "累计消费获得积分": "Earn points through cumulative spending"
+    "累计消费获得积分": "Earn points through cumulative spending",
+    "累计消费获得积分满": "Points earned upon reaching cumulative spending",
+    "查看发放积分记录": "View points distribution records",
+    "发放积分": "Distribute points"
 }
