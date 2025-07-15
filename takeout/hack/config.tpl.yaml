@@ -6,7 +6,7 @@ gfcli:
     pbentity:
       link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
       path: "manifest/protobuf/takeout"
-      removePrefix: "ttpos_"
+      removePrefix: "takeout_"
       #tables: "order,products"
       package: "takeout"
     pb:
@@ -15,7 +15,7 @@ gfcli:
     dao:
       - link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
         descriptionTag: true
-        removePrefix: "ttpos_"
+        removePrefix: "takeout_"
 
   run:
     path: "./bin"
