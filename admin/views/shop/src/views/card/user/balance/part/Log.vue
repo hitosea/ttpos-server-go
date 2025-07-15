@@ -214,34 +214,38 @@
        */
       description(text) {
         let result = text;
-        
+
         // 翻译关键词映射表（按长度从长到短排序，避免部分替换问题）
         const translateKeywords = [
+          '点餐助手管理员添加会员发卡赠送操作',
+          '收银机管理员添加会员发卡赠送操作',
           '收银机管理员充值赠送操作',
           '后台发放会员卡赠送',
           '收银充值赠送积分',
           '收银机管理员操作',
           '后台管理员扣减',
           '订单反结账',
+          '抵扣反结账',
           '后台管理员',
           '订单赠送',
+          '积分抵扣',
           '订单退款',
           '收银充值',
           '用户充值',
           '用户消费',
-          '操作'
+          '操作',
         ];
-        
+
         // 遍历关键词进行替换
-        translateKeywords.forEach(keyword => {
+        translateKeywords.forEach((keyword) => {
           if (result.includes(keyword)) {
             result = result.replace(new RegExp(keyword, 'g'), $t(keyword));
           }
         });
-        
+
         return result;
       },
-      
+
       /**
        * 根据场景值获取对应的颜色
        * @param {number} value 场景值
@@ -255,9 +259,9 @@
           30: '#f56c6c', // 红色
           40: '#e6a23c', // 橙色
           50: '#e63c81', // 粉色
-          90: '#e63c81'  // 粉色
+          90: '#e63c81', // 粉色
         };
-        
+
         return sceneColorMap[value] || '#000000'; // 默认黑色
       },
     },

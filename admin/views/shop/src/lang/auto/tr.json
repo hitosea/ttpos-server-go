@@ -1812,5 +1812,7 @@
     "登录处理失败，请重试": "Giriş işlemi başarısız oldu, lütfen tekrar deneyin",
     "主账户变动数量": "Ana hesap değişim miktarı",
     "赠菜金额": "İkram Yemek Tutarı",
-    "打包": "Paketlemek"
+    "打包": "Paketlemek",
+    "点餐助手管理员添加会员发卡赠送操作": "Sipariş Asistanı yöneticisi, üye kartı ekleme ve hediye verme işlemi",
+    "收银机管理员添加会员发卡赠送操作": "Kasa yöneticisi, üye kartı verme ve hediye işlemi ekler"
 }
