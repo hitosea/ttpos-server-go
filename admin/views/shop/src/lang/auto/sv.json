@@ -2055,5 +2055,6 @@
     "开启整单折扣：": "Aktivera rabatt på hela beställningen:",
     "请选择是否开启整单折扣": "Vänligen välj om du vill aktivera rabatt på hela beställningen",
     "开启整单折扣时，设置折扣的商品会参与整单打折；关闭后则不再参与": "När rabatt på hela beställningen är aktiverad deltar rabatterade produkter i hela beställningens rabatt; när den är avstängd deltar de inte längre.",
-    "赠菜金额": "Belopp för gratisrätt"
+    "赠菜金额": "Belopp för gratisrätt",
+    "打包": "Packa"
 }
