@@ -1,5 +1,17 @@
 # 外送服务
 
+
+## INSTALL
+```shell
+go mod tidy
+#生成配置，依赖上级目录生成的 .env 文件
+make conf
+
+#编译运行
+make run
+```
+
+
 ## gRpc 服务开发流程
 
 参考工程 [https://github.com/gogf/examples/blob/main/registry/nacos/README.ZH.MD]
