@@ -34,7 +34,7 @@ nacos:
 app:
   provider:
     skootar:
-      endpoint: https://hw.skootar.com/skootar_api_dev
-      username: victor@diylink.net
+      endpoint: $SKOOTAR_ENDPOINT
+      username: $SKOOTAR_USERNAME
       apiKey: $SKOOTAR_API_KEY
-      channel: diylink
+      channel: $SKOOTAR_CHANNEL

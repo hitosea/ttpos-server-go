@@ -26,8 +26,11 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	})
 	r.GET("api/testrpc", func(c *gin.Context) {
 		//测试外送服务
-		rpc.TestEcho(c)
-		rpc.TestEstimatePrice()
+		// rpc.TestEcho(c)
+		// rpc.TestEstimatePrice()
+		// rpc.TestCreateOrder()
+		// rpc.TestConfirmOrder()
+		rpc.TestGetDriverLocation()
 		c.String(http.StatusOK, "Success")
 	})
 	apiV1 := r.Group("api/v1")

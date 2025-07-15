@@ -3,15 +3,16 @@ package skootar
 import (
 	"context"
 	"encoding/json"
-	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/util/gconv"
 	"takeout/api"
 	"takeout/internal/consts"
 	"takeout/internal/model/input/skootar"
+
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
-var apiPath = "/api/get_estimate_price"
+var estimateApiPath = "/api/get_estimate_price"
 
 /**
 预估配送费
@@ -34,7 +35,7 @@ func (s *sSkootar) EstimatePrice(ctx context.Context, req *api.EstimatePriceReq)
 		JobType:      consts.JobTypeFood,
 	}
 	resp := &skootar.EstimatePriceOut{}
-	rr := g.Client().ContentJson().PostVar(ctx, s.GetUrl(apiPath), reqInp)
+	rr := g.Client().ContentJson().PostVar(ctx, s.GetUrl(estimateApiPath), reqInp)
 	if rr == nil {
 		return nil, gerror.Newf("获取预估价格失败:%+v", reqInp)
 	}
