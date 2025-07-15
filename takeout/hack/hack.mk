@@ -77,9 +77,9 @@ pbentity: cli.install
 
 # 加载环境变量并替换数据库连接配置
 .PHONY: conf
-conf:
+conf: cli.install
 	@sh $(ROOT_DIR)/hack/init_conf.sh
 
 .PHONY: run
-run:
+run: cli.install
 	@go run $(ROOT_DIR)/main.go
