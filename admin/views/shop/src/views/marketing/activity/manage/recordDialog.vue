@@ -22,7 +22,7 @@
         </el-table-column>
         <el-table-column v-if="rewardType == 1" prop="reward_value" :label="$t('发放积分')">
           <template #default="scope">
-            {{ scope.row.reward_value }}
+            {{ this.$priceTwo(scope.row.reward_value) }}
           </template>
         </el-table-column>
         <el-table-column prop="last_reward_time" :label="$t('发放时间')" />
