@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"ttpos-server-go/app/repository"
 
 	"gorm.io/gorm"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 )
 

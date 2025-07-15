@@ -2130,4 +2130,5 @@ return [
     "减少金额不能大于当前主账户余额" => "Azaltılacak tutar mevcut ana hesap bakiyesinden büyük olamaz",
     "主账户余额不能小于0" => "Ana hesap bakiyesi 0'dan küçük olamaz",
     "减少后的主账户余额不能大于" => "Azaltıldıktan sonraki ana hesap bakiyesi ...'den büyük olamaz",
+    "营销活动赠送" => "Pazarlama kampanyası hediyesi",
 ];

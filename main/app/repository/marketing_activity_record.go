@@ -48,7 +48,9 @@ func (r *MarketingActivityRecordRepo) GetByActivityAndMember(activityUuid, membe
 // GetRewardCount 获取奖励次数
 func (r *MarketingActivityRecordRepo) GetRewardCount(activityUuid uint64, memberUuid uint64) (int64, error) {
 	var count int64
-	err := r.db.Model(&model.MarketingActivityRecord{}).Where("activity_uuid = ? AND member_uuid = ? AND delete_time = 0", activityUuid, memberUuid).Count(&count).Error
+	err := r.db.Model(&model.MarketingActivityRecord{}).Where("activity_uuid = ? AND member_uuid = ? AND delete_time = 0", activityUuid, memberUuid).
+		Select("SUM(reward_count) as count").
+		Scan(&count).Error
 	if err != nil {
 		return 0, err
 	}

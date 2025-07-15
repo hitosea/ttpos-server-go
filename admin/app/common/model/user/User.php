@@ -285,7 +285,7 @@ class User extends BaseModel
 
                 // 更新用户的积分
                 $this->where(['uuid' => $userId])
-                    ->update(['point' => $newPoints]);
+                    ->update(['point' => $newPoints, 'accumulated_get_point' => $user->accumulated_get_point + $expendPoints]);
 
                 // 触发用户等级事件
                 event('UserGrade', $userId);
@@ -506,6 +506,7 @@ class User extends BaseModel
             // 更新账户积分
             $this->where('uuid', '=', $this['uuid'])->update([
                 'point' => $diffMoney,
+                'accumulated_get_point' => $this['accumulated_get_point'] + $points,
             ]);
             // 新增积分变动记录
             $scene = $data['mode'] === 'dec' ? PointsLogSceneEnum::DEDUCT : PointsLogSceneEnum::ADMIN;

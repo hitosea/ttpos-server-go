@@ -2315,6 +2315,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 	// 销售账单状态变为未结账状态
 	// 销售订单状态变为未结账状态
 	// 销售订单的所有付款单都退款，并生成退款单
+	// 反结账次数+1
 	saleBill.SetReverseSettle()
 
 	// 如果销售账单是桌台订单，则开桌

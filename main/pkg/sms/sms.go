@@ -164,6 +164,40 @@ func (c *smsClient) SendMemberCodeSMS(phone, language string, params *MemberSend
 	return c.SendSMS(req)
 }
 
+// SendMemberPointsSMS 发送会员积分短信
+func (c *smsClient) SendMemberPointsSMS(phone, language string, params *MemberPointsRequest) (*SMSResponse, error) {
+	req := &SendSMSRequest{
+		TemplateID: TemplateMemberPoints,
+		Phone:      phone,
+		Language:   language,
+		Params: map[string]interface{}{
+			"company": params.Company,
+			"points":  params.Points,
+		},
+	}
+	if logger.Logger != nil {
+		logger.Logger.Info("发送会员积分短信", zap.Any("req", req))
+	}
+	return c.SendSMS(req)
+}
+
+// SendMemberCouponSMS 发送会员优惠券短信
+func (c *smsClient) SendMemberCouponSMS(phone, language string, params *MemberCouponRequest) (*SMSResponse, error) {
+	req := &SendSMSRequest{
+		TemplateID: TemplateMemberCoupon,
+		Phone:      phone,
+		Language:   language,
+		Params: map[string]interface{}{
+			"company":    params.Company,
+			"coupon_num": params.CouponNum,
+		},
+	}
+	if logger.Logger != nil {
+		logger.Logger.Info("发送会员优惠券短信", zap.Any("req", req))
+	}
+	return c.SendSMS(req)
+}
+
 // SendSMS 发送短信
 func (c *smsClient) SendSMS(req *SendSMSRequest) (*SMSResponse, error) {
 	jsonData, err := json.Marshal(req)

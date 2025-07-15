@@ -533,6 +533,7 @@ class User extends UserModel
             // 更新账户积分
             $this->where('uuid', '=', $this['uuid'])->update([
                 'point' => $diffMoney,
+                'accumulated_get_point' => $this['accumulated_get_point'] + $points,
             ]);
             // 新增积分变动记录
             PointsLogModel::add([
