@@ -23,14 +23,14 @@
                       {
                         required: true,
                         validator: () => {
-                          return scope.row.sort ? true : false;
+                          return scope.row.sort >= 0 && typeof scope.row.sort == 'number' ? true : false;
                         },
                         message: $t('请输入排序'),
                       },
                     ]"
                     prop="scope.row.sort"
                   >
-                    <numInput :controls="false" :min="0" :max="999" :precision="0" :placeholder="$t('接近0，排序等级越高')" v-model="scope.row.sort"></numInput>
+                    <el-input-number :controls="false" :min="0" :max="999" :precision="0" :placeholder="$t('接近0，排序等级越高')" v-model="scope.row.sort"></el-input-number>
                   </el-form-item>
                 </template>
               </el-table-column>
