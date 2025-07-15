@@ -575,7 +575,13 @@ func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.D
 
 		// 发送短信
 		if rewardCountToGive > 0 {
-			go service.NewSMSSrv(dbm).SendMemberCouponSMS(payload.Ctx, phone, &sms.MemberCouponRequest{CouponNum: uint64(rewardCountToGive)})
+			go func() {
+				err := service.NewSMSSrv(dbm).SendMemberCouponSMS(payload.Ctx, phone, &sms.MemberCouponRequest{CouponNum: uint64(rewardCountToGive)})
+				if err != nil {
+					fmt.Println("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", phone), zap.Error(err))
+					logger.Logger.Info("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", phone), zap.Error(err))
+				}
+			}()
 		}
 
 	} else if activity.RewardType == 1 {
@@ -630,7 +636,13 @@ func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.D
 		go HandleMemberPoints(db)
 
 		// 发送短信
-		go service.NewSMSSrv(dbm).SendMemberPointsSMS(payload.Ctx, phone, &sms.MemberPointsRequest{Points: points})
+		go func() {
+			err := service.NewSMSSrv(dbm).SendMemberPointsSMS(payload.Ctx, phone, &sms.MemberPointsRequest{Points: points})
+			if err != nil {
+				fmt.Println("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", phone), zap.Error(err))
+				logger.Logger.Info("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", phone), zap.Error(err))
+			}
+		}()
 	}
 
 	return nil
