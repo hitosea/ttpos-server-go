@@ -56,6 +56,7 @@
   const couponList = ref([]);
   // 表单数据
   const form = reactive({
+    type: null,
     name: '',
     description: '',
     start_time: '',
@@ -66,7 +67,9 @@
     reward_condition_num: 0,
     reward_type: 0,
     prize_list: [],
+    reward_value: null,
     image_base64: '',
+    is_send_sms: 1,
   });
 
   // 引用

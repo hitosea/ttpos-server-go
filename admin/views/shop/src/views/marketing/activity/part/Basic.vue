@@ -2,8 +2,8 @@
   <div class="basic-setting-content pl16 pr16">
     <!--基本信息-->
     <div class="common-form">{{ $t('基本信息') }}</div>
-    <el-form-item for="no_click" :label="$t('活动类型')" prop="activity_type" :rules="[{ required: true, message: $t('活动类型') }]">
-      <el-select class="max-w460" v-model="form.activity_type" :placeholder="$t('请选择活动类型')">
+    <el-form-item for="no_click" :label="$t('活动类型')" prop="type" :rules="[{ required: true, message: $t('请选择活动类型') }]">
+      <el-select class="max-w460" v-model="form.type" :placeholder="$t('请选择活动类型')">
         <el-option :key="1" :label="$t('邀请消费有礼')" :value="1"></el-option>
       </el-select>
     </el-form-item>
@@ -88,13 +88,13 @@
       />
     </el-form-item>
     <el-form-item for="no_click" :label="$t('活动奖品')" :rules="[{ required: true, message: $t('请选择活动奖品') }]">
-      <el-radio-group v-model="rewardType" :disabled="status == 1">
+      <el-radio-group v-model="form.reward_type" :disabled="status == 1">
         <el-radio :value="0">{{ $t('优惠券') }}</el-radio>
         <el-radio :value="1">{{ $t('积分') }}</el-radio>
       </el-radio-group>
     </el-form-item>
     <el-form-item
-      v-if="rewardType == 0"
+      v-if="form.reward_type == 0"
       for="no_click"
       prop="prize_list"
       :rules="[
@@ -116,12 +116,12 @@
         </template>
       </div>
     </el-form-item>
-    <el-form-item v-if="rewardType == 1" for="no_click" :label="$t('每次赠送积分')">
-      <numInput :min="1" :max="999999" :precision="0" v-model="form.prize_list" :placeholder="$t('请输入赠送积分数量')"></numInput>
+    <el-form-item v-if="form.reward_type == 1" for="no_click" :label="$t('每次赠送积分')">
+      <numInput :min="1" :max="999999" :precision="0" v-model="form.reward_value" :placeholder="$t('请输入赠送积分数量')"></numInput>
       <div class="gray9">{{ $t('注：满足设置条件规则后，每次所赠送的积分数量') }}</div>
     </el-form-item>
-    <el-form-item for="no_click" :label="$t('发送短信通知')" prop="send_sms" :rules="[{ required: true, message: $t('请选择是否发送短信通知') }]">
-      <el-radio-group v-model="form.send_sms">
+    <el-form-item for="no_click" :label="$t('发送短信通知')" prop="is_send_sms" :rules="[{ required: true, message: $t('请选择是否发送短信通知') }]">
+      <el-radio-group v-model="form.is_send_sms">
         <el-radio :value="1">{{ $t('是') }}</el-radio>
         <el-radio :value="0">{{ $t('否') }}</el-radio>
       </el-radio-group>
@@ -140,7 +140,6 @@
 
   // 响应式数据
   const activityTime = ref(null);
-  const rewardType = ref(0);
   const openSelectCoupon = ref(false);
   const props = defineProps({
     dateTime: {
