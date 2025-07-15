@@ -1,11 +1,13 @@
 package rpc
 
 import (
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
 	"takeout/api"
 	"takeout/api/echo"
 	"time"
+	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/pkg/logger"
 )
@@ -13,7 +15,8 @@ import (
 func init() {
 }
 
-func TestEcho() (res *echo.EchoResponse, err error) {
+func TestEcho(c *gin.Context) (res *echo.EchoResponse, err error) {
+	gcc := helper.GetContext(c)
 	// 关键修复：增加客户端和连接的判空检查
 	client, conn, err := takeout.NewEchoClient()
 	if err != nil {
@@ -24,7 +27,7 @@ func TestEcho() (res *echo.EchoResponse, err error) {
 	in := &echo.EchoRequest{
 		Message: "ttpos no1",
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(gcc.GetContext(), 5*time.Second)
 	defer cancel()
 
 	res, err = client.Echo(ctx, in)

@@ -26,7 +26,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	})
 	r.GET("api/testrpc", func(c *gin.Context) {
 		//测试外送服务
-		rpc.TestEcho()
+		rpc.TestEcho(c)
 		rpc.TestEstimatePrice()
 		c.String(http.StatusOK, "Success")
 	})
