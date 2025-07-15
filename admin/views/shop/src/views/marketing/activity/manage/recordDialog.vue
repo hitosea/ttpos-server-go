@@ -1,5 +1,11 @@
 <template>
-  <el-dialog :title="rewardType == 0 ? $t('查看发放记录') : $t('查看发放积分记录')" v-model="dialogVisible" @close="handleClose" :close-on-click-modal="false" :close-on-press-escape="false">
+  <el-dialog
+    :title="rewardType == 0 ? $t('查看发放记录') : $t('查看发放积分记录')"
+    v-model="dialogVisible"
+    @close="handleClose"
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
+  >
     <div>
       <div class="record-dialog-wrapper">
         <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
@@ -20,9 +26,14 @@
             <span>({{ scope.row.member_uuid }})</span>
           </template>
         </el-table-column>
+        <el-table-column v-if="rewardType == 1" prop="reward_count" :label="$t('发放次数')">
+          <template #default="scope">
+            {{ proxy.$priceTwo(scope.row.reward_count) || '-' }}
+          </template>
+        </el-table-column>
         <el-table-column v-if="rewardType == 1" prop="reward_value" :label="$t('发放积分')">
           <template #default="scope">
-            {{ proxy.$priceTwo(scope.row.reward_value) }}
+            {{ proxy.$priceTwo(scope.row.reward_value) || '-' }}
           </template>
         </el-table-column>
         <el-table-column prop="last_reward_time" :label="$t('发放时间')" />
