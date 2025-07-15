@@ -22,7 +22,7 @@
         </el-table-column>
         <el-table-column v-if="rewardType == 1" prop="reward_value" :label="$t('发放积分')">
           <template #default="scope">
-            {{ this.$priceTwo(scope.row.reward_value) }}
+            {{ proxy.$priceTwo(scope.row.reward_value) }}
           </template>
         </el-table-column>
         <el-table-column prop="last_reward_time" :label="$t('发放时间')" />
@@ -44,8 +44,10 @@
   </el-dialog>
 </template>
 <script setup>
-  import { ref, onMounted } from 'vue';
+  import { ref, onMounted, getCurrentInstance } from 'vue';
   import MarketingApi from '@/api/marketing.js';
+
+  const { proxy } = getCurrentInstance();
 
   const emit = defineEmits(['update:recordDialogVisible']);
 
@@ -55,7 +57,7 @@
       default: false,
     },
     recordUuid: {
-      type: String,
+      type: [String, Number],
       default: '',
     },
     rewardType: {
