@@ -2131,4 +2131,6 @@ return [
     "主账户余额不能小于0" => "The main account balance cannot be less than 0",
     "减少后的主账户余额不能大于" => "The main account balance after reduction cannot be greater than",
     "营销活动赠送" => "Marketing campaign giveaway",
+    "邀请消费有礼" => "Invite to spend and get rewards",
+    "营销活动" => "Marketing campaign",
 ];

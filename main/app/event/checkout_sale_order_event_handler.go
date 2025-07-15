@@ -224,7 +224,7 @@ func HandleMemberPoints(db *gorm.DB) {
 		pre := memberChangePoint[MemberUuid(memberPointLog.MemberUuid)]
 		memberChangePoint[MemberUuid(memberPointLog.MemberUuid)] = pre.Add(decimal.NewFromFloat(memberPointLog.Value))
 		// 累计同一个会员的消费赠送积分变动
-		if memberPointLog.Scene == constant.MemberPointLogSceneConsume {
+		if memberPointLog.Scene == constant.MemberPointLogSceneConsume || memberPointLog.Scene == constant.MemberPointLogSceneReverse {
 			preConsumption := memberChangePointConsumption[MemberUuid(memberPointLog.MemberUuid)]
 			memberChangePointConsumption[MemberUuid(memberPointLog.MemberUuid)] = preConsumption.Add(decimal.NewFromFloat(memberPointLog.Value))
 		}
@@ -422,8 +422,9 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
 				}
 				// 发放奖励
-				activitySendReward := HandleActivitySendReward(payload, db, activity.Uuid, saleOrder.Member.ReferrerUuid, saleOrder.Member.Phone)
-				if activitySendReward != nil {
+				err := HandleActivitySendReward(payload, db, activity.Uuid, saleOrder.Member.ReferrerUuid, saleOrder.Member.Phone)
+				if err != nil {
+					fmt.Println(err)
 					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
 				}
 			}
@@ -461,6 +462,7 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 
 // HandleActivitySendReward 发放奖励
 func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.DB, activityUuid, memberUuid uint64, phone string) error {
+
 	// 获取活动信息
 	activity, err := repository.NewMarketingActivityRepo(db).GetActivityAndPrizes(activityUuid)
 	if err != nil {
@@ -612,7 +614,7 @@ func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.D
 				MemberUuid:  memberUuid,
 				Scene:       constant.MemberPointLogSceneMarketingActivity,
 				Value:       points,
-				Describe:    fmt.Sprintf("营销活动赠送：%v", activity.Uuid),
+				Describe:    "邀请消费有礼",
 				RelatedUuid: activityUuid,
 			})
 			if err != nil {

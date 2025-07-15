@@ -102,9 +102,9 @@ class PointsLogSceneEnum extends Enum
                 'describe' => '抵扣反结账：%s',
             ],
             self::MARKETING_ACTIVITY => [
-                'name' => __('营销活动赠送'),
+                'name' => __('营销活动'),
                 'value' => self::MARKETING_ACTIVITY,
-                'describe' => '营销活动赠送：%s',
+                'describe' => __('邀请消费有礼'),
             ],
         ];
     }

@@ -72,12 +72,8 @@ func (model *Member) ChangePoint(points float64) {
 // 参数changePoints为积分变动值，正数为增加积分，负数为扣减积分。
 // 清零冻结的积分。表示该会员的积分变动已经处理完，无需再冻结。
 func (model *Member) UpdatePoint(changePoints float64, changePointsConsumption float64) {
-	if changePoints > 0 {
-		model.AccumulatedGetPoint = decimal.NewFromFloat(model.AccumulatedGetPoint).Add(decimal.NewFromFloat(changePoints)).InexactFloat64()
-	}
-	if changePointsConsumption > 0 {
-		model.AccumulatedConsumptionGetPoint = decimal.NewFromFloat(model.AccumulatedConsumptionGetPoint).Add(decimal.NewFromFloat(changePointsConsumption)).InexactFloat64()
-	}
+	model.AccumulatedGetPoint = decimal.NewFromFloat(model.AccumulatedGetPoint).Add(decimal.NewFromFloat(changePoints)).InexactFloat64()
+	model.AccumulatedConsumptionGetPoint = decimal.NewFromFloat(model.AccumulatedConsumptionGetPoint).Add(decimal.NewFromFloat(changePointsConsumption)).InexactFloat64()
 	model.Point = decimal.NewFromFloat(model.Point).Add(decimal.NewFromFloat(changePoints)).InexactFloat64()
 	model.FrozenPoint = 0
 }

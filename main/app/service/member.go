@@ -456,7 +456,7 @@ func (s *memberSrv) checkCanUpgrade(member model.Member, level model.MemberLevel
 	if level.OpenMoney == 1 && member.AccumulatedConsumptionAmount >= level.UpgradeMoney {
 		return true
 	}
-	if level.OpenPoint == 1 && member.GetPoints() >= level.UpgradePoint {
+	if level.OpenPoint == 1 && member.AccumulatedConsumptionGetPoint >= level.UpgradePoint {
 		return true
 	}
 	return false

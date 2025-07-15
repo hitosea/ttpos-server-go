@@ -2131,4 +2131,6 @@ return [
     "主账户余额不能小于0" => "Huvudkontots saldo får inte vara mindre än 0",
     "减少后的主账户余额不能大于" => "Huvudkontots saldo efter minskning får inte vara större än",
     "营销活动赠送" => "Marknadsföringskampanjgåva",
+    "邀请消费有礼" => "Bjud in att handla och få belöning",
+    "营销活动" => "Marknadsföringskampanj",
 ];

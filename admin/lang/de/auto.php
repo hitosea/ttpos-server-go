@@ -2139,4 +2139,6 @@ return [
     "主账户余额不能小于0" => "Der Hauptkontostand darf nicht kleiner als 0 sein",
     "减少后的主账户余额不能大于" => "Der Hauptkontostand nach der Reduzierung darf nicht größer sein als",
     "营销活动赠送" => "Marketingkampagnen-Geschenk",
+    "邀请消费有礼" => "Einladen und beim Konsumieren belohnt werden",
+    "营销活动" => "Marketingkampagne",
 ];
