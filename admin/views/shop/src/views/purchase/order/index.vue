@@ -166,7 +166,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="dialogShow" :title="dialogTitle" width="420" align-center>
+    <el-dialog v-model="dialogShow" :title="dialogTitle" width="540" align-center>
       {{ dialogText }}
       <template #footer>
         <div class="dialog-footer">

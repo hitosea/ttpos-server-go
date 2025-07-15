@@ -45,6 +45,11 @@ export const languageStore = defineStore({
         name: 'my',
         value: 'မြန်မာဘာသာ',
       },
+      {
+        key: 'sv',
+        name: 'sv',
+        value: 'Svenska',
+      },
     ],
     languageListOrigin: [
       {
@@ -87,6 +92,11 @@ export const languageStore = defineStore({
         name: 'my',
         value: 'မြန်မာဘာသာ',
       },
+      {
+        key: 'sv',
+        name: 'sv',
+        value: 'Svenska',
+      },
     ],
     languageData: {
       en: '',
@@ -97,6 +107,7 @@ export const languageStore = defineStore({
       ko: '',
       tr: '',
       my: '',
+      sv: '',
     },
     cloudBasic: {},
     isCloudDeploy: false,

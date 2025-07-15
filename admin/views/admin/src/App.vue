@@ -24,6 +24,7 @@
   import th from 'element-plus/es/locale/lang/th'; // 泰语
   import ja from 'element-plus/es/locale/lang/ja'; // 日语
   import ko from 'element-plus/es/locale/lang/ko'; // 韩语
+  import sv from 'element-plus/es/locale/lang/sv'; // 瑞典语
   // import tr from 'element-plus/es/locale/lang/tr'; // 土耳其语
   import { v4 as uuidv4 } from 'uuid';
 
@@ -53,6 +54,10 @@
     if (getLanguage() == 'ko') {
       dayjs.locale('ko');
       return ko;
+    }
+    if (getLanguage() == 'sv') {
+      dayjs.locale('sv');
+      return sv;
     }
     // if (getLanguage() == 'tr') {
     //   dayjs.locale('tr');
