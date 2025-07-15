@@ -117,7 +117,7 @@ func (s *statisticsSrv) CountSale(ctx context.Context, req CountReq) CountSaleRe
 	totalReceivedAmount := decimal.NewFromFloat(saleData.TotalReceivedAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentAmount))
 	totalPaymentFee := decimal.NewFromFloat(saleData.TotalPaymentFee.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentFee))
 	totalRefundAmount := decimal.NewFromFloat(saleData.TotalRefundAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalRefundAmount))
-	totalBusinessAmount := decimal.NewFromFloat(saleData.TotalBusinessAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentFee)).Add(decimal.NewFromFloat(memberData.TotalPaymentAmount))
+	totalBusinessAmount := decimal.NewFromFloat(saleData.TotalBusinessAmount.Float64).Add(decimal.NewFromFloat(memberData.TotalPaymentAmount))
 
 	return CountSaleResp{
 		TotalSaleAmount:          totalSaleAmount.Round(2).InexactFloat64(),
@@ -250,7 +250,7 @@ func (s *statisticsSrv) CountSaleDays(ctx context.Context, req CountReq, days []
 		if ok {
 			totalSaleAmount = totalSaleAmount.Add(decimal.NewFromFloat(memberResult.TotalSaleAmount.Float64))
 			totalReceivedAmount = totalReceivedAmount.Add(decimal.NewFromFloat(memberResult.TotalPaymentAmount.Float64))
-			totalBusinessAmount = totalBusinessAmount.Add(decimal.NewFromFloat(memberResult.TotalPaymentFee.Float64))
+			totalBusinessAmount = totalBusinessAmount.Add(decimal.NewFromFloat(memberResult.TotalPaymentAmount.Float64))
 			totalPaymentFee = totalPaymentFee.Add(decimal.NewFromFloat(memberResult.TotalPaymentFee.Float64))
 			totalRefundAmount = totalRefundAmount.Add(decimal.NewFromFloat(memberResult.TotalRefundAmount.Float64))
 		}
