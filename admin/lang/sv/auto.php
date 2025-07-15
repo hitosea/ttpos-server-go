@@ -2125,5 +2125,9 @@ return [
     "骑手未接单取消时间必填" => "Obligatoriskt att ange avbokningstid när ryttaren inte har accepterat beställningen",
     "骑手未接单取消时间范围1-60分钟" => "Avbokningstid för ryttare som inte accepterat order: 1–60 minuter",
     "高峰时间" => "Rusningstid",
-    "默认语言不能为空" => "Standardspråket får inte vara tomt"
+    "默认语言不能为空" => "Standardspråket får inte vara tomt",
+    "请输入正确的主账户余额" => "Vänligen ange korrekt huvudkontosaldo",
+    "减少金额不能大于当前主账户余额" => "Beloppet som minskas får inte vara större än nuvarande huvudkontosaldo",
+    "主账户余额不能小于0" => "Huvudkontots saldo får inte vara mindre än 0",
+    "减少后的主账户余额不能大于" => "Huvudkontots saldo efter minskning får inte vara större än",
 ];

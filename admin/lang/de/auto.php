@@ -2134,5 +2134,8 @@ return [
     "未开启自助餐" => "Buffet ist nicht aktiviert",
     "请选择自助餐" => "Bitte wählen Sie ein Buffet aus",
     "平板结束时间提醒不能为空" => "Die Erinnerung an die Tablet-Endzeit darf nicht leer sein.",
-    "角色不存在" => "Rolle existiert nicht",
+    "请输入正确的主账户余额" => "Bitte geben Sie den korrekten Hauptkontostand ein",
+    "减少金额不能大于当前主账户余额" => "Der zu verringernde Betrag darf den aktuellen Hauptkontostand nicht überschreiten",
+    "主账户余额不能小于0" => "Der Hauptkontostand darf nicht kleiner als 0 sein",
+    "减少后的主账户余额不能大于" => "Der Hauptkontostand nach der Reduzierung darf nicht größer sein als",
 ];

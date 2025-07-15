@@ -2126,5 +2126,8 @@ return [
     "距离范围参数错误" => "Mesafe aralığı parametresi hatalı",
     "外送渠道未设置" => "Dışarıdan sipariş kanalı ayarlanmadı",
     "请选择商家" => "Lütfen satıcıyı seçin",
-    "角色不存在" => "Rol mevcut değil",
+    "请输入正确的主账户余额" => "Lütfen doğru ana hesap bakiyesini girin",
+    "减少金额不能大于当前主账户余额" => "Azaltılacak tutar mevcut ana hesap bakiyesinden büyük olamaz",
+    "主账户余额不能小于0" => "Ana hesap bakiyesi 0'dan küçük olamaz",
+    "减少后的主账户余额不能大于" => "Azaltıldıktan sonraki ana hesap bakiyesi ...'den büyük olamaz",
 ];
