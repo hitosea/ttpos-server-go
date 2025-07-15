@@ -103,6 +103,11 @@
               {{ this.$priceTwo(scope.row.points) }}
             </template>
           </el-table-column>
+          <el-table-column prop="accumulated_consumption_get_point" :label="$t('累计消费获得积分')" width="160">
+            <template #default="scope">
+              {{ this.$priceTwo(scope.row.accumulated_consumption_get_point) || '-' }}
+            </template>
+          </el-table-column>
           <el-table-column prop="mobile" :label="$t('手机号')"></el-table-column>
           <el-table-column prop="birthday" :label="$t('生日')"></el-table-column>
           <el-table-column prop="create_time" :label="$t('添加时间')" width="140"></el-table-column>

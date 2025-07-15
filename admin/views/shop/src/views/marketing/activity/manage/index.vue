@@ -27,10 +27,12 @@
               <span v-if="scope.row.type == 0">{{ $t('邀请有礼') }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="prizes" :label="$t('活动奖品')">
+          <el-table-column prop="reward_type" :label="$t('活动奖品')">
             <template #default="scope">
-              <span v-if="scope.row.prizes.length > 0">{{ scope.row.prizes[0].coupon_name }}</span>
-              <span v-else>-</span>
+              <span v-if="scope.row.reward_type == 0 && scope.row.prizes.length > 0">{{ scope.row.prizes[0].coupon_name }}</span>
+              <span v-else>
+                {{ $t('积分') }}
+              </span>
             </template>
           </el-table-column>
           <el-table-column prop="create_time" :label="$t('创建时间')"></el-table-column>

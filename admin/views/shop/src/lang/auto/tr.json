@@ -1814,5 +1814,9 @@
     "赠菜金额": "İkram Yemek Tutarı",
     "打包": "Paketlemek",
     "点餐助手管理员添加会员发卡赠送操作": "Sipariş Asistanı yöneticisi, üye kartı ekleme ve hediye verme işlemi",
-    "收银机管理员添加会员发卡赠送操作": "Kasa yöneticisi, üye kartı verme ve hediye işlemi ekler"
+    "收银机管理员添加会员发卡赠送操作": "Kasa yöneticisi, üye kartı verme ve hediye işlemi ekler",
+    "营销活动赠送": "Pazarlama kampanyası hediyesi",
+    "赠送账户变动数量": "Hediye hesap değişiklik miktarı",
+    "当前主账户余额": "Mevcut ana hesap bakiyesi",
+    "累计消费获得积分": "Toplam harcama ile puan kazanılır"
 }

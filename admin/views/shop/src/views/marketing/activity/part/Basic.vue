@@ -4,7 +4,7 @@
     <div class="common-form">{{ $t('基本信息') }}</div>
     <el-form-item for="no_click" :label="$t('活动类型')" prop="type" :rules="[{ required: true, message: $t('请选择活动类型') }]">
       <el-select class="max-w460" v-model="form.type" :placeholder="$t('请选择活动类型')">
-        <el-option :key="1" :label="$t('邀请消费有礼')" :value="1"></el-option>
+        <el-option :key="0" :label="$t('邀请消费有礼')" :value="0"></el-option>
       </el-select>
     </el-form-item>
 
