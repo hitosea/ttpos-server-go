@@ -4,6 +4,7 @@ import (
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
+	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/service"
@@ -54,6 +55,7 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 
 	// 获取打印内容
 	printContent := p.getPrintingInvoiceContent(
+		settingPrinterInfo,
 		settingPrinterInfo.PrinterType,
 		saleBill,
 		saleOrder,
@@ -104,6 +106,7 @@ func (p *PrinterRepoImpl) PrintingInvoice(
 
 // 构建发票打印的内容
 func (p *PrinterRepoImpl) getPrintingInvoiceContent(
+	settingPrinterInfo respSetting.PrinterInfo,
 	printerType string,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
@@ -135,6 +138,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	// 图片打印
 	if p.IsImagePrinterMethod() {
 		return template.NewInvoiceImgTemplate(base).GetPrintContent(
+			settingPrinterInfo,
 			tmp,
 			saleBill,
 			saleOrder,

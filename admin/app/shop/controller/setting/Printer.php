@@ -123,8 +123,6 @@ class Printer extends Controller
     public function edit($printer_id)
     {
         if ($this->request->isGet()) {
-            $cashierList = BindRecord::getCashierList();
-
             return $this->detail($printer_id);
         }
         /** @var PrinterModel $model */

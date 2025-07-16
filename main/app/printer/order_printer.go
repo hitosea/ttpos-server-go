@@ -4,6 +4,7 @@ import (
 	"slices"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/service"
@@ -66,7 +67,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingStatementOrderContent(settingPrinterInfo.PrinterType, printType, saleBill, saleOrder, payMethodUuid)
+	printContent := p.getPrintingStatementOrderContent(settingPrinterInfo, printType, saleBill, saleOrder, payMethodUuid)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -112,7 +113,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 
 // 构建订单打印的内容
 func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
-	printerType string, // 打印机类型
+	settingPrinterInfo settingResp.PrinterInfo, // 打印机设置
 	printType int, // 打印类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单 8-充值单 9-退菜单
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
@@ -137,13 +138,14 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 		constant.PrinterTypeSunmiLan,
 		constant.PrinterTypeSunmiCloud,
 		constant.PrinterTypeCashierSunmi,
-	}, printerType) {
+	}, settingPrinterInfo.PrinterType) {
 		base.IsSunMi = true
 	}
 
 	// 图片打印
 	if p.IsImagePrinterMethod() {
 		return template.NewStatementOrderImgTemplate(base).GetPrintContent(
+			settingPrinterInfo,
 			printType,
 			tmp,
 			saleBill,
@@ -155,7 +157,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	/* *
 	* Compax 收银打印机 80mm 自带
 	 */
-	if printerType == constant.PrinterTypeCashierCompax {
+	if settingPrinterInfo.PrinterType == constant.PrinterTypeCashierCompax {
 		return template.NewStatementOrderCompaxTemplate(base).GetPrintContent(
 			printType,
 			tmp,
@@ -167,9 +169,9 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	/* *
 	 * 芯烨打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
+	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, settingPrinterInfo.PrinterType) {
 		return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
-			printerType,
+			settingPrinterInfo.PrinterType,
 			printType,
 			tmp,
 			saleBill,
@@ -182,7 +184,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	 */
 	if base.IsSunMi {
 		return template.NewStatementOrderSunmiTemplate(base).GetPrintContent(
-			printerType,
+			settingPrinterInfo.PrinterType,
 			printType,
 			tmp,
 			saleBill,
@@ -193,7 +195,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	/* *
 	* CODESOFT 打印机
 	 */
-	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
+	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, settingPrinterInfo.PrinterType) {
 		return template.NewStatementOrderCodesoftTemplate(base).GetPrintContent(
 			printType,
 			tmp,

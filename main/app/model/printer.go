@@ -11,6 +11,7 @@ type Printer struct {
 	Name              string `gorm:"column:name;type:varchar(255);comment:打印机名称;NOT NULL" json:"name"`
 	PrinterTypeUuid   uint64 `gorm:"column:printer_type_uuid;type:bigint(20) unsigned;default:0;comment:打印机类型ID;NOT NULL" json:"printer_type_uuid"`
 	ConfigJson        string `gorm:"column:config_json;type:text;comment:打印机json配置" json:"config_json"`
+	Sn                string `gorm:"column:sn;type:varchar(255);comment:打印机SN" json:"sn"`
 	Copies            uint   `gorm:"column:copies;type:int(11) unsigned;default:0;comment:打印份数;NOT NULL" json:"copies"`
 	Sort              uint   `gorm:"column:sort;type:int(11) unsigned;default:0;comment:排序;NOT NULL" json:"sort"`
 	IsUsb             int    `gorm:"column:is_usb;type:tinyint(1);default:0;comment:是否usb;NOT NULL" json:"is_usb"`

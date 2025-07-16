@@ -32,7 +32,8 @@ func NewStatementOrderImgTemplate(
 
 // ImgPrint 图片打印
 func (t *statementOrderImgTemplate) GetPrintContent(
-	printType int,
+	settingPrinterInfo settingResp.PrinterInfo,
+	printOrderType int,
 	temp int,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
@@ -68,9 +69,9 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 	if temp != 3 && temp != 4 {
 		img.SetAlignment(pkg.AlignLeft)
-		if printType == constant.PrinterTemplateInvoice {
+		if printOrderType == constant.PrinterTemplateInvoice {
 			img.AppendText(t.base.Translate("发票"))
-		} else if printType == constant.PrinterTemplatePreBilling {
+		} else if printOrderType == constant.PrinterTemplatePreBilling {
 			img.AppendText(t.base.Translate("预结账单"))
 		} else {
 			img.AppendText(t.base.Translate("结账单"))
@@ -168,7 +169,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			)
 		}
 		img.LineFeed(1)
-	} else if temp == 3 || temp == 4 {
+	} else if temp == 3 || temp == 4 || temp == 5 {
 		// 打印logo
 		if logoAddr := t.base.GetLogoAddr(); logoAddr != "" {
 			img.SetTextLineHeight(25)
@@ -181,9 +182,9 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.SetFontWeight(2)
 		img.SetFontSize(26)
 		img.SetTextLineHeight(50)
-		if printType == constant.PrinterTemplateInvoice {
+		if printOrderType == constant.PrinterTemplateInvoice {
 			img.AppendText(t.base.Translate("发票"))
-		} else if printType == constant.PrinterTemplatePreBilling {
+		} else if printOrderType == constant.PrinterTemplatePreBilling {
 			img.AppendText(t.base.Translate("预结账单"))
 		} else {
 			img.AppendText(t.base.Translate("结账单"))
@@ -214,8 +215,18 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("税号"), taxNumber))
 			img.LineFeed(1)
 		}
+		if temp == 5 {
+			if cashierSn := t.base.GetCashierSn(); cashierSn != "" {
+				img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银机SN"), cashierSn))
+				img.LineFeed(1)
+			}
+			if printerSn := settingPrinterInfo.PrinterSn; printerSn != "" {
+				img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("打印机SN"), printerSn))
+				img.LineFeed(1)
+			}
+		}
 		// 发票信息
-		if printType == constant.PrinterTemplateInvoice {
+		if printOrderType == constant.PrinterTemplateInvoice {
 			invoiceInfo := saleOrder.InvoiceInfo
 			if invoiceInfo != nil && invoiceInfo.HasContent() {
 				img.AppendSplitLine()
@@ -634,6 +645,16 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 				}
 			}
 			img.SetTextLineHeight(50)
+		}
+	} else {
+		if temp == 5 && printOrderType == constant.PrinterTemplateBilling {
+			img.AppendSplitLine()
+			img.LineFeed(1)
+			img.AppendBarcode(saleBill.SerialNo, 400, 120)
+			img.LineFeed(1, 12)
+			img.SetAlignment(pkg.AlignCenter)
+			img.AppendText(saleBill.SerialNo)
+			img.LineFeed(1)
 		}
 	}
 

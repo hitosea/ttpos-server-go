@@ -61,6 +61,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567)
+	//
 	if temp != 3 && temp != 4 {
 		printer.SetAlignment(pkg.AlignLeft)
 		if printType == constant.PrinterTemplateInvoice {
@@ -102,12 +103,12 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 			printer.SetLineSpacing(70)
 		}
 		printer.SetPrintModes(true, true, false)
+		if t.base.Lang == "my" || t.base.IsMy(saleBill.SerialNo) {
+			printer.SetLineSpacing(80)
+		} else {
+			printer.SetLineSpacing(70)
+		}
 		if saleBill.DeskUuid > 0 {
-			if t.base.Lang == "my" || t.base.IsMy(saleBill.SerialNo) {
-				printer.SetLineSpacing(80)
-			} else {
-				printer.SetLineSpacing(70)
-			}
 			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
 			printer.LineFeed(1)
 		} else if saleBill.SerialNo != "" {
@@ -174,6 +175,11 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 				printer.SetLineSpacing(40)
 			}
 		} else if saleBill.SerialNo != "" {
+			if t.base.Lang == "my" || t.base.IsMy(saleBill.SerialNo) {
+				printer.SetLineSpacing(80)
+			} else {
+				printer.SetLineSpacing(70)
+			}
 			printer.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("取单号"), saleBill.SerialNo, orderName))
 			printer.LineFeed()
 		}
@@ -236,12 +242,12 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 		printer.SetAlignment(pkg.AlignLeft)
 		printer.SetCharacterSize(2, 1)
 		printer.SetPrintModes(true, true, false)
+		if t.base.Lang == "my" || t.base.IsMy(saleBill.SerialNo) {
+			printer.SetLineSpacing(80)
+		} else {
+			printer.SetLineSpacing(70)
+		}
 		if saleBill.DeskUuid > 0 {
-			if t.base.Lang == "my" || t.base.IsMy(saleBill.SerialNo) {
-				printer.SetLineSpacing(80)
-			} else {
-				printer.SetLineSpacing(70)
-			}
 			printer.AppendText(fmt.Sprintf("%s: %s%s%s", t.base.Translate("桌号"), saleBill.SerialNo, orderName, mealNumStr))
 			printer.LineFeed()
 		} else if saleBill.SerialNo != "" {

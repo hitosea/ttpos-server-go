@@ -512,3 +512,15 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder, isSh
 	}
 	return products, productNum.Round(2).InexactFloat64()
 }
+
+// 获取收银机SN
+func (p *printerTemplate) GetCashierSn() string {
+	for _, item := range p.PrinterSetting.CashierPrinter {
+		if item.Key == p.Ctx.GetDeviceSn() {
+			if item.Sn != "" {
+				return item.Sn
+			}
+		}
+	}
+	return ""
+}

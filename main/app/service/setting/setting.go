@@ -343,6 +343,7 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 				Key:          item.Key,
 				PrinterId:    utils.Uint64OrStringToString(item.PrinterId),
 				PrinterUsbId: item.PrinterUsbId,
+				Sn:           item.Sn,
 			})
 		}
 		defaultPrinter.CashierPrinter = handledCashierPrinters
@@ -378,6 +379,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		isCashierPrinter       bool // 是否收银机自带打印机
 		isUsbPrinter           bool // 是否usb打印机
 		printMethod            int  // 打印方式 1文本打印, 2图片打印
+		printerSn              string
 	)
 
 	// 收银机开启
@@ -406,9 +408,16 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 				return setting.PrinterInfo{}, errors.WithMessage(err)
 			}
 			copies = printer.Copies
-			printerConfig = utils.ToJson(printer.GetConfigJson())
+			printerConfigJson := printer.GetConfigJson()
+			printerConfig = utils.ToJson(printerConfigJson)
 			if printer.PrinterType != nil {
 				printerType = printer.PrinterType.Key
+			}
+			// 打印机SN
+			if printer.Sn != "" {
+				printerSn = printer.Sn
+			} else {
+				printerSn = printerConfigJson.SN
 			}
 			// 由当前点击的设备进行打印
 			printerCashierDeviceSn = deviceSn
@@ -442,6 +451,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		PrinterCashierDeviceSn: printerCashierDeviceSn,
 		IsUsbPrinter:           isUsbPrinter,
 		PrintMethod:            printMethod,
+		PrinterSn:              printerSn,
 	}, nil
 }
 
