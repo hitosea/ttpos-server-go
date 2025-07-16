@@ -43,12 +43,15 @@ message CreateOrderReq {
   Location merchant_location = 3;    // 商家位置信息
   string remark = 4;                 // 备注
   string callback_url = 5;           // 客户端回调地址
+  string shop_order_uuid =6; //商家订单号
 }
 
 message CreateOrderResp {
   ResponseInfo responseInfo = 1;
-  string order_id = 2;               // 订单ID
-  int32 status = 3;                 // 0 - Canceled 已取消; 1 - New 新订单; 2 - Under review 正在审核中; 3 - Mission created 审核通过; 4 - Matching 正在匹配司机; 5 - Assigned 已分配司机; 6 - OTW to pickup 正在前往取货; 7 - OTW to delivery 正在前往送货; 8 - Pending 等待修改; 9 - Completed 已完成; 1 -  Invoice Created 已生成发票; 1 -  Paid 已支付服务费;
+  string takeout_job_uuid = 2;               // 外送订单号
+  string status = 3;                 // 0 - Canceled 已取消; 1 - New 新订单; 2 - Under review 正在审核中; 3 - Mission created 审核通过; 4 - Matching 正在匹配司机; 5 - Assigned 已分配司机; 6 - OTW to pickup 正在前往取货; 7 - OTW to delivery 正在前往送货; 8 - Pending 等待修改; 9 - Completed 已完成; 1 -  Invoice Created 已生成发票; 1 -  Paid 已支付服务费;
+  string shop_order_uuid =4; //餐馆下单uuid
+  string takeout_ref_no =5; //外送协调返回订单号
 }
 
 message ConfirmOrderReq {

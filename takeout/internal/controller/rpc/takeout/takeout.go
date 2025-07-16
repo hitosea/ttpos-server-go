@@ -20,8 +20,12 @@ func Register(s *grpcx.GrpcServer) {
 	api.RegisterTakeoutServiceServer(s.Server, &Controller{})
 }
 
-func (*Controller) EstimatePrice(ctx context.Context, req *api.EstimatePriceReq) (res *api.EstimatePriceResp, err error) {
-	res, err = takeout.GetService(consts.ProviderName(req.ProviderName)).EstimatePrice(ctx, req)
+func (c *Controller) getService(providerName string) takeout.Takeout {
+	return takeout.GetService(consts.ProviderName(providerName))
+}
+
+func (c *Controller) EstimatePrice(ctx context.Context, req *api.EstimatePriceReq) (res *api.EstimatePriceResp, err error) {
+	res, err = c.getService(req.ProviderName).EstimatePrice(ctx, req)
 	if err != nil {
 		return nil, gerror.Wrap(err, "获取预估价格失败")
 	}
@@ -29,8 +33,8 @@ func (*Controller) EstimatePrice(ctx context.Context, req *api.EstimatePriceReq)
 	return
 }
 
-func (*Controller) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (res *api.CreateOrderResp, err error) {
-	res, err = takeout.GetService(consts.ProviderName(req.ProviderName)).CreateOrder(ctx, req)
+func (c *Controller) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (res *api.CreateOrderResp, err error) {
+	res, err = c.getService(req.ProviderName).CreateOrder(ctx, req)
 	if err != nil {
 		return nil, gerror.Wrap(err, "下单失败")
 	}
@@ -38,8 +42,8 @@ func (*Controller) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 	return
 }
 
-func (*Controller) ConfirmOrder(ctx context.Context, req *api.ConfirmOrderReq) (res *api.ConfirmOrderResp, err error) {
-	res, err = takeout.GetService(consts.ProviderName(req.ProviderName)).ConfirmOrder(ctx, req)
+func (c *Controller) ConfirmOrder(ctx context.Context, req *api.ConfirmOrderReq) (res *api.ConfirmOrderResp, err error) {
+	res, err = c.getService(req.ProviderName).ConfirmOrder(ctx, req)
 	if err != nil {
 		return nil, gerror.Wrap(err, "商家确认订单失败")
 	}
@@ -47,8 +51,8 @@ func (*Controller) ConfirmOrder(ctx context.Context, req *api.ConfirmOrderReq) (
 	return
 }
 
-func (*Controller) GetDriverLocation(ctx context.Context, req *api.GetDriverLocationReq) (res *api.GetDriverLocationResp, err error) {
-	res, err = takeout.GetService(consts.ProviderName(req.ProviderName)).GetDriverLocation(ctx, req)
+func (c *Controller) GetDriverLocation(ctx context.Context, req *api.GetDriverLocationReq) (res *api.GetDriverLocationResp, err error) {
+	res, err = c.getService(req.ProviderName).GetDriverLocation(ctx, req)
 	if err != nil {
 		return nil, gerror.Wrap(err, "获取司机位置失败")
 	}

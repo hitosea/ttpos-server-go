@@ -3,14 +3,21 @@ package skootar
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"github.com/gogf/gf/v2/os/gctx"
+	"github.com/gogf/gf/v2/util/gmeta"
+	"github.com/gogf/gf/v2/util/guid"
 	"takeout/api"
+	v1 "takeout/api/callback/v1"
 	"takeout/internal/consts"
+	"takeout/internal/dao"
+	"takeout/internal/model/do"
+	"takeout/internal/model/entity"
 	"takeout/internal/model/input/skootar"
 	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/util/gconv"
 )
 
 var createNewJobApiPath = "/api/create_new_job"
@@ -39,19 +46,17 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 		},
 	}
 
-	// TODO 保存订单
-
 	reqInp := &skootar.CreateOrderInp{
 		ReqBase:         s.ReqBase(),
 		LocationList:    locationList,
-		Vehicle:         "Motorcycle",
-		JobType:         "3",
+		Vehicle:         string(consts.VehicleMotorcycle),
+		JobType:         string(consts.JobTypeFood),
 		JobDate:         time.Now().Format(time.DateOnly),
-		StartTime:       time.Now().Format("15:04"),
-		PaymentType:     "cash",
-		MerchantConfirm: 1,
-		CallbackUrl:     req.CallbackUrl, // TODO 构造回调地址
-		Option:          "10",
+		StartTime:       consts.DEFAULT_START_TIME, //time.Now().Format("15:04")
+		PaymentType:     string(consts.PaymentTypeCash),
+		MerchantConfirm: 1,                //送餐默认需要商家确认
+		CallbackUrl:     getCallbackUrl(), //  构造回调地址
+		Option:          string(consts.EstimateOptionFood),
 	}
 
 	resp := &skootar.CreateOrderOut{}
@@ -60,7 +65,7 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 		return nil, gerror.Newf("创建订单失败:%+v", reqInp)
 	}
 
-	if err := json.Unmarshal(rr.Bytes(), resp); err != nil {
+	if err = json.Unmarshal(rr.Bytes(), resp); err != nil {
 		return nil, gerror.Newf("创建订单失败:%+v", err)
 	}
 
@@ -68,16 +73,67 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 	if resp.ResponseCode != "200" {
 		return nil, gerror.Newf("创建订单异常:%v", resp.ResponseDesc)
 	}
-	res = &api.CreateOrderResp{
-		OrderId: resp.JobDetail.JobID,
-		Status:  resp.JobDetail.JobStatus,
+
+	//保存订单数据，后面移到通用的服务里面
+	job := &entity.Job{
+		Uuid:                 guid.S(),
+		ShopLocationUuid:     guid.S(),
+		ConsumerLocationUuid: guid.S(),
+		TakeoutRefNo:         resp.JobDetail.JobID,
+		ShopRefNo:            req.ShopOrderUuid,
+		PaymentType:          reqInp.PaymentType,
+		CallbackUrl:          reqInp.CallbackUrl,
+		ProviderName:         string(consts.ProviderSkootar),
+		JobDate:              reqInp.JobDate,
+		StartTime:            reqInp.StartTime,
+		JobStatus:            string(resp.JobDetail.JobStatus),
 	}
-	if err = gconv.Struct(resp, res); err != nil {
+	locationModel := dao.JobLocation.Ctx(ctx)
+	if _, err = locationModel.Data(do.JobLocation{
+		Uuid:         job.ShopLocationUuid,
+		LocationType: 0, //餐馆
+		AddressName:  req.MerchantLocation.AddressName,
+		Address:      req.MerchantLocation.Address,
+		Lat:          req.MerchantLocation.Lat,
+		Lng:          req.MerchantLocation.Lng,
+		ContactName:  req.MerchantLocation.ContactName,
+		ContactPhone: req.MerchantLocation.ContactPhone,
+		Seq:          1,
+	}).Insert(); err != nil {
+		return nil, gerror.Wrap(err, "保存商家位置失败")
+	}
+	if _, err = locationModel.Data(do.JobLocation{
+		Uuid:         job.ConsumerLocationUuid,
+		LocationType: 1, //客户
+		AddressName:  req.CustomerLocation.AddressName,
+		Address:      req.CustomerLocation.Address,
+		Lat:          req.CustomerLocation.Lat,
+		Lng:          req.CustomerLocation.Lng,
+		ContactName:  req.CustomerLocation.ContactName,
+		ContactPhone: req.CustomerLocation.ContactPhone,
+		Seq:          2,
+	}).Insert(); err != nil {
+		return nil, gerror.Wrap(err, "保存商家位置失败")
+	}
+
+	// 保存订单
+	if _, err = dao.Job.Ctx(ctx).Data(job).Insert(); err != nil {
 		return nil, gerror.Wrap(err, "创建订单失败")
 	}
-	res.ResponseInfo = &api.ResponseInfo{
-		Code:    resp.ResponseCode,
-		Message: resp.ResponseDesc,
+
+	res = &api.CreateOrderResp{
+		ResponseInfo: &api.ResponseInfo{
+			Code:    resp.ResponseCode,
+			Message: resp.ResponseDesc,
+		},
+		TakeoutJobUuid: job.Uuid,
+		TakeoutRefNo:   job.TakeoutRefNo,
+		ShopOrderUuid:  job.ShopRefNo,
+		Status:         job.JobStatus,
 	}
 	return
+}
+
+func getCallbackUrl() string {
+	return fmt.Sprintf("%s%s", g.Cfg().MustGet(gctx.GetInitCtx(), "app.serviceUrl").String(), gmeta.Get(v1.SkootarStatusReq{}, "path"))
 }

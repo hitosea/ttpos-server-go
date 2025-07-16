@@ -32,6 +32,7 @@ nacos:
     group: DEFAULT_GROUP
 
 app:
+  serviceUrl: $TAKEOUT_SERVICE_URL
   provider:
     skootar:
       endpoint: $SKOOTAR_ENDPOINT

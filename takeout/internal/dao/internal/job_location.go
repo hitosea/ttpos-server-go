@@ -21,38 +21,38 @@ type JobLocationDao struct {
 
 // JobLocationColumns defines and stores column names for the table takeout_job_location.
 type JobLocationColumns struct {
-	Id            string // 主键
-	Uuid          string // 全局唯一uuid
-	LocationType  string // 位置类型： 0 餐馆，1 消费者
-	AddressName   string // 地址说明
-	Address       string // 详细地址
-	Lat           string // 纬度
-	Lng           string // 经度
-	ContractName  string // 联系人名称
-	ContractPhone string // 联系人号码
-	Seq           string // 地址序列，1开始
-	Remark        string // 备注
-	CreatedAt     string // 创建时间
-	UpdatedAt     string // 更新时间
-	DeletedAt     string // 软删除
+	Id           string // 主键
+	Uuid         string // 全局唯一uuid
+	LocationType string // 位置类型： 0 餐馆，1 消费者
+	AddressName  string // 地址说明
+	Address      string // 详细地址
+	Lat          string // 纬度
+	Lng          string // 经度
+	ContactName  string // 联系人名称
+	ContactPhone string // 联系人号码
+	Seq          string // 地址序列，1开始
+	Remark       string // 备注
+	CreatedAt    string // 创建时间
+	UpdatedAt    string // 更新时间
+	DeletedAt    string // 软删除
 }
 
 // jobLocationColumns holds the columns for the table takeout_job_location.
 var jobLocationColumns = JobLocationColumns{
-	Id:            "id",
-	Uuid:          "uuid",
-	LocationType:  "location_type",
-	AddressName:   "address_name",
-	Address:       "address",
-	Lat:           "lat",
-	Lng:           "lng",
-	ContractName:  "contract_name",
-	ContractPhone: "contract_phone",
-	Seq:           "seq",
-	Remark:        "remark",
-	CreatedAt:     "created_at",
-	UpdatedAt:     "updated_at",
-	DeletedAt:     "deleted_at",
+	Id:           "id",
+	Uuid:         "uuid",
+	LocationType: "location_type",
+	AddressName:  "address_name",
+	Address:      "address",
+	Lat:          "lat",
+	Lng:          "lng",
+	ContactName:  "contact_name",
+	ContactPhone: "contact_phone",
+	Seq:          "seq",
+	Remark:       "remark",
+	CreatedAt:    "created_at",
+	UpdatedAt:    "updated_at",
+	DeletedAt:    "deleted_at",
 }
 
 // NewJobLocationDao creates and returns a new DAO object for table data access.

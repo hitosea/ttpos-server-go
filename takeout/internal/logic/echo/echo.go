@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
-	"github.com/gogf/gf/v2/os/glog"
+	"github.com/gogf/gf/v2/frame/g"
 	"takeout/internal/dao"
 	"takeout/internal/model/entity"
 	"takeout/internal/model/input"
@@ -24,7 +24,7 @@ func New() *sEcho {
 }
 
 func (s *sEcho) Msg(ctx context.Context, in *input.EchoMsgInput) (out *input.EcoMsgOutput, err error) {
-	glog.Infof(ctx, "获取随路数据:%v", grpcx.Ctx.IncomingMap(ctx))
+	g.Log().Infof(ctx, "获取随路数据:%v", grpcx.Ctx.IncomingMap(ctx))
 	var echoEntity = &entity.Echo{}
 	dao.Echo.Ctx(ctx).Scan(echoEntity)
 	out = &input.EcoMsgOutput{

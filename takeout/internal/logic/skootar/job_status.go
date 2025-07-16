@@ -5,6 +5,7 @@ import (
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/guid"
@@ -16,7 +17,10 @@ import (
 )
 
 func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq) (res *v1.SkootarStatusRes, err error) {
-	var job *entity.Job
+	var (
+		job             *entity.Job
+		jobStatusBefore string
+	)
 
 	//先做入库，后面再说
 	err = dao.Job.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
@@ -40,11 +44,12 @@ func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq
 		if job == nil {
 			return gerror.Newf("外送任务不存在")
 		}
+		jobStatusBefore = job.JobStatus
 		//状态变更, 后续需考虑兼容其它供应商
 		if _, err = dao.JobStatusLog.Ctx(ctx).Data(&do.JobStatusLog{
 			Uuid:         guid.S(),
 			JobUuid:      job.Uuid,
-			StatusBefore: gconv.String(job.JobStatus),
+			StatusBefore: jobStatusBefore,
 			StatusAfter:  gconv.String(req.StatusAfter),
 		}).Insert(); err != nil {
 			return err
@@ -61,14 +66,21 @@ func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq
 		return nil, gerror.Wrap(err, "更新任务状态失败")
 	}
 	//回调ttpos
-	//if job.CallbackUrl == "" {
-	//
-	//}
-	//callbackRes := g.Client().PostVar(ctx, job.CallbackUrl, g.Map{
-	//	"ff ": " ",
-	//})
-	//glog.Infof(ctx, "发起回调ttpos: %v", callbackRes)
+	if len(job.CallbackUrl) > 0 {
+		//后面改成异步mq
+		go func() {
+			callbackRes := g.Client().PostVar(ctx, job.CallbackUrl, g.Map{
+				"shopRefNo":       job.ShopRefNo,
+				"takeoutRefNo":    job.TakeoutRefNo,
+				"providerName":    job.ProviderName,
+				"jobStatusBefore": jobStatusBefore,
+				"jobStatusAfter":  job.JobStatus,
+			})
+			g.Log().Infof(ctx, "发起回调ttpos: %v", callbackRes)
+		}()
+	}
 	return &v1.SkootarStatusRes{
-		Code: "200",
+		Code:    "200",
+		Message: "订单状态已更新",
 	}, nil
 }
