@@ -2067,5 +2067,9 @@
     "累计消费获得积分": "Earn points through cumulative spending",
     "累计消费获得积分满": "Points earned upon reaching cumulative spending",
     "查看发放积分记录": "View points distribution records",
-    "发放积分": "Distribute points"
+    "发放积分": "Distribute points",
+    "发放次数": "Number of Distributions",
+    "模板5": "Template 5",
+    "收银机SN：": "Cash Register SN:",
+    "打印机SN：": "Printer SN:"
 }
