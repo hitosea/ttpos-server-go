@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -14,6 +15,7 @@ type IMemberSaleOrderRepo interface {
 	CreateMemberSaleOrder(memberSaleOrder model.MemberSaleOrder) error                // 创建会员端销售订单
 	UpdateMemberSaleOrderVerifiedPhoneStatus(memberSaleOrderUuid uint64) error        // 更新会员端销售订单的手机号验证状态为已验证
 	UpdateMemberSaleOrderPendingPayment(memberSaleOrder *model.MemberSaleOrder) error // 更新会员端销售订单为待支付状态
+	UpdateMemberSaleOrderPendingMerchantAccept(memberSaleOrderUuid uint64) error      // 更新会员端销售订单为“待商家接单”状态，表示订单支付成功，等待商家接单
 }
 
 func NewMemberSaleOrderRepo(db *gorm.DB) IMemberSaleOrderRepo {
@@ -84,6 +86,17 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderPendingPayment(memberSaleOrde
 		PaymentMethodUuid: memberSaleOrder.PaymentMethodUuid,            // 更新支付方式UUID
 		Status:            constant.MemberSaleOrderStatusPendingPayment, // 更新订单状态为待支付
 		Remark:            memberSaleOrder.Remark,                       // 更新订单备注
+	}).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderPendingMerchantAccept 更新会员端销售订单为“待商家接单”状态，表示订单支付成功，等待商家接单
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderPendingMerchantAccept(memberSaleOrderUuid uint64) error {
+	if err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrderUuid).Updates(model.MemberSaleOrder{
+		Status:  constant.MemberSaleOrderStatusPendingMerchantAccept, // 更新订单状态为待支付
+		PayTime: time.Now().Unix(),
 	}).Error; err != nil {
 		return errors.WithMessage(err)
 	}
