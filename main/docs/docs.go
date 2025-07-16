@@ -14480,6 +14480,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/base/nickname": {
+            "post": {
+                "description": "修改会员昵称",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.基础信息"
+                ],
+                "summary": "修改会员昵称",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.MemberNicknameUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/member_resp.MemberBaseInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/member/coupon/history/list": {
             "get": {
                 "security": [
@@ -18669,6 +18715,15 @@ const docTemplate = `{
                 },
                 "phone": {
                     "description": "手机号",
+                    "type": "string"
+                }
+            }
+        },
+        "member_req.MemberNicknameUpdateReq": {
+            "type": "object",
+            "properties": {
+                "nickname": {
+                    "description": "会员昵称",
                     "type": "string"
                 }
             }

@@ -766,6 +766,12 @@ definitions:
         description: 手机号
         type: string
     type: object
+  member_req.MemberNicknameUpdateReq:
+    properties:
+      nickname:
+        description: 会员昵称
+        type: string
+    type: object
   member_req.MemberRegisterReq:
     properties:
       code:
@@ -15290,6 +15296,33 @@ paths:
                   $ref: '#/definitions/member_resp.MemberBaseInfoResp'
               type: object
       summary: 获取基础信息
+      tags:
+      - 会员端.基础信息
+  /member/base/nickname:
+    post:
+      consumes:
+      - application/json
+      description: 修改会员昵称
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/member_req.MemberNicknameUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/member_resp.MemberBaseInfoResp'
+              type: object
+      summary: 修改会员昵称
       tags:
       - 会员端.基础信息
   /member/coupon/history/list:
