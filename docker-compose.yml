@@ -144,6 +144,7 @@ services:
       - ./takeout/manifest/config:/app/config  #生产环境根据需要调整
     restart: always
     ports:
+      - "14031:14031"
       - "14032:14032"
     networks:
       saas-network:
