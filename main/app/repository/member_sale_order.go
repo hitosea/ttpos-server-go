@@ -22,6 +22,10 @@ type IQueryMemberSaleOrderRepo interface {
 	GetMemberSaleOrderRecord(uuid uint64) (*model.MemberSaleOrder, error)                                          // 获取会员端销售订单记录
 	PaginateGetMemberSaleOrder(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)     // 分页获取会员端销售订单
 	GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error) // 获取收银台"外送"订单列表
+
+	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
+	WhereStatusIn(status []uint) DBOption
+	WhereCreateTimeGt(ts int64) DBOption
 }
 
 func NewMemberSaleOrderRepo(db *gorm.DB) IMemberSaleOrderRepo {
@@ -143,4 +147,32 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderList(pageNo, pageSize int
 		opts = append(opts, CommonRepo.DBOption(CommonRepo.WhereByMultipleStatus(statusList)))
 	}
 	return r.PaginateGetMemberSaleOrder(pageNo, pageSize, opts...)
+}
+
+func (r *MemberSaleOrderRepo) PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error) {
+	var memberSaleOrders []model.MemberSaleOrder
+	var total int64
+	db := r.db.Model(&model.MemberSaleOrder{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	// 获取总数
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, errors.WithMessage(err)
+	}
+	// 获取分页数据
+	err := db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&memberSaleOrders).Error
+	return memberSaleOrders, total, errors.WithMessage(err)
+}
+
+func (r *MemberSaleOrderRepo) WhereStatusIn(status []uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status IN (?)", status)
+	}
+}
+
+func (r *MemberSaleOrderRepo) WhereCreateTimeGt(ts int64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("create_time > ?", ts)
+	}
 }

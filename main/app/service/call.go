@@ -164,6 +164,9 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 		H5Order: resp.UnprocessedH5Order{
 			List: make([]resp.UnprocessedH5OrderItem, 0),
 		},
+		MemberSaleOrder: resp.UnprocessedMemberSaleOrder{
+			List: make([]resp.UnprocessedMemberSaleOrderItem, 0),
+		},
 	}
 	thirtyMinutesAgo := time.Now().Add(-30 * time.Minute).Unix()
 	callRepo := repository.NewCallRepo(ctx.GetDB())
@@ -195,6 +198,16 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 
 	if err != nil {
 		return res, errors.WithMessage(errors.New("获取未处理的H5订单失败"), err.Error())
+	}
+
+	memberSaleOrderRepo := repository.NewMemberSaleOrderRepo(ctx.GetDB())
+	memberSaleOrders, _, err := memberSaleOrderRepo.PaginateGet(1, 10, memberSaleOrderRepo.WhereStatusIn([]uint{
+		constant.MemberSaleOrderStatusPendingMerchantAccept,
+		constant.MemberSaleOrderStatusCooking,
+		constant.MemberSaleOrderStatusCancelled,
+	}), memberSaleOrderRepo.WhereCreateTimeGt(thirtyMinutesAgo), repository.CommonRepo.SortWithCreateTime("desc"))
+	if err != nil {
+		return res, errors.WithMessage(errors.New("获取未处理的外送订单失败"), err.Error())
 	}
 
 	// 未处理的呼叫
@@ -239,6 +252,17 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 			IsAutoAccept: order.IsAutoAccept == 1,
 		})
 	}
+
+	for _, memberSaleOrder := range memberSaleOrders {
+		res.MemberSaleOrder.List = append(res.MemberSaleOrder.List, resp.UnprocessedMemberSaleOrderItem{
+			Uuid:         memberSaleOrder.Uuid,
+			Status:       memberSaleOrder.Status,
+			UpdateTime:   memberSaleOrder.UpdateTime,
+			IsAutoAccept: memberSaleOrder.IsAutoAccept == 1,
+			CancelScene:  memberSaleOrder.CancelScene,
+		})
+	}
+
 	return res, nil
 }
 
