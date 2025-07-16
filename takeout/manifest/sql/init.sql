@@ -44,7 +44,6 @@ CREATE TABLE `takeout_job` (
                                KEY `takeout_job_provider_name_IDX` (`provider_name`,`takeout_ref_no`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外送订单信息';
 
-
 -- takeout.takeout_job_location definition
 
 CREATE TABLE `takeout_job_location` (
@@ -66,7 +65,6 @@ CREATE TABLE `takeout_job_location` (
                                         UNIQUE KEY `takeout_job_location_unique` (`uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外送定位信息';
 
-
 -- takeout.takeout_job_status_log definition
 
 CREATE TABLE `takeout_job_status_log` (
@@ -83,7 +81,6 @@ CREATE TABLE `takeout_job_status_log` (
                                           KEY `takeout_job_status_log_job_uuid_IDX` (`job_uuid`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外送订单变化日志';
 
-
 -- takeout.takeout_callback_msg definition
 
 CREATE TABLE `takeout_callback_msg` (
@@ -94,6 +91,7 @@ CREATE TABLE `takeout_callback_msg` (
                                         `uuid` varchar(100) NOT NULL COMMENT '全局唯一ID',
                                         `takeout_ref_no` varchar(100) DEFAULT NULL COMMENT '外送系统订单号，如skootar.jobId',
                                         `content` text DEFAULT NULL COMMENT '消息内容',
+                                        `status_datetime` datetime DEFAULT NULL COMMENT '状态变更时间',
                                         PRIMARY KEY (`id`),
                                         UNIQUE KEY `takeout_callback_msg_unique` (`uuid`),
                                         KEY `takeout_callback_msg_takeout_ref_no_IDX` (`takeout_ref_no`) USING BTREE
