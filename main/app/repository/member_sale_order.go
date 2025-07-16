@@ -132,15 +132,23 @@ func (r *MemberSaleOrderRepo) PaginateGetMemberSaleOrder(pageNo, pageSize int, o
 	return memberSaleOrders, total, errors.WithMessage(err)
 }
 
+// GetCashierMemberSaleOrderList 获取收银端"外送"订单列表
 func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error) {
 	opts := []DBOption{
 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 		CommonRepo.DBOption(CommonRepo.SortWithPayTime("desc")),
 	}
+
+	// 根据状态列表筛选
+	// 默认状态列表为空时，查询待接单状态
+	statusFilter := CommonRepo.DBOption(CommonRepo.WhereByMultipleStatus([]uint{
+		constant.MemberSaleOrderStatusPendingMerchantAccept,
+	}))
 	if len(statusList) == 1 {
-		opts = append(opts, CommonRepo.DBOption(CommonRepo.WhereByStatus(statusList[0])))
+		statusFilter = CommonRepo.DBOption(CommonRepo.WhereByStatus(statusList[0]))
 	} else if len(statusList) > 1 {
-		opts = append(opts, CommonRepo.DBOption(CommonRepo.WhereByMultipleStatus(statusList)))
+		statusFilter = CommonRepo.DBOption(CommonRepo.WhereByMultipleStatus(statusList))
 	}
+	opts = append(opts, statusFilter)
 	return r.PaginateGetMemberSaleOrder(pageNo, pageSize, opts...)
 }

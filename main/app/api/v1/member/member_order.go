@@ -148,6 +148,35 @@ func (h *OrderHandler) PayOrder(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// PaidOrder 支付成功
+// @Summary 支付成功
+// @Description 支付成功
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/xie-test/order/paid [post]
+func (h *OrderHandler) PaidOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := member_req.PaidMemberOrderReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("支付成功", zap.Any("params", params))
+
+	// 支付成功
+	if err := h.orderSrv.PaidMemberOrder(ctx, params); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, nil)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -171,5 +200,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/order/address", wrapper.SetOrderAddress)  // 设置订单地址
 		privateApi.POST("/order/phone/verify", wrapper.VerifyPhone) // 验证手机号
 		privateApi.POST("/order/pay", wrapper.PayOrder)             // 提交支付
+		privateApi.POST("/xie-test/order/paid", wrapper.PaidOrder)  // 支付成功 TODO 上线前删除改接口
 	}
 }

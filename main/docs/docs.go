@@ -15343,6 +15343,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/xie-test/order/paid": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "支付成功",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "支付成功",
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/menu/base": {
             "get": {
                 "security": [
@@ -24055,8 +24083,16 @@ const docTemplate = `{
         "resp.MemberOrderProduct": {
             "type": "object",
             "properties": {
+                "locale_attribute_name": {
+                    "description": "商品属性",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
                 "locale_name": {
-                    "description": "商品名称多语言",
+                    "description": "商品名称",
                     "allOf": [
                         {
                             "$ref": "#/definitions/dto.LocaleResponse"

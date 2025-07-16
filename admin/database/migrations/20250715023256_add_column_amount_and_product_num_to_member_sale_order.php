@@ -31,11 +31,11 @@ class AddColumnAmountAndProductNumToMemberSaleOrder extends Migrator
         // 添加字段
         $table = $this->table('member_sale_order');
         if (!$table->hasColumn('serial_number')) {
-            $table->addColumn('serial_number', 'varchar', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '订单流水号', 'after' => 'status']);
+            $table->addColumn('serial_number', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '订单流水号', 'after' => 'status']);
             $table->update();
         }
         if (!$table->hasColumn('cancel_reason')) {
-            $table->addColumn('cancel_reason', 'varchar', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '取消原因', 'after' => 'remark']);
+            $table->addColumn('cancel_reason', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '取消原因', 'after' => 'remark']);
             $table->update();
         }
         if (!$table->hasColumn('product_num')) {
@@ -58,7 +58,7 @@ class AddColumnAmountAndProductNumToMemberSaleOrder extends Migrator
         // 添加字段
          $table = $this->table('member_sale_order_address');
          if (!$table->hasColumn('phone_prefix')) {
-             $table->addColumn('phone_prefix', 'varchar', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '联系电话前缀', 'after' => 'contact_phone']);
+             $table->addColumn('phone_prefix', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '联系电话前缀', 'after' => 'contact_phone']);
              $table->update();
          }
     }

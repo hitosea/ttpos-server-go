@@ -21,3 +21,8 @@ type PayMemberOrderReq struct {
 	PaymentMethodUuid   uint64 `json:"payment_method_uuid" binding:"required"`    // 支付方式UUID
 	Remark              string `json:"remark"`                                    // 订单的备注信息。产品说在点击“提交支付”时保存订单备注
 }
+
+// PaidMemberOrderReq 支付成功
+type PaidMemberOrderReq struct {
+	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+}

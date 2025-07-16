@@ -4217,10 +4217,14 @@ definitions:
     type: object
   resp.MemberOrderProduct:
     properties:
+      locale_attribute_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品属性
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
-        description: 商品名称多语言
+        description: 商品名称
       num:
         description: 数量
         type: number
@@ -16052,6 +16056,23 @@ paths:
       summary: 游客登录
       tags:
       - 会员端.游客
+  /member/xie-test/order/paid:
+    post:
+      consumes:
+      - application/json
+      description: 支付成功
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 支付成功
+      tags:
+      - 会员端-订单
   /menu/base:
     get:
       consumes:

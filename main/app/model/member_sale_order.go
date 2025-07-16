@@ -10,7 +10,7 @@ import (
 // MemberSaleOrder 会员端销售订单表 `ttpos_member_sale_order`
 type MemberSaleOrder struct {
 	BaseModel
-	Status            uint    `gorm:"column:status;type:int(10);not null;default:1;comment:'订单状态 0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消'"`
+	Status            uint    `gorm:"column:status;type:int(10);not null;default:0;comment:'订单状态 0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消'"`
 	SerialNumber      string  `gorm:"column:serial_number;type:varchar(255);not null;default:'';comment:'订单流水号'"`
 	DeliveryDistance  float64 `gorm:"column:delivery_distance;type:decimal(12,6);not null;default:0;comment:'配送距离，单位km'"`
 	Remark            string  `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'订单备注'"`
@@ -96,14 +96,20 @@ func (model *MemberSaleOrder) CalculateAmount() float64 {
 	return decimal.NewFromFloat(productAmount).Add(decimal.NewFromFloat(model.CalculateDeliveryFee())).Sub(decimal.NewFromFloat(memberDiscount)).Round(2).InexactFloat64()
 }
 
-func NewMemberSaleOrder(setting DeliveryConfigResponse) *MemberSaleOrder {
+type CreateMemberSaleOrderParams struct {
+	DeliveryConfig DeliveryConfigResponse
+	SerialNo       string // 订单流水号
+}
+
+func NewMemberSaleOrder(params CreateMemberSaleOrderParams) *MemberSaleOrder {
 	uuid, _ := utils.GetID()
 	saleOrder := &MemberSaleOrder{
 		BaseModel:          BaseModel{Uuid: uuid},
 		Status:             constant.MemberSaleOrderStatusSelecting,
-		DeliveryFeeMinFee:  setting.BaseDeliveryFee,
-		DeliveryFeeBaseFee: setting.BasicFee,
-		DeliveryFeePerKm:   setting.PricePerKm,
+		DeliveryFeeMinFee:  params.DeliveryConfig.BaseDeliveryFee,
+		DeliveryFeeBaseFee: params.DeliveryConfig.BasicFee,
+		DeliveryFeePerKm:   params.DeliveryConfig.PricePerKm,
+		SerialNumber:       params.SerialNo,
 	}
 	return saleOrder
 }

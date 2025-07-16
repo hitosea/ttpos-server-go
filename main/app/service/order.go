@@ -152,6 +152,7 @@ type IMemberOrderSrv interface {
 	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                       // 会员端订单提交支付，状态变为待支付
 	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                             // 查询收银机“外送”页面的订单列表
 	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                    // 查询收银机“外送”页面的订单详情
+	PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error                                                     // 会员端订单支付成功. TODO 用于测试，提测前删掉
 }
 
 // orderSrv 订单服务结构
@@ -382,8 +383,8 @@ func createSaleOrder(ctx context.Context, db *gorm.DB, saleBillSetting *model.Sa
 }
 
 // 创建会员端销售订单
-func createMemberSaleOrder(ctx context.Context, db *gorm.DB, deliveryConfig *model.DeliveryConfigResponse) (*model.MemberSaleOrder, error) {
-	saleOrderObj := model.NewMemberSaleOrder(*deliveryConfig)
+func createMemberSaleOrder(ctx context.Context, db *gorm.DB, params model.CreateMemberSaleOrderParams) (*model.MemberSaleOrder, error) {
+	saleOrderObj := model.NewMemberSaleOrder(params)
 
 	if err := repository.NewMemberSaleOrderRepo(db).CreateMemberSaleOrder(*saleOrderObj); err != nil {
 		return nil, errors.WithMessage(err)
@@ -810,8 +811,8 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取配送费配置失败")
 	}
-	// 创建会员端订单
-	memberSaleOrder, errCreateMemberSaleOrder := createMemberSaleOrder(ctx, db, deliveryConfig)
+	// 创建外送订单
+	memberSaleOrder, errCreateMemberSaleOrder := createMemberSaleOrder(ctx, db, model.CreateMemberSaleOrderParams{DeliveryConfig: *deliveryConfig, SerialNo: serialNo})
 	if errCreateMemberSaleOrder != nil {
 		return nil, errors.WithMessage(errCreateMemberSaleOrder)
 	}
@@ -1242,12 +1243,22 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 	products := make([]resp.MemberOrderProduct, 0)
 	for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
 		products = append(products, resp.MemberOrderProduct{
-			LocaleName: saleOrderProduct.GetNameAndFlavorName(),
-			Num:        saleOrderProduct.Num,
-			TotalPrice: saleOrderProduct.GetTotalPrice(),
+			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
+			Num:                 saleOrderProduct.Num,
+			TotalPrice:          saleOrderProduct.GetTotalPrice(),
 		})
 	}
 
+	var address resp.MemberOrderDetailAddress
+	if memberSaleOrder.Address != nil {
+		address = resp.MemberOrderDetailAddress{
+			ContactName: memberSaleOrder.Address.ContactName,
+			Phone:       memberSaleOrder.Address.ContactPhone,
+			PhonePrefix: memberSaleOrder.Address.PhonePrefix,
+			Address:     memberSaleOrder.Address.Address + memberSaleOrder.Address.DetailAddress,
+		}
+	}
 	return &resp.GetMemberOrderDetailResp{
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		PayTime:             memberSaleOrder.PayTime,
@@ -1261,17 +1272,27 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 			List:          products,
 			ProductAmount: memberSaleOrder.ProductAmount,
 		},
-		AddressInfo: resp.MemberOrderDetailAddress{
-			ContactName: memberSaleOrder.Address.ContactName,
-			Phone:       memberSaleOrder.Address.ContactPhone,
-			PhonePrefix: memberSaleOrder.Address.PhonePrefix,
-			Address:     memberSaleOrder.Address.Address + memberSaleOrder.Address.DetailAddress,
-		},
+		AddressInfo: address,
 		Rider: resp.RiderInfo{
 			Name:  memberSaleOrder.RiderName,
 			Phone: memberSaleOrder.RiderPhone,
 		},
 	}, nil
+}
+
+// PaidMemberOrder 会员端订单支付成功
+func (s *orderSrv) PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error {
+	ctx.SetDB(s.dbm.GetDB(ctx.GetDbId()))
+	// 更新订单状态
+	s.bus.PublishPayFinishMemberSaleOrderEvent(event.PayFinishMemberSaleOrderPayload{
+		BasePayload: event.BasePayload{
+			Ctx:         ctx,
+			CompanyUuid: ctx.GetCompanyUuid(),
+			Source:      ctx.GetSource(),
+		},
+		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
+	})
+	return nil
 }
 
 // createOrderNo 创建订单编号

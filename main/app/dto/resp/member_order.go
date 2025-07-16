@@ -26,9 +26,10 @@ type MemberProductList struct {
 }
 
 type MemberOrderProduct struct {
-	LocaleName dto.LocaleResponse `json:"locale_name"` // 商品名称多语言
-	Num        float64            `json:"num"`         // 数量
-	TotalPrice float64            `json:"total_price"` // 总价. 总价=单价*数量
+	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称
+	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
+	Num                 float64            `json:"num"`                   // 数量
+	TotalPrice          float64            `json:"total_price"`           // 总价. 总价=单价*数量
 }
 
 // 收银端“外送”接单页面订单详情
