@@ -3,11 +3,13 @@ package member_resp
 import "ttpos-server-go/app/dto"
 
 type MemberResp struct {
-	Uuid     uint64  `json:"uuid"`     // 会员UUID
-	Nickname string  `json:"nickname"` // 会员昵称
-	Phone    string  `json:"phone"`    // 会员手机号
-	Point    float64 `json:"point"`    // 会员积分
-	Balance  float64 `json:"balance"`  // 会员余额
+	Id        uint    `json:"id"`         // 会员ID
+	Uuid      uint64  `json:"uuid"`       // 会员UUID
+	Nickname  string  `json:"nickname"`   // 会员昵称
+	Phone     string  `json:"phone"`      // 会员手机号
+	Point     float64 `json:"point"`      // 会员积分
+	Balance   float64 `json:"balance"`    // 会员余额
+	IsVisitor bool    `json:"is_visitor"` // 是否游客
 }
 
 type CompanyResp struct {

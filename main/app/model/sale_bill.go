@@ -80,6 +80,12 @@ type SaleBill struct {
 	ShowMustPlan       uint `gorm:"column:show_must_plan;type:tinyint(1);default:1;comment:是否显示必点方案, 0-不显示 1-显示" json:"show_must_plan"`
 	AutoAddMustProduct uint `gorm:"column:auto_add_must_product;type:tinyint(1);default:1;comment:是否自动加购必点商品, 0-不自动加购 1-自动加购" json:"auto_add_must_product"`
 
+	// 2.4.0 版本新增字段，厨显端是否确认退菜整单
+	IsKitchenConfirm uint `gorm:"column:is_kitchen_confirm;type:tinyint(1);default:0;comment:厨显端是否确认退菜整单, 0-否 1-是" json:"is_kitchen_confirm"`
+
+	// 2.5.0 版本新增字段， 反结账次数
+	ReverseSettleCount uint `gorm:"column:reverse_settle_count;type:int(11);default:0;comment:反结账次数" json:"reverse_settle_count"`
+
 	// 关联模型
 	SaleOrders      []*SaleOrder      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
 	H5OrderProducts []*H5OrderProduct `gorm:"foreignKey:SaleBillUuid;references:uuid"`
@@ -88,6 +94,11 @@ type SaleBill struct {
 	Desk            *Desk             `gorm:"foreignKey:DeskUuid;references:uuid"`
 	BuffetPackage1  *BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
+}
+
+// IsReverseSettle 是否是反结账
+func (model *SaleBill) IsReverseSettle() bool {
+	return model.ReverseSettleCount > 0
 }
 
 // 是否是点餐订单

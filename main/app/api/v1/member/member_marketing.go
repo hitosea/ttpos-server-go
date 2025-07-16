@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthHandler 认证鉴权控制器
+// MarketingHandler 营销活动控制器
 type MarketingHandler struct {
 	marketingActivitySrv service.IMarketingActivitySrv
 }

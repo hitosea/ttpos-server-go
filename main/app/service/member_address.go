@@ -42,7 +42,7 @@ func NewMemberAddressSrvImpl(dbm *database.DBManager) IMemberAddressSrv {
 	}
 }
 
-// GetLevels 获取等级列表
+// GetAddressList 获取会员地址列表
 func (s *memberAddressSrv) GetAddressList(ctx context.Context, req member_req.MemberAddressListReq) (*member_resp.MemberAddressListResp, error) {
 	memberAddressRepo := repository.NewMemberAddressRepo(ctx.GetDB())
 	memberAddresses, total, err := memberAddressRepo.PaginateGet(

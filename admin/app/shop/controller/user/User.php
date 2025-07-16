@@ -152,7 +152,7 @@ class User extends Controller
      * @Apidoc\Method ("POST")
      * @Apidoc\Url ("/index.php/shop/user.user/deduct")
      * @Apidoc\Param("user_id", type="int", require=true, default="", desc="用户id")
-     * @Apidoc\Param("source", type="int", require=true, default="", desc="扣减方式 0-赠送余额 1-积分")
+     * @Apidoc\Param("source", type="int", require=true, default="", desc="扣减方式 0-赠送余额 1-积分 2-主账户余额")
      * @Apidoc\Param("value", type="float", require=true, default="", desc="值"),
      * @Apidoc\Param("remark", type="string", require=true, default="", desc="备注"),
      * @Apidoc\Returned()

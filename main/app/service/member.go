@@ -2,14 +2,19 @@ package service
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/resp/member_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
+	"ttpos-server-go/app/repository/saas"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -26,16 +31,19 @@ import (
 
 // IMemberSrv 定义会员服务接口
 type IMemberSrv interface {
-	GetLevels(companyUuid uint64) resp.MemberLevelList                                                             // 获取等级列表
-	GetCardTypes(companyUuid uint64) resp.MemberCardTypeList                                                       // 获取会员开类型
-	SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList                                         // 模糊搜索
-	AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error                                            // 添加会员
-	GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember                                   // 获取充值会员信息
-	GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (*resp.MemberDiscountResp, error) // 获取会员折扣
-	CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error                         // 使用会员优惠验证密码
-	HandleMemberUpgrade(companyUuid uint64, memberUuid uint64)                                                     // 处理会员升级
-	HandleMemberPoints(ctx context.Context, changeReq MemberPointsChangeReq) error                                 // 处理会员积分
-	HandleMemberBalance(ctx context.Context, changeReq MemberBalanceChangeReq) error                               // 处理会员余额
+	GetLevels(companyUuid uint64) resp.MemberLevelList                                                                                                         // 获取等级列表
+	GetCardTypes(companyUuid uint64) resp.MemberCardTypeList                                                                                                   // 获取会员开类型
+	SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList                                                                                     // 模糊搜索
+	AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error                                                                                        // 添加会员
+	GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember                                                                               // 获取充值会员信息
+	GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (*resp.MemberDiscountResp, error)                                             // 获取会员折扣
+	CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error                                                                     // 使用会员优惠验证密码
+	HandleMemberUpgrade(companyUuid uint64, memberUuid uint64)                                                                                                 // 处理会员升级
+	HandleMemberPoints(ctx context.Context, changeReq MemberPointsChangeReq) error                                                                             // 处理会员积分
+	HandleMemberBalance(ctx context.Context, changeReq MemberBalanceChangeReq) error                                                                           // 处理会员余额
+	GenerateRandomNickname() string                                                                                                                            // 生成随机昵称
+	GetMemberCouponList(ctx context.Context, couponListReq member_req.CouponListReq) (member_resp.CouponListWithPaginationResp, error)                         // 获取优惠券列表
+	GetMemberPointsRecordList(ctx context.Context, pointsRecordListReq member_req.PointsRecordListReq) (member_resp.PointsRecordListWithPaginationResp, error) // 获取积分记录列表
 }
 
 // memberSrv 会员服务结构体
@@ -259,7 +267,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 	if memberPointsChanged || memberBalanceChanged {
 		go func() {
 			if memberBalanceChanged {
-				// 发布“会员余额变动”事件
+				// 发布"会员余额变动"事件
 				s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
 					BasePayload: event.BasePayload{ // 会员余额变动
 						Ctx:          ctx,
@@ -271,7 +279,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 			}
 			if memberPointsChanged {
 				s.HandleMemberUpgrade(companyUuid, member.Uuid)
-				// 发布“会员积分变动”事件
+				// 发布"会员积分变动"事件
 				s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
 					BasePayload: event.BasePayload{ // 会员积分变动
 						Ctx:          ctx,
@@ -448,7 +456,7 @@ func (s *memberSrv) checkCanUpgrade(member model.Member, level model.MemberLevel
 	if level.OpenMoney == 1 && member.AccumulatedConsumptionAmount >= level.UpgradeMoney {
 		return true
 	}
-	if level.OpenPoint == 1 && member.GetPoints() >= level.UpgradePoint {
+	if level.OpenPoint == 1 && member.AccumulatedConsumptionGetPoint >= level.UpgradePoint {
 		return true
 	}
 	return false
@@ -578,4 +586,133 @@ func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.Che
 	}
 
 	return nil
+}
+
+// GenerateRandomNickname 生成随机昵称
+func (s *memberSrv) GenerateRandomNickname() string {
+	// 获取当前纳秒时间戳的后8位
+	now := time.Now().UnixNano()
+	timePart := now % 100000000 // 取后8位，范围0-99999999
+	// 生成4位随机数
+	rand.Seed(now + int64(rand.Intn(10000))) // 使用时间戳+额外随机数作为种子
+	randomPart := rand.Intn(10000)           // 范围0-9999
+	// 生成机器/进程标识（基于当前时间的微秒部分）
+	processPart := (now / 1000) % 1000 // 范围0-999
+	// 组合成一个大整数
+	combined := timePart*10000000 + int64(randomPart)*1000 + processPart
+	// 将整数转换为Base62编码（0-9, a-z, A-Z）
+	nickname := s.base62Encode(combined)
+	// 确保长度为9位，不足则前补随机字符
+	if len(nickname) < 9 {
+		charset := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+		for len(nickname) < 9 {
+			nickname = string(charset[rand.Intn(62)]) + nickname
+		}
+	} else if len(nickname) > 9 {
+		// 如果超过9位，取后9位
+		nickname = nickname[len(nickname)-9:]
+	}
+	// 为了进一步确保唯一性，如果前面的算法生成重复，使用UUID方案
+	memberRepo := saas.NewMemberRepo(s.dbm.GetDB(0))
+	if memberRepo.CheckNicknameExists(nickname) {
+		retryCount := 0
+		for memberRepo.CheckNicknameExists(nickname) && retryCount < 10 {
+			nickname = s.GenerateRandomNickname()
+			retryCount++
+		}
+	}
+	return nickname
+}
+
+// base62Encode 将整数编码为Base62字符串
+func (s *memberSrv) base62Encode(num int64) string {
+	if num == 0 {
+		return "0"
+	}
+
+	charset := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	base := int64(62)
+	result := ""
+
+	for num > 0 {
+		result = string(charset[num%base]) + result
+		num = num / base
+	}
+
+	return result
+}
+
+// GetMemberCouponList 获取优惠券列表
+func (s *memberSrv) GetMemberCouponList(ctx context.Context, couponListReq member_req.CouponListReq) (member_resp.CouponListWithPaginationResp, error) {
+	dbId := ctx.GetDbId()
+	couponRepo := repository.NewMemberCouponRepo(s.dbm.GetDB(dbId))
+	// 处理错误
+	var coupons []*model.MemberCoupon
+	var err error
+	if couponListReq.IsHistory == 1 {
+		coupons, err = couponRepo.GetHistoryMemberCouponList(couponListReq.MemberUuid)
+	} else {
+		coupons, err = couponRepo.GetValidMemberCouponList(couponListReq.MemberUuid)
+	}
+	if err != nil {
+		return member_resp.CouponListWithPaginationResp{}, errors.WithMessage(err, "获取优惠券列表失败")
+	}
+	// 转换为响应对象
+	respMemberCoupons := make([]member_resp.Coupon, 0)
+	for _, memberCoupon := range coupons {
+		var respMemberCoupon member_resp.Coupon
+		copier.Copy(&respMemberCoupon, memberCoupon)
+		if memberCoupon.DayStartTime == "00:00" && memberCoupon.DayEndTime == "23:59" {
+			respMemberCoupon.ApplicableTimePeriod = 0
+		} else {
+			respMemberCoupon.ApplicableTimePeriod = 1
+		}
+		respMemberCoupon.Status = memberCoupon.GetStatus()
+		respMemberCoupons = append(respMemberCoupons, respMemberCoupon)
+	}
+	// 返回响应对象
+	return member_resp.CouponListWithPaginationResp{
+		List: respMemberCoupons,
+	}, nil
+}
+
+// GetMemberPointsRecordList 获取积分记录列表
+func (s *memberSrv) GetMemberPointsRecordList(ctx context.Context, pointsRecordListReq member_req.PointsRecordListReq) (member_resp.PointsRecordListWithPaginationResp, error) {
+	dbId := ctx.GetDbId()
+	pointsRecordRepo := repository.NewMemberPointLogRepo(s.dbm.GetDB(dbId))
+
+	var opts []repository.DBOption
+	if pointsRecordListReq.Type == 1 {
+		opts = append(opts, pointsRecordRepo.WhereByPositiveValue())
+	} else if pointsRecordListReq.Type == 2 {
+		opts = append(opts, pointsRecordRepo.WhereByNegativeValue())
+	}
+
+	pointsRecords, total, err := pointsRecordRepo.PaginateGet(
+		pointsRecordListReq.PageNo,
+		pointsRecordListReq.PageSize,
+		append(opts, repository.CommonRepo.WhereByMemberUuid(pointsRecordListReq.MemberUuid))...,
+	)
+	if err != nil {
+		return member_resp.PointsRecordListWithPaginationResp{}, errors.WithMessage(err, "获取积分记录列表失败")
+	}
+
+	pointsRecordsResp := make([]member_resp.PointsRecord, 0)
+	for _, pointsRecord := range pointsRecords {
+		pointsRecordsResp = append(pointsRecordsResp, member_resp.PointsRecord{
+			Scene:      pointsRecord.Scene,
+			Value:      pointsRecord.Value,
+			CreateTime: pointsRecord.CreateTime,
+		})
+	}
+
+	return member_resp.PointsRecordListWithPaginationResp{
+		List:       pointsRecordsResp,
+		TotalPoint: ctx.GetMember().Point,
+		Meta: dto.PageResponse{
+			PageNo:   pointsRecordListReq.PageNo,
+			PageSize: pointsRecordListReq.PageSize,
+			Total:    total,
+		},
+	}, nil
 }

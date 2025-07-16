@@ -17,6 +17,7 @@ import (
 
 	"github.com/jinzhu/copier"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 type IProductionSrv interface {
@@ -25,6 +26,8 @@ type IProductionSrv interface {
 	GetHistory(ctx context.Context) (resp.ProductionHistory, error)                                                               // 获取上菜历史
 	Finish(ctx context.Context, productionUuid uint64) error                                                                      // 完成制作
 	Recovery(ctx context.Context, productionUuid uint64) error                                                                    // 恢复制作
+	ConfirmReturn(ctx context.Context, productUuid uint64) error                                                                  // 厨显端确认退菜
+	ConfirmReturnAll(ctx context.Context, saleBillUuid uint64) error                                                              // 厨显端确认退菜整单
 }
 
 // productionSrv 收银服务结构体
@@ -55,7 +58,17 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	productPackageUuidOpt := productionRepo.WhereProductPackageUuidIn(productPackageUuids)
 	saleBillUuidOpt := productionRepo.WhereSaleBillUuidIn(saleBillUuids)
 
-	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnSaleBill, req.PageNo, req.PageSize, statusOpt, productPackageUuidOpt, saleBillUuidOpt)
+	opts := []repository.DBOption{
+		statusOpt,
+		productPackageUuidOpt,
+		saleBillUuidOpt,
+	}
+	// 2.4.0 版本之前，只显示大于0的商品
+	if !ctx.Version(context.GTE, "2.4.0") {
+		opts = append(opts, productionRepo.WhereProductNumGT0())
+	}
+
+	limitedProducts, total, err := productionRepo.GetLimitedProducts(constant.ProductionOrderProductColumnSaleBill, req.PageNo, req.PageSize, opts...)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}
@@ -63,8 +76,16 @@ func (s *productionSrv) GetProductListByOrder(ctx context.Context, req req.Produ
 	for _, limitedProduct := range limitedProducts {
 		uuids = append(uuids, limitedProduct.SaleBillUuid)
 	}
-	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt,
-		productPackageUuidOpt, saleBillUuidOpt, productionRepo.WhereSaleBillUuidIn(uuids))
+	opts2 := []repository.DBOption{
+		productPackageUuidOpt,
+		saleBillUuidOpt,
+		productionRepo.WhereSaleBillUuidIn(uuids),
+	}
+	// 2.4.0 版本之前，只显示大于0的商品
+	if !ctx.Version(context.GTE, "2.4.0") {
+		opts2 = append(opts2, productionRepo.WhereProductNumGT0())
+	}
+	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt, opts2...)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.ErrInternal
 	}
@@ -93,6 +114,7 @@ func (s *productionSrv) getProductPackageUuidsAndSaleBillUuids(ctx context.Conte
 		},
 	}
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	// 获取厨显设备信息
 	deviceRepo := repository.NewDeviceRepo(db)
 	device, err := deviceRepo.GetDevice(deviceRepo.WhereSn(ctx.GetDeviceSn()), deviceRepo.WhereSource(ctx.GetSource()))
 	if err != nil {
@@ -101,12 +123,24 @@ func (s *productionSrv) getProductPackageUuidsAndSaleBillUuids(ctx context.Conte
 	if device.ProductPrinterUuid == 0 {
 		return productPackageUuids, saleBillUuids, emptyResp, nil
 	}
+	// 厨显绑定了商品打印机
+	// 从商品打印设置中获取打印机关联的商品Uuid
 	productPrinterRepo := repository.NewProductPrinterRepo(db)
 	productPackageUuids, err = productPrinterRepo.GetProductPackageUuids(productPrinterRepo.WhereProductPrinterUuid(device.ProductPrinterUuid))
 	if err != nil {
 		return productPackageUuids, saleBillUuids, emptyResp, errors.ErrInternal
 	}
-	saleBillUuids, err = productPrinterRepo.GetProductionSaleBillUuid(device.ProductPrinterUuid)
+
+	var opt repository.DBOption
+	// 如果版本号大于等于2.4.0，则获取厨显端未确认退菜整单的账单Uuid；否则获取未被删除的账单Uuid
+	if ctx.Version(context.GTE, "2.4.0") {
+		opt = productPrinterRepo.WhereSaleBillIsKitchenConfirm(0)
+	} else {
+		opt = repository.NotDeleted
+	}
+
+	// 从商品打印设置中获取区域ID，根据区域ID获取销售账单Uuid
+	saleBillUuids, err = productPrinterRepo.GetProductionSaleBillUuid(device.ProductPrinterUuid, opt)
 	if err != nil {
 		return productPackageUuids, saleBillUuids, emptyResp, errors.ErrInternal
 	}
@@ -128,6 +162,10 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 		productPackageUuidOpt,
 		saleBillUuidOpt,
 	}
+	// 2.4.0 版本之前，只显示大于0的商品
+	if !ctx.Version(context.GTE, "2.4.0") {
+		dbOptions = append(dbOptions, productionRepo.WhereProductNumGT0())
+	}
 	if req.CategoryUuid != 0 {
 		dbOptions = append(dbOptions, productionRepo.WhereProductFirstCategoryUuidIn([]uint64{req.CategoryUuid}))
 	}
@@ -140,8 +178,18 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 		uuids = append(uuids, product.FirstCategoryUuid)
 	}
 
-	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt,
-		productPackageUuidOpt, saleBillUuidOpt, productionRepo.WhereProductFirstCategoryUuidIn(uuids), productionRepo.WithProductCategory(), productionRepo.WithProductCategoryMultiLanguageName())
+	dbOptions2 := []repository.DBOption{
+		productPackageUuidOpt,
+		saleBillUuidOpt,
+		productionRepo.WhereProductFirstCategoryUuidIn(uuids),
+		productionRepo.WithProductCategory(),
+		productionRepo.WithProductCategoryMultiLanguageName(),
+	}
+	// 2.4.0 版本之前，只显示大于0的商品
+	if !ctx.Version(context.GTE, "2.4.0") {
+		dbOptions2 = append(dbOptions2, productionRepo.WhereProductNumGT0())
+	}
+	sendKitchenNum, products, err := productionRepo.GetProducts(0, repository.CreateTimeAsc, statusOpt, dbOptions2...)
 	if err != nil {
 		return resp.ProductionListWithPagination{}, errors.WithMessage(errors.ErrInternal)
 	}
@@ -163,6 +211,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
 			item.SerialNo = product.SaleBill.SerialNo
 			item.DiningMethod = product.SaleBill.DiningMethod
+			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 // 是否已经整单取消
 			items = append(items, item)
 		}
 		if group.LocaleName == nil {
@@ -241,6 +290,8 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 			if paginatedProduct.SaleBillUuid != product.SaleBillUuid {
 				continue
 			}
+			group.SaleBillUuid = product.SaleBillUuid                 // 销售账单Uuid
+			group.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 // 是否已经整单取消
 			if product.SaleBill.SerialNo != "" && group.LocaleName == nil {
 				group.LocaleName = &dto.LocaleResponse{
 					ZH:   product.SaleBill.SerialNo,
@@ -261,7 +312,8 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
 			item.SerialNo = product.SaleBill.SerialNo
-			item.DiningMethod = product.GetWrapStatus() // 订单商品的打包状态
+			item.DiningMethod = product.GetWrapStatus()              // 订单商品的打包状态
+			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 // 是否已经整单取消
 			items = append(items, item)
 		}
 		if group.LocaleName == nil {
@@ -292,6 +344,9 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 	}
 	if product.Status != constant.ProductionOrderProductStatusCooking {
 		return errors.New("订单商品未送厨")
+	}
+	if !(product.Num > 0) {
+		return errors.New("订单商品数量为0")
 	}
 
 	finishedTime := time.Now().Unix()
@@ -370,6 +425,65 @@ func (s *productionSrv) Recovery(ctx context.Context, productUuid uint64) error 
 		"update_time":    time.Now().Unix(),
 		"sale_bill_uuid": product.SaleBillUuid,
 		"desk_uuid":      product.SaleBill.DeskUuid,
+	})
+	return nil
+}
+
+// ConfirmReturn 厨显端确认退菜
+func (s *productionSrv) ConfirmReturn(ctx context.Context, productUuid uint64) error {
+	productionRepo := repository.NewProductionRepo(s.dbm.GetDB(ctx.GetCompanyUuid()))
+	product, _ := productionRepo.GetProduct(productionRepo.WhereProductUuid(productUuid))
+	if product.Uuid == 0 {
+		return errors.New("订单商品不存在")
+	}
+	if product.Num > 0 {
+		return errors.New("订单商品数量大于0")
+	}
+	if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereProductUuid(productUuid)}, map[string]any{
+		"delete_time": time.Now().Unix(),
+	}); err != nil {
+		return errors.ErrInternal
+	}
+	// 恢复制作后，推送更新厨显
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
+		"update_time": time.Now().Unix(),
+	})
+	return nil
+}
+
+// ConfirmReturnAll 厨显端确认退菜整单
+func (s *productionSrv) ConfirmReturnAll(ctx context.Context, saleBillUuid uint64) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	saleBillRepo := repository.NewSaleBillRepo(db)
+	saleBill, err := saleBillRepo.GetSaleBillByUuid(saleBillUuid)
+	if err != nil {
+		return errors.ErrInternal
+	}
+	if saleBill.DeleteTime == 0 || saleBill.IsKitchenConfirm != 0 {
+		return errors.New("订单未整单取消")
+	}
+	saleBill.IsKitchenConfirm = 1
+
+	// 销售订单更新为厨显端已确认退整单，并更新送厨商品为已删除
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if err := repository.NewSaleBillRepo(tx).UpdateSaleBill(saleBill); err != nil {
+			return err
+		}
+		productionRepo := repository.NewProductionRepo(tx)
+		if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleBillUuid(saleBillUuid)}, map[string]any{
+			"delete_time": time.Now().Unix(),
+		}); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return errors.ErrInternal
+	}
+
+	// 恢复制作后，推送更新厨显
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
+		"update_time": time.Now().Unix(),
 	})
 	return nil
 }

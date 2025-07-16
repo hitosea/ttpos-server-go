@@ -22,9 +22,9 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
-	"ttpos-server-go/app/repository/admin"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
+	"ttpos-server-go/app/repository/saas"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -1865,8 +1865,9 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		tx.Rollback()
 		return errors.WithMessage(builtinerrors.New("删除送厨单失败"), err.Error())
 	}
+	// 修改送厨商品数量为0，在确认整单退菜时、确认该菜品全退时，再标记为删除
 	err = productionRepo.UpdateProduct([]repository.DBOption{saleBillUuidOpt}, map[string]any{
-		"delete_time": time.Now().Unix(),
+		"num": 0,
 	})
 	if err != nil {
 		tx.Rollback()
@@ -2722,6 +2723,7 @@ func (s *orderSrv) ReverseSettle(ctx context.Context, req req.OrderReverseSettle
 	// 销售账单状态变为未结账状态
 	// 销售订单状态变为未结账状态
 	// 销售订单的所有付款单都退款，并生成退款单
+	// 反结账次数+1
 	saleBill.SetReverseSettle()
 
 	// 如果销售账单是桌台订单，则开桌
@@ -6201,6 +6203,7 @@ func newProductionOrder(ctx context.Context, saleOrderUuid, saleBillUuid, deskUu
 			FirstCategoryUuid:     firstCategoryUuid,
 			ProductPackageUuid:    unCookingSaleOrderProduct.ProductPackageUuid,
 			Num:                   unCookingSaleOrderProduct.Num,
+			InitNum:               unCookingSaleOrderProduct.Num,
 			FlavorName:            unCookingSaleOrderProduct.Name,
 			ProductAttributeNames: attributeName.ToJson(),
 			Status:                constant.ProductionOrderProductStatusCooking,
@@ -6368,9 +6371,9 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 				map[string]any{"num": keepNum}); err != nil {
 				return errors.WithMessage(err)
 			}
-		} else { // 标记删除
+		} else { // 修改数量为0，在确认整单退菜时、确认该菜品全退时，再标记为删除
 			if err := productionRepo.UpdateProduct([]repository.DBOption{productionRepo.WhereSaleOrderProductUuid(saleOrderProduct.Uuid)},
-				map[string]any{"delete_time": time.Now().Unix()}); err != nil {
+				map[string]any{"num": 0}); err != nil {
 				return errors.WithMessage(err)
 			}
 		}
@@ -7737,7 +7740,7 @@ func (s *orderSrv) InstantOrderPaymentInfo(ctx context.Context, saleBill *model.
 	methodItems := make([]resp.PaymentMethodItem, 0)
 	amounts := make([]resp.PaymentMethodAmount, 0)
 
-	paymentApp, paymentAppErr := admin.NewPaymentAppRepo(s.dbm.GetDB(0)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
+	paymentApp, paymentAppErr := saas.NewPaymentAppRepo(s.dbm.GetDB(0)).GetPaymentAppCompanyUuid(ctx.GetCompanyUuid())
 	for _, paymentMethod := range paymentMethods {
 		// 不显示免单
 		if paymentMethod.Code == constant.PaymentMethodCodeFreePay {

@@ -14,7 +14,7 @@ type IDeviceRepo interface {
 	WhereMain() DBOption                // 主设备条件
 
 	GetDevice(opts ...DBOption) (model.Device, error)       // 获取设备 - 不包含软删除
-	GetDeviceAll(opts ...DBOption) (model.Device, error)    // 获取设备 - 所以 - 包含软删除
+	GetDeviceAll(opts ...DBOption) (model.Device, error)    // 获取设备 - 所有 - 包含软删除
 	GetDeviceBySn(sn string) (*model.Device, error)         // 根据sn获取设备
 	GetDeviceByUuid(uuid uint64) (*model.Device, error)     // 根据uuid获取设备
 	GetDeviceBrand(opts ...DBOption) string                 // 获取设备品牌

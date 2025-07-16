@@ -27,6 +27,16 @@ type MemberCoupon struct {
 	MarketingCoupon *MarketingCoupon `gorm:"foreignKey:CouponUuid;references:Uuid" json:"marketing_coupon"`
 }
 
+// 获取优惠券状态
+func (model *MemberCoupon) GetStatus() int {
+	if model.IsExpire() {
+		return 2
+	} else if model.IsUsed() {
+		return 1
+	}
+	return 0
+}
+
 // 判断优惠券是否可用
 // memberUuid 订单会员uuid
 // nowTime 订单点击结账时该商家的时区实时时间，格式：HH:mm

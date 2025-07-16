@@ -1,6 +1,6 @@
 package constant
 
-// 场景,10-用户充值 20-订单赠送 30-管理员操作 40-订单退款 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减 100-积分抵扣 110-积分抵扣反结账
+// 场景,10-用户充值 20-订单赠送 30-管理员操作 40-订单退款 60-订单反结账 70-充值赠送 80-充值反结账 90-扣减 100-积分抵扣 110-积分抵扣反结账 120-积分抵扣反结账 130-营销活动赠送
 const (
 	MemberPointLogSceneRecharge              = 10  // 用户充值
 	MemberPointLogSceneConsume               = 20  // 消费赠送/订单赠送
@@ -13,9 +13,10 @@ const (
 	MemberPointLogSceneCashierOrAssistant    = 100 // 收银机、点餐助手发卡赠送
 	MemberPointLogScenePointsExchange        = 110 // 积分抵扣
 	MemberPointLogScenePointsExchangeReverse = 120 // 积分抵扣反结账
+	MemberPointLogSceneMarketingActivity     = 130 // 营销活动赠送
 )
 
-// 场景,10-用户充值 20-用户消费 30-管理员操作 40-订单退款 50-余额提现 60-订单反结账 70-充值反结账 80-充值退款 90-扣减
+// 场景,10-用户充值 20-用户消费 30-管理员操作 40-订单退款 50-余额提现 60-订单反结账 70-充值反结账 80-充值退款 90-扣减 100-收银机、点餐助手发卡赠送
 const (
 	MemberBalanceLogRecharge           = 10  // 用户充值
 	MemberBalanceLogConsume            = 20  // 用户消费

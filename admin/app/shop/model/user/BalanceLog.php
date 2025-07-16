@@ -55,8 +55,11 @@ class BalanceLog extends BalanceLogModel
             ->order(['log.create_time' => 'desc'])
             ->paginate($query);
         foreach ($list as &$item) {
+            // 总变动余额
             $item['money'] = helper::number2($item['money']);
-            //
+            // 变动主账户余额
+            $item['main_money'] = helper::bcsub($item['money'], $item['gift_money']);
+            // 变动场景描述
             if ($item['scene']['value'] == BalanceLogSceneEnum::DEDUCT) {
                 $item['describe'] = $item['describe'] . '：' . ($item['remark'] ?: '-');
             }

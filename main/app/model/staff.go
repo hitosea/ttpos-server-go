@@ -162,6 +162,7 @@ type StaffShiftSnapshotOrder struct {
 	ReceivablePrice         float64                        `json:"receivable_price"`
 	NotTaxTotalProductPrice float64                        `json:"not_tax_total_product_price"`
 	TotalProductPrice       float64                        `json:"total_product_price"`
+	TotalGiveProductPrice   float64                        `json:"total_give_product_price"`
 	ServiceMoney            float64                        `json:"service_money"`
 	DiscountMoney           float64                        `json:"discount_money"`
 	ConsumptionTaxMoney     float64                        `json:"consumption_tax_money"`

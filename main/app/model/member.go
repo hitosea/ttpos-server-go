@@ -10,26 +10,30 @@ import (
 // Member 会员信息表 `ttpos_member`
 type Member struct {
 	BaseModel
-	MemberNo                     string  `gorm:"column:member_no;type:varchar(255);comment:会员编号;NOT NULL" json:"member_no"`
-	Nickname                     string  `gorm:"column:nickname;type:varchar(255);comment:昵称;NOT NULL" json:"nickname"`
-	Gender                       int     `gorm:"column:gender;type:tinyint(3);default:0;comment:性别,0-女 1-男 2-未知;NOT NULL" json:"gender"`
-	Phone                        string  `gorm:"column:phone;type:varchar(20);comment:电话号码;NOT NULL" json:"phone"`
-	Password                     string  `gorm:"column:password;type:varchar(200);comment:密码;NOT NULL" json:"password"`
-	Birthday                     int64   `gorm:"column:birthday;type:int(10);comment:生日,时间戳" json:"birthday"`
-	Point                        float64 `gorm:"column:point;type:decimal(12,2);default:0.00;comment:积分;NOT NULL" json:"point"`
-	FrozenPoint                  float64 `gorm:"column:frozen_point;type:decimal(12,2);default:0.00;comment:冻结积分。冻结积分不能使用，在前端显示为已扣除或已增加。冻结积分可为负数。积分余额=积分+冻结积分;NOT NULL" json:"frozen_point"`
-	AccumulatedConsumptionAmount float64 `gorm:"column:accumulated_consumption_amount;type:decimal(12,2);default:0.00;comment:累计消费金额;NOT NULL" json:"accumulated_consumption_amount"`
-	ConsumptionCount             int     `gorm:"column:consumption_count;type:int(11);default:0;comment:消费次数;NOT NULL" json:"consumption_count"`
-	Balance                      float64 `gorm:"column:balance;type:decimal(12,2);default:0.00;comment:余额;NOT NULL" json:"balance"`
-	FrozenBalance                float64 `gorm:"column:frozen_balance;type:decimal(12,2);default:0.00;comment:冻结余额。冻结余额不能使用，在前端显示为已扣除或已增加。冻结余额可为负数。会员余额=余额+冻结余额;NOT NULL" json:"frozen_balance"`
-	GiftBalance                  float64 `gorm:"column:gift_balance;type:decimal(12,2);default:0.00;comment:赠送账户余额;NOT NULL" json:"gift_balance"`
-	FrozenGiftBalance            float64 `gorm:"column:frozen_gift_balance;type:decimal(12,2);default:0.00;comment:冻结赠送账户余额。冻结赠送账户余额不能使用，在前端显示为已扣除或已增加。冻结赠送账户余额可为负数。赠送账户余额=赠送账户余额+冻结赠送账户余额;NOT NULL" json:"frozen_gift_balance"`
-	AccumulatedRechargeAmount    float64 `gorm:"column:accumulated_recharge_amount;type:decimal(12,2);default:0.00;comment:累计充值金额;NOT NULL" json:"accumulated_recharge_amount"`
-	MemberLevelUuid              uint64  `gorm:"column:member_level_uuid;type:bigint(20) unsigned;default:0;comment:会员等级ID;NOT NULL" json:"member_level_uuid"`
-	MemberCardUuid               uint64  `gorm:"column:member_card_uuid;type:bigint(20) unsigned;default:0;comment:会员卡片ID;NOT NULL" json:"member_card_uuid"`
-	MemberCardNo                 string  `gorm:"column:member_card_no;type:varchar(255);comment:会员卡号;NOT NULL" json:"member_card_no"`
-	ReferrerUuid                 uint64  `gorm:"column:referrer_uuid;type:bigint(20) unsigned;default:0;comment:推荐人ID;NOT NULL" json:"referrer_uuid"`
-	ActivityUuid                 uint64  `gorm:"column:activity_uuid;type:bigint(20) unsigned;default:0;comment:活动ID;NOT NULL" json:"activity_uuid"`
+	MemberNo                       string  `gorm:"column:member_no;type:varchar(255);comment:会员编号;NOT NULL" json:"member_no"`
+	Nickname                       string  `gorm:"column:nickname;type:varchar(255);comment:昵称;NOT NULL" json:"nickname"`
+	Gender                         int     `gorm:"column:gender;type:tinyint(3);default:0;comment:性别,0-女 1-男 2-未知;NOT NULL" json:"gender"`
+	Phone                          string  `gorm:"column:phone;type:varchar(20);comment:电话号码;NOT NULL" json:"phone"`
+	IsVisitor                      bool    `gorm:"column:is_visitor;type:tinyint(1);default:0;comment:是否游客,0-否 1-是;NOT NULL" json:"is_visitor"`
+	DeviceId                       string  `gorm:"column:device_id;type:varchar(100);comment:设备ID,用于标识游客;NOT NULL" json:"device_id"`
+	Password                       string  `gorm:"column:password;type:varchar(200);comment:密码;NOT NULL" json:"password"`
+	Birthday                       int64   `gorm:"column:birthday;type:int(10);comment:生日,时间戳" json:"birthday"`
+	Point                          float64 `gorm:"column:point;type:decimal(12,2);default:0.00;comment:积分;NOT NULL" json:"point"`
+	FrozenPoint                    float64 `gorm:"column:frozen_point;type:decimal(12,2);default:0.00;comment:冻结积分。冻结积分不能使用，在前端显示为已扣除或已增加。冻结积分可为负数。积分余额=积分+冻结积分;NOT NULL" json:"frozen_point"`
+	AccumulatedGetPoint            float64 `gorm:"column:accumulated_get_point;type:decimal(12,2);default:0.00;comment:累计获取积分;NOT NULL" json:"accumulated_get_point"`
+	AccumulatedConsumptionGetPoint float64 `gorm:"column:accumulated_consumption_get_point;type:decimal(12,2);default:0.00;comment:累计消费获取积分;NOT NULL" json:"accumulated_consumption_get_point"`
+	AccumulatedConsumptionAmount   float64 `gorm:"column:accumulated_consumption_amount;type:decimal(12,2);default:0.00;comment:累计消费金额;NOT NULL" json:"accumulated_consumption_amount"`
+	ConsumptionCount               int     `gorm:"column:consumption_count;type:int(11);default:0;comment:消费次数;NOT NULL" json:"consumption_count"`
+	Balance                        float64 `gorm:"column:balance;type:decimal(12,2);default:0.00;comment:余额;NOT NULL" json:"balance"`
+	FrozenBalance                  float64 `gorm:"column:frozen_balance;type:decimal(12,2);default:0.00;comment:冻结余额。冻结余额不能使用，在前端显示为已扣除或已增加。冻结余额可为负数。会员余额=余额+冻结余额;NOT NULL" json:"frozen_balance"`
+	GiftBalance                    float64 `gorm:"column:gift_balance;type:decimal(12,2);default:0.00;comment:赠送账户余额;NOT NULL" json:"gift_balance"`
+	FrozenGiftBalance              float64 `gorm:"column:frozen_gift_balance;type:decimal(12,2);default:0.00;comment:冻结赠送账户余额。冻结赠送账户余额不能使用，在前端显示为已扣除或已增加。冻结赠送账户余额可为负数。赠送账户余额=赠送账户余额+冻结赠送账户余额;NOT NULL" json:"frozen_gift_balance"`
+	AccumulatedRechargeAmount      float64 `gorm:"column:accumulated_recharge_amount;type:decimal(12,2);default:0.00;comment:累计充值金额;NOT NULL" json:"accumulated_recharge_amount"`
+	MemberLevelUuid                uint64  `gorm:"column:member_level_uuid;type:bigint(20) unsigned;default:0;comment:会员等级ID;NOT NULL" json:"member_level_uuid"`
+	MemberCardUuid                 uint64  `gorm:"column:member_card_uuid;type:bigint(20) unsigned;default:0;comment:会员卡片ID;NOT NULL" json:"member_card_uuid"`
+	MemberCardNo                   string  `gorm:"column:member_card_no;type:varchar(255);comment:会员卡号;NOT NULL" json:"member_card_no"`
+	ReferrerUuid                   uint64  `gorm:"column:referrer_uuid;type:bigint(20) unsigned;default:0;comment:推荐人ID;NOT NULL" json:"referrer_uuid"`
+	ActivityUuid                   uint64  `gorm:"column:activity_uuid;type:bigint(20) unsigned;default:0;comment:活动ID;NOT NULL" json:"activity_uuid"`
 
 	MemberLevel       *MemberLevel       `gorm:"foreignKey:MemberLevelUuid;references:Uuid"`
 	MemberCard        *MemberCard        `gorm:"foreignKey:MemberCardUuid;references:Uuid"`
@@ -67,7 +71,9 @@ func (model *Member) ChangePoint(points float64) {
 // 更改会员积分。仅用于处理积分变动记录时，修改会员积分。
 // 参数changePoints为积分变动值，正数为增加积分，负数为扣减积分。
 // 清零冻结的积分。表示该会员的积分变动已经处理完，无需再冻结。
-func (model *Member) UpdatePoint(changePoints float64) {
+func (model *Member) UpdatePoint(changePoints float64, changePointsConsumption float64) {
+	model.AccumulatedGetPoint = decimal.NewFromFloat(model.AccumulatedGetPoint).Add(decimal.NewFromFloat(changePoints)).InexactFloat64()
+	model.AccumulatedConsumptionGetPoint = decimal.NewFromFloat(model.AccumulatedConsumptionGetPoint).Add(decimal.NewFromFloat(changePointsConsumption)).InexactFloat64()
 	model.Point = decimal.NewFromFloat(model.Point).Add(decimal.NewFromFloat(changePoints)).InexactFloat64()
 	model.FrozenPoint = 0
 }

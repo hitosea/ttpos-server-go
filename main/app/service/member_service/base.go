@@ -99,14 +99,18 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 		fmt.Println("获取门店业务设置失败", zap.Error(err))
 	}
 
+	member := ctx.GetMember()
+
 	// 返回
 	return member_resp.MemberBaseInfoResp{
 		Member: member_resp.MemberResp{
-			Uuid:     ctx.GetMemberUuid(),
-			Nickname: ctx.GetMember().Nickname,
-			Phone:    ctx.GetMember().Phone,
-			Point:    ctx.GetMember().Point,
-			Balance:  ctx.GetMember().Balance,
+			Id:        member.ID,
+			Uuid:      member.Uuid,
+			Nickname:  member.Nickname,
+			Phone:     member.Phone,
+			Point:     member.Point,
+			Balance:   member.Balance,
+			IsVisitor: member.IsVisitor,
 		},
 		Company: member_resp.CompanyResp{
 			Uuid:         company.Uuid,

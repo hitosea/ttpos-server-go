@@ -23,7 +23,7 @@ type ProductHandler struct {
 // GetProductCategoryList 获取会员端产品类别列表
 // @Summary 获取会员端产品类别列表
 // @Description 获取会员端产品类别列表
-// @Tags 会员端
+// @Tags 会员端.产品列表
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -47,7 +47,7 @@ func (h *ProductHandler) GetProductCategoryList(c *gin.Context) {
 // GetProductList 获取会员端产品列表
 // @Summary 获取会员端产品列表
 // @Description 获取会员端产品列表
-// @Tags 会员端
+// @Tags 会员端.产品列表
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -81,7 +81,7 @@ func (h *ProductHandler) GetProductList(c *gin.Context) {
 // GetProductCategoryList 获取会员端商家推荐商品列表
 // @Summary 获取会员端商家推荐商品列表
 // @Description 获取会员端商家推荐商品列表
-// @Tags 会员端
+// @Tags 会员端.产品列表
 // @Accept json
 // @Produce json
 // @Security JwtToken

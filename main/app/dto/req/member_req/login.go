@@ -87,15 +87,11 @@ func (req *MemberLoginReq) Validate() error {
 type MemberRegisterReq struct {
 	Nickname      string `json:"nickname" form:"nickname"`             // 昵称 最大长度50，不能输入特殊的字符
 	Phone         string `json:"phone" form:"phone"`                   // 手机号
-	CompanyUuid   uint64 `json:"company_uuid" form:"company_uuid"`     // 集团ID
 	Code          string `json:"code" form:"code"`                     // 验证码
 	ReferrerPhone string `json:"referrer_phone" form:"referrer_phone"` // 推荐人手机号
 }
 
 func (req *MemberRegisterReq) Validate() error {
-	if req.CompanyUuid == 0 {
-		return errors.New("商家ID不能为空")
-	}
 	if req.Nickname == "" {
 		return errors.New("昵称不能为空")
 	}

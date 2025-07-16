@@ -59,14 +59,25 @@
               </template>
             </template>
           </el-table-column>
+          <el-table-column prop="balance" :label="$t('主账户变动数量')">
+            <template #default="scope">
+              <p v-if="scope.row.main_money > 0"> +{{ this.$formatPrice(scope.row.main_money) }} </p>
+              <p v-else>
+                {{ Number(scope.row.main_money).toLocaleString('en-US') }}
+              </p>
+            </template>
+          </el-table-column>
+          <el-table-column prop="gift_money" :label="$t('赠送账户变动数量')">
+            <template #default="scope">
+              <p v-if="scope.row.gift_money > 0"> +{{ this.$formatPrice(scope.row.gift_money) }} </p>
+              <p v-else>
+                {{ Number(scope.row.gift_money).toLocaleString('en-US') }}
+              </p>
+            </template>
+          </el-table-column>
           <el-table-column prop="scene.text" :label="$t('变动场景')">
             <template #default="scope">
-              <span v-if="scope.row.scene.value == 10" style="color: #409eff">{{ scope.row.scene.text }}</span>
-              <span v-if="scope.row.scene.value == 20" style="color: #67c23a">{{ scope.row.scene.text }}</span>
-              <span v-if="scope.row.scene.value == 30" style="color: #f56c6c">{{ scope.row.scene.text }}</span>
-              <span v-if="scope.row.scene.value == 40" style="color: #e6a23c">{{ scope.row.scene.text }}</span>
-              <span v-if="scope.row.scene.value == 50" style="color: #e63c81">{{ scope.row.scene.text }}</span>
-              <span v-if="scope.row.scene.value == 90" style="color: #e63c81">{{ scope.row.scene.text }}</span>
+              <span :style="{ color: getSceneColor(scope.row.scene.value) }">{{ scope.row.scene.text }}</span>
             </template>
           </el-table-column>
 
@@ -196,49 +207,62 @@
           }
         }
       },
-      /* 翻译 */
+      /**
+       * 翻译文本中的关键词
+       * @param {string} text 原始文本
+       * @returns {string} 翻译后的文本
+       */
       description(text) {
         let result = text;
-        if (result.includes('用户充值')) {
-          result = result.replace('用户充值', $t('用户充值'));
-        }
-        if (result.includes('用户消费')) {
-          result = result.replace('用户消费', $t('用户消费'));
-        }
-        if (result.includes('后台管理员扣减')) {
-          result = result.replace('后台管理员扣减', $t('后台管理员扣减'));
-        }
-        if (result.includes('后台管理员')) {
-          result = result.replace('后台管理员', $t('后台管理员'));
-        }
-        if (result.includes('订单退款')) {
-          result = result.replace('订单退款', $t('订单退款'));
-        }
-        if (result.includes('订单赠送')) {
-          result = result.replace('订单赠送', $t('订单赠送'));
-        }
-        if (result.includes('订单反结账')) {
-          result = result.replace('订单反结账', $t('订单反结账'));
-        }
-        if (result.includes('后台发放会员卡赠送')) {
-          result = result.replace('后台发放会员卡赠送', $t('后台发放会员卡赠送'));
-        }
-        if (result.includes('收银充值赠送积分')) {
-          result = result.replace('收银充值赠送积分', $t('收银充值赠送积分'));
-        }
-        if (result.includes('收银充值')) {
-          result = result.replace('收银充值', $t('收银充值'));
-        }
-        if (result.includes('收银机管理员操作')) {
-          result = result.replace('收银机管理员操作', $t('收银机管理员操作'));
-        }
-        if (result.includes('收银机管理员充值赠送操作')) {
-          result = result.replace('收银机管理员充值赠送操作', $t('收银机管理员充值赠送操作'));
-        }
-        if (result.includes('操作')) {
-          result = result.replace('操作', $t('操作'));
-        }
+
+        // 翻译关键词映射表（按长度从长到短排序，避免部分替换问题）
+        const translateKeywords = [
+          '点餐助手管理员添加会员发卡赠送操作',
+          '收银机管理员添加会员发卡赠送操作',
+          '收银机管理员充值赠送操作',
+          '后台发放会员卡赠送',
+          '收银充值赠送积分',
+          '收银机管理员操作',
+          '后台管理员扣减',
+          '订单反结账',
+          '抵扣反结账',
+          '后台管理员',
+          '订单赠送',
+          '积分抵扣',
+          '订单退款',
+          '收银充值',
+          '用户充值',
+          '用户消费',
+          '操作',
+        ];
+
+        // 遍历关键词进行替换
+        translateKeywords.forEach((keyword) => {
+          if (result.includes(keyword)) {
+            result = result.replace(new RegExp(keyword, 'g'), $t(keyword));
+          }
+        });
+
         return result;
+      },
+
+      /**
+       * 根据场景值获取对应的颜色
+       * @param {number} value 场景值
+       * @returns {string} 颜色值
+       */
+      getSceneColor(value) {
+        // 场景颜色映射
+        const sceneColorMap = {
+          10: '#409eff', // 蓝色
+          20: '#67c23a', // 绿色
+          30: '#f56c6c', // 红色
+          40: '#e6a23c', // 橙色
+          50: '#e63c81', // 粉色
+          90: '#e63c81', // 粉色
+        };
+
+        return sceneColorMap[value] || '#000000'; // 默认黑色
       },
     },
   };

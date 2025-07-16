@@ -96,6 +96,7 @@ class UserShiftSnapshot extends BaseModel
             'product_num' => $businessData['total_product_num'], // 商品数量
             'discount_money' => $businessData['total_discount_money'], // 优惠折扣
             'user_discount_money' => $businessData['total_user_discount_money'], // 会员折扣
+            'total_give_product_price' => $businessData['total_give_product_price'] ?? 0, // 赠送商品金额
             'refund_money' => $refundData['refund_amount'], // 退款
             'recharge_amount' => $businessData['member_data']['recharge_amount'], // 充值金额
             'gift_money' => $businessData['member_data']['gift_money'], // 赠送金额
@@ -182,7 +183,7 @@ class UserShiftSnapshot extends BaseModel
             $balance = 0;
             if (isset($detail['order']['incomes'])) {
                 foreach ($detail['order']['incomes'] as $income) {
-                    if ($income['pay_type'] == 10) {
+                    if (isset($income['pay_type']) && $income['pay_type'] == 10) {
                         $balance = helper::bcadd($balance, $income['price'], 2);
                     }
                 }

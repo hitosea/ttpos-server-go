@@ -2126,5 +2126,11 @@ return [
     "距离范围参数错误" => "Distance range parameter error",
     "外送渠道未设置" => "Delivery channel is not set",
     "请选择商家" => "Please select a merchant",
-    "角色不存在" => "Role does not exist",
+    "请输入正确的主账户余额" => "Please enter the correct main account balance",
+    "减少金额不能大于当前主账户余额" => "The amount to be reduced cannot be greater than the current main account balance",
+    "主账户余额不能小于0" => "The main account balance cannot be less than 0",
+    "减少后的主账户余额不能大于" => "The main account balance after reduction cannot be greater than",
+    "营销活动赠送" => "Marketing campaign giveaway",
+    "邀请消费有礼" => "Invite to spend and get rewards",
+    "营销活动" => "Marketing campaign",
 ];

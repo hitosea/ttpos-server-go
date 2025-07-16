@@ -25,6 +25,7 @@ type IMemberCouponQuery interface {
 	GetMemberCouponByUuid(uuid uint64) (*model.MemberCoupon, error)               // 根据uuid获取会员优惠券
 	GetMembersByUuids(uuids []uint64) ([]*model.MemberCoupon, error)              // 根据uuid列表获取会员优惠券列表
 	GetValidMemberCouponList(memberUuid uint64) ([]*model.MemberCoupon, error)    // 获取会员有效期内的优惠券列表
+	GetHistoryMemberCouponList(memberUuid uint64) ([]*model.MemberCoupon, error)  // 获取会员历史优惠券列表
 }
 
 func NewMemberCouponRepo(db *gorm.DB) IMemberCouponRepo {
@@ -59,7 +60,7 @@ func (r *memberCouponRepo) GetMemberCouponList(opts ...DBOption) ([]*model.Membe
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	db.Find(&memberCoupons)
+	db.Order("id DESC").Find(&memberCoupons)
 	return memberCoupons, nil
 }
 
@@ -98,6 +99,7 @@ func (r *memberCouponRepo) GetMembersByUuids(uuids []uint64) ([]*model.MemberCou
 	return memberCoupons, nil
 }
 
+// GetValidMemberCouponList 获取会员有效期内的优惠券列表
 func (r *memberCouponRepo) GetValidMemberCouponList(memberUuid uint64) ([]*model.MemberCoupon, error) {
 	return r.GetMemberCouponList(
 		CommonRepo.WhereBySoftDelete(),           // 未删除
@@ -109,6 +111,19 @@ func (r *memberCouponRepo) GetValidMemberCouponList(memberUuid uint64) ([]*model
 				Query: "MarketingCoupon",
 			},
 		), // 预加载营销优惠券
+	)
+}
+
+// GetHistoryMemberCouponList 获取会员历史优惠券列表
+func (r *memberCouponRepo) GetHistoryMemberCouponList(memberUuid uint64) ([]*model.MemberCoupon, error) {
+	return r.GetMemberCouponList(
+		CommonRepo.WhereBySoftDelete(),           // 未删除
+		CommonRepo.WhereByMemberUuid(memberUuid), // 根据会员UUID查询
+		func(db *gorm.DB) *gorm.DB {
+			now := time.Now().Unix()
+			// 已使用或已过期的优惠券
+			return db.Where("status = ? OR end_time < ?", 1, now)
+		},
 	)
 }
 
