@@ -15,10 +15,14 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/saas"
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/auth"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/validator"
 
 	"github.com/shopspring/decimal"
 
@@ -44,24 +48,27 @@ type IMemberSrv interface {
 	GenerateRandomNickname() string                                                                                                                            // 生成随机昵称
 	GetMemberCouponList(ctx context.Context, couponListReq member_req.CouponListReq) (member_resp.CouponListWithPaginationResp, error)                         // 获取优惠券列表
 	GetMemberPointsRecordList(ctx context.Context, pointsRecordListReq member_req.PointsRecordListReq) (member_resp.PointsRecordListWithPaginationResp, error) // 获取积分记录列表
+	Register(ctx context.Context, reqs member_req.MemberRegisterReq) (member_resp.LoginResp, error)                                                            // 注册
 }
 
 // memberSrv 会员服务结构体
 type memberSrv struct {
-	dbm *database.DBManager // 数据库管理器
-	bus *event.SystemEventBus
+	dbm   *database.DBManager // 数据库管理器
+	bus   *event.SystemEventBus
+	cache cache.Cache
 }
 
 // NewMemberSrv 创建新的会员服务
-func NewMemberSrv(dbm *database.DBManager) IMemberSrv {
-	return NewMemberSrvImpl(dbm)
+func NewMemberSrv(dbm *database.DBManager, cache cache.Cache) IMemberSrv {
+	return NewMemberSrvImpl(dbm, cache)
 }
 
 // NewMemberSrvImpl 创建新的会员服务实现
-func NewMemberSrvImpl(dbm *database.DBManager) IMemberSrv {
+func NewMemberSrvImpl(dbm *database.DBManager, cache cache.Cache) IMemberSrv {
 	return &memberSrv{
-		dbm: dbm,
-		bus: event.NewSystemBus(),
+		dbm:   dbm,
+		cache: cache,
+		bus:   event.NewSystemBus(),
 	}
 }
 
@@ -714,5 +721,107 @@ func (s *memberSrv) GetMemberPointsRecordList(ctx context.Context, pointsRecordL
 			PageSize: pointsRecordListReq.PageSize,
 			Total:    total,
 		},
+	}, nil
+}
+
+// Register 注册
+// 参数：ctx 上下文，req 注册请求
+// 返回：注册响应，错误信息
+func (s *memberSrv) Register(ctx context.Context, reqs member_req.MemberRegisterReq) (member_resp.LoginResp, error) {
+	if err := reqs.Validate(); err != nil {
+		return member_resp.LoginResp{}, err
+	}
+	// 获取上下文中的公司ID
+	companyUuid := ctx.GetCompanyUuid()
+
+	// 获取商家信息
+	db := s.dbm.GetDB(companyUuid)
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(companyUuid)
+	if err != nil || company.IsExpired() || company.IsDelete() {
+		return member_resp.LoginResp{}, errors.New("无法使用该功能，请联系商家")
+	}
+	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
+		return member_resp.LoginResp{}, errors.New("商家会员服务已关闭")
+	}
+
+	// 设置上下文
+	ctx.SetDB(db)
+	ctx.SetCompanyUuid(companyUuid)
+	ctx.SetCompany(*company)
+	ctx.SetCompanySetting(*company.CompanySetting)
+
+	// 验证验证码
+	if err := validator.VerifyCode(s.cache, companyUuid, reqs.Phone, reqs.Code); err != nil {
+		return member_resp.LoginResp{}, err
+	}
+
+	// 验证手机号是否存在
+	if member, err := repository.NewMemberRepo(db).GetMemberByPhoneContainDeleted(reqs.Phone); err == nil {
+		if member.IsDelete() {
+			return member_resp.LoginResp{}, errors.New("该会员已被注销，可联系商家处理")
+		}
+		return member_resp.LoginResp{}, errors.New("该手机号已注册本商家会员")
+	}
+
+	// 验证推荐人手机号是否存在
+	var referrer *model.Member
+	if reqs.ReferrerPhone != "" {
+		referrer, err = repository.NewMemberRepo(db).GetMemberByPhone(reqs.ReferrerPhone)
+		if err != nil || referrer.IsDelete() {
+			return member_resp.LoginResp{}, errors.New("该推荐人不存在")
+		}
+	}
+
+	// 获取上下文中的会员信息
+	if members := ctx.GetMember(); members.IsVisitor {
+		if err := repository.NewMemberRepo(db).Update(members.Uuid, map[string]interface{}{
+			"phone":         reqs.Phone,
+			"nickname":      utils.IfString(reqs.Nickname != "", reqs.Nickname, members.Nickname),
+			"referrer_uuid": referrer.Uuid,
+			"is_visitor":    false,
+		}); err != nil {
+			return member_resp.LoginResp{}, errors.WithMessage(err, "更新游客信息失败")
+		}
+	} else {
+		err = s.AddMember(ctx, req.AddMemberReq{
+			Phone: reqs.Phone,
+			ReferrerUuid: func() uint64 {
+				if referrer != nil {
+					return referrer.Uuid
+				}
+				return 0
+			}(),
+			Nickname:  reqs.Nickname,
+			LevelUuid: repository.NewMemberRepo(db).GetMemberLevelMinPriorityUuid(),
+		})
+		if err != nil {
+			return member_resp.LoginResp{}, err
+		}
+	}
+
+	// 获取会员信息
+	member, err := repository.NewMemberRepo(db).GetMemberByPhoneContainDeleted(reqs.Phone)
+	if err != nil {
+		return member_resp.LoginResp{}, err
+	}
+
+	// 生成token
+	claims := auth.Claims{
+		Source:      constant.SourceMember,
+		CompanyUuid: companyUuid,
+		MemberUuid:  member.Uuid,
+		DeviceId:    member.DeviceId,
+	}
+	token, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
+	if err != nil {
+		return member_resp.LoginResp{}, errors.New("生成token失败")
+	}
+	refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+	if err != nil {
+		return member_resp.LoginResp{}, errors.New("生成refresh_token失败")
+	}
+	return member_resp.LoginResp{
+		Token:        token,
+		RefreshToken: refreshToken,
 	}, nil
 }

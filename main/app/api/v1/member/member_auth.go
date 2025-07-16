@@ -17,7 +17,8 @@ import (
 
 // AuthHandler 认证鉴权控制器
 type AuthHandler struct {
-	loginSrv member_service.ILoginSrv
+	loginSrv  member_service.ILoginSrv
+	memberSrv service.IMemberSrv
 }
 
 // Login 获取登陆前信息
@@ -141,7 +142,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
 	}
-	registerResp, err := h.loginSrv.Register(ctx, registerReq)
+	registerResp, err := h.memberSrv.Register(ctx, registerReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -167,6 +168,7 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 			service.NewSMSSrv(dbm),
 			setting.NewSrvImpl(dbm, cache),
 		),
+		memberSrv: service.NewMemberSrv(dbm, cache),
 	}
 
 	publicApi := router.Group("")

@@ -159,7 +159,7 @@ func checkoutSaleOrderEventHandler() {
 				}
 
 				// 处理会员升级
-				memberSrv := service.NewMemberSrv(database.GetDBManager(config.DatabaseConf{}))
+				memberSrv := service.NewMemberSrv(database.GetDBManager(config.DatabaseConf{}), cache.Global)
 				go memberSrv.HandleMemberUpgrade(payload.CompanyUuid, saleOrder.ConsumerUuid)
 
 				// 发布"积分变动"事件

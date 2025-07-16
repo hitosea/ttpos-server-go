@@ -1,15 +1,18 @@
 package service
 
 import (
+	"time"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/dto/resp/member_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
+	"ttpos-server-go/pkg/validator"
 
 	"github.com/jinzhu/copier"
 	"gorm.io/gorm"
@@ -21,24 +24,27 @@ type IMemberAddressSrv interface {
 	AddAddress(ctx context.Context, req member_req.MemberAddressAddReq) error                                            // 添加地址
 	UpdateAddress(ctx context.Context, req member_req.MemberAddressUpdateReq) error                                      // 更新地址
 	DeleteAddress(ctx context.Context, req member_req.MemberAddressDeleteReq) error                                      // 删除地址
+	AuthAddress(ctx context.Context, req member_req.MemberAddressAuthReq) (member_resp.LoginResp, error)                 // 认证地址
 }
 
 // memberAddressSrv 会员地址服务结构体
 type memberAddressSrv struct {
-	dbm *database.DBManager
-	bus *event.SystemEventBus
+	dbm   *database.DBManager
+	bus   *event.SystemEventBus
+	cache cache.Cache
 }
 
 // NewMemberAddressSrv 创建新的会员地址服务
-func NewMemberAddressSrv(dbm *database.DBManager) IMemberAddressSrv {
-	return NewMemberAddressSrvImpl(dbm)
+func NewMemberAddressSrv(dbm *database.DBManager, cache cache.Cache) IMemberAddressSrv {
+	return NewMemberAddressSrvImpl(dbm, cache)
 }
 
 // NewMemberAddressSrvImpl 创建新的会员地址服务实现
-func NewMemberAddressSrvImpl(dbm *database.DBManager) IMemberAddressSrv {
+func NewMemberAddressSrvImpl(dbm *database.DBManager, cache cache.Cache) IMemberAddressSrv {
 	return &memberAddressSrv{
-		dbm: dbm,
-		bus: event.NewSystemBus(),
+		dbm:   dbm,
+		bus:   event.NewSystemBus(),
+		cache: cache,
 	}
 }
 
@@ -56,6 +62,7 @@ func (s *memberAddressSrv) GetAddressList(ctx context.Context, req member_req.Me
 	for _, memberAddress := range memberAddresses {
 		var respMemberAddress member_resp.MemberAddressResp
 		copier.Copy(&respMemberAddress, memberAddress)
+		respMemberAddress.IsAuthPhone = memberAddress.IsAuth()
 		respMemberAddresses = append(respMemberAddresses, respMemberAddress)
 	}
 	return &member_resp.MemberAddressListResp{
@@ -215,4 +222,53 @@ func (s *memberAddressSrv) DeleteAddress(ctx context.Context, req member_req.Mem
 	}
 
 	return nil
+}
+
+// AuthAddress 认证地址
+func (s *memberAddressSrv) AuthAddress(ctx context.Context, req member_req.MemberAddressAuthReq) (member_resp.LoginResp, error) {
+	if err := req.Validate(); err != nil {
+		return member_resp.LoginResp{}, errors.New(err.Error())
+	}
+
+	companyUuid := ctx.GetCompanyUuid()
+
+	// 获取地址信息
+	memberAddressRepo := repository.NewMemberAddressRepo(ctx.GetDB())
+	memberAddress, err := memberAddressRepo.GetMemberAddressByUuid(req.Uuid)
+	if err != nil {
+		return member_resp.LoginResp{}, errors.New("地址不存在")
+	}
+
+	// 如果需要注册，则注册会员
+	var tokens member_resp.LoginResp
+	if req.IsRegister {
+		// 如果当前不是游客，则不能注册
+		if member := ctx.GetMember(); !member.IsVisitor {
+			return member_resp.LoginResp{}, errors.New("当前不是游客，不能注册")
+		}
+		// 注册会员
+		tokens, err = NewMemberSrv(s.dbm, s.cache).Register(ctx, member_req.MemberRegisterReq{
+			Phone:         memberAddress.Phone,
+			Code:          req.Code,
+			ReferrerPhone: req.ReferrerPhone,
+		})
+		if err != nil {
+			return member_resp.LoginResp{}, err
+		}
+	} else {
+		// 验证验证码
+		if err := validator.VerifyCode(s.cache, companyUuid, memberAddress.Phone, req.Code); err != nil {
+			return member_resp.LoginResp{}, err
+		}
+	}
+
+	// 更新认证状态
+	memberAddress.AuthPhone = memberAddress.Phone
+	memberAddress.AuthTime = time.Now().Unix()
+	_, err = memberAddressRepo.Update(*memberAddress)
+	if err != nil {
+		return member_resp.LoginResp{}, err
+	}
+
+	return tokens, nil
 }
