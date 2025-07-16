@@ -344,7 +344,8 @@ class MarketingActivityService
                 $query->where(function($query) use ($params){
                     $query->where('m.nickname', 'like', '%'.$params['keyword'].'%')
                         ->whereOr('m.phone', 'like', '%'.$params['keyword'].'%')
-                        ->whereOr('m.id', 'like', '%'.$params['keyword'].'%');
+                        ->whereOr('m.id', 'like', '%'.$params['keyword'].'%')
+                        ->whereOr('m.member_card_no', 'like', '%'.$params['keyword'].'%');
                 });
             });
         // 
