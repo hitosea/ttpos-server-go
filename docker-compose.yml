@@ -102,8 +102,8 @@ services:
   golang:
     container_name: "saas-golang-${APP_ID}"
     build:
-      context: ./main
-      dockerfile: Dockerfile
+#      context: ./main
+      dockerfile: main/Dockerfile
     image: ttpos-server-go
     environment:
       SW_AGENT_NAME: "${SW_AGENT_NAME:-ttpos}"
@@ -130,7 +130,25 @@ services:
     networks:
       saas-network:
         ipv4_address: 10.0.0.15
-        
+  takeout:
+    container_name: "saas-takeout-${APP_ID}"
+    build:
+      context: ./takeout
+      dockerfile: Dockerfile
+    image: ttpos-server-takeout
+    environment:
+      SW_AGENT_NAME: "ttpos-server-takeout"
+      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
+      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
+    volumes:
+      - ./takeout/manifest/config:/app/config  #生产环境根据需要调整
+    restart: always
+    ports:
+      - "14031:14031"
+      - "14032:14032"
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.16
 networks:
   saas-network:
     driver: bridge
