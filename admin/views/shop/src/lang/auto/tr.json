@@ -1825,5 +1825,7 @@
     "发放次数": "Veriliş Sayısı",
     "模板5": "Şablon 5",
     "收银机SN：": "Kasa SN:",
-    "打印机SN：": "Yazıcı SN:"
+    "打印机SN：": "Yazıcı SN:",
+    "收银机SN": "Kasa Makinesi SN",
+    "请输入收银机SN": "Lütfen Kasa Makinesi SN giriniz"
 }

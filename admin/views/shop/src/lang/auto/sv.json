@@ -2067,5 +2067,7 @@
     "发放次数": "Antal utdelningar",
     "模板5": "Mall 5",
     "收银机SN：": "Kassaregister SN:",
-    "打印机SN：": "Skrivare SN:"
+    "打印机SN：": "Skrivare SN:",
+    "收银机SN": "Kassaregister SN",
+    "请输入收银机SN": "Ange kassaregister SN"
 }

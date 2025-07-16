@@ -2071,5 +2071,7 @@
     "发放次数": "Number of Distributions",
     "模板5": "Template 5",
     "收银机SN：": "Cash Register SN:",
-    "打印机SN：": "Printer SN:"
+    "打印机SN：": "Printer SN:",
+    "收银机SN": "Cash Register SN",
+    "请输入收银机SN": "Please enter the Cash Register SN"
 }
