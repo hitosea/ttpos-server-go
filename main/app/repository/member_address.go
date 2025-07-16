@@ -11,6 +11,7 @@ import (
 type IMemberAddressRepo interface {
 	Create(address model.MemberAddress) (model.MemberAddress, error)                        // 创建会员地址
 	GetMemberAddressList(opts ...DBOption) ([]*model.MemberAddress, error)                  // 获取会员地址列表
+	GetMemberAddress(opts ...DBOption) (*model.MemberAddress, error)                        // 获取会员地址
 	PaginateGet(page, pageSize int, opts ...DBOption) ([]model.MemberAddress, int64, error) // 分页获取会员地址列表
 	GetMemberAddressByUuid(uuid uint64) (*model.MemberAddress, error)                       // 获取会员地址
 	GetMemberAddressByMemberUuid(memberUuid uint64) ([]*model.MemberAddress, error)         // 获取会员地址
@@ -35,6 +36,21 @@ func NewMemberAddressRepoImpl(db *gorm.DB) *MemberAddressRepo {
 func (r *MemberAddressRepo) Create(address model.MemberAddress) (model.MemberAddress, error) {
 	err := r.db.Model(&model.MemberAddress{}).Create(&address).Error
 	return address, errors.WithMessage(err)
+}
+
+// GetMemberAddress 获取会员地址
+func (r *MemberAddressRepo) GetMemberAddress(opts ...DBOption) (*model.MemberAddress, error) {
+	var address model.MemberAddress
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.First(&address).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &address, nil
 }
 
 // GetMemberAddressList 获取会员地址列表
@@ -69,9 +85,19 @@ func (r *MemberAddressRepo) PaginateGet(page, pageSize int, opts ...DBOption) ([
 
 // GetMemberAddressByUuid 获取会员地址
 func (r *MemberAddressRepo) GetMemberAddressByUuid(uuid uint64) (*model.MemberAddress, error) {
-	var address model.MemberAddress
-	err := r.db.Model(&model.MemberAddress{}).Where("uuid = ?", uuid).First(&address).Error
-	return &address, errors.WithMessage(err)
+	memberAddress, err := r.GetMemberAddress(
+		CommonRepo.WhereByUuid(uuid),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "Member",
+			},
+		),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return memberAddress, nil
 }
 
 // GetMemberAddressByMemberUuid 获取会员地址

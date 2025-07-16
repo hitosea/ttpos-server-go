@@ -44,6 +44,8 @@ import (
 
 	"go.uber.org/zap"
 
+	"ttpos-server-go/app/dto/req/member_req"
+
 	"github.com/duke-git/lancet/v2/convertor"
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
@@ -55,6 +57,7 @@ type IOrderSrv interface {
 	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                                                 // 创建点餐订单
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                                           // 创建桌台订单
 	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)                        // 创建会员端订单
+	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                                     // 设置会员端订单地址
 	GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error)                                                               // 获取订单列表
 	ExportOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderExportListPaginationResp, error)                                                      // 导出订单列表
 	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                                        // 获取订单详情
@@ -872,6 +875,14 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 
 // GetMemberOrderCheckoutInfo 获取会员端订单结账页面信息
 func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMemberOrderCheckoutInfoReq, saleBill *model.SaleBill) (*resp.CreateMemberOrderResp, error) {
+	if saleBill == nil {
+		// 当前销售账单数据
+		var errSaleBill error
+		saleBill, errSaleBill = repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(0, repository.WithMemberSaleOrderUuid(req.MemberSaleOrderUuid))
+		if errSaleBill != nil {
+			return nil, errors.WithMessage(errSaleBill)
+		}
+	}
 	memberSaleOrder, err := s.getMemberSaleOrder(ctx, req.MemberSaleOrderUuid, saleBill)
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -1060,6 +1071,49 @@ func (s *orderSrv) updateMemberOrder(ctx context.Context, request req.CreateMemb
 		return nil, nil, errors.WithMessage(err)
 	}
 	return info, nil, nil
+}
+
+// SetMemberOrderAddress 设置会员端订单地址
+func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	memberAddress, err := repository.NewMemberAddressRepo(db).GetMemberAddressByUuid(request.MemberAddressUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	member := ctx.GetMember()
+	if member.Uuid == 0 {
+		return nil, errors.New("无法找到会员")
+	}
+	if memberAddress.MemberUuid != member.Uuid {
+		return nil, errors.New("地址与会员不匹配")
+	}
+
+	memberSaleOrderAddress := model.MemberSaleOrderAddress{
+		MemberUuid:        member.Uuid,
+		MemberAddressUuid: memberAddress.Uuid,
+		// Longitude:           memberAddress.Longitude,
+		// Latitude:            memberAddress.Latitude,
+		Address: memberAddress.Address,
+		// DetailAddress:       memberAddress.DetailAddress,
+		ContactName:  memberAddress.Name,
+		ContactPhone: memberAddress.Phone,
+		// ContactGender:       memberAddress.IsDefault,
+		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
+	}
+	if err := repository.NewMemberSaleOrderAddressRepo(db).CreateMemberSaleOrderAddress(memberSaleOrderAddress); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 返回会员端订单信息
+	info, err := s.GetMemberOrderCheckoutInfo(ctx, req.GetMemberOrderCheckoutInfoReq{
+		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
+	}, nil)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return info, nil
 }
 
 // createOrderNo 创建订单编号

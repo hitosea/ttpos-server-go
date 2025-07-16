@@ -13,4 +13,6 @@ type MemberAddress struct {
 	Street     string `gorm:"column:street;type:varchar(255);not null;comment:街道/门牌号" json:"street"`
 	IsDefault  int    `gorm:"column:is_default;type:int(1);not null;comment:是否默认" json:"is_default"`
 	Location   string `gorm:"column:location;type:varchar(100);not null;comment:位置坐标" json:"location"`
+
+	Member *Member `gorm:"foreignKey:MemberUuid;references:Uuid" json:"member"`
 }

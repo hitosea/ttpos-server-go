@@ -4,6 +4,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -23,7 +24,7 @@ type OrderHandler struct {
 // CreateOrder 创建会员端订单
 // @Summary 创建会员端订单
 // @Description 创建会员端订单
-// @Tags 会员端
+// @Tags 会员端-订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -56,6 +57,37 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// SetOrderAddress 设置订单地址
+// @Summary 设置订单地址
+// @Description 设置订单地址
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} product_resp.ProductCategoryListResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/address [post]
+func (h *OrderHandler) SetOrderAddress(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := member_req.SetMemberOrderAddressReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("设置订单地址", zap.Any("params", params))
+
+	// 设置订单地址
+	res, err := h.orderSrv.SetMemberOrderAddress(ctx, params)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -75,6 +107,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// privateApi := router.Group("")
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
-		privateApi.POST("/order/create", wrapper.CreateOrder) // 创建订单
+		privateApi.POST("/order/create", wrapper.CreateOrder)      // 创建订单
+		privateApi.POST("/order/address", wrapper.SetOrderAddress) // 设置订单地址
 	}
 }

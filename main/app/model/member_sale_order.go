@@ -102,3 +102,6 @@ type MemberSaleOrderAddress struct {
 	ContactGender       int     `gorm:"column:contact_gender;type:int(10);not null;default:0;comment:'联系人性别, 0-女士 1-先生'"`
 	MemberSaleOrderUuid uint64  `gorm:"column:member_sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员销售订单UUID'"`
 }
+
+func (model *MemberSaleOrderAddress) SetNil() {
+}
