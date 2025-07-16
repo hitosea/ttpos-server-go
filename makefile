@@ -116,3 +116,6 @@ bump-version:
 	echo "当前版本: $$CURRENT_VERSION, 新版本: $$NEW_VERSION"; \
 	cd main && go run ./main.go version --version=$$NEW_VERSION --commit=$$CURRENT_COMMIT --build-time=$$CURRENT_DATE
 
+# 统计数据重跑
+statistics-re:
+	cd main && go run ./main.go statistics-re $(ARGS)
