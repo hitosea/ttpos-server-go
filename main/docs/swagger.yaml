@@ -15504,7 +15504,7 @@ paths:
       - JwtToken: []
       summary: 创建会员端订单
       tags:
-      - 会员端
+      - 会员端.订单
   /member/points/record/list:
     get:
       consumes:

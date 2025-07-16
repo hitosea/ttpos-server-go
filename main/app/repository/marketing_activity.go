@@ -3,6 +3,7 @@ package repository
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -25,6 +26,7 @@ type IMarketingActivityRepo interface {
 	GetActivityAndPrizes(uuid uint64) (*model.MarketingActivity, error)                   // 获取营销活动与奖励
 	GetMemberClientActivityList(dbOption ...DBOption) ([]*model.MarketingActivity, error) // 获取会员端营销活动列表
 	GetValidActivityListByNow(dbOption ...DBOption) ([]*model.MarketingActivity, error)   // 获取正在进行中的营销活动列表
+	GetValidActivity() (*model.MarketingActivity, error)                                  // 获取正在进行中的营销活动
 	GetValidActivityByUuid(uuid uint64) (*model.MarketingActivity, error)                 // 根据uuid获取正在进行中的营销活动
 	GenerateQrCode(params *QrCodeParams) (string, error)                                  // 生成二维码
 
@@ -122,6 +124,11 @@ func (r *MarketingActivityRepo) GetValidActivityListByNow(opts ...DBOption) ([]*
 	return activities, nil
 }
 
+// GetValidActivity 获取正在进行中的营销活动
+func (r *MarketingActivityRepo) GetValidActivity() (*model.MarketingActivity, error) {
+	return r.GetValidActivityByUuid(0)
+}
+
 // GetValidActivityByUuid 根据uuid获取营销活动
 func (r *MarketingActivityRepo) GetValidActivityByUuid(uuid uint64) (*model.MarketingActivity, error) {
 	var activity model.MarketingActivity
@@ -132,9 +139,16 @@ func (r *MarketingActivityRepo) GetValidActivityByUuid(uuid uint64) (*model.Mark
 		Where("delete_time = ? AND start_time <= ? AND end_time >= ? AND is_invalid = ?", constant.NotDeleted, time.Now().Unix(), time.Now().Unix(), 0).
 		Order("start_time DESC").
 		Order("end_time DESC")
-	// 查询
-	err := db.Where("uuid = ?", uuid).First(&activity).Error
+	//
+	if uuid != 0 {
+		db = db.Where("uuid = ?", uuid)
+	}
+	//
+	err := db.First(&activity).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &activity, nil

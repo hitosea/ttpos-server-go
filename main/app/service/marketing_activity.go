@@ -160,7 +160,7 @@ func (s *marketingActivitySrv) MarketingActivityDetail(ctx context.Context, req 
 
 	// 获取营销活动
 	marketingActivityRepo := repository.NewMarketingActivityRepo(ctx.GetDB())
-	marketingActivity, err := marketingActivityRepo.GetValidActivityByUuid(req.Uuid)
+	marketingActivity, err := marketingActivityRepo.GetValidActivity()
 	if err != nil {
 		return nil, err
 	}

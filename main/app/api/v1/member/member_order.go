@@ -23,7 +23,7 @@ type OrderHandler struct {
 // CreateOrder 创建会员端订单
 // @Summary 创建会员端订单
 // @Description 创建会员端订单
-// @Tags 会员端
+// @Tags 会员端.订单
 // @Accept json
 // @Produce json
 // @Security JwtToken

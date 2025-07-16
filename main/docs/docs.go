@@ -14823,7 +14823,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "会员端"
+                    "会员端.订单"
                 ],
                 "summary": "创建会员端订单",
                 "responses": {
