@@ -240,7 +240,7 @@
                 </el-radio-group>
               </template>
             </el-table-column>
-            <el-table-column prop="product_ratin_tax_type" width="120" :label="`*${$t('堂食税类')}`">
+            <el-table-column prop="product_ratin_tax_type" width="180" :label="`*${$t('堂食税类')}`">
               <template #default="scope">
                 <el-form-item
                   :prop="`${scope.$index}.ratin_tax_id`"
@@ -259,7 +259,7 @@
                 </el-form-item>
               </template>
             </el-table-column>
-            <el-table-column prop="product_takeout_tax_type" width="120" :label="`*${$t('外带税类')}`">
+            <el-table-column prop="product_takeout_tax_type" width="180" :label="`*${$t('外带税类')}`">
               <template #default="scope">
                 <el-form-item
                   :prop="`${scope.$index}.takeout_tax_id`"

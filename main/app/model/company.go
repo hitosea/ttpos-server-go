@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/pkg/utils"
 )
 
 // Company 集团表 ttpos_company
@@ -21,6 +22,14 @@ type Company struct {
 	OldCompanyId  int    `gorm:"column:old_company_id;type:int(11);default:0;comment:原商家ID;NOT NULL" json:"old_company_id"`
 
 	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting"`
+}
+
+func (company *Company) GetLogo(baseURL string) string {
+	logoBase64, err := utils.AddImageDomainAndConvertToBase64(company.Logo, baseURL, true)
+	if err != nil {
+		return utils.AddImageDomain(company.Logo, baseURL, true)
+	}
+	return logoBase64
 }
 
 func (company *Company) SetNil() {

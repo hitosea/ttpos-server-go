@@ -3,6 +3,7 @@ package member
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/member_service"
 	"ttpos-server-go/app/service/setting"
@@ -36,6 +37,30 @@ func (h *BaseHandler) BaseInfo(c *gin.Context) {
 	helper.Success(c, baseInfoResp)
 }
 
+// 修改会员昵称
+// @Summary 修改会员昵称
+// @Description 修改会员昵称
+// @Tags 会员端.基础信息
+// @Accept json
+// @Produce json
+// @param data body member_req.MemberNicknameUpdateReq true "详情参数"
+// @Success 200 {object} dto.Response{data=member_resp.MemberBaseInfoResp}
+// @Router /member/base/nickname [post]
+func (h *BaseHandler) NicknameUpdate(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	nicknameUpdateReq := member_req.MemberNicknameUpdateReq{}
+	if err := c.ShouldBindJSON(&nicknameUpdateReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	baseInfoResp, err := h.baseSrv.UpdateNickname(ctx, nicknameUpdateReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, baseInfoResp)
+}
+
 func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -55,5 +80,6 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
 		privateApi.GET("/base/info", wrapper.BaseInfo)
+		privateApi.POST("/base/nickname", wrapper.NicknameUpdate)
 	}
 }

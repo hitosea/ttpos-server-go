@@ -16,10 +16,11 @@ type MultiLanguageName struct {
 	JaName   string `gorm:"default:'';column:ja_name;comment:'日语名称'"`
 	KoName   string `gorm:"default:'';column:ko_name;comment:'韩语名称'"`
 	TrName   string `gorm:"default:'';column:tr_name;comment:'土耳其语名称'"`
+	SvName   string `gorm:"default:'';column:sv_name;comment:'瑞典语名称'"`
 }
 
 func (m *MultiLanguageName) IsNullName() bool {
-	return m.ZhName == "" && m.ThName == "" && m.EnName == "" && m.ZhTwName == "" && m.JaName == "" && m.KoName == "" && m.MyName == "" && m.TrName == ""
+	return m.ZhName == "" && m.ThName == "" && m.EnName == "" && m.ZhTwName == "" && m.JaName == "" && m.KoName == "" && m.MyName == "" && m.TrName == "" && m.SvName == ""
 }
 
 // GetNames 获取多语言名称
@@ -33,6 +34,7 @@ func (m *MultiLanguageName) GetNames() dto.LocaleResponse {
 		KO:   m.KoName,
 		MY:   m.MyName,
 		TR:   m.TrName,
+		SV:   m.SvName,
 	}
 }
 
@@ -63,6 +65,8 @@ func (m *MultiLanguageName) GetNameByLang(lang string) string {
 		return m.MyName
 	case "tr":
 		return m.TrName
+	case "sv":
+		return m.SvName
 	default:
 		return ""
 	}

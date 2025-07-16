@@ -86,3 +86,20 @@ func (r *MemberAddressUpdateReq) Validate() error {
 type MemberAddressDeleteReq struct {
 	Uuid uint64 `json:"uuid"` // 地址UUID
 }
+
+type MemberAddressAuthReq struct {
+	Uuid          uint64 `json:"uuid"`           // 地址UUID
+	Code          string `json:"code"`           // 验证码
+	IsRegister    bool   `json:"is_register"`    // 是否注册
+	ReferrerPhone string `json:"referrer_phone"` // 推荐人手机号
+}
+
+func (r *MemberAddressAuthReq) Validate() error {
+	if r.Uuid == 0 {
+		return errors.New("地址UUID不能为空")
+	}
+	if r.Code == "" {
+		return errors.New("验证码不能为空")
+	}
+	return nil
+}

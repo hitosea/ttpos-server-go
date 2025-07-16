@@ -113,6 +113,30 @@ func (h *AddressHandler) AddressDelete(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// AddressAuth 认证地址手机号
+// @Summary 认证地址手机号
+// @Description 认证地址, 如果需要注册则注册会员并返回注册会员的token（前端需要更换token为当前token）
+// @Tags 会员端.地址
+// @Accept json
+// @Produce json
+// @param data body member_req.MemberAddressAuthReq true "详情参数"
+// @Success 200 {object} dto.Response{data=member_resp.LoginResp}
+// @Router /member/address/auth [post]
+func (h *AddressHandler) AddressAuth(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	addressAuthReq := member_req.MemberAddressAuthReq{}
+	if err := c.ShouldBindJSON(&addressAuthReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	loginResp, err := h.addressSrv.AuthAddress(ctx, addressAuthReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, loginResp)
+}
+
 func RegisterAddressHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -124,7 +148,7 @@ func RegisterAddressHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	// 初始化处理器
-	addressSrv := service.NewMemberAddressSrv(dbm)
+	addressSrv := service.NewMemberAddressSrv(dbm, cache)
 	wrapper := &AddressHandler{
 		addressSrv: addressSrv,
 	}
@@ -135,5 +159,6 @@ func RegisterAddressHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/address/add", wrapper.AddressAdd)
 		privateApi.POST("/address/update", wrapper.AddressUpdate)
 		privateApi.DELETE("/address/delete", wrapper.AddressDelete)
+		privateApi.POST("/address/auth", wrapper.AddressAuth)
 	}
 }

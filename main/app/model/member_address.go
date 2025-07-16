@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 type MemberAddress struct {
 	BaseModel
 	MemberUuid uint64 `gorm:"column:member_uuid;type:bigint(20);not null;comment:会员uuid" json:"member_uuid"`
@@ -13,6 +15,25 @@ type MemberAddress struct {
 	Street     string `gorm:"column:street;type:varchar(255);not null;comment:街道/门牌号" json:"street"`
 	IsDefault  int    `gorm:"column:is_default;type:int(1);not null;comment:是否默认" json:"is_default"`
 	Location   string `gorm:"column:location;type:varchar(100);not null;comment:位置坐标" json:"location"`
+	AuthPhone  string `gorm:"column:auth_phone;type:varchar(20);not null;comment:认证手机号" json:"auth_phone"`
+	AuthTime   int64  `gorm:"column:auth_time;type:int(11);not null;comment:认证时间" json:"auth_time"`
 
 	Member *Member `gorm:"foreignKey:MemberUuid;references:Uuid" json:"member"`
+}
+
+// 是否认证
+func (model *MemberAddress) IsAuth() bool {
+	// 检查手机号是否匹配且认证时间不为0
+	if model.AuthPhone != model.Phone || model.AuthTime == 0 {
+		return false
+	}
+
+	// 获取当前时间戳
+	now := time.Now().Unix()
+
+	// 计算24小时的时间戳（24 * 60 * 60 = 86400秒）
+	dayInSeconds := int64(86400)
+
+	// 判断认证时间是否在24小时之内
+	return (now - model.AuthTime) <= dayInSeconds
 }

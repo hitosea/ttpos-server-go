@@ -1666,6 +1666,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_multi_language_name` (
     `ja_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '日语名称',
     `ko_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '韩语名称',
     `tr_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '土耳其语名称',
+    `sv_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '瑞典语名称',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

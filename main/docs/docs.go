@@ -14319,6 +14319,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/address/auth": {
+            "post": {
+                "description": "认证地址, 如果需要注册则注册会员并返回注册会员的token（前端需要更换token为当前token）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.地址"
+                ],
+                "summary": "认证地址手机号",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.MemberAddressAuthReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/member_resp.LoginResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/member/address/delete": {
             "delete": {
                 "description": "删除地址",
@@ -14412,6 +14458,52 @@ const docTemplate = `{
                     "会员端.基础信息"
                 ],
                 "summary": "获取基础信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/member_resp.MemberBaseInfoResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/member/base/nickname": {
+            "post": {
+                "description": "修改会员昵称",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.基础信息"
+                ],
+                "summary": "修改会员昵称",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.MemberNicknameUpdateReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -14562,7 +14654,7 @@ const docTemplate = `{
         },
         "/member/login_info": {
             "get": {
-                "description": "获取登陆信息",
+                "description": "获取登陆前信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -14572,7 +14664,7 @@ const docTemplate = `{
                 "tags": [
                     "会员端.认证"
                 ],
-                "summary": "获取登陆信息",
+                "summary": "获取登陆前信息",
                 "parameters": [
                     {
                         "type": "integer",
@@ -14605,7 +14697,7 @@ const docTemplate = `{
         },
         "/member/marketing_activity": {
             "get": {
-                "description": "获取营销活动",
+                "description": "获取营销活动-旧接口(已废弃)",
                 "consumes": [
                     "application/json"
                 ],
@@ -14615,7 +14707,7 @@ const docTemplate = `{
                 "tags": [
                     "会员端.营销活动"
                 ],
-                "summary": "获取营销活动",
+                "summary": "获取营销活动-旧接口(已废弃)",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -14629,6 +14721,49 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/member_resp.MemberMarketingActivityListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/member/marketing_activity_detail": {
+            "get": {
+                "description": "获取营销活动详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.营销活动"
+                ],
+                "summary": "获取营销活动详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "活动UUID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/member_resp.MemberMarketingActivityDetailResp"
                                         }
                                     }
                                 }
@@ -14688,7 +14823,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "会员端"
+                    "会员端.订单"
                 ],
                 "summary": "创建会员端订单",
                 "responses": {
@@ -14998,7 +15133,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.VisitorInfoResp"
+                                            "$ref": "#/definitions/member_resp.LoginResp"
                                         }
                                     }
                                 }
@@ -18392,6 +18527,10 @@ const docTemplate = `{
                     "description": "缅甸语",
                     "type": "string"
                 },
+                "sv": {
+                    "description": "瑞典语",
+                    "type": "string"
+                },
                 "th": {
                     "description": "泰语",
                     "type": "string"
@@ -18484,6 +18623,27 @@ const docTemplate = `{
                 }
             }
         },
+        "member_req.MemberAddressAuthReq": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "description": "验证码",
+                    "type": "string"
+                },
+                "is_register": {
+                    "description": "是否注册",
+                    "type": "boolean"
+                },
+                "referrer_phone": {
+                    "description": "推荐人手机号",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "地址UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "member_req.MemberAddressDeleteReq": {
             "type": "object",
             "properties": {
@@ -18555,6 +18715,15 @@ const docTemplate = `{
                 },
                 "phone": {
                     "description": "手机号",
+                    "type": "string"
+                }
+            }
+        },
+        "member_req.MemberNicknameUpdateReq": {
+            "type": "object",
+            "properties": {
+                "nickname": {
+                    "description": "会员昵称",
                     "type": "string"
                 }
             }
@@ -18736,6 +18905,10 @@ const docTemplate = `{
                     "description": "国家代码",
                     "type": "string"
                 },
+                "is_auth_phone": {
+                    "description": "是否认证手机号",
+                    "type": "boolean"
+                },
                 "is_default": {
                     "description": "是否默认",
                     "type": "integer"
@@ -18838,6 +19011,35 @@ const docTemplate = `{
                 "logo": {
                     "description": "集团logo",
                     "type": "string"
+                }
+            }
+        },
+        "member_resp.MemberMarketingActivityDetailResp": {
+            "type": "object",
+            "properties": {
+                "activity": {
+                    "description": "活动信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/member_resp.MemberMarketingActivityResp"
+                        }
+                    ]
+                },
+                "company": {
+                    "description": "公司信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/member_resp.CompanyInfoResp"
+                        }
+                    ]
+                },
+                "member_info": {
+                    "description": "会员信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/member_resp.MemberInfoResp"
+                        }
+                    ]
                 }
             }
         },
@@ -26577,27 +26779,6 @@ const docTemplate = `{
                     }
                 },
                 "selected_sn": {
-                    "type": "string"
-                }
-            }
-        },
-        "resp.VisitorInfoResp": {
-            "type": "object",
-            "properties": {
-                "device_id": {
-                    "description": "设备ID",
-                    "type": "string"
-                },
-                "is_visitor": {
-                    "description": "是否游客",
-                    "type": "boolean"
-                },
-                "member_uuid": {
-                    "description": "会员UUID",
-                    "type": "integer"
-                },
-                "nickname": {
-                    "description": "随机昵称",
                     "type": "string"
                 }
             }

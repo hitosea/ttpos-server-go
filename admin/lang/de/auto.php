@@ -2141,4 +2141,5 @@ return [
     "营销活动赠送" => "Marketingkampagnen-Geschenk",
     "邀请消费有礼" => "Einladen und beim Konsumieren belohnt werden",
     "营销活动" => "Marketingkampagne",
+    "斯德哥尔摩" => "Stockholm",
 ];

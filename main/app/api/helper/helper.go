@@ -121,6 +121,8 @@ func FailWithData(c *gin.Context, code int, data any, err error, message ...stri
 		msg = i18n.Translate(i18n.GetAcceptLanguage(c), message[0])
 	} else if len(message) > 1 {
 		msg = i18n.Translate(i18n.GetAcceptLanguage(c), message[0], message[1:]...)
+	} else {
+		msg = i18n.Translate(i18n.GetAcceptLanguage(c), msg)
 	}
 	c.JSON(http.StatusOK, dto.Response{
 		Code:    code,

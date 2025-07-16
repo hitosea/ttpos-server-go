@@ -2133,4 +2133,5 @@ return [
     "营销活动赠送" => "Pazarlama kampanyası hediyesi",
     "邀请消费有礼" => "Davetle harcama ödülleri",
     "营销活动" => "Pazarlama etkinliği",
+    "斯德哥尔摩" => "Stockholm",
 ];

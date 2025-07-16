@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/dto/resp/member_resp"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/setting"
@@ -12,6 +13,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 )
@@ -19,7 +21,8 @@ import (
 // IBaseSrv 会员基础信息相关服务接口
 // 获取基础信息
 type IBaseSrv interface {
-	GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoResp, error) // 获取基础信息
+	GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoResp, error)                                            // 获取基础信息
+	UpdateNickname(ctx context.Context, req member_req.MemberNicknameUpdateReq) (member_resp.MemberBaseInfoResp, error) // 修改会员昵称
 }
 
 // baseSrv 会员基础信息服务实现
@@ -115,7 +118,7 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 		Company: member_resp.CompanyResp{
 			Uuid:         company.Uuid,
 			Name:         company.Name,
-			Logo:         company.Logo,
+			Logo:         company.GetLogo(utils.GetBaseURL(ctx.Copy().GetGin().Request)),
 			Address:      company.CompanySetting.Address,
 			LinkPhone:    company.CompanySetting.LinkPhone, // 公司联系电话
 			OpeningHours: businessSetting.OpeningHours,     // 公司营业时间
@@ -124,4 +127,25 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 		LanguageList: languageList,
 	}, nil
 
+}
+
+// UpdateNickname 修改会员昵称
+// 参数：ctx 上下文，req 修改会员昵称请求
+// 返回：错误信息
+func (s *baseSrv) UpdateNickname(ctx context.Context, req member_req.MemberNicknameUpdateReq) (member_resp.MemberBaseInfoResp, error) {
+	if err := req.Validate(); err != nil {
+		return member_resp.MemberBaseInfoResp{}, err
+	}
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	if db == nil {
+		return member_resp.MemberBaseInfoResp{}, errors.New("商家不存在")
+	}
+	member := ctx.GetMember()
+	err := repository.NewMemberRepo(db).Update(member.Uuid, map[string]any{
+		"nickname": req.Nickname,
+	})
+	if err != nil {
+		return member_resp.MemberBaseInfoResp{}, err
+	}
+	return s.GetBaseInfo(ctx)
 }

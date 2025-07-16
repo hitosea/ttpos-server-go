@@ -628,6 +628,9 @@ definitions:
       my:
         description: 缅甸语
         type: string
+      sv:
+        description: 瑞典语
+        type: string
       th:
         description: 泰语
         type: string
@@ -694,6 +697,21 @@ definitions:
         description: 街道/门牌号
         type: string
     type: object
+  member_req.MemberAddressAuthReq:
+    properties:
+      code:
+        description: 验证码
+        type: string
+      is_register:
+        description: 是否注册
+        type: boolean
+      referrer_phone:
+        description: 推荐人手机号
+        type: string
+      uuid:
+        description: 地址UUID
+        type: integer
+    type: object
   member_req.MemberAddressDeleteReq:
     properties:
       uuid:
@@ -746,6 +764,12 @@ definitions:
         type: integer
       phone:
         description: 手机号
+        type: string
+    type: object
+  member_req.MemberNicknameUpdateReq:
+    properties:
+      nickname:
+        description: 会员昵称
         type: string
     type: object
   member_req.MemberRegisterReq:
@@ -871,6 +895,9 @@ definitions:
       country:
         description: 国家代码
         type: string
+      is_auth_phone:
+        description: 是否认证手机号
+        type: boolean
       is_default:
         description: 是否默认
         type: integer
@@ -941,6 +968,21 @@ definitions:
       logo:
         description: 集团logo
         type: string
+    type: object
+  member_resp.MemberMarketingActivityDetailResp:
+    properties:
+      activity:
+        allOf:
+        - $ref: '#/definitions/member_resp.MemberMarketingActivityResp'
+        description: 活动信息
+      company:
+        allOf:
+        - $ref: '#/definitions/member_resp.CompanyInfoResp'
+        description: 公司信息
+      member_info:
+        allOf:
+        - $ref: '#/definitions/member_resp.MemberInfoResp'
+        description: 会员信息
     type: object
   member_resp.MemberMarketingActivityListResp:
     properties:
@@ -6154,21 +6196,6 @@ definitions:
           $ref: '#/definitions/resp.UsbPrinter'
         type: array
       selected_sn:
-        type: string
-    type: object
-  resp.VisitorInfoResp:
-    properties:
-      device_id:
-        description: 设备ID
-        type: string
-      is_visitor:
-        description: 是否游客
-        type: boolean
-      member_uuid:
-        description: 会员UUID
-        type: integer
-      nickname:
-        description: 随机昵称
         type: string
     type: object
   setting.AddClockItem:
@@ -15175,6 +15202,33 @@ paths:
       summary: 添加地址
       tags:
       - 会员端.地址
+  /member/address/auth:
+    post:
+      consumes:
+      - application/json
+      description: 认证地址, 如果需要注册则注册会员并返回注册会员的token（前端需要更换token为当前token）
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/member_req.MemberAddressAuthReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/member_resp.LoginResp'
+              type: object
+      summary: 认证地址手机号
+      tags:
+      - 会员端.地址
   /member/address/delete:
     delete:
       consumes:
@@ -15242,6 +15296,33 @@ paths:
                   $ref: '#/definitions/member_resp.MemberBaseInfoResp'
               type: object
       summary: 获取基础信息
+      tags:
+      - 会员端.基础信息
+  /member/base/nickname:
+    post:
+      consumes:
+      - application/json
+      description: 修改会员昵称
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/member_req.MemberNicknameUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/member_resp.MemberBaseInfoResp'
+              type: object
+      summary: 修改会员昵称
       tags:
       - 会员端.基础信息
   /member/coupon/history/list:
@@ -15319,7 +15400,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取登陆信息
+      description: 获取登陆前信息
       parameters:
       - description: 集团ID
         in: query
@@ -15337,14 +15418,14 @@ paths:
                 data:
                   $ref: '#/definitions/member_resp.MemberLoginInfoResp'
               type: object
-      summary: 获取登陆信息
+      summary: 获取登陆前信息
       tags:
       - 会员端.认证
   /member/marketing_activity:
     get:
       consumes:
       - application/json
-      description: 获取营销活动
+      description: 获取营销活动-旧接口(已废弃)
       produces:
       - application/json
       responses:
@@ -15357,7 +15438,32 @@ paths:
                 data:
                   $ref: '#/definitions/member_resp.MemberMarketingActivityListResp'
               type: object
-      summary: 获取营销活动
+      summary: 获取营销活动-旧接口(已废弃)
+      tags:
+      - 会员端.营销活动
+  /member/marketing_activity_detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取营销活动详情
+      parameters:
+      - description: 活动UUID
+        in: query
+        name: uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/member_resp.MemberMarketingActivityDetailResp'
+              type: object
+      summary: 获取营销活动详情
       tags:
       - 会员端.营销活动
   /member/marketing_activity_list:
@@ -15398,7 +15504,7 @@ paths:
       - JwtToken: []
       summary: 创建会员端订单
       tags:
-      - 会员端
+      - 会员端.订单
   /member/points/record/list:
     get:
       consumes:
@@ -15580,7 +15686,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.VisitorInfoResp'
+                  $ref: '#/definitions/member_resp.LoginResp'
               type: object
       summary: 游客登录
       tags:

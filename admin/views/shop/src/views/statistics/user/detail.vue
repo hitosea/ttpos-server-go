@@ -179,6 +179,16 @@
       </el-col>
       <el-col :span="8">
         <p class="text">
+          {{ $t('赠菜金额') }}:
+          <span>
+            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
+            {{ this.$formatPrice(detail?.order?.total_give_product_price || 0) }}
+            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          </span>
+        </p>
+      </el-col>
+      <el-col :span="8">
+        <p class="text">
           {{ $t('赠送积分') }}:
           <span>
             <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>

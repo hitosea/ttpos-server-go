@@ -210,7 +210,7 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
 			item.SerialNo = product.SaleBill.SerialNo
-			item.DiningMethod = product.SaleBill.DiningMethod
+			item.DiningMethod = product.GetWrapStatus()              // 订单商品的打包状态
 			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 // 是否已经整单取消
 			items = append(items, item)
 		}
@@ -290,6 +290,7 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 			if paginatedProduct.SaleBillUuid != product.SaleBillUuid {
 				continue
 			}
+			group.DiningMethod = product.SaleBill.DiningMethod        // 订单商品的打包状态
 			group.SaleBillUuid = product.SaleBillUuid                 // 销售账单Uuid
 			group.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 // 是否已经整单取消
 			if product.SaleBill.SerialNo != "" && group.LocaleName == nil {
@@ -302,6 +303,7 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 					KO:   product.SaleBill.SerialNo,
 					MY:   product.SaleBill.SerialNo,
 					TR:   product.SaleBill.SerialNo,
+					SV:   product.SaleBill.SerialNo,
 				}
 			}
 			var item resp.ProductionItem
@@ -321,10 +323,6 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 		}
 		group.ProductionList = resp.ProductionList{
 			List: items,
-		}
-		if len(items) > 0 {
-			group.DiningMethod = items[0].DiningMethod
-			group.DiningMethod = products[0].SaleBill.DiningMethod // 账单的打包状态
 		}
 		groups = append(groups, group)
 	}

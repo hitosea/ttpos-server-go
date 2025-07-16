@@ -18,6 +18,7 @@ var Encrypt EncryptConf
 var Log LogConf
 var SMS SMSConf
 var GoogleBucket GoogleBucketConf
+var TakeOutRpcConf GrpcConf
 
 func Init() error {
 	// 加载 .env 文件
@@ -37,6 +38,7 @@ func Init() error {
 	logConf(opt)          // 日志
 	smsConf(opt)          // 短信
 	googleBucketConf(opt) // 谷歌云
+	takeoutConf(opt)      // 外送grpc
 
 	migrateDatabaseConf(opt) // 迁移数据库
 
@@ -193,5 +195,14 @@ func googleBucketConf(opt copier.Option) {
 		GoogleApplicationUploadsBucketName:    viper.GetString("GOOGLE_APPLICATION_UPLOADS_BUCKET_NAME"),
 		GoogleApplicationUploadsCatalogueName: viper.GetString("GOOGLE_APPLICATION_UPLOADS_CATALOGUE_NAME"),
 		GooglePrintBucketName:                 viper.GetString("GOOGLE_PRINT_BUCKET_NAME"),
+	}, opt)
+}
+
+func takeoutConf(opt copier.Option) {
+	TakeOutRpcConf = GrpcConf{
+		Endpoint: "127.0.0.1:14032",
+	}
+	copier.CopyWithOption(&TakeOutRpcConf, GrpcConf{
+		Endpoint: viper.GetString("TAKEOUT_ENDPOINT"),
 	}, opt)
 }
