@@ -135,7 +135,7 @@ type CreateMemberOrderResp struct {
 
 type MemberSaleOrderInfo struct {
 	MemberSaleOrderUuid uint64                     `json:"member_sale_order_uuid"` // 会员端销售订单UUID
-	Status              uint                       `json:"status"`                 // 会员端销售订单状态。0-选购中 1-待支付 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消
+	Status              uint                       `json:"status"`                 // 会员端销售订单状态。0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消
 	ProductList         MemberSaleOrderProductList `json:"product_list"`           // 会员端销售订单商品列表
 	ProductAmount       float64                    `json:"product_amount"`         // 商品金额(合计)
 	MemberDiscount      float64                    `json:"member_discount"`        // 会员折扣金额。大于0时才显示

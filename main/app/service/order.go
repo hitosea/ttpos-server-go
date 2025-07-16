@@ -150,6 +150,8 @@ type IMemberOrderSrv interface {
 	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)              // 设置会员端订单地址
 	VerifyPhone(ctx context.Context, req member_req.VerifyPhoneReq) (*resp.CreateMemberOrderResp, error)                                  // 验证手机号
 	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                       // 会员端订单提交支付，状态变为待支付
+	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                             // 查询收银机“外送”页面的订单列表
+	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                    // 查询收银机“外送”页面的订单详情
 }
 
 // orderSrv 订单服务结构
@@ -1168,12 +1170,108 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 	if err != nil {
 		return errors.WithMessage(err)
 	}
+
 	memberSaleOrder.Remark = request.Remark
 	memberSaleOrder.SetPendingPayment(request.PaymentMethodUuid)
+
+	// TODO 记录会员折扣、商品数量、商品金额、订单总金额
+
 	if err := repository.NewMemberSaleOrderRepo(s.dbm.GetDB(ctx.GetDbId())).UpdateMemberSaleOrderPendingPayment(memberSaleOrder); err != nil {
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+// GetMemberOrderList 获取收银端"外送"订单列表
+func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	memberSaleOrders, total, err := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderList(req.PageNo, req.PageSize, req.GetStatusList())
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	memberOrders := make([]resp.MemberOrder, 0)
+	for _, memberSaleOrder := range memberSaleOrders {
+		memberOrders = append(memberOrders, resp.MemberOrder{
+			MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			SerialNumber:        memberSaleOrder.SerialNumber,
+			Status:              memberSaleOrder.Status,
+			StatusGroup:         constant.ParseToStatusGroup(memberSaleOrder.Status),
+			Num:                 memberSaleOrder.ProductNum,
+			ProductAmount:       memberSaleOrder.ProductAmount,
+		})
+	}
+
+	return &resp.GetMemberOrderListResp{
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    total,
+		},
+		List: memberOrders,
+	}, nil
+}
+
+// getMemberOrderDetail 获取完整的外送订单信息
+func getMemberOrderDetail(ctx context.Context, memberSaleOrderUuid uint64) (*model.MemberSaleOrder, error) {
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(ctx.GetDB()).GetMemberSaleOrderRecord(memberSaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 当前销售账单数据
+	saleBill, errSaleBill := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(0, repository.WithMemberSaleOrderUuid(memberSaleOrderUuid))
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill)
+	}
+	memberSaleOrder.SaleBill = saleBill
+
+	return memberSaleOrder, nil
+}
+
+// GetMemberOrderDetail 获取收银端"外送"订单详情
+func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	memberSaleOrder, err := getMemberOrderDetail(ctx, req.MemberSaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	products := make([]resp.MemberOrderProduct, 0)
+	for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
+		products = append(products, resp.MemberOrderProduct{
+			LocaleName: saleOrderProduct.GetNameAndFlavorName(),
+			Num:        saleOrderProduct.Num,
+			TotalPrice: saleOrderProduct.GetTotalPrice(),
+		})
+	}
+
+	return &resp.GetMemberOrderDetailResp{
+		MemberSaleOrderUuid: memberSaleOrder.Uuid,
+		PayTime:             memberSaleOrder.PayTime,
+		FinishTime:          memberSaleOrder.FinishTime,
+		CancelTime:          memberSaleOrder.CancelTime,
+		CancelReason:        memberSaleOrder.CancelReason,
+		AmountInfo: resp.MemberOrderAmountInfo{
+			Amount: memberSaleOrder.Amount,
+		},
+		ProductList: resp.MemberProductList{
+			List:          products,
+			ProductAmount: memberSaleOrder.ProductAmount,
+		},
+		AddressInfo: resp.MemberOrderDetailAddress{
+			ContactName: memberSaleOrder.Address.ContactName,
+			Phone:       memberSaleOrder.Address.ContactPhone,
+			PhonePrefix: memberSaleOrder.Address.PhonePrefix,
+			Address:     memberSaleOrder.Address.Address + memberSaleOrder.Address.DetailAddress,
+		},
+		Rider: resp.RiderInfo{
+			Name:  memberSaleOrder.RiderName,
+			Phone: memberSaleOrder.RiderPhone,
+		},
+	}, nil
 }
 
 // createOrderNo 创建订单编号

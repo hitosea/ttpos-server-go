@@ -53,6 +53,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			cashier.RegisterBaseHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterCallHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterH5OrderHandlers(cashierGroup, dbm, cache)
+			cashier.RegisterMemberOrderHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterRechargeOrderHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterPrinterHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterStatisticsHandlers(cashierGroup, dbm, cache)

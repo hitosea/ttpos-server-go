@@ -32,7 +32,7 @@ class AddMemberSaleOrderTable extends Migrator
         if (!$this->hasTable('member_sale_order')) {
             $table = $this->table('member_sale_order', ['comment' => '会员销售订单表']);
             $table->addColumn('uuid', 'biginteger', ['signed' => false, 'null' => false, 'default' => 0, 'comment' => '会员销售订单ID'])
-            ->addColumn('status', 'integer', ['null' => false, 'default' => 1, 'comment' => '订单状态 0-选购中 1-待支付 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消'])
+            ->addColumn('status', 'integer', ['null' => false, 'default' => 1, 'comment' => '订单状态 0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消'])
             ->addColumn('delivery_distance', 'decimal', ['precision' => 12, 'scale' => 2, 'null' => false, 'default' => 0.00, 'comment' => '配送距离，单位km'])
             ->addColumn('remark', 'string', ['limit' => 255, 'null' => false, 'default' => '', 'comment' => '订单备注'])
             ->addColumn('delivery_fee_amount', 'decimal', ['precision' => 12, 'scale' => 2, 'null' => false, 'default' => 0.00, 'comment' => '配送费'])

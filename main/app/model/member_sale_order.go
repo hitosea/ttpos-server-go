@@ -10,11 +10,18 @@ import (
 // MemberSaleOrder 会员端销售订单表 `ttpos_member_sale_order`
 type MemberSaleOrder struct {
 	BaseModel
-	Status            uint    `gorm:"column:status;type:int(10);not null;default:1;comment:'订单状态 0-选购中 1-待支付 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消'"`
+	Status            uint    `gorm:"column:status;type:int(10);not null;default:1;comment:'订单状态 0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消'"`
+	SerialNumber      string  `gorm:"column:serial_number;type:varchar(255);not null;default:'';comment:'订单流水号'"`
 	DeliveryDistance  float64 `gorm:"column:delivery_distance;type:decimal(12,6);not null;default:0;comment:'配送距离，单位km'"`
 	Remark            string  `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'订单备注'"`
+	CancelReason      string  `gorm:"column:cancel_reason;type:varchar(255);not null;default:'';comment:'取消原因'"`
 	IsVerifiedPhone   uint    `gorm:"column:is_verified_phone;type:int(10);not null;default:0;comment:'订单是否已经验证手机号,0-未验证 1-已验证,不再弹出验证手机号'"`
 	PaymentMethodUuid uint64  `gorm:"column:payment_method_uuid;type:bigint(20) unsigned;not null;default:0;comment:'支付方式UUID,订单已选择的支付方式'"`
+	// 确认订单之后才有值的字段
+	ProductNum        float64 `gorm:"column:product_num;type:decimal(12,2);not null;default:0;comment:'商品数量.订单中商品的总数量，商品A数量2，商品B数量1，则商品数量为3'"`
+	ProductAmount     float64 `gorm:"column:product_amount;type:decimal(12,2);not null;default:0;comment:'商品金额'"`
+	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);not null;default:0;comment:'会员折扣'"`
+	Amount            float64 `gorm:"column:amount;type:decimal(12,2);not null;default:0;comment:'订单总金额.商品金额-会员折扣+配送费'"`
 	// 配送费参数
 	DeliveryFeeAmount  float64 `gorm:"column:delivery_fee_amount;type:decimal(12,6);not null;default:0;comment:'配送费'"`
 	DeliveryFeeMinFee  float64 `gorm:"column:delivery_fee_min_fee;type:decimal(12,6);not null;default:0;comment:'起步配送费'"`
@@ -101,7 +108,7 @@ func NewMemberSaleOrder(setting DeliveryConfigResponse) *MemberSaleOrder {
 	return saleOrder
 }
 
-// 会员销售订单地址
+// 会员销售订单地址 `ttpos_member_sale_order_address`
 type MemberSaleOrderAddress struct {
 	BaseModel
 	MemberUuid          uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员UUID'"`
@@ -112,6 +119,7 @@ type MemberSaleOrderAddress struct {
 	DetailAddress       string  `gorm:"column:detail_address;type:varchar(255);not null;default:'';comment:'详细地址'"`
 	ContactName         string  `gorm:"column:contact_name;type:varchar(255);not null;default:'';comment:'联系人'"`
 	ContactPhone        string  `gorm:"column:contact_phone;type:varchar(255);not null;default:'';comment:'联系电话'"`
+	PhonePrefix         string  `gorm:"column:phone_prefix;type:varchar(255);not null;default:'';comment:'联系电话前缀'"`
 	ContactGender       int     `gorm:"column:contact_gender;type:int(10);not null;default:0;comment:'联系人性别, 0-女士 1-先生'"`
 	MemberSaleOrderUuid uint64  `gorm:"column:member_sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员销售订单UUID'"`
 }

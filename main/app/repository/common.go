@@ -64,6 +64,7 @@ type ICommonRepo interface {
 	WhereByMemberUuid(uuid uint64) DBOption                             // 根据会员UUID查询
 	WhereByNotRevoked() DBOption                                        // 未撤销的出库记录
 	WhereByStatus(status uint) DBOption                                 // 根据状态查询
+	WhereByMultipleStatus(statusList []uint) DBOption                   // 根据多个状态查询
 	WhereBySource(source uint) DBOption                                 // 根据来源查询
 	WhereByRequirement(requirement string) DBOption                     // 根据requirement查询
 	WhereByIsShowCashier(isShowCashier uint) DBOption                   // 根据是否显示收银机查询
@@ -108,6 +109,7 @@ type ICommonRepo interface {
 	FilterSaleOrderProductH5OrderedWithReject() DBOption                // 查询H5已下单的购物车商品.包括已送厨商品、已下单未接单的商品和被拒单的商品
 	SortWithID(order string) DBOption                                   // 根据ID排序
 	SortWithCreateTime(order string) DBOption                           // 根据创建时间排序
+	SortWithPayTime(order string) DBOption                              // 根据支付时间排序
 	SortWithHandleTime(order string) DBOption                           // 根据h5订单处理时间排序
 	WhereCreateTimeGt(createTime int64) DBOption                        // 根据创建时间大于查询
 	SortWithSort(order string) DBOption                                 // 根据Order By排序
@@ -199,6 +201,13 @@ func (r *commonRepo) WhereByAssociatedOrderUuid(uuid uint64) DBOption {
 func (r *commonRepo) WhereByStatus(status uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", status)
+	}
+}
+
+// 根据多个状态查询
+func (r *commonRepo) WhereByMultipleStatus(statusList []uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status IN (?)", statusList)
 	}
 }
 
@@ -499,6 +508,14 @@ func (r *commonRepo) SortWithCreateTime(order string) DBOption {
 	}
 }
 
+// 按支付时间排序
+func (r *commonRepo) SortWithPayTime(order string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Order("pay_time " + order)
+	}
+}
+
+// 按处理时间排序
 func (r *commonRepo) SortWithHandleTime(order string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Order("handle_time " + order)

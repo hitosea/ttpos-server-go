@@ -10,12 +10,18 @@ import (
 )
 
 type IMemberSaleOrderRepo interface {
-	GetMemberSaleOrder(opts ...DBOption) (*model.MemberSaleOrder, error)
-	GetMemberSaleOrderRecord(uuid uint64) (*model.MemberSaleOrder, error)             // 获取会员端销售订单记录
+	IQueryMemberSaleOrderRepo
 	CreateMemberSaleOrder(memberSaleOrder model.MemberSaleOrder) error                // 创建会员端销售订单
 	UpdateMemberSaleOrderVerifiedPhoneStatus(memberSaleOrderUuid uint64) error        // 更新会员端销售订单的手机号验证状态为已验证
 	UpdateMemberSaleOrderPendingPayment(memberSaleOrder *model.MemberSaleOrder) error // 更新会员端销售订单为待支付状态
 	UpdateMemberSaleOrderPendingMerchantAccept(memberSaleOrderUuid uint64) error      // 更新会员端销售订单为“待商家接单”状态，表示订单支付成功，等待商家接单
+}
+
+type IQueryMemberSaleOrderRepo interface {
+	GetMemberSaleOrder(opts ...DBOption) (*model.MemberSaleOrder, error)                                           // 获取会员端销售订单
+	GetMemberSaleOrderRecord(uuid uint64) (*model.MemberSaleOrder, error)                                          // 获取会员端销售订单记录
+	PaginateGetMemberSaleOrder(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)     // 分页获取会员端销售订单
+	GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error) // 获取收银台"外送"订单列表
 }
 
 func NewMemberSaleOrderRepo(db *gorm.DB) IMemberSaleOrderRepo {
@@ -86,6 +92,10 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderPendingPayment(memberSaleOrde
 		PaymentMethodUuid: memberSaleOrder.PaymentMethodUuid,            // 更新支付方式UUID
 		Status:            constant.MemberSaleOrderStatusPendingPayment, // 更新订单状态为待支付
 		Remark:            memberSaleOrder.Remark,                       // 更新订单备注
+		ProductNum:        memberSaleOrder.ProductNum,                   // 更新商品数量
+		ProductAmount:     memberSaleOrder.ProductAmount,                // 更新商品金额
+		MemberDiscountFee: memberSaleOrder.MemberDiscountFee,            // 更新会员折扣
+		Amount:            memberSaleOrder.Amount,                       // 更新订单总金额
 	}).Error; err != nil {
 		return errors.WithMessage(err)
 	}
@@ -101,4 +111,36 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderPendingMerchantAccept(memberS
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+func (r *MemberSaleOrderRepo) PaginateGetMemberSaleOrder(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error) {
+	var memberSaleOrders []model.MemberSaleOrder
+	var total int64
+
+	db := r.db.Model(&model.MemberSaleOrder{}).Session(&gorm.Session{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Count(&total).Error
+	if err != nil {
+		return nil, 0, errors.WithMessage(err)
+	}
+
+	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&memberSaleOrders).Error
+	return memberSaleOrders, total, errors.WithMessage(err)
+}
+
+func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error) {
+	opts := []DBOption{
+		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+		CommonRepo.DBOption(CommonRepo.SortWithPayTime("desc")),
+	}
+	if len(statusList) == 1 {
+		opts = append(opts, CommonRepo.DBOption(CommonRepo.WhereByStatus(statusList[0])))
+	} else if len(statusList) > 1 {
+		opts = append(opts, CommonRepo.DBOption(CommonRepo.WhereByMultipleStatus(statusList)))
+	}
+	return r.PaginateGetMemberSaleOrder(pageNo, pageSize, opts...)
 }
