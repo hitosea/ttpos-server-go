@@ -28,7 +28,7 @@ type OrderHandler struct {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} product_resp.ProductCategoryListResp "成功"
+// @Success 200 {object} resp.CreateMemberOrderResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/create [post]
 func (h *OrderHandler) CreateOrder(c *gin.Context) {
@@ -64,7 +64,7 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} product_resp.ProductCategoryListResp "成功"
+// @Success 200 {object} resp.CreateMemberOrderResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/address [post]
 func (h *OrderHandler) SetOrderAddress(c *gin.Context) {
@@ -88,6 +88,66 @@ func (h *OrderHandler) SetOrderAddress(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// VerifyPhone 验证手机号
+// @Summary 验证手机号
+// @Description 验证手机号
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} resp.CreateMemberOrderResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/phone/verify [post]
+func (h *OrderHandler) VerifyPhone(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := member_req.VerifyPhoneReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("验证手机号", zap.Any("params", params))
+
+	// 验证手机号
+	res, err := h.orderSrv.VerifyPhone(ctx, params)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// PayOrder 提交支付
+// @Summary 提交支付
+// @Description 提交支付
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/pay [post]
+func (h *OrderHandler) PayOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := member_req.PayMemberOrderReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("提交支付", zap.Any("params", params))
+
+	// 提交支付
+	if err := h.orderSrv.PayMemberOrder(ctx, params); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, nil)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -107,7 +167,9 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// privateApi := router.Group("")
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
-		privateApi.POST("/order/create", wrapper.CreateOrder)      // 创建订单
-		privateApi.POST("/order/address", wrapper.SetOrderAddress) // 设置订单地址
+		privateApi.POST("/order/create", wrapper.CreateOrder)       // 创建订单
+		privateApi.POST("/order/address", wrapper.SetOrderAddress)  // 设置订单地址
+		privateApi.POST("/order/phone/verify", wrapper.VerifyPhone) // 验证手机号
+		privateApi.POST("/order/pay", wrapper.PayOrder)             // 提交支付
 	}
 }

@@ -54,10 +54,9 @@ import (
 
 // IOrderSrv 定义订单服务接口
 type IOrderSrv interface {
+	IMemberOrderSrv
 	CreateInstantOrder(ctx context.Context) (resp.CreateInstantOrderResp, error)                                                                                 // 创建点餐订单
 	CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateReq) (resp.CreateDeskOrderResp, error)                                                           // 创建桌台订单
-	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)                        // 创建会员端订单
-	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                                     // 设置会员端订单地址
 	GetOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderListPaginationResp, error)                                                               // 获取订单列表
 	ExportOrderLists(ctx context.Context, req req.OrderListReq) (resp.OrderExportListPaginationResp, error)                                                      // 导出订单列表
 	GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (resp.OrderInfosResp, error)                                                                        // 获取订单详情
@@ -144,6 +143,13 @@ type IOrderSrv interface {
 
 	GetOrderMemberList(ctx context.Context, saleBillUuid uint64) (resp.InstantOrderMemberList, error)                       // 获取订单会员列表
 	GetProductPackageDetail(ctx context.Context, req req.GetProductPackageDetailReq) (*resp.ProductPackageDetailRes, error) // 获取商品选购详情
+}
+
+type IMemberOrderSrv interface {
+	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error) // 创建会员端订单
+	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)              // 设置会员端订单地址
+	VerifyPhone(ctx context.Context, req member_req.VerifyPhoneReq) (*resp.CreateMemberOrderResp, error)                                  // 验证手机号
+	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                       // 会员端订单提交支付，状态变为待支付
 }
 
 // orderSrv 订单服务结构
@@ -960,6 +966,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		MemberDiscount:      memberDiscount.Round(2).InexactFloat64(),
 		Amount:              memberSaleOrder.CalculateAmount(),
 		Remark:              memberSaleOrder.Remark,
+		IsVerifiedPhone:     memberSaleOrder.IsVerifiedPhoneBool(),
 		Address:             address,
 		DeliveryFee: resp.MemberSaleOrderDeliveryFee{
 			Amount:   memberSaleOrder.CalculateDeliveryFee(),
@@ -1114,6 +1121,59 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	}
 
 	return info, nil
+}
+
+// VerifyPhone 验证手机号
+func (s *orderSrv) VerifyPhone(ctx context.Context, request member_req.VerifyPhoneReq) (*resp.CreateMemberOrderResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	// 判断手机号是否是该订单地址联系人的手机号
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(request.MemberSaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if memberSaleOrder.IsVerifiedPhoneBool() {
+		return nil, errors.WithMessage(errors.New("手机号已验证"))
+	}
+	if memberSaleOrder.Address == nil {
+		return nil, errors.WithMessage(errors.New("无法找到订单地址"))
+	}
+	if memberSaleOrder.Address.ContactPhone != request.Phone {
+		return nil, errors.WithMessage(errors.New("手机号不匹配"))
+	}
+
+	// TODO 验证验证码、注册会员
+
+	memberSaleOrder.IsVerifiedPhone = 1
+	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderVerifiedPhoneStatus(memberSaleOrder.Uuid); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// TODO 如果订单会员从游客变为会员身份，要更会该订单的会员uuid，并重新计算商品订单价格
+
+	// 返回会员端订单信息
+	info, err := s.GetMemberOrderCheckoutInfo(ctx, req.GetMemberOrderCheckoutInfoReq{
+		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
+	}, nil)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return info, nil
+}
+
+// PayMemberOrder 提交支付
+func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error {
+	// 保存订单备注信息
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(s.dbm.GetDB(ctx.GetDbId())).GetMemberSaleOrderRecord(request.MemberSaleOrderUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	memberSaleOrder.Remark = request.Remark
+	memberSaleOrder.SetPendingPayment(request.PaymentMethodUuid)
+	if err := repository.NewMemberSaleOrderRepo(s.dbm.GetDB(ctx.GetDbId())).UpdateMemberSaleOrderPendingPayment(memberSaleOrder); err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }
 
 // createOrderNo 创建订单编号

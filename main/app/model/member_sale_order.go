@@ -10,9 +10,11 @@ import (
 // MemberSaleOrder 会员端销售订单表 `ttpos_member_sale_order`
 type MemberSaleOrder struct {
 	BaseModel
-	Status           uint    `gorm:"column:status;type:int(10);not null;default:1;comment:'订单状态 0-选购中 1-待支付 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消'"`
-	DeliveryDistance float64 `gorm:"column:delivery_distance;type:decimal(12,6);not null;default:0;comment:'配送距离，单位km'"`
-	Remark           string  `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'订单备注'"`
+	Status            uint    `gorm:"column:status;type:int(10);not null;default:1;comment:'订单状态 0-选购中 1-待支付 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消'"`
+	DeliveryDistance  float64 `gorm:"column:delivery_distance;type:decimal(12,6);not null;default:0;comment:'配送距离，单位km'"`
+	Remark            string  `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'订单备注'"`
+	IsVerifiedPhone   uint    `gorm:"column:is_verified_phone;type:int(10);not null;default:0;comment:'订单是否已经验证手机号,0-未验证 1-已验证,不再弹出验证手机号'"`
+	PaymentMethodUuid uint64  `gorm:"column:payment_method_uuid;type:bigint(20) unsigned;not null;default:0;comment:'支付方式UUID,订单已选择的支付方式'"`
 	// 配送费参数
 	DeliveryFeeAmount  float64 `gorm:"column:delivery_fee_amount;type:decimal(12,6);not null;default:0;comment:'配送费'"`
 	DeliveryFeeMinFee  float64 `gorm:"column:delivery_fee_min_fee;type:decimal(12,6);not null;default:0;comment:'起步配送费'"`
@@ -46,9 +48,20 @@ func (model *MemberSaleOrder) SetNil() {
 	model.Address = nil
 }
 
+// 设置订单为“待支付”状态
+func (model *MemberSaleOrder) SetPendingPayment(paymentMethodUuid uint64) {
+	model.Status = constant.MemberSaleOrderStatusPendingPayment
+	model.PaymentMethodUuid = paymentMethodUuid
+}
+
 // 订单是否已经取消
 func (model *MemberSaleOrder) IsCancel() bool {
 	return model.Status == constant.MemberSaleOrderStatusCancelled
+}
+
+// 订单是否已经验证手机号
+func (model *MemberSaleOrder) IsVerifiedPhoneBool() bool {
+	return model.IsVerifiedPhone == 1
 }
 
 // 计算配送费

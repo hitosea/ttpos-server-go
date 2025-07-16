@@ -150,6 +150,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `status` INT(10) NOT NULL DEFAULT 1 COMMENT '订单状态 0-选购中 1-待支付 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消',
     `delivery_distance` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '配送距离，单位km',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '订单备注',
+    `is_verified_phone` INT(10) NOT NULL DEFAULT 0 COMMENT '订单是否已经验证手机号,0-未验证 1-已验证,不再弹出验证手机号',
+    `payment_method_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '支付方式UUID,订单已选择的支付方式',
     -- 配送费参数
     `delivery_fee_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '配送费',
     `delivery_fee_distance` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '配送距离',

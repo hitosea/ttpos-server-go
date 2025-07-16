@@ -144,6 +144,7 @@ type MemberSaleOrderInfo struct {
 	Address             MemberSaleOrderAddress     `json:"address"`                // 收货地址
 	DeliveryFee         MemberSaleOrderDeliveryFee `json:"delivery_fee"`           // 配送费信息
 	PaymentMethods      PaymentMethodList          `json:"payment_methods"`        // 支付方式列表。只显示lianlianpay的微信支付、支付宝支付、QRPromptPay支付
+	IsVerifiedPhone     bool                       `json:"is_verified_phone"`      // 订单是否已经验证手机号
 }
 
 type MemberSaleOrderProductList struct {
