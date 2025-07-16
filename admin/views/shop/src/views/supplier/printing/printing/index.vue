@@ -19,6 +19,10 @@
           <el-select class="max-w460" v-model="items.printer_id" :placeholder="$t('请选择')">
             <el-option v-for="(item, index) in printerList" :key="index" :label="item.printer_name" :value="item.printer_id + ''"> </el-option>
           </el-select>
+          <div class="max-w460 flex-center">
+            <span >{{ $t('收银机SN') }}</span>
+            <el-input  v-model="items.sn" :placeholder="$t('请输入收银机SN')"></el-input>
+          </div>
         </el-form-item>
         <div class="cashier-desc">
           {{ $t('交班单、营业数据、预结账单、结账单、发票、充值单') }}
@@ -115,6 +119,7 @@
           params.cashier_printer.push({
             key: item.cashier_key,
             printer_id: item.printer_id,
+            sn: item.sn,
           });
         });
         self.loading = true;
@@ -144,15 +149,26 @@
   };
 </script>
 
-<style scoped>
+<style scoped lang="scss">
   .tips {
     color: #ccc;
   }
 
   .cashier-item {
     margin-bottom: 0 !important;
+    :deep(.el-form-item__content) {
+      gap: 10px;
+    }
   }
-
+  .flex-center {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    span {
+      flex-shrink: 0;
+    }
+  }
   .cashier-desc {
     font-size: 14px;
     color: #ccc;
