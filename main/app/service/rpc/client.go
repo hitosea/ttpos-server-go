@@ -88,7 +88,8 @@ func TestCreateOrder() (res *api.CreateOrderResp, err error) {
 	}
 	defer conn.Close()
 	in := &api.CreateOrderReq{
-		ProviderName: "skootar",
+		ProviderName:  "skootar",
+		ShopOrderUuid: "8888777",
 		CustomerLocation: &api.Location{
 			Lat:          "13.721899",
 			Lng:          "100.52900",

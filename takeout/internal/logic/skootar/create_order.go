@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gogf/gf/v2/os/gctx"
+	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/gmeta"
 	"github.com/gogf/gf/v2/util/guid"
 	"takeout/api"
@@ -49,14 +50,16 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 	reqInp := &skootar.CreateOrderInp{
 		ReqBase:         s.ReqBase(),
 		LocationList:    locationList,
-		Vehicle:         string(consts.VehicleMotorcycle),
-		JobType:         string(consts.JobTypeFood),
+		Vehicle:         gconv.String(consts.VehicleMotorcycle),
+		JobType:         gconv.String(consts.JobTypeFood),
 		JobDate:         time.Now().Format(time.DateOnly),
 		StartTime:       consts.DEFAULT_START_TIME, //time.Now().Format("15:04")
-		PaymentType:     string(consts.PaymentTypeCash),
+		PaymentType:     gconv.String(consts.PaymentTypeCash),
 		MerchantConfirm: 1,                //送餐默认需要商家确认
-		CallbackUrl:     getCallbackUrl(), //  构造回调地址
-		Option:          string(consts.EstimateOptionFood),
+		CallbackUrl:     getCallbackUrl(), //  构造外送模块回调地址
+		Option:          gconv.String(consts.EstimateOptionFood),
+		RefNo:           req.ShopOrderUuid,
+		Remark:          req.Remark,
 	}
 
 	resp := &skootar.CreateOrderOut{}
@@ -82,11 +85,12 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 		TakeoutRefNo:         resp.JobDetail.JobID,
 		ShopRefNo:            req.ShopOrderUuid,
 		PaymentType:          reqInp.PaymentType,
-		CallbackUrl:          reqInp.CallbackUrl,
-		ProviderName:         string(consts.ProviderSkootar),
+		CallbackUrl:          req.CallbackUrl, //来源订单的回调
+		ProviderName:         gconv.String(consts.ProviderSkootar),
 		JobDate:              reqInp.JobDate,
 		StartTime:            reqInp.StartTime,
-		JobStatus:            string(resp.JobDetail.JobStatus),
+		JobStatus:            gconv.String(resp.JobDetail.JobStatus),
+		Remark:               reqInp.Remark,
 	}
 	locationModel := dao.JobLocation.Ctx(ctx)
 	if _, err = locationModel.Data(do.JobLocation{
