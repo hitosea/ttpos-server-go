@@ -205,7 +205,7 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 		constant.MemberSaleOrderStatusPendingMerchantAccept,
 		constant.MemberSaleOrderStatusCooking,
 		constant.MemberSaleOrderStatusCancelled,
-	}), memberSaleOrderRepo.WhereCreateTimeGt(thirtyMinutesAgo), repository.CommonRepo.SortWithCreateTime("desc"))
+	}), memberSaleOrderRepo.WhereUpdateTimeGt(thirtyMinutesAgo))
 	if err != nil {
 		return res, errors.WithMessage(errors.New("获取未处理的外送订单失败"), err.Error())
 	}

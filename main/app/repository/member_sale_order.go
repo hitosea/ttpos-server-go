@@ -25,7 +25,7 @@ type IQueryMemberSaleOrderRepo interface {
 
 	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
 	WhereStatusIn(status []uint) DBOption
-	WhereCreateTimeGt(ts int64) DBOption
+	WhereUpdateTimeGt(ts int64) DBOption
 }
 
 func NewMemberSaleOrderRepo(db *gorm.DB) IMemberSaleOrderRepo {
@@ -169,7 +169,7 @@ func (r *MemberSaleOrderRepo) PaginateGet(pageNo, pageSize int, opts ...DBOption
 		return nil, 0, errors.WithMessage(err)
 	}
 	// 获取分页数据
-	err := db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&memberSaleOrders).Error
+	err := db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Order("update_time desc").Find(&memberSaleOrders).Error
 	return memberSaleOrders, total, errors.WithMessage(err)
 }
 
@@ -179,7 +179,7 @@ func (r *MemberSaleOrderRepo) WhereStatusIn(status []uint) DBOption {
 	}
 }
 
-func (r *MemberSaleOrderRepo) WhereCreateTimeGt(ts int64) DBOption {
+func (r *MemberSaleOrderRepo) WhereUpdateTimeGt(ts int64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("create_time > ?", ts)
 	}
