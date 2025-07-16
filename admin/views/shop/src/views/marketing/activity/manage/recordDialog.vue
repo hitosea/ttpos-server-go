@@ -9,8 +9,8 @@
     <div>
       <div class="record-dialog-wrapper">
         <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
-          <el-form-item :label="$t('昵称/手机号/ID')">
-            <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/ID')" @input="onSearch"></el-input>
+          <el-form-item :label="$t('昵称/手机号/ID/会员卡号')">
+            <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/ID/会员卡号')" @input="onSearch"></el-input>
           </el-form-item>
           <el-form-item>
             <el-button size="small" type="primary" icon="Search" class="search-button" @click="onSearch">

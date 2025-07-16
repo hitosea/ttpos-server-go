@@ -14,7 +14,7 @@
             <el-option v-for="(item, index) in sex" :key="index" :label="item" :value="index"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item :label="$t('昵称/手机号/ID')"><el-input :placeholder="$t('昵称/手机号/ID')" v-model="formInline.keyword"></el-input></el-form-item>
+        <el-form-item :label="$t('昵称/手机号/ID/会员卡号')"><el-input :placeholder="$t('昵称/手机号/ID/会员卡号')" v-model="formInline.keyword"></el-input></el-form-item>
         <el-form-item style="margin-right: 0">
           <el-button class="search-button" type="primary" icon="Search" @click="search">{{ $t('查询') }}</el-button>
         </el-form-item>
