@@ -215,8 +215,8 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("税号"), taxNumber))
 			img.LineFeed(1)
 		}
-		if temp == 5 {
-			if cashierSn := t.base.GetCashierSn(); cashierSn != "" {
+		if temp == 5 && printOrderType == constant.PrinterTemplateBilling {
+			if cashierSn := t.base.GetCashierSn(settingPrinterInfo.PrinterCashierDeviceSn); cashierSn != "" {
 				img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银机SN"), cashierSn))
 				img.LineFeed(1)
 			}

@@ -514,13 +514,26 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder, isSh
 }
 
 // 获取收银机SN
-func (p *printerTemplate) GetCashierSn() string {
+func (p *printerTemplate) GetCashierSn(printerSn string) string {
+	// 是否存在
+	isExist := false
 	for _, item := range p.PrinterSetting.CashierPrinter {
 		if item.Key == p.Ctx.GetDeviceSn() {
+			isExist = true
 			if item.Sn != "" {
 				return item.Sn
 			}
 		}
 	}
+	if !isExist {
+		for _, item := range p.PrinterSetting.CashierPrinter {
+			if item.Key == printerSn {
+				if item.Sn != "" {
+					return item.Sn
+				}
+			}
+		}
+	}
+	//
 	return ""
 }
