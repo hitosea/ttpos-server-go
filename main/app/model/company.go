@@ -3,7 +3,10 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
+	"ttpos-server-go/app/errors"
 )
 
 // Company 集团表 ttpos_company
@@ -61,6 +64,82 @@ type CompanySetting struct {
 	Timezone         string `gorm:"column:timezone;type:varchar(50);default:Asia/Shanghai;comment:时区;NOT NULL" json:"timezone"`
 	Languages        string `gorm:"column:languages;type:varchar(255);comment:支持语言;NOT NULL" json:"languages"`
 	Address          string `gorm:"column:address;type:varchar(255);comment:联系地址;NOT NULL" json:"address"`
+	DeliveryConfig   string `gorm:"column:delivery_config;type:text;comment:外送配置;NOT NULL" json:"delivery_config"`
+	DeliveryStatus   int    `gorm:"column:delivery_status;type:int(11);default:0;comment:外送配置状态：0-关,1-开;NOT NULL" json:"delivery_status"`
+}
+
+// GetDeliveryConfig 获取外送配置
+func (model *CompanySetting) GetDeliveryConfig(channel string, distance float64) (*DeliveryConfigResponse, error) {
+	// 如果配置为空，返回空配置
+	if model.DeliveryConfig == "" || model.DeliveryConfig == "[]" || len(model.DeliveryConfig) < 10 {
+		return nil, errors.WithMessage(errors.ErrInternal, "delivery config is empty")
+	}
+	var deliveryConfig DeliveryConfig
+	if err := json.Unmarshal([]byte(model.DeliveryConfig), &deliveryConfig); err != nil {
+		return nil, errors.WithMessage(err, "unmarshal delivery config failed")
+	}
+
+	for index := range deliveryConfig {
+		item := &deliveryConfig[index]
+		item.Channel = strings.ToLower(item.Channel) // 外送渠道转换为小写
+		// 按照距离排序,从小到大
+		sort.Slice(item.DistanceRange, func(i, j int) bool {
+			return item.DistanceRange[i].End < item.DistanceRange[j].End
+		})
+	}
+
+	config, err := deliveryConfig.GetConfigByChannel(channel, distance)
+	if err != nil {
+		return nil, errors.WithMessage(err, "get delivery config failed")
+	}
+	return config, nil
+}
+
+// 外送配置
+type DeliveryConfig []DeliveryConfigItem
+
+type DeliveryConfigResponse struct {
+	Channel                string  `json:"channel"`                  // 外送渠道
+	BasicFee               float64 `json:"basic_fee"`                // 基础服务费
+	BaseDeliveryFee        float64 `json:"base_delivery_fee"`        // 起步配送费
+	RiderAcceptanceTimeout int     `json:"rider_acceptance_timeout"` // 骑手接单超时时间,单位分钟
+	PricePerKm             float64 `json:"price_per_km"`             // 每公里价格
+}
+
+// 根据渠道和距离获取配置
+// channel: 外送渠道. skootar、grab
+// distance: 距离
+func (model *DeliveryConfig) GetConfigByChannel(channel string, distance float64) (*DeliveryConfigResponse, error) {
+	for _, item := range *model {
+		if item.Channel == channel {
+			for _, distanceRange := range item.DistanceRange {
+				if distanceRange.IsUnlimited || float64(distanceRange.End) >= distance {
+					return &DeliveryConfigResponse{
+						Channel:                item.Channel,
+						BasicFee:               item.BasicFee,
+						BaseDeliveryFee:        item.BaseDeliveryFee,
+						RiderAcceptanceTimeout: item.RiderAcceptanceTimeout,
+						PricePerKm:             distanceRange.PricePerKm,
+					}, nil
+				}
+			}
+		}
+	}
+	return nil, errors.WithMessage(errors.ErrInternal, "delivery config not found")
+}
+
+type DeliveryConfigItem struct {
+	Channel                string          `json:"channel"`                  // 外送渠道
+	ConfigType             string          `json:"config_type"`              // 配置类型 auto_sync: 自动同步，manual: 手动配置
+	BasicFee               float64         `json:"basic_fee"`                // 基础服务费
+	BaseDeliveryFee        float64         `json:"base_delivery_fee"`        // 起步配送费
+	RiderAcceptanceTimeout int             `json:"rider_acceptance_timeout"` // 骑手接单超时时间
+	DistanceRange          []DistanceRange `json:"distance_range"`           // 距离范围
+}
+type DistanceRange struct {
+	End         float64 `json:"end"`          // 距离
+	PricePerKm  float64 `json:"price_per_km"` // 每公里价格
+	IsUnlimited bool    `json:"is_unlimited"` // 是否无限
 }
 
 // GetIsOpenCoupon 是否开启优惠券

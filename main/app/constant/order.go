@@ -8,6 +8,7 @@ const (
 	OrderSourceInstant  = "instant"  // 点餐
 	OrderSourceDesk     = "desk"     // 桌台
 	OrderSourceRecharge = "recharge" // 充值
+	OrderSourceMember   = "member"   // 会员端
 )
 
 const (
@@ -116,12 +117,14 @@ var OrderSourceMapToOrderNoType = map[string]string{
 	OrderSourceInstant:  "1", // 点餐
 	OrderSourceDesk:     "2", // 桌台
 	OrderSourceRecharge: "3", // 充值
+	OrderSourceMember:   "4", // 会员端
 }
 
 // OrderSourceMapToBillType 订单来源映射到销售账单类型
 var OrderSourceMapToBillType = map[string]uint{
 	OrderSourceInstant: SaleBillTypeInstant, // 点餐
 	OrderSourceDesk:    SaleBillTypeDesk,    // 桌台
+	OrderSourceMember:  SaleBillTypeTakeout, // 会员端
 }
 
 // 订单操作类型

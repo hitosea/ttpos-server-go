@@ -55,6 +55,7 @@ type ICommonRepo interface {
 	WhereByID(id uint) DBOption                                         // 根据ID查询
 	WhereByUuid(uuid uint64) DBOption                                   // 根据UUID查询
 	WhereInUuids(uuids []uint64) DBOption                               // 根据UUID列表查询
+	WhereByMemberSaleOrderUuid(uuid uint64) DBOption                    // 根据会员端销售订单UUID查询
 	WhereByDeskUuid(uuid uint64) DBOption                               // 根据桌台UUID查询
 	WhereBySaleBillUuid(uuid uint64) DBOption                           // 根据销售单UUID查询
 	WhereByAssociatedOrderUuid(uuid uint64) DBOption                    // 根据关联订单UUID查询
@@ -63,6 +64,7 @@ type ICommonRepo interface {
 	WhereByMemberUuid(uuid uint64) DBOption                             // 根据会员UUID查询
 	WhereByNotRevoked() DBOption                                        // 未撤销的出库记录
 	WhereByStatus(status uint) DBOption                                 // 根据状态查询
+	WhereBySource(source uint) DBOption                                 // 根据来源查询
 	WhereByRequirement(requirement string) DBOption                     // 根据requirement查询
 	WhereByIsShowCashier(isShowCashier uint) DBOption                   // 根据是否显示收银机查询
 	WhereByIsShowAssistant(isShow uint) DBOption                        // 根据是否显示点餐助手端查询
@@ -159,6 +161,13 @@ func (r *commonRepo) WhereByUuid(uuid uint64) DBOption {
 	}
 }
 
+// WhereByMemberSaleOrderUuid 根据会员销售订单UUID查询
+func (r *commonRepo) WhereByMemberSaleOrderUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("member_sale_order_uuid = ?", uuid)
+	}
+}
+
 // WhereInUuids 根据UUID列表查询
 func (r *commonRepo) WhereInUuids(uuids []uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -190,6 +199,13 @@ func (r *commonRepo) WhereByAssociatedOrderUuid(uuid uint64) DBOption {
 func (r *commonRepo) WhereByStatus(status uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", status)
+	}
+}
+
+// WhereBySource 根据来源查询
+func (r *commonRepo) WhereBySource(source uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("source = ?", source)
 	}
 }
 

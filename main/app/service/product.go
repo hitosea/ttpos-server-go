@@ -11,10 +11,12 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/utils"
 
+	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
 )
 
@@ -26,18 +28,20 @@ type IProductSrv interface {
 }
 
 type productSrv struct {
-	dbm       *database.DBManager // 数据库管理器
-	localeSrv ILocaleSrv          // 多语言名称服务
+	dbm        *database.DBManager // 数据库管理器
+	localeSrv  ILocaleSrv          // 多语言名称服务
+	settingSrv setting.ISrv
 }
 
-func NewProductSrv(dbm *database.DBManager, localeSrv ILocaleSrv) IProductSrv {
-	return NewProductSrvImpl(dbm, localeSrv)
+func NewProductSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IProductSrv {
+	return NewProductSrvImpl(dbm, localeSrv, settingSrv)
 }
 
-func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv) IProductSrv {
+func NewProductSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IProductSrv {
 	return &productSrv{
-		dbm:       dbm,
-		localeSrv: localeSrv,
+		dbm:        dbm,
+		localeSrv:  localeSrv,
+		settingSrv: settingSrv,
 	}
 }
 
@@ -77,6 +81,28 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		return product_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取产品列表失败")
 	}
 
+	// 如果是会员端查询商品列表
+	if req.IsMember {
+		// 获取外送折扣率
+		// 获取门店业务设置
+		businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+		if err != nil {
+			return product_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取门店业务设置失败")
+		}
+		// 获取外送折扣率
+		deliveryPriceRatio := businessSetting.GetDeliveryPriceRatio()
+
+		// 返回响应对象
+		return product_resp.ProductListWithPaginationResp{
+			List: FormatProducts(ctx, products, WithTakeoutDiscountRate(deliveryPriceRatio)),
+			Meta: dto.PageResponse{
+				PageNo:   req.PageNo,
+				PageSize: req.PageSize,
+				Total:    total,
+			},
+		}, nil
+	}
+
 	// 返回响应对象
 	return product_resp.ProductListWithPaginationResp{
 		List: FormatProducts(ctx, products),
@@ -88,7 +114,28 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 	}, nil
 }
 
-func FormatProducts(ctx context.Context, products []model.ProductPackage) []product_resp.Product {
+type FormatProductsFn func(opts *FormatProductsOption)
+
+type FormatProductsOption struct {
+	IsMember            bool    // 是否是会员端查询商品列表
+	TakeoutDiscountRate float64 // 外送端折扣率. 取值范围1%-300% 即 0.01-3
+}
+
+// 设置参数，会员端查询商品列表，外送端折扣率
+func WithTakeoutDiscountRate(rate float64) FormatProductsFn {
+	return func(opts *FormatProductsOption) {
+		opts.TakeoutDiscountRate = rate
+		opts.IsMember = true
+	}
+}
+
+// FormatProducts 格式化产品列表
+func FormatProducts(ctx context.Context, products []model.ProductPackage, options ...FormatProductsFn) []product_resp.Product {
+	var option FormatProductsOption
+	for _, fn := range options {
+		fn(&option)
+	}
+
 	// 转换为响应对象
 	list := make([]product_resp.Product, 0, len(products))
 	for _, product := range products {
@@ -99,18 +146,28 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage) []prod
 
 		// 商品规格、加料
 		if len(product.ProductBoms) > 0 {
+			taxRate := product.TakeoutTax.TaxRate
+			takeoutDiscountRate := option.TakeoutDiscountRate // 外送端折扣率
+
 			for _, productBom := range product.ProductBoms {
 				if productBom.IsDelete() {
 					continue
 				}
 				if productBom.IsFlavor() {
-					flavors = append(flavors, product_resp.ProductFlavor{
+					flavor := product_resp.ProductFlavor{
 						Uuid:       productBom.Uuid,
 						LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
 						Price:      productBom.Price,
 						StockNum:   int(productBom.GetStockNum()),
 						Barcode:    productBom.BarcodeValue,
-					})
+					}
+					// 如果是会员端查询商品列表，需要获取在会员端的该商品规格价格
+					// 会员端商品规格价格=原商品规格价*外送商品折扣率 + 税费。 税费=原商品规格价*外送商品折扣率*外送的税率
+					// 故，会员端商品规格价格=原商品规格价*外送商品折扣率 * (1 + 外送的税率)
+					if option.IsMember {
+						flavor.Price = calculateTakeoutProductPrice(productBom.Price, takeoutDiscountRate, taxRate)
+					}
+					flavors = append(flavors, flavor)
 					if len(prices) == 0 {
 						prices = append(prices, productBom.Price)
 					} else {
@@ -120,13 +177,20 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage) []prod
 					}
 				}
 				if productBom.IsSauce() {
-					sauces = append(sauces, product_resp.ProductSauce{
+					sauce := product_resp.ProductSauce{
 						Uuid:              productBom.Uuid,
 						LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),
 						Price:             productBom.Price,
 						IsDefaultSelected: productBom.IsDefaultSelect == 1,
 						StockNum:          int(productBom.GetStockNum()),
-					})
+					}
+					// 如果是会员端查询商品列表，需要获取在会员端的该商品小料价格
+					// 会员端商品小料价格=原商品小料价*外送商品折扣率 + 税费。 税费=原商品小料价*外送商品折扣率*外送的税率
+					// 故，会员端商品小料价格=原商品小料价*外送商品折扣率 * (1 + 外送的税率)
+					if option.IsMember {
+						sauce.Price = calculateTakeoutProductPrice(productBom.Price, takeoutDiscountRate, taxRate)
+					}
+					sauces = append(sauces, sauce)
 				}
 			}
 		}
@@ -187,6 +251,15 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage) []prod
 		})
 	}
 	return list
+}
+
+// 外送端商品价格计算
+// 原商品规格价*外送商品折扣率 * (1 + 外送的税率)
+// originPrice 原商品小料价、原商品规格价
+// takeoutDiscountRate 外送商品折扣率 取值范围是1%-300%，即0.01-3
+// takeoutTaxRate 外送的税率 取值范围是0%-100%，即0-1
+func calculateTakeoutProductPrice(originPrice float64, takeoutDiscountRate float64, takeoutTaxRate float64) float64 {
+	return decimal.NewFromFloat(originPrice).Mul(decimal.NewFromFloat(takeoutDiscountRate)).Mul(decimal.NewFromFloat(1 + takeoutTaxRate)).Round(2).InexactFloat64()
 }
 
 // GetProductCategoryList 获取产品类别列表
@@ -282,6 +355,7 @@ func (s *productSrv) GetProductRecommendList(ctx context.Context, request req.Pr
 			PageSize: 100,
 		},
 		RecommendProductPackageUuids: recommendProductUuids,
+		IsMember:                     true,
 	})
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取产品推荐列表失败")

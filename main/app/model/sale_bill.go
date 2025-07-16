@@ -22,7 +22,7 @@ type SaleBill struct {
 	IsSplitOrder uint `gorm:"column:is_split_order;type:tinyint(1);default:0;comment:是否拆单, 0-否 1-是" json:"is_split_order"`
 
 	// 订单类型字段
-	BillType        uint  `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单" json:"bill_type"`
+	BillType        uint  `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单、2-会员端订单" json:"bill_type"`
 	DiningMethod    uint  `gorm:"column:dining_method;type:tinyint(1);default:0;comment:用餐方式,0-堂食 1-打包" json:"dining_method"`
 	IsBuffet        uint  `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`
 	BuffetDuration  uint  `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒），0为不限时. 原始值为自助餐的时长，加钟时会累加" json:"buffet_duration"`
@@ -68,12 +68,13 @@ type SaleBill struct {
 	CashierName string `gorm:"column:cashier_name;type:varchar(255);default:'';comment:收银员名称" json:"cashier_name"`
 
 	// 关联ID字段
-	ConsumerUuid       uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
-	CashierUuid        uint64 `gorm:"column:cashier_uuid;type:bigint(20);default:0;comment:收银员ID" json:"cashier_uuid"`
-	DeskUuid           uint64 `gorm:"column:desk_uuid;type:bigint(20);default:0;comment:餐桌ID" json:"desk_uuid"`
-	BuffetPackage1Uuid uint64 `gorm:"column:buffet_package1_uuid;type:bigint(20);default:0;comment:自助餐套餐1ID" json:"buffet_package1_uuid"`
-	BuffetPackage2Uuid uint64 `gorm:"column:buffet_package2_uuid;type:bigint(20);default:0;comment:自助餐套餐2ID" json:"buffet_package2_uuid"`
-	DeviceUuid         uint64 `gorm:"column:device_uuid;type:bigint(20);default:0;comment:设备ID，用于标识这个账单是由哪个设备创建的。点餐账单通过设备uuid查询" json:"device_uuid"`
+	ConsumerUuid        uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
+	CashierUuid         uint64 `gorm:"column:cashier_uuid;type:bigint(20);default:0;comment:收银员ID" json:"cashier_uuid"`
+	DeskUuid            uint64 `gorm:"column:desk_uuid;type:bigint(20);default:0;comment:餐桌ID" json:"desk_uuid"`
+	BuffetPackage1Uuid  uint64 `gorm:"column:buffet_package1_uuid;type:bigint(20);default:0;comment:自助餐套餐1ID" json:"buffet_package1_uuid"`
+	BuffetPackage2Uuid  uint64 `gorm:"column:buffet_package2_uuid;type:bigint(20);default:0;comment:自助餐套餐2ID" json:"buffet_package2_uuid"`
+	DeviceUuid          uint64 `gorm:"column:device_uuid;type:bigint(20);default:0;comment:设备ID，用于标识这个账单是由哪个设备创建的。点餐账单通过设备uuid查询" json:"device_uuid"`
+	MemberSaleOrderUuid uint64 `gorm:"column:member_sale_order_uuid;type:bigint(20);default:0;comment:会员销售订单ID" json:"member_sale_order_uuid"`
 
 	// 必点方案相关字段
 	ShowMustPlan       uint `gorm:"column:show_must_plan;type:tinyint(1);default:1;comment:是否显示必点方案, 0-不显示 1-显示" json:"show_must_plan"`

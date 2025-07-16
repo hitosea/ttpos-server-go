@@ -65,6 +65,7 @@ func (h *ProductHandler) GetProductList(c *gin.Context) {
 	}
 
 	// 获取会员端产品列表
+	productListReq.IsMember = true
 	res, err := h.productSrv.GetProductList(helper.GetContext(c), productListReq)
 
 	// 处理错误
@@ -113,7 +114,7 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	// 初始化处理器
-	productSrv := service.NewProductSrv(dbm, service.NewLocaleSrv())
+	productSrv := service.NewProductSrv(dbm, service.NewLocaleSrv(), settingSrv)
 	wrapper := &ProductHandler{
 		productSrv: productSrv,
 	}

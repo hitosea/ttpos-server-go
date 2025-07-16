@@ -262,9 +262,17 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, saleBill *model.SaleBill) error {
 	db := ctx.GetDB()
 
-	saleBill, err := s.actionAdd(ctx, request, saleBill)
-	if err != nil {
-		return errors.WithMessage(err)
+	var err error
+	if request.IsMemberAdd {
+		saleBill, err = s.actionAdd(ctx, request, saleBill, WithIsMemberAdd())
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+	} else {
+		saleBill, err = s.actionAdd(ctx, request, saleBill)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
@@ -539,8 +547,15 @@ func (s *orderSrv) TabletAddAndCooking(ctx context.Context, request req.TabletOr
 }
 
 type ActionAddOption struct {
-	IsTableAdd bool // 是否是平板端加购
-	skipLimit  bool // 是否跳过加购时的限购检查。使用场景是加购并送厨时，因为送厨会在坚持一次限购，所有加购时不检查
+	IsTableAdd  bool // 是否是平板端加购
+	IsMemberAdd bool // 是否是会员端加购
+	skipLimit   bool // 是否跳过加购时的限购检查。使用场景是加购并送厨时，因为送厨会在坚持一次限购，所有加购时不检查
+}
+
+func WithIsMemberAdd() func(option *ActionAddOption) {
+	return func(option *ActionAddOption) {
+		option.IsMemberAdd = true
+	}
 }
 
 func WithIsTableAdd() func(option *ActionAddOption) {
@@ -606,11 +621,17 @@ func (s *orderSrv) checkLimitPurchase(ctx context.Context, saleBill *model.SaleB
 		optionFunc(option)
 	}
 
-	// 获取自助餐商品的限购数量
-	limitProducts, err := s.getBuffetProductLimitList(ctx, saleBill.Uuid)
-	if err != nil {
-		return errors.WithMessage(err)
+	limitProducts := make(map[uint64]uint) // product_package_uuid => limit_num
+	var err error
+
+	if saleBill.IsBuffetSaleBill() { // 只有自助餐账单才查询自助餐商品限购信息
+		// 获取自助餐商品的限购数量 limitProducts map[uint64]uint product_package_uuid => limit_num
+		limitProducts, err = s.getBuffetProductLimitList(ctx, saleBill.Uuid)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
 	}
+
 	// 仅检查本次加购的商品是否超过限购
 	uuids := make([]uint64, 0)
 	for _, saleOrderProduct := range saleOrderProducts {

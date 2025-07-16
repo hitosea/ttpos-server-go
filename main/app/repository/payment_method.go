@@ -31,6 +31,7 @@ type IPaymentMethodQueryRepo interface {
 	GetPaymentMethodByUuid(uuid uint64) (*model.PaymentMethod, error)
 	GetPaymentMethodList(opts ...DBOption) []*model.PaymentMethod
 	GetPaymentMethodsByCtx(ctx context.Context) []*model.PaymentMethod // 获取收银机支付页面的支付方式列表
+	GetLianLianPayPaymentMethodList() ([]*model.PaymentMethod, error)  // 查询连连支付的支付方式列表
 }
 
 // paymentMethodRepo 仓库
@@ -162,4 +163,22 @@ func (r *paymentMethodRepo) GetPaymentMethodsByCtx(ctx context.Context) []*model
 	opts = append(opts, r.WithLogoFile(), r.WithQrcodeFile())
 	paymentMethods := r.GetPaymentMethodList(opts...)
 	return paymentMethods
+}
+
+func (r *paymentMethodRepo) GetLianLianPayPaymentMethodList() ([]*model.PaymentMethod, error) {
+	opts := []DBOption{
+		// CommonRepo.WhereByStatus(constant.PaymentMethodStatusEnable),
+		CommonRepo.WhereBySource(constant.PaymentMethodSourceLianLianPay),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "LogoFile",
+			},
+			WithPreload{
+				Query: "QrcodeFile",
+			},
+		),
+	}
+	paymentMethods := r.GetPaymentMethodList(opts...)
+	return paymentMethods, nil
 }
