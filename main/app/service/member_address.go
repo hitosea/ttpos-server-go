@@ -230,10 +230,11 @@ func (s *memberAddressSrv) AuthAddress(ctx context.Context, req member_req.Membe
 		return member_resp.LoginResp{}, errors.New(err.Error())
 	}
 
+	db := ctx.GetDB()
 	companyUuid := ctx.GetCompanyUuid()
 
 	// 获取地址信息
-	memberAddressRepo := repository.NewMemberAddressRepo(ctx.GetDB())
+	memberAddressRepo := repository.NewMemberAddressRepo(db)
 	memberAddress, err := memberAddressRepo.GetMemberAddressByUuid(req.Uuid)
 	if err != nil {
 		return member_resp.LoginResp{}, errors.New("地址不存在")
@@ -262,12 +263,22 @@ func (s *memberAddressSrv) AuthAddress(ctx context.Context, req member_req.Membe
 		}
 	}
 
-	// 更新认证状态
-	memberAddress.AuthPhone = memberAddress.Phone
-	memberAddress.AuthTime = time.Now().Unix()
-	_, err = memberAddressRepo.Update(*memberAddress)
-	if err != nil {
-		return member_resp.LoginResp{}, err
+	// 获取该会员的所有地址 - 找出未认证并与当前手机号相同的地址，并认证
+	addresses, err := repository.NewMemberAddressRepo(db).GetMemberAddressByMemberUuid(ctx.GetMemberUuid())
+	if err == nil && len(addresses) > 0 {
+		for _, address := range addresses {
+			if address.IsAuth() {
+				continue
+			}
+			if address.Phone == memberAddress.Phone {
+				address.AuthPhone = address.Phone
+				address.AuthTime = time.Now().Unix()
+				_, err = repository.NewMemberAddressRepo(db).Update(*address)
+				if err != nil {
+					return member_resp.LoginResp{}, err
+				}
+			}
+		}
 	}
 
 	return tokens, nil
