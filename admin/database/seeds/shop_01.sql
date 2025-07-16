@@ -2132,6 +2132,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
     UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
     INDEX `idx_duty_no` (`duty_no`),
     INDEX `idx_desk_uuid` (`desk_uuid`),
     INDEX `idx_complete_time` (`complete_time`)
@@ -2152,6 +2153,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_payment` (
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
     UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
     INDEX `idx_duty_no` (`duty_no`),
     INDEX `idx_desk_uuid` (`desk_uuid`),
     INDEX `idx_complete_time` (`complete_time`)
@@ -2308,6 +2310,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_member` (
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
     UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX idx_member_recharge_order_uuid (member_recharge_order_uuid),
     INDEX idx_duty_no (duty_no),
     INDEX idx_complete_time (complete_time)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '会员统计表';
@@ -2325,6 +2328,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_member_payment` (
     `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
     UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX idx_member_recharge_order_uuid (member_recharge_order_uuid),
     INDEX idx_duty_no (duty_no),
     INDEX idx_complete_time (complete_time),
     INDEX idx_payment_method_uuid (payment_method_uuid)
