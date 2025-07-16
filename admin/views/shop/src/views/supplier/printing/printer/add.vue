@@ -104,6 +104,9 @@
         <el-form-item for="no_click" :label="$t('打印机PORT')" prop="XPRINTER_LAN.PORT" :rules="[{ required: true, message: ' ' }]">
           <el-input v-model="form.XPRINTER_LAN.PORT"></el-input>
         </el-form-item>
+        <el-form-item for="no_click" :label="$t('打印机SN')">
+          <el-input v-model="form.XPRINTER_LAN.NEW_SN"></el-input>
+        </el-form-item>
       </div>
 
       <!-- CODESOFT打印 -->
@@ -114,6 +117,9 @@
 
         <el-form-item for="no_click" :label="$t('打印机PORT')" prop="CODESOFT_LAN.PORT" :rules="[{ required: true, message: ' ' }]">
           <el-input v-model="form.CODESOFT_LAN.PORT"></el-input>
+        </el-form-item>
+        <el-form-item for="no_click" :label="$t('打印机SN')">
+          <el-input v-model="form.CODESOFT_LAN.NEW_SN"></el-input>
         </el-form-item>
       </div>
 
@@ -201,6 +207,7 @@
           XPRINTER_LAN: {
             IP: '',
             PORT: 9100,
+            NEW_SN: '',
           },
           SUNMI_CLOUD: {
             APP_ID: '',
@@ -210,6 +217,7 @@
           CODESOFT_LAN: {
             IP: '',
             PORT: 9100,
+            NEW_SN: '',
           },
         },
         loading: false,
