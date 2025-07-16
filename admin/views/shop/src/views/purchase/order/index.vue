@@ -493,10 +493,16 @@
     },
   };
 </script>
-<style scoped>
+<style scoped lang="scss">
   .common-search-wrap {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0;
+  }
+  .dialog-footer {
+    margin-top: -10px;
+    .el-button  {
+     margin-top: 10px;
+    }
   }
 </style>

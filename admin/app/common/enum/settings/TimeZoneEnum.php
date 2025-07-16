@@ -30,6 +30,10 @@ class TimeZoneEnum extends Enum
             [
                 'name' => '（UTC+3:00）' . __('安卡拉'),
                 'value' => 'Europe/Istanbul',
+            ],
+            [
+                'name' => '（UTC+2:00）' . __('斯德哥尔摩'),
+                'value' => 'Europe/Stockholm',
             ]
         ];
 

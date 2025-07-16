@@ -18361,6 +18361,10 @@ const docTemplate = `{
                     "description": "缅甸语",
                     "type": "string"
                 },
+                "sv": {
+                    "description": "瑞典语",
+                    "type": "string"
+                },
                 "th": {
                     "description": "泰语",
                     "type": "string"

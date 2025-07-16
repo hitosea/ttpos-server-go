@@ -382,6 +382,7 @@ func (model *SaleOrder) GetCustomerList() []resp.Product {
 				KO:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 				MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 				TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+				SV:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 			},
 			Num:           float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
 			FinishedNum:   float64(orderBuffetCustomer.Num),
@@ -430,6 +431,7 @@ func (model *SaleOrder) GetDelayProductList() []resp.Product {
 				KO:   delayProduct.Name,
 				MY:   delayProduct.Name,
 				TR:   delayProduct.Name,
+				SV:   delayProduct.Name,
 			},
 			LocaleAttributeName: dto.LocaleResponse{},
 			Num:                 float64(delayProduct.Num), // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数

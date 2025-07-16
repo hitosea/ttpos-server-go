@@ -302,6 +302,7 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 					KO:   product.SaleBill.SerialNo,
 					MY:   product.SaleBill.SerialNo,
 					TR:   product.SaleBill.SerialNo,
+					SV:   product.SaleBill.SerialNo,
 				}
 			}
 			var item resp.ProductionItem

@@ -608,6 +608,7 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 	koNames := make([]string, 0)
 	myNames := make([]string, 0)
 	trNames := make([]string, 0)
+	svNames := make([]string, 0)
 	// 遍历选择的退菜原因
 	for _, reason := range model.CancelReasons {
 		if !reason.IsReturnFoodReason() {
@@ -624,6 +625,7 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 		koNames = append(koNames, reason.MultiLanguageName.KoName)
 		myNames = append(myNames, reason.MultiLanguageName.MyName)
 		trNames = append(trNames, reason.MultiLanguageName.TrName)
+		svNames = append(svNames, reason.MultiLanguageName.SvName)
 	}
 	// 添加自定义的退菜原因
 	if model.CancelReason != "" {
@@ -635,6 +637,7 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 		koNames = append(koNames, model.CancelReason)
 		myNames = append(myNames, model.CancelReason)
 		trNames = append(trNames, model.CancelReason)
+		svNames = append(svNames, model.CancelReason)
 	}
 	reasonDto := dto.LocaleResponse{
 		ZH:   strings.Join(zhNames, "、"),
@@ -645,6 +648,7 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 		KO:   strings.Join(koNames, "、"),
 		MY:   strings.Join(myNames, "、"),
 		TR:   strings.Join(trNames, "、"),
+		SV:   strings.Join(svNames, "、"),
 	}
 	return reasonDto
 }
@@ -659,6 +663,7 @@ func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 	koNames := make([]string, 0)
 	myNames := make([]string, 0)
 	trNames := make([]string, 0)
+	svNames := make([]string, 0)
 	// 遍历选择的赠品原因
 	for _, reason := range model.CancelReasons {
 		if !reason.IsGiftReason() {
@@ -672,6 +677,7 @@ func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 		koNames = append(koNames, reason.MultiLanguageName.KoName)
 		myNames = append(myNames, reason.MultiLanguageName.MyName)
 		trNames = append(trNames, reason.MultiLanguageName.TrName)
+		svNames = append(svNames, reason.MultiLanguageName.SvName)
 	}
 	// 添加自定义的退菜原因
 	if model.GiftReason != "" {
@@ -683,6 +689,7 @@ func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 		koNames = append(koNames, model.GiftReason)
 		myNames = append(myNames, model.GiftReason)
 		trNames = append(trNames, model.GiftReason)
+		svNames = append(svNames, model.GiftReason)
 	}
 	reasonDto := dto.LocaleResponse{
 		ZH:   strings.Join(zhNames, "、"),
@@ -693,6 +700,7 @@ func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 		KO:   strings.Join(koNames, "、"),
 		MY:   strings.Join(myNames, "、"),
 		TR:   strings.Join(trNames, "、"),
+		SV:   strings.Join(svNames, "、"),
 	}
 	return reasonDto
 }
@@ -927,6 +935,7 @@ func (model *SaleOrderProduct) GetNameAndFlavorName() dto.LocaleResponse {
 		KO:   fmt.Sprintf("%s (%s)", productPackageName.KO, flavorName.KO),
 		MY:   fmt.Sprintf("%s (%s)", productPackageName.MY, flavorName.MY),
 		TR:   fmt.Sprintf("%s (%s)", productPackageName.TR, flavorName.TR),
+		SV:   fmt.Sprintf("%s (%s)", productPackageName.SV, flavorName.SV),
 	}
 }
 
@@ -943,6 +952,7 @@ func (model *SaleOrderProduct) GetNameAndFlavorNameFrom(ProductBom *ProductBom, 
 		KO:   fmt.Sprintf("%s (%s)", productPackageName.KO, flavorName.KO),
 		MY:   fmt.Sprintf("%s (%s)", productPackageName.MY, flavorName.MY),
 		TR:   fmt.Sprintf("%s (%s)", productPackageName.TR, flavorName.TR),
+		SV:   fmt.Sprintf("%s (%s)", productPackageName.SV, flavorName.SV),
 	}
 }
 
@@ -996,6 +1006,7 @@ func getLocaleResponse(nameList []dto.LocaleResponse, div string) dto.LocaleResp
 		attributeResultNames.KO += name.KO
 		attributeResultNames.MY += name.MY
 		attributeResultNames.TR += name.TR
+		attributeResultNames.SV += name.SV
 		if attributeResultNames.ZH != "" && index != len(nameList)-1 {
 			attributeResultNames.ZH += div
 			attributeResultNames.TH += div
@@ -1005,6 +1016,7 @@ func getLocaleResponse(nameList []dto.LocaleResponse, div string) dto.LocaleResp
 			attributeResultNames.KO += div
 			attributeResultNames.MY += div
 			attributeResultNames.TR += div
+			attributeResultNames.SV += div
 		}
 	}
 	return attributeResultNames

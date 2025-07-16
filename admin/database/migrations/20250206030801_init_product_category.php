@@ -43,6 +43,7 @@ class InitProductCategory extends Migrator
                 'ja_name' => 'すべて',
                 'ko_name' => '전부',
                 'tr_name' => 'Tümü',
+                'sv_name' => 'Alla',
                 'create_time' => time(),
                 'update_time' => time(),
             ]);
@@ -57,6 +58,7 @@ class InitProductCategory extends Migrator
                     'ko' => '전부',
                     'my' => 'အားလုံး',
                     'tr' => 'ทั้งหมด',
+                    'sv' => 'Alla',
                 ], JSON_UNESCAPED_UNICODE),
                 'multi_language_name_uuid' => $nameUuid,
                 'status' => 1,

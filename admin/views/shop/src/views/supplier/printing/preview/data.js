@@ -378,6 +378,7 @@ export const previewData = {
         name: '',
         label: $t('优惠折扣') + $t('：') + '￥50',
         typeShow: '1,2',
+        left: false,
       },
       {
         name: '',
@@ -389,36 +390,43 @@ export const previewData = {
         name: '',
         label: $t('会员优惠') + $t('：') + '￥3',
         typeShow: '1,2,3,4',
+        left: false,
       },
       {
         name: '',
         label: $t('会员折扣') + $t('：') + $t('3.8折'),
         typeShow: '3,4',
+        left: false,
       },
       {
         name: '',
         label: $t('会员卡折扣') + $t('：') + $t('3.8折'),
         typeShow: '3,4',
+        left: false,
       },
       {
         name: '',
         label: $t('免单') + $t('：') + '￥84.89',
         typeShow: '2',
+        left: false,
       },
       {
         name: '',
         label: $t('退款金额') + $t('：') + '￥3',
         typeShow: '1,3,4',
+        left: false,
       },
       {
         name: '',
         label: $t('支付手续费') + $t('：') + '￥3',
         typeShow: '1,3,4',
+        left: false,
       },
       {
         name: '',
         label: $t('手动抹零') + $t('：') + '￥1.15',
         typeShow: '1,2,3,4',
+        left: false,
       },
       {
         typeShow: '1',
@@ -637,6 +645,7 @@ export const previewData = {
         name: '',
         label: $t('优惠折扣') + $t('：') + '￥50',
         typeShow: '1,2',
+        left: false,
       },
       {
         name: '',
@@ -648,21 +657,25 @@ export const previewData = {
         name: '',
         label: $t('会员优惠') + $t('：') + '￥3',
         typeShow: '1,2,3,4',
+        left: false,
       },
       {
         name: '',
         label: $t('会员折扣') + $t('：') + $t('3.8折'),
         typeShow: '3,4',
+        left: false,
       },
       {
         name: '',
         label: $t('会员卡折扣') + $t('：') + $t('3.8折'),
         typeShow: '3,4',
+        left: false,
       },
       {
         name: '',
         label: $t('手动抹零') + $t('：') + '￥1.15',
         typeShow: '1,2,3,4',
+        left: false,
       },
       {
         typeShow: '1,2',
@@ -711,7 +724,7 @@ export const previewData = {
     [
       {
         name: $t('时间'),
-        label: '2023/12/15 14:00:21' + $t('至') + '2023/12/15 14:00:21',
+        label: '2023/12/15 14:00:21' + $t('至') + '\n' + '2023/12/15 14:00:21',
       },
       {
         name: $t('总销售额'),

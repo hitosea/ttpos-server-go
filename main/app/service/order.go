@@ -1067,6 +1067,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 						KO:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 						MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 						TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+						SV:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 					},
 					Price:            orderBuffetCustomer.SalePrice,
 					Num:              float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
@@ -1099,6 +1100,7 @@ func (s *orderSrv) GetOrderInfos(ctx context.Context, req req.OrderInfoReq) (res
 						KO:   delayProduct.Name,
 						MY:   delayProduct.Name,
 						TR:   delayProduct.Name,
+						SV:   delayProduct.Name,
 					},
 					LocaleAttributeName: dto.LocaleResponse{},
 					Num:                 float64(delayProduct.Num), // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
@@ -1944,6 +1946,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 					KO:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 					MY:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 					TR:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+					SV:   saleOrderProduct.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 				},
 				TotalNum: num,
 			})
@@ -1963,6 +1966,7 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 					KO:   saleOrderProduct.Name,
 					MY:   saleOrderProduct.Name,
 					TR:   saleOrderProduct.Name,
+					SV:   saleOrderProduct.Name,
 				},
 				TotalNum: num,
 			})
@@ -3179,7 +3183,7 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 			return errors.WithMessage(err)
 		}
 		// 更新完整个销售订单
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errUpdate
 		}
 		// 更新销售账单
@@ -4842,7 +4846,7 @@ func (s *orderSrv) OrderCartProductNum(ctx context.Context, request req.OrderCar
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单商品成功")
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单成功")
@@ -5006,7 +5010,7 @@ func (s *orderSrv) AssistantOrderCartProductNum(ctx context.Context, request req
 		}
 		ctx.Log().Debug("更新销售订单商品成功")
 
-		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); errUpdate != nil {
+		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
 			return errors.WithMessage(errUpdate)
 		}
 		ctx.Log().Debug("更新销售订单成功")
@@ -5457,6 +5461,7 @@ func (s *orderSrv) checkBuffetCustomerTypePriceChanged(ctx context.Context, sale
 						KO:   buffetCustomer.Name,
 						MY:   buffetCustomer.Name,
 						TR:   buffetCustomer.Name,
+						SV:   buffetCustomer.Name,
 					},
 					Num:       float64(buffetCustomer.Num),
 					SalePrice: buffetCustomer.SalePrice,
@@ -5500,6 +5505,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 				KO:   oldTaxFeeType + " -> " + newTaxFeeType,
 				MY:   oldTaxFeeType + " -> " + newTaxFeeType,
 				TR:   oldTaxFeeType + " -> " + newTaxFeeType,
+				SV:   oldTaxFeeType + " -> " + newTaxFeeType,
 			},
 		})
 		return res, newSetting, nil
@@ -5519,6 +5525,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 				KO:   oldServiceFeeType + " -> " + newServiceFeeType,
 				MY:   oldServiceFeeType + " -> " + newServiceFeeType,
 				TR:   oldServiceFeeType + " -> " + newServiceFeeType,
+				SV:   oldServiceFeeType + " -> " + newServiceFeeType,
 			},
 		})
 		return res, newSetting, nil
@@ -5537,6 +5544,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 				KO:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 				MY:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 				TR:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				SV:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 			},
 		})
 		return res, newSetting, nil
@@ -5555,6 +5563,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 				KO:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 				MY:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 				TR:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				SV:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 			},
 		})
 		return res, newSetting, nil
@@ -5573,6 +5582,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 				KO:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 				MY:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 				TR:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
+				SV:   oldServiceFeeType + fmt.Sprintf(": %v -> %v", oldSetting.ServiceFeeValue, newSetting.ServiceFeeValue),
 			},
 		})
 		return res, newSetting, nil
@@ -5591,6 +5601,7 @@ func (s *orderSrv) checkSaleBillSettingChanged(ctx context.Context, saleBill *mo
 				KO:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
 				MY:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
 				TR:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
+				SV:   fmt.Sprintf("%v -> %v", parseServiceApply(ctx.GetLanguage(), oldSetting.ServiceApply), parseServiceApply(ctx.GetLanguage(), newSetting.ServiceApply)),
 			},
 		})
 		return res, newSetting, nil
@@ -10302,12 +10313,21 @@ func (s *orderSrv) OrderPrint(ctx context.Context, request req.OrderPrintReq, ne
 		return nil, errors.New("销售订单不存在")
 	}
 
-	// 更新用户
-	saleOrder.CashierUuid = ctx.GetStaffUuid()
+	// 更新收银员信息。当收银员信息发生变化时，才更新。且只更新收银员信息相关字段
+	needUpdateCashier := false
+	if saleOrder.CashierUuid != ctx.GetStaffUuid() {
+		saleOrder.CashierUuid = ctx.GetStaffUuid()
+		needUpdateCashier = true
+	}
 	staff := ctx.GetStaff()
-	saleOrder.CashierName = staff.GetUserName()
-	if err := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); err != nil {
-		return nil, errors.WithMessage(err)
+	if saleOrder.CashierName != staff.GetUserName() {
+		saleOrder.CashierName = staff.GetUserName()
+		needUpdateCashier = true
+	}
+	if needUpdateCashier {
+		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderCashier(ctx, saleOrder.Uuid, saleOrder.CashierUuid, saleOrder.CashierName); err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 
 	// 判断是否已支付
@@ -10364,12 +10384,21 @@ func (s *orderSrv) OrderPrintInvoice(ctx context.Context, req req.OrderPrintInvo
 		return nil, errors.New("销售订单不存在")
 	}
 
-	// 更新用户
-	saleOrder.CashierUuid = ctx.GetStaffUuid()
+	// 更新收银员信息。当收银员信息发生变化时，才更新。且只更新收银员信息相关字段
+	needUpdateCashier := false
+	if saleOrder.CashierUuid != ctx.GetStaffUuid() {
+		saleOrder.CashierUuid = ctx.GetStaffUuid()
+		needUpdateCashier = true
+	}
 	staff := ctx.GetStaff()
-	saleOrder.CashierName = staff.GetUserName()
-	if err := repository.NewSaleOrderRepo(db).UpdateSaleOrder(saleOrder); err != nil {
-		return nil, errors.WithMessage(err)
+	if saleOrder.CashierName != staff.GetUserName() {
+		saleOrder.CashierName = staff.GetUserName()
+		needUpdateCashier = true
+	}
+	if needUpdateCashier {
+		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderCashier(ctx, saleOrder.Uuid, saleOrder.CashierUuid, saleOrder.CashierName); err != nil {
+			return nil, errors.WithMessage(err)
+		}
 	}
 
 	// 设置发票信息

@@ -1011,7 +1011,7 @@ func (h *InstantHandler) OrderMustPlanConfirm(c *gin.Context) {
 		return
 	}
 	if !res {
-		helper.ErrorWithDetail(c, constant.CodeOrderCheckProductMust, errors.New(fmt.Sprintf("【%s】%s", mustPlan.Name, errors.ErrMustPlanNotComplete.Error())))
+		helper.ErrorWithDetail(c, constant.CodeOrderCheckProductMust, errors.New(fmt.Sprintf("【%s】%s", mustPlan.Name, i18n.Translate(ctx.GetLanguage(), errors.ErrMustPlanNotComplete.Error()))))
 		return
 	}
 	ctx.Log().Debug("确认必点商品成功", zap.Any("res", res))
