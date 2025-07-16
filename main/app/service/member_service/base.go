@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
 )
@@ -115,7 +116,7 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 		Company: member_resp.CompanyResp{
 			Uuid:         company.Uuid,
 			Name:         company.Name,
-			Logo:         company.Logo,
+			Logo:         company.GetLogo(utils.GetBaseURL(ctx.Copy().GetGin().Request)),
 			Address:      company.CompanySetting.Address,
 			LinkPhone:    company.CompanySetting.LinkPhone, // 公司联系电话
 			OpeningHours: businessSetting.OpeningHours,     // 公司营业时间

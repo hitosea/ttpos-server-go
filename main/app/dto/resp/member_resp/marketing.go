@@ -29,3 +29,10 @@ type MemberMarketingActivityListResp struct {
 	MemberInfo MemberInfoResp                `json:"member_info"` // 会员信息
 	Company    CompanyInfoResp               `json:"company"`     // 公司信息
 }
+
+// MemberMarketingActivityDetailResp 营销活动详情
+type MemberMarketingActivityDetailResp struct {
+	Activity   MemberMarketingActivityResp `json:"activity"`    // 活动信息
+	MemberInfo MemberInfoResp              `json:"member_info"` // 会员信息
+	Company    CompanyInfoResp             `json:"company"`     // 公司信息
+}

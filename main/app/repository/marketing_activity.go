@@ -24,7 +24,8 @@ type IMarketingActivityRepo interface {
 	GetActivity(uuid uint64) (*model.MarketingActivity, error)                            // 获取营销活动
 	GetActivityAndPrizes(uuid uint64) (*model.MarketingActivity, error)                   // 获取营销活动与奖励
 	GetMemberClientActivityList(dbOption ...DBOption) ([]*model.MarketingActivity, error) // 获取会员端营销活动列表
-	GetActivityListByNow() ([]*model.MarketingActivity, error)                            // 获取正在进行中的营销活动列表
+	GetValidActivityListByNow(dbOption ...DBOption) ([]*model.MarketingActivity, error)   // 获取正在进行中的营销活动列表
+	GetValidActivityByUuid(uuid uint64) (*model.MarketingActivity, error)                 // 根据uuid获取正在进行中的营销活动
 	GenerateQrCode(params *QrCodeParams) (string, error)                                  // 生成二维码
 
 	WithLanguage() DBOption
@@ -100,7 +101,7 @@ func (r *MarketingActivityRepo) GetActivityAndPrizes(uuid uint64) (*model.Market
 }
 
 // GetActivityListByNow 获取正在进行中的营销活动列表
-func (r *MarketingActivityRepo) GetActivityListByNow() ([]*model.MarketingActivity, error) {
+func (r *MarketingActivityRepo) GetValidActivityListByNow(opts ...DBOption) ([]*model.MarketingActivity, error) {
 	var activities []*model.MarketingActivity
 	db := r.db.Model(&model.MarketingActivity{}).
 		Preload("Prizes", NotDeleted).
@@ -109,11 +110,34 @@ func (r *MarketingActivityRepo) GetActivityListByNow() ([]*model.MarketingActivi
 		Where("delete_time = ? AND start_time <= ? AND end_time >= ? AND is_invalid = ?", constant.NotDeleted, time.Now().Unix(), time.Now().Unix(), 0).
 		Order("start_time DESC").
 		Order("end_time DESC")
+	// 应用选项
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	// 查询
 	err := db.Find(&activities).Error
 	if err != nil {
 		return nil, err
 	}
 	return activities, nil
+}
+
+// GetValidActivityByUuid 根据uuid获取营销活动
+func (r *MarketingActivityRepo) GetValidActivityByUuid(uuid uint64) (*model.MarketingActivity, error) {
+	var activity model.MarketingActivity
+	db := r.db.Model(&model.MarketingActivity{}).
+		Preload("Prizes", NotDeleted).
+		Preload("MultiLanguageName").
+		Preload("MultiLanguageDesc").
+		Where("delete_time = ? AND start_time <= ? AND end_time >= ? AND is_invalid = ?", constant.NotDeleted, time.Now().Unix(), time.Now().Unix(), 0).
+		Order("start_time DESC").
+		Order("end_time DESC")
+	// 查询
+	err := db.Where("uuid = ?", uuid).First(&activity).Error
+	if err != nil {
+		return nil, err
+	}
+	return &activity, nil
 }
 
 // GenerateQrCode 生成二维码

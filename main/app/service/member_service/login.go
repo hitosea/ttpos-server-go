@@ -1,10 +1,7 @@
 package member_service
 
 import (
-	"fmt"
-	"math/rand"
 	"strings"
-	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/req/member_req"
@@ -23,11 +20,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
-)
-
-const (
-	CodeCacheKey = "member:login:code:%s:%d"
-	CodeCacheTTL = 5 * time.Minute
+	"ttpos-server-go/pkg/validator"
 )
 
 // ILoginSrv 会员登录相关服务接口
@@ -161,18 +154,10 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 	if member.IsDelete() {
 		return errors.New("该会员已被注销，可联系商家处理")
 	}
-
-	// 生成验证码
-	code := fmt.Sprintf("%06d", rand.Intn(1000000)) // 生成6位随机数字验证码，范围：000000-999999
-	// 如果是否debug模式，则打印验证码
-	if config.Server.Mode == "debug" {
-		fmt.Println("code", code)
-	}
-	// 设置缓存key
-	cacheKey := fmt.Sprintf(CodeCacheKey, req.Phone, req.CompanyUuid)
-	// 将验证码存储到缓存中，设置5分钟过期
-	if err := s.cache.Set(cacheKey, code, CodeCacheTTL); err != nil {
-		return fmt.Errorf("存储验证码失败: %v", err)
+	// 获取验证码
+	code, err := validator.GetCode(s.cache, req.CompanyUuid, req.Phone)
+	if err != nil {
+		return err
 	}
 	// 发送验证码短信
 	ctx.SetCompanyUuid(req.CompanyUuid)
@@ -198,6 +183,12 @@ func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (me
 		return member_resp.LoginResp{}, errors.New("商家不存在")
 	}
 
+	// 验证验证码
+	if err := validator.VerifyCode(s.cache, req.CompanyUuid, req.Phone, req.Code); err != nil {
+		return member_resp.LoginResp{}, err
+	}
+
+	// 获取商家信息
 	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(req.CompanyUuid)
 	if err != nil || company.IsExpired() || company.IsDelete() {
 		return member_resp.LoginResp{}, errors.New("无法使用该功能，请联系商家")
@@ -205,16 +196,6 @@ func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (me
 	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
 		return member_resp.LoginResp{}, errors.New("商家会员服务已关闭")
 	}
-
-	// 验证验证码
-	cacheKey := fmt.Sprintf(CodeCacheKey, req.Phone, req.CompanyUuid)
-	code, ok := s.cache.Get(cacheKey)
-	if !ok || code == "" || code.(string) != req.Code {
-		if config.Server.Mode != "debug" || req.Code != "123456" {
-			return member_resp.LoginResp{}, errors.New("验证码不正确")
-		}
-	}
-	s.cache.Del(cacheKey)
 
 	// 验证手机号是否存在
 	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
@@ -361,14 +342,9 @@ func (s *loginSrv) Register(ctx context.Context, reqs member_req.MemberRegisterR
 	ctx.SetCompanySetting(*company.CompanySetting)
 
 	// 验证验证码
-	cacheKey := fmt.Sprintf(CodeCacheKey, reqs.Phone, companyUuid)
-	code, ok := s.cache.Get(cacheKey)
-	if !ok || code == "" || code.(string) != reqs.Code {
-		if config.Server.Mode != "debug" || reqs.Code != "123456" {
-			return member_resp.LoginResp{}, errors.New("验证码不正确")
-		}
+	if err := validator.VerifyCode(s.cache, companyUuid, reqs.Phone, reqs.Code); err != nil {
+		return member_resp.LoginResp{}, err
 	}
-	s.cache.Del(cacheKey)
 
 	// 验证手机号是否存在
 	if member, err := repository.NewMemberRepo(db).GetMemberByPhoneContainDeleted(reqs.Phone); err == nil {

@@ -20,9 +20,9 @@ type AuthHandler struct {
 	loginSrv member_service.ILoginSrv
 }
 
-// Login 获取登陆信息
-// @Summary 获取登陆信息
-// @Description 获取登陆信息
+// Login 获取登陆前信息
+// @Summary 获取登陆前信息
+// @Description 获取登陆前信息
 // @Tags 会员端.认证
 // @Accept json
 // @Produce json
@@ -101,7 +101,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @param data body req.VisitorLoginReq true "游客登录参数"
-// @Success 200 {object} dto.Response{data=resp.VisitorInfoResp}
+// @Success 200 {object} dto.Response{data=member_resp.LoginResp}
 // @Router /member/visitor/login [post]
 func (h *AuthHandler) VisitorLogin(c *gin.Context) {
 	ctx := helper.GetContext(c)
