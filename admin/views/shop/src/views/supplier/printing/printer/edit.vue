@@ -106,7 +106,7 @@
         </el-form-item>
       </div>
       <el-form-item for="no_click" :label="$t('打印机SN')" v-if="form.printer_type == 'XPRINTER_LAN' || form.printer_type == 'XPRINTER_WIFI'">
-        <el-input v-model="form.XPRINTER_LAN.NEW_SN"></el-input>
+        <el-input v-model="form.sn"></el-input>
       </el-form-item>
 
       <!-- CODESOFT打印 -->
@@ -120,7 +120,7 @@
         </el-form-item>
       </div>
       <el-form-item for="no_click" :label="$t('打印机SN')" v-if="form.printer_type == 'CODESOFT_LAN' || form.printer_type == 'CODESOFT_WIFI'">
-        <el-input v-model="form.CODESOFT_LAN.NEW_SN"></el-input>
+        <el-input v-model="form.sn"></el-input>
       </el-form-item>
 
       <el-form-item for="no_click" :label="$t('打印联数')" prop="print_times" :rules="[{ required: true, message: $t('请输入打印联数') }]">
@@ -188,6 +188,7 @@
           print_method: '',
           sort: 1,
           print_times: 1,
+          sn: '',
           FEI_E_YUN: {
             USER: '',
             UKEY: '',
@@ -209,7 +210,6 @@
           XPRINTER_LAN: {
             IP: '',
             PORT: 9100,
-            NEW_SN: '',
           },
           SUNMI_CLOUD: {
             APP_ID: '',
@@ -219,7 +219,6 @@
           CODESOFT_LAN: {
             IP: '',
             PORT: 9100,
-            NEW_SN: '',
           },
         },
         loading: false,
@@ -276,12 +275,12 @@
             if (detail.printer_type.value == 'XPRINTER_LAN' || self.form.printer_type == 'XPRINTER_WIFI') {
               self.form.XPRINTER_LAN.IP = detail.printer_config.IP;
               self.form.XPRINTER_LAN.PORT = detail.printer_config.PORT;
-              self.form.XPRINTER_LAN.NEW_SN = detail.printer_config.NEW_SN;
+              self.form.sn = detail.sn;
             }
             if (detail.printer_type.value == 'CODESOFT_WIFI' || self.form.printer_type == 'CODESOFT_LAN') {
               self.form.CODESOFT_LAN.IP = detail.printer_config.IP;
               self.form.CODESOFT_LAN.PORT = detail.printer_config.PORT;
-              self.form.CODESOFT_LAN.NEW_SN = detail.printer_config.NEW_SN;
+              self.form.sn = detail.sn;
             }
           })
           .catch(() => {});
