@@ -532,15 +532,15 @@ class Delivery extends Controller
         $sheet->getColumnDimension('G')->setWidth(18);
         $sheet->getColumnDimension('H')->setWidth(18);
         $sheet->getColumnDimension('I')->setWidth(18); 
-        $sheet->setCellValue('A1', date(__('商家名称')));
-        $sheet->setCellValue('B1', date(__('外送渠道')));
-        $sheet->setCellValue('C1', date(__('渠道订单编号')));
-        $sheet->setCellValue('D1', date(__('订单编号')));
-        $sheet->setCellValue('E1', date(__('订单配送费')));
-        $sheet->setCellValue('F1', date(__('距离(公里)')));
-        $sheet->setCellValue('G1', date(__('基础服务费')));
-        $sheet->setCellValue('H1', date(__('起步配送费')));
-        $sheet->setCellValue('I1', date(__('距离单价'))); 
+        $sheet->setCellValue('A1', __('商家名称'));
+        $sheet->setCellValue('B1', __('外送渠道'));
+        $sheet->setCellValue('C1', __('渠道订单编号'));
+        $sheet->setCellValue('D1', __('订单编号'));
+        $sheet->setCellValue('E1', __('订单配送费'));
+        $sheet->setCellValue('F1', __('距离(公里)'));
+        $sheet->setCellValue('G1', __('基础服务费'));
+        $sheet->setCellValue('H1', __('起步配送费'));
+        $sheet->setCellValue('I1', __('距离单价')); 
         foreach ($list as $key => $item) {
             $sheet->setCellValue('A' . ($key + 2), $company->name); // 商家名称
             $sheet->setCellValue('B' . ($key + 2), $item->related_order_type); // 外送渠道
@@ -554,17 +554,17 @@ class Delivery extends Controller
         }
 
         $n = count($list) + 3;
-        $sheet->setCellValue('A'.($n+0), date(__('总订单数')));
+        $sheet->setCellValue('A'.($n+0), __('总订单数'));
         $sheet->setCellValue('B'.($n+0), $statistics['order_count']);
 
-        $sheet->setCellValue('A'.($n+1), date(__('总配送费')));
+        $sheet->setCellValue('A'.($n+1), __('总配送费'));
         $sheet->setCellValue('B'.($n+1), $statistics['delivery_fee_amount']); 
 
         foreach ($statistics['channel_data'] as $k => $item) {
             $sheet->setCellValue('A'.($n+2+$k), $item['channel']);
             $sheet->setCellValue('B'.($n+2+$k), $item['amount']);
         } 
-        $sheet->setCellValue('A'.($n+count($statistics['channel_data'])+2), date(__('结清状态'))); 
+        $sheet->setCellValue('A'.($n+count($statistics['channel_data'])+2), __('结清状态')); 
         request()->appId = 0;
         $isSettle =  DeliveryLedgerSettle::where('month', $param['month'])->where('company_uuid', $companyUuid)->find() ? __("是") : __("否");
         $sheet->setCellValue('B'.($n+count($statistics['channel_data'])+2), $isSettle);
