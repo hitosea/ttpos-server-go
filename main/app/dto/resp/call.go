@@ -63,15 +63,26 @@ type UnprocessedH5OrderItem struct {
 	Status       uint   `json:"status"`         // 订单状态, 0-未下单 1-未接单 2-已接单 3-已拒单
 	IsAutoAccept bool   `json:"is_auto_accept"` // 是否自动接单
 }
+type UnprocessedMemberSaleOrderItem struct {
+	Uuid         uint64 `json:"uuid"`           // 外送订单Uuid
+	Status       uint   `json:"status"`         // 订单状态, 2-待商家接单, 3-商家备餐中(已接单), 8-已取消
+	CancelScene  string `json:"cancel_scene"`   // 取消场景: merchant_cancel-商家取消, member_cancel-用户取消, merchant_reject-商家拒单
+	UpdateTime   int64  `json:"update_time"`    // 更新时间
+	IsAutoAccept bool   `json:"is_auto_accept"` // 是否自动接单
+}
 
 type UnprocessedH5Order struct {
 	List []UnprocessedH5OrderItem `json:"list"`
 }
+type UnprocessedMemberSaleOrder struct {
+	List []UnprocessedMemberSaleOrderItem `json:"list"`
+}
 
 type UnprocessedListResp struct {
-	Call          UnprocessedCall          `json:"call"`           // 未处理呼叫列表，最新十条
-	AbnormalPrint UnprocessedAbnormalPrint `json:"abnormal_print"` // 未处理的异常打印，最新十条
-	H5Order       UnprocessedH5Order       `json:"h5_order"`       // 未处理的H5订单，最新十条
+	Call            UnprocessedCall            `json:"call"`              // 未处理呼叫列表，最新十条
+	AbnormalPrint   UnprocessedAbnormalPrint   `json:"abnormal_print"`    // 未处理的异常打印，最新十条
+	H5Order         UnprocessedH5Order         `json:"h5_order"`          // 未处理的H5订单，最新十条
+	MemberSaleOrder UnprocessedMemberSaleOrder `json:"member_sale_order"` // 外送订单消息，最新十条
 }
 
 type ReprintResp struct {
