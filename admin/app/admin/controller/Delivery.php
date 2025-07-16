@@ -483,6 +483,7 @@ class Delivery extends Controller
      * @Apidoc\Url("/api/admin/delivery/export")
      * @Apidoc\Param("uuid", type="biginteger", require=true, desc="商家ID") 
      * @Apidoc\Param("month", type="string", require=true, desc="统计月份，格式：2025-01")
+     * @Apidoc\Param("language", type="string", require=true, desc="语言")
      */
     public function export()
     {
