@@ -1148,6 +1148,45 @@ func (model *SaleOrderProduct) IsCustomPriceBool() bool {
 	return model.ChangePriceTime > 0
 }
 
+func (model *SaleOrderProduct) ProductKey() string {
+	flavorUuid := uint64(0)
+	sauceUuidList := make([]uint64, 0)
+	attributeIdList := make([]uint64, 0)
+
+	// 物料ID列表
+	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsFlavor() {
+			flavorUuid = bom.ProductBomUuid
+		} else if bom.IsSauce() {
+			sauceUuidList = append(sauceUuidList, bom.ProductBomUuid)
+		}
+	}
+	// 属性ID列表
+	for _, attributeGroup := range model.SaleOrderProductAttributes {
+		attributeIdList = append(attributeIdList, attributeGroup.ProductAttributeUuid)
+	}
+
+	// 物料ID列表和属性ID列表排序
+	sort.Slice(sauceUuidList, func(i, j int) bool {
+		return sauceUuidList[i] < sauceUuidList[j]
+	})
+	sort.Slice(attributeIdList, func(i, j int) bool {
+		return attributeIdList[i] < attributeIdList[j]
+	})
+
+	sauceUuidStrList := make([]string, 0)
+	for _, sauceUuid := range sauceUuidList {
+		sauceUuidStrList = append(sauceUuidStrList, fmt.Sprintf("%d", sauceUuid))
+	}
+	attributeIdStrList := make([]string, 0)
+	for _, attributeId := range attributeIdList {
+		attributeIdStrList = append(attributeIdStrList, fmt.Sprintf("%d", attributeId))
+	}
+
+	// 按照“规格id-属性id,属性id-加料id,加料id”的格式拼接
+	return fmt.Sprintf("%d-%s-%s", flavorUuid, strings.Join(attributeIdStrList, ","), strings.Join(sauceUuidStrList, ","))
+}
+
 // GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
 // 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
 // 更新签名的场景：

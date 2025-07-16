@@ -37,6 +37,7 @@ type ProductAddReq struct {
 	SaleOrderUuid uint64          `json:"sale_order_uuid"` // 销售订单ID。
 	Products      []ProductParams `json:"products"`        // 商品信息列表·
 	IsH5Product   bool            `json:"is_h5_product"`   // 是否是H5商品
+	IsMemberAdd   bool            `json:"is_member_add"`   // 是否是会员端加购
 }
 
 type GetProductPackageDetailReq struct {

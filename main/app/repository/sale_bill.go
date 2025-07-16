@@ -32,6 +32,7 @@ type ISaleBillQueryRepo interface {
 	GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error)                       // 获取销售订单的拆单序号。用于操作日志展示
 	GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
 	GetInstantSaleBillLatest() (*model.SaleBill, error)                                            // 获取最新的一条点餐销售账单
+	GetMemberSaleBillLatest() (*model.SaleBill, error)                                             // 获取最新的一条会员端销售账单
 	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                     // 获取销售账单的自助餐商品列表
 	GetSaleBillRecord(uuid uint64) (*model.SaleBill, error)
 	GetDeskSaleBillUnPay() ([]*model.SaleBill, error) // 获取所有未付款的桌台账单
@@ -222,6 +223,20 @@ func (r *saleBillRepo) GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint
 func (r *saleBillRepo) GetInstantSaleBillLatest() (*model.SaleBill, error) {
 	saleBill, err := r.GetSaleBill(
 		CommonRepo.WhereByBillType(constant.OrderSourceMapToBillType[constant.OrderSourceInstant]),
+		CommonRepo.SortWithCreateTime("desc"),
+	)
+	if err != nil {
+		if utils.IsNotFoundRecord(err) {
+			return nil, nil
+		}
+		return nil, errors.WithMessage(err)
+	}
+	return &saleBill, nil
+}
+
+func (r *saleBillRepo) GetMemberSaleBillLatest() (*model.SaleBill, error) {
+	saleBill, err := r.GetSaleBill(
+		CommonRepo.WhereByBillType(constant.OrderSourceMapToBillType[constant.OrderSourceMember]),
 		CommonRepo.SortWithCreateTime("desc"),
 	)
 	if err != nil {
