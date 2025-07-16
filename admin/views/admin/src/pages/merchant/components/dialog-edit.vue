@@ -466,7 +466,6 @@
     formElement.value?.validateField('logo').catch(() => {});
   };
 
-
   const handleLangChange = () => {
     formElement.value?.validateField('languages').catch(() => {});
   };

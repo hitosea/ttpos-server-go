@@ -415,5 +415,6 @@
     "手动同步": "Manual synchronization",
     "操作失败": "Operation failed",
     "单价": "Unit price",
-    "外送台账": "Delivery Ledger"
+    "外送台账": "Delivery Ledger",
+    "渠道": "Channel"
 }
