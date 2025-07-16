@@ -9,6 +9,9 @@ use app\common\enum\settings\SettingEnum;
 use app\admin\model\settings\Setting as SettingModel;
 use app\common\model\supplier\Supplier;
 use app\admin\model\app\App as AppModel;
+use app\common\model\order\Order;
+use app\common\model\user\DeliveryLedgerSettle;
+use app\common\model\user\MemberSaleOrder;
 
 /**
  * 外送管理
@@ -331,7 +334,7 @@ class Delivery extends Controller
      * @Apidoc\Url("/api/admin/delivery/ledger")
      * @Apidoc\Param("uuid", type="biginteger", require=true, desc="商家ID")
      * @Apidoc\Param("channel", type="string", require=false, desc="外送渠道")
-     * @Apidoc\Param("month", type="string", require=false, desc="统计月份")
+     * @Apidoc\Param("month", type="string", require=true, desc="统计月份，格式：2025-01")
      * 
      * @Apidoc\Returned("list", type="object", desc="分页订单列表", children={
      *      @Apidoc\Returned("total", type="int", desc="总记录数"),
@@ -340,8 +343,9 @@ class Delivery extends Controller
      *      @Apidoc\Returned("last_page", type="int", desc="最后一页页码"),
      *      @Apidoc\Returned("data", type="array", desc="订单数据列表", children={
      *          @Apidoc\Returned("uuid", type="biginteger", desc="商家ID"),
-     *          @Apidoc\Returned("name", type="string", desc="商家名称"),
+     *          @Apidoc\Returned("company_name", type="string", desc="商家名称"),
      *          @Apidoc\Returned("channel", type="string", desc="外送渠道"),
+     *          @Apidoc\Returned("channel_order_no", type="string", desc="外送渠道订单号"),
      *          @Apidoc\Returned("order_no", type="string", desc="订单号"),
      *          @Apidoc\Returned("delivery_fee", type="decimal", desc="订单配送费"),
      *          @Apidoc\Returned("distance", type="decimal", desc="距离（公里）"),
@@ -351,11 +355,12 @@ class Delivery extends Controller
      *      }),
      *      @Apidoc\Returned("aggregate", type="object", desc="汇总信息", children={
      *          @Apidoc\Returned("order_count", type="int", desc="总订单数"),
-     *          @Apidoc\Returned("delivery_fee", type="string", desc="总配送费"),
-     *          @Apidoc\Returned("channels", type="array", desc="各渠道配送费"),
-     *          @Apidoc\Returned("channel", type="string", desc="渠道名称"),
-     *          @Apidoc\Returned("fee", type="string", desc="渠道配送费"),
-     *          @Apidoc\Returned("status", type="string", desc="结清状态：settle-已结清；unsettle-未结清"),    
+     *          @Apidoc\Returned("delivery_fee_amount", type="decimal", desc="总配送费"),
+     *          @Apidoc\Returned("channel_data", type="array", desc="各渠道配送费", children={
+     *              @Apidoc\Returned("channel", type="string", desc="渠道名称"),
+     *              @Apidoc\Returned("amount", type="decimal", desc="渠道配送费"),
+     *          }),
+     *          @Apidoc\Returned("is_settle", type="int", desc="结清状态：1-已结清；0-未结清"),    
      *      }),
      * })
      */
@@ -365,7 +370,103 @@ class Delivery extends Controller
         if (!isset($param['uuid'])) {
             return $this->renderError('请选择商家');
         }
+        if (!isset($param['month'])) {
+            return $this->renderError('请选择月份');
+        }
+        if (!preg_match('/^\d{4}-\d{2}$/', $param['month'])) {
+            return $this->renderError('月份格式不正确，格式：2025-01');
+        }
 
-        return $this->renderSuccess('', []);
+        $param['start_time'] = strtotime(date('Y-m-01 00:00:00', strtotime($param['month'])));
+        $param['end_time'] = strtotime(date('Y-m-t 23:59:59', strtotime($param['month'])));
+
+        $companyUuid = $param['uuid'];
+        $companySetting = AppModel::where("uuid", $companyUuid)->find();
+        if (!$companySetting) {
+            return $this->renderError('商家不存在');
+        }
+        $list = (new MemberSaleOrder([], $companyUuid))->setAppId($companyUuid)->getList($param)?->toArray();
+        $uuids = [];
+        $data = [];
+        foreach ($list['data'] as $k => $item) {
+            $uuids[] = $item['uuid'];
+            $data[] = [
+                'uuid' => $item['uuid'], // 外送订单ID
+                'company_name' => $companySetting->name, // 商家名称
+                'channel' => $item['related_order_type'], // 外送渠道
+                'channel_order_no' => $item['related_order_no'], // 外送渠道订单号
+                'delivery_fee' => $item['delivery_fee_amount'], // 配送费
+                'distance' => $item['delivery_distance'], // 距离
+                'basic_fee' => $item['delivery_fee_base_fee'], // 基础服务费
+                'base_delivery_fee' => $item['delivery_fee_base_fee'], // 起步配送费
+                'price_per_km' => $item['delivery_fee_per_km'], // 距离单价
+                'order_no' => '', // 订单号
+            ];
+        }
+
+        $saleBills = Order::whereIn('member_sale_order_uuid', $uuids)->select();
+
+        $saleOrderData = [];
+        foreach ($saleBills as $saleBill) {
+            $saleOrderData[$saleBill->member_sale_order_uuid] = $saleBill->order_no;
+        }
+
+        foreach ($data as $k => $item) {
+            if (isset($saleOrderData[$item['uuid']])) {
+                $data[$k]['order_no'] = $saleOrderData[$item['uuid']];
+            }
+        }
+        $statistics = (new MemberSaleOrder())->getMonthStatistics($param);
+
+        request()->appId = 0;
+        $statistics['is_settle'] =  DeliveryLedgerSettle::where('month', $param['month'])->where('company_uuid', $companyUuid)->find() ? 1 : 0;;
+
+        $list['data'] = $data;
+
+        return $this->renderSuccess('', compact('list', 'statistics'));
+    }
+
+    /**
+     * @Apidoc\Title("结清上月外送台账")
+     * @Apidoc\Desc("")
+     * @Apidoc\Method("POST")
+     * @Apidoc\Url("/api/admin/delivery/settle")
+     * @Apidoc\Param("uuid", type="biginteger", require=true, desc="商家ID") 
+     * @Apidoc\Param("month", type="string", require=true, desc="统计月份，格式：2025-01")
+     */
+    public function settle()
+    {
+        $param = $this->postData();
+        if (!isset($param['uuid'])) {
+            return $this->renderError('请选择商家');
+        }
+        if (!isset($param['month'])) {
+            return $this->renderError('请选择月份');
+        }
+        if (!preg_match('/^\d{4}-\d{2}$/', $param['month'])) {
+            return $this->renderError('月份格式不正确，格式：2025-01');
+        }
+        // 月份不能大于当前月份
+        if (strtotime($param['month']) > strtotime(date('Y-m-d'))) {
+            return $this->renderError('月份不能大于当前月份');
+        }
+        $param['start_time'] = strtotime(date('Y-m-01 00:00:00', strtotime($param['month'])));
+        $param['end_time'] = strtotime(date('Y-m-t 23:59:59', strtotime($param['month'])));
+
+        $statistics = (new MemberSaleOrder([], $param['uuid']))->setAppId($param['uuid'])->getMonthStatistics($param);
+        request()->appId = 0;
+        $deliveryLedgerSettle =  DeliveryLedgerSettle::where('month', $param['month'])->where('company_uuid', $param['uuid'])->find();
+
+        if (!$deliveryLedgerSettle) {
+            $deliveryLedgerSettle = new DeliveryLedgerSettle();
+            $deliveryLedgerSettle->month = $param['month'];
+            $deliveryLedgerSettle->company_uuid = $param['uuid'];
+            $deliveryLedgerSettle->order_count = $statistics['order_count'];
+            $deliveryLedgerSettle->delivery_fee_amount = $statistics['delivery_fee_amount'];
+            $deliveryLedgerSettle->channel_data = json_encode($statistics['channel_data']);
+            $deliveryLedgerSettle->save();
+        }
+
+        return $this->renderSuccess('');
     }
 }
