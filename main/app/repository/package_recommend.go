@@ -10,7 +10,7 @@ import (
 
 // IPackageRecommendRepo 包推荐
 type IPackageRecommendRepo interface {
-	GetRecommendInfo() (*model.PackageRecommend, error) // 查询推荐信息
+	GetRecommendInfo() (*model.ProductPackageRecommend, error) // 查询推荐信息
 }
 
 func NewPackageRecommendRepo(db *gorm.DB) IPackageRecommendRepo {
@@ -27,9 +27,9 @@ type PackageRecommendRepoImpl struct {
 }
 
 // GetPackageRecommend 查询推荐
-func (r *PackageRecommendRepoImpl) GetPackageRecommend(opts ...DBOption) (*model.PackageRecommend, error) {
-	var packageRecommend model.PackageRecommend
-	db := r.db.Model(&model.PackageRecommend{})
+func (r *PackageRecommendRepoImpl) GetPackageRecommend(opts ...DBOption) (*model.ProductPackageRecommend, error) {
+	var packageRecommend model.ProductPackageRecommend
+	db := r.db.Model(&model.ProductPackageRecommend{})
 	for _, opt := range opts {
 		db = opt(db)
 	}
@@ -40,7 +40,7 @@ func (r *PackageRecommendRepoImpl) GetPackageRecommend(opts ...DBOption) (*model
 }
 
 // 查询商品当前的商品推荐
-func (r *PackageRecommendRepoImpl) GetRecommendInfo() (*model.PackageRecommend, error) {
+func (r *PackageRecommendRepoImpl) GetRecommendInfo() (*model.ProductPackageRecommend, error) {
 	packageRecommend, err := r.GetPackageRecommend(
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByStatus(constant.PackageRecommendStatusOpen),
@@ -50,7 +50,7 @@ func (r *PackageRecommendRepoImpl) GetRecommendInfo() (*model.PackageRecommend, 
 	}
 	// 如果没有查到记录，则认为商家未开启推荐
 	if packageRecommend == nil {
-		return &model.PackageRecommend{Status: constant.PackageRecommendStatusClose}, nil
+		return &model.ProductPackageRecommend{Status: constant.PackageRecommendStatusClose}, nil
 	}
 
 	return packageRecommend, nil

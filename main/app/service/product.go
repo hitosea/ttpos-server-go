@@ -323,17 +323,17 @@ func (s *productSrv) GetProductCategoryList(dbId uint64) (product_resp.ProductCa
 // GetProductRecommendList 获取产品推荐列表
 func (s *productSrv) GetProductRecommendList(ctx context.Context, request req.ProductRecommendListReq) (*product_resp.ProductRecommendListResp, error) {
 	// 获取商机推荐信息
-	packageRecommand, err := repository.NewPackageRecommendRepo(s.dbm.GetDB(ctx.GetDbId())).GetRecommendInfo()
+	packageRecommend, err := repository.NewPackageRecommendRepo(s.dbm.GetDB(ctx.GetDbId())).GetRecommendInfo()
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取商机推荐信息失败")
 	}
-	if !packageRecommand.IsOpen() {
+	if !packageRecommend.IsOpen() {
 		return &product_resp.ProductRecommendListResp{
 			IsOpen: false,
 		}, nil
 	}
 
-	recommendProducts, err := s.ParseRecommendInfo(packageRecommand)
+	recommendProducts, err := s.ParseRecommendInfo(packageRecommend)
 	if err != nil {
 		return nil, errors.WithMessage(err, "解析推荐商品失败")
 	}
@@ -364,15 +364,15 @@ func (s *productSrv) GetProductRecommendList(ctx context.Context, request req.Pr
 	// 返回响应对象
 	return &product_resp.ProductRecommendListResp{
 		List:   products.List,
-		Title:  packageRecommand.Title,
-		IsOpen: packageRecommand.IsOpen(),
+		Title:  packageRecommend.Title,
+		IsOpen: packageRecommend.IsOpen(),
 	}, nil
 }
 
 // 解析商品推荐中的JSON字符串
-func (s *productSrv) ParseRecommendInfo(packageRecommend *model.PackageRecommend) ([]ProductItemInfo, error) {
+func (s *productSrv) ParseRecommendInfo(packageRecommend *model.ProductPackageRecommend) ([]ProductItemInfo, error) {
 	var packageRecommendArray []ProductItemInfo
-	if err := json.Unmarshal([]byte(packageRecommend.Packages), &packageRecommendArray); err != nil {
+	if err := json.Unmarshal([]byte(packageRecommend.ProductPackages), &packageRecommendArray); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 	// 按照sort排序, sort是字符串类型, 小的在前
