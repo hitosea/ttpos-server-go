@@ -139,6 +139,10 @@ func (s *roleAccessSrv) filterPermission(permissions []resp.Permission, companyS
 		if companySetting.IsOpenH5Order == 0 && permission.ID == 1724320522 {
 			continue
 		}
+		// 授权无外送权限
+		if companySetting.DeliveryStatus != 1 && permission.Uuid == 1752716650 {
+			continue
+		}
 		filteredPermissions = append(filteredPermissions, permission)
 	}
 	return filteredPermissions
