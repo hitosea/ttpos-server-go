@@ -34,26 +34,27 @@ type LocationList struct {
 	ContactPhone string `json:"contactPhone"`
 }
 
-type JobDetail struct {
-	JobID         string         `json:"jobId"`
-	JobDate       string         `json:"jobDate"`
-	JobStatus     int            `json:"jobStatus"`
-	JobStatusEn   string         `json:"jobStatusEn"`
-	JobStatusTh   string         `json:"jobStatusTh"`
-	JobDesc       string         `json:"jobDesc"`
-	StartTime     string         `json:"startTime"`
-	FinishTime    string         `json:"finishTime"`
-	HaveReturn    bool           `json:"haveReturn"`
-	JobType       string         `json:"jobType"`
-	Option        string         `json:"option"`
-	TotalDistance float64        `json:"totalDistance"`
-	TotalWeight   float64        `json:"totalWeight"`
-	TotalSize     float64        `json:"totalSize"`
-	Remark        string         `json:"remark"`
-	UserType      int            `json:"userType"`
-	NormalPrice   float64        `json:"normalPrice"`
-	NetPrice      float64        `json:"netPrice"`
-	Discount      float64        `json:"discount"`
-	Rating        int            `json:"rating"`
-	LocationList  []LocationList `json:"locationList"`
-}
+//
+//type JobDetail struct {
+//	JobID         string         `json:"jobId"`
+//	JobDate       string         `json:"jobDate"`
+//	JobStatus     int            `json:"jobStatus"`
+//	JobStatusEn   string         `json:"jobStatusEn"`
+//	JobStatusTh   string         `json:"jobStatusTh"`
+//	JobDesc       string         `json:"jobDesc"`
+//	StartTime     string         `json:"startTime"`
+//	FinishTime    string         `json:"finishTime"`
+//	HaveReturn    bool           `json:"haveReturn"`
+//	JobType       string         `json:"jobType"`
+//	Option        string         `json:"option"`
+//	TotalDistance float64        `json:"totalDistance"`
+//	TotalWeight   float64        `json:"totalWeight"`
+//	TotalSize     float64        `json:"totalSize"`
+//	Remark        string         `json:"remark"`
+//	UserType      int            `json:"userType"`
+//	NormalPrice   float64        `json:"normalPrice"`
+//	NetPrice      float64        `json:"netPrice"`
+//	Discount      float64        `json:"discount"`
+//	Rating        int            `json:"rating"`
+//	LocationList  []LocationList `json:"locationList"`
+//}

@@ -82,7 +82,7 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 		Uuid:                 guid.S(),
 		ShopLocationUuid:     guid.S(),
 		ConsumerLocationUuid: guid.S(),
-		TakeoutRefNo:         resp.JobDetail.JobID,
+		TakeoutRefNo:         resp.JobDetail.JobId,
 		ShopRefNo:            req.ShopOrderUuid,
 		PaymentType:          reqInp.PaymentType,
 		CallbackUrl:          req.CallbackUrl, //来源订单的回调

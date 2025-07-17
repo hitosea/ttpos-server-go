@@ -31,4 +31,9 @@ type Job struct {
 	UpdatedAt            *gtime.Time `json:"updatedAt"            orm:"updated_at"             description:"更新时间"`                                                                                                   // 更新时间
 	DeletedAt            *gtime.Time `json:"deletedAt"            orm:"deleted_at"             description:"软删除"`                                                                                                    // 软删除
 	CallbackUrl          string      `json:"callbackUrl"          orm:"callback_url"           description:"订单状态更新回调"`                                                                                               // 订单状态更新回调
+	SkootarId            string      `json:"skootarId"            orm:"skootar_id"             description:"骑手Id"`                                                                                                   // 骑手Id
+	SkootarName          string      `json:"skootarName"          orm:"skootar_name"           description:"骑手名称"`                                                                                                   // 骑手名称
+	SkootarPhone         string      `json:"skootarPhone"         orm:"skootar_phone"          description:"骑手电话"`                                                                                                   // 骑手电话
+	SkootarImageUrl      string      `json:"skootarImageUrl"      orm:"skootar_image_url"      description:"骑手头像"`                                                                                                   // 骑手头像
+	SkootarRating        float64     `json:"skootarRating"        orm:"skootar_rating"         description:"骑手评分"`                                                                                                   // 骑手评分
 }

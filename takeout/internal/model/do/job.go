@@ -33,4 +33,9 @@ type Job struct {
 	UpdatedAt            *gtime.Time // 更新时间
 	DeletedAt            *gtime.Time // 软删除
 	CallbackUrl          interface{} // 订单状态更新回调
+	SkootarId            interface{} // 骑手Id
+	SkootarName          interface{} // 骑手名称
+	SkootarPhone         interface{} // 骑手电话
+	SkootarImageUrl      interface{} // 骑手头像
+	SkootarRating        interface{} // 骑手评分
 }

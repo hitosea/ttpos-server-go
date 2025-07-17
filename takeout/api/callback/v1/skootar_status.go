@@ -8,7 +8,7 @@ import (
 // SkootarStatusReq 定义 Skootar 状态回调的 RESTful 请求结构体
 type SkootarStatusReq struct {
 	g.Meta         `path:"/callback/skootar/status" tags:"Callback" method:"post" summary:"Skootar status callback"`
-	JobID          string    `json:"job_id"`                     // Job id that you tracking
+	JobId          string    `json:"job_id"`                     // Job id that you tracking
 	StatusBefore   int       `json:"status_before"`              // Job status code is 0 - 10
 	StatusAfter    int       `json:"status_after"`               // Job Status code is 0 - 10
 	StatusDatetime time.Time `json:"status_datetime"`            // Date time of status change (yyyy-MM-dd HH:mm:ss)
