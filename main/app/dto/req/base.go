@@ -9,10 +9,21 @@ type UpdateAcceptOrderSetting struct {
 	AutoOrderLimit string `json:"auto_order_limit" binding:"auto_order_limit"` // 自动接单金额上限，0.01-100000000
 }
 
+type UpdateAcceptMemberOrderSetting struct {
+	IsAutoMemberOrder    string `json:"is_auto_member_order" binding:"required,oneof=0 1"`  // 是否自动接单会员订单：0-否；1-是
+	AutoMemberOrderLimit string `json:"auto_member_order_limit" binding:"auto_order_limit"` // 自动接单会员订单金额上限，0.01-100000000
+}
+
 var UpdateAcceptOrderSettingMessage = map[string]string{
 	"is_auto_order.required":            "是否自动接单参数错误",
 	"is_auto_order.oneof":               "是否自动接单参数错误",
 	"auto_order_limit.auto_order_limit": "自动接单金额上限，0.01-100000000",
+}
+
+var UpdateAcceptMemberOrderSettingMessage = map[string]string{
+	"is_auto_member_order.required":            "是否自动接单外送订单参数错误",
+	"is_auto_member_order.oneof":               "是否自动接单外送订单参数错误",
+	"auto_member_order_limit.auto_order_limit": "自动接单外送订单金额上限，0.01-100000000",
 }
 
 type UpdateSystemSetting struct {

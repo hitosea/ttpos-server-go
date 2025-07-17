@@ -82,14 +82,17 @@
 
             let printerKeyArr = [];
             let printerIdArr = [];
+            let printerSnArr = [];
             (self.form.cashier_printer || []).map((item) => {
               printerKeyArr.push(item.key);
               printerIdArr.push(item.printer_id);
+              printerSnArr.push(item.sn);
             });
 
             (self.cashierList || []).map((item) => {
               if (printerKeyArr.indexOf(item.cashier_key) != -1) {
                 item.printer_id = printerIdArr[printerKeyArr.indexOf(item.cashier_key)];
+                item.sn = printerSnArr[printerKeyArr.indexOf(item.cashier_key)];
               } else {
                 item.printer_id = '';
               }

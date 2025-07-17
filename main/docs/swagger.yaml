@@ -2545,6 +2545,20 @@ definitions:
     - sale_bill_uuid
     - sale_order_uuid
     type: object
+  req.UpdateAcceptMemberOrderSetting:
+    properties:
+      auto_member_order_limit:
+        description: 自动接单会员订单金额上限，0.01-100000000
+        type: string
+      is_auto_member_order:
+        description: 是否自动接单会员订单：0-否；1-是
+        enum:
+        - "0"
+        - "1"
+        type: string
+    required:
+    - is_auto_member_order
+    type: object
   req.UpdateAcceptOrderSetting:
     properties:
       auto_order_limit:
@@ -2704,6 +2718,18 @@ definitions:
       is_delay:
         description: 是否是加钟
         type: boolean
+    type: object
+  resp.AcceptMemberOrderSetting:
+    properties:
+      auto_member_order_limit:
+        description: 自动接单会员订单金额上限，0.01-100000000
+        type: string
+      is_auto_member_order:
+        description: 是否自动接单会员订单：0-否；1-是
+        type: string
+      is_auto_voice_member_order:
+        description: 是否开启自动接单会员订单语音播报 0-否；1-是
+        type: string
     type: object
   resp.AcceptOrderSetting:
     properties:
@@ -3141,6 +3167,10 @@ definitions:
     type: object
   resp.CashierBaseSetting:
     properties:
+      accept_member_order:
+        allOf:
+        - $ref: '#/definitions/resp.AcceptMemberOrderSetting'
+        description: 接单会员订单设置
       accept_order:
         allOf:
         - $ref: '#/definitions/resp.AcceptOrderSetting'
@@ -6714,6 +6744,9 @@ definitions:
       auto_lock_screen:
         description: 自动锁屏（秒），默认5分钟
         type: string
+      auto_member_order_limit:
+        description: 自动接单会员订单金额上限
+        type: string
       auto_order_limit:
         description: 自动接单金额上限
         type: string
@@ -6728,6 +6761,9 @@ definitions:
       is_auto_lock_screen:
         description: 是否开启自动锁屏 0-关闭 1-开启
         type: string
+      is_auto_member_order:
+        description: 是否自动接单会员订单 0-关闭 1-开启
+        type: string
       is_auto_order:
         description: 是否自动接单
         type: string
@@ -6736,6 +6772,9 @@ definitions:
         type: string
       is_auto_voice:
         description: 是否开启自动接单语音播报
+        type: string
+      is_auto_voice_member_order:
+        description: 是否开启自动接单会员订单语音播报
         type: string
       is_open_cashier_password:
         description: 是否开启钱箱密码 0-关闭 1-开启
@@ -14157,6 +14196,30 @@ paths:
       security:
       - JwtToken: []
       summary: 获取设置
+      tags:
+      - 收银端.设置
+  /cashier/setting/edit_accept_member_order:
+    post:
+      consumes:
+      - application/json
+      description: 修改接单会员订单设置
+      parameters:
+      - description: 修改接单会员订单设置参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateAcceptMemberOrderSetting'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 修改接单会员订单设置
       tags:
       - 收银端.设置
   /cashier/setting/edit_accept_order:

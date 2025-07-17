@@ -225,6 +225,31 @@ func (h *BaseHandler) EditAcceptOrderSetting(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// EditAcceptMemberOrderSetting 修改接单会员订单设置
+// @Summary 修改接单会员订单设置
+// @Description 修改接单会员订单设置
+// @Tags 收银端.设置
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.UpdateAcceptMemberOrderSetting true "修改接单会员订单设置参数"
+// @Success 200 {object} dto.Response
+// @Router /cashier/setting/edit_accept_member_order [post]
+func (h *BaseHandler) EditAcceptMemberOrderSetting(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var acceptMemberOrderSetting req.UpdateAcceptMemberOrderSetting
+	if err := c.ShouldBindJSON(&acceptMemberOrderSetting); err != nil {
+		helper.HandleValidationError(c, err, acceptMemberOrderSetting, req.UpdateAcceptMemberOrderSettingMessage)
+		return
+	}
+	err := h.settingSrv.EditAcceptMemberOrderSetting(ctx, acceptMemberOrderSetting)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 // EditSystemSetting 修改系统设置
 // @Summary 修改系统设置
 // @Description 修改系统设置
@@ -607,9 +632,10 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/open_cash_box_printer_config", wrapper.GetOpenCashBoxPrinterConfig) // 获取打开钱箱的打印机配置
 
 		// 保存接单设置
-		privateApi.POST("/setting/edit_accept_order", wrapper.EditAcceptOrderSetting) // 修改接单设置
-		privateApi.POST("/setting/edit_system", wrapper.EditSystemSetting)            // 修改系统设置
-		privateApi.GET("/setting", wrapper.GetSetting)                                // 获取设置
+		privateApi.POST("/setting/edit_accept_order", wrapper.EditAcceptOrderSetting)              // 修改接单设置
+		privateApi.POST("/setting/edit_accept_member_order", wrapper.EditAcceptMemberOrderSetting) // 修改接单外送订单设置
+		privateApi.POST("/setting/edit_system", wrapper.EditSystemSetting)                         // 修改系统设置
+		privateApi.GET("/setting", wrapper.GetSetting)                                             // 获取设置
 
 		// 交班
 		privateApi.GET("/shift", wrapper.GetShiftInfo)            // 获取交班信息

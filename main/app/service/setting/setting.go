@@ -62,6 +62,7 @@ type ISrv interface {
 	VerifyAdvancedPassword(ctx context.Context, password string, options ...func(option *VerifyAdvancedPasswordOption)) error             // 验证高级密码
 	CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error)                                 // 检查更新
 	EditAcceptOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptOrderSetting) error                                          // 修改自动接单设置
+	EditAcceptMemberOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptMemberOrderSetting) error                              // 修改自动接单会员订单设置
 	EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error                                                   // 修改系统设置
 	GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error)                                                           // 获取收银端设置
 	GetAcceptOrderSetting(ctx context.Context) (*resp.AcceptOrderSetting, error)                                                          // 获取接单设置
@@ -1316,6 +1317,17 @@ func (s *Srv) EditAcceptOrderSetting(ctx context.Context, orderSetting req.Updat
 	return s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting)
 }
 
+// EditAcceptMemberOrderSetting 修改自动接单会员订单参数
+func (s *Srv) EditAcceptMemberOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptMemberOrderSetting) error { // 修改自动接单会员订单设置
+	cashierSetting, err := s.GetCashierSetting(ctx, nil)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	cashierSetting.IsAutoMemberOrder = orderSetting.IsAutoMemberOrder
+	cashierSetting.AutoMemberOrderLimit = orderSetting.AutoMemberOrderLimit
+	return s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting)
+}
+
 // EditSystemSetting 修改系统设置
 func (s *Srv) EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error {
 	cashierSetting, err := s.GetCashierSetting(ctx, nil)
@@ -1388,6 +1400,11 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 			IsAutoOrder:    cashierSetting.IsAutoOrder,
 			AutoOrderLimit: cashierSetting.AutoOrderLimit,
 			IsAutoVoice:    cashierSetting.IsAutoVoice,
+		},
+		AcceptMemberOrder: resp.AcceptMemberOrderSetting{
+			IsAutoMemberOrder:      cashierSetting.IsAutoMemberOrder,
+			AutoMemberOrderLimit:   cashierSetting.AutoMemberOrderLimit,
+			IsAutoVoiceMemberOrder: cashierSetting.IsAutoVoiceMemberOrder,
 		},
 		System: resp.SystemSetting{
 			IsShowScanSoldOut:      cashierSetting.IsShowScanSoldOut,

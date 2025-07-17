@@ -12027,6 +12027,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/setting/edit_accept_member_order": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改接单会员订单设置",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.设置"
+                ],
+                "summary": "修改接单会员订单设置",
+                "parameters": [
+                    {
+                        "description": "修改接单会员订单设置参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UpdateAcceptMemberOrderSetting"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/setting/edit_accept_order": {
             "post": {
                 "security": [
@@ -21580,6 +21619,26 @@ const docTemplate = `{
                 }
             }
         },
+        "req.UpdateAcceptMemberOrderSetting": {
+            "type": "object",
+            "required": [
+                "is_auto_member_order"
+            ],
+            "properties": {
+                "auto_member_order_limit": {
+                    "description": "自动接单会员订单金额上限，0.01-100000000",
+                    "type": "string"
+                },
+                "is_auto_member_order": {
+                    "description": "是否自动接单会员订单：0-否；1-是",
+                    "type": "string",
+                    "enum": [
+                        "0",
+                        "1"
+                    ]
+                }
+            }
+        },
         "req.UpdateAcceptOrderSetting": {
             "type": "object",
             "required": [
@@ -21802,6 +21861,23 @@ const docTemplate = `{
                 "is_delay": {
                     "description": "是否是加钟",
                     "type": "boolean"
+                }
+            }
+        },
+        "resp.AcceptMemberOrderSetting": {
+            "type": "object",
+            "properties": {
+                "auto_member_order_limit": {
+                    "description": "自动接单会员订单金额上限，0.01-100000000",
+                    "type": "string"
+                },
+                "is_auto_member_order": {
+                    "description": "是否自动接单会员订单：0-否；1-是",
+                    "type": "string"
+                },
+                "is_auto_voice_member_order": {
+                    "description": "是否开启自动接单会员订单语音播报 0-否；1-是",
+                    "type": "string"
                 }
             }
         },
@@ -22476,6 +22552,14 @@ const docTemplate = `{
         "resp.CashierBaseSetting": {
             "type": "object",
             "properties": {
+                "accept_member_order": {
+                    "description": "接单会员订单设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.AcceptMemberOrderSetting"
+                        }
+                    ]
+                },
                 "accept_order": {
                     "description": "接单设置",
                     "allOf": [
@@ -27842,6 +27926,10 @@ const docTemplate = `{
                     "description": "自动锁屏（秒），默认5分钟",
                     "type": "string"
                 },
+                "auto_member_order_limit": {
+                    "description": "自动接单会员订单金额上限",
+                    "type": "string"
+                },
                 "auto_order_limit": {
                     "description": "自动接单金额上限",
                     "type": "string"
@@ -27861,6 +27949,10 @@ const docTemplate = `{
                     "description": "是否开启自动锁屏 0-关闭 1-开启",
                     "type": "string"
                 },
+                "is_auto_member_order": {
+                    "description": "是否自动接单会员订单 0-关闭 1-开启",
+                    "type": "string"
+                },
                 "is_auto_order": {
                     "description": "是否自动接单",
                     "type": "string"
@@ -27871,6 +27963,10 @@ const docTemplate = `{
                 },
                 "is_auto_voice": {
                     "description": "是否开启自动接单语音播报",
+                    "type": "string"
+                },
+                "is_auto_voice_member_order": {
+                    "description": "是否开启自动接单会员订单语音播报",
                     "type": "string"
                 },
                 "is_open_cashier_password": {
