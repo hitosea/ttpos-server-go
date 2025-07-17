@@ -13,7 +13,7 @@ use app\common\model\product\Spec as SpecModel;
 use app\common\model\product\Unit as UnitModel;
 use app\shop\model\product\Product as ProductModel;
 use app\common\model\product\Material as MaterialModel;
-use app\common\model\product\ProductRecommend;
+use app\common\model\product\ProductPackageRecommend;
 use app\shop\model\product\Category as CategoryModel;
 use app\shop\validate\ProductPackageRecommendValidate;
 
@@ -632,7 +632,7 @@ class Product extends Controller
         if (request()->licenses['is_open_delivery'] == 0) {
             return $this->renderError('当前没有权限使用此功能');
         }
-        $model = new ProductRecommend();
+        $model = new ProductPackageRecommend();
         $data = $model->where('delete_time', 0)->hidden(['id', 'uuid', 'create_time', 'update_time', 'delete_time'])->find();
         if ($this->request->isGet()) {
             if (!is_null($data)) {

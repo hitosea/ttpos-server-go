@@ -11,6 +11,10 @@ type ReqBase struct {
 	CustomerMoble string `json:"customerMoble,omitempty"`
 }
 
+type RespBase struct {
+	ResponseCode string `json:"responseCode"`
+	ResponseDesc string `json:"responseDesc"`
+}
 type Location struct {
 	AddressName  string         `json:"addressName,omitempty"`
 	Address      string         `json:"address,omitempty"`

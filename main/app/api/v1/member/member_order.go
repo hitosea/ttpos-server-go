@@ -65,6 +65,7 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param data body member_req.SetMemberOrderAddressReq true "详情参数"
 // @Success 200 {object} resp.CreateMemberOrderResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/address [post]
@@ -96,6 +97,7 @@ func (h *OrderHandler) SetOrderAddress(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param data body member_req.VerifyPhoneReq true "详情参数"
 // @Success 200 {object} resp.CreateMemberOrderResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/phone/verify [post]
@@ -127,6 +129,7 @@ func (h *OrderHandler) VerifyPhone(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param data body member_req.PayMemberOrderReq true "详情参数"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/pay [post]
@@ -156,6 +159,7 @@ func (h *OrderHandler) PayOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param data body member_req.PaidMemberOrderReq true "详情参数"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/xie-test/order/paid [post]

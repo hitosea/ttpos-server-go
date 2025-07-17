@@ -8,7 +8,7 @@ use think\model\concern\SoftDelete;
 /**
  * 商品推荐
  */
-class ProductRecommend extends BaseModel
+class ProductPackageRecommend extends BaseModel
 {
     use SoftDelete;
     protected $name = 'product_package_recommend';

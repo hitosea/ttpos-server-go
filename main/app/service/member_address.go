@@ -62,7 +62,7 @@ func (s *memberAddressSrv) GetAddressList(ctx context.Context, req member_req.Me
 	for _, memberAddress := range memberAddresses {
 		var respMemberAddress member_resp.MemberAddressResp
 		copier.Copy(&respMemberAddress, memberAddress)
-		respMemberAddress.IsAuthPhone = memberAddress.IsAuth()
+		respMemberAddress.IsAuthPhone = memberAddress.IsAuthPhone()
 		respMemberAddresses = append(respMemberAddresses, respMemberAddress)
 	}
 	return &member_resp.MemberAddressListResp{
@@ -267,7 +267,7 @@ func (s *memberAddressSrv) AuthAddress(ctx context.Context, req member_req.Membe
 	addresses, err := repository.NewMemberAddressRepo(db).GetMemberAddressByMemberUuid(ctx.GetMemberUuid())
 	if err == nil && len(addresses) > 0 {
 		for _, address := range addresses {
-			if address.IsAuth() {
+			if address.IsAuthPhone() {
 				continue
 			}
 			if address.Phone == memberAddress.Phone {

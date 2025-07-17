@@ -22,6 +22,7 @@ type (
 		EstimatePrice(ctx context.Context, req *api.EstimatePriceReq) (res *api.EstimatePriceResp, err error)
 		// CreateOrder 创建订单
 		GetDriverLocation(ctx context.Context, req *api.GetDriverLocationReq) (res *api.GetDriverLocationResp, err error)
+		JobDetail4Food(ctx context.Context, req *skootar.JobDetailInp) (jobDetail *skootar.JobDetail, err error)
 		JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq) (res *v1.SkootarStatusRes, err error)
 		MustConf() *conf.Skootar
 		GetUrl(apiPath string) string

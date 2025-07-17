@@ -229,8 +229,8 @@
 
     <!--整单折扣-->
     <div class="common-form mt50">{{ $t('整单折扣') }}</div>
-    <el-form-item for="no_click" :label="$t('开启整单折扣：')" prop="model.is_enable_all_grade" :rules="[{ required: true, message: $t('请选择是否开启整单折扣') }]">
-      <el-radio-group v-model="form.model.is_enable_all_grade">
+    <el-form-item for="no_click" :label="$t('开启整单折扣：')" prop="model.open_overall_discount" :rules="[{ required: true, message: $t('请选择是否开启整单折扣') }]">
+      <el-radio-group v-model="form.model.open_overall_discount">
         <el-radio :value="1">{{ $t('开启') }}</el-radio>
         <el-radio :value="0">{{ $t('关闭') }}</el-radio>
       </el-radio-group>

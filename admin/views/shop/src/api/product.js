@@ -333,6 +333,11 @@ let ProductApi = {
     return request._post('/shop/product.store.product/batchUpdateTax', data, errorback);
   },
 
+  // 批量修改整单折扣
+  batchUpdateOverallDiscount(data, errorback) {
+    return request._post('/shop/product.store.product/batchUpdateOpenOverallDiscount', data, errorback);
+  },
+
   // 推荐
   getRecommend(data, errorback) {
     return request._get('/shop/product.store.product/recommend', data, errorback);

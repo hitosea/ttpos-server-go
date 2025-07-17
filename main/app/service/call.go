@@ -144,11 +144,19 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 		return res, errors.WithMessage(errors.New("获取未处理的h5订单数量失败"), err.Error())
 	}
 
+	memberSaleOrderRepo := repository.NewMemberSaleOrderRepo(db)
+	unhandledMemberSaleOrderCount, err := memberSaleOrderRepo.GetOrderCount(memberSaleOrderRepo.WhereStatusIn([]uint{constant.MemberSaleOrderStatusPendingMerchantAccept}))
+	if err != nil {
+		logger.Logger.Error("获取待接单外送订单数量失败", zap.Error(err))
+		return res, errors.WithMessage(errors.New("获取待接单外送订单数量失败"), err.Error())
+	}
+
 	return resp.UnprocessedResp{
-		UnprocessedCallCount:    unprocessedCallCount,
-		AbnormalPrintCount:      abnormalPrintCount,
-		UnprocessedH5OrderCount: unhandledH5OrderCount,
-		UpdateTime:              time.Now().Unix(),
+		UnprocessedCallCount:     unprocessedCallCount,
+		AbnormalPrintCount:       abnormalPrintCount,
+		UnprocessedH5OrderCount:  unhandledH5OrderCount,
+		UnprocessedDeliveryCount: unhandledMemberSaleOrderCount,
+		UpdateTime:               time.Now().Unix(),
 	}, nil
 }
 

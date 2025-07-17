@@ -42,6 +42,11 @@ type JobColumns struct {
 	UpdatedAt            string // 更新时间
 	DeletedAt            string // 软删除
 	CallbackUrl          string // 订单状态更新回调
+	SkootarId            string // 骑手Id
+	SkootarName          string // 骑手名称
+	SkootarPhone         string // 骑手电话
+	SkootarImageUrl      string // 骑手头像
+	SkootarRating        string // 骑手评分
 }
 
 // jobColumns holds the columns for the table takeout_job.
@@ -67,6 +72,11 @@ var jobColumns = JobColumns{
 	UpdatedAt:            "updated_at",
 	DeletedAt:            "deleted_at",
 	CallbackUrl:          "callback_url",
+	SkootarId:            "skootar_id",
+	SkootarName:          "skootar_name",
+	SkootarPhone:         "skootar_phone",
+	SkootarImageUrl:      "skootar_image_url",
+	SkootarRating:        "skootar_rating",
 }
 
 // NewJobDao creates and returns a new DAO object for table data access.

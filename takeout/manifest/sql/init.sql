@@ -96,3 +96,11 @@ CREATE TABLE `takeout_callback_msg` (
                                         UNIQUE KEY `takeout_callback_msg_unique` (`uuid`),
                                         KEY `takeout_callback_msg_takeout_ref_no_IDX` (`takeout_ref_no`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外送系统回调信息';
+
+
+
+ALTER TABLE takeout_job ADD skootar_id varchar(100) NULL COMMENT '骑手Id';
+ALTER TABLE takeout_job ADD skootar_name varchar(100) NULL COMMENT '骑手名称';
+ALTER TABLE takeout_job ADD skootar_phone varchar(100) NULL COMMENT '骑手电话';
+ALTER TABLE takeout_job ADD skootar_image_url text NULL COMMENT '骑手头像';
+ALTER TABLE takeout_job ADD skootar_rating DECIMAL(10,2) NULL COMMENT '骑手评分';

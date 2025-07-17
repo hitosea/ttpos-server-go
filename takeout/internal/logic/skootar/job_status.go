@@ -14,19 +14,22 @@ import (
 	"takeout/internal/dao"
 	"takeout/internal/model/do"
 	"takeout/internal/model/entity"
+	"takeout/internal/model/input/skootar"
 )
 
 func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq) (res *v1.SkootarStatusRes, err error) {
 	var (
 		job             *entity.Job
 		jobStatusBefore string
+		jobDetail       *skootar.JobDetail
+		jobModel        *gdb.Model
 	)
 
 	//先做入库，后面再说
 	err = dao.Job.Transaction(ctx, func(ctx context.Context, tx gdb.TX) error {
 		if _, err = dao.CallbackMsg.Ctx(ctx).Data(&do.CallbackMsg{
 			Uuid:           guid.S(),
-			TakeoutRefNo:   req.JobID,
+			TakeoutRefNo:   req.JobId,
 			StatusDatetime: gtime.NewFromTime(req.StatusDatetime),
 			Content:        gjson.MustEncodeString(req),
 		}).Insert(); err != nil {
@@ -34,8 +37,8 @@ func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq
 		}
 
 		//状态变更
-		jobModel := dao.Job.Ctx(ctx).Where(do.Job{
-			TakeoutRefNo: req.JobID,
+		jobModel = dao.Job.Ctx(ctx).Where(do.Job{
+			TakeoutRefNo: req.JobId,
 			ProviderName: consts.ProviderSkootar,
 		})
 		if err = jobModel.Scan(&job); err != nil {
@@ -64,6 +67,26 @@ func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq
 	})
 	if err != nil {
 		return nil, gerror.Wrap(err, "更新任务状态失败")
+	}
+	//如果状态变更为 5 Assigned, 则查询订单详情获取skootar骑手信息
+	if req.StatusAfter == int(consts.JobStatusAssigned) {
+		jobDetail, err = s.JobDetail4Food(ctx, &skootar.JobDetailInp{
+			JobId: req.JobId,
+		})
+		if err != nil {
+			g.Log().Errorf(ctx, "获取订单详情失败:%v", err)
+			return nil, gerror.Wrap(err, "获取订单详情失败")
+		}
+		//更新骑手信息
+		if _, err = jobModel.Data(do.Job{
+			SkootarId:       jobDetail.SkootarId,
+			SkootarName:     jobDetail.SkootarName,
+			SkootarPhone:    jobDetail.SkootarPhone,
+			SkootarImageUrl: jobDetail.SkootarImageUrl,
+			SkootarRating:   jobDetail.SkootarRating,
+		}).Update(); err != nil {
+			return nil, gerror.Wrap(err, "更新骑手信息失败")
+		}
 	}
 	//回调ttpos
 	if len(job.CallbackUrl) > 0 {
