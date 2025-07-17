@@ -21745,6 +21745,23 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.AcceptMemberOrderSetting": {
+            "type": "object",
+            "properties": {
+                "auto_member_order_limit": {
+                    "description": "自动接单会员订单金额上限，0.01-100000000",
+                    "type": "string"
+                },
+                "is_auto_member_order": {
+                    "description": "是否自动接单会员订单：0-否；1-是",
+                    "type": "string"
+                },
+                "is_auto_voice_member_order": {
+                    "description": "是否开启自动接单会员订单语音播报 0-否；1-是",
+                    "type": "string"
+                }
+            }
+        },
         "resp.AcceptOrderSetting": {
             "type": "object",
             "properties": {
@@ -22416,6 +22433,14 @@ const docTemplate = `{
         "resp.CashierBaseSetting": {
             "type": "object",
             "properties": {
+                "accept_member_order": {
+                    "description": "接单会员订单设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.AcceptMemberOrderSetting"
+                        }
+                    ]
+                },
                 "accept_order": {
                     "description": "接单设置",
                     "allOf": [

@@ -1401,6 +1401,11 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 			AutoOrderLimit: cashierSetting.AutoOrderLimit,
 			IsAutoVoice:    cashierSetting.IsAutoVoice,
 		},
+		AcceptMemberOrder: resp.AcceptMemberOrderSetting{
+			IsAutoMemberOrder:      cashierSetting.IsAutoMemberOrder,
+			AutoMemberOrderLimit:   cashierSetting.AutoMemberOrderLimit,
+			IsAutoVoiceMemberOrder: cashierSetting.IsAutoVoiceMemberOrder,
+		},
 		System: resp.SystemSetting{
 			IsShowScanSoldOut:      cashierSetting.IsShowScanSoldOut,
 			IsShowAssistantSoldOut: cashierSetting.IsShowAssistantSoldOut,

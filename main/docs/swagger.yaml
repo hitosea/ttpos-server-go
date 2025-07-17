@@ -2686,6 +2686,18 @@ definitions:
         description: 是否是加钟
         type: boolean
     type: object
+  resp.AcceptMemberOrderSetting:
+    properties:
+      auto_member_order_limit:
+        description: 自动接单会员订单金额上限，0.01-100000000
+        type: string
+      is_auto_member_order:
+        description: 是否自动接单会员订单：0-否；1-是
+        type: string
+      is_auto_voice_member_order:
+        description: 是否开启自动接单会员订单语音播报 0-否；1-是
+        type: string
+    type: object
   resp.AcceptOrderSetting:
     properties:
       auto_order_limit:
@@ -3122,6 +3134,10 @@ definitions:
     type: object
   resp.CashierBaseSetting:
     properties:
+      accept_member_order:
+        allOf:
+        - $ref: '#/definitions/resp.AcceptMemberOrderSetting'
+        description: 接单会员订单设置
       accept_order:
         allOf:
         - $ref: '#/definitions/resp.AcceptOrderSetting'
