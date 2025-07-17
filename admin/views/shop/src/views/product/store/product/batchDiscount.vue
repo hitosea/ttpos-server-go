@@ -91,7 +91,7 @@
 <script setup>
   import { ref, reactive, computed, nextTick, getCurrentInstance } from 'vue';
   import IndexApi from '@/api/index.js';
-
+  import ProductApi from '@/api/product.js';
   defineOptions({
     name: 'ProductSelector',
   });
@@ -272,11 +272,11 @@
       pagination.value.total = res.data.list.total;
       pagination.value.totalPage = res.data.list.total_page;
       pagination.value.page = res.data.list.current_page;
-              pagination.value.pageSize = res.data.list.per_page;
+      pagination.value.pageSize = res.data.list.per_page;
 
-        // 等待设置已选商品完成后再执行选择操作
-        await setSelectedProducts(res.data.list.data);
-        toggleRowSelection(isFirst);
+      // 等待设置已选商品完成后再执行选择操作
+      await setSelectedProducts(res.data.list.data);
+      toggleRowSelection(isFirst);
     } catch (error) {
       //
     } finally {
@@ -383,13 +383,11 @@
    */
   const setSelectedProducts = async (productList) => {
     // 筛选出open_overall_discount为1的商品ID
-    selectedProductIds.value = productList
-      .filter((item) => item.open_overall_discount === 1)
-      .map((item) => item.product_id);
-    
+    selectedProductIds.value = productList.filter((item) => item.open_overall_discount === 1).map((item) => item.product_id);
+
     // 确保数据处理完毕
     await nextTick();
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
   };
 
   const toggleRowSelection = async (isFirst = false) => {
@@ -477,7 +475,25 @@
   };
 
   const handleClick = () => {
-    console.log(selectedProductsTmp.value);
+    // 筛选出未被勾选的商品
+    const unselectedProducts = productsTableData.value.filter((item) => !selectedProductsTmp.value.some((p) => p.product_id === item.product_id));
+    // 把未被筛选的商品存入 product_ids
+    const product_ids = unselectedProducts.map((item) => item.product_id);
+    // 调用接口
+    ProductApi.batchUpdateOverallDiscount({ product_ids }, true)
+      .then((res) => {
+        proxy.$ElMessage({
+          message: proxy.$t('操作成功'),
+          type: 'success',
+        });
+        dialogFormVisible();
+      })
+      .catch((err) => {
+        proxy.$ElMessage({
+          message: err.message,
+          type: 'error',
+        });
+      });
   };
 </script>
 
