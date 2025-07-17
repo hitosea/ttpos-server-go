@@ -43,6 +43,15 @@
               </div>
             </template>
           </el-table-column>
+          <el-table-column prop="open_overall_discount" :label="$t('整单折扣')" width="100">
+            <template #default="scope">
+              <el-switch
+                :disabled="!this.$filter.isAuth('/product/buffet/list/open_overall_discount')"
+                :model-value="scope.row.open_overall_discount == 1 ? true : false"
+                @click="handleOpenOverallDiscount(scope.row)"
+              ></el-switch>
+            </template>
+          </el-table-column>
           <el-table-column prop="is_comb" :label="$t('组合')" width="100">
             <template #default="scope">
               <el-switch
@@ -248,6 +257,11 @@
             self.getData();
           });
         });
+      },
+
+      //整单折扣
+      handleOpenOverallDiscount(row) {
+        console.log(row);
       },
 
       /*选择第几页*/

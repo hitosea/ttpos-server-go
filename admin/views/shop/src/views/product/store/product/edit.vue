@@ -233,6 +233,7 @@
           alone_grade_type: 10,
           /*打印标签*/
           label_id: '',
+          open_overall_discount: 0, //整单折扣
         },
         oldForm: {},
         /*库存变没变*/

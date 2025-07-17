@@ -6,76 +6,39 @@
 
     <div class="product-selector-content">
       <div class="product-selector-tree">
-        <template v-if="props.selectorType === 'label'">
-          <el-auto-resizer>
-            <template #default="{ height, width }">
-              <el-tree-v2
-                ref="printTagsTreeRef"
-                :height="height"
-                :data="printTagsTree"
-                node-key="id"
-                highlight-current
-                :current-node-key="printTagsTreeCurrentKey"
-                @current-change="handlePrintTagsTreeCurrentChange"
-                auto-expand-parent
-                :expand-on-click-node="false"
-                :default-expanded-keys="printTagsTreeExpandedKeys"
-                @node-expand="handlePrintTagsTreeExpand"
-                @node-collapse="handlePrintTagsTreeExpand"
-                :props="{ children: 'children', label: 'label' }"
-              >
-                <template #default="{ node }">
-                  <div v-show="false" :style="{ marginRight: '4px' }" @click.stop>
-                    <el-checkbox
-                      v-model="printTagsProductIsAllSelected[`l-${node.key}`]"
-                      @change="(v) => handlePrintTagCheck(node.key, v)"
-                      :disabled="printTagsProductCount[`l-${node.key}`] === 0"
-                    />
-                  </div>
-                  <span>{{ node.label }}</span>
-                  <template v-if="printTagsSelectedProductCount[`l-${node.key}`] > 0">
-                    <span style="margin-left: 2px">({{ printTagsSelectedProductCount[`l-${node.key}`] }})</span>
-                  </template>
+        <el-auto-resizer>
+          <template #default="{ height, width }">
+            <el-tree-v2
+              ref="categoriesTreeRef"
+              :height="height"
+              :data="categoriesTree"
+              node-key="id"
+              highlight-current
+              :current-node-key="categoriesTreeCurrentKey"
+              @current-change="handleCategoriesTreeCurrentChange"
+              auto-expand-parent
+              :expand-on-click-node="false"
+              :default-expanded-keys="categoriesTreeExpandedKeys"
+              @node-expand="handleCategoriesTreeExpand"
+              @node-collapse="handleCategoriesTreeExpand"
+              :props="{ children: 'children', label: 'label' }"
+            >
+              <template #default="{ node }">
+                <div v-show="false" :style="{ marginRight: '4px' }" @click.stop>
+                  <el-checkbox
+                    v-model="categoriesProductIsAllSelected[`c-${node.key}`]"
+                    @change="(v) => handleCategoryCheck(node.key, v)"
+                    :disabled="categoriesProductCount[`c-${node.key}`] === 0"
+                  />
+                </div>
+                <span>{{ node.label }}</span>
+                <template v-if="categoriesProductSelectedCount[`c-${node.key}`] > 0">
+                  <span style="margin-left: 2px">({{ categoriesProductSelectedCount[`c-${node.key}`] }})</span>
                 </template>
-              </el-tree-v2>
-            </template>
-          </el-auto-resizer>
-        </template>
-        <template v-else>
-          <el-auto-resizer>
-            <template #default="{ height, width }">
-              <el-tree-v2
-                ref="categoriesTreeRef"
-                :height="height"
-                :data="categoriesTree"
-                node-key="id"
-                highlight-current
-                :current-node-key="categoriesTreeCurrentKey"
-                @current-change="handleCategoriesTreeCurrentChange"
-                auto-expand-parent
-                :expand-on-click-node="false"
-                :default-expanded-keys="categoriesTreeExpandedKeys"
-                @node-expand="handleCategoriesTreeExpand"
-                @node-collapse="handleCategoriesTreeExpand"
-                :props="{ children: 'children', label: 'label' }"
-              >
-                <template #default="{ node }">
-                  <div v-show="false" :style="{ marginRight: '4px' }" @click.stop>
-                    <el-checkbox
-                      v-model="categoriesProductIsAllSelected[`c-${node.key}`]"
-                      @change="(v) => handleCategoryCheck(node.key, v)"
-                      :disabled="categoriesProductCount[`c-${node.key}`] === 0"
-                    />
-                  </div>
-                  <span>{{ node.label }}</span>
-                  <template v-if="categoriesProductSelectedCount[`c-${node.key}`] > 0">
-                    <span style="margin-left: 2px">({{ categoriesProductSelectedCount[`c-${node.key}`] }})</span>
-                  </template>
-                </template>
-              </el-tree-v2>
-            </template>
-          </el-auto-resizer>
-        </template>
+              </template>
+            </el-tree-v2>
+          </template>
+        </el-auto-resizer>
       </div>
       <div class="product-selector-main">
         <div class="product-selector-form">
@@ -135,20 +98,7 @@
 
   const { proxy } = getCurrentInstance();
 
-  const emit = defineEmits(['close']);
-
   const props = defineProps({
-    open: {
-      type: Boolean,
-      default: false,
-    },
-    selectorType: {
-      type: String,
-      default: 'all',
-      validator(value) {
-        return ['all', 'category', 'label'].includes(value);
-      },
-    },
     type: {
       type: String,
       default: '',
@@ -162,17 +112,11 @@
       type: Number,
       default: 0,
     },
-    selectedProductIds: {
-      type: Array,
-      default: () => [],
-    },
     maxCount: {
       type: Number,
       default: Infinity,
     },
   });
-
-  const dialogVisible = ref(props.open);
 
   const loading = ref(false);
 
@@ -181,6 +125,8 @@
   });
 
   const formRef = ref(null);
+
+  const selectedProductIds = ref([]);
 
   const categories = ref([]);
   const categoriesProductCount = computed(() => {
@@ -236,62 +182,14 @@
   const categoriesTreeExpandedKeys = ref([0]);
 
   const printTags = ref([]);
-  const printTagsProductCount = computed(() => {
-    const _map = {};
 
-    let count = 0;
-    for (const item of printTags.value) {
-      const _count = products.value.filter((product) => product.label_id === item.label_id).length;
-      _map[`l-${item.label_id}`] = _count;
-      count += _count;
-    }
-
-    _map[`l-0`] = count;
-    return _map;
-  });
-  const printTagsTree = computed(() => {
-    return [
-      {
-        id: 0,
-        label: proxy.$t('全部'),
-        children: loading.value
-          ? undefined
-          : Array.isArray(printTags.value)
-          ? printTags.value.map((item) => {
-              return {
-                id: item.label_id,
-                pid: 0,
-                label: item.label_name_text,
-              };
-            })
-          : undefined,
-      },
-    ];
-  });
-  const printTagsTreeRef = ref(null);
   const printTagsTreeCurrentKey = ref(0);
-  const printTagsTreeExpandedKeys = ref([0]);
 
   const products = ref([]);
   const productsTableData = computed(() => {
-    switch (props.selectorType) {
-      case 'category':
-        return products.value
-          .filter(
-            (item) => categoriesTreeCurrentKey.value === 0 || categoriesTreeCurrentKey.value === item.category_id || categoriesTreeCurrentKey.value === item.parent_category_id
-          )
-          .filter((item) => !searchValue.value || item.product_name_text.includes(searchValue.value));
-      case 'label':
-        return products.value
-          .filter((item) => printTagsTreeCurrentKey.value === 0 || printTagsTreeCurrentKey.value === item.label_id)
-          .filter((item) => !searchValue.value || item.product_name_text.includes(searchValue.value));
-      default:
-        return products.value
-          .filter(
-            (item) => categoriesTreeCurrentKey.value === 0 || categoriesTreeCurrentKey.value === item.category_id || categoriesTreeCurrentKey.value === item.parent_category_id
-          )
-          .filter((item) => !searchValue.value || item.product_name_text.includes(searchValue.value));
-    }
+    return products.value
+      .filter((item) => categoriesTreeCurrentKey.value === 0 || categoriesTreeCurrentKey.value === item.category_id || categoriesTreeCurrentKey.value === item.parent_category_id)
+      .filter((item) => !searchValue.value || item.product_name_text.includes(searchValue.value));
   });
 
   const selectedProductsTmp = ref([]);
@@ -337,31 +235,6 @@
     },
   });
 
-  const printTagsSelectedProductCount = computed(() => {
-    const _map = {};
-
-    let count = 0;
-    for (const item of printTags.value) {
-      const _count = selectedProductsTmp.value.filter((product) => product.label_id === item.label_id).length;
-      _map[`l-${item.label_id}`] = _count;
-      count += _count;
-    }
-
-    _map[`l-0`] = count;
-    return _map;
-  });
-
-  const printTagsProductIsAllSelected = computed(() => {
-    const _map = {};
-
-    for (const item of printTags.value) {
-      _map[`l-${item.label_id}`] =
-        printTagsProductCount.value[`l-${item.label_id}`] > 0 && printTagsSelectedProductCount.value[`l-${item.label_id}`] === printTagsProductCount.value[`l-${item.label_id}`];
-    }
-
-    return _map;
-  });
-
   const pagination = ref({
     page: 1,
     pageSize: 10000,
@@ -379,7 +252,7 @@
         {
           page: pagination.value.page,
           list_rows: pagination.value.pageSize,
-          mode: props.selectorType,
+          mode: 'all',
           product_name,
           category_ids,
           label_ids,
@@ -399,9 +272,11 @@
       pagination.value.total = res.data.list.total;
       pagination.value.totalPage = res.data.list.total_page;
       pagination.value.page = res.data.list.current_page;
-      pagination.value.pageSize = res.data.list.per_page;
+              pagination.value.pageSize = res.data.list.per_page;
 
-      toggleRowSelection(isFirst);
+        // 等待设置已选商品完成后再执行选择操作
+        await setSelectedProducts(res.data.list.data);
+        toggleRowSelection(isFirst);
     } catch (error) {
       //
     } finally {
@@ -502,9 +377,24 @@
     }
   };
 
+  /**
+   * 设置已选商品ID列表
+   * @param {Array} productList 商品列表数据
+   */
+  const setSelectedProducts = async (productList) => {
+    // 筛选出open_overall_discount为1的商品ID
+    selectedProductIds.value = productList
+      .filter((item) => item.open_overall_discount === 1)
+      .map((item) => item.product_id);
+    
+    // 确保数据处理完毕
+    await nextTick();
+    await new Promise(resolve => setTimeout(resolve, 0));
+  };
+
   const toggleRowSelection = async (isFirst = false) => {
     if (isFirst) {
-      selectedProductsTmp.value = productsTableData.value.filter((item) => props.selectedProductIds.includes(item.product_id));
+      selectedProductsTmp.value = productsTableData.value.filter((item) => selectedProductIds.value.includes(item.product_id));
     }
 
     nextTick(() => {
@@ -580,62 +470,6 @@
       }
       categoriesTreeExpandedKeys.value = categoriesTreeExpandedKeys.value.filter((item) => item !== id);
     }
-  };
-
-  const handlePrintTagsTreeCurrentChange = async ({ id }) => {
-    if (id === printTagsTreeCurrentKey.value) return;
-    printTagsTreeCurrentKey.value = id;
-    printTagsTreeRef.value.setCurrentKey(printTagsTreeCurrentKey.value);
-
-    toggleRowSelection(false);
-  };
-
-  const handlePrintTagCheck = (id, checked) => {
-    const _products = products.value.filter((item) => item.label_id === id);
-
-    if (id === printTagsTreeCurrentKey.value) {
-      _products.forEach((item) => {
-        productsTableRef.value.toggleRowSelection(item, checked, true);
-      });
-    }
-
-    if (checked) {
-      _products.forEach((item) => {
-        if (selectedProductsTmp.value.some((product) => product.product_id === item.product_id)) return;
-        selectedProductsTmp.value.push(item);
-      });
-    } else {
-      selectedProductsTmp.value = selectedProductsTmp.value.filter((item) => !_products.some((product) => product.product_id === item.product_id));
-    }
-  };
-
-  const handlePrintTagsTreeExpand = ({ id }, { expanded }) => {
-    if (expanded) {
-      printTagsTreeExpandedKeys.value = [...printTagsTreeExpandedKeys.value, id];
-    } else {
-      if (id === 0) {
-        printTagsTreeExpandedKeys.value = [];
-        return;
-      }
-      printTagsTreeExpandedKeys.value = printTagsTreeExpandedKeys.value.filter((item) => item !== id);
-    }
-  };
-
-  const getPrintTagPid = (id) => {
-    let pid;
-
-    const data = printTagsTree.value?.[0]?.children;
-    if (!data) return pid;
-
-    for (const treeItem of data) {
-      const _pid = treeItem.children?.find((v) => v.id === id)?.pid;
-      if (typeof _pid === 'number') {
-        pid = _pid;
-        break;
-      }
-    }
-
-    return pid;
   };
 
   const dialogFormVisible = () => {
