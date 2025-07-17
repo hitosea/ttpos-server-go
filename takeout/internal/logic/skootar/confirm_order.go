@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"takeout/api"
+	"takeout/internal/model/input"
 	"takeout/internal/model/input/skootar"
 
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -13,11 +14,11 @@ import (
 
 var merchantConfirmApiPath = "/partner/api/v1/job"
 
-// CreateOrder 创建订单
-func (s *sSkootar) ConfirmOrder(ctx context.Context, req *api.ConfirmOrderReq) (res *api.ConfirmOrderResp, err error) {
+// ConfirmOrder 商家确认订单
+func (s *sSkootar) ConfirmOrder(ctx context.Context, req *input.ConfirmOrderInp) (res *api.ConfirmOrderResp, err error) {
 	reqInp := &skootar.ConfirmOrderInp{
 		ReqBase: s.ReqBase(),
-		JobId:   req.OrderId,
+		JobId:   req.JobId,
 	}
 	resp := &skootar.ConfirmOrderOut{}
 	rr := g.Client().ContentJson().PostVar(ctx, s.GetUrl(merchantConfirmApiPath), reqInp)
@@ -31,7 +32,7 @@ func (s *sSkootar) ConfirmOrder(ctx context.Context, req *api.ConfirmOrderReq) (
 	if resp.ResponseCode != "200" {
 		return nil, gerror.Newf("商家确认订单异常:%v", resp.ResponseDesc)
 	}
-	// ToDo 更新订单状态
+	// 解析接口返回结果·
 	res = &api.ConfirmOrderResp{}
 	if err = gconv.Struct(resp, res); err != nil {
 		return nil, gerror.Wrap(err, "商家确认订单")

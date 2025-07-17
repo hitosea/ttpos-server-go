@@ -2,12 +2,13 @@ package skootar
 
 import (
 	"fmt"
-	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/os/gctx"
 	"takeout/internal/model/conf"
 	"takeout/internal/model/input/skootar"
 	"takeout/internal/service"
+
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gctx"
 )
 
 var (

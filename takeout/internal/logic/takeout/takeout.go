@@ -4,21 +4,44 @@ import (
 	"context"
 	"takeout/api"
 	"takeout/internal/consts"
+	"takeout/internal/dao"
+	"takeout/internal/model/entity"
+	"takeout/internal/model/input"
 	"takeout/internal/service"
+
+	"github.com/gogf/gf/v2/errors/gerror"
 )
 
-type Takeout interface {
-	EstimatePrice(ctx context.Context, req *api.EstimatePriceReq) (res *api.EstimatePriceResp, err error)
+type ITakeout interface {
+	// EstimatePrice 预估距离
+	EstimateDistance(ctx context.Context, req *api.EstimateDistanceReq) (res *api.EstimateDistanceResp, err error)
+	// CreateOrder 创建订单
 	CreateOrder(ctx context.Context, req *api.CreateOrderReq) (res *api.CreateOrderResp, err error)
-	ConfirmOrder(ctx context.Context, req *api.ConfirmOrderReq) (res *api.ConfirmOrderResp, err error)
-	GetDriverLocation(ctx context.Context, req *api.GetDriverLocationReq) (res *api.GetDriverLocationResp, err error)
+	// ConfirmOrder 商家确认订单
+	ConfirmOrder(ctx context.Context, req *input.ConfirmOrderInp) (res *api.ConfirmOrderResp, err error)
+	// GetDriverInfo 获取司机信息
+	GetDriverInfo(ctx context.Context, req *input.GetDriverInfoInp) (res *api.GetDriverInfoResp, err error)
 }
 
-func GetService(name consts.ProviderName) Takeout {
+func GetService(name consts.ProviderName) ITakeout {
 	switch name {
 	case consts.ProviderSkootar:
 		return service.Skootar()
 	default:
 		return service.Skootar()
 	}
+}
+
+type sTakeout struct {
+}
+
+var Takeout = new(sTakeout)
+
+func (s *sTakeout) Get(ctx context.Context, shopOrderUuid string) (*entity.Job, error) {
+	var takeoutJob *entity.Job
+	err := dao.Job.Ctx(ctx).Where(dao.Job.Columns().ShopRefNo, shopOrderUuid).Scan(&takeoutJob)
+	if err != nil {
+		return nil, gerror.Wrap(err, "获取外送订单失败")
+	}
+	return takeoutJob, nil
 }

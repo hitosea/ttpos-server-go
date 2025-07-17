@@ -1,12 +1,11 @@
 package rpc
 
 import (
-	"encoding/json"
-	"fmt"
-	"takeout/api"
 	"takeout/api/echo"
 	"time"
 	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/pkg/logger"
 
@@ -42,145 +41,90 @@ func TestEcho(c *gin.Context) (res *echo.EchoResponse, err error) {
 	return
 }
 
-func TestEstimatePrice() (res *api.EstimatePriceResp, err error) {
-	client, conn, err := takeout.NewTakeoutClient()
-	if err != nil {
-		logger.Logger.Error("创建外送服务gRPC客户端失败:", zap.Error(err))
-		return
-	}
-	defer conn.Close()
-	in := &api.EstimatePriceReq{
+func TestEstimateDistance() (*resp.TakeoutDistanceResp, error) {
+	res, err := takeout.NewTakeoutSrv().EstimateDistance(context.Background(), &req.TakeoutDistanceReq{
 		ProviderName: "skootar",
-		Address: []*api.Address{
+		Address: []*req.TakeoutAddress{
 			{
-				Lat: "13.721899",
-				Lng: "100.52900",
+				AddressName: "new point",
+				Address:     "281/28 บรรทัดทอง เขต ราชเทวี กรุงเทพมหานคร ประเทศไทย 10400",
+				Lat:         "13.721899",
+				Lng:         "100.52900",
 			},
 			{
-				Lat: "13.747408",
-				Lng: "100.540244",
+				AddressName: "ม.รามคำแหง",
+				Address:     "2086 ถนนรามคำแหง เขตบางกะปิ กรุงเทพมหานคร ประเทศไทย 10240",
+				Lat:         "13.747408",
+				Lng:         "100.540244",
 			},
 		},
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	res, err = client.EstimatePrice(ctx, in)
-
-	resData, _ := json.Marshal(res)
-	fmt.Println("++++")
-	fmt.Println(string(resData))
-	fmt.Println("++++")
-
+	})
 	if err != nil {
 		logger.Logger.Error("调用外送服务gRPC客户端失败: %v", zap.Error(err))
-		return
+		return nil, err
 	}
-	logger.Logger.Info("外送服务gRPC客户端测试成功", zap.Any("res", res))
-	return
+
+	logger.Logger.Info("TestEstimateDistance", zap.Any("res", res))
+
+	return res, nil
 }
 
-func TestCreateOrder() (res *api.CreateOrderResp, err error) {
-	client, conn, err := takeout.NewTakeoutClient()
-	if err != nil {
-		logger.Logger.Error("创建外送服务gRPC客户端失败:", zap.Error(err))
-		return
-	}
-	defer conn.Close()
-	in := &api.CreateOrderReq{
+func TestCreateOrder() (*resp.CreateTakeoutOrderResp, error) {
+	res, err := takeout.NewTakeoutSrv().CreateOrder(context.Background(), &req.CreateTakeoutOrderReq{
 		ProviderName:  "skootar",
-		ShopOrderUuid: "8888777",
-		CustomerLocation: &api.Location{
-			Lat:          "13.721899",
-			Lng:          "100.52900",
-			AddressName:  "new point",
-			Address:      "281/28 บรรทัดทอง เขต ราชเทวี กรุงเทพมหานคร ประเทศไทย 10400",
+		ShopOrderUuid: "3675227238301699",
+		CustomerLocation: &req.TakeoutLocation{
+			TakeoutAddress: req.TakeoutAddress{
+				AddressName: "new point",
+				Address:     "281/28 บรรทัดทอง เขต ราชเทวี กรุงเทพมหานคร ประเทศไทย 10400",
+				Lat:         "13.721899",
+				Lng:         "100.52900",
+			},
 			ContactName:  "Thanate",
 			ContactPhone: "0864923595",
 		},
-		MerchantLocation: &api.Location{
-			Lat:          "13.747408",
-			Lng:          "100.540244",
-			AddressName:  "ม.รามคำแหง",
-			Address:      "2086 ถนนรามคำแหง เขตบางกะปิ กรุงเทพมหานคร ประเทศไทย 10240",
+		MerchantLocation: &req.TakeoutLocation{
+			TakeoutAddress: req.TakeoutAddress{
+				AddressName: "ม.รามคำแหง",
+				Address:     "2086 ถนนรามคำแหง เขตบางกะปิ กรุงเทพมหานคร ประเทศไทย 10240",
+				Lat:         "13.747408",
+				Lng:         "100.540244",
+			},
 			ContactName:  "มาช่า",
 			ContactPhone: "0998888999",
 		},
 		Remark:      "test",
 		CallbackUrl: "https://ttpos-test1.ttpos.com/api/callback/skootar",
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	res, err = client.CreateOrder(ctx, in)
-
-	resData, _ := json.Marshal(res)
-	fmt.Println("++++")
-	fmt.Println(string(resData))
-	fmt.Println("++++")
-
+	})
 	if err != nil {
 		logger.Logger.Error("调用外送服务gRPC客户端失败: %v", zap.Error(err))
-		return
+		return nil, err
 	}
-	logger.Logger.Info("外送服务gRPC客户端测试成功", zap.Any("res", res))
-	return
+	logger.Logger.Info("TestCreateOrder", zap.Any("res", res))
+	return res, nil
 }
 
-func TestConfirmOrder() (res *api.ConfirmOrderResp, err error) {
-	client, conn, err := takeout.NewTakeoutClient()
-	if err != nil {
-		logger.Logger.Error("创建外送服务gRPC客户端失败:", zap.Error(err))
-		return
-	}
-	defer conn.Close()
-	in := &api.ConfirmOrderReq{
-		ProviderName: "skootar",
-		OrderId:      "J25070856677",
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	res, err = client.ConfirmOrder(ctx, in)
-
-	resData, _ := json.Marshal(res)
-	fmt.Println("++++")
-	fmt.Println(string(resData))
-	fmt.Println("++++")
-
+func TestConfirmOrder() error {
+	err := takeout.NewTakeoutSrv().ConfirmOrder(context.Background(), &req.ConfirmTakeoutOrderReq{
+		ShopOrderUuid: "3675227238301699",
+	})
 	if err != nil {
 		logger.Logger.Error("调用外送服务gRPC客户端失败: %v", zap.Error(err))
-		return
+		return err
 	}
-	logger.Logger.Info("外送服务gRPC客户端测试成功", zap.Any("res", res))
-	return
+	logger.Logger.Info("外送服务gRPC客户端测试成功")
+	return nil
 }
 
-func TestGetDriverLocation() (res *api.GetDriverLocationResp, err error) {
-	client, conn, err := takeout.NewTakeoutClient()
-	if err != nil {
-		logger.Logger.Error("创建外送服务gRPC客户端失败:", zap.Error(err))
-		return
-	}
-	defer conn.Close()
-	in := &api.GetDriverLocationReq{
-		ProviderName: "skootar",
-		OrderId:      "SK0002",
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	res, err = client.GetDriverLocation(ctx, in)
-
-	resData, _ := json.Marshal(res)
-	fmt.Println("++++")
-	fmt.Println(string(resData))
-	fmt.Println("++++")
+func TestGetDriverInfo() (*resp.GetDriverInfoResp, error) {
+	res, err := takeout.NewTakeoutSrv().GetDriverInfo(context.Background(), &req.GetDriverInfoReq{
+		ShopOrderUuid: "3675227238301699",
+	})
 
 	if err != nil {
-		logger.Logger.Error("调用外送服务gRPC客户端失败: %v", zap.Error(err))
-		return
+		logger.Logger.Error("调用外送服务gRPC客户端失败", zap.Error(err))
+		return nil, err
 	}
-	logger.Logger.Info("外送服务gRPC客户端测试成功", zap.Any("res", res))
-	return
+	logger.Logger.Info("TestGetDriverInfo", zap.Any("res", res))
+	return res, nil
 }
