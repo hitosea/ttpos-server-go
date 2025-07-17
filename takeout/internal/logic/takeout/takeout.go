@@ -19,6 +19,8 @@ type ITakeout interface {
 	CreateOrder(ctx context.Context, req *api.CreateOrderReq) (res *api.CreateOrderResp, err error)
 	// ConfirmOrder 商家确认订单
 	ConfirmOrder(ctx context.Context, req *input.ConfirmOrderInp) (res *api.ConfirmOrderResp, err error)
+	// CancelOrder 取消订单
+	CancelOrder(ctx context.Context, req *input.CancelOrderInp) (res *api.CancelOrderResp, err error)
 	// GetDriverInfo 获取司机信息
 	GetDriverInfo(ctx context.Context, req *input.GetDriverInfoInp) (res *api.GetDriverInfoResp, err error)
 }

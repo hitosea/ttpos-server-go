@@ -31,6 +31,10 @@ type ConfirmTakeoutOrderReq struct {
 	ShopOrderUuid string // 商户订单号
 }
 
+type CancelTakeoutOrderReq struct {
+	ShopOrderUuid string // 商户订单号
+}
+
 type GetDriverInfoReq struct {
 	ShopOrderUuid string // 商户订单号
 }

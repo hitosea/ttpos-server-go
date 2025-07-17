@@ -72,10 +72,10 @@ func TestEstimateDistance() (*resp.TakeoutDistanceResp, error) {
 func TestCreateOrder() (*resp.CreateTakeoutOrderResp, error) {
 	res, err := takeout.NewTakeoutSrv().CreateOrder(context.Background(), &req.CreateTakeoutOrderReq{
 		ProviderName:  "skootar",
-		ShopOrderUuid: "3675227238301699",
+		ShopOrderUuid: "3675534372503554",
 		CustomerLocation: &req.TakeoutLocation{
 			TakeoutAddress: req.TakeoutAddress{
-				AddressName: "new point",
+				AddressName: "new point11",
 				Address:     "281/28 บรรทัดทอง เขต ราชเทวี กรุงเทพมหานคร ประเทศไทย 10400",
 				Lat:         "13.721899",
 				Lng:         "100.52900",
@@ -85,7 +85,7 @@ func TestCreateOrder() (*resp.CreateTakeoutOrderResp, error) {
 		},
 		MerchantLocation: &req.TakeoutLocation{
 			TakeoutAddress: req.TakeoutAddress{
-				AddressName: "ม.รามคำแหง",
+				AddressName: "xiaoxiong",
 				Address:     "2086 ถนนรามคำแหง เขตบางกะปิ กรุงเทพมหานคร ประเทศไทย 10240",
 				Lat:         "13.747408",
 				Lng:         "100.540244",
@@ -127,4 +127,16 @@ func TestGetDriverInfo() (*resp.GetDriverInfoResp, error) {
 	}
 	logger.Logger.Info("TestGetDriverInfo", zap.Any("res", res))
 	return res, nil
+}
+
+func TestCancelOrder() error {
+	err := takeout.NewTakeoutSrv().CancelOrder(context.Background(), &req.CancelTakeoutOrderReq{
+		ShopOrderUuid: "3675534372503554",
+	})
+	if err != nil {
+		logger.Logger.Error("调用外送服务gRPC客户端失败: %v", zap.Error(err))
+		return err
+	}
+	logger.Logger.Info("外送服务gRPC客户端测试成功")
+	return nil
 }

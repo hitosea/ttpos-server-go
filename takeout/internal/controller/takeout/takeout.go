@@ -17,7 +17,7 @@ func Register(s *grpcx.GrpcServer) {
 	api.RegisterTakeoutServiceServer(s.Server, &Controller{})
 }
 
-func (*Controller) EstimatePrice(ctx context.Context, req *api.EstimatePriceReq) (res *api.EstimatePriceResp, err error) {
+func (*Controller) EstimateDistance(ctx context.Context, req *api.EstimateDistanceReq) (res *api.EstimateDistanceResp, err error) {
 	return nil, gerror.NewCode(gcode.CodeNotImplemented)
 }
 
@@ -29,6 +29,6 @@ func (*Controller) ConfirmOrder(ctx context.Context, req *api.ConfirmOrderReq) (
 	return nil, gerror.NewCode(gcode.CodeNotImplemented)
 }
 
-func (*Controller) GetDriverLocation(ctx context.Context, req *api.GetDriverLocationReq) (res *api.GetDriverLocationResp, err error) {
+func (*Controller) GetDriverInfo(ctx context.Context, req *api.GetDriverInfoReq) (res *api.GetDriverInfoResp, err error) {
 	return nil, gerror.NewCode(gcode.CodeNotImplemented)
 }

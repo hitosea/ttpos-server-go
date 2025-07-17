@@ -722,6 +722,94 @@ func (x *GetDriverInfoResp) GetLng() float32 {
 	return 0
 }
 
+type CancelOrderReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ShopOrderUuid string                 `protobuf:"bytes,1,opt,name=shop_order_uuid,json=shopOrderUuid,proto3" json:"shop_order_uuid,omitempty" dc:"ttpos 订单Uuid"` // ttpos 订单Uuid
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelOrderReq) Reset() {
+	*x = CancelOrderReq{}
+	mi := &file_takeout_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelOrderReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelOrderReq) ProtoMessage() {}
+
+func (x *CancelOrderReq) ProtoReflect() protoreflect.Message {
+	mi := &file_takeout_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelOrderReq.ProtoReflect.Descriptor instead.
+func (*CancelOrderReq) Descriptor() ([]byte, []int) {
+	return file_takeout_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *CancelOrderReq) GetShopOrderUuid() string {
+	if x != nil {
+		return x.ShopOrderUuid
+	}
+	return ""
+}
+
+type CancelOrderResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ResponseInfo  *ResponseInfo          `protobuf:"bytes,1,opt,name=responseInfo,proto3" json:"responseInfo,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelOrderResp) Reset() {
+	*x = CancelOrderResp{}
+	mi := &file_takeout_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelOrderResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelOrderResp) ProtoMessage() {}
+
+func (x *CancelOrderResp) ProtoReflect() protoreflect.Message {
+	mi := &file_takeout_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelOrderResp.ProtoReflect.Descriptor instead.
+func (*CancelOrderResp) Descriptor() ([]byte, []int) {
+	return file_takeout_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *CancelOrderResp) GetResponseInfo() *ResponseInfo {
+	if x != nil {
+		return x.ResponseInfo
+	}
+	return nil
+}
+
 var File_takeout_proto protoreflect.FileDescriptor
 
 const file_takeout_proto_rawDesc = "" +
@@ -775,10 +863,15 @@ const file_takeout_proto_rawDesc = "" +
 	"\x06avatar\x18\x04 \x01(\tR\x06avatar\x12\x16\n" +
 	"\x06rating\x18\x05 \x01(\x02R\x06rating\x12\x10\n" +
 	"\x03lat\x18\x06 \x01(\x02R\x03lat\x12\x10\n" +
-	"\x03lng\x18\a \x01(\x02R\x03lng2\x98\x02\n" +
+	"\x03lng\x18\a \x01(\x02R\x03lng\"8\n" +
+	"\x0eCancelOrderReq\x12&\n" +
+	"\x0fshop_order_uuid\x18\x01 \x01(\tR\rshopOrderUuid\"H\n" +
+	"\x0fCancelOrderResp\x125\n" +
+	"\fresponseInfo\x18\x01 \x01(\v2\x11.api.ResponseInfoR\fresponseInfo2\xd4\x02\n" +
 	"\x0eTakeoutService\x12I\n" +
 	"\x10EstimateDistance\x12\x18.api.EstimateDistanceReq\x1a\x19.api.EstimateDistanceResp\"\x00\x12:\n" +
-	"\vCreateOrder\x12\x13.api.CreateOrderReq\x1a\x14.api.CreateOrderResp\"\x00\x12=\n" +
+	"\vCreateOrder\x12\x13.api.CreateOrderReq\x1a\x14.api.CreateOrderResp\"\x00\x12:\n" +
+	"\vCancelOrder\x12\x13.api.CancelOrderReq\x1a\x14.api.CancelOrderResp\"\x00\x12=\n" +
 	"\fConfirmOrder\x12\x14.api.ConfirmOrderReq\x1a\x15.api.ConfirmOrderResp\"\x00\x12@\n" +
 	"\rGetDriverInfo\x12\x15.api.GetDriverInfoReq\x1a\x16.api.GetDriverInfoResp\"\x00B\rZ\vtakeout/apib\x06proto3"
 
@@ -794,7 +887,7 @@ func file_takeout_proto_rawDescGZIP() []byte {
 	return file_takeout_proto_rawDescData
 }
 
-var file_takeout_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_takeout_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_takeout_proto_goTypes = []any{
 	(*Address)(nil),              // 0: api.Address
 	(*Location)(nil),             // 1: api.Location
@@ -807,6 +900,8 @@ var file_takeout_proto_goTypes = []any{
 	(*ConfirmOrderResp)(nil),     // 8: api.ConfirmOrderResp
 	(*GetDriverInfoReq)(nil),     // 9: api.GetDriverInfoReq
 	(*GetDriverInfoResp)(nil),    // 10: api.GetDriverInfoResp
+	(*CancelOrderReq)(nil),       // 11: api.CancelOrderReq
+	(*CancelOrderResp)(nil),      // 12: api.CancelOrderResp
 }
 var file_takeout_proto_depIdxs = []int32{
 	0,  // 0: api.EstimateDistanceReq.address:type_name -> api.Address
@@ -816,19 +911,22 @@ var file_takeout_proto_depIdxs = []int32{
 	2,  // 4: api.CreateOrderResp.responseInfo:type_name -> api.ResponseInfo
 	2,  // 5: api.ConfirmOrderResp.responseInfo:type_name -> api.ResponseInfo
 	2,  // 6: api.GetDriverInfoResp.responseInfo:type_name -> api.ResponseInfo
-	3,  // 7: api.TakeoutService.EstimateDistance:input_type -> api.EstimateDistanceReq
-	5,  // 8: api.TakeoutService.CreateOrder:input_type -> api.CreateOrderReq
-	7,  // 9: api.TakeoutService.ConfirmOrder:input_type -> api.ConfirmOrderReq
-	9,  // 10: api.TakeoutService.GetDriverInfo:input_type -> api.GetDriverInfoReq
-	4,  // 11: api.TakeoutService.EstimateDistance:output_type -> api.EstimateDistanceResp
-	6,  // 12: api.TakeoutService.CreateOrder:output_type -> api.CreateOrderResp
-	8,  // 13: api.TakeoutService.ConfirmOrder:output_type -> api.ConfirmOrderResp
-	10, // 14: api.TakeoutService.GetDriverInfo:output_type -> api.GetDriverInfoResp
-	11, // [11:15] is the sub-list for method output_type
-	7,  // [7:11] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	2,  // 7: api.CancelOrderResp.responseInfo:type_name -> api.ResponseInfo
+	3,  // 8: api.TakeoutService.EstimateDistance:input_type -> api.EstimateDistanceReq
+	5,  // 9: api.TakeoutService.CreateOrder:input_type -> api.CreateOrderReq
+	11, // 10: api.TakeoutService.CancelOrder:input_type -> api.CancelOrderReq
+	7,  // 11: api.TakeoutService.ConfirmOrder:input_type -> api.ConfirmOrderReq
+	9,  // 12: api.TakeoutService.GetDriverInfo:input_type -> api.GetDriverInfoReq
+	4,  // 13: api.TakeoutService.EstimateDistance:output_type -> api.EstimateDistanceResp
+	6,  // 14: api.TakeoutService.CreateOrder:output_type -> api.CreateOrderResp
+	12, // 15: api.TakeoutService.CancelOrder:output_type -> api.CancelOrderResp
+	8,  // 16: api.TakeoutService.ConfirmOrder:output_type -> api.ConfirmOrderResp
+	10, // 17: api.TakeoutService.GetDriverInfo:output_type -> api.GetDriverInfoResp
+	13, // [13:18] is the sub-list for method output_type
+	8,  // [8:13] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_takeout_proto_init() }
@@ -842,7 +940,7 @@ func file_takeout_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_takeout_proto_rawDesc), len(file_takeout_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

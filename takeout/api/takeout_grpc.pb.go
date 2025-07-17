@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	TakeoutService_EstimateDistance_FullMethodName = "/api.TakeoutService/EstimateDistance"
 	TakeoutService_CreateOrder_FullMethodName      = "/api.TakeoutService/CreateOrder"
+	TakeoutService_CancelOrder_FullMethodName      = "/api.TakeoutService/CancelOrder"
 	TakeoutService_ConfirmOrder_FullMethodName     = "/api.TakeoutService/ConfirmOrder"
 	TakeoutService_GetDriverInfo_FullMethodName    = "/api.TakeoutService/GetDriverInfo"
 )
@@ -32,6 +33,7 @@ const (
 type TakeoutServiceClient interface {
 	EstimateDistance(ctx context.Context, in *EstimateDistanceReq, opts ...grpc.CallOption) (*EstimateDistanceResp, error)
 	CreateOrder(ctx context.Context, in *CreateOrderReq, opts ...grpc.CallOption) (*CreateOrderResp, error)
+	CancelOrder(ctx context.Context, in *CancelOrderReq, opts ...grpc.CallOption) (*CancelOrderResp, error)
 	ConfirmOrder(ctx context.Context, in *ConfirmOrderReq, opts ...grpc.CallOption) (*ConfirmOrderResp, error)
 	GetDriverInfo(ctx context.Context, in *GetDriverInfoReq, opts ...grpc.CallOption) (*GetDriverInfoResp, error)
 }
@@ -64,6 +66,16 @@ func (c *takeoutServiceClient) CreateOrder(ctx context.Context, in *CreateOrderR
 	return out, nil
 }
 
+func (c *takeoutServiceClient) CancelOrder(ctx context.Context, in *CancelOrderReq, opts ...grpc.CallOption) (*CancelOrderResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CancelOrderResp)
+	err := c.cc.Invoke(ctx, TakeoutService_CancelOrder_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *takeoutServiceClient) ConfirmOrder(ctx context.Context, in *ConfirmOrderReq, opts ...grpc.CallOption) (*ConfirmOrderResp, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ConfirmOrderResp)
@@ -90,6 +102,7 @@ func (c *takeoutServiceClient) GetDriverInfo(ctx context.Context, in *GetDriverI
 type TakeoutServiceServer interface {
 	EstimateDistance(context.Context, *EstimateDistanceReq) (*EstimateDistanceResp, error)
 	CreateOrder(context.Context, *CreateOrderReq) (*CreateOrderResp, error)
+	CancelOrder(context.Context, *CancelOrderReq) (*CancelOrderResp, error)
 	ConfirmOrder(context.Context, *ConfirmOrderReq) (*ConfirmOrderResp, error)
 	GetDriverInfo(context.Context, *GetDriverInfoReq) (*GetDriverInfoResp, error)
 	mustEmbedUnimplementedTakeoutServiceServer()
@@ -107,6 +120,9 @@ func (UnimplementedTakeoutServiceServer) EstimateDistance(context.Context, *Esti
 }
 func (UnimplementedTakeoutServiceServer) CreateOrder(context.Context, *CreateOrderReq) (*CreateOrderResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateOrder not implemented")
+}
+func (UnimplementedTakeoutServiceServer) CancelOrder(context.Context, *CancelOrderReq) (*CancelOrderResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CancelOrder not implemented")
 }
 func (UnimplementedTakeoutServiceServer) ConfirmOrder(context.Context, *ConfirmOrderReq) (*ConfirmOrderResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ConfirmOrder not implemented")
@@ -171,6 +187,24 @@ func _TakeoutService_CreateOrder_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TakeoutService_CancelOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CancelOrderReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TakeoutServiceServer).CancelOrder(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TakeoutService_CancelOrder_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TakeoutServiceServer).CancelOrder(ctx, req.(*CancelOrderReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _TakeoutService_ConfirmOrder_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ConfirmOrderReq)
 	if err := dec(in); err != nil {
@@ -221,6 +255,10 @@ var TakeoutService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateOrder",
 			Handler:    _TakeoutService_CreateOrder_Handler,
+		},
+		{
+			MethodName: "CancelOrder",
+			Handler:    _TakeoutService_CancelOrder_Handler,
 		},
 		{
 			MethodName: "ConfirmOrder",

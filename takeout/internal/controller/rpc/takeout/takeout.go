@@ -75,3 +75,16 @@ func (c *Controller) GetDriverInfo(ctx context.Context, req *api.GetDriverInfoRe
 	g.Log().Debugf(ctx, "获取司机位置成功:%+v", res)
 	return
 }
+
+func (c *Controller) CancelOrder(ctx context.Context, req *api.CancelOrderReq) (res *api.CancelOrderResp, err error) {
+	takeoutJob, err := takeout.Takeout.Get(ctx, req.ShopOrderUuid)
+	if err != nil || takeoutJob == nil {
+		return nil, gerror.Wrap(err, "获取外送订单失败")
+	}
+	res, err = c.getService(takeoutJob.ProviderName).CancelOrder(ctx, &input.CancelOrderInp{JobId: takeoutJob.TakeoutRefNo})
+	if err != nil {
+		return nil, gerror.Wrap(err, "取消订单失败")
+	}
+	g.Log().Debugf(ctx, "取消订单成功:%+v", res)
+	return
+}

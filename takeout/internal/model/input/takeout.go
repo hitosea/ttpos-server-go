@@ -4,6 +4,10 @@ type ConfirmOrderInp struct {
 	JobId string
 }
 
+type CancelOrderInp struct {
+	JobId string
+}
+
 type GetDriverInfoInp struct {
 	SKootarId string
 	Name      string

@@ -26,10 +26,16 @@ func NewTakeoutClient() (api.TakeoutServiceClient, *grpc.ClientConn, error) {
 
 // ITakeoutSrv 定义外送服务接口
 type ITakeoutSrv interface {
+	// 预估距离
 	EstimateDistance(ctx context.Context, req *req.TakeoutDistanceReq) (*resp.TakeoutDistanceResp, error)
+	// 创建订单
 	CreateOrder(ctx context.Context, req *req.CreateTakeoutOrderReq) (*resp.CreateTakeoutOrderResp, error)
+	// 确认订单
 	ConfirmOrder(ctx context.Context, req *req.ConfirmTakeoutOrderReq) error
+	// 获取骑手信息
 	GetDriverInfo(ctx context.Context, req *req.GetDriverInfoReq) (*resp.GetDriverInfoResp, error)
+	// 取消订单
+	CancelOrder(ctx context.Context, req *req.CancelTakeoutOrderReq) error
 }
 
 // takeoutSrv 外送服务结构体
@@ -131,6 +137,25 @@ func (s *takeoutSrv) ConfirmOrder(ctx context.Context, req *req.ConfirmTakeoutOr
 		ShopOrderUuid: req.ShopOrderUuid,
 	}
 	_, err = client.ConfirmOrder(ctx, in)
+	if err != nil {
+		logger.Logger.Error("调用外送服务gRPC客户端失败: %v", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+// CancelOrder 取消订单
+func (s *takeoutSrv) CancelOrder(ctx context.Context, req *req.CancelTakeoutOrderReq) error {
+	client, conn, err := NewTakeoutClient()
+	if err != nil {
+		logger.Logger.Error("创建外送服务gRPC客户端失败:", zap.Error(err))
+		return err
+	}
+	defer conn.Close()
+	in := &api.CancelOrderReq{
+		ShopOrderUuid: req.ShopOrderUuid,
+	}
+	_, err = client.CancelOrder(ctx, in)
 	if err != nil {
 		logger.Logger.Error("调用外送服务gRPC客户端失败: %v", zap.Error(err))
 		return err
