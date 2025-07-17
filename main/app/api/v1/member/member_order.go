@@ -28,6 +28,7 @@ type OrderHandler struct {
 // @Accept json
 // @Produce json
 // @Security JwtToken
+// @Param data body req.CreateMemberOrderReq true "详情参数"
 // @Success 200 {object} resp.CreateMemberOrderResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/create [post]
