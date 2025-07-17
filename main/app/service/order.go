@@ -153,6 +153,8 @@ type IMemberOrderSrv interface {
 	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                             // 查询收银机“外送”页面的订单列表
 	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                    // 查询收银机“外送”页面的订单详情
 	PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error                                                     // 会员端订单支付成功. TODO 用于测试，提测前删掉
+	GetMemberOrderManageList(ctx context.Context, req req.MemberOrderManageListReq) (*resp.GetMemberOrderManageListResp, error)           // 查询收银机“外送”页面的订单列表
+	GetMemberOrderManageDetail(ctx context.Context, req req.GetMemberOrderManageDetailReq) (*resp.GetMemberOrderManageDetailResp, error)  // 查询收银机“外送”页面的订单详情
 }
 
 // orderSrv 订单服务结构
@@ -1187,7 +1189,7 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
-	memberSaleOrders, total, err := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderList(req.PageNo, req.PageSize, req.GetStatusList())
+	memberSaleOrders, total, err := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderList(req.PageNo, req.PageSize, constant.GetStatusList(req.Status))
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -1265,6 +1267,7 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 		FinishTime:          memberSaleOrder.FinishTime,
 		CancelTime:          memberSaleOrder.CancelTime,
 		CancelReason:        memberSaleOrder.CancelReason,
+		Remark:              memberSaleOrder.Remark,
 		AmountInfo: resp.MemberOrderAmountInfo{
 			Amount: memberSaleOrder.Amount,
 		},
@@ -1293,6 +1296,143 @@ func (s *orderSrv) PaidMemberOrder(ctx context.Context, request member_req.PaidM
 		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
 	})
 	return nil
+}
+
+// GetMemberOrderManageList 获取收银机订单管理外送订单列表
+func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberOrderManageListReq) (*resp.GetMemberOrderManageListResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+
+	var orderNo *string
+	if req.OrderNo != "" {
+		orderNo = &req.OrderNo
+	}
+	var serialNo *string
+	if req.SerialNo != "" {
+		serialNo = &req.SerialNo
+	}
+	memberSaleOrders, total, err := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderManageList(req.PageNo, req.PageSize, constant.GetStatusList(req.Status), repository.GetCashierMemberSaleOrderManageListReq{
+		OrderNo:    orderNo,
+		SerialNo:   serialNo,
+		TimeFilter: req.GetTimeFilterParams(ctx.GetCompanySetting().Timezone),
+	})
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	memberOrders := make([]resp.MemberOrderManage, 0)
+	for _, memberSaleOrder := range memberSaleOrders {
+		var payType string
+		if memberSaleOrder.PaymentMethod != nil {
+			payType = memberSaleOrder.PaymentMethod.PaymentName
+		}
+
+		var contact resp.ContactInfo
+		if memberSaleOrder.Address != nil {
+			contact = resp.ContactInfo{
+				Name:  memberSaleOrder.Address.ContactName,
+				Phone: memberSaleOrder.Address.ContactPhone,
+			}
+		}
+
+		memberOrders = append(memberOrders, resp.MemberOrderManage{
+			MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			SerialNumber:        memberSaleOrder.SerialNumber,
+			OrderNo:             memberSaleOrder.OrderNo,
+			Status:              memberSaleOrder.Status,
+			StatusGroup:         constant.ParseToStatusGroup(memberSaleOrder.Status),
+			CreateTime:          memberSaleOrder.CreateTime,
+			PayTime:             memberSaleOrder.PayTime,
+			OriginAmount:        memberSaleOrder.OriginAmountValue(),
+			PayAmount:           memberSaleOrder.Amount,
+			DeliveryFee:         memberSaleOrder.DeliveryFeeAmount,
+			PayType:             payType,
+			Contact:             contact,
+		})
+	}
+
+	return &resp.GetMemberOrderManageListResp{
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    total,
+		},
+		List: memberOrders,
+	}, nil
+}
+
+// GetMemberOrderManageDetail 获取收银机订单管理外送订单详情
+func (s *orderSrv) GetMemberOrderManageDetail(ctx context.Context, req req.GetMemberOrderManageDetailReq) (*resp.GetMemberOrderManageDetailResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	memberSaleOrder, err := getMemberOrderDetail(ctx, req.MemberSaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 获取订单商品列表
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
+	products := make([]resp.MemberOrderManageProduct, 0)
+	for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
+		var imageUrl string
+		if saleOrderProduct.ImageFile != nil {
+			imageUrl = saleOrderProduct.ImageFile.GetUrl(baseUrl)
+		}
+		products = append(products, resp.MemberOrderManageProduct{
+			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
+			ImageUrl:            imageUrl,
+			OriginUnitPrice:     saleOrderProduct.OriginTotalPrice,
+			UnitPrice:           saleOrderProduct.TotalPrice,
+			Num:                 saleOrderProduct.Num,
+			TotalPrice:          saleOrderProduct.GetTotalPrice(),
+			OriginTotalPrice:    saleOrderProduct.GetTotalProductPrice(),
+			RefundAmount:        saleOrderProduct.GetReturnPrice(),
+		})
+	}
+
+	// 获取操作日志
+	operationLogs, err := s.GetRecordList(ctx, memberSaleOrder.SaleBill.Uuid, 0)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	var payType string
+	if memberSaleOrder.PaymentMethod != nil {
+		payType = memberSaleOrder.PaymentMethod.PaymentName
+	}
+	var member resp.OrderMember
+	if memberSaleOrder.SaleBill.SaleOrders[0].Member != nil {
+		member = resp.OrderMember{
+			ID:   memberSaleOrder.SaleBill.SaleOrders[0].Member.ID,
+			Name: memberSaleOrder.SaleBill.SaleOrders[0].Member.Nickname,
+		}
+	}
+	return &resp.GetMemberOrderManageDetailResp{
+		MemberSaleOrderUuid: memberSaleOrder.Uuid,
+		BillType:            2,
+		SerialNo:            memberSaleOrder.SerialNumber,
+		OrderNo:             memberSaleOrder.OrderNo,
+		Status:              memberSaleOrder.Status,
+		OriginAmount:        memberSaleOrder.OriginAmountValue(),
+		PayAmount:           memberSaleOrder.Amount,
+		RefundAmount:        memberSaleOrder.RefundAmount,
+		MemberDiscount:      memberSaleOrder.MemberDiscountFee,
+		PayType:             payType,
+		PayTime:             memberSaleOrder.PayTime,
+		CreateTime:          memberSaleOrder.CreateTime,
+		FinshTime:           memberSaleOrder.FinishTime,
+		CancelReason:        memberSaleOrder.CancelReason,
+		CancelTime:          memberSaleOrder.CancelTime,
+		Remark:              memberSaleOrder.Remark,
+		Member:              member,
+		Cachier: resp.CachierInfo{
+			Uuid: memberSaleOrder.SaleBill.CashierUuid,
+			Name: memberSaleOrder.SaleBill.CashierName,
+		},
+		ProductList:  resp.MemberProductManageList{List: products},
+		OperationLog: resp.OperationLog{List: operationLogs},
+	}, nil
 }
 
 // createOrderNo 创建订单编号

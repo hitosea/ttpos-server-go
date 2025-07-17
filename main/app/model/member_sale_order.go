@@ -12,6 +12,7 @@ type MemberSaleOrder struct {
 	BaseModel
 	Status            uint    `gorm:"column:status;type:int(10);not null;default:0;comment:'订单状态 0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消'"`
 	SerialNumber      string  `gorm:"column:serial_number;type:varchar(255);not null;default:'';comment:'订单流水号'"`
+	OrderNo           string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:'订单号'"`
 	CancelScene       string  `gorm:"column:cancel_scene;type:varchar(50);not null;default:'';comment:'取消场景：merchant_cancel-商家取消；member_cancel-用户取消；merchant_reject-商家拒单'"`
 	IsAutoAccept      uint    `gorm:"column:is_auto_accept;type:int(10);not null;default:0;comment:'是否自动接单：0-否；1-是'"`
 	DeliveryDistance  float64 `gorm:"column:delivery_distance;type:decimal(12,6);not null;default:0;comment:'配送距离，单位km'"`
@@ -24,6 +25,7 @@ type MemberSaleOrder struct {
 	ProductAmount     float64 `gorm:"column:product_amount;type:decimal(12,2);not null;default:0;comment:'商品金额'"`
 	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);not null;default:0;comment:'会员折扣'"`
 	Amount            float64 `gorm:"column:amount;type:decimal(12,2);not null;default:0;comment:'订单总金额.商品金额-会员折扣+配送费'"`
+	RefundAmount      float64 `gorm:"column:refund_amount;type:decimal(12,2);not null;default:0;comment:'退款金额'"`
 	// 配送费参数
 	DeliveryFeeAmount  float64 `gorm:"column:delivery_fee_amount;type:decimal(12,6);not null;default:0;comment:'配送费'"`
 	DeliveryFeeMinFee  float64 `gorm:"column:delivery_fee_min_fee;type:decimal(12,6);not null;default:0;comment:'起步配送费'"`
@@ -48,13 +50,19 @@ type MemberSaleOrder struct {
 	ExpectedFinishTime int64 `gorm:"column:expected_finish_time;type:int(10) unsigned;not null;default:0;comment:'预计送达时间（时间戳）'"`
 	CancelTime         int64 `gorm:"column:cancel_time;type:int(10) unsigned;not null;default:0;comment:'取消时间（时间戳）'"`
 
-	SaleBill *SaleBill               `gorm:"foreignKey:MemberSaleOrderUuid;references:Uuid"`
-	Address  *MemberSaleOrderAddress `gorm:"foreignKey:MemberSaleOrderUuid;references:Uuid"`
+	SaleBill      *SaleBill               `gorm:"foreignKey:MemberSaleOrderUuid;references:Uuid"`
+	Address       *MemberSaleOrderAddress `gorm:"foreignKey:MemberSaleOrderUuid;references:Uuid"`
+	PaymentMethod *PaymentMethod          `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"`
+}
+
+func (model *MemberSaleOrder) OriginAmountValue() float64 {
+	return decimal.NewFromFloat(model.ProductAmount).Add(decimal.NewFromFloat(model.DeliveryFeeAmount)).Round(2).InexactFloat64()
 }
 
 func (model *MemberSaleOrder) SetNil() {
 	model.SaleBill = nil
 	model.Address = nil
+	model.PaymentMethod = nil
 }
 
 // 设置订单为“待支付”状态
@@ -130,6 +138,8 @@ type MemberSaleOrderAddress struct {
 	PhonePrefix         string  `gorm:"column:phone_prefix;type:varchar(255);not null;default:'';comment:'联系电话前缀'"`
 	ContactGender       int     `gorm:"column:contact_gender;type:int(10);not null;default:0;comment:'联系人性别, 0-女士 1-先生'"`
 	MemberSaleOrderUuid uint64  `gorm:"column:member_sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员销售订单UUID'"`
+
+	Member *Member `gorm:"foreignKey:MemberUuid;references:Uuid"`
 }
 
 func (model *MemberSaleOrderAddress) SetNil() {

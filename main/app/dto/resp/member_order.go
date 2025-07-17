@@ -39,6 +39,7 @@ type GetMemberOrderDetailResp struct {
 	FinishTime          int64                    `json:"finish_time"`            // 完成时间
 	CancelTime          int64                    `json:"cancel_time"`            // 取消时间
 	CancelReason        string                   `json:"cancel_reason"`          // 取消原因
+	Remark              string                   `json:"remark"`                 // 订单备注
 	AmountInfo          MemberOrderAmountInfo    `json:"amount_info"`            // 订单金额信息
 	ProductList         MemberProductList        `json:"product_list"`           // 订单商品列表
 	AddressInfo         MemberOrderDetailAddress `json:"address_info"`           // 订单地址

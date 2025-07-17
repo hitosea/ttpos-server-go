@@ -66,3 +66,24 @@ func ParseToStatusGroup(status uint) string {
 		return ""
 	}
 }
+
+func GetStatusList(status string) []uint {
+	switch status {
+	case CashierSaleMemberOrderStatusUnpaid: // 待付款。对应 1-待付款
+		return []uint{MemberSaleOrderStatusPendingPayment}
+	case CashierMemberSaleOrderStatusUnaccept: // 待接单。对应 2-待商家接单
+		return []uint{MemberSaleOrderStatusPendingMerchantAccept}
+	case CashierMemberSaleOrderStatusAccept: // 备餐中。对应 3-商家备餐中
+		return []uint{MemberSaleOrderStatusCooking}
+	case CashierMemberSaleOrderStatusUndelivery: // 待配送。对应 4-待骑手接单、5-骑手正在赶往商家
+		return []uint{MemberSaleOrderStatusPendingRiderPickup, MemberSaleOrderStatusPendingRiderDelivery}
+	case CashierMemberSaleOrderStatusDelivery: // 配送中。对应 6-骑手配送中
+		return []uint{MemberSaleOrderStatusDeliverying}
+	case CashierMemberSaleOrderStatusDelivered: // 已完成。对应 7-已完成
+		return []uint{MemberSaleOrderStatusCompleted}
+	case CashierMemberSaleOrderStatusCancel: // 已取消。对应 8-已取消
+		return []uint{MemberSaleOrderStatusCancelled}
+	default:
+		return []uint{}
+	}
+}

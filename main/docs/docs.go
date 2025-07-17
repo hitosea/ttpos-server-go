@@ -9845,6 +9845,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/member_order_manage/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取外送订单管理页面，订单详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外送订单管理相关"
+                ],
+                "summary": "获取外送订单管理页面，订单详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "订单UUID",
+                        "name": "member_sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GetMemberOrderManageDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/member_order_manage/list": {
             "get": {
                 "security": [
@@ -22432,6 +22481,19 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.CachierInfo": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "收银员名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "收银员UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.Card": {
             "type": "object",
             "properties": {
@@ -23243,6 +23305,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "remark": {
+                    "description": "订单备注",
+                    "type": "string"
+                },
                 "rider": {
                     "description": "骑手信息",
                     "allOf": [
@@ -23265,6 +23331,107 @@ const docTemplate = `{
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.GetMemberOrderManageDetailResp": {
+            "type": "object",
+            "properties": {
+                "bill_type": {
+                    "description": "订单类型\t0:桌台订单 1:点餐订单 2:外送订单",
+                    "type": "integer"
+                },
+                "cachier": {
+                    "description": "收银员信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.CachierInfo"
+                        }
+                    ]
+                },
+                "cancel_reason": {
+                    "description": "取消原因",
+                    "type": "string"
+                },
+                "cancel_time": {
+                    "description": "取消时间",
+                    "type": "integer"
+                },
+                "create_time": {
+                    "description": "创建时间,下单时间",
+                    "type": "integer"
+                },
+                "finish_time": {
+                    "description": "完成时间",
+                    "type": "integer"
+                },
+                "member": {
+                    "description": "会员信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OrderMember"
+                        }
+                    ]
+                },
+                "member_discount": {
+                    "description": "会员折扣金额",
+                    "type": "number"
+                },
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                },
+                "operation_log": {
+                    "description": "操作日志",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OperationLog"
+                        }
+                    ]
+                },
+                "order_no": {
+                    "description": "订单号",
+                    "type": "string"
+                },
+                "origin_amount": {
+                    "description": "订单原始金额。商品金额+配送费",
+                    "type": "number"
+                },
+                "pay_amount": {
+                    "description": "实付金额。商品金额+配送费-会员折扣",
+                    "type": "number"
+                },
+                "pay_time": {
+                    "description": "支付时间",
+                    "type": "integer"
+                },
+                "pay_type": {
+                    "description": "支付方式",
+                    "type": "string"
+                },
+                "product_list": {
+                    "description": "订单商品列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.MemberProductManageList"
+                        }
+                    ]
+                },
+                "refund_amount": {
+                    "description": "退款金额",
+                    "type": "number"
+                },
+                "remark": {
+                    "description": "订单备注",
+                    "type": "string"
+                },
+                "serial_no": {
+                    "description": "订单流水号",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "订单状态.0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消",
+                    "type": "integer"
                 }
             }
         },
@@ -24283,6 +24450,55 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.MemberOrderManageProduct": {
+            "type": "object",
+            "properties": {
+                "image_url": {
+                    "description": "商品图片",
+                    "type": "string"
+                },
+                "locale_attribute_name": {
+                    "description": "商品属性",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "locale_name": {
+                    "description": "商品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "num": {
+                    "description": "数量",
+                    "type": "number"
+                },
+                "origin_total_price": {
+                    "description": "商品原总价（折前）",
+                    "type": "number"
+                },
+                "origin_unit_price": {
+                    "description": "商品原单价（折前）",
+                    "type": "number"
+                },
+                "refund_amount": {
+                    "description": "退菜金额",
+                    "type": "number"
+                },
+                "total_price": {
+                    "description": "总价. 总价=单价*数量",
+                    "type": "number"
+                },
+                "unit_price": {
+                    "description": "商品单价（折后）",
+                    "type": "number"
+                }
+            }
+        },
         "resp.MemberOrderProduct": {
             "type": "object",
             "properties": {
@@ -24320,6 +24536,22 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/resp.MemberOrderProduct"
+                    }
+                },
+                "product_amount": {
+                    "description": "商品金额. 所有商品金额总和，如商品A金额为2，商品B金额为3，则总金额为5",
+                    "type": "number"
+                }
+            }
+        },
+        "resp.MemberProductManageList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "订单商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MemberOrderManageProduct"
                     }
                 },
                 "product_amount": {
@@ -24755,7 +24987,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "bill_type": {
-                    "description": "订单类型\t0:桌台订单 1:点餐订单",
+                    "description": "订单类型\t0:桌台订单 1:点餐订单 2:外送订单",
                     "type": "integer"
                 },
                 "buffet_names": {
@@ -24929,6 +25161,19 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.OrderListMeta"
                         }
                     ]
+                }
+            }
+        },
+        "resp.OrderMember": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "会员ID",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "会员名称",
+                    "type": "string"
                 }
             }
         },

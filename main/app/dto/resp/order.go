@@ -122,7 +122,7 @@ type OrderInfo struct {
 // OrderInfos 订单信息响应
 type OrderInfos struct {
 	SaleBillUuid  uint64              `json:"sale_bill_uuid"` // 销售账单UUID
-	BillType      uint                `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单
+	BillType      uint                `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单 2:外送订单
 	DiningMethod  uint                `json:"dining_method"`  // 用餐方式,0-堂食(店内就餐) 1-打包
 	IsSplit       bool                `json:"is_split"`       // 是否拆单	false:否 true:是
 	IsBuffet      bool                `json:"is_buffet"`      // 是否自助餐	false:否 true:是

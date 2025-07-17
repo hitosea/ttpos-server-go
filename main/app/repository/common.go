@@ -101,6 +101,7 @@ type ICommonRepo interface {
 	WhereByOperatorUuid(operatorUuid uint64) DBOption                   // 根据操作员UUID查询
 	WhereLikeByName(name string) DBOption                               // 根据名称查询
 	WhereBetweenByCreateTime(startTime int64, endTime int64) DBOption   // 根据创建时间查询
+	WhereBetweenByPayTime(startTime int64, endTime int64) DBOption      // 根据支付时间查询
 	WhereBetweenByCompleteTime(startTime int64, endTime int64) DBOption // 根据完成时间查询
 	WhereGtUuid(uuid uint64) DBOption                                   // 根据UUID大于查询
 	FilterSaleOrderProduct() DBOption                                   // 只查询常规的购物车商品
@@ -402,6 +403,13 @@ func (r *commonRepo) WhereLikeByName(name string) DBOption {
 func (r *commonRepo) WhereBetweenByCreateTime(startTime int64, endTime int64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("create_time BETWEEN ? AND ?", startTime, endTime)
+	}
+}
+
+// WhereBetweenByPayTime 根据支付时间查询
+func (r *commonRepo) WhereBetweenByPayTime(startTime int64, endTime int64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("pay_time BETWEEN ? AND ?", startTime, endTime)
 	}
 }
 

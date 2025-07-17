@@ -3,6 +3,7 @@ package repository
 import (
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -18,10 +19,11 @@ type IMemberSaleOrderRepo interface {
 }
 
 type IQueryMemberSaleOrderRepo interface {
-	GetMemberSaleOrder(opts ...DBOption) (*model.MemberSaleOrder, error)                                           // 获取会员端销售订单
-	GetMemberSaleOrderRecord(uuid uint64) (*model.MemberSaleOrder, error)                                          // 获取会员端销售订单记录
-	PaginateGetMemberSaleOrder(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)     // 分页获取会员端销售订单
-	GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error) // 获取收银台"外送"订单列表
+	GetMemberSaleOrder(opts ...DBOption) (*model.MemberSaleOrder, error)                                                                                             // 获取会员端销售订单
+	GetMemberSaleOrderRecord(uuid uint64) (*model.MemberSaleOrder, error)                                                                                            // 获取会员端销售订单记录
+	PaginateGetMemberSaleOrder(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)                                                       // 分页获取会员端销售订单
+	GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error)                                                   // 获取收银台"外送"订单列表
+	GetCashierMemberSaleOrderManageList(pageNo, pageSize int, statusList []uint, req GetCashierMemberSaleOrderManageListReq) ([]model.MemberSaleOrder, int64, error) // 获取收银台"外送"订单管理列表
 
 	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
 	WhereStatusIn(status []uint) DBOption
@@ -154,6 +156,59 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderList(pageNo, pageSize int
 		statusFilter = CommonRepo.DBOption(CommonRepo.WhereByMultipleStatus(statusList))
 	}
 	opts = append(opts, statusFilter)
+	return r.PaginateGetMemberSaleOrder(pageNo, pageSize, opts...)
+}
+
+type GetCashierMemberSaleOrderManageListReq struct {
+	OrderNo    *string
+	SerialNo   *string
+	TimeFilter *req.TimeFilterParams
+}
+
+// GetCashierMemberSaleOrderManageList 获取收银端"外送"订单管理列表
+func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderManageList(pageNo, pageSize int, statusList []uint, req GetCashierMemberSaleOrderManageListReq) ([]model.MemberSaleOrder, int64, error) {
+
+	opts := []DBOption{
+		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+		CommonRepo.DBOption(CommonRepo.SortWithPayTime("desc")),
+		CommonRepo.Preload(
+			WithPreload{
+				Query: "PaymentMethod",
+			},
+			WithPreload{
+				Query: "Address",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "Address.Member",
+			},
+		),
+	}
+
+	// 根据状态列表筛选
+	if len(statusList) == 1 {
+		statusFilter := CommonRepo.DBOption(CommonRepo.WhereByStatus(statusList[0]))
+		opts = append(opts, statusFilter)
+	} else if len(statusList) > 1 {
+		statusFilter := CommonRepo.DBOption(CommonRepo.WhereByMultipleStatus(statusList))
+		opts = append(opts, statusFilter)
+
+	}
+	// 根据时间筛选
+	if req.TimeFilter != nil {
+		if req.TimeFilter.TimeType == 1 {
+			// 下单时间
+			timeFilter := CommonRepo.DBOption(CommonRepo.WhereBetweenByCreateTime(req.TimeFilter.QueryStartTime, req.TimeFilter.QueryEndTime))
+			opts = append(opts, timeFilter)
+		} else if req.TimeFilter.TimeType == 2 {
+			// 支付时间
+			timeFilter := CommonRepo.DBOption(CommonRepo.WhereBetweenByPayTime(req.TimeFilter.QueryStartTime, req.TimeFilter.QueryEndTime))
+			opts = append(opts, timeFilter)
+		}
+	}
+
 	return r.PaginateGetMemberSaleOrder(pageNo, pageSize, opts...)
 }
 
