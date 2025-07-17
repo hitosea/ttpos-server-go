@@ -9987,7 +9987,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.GetMemberOrderListResp"
+                                            "$ref": "#/definitions/resp.GetMemberOrderManageListResp"
                                         }
                                     }
                                 }
@@ -22933,6 +22933,19 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.ContactInfo": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "联系人名称",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "联系人电话",
+                    "type": "string"
+                }
+            }
+        },
         "resp.Coupon": {
             "type": "object",
             "properties": {
@@ -23598,6 +23611,21 @@ const docTemplate = `{
                 "status": {
                     "description": "订单状态.0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消",
                     "type": "integer"
+                }
+            }
+        },
+        "resp.GetMemberOrderManageListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MemberOrderManage"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
                 }
             }
         },
@@ -24616,6 +24644,79 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.MemberOrderManage": {
+            "type": "object",
+            "properties": {
+                "contact": {
+                    "description": "联系人信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.ContactInfo"
+                        }
+                    ]
+                },
+                "create_time": {
+                    "description": "创建时间,下单时间",
+                    "type": "integer"
+                },
+                "delivery_fee": {
+                    "description": "配送费",
+                    "type": "number"
+                },
+                "extra": {
+                    "description": "通过当前数据控制按钮是否显示",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OrderListsExtra"
+                        }
+                    ]
+                },
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                },
+                "order_no": {
+                    "description": "订单号",
+                    "type": "string"
+                },
+                "origin_amount": {
+                    "description": "订单原始金额。商品金额+配送费",
+                    "type": "number"
+                },
+                "pay_amount": {
+                    "description": "实付金额。商品金额+配送费-会员折扣",
+                    "type": "number"
+                },
+                "pay_time": {
+                    "description": "支付时间",
+                    "type": "integer"
+                },
+                "pay_type": {
+                    "description": "支付方式",
+                    "type": "string"
+                },
+                "rider": {
+                    "description": "骑手信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.RiderInfo"
+                        }
+                    ]
+                },
+                "serial_number": {
+                    "description": "订单流水号",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "订单状态.0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消",
+                    "type": "integer"
+                },
+                "status_group": {
+                    "description": "订单状态分组. \"unaccept\" 待接单, \"accept\" 备餐中, \"undelivery\" 待配送, \"delivery\" 配送中, \"completed\" 已完成, \"cancel\" 已取消",
+                    "type": "string"
+                }
+            }
+        },
         "resp.MemberOrderManageProduct": {
             "type": "object",
             "properties": {
@@ -25327,6 +25428,23 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.OrderListMeta"
                         }
                     ]
+                }
+            }
+        },
+        "resp.OrderListsExtra": {
+            "type": "object",
+            "properties": {
+                "is_cell_cancel": {
+                    "description": "是否可取消",
+                    "type": "boolean"
+                },
+                "is_cell_refund": {
+                    "description": "是否可退款",
+                    "type": "boolean"
+                },
+                "is_cell_reject": {
+                    "description": "是否可拒单",
+                    "type": "boolean"
                 }
             }
         },

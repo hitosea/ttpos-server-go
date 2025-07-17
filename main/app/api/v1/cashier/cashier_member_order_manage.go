@@ -35,7 +35,7 @@ type MemberOrderManageHandler struct {
 // @Param time_type query int true "时间类型  1=下单时间、 2=支付时间"
 // @Param query_start_time query int true "查询开始时间戳"
 // @Param query_end_time query int true "查询结束时间戳"
-// @Success 200 {object} dto.Response{data=resp.GetMemberOrderListResp}
+// @Success 200 {object} dto.Response{data=resp.GetMemberOrderManageListResp}
 // @Router /cashier/member_order_manage/list [get]
 func (h *MemberOrderManageHandler) GetMemberOrderList(c *gin.Context) {
 	var memberOrderListReq req.MemberOrderManageListReq

@@ -12,18 +12,26 @@ type GetMemberOrderManageListResp struct {
 }
 
 type MemberOrderManage struct {
-	MemberSaleOrderUuid uint64      `json:"member_sale_order_uuid"` // 会员端销售订单UUID
-	SerialNumber        string      `json:"serial_number"`          // 订单流水号
-	OrderNo             string      `json:"order_no"`               // 订单号
-	Status              uint        `json:"status"`                 // 订单状态.0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消
-	StatusGroup         string      `json:"status_group"`           // 订单状态分组. "unaccept" 待接单, "accept" 备餐中, "undelivery" 待配送, "delivery" 配送中, "completed" 已完成, "cancel" 已取消
-	CreateTime          int64       `json:"create_time"`            // 创建时间,下单时间
-	PayTime             int64       `json:"pay_time"`               // 支付时间
-	OriginAmount        float64     `json:"origin_amount"`          // 订单原始金额。商品金额+配送费
-	PayAmount           float64     `json:"pay_amount"`             // 实付金额。商品金额+配送费-会员折扣
-	DeliveryFee         float64     `json:"delivery_fee"`           // 配送费
-	PayType             string      `json:"pay_type"`               // 支付方式
-	Contact             ContactInfo `json:"contact"`                // 联系人信息
+	MemberSaleOrderUuid uint64          `json:"member_sale_order_uuid"` // 会员端销售订单UUID
+	SerialNumber        string          `json:"serial_number"`          // 订单流水号
+	OrderNo             string          `json:"order_no"`               // 订单号
+	Status              uint            `json:"status"`                 // 订单状态.0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消
+	StatusGroup         string          `json:"status_group"`           // 订单状态分组. "unaccept" 待接单, "accept" 备餐中, "undelivery" 待配送, "delivery" 配送中, "completed" 已完成, "cancel" 已取消
+	CreateTime          int64           `json:"create_time"`            // 创建时间,下单时间
+	PayTime             int64           `json:"pay_time"`               // 支付时间
+	OriginAmount        float64         `json:"origin_amount"`          // 订单原始金额。商品金额+配送费
+	PayAmount           float64         `json:"pay_amount"`             // 实付金额。商品金额+配送费-会员折扣
+	DeliveryFee         float64         `json:"delivery_fee"`           // 配送费
+	PayType             string          `json:"pay_type"`               // 支付方式
+	Contact             ContactInfo     `json:"contact"`                // 联系人信息
+	Rider               RiderInfo       `json:"rider"`                  // 骑手信息
+	Extra               OrderListsExtra `json:"extra"`                  // 通过当前数据控制按钮是否显示
+}
+
+type OrderListsExtra struct { // 通过当前数据控制按钮是否显示
+	IsCellReject bool `json:"is_cell_reject"` // 是否可拒单
+	IsCellRefund bool `json:"is_cell_refund"` // 是否可退款
+	IsCellCancel bool `json:"is_cell_cancel"` // 是否可取消
 }
 
 type ContactInfo struct {
