@@ -130,8 +130,8 @@ func (s *takeoutSrv) ConfirmOrder(ctx context.Context, req *req.ConfirmTakeoutOr
 	in := &api.ConfirmOrderReq{
 		ShopOrderUuid: req.ShopOrderUuid,
 	}
-	res, err := client.ConfirmOrder(ctx, in)
-	if err != nil || res.ResponseInfo.Code != "200" {
+	_, err = client.ConfirmOrder(ctx, in)
+	if err != nil {
 		logger.Logger.Error("调用外送服务gRPC客户端失败: %v", zap.Error(err))
 		return err
 	}
