@@ -22,7 +22,7 @@ type MemberAddress struct {
 }
 
 // 是否认证
-func (model *MemberAddress) IsAuth() bool {
+func (model *MemberAddress) IsAuthPhone() bool {
 	// 检查手机号是否匹配且认证时间不为0
 	if model.AuthPhone != model.Phone || model.AuthTime == 0 {
 		return false

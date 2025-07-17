@@ -799,6 +799,63 @@ definitions:
         description: 手机号
         type: string
     type: object
+  member_req.PaidMemberOrderReq:
+    properties:
+      member_sale_order_uuid:
+        description: 会员端销售订单UUID
+        type: integer
+    required:
+    - member_sale_order_uuid
+    type: object
+  member_req.PayMemberOrderReq:
+    properties:
+      member_sale_order_uuid:
+        description: 会员端销售订单UUID
+        type: integer
+      payment_method_uuid:
+        description: 支付方式UUID
+        type: integer
+      remark:
+        description: 订单的备注信息。产品说在点击“提交支付”时保存订单备注
+        type: string
+    required:
+    - member_sale_order_uuid
+    - payment_method_uuid
+    type: object
+  member_req.SetMemberOrderAddressReq:
+    properties:
+      member_address_uuid:
+        description: 会员地址UUID
+        type: integer
+      member_sale_order_uuid:
+        description: 会员端销售订单UUID
+        type: integer
+    required:
+    - member_address_uuid
+    - member_sale_order_uuid
+    type: object
+  member_req.VerifyPhoneReq:
+    properties:
+      code:
+        description: 验证码
+        type: string
+      member_sale_order_uuid:
+        description: 会员端销售订单UUID
+        type: integer
+      phone:
+        description: 手机号
+        type: string
+      referrer_phone:
+        description: 推荐人手机号
+        type: string
+      register:
+        description: 是否注册会员
+        type: boolean
+    required:
+    - code
+    - member_sale_order_uuid
+    - phone
+    type: object
   member_resp.CompanyInfoResp:
     properties:
       logo:
@@ -12888,43 +12945,6 @@ paths:
       summary: 外送订单接单列表
       tags:
       - 收银端.外送接单相关
-  /cashier/member_order_manage/list:
-    get:
-      consumes:
-      - application/json
-      description: 获取外送订单管理页面，订单列表
-      parameters:
-      - description: 页码
-        in: query
-        name: page_no
-        type: integer
-      - description: 每页条数
-        in: query
-        name: page_size
-        type: integer
-      - description: '状态: unaccept-待接单, accept-备餐中, undelivery-待配送, delivery-配送中,
-          completed-已完成, cancel-已取消'
-        in: query
-        name: status
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.GetMemberOrderListResp'
-              type: object
-      security:
-      - JwtToken: []
-      summary: 获取外送订单管理页面，订单列表
-      tags:
-      - 收银端.外送订单管理相关
   /cashier/old/order/cancel:
     post:
       consumes:
@@ -15966,6 +15986,13 @@ paths:
       consumes:
       - application/json
       description: 设置订单地址
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/member_req.SetMemberOrderAddressReq'
       produces:
       - application/json
       responses:
@@ -16011,6 +16038,13 @@ paths:
       consumes:
       - application/json
       description: 提交支付
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/member_req.PayMemberOrderReq'
       produces:
       - application/json
       responses:
@@ -16028,6 +16062,13 @@ paths:
       consumes:
       - application/json
       description: 验证手机号
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/member_req.VerifyPhoneReq'
       produces:
       - application/json
       responses:
@@ -16233,6 +16274,13 @@ paths:
       consumes:
       - application/json
       description: 支付成功
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/member_req.PaidMemberOrderReq'
       produces:
       - application/json
       responses:

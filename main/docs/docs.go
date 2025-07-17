@@ -9845,67 +9845,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/member_order_manage/list": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "获取外送订单管理页面，订单列表",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.外送订单管理相关"
-                ],
-                "summary": "获取外送订单管理页面，订单列表",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "页码",
-                        "name": "page_no",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "每页条数",
-                        "name": "page_size",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "状态: unaccept-待接单, accept-备餐中, undelivery-待配送, delivery-配送中, completed-已完成, cancel-已取消",
-                        "name": "status",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.GetMemberOrderListResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
         "/cashier/old/order/cancel": {
             "post": {
                 "security": [
@@ -15036,6 +14975,17 @@ const docTemplate = `{
                     "会员端-订单"
                 ],
                 "summary": "设置订单地址",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.SetMemberOrderAddressReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "成功",
@@ -15109,6 +15059,17 @@ const docTemplate = `{
                     "会员端-订单"
                 ],
                 "summary": "提交支付",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.PayMemberOrderReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "成功"
@@ -15137,6 +15098,17 @@ const docTemplate = `{
                     "会员端-订单"
                 ],
                 "summary": "验证手机号",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.VerifyPhoneReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "成功",
@@ -15472,6 +15444,17 @@ const docTemplate = `{
                     "会员端-订单"
                 ],
                 "summary": "支付成功",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.PaidMemberOrderReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "成功"
@@ -19102,6 +19085,86 @@ const docTemplate = `{
                 "phone": {
                     "description": "手机号",
                     "type": "string"
+                }
+            }
+        },
+        "member_req.PaidMemberOrderReq": {
+            "type": "object",
+            "required": [
+                "member_sale_order_uuid"
+            ],
+            "properties": {
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "member_req.PayMemberOrderReq": {
+            "type": "object",
+            "required": [
+                "member_sale_order_uuid",
+                "payment_method_uuid"
+            ],
+            "properties": {
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                },
+                "payment_method_uuid": {
+                    "description": "支付方式UUID",
+                    "type": "integer"
+                },
+                "remark": {
+                    "description": "订单的备注信息。产品说在点击“提交支付”时保存订单备注",
+                    "type": "string"
+                }
+            }
+        },
+        "member_req.SetMemberOrderAddressReq": {
+            "type": "object",
+            "required": [
+                "member_address_uuid",
+                "member_sale_order_uuid"
+            ],
+            "properties": {
+                "member_address_uuid": {
+                    "description": "会员地址UUID",
+                    "type": "integer"
+                },
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "member_req.VerifyPhoneReq": {
+            "type": "object",
+            "required": [
+                "code",
+                "member_sale_order_uuid",
+                "phone"
+            ],
+            "properties": {
+                "code": {
+                    "description": "验证码",
+                    "type": "string"
+                },
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                },
+                "phone": {
+                    "description": "手机号",
+                    "type": "string"
+                },
+                "referrer_phone": {
+                    "description": "推荐人手机号",
+                    "type": "string"
+                },
+                "register": {
+                    "description": "是否注册会员",
+                    "type": "boolean"
                 }
             }
         },
