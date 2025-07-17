@@ -26,6 +26,7 @@ type IQueryMemberSaleOrderRepo interface {
 	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
 	WhereStatusIn(status []uint) DBOption
 	WhereUpdateTimeGt(ts int64) DBOption
+	GetOrderCount(opts ...DBOption) (int64, error)
 }
 
 func NewMemberSaleOrderRepo(db *gorm.DB) IMemberSaleOrderRepo {
@@ -183,4 +184,17 @@ func (r *MemberSaleOrderRepo) WhereUpdateTimeGt(ts int64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("create_time > ?", ts)
 	}
+}
+
+// GetOrderCount 获取外送订单数量
+func (r *MemberSaleOrderRepo) GetOrderCount(opts ...DBOption) (int64, error) {
+	var total int64
+	db := r.db.Model(&model.MemberSaleOrder{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	if err := db.Count(&total).Error; err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	return total, nil
 }
