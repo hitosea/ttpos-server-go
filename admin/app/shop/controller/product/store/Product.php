@@ -93,6 +93,7 @@ class Product extends Controller
      *   @Apidoc\Param("deduct_stock_type", type="int", require=true, desc="库存计算方式(10下单减库存 20付款减库存)"),
      *   @Apidoc\Param("num_type", type="int", require=true, desc="数量计算方法, 0-整数 1-小数"),
      *   @Apidoc\Param("is_alone_grade", type="int", require=true, desc="会员折扣设置(0默认等级折扣 1单独设置折扣)"),
+     *   @Apidoc\Param("open_overall_discount", type="int", require=true, desc="是否开启整单折扣(0否 1是)"),
      *   @Apidoc\Param("sku", type="array", require=true, desc="商品sku", children={
      *      @Apidoc\Param("spec_sku_id", type="string", require=true, desc="规格id"),
      *      @Apidoc\Param("spec_name", type="string", require=true, desc="规格名称"),
@@ -178,6 +179,7 @@ class Product extends Controller
      *   @Apidoc\Param("spec_type", type="int", require=true, desc="产品规格(10单规格 20多规格)"),
      *   @Apidoc\Param("deduct_stock_type", type="int", require=true, desc="库存计算方式(10下单减库存 20付款减库存)"),
      *   @Apidoc\Param("is_alone_grade", type="int", require=true, desc="会员折扣设置(0默认等级折扣 1单独设置折扣)"),
+     *   @Apidoc\Param("open_overall_discount", type="int", require=true, desc="是否开启整单折扣(0否 1是)"),
      *   @Apidoc\Param("sku", type="array", require=true, desc="商品sku", children={
      *      @Apidoc\Param("spec_sku_id", type="string", require=true, desc="规格id"),
      *      @Apidoc\Param("spec_name", type="string", require=true, desc="规格名称"),
@@ -329,6 +331,7 @@ class Product extends Controller
      *      @Apidoc\Param("product_sort", type="string", require=true, desc="商品排序"),
      *      @Apidoc\Param("limit_num", type="int", require=true, default="0", desc="限购数量"),
      *      @Apidoc\Param("is_enable_grade", type="int", require=true, default="1", desc="是否开启会员折扣(1开启 0关闭)"),
+     *      @Apidoc\Param("open_overall_discount", type="int", require=true, default="1", desc="整单折扣(1开启 0关闭)"),
      *      @Apidoc\Param("row", type="int", require=true, default="1", desc="excel表的行编号"),
      * }),
      * @Apidoc\Returned("category_list", type="array", ref="app\common\model\product\Category", desc="下拉分类列表")
@@ -353,6 +356,7 @@ class Product extends Controller
      *      @Apidoc\Param("product_sort", type="string", require=true, desc="商品排序"),
      *      @Apidoc\Param("limit_num", type="int", require=true, default="0", desc="限购数量"),
      *      @Apidoc\Param("is_enable_grade", type="int", require=true, default="1", desc="是否开启会员折扣(1开启 0关闭)"),
+     *      @Apidoc\Param("open_overall_discount", type="int", require=true, default="1", desc="整单折扣(1开启 0关闭)"),
      *      @Apidoc\Param("row", type="int", require=true, default="1", desc="excel表的行编号"),
      *      @Apidoc\Param("is_show_cashier", type="int", desc="是否显示在收银端 1-显示 2-不显示'"),
      *      @Apidoc\Param("is_show_tablet", type="int", desc="是否显示在平板端 1-显示 2-不显示"),
@@ -608,6 +612,22 @@ class Product extends Controller
     {
         $model = new ProductModel;
         if (!$model->batchUpdateTax($this->postData())) {
+            return $this->renderError($model->getError() ?: '操作失败');
+        }
+        return $this->renderSuccess('操作成功');
+    }
+
+    /**
+     * @Apidoc\Title("批量修改整单折扣")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/product.store.product/batchUpdateOpenOverallDiscount")
+     * @Apidoc\Param("product_ids", type="array", require=true, desc="商品uuid集")
+     * @Apidoc\Returned()
+     */
+    public function batchUpdateOpenOverallDiscount()
+    {
+        $model = new ProductModel;
+        if (!$model->batchUpdateOpenOverallDiscount($this->postData())) {
             return $this->renderError($model->getError() ?: '操作失败');
         }
         return $this->renderSuccess('操作成功');
