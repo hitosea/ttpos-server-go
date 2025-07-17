@@ -144,12 +144,13 @@ func (h *OrderHandler) PayOrder(c *gin.Context) {
 	ctx.Log().Debug("提交支付", zap.Any("params", params))
 
 	// 提交支付
-	if err := h.orderSrv.PayMemberOrder(ctx, params); err != nil {
+	res, err := h.orderSrv.PayMemberOrder(ctx, params)
+	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
-	helper.Success(c, nil)
+	helper.Success(c, res)
 }
 
 // PaidOrder 支付成功

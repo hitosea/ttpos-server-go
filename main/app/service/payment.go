@@ -35,6 +35,21 @@ import (
 // RequestTimeOut 请求超时
 const RequestTimeOut = 10
 
+const (
+	PaymentMethodH5Payment = "H5_PAYMENT"   // 微信 - H5支付
+	PaymentMethodWechatPay = "DYNAMIC_CODE" // 微信 - 动态码支付
+)
+
+type CreatePaymentReq struct {
+	RelatedType       int
+	RelatedUuid       uint64
+	PaymentMethodUuid uint64
+	PaymentMethodCode int
+	PaymentAmount     float64
+	CommissionFee     float64
+	PaymentMethod     string
+}
+
 // LianLianPaymentResp 连连支付仓库
 type LianLianPaymentResp struct {
 	CallbackUrl     string `json:"callback_url"`      // 回调地址
@@ -103,14 +118,7 @@ func NewPaymentRepo(ctx contexts.Context, dbm *database.DBManager) *PaymentRepo 
 }
 
 // CreatePayment 创建支付
-func (p *PaymentRepo) CreatePayment(
-	relatedType int,
-	relatedUuid uint64,
-	paymentMethodUuid uint64,
-	paymentMethodCode int,
-	paymentAmount float64,
-	commissionFee float64,
-) (*model.LlPaymentOrder, error) {
+func (p *PaymentRepo) CreatePayment(req CreatePaymentReq) (*model.LlPaymentOrder, error) {
 	paymentApp, err := p.validateConfig(p.ctx.GetCompanyUuid())
 	if err != nil {
 		return nil, err
@@ -118,17 +126,17 @@ func (p *PaymentRepo) CreatePayment(
 
 	// 创建支付订单仓库
 	llPaymentOrderRepo := repository.NewLlPaymentOrderRepo(p.dbm.GetDB(p.ctx.GetDbId()))
-	merchantUserId := fmt.Sprintf("%d", p.ctx.GetStaffUuid())
+	merchantUserId := fmt.Sprintf("%d", p.ctx.GetCompanyUuid())
 	merchantOrderNo := utils.GenerateMerchantOrderNo("PS")
 
 	// 获取支付配置
-	url, orderType, err := p.getPaymentInfo(paymentMethodCode)
+	url, orderType, err := p.getPaymentInfo(req.PaymentMethodCode)
 	if err != nil {
 		return nil, err
 	}
 
 	// 判断是否已存在有效待支付二维码
-	order, err := p.GetValidPaymentOrderByUuid(relatedType, relatedUuid, orderType, merchantUserId, paymentAmount)
+	order, err := p.GetValidPaymentOrderByUuid(req.RelatedType, req.RelatedUuid, orderType, merchantUserId, req.PaymentAmount)
 	if err != nil {
 		return nil, err
 	}
@@ -137,24 +145,26 @@ func (p *PaymentRepo) CreatePayment(
 	}
 
 	// 组装请求数据
-	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":%v,\"merchant_order_no\":\"%v\",\"order_amount\":\"%v\",\"order_currency\":\"%v\",\"order_desc\":\"%v\",\"full_name\":\"%v\",\"merchant_user_id\":%v,\"callback_url\":\"%v\"}",
+	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":%v,\"merchant_order_no\":\"%v\",\"order_amount\":\"%v\",\"order_currency\":\"%v\",\"order_desc\":\"%v\",\"full_name\":\"%v\",\"merchant_user_id\":%v,\"callback_url\":\"%v\",\"payment_method\":\"%v\"}",
 		p.ctx.GetCompanyUuid(),
 		merchantOrderNo,
-		paymentAmount,
+		req.PaymentAmount,
 		p.orderCurrency,
 		"CHECK_OUT",
 		"CASHIER",
-		p.ctx.GetStaffUuid(),
+		p.ctx.GetCompanyUuid(),
 		strings.ReplaceAll(p.payCallbackUrl, "/", "\\/"),
+		req.PaymentMethod,
 	)
 
 	// 请求支付
 	response, err := p.postRequest(url, jsonStr, map[string]string{
 		"Content-Type": "application/json; charset=utf-8",
 		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
+		"remote_ip":    p.ctx.GetClientIp(),
 	}, RequestTimeOut)
 	if err != nil {
-		return nil, errors.New("连连支付失败：404")
+		return nil, err
 	}
 
 	// 返回支付结果
@@ -168,21 +178,29 @@ func (p *PaymentRepo) CreatePayment(
 		return nil, err
 	}
 	// 当是微信或者支付宝支付的时候，需要把LinkUrl转换成二维码
-	if paymentMethodCode == constant.PaymentMethodCodeLianLianWechatPay || paymentMethodCode == constant.PaymentMethodCodeLianLianAliPay {
-		if resp.Order.QrCode == "" {
-			qr, err := qrcode.New(resp.Order.LinkUrl, qrcode.Medium)
-			if err != nil {
-				return nil, err
+	if req.PaymentMethodCode == constant.PaymentMethodCodeLianLianWechatPay || req.PaymentMethodCode == constant.PaymentMethodCodeLianLianAliPay {
+		if req.PaymentMethod == PaymentMethodH5Payment {
+			if req.PaymentMethodCode == constant.PaymentMethodCodeLianLianWechatPay {
+				resp.Order.QrCode = resp.Order.LinkUrl
+			} else {
+				resp.Order.QrCode = "alipays://platformapi/startapp?saId=10000007&qrcode=" + resp.Order.LinkUrl
 			}
-			// 生成PNG格式的二维码图片
-			png, err := qr.PNG(256) // 生成256x256大小的PNG图片
-			if err != nil {
-				return nil, err
+		} else {
+			if resp.Order.QrCode == "" {
+				qr, err := qrcode.New(resp.Order.LinkUrl, qrcode.Medium)
+				if err != nil {
+					return nil, err
+				}
+				// 生成PNG格式的二维码图片
+				png, err := qr.PNG(256) // 生成256x256大小的PNG图片
+				if err != nil {
+					return nil, err
+				}
+				// 转换为base64
+				resp.Order.QrCode = "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
 			}
-			// 转换为base64
-			resp.Order.QrCode = "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
 		}
-		if paymentMethodCode == constant.PaymentMethodCodeLianLianAliPay {
+		if req.PaymentMethodCode == constant.PaymentMethodCodeLianLianAliPay {
 			resp.Order.CreateTime = resp.Order.OrderCreateTime
 		}
 	} else {
@@ -199,22 +217,22 @@ func (p *PaymentRepo) CreatePayment(
 	// 创建支付订单
 	paymentOrder := &model.LlPaymentOrder{
 		PaymentOrderUuid:  uuid,
-		PaymentMethodUuid: paymentMethodUuid,
-		RelatedType:       relatedType,
-		RelatedUuid:       relatedUuid,
+		PaymentMethodUuid: req.PaymentMethodUuid,
+		RelatedType:       req.RelatedType,
+		RelatedUuid:       req.RelatedUuid,
 		MerchantOrderId:   merchantOrderNo,
 		MerchantId:        resp.Order.MerchantId,
 		OrderId:           resp.Order.OrderId,
 		OrderType:         resp.PayTypeDesc,
 		OrderStatus:       resp.Order.OrderStatus,
-		OrderAmount:       paymentAmount,
+		OrderAmount:       req.PaymentAmount,
 		OrderCurrency:     resp.Order.OrderCurrency,
 		FullName:          "CASHIER",
 		OrderDesc:         resp.PayTypeDesc,
 		LinkUrl:           resp.Order.QrCode,
 		MerchantUserId:    merchantUserId,
 		LlCreateTime:      resp.Order.CreateTime,
-		CommissionFee:     commissionFee,
+		CommissionFee:     req.CommissionFee,
 	}
 	// 设置创建时间
 	paymentOrder.CreateTime = time.Now().Unix()
