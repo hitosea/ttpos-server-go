@@ -2,17 +2,17 @@
   <!--
       	描述：桌位管理
       -->
-  <div class="common-seach-wrap">
+  <div class="common-search-wrap">
     <!--会员管理-->
-    <user v-if="activeName=='user'"></user>
+    <user v-if="activeName == 'user'"></user>
     <!--等级管理-->
     <grade v-if="activeName == 'grade'"></grade>
     <!--积分设置-->
     <points v-if="activeName == 'points'"></points>
     <!--积分明细-->
-    <pointsdetail v-if="activeName=='pointsdetail'"></pointsdetail>
+    <pointsdetail v-if="activeName == 'pointsdetail'"></pointsdetail>
     <!--余额管理-->
-    <balance v-if="activeName=='balance'"></balance>
+    <balance v-if="activeName == 'balance'"></balance>
   </div>
 </template>
 <script>

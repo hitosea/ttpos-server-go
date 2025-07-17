@@ -130,7 +130,7 @@ func (h *MemberHandler) GetMemberDiscount(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param keyword query string false "关键字搜索：uuid\phone，前端处理前后空格"
+// @param keyword query string false "关键字搜索"
 // @Success 200 {object} dto.Response{data=resp.SearchMemberList}
 // @Router /assistant/member/search [get]
 func (h *MemberHandler) SearchMember(c *gin.Context) {
@@ -173,7 +173,7 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
-	memberSrv := service.NewMemberSrv(dbm)
+	memberSrv := service.NewMemberSrv(dbm, cache)
 	smsSrv := service.NewSMSSrv(dbm)
 	rechargeOrderSrv := service.NewRechargeOrderSrv(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv, smsSrv)
 

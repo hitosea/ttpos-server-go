@@ -4,30 +4,30 @@
       <el-form size="small" ref="form" :model="form" label-position="top">
         <el-form-item for="no_click" :label="$t('厨显功能：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_open">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
           <div class="tips">{{ $t('关闭后将不在平板/扫码H5/点餐助手体现商品制作状态，且不将商品显示在厨显设备（不影响送厨打印）') }}</div>
         </el-form-item>
 
         <el-form-item for="no_click" :label="$t('来菜提醒：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_come_dish">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
 
         <el-form-item for="no_click" :label="$t('顾客呼叫提醒：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_call_service">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
 
         <el-form-item for="no_click" :label="$t('等待时长颜色：')" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.is_wait_color">
-            <el-radio label="1">{{ $t('开') }}</el-radio>
-            <el-radio label="0">{{ $t('关') }}</el-radio>
+            <el-radio value="1">{{ $t('开') }}</el-radio>
+            <el-radio value="0">{{ $t('关') }}</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item for="no_click" v-if="form.is_wait_color == 1" label="" :rules="[{ required: true, message: '' }]">
@@ -54,7 +54,7 @@
 
         <el-form-item for="no_click" :label="$t('常用语言')" prop="language" :rules="[{ required: true, message: $t('请选择常用语言') }]">
           <el-checkbox-group v-model="form.language">
-            <el-checkbox v-for="item in languageList" v-show="item.key" :key="item.key" :label="item.key" :disabled="form.language.length == 1 && form.language.includes(item.key)">
+            <el-checkbox v-for="item in languageList" v-show="item.key" :key="item.key" :value="item.key" :disabled="form.language.length == 1 && form.language.includes(item.key)">
               {{ item.value }}
             </el-checkbox>
           </el-checkbox-group>
@@ -74,6 +74,20 @@
             <div class="max-w460 input-ss">
               <autoTips :tooltipMaxWidth="460" :content="(item.remark ? item.remark : '') + `(${item.key})`">{{ (item.remark ? item.remark : '') + `(${item.key})` }}</autoTips>
             </div>
+
+            <div class="device-btn-box">
+              <span>{{ $t('打印机：') }}</span>
+              <el-select v-model="item.related_printer_uuid" :placeholder="$t('请选择打印机')">
+                <el-option :value="0" :label="$t('不打印')">{{ $t('不打印') }}</el-option>
+                <el-option v-for="item in printerList" :key="item.uuid" :value="item.uuid" :label="item.printer_name">{{ item.printer_name }}</el-option>
+              </el-select>
+              <el-tooltip effect="dark" placement="bottom">
+                <template #content>
+                  <p>{{ $t('选择用于打印出菜单的打印机') }}</p>
+                </template>
+                <SvgIcon class="tip-icon" name="icon6"></SvgIcon>
+              </el-tooltip>
+            </div>
             <el-tooltip class="item" effect="dark" placement="top">
               <template #content>
                 {{ $t('姓名') }}:{{ item.shopUser?.real_name || '-' }}<br />
@@ -91,6 +105,20 @@
             <div class="max-w460 input-ss">
               <autoTips :tooltipMaxWidth="460" :content="(item.remark ? item.remark : '') + `(${item.key})`">{{ (item.remark ? item.remark : '') + `(${item.key})` }}</autoTips>
             </div>
+            <div class="device-btn-box">
+              <span>{{ $t('打印机：') }}</span>
+              <el-select v-model="item.related_printer_uuid" :placeholder="$t('请选择打印机')">
+                <el-option :value="0" :label="$t('不打印')">{{ $t('不打印') }}</el-option>
+                <el-option v-for="item in printerList" :key="item.uuid" :value="item.uuid" :label="item.printer_name">{{ item.printer_name }}</el-option>
+              </el-select>
+              <el-tooltip effect="dark" placement="bottom">
+                <template #content>
+                  <p>{{ $t('选择用于打印出菜单的打印机') }}</p>
+                </template>
+                <SvgIcon class="tip-icon" name="icon6"></SvgIcon>
+              </el-tooltip>
+            </div>
+
             <el-button @click="handleClick(item)" type="primary" link size="small">{{ $t('解绑') }}</el-button>
           </div>
           <p v-else>{{ $t('暂无设备') }}</p>
@@ -157,6 +185,7 @@
         open: false,
         loading: false,
         password: '',
+        printerList: [],
       };
     },
     created() {
@@ -203,10 +232,18 @@
             });
             self.onlineList = [];
             self.offlineList = [];
+            self.printerList = data.data.vars.values.printer_list;
             self.form.bind_list.map((item) => {
+              // 如果 related_printer_uuid 不为0，并且不在 printerList 中，就把 related_printer_uuid 设置为 0
+              if (item.related_printer_uuid > 0 && !self.printerList.some((printer) => printer.uuid === item.related_printer_uuid)) {
+                item.related_printer_uuid = 0;
+              }
+              // 如果 finally_login_id 大于 0，就添加到 onlineList，否则添加到 offlineList
               if (item.finally_login_id > 0) {
                 self.onlineList.push(item);
-              } else {
+              }
+              // 如果 finally_login_id 小于等于 0，就添加到 offlineList
+              else {
                 self.offlineList.push(item);
               }
             });
@@ -218,8 +255,29 @@
       onSubmit() {
         let self = this;
         let params = JSON.parse(JSON.stringify(self.form));
-        //绑定的设备不用提清空
+
+        //绑定的清空,只需要提交绑定的打印机ID和设备UUID
         params.bind_list = [];
+        //在线设备绑定的打印机ID
+        if (self.onlineList.length > 0) {
+          self.onlineList.map((item) => {
+            params.bind_list.push({
+              uuid: item.uuid,
+              related_printer_uuid: item.related_printer_uuid,
+            });
+          });
+        }
+        //离线设备绑定的打印机ID
+        if (self.offlineList.length > 0) {
+          self.offlineList.map((item) => {
+            params.bind_list.push({
+              uuid: item.uuid,
+              related_printer_uuid: item.related_printer_uuid,
+            });
+          });
+        }
+        console.log(params);
+
         self.loading = true;
         Terminal.saveKitchen(params, true)
           .then((data) => {
@@ -322,6 +380,20 @@
           width: 30px;
           height: 30px;
           margin-left: 8px;
+          flex-shrink: 0;
+        }
+        .device-btn-box {
+          display: flex;
+          margin: 0 16px;
+          span {
+            flex-shrink: 0;
+            margin: 0;
+          }
+          .tip-icon {
+            margin-left: 8px;
+            width: 32px;
+            height: 32px;
+          }
         }
       }
     }

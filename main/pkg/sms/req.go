@@ -41,3 +41,15 @@ type MemberSendCodeRequest struct {
 	Company string `json:"company"` // 公司名称
 	Code    string `json:"code"`    // 验证码
 }
+
+// MemberPointsRequest 会员积分请求参数
+type MemberPointsRequest struct {
+	Company string  `json:"company"` // 公司名称
+	Points  float64 `json:"points"`  // 积分
+}
+
+// MemberCouponRequest 会员优惠券请求参数
+type MemberCouponRequest struct {
+	Company   string `json:"company"`    // 公司名称
+	CouponNum uint64 `json:"coupon_num"` // 优惠券数量
+}

@@ -1,5 +1,5 @@
 <template>
-  <div class="common-seach-wrap">
+  <div class="common-search-wrap">
     <!-- 自助餐 -->
     <list v-if="activeName == 'list'"></list>
     <setting v-if="activeName == 'setting'"></setting>
@@ -91,7 +91,7 @@
   });
 </script>
 <style lang="scss" scoped>
-  .common-seach-wrap {
+  .common-search-wrap {
     position: absolute;
     top: 70px;
     left: 16px;

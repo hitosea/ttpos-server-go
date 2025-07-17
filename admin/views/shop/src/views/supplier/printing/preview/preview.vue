@@ -147,21 +147,27 @@
         <div @click="modeChange(3)" v-if="title != $t('整单打印') && title != $t('退菜单')" class="tabs-button" :class="mode == 3 ? 'tabs-active' : ''">
           {{ $t('模板3') }}
         </div>
+        <div @click="modeChange(4)" v-if="title == $t('结账单') || title == $t('预结账单')" class="tabs-button" :class="mode == 4 ? 'tabs-active' : ''">
+          {{ $t('模板4') }}
+        </div>
+        <div @click="modeChange(5)" v-if="title == $t('结账单')" class="tabs-button" :class="mode == 5 ? 'tabs-active' : ''">
+          {{ $t('模板5') }}
+        </div>
       </div>
 
       <div class="box-border">
-        <p class="title-name" v-if="(title == $t('结账单') || title == $t('预结账单')) && mode != 3">
+        <p class="title-name" v-if="(title == $t('结账单') || title == $t('预结账单')) && mode != 3 && mode != 4 && mode != 5">
           {{ title }}
         </p>
-        <h2 class="font24" :class="mode != 1 ? 'mb-8' : 'mb-24'" v-if="mode != 3 && storeShow && (title == $t('结账单') || title == $t('预结账单'))">
+        <h2 class="font24" :class="mode != 1 ? 'mb-8' : 'mb-24'" v-if="mode != 3 && mode != 4 && mode != 5 && storeShow && (title == $t('结账单') || title == $t('预结账单'))">
           {{ $t('店铺名称') }}
         </h2>
 
-        <template v-if="mode == 3 && storeShow && (title == $t('结账单') || title == $t('预结账单'))">
+        <template v-if="(mode == 3 || mode == 4 || mode == 5) && storeShow && (title == $t('结账单') || title == $t('预结账单'))">
           <h2>
             {{ $t('店铺名称') }}
           </h2>
-          <img v-if="mode == 3" :src="userInfo.logoUrl" alt="" class="logo" />
+          <img v-if="mode == 3 || mode == 4 || mode == 5" :src="userInfo.logoUrl" alt="" class="logo" />
           <h2 class="font24" :class="mode != 1 ? 'mb-8' : 'mb-24'">
             {{ title }}
           </h2>
@@ -183,24 +189,30 @@
         </template>
 
         <p
-          v-if="(title == $t('结账单') && mode == 3) || (title == $t('预结账单') && mode == 3)"
+          v-if="(title == $t('结账单') && (mode == 3 || mode == 4 || mode == 5)) || (title == $t('预结账单') && (mode == 3 || mode == 4))"
           class="Invoice-p font14"
           v-html="$t('公司：') + $t('公司名称公司名称公司名称')"
         ></p>
         <p
-          v-if="(title == $t('结账单') && mode == 3) || (title == $t('预结账单') && mode == 3)"
+          v-if="(title == $t('结账单') && (mode == 3 || mode == 4 || mode == 5)) || (title == $t('预结账单') && (mode == 3 || mode == 4))"
           class="Invoice-p font14"
           v-html="$t('商家地址：') + $t('商家地址商家地址商家地址商家地址商家地址商家地址商家地址商家地址')"
         ></p>
-        <p v-if="(title == $t('结账单') && mode == 3) || (title == $t('预结账单') && mode == 3)" class="Invoice-p font14" v-html="$t('电话：') + '02-15-1441414'"></p>
         <p
-          v-if="(title == $t('结账单') && mode == 3) || (title == $t('预结账单') && mode == 3)"
+          v-if="(title == $t('结账单') && (mode == 3 || mode == 4 || mode == 5)) || (title == $t('预结账单') && (mode == 3 || mode == 4))"
           class="Invoice-p font14"
-          :class="mode == 3 ? 'bold-bottom-24' : ''"
+          v-html="$t('电话：') + '02-15-1441414'"
+        ></p>
+        <p
+          v-if="(title == $t('结账单') && (mode == 3 || mode == 4 || mode == 5)) || (title == $t('预结账单') && (mode == 3 || mode == 4))"
+          class="Invoice-p font14"
+          :class="mode == 3 || mode == 4 ? 'bold-bottom-24' : ''"
           v-html="$t('税号：') + '252452524144'"
         >
         </p>
-        <p v-if="(title == $t('结账单') && mode == 2) || (title == $t('预结账单') && mode == 2)" class="Invoice-p" v-html="$t('非常感谢您今天的到来，我们期待您的再次光临')"></p>
+        <p v-if="title == $t('结账单') && mode == 5" class="Invoice-p font14" v-html="$t('收银机SN：') + '354543543958980'"> </p>
+        <p v-if="title == $t('结账单') && mode == 5" class="Invoice-p font14" :class="mode == 5 ? 'bold-bottom-24' : ''" v-html="$t('打印机SN：') + '354543543958980'"> </p
+        ><p v-if="(title == $t('结账单') && mode == 2) || (title == $t('预结账单') && mode == 2)" class="Invoice-p" v-html="$t('非常感谢您今天的到来，我们期待您的再次光临')"></p>
         <p v-if="title == $t('结账单') && mode == 2" class="Invoice-p font14"> 2024/05/04 14:45:21 </p>
 
         <h3 v-if="(title == $t('结账单') && mode == 2) || (title == $t('预结账单') && mode == 2)" class="font24">
@@ -337,7 +349,10 @@
           <img src="@/assets/QRcode.svg" alt="" class="code" />
           <p>{{ $t('请用 Wechat 扫一扫支付') }}</p>
         </div>
-        <div class="brand-box" :class="title == $t('预结账单') ? 'border-top' : ''" v-if="title == $t('结账单') || title == $t('预结账单') || title == $t('外送单')"
+        <div class="code-box" v-if="title == $t('结账单') && mode == 5" :class="title == $t('结账单') && mode == 5 ? 'border-top-12' : ''">
+          <img src="@/assets/barcode.png" alt="" class="barcode" />
+        </div>
+        <div class="brand-box" :class="title == $t('预结账单') || title == $t('结账单') && mode == 5 ? 'border-top' : ''" v-if="title == $t('结账单') || title == $t('预结账单') || title == $t('外送单')"
           >{{ $t('感谢您的光临！本店由') }}{{ brand }}{{ $t('系统提供支持') }}</div
         >
         <template v-if="title == $t('退菜单') && mode == 2">
@@ -861,6 +876,9 @@
   .code {
     width: 140px;
     height: 140px;
+    margin: auto;
+  }
+  .barcode {
     margin: auto;
   }
   .brand-box {

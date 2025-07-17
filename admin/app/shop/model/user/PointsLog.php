@@ -26,7 +26,7 @@ class PointsLog extends PointsLogModel
         if ($query['keyword'] !== '') {
             $keyword = trim($query['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
-                $query->like('user.id|user.phone|user.nickname', $keyword);
+                $query->like('user.id|user.phone|user.nickname|user.member_card_no', $keyword);
             });
         }
         // 搜索时间段
@@ -34,7 +34,9 @@ class PointsLog extends PointsLogModel
             $model = $model->where('log.create_time', 'between', [strtotime($query['date'][0]), strtotime($query['date'][1]) + 86399]);
         }
         // 获取列表数据
-        $list = $model->with(['user'])
+        $list = $model->with(['user' => function ($query) {
+                $query->withTrashed();
+            }])
             ->alias('log')
             ->field('log.*')
             ->join('member user', 'user.uuid = log.member_uuid')

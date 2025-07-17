@@ -651,7 +651,7 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeSystemError, "系统错误，请稍候再试")
 			}
 			// 检查收银机设置-收银用餐是否开启
-			if !s.isCashierOpen(ctx, cashierSetting, auth.UrlPath) {
+			if !s.isCashierOpen(cashierSetting, auth.UrlPath) {
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeCashierOrderMethodNotOpen, "收银用餐已关闭，请选择其他用餐方式")
 			}
 			// 检查收银机设置-桌台用餐是否开启
@@ -671,9 +671,9 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 			if staff.DutyNo == "" && !slices.Contains([]string{"/api/v1/cashier/shift/printer", "/api/v1/cashier/logout"}, auth.UrlPath) {
 				// 判断客户端版本，低于 2.3 的就返回 -101，直接退出
 				// 高于等于的就返-108，能弹出来交班弹窗
-				if ctx.Version(context.GreaterThen, "2.3.0") || ctx.Version(context.Equal, "2.3.0") { // 高于等于 2.3.0
+				if ctx.Version(context.GTE, "2.3.0") { // 高于等于 2.3.0
 					// 获取缓存
-					if cachedSubmitShift, err := s.shiftSrv.GetCachedSubmitShift(ctx); err != nil {
+					if cachedSubmitShift, err := s.shiftSrv.GetCachedSubmitShift(ctx); err != nil || cachedSubmitShift == nil {
 						return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeTokenExpired, "当前班次不存在")
 					} else {
 						return company, companySetting, staff, desk, errors.NewWithCodeAndData(constant.CodeCashierHandedOver, *cachedSubmitShift, "已交班")
@@ -796,7 +796,7 @@ func (s *authSrv) GetCashierSetting(ctx context.Context) (*setting2.Cashier, err
 }
 
 // 检查收银机设置-收银用餐是否开启
-func (s *authSrv) isCashierOpen(ctx context.Context, cashierSetting *setting2.Cashier, pathUrl string) bool {
+func (s *authSrv) isCashierOpen(cashierSetting *setting2.Cashier, pathUrl string) bool {
 	// 检查收银用餐是否开启
 	if cashierSetting.OrderMethod.IsCashierOrder != "1" && regexp.MustCompile(`^/api/v\d+/cashier/instant/`).Match([]byte(pathUrl)) {
 		return false

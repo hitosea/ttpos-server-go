@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <!--订单进度-->
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item label="">

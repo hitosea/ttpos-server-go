@@ -9,6 +9,7 @@
 4. 都用中文注释, 不要用英文注释
 5. 都添加uuid字段, 类型是biginteger, 默认值是0, 不要用bigint类型
 6. 都添加create_time, update_time, delete_time字段, 类型是int, 默认值是0, 不要用datetime类型
+7. 所有的迁移文件都写在php中，不要写在go中
 
 #关于接口
 1. 接口都用中文注释, 不要用英文注释

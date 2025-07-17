@@ -841,6 +841,17 @@ func (h *InstantHandler) OrderPaymentFinish(c *gin.Context) {
 	// 销售订单的付款结账
 	res, err := h.orderSrv.InstantOrderPaymentFinish(ctx, params)
 	if err != nil {
+		if strings.Contains(err.Error(), "请刷新优惠券列表") {
+			// 获取销售订单的付款信息
+			res, err := h.orderSrv.InstantOrderPaymentInfo(ctx, nil, params.SaleBillUuid, params.SaleOrderUuid)
+			if err != nil {
+				helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+				return
+			}
+			// 返回结果
+			helper.ErrorWithData(c, constant.CodeCouponInvalid, res, fmt.Errorf("%s", i18n.Translate(ctx.GetLanguage(), "优惠券信息变化，请重新确认。")))
+			return
+		}
 		helper.ErrorWithDetail(c, constant.CodeFail, fmt.Errorf("%s %s", ctx.GetRequestUuid(), err))
 		return
 	}
@@ -1000,7 +1011,7 @@ func (h *InstantHandler) OrderMustPlanConfirm(c *gin.Context) {
 		return
 	}
 	if !res {
-		helper.ErrorWithDetail(c, constant.CodeOrderCheckProductMust, errors.New(fmt.Sprintf("【%s】%s", mustPlan.Name, errors.ErrMustPlanNotComplete.Error())))
+		helper.ErrorWithDetail(c, constant.CodeOrderCheckProductMust, errors.New(fmt.Sprintf("【%s】%s", mustPlan.Name, i18n.Translate(ctx.GetLanguage(), errors.ErrMustPlanNotComplete.Error()))))
 		return
 	}
 	ctx.Log().Debug("确认必点商品成功", zap.Any("res", res))
@@ -1302,7 +1313,7 @@ func RegisterInstantHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	localeSrv := service.NewLocaleSrv()
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
-	memberSrv := service.NewMemberSrv(dbm)
+	memberSrv := service.NewMemberSrv(dbm, cache)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
 	// 创建收银产品处理程序
 	wrapper := InstantHandler{

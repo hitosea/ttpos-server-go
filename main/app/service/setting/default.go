@@ -57,6 +57,9 @@ func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier
 			IsAutoOrder:            "0",                       // 是否自动接单
 			AutoOrderLimit:         "1000",                    // 自动接单金额上限
 			IsAutoVoice:            "0",                       // 是否开启自动接单语音播报
+			IsAutoMemberOrder:      "0",                       // 是否自动接单会员订单 0-关闭 1-开启
+			AutoMemberOrderLimit:   "1000",                    // 自动接单会员订单金额上限
+			IsAutoVoiceMemberOrder: "0",                       // 是否开启自动接单会员订单语音播报
 			MenuShowSoldOut:        "1",                       // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 		},
 		AdvancedPassword: "666888", // 高级设置密码
@@ -402,11 +405,11 @@ func (s *Srv) getDefaultPoints() setting.Points {
 // 默认系统设置
 func (s *Srv) getDefaultSysAdminConfig() setting.SysAdminConfig {
 	return setting.SysAdminConfig{
-		BrandName:     "Shop",                       // 商城名称
-		BrandLogo:     "/image/logo/jbc_64_64.png",  // 商城背景图
-		BrandLogoLong: "/image/logo/jbc_146_40.png", // 商城logo
-		BrowserLogo:   "/image/logo/jbc_146_40.png", // 浏览器LOGO
-		BrowserTitle:  "Shop",                       // 浏览器标题
+		BrandName:     "Shop",                         // 商城名称
+		BrandLogo:     "/image/logo/ttpos_64_64.png",  // 商城背景图
+		BrandLogoLong: "/image/logo/ttpos_146_40.png", // 商城logo
+		BrowserLogo:   "/image/logo/ttpos_64_64.png",  // 浏览器LOGO
+		BrowserTitle:  "Shop",                         // 浏览器标题
 	}
 }
 

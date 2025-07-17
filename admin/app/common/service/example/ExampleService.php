@@ -222,7 +222,7 @@ class ExampleService
                     // 替换字段值
                     $replaceFields = ['app_id', 'shop_supplier_id', 'admin_user_id'];
                     if (in_array($columnNames[$key], $replaceFields)) {
-                        // TODO 如果是shop_user_id，则替换成@appid后，后边需要在@appid基础上+1（关联性表有使用原来的shop_user_id，暂时性无解决方案，后续再优化）
+                        // NOTE 如果是shop_user_id，则替换成@appid后，后边需要在@appid基础上+1（关联性表有使用原来的shop_user_id，暂时性无解决方案，后续再优化）
                         if ($columnNames[$key] == 'shop_user_id') {
                             $zd = "@appid + " . $k;
                         } else {

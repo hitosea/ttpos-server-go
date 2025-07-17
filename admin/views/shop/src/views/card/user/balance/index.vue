@@ -1,5 +1,5 @@
 <template>
-  <div class="common-seach-wrap">
+  <div class="common-search-wrap">
     <!-- <el-tabs v-model="activeName">
       <el-tab-pane label="余额明细" name="log"></el-tab-pane>
       <el-tab-pane label="充值设置" name="settings"></el-tab-pane>

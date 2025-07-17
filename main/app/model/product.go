@@ -318,7 +318,7 @@ func (model *RelatedMaterial) SetNil() {
 
 // GetDecreaseNum 获取减少的库存数量. 减少的库存数量 = 材料用量 * 商品数量
 func (model *RelatedMaterial) GetDecreaseNum(productNum float64) float64 {
-	return decimal.NewFromFloat(model.Num).Mul(decimal.NewFromFloat(productNum)).Round(2).InexactFloat64() // todo 思考是否需要四舍五入？？
+	return decimal.NewFromFloat(model.Num).Mul(decimal.NewFromFloat(productNum)).Round(2).InexactFloat64()
 }
 
 // IsStockShortage 判断库存是否不足

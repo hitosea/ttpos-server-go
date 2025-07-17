@@ -18,6 +18,7 @@ import (
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
+	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
@@ -140,7 +141,7 @@ func checkoutSaleOrderEventHandler() {
 				// 创建积分发放记录. // 累计会员的消费金额、消费次数
 				saleOrder.HandleMemberPoints(member)
 				if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-					// 更新会员积分 // todo 可以考虑跟func (s *memberSrv) HandleMemberPoints方法合并
+					// 更新会员积分
 					if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{
 						"frozen_point": member.FrozenPoint,
 					}); err != nil {
@@ -158,7 +159,7 @@ func checkoutSaleOrderEventHandler() {
 				}
 
 				// 处理会员升级
-				memberSrv := service.NewMemberSrv(database.GetDBManager(config.DatabaseConf{}))
+				memberSrv := service.NewMemberSrv(database.GetDBManager(config.DatabaseConf{}), cache.Global)
 				go memberSrv.HandleMemberUpgrade(payload.CompanyUuid, saleOrder.ConsumerUuid)
 
 				// 发布"积分变动"事件
@@ -216,11 +217,17 @@ func HandleMemberPoints(db *gorm.DB) {
 	}
 
 	type MemberUuid uint64
-	memberChangePoint := make(map[MemberUuid]decimal.Decimal) // 各个会员的积分变动
+	memberChangePoint := make(map[MemberUuid]decimal.Decimal)            // 各个会员的积分变动
+	memberChangePointConsumption := make(map[MemberUuid]decimal.Decimal) // 各个会员的消费赠送积分变动
 	for _, memberPointLog := range memberPointLogs {
 		// 累计同一个会员的积分变动
 		pre := memberChangePoint[MemberUuid(memberPointLog.MemberUuid)]
 		memberChangePoint[MemberUuid(memberPointLog.MemberUuid)] = pre.Add(decimal.NewFromFloat(memberPointLog.Value))
+		// 累计同一个会员的消费赠送积分变动
+		if memberPointLog.Scene == constant.MemberPointLogSceneConsume || memberPointLog.Scene == constant.MemberPointLogSceneReverse {
+			preConsumption := memberChangePointConsumption[MemberUuid(memberPointLog.MemberUuid)]
+			memberChangePointConsumption[MemberUuid(memberPointLog.MemberUuid)] = preConsumption.Add(decimal.NewFromFloat(memberPointLog.Value))
+		}
 	}
 
 	memberUuids := make([]uint64, 0) // 积分有变动的会员
@@ -234,13 +241,21 @@ func HandleMemberPoints(db *gorm.DB) {
 		logger.Logger.Info("HandleMemberPoints process, GetMembersByUuids failed", zap.Any("memberUuids", memberUuids), zap.Error(err))
 		return
 	}
+
 	// 更新会员积分
 	logMemberInfoMap := make(map[string][]float64)
 	for _, member := range members {
 		beforePoint := member.GetPoints()
-		memberChangePoint := memberChangePoint[MemberUuid(member.Uuid)].InexactFloat64()
-		member.UpdatePoint(memberChangePoint)
-		logMemberInfoMap[member.Nickname] = []float64{beforePoint, memberChangePoint, member.GetPoints()}
+		memberPoint := 0.0
+		memberPointConsumption := 0.0
+		if memberChangePointMap, ok := memberChangePoint[MemberUuid(member.Uuid)]; ok {
+			memberPoint = memberChangePointMap.InexactFloat64()
+		}
+		if memberChangePointConsumptionMap, ok := memberChangePointConsumption[MemberUuid(member.Uuid)]; ok {
+			memberPointConsumption = memberChangePointConsumptionMap.InexactFloat64()
+		}
+		member.UpdatePoint(memberPoint, memberPointConsumption)
+		logMemberInfoMap[member.Nickname] = []float64{beforePoint, memberPoint, member.GetPoints()}
 	}
 
 	uuids := make([]uint64, 0)
@@ -252,8 +267,10 @@ func HandleMemberPoints(db *gorm.DB) {
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		for _, member := range members {
 			if err := repository.NewMemberRepo(tx).Update(member.Uuid, map[string]any{
-				"point":        member.GetPoints(),
-				"frozen_point": member.FrozenPoint,
+				"point":                             member.GetPoints(),
+				"frozen_point":                      member.FrozenPoint,
+				"accumulated_get_point":             member.AccumulatedGetPoint,
+				"accumulated_consumption_get_point": member.AccumulatedConsumptionGetPoint,
 			}); err != nil {
 				return errors.WithMessage(err)
 			}
@@ -363,6 +380,10 @@ func HandleMemberBalance(db *gorm.DB) {
 
 // 处理邀请有礼活动-统计获奖
 func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
+	// 已经进行过反结账的不处理
+	if payload.SaleBill.IsReverseSettle() {
+		return
+	}
 	// 加锁, 避免并发问题
 	lock.NewSystemLock().LockUuid(constant.LockNameActivityConsumption)
 	defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
@@ -401,8 +422,9 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
 				}
 				// 发放奖励
-				activitySendReward := repository.NewMarketingActivityRepo(db).SendReward(activity.Uuid, saleOrder.Member.ReferrerUuid)
-				if activitySendReward != nil {
+				err := HandleActivitySendReward(payload, db, activity.Uuid, saleOrder.Member.ReferrerUuid, saleOrder.Member.Phone)
+				if err != nil {
+					fmt.Println(err)
 					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
 				}
 			}
@@ -427,7 +449,7 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 						logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
 					}
 					// 发放奖励
-					err = repository.NewMarketingActivityRepo(db).SendReward(referrer.ActivityUuid, referrer.ReferrerUuid)
+					err = HandleActivitySendReward(payload, db, referrer.ActivityUuid, referrer.ReferrerUuid, referrer.Phone)
 					if err != nil {
 						fmt.Println(err)
 						logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
@@ -436,4 +458,194 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 			}
 		}
 	}
+}
+
+// HandleActivitySendReward 发放奖励
+func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.DB, activityUuid, memberUuid uint64, phone string) error {
+
+	// 获取活动信息
+	activity, err := repository.NewMarketingActivityRepo(db).GetActivityAndPrizes(activityUuid)
+	if err != nil {
+		return err
+	}
+	if activity == nil {
+		return fmt.Errorf("activity not found")
+	}
+
+	// 检查活动是否有效
+	if !activity.IsValid() {
+		return fmt.Errorf("activity is invalid")
+	}
+
+	// 检查是否开启奖励次数限制, 如果已经达到奖励次数限制，则不再发放奖励
+	rewardCount, err := repository.NewMarketingActivityRecordRepo(db).GetRewardCount(activityUuid, memberUuid)
+	if err != nil {
+		return err
+	}
+	if activity.IsOpenRewardLimit == 1 && rewardCount >= activity.RewardLimit {
+		return fmt.Errorf("reward limit reached")
+	}
+
+	// 获取推荐人的总消费金额
+	consumptionAmount, err := repository.NewMarketingActivityConsumptionRepo(db).GetByActivityAndReferrerConsumptionAmount(activityUuid, memberUuid)
+	if err != nil {
+		return err
+	}
+
+	// 计算应该发放的奖励次数
+	rewardCountToGive := utils.IfInt(activity.RewardConditionAmount <= 0, 0, int(consumptionAmount/activity.RewardConditionAmount))
+	if rewardCountToGive <= 0 {
+		return fmt.Errorf("no reward to give")
+	}
+	// 最多等于奖励次数限制
+	if activity.IsOpenRewardLimit == 1 {
+		if rewardCountToGive > int(activity.RewardLimit) {
+			rewardCountToGive = int(activity.RewardLimit)
+		}
+	}
+	// 计算应该发放的奖励次数，减去已经发放的奖励次数
+	rewardCountToGive = rewardCountToGive - int(rewardCount)
+	if rewardCountToGive <= 0 {
+		return nil
+	}
+
+	// 获取数据库管理器
+	dbm := database.GetDBManager(config.DatabaseConf{})
+
+	// 发放奖励
+	if activity.RewardType == 0 {
+
+		// 发放优惠券
+		marketingCoupon := &model.MarketingCoupon{}
+		if len(activity.Prizes) > 0 && activity.Prizes[0] != nil && activity.Prizes[0].Coupon != nil {
+			marketingCoupon = activity.Prizes[0].Coupon
+		}
+		if marketingCoupon == nil || marketingCoupon.Uuid == 0 {
+			return nil
+		}
+
+		for i := 0; i < rewardCountToGive; i++ {
+			err = db.Transaction(func(tx *gorm.DB) error {
+				// 创建优惠券
+				err = repository.NewMarketingCouponRepo(tx).DecreaseCouponQuantity(marketingCoupon.Uuid, memberUuid, activityUuid)
+				if err != nil {
+					return err
+				}
+				// 创建奖励记录
+				err = repository.NewMarketingActivityRecordRepo(tx).CreateRecord(&model.MarketingActivityRecord{
+					ActivityUuid:   activityUuid,
+					MemberUuid:     memberUuid,
+					RewardCount:    1,
+					LastRewardTime: time.Now().Unix(),
+					PrizeUuid: func() uint64 {
+						if len(activity.Prizes) > 0 && activity.Prizes[0] != nil {
+							return activity.Prizes[0].PrizeUuid
+						}
+						return 0
+					}(),
+				})
+				if err != nil {
+					return err
+				}
+				// 创建会员优惠券
+				err = repository.NewMemberCouponRepo(tx).CreateMemberCoupon(&model.MemberCoupon{
+					MemberUuid:     memberUuid,
+					Type:           "deduction",
+					Status:         0,
+					CouponUuid:     marketingCoupon.Uuid,
+					Name:           marketingCoupon.Name,
+					DeductionType:  marketingCoupon.DeductionType,
+					DayStartTime:   marketingCoupon.DayStartTime,
+					DayEndTime:     marketingCoupon.DayEndTime,
+					ValidStartTime: marketingCoupon.ValidStartTime,
+					ValidEndTime:   marketingCoupon.ValidEndTime,
+					Amount:         marketingCoupon.Amount,
+					StartTime:      time.Now().Unix(),
+					EndTime:        time.Now().AddDate(0, 0, marketingCoupon.ValidDays).Unix(),
+				})
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		// 发送短信
+		if rewardCountToGive > 0 && activity.IsSendSms == 1 {
+			go func() {
+				err := service.NewSMSSrv(dbm).SendMemberCouponSMS(payload.Ctx, phone, &sms.MemberCouponRequest{CouponNum: uint64(rewardCountToGive)})
+				if err != nil {
+					fmt.Println("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", phone), zap.Error(err))
+					logger.Logger.Info("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", phone), zap.Error(err))
+				}
+			}()
+		}
+
+	} else if activity.RewardType == 1 {
+
+		// 发放积分
+		if activity.RewardValue == 0 {
+			return nil
+		}
+
+		points := decimal.NewFromFloat(activity.RewardValue).Mul(decimal.NewFromFloat(float64(rewardCountToGive))).InexactFloat64()
+
+		err = db.Transaction(func(tx *gorm.DB) error {
+
+			// 创建奖励记录
+			err = repository.NewMarketingActivityRecordRepo(tx).CreateRecord(&model.MarketingActivityRecord{
+				ActivityUuid:   activityUuid,
+				MemberUuid:     memberUuid,
+				RewardCount:    rewardCountToGive,
+				LastRewardTime: time.Now().Unix(),
+				PrizeUuid:      0,
+				RewardValue:    points,
+			})
+			if err != nil {
+				return err
+			}
+
+			// 更新会员积分
+			if err := repository.NewMemberRepo(tx).Update(memberUuid, map[string]any{
+				"frozen_point": gorm.Expr("frozen_point + ?", points),
+			}); err != nil {
+				return err
+			}
+
+			// 创建积分记录
+			_, err := repository.NewMemberPointLogRepo(tx).Create(model.MemberPointLog{
+				MemberUuid:  memberUuid,
+				Scene:       constant.MemberPointLogSceneMarketingActivity,
+				Value:       points,
+				Describe:    "邀请消费有礼",
+				RelatedUuid: activityUuid,
+			})
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		// 发布"积分变动"事件
+		go HandleMemberPoints(db)
+
+		// 发送短信
+		if activity.IsSendSms == 1 {
+			go func() {
+				err := service.NewSMSSrv(dbm).SendMemberPointsSMS(payload.Ctx, phone, &sms.MemberPointsRequest{Points: points})
+				if err != nil {
+					fmt.Println("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", phone), zap.Error(err))
+					logger.Logger.Info("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", phone), zap.Error(err))
+				}
+			}()
+		}
+	}
+
+	return nil
 }

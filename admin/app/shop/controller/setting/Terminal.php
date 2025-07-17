@@ -10,6 +10,7 @@ use app\common\model\shop\BindRecord;
 use app\common\enum\settings\SettingEnum;
 use app\common\enum\order\OrderStatusEnum;
 use app\shop\model\settings\Setting as SettingModel;
+use app\common\model\settings\Printer as PrinterModel;
 
 /**
  * 各端设置
@@ -470,6 +471,10 @@ class Terminal extends Controller
      * @Apidoc\Param("wait_color", type="array", require=true, desc="等待颜色")
      * @Apidoc\Param("language", type="array", require=true, desc="常用语言")
      * @Apidoc\Param("default_language", type="string", require=true, default="", desc="默认语言")
+     * @Apidoc\Param("related_printers", type="array", require=true, desc="关联打印机uuid", children={
+     *     @Apidoc\Param("uuid", type="string", require=true, desc="设备uuid"),
+     *     @Apidoc\Param("related_printer_uuid", type="string", require=true, desc="关联打印机uuid"),
+     * })
      * @Apidoc\Returned()
      */
     public function kitchen()
@@ -496,6 +501,7 @@ class Terminal extends Controller
             'wait_color' => $data['wait_color'] ??  [], // 等待颜色
             'language' => $data['language'] ?? [], // 常用语言
             'default_language' => $data['default_language'] ?? 'en', // 默认语言
+            'bind_list' => $data['bind_list'] ?? [],
         ];
         $shop_supplier_id = $this->store['user']['shop_supplier_id'];
         if ($model->edit(SettingEnum::KITCHEN, $arr, $shop_supplier_id)) {
@@ -711,6 +717,8 @@ class Terminal extends Controller
             }
             // 绑定设备列表
             $ret['bind_list'] = (new BindRecord)->getBindList(BindRecord::SOURCE_KITCHEN, $shopSupplierId) ?: [];
+            // 打印机列表
+            $ret['printer_list'] = PrinterModel::getAll(false);
         }
         // 点餐助手密码
         if ($key == SettingEnum::ASSISTANT) {

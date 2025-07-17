@@ -9,6 +9,7 @@ import (
 
 type IPrinterRepo interface {
 	WhereUuid(uuid uint64) DBOption
+	WhereDeviceSn(deviceSn string) DBOption
 
 	WithPrinterType() DBOption
 
@@ -47,6 +48,12 @@ func (r *printerRepo) GetPrinter(opts ...DBOption) (model.Printer, error) {
 func (r *printerRepo) WhereUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid = ?", uuid)
+	}
+}
+
+func (r *printerRepo) WhereDeviceSn(deviceSn string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("device_id = ?", deviceSn)
 	}
 }
 

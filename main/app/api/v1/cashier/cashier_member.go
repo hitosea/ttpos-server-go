@@ -55,7 +55,7 @@ func (h *MemberHandler) GetMemberCardTypes(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param keyword query string false "关键字搜索：uuid\phone，前端处理前后空格"
+// @param keyword query string false "关键字搜索"
 // @Success 200 {object} dto.Response{data=resp.SearchMemberList}
 // @Router /cashier/member/search [get]
 func (h *MemberHandler) SearchMember(c *gin.Context) {
@@ -336,10 +336,9 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
-	memberSrv := service.NewMemberSrv(dbm)
+	memberSrv := service.NewMemberSrv(dbm, cache)
 	smsSrv := service.NewSMSSrv(dbm)
 	rechargeOrderSrv := service.NewRechargeOrderSrv(dbm, cache, paymentMethodSrv, settingSrv, cashBoxSrv, memberSrv, smsSrv)
-	staffOperationLogSrv := service.NewStaffOperationLogSrv(dbm, authSrv)
 
 	wrapper := &MemberHandler{
 		memberSrv:        memberSrv,
@@ -347,7 +346,7 @@ func RegisterMemberHandlers(router gin.IRouter, dbm *database.DBManager, cache c
 	}
 
 	// 需要认证
-	privateApi := router.Group("", middleware.Auth(authSrv, dbm), middleware.OperationLog(staffOperationLogSrv))
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/member/levels", wrapper.GetMemberLevels)                                      // 获取会员等级列表
 		privateApi.GET("/member/card_types", wrapper.GetMemberCardTypes)                               // 获取会员卡类型列表

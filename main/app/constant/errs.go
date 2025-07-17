@@ -56,6 +56,9 @@ const (
 
 	CodeH5OrderTimeLimit = -231 // h5订单时间限制
 	CodeH5OrderNumLimit  = -232 // h5订单数量限制
+
+	// 优惠券已经失效
+	CodeCouponInvalid = -233
 )
 
 type ParseCodeOrderCheckOption struct {

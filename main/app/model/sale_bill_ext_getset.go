@@ -267,6 +267,7 @@ func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
 			KO:   fmt.Sprintf("%s+%s", name1.KO, name2.KO),
 			MY:   fmt.Sprintf("%s+%s", name1.MY, name2.MY),
 			TR:   fmt.Sprintf("%s+%s", name1.TR, name2.TR),
+			SV:   fmt.Sprintf("%s+%s", name1.SV, name2.SV),
 		}
 		return
 	}
@@ -281,6 +282,7 @@ func (model *SaleBill) GetBuffetName() (name dto.LocaleResponse) {
 			KO:   name1.KO,
 			MY:   name1.MY,
 			TR:   name1.TR,
+			SV:   name1.SV,
 		}
 		return
 	}
@@ -458,7 +460,7 @@ func (model *SaleBill) GetUnOrderH5OrderProduct() []*SaleOrderProduct {
 	// 获取第一个销售订单
 	saleOrder := model.SaleOrders[0]
 	// 获取未下单的h5订单商品
-	h5OrderProducts := saleOrder.GetH5CartProductList() // todo 为什么会有已下单的h5订单商品？
+	h5OrderProducts := saleOrder.GetH5CartProductList() // FIXME 为什么会有已下单的h5订单商品？
 	// 过滤掉已下单的h5订单商品
 	newH5OrderProducts := make([]*SaleOrderProduct, 0)
 	for _, h5OrderProduct := range h5OrderProducts {
@@ -557,7 +559,7 @@ func (model *SaleBill) SetCashier(dutyNo string, cashierUuid uint64, cashierName
 	}
 }
 
-// 设置打包销售账单。并更新订单的税率
+// 设置打包销售账单。并更新订单的税率，更新订单商品的打包状态
 func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
 	// 如果没有改变，则不更新
 	if model.DiningMethod == diningMethod {
@@ -586,6 +588,14 @@ func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
 			}
 			taxRate := saleOrderProduct.ProductPackage.TaxRate(model.DiningMethod)
 			saleOrderProduct.SetTaxRate(taxRate)
+			// 设置打包状态
+			if method == constant.SaleBillDiningMethodTakeout {
+				saleOrderProduct.SetWrap()
+				saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign() // 重新生成签名
+			} else {
+				saleOrderProduct.SetUnwrap()
+				saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign() // 重新生成签名
+			}
 		}
 	}
 }
@@ -596,7 +606,10 @@ func (model *SaleBill) SetReverseSettle() {
 	// 销售订单状态变为未结账状态
 	// 销售订单的所有付款单都退款，并生成退款单
 	model.Status = constant.SaleBillStatusPending
+	model.FinishTime = 0                                    // 反结账后支付时间finish_time置0
+	model.ReverseSettleCount = model.ReverseSettleCount + 1 // 反结账次数+1
 	for _, saleOrder := range model.SaleOrders {
+		saleOrder.FinishTime = 0 // 反结账后支付时间finish_time置0
 		saleOrder.Status = constant.SaleOrderStatusPending
 		for _, paymentOrder := range saleOrder.PaymentOrders {
 			if !paymentOrder.PaymentMethod.IsLianLianPay() {

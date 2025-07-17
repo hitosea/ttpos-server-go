@@ -30,7 +30,7 @@ func GetCompanyUuid(db *gorm.DB) uint64 {
 			return uuid
 		}
 	}
-	// todo sqlite - 离线版本要重新考虑
+	// NOTE sqlite - 离线版本要重新考虑
 	return 0
 }
 
@@ -55,6 +55,7 @@ type ICommonRepo interface {
 	WhereByID(id uint) DBOption                                         // 根据ID查询
 	WhereByUuid(uuid uint64) DBOption                                   // 根据UUID查询
 	WhereInUuids(uuids []uint64) DBOption                               // 根据UUID列表查询
+	WhereByMemberSaleOrderUuid(uuid uint64) DBOption                    // 根据会员端销售订单UUID查询
 	WhereByDeskUuid(uuid uint64) DBOption                               // 根据桌台UUID查询
 	WhereBySaleBillUuid(uuid uint64) DBOption                           // 根据销售单UUID查询
 	WhereByAssociatedOrderUuid(uuid uint64) DBOption                    // 根据关联订单UUID查询
@@ -63,12 +64,15 @@ type ICommonRepo interface {
 	WhereByMemberUuid(uuid uint64) DBOption                             // 根据会员UUID查询
 	WhereByNotRevoked() DBOption                                        // 未撤销的出库记录
 	WhereByStatus(status uint) DBOption                                 // 根据状态查询
+	WhereByMultipleStatus(statusList []uint) DBOption                   // 根据多个状态查询
+	WhereBySource(source uint) DBOption                                 // 根据来源查询
 	WhereByRequirement(requirement string) DBOption                     // 根据requirement查询
 	WhereByIsShowCashier(isShowCashier uint) DBOption                   // 根据是否显示收银机查询
 	WhereByIsShowAssistant(isShow uint) DBOption                        // 根据是否显示点餐助手端查询
 	WhereByIsShowTablet(isShow uint) DBOption                           // 根据是否显示平板端查询
 	WhereByIsShowKitchen(isShow uint) DBOption                          // 根据是否显示厨显端查询
 	WhereByIsShowH5(isShow uint) DBOption                               // 根据是否显示H5端查询
+	WhereByIsShowMember(isShow uint) DBOption                           // 根据是否显示会员端查询
 	WhereBySoftDelete() DBOption                                        // 根据软删除查询
 	WhereByCooking() DBOption                                           // 根据账单已经送厨房查询
 	WhereByRelatedUuid(relatedUuid uint64) DBOption                     // 根据关联UUID查询
@@ -97,7 +101,9 @@ type ICommonRepo interface {
 	WhereByOperatorUuid(operatorUuid uint64) DBOption                   // 根据操作员UUID查询
 	WhereLikeByName(name string) DBOption                               // 根据名称查询
 	WhereBetweenByCreateTime(startTime int64, endTime int64) DBOption   // 根据创建时间查询
+	WhereBetweenByPayTime(startTime int64, endTime int64) DBOption      // 根据支付时间查询
 	WhereBetweenByCompleteTime(startTime int64, endTime int64) DBOption // 根据完成时间查询
+	WhereGtUuid(uuid uint64) DBOption                                   // 根据UUID大于查询
 	FilterSaleOrderProduct() DBOption                                   // 只查询常规的购物车商品
 	FilterSaleOrderProductWithH5Order(h5OrderUuid uint64) DBOption      // 只查询常规的购物车商品、指定某个h5订单的商品
 	FilterSaleOrderProductH5Unordered() DBOption                        // 只查询H5未下单的购物车商品
@@ -105,6 +111,7 @@ type ICommonRepo interface {
 	FilterSaleOrderProductH5OrderedWithReject() DBOption                // 查询H5已下单的购物车商品.包括已送厨商品、已下单未接单的商品和被拒单的商品
 	SortWithID(order string) DBOption                                   // 根据ID排序
 	SortWithCreateTime(order string) DBOption                           // 根据创建时间排序
+	SortWithPayTime(order string) DBOption                              // 根据支付时间排序
 	SortWithHandleTime(order string) DBOption                           // 根据h5订单处理时间排序
 	WhereCreateTimeGt(createTime int64) DBOption                        // 根据创建时间大于查询
 	SortWithSort(order string) DBOption                                 // 根据Order By排序
@@ -158,6 +165,13 @@ func (r *commonRepo) WhereByUuid(uuid uint64) DBOption {
 	}
 }
 
+// WhereByMemberSaleOrderUuid 根据会员销售订单UUID查询
+func (r *commonRepo) WhereByMemberSaleOrderUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("member_sale_order_uuid = ?", uuid)
+	}
+}
+
 // WhereInUuids 根据UUID列表查询
 func (r *commonRepo) WhereInUuids(uuids []uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -189,6 +203,20 @@ func (r *commonRepo) WhereByAssociatedOrderUuid(uuid uint64) DBOption {
 func (r *commonRepo) WhereByStatus(status uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", status)
+	}
+}
+
+// 根据多个状态查询
+func (r *commonRepo) WhereByMultipleStatus(statusList []uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status IN (?)", statusList)
+	}
+}
+
+// WhereBySource 根据来源查询
+func (r *commonRepo) WhereBySource(source uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("source = ?", source)
 	}
 }
 
@@ -231,6 +259,13 @@ func (r *commonRepo) WhereByIsShowKitchen(isShow uint) DBOption {
 func (r *commonRepo) WhereByIsShowH5(isShow uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_show_h5 = ?", isShow)
+	}
+}
+
+// WhereByIsShowMember 根据是否显示会员端查询
+func (r *commonRepo) WhereByIsShowMember(isShow uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_show_delivery = ?", isShow)
 	}
 }
 
@@ -371,10 +406,24 @@ func (r *commonRepo) WhereBetweenByCreateTime(startTime int64, endTime int64) DB
 	}
 }
 
+// WhereBetweenByPayTime 根据支付时间查询
+func (r *commonRepo) WhereBetweenByPayTime(startTime int64, endTime int64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("pay_time BETWEEN ? AND ?", startTime, endTime)
+	}
+}
+
 // WhereBetweenByCompleteTime 根据完成时间查询
 func (r *commonRepo) WhereBetweenByCompleteTime(startTime int64, endTime int64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("complete_time BETWEEN ? AND ?", startTime, endTime)
+	}
+}
+
+// WhereGtUuid 根据UUID大于查询
+func (r *commonRepo) WhereGtUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid > ?", uuid)
 	}
 }
 
@@ -475,6 +524,14 @@ func (r *commonRepo) SortWithCreateTime(order string) DBOption {
 	}
 }
 
+// 按支付时间排序
+func (r *commonRepo) SortWithPayTime(order string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Order("pay_time " + order)
+	}
+}
+
+// 按处理时间排序
 func (r *commonRepo) SortWithHandleTime(order string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Order("handle_time " + order)

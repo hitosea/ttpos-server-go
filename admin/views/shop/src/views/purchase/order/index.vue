@@ -1,7 +1,7 @@
 <template>
   <div class="order-list">
     <!--搜索表单-->
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('供应商')">
           <a-select size="small" v-model:value="searchForm.erp_supplier_id" filterable :placeholder="$t('全部供应商')" @change="onSearch">
@@ -166,7 +166,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="dialogShow" :title="dialogTitle" width="420" align-center>
+    <el-dialog v-model="dialogShow" :title="dialogTitle" width="540" align-center>
       {{ dialogText }}
       <template #footer>
         <div class="dialog-footer">
@@ -493,10 +493,16 @@
     },
   };
 </script>
-<style scoped>
-  .common-seach-wrap {
+<style scoped lang="scss">
+  .common-search-wrap {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0;
+  }
+  .dialog-footer {
+    margin-top: -10px;
+    .el-button  {
+     margin-top: 10px;
+    }
   }
 </style>

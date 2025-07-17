@@ -307,7 +307,7 @@ func (h *DeskHandler) OrderMustPlanConfirm(c *gin.Context) {
 		return
 	}
 	if !res {
-		helper.ErrorWithDetail(c, constant.CodeOrderCheckProductMust, errors.New(fmt.Sprintf("【%s】%s", mustPlan.Name, errors.ErrMustPlanNotComplete.Error())))
+		helper.ErrorWithDetail(c, constant.CodeOrderCheckProductMust, errors.New(fmt.Sprintf("【%s】%s", mustPlan.Name, i18n.Translate(ctx.GetLanguage(), errors.ErrMustPlanNotComplete.Error()))))
 		return
 	}
 	// 返回结果
@@ -328,7 +328,7 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	localeSrv := service.NewLocaleSrv()
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
-	memberSrv := service.NewMemberSrv(dbm)
+	memberSrv := service.NewMemberSrv(dbm, cache)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
 
 	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv)

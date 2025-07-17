@@ -62,6 +62,7 @@ type ISrv interface {
 	VerifyAdvancedPassword(ctx context.Context, password string, options ...func(option *VerifyAdvancedPasswordOption)) error             // 验证高级密码
 	CheckUpdate(ctx context.Context, appType int, brand string, language string) (resp.UpdateInfo, error)                                 // 检查更新
 	EditAcceptOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptOrderSetting) error                                          // 修改自动接单设置
+	EditAcceptMemberOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptMemberOrderSetting) error                              // 修改自动接单会员订单设置
 	EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error                                                   // 修改系统设置
 	GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSetting, error)                                                           // 获取收银端设置
 	GetAcceptOrderSetting(ctx context.Context) (*resp.AcceptOrderSetting, error)                                                          // 获取接单设置
@@ -184,7 +185,7 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 	err := json.Unmarshal([]byte(jsonStr), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析商城设置失败-01", zap.Error(err))
-		return store, errors.New("解析商城设置失败-01 " + err.Error())
+		return store, errors.New("解析商城设置失败-01" + err.Error())
 	}
 	// 处理language数组中的key字段
 	if language, ok := jsonMap["language"].([]interface{}); ok {
@@ -212,13 +213,13 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 	modifiedJSON, err := json.Marshal(jsonMap)
 	if err != nil {
 		ctx.Log().Error("重新序列化JSON失败", zap.Error(err))
-		return store, errors.New("重新序列化JSON失败 " + err.Error())
+		return store, errors.New("重新序列化JSON失败" + err.Error())
 	}
 
 	err = json.Unmarshal(modifiedJSON, &store)
 	if err != nil {
 		ctx.Log().Error("解析商城设置失败", zap.Error(err))
-		return store, errors.New("解析商城设置失败 " + err.Error())
+		return store, errors.New("解析商城设置失败" + err.Error())
 	}
 	if store.IPWhiteList != "" {
 		store.IPWhiteList = viper.GetString("PAY_SERVICE_IP")
@@ -268,7 +269,7 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 	err = json.Unmarshal([]byte(jsonStr), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析小票打印机设置失败", zap.Error(err))
-		return printer, errors.New("解析小票打印机设置失败 " + err.Error())
+		return printer, errors.New("解析小票打印机设置失败" + err.Error())
 	}
 	// 处理 cashier_printer 字段，确保它是一个数组
 	if cashierPrinter, ok := jsonMap["cashier_printer"]; ok {
@@ -315,14 +316,14 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 	modifiedJSON, err := json.Marshal(jsonMap)
 	if err != nil {
 		ctx.Log().Error("重新序列化JSON失败", zap.Error(err))
-		return printer, errors.New("重新序列化JSON失败 " + err.Error())
+		return printer, errors.New("重新序列化JSON失败" + err.Error())
 	}
 
 	// 使用处理后的JSON解析
 	err = json.Unmarshal(modifiedJSON, &printer)
 	if err != nil {
 		ctx.Log().Error("解析小票打印机设置失败", zap.Error(err))
-		return printer, errors.New("解析小票打印机设置失败 " + err.Error())
+		return printer, errors.New("解析小票打印机设置失败" + err.Error())
 	}
 	// 过滤佛历、过滤打印方式，使用默认
 	printer.CalendarList = nil
@@ -343,6 +344,7 @@ func (s *Srv) GetPrinterSetting(ctx context.Context, languageList []dto.Language
 				Key:          item.Key,
 				PrinterId:    utils.Uint64OrStringToString(item.PrinterId),
 				PrinterUsbId: item.PrinterUsbId,
+				Sn:           item.Sn,
 			})
 		}
 		defaultPrinter.CashierPrinter = handledCashierPrinters
@@ -378,6 +380,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		isCashierPrinter       bool // 是否收银机自带打印机
 		isUsbPrinter           bool // 是否usb打印机
 		printMethod            int  // 打印方式 1文本打印, 2图片打印
+		printerSn              string
 	)
 
 	// 收银机开启
@@ -406,9 +409,16 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 				return setting.PrinterInfo{}, errors.WithMessage(err)
 			}
 			copies = printer.Copies
-			printerConfig = utils.ToJson(printer.GetConfigJson())
+			printerConfigJson := printer.GetConfigJson()
+			printerConfig = utils.ToJson(printerConfigJson)
 			if printer.PrinterType != nil {
 				printerType = printer.PrinterType.Key
+			}
+			// 打印机SN
+			if printer.Sn != "" {
+				printerSn = printer.Sn
+			} else {
+				printerSn = printerConfigJson.SN
 			}
 			// 由当前点击的设备进行打印
 			printerCashierDeviceSn = deviceSn
@@ -442,6 +452,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 		PrinterCashierDeviceSn: printerCashierDeviceSn,
 		IsUsbPrinter:           isUsbPrinter,
 		PrintMethod:            printMethod,
+		PrinterSn:              printerSn,
 	}, nil
 }
 
@@ -806,7 +817,7 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 	err = json.Unmarshal([]byte(st.Values), &jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析点餐助手设置失败-01", zap.Error(err))
-		return assistant, errors.New("解析点餐助手设置失败-01 " + err.Error())
+		return assistant, errors.New("解析点餐助手设置失败-01" + err.Error())
 	}
 	// 处理 isShowAssistantSoldOut
 	if isShowAssistantSoldOut, ok := jsonMap["is_show_assistant_sold_out"]; ok {
@@ -820,7 +831,7 @@ func (s *Srv) GetAssistantSetting(ctx context.Context, languageList []dto.Langua
 	modifiedJSON, err := json.Marshal(jsonMap)
 	if err != nil {
 		ctx.Log().Error("解析点餐助手设置失败 - 重新序列化JSON失败 - 02", zap.Error(err))
-		return assistant, errors.New("解析点餐助手设置失败 - 重新序列化JSON失败 - 02 " + err.Error())
+		return assistant, errors.New("解析点餐助手设置失败 - 重新序列化JSON失败 - 02" + err.Error())
 	}
 	//
 	err = json.Unmarshal(modifiedJSON, &assistant)
@@ -1306,6 +1317,17 @@ func (s *Srv) EditAcceptOrderSetting(ctx context.Context, orderSetting req.Updat
 	return s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting)
 }
 
+// EditAcceptMemberOrderSetting 修改自动接单会员订单参数
+func (s *Srv) EditAcceptMemberOrderSetting(ctx context.Context, orderSetting req.UpdateAcceptMemberOrderSetting) error { // 修改自动接单会员订单设置
+	cashierSetting, err := s.GetCashierSetting(ctx, nil)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	cashierSetting.IsAutoMemberOrder = orderSetting.IsAutoMemberOrder
+	cashierSetting.AutoMemberOrderLimit = orderSetting.AutoMemberOrderLimit
+	return s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting)
+}
+
 // EditSystemSetting 修改系统设置
 func (s *Srv) EditSystemSetting(ctx context.Context, systemSetting req.UpdateSystemSetting) error {
 	cashierSetting, err := s.GetCashierSetting(ctx, nil)
@@ -1378,6 +1400,11 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 			IsAutoOrder:    cashierSetting.IsAutoOrder,
 			AutoOrderLimit: cashierSetting.AutoOrderLimit,
 			IsAutoVoice:    cashierSetting.IsAutoVoice,
+		},
+		AcceptMemberOrder: resp.AcceptMemberOrderSetting{
+			IsAutoMemberOrder:      cashierSetting.IsAutoMemberOrder,
+			AutoMemberOrderLimit:   cashierSetting.AutoMemberOrderLimit,
+			IsAutoVoiceMemberOrder: cashierSetting.IsAutoVoiceMemberOrder,
 		},
 		System: resp.SystemSetting{
 			IsShowScanSoldOut:      cashierSetting.IsShowScanSoldOut,

@@ -22,9 +22,10 @@ type MemberCardTypeList struct {
 }
 
 type SearchMember struct {
-	Uuid     uint64 `json:"uuid"`     // 会员Uuid
-	Nickname string `json:"nickname"` // 会员昵称
-	Phone    string `json:"phone"`    // 手机
+	Uuid         uint64 `json:"uuid"`           // 会员Uuid
+	Nickname     string `json:"nickname"`       // 会员昵称
+	Phone        string `json:"phone"`          // 手机
+	MemberCardNo string `json:"member_card_no"` // 会员卡号
 }
 
 type SearchMemberList struct {

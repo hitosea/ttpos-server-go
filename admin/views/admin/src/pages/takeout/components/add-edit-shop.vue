@@ -11,7 +11,7 @@
     <div class="max-h-[75vh] overflow-auto pr-4">
       <el-form :model="formData" ref="formElement" label-position="top" label-width="auto">
         <el-form-item :label="$t('选择商家')" prop="uuid" :rules="[{ required: true, message: $t('请选择商家'), trigger: 'blur' }]">
-          <el-select v-model="formData.uuid" type="text" filterable :disabled="hasEdit" :placeholder="$t('请选择商家')">
+          <el-select v-model="formData.uuid" type="text" filterable remote :remote-method="remoteMethod" :disabled="hasEdit" :placeholder="$t('请选择商家')">
             <el-option class="!h-auto" :disabled="item.channel_names.length > 0" v-for="item in companyList" :key="item.uuid" :value="item.uuid" :label="item.name">
               <div>
                 <p class="">{{ item.name }}</p>
@@ -133,7 +133,7 @@
                                 if (!value) {
                                   callback(new Error($t('请输入结束距离')));
                                 }
-                                if (distanceRangeIndex > 0 && value <= item.distance_range[distanceRangeIndex - 1].end) {
+                                if (distanceRangeIndex > 0 && value <= item.distance_range[distanceRangeIndex - 1].end && !distanceRange.is_unlimited) {
                                   callback(new Error($t('结束距离必须大于前一个范围的结束距离')));
                                 } else {
                                   callback();
@@ -158,6 +158,7 @@
                               v-model="distanceRange.is_unlimited"
                               :disabled="item.config_type === 'auto_sync'"
                               :label="$t('最大')"
+                              @change="handleIsUnlimitedChange(index, distanceRangeIndex)"
                             />
                           </div>
                         </el-form-item>
@@ -196,7 +197,16 @@
                   </div>
                 </div>
               </el-form-item>
-              <el-button v-if="item.config_type === 'manual'" type="primary" plain class="!mr-0" @click="addDistanceRange(index)" icon="plus">{{ $t('添加范围距离') }}</el-button>
+              <el-button
+                v-if="item.config_type === 'manual'"
+                :disabled="item.distance_range?.map((distanceRange) => distanceRange.is_unlimited).includes(true)"
+                type="primary"
+                plain
+                class="!mr-0"
+                @click="addDistanceRange(index)"
+                icon="plus"
+                >{{ $t('添加范围距离') }}</el-button
+              >
             </div>
           </div>
         </div>
@@ -247,7 +257,7 @@
     () => props.show,
     () => {
       if (props.show) {
-        getCompanyListData();
+        // getCompanyListData('');
         getChannelsData();
         getTakeoutSettingData();
         if (props.hasEdit) {
@@ -321,13 +331,24 @@
       price_per_km: 0,
       is_unlimited: false,
     });
+    // 所有的is_unlimited设置为false
+    formData.value.channels[index].distance_range?.forEach((item) => {
+      item.is_unlimited = false;
+    });
     formElement.value.validateField('channels.' + index + '.distance_range');
   };
 
+  // 远程搜索
+  const remoteMethod = (keyword: string) => {
+    setTimeout(() => {
+      getCompanyListData(keyword);
+    }, 200);
+  };
+
   // 获取商家列表
-  const getCompanyListData = async () => {
+  const getCompanyListData = async (keyword: string) => {
     try {
-      const res = await getCompanySelect();
+      const res = await getCompanySelect({ keyword: keyword, list_rows: 50 });
       companyList.value = res.data?.list?.data || [];
     } catch (error) {
       console.error('获取渠道失败:', error);
@@ -382,5 +403,12 @@
       formData.value.channels[index] = JSON.parse(JSON.stringify(takeoutSettingData.value.find((setting) => setting.channel === channel)));
       formData.value.channels[index].config_type = 'auto_sync';
     }
+  };
+
+  // 处理is_unlimited变化
+  const handleIsUnlimitedChange = (index: number, distanceRangeIndex: number) => {
+    if (!formData.value.channels[index].distance_range || !formData.value.channels[index].distance_range[distanceRangeIndex]) return;
+    const distanceRange = formData.value.channels[index].distance_range[distanceRangeIndex];
+    distanceRange.end = distanceRange.is_unlimited ? 999999 : 0;
   };
 </script>

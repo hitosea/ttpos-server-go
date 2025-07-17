@@ -40,3 +40,4 @@ dist
 *.sqlite-journal
 *.swp
 admin
+.env.development

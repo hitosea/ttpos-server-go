@@ -42,6 +42,9 @@ class PointsLogSceneEnum extends Enum
     // 抵扣反结账
     const POINTS_REVERSE = 120;
 
+    // 营销活动赠送
+    const MARKETING_ACTIVITY = 130;
+
     /**
      * 获取订单类型值
      */
@@ -97,6 +100,11 @@ class PointsLogSceneEnum extends Enum
                 'name' => __('抵扣反结账'),
                 'value' => self::POINTS_REVERSE,
                 'describe' => '抵扣反结账：%s',
+            ],
+            self::MARKETING_ACTIVITY => [
+                'name' => __('营销活动'),
+                'value' => self::MARKETING_ACTIVITY,
+                'describe' => __('邀请消费有礼'),
             ],
         ];
     }

@@ -16,9 +16,10 @@ import (
 type Operator string
 
 const (
-	LessThen    Operator = "<"
-	GreaterThen Operator = ">"
-	Equal       Operator = "="
+	LT  Operator = "<"
+	GT  Operator = ">"
+	EQ  Operator = "="
+	GTE Operator = ">="
 )
 
 type Context interface {
@@ -287,6 +288,9 @@ func (c *ContextImpl) GetAssistantUuid() uint64 {
 }
 
 func (c *ContextImpl) GetDeviceSn() string {
+	if c.deviceSn == "" {
+		c.deviceSn = c.cc.GetHeader("Device-Id")
+	}
 	return c.deviceSn
 }
 
@@ -362,11 +366,13 @@ func (c *ContextImpl) Version(op Operator, version string) bool {
 		return false
 	}
 	switch op {
-	case GreaterThen:
+	case GTE:
+		return v1.GreaterThan(v2) || v1.Equal(v2)
+	case GT:
 		return v1.GreaterThan(v2)
-	case LessThen:
+	case LT:
 		return v1.LessThan(v2)
-	case Equal:
+	case EQ:
 		return v1.Equal(v2)
 	}
 	return false

@@ -8,7 +8,7 @@ import ja from './locales/ja.json';
 import ko from './locales/ko.json';
 import my from './locales/my.json';
 import tr from './locales/tr.json';
-
+import sv from './locales/sv.json';
 //
 export const LANGUAGE = 'cashier_admin_language'.toUpperCase();
 
@@ -29,6 +29,7 @@ export const i18n = createI18n({
     ko, // 韩语
     my, // 缅甸语
     tr, // 土耳其语
+    sv, // 瑞典语
   },
 });
 
@@ -42,6 +43,7 @@ export enum LanguageEnum {
   ko = '한국어', // 韩语
   my = 'မြန်မာဘာသာ', // 缅甸语
   tr = 'Türkçe', // 土耳其语
+  sv = 'Svenska', // 瑞典语
 }
 
 // 语言类型

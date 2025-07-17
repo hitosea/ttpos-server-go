@@ -5,8 +5,7 @@ env:
   # Docker镜像配置
   REGISTRY: hub.hitosea.com
   IMAGE_NAME: ttpos-server
-  BRANCH: ${{ github.event_name == 'push' && github.ref || github.event.inputs.branch }}
-  IMAGE_TAG_PREFIX: ${{ github.event_name == 'push' && '' || 'test-' }}
+
 
 on:
   push:
@@ -20,6 +19,7 @@ on:
         type: choice
         options:
           - "test"
+          - "release"
 
 
 jobs:
@@ -29,7 +29,20 @@ jobs:
       fail-fast: false
       matrix:
         program: [ main,websocket,redis-proxy ]
+    env:
+      BRANCH: ${{ github.event_name == 'push' && github.ref || github.event.inputs.branch }}
+      
     steps:
+      - name: 设置 IMAGE_TAG
+        id: set_image_tag
+        run: |
+          if [ "${BRANCH}" = "release" ] || [ "${BRANCH}" = "refs/heads/release" ]; then
+            echo "IMAGE_TAG_PREFIX=" >> $GITHUB_ENV
+          else
+            echo "IMAGE_TAG_PREFIX=test-" >> $GITHUB_ENV
+          fi
+ 
+        
       - name: Checkout the code
         uses: actions/checkout@v4
         with:

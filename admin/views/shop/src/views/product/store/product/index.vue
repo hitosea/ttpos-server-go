@@ -6,7 +6,7 @@
     -->
   <div class="product-list">
     <!--搜索表单-->
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('商品类型')">
           <a-select size="small" v-model:value="material_type" clearable :placeholder="$t('全部类型')" @change="onSearch">
@@ -67,6 +67,9 @@
               </el-dropdown-item>
               <el-dropdown-item @click="openBatch(3)" v-if="userInfo.isOpenTax == '1'">
                 {{ $t('修改税类') }}
+              </el-dropdown-item>
+              <el-dropdown-item @click="openBatch(6)">
+                {{ $t('批量修改整单折扣商品') }}
               </el-dropdown-item>
               <el-dropdown-item @click="openBatch(4)">
                 {{ $t('删除') }}
@@ -203,7 +206,6 @@
         searchLoading: '',
 
         open_import_product: false,
-        batch_title: '',
         batch_type: '',
 
         openProductSelector: false,
@@ -414,27 +416,34 @@
         this.$router.push({ path: '/' + this.app_id + '/product/store/product/importProduct' });
       },
 
-      //   上传图片
+      // 批量操作
       openBatch(e) {
         this.batch_type = e;
-        if (e == 1) {
-          this.batch_title = '修改图片';
-          this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { title: this.batch_title, type: this.batch_type } });
-        }
-        if (e == 2) {
-          this.batch_title = '修改分类';
-          this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { title: this.batch_title, type: this.batch_type } });
-        }
-        if (e == 3) {
-          this.batch_title = '修改税类';
-          this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { title: this.batch_title, type: this.batch_type } });
-        }
-        if (e == 4) {
-          this.openProductSelector = true;
-        }
-        if (e == 5) {
-          this.batch_title = '商品批量导入';
-          this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { title: this.batch_title, type: this.batch_type } });
+        switch (e) {
+          case 1:
+            // 修改图片
+            this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
+            break;
+          case 2:
+            // 修改分类
+            this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
+            break;
+          case 3:
+            // 修改税类
+            this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
+            break;
+          case 4:
+            // 删除
+            this.openProductSelector = true;
+            break;
+          case 5:
+            // 商品批量导入
+            this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
+            break;
+          case 6:
+            // 批量修改整单折扣商品
+            this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { type: this.batch_type } });
+            break;
         }
       },
 
@@ -462,7 +471,7 @@
 </script>
 
 <style scoped>
-  .common-seach-wrap {
+  .common-search-wrap {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0;

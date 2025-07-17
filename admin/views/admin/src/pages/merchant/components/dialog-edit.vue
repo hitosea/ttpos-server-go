@@ -14,7 +14,7 @@
           <el-input v-model="formData.name" type="text" maxlength="100" clearable :placeholder="$t('请输入商家名称')"></el-input>
         </el-form-item>
         <!--
-        TODO sass暂时没一二级商家 2024年08月22日10:11:01
+        NOTE sass暂时没一二级商家 2024年08月22日10:11:01
         <el-form-item :label="$t('部署方式')" prop="deploy_mode">
           <el-radio-group v-model="formData.deploy_mode" :disabled="hasEdit" @change="handleChangeDeployMode">
             <el-radio :value="0">{{ $t('局域网部署') }}</el-radio>
@@ -58,15 +58,6 @@
             <div class="text-[#ccc] w-full">{{ $t('支持JPG、JPEG、PNG格式，小於15MB，尺寸：120*120px') }}</div>
           </template>
         </el-form-item>
-        <!--
-        todo sass暂时没有这些 2024年08月22日10:10:52
-        <el-form-item :label="$t('预定')" prop="reserve" v-if="formData.deploy_mode == 0">
-          <el-radio-group v-model="formData.reserve">
-            <el-radio :value="1">{{ $t('开启') }}</el-radio>
-            <el-radio :value="0">{{ $t('关闭') }}</el-radio>
-          </el-radio-group>
-        </el-form-item> -->
-        <!-- 授权时间 -->
 
         <el-form-item :label="$t('进销存')" prop="sale_stock">
           <el-radio-group v-model="formData.sale_stock">
@@ -475,10 +466,6 @@
     formElement.value?.validateField('logo').catch(() => {});
   };
 
-  // todo 暂时用不到 2024年08月22日10:13:44  const handleSelectChange = () => {
-  //     formElement.value?.validateField('parent_id').catch(() => {});
-  //   };
-
   const handleLangChange = () => {
     formElement.value?.validateField('languages').catch(() => {});
   };
@@ -561,15 +548,6 @@
       }
     });
   };
-
-  //  todo 2024年08月22日10:14:00 暂时用不到
-  //    const handleChangeDeployMode = (e: number) => {
-  //     if (e == 1) {
-  //       formData.value.level = 1;
-  //       formData.value.reserve = 0;
-  //       formData.value.sale_stock = 0;
-  //     }
-  //   };
 
   const handleClose = () => {
     emits('update:show', false);

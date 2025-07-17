@@ -335,8 +335,7 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 				}
 
 			} else {
-				// todo
-				// 等于子订单的 orderProductTax， orderRefundTax
+				// NOTE 等于子订单的 orderProductTax， orderRefundTax
 			}
 
 			// 优惠折扣
@@ -345,8 +344,7 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 			} else if order.IsFree == 1 {
 				orderDiscount = decimal.NewFromFloat(order.DiscountMoney)
 			} else {
-				// todo
-				// 等于子订单的
+				// NOTE 等于子订单的
 			}
 
 			// 商品价格

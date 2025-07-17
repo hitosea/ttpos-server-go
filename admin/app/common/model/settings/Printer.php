@@ -106,19 +106,9 @@ class Printer extends BaseModel
     /**
      * 获取全部
      */
-    public static function getAll($shop_supplier_id = 0)
+    public static function getAll($isComesWithBind = true)
     {
         $printerList = (new static)->order(['sort' => 'asc'])
-            // NOTE: 舍弃5分钟自动切换
-            // ->where(function ($query) {
-            //     $query->where(function ($q) {
-            //         $q->where('is_usb', 0);
-            //     })->whereOr(function ($q) {
-            //         $q->where('is_usb', 1)->where('status', 1);
-            //     })->whereOr(function ($q) {
-            //         $q->where('last_heartbeat_time', ">=", time() - 300);
-            //     });
-            // })  
             ->select()
             ->toArray();
        
@@ -128,17 +118,20 @@ class Printer extends BaseModel
         }
 
         //
-        $text = __('自带');
-        $cashierDevices = BindRecord::alias('a')
-            ->where("delete_time", 0)
-            ->where('source', BindRecord::SOURCE_CASHIER)
-            ->whereIn('brand', BindRecord::BRANDS_PRINTS)
-            ->field("a.device_id as printer_id")
-            ->field("CONCAT(if(remark='', a.device_id, remark), ' ($text)') printer_name")
-            ->order('id')
-            ->select()
-            ->toArray();
-            
+        $cashierDevices = [];
+        if ($isComesWithBind) {
+            $text = __('自带');
+            $cashierDevices = BindRecord::alias('a')
+                ->where("delete_time", 0)
+                ->where('source', BindRecord::SOURCE_CASHIER)
+                ->whereIn('brand', BindRecord::BRANDS_PRINTS)
+                ->field("a.device_id as printer_id")
+                ->field("CONCAT(if(remark='', a.device_id, remark), ' ($text)') printer_name")
+                ->order('id')
+                ->select()
+                ->toArray();
+        }
+        
         //
         return array_merge($cashierDevices, $printerList);
     }

@@ -1,6 +1,6 @@
 <template>
   <div class="buffet-list">
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('状态')">
           <a-select size="small" v-model:value="searchForm.status" :placeholder="$t('全部状态')" clearable @change="onSearch">
@@ -41,6 +41,15 @@
               <div class="name">
                 {{ scope.row.time_limit == 0 ? $t('不限制') : scope.row.time_limit }}
               </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="open_overall_discount" :label="$t('整单折扣')" width="100">
+            <template #default="scope">
+              <el-switch
+                :disabled="!this.$filter.isAuth('/product/buffet/list/open_overall_discount')"
+                :model-value="scope.row.open_overall_discount == 1 ? true : false"
+                @click="handleOpenOverallDiscount(scope.row)"
+              ></el-switch>
             </template>
           </el-table-column>
           <el-table-column prop="is_comb" :label="$t('组合')" width="100">
@@ -250,6 +259,11 @@
         });
       },
 
+      //整单折扣
+      handleOpenOverallDiscount(row) {
+        console.log(row);
+      },
+
       /*选择第几页*/
       handleCurrentChange(val) {
         let self = this;
@@ -276,7 +290,7 @@
   };
 </script>
 <style lang="scss" scoped>
-  .common-seach-wrap {
+  .common-search-wrap {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0;

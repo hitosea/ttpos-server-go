@@ -234,22 +234,6 @@
     }
   };
 
-  // todo 暂时不需要这个状态调整
-  // const handleReserve = async (row: ShopListData) => {
-  //     try {
-  //       reserveLoading.value = true;
-  //       shopId.value = row.id;
-  //       const res = await fetchUpdateReserve(row.id);
-  //       message.success(res.msg);
-  //       //
-  //       refetch.value();
-  //     } catch (error) {
-  //       //
-  //     } finally {
-  //       reserveLoading.value = false;
-  //     }
-  //   };
-
   const handlePageSizeChange = (page: number, list_rows: number) => {
     searchParams.value.page = page || 1;
     searchParams.value.list_rows = list_rows || 15;

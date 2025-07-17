@@ -101,41 +101,105 @@ let checkChild = function (obj, str) {
 /* 检测图片是否存在*/
 async function imageIsExist(url, timeout = 30000) {
     return new Promise((resolve, reject) => {
-        // Handle HTTP URLs safely
-        if (url.startsWith('http:')) {
-            // For HTTP URLs, use Image object instead of fetch to avoid mixed content errors
-            const img = new Image();
-            const timer = setTimeout(() => {
-                img.onload = img.onerror = null;
-                reject(new Error('Request timed out'));
-            }, timeout);
+        // 统一使用Image对象，避免fetch的跨域问题
+        const img = new Image();
+        let isResolved = false;
+        
+        const cleanup = () => {
+            img.onload = img.onerror = null;
+            if (timer) clearTimeout(timer);
+        };
+        
+        const timer = setTimeout(() => {
+            if (isResolved) return;
+            isResolved = true;
+            cleanup();
+            resolve(false); // 超时返回false而不是reject
+        }, timeout);
 
-            img.onload = () => {
-                clearTimeout(timer);
-                resolve(true);
-            };
+        img.onload = () => {
+            if (isResolved) return;
+            isResolved = true;
+            cleanup();
+            resolve(true);
+        };
 
-            img.onerror = () => {
-                clearTimeout(timer);
-                resolve(false); // Image doesn't exist or couldn't be loaded
-            };
-
-            img.src = url;
+        // 第一步：智能判断是否需要CORS
+        if (isGoogleCloudStorageUrl(url)) {
+            img.src = url; // 直接加载，不设置crossOrigin
         } else {
-            // For HTTPS URLs, continue using fetch
-            const timer = setTimeout(() => {
-                reject(new Error('Request timed out'));
-            }, timeout);
-
-            fetch(url, { method: 'HEAD' })
-                .then(response => {
-                    clearTimeout(timer);
-                    resolve(response.ok);
-                })
-                .catch(error => {
-                    clearTimeout(timer);
-                    reject(error);
-                });
+            img.crossOrigin = 'anonymous'; // 其他URL尝试CORS
+            img.src = url;
         }
+
+        // 第二步：如果CORS失败，自动降级
+        img.onerror = () => {
+            if (img.crossOrigin) {
+                // 重新尝试不设置CORS
+                imageIsExistWithoutCORS(url, timeout).then(resolve);
+            }
+        };
     });
+}
+
+/* 不设置CORS的图片检测（备用方案）*/
+function imageIsExistWithoutCORS(url, timeout = 30000) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        let isResolved = false;
+        
+        const cleanup = () => {
+            img.onload = img.onerror = null;
+            if (timer) clearTimeout(timer);
+        };
+        
+        const timer = setTimeout(() => {
+            if (isResolved) return;
+            isResolved = true;
+            cleanup();
+            resolve(false);
+        }, timeout);
+
+        img.onload = () => {
+            if (isResolved) return;
+            isResolved = true;
+            cleanup();
+            resolve(true);
+        };
+
+        img.onerror = () => {
+            if (isResolved) return;
+            isResolved = true;
+            cleanup();
+            resolve(false);
+        };
+
+        // 不设置crossOrigin，避免CORS问题
+        img.src = url;
+    });
+}
+
+/* 检查是否为Google Cloud Storage URL */
+function isGoogleCloudStorageUrl(url) {
+    return url.includes('storage_googleapis') || 
+           url.includes('storage.googleapis.com') ||
+           url.includes('GoogleAccessId=');
+}
+
+/* 检查是否为已知的CORS友好域名 */
+function isKnownCORSFriendlyDomain(url) {
+    try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname.toLowerCase();
+        
+        // 已知不支持CORS的域名列表
+        const nonCORSDomains = [
+            'ttpos-test1.ttpos.com', // 你的域名
+            // 可以根据需要添加更多
+        ];
+        
+        return nonCORSDomains.some(domain => hostname.includes(domain));
+    } catch {
+        return false;
+    }
 }

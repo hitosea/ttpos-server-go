@@ -8,6 +8,8 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/shopspring/decimal"
 )
 
 // businessDataXprinterTemplate 商米打印模板
@@ -107,7 +109,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		}
 		printer.AppendText("\n------------------------------------------------\n")
 		//
-		printer.AppendText(t.base.PrintText(t.base.Translate("销售笔数"), "", fmt.Sprintf("%d", businessData.ProductCategory.SalesNum), width))
+		printer.AppendText(t.base.PrintText(t.base.Translate("销售笔数"), "", fmt.Sprintf("%v", businessData.ProductCategory.SalesNum), width))
 		printer.LineFeed()
 		printer.LineFeed()
 		//
@@ -133,7 +135,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.AppendText("\n------------------------------------------------")
 		for _, product := range businessData.Product.Products {
-			printer.AppendText(t.base.PrintText(product.Name, fmt.Sprintf("%s*%d", t.base.Number(product.Price), product.SalesNum), t.base.GetPriceAndUnit(product.Subtotal), width-differenceWidth, 26, 16, 16))
+			printer.AppendText(t.base.PrintText(product.Name, fmt.Sprintf("%s*%v", t.base.Number(product.Price), product.SalesNum), t.base.GetPriceAndUnit(product.Subtotal), width-differenceWidth, 26, 16, 16))
 			printer.LineFeed()
 			printer.LineFeed()
 		}
@@ -150,7 +152,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("税费"), "", t.base.GetPriceAndUnit(businessData.All.TotalTaxMoney), width))
 		printer.LineFeed(1)
-		printer.AppendText(t.base.PrintText(t.base.Translate("商品数量"), "", strconv.Itoa(businessData.All.TotalProductNum), width))
+		printer.AppendText(t.base.PrintText(t.base.Translate("商品数量"), "", utils.FormatFloat(businessData.All.TotalProductNum), width))
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("优惠折扣"), "", t.base.GetPriceAndUnit(businessData.All.TotalDiscountMoney), width))
 		printer.LineFeed(1)
@@ -161,6 +163,8 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		printer.AppendText(t.base.PrintText(t.base.Translate("退款金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalRefundMoney), width))
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalFreeOrderPrice), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("赠菜金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalGiveProductPrice), width))
 		printer.LineFeed(1)
 		printer.SetPrintModes(true, true, false)
 		printer.SetCharacterSize(2, 1)
@@ -271,16 +275,16 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), t.base.Translate("订单数"), t.base.Translate("金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 16))
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(1)
-		var totalPayPrice float64 = 0
+		totalPayPrice := decimal.NewFromFloat(0)
 		for _, income := range businessData.All.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
-				printer.AppendText(t.base.PrintText(income.Name, fmt.Sprintf("%d", income.OrderNum), t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
+				printer.AppendText(t.base.PrintText(income.Name, fmt.Sprintf("%v", income.OrderNum), t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
 				printer.LineFeed()
-				totalPayPrice += income.Amount
+				totalPayPrice = totalPayPrice.Add(decimal.NewFromFloat(income.Amount).Round(2))
 			}
 		}
-		if totalPayPrice > 0 {
-			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice), width, 26, 10, 18))
+		if totalPayPrice.GreaterThan(decimal.NewFromFloat(0)) {
+			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice.Round(2).InexactFloat64()), width, 26, 10, 18))
 			printer.LineFeed(1)
 		}
 		// 高峰时间
@@ -290,7 +294,7 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(1)
 		for _, peak := range businessData.All.PeakHourList {
-			printer.AppendText(t.base.PrintText(peak.TimePeriod, fmt.Sprintf("%d", peak.OrderNum), t.base.GetPriceAndUnit(peak.Amount), width, 26, 10, 18))
+			printer.AppendText(t.base.PrintText(peak.TimePeriod, fmt.Sprintf("%v", peak.OrderNum), t.base.GetPriceAndUnit(peak.Amount), width, 26, 10, 18))
 			printer.LineFeed(1)
 		}
 	}

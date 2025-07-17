@@ -92,7 +92,7 @@ type SaleOrder struct {
 	MemberPointLogs              []*MemberPointLog              `gorm:"foreignKey:RelatedUuid;references:uuid"`   // 关联积分变动记录.赠送积分、退款积分、反结账积分
 	Coupons                      []*SaleOrderCoupon             `gorm:"foreignKey:SaleOrderUuid;references:uuid"` // 订单使用的优惠券
 	// 虚拟字段，用于标记当前子单是第几个
-	index int `gorm:"-" json:"index,omitempty"`
+	index int `gorm:"-"`
 }
 
 // 获取已选择的优惠券uuid
@@ -382,6 +382,7 @@ func (model *SaleOrder) GetCustomerList() []resp.Product {
 				KO:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 				MY:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 				TR:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
+				SV:   orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name,
 			},
 			Num:           float64(orderBuffetCustomer.Num), // 这种类型顾客多少个，如老人这个类型2人
 			FinishedNum:   float64(orderBuffetCustomer.Num),
@@ -430,6 +431,7 @@ func (model *SaleOrder) GetDelayProductList() []resp.Product {
 				KO:   delayProduct.Name,
 				MY:   delayProduct.Name,
 				TR:   delayProduct.Name,
+				SV:   delayProduct.Name,
 			},
 			LocaleAttributeName: dto.LocaleResponse{},
 			Num:                 float64(delayProduct.Num), // 拆单后不等于桌台人数，但同一个加钟商品的总数等于桌台人数
@@ -488,13 +490,14 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
-			NumType:             saleOrderProduct.ProductPackage.NumType,
+			NumType:             saleOrderProduct.NumType,
 			SalePrice:           saleOrderProduct.GetSalePrice(),
 			DiscountPrice:       saleOrderProduct.GetProductFinalSalePrice(),
 			Status:              saleOrderProduct.StatusValue(),
 			Remark:              saleOrderProduct.Remark,
 			IsMust:              saleOrderProduct.IsMustProduct(),
 			IsGift:              saleOrderProduct.IsGiftProduct(),
+			IsWrap:              saleOrderProduct.IsWrapProduct(),
 			IsBuffet:            saleOrderProduct.IsBuffetProduct(),
 			IsCancel:            saleOrderProduct.IsCancelProduct(),
 			CanChangeNum:        canChangeNum,

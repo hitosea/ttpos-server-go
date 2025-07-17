@@ -1,16 +1,16 @@
 package member_service
 
 import (
-	"errors"
-	"fmt"
-	"math/rand"
 	"strings"
-	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/req/member_req"
-	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/dto/resp/member_resp"
+	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/model"
+	saas_model "ttpos-server-go/app/model/saas"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/repository/saas"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
@@ -20,11 +20,7 @@ import (
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
-)
-
-const (
-	CodeCacheKey = "member:login:code:%s:%d"
-	CodeCacheTTL = 5 * time.Minute
+	"ttpos-server-go/pkg/validator"
 )
 
 // ILoginSrv 会员登录相关服务接口
@@ -32,7 +28,8 @@ const (
 type ILoginSrv interface {
 	GetLoginInfo(ctx context.Context, req member_req.MemberLoginInfoReq) (member_resp.MemberLoginInfoResp, error) // 获取登录信息
 	SendCode(ctx context.Context, req member_req.MemberSendCodeReq) error                                         // 发送验证码
-	Login(ctx context.Context, req member_req.MemberLoginReq) (resp.LoginResp, error)                             // 登录
+	Login(ctx context.Context, req member_req.MemberLoginReq) (member_resp.LoginResp, error)                      // 登录
+	VisitorLogin(ctx context.Context, loginReq req.VisitorLoginReq) (*member_resp.LoginResp, error)               // 游客登录
 }
 
 // loginSrv 会员登录服务实现
@@ -109,15 +106,6 @@ func (s *loginSrv) GetLoginInfo(ctx context.Context, req member_req.MemberLoginI
 		return member_resp.MemberLoginInfoResp{}, errors.New("商家不存在")
 	}
 
-	// 获取商家设置
-	// companySetting := repository.NewCompanySettingRepo(db).Get()
-	// if companySetting.IsOpenMember != 1 {
-	// 	return member_resp.MemberLoginInfoResp{}, errors.New("商家未开通会员功能")
-	// }
-	// if companySetting.IsOpenMarketing != 1 {
-	// 	return member_resp.MemberLoginInfoResp{}, errors.New("二维码已失效")
-	// }
-
 	//
 	ctx.SetCompanyUuid(req.CompanyUuid)
 	languageList, _ := s.settingSrv.GetStoreLanguageList(ctx)
@@ -155,27 +143,20 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 		return errors.New("无法使用该功能，请联系商家")
 	}
 	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
-		return errors.New("商家会员服务已失效")
+		return errors.New("商家会员服务已关闭")
 	}
-	// if companySetting.IsOpenMarketing != 1 {
-	// 	return errors.New("二维码已失效")
-	// }
 	// 验证手机号是否存在
-	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
-	if err != nil || member.IsDelete() {
+	member, err := repository.NewMemberRepo(db).GetMemberByPhoneContainDeleted(req.Phone)
+	if err != nil {
 		return errors.New("该手机号未在该商家进行注册")
 	}
-	// 生成验证码
-	code := fmt.Sprintf("%06d", rand.Intn(1000000)) // 生成6位随机数字验证码，范围：000000-999999
-	// 如果是否debug模式，则打印验证码
-	if config.Server.Mode == "debug" {
-		fmt.Println("code", code)
+	if member.IsDelete() {
+		return errors.New("该会员已被注销，可联系商家处理")
 	}
-	// 设置缓存key
-	cacheKey := fmt.Sprintf(CodeCacheKey, req.Phone, req.CompanyUuid)
-	// 将验证码存储到缓存中，设置5分钟过期
-	if err := s.cache.Set(cacheKey, code, CodeCacheTTL); err != nil {
-		return fmt.Errorf("存储验证码失败: %v", err)
+	// 获取验证码
+	code, err := validator.GetCode(s.cache, req.CompanyUuid, req.Phone)
+	if err != nil {
+		return err
 	}
 	// 发送验证码短信
 	ctx.SetCompanyUuid(req.CompanyUuid)
@@ -192,37 +173,33 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 // Login 登录
 // 参数：ctx 上下文，req 登录请求
 // 返回：登录响应，错误信息
-func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (resp.LoginResp, error) {
+func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (member_resp.LoginResp, error) {
 	if err := req.Validate(); err != nil {
-		return resp.LoginResp{}, err
+		return member_resp.LoginResp{}, err
 	}
 	db := s.dbm.GetDB(req.CompanyUuid)
 	if db == nil {
-		return resp.LoginResp{}, errors.New("商家不存在")
-	}
-
-	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(req.CompanyUuid)
-	if err != nil || company.IsExpired() || company.IsDelete() {
-		return resp.LoginResp{}, errors.New("无法使用该功能，请联系商家")
-	}
-	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
-		return resp.LoginResp{}, errors.New("商家会员服务已失效")
+		return member_resp.LoginResp{}, errors.New("商家不存在")
 	}
 
 	// 验证验证码
-	cacheKey := fmt.Sprintf(CodeCacheKey, req.Phone, req.CompanyUuid)
-	code, ok := s.cache.Get(cacheKey)
-	if !ok || code == "" || code.(string) != req.Code {
-		if config.Server.Mode != "debug" || req.Code != "123456" {
-			return resp.LoginResp{}, errors.New("验证码不正确")
-		}
+	if err := validator.VerifyCode(s.cache, req.CompanyUuid, req.Phone, req.Code); err != nil {
+		return member_resp.LoginResp{}, err
 	}
-	s.cache.Del(cacheKey)
+
+	// 获取商家信息
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(req.CompanyUuid)
+	if err != nil || company.IsExpired() || company.IsDelete() {
+		return member_resp.LoginResp{}, errors.New("无法使用该功能，请联系商家")
+	}
+	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
+		return member_resp.LoginResp{}, errors.New("商家会员服务已关闭")
+	}
 
 	// 验证手机号是否存在
 	member, err := repository.NewMemberRepo(db).GetMemberByPhone(req.Phone)
 	if err != nil || member.IsDelete() {
-		return resp.LoginResp{}, errors.New("该手机号未在该商家进行注册")
+		return member_resp.LoginResp{}, errors.New("该手机号未在该商家进行注册")
 	}
 	// 生成token
 	claims := auth.Claims{
@@ -232,13 +209,103 @@ func (s *loginSrv) Login(ctx context.Context, req member_req.MemberLoginReq) (re
 	}
 	token, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
 	if err != nil {
-		return resp.LoginResp{}, errors.New("生成token失败")
+		return member_resp.LoginResp{}, errors.New("生成token失败")
 	}
 	refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
 	if err != nil {
-		return resp.LoginResp{}, errors.New("生成refresh_token失败")
+		return member_resp.LoginResp{}, errors.New("生成refresh_token失败")
 	}
-	return resp.LoginResp{
+	return member_resp.LoginResp{
+		Token:        token,
+		RefreshToken: refreshToken,
+	}, nil
+}
+
+// VisitorLogin 游客登录
+// 参数：ctx 上下文，loginReq 游客登录请求
+// 返回：游客信息响应，错误信息
+func (s *loginSrv) VisitorLogin(ctx context.Context, loginReq req.VisitorLoginReq) (*member_resp.LoginResp, error) {
+	companyUuid := loginReq.CompanyUuid
+	db := s.dbm.GetDB(companyUuid)
+	if db == nil {
+		return nil, errors.New("商家不存在")
+	}
+
+	ctx.SetDB(db)
+	ctx.SetCompanyUuid(companyUuid)
+	deviceId := ctx.GetDeviceSn()
+
+	// 检查是否已存在相同设备ID的游客
+	member, err := repository.NewMemberRepo(db).GetVisitorByDeviceId(deviceId)
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询游客失败")
+	}
+
+	// 不存在，创建游客
+	if member.ID == 0 {
+
+		// 生成随机昵称
+		nickname := service.NewMemberSrv(s.dbm, s.cache).GenerateRandomNickname()
+
+		// 事务开始
+		tx := db.Begin()
+		defer func() {
+			if r := recover(); r != nil {
+				tx.Rollback()
+			}
+		}()
+
+		// 获取默认会员等级
+		defaultLevelUuid := repository.NewMemberRepo(tx).GetMemberLevelMinPriorityUuid()
+		if defaultLevelUuid == 0 {
+			return nil, errors.New("未找到默认会员等级")
+		}
+
+		// 创建游客会员
+		member = &model.Member{
+			MemberNo:        utils.RandomNumber(5), // 5位数字
+			Nickname:        nickname,
+			Gender:          constant.MemberGenderUnknown,
+			Phone:           "",
+			IsVisitor:       true,
+			DeviceId:        deviceId,
+			Password:        "",
+			MemberLevelUuid: defaultLevelUuid,
+		}
+
+		if err := repository.NewMemberRepo(tx).CreateMember(member); err != nil {
+			return nil, errors.WithMessage(err, "创建游客失败")
+		}
+
+		if err := saas.NewMemberRepo(s.dbm.GetDB(0)).CreateMember(&saas_model.Member{
+			CompanyUuid: companyUuid,
+			Nickname:    nickname,
+			IsVisitor:   true,
+			DeviceId:    deviceId,
+		}); err != nil {
+			return nil, errors.WithMessage(err, "创建游客失败")
+		}
+
+		if err := tx.Commit().Error; err != nil {
+			return nil, errors.WithMessage(err, "创建游客失败")
+		}
+	}
+
+	// 生成token
+	claims := auth.Claims{
+		Source:      constant.SourceMember,
+		CompanyUuid: companyUuid,
+		MemberUuid:  member.Uuid,
+	}
+	token, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
+	if err != nil {
+		return nil, errors.New("生成token失败")
+	}
+	refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+	if err != nil {
+		return nil, errors.New("生成refresh_token失败")
+	}
+	return &member_resp.LoginResp{
 		Token:        token,
 		RefreshToken: refreshToken,
 	}, nil

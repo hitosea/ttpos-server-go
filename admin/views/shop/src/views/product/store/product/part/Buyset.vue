@@ -22,8 +22,8 @@
       prop="model.product_status"
     >
       <el-radio-group v-model="form.model.product_status">
-        <el-radio :label="10">{{ $t('上架') }}</el-radio>
-        <el-radio :label="20">{{ $t('下架') }}</el-radio>
+        <el-radio :value="10">{{ $t('上架') }}</el-radio>
+        <el-radio :value="20">{{ $t('下架') }}</el-radio>
       </el-radio-group>
     </el-form-item>
 
@@ -53,8 +53,8 @@
     <!--数量计算方法-->
     <el-form-item for="no_click" :label="$t('计价方式：')" v-if="form.model.type == 10" :rules="[{ required: true, message: $t('选择计价方式') }]">
       <el-radio-group v-model="form.model.num_type">
-        <el-radio :label="0">{{ $t('整数') }}</el-radio>
-        <el-radio :label="1">{{ $t('小数') }}</el-radio>
+        <el-radio :value="0">{{ $t('整数') }}</el-radio>
+        <el-radio :value="1">{{ $t('小数') }}</el-radio>
       </el-radio-group>
       <div class="gray9 line-height-tips">{{ $t('按整数计价：按”个/份/件“卖，数量只能是整数的商品。') }}<br />{{ $t('按小数计价：按”斤/米/升“卖，数量可带小数的商品。') }}</div>
     </el-form-item>
@@ -74,22 +74,22 @@
       ]"
       prop="model"
     >
-      <el-checkbox v-model="form.model.is_show_cashier" :true-label="1" :false-label="2" :label="$t('收银机')" size="large" />
+      <el-checkbox v-model="form.model.is_show_cashier" :true-value="1" :false-value="2" :label="$t('收银机')" size="large" />
       <el-checkbox
         v-if="is_open_tablet"
         v-model="form.model.is_show_tablet"
-        :true-label="1"
-        :false-label="2"
+        :true-value="1"
+        :false-value="2"
         :label="$t('平板')"
         size="large"
         :disabled="form.model.num_type == 1"
       />
-      <el-checkbox v-if="is_open_kitchen_kds" v-model="form.model.is_show_kitchen" :true-label="1" :false-label="2" :label="$t('厨显')" size="large" />
+      <el-checkbox v-if="is_open_kitchen_kds" v-model="form.model.is_show_kitchen" :true-value="1" :false-value="2" :label="$t('厨显')" size="large" />
       <el-checkbox
         v-if="is_open_assistant"
         v-model="form.model.is_show_assistant"
-        :true-label="1"
-        :false-label="2"
+        :true-value="1"
+        :false-value="2"
         :label="$t('点餐助手')"
         size="large"
         :disabled="form.model.num_type == 1"
@@ -97,8 +97,8 @@
       <el-checkbox
         v-if="is_open_assistant"
         v-model="form.model.is_show_h5"
-        :true-label="1"
-        :false-label="2"
+        :true-value="1"
+        :false-value="2"
         :label="$t('扫码点餐')"
         size="large"
         :disabled="form.model.num_type == 1"
@@ -106,8 +106,8 @@
       <el-checkbox
         v-if="is_open_delivery"
         v-model="form.model.is_show_delivery"
-        :true-label="1"
-        :false-label="2"
+        :true-value="1"
+        :false-value="2"
         :label="$t('外送')"
         size="large"
         :disabled="form.model.num_type == 1"
@@ -171,13 +171,13 @@
       <div class="common-form mt50">{{ $t('会员折扣设置') }}</div>
       <el-form-item for="no_click" :label="$t('是否开启会员折扣：')">
         <el-radio-group v-model="form.model.is_enable_grade">
-          <el-radio :label="1">{{ $t('开启') }}</el-radio>
-          <el-radio :label="0">{{ $t('关闭') }}</el-radio>
+          <el-radio :value="1">{{ $t('开启') }}</el-radio>
+          <el-radio :value="0">{{ $t('关闭') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('会员折扣设置：')" v-if="form.model.is_enable_grade == 1">
         <el-radio-group v-model="form.model.is_alone_grade">
-          <el-radio :label="0">{{ $t('默认折扣') }}</el-radio>
+          <el-radio :value="0">{{ $t('默认折扣') }}</el-radio>
           <!-- <el-radio :label="1">{{ $t('仅需支付') }}</el-radio> -->
         </el-radio-group>
         <div class="gray9" v-if="form.model.is_alone_grade == 0">{{ $t('默认折扣：默认为用户所属会员等级的折扣率') }}</div>
@@ -185,8 +185,8 @@
       </el-form-item>
       <el-form-item for="no_click" :label="$t('折扣佣金类型：')" v-if="form.model.is_alone_grade == 1 && form.model.is_enable_grade == 1">
         <el-radio-group v-model="form.model.alone_grade_type" @change="changeGradeType">
-          <el-radio :label="10">{{ $t('百分比') }}</el-radio>
-          <el-radio :label="20">{{ $t('固定金额') }}</el-radio>
+          <el-radio :value="10">{{ $t('百分比') }}</el-radio>
+          <el-radio :value="20">{{ $t('固定金额') }}</el-radio>
         </el-radio-group>
       </el-form-item>
 
@@ -226,6 +226,16 @@
         </div>
       </el-form-item>
     </template>
+
+    <!--整单折扣-->
+    <div class="common-form mt50">{{ $t('整单折扣') }}</div>
+    <el-form-item for="no_click" :label="$t('开启整单折扣：')" prop="model.open_overall_discount" :rules="[{ required: true, message: $t('请选择是否开启整单折扣') }]">
+      <el-radio-group v-model="form.model.open_overall_discount">
+        <el-radio :value="1">{{ $t('开启') }}</el-radio>
+        <el-radio :value="0">{{ $t('关闭') }}</el-radio>
+      </el-radio-group>
+      <div class="gray9">{{ $t('开启整单折扣时，设置折扣的商品会参与整单打折；关闭后则不再参与') }}</div>
+    </el-form-item>
   </div>
 </template>
 

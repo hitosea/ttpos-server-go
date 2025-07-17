@@ -6,7 +6,7 @@
       -->
   <div class="user">
     <!--搜索表单-->
-    <div class="common-seach-wrap flex">
+    <div class="common-search-wrap flex">
       <el-form size="small" :inline="true" :model="formInline" class="demo-form-inline">
         <el-form-item :label="$t('优惠券名称')">
           <el-input v-model="formInline.name" :placeholder="$t('优惠券名称')" @input="onSearch"></el-input>

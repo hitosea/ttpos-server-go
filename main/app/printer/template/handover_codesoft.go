@@ -3,13 +3,14 @@ package template
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/shopspring/decimal"
 )
 
 // handoverCodesoftTemplate 图片订单打印模板
@@ -93,7 +94,7 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 		printer.SetPrintModes(true, false, false)
 		printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), t.base.Translate("订单数"), t.base.Translate("金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 16))
 		printer.SetPrintModes(false, false, false)
-		totalPayPrice := float64(0)
+		totalPayPrice := decimal.NewFromFloat(0)
 		for _, income := range businessData.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
 				printer.AppendText(t.base.PrintText(income.Name, fmt.Sprintf("%d", income.OrderNum), t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
@@ -102,11 +103,11 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 				} else {
 					printer.LineFeed(1)
 				}
-				totalPayPrice += income.Amount
+				totalPayPrice = totalPayPrice.Add(decimal.NewFromFloat(income.Amount).Round(2))
 			}
 		}
-		if totalPayPrice > 0 {
-			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice), width, 26, 10, 18))
+		if totalPayPrice.GreaterThan(decimal.NewFromFloat(0)) {
+			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice.Round(2).InexactFloat64()), width, 26, 10, 18))
 			if t.base.Lang == "th" {
 				printer.LineFeed(2)
 			} else {
@@ -132,6 +133,8 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 			printer.LineFeed(1)
 		}
 		printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.TotalFreeOrderPrice), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("赠菜金额"), "", t.base.GetPriceAndUnit(businessData.TotalGiveProductPrice), width))
 		printer.LineFeed(2)
 		// 退款
 		printer.AppendText("------------------------------------------------")
@@ -208,7 +211,7 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 		printer.SetLineSpacing(100)
 		printer.LineFeed()
 		for _, category := range businessData.CategoryList {
-			printer.AppendText(t.base.PrintText(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
+			printer.AppendText(t.base.PrintText(category.Name, t.base.FloatToString(category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
 			printer.LineFeed()
 		}
 		if t.base.Lang == "th" {
@@ -266,7 +269,7 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 		printer.AppendText(t.base.PrintText(t.base.Translate("税费"), "", t.base.GetPriceAndUnit(businessData.TotalTaxMoney), width))
 		printer.LineFeed(1)
 		printer.SetAlignment(pkg.AlignLeft)
-		printer.AppendText(t.base.PrintText(t.base.Translate("商品数量"), "", strconv.Itoa(businessData.TotalProductNum), width))
+		printer.AppendText(t.base.PrintText(t.base.Translate("商品数量"), "", utils.FormatFloat(businessData.TotalProductNum), width))
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("优惠折扣"), "", t.base.GetPriceAndUnit(businessData.TotalDiscountMoney), width))
 		printer.LineFeed(1)
@@ -277,6 +280,8 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 		printer.AppendText(t.base.PrintText(t.base.Translate("退款金额"), "", t.base.GetPriceAndUnit(businessData.TotalRefundMoney), width))
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.TotalFreeOrderPrice), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("赠菜金额"), "", t.base.GetPriceAndUnit(businessData.TotalGiveProductPrice), width))
 		printer.LineFeed(1)
 		printer.SetPrintModes(true, true, false)
 		printer.SetCharacterSize(2, 1)
@@ -367,7 +372,7 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 		printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), t.base.Translate("订单数"), t.base.Translate("金额"), width, 24-utils.IfInt(isTrThEn, 4, 0), 20, 16))
 		printer.SetPrintModes(false, false, false)
 		printer.LineFeed(1)
-		var totalPayPrice float64 = 0
+		totalPayPrice := decimal.NewFromFloat(0)
 		for _, income := range businessData.PaymentMethodIncomes {
 			if income.Code != constant.PaymentMethodCodeFreePay {
 				printer.AppendText(t.base.PrintText(income.Name, fmt.Sprintf("%d", income.OrderNum), t.base.GetPriceAndUnit(income.Amount), width, 26, 10, 18))
@@ -376,11 +381,11 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 				} else {
 					printer.LineFeed(1)
 				}
-				totalPayPrice += income.Amount
+				totalPayPrice = totalPayPrice.Add(decimal.NewFromFloat(income.Amount).Round(2))
 			}
 		}
-		if totalPayPrice > 0 {
-			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice), width, 26, 10, 18))
+		if totalPayPrice.GreaterThan(decimal.NewFromFloat(0)) {
+			printer.AppendText(t.base.PrintText(t.base.Translate("总金额"), "", t.base.GetPriceAndUnit(totalPayPrice.Round(2).InexactFloat64()), width, 26, 10, 18))
 			if t.base.Lang == "th" {
 				printer.LineFeed(2)
 			} else {
@@ -411,7 +416,7 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 		printer.SetLineSpacing(100)
 		printer.LineFeed()
 		for _, category := range businessData.CategoryList {
-			printer.AppendText(t.base.PrintText(category.Name, fmt.Sprintf("%d", category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
+			printer.AppendText(t.base.PrintText(category.Name, t.base.FloatToString(category.SalesNum), t.base.GetPriceAndUnit(category.Prices), width, leftWidth, centerWidth, rightWidth))
 			printer.LineFeed()
 		}
 		if t.base.Lang == "th" {

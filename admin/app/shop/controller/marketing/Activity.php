@@ -204,7 +204,7 @@ class Activity extends Controller
      * @Apidoc\Method ("GET")
      * @Apidoc\Url ("/index.php/shop/marketing.activity/record")
      * @Apidoc\Query("activity_uuid", type="string", require=false, desc="活动uuid")
-     * @Apidoc\Query("keyword", type="string", require=false, desc="暱稱/手機號/ID")
+     * @Apidoc\Query("keyword", type="string", require=false, desc="暱稱/手機號/ID/会员卡号")
      * @Apidoc\Query(ref="pageParam")
      * @Apidoc\Returned("list", type="array", desc="奖励记录列表", children={
      *      @Apidoc\Returned("uuid", type="string", desc="记录uuid"),

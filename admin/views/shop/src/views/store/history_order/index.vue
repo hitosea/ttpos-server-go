@@ -6,14 +6,14 @@
   -->
   <div class="user">
     <!--搜索表单-->
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item label="">
           <el-radio-group v-model="searchForm.time_type" class="radio-search" @change="timeTypeChange">
-            <el-radio-button :label="1">{{ $t('今天') }}</el-radio-button>
-            <el-radio-button :label="2">{{ $t('昨天') }}</el-radio-button>
-            <el-radio-button :label="3">{{ $t('本周') }}</el-radio-button>
-            <el-radio-button :label="0">{{ $t('全部') }}</el-radio-button>
+            <el-radio-button :value="1">{{ $t('今天') }}</el-radio-button>
+            <el-radio-button :value="2">{{ $t('昨天') }}</el-radio-button>
+            <el-radio-button :value="3">{{ $t('本周') }}</el-radio-button>
+            <el-radio-button :value="0">{{ $t('全部') }}</el-radio-button>
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="$t('订单类型')">

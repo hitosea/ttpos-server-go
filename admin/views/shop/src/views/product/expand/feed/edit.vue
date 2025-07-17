@@ -104,6 +104,7 @@
       };
     },
     props: ['open_edit', 'editform'],
+    emits: ['closeDialog'],
     created() {
       this.dialogVisible = this.open_edit;
 

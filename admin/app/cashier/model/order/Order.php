@@ -204,12 +204,11 @@ class Order extends OrderModel
             } else if ($data['type'] == 3) { // 抹零
                 // 重置改价
                 $detail->save([
-                    //                    'discount_ratio' => 0,  // TODO 不重置折扣
                     'discount_money' => 0,
                     'discount_change_price' => 0,   // 重置改价
                     'small_auto' => 0,
                 ]);
-                $o = (new OrderModel())->reloadPrice($detail['order_id']);  // TODO 这里现在会返回主单
+                $o = (new OrderModel())->reloadPrice($detail['order_id']);
                 if ($data['discountType'] == 1) { //抹分
                     $discount_money = round($o['order_price'] - intval(($o['pay_price'] - $o['pay_fee_money']) * 10) / 10, 2);
                 } elseif ($data['discountType'] == 2) { //抹角
@@ -274,7 +273,6 @@ class Order extends OrderModel
                         'discount_money' => $discount_money < 0 ? 0 : $discount_money,
                         'pay_price' => $pay_price,
                         'discount_ratio' => $discount_ratio,
-                        //                        'user_discount_money' => 0,  // TODO  改价不清除会员折扣了
                         'points_bonus' => $points_bonus,
                         'is_change_price' => 1,
                         'discount_change_price' => $data['money'] == 0 ? -1 : $data['money'],

@@ -240,7 +240,7 @@
                 </el-radio-group>
               </template>
             </el-table-column>
-            <el-table-column prop="product_ratin_tax_type" width="120" :label="`*${$t('堂食税类')}`">
+            <el-table-column prop="product_ratin_tax_type" width="180" :label="`*${$t('堂食税类')}`">
               <template #default="scope">
                 <el-form-item
                   :prop="`${scope.$index}.ratin_tax_id`"
@@ -259,7 +259,7 @@
                 </el-form-item>
               </template>
             </el-table-column>
-            <el-table-column prop="product_takeout_tax_type" width="120" :label="`*${$t('外带税类')}`">
+            <el-table-column prop="product_takeout_tax_type" width="180" :label="`*${$t('外带税类')}`">
               <template #default="scope">
                 <el-form-item
                   :prop="`${scope.$index}.takeout_tax_id`"
@@ -290,11 +290,11 @@
               <template #default="scope">
                 <div>
                   <el-checkbox v-model="scope.row.is_show_cashier" :true-label="1" :false-label="2" :label="$t('收银机')" />
-                  <el-checkbox v-model="scope.row.is_show_tablet" :true-label="1" :false-label="2" :label="$t('平板')" :disabled="scope.row.num_type === 1"/>
+                  <el-checkbox v-model="scope.row.is_show_tablet" :true-label="1" :false-label="2" :label="$t('平板')" :disabled="scope.row.num_type === 1" />
                   <el-checkbox v-model="scope.row.is_show_kitchen" :true-label="1" :false-label="2" :label="$t('厨显')" />
-                  <el-checkbox v-model="scope.row.is_show_assistant" :true-label="1" :false-label="2" :label="$t('点餐助手')" :disabled="scope.row.num_type === 1"/>
-                  <el-checkbox v-model="scope.row.is_show_h5" :true-label="1" :false-label="2" :label="$t('扫码点餐')" :disabled="scope.row.num_type === 1"/>
-                  <el-checkbox v-if="showDelivery" v-model="scope.row.is_show_delivery" :true-label="1" :false-label="2" :label="$t('外送')" :disabled="scope.row.num_type === 1"/>
+                  <el-checkbox v-model="scope.row.is_show_assistant" :true-label="1" :false-label="2" :label="$t('点餐助手')" :disabled="scope.row.num_type === 1" />
+                  <el-checkbox v-model="scope.row.is_show_h5" :true-label="1" :false-label="2" :label="$t('扫码点餐')" :disabled="scope.row.num_type === 1" />
+                  <el-checkbox v-if="showDelivery" v-model="scope.row.is_show_delivery" :true-label="1" :false-label="2" :label="$t('外送')" :disabled="scope.row.num_type === 1" />
                 </div>
               </template>
             </el-table-column>
@@ -399,18 +399,18 @@
       tableData: {
         handler(newVal) {
           this.totalDataNumber = newVal.length || 0;
-          newVal.forEach(row => {
+          newVal.forEach((row) => {
             if (row.num_type === '2') {
-              row.is_show_tablet = 2
-              row.is_show_assistant = 2
-              row.is_show_h5 = 2
-              row.is_show_delivery = 2
+              row.is_show_tablet = 2;
+              row.is_show_assistant = 2;
+              row.is_show_h5 = 2;
+              row.is_show_delivery = 2;
             }
-          })
+          });
         },
         deep: true,
         immediate: true,
-      }
+      },
     },
     computed: {},
 
@@ -572,7 +572,7 @@
                 product_status: item[9] || '0', // 商品状态
                 product_ratin_tax_type: item[10] || '', // 堂食税类
                 product_takeout_tax_type: item[11] || '', // 外带税类
-                num_type: item[12] || '1', // 计价方式 
+                num_type: item[12] || '1', // 计价方式
                 shows: item[13] || '', // 显示
                 product_sort: item[14] || '0', // 商品排序
                 limit_num: item[15] || '', // 限购数量

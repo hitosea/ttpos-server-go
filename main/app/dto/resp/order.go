@@ -89,6 +89,7 @@ type OrderProduct struct {
 	Status              uint               `json:"status"`                // 状态, 0-正常 1-退菜
 	Remark              string             `json:"remark"`                // 备注
 	IsGift              bool               `json:"is_gift"`               // 是否赠品, false-否 true-是
+	IsWrap              bool               `json:"is_wrap"`               // 是否打包, false-否 true-是
 	IsBuffet            bool               `json:"is_buffet"`             // 是否自助餐, false-否 true-是
 	IsBuffetCustomer    bool               `json:"is_buffet_customer"`    // 是否自助餐顾客, false-否 true-是
 	IsDelay             bool               `json:"is_delay"`              // 是否加钟, false-否 true-是
@@ -121,7 +122,7 @@ type OrderInfo struct {
 // OrderInfos 订单信息响应
 type OrderInfos struct {
 	SaleBillUuid  uint64              `json:"sale_bill_uuid"` // 销售账单UUID
-	BillType      uint                `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单
+	BillType      uint                `json:"bill_type"`      // 订单类型	0:桌台订单 1:点餐订单 2:外送订单
 	DiningMethod  uint                `json:"dining_method"`  // 用餐方式,0-堂食(店内就餐) 1-打包
 	IsSplit       bool                `json:"is_split"`       // 是否拆单	false:否 true:是
 	IsBuffet      bool                `json:"is_buffet"`      // 是否自助餐	false:否 true:是
@@ -201,6 +202,7 @@ type OrderReturnProduct struct {
 	LocaleName           dto.LocaleResponse `json:"locale_name"`             // 产品名称
 	LocaleAttributeName  dto.LocaleResponse `json:"locale_attribute_name"`   // 属性名称
 	Num                  float64            `json:"num"`                     // 数量。可退货数量=订单商品数量-已退货数量
+	NumType              uint               `json:"num_type"`                // 数量类型 0-整数 1-小数
 	Price                float64            `json:"price"`                   // 最终单价(单商品，会员、会员卡和优惠折扣后，折后价)。
 	CanReturnAmount      float64            `json:"can_return_amount"`       // 可退款金额. 可退款金额=订单商品数量*最终单价
 	CurrencyUnit         string             `json:"currency_unit"`           // 货币单位

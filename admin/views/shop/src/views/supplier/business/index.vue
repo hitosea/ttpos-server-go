@@ -2,7 +2,7 @@
   <!--
       	描述：商品-店内商品
       -->
-  <div class="common-seach-wrap">
+  <div class="common-search-wrap">
     <manage v-if="activeName == 'manage'"></manage>
     <must v-if="activeName == 'must'"></must>
   </div>
@@ -112,7 +112,7 @@
     background-size: 100% 100%;
     color: #fff;
   }
-  .common-seach-wrap {
+  .common-search-wrap {
     height: calc(100% - 54px);
     overflow: hidden;
   }

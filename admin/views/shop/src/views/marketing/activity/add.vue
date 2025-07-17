@@ -53,8 +53,9 @@
   const ImagePreviewRef = ref();
   // 表单数据
   const form = reactive({
-    name: '',
-    description: '',
+    type: null,
+    name: {},
+    description: {},
     start_time: '',
     end_time: '',
     reward_condition_amount: null,
@@ -62,8 +63,10 @@
     reward_limit: null,
     reward_condition_num: 0,
     reward_type: 0,
+    reward_value: null,
     prize_list: [],
     image_base64: '',
+    is_send_sms: 1,
   });
 
   const qrcode = ref('');

@@ -1,7 +1,7 @@
 <template>
   <div class="product">
     <!--搜索表单-->
-    <div class="common-seach-wrap">
+    <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item :label="$t('分类名称')">
           <el-input size="small" v-model="searchForm.name" :placeholder="$t('请输入分类名称')" @input="onSearch"></el-input>
@@ -249,7 +249,7 @@
 </script>
 
 <style scoped>
-  .common-seach-wrap {
+  .common-search-wrap {
     display: flex;
     justify-content: space-between;
     margin-bottom: 0;

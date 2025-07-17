@@ -29,7 +29,7 @@
               </el-input>
             </div>
           </el-form-item>
-          <!-- TODO 验证码 -->
+          <!--  验证码 -->
           <el-form-item prop="verifycode" style="line-height: 0px">
             <div class="flex-1 verifycode">
               <div class="left-img-input" style="max-width: 264px; float: left">
@@ -326,12 +326,40 @@
                   this.dialogVisible = true;
                   return;
                 }
-                await afterLogin(data);
-                await _this.getBase();
-                // useLockscreen.setLock(false);
+
+                try {
+                  // 确保登录状态更新完成
+                  await afterLogin(data);
+                  console.log('afterLogin 完成');
+
+                  await _this.getBase();
+                  console.log('getBase 完成');
+
+                  // 在所有异步操作完成后再验证状态
+                  this.$nextTick(() => {
+                    const userStore = useUserStore();
+                    const currentUser = userStore.userInfo;
+
+                    if (currentUser && currentUser.token) {
+                      console.log('登录状态验证成功，用户已正确登录');
+                    } else {
+                      console.warn('登录流程完成但用户状态不完整，可能存在状态同步问题');
+                      // 不阻止跳转，因为getBase已经成功执行
+                    }
+                  });
+                } catch (error) {
+                  console.error('登录后处理失败:', error);
+                  this.$ElMessage({
+                    message: this.$t('登录处理失败，请重试'),
+                    type: 'error',
+                  });
+                  _this.logining = false;
+                  this.getCode();
+                }
               })
               .catch((error) => {
                 //接口调用方法统一处理
+                console.error('登录接口调用失败:', error);
                 this.getCode();
                 _this.logining = false;
               });
@@ -416,14 +444,26 @@
             setSessionStorage('authlist', authlist);
             auth = authlist;
             //获取完再跳转
-            await this.$router.push({
-              path: '/home',
-            });
-            document.removeEventListener('keyup', this.onEnter);
-            document.removeEventListener('focus', this.getCode('return'));
-            this.logining = false;
-            // 由于路由存在缓存，导致数据更新不及时，所以需要刷新页面
-            location.reload();
+            try {
+              // 清理事件监听器
+              document.removeEventListener('keyup', this.onEnter);
+              document.removeEventListener('focus', this.getCode('return'));
+
+              console.log('准备跳转到首页，当前路径:', this.$route.path);
+
+              // 尝试路由跳转
+              await this.$router.push({ path: '/home' });
+
+              this.logining = false;
+              // 由于路由存在缓存，导致数据更新不及时，所以需要刷新页面
+              location.reload();
+            } catch (error) {
+              console.error('跳转过程出错:', error);
+              // 出错时直接使用强制跳转
+              window.location.href = '/home';
+            } finally {
+              this.logining = false;
+            }
           })
           .catch((error) => {
             this.logining = false;

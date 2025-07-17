@@ -162,6 +162,7 @@ type StaffShiftSnapshotOrder struct {
 	ReceivablePrice         float64                        `json:"receivable_price"`
 	NotTaxTotalProductPrice float64                        `json:"not_tax_total_product_price"`
 	TotalProductPrice       float64                        `json:"total_product_price"`
+	TotalGiveProductPrice   float64                        `json:"total_give_product_price"`
 	ServiceMoney            float64                        `json:"service_money"`
 	DiscountMoney           float64                        `json:"discount_money"`
 	ConsumptionTaxMoney     float64                        `json:"consumption_tax_money"`
@@ -169,12 +170,12 @@ type StaffShiftSnapshotOrder struct {
 	ReceivedBalancePrice    float64                        `json:"received_balance_price"`
 	ReceivedPrice           float64                        `json:"received_price"`
 	SalesPrice              float64                        `json:"sales_price"`
-	ProductNum              int                            `json:"product_num"`
+	ProductNum              float64                        `json:"product_num"`
 	UserDiscountMoney       float64                        `json:"user_discount_money"`
 	RefundMoney             float64                        `json:"refund_money"`
 	RefundConsumptionTax    float64                        `json:"refund_consumption_tax"`
 	FreeProductPrice        float64                        `json:"free_product_price"`
-	FreeProductNum          uint                           `json:"free_product_num"`
+	FreeProductNum          float64                        `json:"free_product_num"`
 	FreeOrderPrice          float64                        `json:"free_order_price"`
 	FreeOrderNum            uint                           `json:"free_order_num"`
 	TotalOrderNum           int                            `json:"total_order_num"`

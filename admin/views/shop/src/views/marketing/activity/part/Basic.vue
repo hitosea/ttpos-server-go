@@ -2,6 +2,12 @@
   <div class="basic-setting-content pl16 pr16">
     <!--基本信息-->
     <div class="common-form">{{ $t('基本信息') }}</div>
+    <el-form-item for="no_click" :label="$t('活动类型')" prop="type" :rules="[{ required: true, message: $t('请选择活动类型') }]">
+      <el-select class="max-w460" v-model="form.type" :placeholder="$t('请选择活动类型')">
+        <el-option :key="0" :label="$t('邀请消费有礼')" :value="0"></el-option>
+      </el-select>
+    </el-form-item>
+
     <el-form-item for="no_click" :rules="[{ required: true, message: $t('请输入活动名称') }]">
       <UniqueNameForm
         ref="activityNameFormRef"
@@ -81,10 +87,15 @@
         @change="handleChangeEnd"
       />
     </el-form-item>
+    <el-form-item for="no_click" :label="$t('活动奖品')" :rules="[{ required: true, message: $t('请选择活动奖品') }]">
+      <el-radio-group v-model="form.reward_type" :disabled="status == 1">
+        <el-radio :value="0">{{ $t('优惠券') }}</el-radio>
+        <el-radio :value="1">{{ $t('积分') }}</el-radio>
+      </el-radio-group>
+    </el-form-item>
     <el-form-item
-      class="flex-box"
+      v-if="form.reward_type == 0"
       for="no_click"
-      :label="$t('活动奖品')"
       prop="prize_list"
       :rules="[
         {
@@ -96,17 +107,24 @@
         },
       ]"
     >
-      <el-radio-group v-model="rewardType" :disabled="status == 1">
-        <el-radio :label="0">{{ $t('优惠券（当前仅支持选择优惠券）') }}</el-radio>
-      </el-radio-group>
       <div>
-        <span class="select-coupon-btn" @click="selectCoupon">{{ $t('选择优惠券') }}</span>
+        <el-button type="primary" size="small" @click="selectCoupon">{{ $t('选择优惠券') }}</el-button>
         <template v-if="couponList.length > 0">
           <el-tag v-for="tag in couponList" disable-transitions size="large" :key="tag.uuid" closable @close="handleClose(tag)">
             {{ `${tag.name}` }}
           </el-tag>
         </template>
       </div>
+    </el-form-item>
+    <el-form-item v-if="form.reward_type == 1" for="no_click" :label="$t('每次赠送积分')">
+      <numInput :min="1" :max="9999999" :precision="0" v-model="form.reward_value" :placeholder="$t('请输入赠送积分数量')"></numInput>
+      <div class="gray9">{{ $t('注：满足设置条件规则后，每次所赠送的积分数量') }}</div>
+    </el-form-item>
+    <el-form-item for="no_click" :label="$t('发送短信通知')" prop="is_send_sms" :rules="[{ required: true, message: $t('请选择是否发送短信通知') }]">
+      <el-radio-group v-model="form.is_send_sms">
+        <el-radio :value="1">{{ $t('是') }}</el-radio>
+        <el-radio :value="0">{{ $t('否') }}</el-radio>
+      </el-radio-group>
     </el-form-item>
   </div>
   <SelectCouponDialog :open="openSelectCoupon" v-if="openSelectCoupon" @close="closeSelectCoupon" />
@@ -122,7 +140,6 @@
 
   // 响应式数据
   const activityTime = ref(null);
-  const rewardType = ref(0);
   const openSelectCoupon = ref(false);
   const props = defineProps({
     dateTime: {
@@ -265,8 +282,7 @@
     const now = new Date();
     const currentDate = new Date(activityTime.value[0]);
     // 如果是当前小时和分钟，才禁用当前秒之前的选项
-    if (currentDate.getHours() === now.getHours() && 
-        currentDate.getMinutes() === now.getMinutes()) {
+    if (currentDate.getHours() === now.getHours() && currentDate.getMinutes() === now.getMinutes()) {
       const seconds = [];
       for (let i = 0; i < now.getSeconds(); i++) {
         seconds.push(i);
@@ -426,13 +442,6 @@
 
   .active.card {
     border: 2px solid #4aa3f7;
-  }
-  :deep(.el-radio.el-radio--small) {
-    height: 30px;
-    width: 100%;
-    .el-radio__input.is-checked + .el-radio__label {
-      color: #100a05;
-    }
   }
 
   .flex-box {

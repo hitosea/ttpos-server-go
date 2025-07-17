@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
+	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/app/printer/pkg/images"
@@ -27,6 +28,7 @@ func NewInvoiceImgTemplate(
 
 // ImgPrint 图片打印
 func (t *invoiceImgTemplate) GetPrintContent(
+	settingPrinterInfo respSetting.PrinterInfo,
 	temp int,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
@@ -36,6 +38,7 @@ func (t *invoiceImgTemplate) GetPrintContent(
 	 */
 	if temp == 2 {
 		return NewStatementOrderImgTemplate(t.base).GetPrintContent(
+			settingPrinterInfo,
 			constant.PrinterTemplateInvoice,
 			3,
 			saleBill,

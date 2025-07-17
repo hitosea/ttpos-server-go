@@ -32,7 +32,7 @@ class BalanceLog extends BalanceLogModel
         if ($query['keyword'] !== '') {
             $keyword = trim($query['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
-                $query->like('user.id|user.phone|user.nickname', $keyword);
+                $query->like('user.id|user.phone|user.nickname|user.member_card_no', $keyword);
             });
         }
         // 搜索时间段
@@ -48,13 +48,18 @@ class BalanceLog extends BalanceLogModel
             $model = $model->where('log.user_id', '=', (int)$data['user_id']);
         }
         // 获取列表数据
-        $list = $model->with(['user'])
+        $list = $model->with(['user' => function ($query) {
+                $query->withTrashed();
+            }])
             ->join('member user', 'user.uuid = log.member_uuid')
             ->order(['log.create_time' => 'desc'])
             ->paginate($query);
         foreach ($list as &$item) {
+            // 总变动余额
             $item['money'] = helper::number2($item['money']);
-            //
+            // 变动主账户余额
+            $item['main_money'] = helper::bcsub($item['money'], $item['gift_money']);
+            // 变动场景描述
             if ($item['scene']['value'] == BalanceLogSceneEnum::DEDUCT) {
                 $item['describe'] = $item['describe'] . '：' . ($item['remark'] ?: '-');
             }

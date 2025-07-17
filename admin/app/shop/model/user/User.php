@@ -56,7 +56,7 @@ class User extends UserModel
         if ($data['keyword'] !== '') {
             $keyword = trim($data['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
-                $query->like('id|phone|nickname', $keyword);
+                $query->like('id|phone|nickname|member_card_no', $keyword);
             });
         }
         // 检索：会员等级
@@ -79,6 +79,7 @@ class User extends UserModel
         $paginate = $model->with(['grade', 'memberCard' => ['card'], 'memberBalanceLog', 'referrer'])
             ->field('*, nickname as nickName')
             ->order(['create_time' => 'desc'])
+            ->where('is_visitor', 0)
             ->hidden(['open_id', 'union_id', 'password'])
             ->paginate($data);
 
@@ -253,38 +254,6 @@ class User extends UserModel
         }
 
         return true;
-
-        return $this->transaction(function () use ($nickName, $mobile, $password, $gender, $gradeId, $birthday, $card, $cardNumber, $referrerUuid, $activityUuid) {
-            $userUuid = createUuid();
-            $user = $this->save([
-                'uuid' => $userUuid,
-                'nickname' => $nickName,
-                'phone' => $mobile,
-                'password' => $password ? md5($password) : '',
-                'gender' => $gender, //性别
-                'member_level_uuid' => $gradeId, //默认等级
-                'birthday' => $birthday ? strtotime($birthday) : 0, //生日
-                'referrer_uuid' => $referrerUuid, //推荐人
-                'activity_uuid' => $activityUuid, //活动
-            ]);
-            if (!$user) {
-                return false;
-            }
-            if ($card) {
-                $model = new CardModel();
-                $result = $model->put([
-                    'card_id' => $card['uuid'],
-                    'user_ids' => [
-                        [ 'uuid' => $userUuid, 'card_number' => $cardNumber ]
-                    ],
-                ]);
-                if (!$result) {
-                    $this->error = $model->getError();
-                    return false;
-                }
-            }
-            return true;
-        });
     }
 
     /**
@@ -564,6 +533,7 @@ class User extends UserModel
             // 更新账户积分
             $this->where('uuid', '=', $this['uuid'])->update([
                 'point' => $diffMoney,
+                'accumulated_get_point' => $this['accumulated_get_point'] + $points,
             ]);
             // 新增积分变动记录
             PointsLogModel::add([

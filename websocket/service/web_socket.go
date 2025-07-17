@@ -181,7 +181,7 @@ func handleConnectionSuccess(ws *websocket.Conn, r *http.Request) *ConnectionInf
 		ws.WriteMessage(websocket.TextMessage, getMsgData(PushMessage{
 			Event: "connect",
 			State: constant.CodeFail,
-			Msg:   "No binding",
+			Msg:   "No binding device-id: " + claims.DeviceId,
 		}))
 		ws.Close()
 		return nil

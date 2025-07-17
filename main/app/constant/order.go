@@ -8,6 +8,7 @@ const (
 	OrderSourceInstant  = "instant"  // 点餐
 	OrderSourceDesk     = "desk"     // 桌台
 	OrderSourceRecharge = "recharge" // 充值
+	OrderSourceMember   = "member"   // 会员端
 )
 
 const (
@@ -20,8 +21,9 @@ const (
 )
 
 const (
-	SaleBillTypeInstant = 1 // 点餐
 	SaleBillTypeDesk    = 0 // 桌台
+	SaleBillTypeInstant = 1 // 点餐
+	SaleBillTypeTakeout = 2 // 外送，会员端订单
 )
 
 const (
@@ -115,12 +117,14 @@ var OrderSourceMapToOrderNoType = map[string]string{
 	OrderSourceInstant:  "1", // 点餐
 	OrderSourceDesk:     "2", // 桌台
 	OrderSourceRecharge: "3", // 充值
+	OrderSourceMember:   "4", // 会员端
 }
 
 // OrderSourceMapToBillType 订单来源映射到销售账单类型
 var OrderSourceMapToBillType = map[string]uint{
 	OrderSourceInstant: SaleBillTypeInstant, // 点餐
 	OrderSourceDesk:    SaleBillTypeDesk,    // 桌台
+	OrderSourceMember:  SaleBillTypeTakeout, // 会员端
 }
 
 // 订单操作类型
@@ -135,6 +139,10 @@ const (
 	OrderStayOrder           = "STAY_ORDER"            // 挂单
 	OrderPickOrder           = "PICK_ORDER"            // 取单
 	OrderProductFree         = "PRODUCT_FREE"          // 赠菜
+	OrderProductWrap         = "PRODUCT_WRAP"          // 打包
+	OrderProductUnwrap       = "PRODUCT_UNWRAP"        // 取消打包
+	OrderWrapSaleBill        = "WRAP_SALE_BILL"        // 整单打包
+	OrderUnwrapSaleBill      = "UNWRAP_SALE_BILL"      // 取消整单打包
 	OrderCancelProductFree   = "CANCEL_PRODUCT_FREE"   // 取消赠菜
 	OrderProductMove         = "PRODUCT_MOVE"          // 转菜
 	OrderDiscount            = "DISCOUNT"              // 优惠折扣

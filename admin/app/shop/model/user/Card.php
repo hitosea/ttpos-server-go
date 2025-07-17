@@ -106,7 +106,7 @@ class Card extends CardModel
                 }
     
                 $detail = self::detail($data['card_id']);
-                $user = (new User)::detail($userId);
+                $user = (new User)::where('uuid', $userId)->find();
                 if (!$isOwnCard) {
                     //添加会员卡
                     $record = [

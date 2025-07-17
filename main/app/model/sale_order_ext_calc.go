@@ -603,6 +603,9 @@ func (model *SaleOrder) calcZeroFee(amount float64) float64 {
 func (model *SaleOrder) CalcGiftAmount(products []*SaleOrderProduct) float64 {
 	amount := float64(0)
 	for _, saleOrderProduct := range products {
+		if saleOrderProduct.IsCancelProduct() {
+			continue
+		}
 		if saleOrderProduct.IsGiftProduct() {
 			// 商品的最终金额
 			giftFee := saleOrderProduct.GetSalePrice()

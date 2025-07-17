@@ -37,6 +37,7 @@ type ProductAddReq struct {
 	SaleOrderUuid uint64          `json:"sale_order_uuid"` // 销售订单ID。
 	Products      []ProductParams `json:"products"`        // 商品信息列表·
 	IsH5Product   bool            `json:"is_h5_product"`   // 是否是H5商品
+	IsMemberAdd   bool            `json:"is_member_add"`   // 是否是会员端加购
 }
 
 type GetProductPackageDetailReq struct {
@@ -105,6 +106,20 @@ type OrderCartProductGivingReq struct {
 	SaleOrderProductUuid uint64   `json:"sale_order_product_uuid"` // 销售订单商品ID
 	Reason               string   `json:"reason"`                  // 赠菜原因
 	GiftIds              []uint64 `json:"gift_ids"`                // 赠菜标签ids
+}
+
+// OrderCartProductWrapReq 打包购物车商品请求参数
+type OrderCartProductWrapReq struct {
+	SaleBillUuid         uint64 `json:"sale_bill_uuid"`          // 销售账单ID
+	SaleOrderUuid        uint64 `json:"sale_order_uuid"`         // 销售订单ID
+	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
+}
+
+// OrderCartProductUnwrapReq 取消打包购物车商品请求参数
+type OrderCartProductUnwrapReq struct {
+	SaleBillUuid         uint64 `json:"sale_bill_uuid"`          // 销售账单ID
+	SaleOrderUuid        uint64 `json:"sale_order_uuid"`         // 销售订单ID
+	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
 }
 
 // OrderCartProductChangeDeskReq 转菜购物车商品请求参数

@@ -1,6 +1,9 @@
 package req
 
 import (
+	"fmt"
+	"sort"
+	"strings"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
@@ -56,6 +59,47 @@ type DeskOrderCreateReq struct {
 	BuffetUuids         []uint64                 `json:"buffet_uuids"`          // 自助餐uuid列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1, 最大为2
 	BuffetCustomerTypes []DeskBuffetCustomerType `json:"buffet_customer_types"` // 自助餐顾客类型列表: 非自助餐时, 传空数组; 自助餐时, 元素数量最小为1
 	Remark              string                   `json:"remark"`                // 备注: 最小空字符串,最大50字符
+}
+
+type GetMemberOrderCheckoutInfoReq struct {
+	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+}
+
+// 创建会员端订单请求参数
+type CreateMemberOrderReq struct {
+	MemberSaleOrderUuid uint64               `json:"member_sale_order_uuid"` // 会员端销售订单UUID. 值为0时，表示创建会员端订单。值不为0时，表示更新会员端订单的商品列表。
+	Products            []OrderProductAddReq `json:"products"`               // 商品列表
+}
+
+type OrderProductAddReq struct {
+	FlavorUuid        uint64   `json:"flavor_uuid"`    // 某个规格商品ID
+	SauceUuidList     []uint64 `json:"sauce_uuid"`     // 小料ID列表
+	AttributeUuidList []uint64 `json:"attribute_uuid"` // 属性ID列表
+	Num               float64  `json:"num"`            // 商品数量。
+	Price             float64  `json:"price"`          // 商品价格单价。
+}
+
+// 商品key。格式：规格id-属性id,属性id-加料id,加料id
+func (req *OrderProductAddReq) ProductKey() string {
+	// 先排序
+	sort.Slice(req.AttributeUuidList, func(i, j int) bool {
+		return req.AttributeUuidList[i] < req.AttributeUuidList[j]
+	})
+	sort.Slice(req.SauceUuidList, func(i, j int) bool {
+		return req.SauceUuidList[i] < req.SauceUuidList[j]
+	})
+
+	// 转为字符串
+	AttributeUuidListStr := make([]string, 0)
+	for _, attributeUuid := range req.AttributeUuidList {
+		AttributeUuidListStr = append(AttributeUuidListStr, fmt.Sprintf("%d", attributeUuid))
+	}
+	SauceUuidListStr := make([]string, 0)
+	for _, sauceUuid := range req.SauceUuidList {
+		SauceUuidListStr = append(SauceUuidListStr, fmt.Sprintf("%d", sauceUuid))
+	}
+	// 按照“规格id-属性id,属性id-加料id,加料id”的格式拼接
+	return fmt.Sprintf("%d-%s-%s", req.FlavorUuid, strings.Join(AttributeUuidListStr, ","), strings.Join(SauceUuidListStr, ","))
 }
 
 // 判断是不是自助餐

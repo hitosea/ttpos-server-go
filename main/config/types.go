@@ -82,6 +82,11 @@ type GoogleBucketConf struct {
 	GooglePrintBucketName                 string // 谷歌云 - 打印相关的bucket
 }
 
+type GrpcConf struct {
+	Endpoint string
+	Service  string
+}
+
 func (c *GoogleBucketConf) Verification() bool {
 	if c.GoogleApplicationCredentialsFileName == "" || c.GooglePrintBucketName == "" {
 		return false

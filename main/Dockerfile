@@ -1,5 +1,10 @@
 # 使用官方Go语言镜像作为基础镜像
 FROM apache/skywalking-go:0.5.0-go1.23 AS builder
+#注意 context 要设置为上级目录,因为要拷贝别的模块的文件
+#复制takeout 模块 api
+WORKDIR /takeout
+COPY  takeout/go.mod  .
+COPY  takeout/api ./api
 
 # 设置工作目录
 WORKDIR /app
@@ -8,13 +13,13 @@ WORKDIR /app
 ENV GOPROXY=https://goproxy.cn,direct
 
 # 复制go.mod和go.sum文件
-COPY go.mod go.sum ./
+COPY main/go.mod main/go.sum ./
 
 # 下载依赖，这一步会生成缓存，在依赖有变化时才会重新下载
 RUN go mod download
 
 # 复制源代码
-COPY . .
+COPY main .
 
 RUN skywalking-go-agent -inject /app
 

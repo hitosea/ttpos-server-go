@@ -2,7 +2,7 @@
   <div>
     <el-dialog :title="$t('选择优惠券')" v-model="dialogVisible" @close="dialogFormVisible" :close-on-click-modal="false" :close-on-press-escape="false">
       <!--搜索表单-->
-      <div class="common-seach-wrap flex">
+      <div class="common-search-wrap flex">
         <el-form size="small" :inline="true" :model="form" class="demo-form-inline">
           <el-form-item :label="$t('优惠券名称')">
             <el-input v-model="form.name" :placeholder="$t('请输入优惠券名称')" @input="onSearch"></el-input>
@@ -35,7 +35,7 @@
         <el-table-column type="radio" width="45" fixed="right">
           <template #default="scope">
             <div class="radio-box">
-              <el-radio v-model="selectedRow" :label="scope.row" @change="handleRadioChange(scope.row)">&nbsp;</el-radio>
+              <el-radio v-model="selectedRow" :value="scope.row" @change="handleRadioChange(scope.row)">&nbsp;</el-radio>
             </div>
           </template>
         </el-table-column>

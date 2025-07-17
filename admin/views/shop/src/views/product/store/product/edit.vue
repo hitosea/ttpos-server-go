@@ -53,7 +53,7 @@
 
       <template #footer>
         <div class="dialog-footer">
-          <el-button type="primary" @click="() => onSubmit(1)"> {{ $t('确定') }}</el-button>
+          <el-button type="primary" @click="() => onSubmit(1)" :loading="save_loading"> {{ $t('确定') }}</el-button>
         </div>
       </template>
     </el-dialog>
@@ -233,6 +233,7 @@
           alone_grade_type: 10,
           /*打印标签*/
           label_id: '',
+          open_overall_discount: 0, //整单折扣
         },
         oldForm: {},
         /*库存变没变*/

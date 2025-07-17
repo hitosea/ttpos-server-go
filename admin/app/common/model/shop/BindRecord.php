@@ -374,11 +374,6 @@ class BindRecord extends BaseModel
     public static function getCashierList()
     {
         return  self::alias('a')->where('source', self::SOURCE_CASHIER)
-            // 云部署方式 - 不显示网页端
-            // todo 无网页版本-先注释
-            // ->when(env('IS_CLOUD_DEPLOY', false), function ($q) {
-            //     $q->where('platform', '<>', 0);
-            // })
             ->field("a.device_id as cashier_key")
             ->field("CONCAT(if(remark='', '-', remark), ' (', a.device_id, ')') cashier_name")
             ->order('id')
@@ -394,5 +389,13 @@ class BindRecord extends BaseModel
     {
         $this->where('source', self::SOURCE_CASHIER)->where('is_main', 1)->update(['is_main' => 0]);
         return $this->where('source', self::SOURCE_CASHIER)->where('uuid', $uuid)->update(['is_main' => 1]);
+    }
+
+    /**
+     * 设置厨显
+     */
+    public function setKitchenRelatedPrinterUuid($uuid, $relatedPrinterUuid)
+    {
+        return $this->where('source', self::SOURCE_KITCHEN)->where('uuid', $uuid)->update(['related_printer_uuid' => $relatedPrinterUuid]);
     }
 }

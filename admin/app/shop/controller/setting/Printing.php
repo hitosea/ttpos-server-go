@@ -130,7 +130,7 @@ class Printing extends Controller
      */
     public function fetchData()
     {
-        $vars['printerList'] = PrinterModel::getAll($this->store['user']['shop_supplier_id']);
+        $vars['printerList'] = PrinterModel::getAll();
         $vars['cashierList'] = BindRecord::getCashierList();
         $vars['values'] = SettingModel::getSupplierItem(SettingEnum::PRINTER, $this->store['user']['shop_supplier_id']);
         // usb 设备回显

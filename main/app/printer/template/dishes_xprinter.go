@@ -15,7 +15,7 @@ type dishesXprinterTemplate struct {
 	base *printerTemplate
 }
 
-// NewdishesXprinterTemplate 创建新的xprinter菜品打印模板
+// NewDishesXprinterTemplate 创建新的xprinter菜品打印模板
 func NewDishesXprinterTemplate(
 	base *printerTemplate,
 ) *dishesXprinterTemplate {
@@ -789,7 +789,7 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 		printer.SetCharacterSize(2, 2)
 		productNum := utils.IfString(tmp == 2, "-", "x") + t.base.FloatToString(product.TotalNum)
 		if len(productNum) >= 3 {
-			w := 20 - (len(productNum) - 4)
+			w := 20 - (len(productNum) - 3)
 			printer.AppendText(t.base.PrintText(
 				productName, "", productNum,
 				w, w, 0, 0, 2,
@@ -894,7 +894,7 @@ func (t *dishesXprinterTemplate) ReturnMenuTemplate(
 // OutMenuTemplate 出菜单模版
 func (t *dishesXprinterTemplate) OutMenuTemplate(
 	tmp int,
-	printerItem *model.ProductPrinterItem,
+	mdPrinter model.Printer,
 	order model.SaleBill,
 	products printer_model.Products,
 	finishedTime int64,
@@ -912,8 +912,8 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 	}
 	// 打印机类型
 	printerType := PrinterTypeXPrinterLan
-	if printerItem.Printer != nil && printerItem.Printer.PrinterType != nil {
-		printerType = printerItem.Printer.PrinterType.Key
+	if mdPrinter.PrinterType != nil {
+		printerType = mdPrinter.PrinterType.Key
 	}
 	// 是否有打印内容
 	isPrinter := false
@@ -933,7 +933,7 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 		printer.LineFeed()
 	}
 	// 桌号
-	if order.BillType == 2 {
+	if order.IsTakeoutBill() {
 		printer.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 	} else if order.DeskUuid > 0 {
 		// 判断文字是否包含缅甸语

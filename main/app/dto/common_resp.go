@@ -25,10 +25,11 @@ type LocaleResponse struct {
 	KO   string `json:"ko"`   // 韩语
 	MY   string `json:"my"`   // 缅甸语
 	TR   string `json:"tr"`   // 土耳其语
+	SV   string `json:"sv"`   // 瑞典语
 }
 
 func (l *LocaleResponse) IsNull() bool {
-	return l.ZH == "" && l.TH == "" && l.EN == "" && l.ZHTW == "" && l.JA == "" && l.KO == "" && l.MY == "" && l.TR == ""
+	return l.ZH == "" && l.TH == "" && l.EN == "" && l.ZHTW == "" && l.JA == "" && l.KO == "" && l.MY == "" && l.TR == "" && l.SV == ""
 }
 
 type LocaleType string
@@ -42,6 +43,7 @@ const (
 	LocaleKO   LocaleType = "ko"
 	LocaleMY   LocaleType = "my"
 	LocaleTR   LocaleType = "tr"
+	LocaleSV   LocaleType = "sv"
 )
 
 // GetLocale 获取语言
@@ -63,6 +65,8 @@ func (l *LocaleResponse) GetLocale(locale string) string {
 		return l.MY
 	case "tr":
 		return l.TR
+	case "sv":
+		return l.SV
 	}
 	return l.ZH
 }

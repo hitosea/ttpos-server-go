@@ -62,18 +62,6 @@ class ProductFeed extends BaseModel
                 $data['feed_id'] = $item['feed_id'] ?? 0;
                 $data['shop_supplier_id'] = $shopSupplierId;
                 $data['app_id'] = self::$app_id;
-                // todo 加料库， v1.0.8需求变更，暂时不需要
-                // $feedExists = feed::where('feed_name', '=', $item['feed_name'])->count();
-                // if ($feedExists == 0) {
-                //     $newFeedData = [
-                //         'feed_name' => $item['feed_name'],
-                //         'price' => $item['price'],
-                //     ];
-                //     $feedModel = new Feed;
-                //     $feedModel->save($newFeedData);
-                //     $feedId = $feedModel->feed_id;
-                //     $this->addMaterial($item['material'], $feedId, 0, $shopSupplierId);
-                // }
                 // 产品加料库
                 if (isset($item['product_feed_id']) && $item['product_feed_id'] > 0) {
                     $index = 0;

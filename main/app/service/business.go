@@ -121,8 +121,10 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 			TotalRefundMoney:        saleData.TotalRefundAmount,
 			TotalOrderNum:           int(saleData.TotalOrderNum),
 			TotalPeopleNum:          int(saleData.TotalMealNum),
-			TotalProductNum:         int(saleData.TotalProductNum),
+			TotalProductNum:         saleData.TotalProductNum,
 			TotalTableNum:           int(saleData.TotalDeskNum),
+			TotalGiveProductPrice:   saleData.TotalGiftAmount,
+			TotalGiveProductNum:     saleData.TotalGiftNum,
 			AvgOrderPrice:           saleData.AvgOrderAmount,
 			MinOrderPrice:           saleData.MinOrderAmount,
 			MaxOrderPrice:           saleData.MaxOrderAmount,
@@ -246,7 +248,7 @@ func (s *businessSrv) Printer(ctx context.Context, printerReq req.BusinessDataPr
 				for _, product := range productList {
 					list = append(list, business_data_resp.Product{
 						Name:     product.ProductName,
-						SalesNum: int(product.SaleNum),
+						SalesNum: product.SaleNum,
 						Price:    product.SalePrice,
 						Subtotal: product.SaleAmount,
 					})
@@ -340,11 +342,11 @@ func (s *businessSrv) CountBusiness(ctx context.Context, req req.BusinessDataCou
 		TotalFreeOrderPrice:     saleData.TotalFreeAmount,
 		TotalFreeOrderNum:       int(saleData.TotalFreeNum),
 		TotalGiveProductPrice:   saleData.TotalGiftAmount,
-		TotalGiveProductNum:     int(saleData.TotalGiftNum),
+		TotalGiveProductNum:     saleData.TotalGiftNum,
 		TotalRefundMoney:        saleData.TotalRefundAmount,
 		TotalOrderNum:           int(saleData.TotalOrderNum),
 		TotalPeopleNum:          int(saleData.TotalMealNum),
-		TotalProductNum:         int(saleData.TotalProductNum),
+		TotalProductNum:         saleData.TotalProductNum,
 		TotalTableNum:           int(saleData.TotalDeskNum),
 		AvgOrderPrice:           saleData.AvgOrderAmount,
 		MinOrderPrice:           saleData.MinOrderAmount,
@@ -494,7 +496,7 @@ func (s *businessSrv) CountProduct(ctx context.Context, req req.BusinessDataCoun
 			for _, product := range productList {
 				list = append(list, business_data_resp.Product{
 					Name:     product.ProductName,
-					SalesNum: int(product.SaleNum),
+					SalesNum: product.SaleNum,
 					Price:    product.SalePrice,
 					Subtotal: product.SaleAmount,
 				})
@@ -545,7 +547,7 @@ func (s *businessSrv) RankProduct(ctx context.Context, req req.BusinessDataRankP
 			for _, productRank := range productRankList {
 				list = append(list, business_data_resp.ProductRank{
 					ProductName: productRank.ProductName,
-					SalesNum:    int(productRank.SaleNum),
+					SalesNum:    productRank.SaleNum,
 					SalesPrice:  productRank.SaleAmount,
 				})
 			}
@@ -574,12 +576,12 @@ func (s *businessSrv) CountProductSales(ctx context.Context, req req.BusinessDat
 	for _, productSale := range productSalesData.Data {
 		list = append(list, business_data_resp.BusinessDataCountProductSalesItem{
 			ProductName:        productSale.ProductName,
-			SalesNum:           int(productSale.TotalSaleNum),
+			SalesNum:           productSale.TotalSaleNum,
 			SalesPrice:         productSale.TotalBusinessAmount,
 			CategoryName:       productSale.CategoryName,
 			OriginalSalesPrice: productSale.TotalOriginSaleAmount,
 			TotalPayPrice:      productSale.TotalActualSaleAmount,
-			GiveProductNum:     int(productSale.TotalGiveNum),
+			GiveProductNum:     productSale.TotalGiveNum,
 		})
 	}
 
@@ -682,7 +684,7 @@ func (s *businessSrv) BuildCategoryList(ctx context.Context, req req.BusinessDat
 	for _, category := range categoryData.CategoryList {
 		list = append(list, business_data_resp.Category{
 			Name:     category.CategoryName,
-			SalesNum: int(category.SaleNum),
+			SalesNum: category.SaleNum,
 			Prices:   category.SaleAmount,
 		})
 	}
@@ -724,6 +726,12 @@ func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCount
 			})
 		}
 
+		memberData := s.statisticsSrv.CountMember(ctx, CountReq{
+			QueryStartTime: req.QueryStartTime,
+			QueryEndTime:   req.QueryEndTime,
+			Timezone:       ctx.GetCompany().CompanySetting.Timezone,
+		})
+
 		exportDataList = append(exportDataList, business_data_resp.BusinessDataExportItem{
 			Day:                   export.Day,
 			TotalSaleAmount:       export.TotalSaleAmount,
@@ -757,6 +765,7 @@ func (s *businessSrv) CountExport(ctx context.Context, req req.BusinessDataCount
 			AvgInstantOrderAmount: export.AvgInstantOrderAmount,
 			AreaList:              areaList,
 			PaymentList:           paymentList,
+			TotalRechargeAmount:   memberData.TotalRechargeAmount,
 		})
 	}
 

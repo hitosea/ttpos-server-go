@@ -69,6 +69,7 @@ type SaleOrderProduct struct {
 
 	// 赠品相关字段
 	GiftTime     int64  `gorm:"column:gift_time;type:int(10);not null;default:0;comment:'赠菜时间(时间戳),用于判断不同时间赠送的商品不合并'" json:"gift_time"`
+	WrapTime     int64  `gorm:"column:wrap_time;type:int(10);not null;default:0;comment:'打包时间(时间戳),用于判断不同时间打包的商品不合并'" json:"wrap_time"`
 	CancelTime   int64  `gorm:"column:cancel_time;type:int(10);not null;default:0;comment:'退菜时间(时间戳)'" json:"cancel_time"`
 	GiftReason   string `gorm:"column:gift_reason;type:varchar(255);not null;default:'';comment:'赠菜原因'" json:"gift_reason"`
 	CancelReason string `gorm:"column:cancel_reason;type:varchar(255);not null;default:'';comment:'退菜原因'" json:"cancel_reason"`
@@ -107,7 +108,8 @@ type SaleOrderProduct struct {
 	ProductMustPlan            *ProductMustPlan             `gorm:"foreignKey:MustPlanUuid;references:uuid"`
 
 	// 内部字段
-	operation string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
+	operation        string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
+	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
 }
 
 // 获取商品包的规格uuid
@@ -213,6 +215,18 @@ func (model *SaleOrderProduct) IsSubOperation() bool {
 	return model.operation == "sub"
 }
 
+// 设置打包时间
+func (model *SaleOrderProduct) SetWrap() {
+	defer model.SetUpdate() // 标记要更新model
+	model.WrapTime = time.Now().Unix()
+}
+
+// 设置取消打包
+func (model *SaleOrderProduct) SetUnwrap() {
+	defer model.SetUpdate() // 标记要更新model
+	model.WrapTime = 0      // 取消打包，打包时间置为0。注：暂时不更新商品的签名，历史遗留问题取消赠菜也没有更新签名，如果更新签名的话可能会与未打包的商品签名一致需要合并商品。
+}
+
 // GetAcceptTime 获取接单时间
 func (model *SaleOrderProduct) GetAcceptTime() int64 {
 	if model.H5Order != nil {
@@ -235,6 +249,7 @@ func (model *SaleOrderProduct) SetAcceptOrderProduct() {
 
 // 将未下单的h5订单商品变为已下单的h5订单商品
 func (model *SaleOrderProduct) SetH5OrderProduct(h5OrderUuid uint64) {
+	model.unOrderH5Product = true // 标记为未下单的h5订单商品
 	model.H5OrderUuid = h5OrderUuid
 	model.Sign = model.GenerateProductSign() // 更新签名
 	// model.H5OrderProductUuid = h5OrderProductUuid
@@ -277,13 +292,13 @@ func (model *SaleOrderProduct) GetReturnPrice() float64 {
 	if model.GetReturnNum() == 0 {
 		return 0
 	}
-	returnPrice := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromUint64(uint64(model.GetReturnNum()))).Truncate(3).Round(2).InexactFloat64()
+	returnPrice := decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromFloat(model.GetReturnNum())).Truncate(3).Round(2).InexactFloat64()
 	return returnPrice
 }
 
 // GetCanReturnPrice 获取销售订单商品的可退货金额. 可退货金额=订单商品金额-已退货金额
 func (model *SaleOrderProduct) GetCanReturnPrice() float64 {
-	return decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromUint64(uint64(model.GetCanReturnNum()))).Truncate(3).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.TotalPrice).Mul(decimal.NewFromFloat(model.GetCanReturnNum())).Truncate(3).Round(2).InexactFloat64()
 }
 
 func (model *SaleOrderProduct) IsCurrentDeskProduct() bool {
@@ -593,6 +608,7 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 	koNames := make([]string, 0)
 	myNames := make([]string, 0)
 	trNames := make([]string, 0)
+	svNames := make([]string, 0)
 	// 遍历选择的退菜原因
 	for _, reason := range model.CancelReasons {
 		if !reason.IsReturnFoodReason() {
@@ -609,6 +625,7 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 		koNames = append(koNames, reason.MultiLanguageName.KoName)
 		myNames = append(myNames, reason.MultiLanguageName.MyName)
 		trNames = append(trNames, reason.MultiLanguageName.TrName)
+		svNames = append(svNames, reason.MultiLanguageName.SvName)
 	}
 	// 添加自定义的退菜原因
 	if model.CancelReason != "" {
@@ -620,6 +637,7 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 		koNames = append(koNames, model.CancelReason)
 		myNames = append(myNames, model.CancelReason)
 		trNames = append(trNames, model.CancelReason)
+		svNames = append(svNames, model.CancelReason)
 	}
 	reasonDto := dto.LocaleResponse{
 		ZH:   strings.Join(zhNames, "、"),
@@ -630,6 +648,7 @@ func (model *SaleOrderProduct) GetCancelReason() dto.LocaleResponse {
 		KO:   strings.Join(koNames, "、"),
 		MY:   strings.Join(myNames, "、"),
 		TR:   strings.Join(trNames, "、"),
+		SV:   strings.Join(svNames, "、"),
 	}
 	return reasonDto
 }
@@ -644,6 +663,7 @@ func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 	koNames := make([]string, 0)
 	myNames := make([]string, 0)
 	trNames := make([]string, 0)
+	svNames := make([]string, 0)
 	// 遍历选择的赠品原因
 	for _, reason := range model.CancelReasons {
 		if !reason.IsGiftReason() {
@@ -657,6 +677,7 @@ func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 		koNames = append(koNames, reason.MultiLanguageName.KoName)
 		myNames = append(myNames, reason.MultiLanguageName.MyName)
 		trNames = append(trNames, reason.MultiLanguageName.TrName)
+		svNames = append(svNames, reason.MultiLanguageName.SvName)
 	}
 	// 添加自定义的退菜原因
 	if model.GiftReason != "" {
@@ -668,6 +689,7 @@ func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 		koNames = append(koNames, model.GiftReason)
 		myNames = append(myNames, model.GiftReason)
 		trNames = append(trNames, model.GiftReason)
+		svNames = append(svNames, model.GiftReason)
 	}
 	reasonDto := dto.LocaleResponse{
 		ZH:   strings.Join(zhNames, "、"),
@@ -678,6 +700,7 @@ func (model *SaleOrderProduct) GetGiftReason() dto.LocaleResponse {
 		KO:   strings.Join(koNames, "、"),
 		MY:   strings.Join(myNames, "、"),
 		TR:   strings.Join(trNames, "、"),
+		SV:   strings.Join(svNames, "、"),
 	}
 	return reasonDto
 }
@@ -772,16 +795,16 @@ func (model *SaleOrderProduct) IsH5OrderProductBool() bool {
 
 // 是否是H5未下单商品。 未接单且无h5订单uuid
 func (model *SaleOrderProduct) IsUnOrderH5OrderProduct() bool {
+	if model.unOrderH5Product {
+		// 如果是特别标记的未下单的h5订单商品，返回true。此类商品此时正在下单的处理程序中
+		return true
+	}
 	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept && model.H5OrderUuid == 0
 }
 
 // 是否时h5购物车的商品，h5未下单的商品。未接单且无h5订单uuid
 func (model *SaleOrderProduct) IsH5CartProduct() bool {
 	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept && model.H5OrderUuid == 0
-}
-
-func (model *SaleOrderProduct) IsGiftBool() bool {
-	return model.GiftTime > 0
 }
 
 func (model *SaleOrderProduct) ChangeProductPrice(price float64) {
@@ -807,7 +830,7 @@ func (model *SaleOrderProduct) GetSalePriceUnit() float64 {
 
 // 获取商品的最终售价（单价）。最终售价为商品的最终单价，默认等于Price，如果免单，则等于0
 func (model *SaleOrderProduct) GetFinalSalePrice() float64 {
-	if model.IsGiftBool() {
+	if model.IsGiftProduct() {
 		return 0
 	}
 	return model.Price
@@ -868,6 +891,11 @@ func (model *SaleOrderProduct) IsGiftProduct() bool {
 	return model.GiftTime > 0
 }
 
+// 是否是包装商品
+func (model *SaleOrderProduct) IsWrapProduct() bool {
+	return model.WrapTime > 0
+}
+
 // 是否取消商品
 func (model *SaleOrderProduct) IsCancelProduct() bool {
 	return model.CancelTime > 0
@@ -886,7 +914,7 @@ func (model *SaleOrderProduct) StatusValue() int {
 // 获取该订单商品的材料组成及用量。
 // 如一个珍珠奶茶加料珍珠，则计算成分珍珠、奶、茶等各个原材料等用量
 func (model *SaleOrderProduct) GetMaterialBom() []*ProductionOrderMaterial {
-	return nil // todo
+	return nil // TODO 植焕
 }
 
 // 获取商品的名称。格式：`商品名 (规格名)`
@@ -907,6 +935,7 @@ func (model *SaleOrderProduct) GetNameAndFlavorName() dto.LocaleResponse {
 		KO:   fmt.Sprintf("%s (%s)", productPackageName.KO, flavorName.KO),
 		MY:   fmt.Sprintf("%s (%s)", productPackageName.MY, flavorName.MY),
 		TR:   fmt.Sprintf("%s (%s)", productPackageName.TR, flavorName.TR),
+		SV:   fmt.Sprintf("%s (%s)", productPackageName.SV, flavorName.SV),
 	}
 }
 
@@ -923,6 +952,7 @@ func (model *SaleOrderProduct) GetNameAndFlavorNameFrom(ProductBom *ProductBom, 
 		KO:   fmt.Sprintf("%s (%s)", productPackageName.KO, flavorName.KO),
 		MY:   fmt.Sprintf("%s (%s)", productPackageName.MY, flavorName.MY),
 		TR:   fmt.Sprintf("%s (%s)", productPackageName.TR, flavorName.TR),
+		SV:   fmt.Sprintf("%s (%s)", productPackageName.SV, flavorName.SV),
 	}
 }
 
@@ -976,6 +1006,7 @@ func getLocaleResponse(nameList []dto.LocaleResponse, div string) dto.LocaleResp
 		attributeResultNames.KO += name.KO
 		attributeResultNames.MY += name.MY
 		attributeResultNames.TR += name.TR
+		attributeResultNames.SV += name.SV
 		if attributeResultNames.ZH != "" && index != len(nameList)-1 {
 			attributeResultNames.ZH += div
 			attributeResultNames.TH += div
@@ -985,15 +1016,20 @@ func getLocaleResponse(nameList []dto.LocaleResponse, div string) dto.LocaleResp
 			attributeResultNames.KO += div
 			attributeResultNames.MY += div
 			attributeResultNames.TR += div
+			attributeResultNames.SV += div
 		}
 	}
 	return attributeResultNames
 }
 
-func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string) string {
+func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string, showSku ...bool) string {
 	var flavorName string
 	var sauceNames []string
 	var attributeNames []string
+	isShowSku := true
+	if len(showSku) > 0 {
+		isShowSku = showSku[0]
+	}
 	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
 		if saleOrderProductBom.IsFlavor() {
 			flavorName = saleOrderProductBom.ProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(lang)
@@ -1009,10 +1045,14 @@ func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string) string {
 	}
 	// 根据规格生成字符串。`(规格；属性；小料)`
 	nameList := make([]string, 0)
-	nameList = append(nameList, flavorName)
-	if len(attributeNames) > 0 {
-		nameList = append(nameList, attributeNames...)
+	// 是否显示sku
+	if isShowSku {
+		nameList = append(nameList, flavorName)
+		if len(attributeNames) > 0 {
+			nameList = append(nameList, attributeNames...)
+		}
 	}
+	// 小料
 	if len(sauceNames) > 0 {
 		nameList = append(nameList, sauceNames...)
 	}
@@ -1120,16 +1160,56 @@ func (model *SaleOrderProduct) IsCustomPriceBool() bool {
 	return model.ChangePriceTime > 0
 }
 
+func (model *SaleOrderProduct) ProductKey() string {
+	flavorUuid := uint64(0)
+	sauceUuidList := make([]uint64, 0)
+	attributeIdList := make([]uint64, 0)
+
+	// 物料ID列表
+	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsFlavor() {
+			flavorUuid = bom.ProductBomUuid
+		} else if bom.IsSauce() {
+			sauceUuidList = append(sauceUuidList, bom.ProductBomUuid)
+		}
+	}
+	// 属性ID列表
+	for _, attributeGroup := range model.SaleOrderProductAttributes {
+		attributeIdList = append(attributeIdList, attributeGroup.ProductAttributeUuid)
+	}
+
+	// 物料ID列表和属性ID列表排序
+	sort.Slice(sauceUuidList, func(i, j int) bool {
+		return sauceUuidList[i] < sauceUuidList[j]
+	})
+	sort.Slice(attributeIdList, func(i, j int) bool {
+		return attributeIdList[i] < attributeIdList[j]
+	})
+
+	sauceUuidStrList := make([]string, 0)
+	for _, sauceUuid := range sauceUuidList {
+		sauceUuidStrList = append(sauceUuidStrList, fmt.Sprintf("%d", sauceUuid))
+	}
+	attributeIdStrList := make([]string, 0)
+	for _, attributeId := range attributeIdList {
+		attributeIdStrList = append(attributeIdStrList, fmt.Sprintf("%d", attributeId))
+	}
+
+	// 按照“规格id-属性id,属性id-加料id,加料id”的格式拼接
+	return fmt.Sprintf("%d-%s-%s", flavorUuid, strings.Join(attributeIdStrList, ","), strings.Join(sauceUuidStrList, ","))
+}
+
 // GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
-// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-退菜原因-H5OrderUuid-是否接单
+// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
 // 3 送厨
 // 4 赠菜
-// 5 退菜
-// 6 h5下单
-// 7 接单
+// 5 打包
+// 6 退菜
+// 7 h5下单
+// 8 接单
 func (model *SaleOrderProduct) GenerateProductSign() string {
 	bomIdList := make([]string, 0)
 	attributeIdList := make([]string, 0)
@@ -1149,7 +1229,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	sort.Slice(attributeIdList, func(i, j int) bool {
 		return attributeIdList[i] < attributeIdList[j]
 	})
-	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-退菜原因-H5OrderUuid-是否接单
+	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
 	bomIdListStr := strings.Join(bomIdList, ",")
 	attributeIdListStr := strings.Join(attributeIdList, ",")
 
@@ -1164,7 +1244,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	}
 	reasonStr := utils.ToJson(reason)
 
-	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%s-%d-%d",
+	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d",
 		bomIdListStr,
 		attributeIdListStr,
 		model.Remark,
@@ -1172,6 +1252,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 		model.ProductionOrderUuid,
 		model.ChangePriceTime,
 		model.GiftTime,
+		model.WrapTime,
 		reasonStr,
 		model.H5OrderUuid,
 		model.IsAcceptOrder, // 是否接单. 为了让未下单的h5商品和未送厨的商品不被合并在一起

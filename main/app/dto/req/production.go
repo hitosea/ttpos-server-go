@@ -17,3 +17,8 @@ type ProductionListByCategoryReq struct {
 type ProductUuid struct {
 	ProductUuid uint64 `json:"product_uuid"` // 送厨商品ID
 }
+
+// SaleBillUuid 按订单查看送厨商品，确认整单取消时传递销售账单Uuid
+type SaleBillUuid struct {
+	SaleBillUuid uint64 `json:"sale_bill_uuid"` // 销售账单Uuid
+}

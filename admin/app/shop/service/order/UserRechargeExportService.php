@@ -51,7 +51,7 @@ class UserRechargeExportService
                 $payType .= $pay . '、';
             }
             $order['order_status_text'] = [
-                0 => __('进行中'),
+                0 => __('待付款'),
                 1 => __('已完成'),
                 2 => __('已取消')
             ][$order['status']];

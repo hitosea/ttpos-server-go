@@ -21,6 +21,9 @@ type CashierResp struct {
 	IsAutoOrder            string             `json:"is_auto_order"`              // 是否自动接单
 	AutoOrderLimit         string             `json:"auto_order_limit"`           // 自动接单金额上限
 	IsAutoVoice            string             `json:"is_auto_voice"`              // 是否开启自动接单语音播报
+	IsAutoMemberOrder      string             `json:"is_auto_member_order"`       // 是否自动接单会员订单 0-关闭 1-开启
+	AutoMemberOrderLimit   string             `json:"auto_member_order_limit"`    // 自动接单会员订单金额上限
+	IsAutoVoiceMemberOrder string             `json:"is_auto_voice_member_order"` // 是否开启自动接单会员订单语音播报
 	MenuShowSoldOut        string             `json:"menu_show_sold_out"`         // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 }
 

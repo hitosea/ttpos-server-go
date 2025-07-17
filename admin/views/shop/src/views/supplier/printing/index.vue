@@ -1,135 +1,130 @@
 <template>
-    <!--
+  <!--
       	描述：商品-店内商品
       -->
-    <div class="common-seach-wrap">
-        <!--打印機管理-->
-        <printer v-if="activeName == 'printer'"></printer>
-        <!-- 商品打印 -->
-        <printing v-if="activeName == 'printing'"></printing>
-        <!-- 打印模版 -->
-        <preview v-if="activeName == 'preview'"></preview>
-        <!--打印设置-->
-        <dishes v-if="activeName == 'dishes'"></dishes>
-        <!--打印设置-->
-        <setMenu v-if="activeName == 'setting'"></setMenu>
-    </div>
+  <div class="common-search-wrap">
+    <!--打印機管理-->
+    <printer v-if="activeName == 'printer'"></printer>
+    <!-- 商品打印 -->
+    <printing v-if="activeName == 'printing'"></printing>
+    <!-- 打印模版 -->
+    <preview v-if="activeName == 'preview'"></preview>
+    <!--打印设置-->
+    <dishes v-if="activeName == 'dishes'"></dishes>
+    <!--打印设置-->
+    <setMenu v-if="activeName == 'setting'"></setMenu>
+  </div>
 </template>
 <script>
-import { reactive, toRefs, defineComponent } from 'vue';
-import { useUserStore } from "@/store";
+  import { reactive, toRefs, defineComponent } from 'vue';
+  import { useUserStore } from '@/store';
 
-import printer from './printer/index.vue';
-import dishes from './dishes/index.vue';
-import printing from './printing/index.vue';
-import preview from './preview/index.vue';
-import setMenu from './setting/index.vue';
-export default defineComponent({
+  import printer from './printer/index.vue';
+  import dishes from './dishes/index.vue';
+  import printing from './printing/index.vue';
+  import preview from './preview/index.vue';
+  import setMenu from './setting/index.vue';
+  export default defineComponent({
     components: {
-        printer,
-        dishes,
-        printing,
-        preview,
-        setMenu,
+      printer,
+      dishes,
+      printing,
+      preview,
+      setMenu,
     },
     setup() {
-
-        const { bus_emit, bus_off, bus_on } = useUserStore();
-        const state = reactive({
-            bus_emit,
-            bus_off,
-            bus_on,
-            /*是否加载完成*/
-            loading: true,
-            form: {},
-            /*参数*/
-            param: {},
-            /*当前选中*/
-            activeName: '',
-            /*切换数组原始数据*/
-            sourceList: [{
-                key: 'printer',
-                value: $t('打印机管理'),
-                path: '/supplier/printing/printer/index'
-            },
-            {
-                key: 'dishes',
-                value: $t('商品打印'),
-                path: '/supplier/printing/dishes/index'
-            },
-            {
-                key: 'preview',
-                value: $t('打印模版'),
-                path: '/supplier/printing/preview/index'
-            },
-            {
-                key: 'printing',
-                value: $t('收银打印设置'),
-                path: '/supplier/printing/printing/index'
-            },
-            {
-                key: 'setting',
-                value: $t('打印设置'),
-                path: '/supplier/printing/setting/index'
-            },
-            ],
-            /*权限筛选后的数据*/
-            tabList: [],
-
-        })
-        return {
-            ...toRefs(state),
-
-        };
-
+      const { bus_emit, bus_off, bus_on } = useUserStore();
+      const state = reactive({
+        bus_emit,
+        bus_off,
+        bus_on,
+        /*是否加载完成*/
+        loading: true,
+        form: {},
+        /*参数*/
+        param: {},
+        /*当前选中*/
+        activeName: '',
+        /*切换数组原始数据*/
+        sourceList: [
+          {
+            key: 'printer',
+            value: $t('打印机管理'),
+            path: '/supplier/printing/printer/index',
+          },
+          {
+            key: 'dishes',
+            value: $t('商品打印'),
+            path: '/supplier/printing/dishes/index',
+          },
+          {
+            key: 'preview',
+            value: $t('打印模版'),
+            path: '/supplier/printing/preview/index',
+          },
+          {
+            key: 'printing',
+            value: $t('收银打印设置'),
+            path: '/supplier/printing/printing/index',
+          },
+          {
+            key: 'setting',
+            value: $t('打印设置'),
+            path: '/supplier/printing/setting/index',
+          },
+        ],
+        /*权限筛选后的数据*/
+        tabList: [],
+      });
+      return {
+        ...toRefs(state),
+      };
     },
     mounted() {
-        this.tabList = this.authFilter();
-        if (this.tabList.length > 0) {
-            this.activeName = this.tabList[0].key;
-        }
-        if (this.$route.query.type != null) {
-            this.activeName = this.$route.query.type;
-        }
+      this.tabList = this.authFilter();
+      if (this.tabList.length > 0) {
+        this.activeName = this.tabList[0].key;
+      }
+      if (this.$route.query.type != null) {
+        this.activeName = this.$route.query.type;
+      }
 
-        /*监听传插件的值*/
-        this.bus_on('activeValue', res => {
-            this.activeName = res;
-        });
+      /*监听传插件的值*/
+      this.bus_on('activeValue', (res) => {
+        this.activeName = res;
+      });
 
-        //发送类别切换
-        let params = {
-            active: this.activeName,
-            list: this.tabList,
-            tab_type: 'printing',
-        }
-        this.bus_emit('tabData', params);
-
+      //发送类别切换
+      let params = {
+        active: this.activeName,
+        list: this.tabList,
+        tab_type: 'printing',
+      };
+      this.bus_emit('tabData', params);
     },
     beforeUnmount() {
-        //发送类别切换
-        this.bus_emit('tabData', { active: null, tab_type: 'printing', list: [] });
-        this.bus_off('activeValue');
+      //发送类别切换
+      this.bus_emit('tabData', { active: null, tab_type: 'printing', list: [] });
+      this.bus_off('activeValue');
     },
     methods: {
-        /*权限过滤*/
-        authFilter() {
-            let list = [];
-            for (let i = 0; i < this.sourceList.length; i++) {
-                let item = this.sourceList[i];
-                if (this.$filter.isAuth(item.path)) {
-                    list.push(item);
-                }
-            }
-            return list;
-        },
-
-    }
-});
+      /*权限过滤*/
+      authFilter() {
+        let list = [];
+        for (let i = 0; i < this.sourceList.length; i++) {
+          let item = this.sourceList[i];
+          if (this.$filter.isAuth(item.path)) {
+            list.push(item);
+          }
+        }
+        return list;
+      },
+    },
+  });
 </script>
 
 <style lang="scss" scoped>
-.operation-wrap {
+  .operation-wrap {
     height: 124px;
     border-radius: 8px;
     -webkit-box-pack: center;
@@ -144,5 +139,5 @@ export default defineComponent({
     background: #909399;
     background-size: 100% 100%;
     color: #fff;
-}
+  }
 </style>

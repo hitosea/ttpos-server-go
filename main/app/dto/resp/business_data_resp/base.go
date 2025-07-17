@@ -5,7 +5,7 @@ import "ttpos-server-go/app/dto"
 // 商品
 type Product struct {
 	Name     string  `json:"name"`      // 商品名称
-	SalesNum int     `json:"sales_num"` // 销售数量
+	SalesNum float64 `json:"sales_num"` // 销售数量
 	Price    float64 `json:"price"`     // 单价
 	Subtotal float64 `json:"subtotal"`  // 小计
 }
@@ -50,7 +50,7 @@ type PeakHour struct {
 // 分类
 type Category struct {
 	Name     string  `json:"name"`      // 分类名称
-	SalesNum int     `json:"sales_num"` // 销售数量
+	SalesNum float64 `json:"sales_num"` // 销售数量
 	Prices   float64 `json:"prices"`    // 销售金额
 }
 
@@ -77,10 +77,10 @@ type BusinessDataAll struct {
 	TotalRefundMoney       float64 `json:"total_refund_money"`        // 总退款金额
 	TotalGiveProductPrice  float64 `json:"total_give_product_price"`  // 总赠菜金额
 	TotalFreeOrderNum      int     `json:"total_free_order_num"`      // 总免单数量
-	TotalGiveProductNum    int     `json:"total_give_product_num"`    // 总赠菜数量
+	TotalGiveProductNum    float64 `json:"total_give_product_num"`    // 总赠菜数量
 	TotalOrderNum          int     `json:"total_order_num"`           // 总订单数
 	TotalPeopleNum         int     `json:"total_people_num"`          // 总人数
-	TotalProductNum        int     `json:"total_product_num"`         // 总商品数
+	TotalProductNum        float64 `json:"total_product_num"`         // 总商品数
 	TotalTableNum          int     `json:"total_table_num"`           // 总桌数
 	AvgOrderPrice          float64 `json:"avg_order_price"`           // 平均订单金额
 	MinOrderPrice          float64 `json:"min_order_price"`           // 最小订单金额
@@ -154,7 +154,7 @@ type BusinessDataProductRank struct {
 // 商品排行
 type ProductRank struct {
 	ProductName string  `json:"product_name"` // 商品名称
-	SalesNum    int     `json:"sales_num"`    // 销售数量
+	SalesNum    float64 `json:"sales_num"`    // 销售数量
 	SalesPrice  float64 `json:"sales_price"`  // 销售金额
 }
 
@@ -171,8 +171,8 @@ type BusinessDataCountProductSalesItem struct {
 	OriginalSalesPrice float64 `json:"original_sales_price"` // 原价销售额
 	SalesPrice         float64 `json:"sales_price"`          // 实际销售金额
 	TotalPayPrice      float64 `json:"total_pay_price"`      // 营业收入
-	SalesNum           int     `json:"sales_num"`            // 销售数量
-	GiveProductNum     int     `json:"give_product_num"`     // 赠菜数量
+	SalesNum           float64 `json:"sales_num"`            // 销售数量
+	GiveProductNum     float64 `json:"give_product_num"`     // 赠菜数量
 }
 
 // 营业数据 - 7天
@@ -214,7 +214,7 @@ type BusinessDataExportItem struct {
 	TotalFreeAmount     float64 `json:"total_free_amount"`     // 免单总额
 	TotalFreeNum        float64 `json:"total_free_num"`        // 免单数量
 	TotalRechargeAmount float64 `json:"total_recharge_amount"` // 充值金额
-	// ToDo 外送数据来源
+	// TODO 外送数据来源
 	TotalDeliveryOrderAmount       float64                     `json:"total_delivery_order_amount"`        // 外送订单总额
 	TotalDeliveryOrderRevenue      float64                     `json:"total_delivery_order_revenue"`       // 外送营收
 	TotalDeliveryOrderRefundAmount float64                     `json:"total_delivery_order_refund_amount"` // 外送订单退款

@@ -35,5 +35,6 @@ func (s *localeSrv) GetLocaleNames(m model.MultiLanguageName) dto.LocaleResponse
 		KO:   m.KoName,
 		MY:   m.MyName,
 		TR:   m.TrName,
+		SV:   m.SvName,
 	}
 }

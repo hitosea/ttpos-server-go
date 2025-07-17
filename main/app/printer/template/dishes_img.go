@@ -119,14 +119,15 @@ func (t *dishesImgTemplate) CompleteOrder(
 		productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
 		// 打印产品名称和数量
 		totalNum := "x" + t.base.FloatToString(product.TotalNum)
+		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
 		if tmp == 2 {
 			img.PrintInColumns(
-				pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
+				pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
 				pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 42},
 			)
 		} else {
 			img.PrintInColumns(
-				pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 20},
+				pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 20},
 				pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 20, LineHeight: 42},
 			)
 		}
@@ -246,9 +247,11 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 					img.SetTextLineHeight(64)
 				}
 				img.LineFeed(1, 12)
+				totalNum := "x" + t.base.FloatToString(num)
+				productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
 				img.PrintInColumns(
-					pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
-					pkg.ColumnConfig{Text: "x" + t.base.FloatToString(num), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
+					pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
+					pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
 				)
 				if t.base.Lang == "my" {
 					img.LineFeed(1, 12)
@@ -350,9 +353,11 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 					img.SetTextLineHeight(64)
 				}
 				img.LineFeed(1, 12)
+				totalNum := "x" + t.base.FloatToString(num)
+				productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 470)
 				img.PrintInColumns(
-					pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
-					pkg.ColumnConfig{Text: "x" + t.base.FloatToString(num), Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
+					pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
+					pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
 				)
 				if t.base.Lang == "my" {
 					img.LineFeed(1, 12)
@@ -510,9 +515,9 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 
 		// 打印产品名称和数量
 		totalNum := utils.IfString(tmp == 2, "-", "x") + t.base.FloatToString(product.TotalNum)
-
+		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
+			pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
 			pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
 		)
 		if t.base.Lang == "my" {
@@ -591,7 +596,6 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 // OutMenuTemplate 出菜单模版
 func (t *dishesImgTemplate) OutMenuTemplate(
 	tmp int,
-	printerItem *model.ProductPrinterItem,
 	order model.SaleBill,
 	products printer_model.Products,
 	finishedTime int64,
@@ -620,7 +624,7 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 	img.LineFeed(1, 68)
 
 	// 桌号
-	if order.BillType == 2 {
+	if order.IsTakeoutBill() {
 		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 	} else if order.DeskUuid > 0 {
 		// 判断文字是否包含缅甸语
@@ -682,9 +686,9 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 
 		// 打印产品名称和数量
 		totalNum := "X" + t.base.FloatToString(product.TotalNum)
-
+		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: productName, Width: 500, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
+			pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
 			pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 50},
 		)
 		if t.base.Lang == "my" {

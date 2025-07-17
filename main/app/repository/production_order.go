@@ -21,6 +21,8 @@ type IProductionOrderRepo interface {
 	WhereSaleBillUuid(uuid uint64) DBOption                   // 销售账单uuid条件
 	WhereSource(source string) DBOption                       // 来源条件
 	WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption  // 生产商品分类Uuid条件
+	WhereProductNumGT0() DBOption                             // 送厨商品数量大于0
+
 	SaleBillUuidOpt() DBOption                                // 历史上菜条件
 	WithSaleOrderProductAll() DBOption                        // 关联销售订单商品
 	WithProductCategory() DBOption                            // 关联商品分类
@@ -239,6 +241,13 @@ func (r *productionRepo) WhereSource(source string) DBOption {
 func (r *productionRepo) WhereProductFirstCategoryUuidIn(uuids []uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("first_category_uuid in (?)", uuids)
+	}
+}
+
+// WhereProductNumGT0 送厨商品数量大于0
+func (r *productionRepo) WhereProductNumGT0() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("num > 0")
 	}
 }
 
