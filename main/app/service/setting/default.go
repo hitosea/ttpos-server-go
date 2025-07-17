@@ -57,6 +57,9 @@ func (s *Srv) getDefaultCashier(languageList []dto.LanguageItem) setting.Cashier
 			IsAutoOrder:            "0",                       // 是否自动接单
 			AutoOrderLimit:         "1000",                    // 自动接单金额上限
 			IsAutoVoice:            "0",                       // 是否开启自动接单语音播报
+			IsAutoMemberOrder:      "0",                       // 是否自动接单会员订单 0-关闭 1-开启
+			AutoMemberOrderLimit:   "1000",                    // 自动接单会员订单金额上限
+			IsAutoVoiceMemberOrder: "0",                       // 是否开启自动接单会员订单语音播报
 			MenuShowSoldOut:        "1",                       // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 		},
 		AdvancedPassword: "666888", // 高级设置密码
