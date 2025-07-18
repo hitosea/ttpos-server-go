@@ -353,7 +353,7 @@ func (t *statementOrderSunmiTemplate) GetPrintContent(
 	printer.SetAlignment(pkg.AlignRight)
 	if temp == 3 || temp == 4 {
 		printer.SetupColumns(
-			[]int{200, pkg.AlignLeft, 0},
+			[]int{250, pkg.AlignLeft, 0},
 			[]int{0, pkg.AlignRight, 0},
 		)
 		printer.PrintInColumns(
