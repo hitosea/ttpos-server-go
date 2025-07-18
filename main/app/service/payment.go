@@ -48,6 +48,7 @@ type CreatePaymentReq struct {
 	PaymentAmount     float64
 	CommissionFee     float64
 	PaymentMethod     string
+	PaymentOrderUuid  uint64
 }
 
 // LianLianPaymentResp 连连支付仓库
@@ -209,9 +210,12 @@ func (p *PaymentRepo) CreatePayment(req CreatePaymentReq) (*model.LlPaymentOrder
 	}
 
 	// 生成雪花ID
-	uuid, err := utils.GetID()
-	if err != nil {
-		return nil, errors.New("生成雪花ID失败")
+	uuid := req.PaymentOrderUuid
+	if uuid == 0 {
+		uuid, err = utils.GetID()
+		if err != nil {
+			return nil, errors.New("生成雪花ID失败")
+		}
 	}
 
 	// 创建支付订单
