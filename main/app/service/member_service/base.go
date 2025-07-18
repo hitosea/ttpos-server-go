@@ -3,6 +3,7 @@ package member_service
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req/member_req"
@@ -91,18 +92,29 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 		return member_resp.MemberBaseInfoResp{}, errors.New("商家不存在")
 	}
 
+	settingSrv := setting.NewSrv(s.dbm, s.cache)
+
 	// 获取语言列表
 	ctx.SetCompanyUuid(ctx.GetCompanyUuid())
-	languageList, _ := setting.NewSrv(s.dbm, s.cache).GetStoreLanguageList(ctx)
+	languageList, _ := settingSrv.GetStoreLanguageList(ctx)
 
 	// 获取门店业务设置
-	businessSetting, err := setting.NewSrv(s.dbm, s.cache).GetBusinessSetting(ctx)
+	businessSetting, err := settingSrv.GetBusinessSetting(ctx)
 	if err != nil {
 		logger.Logger.Error("获取门店业务设置失败", zap.Error(err))
 		fmt.Println("获取门店业务设置失败", zap.Error(err))
 	}
 
+	// 获取收银机设置
+	cashierSetting, err := settingSrv.GetCashierSetting(ctx, nil)
+	if err != nil {
+		logger.Logger.Error("获取收银机设置失败", zap.Error(err))
+		fmt.Println("获取收银机设置失败", zap.Error(err))
+	}
+
 	member := ctx.GetMember()
+
+	isMemberShowSoldOut, err := strconv.Atoi(cashierSetting.MemberShowSoldOut)
 
 	// 返回
 	return member_resp.MemberBaseInfoResp{
@@ -125,6 +137,8 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 		},
 		AreaCode:     areaCodes,
 		LanguageList: languageList,
+
+		IsMemberShowSoldOut: isMemberShowSoldOut,
 	}, nil
 
 }

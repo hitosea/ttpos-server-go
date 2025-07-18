@@ -24,6 +24,7 @@ type AddressHandler struct {
 // @Tags 会员端.地址
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query member_req.MemberAddressListReq true "详情参数"
 // @Success 200 {object} dto.Response{data=member_resp.MemberAddressListResp}
 // @Router /member/address [get]
@@ -48,6 +49,7 @@ func (h *AddressHandler) AddressList(c *gin.Context) {
 // @Tags 会员端.地址
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body member_req.MemberAddressAddReq true "详情参数"
 // @Success 200 {object} dto.Response{}
 // @Router /member/address/add [post]
@@ -72,6 +74,7 @@ func (h *AddressHandler) AddressAdd(c *gin.Context) {
 // @Tags 会员端.地址
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body member_req.MemberAddressUpdateReq true "详情参数"
 // @Success 200 {object} dto.Response{data=resp.LoginResp}
 // @Router /member/address/update [post]
@@ -95,6 +98,7 @@ func (h *AddressHandler) AddressUpdate(c *gin.Context) {
 // @Tags 会员端.地址
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body member_req.MemberAddressDeleteReq true "详情参数"
 // @Success 200 {object} dto.Response{}
 // @Router /member/address/delete [delete]
@@ -119,6 +123,7 @@ func (h *AddressHandler) AddressDelete(c *gin.Context) {
 // @Tags 会员端.地址
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body member_req.MemberAddressAuthReq true "详情参数"
 // @Success 200 {object} dto.Response{data=member_resp.LoginResp}
 // @Router /member/address/auth [post]
