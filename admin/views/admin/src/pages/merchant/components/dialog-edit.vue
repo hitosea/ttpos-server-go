@@ -278,6 +278,9 @@
         <el-form-item :label="$t('所在地')">
           <el-input v-model="formData.address" type="textarea" rows="5" maxlength="500" clearable :placeholder="$t('请输入所在地')"></el-input>
         </el-form-item>
+        <el-form-item :label="$t('经纬度')">
+          <el-input v-model="formData.coordinates" type="textarea" rows="5" maxlength="500" clearable :placeholder="$t('请输入经纬度')"></el-input>
+        </el-form-item>
       </el-form>
     </div>
     <template #footer>
@@ -349,6 +352,7 @@
     sms_quota: 200, // 短信额度
     is_open_coupon: 0, // 是否开启优惠券: 0不开启, 1开启
     is_open_marketing: 0, // 是否开启营销活动: 0不开启, 1开启
+    coordinates: '', // 经纬度
   });
 
   const limitTable = ref(false);
@@ -614,6 +618,7 @@
         printer_limit: props.detail?.printer_limit == -1 ? undefined : props.detail?.printer_limit || undefined, //
         is_open_coupon: props.detail?.is_open_coupon || 0, //
         is_open_marketing: props.detail?.is_open_marketing || 0, //
+        coordinates: props.detail?.coordinates || '', //
       };
       props.detail?.printer_limit == -1 ? (limitPrinter.value = true) : (limitPrinter.value = false);
       props.detail?.table_limit == -1 ? (limitTable.value = true) : (limitTable.value = false);
