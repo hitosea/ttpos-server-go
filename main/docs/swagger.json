@@ -523,7 +523,7 @@
                     {
                         "type": "integer",
                         "description": "是否是自助餐: -1=全都、0=否、1=是",
-                        "name": "isBuffet",
+                        "name": "is_buffet",
                         "in": "query"
                     },
                     {
@@ -776,7 +776,7 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "saleBillUuid",
+                        "name": "sale_bill_uuid",
                         "in": "query"
                     }
                 ],
@@ -3220,13 +3220,13 @@
                     {
                         "type": "integer",
                         "description": "桌台UUID\t   二选一, 销售账单UUID权重最大",
-                        "name": "deskUuid",
+                        "name": "desk_uuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售账单UUID\t二选一，销售账单UUID权重最大",
-                        "name": "saleBillUuid",
+                        "name": "sale_bill_uuid",
                         "in": "query"
                     }
                 ],
@@ -4270,7 +4270,7 @@
                     {
                         "type": "integer",
                         "description": "是否是自助餐: -1=全都、0=否、1=是",
-                        "name": "isBuffet",
+                        "name": "is_buffet",
                         "in": "query"
                     },
                     {
@@ -4519,7 +4519,7 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "saleBillUuid",
+                        "name": "sale_bill_uuid",
                         "in": "query"
                     }
                 ],
@@ -9501,19 +9501,19 @@
                     {
                         "type": "number",
                         "description": "支付金额, 必填",
-                        "name": "paymentAmount",
+                        "name": "payment_amount",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "支付方式UUID, 必填",
-                        "name": "paymentMethodUuid",
+                        "name": "payment_method_uuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "充值订单UUID, 必填",
-                        "name": "rechargeOrderUuid",
+                        "name": "recharge_order_uuid",
                         "in": "query"
                     }
                 ],
@@ -10705,13 +10705,13 @@
                     {
                         "type": "integer",
                         "description": "桌台UUID\t   二选一, 销售账单UUID权重最大",
-                        "name": "deskUuid",
+                        "name": "desk_uuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售账单UUID\t二选一，销售账单UUID权重最大",
-                        "name": "saleBillUuid",
+                        "name": "sale_bill_uuid",
                         "in": "query"
                     }
                 ],
@@ -10744,37 +10744,37 @@
                     {
                         "type": "integer",
                         "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
-                        "name": "billType",
+                        "name": "bill_type",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
-                        "name": "dateType",
+                        "name": "date_type",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "用餐方式, -1=全都、 0-堂食 1-打包",
-                        "name": "diningMethod",
+                        "name": "dining_method",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用开台时间 false-不启用，true-启用",
-                        "name": "enableCreateTime",
+                        "name": "enable_create_time",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
-                        "name": "enablePayTime",
+                        "name": "enable_pay_time",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "订单编号",
-                        "name": "orderNo",
+                        "name": "order_no",
                         "in": "query"
                     },
                     {
@@ -10795,13 +10795,13 @@
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "queryEndTime",
+                        "name": "query_end_time",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "queryStartTime",
+                        "name": "query_start_time",
                         "in": "query"
                     },
                     {
@@ -10846,37 +10846,37 @@
                     {
                         "type": "integer",
                         "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
-                        "name": "billType",
+                        "name": "bill_type",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
-                        "name": "dateType",
+                        "name": "date_type",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "用餐方式, -1=全都、 0-堂食 1-打包",
-                        "name": "diningMethod",
+                        "name": "dining_method",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用开台时间 false-不启用，true-启用",
-                        "name": "enableCreateTime",
+                        "name": "enable_create_time",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
-                        "name": "enablePayTime",
+                        "name": "enable_pay_time",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "订单编号",
-                        "name": "orderNo",
+                        "name": "order_no",
                         "in": "query"
                     },
                     {
@@ -10897,13 +10897,13 @@
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "queryEndTime",
+                        "name": "query_end_time",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "queryStartTime",
+                        "name": "query_start_time",
                         "in": "query"
                     },
                     {
@@ -11089,13 +11089,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "saleBillUuid",
+                        "name": "sale_bill_uuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID。退款都是针对子单进行退款",
-                        "name": "saleOrderUuid",
+                        "name": "sale_order_uuid",
                         "in": "query"
                     }
                 ],
@@ -11183,7 +11183,7 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "saleBillUuid",
+                        "name": "sale_bill_uuid",
                         "in": "query"
                     }
                 ],
@@ -11390,7 +11390,7 @@
                     {
                         "type": "integer",
                         "description": "数据类型 (打印类型), -1=全都、.....",
-                        "name": "dataType",
+                        "name": "data_type",
                         "in": "query"
                     },
                     {
@@ -11411,19 +11411,19 @@
                     {
                         "type": "integer",
                         "description": "打印机UUID",
-                        "name": "printerUuid",
+                        "name": "printer_uuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "queryEndTime",
+                        "name": "query_end_time",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "queryStartTime",
+                        "name": "query_start_time",
                         "in": "query"
                     },
                     {
@@ -13342,7 +13342,7 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "saleBillUuid",
+                        "name": "sale_bill_uuid",
                         "in": "query"
                     }
                 ],
@@ -13785,19 +13785,19 @@
                     {
                         "type": "integer",
                         "description": "商品包uuid",
-                        "name": "productPackageUuid",
+                        "name": "product_package_uuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售账单ID",
-                        "name": "saleBillUuid",
+                        "name": "sale_bill_uuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单ID",
-                        "name": "saleOrderUuid",
+                        "name": "sale_order_uuid",
                         "in": "query"
                     }
                 ],
@@ -15382,6 +15382,43 @@
                 }
             }
         },
+        "/member/order/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "取消订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "取消订单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会员端销售订单UUID",
+                        "name": "member_sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/member/order/create": {
             "post": {
                 "security": [
@@ -15417,6 +15454,43 @@
                         "schema": {
                             "$ref": "#/definitions/resp.CreateMemberOrderResp"
                         }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取会员端订单详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "获取会员端订单详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会员端销售订单UUID",
+                        "name": "member_sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
                     },
                     "400": {
                         "description": "错误请求"
@@ -15576,6 +15650,46 @@
                 }
             }
         },
+        "/member/order/payment/method/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取会员端订单支付方式列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "获取会员端订单支付方式列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会员端销售订单UUID",
+                        "name": "member_sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.GetMemberOrderPaymentMethodListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/member/points/record/list": {
             "get": {
                 "security": [
@@ -15598,7 +15712,7 @@
                     {
                         "type": "integer",
                         "description": "会员ID",
-                        "name": "memberUuid",
+                        "name": "member_uuid",
                         "in": "query"
                     },
                     {
@@ -16410,37 +16524,37 @@
                     {
                         "type": "integer",
                         "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
-                        "name": "billType",
+                        "name": "bill_type",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
-                        "name": "dateType",
+                        "name": "date_type",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "用餐方式, -1=全都、 0-堂食 1-打包",
-                        "name": "diningMethod",
+                        "name": "dining_method",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用开台时间 false-不启用，true-启用",
-                        "name": "enableCreateTime",
+                        "name": "enable_create_time",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
-                        "name": "enablePayTime",
+                        "name": "enable_pay_time",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "订单编号",
-                        "name": "orderNo",
+                        "name": "order_no",
                         "in": "query"
                     },
                     {
@@ -16461,13 +16575,13 @@
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "queryEndTime",
+                        "name": "query_end_time",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "queryStartTime",
+                        "name": "query_start_time",
                         "in": "query"
                     },
                     {
@@ -16557,13 +16671,13 @@
                     {
                         "type": "integer",
                         "description": "桌台UUID\t   二选一, 销售账单UUID权重最大",
-                        "name": "deskUuid",
+                        "name": "desk_uuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售账单UUID\t二选一，销售账单UUID权重最大",
-                        "name": "saleBillUuid",
+                        "name": "sale_bill_uuid",
                         "in": "query"
                     }
                 ],
@@ -16596,37 +16710,37 @@
                     {
                         "type": "integer",
                         "description": "账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单",
-                        "name": "billType",
+                        "name": "bill_type",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
-                        "name": "dateType",
+                        "name": "date_type",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "用餐方式, -1=全都、 0-堂食 1-打包",
-                        "name": "diningMethod",
+                        "name": "dining_method",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用开台时间 false-不启用，true-启用",
-                        "name": "enableCreateTime",
+                        "name": "enable_create_time",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
                         "description": "启用支付时间 false-不启用，true-启用",
-                        "name": "enablePayTime",
+                        "name": "enable_pay_time",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "description": "订单编号",
-                        "name": "orderNo",
+                        "name": "order_no",
                         "in": "query"
                     },
                     {
@@ -16647,13 +16761,13 @@
                     {
                         "type": "integer",
                         "description": "查询结束时间戳",
-                        "name": "queryEndTime",
+                        "name": "query_end_time",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "查询开始时间戳",
-                        "name": "queryStartTime",
+                        "name": "query_start_time",
                         "in": "query"
                     },
                     {
@@ -16768,13 +16882,13 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "saleBillUuid",
+                        "name": "sale_bill_uuid",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "description": "销售订单UUID。退款都是针对子单进行退款",
-                        "name": "saleOrderUuid",
+                        "name": "sale_order_uuid",
                         "in": "query"
                     }
                 ],
@@ -18000,7 +18114,7 @@
                     {
                         "type": "integer",
                         "description": "是否是自助餐: -1=全都、0=否、1=是",
-                        "name": "isBuffet",
+                        "name": "is_buffet",
                         "in": "query"
                     },
                     {
@@ -18105,7 +18219,7 @@
                     {
                         "type": "integer",
                         "description": "销售账单UUID",
-                        "name": "saleBillUuid",
+                        "name": "sale_bill_uuid",
                         "in": "query"
                     }
                 ],
@@ -18742,6 +18856,22 @@
                     "description": "总桌数人数",
                     "type": "integer"
                 },
+                "all_takeout_avg_order_price": {
+                    "description": "总外送平均订单金额",
+                    "type": "number"
+                },
+                "all_takeout_max_order_price": {
+                    "description": "总外送最大订单金额",
+                    "type": "number"
+                },
+                "all_takeout_min_order_price": {
+                    "description": "总外送最小订单金额",
+                    "type": "number"
+                },
+                "all_takeout_order_num": {
+                    "description": "外送数据",
+                    "type": "integer"
+                },
                 "avg_order_price": {
                     "description": "平均订单金额",
                     "type": "number"
@@ -18861,6 +18991,22 @@
                 "total_table_num": {
                     "description": "总桌数",
                     "type": "integer"
+                },
+                "total_takeout_business_amount": {
+                    "description": "总外送营收",
+                    "type": "number"
+                },
+                "total_takeout_delivery_fee": {
+                    "description": "总外送配送费",
+                    "type": "number"
+                },
+                "total_takeout_refund_amount": {
+                    "description": "总外送退款金额",
+                    "type": "number"
+                },
+                "total_takeout_sale_amount": {
+                    "description": "总外送销售",
+                    "type": "number"
                 },
                 "total_tax_money": {
                     "description": "总税费",
@@ -19035,10 +19181,6 @@
                         "$ref": "#/definitions/business_data_resp.BusinessDataExportArea"
                     }
                 },
-                "avg_delivery_order_amount": {
-                    "description": "外送点餐-平均订单金额",
-                    "type": "number"
-                },
                 "avg_desk_order_amount": {
                     "description": "桌台方式-平均订单金额",
                     "type": "number"
@@ -19051,12 +19193,13 @@
                     "description": "平均订单金额",
                     "type": "number"
                 },
-                "day": {
-                    "type": "string"
-                },
-                "max_delivery_order_amount": {
-                    "description": "外送点餐-最大订单金额",
+                "avg_takeout_order_amount": {
+                    "description": "外送点餐-平均订单金额",
                     "type": "number"
+                },
+                "day": {
+                    "description": "日期",
+                    "type": "string"
                 },
                 "max_desk_order_amount": {
                     "description": "桌台方式-最大订单金额",
@@ -19070,8 +19213,8 @@
                     "description": "最大订单金额",
                     "type": "number"
                 },
-                "min_delivery_order_amount": {
-                    "description": "外送点餐-最小订单金额",
+                "max_takeout_order_amount": {
+                    "description": "外送点餐-最大订单金额",
                     "type": "number"
                 },
                 "min_desk_order_amount": {
@@ -19086,6 +19229,10 @@
                     "description": "最小订单金额",
                     "type": "number"
                 },
+                "min_takeout_order_amount": {
+                    "description": "外送点餐-最小订单金额",
+                    "type": "number"
+                },
                 "payment_list": {
                     "description": "支付列表",
                     "type": "array",
@@ -19095,26 +19242,6 @@
                 },
                 "total_business_amount": {
                     "description": "营业收入",
-                    "type": "number"
-                },
-                "total_delivery_fee": {
-                    "description": "配送费",
-                    "type": "number"
-                },
-                "total_delivery_order_amount": {
-                    "description": "TODO 外送数据来源",
-                    "type": "number"
-                },
-                "total_delivery_order_num": {
-                    "description": "外送点餐-订单数",
-                    "type": "integer"
-                },
-                "total_delivery_order_refund_amount": {
-                    "description": "外送订单退款",
-                    "type": "number"
-                },
-                "total_delivery_order_revenue": {
-                    "description": "外送营收",
                     "type": "number"
                 },
                 "total_desk_num": {
@@ -19191,6 +19318,26 @@
                 },
                 "total_service_fee": {
                     "description": "服务费",
+                    "type": "number"
+                },
+                "total_takeout_business_amount": {
+                    "description": "外送营收",
+                    "type": "number"
+                },
+                "total_takeout_delivery_fee": {
+                    "description": "外送配送费",
+                    "type": "number"
+                },
+                "total_takeout_order_num": {
+                    "description": "外送点餐-订单数",
+                    "type": "integer"
+                },
+                "total_takeout_refund_amount": {
+                    "description": "外送退款",
+                    "type": "number"
+                },
+                "total_takeout_sale_amount": {
+                    "description": "外送销售",
                     "type": "number"
                 },
                 "total_tax": {
@@ -20738,11 +20885,11 @@
         "req.BusinessDataCountProductSalesReq": {
             "type": "object",
             "properties": {
-                "areaUuid": {
+                "area_uuid": {
                     "description": "区域UUID, -1=全都",
                     "type": "integer"
                 },
-                "categoryUuid": {
+                "category_uuid": {
                     "description": "分类UUID, -1=全都",
                     "type": "integer"
                 },
@@ -20757,23 +20904,23 @@
                     "maximum": 1100,
                     "minimum": 1
                 },
-                "productName": {
+                "product_name": {
                     "description": "商品名称",
                     "type": "string"
                 },
-                "queryEndTime": {
+                "query_end_time": {
                     "description": "查询结束时间戳",
                     "type": "integer"
                 },
-                "queryStartTime": {
+                "query_start_time": {
                     "description": "查询开始时间戳",
                     "type": "integer"
                 },
-                "sortDirection": {
+                "sort_direction": {
                     "description": "排序方向 0=默认、 1=升序、 2=降序",
                     "type": "integer"
                 },
-                "sortType": {
+                "sort_type": {
                     "description": "排序类型 0=默认、 1=按销售数量、 2=按原销售额",
                     "type": "integer"
                 }
@@ -20782,31 +20929,31 @@
         "req.BusinessDataCountReq": {
             "type": "object",
             "properties": {
-                "categoryType": {
+                "category_type": {
                     "description": "分类类型 (-1 未选择, 1 按一级分类, 2 按二级分类)",
                     "type": "integer"
                 },
-                "dutyNo": {
+                "duty_no": {
                     "description": "班次编号",
                     "type": "string"
                 },
-                "notQueryFree": {
+                "not_query_free": {
                     "description": "是否不查询免费使用场景",
                     "type": "boolean"
                 },
-                "queryEndTime": {
+                "query_end_time": {
                     "description": "查询结束时间戳",
                     "type": "integer"
                 },
-                "queryStartTime": {
+                "query_start_time": {
                     "description": "查询开始时间戳",
                     "type": "integer"
                 },
-                "staffUuid": {
+                "staff_uuid": {
                     "description": "操作员UUID",
                     "type": "integer"
                 },
-                "timeType": {
+                "time_type": {
                     "description": "时间类型 (-1 未选择, 1 今天, 2 昨天, 3 本周, 4 本月, 5 营业时间)",
                     "type": "integer"
                 }
@@ -20844,15 +20991,15 @@
         "req.BusinessDataRankProductReq": {
             "type": "object",
             "properties": {
-                "queryEndTime": {
+                "query_end_time": {
                     "description": "查询结束时间戳",
                     "type": "integer"
                 },
-                "queryStartTime": {
+                "query_start_time": {
                     "description": "查询开始时间戳",
                     "type": "integer"
                 },
-                "rankType": {
+                "rank_type": {
                     "description": "排行类型 (1 按销量, 2 按销售额)",
                     "type": "integer"
                 }
@@ -23705,6 +23852,31 @@
                 }
             }
         },
+        "resp.DeliveryResp": {
+            "type": "object",
+            "properties": {
+                "delivery_distance": {
+                    "description": "配送距离，单位km",
+                    "type": "number"
+                },
+                "delivery_fee_amount": {
+                    "description": "配送费",
+                    "type": "number"
+                },
+                "delivery_fee_base_fee": {
+                    "description": "基础配送费",
+                    "type": "number"
+                },
+                "delivery_fee_min_fee": {
+                    "description": "起步配送费",
+                    "type": "number"
+                },
+                "delivery_fee_per_km": {
+                    "description": "每公里配送费",
+                    "type": "number"
+                }
+            }
+        },
         "resp.Desk": {
             "type": "object",
             "properties": {
@@ -24109,6 +24281,22 @@
                     "description": "取消时间",
                     "type": "integer"
                 },
+                "company_name": {
+                    "description": "公司名称",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "delivery_config": {
+                    "description": "配送费配置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.DeliveryResp"
+                        }
+                    ]
+                },
                 "finish_time": {
                     "description": "完成时间",
                     "type": "integer"
@@ -24129,6 +24317,10 @@
                         }
                     ]
                 },
+                "remaining_payment_time": {
+                    "description": "剩余支付时间(单位秒)",
+                    "type": "integer"
+                },
                 "remark": {
                     "description": "订单备注",
                     "type": "string"
@@ -24140,6 +24332,10 @@
                             "$ref": "#/definitions/resp.RiderInfo"
                         }
                     ]
+                },
+                "status": {
+                    "description": "订单状态 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消",
+                    "type": "integer"
                 }
             }
         },
@@ -24271,6 +24467,26 @@
                 },
                 "meta": {
                     "$ref": "#/definitions/resp.OrderManageListMeta"
+                }
+            }
+        },
+        "resp.GetMemberOrderPaymentMethodListResp": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "订单总金额. 订单总金额=实际付款金额=商品金额-会员折扣金额+运费",
+                    "type": "number"
+                },
+                "list": {
+                    "description": "支付方式列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PaymentMethodItem"
+                    }
+                },
+                "remaining_payment_time": {
+                    "description": "剩余支付时间(单位秒)",
+                    "type": "integer"
                 }
             }
         },
@@ -25256,6 +25472,14 @@
                         "$ref": "#/definitions/resp.MemberOrderProduct"
                     }
                 },
+                "rider": {
+                    "description": "骑手信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.RiderInfo"
+                        }
+                    ]
+                },
                 "serial_number": {
                     "description": "订单流水号",
                     "type": "string"
@@ -25271,6 +25495,10 @@
             "properties": {
                 "amount": {
                     "description": "订单总金额. 订单总金额=实际付款金额=商品金额-会员折扣金额+运费",
+                    "type": "number"
+                },
+                "member_discount_fee": {
+                    "description": "会员折扣金额",
                     "type": "number"
                 }
             }
@@ -28090,6 +28318,14 @@
         "resp.RiderInfo": {
             "type": "object",
             "properties": {
+                "latitude": {
+                    "description": "骑手纬度",
+                    "type": "number"
+                },
+                "longitude": {
+                    "description": "骑手经度",
+                    "type": "number"
+                },
                 "name": {
                     "description": "骑手姓名",
                     "type": "string"
@@ -28097,6 +28333,10 @@
                 "phone": {
                     "description": "骑手电话",
                     "type": "string"
+                },
+                "remaining_distance": {
+                    "description": "剩余距离",
+                    "type": "number"
                 }
             }
         },

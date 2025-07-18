@@ -63,6 +63,12 @@ func (model *MemberSaleOrder) OriginAmountValue() float64 {
 	return decimal.NewFromFloat(model.ProductAmount).Add(decimal.NewFromFloat(model.DeliveryFeeAmount)).Round(2).InexactFloat64()
 }
 
+// 获取剩余支付时间(单位秒)
+func (model *MemberSaleOrder) GetRemainingPaymentTime() int64 {
+	// TODO: 需要根据公司设置的支付超时时间来计算
+	return 0
+}
+
 // 订单是否可以支付 0-未支付 1-已支付 2-已取消
 func (model *MemberSaleOrder) GetPayStatus() uint {
 	if model.Status == constant.MemberSaleOrderStatusCancelled {
@@ -80,6 +86,13 @@ func (model *MemberSaleOrder) SetNil() {
 	model.PaymentMethod = nil
 }
 
+// 设置订单为“已取消”状态
+func (model *MemberSaleOrder) SetCancel(cancelReason string) {
+	model.Status = constant.MemberSaleOrderStatusCancelled
+	model.CancelReason = cancelReason
+	model.CancelTime = time.Now().Unix()
+}
+
 // 设置订单为“待支付”状态
 func (model *MemberSaleOrder) SetPendingPayment(paymentMethodUuid uint64) {
 	model.Status = constant.MemberSaleOrderStatusPendingPayment
@@ -94,6 +107,12 @@ func (model *MemberSaleOrder) IsCancel() bool {
 // 订单是否可以支付
 func (model *MemberSaleOrder) IsCanPaid() bool {
 	return model.Status == constant.MemberSaleOrderStatusPendingPayment
+}
+
+// 订单是否可取消
+func (model *MemberSaleOrder) IsCanCancel() bool {
+	// 商家没接单之前可以取消
+	return model.Status <= constant.MemberSaleOrderStatusPendingMerchantAccept
 }
 
 // 订单是否已经验证手机号

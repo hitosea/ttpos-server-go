@@ -59,20 +59,21 @@ type DeliveryResp struct {
 
 // 会员端订单详情
 type GetMemberOrderDetailResp struct {
-	MemberSaleOrderUuid uint64                   `json:"member_sale_order_uuid"` // 会员端销售订单UUID
-	CompanyName         string                   `json:"company_name"`           // 公司名称
-	PayTime             int64                    `json:"pay_time"`               // 支付时间
-	FinishTime          int64                    `json:"finish_time"`            // 完成时间
-	CancelTime          int64                    `json:"cancel_time"`            // 取消时间
-	CreateTime          int64                    `json:"create_time"`            // 创建时间
-	CancelReason        string                   `json:"cancel_reason"`          // 取消原因
-	Status              uint                     `json:"status"`                 // 订单状态 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消
-	Remark              string                   `json:"remark"`                 // 订单备注
-	AmountInfo          MemberOrderAmountInfo    `json:"amount_info"`            // 订单金额信息
-	ProductList         MemberProductList        `json:"product_list"`           // 订单商品列表
-	AddressInfo         MemberOrderDetailAddress `json:"address_info"`           // 订单地址
-	DeliveryConfig      DeliveryResp             `json:"delivery_config"`        // 配送费配置
-	Rider               RiderInfo                `json:"rider"`                  // 骑手信息
+	MemberSaleOrderUuid  uint64                   `json:"member_sale_order_uuid"` // 会员端销售订单UUID
+	CompanyName          string                   `json:"company_name"`           // 公司名称
+	PayTime              int64                    `json:"pay_time"`               // 支付时间
+	RemainingPaymentTime int64                    `json:"remaining_payment_time"` // 剩余支付时间(单位秒)
+	FinishTime           int64                    `json:"finish_time"`            // 完成时间
+	CancelTime           int64                    `json:"cancel_time"`            // 取消时间
+	CreateTime           int64                    `json:"create_time"`            // 创建时间
+	CancelReason         string                   `json:"cancel_reason"`          // 取消原因
+	Status               uint                     `json:"status"`                 // 订单状态 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消
+	Remark               string                   `json:"remark"`                 // 订单备注
+	AmountInfo           MemberOrderAmountInfo    `json:"amount_info"`            // 订单金额信息
+	ProductList          MemberProductList        `json:"product_list"`           // 订单商品列表
+	AddressInfo          MemberOrderDetailAddress `json:"address_info"`           // 订单地址
+	DeliveryConfig       DeliveryResp             `json:"delivery_config"`        // 配送费配置
+	Rider                RiderInfo                `json:"rider"`                  // 骑手信息
 }
 
 // 收银端“外送”接单页面订单详情
@@ -122,4 +123,10 @@ type MemberOrderPaymentInfoResp struct {
 type MemberOrderPaymentStatusResp struct {
 	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员端销售订单UUID
 	Status              uint   `json:"status"`                 // 支付单状态 支付状态, 0-未支付 1-已支付 2-支付失败
+}
+
+type GetMemberOrderPaymentMethodListResp struct {
+	List                 []PaymentMethodItem `json:"list"`                   // 支付方式列表
+	RemainingPaymentTime int64               `json:"remaining_payment_time"` // 剩余支付时间(单位秒)
+	Amount               float64             `json:"amount"`                 // 订单总金额. 订单总金额=实际付款金额=商品金额-会员折扣金额+运费
 }
