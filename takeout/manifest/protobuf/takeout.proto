@@ -76,6 +76,7 @@ message GetDriverInfoResp {
 
 message CancelOrderReq {
   string shop_order_uuid = 1;     // ttpos 订单Uuid
+  string reason = 2; // 取消原因
 }
 
 message CancelOrderResp {

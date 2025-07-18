@@ -315,6 +315,7 @@ class Supplier extends BaseModel
                 'time_zone' => $data['timezone'] ?? '',
                 'phone' => $data['link_phone'] ?? '',
                 'address' => $data['address'] ?? '',
+                'coordinates' => $data['coordinates'] ?? '',
                 'chain_number' => $data['chain_number'] ?? '',
                 'tax_number' => $data['tax_number'] ?? $setting->values['tax_number'] ?? '', // 兼容后台修改商家授权信息，重置税号
                 'language' => $settingLanguages

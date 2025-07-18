@@ -2152,4 +2152,5 @@ return [
     "是" => "Evet",
     "否" => "Hayır",
     "外送账单" => "Dış teslimat faturası",
+    "经纬度格式错误" => "Enlem ve boylam formatı hatalı",
 ];

@@ -72,22 +72,22 @@ func TestEstimateDistance() (*resp.TakeoutDistanceResp, error) {
 func TestCreateOrder() (*resp.CreateTakeoutOrderResp, error) {
 	res, err := takeout.NewTakeoutSrv().CreateOrder(context.Background(), &req.CreateTakeoutOrderReq{
 		ProviderName:  "skootar",
-		ShopOrderUuid: "3675534372503554",
+		ShopOrderUuid: "3675543933419521",
 		CustomerLocation: &req.TakeoutLocation{
 			TakeoutAddress: req.TakeoutAddress{
-				AddressName: "new point11",
-				Address:     "281/28 บรรทัดทอง เขต ราชเทวี กรุงเทพมหานคร ประเทศไทย 10400",
-				Lat:         "13.721899",
+				AddressName: "zomato",
+				Address:     "281/28 บรรทัดทอง เขต ราชเทวี กรุงเทพมหานคร ประเทศไทย 10401",
+				Lat:         "13.721900",
 				Lng:         "100.52900",
 			},
-			ContactName:  "Thanate",
-			ContactPhone: "0864923595",
+			ContactName:  "Thanata",
+			ContactPhone: "0864923676",
 		},
 		MerchantLocation: &req.TakeoutLocation{
 			TakeoutAddress: req.TakeoutAddress{
 				AddressName: "xiaoxiong",
-				Address:     "2086 ถนนรามคำแหง เขตบางกะปิ กรุงเทพมหานคร ประเทศไทย 10240",
-				Lat:         "13.747408",
+				Address:     "2086 ถนนรามคำแหง เขตบางกะปิ กรุงเทพมหานคร ประเทศไทย 10241",
+				Lat:         "13.747418",
 				Lng:         "100.540244",
 			},
 			ContactName:  "มาช่า",
@@ -131,7 +131,8 @@ func TestGetDriverInfo() (*resp.GetDriverInfoResp, error) {
 
 func TestCancelOrder() error {
 	err := takeout.NewTakeoutSrv().CancelOrder(context.Background(), &req.CancelTakeoutOrderReq{
-		ShopOrderUuid: "3675534372503554",
+		ShopOrderUuid: "3675534194245633",
+		Reason:        "wait too long",
 	})
 	if err != nil {
 		logger.Logger.Error("调用外送服务gRPC客户端失败: %v", zap.Error(err))

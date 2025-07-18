@@ -20,8 +20,9 @@ var cancelOrderApiPath = "/api/cancel_created_job"
 // CancelOrder 取消订单
 func (s *sSkootar) CancelOrder(ctx context.Context, req *input.CancelOrderInp) (res *api.CancelOrderResp, err error) {
 	reqInp := &skootar.CancelOrderInp{
-		ReqBase: s.ReqBase(),
-		JobId:   req.JobId,
+		ReqBase:      s.ReqBase(),
+		JobId:        req.JobId,
+		CancelReason: req.Reason,
 	}
 	resp := &skootar.CancelOrderOut{}
 	rr := g.Client().ContentJson().PostVar(ctx, s.GetUrl(cancelOrderApiPath), reqInp)

@@ -5,7 +5,8 @@ type ConfirmOrderInp struct {
 }
 
 type CancelOrderInp struct {
-	JobId string
+	JobId  string
+	Reason string
 }
 
 type GetDriverInfoInp struct {

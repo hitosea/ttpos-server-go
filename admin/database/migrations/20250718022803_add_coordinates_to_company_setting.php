@@ -3,8 +3,10 @@
 use think\migration\Migrator;
 use think\migration\db\Column;
 
-class AddLocationToMemberSaleOrderAddressTable extends Migrator
+class AddCoordinatesToCompanySetting extends Migrator
 {
+    // 迁移目标
+    const TARGET = 'all';
     /**
      * Change Method.
      *
@@ -27,11 +29,11 @@ class AddLocationToMemberSaleOrderAddressTable extends Migrator
      * with the Table class.
      */
     public function change()
-    {
-        $table = $this->table('member_sale_order_address');
-        if (!$table->hasColumn('location')) {
-            $table->addColumn('location', 'string', ['limit' => 100, 'null' => false, 'default' => '', 'comment' => '位置坐标'])
-                ->update();
+    { 
+        $table =  $this->table('company_setting');
+        if (!$table->hasColumn('coordinates')) {
+            $table->addColumn('coordinates', 'string', ['null' => false, 'default' => '', 'after' => 'address', 'comment' => '经纬度，如：13.721899,100.52900']); // 经纬度
         }
+        $table->update(); 
     }
 }

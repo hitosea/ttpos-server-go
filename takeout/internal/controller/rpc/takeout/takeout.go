@@ -81,7 +81,7 @@ func (c *Controller) CancelOrder(ctx context.Context, req *api.CancelOrderReq) (
 	if err != nil || takeoutJob == nil {
 		return nil, gerror.Wrap(err, "获取外送订单失败")
 	}
-	res, err = c.getService(takeoutJob.ProviderName).CancelOrder(ctx, &input.CancelOrderInp{JobId: takeoutJob.TakeoutRefNo})
+	res, err = c.getService(takeoutJob.ProviderName).CancelOrder(ctx, &input.CancelOrderInp{JobId: takeoutJob.TakeoutRefNo, Reason: req.Reason})
 	if err != nil {
 		return nil, gerror.Wrap(err, "取消订单失败")
 	}

@@ -88,7 +88,8 @@ class Store extends Controller
             'address' => $data['address'] ?? '',
             'phone' => $data['phone'] ?? '',
             'tax_number' => $data['tax_number'] ?? '',
-            'language' => $data['language'] ?? []
+            'language' => $data['language'] ?? [],
+            'coordinates' => $data['coordinates'] ?? '',
         ];
         if ($model->edit(SettingEnum::STORE, $arr, $this->store['user']['shop_supplier_id'])) {
             return $this->renderSuccess('操作成功');

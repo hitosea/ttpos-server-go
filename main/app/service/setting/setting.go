@@ -244,6 +244,18 @@ func (s *Srv) GetStoreSetting(ctx context.Context) (setting.Store, error) {
 	if len(defaultStore.Language) == 0 {
 		defaultStore.Language = make([]dto.LanguageItem, 0)
 	}
+
+	if defaultStore.Coordinates != "" {
+		latLng := strings.Split(defaultStore.Coordinates, ",")
+		if len(latLng) == 2 {
+			// 转成float64保留6位小数，然后再转成字符串
+			lat, _ := strconv.ParseFloat(latLng[0], 64)
+			lng, _ := strconv.ParseFloat(latLng[1], 64)
+			defaultStore.Latitude = fmt.Sprintf("%.6f", lat)
+			defaultStore.Longitude = fmt.Sprintf("%.6f", lng)
+		}
+	}
+
 	return defaultStore, nil
 }
 

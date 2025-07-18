@@ -4,10 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gogf/gf/v2/os/gctx"
-	"github.com/gogf/gf/v2/util/gconv"
-	"github.com/gogf/gf/v2/util/gmeta"
-	"github.com/gogf/gf/v2/util/guid"
 	"takeout/api"
 	v1 "takeout/api/callback/v1"
 	"takeout/internal/consts"
@@ -16,6 +12,11 @@ import (
 	"takeout/internal/model/entity"
 	"takeout/internal/model/input/skootar"
 	"time"
+
+	"github.com/gogf/gf/v2/os/gctx"
+	"github.com/gogf/gf/v2/util/gconv"
+	"github.com/gogf/gf/v2/util/gmeta"
+	"github.com/gogf/gf/v2/util/guid"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -53,10 +54,10 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 		Vehicle:         gconv.String(consts.VehicleMotorcycle),
 		JobType:         gconv.String(consts.JobTypeFood),
 		JobDate:         time.Now().Format(time.DateOnly),
-		StartTime:       consts.DEFAULT_START_TIME, //time.Now().Format("15:04")
+		StartTime:       consts.DEFAULT_START_TIME,
 		PaymentType:     gconv.String(consts.PaymentTypeCash),
-		MerchantConfirm: 1,                //送餐默认需要商家确认
-		CallbackUrl:     getCallbackUrl(), //  构造外送模块回调地址
+		MerchantConfirm: 1,                // 送餐默认需要商家确认
+		CallbackUrl:     getCallbackUrl(), // 构造外送模块回调地址
 		Option:          gconv.String(consts.EstimateOptionFood),
 		RefNo:           req.ShopOrderUuid,
 		Remark:          req.Remark,
@@ -85,7 +86,7 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 		TakeoutRefNo:         resp.JobDetail.JobId,
 		ShopRefNo:            req.ShopOrderUuid,
 		PaymentType:          reqInp.PaymentType,
-		CallbackUrl:          req.CallbackUrl, //来源订单的回调
+		CallbackUrl:          req.CallbackUrl, // 来源订单的回调
 		ProviderName:         gconv.String(consts.ProviderSkootar),
 		JobDate:              reqInp.JobDate,
 		StartTime:            reqInp.StartTime,

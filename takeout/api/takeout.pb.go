@@ -725,6 +725,7 @@ func (x *GetDriverInfoResp) GetLng() float32 {
 type CancelOrderReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ShopOrderUuid string                 `protobuf:"bytes,1,opt,name=shop_order_uuid,json=shopOrderUuid,proto3" json:"shop_order_uuid,omitempty" dc:"ttpos 订单Uuid"` // ttpos 订单Uuid
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty" dc:"取消原因"`                                              // 取消原因
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -762,6 +763,13 @@ func (*CancelOrderReq) Descriptor() ([]byte, []int) {
 func (x *CancelOrderReq) GetShopOrderUuid() string {
 	if x != nil {
 		return x.ShopOrderUuid
+	}
+	return ""
+}
+
+func (x *CancelOrderReq) GetReason() string {
+	if x != nil {
+		return x.Reason
 	}
 	return ""
 }
@@ -863,9 +871,10 @@ const file_takeout_proto_rawDesc = "" +
 	"\x06avatar\x18\x04 \x01(\tR\x06avatar\x12\x16\n" +
 	"\x06rating\x18\x05 \x01(\x02R\x06rating\x12\x10\n" +
 	"\x03lat\x18\x06 \x01(\x02R\x03lat\x12\x10\n" +
-	"\x03lng\x18\a \x01(\x02R\x03lng\"8\n" +
+	"\x03lng\x18\a \x01(\x02R\x03lng\"P\n" +
 	"\x0eCancelOrderReq\x12&\n" +
-	"\x0fshop_order_uuid\x18\x01 \x01(\tR\rshopOrderUuid\"H\n" +
+	"\x0fshop_order_uuid\x18\x01 \x01(\tR\rshopOrderUuid\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"H\n" +
 	"\x0fCancelOrderResp\x125\n" +
 	"\fresponseInfo\x18\x01 \x01(\v2\x11.api.ResponseInfoR\fresponseInfo2\xd4\x02\n" +
 	"\x0eTakeoutService\x12I\n" +

@@ -2,7 +2,8 @@ package skootar
 
 type CancelOrderInp struct {
 	ReqBase
-	JobId string `json:"jobId"`
+	JobId        string `json:"jobId"`
+	CancelReason string `json:"cancelReason"`
 }
 
 type CancelOrderOut struct {
