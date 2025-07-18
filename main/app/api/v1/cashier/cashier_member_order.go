@@ -69,6 +69,30 @@ func (h *MemberOrderHandler) GetMemberOrderDetail(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// RejectOrder 拒单
+// @Summary 拒单
+// @Description 拒单
+// @Tags 收银端.外送接单相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param RejectOrderReq body req.RejectOrderReq true "拒绝接单"
+// @Success 200 {object} dto.Response{data=resp.GetMemberOrderDetailResp}
+// @Router /cashier/member_order/reject [post]
+func (h *MemberOrderHandler) RejectOrder(c *gin.Context) {
+	var rejectOrderReq req.RejectOrderReq
+	if err := c.ShouldBindJSON(&rejectOrderReq); err != nil {
+		helper.HandleValidationError(c, err, rejectOrderReq, nil)
+		return
+	}
+	err := h.memberOrderSrv.RejectMemberSaleOrder(helper.GetContext(c), rejectOrderReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -93,5 +117,7 @@ func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, ca
 	{
 		privateApi.GET("/member_order/list", wrapper.GetMemberOrderList)     // 获取外送订单接单列表
 		privateApi.GET("/member_order/detail", wrapper.GetMemberOrderDetail) // 获取外送订单接单详情
+		// privateApi.POST("/member_order/accept", wrapper.AcceptOrder)         // 接单
+		privateApi.POST("/member_order/reject", wrapper.RejectOrder) // 拒单
 	}
 }

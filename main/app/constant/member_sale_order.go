@@ -87,3 +87,10 @@ func GetStatusList(status string) []uint {
 		return []uint{}
 	}
 }
+
+// 取消场景：merchant_cancel-商家取消；member_cancel-用户取消；merchant_reject-商家拒单
+const (
+	MemberSaleOrderSceneMerchantCancel = "merchant_cancel" // 商家取消
+	MemberSaleOrderSceneMemberCancel   = "member_cancel"   // 用户取消
+	MemberSaleOrderSceneMerchantReject = "merchant_reject" // 商家拒单
+)

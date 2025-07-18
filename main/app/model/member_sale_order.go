@@ -1,6 +1,7 @@
 package model
 
 import (
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/pkg/utils"
 
@@ -104,6 +105,14 @@ func (model *MemberSaleOrder) CalculateAmount() float64 {
 	memberDiscount := model.SaleBill.SaleOrders[0].MemberDiscountFee
 
 	return decimal.NewFromFloat(productAmount).Add(decimal.NewFromFloat(model.CalculateDeliveryFee())).Sub(decimal.NewFromFloat(memberDiscount)).Round(2).InexactFloat64()
+}
+
+// 拒单
+func (model *MemberSaleOrder) Reject() {
+	model.Status = constant.MemberSaleOrderStatusCancelled          // 已取消
+	model.CancelScene = constant.MemberSaleOrderSceneMerchantReject // 商家拒单
+	model.CancelTime = time.Now().Unix()
+	model.CancelReason = "商家拒单"
 }
 
 type CreateMemberSaleOrderParams struct {

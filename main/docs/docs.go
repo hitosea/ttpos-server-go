@@ -9845,6 +9845,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/member_order/reject": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "拒单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外送接单相关"
+                ],
+                "summary": "拒单",
+                "parameters": [
+                    {
+                        "description": "拒绝接单",
+                        "name": "RejectOrderReq",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.RejectOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GetMemberOrderDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/member_order_manage/detail": {
             "get": {
                 "security": [
@@ -21692,6 +21743,15 @@ const docTemplate = `{
             "properties": {
                 "h5_order_uuid": {
                     "description": "h5订单ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.RejectOrderReq": {
+            "type": "object",
+            "properties": {
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
                     "type": "integer"
                 }
             }
