@@ -1,8 +1,10 @@
 package model
 
 import (
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
@@ -160,4 +162,16 @@ type MemberSaleOrderAddress struct {
 }
 
 func (model *MemberSaleOrderAddress) SetNil() {
+}
+
+// 获取位置坐标. 返回纬度,经度
+func (model *MemberSaleOrderAddress) GetLocation() (string, string, error) {
+	if model.Location == "" {
+		return "", "", errors.New("位置坐标为空")
+	}
+	location := strings.Split(model.Location, ",")
+	if len(location) != 2 {
+		return "", "", errors.New("位置坐标格式错误")
+	}
+	return location[0], location[1], nil
 }

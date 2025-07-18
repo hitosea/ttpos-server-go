@@ -26,6 +26,7 @@ type IQueryMemberSaleOrderRepo interface {
 	GetCashierMemberSaleOrderManageList(pageNo, pageSize int, statusList []uint, req GetCashierMemberSaleOrderManageListReq) ([]model.MemberSaleOrder, int64, error) // 获取收银台"外送"订单管理列表
 	UpdateMemberSaleOrderAccept(memberSaleOrder model.MemberSaleOrder) error                                                                                         // 更新会员端销售订单-接单
 	UpdateMemberSaleOrderReject(memberSaleOrder model.MemberSaleOrder) error                                                                                         // 更新会员端销售订单-拒单
+	UpdateDeliveryDistance(memberSaleOrderUuid uint64, distance float64) error                                                                                       // 更新会员端销售订单的配送距离
 
 	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
 	WhereStatusIn(status []uint) DBOption
@@ -287,6 +288,17 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderAccept(memberSaleOrder model.
 	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
 		Status:     memberSaleOrder.Status,
 		AcceptTime: memberSaleOrder.AcceptTime,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateDeliveryDistance 更新会员端销售订单的配送距离
+func (r *MemberSaleOrderRepo) UpdateDeliveryDistance(memberSaleOrderUuid uint64, distance float64) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrderUuid).Updates(model.MemberSaleOrder{
+		DeliveryDistance: distance,
 	}).Error
 	if err != nil {
 		return errors.WithMessage(err)

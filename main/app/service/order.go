@@ -25,6 +25,7 @@ import (
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
 	"ttpos-server-go/app/repository/saas"
+	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
@@ -965,6 +966,19 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		}
 	}
 
+	// 如果未查询配送距离
+	if memberSaleOrder.DeliveryDistance == 0 {
+		// 查询配送距离
+		distance, err := s.QueryDistance(ctx, memberSaleOrder)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		memberSaleOrder.DeliveryDistance = distance
+		if err := repository.NewMemberSaleOrderRepo(ctx.GetDB()).UpdateDeliveryDistance(memberSaleOrder.Uuid, distance); err != nil {
+			return nil, errors.WithMessage(err)
+		}
+	}
+
 	info := &resp.MemberSaleOrderInfo{
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		Status:              memberSaleOrder.Status,
@@ -987,6 +1001,42 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 	return &resp.CreateMemberOrderResp{
 		MemberSaleOrderInfo: info,
 	}, nil
+}
+
+// 查询配送距离
+func (s *orderSrv) QueryDistance(ctx context.Context, memberSaleOrder *model.MemberSaleOrder) (float64, error) {
+	takeoutSrv := takeout.NewTakeoutSrv()
+
+	// 收货人地址
+	lat, lng, err := memberSaleOrder.Address.GetLocation()
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+
+	takeoutResp, err := takeoutSrv.EstimateDistance(contexts.Background(), &req.TakeoutDistanceReq{
+		ProviderName: constant.ProviderNameSkootar,
+		Address: []*req.TakeoutAddress{
+			// 商家地址
+			{
+				AddressName: "商家",
+				Address:     "",
+				Lat:         "123",
+				Lng:         "1231",
+			},
+			// 收货人地址
+			{
+				AddressName: memberSaleOrder.Address.ContactName,
+				Address:     memberSaleOrder.Address.Address,
+				Lat:         lat,
+				Lng:         lng,
+			},
+		},
+	})
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+
+	return takeoutResp.Distance, nil
 }
 
 // updateMemberOrder 更新会员端订单
