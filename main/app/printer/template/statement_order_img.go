@@ -349,7 +349,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	for key, product := range products {
 		img.SetTextLineHeight(45)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: product.ProductName, Width: 300, RightPadding: 15, Align: pkg.AlignLeft},
+			pkg.ColumnConfig{Text: product.ProductName, Width: 300, RightPadding: 40, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%v", t.base.Amount(product.ProductPrice), product.ProductNum), Width: 120, RightPadding: 15, Align: pkg.AlignCenter},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(product.ProductTotalPrice), Width: 0, Align: pkg.AlignRight},
 		)
