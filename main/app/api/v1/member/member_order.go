@@ -209,6 +209,35 @@ func (h *OrderHandler) PaidOrder(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// GetMemberOrderList 获取会员端订单列表
+// @Summary 获取会员端订单列表
+// @Description 获取会员端订单列表
+// @Tags 会员端-订单列表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.MemberOrderListReq true "详情参数"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/list [get]
+func (h *OrderHandler) GetMemberOrderList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.MemberOrderListReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取会员端订单列表
+	res, err := h.orderSrv.GetMemberOrderList(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -233,6 +262,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/order/pay", wrapper.PayOrder)             // 提交支付
 		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)     // 获取支付信息
 		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus) // 获取支付状态
+		privateApi.GET("/order/list", wrapper.GetMemberOrderList)   // 获取会员端订单列表
 		privateApi.POST("/xie-test/order/paid", wrapper.PaidOrder)  // 支付成功 TODO 上线前删除改接口
 	}
 }

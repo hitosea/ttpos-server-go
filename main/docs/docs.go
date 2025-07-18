@@ -15379,6 +15379,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/order/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取会员端订单列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单列表"
+                ],
+                "summary": "获取会员端订单列表",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MemberOrderListReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/member/order/pay": {
             "post": {
                 "security": [
@@ -21231,6 +21270,26 @@ const docTemplate = `{
                 }
             }
         },
+        "req.MemberOrderListReq": {
+            "type": "object",
+            "properties": {
+                "page_no": {
+                    "description": "页码",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer",
+                    "maximum": 1100,
+                    "minimum": 1
+                },
+                "status": {
+                    "description": "状态: \"all\" 全部, \"unpaid\" 待付款, \"undelivery\" 待配送, \"delivery\" 配送中, \"completed\" 已完成, \"cancel\" 已取消",
+                    "type": "string"
+                }
+            }
+        },
         "req.MergeDeskReq": {
             "type": "object",
             "required": [
@@ -25120,6 +25179,10 @@ const docTemplate = `{
         "resp.MemberOrder": {
             "type": "object",
             "properties": {
+                "company_name": {
+                    "description": "公司名称",
+                    "type": "string"
+                },
                 "member_sale_order_uuid": {
                     "description": "会员端销售订单UUID",
                     "type": "integer"
@@ -25132,17 +25195,20 @@ const docTemplate = `{
                     "description": "商品金额. 所有商品金额总和，如商品A金额为2，商品B金额为3，则总金额为5",
                     "type": "number"
                 },
+                "product_list": {
+                    "description": "订单商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MemberOrderProduct"
+                    }
+                },
                 "serial_number": {
                     "description": "订单流水号",
                     "type": "string"
                 },
                 "status": {
-                    "description": "订单状态.0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消",
+                    "description": "订单状态 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消",
                     "type": "integer"
-                },
-                "status_group": {
-                    "description": "订单状态分组. \"unaccept\" 待接单, \"accept\" 备餐中, \"undelivery\" 待配送, \"delivery\" 配送中, \"completed\" 已完成, \"cancel\" 已取消",
-                    "type": "string"
                 }
             }
         },
@@ -25301,6 +25367,10 @@ const docTemplate = `{
         "resp.MemberOrderProduct": {
             "type": "object",
             "properties": {
+                "image": {
+                    "description": "商品图片",
+                    "type": "string"
+                },
                 "locale_attribute_name": {
                     "description": "商品属性",
                     "allOf": [

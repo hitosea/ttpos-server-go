@@ -12,6 +12,21 @@ type GetMemberOrderListResp struct {
 }
 
 type MemberOrder struct {
+	MemberSaleOrderUuid uint64               `json:"member_sale_order_uuid"` // 会员端销售订单UUID
+	CompanyName         string               `json:"company_name"`           // 公司名称
+	SerialNumber        string               `json:"serial_number"`          // 订单流水号
+	Status              uint                 `json:"status"`                 // 订单状态 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消
+	Num                 float64              `json:"num"`                    // 商品数量. 所有商品数量总和，如商品A数量为2，商品B数量为3，则总数量为5
+	ProductAmount       float64              `json:"product_amount"`         // 商品金额. 所有商品金额总和，如商品A金额为2，商品B金额为3，则总金额为5
+	ProductList         []MemberOrderProduct `json:"product_list"`           // 订单商品列表
+}
+
+type GetMemberCashierOrderListResp struct {
+	Meta dto.PageResponse     `json:"meta"`
+	List []MemberCashierOrder `json:"list"` // 订单列表
+}
+
+type MemberCashierOrder struct {
 	MemberSaleOrderUuid uint64  `json:"member_sale_order_uuid"` // 会员端销售订单UUID
 	SerialNumber        string  `json:"serial_number"`          // 订单流水号
 	Status              uint    `json:"status"`                 // 订单状态.0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消
@@ -30,6 +45,7 @@ type MemberOrderProduct struct {
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 float64            `json:"num"`                   // 数量
 	TotalPrice          float64            `json:"total_price"`           // 总价. 总价=单价*数量
+	Image               string             `json:"image"`                 // 商品图片
 }
 
 // 收银端“外送”接单页面订单详情
