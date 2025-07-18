@@ -51,7 +51,7 @@ func (h *MarketingHandler) MarketingActivity(c *gin.Context) {
 // @Tags 会员端.营销活动
 // @Accept json
 // @Produce json
-// @Success 200 {object} dto.Response{data=member_resp.MemberMarketingActivityListResp}
+// @Success 200 {object} dto.Response{data=member_resp.MemberMarketingActivityListsResp}
 // @Router /member/marketing_activity_list [get]
 func (h *MarketingHandler) MarketingActivityList(c *gin.Context) {
 	ctx := helper.GetContext(c)

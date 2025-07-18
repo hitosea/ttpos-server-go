@@ -1156,23 +1156,19 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, req member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error) {
 	db := ctx.GetDB()
 
-	// 保存订单备注信息
+	// 订单
 	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(req.MemberSaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
-
-	memberSaleOrder.Amount = 129876.12
-
 	// 判断订单金额是否为0
-	if memberSaleOrder.Amount == 0 {
-		return nil, errors.New("订单金额为0，无法支付")
+	if memberSaleOrder.Amount < 1 {
+		return nil, errors.NewWithCode(constant.CodeOrderAmountLessThan1, "订单金额小于1，无法支付")
 	}
 
 	// 判断当前是否连连支付
-	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
-	paymentMethod := paymentMethodRepo.GetPaymentMethod(paymentMethodRepo.WhereUuid(memberSaleOrder.PaymentMethodUuid))
-	if paymentMethod.Uuid == 0 {
+	paymentMethod := memberSaleOrder.PaymentMethod
+	if paymentMethod == nil || paymentMethod.Uuid == 0 {
 		return nil, errors.New("支付方式不存在")
 	}
 	// 支付方式是否可用
@@ -1181,14 +1177,14 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, req member_req.Get
 	}
 
 	// 判断支付方式是否已支付
-	orderRepo := repository.NewPaymentOrderRepo(db)
-	paymentOrder, err := orderRepo.GetPaymentOrderInfo(
+	paymentOrderRepo := repository.NewPaymentOrderRepo(db)
+	paymentOrder, err := paymentOrderRepo.GetPaymentOrderInfo(
 		repository.CommonRepo.WhereBySoftDelete(),
-		orderRepo.WhereRelatedUuid(memberSaleOrder.Uuid),
-		orderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeMemberOrder),
-		orderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
+		paymentOrderRepo.WhereRelatedUuid(memberSaleOrder.Uuid),
+		paymentOrderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeMemberOrder),
+		paymentOrderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
 	)
-	if err == nil {
+	if err == nil && paymentOrder.Uuid != 0 {
 		if paymentOrder.Status == constant.PaymentOrderStatusPaid {
 			infoResp := &resp.MemberOrderPaymentInfoResp{
 				MemberSaleOrderUuid: memberSaleOrder.Uuid,
@@ -1199,6 +1195,27 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, req member_req.Get
 				PaymentAmount:       paymentOrder.PaymentAmount,
 			}
 			return infoResp, nil
+		}
+	} else {
+		currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+		if err != nil {
+			return nil, errors.WithMessage(err, "添加支付方式失败")
+		}
+		_, err = paymentOrderRepo.Create(model.PaymentOrder{
+			BaseModel:            model.BaseModel{Uuid: paymentOrder.Uuid},
+			PaymentMethodName:    paymentMethod.PaymentName,
+			PaymentMethodUuid:    paymentMethod.Uuid,
+			PaymentFeePercent:    0,
+			RelatedType:          constant.PaymentOrderRelatedTypeMemberOrder,
+			RelatedUuid:          memberSaleOrder.Uuid,
+			CurrencyUnit:         currencySetting.Unit, // 留档使用
+			PaymentAmount:        memberSaleOrder.Amount,
+			PaymentCommissionFee: 0,
+			Amount:               paymentOrder.PaymentAmount,
+			Status:               constant.PaymentOrderStatusUnPay,
+		})
+		if err != nil {
+			return nil, errors.WithMessage(err, "添加支付方式失败")
 		}
 	}
 

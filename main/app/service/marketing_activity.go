@@ -307,22 +307,50 @@ func (s *marketingActivitySrv) MarketingActivityList(ctx context.Context) (*memb
 	memberMarketingActivityInfoResp := make([]member_resp.MemberMarketingActivityInfoResp, 0)
 	for _, marketingActivity := range marketingActivityList {
 		memberMarketingActivityInfoResp = append(memberMarketingActivityInfoResp, member_resp.MemberMarketingActivityInfoResp{
-			Uuid:        marketingActivity.Uuid,
-			Type:        marketingActivity.Type,
-			LocaleName:  marketingActivity.MultiLanguageName.GetNames(),
-			LocaleDesc:  marketingActivity.MultiLanguageDesc.GetNames(),
-			StartTime:   int64(marketingActivity.StartTime),
-			EndTime:     int64(marketingActivity.EndTime),
-			Status:      marketingActivity.GetStatus(),
-			RewardType:  marketingActivity.RewardType,
-			RewardValue: marketingActivity.RewardValue,
+			Uuid:       marketingActivity.Uuid,
+			Type:       marketingActivity.Type,
+			LocaleName: marketingActivity.MultiLanguageName.GetNames(),
+			LocaleDesc: marketingActivity.MultiLanguageDesc.GetNames(),
+			StartTime:  int64(marketingActivity.StartTime),
+			EndTime:    int64(marketingActivity.EndTime),
+			Status:     marketingActivity.GetStatus(),
 			Prizes: func() []member_resp.MemberMarketingActivityPrizeResp {
 				prizes := make([]member_resp.MemberMarketingActivityPrizeResp, 0)
-				for _, prize := range marketingActivity.Prizes {
+				if marketingActivity.RewardType == 1 {
 					prizes = append(prizes, member_resp.MemberMarketingActivityPrizeResp{
-						Uuid:      prize.Uuid,
-						PrizeName: prize.Coupon.Name,
+						Uuid: marketingActivity.Uuid,
+						LocalePrizeName: dto.LocaleResponse{
+							ZH:   "积分",
+							TH:   "คะแนน",
+							EN:   "Points",
+							ZHTW: "積分",
+							JA:   "ポイント",
+							KO:   "포인트",
+							MY:   "คะแนน",
+							TR:   "Puan",
+							SV:   "Poäng",
+						},
+						RewardType:  marketingActivity.RewardType,
+						RewardValue: marketingActivity.RewardValue,
 					})
+				} else {
+					for _, prize := range marketingActivity.Prizes {
+						prizes = append(prizes, member_resp.MemberMarketingActivityPrizeResp{
+							LocalePrizeName: dto.LocaleResponse{
+								ZH:   prize.Coupon.Name,
+								TH:   prize.Coupon.Name,
+								EN:   prize.Coupon.Name,
+								ZHTW: prize.Coupon.Name,
+								JA:   prize.Coupon.Name,
+								KO:   prize.Coupon.Name,
+								MY:   prize.Coupon.Name,
+								TR:   prize.Coupon.Name,
+								SV:   prize.Coupon.Name,
+							},
+							RewardValue: prize.Coupon.Amount,
+							RewardType:  0,
+						})
+					}
 				}
 				return prizes
 			}(),
