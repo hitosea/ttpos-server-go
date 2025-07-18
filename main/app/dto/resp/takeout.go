@@ -1,7 +1,7 @@
 package resp
 
 type TakeoutDistanceResp struct {
-	Distance     float64 // 预估距离
+	Distance     float64 // 预估距离。单位km
 	TripDuration int     // 预估时间，单位秒
 }
 
@@ -13,10 +13,10 @@ type CreateTakeoutOrderResp struct {
 }
 
 type GetDriverInfoResp struct {
-	Name   string
-	Phone  string
-	Avatar string
-	Rating float32
-	Lat    float32
-	Lng    float32
+	Name   string  // 骑手姓名
+	Phone  string  // 骑手电话
+	Avatar string  // 骑手头像
+	Rating float32 // 骑手评分
+	Lat    float32 // 骑手纬度
+	Lng    float32 // 骑手经度
 }

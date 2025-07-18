@@ -1,10 +1,10 @@
 package req
 
 type TakeoutAddress struct {
-	AddressName string
-	Address     string
-	Lat         string
-	Lng         string
+	AddressName string // 地址名称。商家名称
+	Address     string // 地址
+	Lat         string // 纬度
+	Lng         string // 经度
 }
 
 type TakeoutDistanceReq struct {
@@ -14,8 +14,8 @@ type TakeoutDistanceReq struct {
 
 type TakeoutLocation struct {
 	TakeoutAddress
-	ContactName  string
-	ContactPhone string
+	ContactName  string // 联系人。外送订单的收获人或商家名
+	ContactPhone string // 联系电话。外送订单的收获人或商家电话
 }
 
 type CreateTakeoutOrderReq struct {
@@ -24,17 +24,17 @@ type CreateTakeoutOrderReq struct {
 	MerchantLocation *TakeoutLocation // 商户地址
 	Remark           string           // 备注
 	CallbackUrl      string           // 回调地址
-	ShopOrderUuid    string           // 商户订单号
+	ShopOrderUuid    string           // 商户订单号。member_sale_order_uuid
 }
 
 type ConfirmTakeoutOrderReq struct {
-	ShopOrderUuid string // 商户订单号
+	ShopOrderUuid string // 商户订单号。member_sale_order_uuid
 }
 
 type CancelTakeoutOrderReq struct {
-	ShopOrderUuid string // 商户订单号
+	ShopOrderUuid string // 商户订单号。member_sale_order_uuid
 }
 
 type GetDriverInfoReq struct {
-	ShopOrderUuid string // 商户订单号
+	ShopOrderUuid string // 商户订单号。member_sale_order_uuid
 }

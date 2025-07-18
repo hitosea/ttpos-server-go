@@ -30,7 +30,7 @@ type ITakeoutSrv interface {
 	EstimateDistance(ctx context.Context, req *req.TakeoutDistanceReq) (*resp.TakeoutDistanceResp, error)
 	// 创建订单
 	CreateOrder(ctx context.Context, req *req.CreateTakeoutOrderReq) (*resp.CreateTakeoutOrderResp, error)
-	// 确认订单
+	// 确认订单。即“商家备餐完成，联系骑手”
 	ConfirmOrder(ctx context.Context, req *req.ConfirmTakeoutOrderReq) error
 	// 获取骑手信息
 	GetDriverInfo(ctx context.Context, req *req.GetDriverInfoReq) (*resp.GetDriverInfoResp, error)
