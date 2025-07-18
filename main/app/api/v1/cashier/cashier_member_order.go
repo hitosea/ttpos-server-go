@@ -69,6 +69,30 @@ func (h *MemberOrderHandler) GetMemberOrderDetail(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// AcceptOrder 接单
+// @Summary 接单
+// @Description 接单
+// @Tags 收银端.外送接单相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param AcceptOrderReq body req.AcceptOrderReq true "接受接单"
+// @Success 200 {object} dto.Response{data=resp.GetMemberOrderDetailResp}
+// @Router /cashier/member_order/accept [post]
+func (h *MemberOrderHandler) AcceptOrder(c *gin.Context) {
+	var acceptOrderReq req.AcceptOrderReq
+	if err := c.ShouldBindJSON(&acceptOrderReq); err != nil {
+		helper.HandleValidationError(c, err, acceptOrderReq, nil)
+		return
+	}
+	err := h.memberOrderSrv.AcceptMemberSaleOrder(helper.GetContext(c), acceptOrderReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 // RejectOrder 拒单
 // @Summary 拒单
 // @Description 拒单
@@ -117,7 +141,7 @@ func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, ca
 	{
 		privateApi.GET("/member_order/list", wrapper.GetMemberOrderList)     // 获取外送订单接单列表
 		privateApi.GET("/member_order/detail", wrapper.GetMemberOrderDetail) // 获取外送订单接单详情
-		// privateApi.POST("/member_order/accept", wrapper.AcceptOrder)         // 接单
-		privateApi.POST("/member_order/reject", wrapper.RejectOrder) // 拒单
+		privateApi.POST("/member_order/accept", wrapper.AcceptOrder)         // 接单
+		privateApi.POST("/member_order/reject", wrapper.RejectOrder)         // 拒单
 	}
 }

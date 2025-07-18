@@ -24,6 +24,7 @@ type IQueryMemberSaleOrderRepo interface {
 	PaginateGetMemberSaleOrder(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)                                                       // 分页获取会员端销售订单
 	GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error)                                                   // 获取收银台"外送"订单列表
 	GetCashierMemberSaleOrderManageList(pageNo, pageSize int, statusList []uint, req GetCashierMemberSaleOrderManageListReq) ([]model.MemberSaleOrder, int64, error) // 获取收银台"外送"订单管理列表
+	UpdateMemberSaleOrderAccept(memberSaleOrder model.MemberSaleOrder) error                                                                                         // 更新会员端销售订单-接单
 	UpdateMemberSaleOrderReject(memberSaleOrder model.MemberSaleOrder) error                                                                                         // 更新会员端销售订单-拒单
 
 	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
@@ -262,6 +263,18 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderReject(memberSaleOrder model.
 		CancelScene:  memberSaleOrder.CancelScene,
 		CancelTime:   memberSaleOrder.CancelTime,
 		CancelReason: memberSaleOrder.CancelReason,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderAccept 更新会员端销售订单-接单
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderAccept(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		Status:     memberSaleOrder.Status,
+		AcceptTime: memberSaleOrder.AcceptTime,
 	}).Error
 	if err != nil {
 		return errors.WithMessage(err)

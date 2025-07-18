@@ -154,6 +154,7 @@ type IMemberOrderSrv interface {
 	PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error                                                     // 会员端订单支付成功. TODO 用于测试，提测前删掉
 	GetMemberOrderManageList(ctx context.Context, req req.MemberOrderManageListReq) (*resp.GetMemberOrderManageListResp, error)           // 查询收银机“外送”页面的订单列表
 	GetMemberOrderManageDetail(ctx context.Context, req req.GetMemberOrderManageDetailReq) (*resp.GetMemberOrderManageDetailResp, error)  // 查询收银机“外送”页面的订单详情
+	AcceptMemberSaleOrder(ctx context.Context, req req.AcceptOrderReq) error                                                              // 接单外送订单
 	RejectMemberSaleOrder(ctx context.Context, req req.RejectOrderReq) error                                                              // 拒单外送订单
 }
 
@@ -11888,6 +11889,54 @@ func (s *orderSrv) GetProductPackageDetail(ctx context.Context, req req.GetProdu
 	}
 
 	return &resp.ProductPackageDetailRes{List: productPackageDetailList}, nil
+}
+
+// AcceptMemberSaleOrder 接单外送订单
+func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.AcceptOrderReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	memberSaleOrder, err := getMemberOrderDetail(ctx, request.MemberSaleOrderUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 接单
+	memberSaleOrder.Accept()
+
+	// 整单送厨
+	_, checkRes, err := s.InstantOrderCartProductCooking(ctx, req.OrderCartProductCookingReq{
+		SaleBillUuid: memberSaleOrder.SaleBill.Uuid,
+		IgnoreMust:   true,
+	})
+	if err != nil {
+		return errors.WithMessage(err, "整单送厨失败")
+	}
+	if checkRes == nil {
+		return errors.New("整单送厨失败")
+	}
+
+	repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderAccept(*memberSaleOrder)
+		return nil
+	})
+
+	// 发布"外送接单"操作事件
+	go func() {
+		s.bus.PublishAcceptMemberSaleOrderEvent(event.AcceptMemberSaleOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:           ctx,
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  memberSaleOrder.SaleBill.Uuid,
+				SaleOrderUuid: memberSaleOrder.SaleBill.SaleOrders[0].Uuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			MemberSaleOrder:     memberSaleOrder,
+		})
+	}()
+
+	return nil
 }
 
 // RejectMemberSaleOrder 拒单外送订单

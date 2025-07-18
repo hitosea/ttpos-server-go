@@ -107,6 +107,12 @@ func (model *MemberSaleOrder) CalculateAmount() float64 {
 	return decimal.NewFromFloat(productAmount).Add(decimal.NewFromFloat(model.CalculateDeliveryFee())).Sub(decimal.NewFromFloat(memberDiscount)).Round(2).InexactFloat64()
 }
 
+// 接单
+func (model *MemberSaleOrder) Accept() {
+	model.Status = constant.MemberSaleOrderStatusCooking // 商家备餐中
+	model.AcceptTime = time.Now().Unix()
+}
+
 // 拒单
 func (model *MemberSaleOrder) Reject() {
 	model.Status = constant.MemberSaleOrderStatusCancelled          // 已取消
