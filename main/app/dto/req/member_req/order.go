@@ -32,6 +32,11 @@ type GetMemberOrderPayInfoReq struct {
 	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 }
 
+// GetMemberOrderPayStatusReq 获取支付状态
+type GetMemberOrderPayStatusReq struct {
+	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+}
+
 type CallbackReq struct {
 	JobStatusAfter  string `json:"jobStatusAfter"`  // 变化后的状态，即当前状态。 枚举请查看”skootar 订单状态“
 	JobStatusBefore string `json:"jobStatusBefore"` // 变化前的状态。 枚举请查看”skootar 订单状态“

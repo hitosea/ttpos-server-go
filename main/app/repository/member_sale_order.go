@@ -84,6 +84,9 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecord(uuid uint64) (*model.Memb
 			WithPreload{
 				Query: "Address.Member",
 			},
+			WithPreload{
+				Query: "SaleBill.SaleOrders",
+			},
 		),
 	)
 	if err != nil {
