@@ -152,11 +152,11 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 	}
 
 	return resp.UnprocessedResp{
-		UnprocessedCallCount:     unprocessedCallCount,
-		AbnormalPrintCount:       abnormalPrintCount,
-		UnprocessedH5OrderCount:  unhandledH5OrderCount,
-		UnprocessedDeliveryCount: unhandledMemberSaleOrderCount,
-		UpdateTime:               time.Now().Unix(),
+		UnprocessedCallCount:        unprocessedCallCount,
+		AbnormalPrintCount:          abnormalPrintCount,
+		UnprocessedH5OrderCount:     unhandledH5OrderCount,
+		UnprocessedMemberOrderCount: unhandledMemberSaleOrderCount,
+		UpdateTime:                  time.Now().Unix(),
 	}, nil
 }
 
