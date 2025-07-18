@@ -834,28 +834,6 @@ definitions:
     - member_address_uuid
     - member_sale_order_uuid
     type: object
-  member_req.VerifyPhoneReq:
-    properties:
-      code:
-        description: 验证码
-        type: string
-      member_sale_order_uuid:
-        description: 会员端销售订单UUID
-        type: integer
-      phone:
-        description: 手机号
-        type: string
-      referrer_phone:
-        description: 推荐人手机号
-        type: string
-      register:
-        description: 是否注册会员
-        type: boolean
-    required:
-    - code
-    - member_sale_order_uuid
-    - phone
-    type: object
   member_resp.CompanyInfoResp:
     properties:
       logo:
@@ -2506,6 +2484,12 @@ definitions:
         description: h5订单ID
         type: integer
     type: object
+  req.RejectOrderReq:
+    properties:
+      member_sale_order_uuid:
+        description: 会员端销售订单UUID
+        type: integer
+    type: object
   req.SaleBillUuid:
     properties:
       sale_bill_uuid:
@@ -2659,6 +2643,12 @@ definitions:
         - 0
         - 1
         type: integer
+      member_show_sold_out:
+        description: 会员端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+        enum:
+        - 0
+        - 1
+        type: integer
       menu_show_sold_out:
         description: 电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
         enum:
@@ -2670,6 +2660,7 @@ definitions:
     - is_show_assistant_sold_out
     - is_show_scan_sold_out
     - is_show_sold_out
+    - member_show_sold_out
     - menu_show_sold_out
     type: object
   req.UsbPrinterReportPrinterData:
@@ -6572,6 +6563,9 @@ definitions:
       is_show_sold_out:
         description: 平板端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
         type: integer
+      member_show_sold_out:
+        description: 会员端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+        type: integer
       menu_show_sold_out:
         description: 电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
         type: integer
@@ -7071,6 +7065,9 @@ definitions:
         items:
           $ref: '#/definitions/dto.LanguageItem'
         type: array
+      member_show_sold_out:
+        description: 是否显示会员端售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+        type: string
       menu_show_sold_out:
         description: 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
         type: string
@@ -13161,6 +13158,35 @@ paths:
       summary: 外送订单接单列表
       tags:
       - 收银端.外送接单相关
+  /cashier/member_order/reject:
+    post:
+      consumes:
+      - application/json
+      description: 拒单
+      parameters:
+      - description: 拒绝接单
+        in: body
+        name: RejectOrderReq
+        required: true
+        schema:
+          $ref: '#/definitions/req.RejectOrderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.GetMemberOrderDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 拒单
+      tags:
+      - 收银端.外送接单相关
   /cashier/member_order_manage/detail:
     get:
       consumes:
@@ -16366,32 +16392,6 @@ paths:
       security:
       - JwtToken: []
       summary: 提交支付
-      tags:
-      - 会员端-订单
-  /member/order/phone/verify:
-    post:
-      consumes:
-      - application/json
-      description: 验证手机号
-      parameters:
-      - description: 详情参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/member_req.VerifyPhoneReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 成功
-          schema:
-            $ref: '#/definitions/resp.CreateMemberOrderResp'
-        "400":
-          description: 错误请求
-      security:
-      - JwtToken: []
-      summary: 验证手机号
       tags:
       - 会员端-订单
   /member/points/record/list:

@@ -76,3 +76,8 @@ func (req *MemberOrderManageListReq) GetTimeFilterParams(timezone string) *TimeF
 	// 没有时间筛选条件
 	return nil
 }
+
+// RejectOrderReq 拒单
+type RejectOrderReq struct {
+	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员端销售订单UUID
+}

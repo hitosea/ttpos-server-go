@@ -1337,6 +1337,7 @@ func (s *Srv) EditSystemSetting(ctx context.Context, systemSetting req.UpdateSys
 	cashierSetting.IsShowAssistantSoldOut = *systemSetting.IsShowAssistantSoldOut
 	cashierSetting.IsShowScanSoldOut = *systemSetting.IsShowScanSoldOut
 	cashierSetting.MenuShowSoldOut = strconv.Itoa(*systemSetting.MenuShowSoldOut)
+	cashierSetting.MemberShowSoldOut = strconv.Itoa(*systemSetting.MemberShowSoldOut)
 	if err := s.UpdateSetting(ctx, constant.SettingCashier, cashierSetting); err != nil {
 		return errors.WithMessage(err)
 	}
@@ -1394,6 +1395,7 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 
 	menuShowSoldOut, _ := strconv.Atoi(cashierSetting.MenuShowSoldOut)
 	isShowSoldOut, _ := strconv.Atoi(tabletSetting.IsShowSoldOut)
+	memberShowSoldOut, _ := strconv.Atoi(cashierSetting.MemberShowSoldOut)
 
 	return resp.CashierBaseSetting{
 		AcceptOrder: resp.AcceptOrderSetting{
@@ -1410,6 +1412,7 @@ func (s *Srv) GetCashierBaseSetting(ctx context.Context) (resp.CashierBaseSettin
 			IsShowScanSoldOut:      cashierSetting.IsShowScanSoldOut,
 			IsShowAssistantSoldOut: cashierSetting.IsShowAssistantSoldOut,
 			MenuShowSoldOut:        menuShowSoldOut,
+			MemberShowSoldOut:      memberShowSoldOut,
 			DishCardStyle:          businessSetting.DishCardStyle,
 			IsShowSoldOut:          isShowSoldOut,
 			DefaultLanguage:        cashierSetting.DefaultLanguage,

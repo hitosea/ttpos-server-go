@@ -9845,6 +9845,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/member_order/reject": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "拒单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外送接单相关"
+                ],
+                "summary": "拒单",
+                "parameters": [
+                    {
+                        "description": "拒绝接单",
+                        "name": "RejectOrderReq",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.RejectOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GetMemberOrderDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/member_order_manage/detail": {
             "get": {
                 "security": [
@@ -15232,48 +15283,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/member/order/phone/verify": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "验证手机号",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "会员端-订单"
-                ],
-                "summary": "验证手机号",
-                "parameters": [
-                    {
-                        "description": "详情参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/member_req.VerifyPhoneReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "$ref": "#/definitions/resp.CreateMemberOrderResp"
-                        }
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
         "/member/points/record/list": {
             "get": {
                 "security": [
@@ -19290,36 +19299,6 @@ const docTemplate = `{
                 }
             }
         },
-        "member_req.VerifyPhoneReq": {
-            "type": "object",
-            "required": [
-                "code",
-                "member_sale_order_uuid",
-                "phone"
-            ],
-            "properties": {
-                "code": {
-                    "description": "验证码",
-                    "type": "string"
-                },
-                "member_sale_order_uuid": {
-                    "description": "会员端销售订单UUID",
-                    "type": "integer"
-                },
-                "phone": {
-                    "description": "手机号",
-                    "type": "string"
-                },
-                "referrer_phone": {
-                    "description": "推荐人手机号",
-                    "type": "string"
-                },
-                "register": {
-                    "description": "是否注册会员",
-                    "type": "boolean"
-                }
-            }
-        },
         "member_resp.CompanyInfoResp": {
             "type": "object",
             "properties": {
@@ -21696,6 +21675,15 @@ const docTemplate = `{
                 }
             }
         },
+        "req.RejectOrderReq": {
+            "type": "object",
+            "properties": {
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.SaleBillUuid": {
             "type": "object",
             "properties": {
@@ -21881,6 +21869,7 @@ const docTemplate = `{
                 "is_show_assistant_sold_out",
                 "is_show_scan_sold_out",
                 "is_show_sold_out",
+                "member_show_sold_out",
                 "menu_show_sold_out"
             ],
             "properties": {
@@ -21914,6 +21903,14 @@ const docTemplate = `{
                 },
                 "is_show_sold_out": {
                     "description": "平板端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "member_show_sold_out": {
+                    "description": "会员端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
                     "type": "integer",
                     "enum": [
                         0,
@@ -27793,6 +27790,10 @@ const docTemplate = `{
                     "description": "平板端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
                     "type": "integer"
                 },
+                "member_show_sold_out": {
+                    "description": "会员端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
+                    "type": "integer"
+                },
                 "menu_show_sold_out": {
                     "description": "电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
                     "type": "integer"
@@ -28531,6 +28532,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/dto.LanguageItem"
                     }
+                },
+                "member_show_sold_out": {
+                    "description": "是否显示会员端售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
+                    "type": "string"
                 },
                 "menu_show_sold_out": {
                     "description": "是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
