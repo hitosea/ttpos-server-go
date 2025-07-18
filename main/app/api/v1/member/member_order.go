@@ -150,6 +150,35 @@ func (h *OrderHandler) PayOrderInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// PayOrderStatus 获取支付状态
+// @Summary 获取支付状态
+// @Description 获取支付状态
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param member_sale_order_uuid query string true "会员端销售订单UUID"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/pay/status [get]
+func (h *OrderHandler) PayOrderStatus(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := member_req.GetMemberOrderPayStatusReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取支付信息
+	res, err := h.orderSrv.GetMemberOrderPayStatus(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // PaidOrder 支付成功
 // @Summary 支付成功
 // @Description 支付成功
@@ -199,10 +228,11 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// privateApi := router.Group("")
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
-		privateApi.POST("/order/create", wrapper.CreateOrder)      // 创建订单
-		privateApi.POST("/order/address", wrapper.SetOrderAddress) // 设置订单地址
-		privateApi.POST("/order/pay", wrapper.PayOrder)            // 提交支付
-		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)    // 获取支付信息
-		privateApi.POST("/xie-test/order/paid", wrapper.PaidOrder) // 支付成功 TODO 上线前删除改接口
+		privateApi.POST("/order/create", wrapper.CreateOrder)       // 创建订单
+		privateApi.POST("/order/address", wrapper.SetOrderAddress)  // 设置订单地址
+		privateApi.POST("/order/pay", wrapper.PayOrder)             // 提交支付
+		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)     // 获取支付信息
+		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus) // 获取支付状态
+		privateApi.POST("/xie-test/order/paid", wrapper.PaidOrder)  // 支付成功 TODO 上线前删除改接口
 	}
 }

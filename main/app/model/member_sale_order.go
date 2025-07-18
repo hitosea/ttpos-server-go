@@ -13,6 +13,7 @@ import (
 // MemberSaleOrder 会员端销售订单表 `ttpos_member_sale_order`
 type MemberSaleOrder struct {
 	BaseModel
+	MemberUuid        uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员UUID'"`
 	Status            uint    `gorm:"column:status;type:int(10);not null;default:0;comment:'订单状态 0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消'"`
 	SerialNumber      string  `gorm:"column:serial_number;type:varchar(255);not null;default:'';comment:'订单流水号'"`
 	OrderNo           string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:'订单号'"`
@@ -62,6 +63,17 @@ func (model *MemberSaleOrder) OriginAmountValue() float64 {
 	return decimal.NewFromFloat(model.ProductAmount).Add(decimal.NewFromFloat(model.DeliveryFeeAmount)).Round(2).InexactFloat64()
 }
 
+// 订单是否可以支付 0-未支付 1-已支付 2-已取消
+func (model *MemberSaleOrder) GetPayStatus() uint {
+	if model.Status == constant.MemberSaleOrderStatusCancelled {
+		return 2
+	}
+	if model.Status <= constant.MemberSaleOrderStatusPendingPayment {
+		return 0
+	}
+	return 1
+}
+
 func (model *MemberSaleOrder) SetNil() {
 	model.SaleBill = nil
 	model.Address = nil
@@ -77,6 +89,11 @@ func (model *MemberSaleOrder) SetPendingPayment(paymentMethodUuid uint64) {
 // 订单是否已经取消
 func (model *MemberSaleOrder) IsCancel() bool {
 	return model.Status == constant.MemberSaleOrderStatusCancelled
+}
+
+// 订单是否可以支付
+func (model *MemberSaleOrder) IsCanPaid() bool {
+	return model.Status == constant.MemberSaleOrderStatusPendingPayment
 }
 
 // 订单是否已经验证手机号
@@ -127,6 +144,7 @@ func (model *MemberSaleOrder) Reject() {
 type CreateMemberSaleOrderParams struct {
 	DeliveryConfig DeliveryConfigResponse
 	SerialNo       string // 订单流水号
+	MemberUuid     uint64 // 会员UUID
 }
 
 func NewMemberSaleOrder(params CreateMemberSaleOrderParams) *MemberSaleOrder {
@@ -138,6 +156,7 @@ func NewMemberSaleOrder(params CreateMemberSaleOrderParams) *MemberSaleOrder {
 		DeliveryFeeBaseFee: params.DeliveryConfig.BasicFee,
 		DeliveryFeePerKm:   params.DeliveryConfig.PricePerKm,
 		SerialNumber:       params.SerialNo,
+		MemberUuid:         params.MemberUuid,
 	}
 	return saleOrder
 }

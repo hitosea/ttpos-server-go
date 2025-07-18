@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	builtinerrors "errors"
 	"fmt"
+	"github.com/hdt3213/delayqueue"
 	"math"
 	"slices"
 	"sort"
@@ -21,6 +22,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
+	"ttpos-server-go/app/queue"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
@@ -147,17 +149,18 @@ type IOrderSrv interface {
 }
 
 type IMemberOrderSrv interface {
-	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error) // 创建会员端订单
-	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)              // 设置会员端订单地址
-	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                       // 会员端订单提交支付，状态变为待支付
-	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)     // 会员端订单获取支付信息
-	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                             // 查询收银机“外送”页面的订单列表
-	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                    // 查询收银机“外送”页面的订单详情
-	PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error                                                     // 会员端订单支付成功. TODO 用于测试，提测前删掉
-	GetMemberOrderManageList(ctx context.Context, req req.MemberOrderManageListReq) (*resp.GetMemberOrderManageListResp, error)           // 查询收银机“外送”管理页面的订单列表
-	GetMemberOrderManageDetail(ctx context.Context, req req.GetMemberOrderManageDetailReq) (*resp.GetMemberOrderManageDetailResp, error)  // 查询收银机“外送”管理页面的订单详情
-	AcceptMemberSaleOrder(ctx context.Context, req req.AcceptOrderReq) error                                                              // 接单外送订单
-	RejectMemberSaleOrder(ctx context.Context, req req.RejectOrderReq) error                                                              // 拒单外送订单
+	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)   // 创建会员端订单
+	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                // 设置会员端订单地址
+	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                         // 会员端订单提交支付，状态变为待支付
+	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)       // 会员端订单获取支付信息
+	GetMemberOrderPayStatus(ctx context.Context, request member_req.GetMemberOrderPayStatusReq) (*resp.MemberOrderPaymentStatusResp, error) // 会员端订单获取支付状态
+	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                               // 查询收银机“外送”页面的订单列表
+	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                      // 查询收银机“外送”页面的订单详情
+	PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error                                                       // 会员端订单支付成功. TODO 用于测试，提测前删掉
+	GetMemberOrderManageList(ctx context.Context, req req.MemberOrderManageListReq) (*resp.GetMemberOrderManageListResp, error)             // 查询收银机“外送”管理页面的订单列表
+	GetMemberOrderManageDetail(ctx context.Context, req req.GetMemberOrderManageDetailReq) (*resp.GetMemberOrderManageDetailResp, error)    // 查询收银机“外送”管理页面的订单详情
+	AcceptMemberSaleOrder(ctx context.Context, req req.AcceptOrderReq) error                                                                // 接单外送订单
+	RejectMemberSaleOrder(ctx context.Context, req req.RejectOrderReq) error                                                                // 拒单外送订单
 }
 
 // orderSrv 订单服务结构
@@ -726,10 +729,8 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 // 3. 订单uuid不为0且订单已取消时，新建订单
 func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error) {
 	// 获取数据库
-	//companyUuid := uint64(7684296282112000)
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	ctx.SetDB(db)
-	//ctx.SetCompanyUuid(companyUuid)
 
 	if req.MemberSaleOrderUuid == 0 {
 		// 新建订单
@@ -746,6 +747,11 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 		}); err != nil {
 			return nil, nil, errors.WithMessage(err)
 		}
+
+		//FIXME N分钟后取消订单
+		queue.TakeoutCancelQueue.SendDelayMsgV2(strconv.FormatUint(result.MemberSaleOrderInfo.MemberSaleOrderUuid, 10),
+			30*time.Minute, delayqueue.WithRetryCount(3))
+
 		return result, nil, nil
 	} else {
 		// 更新订单
@@ -817,7 +823,11 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 		return nil, errors.WithMessage(err, "获取配送费配置失败")
 	}
 	// 创建外送订单
-	memberSaleOrder, errCreateMemberSaleOrder := createMemberSaleOrder(ctx, db, model.CreateMemberSaleOrderParams{DeliveryConfig: *deliveryConfig, SerialNo: serialNo})
+	memberSaleOrder, errCreateMemberSaleOrder := createMemberSaleOrder(ctx, db, model.CreateMemberSaleOrderParams{
+		DeliveryConfig: *deliveryConfig,
+		SerialNo:       serialNo,
+		MemberUuid:     ctx.GetMemberUuid(),
+	})
 	if errCreateMemberSaleOrder != nil {
 		return nil, errors.WithMessage(errCreateMemberSaleOrder)
 	}
@@ -1223,18 +1233,22 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 	return nil
 }
 
-// PayMemberOrderStatus 查询支付状态
-func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, req member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error) {
+// GetMemberOrderPayInfo 查询支付信息
+func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error) {
 	db := ctx.GetDB()
 
 	// 订单
-	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(req.MemberSaleOrderUuid)
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(request.MemberSaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
 	// 判断订单金额是否为0
 	if memberSaleOrder.Amount < 1 {
 		return nil, errors.NewWithCode(constant.CodeOrderAmountLessThan1, "订单金额小于1，无法支付")
+	}
+	// 判断订单是否可以支付
+	if !memberSaleOrder.IsCanPaid() {
+		return nil, errors.New("订单状态不可支付")
 	}
 
 	// 判断当前是否连连支付
@@ -1255,31 +1269,29 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, req member_req.Get
 		paymentOrderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeMemberOrder),
 		paymentOrderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
 	)
-	if err == nil && paymentOrder.Uuid != 0 {
-		if paymentOrder.Status == constant.PaymentOrderStatusPaid {
-			infoResp := &resp.MemberOrderPaymentInfoResp{
-				MemberSaleOrderUuid: memberSaleOrder.Uuid,
-				PaymentOrderUuid:    paymentOrder.Uuid,
-				QrCode:              "",
-				LinkUrl:             "",
-				Status:              paymentOrder.Status,
-				PaymentAmount:       paymentOrder.PaymentAmount,
-			}
-			return infoResp, nil
-		}
+	if err == nil && paymentOrder.Uuid != 0 && paymentOrder.Status == constant.PaymentOrderStatusPaid {
+		return &resp.MemberOrderPaymentInfoResp{
+			MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			PaymentOrderUuid:    paymentOrder.Uuid,
+			PaymentMethodName:   paymentMethod.PaymentName,
+			Status:              paymentOrder.Status,
+			PaymentAmount:       paymentOrder.PaymentAmount,
+		}, nil
 	} else {
-		currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
-		if err != nil {
-			return nil, errors.WithMessage(err, "添加支付方式失败")
-		}
-		_, err = paymentOrderRepo.Create(model.PaymentOrder{
-			BaseModel:            model.BaseModel{Uuid: paymentOrder.Uuid},
-			PaymentMethodName:    paymentMethod.PaymentName,
-			PaymentMethodUuid:    paymentMethod.Uuid,
-			PaymentFeePercent:    0,
-			RelatedType:          constant.PaymentOrderRelatedTypeMemberOrder,
-			RelatedUuid:          memberSaleOrder.Uuid,
-			CurrencyUnit:         currencySetting.Unit, // 留档使用
+		// 添加支付方式
+		createPaymentOrder, err := paymentOrderRepo.Create(model.PaymentOrder{
+			PaymentMethodName: paymentMethod.PaymentName,
+			PaymentMethodUuid: paymentMethod.Uuid,
+			PaymentFeePercent: 0,
+			RelatedType:       constant.PaymentOrderRelatedTypeMemberOrder,
+			RelatedUuid:       memberSaleOrder.Uuid,
+			CurrencyUnit: func() string {
+				currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+				if err != nil {
+					return "THB"
+				}
+				return currencySetting.Unit
+			}(),
 			PaymentAmount:        memberSaleOrder.Amount,
 			PaymentCommissionFee: 0,
 			Amount:               paymentOrder.PaymentAmount,
@@ -1288,10 +1300,13 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, req member_req.Get
 		if err != nil {
 			return nil, errors.WithMessage(err, "添加支付方式失败")
 		}
+		//
+		paymentOrder = &createPaymentOrder
 	}
 
 	// 创建连连支付订单
 	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
+		PaymentOrderUuid:  paymentOrder.Uuid,
 		RelatedType:       constant.PaymentOrderRelatedTypeMemberOrder,
 		RelatedUuid:       memberSaleOrder.Uuid,
 		PaymentMethodUuid: paymentMethod.Uuid,
@@ -1307,10 +1322,26 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, req member_req.Get
 	return &resp.MemberOrderPaymentInfoResp{
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		PaymentOrderUuid:    payment.PaymentOrderUuid,
+		PaymentMethodName:   paymentMethod.PaymentName,
 		QrCode:              utils.IfString(paymentMethod.IsQrPromptPay(), payment.LinkUrl, ""),
 		LinkUrl:             utils.IfString(paymentMethod.IsQrPromptPay(), "", payment.LinkUrl),
 		Status:              payment.GetStatus(), // 支付单状态 支付状态, 0-未支付 1-已支付 (可选择轮询当前接口，获取支付状态)
 		PaymentAmount:       payment.OrderAmount, // 支付金额
+	}, nil
+}
+
+// GetMemberOrderPayStatus 获取支付状态
+func (s *orderSrv) GetMemberOrderPayStatus(ctx context.Context, request member_req.GetMemberOrderPayStatusReq) (*resp.MemberOrderPaymentStatusResp, error) {
+	db := ctx.GetDB()
+	// 订单
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(request.MemberSaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	// 判断订单是否已经支付
+	return &resp.MemberOrderPaymentStatusResp{
+		MemberSaleOrderUuid: memberSaleOrder.Uuid,
+		Status:              memberSaleOrder.GetPayStatus(),
 	}, nil
 }
 

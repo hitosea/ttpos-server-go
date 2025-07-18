@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"ttpos-server-go/app/queue"
 	"ttpos-server-go/app/tasks"
 	"ttpos-server-go/config"
 	"ttpos-server-go/docs"
@@ -79,6 +80,9 @@ var rootCommand = &cobra.Command{
 		// 定时器
 		initializeTimers(dbm, cache.Global)
 
+		//初始化延迟消息
+		initQueue()
+
 		// 外网服务
 		initializeExternalService(dbm, cache.Global)
 	},
@@ -142,4 +146,8 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 
 	// 启动定时器
 	c.Start()
+}
+
+func initQueue() {
+	queue.Init(cache.Global.GetClient())
 }

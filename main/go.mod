@@ -8,6 +8,7 @@ require (
 	cloud.google.com/go/storage v1.55.0
 	github.com/Masterminds/semver v1.5.0
 	github.com/ace-zhaoy/go-id v1.0.6
+	github.com/boombuler/barcode v1.0.2
 	github.com/disintegration/imaging v1.6.2
 	github.com/duke-git/lancet/v2 v2.3.4
 	github.com/gin-gonic/gin v1.9.1
@@ -17,6 +18,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/google/uuid v1.6.0
+	github.com/hdt3213/delayqueue v1.1.2
 	github.com/jinzhu/copier v0.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/nahid/gohttp v0.0.1
@@ -60,7 +62,6 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.27.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.51.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.51.0 // indirect
-	github.com/boombuler/barcode v1.0.2 // indirect
 	github.com/cncf/xds/go v0.0.0-20250121191232-2f005788dc42 // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect

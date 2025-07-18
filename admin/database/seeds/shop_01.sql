@@ -146,6 +146,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_coupon` (
 
 CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员UUID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员销售订单ID',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '订单状态 0-选购中 1-待支付 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消',
     `serial_number` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '订单流水号',

@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/app/repository/saas"
 	contexts "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
@@ -48,6 +49,7 @@ type CreatePaymentReq struct {
 	PaymentAmount     float64
 	CommissionFee     float64
 	PaymentMethod     string
+	PaymentOrderUuid  uint64
 }
 
 // LianLianPaymentResp 连连支付仓库
@@ -209,9 +211,12 @@ func (p *PaymentRepo) CreatePayment(req CreatePaymentReq) (*model.LlPaymentOrder
 	}
 
 	// 生成雪花ID
-	uuid, err := utils.GetID()
-	if err != nil {
-		return nil, errors.New("生成雪花ID失败")
+	uuid := req.PaymentOrderUuid
+	if uuid == 0 {
+		uuid, err = utils.GetID()
+		if err != nil {
+			return nil, errors.New("生成雪花ID失败")
+		}
 	}
 
 	// 创建支付订单
@@ -376,7 +381,10 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 		fmt.Println("商户ID格式错误", err)
 		return fmt.Errorf("商户ID格式错误: %v", err)
 	}
+	// 设置数据库
 	db := p.dbm.GetDB(companyUuid)
+	p.ctx.SetDB(db)
+
 	// 获取支付订单
 	order, err := repository.NewLlPaymentOrderRepo(db).GetPaymentOrder(
 		repository.CommonRepo.WhereBySoftDelete(),
@@ -456,6 +464,26 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 			Status:               constant.PaymentOrderStatusPaid,
 		}); err != nil {
 			return err
+		}
+
+		// 会员端订单支付成功
+		if order.RelatedType == constant.PaymentOrderRelatedTypeMemberOrder {
+			memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(order.RelatedUuid)
+			if err != nil {
+				return err
+			}
+			// 更新订单状态
+			event.NewSystemBus().PublishPayFinishMemberSaleOrderEvent(event.PayFinishMemberSaleOrderPayload{
+				BasePayload: event.BasePayload{
+					Ctx:           p.ctx,
+					CompanyUuid:   p.ctx.GetCompanyUuid(),
+					Source:        constant.SourceMember,
+					SaleBillUuid:  memberSaleOrder.SaleBill.Uuid,
+					SaleOrderUuid: memberSaleOrder.SaleBill.GetFirstSaleOrder().Uuid,
+					OperatorUuid:  int64(memberSaleOrder.MemberUuid),
+				},
+				MemberSaleOrderUuid: order.RelatedUuid,
+			})
 		}
 
 		return nil
