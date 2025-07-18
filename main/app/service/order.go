@@ -148,7 +148,6 @@ type IOrderSrv interface {
 type IMemberOrderSrv interface {
 	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error) // 创建会员端订单
 	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)              // 设置会员端订单地址
-	VerifyPhone(ctx context.Context, req member_req.VerifyPhoneReq) (*resp.CreateMemberOrderResp, error)                                  // 验证手机号
 	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) (*resp.MemberOrderPaymentInfoResp, error)                   // 会员端订单提交支付，状态变为待支付
 	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                             // 查询收银机“外送”页面的订单列表
 	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                    // 查询收银机“外送”页面的订单详情
@@ -1128,44 +1127,6 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	return info, nil
 }
 
-// VerifyPhone 验证手机号
-func (s *orderSrv) VerifyPhone(ctx context.Context, request member_req.VerifyPhoneReq) (*resp.CreateMemberOrderResp, error) {
-	db := s.dbm.GetDB(ctx.GetDbId())
-	ctx.SetDB(db)
-	// 判断手机号是否是该订单地址联系人的手机号
-	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(request.MemberSaleOrderUuid)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-	if memberSaleOrder.IsVerifiedPhoneBool() {
-		return nil, errors.WithMessage(errors.New("手机号已验证"))
-	}
-	if memberSaleOrder.Address == nil {
-		return nil, errors.WithMessage(errors.New("无法找到订单地址"))
-	}
-	if memberSaleOrder.Address.ContactPhone != request.Phone {
-		return nil, errors.WithMessage(errors.New("手机号不匹配"))
-	}
-
-	// TODO 验证验证码、注册会员
-
-	memberSaleOrder.IsVerifiedPhone = 1
-	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderVerifiedPhoneStatus(memberSaleOrder.Uuid); err != nil {
-		return nil, errors.WithMessage(err)
-	}
-
-	// TODO 如果订单会员从游客变为会员身份，要更会该订单的会员uuid，并重新计算商品订单价格
-
-	// 返回会员端订单信息
-	info, err := s.GetMemberOrderCheckoutInfo(ctx, req.GetMemberOrderCheckoutInfoReq{
-		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
-	}, nil)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-	return info, nil
-}
-
 // PayMemberOrder 提交支付
 func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) (*resp.MemberOrderPaymentInfoResp, error) {
 	db := ctx.GetDB()
@@ -1183,6 +1144,11 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 
 	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderPendingPayment(memberSaleOrder); err != nil {
 		return nil, errors.WithMessage(err)
+	}
+
+	// 判断订单金额是否为0
+	if memberSaleOrder.Amount == 0 {
+		return nil, errors.New("订单金额为0，无法支付")
 	}
 
 	// 判断当前是否连连支付

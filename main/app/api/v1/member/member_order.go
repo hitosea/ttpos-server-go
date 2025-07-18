@@ -90,38 +90,6 @@ func (h *OrderHandler) SetOrderAddress(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// VerifyPhone 验证手机号
-// @Summary 验证手机号
-// @Description 验证手机号
-// @Tags 会员端-订单
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Param data body member_req.VerifyPhoneReq true "详情参数"
-// @Success 200 {object} resp.CreateMemberOrderResp "成功"
-// @Failure 400 {object} nil "错误请求"
-// @Router /member/order/phone/verify [post]
-func (h *OrderHandler) VerifyPhone(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	// 绑定请求参数
-	params := member_req.VerifyPhoneReq{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.HandleValidationError(c, err, params, nil)
-		return
-	}
-	ctx.Log().Debug("验证手机号", zap.Any("params", params))
-
-	// 验证手机号
-	res, err := h.orderSrv.VerifyPhone(ctx, params)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	// 返回结果
-	helper.Success(c, res)
-}
-
 // PayOrder 提交支付
 // @Summary 提交支付
 // @Description 提交支付
@@ -202,10 +170,9 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// privateApi := router.Group("")
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
-		privateApi.POST("/order/create", wrapper.CreateOrder)       // 创建订单
-		privateApi.POST("/order/address", wrapper.SetOrderAddress)  // 设置订单地址
-		privateApi.POST("/order/phone/verify", wrapper.VerifyPhone) // 验证手机号
-		privateApi.POST("/order/pay", wrapper.PayOrder)             // 提交支付
-		privateApi.POST("/xie-test/order/paid", wrapper.PaidOrder)  // 支付成功 TODO 上线前删除改接口
+		privateApi.POST("/order/create", wrapper.CreateOrder)      // 创建订单
+		privateApi.POST("/order/address", wrapper.SetOrderAddress) // 设置订单地址
+		privateApi.POST("/order/pay", wrapper.PayOrder)            // 提交支付
+		privateApi.POST("/xie-test/order/paid", wrapper.PaidOrder) // 支付成功 TODO 上线前删除改接口
 	}
 }
