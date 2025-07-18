@@ -1,0 +1,53 @@
+# https://goframe.org/docs/web/server-config-file-template
+server:
+  address: ":14021"
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+
+# https://goframe.org/docs/core/glog-config
+logger:
+  level: "all"
+  stdout: true
+
+# https://goframe.org/docs/core/gdb-config-file
+database:
+  default:
+  link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
+
+grpc:
+  name: "ttpos-erp"
+  address: ":14022"
+  logPath: "./log"
+  logStdout: true
+  errorLogEnabled: true
+  accessLogEnabled: true
+  errorStack: true
+
+nacos:
+  server:
+    ip: localhost
+    port: 8848
+  config:
+    dataId: ttpos-bmp.erp.yaml
+    group: DEFAULT_GROUP
+
+app:
+  serviceUrl: $TAKEOUT_SERVICE_URL
+  erp:
+    serviceUrl: $ERP_SERVICE_URL
+
+# 消息队列
+queue:
+  switch: true                                        # 队列开关，可选：true|false，默认为true
+  driver: "rocketmq"                                      # 队列驱动，可选：redis|rocketmq，默认为redis
+  groupName: "ttpos-erp"                                  # mq群组名称
+  # redis，默认使用全局redis运行队列
+  redis:
+    timeout: 0                                        # 队列超时时间以秒为单位，0表示永不超时。如果队列在设定的超时时间内没有被消费，则会被销毁
+  rocketmq:
+    nameSrvAdders: [ "127.0.0.1:9876" ]                  # nameSrvAdder+端口，支持多个
+    accessKey: ""                                      # 选填。如果开启了acl控制就必填
+    secretKey: ""                                      # 选填。如果开启了acl控制就必填
+    brokerAddr: "127.0.0.1:10911"                      # brokerAddr+端口，选填。用于消费者订阅主题前会检查主题是否存在，不存在会自动创建。你也可以在rocketmq控制台手动创建主题
+    retry: 3                                           # 重试次数
+    logLevel: "info"

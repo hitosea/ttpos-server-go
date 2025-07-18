@@ -5,6 +5,7 @@
  - 服务发现，配置管理 Nacos
  - 消息中间件 RocketMQ , 支持延迟消息
  - 微服务通讯及远程调用 gRPC
+ - 部分工具参考了框架 HotGo(https://gitee.com/bufanyun/hotgo)
 
 ## INSTALL
 ```shell
