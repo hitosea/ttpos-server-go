@@ -112,7 +112,36 @@ func (h *OrderHandler) PayOrder(c *gin.Context) {
 	ctx.Log().Debug("提交支付", zap.Any("params", params))
 
 	// 提交支付
-	res, err := h.orderSrv.PayMemberOrder(ctx, params)
+	err := h.orderSrv.PayMemberOrder(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
+// PayOrderStatus 获取支付信息
+// @Summary 获取支付信息
+// @Description 获取支付信息
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param member_sale_order_uuid query string true "会员端销售订单UUID"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/pay/info [get]
+func (h *OrderHandler) PayOrderInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := member_req.GetMemberOrderPayInfoReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取支付信息
+	res, err := h.orderSrv.GetMemberOrderPayInfo(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -173,6 +202,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/order/create", wrapper.CreateOrder)      // 创建订单
 		privateApi.POST("/order/address", wrapper.SetOrderAddress) // 设置订单地址
 		privateApi.POST("/order/pay", wrapper.PayOrder)            // 提交支付
+		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)    // 获取支付信息
 		privateApi.POST("/xie-test/order/paid", wrapper.PaidOrder) // 支付成功 TODO 上线前删除改接口
 	}
 }
