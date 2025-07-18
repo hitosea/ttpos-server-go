@@ -95,6 +95,24 @@ type SaleOrder struct {
 	index int `gorm:"-"`
 }
 
+// 获取商品数量. 用于会员端订单
+func (model *SaleOrder) GetProductNum() float64 {
+	num := decimal.NewFromFloat(0)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		num = num.Add(decimal.NewFromFloat(saleOrderProduct.Num))
+	}
+	return num.Round(2).InexactFloat64()
+}
+
+// 获取商品金额. 用于会员端订单
+func (model *SaleOrder) GetProductAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.SalePrice))
+	}
+	return amount.Round(2).InexactFloat64()
+}
+
 // 获取已选择的优惠券uuid
 func (model *SaleOrder) GetSelectedCouponUuid() uint64 {
 	if model.HasCoupon() {

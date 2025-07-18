@@ -902,22 +902,23 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		return nil, errors.WithMessage(err)
 	}
 
-	productAmount := decimal.NewFromFloat(0)  // 商品合计
-	memberDiscount := decimal.NewFromFloat(0) // 会员折扣
+	// productAmount := decimal.NewFromFloat(0)  // 商品合计
+	// memberDiscount := decimal.NewFromFloat(0) // 会员折扣
 	produtds := make([]resp.MemberSaleOrderProduct, 0)
 	for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
 		produtds = append(produtds, resp.MemberSaleOrderProduct{
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
 			Num:                  saleOrderProduct.Num,
-			UnitPrice:            saleOrderProduct.Price,
+			UnitPrice:            saleOrderProduct.SalePrice,
+			Amount:               saleOrderProduct.GetSalePrice(),
 			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
 		})
-		// 商品合计
-		amount := decimal.NewFromFloat(saleOrderProduct.GetTotalPrice())
-		productAmount = productAmount.Add(amount).Round(2)
-		// 会员折扣
-		memberDiscount = memberDiscount.Add(decimal.NewFromFloat(saleOrderProduct.GetMemberDiscountFee())).Round(2)
+		// // 商品合计
+		// amount := decimal.NewFromFloat(saleOrderProduct.GetTotalPrice())
+		// productAmount = productAmount.Add(amount).Round(2)
+		// // 会员折扣
+		// memberDiscount = memberDiscount.Add(decimal.NewFromFloat(saleOrderProduct.GetMemberDiscountFee())).Round(2)
 	}
 
 	// 获取支付方式
@@ -954,10 +955,14 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 
 	var address resp.MemberSaleOrderAddress
 	if memberSaleOrder.Address != nil {
+		lat, lng, _ := memberSaleOrder.Address.GetLocation()
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
 		address = resp.MemberSaleOrderAddress{
 			MemberAddressUuid: memberSaleOrder.Address.MemberAddressUuid,
-			Longitude:         memberSaleOrder.Address.Longitude,
-			Latitude:          memberSaleOrder.Address.Latitude,
+			Longitude:         lng,
+			Latitude:          lat,
 			Address:           memberSaleOrder.Address.Address,
 			DetailAddress:     memberSaleOrder.Address.DetailAddress,
 			ContactName:       memberSaleOrder.Address.ContactName,
@@ -979,13 +984,23 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		}
 	}
 
+	// 保存一下
+	memberSaleOrder.ProductNum = memberSaleOrder.SaleBill.SaleOrders[0].GetProductNum()
+	memberSaleOrder.ProductAmount = memberSaleOrder.SaleBill.SaleOrders[0].GetProductAmount()
+	memberSaleOrder.MemberDiscountFee = memberSaleOrder.SaleBill.SaleOrders[0].MemberDiscountFee
+	memberSaleOrder.Amount = memberSaleOrder.CalculateAmount()
+	memberSaleOrder.DeliveryFeeAmount = memberSaleOrder.CalculateDeliveryFee()
+	if err := repository.NewMemberSaleOrderRepo(ctx.GetDB()).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	info := &resp.MemberSaleOrderInfo{
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		Status:              memberSaleOrder.Status,
 		ProductList:         resp.MemberSaleOrderProductList{List: produtds},
-		ProductAmount:       productAmount.Round(2).InexactFloat64(),
-		MemberDiscount:      memberDiscount.Round(2).InexactFloat64(),
-		Amount:              memberSaleOrder.CalculateAmount(),
+		ProductAmount:       memberSaleOrder.ProductAmount,
+		MemberDiscount:      memberSaleOrder.MemberDiscountFee,
+		Amount:              memberSaleOrder.Amount,
 		Remark:              memberSaleOrder.Remark,
 		IsVerifiedPhone:     memberSaleOrder.IsVerifiedPhoneBool(),
 		Address:             address,
@@ -998,6 +1013,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		},
 		PaymentMethods: resp.PaymentMethodList{List: payList},
 	}
+
 	return &resp.CreateMemberOrderResp{
 		MemberSaleOrderInfo: info,
 	}, nil
@@ -5434,6 +5450,11 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		if ctx.GetSource() == jwt.SourceH5 {
 			deviceSn = jwt.SourceH5 // 扫码h5订单，设备sn为h5
 		}
+
+		flavorPrice := flavorProductBom.Price
+		if params.Setting.MemberOrderDiscountRate != 1 {
+			flavorPrice = decimal.NewFromFloat(flavorProductBom.Price).Mul(decimal.NewFromFloat(params.Setting.MemberOrderDiscountRate)).Round(2).InexactFloat64()
+		}
 		saleOrderProduct := model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
 			DeviceId:               deviceSn,
 			Name:                   productPackage.Name,
@@ -5453,7 +5474,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			NumType:                productPackage.NumType,
 			Flavor: model.Flavor{
 				Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
-				Price:          flavorProductBom.Price,
+				Price:          flavorPrice,
 				ProductBomUuid: product.FlavorProductBomUuid,
 			},
 			Attribute:     attributes,

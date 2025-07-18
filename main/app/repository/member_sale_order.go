@@ -27,6 +27,7 @@ type IQueryMemberSaleOrderRepo interface {
 	UpdateMemberSaleOrderAccept(memberSaleOrder model.MemberSaleOrder) error                                                                                         // 更新会员端销售订单-接单
 	UpdateMemberSaleOrderReject(memberSaleOrder model.MemberSaleOrder) error                                                                                         // 更新会员端销售订单-拒单
 	UpdateDeliveryDistance(memberSaleOrderUuid uint64, distance float64) error                                                                                       // 更新会员端销售订单的配送距离
+	UpdateMemberSaleOrder(memberSaleOrder model.MemberSaleOrder) error                                                                                               // 更新会员端销售订单
 
 	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
 	WhereStatusIn(status []uint) DBOption
@@ -300,6 +301,16 @@ func (r *MemberSaleOrderRepo) UpdateDeliveryDistance(memberSaleOrderUuid uint64,
 	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrderUuid).Updates(model.MemberSaleOrder{
 		DeliveryDistance: distance,
 	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrder 更新会员端销售订单
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrder(memberSaleOrder model.MemberSaleOrder) error {
+	memberSaleOrder.SetNil()
+	err := r.db.Model(&model.MemberSaleOrder{}).Select("*").Where("uuid = ?", memberSaleOrder.Uuid).Updates(memberSaleOrder).Error
 	if err != nil {
 		return errors.WithMessage(err)
 	}

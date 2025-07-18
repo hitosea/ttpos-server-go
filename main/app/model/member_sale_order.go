@@ -25,7 +25,7 @@ type MemberSaleOrder struct {
 	PaymentMethodUuid uint64  `gorm:"column:payment_method_uuid;type:bigint(20) unsigned;not null;default:0;comment:'支付方式UUID,订单已选择的支付方式'"`
 	// 确认订单之后才有值的字段
 	ProductNum        float64 `gorm:"column:product_num;type:decimal(12,2);not null;default:0;comment:'商品数量.订单中商品的总数量，商品A数量2，商品B数量1，则商品数量为3'"`
-	ProductAmount     float64 `gorm:"column:product_amount;type:decimal(12,2);not null;default:0;comment:'商品金额'"`
+	ProductAmount     float64 `gorm:"column:product_amount;type:decimal(12,2);not null;default:0;comment:'商品金额,折前价，已含税'"`
 	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);not null;default:0;comment:'会员折扣'"`
 	Amount            float64 `gorm:"column:amount;type:decimal(12,2);not null;default:0;comment:'订单总金额.商品金额-会员折扣+配送费'"`
 	RefundAmount      float64 `gorm:"column:refund_amount;type:decimal(12,2);not null;default:0;comment:'退款金额'"`
@@ -107,10 +107,7 @@ func (model *MemberSaleOrder) CalculateDeliveryFee() float64 {
 
 // 计算订单总金额. 订单总金额=商品金额+配送费-会员折扣
 func (model *MemberSaleOrder) CalculateAmount() float64 {
-	productAmount := model.SaleBill.SaleOrders[0].ProductAmount
-	memberDiscount := model.SaleBill.SaleOrders[0].MemberDiscountFee
-
-	return decimal.NewFromFloat(productAmount).Add(decimal.NewFromFloat(model.CalculateDeliveryFee())).Sub(decimal.NewFromFloat(memberDiscount)).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.ProductAmount).Add(decimal.NewFromFloat(model.CalculateDeliveryFee())).Sub(decimal.NewFromFloat(model.MemberDiscountFee)).Round(2).InexactFloat64()
 }
 
 // 接单

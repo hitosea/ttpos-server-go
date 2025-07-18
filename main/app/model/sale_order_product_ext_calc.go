@@ -460,7 +460,12 @@ func (model *SaleOrderProduct) calcSaucePrice() float64 {
 	for _, bom := range model.SaleOrderProductBoms {
 		if !bom.IsFlavor() {
 			// 累加每个小料的价格
-			saucePrice = saucePrice.Add(decimal.NewFromFloat(bom.Price))
+			price := decimal.NewFromFloat(bom.Price) // 加料单价
+			// 如果要上浮价格的话
+			if model.MemberOrderDiscountRate != 1 {
+				price = price.Mul(decimal.NewFromFloat(model.MemberOrderDiscountRate)).Round(2)
+			}
+			saucePrice = saucePrice.Add(price)
 		}
 	}
 	return saucePrice.InexactFloat64()
@@ -519,7 +524,6 @@ func (model *SaleOrderProduct) IsMetering() bool {
 // 如果商品改价，则直接修改SalePrice。
 // 如果没有改价，销售价=ProductPrice
 // 如果商品是自助餐商品，则销售价=小料原价
-// TODO 如果商品是在会员端售卖，则销售价=ProductPrice*会员端折扣率+（SaucePrice1*会员端折扣率 + SaucePrice2*会员端折扣率 + SaucePrice3*会员端折扣率）
 func (model *SaleOrderProduct) calcSalePrice() float64 {
 	if model.IsCustomPriceBool() {
 		return model.SalePrice
