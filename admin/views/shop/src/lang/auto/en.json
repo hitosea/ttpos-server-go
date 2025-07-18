@@ -2073,5 +2073,8 @@
     "收银机SN：": "Cash Register SN:",
     "打印机SN：": "Printer SN:",
     "收银机SN": "Cash Register SN",
-    "请输入收银机SN": "Please enter the Cash Register SN"
+    "请输入收银机SN": "Please enter the Cash Register SN",
+    "确认要关闭整单折扣吗?": "Are you sure you want to disable the order-wide discount?",
+    "确认要开启整单折扣吗?": "Are you sure you want to enable the order-wide discount?",
+    "经纬度": "Latitude and Longitude"
 }
