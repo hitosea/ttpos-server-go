@@ -650,10 +650,10 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		if temp == 5 && printOrderType == constant.PrinterTemplateBilling {
 			img.AppendSplitLine()
 			img.LineFeed(1)
-			img.AppendBarcode(saleBill.SerialNo, 400, 120)
+			img.AppendBarcode(saleOrder.OrderNo, 500, 120)
 			img.LineFeed(1, 12)
 			img.SetAlignment(pkg.AlignCenter)
-			img.AppendText(saleBill.SerialNo)
+			img.AppendText(saleOrder.OrderNo)
 			img.LineFeed(1)
 		}
 	}
