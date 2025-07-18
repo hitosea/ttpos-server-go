@@ -1409,10 +1409,12 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 	}
 
 	return &resp.GetMemberOrderManageListResp{
-		Meta: dto.PageResponse{
-			PageNo:   req.PageNo,
-			PageSize: req.PageSize,
-			Total:    total,
+		Meta: resp.OrderManageListMeta{
+			PageResponse: dto.PageResponse{
+				PageNo:   req.PageNo,
+				PageSize: req.PageSize,
+				Total:    total,
+			},
 		},
 		List: memberOrders,
 	}, nil
