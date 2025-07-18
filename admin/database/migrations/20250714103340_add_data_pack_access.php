@@ -37,22 +37,22 @@ class AddDataPackAccess extends Migrator
         $db = Db::connect(Db::getConfig('default'), true);
         // 打包权限
         $accessList = [
-            ['id' => 1724220606, 'uuid' => 1724220606, 'name' => '打包', 'path' => 'cashier_cash_pack', 'parent_uuid' => 1704880795, 'sort' => 11, 'icon' => '', 'redirect_name' => '', 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'plus_category_uuid' => 0, 'remark' => '', 'is_supplier' => 0, 'create_time' => 1752479818, 'update_time' => 1752479818],
-            ['id' => 1724220607, 'uuid' => 1724220607, 'name' => '打包', 'path' => 'cashier_table_pack', 'parent_uuid' => 1704880828, 'sort' => 16, 'icon' => '', 'redirect_name' => '', 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'plus_category_uuid' => 0, 'remark' => '', 'is_supplier' => 0, 'create_time' => 1752479818, 'update_time' => 1752479818],
-            ['id' => 1724220608, 'uuid' => 1724220608, 'name' => '打包', 'path' => 'pack', 'parent_uuid' => 1724320508, 'sort' => 1, 'icon' => '', 'redirect_name' => '', 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'plus_category_uuid' => 0, 'remark' => '', 'is_supplier' => 0, 'create_time' => 1752479818, 'update_time' => 1752479818],
+            ['uuid' => 1724220606, 'name' => '打包', 'path' => 'cashier_cash_pack', 'parent_uuid' => 1704880795, 'sort' => 11, 'icon' => '', 'redirect_name' => '', 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'plus_category_uuid' => 0, 'remark' => '', 'is_supplier' => 0, 'create_time' => 1752479818, 'update_time' => 1752479818],
+            ['uuid' => 1724220607, 'name' => '打包', 'path' => 'cashier_table_pack', 'parent_uuid' => 1704880828, 'sort' => 16, 'icon' => '', 'redirect_name' => '', 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'plus_category_uuid' => 0, 'remark' => '', 'is_supplier' => 0, 'create_time' => 1752479818, 'update_time' => 1752479818],
+            ['uuid' => 1724220608, 'name' => '打包', 'path' => 'pack', 'parent_uuid' => 1724320508, 'sort' => 1, 'icon' => '', 'redirect_name' => '', 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'plus_category_uuid' => 0, 'remark' => '', 'is_supplier' => 0, 'create_time' => 1752479818, 'update_time' => 1752479818],
         ];
         foreach ($accessList as $access) {
-            $row = $db->name('access')->where('uuid', $access['id'])->find();
+            $row = $db->name('access')->where('uuid', $access['uuid'])->find();
             if (!$row) {
                 $db->name('access')->insert($access);
             }
         }
         // 查找有收银机-点餐权限的角色，并默认选中打包权限
-        $this->insertRoleAccess($db, $accessList[0]['parent_uuid'], $accessList[0]['id']);
+        $this->insertRoleAccess($db, $accessList[0]['parent_uuid'], $accessList[0]['uuid']);
         // 查找有收银机-桌台权限的角色，并默认选中打包权限
-        $this->insertRoleAccess($db, $accessList[1]['parent_uuid'], $accessList[1]['id']);
+        $this->insertRoleAccess($db, $accessList[1]['parent_uuid'], $accessList[1]['uuid']);
         // 查找有点餐助手权限的角色，并默认选中打包权限
-        $this->insertRoleAccess($db, $accessList[2]['parent_uuid'], $accessList[2]['id']);
+        $this->insertRoleAccess($db, $accessList[2]['parent_uuid'], $accessList[2]['uuid']);
     }
 
     private function insertRoleAccess($db, $parentUuid, $accessUuid)
