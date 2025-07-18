@@ -2,13 +2,13 @@ package skootar
 
 import (
 	"fmt"
-	"takeout/internal/model/conf"
-	"takeout/internal/model/input/skootar"
-	"takeout/internal/service"
-
+	"github.com/gogf/gf/v2/crypto/gmd5"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
+	"takeout/internal/model/conf"
+	"takeout/internal/model/input/skootar"
+	"takeout/internal/service"
 )
 
 var (
@@ -37,14 +37,26 @@ func (s *sSkootar) MustConf() *conf.Skootar {
 	return config
 }
 
+// GetUrl 获取Skootar API URL
 func (s *sSkootar) GetUrl(apiPath string) string {
 	return fmt.Sprintf("%v%v", s.MustConf().Endpoint, apiPath)
 }
 
+// ReqBase 获取请求基础参数
 func (s *sSkootar) ReqBase() skootar.ReqBase {
 	return skootar.ReqBase{
 		ApiKey:   s.MustConf().ApiKey,
 		UserName: s.MustConf().UserName,
 		Channel:  s.MustConf().Channel,
 	}
+}
+
+// getCallBackAuth 获取回调Auth
+func (*sSkootar) getCallBackAuth(shopRefNo string) string {
+	if res, err := gmd5.EncryptString(shopRefNo + g.Cfg().MustGet(gctx.GetInitCtx(), "app.callbackAuth").String()); err == nil {
+		return res
+	} else {
+		g.Log().Error(gctx.GetInitCtx(), "获取回调Auth失败", err)
+	}
+	return ""
 }

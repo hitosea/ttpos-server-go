@@ -29,7 +29,9 @@ type (
 		JobDetail4Food(ctx context.Context, req *skootar.JobDetailInp) (jobDetail *skootar.JobDetail, err error)
 		JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq) (res *v1.SkootarStatusRes, err error)
 		MustConf() *conf.Skootar
+		// GetUrl 获取Skootar API URL
 		GetUrl(apiPath string) string
+		// ReqBase 获取请求基础参数
 		ReqBase() skootar.ReqBase
 	}
 )

@@ -33,6 +33,7 @@ nacos:
 
 app:
   serviceUrl: $TAKEOUT_SERVICE_URL
+  callbackSecret:  $TAKEOUT_CALLBACK_SECRET
   provider:
     skootar:
       endpoint: $SKOOTAR_ENDPOINT
