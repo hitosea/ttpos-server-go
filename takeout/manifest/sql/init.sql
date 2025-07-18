@@ -104,3 +104,5 @@ ALTER TABLE takeout_job ADD skootar_name varchar(100) NULL COMMENT '骑手名称
 ALTER TABLE takeout_job ADD skootar_phone varchar(100) NULL COMMENT '骑手电话';
 ALTER TABLE takeout_job ADD skootar_image_url text NULL COMMENT '骑手头像';
 ALTER TABLE takeout_job ADD skootar_rating DECIMAL(10,2) NULL COMMENT '骑手评分';
+ALTER TABLE takeout_job_location MODIFY COLUMN `lat` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '纬度' AFTER `address`;
+ALTER TABLE takeout_job_location MODIFY COLUMN `lng` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '经度' AFTER `lat`;
