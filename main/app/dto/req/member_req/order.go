@@ -26,3 +26,8 @@ type PayMemberOrderReq struct {
 type PaidMemberOrderReq struct {
 	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 }
+
+// GetMemberOrderPayInfoReq 获取支付信息
+type GetMemberOrderPayInfoReq struct {
+	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+}

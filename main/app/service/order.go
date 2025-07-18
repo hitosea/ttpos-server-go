@@ -148,7 +148,8 @@ type IOrderSrv interface {
 type IMemberOrderSrv interface {
 	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error) // 创建会员端订单
 	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)              // 设置会员端订单地址
-	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) (*resp.MemberOrderPaymentInfoResp, error)                   // 会员端订单提交支付，状态变为待支付
+	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                       // 会员端订单提交支付，状态变为待支付
+	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)     // 会员端订单获取支付信息
 	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                             // 查询收银机“外送”页面的订单列表
 	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                    // 查询收银机“外送”页面的订单详情
 	PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error                                                     // 会员端订单支付成功. TODO 用于测试，提测前删掉
@@ -1128,13 +1129,13 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 }
 
 // PayMemberOrder 提交支付
-func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) (*resp.MemberOrderPaymentInfoResp, error) {
+func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error {
 	db := ctx.GetDB()
 
 	// 保存订单备注信息
 	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(request.MemberSaleOrderUuid)
 	if err != nil {
-		return nil, errors.WithMessage(err)
+		return errors.WithMessage(err)
 	}
 
 	memberSaleOrder.Remark = request.Remark
@@ -1143,8 +1144,23 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 	// TODO 记录会员折扣、商品数量、商品金额、订单总金额
 
 	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderPendingPayment(memberSaleOrder); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	return nil
+}
+
+// PayMemberOrderStatus 查询支付状态
+func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, req member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error) {
+	db := ctx.GetDB()
+
+	// 保存订单备注信息
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(req.MemberSaleOrderUuid)
+	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+
+	memberSaleOrder.Amount = 129876.12
 
 	// 判断订单金额是否为0
 	if memberSaleOrder.Amount == 0 {
@@ -1153,7 +1169,7 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 
 	// 判断当前是否连连支付
 	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
-	paymentMethod := paymentMethodRepo.GetPaymentMethod(paymentMethodRepo.WhereUuid(request.PaymentMethodUuid))
+	paymentMethod := paymentMethodRepo.GetPaymentMethod(paymentMethodRepo.WhereUuid(memberSaleOrder.PaymentMethodUuid))
 	if paymentMethod.Uuid == 0 {
 		return nil, errors.New("支付方式不存在")
 	}
