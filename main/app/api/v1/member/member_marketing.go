@@ -51,6 +51,7 @@ func (h *MarketingHandler) MarketingActivity(c *gin.Context) {
 // @Tags 会员端.营销活动
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Success 200 {object} dto.Response{data=member_resp.MemberMarketingActivityListsResp}
 // @Router /member/marketing_activity_list [get]
 func (h *MarketingHandler) MarketingActivityList(c *gin.Context) {
@@ -73,6 +74,7 @@ func (h *MarketingHandler) MarketingActivityList(c *gin.Context) {
 // @Tags 会员端.营销活动
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query member_req.MarketingActivityDetailReq true "详情参数"
 // @Success 200 {object} dto.Response{data=member_resp.MemberMarketingActivityDetailResp}
 // @Router /member/marketing_activity_detail [get]

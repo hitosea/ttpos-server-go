@@ -32,8 +32,11 @@ type IQueryMemberSaleOrderRepo interface {
 
 	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
 	WhereStatusIn(status []uint) DBOption
+	WhereNotStatusIn(status []uint) DBOption
 	WhereUpdateTimeGt(ts int64) DBOption
 	GetOrderCount(opts ...DBOption) (int64, error)
+
+	WithSaleBillSaleOrderProduct(preloads ...WithPreload) DBOption
 }
 
 func NewMemberSaleOrderRepo(db *gorm.DB) IMemberSaleOrderRepo {
@@ -251,7 +254,16 @@ func (r *MemberSaleOrderRepo) PaginateGet(pageNo, pageSize int, opts ...DBOption
 
 func (r *MemberSaleOrderRepo) WhereStatusIn(status []uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
+		if len(status) == 0 {
+			return db
+		}
 		return db.Where("status IN (?)", status)
+	}
+}
+
+func (r *MemberSaleOrderRepo) WhereNotStatusIn(status []uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status NOT IN (?)", status)
 	}
 }
 
@@ -331,4 +343,11 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrder(memberSaleOrder model.Member
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+func (r *MemberSaleOrderRepo) WithSaleBillSaleOrderProduct(preloads ...WithPreload) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("SaleBill.SaleOrders.SaleOrderProducts.ImageFile").
+			Preload("SaleBill.SaleOrders.SaleOrderProducts.MultiLanguageName")
+	}
 }

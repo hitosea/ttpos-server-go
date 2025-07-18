@@ -25,6 +25,7 @@ type BaseHandler struct {
 // @Tags 会员端.基础信息
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @Success 200 {object} dto.Response{data=member_resp.MemberBaseInfoResp}
 // @Router /member/base/info [get]
 func (h *BaseHandler) BaseInfo(c *gin.Context) {
@@ -43,6 +44,7 @@ func (h *BaseHandler) BaseInfo(c *gin.Context) {
 // @Tags 会员端.基础信息
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body member_req.MemberNicknameUpdateReq true "详情参数"
 // @Success 200 {object} dto.Response{data=member_resp.MemberBaseInfoResp}
 // @Router /member/base/nickname [post]

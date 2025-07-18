@@ -22,8 +22,9 @@ type CompanyResp struct {
 }
 
 type MemberBaseInfoResp struct {
-	Member       MemberResp         `json:"member"`        // 会员信息
-	Company      CompanyResp        `json:"company"`       // 公司信息
-	AreaCode     []string           `json:"area_code"`     // 区号列表
-	LanguageList []dto.LanguageItem `json:"language_list"` // 语言列表
+	Member              MemberResp         `json:"member"`                  // 会员信息
+	Company             CompanyResp        `json:"company"`                 // 公司信息
+	AreaCode            []string           `json:"area_code"`               // 区号列表
+	LanguageList        []dto.LanguageItem `json:"language_list"`           // 语言列表
+	IsMemberShowSoldOut int                `json:"is_member_show_sold_out"` // 是否显示售罄商品
 }

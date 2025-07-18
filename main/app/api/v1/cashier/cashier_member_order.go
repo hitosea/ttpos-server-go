@@ -37,7 +37,7 @@ func (h *MemberOrderHandler) GetMemberOrderList(c *gin.Context) {
 		helper.HandleValidationError(c, err, memberOrderListReq, nil)
 		return
 	}
-	res, err := h.memberOrderSrv.GetMemberOrderList(helper.GetContext(c), memberOrderListReq)
+	res, err := h.memberOrderSrv.GetMemberCashierOrderList(helper.GetContext(c), memberOrderListReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -61,7 +61,7 @@ func (h *MemberOrderHandler) GetMemberOrderDetail(c *gin.Context) {
 		helper.HandleValidationError(c, err, memberOrderDetailReq, nil)
 		return
 	}
-	res, err := h.memberOrderSrv.GetMemberOrderDetail(helper.GetContext(c), memberOrderDetailReq)
+	res, err := h.memberOrderSrv.GetMemberCashierOrderDetail(helper.GetContext(c), memberOrderDetailReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
