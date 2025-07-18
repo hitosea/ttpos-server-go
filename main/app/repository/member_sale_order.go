@@ -77,6 +77,12 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecord(uuid uint64) (*model.Memb
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
+			WithPreload{
+				Query: "Address.MemberAddress",
+			},
+			WithPreload{
+				Query: "Address.Member",
+			},
 		),
 	)
 	if err != nil {

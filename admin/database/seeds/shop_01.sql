@@ -200,6 +200,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order_address` (
     `member_address_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员收货地址UUID',
     `longitude` DECIMAL(12, 6) NOT NULL DEFAULT 0 COMMENT '经度',
     `latitude` DECIMAL(12, 6) NOT NULL DEFAULT 0 COMMENT '纬度', 
+    `location` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '位置坐标',
     `address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '地址',
     `detail_address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '详细地址',
     `contact_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系人',
@@ -2502,5 +2503,27 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_recommend` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品推荐';
 
+CREATE TABLE IF NOT EXISTS `ttpos_member_address` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) DEFAULT 0 COMMENT '唯一ID',
+  `member_uuid` bigint(20) DEFAULT 0 COMMENT '会员uuid',
+  `name` varchar(50) DEFAULT '' COMMENT '联系人',
+  `gender` int(1) DEFAULT 0 COMMENT '性别 0-女 1-男',
+  `phone` varchar(20) DEFAULT '' COMMENT '手机号',
+  `country` varchar(10) DEFAULT '' COMMENT '国家代码',
+  `province` varchar(50) DEFAULT '' COMMENT '省份',
+  `city` varchar(50) DEFAULT '' COMMENT '城市',
+  `area` varchar(50) DEFAULT '' COMMENT '区',
+  `address` varchar(255) DEFAULT '' COMMENT '详细地址',
+  `street` varchar(255) DEFAULT '' COMMENT '街道/门牌号',
+  `is_default` int(1) DEFAULT 0 COMMENT '是否默认',
+  `location` varchar(100) DEFAULT '' COMMENT '位置坐标',
+  `auth_phone` varchar(20) DEFAULT '' COMMENT '认证手机号',
+  `auth_time` int(11) DEFAULT 0 COMMENT '认证时间',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员地址表';
 
 SET FOREIGN_KEY_CHECKS = 1;

@@ -79,7 +79,7 @@ func (model *MemberSaleOrder) IsCancel() bool {
 
 // 订单是否已经验证手机号
 func (model *MemberSaleOrder) IsVerifiedPhoneBool() bool {
-	return model.IsVerifiedPhone == 1
+	return model.Address.MemberAddress.IsAuthPhone()
 }
 
 // 计算配送费
@@ -146,6 +146,7 @@ type MemberSaleOrderAddress struct {
 	MemberAddressUuid   uint64  `gorm:"column:member_address_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员收货地址UUID'"`
 	Longitude           float64 `gorm:"column:longitude;type:decimal(12,6);not null;default:0;comment:'经度'"`
 	Latitude            float64 `gorm:"column:latitude;type:decimal(12,6);not null;default:0;comment:'纬度'"`
+	Location            string  `gorm:"column:location;type:varchar(100);not null;comment:位置坐标" json:"location"` // "纬度,经度"
 	Address             string  `gorm:"column:address;type:varchar(255);not null;default:'';comment:'地址'"`
 	DetailAddress       string  `gorm:"column:detail_address;type:varchar(255);not null;default:'';comment:'详细地址'"`
 	ContactName         string  `gorm:"column:contact_name;type:varchar(255);not null;default:'';comment:'联系人'"`
@@ -154,7 +155,8 @@ type MemberSaleOrderAddress struct {
 	ContactGender       int     `gorm:"column:contact_gender;type:int(10);not null;default:0;comment:'联系人性别, 0-女士 1-先生'"`
 	MemberSaleOrderUuid uint64  `gorm:"column:member_sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员销售订单UUID'"`
 
-	Member *Member `gorm:"foreignKey:MemberUuid;references:Uuid"`
+	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`
+	MemberAddress *MemberAddress `gorm:"foreignKey:MemberAddressUuid;references:Uuid"`
 }
 
 func (model *MemberSaleOrderAddress) SetNil() {

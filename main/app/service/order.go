@@ -1104,15 +1104,14 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	}
 
 	memberSaleOrderAddress := model.MemberSaleOrderAddress{
-		MemberUuid:        member.Uuid,
-		MemberAddressUuid: memberAddress.Uuid,
-		// Longitude:           memberAddress.Longitude,
-		// Latitude:            memberAddress.Latitude,
-		Address: memberAddress.Address,
-		// DetailAddress:       memberAddress.DetailAddress,
-		ContactName:  memberAddress.Name,
-		ContactPhone: memberAddress.Phone,
-		// ContactGender:       memberAddress.IsDefault,
+		MemberUuid:          member.Uuid,
+		MemberAddressUuid:   memberAddress.Uuid,
+		Location:            memberAddress.Location,
+		Address:             memberAddress.Address,
+		DetailAddress:       memberAddress.GetAddressDetail(),
+		ContactName:         memberAddress.Name,
+		ContactPhone:        memberAddress.Phone,
+		ContactGender:       memberAddress.Gender,
 		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
 	}
 	if err := repository.NewMemberSaleOrderAddressRepo(db).CreateMemberSaleOrderAddress(memberSaleOrderAddress); err != nil {
