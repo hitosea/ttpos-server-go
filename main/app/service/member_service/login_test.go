@@ -12,10 +12,10 @@ func TestLogin(t *testing.T) {
 	// 生成token
 	claims := auth.Claims{
 		Source:      constant.SourceMember,
-		CompanyUuid: 7684296282112000,
-		MemberUuid:  7717741662208000,
+		CompanyUuid: 2290362617856000,
+		MemberUuid:  3676004191174657,
 	}
-	token, err := auth.GenerateToken(claims, "ttoposerewrwgbngdf", 360000000, false)
+	token, err := auth.GenerateToken(claims, "dkjhd00a08", 360000000, false)
 	if err != nil {
 		t.Error("生成token失败")
 	}

@@ -82,6 +82,11 @@ const (
 	CodeOrderAmountLessThan1 = -601 // 订单金额小于1，无法支付
 )
 
+// 外送业务错误码
+const (
+	CodeDistanceError = -701 // 计算距离错误
+)
+
 type ParseCodeOrderCheckOption struct {
 	IsH5     bool // 是否是h5端的文案
 	IsTablet bool // 是否是平板端的文案
