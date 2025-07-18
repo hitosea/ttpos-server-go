@@ -664,6 +664,24 @@ definitions:
       message:
         type: string
     type: object
+  member_req.CallbackReq:
+    properties:
+      jobStatusAfter:
+        description: 变化后的状态，即当前状态。 枚举请查看”skootar 订单状态“
+        type: string
+      jobStatusBefore:
+        description: 变化前的状态。 枚举请查看”skootar 订单状态“
+        type: string
+      providerName:
+        description: 外送渠道名称。如：skootar。 枚举请查看”外送渠道方“
+        type: string
+      shopRefNo:
+        description: 订单号。即member_sale_order_uuid
+        type: string
+      takeoutRefNo:
+        description: 外送渠道订单号。如skootar的order_id
+        type: string
+    type: object
   member_req.MemberAddressAddReq:
     properties:
       address:
@@ -1367,6 +1385,12 @@ definitions:
         description: h5订单ID
         type: integer
     type: object
+  req.AcceptOrderReq:
+    properties:
+      member_sale_order_uuid:
+        description: 会员端销售订单UUID
+        type: integer
+    type: object
   req.AddMemberReq:
     properties:
       activity_uuid:
@@ -1954,14 +1978,14 @@ definitions:
       is_check_cooking:
         description: 是否只进行送厨检查，而不进行实际的送厨。场景：助手端开启下单校验高级密码时，先检查送厨，再实际送厨。检查送厨时不进行实际送厨
         type: boolean
+      is_member_order_accept:
+        description: 是否是会员端接单. 不用返回购物车信息
+        type: boolean
       password:
         description: 高级密码后台开启的时候才传
         type: string
       sale_bill_uuid:
         description: 销售账单ID
-        type: integer
-      sale_order_uuid:
-        description: 销售订单ID。废弃
         type: integer
     type: object
   req.OrderCartProductGivingReq:
@@ -3841,7 +3865,7 @@ definitions:
           $ref: '#/definitions/resp.MemberOrderManage'
         type: array
       meta:
-        $ref: '#/definitions/dto.PageResponse'
+        $ref: '#/definitions/resp.OrderManageListMeta'
     type: object
   resp.GiftOrFreeOrderReasonResp:
     properties:
@@ -4526,8 +4550,8 @@ definitions:
           8-已取消
         type: integer
       status_group:
-        description: 订单状态分组. "unaccept" 待接单, "accept" 备餐中, "undelivery" 待配送, "delivery"
-          配送中, "completed" 已完成, "cancel" 已取消
+        description: 订单状态分组. "unpaid" 待付款， "unaccept" 待接单, "accept" 备餐中, "undelivery"
+          待配送, "delivery" 配送中, "completed" 已完成, "cancel" 已取消
         type: string
     type: object
   resp.MemberOrderManageProduct:
@@ -5018,6 +5042,42 @@ definitions:
       is_cell_reject:
         description: 是否可拒单
         type: boolean
+    type: object
+  resp.OrderManageListMeta:
+    properties:
+      accept_num:
+        description: 备餐中数量
+        type: integer
+      cancel_num:
+        description: 已取消数量
+        type: integer
+      complete_num:
+        description: 已完成数量
+        type: integer
+      delivery_num:
+        description: 配送中数量
+        type: integer
+      page_no:
+        description: 当前页码
+        type: integer
+      page_size:
+        description: 每页大小
+        type: integer
+      total:
+        description: 总数
+        type: integer
+      total_num:
+        description: 总数量
+        type: integer
+      unaccept_num:
+        description: 待接单数量
+        type: integer
+      undelivery_num:
+        description: 待配送数量
+        type: integer
+      unpaid_num:
+        description: 待付款数量
+        type: integer
     type: object
   resp.OrderMember:
     properties:
@@ -13148,6 +13208,35 @@ paths:
       summary: 模糊搜索会员
       tags:
       - 收银端.会员
+  /cashier/member_order/accept:
+    post:
+      consumes:
+      - application/json
+      description: 接单
+      parameters:
+      - description: 接受接单
+        in: body
+        name: AcceptOrderReq
+        required: true
+        schema:
+          $ref: '#/definitions/req.AcceptOrderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.GetMemberOrderDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 接单
+      tags:
+      - 收银端.外送接单相关
   /cashier/member_order/detail:
     get:
       consumes:
@@ -16212,6 +16301,30 @@ paths:
       summary: 修改会员昵称
       tags:
       - 会员端.基础信息
+  /member/callback:
+    post:
+      consumes:
+      - application/json
+      description: 回调
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/member_req.CallbackReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 回调
+      tags:
+      - 会员端.回调
   /member/coupon/history/list:
     get:
       consumes:

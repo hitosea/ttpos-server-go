@@ -9735,6 +9735,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/member_order/accept": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "接单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外送接单相关"
+                ],
+                "summary": "接单",
+                "parameters": [
+                    {
+                        "description": "接受接单",
+                        "name": "AcceptOrderReq",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.AcceptOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GetMemberOrderDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/member_order/detail": {
             "get": {
                 "security": [
@@ -14878,6 +14929,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/callback": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "回调",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.回调"
+                ],
+                "summary": "回调",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.CallbackReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/member/coupon/history/list": {
             "get": {
                 "security": [
@@ -19098,6 +19188,31 @@ const docTemplate = `{
                 }
             }
         },
+        "member_req.CallbackReq": {
+            "type": "object",
+            "properties": {
+                "jobStatusAfter": {
+                    "description": "变化后的状态，即当前状态。 枚举请查看”skootar 订单状态“",
+                    "type": "string"
+                },
+                "jobStatusBefore": {
+                    "description": "变化前的状态。 枚举请查看”skootar 订单状态“",
+                    "type": "string"
+                },
+                "providerName": {
+                    "description": "外送渠道名称。如：skootar。 枚举请查看”外送渠道方“",
+                    "type": "string"
+                },
+                "shopRefNo": {
+                    "description": "订单号。即member_sale_order_uuid",
+                    "type": "string"
+                },
+                "takeoutRefNo": {
+                    "description": "外送渠道订单号。如skootar的order_id",
+                    "type": "string"
+                }
+            }
+        },
         "member_req.MemberAddressAddReq": {
             "type": "object",
             "properties": {
@@ -20149,6 +20264,15 @@ const docTemplate = `{
                 }
             }
         },
+        "req.AcceptOrderReq": {
+            "type": "object",
+            "properties": {
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.AddMemberReq": {
             "type": "object",
             "required": [
@@ -20975,16 +21099,16 @@ const docTemplate = `{
                     "description": "是否只进行送厨检查，而不进行实际的送厨。场景：助手端开启下单校验高级密码时，先检查送厨，再实际送厨。检查送厨时不进行实际送厨",
                     "type": "boolean"
                 },
+                "is_member_order_accept": {
+                    "description": "是否是会员端接单. 不用返回购物车信息",
+                    "type": "boolean"
+                },
                 "password": {
                     "description": "高级密码后台开启的时候才传",
                     "type": "string"
                 },
                 "sale_bill_uuid": {
                     "description": "销售账单ID",
-                    "type": "integer"
-                },
-                "sale_order_uuid": {
-                    "description": "销售订单ID。废弃",
                     "type": "integer"
                 }
             }
@@ -23744,7 +23868,7 @@ const docTemplate = `{
                     }
                 },
                 "meta": {
-                    "$ref": "#/definitions/dto.PageResponse"
+                    "$ref": "#/definitions/resp.OrderManageListMeta"
                 }
             }
         },
@@ -24831,7 +24955,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "status_group": {
-                    "description": "订单状态分组. \"unaccept\" 待接单, \"accept\" 备餐中, \"undelivery\" 待配送, \"delivery\" 配送中, \"completed\" 已完成, \"cancel\" 已取消",
+                    "description": "订单状态分组. \"unpaid\" 待付款， \"unaccept\" 待接单, \"accept\" 备餐中, \"undelivery\" 待配送, \"delivery\" 配送中, \"completed\" 已完成, \"cancel\" 已取消",
                     "type": "string"
                 }
             }
@@ -25564,6 +25688,55 @@ const docTemplate = `{
                 "is_cell_reject": {
                     "description": "是否可拒单",
                     "type": "boolean"
+                }
+            }
+        },
+        "resp.OrderManageListMeta": {
+            "type": "object",
+            "properties": {
+                "accept_num": {
+                    "description": "备餐中数量",
+                    "type": "integer"
+                },
+                "cancel_num": {
+                    "description": "已取消数量",
+                    "type": "integer"
+                },
+                "complete_num": {
+                    "description": "已完成数量",
+                    "type": "integer"
+                },
+                "delivery_num": {
+                    "description": "配送中数量",
+                    "type": "integer"
+                },
+                "page_no": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer"
+                },
+                "total": {
+                    "description": "总数",
+                    "type": "integer"
+                },
+                "total_num": {
+                    "description": "总数量",
+                    "type": "integer"
+                },
+                "unaccept_num": {
+                    "description": "待接单数量",
+                    "type": "integer"
+                },
+                "undelivery_num": {
+                    "description": "待配送数量",
+                    "type": "integer"
+                },
+                "unpaid_num": {
+                    "description": "待付款数量",
+                    "type": "integer"
                 }
             }
         },
