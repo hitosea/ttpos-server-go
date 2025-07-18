@@ -81,6 +81,10 @@ func (model *MemberSaleOrder) IsCancel() bool {
 
 // 订单是否已经验证手机号
 func (model *MemberSaleOrder) IsVerifiedPhoneBool() bool {
+	// 订单未配置收货地址前，默认都是未验证
+	if model.Address == nil {
+		return false
+	}
 	return model.Address.MemberAddress.IsAuthPhone()
 }
 

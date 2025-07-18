@@ -966,8 +966,8 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		}
 	}
 
-	// 如果未查询配送距离
-	if memberSaleOrder.DeliveryDistance == 0 {
+	// 如果未查询配送距离,且配置地址
+	if memberSaleOrder.DeliveryDistance == 0 && memberSaleOrder.Address != nil {
 		// 查询配送距离
 		distance, err := s.QueryDistance(ctx, memberSaleOrder)
 		if err != nil {
@@ -1013,15 +1013,21 @@ func (s *orderSrv) QueryDistance(ctx context.Context, memberSaleOrder *model.Mem
 		return 0, errors.WithMessage(err)
 	}
 
+	companySetting := ctx.GetCompanySetting()
+	latitude, longitude := companySetting.GetCoordinates()
+	if latitude == "" || longitude == "" {
+		return 0, errors.New("无法找到商家经纬度")
+	}
+
 	takeoutResp, err := takeoutSrv.EstimateDistance(contexts.Background(), &req.TakeoutDistanceReq{
 		ProviderName: constant.ProviderNameSkootar,
 		Address: []*req.TakeoutAddress{
 			// 商家地址
 			{
-				AddressName: "商家",
-				Address:     "",
-				Lat:         "123",
-				Lng:         "1231",
+				AddressName: ctx.GetCompany().Name,
+				Address:     companySetting.Address,
+				Lat:         latitude,
+				Lng:         longitude,
 			},
 			// 收货人地址
 			{
