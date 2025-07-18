@@ -5331,7 +5331,7 @@ func (s *orderSrv) GetOrderCartInfo(ctx context.Context, saleBillUuid uint64, op
 			Uuid:                saleOrder.Uuid,
 			OrderNo:             saleOrder.OrderNo,
 			Status:              saleOrder.Status,
-			ProductNum:          decimal.NewFromFloat(productNum).Truncate(2).InexactFloat64(),
+			ProductNum:          decimal.NewFromFloat(productNum).Truncate(3).InexactFloat64(),
 			ProductList:         productList,
 			IsDiscount:          saleOrder.IsManualDiscount(uint8(shopCart.SaleBill.SaleBillSetting.ZeroRule)),
 			IsMemberDiscount:    saleOrder.IsMemberDiscount(),

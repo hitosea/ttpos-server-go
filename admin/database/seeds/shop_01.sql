@@ -332,7 +332,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `name` TEXT COMMENT '商品名称',
     `flavor_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '规格名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
-    `num` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品数量。不能减为0，当数量为1再减时，标记删除',
+    `num` DECIMAL(12, 8) NOT NULL DEFAULT 0 COMMENT '商品数量。不能减为0，当数量为1再减时，标记删除',
     `image_file_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品图片ID',
     `device_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '设备ID,用于标识订单来源设备.来源h5时，device_id为h5',
     -- 价格信息

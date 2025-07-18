@@ -332,7 +332,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		if orderBuffetCustomer.IsDelete() {
 			continue
 		}
-		productNum = productNum.Add(decimal.NewFromFloat(float64(orderBuffetCustomer.Num)).Round(2))
+		productNum = productNum.Add(decimal.NewFromFloat(float64(orderBuffetCustomer.Num)).Round(3))
 		buffetNameText := orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang)
 		if orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name != "" {
 			buffetNameText += "\n(" + orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name + ")"
@@ -346,7 +346,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 	// 添加加钟商品
 	buffetDelayProducts, num := t.base.MergeSaleOrderBuffetDelayProducts(saleOrder)
-	productNum = productNum.Add(decimal.NewFromFloat(num).Round(2))
+	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for _, delay := range buffetDelayProducts {
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: delay.DelayName, Width: 310, Align: pkg.AlignLeft},
@@ -356,12 +356,12 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 	// 商品列表
 	products, num := t.base.MergeSaleOrderProduct(saleOrder, temp != 4)
-	productNum = productNum.Add(decimal.NewFromFloat(num).Round(2))
+	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for key, product := range products {
 		img.SetTextLineHeight(45)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: product.ProductName, Width: 310, Align: pkg.AlignLeft},
-			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%v", t.base.Amount(product.ProductPrice), product.ProductNum), Width: 120, Align: pkg.AlignCenter},
+			pkg.ColumnConfig{Text: product.ProductName, Width: 300, RightPadding: 40, Align: pkg.AlignLeft},
+			pkg.ColumnConfig{Text: fmt.Sprintf("%s*%v", t.base.Amount(product.ProductPrice), product.ProductNum), Width: 120, RightPadding: 15, Align: pkg.AlignCenter},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(product.ProductTotalPrice), Width: 0, Align: pkg.AlignRight},
 		)
 		img.RecoverDefaultTextLineHeight()
