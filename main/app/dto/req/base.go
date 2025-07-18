@@ -31,6 +31,7 @@ type UpdateSystemSetting struct {
 	IsShowSoldOut          *int   `json:"is_show_sold_out" binding:"required,oneof=0 1"`           // 平板端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 	IsShowScanSoldOut      *int   `json:"is_show_scan_sold_out" binding:"required,oneof=0 1"`      // 扫码点餐端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 	MenuShowSoldOut        *int   `json:"menu_show_sold_out" binding:"required,oneof=0 1"`         // 电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+	MemberShowSoldOut      *int   `json:"member_show_sold_out" binding:"required,oneof=0 1"`       // 会员端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 	DishCardStyle          string `json:"dish_card_style" binding:"required,oneof=0 1"`            // 菜品卡片样式 0-无图模式 1-图片模式
 	DeviceRemark           string `json:"device_remark"`                                           // 机器备注
 }
