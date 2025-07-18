@@ -9,11 +9,11 @@
     <div class="common-search-wrap">
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item label="">
-          <el-radio-group v-model="searchForm.time_type" class="radio-search" @change="timeTypeChange">
-            <el-radio-button :value="1">{{ $t('今天') }}</el-radio-button>
-            <el-radio-button :value="2">{{ $t('昨天') }}</el-radio-button>
-            <el-radio-button :value="3">{{ $t('本周') }}</el-radio-button>
-            <el-radio-button :value="0">{{ $t('全部') }}</el-radio-button>
+          <el-radio-group v-model="searchForm.date_range" class="radio-search" @change="timeTypeChange">
+            <el-radio-button :value="0">{{ $t('今天') }}</el-radio-button>
+            <el-radio-button :value="1">{{ $t('昨天') }}</el-radio-button>
+            <el-radio-button :value="2">{{ $t('本周') }}</el-radio-button>
+            <el-radio-button :value="-1">{{ $t('全部') }}</el-radio-button>
           </el-radio-group>
         </el-form-item>
 
@@ -25,30 +25,13 @@
         </el-form-item>
         <el-form-item :label="$t('起始时间')">
           <div class="flex-box">
-            <el-select
-              class="time-select"
-              size="small"
-              multiple
-              v-model="searchForm.time_mode"
-              :placeholder="$t('请选择')"
-              @change="onSearch"
-              @clear="
-                () => {
-                  searchForm.time_mode = [0];
-                }
-              "
-            >
-              <el-option :label="$t('下单时间')" :value="0"></el-option>
-              <el-option :label="$t('完成时间')" :value="1"></el-option>
-              <template #tag>
-                <span v-if="searchForm.time_mode.includes(0)">{{ $t('下单时间') }}</span>
-                <span v-if="searchForm.time_mode.includes(1) && !searchForm.time_mode.includes(0)">{{ $t('完成时间') }}</span>
-                <span v-if="!searchForm.time_mode.includes(1) && !searchForm.time_mode.includes(0)">{{ $t('请选择') }}</span>
-              </template>
+            <el-select class="time-select" size="small" v-model="searchForm.time_type" :placeholder="$t('请选择')" @change="onSearch">
+              <el-option :label="$t('下单时间')" :value="1"></el-option>
+              <el-option :label="$t('支付时间')" :value="2"></el-option>
             </el-select>
             <el-date-picker
               size="small"
-              v-model="searchForm.time"
+              v-model="time"
               @change="createTimeChange"
               type="daterange"
               value-format="YYYY-MM-DD"
@@ -73,7 +56,7 @@
     <div class="product-content">
       <div class="table-wrap">
         <el-tabs size="small" v-model="activeName" @tab-change="handleClick">
-          <el-tab-pane :label="$t('全部订单')" name="all">
+          <el-tab-pane :label="$t('全部订单')" name="">
             <template #label>
               <span>
                 {{ $t('全部订单') }}
@@ -81,7 +64,7 @@
               </span>
             </template>
           </el-tab-pane>
-          <el-tab-pane :label="$t('待付款')" name="pending_payment">
+          <el-tab-pane :label="$t('待付款')" name="unpaid">
             <template #label>
               <span>
                 {{ $t('待付款') }}
@@ -89,7 +72,15 @@
               </span>
             </template>
           </el-tab-pane>
-          <el-tab-pane :label="$t('待配送')" name="awaiting_delivery">
+          <el-tab-pane :label="$t('待接单')" name="unaccept">
+            <template #label>
+              <span>
+                {{ $t('待接单') }}
+                <el-tag size="" class="ml-4">{{ order_count.unpaid_num }}</el-tag>
+              </span>
+            </template>
+          </el-tab-pane>
+          <el-tab-pane :label="$t('待配送')" name="undelivery">
             <template #label>
               <span>
                 {{ $t('待配送') }}
@@ -97,7 +88,7 @@
               </span>
             </template>
           </el-tab-pane>
-          <el-tab-pane :label="$t('配送中')" name="delivering">
+          <el-tab-pane :label="$t('配送中')" name="delivery">
             <template #label>
               <span>
                 {{ $t('配送中') }}
@@ -105,7 +96,7 @@
               </span>
             </template>
           </el-tab-pane>
-          <el-tab-pane :label="$t('已取消')" name="cancelled">
+          <el-tab-pane :label="$t('已取消')" name="cancel">
             <template #label>
               <span>
                 {{ $t('已取消') }}
@@ -113,7 +104,7 @@
               </span>
             </template>
           </el-tab-pane>
-          <el-tab-pane :label="$t('已完成')" name="complete">
+          <el-tab-pane :label="$t('已完成')" name="completed">
             <template #label>
               <span>
                 {{ $t('已完成') }}
@@ -123,43 +114,43 @@
           </el-tab-pane>
         </el-tabs>
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading" row-key="unique_key">
-          <el-table-column prop="serial_no" :label="$t('外卖序号')"> </el-table-column>
+          <el-table-column prop="serial_number" :label="$t('外卖序号')"> </el-table-column>
           <el-table-column prop="order_no" :label="$t('订单号')"></el-table-column>
           <el-table-column prop="status" :label="$t('状态')">
             <template #default="scope">
-              {{ scope.row.status == 0 ? $t('待付款') : scope.row.status == 2 ? $t('已取消') : $t('已完成') }}
+              {{ statusMap(scope.row.status) }}
             </template>
           </el-table-column>
           <el-table-column prop="create_time" :label="$t('下单时间')">
             <template #default="scope">
-              {{ scope.row.create_time }}
+              {{ DTime(scope.row.create_time) }}
             </template>
           </el-table-column>
           <el-table-column prop="pay_time" :label="$t('支付时间')">
             <template #default="scope">
-              {{ scope.row.pay_time }}
+              {{ DTime(scope.row.pay_time) }}
             </template>
           </el-table-column>
-          <el-table-column prop="order_amount" :label="$t('订单金额')" width="140" show-overflow-tooltip>
+          <el-table-column prop="origin_amount" :label="$t('订单金额')" width="140" show-overflow-tooltip>
             <template #default="scope">
               <div style="line-height: 24px">
                 <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                {{ this.$formatPrice(scope.row.order_amount) }}
+                {{ this.$formatPrice(scope.row.origin_amount) }}
                 <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
                 <p class="gray98" v-if="currency.is_open == 1">
                   <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                  {{ this.$formatPrice((Number(scope.row.order_amount) * Number(currency.vices?.unit_rate)).toFixed(2))
+                  {{ this.$formatPrice((Number(scope.row.origin_amount) * Number(currency.vices?.unit_rate)).toFixed(2))
                   }}<template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }} </template>
                 </p>
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="payment_amount" :label="$t('实付金额')" show-overflow-tooltip>
+          <el-table-column prop="pay_amount" :label="$t('实付金额')" show-overflow-tooltip>
             <template #default="scope">
               <div>
                 <div class="orange" v-if="scope.row.status == 1 || (scope.row.sale_orders && scope.row.sale_orders.map((item) => item.status == 1).includes(true))">
                   <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                  {{ this.$formatPrice(scope.row.payment_amount) }}
+                  {{ this.$formatPrice(scope.row.pay_amount) }}
                   <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
                 </div>
                 <div v-else>-</div>
@@ -168,8 +159,8 @@
           </el-table-column>
           <el-table-column prop="" :label="$t('用户信息')" show-overflow-tooltip>
             <template #default="scope">
-              <span v-if="scope.row.consumer_uuids" class="gray9">{{ $t('会员ID') }}&nbsp;({{ scope.row.consumer_uuids }})</span>
-              <span v-else class="gray9">-</span>
+              <p class="gray9">{{ scope.row.contact.name || '-' }}</p>
+              <p class="gray9">{{ scope.row.contact.phone || '-' }}</p>
             </template>
           </el-table-column>
           <el-table-column prop="delivery_fee" :label="$t('配送费')" show-overflow-tooltip>
@@ -180,9 +171,9 @@
             </template>
           </el-table-column>
 
-          <el-table-column prop="payment_method" :label="$t('支付方式')" show-overflow-tooltip>
+          <el-table-column prop="pay_type" :label="$t('支付方式')" show-overflow-tooltip>
             <template #default="scope">
-              <span class="gray9">{{ scope.row.payment_method }}</span>
+              <span class="gray9">{{ scope.row.pay_type || '-' }}</span>
             </template>
           </el-table-column>
 
@@ -236,6 +227,7 @@
   import refund from './dialog/refund.vue';
   import qs from 'qs';
   import { useUserStore } from '@/store';
+  import { DTime } from '@/utils/DateTime.js';
   const { token, currency, computedSupplier } = useUserStore();
   import { languageStore } from '@/store/model/language';
   const supplier = computedSupplier().supplier;
@@ -250,7 +242,7 @@
       return {
         currency: currency,
         /*切换菜单*/
-        activeName: 'all',
+        activeName: '',
         /*是否加载完成*/
         loading: true,
         /*列表数据*/
@@ -264,11 +256,10 @@
         /*横向表单数据模型*/
         searchForm: {
           order_no: '',
+          serial_no: '',
           style_id: ' ',
-          time: '',
+          date_range: 0,
           time_type: 1,
-          order_source: ' ',
-          time_mode: [0],
         },
         /*配送方式*/
         exStyle: [],
@@ -305,11 +296,11 @@
       if (params.value.page) {
         this.searchForm = {
           order_no: params.value.order_no,
+          serial_no: params.value.serial_no,
           style_id: params.value.style_id,
           time: params.value.time,
+          date_range: params.value.date_range,
           time_type: params.value.time_type,
-          order_source: params.value.order_source,
-          time_mode: params.value.time_mode,
         };
         this.activeName = params.value.dataType;
         this.curPage = params.value.page;
@@ -322,11 +313,11 @@
     },
 
     watch: {
-      'searchForm.time_mode': {
+      'searchForm.time_type': {
         handler(newVal, oldVal) {
           this.$nextTick(() => {
             if (newVal.length == 0) {
-              this.searchForm.time_mode = oldVal;
+              this.searchForm.time_type = oldVal;
             }
           });
         },
@@ -334,6 +325,7 @@
       },
     },
     methods: {
+      DTime: DTime,
       /*跨多列*/
       arraySpanMethod(row) {
         if (row.rowIndex % 2 == 0) {
@@ -371,7 +363,7 @@
 
       /*切换时间段*/
       createTimeChange() {
-        this.searchForm.time_type = '';
+        this.searchForm.time_type = 1;
         this.onSearch();
       },
 
@@ -379,7 +371,12 @@
       getData() {
         let self = this;
         let Params = this.searchForm;
-        Params.dataType = self.activeName;
+        Params.status = self.activeName;
+        if (self.time.length > 0) {
+          //转为时间戳
+          Params.query_start_time = new Date(self.time[0]).getTime() / 1000;
+          Params.query_end_time = new Date(self.time[1]).getTime() / 1000;
+        }
         Params.page = self.curPage;
         Params.list_rows = self.pageSize;
         self.loading = true;
@@ -407,6 +404,7 @@
         let self = this;
         let pageParams = self.searchForm;
         pageParams.dataType = self.activeName;
+        pageParams.time = self.time;
         pageParams.page = self.curPage;
         pageParams.list_rows = self.pageSize;
         languageStore().setPageParams(pageParams);
@@ -414,10 +412,9 @@
         // 反之查看子单详情, 则sale_order_uuid = 为子单sale_order_uuid
         const saleOrderUuid = row.is_split === undefined ? row.sale_order_uuid : 0;
         self.$router.push({
-          path: '/' + this.app_id + '/store/order/detail',
+          path: '/' + this.app_id + '/store/takeout/detail',
           query: {
-            sale_bill_uuid: row.sale_bill_uuid,
-            sale_order_uuid: saleOrderUuid,
+            member_sale_order_uuid: row.member_sale_order_uuid,
           },
         });
       },
@@ -482,6 +479,29 @@
           if (e.type == 'success') {
             this.getData();
           }
+        }
+      },
+
+      statusMap(status) {
+        switch (status) {
+          case 0:
+            return this.$t('选购中');
+          case 1:
+            return this.$t('待付款');
+          case 2:
+            return this.$t('待商家接单');
+          case 3:
+            return this.$t('商家备餐中');
+          case 4:
+            return this.$t('待骑手接单');
+          case 5:
+            return this.$t('骑手正在赶往商家');
+          case 6:
+            return this.$t('骑手配送中');
+          case 7:
+            return this.$t('已完成');
+          case 8:
+            return this.$t('已取消');
         }
       },
     },
@@ -566,10 +586,6 @@
       width: 180px;
       :deep(.el-select__wrapper) {
         border-radius: 4px 0 0 4px;
-        .el-select__selection {
-          flex-wrap: nowrap;
-          overflow: hidden;
-        }
       }
     }
     :deep(.el-input__wrapper) {

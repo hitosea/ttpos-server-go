@@ -13,7 +13,7 @@
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('订单类型：') }}</span>
-              {{ detail.bill_type == 1 ? $t('点餐订单') : $t('桌台订单') }}
+              {{ $t('外送订单') }}
             </div>
           </el-col>
           <el-col :span="6">
@@ -22,34 +22,61 @@
               {{ detail.order_no }}
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.member_uuids">
+          <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('会员：') }}</span>
-              <span>{{ $t('会员ID') }}&nbsp;({{ detail?.member_uuids }})</span>
+              <span>{{ $t('会员ID') }}&nbsp;({{ detail?.member?.id }})</span>
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div class="pb16">
+              <span class="gray9">{{ $t('外送序号：') }}</span>
+              <span>{{ detail?.serial_no || '-' }}</span>
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div class="pb16">
+              <span class="gray9">{{ $t('订单状态：') }}</span>
+              {{ statusMap(detail.status) }}
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div class="pb16">
+              <span class="gray9">{{ $t('收银员：') }}</span>
+              <span>{{ detail.cachier?.name || '-' }}</span>
             </div>
           </el-col>
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('订单金额：') }}</span>
               <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ this.$formatPrice(detail.order_amount) }}
+              {{ this.$formatPrice(detail.origin_amount) }}
               <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
               <span v-if="currency.is_open == 1" style="padding-left: 8px">
                 <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                {{ this.$formatPrice(Number(detail.order_amount) * Number(currency.vices?.unit_rate)) }}
+                {{ this.$formatPrice(Number(detail.origin_amount) * Number(currency.vices?.unit_rate)) }}
                 <template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }}</template>
               </span>
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.status == 1">
+          <el-col :span="6">
             <div class="pb16">
-              <span class="gray9">{{ $t('实付款金额：') }}</span>
+              <span class="gray9">{{ $t('会员折扣：') }}</span>
               <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ this.$formatPrice(Number(detail.payment_amount)) }}
+              {{ this.$formatPrice(detail.member_discount) }}
               <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
             </div>
           </el-col>
-          <el-col :span="6" v-if="Number(detail.refund_money || 0) > 0">
+
+          <el-col :span="6" v-if="detail.status == 7">
+            <div class="pb16">
+              <span class="gray9">{{ $t('实付金额：') }}</span>
+              <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
+              {{ this.$formatPrice(Number(detail.pay_amount)) }}
+              <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            </div>
+          </el-col>
+          <el-col :span="6" v-if="Number(detail.refund_amount || 0) > 0">
             <div class="pb16">
               <span class="gray9">{{ $t('退款金额：') }}</span>
               <span>
@@ -59,105 +86,50 @@
               </span>
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.status == 1" v-for="item in detail.pay_types">
+          <el-col :span="6" v-if="detail.status == 7" >
             <div class="pb16">
               <span class="gray9">{{ $t('支付方式：') }}</span>
               <span>
-                {{ item.payment_type_name }}
-                <template v-if="item.source_text && item.code != 40 && item.code != 10 && item.code != -1"> ({{ item.source_text }}) </template>
-                <el-tag class="ml-8" v-if="item.status == 0" type="danger" size="large">{{ $t('异常') }}</el-tag>
+                {{ detail.pay_type }}
+              </span>
+            </div>
+          </el-col>
+          <el-col :span="6" v-if="detail.status == 7">
+            <div class="pb16">
+              <span class="gray9">{{ $t('支付时间：') }}</span>
+              <span>
+                {{ DTime(detail.pay_time) }}
               </span>
             </div>
           </el-col>
           <el-col :span="6">
             <div class="pb16">
-              <span class="gray9">{{ $t('用餐方式：') }}</span> {{ detail.dining_method == 0 ? $t('店内就餐') : $t('打包带走') }}
+              <span class="gray9">{{ $t('订单时间：') }}</span>
+              {{ DTime(detail.create_time) }} {{ $t('至') }} {{ DTime(detail.finish_time) }}
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.serial_no">
-            <div class="pb16">
-              <span class="gray9">{{ detail.bill_type == 1 ? $t('序号：') : $t('桌号：') }}</span> {{ detail.serial_no }}
-            </div>
-          </el-col>
-          <el-col :span="6">
-            <div class="pb16">
-              <span class="gray9">{{ $t('交易状态：') }}</span>
-              {{ detail.status == 0 ? $t('待付款') : detail.status == 2 ? $t('已取消') : $t('已完成') }}
-            </div>
-          </el-col>
-          <el-col :span="6" v-if="detail.cashier_name">
-            <div class="pb16">
-              <span class="gray9">{{ $t('收银员：') }}</span>
-              {{ detail.cashier_name || '-' }}
-            </div>
-          </el-col>
-          <el-col :span="6" v-if="detail.is_buffet == 1">
-            <div class="pb16">
-              <span class="gray9">{{ $t('自助餐：') }}</span
-              >{{ detail.buffet_names }}
-            </div>
-          </el-col>
-          <el-col :span="6" v-if="detail.status == 2">
-            <div class="pb16">
-              <span class="gray9">{{ $t('取消原因：') }}</span>
-              {{ detail.cancel_reason || '-' }}
-            </div>
-          </el-col>
-          <el-col :span="6" v-if="detail.sale_orders.length == 1 && detail.sale_orders[0]?.is_free">
-            <div class="pb16">
-              <span class="gray9">{{ $t('免单原因：') }}</span>
-              {{ detail.sale_orders[0]?.free_reason[language] || '-' }}
-            </div>
-          </el-col>
-          <el-col :span="6">
-            <div class="pb16">
-              <span class="gray9">{{ $t('时间：') }}</span>
-              {{ detail.create_time || '-' }} {{ $t('至') }} {{ detail.finish_time || '-' }}
-            </div>
-          </el-col>
-          <el-col :span="6" v-if="detail.bill_type != 1">
+          <el-col :span="6" >
             <div class="pb16">
               <span class="gray9">{{ $t('备注：') }}</span>
               {{ detail.remark || '-' }}
             </div>
           </el-col>
+          <el-col :span="6" v-if="detail.status == 8">
+            <div class="pb16">
+              <span class="gray9">{{ $t('取消原因：') }}</span>
+              {{ detail.cancel_reason || '-' }}
+            </div>
+          </el-col>
+
+
+
         </el-row>
       </div>
 
       <div class="common-form mt16"> {{ $t('商品信息') }} </div>
 
-      <el-radio-group v-model="activeName" class="radio-search" v-if="(detail?.sale_orders || []).length > 1">
-        <template v-for="(item, index) in detail?.sale_orders">
-          <el-radio-button :label="index">{{ item.serial_no }}</el-radio-button>
-        </template>
-      </el-radio-group>
-      <div class="sub-order" v-if="(detail?.sale_orders || []).length > 1">
-        <p class="sub-order-item">{{ $t('订单号：') }}{{ detail?.sale_orders[activeName].order_no }}</p>
-        <p class="sub-order-item">
-          {{ $t('订单金额：') }}
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(detail?.sale_orders[activeName].order_amount) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
-          <span v-if="currency.is_open == 1" style="padding-left: 8px">
-            <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-            {{ this.$formatPrice(Number(detail?.sale_orders[activeName].order_amount) * Number(currency.vices?.unit_rate)) }}
-            <template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }}</template>
-          </span>
-        </p>
-        <p class="sub-order-item">
-          {{ $t('实付金额：') }}
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(Number(detail?.sale_orders[activeName].payment_amount)) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
-        </p>
-        <p class="sub-order-item">
-          {{ $t('会员：') }}
-          <span v-if="detail?.sale_orders[activeName].member_uuid">{{ $t('会员ID') }}({{ detail?.sale_orders[activeName].member_uuid }})</span>
-          <span v-else>-</span>
-        </p>
-      </div>
       <div class="table-wrap">
-        <el-table size="small" :data="detail?.sale_orders[activeName]?.products" border style="width: 100%">
+        <el-table size="small" :data="detail?.product_list?.list" border style="width: 100%">
           <el-table-column prop="name_text" :label="$t('商品')" width="400">
             <template #default="scope">
               <div class="product-info">
@@ -178,11 +150,11 @@
                   <div class="price">
                     <span>
                       <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                      {{ this.$formatPrice(scope.row.price) }}
+                      {{ this.$formatPrice(scope.row.origin_unit_price) }}
                       <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
                       <span v-if="currency.is_open == 1" style="padding-left: 8px">
                         <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                        {{ this.$formatPrice(Number(scope.row.price) * Number(currency.vices?.unit_rate)) }}
+                        {{ this.$formatPrice(Number(scope.row.origin_unit_price) * Number(currency.vices?.unit_rate)) }}
                         <template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }}</template>
                       </span>
                     </span>
@@ -319,6 +291,7 @@
   import refundAgain from './dialog/refundAgain.vue';
   import { useUserStore } from '@/store';
   import { languageStore } from '@/store/model/language';
+  import { DTime } from '@/utils/DateTime.js';
   const { currency } = useUserStore();
   export default {
     components: {
@@ -350,6 +323,7 @@
           supplier: {
             name: '',
           },
+          status: 0,
         },
         extra: {},
         /*是否打开编辑弹窗*/
@@ -418,6 +392,7 @@
     },
 
     methods: {
+      DTime,
       next() {
         if (this.active++ > 4) this.active = 0;
       },
@@ -425,17 +400,15 @@
       getParams() {
         let self = this;
         // 取到路由带过来的参数
-        OrderApi.storeOrderdetail(
+        OrderApi.postTakeoutOrderDetail(
           {
-            sale_bill_uuid: this.$route.query.sale_bill_uuid,
-            sale_order_uuid: this.$route.query.sale_order_uuid,
+            member_sale_order_uuid: this.$route.query.member_sale_order_uuid,
           },
           true
         )
           .then((res) => {
             self.loading = false;
-            self.detail = res.data.detail;
-            self.extra = res.data.extra;
+            self.detail = res.data;
             self.activities = [];
             res.data.operation_log.list.map((item) => {
               self.activities.push({
@@ -570,16 +543,27 @@
         return name;
       },
 
-      tableNo(arr) {
-        let result = '-';
-        if (arr && arr.length > 0) {
-          let nameArr = [];
-          (arr || []).map((item) => {
-            nameArr.push(item.table_no);
-          });
-          result = nameArr.join('+');
+      statusMap(status) {
+        switch (status) {
+          case 0:
+            return this.$t('选购中');
+          case 1:
+            return this.$t('待付款');
+          case 2:
+            return this.$t('待商家接单');
+          case 3:
+            return this.$t('商家备餐中');
+          case 4:
+            return this.$t('待骑手接单');
+          case 5:
+            return this.$t('骑手正在赶往商家');
+          case 6:
+            return this.$t('骑手配送中');
+          case 7:
+            return this.$t('已完成');
+          case 8:
+            return this.$t('已取消');
         }
-        return result;
       },
     },
   };

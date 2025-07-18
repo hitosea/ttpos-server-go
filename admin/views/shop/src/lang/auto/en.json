@@ -2076,5 +2076,16 @@
     "请输入收银机SN": "Please enter the Cash Register SN",
     "确认要关闭整单折扣吗?": "Are you sure you want to disable the order-wide discount?",
     "确认要开启整单折扣吗?": "Are you sure you want to enable the order-wide discount?",
-    "经纬度": "Latitude and Longitude"
+    "经纬度": "Latitude and Longitude",
+    "外送序号：": "Delivery Number:",
+    "订单状态：": "Order Status:",
+    "会员折扣：": "Member Discount:",
+    "订单时间：": "Order Time:",
+    "选购中": "Selecting",
+    "待商家接单": "Waiting for merchant to accept order",
+    "商家备餐中": "Merchant is preparing food",
+    "待骑手接单": "Waiting for rider to accept order",
+    "骑手正在赶往商家": "Rider is on the way to the merchant",
+    "骑手配送中": "Rider is delivering",
+    "待接单": "Pending Order"
 }

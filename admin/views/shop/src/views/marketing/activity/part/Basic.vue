@@ -88,7 +88,7 @@
       />
     </el-form-item>
     <el-form-item for="no_click" :label="$t('活动奖品')" :rules="[{ required: true, message: $t('请选择活动奖品') }]">
-      <el-radio-group v-model="form.reward_type" :disabled="status == 1">
+      <el-radio-group v-model="form.reward_type" :disabled="status == 1" >
         <el-radio :value="0">{{ $t('优惠券') }}</el-radio>
         <el-radio :value="1">{{ $t('积分') }}</el-radio>
       </el-radio-group>
@@ -110,14 +110,14 @@
       <div>
         <el-button type="primary" size="small" @click="selectCoupon">{{ $t('选择优惠券') }}</el-button>
         <template v-if="couponList.length > 0">
-          <el-tag v-for="tag in couponList" disable-transitions size="large" :key="tag.uuid" closable @close="handleClose(tag)">
+          <el-tag v-for="tag in couponList" disable-transitions size="large" :key="tag.uuid" closable @close="handleClose(tag)" :disabled="status == 1">
             {{ `${tag.name}` }}
           </el-tag>
         </template>
       </div>
     </el-form-item>
     <el-form-item v-if="form.reward_type == 1" for="no_click" :label="$t('每次赠送积分')">
-      <numInput :min="1" :max="9999999" :precision="2" v-model="form.reward_value" :placeholder="$t('请输入赠送积分数量')"></numInput>
+      <numInput :min="1" :max="9999999" :precision="2" :disabled="status == 1" v-model="form.reward_value" :placeholder="$t('请输入赠送积分数量')"></numInput>
       <div class="gray9">{{ $t('注：满足设置条件规则后，每次所赠送的积分数量') }}</div>
     </el-form-item>
     <el-form-item for="no_click" :label="$t('发送短信通知')" prop="is_send_sms" :rules="[{ required: true, message: $t('请选择是否发送短信通知') }]">

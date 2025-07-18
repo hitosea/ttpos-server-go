@@ -90,7 +90,12 @@ let OrderApi = {
 
   //外卖订单列表
   postTakeoutOrderList(data, errorback) {
-    return request._post('/shop/store.DeliveryOrder/index', data, errorback);
+    return request._post('/shop/store.MemberOrder/index', data, errorback);
+  },
+
+  //外卖订单详情
+  postTakeoutOrderDetail(data, errorback) {
+    return request._post('/shop/store.MemberOrder/detail', data, errorback);
   },
 };
 

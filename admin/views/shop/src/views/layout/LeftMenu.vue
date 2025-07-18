@@ -166,6 +166,19 @@
               }
             });
           }
+
+          if (newVal.meta.topTree == '/store/takeout/detail') {
+            this.menuList.map((item, index) => {
+              if (item.name == '订单管理') {
+                this.active_menu = index;
+                item.children.map((child, i) => {
+                  if (child.name == '外送订单') this.active_child = i;
+                });
+
+                this.$emit('selectMenu', false);
+              }
+            });
+          }
           if (newVal.meta.topTree == '/store/history_order/detail') {
             this.menuList.map((item, index) => {
               if (item.name == '订单管理') {
