@@ -61,3 +61,12 @@ type MemberOrderDetailAddress struct {
 	PhonePrefix string `json:"phone_prefix"` // 联系电话前缀. 例如：+86
 	Address     string `json:"address"`      // 详细地址
 }
+
+type MemberOrderPaymentInfoResp struct {
+	MemberSaleOrderUuid uint64  `json:"member_sale_order_uuid"` // 会员端销售订单UUID
+	PaymentOrderUuid    uint64  `json:"payment_order_uuid"`     // 支付单uuid (当/cashier/desk/order/payment/info接口的payment_orders中的存在相同的uuid时证明已经支付)
+	QrCode              string  `json:"qr_code"`                // 支付单二维码 (返回base64图片)
+	LinkUrl             string  `json:"link_url"`               // 支付单链接 (返回跳转地址 window.location.href = LinkUrl; )
+	Status              int     `json:"status"`                 // 支付单状态 支付状态, 0-未支付 1-已支付
+	PaymentAmount       float64 `json:"payment_amount"`         // 支付金额
+}

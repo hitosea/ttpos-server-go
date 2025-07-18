@@ -320,6 +320,14 @@
                 </el-radio-group>
               </template>
             </el-table-column>
+            <el-table-column prop="is_enable_grade" width="120" :label="`*${$t('整单折扣')}`">
+              <template #default="scope">
+                <el-radio-group v-model="scope.row.open_overall_discount">
+                  <el-radio label="1">{{ $t('开启') }}</el-radio>
+                  <el-radio label="0">{{ $t('关闭') }}</el-radio>
+                </el-radio-group>
+              </template>
+            </el-table-column>
             <el-table-column prop="" width="80" fixed="right" align="center" :label="$t('操作')">
               <template #default="scope">
                 <el-button type="primary" link @click="handleDelete(scope.row)">{{ $t('删除') }}</el-button>
@@ -577,6 +585,7 @@
                 product_sort: item[14] || '0', // 商品排序
                 limit_num: item[15] || '', // 限购数量
                 is_enable_grade: item[16] || '0', // 会员折扣
+                open_overall_discount: item[17] || '0', // 整单折扣
                 row: index,
               });
             }

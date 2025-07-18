@@ -14,12 +14,8 @@ import (
 
 var estimateApiPath = "/api/get_estimate_price"
 
-/**
-预估配送费
-Estimate price based on pick up and delivery locations
-*/
-
-func (s *sSkootar) EstimatePrice(ctx context.Context, req *api.EstimatePriceReq) (res *api.EstimatePriceResp, err error) {
+// EstimateDistance 获取预估距离
+func (s *sSkootar) EstimateDistance(ctx context.Context, req *api.EstimateDistanceReq) (res *api.EstimateDistanceResp, err error) {
 	var locationList []skootar.Location
 	for i, address := range req.Address {
 		locationList = append(locationList, skootar.Location{
@@ -28,7 +24,6 @@ func (s *sSkootar) EstimatePrice(ctx context.Context, req *api.EstimatePriceReq)
 			Seq: i + 1,
 		})
 	}
-	//TODO 调整Opting 配置
 	reqInp := &skootar.EstimatePriceInp{
 		ReqBase:      s.ReqBase(),
 		LocationList: locationList,
@@ -45,11 +40,10 @@ func (s *sSkootar) EstimatePrice(ctx context.Context, req *api.EstimatePriceReq)
 	if resp.ResponseCode != "200" {
 		return nil, gerror.Newf("获取预估价格异常:%v", resp.ResponseDesc)
 	}
-	res = &api.EstimatePriceResp{}
+	res = &api.EstimateDistanceResp{}
 	if err = gconv.Struct(resp, res); err != nil {
 		return nil, gerror.Wrap(err, "获取预估价格失败")
 	}
-	//TODO 自定返回值
 	res.ResponseInfo = &api.ResponseInfo{
 		Code:    resp.ResponseCode,
 		Message: resp.ResponseDesc,

@@ -148,8 +148,7 @@ type IOrderSrv interface {
 type IMemberOrderSrv interface {
 	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error) // 创建会员端订单
 	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)              // 设置会员端订单地址
-	VerifyPhone(ctx context.Context, req member_req.VerifyPhoneReq) (*resp.CreateMemberOrderResp, error)                                  // 验证手机号
-	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                       // 会员端订单提交支付，状态变为待支付
+	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) (*resp.MemberOrderPaymentInfoResp, error)                   // 会员端订单提交支付，状态变为待支付
 	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                             // 查询收银机“外送”页面的订单列表
 	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                    // 查询收银机“外送”页面的订单详情
 	PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error                                                     // 会员端订单支付成功. TODO 用于测试，提测前删掉
@@ -1129,50 +1128,14 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	return info, nil
 }
 
-// VerifyPhone 验证手机号
-func (s *orderSrv) VerifyPhone(ctx context.Context, request member_req.VerifyPhoneReq) (*resp.CreateMemberOrderResp, error) {
-	db := s.dbm.GetDB(ctx.GetDbId())
-	ctx.SetDB(db)
-	// 判断手机号是否是该订单地址联系人的手机号
+// PayMemberOrder 提交支付
+func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) (*resp.MemberOrderPaymentInfoResp, error) {
+	db := ctx.GetDB()
+
+	// 保存订单备注信息
 	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(request.MemberSaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
-	}
-	if memberSaleOrder.IsVerifiedPhoneBool() {
-		return nil, errors.WithMessage(errors.New("手机号已验证"))
-	}
-	if memberSaleOrder.Address == nil {
-		return nil, errors.WithMessage(errors.New("无法找到订单地址"))
-	}
-	if memberSaleOrder.Address.ContactPhone != request.Phone {
-		return nil, errors.WithMessage(errors.New("手机号不匹配"))
-	}
-
-	// TODO 验证验证码、注册会员
-
-	memberSaleOrder.IsVerifiedPhone = 1
-	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderVerifiedPhoneStatus(memberSaleOrder.Uuid); err != nil {
-		return nil, errors.WithMessage(err)
-	}
-
-	// TODO 如果订单会员从游客变为会员身份，要更会该订单的会员uuid，并重新计算商品订单价格
-
-	// 返回会员端订单信息
-	info, err := s.GetMemberOrderCheckoutInfo(ctx, req.GetMemberOrderCheckoutInfoReq{
-		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
-	}, nil)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-	return info, nil
-}
-
-// PayMemberOrder 提交支付
-func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error {
-	// 保存订单备注信息
-	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(s.dbm.GetDB(ctx.GetDbId())).GetMemberSaleOrderRecord(request.MemberSaleOrderUuid)
-	if err != nil {
-		return errors.WithMessage(err)
 	}
 
 	memberSaleOrder.Remark = request.Remark
@@ -1180,10 +1143,70 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 
 	// TODO 记录会员折扣、商品数量、商品金额、订单总金额
 
-	if err := repository.NewMemberSaleOrderRepo(s.dbm.GetDB(ctx.GetDbId())).UpdateMemberSaleOrderPendingPayment(memberSaleOrder); err != nil {
-		return errors.WithMessage(err)
+	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderPendingPayment(memberSaleOrder); err != nil {
+		return nil, errors.WithMessage(err)
 	}
-	return nil
+
+	// 判断订单金额是否为0
+	if memberSaleOrder.Amount == 0 {
+		return nil, errors.New("订单金额为0，无法支付")
+	}
+
+	// 判断当前是否连连支付
+	paymentMethodRepo := repository.NewPaymentMethodRepo(db)
+	paymentMethod := paymentMethodRepo.GetPaymentMethod(paymentMethodRepo.WhereUuid(request.PaymentMethodUuid))
+	if paymentMethod.Uuid == 0 {
+		return nil, errors.New("支付方式不存在")
+	}
+	// 支付方式是否可用
+	if !paymentMethod.IsLianLianPay() {
+		return nil, errors.New("支付方式不可用")
+	}
+
+	// 判断支付方式是否已支付
+	orderRepo := repository.NewPaymentOrderRepo(db)
+	paymentOrder, err := orderRepo.GetPaymentOrderInfo(
+		repository.CommonRepo.WhereBySoftDelete(),
+		orderRepo.WhereRelatedUuid(memberSaleOrder.Uuid),
+		orderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeMemberOrder),
+		orderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
+	)
+	if err == nil {
+		if paymentOrder.Status == constant.PaymentOrderStatusPaid {
+			infoResp := &resp.MemberOrderPaymentInfoResp{
+				MemberSaleOrderUuid: memberSaleOrder.Uuid,
+				PaymentOrderUuid:    paymentOrder.Uuid,
+				QrCode:              "",
+				LinkUrl:             "",
+				Status:              paymentOrder.Status,
+				PaymentAmount:       paymentOrder.PaymentAmount,
+			}
+			return infoResp, nil
+		}
+	}
+
+	// 创建连连支付订单
+	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
+		RelatedType:       constant.PaymentOrderRelatedTypeMemberOrder,
+		RelatedUuid:       memberSaleOrder.Uuid,
+		PaymentMethodUuid: paymentMethod.Uuid,
+		PaymentMethodCode: paymentMethod.Code,
+		PaymentAmount:     memberSaleOrder.Amount,
+		CommissionFee:     0,
+		PaymentMethod:     PaymentMethodH5Payment,
+	})
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return &resp.MemberOrderPaymentInfoResp{
+		MemberSaleOrderUuid: memberSaleOrder.Uuid,
+		PaymentOrderUuid:    payment.PaymentOrderUuid,
+		QrCode:              utils.IfString(paymentMethod.IsQrPromptPay(), payment.LinkUrl, ""),
+		LinkUrl:             utils.IfString(paymentMethod.IsQrPromptPay(), "", payment.LinkUrl),
+		Status:              payment.GetStatus(), // 支付单状态 支付状态, 0-未支付 1-已支付 (可选择轮询当前接口，获取支付状态)
+		PaymentAmount:       payment.OrderAmount, // 支付金额
+	}, nil
 }
 
 // GetMemberOrderList 获取收银端"外送"订单列表
@@ -8480,14 +8503,14 @@ func (s *orderSrv) InstantOrderPaymentQrcode(ctx context.Context, req req.Instan
 	}
 
 	// 创建连连支付订单
-	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(
-		constant.PaymentOrderRelatedTypeSaleOrder,
-		saleOrder.Uuid,
-		paymentMethod.Uuid,
-		paymentMethod.Code,
-		decimal.NewFromFloat(paymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64(),
-		commissionFee,
-	)
+	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
+		RelatedType:       constant.PaymentOrderRelatedTypeSaleOrder,
+		RelatedUuid:       saleOrder.Uuid,
+		PaymentMethodUuid: paymentMethod.Uuid,
+		PaymentMethodCode: paymentMethod.Code,
+		PaymentAmount:     decimal.NewFromFloat(paymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64(),
+		CommissionFee:     commissionFee,
+	})
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

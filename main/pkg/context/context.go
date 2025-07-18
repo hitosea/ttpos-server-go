@@ -54,6 +54,7 @@ type Context interface {
 	GetMember() model.Member                               // 获取会员信息
 	GetMemberUuid() uint64                                 // 获取会员uuid
 	Version(op Operator, version string) bool              // 比较版本
+	GetClientIp() string                                   // 获取客户端IP
 }
 
 type ContextImpl struct {
@@ -376,4 +377,9 @@ func (c *ContextImpl) Version(op Operator, version string) bool {
 		return v1.Equal(v2)
 	}
 	return false
+}
+
+// GetClientIp 获取客户端IP
+func (c *ContextImpl) GetClientIp() string {
+	return c.cc.ClientIP()
 }

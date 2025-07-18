@@ -55,6 +55,7 @@ const (
 const (
 	PaymentOrderRelatedTypeSaleOrder     = 0 // 销售订单
 	PaymentOrderRelatedTypeRechargeOrder = 1 // 充值订单
+	PaymentOrderRelatedTypeMemberOrder   = 2 // 会员订单
 )
 
 const (

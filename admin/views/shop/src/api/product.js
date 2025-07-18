@@ -268,6 +268,10 @@ let ProductApi = {
   stateBuffet(data, errorback) {
     return request._post('/shop/product.buffet.buffet/state', data, errorback);
   },
+  // 自助餐整单折扣
+  openOverallDiscount(data, errorback) {
+    return request._post('/shop/product.buffet.buffet/overallDiscount', data, errorback);
+  },
   // 自助餐状态
   combBuffet(data, errorback) {
     return request._post('/shop/product.buffet.buffet/comb', data, errorback);

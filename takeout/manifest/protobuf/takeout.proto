@@ -23,18 +23,15 @@ message ResponseInfo {
   string message = 2;
 }
 
-message EstimatePriceReq {
+message EstimateDistanceReq {
   string providerName = 1; // 外送渠道：skootar、grab
   repeated Address address = 2;
 }
 
-message EstimatePriceResp {
+message EstimateDistanceResp {
   ResponseInfo responseInfo = 1;
-  float normalPrice = 2;
-  float netPrice = 3;
-  float discount = 4;
-  float distance = 5;
-  int32 tripDuration = 6;
+  float distance = 2;
+  int32 tripDuration = 3;
 }
 
 message CreateOrderReq {
@@ -48,35 +45,47 @@ message CreateOrderReq {
 
 message CreateOrderResp {
   ResponseInfo responseInfo = 1;
-  string takeout_job_uuid = 2;               // 外送订单号
+  string takeout_job_uuid = 2;   // 外送订单号
   string status = 3;                 // 0 - Canceled 已取消; 1 - New 新订单; 2 - Under review 正在审核中; 3 - Mission created 审核通过; 4 - Matching 正在匹配司机; 5 - Assigned 已分配司机; 6 - OTW to pickup 正在前往取货; 7 - OTW to delivery 正在前往送货; 8 - Pending 等待修改; 9 - Completed 已完成; 1 -  Invoice Created 已生成发票; 1 -  Paid 已支付服务费;
   string shop_order_uuid =4; //餐馆下单uuid
   string takeout_ref_no =5; //外送协调返回订单号
 }
 
 message ConfirmOrderReq {
-  string providerName = 1;           // 外送渠道：skootar、grab
-  string orderId = 2;  // 外送渠道订单ID
+  string shop_order_uuid = 1;  // ttpos 订单Uuid
 }
 
 message ConfirmOrderResp {
   ResponseInfo responseInfo = 1;
 }
 
-message GetDriverLocationReq {
-  string providerName = 1;           // 外送渠道：skootar、grab
-  string orderId = 2;      // 外送渠道订单ID
+message GetDriverInfoReq {
+  string shop_order_uuid = 1;     // ttpos 订单Uuid
 }
 
-message GetDriverLocationResp {
-  ResponseInfo responseInfo = 1;           // 外送渠道：skootar、grab
-  float lat = 2;      // 纬度
-  float lng = 3;      // 经度
+message GetDriverInfoResp {
+  ResponseInfo responseInfo = 1;
+  string name = 2; // 骑手名称
+  string phone = 3; // 骑手电话
+  string avatar = 4; // 骑手头像
+  float rating = 5; // 骑手评分
+  float lat = 6;      // 纬度
+  float lng = 7;      // 经度
+}
+
+
+message CancelOrderReq {
+  string shop_order_uuid = 1;     // ttpos 订单Uuid
+}
+
+message CancelOrderResp {
+  ResponseInfo responseInfo = 1;
 }
 
 service TakeoutService {
-  rpc EstimatePrice (EstimatePriceReq) returns (EstimatePriceResp) {}
+  rpc EstimateDistance (EstimateDistanceReq) returns (EstimateDistanceResp) {}
   rpc CreateOrder (CreateOrderReq) returns (CreateOrderResp) {}
+  rpc CancelOrder (CancelOrderReq) returns (CancelOrderResp) {}
   rpc ConfirmOrder (ConfirmOrderReq) returns (ConfirmOrderResp) {}
-  rpc GetDriverLocation(GetDriverLocationReq) returns (GetDriverLocationResp) {}
+  rpc GetDriverInfo(GetDriverInfoReq) returns (GetDriverInfoResp) {}
 }

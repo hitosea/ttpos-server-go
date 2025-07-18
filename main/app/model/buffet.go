@@ -15,6 +15,7 @@ type BuffetPackage struct {
 	NonOrderingTime       uint    `gorm:"default:0;comment:不可下单时间（分钟）"`
 	ReminderOrderTime     uint    `gorm:"default:0;column:reminder_order_time;comment:提醒下单时间（分钟）"`
 	ActualSaleNum         float64 `gorm:"default:0;column:actual_sale_num;comment:实际销量"`
+	OpenOverallDiscount   uint    `gorm:"default:1;column:open_overall_discount;comment:是否开启整单折扣, 0-否、1-是"`
 
 	MultiLanguageName        MultiLanguageName         `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`
 	BuffetCustomerTypePrices []BuffetCustomerTypePrice `gorm:"foreignKey:buffet_package_uuid;references:uuid"`

@@ -28,9 +28,23 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		//测试外送服务
 		// rpc.TestEcho(c)
 		// rpc.TestEstimatePrice()
-		rpc.TestCreateOrder()
-		// rpc.TestConfirmOrder()
-		//rpc.TestGetDriverLocation()
+
+		// res, err := rpc.TestCreateOrder()
+		// if err != nil {
+		// 	c.String(http.StatusInternalServerError, err.Error())
+		// 	return
+		// }
+		// json, _ := json.Marshal(res)
+		// c.String(http.StatusOK, string(json))
+
+		// // rpc.TestConfirmOrder()
+		// // rpc.TestGetDriverInfo()
+
+		if err := rpc.TestCancelOrder(); err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
 		c.String(http.StatusOK, "Success")
 	})
 	apiV1 := r.Group("api/v1")

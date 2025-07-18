@@ -6,6 +6,8 @@ import (
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/net/gclient"
+	"github.com/gogf/gf/v2/os/gctx"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/guid"
@@ -91,15 +93,20 @@ func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq
 	//回调ttpos
 	if len(job.CallbackUrl) > 0 {
 		//后面改成异步mq
+		//报文参考 `{"jobStatusAfter":"5","jobStatusBefore":"5","providerName":"skootar","shopRefNo":"8888777","takeoutRefNo":"J25070856667"}`
 		go func() {
-			callbackRes := g.Client().PostVar(ctx, job.CallbackUrl, g.Map{
+			callbackRes := &gclient.Response{}
+			if callbackRes, err = g.Client().ContentJson().Post(gctx.New(), job.CallbackUrl, g.Map{
 				"shopRefNo":       job.ShopRefNo,
 				"takeoutRefNo":    job.TakeoutRefNo,
 				"providerName":    job.ProviderName,
 				"jobStatusBefore": jobStatusBefore,
 				"jobStatusAfter":  job.JobStatus,
-			})
-			g.Log().Infof(ctx, "发起回调ttpos: %v", callbackRes)
+			}); err != nil {
+				g.Log().Infof(ctx, "发起回调ttpos异常: %v", err)
+			}
+			defer callbackRes.Close()
+			callbackRes.RawDump()
 		}()
 	}
 	return &v1.SkootarStatusRes{
