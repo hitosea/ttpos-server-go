@@ -153,8 +153,8 @@ type IMemberOrderSrv interface {
 	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                             // 查询收银机“外送”页面的订单列表
 	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                    // 查询收银机“外送”页面的订单详情
 	PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error                                                     // 会员端订单支付成功. TODO 用于测试，提测前删掉
-	GetMemberOrderManageList(ctx context.Context, req req.MemberOrderManageListReq) (*resp.GetMemberOrderManageListResp, error)           // 查询收银机“外送”页面的订单列表
-	GetMemberOrderManageDetail(ctx context.Context, req req.GetMemberOrderManageDetailReq) (*resp.GetMemberOrderManageDetailResp, error)  // 查询收银机“外送”页面的订单详情
+	GetMemberOrderManageList(ctx context.Context, req req.MemberOrderManageListReq) (*resp.GetMemberOrderManageListResp, error)           // 查询收银机“外送”管理页面的订单列表
+	GetMemberOrderManageDetail(ctx context.Context, req req.GetMemberOrderManageDetailReq) (*resp.GetMemberOrderManageDetailResp, error)  // 查询收银机“外送”管理页面的订单详情
 	AcceptMemberSaleOrder(ctx context.Context, req req.AcceptOrderReq) error                                                              // 接单外送订单
 	RejectMemberSaleOrder(ctx context.Context, req req.RejectOrderReq) error                                                              // 拒单外送订单
 }
