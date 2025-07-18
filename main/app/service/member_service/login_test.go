@@ -4,6 +4,8 @@ import (
 	"testing"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/pkg/auth"
+
+	"github.com/duke-git/lancet/cryptor"
 )
 
 func TestLogin(t *testing.T) {
@@ -17,5 +19,11 @@ func TestLogin(t *testing.T) {
 	if err != nil {
 		t.Error("生成token失败")
 	}
+	t.Log(token)
+}
+
+func TestCallbackToken(t *testing.T) {
+	member_sale_order_uuid := "7717741662208000"
+	token := cryptor.Md5String(member_sale_order_uuid + "ttoposerewrwgbngdf")
 	t.Log(token)
 }

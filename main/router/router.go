@@ -133,6 +133,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			member.RegisterAddressHandlers(memberGroup, dbm, cache)
 			member.RegisterBaseHandlers(memberGroup, dbm, cache)
 			member.RegisterBenefitHandlers(memberGroup, dbm, cache)
+			member.RegisterMemberCallbackHandlers(memberGroup, dbm, cache)
 		}
 
 	}

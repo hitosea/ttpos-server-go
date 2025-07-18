@@ -31,3 +31,11 @@ type PaidMemberOrderReq struct {
 type GetMemberOrderPayInfoReq struct {
 	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 }
+
+type CallbackReq struct {
+	JobStatusAfter  string `json:"jobStatusAfter"`  // 变化后的状态，即当前状态。 枚举请查看”skootar 订单状态“
+	JobStatusBefore string `json:"jobStatusBefore"` // 变化前的状态。 枚举请查看”skootar 订单状态“
+	ProviderName    string `json:"providerName"`    // 外送渠道名称。如：skootar。 枚举请查看”外送渠道方“
+	ShopRefNo       string `json:"shopRefNo"`       // 订单号。即member_sale_order_uuid
+	TakeoutRefNo    string `json:"takeoutRefNo"`    // 外送渠道订单号。如skootar的order_id
+}

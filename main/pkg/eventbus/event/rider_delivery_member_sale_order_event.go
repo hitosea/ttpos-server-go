@@ -1,0 +1,35 @@
+package event
+
+import (
+	"ttpos-server-go/pkg/eventbus"
+	"ttpos-server-go/pkg/utils"
+)
+
+// EventRiderDeliveryMemberSaleOrder “骑手完成取餐”事件
+const EventRiderDeliveryMemberSaleOrder EventName = "Event_Rider_Delivery_Member_Sale_Order"
+
+// RiderDeliveryMemberSaleOrderPayload “骑手完成取餐”事件的数据结构
+type RiderDeliveryMemberSaleOrderPayload struct {
+	BasePayload
+	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+}
+
+func (payload *RiderDeliveryMemberSaleOrderPayload) ToJsonString() string {
+	return utils.ToJson(payload)
+}
+
+// RiderDeliveryMemberSaleOrderHandler “骑手完成取餐”事件的处理器
+type RiderDeliveryMemberSaleOrderHandler func(msg RiderDeliveryMemberSaleOrderPayload)
+
+// PublishRiderDeliveryMemberSaleOrderEvent 发布“骑手完成取餐”事件
+func (system *SystemEventBus) PublishRiderDeliveryMemberSaleOrderEvent(msg RiderDeliveryMemberSaleOrderPayload) {
+	system.bus.Publish(eventbus.Event{Name: string(EventRiderDeliveryMemberSaleOrder), Payload: msg})
+}
+
+// SubscribeRiderDeliveryMemberSaleOrderEvent 订阅“骑手完成取餐”事件
+func (system *SystemEventBus) SubscribeRiderDeliveryMemberSaleOrderEvent(handler RiderDeliveryMemberSaleOrderHandler) {
+	system.bus.Subscribe(string(EventRiderDeliveryMemberSaleOrder), func(event eventbus.Event) {
+		msg := event.Payload.(RiderDeliveryMemberSaleOrderPayload)
+		handler(msg)
+	})
+}
