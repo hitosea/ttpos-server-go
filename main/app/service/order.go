@@ -157,10 +157,12 @@ type IMemberOrderSrv interface {
 	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)       // 会员端订单获取支付信息
 	GetMemberOrderPayStatus(ctx context.Context, request member_req.GetMemberOrderPayStatusReq) (*resp.MemberOrderPaymentStatusResp, error) // 会员端订单获取支付状态
 	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                               // 查询收银机“外送”页面的订单列表
+	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                      // 查询会员端订单详情
 	PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error                                                       // 会员端订单支付成功. TODO 用于测试，提测前删掉
+
 	// 收银机
 	GetMemberCashierOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberCashierOrderListResp, error)              // 查询收银机“外送”页面的订单列表
-	GetMemberCashierOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)            // 查询收银机“外送”页面的订单详情
+	GetMemberCashierOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderCashierDetailResp, error)     // 查询收银机“外送”页面的订单详情
 	GetMemberOrderManageList(ctx context.Context, req req.MemberOrderManageListReq) (*resp.GetMemberOrderManageListResp, error)          // 查询收银机“外送”管理页面的订单列表
 	GetMemberOrderManageDetail(ctx context.Context, req req.GetMemberOrderManageDetailReq) (*resp.GetMemberOrderManageDetailResp, error) // 查询收银机“外送”管理页面的订单详情
 	AcceptMemberSaleOrder(ctx context.Context, req req.AcceptOrderReq) error                                                             // 接单外送订单
@@ -787,6 +789,7 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 	}
 }
 
+// getMemberSaleOrder 获取会员端销售订单
 func (s *orderSrv) getMemberSaleOrder(ctx context.Context, memberSaleOrderUuid uint64, saleBill *model.SaleBill) (*model.MemberSaleOrder, error) {
 	// 获取数据库
 	db := ctx.GetDB()
@@ -1379,6 +1382,13 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 			Status:              memberSaleOrder.Status,
 			Num:                 memberSaleOrder.ProductNum,
 			ProductAmount:       memberSaleOrder.ProductAmount,
+			Rider: resp.RiderInfo{
+				Name:              memberSaleOrder.RiderName,
+				Phone:             memberSaleOrder.RiderPhone,
+				Latitude:          memberSaleOrder.RiderLatitude,
+				Longitude:         memberSaleOrder.RiderLongitude,
+				RemainingDistance: memberSaleOrder.RemainingDistance,
+			},
 			ProductList: func() []resp.MemberOrderProduct {
 				products := make([]resp.MemberOrderProduct, 0)
 				for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
@@ -1404,15 +1414,79 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 	}, nil
 }
 
-// getMemberOrderDetail 获取完整的外送订单信息
-func getMemberOrderDetail(ctx context.Context, memberSaleOrderUuid uint64) (*model.MemberSaleOrder, error) {
-	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(ctx.GetDB()).GetMemberSaleOrderRecord(memberSaleOrderUuid)
+// GetMemberOrderDetail 获取会员端订单详情
+func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	memberSaleOrder, err := getMemberOrderDetail(ctx, req.MemberSaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+	//
+	products := make([]resp.MemberOrderProduct, 0)
+	for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
+		products = append(products, resp.MemberOrderProduct{
+			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
+			Num:                 saleOrderProduct.Num,
+			TotalPrice:          saleOrderProduct.GetTotalPrice(),
+			Image:               saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request)),
+		})
+	}
+	//
+	var address resp.MemberOrderDetailAddress
+	if memberSaleOrder.Address != nil {
+		address = resp.MemberOrderDetailAddress{
+			ContactName: memberSaleOrder.Address.ContactName,
+			Phone:       memberSaleOrder.Address.ContactPhone,
+			PhonePrefix: memberSaleOrder.Address.PhonePrefix,
+			Address:     memberSaleOrder.Address.Address + memberSaleOrder.Address.DetailAddress,
+		}
+	}
+	//
+	return &resp.GetMemberOrderDetailResp{
+		MemberSaleOrderUuid: memberSaleOrder.Uuid,
+		CompanyName:         ctx.GetCompany().Name,
+		PayTime:             memberSaleOrder.PayTime,
+		FinishTime:          memberSaleOrder.FinishTime,
+		CancelTime:          memberSaleOrder.CancelTime,
+		CancelReason:        memberSaleOrder.CancelReason,
+		CreateTime:          memberSaleOrder.CreateTime,
+		Status:              memberSaleOrder.Status,
+		Remark:              memberSaleOrder.Remark,
+		AmountInfo: resp.MemberOrderAmountInfo{
+			Amount:            memberSaleOrder.Amount,
+			MemberDiscountFee: memberSaleOrder.MemberDiscountFee,
+		},
+		ProductList: resp.MemberProductList{
+			List:          products,
+			ProductAmount: memberSaleOrder.ProductAmount,
+		},
+		AddressInfo: address,
+		DeliveryConfig: resp.DeliveryResp{
+			DeliveryDistance:   memberSaleOrder.DeliveryDistance,
+			DeliveryFeeAmount:  memberSaleOrder.DeliveryFeeAmount,
+			DeliveryFeeMinFee:  memberSaleOrder.DeliveryFeeMinFee,
+			DeliveryFeeBaseFee: memberSaleOrder.DeliveryFeeBaseFee,
+			DeliveryFeePerKm:   memberSaleOrder.DeliveryFeePerKm,
+		},
+		Rider: resp.RiderInfo{
+			Name:  memberSaleOrder.RiderName,
+			Phone: memberSaleOrder.RiderPhone,
+		},
+	}, nil
+}
 
+// getMemberOrderDetail 获取完整的外送订单信息
+func getMemberOrderDetail(ctx context.Context, memberSaleOrderUuid uint64) (*model.MemberSaleOrder, error) {
+	db := ctx.GetDB()
+	// 获取会员端销售订单
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(memberSaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
 	// 当前销售账单数据
-	saleBill, errSaleBill := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(0, repository.WithMemberSaleOrderUuid(memberSaleOrderUuid))
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(0, repository.WithMemberSaleOrderUuid(memberSaleOrderUuid))
 	if errSaleBill != nil {
 		return nil, errors.WithMessage(errSaleBill)
 	}
@@ -1472,7 +1546,7 @@ func (s *orderSrv) GetMemberCashierOrderList(ctx context.Context, req req.Member
 }
 
 // GetMemberOrderDetail 获取收银端"外送"订单详情
-func (s *orderSrv) GetMemberCashierOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error) {
+func (s *orderSrv) GetMemberCashierOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderCashierDetailResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	memberSaleOrder, err := getMemberOrderDetail(ctx, req.MemberSaleOrderUuid)
@@ -1499,7 +1573,7 @@ func (s *orderSrv) GetMemberCashierOrderDetail(ctx context.Context, req req.GetM
 			Address:     memberSaleOrder.Address.Address + memberSaleOrder.Address.DetailAddress,
 		}
 	}
-	return &resp.GetMemberOrderDetailResp{
+	return &resp.GetMemberOrderCashierDetailResp{
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		PayTime:             memberSaleOrder.PayTime,
 		FinishTime:          memberSaleOrder.FinishTime,

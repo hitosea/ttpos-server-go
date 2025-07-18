@@ -19,6 +19,7 @@ type MemberOrder struct {
 	Num                 float64              `json:"num"`                    // 商品数量. 所有商品数量总和，如商品A数量为2，商品B数量为3，则总数量为5
 	ProductAmount       float64              `json:"product_amount"`         // 商品金额. 所有商品金额总和，如商品A金额为2，商品B金额为3，则总金额为5
 	ProductList         []MemberOrderProduct `json:"product_list"`           // 订单商品列表
+	Rider               RiderInfo            `json:"rider"`                  // 骑手信息
 }
 
 type GetMemberCashierOrderListResp struct {
@@ -48,8 +49,34 @@ type MemberOrderProduct struct {
 	Image               string             `json:"image"`                 // 商品图片
 }
 
-// 收银端“外送”接单页面订单详情
+type DeliveryResp struct {
+	DeliveryDistance   float64 `json:"delivery_distance"`     // 配送距离，单位km
+	DeliveryFeeAmount  float64 `json:"delivery_fee_amount"`   // 配送费
+	DeliveryFeeMinFee  float64 `json:"delivery_fee_min_fee"`  // 起步配送费
+	DeliveryFeeBaseFee float64 `json:"delivery_fee_base_fee"` // 基础配送费
+	DeliveryFeePerKm   float64 `json:"delivery_fee_per_km"`   // 每公里配送费
+}
+
+// 会员端订单详情
 type GetMemberOrderDetailResp struct {
+	MemberSaleOrderUuid uint64                   `json:"member_sale_order_uuid"` // 会员端销售订单UUID
+	CompanyName         string                   `json:"company_name"`           // 公司名称
+	PayTime             int64                    `json:"pay_time"`               // 支付时间
+	FinishTime          int64                    `json:"finish_time"`            // 完成时间
+	CancelTime          int64                    `json:"cancel_time"`            // 取消时间
+	CreateTime          int64                    `json:"create_time"`            // 创建时间
+	CancelReason        string                   `json:"cancel_reason"`          // 取消原因
+	Status              uint                     `json:"status"`                 // 订单状态 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消
+	Remark              string                   `json:"remark"`                 // 订单备注
+	AmountInfo          MemberOrderAmountInfo    `json:"amount_info"`            // 订单金额信息
+	ProductList         MemberProductList        `json:"product_list"`           // 订单商品列表
+	AddressInfo         MemberOrderDetailAddress `json:"address_info"`           // 订单地址
+	DeliveryConfig      DeliveryResp             `json:"delivery_config"`        // 配送费配置
+	Rider               RiderInfo                `json:"rider"`                  // 骑手信息
+}
+
+// 收银端“外送”接单页面订单详情
+type GetMemberOrderCashierDetailResp struct {
 	MemberSaleOrderUuid uint64                   `json:"member_sale_order_uuid"` // 会员端销售订单UUID
 	PayTime             int64                    `json:"pay_time"`               // 支付时间
 	FinishTime          int64                    `json:"finish_time"`            // 完成时间
@@ -63,12 +90,16 @@ type GetMemberOrderDetailResp struct {
 }
 
 type RiderInfo struct {
-	Name  string `json:"name"`  // 骑手姓名
-	Phone string `json:"phone"` // 骑手电话
+	Name              string  `json:"name"`               // 骑手姓名
+	Phone             string  `json:"phone"`              // 骑手电话
+	Latitude          float64 `json:"latitude"`           // 骑手纬度
+	Longitude         float64 `json:"longitude"`          // 骑手经度
+	RemainingDistance float64 `json:"remaining_distance"` // 剩余距离
 }
 
 type MemberOrderAmountInfo struct {
-	Amount float64 `json:"amount"` // 订单总金额. 订单总金额=实际付款金额=商品金额-会员折扣金额+运费
+	Amount            float64 `json:"amount"`              // 订单总金额. 订单总金额=实际付款金额=商品金额-会员折扣金额+运费
+	MemberDiscountFee float64 `json:"member_discount_fee"` // 会员折扣金额
 }
 
 type MemberOrderDetailAddress struct {

@@ -20,7 +20,7 @@ type IMemberSaleOrderRepo interface {
 
 type IQueryMemberSaleOrderRepo interface {
 	GetMemberSaleOrder(opts ...DBOption) (*model.MemberSaleOrder, error)                                                                                             // 获取会员端销售订单
-	GetMemberSaleOrderRecord(uuid uint64) (*model.MemberSaleOrder, error)                                                                                            // 获取会员端销售订单记录
+	GetMemberSaleOrderRecord(uuid uint64, opts ...DBOption) (*model.MemberSaleOrder, error)                                                                          // 获取会员端销售订单记录
 	PaginateGetMemberSaleOrder(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)                                                       // 分页获取会员端销售订单
 	GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error)                                                   // 获取收银台"外送"订单列表
 	GetCashierMemberSaleOrderManageList(pageNo, pageSize int, statusList []uint, req GetCashierMemberSaleOrderManageListReq) ([]model.MemberSaleOrder, int64, error) // 获取收银台"外送"订单管理列表
@@ -66,7 +66,7 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrder(opts ...DBOption) (*model.Membe
 	return &memberSaleOrder, nil
 }
 
-func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecord(uuid uint64) (*model.MemberSaleOrder, error) {
+func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecord(uuid uint64, opts ...DBOption) (*model.MemberSaleOrder, error) {
 	memberSaleOrder, err := r.GetMemberSaleOrder(
 		CommonRepo.WhereByUuid(uuid),
 		CommonRepo.WhereBySoftDelete(),
