@@ -76,11 +76,12 @@ type OrderCartProductNumReq struct {
 
 // OrderCartProductCookingReq 送厨购物车商品请求参数
 type OrderCartProductCookingReq struct {
-	SaleBillUuid   uint64 `json:"sale_bill_uuid"`   // 销售账单ID
-	IgnoreMust     bool   `json:"ignore_must"`      // 是否忽略必点方案
-	H5OrderUuid    uint64 `json:"h5_order_uuid"`    // h5订单ID。默认为0，表示不送厨h5订单商品。当从H5订单进入桌台时，需要传入h5订单ID，将该h5订单的商品送厨
-	Password       string `json:"password"`         // 高级密码后台开启的时候才传
-	IsCheckCooking bool   `json:"is_check_cooking"` // 是否只进行送厨检查，而不进行实际的送厨。场景：助手端开启下单校验高级密码时，先检查送厨，再实际送厨。检查送厨时不进行实际送厨
+	SaleBillUuid        uint64 `json:"sale_bill_uuid"`         // 销售账单ID
+	IgnoreMust          bool   `json:"ignore_must"`            // 是否忽略必点方案
+	H5OrderUuid         uint64 `json:"h5_order_uuid"`          // h5订单ID。默认为0，表示不送厨h5订单商品。当从H5订单进入桌台时，需要传入h5订单ID，将该h5订单的商品送厨
+	Password            string `json:"password"`               // 高级密码后台开启的时候才传
+	IsCheckCooking      bool   `json:"is_check_cooking"`       // 是否只进行送厨检查，而不进行实际的送厨。场景：助手端开启下单校验高级密码时，先检查送厨，再实际送厨。检查送厨时不进行实际送厨
+	IsMemberOrderAccept bool   `json:"is_member_order_accept"` // 是否是会员端接单. 不用返回购物车信息
 }
 
 type H5ConfirmOrderReq struct {

@@ -6604,6 +6604,11 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		}
 	}
 
+	// 会员端接单，不返回购物车信息
+	if req.IsMemberOrderAccept {
+		return nil, nil, nil
+	}
+
 	ctx.Log().Debug("获取新的购物车信息")
 	cartInfo, err := s.GetOrderCartInfo(ctx, req.SaleBillUuid)
 	if err != nil {
@@ -11919,18 +11924,22 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 	// 接单
 	memberSaleOrder.Accept()
 
-	// 整单送厨
-	_, checkRes, err := s.InstantOrderCartProductCooking(ctx, req.OrderCartProductCookingReq{
-		SaleBillUuid: memberSaleOrder.SaleBill.Uuid,
-		IgnoreMust:   true,
-	})
-	if err != nil {
-		return errors.WithMessage(err, "整单送厨失败")
+	// 获取未送厨的商品列表
+	unCookingSaleOrderProducts := memberSaleOrder.SaleBill.GetSaleOrderProductUnCooking()
+	if len(unCookingSaleOrderProducts) > 0 {
+		// 整单送厨
+		_, checkRes, err := s.InstantOrderCartProductCooking(ctx, req.OrderCartProductCookingReq{
+			SaleBillUuid:        memberSaleOrder.SaleBill.Uuid,
+			IgnoreMust:          true,
+			IsMemberOrderAccept: true,
+		})
+		if err != nil {
+			return errors.WithMessage(err, "整单送厨失败")
+		}
+		if checkRes == nil {
+			return errors.New("整单送厨失败")
+		}
 	}
-	if checkRes == nil {
-		return errors.New("整单送厨失败")
-	}
-
 	repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderAccept(*memberSaleOrder)
 		return nil
