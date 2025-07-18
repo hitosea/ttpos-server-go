@@ -1101,6 +1101,7 @@ type ColumnConfig struct {
 	FontWeight   int    // 字体粗细
 	FontSize     int    // 字体大小
 	LineHeight   int    // 行高
+	RightPadding int    // 内边距
 }
 
 // SetupColumns 设置列（在Go中没有实际作用，保留为兼容性接口）
@@ -1134,6 +1135,8 @@ func (i *ImgFont) PrintInColumns(columns ...ColumnConfig) *ImgFont {
 	for key, column := range columns {
 		text := column.Text
 		columnWidth := column.Width
+
+		// 如果列宽为0，计算剩余宽度
 		contentWidth := column.ContentWidth
 		if column.ContentWidth == 0 {
 			contentWidth = columnWidth
@@ -1179,7 +1182,7 @@ func (i *ImgFont) PrintInColumns(columns ...ColumnConfig) *ImgFont {
 		results = append(results, result)
 
 		// 更新偏移量并恢复原始设置
-		deviationWidth += float64(columnWidth)
+		deviationWidth += float64(columnWidth) + float64(column.RightPadding)
 		i.ImageWidth = imageWidth
 
 		// 恢复字体设置
