@@ -63,28 +63,32 @@ type Percentage struct {
 
 // 营业数据 - 全部
 type BusinessDataAll struct {
-	TotalSales             float64 `json:"total_sales"`               // 总销售额
-	TotalReceivedPrice     float64 `json:"total_received_price"`      // 总实收金额
-	TotalPayPrice          float64 `json:"total_pay_price"`           // 总支付金额
-	TotalProductPrice      float64 `json:"total_product_price"`       // 总原商品金额 (未含税的总商品金额)
-	TotalPayFeeMoney       float64 `json:"total_pay_fee_money"`       // 总支付手续费
-	TotalServiceMoney      float64 `json:"total_service_money"`       // 总服务费
-	TotalTaxMoney          float64 `json:"total_tax_money"`           // 总税费
-	TotalUserDiscountMoney float64 `json:"total_user_discount_money"` // 总会员折扣
-	TotalDiscountMoney     float64 `json:"total_discount_money"`      // 总优惠折扣
-	TotalDiscountRatio     float64 `json:"total_discount_ratio"`      // 总优惠占比
-	TotalFreeOrderPrice    float64 `json:"total_free_order_price"`    // 总免单金额
-	TotalRefundMoney       float64 `json:"total_refund_money"`        // 总退款金额
-	TotalGiveProductPrice  float64 `json:"total_give_product_price"`  // 总赠菜金额
-	TotalFreeOrderNum      int     `json:"total_free_order_num"`      // 总免单数量
-	TotalGiveProductNum    float64 `json:"total_give_product_num"`    // 总赠菜数量
-	TotalOrderNum          int     `json:"total_order_num"`           // 总订单数
-	TotalPeopleNum         int     `json:"total_people_num"`          // 总人数
-	TotalProductNum        float64 `json:"total_product_num"`         // 总商品数
-	TotalTableNum          int     `json:"total_table_num"`           // 总桌数
-	AvgOrderPrice          float64 `json:"avg_order_price"`           // 平均订单金额
-	MinOrderPrice          float64 `json:"min_order_price"`           // 最小订单金额
-	MaxOrderPrice          float64 `json:"max_order_price"`           // 最大订单金额
+	TotalSales                 float64 `json:"total_sales"`                   // 总销售额
+	TotalReceivedPrice         float64 `json:"total_received_price"`          // 总实收金额
+	TotalPayPrice              float64 `json:"total_pay_price"`               // 总支付金额
+	TotalProductPrice          float64 `json:"total_product_price"`           // 总原商品金额 (未含税的总商品金额)
+	TotalPayFeeMoney           float64 `json:"total_pay_fee_money"`           // 总支付手续费
+	TotalServiceMoney          float64 `json:"total_service_money"`           // 总服务费
+	TotalTaxMoney              float64 `json:"total_tax_money"`               // 总税费
+	TotalUserDiscountMoney     float64 `json:"total_user_discount_money"`     // 总会员折扣
+	TotalDiscountMoney         float64 `json:"total_discount_money"`          // 总优惠折扣
+	TotalDiscountRatio         float64 `json:"total_discount_ratio"`          // 总优惠占比
+	TotalFreeOrderPrice        float64 `json:"total_free_order_price"`        // 总免单金额
+	TotalRefundMoney           float64 `json:"total_refund_money"`            // 总退款金额
+	TotalGiveProductPrice      float64 `json:"total_give_product_price"`      // 总赠菜金额
+	TotalFreeOrderNum          int     `json:"total_free_order_num"`          // 总免单数量
+	TotalGiveProductNum        float64 `json:"total_give_product_num"`        // 总赠菜数量
+	TotalOrderNum              int     `json:"total_order_num"`               // 总订单数
+	TotalPeopleNum             int     `json:"total_people_num"`              // 总人数
+	TotalProductNum            float64 `json:"total_product_num"`             // 总商品数
+	TotalTakeoutSaleAmount     float64 `json:"total_takeout_sale_amount"`     // 总外送销售
+	TotalTakeoutBusinessAmount float64 `json:"total_takeout_business_amount"` // 总外送营收
+	TotalTakeoutRefundAmount   float64 `json:"total_takeout_refund_amount"`   // 总外送退款金额
+	TotalTakeoutDeliveryFee    float64 `json:"total_takeout_delivery_fee"`    // 总外送配送费
+	TotalTableNum              int     `json:"total_table_num"`               // 总桌数
+	AvgOrderPrice              float64 `json:"avg_order_price"`               // 平均订单金额
+	MinOrderPrice              float64 `json:"min_order_price"`               // 最小订单金额
+	MaxOrderPrice              float64 `json:"max_order_price"`               // 最大订单金额
 	// 桌台方式
 	AllTableOrderNum      int     `json:"all_table_order_num"`       // 总桌数订单数
 	AllTablePeopleNum     int     `json:"all_table_people_num"`      // 总桌数人数
@@ -97,6 +101,11 @@ type BusinessDataAll struct {
 	AllCashierMinOrderPrice float64 `json:"all_cashier_min_order_price"` // 收银方式最小订单金额
 	AllCashierMaxOrderPrice float64 `json:"all_cashier_max_order_price"` // 收银方式最大订单金额
 	AllCashierAvgOrderPrice float64 `json:"all_cashier_avg_order_price"` // 收银方式平均订单金额
+	// 外送数据
+	AllTakeoutOrderNum      int     `json:"all_takeout_order_num"`       // 总外送订单数
+	AllTakeoutMinOrderPrice float64 `json:"all_takeout_min_order_price"` // 总外送最小订单金额
+	AllTakeoutMaxOrderPrice float64 `json:"all_takeout_max_order_price"` // 总外送最大订单金额
+	AllTakeoutAvgOrderPrice float64 `json:"all_takeout_avg_order_price"` // 总外送平均订单金额
 	// 未结账数据
 	UnclosedTotalOrderNum int     `json:"unclosed_total_order_num"` // 未结账数据 - 总订单数
 	UnclosedTotalPrice    float64 `json:"unclosed_total_price"`     // 未结账数据 - 总金额
@@ -196,48 +205,47 @@ type BusinessDataExport struct {
 
 // 营业数据 - 导出 - 单天
 type BusinessDataExportItem struct {
-	Day                 string  `json:"day"`
-	TotalSaleAmount     float64 `json:"total_sale_amount"`     // 总销售额
-	TotalReceivedAmount float64 `json:"total_received_amount"` // 实收金额
-	TotalProductNum     float64 `json:"total_product_num"`     // 商品数量
-	TotalMemberNum      int64   `json:"total_member_num"`      // 新增会员数
-	TotalDiscountMember float64 `json:"total_discount_member"` // 会员折扣
-	TotalBusinessAmount float64 `json:"total_business_amount"` // 营业收入
-	TotalServiceFee     float64 `json:"total_service_fee"`     // 服务费
-	TotalPaymentFee     float64 `json:"total_payment_fee"`     // 支付手续费
-	TotalTax            float64 `json:"total_tax"`             // 税费
-	TotalRefundAmount   float64 `json:"total_refund_amount"`   // 退款金额
-	TotalDiscount       float64 `json:"total_discount"`        // 优惠折扣
-	TotalDiscountRatio  float64 `json:"total_discount_ratio"`  // 优惠折扣占比
-	TotalGiftAmount     float64 `json:"total_gift_amount"`     // 赠菜总额
-	TotalGiftNum        float64 `json:"total_gift_num"`        // 赠菜数量
-	TotalFreeAmount     float64 `json:"total_free_amount"`     // 免单总额
-	TotalFreeNum        float64 `json:"total_free_num"`        // 免单数量
-	TotalRechargeAmount float64 `json:"total_recharge_amount"` // 充值金额
-	// TODO 外送数据来源
-	TotalDeliveryOrderAmount       float64                     `json:"total_delivery_order_amount"`        // 外送订单总额
-	TotalDeliveryOrderRevenue      float64                     `json:"total_delivery_order_revenue"`       // 外送营收
-	TotalDeliveryOrderRefundAmount float64                     `json:"total_delivery_order_refund_amount"` // 外送订单退款
-	TotalDeliveryFee               float64                     `json:"total_delivery_fee"`                 // 配送费
-	TotalOrderNum                  int64                       `json:"total_order_num"`                    // 合计订单数
-	MinOrderAmount                 float64                     `json:"min_order_amount"`                   // 最小订单金额
-	MaxOrderAmount                 float64                     `json:"max_order_amount"`                   // 最大订单金额
-	AvgOrderAmount                 float64                     `json:"avg_order_amount"`                   // 平均订单金额
-	TotalDeskNum                   int64                       `json:"total_desk_num"`                     // 总桌台数
-	TotalMealNum                   int64                       `json:"total_meal_num"`                     // 桌台方式-人数
-	MinDeskOrderAmount             float64                     `json:"min_desk_order_amount"`              // 桌台方式-最小订单金额
-	MaxDeskOrderAmount             float64                     `json:"max_desk_order_amount"`              // 桌台方式-最大订单金额
-	AvgDeskOrderAmount             float64                     `json:"avg_desk_order_amount"`              // 桌台方式-平均订单金额
-	TotalInstantOrderNum           int64                       `json:"total_instant_order_num"`            // 点餐方式-订单数
-	MinInstantOrderAmount          float64                     `json:"min_instant_order_amount"`           // 点餐方式-最小订单金额
-	MaxInstantOrderAmount          float64                     `json:"max_instant_order_amount"`           // 点餐方式-最大订单金额
-	AvgInstantOrderAmount          float64                     `json:"avg_instant_order_amount"`           // 点餐方式-平均订单金额
-	TotalDeliveryOrderNum          int64                       `json:"total_delivery_order_num"`           // 外送点餐-订单数
-	MinDeliveryOrderAmount         float64                     `json:"min_delivery_order_amount"`          // 外送点餐-最小订单金额
-	MaxDeliveryOrderAmount         float64                     `json:"max_delivery_order_amount"`          // 外送点餐-最大订单金额
-	AvgDeliveryOrderAmount         float64                     `json:"avg_delivery_order_amount"`          // 外送点餐-平均订单金额
-	AreaList                       []BusinessDataExportArea    `json:"area_list"`                          // 区域列表
-	PaymentList                    []BusinessDataExportPayment `json:"payment_list"`                       // 支付列表
+	Day                        string                      `json:"day"`                           // 日期
+	TotalSaleAmount            float64                     `json:"total_sale_amount"`             // 总销售额
+	TotalReceivedAmount        float64                     `json:"total_received_amount"`         // 实收金额
+	TotalProductNum            float64                     `json:"total_product_num"`             // 商品数量
+	TotalMemberNum             int64                       `json:"total_member_num"`              // 新增会员数
+	TotalDiscountMember        float64                     `json:"total_discount_member"`         // 会员折扣
+	TotalBusinessAmount        float64                     `json:"total_business_amount"`         // 营业收入
+	TotalServiceFee            float64                     `json:"total_service_fee"`             // 服务费
+	TotalPaymentFee            float64                     `json:"total_payment_fee"`             // 支付手续费
+	TotalTax                   float64                     `json:"total_tax"`                     // 税费
+	TotalRefundAmount          float64                     `json:"total_refund_amount"`           // 退款金额
+	TotalDiscount              float64                     `json:"total_discount"`                // 优惠折扣
+	TotalDiscountRatio         float64                     `json:"total_discount_ratio"`          // 优惠折扣占比
+	TotalGiftAmount            float64                     `json:"total_gift_amount"`             // 赠菜总额
+	TotalGiftNum               float64                     `json:"total_gift_num"`                // 赠菜数量
+	TotalFreeAmount            float64                     `json:"total_free_amount"`             // 免单总额
+	TotalFreeNum               float64                     `json:"total_free_num"`                // 免单数量
+	TotalRechargeAmount        float64                     `json:"total_recharge_amount"`         // 充值金额
+	TotalTakeoutSaleAmount     float64                     `json:"total_takeout_sale_amount"`     // 外送销售
+	TotalTakeoutBusinessAmount float64                     `json:"total_takeout_business_amount"` // 外送营收
+	TotalTakeoutRefundAmount   float64                     `json:"total_takeout_refund_amount"`   // 外送退款
+	TotalTakeoutDeliveryFee    float64                     `json:"total_takeout_delivery_fee"`    // 外送配送费
+	TotalOrderNum              int64                       `json:"total_order_num"`               // 合计订单数
+	MinOrderAmount             float64                     `json:"min_order_amount"`              // 最小订单金额
+	MaxOrderAmount             float64                     `json:"max_order_amount"`              // 最大订单金额
+	AvgOrderAmount             float64                     `json:"avg_order_amount"`              // 平均订单金额
+	TotalDeskNum               int64                       `json:"total_desk_num"`                // 总桌台数
+	TotalMealNum               int64                       `json:"total_meal_num"`                // 桌台方式-人数
+	MinDeskOrderAmount         float64                     `json:"min_desk_order_amount"`         // 桌台方式-最小订单金额
+	MaxDeskOrderAmount         float64                     `json:"max_desk_order_amount"`         // 桌台方式-最大订单金额
+	AvgDeskOrderAmount         float64                     `json:"avg_desk_order_amount"`         // 桌台方式-平均订单金额
+	TotalInstantOrderNum       int64                       `json:"total_instant_order_num"`       // 点餐方式-订单数
+	MinInstantOrderAmount      float64                     `json:"min_instant_order_amount"`      // 点餐方式-最小订单金额
+	MaxInstantOrderAmount      float64                     `json:"max_instant_order_amount"`      // 点餐方式-最大订单金额
+	AvgInstantOrderAmount      float64                     `json:"avg_instant_order_amount"`      // 点餐方式-平均订单金额
+	TotalTakeoutOrderNum       int64                       `json:"total_takeout_order_num"`       // 外送点餐-订单数
+	MinTakeoutOrderAmount      float64                     `json:"min_takeout_order_amount"`      // 外送点餐-最小订单金额
+	MaxTakeoutOrderAmount      float64                     `json:"max_takeout_order_amount"`      // 外送点餐-最大订单金额
+	AvgTakeoutOrderAmount      float64                     `json:"avg_takeout_order_amount"`      // 外送点餐-平均订单金额
+	AreaList                   []BusinessDataExportArea    `json:"area_list"`                     // 区域列表
+	PaymentList                []BusinessDataExportPayment `json:"payment_list"`                  // 支付列表
 }
 
 // 营业数据 - 导出 - 区域
