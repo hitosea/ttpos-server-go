@@ -67,6 +67,20 @@ func newRedisCache(conf Config) Cache {
 			address := fmt.Sprintf("%s:%s", conf.Host, conf.Port)
 			addressList = append(addressList, address)
 		}
+		//初始化一个Client 给其他方法使用
+		client = redis.NewClient(&redis.Options{
+			Addr:     addressList[0],
+			Password: conf.Password,
+			DB:       conf.DB,
+		})
+		{
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			if _, err := client.Ping(ctx).Result(); err != nil {
+				log.Fatal("initRedis client.Ping err: ", err)
+			}
+		}
+
 		clusterClient = redis.NewClusterClient(&redis.ClusterOptions{
 			Addrs:         addressList,
 			Password:      conf.Password,

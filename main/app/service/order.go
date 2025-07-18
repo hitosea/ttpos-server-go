@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	builtinerrors "errors"
 	"fmt"
+	"github.com/hdt3213/delayqueue"
 	"math"
 	"slices"
 	"sort"
@@ -21,6 +22,7 @@ import (
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer"
+	"ttpos-server-go/app/queue"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
 	"ttpos-server-go/app/repository/ro"
@@ -746,6 +748,11 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 		}); err != nil {
 			return nil, nil, errors.WithMessage(err)
 		}
+
+		//FIXME N分钟后取消订单
+		queue.TakeoutCancelQueue.SendDelayMsgV2(strconv.FormatUint(result.MemberSaleOrderInfo.MemberSaleOrderUuid, 10),
+			30*time.Minute, delayqueue.WithRetryCount(3))
+
 		return result, nil, nil
 	} else {
 		// 更新订单
