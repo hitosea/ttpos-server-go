@@ -43,6 +43,9 @@ func (s *sTakeout) Get(ctx context.Context, shopOrderUuid string) (*entity.Job, 
 	var takeoutJob *entity.Job
 	err := dao.Job.Ctx(ctx).Where(dao.Job.Columns().ShopRefNo, shopOrderUuid).Scan(&takeoutJob)
 	if err != nil {
+		if e, ok := err.(*gerror.Error); ok {
+			return nil, gerror.Wrap(e.Cause(), "获取外送订单失败")
+		}
 		return nil, gerror.Wrap(err, "获取外送订单失败")
 	}
 	return takeoutJob, nil

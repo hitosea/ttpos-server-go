@@ -46,12 +46,15 @@ func (c *Controller) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (
 
 func (c *Controller) ConfirmOrder(ctx context.Context, req *api.ConfirmOrderReq) (res *api.ConfirmOrderResp, err error) {
 	takeoutJob, err := takeout.Takeout.Get(ctx, req.ShopOrderUuid)
-	if err != nil || takeoutJob == nil {
-		return nil, gerror.New("订单不存在")
+	if err != nil {
+		return nil, gerror.Wrap(err, "确认订单失败")
+	}
+	if takeoutJob == nil {
+		return nil, gerror.Wrap(gerror.New("订单不存在"), "确认订单失败")
 	}
 	res, err = c.getService(takeoutJob.ProviderName).ConfirmOrder(ctx, &input.ConfirmOrderInp{JobId: takeoutJob.TakeoutRefNo})
 	if err != nil {
-		return nil, gerror.Wrap(err, "商家确认订单失败")
+		return nil, gerror.Wrap(err, "确认订单失败")
 	}
 	g.Log().Debugf(ctx, "商家确认订单成功:%+v", res)
 	return
@@ -59,8 +62,11 @@ func (c *Controller) ConfirmOrder(ctx context.Context, req *api.ConfirmOrderReq)
 
 func (c *Controller) GetDriverInfo(ctx context.Context, req *api.GetDriverInfoReq) (res *api.GetDriverInfoResp, err error) {
 	takeoutJob, err := takeout.Takeout.Get(ctx, req.ShopOrderUuid)
-	if err != nil || takeoutJob == nil {
-		return nil, gerror.New("订单不存在")
+	if err != nil {
+		return nil, gerror.Wrap(err, "获取司机位置失败")
+	}
+	if takeoutJob == nil {
+		return nil, gerror.Wrap(gerror.New("订单不存在"), "获取司机位置失败")
 	}
 	res, err = c.getService(takeoutJob.ProviderName).GetDriverInfo(ctx, &input.GetDriverInfoInp{
 		SKootarId: takeoutJob.SkootarId,
@@ -78,8 +84,11 @@ func (c *Controller) GetDriverInfo(ctx context.Context, req *api.GetDriverInfoRe
 
 func (c *Controller) CancelOrder(ctx context.Context, req *api.CancelOrderReq) (res *api.CancelOrderResp, err error) {
 	takeoutJob, err := takeout.Takeout.Get(ctx, req.ShopOrderUuid)
-	if err != nil || takeoutJob == nil {
-		return nil, gerror.Wrap(err, "订单不存在")
+	if err != nil {
+		return nil, gerror.Wrap(err, "取消订单失败")
+	}
+	if takeoutJob == nil {
+		return nil, gerror.Wrap(gerror.New("订单不存在"), "取消订单失败")
 	}
 	res, err = c.getService(takeoutJob.ProviderName).CancelOrder(ctx, &input.CancelOrderInp{JobId: takeoutJob.TakeoutRefNo, Reason: req.Reason})
 	if err != nil {
