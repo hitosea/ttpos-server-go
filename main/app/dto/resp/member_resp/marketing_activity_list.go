@@ -6,7 +6,7 @@ type MemberMarketingActivityPrizeResp struct {
 	Uuid            uint64             `json:"uuid"`              // 奖品UUID
 	LocalePrizeName dto.LocaleResponse `json:"locale_prize_name"` // 奖品名称
 	RewardType      int                `json:"reward_type"`       // 奖励类型 0-优惠券 1-积分
-	RewardValue     float64            `json:"reward_value"`      // 奖励的积分
+	RewardValue     float64            `json:"reward_value"`      // 奖励的值，优惠券为金额，积分则为积分数量
 }
 
 type MemberMarketingActivityInfoResp struct {

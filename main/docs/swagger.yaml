@@ -1084,7 +1084,7 @@ definitions:
         description: 奖励类型 0-优惠券 1-积分
         type: integer
       reward_value:
-        description: 奖励的积分
+        description: 奖励的值，优惠券为金额，积分则为积分数量
         type: number
       uuid:
         description: 奖品UUID

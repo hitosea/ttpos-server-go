@@ -19717,7 +19717,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "reward_value": {
-                    "description": "奖励的积分",
+                    "description": "奖励的值，优惠券为金额，积分则为积分数量",
                     "type": "number"
                 },
                 "uuid": {

@@ -70,6 +70,12 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecord(uuid uint64) (*model.Memb
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
+			WithPreload{
+				Query: "PaymentMethod",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
 		),
 	)
 	if err != nil {
