@@ -141,6 +141,12 @@ func (model *MemberSaleOrder) Reject() {
 	model.CancelReason = "商家拒单"
 }
 
+// 备餐完成
+func (model *MemberSaleOrder) CookFinish() {
+	model.Status = constant.MemberSaleOrderStatusPendingRiderPickup // 商家备餐完成
+	model.CookTime = time.Now().Unix()
+}
+
 type CreateMemberSaleOrderParams struct {
 	DeliveryConfig DeliveryConfigResponse
 	SerialNo       string // 订单流水号

@@ -86,3 +86,8 @@ type RejectOrderReq struct {
 type AcceptOrderReq struct {
 	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员端销售订单UUID
 }
+
+// CookFinishOrderReq 备餐完成
+type CookFinishOrderReq struct {
+	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员端销售订单UUID
+}

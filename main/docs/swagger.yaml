@@ -1614,6 +1614,12 @@ definitions:
         description: 充值订单Uuid
         type: integer
     type: object
+  req.CookFinishOrderReq:
+    properties:
+      member_sale_order_uuid:
+        description: 会员端销售订单UUID
+        type: integer
+    type: object
   req.CreateMemberOrderReq:
     properties:
       member_sale_order_uuid:
@@ -4644,10 +4650,10 @@ definitions:
         type: string
       latitude:
         description: 纬度
-        type: number
+        type: string
       longitude:
         description: 经度
-        type: number
+        type: string
       member_address_uuid:
         description: 会员地址UUID
         type: integer
@@ -4713,6 +4719,10 @@ definitions:
     type: object
   resp.MemberSaleOrderProduct:
     properties:
+      amount:
+        description: 商品金额（折前）。商品金额=（商品规格价 + 商品小料A价格 + 商品小料B价格）*数量。商品规格价=商品规格原价*会员端折扣率。
+          商品小料价格=商品小料原价*会员端折扣率。 会员折扣率是指商品在会员端价格上浮比例，一般比堂食贵
+        type: number
       locale_attribute_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
@@ -13235,6 +13245,35 @@ paths:
       security:
       - JwtToken: []
       summary: 接单
+      tags:
+      - 收银端.外送接单相关
+  /cashier/member_order/cook_finish:
+    post:
+      consumes:
+      - application/json
+      description: 备餐完成
+      parameters:
+      - description: 备餐完成
+        in: body
+        name: CookFinishOrderReq
+        required: true
+        schema:
+          $ref: '#/definitions/req.CookFinishOrderReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.GetMemberOrderDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 备餐完成
       tags:
       - 收银端.外送接单相关
   /cashier/member_order/detail:

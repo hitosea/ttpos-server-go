@@ -117,6 +117,30 @@ func (h *MemberOrderHandler) RejectOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// CookFinish 备餐完成
+// @Summary 备餐完成
+// @Description 备餐完成
+// @Tags 收银端.外送接单相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param CookFinishOrderReq body req.CookFinishOrderReq true "备餐完成"
+// @Success 200 {object} dto.Response{data=resp.GetMemberOrderDetailResp}
+// @Router /cashier/member_order/cook_finish [post]
+func (h *MemberOrderHandler) CookFinish(c *gin.Context) {
+	var cookFinishOrderReq req.CookFinishOrderReq
+	if err := c.ShouldBindJSON(&cookFinishOrderReq); err != nil {
+		helper.HandleValidationError(c, err, cookFinishOrderReq, nil)
+		return
+	}
+	err := h.memberOrderSrv.CookFinishMemberSaleOrder(helper.GetContext(c), cookFinishOrderReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -143,5 +167,6 @@ func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, ca
 		privateApi.GET("/member_order/detail", wrapper.GetMemberOrderDetail) // 获取外送订单接单详情
 		privateApi.POST("/member_order/accept", wrapper.AcceptOrder)         // 接单
 		privateApi.POST("/member_order/reject", wrapper.RejectOrder)         // 拒单
+		privateApi.POST("/member_order/cook_finish", wrapper.CookFinish)     // 备餐完成
 	}
 }

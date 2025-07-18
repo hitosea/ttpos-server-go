@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	builtinerrors "errors"
 	"fmt"
-	"github.com/hdt3213/delayqueue"
 	"math"
 	"slices"
 	"sort"
@@ -38,6 +37,8 @@ import (
 	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
+
+	"github.com/hdt3213/delayqueue"
 
 	"github.com/gin-gonic/gin"
 
@@ -161,6 +162,7 @@ type IMemberOrderSrv interface {
 	GetMemberOrderManageDetail(ctx context.Context, req req.GetMemberOrderManageDetailReq) (*resp.GetMemberOrderManageDetailResp, error)    // 查询收银机“外送”管理页面的订单详情
 	AcceptMemberSaleOrder(ctx context.Context, req req.AcceptOrderReq) error                                                                // 接单外送订单
 	RejectMemberSaleOrder(ctx context.Context, req req.RejectOrderReq) error                                                                // 拒单外送订单
+	CookFinishMemberSaleOrder(ctx context.Context, request req.CookFinishOrderReq) error                                                    // 备餐完成外送订单
 }
 
 // orderSrv 订单服务结构
@@ -12127,6 +12129,38 @@ func (s *orderSrv) RejectMemberSaleOrder(ctx context.Context, request req.Reject
 			MemberSaleOrder:     memberSaleOrder,
 		})
 	}()
+
+	return nil
+}
+
+// CookFinishMemberSaleOrder 备餐完成外送订单
+func (s *orderSrv) CookFinishMemberSaleOrder(ctx context.Context, request req.CookFinishOrderReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	memberSaleOrder, err := getMemberOrderDetail(ctx, request.MemberSaleOrderUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 备餐完成
+	memberSaleOrder.CookFinish()
+
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 更新备餐完成
+		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderCookFinish(*memberSaleOrder); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 确认订单
+		takeoutSrv := takeout.NewTakeoutSrv()
+		if err := takeoutSrv.ConfirmOrder(contexts.Background(), &req.ConfirmTakeoutOrderReq{
+			ShopOrderUuid: fmt.Sprintf("%d", memberSaleOrder.Uuid),
+		}); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
 
 	return nil
 }
