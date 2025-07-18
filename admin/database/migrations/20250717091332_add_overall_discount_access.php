@@ -29,24 +29,25 @@ class AddOverallDiscountAccess extends Migrator
      */
     public function change()
     {
-        // 1724220609 整单折扣权限UUID
+        $parentUuid = 1708671752;
+        $accessUuid = 1724220609;
         $db = Db::connect(Db::getConfig('default'), true);
-        $access = ['id' => 1724220609, 'uuid' => 1724220609, 'name' => '整单折扣', 'path' => '/product/buffet/list/overallDiscount', 'api_path' => '/product/buffet/buffet/overallDiscount', 'parent_uuid' => 1708671752, 'sort' => 1, 'icon' => '', 'redirect_name' => '', 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'plus_category_uuid' => 0, 'remark' => '', 'is_supplier' => 0, 'create_time' => 1752479818, 'update_time' => 1752479818];
-        $row = $db->name('access')->where('uuid', $access['id'])->find();
+        $access = ['uuid' => $accessUuid, 'name' => '整单折扣', 'path' => '/product/buffet/list/overallDiscount', 'api_path' => '/product/buffet/buffet/overallDiscount', 'parent_uuid' => $parentUuid, 'sort' => 1, 'icon' => '', 'redirect_name' => '', 'is_route' => 0, 'is_menu' => 0, 'is_show' => 1, 'plus_category_uuid' => 0, 'remark' => '', 'is_supplier' => 0, 'create_time' => 1752479818, 'update_time' => 1752479818];
+        $row = $db->name('access')->where('uuid', $access['uuid'])->find();
         if (!$row) {
             $db->name('access')->insert($access);
         }
         $roleList = $db->name('role_access')
-            ->where('access_uuid', 1708671752)
+            ->where('access_uuid', $parentUuid)
             ->where('delete_time', 0)
             ->distinct(true)
             ->field('role_uuid')
             ->select();
         foreach ($roleList as $role) {
-            $row = $db->name('role_access')->where('role_uuid', $role['role_uuid'])->where('access_uuid', 1724220609)->where('delete_time', 0)->find();
+            $row = $db->name('role_access')->where('role_uuid', $role['role_uuid'])->where('access_uuid', $accessUuid)->where('delete_time', 0)->find();
             if (!$row) {
                 $uuid = createUuid();
-                $db->name('role_access')->insert(['uuid' => $uuid, 'role_uuid' => $role['role_uuid'], 'access_uuid' => 1724220609, 'create_time' => time(), 'update_time' => time()]);
+                $db->name('role_access')->insert(['uuid' => $uuid, 'role_uuid' => $role['role_uuid'], 'access_uuid' => $accessUuid, 'create_time' => time(), 'update_time' => time()]);
             }
         }
     }
