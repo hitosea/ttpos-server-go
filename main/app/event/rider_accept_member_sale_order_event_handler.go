@@ -64,6 +64,7 @@ func riderAcceptMemberSaleOrderEventHandler() {
 			// 创建“骑手接单”操作记录
 			go func() {
 				payload.RiderName = riderName
+				payload.RiderPhone = riderPhone
 				if payload.RiderName == "" {
 					payload.RiderName = "-" // 骑手默认名
 				}

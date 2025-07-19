@@ -12,6 +12,8 @@ const EventRiderDeliveryMemberSaleOrder EventName = "Event_Rider_Delivery_Member
 type RiderDeliveryMemberSaleOrderPayload struct {
 	BasePayload
 	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+	RiderName           string `json:"rider_name" binding:"required"`             // 骑手姓名
+	RiderPhone          string `json:"rider_phone" binding:"required"`            // 骑手手机号
 }
 
 func (payload *RiderDeliveryMemberSaleOrderPayload) ToJsonString() string {
