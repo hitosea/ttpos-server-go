@@ -1614,6 +1614,7 @@ func (s *orderSrv) GetMemberOrderPaymentMethodList(ctx context.Context, req req.
 		List:                 payList, // 支付方式列表
 		RemainingPaymentTime: memberSaleOrder.GetRemainingPaymentTime(),
 		Amount:               memberSaleOrder.Amount,
+		PaymentMethodUuid:    memberSaleOrder.PaymentMethodUuid,
 	}, nil
 }
 
@@ -12295,6 +12296,7 @@ func (s *orderSrv) GetOrderMemberList(ctx context.Context, saleBillUuid uint64) 
 	}, nil
 }
 
+// GetProductPackageDetail 获取商品包详情
 func (s *orderSrv) GetProductPackageDetail(ctx context.Context, req req.GetProductPackageDetailReq) (*resp.ProductPackageDetailRes, error) {
 	db := ctx.GetDB()
 	// 获取销售订单中h5未下单的销售订单商品

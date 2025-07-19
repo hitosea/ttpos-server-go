@@ -17,24 +17,25 @@ import (
 )
 
 /**
- * 结账单打印
+ * 外送单打印
  */
-func (p *PrinterRepoImpl) PrintingStatementOrder(
-	printType int, // 打印类型 1-预结账单 2-结账单 11-外送单
+func (p *PrinterRepoImpl) PrintingTakeoutOrder(
+	memberSaleOrder *model.MemberSaleOrder,
 	saleBill *model.SaleBill,
 	saleOrderUuid uint64,
-	FirstExecution int,
-	payMethodUuid uint64,
 ) (*resp.PrinterData, error) {
+
+	db := p.dbm.GetDB(p.ctx.GetCompanyUuid())
 
 	// 设备sn
 	deviceSn := p.ctx.GetDeviceSn()
-	// 如果不是收银端和助手端，从订单获取 获取设备品牌
-	if p.ctx.GetSource() != constant.SourceCashier && p.ctx.GetSource() != constant.SourceAssistant {
-		deviceRepo := repository.NewDeviceRepo(p.ctx.GetDB())
-		deviceSn = deviceRepo.GetDeviceSn(deviceRepo.WhereUuid(saleBill.DeviceUuid))
+
+	// 如果不是收银端端，从主设备获取
+	if p.ctx.GetSource() != constant.SourceCashier {
+		deviceRepo := repository.NewDeviceRepo(db)
+		deviceSn = deviceRepo.GetDeviceSn(deviceRepo.WhereMain())
 		if deviceSn == "" {
-			return nil, errors.New("获取设备失败")
+			return nil, errors.New("找不到收银机设备")
 		}
 	}
 
@@ -67,7 +68,13 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 	printerLogSrv := service.NewPrinterLogSrv(p.dbm, setting.NewSrv(p.dbm, p.cache))
 
 	// 获取打印内容
-	printContent := p.getPrintingStatementOrderContent(settingPrinterInfo, printType, saleBill, saleOrder, payMethodUuid)
+	printContent := p.getPrintingContent(
+		settingPrinterInfo,
+		constant.PrinterTemplateTakeoutOrder,
+		memberSaleOrder,
+		saleBill,
+		saleOrder,
+	)
 	if printContent == "" {
 		return nil, errors.New("获取打印内容失败")
 	}
@@ -81,10 +88,10 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 		RelatedUuid:     saleOrderUuid,
 		PrinterUuid:     settingPrinterInfo.PrinterUuid,
 		CashierDeviceId: settingPrinterInfo.PrinterCashierDeviceSn,
-		DataType:        printType,
+		DataType:        constant.PrinterTemplateTakeoutOrder,
 		Data:            printContent,
 		Type:            1,
-		FirstExecution:  FirstExecution,
+		FirstExecution:  0,
 		Copies:          settingPrinterInfo.Copies,
 	}, "")
 	if err != nil {
@@ -112,12 +119,12 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 }
 
 // 构建订单打印的内容
-func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
+func (p *PrinterRepoImpl) getPrintingContent(
 	settingPrinterInfo settingResp.PrinterInfo, // 打印机设置
-	printType int, // 打印类型 1-预结账单 2-结账单
+	printType int, // 打印类型 11-外送单
+	memberSaleOrder *model.MemberSaleOrder,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
-	payMethodUuid uint64,
 ) string {
 	// 获取打印模板
 	tmp := p.GetPrinterTemplate(uint64(printType))
@@ -144,13 +151,12 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 
 	// 图片打印
 	if p.IsImagePrinterMethod() {
-		return template.NewStatementOrderImgTemplate(base).GetPrintContent(
+		return template.NewTakeoutOrderImgTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			printType,
 			tmp,
+			memberSaleOrder,
 			saleBill,
 			saleOrder,
-			payMethodUuid,
 		)
 	}
 
@@ -158,9 +164,10 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	* Compax 收银打印机 80mm 自带
 	 */
 	if settingPrinterInfo.PrinterType == constant.PrinterTypeCashierCompax {
-		return template.NewStatementOrderCompaxTemplate(base).GetPrintContent(
-			printType,
+		return template.NewTakeoutOrderCompaxTemplate(base).GetPrintContent(
+			settingPrinterInfo.PrinterType,
 			tmp,
+			memberSaleOrder,
 			saleBill,
 			saleOrder,
 		)
@@ -170,10 +177,10 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	 * 芯烨打印机
 	 */
 	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, settingPrinterInfo.PrinterType) {
-		return template.NewStatementOrderXprinterTemplate(base).GetPrintContent(
+		return template.NewTakeoutOrderXprinterTemplate(base).GetPrintContent(
 			settingPrinterInfo.PrinterType,
-			printType,
 			tmp,
+			memberSaleOrder,
 			saleBill,
 			saleOrder,
 		)
@@ -183,10 +190,10 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	* 商米打印机
 	 */
 	if base.IsSunMi {
-		return template.NewStatementOrderSunmiTemplate(base).GetPrintContent(
+		return template.NewTakeoutOrderSunmiTemplate(base).GetPrintContent(
 			settingPrinterInfo.PrinterType,
-			printType,
 			tmp,
+			memberSaleOrder,
 			saleBill,
 			saleOrder,
 		)
@@ -196,9 +203,10 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	* CODESOFT 打印机
 	 */
 	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, settingPrinterInfo.PrinterType) {
-		return template.NewStatementOrderCodesoftTemplate(base).GetPrintContent(
-			printType,
+		return template.NewTakeoutOrderCodesoftTemplate(base).GetPrintContent(
+			settingPrinterInfo.PrinterType,
 			tmp,
+			memberSaleOrder,
 			saleBill,
 			saleOrder,
 		)

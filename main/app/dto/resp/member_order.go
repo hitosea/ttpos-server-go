@@ -129,4 +129,5 @@ type GetMemberOrderPaymentMethodListResp struct {
 	List                 []PaymentMethodItem `json:"list"`                   // 支付方式列表
 	RemainingPaymentTime int64               `json:"remaining_payment_time"` // 剩余支付时间(单位秒)
 	Amount               float64             `json:"amount"`                 // 订单总金额. 订单总金额=实际付款金额=商品金额-会员折扣金额+运费
+	PaymentMethodUuid    uint64              `json:"payment_method_uuid"`    // 当前订单的支付方式UUID(可用来默认选中)
 }

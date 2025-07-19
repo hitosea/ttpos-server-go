@@ -113,7 +113,7 @@ func (model *SaleBill) IsDeskBill() bool {
 
 // 是否是外送订单
 func (model *SaleBill) IsTakeoutBill() bool {
-	return model.BillType == constant.SaleBillTypeTakeout
+	return model.BillType == constant.SaleBillTypeTakeout || model.MemberSaleOrderUuid != 0
 }
 
 // 销售账单是否已经使用了通用优惠券

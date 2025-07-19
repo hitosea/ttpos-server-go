@@ -61,6 +61,8 @@ func (t *dishesImgTemplate) CompleteOrder(
 		img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 		img.SetTextLineHeight(45)
 		img.LineFeed(1, 20)
+	} else if order.IsTakeout() {
+		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 	} else {
 		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 	}
@@ -215,6 +217,8 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 			img.SetTextLineHeight(45)
 			img.LineFeed(1, 20)
+		} else if order.IsTakeout() {
+			img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 		} else {
 			img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
 		}
@@ -323,6 +327,8 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 			img.SetTextLineHeight(spacing)
 			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 			img.SetTextLineHeight(45)
+		} else if order.IsTakeout() {
+			img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 		} else {
 			img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
 		}
@@ -465,6 +471,8 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 		img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 		img.SetTextLineHeight(45)
 		img.LineFeed(1)
+	} else if order.IsTakeout() {
+		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 	} else {
 		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 	}
@@ -636,6 +644,8 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 		img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 		img.SetTextLineHeight(45)
 		img.LineFeed(1)
+	} else if order.IsTakeout() {
+		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 	} else {
 		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 	}

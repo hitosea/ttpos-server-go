@@ -443,7 +443,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.LineFeed()
 		printer.SetAlignment(pkg.AlignRight)
 		printer.AppendText(t.base.Translate("合计 (其中VAT)"))
-		printer.SetLineSpacing(90)
+		printer.SetLineSpacing(45)
 		printer.LineFeed(1)
 		for _, percentage := range saleOrder.GetPercentageList() {
 			taxRate := percentage["TaxRate"]

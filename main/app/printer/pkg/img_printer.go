@@ -1341,7 +1341,7 @@ func (i *ImgFont) SetImagePadding(padding int) *ImgFont {
 // Save 保存图像并返回打印数据
 func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) string {
 	if config.Server.Mode == constant.ServerModeDebug && imageSrc == "" {
-		imageSrc = "./tmp/printer/dishes_img.png"
+		imageSrc = "./tmp/printer/test_img.png"
 	}
 	//
 	maxHeight := 2200
