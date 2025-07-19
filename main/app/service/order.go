@@ -12489,5 +12489,21 @@ func (s *orderSrv) CookFinishMemberSaleOrder(ctx context.Context, request req.Co
 		return errors.WithMessage(err)
 	}
 
+	// 发布"外送备餐完成"操作事件
+	go func() {
+		s.bus.PublishCookFinishMemberSaleOrderEvent(event.CookFinishMemberSaleOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:           ctx,
+				CompanyUuid:   ctx.GetCompanyUuid(),
+				Source:        ctx.GetSource(),
+				SaleBillUuid:  memberSaleOrder.SaleBill.Uuid,
+				SaleOrderUuid: memberSaleOrder.SaleBill.SaleOrders[0].Uuid,
+				OperatorUuid:  int64(ctx.GetStaffUuid()),
+			},
+			MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			MemberSaleOrder:     memberSaleOrder,
+		})
+	}()
+
 	return nil
 }
