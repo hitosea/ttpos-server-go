@@ -41,6 +41,8 @@ func NewMemberCallbackSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, set
 
 // ParseMemberCallbackData 解析会员回调数据
 func (s *memberCallbackSrv) ParseMemberCallbackData(ctx context.Context, data member_req.CallbackReq) error {
+	companyUuid := ctx.GetCompanyUuid()
+
 	// 检查数据是否合法
 	providerName := strings.ToLower(data.ProviderName)
 	if providerName != constant.ProviderNameSkootar &&
@@ -73,6 +75,10 @@ func (s *memberCallbackSrv) ParseMemberCallbackData(ctx context.Context, data me
 			}
 			go func() {
 				s.bus.PublishRiderAcceptMemberSaleOrderEvent(event.RiderAcceptMemberSaleOrderPayload{
+					BasePayload: event.BasePayload{
+						Ctx:         ctx,
+						CompanyUuid: companyUuid,
+					},
 					MemberSaleOrderUuid: memberSaleOrderUuid,
 				})
 			}()
@@ -87,6 +93,10 @@ func (s *memberCallbackSrv) ParseMemberCallbackData(ctx context.Context, data me
 			}
 			go func() {
 				s.bus.PublishRiderDeliveryMemberSaleOrderEvent(event.RiderDeliveryMemberSaleOrderPayload{
+					BasePayload: event.BasePayload{
+						Ctx:         ctx,
+						CompanyUuid: companyUuid,
+					},
 					MemberSaleOrderUuid: memberSaleOrderUuid,
 				})
 			}()
@@ -101,6 +111,10 @@ func (s *memberCallbackSrv) ParseMemberCallbackData(ctx context.Context, data me
 			}
 			go func() {
 				s.bus.PublishRiderCompletedMemberSaleOrderEvent(event.RiderCompletedMemberSaleOrderPayload{
+					BasePayload: event.BasePayload{
+						Ctx:         ctx,
+						CompanyUuid: companyUuid,
+					},
 					MemberSaleOrderUuid: memberSaleOrderUuid,
 				})
 			}()
@@ -108,5 +122,5 @@ func (s *memberCallbackSrv) ParseMemberCallbackData(ctx context.Context, data me
 		}
 	}
 
-	return errors.New("未找到对应的回调事件")
+	return errors.WithMessage(errors.New("未找到对应的回调事件"), "未找到对应的回调事件")
 }

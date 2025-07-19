@@ -23,7 +23,7 @@ func TestLogin(t *testing.T) {
 }
 
 func TestCallbackToken(t *testing.T) {
-	member_sale_order_uuid := "7717741662208000"
-	token := cryptor.Md5String(member_sale_order_uuid + "ttoposerewrwgbngdf")
+	member_sale_order_uuid := "3676062395531265"
+	token := cryptor.Md5String(member_sale_order_uuid + "dkjhd00a08")
 	t.Log(token)
 }

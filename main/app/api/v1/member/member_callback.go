@@ -10,6 +10,7 @@ import (
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/utils"
 
 	"github.com/duke-git/lancet/cryptor"
 	"github.com/gin-gonic/gin"
@@ -29,12 +30,25 @@ type CallbackHandler struct {
 // @Produce json
 // @Security JwtToken
 // @Param data body member_req.CallbackReq true "详情参数"
+// @Param companyUuid query string true "商家uuid"
+// @param X-Ttpos-Callback-Auth header string true "回调token"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/callback [post]
 func (h *CallbackHandler) Callback(c *gin.Context) {
 	// 绑定请求参数
 	ctx := helper.GetContext(c)
+	companyUuidStr := c.Query("company_uuid")
+	if companyUuidStr == "" {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("company_uuid不能为空"))
+		return
+	}
+	companyUuid, err := utils.StringToUint64(companyUuidStr)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.SetCompanyUuid(companyUuid)
 	callbackReq := member_req.CallbackReq{}
 	if err := c.ShouldBindJSON(&callbackReq); err != nil {
 		helper.HandleValidationError(c, err, callbackReq, nil)

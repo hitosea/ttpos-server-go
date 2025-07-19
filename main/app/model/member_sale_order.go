@@ -166,9 +166,28 @@ func (model *MemberSaleOrder) CookFinish() {
 	model.CookTime = time.Now().Unix()
 }
 
+// 骑手正在赶往商家
+func (model *MemberSaleOrder) RiderAccept() {
+	model.Status = constant.MemberSaleOrderStatusPendingRiderDelivery // 骑手正在赶往商家
+	model.RiderAcceptTime = time.Now().Unix()
+}
+
+// 骑手配送中
+func (model *MemberSaleOrder) RiderDelivery() {
+	model.Status = constant.MemberSaleOrderStatusDeliverying // 骑手配送中
+	model.RiderStartTime = time.Now().Unix()
+}
+
+// 骑手配送完成
+func (model *MemberSaleOrder) RiderCompleted() {
+	model.Status = constant.MemberSaleOrderStatusCompleted // 骑手配送完成
+	model.FinishTime = time.Now().Unix()
+}
+
 type CreateMemberSaleOrderParams struct {
 	DeliveryConfig DeliveryConfigResponse
 	SerialNo       string // 订单流水号
+	OrderNo        string // 订单号
 	MemberUuid     uint64 // 会员UUID
 }
 
@@ -177,6 +196,7 @@ func NewMemberSaleOrder(params CreateMemberSaleOrderParams) *MemberSaleOrder {
 	saleOrder := &MemberSaleOrder{
 		BaseModel:          BaseModel{Uuid: uuid},
 		Status:             constant.MemberSaleOrderStatusSelecting,
+		OrderNo:            params.OrderNo,
 		DeliveryFeeMinFee:  params.DeliveryConfig.BaseDeliveryFee,
 		DeliveryFeeBaseFee: params.DeliveryConfig.BasicFee,
 		DeliveryFeePerKm:   params.DeliveryConfig.PricePerKm,

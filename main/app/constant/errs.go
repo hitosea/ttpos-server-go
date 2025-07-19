@@ -84,7 +84,8 @@ const (
 
 // 外送业务错误码
 const (
-	CodeDistanceError = -701 // 计算距离错误
+	CodeDistanceError           = -701 // 计算距离错误
+	CodeTakeoutCreateOrderError = -702 // 外送订单创建失败
 )
 
 type ParseCodeOrderCheckOption struct {

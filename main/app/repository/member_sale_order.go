@@ -29,6 +29,10 @@ type IQueryMemberSaleOrderRepo interface {
 	UpdateMemberSaleOrderCookFinish(memberSaleOrder model.MemberSaleOrder) error                                                                                     // 更新会员端销售订单-备餐完成
 	UpdateDeliveryDistance(memberSaleOrderUuid uint64, distance float64) error                                                                                       // 更新会员端销售订单的配送距离
 	UpdateMemberSaleOrder(memberSaleOrder model.MemberSaleOrder) error                                                                                               // 更新会员端销售订单
+	UpdateMemberSaleOrderRiderAccept(memberSaleOrder model.MemberSaleOrder) error                                                                                    // 更新会员端销售订单-骑手接单
+	UpdateMemberSaleOrderRiderDelivery(memberSaleOrder model.MemberSaleOrder) error                                                                                  // 更新会员端销售订单-骑手配送中
+	UpdateMemberSaleOrderRiderCompleted(memberSaleOrder model.MemberSaleOrder) error                                                                                 // 更新会员端销售订单-骑手配送完成
+	UpdateMemberSaleOrderProviderInfo(memberSaleOrder model.MemberSaleOrder) error                                                                                   // 更新会员端销售订单-配送 provider 信息
 
 	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
 	WhereStatusIn(status []uint) DBOption
@@ -339,6 +343,54 @@ func (r *MemberSaleOrderRepo) UpdateDeliveryDistance(memberSaleOrderUuid uint64,
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrder(memberSaleOrder model.MemberSaleOrder) error {
 	memberSaleOrder.SetNil()
 	err := r.db.Model(&model.MemberSaleOrder{}).Select("*").Where("uuid = ?", memberSaleOrder.Uuid).Updates(memberSaleOrder).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderRiderAccept 更新会员端销售订单-骑手接单
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderAccept(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		Status:          memberSaleOrder.Status,
+		RiderAcceptTime: memberSaleOrder.RiderAcceptTime,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderRiderDelivery 更新会员端销售订单-骑手配送中
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderDelivery(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		Status:         memberSaleOrder.Status,
+		RiderStartTime: memberSaleOrder.RiderStartTime,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderRiderCompleted 更新会员端销售订单-骑手配送完成
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderCompleted(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		Status:     memberSaleOrder.Status,
+		FinishTime: memberSaleOrder.FinishTime,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderProviderInfo 更新会员端销售订单-配送 provider 信息
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderProviderInfo(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		RelatedOrderType: memberSaleOrder.RelatedOrderType,
+		RelatedOrderNo:   memberSaleOrder.RelatedOrderNo,
+	}).Error
 	if err != nil {
 		return errors.WithMessage(err)
 	}

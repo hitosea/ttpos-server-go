@@ -839,6 +839,7 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 	memberSaleOrder, errCreateMemberSaleOrder := createMemberSaleOrder(ctx, db, model.CreateMemberSaleOrderParams{
 		DeliveryConfig: *deliveryConfig,
 		SerialNo:       serialNo,
+		OrderNo:        orderNo,
 		MemberUuid:     ctx.GetMemberUuid(),
 	})
 	if errCreateMemberSaleOrder != nil {
@@ -1055,7 +1056,7 @@ func (s *orderSrv) QueryDistance(ctx context.Context, memberSaleOrder *model.Mem
 	companySetting := ctx.GetCompanySetting()
 	latitude, longitude := companySetting.GetCoordinates()
 	if latitude == "" || longitude == "" {
-		return 0, errors.New("无法找到商家经纬度")
+		return 0, errors.WithMessage(errors.New("无法找到商家经纬度"))
 	}
 
 	takeoutResp, err := takeoutSrv.EstimateDistance(contexts.Background(), &req.TakeoutDistanceReq{
@@ -12307,10 +12308,60 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 			return errors.New("整单送厨失败")
 		}
 	}
-	repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderAccept(*memberSaleOrder)
+		lat, lng, _ := memberSaleOrder.Address.GetLocation()
+		// 获取商家地址
+		companySetting := ctx.GetCompanySetting()
+		latitude, longitude := companySetting.GetCoordinates()
+		if latitude == "" || longitude == "" {
+			return errors.New("无法找到商家经纬度")
+		}
+		// 选择外送渠道
+		memberSaleOrder.RelatedOrderType = constant.ProviderNameSkootar
+
+		takeoutSrv := takeout.NewTakeoutSrv()
+		params := req.CreateTakeoutOrderReq{
+			ProviderName:  memberSaleOrder.RelatedOrderType,
+			Remark:        memberSaleOrder.Remark,
+			CallbackUrl:   "",
+			ShopOrderUuid: fmt.Sprintf("%d", memberSaleOrder.Uuid),
+			CustomerLocation: &req.TakeoutLocation{
+				ContactName:  memberSaleOrder.Address.ContactName,
+				ContactPhone: memberSaleOrder.Address.ContactPhone,
+				TakeoutAddress: req.TakeoutAddress{
+					AddressName: memberSaleOrder.Address.ContactName,
+					Address:     memberSaleOrder.Address.Address,
+					Lat:         lat,
+					Lng:         lng,
+				},
+			},
+			MerchantLocation: &req.TakeoutLocation{
+				ContactName:  ctx.GetCompany().Name,
+				ContactPhone: companySetting.LinkPhone,
+				TakeoutAddress: req.TakeoutAddress{
+					AddressName: ctx.GetCompany().Name,
+					Address:     companySetting.Address,
+					Lat:         latitude,
+					Lng:         longitude,
+				},
+			},
+		}
+		startTime := time.Now()
+		res, err := takeoutSrv.CreateOrder(contexts.Background(), &params)
+		if err != nil {
+			ctx.Log().Error("创建外送订单失败", zap.Error(err))
+			return errors.WithMessage(errors.NewWithCode(constant.CodeTakeoutCreateOrderError, "创建外送订单失败"), err.Error())
+		}
+		ctx.Log().Info("创建外送订单成功", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))
+		memberSaleOrder.RelatedOrderNo = res.TakeoutRefNo
+		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderProviderInfo(*memberSaleOrder); err != nil {
+			return errors.WithMessage(err, "更新外送订单失败")
+		}
 		return nil
-	})
+	}); err != nil {
+		return errors.WithMessage(err, "更新外送订单失败")
+	}
 
 	// 发布"外送接单"操作事件
 	go func() {
