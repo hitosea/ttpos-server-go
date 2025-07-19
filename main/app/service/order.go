@@ -2503,7 +2503,13 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 		// 如果是会员端的操作
 		if record.Source == constant.SourceRider {
 			prefix := i18n.Translate(language, "骑手")
-			realName = fmt.Sprintf("%s(%s)", prefix, record.Data)
+			riderName := "--"
+			var payload event.RiderAcceptMemberSaleOrderPayload
+			err := json.Unmarshal([]byte(record.Data), &payload)
+			if err == nil {
+				riderName = payload.RiderName
+			}
+			realName = fmt.Sprintf("%s(%s)", prefix, riderName)
 		}
 
 		var refundType int
