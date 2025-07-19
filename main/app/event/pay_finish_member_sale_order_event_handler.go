@@ -31,12 +31,14 @@ func payFinishMemberSaleOrderEventHandler() {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 			record := model.SaleOrderOperationRecord{
-				Source:        payload.Source,
-				Action:        constant.OrderPayFinishMemberSaleOrder,
-				Remark:        "订单支付成功",
-				SaleBillUuid:  payload.SaleBillUuid,
-				SaleOrderUuid: payload.SaleOrderUuid,
-				OperatorUuid:  payload.GetOperatorUuid(),
+				Source:              payload.Source,
+				Action:              constant.OrderPayFinishMemberSaleOrder,
+				Remark:              "订单支付成功",
+				SaleBillUuid:        payload.SaleBillUuid,
+				SaleOrderUuid:       payload.SaleOrderUuid,
+				OperatorUuid:        payload.GetOperatorUuid(),
+				MemberUuid:          payload.MemberUuid,
+				MemberSaleOrderUuid: payload.MemberSaleOrderUuid,
 			}
 			record.Data = payload.ToJsonString()
 			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)

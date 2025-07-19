@@ -475,12 +475,13 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 			// 更新订单状态
 			event.NewSystemBus().PublishPayFinishMemberSaleOrderEvent(event.PayFinishMemberSaleOrderPayload{
 				BasePayload: event.BasePayload{
-					Ctx:           p.ctx,
-					CompanyUuid:   p.ctx.GetCompanyUuid(),
-					Source:        constant.SourceMember,
-					SaleBillUuid:  memberSaleOrder.SaleBill.Uuid,
-					SaleOrderUuid: memberSaleOrder.SaleBill.GetFirstSaleOrder().Uuid,
-					OperatorUuid:  int64(memberSaleOrder.MemberUuid),
+					Ctx:                 p.ctx,
+					CompanyUuid:         p.ctx.GetCompanyUuid(),
+					Source:              p.ctx.GetSource(),
+					SaleBillUuid:        memberSaleOrder.SaleBill.Uuid,
+					SaleOrderUuid:       memberSaleOrder.SaleBill.SaleOrders[0].Uuid,
+					MemberSaleOrderUuid: memberSaleOrder.Uuid,
+					MemberUuid:          p.ctx.GetMemberUuid(),
 				},
 				MemberSaleOrderUuid: order.RelatedUuid,
 			})

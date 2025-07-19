@@ -1541,12 +1541,21 @@ func getMemberOrderDetail(ctx context.Context, memberSaleOrderUuid uint64) (*mod
 // PaidMemberOrder 会员端订单支付成功
 func (s *orderSrv) PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error {
 	ctx.SetDB(s.dbm.GetDB(ctx.GetDbId()))
+	memberSaleOrder, err := getMemberOrderDetail(ctx, request.MemberSaleOrderUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
 	// 更新订单状态
 	s.bus.PublishPayFinishMemberSaleOrderEvent(event.PayFinishMemberSaleOrderPayload{
 		BasePayload: event.BasePayload{
-			Ctx:         ctx,
-			CompanyUuid: ctx.GetCompanyUuid(),
-			Source:      ctx.GetSource(),
+			Ctx:                 ctx,
+			CompanyUuid:         ctx.GetCompanyUuid(),
+			Source:              ctx.GetSource(),
+			SaleBillUuid:        memberSaleOrder.SaleBill.Uuid,
+			SaleOrderUuid:       memberSaleOrder.SaleBill.SaleOrders[0].Uuid,
+			MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			MemberUuid:          ctx.GetMemberUuid(),
 		},
 		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
 	})
