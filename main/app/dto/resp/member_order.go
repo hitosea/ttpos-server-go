@@ -93,8 +93,7 @@ type GetMemberOrderCashierDetailResp struct {
 type RiderInfo struct {
 	Name              string  `json:"name"`               // 骑手姓名
 	Phone             string  `json:"phone"`              // 骑手电话
-	Latitude          float64 `json:"latitude"`           // 骑手纬度
-	Longitude         float64 `json:"longitude"`          // 骑手经度
+	Location          string  `json:"location"`           // 骑手位置.格式: 纬度,经度
 	RemainingDistance float64 `json:"remaining_distance"` // 剩余距离
 }
 

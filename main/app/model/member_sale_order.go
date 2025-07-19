@@ -14,6 +14,8 @@ import (
 type MemberSaleOrder struct {
 	BaseModel
 	MemberUuid        uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员UUID'"`
+	SaleBillUuid      uint64  `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;not null;default:0;comment:'销售账单UUID'"`
+	SaleOrderUuid     uint64  `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:'销售订单UUID'"`
 	Status            uint    `gorm:"column:status;type:int(10);not null;default:0;comment:'订单状态 0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消'"`
 	SerialNumber      string  `gorm:"column:serial_number;type:varchar(255);not null;default:'';comment:'订单流水号'"`
 	OrderNo           string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:'订单号'"`
@@ -41,8 +43,7 @@ type MemberSaleOrder struct {
 	// 骑手信息
 	RiderName         string  `gorm:"column:rider_name;type:varchar(255);not null;default:'';comment:'骑手名称'"`
 	RiderPhone        string  `gorm:"column:rider_phone;type:varchar(255);not null;default:'';comment:'骑手电话'"`
-	RiderLatitude     float64 `gorm:"column:rider_latitude;type:decimal(12,6);not null;default:0;comment:'骑手纬度'"`
-	RiderLongitude    float64 `gorm:"column:rider_longitude;type:decimal(12,6);not null;default:0;comment:'骑手经度'"`
+	Location          string  `gorm:"column:location;type:varchar(255);not null;default:'';comment:'骑手位置,格式:纬度,经度'"`
 	RemainingDistance float64 `gorm:"column:remaining_distance;type:decimal(12,6);not null;default:0;comment:'剩余距离'"`
 	// 时间相关
 	PayTime            int64 `gorm:"column:pay_time;type:int(10) unsigned;not null;default:0;comment:'支付完成时间（时间戳）'"`
@@ -84,6 +85,18 @@ func (model *MemberSaleOrder) SetNil() {
 	model.SaleBill = nil
 	model.Address = nil
 	model.PaymentMethod = nil
+}
+
+// 获取骑手经纬度信息。第一个是纬度，第二个是经度
+func (model *MemberSaleOrder) GetLocation() (string, string) {
+	if model.Location == "" {
+		return "", ""
+	}
+	location := strings.Split(model.Location, ",")
+	if len(location) != 2 {
+		return "", ""
+	}
+	return location[0], location[1]
 }
 
 // 设置订单为“已取消”状态
@@ -167,9 +180,12 @@ func (model *MemberSaleOrder) CookFinish() {
 }
 
 // 骑手正在赶往商家
-func (model *MemberSaleOrder) RiderAccept() {
+func (model *MemberSaleOrder) RiderAccept(riderName string, riderPhone string, location string) {
 	model.Status = constant.MemberSaleOrderStatusPendingRiderDelivery // 骑手正在赶往商家
 	model.RiderAcceptTime = time.Now().Unix()
+	model.RiderName = riderName
+	model.RiderPhone = riderPhone
+	model.Location = location
 }
 
 // 骑手配送中
@@ -185,14 +201,22 @@ func (model *MemberSaleOrder) RiderCompleted() {
 }
 
 type CreateMemberSaleOrderParams struct {
+	Uuid           uint64
 	DeliveryConfig DeliveryConfigResponse
 	SerialNo       string // 订单流水号
 	OrderNo        string // 订单号
+	SaleBillUuid   uint64 // 销售账单UUID
+	SaleOrderUuid  uint64 // 销售订单UUID
 	MemberUuid     uint64 // 会员UUID
 }
 
 func NewMemberSaleOrder(params CreateMemberSaleOrderParams) *MemberSaleOrder {
-	uuid, _ := utils.GetID()
+	var uuid uint64
+	uuid = params.Uuid
+	// 如果uuid没有值的话，重新生成uuid
+	if uuid == 0 {
+		uuid, _ = utils.GetID()
+	}
 	saleOrder := &MemberSaleOrder{
 		BaseModel:          BaseModel{Uuid: uuid},
 		Status:             constant.MemberSaleOrderStatusSelecting,
@@ -202,6 +226,8 @@ func NewMemberSaleOrder(params CreateMemberSaleOrderParams) *MemberSaleOrder {
 		DeliveryFeePerKm:   params.DeliveryConfig.PricePerKm,
 		SerialNumber:       params.SerialNo,
 		MemberUuid:         params.MemberUuid,
+		SaleBillUuid:       params.SaleBillUuid,
+		SaleOrderUuid:      params.SaleOrderUuid,
 	}
 	return saleOrder
 }

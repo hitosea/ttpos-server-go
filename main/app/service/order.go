@@ -851,16 +851,8 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取配送费配置失败")
 	}
-	// 创建外送订单
-	memberSaleOrder, errCreateMemberSaleOrder := createMemberSaleOrder(ctx, db, model.CreateMemberSaleOrderParams{
-		DeliveryConfig: *deliveryConfig,
-		SerialNo:       serialNo,
-		OrderNo:        orderNo,
-		MemberUuid:     ctx.GetMemberUuid(),
-	})
-	if errCreateMemberSaleOrder != nil {
-		return nil, errors.WithMessage(errCreateMemberSaleOrder)
-	}
+
+	memberSaleOrderUuid, _ := utils.GetID() // 生成外送订单uuid
 
 	// 创建销售账单
 	saleBill, err := repository.NewOrderRepo(db).CreateSaleBill(model.SaleBill{
@@ -869,7 +861,7 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 		BillType:            constant.OrderSourceMapToBillType[constant.OrderSourceMember],
 		DiningMethod:        constant.SaleBillDiningMethodTakeout,
 		DeviceUuid:          ctx.GetDeviceUuid(),
-		MemberSaleOrderUuid: memberSaleOrder.Uuid,
+		MemberSaleOrderUuid: memberSaleOrderUuid,
 	})
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -890,6 +882,19 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 	saleBillUuid := saleBill.Uuid
 	saleOrderUuid := saleOrder.Uuid
 
+	// 创建外送订单
+	memberSaleOrder, errCreateMemberSaleOrder := createMemberSaleOrder(ctx, db, model.CreateMemberSaleOrderParams{
+		Uuid:           memberSaleOrderUuid,
+		DeliveryConfig: *deliveryConfig,
+		SerialNo:       serialNo,
+		OrderNo:        orderNo,
+		MemberUuid:     ctx.GetMemberUuid(),
+		SaleBillUuid:   saleBillUuid,
+		SaleOrderUuid:  saleOrderUuid,
+	})
+	if errCreateMemberSaleOrder != nil {
+		return nil, errors.WithMessage(errCreateMemberSaleOrder)
+	}
 	// 当前销售账单数据
 	targetSaleBill, errSaleBill := repository.NewOrderRepo(ctx.GetDB()).GetSaleBillAllInfo(saleBillUuid)
 	if errSaleBill != nil {
@@ -1427,8 +1432,7 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 			Rider: resp.RiderInfo{
 				Name:              memberSaleOrder.RiderName,
 				Phone:             memberSaleOrder.RiderPhone,
-				Latitude:          memberSaleOrder.RiderLatitude,
-				Longitude:         memberSaleOrder.RiderLongitude,
+				Location:          memberSaleOrder.Location,
 				RemainingDistance: memberSaleOrder.RemainingDistance,
 			},
 			ProductList: func() []resp.MemberOrderProduct {
@@ -2497,9 +2501,9 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			realName = i18n.Translate(language, "用户")
 		}
 		// 如果是会员端的操作
-		if record.Source == constant.SourceMember {
-			prefix := i18n.Translate(language, "顾客")
-			realName = fmt.Sprintf("%s(%s)", prefix, record.Member.Nickname)
+		if record.Source == constant.SourceRider {
+			prefix := i18n.Translate(language, "骑手")
+			realName = fmt.Sprintf("%s(%s)", prefix, record.Data)
 		}
 
 		var refundType int

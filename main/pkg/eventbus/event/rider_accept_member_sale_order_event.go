@@ -8,10 +8,11 @@ import (
 // EventRiderAcceptMemberSaleOrder “骑手接单”事件
 const EventRiderAcceptMemberSaleOrder EventName = "Event_Rider_Accept_Member_Sale_Order"
 
-// RiderAcceptMemberSaleOrderPayload 接单骑手端销售订单事件的数据结构
+// RiderAcceptMemberSaleOrderPayload  “骑手接单”事件的数据结构
 type RiderAcceptMemberSaleOrderPayload struct {
 	BasePayload
 	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+	RiderName           string `json:"rider_name" binding:"required"`             // 骑手名称
 }
 
 func (payload *RiderAcceptMemberSaleOrderPayload) ToJsonString() string {

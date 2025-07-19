@@ -21,6 +21,7 @@ type IMemberSaleOrderRepo interface {
 type IQueryMemberSaleOrderRepo interface {
 	GetMemberSaleOrder(opts ...DBOption) (*model.MemberSaleOrder, error)                                                                                             // 获取会员端销售订单
 	GetMemberSaleOrderRecord(uuid uint64, opts ...DBOption) (*model.MemberSaleOrder, error)                                                                          // 获取会员端销售订单记录
+	GetMemberSaleOrderRecordOnly(uuid uint64) (*model.MemberSaleOrder, error)                                                                                        // 获取会员端销售订单记录，不包含关联数据
 	PaginateGetMemberSaleOrder(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)                                                       // 分页获取会员端销售订单
 	GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error)                                                   // 获取收银台"外送"订单列表
 	GetCashierMemberSaleOrderManageList(pageNo, pageSize int, statusList []uint, req GetCashierMemberSaleOrderManageListReq) ([]model.MemberSaleOrder, int64, error) // 获取收银台"外送"订单管理列表
@@ -102,6 +103,18 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecord(uuid uint64, opts ...DBOp
 		return nil, errors.WithMessage(err)
 	}
 	return memberSaleOrder, nil
+}
+
+// GetMemberSaleOrderRecordOnly 获取会员端销售订单记录，不包含关联数据
+func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecordOnly(uuid uint64) (*model.MemberSaleOrder, error) {
+	var memberSaleOrder model.MemberSaleOrder
+	db := r.db.Model(&model.MemberSaleOrder{})
+
+	err := db.Where("uuid = ?", uuid).First(&memberSaleOrder).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &memberSaleOrder, nil
 }
 
 func (r *MemberSaleOrderRepo) CreateMemberSaleOrder(memberSaleOrder model.MemberSaleOrder) error {
@@ -354,6 +367,9 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderAccept(memberSaleOrder m
 	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
 		Status:          memberSaleOrder.Status,
 		RiderAcceptTime: memberSaleOrder.RiderAcceptTime,
+		RiderName:       memberSaleOrder.RiderName,
+		RiderPhone:      memberSaleOrder.RiderPhone,
+		Location:        memberSaleOrder.Location,
 	}).Error
 	if err != nil {
 		return errors.WithMessage(err)
