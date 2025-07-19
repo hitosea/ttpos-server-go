@@ -14873,6 +14873,66 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/address/search": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "搜索谷歌地图地址",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.地址"
+                ],
+                "summary": "搜索谷歌地图地址",
+                "parameters": [
+                    {
+                        "type": "number",
+                        "description": "纬度",
+                        "name": "latitude",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "经度",
+                        "name": "longitude",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "搜索文本",
+                        "name": "text",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/member/address/update": {
             "post": {
                 "security": [

@@ -16391,6 +16391,41 @@ paths:
       summary: 删除地址
       tags:
       - 会员端.地址
+  /member/address/search:
+    get:
+      consumes:
+      - application/json
+      description: 搜索谷歌地图地址
+      parameters:
+      - description: 纬度
+        in: query
+        name: latitude
+        type: number
+      - description: 经度
+        in: query
+        name: longitude
+        type: number
+      - description: 搜索文本
+        in: query
+        name: text
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  type: string
+              type: object
+      security:
+      - JwtToken: []
+      summary: 搜索谷歌地图地址
+      tags:
+      - 会员端.地址
   /member/address/update:
     post:
       consumes:

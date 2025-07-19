@@ -5,6 +5,13 @@ import (
 	"ttpos-server-go/app/dto"
 )
 
+// MemberAddressSearchReq 搜索地址请求
+type MemberAddressSearchReq struct {
+	Text      string  `form:"text"`      // 搜索文本
+	Latitude  float64 `form:"latitude"`  // 纬度
+	Longitude float64 `form:"longitude"` // 经度
+}
+
 type MemberAddressListReq struct {
 	dto.PageReq // 分页参数
 }

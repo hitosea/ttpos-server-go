@@ -2,6 +2,10 @@ package config
 
 import "fmt"
 
+type GoogleConf struct {
+	PlacesApiKey string // 谷歌地图搜索API密钥
+}
+
 type ServerConf struct {
 	Port       string // 端口
 	Mode       string // 模式：debug/release/test

@@ -8,7 +8,7 @@ import (
 	"time"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/cache"
-	"ttpos-server-go/pkg/google_bucket"
+	"ttpos-server-go/pkg/google"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/utils"
 
@@ -51,7 +51,7 @@ func (model *PrinterLogData) SetData(companyUuid uint64, data string) string {
 		defer cancel() // 确保资源释放
 
 		// 初始化存储桶
-		ctx, err := google_bucket.InitBucket(
+		ctx, err := google.InitBucket(
 			ctx,
 			config.GoogleBucket.GooglePrintBucketName,
 			config.GoogleBucket.GetGoogleApplicationCredentialsFileName(),
@@ -80,7 +80,7 @@ func (model *PrinterLogData) SetData(companyUuid uint64, data string) string {
 		defer file.Close()
 
 		// 测试上传（设置1分钟过期）
-		_, err = google_bucket.UploadFile(ctx, fileName, file, 1)
+		_, err = google.UploadFile(ctx, fileName, file, 1)
 		if err != nil {
 			logger.Logger.Error("测试上传失败", zap.Error(err))
 			fmt.Println("测试上传失败", err)
@@ -116,7 +116,7 @@ func (model *PrinterLogData) GetData(isDelCache bool) string {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel() // 确保资源释放
 
-	ctx, err := google_bucket.InitBucket(
+	ctx, err := google.InitBucket(
 		ctx,
 		config.GoogleBucket.GooglePrintBucketName,
 		config.GoogleBucket.GetGoogleApplicationCredentialsFileName(),
@@ -127,7 +127,7 @@ func (model *PrinterLogData) GetData(isDelCache bool) string {
 		return ""
 	}
 
-	data, err := google_bucket.DownloadFileContent(ctx, model.Data)
+	data, err := google.DownloadFileContent(ctx, model.Data)
 	if err != nil {
 		logger.Logger.Error("下载文件失败", zap.Error(err))
 		fmt.Println("下载文件失败", err)
