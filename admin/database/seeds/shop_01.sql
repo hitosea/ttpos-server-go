@@ -656,6 +656,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_operation_record` (
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `h5_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'h5订单Uuid',
     `operator_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '操作员ID',
+    `member_sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外送订单Uuid',
+    `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员uuid',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

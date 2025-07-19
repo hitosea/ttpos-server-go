@@ -13,9 +13,13 @@ type SaleOrderOperationRecord struct {
 	H5OrderUuid   uint64 `gorm:"column:h5_order_uuid;type:bigint(20) unsigned;default:0;comment:h5订单Uuid;NOT NULL" json:"h5_order_uuid"`
 	OperatorUuid  uint64 `gorm:"column:operator_uuid;type:bigint(20) unsigned;default:0;comment:操作员ID;NOT NULL" json:"operator_uuid"`
 
+	MemberSaleOrderUuid uint64 `gorm:"column:member_sale_order_uuid;type:bigint(20) unsigned;default:0;comment:外送订单Uuid;NOT NULL" json:"member_sale_order_uuid"`
+	MemberUuid          uint64 `gorm:"column:member_uuid;type:bigint(20) unsigned;default:0;comment:会员ID;NOT NULL" json:"member_uuid"`
+
 	dutyNo string `gorm:"-"`
 
-	Operator Staff `gorm:"foreignKey:OperatorUuid;references:uuid"`
+	Operator Staff  `gorm:"foreignKey:OperatorUuid;references:uuid"`
+	Member   Member `gorm:"foreignKey:MemberUuid;references:uuid"`
 }
 
 func (model *SaleOrderOperationRecord) SetNil() {

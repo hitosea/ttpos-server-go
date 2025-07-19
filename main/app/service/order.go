@@ -758,6 +758,21 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 			return nil, nil, errors.WithMessage(err)
 		}
 
+		// 	发布“创建外送订单”事件
+		go func() {
+			s.bus.PublishCreateMemberSaleOrderEvent(event.CreateMemberSaleOrderPayload{
+				BasePayload: event.BasePayload{
+					Ctx:                 ctx,
+					CompanyUuid:         ctx.GetCompanyUuid(),
+					Source:              ctx.GetSource(),
+					SaleBillUuid:        result.MemberSaleOrderInfo.SaleBillUuid,
+					SaleOrderUuid:       result.MemberSaleOrderInfo.SaleOrderUuid,
+					MemberSaleOrderUuid: result.MemberSaleOrderInfo.MemberSaleOrderUuid,
+					MemberUuid:          ctx.GetMemberUuid(),
+				},
+			})
+		}()
+
 		//FIXME N分钟后取消订单
 		queue.TakeoutCancelQueue.SendDelayMsgV2(
 			strconv.FormatUint(result.MemberSaleOrderInfo.MemberSaleOrderUuid, 10),
@@ -909,6 +924,9 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+	// 用于记录操作日志
+	info.MemberSaleOrderInfo.SaleBillUuid = saleBillUuid
+	info.MemberSaleOrderInfo.SaleOrderUuid = saleOrderUuid
 	return info, nil
 }
 
@@ -2467,6 +2485,11 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 		realName := record.Operator.RealName
 		if record.Source == constant.SourceH5 {
 			realName = i18n.Translate(language, "用户")
+		}
+		// 如果是会员端的操作
+		if record.Source == constant.SourceMember {
+			prefix := i18n.Translate(language, "顾客")
+			realName = fmt.Sprintf("%s(%s)", prefix, record.Member.Nickname)
 		}
 
 		var refundType int
