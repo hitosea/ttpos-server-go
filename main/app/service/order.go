@@ -28,6 +28,7 @@ import (
 	"ttpos-server-go/app/repository/saas"
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
@@ -12319,12 +12320,14 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		}
 		// 选择外送渠道
 		memberSaleOrder.RelatedOrderType = constant.ProviderNameSkootar
+		// 状态变更的回调地址
+		callbackUrl := config.TakeOutRpcConf.CallbackEndpoint + "/api/v1/member/order/callback?company_uuid=" + fmt.Sprintf("%d", ctx.GetCompany().Uuid)
 
 		takeoutSrv := takeout.NewTakeoutSrv()
 		params := req.CreateTakeoutOrderReq{
 			ProviderName:  memberSaleOrder.RelatedOrderType,
 			Remark:        memberSaleOrder.Remark,
-			CallbackUrl:   "",
+			CallbackUrl:   callbackUrl,
 			ShopOrderUuid: fmt.Sprintf("%d", memberSaleOrder.Uuid),
 			CustomerLocation: &req.TakeoutLocation{
 				ContactName:  memberSaleOrder.Address.ContactName,

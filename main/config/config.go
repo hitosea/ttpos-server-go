@@ -200,9 +200,11 @@ func googleBucketConf(opt copier.Option) {
 
 func takeoutConf(opt copier.Option) {
 	TakeOutRpcConf = GrpcConf{
-		Endpoint: "127.0.0.1:14032",
+		Endpoint:         "127.0.0.1:14032",
+		CallbackEndpoint: "http://127.0.0.1:8080",
 	}
 	copier.CopyWithOption(&TakeOutRpcConf, GrpcConf{
-		Endpoint: viper.GetString("TAKEOUT_ENDPOINT"),
+		Endpoint:         viper.GetString("TAKEOUT_ENDPOINT"),
+		CallbackEndpoint: viper.GetString("TAKEOUT_CALLBACK_ENDPOINT"),
 	}, opt)
 }

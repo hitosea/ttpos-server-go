@@ -83,8 +83,9 @@ type GoogleBucketConf struct {
 }
 
 type GrpcConf struct {
-	Endpoint string
-	Service  string
+	Endpoint         string
+	CallbackEndpoint string // 外定订单状态变更回调地址，用于通知ttpos订单状态变更
+	Service          string
 }
 
 func (c *GoogleBucketConf) Verification() bool {

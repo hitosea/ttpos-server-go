@@ -34,7 +34,7 @@ type CallbackHandler struct {
 // @param X-Ttpos-Callback-Auth header string true "回调token"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /member/callback [post]
+// @Router /member/order/callback [post]
 func (h *CallbackHandler) Callback(c *gin.Context) {
 	// 绑定请求参数
 	ctx := helper.GetContext(c)
@@ -83,6 +83,6 @@ func RegisterMemberCallbackHandlers(router gin.IRouter, dbm *database.DBManager,
 	// 需要认证
 	privateApi := router.Group("")
 	{
-		privateApi.POST("/callback", wrapper.Callback) // 回调
+		privateApi.POST("/order/callback", wrapper.Callback) // 回调
 	}
 }
