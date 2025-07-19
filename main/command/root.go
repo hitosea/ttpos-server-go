@@ -149,5 +149,5 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 }
 
 func initQueue() {
-	queue.Init(cache.Global.GetClient())
+	queue.Init()
 }
