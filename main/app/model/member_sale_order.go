@@ -198,9 +198,12 @@ func (model *MemberSaleOrder) RiderDelivery(riderName string, riderPhone string,
 }
 
 // 骑手配送完成
-func (model *MemberSaleOrder) RiderCompleted() {
+func (model *MemberSaleOrder) RiderCompleted(riderName string, riderPhone string, location string) {
 	model.Status = constant.MemberSaleOrderStatusCompleted // 骑手配送完成
 	model.FinishTime = time.Now().Unix()
+	model.RiderName = riderName
+	model.RiderPhone = riderPhone
+	model.Location = location
 }
 
 type CreateMemberSaleOrderParams struct {
