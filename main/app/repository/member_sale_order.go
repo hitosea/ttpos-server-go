@@ -34,6 +34,7 @@ type IQueryMemberSaleOrderRepo interface {
 	UpdateMemberSaleOrderRiderDelivery(memberSaleOrder model.MemberSaleOrder) error                                                                                  // 更新会员端销售订单-骑手配送中
 	UpdateMemberSaleOrderRiderCompleted(memberSaleOrder model.MemberSaleOrder) error                                                                                 // 更新会员端销售订单-骑手配送完成
 	UpdateMemberSaleOrderProviderInfo(memberSaleOrder model.MemberSaleOrder) error                                                                                   // 更新会员端销售订单-配送 provider 信息
+	UpdateMemberSaleOrderAddress(memberSaleOrder model.MemberSaleOrder) error                                                                                        // 更新会员端销售订单-配送地址
 
 	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
 	WhereStatusIn(status []uint) DBOption
@@ -406,6 +407,24 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderProviderInfo(memberSaleOrder 
 	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
 		RelatedOrderType: memberSaleOrder.RelatedOrderType,
 		RelatedOrderNo:   memberSaleOrder.RelatedOrderNo,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderAddress 更新会员端销售订单-配送地址
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderAddress(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		MemberAddressUuid:    memberSaleOrder.MemberAddressUuid,
+		ContactLocation:      memberSaleOrder.ContactLocation,
+		ContactAddress:       memberSaleOrder.ContactAddress,
+		ContactAddressDetail: memberSaleOrder.ContactAddressDetail,
+		ContactName:          memberSaleOrder.ContactName,
+		ContactPhone:         memberSaleOrder.ContactPhone,
+		PhonePrefix:          memberSaleOrder.PhonePrefix,
+		ContactGender:        memberSaleOrder.ContactGender,
 	}).Error
 	if err != nil {
 		return errors.WithMessage(err)

@@ -4,7 +4,6 @@ import (
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
-	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
@@ -45,6 +44,15 @@ type MemberSaleOrder struct {
 	RiderPhone        string  `gorm:"column:rider_phone;type:varchar(255);not null;default:'';comment:'骑手电话'"`
 	Location          string  `gorm:"column:location;type:varchar(255);not null;default:'';comment:'骑手位置,格式:纬度,经度'"`
 	RemainingDistance float64 `gorm:"column:remaining_distance;type:decimal(12,6);not null;default:0;comment:'剩余距离'"`
+	// 收货人信息
+	MemberAddressUuid    uint64 `gorm:"column:member_address_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员收货地址UUID'"`
+	ContactLocation      string `gorm:"column:contact_location;type:varchar(100);not null;comment:位置坐标" json:"location"` // "纬度,经度"
+	ContactAddress       string `gorm:"column:contact_address;type:varchar(255);not null;default:'';comment:'详细地址'"`
+	ContactAddressDetail string `gorm:"column:contact_address_detail;type:varchar(255);not null;default:'';comment:'详细地址'"`
+	ContactName          string `gorm:"column:contact_name;type:varchar(255);not null;default:'';comment:'联系人'"`
+	ContactPhone         string `gorm:"column:contact_phone;type:varchar(255);not null;default:'';comment:'联系电话'"`
+	PhonePrefix          string `gorm:"column:phone_prefix;type:varchar(255);not null;default:'';comment:'联系电话前缀'"`
+	ContactGender        int    `gorm:"column:contact_gender;type:int(10);not null;default:0;comment:'联系人性别, 0-女士 1-先生'"`
 	// 时间相关
 	PayTime            int64 `gorm:"column:pay_time;type:int(10) unsigned;not null;default:0;comment:'支付完成时间（时间戳）'"`
 	AcceptTime         int64 `gorm:"column:accept_time;type:int(10) unsigned;not null;default:0;comment:'商家接单时间（时间戳）'"`
@@ -55,9 +63,9 @@ type MemberSaleOrder struct {
 	ExpectedFinishTime int64 `gorm:"column:expected_finish_time;type:int(10) unsigned;not null;default:0;comment:'预计送达时间（时间戳）'"`
 	CancelTime         int64 `gorm:"column:cancel_time;type:int(10) unsigned;not null;default:0;comment:'取消时间（时间戳）'"`
 
-	SaleBill      *SaleBill               `gorm:"foreignKey:MemberSaleOrderUuid;references:Uuid"`
-	Address       *MemberSaleOrderAddress `gorm:"foreignKey:MemberSaleOrderUuid;references:Uuid"`
-	PaymentMethod *PaymentMethod          `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"`
+	SaleBill      *SaleBill      `gorm:"foreignKey:MemberSaleOrderUuid;references:Uuid"`
+	PaymentMethod *PaymentMethod `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"`
+	Address       *MemberAddress `gorm:"foreignKey:MemberAddressUuid;references:Uuid"`
 }
 
 func (model *MemberSaleOrder) OriginAmountValue() float64 {
@@ -83,7 +91,6 @@ func (model *MemberSaleOrder) GetPayStatus() uint {
 
 func (model *MemberSaleOrder) SetNil() {
 	model.SaleBill = nil
-	model.Address = nil
 	model.PaymentMethod = nil
 }
 
@@ -134,7 +141,7 @@ func (model *MemberSaleOrder) IsVerifiedPhoneBool() bool {
 	if model.Address == nil {
 		return false
 	}
-	return model.Address.MemberAddress.IsAuthPhone()
+	return model.Address.IsAuthPhone()
 }
 
 // 计算配送费
@@ -236,39 +243,4 @@ func NewMemberSaleOrder(params CreateMemberSaleOrderParams) *MemberSaleOrder {
 		SaleOrderUuid:      params.SaleOrderUuid,
 	}
 	return saleOrder
-}
-
-// 会员销售订单地址 `ttpos_member_sale_order_address`
-type MemberSaleOrderAddress struct {
-	BaseModel
-	MemberUuid          uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员UUID'"`
-	MemberAddressUuid   uint64  `gorm:"column:member_address_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员收货地址UUID'"`
-	Longitude           float64 `gorm:"column:longitude;type:decimal(12,6);not null;default:0;comment:'经度'"`
-	Latitude            float64 `gorm:"column:latitude;type:decimal(12,6);not null;default:0;comment:'纬度'"`
-	Location            string  `gorm:"column:location;type:varchar(100);not null;comment:位置坐标" json:"location"` // "纬度,经度"
-	Address             string  `gorm:"column:address;type:varchar(255);not null;default:'';comment:'地址'"`
-	DetailAddress       string  `gorm:"column:detail_address;type:varchar(255);not null;default:'';comment:'详细地址'"`
-	ContactName         string  `gorm:"column:contact_name;type:varchar(255);not null;default:'';comment:'联系人'"`
-	ContactPhone        string  `gorm:"column:contact_phone;type:varchar(255);not null;default:'';comment:'联系电话'"`
-	PhonePrefix         string  `gorm:"column:phone_prefix;type:varchar(255);not null;default:'';comment:'联系电话前缀'"`
-	ContactGender       int     `gorm:"column:contact_gender;type:int(10);not null;default:0;comment:'联系人性别, 0-女士 1-先生'"`
-	MemberSaleOrderUuid uint64  `gorm:"column:member_sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员销售订单UUID'"`
-
-	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`
-	MemberAddress *MemberAddress `gorm:"foreignKey:MemberAddressUuid;references:Uuid"`
-}
-
-func (model *MemberSaleOrderAddress) SetNil() {
-}
-
-// 获取位置坐标. 返回纬度,经度
-func (model *MemberSaleOrderAddress) GetLocation() (string, string, error) {
-	if model.Location == "" {
-		return "", "", errors.New("位置坐标为空")
-	}
-	location := strings.Split(model.Location, ",")
-	if len(location) != 2 {
-		return "", "", errors.New("位置坐标格式错误")
-	}
-	return location[0], location[1], nil
 }

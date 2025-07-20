@@ -175,6 +175,15 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     -- 第三方订单信息
     `related_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关联订单号,skootar、grab等第三方平台上的订单号',
     `related_order_type` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关联订单类型,skootar、grab',
+    -- 收货人信息
+    `member_address_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员收货地址UUID',
+    `contact_location` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '位置坐标',
+    `contact_address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '详细地址',
+    `contact_address_detail` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '详细地址',
+    `contact_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系人',
+    `contact_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系电话',
+    `contact_phone_prefix` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系电话前缀',
+    `contact_gender` INT(10) NOT NULL DEFAULT 0 COMMENT '联系人性别, 0-女士 1-先生',
     -- 骑手信息
     `rider_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手名称',
     `rider_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手电话',
@@ -194,27 +203,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员销售订单表';
-
-CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order_address` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员销售订单地址ID',
-    `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员UUID',
-    `member_address_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员收货地址UUID',
-    `longitude` DECIMAL(12, 6) NOT NULL DEFAULT 0 COMMENT '经度',
-    `latitude` DECIMAL(12, 6) NOT NULL DEFAULT 0 COMMENT '纬度', 
-    `location` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '位置坐标',
-    `address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '地址',
-    `detail_address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '详细地址',
-    `contact_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系人',
-    `contact_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系电话',
-    `phone_prefix` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系电话前缀',
-    `contact_gender` INT(10) NOT NULL DEFAULT 0 COMMENT '联系人性别, 0-女士 1-先生',
-    `member_sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员销售订单UUID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员销售订单地址表,订单的地址信息';
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',

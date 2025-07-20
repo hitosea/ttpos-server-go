@@ -1008,14 +1008,14 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 			return nil, errors.WithMessage(err)
 		}
 		address = resp.MemberSaleOrderAddress{
-			MemberAddressUuid: memberSaleOrder.Address.MemberAddressUuid,
+			MemberAddressUuid: memberSaleOrder.MemberAddressUuid,
 			Longitude:         lng,
 			Latitude:          lat,
-			Address:           memberSaleOrder.Address.Address,
-			DetailAddress:     memberSaleOrder.Address.DetailAddress,
-			ContactName:       memberSaleOrder.Address.ContactName,
-			ContactPhone:      memberSaleOrder.Address.ContactPhone,
-			ContactGender:     memberSaleOrder.Address.ContactGender,
+			Address:           memberSaleOrder.ContactAddress,
+			DetailAddress:     memberSaleOrder.ContactAddressDetail,
+			ContactName:       memberSaleOrder.ContactName,
+			ContactPhone:      memberSaleOrder.ContactPhone,
+			ContactGender:     memberSaleOrder.ContactGender,
 		}
 	}
 
@@ -1095,8 +1095,8 @@ func (s *orderSrv) QueryDistance(ctx context.Context, memberSaleOrder *model.Mem
 			},
 			// 收货人地址
 			{
-				AddressName: memberSaleOrder.Address.ContactName,
-				Address:     memberSaleOrder.Address.Address,
+				AddressName: memberSaleOrder.ContactName,
+				Address:     memberSaleOrder.ContactAddress,
 				Lat:         lat,
 				Lng:         lng,
 			},
@@ -1224,18 +1224,24 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 		return nil, errors.New("地址与会员不匹配")
 	}
 
-	memberSaleOrderAddress := model.MemberSaleOrderAddress{
-		MemberUuid:          member.Uuid,
-		MemberAddressUuid:   memberAddress.Uuid,
-		Location:            memberAddress.Location,
-		Address:             memberAddress.Address,
-		DetailAddress:       memberAddress.GetAddressDetail(),
-		ContactName:         memberAddress.Name,
-		ContactPhone:        memberAddress.Phone,
-		ContactGender:       memberAddress.Gender,
-		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecordOnly(request.MemberAddressUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
 	}
-	if err := repository.NewMemberSaleOrderAddressRepo(db).CreateMemberSaleOrderAddress(memberSaleOrderAddress); err != nil {
+	if memberSaleOrder.MemberUuid != member.Uuid {
+		return nil, errors.New("订单与会员不匹配")
+	}
+
+	memberSaleOrder.MemberAddressUuid = request.MemberAddressUuid
+	memberSaleOrder.ContactLocation = memberAddress.Location
+	memberSaleOrder.ContactAddress = memberAddress.Address
+	memberSaleOrder.ContactAddressDetail = memberAddress.Street
+	memberSaleOrder.ContactName = memberAddress.Name
+	memberSaleOrder.ContactPhone = memberAddress.Phone
+	memberSaleOrder.PhonePrefix = memberAddress.Country
+	memberSaleOrder.ContactGender = memberAddress.Gender
+
+	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderAddress(*memberSaleOrder); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -1483,10 +1489,10 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 	var address resp.MemberOrderDetailAddress
 	if memberSaleOrder.Address != nil {
 		address = resp.MemberOrderDetailAddress{
-			ContactName: memberSaleOrder.Address.ContactName,
-			Phone:       memberSaleOrder.Address.ContactPhone,
-			PhonePrefix: memberSaleOrder.Address.PhonePrefix,
-			Address:     memberSaleOrder.Address.Address + memberSaleOrder.Address.DetailAddress,
+			ContactName: memberSaleOrder.ContactName,
+			Phone:       memberSaleOrder.ContactPhone,
+			PhonePrefix: memberSaleOrder.PhonePrefix,
+			Address:     memberSaleOrder.ContactAddress + memberSaleOrder.ContactAddressDetail,
 		}
 	}
 	//
@@ -1705,10 +1711,10 @@ func (s *orderSrv) GetMemberCashierOrderDetail(ctx context.Context, req req.GetM
 	var address resp.MemberOrderDetailAddress
 	if memberSaleOrder.Address != nil {
 		address = resp.MemberOrderDetailAddress{
-			ContactName: memberSaleOrder.Address.ContactName,
-			Phone:       memberSaleOrder.Address.ContactPhone,
-			PhonePrefix: memberSaleOrder.Address.PhonePrefix,
-			Address:     memberSaleOrder.Address.Address + memberSaleOrder.Address.DetailAddress,
+			ContactName: memberSaleOrder.ContactName,
+			Phone:       memberSaleOrder.ContactPhone,
+			PhonePrefix: memberSaleOrder.PhonePrefix,
+			Address:     memberSaleOrder.ContactAddress + memberSaleOrder.ContactAddressDetail,
 		}
 	}
 	return &resp.GetMemberOrderCashierDetailResp{
@@ -1765,8 +1771,8 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 		var contact resp.ContactInfo
 		if memberSaleOrder.Address != nil {
 			contact = resp.ContactInfo{
-				Name:  memberSaleOrder.Address.ContactName,
-				Phone: memberSaleOrder.Address.ContactPhone,
+				Name:  memberSaleOrder.ContactName,
+				Phone: memberSaleOrder.ContactPhone,
 			}
 		}
 
@@ -12374,11 +12380,11 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 			CallbackUrl:   callbackUrl,
 			ShopOrderUuid: fmt.Sprintf("%d", memberSaleOrder.Uuid),
 			CustomerLocation: &req.TakeoutLocation{
-				ContactName:  memberSaleOrder.Address.ContactName,
-				ContactPhone: memberSaleOrder.Address.ContactPhone,
+				ContactName:  memberSaleOrder.ContactName,
+				ContactPhone: memberSaleOrder.ContactPhone,
 				TakeoutAddress: req.TakeoutAddress{
-					AddressName: memberSaleOrder.Address.ContactName,
-					Address:     memberSaleOrder.Address.Address,
+					AddressName: memberSaleOrder.ContactName,
+					Address:     memberSaleOrder.ContactAddress,
 					Lat:         lat,
 					Lng:         lng,
 				},

@@ -211,11 +211,11 @@ func (t *takeoutOrderImgTemplate) GetPrintContent(
 	if memberSaleOrder.Address != nil {
 		img.AppendSplitLine()
 		img.LineFeed(1)
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("联系人"), memberSaleOrder.Address.ContactName))
+		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("联系人"), memberSaleOrder.ContactName))
 		img.LineFeed(1)
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手机号码"), memberSaleOrder.Address.PhonePrefix+memberSaleOrder.Address.ContactPhone))
+		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手机号码"), memberSaleOrder.PhonePrefix+memberSaleOrder.ContactPhone))
 		img.LineFeed(1)
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收货地址"), memberSaleOrder.Address.Address+" "+memberSaleOrder.Address.DetailAddress))
+		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收货地址"), memberSaleOrder.ContactAddress+" "+memberSaleOrder.ContactAddressDetail))
 		img.LineFeed(1)
 	}
 
