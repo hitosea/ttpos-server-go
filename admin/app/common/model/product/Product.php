@@ -2080,28 +2080,22 @@ class Product extends BaseModel
     public function batchUpdateOpenOverallDiscount($params)
     {
         $product_ids = $params['product_ids'] ?? [];
-        if (empty($product_ids)) {
-            $this->error = '请选择商品';
-            return false;
-        }
-
-        $productList = self::whereIn('uuid', $product_ids)->select();
-        if (empty($productList) || count($productList) != count($product_ids)) {
-            $this->error = '商品不存在';
-            return false;
-        }
-
         // 开启事务，保证批量操作的原子性
         Db::startTrans();
         try {
             // 1. 关闭选中商品的整单折扣（open_overall_discount=0）
-            $this->whereIn('uuid', $product_ids)
-                ->update(['open_overall_discount' => 0]);
+            if (!empty($product_ids)) {
+                $this->whereIn('uuid', $product_ids)
+                    ->update(['open_overall_discount' => 0]);
+            }
 
             // 2. 开启未选中商品的整单折扣（open_overall_discount=1）
-            $this->whereNotIn('uuid', $product_ids)
-                ->where('open_overall_discount', 0)
-                ->update(['open_overall_discount' => 1]);
+            $builder = $this->where('open_overall_discount', 0);
+            if (!empty($product_ids)) {
+                $builder = $builder->whereNotIn('uuid', $product_ids);
+            }
+            $builder->update(['open_overall_discount' => 1]);
+                
 
             // 提交事务
             Db::commit();
