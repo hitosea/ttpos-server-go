@@ -224,7 +224,7 @@ func (t *takeoutOrderSunmiTemplate) GetPrintContent(
 		printer.AppendText("------------------------------------------------\n")
 		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("联系人"), memberSaleOrder.ContactName))
 		printer.LineFeed()
-		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手机号码"), memberSaleOrder.PhonePrefix+memberSaleOrder.ContactPhone))
+		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手机号码"), memberSaleOrder.ContactPhonePrefix+memberSaleOrder.ContactPhone))
 		printer.LineFeed()
 		printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收货地址"), memberSaleOrder.ContactAddress+" "+memberSaleOrder.ContactAddressDetail))
 		printer.LineFeed()

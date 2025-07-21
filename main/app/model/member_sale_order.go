@@ -51,7 +51,7 @@ type MemberSaleOrder struct {
 	ContactAddressDetail string `gorm:"column:contact_address_detail;type:varchar(255);not null;default:'';comment:'详细地址'"`
 	ContactName          string `gorm:"column:contact_name;type:varchar(255);not null;default:'';comment:'联系人'"`
 	ContactPhone         string `gorm:"column:contact_phone;type:varchar(255);not null;default:'';comment:'联系电话'"`
-	PhonePrefix          string `gorm:"column:phone_prefix;type:varchar(255);not null;default:'';comment:'联系电话前缀'"`
+	ContactPhonePrefix   string `gorm:"column:contact_phone_prefix;type:varchar(255);not null;default:'';comment:'联系电话前缀'"`
 	ContactGender        int    `gorm:"column:contact_gender;type:int(10);not null;default:0;comment:'联系人性别, 0-女士 1-先生'"`
 	// 时间相关
 	PayTime            int64 `gorm:"column:pay_time;type:int(10) unsigned;not null;default:0;comment:'支付完成时间（时间戳）'"`
@@ -66,6 +66,7 @@ type MemberSaleOrder struct {
 	SaleBill      *SaleBill      `gorm:"foreignKey:MemberSaleOrderUuid;references:Uuid"`
 	PaymentMethod *PaymentMethod `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"`
 	Address       *MemberAddress `gorm:"foreignKey:MemberAddressUuid;references:Uuid"`
+	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`
 }
 
 func (model *MemberSaleOrder) OriginAmountValue() float64 {

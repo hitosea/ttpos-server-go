@@ -90,10 +90,10 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecord(uuid uint64, opts ...DBOp
 				},
 			},
 			WithPreload{
-				Query: "Address.MemberAddress",
+				Query: "Address",
 			},
 			WithPreload{
-				Query: "Address.Member",
+				Query: "Member",
 			},
 			WithPreload{
 				Query: "SaleBill.SaleOrders",
@@ -423,7 +423,7 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderAddress(memberSaleOrder model
 		ContactAddressDetail: memberSaleOrder.ContactAddressDetail,
 		ContactName:          memberSaleOrder.ContactName,
 		ContactPhone:         memberSaleOrder.ContactPhone,
-		PhonePrefix:          memberSaleOrder.PhonePrefix,
+		ContactPhonePrefix:   memberSaleOrder.ContactPhonePrefix,
 		ContactGender:        memberSaleOrder.ContactGender,
 	}).Error
 	if err != nil {

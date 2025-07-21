@@ -213,7 +213,7 @@ func (t *takeoutOrderImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("联系人"), memberSaleOrder.ContactName))
 		img.LineFeed(1)
-		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手机号码"), memberSaleOrder.PhonePrefix+memberSaleOrder.ContactPhone))
+		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("手机号码"), memberSaleOrder.ContactPhonePrefix+memberSaleOrder.ContactPhone))
 		img.LineFeed(1)
 		img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收货地址"), memberSaleOrder.ContactAddress+" "+memberSaleOrder.ContactAddressDetail))
 		img.LineFeed(1)

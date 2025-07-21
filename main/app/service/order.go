@@ -1224,7 +1224,7 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 		return nil, errors.New("地址与会员不匹配")
 	}
 
-	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecordOnly(request.MemberAddressUuid)
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecordOnly(request.MemberSaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -1238,7 +1238,7 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	memberSaleOrder.ContactAddressDetail = memberAddress.Street
 	memberSaleOrder.ContactName = memberAddress.Name
 	memberSaleOrder.ContactPhone = memberAddress.Phone
-	memberSaleOrder.PhonePrefix = memberAddress.Country
+	memberSaleOrder.ContactPhonePrefix = memberAddress.Country
 	memberSaleOrder.ContactGender = memberAddress.Gender
 
 	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderAddress(*memberSaleOrder); err != nil {
@@ -1491,7 +1491,7 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 		address = resp.MemberOrderDetailAddress{
 			ContactName: memberSaleOrder.ContactName,
 			Phone:       memberSaleOrder.ContactPhone,
-			PhonePrefix: memberSaleOrder.PhonePrefix,
+			PhonePrefix: memberSaleOrder.ContactPhonePrefix,
 			Address:     memberSaleOrder.ContactAddress + memberSaleOrder.ContactAddressDetail,
 		}
 	}
@@ -1713,7 +1713,7 @@ func (s *orderSrv) GetMemberCashierOrderDetail(ctx context.Context, req req.GetM
 		address = resp.MemberOrderDetailAddress{
 			ContactName: memberSaleOrder.ContactName,
 			Phone:       memberSaleOrder.ContactPhone,
-			PhonePrefix: memberSaleOrder.PhonePrefix,
+			PhonePrefix: memberSaleOrder.ContactPhonePrefix,
 			Address:     memberSaleOrder.ContactAddress + memberSaleOrder.ContactAddressDetail,
 		}
 	}
