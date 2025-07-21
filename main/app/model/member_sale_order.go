@@ -1,6 +1,8 @@
 package model
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -106,6 +108,18 @@ func (model *MemberSaleOrder) GetLocation() (string, string) {
 	if len(location) != 2 {
 		return "", ""
 	}
+	// 去掉前后空格并保留6位小数
+	location[0] = strings.TrimSpace(location[0])
+	location[1] = strings.TrimSpace(location[1])
+	// 转换为float64并保留6位小数
+	lat, err := strconv.ParseFloat(location[0], 64)
+	if err == nil {
+		location[0] = fmt.Sprintf("%.6f", lat)
+	}
+	lng, err := strconv.ParseFloat(location[1], 64)
+	if err == nil {
+		location[1] = fmt.Sprintf("%.6f", lng)
+	}
 	return location[0], location[1]
 }
 
@@ -117,6 +131,18 @@ func (model *MemberSaleOrder) GetCustomerLocation() (string, string) {
 	location := strings.Split(model.ContactLocation, ",")
 	if len(location) != 2 {
 		return "", ""
+	}
+	// 去掉前后空格并保留6位小数
+	location[0] = strings.TrimSpace(location[0])
+	location[1] = strings.TrimSpace(location[1])
+	// 转换为float64并保留6位小数
+	lat, err := strconv.ParseFloat(location[0], 64)
+	if err == nil {
+		location[0] = fmt.Sprintf("%.6f", lat)
+	}
+	lng, err := strconv.ParseFloat(location[1], 64)
+	if err == nil {
+		location[1] = fmt.Sprintf("%.6f", lng)
 	}
 	return location[0], location[1]
 }
