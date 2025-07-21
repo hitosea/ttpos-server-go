@@ -80,6 +80,21 @@ pbentity: cli.install
 conf: cli.install envsubst.install
 	@sh $(ROOT_DIR)/hack/init_conf.sh
 
+.PHONY: db_add
+db_add: migrate.install
+	@migrate create -ext sql -dir ./manifest/sql -tz Asia/Shanghai $(COMMENT)
+
+.PHONY: db_up
+db_up: migrate.install
+	@# 使用 sed 从 config.yaml 中提取 link 配置的值
+	@DB_DSN=$$(cat $(ROOT_DIR)/hack/config.yaml  | python -c 'import yaml,sys;print(yaml.safe_load(sys.stdin)["migrate"]["db"])') && \
+	echo $$DB_DSN ;\
+	if [ -z "$$DB_DSN" ]; then \
+		echo "未在 config.yaml 中找到有效的 link 配置" >&2; \
+		exit 1; \
+	fi && \
+	migrate -path ./manifest/sql -database "$$DB_DSN" up
+
 .PHONY: run
 run: cli.install
 	@go run $(ROOT_DIR)/main.go

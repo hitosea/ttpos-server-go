@@ -27,3 +27,11 @@ envsubst.install:
 		echo "envsubst is not installed, start proceeding auto installation..."; \
 		brew install gettext; \
 	fi;
+
+.PHONY: migrate.install
+migrate.install:
+	@set -e; \
+	migrate -version > /dev/null 2>&1 || if [[ "$?" -ne "0" ]]; then \
+		echo "migrate is not installed, start proceeding auto installation..."; \
+		go install -tags mysql github.com/golang-migrate/migrate/v4/cmd/migrate@latest; \
+	fi;
