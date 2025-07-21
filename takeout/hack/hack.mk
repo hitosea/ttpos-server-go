@@ -82,7 +82,7 @@ conf: cli.install envsubst.install
 
 .PHONY: db_add
 db_add: migrate.install
-	@migrate create -ext sql -dir ./manifest/sql -tz Asia/Shanghai $(COMMENT)
+	@migrate create -ext sql -dir ./manifest/sql -tz Asia/Shanghai $(NAME)
 
 .PHONY: db_up
 db_up: migrate.install
