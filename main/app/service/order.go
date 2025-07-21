@@ -2000,6 +2000,16 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 			}
 		}
 
+		var rider resp.RiderInfo
+		rider.Name = memberSaleOrder.RiderName
+		rider.Phone = memberSaleOrder.RiderPhone
+		if rider.Name == "" {
+			rider.Name = "-"
+		}
+		if rider.Phone == "" {
+			rider.Phone = "*"
+		}
+
 		memberOrders = append(memberOrders, resp.MemberOrderManage{
 			MemberSaleOrderUuid: memberSaleOrder.Uuid,
 			SerialNumber:        memberSaleOrder.SerialNumber,
@@ -2013,6 +2023,21 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 			DeliveryFee:         memberSaleOrder.DeliveryFeeAmount,
 			PayType:             payType,
 			Contact:             contact,
+			Rider:               rider,
+			Extra: resp.OrderListsExtra{
+				IsCellReject: func() bool {
+					// 待商家接单时，可以拒单
+					return memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingMerchantAccept
+				}(),
+				IsCellCancel: func() bool {
+					// 商家备餐中，商家可以取消订单
+					return memberSaleOrder.Status == constant.MemberSaleOrderStatusCooking
+				}(),
+				IsCellRefund: func() bool {
+					// 订单完成后，用户可以申请退款。TODO 且未全部退款时
+					return memberSaleOrder.Status == constant.MemberSaleOrderStatusCompleted
+				}(),
+			},
 		})
 	}
 
