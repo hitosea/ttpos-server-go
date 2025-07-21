@@ -83,12 +83,38 @@ class MemberOrder extends Controller
      */
     public function reject($member_sale_order_uuid)
     {
-        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/member_order/reject', [
-            'member_sale_order_uuid' => $member_sale_order_uuid,
-        ], [
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/reject', json_encode($this->postData()), [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
         ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+        
+        return $this->renderSuccess('');
+    }
+
+    /**
+     * @Apidoc\Title("取消外送订单")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/store.MemberOrder/cancel")
+     * @Apidoc\Param("member_sale_order_uuid", type="int", require=true, default="", desc="订单UUID")
+     * @Apidoc\Param("cancel_reason", type="string", require=true, default="", desc="取消原因")
+     * @Apidoc\Param("bank_code", type="string", require=false, default="", desc="银行代码 - 暂时不用")
+     * @Apidoc\Param("account_no", type="string", require=false, default="", desc="账号 - 暂时不用")
+     * @Apidoc\Param("account_name", type="string", require=false, default="", desc="账户名称- 暂时不用")
+     */
+    public function cancel()
+    {
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/cancel', json_encode($this->postData()), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+
         if (!$res) {
             return $this->renderError('请求失败');
         }
@@ -97,10 +123,8 @@ class MemberOrder extends Controller
         if (($result['code'] ?? -1) != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
         }
-        //
-        $data = $result['data'];
-         
-        return $this->renderSuccess('', $data);
+
+        return $this->renderSuccess('');
     }
 
 
@@ -140,6 +164,5 @@ class MemberOrder extends Controller
         // 导出excel文件
         return (new MemberOrderExportService)->export($list);
     }
-
 
 }
