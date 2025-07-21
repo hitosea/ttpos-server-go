@@ -10,7 +10,7 @@ import (
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 )
 
-const docTypeApiUrl = "/api/v2/doctype/"
+const docTypeApiUrl = "/api/v2/doctype"
 
 var Doctype = new(sDoctype)
 
@@ -22,12 +22,12 @@ func init() {
 }
 
 func (s *sDoctype) Meta(ctx context.Context, req *dto.ErpReq) (rst *g.Var, err error) {
-	rst = g.Client().GetVar(ctx, fmt.Sprintf("%s%s%s/meta", GetApiBase(), docTypeApiUrl, req.DocType))
+	rst = g.Client().GetVar(ctx, fmt.Sprintf("%s%s/%s/meta", GetApiBase(), docTypeApiUrl, req.DocType))
 	return
 }
 
 func (s *sDoctype) Count(ctx context.Context, req *dto.ErpReq) (int, error) {
-	rst := g.Client().GetVar(ctx, fmt.Sprintf("%s%s%s/count", GetApiBase(), docTypeApiUrl, req.DocType))
+	rst := g.Client().GetVar(ctx, fmt.Sprintf("%s%s/%s/count", GetApiBase(), docTypeApiUrl, req.DocType))
 	if rst != nil {
 		return gconv.Int(rst.Map()["data"]), nil
 	}

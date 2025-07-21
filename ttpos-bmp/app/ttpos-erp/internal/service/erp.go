@@ -33,12 +33,16 @@ type (
 		Put(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error)
 		Delete(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error)
 	}
+	IRpc interface {
+		Execute(ctx context.Context, req *dto.ErpReq, params interface{}) (rst *g.Var, err error)
+	}
 )
 
 var (
 	localDoctype  IDoctype
 	localDocument IDocument
 	localResource IResource
+	localRpc      IRpc
 )
 
 func Doctype() IDoctype {
@@ -72,4 +76,15 @@ func Resource() IResource {
 
 func RegisterResource(i IResource) {
 	localResource = i
+}
+
+func Rpc() IRpc {
+	if localRpc == nil {
+		panic("implement not found for interface IRpc, forgot register?")
+	}
+	return localRpc
+}
+
+func RegisterRpc(i IRpc) {
+	localRpc = i
 }
