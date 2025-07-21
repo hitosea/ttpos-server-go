@@ -53,7 +53,7 @@ func (s *sSkootar) ReqBase() skootar.ReqBase {
 
 // getCallBackAuth 获取回调Auth
 func (*sSkootar) getCallBackAuth(shopRefNo string) string {
-	if res, err := gmd5.EncryptString(shopRefNo + g.Cfg().MustGet(gctx.GetInitCtx(), "app.callbackAuth").String()); err == nil {
+	if res, err := gmd5.EncryptString(shopRefNo + g.Cfg().MustGet(gctx.GetInitCtx(), "app.callbackSecret").String()); err == nil {
 		return res
 	} else {
 		g.Log().Error(gctx.GetInitCtx(), "获取回调Auth失败", err)
