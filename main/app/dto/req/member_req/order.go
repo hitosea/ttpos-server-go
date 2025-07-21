@@ -50,6 +50,9 @@ type CallbackReq struct {
 type CancelOrderReq struct {
 	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 	CancelReason        string `form:"cancel_reason"`                             // 取消原因
+	BankCode            string `form:"bank_code"`                                 // 银行代码 - 暂时不用
+	AccountNo           string `form:"account_no"`                                // 账号 - 暂时不用
+	AccountName         string `form:"account_name"`                              // 账户名称- 暂时不用
 }
 
 // GetRiderInfoReq 获取骑手信息

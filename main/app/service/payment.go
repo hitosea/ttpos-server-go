@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,6 +14,7 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/saas"
@@ -701,4 +701,87 @@ func (p *PaymentRepo) postRequest(url string, jsonData string, headers map[strin
 	}
 
 	return responseData, nil
+}
+
+// MemberSaleOrderRefund 会员端销售单发起退款
+type MemberSaleOrderRefundReq struct {
+	CancelReason string `json:"cancel_reason"` // 取消原因
+	BankCode     string `json:"bank_code"`     // 银行代码 - 暂时不用
+	AccountNo    string `json:"account_no"`    // 账号 - 暂时不用
+	AccountName  string `json:"account_name"`  // 账户名称- 暂时不用
+}
+
+func (p *PaymentRepo) MemberSaleOrderRefund(saleOrder model.SaleOrder, req MemberSaleOrderRefundReq) error {
+	db := p.ctx.GetDB()
+	// 创建退货单
+	returnOrder := model.ReturnOrder{
+		BaseModel: model.BaseModel{
+			Uuid: func() uint64 {
+				id, _ := utils.GetID()
+				return id
+			}(),
+		},
+		RelatedOrderType: constant.ReturnOrderRelatedOrderTypeSaleOrder,
+		RelatedOrderUuid: saleOrder.Uuid,
+		RelatedOrderNo:   saleOrder.OrderNo,
+		ReturnType:       constant.ReturnOrderRefundTypeTotal,
+		RefundAmount:     saleOrder.Amount,
+		RefundReason:     req.CancelReason,
+		ReturnOrderAmounts: func() []model.ReturnOrderAmount {
+			var returnOrderAmounts []model.ReturnOrderAmount
+			for _, paymentOrder := range saleOrder.PaymentOrders {
+				if paymentOrder.IsDelete() {
+					continue
+				}
+				returnOrderAmounts = append(returnOrderAmounts, model.ReturnOrderAmount{
+					BaseModel: model.BaseModel{
+						Uuid: func() uint64 {
+							id, _ := utils.GetID()
+							return id
+						}(),
+					},
+					PaymentMethodUuid:     paymentOrder.PaymentMethodUuid,
+					Amount:                paymentOrder.Amount,
+					PaymentOrderUuid:      paymentOrder.Uuid,
+					MerchantRefundOrderNo: utils.GenerateMerchantOrderNo("RE"),
+					PaymentMethod:         &model.PaymentMethod{Code: paymentOrder.PaymentMethod.Code, PaymentName: paymentOrder.PaymentMethodName},
+				})
+			}
+			return returnOrderAmounts
+		}(),
+		BankCode:    req.BankCode,
+		AccountNo:   req.AccountNo,
+		AccountName: req.AccountName,
+	}
+	returnOrderUuid, err := repository.NewReturnOrderRepo(db).CreateReturnOrderRecord(returnOrder)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	// 发起退款
+	for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
+		refund, err := p.Refund(PaymentServiceRefundReq{
+			RelatedType:           constant.PaymentOrderRelatedTypeMemberOrder, // 相关类型
+			PaymentOrderUuid:      returnOrderAmount.PaymentOrderUuid,          // 支付订单UUID
+			MerchantRefundOrderNo: returnOrderAmount.MerchantRefundOrderNo,     // 商户退款订单号
+			RefundAmount:          returnOrderAmount.Amount,                    // 退款金额
+			RefundOrderId:         returnOrderAmount.LlReturnOrderid,           // 退款ID
+			BankCode:              returnOrder.BankCode,
+			AccountNo:             returnOrder.AccountNo,
+			AccountName:           returnOrder.AccountName,
+		})
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		// 更新退款状态
+		returnOrderAmount.ReturnOrderUuid = returnOrderUuid
+		returnOrderAmount.LlReturnOrderid = refund.RefundOrderId
+		returnOrderRepo := repository.NewReturnOrderRepo(db)
+		err = returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{
+			returnOrderRepo.WhereUuid(returnOrderAmount.Uuid),
+		}, returnOrderAmount)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+	}
+	return nil
 }

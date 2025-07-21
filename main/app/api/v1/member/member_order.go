@@ -315,14 +315,13 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
-	ctx.Log().Debug("取消订单", zap.Any("params", params))
-
 	// 取消订单
 	err := h.orderSrv.MemberOrderCancel(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	helper.Success(c, gin.H{})
 }
 
 // GetRiderInfo 获取骑手信息
