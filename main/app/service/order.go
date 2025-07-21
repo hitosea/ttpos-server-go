@@ -1726,9 +1726,9 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 	if memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingMerchantAccept {
 		err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
 			CancelReason: "客户取消订单",
-			BankCode:     request.BankCode,
-			AccountNo:    request.AccountNo,
-			AccountName:  request.AccountName,
+			// BankCode:     request.BankCode,
+			// AccountNo:    request.AccountNo,
+			// AccountName:  request.AccountName,
 		})
 		if err != nil {
 			tx.Rollback()

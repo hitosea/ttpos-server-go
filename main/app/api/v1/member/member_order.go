@@ -303,7 +303,7 @@ func (h *OrderHandler) GetMemberOrderPaymentMethodList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param member_sale_order_uuid query string true "会员端销售订单UUID"
+// @Param data body member_req.CancelOrderReq true "详情参数"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/cancel [post]
@@ -311,7 +311,7 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := member_req.CancelOrderReq{}
-	if err := c.ShouldBindQuery(&params); err != nil {
+	if err := c.ShouldBindJSON(&params); err != nil {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
