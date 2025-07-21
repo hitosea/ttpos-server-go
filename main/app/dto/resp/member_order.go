@@ -141,3 +141,28 @@ type GetMemberOrderPaymentMethodListResp struct {
 	Amount               float64             `json:"amount"`                 // 订单总金额. 订单总金额=实际付款金额=商品金额-会员折扣金额+运费
 	PaymentMethodUuid    uint64              `json:"payment_method_uuid"`    // 当前订单的支付方式UUID(可用来默认选中)
 }
+
+// 名称、地址、坐标
+type OrderCoordinate struct {
+	Name    string `json:"name"`    // 名称
+	Address string `json:"address"` // 地址
+	Lat     string `json:"lat"`     // 纬度
+	Lng     string `json:"lng"`     // 经度
+}
+
+type DriverInfoResp struct {
+	Name          string  `json:"name"`           // 骑手姓名
+	Phone         string  `json:"phone"`          // 骑手电话
+	Avatar        string  `json:"avatar"`         // 骑手头像
+	Rating        float64 `json:"rating"`         // 骑手评分
+	Lat           string  `json:"lat"`            // 纬度
+	Lng           string  `json:"lng"`            // 经度
+	EstimatedTime string  `json:"estimated_time"` // 预计送达时间
+}
+
+// 订单相关坐标信息
+type MemberOrderCoordinates struct {
+	Merchant   OrderCoordinate `json:"merchant"`    // 商家
+	Customer   OrderCoordinate `json:"customer"`    // 顾客
+	DriverInfo DriverInfoResp  `json:"driver_info"` // 骑手
+}

@@ -10,6 +10,7 @@ type CreateTakeoutOrderResp struct {
 	Status         string // 订单状态
 	ShopOrderUuid  string // 商户订单
 	TakeoutRefNo   string // 外送渠道订单，比如skootar订单
+	FinishTime     string // 预计送达时间
 }
 
 type GetDriverInfoResp struct {

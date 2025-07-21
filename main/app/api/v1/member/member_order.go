@@ -325,6 +325,37 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	}
 }
 
+// GetRiderInfo 获取骑手信息
+// @Summary 获取骑手信息
+// @Description 获取骑手信息
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param member_sale_order_uuid query string true "会员端销售订单UUID"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/rider [get]
+func (h *OrderHandler) GetRiderInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := member_req.GetRiderInfoReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("获取骑手信息", zap.Any("params", params))
+
+	// 获取骑手信息
+	res, err := h.orderSrv.GetRiderInfo(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -354,5 +385,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/payment/method/list", wrapper.GetMemberOrderPaymentMethodList) // 获取会员端订单支付方式列表
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)                                 // 取消订单
 		privateApi.POST("/xie-test/order/paid", wrapper.PaidOrder)                            // 支付成功 TODO 上线前删除改接口
+
+		privateApi.GET("/order/rider", wrapper.GetRiderInfo) // 获取骑手信息，以及商家、会员坐标
 	}
 }
