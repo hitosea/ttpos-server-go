@@ -79,6 +79,7 @@ type ICommonRepo interface {
 	WhereByRelatedType(relatedType uint) DBOption                       // 根据关联类型查询
 	WhereByOrderNo(orderNo string) DBOption                             // 根据订单编号查询
 	WhereByBillType(billType uint) DBOption                             // 根据账单类型查询
+	WhereInBillType(billTypeList []uint) DBOption                       // 根据账单类型查询
 	WhereByNotStatus(status uint) DBOption                              // 根据状态查询
 	WhereByIsHide(isHide bool) DBOption                                 // 根据是否隐藏查询
 	WhereByReduceStock(reduceStock uint) DBOption                       // 根据是否减库存查询
@@ -308,6 +309,13 @@ func (r *commonRepo) WhereByOrderNo(orderNo string) DBOption {
 func (r *commonRepo) WhereByBillType(billType uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("bill_type = ?", billType)
+	}
+}
+
+// WhereInBillType 根据账单类型查询
+func (r *commonRepo) WhereInBillType(billTypeList []uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("bill_type IN (?)", billTypeList)
 	}
 }
 

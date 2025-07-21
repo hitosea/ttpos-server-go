@@ -368,6 +368,7 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 		),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByCooking(),
+		CommonRepo.WhereInBillType([]uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}),
 		CommonRepo.SortWithID("DESC"),
 		dbOption,
 		//
