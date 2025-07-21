@@ -20178,6 +20178,10 @@ const docTemplate = `{
                     "description": "公司地址",
                     "type": "string"
                 },
+                "is_open_rider": {
+                    "description": "是否开启外送",
+                    "type": "boolean"
+                },
                 "link_phone": {
                     "description": "公司联系电话",
                     "type": "string"
@@ -20339,7 +20343,7 @@ const docTemplate = `{
                 },
                 "is_member_show_sold_out": {
                     "description": "是否显示售罄商品",
-                    "type": "integer"
+                    "type": "boolean"
                 },
                 "language_list": {
                     "description": "语言列表",

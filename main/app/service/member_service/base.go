@@ -114,7 +114,7 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 
 	member := ctx.GetMember()
 
-	isMemberShowSoldOut, err := strconv.Atoi(cashierSetting.MemberShowSoldOut)
+	isMemberShowSoldOut, _ := strconv.Atoi(cashierSetting.MemberShowSoldOut)
 
 	// 返回
 	return member_resp.MemberBaseInfoResp{
@@ -134,11 +134,11 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 			Address:      company.CompanySetting.Address,
 			LinkPhone:    company.CompanySetting.LinkPhone, // 公司联系电话
 			OpeningHours: businessSetting.OpeningHours,     // 公司营业时间
+			IsOpenRider:  company.CompanySetting.DeliveryStatus == 1,
 		},
-		AreaCode:     areaCodes,
-		LanguageList: languageList,
-
-		IsMemberShowSoldOut: isMemberShowSoldOut,
+		AreaCode:            areaCodes,
+		LanguageList:        languageList,
+		IsMemberShowSoldOut: isMemberShowSoldOut == 1,
 	}, nil
 
 }
