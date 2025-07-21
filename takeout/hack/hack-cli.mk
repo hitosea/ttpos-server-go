@@ -23,7 +23,7 @@ cli.install:
 .PHONY: envsubst.install
 envsubst.install:
 	@set -e; \
-	envsubst -v > /dev/null 2>&1 || if [[ "$?" -ne "0" ]]; then \
+	envsubst -V > /dev/null 2>&1 || if [[ "$?" -ne "0" ]]; then \
 		echo "envsubst is not installed, start proceeding auto installation..."; \
 		brew install gettext; \
 	fi;
