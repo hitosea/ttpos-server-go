@@ -12355,7 +12355,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		if err != nil {
 			return errors.WithMessage(err, "整单送厨失败")
 		}
-		if checkRes == nil {
+		if checkRes != nil {
 			return errors.New("整单送厨失败")
 		}
 	}
