@@ -1821,7 +1821,7 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, req member_req.CancelO
 func (s *orderSrv) GetMemberCashierOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberCashierOrderListResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
-	memberSaleOrders, total, err := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderList(
+	memberSaleOrders, _, err := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderList(
 		req.PageNo,
 		req.PageSize,
 		constant.GetStatusList(req.Status),
@@ -1842,11 +1842,22 @@ func (s *orderSrv) GetMemberCashierOrderList(ctx context.Context, req req.Member
 		})
 	}
 
+	// 获取数量
+	getOrderNum := func(status []uint) int64 {
+		num, _ := repository.NewMemberSaleOrderRepo(db).GetOrderNum(status)
+		return num
+	}
+
 	return &resp.GetMemberCashierOrderListResp{
-		Meta: dto.PageResponse{
-			PageNo:   req.PageNo,
-			PageSize: req.PageSize,
-			Total:    total,
+		Meta: resp.MemberCashierOrderListMeta{
+			PageNo:        req.PageNo,
+			PageSize:      req.PageSize,
+			UnacceptNum:   getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUnaccept)),
+			AcceptNum:     getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusAccept)),
+			UndeliveryNum: getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUndelivery)),
+			DeliveryNum:   getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusDelivery)),
+			CompletedNum:  getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusDelivered)),
+			CancelNum:     getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusCancel)),
 		},
 		List: memberOrders,
 	}, nil

@@ -36,6 +36,7 @@ type IQueryMemberSaleOrderRepo interface {
 	UpdateMemberSaleOrderProviderInfo(memberSaleOrder model.MemberSaleOrder) error                                                                                   // 更新会员端销售订单-配送 provider 信息
 	UpdateMemberSaleOrderAddress(memberSaleOrder model.MemberSaleOrder) error                                                                                        // 更新会员端销售订单-配送地址
 	GetMemberSaleOrderByContactNameAndContactPhoneSuffix(contactName string, contactPhoneSuffix string) ([]*model.MemberSaleOrder, error)                            // 根据联系人姓名和手机号后缀查询会员端销售订单
+	GetOrderNum(status []uint) (int64, error)                                                                                                                        // 获取订单数量
 
 	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
 	WhereStatusIn(status []uint) DBOption
@@ -459,4 +460,17 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderByContactNameAndContactPhoneSuff
 		return nil, errors.WithMessage(err)
 	}
 	return memberSaleOrders, nil
+}
+
+// GetOrderNum 获取某些状态的订单数量
+func (r *MemberSaleOrderRepo) GetOrderNum(status []uint) (int64, error) {
+	var num int64
+	err := r.db.Model(&model.MemberSaleOrder{}).
+		Where("delete_time = ?", 0).
+		Where("status in ?", status).
+		Count(&num).Error
+	if err != nil {
+		return 0, errors.WithMessage(err)
+	}
+	return num, nil
 }

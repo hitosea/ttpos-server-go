@@ -29,7 +29,7 @@ type MemberOrderHandler struct {
 // @Param page_no query int false "页码"
 // @Param page_size query int false "每页条数"
 // @Param status query string true "状态: unaccept-待接单, accept-备餐中, undelivery-待配送, delivery-配送中, completed-已完成, cancel-已取消"
-// @Success 200 {object} dto.Response{data=resp.GetMemberOrderListResp}
+// @Success 200 {object} dto.Response{data=resp.GetMemberCashierOrderListResp}
 // @Router /cashier/member_order/list [get]
 func (h *MemberOrderHandler) GetMemberOrderList(c *gin.Context) {
 	var memberOrderListReq req.MemberOrderListReq

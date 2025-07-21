@@ -22,9 +22,20 @@ type MemberOrder struct {
 	Rider               RiderInfo            `json:"rider"`                  // 骑手信息
 }
 
+type MemberCashierOrderListMeta struct {
+	PageNo        int   `json:"page_no"`        // 当前页码
+	PageSize      int   `json:"page_size"`      // 每页大小
+	UnacceptNum   int64 `json:"unaccept_num"`   // 待接单数量
+	AcceptNum     int64 `json:"accept_num"`     // 备餐中数量
+	UndeliveryNum int64 `json:"undelivery_num"` // 待配送数量
+	DeliveryNum   int64 `json:"delivery_num"`   // 配送中数量
+	CompletedNum  int64 `json:"completed_num"`  // 已完成数量
+	CancelNum     int64 `json:"cancel_num"`     // 已取消数量
+}
+
 type GetMemberCashierOrderListResp struct {
-	Meta dto.PageResponse     `json:"meta"`
-	List []MemberCashierOrder `json:"list"` // 订单列表
+	Meta MemberCashierOrderListMeta `json:"meta"`
+	List []MemberCashierOrder       `json:"list"` // 订单列表
 }
 
 type MemberCashierOrder struct {

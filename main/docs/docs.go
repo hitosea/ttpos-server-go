@@ -9937,7 +9937,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.GetMemberOrderListResp"
+                                            "$ref": "#/definitions/resp.GetMemberCashierOrderListResp"
                                         }
                                     }
                                 }
@@ -24383,6 +24383,21 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.GetMemberCashierOrderListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MemberCashierOrder"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/resp.MemberCashierOrderListMeta"
+                }
+            }
+        },
         "resp.GetMemberCashierOrderSearchResp": {
             "type": "object",
             "properties": {
@@ -24477,21 +24492,6 @@ const docTemplate = `{
                 "status": {
                     "description": "订单状态 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消",
                     "type": "integer"
-                }
-            }
-        },
-        "resp.GetMemberOrderListResp": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "description": "订单列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.MemberOrder"
-                    }
-                },
-                "meta": {
-                    "$ref": "#/definitions/dto.PageResponse"
                 }
             }
         },
@@ -25531,6 +25531,43 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.MemberCashierOrderListMeta": {
+            "type": "object",
+            "properties": {
+                "accept_num": {
+                    "description": "备餐中数量",
+                    "type": "integer"
+                },
+                "cancel_num": {
+                    "description": "已取消数量",
+                    "type": "integer"
+                },
+                "completed_num": {
+                    "description": "已完成数量",
+                    "type": "integer"
+                },
+                "delivery_num": {
+                    "description": "配送中数量",
+                    "type": "integer"
+                },
+                "page_no": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer"
+                },
+                "unaccept_num": {
+                    "description": "待接单数量",
+                    "type": "integer"
+                },
+                "undelivery_num": {
+                    "description": "待配送数量",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.MemberDiscountResp": {
             "type": "object",
             "properties": {
@@ -25617,50 +25654,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.MemberLevel"
                     }
-                }
-            }
-        },
-        "resp.MemberOrder": {
-            "type": "object",
-            "properties": {
-                "company_name": {
-                    "description": "公司名称",
-                    "type": "string"
-                },
-                "member_sale_order_uuid": {
-                    "description": "会员端销售订单UUID",
-                    "type": "integer"
-                },
-                "num": {
-                    "description": "商品数量. 所有商品数量总和，如商品A数量为2，商品B数量为3，则总数量为5",
-                    "type": "number"
-                },
-                "product_amount": {
-                    "description": "商品金额. 所有商品金额总和，如商品A金额为2，商品B金额为3，则总金额为5",
-                    "type": "number"
-                },
-                "product_list": {
-                    "description": "订单商品列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/resp.MemberOrderProduct"
-                    }
-                },
-                "rider": {
-                    "description": "骑手信息",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/resp.RiderInfo"
-                        }
-                    ]
-                },
-                "serial_number": {
-                    "description": "订单流水号",
-                    "type": "string"
-                },
-                "status": {
-                    "description": "订单状态 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消",
-                    "type": "integer"
                 }
             }
         },
