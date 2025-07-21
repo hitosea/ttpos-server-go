@@ -531,7 +531,7 @@ func (p *PaymentRepo) HandleRefundCallback(sign string, callbackReq req.LianLian
 	returnOrderRepo := repository.NewReturnOrderRepo(db)
 	orderAmount, err := returnOrderRepo.GetReturnOrderAmount(
 		returnOrderRepo.WithReturnOrder(),
-		returnOrderRepo.WhereMerchantRefundOrderNo(callbackReq.MerchantRefundOrderNo),
+		returnOrderRepo.WhereMerchantRefundOrderNo(callbackReq.MerchantRefundId),
 	)
 	if err != nil {
 		fmt.Println("获取退货金额失败", err)
@@ -785,14 +785,10 @@ func (p *PaymentRepo) MemberSaleOrderRefund(saleOrder model.SaleOrder, req Membe
 		if err != nil {
 			return errors.WithMessage(err)
 		}
-		// 更新退款状态
+		// 创建退款金额
 		returnOrderAmount.ReturnOrderUuid = returnOrderUuid
 		returnOrderAmount.LlReturnOrderid = refund.RefundOrderId
-		returnOrderRepo := repository.NewReturnOrderRepo(db)
-		err = returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{
-			returnOrderRepo.WhereUuid(returnOrderAmount.Uuid),
-		}, returnOrderAmount)
-		if err != nil {
+		if err = repository.NewReturnOrderRepo(db).CreateReturnOrderAmount([]model.ReturnOrderAmount{returnOrderAmount}); err != nil {
 			return errors.WithMessage(err)
 		}
 	}
