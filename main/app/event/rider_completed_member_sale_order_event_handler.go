@@ -94,6 +94,16 @@ func riderCompletedMemberSaleOrderEventHandler() {
 				}
 				logger.Logger.Info(fmt.Sprintf("操作记录:配送完成，订单完成 %+v", payload), zap.Uint64("record", uuid))
 			}()
+
+			// 外送订单完结时, 发布"统计"事件
+			go func() {
+				event.NewSystemBus().PublishStatisticsSaleEvent(event.StatisticsSalePayload{
+					BasePayload: event.BasePayload{ // 统计
+						Ctx: payload.Ctx,
+					},
+					SaleBillUuid: memberSaleOrder.SaleBillUuid,
+				})
+			}()
 		})
 	})
 }

@@ -9837,7 +9837,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	}()
 
 	// 整单完结时, 发布"统计"事件
-	if saleBill.CanFinishSaleBill() && saleBill.BillType != constant.SaleBillTypeTakeout {
+	if saleBill.CanFinishSaleBill() {
 		go func() {
 			s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
 				BasePayload: event.BasePayload{ // 统计
