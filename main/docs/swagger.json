@@ -24366,6 +24366,35 @@
                 }
             }
         },
+        "resp.ExtraMemberCashierOrderListMeta": {
+            "type": "object",
+            "properties": {
+                "accept_num": {
+                    "description": "备餐中数量",
+                    "type": "integer"
+                },
+                "cancel_num": {
+                    "description": "已取消数量",
+                    "type": "integer"
+                },
+                "completed_num": {
+                    "description": "已完成数量",
+                    "type": "integer"
+                },
+                "delivery_num": {
+                    "description": "配送中数量",
+                    "type": "integer"
+                },
+                "unaccept_num": {
+                    "description": "待接单数量",
+                    "type": "integer"
+                },
+                "undelivery_num": {
+                    "description": "待配送数量",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.Flavors": {
             "type": "object",
             "properties": {
@@ -24380,6 +24409,9 @@
         "resp.GetMemberCashierOrderListResp": {
             "type": "object",
             "properties": {
+                "extra": {
+                    "$ref": "#/definitions/resp.ExtraMemberCashierOrderListMeta"
+                },
                 "list": {
                     "description": "订单列表",
                     "type": "array",
@@ -24388,7 +24420,7 @@
                     }
                 },
                 "meta": {
-                    "$ref": "#/definitions/resp.MemberCashierOrderListMeta"
+                    "$ref": "#/definitions/dto.PageResponse"
                 }
             }
         },
@@ -25522,43 +25554,6 @@
                 "status_group": {
                     "description": "订单状态分组. \"unaccept\" 待接单, \"accept\" 备餐中, \"undelivery\" 待配送, \"delivery\" 配送中, \"completed\" 已完成, \"cancel\" 已取消",
                     "type": "string"
-                }
-            }
-        },
-        "resp.MemberCashierOrderListMeta": {
-            "type": "object",
-            "properties": {
-                "accept_num": {
-                    "description": "备餐中数量",
-                    "type": "integer"
-                },
-                "cancel_num": {
-                    "description": "已取消数量",
-                    "type": "integer"
-                },
-                "completed_num": {
-                    "description": "已完成数量",
-                    "type": "integer"
-                },
-                "delivery_num": {
-                    "description": "配送中数量",
-                    "type": "integer"
-                },
-                "page_no": {
-                    "description": "当前页码",
-                    "type": "integer"
-                },
-                "page_size": {
-                    "description": "每页大小",
-                    "type": "integer"
-                },
-                "unaccept_num": {
-                    "description": "待接单数量",
-                    "type": "integer"
-                },
-                "undelivery_num": {
-                    "description": "待配送数量",
-                    "type": "integer"
                 }
             }
         },

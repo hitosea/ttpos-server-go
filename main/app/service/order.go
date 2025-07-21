@@ -1821,7 +1821,7 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, req member_req.CancelO
 func (s *orderSrv) GetMemberCashierOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberCashierOrderListResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
-	memberSaleOrders, _, err := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderList(
+	memberSaleOrders, total, err := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderList(
 		req.PageNo,
 		req.PageSize,
 		constant.GetStatusList(req.Status),
@@ -1849,9 +1849,12 @@ func (s *orderSrv) GetMemberCashierOrderList(ctx context.Context, req req.Member
 	}
 
 	return &resp.GetMemberCashierOrderListResp{
-		Meta: resp.MemberCashierOrderListMeta{
-			PageNo:        req.PageNo,
-			PageSize:      req.PageSize,
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    total,
+		},
+		Extra: resp.ExtraMemberCashierOrderListMeta{
 			UnacceptNum:   getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUnaccept)),
 			AcceptNum:     getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusAccept)),
 			UndeliveryNum: getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUndelivery)),
