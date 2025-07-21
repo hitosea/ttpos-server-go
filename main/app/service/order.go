@@ -6937,7 +6937,7 @@ func (s *orderSrv) checkBuffetCustomerTypePriceChanged(ctx context.Context, sale
 			if buffetCustomer.IsDelete() {
 				continue
 			}
-			if buffetCustomer.IsBuffetCustomerTypePriceChanged() {
+			if buffetCustomer.IsBuffetCustomerTypePriceChanged() || buffetCustomer.GetOpenOverallDiscountChanged() {
 				// 自助餐顾客类型价格变动
 				customer := resp.Product{
 					Uuid:       buffetCustomer.Uuid,

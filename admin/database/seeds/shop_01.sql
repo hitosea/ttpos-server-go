@@ -769,6 +769,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_buffet_customer_type` (
     `sale_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变',
     `sale_price_no_tax` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '销售价,未含税价格（折前）',
     -- 价格计算相关
+    `open_overall_discount` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启整单折扣, 0-否 1-是',
     `price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '最终单价（折后价），只进行自定义打折，不进行会员打折',
     `custom_discount_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '自定义折扣率, 值为0-1之间(0-100%)',
     `custom_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '自定义折扣金额（单人）。自定义折扣金额（单人）=自助餐顾客类型原价*自定义折扣率',
