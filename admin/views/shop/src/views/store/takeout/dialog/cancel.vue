@@ -75,7 +75,11 @@
 
   // 方法定义
   const submit = () => {
-    const formData = { ...form };
+    const formData = {
+      member_sale_order_uuid: form.member_sale_order_uuid,
+      cancel_reason: form.cancel_reason,
+    };
+
     formRef.value.validate((valid) => {
       if (valid) {
         loading.value = true;
