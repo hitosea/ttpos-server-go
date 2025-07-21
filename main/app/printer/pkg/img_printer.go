@@ -288,6 +288,10 @@ func (i *ImgFont) getCharWidth(fontPath string, fontSize int, text string) int {
 	// 应用缩放系数
 	scaleFactor := 0.99
 
+	if fontPath == fonts.FontTH || fontPath == fonts.FontTHExt {
+		scaleFactor = 1.1
+	}
+
 	return int(float64(totalWidth) * scaleFactor)
 }
 
@@ -1090,12 +1094,14 @@ func (i *ImgFont) AppendSplitLine(opts ...AppendSplitlineOption) *ImgFont {
 
 // ColumnConfig 列配置结构体
 type ColumnConfig struct {
-	Text       string // 文本内容
-	Width      int    // 列宽度
-	Align      int    // 对齐方式
-	FontWeight int    // 字体粗细
-	FontSize   int    // 字体大小
-	LineHeight int    // 行高
+	Text         string // 文本内容
+	Width        int    // 列宽度
+	ContentWidth int    // 内容宽度
+	Align        int    // 对齐方式
+	FontWeight   int    // 字体粗细
+	FontSize     int    // 字体大小
+	LineHeight   int    // 行高
+	RightPadding int    // 内边距
 }
 
 // SetupColumns 设置列（在Go中没有实际作用，保留为兼容性接口）
@@ -1129,6 +1135,12 @@ func (i *ImgFont) PrintInColumns(columns ...ColumnConfig) *ImgFont {
 	for key, column := range columns {
 		text := column.Text
 		columnWidth := column.Width
+
+		// 如果列宽为0，计算剩余宽度
+		contentWidth := column.ContentWidth
+		if column.ContentWidth == 0 {
+			contentWidth = columnWidth
+		}
 
 		// 如果列宽为0，计算剩余宽度
 		if columnWidth == 0 {
@@ -1166,11 +1178,11 @@ func (i *ImgFont) PrintInColumns(columns ...ColumnConfig) *ImgFont {
 		}
 
 		// 添加文本
-		result := i.AddText(text, float64(height), float64(columnWidth-i.ImagePadding*2), deviationWidth)
+		result := i.AddText(text, float64(height), float64(contentWidth-i.ImagePadding*2), deviationWidth)
 		results = append(results, result)
 
 		// 更新偏移量并恢复原始设置
-		deviationWidth += float64(columnWidth)
+		deviationWidth += float64(columnWidth) + float64(column.RightPadding)
 		i.ImageWidth = imageWidth
 
 		// 恢复字体设置

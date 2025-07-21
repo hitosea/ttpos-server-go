@@ -431,7 +431,7 @@ func (p *printerTemplate) MergeSaleOrderBuffetDelayProducts(saleOrder *model.Sal
 		if delay.IsDelete() {
 			continue
 		}
-		num = num.Add(decimal.NewFromFloat(float64(delay.Num)).Round(2))
+		num = num.Add(decimal.NewFromFloat(float64(delay.Num)).Round(3))
 		originPrice := delay.GetAmount()
 		key := fmt.Sprintf("%s(%v)", delay.Name, originPrice)
 		// 按产品名称分组累加
@@ -455,7 +455,7 @@ func (p *printerTemplate) MergeSaleOrderBuffetDelayProducts(saleOrder *model.Sal
 	for _, key := range keyOrder {
 		delays = append(delays, *delayMap[key])
 	}
-	return delays, num.Round(2).InexactFloat64()
+	return delays, num.Round(3).InexactFloat64()
 }
 
 // 合并销售订单商品数据
@@ -472,7 +472,7 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder, isSh
 			continue
 		}
 		// 商品数量
-		productNum = productNum.Add(decimal.NewFromFloat(item.Num).Round(2))
+		productNum = productNum.Add(decimal.NewFromFloat(item.Num).Round(3))
 		// 商品价格
 		productPrice := utils.IfFloat64(item.IsBuffetProduct(), item.SaucePrice, item.SalePrice)
 		productTotalPrice := utils.IfFloat64(item.IsBuffetProduct(), item.GetTotalSaucePrice(), item.GetSalePrice()) // 商品原价
@@ -492,7 +492,7 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder, isSh
 		key := fmt.Sprintf("%s(%v)(%v)", productName, productPrice, item.ProductPackageUuid)
 		if _, exists := productMap[key]; exists {
 			// 如果产品名称已存在，则累加数量和总价
-			productMap[key].ProductNum = decimal.NewFromFloat(productMap[key].ProductNum).Add(decimal.NewFromFloat(item.Num).Round(2)).InexactFloat64()
+			productMap[key].ProductNum = decimal.NewFromFloat(productMap[key].ProductNum).Add(decimal.NewFromFloat(item.Num).Round(3)).InexactFloat64()
 			productMap[key].ProductTotalPrice = decimal.NewFromFloat(productMap[key].ProductTotalPrice).Add(decimal.NewFromFloat(productTotalPrice).Round(2)).InexactFloat64()
 		} else {
 			// 如果产品名称不存在，则创建新记录
@@ -510,5 +510,5 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder, isSh
 	for _, key := range keyOrder {
 		products = append(products, *productMap[key])
 	}
-	return products, productNum.Round(2).InexactFloat64()
+	return products, productNum.Round(3).InexactFloat64()
 }
