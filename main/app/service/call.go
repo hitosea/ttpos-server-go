@@ -268,6 +268,7 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 			UpdateTime:   memberSaleOrder.UpdateTime,
 			IsAutoAccept: memberSaleOrder.IsAutoAccept == 1,
 			CancelScene:  memberSaleOrder.CancelScene,
+			SerialNumber: memberSaleOrder.SerialNumber,
 		})
 	}
 

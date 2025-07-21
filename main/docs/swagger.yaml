@@ -3803,6 +3803,30 @@ definitions:
         description: 餐桌类型ID
         type: integer
     type: object
+  resp.DriverInfoResp:
+    properties:
+      avatar:
+        description: 骑手头像
+        type: string
+      estimated_time:
+        description: 预计送达时间
+        type: string
+      lat:
+        description: 纬度
+        type: string
+      lng:
+        description: 经度
+        type: string
+      name:
+        description: 骑手姓名
+        type: string
+      phone:
+        description: 骑手电话
+        type: string
+      rating:
+        description: 骑手评分
+        type: number
+    type: object
   resp.ExtraMemberCashierOrderListMeta:
     properties:
       accept_num:
@@ -4624,6 +4648,21 @@ definitions:
         description: 会员折扣金额
         type: number
     type: object
+  resp.MemberOrderCoordinates:
+    properties:
+      customer:
+        allOf:
+        - $ref: '#/definitions/resp.OrderCoordinate'
+        description: 顾客
+      driver_info:
+        allOf:
+        - $ref: '#/definitions/resp.DriverInfoResp'
+        description: 骑手
+      merchant:
+        allOf:
+        - $ref: '#/definitions/resp.OrderCoordinate'
+        description: 商家
+    type: object
   resp.MemberOrderDetailAddress:
     properties:
       address:
@@ -4737,8 +4776,11 @@ definitions:
       num:
         description: 数量
         type: number
+      origin_total_price:
+        description: 原价总价. 原价总价=原价单价*数量。 折前
+        type: number
       total_price:
-        description: 总价. 总价=单价*数量
+        description: 总价. 总价=单价*数量。 折后
         type: number
     type: object
   resp.MemberProductList:
@@ -4946,6 +4988,21 @@ definitions:
         $ref: '#/definitions/resp.ProductMustPlanList'
       products:
         $ref: '#/definitions/resp.CartProductList'
+    type: object
+  resp.OrderCoordinate:
+    properties:
+      address:
+        description: 地址
+        type: string
+      lat:
+        description: 纬度
+        type: string
+      lng:
+        description: 经度
+        type: string
+      name:
+        description: 名称
+        type: string
     type: object
   resp.OrderFinishResp:
     properties:
@@ -6992,6 +7049,9 @@ definitions:
       is_auto_accept:
         description: 是否自动接单
         type: boolean
+      serial_number:
+        description: 订单流水号
+        type: string
       status:
         description: 订单状态, 2-待商家接单, 3-商家备餐中(已接单), 8-已取消
         type: integer
@@ -16975,7 +17035,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 获取司机信息
+      description: 获取骑手信息
       parameters:
       - description: 会员端销售订单UUID
         in: query
@@ -16987,11 +17047,13 @@ paths:
       responses:
         "200":
           description: 成功
+          schema:
+            $ref: '#/definitions/resp.MemberOrderCoordinates'
         "400":
           description: 错误请求
       security:
       - JwtToken: []
-      summary: 获取司机信息
+      summary: 获取骑手信息
       tags:
       - 会员端-订单
   /member/points/record/list:

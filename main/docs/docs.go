@@ -15826,7 +15826,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "获取司机信息",
+                "description": "获取骑手信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -15836,7 +15836,7 @@ const docTemplate = `{
                 "tags": [
                     "会员端-订单"
                 ],
-                "summary": "获取司机信息",
+                "summary": "获取骑手信息",
                 "parameters": [
                     {
                         "type": "string",
@@ -15848,7 +15848,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "成功"
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.MemberOrderCoordinates"
+                        }
                     },
                     "400": {
                         "description": "错误请求"
@@ -24409,6 +24412,39 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.DriverInfoResp": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "description": "骑手头像",
+                    "type": "string"
+                },
+                "estimated_time": {
+                    "description": "预计送达时间",
+                    "type": "string"
+                },
+                "lat": {
+                    "description": "纬度",
+                    "type": "string"
+                },
+                "lng": {
+                    "description": "经度",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "骑手姓名",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "骑手电话",
+                    "type": "string"
+                },
+                "rating": {
+                    "description": "骑手评分",
+                    "type": "number"
+                }
+            }
+        },
         "resp.ExtraMemberCashierOrderListMeta": {
             "type": "object",
             "properties": {
@@ -25702,6 +25738,35 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.MemberOrderCoordinates": {
+            "type": "object",
+            "properties": {
+                "customer": {
+                    "description": "顾客",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OrderCoordinate"
+                        }
+                    ]
+                },
+                "driver_info": {
+                    "description": "骑手",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.DriverInfoResp"
+                        }
+                    ]
+                },
+                "merchant": {
+                    "description": "商家",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.OrderCoordinate"
+                        }
+                    ]
+                }
+            }
+        },
         "resp.MemberOrderDetailAddress": {
             "type": "object",
             "properties": {
@@ -25872,8 +25937,12 @@ const docTemplate = `{
                     "description": "数量",
                     "type": "number"
                 },
+                "origin_total_price": {
+                    "description": "原价总价. 原价总价=原价单价*数量。 折前",
+                    "type": "number"
+                },
                 "total_price": {
-                    "description": "总价. 总价=单价*数量",
+                    "description": "总价. 总价=单价*数量。 折后",
                     "type": "number"
                 }
             }
@@ -26188,6 +26257,27 @@ const docTemplate = `{
                 },
                 "products": {
                     "$ref": "#/definitions/resp.CartProductList"
+                }
+            }
+        },
+        "resp.OrderCoordinate": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "地址",
+                    "type": "string"
+                },
+                "lat": {
+                    "description": "纬度",
+                    "type": "string"
+                },
+                "lng": {
+                    "description": "经度",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "名称",
+                    "type": "string"
                 }
             }
         },
@@ -29201,6 +29291,10 @@ const docTemplate = `{
                 "is_auto_accept": {
                     "description": "是否自动接单",
                     "type": "boolean"
+                },
+                "serial_number": {
+                    "description": "订单流水号",
+                    "type": "string"
                 },
                 "status": {
                     "description": "订单状态, 2-待商家接单, 3-商家备餐中(已接单), 8-已取消",

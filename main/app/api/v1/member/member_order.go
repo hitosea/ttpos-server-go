@@ -332,7 +332,7 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param member_sale_order_uuid query string true "会员端销售订单UUID"
-// @Success 200 {object} nil "成功"
+// @Success 200 {object} resp.MemberOrderCoordinates "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/rider [get]
 func (h *OrderHandler) GetRiderInfo(c *gin.Context) {
