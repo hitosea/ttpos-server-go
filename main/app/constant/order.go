@@ -215,8 +215,9 @@ const (
 
 // 退货单关联订单类型
 const (
-	ReturnOrderRelatedOrderTypeSaleOrder     = 0 //  销售订单
+	ReturnOrderRelatedOrderTypeSaleOrder     = 0 // 销售订单
 	ReturnOrderRelatedOrderTypeRechargeOrder = 1 // 充值订单
+	ReturnOrderRelatedOrderTypeMemberOrder   = 2 // 会员订单
 )
 
 // 退货单商品类型
