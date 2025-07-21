@@ -32,9 +32,9 @@ nacos:
     group: DEFAULT_GROUP
 
 app:
-  serviceUrl: $TAKEOUT_SERVICE_URL
-  erp:
-    serviceUrl: $ERP_SERVICE_URL
+  serviceUrl: $ERP_SERVICE_URL
+  erpnext:
+    serviceUrl: $NEXTERP_SERVICE_URL
 
 # 消息队列
 queue:
