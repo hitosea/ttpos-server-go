@@ -85,6 +85,15 @@ func (s *memberAddressSrv) AddAddress(ctx context.Context, req member_req.Member
 	copier.Copy(&memberAddress, req)
 	memberAddress.MemberUuid = ctx.GetMemberUuid()
 
+	// 如果国家代码为空，则根据手机号判断
+	if memberAddress.Country == "" {
+		if len(memberAddress.Phone) == 11 {
+			memberAddress.Country = "+86"
+		} else {
+			memberAddress.Country = "+66"
+		}
+	}
+
 	// 如果设置为默认地址，则需要将该会员的其他地址设置为非默认
 	if req.IsDefault == 1 {
 		// 开启事务
@@ -137,6 +146,15 @@ func (s *memberAddressSrv) UpdateAddress(ctx context.Context, req member_req.Mem
 	// 复制请求参数到会员地址
 	copier.Copy(&memberAddress, req)
 	memberAddress.MemberUuid = ctx.GetMemberUuid()
+
+	// 如果国家代码为空，则根据手机号判断
+	if memberAddress.Country == "" {
+		if len(memberAddress.Phone) == 11 {
+			memberAddress.Country = "+86"
+		} else {
+			memberAddress.Country = "+66"
+		}
+	}
 
 	// 如果设置为默认地址，则将该会员的其他地址设置为非默认
 	if req.IsDefault == 1 {

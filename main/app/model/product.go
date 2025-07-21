@@ -136,9 +136,10 @@ type ProductPackage struct {
 
 	ActualSaleNum float64 `gorm:"default:0.0000;column:actual_sale_num;comment:'实际销量。每次卖出时,实际销量增加'"`
 
-	SauceRequired     uint8 `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是'"`
-	SauceMaxSelection uint  `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
-	OpenDiscount      uint  `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
+	SauceRequired       uint8 `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是'"`
+	SauceMaxSelection   uint  `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
+	OpenDiscount        uint  `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
+	OpenOverallDiscount uint  `gorm:"default:1;column:open_overall_discount;comment:'是否开启整单折扣, 0-否 1-是'"`
 
 	MultiLanguageName             MultiLanguageName              `gorm:"foreignKey:multi_language_name_uuid;references:uuid"`  // 多语言名称
 	ProductUnit                   ProductUnit                    `gorm:"foreignKey:unit_uuid;references:uuid" json:"-"`        // 单位

@@ -37,7 +37,7 @@ func (h *MemberOrderHandler) GetMemberOrderList(c *gin.Context) {
 		helper.HandleValidationError(c, err, memberOrderListReq, nil)
 		return
 	}
-	res, err := h.memberOrderSrv.GetMemberOrderList(helper.GetContext(c), memberOrderListReq)
+	res, err := h.memberOrderSrv.GetMemberCashierOrderList(helper.GetContext(c), memberOrderListReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -61,12 +61,84 @@ func (h *MemberOrderHandler) GetMemberOrderDetail(c *gin.Context) {
 		helper.HandleValidationError(c, err, memberOrderDetailReq, nil)
 		return
 	}
-	res, err := h.memberOrderSrv.GetMemberOrderDetail(helper.GetContext(c), memberOrderDetailReq)
+	res, err := h.memberOrderSrv.GetMemberCashierOrderDetail(helper.GetContext(c), memberOrderDetailReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, res)
+}
+
+// AcceptOrder 接单
+// @Summary 接单
+// @Description 接单
+// @Tags 收银端.外送接单相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param AcceptOrderReq body req.AcceptOrderReq true "接受接单"
+// @Success 200 {object} dto.Response{data=resp.GetMemberOrderDetailResp}
+// @Router /cashier/member_order/accept [post]
+func (h *MemberOrderHandler) AcceptOrder(c *gin.Context) {
+	var acceptOrderReq req.AcceptOrderReq
+	if err := c.ShouldBindJSON(&acceptOrderReq); err != nil {
+		helper.HandleValidationError(c, err, acceptOrderReq, nil)
+		return
+	}
+	err := h.memberOrderSrv.AcceptMemberSaleOrder(helper.GetContext(c), acceptOrderReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
+// RejectOrder 拒单
+// @Summary 拒单
+// @Description 拒单
+// @Tags 收银端.外送接单相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param RejectOrderReq body req.RejectOrderReq true "拒绝接单"
+// @Success 200 {object} dto.Response{data=resp.GetMemberOrderDetailResp}
+// @Router /cashier/member_order/reject [post]
+func (h *MemberOrderHandler) RejectOrder(c *gin.Context) {
+	var rejectOrderReq req.RejectOrderReq
+	if err := c.ShouldBindJSON(&rejectOrderReq); err != nil {
+		helper.HandleValidationError(c, err, rejectOrderReq, nil)
+		return
+	}
+	err := h.memberOrderSrv.RejectMemberSaleOrder(helper.GetContext(c), rejectOrderReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
+// CookFinish 备餐完成
+// @Summary 备餐完成
+// @Description 备餐完成
+// @Tags 收银端.外送接单相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param CookFinishOrderReq body req.CookFinishOrderReq true "备餐完成"
+// @Success 200 {object} dto.Response{data=resp.GetMemberOrderDetailResp}
+// @Router /cashier/member_order/cook_finish [post]
+func (h *MemberOrderHandler) CookFinish(c *gin.Context) {
+	var cookFinishOrderReq req.CookFinishOrderReq
+	if err := c.ShouldBindJSON(&cookFinishOrderReq); err != nil {
+		helper.HandleValidationError(c, err, cookFinishOrderReq, nil)
+		return
+	}
+	err := h.memberOrderSrv.CookFinishMemberSaleOrder(helper.GetContext(c), cookFinishOrderReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
 }
 
 func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -93,5 +165,8 @@ func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, ca
 	{
 		privateApi.GET("/member_order/list", wrapper.GetMemberOrderList)     // 获取外送订单接单列表
 		privateApi.GET("/member_order/detail", wrapper.GetMemberOrderDetail) // 获取外送订单接单详情
+		privateApi.POST("/member_order/accept", wrapper.AcceptOrder)         // 接单
+		privateApi.POST("/member_order/reject", wrapper.RejectOrder)         // 拒单
+		privateApi.POST("/member_order/cook_finish", wrapper.CookFinish)     // 备餐完成
 	}
 }

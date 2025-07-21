@@ -8,6 +8,7 @@ const (
 	SourceKitchen   = "kitchen"   // 厨显端
 	SourceAssistant = "assistant" // 点餐助手
 	SourceH5        = "h5"        // H5
+	SourceRider     = "rider"     // 骑手端. skootar
 )
 
 var SourceTextMap = map[string]string{

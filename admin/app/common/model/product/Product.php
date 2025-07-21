@@ -20,7 +20,6 @@ use app\common\model\product\ProductSkuMaterial;
 use app\common\model\product\ProductFeedMaterial;
 use app\common\model\product\Material;
 use app\common\model\store\MultiLanguageName;
-use think\facade\Log;
 use think\model\concern\SoftDelete;
 
 /**
@@ -2067,6 +2066,51 @@ class Product extends BaseModel
             }
         }
         return true;
+    }
+
+    /**
+     * 批量修改整单折扣
+     * 
+     * 逻辑说明：
+     * 1. 将参数中的商品uuid列表（product_ids）对应的商品整单折扣(open_overall_discount)字段设置为0（关闭整单折扣）。
+     * 2. 将不在参数uuid列表中，并且整单折扣(open_overall_discount)字段为0的商品整单折扣(open_overall_discount)字段设置为1（开启整单折扣）。
+     * 3. 操作需使用模型事务，保证数据一致性。
+     * 4. 若未选择商品，返回错误。
+     */
+    public function batchUpdateOpenOverallDiscount($params)
+    {
+        $product_ids = $params['product_ids'] ?? [];
+        if (empty($product_ids)) {
+            $this->error = '请选择商品';
+            return false;
+        }
+
+        $productList = self::whereIn('uuid', $product_ids)->select();
+        if (empty($productList) || count($productList) != count($product_ids)) {
+            $this->error = '商品不存在';
+            return false;
+        }
+
+        // 开启事务，保证批量操作的原子性
+        Db::startTrans();
+        try {
+            // 1. 关闭选中商品的整单折扣（open_overall_discount=0）
+            $this->whereIn('uuid', $product_ids)
+                ->update(['open_overall_discount' => 0]);
+
+            // 2. 开启未选中商品的整单折扣（open_overall_discount=1）
+            $this->whereNotIn('uuid', $product_ids)
+                ->where('open_overall_discount', 0)
+                ->update(['open_overall_discount' => 1]);
+
+            // 提交事务
+            Db::commit();
+            return true;
+        } catch (\Exception $e) {
+            // 回滚事务
+            Db::rollback();
+            return false;
+        }
     }
 
     /**

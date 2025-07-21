@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"takeout/api"
+	"takeout/internal/model/input"
 	"takeout/internal/model/input/skootar"
 
 	"github.com/gogf/gf/v2/errors/gerror"
@@ -14,10 +15,10 @@ import (
 var trackingDriverApiPath = "/api/tracking_driver"
 
 // CreateOrder 创建订单
-func (s *sSkootar) GetDriverLocation(ctx context.Context, req *api.GetDriverLocationReq) (res *api.GetDriverLocationResp, err error) {
+func (s *sSkootar) GetDriverInfo(ctx context.Context, req *input.GetDriverInfoInp) (res *api.GetDriverInfoResp, err error) {
 	reqInp := &skootar.GetDriverLocationInp{
 		ReqBase:   s.ReqBase(),
-		SKootarId: req.OrderId, // TODO 根据订单ID 获取司机 skootar id
+		SKootarId: req.SKootarId,
 	}
 	resp := &skootar.GetDriverLocationOut{}
 	rr := g.Client().ContentJson().PostVar(ctx, s.GetUrl(trackingDriverApiPath), reqInp)
@@ -32,9 +33,13 @@ func (s *sSkootar) GetDriverLocation(ctx context.Context, req *api.GetDriverLoca
 	if resp.ResponseCode != "200" {
 		return nil, gerror.Newf("获取司机位置异常:%v", resp.ResponseDesc)
 	}
-	res = &api.GetDriverLocationResp{
-		Lat: float32(resp.Lat),
-		Lng: float32(resp.Lng),
+	res = &api.GetDriverInfoResp{
+		Lat:    float32(resp.Lat),
+		Lng:    float32(resp.Lng),
+		Name:   req.Name,
+		Phone:  req.Phone,
+		Avatar: req.Avatar,
+		Rating: float32(req.Rating),
 	}
 	if err = gconv.Struct(resp, res); err != nil {
 		return nil, gerror.Wrap(err, "获取司机位置")

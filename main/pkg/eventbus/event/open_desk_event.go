@@ -18,6 +18,9 @@ type BasePayload struct {
 	SaleOrderUuid uint64          `json:"-"`
 	H5OrderUuid   uint64          `json:"-"`
 	OperatorUuid  int64           `json:"-"` // -1 是系统平台； -2 是用户； 正数 是员工
+	// 会员端订单时，MemberSaleOrderUuid 是外送订单Uuid
+	MemberSaleOrderUuid uint64 `json:"-"`
+	MemberUuid          uint64 `json:"-"`
 }
 
 func (base BasePayload) GetOperatorUuid() uint64 {

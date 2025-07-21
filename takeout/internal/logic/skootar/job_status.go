@@ -96,7 +96,7 @@ func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq
 		//报文参考 `{"jobStatusAfter":"5","jobStatusBefore":"5","providerName":"skootar","shopRefNo":"8888777","takeoutRefNo":"J25070856667"}`
 		go func() {
 			callbackRes := &gclient.Response{}
-			if callbackRes, err = g.Client().ContentJson().Post(gctx.New(), job.CallbackUrl, g.Map{
+			if callbackRes, err = g.Client().SetHeader(consts.TTPOS_HEADER_CALLBACK_AUTH, s.getCallBackAuth(job.ShopRefNo)).ContentJson().Post(gctx.New(), job.CallbackUrl, g.Map{
 				"shopRefNo":       job.ShopRefNo,
 				"takeoutRefNo":    job.TakeoutRefNo,
 				"providerName":    job.ProviderName,

@@ -2152,4 +2152,5 @@ return [
     "是" => "Ja",
     "否" => "Nej",
     "外送账单" => "Leveransfaktura",
+    "经纬度格式错误" => "Ogiltigt format för latitud och longitud",
 ];

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 )
@@ -35,6 +36,11 @@ type LlPaymentOrder struct {
 func (model *LlPaymentOrder) GetAliveTime() int64 {
 	// 二维码有效期 微信(90111)-60分 支付宝(90222)-15分 promptPay(90333)-8分
 	if model.OrderType == "LIANLIAN_WECHAT" {
+		// h5支付
+		if strings.Contains(model.LinkUrl, "https://wx.tenpay.com") {
+			return 60 * 5
+		}
+		// 二维码支付
 		return 60 * 60
 	}
 	if model.OrderType == "LIANLIAN_ALI_OFFLINE_PAY" {

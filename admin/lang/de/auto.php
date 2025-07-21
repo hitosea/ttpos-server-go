@@ -2160,4 +2160,5 @@ return [
     "是" => "Ja",
     "否" => "Nein",
     "外送账单" => "Lieferrechnung",
+    "经纬度格式错误" => "Ungültiges Längen- und Breitengradformat",
 ];

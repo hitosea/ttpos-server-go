@@ -19,6 +19,7 @@ var Log LogConf
 var SMS SMSConf
 var GoogleBucket GoogleBucketConf
 var TakeOutRpcConf GrpcConf
+var Google GoogleConf
 
 func Init() error {
 	// 加载 .env 文件
@@ -31,15 +32,15 @@ func Init() error {
 
 	opt := copier.Option{IgnoreEmpty: true}
 
-	serverConf(opt)       // 服务器
-	databaseConf(opt)     // 数据库
-	redisConf(opt)        // Redis
-	jwtConf(opt)          // JWT
-	logConf(opt)          // 日志
-	smsConf(opt)          // 短信
-	googleBucketConf(opt) // 谷歌云
-	takeoutConf(opt)      // 外送grpc
-
+	serverConf(opt)          // 服务器
+	databaseConf(opt)        // 数据库
+	redisConf(opt)           // Redis
+	jwtConf(opt)             // JWT
+	logConf(opt)             // 日志
+	smsConf(opt)             // 短信
+	googleBucketConf(opt)    // 谷歌云
+	takeoutConf(opt)         // 外送grpc
+	googleConf(opt)          // 谷歌
 	migrateDatabaseConf(opt) // 迁移数据库
 
 	// 验证码
@@ -200,9 +201,20 @@ func googleBucketConf(opt copier.Option) {
 
 func takeoutConf(opt copier.Option) {
 	TakeOutRpcConf = GrpcConf{
-		Endpoint: "127.0.0.1:14032",
+		Endpoint:         "127.0.0.1:14032",
+		CallbackEndpoint: "http://127.0.0.1:8080",
 	}
 	copier.CopyWithOption(&TakeOutRpcConf, GrpcConf{
-		Endpoint: viper.GetString("TAKEOUT_ENDPOINT"),
+		Endpoint:         viper.GetString("TAKEOUT_ENDPOINT"),
+		CallbackEndpoint: viper.GetString("TAKEOUT_CALLBACK_ENDPOINT"),
+	}, opt)
+}
+
+func googleConf(opt copier.Option) {
+	Google = GoogleConf{
+		PlacesApiKey: "",
+	}
+	copier.CopyWithOption(&Google, GoogleConf{
+		PlacesApiKey: viper.GetString("GOOGLE_PLACES_API_KEY"),
 	}, opt)
 }

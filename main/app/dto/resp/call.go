@@ -31,11 +31,11 @@ type AbnormalPrintList struct {
 }
 
 type UnprocessedResp struct {
-	UnprocessedCallCount     int64 `json:"unprocessed_call_count"`         // 未处理呼叫数量
-	AbnormalPrintCount       int64 `json:"abnormal_print_count"`           // 异常打印数量
-	UnprocessedH5OrderCount  int64 `json:"unprocessed_h5_order_count"`     // 未处理的h5订单数量
-	UnprocessedDeliveryCount int64 `json:"unprocessed_member_order_count"` // 未处理的外送订单数量
-	UpdateTime               int64 `json:"update_time"`                    // 更新时间
+	UnprocessedCallCount        int64 `json:"unprocessed_call_count"`         // 未处理呼叫数量
+	AbnormalPrintCount          int64 `json:"abnormal_print_count"`           // 异常打印数量
+	UnprocessedH5OrderCount     int64 `json:"unprocessed_h5_order_count"`     // 未处理的h5订单数量
+	UnprocessedMemberOrderCount int64 `json:"unprocessed_member_order_count"` // 未处理的外送订单数量
+	UpdateTime                  int64 `json:"update_time"`                    // 更新时间
 }
 
 type UnprocessedCallItemForNotice struct {

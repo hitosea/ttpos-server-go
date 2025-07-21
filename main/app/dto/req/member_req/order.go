@@ -26,3 +26,28 @@ type PayMemberOrderReq struct {
 type PaidMemberOrderReq struct {
 	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 }
+
+// GetMemberOrderPayInfoReq 获取支付信息
+type GetMemberOrderPayInfoReq struct {
+	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+	PaymentMethodUuid   uint64 `form:"payment_method_uuid"`                       // 支付方式UUID - 如果为0，则使用订单的支付方式, 否则使用指定的支付方式
+}
+
+// GetMemberOrderPayStatusReq 获取支付状态
+type GetMemberOrderPayStatusReq struct {
+	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+}
+
+type CallbackReq struct {
+	JobStatusAfter  string `json:"jobStatusAfter"`  // 变化后的状态，即当前状态。 枚举请查看”skootar 订单状态“
+	JobStatusBefore string `json:"jobStatusBefore"` // 变化前的状态。 枚举请查看”skootar 订单状态“
+	ProviderName    string `json:"providerName"`    // 外送渠道名称。如：skootar。 枚举请查看”外送渠道方“
+	ShopRefNo       string `json:"shopRefNo"`       // 订单号。即member_sale_order_uuid
+	TakeoutRefNo    string `json:"takeoutRefNo"`    // 外送渠道订单号。如skootar的order_id
+}
+
+// CancelOrderReq 取消订单
+type CancelOrderReq struct {
+	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+	CancelReason        string `form:"cancel_reason"`                             // 取消原因
+}

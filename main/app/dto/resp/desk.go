@@ -145,6 +145,10 @@ type MemberSaleOrderInfo struct {
 	DeliveryFee         MemberSaleOrderDeliveryFee `json:"delivery_fee"`           // 配送费信息
 	PaymentMethods      PaymentMethodList          `json:"payment_methods"`        // 支付方式列表。只显示lianlianpay的微信支付、支付宝支付、QRPromptPay支付
 	IsVerifiedPhone     bool                       `json:"is_verified_phone"`      // 订单是否已经验证手机号
+
+	// 内部使用，用于记录操作日志
+	SaleBillUuid  uint64 `json:"-"` // 销售账单UUID
+	SaleOrderUuid uint64 `json:"-"` // 销售订单UUID
 }
 
 type MemberSaleOrderProductList struct {
@@ -158,18 +162,19 @@ type MemberSaleOrderProduct struct {
 	LocaleAttributeName  dto.LocaleResponse `json:"locale_attribute_name"`   // 商品属性
 	Num                  float64            `json:"num"`                     // 数量
 	UnitPrice            float64            `json:"unit_price"`              // 单价（折前）,含税费
+	Amount               float64            `json:"amount"`                  // 商品金额（折前）。商品金额=（商品规格价 + 商品小料A价格 + 商品小料B价格）*数量。商品规格价=商品规格原价*会员端折扣率。 商品小料价格=商品小料原价*会员端折扣率。 会员折扣率是指商品在会员端价格上浮比例，一般比堂食贵
 }
 
 // 会员端销售订单地址
 type MemberSaleOrderAddress struct {
-	MemberAddressUuid uint64  `json:"member_address_uuid"` // 会员地址UUID
-	Longitude         float64 `json:"longitude"`           // 经度
-	Latitude          float64 `json:"latitude"`            // 纬度
-	Address           string  `json:"address"`             // 地址
-	DetailAddress     string  `json:"detail_address"`      // 详细地址。如门牌号
-	ContactName       string  `json:"contact_name"`        // 联系人
-	ContactPhone      string  `json:"contact_phone"`       // 联系电话
-	ContactGender     int     `json:"contact_gender"`      // 联系人性别, 0-女士 1-先生
+	MemberAddressUuid uint64 `json:"member_address_uuid"` // 会员地址UUID
+	Longitude         string `json:"longitude"`           // 经度
+	Latitude          string `json:"latitude"`            // 纬度
+	Address           string `json:"address"`             // 地址
+	DetailAddress     string `json:"detail_address"`      // 详细地址。如门牌号
+	ContactName       string `json:"contact_name"`        // 联系人
+	ContactPhone      string `json:"contact_phone"`       // 联系电话
+	ContactGender     int    `json:"contact_gender"`      // 联系人性别, 0-女士 1-先生
 }
 
 // 会员端销售订单配送费信息

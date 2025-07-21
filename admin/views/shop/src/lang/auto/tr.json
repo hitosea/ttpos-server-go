@@ -1827,5 +1827,19 @@
     "收银机SN：": "Kasa SN:",
     "打印机SN：": "Yazıcı SN:",
     "收银机SN": "Kasa Makinesi SN",
-    "请输入收银机SN": "Lütfen Kasa Makinesi SN giriniz"
+    "请输入收银机SN": "Lütfen Kasa Makinesi SN giriniz",
+    "确认要关闭整单折扣吗?": "Tüm sipariş indiriminin kapatılmasını onaylıyor musunuz?",
+    "确认要开启整单折扣吗?": "Tüm sipariş indirimini açmak istediğinizden emin misiniz?",
+    "经纬度": "Enlem ve boylam",
+    "外送序号：": "Teslimat Numarası:",
+    "订单状态：": "Sipariş Durumu:",
+    "会员折扣：": "Üye İndirimi:",
+    "订单时间：": "Sipariş Zamanı:",
+    "选购中": "Seçiliyor",
+    "待商家接单": "Satıcının siparişi kabul etmesi bekleniyor",
+    "商家备餐中": "Satıcı yemeği hazırlıyor",
+    "待骑手接单": "Kuryenin siparişi alması bekleniyor",
+    "骑手正在赶往商家": "Kurye satıcıya gidiyor",
+    "骑手配送中": "Kurye teslimat yapıyor",
+    "待接单": "Sipariş Bekleniyor"
 }

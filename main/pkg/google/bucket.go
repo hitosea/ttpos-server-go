@@ -1,4 +1,4 @@
-package google_bucket
+package google
 
 import (
 	"context"

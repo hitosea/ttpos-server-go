@@ -31,15 +31,16 @@ func payFinishMemberSaleOrderEventHandler() {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 			record := model.SaleOrderOperationRecord{
-				Source:        payload.Source,
-				Action:        constant.OrderPayFinishMemberSaleOrder,
-				Remark:        "订单支付成功",
-				SaleBillUuid:  payload.SaleBillUuid,
-				SaleOrderUuid: payload.SaleOrderUuid,
-				OperatorUuid:  payload.GetOperatorUuid(),
+				Source:              payload.Source,
+				Action:              constant.OrderPayFinishMemberSaleOrder,
+				Remark:              "订单支付成功",
+				SaleBillUuid:        payload.SaleBillUuid,
+				SaleOrderUuid:       payload.SaleOrderUuid,
+				OperatorUuid:        payload.GetOperatorUuid(),
+				MemberUuid:          payload.MemberUuid,
+				MemberSaleOrderUuid: payload.MemberSaleOrderUuid,
 			}
 			record.Data = payload.ToJsonString()
-			record.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
 			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
 				logger.Logger.Error("SubscribePayFinishMemberSaleOrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))

@@ -2152,4 +2152,5 @@ return [
     "是" => "Yes",
     "否" => "No",
     "外送账单" => "Delivery Bill",
+    "经纬度格式错误" => "Invalid latitude and longitude format",
 ];

@@ -163,6 +163,9 @@ type SaleBillSetting struct {
 	OpenPointsExchange uint    `gorm:"column:open_points_exchange;type:tinyint(1);default:0;comment:是否开启积分抵扣, 0-不开启 1-开启" json:"open_points_exchange"`
 	PointsExchangeRate float64 `gorm:"column:points_exchange_rate;type:decimal(12,2);default:0;comment:积分汇率，每积分抵扣的金额，可输入大于0的两位小数" json:"points_exchange_rate"`
 	AutoPointsExchange uint    `gorm:"column:auto_points_exchange;type:tinyint(1);default:0;comment:积分抵扣类型,0-手动抵扣 1-自动抵扣" json:"auto_points_exchange"`
+
+	// 会员端商品价格上浮比例
+	MemberOrderDiscountRate float64 `gorm:"column:member_order_discount_rate;type:decimal(12,2);default:1;comment:会员端商品价格上浮比例" json:"member_order_discount_rate"`
 }
 
 // 积分是否开启自动抵扣

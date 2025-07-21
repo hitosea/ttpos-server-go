@@ -49,6 +49,7 @@ class Setting extends SettingModel
                 'timezone' => $values['time_zone'] ?? '',
                 'link_phone' => $values['phone'] ?? '',
                 'address' => $values['address'] ?? '',
+                'coordinates' => $values['coordinates'] ?? '',
                 'chain_number' => $values['chain_number'] ?? '',
                 'tax_number' => $values['tax_number'] ?? '',
             ];

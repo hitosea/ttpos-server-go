@@ -20,15 +20,29 @@ type IMemberSaleOrderRepo interface {
 
 type IQueryMemberSaleOrderRepo interface {
 	GetMemberSaleOrder(opts ...DBOption) (*model.MemberSaleOrder, error)                                                                                             // 获取会员端销售订单
-	GetMemberSaleOrderRecord(uuid uint64) (*model.MemberSaleOrder, error)                                                                                            // 获取会员端销售订单记录
+	GetMemberSaleOrderRecord(uuid uint64, opts ...DBOption) (*model.MemberSaleOrder, error)                                                                          // 获取会员端销售订单记录
+	GetMemberSaleOrderRecordOnly(uuid uint64) (*model.MemberSaleOrder, error)                                                                                        // 获取会员端销售订单记录，不包含关联数据
 	PaginateGetMemberSaleOrder(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)                                                       // 分页获取会员端销售订单
 	GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error)                                                   // 获取收银台"外送"订单列表
 	GetCashierMemberSaleOrderManageList(pageNo, pageSize int, statusList []uint, req GetCashierMemberSaleOrderManageListReq) ([]model.MemberSaleOrder, int64, error) // 获取收银台"外送"订单管理列表
+	UpdateMemberSaleOrderAccept(memberSaleOrder model.MemberSaleOrder) error                                                                                         // 更新会员端销售订单-接单
+	UpdateMemberSaleOrderReject(memberSaleOrder model.MemberSaleOrder) error                                                                                         // 更新会员端销售订单-拒单
+	UpdateMemberSaleOrderCookFinish(memberSaleOrder model.MemberSaleOrder) error                                                                                     // 更新会员端销售订单-备餐完成
+	UpdateDeliveryDistance(memberSaleOrderUuid uint64, distance float64) error                                                                                       // 更新会员端销售订单的配送距离
+	UpdateMemberSaleOrder(memberSaleOrder model.MemberSaleOrder) error                                                                                               // 更新会员端销售订单
+	UpdateMemberSaleOrderRiderAccept(memberSaleOrder model.MemberSaleOrder) error                                                                                    // 更新会员端销售订单-骑手接单
+	UpdateMemberSaleOrderRiderDelivery(memberSaleOrder model.MemberSaleOrder) error                                                                                  // 更新会员端销售订单-骑手配送中
+	UpdateMemberSaleOrderRiderCompleted(memberSaleOrder model.MemberSaleOrder) error                                                                                 // 更新会员端销售订单-骑手配送完成
+	UpdateMemberSaleOrderProviderInfo(memberSaleOrder model.MemberSaleOrder) error                                                                                   // 更新会员端销售订单-配送 provider 信息
+	UpdateMemberSaleOrderAddress(memberSaleOrder model.MemberSaleOrder) error                                                                                        // 更新会员端销售订单-配送地址
 
 	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
 	WhereStatusIn(status []uint) DBOption
+	WhereNotStatusIn(status []uint) DBOption
 	WhereUpdateTimeGt(ts int64) DBOption
 	GetOrderCount(opts ...DBOption) (int64, error)
+
+	WithSaleBillSaleOrderProduct(preloads ...WithPreload) DBOption
 }
 
 func NewMemberSaleOrderRepo(db *gorm.DB) IMemberSaleOrderRepo {
@@ -58,7 +72,7 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrder(opts ...DBOption) (*model.Membe
 	return &memberSaleOrder, nil
 }
 
-func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecord(uuid uint64) (*model.MemberSaleOrder, error) {
+func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecord(uuid uint64, opts ...DBOption) (*model.MemberSaleOrder, error) {
 	memberSaleOrder, err := r.GetMemberSaleOrder(
 		CommonRepo.WhereByUuid(uuid),
 		CommonRepo.WhereBySoftDelete(),
@@ -69,12 +83,39 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecord(uuid uint64) (*model.Memb
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 				},
 			},
+			WithPreload{
+				Query: "PaymentMethod",
+				Args: []any{
+					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+				},
+			},
+			WithPreload{
+				Query: "Address",
+			},
+			WithPreload{
+				Query: "Member",
+			},
+			WithPreload{
+				Query: "SaleBill.SaleOrders",
+			},
 		),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
 	return memberSaleOrder, nil
+}
+
+// GetMemberSaleOrderRecordOnly 获取会员端销售订单记录，不包含关联数据
+func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecordOnly(uuid uint64) (*model.MemberSaleOrder, error) {
+	var memberSaleOrder model.MemberSaleOrder
+	db := r.db.Model(&model.MemberSaleOrder{})
+
+	err := db.Where("uuid = ?", uuid).First(&memberSaleOrder).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &memberSaleOrder, nil
 }
 
 func (r *MemberSaleOrderRepo) CreateMemberSaleOrder(memberSaleOrder model.MemberSaleOrder) error {
@@ -231,7 +272,16 @@ func (r *MemberSaleOrderRepo) PaginateGet(pageNo, pageSize int, opts ...DBOption
 
 func (r *MemberSaleOrderRepo) WhereStatusIn(status []uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
+		if len(status) == 0 {
+			return db
+		}
 		return db.Where("status IN (?)", status)
+	}
+}
+
+func (r *MemberSaleOrderRepo) WhereNotStatusIn(status []uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("status NOT IN (?)", status)
 	}
 }
 
@@ -252,4 +302,139 @@ func (r *MemberSaleOrderRepo) GetOrderCount(opts ...DBOption) (int64, error) {
 		return 0, errors.WithMessage(err)
 	}
 	return total, nil
+}
+
+// UpdateMemberSaleOrderReject 更新会员端销售订单-拒单
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderReject(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		Status:       memberSaleOrder.Status,
+		CancelScene:  memberSaleOrder.CancelScene,
+		CancelTime:   memberSaleOrder.CancelTime,
+		CancelReason: memberSaleOrder.CancelReason,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderAccept 更新会员端销售订单-接单
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderAccept(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		Status:     memberSaleOrder.Status,
+		AcceptTime: memberSaleOrder.AcceptTime,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderCookFinish 更新会员端销售订单-备餐完成
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderCookFinish(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		Status:   memberSaleOrder.Status,
+		CookTime: memberSaleOrder.CookTime,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateDeliveryDistance 更新会员端销售订单的配送距离
+func (r *MemberSaleOrderRepo) UpdateDeliveryDistance(memberSaleOrderUuid uint64, distance float64) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrderUuid).Updates(model.MemberSaleOrder{
+		DeliveryDistance: distance,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrder 更新会员端销售订单
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrder(memberSaleOrder model.MemberSaleOrder) error {
+	memberSaleOrder.SetNil()
+	err := r.db.Model(&model.MemberSaleOrder{}).Select("*").Where("uuid = ?", memberSaleOrder.Uuid).Updates(memberSaleOrder).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderRiderAccept 更新会员端销售订单-骑手接单
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderAccept(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		Status:          memberSaleOrder.Status,
+		RiderAcceptTime: memberSaleOrder.RiderAcceptTime,
+		RiderName:       memberSaleOrder.RiderName,
+		RiderPhone:      memberSaleOrder.RiderPhone,
+		Location:        memberSaleOrder.Location,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderRiderDelivery 更新会员端销售订单-骑手配送中
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderDelivery(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		Status:         memberSaleOrder.Status,
+		RiderStartTime: memberSaleOrder.RiderStartTime,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderRiderCompleted 更新会员端销售订单-骑手配送完成
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderCompleted(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		Status:     memberSaleOrder.Status,
+		FinishTime: memberSaleOrder.FinishTime,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderProviderInfo 更新会员端销售订单-配送 provider 信息
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderProviderInfo(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		RelatedOrderType: memberSaleOrder.RelatedOrderType,
+		RelatedOrderNo:   memberSaleOrder.RelatedOrderNo,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderAddress 更新会员端销售订单-配送地址
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderAddress(memberSaleOrder model.MemberSaleOrder) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		MemberAddressUuid:    memberSaleOrder.MemberAddressUuid,
+		ContactLocation:      memberSaleOrder.ContactLocation,
+		ContactAddress:       memberSaleOrder.ContactAddress,
+		ContactAddressDetail: memberSaleOrder.ContactAddressDetail,
+		ContactName:          memberSaleOrder.ContactName,
+		ContactPhone:         memberSaleOrder.ContactPhone,
+		ContactPhonePrefix:   memberSaleOrder.ContactPhonePrefix,
+		ContactGender:        memberSaleOrder.ContactGender,
+	}).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+func (r *MemberSaleOrderRepo) WithSaleBillSaleOrderProduct(preloads ...WithPreload) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("SaleBill.SaleOrders.SaleOrderProducts.ImageFile").
+			Preload("SaleBill.SaleOrders.SaleOrderProducts.MultiLanguageName")
+	}
 }

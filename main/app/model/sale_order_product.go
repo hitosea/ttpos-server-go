@@ -46,11 +46,12 @@ type SaleOrderProduct struct {
 	OriginTotalPrice float64 `gorm:"column:origin_total_price;type:decimal(12,2);not null;default:0.00;comment:'应收金额(单商品)。商品已含税时，应收金额(单商品)=(销售价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=销售价+服务费+总税费'" json:"origin_total_price"`
 
 	// 折扣相关字段
-	ChangePriceTime        int64   `gorm:"column:change_price_time;type:int(10);not null;default:0;comment:'改价时间(时间戳),用于判断是否改价和不同时间改价的商品不合并'" json:"change_price_time"`
-	OpenMemberDiscount     uint    `gorm:"column:open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"open_member_discount"`              // 快照设置相关，不受后台改变，结账时检查
-	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`            // 与sale_order的member_discount_rate一致
-	MemberCardDiscountRate float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员卡折扣率(0-100%)'" json:"member_card_discount_rate"` // 与sale_order的member_card_discount_rate一致
-	CustomDiscountRate     float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'自定义折扣率(0-100%)'" json:"custom_discount_rate"`           // 与sale_order的custom_discount_rate一致
+	ChangePriceTime         int64   `gorm:"column:change_price_time;type:int(10);not null;default:0;comment:'改价时间(时间戳),用于判断是否改价和不同时间改价的商品不合并'" json:"change_price_time"`
+	OpenMemberDiscount      uint    `gorm:"column:open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"open_member_discount"`                 // 快照设置相关，不受后台改变，结账时检查
+	MemberDiscountRate      float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`               // 与sale_order的member_discount_rate一致
+	MemberCardDiscountRate  float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员卡折扣率(0-100%)'" json:"member_card_discount_rate"`    // 与sale_order的member_card_discount_rate一致
+	MemberOrderDiscountRate float64 `gorm:"column:member_order_discount_rate;type:decimal(12,2);not null;default:1.00;comment:'会员订单折扣率(1-300%)'" json:"member_order_discount_rate"` // 用于上浮会员端上的商品价格
+	CustomDiscountRate      float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'自定义折扣率(0-100%)'" json:"custom_discount_rate"`              // 与sale_order的custom_discount_rate一致
 
 	// 折扣金额字段
 	DiscountFee       float64 `gorm:"column:discount_fee;type:decimal(12,2);not null;default:0.00;comment:'打折金额（单商品）=销售价-最终单价。校验：打折金额=会员折扣金额+自定义折扣金额'" json:"discount_fee"`
@@ -138,6 +139,40 @@ func (model *SaleOrderProduct) GetMemberDiscountRate() float64 {
 		return constant.NoDiscount
 	}
 	return model.MemberDiscountRate
+}
+
+// 获取商品在会员端显示的价格（折前）单个商品的价格
+// 会员端显示的价格= 商品规格价*会员端折扣率 + 小料A*会员端折扣率 + 小料B*会员端折扣率 + ...
+// （商品规格价=商品规格原价*会员端折扣率）=》 转换为商品未含税价格。  商品未含税价格*税率=税费 。 （商品未含税价格+税费）
+// 如果规格价已含税，计算
+func (model *SaleOrderProduct) GetPriceInMemberClient() float64 {
+	saucePrices := make([]float64, 0) // 该销售订单商品的各个小料原始价格
+	flavorPrice := model.FlavorPrice  // 该销售订单商品的规格原始价格
+	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsDelete() {
+			continue
+		}
+		if bom.ProductBom.IsSauce() {
+			saucePrices = append(saucePrices, bom.ProductBom.Price)
+		}
+	}
+	// 上浮后的价格
+	flavorPrice = decimal.NewFromFloat(flavorPrice).Mul(decimal.NewFromFloat(model.MemberOrderDiscountRate)).Round(2).InexactFloat64()
+	// 上浮后的小料价格
+	for i, saucePrice := range saucePrices {
+		saucePrices[i] = decimal.NewFromFloat(saucePrice).Mul(decimal.NewFromFloat(model.MemberOrderDiscountRate)).Round(2).InexactFloat64()
+	}
+	// 上浮后的小料价格总和
+	var saucePriceTotal float64
+	for _, saucePrice := range saucePrices {
+		saucePriceTotal += saucePrice
+	}
+	return decimal.NewFromFloat(flavorPrice).Add(decimal.NewFromFloat(saucePriceTotal)).Round(2).InexactFloat64()
+}
+
+// 获取商品在会员端显示的价格（折前）
+func (model *SaleOrderProduct) GetTotalPriceInMemberClient() float64 {
+	return decimal.NewFromFloat(model.GetPriceInMemberClient()).Mul(model.GetNumDecimal()).Round(2).InexactFloat64()
 }
 
 // 获取销售订单商品的总税费。包含服务费税费

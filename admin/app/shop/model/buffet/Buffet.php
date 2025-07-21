@@ -86,6 +86,7 @@ class Buffet extends BuffetModel
         $data['is_remain_continue'] = $data['is_remain_continue'] ?? 0; // 平板是否可继续点餐开关 0-关闭 1-开启
         $data['remain_continue_time'] = $data['remain_continue_time'] ?? 20; // 剩余xx分不可继续点餐
         $data['remain_continue_notice_time'] = $data['remain_continue_notice_time'] ?? 5; // 剩余xx分提醒不可继续点餐
+        $data['open_overall_discount'] = $data['open_overall_discount'] ?? 1; // 是否开启整单折扣 0-否 1-是
         $shop_supplier_id = $data['shop_supplier_id'] ?? 0; // 供应商id
 
         if (ValidateHelp::hasEmptyValue($data['name'])) {
@@ -233,6 +234,7 @@ class Buffet extends BuffetModel
         $data['is_remain_continue'] = $data['is_remain_continue'] ?? 0; // 平板是否可继续点餐开关 0-关闭 1-开启
         $data['remain_continue_time'] = $data['remain_continue_time'] ?? 0; // 剩余xx分不可继续点餐
         $data['remain_continue_notice_time'] = $data['remain_continue_notice_time'] ?? 0; // 剩余xx分提醒不可继续点餐
+        $data['open_overall_discount'] = $data['open_overall_discount'] ?? 1; // 是否开启整单折扣 0-否 1-是
 
         if (ValidateHelp::hasEmptyValue($data['name'])) {
             $this->error = '请输入自助餐名称';
@@ -431,6 +433,14 @@ class Buffet extends BuffetModel
     public function setStatus($state)
     {
         return $this->save(['status' => (int)$state]);
+    }
+
+    /**
+     * 设置自助餐状态
+     */
+    public function setOverallDiscount($open_overall_discount)
+    {
+        return $this->save(['open_overall_discount' => (int)$open_overall_discount]);
     }
 
     /**

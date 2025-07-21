@@ -692,15 +692,14 @@ class Order extends BaseModelOrder
             'free_order_price' => $data['total_free_order_price'],
             'free_order_num' => $data['total_free_order_num'],
             'recharge_amount' => $data['member_data']['recharge_amount'],
-            // TODO 外送数据来源
-            'delivery_order_amount' => 0, // 外送订单总额
-            'delivery_order_revenue' => 0, // 外送营收
-            'delivery_order_refund_amount' => 0, // 外送订单退款
-            'delivery_fee' => 0, // 配送费
-            'delivery_order_num' => 0, // 外送订单数
-            'delivery_min_order_price' => 0, // 外送最小金额
-            'delivery_max_order_price' => 0, // 外送最大金额
-            'delivery_avg_order_price' => 0, // 外送平均订单金额
+            'delivery_order_amount' => $data['total_takeout_sale_amount'], // 外送订单总额
+            'delivery_order_revenue' => $data['total_takeout_business_amount'], // 外送营收
+            'delivery_order_refund_amount' => $data['total_takeout_refund_amount'], // 外送订单退款
+            'delivery_fee' => $data['total_takeout_delivery_fee'], // 配送费
+            'delivery_order_num' => $data['all_takeout_order_num'], // 外送订单数
+            'delivery_min_order_price' => $data['all_takeout_min_order_price'], // 外送最小金额
+            'delivery_max_order_price' => $data['all_takeout_max_order_price'], // 外送最大金额
+            'delivery_avg_order_price' => $data['all_takeout_avg_order_price'], // 外送平均订单金额
             'total_order_num' => $data['total_order_num'],
             'min_order_price' => $data['min_order_price'],
             'max_order_price' => $data['max_order_price'],

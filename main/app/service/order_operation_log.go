@@ -305,6 +305,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language string) string {
 
 	actionTextMap := map[string]string{
+		// 用餐订单 操作
 		constant.OrderOpenTable:           i18n.Translate(language, "开台"),
 		constant.OrderSendKitchen:         i18n.Translate(language, "送厨"),
 		constant.OrderRefundProduct:       i18n.Translate(language, "退菜"),
@@ -334,6 +335,15 @@ func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language st
 		constant.OrderCheckoutDiscount:    i18n.Translate(language, "结账手动抹零"),
 		constant.OrderSplitOrder:          i18n.Translate(language, "拆单"),
 		constant.OrderCancelSplitOrder:    i18n.Translate(language, "撤销拆单"),
+		// 外送订单 操作
+		constant.OrderCreateMemberSaleOrder:    i18n.Translate(language, "创建订单"),
+		constant.OrderPayFinishMemberSaleOrder: i18n.Translate(language, "订单支付成功"),
+		constant.OrderCancelMemberSaleOrder:    i18n.Translate(language, "订单取消"),
+		constant.OrderAcceptMemberSaleOrder:    i18n.Translate(language, "商家接单"),
+		constant.OrderPickMemberSaleOrder:      i18n.Translate(language, "出餐完成,呼叫骑手"),
+		constant.OrderPickUpMemberSaleOrder:    i18n.Translate(language, "骑手已接单，正在赶往商家"),
+		constant.OrderDeliveryMemberSaleOrder:  i18n.Translate(language, "骑手取货完成，开始配送"),
+		constant.OrderFinishMemberSaleOrder:    i18n.Translate(language, "配送完成，订单完成"),
 	}
 
 	var text, prefix string

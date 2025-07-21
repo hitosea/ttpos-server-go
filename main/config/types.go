@@ -2,6 +2,10 @@ package config
 
 import "fmt"
 
+type GoogleConf struct {
+	PlacesApiKey string // 谷歌地图搜索API密钥
+}
+
 type ServerConf struct {
 	Port       string // 端口
 	Mode       string // 模式：debug/release/test
@@ -83,8 +87,9 @@ type GoogleBucketConf struct {
 }
 
 type GrpcConf struct {
-	Endpoint string
-	Service  string
+	Endpoint         string
+	CallbackEndpoint string // 外定订单状态变更回调地址，用于通知ttpos订单状态变更
+	Service          string
 }
 
 func (c *GoogleBucketConf) Verification() bool {

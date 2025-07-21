@@ -39,6 +39,7 @@ class App extends AppModel
      * @Apidoc\AddField("kitchen_limit",type="int",default="0",desc="厨显上限")
      * @Apidoc\AddField("tablet_limit",type="int",default="0",desc="平板上限")
      * @Apidoc\AddField("address",type="int",default="0",desc="联系地址")
+     * @Apidoc\AddField("coordinates",type="string",default="",desc="经纬度，如：13.721899,100.52900")
      * @Apidoc\AddField("store_type",type="int",default="0",desc="店铺类型10加盟20自营")
      * @Apidoc\AddField("category_set",type="int",default="0",desc="商品分类设置10同步 主店20分店创建")
      */
@@ -87,6 +88,7 @@ class App extends AppModel
             "su.timezone",
             "su.enable_sms",
             "su.sms_quota",
+            "su.coordinates",
         ];
         //
         $countWhere = 'where 1 = 1';

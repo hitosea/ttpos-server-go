@@ -90,38 +90,6 @@ func (h *OrderHandler) SetOrderAddress(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// VerifyPhone 验证手机号
-// @Summary 验证手机号
-// @Description 验证手机号
-// @Tags 会员端-订单
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Param data body member_req.VerifyPhoneReq true "详情参数"
-// @Success 200 {object} resp.CreateMemberOrderResp "成功"
-// @Failure 400 {object} nil "错误请求"
-// @Router /member/order/phone/verify [post]
-func (h *OrderHandler) VerifyPhone(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	// 绑定请求参数
-	params := member_req.VerifyPhoneReq{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.HandleValidationError(c, err, params, nil)
-		return
-	}
-	ctx.Log().Debug("验证手机号", zap.Any("params", params))
-
-	// 验证手机号
-	res, err := h.orderSrv.VerifyPhone(ctx, params)
-	// 处理错误
-	if err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	// 返回结果
-	helper.Success(c, res)
-}
-
 // PayOrder 提交支付
 // @Summary 提交支付
 // @Description 提交支付
@@ -144,12 +112,71 @@ func (h *OrderHandler) PayOrder(c *gin.Context) {
 	ctx.Log().Debug("提交支付", zap.Any("params", params))
 
 	// 提交支付
-	if err := h.orderSrv.PayMemberOrder(ctx, params); err != nil {
+	err := h.orderSrv.PayMemberOrder(ctx, params)
+	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	// 返回结果
-	helper.Success(c, nil)
+	helper.Success(c, gin.H{})
+}
+
+// PayOrderStatus 获取支付信息
+// @Summary 获取支付信息
+// @Description 获取支付信息
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param member_sale_order_uuid query string true "会员端销售订单UUID"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/pay/info [get]
+func (h *OrderHandler) PayOrderInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := member_req.GetMemberOrderPayInfoReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取支付信息
+	res, err := h.orderSrv.GetMemberOrderPayInfo(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// PayOrderStatus 获取支付状态
+// @Summary 获取支付状态
+// @Description 获取支付状态
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param member_sale_order_uuid query string true "会员端销售订单UUID"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/pay/status [get]
+func (h *OrderHandler) PayOrderStatus(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := member_req.GetMemberOrderPayStatusReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取支付信息
+	res, err := h.orderSrv.GetMemberOrderPayStatus(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
 }
 
 // PaidOrder 支付成功
@@ -182,6 +209,122 @@ func (h *OrderHandler) PaidOrder(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// GetMemberOrderList 获取会员端订单列表
+// @Summary 获取会员端订单列表
+// @Description 获取会员端订单列表
+// @Tags 会员端-订单列表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.MemberOrderListReq true "详情参数"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/list [get]
+func (h *OrderHandler) GetMemberOrderList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.MemberOrderListReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取会员端订单列表
+	res, err := h.orderSrv.GetMemberOrderList(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// GetMemberOrderDetail 获取会员端订单详情
+// @Summary 获取会员端订单详情
+// @Description 获取会员端订单详情
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param member_sale_order_uuid query string true "会员端销售订单UUID"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/detail [get]
+func (h *OrderHandler) GetMemberOrderDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.GetMemberOrderDetailReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取会员端订单详情
+	res, err := h.orderSrv.GetMemberOrderDetail(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// GetMemberOrderPaymentMethodList 获取会员端订单支付方式列表
+// @Summary 获取会员端订单支付方式列表
+// @Description 获取会员端订单支付方式列表
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param member_sale_order_uuid query string true "会员端销售订单UUID"
+// @Success 200 {object} resp.GetMemberOrderPaymentMethodListResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/payment/method/list [get]
+func (h *OrderHandler) GetMemberOrderPaymentMethodList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.GetMemberOrderDetailReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 获取会员端订单支付方式列表
+	res, err := h.orderSrv.GetMemberOrderPaymentMethodList(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// CancelOrder 取消订单
+// @Summary 取消订单
+// @Description 取消订单
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param member_sale_order_uuid query string true "会员端销售订单UUID"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/cancel [post]
+func (h *OrderHandler) CancelOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := member_req.CancelOrderReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("取消订单", zap.Any("params", params))
+
+	// 取消订单
+	err := h.orderSrv.MemberOrderCancel(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -201,10 +344,15 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// privateApi := router.Group("")
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
-		privateApi.POST("/order/create", wrapper.CreateOrder)       // 创建订单
-		privateApi.POST("/order/address", wrapper.SetOrderAddress)  // 设置订单地址
-		privateApi.POST("/order/phone/verify", wrapper.VerifyPhone) // 验证手机号
-		privateApi.POST("/order/pay", wrapper.PayOrder)             // 提交支付
-		privateApi.POST("/xie-test/order/paid", wrapper.PaidOrder)  // 支付成功 TODO 上线前删除改接口
+		privateApi.POST("/order/create", wrapper.CreateOrder)                                 // 创建订单
+		privateApi.POST("/order/address", wrapper.SetOrderAddress)                            // 设置订单地址
+		privateApi.POST("/order/pay", wrapper.PayOrder)                                       // 提交支付
+		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)                               // 获取支付信息
+		privateApi.GET("/order/pay/status", wrapper.PayOrderStatus)                           // 获取支付状态
+		privateApi.GET("/order/list", wrapper.GetMemberOrderList)                             // 获取会员端订单列表
+		privateApi.GET("/order/detail", wrapper.GetMemberOrderDetail)                         // 获取会员端订单详情
+		privateApi.GET("/order/payment/method/list", wrapper.GetMemberOrderPaymentMethodList) // 获取会员端订单支付方式列表
+		privateApi.POST("/order/cancel", wrapper.CancelOrder)                                 // 取消订单
+		privateApi.POST("/xie-test/order/paid", wrapper.PaidOrder)                            // 支付成功 TODO 上线前删除改接口
 	}
 }

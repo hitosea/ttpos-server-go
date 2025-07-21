@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"ttpos-server-go/app/errors"
@@ -73,8 +74,24 @@ type CompanySetting struct {
 	Timezone         string `gorm:"column:timezone;type:varchar(50);default:Asia/Shanghai;comment:时区;NOT NULL" json:"timezone"`
 	Languages        string `gorm:"column:languages;type:varchar(255);comment:支持语言;NOT NULL" json:"languages"`
 	Address          string `gorm:"column:address;type:varchar(255);comment:联系地址;NOT NULL" json:"address"`
+	Coordinates      string `gorm:"column:coordinates;type:varchar(255);comment:经纬度，如：13.721899,100.52900;NOT NULL" json:"coordinates"`
 	DeliveryConfig   string `gorm:"column:delivery_config;type:text;comment:外送配置;NOT NULL" json:"delivery_config"`
 	DeliveryStatus   int    `gorm:"column:delivery_status;type:int(11);default:0;comment:外送配置状态：0-关,1-开;NOT NULL" json:"delivery_status"`
+}
+
+func (model *CompanySetting) GetCoordinates() (latitude, longitude string) {
+	if model.Coordinates == "" {
+		return
+	}
+	// 分隔后去掉前后空格,转成float64保留6位小数
+	latLng := strings.Split(strings.TrimSpace(model.Coordinates), ",")
+	if len(latLng) == 2 {
+		latFloat, _ := strconv.ParseFloat(strings.TrimSpace(latLng[0]), 64)
+		lngFloat, _ := strconv.ParseFloat(strings.TrimSpace(latLng[1]), 64)
+		latitude = fmt.Sprintf("%.6f", latFloat)
+		longitude = fmt.Sprintf("%.6f", lngFloat)
+	}
+	return
 }
 
 // GetDeliveryConfig 获取外送配置

@@ -416,5 +416,7 @@
     "操作失败": "İşlem başarısız oldu",
     "单价": "Birim fiyat",
     "外送台账": "Dışarıya Teslimat Defteri",
-    "渠道": "Kanal"
+    "渠道": "Kanal",
+    "经纬度": "Enlem ve boylam",
+    "请输入经纬度": "Lütfen enlem ve boylam giriniz"
 }

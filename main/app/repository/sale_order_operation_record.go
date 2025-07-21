@@ -87,7 +87,7 @@ func (r *OrderOperationRecordRepoImpl) GetRecordLists(opts ...DBOption) ([]model
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.Model(&model.SaleOrderOperationRecord{}).Preload("Operator").Order("create_time desc, id desc").Find(&orderOperationRecords).Error
+	err := db.Model(&model.SaleOrderOperationRecord{}).Preload("Member").Preload("Operator").Order("create_time desc, id desc").Find(&orderOperationRecords).Error
 	return orderOperationRecords, errors.WithMessage(err)
 }
 

@@ -83,6 +83,7 @@ class Buffet extends Controller
      * @Apidoc\Param("status", type="int", require=true, desc="状态 0-未开启 1-已开启")
      * @Apidoc\Param("is_comb", type="int", require=true, desc="是否组合 0-否 1-是")
      * @Apidoc\Param("buy_limit_status", type="int", require=true, desc="是否限购 0-否 1-是")
+     * @Apidoc\Param("open_overall_discount", type="int", require=true, desc="是否开启整单折扣 0-否 1-是")
      * @Apidoc\Param("customer_type", type="array", require=true, desc="顾客类型", children={
      *   @Apidoc\Param("customer_type_id", type="int", require=true, desc="顾客类型id"),
      *   @Apidoc\Param("price", type="decimal", require=true, desc="价格"),
@@ -133,6 +134,7 @@ class Buffet extends Controller
      * @Apidoc\Param("status", type="int", require=true, desc="状态 0-未开启 1-已开启")
      * @Apidoc\Param("is_comb", type="int", require=true, desc="是否组合 0-否 1-是")
      * @Apidoc\Param("buy_limit_status", type="int", require=true, desc="是否限购 0-否 1-是")
+     * @Apidoc\Param("open_overall_discount", type="int", require=true, desc="是否开启整单折扣 0-否 1-是")
      * @Apidoc\Param("customer_type", type="array", require=true, desc="顾客类型", children={
      *   @Apidoc\Param("customer_type_id", type="int", require=true, desc="顾客类型id"),
      *   @Apidoc\Param("price", type="decimal", require=true, desc="价格"),
@@ -206,6 +208,27 @@ class Buffet extends Controller
         }
         /** @var BuffetModel $model */
         if ($model?->setStatus($state)) {
+            return $this->renderSuccess('操作成功');
+        }
+        return $this->renderError($model?->getError() ?: '操作失败');
+    }
+
+    /**
+     * @Apidoc\Title("修改自助餐整单折扣")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/product.buffet.buffet/overallDiscount")
+     * @Apidoc\Param("buffet_id", type="int", require=true, desc="自助餐id")
+     * @Apidoc\Param("open_overall_discount", type="int", require=true, desc="是否开启整单折扣 0-否 1-是")
+     * @Apidoc\Returned()
+     */
+    public function overallDiscount($buffet_id, $open_overall_discount)
+    {
+        $model = BuffetModel::detail($buffet_id ?? 0);
+        if (!$model) {
+            return $this->renderError('数据不存在');
+        }
+        /** @var BuffetModel $model */
+        if ($model?->setOverallDiscount($open_overall_discount)) {
             return $this->renderSuccess('操作成功');
         }
         return $this->renderError($model?->getError() ?: '操作失败');

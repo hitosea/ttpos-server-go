@@ -20,7 +20,7 @@ import (
  * 结账单打印
  */
 func (p *PrinterRepoImpl) PrintingStatementOrder(
-	printType int,
+	printType int, // 打印类型 1-预结账单 2-结账单 11-外送单
 	saleBill *model.SaleBill,
 	saleOrderUuid uint64,
 	FirstExecution int,
@@ -114,7 +114,7 @@ func (p *PrinterRepoImpl) PrintingStatementOrder(
 // 构建订单打印的内容
 func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 	settingPrinterInfo settingResp.PrinterInfo, // 打印机设置
-	printType int, // 打印类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单 8-充值单 9-退菜单
+	printType int, // 打印类型 1-预结账单 2-结账单
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
 	payMethodUuid uint64,

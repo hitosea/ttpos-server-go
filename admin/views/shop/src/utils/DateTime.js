@@ -1,4 +1,7 @@
 export function formatDate(date, fmt) {
+    // 如果date为空或者为0，则返回-
+    if (!date || date == 0) return '-';
+
     if (/(y+)/.test(fmt)) {
         fmt = fmt.replace(RegExp.$1, (date.getFullYear() + '').substr(4 - RegExp.$1.length));
     }
@@ -23,6 +26,8 @@ function padLeftZero(str) {
 }
 
 export function DTime(timestamp, type) {
+    // 如果date为空或者为0，则返回-
+    if (!timestamp || timestamp == 0) return '-';
     let date = new Date(timestamp * 1000);
 
     // 获取年、月、日、小时、分钟和秒

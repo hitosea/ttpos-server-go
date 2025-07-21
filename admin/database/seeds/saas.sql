@@ -240,6 +240,7 @@ CREATE TABLE `ttpos_company_setting` (
     `timezone` VARCHAR(50) NOT NULL DEFAULT 'Asia/Shanghai' COMMENT '时区',
     `languages` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支持语言',
     `address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系地址',
+    `coordinates` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '经纬度，如：13.721899,100.52900',
     `delivery_status` int(11) DEFAULT 0 COMMENT '外送配置状态：0-关,1-开',
     `delivery_config` text COMMENT '外送配置',
     `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',

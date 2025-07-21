@@ -25,12 +25,31 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		c.String(http.StatusOK, "healthy")
 	})
 	r.GET("api/testrpc", func(c *gin.Context) {
+
+		//var setting model.CompanySetting
+		//dbm.GetDB(7633004138496000).Model(&model.CompanySetting{}).Find(&setting)
+		//lat, lng := setting.GetCoordinates()
+		//c.String(http.StatusOK, fmt.Sprintf("lat: %s, lng: %s", lat, lng))
 		//测试外送服务
 		// rpc.TestEcho(c)
 		// rpc.TestEstimatePrice()
-		rpc.TestCreateOrder()
-		// rpc.TestConfirmOrder()
-		//rpc.TestGetDriverLocation()
+
+		// res, err := rpc.TestCreateOrder()
+		// if err != nil {
+		// 	c.String(http.StatusInternalServerError, err.Error())
+		// 	return
+		// }
+		// json, _ := json.Marshal(res)
+		// c.String(http.StatusOK, string(json))
+
+		// // rpc.TestConfirmOrder()
+		// // rpc.TestGetDriverInfo()
+
+		// if err := rpc.TestCancelOrder(); err != nil {
+		// 	c.String(http.StatusInternalServerError, err.Error())
+		// 	return
+		// }
+		rpc.TestCancelOrderDelay()
 		c.String(http.StatusOK, "Success")
 	})
 	apiV1 := r.Group("api/v1")
@@ -47,6 +66,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterRechargeOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterStatisticsHandlers(shopGroup, dbm, cache)
+			shop.RegisterMemberOrderHandlers(shopGroup, dbm, cache)
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")
@@ -119,6 +139,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			member.RegisterAddressHandlers(memberGroup, dbm, cache)
 			member.RegisterBaseHandlers(memberGroup, dbm, cache)
 			member.RegisterBenefitHandlers(memberGroup, dbm, cache)
+			member.RegisterMemberCallbackHandlers(memberGroup, dbm, cache)
 		}
 
 	}

@@ -240,7 +240,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		if orderBuffetCustomer.IsDelete() {
 			continue
 		}
-		productNum = productNum.Add(decimal.NewFromFloat(float64(orderBuffetCustomer.Num)).Round(2))
+		productNum = productNum.Add(decimal.NewFromFloat(float64(orderBuffetCustomer.Num)).Round(3))
 		buffetNameText := orderBuffetCustomer.BuffetPackage.MultiLanguageName.GetNameByLang(t.base.Lang)
 		if orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name != "" {
 			buffetNameText += "\n(" + orderBuffetCustomer.BuffetCustomerTypePrice.BuffetCustomerType.Name + ")"
@@ -262,7 +262,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 	}
 	// 添加加钟商品
 	buffetDelayProducts, num := t.base.MergeSaleOrderBuffetDelayProducts(saleOrder)
-	productNum = productNum.Add(decimal.NewFromFloat(num).Round(2))
+	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for _, delay := range buffetDelayProducts {
 		printer.AppendText(t.base.PrintText(
 			delay.DelayName,
@@ -280,7 +280,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 	}
 	// 商品列表
 	products, num := t.base.MergeSaleOrderProduct(saleOrder, temp != 4)
-	productNum = productNum.Add(decimal.NewFromFloat(num).Round(2))
+	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for key, product := range products {
 		printer.AppendText(t.base.PrintText(
 			product.ProductName,
@@ -306,14 +306,14 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 	printer.SetAlignment(pkg.AlignRight)
 	if temp == 3 || temp == 4 {
 		printer.AppendText(t.base.PrintText(
-			t.base.Translate("商品数量")+": "+t.base.FloatToString(productNum.Round(2).InexactFloat64()),
+			t.base.Translate("商品数量")+": "+t.base.FloatToString(productNum.Round(3).InexactFloat64()),
 			"",
 			t.base.Translate("商品金额")+": "+t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount),
 			currencyWidth,
 		))
 		printer.LineFeed()
 	} else {
-		printer.AppendText(t.base.Translate("商品数量") + ": " + t.base.FloatToString(productNum.Round(2).InexactFloat64()))
+		printer.AppendText(t.base.Translate("商品数量") + ": " + t.base.FloatToString(productNum.Round(3).InexactFloat64()))
 		printer.LineFeed()
 		printer.AppendText(t.base.Translate("商品金额") + ": " + t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount))
 		printer.LineFeed()
@@ -443,7 +443,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.LineFeed()
 		printer.SetAlignment(pkg.AlignRight)
 		printer.AppendText(t.base.Translate("合计 (其中VAT)"))
-		printer.SetLineSpacing(90)
+		printer.SetLineSpacing(45)
 		printer.LineFeed(1)
 		for _, percentage := range saleOrder.GetPercentageList() {
 			taxRate := percentage["TaxRate"]

@@ -9735,6 +9735,108 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/member_order/accept": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "接单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外送接单相关"
+                ],
+                "summary": "接单",
+                "parameters": [
+                    {
+                        "description": "接受接单",
+                        "name": "AcceptOrderReq",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.AcceptOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GetMemberOrderDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/member_order/cook_finish": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "备餐完成",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外送接单相关"
+                ],
+                "summary": "备餐完成",
+                "parameters": [
+                    {
+                        "description": "备餐完成",
+                        "name": "CookFinishOrderReq",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CookFinishOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GetMemberOrderDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/member_order/detail": {
             "get": {
                 "security": [
@@ -9836,6 +9938,57 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/resp.GetMemberOrderListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/member_order/reject": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "拒单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外送接单相关"
+                ],
+                "summary": "拒单",
+                "parameters": [
+                    {
+                        "description": "拒绝接单",
+                        "name": "RejectOrderReq",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.RejectOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GetMemberOrderDetailResp"
                                         }
                                     }
                                 }
@@ -14536,6 +14689,11 @@ const docTemplate = `{
         },
         "/member/address": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取地址列表",
                 "consumes": [
                     "application/json"
@@ -14588,6 +14746,11 @@ const docTemplate = `{
         },
         "/member/address/add": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "添加地址",
                 "consumes": [
                     "application/json"
@@ -14622,6 +14785,11 @@ const docTemplate = `{
         },
         "/member/address/auth": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "认证地址, 如果需要注册则注册会员并返回注册会员的token（前端需要更换token为当前token）",
                 "consumes": [
                     "application/json"
@@ -14668,6 +14836,11 @@ const docTemplate = `{
         },
         "/member/address/delete": {
             "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "删除地址",
                 "consumes": [
                     "application/json"
@@ -14700,8 +14873,73 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/address/search": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "搜索谷歌地图地址",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.地址"
+                ],
+                "summary": "搜索谷歌地图地址",
+                "parameters": [
+                    {
+                        "type": "number",
+                        "description": "纬度",
+                        "name": "latitude",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "经度",
+                        "name": "longitude",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "搜索文本",
+                        "name": "text",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/member/address/update": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "更新地址",
                 "consumes": [
                     "application/json"
@@ -14748,6 +14986,11 @@ const docTemplate = `{
         },
         "/member/base/info": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取基础信息",
                 "consumes": [
                     "application/json"
@@ -14783,6 +15026,11 @@ const docTemplate = `{
         },
         "/member/base/nickname": {
             "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "修改会员昵称",
                 "consumes": [
                     "application/json"
@@ -15033,6 +15281,11 @@ const docTemplate = `{
         },
         "/member/marketing_activity_detail": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取营销活动详情",
                 "consumes": [
                     "application/json"
@@ -15076,6 +15329,11 @@ const docTemplate = `{
         },
         "/member/marketing_activity_list": {
             "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
                 "description": "获取营销活动列表",
                 "consumes": [
                     "application/json"
@@ -15099,7 +15357,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/member_resp.MemberMarketingActivityListResp"
+                                            "$ref": "#/definitions/member_resp.MemberMarketingActivityListsResp"
                                         }
                                     }
                                 }
@@ -15151,6 +15409,96 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/order/callback": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "回调",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.回调"
+                ],
+                "summary": "回调",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.CallbackReq"
+                        }
+                    },
+                    {
+                        "type": "string",
+                        "description": "商家uuid",
+                        "name": "companyUuid",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "回调token",
+                        "name": "X-Ttpos-Callback-Auth",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "取消订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "取消订单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会员端销售订单UUID",
+                        "name": "member_sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/member/order/create": {
             "post": {
                 "security": [
@@ -15186,6 +15534,82 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/resp.CreateMemberOrderResp"
                         }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取会员端订单详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "获取会员端订单详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会员端销售订单UUID",
+                        "name": "member_sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取会员端订单列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单列表"
+                ],
+                "summary": "获取会员端订单列表",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MemberOrderListReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
                     },
                     "400": {
                         "description": "错误请求"
@@ -15232,14 +15656,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/member/order/phone/verify": {
-            "post": {
+        "/member/order/pay/info": {
+            "get": {
                 "security": [
                     {
                         "JwtToken": []
                     }
                 ],
-                "description": "验证手机号",
+                "description": "获取支付信息",
                 "consumes": [
                     "application/json"
                 ],
@@ -15249,23 +15673,95 @@ const docTemplate = `{
                 "tags": [
                     "会员端-订单"
                 ],
-                "summary": "验证手机号",
+                "summary": "获取支付信息",
                 "parameters": [
                     {
-                        "description": "详情参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/member_req.VerifyPhoneReq"
-                        }
+                        "type": "string",
+                        "description": "会员端销售订单UUID",
+                        "name": "member_sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/pay/status": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取支付状态",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "获取支付状态",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会员端销售订单UUID",
+                        "name": "member_sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/member/order/payment/method/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取会员端订单支付方式列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "获取会员端订单支付方式列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会员端销售订单UUID",
+                        "name": "member_sale_order_uuid",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "成功",
                         "schema": {
-                            "$ref": "#/definitions/resp.CreateMemberOrderResp"
+                            "$ref": "#/definitions/resp.GetMemberOrderPaymentMethodListResp"
                         }
                     },
                     "400": {
@@ -15800,6 +16296,209 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/member_order/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取外送订单管理页面，订单详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外送订单管理相关"
+                ],
+                "summary": "获取外送订单管理页面，订单详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "订单UUID",
+                        "name": "member_sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GetMemberOrderManageDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/member_order/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取外送订单管理页面，订单列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外送订单管理相关"
+                ],
+                "summary": "获取外送订单管理页面，订单列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "状态: unaccept-待接单, accept-备餐中, undelivery-待配送, delivery-配送中, completed-已完成, cancel-已取消",
+                        "name": "status",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "订单编号",
+                        "name": "order_no",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "订单序号",
+                        "name": "serial_no",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "日期类型 -1=全都、 0=今天、 1=昨天、 2=本周",
+                        "name": "date_range",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "时间类型  1=下单时间、 2=支付时间",
+                        "name": "time_type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "查询开始时间戳",
+                        "name": "query_start_time",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "查询结束时间戳",
+                        "name": "query_end_time",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GetMemberOrderManageListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/member_order/reject": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "拒单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外送接单相关"
+                ],
+                "summary": "拒单",
+                "parameters": [
+                    {
+                        "description": "拒绝接单",
+                        "name": "RejectOrderReq",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.RejectOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GetMemberOrderDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -18237,6 +18936,22 @@ const docTemplate = `{
                     "description": "总桌数人数",
                     "type": "integer"
                 },
+                "all_takeout_avg_order_price": {
+                    "description": "总外送平均订单金额",
+                    "type": "number"
+                },
+                "all_takeout_max_order_price": {
+                    "description": "总外送最大订单金额",
+                    "type": "number"
+                },
+                "all_takeout_min_order_price": {
+                    "description": "总外送最小订单金额",
+                    "type": "number"
+                },
+                "all_takeout_order_num": {
+                    "description": "外送数据",
+                    "type": "integer"
+                },
                 "avg_order_price": {
                     "description": "平均订单金额",
                     "type": "number"
@@ -18356,6 +19071,22 @@ const docTemplate = `{
                 "total_table_num": {
                     "description": "总桌数",
                     "type": "integer"
+                },
+                "total_takeout_business_amount": {
+                    "description": "总外送营收",
+                    "type": "number"
+                },
+                "total_takeout_delivery_fee": {
+                    "description": "总外送配送费",
+                    "type": "number"
+                },
+                "total_takeout_refund_amount": {
+                    "description": "总外送退款金额",
+                    "type": "number"
+                },
+                "total_takeout_sale_amount": {
+                    "description": "总外送销售",
+                    "type": "number"
                 },
                 "total_tax_money": {
                     "description": "总税费",
@@ -18530,10 +19261,6 @@ const docTemplate = `{
                         "$ref": "#/definitions/business_data_resp.BusinessDataExportArea"
                     }
                 },
-                "avg_delivery_order_amount": {
-                    "description": "外送点餐-平均订单金额",
-                    "type": "number"
-                },
                 "avg_desk_order_amount": {
                     "description": "桌台方式-平均订单金额",
                     "type": "number"
@@ -18546,12 +19273,13 @@ const docTemplate = `{
                     "description": "平均订单金额",
                     "type": "number"
                 },
-                "day": {
-                    "type": "string"
-                },
-                "max_delivery_order_amount": {
-                    "description": "外送点餐-最大订单金额",
+                "avg_takeout_order_amount": {
+                    "description": "外送点餐-平均订单金额",
                     "type": "number"
+                },
+                "day": {
+                    "description": "日期",
+                    "type": "string"
                 },
                 "max_desk_order_amount": {
                     "description": "桌台方式-最大订单金额",
@@ -18565,8 +19293,8 @@ const docTemplate = `{
                     "description": "最大订单金额",
                     "type": "number"
                 },
-                "min_delivery_order_amount": {
-                    "description": "外送点餐-最小订单金额",
+                "max_takeout_order_amount": {
+                    "description": "外送点餐-最大订单金额",
                     "type": "number"
                 },
                 "min_desk_order_amount": {
@@ -18581,6 +19309,10 @@ const docTemplate = `{
                     "description": "最小订单金额",
                     "type": "number"
                 },
+                "min_takeout_order_amount": {
+                    "description": "外送点餐-最小订单金额",
+                    "type": "number"
+                },
                 "payment_list": {
                     "description": "支付列表",
                     "type": "array",
@@ -18590,26 +19322,6 @@ const docTemplate = `{
                 },
                 "total_business_amount": {
                     "description": "营业收入",
-                    "type": "number"
-                },
-                "total_delivery_fee": {
-                    "description": "配送费",
-                    "type": "number"
-                },
-                "total_delivery_order_amount": {
-                    "description": "TODO 外送数据来源",
-                    "type": "number"
-                },
-                "total_delivery_order_num": {
-                    "description": "外送点餐-订单数",
-                    "type": "integer"
-                },
-                "total_delivery_order_refund_amount": {
-                    "description": "外送订单退款",
-                    "type": "number"
-                },
-                "total_delivery_order_revenue": {
-                    "description": "外送营收",
                     "type": "number"
                 },
                 "total_desk_num": {
@@ -18686,6 +19398,26 @@ const docTemplate = `{
                 },
                 "total_service_fee": {
                     "description": "服务费",
+                    "type": "number"
+                },
+                "total_takeout_business_amount": {
+                    "description": "外送营收",
+                    "type": "number"
+                },
+                "total_takeout_delivery_fee": {
+                    "description": "外送配送费",
+                    "type": "number"
+                },
+                "total_takeout_order_num": {
+                    "description": "外送点餐-订单数",
+                    "type": "integer"
+                },
+                "total_takeout_refund_amount": {
+                    "description": "外送退款",
+                    "type": "number"
+                },
+                "total_takeout_sale_amount": {
+                    "description": "外送销售",
                     "type": "number"
                 },
                 "total_tax": {
@@ -19052,6 +19784,31 @@ const docTemplate = `{
                 }
             }
         },
+        "member_req.CallbackReq": {
+            "type": "object",
+            "properties": {
+                "jobStatusAfter": {
+                    "description": "变化后的状态，即当前状态。 枚举请查看”skootar 订单状态“",
+                    "type": "string"
+                },
+                "jobStatusBefore": {
+                    "description": "变化前的状态。 枚举请查看”skootar 订单状态“",
+                    "type": "string"
+                },
+                "providerName": {
+                    "description": "外送渠道名称。如：skootar。 枚举请查看”外送渠道方“",
+                    "type": "string"
+                },
+                "shopRefNo": {
+                    "description": "订单号。即member_sale_order_uuid",
+                    "type": "string"
+                },
+                "takeoutRefNo": {
+                    "description": "外送渠道订单号。如skootar的order_id",
+                    "type": "string"
+                }
+            }
+        },
         "member_req.MemberAddressAddReq": {
             "type": "object",
             "properties": {
@@ -19290,36 +20047,6 @@ const docTemplate = `{
                 }
             }
         },
-        "member_req.VerifyPhoneReq": {
-            "type": "object",
-            "required": [
-                "code",
-                "member_sale_order_uuid",
-                "phone"
-            ],
-            "properties": {
-                "code": {
-                    "description": "验证码",
-                    "type": "string"
-                },
-                "member_sale_order_uuid": {
-                    "description": "会员端销售订单UUID",
-                    "type": "integer"
-                },
-                "phone": {
-                    "description": "手机号",
-                    "type": "string"
-                },
-                "referrer_phone": {
-                    "description": "推荐人手机号",
-                    "type": "string"
-                },
-                "register": {
-                    "description": "是否注册会员",
-                    "type": "boolean"
-                }
-            }
-        },
         "member_resp.CompanyInfoResp": {
             "type": "object",
             "properties": {
@@ -19503,6 +20230,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "is_member_show_sold_out": {
+                    "description": "是否显示售罄商品",
+                    "type": "integer"
+                },
                 "language_list": {
                     "description": "语言列表",
                     "type": "array",
@@ -19597,6 +20328,54 @@ const docTemplate = `{
                 }
             }
         },
+        "member_resp.MemberMarketingActivityInfoResp": {
+            "type": "object",
+            "properties": {
+                "end_time": {
+                    "description": "活动结束时间",
+                    "type": "integer"
+                },
+                "locale_desc": {
+                    "description": "活动描述",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "locale_name": {
+                    "description": "活动名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "prizes": {
+                    "description": "奖励的优惠券列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/member_resp.MemberMarketingActivityPrizeResp"
+                    }
+                },
+                "start_time": {
+                    "description": "活动开始时间",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "活动状态 0-未开始 1-进行中 2-已结束",
+                    "type": "integer"
+                },
+                "type": {
+                    "description": "活动类型 0-邀请有礼",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "活动UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "member_resp.MemberMarketingActivityListResp": {
             "type": "object",
             "properties": {
@@ -19622,6 +20401,43 @@ const docTemplate = `{
                             "$ref": "#/definitions/member_resp.MemberInfoResp"
                         }
                     ]
+                }
+            }
+        },
+        "member_resp.MemberMarketingActivityListsResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "活动列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/member_resp.MemberMarketingActivityInfoResp"
+                    }
+                }
+            }
+        },
+        "member_resp.MemberMarketingActivityPrizeResp": {
+            "type": "object",
+            "properties": {
+                "locale_prize_name": {
+                    "description": "奖品名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "reward_type": {
+                    "description": "奖励类型 0-优惠券 1-积分",
+                    "type": "integer"
+                },
+                "reward_value": {
+                    "description": "奖励的值，优惠券为金额，积分则为积分数量",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "奖品UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -20048,6 +20864,15 @@ const docTemplate = `{
                 }
             }
         },
+        "req.AcceptOrderReq": {
+            "type": "object",
+            "properties": {
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.AddMemberReq": {
             "type": "object",
             "required": [
@@ -20354,6 +21179,15 @@ const docTemplate = `{
                 },
                 "recharge_order_uuid": {
                     "description": "充值订单Uuid",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.CookFinishOrderReq": {
+            "type": "object",
+            "properties": {
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
                     "type": "integer"
                 }
             }
@@ -20717,6 +21551,26 @@ const docTemplate = `{
                 }
             }
         },
+        "req.MemberOrderListReq": {
+            "type": "object",
+            "properties": {
+                "page_no": {
+                    "description": "页码",
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer",
+                    "maximum": 1100,
+                    "minimum": 1
+                },
+                "status": {
+                    "description": "状态: \"all\" 全部, \"unpaid\" 待付款, \"undelivery\" 待配送, \"delivery\" 配送中, \"completed\" 已完成, \"cancel\" 已取消",
+                    "type": "string"
+                }
+            }
+        },
         "req.MergeDeskReq": {
             "type": "object",
             "required": [
@@ -20874,16 +21728,16 @@ const docTemplate = `{
                     "description": "是否只进行送厨检查，而不进行实际的送厨。场景：助手端开启下单校验高级密码时，先检查送厨，再实际送厨。检查送厨时不进行实际送厨",
                     "type": "boolean"
                 },
+                "is_member_order_accept": {
+                    "description": "是否是会员端接单. 不用返回购物车信息",
+                    "type": "boolean"
+                },
                 "password": {
                     "description": "高级密码后台开启的时候才传",
                     "type": "string"
                 },
                 "sale_bill_uuid": {
                     "description": "销售账单ID",
-                    "type": "integer"
-                },
-                "sale_order_uuid": {
-                    "description": "销售订单ID。废弃",
                     "type": "integer"
                 }
             }
@@ -21696,6 +22550,15 @@ const docTemplate = `{
                 }
             }
         },
+        "req.RejectOrderReq": {
+            "type": "object",
+            "properties": {
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "req.SaleBillUuid": {
             "type": "object",
             "properties": {
@@ -21881,6 +22744,7 @@ const docTemplate = `{
                 "is_show_assistant_sold_out",
                 "is_show_scan_sold_out",
                 "is_show_sold_out",
+                "member_show_sold_out",
                 "menu_show_sold_out"
             ],
             "properties": {
@@ -21914,6 +22778,14 @@ const docTemplate = `{
                 },
                 "is_show_sold_out": {
                     "description": "平板端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
+                    "type": "integer",
+                    "enum": [
+                        0,
+                        1
+                    ]
+                },
+                "member_show_sold_out": {
+                    "description": "会员端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
                     "type": "integer",
                     "enum": [
                         0,
@@ -23060,6 +23932,31 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.DeliveryResp": {
+            "type": "object",
+            "properties": {
+                "delivery_distance": {
+                    "description": "配送距离，单位km",
+                    "type": "number"
+                },
+                "delivery_fee_amount": {
+                    "description": "配送费",
+                    "type": "number"
+                },
+                "delivery_fee_base_fee": {
+                    "description": "基础配送费",
+                    "type": "number"
+                },
+                "delivery_fee_min_fee": {
+                    "description": "起步配送费",
+                    "type": "number"
+                },
+                "delivery_fee_per_km": {
+                    "description": "每公里配送费",
+                    "type": "number"
+                }
+            }
+        },
         "resp.Desk": {
             "type": "object",
             "properties": {
@@ -23464,6 +24361,22 @@ const docTemplate = `{
                     "description": "取消时间",
                     "type": "integer"
                 },
+                "company_name": {
+                    "description": "公司名称",
+                    "type": "string"
+                },
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "delivery_config": {
+                    "description": "配送费配置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.DeliveryResp"
+                        }
+                    ]
+                },
                 "finish_time": {
                     "description": "完成时间",
                     "type": "integer"
@@ -23484,6 +24397,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "remaining_payment_time": {
+                    "description": "剩余支付时间(单位秒)",
+                    "type": "integer"
+                },
                 "remark": {
                     "description": "订单备注",
                     "type": "string"
@@ -23495,6 +24412,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.RiderInfo"
                         }
                     ]
+                },
+                "status": {
+                    "description": "订单状态 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消",
+                    "type": "integer"
                 }
             }
         },
@@ -23625,7 +24546,31 @@ const docTemplate = `{
                     }
                 },
                 "meta": {
-                    "$ref": "#/definitions/dto.PageResponse"
+                    "$ref": "#/definitions/resp.OrderManageListMeta"
+                }
+            }
+        },
+        "resp.GetMemberOrderPaymentMethodListResp": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "订单总金额. 订单总金额=实际付款金额=商品金额-会员折扣金额+运费",
+                    "type": "number"
+                },
+                "list": {
+                    "description": "支付方式列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.PaymentMethodItem"
+                    }
+                },
+                "payment_method_uuid": {
+                    "description": "当前订单的支付方式UUID(可用来默认选中)",
+                    "type": "integer"
+                },
+                "remaining_payment_time": {
+                    "description": "剩余支付时间(单位秒)",
+                    "type": "integer"
                 }
             }
         },
@@ -24588,6 +25533,10 @@ const docTemplate = `{
         "resp.MemberOrder": {
             "type": "object",
             "properties": {
+                "company_name": {
+                    "description": "公司名称",
+                    "type": "string"
+                },
                 "member_sale_order_uuid": {
                     "description": "会员端销售订单UUID",
                     "type": "integer"
@@ -24600,17 +25549,28 @@ const docTemplate = `{
                     "description": "商品金额. 所有商品金额总和，如商品A金额为2，商品B金额为3，则总金额为5",
                     "type": "number"
                 },
+                "product_list": {
+                    "description": "订单商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MemberOrderProduct"
+                    }
+                },
+                "rider": {
+                    "description": "骑手信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.RiderInfo"
+                        }
+                    ]
+                },
                 "serial_number": {
                     "description": "订单流水号",
                     "type": "string"
                 },
                 "status": {
-                    "description": "订单状态.0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消",
+                    "description": "订单状态 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消",
                     "type": "integer"
-                },
-                "status_group": {
-                    "description": "订单状态分组. \"unaccept\" 待接单, \"accept\" 备餐中, \"undelivery\" 待配送, \"delivery\" 配送中, \"completed\" 已完成, \"cancel\" 已取消",
-                    "type": "string"
                 }
             }
         },
@@ -24619,6 +25579,10 @@ const docTemplate = `{
             "properties": {
                 "amount": {
                     "description": "订单总金额. 订单总金额=实际付款金额=商品金额-会员折扣金额+运费",
+                    "type": "number"
+                },
+                "member_discount_fee": {
+                    "description": "会员折扣金额",
                     "type": "number"
                 }
             }
@@ -24712,7 +25676,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "status_group": {
-                    "description": "订单状态分组. \"unaccept\" 待接单, \"accept\" 备餐中, \"undelivery\" 待配送, \"delivery\" 配送中, \"completed\" 已完成, \"cancel\" 已取消",
+                    "description": "订单状态分组. \"unpaid\" 待付款， \"unaccept\" 待接单, \"accept\" 备餐中, \"undelivery\" 待配送, \"delivery\" 配送中, \"completed\" 已完成, \"cancel\" 已取消",
                     "type": "string"
                 }
             }
@@ -24769,6 +25733,10 @@ const docTemplate = `{
         "resp.MemberOrderProduct": {
             "type": "object",
             "properties": {
+                "image": {
+                    "description": "商品图片",
+                    "type": "string"
+                },
                 "locale_attribute_name": {
                     "description": "商品属性",
                     "allOf": [
@@ -24852,11 +25820,11 @@ const docTemplate = `{
                 },
                 "latitude": {
                     "description": "纬度",
-                    "type": "number"
+                    "type": "string"
                 },
                 "longitude": {
                     "description": "经度",
-                    "type": "number"
+                    "type": "string"
                 },
                 "member_address_uuid": {
                     "description": "会员地址UUID",
@@ -24957,6 +25925,10 @@ const docTemplate = `{
         "resp.MemberSaleOrderProduct": {
             "type": "object",
             "properties": {
+                "amount": {
+                    "description": "商品金额（折前）。商品金额=（商品规格价 + 商品小料A价格 + 商品小料B价格）*数量。商品规格价=商品规格原价*会员端折扣率。 商品小料价格=商品小料原价*会员端折扣率。 会员折扣率是指商品在会员端价格上浮比例，一般比堂食贵",
+                    "type": "number"
+                },
                 "locale_attribute_name": {
                     "description": "商品属性",
                     "allOf": [
@@ -25445,6 +26417,55 @@ const docTemplate = `{
                 "is_cell_reject": {
                     "description": "是否可拒单",
                     "type": "boolean"
+                }
+            }
+        },
+        "resp.OrderManageListMeta": {
+            "type": "object",
+            "properties": {
+                "accept_num": {
+                    "description": "备餐中数量",
+                    "type": "integer"
+                },
+                "cancel_num": {
+                    "description": "已取消数量",
+                    "type": "integer"
+                },
+                "complete_num": {
+                    "description": "已完成数量",
+                    "type": "integer"
+                },
+                "delivery_num": {
+                    "description": "配送中数量",
+                    "type": "integer"
+                },
+                "page_no": {
+                    "description": "当前页码",
+                    "type": "integer"
+                },
+                "page_size": {
+                    "description": "每页大小",
+                    "type": "integer"
+                },
+                "total": {
+                    "description": "总数",
+                    "type": "integer"
+                },
+                "total_num": {
+                    "description": "总数量",
+                    "type": "integer"
+                },
+                "unaccept_num": {
+                    "description": "待接单数量",
+                    "type": "integer"
+                },
+                "undelivery_num": {
+                    "description": "待配送数量",
+                    "type": "integer"
+                },
+                "unpaid_num": {
+                    "description": "待付款数量",
+                    "type": "integer"
                 }
             }
         },
@@ -27381,6 +28402,14 @@ const docTemplate = `{
         "resp.RiderInfo": {
             "type": "object",
             "properties": {
+                "latitude": {
+                    "description": "骑手纬度",
+                    "type": "number"
+                },
+                "longitude": {
+                    "description": "骑手经度",
+                    "type": "number"
+                },
                 "name": {
                     "description": "骑手姓名",
                     "type": "string"
@@ -27388,6 +28417,10 @@ const docTemplate = `{
                 "phone": {
                     "description": "骑手电话",
                     "type": "string"
+                },
+                "remaining_distance": {
+                    "description": "剩余距离",
+                    "type": "number"
                 }
             }
         },
@@ -27791,6 +28824,10 @@ const docTemplate = `{
                 },
                 "is_show_sold_out": {
                     "description": "平板端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
+                    "type": "integer"
+                },
+                "member_show_sold_out": {
+                    "description": "会员端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
                     "type": "integer"
                 },
                 "menu_show_sold_out": {
@@ -28531,6 +29568,10 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/dto.LanguageItem"
                     }
+                },
+                "member_show_sold_out": {
+                    "description": "是否显示会员端售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",
+                    "type": "string"
                 },
                 "menu_show_sold_out": {
                     "description": "是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）",

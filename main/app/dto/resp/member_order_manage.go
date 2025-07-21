@@ -6,8 +6,20 @@ import "ttpos-server-go/app/dto"
   收银机"订单"中外送订单列表 接口返回结构体
 ***/
 
+type OrderManageListMeta struct {
+	dto.PageResponse
+	TotalNum      int64 `json:"total_num"`      // 总数量
+	UnpaidNum     int64 `json:"unpaid_num"`     // 待付款数量
+	UnacceptNum   int64 `json:"unaccept_num"`   // 待接单数量
+	AcceptNum     int64 `json:"accept_num"`     // 备餐中数量
+	UndeliveryNum int64 `json:"undelivery_num"` // 待配送数量
+	DeliveryNum   int64 `json:"delivery_num"`   // 配送中数量
+	CompleteNum   int64 `json:"complete_num"`   // 已完成数量
+	CancelNum     int64 `json:"cancel_num"`     // 已取消数量
+}
+
 type GetMemberOrderManageListResp struct {
-	Meta dto.PageResponse    `json:"meta"`
+	Meta OrderManageListMeta `json:"meta"`
 	List []MemberOrderManage `json:"list"` // 订单列表
 }
 
@@ -16,7 +28,7 @@ type MemberOrderManage struct {
 	SerialNumber        string          `json:"serial_number"`          // 订单流水号
 	OrderNo             string          `json:"order_no"`               // 订单号
 	Status              uint            `json:"status"`                 // 订单状态.0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消
-	StatusGroup         string          `json:"status_group"`           // 订单状态分组. "unaccept" 待接单, "accept" 备餐中, "undelivery" 待配送, "delivery" 配送中, "completed" 已完成, "cancel" 已取消
+	StatusGroup         string          `json:"status_group"`           // 订单状态分组. "unpaid" 待付款， "unaccept" 待接单, "accept" 备餐中, "undelivery" 待配送, "delivery" 配送中, "completed" 已完成, "cancel" 已取消
 	CreateTime          int64           `json:"create_time"`            // 创建时间,下单时间
 	PayTime             int64           `json:"pay_time"`               // 支付时间
 	OriginAmount        float64         `json:"origin_amount"`          // 订单原始金额。商品金额+配送费

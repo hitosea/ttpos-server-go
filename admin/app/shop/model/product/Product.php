@@ -199,6 +199,7 @@ class Product extends ProductModel
         $data['is_show_assistant'] = $data['is_show_assistant'] != 2 ? 1 : 0;
         $data['is_show_h5'] = $data['is_show_h5'] != 2 ? 1 : 0;
         $data['sort'] = $data['product_sort'] ?? 0;
+        $data['open_overall_discount'] = $data['open_overall_discount'] ?? 1; // 是否开启整单折扣 0-否 1-是
 
         // 开启事务
         $this->startTrans();
@@ -502,6 +503,7 @@ class Product extends ProductModel
             'special_category_uuid' => $data['special_id'], // 热门分类
             'describe' => $data['selling_point'], // 卖点
             'open_discount' => $data['is_enable_grade'], // 是否开启折扣: 0-否, 1-是
+            'open_overall_discount' => $data['open_overall_discount'], // 是否开启整单折扣: 0-否, 1-是
             'printer_tag_uuid' => $data['label_id'] ?? 0, // 打印机标签
             'supplier_uuid' => $data['erp_supplier_id'] ?? 0, // 供应商uuid
         ]);

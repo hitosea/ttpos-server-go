@@ -2069,5 +2069,19 @@
     "收银机SN：": "Kassaregister SN:",
     "打印机SN：": "Skrivare SN:",
     "收银机SN": "Kassaregister SN",
-    "请输入收银机SN": "Ange kassaregister SN"
+    "请输入收银机SN": "Ange kassaregister SN",
+    "确认要关闭整单折扣吗?": "Är du säker på att du vill stänga av hela orderrabatten?",
+    "确认要开启整单折扣吗?": "Är du säker på att du vill aktivera hela orderrabatten?",
+    "经纬度": "Latitud och longitud",
+    "外送序号：": "Leveransnummer:",
+    "订单状态：": "Orderstatus:",
+    "会员折扣：": "Medlemsrabatt:",
+    "订单时间：": "Beställningstid:",
+    "选购中": "Väljer",
+    "待商家接单": "Väntar på att butiken ska acceptera beställningen",
+    "商家备餐中": "Butiken förbereder maten",
+    "待骑手接单": "Väntar på att budet ska acceptera beställningen",
+    "骑手正在赶往商家": "Budet är på väg till butiken",
+    "骑手配送中": "Budet levererar",
+    "待接单": "Väntar på beställning"
 }

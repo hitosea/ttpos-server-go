@@ -515,11 +515,13 @@ class Index extends Controller
         };
         $productQuery = $buildQuery(new Product, [
             'printer_tag_uuid as label_id',
-            '"product" as source_type'
+            '"product" as source_type',
+            'open_overall_discount'
         ]);
         $materialQuery = $buildQuery(new Material, [
             '0 as label_id',
-            '"material" as source_type'
+            '"material" as source_type',
+            '0 as open_overall_discount'
         ]);
         $applyConditions = function ($query) use ($categoryIds, $labelIds, $productName, $mode, $numType, $showDeliveryRequired) {
             if ($categoryIds) {

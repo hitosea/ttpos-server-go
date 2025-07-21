@@ -29,6 +29,7 @@ class AppValidate extends  BaseValidate
         'store_type|经营模式' => 'require|in:10,20',
         'category_set|商品分类' => 'require|in:10,20',
         'address|地址' => 'max:500',
+        'coordinates|经纬度' => 'isCoordinates',
         'minutes|过期时间' => 'require|between:1,999',
         'mac_addr|工控机MAC地址' => 'require',
         'serial_number|工控机序列号' => 'require',
@@ -59,6 +60,7 @@ class AppValidate extends  BaseValidate
         'name.max' => '商家名称不能超过100个字符',
         'user_name.max' => '邮箱长度不能超过64个字符',
         'user_name.email' => '请确认邮箱格式',
+        'coordinates.isCoordinates' => '经纬度格式错误',
     ];
 
     protected $scene = [
@@ -98,6 +100,8 @@ class AppValidate extends  BaseValidate
             'is_open_local_print',
             // v2.0.0
             'is_open_tax',
+            // v2.4.0
+            'coordinates',
         ],
         'edit' => [
             'app_id',
@@ -134,6 +138,8 @@ class AppValidate extends  BaseValidate
             'is_open_local_print',
             // v2.0.0
             'is_open_tax',
+            // v2.4.0
+            'coordinates',
         ],
         'id' => [
             'app_id',
@@ -171,5 +177,19 @@ class AppValidate extends  BaseValidate
         } else {
             return true;
         }
+    }
+
+    protected function isCoordinates($value, $rule, $data = [])
+    { 
+        if (empty($value)) {
+            return true;
+        }
+        // 判断经纬度，是否是经度取值范围为[-180,180],纬度取值范围为[-90,90]
+        $lat = floatval(explode(',', $value)[0]);
+        $lng = floatval(explode(',', $value)[1]);
+        if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+            return false;
+        }
+        return true;
     }
 }

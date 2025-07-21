@@ -146,7 +146,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_coupon` (
 
 CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员UUID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员销售订单ID',
+    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
+    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '订单状态 0-选购中 1-待支付 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消',
     `serial_number` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '订单流水号',
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '订单号',
@@ -159,7 +162,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `payment_method_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '支付方式UUID,订单已选择的支付方式',
     -- 确认订单（“待支付”状态）之后才有值的字段
     `product_num` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品数量.订单中商品的总数量，商品A数量2，商品B数量1，则商品数量为3',
-    `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额',
+    `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额,折前价，已含税',
     `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单总金额.商品金额-会员折扣+配送费',
     `refund_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '退款金额',
@@ -172,11 +175,19 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     -- 第三方订单信息
     `related_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关联订单号,skootar、grab等第三方平台上的订单号',
     `related_order_type` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关联订单类型,skootar、grab',
+    -- 收货人信息
+    `member_address_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员收货地址UUID',
+    `contact_location` VARCHAR(100) NOT NULL DEFAULT '' COMMENT '位置坐标',
+    `contact_address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '详细地址',
+    `contact_address_detail` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '详细地址',
+    `contact_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系人',
+    `contact_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系电话',
+    `contact_phone_prefix` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系电话前缀',
+    `contact_gender` INT(10) NOT NULL DEFAULT 0 COMMENT '联系人性别, 0-女士 1-先生',
     -- 骑手信息
     `rider_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手名称',
     `rider_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手电话',
-    `rider_latitude` DECIMAL(12, 6) NOT NULL DEFAULT 0 COMMENT '骑手纬度',
-    `rider_longitude` DECIMAL(12, 6) NOT NULL DEFAULT 0 COMMENT '骑手经度',
+    `location` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手位置,格式:纬度,经度',
     `remaining_distance` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '剩余距离',
     -- 时间相关
     `pay_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付完成时间（时间戳）',
@@ -192,26 +203,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员销售订单表';
-
-CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order_address` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员销售订单地址ID',
-    `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员UUID',
-    `member_address_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员收货地址UUID',
-    `longitude` DECIMAL(12, 6) NOT NULL DEFAULT 0 COMMENT '经度',
-    `latitude` DECIMAL(12, 6) NOT NULL DEFAULT 0 COMMENT '纬度', 
-    `address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '地址',
-    `detail_address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '详细地址',
-    `contact_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系人',
-    `contact_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系电话',
-    `phone_prefix` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系电话前缀',
-    `contact_gender` INT(10) NOT NULL DEFAULT 0 COMMENT '联系人性别, 0-女士 1-先生',
-    `member_sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员销售订单UUID',
-    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
-    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
-    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
-    UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '会员销售订单地址表,订单的地址信息';
 
 CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -230,6 +221,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     `open_points_exchange` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启积分抵扣, 0-不开启 1-开启',
     `points_exchange_rate` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '积分抵扣汇率,1积分抵扣多少元',
     `auto_points_exchange` INT(10) NOT NULL DEFAULT 0 COMMENT '积分抵扣类型,0-手动抵扣 1-自动抵扣',
+    `member_order_discount_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '会员端商品价格上浮比例1%-300%',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -329,7 +321,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `name` TEXT COMMENT '商品名称',
     `flavor_name` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '规格名称',
     `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
-    `num` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品数量。不能减为0，当数量为1再减时，标记删除',
+    `num` DECIMAL(12, 8) NOT NULL DEFAULT 0 COMMENT '商品数量。不能减为0，当数量为1再减时，标记删除',
     `image_file_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品图片ID',
     `device_id` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '设备ID,用于标识订单来源设备.来源h5时，device_id为h5',
     -- 价格信息
@@ -653,6 +645,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_operation_record` (
     `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
     `h5_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'h5订单Uuid',
     `operator_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '操作员ID',
+    `member_sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '外送订单Uuid',
+    `member_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员uuid',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -691,6 +685,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_buffet_package` (
     `non_ordering_time` INT(11) NOT NULL DEFAULT 0 COMMENT '平板不可下单时间(分钟)',
     `reminder_order_time` INT(11) NOT NULL DEFAULT 0 COMMENT '平板提醒不可下单时间(分钟)',
     `status` INT(10) NOT NULL DEFAULT 1 COMMENT '状态 0-禁用 1-启用',
+    `open_overall_discount` INT(10) NOT NULL DEFAULT 1 COMMENT '是否开启整单折扣: 0否 1是',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -977,6 +972,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     `sauce_max_selection` INT(11) NOT NULL DEFAULT 0 COMMENT '小料最大选择数量',
     `describe` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '卖点描述',
     `open_discount` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启会员折扣, 0-否 1-是',
+    `open_overall_discount` INT(10) NOT NULL DEFAULT 1 COMMENT '是否开启整单折扣: 0否 1是',
     `actual_sale_num` DECIMAL(12, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -1183,6 +1179,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_balance_log` (
     `describe` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '变动描述',
     `processed` INT(10) NOT NULL DEFAULT 0 COMMENT '是否已处理,0-未处理 1-已处理. 用于处理会员余额变动，修改会员的余额并清0冻结的余额',
     `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联uuid. 表示余额变动记录关联的业务订单ID,可能是销售订单(场景90)、充值订单(场景10)、退款单(场景80)、退货单退款金额(场景40)',
+    `remark` TEXT COMMENT '备注',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -1197,6 +1194,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_point_log` (
     `value` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '数值,负数:减积分 正数:加积分',
     `describe` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '变动描述',
     `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联uuid. 表示积分变动记录关联的业务订单ID,可能是销售订单、充值订单、退款单、退货单退款金额',
+    `remark` TEXT COMMENT '备注',
     `processed` INT(10) NOT NULL DEFAULT 0 COMMENT '是否已处理,0-未处理 1-已处理. 用于处理积分变动，修改会员的积分并清0冻结的积分',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
@@ -1721,6 +1719,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_company_setting` (
     `timezone` VARCHAR(50) NOT NULL DEFAULT 'Asia/Shanghai' COMMENT '时区',
     `languages` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支持语言',
     `address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系地址',
+    `coordinates` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '经纬度，如：13.721899,100.52900',
     `delivery_status` int(11) DEFAULT 0 COMMENT '外送配置状态：0-关,1-开',
     `delivery_config` text COMMENT '外送配置',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
@@ -2124,6 +2123,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     `extend_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '扩展价格',
     `is_meger` INT(10) NOT NULL DEFAULT 0 COMMENT '是否合单',
     `is_special` INT(10) NOT NULL DEFAULT 0 COMMENT '是否特殊订单',
+    `is_takeout` INT(10) NOT NULL DEFAULT 0 COMMENT '是否外送',
+    `delivery_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '配送费',
     `refund_service_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款服务费',
     `refund_discount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款优惠折扣',
     `refund_discount_member` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款会员折扣',
@@ -2137,7 +2138,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_sale` (
     INDEX `idx_sale_bill_uuid` (`sale_bill_uuid`),
     INDEX `idx_duty_no` (`duty_no`),
     INDEX `idx_desk_uuid` (`desk_uuid`),
-    INDEX `idx_complete_time` (`complete_time`)
+    INDEX `idx_complete_time` (`complete_time`),
+    INDEX `idx_is_takeout` (`is_takeout`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '销售统计表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_statistics_payment` (
@@ -2498,5 +2500,27 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_recommend` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商品推荐';
 
+CREATE TABLE IF NOT EXISTS `ttpos_member_address` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) DEFAULT 0 COMMENT '唯一ID',
+  `member_uuid` bigint(20) DEFAULT 0 COMMENT '会员uuid',
+  `name` varchar(50) DEFAULT '' COMMENT '联系人',
+  `gender` int(1) DEFAULT 0 COMMENT '性别 0-女 1-男',
+  `phone` varchar(20) DEFAULT '' COMMENT '手机号',
+  `country` varchar(10) DEFAULT '' COMMENT '国家代码',
+  `province` varchar(50) DEFAULT '' COMMENT '省份',
+  `city` varchar(50) DEFAULT '' COMMENT '城市',
+  `area` varchar(50) DEFAULT '' COMMENT '区',
+  `address` varchar(255) DEFAULT '' COMMENT '详细地址',
+  `street` varchar(255) DEFAULT '' COMMENT '街道/门牌号',
+  `is_default` int(1) DEFAULT 0 COMMENT '是否默认',
+  `location` varchar(100) DEFAULT '' COMMENT '位置坐标',
+  `auth_phone` varchar(20) DEFAULT '' COMMENT '认证手机号',
+  `auth_time` int(11) DEFAULT 0 COMMENT '认证时间',
+  `create_time` int(11) DEFAULT 0 COMMENT '创建时间',
+  `update_time` int(11) DEFAULT 0 COMMENT '更新时间',
+  `delete_time` int(11) DEFAULT 0 COMMENT '删除时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会员地址表';
 
 SET FOREIGN_KEY_CHECKS = 1;

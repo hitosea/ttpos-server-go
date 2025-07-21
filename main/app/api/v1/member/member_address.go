@@ -4,11 +4,13 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req/member_req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/middleware"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/google"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,12 +20,46 @@ type AddressHandler struct {
 	addressSrv service.IMemberAddressSrv
 }
 
+// 搜索谷歌地图地址
+// @Summary 搜索谷歌地图地址
+// @Description 搜索谷歌地图地址
+// @Tags 会员端.地址
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query member_req.MemberAddressSearchReq true "详情参数"
+// @Success 200 {object} dto.Response{data=string}
+// @Router /member/address/search [get]
+func (h *AddressHandler) AddressSearch(c *gin.Context) {
+	addressSearchReq := member_req.MemberAddressSearchReq{}
+	if err := c.ShouldBindQuery(&addressSearchReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	if addressSearchReq.Text == "" {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("搜索文本不能为空"))
+		return
+	}
+	if addressSearchReq.Latitude == 0 || addressSearchReq.Longitude == 0 {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.New("纬度或经度不能为空"))
+		return
+	}
+	//
+	addressSearchResp, err := google.PlacesSearchText(addressSearchReq.Text, addressSearchReq.Latitude, addressSearchReq.Longitude)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, addressSearchResp)
+}
+
 // AddressList 获取地址列表
 // @Summary 获取地址列表
 // @Description 获取地址列表
 // @Tags 会员端.地址
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data query member_req.MemberAddressListReq true "详情参数"
 // @Success 200 {object} dto.Response{data=member_resp.MemberAddressListResp}
 // @Router /member/address [get]
@@ -48,6 +84,7 @@ func (h *AddressHandler) AddressList(c *gin.Context) {
 // @Tags 会员端.地址
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body member_req.MemberAddressAddReq true "详情参数"
 // @Success 200 {object} dto.Response{}
 // @Router /member/address/add [post]
@@ -72,6 +109,7 @@ func (h *AddressHandler) AddressAdd(c *gin.Context) {
 // @Tags 会员端.地址
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body member_req.MemberAddressUpdateReq true "详情参数"
 // @Success 200 {object} dto.Response{data=resp.LoginResp}
 // @Router /member/address/update [post]
@@ -95,6 +133,7 @@ func (h *AddressHandler) AddressUpdate(c *gin.Context) {
 // @Tags 会员端.地址
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body member_req.MemberAddressDeleteReq true "详情参数"
 // @Success 200 {object} dto.Response{}
 // @Router /member/address/delete [delete]
@@ -119,6 +158,7 @@ func (h *AddressHandler) AddressDelete(c *gin.Context) {
 // @Tags 会员端.地址
 // @Accept json
 // @Produce json
+// @Security JwtToken
 // @param data body member_req.MemberAddressAuthReq true "详情参数"
 // @Success 200 {object} dto.Response{data=member_resp.LoginResp}
 // @Router /member/address/auth [post]
@@ -155,6 +195,7 @@ func RegisterAddressHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	// 需要认证
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
+		privateApi.GET("/address/search", wrapper.AddressSearch)
 		privateApi.GET("/address", wrapper.AddressList)
 		privateApi.POST("/address/add", wrapper.AddressAdd)
 		privateApi.POST("/address/update", wrapper.AddressUpdate)

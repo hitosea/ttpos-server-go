@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -15,7 +14,6 @@ type ILlPaymentOrderRepo interface {
 	GetPaymentOrderRecordList(opts ...DBOption) ([]*model.LlPaymentOrder, error)
 
 	GetPaymentOrderRecord(paymentOrderUuid uint64) (*model.LlPaymentOrder, error)
-	GetPaymentOrderListBySaleOrderUuid(saleOrderUuid uint64) ([]*model.LlPaymentOrder, error)
 	UpdatePaymentOrderRecord(paymentOrder model.LlPaymentOrder) error
 	Create(order model.LlPaymentOrder) (model.LlPaymentOrder, error) // 创建支付订单
 	UpdateOrCreatePaymentOrderRecord(obj model.LlPaymentOrder) error // 没有主键时创建，有主键时更新
@@ -83,20 +81,6 @@ func (r *llPaymentOrderRepo) GetPaymentOrderRecord(paymentOrderUuid uint64) (*mo
 		return nil, errors.WithMessage(err)
 	}
 	return &paymentOrder, nil
-}
-
-// GetPaymentOrderListBySaleOrderUuid 销售订单支付订单列表
-func (r *llPaymentOrderRepo) GetPaymentOrderListBySaleOrderUuid(saleOrderUuid uint64) ([]*model.LlPaymentOrder, error) {
-	paymentOrders, err := r.GetPaymentOrderRecordList(
-		CommonRepo.WhereByRelatedUuid(saleOrderUuid),
-		CommonRepo.WhereByStatus(constant.PaymentOrderStatusPaid),
-		CommonRepo.WhereByRelatedType(constant.PaymentOrderRelatedTypeSaleOrder),
-		CommonRepo.WhereBySoftDelete(),
-	)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-	return paymentOrders, nil
 }
 
 // UpdatePaymentOrderRecord 更新支付订单记录
