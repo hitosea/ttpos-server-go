@@ -169,6 +169,7 @@ type IMemberOrderSrv interface {
 	AcceptMemberSaleOrder(ctx context.Context, req req.AcceptOrderReq) error                                                             // 接单外送订单
 	RejectMemberSaleOrder(ctx context.Context, req req.RejectOrderReq) error                                                             // 拒单外送订单
 	CookFinishMemberSaleOrder(ctx context.Context, request req.CookFinishOrderReq) error                                                 // 备餐完成外送订单
+	GetMemberCashierOrderSearch(ctx context.Context, req req.MemberOrderSearchReq) (*resp.GetMemberCashierOrderSearchResp, error)        // 搜索订单列表通过关键词
 	//
 	PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error // 会员端订单支付成功. TODO 用于测试，提测前删掉
 }
@@ -12523,4 +12524,29 @@ func (s *orderSrv) CookFinishMemberSaleOrder(ctx context.Context, request req.Co
 	}()
 
 	return nil
+}
+
+// GetMemberCashierOrderSearch 订单搜索
+func (s *orderSrv) GetMemberCashierOrderSearch(ctx context.Context, req req.MemberOrderSearchReq) (*resp.GetMemberCashierOrderSearchResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	memberSaleOrders, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderByContactNameAndContactPhoneSuffix(req.Keyword, req.Keyword)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	memberOrders := make([]resp.MemberCashierOrder, 0)
+	for _, memberSaleOrder := range memberSaleOrders {
+		memberOrders = append(memberOrders, resp.MemberCashierOrder{
+			MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			SerialNumber:        memberSaleOrder.SerialNumber,
+			Status:              memberSaleOrder.Status,
+			Num:                 memberSaleOrder.ProductNum,
+			ProductAmount:       memberSaleOrder.ProductAmount,
+		})
+	}
+
+	return &resp.GetMemberCashierOrderSearchResp{
+		List: memberOrders,
+	}, nil
 }

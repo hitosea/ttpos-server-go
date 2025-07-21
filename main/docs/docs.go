@@ -9998,6 +9998,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/member_order/search": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "搜索订单列表通过关键词",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外送接单相关"
+                ],
+                "summary": "搜索订单列表通过关键词",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "关键字",
+                        "name": "keyword",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.GetMemberCashierOrderSearchResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/member_order_manage/detail": {
             "get": {
                 "security": [
@@ -24334,6 +24383,18 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.GetMemberCashierOrderSearchResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MemberCashierOrder"
+                    }
+                }
+            }
+        },
         "resp.GetMemberOrderDetailResp": {
             "type": "object",
             "properties": {
@@ -25438,6 +25499,35 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/resp.MemberCardType"
                     }
+                }
+            }
+        },
+        "resp.MemberCashierOrder": {
+            "type": "object",
+            "properties": {
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                },
+                "num": {
+                    "description": "商品数量. 所有商品数量总和，如商品A数量为2，商品B数量为3，则总数量为5",
+                    "type": "number"
+                },
+                "product_amount": {
+                    "description": "商品金额. 所有商品金额总和，如商品A金额为2，商品B金额为3，则总金额为5",
+                    "type": "number"
+                },
+                "serial_number": {
+                    "description": "订单流水号",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "订单状态.0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消",
+                    "type": "integer"
+                },
+                "status_group": {
+                    "description": "订单状态分组. \"unaccept\" 待接单, \"accept\" 备餐中, \"undelivery\" 待配送, \"delivery\" 配送中, \"completed\" 已完成, \"cancel\" 已取消",
+                    "type": "string"
                 }
             }
         },
@@ -28402,13 +28492,9 @@ const docTemplate = `{
         "resp.RiderInfo": {
             "type": "object",
             "properties": {
-                "latitude": {
-                    "description": "骑手纬度",
-                    "type": "number"
-                },
-                "longitude": {
-                    "description": "骑手经度",
-                    "type": "number"
+                "location": {
+                    "description": "骑手位置.格式: 纬度,经度",
+                    "type": "string"
                 },
                 "name": {
                     "description": "骑手姓名",

@@ -35,6 +35,7 @@ type IQueryMemberSaleOrderRepo interface {
 	UpdateMemberSaleOrderRiderCompleted(memberSaleOrder model.MemberSaleOrder) error                                                                                 // 更新会员端销售订单-骑手配送完成
 	UpdateMemberSaleOrderProviderInfo(memberSaleOrder model.MemberSaleOrder) error                                                                                   // 更新会员端销售订单-配送 provider 信息
 	UpdateMemberSaleOrderAddress(memberSaleOrder model.MemberSaleOrder) error                                                                                        // 更新会员端销售订单-配送地址
+	GetMemberSaleOrderByContactNameAndContactPhoneSuffix(contactName string, contactPhoneSuffix string) ([]*model.MemberSaleOrder, error)                            // 根据联系人姓名和手机号后缀查询会员端销售订单
 
 	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
 	WhereStatusIn(status []uint) DBOption
@@ -437,4 +438,25 @@ func (r *MemberSaleOrderRepo) WithSaleBillSaleOrderProduct(preloads ...WithPrelo
 		return db.Preload("SaleBill.SaleOrders.SaleOrderProducts.ImageFile").
 			Preload("SaleBill.SaleOrders.SaleOrderProducts.MultiLanguageName")
 	}
+}
+
+// 根据联系人姓名和联系人手机号后四位查询外送订单
+func (r *MemberSaleOrderRepo) GetMemberSaleOrderByContactNameAndContactPhoneSuffix(contactName string, contactPhoneSuffix string) ([]*model.MemberSaleOrder, error) {
+	var memberSaleOrders []*model.MemberSaleOrder
+	err := r.db.Model(&model.MemberSaleOrder{}).
+		Where("delete_time = ?", 0).
+		Where("status in ?", []int{ // 只查询以下状态的订单
+			constant.MemberSaleOrderStatusPendingMerchantAccept, // 待商家接单
+			constant.MemberSaleOrderStatusCooking,               // 商家备餐中
+			constant.MemberSaleOrderStatusPendingRiderPickup,    // 待骑手接单
+			constant.MemberSaleOrderStatusPendingRiderDelivery,  // 骑手正在赶往商家
+			constant.MemberSaleOrderStatusDeliverying,           // 骑手配送中
+			constant.MemberSaleOrderStatusCompleted,             // 已完成
+			constant.MemberSaleOrderStatusCancelled,             // 已取消
+		}).
+		Where("contact_name = ? OR contact_phone LIKE ?", contactName, "%"+contactPhoneSuffix).Find(&memberSaleOrders).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return memberSaleOrders, nil
 }
