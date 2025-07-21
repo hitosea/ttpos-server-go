@@ -108,7 +108,7 @@ func (model *SaleOrder) GetProductNum() float64 {
 func (model *SaleOrder) GetProductAmount() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
-		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.SalePrice))
+		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.GetTotalPrice()))
 	}
 	return amount.Round(2).InexactFloat64()
 }
