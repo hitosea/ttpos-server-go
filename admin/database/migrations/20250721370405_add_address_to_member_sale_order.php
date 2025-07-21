@@ -37,7 +37,7 @@ class AddAddressToMemberSaleOrder extends Migrator
 
         $table = $this->table('member_sale_order');
         if (!$table->hasColumn('member_address_uuid')) {
-            $table->addColumn('member_address_uuid', 'biginteger', [unsigned => true, 'null' => false, 'default' => 0, 'comment' => '会员收货地址UUID', 'after' => 'related_order_type']);
+            $table->addColumn('member_address_uuid', 'biginteger', ['signed' => false, 'null' => false, 'default' => 0, 'comment' => '会员收货地址UUID', 'after' => 'related_order_type']);
             $table->update();
         }
          if (!$table->hasColumn('contact_location')) {
