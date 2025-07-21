@@ -102,3 +102,8 @@ type GetMemberOrderManageDetailResp struct {
 	ProductList  MemberProductManageList `json:"product_list"`  // 订单商品列表
 	OperationLog OperationLog            `json:"operation_log"` // 操作日志
 }
+
+// 收银端“外送”接单页面订单搜索
+type GetMemberCashierOrderSearchResp struct {
+	List []MemberCashierOrder `json:"list"` // 订单列表
+}

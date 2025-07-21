@@ -60,6 +60,7 @@ type IOrderQueryRepo interface {
 	GetSaleBillWithProducts(saleBillUuid uint64) (*model.SaleBill, error)                                                                      // 获取销售账单所有商品信息
 	HasShowOrder(deviceUuid uint64) (uint64, error)                                                                                            // 判断该设备是否有未挂单的点餐订单
 	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                                            // 获取销售账单记录
+	GetSaleBillSaleOrderRecord(saleOrderUuid uint64) (*model.SaleOrder, error)                                                                 // 获取销售账单记录
 	GetInvoiceInfo(saleOrderUuid uint64) (*model.SaleOrderInvoiceInfo, error)                                                                  // 获取订单发票信息
 }
 
@@ -368,6 +369,7 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 		),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByCooking(),
+		CommonRepo.WhereInBillType([]uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}),
 		CommonRepo.SortWithID("DESC"),
 		dbOption,
 		//
@@ -1336,6 +1338,15 @@ func (r *orderRepo) GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, err
 		return nil, fmt.Errorf("GetSaleBillRecord: %v", err)
 	}
 	return &saleBill, nil
+}
+
+// GetSaleBillSaleOrderRecord 获取销售账单记录
+func (r *orderRepo) GetSaleBillSaleOrderRecord(saleOrderUuid uint64) (*model.SaleOrder, error) {
+	var saleOrder model.SaleOrder
+	if err := r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Preload("SaleBill").First(&saleOrder).Error; err != nil {
+		return nil, fmt.Errorf("GetSaleBillSaleOrderRecord: %v", err)
+	}
+	return &saleOrder, nil
 }
 
 // GetSaleBillAllInfo 获取销售账单所有信息

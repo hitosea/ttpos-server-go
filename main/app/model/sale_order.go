@@ -108,7 +108,7 @@ func (model *SaleOrder) GetProductNum() float64 {
 func (model *SaleOrder) GetProductAmount() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
-		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.SalePrice))
+		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.GetTotalPrice()))
 	}
 	return amount.Round(2).InexactFloat64()
 }
@@ -906,7 +906,7 @@ func NewSaleOrder(deviceId string, saleBillUuid uint64, saleBillOrderNo string, 
 	return saleOrder
 }
 
-func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, saleBillUuid, buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting) *SaleOrderBuffetCustomerType {
+func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, saleBillUuid, buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting, openOverallDiscount uint) *SaleOrderBuffetCustomerType {
 	saleOrderBuffetCustomerType := &SaleOrderBuffetCustomerType{
 		Name:                        customerName,
 		SaleOrderUuid:               saleOrderUuid,
@@ -917,7 +917,8 @@ func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, saleBill
 		SalePrice:                   buffetCustomerTypePricePrice,
 		Price:                       buffetCustomerTypePricePrice,
 		TaxRate:                     buffetPackageTaxRate,
-		CustomDiscountRate:          1, // 默认自定义折扣率为1，即不打折。刚开始创建时是没有折扣的
+		CustomDiscountRate:          1,                   // 默认自定义折扣率为1，即不打折。刚开始创建时是没有折扣的
+		OpenOverallDiscount:         openOverallDiscount, // 默认开启整单折扣
 	}
 	// 计算金额
 	saleOrderBuffetCustomerType.CalcSaleOrderBuffetCustomerType(setting)

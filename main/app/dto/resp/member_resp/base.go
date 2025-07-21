@@ -19,6 +19,7 @@ type CompanyResp struct {
 	Address      string `json:"address"`       // 公司地址
 	LinkPhone    string `json:"link_phone"`    // 公司联系电话
 	OpeningHours string `json:"opening_hours"` // 公司营业时间
+	IsOpenRider  bool   `json:"is_open_rider"` // 是否开启外送
 }
 
 type MemberBaseInfoResp struct {
@@ -26,5 +27,5 @@ type MemberBaseInfoResp struct {
 	Company             CompanyResp        `json:"company"`                 // 公司信息
 	AreaCode            []string           `json:"area_code"`               // 区号列表
 	LanguageList        []dto.LanguageItem `json:"language_list"`           // 语言列表
-	IsMemberShowSoldOut int                `json:"is_member_show_sold_out"` // 是否显示售罄商品
+	IsMemberShowSoldOut bool               `json:"is_member_show_sold_out"` // 是否显示售罄商品
 }

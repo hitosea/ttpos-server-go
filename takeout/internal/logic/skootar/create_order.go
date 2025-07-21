@@ -90,6 +90,7 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 		ProviderName:         gconv.String(consts.ProviderSkootar),
 		JobDate:              reqInp.JobDate,
 		StartTime:            reqInp.StartTime,
+		FinishTime:           resp.JobDetail.FinishTime,
 		JobStatus:            gconv.String(resp.JobDetail.JobStatus),
 		Remark:               reqInp.Remark,
 	}
@@ -135,6 +136,7 @@ func (s *sSkootar) CreateOrder(ctx context.Context, req *api.CreateOrderReq) (re
 		TakeoutRefNo:   job.TakeoutRefNo,
 		ShopOrderUuid:  job.ShopRefNo,
 		Status:         job.JobStatus,
+		FinishTime:     job.FinishTime,
 	}
 	return
 }

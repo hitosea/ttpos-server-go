@@ -26,6 +26,8 @@ func init() {
 // cancelOrderEventHandler "整单取消"事件处理器
 func cancelOrderEventHandler() {
 	once_cancel_order_event_handler.Do(func() {
+
+		// 整单取消 - 创建操作记录
 		event.NewSystemBus().SubscribeCancelOrderEvent(func(payload event.CancelOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
@@ -39,7 +41,9 @@ func cancelOrderEventHandler() {
 				OperatorUuid:  payload.GetOperatorUuid(),
 			}
 			record.Data = ""
-			record.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
+			if payload.Ctx.GetStaff() != (model.Staff{}) {
+				record.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
+			}
 			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
 				logger.Logger.Error("SubscribeCancelOrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))

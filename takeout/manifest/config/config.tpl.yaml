@@ -12,7 +12,7 @@ logger:
 # https://goframe.org/docs/core/gdb-config-file
 database:
   default:
-  link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
+    link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
 
 grpc:
   name:            "ttpos-takeout"
@@ -33,7 +33,8 @@ nacos:
 
 app:
   serviceUrl: $TAKEOUT_SERVICE_URL
-  callbackSecret:  $TAKEOUT_CALLBACK_SECRET
+  # 换成 jwt的密钥
+  callbackSecret:  $JWT_SECRET
   provider:
     skootar:
       endpoint: $SKOOTAR_ENDPOINT

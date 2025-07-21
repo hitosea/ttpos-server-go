@@ -64,6 +64,7 @@ type ICommonRepo interface {
 	WhereByMemberUuid(uuid uint64) DBOption                             // 根据会员UUID查询
 	WhereByNotRevoked() DBOption                                        // 未撤销的出库记录
 	WhereByStatus(status uint) DBOption                                 // 根据状态查询
+	WhereBySerialNumber(serialNo string) DBOption                       // 根据外送序号查询
 	WhereByMultipleStatus(statusList []uint) DBOption                   // 根据多个状态查询
 	WhereBySource(source uint) DBOption                                 // 根据来源查询
 	WhereByRequirement(requirement string) DBOption                     // 根据requirement查询
@@ -79,6 +80,7 @@ type ICommonRepo interface {
 	WhereByRelatedType(relatedType uint) DBOption                       // 根据关联类型查询
 	WhereByOrderNo(orderNo string) DBOption                             // 根据订单编号查询
 	WhereByBillType(billType uint) DBOption                             // 根据账单类型查询
+	WhereInBillType(billTypeList []uint) DBOption                       // 根据账单类型查询
 	WhereByNotStatus(status uint) DBOption                              // 根据状态查询
 	WhereByIsHide(isHide bool) DBOption                                 // 根据是否隐藏查询
 	WhereByReduceStock(reduceStock uint) DBOption                       // 根据是否减库存查询
@@ -206,6 +208,13 @@ func (r *commonRepo) WhereByStatus(status uint) DBOption {
 	}
 }
 
+// WhereBySerialNumber 根据外送序号查询
+func (r *commonRepo) WhereBySerialNumber(serialNo string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("serial_number = ?", serialNo)
+	}
+}
+
 // 根据多个状态查询
 func (r *commonRepo) WhereByMultipleStatus(statusList []uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
@@ -308,6 +317,13 @@ func (r *commonRepo) WhereByOrderNo(orderNo string) DBOption {
 func (r *commonRepo) WhereByBillType(billType uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("bill_type = ?", billType)
+	}
+}
+
+// WhereInBillType 根据账单类型查询
+func (r *commonRepo) WhereInBillType(billTypeList []uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("bill_type IN (?)", billTypeList)
 	}
 }
 

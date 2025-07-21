@@ -1,6 +1,8 @@
 package model
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -43,6 +45,8 @@ type MemberSaleOrder struct {
 	RiderName         string  `gorm:"column:rider_name;type:varchar(255);not null;default:'';comment:'骑手名称'"`
 	RiderPhone        string  `gorm:"column:rider_phone;type:varchar(255);not null;default:'';comment:'骑手电话'"`
 	Location          string  `gorm:"column:location;type:varchar(255);not null;default:'';comment:'骑手位置,格式:纬度,经度'"`
+	RiderAvatar       string  `gorm:"column:rider_avatar;type:varchar(255);not null;default:'';comment:'骑手头像'"`
+	RiderRating       float64 `gorm:"column:rider_rating;type:decimal(12,2);not null;default:0.00;comment:'骑手评分'"`
 	RemainingDistance float64 `gorm:"column:remaining_distance;type:decimal(12,6);not null;default:0;comment:'剩余距离'"`
 	// 收货人信息
 	MemberAddressUuid    uint64 `gorm:"column:member_address_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员收货地址UUID'"`
@@ -54,14 +58,14 @@ type MemberSaleOrder struct {
 	ContactPhonePrefix   string `gorm:"column:contact_phone_prefix;type:varchar(255);not null;default:'';comment:'联系电话前缀'"`
 	ContactGender        int    `gorm:"column:contact_gender;type:int(10);not null;default:0;comment:'联系人性别, 0-女士 1-先生'"`
 	// 时间相关
-	PayTime            int64 `gorm:"column:pay_time;type:int(10) unsigned;not null;default:0;comment:'支付完成时间（时间戳）'"`
-	AcceptTime         int64 `gorm:"column:accept_time;type:int(10) unsigned;not null;default:0;comment:'商家接单时间（时间戳）'"`
-	CookTime           int64 `gorm:"column:cook_time;type:int(10) unsigned;not null;default:0;comment:'商家备餐完成时间（时间戳）'"`
-	RiderAcceptTime    int64 `gorm:"column:rider_accept_time;type:int(10) unsigned;not null;default:0;comment:'骑手接单时间（时间戳）'"`
-	RiderStartTime     int64 `gorm:"column:rider_start_time;type:int(10) unsigned;not null;default:0;comment:'骑手开始配送时间（时间戳）'"`
-	FinishTime         int64 `gorm:"column:finish_time;type:int(10) unsigned;not null;default:0;comment:'骑手送达时间（时间戳）'"`
-	ExpectedFinishTime int64 `gorm:"column:expected_finish_time;type:int(10) unsigned;not null;default:0;comment:'预计送达时间（时间戳）'"`
-	CancelTime         int64 `gorm:"column:cancel_time;type:int(10) unsigned;not null;default:0;comment:'取消时间（时间戳）'"`
+	PayTime            int64  `gorm:"column:pay_time;type:int(10) unsigned;not null;default:0;comment:'支付完成时间（时间戳）'"`
+	AcceptTime         int64  `gorm:"column:accept_time;type:int(10) unsigned;not null;default:0;comment:'商家接单时间（时间戳）'"`
+	CookTime           int64  `gorm:"column:cook_time;type:int(10) unsigned;not null;default:0;comment:'商家备餐完成时间（时间戳）'"`
+	RiderAcceptTime    int64  `gorm:"column:rider_accept_time;type:int(10) unsigned;not null;default:0;comment:'骑手接单时间（时间戳）'"`
+	RiderStartTime     int64  `gorm:"column:rider_start_time;type:int(10) unsigned;not null;default:0;comment:'骑手开始配送时间（时间戳）'"`
+	FinishTime         int64  `gorm:"column:finish_time;type:int(10) unsigned;not null;default:0;comment:'骑手送达时间（时间戳）'"`
+	ExpectedFinishTime string `gorm:"column:expected_finish_time;type:varchar(255);not null;default:'';comment:'预计送达时间'"`
+	CancelTime         int64  `gorm:"column:cancel_time;type:int(10) unsigned;not null;default:0;comment:'取消时间（时间戳）'"`
 
 	SaleBill      *SaleBill      `gorm:"foreignKey:MemberSaleOrderUuid;references:Uuid"`
 	PaymentMethod *PaymentMethod `gorm:"foreignKey:PaymentMethodUuid;references:Uuid"`
@@ -104,6 +108,42 @@ func (model *MemberSaleOrder) GetLocation() (string, string) {
 	if len(location) != 2 {
 		return "", ""
 	}
+	// 去掉前后空格并保留6位小数
+	location[0] = strings.TrimSpace(location[0])
+	location[1] = strings.TrimSpace(location[1])
+	// 转换为float64并保留6位小数
+	lat, err := strconv.ParseFloat(location[0], 64)
+	if err == nil {
+		location[0] = fmt.Sprintf("%.6f", lat)
+	}
+	lng, err := strconv.ParseFloat(location[1], 64)
+	if err == nil {
+		location[1] = fmt.Sprintf("%.6f", lng)
+	}
+	return location[0], location[1]
+}
+
+// 获取买家经纬度信息。第一个是纬度，第二个是经度
+func (model *MemberSaleOrder) GetCustomerLocation() (string, string) {
+	if model.ContactLocation == "" {
+		return "", ""
+	}
+	location := strings.Split(model.ContactLocation, ",")
+	if len(location) != 2 {
+		return "", ""
+	}
+	// 去掉前后空格并保留6位小数
+	location[0] = strings.TrimSpace(location[0])
+	location[1] = strings.TrimSpace(location[1])
+	// 转换为float64并保留6位小数
+	lat, err := strconv.ParseFloat(location[0], 64)
+	if err == nil {
+		location[0] = fmt.Sprintf("%.6f", lat)
+	}
+	lng, err := strconv.ParseFloat(location[1], 64)
+	if err == nil {
+		location[1] = fmt.Sprintf("%.6f", lng)
+	}
 	return location[0], location[1]
 }
 
@@ -134,6 +174,12 @@ func (model *MemberSaleOrder) IsCanPaid() bool {
 func (model *MemberSaleOrder) IsCanCancel() bool {
 	// 商家没接单之前可以取消
 	return model.Status <= constant.MemberSaleOrderStatusPendingMerchantAccept
+}
+
+// IsRiderPickup 订单是否骑手接单
+func (model *MemberSaleOrder) IsRiderPickup() bool {
+	// 骑手接单之后可以取消
+	return model.Status > constant.MemberSaleOrderStatusPendingRiderPickup
 }
 
 // 订单是否已经验证手机号
@@ -188,12 +234,14 @@ func (model *MemberSaleOrder) CookFinish() {
 }
 
 // 骑手正在赶往商家
-func (model *MemberSaleOrder) RiderAccept(riderName string, riderPhone string, location string) {
+func (model *MemberSaleOrder) RiderAccept(riderName string, riderPhone string, location string, riderAvatar string, riderRating float32) {
 	model.Status = constant.MemberSaleOrderStatusPendingRiderDelivery // 骑手正在赶往商家
 	model.RiderAcceptTime = time.Now().Unix()
 	model.RiderName = riderName
 	model.RiderPhone = riderPhone
 	model.Location = location
+	model.RiderAvatar = riderAvatar
+	model.RiderRating = float64(riderRating)
 }
 
 // 骑手配送中

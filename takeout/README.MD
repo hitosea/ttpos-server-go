@@ -3,12 +3,21 @@
 
 ## INSTALL
 ```shell
+#安装依赖
 go mod tidy
+
 #生成配置，依赖上级目录生成的 .env 文件
 make conf
 
 #编译运行
 make run
+
+#升级 db
+make db_up
+
+#新增db变更
+make db_add NAME='comment'
+
 ```
 
 

@@ -1,8 +1,7 @@
-CREATE DATABASE `takeout` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 
 -- takeout.echo definition
 
-CREATE TABLE `echo` (
+CREATE TABLE IF NOT EXISTS `echo` (
                         `id` bigint(20) NOT NULL AUTO_INCREMENT,
                         `uuid` bigint(20) NOT NULL,
                         `msg` varchar(100) DEFAULT NULL,
@@ -10,13 +9,9 @@ CREATE TABLE `echo` (
                         UNIQUE KEY `echo_unique` (`uuid`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO echo
-(uuid, msg)
-VALUES( 999, 'test msg');
-
 -- takeout.takeout_job definition
 
-CREATE TABLE `takeout_job` (
+CREATE TABLE IF NOT EXISTS `takeout_job` (
                                `id` bigint(20) NOT NULL AUTO_INCREMENT,
                                `uuid` varchar(100) NOT NULL COMMENT '外送订单UUID',
                                `shop_ref_no` varchar(100) DEFAULT NULL COMMENT '餐馆订单参考，如UUID',
@@ -38,22 +33,28 @@ CREATE TABLE `takeout_job` (
                                `updated_at` datetime DEFAULT NULL COMMENT '更新时间',
                                `deleted_at` datetime DEFAULT NULL COMMENT '软删除',
                                `callback_url` varchar(300) DEFAULT NULL COMMENT '订单状态更新回调',
+                               `skootar_id` varchar(100) DEFAULT NULL COMMENT '骑手Id',
+                               `skootar_name` varchar(100) DEFAULT NULL COMMENT '骑手名称',
+                               `skootar_phone` varchar(100) DEFAULT NULL COMMENT '骑手电话',
+                               `skootar_image_url` text DEFAULT NULL COMMENT '骑手头像',
+                               `skootar_rating` decimal(10,2) DEFAULT NULL COMMENT '骑手评分',
                                PRIMARY KEY (`id`),
                                UNIQUE KEY `takeout_order_uk_uuid` (`uuid`),
                                KEY `takeout_job_shop_ref_no_IDX` (`shop_ref_no`) USING BTREE,
                                KEY `takeout_job_provider_name_IDX` (`provider_name`,`takeout_ref_no`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外送订单信息';
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外送订单信息';
+
 
 -- takeout.takeout_job_location definition
 
-CREATE TABLE `takeout_job_location` (
+CREATE TABLE IF NOT EXISTS `takeout_job_location` (
                                         `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
                                         `uuid` varchar(100) NOT NULL COMMENT '全局唯一uuid',
                                         `location_type` tinyint(4) DEFAULT 0 COMMENT '位置类型： 0 餐馆，1 消费者',
                                         `address_name` varchar(100) DEFAULT NULL COMMENT '地址说明',
                                         `address` varchar(200) DEFAULT NULL COMMENT '详细地址',
-                                        `lat` varchar(10) DEFAULT NULL COMMENT '纬度',
-                                        `lng` varchar(10) DEFAULT NULL COMMENT '经度',
+                                        `lat` varchar(30) DEFAULT NULL COMMENT '纬度',
+                                        `lng` varchar(30) DEFAULT NULL COMMENT '经度',
                                         `contact_name` varchar(100) DEFAULT NULL COMMENT '联系人名称',
                                         `contact_phone` varchar(100) DEFAULT NULL COMMENT '联系人号码',
                                         `seq` int(11) DEFAULT 1 COMMENT '地址序列，1开始',
@@ -67,7 +68,7 @@ CREATE TABLE `takeout_job_location` (
 
 -- takeout.takeout_job_status_log definition
 
-CREATE TABLE `takeout_job_status_log` (
+CREATE TABLE IF NOT EXISTS `takeout_job_status_log` (
                                           `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
                                           `uuid` varchar(100) NOT NULL COMMENT '全局唯一ID',
                                           `job_uuid` varchar(100) DEFAULT NULL COMMENT '外送订单uuid',
@@ -83,7 +84,7 @@ CREATE TABLE `takeout_job_status_log` (
 
 -- takeout.takeout_callback_msg definition
 
-CREATE TABLE `takeout_callback_msg` (
+CREATE TABLE IF NOT EXISTS `takeout_callback_msg` (
                                         `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
                                         `created_at` datetime DEFAULT NULL COMMENT '创建时间',
                                         `updated_at` datetime DEFAULT NULL COMMENT '修改时间',
@@ -97,12 +98,3 @@ CREATE TABLE `takeout_callback_msg` (
                                         KEY `takeout_callback_msg_takeout_ref_no_IDX` (`takeout_ref_no`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外送系统回调信息';
 
-
-
-ALTER TABLE takeout_job ADD skootar_id varchar(100) NULL COMMENT '骑手Id';
-ALTER TABLE takeout_job ADD skootar_name varchar(100) NULL COMMENT '骑手名称';
-ALTER TABLE takeout_job ADD skootar_phone varchar(100) NULL COMMENT '骑手电话';
-ALTER TABLE takeout_job ADD skootar_image_url text NULL COMMENT '骑手头像';
-ALTER TABLE takeout_job ADD skootar_rating DECIMAL(10,2) NULL COMMENT '骑手评分';
-ALTER TABLE takeout_job_location MODIFY COLUMN `lat` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '纬度' AFTER `address`;
-ALTER TABLE takeout_job_location MODIFY COLUMN `lng` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '经度' AFTER `lat`;

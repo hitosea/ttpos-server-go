@@ -22,9 +22,19 @@ type MemberOrder struct {
 	Rider               RiderInfo            `json:"rider"`                  // 骑手信息
 }
 
+type ExtraMemberCashierOrderListMeta struct {
+	UnacceptNum   int64 `json:"unaccept_num"`   // 待接单数量
+	AcceptNum     int64 `json:"accept_num"`     // 备餐中数量
+	UndeliveryNum int64 `json:"undelivery_num"` // 待配送数量
+	DeliveryNum   int64 `json:"delivery_num"`   // 配送中数量
+	CompletedNum  int64 `json:"completed_num"`  // 已完成数量
+	CancelNum     int64 `json:"cancel_num"`     // 已取消数量
+}
+
 type GetMemberCashierOrderListResp struct {
-	Meta dto.PageResponse     `json:"meta"`
-	List []MemberCashierOrder `json:"list"` // 订单列表
+	Meta  dto.PageResponse                `json:"meta"`
+	Extra ExtraMemberCashierOrderListMeta `json:"extra"`
+	List  []MemberCashierOrder            `json:"list"` // 订单列表
 }
 
 type MemberCashierOrder struct {
@@ -45,7 +55,8 @@ type MemberOrderProduct struct {
 	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 float64            `json:"num"`                   // 数量
-	TotalPrice          float64            `json:"total_price"`           // 总价. 总价=单价*数量
+	TotalPrice          float64            `json:"total_price"`           // 总价. 总价=单价*数量。 折后
+	OriginTotalPrice    float64            `json:"origin_total_price"`    // 原价总价. 原价总价=原价单价*数量。 折前
 	Image               string             `json:"image"`                 // 商品图片
 }
 
@@ -129,4 +140,29 @@ type GetMemberOrderPaymentMethodListResp struct {
 	RemainingPaymentTime int64               `json:"remaining_payment_time"` // 剩余支付时间(单位秒)
 	Amount               float64             `json:"amount"`                 // 订单总金额. 订单总金额=实际付款金额=商品金额-会员折扣金额+运费
 	PaymentMethodUuid    uint64              `json:"payment_method_uuid"`    // 当前订单的支付方式UUID(可用来默认选中)
+}
+
+// 名称、地址、坐标
+type OrderCoordinate struct {
+	Name    string `json:"name"`    // 名称
+	Address string `json:"address"` // 地址
+	Lat     string `json:"lat"`     // 纬度
+	Lng     string `json:"lng"`     // 经度
+}
+
+type DriverInfoResp struct {
+	Name          string  `json:"name"`           // 骑手姓名
+	Phone         string  `json:"phone"`          // 骑手电话
+	Avatar        string  `json:"avatar"`         // 骑手头像
+	Rating        float64 `json:"rating"`         // 骑手评分
+	Lat           string  `json:"lat"`            // 纬度
+	Lng           string  `json:"lng"`            // 经度
+	EstimatedTime string  `json:"estimated_time"` // 预计送达时间
+}
+
+// 订单相关坐标信息
+type MemberOrderCoordinates struct {
+	Merchant   OrderCoordinate `json:"merchant"`    // 商家
+	Customer   OrderCoordinate `json:"customer"`    // 顾客
+	DriverInfo DriverInfoResp  `json:"driver_info"` // 骑手
 }

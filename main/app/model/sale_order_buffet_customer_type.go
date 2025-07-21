@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"ttpos-server-go/app/constant"
 
 	"github.com/jinzhu/copier"
 	"github.com/shopspring/decimal"
@@ -18,6 +19,8 @@ type SaleOrderBuffetCustomerType struct {
 	SalePriceNoTax     float64 `gorm:"column:sale_price_no_tax;type:decimal(12,2);not null;default:0.00;comment:'销售价,未含税价格（折前）'" json:"sale_price_no_tax"`
 	CustomDiscountRate float64 `gorm:"column:custom_discount_rate;type:decimal(12,4);not null;default:1;comment:自定义折扣率(0-100%)" json:"custom_discount_rate"`
 	TaxRate            float64 `gorm:"column:tax_rate;type:decimal(10,2);not null;default:0;comment:税率,单位%.加购时记录税率,结账时再重新核算" json:"tax_rate"`
+
+	OpenOverallDiscount uint `gorm:"column:open_overall_discount;type:tinyint(1);not null;default:0;comment:'是否开启整单折扣, 0-否 1-是'" json:"open_overall_discount"`
 
 	// 价格计算相关
 	Price             float64 `gorm:"column:price;type:decimal(12,2);not null;default:0;comment:最终单价（折后价），只进行自定义打折，不进行会员打折" json:"price"`
@@ -38,6 +41,14 @@ type SaleOrderBuffetCustomerType struct {
 	BuffetPackage           BuffetPackage           `gorm:"foreignKey:BuffetPackageUuid;references:uuid"`
 	BuffetCustomerTypePrice BuffetCustomerTypePrice `gorm:"foreignKey:BuffetCustomerTypePriceUuid;references:uuid"` // 用于关联后台设置的顾客类型定价。在结账时，判断价格是否改变
 	ReturnOrderProducts     []*ReturnOrderProduct   `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid"`        // 退货单商品表，用于获取该顾客商品的退货数量
+}
+
+// 获取整单折扣率
+func (model *SaleOrderBuffetCustomerType) GetCustomDiscountRate() float64 {
+	if model.OpenOverallDiscount == 0 {
+		return constant.NoDiscount
+	}
+	return model.CustomDiscountRate
 }
 
 // 设置为空。为了更新数据库数据时，不更新关联对象

@@ -122,6 +122,7 @@ func (s *takeoutSrv) CreateOrder(ctx context.Context, req *req.CreateTakeoutOrde
 		Status:         res.Status,
 		ShopOrderUuid:  res.ShopOrderUuid,
 		TakeoutRefNo:   res.TakeoutRefNo,
+		FinishTime:     res.FinishTime,
 	}, nil
 }
 

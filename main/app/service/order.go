@@ -161,6 +161,7 @@ type IMemberOrderSrv interface {
 	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                       // 查询会员端订单详情
 	GetMemberOrderPaymentMethodList(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderPaymentMethodListResp, error) // 获取会员端订单支付方式列表
 	MemberOrderCancel(ctx context.Context, req member_req.CancelOrderReq) error                                                              // 会员端订单取消
+	GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.GetRiderInfoReq) (*resp.MemberOrderCoordinates, error)                      // 获取骑手信息
 	// 收银机
 	GetMemberCashierOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberCashierOrderListResp, error)              // 查询收银机“外送”页面的订单列表
 	GetMemberCashierOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderCashierDetailResp, error)     // 查询收银机“外送”页面的订单详情
@@ -169,6 +170,7 @@ type IMemberOrderSrv interface {
 	AcceptMemberSaleOrder(ctx context.Context, req req.AcceptOrderReq) error                                                             // 接单外送订单
 	RejectMemberSaleOrder(ctx context.Context, req req.RejectOrderReq) error                                                             // 拒单外送订单
 	CookFinishMemberSaleOrder(ctx context.Context, request req.CookFinishOrderReq) error                                                 // 备餐完成外送订单
+	GetMemberCashierOrderSearch(ctx context.Context, req req.MemberOrderSearchReq) (*resp.GetMemberCashierOrderSearchResp, error)        // 搜索订单列表通过关键词
 	//
 	PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error // 会员端订单支付成功. TODO 用于测试，提测前删掉
 }
@@ -1003,7 +1005,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 
 	var address resp.MemberSaleOrderAddress
 	if memberSaleOrder.Address != nil {
-		lat, lng, _ := memberSaleOrder.Address.GetLocation()
+		lat, lng, err := memberSaleOrder.Address.GetLocation()
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -1333,14 +1335,16 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 		paymentOrderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeMemberOrder),
 		paymentOrderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
 	)
-	if err == nil && paymentOrder.Uuid != 0 && paymentOrder.Status == constant.PaymentOrderStatusPaid {
-		return &resp.MemberOrderPaymentInfoResp{
-			MemberSaleOrderUuid: memberSaleOrder.Uuid,
-			PaymentOrderUuid:    paymentOrder.Uuid,
-			PaymentMethodName:   paymentMethod.PaymentName,
-			Status:              paymentOrder.Status,
-			PaymentAmount:       paymentOrder.PaymentAmount,
-		}, nil
+	if err == nil && paymentOrder.Uuid != 0 {
+		if paymentOrder.Status == constant.PaymentOrderStatusPaid {
+			return &resp.MemberOrderPaymentInfoResp{
+				MemberSaleOrderUuid: memberSaleOrder.Uuid,
+				PaymentOrderUuid:    paymentOrder.Uuid,
+				PaymentMethodName:   paymentMethod.PaymentName,
+				Status:              paymentOrder.Status,
+				PaymentAmount:       paymentOrder.PaymentAmount,
+			}, nil
+		}
 	} else {
 		// 添加支付方式
 		createPaymentOrder, err := paymentOrderRepo.Create(model.PaymentOrder{
@@ -1482,6 +1486,7 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
 			TotalPrice:          saleOrderProduct.GetTotalPrice(),
+			OriginTotalPrice:    saleOrderProduct.GetTotalProductPrice(),
 			Image:               saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request)),
 		})
 	}
@@ -1629,29 +1634,190 @@ func (s *orderSrv) GetMemberOrderPaymentMethodList(ctx context.Context, req req.
 }
 
 // MemberOrderCancel 会员端订单取消
-func (s *orderSrv) MemberOrderCancel(ctx context.Context, req member_req.CancelOrderReq) error {
+func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.CancelOrderReq) error {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(request.MemberSaleOrderUuid)
+		defer lock.NewSystemLock().UnlockUuid(request.MemberSaleOrderUuid)
+		ctx.AddLock()
+	}
+
+	// 获取DB
 	db := s.dbm.GetDB(ctx.GetDbId())
+
 	// 获取会员端销售订单
-	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(req.MemberSaleOrderUuid)
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(request.MemberSaleOrderUuid)
 	if err != nil {
 		return errors.WithMessage(err)
 	}
 	if !memberSaleOrder.IsCanCancel() {
 		return errors.New("订单状态不可取消")
 	}
-	// 设置订单为“已取消”状态
-	memberSaleOrder.SetCancel(req.CancelReason)
-	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
+
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(memberSaleOrder.SaleBill.Uuid)
+		defer lock.NewSystemLock().UnlockUuid(memberSaleOrder.SaleBill.Uuid)
+		ctx.AddLock()
+	}
+
+	// 获取销售账单Uuid
+	saleBillUuid := memberSaleOrder.SaleBill.Uuid
+
+	// 开始事务
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback() // 如果发生恐慌，回滚事务
+		}
+	}()
+
+	// 设置DB
+	ctx.SetDB(tx)
+
+	// 获取订单信息
+	orderRepo := repository.NewOrderRepo(tx)
+	billInfo, err := orderRepo.GetSaleBillAllInfo(saleBillUuid)
+	if err != nil {
+		tx.Rollback()
 		return errors.WithMessage(err)
 	}
-	// TODO: 取消订单支付
-	// TODO: 取消销售订单
-	// TODO: 取消销售订单商品
-	// TODO: 发起退款
-	//
-	// TODO: 发送取消订单消息，记录操作记录
+
+	// 获取销售订单
+	saleOrder := billInfo.GetFirstSaleOrder()
+
+	// 退回商品库存
+	if err := s.returnInventory(ctx, billInfo); err != nil {
+		tx.Rollback()
+		return errors.WithMessage(err)
+	}
+
+	// 取消订单
+	err = orderRepo.CancelOrder(ctx, saleBillUuid, 0, request.CancelReason)
+	if err != nil {
+		tx.Rollback()
+		return errors.WithMessage(err)
+	}
+
+	// 标记送厨单、送厨商品为删除
+	productionRepo := repository.NewProductionRepo(tx)
+	saleBillUuidOpt := productionRepo.WhereSaleBillUuid(billInfo.Uuid)
+	err = productionRepo.UpdateOrder([]repository.DBOption{saleBillUuidOpt}, map[string]any{
+		"delete_time": time.Now().Unix(),
+	})
+	if err != nil {
+		tx.Rollback()
+		return errors.WithMessage(builtinerrors.New("删除送厨单失败"), err.Error())
+	}
+
+	// 修改送厨商品数量为0，在确认整单退菜时、确认该菜品全退时，再标记为删除
+	err = productionRepo.UpdateProduct([]repository.DBOption{saleBillUuidOpt}, map[string]any{"num": 0})
+	if err != nil {
+		tx.Rollback()
+		return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
+	}
+
+	// 取消订单后，删除所有销售订单商品
+	err = repository.NewSaleOrderProductRepo(tx).DeleteSaleOrderProductBySaleBillUuid(billInfo.Uuid)
+	if err != nil {
+		tx.Rollback()
+		return errors.WithMessage(builtinerrors.New("删除销售订单商品失败"), err.Error())
+	}
+
+	// 已经支付的-发起退款
+	if memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingMerchantAccept {
+		err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
+			CancelReason: "客户取消订单",
+			// BankCode:     request.BankCode,
+			// AccountNo:    request.AccountNo,
+			// AccountName:  request.AccountName,
+		})
+		if err != nil {
+			tx.Rollback()
+			return errors.WithMessage(err)
+		}
+	}
+
+	// 设置订单为“已取消”状态
+	memberSaleOrder.RefundAmount = memberSaleOrder.Amount
+	memberSaleOrder.SetCancel(request.CancelReason)
+
+	// 更新订单状态
+	if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
+		tx.Rollback()
+		return errors.WithMessage(err)
+	}
+
+	// 提交事务
+	if err := tx.Commit().Error; err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 发布“整单取消”操作事件
+	go func() {
+		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
+			BasePayload: event.BasePayload{ // 整单取消
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: billInfo.Uuid,
+				OperatorUuid: int64(ctx.GetMemberUuid()),
+			},
+		})
+	}()
+
+	// 成功后，推送到厨显端更新订单
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
+		"update_time": time.Now().Unix(),
+	})
+
 	//
 	return nil
+}
+
+// GetRiderInfo 获取骑手信息
+func (s *orderSrv) GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.GetRiderInfoReq) (*resp.MemberOrderCoordinates, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取会员端销售订单
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(getRiderInfoReq.MemberSaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if !memberSaleOrder.IsRiderPickup() {
+		return nil, errors.New("订单未骑手接单")
+	}
+
+	companySetting := ctx.GetCompanySetting()
+	company := ctx.GetCompany()
+
+	merchantLat, merchantLng := companySetting.GetCoordinates()
+	customerLat, customerLng := memberSaleOrder.GetCustomerLocation()
+	riderLat, riderLng := memberSaleOrder.GetLocation()
+
+	return &resp.MemberOrderCoordinates{
+		Merchant: resp.OrderCoordinate{
+			Name:    company.Name,
+			Address: companySetting.Address,
+			Lat:     merchantLat,
+			Lng:     merchantLng,
+		},
+		Customer: resp.OrderCoordinate{
+			Name:    memberSaleOrder.ContactName,
+			Address: memberSaleOrder.ContactAddress + "(" + memberSaleOrder.ContactAddressDetail + ")",
+			Lat:     customerLat,
+			Lng:     customerLng,
+		},
+		DriverInfo: resp.DriverInfoResp{
+			Name:          memberSaleOrder.RiderName,
+			Phone:         memberSaleOrder.RiderPhone,
+			Avatar:        memberSaleOrder.RiderAvatar,
+			Rating:        memberSaleOrder.RiderRating,
+			Lat:           riderLat,
+			Lng:           riderLng,
+			EstimatedTime: memberSaleOrder.ExpectedFinishTime,
+		},
+	}, nil
+
 }
 
 // GetMemberCashierOrderList 获取收银端"外送"订单列表
@@ -1679,11 +1845,25 @@ func (s *orderSrv) GetMemberCashierOrderList(ctx context.Context, req req.Member
 		})
 	}
 
+	// 获取数量
+	getOrderNum := func(status []uint) int64 {
+		num, _ := repository.NewMemberSaleOrderRepo(db).GetOrderNum(status)
+		return num
+	}
+
 	return &resp.GetMemberCashierOrderListResp{
 		Meta: dto.PageResponse{
 			PageNo:   req.PageNo,
 			PageSize: req.PageSize,
 			Total:    total,
+		},
+		Extra: resp.ExtraMemberCashierOrderListMeta{
+			UnacceptNum:   getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUnaccept)),
+			AcceptNum:     getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusAccept)),
+			UndeliveryNum: getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUndelivery)),
+			DeliveryNum:   getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusDelivery)),
+			CompletedNum:  getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusDelivered)),
+			CancelNum:     getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusCancel)),
 		},
 		List: memberOrders,
 	}, nil
@@ -1776,6 +1956,16 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 			}
 		}
 
+		var rider resp.RiderInfo
+		rider.Name = memberSaleOrder.RiderName
+		rider.Phone = memberSaleOrder.RiderPhone
+		if rider.Name == "" {
+			rider.Name = "-"
+		}
+		if rider.Phone == "" {
+			rider.Phone = "*"
+		}
+
 		memberOrders = append(memberOrders, resp.MemberOrderManage{
 			MemberSaleOrderUuid: memberSaleOrder.Uuid,
 			SerialNumber:        memberSaleOrder.SerialNumber,
@@ -1789,6 +1979,21 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 			DeliveryFee:         memberSaleOrder.DeliveryFeeAmount,
 			PayType:             payType,
 			Contact:             contact,
+			Rider:               rider,
+			Extra: resp.OrderListsExtra{
+				IsCellReject: func() bool {
+					// 待商家接单时，可以拒单
+					return memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingMerchantAccept
+				}(),
+				IsCellCancel: func() bool {
+					// 商家备餐中，商家可以取消订单
+					return memberSaleOrder.Status == constant.MemberSaleOrderStatusCooking
+				}(),
+				IsCellRefund: func() bool {
+					// 订单完成后，用户可以申请退款。TODO 且未全部退款时
+					return memberSaleOrder.Status == constant.MemberSaleOrderStatusCompleted
+				}(),
+			},
 		})
 	}
 
@@ -2058,6 +2263,7 @@ func (s *orderSrv) GetOrderLists(ctx context.Context, req req.OrderListReq) (res
 			repository.CommonRepo.WhereByStatus(status),
 			repository.CommonRepo.WhereBySoftDelete(),
 			repository.CommonRepo.WhereByCooking(),
+			repository.CommonRepo.WhereInBillType([]uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}),
 			dbOption,
 		)
 		return num
@@ -2671,19 +2877,6 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		}
 	}
 
-	// 发布“整单取消”操作事件
-	go func() {
-		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
-			BasePayload: event.BasePayload{ // 整单取消
-				Ctx:          ctx,
-				CompanyUuid:  ctx.GetCompanyUuid(),
-				Source:       ctx.GetSource(),
-				SaleBillUuid: billInfo.Uuid,
-				OperatorUuid: int64(ctx.GetStaffUuid()),
-			},
-		})
-	}()
-
 	// 标记送厨单、送厨商品为删除
 	productionRepo := repository.NewProductionRepo(tx)
 	saleBillUuidOpt := productionRepo.WhereSaleBillUuid(billInfo.Uuid)
@@ -2720,7 +2913,20 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		return errors.WithMessage(err)
 	}
 
-	// 送厨成功后，推送更新订单
+	// 发布“整单取消”操作事件
+	go func() {
+		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
+			BasePayload: event.BasePayload{ // 整单取消
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: billInfo.Uuid,
+				OperatorUuid: int64(ctx.GetStaffUuid()),
+			},
+		})
+	}()
+
+	// 成功后，推送到厨显端更新订单
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
 		"update_time": time.Now().Unix(),
 	})
@@ -6687,7 +6893,7 @@ func (s *orderSrv) checkBuffetCustomerTypePriceChanged(ctx context.Context, sale
 			if buffetCustomer.IsDelete() {
 				continue
 			}
-			if buffetCustomer.IsBuffetCustomerTypePriceChanged() {
+			if buffetCustomer.IsBuffetCustomerTypePriceChanged() || buffetCustomer.GetOpenOverallDiscountChanged() {
 				// 自助餐顾客类型价格变动
 				customer := resp.Product{
 					Uuid:       buffetCustomer.Uuid,
@@ -9836,7 +10042,7 @@ func (s *orderSrv) InstantOrderPaymentFinish(ctx context.Context, req req.Instan
 	}()
 
 	// 整单完结时, 发布"统计"事件
-	if saleBill.CanFinishSaleBill() && saleBill.BillType != constant.SaleBillTypeTakeout {
+	if saleBill.CanFinishSaleBill() {
 		go func() {
 			s.bus.PublishStatisticsSaleEvent(event.StatisticsSalePayload{
 				BasePayload: event.BasePayload{ // 统计
@@ -12355,7 +12561,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		if err != nil {
 			return errors.WithMessage(err, "整单送厨失败")
 		}
-		if checkRes == nil {
+		if checkRes != nil {
 			return errors.New("整单送厨失败")
 		}
 	}
@@ -12408,6 +12614,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		}
 		ctx.Log().Info("创建外送订单成功", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))
 		memberSaleOrder.RelatedOrderNo = res.TakeoutRefNo
+		memberSaleOrder.ExpectedFinishTime = res.FinishTime
 		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderProviderInfo(*memberSaleOrder); err != nil {
 			return errors.WithMessage(err, "更新外送订单失败")
 		}
@@ -12522,4 +12729,29 @@ func (s *orderSrv) CookFinishMemberSaleOrder(ctx context.Context, request req.Co
 	}()
 
 	return nil
+}
+
+// GetMemberCashierOrderSearch 订单搜索
+func (s *orderSrv) GetMemberCashierOrderSearch(ctx context.Context, req req.MemberOrderSearchReq) (*resp.GetMemberCashierOrderSearchResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	memberSaleOrders, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderByContactNameAndContactPhoneSuffix(req.Keyword, req.Keyword)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	memberOrders := make([]resp.MemberCashierOrder, 0)
+	for _, memberSaleOrder := range memberSaleOrders {
+		memberOrders = append(memberOrders, resp.MemberCashierOrder{
+			MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			SerialNumber:        memberSaleOrder.SerialNumber,
+			Status:              memberSaleOrder.Status,
+			Num:                 memberSaleOrder.ProductNum,
+			ProductAmount:       memberSaleOrder.ProductAmount,
+		})
+	}
+
+	return &resp.GetMemberCashierOrderSearchResp{
+		List: memberOrders,
+	}, nil
 }

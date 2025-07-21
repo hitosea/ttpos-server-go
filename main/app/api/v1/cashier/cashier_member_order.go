@@ -29,7 +29,7 @@ type MemberOrderHandler struct {
 // @Param page_no query int false "页码"
 // @Param page_size query int false "每页条数"
 // @Param status query string true "状态: unaccept-待接单, accept-备餐中, undelivery-待配送, delivery-配送中, completed-已完成, cancel-已取消"
-// @Success 200 {object} dto.Response{data=resp.GetMemberOrderListResp}
+// @Success 200 {object} dto.Response{data=resp.GetMemberCashierOrderListResp}
 // @Router /cashier/member_order/list [get]
 func (h *MemberOrderHandler) GetMemberOrderList(c *gin.Context) {
 	var memberOrderListReq req.MemberOrderListReq
@@ -141,6 +141,30 @@ func (h *MemberOrderHandler) CookFinish(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// GetMemberOrderSearch 搜索订单列表通过关键词
+// @Summary 搜索订单列表通过关键词
+// @Description 搜索订单列表通过关键词
+// @Tags 收银端.外送接单相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param keyword query string true "关键字"
+// @Success 200 {object} dto.Response{data=resp.GetMemberCashierOrderSearchResp}
+// @Router /cashier/member_order/search [get]
+func (h *MemberOrderHandler) GetMemberOrderSearch(c *gin.Context) {
+	var memberOrderSearchReq req.MemberOrderSearchReq
+	if err := c.ShouldBindQuery(&memberOrderSearchReq); err != nil {
+		helper.HandleValidationError(c, err, memberOrderSearchReq, nil)
+		return
+	}
+	res, err := h.memberOrderSrv.GetMemberCashierOrderSearch(helper.GetContext(c), memberOrderSearchReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -168,5 +192,6 @@ func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, ca
 		privateApi.POST("/member_order/accept", wrapper.AcceptOrder)         // 接单
 		privateApi.POST("/member_order/reject", wrapper.RejectOrder)         // 拒单
 		privateApi.POST("/member_order/cook_finish", wrapper.CookFinish)     // 备餐完成
+		privateApi.GET("/member_order/search", wrapper.GetMemberOrderSearch) // 搜索订单列表通过关键词
 	}
 }

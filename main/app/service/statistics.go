@@ -911,7 +911,12 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 			repository.NewCommonRepoImpl().WhereByUuid(saleBill.MemberSaleOrderUuid),
 			repository.NewCommonRepoImpl().WhereBySoftDelete(),
 		)
+		// 如果会员销售订单不存在，则不统计
 		if memberSaleOrder == nil || memberSaleOrder.ID == 0 {
+			return nil
+		}
+		// 如果会员销售订单状态不是已完成，则不统计
+		if memberSaleOrder.Status != constant.MemberSaleOrderStatusCompleted || memberSaleOrder.FinishTime == 0 {
 			return nil
 		}
 		isTakeout = true

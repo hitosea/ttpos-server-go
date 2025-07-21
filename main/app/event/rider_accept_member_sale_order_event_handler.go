@@ -50,12 +50,16 @@ func riderAcceptMemberSaleOrderEventHandler() {
 			var riderName string     // 骑手名称
 			var riderPhone string    // 骑手手机号
 			var riderLocation string // 骑手经纬度
+			var riderAvatar string   // 骑手头像
+			var riderRating float32  // 骑手评分
 			if driverInfoResp != nil {
 				riderName = driverInfoResp.Name
 				riderPhone = driverInfoResp.Phone
 				riderLocation = fmt.Sprintf("%f,%f", driverInfoResp.Lat, driverInfoResp.Lng)
+				riderAvatar = driverInfoResp.Avatar
+				riderRating = driverInfoResp.Rating
 			}
-			memberSaleOrder.RiderAccept(riderName, riderPhone, riderLocation)
+			memberSaleOrder.RiderAccept(riderName, riderPhone, riderLocation, riderAvatar, riderRating)
 			if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderRiderAccept(memberSaleOrder); err != nil {
 				payload.Ctx.Log().Error("更新会员端销售订单-骑手接单失败", zap.Error(err))
 				return

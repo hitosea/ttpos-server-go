@@ -931,7 +931,7 @@ class Product extends BaseModel
             ->leftJoin('product_category c1', 'm.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
             ->leftJoin('file', 'm.image_uuid = file.uuid')
-            ->leftJoin('related_material rm', 'm.uuid = rm.material_uuid')
+            ->leftJoin('related_material rm', 'm.uuid = rm.material_uuid AND rm.delete_time = 0')
             ->leftJoin('product_unit pu', 'm.unit_uuid = pu.uuid')
             ->group('m.uuid')
             ->order('m.id', 'desc')

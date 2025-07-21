@@ -178,6 +178,7 @@ func (model *SaleOrderProduct) calcSaleOrderProduct(serviceFeeRate float64, taxF
 func (model *SaleOrderProduct) calcLastestSaleOrderProduct(serviceFeeRate float64, taxFeeType int, serviceFeeType int, options ...func(option *CalcOption)) SaleOrderProductCalc {
 	// 设置最新的商品会员折扣设置，即是否开启会员折扣
 	model.OpenMemberDiscount = model.ProductPackage.OpenDiscount
+	model.OpenOverallDiscount = model.ProductPackage.OpenOverallDiscount
 
 	calc := SaleOrderProductCalc{}
 	// 开始计算
@@ -254,7 +255,7 @@ func (model *SaleOrderProduct) calcMemberDiscountFee() float64 {
 // 当没有会员折扣时，自定义折扣费= 商品销售价- 商品销售价*自定义折扣率 = 商品销售价*（1-自定义折扣率）= （商品销售价-会员折扣费0）*（1-自定义折扣率）
 // 当没有会员折扣时，会员折扣费为0，则两个情况的算法可以都用 自定义折扣费=会员折扣价*（1-自定义折扣率）
 func (model *SaleOrderProduct) calcCustomDiscountFee() float64 {
-	customDiscountRate := model.CustomDiscountRate
+	customDiscountRate := model.GetCustomDiscountRate()
 	if customDiscountRate == constant.NoDiscount {
 		return 0
 	}
@@ -539,7 +540,7 @@ func (model *SaleOrderProduct) calcDiscountRate() float64 {
 	rate := decimal.NewFromFloat(1)
 	memberDiscountRate := model.GetMemberDiscountRate()
 	memberCardDiscountRate := model.GetMemberCardDiscountRate()
-	customDiscountRate := model.CustomDiscountRate
+	customDiscountRate := model.GetCustomDiscountRate()
 	// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
 	rate = rate.Mul(decimal.NewFromFloat(memberDiscountRate))
 	// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
