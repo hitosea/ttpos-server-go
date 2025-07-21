@@ -51,3 +51,8 @@ type CancelOrderReq struct {
 	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 	CancelReason        string `form:"cancel_reason"`                             // 取消原因
 }
+
+// GetRiderInfoReq 获取骑手信息
+type GetRiderInfoReq struct {
+	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+}

@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"github.com/hdt3213/delayqueue"
 	"takeout/api/echo"
 	"time"
 	"ttpos-server-go/app/api/helper"
@@ -10,6 +9,8 @@ import (
 	"ttpos-server-go/app/queue"
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/pkg/logger"
+
+	"github.com/hdt3213/delayqueue"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -76,23 +77,28 @@ func TestCreateOrder() (*resp.CreateTakeoutOrderResp, error) {
 		ProviderName:  "skootar",
 		ShopOrderUuid: "3675543933419521",
 		CustomerLocation: &req.TakeoutLocation{
+
+			// 13.769116, 100.605733
 			TakeoutAddress: req.TakeoutAddress{
-				AddressName: "zomato",
-				Address:     "281/28 บรรทัดทอง เขต ราชเทวี กรุงเทพมหานคร ประเทศไทย 10401",
-				Lat:         "13.721900",
-				Lng:         "100.52900",
+				AddressName: "Sarllive Hair Spa",
+				Address:     "พลับพลา 456/10 Biz town in town Srivara Rd, Bangkok 10310",
+				Lat:         "13.769116",
+				Lng:         "100.605733",
 			},
-			ContactName:  "Thanata",
+			ContactName:  "aaa",
 			ContactPhone: "0864923676",
 		},
 		MerchantLocation: &req.TakeoutLocation{
+
+			// 13.772280704650836, 100.60901012388038
+
 			TakeoutAddress: req.TakeoutAddress{
-				AddressName: "xiaoxiong",
-				Address:     "2086 ถนนรามคำแหง เขตบางกะปิ กรุงเทพมหานคร ประเทศไทย 10241",
-				Lat:         "13.747418",
-				Lng:         "100.540244",
+				AddressName: "Ob Aroi Town In Town",
+				Address:     "1329 53 Lat Phrao 94 Alley, Phlabphla, วังทองหลา Bangkok 10310",
+				Lat:         "13.772280",
+				Lng:         "100.609010",
 			},
-			ContactName:  "มาช่า",
+			ContactName:  "bbb",
 			ContactPhone: "0998888999",
 		},
 		Remark:      "test",
@@ -120,7 +126,7 @@ func TestConfirmOrder() error {
 
 func TestGetDriverInfo() (*resp.GetDriverInfoResp, error) {
 	res, err := takeout.NewTakeoutSrv().GetDriverInfo(context.Background(), &req.GetDriverInfoReq{
-		ShopOrderUuid: "3675227238301699",
+		ShopOrderUuid: "3675543933419521",
 	})
 
 	if err != nil {

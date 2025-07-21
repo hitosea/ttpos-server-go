@@ -161,6 +161,7 @@ type IMemberOrderSrv interface {
 	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                       // 查询会员端订单详情
 	GetMemberOrderPaymentMethodList(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderPaymentMethodListResp, error) // 获取会员端订单支付方式列表
 	MemberOrderCancel(ctx context.Context, req member_req.CancelOrderReq) error                                                              // 会员端订单取消
+	GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.GetRiderInfoReq) (*resp.MemberOrderCoordinates, error)                      // 获取骑手信息
 	// 收银机
 	GetMemberCashierOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberCashierOrderListResp, error)              // 查询收银机“外送”页面的订单列表
 	GetMemberCashierOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderCashierDetailResp, error)     // 查询收银机“外送”页面的订单详情
@@ -1815,6 +1816,51 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, req member_req.CancelO
 
 	//
 	return nil
+}
+
+// GetRiderInfo 获取骑手信息
+func (s *orderSrv) GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.GetRiderInfoReq) (*resp.MemberOrderCoordinates, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取会员端销售订单
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(getRiderInfoReq.MemberSaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	if !memberSaleOrder.IsRiderPickup() {
+		return nil, errors.New("订单未骑手接单")
+	}
+
+	companySetting := ctx.GetCompanySetting()
+	company := ctx.GetCompany()
+
+	merchantLat, merchantLng := companySetting.GetCoordinates()
+	customerLat, customerLng := memberSaleOrder.GetCustomerLocation()
+	riderLat, riderLng := memberSaleOrder.GetLocation()
+
+	return &resp.MemberOrderCoordinates{
+		Merchant: resp.OrderCoordinate{
+			Name:    company.Name,
+			Address: companySetting.Address,
+			Lat:     merchantLat,
+			Lng:     merchantLng,
+		},
+		Customer: resp.OrderCoordinate{
+			Name:    memberSaleOrder.ContactName,
+			Address: memberSaleOrder.ContactAddress + "(" + memberSaleOrder.ContactAddressDetail + ")",
+			Lat:     customerLat,
+			Lng:     customerLng,
+		},
+		DriverInfo: resp.DriverInfoResp{
+			Name:          memberSaleOrder.RiderName,
+			Phone:         memberSaleOrder.RiderPhone,
+			Avatar:        memberSaleOrder.RiderAvatar,
+			Rating:        memberSaleOrder.RiderRating,
+			Lat:           riderLat,
+			Lng:           riderLng,
+			EstimatedTime: memberSaleOrder.ExpectedFinishTime,
+		},
+	}, nil
+
 }
 
 // GetMemberCashierOrderList 获取收银端"外送"订单列表
@@ -12586,6 +12632,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		}
 		ctx.Log().Info("创建外送订单成功", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))
 		memberSaleOrder.RelatedOrderNo = res.TakeoutRefNo
+		memberSaleOrder.ExpectedFinishTime = res.FinishTime
 		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderProviderInfo(*memberSaleOrder); err != nil {
 			return errors.WithMessage(err, "更新外送订单失败")
 		}

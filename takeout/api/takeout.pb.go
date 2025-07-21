@@ -429,6 +429,7 @@ type CreateOrderResp struct {
 	Status         string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty" dc:"0 - Canceled 已取消; 1 - New 新订单; 2 - Under review 正在审核中; 3 - Mission created 审核通过; 4 - Matching 正在匹配司机; 5 - Assigned 已分配司机; 6 - OTW to pickup 正在前往取货; 7 - OTW to delivery 正在前往送货; 8 - Pending 等待修改; 9 - Completed 已完成; 1 -  Invoice Created 已生成发票; 1 -  Paid 已支付服务费;"` // 0 - Canceled 已取消; 1 - New 新订单; 2 - Under review 正在审核中; 3 - Mission created 审核通过; 4 - Matching 正在匹配司机; 5 - Assigned 已分配司机; 6 - OTW to pickup 正在前往取货; 7 - OTW to delivery 正在前往送货; 8 - Pending 等待修改; 9 - Completed 已完成; 1 -  Invoice Created 已生成发票; 1 -  Paid 已支付服务费;
 	ShopOrderUuid  string                 `protobuf:"bytes,4,opt,name=shop_order_uuid,json=shopOrderUuid,proto3" json:"shop_order_uuid,omitempty" dc:"餐馆下单uuid"`                                                                                                                                                                                                                      //餐馆下单uuid
 	TakeoutRefNo   string                 `protobuf:"bytes,5,opt,name=takeout_ref_no,json=takeoutRefNo,proto3" json:"takeout_ref_no,omitempty" dc:"外送协调返回订单号"`                                                                                                                                                                                                                        //外送协调返回订单号
+	FinishTime     string                 `protobuf:"bytes,6,opt,name=finish_time,json=finishTime,proto3" json:"finish_time,omitempty" dc:"预计送达时间"`                                                                                                                                                                                                                                   //预计送达时间
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -494,6 +495,13 @@ func (x *CreateOrderResp) GetShopOrderUuid() string {
 func (x *CreateOrderResp) GetTakeoutRefNo() string {
 	if x != nil {
 		return x.TakeoutRefNo
+	}
+	return ""
+}
+
+func (x *CreateOrderResp) GetFinishTime() string {
+	if x != nil {
+		return x.FinishTime
 	}
 	return ""
 }
@@ -851,13 +859,15 @@ const file_takeout_proto_rawDesc = "" +
 	"\x11merchant_location\x18\x03 \x01(\v2\r.api.LocationR\x10merchantLocation\x12\x16\n" +
 	"\x06remark\x18\x04 \x01(\tR\x06remark\x12!\n" +
 	"\fcallback_url\x18\x05 \x01(\tR\vcallbackUrl\x12&\n" +
-	"\x0fshop_order_uuid\x18\x06 \x01(\tR\rshopOrderUuid\"\xd8\x01\n" +
+	"\x0fshop_order_uuid\x18\x06 \x01(\tR\rshopOrderUuid\"\xf9\x01\n" +
 	"\x0fCreateOrderResp\x125\n" +
 	"\fresponseInfo\x18\x01 \x01(\v2\x11.api.ResponseInfoR\fresponseInfo\x12(\n" +
 	"\x10takeout_job_uuid\x18\x02 \x01(\tR\x0etakeoutJobUuid\x12\x16\n" +
 	"\x06status\x18\x03 \x01(\tR\x06status\x12&\n" +
 	"\x0fshop_order_uuid\x18\x04 \x01(\tR\rshopOrderUuid\x12$\n" +
-	"\x0etakeout_ref_no\x18\x05 \x01(\tR\ftakeoutRefNo\"9\n" +
+	"\x0etakeout_ref_no\x18\x05 \x01(\tR\ftakeoutRefNo\x12\x1f\n" +
+	"\vfinish_time\x18\x06 \x01(\tR\n" +
+	"finishTime\"9\n" +
 	"\x0fConfirmOrderReq\x12&\n" +
 	"\x0fshop_order_uuid\x18\x01 \x01(\tR\rshopOrderUuid\"I\n" +
 	"\x10ConfirmOrderResp\x125\n" +
