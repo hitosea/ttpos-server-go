@@ -221,7 +221,6 @@
       this.form.sub_order_id = this.sub_order_id;
       this.form.pay_price = this.$priceTwo(this.pay_price);
       this.language = languageStore()?.getLanguageKey().language.value;
-      // this.getData();
       this.getStoreRefundInfo();
     },
     methods: {
@@ -292,61 +291,7 @@
           }
         });
       },
-      getData() {
-        let self = this;
-        self.loading = true;
-        OrderApi.orderProductList({ order_id: this.form.order_id })
-          .then((data) => {
-            self.loading = false;
-            this.tableData = [];
-
-            (data.data.buffetList || []).map((item) => {
-              this.tableData.push({
-                type: 1,
-                product_name_text: item.buffet_name_text + `(${item.customer_type_name_text})`, //名称
-                product_attr: '', //规格
-                total_num: item.num, //总数量
-                total_price: item.consumption_tax_pay_price * Number(item.num), //总价钱
-                refund_num: item.refund_num, //已退数量
-                refund_money: item.consumption_tax_pay_price * Number(item.refund_num), //已退价钱
-                id: item.id, //id
-                refund_num_updata: 0, //提交退款的数量
-              });
-            });
-
-            (data.data.delayList || []).map((item) => {
-              this.tableData.push({
-                type: 2,
-                product_name_text: item.name_text, //名称
-                product_attr: '', //规格
-                total_num: item.num, //总数量
-                total_price: item.price * Number(item.num), //总价钱
-                refund_num: item.refund_num, //已退数量
-                refund_money: item.refund_money, //已退价钱
-                id: item.id, //id
-                refund_num_updata: 0, //提交退款的数量
-              });
-            });
-
-            (data.data.productList || []).map((item) => {
-              this.tableData.push({
-                type: 3,
-                product_name_text: item.product_name_text, //名称
-                product_attr: item.product_attr, //规格
-                total_num: item.total_num, //总数量
-                total_price: item.consumption_tax_pay_price * Number(item.total_num), //总价钱
-                refund_num: item.refund_num, //已退数量
-                refund_money: item.consumption_tax_pay_price * Number(item.refund_num), //已退价钱
-                id: item.order_product_id, //id
-                refund_num_updata: 0, //提交退款的数量
-                num_type: item.num_type,
-              });
-            });
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
+    
 
       getStoreRefundInfo() {
         let self = this;

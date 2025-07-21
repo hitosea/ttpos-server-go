@@ -1,9 +1,4 @@
 <template>
-  <!--
-
-      时间：2019-10-25
-      描述：订单列表
-  -->
   <div class="user">
     <!--搜索表单-->
     <div class="common-search-wrap">
@@ -38,7 +33,7 @@
               range-separator="~"
               :start-placeholder="$t('开始日期')"
               :end-placeholder="$t('结束日期')"
-              :disabledDate="(time) => time.getTime() > Date.now()"
+              :disabled-date="(time) => time.getTime() > Date.now()"
             ></el-date-picker>
           </div>
         </el-form-item>
@@ -48,7 +43,7 @@
           </el-button>
         </el-form-item>
         <el-form-item>
-          <el-button v-auth="'/store/operate/export'" size="small" type="primary" @click="onExport">{{ $t('导出') }}</el-button>
+          <el-button v-auth="'/store/takeout/export'" size="small" type="primary" @click="onExport">{{ $t('导出') }}</el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -135,11 +130,11 @@
             <template #default="scope">
               <div style="line-height: 24px">
                 <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                {{ this.$formatPrice(scope.row.origin_amount) }}
+                {{ formatPrice(scope.row.origin_amount) }}
                 <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
                 <p class="gray98" v-if="currency.is_open == 1">
                   <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                  {{ this.$formatPrice((Number(scope.row.origin_amount) * Number(currency.vices?.unit_rate)).toFixed(2))
+                  {{ formatPrice((Number(scope.row.origin_amount) * Number(currency.vices?.unit_rate)).toFixed(2))
                   }}<template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }} </template>
                 </p>
               </div>
@@ -150,7 +145,7 @@
               <div>
                 <div class="orange" v-if="scope.row.status == 1 || (scope.row.sale_orders && scope.row.sale_orders.map((item) => item.status == 1).includes(true))">
                   <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                  {{ this.$formatPrice(scope.row.pay_amount) }}
+                  {{ formatPrice(scope.row.pay_amount) }}
                   <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
                 </div>
                 <div v-else>-</div>
@@ -166,7 +161,7 @@
           <el-table-column prop="delivery_fee" :label="$t('配送费')" show-overflow-tooltip>
             <template #default="scope">
               <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ this.$formatPrice(scope.row.delivery_fee) }}
+              {{ formatPrice(scope.row.delivery_fee) }}
               <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
             </template>
           </el-table-column>
@@ -177,18 +172,20 @@
             </template>
           </el-table-column>
 
-          <el-table-column fixed="right" :label="$t('操作')" width="160">
+          <el-table-column fixed="right" :label="$t('操作')" width="180">
             <template #default="scope">
               <div>
                 <el-button @click="detailClick(scope.row)" type="primary" link size="small" v-auth="'/store/order/detail'">{{ $t('详情') }} </el-button>
-                <el-button @click="contactClick(scope.row)" type="danger" link size="small">{{ $t('联系骑手') }} </el-button>
-                <el-button v-if="scope.row.extra.is_cell_refund" @click="refundClick(scope.row)" type="danger" link size="small" v-auth="'/store/operate/refund'"
+                <el-button v-if="scope.row.status == 4 || scope.row.status == 5 || scope.row.status == 6" @click="contactClick(scope.row)" type="danger" link size="small"
+                  >{{ $t('联系骑手') }}
+                </el-button>
+                <el-button v-if="scope.row.extra.is_cell_refund" @click="refundClick(scope.row)" type="danger" link size="small" v-auth="'/store/takeout/refund'"
                   >{{ $t('退款') }}
                 </el-button>
-                <el-button v-if="scope.row.extra.is_cell_reject" @click="rejectClick(scope.row)" type="danger" link size="small" v-auth="'/store/operate/order_reject'"
+                <el-button v-if="scope.row.extra.is_cell_reject" @click="rejectClick(scope.row)" type="danger" link size="small" v-auth="'/store/takeout/reject'"
                   >{{ $t('拒单') }}
                 </el-button>
-                <el-button v-if="scope.row.extra.is_cell_cancel" @click="cancelClick(scope.row)" type="danger" link size="small" v-auth="'/store/operate/order_cancel'"
+                <el-button v-if="scope.row.extra.is_cell_cancel" @click="cancelClick(scope.row)" type="danger" link size="small" v-auth="'/store/takeout/cancel'"
                   >{{ $t('取消') }}
                 </el-button>
               </div>
@@ -211,11 +208,11 @@
       </div>
     </div>
     <!--处理-->
-    <Cancel v-if="open_edit" :open_edit="open_edit" :order_no="order_no" :order_id="order_id" @closeDialog="closeDialogFunc($event, 'edit')"> </Cancel>
+    <Cancel v-if="open_cancel" :open_cancel="open_cancel" :order_no="order_no" :member_sale_order_uuid="member_sale_order_uuid" @closeDialog="closeDialogFunc($event, 'edit')"> </Cancel>
     <!--处理-->
     <refund
       v-if="open_refund"
-      :open_edit="open_refund"
+      :open_cancel="open_refund"
       :order_id="order_id"
       :sub_order_id="sub_order_id"
       :pay_price="pay_price"
@@ -225,351 +222,336 @@
   </div>
 </template>
 
-<script>
-  import OrderApi from '@/api/order.js';
-  import Cancel from './dialog/cancel.vue';
-  import refund from './dialog/refund.vue';
-  import qs from 'qs';
-  import { useUserStore } from '@/store';
-  import { DTime } from '@/utils/DateTime.js';
-  const { token, currency, computedSupplier } = useUserStore();
-  import { languageStore } from '@/store/model/language';
-  const supplier = computedSupplier().supplier;
-  const app_id = supplier.value?.app_id || 0;
+<script setup>
+    import { ref, reactive, onMounted, watch, nextTick, getCurrentInstance } from 'vue';
+    import { useRouter } from 'vue-router';
+    import { useI18n } from 'vue-i18n';
+    import { ElMessageBox, ElMessage } from 'element-plus';
+    import OrderApi from '@/api/order.js';
+    import Cancel from './dialog/cancel.vue';
+    import refund from './dialog/refund.vue';
+    import qs from 'qs';
+    import { useUserStore } from '@/store';
+    import { DTime } from '@/utils/DateTime.js';
+    import { languageStore } from '@/store/model/language';
 
-  export default {
-    components: {
-      Cancel,
-      refund,
-    },
-    data() {
-      return {
-        currency: currency,
-        /*切换菜单*/
-        activeName: '',
-        /*是否加载完成*/
-        loading: true,
-        /*列表数据*/
-        tableData: [],
-        /*一页多少条*/
-        pageSize: 10,
-        /*一共多少条数据*/
-        totalDataNumber: 0,
-        /*当前是第几页*/
-        curPage: 1,
-        /*横向表单数据模型*/
-        searchForm: {
-          order_no: '',
-          serial_no: '',
-          style_id: ' ',
-          date_range: 0,
-          time_type: 1,
-          query_start_time: 0,
-          query_end_time: 0,
-        },
-        /*配送方式*/
-        exStyle: [],
-        /*门店列表*/
-        shopList: [],
-        /*时间*/
-        time: '',
-        /*统计*/
-        order_count: {
-          cancel_num: 0,
-          complete_num: 0,
-          page_no: 1,
-          page_size: 10,
-          total: 0,
-          total_num: 0,
-          unpaid_num: 0,
-        },
-        /*是否打开编辑弹窗*/
-        open_edit: false,
-        open_refund: false,
-        /*当前编辑的对象*/
-        order_no: 0,
-        order_id: 0,
-        sub_order_id: 0,
-        pay_price: 0,
-        token,
-        app_id: app_id,
-        searchLoading: '',
-        member_sale_order_uuid: 0,
-      };
-    },
-    created() {
+    // 获取当前实例
+    const { proxy } = getCurrentInstance();
+
+    // 使用路由和国际化
+    const router = useRouter();
+    const { t: $t } = useI18n();
+
+    // 使用store
+    const { token, currency, computedSupplier } = useUserStore();
+    const supplier = computedSupplier().supplier;
+    const app_id = supplier.value?.app_id || 0;
+
+    // 格式化价格函数
+    const formatPrice = (price) => {
+      return proxy.$formatPrice(price);
+    };
+
+    // 响应式数据
+    const activeName = ref('');
+    const loading = ref(true);
+    const tableData = ref([]);
+    const pageSize = ref(10);
+    const totalDataNumber = ref(0);
+    const curPage = ref(1);
+
+    const searchForm = reactive({
+      order_no: '',
+      serial_no: '',
+      style_id: ' ',
+      date_range: 0,
+      time_type: 1,
+      query_start_time: 0,
+      query_end_time: 0,
+    });
+
+    const exStyle = ref([]);
+    const time = ref('');
+
+    const order_count = reactive({
+      cancel_num: 0,
+      complete_num: 0,
+      page_no: 1,
+      page_size: 10,
+      total: 0,
+      total_num: 0,
+      unpaid_num: 0,
+    });
+
+    const open_cancel = ref(false);
+    const open_refund = ref(false);
+    const order_no = ref(0);
+    const order_id = ref(0);
+    const sub_order_id = ref(0);
+    const pay_price = ref(0);
+    const searchLoading = ref('');
+    const member_sale_order_uuid = ref(0);
+    // 监听器
+    watch(
+      () => searchForm.time_type,
+      (newVal, oldVal) => {
+        nextTick(() => {
+          if (newVal.length == 0) {
+            searchForm.time_type = oldVal;
+          }
+        });
+      },
+      { deep: true }
+    );
+
+    // 生命周期
+    onMounted(() => {
       let params = languageStore().getPageParams().pageParams;
 
       if (params.value.page) {
-        this.searchForm = {
+        Object.assign(searchForm, {
           order_no: params.value.order_no,
           serial_no: params.value.serial_no,
           style_id: params.value.style_id,
-          time: params.value.time,
           date_range: params.value.date_range,
           time_type: params.value.time_type,
           query_start_time: params.value.query_start_time,
           query_end_time: params.value.query_end_time,
-        };
-        this.activeName = params.value.dataType;
-        this.curPage = params.value.page;
-        this.pageSize = params.value.list_rows;
+        });
+        time.value = params.value.time;
+        activeName.value = params.value.dataType;
+        curPage.value = params.value.page;
+        pageSize.value = params.value.list_rows;
         languageStore().setPageParams({});
       }
 
-      /*获取列表*/
-      this.getData();
-    },
+      // 获取列表
+      getData();
+    });
 
-    watch: {
-      'searchForm.time_type': {
-        handler(newVal, oldVal) {
-          this.$nextTick(() => {
-            if (newVal.length == 0) {
-              this.searchForm.time_type = oldVal;
+    // 方法定义
+    const arraySpanMethod = (row) => {
+      if (row.rowIndex % 2 == 0) {
+        if (row.columnIndex === 0) {
+          return [1, 8];
+        }
+      }
+    };
+
+    const handleCurrentChange = (val) => {
+      curPage.value = val;
+      getData();
+    };
+
+    const handleSizeChange = (val) => {
+      curPage.value = 1;
+      pageSize.value = val;
+      getData();
+    };
+
+    const handleClick = (tab, event) => {
+      curPage.value = 1;
+      getData();
+    };
+
+    const timeTypeChange = () => {
+      searchForm.time = '';
+      onSearch();
+    };
+
+    const createTimeChange = () => {
+      searchForm.time_type = 1;
+      if (time.value.length > 0) {
+        // 转为时间戳
+        searchForm.query_start_time = new Date(time.value[0]).getTime() / 1000;
+        searchForm.query_end_time = new Date(time.value[1]).getTime() / 1000;
+      }
+      onSearch();
+    };
+
+    const getData = () => {
+      let Params = { ...searchForm };
+      Params.status = activeName.value;
+      Params.page = curPage.value;
+      Params.list_rows = pageSize.value;
+      loading.value = true;
+
+      OrderApi.postTakeoutOrderList(Params, true)
+        .then((res) => {
+          tableData.value = res.data.list;
+          tableData.value.map((item) => {
+            if (item.sale_orders.length > 0) {
+              item.children = item.sale_orders;
             }
+            item.unique_key = item.order_no + item.serial_no;
           });
-        },
-        deep: true,
-      },
-    },
-    methods: {
-      DTime: DTime,
-      /*跨多列*/
-      arraySpanMethod(row) {
-        if (row.rowIndex % 2 == 0) {
-          if (row.columnIndex === 0) {
-            return [1, 8];
-          }
-        }
-      },
-      /*选择第几页*/
-      handleCurrentChange(val) {
-        let self = this;
-        self.curPage = val;
-        self.getData();
-      },
-
-      /*每页多少条*/
-      handleSizeChange(val) {
-        this.curPage = 1;
-        this.pageSize = val;
-        this.getData();
-      },
-
-      /*切换菜单*/
-      handleClick(tab, event) {
-        let self = this;
-        self.curPage = 1;
-        self.getData();
-      },
-
-      /*切换周*/
-      timeTypeChange() {
-        this.searchForm.time = '';
-        this.onSearch();
-      },
-
-      /*切换时间段*/
-      createTimeChange() {
-        this.searchForm.time_type = 1;
-        if (this.time.length > 0) {
-          //转为时间戳
-          this.searchForm.query_start_time = new Date(this.time[0]).getTime() / 1000;
-          this.searchForm.query_end_time = new Date(this.time[1]).getTime() / 1000;
-        }
-        this.onSearch();
-      },
-
-      /*获取列表*/
-      getData() {
-        let self = this;
-        let Params = this.searchForm;
-        Params.status = self.activeName;
-        Params.page = self.curPage;
-        Params.list_rows = self.pageSize;
-        self.loading = true;
-        OrderApi.postTakeoutOrderList(Params, true)
-          .then((res) => {
-            self.tableData = res.data.list;
-            self.tableData.map((item) => {
-              if (item.sale_orders.length > 0) {
-                item.children = item.sale_orders;
-              }
-              item.unique_key = item.order_no + item.serial_no;
-            });
-            self.totalDataNumber = res.data.meta.total;
-            self.exStyle = res.data.ex_style;
-            self.order_count = res.data.meta;
-            self.loading = false;
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
-
-      /*打开详情*/
-      detailClick(row) {
-        let self = this;
-        let pageParams = self.searchForm;
-        pageParams.dataType = self.activeName;
-        pageParams.time = self.time;
-        pageParams.page = self.curPage;
-        pageParams.list_rows = self.pageSize;
-        languageStore().setPageParams(pageParams);
-        // 如果没有拆单, 或者查看主单详情, 则sale_order_uuid = 0;
-        // 反之查看子单详情, 则sale_order_uuid = 为子单sale_order_uuid
-        const saleOrderUuid = row.is_split === undefined ? row.sale_order_uuid : 0;
-        self.$router.push({
-          path: '/' + this.app_id + '/store/takeout/detail',
-          query: {
-            member_sale_order_uuid: row.member_sale_order_uuid,
-          },
+          totalDataNumber.value = res.data.meta.total;
+          exStyle.value = res.data.ex_style;
+          Object.assign(order_count, res.data.meta);
+          loading.value = false;
+        })
+        .catch((error) => {
+          loading.value = false;
         });
-      },
+    };
 
-      /*搜索查询*/
-      onSearch() {
-        clearTimeout(this.searchLoading);
-        this.searchLoading = setTimeout(() => {
-          this.curPage = 1;
-          this.tableData = [];
-          this.getData();
-        }, 200);
-      },
+    const detailClick = (row) => {
+      let pageParams = { ...searchForm };
+      pageParams.dataType = activeName.value;
+      pageParams.time = time.value;
+      pageParams.page = curPage.value;
+      pageParams.list_rows = pageSize.value;
+      languageStore().setPageParams(pageParams);
 
-      onExport: function () {
-        this.searchForm.token = this.token;
-        OrderApi.storeExport(
-          {
-            ...this.searchForm,
-            request_type: 1,
-          },
-          true
-        )
-          .then((data) => {
-            self.loading = false;
-            const baseUrl = window.location.protocol + '//' + window.location.host;
-            const url = baseUrl + '/index.php/shop/store.MemberOrder/export?' + qs.stringify(this.searchForm) + '&language=' + languageStore().language;
-            window.open(url, '_blank');
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
-      /*打开取消*/
-      cancelClick(item) {
-        this.order_no = item.order_no;
-        this.order_id = item.sale_bill_uuid;
-        this.open_edit = true;
-      },
-      refundClick(item) {
-        this.order_no = item.order_no;
-        this.order_id = item.sale_bill_uuid;
-        this.sub_order_id = item.sale_order_uuid;
-        this.pay_price = 0;
+      // 如果没有拆单, 或者查看主单详情, 则sale_order_uuid = 0;
+      // 反之查看子单详情, 则sale_order_uuid = 为子单sale_order_uuid
+      const saleOrderUuid = row.is_split === undefined ? row.sale_order_uuid : 0;
+      router.push({
+        path: '/' + app_id + '/store/takeout/detail',
+        query: {
+          member_sale_order_uuid: row.member_sale_order_uuid,
+        },
+      });
+    };
 
-        this.open_refund = true;
-      },
+    const onSearch = () => {
+      clearTimeout(searchLoading.value);
+      searchLoading.value = setTimeout(() => {
+        curPage.value = 1;
+        tableData.value = [];
+        getData();
+      }, 200);
+    };
 
-      rejectClick(item) {
-        this.member_sale_order_uuid = item.member_sale_order_uuid;
-        ElMessageBox.confirm($t('是否取消此订单?'), $t('提示'), {
-          confirmButtonText: $t('确定'),
-          cancelButtonText: $t('取消'),
-          type: 'warning',
+    const onExport = () => {
+      searchForm.token = token;
+      OrderApi.storeExport(
+        {
+          ...searchForm,
+          request_type: 1,
+        },
+        true
+      )
+        .then((data) => {
+          loading.value = false;
+          const baseUrl = window.location.protocol + '//' + window.location.host;
+          const url = baseUrl + '/index.php/shop/store.MemberOrder/export?' + qs.stringify(searchForm) + '&language=' + languageStore().language;
+          window.open(url, '_blank');
         })
-          .then(() => {
-            this.rejectSubmit();
-          })
-          .catch(() => {
-            this.$ElMessage({
-              type: 'info',
-              message: $t('已取消'),
-            });
-          });
-      },
+        .catch((error) => {
+          loading.value = false;
+        });
+    };
 
-      contactClick(item) {
-        this.member_sale_order_uuid = item.member_sale_order_uuid;
-        ElMessageBox.confirm(`${$t('骑手：')}${item.rider.name}<br/>${$t('联系电话：')}${item.rider.phone}`, $t('提示'), {
-          confirmButtonText: $t('确定'),
-          cancelButtonText: $t('取消'),
-          dangerouslyUseHTMLString: true
+    const cancelClick = (item) => {
+      member_sale_order_uuid.value = item.member_sale_order_uuid;
+      order_no.value = item.order_no;
+      open_cancel.value = true;
+    };
+
+    const refundClick = (item) => {
+      order_no.value = item.order_no;
+      order_id.value = item.sale_bill_uuid;
+      sub_order_id.value = item.sale_order_uuid;
+      pay_price.value = 0;
+      open_refund.value = true;
+    };
+
+    const rejectClick = (item) => {
+      member_sale_order_uuid.value = item.member_sale_order_uuid;
+      ElMessageBox.confirm($t('是否取消此订单?'), $t('提示'), {
+        confirmButtonText: $t('确定'),
+        cancelButtonText: $t('取消'),
+        type: 'warning',
+      })
+        .then(() => {
+          rejectSubmit();
         })
-          .then(() => {})
-          .catch(() => {});
-      },
-
-      rejectSubmit() {
-        this.loading = true;
-        OrderApi.postTakeoutOrderReject(
-          {
-            member_sale_order_uuid: this.member_sale_order_uuid,
-          },
-          true
-        )
-          .then((res) => {
-            this.$ElMessage({
-              message: res.msg,
-              type: 'success',
-            });
-            this.getData();
-          })
-          .catch((error) => {
-            this.$ElMessage({
-              message: error.msg,
-              type: 'error',
-            });
-          })
-          .finally(() => {
-            this.loading = false;
+        .catch(() => {
+          ElMessage({
+            type: 'info',
+            message: $t('已取消'),
           });
-      },
+        });
+    };
 
-      /*关闭弹窗*/
-      closeDialogFunc(e, f) {
-        if (f == 'edit') {
-          this.open_edit = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-          }
-        }
-      },
-      /*关闭弹窗*/
-      closerefundDialogFunc(e, f) {
-        if (f == 'edit') {
-          this.open_refund = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-          }
-        }
-      },
+    const contactClick = (item) => {
+      member_sale_order_uuid.value = item.member_sale_order_uuid;
+      ElMessageBox.confirm(`${$t('骑手：')}${item.rider.name}<br/>${$t('联系电话：')}${item.rider.phone}`, $t('提示'), {
+        confirmButtonText: $t('确定'),
+        cancelButtonText: $t('取消'),
+        dangerouslyUseHTMLString: true,
+      })
+        .then(() => {})
+        .catch(() => {});
+    };
 
-      statusMap(status) {
-        switch (status) {
-          case 0:
-            return this.$t('选购中');
-          case 1:
-            return this.$t('待付款');
-          case 2:
-            return this.$t('待商家接单');
-          case 3:
-            return this.$t('商家备餐中');
-          case 4:
-            return this.$t('待骑手接单');
-          case 5:
-            return this.$t('骑手正在赶往商家');
-          case 6:
-            return this.$t('骑手配送中');
-          case 7:
-            return this.$t('已完成');
-          case 8:
-            return this.$t('已取消');
+    const rejectSubmit = () => {
+      loading.value = true;
+      OrderApi.postTakeoutOrderReject(
+        {
+          member_sale_order_uuid: member_sale_order_uuid.value,
+        },
+        true
+      )
+        .then((res) => {
+          ElMessage({
+            message: res.msg,
+            type: 'success',
+          });
+          getData();
+        })
+        .catch((error) => {
+          ElMessage({
+            message: error.msg,
+            type: 'error',
+          });
+        })
+        .finally(() => {
+          loading.value = false;
+        });
+    };
+
+    const closeDialogFunc = (e, f) => {
+      if (f == 'edit') {
+        open_cancel.value = e.openDialog;
+        if (e.type == 'success') {
+          getData();
         }
-      },
-    },
-  };
+      }
+    };
+
+    const closerefundDialogFunc = (e, f) => {
+      if (f == 'edit') {
+        open_refund.value = e.openDialog;
+        if (e.type == 'success') {
+          getData();
+        }
+      }
+    };
+
+    const statusMap = (status) => {
+      switch (status) {
+        case 0:
+          return $t('选购中');
+        case 1:
+          return $t('待付款');
+        case 2:
+          return $t('待商家接单');
+        case 3:
+          return $t('商家备餐中');
+        case 4:
+          return $t('待骑手接单');
+        case 5:
+          return $t('骑手正在赶往商家');
+        case 6:
+          return $t('骑手配送中');
+        case 7:
+          return $t('已完成');
+        case 8:
+          return $t('已取消');
+      }
+    };
 </script>
 <style lang="scss" scoped>
   .product-info {

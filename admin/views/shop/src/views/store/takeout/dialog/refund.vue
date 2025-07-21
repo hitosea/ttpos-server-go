@@ -3,7 +3,7 @@
     <!-- 退款弹窗 -->
     <el-dialog :title="$t('退款')" v-model="dialogVisible" @close="dialogFormVisible(false)" :close-on-click-modal="false" :close-on-press-escape="false">
       <!-- 表单 -->
-      <el-form size="small" ref="form" :model="form" label-position="top">
+      <el-form size="small" ref="formRef" :model="form" label-position="top">
         <!-- 退款类型 -->
         <el-form-item for="no_click" :rules="[{ required: true, message: '' }]">
           <el-radio-group v-model="form.refund_type">
@@ -55,7 +55,7 @@
                   <span v-if="currency.unit_position == '0'">
                     {{ currency.unit }}
                   </span>
-                  {{ this.$formatPrice(Number(scope.row.refund_num_updata) * Number(scope.row.price)) }}
+                  {{ formatPrice(Number(scope.row.refund_num_updata) * Number(scope.row.price)) }}
                   <span v-if="currency.unit_position == '1'">
                     {{ currency.unit }}
                   </span>
@@ -65,7 +65,7 @@
                   <span v-if="currency.unit_position == '0'">
                     {{ currency.unit }}
                   </span>
-                  {{ this.$formatPrice(Number(scope.row.total_price)) }}
+                  {{ formatPrice(Number(scope.row.total_price)) }}
                   <span v-if="currency.unit_position == '1'">
                     {{ currency.unit }}
                   </span>
@@ -119,11 +119,11 @@
     <el-dialog :title="$t('提示')" v-model="dialogVisible2" @close="dialogFormVisible2(false)" :close-on-click-modal="false" :close-on-press-escape="false">
       <div>
         <p class="tips-QR">{{ $t('本次退款涉及') }}<span> QR PromptPay </span>{{ $t('退款，请填写退款所需的银行卡信息') }}</p>
-        <el-form size="small" ref="bankForm" :model="bankForm" label-position="top">
+        <el-form size="small" ref="bankFormRef" :model="bankForm" label-position="top">
           <!-- 退款类型 -->
           <el-form-item for="no_click" :label="$t('选择银行')" prop="bank_code" :rules="[{ required: true, message: $t('请选择银行') }]">
             <el-select v-model="bankForm.bank_code" clearable size="default" :placeholder="$t('请选择银行')">
-              <template v-for="item in bankList">
+              <template v-for="item in bankList" :key="item.value">
                 <el-option :value="item.value" :label="item.name"></el-option>
               </template>
             </el-select>
@@ -148,267 +148,254 @@
   </div>
 </template>
 
-<script>
-  import { useUserStore } from '@/store';
-  const { currency } = useUserStore();
-  import { languageStore } from '@/store/model/language';
-  import OrderApi from '@/api/order.js';
-  import draggable from 'vuedraggable';
-  export default {
-    components: {
-      draggable,
-    },
-    data() {
-      return {
-        loading: false, //加载状态
-        /*左边长度*/
-        formLabelWidth: '120px',
-        /*是否显示*/
-        dialogVisible: false,
-        dialogVisible2: false,
-        form: {
-          refund_type: '1', //退款类型
-          order_id: '', //订单id
-          sub_order_id: '', // 子单id
-          pay_price: '', //支付金额
-          points: null,
-        },
-        deductible_points: 0, //扣除积分
-        manual_return_points: false,
-        tableData: [], //表格数据
-        pay_list: [], //支付记录（原路退款会按照以下顺序退回）
-        currency: currency, //货币
-        language: '',
-        bankForm: {
-          bank_code: '',
-          account_no: '',
-          account_name: '',
-        },
-        bankList: [
-          { name: 'BANGKOK BANK (BBL)', value: '002' },
-          { name: 'KASIKORNBANK (KBANK)', value: '004' },
-          { name: 'KRUNG THAI BANK (KTB)', value: '006' },
-          { name: 'TMBTHANACHART BANK (TTB)', value: '011' },
-          { name: 'SIAM COMMERCIAL BANK (SCB)', value: '014' },
-          { name: 'CITIBANK BANGKOK BRANCH (CITI)', value: '017' },
-          { name: 'SUMITOMO MITSUI BANK (SMBC)', value: '018' },
-          { name: 'STANDARD CHARTERED BANK THAI (SCBT)', value: '020' },
-          { name: 'CIMB THAI BANK (CIMBT)', value: '022' },
-          { name: 'UNITED OVERSEAS BANK THAI (UOBT)', value: '024' },
-          { name: 'BANK OF AYUDHYA (BAY)', value: '025' },
-          { name: 'GOVERNMENT SAVINGS BANK (GSB)', value: '030' },
-          { name: 'THE HONGKONG AND SHANGHAI BANKING CORPORATION (HSBC)', value: '031' },
-          { name: 'GOVERNMENT HOUSING BANK (GHB)', value: '033' },
-          { name: 'BANK FOR AGRICULTURE AND AGRICULTURAL COOPERATIVES (BAAC)', value: '034' },
-          { name: 'MIZUHO CORPORATE BANK (MHCB)', value: '039' },
-          { name: 'ISLAMIC BANK OF THAILAND (ISBT)', value: 'ISBT' },
-          { name: 'TISCO BANK (TISCO)', value: 'TISCO' },
-          { name: 'KIATNAKIN BANK (KK)', value: '069' },
-          { name: 'INDUSTRIAL AND COMMERCIAL BANK OF CHINA (ICBC THAI)', value: '070' },
-          { name: 'THAI CREDIT RETAIL BANK (TCRB)', value: '071' },
-          { name: 'LAND AND HOUSES BANK (LH BANK)', value: '073' },
-        ],
-      };
-    },
-    props: ['open_edit', 'order_id', 'sub_order_id', 'pay_price'], //父组件传递的参数
-    created() {
-      this.dialogVisible = this.open_edit;
-      this.form.order_id = this.order_id;
-      this.form.sub_order_id = this.sub_order_id;
-      this.form.pay_price = this.$priceTwo(this.pay_price);
-      this.language = languageStore()?.getLanguageKey().language.value;
-      // this.getData();
-      this.getStoreRefundInfo();
-    },
-    methods: {
-      /*处理*/
-      submit() {
-        let self = this;
-        let form = {
-          sale_bill_uuid: this.form.order_id,
-          sale_order_uuid: this.form.sub_order_id,
-          refund_type: this.form.refund_type,
-          points: this.form.points,
-          refund_product: [],
-          refund_buffet: [],
-          refund_delay: [],
-        };
-        this.tableData.map((item) => {
-          if (item.refund_num_updata > 0 && item.type == 1) {
-            form.refund_buffet.push({
-              id: item.id,
-              refund_num: item.refund_num_updata,
-            });
-          }
-          if (item.refund_num_updata > 0 && item.type == 2) {
-            form.refund_delay.push({
-              id: item.id,
-              refund_num: item.refund_num_updata,
-            });
-          }
-          if (item.refund_num_updata > 0 && item.type == 3) {
-            form.refund_product.push({
-              order_product_id: item.id,
-              refund_num: item.refund_num_updata,
-            });
-          }
-        });
-        if (this.form.refund_type == '2' && form.refund_product.length == 0 && form.refund_buffet.length == 0 && form.refund_delay.length == 0) {
-          this.$ElMessage({
-            type: 'warning',
-            message: $t('请选择退款商品'),
-          });
-          return;
-        }
-        if (this.dialogVisible2) {
-          form.bank_code = this.bankForm.bank_code;
-          form.account_no = this.bankForm.account_no;
-          form.account_name = this.bankForm.account_name;
-        }
+<script setup>
+import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { ElMessage } from 'element-plus';
+import { useUserStore } from '@/store';
+import { languageStore } from '@/store/model/language';
+import OrderApi from '@/api/order.js';
 
-        self.$refs.form.validate((valid) => {
-          if (valid) {
-            self.loading = true;
-            OrderApi.storeRefund(form, true)
-              .then((data) => {
-                self.loading = false;
-                this.$ElMessage({
-                  message: data.msg,
-                  type: 'success',
-                });
-                self.dialogFormVisible(true);
-                self.dialogFormVisible2(false);
-              })
-              .catch((error) => {
-                self.loading = false;
-                if (error?.data?.code == -901) {
-                  self.dialogVisible2 = true;
-                }
-              });
-          }
-        });
-      },
-      getData() {
-        let self = this;
-        self.loading = true;
-        OrderApi.orderProductList({ order_id: this.form.order_id })
-          .then((data) => {
-            self.loading = false;
-            this.tableData = [];
+// 获取当前实例
+const { proxy } = getCurrentInstance();
 
-            (data.data.buffetList || []).map((item) => {
-              this.tableData.push({
-                type: 1,
-                product_name_text: item.buffet_name_text + `(${item.customer_type_name_text})`, //名称
-                product_attr: '', //规格
-                total_num: item.num, //总数量
-                total_price: item.consumption_tax_pay_price * Number(item.num), //总价钱
-                refund_num: item.refund_num, //已退数量
-                refund_money: item.consumption_tax_pay_price * Number(item.refund_num), //已退价钱
-                id: item.id, //id
-                refund_num_updata: 0, //提交退款的数量
-              });
-            });
+// 使用国际化
+const { t: $t } = useI18n();
 
-            (data.data.delayList || []).map((item) => {
-              this.tableData.push({
-                type: 2,
-                product_name_text: item.name_text, //名称
-                product_attr: '', //规格
-                total_num: item.num, //总数量
-                total_price: item.price * Number(item.num), //总价钱
-                refund_num: item.refund_num, //已退数量
-                refund_money: item.refund_money, //已退价钱
-                id: item.id, //id
-                refund_num_updata: 0, //提交退款的数量
-              });
-            });
+// 使用store
+const { currency } = useUserStore();
 
-            (data.data.productList || []).map((item) => {
-              this.tableData.push({
-                type: 3,
-                product_name_text: item.product_name_text, //名称
-                product_attr: item.product_attr, //规格
-                total_num: item.total_num, //总数量
-                total_price: item.consumption_tax_pay_price * Number(item.total_num), //总价钱
-                refund_num: item.refund_num, //已退数量
-                refund_money: item.consumption_tax_pay_price * Number(item.refund_num), //已退价钱
-                id: item.order_product_id, //id
-                refund_num_updata: 0, //提交退款的数量
-              });
-            });
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
+// 定义props
+const props = defineProps({
+  open_edit: {
+    type: Boolean,
+    default: false
+  },
+  order_id: {
+    type: [String, Number],
+    default: ''
+  },
+  sub_order_id: {
+    type: [String, Number],  
+    default: ''
+  },
+  pay_price: {
+    type: [String, Number],
+    default: ''
+  }
+});
 
-      getStoreRefundInfo() {
-        let self = this;
-        self.loading = true;
-        OrderApi.getStoreRefund(
-          {
-            sale_bill_uuid: this.form.order_id,
-            sale_order_uuid: this.sub_order_id,
-          },
-          true
-        )
-          .then((data) => {
-            self.loading = false;
-            self.form.pay_price = this.$priceTwo(data.data.can_return_amount);
-            self.pay_list = data.data.payment_records;
-            self.deductible_points = data.data.deductible_points;
-            self.manual_return_points = data.data.manual_return_points;
-            (data.data.products || []).map((item) => {
-              this.tableData.push({
-                type: 3,
-                product_name_text: item.locale_name[self.language], //名称
-                product_attr: item.locale_attribute_name[self.language], //规格
-                total_num: item.num, // 可退数量
-                total_price: item.can_return_amount, // 可退金额
-                price: item.price, // 商品单价
-                id: item.sale_order_product_uuid, //id
-                refund_num_updata: 0, //提交退款的数量
-              });
-            });
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
-      /*关闭弹窗*/
-      dialogFormVisible(e) {
-        if (e) {
-          this.$emit('closeDialog', {
-            type: 'success',
-            openDialog: false,
-          });
-        } else {
-          this.$emit('closeDialog', {
-            type: 'error',
-            openDialog: false,
-          });
-        }
-      },
+// 定义emits
+const emit = defineEmits(['closeDialog']);
 
-      handleClick() {
-        this.$refs.bankForm.validate((valid) => {
-          if (valid) {
-            this.submit();
-          }
-        });
-      },
+// 格式化价格函数
+const formatPrice = (price) => {
+  return proxy.$formatPrice(price);
+};
 
-      dialogFormVisible2() {
-        this.dialogVisible2 = false;
-        this.bankForm = {
-          bank_code: '',
-          account_no: '',
-          account_name: '',
-        };
-      },
-    },
+const priceTwo = (price) => {
+  return proxy.$priceTwo(price);
+};
+
+// 响应式数据
+const loading = ref(false);
+const formLabelWidth = ref('120px');
+const dialogVisible = ref(false);
+const dialogVisible2 = ref(false);
+const language = ref('');
+
+const form = reactive({
+  refund_type: '1',
+  order_id: '',
+  sub_order_id: '',
+  pay_price: '',
+  points: null,
+});
+
+const deductible_points = ref(0);
+const manual_return_points = ref(false);
+const tableData = ref([]);
+const pay_list = ref([]);
+
+const bankForm = reactive({
+  bank_code: '',
+  account_no: '',
+  account_name: '',
+});
+
+const bankList = ref([
+  { name: 'BANGKOK BANK (BBL)', value: '002' },
+  { name: 'KASIKORNBANK (KBANK)', value: '004' },
+  { name: 'KRUNG THAI BANK (KTB)', value: '006' },
+  { name: 'TMBTHANACHART BANK (TTB)', value: '011' },
+  { name: 'SIAM COMMERCIAL BANK (SCB)', value: '014' },
+  { name: 'CITIBANK BANGKOK BRANCH (CITI)', value: '017' },
+  { name: 'SUMITOMO MITSUI BANK (SMBC)', value: '018' },
+  { name: 'STANDARD CHARTERED BANK THAI (SCBT)', value: '020' },
+  { name: 'CIMB THAI BANK (CIMBT)', value: '022' },
+  { name: 'UNITED OVERSEAS BANK THAI (UOBT)', value: '024' },
+  { name: 'BANK OF AYUDHYA (BAY)', value: '025' },
+  { name: 'GOVERNMENT SAVINGS BANK (GSB)', value: '030' },
+  { name: 'THE HONGKONG AND SHANGHAI BANKING CORPORATION (HSBC)', value: '031' },
+  { name: 'GOVERNMENT HOUSING BANK (GHB)', value: '033' },
+  { name: 'BANK FOR AGRICULTURE AND AGRICULTURAL COOPERATIVES (BAAC)', value: '034' },
+  { name: 'MIZUHO CORPORATE BANK (MHCB)', value: '039' },
+  { name: 'ISLAMIC BANK OF THAILAND (ISBT)', value: 'ISBT' },
+  { name: 'TISCO BANK (TISCO)', value: 'TISCO' },
+  { name: 'KIATNAKIN BANK (KK)', value: '069' },
+  { name: 'INDUSTRIAL AND COMMERCIAL BANK OF CHINA (ICBC THAI)', value: '070' },
+  { name: 'THAI CREDIT RETAIL BANK (TCRB)', value: '071' },
+  { name: 'LAND AND HOUSES BANK (LH BANK)', value: '073' },
+]);
+
+// 表单引用
+const formRef = ref(null);
+const bankFormRef = ref(null);
+
+// 生命周期
+onMounted(() => {
+  dialogVisible.value = props.open_edit;
+  form.order_id = props.order_id;
+  form.sub_order_id = props.sub_order_id;
+  form.pay_price = priceTwo(props.pay_price);
+  language.value = languageStore()?.getLanguageKey().language.value;
+  getStoreRefundInfo();
+});
+
+// 方法定义
+const submit = () => {
+  let formData = {
+    sale_bill_uuid: form.order_id,
+    sale_order_uuid: form.sub_order_id,
+    refund_type: form.refund_type,
+    points: form.points,
+    refund_product: [],
+    refund_buffet: [],
+    refund_delay: [],
   };
+
+  tableData.value.map((item) => {
+    if (item.refund_num_updata > 0 && item.type == 1) {
+      formData.refund_buffet.push({
+        id: item.id,
+        refund_num: item.refund_num_updata,
+      });
+    }
+    if (item.refund_num_updata > 0 && item.type == 2) {
+      formData.refund_delay.push({
+        id: item.id,
+        refund_num: item.refund_num_updata,
+      });
+    }
+    if (item.refund_num_updata > 0 && item.type == 3) {
+      formData.refund_product.push({
+        order_product_id: item.id,
+        refund_num: item.refund_num_updata,
+      });
+    }
+  });
+
+  if (form.refund_type == '2' && formData.refund_product.length == 0 && formData.refund_buffet.length == 0 && formData.refund_delay.length == 0) {
+    ElMessage({
+      type: 'warning',
+      message: $t('请选择退款商品'),
+    });
+    return;
+  }
+
+  if (dialogVisible2.value) {
+    formData.bank_code = bankForm.bank_code;
+    formData.account_no = bankForm.account_no;
+    formData.account_name = bankForm.account_name;
+  }
+
+  formRef.value.validate((valid) => {
+    if (valid) {
+      loading.value = true;
+      OrderApi.storeRefund(formData, true)
+        .then((data) => {
+          loading.value = false;
+          ElMessage({
+            message: data.msg,
+            type: 'success',
+          });
+          dialogFormVisible(true);
+          dialogFormVisible2(false);
+        })
+        .catch((error) => {
+          loading.value = false;
+          if (error?.data?.code == -901) {
+            dialogVisible2.value = true;
+          }
+        });
+    }
+  });
+};
+
+const getStoreRefundInfo = () => {
+  loading.value = true;
+  OrderApi.getStoreRefund(
+    {
+      sale_bill_uuid: form.order_id,
+      sale_order_uuid: props.sub_order_id,
+    },
+    true
+  )
+    .then((data) => {
+      loading.value = false;
+      form.pay_price = priceTwo(data.data.can_return_amount);
+      pay_list.value = data.data.payment_records;
+      deductible_points.value = data.data.deductible_points;
+      manual_return_points.value = data.data.manual_return_points;
+      
+      (data.data.products || []).map((item) => {
+        tableData.value.push({
+          type: 3,
+          product_name_text: item.locale_name[language.value],
+          product_attr: item.locale_attribute_name[language.value],
+          total_num: item.num,
+          total_price: item.can_return_amount,
+          price: item.price,
+          id: item.sale_order_product_uuid,
+          refund_num_updata: 0,
+        });
+      });
+    })
+    .catch((error) => {
+      loading.value = false;
+    });
+};
+
+const dialogFormVisible = (e) => {
+  if (e) {
+    emit('closeDialog', {
+      type: 'success',
+      openDialog: false,
+    });
+  } else {
+    emit('closeDialog', {
+      type: 'error',
+      openDialog: false,
+    });
+  }
+};
+
+const handleClick = () => {
+  bankFormRef.value.validate((valid) => {
+    if (valid) {
+      submit();
+    }
+  });
+};
+
+const dialogFormVisible2 = () => {
+  dialogVisible2.value = false;
+  Object.assign(bankForm, {
+    bank_code: '',
+    account_no: '',
+    account_name: '',
+  });
+};
 </script>
 <style scoped lang="scss">
   .flex {
