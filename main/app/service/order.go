@@ -1336,7 +1336,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 		paymentOrderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
 	)
 	if err == nil && paymentOrder.Uuid != 0 {
-		if paymentOrder.Status == constant.PaymentOrderStatusUnPay {
+		if paymentOrder.Status == constant.PaymentOrderStatusPaid {
 			return &resp.MemberOrderPaymentInfoResp{
 				MemberSaleOrderUuid: memberSaleOrder.Uuid,
 				PaymentOrderUuid:    paymentOrder.Uuid,
