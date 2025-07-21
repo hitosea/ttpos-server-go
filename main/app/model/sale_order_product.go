@@ -47,7 +47,8 @@ type SaleOrderProduct struct {
 
 	// 折扣相关字段
 	ChangePriceTime         int64   `gorm:"column:change_price_time;type:int(10);not null;default:0;comment:'改价时间(时间戳),用于判断是否改价和不同时间改价的商品不合并'" json:"change_price_time"`
-	OpenMemberDiscount      uint    `gorm:"column:open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"open_member_discount"`                 // 快照设置相关，不受后台改变，结账时检查
+	OpenMemberDiscount      uint    `gorm:"column:open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"open_member_discount"` // 快照设置相关，不受后台改变，结账时检查
+	OpenOverallDiscount     uint    `gorm:"column:open_overall_discount;type:tinyint(1);not null;default:0;comment:'是否开启 Overall 折扣, 0-否 1-是'" json:"open_overall_discount"`
 	MemberDiscountRate      float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`               // 与sale_order的member_discount_rate一致
 	MemberCardDiscountRate  float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员卡折扣率(0-100%)'" json:"member_card_discount_rate"`    // 与sale_order的member_card_discount_rate一致
 	MemberOrderDiscountRate float64 `gorm:"column:member_order_discount_rate;type:decimal(12,2);not null;default:1.00;comment:'会员订单折扣率(1-300%)'" json:"member_order_discount_rate"` // 用于上浮会员端上的商品价格
@@ -111,6 +112,20 @@ type SaleOrderProduct struct {
 	// 内部字段
 	operation        string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
 	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
+}
+
+// GetOpenOverallDiscount 获取是否开启 Overall 折扣
+func (model *SaleOrderProduct) GetOpenOverallDiscount() bool {
+	return model.OpenOverallDiscount == 1
+}
+
+// GetCustomDiscountRate 获取自定义折扣率
+func (model *SaleOrderProduct) GetCustomDiscountRate() float64 {
+	if !model.GetOpenOverallDiscount() {
+		// 不开启整单打折
+		return constant.NoDiscount
+	}
+	return model.CustomDiscountRate
 }
 
 // 获取商品包的规格uuid
@@ -464,6 +479,14 @@ func (model *SaleOrderProduct) CheckOutProduct() (int, string) {
 		}
 	}
 
+	// 商品是否享受整单折扣发生变动
+	if model.overallDiscountChanged() {
+		// 如果商品已经有整单折扣时才返回价格变动
+		if model.CustomDiscountRate < 1 {
+			return constant.CodeOrderCheckProductPriceChanged, "商品整单折扣发生变动"
+		}
+	}
+
 	// 小料的价格有变动
 	if model.saucePriceChanged(model.SaucePrice) {
 		return constant.CodeOrderCheckProductPriceChanged, "小料价格变动"
@@ -546,6 +569,12 @@ func (model *SaleOrderProduct) CheckCookingProduct(lang string) (int, string) {
 func (model *SaleOrderProduct) memberDiscountChanged() bool {
 	latestOpenMemberDiscount := model.ProductPackage.OpenDiscount
 	return latestOpenMemberDiscount != model.OpenMemberDiscount
+}
+
+// 商品是否享受整单折扣发生变动
+func (model *SaleOrderProduct) overallDiscountChanged() bool {
+	latestOpenOverallDiscount := model.ProductPackage.OpenOverallDiscount
+	return latestOpenOverallDiscount != model.OpenOverallDiscount
 }
 
 // 小料的价格是否有变动
@@ -1168,6 +1197,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		MemberDiscountRate:         def.MemberDiscountRate,
 		MemberCardDiscountRate:     def.MemberCardDiscountRate,
 		CustomDiscountRate:         def.CustomDiscountRate,
+		OpenOverallDiscount:        productPackage.OpenOverallDiscount,
 		DeductStockType:            def.DeductStockType,
 		MultiLanguageNameUuid:      def.MultiLanguageNameUuid,
 		ImageFileUuid:              def.ImageFileUuid,

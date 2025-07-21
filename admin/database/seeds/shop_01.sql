@@ -339,6 +339,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `member_discount_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '会员折扣率(0-100%)',
     `member_card_discount_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '会员卡折扣率(0-100%)',
     `custom_discount_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '自定义折扣率(0-100%)',
+    `open_overall_discount` INT(10) NOT NULL DEFAULT 1 COMMENT '是否开启 Overall 折扣, 0-否 1-是',
     -- 会员折扣后的价格
     `member_discount_price` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣后的价格（单商品）=销售价*会员折扣率*会员卡折扣率',
     -- 最终单价=销售价*折扣率；总最终单价=最终单价*商品数量
