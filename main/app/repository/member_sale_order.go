@@ -231,6 +231,18 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderManageList(pageNo, pageSi
 		),
 	}
 
+	// 根据外送序号搜索
+	if req.SerialNo != nil {
+		serialNoFilter := CommonRepo.DBOption(CommonRepo.WhereBySerialNumber(*req.SerialNo))
+		opts = append(opts, serialNoFilter)
+	}
+
+	// 根据订单号搜索
+	if req.OrderNo != nil {
+		orderNoFilter := CommonRepo.DBOption(CommonRepo.WhereByOrderNo(*req.OrderNo))
+		opts = append(opts, orderNoFilter)
+	}
+
 	// 根据状态列表筛选
 	if len(statusList) == 1 {
 		statusFilter := CommonRepo.DBOption(CommonRepo.WhereByStatus(statusList[0]))
@@ -238,7 +250,6 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderManageList(pageNo, pageSi
 	} else if len(statusList) > 1 {
 		statusFilter := CommonRepo.DBOption(CommonRepo.WhereByMultipleStatus(statusList))
 		opts = append(opts, statusFilter)
-
 	}
 	// 根据时间筛选
 	if req.TimeFilter != nil {

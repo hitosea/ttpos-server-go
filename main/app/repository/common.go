@@ -64,6 +64,7 @@ type ICommonRepo interface {
 	WhereByMemberUuid(uuid uint64) DBOption                             // 根据会员UUID查询
 	WhereByNotRevoked() DBOption                                        // 未撤销的出库记录
 	WhereByStatus(status uint) DBOption                                 // 根据状态查询
+	WhereBySerialNumber(serialNo string) DBOption                       // 根据外送序号查询
 	WhereByMultipleStatus(statusList []uint) DBOption                   // 根据多个状态查询
 	WhereBySource(source uint) DBOption                                 // 根据来源查询
 	WhereByRequirement(requirement string) DBOption                     // 根据requirement查询
@@ -204,6 +205,13 @@ func (r *commonRepo) WhereByAssociatedOrderUuid(uuid uint64) DBOption {
 func (r *commonRepo) WhereByStatus(status uint) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("status = ?", status)
+	}
+}
+
+// WhereBySerialNumber 根据外送序号查询
+func (r *commonRepo) WhereBySerialNumber(serialNo string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("serial_number = ?", serialNo)
 	}
 }
 
