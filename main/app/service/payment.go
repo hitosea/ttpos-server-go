@@ -385,6 +385,7 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 	// 设置数据库
 	db := p.dbm.GetDB(companyUuid)
 	p.ctx.SetDB(db)
+	p.ctx.SetCompanyUuid(companyUuid)
 
 	// 获取支付订单
 	order, err := repository.NewLlPaymentOrderRepo(db).GetPaymentOrder(
@@ -441,35 +442,47 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 		if err != nil {
 			return err
 		}
+
 		// 创建或更新支付单
-		if err := repository.NewPaymentOrderRepo(tx).UpdateOrCreatePaymentOrderRecord(model.PaymentOrder{
-			BaseModel: model.BaseModel{
-				ID:   paymentOrderId,
-				Uuid: paymentOrderUuid,
-			},
-			PaymentMethodName: func() string {
-				if order.PaymentMethod == nil {
-					return ""
-				}
-				return order.PaymentMethod.Name
-			}(),
-			PaymentFeePercent:    paymentFeePercent,
-			PaymentMethodUuid:    order.PaymentMethodUuid,
-			RelatedType:          order.RelatedType,
-			RelatedUuid:          order.RelatedUuid,
-			CurrencyUnit:         order.OrderCurrency,
-			PaymentAmount:        order.OrderAmount - order.CommissionFee,
-			PaymentCommissionFee: order.CommissionFee,
-			Amount:               order.OrderAmount,
-			TransactionNumber:    callbackReq.PaymentId,
-			Status:               constant.PaymentOrderStatusPaid,
-		}); err != nil {
+		if paymentOrderId > 0 {
+			paymentOrder.SetUpdate()
+			paymentOrder.TransactionNumber = callbackReq.PaymentId
+			paymentOrder.Status = constant.PaymentOrderStatusPaid
+		} else {
+			paymentOrder = model.PaymentOrder{
+				BaseModel: model.BaseModel{
+					ID:   paymentOrderId,
+					Uuid: paymentOrderUuid,
+				},
+				PaymentMethodName: func() string {
+					if order.PaymentMethod == nil {
+						return ""
+					}
+					return order.PaymentMethod.Name
+				}(),
+				PaymentFeePercent:    paymentFeePercent,
+				PaymentMethodUuid:    order.PaymentMethodUuid,
+				RelatedType:          order.RelatedType,
+				RelatedUuid:          order.RelatedUuid,
+				CurrencyUnit:         order.OrderCurrency,
+				PaymentAmount:        order.OrderAmount - order.CommissionFee,
+				PaymentCommissionFee: order.CommissionFee,
+				Amount:               order.OrderAmount,
+				TransactionNumber:    callbackReq.PaymentId,
+				Status:               constant.PaymentOrderStatusPaid,
+			}
+		}
+		if err := repository.NewPaymentOrderRepo(tx).UpdateOrCreatePaymentOrderRecord(paymentOrder); err != nil {
 			return err
 		}
 
 		// 会员端订单支付成功
 		if order.RelatedType == constant.PaymentOrderRelatedTypeMemberOrder {
-			memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(order.RelatedUuid)
+			saleOrder, err := repository.NewOrderRepo(db).GetSaleBillSaleOrderRecord(order.RelatedUuid)
+			if err != nil {
+				return err
+			}
+			memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(saleOrder.SaleBill.MemberSaleOrderUuid)
 			if err != nil {
 				return err
 			}
@@ -478,13 +491,13 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 				BasePayload: event.BasePayload{
 					Ctx:                 p.ctx,
 					CompanyUuid:         p.ctx.GetCompanyUuid(),
-					Source:              p.ctx.GetSource(),
-					SaleBillUuid:        memberSaleOrder.SaleBill.Uuid,
-					SaleOrderUuid:       memberSaleOrder.SaleBill.SaleOrders[0].Uuid,
+					Source:              constant.SourceSystem,
+					SaleBillUuid:        saleOrder.SaleBill.Uuid,
+					SaleOrderUuid:       saleOrder.Uuid,
 					MemberSaleOrderUuid: memberSaleOrder.Uuid,
-					MemberUuid:          p.ctx.GetMemberUuid(),
+					MemberUuid:          memberSaleOrder.MemberUuid,
 				},
-				MemberSaleOrderUuid: order.RelatedUuid,
+				MemberSaleOrderUuid: memberSaleOrder.Uuid,
 			})
 		}
 

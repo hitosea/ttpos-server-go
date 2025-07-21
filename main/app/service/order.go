@@ -1335,14 +1335,16 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 		paymentOrderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeMemberOrder),
 		paymentOrderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
 	)
-	if err == nil && paymentOrder.Uuid != 0 && paymentOrder.Status == constant.PaymentOrderStatusPaid {
-		return &resp.MemberOrderPaymentInfoResp{
-			MemberSaleOrderUuid: memberSaleOrder.Uuid,
-			PaymentOrderUuid:    paymentOrder.Uuid,
-			PaymentMethodName:   paymentMethod.PaymentName,
-			Status:              paymentOrder.Status,
-			PaymentAmount:       paymentOrder.PaymentAmount,
-		}, nil
+	if err == nil && paymentOrder.Uuid != 0 {
+		if paymentOrder.Status == constant.PaymentOrderStatusUnPay {
+			return &resp.MemberOrderPaymentInfoResp{
+				MemberSaleOrderUuid: memberSaleOrder.Uuid,
+				PaymentOrderUuid:    paymentOrder.Uuid,
+				PaymentMethodName:   paymentMethod.PaymentName,
+				Status:              paymentOrder.Status,
+				PaymentAmount:       paymentOrder.PaymentAmount,
+			}, nil
+		}
 	} else {
 		// 添加支付方式
 		createPaymentOrder, err := paymentOrderRepo.Create(model.PaymentOrder{
