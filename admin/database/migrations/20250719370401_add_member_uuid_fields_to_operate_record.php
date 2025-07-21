@@ -30,11 +30,11 @@ class AddMemberUuidFieldsToOperateRecord extends Migrator
     {
         $table = $this->table('sale_order_operation_record');
         if (!$table->hasColumn('member_sale_order_uuid')) {
-            $table->addColumn('member_sale_order_uuid', 'biginteger', ['unsigned' => true, 'null' => false, 'default' => 0, 'comment' => '外送订单Uuid', 'after' => 'operator_uuid']);
+            $table->addColumn('member_sale_order_uuid', 'biginteger', ['signed' => false, 'null' => false, 'default' => 0, 'comment' => '外送订单Uuid', 'after' => 'operator_uuid']);
             $table->update();
         }
          if (!$table->hasColumn('member_uuid')) {
-            $table->addColumn('member_uuid', 'biginteger', ['unsigned' => true, 'null' => false, 'default' => 0, 'comment' => '会员uuid', 'after' => 'member_sale_order_uuid']);
+            $table->addColumn('member_uuid', 'biginteger', ['signed' => false, 'null' => false, 'default' => 0, 'comment' => '会员uuid', 'after' => 'member_sale_order_uuid']);
             $table->update();
         }
     }
