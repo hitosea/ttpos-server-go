@@ -101,7 +101,7 @@ func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq
 				"takeoutRefNo":    job.TakeoutRefNo,
 				"providerName":    job.ProviderName,
 				"jobStatusBefore": jobStatusBefore,
-				"jobStatusAfter":  job.JobStatus,
+				"jobStatusAfter":  req.StatusAfter,
 			}); err != nil {
 				g.Log().Infof(ctx, "发起回调ttpos异常: %v", err)
 			}
