@@ -55,7 +55,8 @@ type MemberOrderProduct struct {
 	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品名称
 	LocaleAttributeName dto.LocaleResponse `json:"locale_attribute_name"` // 商品属性
 	Num                 float64            `json:"num"`                   // 数量
-	TotalPrice          float64            `json:"total_price"`           // 总价. 总价=单价*数量
+	TotalPrice          float64            `json:"total_price"`           // 总价. 总价=单价*数量。 折后
+	OriginTotalPrice    float64            `json:"origin_total_price"`    // 原价总价. 原价总价=原价单价*数量。 折前
 	Image               string             `json:"image"`                 // 商品图片
 }
 
