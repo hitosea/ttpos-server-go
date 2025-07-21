@@ -9,6 +9,13 @@ make conf
 
 #编译运行
 make run
+
+#升级 db
+make db_up
+
+#新增db变更
+make db_add COMMENT='comment'
+
 ```
 
 
