@@ -77,7 +77,7 @@ pbentity: cli.install
 
 # 加载环境变量并替换数据库连接配置
 .PHONY: conf
-conf: cli.install
+conf: cli.install envsubst.install
 	@sh $(ROOT_DIR)/hack/init_conf.sh
 
 .PHONY: run

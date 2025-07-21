@@ -183,6 +183,7 @@
                 <el-button v-if="scope.row.extra.is_cell_refund" @click="refundClick(scope.row)" type="danger" link size="small" v-auth="'/store/operate/refund'"
                   >{{ $t('退款') }}
                 </el-button>
+                
                 <el-button v-if="scope.row.extra.is_cell_cancel" @click="cancelClick(scope.row)" type="danger" link size="small" v-auth="'/store/operate/order_cancel'"
                   >{{ $t('取消') }}
                 </el-button>

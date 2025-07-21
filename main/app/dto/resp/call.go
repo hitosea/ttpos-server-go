@@ -70,6 +70,7 @@ type UnprocessedMemberSaleOrderItem struct {
 	CancelScene  string `json:"cancel_scene"`   // 取消场景: merchant_cancel-商家取消, member_cancel-用户取消, merchant_reject-商家拒单
 	UpdateTime   int64  `json:"update_time"`    // 更新时间
 	IsAutoAccept bool   `json:"is_auto_accept"` // 是否自动接单
+	SerialNumber string `json:"serial_number"`  // 订单流水号
 }
 
 type UnprocessedH5Order struct {

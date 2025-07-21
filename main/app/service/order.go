@@ -1005,7 +1005,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 
 	var address resp.MemberSaleOrderAddress
 	if memberSaleOrder.Address != nil {
-		lat, lng, _ := memberSaleOrder.Address.GetLocation()
+		lat, lng, err := memberSaleOrder.Address.GetLocation()
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -1632,17 +1632,19 @@ func (s *orderSrv) GetMemberOrderPaymentMethodList(ctx context.Context, req req.
 }
 
 // MemberOrderCancel 会员端订单取消
-func (s *orderSrv) MemberOrderCancel(ctx context.Context, req member_req.CancelOrderReq) error {
+func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.CancelOrderReq) error {
 	// 禁止并发操作
 	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(req.MemberSaleOrderUuid)
-		defer lock.NewSystemLock().UnlockUuid(req.MemberSaleOrderUuid)
+		lock.NewSystemLock().LockUuid(request.MemberSaleOrderUuid)
+		defer lock.NewSystemLock().UnlockUuid(request.MemberSaleOrderUuid)
 		ctx.AddLock()
 	}
+
 	// 获取DB
 	db := s.dbm.GetDB(ctx.GetDbId())
+
 	// 获取会员端销售订单
-	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(req.MemberSaleOrderUuid)
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(request.MemberSaleOrderUuid)
 	if err != nil {
 		return errors.WithMessage(err)
 	}
@@ -1657,6 +1659,9 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, req member_req.CancelO
 		ctx.AddLock()
 	}
 
+	// 获取销售账单Uuid
+	saleBillUuid := memberSaleOrder.SaleBill.Uuid
+
 	// 开始事务
 	tx := db.Begin()
 	defer func() {
@@ -1668,9 +1673,6 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, req member_req.CancelO
 	// 设置DB
 	ctx.SetDB(tx)
 
-	// 获取销售账单Uuid
-	saleBillUuid := memberSaleOrder.SaleBill.Uuid
-
 	// 获取订单信息
 	orderRepo := repository.NewOrderRepo(tx)
 	billInfo, err := orderRepo.GetSaleBillAllInfo(saleBillUuid)
@@ -1679,6 +1681,9 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, req member_req.CancelO
 		return errors.WithMessage(err)
 	}
 
+	// 获取销售订单
+	saleOrder := billInfo.GetFirstSaleOrder()
+
 	// 退回商品库存
 	if err := s.returnInventory(ctx, billInfo); err != nil {
 		tx.Rollback()
@@ -1686,7 +1691,7 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, req member_req.CancelO
 	}
 
 	// 取消订单
-	err = orderRepo.CancelOrder(ctx, saleBillUuid, 0, req.CancelReason)
+	err = orderRepo.CancelOrder(ctx, saleBillUuid, 0, request.CancelReason)
 	if err != nil {
 		tx.Rollback()
 		return errors.WithMessage(err)
@@ -1702,12 +1707,14 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, req member_req.CancelO
 		tx.Rollback()
 		return errors.WithMessage(builtinerrors.New("删除送厨单失败"), err.Error())
 	}
+
 	// 修改送厨商品数量为0，在确认整单退菜时、确认该菜品全退时，再标记为删除
 	err = productionRepo.UpdateProduct([]repository.DBOption{saleBillUuidOpt}, map[string]any{"num": 0})
 	if err != nil {
 		tx.Rollback()
 		return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
 	}
+
 	// 取消订单后，删除所有销售订单商品
 	err = repository.NewSaleOrderProductRepo(tx).DeleteSaleOrderProductBySaleBillUuid(billInfo.Uuid)
 	if err != nil {
@@ -1715,76 +1722,23 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, req member_req.CancelO
 		return errors.WithMessage(builtinerrors.New("删除销售订单商品失败"), err.Error())
 	}
 
-	// if lianLianPayCount > 0 && returnOrderAmount.PaymentMethod.IsLianLianPay() {
-	//   paymentServiceRefundReq := PaymentServiceRefundReq{
-	//       RelatedType:           constant.PaymentOrderRelatedTypeSaleOrder,
-	//       PaymentOrderUuid:      returnOrderAmount.PaymentOrderUuid,
-	//       MerchantRefundOrderNo: returnOrderAmount.MerchantRefundOrderNo,
-	//       RefundAmount:          returnOrderAmount.Amount,
-	//       BankCode:              returnOrder.BankCode,
-	//       AccountNo:             returnOrder.AccountNo,
-	//       AccountName:           returnOrder.AccountName,
-	//    }
-	//    payment, err := NewPaymentRepo(ctx, s.dbm).Refund(paymentServiceRefundReq)
-	//    if err != nil {
-	//        return errors.WithMessage(err)
-	//    }
-	//    // 设置连连退款订单ID
-	//    returnOrderAmount.LlReturnOrderid = payment.RefundOrderId
-	// } else {
-	//     returnOrderAmount.RefundStatus = 1
-	// }
-
 	// 已经支付的-发起退款
 	if memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingMerchantAccept {
-		// 创建退货单
-		returnOrder := model.ReturnOrder{
-			BaseModel: model.BaseModel{
-				Uuid: func() uint64 {
-					id, _ := utils.GetID()
-					return id
-				}(),
-			},
-			RelatedOrderType: constant.ReturnOrderRelatedOrderTypeMemberOrder,
-			RelatedOrderUuid: memberSaleOrder.Uuid,
-			RelatedOrderNo:   memberSaleOrder.OrderNo,
-			ReturnType:       constant.ReturnOrderRefundTypeTotal,
-			RefundAmount:     memberSaleOrder.Amount,
-			// BankCode:           memberSaleOrder.SaleBill.SaleOrders[0].PaymentMethod.BankCode,
-			// AccountNo:          memberSaleOrder.SaleBill.SaleOrders[0].PaymentMethod.AccountNo,
-			// AccountName:        memberSaleOrder.SaleBill.SaleOrders[0].PaymentMethod.AccountName,
-			// ReturnOrderAmounts: returnOrderAmounts, // 关联创建退款金额
-			DutyNo: ctx.GetStaff().DutyNo,
-			// Unit:         currencyUnit,
-			RefundReason: "退款",
-		}
-
-		var paymentOrderUuid uint64
-		// 创建退货单
-		if paymentOrderUuid, err = repository.NewReturnOrderRepo(tx).CreateReturnOrderRecord(returnOrder); err != nil {
-			return errors.WithMessage(err)
-		}
-		// 发起退款
-		refund, err := NewPaymentRepo(ctx, s.dbm).Refund(PaymentServiceRefundReq{
-			RelatedType: constant.PaymentOrderRelatedTypeMemberOrder, // 相关类型
-			// PaymentOrderUuid:      paymentOrderUuid,      // 支付订单UUID
-			// MerchantRefundOrderNo: memberSaleOrder.SaleBill.SaleOrders[0].MerchantRefundOrderNo, // 商户退款订单号
-			// RefundAmount:          memberSaleOrder.SaleBill.SaleOrders[0].RefundAmount,          // 退款金额
-			// RefundOrderId:         memberSaleOrder.SaleBill.SaleOrders[0].RefundOrderId,         // 退款ID
+		err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
+			CancelReason: "客户取消订单",
+			// BankCode:     request.BankCode,
+			// AccountNo:    request.AccountNo,
+			// AccountName:  request.AccountName,
 		})
 		if err != nil {
+			tx.Rollback()
 			return errors.WithMessage(err)
 		}
-
-		fmt.Println("refund", refund)
-		fmt.Println("paymentOrderUuid", paymentOrderUuid)
-		// returnOrderAmount.LlReturnOrderid = refund.RefundOrderId
-
-		memberSaleOrder.RefundAmount = memberSaleOrder.Amount
 	}
 
 	// 设置订单为“已取消”状态
-	memberSaleOrder.SetCancel(req.CancelReason)
+	memberSaleOrder.RefundAmount = memberSaleOrder.Amount
+	memberSaleOrder.SetCancel(request.CancelReason)
 
 	// 更新订单状态
 	if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
@@ -1805,7 +1759,7 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, req member_req.CancelO
 				CompanyUuid:  ctx.GetCompanyUuid(),
 				Source:       ctx.GetSource(),
 				SaleBillUuid: billInfo.Uuid,
-				OperatorUuid: int64(ctx.GetStaffUuid()),
+				OperatorUuid: int64(ctx.GetMemberUuid()),
 			},
 		})
 	}()

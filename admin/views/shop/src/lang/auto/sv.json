@@ -2083,5 +2083,8 @@
     "待骑手接单": "Väntar på att budet ska acceptera beställningen",
     "骑手正在赶往商家": "Budet är på väg till butiken",
     "骑手配送中": "Budet levererar",
-    "待接单": "Väntar på beställning"
+    "待接单": "Väntar på beställning",
+    "联系骑手": "Kontakta budet",
+    "拒单": "Order avvisad",
+    "骑手：": "Bud:"
 }

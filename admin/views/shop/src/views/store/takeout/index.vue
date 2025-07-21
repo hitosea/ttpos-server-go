@@ -180,9 +180,13 @@
           <el-table-column fixed="right" :label="$t('操作')" width="160">
             <template #default="scope">
               <div>
-                <el-button @click="addClick(scope.row)" type="primary" link size="small" v-auth="'/store/order/detail'">{{ $t('详情') }} </el-button>
+                <el-button @click="detailClick(scope.row)" type="primary" link size="small" v-auth="'/store/order/detail'">{{ $t('详情') }} </el-button>
+                <el-button @click="contactClick(scope.row)" type="danger" link size="small">{{ $t('联系骑手') }} </el-button>
                 <el-button v-if="scope.row.extra.is_cell_refund" @click="refundClick(scope.row)" type="danger" link size="small" v-auth="'/store/operate/refund'"
                   >{{ $t('退款') }}
+                </el-button>
+                <el-button v-if="scope.row.extra.is_cell_reject" @click="rejectClick(scope.row)" type="danger" link size="small" v-auth="'/store/operate/order_reject'"
+                  >{{ $t('拒单') }}
                 </el-button>
                 <el-button v-if="scope.row.extra.is_cell_cancel" @click="cancelClick(scope.row)" type="danger" link size="small" v-auth="'/store/operate/order_cancel'"
                   >{{ $t('取消') }}
@@ -260,6 +264,8 @@
           style_id: ' ',
           date_range: 0,
           time_type: 1,
+          query_start_time: 0,
+          query_end_time: 0,
         },
         /*配送方式*/
         exStyle: [],
@@ -288,6 +294,7 @@
         token,
         app_id: app_id,
         searchLoading: '',
+        member_sale_order_uuid: 0,
       };
     },
     created() {
@@ -301,6 +308,8 @@
           time: params.value.time,
           date_range: params.value.date_range,
           time_type: params.value.time_type,
+          query_start_time: params.value.query_start_time,
+          query_end_time: params.value.query_end_time,
         };
         this.activeName = params.value.dataType;
         this.curPage = params.value.page;
@@ -364,6 +373,11 @@
       /*切换时间段*/
       createTimeChange() {
         this.searchForm.time_type = 1;
+        if (this.time.length > 0) {
+          //转为时间戳
+          this.searchForm.query_start_time = new Date(this.time[0]).getTime() / 1000;
+          this.searchForm.query_end_time = new Date(this.time[1]).getTime() / 1000;
+        }
         this.onSearch();
       },
 
@@ -372,11 +386,6 @@
         let self = this;
         let Params = this.searchForm;
         Params.status = self.activeName;
-        if (self.time.length > 0) {
-          //转为时间戳
-          Params.query_start_time = new Date(self.time[0]).getTime() / 1000;
-          Params.query_end_time = new Date(self.time[1]).getTime() / 1000;
-        }
         Params.page = self.curPage;
         Params.list_rows = self.pageSize;
         self.loading = true;
@@ -399,8 +408,8 @@
           });
       },
 
-      /*打开添加*/
-      addClick(row) {
+      /*打开详情*/
+      detailClick(row) {
         let self = this;
         let pageParams = self.searchForm;
         pageParams.dataType = self.activeName;
@@ -441,7 +450,7 @@
           .then((data) => {
             self.loading = false;
             const baseUrl = window.location.protocol + '//' + window.location.host;
-            const url = baseUrl + '/index.php/shop/store.operate/export?' + qs.stringify(this.searchForm) + '&language=' + languageStore().language;
+            const url = baseUrl + '/index.php/shop/store.MemberOrder/export?' + qs.stringify(this.searchForm) + '&language=' + languageStore().language;
             window.open(url, '_blank');
           })
           .catch((error) => {
@@ -461,6 +470,61 @@
         this.pay_price = 0;
 
         this.open_refund = true;
+      },
+
+      rejectClick(item) {
+        this.member_sale_order_uuid = item.member_sale_order_uuid;
+        ElMessageBox.confirm($t('是否取消此订单?'), $t('提示'), {
+          confirmButtonText: $t('确定'),
+          cancelButtonText: $t('取消'),
+          type: 'warning',
+        })
+          .then(() => {
+            this.rejectSubmit();
+          })
+          .catch(() => {
+            this.$ElMessage({
+              type: 'info',
+              message: $t('已取消'),
+            });
+          });
+      },
+
+      contactClick(item) {
+        this.member_sale_order_uuid = item.member_sale_order_uuid;
+        ElMessageBox.confirm(`${$t('骑手：')}${item.rider.name}<br/>${$t('联系电话：')}${item.rider.phone}`, $t('提示'), {
+          confirmButtonText: $t('确定'),
+          cancelButtonText: $t('取消'),
+          dangerouslyUseHTMLString: true
+        })
+          .then(() => {})
+          .catch(() => {});
+      },
+
+      rejectSubmit() {
+        this.loading = true;
+        OrderApi.postTakeoutOrderReject(
+          {
+            member_sale_order_uuid: this.member_sale_order_uuid,
+          },
+          true
+        )
+          .then((res) => {
+            this.$ElMessage({
+              message: res.msg,
+              type: 'success',
+            });
+            this.getData();
+          })
+          .catch((error) => {
+            this.$ElMessage({
+              message: error.msg,
+              type: 'error',
+            });
+          })
+          .finally(() => {
+            this.loading = false;
+          });
       },
 
       /*关闭弹窗*/

@@ -303,7 +303,7 @@ func (h *OrderHandler) GetMemberOrderPaymentMethodList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param member_sale_order_uuid query string true "会员端销售订单UUID"
+// @Param data body member_req.CancelOrderReq true "详情参数"
 // @Success 200 {object} nil "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/cancel [post]
@@ -311,18 +311,17 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := member_req.CancelOrderReq{}
-	if err := c.ShouldBindQuery(&params); err != nil {
+	if err := c.ShouldBindJSON(&params); err != nil {
 		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
-	ctx.Log().Debug("取消订单", zap.Any("params", params))
-
 	// 取消订单
 	err := h.orderSrv.MemberOrderCancel(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
+	helper.Success(c, gin.H{})
 }
 
 // GetRiderInfo 获取骑手信息
@@ -333,7 +332,7 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param member_sale_order_uuid query string true "会员端销售订单UUID"
-// @Success 200 {object} nil "成功"
+// @Success 200 {object} resp.MemberOrderCoordinates "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/rider [get]
 func (h *OrderHandler) GetRiderInfo(c *gin.Context) {

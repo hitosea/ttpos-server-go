@@ -18,3 +18,12 @@ cli.install:
   		echo "GoFame CLI is not installed, start proceeding auto installation..."; \
 		make cli; \
 	fi;
+
+# Check and install envsubst.
+.PHONY: envsubst.install
+envsubst.install:
+	@set -e; \
+	envsubst -V > /dev/null 2>&1 || if [[ "$?" -ne "0" ]]; then \
+		echo "envsubst is not installed, start proceeding auto installation..."; \
+		brew install gettext; \
+	fi;

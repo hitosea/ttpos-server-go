@@ -48,8 +48,11 @@ type CallbackReq struct {
 
 // CancelOrderReq 取消订单
 type CancelOrderReq struct {
-	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
-	CancelReason        string `form:"cancel_reason"`                             // 取消原因
+	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+	CancelReason        string `json:"cancel_reason"`                             // 取消原因
+	// BankCode            string `json:"bank_code"`                                 // 银行代码 - 暂时不用
+	// AccountNo           string `json:"account_no"`                                // 账号 - 暂时不用
+	// AccountName         string `json:"account_name"`                              // 账户名称- 暂时不用
 }
 
 // GetRiderInfoReq 获取骑手信息
