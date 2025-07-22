@@ -79,7 +79,7 @@ func (h *MemberOrderManageHandler) GetMemberOrderDetail(c *gin.Context) {
 // GetMemberOrderReturnInfo 获取外送订单退款弹窗信息
 // @Summary 获取外送订单退款弹窗信息
 // @Description 获取外送订单退款弹窗信息
-// @Tags 收银端.外送接单相关
+// @Tags 收银端.外送订单管理相关
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -107,7 +107,7 @@ func (h *MemberOrderManageHandler) GetMemberOrderReturnInfo(c *gin.Context) {
 // MemberOrderReturn 外送订单退款/部分退款
 // @Summary 外送订单退款/部分退款
 // @Description 外送订单退款/部分退款
-// @Tags 收银端.外送接单相关
+// @Tags 收银端.外送订单管理相关
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -136,7 +136,7 @@ func (h *MemberOrderManageHandler) MemberOrderReturn(c *gin.Context) {
 // MemberOrderReReturn 外送订单重新退款
 // @Summary 外送订单重新退款
 // @Description 外送订单重新退款
-// @Tags 收银端.外送接单相关
+// @Tags 收银端.外送订单管理相关
 // @Accept json
 // @Produce json
 // @Security JwtToken

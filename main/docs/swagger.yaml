@@ -13850,7 +13850,7 @@ paths:
       - JwtToken: []
       summary: 外送订单重新退款
       tags:
-      - 收银端.外送接单相关
+      - 收银端.外送订单管理相关
   /cashier/member_order_manage/return:
     post:
       consumes:
@@ -13874,7 +13874,7 @@ paths:
       - JwtToken: []
       summary: 外送订单退款/部分退款
       tags:
-      - 收银端.外送接单相关
+      - 收银端.外送订单管理相关
   /cashier/member_order_manage/return_info:
     get:
       consumes:
@@ -13902,7 +13902,7 @@ paths:
       - JwtToken: []
       summary: 获取外送订单退款弹窗信息
       tags:
-      - 收银端.外送接单相关
+      - 收银端.外送订单管理相关
   /cashier/old/order/cancel:
     post:
       consumes:
