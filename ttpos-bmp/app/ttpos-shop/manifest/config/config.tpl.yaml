@@ -28,5 +28,5 @@ nacos:
     ip: localhost
     port: 8848
   config:
-    dataId: ttpos-manager.yaml
+    dataId: ttpos-shop.yaml
     group: DEFAULT_GROUP

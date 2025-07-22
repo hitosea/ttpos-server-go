@@ -45,9 +45,9 @@ queue:
   redis:
     timeout: 0                                        # 队列超时时间以秒为单位，0表示永不超时。如果队列在设定的超时时间内没有被消费，则会被销毁
   rocketmq:
-    nameSrvAdders: [ "127.0.0.1:9876" ]                  # nameSrvAdder+端口，支持多个
+    nameSrvAdders: [ "$ROCKETMQ_NAME_SRV_ADDR" ]                  # nameSrvAdder+端口，支持多个
     accessKey: ""                                      # 选填。如果开启了acl控制就必填
     secretKey: ""                                      # 选填。如果开启了acl控制就必填
-    brokerAddr: "127.0.0.1:10911"                      # brokerAddr+端口，选填。用于消费者订阅主题前会检查主题是否存在，不存在会自动创建。你也可以在rocketmq控制台手动创建主题
+    brokerAddr: "$ROCKETMQ_BROKER_ADDR"                      # brokerAddr+端口，选填。用于消费者订阅主题前会检查主题是否存在，不存在会自动创建。你也可以在rocketmq控制台手动创建主题
     retry: 3                                           # 重试次数
     logLevel: "info"

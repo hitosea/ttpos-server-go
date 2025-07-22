@@ -12,7 +12,7 @@ logger:
 # https://goframe.org/docs/core/gdb-config-file
 database:
   default:
-  link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/saas"
+    link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/saas"
 
 grpc:
   name:            "ttpos-manager"
@@ -30,3 +30,15 @@ nacos:
   config:
     dataId: ttpos-manager.yaml
     group: DEFAULT_GROUP
+
+queue:
+  switch: true                                        # 队列开关，可选：true|false，默认为true
+  driver: "rocketmq"                                      # 队列驱动，可选：redis|rocketmq
+  groupName: "ttpos-manager"
+  rocketmq:
+    nameSrvAdders: ["192.168.100.206:9876"]                  # nameSrvAdder+端口，支持多个
+    accessKey: ""                                      # 选填。如果开启了acl控制就必填
+    secretKey: ""                                      # 选填。如果开启了acl控制就必填
+    brokerAddr: "192.168.100.206:10911"                      # brokerAddr+端口，选填。用于消费者订阅主题前会检查主题是否存在，不存在会自动创建。你也可以在rocketmq控制台手动创建主题
+    retry: 3                                           # 重试次数
+    logLevel: "info"                                   # rocketmq日志输出级别，可选：all|close|debug|info|warn|error|fatal
