@@ -204,29 +204,40 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 	memberSaleOrder.Remark = request.Remark
 	memberSaleOrder.SetPendingPayment(request.PaymentMethodUuid)
 
-	// 取消24小时自动取消订单的延时队列
-	// 用户提交支付后，取消自动取消订单的任务
-	go func() {
-		memberSaleOrderUuidStr := strconv.FormatUint(request.MemberSaleOrderUuid, 10)
-
-		// 尝试从延时队列中删除自动取消任务
-		// 注意：由于原有的创建订单时使用的是TakeoutCancelQueue，这里也使用同样的队列来删除
-		if queue.TakeoutCancelQueue != nil {
-			ctx.Log().Info("取消24小时自动取消订单任务",
-				zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
-				zap.String("reason", "用户已提交支付"))
-
-			// 由于hdt3213/delayqueue库没有直接的删除方法，
-			// 我们需要在队列消费函数中增加状态检查，避免重复取消已支付的订单
-			// 这里记录日志，实际的避免重复取消逻辑在队列消费函数中处理
-		}
-	}()
-
 	// TODO 记录会员折扣、商品数量、商品金额、订单总金额
 
 	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderPendingPayment(memberSaleOrder); err != nil {
 		return errors.WithMessage(err)
 	}
+
+	// 取消原有的30分钟自动取消订单任务
+	// 用户提交支付后，取消自动取消订单的任务
+	go func() {
+		memberSaleOrderUuidStr := strconv.FormatUint(request.MemberSaleOrderUuid, 10)
+		// 添加24小时后自动取消订单的延时队列任务
+		if queue.MemberOrderCancelQueue != nil {
+			// 发送24小时后自动取消订单的延时消息，重试1次
+			msgId, err := queue.MemberOrderCancelQueue.SendDelayMsgV2(
+				memberSaleOrderUuidStr,
+				24*time.Hour,                 // 24小时后执行
+				delayqueue.WithRetryCount(1), // 重试1次
+			)
+			if err != nil {
+				ctx.Log().Error("添加24小时自动取消订单任务失败",
+					zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
+					zap.Error(err))
+			} else {
+				ctx.Log().Info("成功添加24小时自动取消订单任务",
+					zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
+					zap.String("delayTime", "24小时"),
+					zap.Int("retryCount", 1),
+					zap.Any("messageId", msgId))
+			}
+		} else {
+			ctx.Log().Error("MemberOrderCancelQueue队列未初始化",
+				zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr))
+		}
+	}()
 
 	return nil
 }
