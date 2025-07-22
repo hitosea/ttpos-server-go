@@ -130,7 +130,7 @@ services:
       saas-network:
         ipv4_address: 10.0.0.17
 
-    takeout:
+  takeout:
     container_name: "saas-takeout-${APP_ID}"
     image: hub.hitosea.com/ttpos-server/ttpos-server-takeout:${IMAGE_VERSION}
     environment:
