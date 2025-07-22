@@ -129,6 +129,63 @@ func (h *MemberOrderHandler) CancelMemberOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// GetMemberOrderReturnInfo 获取外送订单退款弹窗信息
+// @Summary 获取外送订单退款弹窗信息
+// @Description 获取外送订单退款弹窗信息
+// @Tags 商家端.外送订单管理相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param member_sale_order_uuid query int true "会员端销售订单UUID"
+// @Success 200 {object} dto.Response{data=resp.OrderReturnInfoResp}
+// @Router /shop/member_order/return_info [get]
+func (h *MemberOrderHandler) GetMemberOrderReturnInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	reqParam := member_req.MemberOrderReturnInfoReq{}
+	if err := c.ShouldBindQuery(&reqParam); err != nil {
+		helper.HandleValidationError(c, err, reqParam, nil)
+		return
+	}
+	//
+	res, err := h.memberOrderSrv.GetMemberOrderReturnInfo(ctx, reqParam)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// MemberOrderReturn 外送订单退款/部分退款
+// @Summary 外送订单退款/部分退款
+// @Description 外送订单退款/部分退款
+// @Tags 商家端.外送订单管理相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.OrderReturnReq true "详情参数"
+// @Success 200 {object} nil "退款订单成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /shop/member_order/return [post]
+func (h *MemberOrderHandler) MemberOrderReturn(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	reqParam := req.OrderReturnReq{}
+	if err := c.ShouldBindJSON(&reqParam); err != nil {
+		helper.HandleValidationError(c, err, reqParam, nil)
+		return
+	}
+	//
+	err, codeFail := h.memberOrderSrv.MemberOrderReturn(ctx, reqParam)
+	if err != nil {
+		helper.ErrorWithMessage(c, codeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterDeliveryOrderHandlers 注册商家充值订单路由
 func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -157,5 +214,7 @@ func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, ca
 		privateApi.GET("/member_order/info", wrapper.GetMemberOrderDetail)
 		privateApi.POST("/member_order/reject", wrapper.RejectMemberOrder)
 		privateApi.POST("/member_order/cancel", wrapper.CancelMemberOrder)
+		privateApi.GET("/member_order/return_info", wrapper.GetMemberOrderReturnInfo)
+		privateApi.POST("/member_order/return", wrapper.MemberOrderReturn)
 	}
 }

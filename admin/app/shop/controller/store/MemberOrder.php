@@ -146,9 +146,9 @@ class MemberOrder extends Controller
         $data['page_no'] = 1;
         $data['page_size'] = 1000;
         // 请求获取充值订单列表接口
-        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/recharge_order/list', $data, [
-            'Authorization: Bearer ' . $data['token'],
-            'Accept-Language: ' . $data['language'],
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/member_order/list', $data, [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
         ]);
 
         if (!$res) {
@@ -163,6 +163,49 @@ class MemberOrder extends Controller
 
         // 导出excel文件
         return (new MemberOrderExportService)->export($list);
+    }
+
+    /**
+     * @Apidoc\Title("外送订单退款弹窗信息")
+     * @Apidoc\Method ("GET")
+     * @Apidoc\Url ("/index.php/shop/store.MemberOrder/return_info")
+     * @Apidoc\Param("member_sale_order_uuid", type="int", require=true, default="", desc="订单UUID")
+     */
+    public function return_info()
+    {
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/member_order/return_info', $this->getData(), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+        return $this->renderSuccess('', $result['data']);
+    }
+
+    /**
+     * @Apidoc\Title("外送订单退款")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/store.MemberOrder/return")
+     */
+    public function return()
+    {
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/return', json_encode($this->postData()), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+        return $this->renderSuccess('');
     }
 
 }
