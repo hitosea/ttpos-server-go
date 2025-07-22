@@ -59,3 +59,18 @@ type CancelOrderReq struct {
 type GetRiderInfoReq struct {
 	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 }
+
+// MemberOrderReturnInfoReq 获取外送订单退款弹窗信息
+type MemberOrderReturnInfoReq struct {
+	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+}
+
+// MemberOrderReReturnReq 外送订单重新退款
+type MemberOrderReReturnReq struct {
+	ReturnOrderUuid  uint64 `json:"return_order_uuid"`  // 退款订单UUID
+	ReturnAmountUuid uint64 `json:"return_amount_uuid"` // 退款金额UUID
+	// 退款账户信息
+	BankCode    string `json:"bank_code"`    // 银行编码 - 当存在QR PromptPay的时候需要传
+	AccountNo   string `json:"account_no"`   // 账号 - 当存在QR PromptPay的时候需要传
+	AccountName string `json:"account_name"` // 账户名称 - 当存在QR PromptPay的时候需要传
+}
