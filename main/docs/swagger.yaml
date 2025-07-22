@@ -16767,7 +16767,7 @@ paths:
       summary: 更新地址
       tags:
       - 会员端.地址
-  /member/base/info:
+  /member/base:
     get:
       consumes:
       - application/json

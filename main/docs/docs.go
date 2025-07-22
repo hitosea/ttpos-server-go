@@ -15199,7 +15199,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/member/base/info": {
+        "/member/base": {
             "get": {
                 "security": [
                     {

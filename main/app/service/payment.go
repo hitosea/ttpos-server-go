@@ -160,11 +160,10 @@ func (p *PaymentRepo) CreatePayment(req CreatePaymentReq) (*model.LlPaymentOrder
 	)
 
 	// 请求支付
-	clientIp := p.ctx.GetClientIp()
 	response, err := p.postRequest(url, jsonStr, map[string]string{
 		"Content-Type": "application/json; charset=utf-8",
 		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
-		"client-ip":    utils.IfString(clientIp == "127.0.0.1", "180.136.139.13", clientIp),
+		"client-ip":    p.ctx.GetRemoteIp(),
 	}, RequestTimeOut)
 	if err != nil {
 		return nil, err

@@ -2,12 +2,16 @@ package context
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/model"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+
+	"math/rand"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/gin-gonic/gin"
@@ -54,7 +58,7 @@ type Context interface {
 	GetMember() model.Member                               // 获取会员信息
 	GetMemberUuid() uint64                                 // 获取会员uuid
 	Version(op Operator, version string) bool              // 比较版本
-	GetClientIp() string                                   // 获取客户端IP
+	GetRemoteIp() string                                   // 获取客户端IP
 }
 
 type ContextImpl struct {
@@ -379,7 +383,35 @@ func (c *ContextImpl) Version(op Operator, version string) bool {
 	return false
 }
 
-// GetClientIp 获取客户端IP
-func (c *ContextImpl) GetClientIp() string {
-	return c.cc.ClientIP()
+// generateRandomIP 生成随机IP地址
+func generateRandomIP() string {
+	// 使用当前时间作为随机种子
+	rand.Seed(time.Now().UnixNano())
+
+	// 生成随机IP地址，避免私有IP段
+	var firstOctet int
+	for {
+		firstOctet = rand.Intn(254) + 1 // 1-254
+		// 避免私有IP段和保留段
+		// 10.0.0.0/8, 127.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+		if firstOctet != 10 && firstOctet != 127 && !(firstOctet >= 172 && firstOctet <= 191) && firstOctet != 192 {
+			break
+		}
+	}
+
+	// 后三段随机生成
+	second := rand.Intn(256)
+	third := rand.Intn(256)
+	fourth := rand.Intn(254) + 1 // 1-254，避免0和255
+
+	return fmt.Sprintf("%d.%d.%d.%d", firstOctet, second, third, fourth)
+}
+
+// GetRemoteIp 获取客户端IP
+func (c *ContextImpl) GetRemoteIp() string {
+	clientIp := c.cc.RemoteIP()
+	if clientIp == "127.0.0.1" || clientIp == "::1" {
+		return generateRandomIP()
+	}
+	return clientIp
 }
