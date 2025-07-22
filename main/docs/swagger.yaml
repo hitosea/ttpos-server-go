@@ -17290,6 +17290,38 @@ paths:
       summary: 获取会员端商家推荐商品列表
       tags:
       - 会员端.产品列表
+  /member/product/search:
+    get:
+      consumes:
+      - application/json
+      description: 根据关键词搜索商品，不分页返回
+      parameters:
+      - description: 搜索关键词
+        in: query
+        name: keyword
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/product_resp.Product'
+                  type: array
+              type: object
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 搜索商品
+      tags:
+      - 会员端.产品列表
   /member/register:
     post:
       consumes:
