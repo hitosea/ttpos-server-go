@@ -29,16 +29,20 @@ class AddRemarkFieldToTables extends Migrator
     public function change()
     {
         // 会员余额日志
-        $table = $this->table('member_balance_log');
-        if (!$table->hasColumn('remark')) {
-            $table->addColumn('remark', 'text', ['comment' => '备注', 'after' => 'related_uuid'])
-                ->update();
+        if ($this->hasTable('member_balance_log')) {    
+            $table = $this->table('member_balance_log');
+            if (!$table->hasColumn('remark')) {
+                $table->addColumn('remark', 'text', ['comment' => '备注', 'after' => 'related_uuid'])
+                    ->update();
+            }
         }
         // 会员积分日志
-        $table = $this->table('member_point_log');
-        if (!$table->hasColumn('remark')) {
-            $table->addColumn('remark', 'text', ['comment' => '备注', 'after' => 'related_uuid'])
-                ->update();
+        if ($this->hasTable('member_point_log')) {
+            $table = $this->table('member_point_log');
+            if (!$table->hasColumn('remark')) {
+                $table->addColumn('remark', 'text', ['comment' => '备注', 'after' => 'related_uuid'])
+                    ->update();
+            }
         }
     }
 }
