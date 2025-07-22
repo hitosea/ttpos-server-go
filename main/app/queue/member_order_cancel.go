@@ -22,7 +22,7 @@ func initMemberOrderCancel() {
 		} else {
 			memberOrderCancelQueue = delayqueue.NewQueue(MEMBER_ORDER_CANCEL, cache.Global.GetClient(), consumer.ProcessMemberOrderCancel).WithConcurrent(5)
 		}
-		service.Queue.RegistryMemberOrderCancelQueue(memberOrderCancelQueue)
+		service.Queue.RegisterMemberOrderCancelQueue(memberOrderCancelQueue)
 		memberOrderCancelQueue.StartConsume()
 	})
 }

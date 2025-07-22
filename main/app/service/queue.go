@@ -9,10 +9,10 @@ type queue struct {
 
 var Queue = new(queue)
 
-func (s *queue) RegistryMemberOrderCancelQueue(q *delayqueue.DelayQueue) {
+func (s *queue) RegisterMemberOrderCancelQueue(q *delayqueue.DelayQueue) {
 	s.MemberOrderCancelQueue = q
 }
 
-func (s *queue) RegistryTakeoutCancelQueue(q *delayqueue.DelayQueue) {
+func (s *queue) RegisterTakeoutCancelQueue(q *delayqueue.DelayQueue) {
 	s.TakeoutCancelQueue = q
 }

@@ -21,7 +21,7 @@ func initTakeoutCancel() {
 		} else {
 			takeoutCancelQueue = delayqueue.NewQueue(TAKEOUT, cache.Global.GetClient(), consumer.TakeoutCancelFunc).WithConcurrent(5)
 		}
-		service.Queue.RegistryTakeoutCancelQueue(takeoutCancelQueue)
+		service.Queue.RegisterTakeoutCancelQueue(takeoutCancelQueue)
 		takeoutCancelQueue.StartConsume()
 	})
 }
