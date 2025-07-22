@@ -5,7 +5,7 @@ import (
 	"ttpos-server-go/app/dto/resp/setting"
 )
 
-type MemberResp struct {
+type UserResp struct {
 	Id        uint    `json:"id"`         // 会员ID
 	Uuid      uint64  `json:"uuid"`       // 会员UUID
 	Nickname  string  `json:"nickname"`   // 会员昵称
@@ -15,6 +15,13 @@ type MemberResp struct {
 	IsVisitor bool    `json:"is_visitor"` // 是否游客
 }
 
+type MemberResp struct {
+	LanguageList        []dto.LanguageItem `json:"language_list"`           // 语言列表
+	IsMemberShowSoldOut bool               `json:"is_member_show_sold_out"` // 是否显示售罄商品
+	IsOpenRider         bool               `json:"is_open_rider"`           // 是否开启外送
+	AreaCode            []string           `json:"area_code"`               // 区号列表
+}
+
 type CompanyResp struct {
 	Uuid         uint64 `json:"uuid"`          // 公司UUID
 	Name         string `json:"name"`          // 公司名称
@@ -22,14 +29,11 @@ type CompanyResp struct {
 	Address      string `json:"address"`       // 公司地址
 	LinkPhone    string `json:"link_phone"`    // 公司联系电话
 	OpeningHours string `json:"opening_hours"` // 公司营业时间
-	IsOpenRider  bool   `json:"is_open_rider"` // 是否开启外送
 }
 
 type MemberBaseInfoResp struct {
-	IsMemberShowSoldOut bool               `json:"is_member_show_sold_out"` // 是否显示售罄商品
-	Member              MemberResp         `json:"member"`                  // 会员信息
-	Company             CompanyResp        `json:"company"`                 // 公司信息
-	AreaCode            []string           `json:"area_code"`               // 区号列表
-	LanguageList        []dto.LanguageItem `json:"language_list"`           // 语言列表
-	Currency            setting.Currency   `json:"currency"`                // 货币单位
+	User     UserResp         `json:"user"`     // 用户信息
+	Member   MemberResp       `json:"member"`   // 会员信息
+	Company  CompanyResp      `json:"company"`  // 公司信息
+	Currency setting.Currency `json:"currency"` // 货币单位
 }

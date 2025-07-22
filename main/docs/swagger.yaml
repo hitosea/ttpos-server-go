@@ -923,9 +923,6 @@ definitions:
       address:
         description: 公司地址
         type: string
-      is_open_rider:
-        description: 是否开启外送
-        type: boolean
       link_phone:
         description: 公司联系电话
         type: string
@@ -1026,11 +1023,6 @@ definitions:
     type: object
   member_resp.MemberBaseInfoResp:
     properties:
-      area_code:
-        description: 区号列表
-        items:
-          type: string
-        type: array
       company:
         allOf:
         - $ref: '#/definitions/member_resp.CompanyResp'
@@ -1039,18 +1031,14 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Currency'
         description: 货币单位
-      is_member_show_sold_out:
-        description: 是否显示售罄商品
-        type: boolean
-      language_list:
-        description: 语言列表
-        items:
-          $ref: '#/definitions/dto.LanguageItem'
-        type: array
       member:
         allOf:
         - $ref: '#/definitions/member_resp.MemberResp'
         description: 会员信息
+      user:
+        allOf:
+        - $ref: '#/definitions/member_resp.UserResp'
+        description: 用户信息
     type: object
   member_resp.MemberInfoResp:
     properties:
@@ -1199,27 +1187,22 @@ definitions:
     type: object
   member_resp.MemberResp:
     properties:
-      balance:
-        description: 会员余额
-        type: number
-      id:
-        description: 会员ID
-        type: integer
-      is_visitor:
-        description: 是否游客
+      area_code:
+        description: 区号列表
+        items:
+          type: string
+        type: array
+      is_member_show_sold_out:
+        description: 是否显示售罄商品
         type: boolean
-      nickname:
-        description: 会员昵称
-        type: string
-      phone:
-        description: 会员手机号
-        type: string
-      point:
-        description: 会员积分
-        type: number
-      uuid:
-        description: 会员UUID
-        type: integer
+      is_open_rider:
+        description: 是否开启外送
+        type: boolean
+      language_list:
+        description: 语言列表
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
     type: object
   member_resp.PointsRecord:
     properties:
@@ -1245,6 +1228,30 @@ definitions:
       total_point:
         description: 总积分, 用于计算总积分
         type: number
+    type: object
+  member_resp.UserResp:
+    properties:
+      balance:
+        description: 会员余额
+        type: number
+      id:
+        description: 会员ID
+        type: integer
+      is_visitor:
+        description: 是否游客
+        type: boolean
+      nickname:
+        description: 会员昵称
+        type: string
+      phone:
+        description: 会员手机号
+        type: string
+      point:
+        description: 会员积分
+        type: number
+      uuid:
+        description: 会员UUID
+        type: integer
     type: object
   product_resp.Product:
     properties:

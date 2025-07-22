@@ -20478,10 +20478,6 @@ const docTemplate = `{
                     "description": "公司地址",
                     "type": "string"
                 },
-                "is_open_rider": {
-                    "description": "是否开启外送",
-                    "type": "boolean"
-                },
                 "link_phone": {
                     "description": "公司联系电话",
                     "type": "string"
@@ -20626,13 +20622,6 @@ const docTemplate = `{
         "member_resp.MemberBaseInfoResp": {
             "type": "object",
             "properties": {
-                "area_code": {
-                    "description": "区号列表",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
                 "company": {
                     "description": "公司信息",
                     "allOf": [
@@ -20649,22 +20638,19 @@ const docTemplate = `{
                         }
                     ]
                 },
-                "is_member_show_sold_out": {
-                    "description": "是否显示售罄商品",
-                    "type": "boolean"
-                },
-                "language_list": {
-                    "description": "语言列表",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.LanguageItem"
-                    }
-                },
                 "member": {
                     "description": "会员信息",
                     "allOf": [
                         {
                             "$ref": "#/definitions/member_resp.MemberResp"
+                        }
+                    ]
+                },
+                "user": {
+                    "description": "用户信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/member_resp.UserResp"
                         }
                     ]
                 }
@@ -20898,33 +20884,27 @@ const docTemplate = `{
         "member_resp.MemberResp": {
             "type": "object",
             "properties": {
-                "balance": {
-                    "description": "会员余额",
-                    "type": "number"
+                "area_code": {
+                    "description": "区号列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
-                "id": {
-                    "description": "会员ID",
-                    "type": "integer"
-                },
-                "is_visitor": {
-                    "description": "是否游客",
+                "is_member_show_sold_out": {
+                    "description": "是否显示售罄商品",
                     "type": "boolean"
                 },
-                "nickname": {
-                    "description": "会员昵称",
-                    "type": "string"
+                "is_open_rider": {
+                    "description": "是否开启外送",
+                    "type": "boolean"
                 },
-                "phone": {
-                    "description": "会员手机号",
-                    "type": "string"
-                },
-                "point": {
-                    "description": "会员积分",
-                    "type": "number"
-                },
-                "uuid": {
-                    "description": "会员UUID",
-                    "type": "integer"
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
                 }
             }
         },
@@ -20960,6 +20940,39 @@ const docTemplate = `{
                 "total_point": {
                     "description": "总积分, 用于计算总积分",
                     "type": "number"
+                }
+            }
+        },
+        "member_resp.UserResp": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "description": "会员余额",
+                    "type": "number"
+                },
+                "id": {
+                    "description": "会员ID",
+                    "type": "integer"
+                },
+                "is_visitor": {
+                    "description": "是否游客",
+                    "type": "boolean"
+                },
+                "nickname": {
+                    "description": "会员昵称",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "会员手机号",
+                    "type": "string"
+                },
+                "point": {
+                    "description": "会员积分",
+                    "type": "number"
+                },
+                "uuid": {
+                    "description": "会员UUID",
+                    "type": "integer"
                 }
             }
         },
