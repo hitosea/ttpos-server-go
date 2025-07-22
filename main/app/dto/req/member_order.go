@@ -9,7 +9,8 @@ import (
 // MemberOrderListReq 会员端订单列表
 type MemberOrderListReq struct {
 	dto.PageReq        // 分页参数
-	Status      string `form:"status"` // 状态: "all" 全部, "unpaid" 待付款, "undelivery" 待配送, "delivery" 配送中, "completed" 已完成, "cancel" 已取消
+	Status      string `form:"status"`  // 状态: "all" 全部, "unpaid" 待付款, "undelivery" 待配送, "delivery" 配送中, "completed" 已完成, "cancel" 已取消
+	Keyword     string `form:"keyword"` // 关键字
 }
 
 // GetMemberOrderDetailReq 外送订单详情

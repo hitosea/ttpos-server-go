@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/config"
 
 	"gorm.io/gorm"
 )
@@ -43,6 +44,7 @@ type IQueryMemberSaleOrderRepo interface {
 	WhereStatusIn(status []uint) DBOption
 	WhereNotStatusIn(status []uint) DBOption
 	WhereUpdateTimeGt(ts int64) DBOption
+	WhereKeyword(keyword string, language string) DBOption
 	GetOrderCount(opts ...DBOption) (int64, error)
 
 	WithSaleBillSaleOrderProduct(preloads ...WithPreload) DBOption
@@ -312,6 +314,26 @@ func (r *MemberSaleOrderRepo) WhereNotStatusIn(status []uint) DBOption {
 func (r *MemberSaleOrderRepo) WhereUpdateTimeGt(ts int64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("create_time > ?", ts)
+	}
+}
+
+// WhereKeyword 根据订单号或商品名称搜索
+func (r *MemberSaleOrderRepo) WhereKeyword(keyword string, language string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		if keyword == "" {
+			return db
+		}
+		// 获取表前缀
+		prefix := config.Database.TablePrefix
+
+		// 子查询：查找包含指定商品名称的销售订单UUID
+		subQuery := r.db.Table(prefix+"sale_order_product sop").
+			Select("DISTINCT sop.sale_order_uuid").
+			Joins("LEFT JOIN "+prefix+"multi_language_name so ON sop.multi_language_name_uuid = so.uuid").
+			Where("sop.delete_time = ?", 0).
+			Where("so."+language+"_name LIKE ?", "%"+keyword+"%")
+
+		return db.Where("(sale_order_uuid IN (?) OR order_no LIKE ?)", subQuery, "%"+keyword+"%")
 	}
 }
 

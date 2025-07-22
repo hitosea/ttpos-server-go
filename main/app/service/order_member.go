@@ -380,11 +380,11 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 
 	memberSaleOrderRepo := repository.NewMemberSaleOrderRepo(db)
 	memberSaleOrders, total, err := memberSaleOrderRepo.PaginateGetMemberSaleOrder(
-		req.PageNo,
-		req.PageSize,
+		req.PageNo, req.PageSize,
 		memberSaleOrderRepo.WithSaleBillSaleOrderProduct(),
 		memberSaleOrderRepo.WhereNotStatusIn([]uint{constant.MemberSaleOrderStatusSelecting}),
 		memberSaleOrderRepo.WhereStatusIn(constant.GetMemberOrderStatusList(req.Status)),
+		memberSaleOrderRepo.WhereKeyword(req.Keyword, ctx.GetLanguage()),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)

@@ -216,7 +216,7 @@ func (h *OrderHandler) PaidOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.MemberOrderListReq true "详情参数"
+// @Param data query req.MemberOrderListReq true "详情参数"
 // @Success 200 {object} resp.GetMemberOrderListResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/list [get]
