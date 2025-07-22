@@ -293,6 +293,7 @@ type PaymentServiceRefundReq struct {
 	BankCode              string  // 银行代码
 	AccountNo             string  // 账号
 	AccountName           string  // 账号名称
+	RefundRequestIndex    int     `json:"refund_request_index"` // 退款请求次数索引
 }
 type LianLianPaymentRefundResp struct {
 	MerchantId       string `json:"merchant_id"`        // 商户ID
@@ -304,12 +305,19 @@ type LianLianPaymentRefundResp struct {
 	CreateTime       string `json:"ll_create_time"`     // 创建时间
 }
 
+func (p *PaymentRepo) handleRefundError(err error, serviceRefundReq *PaymentServiceRefundReq) (*LianLianPaymentRefundResp, error) {
+	if serviceRefundReq.RefundRequestIndex == 0 {
+		serviceRefundReq.RefundRequestIndex = 1
+		return p.Refund(*serviceRefundReq)
+	}
+	return nil, fmt.Errorf("退款失败: %w", err)
+}
 func (p *PaymentRepo) Refund(serviceRefundReq PaymentServiceRefundReq) (*LianLianPaymentRefundResp, error) {
 	paymentApp, err := p.validateConfig(p.ctx.GetCompanyUuid())
 	if err != nil {
 		return nil, err
 	}
-	//
+	// 获取支付订单信息
 	order, err := repository.NewLlPaymentOrderRepo(p.dbm.GetDB(p.ctx.GetDbId())).GetPaymentOrder(
 		repository.CommonRepo.WhereBySoftDelete(),
 		func(db *gorm.DB) *gorm.DB {
@@ -346,18 +354,20 @@ func (p *PaymentRepo) Refund(serviceRefundReq PaymentServiceRefundReq) (*LianLia
 		"Content-Type": "application/json; charset=utf-8",
 		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
 	}, RequestTimeOut)
+	//
+	// 提取重试逻辑
 	if err != nil {
-		return nil, errors.New(err.Error())
+		return p.handleRefundError(err, &serviceRefundReq)
 	}
 	// 返回结果
 	var resp LianLianPaymentRefundResp
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
-		return nil, err
+		return p.handleRefundError(err, &serviceRefundReq)
 	}
 	// 然后将 JSON 字符串解析到结构体中
 	if err := json.Unmarshal(responseJSON, &resp); err != nil {
-		return nil, err
+		return p.handleRefundError(err, &serviceRefundReq)
 	}
 	// 返回支付订单
 	return &resp, nil

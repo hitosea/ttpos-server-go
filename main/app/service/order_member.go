@@ -1265,6 +1265,8 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 func (s *orderSrv) RejectMemberSaleOrder(ctx context.Context, request req.RejectOrderReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
+
+	// 获取订单信息
 	memberSaleOrder, err := getMemberOrderDetail(ctx, request.MemberSaleOrderUuid)
 	if err != nil {
 		return errors.WithMessage(err)
