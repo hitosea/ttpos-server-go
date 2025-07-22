@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     -- 确认订单（“待支付”状态）之后才有值的字段
     `product_num` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品数量.订单中商品的总数量，商品A数量2，商品B数量1，则商品数量为3',
     `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额,折前价，已含税',
+    `origin_product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品原价,折前价，已含税',
     `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单总金额.商品金额-会员折扣+配送费',
     `refund_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '退款金额',

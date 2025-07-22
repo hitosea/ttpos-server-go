@@ -28,11 +28,12 @@ type MemberSaleOrder struct {
 	IsVerifiedPhone   uint    `gorm:"column:is_verified_phone;type:int(10);not null;default:0;comment:'订单是否已经验证手机号,0-未验证 1-已验证,不再弹出验证手机号'"`
 	PaymentMethodUuid uint64  `gorm:"column:payment_method_uuid;type:bigint(20) unsigned;not null;default:0;comment:'支付方式UUID,订单已选择的支付方式'"`
 	// 确认订单之后才有值的字段
-	ProductNum        float64 `gorm:"column:product_num;type:decimal(12,2);not null;default:0;comment:'商品数量.订单中商品的总数量，商品A数量2，商品B数量1，则商品数量为3'"`
-	ProductAmount     float64 `gorm:"column:product_amount;type:decimal(12,2);not null;default:0;comment:'商品金额,折前价，已含税'"`
-	MemberDiscountFee float64 `gorm:"column:member_discount_fee;type:decimal(12,2);not null;default:0;comment:'会员折扣'"`
-	Amount            float64 `gorm:"column:amount;type:decimal(12,2);not null;default:0;comment:'订单总金额.商品金额-会员折扣+配送费'"`
-	RefundAmount      float64 `gorm:"column:refund_amount;type:decimal(12,2);not null;default:0;comment:'退款金额'"`
+	ProductNum          float64 `gorm:"column:product_num;type:decimal(12,2);not null;default:0;comment:'商品数量.订单中商品的总数量，商品A数量2，商品B数量1，则商品数量为3'"`
+	ProductAmount       float64 `gorm:"column:product_amount;type:decimal(12,2);not null;default:0;comment:'商品金额,折前价，已含税'"`
+	OriginProductAmount float64 `gorm:"column:origin_product_amount;type:decimal(12,2);not null;default:0;comment:'商品原价,折前价，已含税'"`
+	MemberDiscountFee   float64 `gorm:"column:member_discount_fee;type:decimal(12,2);not null;default:0;comment:'会员折扣'"`
+	Amount              float64 `gorm:"column:amount;type:decimal(12,2);not null;default:0;comment:'订单总金额.商品金额-会员折扣+配送费'"`
+	RefundAmount        float64 `gorm:"column:refund_amount;type:decimal(12,2);not null;default:0;comment:'退款金额'"`
 	// 配送费参数
 	DeliveryFeeAmount  float64 `gorm:"column:delivery_fee_amount;type:decimal(12,6);not null;default:0;comment:'配送费'"`
 	DeliveryFeeMinFee  float64 `gorm:"column:delivery_fee_min_fee;type:decimal(12,6);not null;default:0;comment:'起步配送费'"`
@@ -74,7 +75,7 @@ type MemberSaleOrder struct {
 }
 
 func (model *MemberSaleOrder) OriginAmountValue() float64 {
-	return decimal.NewFromFloat(model.ProductAmount).Add(decimal.NewFromFloat(model.DeliveryFeeAmount)).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.OriginProductAmount).Add(decimal.NewFromFloat(model.DeliveryFeeAmount)).Round(2).InexactFloat64()
 }
 
 // 获取剩余支付时间(单位秒)
@@ -210,7 +211,7 @@ func (model *MemberSaleOrder) CalculateDeliveryFee() float64 {
 
 // 计算订单总金额. 订单总金额=商品金额+配送费-会员折扣
 func (model *MemberSaleOrder) CalculateAmount() float64 {
-	return decimal.NewFromFloat(model.ProductAmount).Add(decimal.NewFromFloat(model.CalculateDeliveryFee())).Sub(decimal.NewFromFloat(model.MemberDiscountFee)).Round(2).InexactFloat64()
+	return decimal.NewFromFloat(model.OriginProductAmount).Add(decimal.NewFromFloat(model.CalculateDeliveryFee())).Sub(decimal.NewFromFloat(model.MemberDiscountFee)).Round(2).InexactFloat64()
 }
 
 // 接单

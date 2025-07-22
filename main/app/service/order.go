@@ -1039,6 +1039,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 	// 保存一下
 	memberSaleOrder.ProductNum = memberSaleOrder.SaleBill.SaleOrders[0].GetProductNum()
 	memberSaleOrder.ProductAmount = memberSaleOrder.SaleBill.SaleOrders[0].GetProductAmount()
+	memberSaleOrder.OriginProductAmount = memberSaleOrder.SaleBill.SaleOrders[0].GetOriginProductAmount()
 	memberSaleOrder.MemberDiscountFee = memberSaleOrder.SaleBill.SaleOrders[0].MemberDiscountFee
 	memberSaleOrder.Amount = memberSaleOrder.CalculateAmount()
 	memberSaleOrder.DeliveryFeeAmount = memberSaleOrder.CalculateDeliveryFee()
@@ -1050,7 +1051,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		Status:              memberSaleOrder.Status,
 		ProductList:         resp.MemberSaleOrderProductList{List: produtds},
-		ProductAmount:       memberSaleOrder.ProductAmount,
+		ProductAmount:       memberSaleOrder.OriginProductAmount,
 		MemberDiscount:      memberSaleOrder.MemberDiscountFee,
 		Amount:              memberSaleOrder.Amount,
 		Remark:              memberSaleOrder.Remark,
@@ -12617,6 +12618,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		res, err := takeoutSrv.CreateOrder(contexts.Background(), &params)
 		if err != nil {
 			ctx.Log().Error("创建外送订单失败", zap.Error(err))
+			ctx.Log().Info("创建外送订单失败", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))
 			return errors.WithMessage(errors.NewWithCode(constant.CodeTakeoutCreateOrderError, "创建外送订单失败"), err.Error())
 		}
 		ctx.Log().Info("创建外送订单成功", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))

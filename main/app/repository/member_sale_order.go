@@ -139,13 +139,14 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderVerifiedPhoneStatus(memberSal
 // UpdateMemberSaleOrderPendingPayment 更新会员端销售订单为待支付状态
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderPendingPayment(memberSaleOrder *model.MemberSaleOrder) error {
 	if err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
-		PaymentMethodUuid: memberSaleOrder.PaymentMethodUuid,            // 更新支付方式UUID
-		Status:            constant.MemberSaleOrderStatusPendingPayment, // 更新订单状态为待支付
-		Remark:            memberSaleOrder.Remark,                       // 更新订单备注
-		ProductNum:        memberSaleOrder.ProductNum,                   // 更新商品数量
-		ProductAmount:     memberSaleOrder.ProductAmount,                // 更新商品金额
-		MemberDiscountFee: memberSaleOrder.MemberDiscountFee,            // 更新会员折扣
-		Amount:            memberSaleOrder.Amount,                       // 更新订单总金额
+		PaymentMethodUuid:   memberSaleOrder.PaymentMethodUuid,            // 更新支付方式UUID
+		Status:              constant.MemberSaleOrderStatusPendingPayment, // 更新订单状态为待支付
+		Remark:              memberSaleOrder.Remark,                       // 更新订单备注
+		ProductNum:          memberSaleOrder.ProductNum,                   // 更新商品数量
+		ProductAmount:       memberSaleOrder.ProductAmount,                // 更新商品金额
+		OriginProductAmount: memberSaleOrder.OriginProductAmount,          // 更新商品原价
+		MemberDiscountFee:   memberSaleOrder.MemberDiscountFee,            // 更新会员折扣
+		Amount:              memberSaleOrder.Amount,                       // 更新订单总金额
 	}).Error; err != nil {
 		return errors.WithMessage(err)
 	}
