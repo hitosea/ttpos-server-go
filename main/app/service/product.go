@@ -25,6 +25,7 @@ type IProductSrv interface {
 	GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error)               // 获取产品列表
 	GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error)                                             // 获取产品类别列表
 	GetProductRecommendList(ctx context.Context, req req.ProductRecommendListReq) (*product_resp.ProductRecommendListResp, error) // 获取产品推荐列表
+	SearchProducts(ctx context.Context, req req.ProductSearchReq) ([]product_resp.Product, error)                                 // 搜索商品
 }
 
 type productSrv struct {
@@ -386,4 +387,63 @@ type ProductItemInfo struct {
 	Uuid string `json:"uuid"`
 	Name string `json:"name"`
 	Sort string `json:"sort"`
+}
+
+// SearchProducts 搜索商品
+func (s *productSrv) SearchProducts(ctx context.Context, req req.ProductSearchReq) ([]product_resp.Product, error) {
+	dbId := ctx.GetDbId()
+	// 获取产品列表
+	commonRepo := repository.NewCommonRepo()
+	sourceMap := map[string]repository.DBOption{
+		constant.SourceCashier:   commonRepo.WhereByIsShowCashier(1),
+		constant.SourceAssistant: commonRepo.WhereByIsShowAssistant(1),
+		constant.SourceTablet:    commonRepo.WhereByIsShowTablet(1),
+		constant.SourceKitchen:   commonRepo.WhereByIsShowKitchen(1),
+		constant.SourceH5:        commonRepo.WhereByIsShowH5(1),
+		constant.SourceMember:    commonRepo.WhereByIsShowMember(1),
+	}
+	productRepo := repository.NewProductRepo(s.dbm.GetDB(dbId))
+	var dbOptions []repository.DBOption
+	if option, ok := sourceMap[ctx.GetSource()]; ok {
+		dbOptions = append(dbOptions, option)
+	}
+
+	// 添加搜索条件
+	dbOptions = append(dbOptions,
+		commonRepo.WhereByStatus(1),
+		commonRepo.WhereBySoftDelete(),
+		commonRepo.WhereLikeByName(req.Keyword), // 根据关键词搜索商品名称
+		commonRepo.SortWithSort("ASC"),
+		commonRepo.SortWithID("DESC"),
+	)
+
+	// 获取商品列表，不分页
+	products, _, err := productRepo.GetProductListWithPagination(
+		1,    // 第一页
+		1000, // 足够大的页面大小，实际不分页
+		dbOptions...,
+	)
+
+	// 处理错误
+	if err != nil {
+		return nil, errors.WithMessage(err, "搜索商品失败")
+	}
+
+	// 如果是会员端查询商品列表
+	if req.IsMember {
+		// 获取外送折扣率
+		// 获取门店业务设置
+		businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+		if err != nil {
+			return nil, errors.WithMessage(err, "获取门店业务设置失败")
+		}
+		// 获取外送折扣率
+		deliveryPriceRatio := businessSetting.GetDeliveryPriceRatio()
+
+		// 返回响应对象
+		return FormatProducts(ctx, products, WithTakeoutDiscountRate(deliveryPriceRatio)), nil
+	}
+
+	// 返回响应对象
+	return FormatProducts(ctx, products), nil
 }

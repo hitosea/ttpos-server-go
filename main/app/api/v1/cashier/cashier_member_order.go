@@ -4,6 +4,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -165,6 +166,30 @@ func (h *MemberOrderHandler) GetMemberOrderSearch(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// CancelOrder 取消订单
+// @Summary 取消订单
+// @Description 取消订单
+// @Tags 收银端.外送接单相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param CancelOrderReq body member_req.CancelOrderReq true "取消订单请求"
+// @Success 200 {object} dto.Response
+// @Router /cashier/member_order/cancel [post]
+func (h *MemberOrderHandler) CancelOrder(c *gin.Context) {
+	var cancelOrderReq member_req.CancelOrderReq
+	if err := c.ShouldBindJSON(&cancelOrderReq); err != nil {
+		helper.HandleValidationError(c, err, cancelOrderReq, nil)
+		return
+	}
+	err := h.memberOrderSrv.MemberOrderCancelInCashier(helper.GetContext(c), cancelOrderReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -193,5 +218,6 @@ func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, ca
 		privateApi.POST("/member_order/reject", wrapper.RejectOrder)         // 拒单
 		privateApi.POST("/member_order/cook_finish", wrapper.CookFinish)     // 备餐完成
 		privateApi.GET("/member_order/search", wrapper.GetMemberOrderSearch) // 搜索订单列表通过关键词
+		privateApi.POST("/member_order/cancel", wrapper.CancelOrder)         // 取消订单
 	}
 }

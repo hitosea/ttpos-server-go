@@ -28,6 +28,10 @@ class AddVisitorFieldsToMember extends Migrator
      */
     public function change()
     {
+        if (!$this->hasTable('member')) {
+            return;
+        }
+
         // 修改会员表，添加游客相关字段
         $table = $this->table('member');
         

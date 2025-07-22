@@ -161,6 +161,7 @@ type IMemberOrderSrv interface {
 	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                       // 查询会员端订单详情
 	GetMemberOrderPaymentMethodList(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderPaymentMethodListResp, error) // 获取会员端订单支付方式列表
 	MemberOrderCancel(ctx context.Context, req member_req.CancelOrderReq) error                                                              // 会员端订单取消
+	MemberOrderCancelInCashier(ctx context.Context, request member_req.CancelOrderReq) error                                                 // 收银端取消订单
 	GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.GetRiderInfoReq) (*resp.MemberOrderCoordinates, error)                      // 获取骑手信息
 	// 收银机
 	GetMemberCashierOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberCashierOrderListResp, error)              // 查询收银机“外送”页面的订单列表
@@ -1039,6 +1040,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 	// 保存一下
 	memberSaleOrder.ProductNum = memberSaleOrder.SaleBill.SaleOrders[0].GetProductNum()
 	memberSaleOrder.ProductAmount = memberSaleOrder.SaleBill.SaleOrders[0].GetProductAmount()
+	memberSaleOrder.OriginProductAmount = memberSaleOrder.SaleBill.SaleOrders[0].GetOriginProductAmount()
 	memberSaleOrder.MemberDiscountFee = memberSaleOrder.SaleBill.SaleOrders[0].MemberDiscountFee
 	memberSaleOrder.Amount = memberSaleOrder.CalculateAmount()
 	memberSaleOrder.DeliveryFeeAmount = memberSaleOrder.CalculateDeliveryFee()
@@ -1050,7 +1052,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		Status:              memberSaleOrder.Status,
 		ProductList:         resp.MemberSaleOrderProductList{List: produtds},
-		ProductAmount:       memberSaleOrder.ProductAmount,
+		ProductAmount:       memberSaleOrder.OriginProductAmount,
 		MemberDiscount:      memberSaleOrder.MemberDiscountFee,
 		Amount:              memberSaleOrder.Amount,
 		Remark:              memberSaleOrder.Remark,
@@ -1757,6 +1759,128 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 发布“整单取消”操作事件
+	go func() {
+		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
+			BasePayload: event.BasePayload{ // 整单取消
+				Ctx:          ctx,
+				CompanyUuid:  ctx.GetCompanyUuid(),
+				Source:       ctx.GetSource(),
+				SaleBillUuid: billInfo.Uuid,
+				OperatorUuid: int64(ctx.GetMemberUuid()),
+			},
+		})
+	}()
+
+	// 成功后，推送到厨显端更新订单
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
+		"update_time": time.Now().Unix(),
+	})
+
+	//
+	return nil
+}
+
+// MemberOrderCancelInCashier 收银端取消订单
+// 收银端取消订单，退回商品库存
+// 标记MemberSaleOrder为已取消
+func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request member_req.CancelOrderReq) error {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.MemberSaleOrderUuid)
+		defer s.lock.UnlockUuid(request.MemberSaleOrderUuid)
+		ctx.AddLock()
+	}
+
+	// 获取DB
+	db := s.dbm.GetDB(ctx.GetDbId())
+
+	// 获取会员端销售订单
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(request.MemberSaleOrderUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	if !memberSaleOrder.IsCanCancelInCashier() {
+		return errors.New("订单状态不可取消")
+	}
+
+	// 禁止并发操作
+	if ctx.NoLock() {
+		s.lock.LockUuid(memberSaleOrder.SaleBill.Uuid)
+		defer s.lock.UnlockUuid(memberSaleOrder.SaleBill.Uuid)
+		ctx.AddLock()
+	}
+
+	// 获取销售账单Uuid
+	saleBillUuid := memberSaleOrder.SaleBill.Uuid
+	// 获取订单信息
+	orderRepo := repository.NewOrderRepo(db)
+	billInfo, err := orderRepo.GetSaleBillAllInfo(saleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 获取销售订单
+	saleOrder := billInfo.GetFirstSaleOrder()
+
+	err = repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 退回商品库存
+		if err := s.returnInventory(ctx.Copy(), billInfo); err != nil {
+			return errors.WithMessage(err)
+		}
+
+		// 取消订单
+		err = orderRepo.CancelOrder(ctx.Copy(), saleBillUuid, 0, request.CancelReason)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+
+		// 标记送厨单、送厨商品为删除
+		productionRepo := repository.NewProductionRepo(tx)
+		saleBillUuidOpt := productionRepo.WhereSaleBillUuid(billInfo.Uuid)
+		err = productionRepo.UpdateOrder([]repository.DBOption{saleBillUuidOpt}, map[string]any{
+			"delete_time": time.Now().Unix(),
+		})
+		if err != nil {
+			return errors.WithMessage(builtinerrors.New("删除送厨单失败"), err.Error())
+		}
+
+		// 修改送厨商品数量为0，在确认整单退菜时、确认该菜品全退时，再标记为删除
+		err = productionRepo.UpdateProduct([]repository.DBOption{saleBillUuidOpt}, map[string]any{"num": 0})
+		if err != nil {
+			return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
+		}
+
+		// 取消订单后，删除所有销售订单商品
+		err = repository.NewSaleOrderProductRepo(tx).DeleteSaleOrderProductBySaleBillUuid(billInfo.Uuid)
+		if err != nil {
+			return errors.WithMessage(builtinerrors.New("删除销售订单商品失败"), err.Error())
+		}
+
+		// 已经支付的-发起退款
+		if memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingMerchantAccept {
+			err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
+				CancelReason: "客户取消订单",
+			})
+			if err != nil {
+				return errors.WithMessage(err)
+			}
+		}
+
+		// 设置订单为“已取消”状态
+		memberSaleOrder.RefundAmount = memberSaleOrder.Amount
+		memberSaleOrder.SetCancelInCashier(request.CancelReason)
+
+		// 更新订单状态
+		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	})
+	if err != nil {
 		return errors.WithMessage(err)
 	}
 
@@ -12617,6 +12741,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		res, err := takeoutSrv.CreateOrder(contexts.Background(), &params)
 		if err != nil {
 			ctx.Log().Error("创建外送订单失败", zap.Error(err))
+			ctx.Log().Info("创建外送订单失败", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))
 			return errors.WithMessage(errors.NewWithCode(constant.CodeTakeoutCreateOrderError, "创建外送订单失败"), err.Error())
 		}
 		ctx.Log().Info("创建外送订单成功", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))

@@ -7,6 +7,8 @@ import (
 
 	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
 
+	_ "takeout/internal/boot"
+
 	"github.com/gogf/gf/v2/os/gctx"
 
 	"takeout/internal/cmd"

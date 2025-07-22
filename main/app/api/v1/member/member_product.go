@@ -103,6 +103,41 @@ func (h *ProductHandler) GetProductRecommendList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// SearchProducts 搜索商品
+// @Summary 搜索商品
+// @Description 根据关键词搜索商品，不分页返回
+// @Tags 会员端.产品列表
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param keyword query string true "搜索关键词"
+// @Success 200 {object} dto.Response{data=[]product_resp.Product} "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/product/search [get]
+func (h *ProductHandler) SearchProducts(c *gin.Context) {
+	// 绑定请求参数
+	searchReq := req.ProductSearchReq{}
+	if err := c.ShouldBindQuery(&searchReq); err != nil {
+		helper.HandleValidationError(c, err, searchReq, nil)
+		return
+	}
+
+	// 设置为会员端查询
+	searchReq.IsMember = true
+
+	// 搜索商品
+	res, err := h.productSrv.SearchProducts(helper.GetContext(c), searchReq)
+
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+
+	// 返回结果
+	helper.Success(c, res)
+}
+
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -124,5 +159,6 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/product/list", wrapper.GetProductList)                    // 获取商品列表
 		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList)   // 获取商品类别列表
 		privateApi.GET("/product/recommend/list", wrapper.GetProductRecommendList) // 获取商品推荐列表
+		privateApi.GET("/product/search", wrapper.SearchProducts)                  // 搜索商品
 	}
 }
