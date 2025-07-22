@@ -580,7 +580,7 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 	}
 
 	// 获取销售账单Uuid
-	saleBillUuid := memberSaleOrder.SaleBill.Uuid
+	saleBillUuid := memberSaleOrder.SaleBillUuid
 
 	// 开始事务
 	tx := db.Begin()
@@ -1270,6 +1270,12 @@ func (s *orderSrv) RejectMemberSaleOrder(ctx context.Context, request req.Reject
 		return errors.WithMessage(err)
 	}
 
+	// 获取销售账单
+	billInfo, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(memberSaleOrder.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
 	// 拒单
 	memberSaleOrder.Reject()
 
@@ -1278,6 +1284,15 @@ func (s *orderSrv) RejectMemberSaleOrder(ctx context.Context, request req.Reject
 		SaleBillUuid: memberSaleOrder.SaleBill.Uuid,
 	})
 
+	// 退款
+	err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*billInfo.GetFirstSaleOrder(), MemberSaleOrderRefundReq{
+		CancelReason: "商家拒单",
+	})
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+
+	// 更新订单状态
 	repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderReject(*memberSaleOrder)
 		return nil
