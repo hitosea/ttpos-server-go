@@ -486,6 +486,14 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 			if err != nil {
 				return err
 			}
+
+			// 如果submit_pay_time为0，说明还没有设置过提交支付时间，此时设置为支付成功时间
+			if memberSaleOrder.SubmitPayTime == 0 {
+				if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderSubmitPayTime(memberSaleOrder.Uuid, payAt.Unix()); err != nil {
+					return err
+				}
+			}
+
 			// 更新订单状态
 			event.NewSystemBus().PublishPayFinishMemberSaleOrderEvent(event.PayFinishMemberSaleOrderPayload{
 				BasePayload: event.BasePayload{
