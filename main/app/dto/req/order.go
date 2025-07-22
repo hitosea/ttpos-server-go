@@ -21,14 +21,14 @@ var OrderReqMessage = map[string]string{
 // OrderListReq 订单列表查询
 type OrderListReq struct {
 	dto.PageReq             // 分页参数
-	OrderNo          string `form:"order_no"`                 // 订单编号
-	DateType         int    `form:"date_type,default=-1"`     // 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
-	EnableCreateTime bool   `form:"enable_create_time"`       // 启用开台时间 false-不启用，true-启用
-	EnablePayTime    bool   `form:"enable_pay_time"`          // 启用支付时间 false-不启用，true-启用
-	QueryStartTime   uint   `form:"query_start_time"`         // 查询开始时间戳
-	QueryEndTime     uint   `form:"query_end_time"`           // 查询结束时间戳
-	Status           int    `form:"status,default=-1"`        // 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
-	BillType         int    `form:"bill_type,default=-1"`     // 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
+	OrderNo          string `form:"order_no"` // 订单编号
+	DateType         int    `form:"date_type,default=-1"` // 日期类型 -1=全都、 0=今天、 1=昨天、 2=本周
+	EnableCreateTime bool   `form:"enable_create_time"` // 启用开台时间 false-不启用，true-启用
+	EnablePayTime    bool   `form:"enable_pay_time"` // 启用支付时间 false-不启用，true-启用
+	QueryStartTime   uint   `form:"query_start_time"` // 查询开始时间戳
+	QueryEndTime     uint   `form:"query_end_time"` // 查询结束时间戳
+	Status           int    `form:"status,default=-1"` // 账单状态, -1=全都、 0=待付款、1=已完成、2=已取消
+	BillType         int    `form:"bill_type,default=-1"` // 账单类型, -1=全都、 0=Desk桌台订单、1=OrderingFood点餐订单
 	DiningMethod     int    `form:"dining_method,default=-1"` // 用餐方式, -1=全都、 0-堂食 1-打包
 }
 
@@ -54,9 +54,10 @@ type OrderReturnInfoReq struct {
 
 // OrderReturnReq 订单退款
 type OrderReturnReq struct {
-	SaleBillUuid  uint64               `json:"sale_bill_uuid"`  // 销售账单UUID
-	SaleOrderUuid uint64               `json:"sale_order_uuid"` // 销售订单UUID。退款都是针对子单进行退款
-	Products      []OrderReturnProduct `json:"products"`        // 退款商品UUID列表. 如果为空，则退款所有商品,即整单退款
+	SaleBillUuid        uint64               `json:"sale_bill_uuid"`         // 销售账单UUID
+	SaleOrderUuid       uint64               `json:"sale_order_uuid"`        // 销售订单UUID。退款都是针对子单进行退款
+	MemberSaleOrderUuid uint64               `json:"member_sale_order_uuid"` // 会员销售订单UUID。退款都是针对子单进行退款
+	Products            []OrderReturnProduct `json:"products"`               // 退款商品UUID列表. 如果为空，则退款所有商品,即整单退款
 	// 退款账户信息
 	BankCode    string `json:"bank_code"`    // 银行编码 - 当存在QR PromptPay的时候需要传
 	AccountNo   string `json:"account_no"`   // 账号 - 当存在QR PromptPay的时候需要传
