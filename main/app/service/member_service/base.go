@@ -3,7 +3,6 @@ package member_service
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req/member_req"
@@ -112,11 +111,15 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 		fmt.Println("获取收银机设置失败", zap.Error(err))
 	}
 
-	member := ctx.GetMember()
-
-	isMemberShowSoldOut, _ := strconv.Atoi(cashierSetting.MemberShowSoldOut)
+	// 获取货币设置
+	currencySetting, err := settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		logger.Logger.Error("获取货币设置失败", zap.Error(err))
+		fmt.Println("获取货币设置失败", zap.Error(err))
+	}
 
 	// 返回
+	member := ctx.GetMember()
 	return member_resp.MemberBaseInfoResp{
 		Member: member_resp.MemberResp{
 			Id:        member.ID,
@@ -136,9 +139,10 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 			OpeningHours: businessSetting.OpeningHours,     // 公司营业时间
 			IsOpenRider:  company.CompanySetting.DeliveryStatus == 1,
 		},
+		Currency:            currencySetting,
 		AreaCode:            areaCodes,
 		LanguageList:        languageList,
-		IsMemberShowSoldOut: isMemberShowSoldOut == 1,
+		IsMemberShowSoldOut: cashierSetting.MemberShowSoldOut == "1",
 	}, nil
 
 }
