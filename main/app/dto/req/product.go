@@ -20,3 +20,9 @@ func (p *ProductListReq) ToPageReq() dto.PageReq {
 // ProductRecommendListReq 商品推荐列表查询
 type ProductRecommendListReq struct {
 }
+
+// ProductSearchReq 商品搜索查询
+type ProductSearchReq struct {
+	Keyword  string `form:"keyword" json:"keyword" binding:"required"` // 搜索关键词
+	IsMember bool   `json:"-"`                                         // 是否是会员端查询商品列表
+}
