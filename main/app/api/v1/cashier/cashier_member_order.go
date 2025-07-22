@@ -174,7 +174,7 @@ func (h *MemberOrderHandler) GetMemberOrderSearch(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param member_sale_order_uuid query int true "会员端销售订单UUID"
-// @Success 200 {object} dto.Response{data=resp.MemberOrderReturnInfoResp}
+// @Success 200 {object} dto.Response{data=resp.OrderReturnInfoResp}
 // @Router /cashier/member_order/return_info [get]
 func (h *MemberOrderHandler) GetMemberOrderReturnInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -201,7 +201,7 @@ func (h *MemberOrderHandler) GetMemberOrderReturnInfo(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body member_req.MemberOrderReturnReq true "详情参数"
+// @Param data body req.OrderReturnReq true "详情参数"
 // @Success 200 {object} nil "退款订单成功"
 // @Failure 404 {object} nil "未找到"
 // @Router /cashier/member_order/return [post]

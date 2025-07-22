@@ -826,6 +826,24 @@ definitions:
         description: 会员昵称
         type: string
     type: object
+  member_req.MemberOrderReReturnReq:
+    properties:
+      account_name:
+        description: 账户名称 - 当存在QR PromptPay的时候需要传
+        type: string
+      account_no:
+        description: 账号 - 当存在QR PromptPay的时候需要传
+        type: string
+      bank_code:
+        description: 退款账户信息
+        type: string
+      return_amount_uuid:
+        description: 退款金额UUID
+        type: integer
+      return_order_uuid:
+        description: 退款订单UUID
+        type: integer
+    type: object
   member_req.MemberRegisterReq:
     properties:
       code:
@@ -2375,6 +2393,9 @@ definitions:
       bank_code:
         description: 退款账户信息
         type: string
+      member_sale_order_uuid:
+        description: 会员销售订单UUID。退款都是针对子单进行退款
+        type: integer
       points:
         description: 手动退款积分
         type: number
@@ -13654,6 +13675,30 @@ paths:
       summary: 外送订单接单列表
       tags:
       - 收银端.外送接单相关
+  /cashier/member_order/re_return:
+    post:
+      consumes:
+      - application/json
+      description: 外送订单重新退款
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/member_req.MemberOrderReReturnReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 重新退款成功
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 外送订单重新退款
+      tags:
+      - 收银端.外送接单相关
   /cashier/member_order/reject:
     post:
       consumes:
@@ -13681,6 +13726,58 @@ paths:
       security:
       - JwtToken: []
       summary: 拒单
+      tags:
+      - 收银端.外送接单相关
+  /cashier/member_order/return:
+    post:
+      consumes:
+      - application/json
+      description: 外送订单退款/部分退款
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderReturnReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 退款订单成功
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 外送订单退款/部分退款
+      tags:
+      - 收银端.外送接单相关
+  /cashier/member_order/return_info:
+    get:
+      consumes:
+      - application/json
+      description: 获取外送订单退款弹窗信息
+      parameters:
+      - description: 会员端销售订单UUID
+        in: query
+        name: member_sale_order_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderReturnInfoResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取外送订单退款弹窗信息
       tags:
       - 收银端.外送接单相关
   /cashier/member_order/search:
