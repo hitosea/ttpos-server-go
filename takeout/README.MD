@@ -38,4 +38,4 @@ make db_add NAME='comment'
 1. .env.example 新增了配置， .env 需要同步增加
 2. 新增环境相关的 manifest/config/config.yaml ，模板manifest/config/config.tpl.yaml，修改对应的账号密码
 3. 新增的config.yaml 部署时 挂载到容器 的/app/config/config.yaml 下
-4. 数据库需要新增 一个takeout 库， 可以通过 make db_up 升级迁移数据库变更
+4. 数据库初始化需要新增 一个takeout 库， 后续更新可以通过 make db_up.docker 升级迁移数据库变更

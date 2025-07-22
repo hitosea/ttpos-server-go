@@ -12,10 +12,11 @@ import (
 
 type IMemberSaleOrderRepo interface {
 	IQueryMemberSaleOrderRepo
-	CreateMemberSaleOrder(memberSaleOrder model.MemberSaleOrder) error                // 创建会员端销售订单
-	UpdateMemberSaleOrderVerifiedPhoneStatus(memberSaleOrderUuid uint64) error        // 更新会员端销售订单的手机号验证状态为已验证
-	UpdateMemberSaleOrderPendingPayment(memberSaleOrder *model.MemberSaleOrder) error // 更新会员端销售订单为待支付状态
-	UpdateMemberSaleOrderPendingMerchantAccept(memberSaleOrderUuid uint64) error      // 更新会员端销售订单为“待商家接单”状态，表示订单支付成功，等待商家接单
+	CreateMemberSaleOrder(memberSaleOrder model.MemberSaleOrder) error                        // 创建会员端销售订单
+	UpdateMemberSaleOrderVerifiedPhoneStatus(memberSaleOrderUuid uint64) error                // 更新会员端销售订单的手机号验证状态为已验证
+	UpdateMemberSaleOrderPendingPayment(memberSaleOrder *model.MemberSaleOrder) error         // 更新会员端销售订单为待支付状态
+	UpdateMemberSaleOrderPendingMerchantAccept(memberSaleOrderUuid uint64) error              // 更新会员端销售订单为"待商家接单"状态，表示订单支付成功，等待商家接单
+	UpdateMemberSaleOrderSubmitPayTime(memberSaleOrderUuid uint64, submitPayTime int64) error // 更新会员端销售订单的提交支付时间戳
 }
 
 type IQueryMemberSaleOrderRepo interface {
@@ -147,18 +148,27 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderPendingPayment(memberSaleOrde
 		OriginProductAmount: memberSaleOrder.OriginProductAmount,          // 更新商品原价
 		MemberDiscountFee:   memberSaleOrder.MemberDiscountFee,            // 更新会员折扣
 		Amount:              memberSaleOrder.Amount,                       // 更新订单总金额
+		SubmitPayTime:       memberSaleOrder.SubmitPayTime,                // 更新提交支付时间戳
 	}).Error; err != nil {
 		return errors.WithMessage(err)
 	}
 	return nil
 }
 
-// UpdateMemberSaleOrderPendingMerchantAccept 更新会员端销售订单为“待商家接单”状态，表示订单支付成功，等待商家接单
+// UpdateMemberSaleOrderPendingMerchantAccept 更新会员端销售订单为"待商家接单"状态，表示订单支付成功，等待商家接单
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderPendingMerchantAccept(memberSaleOrderUuid uint64) error {
 	if err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrderUuid).Updates(model.MemberSaleOrder{
 		Status:  constant.MemberSaleOrderStatusPendingMerchantAccept, // 更新订单状态为待支付
 		PayTime: time.Now().Unix(),
 	}).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderSubmitPayTime 更新会员端销售订单的提交支付时间戳
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderSubmitPayTime(memberSaleOrderUuid uint64, submitPayTime int64) error {
+	if err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrderUuid).Update("submit_pay_time", submitPayTime).Error; err != nil {
 		return errors.WithMessage(err)
 	}
 	return nil
