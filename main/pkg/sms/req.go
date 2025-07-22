@@ -53,3 +53,9 @@ type MemberCouponRequest struct {
 	Company   string `json:"company"`    // 公司名称
 	CouponNum uint64 `json:"coupon_num"` // 优惠券数量
 }
+
+// DeliveryOrderCancelBySelfRequest 外送订单取消请求参数
+type DeliveryOrderCancelBySelfRequest struct {
+	Company string `json:"company"`  // 商家名称
+	OrderNo string `json:"order_no"` // 订单号
+}

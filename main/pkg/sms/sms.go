@@ -198,6 +198,23 @@ func (c *smsClient) SendMemberCouponSMS(phone, language string, params *MemberCo
 	return c.SendSMS(req)
 }
 
+// SendDeliveryOrderBySelfCancelSMS 发送外送订单取消短信（自己取消）
+func (c *smsClient) SendDeliveryOrderBySelfCancelSMS(phone, language string, params *DeliveryOrderCancelBySelfRequest) (*SMSResponse, error) {
+	req := &SendSMSRequest{
+		TemplateID: TemplateDeliveryOrderCanceledBySelf,
+		Phone:      phone,
+		Language:   language,
+		Params: map[string]interface{}{
+			"company":  params.Company,
+			"order_no": params.OrderNo,
+		},
+	}
+	if logger.Logger != nil {
+		logger.Logger.Info("发送外送订单取消短信", zap.Any("req", req))
+	}
+	return c.SendSMS(req)
+}
+
 // SendSMS 发送短信
 func (c *smsClient) SendSMS(req *SendSMSRequest) (*SMSResponse, error) {
 	jsonData, err := json.Marshal(req)
