@@ -1268,6 +1268,11 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 		return errors.WithMessage(err)
 	}
 
+	// 如果未设置地址，返回错误
+	if memberSaleOrder.MemberAddressUuid == 0 {
+		return errors.New("请先选择订单地址")
+	}
+
 	memberSaleOrder.Remark = request.Remark
 	memberSaleOrder.SetPendingPayment(request.PaymentMethodUuid)
 
