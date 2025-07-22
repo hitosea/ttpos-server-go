@@ -167,16 +167,12 @@ const { currency } = useUserStore();
 
 // 定义props
 const props = defineProps({
-  open_edit: {
+    open_refund: {
     type: Boolean,
     default: false
   },
-  order_id: {
+  member_sale_order_uuid: {
     type: [String, Number],
-    default: ''
-  },
-  sub_order_id: {
-    type: [String, Number],  
     default: ''
   },
   pay_price: {
@@ -206,8 +202,7 @@ const language = ref('');
 
 const form = reactive({
   refund_type: '1',
-  order_id: '',
-  sub_order_id: '',
+  member_sale_order_uuid: '',
   pay_price: '',
   points: null,
 });
@@ -254,19 +249,17 @@ const bankFormRef = ref(null);
 
 // 生命周期
 onMounted(() => {
-  dialogVisible.value = props.open_edit;
-  form.order_id = props.order_id;
-  form.sub_order_id = props.sub_order_id;
+  dialogVisible.value = props.open_refund;
+  form.member_sale_order_uuid = props.member_sale_order_uuid;
   form.pay_price = priceTwo(props.pay_price);
   language.value = languageStore()?.getLanguageKey().language.value;
-  getStoreRefundInfo();
+  getTakeoutOrderReturnInfo();
 });
 
 // 方法定义
 const submit = () => {
   let formData = {
-    sale_bill_uuid: form.order_id,
-    sale_order_uuid: form.sub_order_id,
+    member_sale_order_uuid: props.member_sale_order_uuid,
     refund_type: form.refund_type,
     points: form.points,
     refund_product: [],
@@ -312,7 +305,7 @@ const submit = () => {
   formRef.value.validate((valid) => {
     if (valid) {
       loading.value = true;
-      OrderApi.storeRefund(formData, true)
+      OrderApi.postTakeoutOrderRefund(formData, true)
         .then((data) => {
           loading.value = false;
           ElMessage({
@@ -332,12 +325,11 @@ const submit = () => {
   });
 };
 
-const getStoreRefundInfo = () => {
+const getTakeoutOrderReturnInfo = () => {
   loading.value = true;
-  OrderApi.getStoreRefund(
+  OrderApi.getTakeoutOrderReturnInfo(
     {
-      sale_bill_uuid: form.order_id,
-      sale_order_uuid: props.sub_order_id,
+      member_sale_order_uuid: props.member_sale_order_uuid,
     },
     true
   )

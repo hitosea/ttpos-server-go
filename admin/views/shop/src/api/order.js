@@ -107,6 +107,16 @@ let OrderApi = {
   postTakeoutOrderCancel(data, errorback) {
     return request._post('/shop/store.MemberOrder/cancel', data, errorback);
   },
+
+  //外卖订单退款信息
+  getTakeoutOrderReturnInfo(data, errorback) {
+    return request._get('/shop/store.MemberOrder/return_info', data, errorback);
+  },
+
+  //外卖订单退款
+  postTakeoutOrderRefund(data, errorback) {
+    return request._post('/shop/store.MemberOrder/refund', data, errorback);
+  },
 };
 
 export default OrderApi;
