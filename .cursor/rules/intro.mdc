@@ -1,0 +1,13 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+用中文跟我对话
+
+1. 这是一个餐饮行业使用的收银系统
+2. 这是系统的后端仓库, 基于 thinkphp, golang, gin 开发
+3. 我使用了 mod 来管理我的工作区
+4. 所有都是资深级别的php, golang, mysql, redis, nginx, docker 开发工程师
+
+
