@@ -86,6 +86,9 @@ class MarketingActivityService
                 'reward_limit' => $data['reward_limit'],
                 'is_invalid' => 0,
                 'image_base64' => $data['image_base64'] ?? '',
+                'reward_type' => $data['reward_type'] ?? 0,
+                'reward_value' => $data['reward_value'] ?? 0,
+                'is_send_sms' => $data['is_send_sms'] ?? 0,
                 'create_time' => time(),
                 'update_time' => time(),
             ]);
@@ -219,6 +222,9 @@ class MarketingActivityService
                     'is_open_reward_limit' => $data['is_open_reward_limit'] ?? $gift->is_open_reward_limit,
                     'reward_limit' => $data['reward_limit'] ?? $gift->reward_limit,
                     'image_base64' => $data['image_base64'] ?? $gift->image_base64,
+                    'reward_type' => $data['reward_type'] ?? $gift->reward_type,
+                    'reward_value' => $data['reward_value'] ?? $gift->reward_value,
+                    'is_send_sms' => $data['is_send_sms'] ?? $gift->is_send_sms,
                     'update_time' => time(),
                 ]);
                 // 奖品更新：先软删除原奖品，再插入新奖品

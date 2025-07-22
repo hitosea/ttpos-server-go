@@ -15621,7 +15621,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "成功"
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.GetMemberOrderDetailResp"
+                        }
                     },
                     "400": {
                         "description": "错误请求"
@@ -15660,7 +15663,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "成功"
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.GetMemberOrderListResp"
+                        }
                     },
                     "400": {
                         "description": "错误请求"
@@ -15736,7 +15742,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "成功"
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.MemberOrderPaymentInfoResp"
+                        }
                     },
                     "400": {
                         "description": "错误请求"
@@ -15773,7 +15782,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "成功"
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.MemberOrderPaymentStatusResp"
+                        }
                     },
                     "400": {
                         "description": "错误请求"
@@ -16196,7 +16208,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "成功"
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/resp.MemberOrderPaymentStatusResp"
+                        }
                     },
                     "400": {
                         "description": "错误请求"
@@ -16388,6 +16403,45 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
                         }
+                    }
+                }
+            }
+        },
+        "/shop/member_order/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "取消订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外送订单管理相关"
+                ],
+                "summary": "取消订单",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.CancelOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
                     }
                 }
             }
@@ -24622,6 +24676,21 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.GetMemberOrderListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "订单列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MemberOrder"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
         "resp.GetMemberOrderManageDetailResp": {
             "type": "object",
             "properties": {
@@ -25747,6 +25816,50 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.MemberOrder": {
+            "type": "object",
+            "properties": {
+                "company_name": {
+                    "description": "公司名称",
+                    "type": "string"
+                },
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                },
+                "num": {
+                    "description": "商品数量. 所有商品数量总和，如商品A数量为2，商品B数量为3，则总数量为5",
+                    "type": "number"
+                },
+                "product_amount": {
+                    "description": "商品金额. 所有商品金额总和，如商品A金额为2，商品B金额为3，则总金额为5",
+                    "type": "number"
+                },
+                "product_list": {
+                    "description": "订单商品列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.MemberOrderProduct"
+                    }
+                },
+                "rider": {
+                    "description": "骑手信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.RiderInfo"
+                        }
+                    ]
+                },
+                "serial_number": {
+                    "description": "订单流水号",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "订单状态 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消",
+                    "type": "integer"
+                }
+            }
+        },
         "resp.MemberOrderAmountInfo": {
             "type": "object",
             "properties": {
@@ -25929,6 +26042,52 @@ const docTemplate = `{
                 "unit_price": {
                     "description": "商品单价（折后）",
                     "type": "number"
+                }
+            }
+        },
+        "resp.MemberOrderPaymentInfoResp": {
+            "type": "object",
+            "properties": {
+                "link_url": {
+                    "description": "支付单链接 (返回跳转地址 window.location.href = LinkUrl; )",
+                    "type": "string"
+                },
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                },
+                "payment_amount": {
+                    "description": "支付金额",
+                    "type": "number"
+                },
+                "payment_method_name": {
+                    "description": "支付方式名称",
+                    "type": "string"
+                },
+                "payment_order_uuid": {
+                    "description": "支付单uuid (当/cashier/desk/order/payment/info接口的payment_orders中的存在相同的uuid时证明已经支付)",
+                    "type": "integer"
+                },
+                "qr_code": {
+                    "description": "支付单二维码 (返回base64图片)",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "支付单状态 支付状态, 0-未支付 1-已支付",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.MemberOrderPaymentStatusResp": {
+            "type": "object",
+            "properties": {
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "支付单状态 支付状态, 0-未支付 1-已支付 2-支付失败",
+                    "type": "integer"
                 }
             }
         },

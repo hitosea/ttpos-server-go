@@ -22,9 +22,9 @@ type LianLianCallbackRequest struct {
 }
 
 type LianLianRefundCallbackRequest struct {
-	CompanyUuid           string `json:"shop_supplier_id"`
-	RefundStatus          string `json:"refund_status"` // 'RS' 等于已经支付
-	RefundOrderId         string `json:"refund_order_id"`
-	PaymentOrderId        string `json:"payment_order_id"`
-	MerchantRefundOrderNo string `json:"merchant_refund_id"`
+	CompanyUuid      string `json:"shop_supplier_id"`
+	RefundStatus     string `json:"refund_status"` // 'RS' 等于已经支付
+	RefundOrderId    string `json:"refund_order_id"`
+	PaymentOrderId   string `json:"payment_order_id"`
+	MerchantRefundId string `json:"merchant_refund_id"`
 }

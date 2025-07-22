@@ -11,6 +11,8 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
+	"ttpos-server-go/app/dto/req/member_req"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -98,6 +100,35 @@ func (h *MemberOrderHandler) RejectMemberOrder(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// CancelOrder 取消订单
+// @Summary 取消订单
+// @Description 取消订单
+// @Tags 商家端.外送订单管理相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body member_req.CancelOrderReq true "详情参数"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/member_order/cancel [post]
+func (h *MemberOrderHandler) CancelMemberOrder(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := member_req.CancelOrderReq{}
+
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	// 取消订单
+	err := h.memberOrderSrv.MemberOrderCancel(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, gin.H{})
+}
+
 // RegisterDeliveryOrderHandlers 注册商家充值订单路由
 func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -125,5 +156,6 @@ func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, ca
 		privateApi.GET("/member_order/list", wrapper.GetMemberOrderList)
 		privateApi.GET("/member_order/info", wrapper.GetMemberOrderDetail)
 		privateApi.POST("/member_order/reject", wrapper.RejectMemberOrder)
+		privateApi.POST("/member_order/cancel", wrapper.CancelMemberOrder)
 	}
 }

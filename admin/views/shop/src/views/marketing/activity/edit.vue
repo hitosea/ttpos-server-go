@@ -18,6 +18,7 @@
             :dateTime="dateTime"
             :couponList="couponList"
             :status="status"
+            :uuid="uuid"
           ></Basic>
           <!--高级设置-->
           <Set ref="SetRef" :status="status"></Set>

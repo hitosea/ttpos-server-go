@@ -1362,7 +1362,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 			}(),
 			PaymentAmount:        memberSaleOrder.Amount,
 			PaymentCommissionFee: 0,
-			Amount:               paymentOrder.PaymentAmount,
+			Amount:               memberSaleOrder.Amount,
 			Status:               constant.PaymentOrderStatusUnPay,
 		})
 		if err != nil {

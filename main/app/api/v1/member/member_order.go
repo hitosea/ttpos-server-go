@@ -129,7 +129,7 @@ func (h *OrderHandler) PayOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param member_sale_order_uuid query string true "会员端销售订单UUID"
-// @Success 200 {object} nil "成功"
+// @Success 200 {object} resp.MemberOrderPaymentInfoResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/pay/info [get]
 func (h *OrderHandler) PayOrderInfo(c *gin.Context) {
@@ -158,7 +158,7 @@ func (h *OrderHandler) PayOrderInfo(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param member_sale_order_uuid query string true "会员端销售订单UUID"
-// @Success 200 {object} nil "成功"
+// @Success 200 {object} resp.MemberOrderPaymentStatusResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/pay/status [get]
 func (h *OrderHandler) PayOrderStatus(c *gin.Context) {
@@ -187,7 +187,7 @@ func (h *OrderHandler) PayOrderStatus(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body member_req.PaidMemberOrderReq true "详情参数"
-// @Success 200 {object} nil "成功"
+// @Success 200 {object} resp.MemberOrderPaymentStatusResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/xie-test/order/paid [post]
 func (h *OrderHandler) PaidOrder(c *gin.Context) {
@@ -217,7 +217,7 @@ func (h *OrderHandler) PaidOrder(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body req.MemberOrderListReq true "详情参数"
-// @Success 200 {object} nil "成功"
+// @Success 200 {object} resp.GetMemberOrderListResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/list [get]
 func (h *OrderHandler) GetMemberOrderList(c *gin.Context) {
@@ -246,7 +246,7 @@ func (h *OrderHandler) GetMemberOrderList(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param member_sale_order_uuid query string true "会员端销售订单UUID"
-// @Success 200 {object} nil "成功"
+// @Success 200 {object} resp.GetMemberOrderDetailResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/detail [get]
 func (h *OrderHandler) GetMemberOrderDetail(c *gin.Context) {
