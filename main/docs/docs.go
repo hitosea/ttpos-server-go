@@ -9986,45 +9986,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cashier/member_order/re_return": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "外送订单重新退款",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.外送接单相关"
-                ],
-                "summary": "外送订单重新退款",
-                "parameters": [
-                    {
-                        "description": "详情参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/member_req.MemberOrderReReturnReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "重新退款成功"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
         "/cashier/member_order/reject": {
             "post": {
                 "security": [
@@ -10067,94 +10028,6 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/resp.GetMemberOrderDetailResp"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/cashier/member_order/return": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "外送订单退款/部分退款",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.外送接单相关"
-                ],
-                "summary": "外送订单退款/部分退款",
-                "parameters": [
-                    {
-                        "description": "详情参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.OrderReturnReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "退款订单成功"
-                    },
-                    "404": {
-                        "description": "未找到"
-                    }
-                }
-            }
-        },
-        "/cashier/member_order/return_info": {
-            "get": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "获取外送订单退款弹窗信息",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "收银端.外送接单相关"
-                ],
-                "summary": "获取外送订单退款弹窗信息",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "会员端销售订单UUID",
-                        "name": "member_sale_order_uuid",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.OrderReturnInfoResp"
                                         }
                                     }
                                 }
@@ -10356,6 +10229,133 @@ const docTemplate = `{
                                     "properties": {
                                         "data": {
                                             "$ref": "#/definitions/resp.GetMemberOrderManageListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/cashier/member_order_manage/re_return": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "外送订单重新退款",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外送接单相关"
+                ],
+                "summary": "外送订单重新退款",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.MemberOrderReReturnReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "重新退款成功"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/member_order_manage/return": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "外送订单退款/部分退款",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外送接单相关"
+                ],
+                "summary": "外送订单退款/部分退款",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderReturnReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "退款订单成功"
+                    },
+                    "404": {
+                        "description": "未找到"
+                    }
+                }
+            }
+        },
+        "/cashier/member_order_manage/return_info": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取外送订单退款弹窗信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外送接单相关"
+                ],
+                "summary": "获取外送订单退款弹窗信息",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "会员端销售订单UUID",
+                        "name": "member_sale_order_uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.OrderReturnInfoResp"
                                         }
                                     }
                                 }

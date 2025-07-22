@@ -13675,30 +13675,6 @@ paths:
       summary: 外送订单接单列表
       tags:
       - 收银端.外送接单相关
-  /cashier/member_order/re_return:
-    post:
-      consumes:
-      - application/json
-      description: 外送订单重新退款
-      parameters:
-      - description: 详情参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/member_req.MemberOrderReReturnReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 重新退款成功
-        "404":
-          description: 未找到
-      security:
-      - JwtToken: []
-      summary: 外送订单重新退款
-      tags:
-      - 收银端.外送接单相关
   /cashier/member_order/reject:
     post:
       consumes:
@@ -13726,58 +13702,6 @@ paths:
       security:
       - JwtToken: []
       summary: 拒单
-      tags:
-      - 收银端.外送接单相关
-  /cashier/member_order/return:
-    post:
-      consumes:
-      - application/json
-      description: 外送订单退款/部分退款
-      parameters:
-      - description: 详情参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/req.OrderReturnReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 退款订单成功
-        "404":
-          description: 未找到
-      security:
-      - JwtToken: []
-      summary: 外送订单退款/部分退款
-      tags:
-      - 收银端.外送接单相关
-  /cashier/member_order/return_info:
-    get:
-      consumes:
-      - application/json
-      description: 获取外送订单退款弹窗信息
-      parameters:
-      - description: 会员端销售订单UUID
-        in: query
-        name: member_sale_order_uuid
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.OrderReturnInfoResp'
-              type: object
-      security:
-      - JwtToken: []
-      summary: 获取外送订单退款弹窗信息
       tags:
       - 收银端.外送接单相关
   /cashier/member_order/search:
@@ -13903,6 +13827,82 @@ paths:
       summary: 获取外送订单管理页面，订单列表
       tags:
       - 收银端.外送订单管理相关
+  /cashier/member_order_manage/re_return:
+    post:
+      consumes:
+      - application/json
+      description: 外送订单重新退款
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/member_req.MemberOrderReReturnReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 重新退款成功
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 外送订单重新退款
+      tags:
+      - 收银端.外送接单相关
+  /cashier/member_order_manage/return:
+    post:
+      consumes:
+      - application/json
+      description: 外送订单退款/部分退款
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderReturnReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 退款订单成功
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 外送订单退款/部分退款
+      tags:
+      - 收银端.外送接单相关
+  /cashier/member_order_manage/return_info:
+    get:
+      consumes:
+      - application/json
+      description: 获取外送订单退款弹窗信息
+      parameters:
+      - description: 会员端销售订单UUID
+        in: query
+        name: member_sale_order_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.OrderReturnInfoResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取外送订单退款弹窗信息
+      tags:
+      - 收银端.外送接单相关
   /cashier/old/order/cancel:
     post:
       consumes:
