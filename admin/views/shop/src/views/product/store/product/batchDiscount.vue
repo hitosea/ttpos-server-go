@@ -129,6 +129,8 @@
   const selectedProductIds = ref([]);
 
   const categories = ref([]);
+
+  // 分类商品数量
   const categoriesProductCount = computed(() => {
     const _map = {};
 
@@ -149,6 +151,7 @@
     return _map;
   });
 
+  // 分类树
   const categoriesTree = computed(() => {
     return [
       {
@@ -177,14 +180,20 @@
       },
     ];
   });
+
+  // 分类树引用
   const categoriesTreeRef = ref(null);
+  // 分类树当前选中
   const categoriesTreeCurrentKey = ref(0);
+  // 分类树展开
   const categoriesTreeExpandedKeys = ref([0]);
 
+  // 标签
   const printTags = ref([]);
-
+  // 标签树当前选中
   const printTagsTreeCurrentKey = ref(0);
 
+  // 商品列表
   const products = ref([]);
   const productsTableData = computed(() => {
     return products.value
@@ -192,8 +201,10 @@
       .filter((item) => !searchValue.value || item.product_name_text.includes(searchValue.value));
   });
 
+  // 已选商品临时列表
   const selectedProductsTmp = ref([]);
 
+  // 分类商品已选数量
   const categoriesProductSelectedCount = computed(() => {
     const _map = {};
 
@@ -213,6 +224,8 @@
     _map[`c-0`] = count;
     return _map;
   });
+
+  // 分类商品是否全选
   const categoriesProductIsAllSelected = computed({
     get() {
       const _map = {};
@@ -235,6 +248,7 @@
     },
   });
 
+  // 分页
   const pagination = ref({
     page: 1,
     pageSize: 10000,
@@ -242,6 +256,7 @@
     totalPage: 0,
   });
 
+  // 获取数据
   const getData = async (isFirst = false) => {
     loading.value = true;
     try {
@@ -286,9 +301,10 @@
 
   getData(true);
 
+  // 商品表格引用
   const productsTableRef = ref(null);
 
-  // 添加选择控制函数
+  // 选择控制函数
   const selectable = (row) => {
     // 如果当前行已选中，始终可操作（允许取消）
     if (selectedProductsTmp.value.some((item) => item.product_id === row.product_id)) {
@@ -298,6 +314,7 @@
     return selectedProductsTmp.value.length < props.maxCount;
   };
 
+  // 选择商品
   const handleSelect = (data, node) => {
     const isChecked = data.some((item) => item.product_id === node.product_id);
 
@@ -323,6 +340,7 @@
     }
   };
 
+  // 全选商品
   const handleSelectAll = (selection) => {
     if (selection.length === 0) {
       // 取消全选
@@ -439,6 +457,7 @@
     toggleRowSelection(false);
   };
 
+  // 分类商品勾选
   const handleCategoryCheck = (id, checked) => {
     const _products = products.value.filter((item) => item.category_id === id || item.parent_category_id === id);
 
@@ -458,6 +477,7 @@
     }
   };
 
+  // 分类树展开
   const handleCategoriesTreeExpand = ({ id }, { expanded }) => {
     if (expanded) {
       categoriesTreeExpandedKeys.value = [...categoriesTreeExpandedKeys.value, id];
@@ -470,10 +490,12 @@
     }
   };
 
+  // 关闭弹窗
   const dialogFormVisible = () => {
     proxy.$router.go(-1);
   };
 
+  // 确定按钮
   const handleClick = () => {
     // 筛选出未被勾选的商品
     const unselectedProducts = productsTableData.value.filter((item) => !selectedProductsTmp.value.some((p) => p.product_id === item.product_id));
