@@ -1,6 +1,9 @@
 package member_resp
 
-import "ttpos-server-go/app/dto"
+import (
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/resp/setting"
+)
 
 type MemberResp struct {
 	Id        uint    `json:"id"`         // 会员ID
@@ -23,9 +26,10 @@ type CompanyResp struct {
 }
 
 type MemberBaseInfoResp struct {
+	IsMemberShowSoldOut bool               `json:"is_member_show_sold_out"` // 是否显示售罄商品
 	Member              MemberResp         `json:"member"`                  // 会员信息
 	Company             CompanyResp        `json:"company"`                 // 公司信息
 	AreaCode            []string           `json:"area_code"`               // 区号列表
 	LanguageList        []dto.LanguageItem `json:"language_list"`           // 语言列表
-	IsMemberShowSoldOut bool               `json:"is_member_show_sold_out"` // 是否显示售罄商品
+	Currency            setting.Currency   `json:"currency"`                // 货币单位
 }

@@ -1017,6 +1017,10 @@ definitions:
         allOf:
         - $ref: '#/definitions/member_resp.CompanyResp'
         description: 公司信息
+      currency:
+        allOf:
+        - $ref: '#/definitions/setting.Currency'
+        description: 货币单位
       is_member_show_sold_out:
         description: 是否显示售罄商品
         type: boolean
