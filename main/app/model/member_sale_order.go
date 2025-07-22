@@ -60,6 +60,7 @@ type MemberSaleOrder struct {
 	ContactGender        int    `gorm:"column:contact_gender;type:int(10);not null;default:0;comment:'联系人性别, 0-女士 1-先生'"`
 	// 时间相关
 	PayTime            int64  `gorm:"column:pay_time;type:int(10) unsigned;not null;default:0;comment:'支付完成时间（时间戳）'"`
+	SubmitPayTime      int64  `gorm:"column:submit_pay_time;type:int(10) unsigned;not null;default:0;comment:'提交支付时间戳'"`
 	AcceptTime         int64  `gorm:"column:accept_time;type:int(10) unsigned;not null;default:0;comment:'商家接单时间（时间戳）'"`
 	CookTime           int64  `gorm:"column:cook_time;type:int(10) unsigned;not null;default:0;comment:'商家备餐完成时间（时间戳）'"`
 	RiderAcceptTime    int64  `gorm:"column:rider_accept_time;type:int(10) unsigned;not null;default:0;comment:'骑手接单时间（时间戳）'"`
@@ -80,8 +81,31 @@ func (model *MemberSaleOrder) OriginAmountValue() float64 {
 
 // 获取剩余支付时间(单位秒)
 func (model *MemberSaleOrder) GetRemainingPaymentTime() int64 {
-	// TODO: 需要根据公司设置的支付超时时间来计算
-	return 0
+	// 支付超时时间为24小时（86400秒）
+	const paymentTimeoutSeconds = 24 * 60 * 60 // 24小时
+
+	// 如果订单已经支付或取消，返回0
+	if model.Status != constant.MemberSaleOrderStatusPendingPayment {
+		return 0
+	}
+
+	// 如果没有提交支付时间，从创建时间开始计算
+	baseTime := model.SubmitPayTime
+	if baseTime == 0 {
+		baseTime = model.CreateTime
+	}
+
+	// 计算过期时间
+	expireTime := baseTime + paymentTimeoutSeconds
+	currentTime := time.Now().Unix()
+
+	// 如果已经过期，返回0
+	if currentTime >= expireTime {
+		return 0
+	}
+
+	// 返回剩余时间（秒）
+	return expireTime - currentTime
 }
 
 // 订单是否可以支付 0-未支付 1-已支付 2-已取消
@@ -164,10 +188,11 @@ func (model *MemberSaleOrder) SetCancelInCashier(cancelReason string) {
 	model.CancelScene = constant.MemberSaleOrderSceneMerchantCancel
 }
 
-// 设置订单为“待支付”状态
+// 设置订单为"待支付"状态
 func (model *MemberSaleOrder) SetPendingPayment(paymentMethodUuid uint64) {
 	model.Status = constant.MemberSaleOrderStatusPendingPayment
 	model.PaymentMethodUuid = paymentMethodUuid
+	model.SubmitPayTime = time.Now().Unix() // 设置提交支付时间戳
 }
 
 // 订单是否已经取消
