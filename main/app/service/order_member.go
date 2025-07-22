@@ -31,23 +31,29 @@ import (
 
 type IMemberOrderSrv interface {
 	// 会员端
-	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)    // 创建会员端订单
-	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                 // 设置会员端订单地址
-	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                          // 会员端订单提交支付，状态变为待支付
-	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)        // 会员端订单获取支付信息
-	GetMemberOrderPayStatus(ctx context.Context, request member_req.GetMemberOrderPayStatusReq) (*resp.MemberOrderPaymentStatusResp, error)  // 会员端订单获取支付状态
-	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                                // 查询收银机“外送”页面的订单列表
-	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                       // 查询会员端订单详情
-	GetMemberOrderPaymentMethodList(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderPaymentMethodListResp, error) // 获取会员端订单支付方式列表
-	MemberOrderCancel(ctx context.Context, req member_req.CancelOrderReq) error                                                              // 会员端订单取消
-	GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.GetRiderInfoReq) (*resp.MemberOrderCoordinates, error)                      // 获取骑手信息
+	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)   // 创建会员端订单
+	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                // 设置会员端订单地址
+	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                         // 会员端订单提交支付，状态变为待支付
+	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)       // 会员端订单获取支付信息
+	GetMemberOrderPayStatus(ctx context.Context, request member_req.GetMemberOrderPayStatusReq) (*resp.MemberOrderPaymentStatusResp, error) // 会员端订单获取支付状态
+	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                               // 查询收银机"外送"页面的订单列表
+	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                      // 查询会员端订单详情
+	GetMemberOrderPaymentMethodList(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderPaymentMethodListResp, error)
+	MemberOrderCancel(ctx context.Context, req member_req.CancelOrderReq) error                                         // 会员端订单取消
+	MemberOrderCancelInCashier(ctx context.Context, request member_req.CancelOrderReq) error                            // 收银端取消订单
+	GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.GetRiderInfoReq) (*resp.MemberOrderCoordinates, error) // 获取骑手信息
+
+	// 外送订单退款相关
+	GetMemberOrderReturnInfo(ctx context.Context, req member_req.MemberOrderReturnInfoReq) (*resp.OrderReturnInfoResp, error) // 获取外送订单退款弹窗信息
+	MemberOrderReturn(ctx context.Context, req req.OrderReturnReq) (error, int)                                               // 外送订单退款/部分退款
+	MemberOrderReReturn(ctx context.Context, req req.OrderReReturnReq) (error, int)                                           // 外送订单重新退款
+
 	// 收银机
-	GetMemberCashierOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberCashierOrderListResp, error)              // 查询收银机“外送”页面的订单列表
-	GetMemberCashierOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderCashierDetailResp, error)     // 查询收银机“外送”页面的订单详情
-	GetMemberOrderManageList(ctx context.Context, req req.MemberOrderManageListReq) (*resp.GetMemberOrderManageListResp, error)          // 查询收银机“外送”管理页面的订单列表
-	GetMemberOrderManageDetail(ctx context.Context, req req.GetMemberOrderManageDetailReq) (*resp.GetMemberOrderManageDetailResp, error) // 查询收银机“外送”管理页面的订单详情
+	GetMemberCashierOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberCashierOrderListResp, error)              // 查询收银机"外送"页面的订单列表
+	GetMemberCashierOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderCashierDetailResp, error)     // 查询收银机"外送"页面的订单详情
+	GetMemberOrderManageList(ctx context.Context, req req.MemberOrderManageListReq) (*resp.GetMemberOrderManageListResp, error)          // 查询收银机"外送"管理页面的订单列表
+	GetMemberOrderManageDetail(ctx context.Context, req req.GetMemberOrderManageDetailReq) (*resp.GetMemberOrderManageDetailResp, error) // 查询收银机"外送"管理页面的订单详情
 	AcceptMemberSaleOrder(ctx context.Context, req req.AcceptOrderReq) error                                                             // 接单外送订单
-	MemberOrderCancelInCashier(ctx context.Context, request member_req.CancelOrderReq) error                                             // 收银端取消订单
 	RejectMemberSaleOrder(ctx context.Context, req req.RejectOrderReq) error                                                             // 拒单外送订单
 	CookFinishMemberSaleOrder(ctx context.Context, request req.CookFinishOrderReq) error                                                 // 备餐完成外送订单
 	GetMemberCashierOrderSearch(ctx context.Context, req req.MemberOrderSearchReq) (*resp.GetMemberCashierOrderSearchResp, error)        // 搜索订单列表通过关键词
@@ -1353,4 +1359,172 @@ func (s *orderSrv) PaidMemberOrder(ctx context.Context, request member_req.PaidM
 		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
 	})
 	return nil
+}
+
+// GetMemberOrderReturnInfo 获取外送订单退款弹窗信息
+func (s *orderSrv) GetMemberOrderReturnInfo(ctx context.Context, req member_req.MemberOrderReturnInfoReq) (*resp.OrderReturnInfoResp, error) {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(req.MemberSaleOrderUuid)
+		defer lock.NewSystemLock().UnlockUuid(req.MemberSaleOrderUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取外送订单信息
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(req.MemberSaleOrderUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 获取销售账单信息
+	orderRepo := repository.NewOrderRepo(db)
+	saleBill, err := orderRepo.GetSaleBillAllInfo(memberSaleOrder.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 获取销售订单信息
+	saleOrder := saleBill.GetFirstSaleOrder()
+	if saleOrder == nil {
+		return nil, errors.New("找不到销售订单")
+	}
+
+	products := make([]resp.OrderReturnProduct, 0)
+
+	// 获取销售订单的每个付款单的可退款金额
+	// 要求排好序：退款顺序优先退会员、不够退则到现金、再到记录支付（多个时，哪个先后都行）、再到lianlian（多个时，哪个先后都行）
+	paymentRecords, currencyUnit := saleOrder.GetPaymentOrderCanReturnAmount()
+
+	// 构建退款支付记录
+	memberPaymentRecords := make([]resp.OrderReturnPaymentRecord, 0)
+	for _, record := range paymentRecords {
+		memberPaymentRecords = append(memberPaymentRecords, resp.OrderReturnPaymentRecord{
+			PaymentMethodCode: record.PaymentMethodCode,
+			PaymentOrderUuid:  record.PaymentOrderUuid,
+			PaymentMethodName: record.PaymentMethodName,
+			PaymentMethodUuid: record.PaymentMethodUuid,
+			CurrencyUnit:      record.CurrencyUnit,
+			PaymentAmount:     record.PaymentAmount,
+			CanReturnAmount:   record.CanReturnAmount,
+		})
+	}
+
+	// 获取商品列表
+	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+		if saleOrderProduct.IsCancelProduct() || saleOrderProduct.IsGiftProduct() || saleOrderProduct.Status == constant.OrderProductStatusUnSending {
+			continue
+		}
+		products = append(products, resp.OrderReturnProduct{
+			SaleOrderProductUuid: saleOrderProduct.Uuid,
+			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
+			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
+			Num:                  saleOrderProduct.GetCanReturnNum(), // 可退货数量=订单商品数量-已退货数量
+			NumType:              saleOrderProduct.NumType,
+			Price:                saleOrderProduct.TotalPrice,
+			CanReturnAmount:      saleOrderProduct.GetCanReturnPrice(),
+			CurrencyUnit:         currencyUnit,
+		})
+	}
+
+	// 过滤掉单价为0的商品
+	productList := make([]resp.OrderReturnProduct, 0)
+	for _, product := range products {
+		if product.Price == 0 {
+			continue
+		}
+		productList = append(productList, product)
+	}
+
+	// 可退款金额
+	canReturnAmount := saleOrder.GetCanReturnAmount()
+	res := &resp.OrderReturnInfoResp{
+		ManualReturnPoints: saleOrder.CanManualReturnPoints(), // 是否可以手动退款积分。订单是按比例赠送积分且未发生积分抵扣时，不自动退款。
+		DeductiblePoints:   saleOrder.GetManualReturnPoints(), // 可扣除积分。订单赠送的积分-已经退回的积分
+		CanReturnAmount:    canReturnAmount,                   // 可退款金额. 可退款金额=订单最终应收金额-已退款金额
+		PaymentRecords:     memberPaymentRecords,
+		Products:           productList,
+	}
+
+	return res, nil
+}
+
+// MemberOrderReturn 外送订单退款/部分退款
+func (s *orderSrv) MemberOrderReturn(ctx context.Context, memberReturnReq req.OrderReturnReq) (error, int) {
+	// 禁止并发操作
+	if ctx.NoLock() {
+		s.lock.LockUuid(memberReturnReq.MemberSaleOrderUuid)
+		defer s.lock.UnlockUuid(memberReturnReq.MemberSaleOrderUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	// 获取外送订单信息
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(memberReturnReq.MemberSaleOrderUuid)
+	if err != nil {
+		return errors.WithMessage(err), constant.CodeFail
+	}
+
+	// 检查订单状态是否允许退款（外送订单已支付且未取消状态下可以退款）
+	if memberSaleOrder.Status < constant.MemberSaleOrderStatusPendingMerchantAccept || memberSaleOrder.IsCancel() {
+		return errors.New("当前订单状态不允许退款"), constant.CodeFail
+	}
+
+	// 获取销售账单信息
+	orderRepo := repository.NewOrderRepo(db)
+	saleBill, err := orderRepo.GetSaleBillAllInfo(memberSaleOrder.SaleBillUuid)
+	if err != nil {
+		return errors.WithMessage(err), constant.CodeFail
+	}
+
+	// 获取销售订单信息
+	saleOrder := saleBill.GetFirstSaleOrder()
+	if saleOrder == nil {
+		return errors.WithMessage(errors.New("找不到销售订单")), constant.CodeFail
+	}
+
+	if memberReturnReq.Points > saleOrder.GetManualReturnPoints() {
+		return errors.WithMessage(errors.New("退款积分不能大于最大可退积分")), constant.CodeFail
+	}
+
+	// 构建退款请求，转换为用餐订单退款请求格式
+	orderReturnReq := req.OrderReturnReq{
+		SaleBillUuid:  memberSaleOrder.SaleBillUuid,
+		SaleOrderUuid: saleOrder.Uuid,
+		BankCode:      memberReturnReq.BankCode,
+		AccountNo:     memberReturnReq.AccountNo,
+		AccountName:   memberReturnReq.AccountName,
+		Points:        memberReturnReq.Points,
+	}
+
+	// 转换商品列表
+	for _, product := range memberReturnReq.Products {
+		orderReturnReq.Products = append(orderReturnReq.Products, req.OrderReturnProduct{
+			SaleOrderProductUuid: product.SaleOrderProductUuid,
+			Num:                  product.Num,
+		})
+	}
+
+	// 调用原有的退款逻辑
+	err, codeResult := s.ReturnOrder(ctx, orderReturnReq)
+	if err != nil {
+		return errors.WithMessage(err), codeResult
+	}
+
+	return nil, codeResult
+}
+
+// MemberOrderReReturn 外送订单重新退款
+func (s *orderSrv) MemberOrderReReturn(ctx context.Context, memberReReturnReq req.OrderReReturnReq) (error, int) {
+	// 构建重新退款请求，转换为用餐订单重新退款请求格式
+	orderReReturnReq := req.OrderReReturnReq{
+		ReturnOrderUuid:  memberReReturnReq.ReturnOrderUuid,
+		ReturnAmountUuid: memberReReturnReq.ReturnAmountUuid,
+		BankCode:         memberReReturnReq.BankCode,
+		AccountNo:        memberReReturnReq.AccountNo,
+		AccountName:      memberReReturnReq.AccountName,
+	}
+
+	// 调用原有的重新退款逻辑
+	return s.ReReturnOrder(ctx, orderReReturnReq)
 }
