@@ -107,7 +107,11 @@ func GetStatusList(status string) []uint {
 
 // 取消场景：merchant_cancel-商家取消；member_cancel-用户取消；merchant_reject-商家拒单
 const (
-	MemberSaleOrderSceneMerchantCancel = "merchant_cancel" // 商家取消
-	MemberSaleOrderSceneMemberCancel   = "member_cancel"   // 用户取消
-	MemberSaleOrderSceneMerchantReject = "merchant_reject" // 商家拒单
+	MemberSaleOrderSceneMerchantCancel     = "merchant_cancel"      // 商家取消。备餐中取消
+	MemberSaleOrderSceneMemberCancel       = "member_cancel_paid"   // 用户取消。已支付时用户取消
+	MemberSaleOrderSceneMerchantReject     = "merchant_reject"      // 商家拒单
+	MemberSaleOrderSceneSelectingTimeout   = "selecting_timeout"    // 选购超时
+	MemberSaleOrderScenePaymentTimeout     = "payment_timeout"      // 支付超时。未支付时用户取消
+	MemberSaleOrderSceneMemberCancelUnpaid = "member_cancel_unpaid" // 用户取消。未支付时用户取消
+	MemberSaleOrderSceneRiderPickupTimeout = "rider_pickup_timeout" // 骑手接单超时。取消订单
 )

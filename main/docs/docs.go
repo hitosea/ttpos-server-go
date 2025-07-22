@@ -9786,6 +9786,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/cashier/member_order/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "取消订单",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "收银端.外送接单相关"
+                ],
+                "summary": "取消订单",
+                "parameters": [
+                    {
+                        "description": "取消订单请求",
+                        "name": "CancelOrderReq",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/member_req.CancelOrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/cashier/member_order/cook_finish": {
             "post": {
                 "security": [

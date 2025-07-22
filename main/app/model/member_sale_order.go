@@ -153,6 +153,15 @@ func (model *MemberSaleOrder) SetCancel(cancelReason string) {
 	model.Status = constant.MemberSaleOrderStatusCancelled
 	model.CancelReason = cancelReason
 	model.CancelTime = time.Now().Unix()
+	model.CancelScene = constant.MemberSaleOrderSceneMemberCancel
+}
+
+// 设置订单为“已取消”状态
+func (model *MemberSaleOrder) SetCancelInCashier(cancelReason string) {
+	model.Status = constant.MemberSaleOrderStatusCancelled
+	model.CancelReason = cancelReason
+	model.CancelTime = time.Now().Unix()
+	model.CancelScene = constant.MemberSaleOrderSceneMerchantCancel
 }
 
 // 设置订单为“待支付”状态
@@ -171,10 +180,16 @@ func (model *MemberSaleOrder) IsCanPaid() bool {
 	return model.Status == constant.MemberSaleOrderStatusPendingPayment
 }
 
-// 订单是否可取消
+// 订单是否可取消。会员可以在商家没接单之前取消订单。商家接单之后，会员不能取消订单
 func (model *MemberSaleOrder) IsCanCancel() bool {
 	// 商家没接单之前可以取消
 	return model.Status <= constant.MemberSaleOrderStatusPendingMerchantAccept
+}
+
+// 订单是否可取消。商家只有在备餐中可以取消
+func (model *MemberSaleOrder) IsCanCancelInCashier() bool {
+	// 商家在备餐完成之前可以取消
+	return model.Status == constant.MemberSaleOrderStatusCooking
 }
 
 // IsRiderPickup 订单是否骑手接单
