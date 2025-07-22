@@ -28,38 +28,42 @@ class AddVisitorFieldsToMember extends Migrator
      */
     public function change()
     {
-        if ($this->hasTable('member')) {
-            // 修改会员表，添加游客相关字段
-            $table = $this->table('member');
-            
-            // 添加是否游客字段
-            if (!$table->hasColumn('is_visitor')) {
-                $table->addColumn('is_visitor', 'integer', [
-                    'default' => 0, 
-                    'null' => false, 
-                    'comment' => '是否游客,0-否 1-是',
-                    'after' => 'phone'
-                ]);
-            }
-            
-            // 添加设备ID字段
-            if (!$table->hasColumn('device_id')) {
-                $table->addColumn('device_id', 'string', [
-                    'limit' => 255, 
-                    'default' => '', 
-                    'null' => false, 
-                    'comment' => '设备ID,用于标识游客',
-                    'after' => 'is_visitor'
-                ]);
+        try {
+            if ($this->hasTable('member')) {
+                // 修改会员表，添加游客相关字段
+                $table = $this->table('member');
                 
-                // 添加设备ID索引
-                $table->addIndex(['device_id'], [
-                    'name' => 'idx_device_id',
-                    'unique' => false
-                ]);
+                // 添加是否游客字段
+                if (!$table->hasColumn('is_visitor')) {
+                    $table->addColumn('is_visitor', 'integer', [
+                        'default' => 0, 
+                        'null' => false, 
+                        'comment' => '是否游客,0-否 1-是',
+                        'after' => 'phone'
+                    ]);
+                }
+                
+                // 添加设备ID字段
+                if (!$table->hasColumn('device_id')) {
+                    $table->addColumn('device_id', 'string', [
+                        'limit' => 255, 
+                        'default' => '', 
+                        'null' => false, 
+                        'comment' => '设备ID,用于标识游客',
+                        'after' => 'is_visitor'
+                    ]);
+                    
+                    // 添加设备ID索引
+                    $table->addIndex(['device_id'], [
+                        'name' => 'idx_device_id',
+                        'unique' => false
+                    ]);
+                }
+
+                $table->update();
             }
+        } catch (\Exception $e) {
             
-            $table->update();
         }
     }
 } 

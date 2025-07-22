@@ -10253,7 +10253,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.外送接单相关"
+                    "收银端.外送订单管理相关"
                 ],
                 "summary": "外送订单重新退款",
                 "parameters": [
@@ -10292,7 +10292,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.外送接单相关"
+                    "收银端.外送订单管理相关"
                 ],
                 "summary": "外送订单退款/部分退款",
                 "parameters": [
@@ -10331,7 +10331,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "收银端.外送接单相关"
+                    "收银端.外送订单管理相关"
                 ],
                 "summary": "获取外送订单退款弹窗信息",
                 "parameters": [

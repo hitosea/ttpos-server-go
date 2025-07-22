@@ -31,17 +31,16 @@ import (
 
 type IMemberOrderSrv interface {
 	// 会员端
-	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)   // 创建会员端订单
-	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                // 设置会员端订单地址
-	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                         // 会员端订单提交支付，状态变为待支付
-	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)       // 会员端订单获取支付信息
-	GetMemberOrderPayStatus(ctx context.Context, request member_req.GetMemberOrderPayStatusReq) (*resp.MemberOrderPaymentStatusResp, error) // 会员端订单获取支付状态
-	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                               // 查询收银机"外送"页面的订单列表
-	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                      // 查询会员端订单详情
-	GetMemberOrderPaymentMethodList(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderPaymentMethodListResp, error)
-	MemberOrderCancel(ctx context.Context, req member_req.CancelOrderReq) error                                         // 会员端订单取消
-	MemberOrderCancelInCashier(ctx context.Context, request member_req.CancelOrderReq) error                            // 收银端取消订单
-	GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.GetRiderInfoReq) (*resp.MemberOrderCoordinates, error) // 获取骑手信息
+	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)    // 创建会员端订单
+	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                 // 设置会员端订单地址
+	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                          // 会员端订单提交支付，状态变为待支付
+	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)        // 会员端订单获取支付信息
+	GetMemberOrderPayStatus(ctx context.Context, request member_req.GetMemberOrderPayStatusReq) (*resp.MemberOrderPaymentStatusResp, error)  // 会员端订单获取支付状态
+	GetMemberOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberOrderListResp, error)                                // 查询收银机"外送"页面的订单列表
+	GetMemberOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderDetailResp, error)                       // 查询会员端订单详情
+	GetMemberOrderPaymentMethodList(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderPaymentMethodListResp, error) // 获取会员端订单支付方式列表
+	MemberOrderCancel(ctx context.Context, req member_req.CancelOrderReq) error                                                              // 会员端订单取消
+	GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.GetRiderInfoReq) (*resp.MemberOrderCoordinates, error)                      // 获取骑手信息
 
 	// 外送订单退款相关
 	GetMemberOrderReturnInfo(ctx context.Context, req member_req.MemberOrderReturnInfoReq) (*resp.OrderReturnInfoResp, error) // 获取外送订单退款弹窗信息
@@ -53,6 +52,7 @@ type IMemberOrderSrv interface {
 	GetMemberCashierOrderDetail(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderCashierDetailResp, error)     // 查询收银机"外送"页面的订单详情
 	GetMemberOrderManageList(ctx context.Context, req req.MemberOrderManageListReq) (*resp.GetMemberOrderManageListResp, error)          // 查询收银机"外送"管理页面的订单列表
 	GetMemberOrderManageDetail(ctx context.Context, req req.GetMemberOrderManageDetailReq) (*resp.GetMemberOrderManageDetailResp, error) // 查询收银机"外送"管理页面的订单详情
+	MemberOrderCancelInCashier(ctx context.Context, request member_req.CancelOrderReq) error                                             // 收银端取消订单
 	AcceptMemberSaleOrder(ctx context.Context, req req.AcceptOrderReq) error                                                             // 接单外送订单
 	RejectMemberSaleOrder(ctx context.Context, req req.RejectOrderReq) error                                                             // 拒单外送订单
 	CookFinishMemberSaleOrder(ctx context.Context, request req.CookFinishOrderReq) error                                                 // 备餐完成外送订单
@@ -204,29 +204,40 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 	memberSaleOrder.Remark = request.Remark
 	memberSaleOrder.SetPendingPayment(request.PaymentMethodUuid)
 
-	// 取消24小时自动取消订单的延时队列
-	// 用户提交支付后，取消自动取消订单的任务
-	go func() {
-		memberSaleOrderUuidStr := strconv.FormatUint(request.MemberSaleOrderUuid, 10)
-
-		// 尝试从延时队列中删除自动取消任务
-		// 注意：由于原有的创建订单时使用的是TakeoutCancelQueue，这里也使用同样的队列来删除
-		if queue.TakeoutCancelQueue != nil {
-			ctx.Log().Info("取消24小时自动取消订单任务",
-				zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
-				zap.String("reason", "用户已提交支付"))
-
-			// 由于hdt3213/delayqueue库没有直接的删除方法，
-			// 我们需要在队列消费函数中增加状态检查，避免重复取消已支付的订单
-			// 这里记录日志，实际的避免重复取消逻辑在队列消费函数中处理
-		}
-	}()
-
 	// TODO 记录会员折扣、商品数量、商品金额、订单总金额
 
 	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderPendingPayment(memberSaleOrder); err != nil {
 		return errors.WithMessage(err)
 	}
+
+	// 取消原有的30分钟自动取消订单任务
+	// 用户提交支付后，取消自动取消订单的任务
+	go func() {
+		memberSaleOrderUuidStr := strconv.FormatUint(request.MemberSaleOrderUuid, 10)
+		// 添加24小时后自动取消订单的延时队列任务
+		if queue.MemberOrderCancelQueue != nil {
+			// 发送24小时后自动取消订单的延时消息，重试1次
+			msgId, err := queue.MemberOrderCancelQueue.SendDelayMsgV2(
+				memberSaleOrderUuidStr,
+				24*time.Hour,                 // 24小时后执行
+				delayqueue.WithRetryCount(1), // 重试1次
+			)
+			if err != nil {
+				ctx.Log().Error("添加24小时自动取消订单任务失败",
+					zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
+					zap.Error(err))
+			} else {
+				ctx.Log().Info("成功添加24小时自动取消订单任务",
+					zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
+					zap.String("delayTime", "24小时"),
+					zap.Int("retryCount", 1),
+					zap.Any("messageId", msgId))
+			}
+		} else {
+			ctx.Log().Error("MemberOrderCancelQueue队列未初始化",
+				zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr))
+		}
+	}()
 
 	return nil
 }
@@ -1028,6 +1039,26 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 		})
 	}
 
+	getOrderNum := func(memberOrders []resp.MemberOrderManage, statusGroup string) int64 {
+		num := int64(0)
+		for _, memberOrder := range memberOrders {
+			if memberOrder.StatusGroup == statusGroup {
+				num++
+			}
+		}
+		return num
+	}
+
+	unpaidNum := getOrderNum(memberOrders, "unpaid")
+	unacceptNum := getOrderNum(memberOrders, "unaccept")
+	acceptNum := getOrderNum(memberOrders, "accept")
+	undeliveryNum := getOrderNum(memberOrders, "undelivery")
+	deliveryNum := getOrderNum(memberOrders, "delivery")
+	completeNum := getOrderNum(memberOrders, "completed")
+	cancelNum := getOrderNum(memberOrders, "cancel")
+
+	allNum := unpaidNum + unacceptNum + undeliveryNum + deliveryNum + completeNum + cancelNum
+
 	return &resp.GetMemberOrderManageListResp{
 		Meta: resp.OrderManageListMeta{
 			PageResponse: dto.PageResponse{
@@ -1035,6 +1066,14 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 				PageSize: req.PageSize,
 				Total:    total,
 			},
+			TotalNum:      allNum,
+			UnpaidNum:     unpaidNum,
+			UnacceptNum:   unacceptNum,
+			AcceptNum:     acceptNum,
+			UndeliveryNum: undeliveryNum,
+			DeliveryNum:   deliveryNum,
+			CompleteNum:   completeNum,
+			CancelNum:     cancelNum,
 		},
 		List: memberOrders,
 	}, nil
