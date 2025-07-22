@@ -60,6 +60,7 @@ EOT
         $config = config('database');
         $mysql = $config['connections'][$default];
         $tables = Db::getTables();
+        $dbs = Db::query('SHOW DATABASES LIKE "shop\_%"');
         if (in_array($mysql['prefix'] . 'company', $tables)) {
 
             if ($dbname) {
@@ -86,6 +87,26 @@ EOT
                     $this->adapter = null;
                     $this->migrations = null;
                     $this->migrate($version, 2);
+                }
+                // 连锁店
+                $shopMasterList = [];
+                foreach ($dbs as $db) {
+                    if (strpos($db['Database (shop\_%)'], 'shop_') === 0) {
+                        $shopMasterList[] = $db['Database (shop\_%)'];
+                    }
+                }
+                if ($shopMasterList) {
+                    foreach ($shopMasterList as $shopMaster) {
+                        $mysql['database'] = $shopMaster;
+                        $mysql['username'] = env('DB_USERNAME');
+                        $mysql['password'] = env('DB_PASSWORD');
+                        $config['connections'][$default] = $mysql;
+                        Config::set($config, 'database');
+                        //
+                        $this->adapter = null;
+                        $this->migrations = null;
+                        $this->migrate($version, 3);
+                    }
                 }
             }
         } else {
@@ -150,8 +171,14 @@ EOT
                         $target = $migration::TARGET;
                     } catch (\Throwable $th) {
                     }
-                    if ($target == 'all' || ($mode == 1 && $target == 'main') || ($mode != 1 && $target == 'shop')) {
-                        $this->executeMigration($migration, MigrationInterface::DOWN);
+                    if ($mode == 3) {
+                        if ($target == 'shop_master') {
+                            $this->executeMigration($migration, MigrationInterface::DOWN);
+                        }
+                    } else {
+                        if ($target == 'all' || ($mode == 1 && $target == 'main') || ($mode != 1 && $target == 'shop')) {
+                            $this->executeMigration($migration, MigrationInterface::DOWN);
+                        }
                     }
                 }
             }
@@ -168,8 +195,14 @@ EOT
                     $target = $migration::TARGET;
                 } catch (\Throwable $th) {
                 }
-                if ($target == 'all' || ($mode == 1 && $target == 'main') || ($mode != 1 && $target == 'shop')) {
-                    $this->executeMigration($migration, MigrationInterface::UP);
+                if ($mode == 3) {
+                    if ($target == 'shop_master') {
+                        $this->executeMigration($migration, MigrationInterface::UP);
+                    }
+                } else {
+                    if ($target == 'all' || ($mode == 1 && $target == 'main') || ($mode != 1 && $target == 'shop')) {
+                        $this->executeMigration($migration, MigrationInterface::UP);
+                    }
                 }
             }
         }
