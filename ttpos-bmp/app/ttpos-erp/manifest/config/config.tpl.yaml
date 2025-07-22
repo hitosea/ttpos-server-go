@@ -28,7 +28,7 @@ nacos:
     ip: localhost
     port: 8848
   config:
-    dataId: ttpos-bmp.erp.yaml
+    dataId: ttpos-erp.yaml
     group: DEFAULT_GROUP
 
 app:
