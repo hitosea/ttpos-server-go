@@ -1039,6 +1039,21 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 		})
 	}
 
+	getOrderNum := func(status []uint) int64 {
+		num, _ := repository.NewMemberSaleOrderRepo(db).GetOrderNum(status)
+		return num
+	}
+
+	unpaidNum := getOrderNum(constant.GetStatusList(constant.CashierSaleMemberOrderStatusUnpaid))
+	unacceptNum := getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUnaccept))
+	acceptNum := getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusAccept))
+	undeliveryNum := getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUndelivery))
+	deliveryNum := getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusDelivery))
+	completeNum := getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusDelivered))
+	cancelNum := getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusCancel))
+
+	allNum := unpaidNum + unacceptNum + undeliveryNum + deliveryNum + completeNum + cancelNum
+
 	return &resp.GetMemberOrderManageListResp{
 		Meta: resp.OrderManageListMeta{
 			PageResponse: dto.PageResponse{
@@ -1046,6 +1061,14 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 				PageSize: req.PageSize,
 				Total:    total,
 			},
+			TotalNum:      allNum,
+			UnpaidNum:     unpaidNum,
+			UnacceptNum:   unacceptNum,
+			AcceptNum:     acceptNum,
+			UndeliveryNum: undeliveryNum,
+			DeliveryNum:   deliveryNum,
+			CompleteNum:   completeNum,
+			CancelNum:     cancelNum,
 		},
 		List: memberOrders,
 	}, nil
