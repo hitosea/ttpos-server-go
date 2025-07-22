@@ -14,7 +14,6 @@ import (
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
-	"ttpos-server-go/app/queue"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/config"
@@ -103,7 +102,7 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 		}()
 
 		//FIXME N分钟后取消订单
-		queue.TakeoutCancelQueue.SendDelayMsgV2(
+		Queue.TakeoutCancelQueue.SendDelayMsgV2(
 			strconv.FormatUint(result.MemberSaleOrderInfo.MemberSaleOrderUuid, 10),
 			30*time.Minute,
 			delayqueue.WithRetryCount(3),
@@ -216,7 +215,7 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 	go func() {
 		memberSaleOrderUuidStr := strconv.FormatUint(request.MemberSaleOrderUuid, 10)
 		// 添加24小时后自动取消订单的延时队列任务
-		if queue.MemberOrderCancelQueue != nil {
+		if Queue.MemberOrderCancelQueue != nil {
 			// 构建队列消息参数
 			paramsJson := utils.ToJson(map[string]interface{}{
 				"member_sale_order_uuid": request.MemberSaleOrderUuid,
@@ -224,11 +223,11 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 				"reason":                 "支付超时",
 			})
 			// 发送24小时后自动取消订单的延时消息，重试1次
-			msgId, err := queue.MemberOrderCancelQueue.SendDelayMsgV2(
-				paramsJson,    // 传递JSON参数
+			msgId, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
+				paramsJson,
 				1*time.Second, // 1秒后执行
-				// 24*time.Hour,                 // 24小时后执行
-				delayqueue.WithRetryCount(2), // 重试2次
+				//24*time.Hour,                 // 24小时后执行
+				delayqueue.WithRetryCount(2), // 重试1次
 			)
 			if err != nil {
 				ctx.Log().Error("添加24小时自动取消订单任务失败",

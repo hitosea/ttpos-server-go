@@ -3,24 +3,30 @@ package queue
 import (
 	"sync"
 	"ttpos-server-go/app/queue/consumer"
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/pkg/cache"
 
 	"github.com/hdt3213/delayqueue"
 )
 
 var (
-	MemberOrderCancelQueue *delayqueue.DelayQueue
+	memberOrderCancelQueue *delayqueue.DelayQueue
 	memberOrderInit        sync.Once
 )
 
 // InitMemberOrderCancel 初始化会员订单自动取消队列
-func InitMemberOrderCancel() {
+func initMemberOrderCancel() {
 	memberOrderInit.Do(func() {
 		if cache.Global.GetClusterClient() != nil {
-			MemberOrderCancelQueue = delayqueue.NewQueueOnCluster(MEMBER_ORDER_CANCEL, cache.Global.GetClusterClient(), consumer.ProcessMemberOrderCancel).WithConcurrent(5)
+			memberOrderCancelQueue = delayqueue.NewQueueOnCluster(MEMBER_ORDER_CANCEL, cache.Global.GetClusterClient(), consumer.ProcessMemberOrderCancel).WithConcurrent(5)
 		} else {
-			MemberOrderCancelQueue = delayqueue.NewQueue(MEMBER_ORDER_CANCEL, cache.Global.GetClient(), consumer.ProcessMemberOrderCancel).WithConcurrent(5)
+			memberOrderCancelQueue = delayqueue.NewQueue(MEMBER_ORDER_CANCEL, cache.Global.GetClient(), consumer.ProcessMemberOrderCancel).WithConcurrent(5)
 		}
-		MemberOrderCancelQueue.StartConsume()
+		service.Queue.RegistryMemberOrderCancelQueue(memberOrderCancelQueue)
+		memberOrderCancelQueue.StartConsume()
 	})
+}
+
+func GetMemberOrderCancelQueue() *delayqueue.DelayQueue {
+	return memberOrderCancelQueue
 }

@@ -151,6 +151,6 @@ func TestCancelOrder() error {
 }
 
 func TestCancelOrderDelay() {
-	queue.TakeoutCancelQueue.SendDelayMsgV2("3675534194245633",
+	queue.GetTakeoutCancelQueue().SendDelayMsgV2("3675534194245633",
 		1*time.Minute, delayqueue.WithRetryCount(3))
 }
