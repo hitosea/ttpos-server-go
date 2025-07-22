@@ -1,10 +1,11 @@
 package queue
 
 import (
-	"github.com/hdt3213/delayqueue"
 	"sync"
 	"ttpos-server-go/app/queue/consumer"
 	"ttpos-server-go/pkg/cache"
+
+	"github.com/hdt3213/delayqueue"
 )
 
 var (
