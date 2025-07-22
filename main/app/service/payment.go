@@ -354,8 +354,6 @@ func (p *PaymentRepo) Refund(serviceRefundReq PaymentServiceRefundReq) (*LianLia
 		"Content-Type": "application/json; charset=utf-8",
 		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
 	}, RequestTimeOut)
-	//
-	// 提取重试逻辑
 	if err != nil {
 		return p.handleRefundError(err, &serviceRefundReq)
 	}
