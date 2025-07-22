@@ -171,7 +171,7 @@ EOT
                         $target = $migration::TARGET;
                     } catch (\Throwable $th) {
                     }
-                    if ($mode == 3) {
+                    if ($mode == 2 || $mode == 3) {
                         if ($target == 'shop_master') {
                             $this->executeMigration($migration, MigrationInterface::DOWN);
                         }
@@ -195,7 +195,7 @@ EOT
                     $target = $migration::TARGET;
                 } catch (\Throwable $th) {
                 }
-                if ($mode == 3) {
+                if ($mode == 2 || $mode == 3) {
                     if ($target == 'shop_master') {
                         $this->executeMigration($migration, MigrationInterface::UP);
                     }
