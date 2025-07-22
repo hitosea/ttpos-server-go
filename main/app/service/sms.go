@@ -32,6 +32,8 @@ type ISmsSrv interface {
 	SendMemberPointsSMS(ctx context.Context, phone string, params *sms.MemberPointsRequest) error
 	// SendMemberCouponSMS 发送会员优惠券短信
 	SendMemberCouponSMS(ctx context.Context, phone string, params *sms.MemberCouponRequest) error
+	// SendDeliveryOrderBySelfCancelSMS 发送外送订单取消短信（自己取消）
+	SendDeliveryOrderBySelfCancelSMS(ctx context.Context, phone string, params *sms.DeliveryOrderCancelBySelfRequest) error
 }
 
 // smsSrv 短信服务实现
@@ -111,7 +113,6 @@ func (s *smsSrv) checkFormatPhone(ctx context.Context, phone string) (string, st
 		return "", "", "", errors.New("手机号格式错误")
 	}
 
-	// 选择语言
 	// 获取门店设置
 	settingSvr := srvSetting.NewSrvImpl(s.dbm, cache.Global)
 	storeSetting, err := settingSvr.GetStoreSetting(ctx)
@@ -122,6 +123,8 @@ func (s *smsSrv) checkFormatPhone(ctx context.Context, phone string) (string, st
 	if len(storeSetting.Language) > 0 {
 		defaultLanguage = storeSetting.Language[0].Name
 	}
+
+	// 选择语言
 	language := s.selectLanguage(defaultLanguage)
 
 	return formattedPhone, language, ctx.GetCompany().Name, nil
@@ -404,6 +407,47 @@ func (s *smsSrv) SendMemberCouponSMS(ctx context.Context, phone string, params *
 
 	// 发送短信
 	resp, err := s.client.SendMemberCouponSMS(formattedPhone, language, params)
+	if err != nil {
+		err := fmt.Errorf("failed to send SMS: %v", err)
+		return errors.WithMessage(err, "发送短信失败")
+	}
+
+	// 如果发送成功，扣减额度
+	if resp.Code == sms.ResponseCodeSuccess {
+		if err := s.deductQuota(ctx, company.Uuid); err != nil {
+			return errors.WithMessage(err, "扣减短信额度失败")
+		}
+	} else {
+		err := fmt.Errorf("failed to send SMS code: %v, msg: %v", resp.Code, resp.Msg)
+		return errors.WithMessage(err, "发送短信失败")
+	}
+
+	return nil
+}
+
+// SendDeliveryOrderBySelfCancelSMS 发送外送订单取消短信
+func (s *smsSrv) SendDeliveryOrderBySelfCancelSMS(ctx context.Context, phone string, params *sms.DeliveryOrderCancelBySelfRequest) error {
+	company := ctx.GetCompany()
+
+	// 禁止并发操作
+	if ctx.NoLock() {
+		lock.NewSystemLock().LockUuid(company.Uuid)
+		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
+		ctx.AddLock()
+	}
+
+	formattedPhone, language, companyName, err := s.checkFormatPhone(ctx, phone)
+	if err != nil {
+		return err
+	}
+
+	// 获取公司名称
+	if params.Company == "" {
+		params.Company = companyName
+	}
+
+	// 发送短信
+	resp, err := s.client.SendDeliveryOrderBySelfCancelSMS(formattedPhone, language, params)
 	if err != nil {
 		err := fmt.Errorf("failed to send SMS: %v", err)
 		return errors.WithMessage(err, "发送短信失败")

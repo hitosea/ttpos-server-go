@@ -21,6 +21,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
+	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
 
@@ -690,6 +691,12 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 			},
 		})
 	}()
+
+	// 发送短信通知
+	go NewSMSSrv(s.dbm).SendDeliveryOrderBySelfCancelSMS(ctx, memberSaleOrder.ContactPhone, &sms.DeliveryOrderCancelBySelfRequest{
+		Company: ctx.GetCompany().Name,
+		OrderNo: memberSaleOrder.OrderNo,
+	})
 
 	// 成功后，推送到厨显端更新订单
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{

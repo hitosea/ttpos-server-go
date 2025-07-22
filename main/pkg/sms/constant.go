@@ -16,6 +16,8 @@ const (
 	TemplateMemberPoints = "referral_consumption_got_points"
 	// TemplateMemberCoupon 会员优惠券模板ID
 	TemplateMemberCoupon = "referral_consumption_got_coupons"
+	// TemplateDeliveryOrderCanceledBySelf 外送订单取消模板ID
+	TemplateDeliveryOrderCanceledBySelf = "delivery_order_canceled_by_self"
 )
 
 // 语言常量
