@@ -15,7 +15,7 @@ func init() {
 	takeoutAcceptOrderEventHandler()
 }
 
-// checkoutSaleOrderEventHandler "结账"事件处理器
+// checkoutSaleOrderEventHandler "外送接单"事件处理器
 func takeoutAcceptOrderEventHandler() {
 	once_takeout_accept_order_event_handler.Do(func() {
 

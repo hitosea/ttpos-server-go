@@ -45,6 +45,9 @@ func cookFinishMemberSaleOrderEventHandler() {
 				return
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:备餐完成 %+v", payload), zap.Uint64("record", uuid))
+
+			// +++++++++++++++++++++++ 设置SaleBill的当班编号
+			setDutyNoForSaleBill(db, payload.BasePayload)
 		})
 	})
 }

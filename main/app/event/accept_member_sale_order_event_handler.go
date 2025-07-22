@@ -13,6 +13,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 var once_accept_member_sale_order_event_handler sync.Once
@@ -45,6 +46,16 @@ func acceptMemberSaleOrderEventHandler() {
 				return
 			}
 			logger.Logger.Info(fmt.Sprintf("操作记录:商家接单 %+v", payload), zap.Uint64("record", uuid))
+
+			// +++++++++++++++++++++++ 设置SaleBill的当班编号
+			setDutyNoForSaleBill(db, payload.BasePayload)
 		})
 	})
+}
+
+// 设置SaleBill当班编号
+func setDutyNoForSaleBill(db *gorm.DB, payload event.BasePayload) {
+	if err := repository.NewSaleBillRepo(db).UpdateDutyNo(payload.SaleBillUuid, payload.Staff.DutyNo); err != nil {
+		logger.Logger.Error("SubscribeAcceptMemberSaleOrderEvent process, UpdateDutyNo failed", zap.Uint64("sale_bill_uuid", payload.SaleBillUuid), zap.Error(err))
+	}
 }
