@@ -87,7 +87,7 @@ db_add: migrate.install
 .PHONY: db_up
 db_up: migrate.install
 	@# 使用 sed 从 config.yaml 中提取 link 配置的值
-	@DB_DSN=$$(cat $(ROOT_DIR)/hack/config.yaml  | python -c 'import yaml,sys;print(yaml.safe_load(sys.stdin)["migrate"]["db"])') && \
+	@DB_DSN=$$(cat $(ROOT_DIR)/hack/config.yaml  | python3 -c 'import yaml,sys;print(yaml.safe_load(sys.stdin)["migrate"]["db"])') && \
 	echo $$DB_DSN ;\
 	if [ -z "$$DB_DSN" ]; then \
 		echo "未在 config.yaml 中找到有效的 link 配置" >&2; \
