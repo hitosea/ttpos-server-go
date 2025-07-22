@@ -5,6 +5,7 @@
  - 服务发现，配置管理 Nacos
  - 消息中间件 RocketMQ , 支持延迟消息
  - 微服务通讯及远程调用 gRPC
+ - 数据库迁移工具 golang-migrate
  - 部分工具参考了框架 HotGo(https://gitee.com/bufanyun/hotgo)
 
 ## INSTALL
@@ -21,6 +22,32 @@ make run.manager
 # 门店模块
 make run.shop
 ```
+
+## 数据库迁移
+
+本项目使用 `golang-migrate` 进行数据库迁移管理，所有迁移脚本都放在 `manifest/sql` 目录中。
+
+
+### 详细文档
+- [数据库迁移规则](./DATABASE_MIGRATION_RULES.md) - 详细的迁移规范和最佳实践
+- [快速开始指南](./MIGRATION_QUICK_START.md) - 快速上手指南
+- [迁移脚本模板](./migrate_template.sql) - 常用迁移脚本模板
+
+### 迁移目录结构
+```
+ttpos-bmp/
+├── app/
+│   ├── ttpos-manager/
+│   │   └── manifest/
+│   │       └── sql/           # 管理端数据库迁移脚本
+│   │   ├── ttpos-erp/
+│   │   │   └── manifest/
+│   │   │   └── sql/           # ERP系统数据库迁移脚本
+│   │   └── ttpos-shop/
+│   │       └── manifest/
+│   │       └── sql/           # 商城系统数据库迁移脚本
+```
+
 
 ## gRpc 服务开发流程
 参考工程 [https://github.com/gogf/examples/blob/main/registry/nacos/README.ZH.MD]
