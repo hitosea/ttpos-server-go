@@ -1028,18 +1028,23 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 		})
 	}
 
-	getOrderNum := func(status []uint) int64 {
-		num, _ := repository.NewMemberSaleOrderRepo(db).GetOrderNum(status)
+	getOrderNum := func(memberOrders []resp.MemberOrderManage, statusGroup string) int64 {
+		num := int64(0)
+		for _, memberOrder := range memberOrders {
+			if memberOrder.StatusGroup == statusGroup {
+				num++
+			}
+		}
 		return num
 	}
 
-	unpaidNum := getOrderNum(constant.GetStatusList(constant.CashierSaleMemberOrderStatusUnpaid))
-	unacceptNum := getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUnaccept))
-	acceptNum := getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusAccept))
-	undeliveryNum := getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUndelivery))
-	deliveryNum := getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusDelivery))
-	completeNum := getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusDelivered))
-	cancelNum := getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusCancel))
+	unpaidNum := getOrderNum(memberOrders, "unpaid")
+	unacceptNum := getOrderNum(memberOrders, "unaccept")
+	acceptNum := getOrderNum(memberOrders, "accept")
+	undeliveryNum := getOrderNum(memberOrders, "undelivery")
+	deliveryNum := getOrderNum(memberOrders, "delivery")
+	completeNum := getOrderNum(memberOrders, "completed")
+	cancelNum := getOrderNum(memberOrders, "cancel")
 
 	allNum := unpaidNum + unacceptNum + undeliveryNum + deliveryNum + completeNum + cancelNum
 
