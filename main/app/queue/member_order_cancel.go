@@ -2,7 +2,6 @@ package queue
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
 	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/repository"
@@ -12,6 +11,8 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 
 	"github.com/hdt3213/delayqueue"
 )

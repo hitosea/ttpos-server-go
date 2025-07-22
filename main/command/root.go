@@ -148,6 +148,7 @@ func initializeTimers(dbm *database.DBManager, cache cache.Cache) {
 	c.Start()
 }
 
+// 初始化延迟消息队列
 func initQueue() {
 	queue.Init()
 }

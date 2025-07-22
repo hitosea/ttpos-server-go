@@ -210,11 +210,9 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 		return errors.WithMessage(err)
 	}
 
-	// 取消原有的30分钟自动取消订单任务
-	// 用户提交支付后，取消自动取消订单的任务
+	// 添加24小时后自动取消订单的延时队列任务
 	go func() {
 		memberSaleOrderUuidStr := strconv.FormatUint(request.MemberSaleOrderUuid, 10)
-		// 添加24小时后自动取消订单的延时队列任务
 		if Queue.MemberOrderCancelQueue != nil {
 			// 构建队列消息参数
 			paramsJson := utils.ToJson(map[string]interface{}{
@@ -223,23 +221,15 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 				"reason":                 "支付超时",
 			})
 			// 发送24小时后自动取消订单的延时消息，重试1次
-			msgId, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
+			_, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
 				paramsJson,
-				1*time.Second, // 1秒后执行
-				//24*time.Hour,                 // 24小时后执行
-				delayqueue.WithRetryCount(2), // 重试1次
+				24*time.Hour,                 // 24小时后执行
+				delayqueue.WithRetryCount(2), // 重试2次
 			)
 			if err != nil {
 				ctx.Log().Error("添加24小时自动取消订单任务失败",
 					zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
 					zap.Error(err))
-			} else {
-				ctx.Log().Info("成功添加24小时自动取消订单任务",
-					zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
-					zap.String("delayTime", "24小时"),
-					zap.Int("retryCount", 1),
-					zap.Any("messageId", msgId),
-					zap.String("params", paramsJson))
 			}
 		} else {
 			ctx.Log().Error("MemberOrderCancelQueue队列未初始化",
