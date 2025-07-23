@@ -218,6 +218,11 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 		return errors.New("请先选择订单地址")
 	}
 
+	// 判断订单地址是否认证手机号
+	if !memberSaleOrder.IsVerifiedPhoneBool() {
+		return errors.NewWithCode(constant.CodeOrderAddressNotVerifiedPhone, "订单地址未认证手机号")
+	}
+
 	memberSaleOrder.Remark = request.Remark
 	memberSaleOrder.SetPendingPayment(request.PaymentMethodUuid)
 
