@@ -401,7 +401,7 @@ const getParams = () => {
           pay_type: item.pay_type,
           content: item.description,
           timestamp:
-            item.create_time +
+            DTime(item.create_time) +
             ' ' +
             $t('操作人：') +
             (item.user_name ? item.user_name + (item.user_email ? `(${item.user_email})` : '') : item.user_email || '') +
