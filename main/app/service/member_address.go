@@ -115,6 +115,9 @@ func (s *memberAddressSrv) AddAddress(ctx context.Context, req member_req.Member
 	// 复制请求参数到会员地址
 	var memberAddress model.MemberAddress
 	copier.Copy(&memberAddress, req)
+	if req.IsDefault {
+		memberAddress.IsDefault = 1
+	}
 	memberAddress.MemberUuid = ctx.GetMemberUuid()
 
 	// 如果国家代码为空，则根据手机号判断
