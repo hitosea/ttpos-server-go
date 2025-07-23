@@ -181,6 +181,9 @@ func (s *memberAddressSrv) UpdateAddress(ctx context.Context, req member_req.Mem
 	// 复制请求参数到会员地址
 	copier.Copy(&memberAddress, req)
 	memberAddress.MemberUuid = ctx.GetMemberUuid()
+	if req.IsDefault {
+		memberAddress.IsDefault = 1
+	}
 
 	// 如果国家代码为空，则根据手机号判断
 	if memberAddress.PhonePrefix == "" {
