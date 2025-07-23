@@ -20382,7 +20382,7 @@ const docTemplate = `{
                 },
                 "is_default": {
                     "description": "是否默认",
-                    "type": "integer"
+                    "type": "boolean"
                 },
                 "location": {
                     "description": "位置坐标",

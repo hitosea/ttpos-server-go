@@ -21,7 +21,7 @@ type MemberAddressAddReq struct {
 	Phone     string `json:"phone"`      // 手机号
 	Address   string `json:"address"`    // 详细地址
 	Street    string `json:"street"`     // 街道/门牌号
-	IsDefault int    `json:"is_default"` // 是否默认
+	IsDefault bool   `json:"is_default"` // 是否默认
 	Location  string `json:"location"`   // 位置坐标
 }
 
