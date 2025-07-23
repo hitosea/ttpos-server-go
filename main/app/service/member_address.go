@@ -64,6 +64,7 @@ func (s *memberAddressSrv) GetAddressList(ctx context.Context, req member_req.Me
 		var respMemberAddress member_resp.MemberAddressResp
 		copier.Copy(&respMemberAddress, memberAddress)
 		respMemberAddress.IsAuthPhone = memberAddress.IsAuthPhone()
+		respMemberAddress.IsDefault = memberAddress.IsDefault == 1
 		respMemberAddresses = append(respMemberAddresses, respMemberAddress)
 	}
 	return &member_resp.MemberAddressListResp{
@@ -96,6 +97,7 @@ func (s *memberAddressSrv) GetAddressDetail(ctx context.Context, req member_req.
 	// 构建响应数据
 	var respMemberAddress member_resp.MemberAddressDetailResp
 	copier.Copy(&respMemberAddress, memberAddress)
+	respMemberAddress.IsDefault = memberAddress.IsDefault == 1
 
 	// 设置地址详情
 	respMemberAddress.AddressDetail = memberAddress.GetAddressDetail()
@@ -123,7 +125,7 @@ func (s *memberAddressSrv) AddAddress(ctx context.Context, req member_req.Member
 	}
 
 	// 如果设置为默认地址，则需要将该会员的其他地址设置为非默认
-	if req.IsDefault == 1 {
+	if req.IsDefault {
 		// 开启事务
 		err := ctx.GetDB().Transaction(func(tx *gorm.DB) error {
 			// 先将该会员的所有地址设置为非默认
@@ -185,7 +187,7 @@ func (s *memberAddressSrv) UpdateAddress(ctx context.Context, req member_req.Mem
 	}
 
 	// 如果设置为默认地址，则将该会员的其他地址设置为非默认
-	if req.IsDefault == 1 {
+	if req.IsDefault {
 		// 开启事务
 		err = ctx.GetDB().Transaction(func(tx *gorm.DB) error {
 			// 先将该会员的所有地址设置为非默认

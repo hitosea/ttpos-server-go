@@ -20392,21 +20392,9 @@ const docTemplate = `{
                     "description": "详细地址",
                     "type": "string"
                 },
-                "area": {
-                    "description": "区",
-                    "type": "string"
-                },
-                "city": {
-                    "description": "城市",
-                    "type": "string"
-                },
-                "country": {
-                    "description": "国家代码",
-                    "type": "string"
-                },
                 "is_default": {
                     "description": "是否默认",
-                    "type": "integer"
+                    "type": "boolean"
                 },
                 "location": {
                     "description": "位置坐标",
@@ -20418,10 +20406,6 @@ const docTemplate = `{
                 },
                 "phone": {
                     "description": "手机号",
-                    "type": "string"
-                },
-                "province": {
-                    "description": "省份",
                     "type": "string"
                 },
                 "street": {
@@ -20467,21 +20451,9 @@ const docTemplate = `{
                     "description": "详细地址",
                     "type": "string"
                 },
-                "area": {
-                    "description": "区",
-                    "type": "string"
-                },
-                "city": {
-                    "description": "城市",
-                    "type": "string"
-                },
-                "country": {
-                    "description": "国家代码",
-                    "type": "string"
-                },
                 "is_default": {
                     "description": "是否默认",
-                    "type": "integer"
+                    "type": "boolean"
                 },
                 "location": {
                     "description": "位置坐标",
@@ -20493,10 +20465,6 @@ const docTemplate = `{
                 },
                 "phone": {
                     "description": "手机号",
-                    "type": "string"
-                },
-                "province": {
-                    "description": "省份",
                     "type": "string"
                 },
                 "street": {
@@ -20768,25 +20736,13 @@ const docTemplate = `{
                     "description": "地址详情（完整地址串）",
                     "type": "string"
                 },
-                "area": {
-                    "description": "区",
-                    "type": "string"
-                },
-                "city": {
-                    "description": "城市",
-                    "type": "string"
-                },
                 "country": {
                     "description": "国家代码",
                     "type": "string"
                 },
-                "gender": {
-                    "description": "性别 0-女 1-男",
-                    "type": "integer"
-                },
                 "is_default": {
                     "description": "是否默认",
-                    "type": "integer"
+                    "type": "boolean"
                 },
                 "location": {
                     "description": "位置坐标",
@@ -20798,10 +20754,6 @@ const docTemplate = `{
                 },
                 "phone": {
                     "description": "手机号",
-                    "type": "string"
-                },
-                "province": {
-                    "description": "省份",
                     "type": "string"
                 },
                 "street": {
@@ -20850,7 +20802,7 @@ const docTemplate = `{
                 },
                 "is_default": {
                     "description": "是否默认",
-                    "type": "integer"
+                    "type": "boolean"
                 },
                 "name": {
                     "description": "联系人",
