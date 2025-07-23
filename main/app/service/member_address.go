@@ -20,11 +20,12 @@ import (
 
 // IMemberAddressSrv 定义会员地址服务接口
 type IMemberAddressSrv interface {
-	GetAddressList(ctx context.Context, req member_req.MemberAddressListReq) (*member_resp.MemberAddressListResp, error) // 获取地址列表
-	AddAddress(ctx context.Context, req member_req.MemberAddressAddReq) error                                            // 添加地址
-	UpdateAddress(ctx context.Context, req member_req.MemberAddressUpdateReq) error                                      // 更新地址
-	DeleteAddress(ctx context.Context, req member_req.MemberAddressDeleteReq) error                                      // 删除地址
-	AuthAddress(ctx context.Context, req member_req.MemberAddressAuthReq) (member_resp.LoginResp, error)                 // 认证地址
+	GetAddressList(ctx context.Context, req member_req.MemberAddressListReq) (*member_resp.MemberAddressListResp, error)       // 获取地址列表
+	GetAddressDetail(ctx context.Context, req member_req.MemberAddressDetailReq) (*member_resp.MemberAddressDetailResp, error) // 获取地址详情
+	AddAddress(ctx context.Context, req member_req.MemberAddressAddReq) error                                                  // 添加地址
+	UpdateAddress(ctx context.Context, req member_req.MemberAddressUpdateReq) error                                            // 更新地址
+	DeleteAddress(ctx context.Context, req member_req.MemberAddressDeleteReq) error                                            // 删除地址
+	AuthAddress(ctx context.Context, req member_req.MemberAddressAuthReq) (member_resp.LoginResp, error)                       // 认证地址
 }
 
 // memberAddressSrv 会员地址服务结构体
@@ -73,6 +74,33 @@ func (s *memberAddressSrv) GetAddressList(ctx context.Context, req member_req.Me
 			PageSize: req.PageSize,
 		},
 	}, nil
+}
+
+// GetAddressDetail 获取地址详情
+func (s *memberAddressSrv) GetAddressDetail(ctx context.Context, req member_req.MemberAddressDetailReq) (*member_resp.MemberAddressDetailResp, error) {
+	if err := req.Validate(); err != nil {
+		return nil, errors.New(err.Error())
+	}
+
+	memberAddressRepo := repository.NewMemberAddressRepo(ctx.GetDB())
+	memberAddress, err := memberAddressRepo.GetMemberAddressByUuid(req.Uuid)
+	if err != nil {
+		return nil, errors.New("地址不存在")
+	}
+
+	// 验证地址归属权
+	if memberAddress.MemberUuid != ctx.GetMemberUuid() {
+		return nil, errors.New("地址不存在")
+	}
+
+	// 构建响应数据
+	var respMemberAddress member_resp.MemberAddressDetailResp
+	copier.Copy(&respMemberAddress, memberAddress)
+
+	// 设置地址详情
+	respMemberAddress.AddressDetail = memberAddress.GetAddressDetail()
+
+	return &respMemberAddress, nil
 }
 
 // AddAddress 添加地址

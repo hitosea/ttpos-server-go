@@ -110,3 +110,15 @@ func (r *MemberAddressAuthReq) Validate() error {
 	}
 	return nil
 }
+
+// MemberAddressDetailReq 获取地址详情请求
+type MemberAddressDetailReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid"` // 地址UUID
+}
+
+func (r *MemberAddressDetailReq) Validate() error {
+	if r.Uuid == 0 {
+		return errors.New("地址UUID不能为空")
+	}
+	return nil
+}

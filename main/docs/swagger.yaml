@@ -983,6 +983,48 @@ definitions:
       token:
         type: string
     type: object
+  member_resp.MemberAddressDetailResp:
+    properties:
+      address:
+        description: 详细地址
+        type: string
+      address_detail:
+        description: 地址详情（完整地址串）
+        type: string
+      area:
+        description: 区
+        type: string
+      city:
+        description: 城市
+        type: string
+      country:
+        description: 国家代码
+        type: string
+      gender:
+        description: 性别 0-女 1-男
+        type: integer
+      is_default:
+        description: 是否默认
+        type: integer
+      location:
+        description: 位置坐标
+        type: string
+      name:
+        description: 联系人
+        type: string
+      phone:
+        description: 手机号
+        type: string
+      province:
+        description: 省份
+        type: string
+      street:
+        description: 街道/门牌号
+        type: string
+      uuid:
+        description: 地址UUID
+        type: integer
+    type: object
   member_resp.MemberAddressListResp:
     properties:
       list:
@@ -16701,6 +16743,33 @@ paths:
       security:
       - JwtToken: []
       summary: 删除地址
+      tags:
+      - 会员端.地址
+  /member/address/detail:
+    get:
+      consumes:
+      - application/json
+      description: 获取地址详情
+      parameters:
+      - description: 地址UUID
+        in: query
+        name: uuid
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/member_resp.MemberAddressDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取地址详情
       tags:
       - 会员端.地址
   /member/address/search:
