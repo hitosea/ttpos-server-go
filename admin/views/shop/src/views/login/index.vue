@@ -9,7 +9,7 @@
           <el-form-item prop="account">
             <div class="left-img-input">
               <img class="l-img" src="@/assets/img/user.svg" />
-              <el-input class="l-input" type="text" v-model="ruleForm.account" auto-complete="off" :disabled="logining" @focus="handleFocus" :placeholder="$t('请输入用户名')">
+              <el-input class="l-input" type="text" v-model="ruleForm.account" auto-complete="off" :disabled="logining" @focus="handleFocus" :placeholder="$t('请输入邮箱/手机号')">
               </el-input>
             </div>
           </el-form-item>
