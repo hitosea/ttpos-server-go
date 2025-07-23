@@ -71,6 +71,21 @@ type CreateMemberOrderReq struct {
 	Products            []OrderProductAddReq `json:"products"`               // 商品列表
 }
 
+func (req *CreateMemberOrderReq) Validate() error {
+	if len(req.Products) == 0 {
+		return errors.New("未选购商品，请先选购商品")
+	}
+	for _, product := range req.Products {
+		if product.Num <= 0 {
+			return errors.New("商品数量不能为0")
+		}
+		if product.FlavorUuid <= 0 {
+			return errors.New("商品规格ID不能为0")
+		}
+	}
+	return nil
+}
+
 type GetMemberOrdeFormInfoReq struct {
 	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 }

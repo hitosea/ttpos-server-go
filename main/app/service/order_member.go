@@ -71,6 +71,10 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 	db := s.dbm.GetDB(ctx.GetCompanyUuid())
 	ctx.SetDB(db)
 
+	if err := req.Validate(); err != nil {
+		return nil, nil, errors.WithMessage(err)
+	}
+
 	if req.MemberSaleOrderUuid == 0 {
 		// 新建订单
 		var result *resp.CreateMemberOrderResp
