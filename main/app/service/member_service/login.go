@@ -28,6 +28,7 @@ import (
 type ILoginSrv interface {
 	GetLoginInfo(ctx context.Context, req member_req.MemberLoginInfoReq) (member_resp.MemberLoginInfoResp, error) // 获取登录信息
 	SendCode(ctx context.Context, req member_req.MemberSendCodeReq) error                                         // 发送验证码
+	SendRegisterCode(ctx context.Context, req member_req.MemberSendCodeReq) error                                 // 发送注册验证码
 	Login(ctx context.Context, req member_req.MemberLoginReq) (member_resp.LoginResp, error)                      // 登录
 	VisitorLogin(ctx context.Context, loginReq req.VisitorLoginReq) (*member_resp.LoginResp, error)               // 游客登录
 }
@@ -160,6 +161,41 @@ func (s *loginSrv) SendCode(ctx context.Context, req member_req.MemberSendCodeRe
 	}
 	// 发送验证码短信
 	ctx.SetCompanyUuid(req.CompanyUuid)
+	ctx.SetCompany(*company)
+	ctx.SetCompanySetting(*company.CompanySetting)
+	if err := s.smsSrv.SendMemberCodeSMS(ctx, req.Phone, &sms.MemberSendCodeRequest{
+		Code: code,
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// SendRegisterCode 发送注册验证码
+// 参数：ctx 上下文，req 发送验证码请求
+// 返回：错误信息
+func (s *loginSrv) SendRegisterCode(ctx context.Context, req member_req.MemberSendCodeReq) error {
+	if err := req.Validate(); err != nil {
+		return err
+	}
+	//
+	companyUuid := ctx.GetCompanyUuid()
+	db := s.dbm.GetDB(companyUuid)
+	// 获取商家信息
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(companyUuid)
+	if err != nil || company.IsExpired() || company.IsDelete() {
+		return errors.New("无法使用该功能，请联系商家")
+	}
+	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
+		return errors.New("商家会员服务已关闭")
+	}
+	// 获取验证码
+	code, err := validator.GetCode(s.cache, companyUuid, req.Phone)
+	if err != nil {
+		return err
+	}
+	// 发送验证码短信
+	ctx.SetCompanyUuid(companyUuid)
 	ctx.SetCompany(*company)
 	ctx.SetCompanySetting(*company.CompanySetting)
 	if err := s.smsSrv.SendMemberCodeSMS(ctx, req.Phone, &sms.MemberSendCodeRequest{

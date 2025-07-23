@@ -775,10 +775,15 @@ func (s *memberSrv) Register(ctx context.Context, reqs member_req.MemberRegister
 	// 获取上下文中的会员信息
 	if members := ctx.GetMember(); members.IsVisitor {
 		if err := repository.NewMemberRepo(db).Update(members.Uuid, map[string]interface{}{
-			"phone":         reqs.Phone,
-			"nickname":      utils.IfString(reqs.Nickname != "", reqs.Nickname, members.Nickname),
-			"referrer_uuid": referrer.Uuid,
-			"is_visitor":    false,
+			"phone":    reqs.Phone,
+			"nickname": utils.IfString(reqs.Nickname != "", reqs.Nickname, members.Nickname),
+			"referrer_uuid": func() uint64 {
+				if referrer != nil {
+					return referrer.Uuid
+				}
+				return 0
+			}(),
+			"is_visitor": false,
 		}); err != nil {
 			return member_resp.LoginResp{}, errors.WithMessage(err, "更新游客信息失败")
 		}

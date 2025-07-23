@@ -167,14 +167,15 @@ type MemberSaleOrderProduct struct {
 
 // 会员端销售订单地址
 type MemberSaleOrderAddress struct {
-	MemberAddressUuid uint64 `json:"member_address_uuid"` // 会员地址UUID
-	Longitude         string `json:"longitude"`           // 经度
-	Latitude          string `json:"latitude"`            // 纬度
-	Address           string `json:"address"`             // 地址
-	DetailAddress     string `json:"detail_address"`      // 详细地址。如门牌号
-	ContactName       string `json:"contact_name"`        // 联系人
-	ContactPhone      string `json:"contact_phone"`       // 联系电话
-	ContactGender     int    `json:"contact_gender"`      // 联系人性别, 0-女士 1-先生
+	MemberAddressUuid  uint64 `json:"member_address_uuid"`  // 会员地址UUID
+	Longitude          string `json:"longitude"`            // 经度
+	Latitude           string `json:"latitude"`             // 纬度
+	Address            string `json:"address"`              // 地址
+	DetailAddress      string `json:"detail_address"`       // 详细地址。如门牌号
+	ContactName        string `json:"contact_name"`         // 联系人
+	ContactPhone       string `json:"contact_phone"`        // 联系电话
+	ContactPhonePrefix string `json:"contact_phone_prefix"` // 联系电话前缀
+	ContactGender      int    `json:"contact_gender"`       // 联系人性别, 0-女士 1-先生
 }
 
 // 会员端销售订单配送费信息

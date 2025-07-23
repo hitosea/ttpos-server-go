@@ -191,7 +191,7 @@ func (r *MemberSaleOrderRepo) PaginateGetMemberSaleOrder(pageNo, pageSize int, o
 		return nil, 0, errors.WithMessage(err)
 	}
 
-	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&memberSaleOrders).Error
+	err = db.Offset((pageNo - 1) * pageSize).Order("id desc").Limit(pageSize).Find(&memberSaleOrders).Error
 	return memberSaleOrders, total, errors.WithMessage(err)
 }
 
