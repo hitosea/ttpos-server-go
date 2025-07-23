@@ -890,7 +890,7 @@ func (s *orderSrv) GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.
 		},
 		Customer: resp.OrderCoordinate{
 			Name:    memberSaleOrder.ContactName,
-			Address: memberSaleOrder.ContactAddress + "(" + memberSaleOrder.ContactAddressDetail + ")",
+			Address: memberSaleOrder.ContactAddressDetail,
 			Lat:     customerLat,
 			Lng:     customerLng,
 		},

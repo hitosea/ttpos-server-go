@@ -3968,6 +3968,9 @@ definitions:
       create_time:
         description: 创建时间,下单时间
         type: integer
+      delivery_fee:
+        description: 配送费
+        type: number
       finish_time:
         description: 完成时间
         type: integer
@@ -17671,9 +17674,9 @@ paths:
       - application/json
       description: 取消订单
       parameters:
-      - description: 详情参数
+      - description: 取消订单请求
         in: body
-        name: data
+        name: CancelOrderReq
         required: true
         schema:
           $ref: '#/definitions/member_req.CancelOrderReq'
@@ -17681,14 +17684,14 @@ paths:
       - application/json
       responses:
         "200":
-          description: 成功
-        "400":
-          description: 错误请求
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
       summary: 取消订单
       tags:
-      - 商家端.外送订单管理相关
+      - 商家端.外送接单相关
   /shop/member_order/detail:
     get:
       consumes:
@@ -17782,6 +17785,30 @@ paths:
       security:
       - JwtToken: []
       summary: 获取外送订单管理页面，订单列表
+      tags:
+      - 商家端.外送订单管理相关
+  /shop/member_order/re_return:
+    post:
+      consumes:
+      - application/json
+      description: 外送订单重新退款
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderReReturnReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 重新退款成功
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 外送订单重新退款
       tags:
       - 商家端.外送订单管理相关
   /shop/member_order/reject:

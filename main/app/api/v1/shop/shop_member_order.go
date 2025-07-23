@@ -86,7 +86,7 @@ func (h *MemberOrderHandler) GetMemberOrderDetail(c *gin.Context) {
 // @Param RejectOrderReq body req.RejectOrderReq true "拒绝接单"
 // @Success 200 {object} dto.Response{data=resp.GetMemberOrderDetailResp}
 // @Router /shop/member_order/reject [post]
-func (h *MemberOrderHandler) RejectMemberOrder(c *gin.Context) {
+func (h *MemberOrderHandler) RejectOrder(c *gin.Context) {
 	var rejectOrderReq req.RejectOrderReq
 	if err := c.ShouldBindJSON(&rejectOrderReq); err != nil {
 		helper.HandleValidationError(c, err, rejectOrderReq, nil)
@@ -103,25 +103,20 @@ func (h *MemberOrderHandler) RejectMemberOrder(c *gin.Context) {
 // CancelOrder 取消订单
 // @Summary 取消订单
 // @Description 取消订单
-// @Tags 商家端.外送订单管理相关
+// @Tags 商家端.外送接单相关
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body member_req.CancelOrderReq true "详情参数"
-// @Success 200 {object} nil "成功"
-// @Failure 400 {object} nil "错误请求"
+// @Param CancelOrderReq body member_req.CancelOrderReq true "取消订单请求"
+// @Success 200 {object} dto.Response
 // @Router /shop/member_order/cancel [post]
-func (h *MemberOrderHandler) CancelMemberOrder(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	// 绑定请求参数
-	params := member_req.CancelOrderReq{}
-
-	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.HandleValidationError(c, err, params, nil)
+func (h *MemberOrderHandler) CancelOrder(c *gin.Context) {
+	var cancelOrderReq member_req.CancelOrderReq
+	if err := c.ShouldBindJSON(&cancelOrderReq); err != nil {
+		helper.HandleValidationError(c, err, cancelOrderReq, nil)
 		return
 	}
-	// 取消订单
-	err := h.memberOrderSrv.MemberOrderCancel(ctx, params)
+	err := h.memberOrderSrv.MemberOrderCancelInCashier(helper.GetContext(c), cancelOrderReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -186,6 +181,35 @@ func (h *MemberOrderHandler) MemberOrderReturn(c *gin.Context) {
 	helper.Success(c, gin.H{})
 }
 
+// MemberOrderReReturn 外送订单重新退款
+// @Summary 外送订单重新退款
+// @Description 外送订单重新退款
+// @Tags 商家端.外送订单管理相关
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.OrderReReturnReq true "详情参数"
+// @Success 200 {object} nil "重新退款成功"
+// @Failure 404 {object} nil "未找到"
+// @Router /shop/member_order/re_return [post]
+func (h *MemberOrderHandler) MemberOrderReReturn(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	reqParam := req.OrderReReturnReq{}
+	if err := c.ShouldBindJSON(&reqParam); err != nil {
+		helper.HandleValidationError(c, err, reqParam, nil)
+		return
+	}
+	//
+	err, codeFail := h.memberOrderSrv.MemberOrderReReturn(ctx, reqParam)
+	if err != nil {
+		helper.ErrorWithMessage(c, codeFail, err)
+		return
+	}
+	// 返回结果
+	helper.Success(c, gin.H{})
+}
+
 // RegisterDeliveryOrderHandlers 注册商家充值订单路由
 func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -212,9 +236,10 @@ func RegisterMemberOrderHandlers(router gin.IRouter, dbm *database.DBManager, ca
 	{
 		privateApi.GET("/member_order/list", wrapper.GetMemberOrderList)
 		privateApi.GET("/member_order/info", wrapper.GetMemberOrderDetail)
-		privateApi.POST("/member_order/reject", wrapper.RejectMemberOrder)
-		privateApi.POST("/member_order/cancel", wrapper.CancelMemberOrder)
+		privateApi.POST("/member_order/reject", wrapper.RejectOrder)
+		privateApi.POST("/member_order/cancel", wrapper.CancelOrder)
 		privateApi.GET("/member_order/return_info", wrapper.GetMemberOrderReturnInfo)
 		privateApi.POST("/member_order/return", wrapper.MemberOrderReturn)
+		privateApi.POST("/member_order/re_return", wrapper.MemberOrderReReturn)
 	}
 }
