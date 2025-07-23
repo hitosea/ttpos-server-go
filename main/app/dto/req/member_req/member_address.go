@@ -36,6 +36,9 @@ func (r *MemberAddressAddReq) Validate() error {
 	if r.Phone == "" {
 		return errors.New("手机号不能为空")
 	}
+	if len(r.Phone) != 11 && len(r.Phone) != 10 {
+		return errors.New("手机号不正确")
+	}
 	if r.Country == "" {
 		return errors.New("国家代码不能为空")
 	}
@@ -74,6 +77,9 @@ func (r *MemberAddressUpdateReq) Validate() error {
 	}
 	if r.Phone == "" {
 		return errors.New("手机号不能为空")
+	}
+	if len(r.Phone) != 11 && len(r.Phone) != 10 {
+		return errors.New("手机号不正确")
 	}
 	if r.Country == "" {
 		return errors.New("国家代码不能为空")
