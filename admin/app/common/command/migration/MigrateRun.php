@@ -171,12 +171,18 @@ EOT
                         $target = $migration::TARGET;
                     } catch (\Throwable $th) {
                     }
-                    if ($mode == 2 || $mode == 3) {
-                        if ($target == 'shop_master') {
+                    // 优化后的迁移执行逻辑
+                    if ($target == 'shop_master') {
+                        // shop_master 只在 mode 为 2 或 3 时执行
+                        if (in_array($mode, [2, 3])) {
                             $this->executeMigration($migration, MigrationInterface::DOWN);
                         }
-                    } else {
-                        if ($target == 'all' || ($mode == 1 && $target == 'main') || ($mode != 1 && $target == 'shop')) {
+                    } else if ($mode != 3) {
+                        // mode 不为 3 时，判断目标类型
+                        $isAll = $target == 'all';
+                        $isMain = ($mode == 1 && $target == 'main');
+                        $isShop = ($mode != 1 && $target == 'shop');
+                        if ($isAll || $isMain || $isShop) {
                             $this->executeMigration($migration, MigrationInterface::DOWN);
                         }
                     }
@@ -195,12 +201,18 @@ EOT
                     $target = $migration::TARGET;
                 } catch (\Throwable $th) {
                 }
-                if ($mode == 2 || $mode == 3) {
-                    if ($target == 'shop_master') {
+                // 优化后的迁移执行逻辑
+                if ($target == 'shop_master') {
+                    // shop_master 只在 mode 为 2 或 3 时执行
+                    if (in_array($mode, [2, 3])) {
                         $this->executeMigration($migration, MigrationInterface::UP);
                     }
-                } else {
-                    if ($target == 'all' || ($mode == 1 && $target == 'main') || ($mode != 1 && $target == 'shop')) {
+                } else if ($mode != 3) {
+                    // mode 不为 3 时，判断目标类型
+                    $isAll = $target == 'all';
+                    $isMain = ($mode == 1 && $target == 'main');
+                    $isShop = ($mode != 1 && $target == 'shop');
+                    if ($isAll || $isMain || $isShop) {
                         $this->executeMigration($migration, MigrationInterface::UP);
                     }
                 }
