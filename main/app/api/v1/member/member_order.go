@@ -80,7 +80,7 @@ func (h *OrderHandler) GetMemberOrdeFormInfo(c *gin.Context) {
 	ctx.Log().Debug("获取订单提交表单信息", zap.Any("params", params))
 
 	// 获取订单提交表单信息
-	res, err := h.orderSrv.GetMemberOrdeFormInfo(ctx, params)
+	res, err := h.orderSrv.GetMemberOrderFormInfo(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -402,7 +402,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		orderSrv: orderSrv,
 	}
 	// 需要认证
-	// privateApi := router.Group("")
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
 		privateApi.POST("/order/create", wrapper.CreateOrder)                                 // 创建订单

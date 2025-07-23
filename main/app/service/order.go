@@ -848,10 +848,10 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 
 	// productAmount := decimal.NewFromFloat(0) // 商品合计
 	// memberDiscount := decimal.NewFromFloat(0) // 会员折扣
-	produtds := make([]resp.MemberSaleOrderProduct, 0)
+	products := make([]resp.MemberSaleOrderProduct, 0)
 	for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
 		amount := saleOrderProduct.GetTotalPriceOrigin()
-		produtds = append(produtds, resp.MemberSaleOrderProduct{
+		products = append(products, resp.MemberSaleOrderProduct{
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
 			Num:                  saleOrderProduct.Num,
 			UnitPrice:            saleOrderProduct.OriginTotalPrice,
@@ -943,7 +943,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 	info := &resp.MemberSaleOrderInfo{
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		Status:              memberSaleOrder.Status,
-		ProductList:         resp.MemberSaleOrderProductList{List: produtds},
+		ProductList:         resp.MemberSaleOrderProductList{List: products},
 		ProductAmount:       memberSaleOrder.OriginProductAmount,
 		MemberDiscount:      memberSaleOrder.MemberDiscountFee,
 		Amount:              memberSaleOrder.Amount,
@@ -1099,7 +1099,7 @@ func (s *orderSrv) updateMemberOrder(ctx context.Context, request req.CreateMemb
 
 	info, err := s.GetMemberOrderCheckoutInfo(ctx, req.GetMemberOrderCheckoutInfoReq{
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
-	}, memberSaleOrder.SaleBill)
+	}, nil)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err)
 	}
