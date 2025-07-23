@@ -163,6 +163,7 @@ type MemberSaleOrderProduct struct {
 	Num                  float64            `json:"num"`                     // 数量
 	UnitPrice            float64            `json:"unit_price"`              // 单价（折前）,含税费
 	Amount               float64            `json:"amount"`                  // 商品金额（折前）。商品金额=（商品规格价 + 商品小料A价格 + 商品小料B价格）*数量。商品规格价=商品规格原价*会员端折扣率。 商品小料价格=商品小料原价*会员端折扣率。 会员折扣率是指商品在会员端价格上浮比例，一般比堂食贵
+	Image                string             `json:"image"`                   // 商品图片URL
 }
 
 // 会员端销售订单地址
