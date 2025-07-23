@@ -15088,6 +15088,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/address/detail": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取地址详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端.地址"
+                ],
+                "summary": "获取地址详情",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "地址UUID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/member_resp.MemberAddressDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/member/address/search": {
             "get": {
                 "security": [
@@ -15181,19 +15229,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.LoginResp"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -20344,21 +20380,9 @@ const docTemplate = `{
                     "description": "详细地址",
                     "type": "string"
                 },
-                "area": {
-                    "description": "区",
-                    "type": "string"
-                },
-                "city": {
-                    "description": "城市",
-                    "type": "string"
-                },
-                "country": {
-                    "description": "国家代码",
-                    "type": "string"
-                },
                 "is_default": {
                     "description": "是否默认",
-                    "type": "integer"
+                    "type": "boolean"
                 },
                 "location": {
                     "description": "位置坐标",
@@ -20370,10 +20394,6 @@ const docTemplate = `{
                 },
                 "phone": {
                     "description": "手机号",
-                    "type": "string"
-                },
-                "province": {
-                    "description": "省份",
                     "type": "string"
                 },
                 "street": {
@@ -20419,21 +20439,9 @@ const docTemplate = `{
                     "description": "详细地址",
                     "type": "string"
                 },
-                "area": {
-                    "description": "区",
-                    "type": "string"
-                },
-                "city": {
-                    "description": "城市",
-                    "type": "string"
-                },
-                "country": {
-                    "description": "国家代码",
-                    "type": "string"
-                },
                 "is_default": {
                     "description": "是否默认",
-                    "type": "integer"
+                    "type": "boolean"
                 },
                 "location": {
                     "description": "位置坐标",
@@ -20445,10 +20453,6 @@ const docTemplate = `{
                 },
                 "phone": {
                     "description": "手机号",
-                    "type": "string"
-                },
-                "province": {
-                    "description": "省份",
                     "type": "string"
                 },
                 "street": {
@@ -20709,34 +20713,15 @@ const docTemplate = `{
                 }
             }
         },
-        "member_resp.MemberAddressListResp": {
-            "type": "object",
-            "properties": {
-                "list": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/member_resp.MemberAddressResp"
-                    }
-                },
-                "meta": {
-                    "description": "分页信息",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.PageResponse"
-                        }
-                    ]
-                }
-            }
-        },
-        "member_resp.MemberAddressResp": {
+        "member_resp.MemberAddressDetailResp": {
             "type": "object",
             "properties": {
                 "address": {
                     "description": "详细地址",
                     "type": "string"
                 },
-                "country": {
-                    "description": "国家代码",
+                "address_detail": {
+                    "description": "地址详情（完整地址串）",
                     "type": "string"
                 },
                 "is_auth_phone": {
@@ -20745,7 +20730,11 @@ const docTemplate = `{
                 },
                 "is_default": {
                     "description": "是否默认",
-                    "type": "integer"
+                    "type": "boolean"
+                },
+                "location": {
+                    "description": "位置坐标",
+                    "type": "string"
                 },
                 "name": {
                     "description": "联系人",
@@ -20755,6 +20744,10 @@ const docTemplate = `{
                     "description": "手机号",
                     "type": "string"
                 },
+                "phone_prefix": {
+                    "description": "手机区号",
+                    "type": "string"
+                },
                 "street": {
                     "description": "街道/门牌号",
                     "type": "string"
@@ -20762,6 +20755,25 @@ const docTemplate = `{
                 "uuid": {
                     "description": "地址UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "member_resp.MemberAddressListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/member_resp.MemberAddressDetailResp"
+                    }
+                },
+                "meta": {
+                    "description": "分页信息",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.PageResponse"
+                        }
+                    ]
                 }
             }
         },

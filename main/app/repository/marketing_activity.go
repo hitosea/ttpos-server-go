@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -79,9 +80,19 @@ func (r *MarketingActivityRepo) GetMemberClientActivityList(opts ...DBOption) ([
 		db = opt(db)
 	}
 	sevenDaysAgo := time.Now().AddDate(0, 0, -7).Unix() // 7天前的时间戳
+	nowUnix := time.Now().Unix()
 	result := db.Scopes(NotDeleted)
-	result = result.Where("start_time <= ? AND end_time >= ?", time.Now().Unix(), sevenDaysAgo)
-	result = result.Find(&activities)
+	result = result.Where("start_time <= ? AND end_time >= ?", nowUnix, sevenDaysAgo)
+	// 按活动状态排序：进行中(1)排最前，未开始(0)其次，已结束/无效(2)最后
+	orderSQL := fmt.Sprintf(`
+		CASE 
+			WHEN is_invalid = 1 THEN 2
+			WHEN start_time > %d THEN 0  
+			WHEN end_time < %d THEN 2
+			ELSE 1 
+		END ASC, start_time DESC
+	`, nowUnix, nowUnix)
+	result = result.Order(orderSQL).Find(&activities)
 	if result.Error != nil {
 		return nil, result.Error
 	}
