@@ -916,8 +916,12 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		}
 	}
 
-	// 如果未查询配送距离,且配置地址
-	if req.AddressChanged && memberSaleOrder.Address != nil {
+	// 如果未查询配送距离,且配置地址,重新查询配送距离。因为查询距离可能失败，所以加载订单信息时需要重新查询
+	if memberSaleOrder.DeliveryDistance == 0 && memberSaleOrder.Address != nil {
+		req.AddressChanged = true
+	}
+
+	if req.AddressChanged {
 		// 查询配送距离
 		distance, err := s.QueryDistance(ctx, memberSaleOrder)
 		if err != nil {
