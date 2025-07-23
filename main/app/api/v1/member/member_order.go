@@ -402,7 +402,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		orderSrv: orderSrv,
 	}
 	// 需要认证
-	// privateApi := router.Group("")
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
 		privateApi.POST("/order/create", wrapper.CreateOrder)                                 // 创建订单

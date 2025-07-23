@@ -1099,7 +1099,7 @@ func (s *orderSrv) updateMemberOrder(ctx context.Context, request req.CreateMemb
 
 	info, err := s.GetMemberOrderCheckoutInfo(ctx, req.GetMemberOrderCheckoutInfoReq{
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
-	}, memberSaleOrder.SaleBill)
+	}, nil)
 	if err != nil {
 		return nil, nil, errors.WithMessage(err)
 	}

@@ -839,6 +839,7 @@ func (model *SaleOrderProduct) SetMustPlanInfo(mustPlanUuid uint64) {
 
 // 标记该订单商品相关的资源为删除
 func (model *SaleOrderProduct) DeleteProduct() {
+	defer model.SetUpdate()
 	deleteTime := time.Now().Unix()
 	model.DeleteTime = deleteTime
 	for index, _ := range model.SaleOrderProductBoms {
