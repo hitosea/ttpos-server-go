@@ -180,10 +180,7 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	if memberSaleOrder.MemberUuid != member.Uuid {
 		return nil, errors.New("订单与会员不匹配")
 	}
-	distance := memberSaleOrder.DeliveryDistance
-	if memberSaleOrder.MemberAddressUuid != request.MemberAddressUuid {
-		distance = 0
-	}
+	addressChanged := memberSaleOrder.MemberAddressUuid != request.MemberAddressUuid
 
 	memberSaleOrder.MemberAddressUuid = request.MemberAddressUuid
 	memberSaleOrder.ContactLocation = memberAddress.Location
@@ -192,7 +189,6 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	memberSaleOrder.ContactName = memberAddress.Name
 	memberSaleOrder.ContactPhone = memberAddress.Phone
 	memberSaleOrder.ContactPhonePrefix = memberAddress.PhonePrefix
-	memberSaleOrder.DeliveryDistance = distance
 
 	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderAddress(*memberSaleOrder); err != nil {
 		return nil, errors.WithMessage(err)
@@ -201,7 +197,7 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	// 返回会员端订单信息
 	info, err := s.GetMemberOrderCheckoutInfo(ctx, req.GetMemberOrderCheckoutInfoReq{
 		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
-		AddressChanged:      distance == 0,
+		AddressChanged:      addressChanged,
 	}, nil)
 	if err != nil {
 		return nil, errors.WithMessage(err)

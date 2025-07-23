@@ -462,7 +462,7 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderProviderInfo(memberSaleOrder 
 
 // UpdateMemberSaleOrderAddress 更新会员端销售订单-配送地址
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderAddress(memberSaleOrder model.MemberSaleOrder) error {
-	err := r.db.Model(&model.MemberSaleOrder{}).Debug().Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
 		MemberAddressUuid:    memberSaleOrder.MemberAddressUuid,
 		ContactLocation:      memberSaleOrder.ContactLocation,
 		ContactAddress:       memberSaleOrder.ContactAddress,
@@ -471,7 +471,6 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderAddress(memberSaleOrder model
 		ContactPhone:         memberSaleOrder.ContactPhone,
 		ContactPhonePrefix:   memberSaleOrder.ContactPhonePrefix,
 		ContactGender:        memberSaleOrder.ContactGender,
-		DeliveryDistance:     memberSaleOrder.DeliveryDistance,
 	}).Error
 	if err != nil {
 		return errors.WithMessage(err)
