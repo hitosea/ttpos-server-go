@@ -1775,13 +1775,18 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			actionText = actionDescription.SplitMessage + actionText
 		}
 		if actionDescription.Desc != "" {
-			actionText = actionText + ": " + actionDescription.Desc
+			if record.Source == constant.SourceMember {
+				actionText = actionText + actionDescription.Desc
+			} else {
+				actionText = actionText + ": " + actionDescription.Desc
+			}
 		}
 		realName := record.Operator.RealName
 		if record.Source == constant.SourceH5 {
 			realName = i18n.Translate(language, "用户")
 		}
-		// 如果是会员端的操作
+
+		// 如果是骑手端的操作
 		if record.Source == constant.SourceRider {
 			prefix := i18n.Translate(language, "骑手")
 			riderName := "--"
@@ -1792,6 +1797,8 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			}
 			realName = fmt.Sprintf("%s(%s)", prefix, riderName)
 		}
+
+		// 如果是会员端的操作
 		if record.Source == constant.SourceMember {
 			prefix := i18n.Translate(language, "顾客")
 			realName = fmt.Sprintf("%s(%s)", prefix, record.Member.Nickname)

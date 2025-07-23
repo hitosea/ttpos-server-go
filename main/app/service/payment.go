@@ -506,7 +506,7 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 				BasePayload: event.BasePayload{
 					Ctx:                 p.ctx,
 					CompanyUuid:         p.ctx.GetCompanyUuid(),
-					Source:              constant.SourceSystem,
+					Source:              constant.SourceMember,
 					SaleBillUuid:        saleOrder.SaleBill.Uuid,
 					SaleOrderUuid:       saleOrder.Uuid,
 					MemberSaleOrderUuid: memberSaleOrder.Uuid,

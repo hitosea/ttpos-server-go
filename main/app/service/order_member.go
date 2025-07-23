@@ -713,12 +713,12 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 					if returnOrder != nil {
 						for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
 							refunds = append(refunds, event.CancelMemberOrderPayloadDataRefund{
-								Name:              returnOrderAmount.PaymentMethod.Name,
+								Name:              returnOrderAmount.PaymentMethod.PaymentName,
 								Code:              returnOrderAmount.PaymentMethod.Code,
 								Amount:            returnOrderAmount.Amount,
 								RefundStatus:      returnOrderAmount.RefundStatus,
 								ReturnAmountUuid:  returnOrderAmount.Uuid,
-								ReturnOrderUuid:   returnOrderAmount.ReturnOrderUuid,
+								ReturnOrderUuid:   returnOrder.Uuid,
 								PaymentOrderUuid:  returnOrderAmount.PaymentOrderUuid,
 								PaymentMethodUuid: returnOrderAmount.PaymentMethodUuid,
 							})

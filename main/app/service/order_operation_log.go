@@ -303,7 +303,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 	// 会员端订单操作
 	case constant.OrderCancelMemberSaleOrder: // 订单取消
 		var cancelMemberSaleOrder event.CancelMemberOrderPayload
-		if err := json.Unmarshal([]byte(log.Data), &cancelMemberSaleOrder); err == nil {
+		if err := json.Unmarshal([]byte(log.Data), &cancelMemberSaleOrder.Data); err == nil {
 			desc := ""
 			if cancelMemberSaleOrder.Data.Type == "user_cancel" {
 				desc = desc + " (" + i18n.Translate(language, "用户取消") + ")"
@@ -313,8 +313,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 			}
 			// 退款信息
 			if len(cancelMemberSaleOrder.Data.Refunds) > 0 {
-				// 订单取消（用户取消），订单已退款（微信：￥958.89 ）
-				desc = desc + "，(" + i18n.Translate(language, "订单已退款") + " ("
+				desc = desc + "，" + i18n.Translate(language, "订单已退款") + " ("
 				for i, refund := range cancelMemberSaleOrder.Data.Refunds {
 					desc = desc + " " + refund.Name + "：" + s.settingSrv.SymbolPosition(ctx, refund.Amount)
 					if i < len(cancelMemberSaleOrder.Data.Refunds)-1 {
@@ -323,6 +322,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 				}
 				desc = desc + ")"
 			}
+
 			return ActionDescription{Desc: desc}
 		}
 	}
