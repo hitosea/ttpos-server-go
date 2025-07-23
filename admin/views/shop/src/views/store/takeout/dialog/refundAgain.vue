@@ -139,7 +139,7 @@
             account_no: bankForm.value.account_no,
             account_name: bankForm.value.account_name,
           };
-          const res = await OrderApi.orderRefundAgain(params, true);
+          const res = await OrderApi.postTakeoutOrderRefundAgain(params, true);
           loading.value = false;
           message({
             message: res.msg,
