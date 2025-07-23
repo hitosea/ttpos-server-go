@@ -20724,10 +20724,6 @@ const docTemplate = `{
                     "description": "地址详情（完整地址串）",
                     "type": "string"
                 },
-                "country": {
-                    "description": "国家代码",
-                    "type": "string"
-                },
                 "is_auth_phone": {
                     "description": "是否认证手机号",
                     "type": "boolean"
@@ -20746,6 +20742,10 @@ const docTemplate = `{
                 },
                 "phone": {
                     "description": "手机号",
+                    "type": "string"
+                },
+                "phone_prefix": {
+                    "description": "手机区号",
                     "type": "string"
                 },
                 "street": {

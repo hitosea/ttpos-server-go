@@ -118,11 +118,11 @@ func (s *memberAddressSrv) AddAddress(ctx context.Context, req member_req.Member
 	memberAddress.MemberUuid = ctx.GetMemberUuid()
 
 	// 如果国家代码为空，则根据手机号判断
-	if memberAddress.Country == "" {
+	if memberAddress.PhonePrefix == "" {
 		if len(memberAddress.Phone) == 11 {
-			memberAddress.Country = "+86"
+			memberAddress.PhonePrefix = "+86"
 		} else {
-			memberAddress.Country = "+66"
+			memberAddress.PhonePrefix = "+66"
 		}
 	}
 
@@ -180,11 +180,11 @@ func (s *memberAddressSrv) UpdateAddress(ctx context.Context, req member_req.Mem
 	memberAddress.MemberUuid = ctx.GetMemberUuid()
 
 	// 如果国家代码为空，则根据手机号判断
-	if memberAddress.Country == "" {
+	if memberAddress.PhonePrefix == "" {
 		if len(memberAddress.Phone) == 11 {
-			memberAddress.Country = "+86"
+			memberAddress.PhonePrefix = "+86"
 		} else {
-			memberAddress.Country = "+66"
+			memberAddress.PhonePrefix = "+66"
 		}
 	}
 

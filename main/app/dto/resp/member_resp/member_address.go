@@ -7,7 +7,7 @@ type MemberAddressDetailResp struct {
 	Uuid          uint64 `json:"uuid"`           // 地址UUID
 	Name          string `json:"name"`           // 联系人
 	Phone         string `json:"phone"`          // 手机号
-	Country       string `json:"country"`        // 国家代码
+	PhonePrefix   string `json:"phone_prefix"`   // 手机区号
 	Address       string `json:"address"`        // 详细地址
 	Street        string `json:"street"`         // 街道/门牌号
 	IsDefault     bool   `json:"is_default"`     // 是否默认
