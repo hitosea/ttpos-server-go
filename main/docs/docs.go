@@ -16737,13 +16737,13 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "商家端.外送订单管理相关"
+                    "商家端.外送接单相关"
                 ],
                 "summary": "取消订单",
                 "parameters": [
                     {
-                        "description": "详情参数",
-                        "name": "data",
+                        "description": "取消订单请求",
+                        "name": "CancelOrderReq",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -16753,10 +16753,10 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "成功"
-                    },
-                    "400": {
-                        "description": "错误请求"
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
                     }
                 }
             }
@@ -16909,6 +16909,45 @@ const docTemplate = `{
                                 }
                             ]
                         }
+                    }
+                }
+            }
+        },
+        "/shop/member_order/re_return": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "外送订单重新退款",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.外送订单管理相关"
+                ],
+                "summary": "外送订单重新退款",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.OrderReReturnReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "重新退款成功"
+                    },
+                    "404": {
+                        "description": "未找到"
                     }
                 }
             }

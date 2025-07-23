@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
@@ -665,18 +666,20 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 	}
 
 	// 已经支付的-发起退款
+	var returnOrder *model.ReturnOrder
 	if memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingMerchantAccept {
-		err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
+		returnOrder, err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
 			CancelReason: "客户取消订单",
 		})
 		if err != nil {
 			tx.Rollback()
 			return errors.WithMessage(err)
 		}
+		// 退款金额
+		memberSaleOrder.RefundAmount = returnOrder.RefundAmount
 	}
 
 	// 设置订单为“已取消”状态
-	memberSaleOrder.RefundAmount = memberSaleOrder.Amount
 	memberSaleOrder.SetCancel(request.CancelReason)
 
 	// 更新订单状态
@@ -692,13 +695,37 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 
 	// 发布“整单取消”操作事件
 	go func() {
-		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
-			BasePayload: event.BasePayload{ // 整单取消
-				Ctx:          ctx,
-				CompanyUuid:  ctx.GetCompanyUuid(),
-				Source:       ctx.GetSource(),
-				SaleBillUuid: billInfo.Uuid,
-				OperatorUuid: int64(ctx.GetMemberUuid()),
+		s.bus.PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:                 ctx,
+				CompanyUuid:         ctx.GetCompanyUuid(),
+				Source:              ctx.GetSource(),
+				SaleBillUuid:        billInfo.Uuid,
+				SaleOrderUuid:       saleOrder.Uuid,
+				OperatorUuid:        0,
+				MemberUuid:          memberSaleOrder.MemberUuid,
+				MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			},
+			Data: event.CancelMemberOrderPayloadData{
+				Type: "user_cancel",
+				Refunds: func() []event.CancelMemberOrderPayloadDataRefund {
+					refunds := make([]event.CancelMemberOrderPayloadDataRefund, 0)
+					if returnOrder != nil {
+						for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
+							refunds = append(refunds, event.CancelMemberOrderPayloadDataRefund{
+								Name:              returnOrderAmount.PaymentMethod.Name,
+								Code:              returnOrderAmount.PaymentMethod.Code,
+								Amount:            returnOrderAmount.Amount,
+								RefundStatus:      returnOrderAmount.RefundStatus,
+								ReturnAmountUuid:  returnOrderAmount.Uuid,
+								ReturnOrderUuid:   returnOrderAmount.ReturnOrderUuid,
+								PaymentOrderUuid:  returnOrderAmount.PaymentOrderUuid,
+								PaymentMethodUuid: returnOrderAmount.PaymentMethodUuid,
+							})
+						}
+					}
+					return refunds
+				}(),
 			},
 		})
 	}()
@@ -796,7 +823,7 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 
 		// 已经支付的-发起退款
 		if memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingMerchantAccept {
-			err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
+			_, err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
 				CancelReason: "客户取消订单",
 			})
 			if err != nil {
@@ -857,7 +884,28 @@ func (s *orderSrv) GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.
 
 	merchantLat, merchantLng := companySetting.GetCoordinates()
 	customerLat, customerLng := memberSaleOrder.GetCustomerLocation()
-	riderLat, riderLng := memberSaleOrder.GetLocation()
+
+	// 调用外送服务获取骑手位置接口，如果获取成功，则更新member_sale_order的location，否则使用member_sale_order的location
+	var riderLat, riderLng string
+	takeoutSrv := takeout.NewTakeoutSrv()
+	// 获取骑手实时位置
+	riderLocation, err := takeoutSrv.GetDriverInfo(contexts.Background(), &req.GetDriverInfoReq{
+		ShopOrderUuid: memberSaleOrder.OrderNo,
+	})
+	if err == nil && riderLocation != nil {
+		riderLat = fmt.Sprintf("%.6f", riderLocation.Lat)
+		riderLng = fmt.Sprintf("%.6f", riderLocation.Lng)
+		memberSaleOrder.Location = fmt.Sprintf("%s,%s", riderLat, riderLng)
+		// 更新骑手位置到订单
+		if err = repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
+			logger.Logger.Error("更新骑手位置失败",
+				zap.Error(err),
+				zap.Uint64("member_sale_order_uuid", memberSaleOrder.Uuid),
+			)
+		}
+	} else {
+		riderLat, riderLng = memberSaleOrder.GetLocation()
+	}
 
 	return &resp.MemberOrderCoordinates{
 		Merchant: resp.OrderCoordinate{
@@ -868,7 +916,7 @@ func (s *orderSrv) GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.
 		},
 		Customer: resp.OrderCoordinate{
 			Name:    memberSaleOrder.ContactName,
-			Address: memberSaleOrder.ContactAddress + "(" + memberSaleOrder.ContactAddressDetail + ")",
+			Address: memberSaleOrder.ContactAddressDetail,
 			Lat:     customerLat,
 			Lng:     customerLng,
 		},
@@ -1310,7 +1358,7 @@ func (s *orderSrv) RejectMemberSaleOrder(ctx context.Context, request req.Reject
 	})
 
 	// 退款
-	err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*billInfo.GetFirstSaleOrder(), MemberSaleOrderRefundReq{
+	_, err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*billInfo.GetFirstSaleOrder(), MemberSaleOrderRefundReq{
 		CancelReason: "商家拒单",
 	})
 	if err != nil {

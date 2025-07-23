@@ -231,7 +231,6 @@ func (model *MemberSaleOrder) IsCanCancelInCashier() bool {
 
 // IsRiderPickup 订单是否骑手接单
 func (model *MemberSaleOrder) IsRiderPickup() bool {
-	// 骑手接单之后可以取消
 	return model.Status > constant.MemberSaleOrderStatusPendingRiderPickup
 }
 

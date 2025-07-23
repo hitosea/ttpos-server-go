@@ -68,6 +68,9 @@ func (c *Controller) GetDriverInfo(ctx context.Context, req *api.GetDriverInfoRe
 	if takeoutJob == nil {
 		return nil, gerror.Wrap(gerror.New("订单不存在"), "获取司机位置失败")
 	}
+	if takeoutJob.SkootarId == "" {
+		return nil, gerror.Wrap(gerror.New("未有骑手接单"), "获取司机位置失败")
+	}
 	res, err = c.getService(takeoutJob.ProviderName).GetDriverInfo(ctx, &input.GetDriverInfoInp{
 		SKootarId: takeoutJob.SkootarId,
 		Name:      takeoutJob.SkootarName,

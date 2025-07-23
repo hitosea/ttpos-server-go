@@ -739,7 +739,7 @@ type MemberSaleOrderRefundReq struct {
 	AccountName  string `json:"account_name"`  // 账户名称- 暂时不用
 }
 
-func (p *PaymentRepo) MemberSaleOrderRefund(saleOrder model.SaleOrder, req MemberSaleOrderRefundReq) error {
+func (p *PaymentRepo) MemberSaleOrderRefund(saleOrder model.SaleOrder, req MemberSaleOrderRefundReq) (*model.ReturnOrder, error) {
 	db := p.ctx.GetDB()
 	// 创建退货单
 	returnOrder := model.ReturnOrder{
@@ -783,7 +783,7 @@ func (p *PaymentRepo) MemberSaleOrderRefund(saleOrder model.SaleOrder, req Membe
 	}
 	returnOrderUuid, err := repository.NewReturnOrderRepo(db).CreateReturnOrderRecord(returnOrder)
 	if err != nil {
-		return errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
 	// 发起退款
 	for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
@@ -798,14 +798,14 @@ func (p *PaymentRepo) MemberSaleOrderRefund(saleOrder model.SaleOrder, req Membe
 			AccountName:           returnOrder.AccountName,
 		})
 		if err != nil {
-			return errors.WithMessage(err)
+			return nil, errors.WithMessage(err)
 		}
 		// 创建退款金额
 		returnOrderAmount.ReturnOrderUuid = returnOrderUuid
 		returnOrderAmount.LlReturnOrderid = refund.RefundOrderId
 		if err = repository.NewReturnOrderRepo(db).CreateReturnOrderAmount([]model.ReturnOrderAmount{returnOrderAmount}); err != nil {
-			return errors.WithMessage(err)
+			return nil, errors.WithMessage(err)
 		}
 	}
-	return nil
+	return &returnOrder, nil
 }

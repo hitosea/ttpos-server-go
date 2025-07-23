@@ -918,14 +918,15 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 			return nil, errors.WithMessage(err)
 		}
 		address = resp.MemberSaleOrderAddress{
-			MemberAddressUuid: memberSaleOrder.MemberAddressUuid,
-			Longitude:         lng,
-			Latitude:          lat,
-			Address:           memberSaleOrder.ContactAddress,
-			DetailAddress:     memberSaleOrder.ContactAddressDetail,
-			ContactName:       memberSaleOrder.ContactName,
-			ContactPhone:      memberSaleOrder.ContactPhone,
-			ContactGender:     memberSaleOrder.ContactGender,
+			MemberAddressUuid:  memberSaleOrder.MemberAddressUuid,
+			Longitude:          lng,
+			Latitude:           lat,
+			Address:            memberSaleOrder.ContactAddress,
+			DetailAddress:      memberSaleOrder.ContactAddressDetail,
+			ContactName:        memberSaleOrder.ContactName,
+			ContactPhone:       memberSaleOrder.ContactPhone,
+			ContactPhonePrefix: memberSaleOrder.ContactPhonePrefix,
+			ContactGender:      memberSaleOrder.ContactGender,
 		}
 	}
 
@@ -1764,6 +1765,8 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			// 隐藏. 日志关联的订单已经被删除，故因此该订单的操作记录
 			continue
 		}
+
+		// 获取操作描述
 		actionText := s.getActionText(record, language)
 		if record.Action == constant.OrderCheckoutDiscount && actionDescription.IsAutoCheckoutZero {
 			actionText = i18n.Translate(language, "结账自动抹零")
@@ -1789,21 +1792,26 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			}
 			realName = fmt.Sprintf("%s(%s)", prefix, riderName)
 		}
-
-		var refundType int
-		if record.Action == constant.OrderRefund {
-			var refundPayload event.ReturnOrderPayload
-			json.Unmarshal([]byte(record.Data), &refundPayload)
-			refundType = refundPayload.RefundType
+		if record.Source == constant.SourceMember {
+			prefix := i18n.Translate(language, "顾客")
+			realName = fmt.Sprintf("%s(%s)", prefix, record.Member.Nickname)
 		}
 
 		logs = append(logs, resp.OrderOperationLog{
-			Uuid:        record.Uuid,
-			RealName:    realName,
-			Email:       record.Operator.Username,
-			Source:      i18n.Translate(language, constant.SourceTextMap[record.Source]),
-			CreateTime:  record.CreateTime,
-			RefundType:  refundType,
+			Uuid:       record.Uuid,
+			RealName:   realName,
+			Email:      record.Operator.Username,
+			Source:     i18n.Translate(language, constant.SourceTextMap[record.Source]),
+			CreateTime: record.CreateTime,
+			RefundType: func() int {
+				var refundType int
+				if record.Action == constant.OrderRefund {
+					var refundPayload event.ReturnOrderPayload
+					json.Unmarshal([]byte(record.Data), &refundPayload)
+					refundType = refundPayload.RefundType
+				}
+				return refundType
+			}(),
 			Description: actionText, // 获取描述
 			PayType:     s.getRefundPayType(ctx, record, language),
 		})

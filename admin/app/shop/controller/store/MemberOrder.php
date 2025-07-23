@@ -208,4 +208,24 @@ class MemberOrder extends Controller
         return $this->renderSuccess('');
     }
 
+    /**
+     * @Apidoc\Title("外送订单重新退款")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/store.MemberOrder/re_return")
+     */
+    public function re_return()
+    {
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/re_return', json_encode($this->postData()), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+        return $this->renderSuccess('');
+    }
 }

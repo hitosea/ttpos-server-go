@@ -45,9 +45,9 @@ func (h *AuthHandler) LoginInfo(c *gin.Context) {
 	helper.Success(c, loginResp)
 }
 
-// SendCode 发送验证码
-// @Summary 发送验证码
-// @Description 发送验证码
+// SendLoginCode 发送登录验证码
+// @Summary 发送登录验证码
+// @Description 发送登录验证码
 // @Tags 会员端.认证
 // @Accept json
 // @Produce json
@@ -62,6 +62,32 @@ func (h *AuthHandler) SendCode(c *gin.Context) {
 		return
 	}
 	err := h.loginSrv.SendCode(ctx, sendCodeReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{
+		"uuid": sendCodeReq.Phone,
+	})
+}
+
+// SendRegisterCode 发送注册验证码
+// @Summary 发送注册验证码
+// @Description 发送注册验证码
+// @Tags 会员端.认证
+// @Accept json
+// @Produce json
+// @param data body member_req.MemberSendCodeReq true "详情参数"
+// @Success 200 {object} dto.Response{}
+// @Router /member/send_register_code [post]
+func (h *AuthHandler) SendRegisterCode(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sendCodeReq := member_req.MemberSendCodeReq{}
+	if err := c.ShouldBindJSON(&sendCodeReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	err := h.loginSrv.SendRegisterCode(ctx, sendCodeReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -183,5 +209,6 @@ func RegisterAuthHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
 		privateApi.POST("/register", wrapper.Register)
+		privateApi.POST("/send_register_code", wrapper.SendRegisterCode)
 	}
 }
