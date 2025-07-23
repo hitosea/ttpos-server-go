@@ -1040,7 +1040,15 @@ func (s *orderSrv) updateMemberOrder(ctx context.Context, request req.CreateMemb
 	commitProductMap := make(map[string]req.OrderProductAddReq)
 	for index := range request.Products {
 		product := request.Products[index]
-		key := product.ProductKey()
+		productPackageAttributes, err := repository.NewProductPackageAttributeRepo(ctx.GetDB()).GetProductPackageAttributesByUuids(product.AttributeUuidList)
+		if err != nil {
+			return nil, nil, errors.WithMessage(err)
+		}
+		attributeUuids := make([]uint64, 0)
+		for _, attribute := range productPackageAttributes {
+			attributeUuids = append(attributeUuids, attribute.AttributeUuid)
+		}
+		key := product.ProductKey(attributeUuids)
 		commitProductMap[key] = product
 	}
 	olderProductMap := make(map[string]*model.SaleOrderProduct)

@@ -1249,8 +1249,8 @@ func (model *SaleOrderProduct) ProductKey() string {
 		}
 	}
 	// 属性ID列表
-	for _, attributeGroup := range model.SaleOrderProductAttributes {
-		attributeIdList = append(attributeIdList, attributeGroup.ProductAttributeUuid)
+	for _, attribute := range model.SaleOrderProductAttributes {
+		attributeIdList = append(attributeIdList, attribute.ProductAttributeUuid)
 	}
 
 	// 物料ID列表和属性ID列表排序

@@ -19,7 +19,7 @@ var DeskReqMessage = map[string]string{
 type DeskListReq struct {
 	Status      int `form:"status,default=-1"`    // 桌台状态, -1=全都、 0=未开台、1=已开台, 2=已开台不等于待清台
 	IsBuffet    int `form:"is_buffet,default=-1"` // 是否是自助餐: -1=全都、0=否、1=是
-	dto.PageReq     // 分页参数
+	dto.PageReq                                   // 分页参数
 }
 
 // DeskInfoReq 桌台信息
@@ -100,10 +100,10 @@ type OrderProductAddReq struct {
 }
 
 // 商品key。格式：规格id-属性id,属性id-加料id,加料id
-func (req *OrderProductAddReq) ProductKey() string {
+func (req *OrderProductAddReq) ProductKey(attributeUuidList []uint64) string {
 	// 先排序
-	sort.Slice(req.AttributeUuidList, func(i, j int) bool {
-		return req.AttributeUuidList[i] < req.AttributeUuidList[j]
+	sort.Slice(attributeUuidList, func(i, j int) bool {
+		return attributeUuidList[i] < attributeUuidList[j]
 	})
 	sort.Slice(req.SauceUuidList, func(i, j int) bool {
 		return req.SauceUuidList[i] < req.SauceUuidList[j]
@@ -111,7 +111,7 @@ func (req *OrderProductAddReq) ProductKey() string {
 
 	// 转为字符串
 	AttributeUuidListStr := make([]string, 0)
-	for _, attributeUuid := range req.AttributeUuidList {
+	for _, attributeUuid := range attributeUuidList {
 		AttributeUuidListStr = append(AttributeUuidListStr, fmt.Sprintf("%d", attributeUuid))
 	}
 	SauceUuidListStr := make([]string, 0)
