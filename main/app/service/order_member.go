@@ -25,6 +25,7 @@ import (
 	"ttpos-server-go/pkg/websocket"
 
 	"github.com/hdt3213/delayqueue"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -179,10 +180,7 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	if memberSaleOrder.MemberUuid != member.Uuid {
 		return nil, errors.New("订单与会员不匹配")
 	}
-	distance := memberSaleOrder.DeliveryDistance
-	if memberSaleOrder.MemberAddressUuid != request.MemberAddressUuid {
-		distance = 0
-	}
+	addressChanged := memberSaleOrder.MemberAddressUuid != request.MemberAddressUuid
 
 	memberSaleOrder.MemberAddressUuid = request.MemberAddressUuid
 	memberSaleOrder.ContactLocation = memberAddress.Location
@@ -191,7 +189,6 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	memberSaleOrder.ContactName = memberAddress.Name
 	memberSaleOrder.ContactPhone = memberAddress.Phone
 	memberSaleOrder.ContactPhonePrefix = memberAddress.PhonePrefix
-	memberSaleOrder.DeliveryDistance = distance
 
 	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderAddress(*memberSaleOrder); err != nil {
 		return nil, errors.WithMessage(err)
@@ -200,7 +197,7 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	// 返回会员端订单信息
 	info, err := s.GetMemberOrderCheckoutInfo(ctx, req.GetMemberOrderCheckoutInfoReq{
 		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
-		AddressChanged:      distance == 0,
+		AddressChanged:      addressChanged,
 	}, nil)
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -355,6 +352,9 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 		paymentOrder = &createPaymentOrder
 	}
 
+	// 判断当前手机端访问还是PC端访问
+	isOpenPc := !ctx.IsMobile() && viper.GetString("OPEN_MEMBER_PC_PAY") == "true"
+
 	// 创建连连支付订单
 	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
 		PaymentOrderUuid:  paymentOrder.Uuid,
@@ -364,7 +364,12 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 		PaymentMethodCode: paymentMethod.Code,
 		PaymentAmount:     memberSaleOrder.Amount,
 		CommissionFee:     0,
-		PaymentMethod:     PaymentMethodH5Payment,
+		PaymentMethod: func() string {
+			if isOpenPc {
+				return PaymentMethodWechatPay
+			}
+			return PaymentMethodH5Payment
+		}(),
 	})
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -374,8 +379,8 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		PaymentOrderUuid:    payment.PaymentOrderUuid,
 		PaymentMethodName:   paymentMethod.PaymentName,
-		QrCode:              utils.IfString(paymentMethod.IsQrPromptPay(), payment.LinkUrl, ""),
-		LinkUrl:             utils.IfString(paymentMethod.IsQrPromptPay(), "", payment.LinkUrl),
+		QrCode:              utils.IfString(isOpenPc || paymentMethod.IsQrPromptPay(), payment.LinkUrl, ""),
+		LinkUrl:             utils.IfString(isOpenPc || paymentMethod.IsQrPromptPay(), "", payment.LinkUrl),
 		Status:              payment.GetStatus(), // 支付单状态 支付状态, 0-未支付 1-已支付 (可选择轮询当前接口，获取支付状态)
 		PaymentAmount:       payment.OrderAmount, // 支付金额
 	}, nil
