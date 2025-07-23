@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"slices"
 	"sort"
+	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -326,6 +327,11 @@ func (s *productSrv) GetProductRecommendList(ctx context.Context, request req.Pr
 	// 获取商机推荐信息
 	packageRecommend, err := repository.NewPackageRecommendRepo(s.dbm.GetDB(ctx.GetDbId())).GetRecommendInfo()
 	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return &product_resp.ProductRecommendListResp{
+				IsOpen: false,
+			}, nil
+		}
 		return nil, errors.WithMessage(err, "获取商机推荐信息失败")
 	}
 	if !packageRecommend.IsOpen() {

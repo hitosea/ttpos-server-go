@@ -71,6 +71,10 @@ type CreateMemberOrderReq struct {
 	Products            []OrderProductAddReq `json:"products"`               // 商品列表
 }
 
+type GetMemberOrdeFormInfoReq struct {
+	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+}
+
 type OrderProductAddReq struct {
 	FlavorUuid        uint64   `json:"flavor_uuid"`    // 某个规格商品ID
 	SauceUuidList     []uint64 `json:"sauce_uuid"`     // 小料ID列表

@@ -17118,6 +17118,31 @@ paths:
       summary: 获取会员端订单详情
       tags:
       - 会员端-订单
+  /member/order/form/info:
+    get:
+      consumes:
+      - application/json
+      description: 获取订单提交表单信息
+      parameters:
+      - description: 会员端销售订单UUID
+        in: query
+        name: member_sale_order_uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/resp.CreateMemberOrderResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取订单提交表单信息
+      tags:
+      - 会员端-订单
   /member/order/list:
     get:
       consumes:

@@ -32,6 +32,7 @@ import (
 type IMemberOrderSrv interface {
 	// 会员端
 	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)    // 创建会员端订单
+	GetMemberOrdeFormInfo(ctx context.Context, req req.GetMemberOrdeFormInfoReq) (*resp.CreateMemberOrderResp, error)                        // 获取订单提交表单信息
 	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                 // 设置会员端订单地址
 	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                          // 会员端订单提交支付，状态变为待支付
 	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)        // 会员端订单获取支付信息
@@ -136,6 +137,19 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 		// 订单未取消，更新订单
 		return s.updateMemberOrder(ctx, req, memberSaleOrder)
 	}
+}
+
+// GetMemberOrdeFormInfo 获取订单提交表单信息
+func (s *orderSrv) GetMemberOrdeFormInfo(ctx context.Context, request req.GetMemberOrdeFormInfoReq) (*resp.CreateMemberOrderResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	info, err := s.GetMemberOrderCheckoutInfo(ctx, req.GetMemberOrderCheckoutInfoReq{
+		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
+	}, nil)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return info, nil
 }
 
 // SetMemberOrderAddress 设置会员端订单地址
