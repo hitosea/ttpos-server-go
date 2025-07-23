@@ -917,7 +917,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 	}
 
 	// 如果未查询配送距离,且配置地址
-	if memberSaleOrder.DeliveryDistance == 0 && memberSaleOrder.Address != nil {
+	if req.AddressChanged && memberSaleOrder.Address != nil {
 		// 查询配送距离
 		distance, err := s.QueryDistance(ctx, memberSaleOrder)
 		if err != nil {
