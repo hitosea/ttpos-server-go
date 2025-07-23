@@ -59,6 +59,7 @@ type Context interface {
 	GetMemberUuid() uint64                                 // 获取会员uuid
 	Version(op Operator, version string) bool              // 比较版本
 	GetRemoteIp() string                                   // 获取客户端IP
+	IsMobile() bool                                        // 判断是否是移动端
 }
 
 type ContextImpl struct {
@@ -414,4 +415,18 @@ func (c *ContextImpl) GetRemoteIp() string {
 		return generateRandomIP()
 	}
 	return clientIp
+}
+
+// IsMobile 判断是否是移动端
+func (c *ContextImpl) IsMobile() bool {
+	userAgent := c.cc.GetHeader("User-Agent")
+	// 检查 User-Agent 字符串中的常见移动设备标识
+	mobileKeywords := []string{"Mobile", "Android", "iPhone", "iPad", "iPod", "BlackBerry", "Windows Phone", "iPad Desktop Mode", "Desktop with Mobile keyword"}
+	for _, keyword := range mobileKeywords {
+		if strings.Contains(userAgent, keyword) {
+			return true
+		}
+	}
+	//
+	return false
 }
