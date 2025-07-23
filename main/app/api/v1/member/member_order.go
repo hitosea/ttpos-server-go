@@ -58,21 +58,21 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetMemberOrdeFormInfo 获取订单提交表单信息
+// GetMemberOrderFormInfo 获取订单提交表单信息
 // @Summary 获取订单提交表单信息
 // @Description 获取订单提交表单信息
 // @Tags 会员端-订单
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data query req.GetMemberOrdeFormInfoReq true "详情参数"
+// @Param data query req.GetMemberOrderFormInfoReq true "详情参数"
 // @Success 200 {object} resp.CreateMemberOrderResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/form/info [get]
-func (h *OrderHandler) GetMemberOrdeFormInfo(c *gin.Context) {
+func (h *OrderHandler) GetMemberOrderFormInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
-	params := req.GetMemberOrdeFormInfoReq{}
+	params := req.GetMemberOrderFormInfoReq{}
 	if err := c.ShouldBindQuery(&params); err != nil {
 		helper.HandleValidationError(c, err, params, nil)
 		return
@@ -405,7 +405,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
 		privateApi.POST("/order/create", wrapper.CreateOrder)                                 // 创建订单
-		privateApi.GET("/order/form/info", wrapper.GetMemberOrdeFormInfo)                     // 获取订单提交表单信息
+		privateApi.GET("/order/form/info", wrapper.GetMemberOrderFormInfo)                    // 获取订单提交表单信息
 		privateApi.POST("/order/address", wrapper.SetOrderAddress)                            // 设置订单地址
 		privateApi.POST("/order/pay", wrapper.PayOrder)                                       // 提交支付
 		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)                               // 获取支付信息

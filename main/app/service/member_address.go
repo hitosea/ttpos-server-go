@@ -127,7 +127,7 @@ func (s *memberAddressSrv) AddAddress(ctx context.Context, req member_req.Member
 	}
 
 	// 如果设置为默认地址，则需要将该会员的其他地址设置为非默认
-	if req.IsDefault {
+	if req.IsDefault == 1 {
 		// 开启事务
 		err := ctx.GetDB().Transaction(func(tx *gorm.DB) error {
 			// 先将该会员的所有地址设置为非默认

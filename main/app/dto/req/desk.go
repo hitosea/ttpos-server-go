@@ -63,6 +63,7 @@ type DeskOrderCreateReq struct {
 
 type GetMemberOrderCheckoutInfoReq struct {
 	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+	AddressChanged      bool   // 地址是否发生变化
 }
 
 // 创建会员端订单请求参数
@@ -86,7 +87,7 @@ func (req *CreateMemberOrderReq) Validate() error {
 	return nil
 }
 
-type GetMemberOrdeFormInfoReq struct {
+type GetMemberOrderFormInfoReq struct {
 	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 }
 
