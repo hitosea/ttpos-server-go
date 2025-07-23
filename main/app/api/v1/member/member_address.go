@@ -136,7 +136,7 @@ func (h *AddressHandler) AddressAdd(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body member_req.MemberAddressUpdateReq true "详情参数"
-// @Success 200 {object} dto.Response{data=resp.LoginResp}
+// @Success 200 {object} dto.Response{}
 // @Router /member/address/update [post]
 func (h *AddressHandler) AddressUpdate(c *gin.Context) {
 	ctx := helper.GetContext(c)

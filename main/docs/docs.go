@@ -15229,19 +15229,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/dto.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/resp.LoginResp"
-                                        }
-                                    }
-                                }
-                            ]
+                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -20740,6 +20728,10 @@ const docTemplate = `{
                     "description": "国家代码",
                     "type": "string"
                 },
+                "is_auth_phone": {
+                    "description": "是否认证手机号",
+                    "type": "boolean"
+                },
                 "is_default": {
                     "description": "是否默认",
                     "type": "boolean"
@@ -20772,7 +20764,7 @@ const docTemplate = `{
                 "list": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/member_resp.MemberAddressResp"
+                        "$ref": "#/definitions/member_resp.MemberAddressDetailResp"
                     }
                 },
                 "meta": {
@@ -20782,43 +20774,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.PageResponse"
                         }
                     ]
-                }
-            }
-        },
-        "member_resp.MemberAddressResp": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "description": "详细地址",
-                    "type": "string"
-                },
-                "country": {
-                    "description": "国家代码",
-                    "type": "string"
-                },
-                "is_auth_phone": {
-                    "description": "是否认证手机号",
-                    "type": "boolean"
-                },
-                "is_default": {
-                    "description": "是否默认",
-                    "type": "boolean"
-                },
-                "name": {
-                    "description": "联系人",
-                    "type": "string"
-                },
-                "phone": {
-                    "description": "手机号",
-                    "type": "string"
-                },
-                "street": {
-                    "description": "街道/门牌号",
-                    "type": "string"
-                },
-                "uuid": {
-                    "description": "地址UUID",
-                    "type": "integer"
                 }
             }
         },

@@ -970,6 +970,9 @@ definitions:
       country:
         description: 国家代码
         type: string
+      is_auth_phone:
+        description: 是否认证手机号
+        type: boolean
       is_default:
         description: 是否默认
         type: boolean
@@ -993,39 +996,12 @@ definitions:
     properties:
       list:
         items:
-          $ref: '#/definitions/member_resp.MemberAddressResp'
+          $ref: '#/definitions/member_resp.MemberAddressDetailResp'
         type: array
       meta:
         allOf:
         - $ref: '#/definitions/dto.PageResponse'
         description: 分页信息
-    type: object
-  member_resp.MemberAddressResp:
-    properties:
-      address:
-        description: 详细地址
-        type: string
-      country:
-        description: 国家代码
-        type: string
-      is_auth_phone:
-        description: 是否认证手机号
-        type: boolean
-      is_default:
-        description: 是否默认
-        type: boolean
-      name:
-        description: 联系人
-        type: string
-      phone:
-        description: 手机号
-        type: string
-      street:
-        description: 街道/门牌号
-        type: string
-      uuid:
-        description: 地址UUID
-        type: integer
     type: object
   member_resp.MemberBaseInfoResp:
     properties:
@@ -16789,12 +16765,7 @@ paths:
         "200":
           description: OK
           schema:
-            allOf:
-            - $ref: '#/definitions/dto.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/resp.LoginResp'
-              type: object
+            $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
       summary: 更新地址

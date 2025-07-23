@@ -59,12 +59,13 @@ func (s *memberAddressSrv) GetAddressList(ctx context.Context, req member_req.Me
 	if err != nil {
 		return nil, err
 	}
-	respMemberAddresses := make([]member_resp.MemberAddressResp, 0)
+	respMemberAddresses := make([]member_resp.MemberAddressDetailResp, 0)
 	for _, memberAddress := range memberAddresses {
-		var respMemberAddress member_resp.MemberAddressResp
+		var respMemberAddress member_resp.MemberAddressDetailResp
 		copier.Copy(&respMemberAddress, memberAddress)
 		respMemberAddress.IsAuthPhone = memberAddress.IsAuthPhone()
 		respMemberAddress.IsDefault = memberAddress.IsDefault == 1
+		respMemberAddress.AddressDetail = memberAddress.GetAddressDetail()
 		respMemberAddresses = append(respMemberAddresses, respMemberAddress)
 	}
 	return &member_resp.MemberAddressListResp{
