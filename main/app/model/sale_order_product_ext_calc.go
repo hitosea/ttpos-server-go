@@ -463,8 +463,8 @@ func (model *SaleOrderProduct) calcSaucePrice() float64 {
 			// 累加每个小料的价格
 			price := decimal.NewFromFloat(bom.Price) // 加料单价
 			// 如果要上浮价格的话
-			if model.MemberOrderDiscountRate != 1 {
-				price = price.Mul(decimal.NewFromFloat(model.MemberOrderDiscountRate)).Round(2)
+			if model.GetMemberOrderDiscountRate() != 1 {
+				price = price.Mul(decimal.NewFromFloat(model.GetMemberOrderDiscountRate())).Round(2)
 			}
 			saucePrice = saucePrice.Add(price)
 		}

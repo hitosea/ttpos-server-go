@@ -168,6 +168,15 @@ type SaleBillSetting struct {
 	MemberOrderDiscountRate float64 `gorm:"column:member_order_discount_rate;type:decimal(12,2);default:1;comment:会员端商品价格上浮比例" json:"member_order_discount_rate"`
 }
 
+// 获取会员端商品价格上浮比例
+func (model *SaleBillSetting) GetMemberOrderDiscountRate() float64 {
+	// 如果会员端商品价格上浮比例小于等于0，则返回1,表示未设置上浮比例
+	if model.MemberOrderDiscountRate <= 0 {
+		return 1
+	}
+	return model.MemberOrderDiscountRate
+}
+
 // 积分是否开启自动抵扣
 func (model *SaleBillSetting) IsAutoPointsExchange() bool {
 	return model.OpenPointsExchange == 1 && model.AutoPointsExchange == 1

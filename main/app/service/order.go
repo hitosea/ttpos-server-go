@@ -846,21 +846,22 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		return nil, errors.WithMessage(err)
 	}
 
-	// productAmount := decimal.NewFromFloat(0)  // 商品合计
+	// productAmount := decimal.NewFromFloat(0) // 商品合计
 	// memberDiscount := decimal.NewFromFloat(0) // 会员折扣
 	produtds := make([]resp.MemberSaleOrderProduct, 0)
 	for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
+		amount := saleOrderProduct.GetTotalPriceOrigin()
 		produtds = append(produtds, resp.MemberSaleOrderProduct{
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
 			Num:                  saleOrderProduct.Num,
-			UnitPrice:            saleOrderProduct.SalePrice,
-			Amount:               saleOrderProduct.GetSalePrice(),
+			UnitPrice:            saleOrderProduct.OriginTotalPrice,
+			Amount:               amount,
 			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
 		})
 		// // 商品合计
 		// amount := decimal.NewFromFloat(saleOrderProduct.GetTotalPrice())
-		// productAmount = productAmount.Add(amount).Round(2)
+		// productAmount = productAmount.Add(decimal.NewFromFloat(amount)).Round(2)
 		// // 会员折扣
 		// memberDiscount = memberDiscount.Add(decimal.NewFromFloat(saleOrderProduct.GetMemberDiscountFee())).Round(2)
 	}
@@ -5021,8 +5022,8 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		}
 
 		flavorPrice := flavorProductBom.Price
-		if params.Setting.MemberOrderDiscountRate != 1 {
-			flavorPrice = decimal.NewFromFloat(flavorProductBom.Price).Mul(decimal.NewFromFloat(params.Setting.MemberOrderDiscountRate)).Round(2).InexactFloat64()
+		if params.Setting.GetMemberOrderDiscountRate() != 1 {
+			flavorPrice = decimal.NewFromFloat(flavorProductBom.Price).Mul(decimal.NewFromFloat(params.Setting.GetMemberOrderDiscountRate())).Round(2).InexactFloat64()
 		}
 		saleOrderProduct := model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
 			DeviceId:               deviceSn,
@@ -5050,6 +5051,11 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			IsAcceptOrder: uint(isAcceptOrder),
 			Remark:        product.Remark,
 		}, &productPackage, product.Operation)
+
+		if option.IsMemberAdd {
+			saleOrderProduct.MemberOrderDiscountRate = params.Setting.GetMemberOrderDiscountRate()
+		}
+
 		// 设置必点信息
 		if !option.IsMemberAdd { // 会员端加购不设置必点信息
 			var mustPlanUuid uint64

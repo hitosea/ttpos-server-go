@@ -114,6 +114,15 @@ type SaleOrderProduct struct {
 	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
 }
 
+// 获取会员端商品价格上浮比例
+func (model *SaleOrderProduct) GetMemberOrderDiscountRate() float64 {
+	// 如果会员端商品价格上浮比例小于等于0，则返回1,表示未设置上浮比例
+	if model.MemberOrderDiscountRate <= 0 {
+		return 1
+	}
+	return model.MemberOrderDiscountRate
+}
+
 // GetOpenOverallDiscount 获取是否开启 Overall 折扣
 func (model *SaleOrderProduct) GetOpenOverallDiscount() bool {
 	return model.OpenOverallDiscount == 1
@@ -172,10 +181,10 @@ func (model *SaleOrderProduct) GetPriceInMemberClient() float64 {
 		}
 	}
 	// 上浮后的价格
-	flavorPrice = decimal.NewFromFloat(flavorPrice).Mul(decimal.NewFromFloat(model.MemberOrderDiscountRate)).Round(2).InexactFloat64()
+	flavorPrice = decimal.NewFromFloat(flavorPrice).Mul(decimal.NewFromFloat(model.GetMemberOrderDiscountRate())).Round(2).InexactFloat64()
 	// 上浮后的小料价格
 	for i, saucePrice := range saucePrices {
-		saucePrices[i] = decimal.NewFromFloat(saucePrice).Mul(decimal.NewFromFloat(model.MemberOrderDiscountRate)).Round(2).InexactFloat64()
+		saucePrices[i] = decimal.NewFromFloat(saucePrice).Mul(decimal.NewFromFloat(model.GetMemberOrderDiscountRate())).Round(2).InexactFloat64()
 	}
 	// 上浮后的小料价格总和
 	var saucePriceTotal float64
