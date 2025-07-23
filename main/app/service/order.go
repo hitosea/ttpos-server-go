@@ -898,6 +898,18 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		})
 	}
 
+	// 如果订单未设置地址，查询会员的默认地址,如果有默认地址，则使用默认地址
+	if memberSaleOrder.MemberAddressUuid == 0 {
+		memberAddress, err := repository.NewMemberAddressRepo(ctx.GetDB()).GetMemberDefaultAddress(memberSaleOrder.MemberUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		if memberAddress != nil {
+			memberSaleOrder.SetMemberAddress(*memberAddress)
+			req.AddressChanged = true
+		}
+	}
+
 	var address resp.MemberSaleOrderAddress
 	if memberSaleOrder.Address != nil {
 		lat, lng, err := memberSaleOrder.Address.GetLocation()

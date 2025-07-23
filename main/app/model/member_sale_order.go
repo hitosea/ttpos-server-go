@@ -79,6 +79,18 @@ func (model *MemberSaleOrder) OriginAmountValue() float64 {
 	return decimal.NewFromFloat(model.OriginProductAmount).Add(decimal.NewFromFloat(model.DeliveryFeeAmount)).Round(2).InexactFloat64()
 }
 
+// SetMemberAddress 设置会员地址
+func (model *MemberSaleOrder) SetMemberAddress(address MemberAddress) {
+	model.MemberAddressUuid = address.Uuid
+	model.ContactLocation = address.Location
+	model.ContactAddress = address.Address
+	model.ContactAddressDetail = address.Street
+	model.ContactName = address.Name
+	model.ContactPhone = address.Phone
+	model.ContactPhonePrefix = address.PhonePrefix
+	model.Address = &address
+}
+
 // 获取剩余支付时间(单位秒)
 func (model *MemberSaleOrder) GetRemainingPaymentTime() int64 {
 	// 支付超时时间为24小时（86400秒）

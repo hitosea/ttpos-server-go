@@ -182,13 +182,7 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	}
 	addressChanged := memberSaleOrder.MemberAddressUuid != request.MemberAddressUuid
 
-	memberSaleOrder.MemberAddressUuid = request.MemberAddressUuid
-	memberSaleOrder.ContactLocation = memberAddress.Location
-	memberSaleOrder.ContactAddress = memberAddress.Address
-	memberSaleOrder.ContactAddressDetail = memberAddress.Street
-	memberSaleOrder.ContactName = memberAddress.Name
-	memberSaleOrder.ContactPhone = memberAddress.Phone
-	memberSaleOrder.ContactPhonePrefix = memberAddress.PhonePrefix
+	memberSaleOrder.SetMemberAddress(*memberAddress)
 
 	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderAddress(*memberSaleOrder); err != nil {
 		return nil, errors.WithMessage(err)
