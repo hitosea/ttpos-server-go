@@ -1159,6 +1159,7 @@ func (s *orderSrv) GetMemberOrderManageDetail(ctx context.Context, req req.GetMe
 		PayAmount:           memberSaleOrder.Amount,
 		RefundAmount:        memberSaleOrder.RefundAmount,
 		MemberDiscount:      memberSaleOrder.MemberDiscountFee,
+		DeliveryFee:         memberSaleOrder.DeliveryFeeAmount,
 		PayType:             payType,
 		PayTime:             memberSaleOrder.PayTime,
 		CreateTime:          memberSaleOrder.CreateTime,
