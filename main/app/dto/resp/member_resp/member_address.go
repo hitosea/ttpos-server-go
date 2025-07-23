@@ -29,4 +29,5 @@ type MemberAddressDetailResp struct {
 	IsDefault     bool   `json:"is_default"`     // 是否默认
 	Location      string `json:"location"`       // 位置坐标
 	AddressDetail string `json:"address_detail"` // 地址详情（完整地址串）
+	IsAuthPhone   bool   `json:"is_auth_phone"`  // 是否认证手机号
 }

@@ -98,6 +98,7 @@ func (s *memberAddressSrv) GetAddressDetail(ctx context.Context, req member_req.
 	var respMemberAddress member_resp.MemberAddressDetailResp
 	copier.Copy(&respMemberAddress, memberAddress)
 	respMemberAddress.IsDefault = memberAddress.IsDefault == 1
+	respMemberAddress.IsAuthPhone = memberAddress.IsAuthPhone()
 
 	// 设置地址详情
 	respMemberAddress.AddressDetail = memberAddress.GetAddressDetail()
