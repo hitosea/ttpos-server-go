@@ -32,7 +32,7 @@ import (
 type IMemberOrderSrv interface {
 	// 会员端
 	CreateMemberOrder(ctx context.Context, req req.CreateMemberOrderReq) (*resp.CreateMemberOrderResp, *resp.OrderCheckServiceRes, error)    // 创建会员端订单
-	GetMemberOrdeFormInfo(ctx context.Context, req req.GetMemberOrdeFormInfoReq) (*resp.CreateMemberOrderResp, error)                        // 获取订单提交表单信息
+	GetMemberOrderFormInfo(ctx context.Context, req req.GetMemberOrderFormInfoReq) (*resp.CreateMemberOrderResp, error)                      // 获取订单提交表单信息
 	SetMemberOrderAddress(ctx context.Context, req member_req.SetMemberOrderAddressReq) (*resp.CreateMemberOrderResp, error)                 // 设置会员端订单地址
 	PayMemberOrder(ctx context.Context, request member_req.PayMemberOrderReq) error                                                          // 会员端订单提交支付，状态变为待支付
 	GetMemberOrderPayInfo(ctx context.Context, request member_req.GetMemberOrderPayInfoReq) (*resp.MemberOrderPaymentInfoResp, error)        // 会员端订单获取支付信息
@@ -143,8 +143,8 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 	}
 }
 
-// GetMemberOrdeFormInfo 获取订单提交表单信息
-func (s *orderSrv) GetMemberOrdeFormInfo(ctx context.Context, request req.GetMemberOrdeFormInfoReq) (*resp.CreateMemberOrderResp, error) {
+// GetMemberOrderFormInfo 获取订单提交表单信息
+func (s *orderSrv) GetMemberOrderFormInfo(ctx context.Context, request req.GetMemberOrderFormInfoReq) (*resp.CreateMemberOrderResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	info, err := s.GetMemberOrderCheckoutInfo(ctx, req.GetMemberOrderCheckoutInfoReq{
@@ -179,6 +179,10 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	if memberSaleOrder.MemberUuid != member.Uuid {
 		return nil, errors.New("订单与会员不匹配")
 	}
+	distance := memberSaleOrder.DeliveryDistance
+	if memberSaleOrder.MemberAddressUuid != request.MemberAddressUuid {
+		distance = 0
+	}
 
 	memberSaleOrder.MemberAddressUuid = request.MemberAddressUuid
 	memberSaleOrder.ContactLocation = memberAddress.Location
@@ -187,6 +191,7 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	memberSaleOrder.ContactName = memberAddress.Name
 	memberSaleOrder.ContactPhone = memberAddress.Phone
 	memberSaleOrder.ContactPhonePrefix = memberAddress.PhonePrefix
+	memberSaleOrder.DeliveryDistance = distance
 
 	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderAddress(*memberSaleOrder); err != nil {
 		return nil, errors.WithMessage(err)
@@ -195,6 +200,7 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	// 返回会员端订单信息
 	info, err := s.GetMemberOrderCheckoutInfo(ctx, req.GetMemberOrderCheckoutInfoReq{
 		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
+		AddressChanged:      distance == 0,
 	}, nil)
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -216,11 +222,6 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 	// 如果未设置地址，返回错误
 	if memberSaleOrder.MemberAddressUuid == 0 {
 		return errors.New("请先选择订单地址")
-	}
-
-	// 判断订单地址是否认证手机号
-	if !memberSaleOrder.IsVerifiedPhoneBool() {
-		return errors.NewWithCode(constant.CodeOrderAddressNotVerifiedPhone, "订单地址未认证手机号")
 	}
 
 	memberSaleOrder.Remark = request.Remark
