@@ -20,6 +20,7 @@ import (
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
+	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
 	"ttpos-server-go/pkg/websocket"
@@ -857,7 +858,28 @@ func (s *orderSrv) GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.
 
 	merchantLat, merchantLng := companySetting.GetCoordinates()
 	customerLat, customerLng := memberSaleOrder.GetCustomerLocation()
-	riderLat, riderLng := memberSaleOrder.GetLocation()
+
+	// 调用外送服务获取骑手位置接口，如果获取成功，则更新member_sale_order的location，否则使用member_sale_order的location
+	var riderLat, riderLng string
+	takeoutSrv := takeout.NewTakeoutSrv()
+	// 获取骑手实时位置
+	riderLocation, err := takeoutSrv.GetDriverInfo(contexts.Background(), &req.GetDriverInfoReq{
+		ShopOrderUuid: memberSaleOrder.OrderNo,
+	})
+	if err == nil && riderLocation != nil {
+		riderLat = fmt.Sprintf("%.6f", riderLocation.Lat)
+		riderLng = fmt.Sprintf("%.6f", riderLocation.Lng)
+		memberSaleOrder.Location = fmt.Sprintf("%s,%s", riderLat, riderLng)
+		// 更新骑手位置到订单
+		if err = repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
+			logger.Logger.Error("更新骑手位置失败",
+				zap.Error(err),
+				zap.Uint64("member_sale_order_uuid", memberSaleOrder.Uuid),
+			)
+		}
+	} else {
+		riderLat, riderLng = memberSaleOrder.GetLocation()
+	}
 
 	return &resp.MemberOrderCoordinates{
 		Merchant: resp.OrderCoordinate{
