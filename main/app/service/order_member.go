@@ -693,7 +693,7 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 		return errors.WithMessage(err)
 	}
 
-	// 发布“整单取消”操作事件
+	// 发布“订单取消”操作事件
 	go func() {
 		s.bus.PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
 			BasePayload: event.BasePayload{
