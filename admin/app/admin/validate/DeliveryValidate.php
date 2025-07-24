@@ -32,6 +32,19 @@ class DeliveryValidate extends  BaseValidate
         $prevEnd = null;
         $hasUnlimited = false;
 
+        // 至少有一个元素
+        if (!is_array($value) || count($value) < 1) {
+            return "至少有一个距离范围";
+        }
+        // 根据end升序排序
+        usort($value, function ($a, $b) {
+            return $a['end'] - $b['end'];
+        });
+        $lastItem = $value[count($value) - 1];
+        if (!isset($lastItem['is_unlimited']) || !$lastItem['is_unlimited']) {
+            return "最后一个距离范围必须是最大范围";
+        }
+
         foreach ($value as $index => $item) {
 
             if (!isset($item['price_per_km']) || !is_float($item['price_per_km']) && !is_int($item['price_per_km'])) {
