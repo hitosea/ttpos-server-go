@@ -70,6 +70,8 @@ build-run:
 # 更新
 update:
 	chmod +x ./.sh && ./.sh update
+	#更新 takeout模块数据库
+	cd takeout && make conf && make db_up
 	docker compose -p ttpos-server-go up -d --build
 	chmod +x ./.sh && ./.sh restart
 
