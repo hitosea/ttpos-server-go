@@ -113,6 +113,15 @@ func (model *SaleOrder) GetProductAmount() float64 {
 	return amount.Round(2).InexactFloat64()
 }
 
+// 获取商品原价. 用于会员端订单
+func (model *SaleOrder) GetOriginProductAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.GetTotalPriceOrigin()))
+	}
+	return amount.Round(2).InexactFloat64()
+}
+
 // 获取已选择的优惠券uuid
 func (model *SaleOrder) GetSelectedCouponUuid() uint64 {
 	if model.HasCoupon() {

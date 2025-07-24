@@ -12,7 +12,8 @@ const EventRejectMemberSaleOrder EventName = "Event_Reject_Member_Sale_Order"
 // RejectMemberSaleOrderPayload 拒单会员端销售订单事件的数据结构
 type RejectMemberSaleOrderPayload struct {
 	BasePayload
-	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+	Data                CancelMemberOrderPayloadData `json:"data"`
+	MemberSaleOrderUuid uint64                       `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 	MemberSaleOrder     *model.MemberSaleOrder
 }
 

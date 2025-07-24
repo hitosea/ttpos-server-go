@@ -140,8 +140,6 @@
         multipleSelection: [],
         /*是否显示*/
         dialogVisible: false,
-        /*单选模式*/
-        is_single: false,
         /*选中的行*/
         selectedRow: null,
       };
@@ -151,7 +149,10 @@
         type: Boolean,
         default: false,
       },
-      detailSelection: [],
+      detailSelection: {
+        type: Array,
+        default: () => [],
+      },
       is_open: Boolean,
       is_single: {
         type: Boolean,
@@ -174,19 +175,7 @@
           }
         }
       },
-      // 监听is_single变化
-      is_single: {
-        immediate: true,
-        handler(val) {
-          // 切换模式时重置选择状态
-          this.selectedRow = null;
-          this.multipleSelection = [];
-        },
-      },
-    },
-    created() {
-      // 初始化时设置单选/多选模式
-      this.is_single = this.$props.is_single;
+
     },
     methods: {
       /*选择第几页*/

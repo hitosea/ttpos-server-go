@@ -1,5 +1,17 @@
 package constant
 
+// 会员端订单操作类型
+const (
+	OrderCreateMemberSaleOrder    = "CREATE_MEMBER_SALE_ORDER"         // 创建订单
+	OrderPayFinishMemberSaleOrder = "PAY_FINISH_MEMBER_SALE_ORDER"     // 订单支付成功
+	OrderCancelMemberSaleOrder    = "CANCEL_MEMBER_SALE_ORDER"         // 订单取消
+	OrderAcceptMemberSaleOrder    = "ACCEPT_MEMBER_SALE_ORDER"         // 商家接单
+	OrderPickMemberSaleOrder      = "COMPLETE_ORDER_MEMBER_SALE_ORDER" // 出餐完成，呼叫骑手
+	OrderPickUpMemberSaleOrder    = "PICK_UP_MEMBER_SALE_ORDER"        // 骑手已接单，正在赶往商家
+	OrderDeliveryMemberSaleOrder  = "DELIVERY_MEMBER_SALE_ORDER"       // 骑手取货完成，开始配送
+	OrderFinishMemberSaleOrder    = "FINISH_MEMBER_SALE_ORDER"         // 配送完成，订单完成
+)
+
 // 会员端订单状态列表
 const (
 	MemberSaleOrderStatusSelecting             = 0 // 选购中
@@ -107,7 +119,17 @@ func GetStatusList(status string) []uint {
 
 // 取消场景：merchant_cancel-商家取消；member_cancel-用户取消；merchant_reject-商家拒单
 const (
-	MemberSaleOrderSceneMerchantCancel = "merchant_cancel" // 商家取消
-	MemberSaleOrderSceneMemberCancel   = "member_cancel"   // 用户取消
-	MemberSaleOrderSceneMerchantReject = "merchant_reject" // 商家拒单
+	MemberSaleOrderSceneMerchantCancel     = "merchant_cancel"      // 商家取消。备餐中取消
+	MemberSaleOrderSceneMemberCancel       = "member_cancel_paid"   // 用户取消。已支付时用户取消
+	MemberSaleOrderSceneMerchantReject     = "merchant_reject"      // 商家拒单
+	MemberSaleOrderSceneSelectingTimeout   = "selecting_timeout"    // 选购超时
+	MemberSaleOrderScenePaymentTimeout     = "payment_timeout"      // 支付超时。未支付时用户取消
+	MemberSaleOrderSceneMemberCancelUnpaid = "member_cancel_unpaid" // 用户取消。未支付时用户取消
+	MemberSaleOrderSceneRiderPickupTimeout = "rider_pickup_timeout" // 骑手接单超时。取消订单
+)
+
+// 外送订单是否已计算距离费
+const (
+	DistanceNotCalculated = -1 // 未计算
+	DistanceCalculated    = 1  // 已计算
 )

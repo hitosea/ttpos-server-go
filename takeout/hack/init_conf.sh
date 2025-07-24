@@ -2,9 +2,9 @@
 old_dir=$OLDPWD
 cd `dirname $0`
 set -o allexport
-source ../../.env
+#引入环境变量
+. ../../.env
 app_dir=`dirname $(pwd)`
-# 遍历app目录下的所有子目录（假设init_conf.sh位于hack目录，app目录在上级目录）
     # 仅处理目录类型
     if [ -d "$app_dir" ]; then
         # 定义模板文件路径（根据用户提供的config.tpl.yaml路径结构）

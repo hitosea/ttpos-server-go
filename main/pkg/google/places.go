@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -44,13 +44,13 @@ func PlacesSearchText(text string, latitude float64, longitude float64) (string,
 	}
 	//
 	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println(err)
 		return "", err
 	}
 	//
-	result := map[string]interface{}{}
+	result := map[string]any{}
 	json.Unmarshal(body, &result)
 	//
 	resultJson, err := json.Marshal(result)

@@ -2090,5 +2090,7 @@
     "待接单": "Pending Order",
     "联系骑手": "Contact rider",
     "拒单": "Order rejected",
-    "骑手：": "Rider:"
+    "骑手：": "Rider:",
+    "备餐中": "Preparing",
+    "请输入邮箱/手机号": "Please enter your email or phone number"
 }

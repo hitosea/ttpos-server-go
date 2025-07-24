@@ -28,5 +28,6 @@ gfcli:
     build: "-a amd64 -s linux -p temp -ew"
     tagPrefixes:
       - hub.hitosea.com/ttpos-bmp-takeout
-migrate:
-  db: "mysql://root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
+
+#注意db的格式跟link的不一样
+migrate-db-link: mysql://root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout

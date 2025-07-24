@@ -34,7 +34,7 @@ func (resp *Business) IsAutoClearDesk() bool {
 // 外送折扣率。100%应表示为1，90%应表示为0.9
 func (resp *Business) GetDeliveryPriceRatio() float64 {
 	value := float64(resp.DeliveryPriceRatio)
-	return decimal.NewFromFloat(value).Div(decimal.NewFromInt(100)).Round(2).InexactFloat64() // 取值范围为0.01-300
+	return decimal.NewFromFloat(value).Div(decimal.NewFromInt(100)).Round(4).InexactFloat64() // 取值范围为0.01-3
 }
 
 type ZeroingMethodItem MethodItem

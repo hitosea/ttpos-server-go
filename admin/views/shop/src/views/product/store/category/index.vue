@@ -26,11 +26,6 @@
               <p v-else>{{ $t('二级分类') }}</p>
             </template>
           </el-table-column>
-          <!-- <el-table-column prop="" :label="$t('图片')" width="180">
-                        <template #default="scope">
-                            <img v-if="scope.row.images" v-img-url="scope.row.images.file_path" alt="" width="50" />
-                        </template>
-                    </el-table-column> -->
           <el-table-column prop="product_num" :label="$t('关联商品数量')" width="120">
             <template #default="scope">
               <p v-if="scope.row.is_button == 1">-</p>
@@ -40,7 +35,7 @@
           <el-table-column prop="sort" :label="$t('状态')">
             <template #default="scope">
               <el-switch
-                :disabled="!this.$filter.isAuth('/product/store/category/state') || scope.row.is_button == 1"
+                :disabled="!$filter.isAuth('/product/store/category/state') || scope.row.is_button == 1"
                 v-model="scope.row.status"
                 :active-value="1"
                 :inactive-value="0"
@@ -93,159 +88,152 @@
   </div>
 </template>
 
-<script>
-  import PorductApi from '@/api/product.js';
-  import Add from './Add.vue';
-  import Edit from './Edit.vue';
-  export default {
-    components: {
-      Add,
-      Edit,
+<script setup>
+import { ref, reactive, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useI18n } from 'vue-i18n'
+import PorductApi from '@/api/product.js'
+import Add from './Add.vue'
+import Edit from './Edit.vue'
+
+// 国际化
+const { t } = useI18n()
+
+// 响应式数据
+const loading = ref(true)
+const pageSize = ref(10)
+const totalDataNumber = ref(0)
+const curPage = ref(1)
+const tableData = ref([])
+const open_add = ref(false)
+const open_edit = ref(false)
+const categoryModel = reactive({
+  catList: [],
+  model: {},
+})
+const searchForm = reactive({
+  name: '',
+})
+const searchLoading = ref(null)
+
+// 方法定义
+// 选择第几页
+const handleCurrentChange = (val) => {
+  loading.value = true
+  curPage.value = val
+  getData()
+}
+
+// 每页多少条
+const handleSizeChange = (val) => {
+  pageSize.value = val
+  getData()
+}
+
+// 搜索查询
+const onSearch = () => {
+  clearTimeout(searchLoading.value)
+  searchLoading.value = setTimeout(() => {
+    curPage.value = 1
+    getData()
+  }, 200)
+}
+
+// 切换菜单
+const handleClick = () => {
+  curPage.value = 1
+  getData()
+}
+
+// 获取列表
+const getData = async () => {
+  loading.value = true
+  try {
+    const res = await PorductApi.storeCatList(
+    {
+      name: searchForm.name,
+      page: curPage.value,
+      list_rows: pageSize.value,
     },
-    data() {
-      return {
-        /*是否加载完成*/
-        loading: true,
-        activeName: 'first',
-        /*是否正在加载*/
-        loading: true,
-        /*一页多少条*/
-        pageSize: 10,
-        /*一共多少条数据*/
-        totalDataNumber: 0,
-        /*当前是第几页*/
-        curPage: 1,
-        /*列表数据*/
-        tableData: [],
-        /*是否打开添加弹窗*/
-        open_add: false,
-        /*是否打开编辑弹窗*/
-        open_edit: false,
-        /*当前编辑的对象*/
-        categoryModel: {
-          catList: [],
-          model: {},
-        },
-        searchForm: {
-          name: '',
-        },
-        searchLoading: '',
-      };
-    },
-    created() {
-      /*获取列表*/
-      this.getData();
-    },
-    methods: {
-      /*选择第几页*/
-      handleCurrentChange(val) {
-        this.loading = true;
-        this.curPage = val;
-        this.getData();
-      },
+    true
+  )
+  loading.value = false
+  tableData.value = res.data.list.data || res.data.data || []
+  categoryModel.catList = tableData.value
+  totalDataNumber.value = res.data.list.total || 0
+  } catch (error) {
+    loading.value = false
+  }
+    
+}
 
-      /*每页多少条*/
-      handleSizeChange(val) {
-        this.pageSize = val;
-        this.getData();
-      },
+// 打开添加
+const addClick = () => {
+  open_add.value = true
+}
 
-      /*搜索查询*/
-      /*搜索查询*/
-      onSearch() {
-        clearTimeout(this.searchLoading);
-        this.searchLoading = setTimeout(() => {
-          this.curPage = 1;
-          this.getData();
-        }, 200);
-      },
+// 打开编辑
+const editClick = (item) => {
+  categoryModel.model = item
+  open_edit.value = true
+}
 
-      /*切换菜单*/
-      handleClick() {
-        this.curPage = 1;
-        this.getData();
-      },
+// 状态设置
+const statusSet = async (e, id) => {
+  try {
+    const res = await PorductApi.storeCatSet({
+      category_id: id,
+      status: e,
+    },true)
+    ElMessage({
+      message: res.msg,
+      type: 'success',
+    })
+  } catch (error) {
+    ElMessage.error(error?.message || t('状态设置失败'))
+  }
+}
 
-      /*获取列表*/
-      getData() {
-        let self = this;
-        self.loading = true;
-        PorductApi.storeCatList(
-          {
-            name: self.searchForm.name,
-            page: self.curPage,
-            list_rows: self.pageSize,
-          },
-          true
-        )
-          .then((data) => {
-            self.loading = false;
-            self.tableData = data.data.list.data || data.data.data || [];
-            self.categoryModel.catList = self.tableData;
-            self.totalDataNumber = data.data.list.total || 0;
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
-      /*打开添加*/
-      addClick() {
-        this.open_add = true;
-      },
+// 关闭弹窗
+const closeDialogFunc = (e, f) => {
+  if (f == 'add') {
+    open_add.value = e.openDialog
+    if (e.type == 'success') {
+      getData()
+    }
+  }
+  if (f == 'edit') {
+    open_edit.value = e.openDialog
+    if (e.type == 'success') {
+      getData()
+    }
+  }
+}
 
-      /*打开编辑*/
-      editClick(item) {
-        this.categoryModel.model = item;
-        this.open_edit = true;
-      },
+// 删除分类
+const deleteClick = (row) => {
+  ElMessageBox.confirm(t('删除后不可恢复，确认删除吗?'), t('提示'), {
+    type: 'warning',
+  }).then(async () => {
+    try {
+      const res = await PorductApi.storeCatDel({
+        category_id: row.category_id,
+      },true)
+      ElMessage({
+        message: t('删除成功'),
+        type: 'success',
+      })
+      getData()
+    } catch (err) {
+      ElMessage.error(err?.message || t('删除失败'))
+    }
+  })
+}
 
-      // 状态设置
-      statusSet(e, id) {
-        PorductApi.storeCatSet({
-          category_id: id,
-          status: e,
-        }).then((data) => {
-          this.$ElMessage({
-            message: data.msg,
-            type: 'success',
-          });
-        });
-      },
-
-      /*关闭弹窗*/
-      closeDialogFunc(e, f) {
-        if (f == 'add') {
-          this.open_add = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-          }
-        }
-        if (f == 'edit') {
-          this.open_edit = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-          }
-        }
-      },
-      /*删除分类*/
-      deleteClick(row) {
-        let self = this;
-        ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          PorductApi.storeCatDel({
-            category_id: row.category_id,
-          }).then((data) => {
-            this.$ElMessage({
-              message: $t('删除成功'),
-              type: 'success',
-            });
-            self.getData();
-          });
-        });
-      },
-    },
-  };
+// 组件挂载时获取数据
+onMounted(() => {
+  getData()
+})
 </script>
 
 <style scoped>

@@ -12,7 +12,14 @@ logger:
 # https://goframe.org/docs/core/gdb-config-file
 database:
   default:
-    link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
+    link: "mysql:root:$DB_ROOT_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout?charset=utf8mb4&parseTime=True&loc=Local&timeout=5s"
+    maxIdle: 10                 # (可选)连接池最大闲置的连接数(默认10)
+    maxOpen: 100                # (可选)连接池最大打开的连接数(默认无限制)
+    maxLifetime: "30s"          # (可选)连接对象可重复使用的时间长度(默认30秒)
+    queryTimeout: "0"           # (可选)查询语句超时时长(默认无限制，同时受ctx超时时间影响)。值为time.Parse支持的格式，如30s, 1m。
+    execTimeout: "0"            # (可选)写入语句超时时长(默认无限制，同时受ctx超时时间影响)。值为time.Parse支持的格式，如30s, 1m。
+    tranTimeout: "0"            # (可选)事务处理超时时长(默认无限制，同时受ctx超时时间影响)。值为time.Parse支持的格式，如30s, 1m。
+    prepareTimeout: "0"         # (可选)预准备SQL语句执行超时时长(默认无限制，同时受ctx超时时间影响)。值为time.Parse支持的格式，如30s, 1m。
 
 grpc:
   name:            "ttpos-takeout"

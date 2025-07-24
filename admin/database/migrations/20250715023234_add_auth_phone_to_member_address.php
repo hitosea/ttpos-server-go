@@ -5,6 +5,9 @@ use think\migration\Migrator;
 
 class AddAuthPhoneToMemberAddress extends Migrator
 {
+    // 迁移目标
+    const TARGET = 'shop_master';
+    
     /**
      * Change Method.
      *
@@ -28,11 +31,18 @@ class AddAuthPhoneToMemberAddress extends Migrator
      */
     public function change()
     {
-        $table = $this->table('member_address');
-        if (!$table->hasColumn('auth_phone')) {
-            $table->addColumn('auth_phone', 'string', ['limit' => 20, 'null' => false, 'default' => '', 'comment' => '认证手机号', 'after' => 'location']);
-            $table->addColumn('auth_time', 'integer', ['limit' => 11, 'null' => false, 'default' => 0, 'comment' => '认证时间', 'after' => 'auth_phone']);
-            $table->update();
+        try {
+            if ($this->hasTable('member_address')) {
+                $table = $this->table('member_address');
+                if (!$table->hasColumn('auth_phone')) {
+                    $table->addColumn('auth_phone', 'string', ['limit' => 20, 'null' => false, 'default' => '', 'comment' => '认证手机号', 'after' => 'location']);
+                    $table->addColumn('auth_time', 'integer', ['limit' => 11, 'null' => false, 'default' => 0, 'comment' => '认证时间', 'after' => 'auth_phone']);
+                    $table->update();
+                }
+            }
+        } catch (\Throwable $th) {
+            //throw $th;
         }
+       
     }
 }

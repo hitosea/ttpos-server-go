@@ -232,6 +232,19 @@ func (model *SaleBill) GetFirstSaleOrder() *SaleOrder {
 	return model.SaleOrders[0]
 }
 
+// 重新设置外送订单的会员端折扣率，并重新计算商品价格
+func (model *SaleBill) SetMemberOrderDiscountRate(rate float64) {
+	defer model.SetUpdate()
+	model.SaleBillSetting.MemberOrderDiscountRate = rate
+	for _, saleOrder := range model.SaleOrders {
+		saleOrder.SetUpdate()
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			saleOrderProduct.MemberOrderDiscountRate = rate
+			saleOrderProduct.SetUpdate()
+		}
+	}
+}
+
 // 获取销售账单的销售订单和销售订单商品
 func (model *SaleBill) GetSaleOrderAndProduct(saleOrderUuid uint64, saleOrderProductUuid uint64) (*SaleOrder, *SaleOrderProduct) {
 	// 获取销售订单

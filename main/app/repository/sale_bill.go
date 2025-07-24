@@ -17,9 +17,11 @@ type ISaleBillRepo interface {
 	UpdateSaleBill(saleBill *model.SaleBill) error
 	UpdateSaleBillRecord(saleBill model.SaleBill) error
 	UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error
-	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error       // 确认必点
-	UpdateSaleBillAutoAddMustProduct(saleBillUuid uint64) error // 完成自动加购
-	DeleteSaleBill(saleBillUuid uint64) error                   // 软删除销售账单
+	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error              // 确认必点
+	UpdateSaleBillAutoAddMustProduct(saleBillUuid uint64) error        // 完成自动加购
+	DeleteSaleBill(saleBillUuid uint64) error                          // 软删除销售账单
+	UpdateDutyNo(saleBillUuid uint64, dutyNo string) error             // 更新销售账单的当班编号
+	UpdateSaleBillSerialNo(saleBillUuid uint64, serialNo string) error // 更新销售账单的流水号
 }
 
 // ISaleBillQueryRepo 销售账单的查询接口。
@@ -327,4 +329,21 @@ func (r *saleBillRepo) GetCompleteTotal() (int64, error) {
 		return 0, errors.WithMessage(err)
 	}
 	return total, nil
+}
+
+// UpdateDutyNo 更新销售账单的当班编号
+func (r *saleBillRepo) UpdateDutyNo(saleBillUuid uint64, dutyNo string) error {
+	if err := r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
+		DutyNo: dutyNo,
+	}).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateSaleBillSerialNo 更新销售账单的流水号
+func (r *saleBillRepo) UpdateSaleBillSerialNo(saleBillUuid uint64, serialNo string) error {
+	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
+		SerialNo: serialNo,
+	}).Error
 }

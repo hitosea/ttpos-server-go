@@ -1,4 +1,4 @@
-
+SHELL := /bin/bash
 # Install/Update to the latest CLI tool.
 .PHONY: cli
 cli:
@@ -28,6 +28,7 @@ envsubst.install:
 		brew install gettext; \
 	fi;
 
+# Check and install migrate.
 .PHONY: migrate.install
 migrate.install:
 	@set -e; \

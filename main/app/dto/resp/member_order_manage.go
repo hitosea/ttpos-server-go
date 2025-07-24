@@ -89,6 +89,7 @@ type GetMemberOrderManageDetailResp struct {
 	PayAmount           float64     `json:"pay_amount"`             // 实付金额。商品金额+配送费-会员折扣
 	RefundAmount        float64     `json:"refund_amount"`          // 退款金额
 	MemberDiscount      float64     `json:"member_discount"`        // 会员折扣金额
+	DeliveryFee         float64     `json:"delivery_fee"`           // 配送费
 	PayType             string      `json:"pay_type"`               // 支付方式
 	PayTime             int64       `json:"pay_time"`               // 支付时间
 	CreateTime          int64       `json:"create_time"`            // 创建时间,下单时间

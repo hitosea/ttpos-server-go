@@ -58,6 +58,37 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetMemberOrderFormInfo 获取订单提交表单信息
+// @Summary 获取订单提交表单信息
+// @Description 获取订单提交表单信息
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data query req.GetMemberOrderFormInfoReq true "详情参数"
+// @Success 200 {object} resp.CreateMemberOrderResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /member/order/form/info [get]
+func (h *OrderHandler) GetMemberOrderFormInfo(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.GetMemberOrderFormInfoReq{}
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
+		return
+	}
+	ctx.Log().Debug("获取订单提交表单信息", zap.Any("params", params))
+
+	// 获取订单提交表单信息
+	res, err := h.orderSrv.GetMemberOrderFormInfo(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // SetOrderAddress 设置订单地址
 // @Summary 设置订单地址
 // @Description 设置订单地址
@@ -128,8 +159,8 @@ func (h *OrderHandler) PayOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param member_sale_order_uuid query string true "会员端销售订单UUID"
-// @Success 200 {object} nil "成功"
+// @Param data query member_req.GetMemberOrderPayInfoReq true "详情参数"
+// @Success 200 {object} resp.MemberOrderPaymentInfoResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/pay/info [get]
 func (h *OrderHandler) PayOrderInfo(c *gin.Context) {
@@ -158,7 +189,7 @@ func (h *OrderHandler) PayOrderInfo(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param member_sale_order_uuid query string true "会员端销售订单UUID"
-// @Success 200 {object} nil "成功"
+// @Success 200 {object} resp.MemberOrderPaymentStatusResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/pay/status [get]
 func (h *OrderHandler) PayOrderStatus(c *gin.Context) {
@@ -187,7 +218,7 @@ func (h *OrderHandler) PayOrderStatus(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param data body member_req.PaidMemberOrderReq true "详情参数"
-// @Success 200 {object} nil "成功"
+// @Success 200 {object} resp.MemberOrderPaymentStatusResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/xie-test/order/paid [post]
 func (h *OrderHandler) PaidOrder(c *gin.Context) {
@@ -216,8 +247,8 @@ func (h *OrderHandler) PaidOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param data body req.MemberOrderListReq true "详情参数"
-// @Success 200 {object} nil "成功"
+// @Param data query req.MemberOrderListReq true "详情参数"
+// @Success 200 {object} resp.GetMemberOrderListResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/list [get]
 func (h *OrderHandler) GetMemberOrderList(c *gin.Context) {
@@ -246,7 +277,7 @@ func (h *OrderHandler) GetMemberOrderList(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param member_sale_order_uuid query string true "会员端销售订单UUID"
-// @Success 200 {object} nil "成功"
+// @Success 200 {object} resp.GetMemberOrderDetailResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/detail [get]
 func (h *OrderHandler) GetMemberOrderDetail(c *gin.Context) {
@@ -371,10 +402,10 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		orderSrv: orderSrv,
 	}
 	// 需要认证
-	// privateApi := router.Group("")
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
 		privateApi.POST("/order/create", wrapper.CreateOrder)                                 // 创建订单
+		privateApi.GET("/order/form/info", wrapper.GetMemberOrderFormInfo)                    // 获取订单提交表单信息
 		privateApi.POST("/order/address", wrapper.SetOrderAddress)                            // 设置订单地址
 		privateApi.POST("/order/pay", wrapper.PayOrder)                                       // 提交支付
 		privateApi.GET("/order/pay/info", wrapper.PayOrderInfo)                               // 获取支付信息

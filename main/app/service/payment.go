@@ -160,11 +160,10 @@ func (p *PaymentRepo) CreatePayment(req CreatePaymentReq) (*model.LlPaymentOrder
 	)
 
 	// 请求支付
-	clientIp := p.ctx.GetClientIp()
 	response, err := p.postRequest(url, jsonStr, map[string]string{
 		"Content-Type": "application/json; charset=utf-8",
 		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
-		"client-ip":    utils.IfString(clientIp == "127.0.0.1", "180.136.139.13", clientIp),
+		"client-ip":    p.ctx.GetRemoteIp(),
 	}, RequestTimeOut)
 	if err != nil {
 		return nil, err
@@ -294,6 +293,7 @@ type PaymentServiceRefundReq struct {
 	BankCode              string  // 银行代码
 	AccountNo             string  // 账号
 	AccountName           string  // 账号名称
+	RefundRequestIndex    int     `json:"refund_request_index"` // 退款请求次数索引
 }
 type LianLianPaymentRefundResp struct {
 	MerchantId       string `json:"merchant_id"`        // 商户ID
@@ -305,12 +305,19 @@ type LianLianPaymentRefundResp struct {
 	CreateTime       string `json:"ll_create_time"`     // 创建时间
 }
 
+func (p *PaymentRepo) handleRefundError(err error, serviceRefundReq *PaymentServiceRefundReq) (*LianLianPaymentRefundResp, error) {
+	if serviceRefundReq.RefundRequestIndex == 0 {
+		serviceRefundReq.RefundRequestIndex = 1
+		return p.Refund(*serviceRefundReq)
+	}
+	return nil, fmt.Errorf("退款失败: %w", err)
+}
 func (p *PaymentRepo) Refund(serviceRefundReq PaymentServiceRefundReq) (*LianLianPaymentRefundResp, error) {
 	paymentApp, err := p.validateConfig(p.ctx.GetCompanyUuid())
 	if err != nil {
 		return nil, err
 	}
-	//
+	// 获取支付订单信息
 	order, err := repository.NewLlPaymentOrderRepo(p.dbm.GetDB(p.ctx.GetDbId())).GetPaymentOrder(
 		repository.CommonRepo.WhereBySoftDelete(),
 		func(db *gorm.DB) *gorm.DB {
@@ -348,17 +355,17 @@ func (p *PaymentRepo) Refund(serviceRefundReq PaymentServiceRefundReq) (*LianLia
 		"sign":         p.requestSign(paymentApp.LlSignSalt, jsonStr),
 	}, RequestTimeOut)
 	if err != nil {
-		return nil, errors.New(err.Error())
+		return p.handleRefundError(err, &serviceRefundReq)
 	}
 	// 返回结果
 	var resp LianLianPaymentRefundResp
 	responseJSON, err := json.Marshal(response)
 	if err != nil {
-		return nil, err
+		return p.handleRefundError(err, &serviceRefundReq)
 	}
 	// 然后将 JSON 字符串解析到结构体中
 	if err := json.Unmarshal(responseJSON, &resp); err != nil {
-		return nil, err
+		return p.handleRefundError(err, &serviceRefundReq)
 	}
 	// 返回支付订单
 	return &resp, nil
@@ -486,12 +493,20 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 			if err != nil {
 				return err
 			}
+
+			// 如果submit_pay_time为0，说明还没有设置过提交支付时间，此时设置为支付成功时间
+			if memberSaleOrder.SubmitPayTime == 0 {
+				if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderSubmitPayTime(memberSaleOrder.Uuid, payAt.Unix()); err != nil {
+					return err
+				}
+			}
+
 			// 更新订单状态
 			event.NewSystemBus().PublishPayFinishMemberSaleOrderEvent(event.PayFinishMemberSaleOrderPayload{
 				BasePayload: event.BasePayload{
 					Ctx:                 p.ctx,
 					CompanyUuid:         p.ctx.GetCompanyUuid(),
-					Source:              constant.SourceSystem,
+					Source:              constant.SourceMember,
 					SaleBillUuid:        saleOrder.SaleBill.Uuid,
 					SaleOrderUuid:       saleOrder.Uuid,
 					MemberSaleOrderUuid: memberSaleOrder.Uuid,
@@ -531,7 +546,7 @@ func (p *PaymentRepo) HandleRefundCallback(sign string, callbackReq req.LianLian
 	returnOrderRepo := repository.NewReturnOrderRepo(db)
 	orderAmount, err := returnOrderRepo.GetReturnOrderAmount(
 		returnOrderRepo.WithReturnOrder(),
-		returnOrderRepo.WhereMerchantRefundOrderNo(callbackReq.MerchantRefundOrderNo),
+		returnOrderRepo.WhereMerchantRefundOrderNo(callbackReq.MerchantRefundId),
 	)
 	if err != nil {
 		fmt.Println("获取退货金额失败", err)
@@ -724,7 +739,7 @@ type MemberSaleOrderRefundReq struct {
 	AccountName  string `json:"account_name"`  // 账户名称- 暂时不用
 }
 
-func (p *PaymentRepo) MemberSaleOrderRefund(saleOrder model.SaleOrder, req MemberSaleOrderRefundReq) error {
+func (p *PaymentRepo) MemberSaleOrderRefund(saleOrder model.SaleOrder, req MemberSaleOrderRefundReq) (*model.ReturnOrder, error) {
 	db := p.ctx.GetDB()
 	// 创建退货单
 	returnOrder := model.ReturnOrder{
@@ -768,7 +783,7 @@ func (p *PaymentRepo) MemberSaleOrderRefund(saleOrder model.SaleOrder, req Membe
 	}
 	returnOrderUuid, err := repository.NewReturnOrderRepo(db).CreateReturnOrderRecord(returnOrder)
 	if err != nil {
-		return errors.WithMessage(err)
+		return nil, errors.WithMessage(err)
 	}
 	// 发起退款
 	for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
@@ -783,18 +798,14 @@ func (p *PaymentRepo) MemberSaleOrderRefund(saleOrder model.SaleOrder, req Membe
 			AccountName:           returnOrder.AccountName,
 		})
 		if err != nil {
-			return errors.WithMessage(err)
+			return nil, errors.WithMessage(err)
 		}
-		// 更新退款状态
+		// 创建退款金额
 		returnOrderAmount.ReturnOrderUuid = returnOrderUuid
 		returnOrderAmount.LlReturnOrderid = refund.RefundOrderId
-		returnOrderRepo := repository.NewReturnOrderRepo(db)
-		err = returnOrderRepo.UpdateReturnOrderAmount([]repository.DBOption{
-			returnOrderRepo.WhereUuid(returnOrderAmount.Uuid),
-		}, returnOrderAmount)
-		if err != nil {
-			return errors.WithMessage(err)
+		if err = repository.NewReturnOrderRepo(db).CreateReturnOrderAmount([]model.ReturnOrderAmount{returnOrderAmount}); err != nil {
+			return nil, errors.WithMessage(err)
 		}
 	}
-	return nil
+	return &returnOrder, nil
 }

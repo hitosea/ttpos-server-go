@@ -11,6 +11,7 @@ const EventCancelOrder EventName = "Event_Cancel_Order"
 // CancelOrderPayload 整单取消事件数据结构
 type CancelOrderPayload struct {
 	BasePayload
+	Data CancelMemberOrderPayloadData `json:"data"`
 }
 
 func (payload *CancelOrderPayload) ToJsonString() string {

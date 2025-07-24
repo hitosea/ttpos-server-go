@@ -157,7 +157,7 @@ class Business extends Controller
             return $this->renderError('当前没有权限使用此功能');
         }
         $shop_supplier_id = $this->store['user']['shop_supplier_id'] ?: 0;
-        $qrCode = new QrCode(env('MEMBER_BASE_URL') . "/login?cid={$shop_supplier_id}");
+        $qrCode = new QrCode(env('MEMBER_BASE_URL') . "/launch/{$shop_supplier_id}");
         return $this->renderSuccess('', (new PngWriter())->write($qrCode)->getDataUri());
     }
 
@@ -465,7 +465,7 @@ class Business extends Controller
         $free_tag_count = FreeTag::count();
 
         $return_reason_count = ReturnReason::count();
-        $company_link = request()->licenses['is_open_member'] == 1 ? env('MEMBER_BASE_URL') . "/login?cid={$shop_supplier_id}" : '';
+        $company_link = request()->licenses['is_open_member'] == 1 ? env('MEMBER_BASE_URL') . "/launch/{$shop_supplier_id}" : '';
         $vars['values'] = $ret;
         return $this->renderSuccess('', compact('vars', 'free_tag_count', 'return_reason_count', 'company_link'));
     }

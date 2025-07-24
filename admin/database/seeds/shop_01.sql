@@ -155,7 +155,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '订单号',
     `cancel_scene` varchar(50) NOT NULL DEFAULT '' COMMENT '取消场景：merchant_cancel-商家取消；member_cancel-用户取消；merchant_reject-商家拒单',
     `is_auto_accept` int(11) NOT NULL DEFAULT 0 COMMENT '是否自动接单：0-否；1-是',
-    `delivery_distance` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '配送距离，单位km',
     `remark` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '订单备注',
     `cancel_reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '取消原因',
     `is_verified_phone` INT(10) NOT NULL DEFAULT 0 COMMENT '订单是否已经验证手机号,0-未验证 1-已验证,不再弹出验证手机号',
@@ -163,12 +162,15 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     -- 确认订单（“待支付”状态）之后才有值的字段
     `product_num` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品数量.订单中商品的总数量，商品A数量2，商品B数量1，则商品数量为3',
     `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额,折前价，已含税',
+    `origin_product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品原价,折前价，已含税',
     `member_discount_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '会员折扣',
     `amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '订单总金额.商品金额-会员折扣+配送费',
     `refund_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '退款金额',
     -- 配送费参数
+    `is_distance_calculated` INT(10) NOT NULL DEFAULT -1 COMMENT '是否已计算距离费，-1-未计算，1-已计算',
+    `delivery_distance` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '配送距离，单位km',
     `delivery_fee_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '配送费',
-    `delivery_fee_distance` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '配送距离',
+    `delivery_fee_distance` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '距离费送费',
     `delivery_fee_min_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '起步配送费',
     `delivery_fee_base_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '基础配送费',
     `delivery_fee_per_km` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '每公里配送费',
@@ -189,7 +191,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `rider_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手电话',
     `location` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手位置,格式:纬度,经度',
     `remaining_distance` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '剩余距离',
+    -- 排序相关
+    `sort` INT(10) NOT NULL DEFAULT 0 COMMENT '排序, 0-其他状态，1-骑手正在赶往商家，2-骑手配送中，降序排序',
     -- 时间相关
+    `submit_pay_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '提交支付时间（时间戳），根据该时间生成当天订单的流水号',
     `pay_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付完成时间（时间戳）',
     `accept_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '商家接单时间（时间戳）',
     `cook_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '商家备餐完成时间（时间戳）',
@@ -2236,7 +2241,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     INDEX idx_complete_time (complete_time)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品统计表';
 
-CREATE TABLE IF NOT EXISTS `statistics_customer_type` (
+CREATE TABLE IF NOT EXISTS `ttpos_statistics_customer_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售单UUID',
@@ -2268,7 +2273,7 @@ CREATE TABLE IF NOT EXISTS `statistics_customer_type` (
     INDEX idx_complete_time (complete_time)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '客户类型统计表';
 
-CREATE TABLE IF NOT EXISTS `statistics_delay` (
+CREATE TABLE IF NOT EXISTS `ttpos_statistics_delay` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售单UUID',
@@ -2507,12 +2512,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_address` (
   `uuid` bigint(20) DEFAULT 0 COMMENT '唯一ID',
   `member_uuid` bigint(20) DEFAULT 0 COMMENT '会员uuid',
   `name` varchar(50) DEFAULT '' COMMENT '联系人',
-  `gender` int(1) DEFAULT 0 COMMENT '性别 0-女 1-男',
   `phone` varchar(20) DEFAULT '' COMMENT '手机号',
-  `country` varchar(10) DEFAULT '' COMMENT '国家代码',
-  `province` varchar(50) DEFAULT '' COMMENT '省份',
-  `city` varchar(50) DEFAULT '' COMMENT '城市',
-  `area` varchar(50) DEFAULT '' COMMENT '区',
+  `phone_prefix` varchar(11) DEFAULT '+66' COMMENT '手机区号',
   `address` varchar(255) DEFAULT '' COMMENT '详细地址',
   `street` varchar(255) DEFAULT '' COMMENT '街道/门牌号',
   `is_default` int(1) DEFAULT 0 COMMENT '是否默认',

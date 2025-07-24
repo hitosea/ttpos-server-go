@@ -25,22 +25,22 @@
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('订单金额：') }}</span>
-              <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ proxy.$formatPrice(detail.recharge_amount) }}
-              <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
-              <span v-if="currency.is_open == 1" style="padding-left: 8px">
-                <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                {{ proxy.$formatPrice(Number(detail.recharge_amount) * Number(currency.vices?.unit_rate)) }}
-                <template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }}</template>
+              <main-currency>
+                {{ proxy.$formatPrice(detail.recharge_amount) }}
+              </main-currency>
+              <span style="padding-left: 8px">
+                <sub-currency>
+                  {{ proxy.$formatPrice(Number(detail.recharge_amount) * Number(currency.vices?.unit_rate)) }}
+                </sub-currency>
               </span>
             </div>
           </el-col>
           <el-col :span="6" v-if="detail.status == 1">
             <div class="pb16">
               <span class="gray9">{{ $t('实付金额：') }}</span>
-              <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ proxy.$formatPrice(detail.amount || 0) }}
-              <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+              <main-currency>
+                {{ proxy.$formatPrice(detail.amount || 0) }}
+              </main-currency>
             </div>
           </el-col>
           <el-col :span="6" v-if="detail.status == 1" v-for="item in detail.payment_methods">

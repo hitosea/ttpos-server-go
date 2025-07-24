@@ -19,7 +19,7 @@ var DeskReqMessage = map[string]string{
 type DeskListReq struct {
 	Status      int `form:"status,default=-1"`    // 桌台状态, -1=全都、 0=未开台、1=已开台, 2=已开台不等于待清台
 	IsBuffet    int `form:"is_buffet,default=-1"` // 是否是自助餐: -1=全都、0=否、1=是
-	dto.PageReq     // 分页参数
+	dto.PageReq                                   // 分页参数
 }
 
 // DeskInfoReq 桌台信息
@@ -63,12 +63,32 @@ type DeskOrderCreateReq struct {
 
 type GetMemberOrderCheckoutInfoReq struct {
 	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+	AddressChanged      bool   // 地址是否发生变化
 }
 
 // 创建会员端订单请求参数
 type CreateMemberOrderReq struct {
 	MemberSaleOrderUuid uint64               `json:"member_sale_order_uuid"` // 会员端销售订单UUID. 值为0时，表示创建会员端订单。值不为0时，表示更新会员端订单的商品列表。
 	Products            []OrderProductAddReq `json:"products"`               // 商品列表
+}
+
+func (req *CreateMemberOrderReq) Validate() error {
+	if len(req.Products) == 0 {
+		return errors.New("未选购商品，请先选购商品")
+	}
+	for _, product := range req.Products {
+		if product.Num <= 0 {
+			return errors.New("商品数量不能为0")
+		}
+		if product.FlavorUuid <= 0 {
+			return errors.New("商品规格ID不能为0")
+		}
+	}
+	return nil
+}
+
+type GetMemberOrderFormInfoReq struct {
+	MemberSaleOrderUuid uint64 `form:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
 }
 
 type OrderProductAddReq struct {
@@ -80,10 +100,10 @@ type OrderProductAddReq struct {
 }
 
 // 商品key。格式：规格id-属性id,属性id-加料id,加料id
-func (req *OrderProductAddReq) ProductKey() string {
+func (req *OrderProductAddReq) ProductKey(attributeUuidList []uint64) string {
 	// 先排序
-	sort.Slice(req.AttributeUuidList, func(i, j int) bool {
-		return req.AttributeUuidList[i] < req.AttributeUuidList[j]
+	sort.Slice(attributeUuidList, func(i, j int) bool {
+		return attributeUuidList[i] < attributeUuidList[j]
 	})
 	sort.Slice(req.SauceUuidList, func(i, j int) bool {
 		return req.SauceUuidList[i] < req.SauceUuidList[j]
@@ -91,7 +111,7 @@ func (req *OrderProductAddReq) ProductKey() string {
 
 	// 转为字符串
 	AttributeUuidListStr := make([]string, 0)
-	for _, attributeUuid := range req.AttributeUuidList {
+	for _, attributeUuid := range attributeUuidList {
 		AttributeUuidListStr = append(AttributeUuidListStr, fmt.Sprintf("%d", attributeUuid))
 	}
 	SauceUuidListStr := make([]string, 0)

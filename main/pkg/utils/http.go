@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -30,7 +31,13 @@ func HttpPost(url string, payload map[string]interface{}, headers map[string]str
 		req.Header.Set(key, value)
 	}
 	//
-	client := &http.Client{}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Printf("Failed to send request: %v", err)

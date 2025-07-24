@@ -78,6 +78,31 @@ func (h *AddressHandler) AddressList(c *gin.Context) {
 	helper.Success(c, addressListResp)
 }
 
+// AddressDetail 获取地址详情
+// @Summary 获取地址详情
+// @Description 获取地址详情
+// @Tags 会员端.地址
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data query member_req.MemberAddressDetailReq true "详情参数"
+// @Success 200 {object} dto.Response{data=member_resp.MemberAddressDetailResp}
+// @Router /member/address/detail [get]
+func (h *AddressHandler) AddressDetail(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	addressDetailReq := member_req.MemberAddressDetailReq{}
+	if err := c.ShouldBindQuery(&addressDetailReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	addressDetailResp, err := h.addressSrv.GetAddressDetail(ctx, addressDetailReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, addressDetailResp)
+}
+
 // AddressAdd 添加地址
 // @Summary 添加地址
 // @Description 添加地址
@@ -111,7 +136,7 @@ func (h *AddressHandler) AddressAdd(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @param data body member_req.MemberAddressUpdateReq true "详情参数"
-// @Success 200 {object} dto.Response{data=resp.LoginResp}
+// @Success 200 {object} dto.Response{}
 // @Router /member/address/update [post]
 func (h *AddressHandler) AddressUpdate(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -197,6 +222,7 @@ func RegisterAddressHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	{
 		privateApi.GET("/address/search", wrapper.AddressSearch)
 		privateApi.GET("/address", wrapper.AddressList)
+		privateApi.GET("/address/detail", wrapper.AddressDetail)
 		privateApi.POST("/address/add", wrapper.AddressAdd)
 		privateApi.POST("/address/update", wrapper.AddressUpdate)
 		privateApi.DELETE("/address/delete", wrapper.AddressDelete)

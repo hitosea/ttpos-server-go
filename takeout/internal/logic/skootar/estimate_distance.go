@@ -3,6 +3,7 @@ package skootar
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"takeout/api"
 	"takeout/internal/consts"
 	"takeout/internal/model/input/skootar"
@@ -30,10 +31,12 @@ func (s *sSkootar) EstimateDistance(ctx context.Context, req *api.EstimateDistan
 		JobType:      consts.JobTypeFood,
 	}
 	resp := &skootar.EstimatePriceOut{}
+	fmt.Println("11111 url:", s.GetUrl(estimateApiPath))
 	rr := g.Client().ContentJson().PostVar(ctx, s.GetUrl(estimateApiPath), reqInp)
 	if rr == nil {
 		return nil, gerror.Newf("获取预估价格失败:%+v", reqInp)
 	}
+	fmt.Println("22222 rr:", rr.String())
 	json.Unmarshal(rr.Bytes(), resp)
 
 	// 处理返回结果

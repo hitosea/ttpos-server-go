@@ -20,11 +20,12 @@ import (
 
 // IMemberAddressSrv 定义会员地址服务接口
 type IMemberAddressSrv interface {
-	GetAddressList(ctx context.Context, req member_req.MemberAddressListReq) (*member_resp.MemberAddressListResp, error) // 获取地址列表
-	AddAddress(ctx context.Context, req member_req.MemberAddressAddReq) error                                            // 添加地址
-	UpdateAddress(ctx context.Context, req member_req.MemberAddressUpdateReq) error                                      // 更新地址
-	DeleteAddress(ctx context.Context, req member_req.MemberAddressDeleteReq) error                                      // 删除地址
-	AuthAddress(ctx context.Context, req member_req.MemberAddressAuthReq) (member_resp.LoginResp, error)                 // 认证地址
+	GetAddressList(ctx context.Context, req member_req.MemberAddressListReq) (*member_resp.MemberAddressListResp, error)       // 获取地址列表
+	GetAddressDetail(ctx context.Context, req member_req.MemberAddressDetailReq) (*member_resp.MemberAddressDetailResp, error) // 获取地址详情
+	AddAddress(ctx context.Context, req member_req.MemberAddressAddReq) error                                                  // 添加地址
+	UpdateAddress(ctx context.Context, req member_req.MemberAddressUpdateReq) error                                            // 更新地址
+	DeleteAddress(ctx context.Context, req member_req.MemberAddressDeleteReq) error                                            // 删除地址
+	AuthAddress(ctx context.Context, req member_req.MemberAddressAuthReq) (member_resp.LoginResp, error)                       // 认证地址
 }
 
 // memberAddressSrv 会员地址服务结构体
@@ -58,11 +59,13 @@ func (s *memberAddressSrv) GetAddressList(ctx context.Context, req member_req.Me
 	if err != nil {
 		return nil, err
 	}
-	respMemberAddresses := make([]member_resp.MemberAddressResp, 0)
+	respMemberAddresses := make([]member_resp.MemberAddressDetailResp, 0)
 	for _, memberAddress := range memberAddresses {
-		var respMemberAddress member_resp.MemberAddressResp
+		var respMemberAddress member_resp.MemberAddressDetailResp
 		copier.Copy(&respMemberAddress, memberAddress)
 		respMemberAddress.IsAuthPhone = memberAddress.IsAuthPhone()
+		respMemberAddress.IsDefault = memberAddress.IsDefault == 1
+		respMemberAddress.AddressDetail = memberAddress.GetAddressDetail()
 		respMemberAddresses = append(respMemberAddresses, respMemberAddress)
 	}
 	return &member_resp.MemberAddressListResp{
@@ -75,6 +78,35 @@ func (s *memberAddressSrv) GetAddressList(ctx context.Context, req member_req.Me
 	}, nil
 }
 
+// GetAddressDetail 获取地址详情
+func (s *memberAddressSrv) GetAddressDetail(ctx context.Context, req member_req.MemberAddressDetailReq) (*member_resp.MemberAddressDetailResp, error) {
+	if err := req.Validate(); err != nil {
+		return nil, errors.New(err.Error())
+	}
+
+	memberAddressRepo := repository.NewMemberAddressRepo(ctx.GetDB())
+	memberAddress, err := memberAddressRepo.GetMemberAddressByUuid(req.Uuid)
+	if err != nil {
+		return nil, errors.New("地址不存在")
+	}
+
+	// 验证地址归属权
+	if memberAddress.MemberUuid != ctx.GetMemberUuid() {
+		return nil, errors.New("地址不存在")
+	}
+
+	// 构建响应数据
+	var respMemberAddress member_resp.MemberAddressDetailResp
+	copier.Copy(&respMemberAddress, memberAddress)
+	respMemberAddress.IsDefault = memberAddress.IsDefault == 1
+	respMemberAddress.IsAuthPhone = memberAddress.IsAuthPhone()
+
+	// 设置地址详情
+	respMemberAddress.AddressDetail = memberAddress.GetAddressDetail()
+
+	return &respMemberAddress, nil
+}
+
 // AddAddress 添加地址
 func (s *memberAddressSrv) AddAddress(ctx context.Context, req member_req.MemberAddressAddReq) error {
 	if err := req.Validate(); err != nil {
@@ -83,19 +115,13 @@ func (s *memberAddressSrv) AddAddress(ctx context.Context, req member_req.Member
 	// 复制请求参数到会员地址
 	var memberAddress model.MemberAddress
 	copier.Copy(&memberAddress, req)
+	if req.IsDefault {
+		memberAddress.IsDefault = 1
+	}
 	memberAddress.MemberUuid = ctx.GetMemberUuid()
 
-	// 如果国家代码为空，则根据手机号判断
-	if memberAddress.Country == "" {
-		if len(memberAddress.Phone) == 11 {
-			memberAddress.Country = "+86"
-		} else {
-			memberAddress.Country = "+66"
-		}
-	}
-
 	// 如果设置为默认地址，则需要将该会员的其他地址设置为非默认
-	if req.IsDefault == 1 {
+	if req.IsDefault {
 		// 开启事务
 		err := ctx.GetDB().Transaction(func(tx *gorm.DB) error {
 			// 先将该会员的所有地址设置为非默认
@@ -146,18 +172,21 @@ func (s *memberAddressSrv) UpdateAddress(ctx context.Context, req member_req.Mem
 	// 复制请求参数到会员地址
 	copier.Copy(&memberAddress, req)
 	memberAddress.MemberUuid = ctx.GetMemberUuid()
+	if req.IsDefault {
+		memberAddress.IsDefault = 1
+	}
 
 	// 如果国家代码为空，则根据手机号判断
-	if memberAddress.Country == "" {
+	if memberAddress.PhonePrefix == "" {
 		if len(memberAddress.Phone) == 11 {
-			memberAddress.Country = "+86"
+			memberAddress.PhonePrefix = "+86"
 		} else {
-			memberAddress.Country = "+66"
+			memberAddress.PhonePrefix = "+66"
 		}
 	}
 
 	// 如果设置为默认地址，则将该会员的其他地址设置为非默认
-	if req.IsDefault == 1 {
+	if req.IsDefault {
 		// 开启事务
 		err = ctx.GetDB().Transaction(func(tx *gorm.DB) error {
 			// 先将该会员的所有地址设置为非默认

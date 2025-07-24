@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"slices"
 	"sort"
+	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -25,6 +26,7 @@ type IProductSrv interface {
 	GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error)               // 获取产品列表
 	GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error)                                             // 获取产品类别列表
 	GetProductRecommendList(ctx context.Context, req req.ProductRecommendListReq) (*product_resp.ProductRecommendListResp, error) // 获取产品推荐列表
+	SearchProducts(ctx context.Context, req req.ProductSearchReq) ([]product_resp.Product, error)                                 // 搜索商品
 }
 
 type productSrv struct {
@@ -70,6 +72,15 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 	}
 
 	dbOptions = append(dbOptions, commonRepo.WhereByStatus(1), commonRepo.WhereBySoftDelete(), commonRepo.SortWithSort("ASC"), commonRepo.SortWithID("DESC"))
+	if req.IsMember {
+		// 会员端查询商品列表，预加载外送税
+		dbOptions = append(dbOptions, commonRepo.Preload(
+			repository.WithPreload{
+				Query: "TakeoutTax",
+			},
+		))
+	}
+
 	products, total, err := productRepo.GetProductListWithPagination(
 		req.PageNo,
 		req.PageSize,
@@ -92,9 +103,15 @@ func (s *productSrv) GetProductList(ctx context.Context, req req.ProductListReq)
 		// 获取外送折扣率
 		deliveryPriceRatio := businessSetting.GetDeliveryPriceRatio()
 
+		taxRateSetting, err := s.settingSrv.GetTaxRateSetting(ctx)
+		if err != nil {
+			return product_resp.ProductListWithPaginationResp{}, errors.WithMessage(err, "获取门店设置失败")
+		}
+		taxFeeType := taxRateSetting.GetTaxFeeType()
+
 		// 返回响应对象
 		return product_resp.ProductListWithPaginationResp{
-			List: FormatProducts(ctx, products, WithTakeoutDiscountRate(deliveryPriceRatio)),
+			List: FormatProducts(ctx, products, WithTakeoutDiscountRate(deliveryPriceRatio, taxFeeType)),
 			Meta: dto.PageResponse{
 				PageNo:   req.PageNo,
 				PageSize: req.PageSize,
@@ -119,12 +136,14 @@ type FormatProductsFn func(opts *FormatProductsOption)
 type FormatProductsOption struct {
 	IsMember            bool    // 是否是会员端查询商品列表
 	TakeoutDiscountRate float64 // 外送端折扣率. 取值范围1%-300% 即 0.01-3
+	TaxFeeType          uint8   // 税费类型
 }
 
 // 设置参数，会员端查询商品列表，外送端折扣率
-func WithTakeoutDiscountRate(rate float64) FormatProductsFn {
+func WithTakeoutDiscountRate(rate float64, taxFeeType uint8) FormatProductsFn {
 	return func(opts *FormatProductsOption) {
 		opts.TakeoutDiscountRate = rate
+		opts.TaxFeeType = taxFeeType // constant.TaxFeeTypeNoTax
 		opts.IsMember = true
 	}
 }
@@ -165,7 +184,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 					// 会员端商品规格价格=原商品规格价*外送商品折扣率 + 税费。 税费=原商品规格价*外送商品折扣率*外送的税率
 					// 故，会员端商品规格价格=原商品规格价*外送商品折扣率 * (1 + 外送的税率)
 					if option.IsMember {
-						flavor.Price = calculateTakeoutProductPrice(productBom.Price, takeoutDiscountRate, taxRate)
+						flavor.Price = calculateTakeoutProductPrice(productBom.Price, takeoutDiscountRate, taxRate, option.TaxFeeType)
 					}
 					flavors = append(flavors, flavor)
 					if len(prices) == 0 {
@@ -188,7 +207,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 					// 会员端商品小料价格=原商品小料价*外送商品折扣率 + 税费。 税费=原商品小料价*外送商品折扣率*外送的税率
 					// 故，会员端商品小料价格=原商品小料价*外送商品折扣率 * (1 + 外送的税率)
 					if option.IsMember {
-						sauce.Price = calculateTakeoutProductPrice(productBom.Price, takeoutDiscountRate, taxRate)
+						sauce.Price = calculateTakeoutProductPrice(productBom.Price, takeoutDiscountRate, taxRate, option.TaxFeeType)
 					}
 					sauces = append(sauces, sauce)
 				}
@@ -224,6 +243,9 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 		if len(prices) > 0 {
 			minPrice = slices.Min(prices)
 		}
+		if option.IsMember {
+			minPrice = calculateTakeoutProductPrice(minPrice, option.TakeoutDiscountRate, product.TakeoutTax.TaxRate, option.TaxFeeType)
+		}
 		list = append(list, product_resp.Product{
 			Uuid:                product.Uuid,
 			Image:               image,
@@ -254,12 +276,37 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 }
 
 // 外送端商品价格计算
-// 原商品规格价*外送商品折扣率 * (1 + 外送的税率)
 // originPrice 原商品小料价、原商品规格价
 // takeoutDiscountRate 外送商品折扣率 取值范围是1%-300%，即0.01-3
 // takeoutTaxRate 外送的税率 取值范围是0%-100%，即0-1
-func calculateTakeoutProductPrice(originPrice float64, takeoutDiscountRate float64, takeoutTaxRate float64) float64 {
-	return decimal.NewFromFloat(originPrice).Mul(decimal.NewFromFloat(takeoutDiscountRate)).Mul(decimal.NewFromFloat(1 + takeoutTaxRate)).Round(2).InexactFloat64()
+func calculateTakeoutProductPrice(originPrice float64, takeoutDiscountRate float64, takeoutTaxRate float64, TaxFeeType uint8) float64 {
+	// 商品未含税时
+	if TaxFeeType == constant.TaxFeeTypeNoTax {
+		// 未含税商品价格
+		unTaxPrice := originPrice
+		// 涨价后的未含税商品金额
+		unTaxPriceAfterDiscount := decimal.NewFromFloat(unTaxPrice).Mul(decimal.NewFromFloat(takeoutDiscountRate)).Round(2).InexactFloat64()
+		// 涨价后的税费
+		taxFee := decimal.NewFromFloat(unTaxPriceAfterDiscount).Mul(decimal.NewFromFloat(takeoutTaxRate)).Round(2).InexactFloat64()
+		// 涨价后会员端显示的价格
+		price := unTaxPriceAfterDiscount + taxFee
+		return decimal.NewFromFloat(price).Round(2).InexactFloat64()
+	}
+
+	// 商品已含税时
+	if TaxFeeType == constant.TaxFeeTypeTax {
+		// 当商品已含税时，显示售价=商品规格价*外送商品折扣率
+		return decimal.NewFromFloat(originPrice).Mul(decimal.NewFromFloat(takeoutDiscountRate)).Round(2).InexactFloat64()
+	}
+
+	// 不收取税费时
+	if TaxFeeType == constant.TaxFeeTypeNone {
+		// 不收取税费时，显示售价=商品规格价*外送商品折扣率
+		return decimal.NewFromFloat(originPrice).Mul(decimal.NewFromFloat(takeoutDiscountRate)).Round(2).InexactFloat64()
+	}
+
+	// 默认按不收取税费处理
+	return decimal.NewFromFloat(originPrice).Mul(decimal.NewFromFloat(takeoutDiscountRate)).Round(2).InexactFloat64()
 }
 
 // GetProductCategoryList 获取产品类别列表
@@ -325,6 +372,11 @@ func (s *productSrv) GetProductRecommendList(ctx context.Context, request req.Pr
 	// 获取商机推荐信息
 	packageRecommend, err := repository.NewPackageRecommendRepo(s.dbm.GetDB(ctx.GetDbId())).GetRecommendInfo()
 	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return &product_resp.ProductRecommendListResp{
+				IsOpen: false,
+			}, nil
+		}
 		return nil, errors.WithMessage(err, "获取商机推荐信息失败")
 	}
 	if !packageRecommend.IsOpen() {
@@ -386,4 +438,76 @@ type ProductItemInfo struct {
 	Uuid string `json:"uuid"`
 	Name string `json:"name"`
 	Sort string `json:"sort"`
+}
+
+// SearchProducts 搜索商品
+func (s *productSrv) SearchProducts(ctx context.Context, req req.ProductSearchReq) ([]product_resp.Product, error) {
+	dbId := ctx.GetDbId()
+	// 获取产品列表
+	commonRepo := repository.NewCommonRepo()
+	sourceMap := map[string]repository.DBOption{
+		constant.SourceCashier:   commonRepo.WhereByIsShowCashier(1),
+		constant.SourceAssistant: commonRepo.WhereByIsShowAssistant(1),
+		constant.SourceTablet:    commonRepo.WhereByIsShowTablet(1),
+		constant.SourceKitchen:   commonRepo.WhereByIsShowKitchen(1),
+		constant.SourceH5:        commonRepo.WhereByIsShowH5(1),
+		constant.SourceMember:    commonRepo.WhereByIsShowMember(1),
+	}
+	productRepo := repository.NewProductRepo(s.dbm.GetDB(dbId))
+	var dbOptions []repository.DBOption
+	if option, ok := sourceMap[ctx.GetSource()]; ok {
+		dbOptions = append(dbOptions, option)
+	}
+
+	// 会员端查询商品列表，预加载外送税
+	dbOptions = append(dbOptions, commonRepo.Preload(
+		repository.WithPreload{
+			Query: "TakeoutTax",
+		},
+	))
+
+	// 添加搜索条件
+	dbOptions = append(dbOptions,
+		commonRepo.WhereByStatus(1),
+		commonRepo.WhereBySoftDelete(),
+		commonRepo.WhereLikeByName(req.Keyword), // 根据关键词搜索商品名称
+		commonRepo.SortWithSort("ASC"),
+		commonRepo.SortWithID("DESC"),
+	)
+
+	// 获取商品列表，不分页
+	products, _, err := productRepo.GetProductListWithPagination(
+		1,    // 第一页
+		1000, // 足够大的页面大小，实际不分页
+		dbOptions...,
+	)
+
+	// 处理错误
+	if err != nil {
+		return nil, errors.WithMessage(err, "搜索商品失败")
+	}
+
+	// 如果是会员端查询商品列表
+	if req.IsMember {
+		// 获取外送折扣率
+		// 获取门店业务设置
+		businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+		if err != nil {
+			return nil, errors.WithMessage(err, "获取门店业务设置失败")
+		}
+		// 获取外送折扣率
+		deliveryPriceRatio := businessSetting.GetDeliveryPriceRatio()
+
+		taxRateSetting, err := s.settingSrv.GetTaxRateSetting(ctx)
+		if err != nil {
+			return nil, errors.WithMessage(err, "获取门店设置失败")
+		}
+		taxFeeType := taxRateSetting.GetTaxFeeType()
+
+		// 返回响应对象
+		return FormatProducts(ctx, products, WithTakeoutDiscountRate(deliveryPriceRatio, taxFeeType)), nil
+	}
+
+	// 返回响应对象
+	return FormatProducts(ctx, products), nil
 }
