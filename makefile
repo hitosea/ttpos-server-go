@@ -58,6 +58,8 @@ mysql-open:
 # 运行数据库迁移
 migrate:
 	chmod +x ./.sh && ./.sh think migrate:run
+	#更新 takeout模块数据库
+	cd takeout && make conf && make db_up
 
 # 生成文档
 build-doc:
