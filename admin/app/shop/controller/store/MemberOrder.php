@@ -203,6 +203,19 @@ class MemberOrder extends Controller
         $param['sale_order_uuid'] = intval($param['sale_order_uuid'] ?? 0);
         $param['member_sale_order_uuid'] = intval($param['member_sale_order_uuid'] ?? 0);
 
+        if (isset($param['points'])) {
+            $param['points'] = floatval($param['points'] ?: 0.0);
+        }
+        // 处理退款商品
+        if (isset($param['products']) && is_array($param['products'])) {
+            $param['products'] = array_map(function ($item) {
+                return [
+                    'sale_order_product_uuid' => intval($item['sale_order_product_uuid'] ?? 0),
+                    'num' => floatval($item['num'] ?? 0),
+                ];
+            }, $param['products']);
+        }
+
         $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/return', json_encode($param), [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
