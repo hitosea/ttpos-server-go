@@ -1365,8 +1365,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		startTime := time.Now()
 		res, err := takeoutSrv.CreateOrder(contexts.Background(), &params)
 		if err != nil {
-			ctx.Log().Error("创建外送订单失败", zap.Error(err))
-			ctx.Log().Info("创建外送订单失败", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))
+			ctx.Log().Info("创建外送订单失败", zap.Error(err), zap.Duration("cost", time.Since(startTime)))
 			return errors.WithMessage(errors.NewWithCode(constant.CodeTakeoutCreateOrderError, "创建外送订单失败"), err.Error())
 		}
 		ctx.Log().Info("创建外送订单成功", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))
