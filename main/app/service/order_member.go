@@ -890,7 +890,7 @@ func (s *orderSrv) GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.
 	takeoutSrv := takeout.NewTakeoutSrv()
 	// 获取骑手实时位置
 	riderLocation, err := takeoutSrv.GetDriverInfo(contexts.Background(), &req.GetDriverInfoReq{
-		ShopOrderUuid: memberSaleOrder.OrderNo,
+		ShopOrderUuid: strconv.FormatUint(memberSaleOrder.Uuid, 10),
 	})
 	if err == nil && riderLocation != nil {
 		riderLat = fmt.Sprintf("%.6f", riderLocation.Lat)
