@@ -418,5 +418,6 @@
     "外送台账": "Delivery Ledger",
     "渠道": "Channel",
     "经纬度": "Latitude and Longitude",
-    "请输入经纬度": "Please enter the latitude and longitude"
+    "请输入经纬度": "Please enter the latitude and longitude",
+    "最后一个距离范围必须勾选最大": "The last distance range must be set to the maximum"
 }
