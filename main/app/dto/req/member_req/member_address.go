@@ -2,6 +2,7 @@ package member_req
 
 import (
 	"errors"
+	"slices"
 	"ttpos-server-go/app/dto"
 )
 
@@ -17,12 +18,13 @@ type MemberAddressListReq struct {
 }
 
 type MemberAddressAddReq struct {
-	Name      string `json:"name"`       // 联系人
-	Phone     string `json:"phone"`      // 手机号
-	Address   string `json:"address"`    // 详细地址
-	Street    string `json:"street"`     // 街道/门牌号
-	IsDefault bool   `json:"is_default"` // 是否默认
-	Location  string `json:"location"`   // 位置坐标
+	Name        string `json:"name"`         // 联系人
+	Phone       string `json:"phone"`        // 手机号
+	Address     string `json:"address"`      // 详细地址
+	Street      string `json:"street"`       // 街道/门牌号
+	IsDefault   bool   `json:"is_default"`   // 是否默认
+	Location    string `json:"location"`     // 位置坐标
+	PhonePrefix string `json:"phone_prefix"` // 地区编码，仅支持+86、+66
 }
 
 func (r *MemberAddressAddReq) Validate() error {
@@ -41,17 +43,21 @@ func (r *MemberAddressAddReq) Validate() error {
 	if r.Street == "" {
 		return errors.New("街道/门牌号不能为空")
 	}
+	if !slices.Contains([]string{"+86", "+66"}, r.PhonePrefix) {
+		return errors.New("地区编码不正确")
+	}
 	return nil
 }
 
 type MemberAddressUpdateReq struct {
-	Uuid      uint64 `json:"uuid"`       // 地址UUID
-	Name      string `json:"name"`       // 联系人
-	Phone     string `json:"phone"`      // 手机号
-	Address   string `json:"address"`    // 详细地址
-	Street    string `json:"street"`     // 街道/门牌号
-	IsDefault bool   `json:"is_default"` // 是否默认
-	Location  string `json:"location"`   // 位置坐标
+	Uuid        uint64 `json:"uuid"`         // 地址UUID
+	Name        string `json:"name"`         // 联系人
+	Phone       string `json:"phone"`        // 手机号
+	Address     string `json:"address"`      // 详细地址
+	Street      string `json:"street"`       // 街道/门牌号
+	IsDefault   bool   `json:"is_default"`   // 是否默认
+	Location    string `json:"location"`     // 位置坐标
+	PhonePrefix string `json:"phone_prefix"` // 地区编码，仅支持+86、+66
 }
 
 func (r *MemberAddressUpdateReq) Validate() error {
@@ -72,6 +78,9 @@ func (r *MemberAddressUpdateReq) Validate() error {
 	}
 	if r.Street == "" {
 		return errors.New("街道/门牌号不能为空")
+	}
+	if !slices.Contains([]string{"+86", "+66"}, r.PhonePrefix) {
+		return errors.New("地区编码不正确")
 	}
 	return nil
 }
