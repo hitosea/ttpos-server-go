@@ -348,7 +348,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 	paymentOrder, err := paymentOrderRepo.GetPaymentOrderInfo(
 		repository.CommonRepo.WhereBySoftDelete(),
 		paymentOrderRepo.WhereRelatedUuid(relatedUuid),
-		paymentOrderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeMemberOrder),
+		paymentOrderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeSaleOrder),
 		paymentOrderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
 	)
 	if err == nil && paymentOrder.Uuid != 0 {
@@ -367,7 +367,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 			PaymentMethodName: paymentMethod.PaymentName,
 			PaymentMethodUuid: paymentMethod.Uuid,
 			PaymentFeePercent: 0,
-			RelatedType:       constant.PaymentOrderRelatedTypeMemberOrder,
+			RelatedType:       constant.PaymentOrderRelatedTypeSaleOrder,
 			RelatedUuid:       relatedUuid,
 			CurrencyUnit: func() string {
 				currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
@@ -393,13 +393,14 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 
 	// 创建连连支付订单
 	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
-		PaymentOrderUuid:  paymentOrder.Uuid,
-		RelatedType:       constant.PaymentOrderRelatedTypeMemberOrder,
-		RelatedUuid:       relatedUuid,
-		PaymentMethodUuid: paymentMethod.Uuid,
-		PaymentMethodCode: paymentMethod.Code,
-		PaymentAmount:     memberSaleOrder.Amount,
-		CommissionFee:     0,
+		PaymentOrderUuid:    paymentOrder.Uuid,
+		RelatedType:         constant.PaymentOrderRelatedTypeSaleOrder,
+		RelatedUuid:         relatedUuid,
+		PaymentMethodUuid:   paymentMethod.Uuid,
+		PaymentMethodCode:   paymentMethod.Code,
+		PaymentAmount:       memberSaleOrder.Amount,
+		CommissionFee:       0,
+		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		PaymentMethod: func() string {
 			if isOpenPc {
 				return PaymentMethodWechatPay
