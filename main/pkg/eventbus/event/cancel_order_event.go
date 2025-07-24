@@ -11,10 +11,7 @@ const EventCancelOrder EventName = "Event_Cancel_Order"
 // CancelOrderPayload 整单取消事件数据结构
 type CancelOrderPayload struct {
 	BasePayload
-	// 会员端订单时，MemberSaleOrderUuid 是外送订单Uuid
-	MemberSaleOrderUuid uint64                       `json:"-"`
-	MemberUuid          uint64                       `json:"-"`
-	Data                CancelMemberOrderPayloadData `json:"data"`
+	Data CancelMemberOrderPayloadData `json:"data"`
 }
 
 func (payload *CancelOrderPayload) ToJsonString() string {
