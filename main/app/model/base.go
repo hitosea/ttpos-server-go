@@ -233,12 +233,17 @@ func (model *MemberSaleOrder) AfterUpdate(tx *gorm.DB) (err error) {
 
 	// 如果订单状态大于待商家接单，则推送呼叫消息
 	if model.Status > constant.MemberSaleOrderStatusPendingPayment {
-		data := map[string]interface{}{
-			"member_sale_order_uuid": model.Uuid,
-			"status":                 model.Status,
-			"update_time":            model.BaseModel.UpdateTime,
-		}
-		go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.UPDATE_MEMBER_SALE_ORDER, data)
+		go websocket.PushClient(
+			companyUuid,
+			websocket.SourceCashier,
+			websocket.SourceAll,
+			websocket.UPDATE_MEMBER_SALE_ORDER,
+			map[string]interface{}{
+				"member_sale_order_uuid": model.Uuid,
+				"status":                 model.Status,
+				"update_time":            model.BaseModel.UpdateTime,
+			},
+		)
 	}
 
 	// 只有以下状态的订单才需要推送websocket消息
@@ -248,14 +253,17 @@ func (model *MemberSaleOrder) AfterUpdate(tx *gorm.DB) (err error) {
 		constant.MemberSaleOrderStatusPendingRiderPickup,
 		constant.MemberSaleOrderStatusCancelled,
 	}, model.Status) {
-		if companyUuid > 0 {
-			data := map[string]interface{}{
+		go websocket.PushClient(
+			companyUuid,
+			websocket.SourceCashier,
+			websocket.SourceAll,
+			websocket.CUSTOMER_CALL,
+			map[string]interface{}{
 				"member_sale_order_uuid": model.Uuid,
 				"status":                 model.Status,
-				"update_time":            model.BaseModel.UpdateTime,
-			}
-			go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.CUSTOMER_CALL, data)
-		}
+				"update_time":            time.Now().Unix(),
+			},
+		)
 	}
 
 	return nil
