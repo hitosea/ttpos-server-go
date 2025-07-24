@@ -839,8 +839,18 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		return nil, errors.WithMessage(err)
 	}
 
-	// productAmount := decimal.NewFromFloat(0) // 商品合计
-	// memberDiscount := decimal.NewFromFloat(0) // 会员折扣
+	// 重新设置订单的member_order_discount_rate, 并计算商品金额
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	rate := businessSetting.GetDeliveryPriceRatio() // 外送商品价格和商品原价比例. 取值范围1-300， 表示原价的1%到300%
+	saleBill.SetMemberOrderDiscountRate(rate)
+	if err := s.CalcAndSaveSaleBill(ctx, ctx.GetDB(), saleBill); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
 	products := make([]resp.MemberSaleOrderProduct, 0)
 	for _, saleOrderProduct := range saleBill.GetFirstSaleOrder().SaleOrderProducts {
 		amount := saleOrderProduct.GetTotalPriceOrigin()
@@ -858,11 +868,6 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 				return ""
 			}(),
 		})
-		// // 商品合计
-		// amount := decimal.NewFromFloat(saleOrderProduct.GetTotalPrice())
-		// productAmount = productAmount.Add(decimal.NewFromFloat(amount)).Round(2)
-		// // 会员折扣
-		// memberDiscount = memberDiscount.Add(decimal.NewFromFloat(saleOrderProduct.GetMemberDiscountFee())).Round(2)
 	}
 
 	// 获取支付方式
