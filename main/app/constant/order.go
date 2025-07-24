@@ -168,8 +168,6 @@ const (
 	OrderUnlock           = "UNLOCK"             // 解锁
 	OrderQuery            = "QUERY"              // 查询。查询自助餐商品列表
 	OrderH5Confirm        = "H5_CONFIRM"         // 下单扫码h5订单
-	// 订单操作类型
-	OrderRejectMemberSaleOrder = "REJECT_MEMBER_SALE_ORDER" // 拒单
 )
 
 // 结账抹零操作类型

@@ -32,15 +32,27 @@ func cancelOrderEventHandler() {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 			record := model.SaleOrderOperationRecord{
-				Source:        payload.Source,
-				Action:        constant.OrderOrderCancel,
-				Remark:        "整单取消",
-				SaleBillUuid:  payload.SaleBillUuid,
-				SaleOrderUuid: payload.SaleOrderUuid,
-				H5OrderUuid:   payload.H5OrderUuid,
-				OperatorUuid:  payload.GetOperatorUuid(),
+				Source: payload.Source,
+				Action: func() string {
+					if payload.MemberSaleOrderUuid != 0 {
+						return constant.OrderCancelMemberSaleOrder
+					}
+					return constant.OrderOrderCancel
+				}(),
+				Remark:              "整单取消",
+				SaleBillUuid:        payload.SaleBillUuid,
+				SaleOrderUuid:       payload.SaleOrderUuid,
+				H5OrderUuid:         payload.H5OrderUuid,
+				OperatorUuid:        payload.GetOperatorUuid(),
+				MemberSaleOrderUuid: payload.MemberSaleOrderUuid,
+				MemberUuid:          payload.MemberUuid,
+				Data: func() string {
+					if payload.MemberSaleOrderUuid != 0 {
+						return utils.ToJson(payload.Data)
+					}
+					return ""
+				}(),
 			}
-			record.Data = ""
 			if payload.Ctx.GetStaff() != (model.Staff{}) {
 				record.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
 			}

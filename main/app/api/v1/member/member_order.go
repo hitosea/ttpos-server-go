@@ -159,7 +159,7 @@ func (h *OrderHandler) PayOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Param member_sale_order_uuid query string true "会员端销售订单UUID"
+// @Param data query member_req.GetMemberOrderPayInfoReq true "详情参数"
 // @Success 200 {object} resp.MemberOrderPaymentInfoResp "成功"
 // @Failure 400 {object} nil "错误请求"
 // @Router /member/order/pay/info [get]

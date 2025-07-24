@@ -825,6 +825,8 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 	// 获取销售订单
 	saleOrder := billInfo.GetFirstSaleOrder()
 
+	var returnOrder *model.ReturnOrder
+
 	err = repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		// 退回商品库存
 		if err := s.returnInventory(ctx.Copy(), billInfo); err != nil {
@@ -861,7 +863,7 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 
 		// 已经支付的-发起退款
 		if memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingMerchantAccept {
-			_, err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
+			returnOrder, err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
 				CancelReason: "客户取消订单",
 			})
 			if err != nil {
@@ -887,11 +889,34 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 	go func() {
 		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
 			BasePayload: event.BasePayload{ // 整单取消
-				Ctx:          ctx,
-				CompanyUuid:  ctx.GetCompanyUuid(),
-				Source:       ctx.GetSource(),
-				SaleBillUuid: billInfo.Uuid,
-				OperatorUuid: int64(ctx.GetMemberUuid()),
+				Ctx:                 ctx,
+				CompanyUuid:         ctx.GetCompanyUuid(),
+				Source:              ctx.GetSource(),
+				SaleBillUuid:        billInfo.Uuid,
+				OperatorUuid:        int64(ctx.GetMemberUuid()),
+				MemberSaleOrderUuid: memberSaleOrder.Uuid,
+				MemberUuid:          memberSaleOrder.MemberUuid,
+			},
+			Data: event.CancelMemberOrderPayloadData{
+				Type: "shop_cancel",
+				Refunds: func() []event.CancelMemberOrderPayloadDataRefund {
+					refunds := make([]event.CancelMemberOrderPayloadDataRefund, 0)
+					if returnOrder != nil {
+						for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
+							refunds = append(refunds, event.CancelMemberOrderPayloadDataRefund{
+								Name:              returnOrderAmount.PaymentMethod.PaymentName,
+								Code:              returnOrderAmount.PaymentMethod.Code,
+								Amount:            returnOrderAmount.Amount,
+								RefundStatus:      returnOrderAmount.RefundStatus,
+								ReturnAmountUuid:  returnOrderAmount.Uuid,
+								ReturnOrderUuid:   returnOrder.Uuid,
+								PaymentOrderUuid:  returnOrderAmount.PaymentOrderUuid,
+								PaymentMethodUuid: returnOrderAmount.PaymentMethodUuid,
+							})
+						}
+					}
+					return refunds
+				}(),
 			},
 		})
 	}()
