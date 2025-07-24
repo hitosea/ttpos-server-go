@@ -851,12 +851,16 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 	products := make([]resp.MemberSaleOrderProduct, 0)
 	for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
 		amount := saleOrderProduct.GetTotalPriceOrigin()
+		image := ""
+		if saleOrderProduct.ImageFileUuid != 0 {
+			image = saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+		}
 		products = append(products, resp.MemberSaleOrderProduct{
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
 			Num:                  saleOrderProduct.Num,
 			UnitPrice:            saleOrderProduct.OriginTotalPrice,
 			Amount:               amount,
-			Image:                saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request)),
+			Image:                image,
 			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
 		})
