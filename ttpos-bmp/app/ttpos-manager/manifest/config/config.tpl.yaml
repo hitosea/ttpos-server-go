@@ -35,6 +35,7 @@ queue:
   switch: true                                        # 队列开关，可选：true|false，默认为true
   driver: "rocketmq"                                      # 队列驱动，可选：redis|rocketmq
   groupName: "ttpos-manager"
+  poolSize: 20                                          # 消息处理线程池大小，默认20
   rocketmq:
     nameSrvAdders: ["192.168.100.206:9876"]                  # nameSrvAdder+端口，支持多个
     accessKey: ""                                      # 选填。如果开启了acl控制就必填

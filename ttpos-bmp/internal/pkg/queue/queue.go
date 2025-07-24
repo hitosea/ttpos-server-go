@@ -11,11 +11,11 @@ import (
 type MqProducer interface {
 	SendMsg(topic string, body string) (mqMsg MqMsg, err error)
 	SendByteMsg(topic string, body []byte) (mqMsg MqMsg, err error)
-	SendDelayMsg(topic string, body string, delay int64) (mqMsg MqMsg, err error)
+	SendDelayMsg(topic string, body string, delay time.Duration) (mqMsg MqMsg, err error)
 }
 
 type MqConsumer interface {
-	ListenReceiveMsgDo(topic string, receiveDo func(mqMsg MqMsg)) (err error)
+	ListenReceiveMsgDo(topic string, receiveDo func(mqMsg MqMsg) error) (err error)
 }
 
 const (
@@ -28,6 +28,7 @@ type Config struct {
 	Switch    bool   `json:"switch"`
 	Driver    string `json:"driver"`
 	GroupName string `json:"groupName"`
+	PoolSize  int    `json:"poolSize"`
 	Redis     RedisConf
 	Rocketmq  RocketmqConf
 	Kafka     KafkaConf
@@ -39,6 +40,7 @@ type RedisConf struct {
 
 type RocketmqConf struct {
 	NameSrvAdders []string `json:"nameSrvAdders"`
+	Endpoint      string   `json:"endpoint"`
 	AccessKey     string   `json:"accessKey"`
 	SecretKey     string   `json:"secretKey"`
 	BrokerAddr    string   `json:"brokerAddr"`
@@ -100,10 +102,13 @@ func NewProducer(groupName string) (mqClient MqProducer, err error) {
 		return
 	}
 
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	switch config.Driver {
 	case "rocketmq":
-		if len(config.Rocketmq.NameSrvAdders) == 0 {
-			err = gerror.New("queue.rocketmq.nameSrvAdders is empty.")
+		if len(config.Rocketmq.Endpoint) == 0 {
+			err = gerror.New("queue.rocketmq.endpoint is empty.")
 			return
 		}
 		mqClient, err = RegisterRocketProducer()
@@ -132,11 +137,9 @@ func NewProducer(groupName string) (mqClient MqProducer, err error) {
 	}
 
 	if err != nil {
+		Logger().Error(ctx, err)
 		return
 	}
-
-	mutex.Lock()
-	defer mutex.Unlock()
 	mqProducerInstanceMap[groupName] = mqClient
 	return
 }
@@ -155,42 +158,13 @@ func NewConsumer(groupName string) (mqClient MqConsumer, err error) {
 			return
 		}
 		mqClient, err = RegisterRocketConsumer()
-	//case "kafka":
-	//	if len(config.Kafka.Address) == 0 {
-	//		err = gerror.New("queue kafka address is not support")
-	//		return
-	//	}
-	//
-	//	randTag := string(charset.RandomCreateBytes(6))
-	//	// 是否支持创建多个消费者
-	//	if !config.Kafka.MultiConsumer {
-	//		randTag = "001"
-	//	}
-	//
-	//	if item, ok := mqConsumerInstanceMap[groupName+"-"+randTag]; ok {
-	//		return item, nil
-	//	}
-	//
-	//	clientId := "ttpos-consumer-" + groupName
-	//	if config.Kafka.RandClient {
-	//		clientId += "-" + randTag
-	//	}
-	//
-	//	mqClient, err = RegisterKafkaMqConsumer(KafkaConfig{
-	//		Brokers:  config.Kafka.Address,
-	//		GroupID:  groupName,
-	//		Version:  config.Kafka.Version,
-	//		ClientId: clientId,
-	//	})
+
 	case "redis":
 		if _, err = g.Redis().Do(ctx, "ping"); err == nil {
 			mqClient = RegisterRedisMqConsumer(RedisOption{
 				Timeout: config.Redis.Timeout,
 			}, groupName)
 		}
-	//case "disk":
-	//	config.Disk.GroupName = groupName
-	//	mqClient, err = RegisterDiskMqConsumer(config.Disk)
 	default:
 		err = gerror.New("queue driver is not support")
 	}

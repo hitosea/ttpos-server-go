@@ -26,6 +26,9 @@ type (
 		Copy(ctx context.Context, req *dto.ErpReq) (rst *g.Var, err error)
 		Execute(ctx context.Context, req *dto.ErpReq, params interface{}) (rst *g.Var, err error)
 	}
+	IItem interface {
+		SyncDelay()
+	}
 	IResource interface {
 		List(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error)
 		Get(ctx context.Context, docType string, name string, params *dto.RequestParams) (rst *g.Var, err error)
@@ -41,6 +44,7 @@ type (
 var (
 	localDoctype  IDoctype
 	localDocument IDocument
+	localItem     IItem
 	localResource IResource
 	localRpc      IRpc
 )
@@ -65,6 +69,17 @@ func Document() IDocument {
 
 func RegisterDocument(i IDocument) {
 	localDocument = i
+}
+
+func Item() IItem {
+	if localItem == nil {
+		panic("implement not found for interface IItem, forgot register?")
+	}
+	return localItem
+}
+
+func RegisterItem(i IItem) {
+	localItem = i
 }
 
 func Resource() IResource {

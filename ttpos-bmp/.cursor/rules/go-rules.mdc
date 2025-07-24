@@ -2,10 +2,43 @@
 alwaysApply: true
 ---
  Go 代码开发规范（ttpos-bmp 项目专用）
+    代码使用goframe(https://github.com/gogf/gf) 框架开发
 
  1. 目录结构
  - 业务代码统一放在 app/ 目录下，按模块（如 ttpos-manager, ttpos-erp, ttpos-shop）划分
  - 每个模块下 manifest/sql 目录用于存放数据库迁移脚本
+ - 目录结构样例
+
+    app/ttpos-erp/
+    ├── api/                // API 接口定义
+    ├── cmd/                // 命令行入口
+    ├── internal/           // 内部实现
+    │   ├── consts/         // 常量定义
+    |   |── controller/     // web控制器
+    │   ├── dao/            // 数据访问层
+    │   ├── logic/          // 业务逻辑层
+    │   │   ├── erp/        // erp 相关业务逻辑
+    │   │   │   ├── document.go
+    │   │   │   └── item/
+    │   │   │       └── item.go
+    │   ├── model/          // 数据模型
+    │   │   ├── dto/        // 数据传输对象
+    │   │   │   └── 
+    │   │   └── entity/     // 实体对象
+    │   ├── service/        // 服务接口定义与实现
+    │   └── utility/        // 工具类
+    ├── manifest/
+    │   └── sql/            // 数据库迁移脚本
+    ├── router/             // 路由定义
+    └── main.go             // 启动入口
+
+说明：
+- 业务代码全部放在 internal/logic/erp 及其子目录下
+- 数据库迁移脚本统一放在 manifest/sql 目录
+- model/dto 用于定义接口数据结构
+- model/entity 用于定义数据库实体结构
+- 其他目录根据业务需要可适当扩展
+
 
  2. 依赖管理
  - 统一使用 go mod 管理依赖，禁止手动修改 go.sum
@@ -15,16 +48,19 @@ alwaysApply: true
  - 变量、函数、结构体命名统一使用驼峰命名法
  - 包名一律小写，禁止使用下划线
  - 文件名建议小写，单词间用下划线分隔
+ - 数据库操作使用 dao层服务
+ - controller,dao,service,entity,do 目录不要自己生成,框架会生成
 
  4. 注释规范
  - 所有导出函数、结构体、接口必须添加中文注释
  - 重要业务逻辑、复杂算法处需补充详细中文注释
 
  5. 接口规范
- - PHP接口需添加 apidoc 注释，Go接口建议补充详细中文注释说明参数和返回值
+ - Go接口建议补充详细中文注释说明参数和返回值
 
  6. 数据库迁移
  - 迁移脚本仅允许写在 manifest/sql 目录下
+ - 迁移脚本通过 make db_add NAME=[备注] 的方式新增脚本，脚本内容写在新增的 xxx_up.sql内 
  - 新增表/字段时，时间字段用 int 类型并以 _time 结尾，金额字段用 decimal(14,2)
  - 必须包含 uuid（string, 默认guuid.S()）、create_time、update_time、delete_time 字段（int, 默认0）
  - 新增表/字段前需判断是否已存在，避免重复

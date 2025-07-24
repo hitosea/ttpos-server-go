@@ -64,7 +64,8 @@ func (r *RedisMq) SendByteMsg(topic string, body []byte) (mqMsg MqMsg, err error
 	return
 }
 
-func (r *RedisMq) SendDelayMsg(topic string, body string, delaySecond int64) (mqMsg MqMsg, err error) {
+func (r *RedisMq) SendDelayMsg(topic string, body string, delay time.Duration) (mqMsg MqMsg, err error) {
+	delaySecond := int64(delay.Seconds())
 	if delaySecond < 1 {
 		return r.SendMsg(topic, body)
 	}
@@ -117,7 +118,7 @@ func (r *RedisMq) SendDelayMsg(topic string, body string, delaySecond int64) (mq
 }
 
 // ListenReceiveMsgDo 消费数据
-func (r *RedisMq) ListenReceiveMsgDo(topic string, receiveDo func(mqMsg MqMsg)) (err error) {
+func (r *RedisMq) ListenReceiveMsgDo(topic string, receiveDo func(mqMsg MqMsg) error) (err error) {
 	if r.poolName == "" {
 		return gerror.New("RedisMq producer not register")
 	}
