@@ -120,15 +120,6 @@ func (s *memberAddressSrv) AddAddress(ctx context.Context, req member_req.Member
 	}
 	memberAddress.MemberUuid = ctx.GetMemberUuid()
 
-	// 如果国家代码为空，则根据手机号判断
-	if memberAddress.PhonePrefix == "" {
-		if len(memberAddress.Phone) == 11 {
-			memberAddress.PhonePrefix = "+86"
-		} else {
-			memberAddress.PhonePrefix = "+66"
-		}
-	}
-
 	// 如果设置为默认地址，则需要将该会员的其他地址设置为非默认
 	if req.IsDefault {
 		// 开启事务
