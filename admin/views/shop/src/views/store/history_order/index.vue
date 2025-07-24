@@ -137,13 +137,13 @@
           <el-table-column prop="order_amount" :label="$t('订单金额')" width="140" show-overflow-tooltip>
             <template #default="scope">
               <div style="line-height: 24px">
-                <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                {{ this.$formatPrice(scope.row.order_amount) }}
-                <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+                <main-currency>
+                  {{ this.$formatPrice(scope.row.order_amount) }}
+                </main-currency>
                 <p class="gray98" v-if="currency.is_open == 1">
-                  <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                  {{ this.$formatPrice((Number(scope.row.order_amount) * Number(currency.vices?.unit_rate)).toFixed(2))
-                  }}<template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }} </template>
+                  <sub-currency>
+                    {{ this.$formatPrice((Number(scope.row.order_amount) * Number(currency.vices?.unit_rate)).toFixed(2)) }}
+                  </sub-currency>
                 </p>
               </div>
             </template>
@@ -152,9 +152,9 @@
             <template #default="scope">
               <div>
                 <div class="orange" v-if="scope.row.status == 1 || (scope.row.sale_orders && scope.row.sale_orders.map((item) => item.status == 1).includes(true))">
-                  <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                  {{ this.$formatPrice(scope.row.payment_amount) }}
-                  <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+                  <main-currency>
+                    {{ this.$formatPrice(scope.row.payment_amount) }}
+                  </main-currency>
                 </div>
                 <div v-else>-</div>
               </div>
