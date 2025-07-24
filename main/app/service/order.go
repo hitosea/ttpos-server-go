@@ -821,7 +821,7 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 	ctxCopy.SetDB(db)
 	info, err := s.GetMemberOrderCheckoutInfo(ctxCopy, req.GetMemberOrderCheckoutInfoReq{
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
-	}, targetSaleBill)
+	}, nil)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -849,20 +849,21 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 	// productAmount := decimal.NewFromFloat(0) // 商品合计
 	// memberDiscount := decimal.NewFromFloat(0) // 会员折扣
 	products := make([]resp.MemberSaleOrderProduct, 0)
-	for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
+	for _, saleOrderProduct := range saleBill.GetFirstSaleOrder().SaleOrderProducts {
 		amount := saleOrderProduct.GetTotalPriceOrigin()
-		image := ""
-		if saleOrderProduct.ImageFileUuid != 0 {
-			image = saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
-		}
 		products = append(products, resp.MemberSaleOrderProduct{
 			SaleOrderProductUuid: saleOrderProduct.Uuid,
 			Num:                  saleOrderProduct.Num,
 			UnitPrice:            saleOrderProduct.OriginTotalPrice,
 			Amount:               amount,
-			Image:                image,
 			LocaleName:           saleOrderProduct.MultiLanguageName.GetNames(),
 			LocaleAttributeName:  saleOrderProduct.GetAttributeName(),
+			Image: func() string {
+				if saleOrderProduct.ImageFileUuid != 0 {
+					return saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+				}
+				return ""
+			}(),
 		})
 		// // 商品合计
 		// amount := decimal.NewFromFloat(saleOrderProduct.GetTotalPrice())
