@@ -137,27 +137,24 @@
           <el-table-column prop="origin_amount" :label="$t('订单金额')" width="140" show-overflow-tooltip>
             <template #default="scope">
               <div style="line-height: 24px">
-                <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                {{ formatPrice(scope.row.origin_amount) }}
-                <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
-                <p class="gray98" v-if="currency.is_open == 1">
-                  <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                  {{ formatPrice((Number(scope.row.origin_amount) * Number(currency.vices?.unit_rate)).toFixed(2))
-                  }}<template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }} </template>
+                <main-currency>
+                    {{ formatPrice(scope.row.origin_amount) }}
+                </main-currency>
+                <p class="gray98">
+                  <sub-currency>
+                    {{ formatPrice((Number(scope.row.origin_amount) * Number(currency.vices?.unit_rate)).toFixed(2)) }}
+                  </sub-currency>
                 </p>
               </div>
             </template>
           </el-table-column>
           <el-table-column prop="pay_amount" :label="$t('实付金额')" show-overflow-tooltip>
             <template #default="scope">
-              <div>
-                <div class="orange" v-if="scope.row.status == 1 || (scope.row.sale_orders && scope.row.sale_orders.map((item) => item.status == 1).includes(true))">
-                  <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                  {{ formatPrice(scope.row.pay_amount) }}
-                  <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+                <div class="orange">
+                  <main-currency>
+                    {{ formatPrice(scope.row.pay_amount) }}
+                  </main-currency>
                 </div>
-                <div v-else>-</div>
-              </div>
             </template>
           </el-table-column>
           <el-table-column prop="" :label="$t('用户信息')" show-overflow-tooltip>
@@ -168,9 +165,9 @@
           </el-table-column>
           <el-table-column prop="delivery_fee" :label="$t('配送费')" show-overflow-tooltip>
             <template #default="scope">
-              <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ formatPrice(scope.row.delivery_fee) }}
-              <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+              <main-currency>
+                {{ formatPrice(scope.row.delivery_fee) }}
+              </main-currency>
             </template>
           </el-table-column>
 
@@ -319,18 +316,20 @@
 
     if (params.value.page) {
       Object.assign(searchForm, {
-        order_no: params.value.order_no,    
+        order_no: params.value.order_no,
         serial_no: params.value.serial_no,
         style_id: params.value.style_id,
         date_range: params.value.date_range,
         time_type: params.value.time_type,
         query_start_time: params.value.query_start_time,
         query_end_time: params.value.query_end_time,
+        page_no: params.value.page_no,
+        page_size: params.value.page_size,
       });
       time.value = params.value.time;
       activeName.value = params.value.dataType;
-      curPage.value = params.value.page_no;
-      pageSize.value = params.value.page_size;
+      curPage.value = params.value.page;
+      pageSize.value = params.value.list_rows;
       languageStore().setPageParams({});
     }
 
@@ -486,30 +485,28 @@
       .catch(() => {});
   };
 
-  const rejectSubmit = () => {
+  const rejectSubmit = async () => {
     loading.value = true;
-    OrderApi.postTakeoutOrderReject(
-      {
-        member_sale_order_uuid: member_sale_order_uuid.value,
-      },
-      true
-    )
-      .then((res) => {
-        ElMessage({
-          message: res.msg,
-          type: 'success',
-        });
-        getData();
-      })
-      .catch((error) => {
-        ElMessage({
-          message: error.msg,
-          type: 'error',
-        });
-      })
-      .finally(() => {
-        loading.value = false;
+    try {
+      const res = await OrderApi.postTakeoutOrderReject(
+        {
+          member_sale_order_uuid: member_sale_order_uuid.value,
+        },
+        true
+      );
+      ElMessage({
+        message: res.msg,
+        type: 'success',
       });
+      getData();
+    } catch (error) {
+      ElMessage({
+        message: error.msg,
+        type: 'error',
+      });
+    } finally {
+      loading.value = false;
+    }
   };
 
   const closeDialogFunc = (e, f) => {
