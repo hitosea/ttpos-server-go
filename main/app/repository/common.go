@@ -114,7 +114,7 @@ type ICommonRepo interface {
 	FilterSaleOrderProductH5OrderedWithReject() DBOption                // 查询H5已下单的购物车商品.包括已送厨商品、已下单未接单的商品和被拒单的商品
 	SortWithID(order string) DBOption                                   // 根据ID排序
 	SortWithCreateTime(order string) DBOption                           // 根据创建时间排序
-	SortWithCommitPayTime(order string) DBOption                        // 根据提交支付时间排序
+	SortWithSubmitPayTime(order string) DBOption                        // 根据提交支付时间排序
 	SortWithPayTime(order string) DBOption                              // 根据支付时间排序
 	SortWithHandleTime(order string) DBOption                           // 根据h5订单处理时间排序
 	WhereCreateTimeGt(createTime int64) DBOption                        // 根据创建时间大于查询
@@ -549,10 +549,10 @@ func (r *commonRepo) SortWithCreateTime(order string) DBOption {
 	}
 }
 
-// SortWithCommitPayTime 根据提交支付时间排序
-func (r *commonRepo) SortWithCommitPayTime(order string) DBOption {
+// SortWithSubmitPayTime 根据提交支付时间排序
+func (r *commonRepo) SortWithSubmitPayTime(order string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Order("commit_pay_time " + order)
+		return db.Order("submit_pay_time " + order)
 	}
 }
 

@@ -525,7 +525,7 @@ func (r *MemberSaleOrderRepo) GetOrderNum(status []uint) (int64, error) {
 func (r *MemberSaleOrderRepo) GetMemberSaleOrderLatest() (*model.MemberSaleOrder, error) {
 	memberSaleOrder, err := r.GetMemberSaleOrder(
 		CommonRepo.WhereBySoftDelete(),
-		CommonRepo.SortWithCommitPayTime("desc"),
+		CommonRepo.SortWithSubmitPayTime("desc"),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err)
