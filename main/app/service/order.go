@@ -736,7 +736,7 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 		return nil, errors.WithMessage(err, "获取公司设置失败")
 	}
 	// 获取配送费配置
-	deliveryConfig, err := companySetting.GetDeliveryConfig("skootar", 0)
+	deliveryConfig, err := companySetting.GetDeliveryConfig(constant.ProviderNameSkootar, 0)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取配送费配置失败")
 	}
@@ -944,6 +944,14 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 			}
 		}
 	}
+
+	// 每次获取会员端订单信息时，重新获取最新的外送费用配置
+	companySetting := ctx.GetCompanySetting()
+	deliveryConfig, err := companySetting.GetDeliveryConfig(constant.ProviderNameSkootar, memberSaleOrder.DeliveryDistance)
+	if err != nil {
+		return nil, errors.WithMessage(err, "配送费配置失败")
+	}
+	memberSaleOrder.UpdateDeliveryConfig(*deliveryConfig)
 
 	// 保存一下
 	memberSaleOrder.ProductNum = memberSaleOrder.SaleBill.SaleOrders[0].GetProductNum()
