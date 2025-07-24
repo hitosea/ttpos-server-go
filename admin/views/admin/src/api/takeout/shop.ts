@@ -61,7 +61,6 @@ export interface TakeoutShopAddEditDataItem {
   distance_range: Array<{
     end: number;
     price_per_km: number;
-    is_unlimited: boolean;
   }>;
 }
 
