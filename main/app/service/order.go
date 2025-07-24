@@ -9531,6 +9531,14 @@ func IsSameSignature[T any](sign string, toSaleOrderProductSignMap map[string]*T
 }
 
 func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error {
+	// 保存到数据库
+	if db == nil {
+		db = s.dbm.GetDB(ctx.GetDbId())
+	}
+	return CalcAndSaveSaleBill(ctx, db, saleBill, options...)
+}
+
+func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error {
 	option := &model.CalcOption{}
 	for _, optionFunc := range options {
 		optionFunc(option)
@@ -9540,10 +9548,6 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 	// 设置收银员信息
 	staff := ctx.GetStaff()
 	saleBill.SetCashier(staff.DutyNo, staff.Uuid, staff.GetUserName())
-	// 保存到数据库
-	if db == nil {
-		db = s.dbm.GetDB(ctx.GetDbId())
-	}
 
 	err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		for _, saleOrder := range saleBill.SaleOrders {

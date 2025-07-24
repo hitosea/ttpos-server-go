@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
+	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -13,6 +14,7 @@ import (
 	"ttpos-server-go/pkg/utils"
 
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 var once_cook_finish_member_sale_order_event_handler sync.Once
@@ -48,6 +50,17 @@ func cookFinishMemberSaleOrderEventHandler() {
 
 			// +++++++++++++++++++++++ 设置SaleBill的当班编号
 			setDutyNoForSaleBill(db, payload.BasePayload)
+
+			// 结束SaleBill和SaleOrder
+			endSaleBillAndSaleOrder(db, payload)
 		})
 	})
+}
+
+// 备餐完成时，结束SaleBill和SaleOrder
+func endSaleBillAndSaleOrder(db *gorm.DB, payload event.CookFinishMemberSaleOrderPayload) {
+	saleBill := payload.MemberSaleOrder.SaleBill
+	staff := payload.Ctx.GetStaff()
+	saleBill.EndSaleBillAndSaleOrder(staff.DutyNo, staff.Uuid, staff.GetUserName())
+	service.CalcAndSaveSaleBill(payload.Ctx, db, saleBill)
 }
