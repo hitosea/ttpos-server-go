@@ -1333,7 +1333,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		// 选择外送渠道
 		memberSaleOrder.RelatedOrderType = constant.ProviderNameSkootar
 		// 状态变更的回调地址
-		callbackUrl := config.TakeOutRpcConf.CallbackEndpoint + "/api/v1/member/order/callback?company_uuid=" + fmt.Sprintf("%d", ctx.GetCompany().Uuid)
+		callbackUrl := config.Server.Domain + "/api/v1/member/order/callback?company_uuid=" + fmt.Sprintf("%d", ctx.GetCompany().Uuid)
 
 		takeoutSrv := takeout.NewTakeoutSrv()
 		params := req.CreateTakeoutOrderReq{

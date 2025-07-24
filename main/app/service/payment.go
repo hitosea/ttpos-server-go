@@ -18,6 +18,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/saas"
+	"ttpos-server-go/config"
 	contexts "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -97,8 +98,8 @@ func NewPaymentRepo(ctx contexts.Context, dbm *database.DBManager) *PaymentRepo 
 		payServiceUrl: viper.GetString("PAY_SERVICE_URL"),
 		payCallbackUrl: func() string {
 			if viper.GetString("PAY_SERVICE_LIANLIAN_CALLBACK_URL") == "" {
-				if viper.GetString("DOMAIN") != "" {
-					return viper.GetString("DOMAIN") + "/api/v1/passport/lianlian/callback"
+				if config.Server.Domain != "" {
+					return config.Server.Domain + "/api/v1/passport/lianlian/callback"
 				} else {
 					return ""
 				}
@@ -107,8 +108,8 @@ func NewPaymentRepo(ctx contexts.Context, dbm *database.DBManager) *PaymentRepo 
 		}(),
 		refundCallbackUrl: func() string {
 			if viper.GetString("PAY_SERVICE_LIANLIAN_REFUND_CALLBACK_URL") == "" {
-				if viper.GetString("DOMAIN") != "" {
-					return viper.GetString("DOMAIN") + "/api/v1/passport/lianlian/refund/callback"
+				if config.Server.Domain != "" {
+					return config.Server.Domain + "/api/v1/passport/lianlian/refund/callback"
 				} else {
 					return ""
 				}
