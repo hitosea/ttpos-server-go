@@ -29,6 +29,7 @@
   "下载文件失败，HTTP状态码：": "Datei konnte nicht heruntergeladen werden, HTTP-Statuscode:",
   "不使用此会员": "Dieses Mitglied nicht verwenden",
   "不包含退款金额": "Rückerstattungsbetrag nicht enthalten",
+  "不在配送范围内，无法下单": "Außerhalb des Liefergebiets, Bestellung nicht möglich",
   "不存在相同的sign": "Es existiert kein identisches sign",
   "不支持的支付方式": "Nicht unterstützte Zahlungsmethode",
   "不收取服务费": "Keine Servicegebühr",

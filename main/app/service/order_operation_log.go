@@ -311,6 +311,9 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 			if cancelMemberSaleOrder.Data.Type == "timeout_cancel" {
 				desc = desc + " (" + i18n.Translate(language, "超时取消") + ")"
 			}
+			if cancelMemberSaleOrder.Data.Type == "reject_order" {
+				desc = desc + " (" + i18n.Translate(language, "商家拒单") + ")"
+			}
 			// 退款信息
 			if len(cancelMemberSaleOrder.Data.Refunds) > 0 {
 				desc = desc + "，" + i18n.Translate(language, "订单已退款") + " ("

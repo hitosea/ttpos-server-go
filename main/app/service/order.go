@@ -1012,7 +1012,7 @@ func (s *orderSrv) QueryDistance(ctx context.Context, memberSaleOrder *model.Mem
 	})
 	if err != nil {
 		ctx.Log().Error("计算配送距离失败", zap.Error(err))
-		return 0, errors.WithMessage(errors.NewWithCode(constant.CodeDistanceError, "计算距离失败"), err.Error())
+		return 0, errors.WithMessage(errors.NewWithCode(constant.CodeDistanceError, "不在配送范围内，无法下单"), err.Error())
 	}
 
 	return takeoutResp.Distance, nil
@@ -1767,7 +1767,7 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			actionText = actionDescription.SplitMessage + actionText
 		}
 		if actionDescription.Desc != "" {
-			if record.Source == constant.SourceMember {
+			if record.Source == constant.SourceMember || record.Action == constant.OrderCancelMemberSaleOrder {
 				actionText = actionText + actionDescription.Desc
 			} else {
 				actionText = actionText + ": " + actionDescription.Desc

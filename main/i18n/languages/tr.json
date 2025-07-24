@@ -29,6 +29,7 @@
   "下载文件失败，HTTP状态码：": "Dosya indirilemedi, HTTP durum kodu:",
   "不使用此会员": "Bu üyeyi kullanma",
   "不包含退款金额": "İade tutarı dahil değil",
+  "不在配送范围内，无法下单": "Teslimat alanı dışında, sipariş verilemiyor",
   "不存在相同的sign": "Aynı sign mevcut değil",
   "不支持的支付方式": "Desteklenmeyen ödeme yöntemi",
   "不收取服务费": "Hizmet ücreti alınmaz",

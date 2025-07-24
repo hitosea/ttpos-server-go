@@ -1396,7 +1396,7 @@ func (s *orderSrv) RejectMemberSaleOrder(ctx context.Context, request req.Reject
 	})
 
 	// 退款
-	_, err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*billInfo.GetFirstSaleOrder(), MemberSaleOrderRefundReq{
+	returnOrder, err := NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*billInfo.GetFirstSaleOrder(), MemberSaleOrderRefundReq{
 		CancelReason: "商家拒单",
 	})
 	if err != nil {
@@ -1423,6 +1423,27 @@ func (s *orderSrv) RejectMemberSaleOrder(ctx context.Context, request req.Reject
 			},
 			MemberSaleOrderUuid: memberSaleOrder.Uuid,
 			MemberSaleOrder:     memberSaleOrder,
+			Data: event.CancelMemberOrderPayloadData{
+				Type: "reject_order",
+				Refunds: func() []event.CancelMemberOrderPayloadDataRefund {
+					refunds := make([]event.CancelMemberOrderPayloadDataRefund, 0)
+					if returnOrder != nil {
+						for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
+							refunds = append(refunds, event.CancelMemberOrderPayloadDataRefund{
+								Name:              returnOrderAmount.PaymentMethod.PaymentName,
+								Code:              returnOrderAmount.PaymentMethod.Code,
+								Amount:            returnOrderAmount.Amount,
+								RefundStatus:      returnOrderAmount.RefundStatus,
+								ReturnAmountUuid:  returnOrderAmount.Uuid,
+								ReturnOrderUuid:   returnOrder.Uuid,
+								PaymentOrderUuid:  returnOrderAmount.PaymentOrderUuid,
+								PaymentMethodUuid: returnOrderAmount.PaymentMethodUuid,
+							})
+						}
+					}
+					return refunds
+				}(),
+			},
 		})
 	}()
 
