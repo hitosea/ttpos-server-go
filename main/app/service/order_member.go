@@ -1181,25 +1181,20 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 		})
 	}
 
-	getOrderNum := func(memberOrders []resp.MemberOrderManage, statusGroup string) int64 {
-		num := int64(0)
-		for _, memberOrder := range memberOrders {
-			if memberOrder.StatusGroup == statusGroup {
-				num++
-			}
-		}
+	getOrderNum := func(status string) int64 {
+		num, _ := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderNum(constant.GetStatusList(status), req.GetTimeFilterParams(ctx.GetCompanySetting().Timezone))
 		return num
 	}
 
-	unpaidNum := getOrderNum(memberOrders, "unpaid")
-	unacceptNum := getOrderNum(memberOrders, "unaccept")
-	acceptNum := getOrderNum(memberOrders, "accept")
-	undeliveryNum := getOrderNum(memberOrders, "undelivery")
-	deliveryNum := getOrderNum(memberOrders, "delivery")
-	completeNum := getOrderNum(memberOrders, "completed")
-	cancelNum := getOrderNum(memberOrders, "cancel")
+	unpaidNum := getOrderNum(constant.CashierSaleMemberOrderStatusUnpaid)         // 待付款
+	unacceptNum := getOrderNum(constant.CashierMemberSaleOrderStatusUnaccept)     // 待接单
+	acceptNum := getOrderNum(constant.CashierMemberSaleOrderStatusAccept)         // 备餐中
+	undeliveryNum := getOrderNum(constant.CashierMemberSaleOrderStatusUndelivery) // 待配送
+	deliveryNum := getOrderNum(constant.CashierMemberSaleOrderStatusDelivery)     // 配送中
+	cancelNum := getOrderNum(constant.CashierMemberSaleOrderStatusCancel)         // 已取消
+	completeNum := getOrderNum(constant.CashierMemberSaleOrderStatusDelivered)    // 已完成
 
-	allNum := unpaidNum + unacceptNum + undeliveryNum + deliveryNum + completeNum + cancelNum
+	allNum := unpaidNum + unacceptNum + acceptNum + undeliveryNum + deliveryNum + cancelNum + completeNum
 
 	return &resp.GetMemberOrderManageListResp{
 		Meta: resp.OrderManageListMeta{
