@@ -870,7 +870,7 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 		}
 
 		// 已经支付的-发起退款
-		if memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingMerchantAccept {
+		if memberSaleOrder.Status > constant.MemberSaleOrderStatusPendingPayment {
 			returnOrder, err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
 				CancelReason: "客户取消订单",
 			})
@@ -895,13 +895,15 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 
 	// 发布“整单取消”操作事件
 	go func() {
+
+		// 取消订单
 		s.bus.PublishCancelOrderEvent(event.CancelOrderPayload{
-			BasePayload: event.BasePayload{ // 整单取消
+			BasePayload: event.BasePayload{
 				Ctx:                 ctx,
 				CompanyUuid:         ctx.GetCompanyUuid(),
 				Source:              ctx.GetSource(),
 				SaleBillUuid:        billInfo.Uuid,
-				OperatorUuid:        int64(ctx.GetMemberUuid()),
+				OperatorUuid:        int64(ctx.GetStaffUuid()),
 				MemberSaleOrderUuid: memberSaleOrder.Uuid,
 				MemberUuid:          memberSaleOrder.MemberUuid,
 			},
