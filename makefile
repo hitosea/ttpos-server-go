@@ -121,3 +121,7 @@ bump-version:
 # 统计数据重跑
 statistics-re:
 	cd main && go run ./main.go statistics-re $(ARGS)
+
+# 更新skootar状态
+skootar-update-status:
+	cd main && go run ./main.go skootar-update-status $(ARGS)
