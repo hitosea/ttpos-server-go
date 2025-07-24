@@ -31,14 +31,14 @@ class MemberOrder extends Controller
      */
     public function index()
     {
-        $data = $this->postData(); 
+        $data = $this->postData();
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/member_order/list', $data, [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
         ]);
         if (!$res) {
             return $this->renderError('请求失败');
-        } 
+        }
         $result = json_decode($res, true);
         if (($result['code'] ?? -1) != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
@@ -71,7 +71,7 @@ class MemberOrder extends Controller
         }
         //
         $data = $result['data'];
-         
+
         return $this->renderSuccess('', $data);
     }
 
@@ -83,7 +83,9 @@ class MemberOrder extends Controller
      */
     public function reject($member_sale_order_uuid)
     {
-        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/reject', json_encode($this->postData()), [
+        $param = $this->postData();
+        $param['member_sale_order_uuid'] = intval($param['member_sale_order_uuid'] ?? 0);
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/reject', json_encode($param), [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
         ]);
@@ -94,7 +96,7 @@ class MemberOrder extends Controller
         if (($result['code'] ?? -1) != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
         }
-        
+
         return $this->renderSuccess('');
     }
 
@@ -110,7 +112,9 @@ class MemberOrder extends Controller
      */
     public function cancel()
     {
-        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/cancel', json_encode($this->postData()), [
+        $param = $this->postData();
+        $param['member_sale_order_uuid'] = intval($param['member_sale_order_uuid'] ?? 0);
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/cancel', json_encode($param), [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
         ]);
@@ -153,7 +157,7 @@ class MemberOrder extends Controller
 
         if (!$res) {
             return $this->renderError('请求失败');
-        } 
+        }
         $result = json_decode($res, true);
         if (($result['code'] ?? -1) != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
@@ -194,7 +198,12 @@ class MemberOrder extends Controller
      */
     public function return()
     {
-        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/return', json_encode($this->postData()), [
+        $param = $this->postData();
+        $param['sale_bill_uuid'] = intval($param['sale_bill_uuid'] ?? 0);
+        $param['sale_order_uuid'] = intval($param['sale_order_uuid'] ?? 0);
+        $param['member_sale_order_uuid'] = intval($param['member_sale_order_uuid'] ?? 0);
+
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/return', json_encode($param), [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
         ]);
@@ -215,7 +224,11 @@ class MemberOrder extends Controller
      */
     public function re_return()
     {
-        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/re_return', json_encode($this->postData()), [
+        $param = $this->postData();
+        $param['sale_bill_uuid'] = intval($param['sale_bill_uuid'] ?? 0);
+        $param['sale_order_uuid'] = intval($param['sale_order_uuid'] ?? 0);
+        $param['member_sale_order_uuid'] = intval($param['member_sale_order_uuid'] ?? 0);
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/re_return', json_encode($param), [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
         ]);
