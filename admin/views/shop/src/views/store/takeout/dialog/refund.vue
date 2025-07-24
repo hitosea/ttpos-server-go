@@ -301,7 +301,7 @@ const submit = () => {
         .then((data) => {
           loading.value = false;
           ElMessage({
-            message: data.msg,
+            message: $t('操作成功'),
             type: 'success',
           });
           dialogFormVisible(true);
