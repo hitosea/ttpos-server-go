@@ -301,7 +301,7 @@ func (s *memberAddressSrv) AuthAddress(ctx context.Context, req member_req.Membe
 			ReferrerPhone: req.ReferrerPhone,
 		})
 		if err != nil {
-			return member_resp.LoginResp{}, err
+			return member_resp.LoginResp{}, errors.WithMessage(err)
 		}
 	} else {
 		// 验证验证码
