@@ -402,7 +402,7 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 							// if orderProduct.IsSendKitchen == 1 {
 							// 	orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
 							// }
-							orderServiceTax = orderServiceTax.Add(productServiceTax)
+							// orderServiceTax = orderServiceTax.Add(productServiceTax)
 						}
 					} else {
 						if orderProduct.IsFree > 0 {
@@ -414,12 +414,12 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 								// 	orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
 								// }
 							}
-							orderServiceTax = orderServiceTax.Add(productServiceTax)
+							// orderServiceTax = orderServiceTax.Add(productServiceTax)
 						} else {
 							// if orderProduct.IsSendKitchen == 1 {
 							// 	orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
 							// }
-							orderServiceTax = orderServiceTax.Add(productServiceTax)
+							// orderServiceTax = orderServiceTax.Add(productServiceTax)
 						}
 					}
 
@@ -474,7 +474,7 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 					}
 				} else {
 					orderProductPrice = orderProductPrice.Add(productPrice.Mul(totalNumDec))
-					orderServiceTax = orderServiceTax.Add(productServiceTax)
+					// orderServiceTax = orderServiceTax.Add(productServiceTax)
 				}
 
 				if isFeeType && orderBuffetCustomer.RefundMoney > 0 {
@@ -519,6 +519,10 @@ func (s *StatisticsSaleService) convertStatisticsSale1() error {
 				orderPaymentAmount = decimal.NewFromFloat(0)
 			} else {
 				orderPaymentAmount = decimal.NewFromFloat(order.PayPrice)
+			}
+
+			if orderPaymentBalance.GreaterThan(decimal.Zero) && orderRefundAmount.Equal(orderPaymentBalance) {
+				orderPaymentBalance = decimal.NewFromFloat(0)
 			}
 
 			if !isFree && order.PayPrice == order.RefundMoney {
