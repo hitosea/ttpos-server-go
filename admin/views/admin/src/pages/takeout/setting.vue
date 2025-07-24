@@ -141,6 +141,11 @@
                               return;
                             }
                           }
+                          // 如果是最后一个距离范围，则提示必须勾选最大
+                          if (distanceRangeIndex === (formData[index].distance_range && formData[index].distance_range?.length - 1)) {
+                            callback(new Error($t('最后一个距离范围必须勾选最大')));
+                            return;
+                          }
                           callback();
                         },
                       },

@@ -135,6 +135,10 @@
                                 }
                                 if (distanceRangeIndex > 0 && value <= item.distance_range[distanceRangeIndex - 1].end && !distanceRange.is_unlimited) {
                                   callback(new Error($t('结束距离必须大于前一个范围的结束距离')));
+                                }
+                                // 如果是最后一个距离范围且是手动设置，则提示必须勾选最大
+                                if (distanceRangeIndex === item.distance_range.length - 1 && item.config_type === 'manual' && !distanceRange.is_unlimited) {
+                                  callback(new Error($t('最后一个距离范围必须勾选最大')));
                                 } else {
                                   callback();
                                 }
