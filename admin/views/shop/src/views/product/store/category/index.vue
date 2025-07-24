@@ -146,9 +146,10 @@ const handleClick = () => {
 }
 
 // 获取列表
-const getData = () => {
+const getData = async () => {
   loading.value = true
-  PorductApi.storeCatList(
+  try {
+    const res = await PorductApi.storeCatList(
     {
       name: searchForm.name,
       page: curPage.value,
@@ -156,15 +157,14 @@ const getData = () => {
     },
     true
   )
-    .then((data) => {
-      loading.value = false
-      tableData.value = data.data.list.data || data.data.data || []
-      categoryModel.catList = tableData.value
-      totalDataNumber.value = data.data.list.total || 0
-    })
-    .catch((error) => {
-      loading.value = false
-    })
+  loading.value = false
+  tableData.value = res.data.list.data || res.data.data || []
+  categoryModel.catList = tableData.value
+  totalDataNumber.value = res.data.list.total || 0
+  } catch (error) {
+    loading.value = false
+  }
+    
 }
 
 // 打开添加
@@ -179,16 +179,19 @@ const editClick = (item) => {
 }
 
 // 状态设置
-const statusSet = (e, id) => {
-  PorductApi.storeCatSet({
-    category_id: id,
-    status: e,
-  }).then((data) => {
+const statusSet = async (e, id) => {
+  try {
+    const res = await PorductApi.storeCatSet({
+      category_id: id,
+      status: e,
+    },true)
     ElMessage({
-      message: data.msg,
+      message: res.msg,
       type: 'success',
     })
-  })
+  } catch (error) {
+    ElMessage.error(error?.message || t('状态设置失败'))
+  }
 }
 
 // 关闭弹窗
@@ -211,16 +214,19 @@ const closeDialogFunc = (e, f) => {
 const deleteClick = (row) => {
   ElMessageBox.confirm(t('删除后不可恢复，确认删除吗?'), t('提示'), {
     type: 'warning',
-  }).then(() => {
-    PorductApi.storeCatDel({
-      category_id: row.category_id,
-    }).then((data) => {
+  }).then(async () => {
+    try {
+      const res = await PorductApi.storeCatDel({
+        category_id: row.category_id,
+      },true)
       ElMessage({
         message: t('删除成功'),
         type: 'success',
       })
       getData()
-    })
+    } catch (err) {
+      ElMessage.error(err?.message || t('删除失败'))
+    }
   })
 }
 

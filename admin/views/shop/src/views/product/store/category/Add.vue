@@ -106,16 +106,16 @@ watch(() => props.open_add, (newVal) => {
 }, { immediate: true })
 
 // 获取父级分类
-const getParentCategory = () => {
+const getParentCategory = async () => {
   loading.value = true
-  ProductApi.storeCatParentList({}, true)
-    .then((res) => {
-      loading.value = false
-      category.value = res.data.list
-    })
-    .catch(() => {
-      loading.value = false
-    })
+  try {
+    const res = await ProductApi.storeCatParentList({}, true)
+    category.value = res.data.list
+  } catch (err) {
+    ElMessage.error(err?.message || t('获取父级分类失败'))
+  } finally {
+    loading.value = false
+  }
 }
 
 // 提交表单
