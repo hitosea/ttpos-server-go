@@ -559,8 +559,11 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 			DeliveryFeePerKm:   memberSaleOrder.DeliveryFeePerKm,
 		},
 		Rider: resp.RiderInfo{
-			Name:  memberSaleOrder.RiderName,
-			Phone: memberSaleOrder.RiderPhone,
+			Name:              memberSaleOrder.RiderName,
+			Phone:             memberSaleOrder.RiderPhone,
+			Location:          memberSaleOrder.Location,
+			RemainingDistance: memberSaleOrder.RemainingDistance,
+			EstimatedTime:     memberSaleOrder.ExpectedFinishTime,
 		},
 	}, nil
 }

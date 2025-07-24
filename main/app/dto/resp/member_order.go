@@ -106,6 +106,7 @@ type RiderInfo struct {
 	Phone             string  `json:"phone"`              // 骑手电话
 	Location          string  `json:"location"`           // 骑手位置.格式: 纬度,经度
 	RemainingDistance float64 `json:"remaining_distance"` // 剩余距离
+	EstimatedTime     string  `json:"estimated_time"`     // 预计送达时间
 }
 
 type MemberOrderAmountInfo struct {

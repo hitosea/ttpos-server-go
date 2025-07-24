@@ -29288,6 +29288,10 @@ const docTemplate = `{
         "resp.RiderInfo": {
             "type": "object",
             "properties": {
+                "estimated_time": {
+                    "description": "预计送达时间",
+                    "type": "string"
+                },
                 "location": {
                     "description": "骑手位置.格式: 纬度,经度",
                     "type": "string"
