@@ -2241,7 +2241,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     INDEX idx_complete_time (complete_time)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品统计表';
 
-CREATE TABLE IF NOT EXISTS `statistics_customer_type` (
+CREATE TABLE IF NOT EXISTS `ttpos_statistics_customer_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售单UUID',
@@ -2273,7 +2273,7 @@ CREATE TABLE IF NOT EXISTS `statistics_customer_type` (
     INDEX idx_complete_time (complete_time)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '客户类型统计表';
 
-CREATE TABLE IF NOT EXISTS `statistics_delay` (
+CREATE TABLE IF NOT EXISTS `ttpos_statistics_delay` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
     `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售单UUID',
