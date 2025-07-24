@@ -1176,10 +1176,7 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 					// 商家备餐中，商家可以取消订单
 					return memberSaleOrder.Status == constant.MemberSaleOrderStatusCooking
 				}(),
-				IsCellRefund: func() bool {
-					// 订单完成后，用户可以申请退款。TODO 且未全部退款时
-					return memberSaleOrder.Status == constant.MemberSaleOrderStatusCompleted
-				}(),
+				IsCellRefund: memberSaleOrder.IsCanRefund(),
 			},
 		})
 	}

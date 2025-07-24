@@ -41,6 +41,7 @@ type IQueryMemberSaleOrderRepo interface {
 	GetMemberSaleOrderByContactNameAndContactPhoneSuffix(contactName string, contactPhoneSuffix string) ([]*model.MemberSaleOrder, error)                            // 根据联系人姓名和手机号后缀查询会员端销售订单
 	GetOrderNum(status []uint) (int64, error)                                                                                                                        // 获取订单数量
 	GetMemberSaleOrderLatest() (*model.MemberSaleOrder, error)                                                                                                       // 获取最新的一条会员端销售订单(已提交支付的)
+	UpdateMemberSaleOrderRefundAmount(memberSaleOrderUuid uint64, refundAmount float64) error                                                                        // 更新会员端销售订单的退款金额
 
 	GetForCall(opts ...DBOption) ([]model.MemberSaleOrder, error)
 	WhereStatusIn(status []uint) DBOption
@@ -569,4 +570,13 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderLatest() (*model.MemberSaleOrder
 		return nil, errors.WithMessage(err)
 	}
 	return memberSaleOrder, nil
+}
+
+// 更新会员端销售订单的退款金额
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRefundAmount(memberSaleOrderUuid uint64, refundAmount float64) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrderUuid).Update("refund_amount", gorm.Expr("refund_amount + ?", refundAmount)).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }

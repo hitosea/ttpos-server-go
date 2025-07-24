@@ -80,6 +80,11 @@ type MemberSaleOrder struct {
 	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`
 }
 
+// 是否还可退款
+func (model *MemberSaleOrder) IsCanRefund() bool {
+	return model.Status == constant.MemberSaleOrderStatusCompleted && model.RefundAmount < model.Amount
+}
+
 // 更新配送费配置
 func (model *MemberSaleOrder) UpdateDeliveryConfig(deliveryConfig DeliveryConfigResponse) {
 	model.DeliveryFeeMinFee = deliveryConfig.BaseDeliveryFee

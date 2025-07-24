@@ -2512,6 +2512,16 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			PaymentMethodUuid: amount.PaymentMethodUuid,
 		})
 	}
+
+	// 记录外送订单的退款金额
+	if saleBill.MemberSaleOrderUuid > 0 {
+		go func() {
+			if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderRefundAmount(saleBill.MemberSaleOrderUuid, returnOrder.RefundAmount); err != nil {
+				ctx.Log().Error("记录外送订单的退款金额失败", zap.Error(errors.WithMessage(err)))
+			}
+		}()
+	}
+
 	go func() {
 		s.bus.PublishReturnOrderEvent(event.ReturnOrderPayload{
 			SaleBill: saleBill,
