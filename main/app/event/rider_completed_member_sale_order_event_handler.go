@@ -96,12 +96,19 @@ func riderCompletedMemberSaleOrderEventHandler() {
 			}()
 
 			// 外送订单完结时, 发布"统计"事件
+			order, err := repository.NewMemberSaleOrderRepoImpl(db).GetMemberSaleOrder(
+				repository.NewCommonRepoImpl().WhereByUuid(memberSaleOrder.Uuid),
+			)
+			if err != nil {
+				payload.Ctx.Log().Error("获取会员端销售订单记录失败", zap.Error(err))
+				return
+			}
 			go func() {
 				event.NewSystemBus().PublishStatisticsSaleEvent(event.StatisticsSalePayload{
 					BasePayload: event.BasePayload{ // 统计
 						Ctx: payload.Ctx,
 					},
-					SaleBillUuid: memberSaleOrder.SaleBillUuid,
+					SaleBillUuid: order.SaleBillUuid,
 				})
 			}()
 		})

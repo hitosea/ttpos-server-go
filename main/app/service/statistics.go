@@ -886,10 +886,10 @@ func (s *statisticsSrv) SaveSale(ctx context.Context, req SaveSaleReq) error {
 		return nil
 	}
 
-	// 查询销售账单详情
+	// 查询销售账单详情, 如果销售账单不存在、已删除、未完成，则不统计
 	orderRepo := repository.NewOrderRepo(db)
 	saleBill, err := orderRepo.GetSaleBillAllInfo(req.SaleBillUuid)
-	if err != nil {
+	if err != nil || saleBill == nil || saleBill.ID == 0 || saleBill.IsDelete() || !saleBill.IsFinish() {
 		return nil
 	}
 
@@ -1831,42 +1831,46 @@ func (s *statisticsSrv) CountExport(ctx context.Context, req CountReq) (CountExp
 		}
 
 		data = append(data, CountExportData{
-			Day:                   sale.Day,
-			TotalSaleAmount:       sale.TotalSaleAmount,
-			TotalBusinessAmount:   sale.TotalBusinessAmount,
-			TotalServiceFee:       sale.TotalServiceFee,
-			TotalPaymentFee:       sale.TotalPaymentFee,
-			TotalTax:              sale.TotalTax,
-			TotalProductNum:       sale.TotalProductNum,
-			TotalMemberNum:        totalMemberNum,
-			TotalDiscountMember:   sale.TotalDiscountMember,
-			TotalDiscount:         sale.TotalDiscount,
-			TotalDiscountRatio:    sale.TotalDiscountRatio,
-			TotalRefundAmount:     sale.TotalRefundAmount,
-			TotalGiftAmount:       sale.TotalGiftAmount,
-			TotalGiftNum:          sale.TotalGiftNum,
-			TotalFreeAmount:       sale.TotalFreeAmount,
-			TotalFreeNum:          sale.TotalFreeNum,
-			TotalReceivedAmount:   sale.TotalReceivedAmount,
-			TotalOrderNum:         sale.TotalOrderNum,
-			MinOrderAmount:        sale.MinOrderAmount,
-			MaxOrderAmount:        sale.MaxOrderAmount,
-			AvgOrderAmount:        sale.AvgOrderAmount,
-			TotalDeskNum:          sale.TotalDeskNum,
-			TotalMealNum:          sale.TotalMealNum,
-			MinDeskOrderAmount:    sale.MinDeskOrderAmount,
-			MaxDeskOrderAmount:    sale.MaxDeskOrderAmount,
-			AvgDeskOrderAmount:    sale.AvgDeskOrderAmount,
-			TotalInstantOrderNum:  sale.TotalInstantOrderNum,
-			MinInstantOrderAmount: sale.MinInstantOrderAmount,
-			MaxInstantOrderAmount: sale.MaxInstantOrderAmount,
-			AvgInstantOrderAmount: sale.AvgInstantOrderAmount,
-			TotalTakeoutOrderNum:  sale.TotalTakeoutOrderNum,
-			MinTakeoutOrderAmount: sale.MinTakeoutOrderAmount,
-			MaxTakeoutOrderAmount: sale.MaxTakeoutOrderAmount,
-			AvgTakeoutOrderAmount: sale.AvgTakeoutOrderAmount,
-			AreaList:              areaList,
-			PaymentList:           paymentList,
+			Day:                        sale.Day,
+			TotalSaleAmount:            sale.TotalSaleAmount,
+			TotalBusinessAmount:        sale.TotalBusinessAmount,
+			TotalServiceFee:            sale.TotalServiceFee,
+			TotalPaymentFee:            sale.TotalPaymentFee,
+			TotalTax:                   sale.TotalTax,
+			TotalProductNum:            sale.TotalProductNum,
+			TotalMemberNum:             totalMemberNum,
+			TotalDiscountMember:        sale.TotalDiscountMember,
+			TotalDiscount:              sale.TotalDiscount,
+			TotalDiscountRatio:         sale.TotalDiscountRatio,
+			TotalRefundAmount:          sale.TotalRefundAmount,
+			TotalGiftAmount:            sale.TotalGiftAmount,
+			TotalGiftNum:               sale.TotalGiftNum,
+			TotalFreeAmount:            sale.TotalFreeAmount,
+			TotalFreeNum:               sale.TotalFreeNum,
+			TotalTakeoutSaleAmount:     sale.TotalTakeoutSaleAmount,
+			TotalTakeoutBusinessAmount: sale.TotalTakeoutBusinessAmount,
+			TotalTakeoutRefundAmount:   sale.TotalTakeoutRefundAmount,
+			TotalTakeoutDeliveryFee:    sale.TotalTakeoutDeliveryFee,
+			TotalReceivedAmount:        sale.TotalReceivedAmount,
+			TotalOrderNum:              sale.TotalOrderNum,
+			MinOrderAmount:             sale.MinOrderAmount,
+			MaxOrderAmount:             sale.MaxOrderAmount,
+			AvgOrderAmount:             sale.AvgOrderAmount,
+			TotalDeskNum:               sale.TotalDeskNum,
+			TotalMealNum:               sale.TotalMealNum,
+			MinDeskOrderAmount:         sale.MinDeskOrderAmount,
+			MaxDeskOrderAmount:         sale.MaxDeskOrderAmount,
+			AvgDeskOrderAmount:         sale.AvgDeskOrderAmount,
+			TotalInstantOrderNum:       sale.TotalInstantOrderNum,
+			MinInstantOrderAmount:      sale.MinInstantOrderAmount,
+			MaxInstantOrderAmount:      sale.MaxInstantOrderAmount,
+			AvgInstantOrderAmount:      sale.AvgInstantOrderAmount,
+			TotalTakeoutOrderNum:       sale.TotalTakeoutOrderNum,
+			MinTakeoutOrderAmount:      sale.MinTakeoutOrderAmount,
+			MaxTakeoutOrderAmount:      sale.MaxTakeoutOrderAmount,
+			AvgTakeoutOrderAmount:      sale.AvgTakeoutOrderAmount,
+			AreaList:                   areaList,
+			PaymentList:                paymentList,
 		})
 	}
 
