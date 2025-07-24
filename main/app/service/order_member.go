@@ -348,7 +348,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 	paymentOrder, err := paymentOrderRepo.GetPaymentOrderInfo(
 		repository.CommonRepo.WhereBySoftDelete(),
 		paymentOrderRepo.WhereRelatedUuid(relatedUuid),
-		paymentOrderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeMemberOrder),
+		paymentOrderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeSaleOrder),
 		paymentOrderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
 	)
 	if err == nil && paymentOrder.Uuid != 0 {
@@ -367,7 +367,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 			PaymentMethodName: paymentMethod.PaymentName,
 			PaymentMethodUuid: paymentMethod.Uuid,
 			PaymentFeePercent: 0,
-			RelatedType:       constant.PaymentOrderRelatedTypeMemberOrder,
+			RelatedType:       constant.PaymentOrderRelatedTypeSaleOrder,
 			RelatedUuid:       relatedUuid,
 			CurrencyUnit: func() string {
 				currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
@@ -393,13 +393,14 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 
 	// 创建连连支付订单
 	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
-		PaymentOrderUuid:  paymentOrder.Uuid,
-		RelatedType:       constant.PaymentOrderRelatedTypeMemberOrder,
-		RelatedUuid:       relatedUuid,
-		PaymentMethodUuid: paymentMethod.Uuid,
-		PaymentMethodCode: paymentMethod.Code,
-		PaymentAmount:     memberSaleOrder.Amount,
-		CommissionFee:     0,
+		PaymentOrderUuid:    paymentOrder.Uuid,
+		RelatedType:         constant.PaymentOrderRelatedTypeSaleOrder,
+		RelatedUuid:         relatedUuid,
+		PaymentMethodUuid:   paymentMethod.Uuid,
+		PaymentMethodCode:   paymentMethod.Code,
+		PaymentAmount:       memberSaleOrder.Amount,
+		CommissionFee:       0,
+		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		PaymentMethod: func() string {
 			if isOpenPc {
 				return PaymentMethodWechatPay
@@ -1333,7 +1334,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		// 选择外送渠道
 		memberSaleOrder.RelatedOrderType = constant.ProviderNameSkootar
 		// 状态变更的回调地址
-		callbackUrl := config.TakeOutRpcConf.CallbackEndpoint + "/api/v1/member/order/callback?company_uuid=" + fmt.Sprintf("%d", ctx.GetCompany().Uuid)
+		callbackUrl := config.Server.Domain + "/api/v1/member/order/callback?company_uuid=" + fmt.Sprintf("%d", ctx.GetCompany().Uuid)
 
 		takeoutSrv := takeout.NewTakeoutSrv()
 		params := req.CreateTakeoutOrderReq{

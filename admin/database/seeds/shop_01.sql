@@ -285,6 +285,7 @@ CREATE TABLE `ttpos_ll_payment_order` (
     `ll_create_time` varchar(250) DEFAULT '0' COMMENT 'lianlian订单创建时间',
     `expired_time` int(11) NOT NULL DEFAULT 0 COMMENT '过期时间',
     `pay_time` int(11) NOT NULL DEFAULT 0 COMMENT '支付时间',
+    `member_sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '会员销售订单ID',
     `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间',
     `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

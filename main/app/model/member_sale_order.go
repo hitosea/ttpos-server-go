@@ -80,6 +80,15 @@ type MemberSaleOrder struct {
 	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`
 }
 
+// 更新配送费配置
+func (model *MemberSaleOrder) UpdateDeliveryConfig(deliveryConfig DeliveryConfigResponse) {
+	model.DeliveryFeeMinFee = deliveryConfig.BaseDeliveryFee
+	model.DeliveryFeeBaseFee = deliveryConfig.BasicFee
+	model.DeliveryFeePerKm = deliveryConfig.PricePerKm
+	// 重新计算配送费
+	model.RecalculateDeliveryFee()
+}
+
 // 是否已计算距离费
 func (model *MemberSaleOrder) GetIsDistanceCalculated() bool {
 	return model.IsDistanceCalculated == constant.DistanceCalculated
