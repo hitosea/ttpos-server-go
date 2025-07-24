@@ -209,11 +209,7 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 	}
 
 	memberSaleOrderRepo := repository.NewMemberSaleOrderRepo(ctx.GetDB())
-	memberSaleOrders, _, err := memberSaleOrderRepo.PaginateGet(1, 10, memberSaleOrderRepo.WhereStatusIn([]uint{
-		constant.MemberSaleOrderStatusPendingMerchantAccept,
-		constant.MemberSaleOrderStatusCooking,
-		constant.MemberSaleOrderStatusCancelled,
-	}), memberSaleOrderRepo.WhereUpdateTimeGt(thirtyMinutesAgo))
+	memberSaleOrders, err := memberSaleOrderRepo.GetForCall(memberSaleOrderRepo.WhereUpdateTimeGt(thirtyMinutesAgo))
 	if err != nil {
 		return res, errors.WithMessage(errors.New("获取未处理的外送订单失败"), err.Error())
 	}
