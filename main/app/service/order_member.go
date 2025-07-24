@@ -477,7 +477,12 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 						LocaleName: saleOrderProduct.MultiLanguageName.GetNames(),
 						Num:        saleOrderProduct.Num,
 						TotalPrice: saleOrderProduct.GetTotalPrice(),
-						Image:      saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request)),
+						Image: func() string {
+							if saleOrderProduct.ImageFile == nil {
+								return ""
+							}
+							return saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+						}(),
 					})
 				}
 				return products
