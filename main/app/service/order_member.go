@@ -1320,7 +1320,6 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		}
 	}
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderAccept(*memberSaleOrder)
 		lat, lng, _ := memberSaleOrder.Address.GetLocation()
 		// 获取商家地址
 		companySetting := ctx.GetCompanySetting()
@@ -1369,7 +1368,8 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		ctx.Log().Info("创建外送订单成功", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))
 		memberSaleOrder.RelatedOrderNo = res.TakeoutRefNo
 		memberSaleOrder.ExpectedFinishTime = res.FinishTime
-		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderProviderInfo(*memberSaleOrder); err != nil {
+		memberSaleOrder.RelatedOrderNo = res.TakeoutRefNo
+		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderAccept(*memberSaleOrder); err != nil {
 			return errors.WithMessage(err, "更新外送订单失败")
 		}
 		return nil
