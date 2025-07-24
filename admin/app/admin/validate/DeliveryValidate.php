@@ -30,7 +30,6 @@ class DeliveryValidate extends  BaseValidate
     protected function checkDistanceRange($value, $rule, $data = [])
     {
         $prevEnd = null;
-        $hasUnlimited = false;
 
         // 至少有一个元素
         if (!is_array($value) || count($value) < 1) {
@@ -40,27 +39,11 @@ class DeliveryValidate extends  BaseValidate
         usort($value, function ($a, $b) {
             return $a['end'] - $b['end'];
         });
-        $lastItem = $value[count($value) - 1];
-        if (!isset($lastItem['is_unlimited']) || !$lastItem['is_unlimited']) {
-            return "最后一个距离范围必须是最大范围";
-        }
 
         foreach ($value as $index => $item) {
 
             if (!isset($item['price_per_km']) || !is_float($item['price_per_km']) && !is_int($item['price_per_km'])) {
                 return "距离范围单价错误";
-            }
-
-            // 检查无限范围元素后面是否还有元素
-            if ($hasUnlimited) {
-                return "距离范围设置了无限范围，后面不能再有其他范围";
-            }
-
-            // 检查无限范围设置
-            if ($item['is_unlimited']) {
-                $hasUnlimited = true;
-                // 无限范围可以不设置 end
-                continue;
             }
 
             // 非无限范围必须设置 end
