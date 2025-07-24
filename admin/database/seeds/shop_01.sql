@@ -190,7 +190,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `rider_phone` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手电话',
     `location` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '骑手位置,格式:纬度,经度',
     `remaining_distance` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '剩余距离',
+    -- 排序相关
+    `sort` INT(10) NOT NULL DEFAULT 0 COMMENT '排序, 0-其他状态，1-骑手正在赶往商家，2-骑手配送中，降序排序',
     -- 时间相关
+    `submit_pay_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '提交支付时间（时间戳），根据该时间生成当天订单的流水号',
     `pay_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '支付完成时间（时间戳）',
     `accept_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '商家接单时间（时间戳）',
     `cook_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '商家备餐完成时间（时间戳）',

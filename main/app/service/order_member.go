@@ -217,11 +217,34 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 	}
 
 	memberSaleOrder.Remark = request.Remark
-	memberSaleOrder.SetPendingPayment(request.PaymentMethodUuid)
+	if err := memberSaleOrder.SetPendingPayment(request.PaymentMethodUuid); err != nil {
+		return errors.WithMessage(err)
+	}
 
-	// TODO 记录会员折扣、商品数量、商品金额、订单总金额
+	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
+		// 只有第一次提交支付时才生成订单流水号并记录提交支付时间
+		if memberSaleOrder.SubmitPayTime == 0 {
+			memberSaleOrder.SubmitPayTime = time.Now().Unix() // 记录提交支付时间戳
+			// 创建会员端订单流水号
+			timezone := ctx.GetCompanySetting().Timezone
+			serialNo, err := s.createMemberSaleOrderSerialNo(db, timezone)
+			if err != nil {
+				ctx.Log().Error("会员端订单流水号生成失败", zap.Error(err))
+				return errors.WithMessage(err, "会员端订单流水号生成失败")
+			}
+			memberSaleOrder.SerialNumber = serialNo
+		}
 
-	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderPendingPayment(memberSaleOrder); err != nil {
+		// 更新sale_bill的serial_no
+		if err := repository.NewSaleBillRepo(db).UpdateSaleBillSerialNo(memberSaleOrder.SaleBillUuid, memberSaleOrder.SerialNumber); err != nil {
+			return errors.WithMessage(err)
+		}
+
+		if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderPendingPayment(memberSaleOrder); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
 		return errors.WithMessage(err)
 	}
 
@@ -283,7 +306,9 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 		if paymentMethod.Uuid == 0 {
 			return nil, errors.New("支付方式不存在")
 		}
-		memberSaleOrder.SetPendingPayment(paymentMethod.Uuid)
+		if err := memberSaleOrder.SetPendingPayment(paymentMethod.Uuid); err != nil {
+			return nil, errors.WithMessage(err)
+		}
 		if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderPendingPayment(memberSaleOrder); err != nil {
 			return nil, errors.WithMessage(err)
 		}

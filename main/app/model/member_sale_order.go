@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
@@ -58,6 +59,8 @@ type MemberSaleOrder struct {
 	ContactPhone         string `gorm:"column:contact_phone;type:varchar(255);not null;default:'';comment:'联系电话'"`
 	ContactPhonePrefix   string `gorm:"column:contact_phone_prefix;type:varchar(255);not null;default:'';comment:'联系电话前缀'"`
 	ContactGender        int    `gorm:"column:contact_gender;type:int(10);not null;default:0;comment:'联系人性别, 0-女士 1-先生'"`
+	// 排序相关
+	Sort int `gorm:"column:sort;type:int(10);not null;default:0;comment:'排序, 0-其他状态，1-骑手正在赶往商家，2-骑手配送中，降序排序'"`
 	// 时间相关
 	PayTime            int64  `gorm:"column:pay_time;type:int(10) unsigned;not null;default:0;comment:'支付完成时间（时间戳）'"`
 	SubmitPayTime      int64  `gorm:"column:submit_pay_time;type:int(10) unsigned;not null;default:0;comment:'提交支付时间戳'"`
@@ -201,10 +204,17 @@ func (model *MemberSaleOrder) SetCancelInCashier(cancelReason string) {
 }
 
 // 设置订单为"待支付"状态
-func (model *MemberSaleOrder) SetPendingPayment(paymentMethodUuid uint64) {
+func (model *MemberSaleOrder) SetPendingPayment(paymentMethodUuid uint64) error {
+	statusMap := map[uint]bool{
+		constant.MemberSaleOrderStatusSelecting:      true, // 选购中
+		constant.MemberSaleOrderStatusPendingPayment: true, // 待支付
+	}
+	if !statusMap[model.Status] {
+		return errors.New("订单状态不支持支付")
+	}
 	model.Status = constant.MemberSaleOrderStatusPendingPayment
 	model.PaymentMethodUuid = paymentMethodUuid
-	model.SubmitPayTime = time.Now().Unix() // 设置提交支付时间戳
+	return nil
 }
 
 // 订单是否已经取消

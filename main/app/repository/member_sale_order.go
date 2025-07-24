@@ -39,6 +39,7 @@ type IQueryMemberSaleOrderRepo interface {
 	UpdateMemberSaleOrderAddress(memberSaleOrder model.MemberSaleOrder) error                                                                                        // 更新会员端销售订单-配送地址
 	GetMemberSaleOrderByContactNameAndContactPhoneSuffix(contactName string, contactPhoneSuffix string) ([]*model.MemberSaleOrder, error)                            // 根据联系人姓名和手机号后缀查询会员端销售订单
 	GetOrderNum(status []uint) (int64, error)                                                                                                                        // 获取订单数量
+	GetMemberSaleOrderLatest() (*model.MemberSaleOrder, error)                                                                                                       // 获取最新的一条会员端销售订单(已提交支付的)
 
 	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
 	WhereStatusIn(status []uint) DBOption
@@ -142,6 +143,7 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderVerifiedPhoneStatus(memberSal
 // UpdateMemberSaleOrderPendingPayment 更新会员端销售订单为待支付状态
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderPendingPayment(memberSaleOrder *model.MemberSaleOrder) error {
 	if err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		SerialNumber:        memberSaleOrder.SerialNumber,                 // 更新订单流水号
 		PaymentMethodUuid:   memberSaleOrder.PaymentMethodUuid,            // 更新支付方式UUID
 		Status:              constant.MemberSaleOrderStatusPendingPayment, // 更新订单状态为待支付
 		Remark:              memberSaleOrder.Remark,                       // 更新订单备注
@@ -517,4 +519,15 @@ func (r *MemberSaleOrderRepo) GetOrderNum(status []uint) (int64, error) {
 		return 0, errors.WithMessage(err)
 	}
 	return num, nil
+}
+
+func (r *MemberSaleOrderRepo) GetMemberSaleOrderLatest() (*model.MemberSaleOrder, error) {
+	memberSaleOrder, err := r.GetMemberSaleOrder(
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.SortWithCommitPayTime("desc"),
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return memberSaleOrder, nil
 }

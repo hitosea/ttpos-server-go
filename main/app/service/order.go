@@ -275,24 +275,23 @@ func (s *orderSrv) CreateInstantOrder(ctx context.Context) (resp.CreateInstantOr
 }
 
 // createMemberSaleOrderSerialNo 创建会员端订单序号
-func (s *orderSrv) createMemberSaleOrderSerialNo(db *gorm.DB) (string, error) {
+func (s *orderSrv) createMemberSaleOrderSerialNo(db *gorm.DB, timezone string) (string, error) {
 	var serialNo string
-	saleBillRepo := repository.NewSaleBillRepo(db)
-	saleBill, err := saleBillRepo.GetMemberSaleBillLatest() // 获取最新的一条会员端销售账单
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderLatest() // 获取最新的一条会员销售订单
 	if err != nil {
 		return "", errors.WithMessage(err)
 	}
 	// 如果没有查询到账单，则设置为0001
-	if saleBill == nil {
+	if memberSaleOrder == nil {
 		serialNo = "0001"
 		return serialNo, nil
 	}
-	createTime := saleBill.CreateTime
+	createTime := memberSaleOrder.SubmitPayTime
 	// 判断账单的创建时间是不是今天
-	if !IsToday("Asia/Shanghai", createTime) {
+	if !IsToday(timezone, createTime) {
 		serialNo = "0001"
 	} else {
-		oldSerialNo := saleBill.SerialNo
+		oldSerialNo := memberSaleOrder.SerialNumber
 		if oldSerialNo == "" {
 			// 如果serialNo为空，则设置为0001. 兼容老数据没有serialNo的情况
 			serialNo = "0001"
@@ -731,12 +730,6 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 		ctx.Log().Error("会员端订单编号生成失败", zap.Error(err))
 		return nil, errors.WithMessage(err, "会员端订单编号生成失败")
 	}
-	// 创建会员端订单流水号
-	serialNo, err := s.createMemberSaleOrderSerialNo(db)
-	if err != nil {
-		ctx.Log().Error("会员端订单流水号生成失败", zap.Error(err))
-		return nil, errors.WithMessage(err, "会员端订单流水号生成失败")
-	}
 	// 获取公司设置
 	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
 	if err != nil {
@@ -753,7 +746,7 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 	// 创建销售账单
 	saleBill, err := repository.NewOrderRepo(db).CreateSaleBill(model.SaleBill{
 		OrderNo:             orderNo,
-		SerialNo:            serialNo,
+		SerialNo:            "", // 等会员端订单提交支付时再生成订单流水号
 		BillType:            constant.OrderSourceMapToBillType[constant.OrderSourceMember],
 		DiningMethod:        constant.SaleBillDiningMethodTakeout,
 		DeviceUuid:          ctx.GetDeviceUuid(),
@@ -782,7 +775,7 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 	memberSaleOrder, errCreateMemberSaleOrder := createMemberSaleOrder(ctx, db, model.CreateMemberSaleOrderParams{
 		Uuid:           memberSaleOrderUuid,
 		DeliveryConfig: *deliveryConfig,
-		SerialNo:       serialNo,
+		SerialNo:       "", // 等会员端订单提交支付时再生成订单流水号
 		OrderNo:        orderNo,
 		MemberUuid:     ctx.GetMemberUuid(),
 		SaleBillUuid:   saleBillUuid,
