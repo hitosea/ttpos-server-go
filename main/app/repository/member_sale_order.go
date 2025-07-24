@@ -42,7 +42,7 @@ type IQueryMemberSaleOrderRepo interface {
 	GetOrderNum(status []uint) (int64, error)                                                                                                                        // 获取订单数量
 	GetMemberSaleOrderLatest() (*model.MemberSaleOrder, error)                                                                                                       // 获取最新的一条会员端销售订单(已提交支付的)
 
-	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
+	GetForCall(opts ...DBOption) ([]model.MemberSaleOrder, error)
 	WhereStatusIn(status []uint) DBOption
 	WhereNotStatusIn(status []uint) DBOption
 	WhereUpdateTimeGt(ts int64) DBOption
@@ -320,20 +320,20 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderNum(statusList []uint, ti
 	return total, nil
 }
 
-func (r *MemberSaleOrderRepo) PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error) {
+func (r *MemberSaleOrderRepo) GetForCall(opts ...DBOption) ([]model.MemberSaleOrder, error) {
 	var memberSaleOrders []model.MemberSaleOrder
-	var total int64
 	db := r.db.Model(&model.MemberSaleOrder{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	// 获取总数
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, errors.WithMessage(err)
-	}
-	// 获取分页数据
-	err := db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Order("update_time desc").Find(&memberSaleOrders).Error
-	return memberSaleOrders, total, errors.WithMessage(err)
+	// 1、会员付款，非自动接单
+	// 2、已自动接单
+	// 3、会员取消
+	db = db.Where("( status = ? AND is_auto_accept = 0 ) OR ( status = ? AND is_auto_accept = 1 ) OR ( status = ? AND cancel_scene = ? )",
+		constant.MemberSaleOrderStatusPendingMerchantAccept, constant.MemberSaleOrderStatusCooking, constant.MemberSaleOrderStatusCancelled, constant.MemberSaleOrderSceneMemberCancel)
+	// 获取10条数据
+	err := db.Debug().Limit(10).Order("update_time desc").Find(&memberSaleOrders).Error
+	return memberSaleOrders, errors.WithMessage(err)
 }
 
 func (r *MemberSaleOrderRepo) WhereStatusIn(status []uint) DBOption {
