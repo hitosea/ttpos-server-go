@@ -5,7 +5,6 @@ import (
 	builtinerrors "errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -573,18 +572,14 @@ func (s *orderSrv) GetMemberOrderPaymentMethodList(ctx context.Context, req req.
 			PaymentMethod: paymentMethod.GetName(),
 			FeePercent:    paymentMethod.FeePercent,
 			Logo: func() string {
-				var logoUrl string
-				if paymentMethod.LogoFile != nil {
-					logoUrl = paymentMethod.LogoFile.GetUrl(baseUrl)
+				if paymentMethod.IsWechatPay() {
+					return baseUrl + "/image/pay/wechat_pay.png"
 				}
-				if logoUrl == "" && paymentMethod.DefaultImg != "" {
-					logoUrl = strings.TrimRight(baseUrl, "/") + paymentMethod.DefaultImg
+				if paymentMethod.IsAliPay() {
+					return baseUrl + "/image/pay/alipay.png"
 				}
-				return logoUrl
-			}(),
-			Qrcode: func() string {
-				if paymentMethod.QrcodeFile != nil {
-					return paymentMethod.QrcodeFile.GetUrl(baseUrl)
+				if paymentMethod.IsQrPromptPay() {
+					return baseUrl + "/image/pay/qr_prompt_pay.png"
 				}
 				return ""
 			}(),

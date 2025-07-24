@@ -6,20 +6,20 @@
         <dataBox
           :title="$t('实收金额')"
           :content="$t('实收金额：指订单原价扣除优惠折扣、会员折扣后的金额，包含支付手续费+会员充值金额（不包括会员余额消费金额）')"
-          :value="this.$formatPrice(top_data.total_money || 0)"
+          :value="$formatPrice(top_data.total_money || 0)"
         ></dataBox>
 
         <dataBox
           :title="$t('优惠折扣/会员折扣')"
           :content="$t('优惠折扣=优惠折扣总金额（包含改价、折扣比例、抹零、结账抹零）') + `<br />` + $t('会员折扣：会员折扣总金额（包含等级折扣及会员卡折扣）')"
-          :value="this.$formatPrice(top_data.discount_money || 0) + '/' + this.$formatPrice(top_data.user_discount_money || 0)"
+          :value="$formatPrice(top_data.discount_money || 0) + '/' + $formatPrice(top_data.user_discount_money || 0)"
         ></dataBox>
 
-        <dataBox v-if="is_open_member == '1'" :title="$t('会员数')" :content="$t('当前会员总数')" :value="this.$formatPrice(top_data.user_total || 0)"></dataBox>
+        <dataBox v-if="is_open_member == '1'" :title="$t('会员数')" :content="$t('当前会员总数')" :value="$formatPrice(top_data.user_total || 0)"></dataBox>
 
-        <dataBox :title="$t('订单数')" :content="$t('所有的订单数，包含待付款、已取消、已完成')" :value="this.$formatPrice(top_data.order_total || 0)"></dataBox>
+        <dataBox :title="$t('订单数')" :content="$t('所有的订单数，包含待付款、已取消、已完成')" :value="$formatPrice(top_data.order_total || 0)"></dataBox>
 
-        <dataBox :title="$t('退款金额')" :content="$t('订单退款的金额（反结账不计入在此）')" :value="this.$formatPrice(top_data.refund_money || 0)"></dataBox>
+        <dataBox :title="$t('退款金额')" :content="$t('订单退款的金额（反结账不计入在此）')" :value="$formatPrice(top_data.refund_money || 0)"></dataBox>
       </div>
     </div>
     <div class="operation-center mt12">
@@ -28,14 +28,14 @@
         <div class="operation-today">
           <gridContent
             :title="$t('实收金额')"
-            :value="this.$formatPrice(today_data.order_total_price?.tday || 0)"
-            :yesterdayData="$t('昨日：') + this.$formatPrice(today_data.order_total_price?.ytd || 0)"
+            :value="$formatPrice(today_data.order_total_price?.tday || 0)"
+            :yesterdayData="$t('昨日：') + $formatPrice(today_data.order_total_price?.ytd || 0)"
           ></gridContent>
 
           <gridContent
             :title="$t('优惠折扣/会员折扣')"
-            :value="this.$formatPrice(today_data.discount_money?.tday || 0) + '/' + this.$formatPrice(today_data.user_discount_money?.tday || 0)"
-            :yesterdayData="$t('昨日：') + this.$formatPrice(today_data.discount_money?.ytd || 0) + '/' + this.$formatPrice(today_data.user_discount_money?.ytd || 0)"
+            :value="$formatPrice(today_data.discount_money?.tday || 0) + '/' + $formatPrice(today_data.user_discount_money?.tday || 0)"
+            :yesterdayData="$t('昨日：') + $formatPrice(today_data.discount_money?.ytd || 0) + '/' + $formatPrice(today_data.user_discount_money?.ytd || 0)"
           ></gridContent>
 
           <gridContent
@@ -48,14 +48,14 @@
 
           <gridContent
             :title="$t('订单数')"
-            :value="this.$formatPrice(today_data.order_total?.tday || 0)"
-            :yesterdayData="$t('昨日：') + this.$formatPrice(today_data.order_total?.ytd || 0)"
+            :value="$formatPrice(today_data.order_total?.tday || 0)"
+            :yesterdayData="$t('昨日：') + $formatPrice(today_data.order_total?.ytd || 0)"
           ></gridContent>
 
           <gridContent
             :title="$t('退款金额')"
-            :value="this.$formatPrice(today_data.order_refund_money?.tday || 0)"
-            :yesterdayData="$t('昨日：') + this.$formatPrice(today_data.order_refund_money?.ytd || 0)"
+            :value="$formatPrice(today_data.order_refund_money?.tday || 0)"
+            :yesterdayData="$t('昨日：') + $formatPrice(today_data.order_refund_money?.ytd || 0)"
           ></gridContent>
         </div>
       </div>
@@ -77,132 +77,117 @@
         </div>
       </div>
       <div class="matters-wrap flex-1">
-        <Ranking v-if="!loading"></Ranking>
+        <Ranking v-if="!loading" :product_data="product_data"></Ranking>
       </div>
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
+  import { ref, provide, onMounted } from 'vue';
+  import { useI18n } from 'vue-i18n';
+  import { ElMessage } from 'element-plus';
   import IndexApi from '@/api/index.js';
   import Ranking from '@/views/home/part/product/Ranking.vue';
-  import Transaction from '@/views/home/part/Transaction.vue';
-  import SvgIcon from '@/components/svg-icon/SvgIcon.vue';
+  import Transaction from '@/views/home/part/product/Transaction.vue';
   import { useUserStore } from '@/store';
   import dataBox from '@/components/dataBox/dataBox.vue';
   import gridContent from './part/product/gridContent.vue';
-  import centerRBox from './part/centerRBox.vue';
+  import centerRBox from './part/product/centerRBox.vue';
+  
+
+  // 国际化
+  const { t } = useI18n();
+
+  // 定义emits
+  const emit = defineEmits(['selectMenu']);
+
+  // 用户信息
   const { userInfo, computedRenderMenus, computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
-  const baseSale = supplier.value?.sale_stock || 0;
-  const is_open_member = supplier.value?.is_open_member || 0;
+  const is_open_member = ref(supplier.value?.is_open_member || 0);
   const renderMenus = computedRenderMenus().renderMenus;
-  export default {
-    components: {
-      Ranking,
-      Transaction,
-      SvgIcon,
-      dataBox,
-      gridContent,
-      centerRBox,
-    },
-    data() {
-      return {
-        /*是否加载完成*/
-        loading: true,
-        /*统计信息*/
-        top_data: [],
-        /*待办事项*/
-        wait_data: {
-          order: {},
-          agent: {},
-          supplier: {},
-          activity: {},
-          audit: {},
-          stock: {},
-        },
-        /*今日数据*/
-        today_data: {
-          order_total_price: {},
-          order_total: {},
-          new_user_total: {},
-          new_supplier_total: {},
-          apply_supplier_total: {},
-          order_user_total: {},
-          income_money: {},
-        },
-        product_data: {
-          salesMoneyRank: [],
-          salesNumRank: [],
-        },
-        user_type: '',
-        baseSale: baseSale,
-        is_open_member: is_open_member,
-        app_id: supplier.value?.app_id || 0,
-        /*菜单数据*/
-        menuList: renderMenus,
-      };
-    },
-    provide: function () {
-      return {
-        dataRank: this.product_data,
-      };
-    },
-    mounted() {
-      /*获取数据*/
-      this.getData();
-      this.getBaseInof();
-    },
-    methods: {
-      async getBaseInof() {
-        /* let res = await store.dispatch('common/getBaseInfo');
-            this.user_type = res.user.user_type; */
-        this.user_type = userInfo.user_type;
-      },
-      /*获取数据*/
-      getData() {
-        let self = this;
-        self.loading = true;
-        IndexApi.getCount(true)
-          .then((data) => {
-            self.loading = false;
-            Object.assign(self.product_data, data.data.data.product_data);
-            self.top_data = data.data.data.top_data;
-            self.wait_data = data.data.data.wait_data;
-            self.today_data = data.data.data.today_data;
-          })
-          .catch((error) => {});
-      },
 
-      lockStock() {
-        // this.$router.push({
-        //   path: '/' + this.app_id + '/product/store/index',
-        //   query: { inventory: 10 },
-        // });
-        this.menuList.map((item, index) => {
-          if (item.name == '商品管理') {
-            this.$emit('selectMenu', {
-              type: 2,
-              item: item,
-              index: index,
-              query: { inventory: 10 },
-            });
-          }
-        });
-      },
-      lookOrder() {
-        this.menuList.map((item, index) => {
-          if (item.name == '采购管理') {
-            this.$emit('selectMenu', {
-              type: 2,
-              item: item,
-              index: index,
-            });
-          }
-        });
-      },
-    },
+  // 响应式数据
+  const loading = ref(true);
+  const top_data = ref({});
+  const wait_data = ref({
+    order: {},
+    agent: {},
+    supplier: {},
+    activity: {},
+    audit: {},
+    stock: {},
+  });
+  const today_data = ref({
+    order_total_price: {},
+    order_total: {},
+    new_user_total: {},
+    new_supplier_total: {},
+    apply_supplier_total: {},
+    order_user_total: {},
+    income_money: {},
+  });
+  const product_data = ref({
+    salesMoneyRank: [],
+    salesNumRank: [],
+  });
+  const user_type = ref('');
+  const menuList = ref(renderMenus);
+
+  // 获取基础信息
+  const getBaseInfo = async () => {
+    user_type.value = userInfo.user_type;
   };
+
+  // 获取统计数据
+  const getData = async () => {
+    loading.value = true;
+    try {
+      const data = await IndexApi.getCount(true);
+      Object.assign(product_data.value, data.data.data.product_data);
+      top_data.value = data.data.data.top_data;
+      wait_data.value = data.data.data.wait_data;
+      today_data.value = data.data.data.today_data;
+    } catch (error) {
+      ElMessage.error(error?.message || t('获取数据失败'));
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  // 跳转库存告警
+  const lockStock = () => {
+    menuList.value.map((item, index) => {
+      if (item.name == '商品管理') {
+        emit('selectMenu', {
+          type: 2,
+          item: item,
+          index: index,
+          query: { inventory: 10 },
+        });
+      }
+    });
+  };
+
+  // 跳转采购单
+  const lookOrder = () => {
+    menuList.value.map((item, index) => {
+      if (item.name == '采购管理') {
+        emit('selectMenu', {
+          type: 2,
+          item: item,
+          index: index,
+        });
+      }
+    });
+  };
+
+  // 组件挂载时初始化数据
+  onMounted(() => {
+    getData();
+    getBaseInfo();
+  });
 </script>
 
 <style lang="scss" scoped>

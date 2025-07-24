@@ -1,9 +1,4 @@
 <template>
-  <!--
-          
-          时间：2019-10-24
-          描述：统计-销售统计-商品统计-排行榜
-      -->
   <div class="right-box d-s-s d-c">
     <div class="ww100 right-box-t">
       <div :class="activeName == 'sale' ? 'active' : ''" @click="handleClick('sale')">{{ $t('销量TOP10') }}</div>
@@ -22,7 +17,7 @@
         <el-table-column prop="total_num" :label="$t('销量')"> </el-table-column>
         <el-table-column prop="total_price" :label="$t('销售额')">
           <template #default="scope">
-            {{ this.$formatPrice(scope.row.total_price) }}
+            {{ $formatPrice(scope.row.total_price) }}
           </template>
         </el-table-column>
       </el-table>
@@ -31,31 +26,27 @@
   </div>
 </template>
 
-<script>
-  export default {
-    data() {
-      return {
-        activeName: 'sale',
-        /*列表数据*/
-        listData: [],
-      };
+<script setup>
+  import { ref, computed } from 'vue';
+
+  const props = defineProps({
+    product_data: {
+      type: Object,
+      default: () => ({}),
     },
-    inject: ['dataRank'],
-    created() {
-      this.listData = this.dataRank.salesNumRank;
-    },
-    mounted() {},
-    methods: {
-      handleClick(e) {
-        if (e == 'sale') {
-          this.listData = this.dataRank.salesNumRank;
-          this.activeName = e;
-        } else if (e == 'view') {
-          this.listData = this.dataRank.salesMoneyRank;
-          this.activeName = e;
-        }
-      },
-    },
+  });
+
+  // 当前激活tab
+  const activeName = ref('sale');
+
+  // 列表数据根据tab动态切换，保证响应式
+  const listData = computed(() => {
+    return activeName.value == 'sale' ? props.product_data?.salesNumRank || [] : props.product_data?.salesMoneyRank || [];
+  });
+
+  // 切换tab
+  const handleClick = (type) => {
+    activeName.value = type;
   };
 </script>
 
