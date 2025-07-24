@@ -3,8 +3,8 @@
     <el-form size="small" :model="form" label-position="top" ref="formRef">
       <el-form-item for="no_click" :label="$t('分类级别')" prop="parent">
         <el-radio-group v-model="parent" disabled>
-          <el-radio :label="1" disabled>{{ $t('一级分类') }}</el-radio>
-          <el-radio :label="0" disabled>{{ $t('二级分类') }}</el-radio>
+          <el-radio :value="1" disabled>{{ $t('一级分类') }}</el-radio>
+          <el-radio :value="0" disabled>{{ $t('二级分类') }}</el-radio>
         </el-radio-group>
       </el-form-item>
 
@@ -54,110 +54,139 @@
   </el-dialog>
 </template>
 
-<script>
-  import ProductApi from '@/api/product.js';
-  import mInput from '@/components/m-input/index.vue';
-  import { languageStore } from '@/store/model/language.js';
-  import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
+<script setup>
+import { ref, reactive, onMounted, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { useI18n } from 'vue-i18n'
+import ProductApi from '@/api/product.js'
+import { languageStore } from '@/store/model/language.js'
+import UniqueNameForm from '@/components/product/UniqueNameForm.vue'
 
-  const languageData = JSON.stringify(languageStore().getLanguageData().languageData.value);
+// 国际化
+const { t } = useI18n()
 
-  export default {
-    name: 'ProductCategoryEdit',
-    components: {
-      mInput,
-      UniqueNameForm,
-    },
-    data() {
-      return {
-        category: [],
-        parent: 1,
-        form: {
-          parent_id: 0,
-          category_id: 0,
-          name: JSON.parse(languageData),
-          sort: null,
-        },
-        /*是否显示*/
-        dialogVisible: false,
-        loading: false,
-      };
-    },
-    props: ['open_edit', 'editform'],
-    created() {
-      /*获取父级分类*/
-      this.getParentCategory();
-      this.dialogVisible = this.open_edit;
-      this.form.category_id = this.editform.model.category_id;
-      this.form.parent_id = this.editform.model.parent_id;
-      try {
-        const _names = JSON.parse(this.editform.model.name);
-        Object.keys(this.form.name).forEach((key) => {
-          this.form.name[key] = _names[key] ?? '';
-        });
-      } catch (error) {
-        //
-      }
-      this.form.sort = this.editform.model.sort;
+// 获取语言数据
+const languageData = JSON.stringify(languageStore().getLanguageData().languageData.value)
 
-      this.parent = this.editform.model.parent_id == 0 ? 1 : 0;
-    },
-    methods: {
-      /*获取父级分类*/
-      getParentCategory: function () {
-        const self = this;
-        ProductApi.storeCatParentList({}, true)
-          .then((res) => {
-            self.loading = false;
-            self.category = res.data.list;
-          })
-          .catch(() => {
-            self.loading = false;
-          });
-      },
+// 定义props
+const props = defineProps({
+  open_edit: {
+    type: Boolean,
+    default: false
+  },
+  editform: {
+    type: Object,
+    default: () => ({})
+  }
+})
 
-      async submit() {
-        const self = this;
-        self.loading = true;
-        try {
-          const validUniqueName = await self.$refs.uniqueNameFormRef.validate();
-          const validForm = await self.$refs.formRef.validate();
-          if (!validUniqueName || !validForm) return;
-          const params = JSON.parse(JSON.stringify(self.form));
-          if (self.parent === 1) {
-            params.parent_id = 0;
-          }
-          const _name = self.$refs.uniqueNameFormRef.data;
-          params.name = JSON.stringify(_name);
-          await ProductApi.storeCatEdit(params, true);
-          self.$ElMessage({
-            message: self.$t('保存成功'),
-            type: 'success',
-          });
-          self.dialogFormVisible(true);
-        } catch (error) {
-          //
-        } finally {
-          self.loading = false;
-        }
-      },
+// 定义emits
+const emit = defineEmits(['closeDialog'])
 
-      /*关闭弹窗*/
-      dialogFormVisible(e) {
-        if (e) {
-          this.$emit('closeDialog', {
-            type: 'success',
-            openDialog: false,
-          });
-        } else {
-          this.$emit('closeDialog', {
-            type: 'error',
-            openDialog: false,
-          });
-        }
-      },
-    },
-  };
+// 响应式数据
+const category = ref([])
+const parent = ref(1)
+const form = reactive({
+  parent_id: 0,
+  category_id: 0,
+  name: JSON.parse(languageData),
+  sort: null,
+})
+const dialogVisible = ref(false)
+const loading = ref(false)
+
+// 表单引用
+const formRef = ref(null)
+const uniqueNameFormRef = ref(null)
+
+// 监听open_edit变化
+watch(() => props.open_edit, (newVal) => {
+  dialogVisible.value = newVal
+}, { immediate: true })
+
+// 获取父级分类
+const getParentCategory = () => {
+  loading.value = true
+  ProductApi.storeCatParentList({}, true)
+    .then((res) => {
+      loading.value = false
+      category.value = res.data.list
+    })
+    .catch(() => {
+      loading.value = false
+    })
+}
+
+// 初始化表单数据
+const initFormData = () => {
+  if (props.editform.model) {
+    form.category_id = props.editform.model.category_id
+    form.parent_id = props.editform.model.parent_id
+    
+    try {
+      const _names = JSON.parse(props.editform.model.name)
+      Object.keys(form.name).forEach((key) => {
+        form.name[key] = _names[key] ?? ''
+      })
+    } catch (error) {
+      // 解析失败时的处理
+    }
+    
+    form.sort = props.editform.model.sort
+    parent.value = props.editform.model.parent_id == 0 ? 1 : 0
+  }
+}
+
+// 提交表单
+const submit = async () => {
+  loading.value = true
+  try {
+    const validUniqueName = await uniqueNameFormRef.value.validate()
+    const validForm = await formRef.value.validate()
+    
+    if (!validUniqueName || !validForm) return
+    
+    const params = JSON.parse(JSON.stringify(form))
+    if (parent.value === 1) {
+      params.parent_id = 0
+    }
+    
+    const _name = uniqueNameFormRef.value.data
+    params.name = JSON.stringify(_name)
+    
+    await ProductApi.storeCatEdit(params, true)
+    ElMessage({
+      message: t('保存成功'),
+      type: 'success',
+    })
+    dialogFormVisible(true)
+  } catch (error) {
+    // 错误处理
+  } finally {
+    loading.value = false
+  }
+}
+
+// 关闭弹窗
+const dialogFormVisible = (e) => {
+  if (e) {
+    emit('closeDialog', {
+      type: 'success',
+      openDialog: false,
+    })
+  } else {
+    emit('closeDialog', {
+      type: 'error',
+      openDialog: false,
+    })
+  }
+}
+
+// 组件挂载时初始化数据
+onMounted(() => {
+  getParentCategory()
+  initFormData()
+})
 </script>
 
 <style scoped>
