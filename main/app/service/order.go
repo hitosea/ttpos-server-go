@@ -1017,7 +1017,7 @@ func (s *orderSrv) QueryDistance(ctx context.Context, memberSaleOrder *model.Mem
 	})
 	if err != nil {
 		ctx.Log().Error("计算配送距离失败", zap.Error(err))
-		return 0, errors.WithMessage(errors.NewWithCode(constant.CodeDistanceError, "计算距离失败"), err.Error())
+		return 0, errors.WithMessage(errors.NewWithCode(constant.CodeDistanceError, "不在配送范围内，无法下单"), err.Error())
 	}
 
 	return takeoutResp.Distance, nil

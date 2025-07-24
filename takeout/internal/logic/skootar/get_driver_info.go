@@ -14,7 +14,7 @@ import (
 
 var trackingDriverApiPath = "/api/tracking_driver"
 
-// CreateOrder 创建订单
+// GetDriverInfo 获取司机位置
 func (s *sSkootar) GetDriverInfo(ctx context.Context, req *input.GetDriverInfoInp) (res *api.GetDriverInfoResp, err error) {
 	reqInp := &skootar.GetDriverLocationInp{
 		ReqBase:   s.ReqBase(),

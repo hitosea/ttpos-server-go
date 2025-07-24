@@ -29,6 +29,7 @@
   "下载文件失败，HTTP状态码：": "Failed to download file, HTTP status code:",
   "不使用此会员": "Do not use this member",
   "不包含退款金额": "Refund amount not included",
+  "不在配送范围内，无法下单": "Out of delivery range, unable to place order",
   "不存在相同的sign": "No identical sign exists",
   "不支持的支付方式": "Unsupported payment method",
   "不收取服务费": "No service fee charged",

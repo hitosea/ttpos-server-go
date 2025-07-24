@@ -29,6 +29,7 @@
   "下载文件失败，HTTP状态码：": "Misslyckades med att ladda ner fil, HTTP-statuskod:",
   "不使用此会员": "Använd inte denna medlem",
   "不包含退款金额": "Återbetalningsbelopp ingår ej",
+  "不在配送范围内，无法下单": "Utanför leveransområdet, kan inte beställa",
   "不存在相同的sign": "Det finns ingen identisk sign",
   "不支持的支付方式": "Ej stödd betalningsmetod",
   "不收取服务费": "Ingen serviceavgift tas ut",
