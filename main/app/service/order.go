@@ -1772,7 +1772,7 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			actionText = actionDescription.SplitMessage + actionText
 		}
 		if actionDescription.Desc != "" {
-			if record.Source == constant.SourceMember {
+			if record.Source == constant.SourceMember || record.Action == constant.OrderCancelMemberSaleOrder {
 				actionText = actionText + actionDescription.Desc
 			} else {
 				actionText = actionText + ": " + actionDescription.Desc
