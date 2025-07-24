@@ -95,6 +95,16 @@ func (model *PaymentMethod) IsLianLianPay() bool {
 	}, model.Code)
 }
 
+// IsWechatPay 是否微信支付
+func (model *PaymentMethod) IsWechatPay() bool {
+	return model.Code == constant.PaymentMethodCodeLianLianWechatPay
+}
+
+// IsAliPay 是否支付宝支付
+func (model *PaymentMethod) IsAliPay() bool {
+	return model.Code == constant.PaymentMethodCodeLianLianAliPay
+}
+
 // IsQrPromptPay 是否QrPromptPay 支付
 func (model *PaymentMethod) IsQrPromptPay() bool {
 	return model.Code == constant.PaymentMethodCodeLianLianQRPromptPay

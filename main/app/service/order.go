@@ -878,19 +878,8 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		return nil, errors.WithMessage(err)
 	}
 	payList := make([]resp.PaymentMethodItem, 0)
+	baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
 	for _, paymentMethod := range paymentMethods {
-		var logoUrl string
-		var qrcodeUrl string
-		baseUrl := utils.GetBaseURL(ctx.GetGin().Request)
-		if paymentMethod.LogoFile != nil {
-			logoUrl = paymentMethod.LogoFile.GetUrl(baseUrl)
-		}
-		if logoUrl == "" && paymentMethod.DefaultImg != "" {
-			logoUrl = strings.TrimRight(baseUrl, "/") + paymentMethod.DefaultImg
-		}
-		if paymentMethod.QrcodeFile != nil {
-			qrcodeUrl = paymentMethod.QrcodeFile.GetUrl(baseUrl)
-		}
 		payList = append(payList, resp.PaymentMethodItem{
 			Source:        paymentMethod.Source,
 			SourceText:    constant.PaymentMethodSourceTextMap[paymentMethod.Source],
@@ -898,9 +887,19 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 			PaymentName:   paymentMethod.GetPaymentName(),
 			PaymentMethod: paymentMethod.GetName(),
 			FeePercent:    paymentMethod.FeePercent,
-			Logo:          logoUrl,
-			Qrcode:        qrcodeUrl,
-			Code:          paymentMethod.Code,
+			Logo: func() string {
+				if paymentMethod.IsWechatPay() {
+					return baseUrl + "/image/pay/wechat_pay.png"
+				}
+				if paymentMethod.IsAliPay() {
+					return baseUrl + "/image/pay/alipay.png"
+				}
+				if paymentMethod.IsQrPromptPay() {
+					return baseUrl + "/image/pay/qr_prompt_pay.png"
+				}
+				return ""
+			}(),
+			Code: paymentMethod.Code,
 		})
 	}
 
