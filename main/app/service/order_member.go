@@ -405,6 +405,7 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 	memberSaleOrders, total, err := memberSaleOrderRepo.PaginateGetMemberSaleOrder(
 		req.PageNo, req.PageSize,
 		memberSaleOrderRepo.WithSaleBillSaleOrderProduct(),
+		repository.CommonRepo.WhereByMemberUuid(ctx.GetMemberUuid()),
 		memberSaleOrderRepo.WhereNotStatusIn([]uint{constant.MemberSaleOrderStatusSelecting}),
 		memberSaleOrderRepo.WhereStatusIn(constant.GetMemberOrderStatusList(req.Status)),
 		memberSaleOrderRepo.WhereKeyword(req.Keyword, ctx.GetLanguage()),
