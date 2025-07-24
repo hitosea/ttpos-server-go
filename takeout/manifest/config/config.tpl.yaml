@@ -40,6 +40,8 @@ nacos:
 
 app:
   serviceUrl: $TAKEOUT_SERVICE_URL
+  # 换成 jwt的密钥
+  callbackSecret:  $JWT_SECRET
   provider:
     skootar:
       endpoint: $SKOOTAR_ENDPOINT
