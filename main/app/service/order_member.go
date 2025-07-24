@@ -1305,7 +1305,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 	// 接单
 	memberSaleOrder.Accept()
 
-	// 获取未送厨的商品列表
+	//  获取未送厨的商品列表
 	unCookingSaleOrderProducts := memberSaleOrder.SaleBill.GetSaleOrderProductUnCooking()
 	if len(unCookingSaleOrderProducts) > 0 {
 		// 整单送厨
@@ -1381,18 +1381,23 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 
 	// 发布"外送接单"操作事件
 	go func() {
+		memberSaleOrder, err := getMemberOrderDetail(ctx, request.MemberSaleOrderUuid)
+		if err != nil {
+			return
+		}
 		s.bus.PublishAcceptMemberSaleOrderEvent(event.AcceptMemberSaleOrderPayload{
 			BasePayload: event.BasePayload{
-				Ctx:           ctx,
-				CompanyUuid:   ctx.GetCompanyUuid(),
-				Source:        ctx.GetSource(),
-				SaleBillUuid:  memberSaleOrder.SaleBill.Uuid,
-				SaleOrderUuid: memberSaleOrder.SaleBill.SaleOrders[0].Uuid,
-				OperatorUuid:  int64(ctx.GetStaffUuid()),
-				Staff:         ctx.GetStaff(),
+				Ctx:                 ctx,
+				CompanyUuid:         ctx.GetCompanyUuid(),
+				Source:              ctx.GetSource(),
+				SaleBillUuid:        memberSaleOrder.SaleBill.Uuid,
+				SaleOrderUuid:       memberSaleOrder.SaleBill.GetFirstSaleOrder().Uuid,
+				OperatorUuid:        int64(ctx.GetStaffUuid()),
+				Staff:               ctx.GetStaff(),
+				MemberSaleOrderUuid: memberSaleOrder.Uuid,
+				MemberUuid:          memberSaleOrder.MemberUuid,
 			},
-			MemberSaleOrderUuid: memberSaleOrder.Uuid,
-			MemberSaleOrder:     memberSaleOrder,
+			MemberSaleOrder: memberSaleOrder,
 		})
 	}()
 

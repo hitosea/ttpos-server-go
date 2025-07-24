@@ -31,31 +31,31 @@
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('订单金额：') }}</span>
-              <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ this.$formatPrice(detail.order_amount) }}
-              <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
-              <span v-if="currency.is_open == 1" style="padding-left: 8px">
-                <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                {{ this.$formatPrice(Number(detail.order_amount) * Number(currency.vices?.unit_rate)) }}
-                <template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }}</template>
+              <main-currency>
+                {{ this.$formatPrice(detail.order_amount) }}
+              </main-currency>
+              <span style="padding-left: 8px">
+                <sub-currency>
+                  {{ this.$formatPrice(Number(detail.order_amount) * Number(currency.vices?.unit_rate)) }}
+                </sub-currency>
               </span>
             </div>
           </el-col>
           <el-col :span="6" v-if="detail.status == 1">
             <div class="pb16">
               <span class="gray9">{{ $t('实付款金额：') }}</span>
-              <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ this.$formatPrice(Number(detail.payment_amount)) }}
-              <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+              <main-currency>
+                {{ this.$formatPrice(Number(detail.payment_amount)) }}
+              </main-currency>
             </div>
           </el-col>
           <el-col :span="6" v-if="Number(detail.refund_money || 0) > 0">
             <div class="pb16">
               <span class="gray9">{{ $t('退款金额：') }}</span>
               <span>
-                <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                {{ this.$formatPrice(detail.refund_amount) }}
-                <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+                <main-currency>
+                  {{ this.$formatPrice(detail.refund_amount) }}
+                </main-currency>
               </span>
             </div>
           </el-col>
@@ -135,20 +135,20 @@
         <p class="sub-order-item">{{ $t('订单号：') }}{{ detail?.sale_orders[activeName].order_no }}</p>
         <p class="sub-order-item">
           {{ $t('订单金额：') }}
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(detail?.sale_orders[activeName].order_amount) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
-          <span v-if="currency.is_open == 1" style="padding-left: 8px">
-            <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-            {{ this.$formatPrice(Number(detail?.sale_orders[activeName].order_amount) * Number(currency.vices?.unit_rate)) }}
-            <template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(detail?.sale_orders[activeName].order_amount) }}
+          </main-currency>
+          <span style="padding-left: 8px">
+            <sub-currency>
+              {{ this.$formatPrice(Number(detail?.sale_orders[activeName].order_amount) * Number(currency.vices?.unit_rate)) }}
+            </sub-currency>
           </span>
         </p>
         <p class="sub-order-item">
           {{ $t('实付金额：') }}
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(Number(detail?.sale_orders[activeName].payment_amount)) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(Number(detail?.sale_orders[activeName].payment_amount)) }}
+          </main-currency>
         </p>
         <p class="sub-order-item">
           {{ $t('会员：') }}
@@ -177,13 +177,13 @@
                   </div>
                   <div class="price">
                     <span>
-                      <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                      {{ this.$formatPrice(scope.row.price) }}
-                      <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
-                      <span v-if="currency.is_open == 1" style="padding-left: 8px">
-                        <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                        {{ this.$formatPrice(Number(scope.row.price) * Number(currency.vices?.unit_rate)) }}
-                        <template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }}</template>
+                      <main-currency>
+                        {{ this.$formatPrice(scope.row.price) }}
+                      </main-currency>
+                      <span style="padding-left: 8px">
+                        <sub-currency>
+                          {{ this.$formatPrice(Number(scope.row.price) * Number(currency.vices?.unit_rate)) }}
+                        </sub-currency>
                       </span>
                     </span>
                   </div>
@@ -205,43 +205,27 @@
               <div>
                 <template v-if="scope.row.total_price != scope.row.sale_price">
                   <span class="text-line-through" v-if="scope.row.sale_price">
-                    <template v-if="currency.unit_position == '0'">
-                      {{ currency.unit }}
-                    </template>
-                    {{ this.$formatPrice(Number(scope.row.sale_price)) }}
-                    <template v-if="currency.unit_position == '1'">
-                      {{ currency.unit }}
-                    </template>
+                    <main-currency>
+                      {{ this.$formatPrice(Number(scope.row.sale_price)) }}
+                    </main-currency>
                   </span>
-                  <span class="text-line-through" v-if="currency.is_open == 1 && scope.row.sale_price">
-                    <template v-if="currency.vices.vice_unit_position == '0'">
-                      {{ currency.vices?.vice_unit }}
-                    </template>
-                    {{ this.$formatPrice(Number(scope.row.sale_price) * Number(currency.vices?.unit_rate)) }}
-                    <template v-if="currency.vices.vice_unit_position == '1'">
-                      {{ currency.vices?.vice_unit }}
-                    </template>
+                  <span class="text-line-through" v-if="scope.row.sale_price">
+                    <sub-currency>
+                      {{ this.$formatPrice(Number(scope.row.sale_price) * Number(currency.vices?.unit_rate)) }}
+                    </sub-currency>
                   </span>
                 </template>
 
                 <span>
-                  <template v-if="currency.unit_position == '0'">
-                    {{ currency.unit }}
-                  </template>
-                  {{ this.$formatPrice(Number(scope.row.total_price)) }}
-                  <template v-if="currency.unit_position == '1'">
-                    {{ currency.unit }}
-                  </template>
+                  <main-currency>
+                    {{ this.$formatPrice(Number(scope.row.total_price)) }}
+                  </main-currency>
                 </span>
 
-                <span v-if="currency.is_open == 1">
-                  <template v-if="currency.vices.vice_unit_position == '0'">
-                    {{ currency.vices?.vice_unit }}
-                  </template>
-                  {{ this.$formatPrice(Number(scope.row.total_price) * Number(currency.vices?.unit_rate)) }}
-                  <template v-if="currency.vices.vice_unit_position == '1'">
-                    {{ currency.vices?.vice_unit }}
-                  </template>
+                <span>
+                  <sub-currency>
+                    {{ this.$formatPrice(Number(scope.row.total_price) * Number(currency.vices?.unit_rate)) }}
+                  </sub-currency>
                 </span>
                 <span class="tips" v-if="Number(scope.row.refund_amount) > 0"> （{{ $t('退款：') + currency.unit + this.$formatPrice(scope.row.refund_amount) }}） </span>
               </div>

@@ -59,23 +59,15 @@
             <template #default="scope">
               <div class="flex">
                 <p>
-                  <span v-if="currency.unit_position == '0'">
-                    {{ currency.unit }}
-                  </span>
-                  {{ this.$formatPrice(Number(scope.row.refund_num_updata) * Number(scope.row.price)) }}
-                  <span v-if="currency.unit_position == '1'">
-                    {{ currency.unit }}
-                  </span>
+                  <main-currency>
+                    {{ this.$formatPrice(Number(scope.row.refund_num_updata) * Number(scope.row.price)) }}
+                  </main-currency>
                 </p>
                 <p class="tips">
                   {{ $t('可退款金额：') }}
-                  <span v-if="currency.unit_position == '0'">
-                    {{ currency.unit }}
-                  </span>
-                  {{ this.$formatPrice(Number(scope.row.total_price)) }}
-                  <span v-if="currency.unit_position == '1'">
-                    {{ currency.unit }}
-                  </span>
+                  <main-currency>
+                    {{ this.$formatPrice(Number(scope.row.total_price)) }}
+                  </main-currency>
                 </p>
               </div>
             </template>

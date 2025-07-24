@@ -12,8 +12,7 @@ const EventAcceptMemberSaleOrder EventName = "Event_Accept_Member_Sale_Order"
 // AcceptMemberSaleOrderPayload 外送订单“商家接单”事件的数据结构
 type AcceptMemberSaleOrderPayload struct {
 	BasePayload
-	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
-	MemberSaleOrder     *model.MemberSaleOrder
+	MemberSaleOrder *model.MemberSaleOrder
 }
 
 func (payload *AcceptMemberSaleOrderPayload) ToJsonString() string {

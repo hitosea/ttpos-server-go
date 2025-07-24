@@ -50,37 +50,37 @@
         </el-table-column>
         <el-table-column prop="total_business" :label="$t('总销售额')">
           <template #default="scope">
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(scope.row.total_business) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(scope.row.total_business) }}
+            </main-currency>
           </template>
         </el-table-column>
         <el-table-column prop="total_income" :label="$t('营业收入')">
           <template #default="scope">
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(scope.row.total_income) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(scope.row.total_income) }}
+            </main-currency>
           </template>
         </el-table-column>
         <el-table-column prop="cash_income" :label="$t('现金收入')">
           <template #default="scope">
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(scope.row.cash_income) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(scope.row.cash_income) }}
+            </main-currency>
           </template>
         </el-table-column>
         <el-table-column prop="previous_shift_cash" :label="$t('上一班遗留备用金')">
           <template #default="scope">
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(scope.row.previous_shift_cash) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(scope.row.previous_shift_cash) }}
+            </main-currency>
           </template>
         </el-table-column>
         <el-table-column prop="cash_left" :label="$t('本班遗留备用金')">
           <template #default="scope">
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(scope.row.cash_left) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(scope.row.cash_left) }}
+            </main-currency>
           </template>
         </el-table-column>
         <el-table-column prop="shift_start_time" :label="$t('添加时间')"></el-table-column>

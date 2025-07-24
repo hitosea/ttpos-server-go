@@ -173,9 +173,6 @@ func (t *takeoutOrderCodesoftTemplate) GetPrintContent(
 
 	// 支付方式
 	if len(saleOrder.PaymentOrders) > 0 {
-		if memberSaleOrder.MemberDiscountFee == 0 {
-			printer.LineFeed()
-		}
 		for _, paymentOrder := range saleOrder.PaymentOrders {
 			printer.AppendText(t.base.PrintText(t.base.Translate("支付方式"), "", paymentOrder.PaymentMethod.GetName(), width, 20, 0, 28))
 			printer.LineFeed()
