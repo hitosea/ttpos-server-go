@@ -167,5 +167,9 @@ func (s *baseSrv) UpdateNickname(ctx context.Context, req member_req.MemberNickn
 	if err != nil {
 		return member_resp.MemberBaseInfoResp{}, err
 	}
+	// 更新缓存
+	member.Nickname = req.Nickname
+	ctx.SetMember(member)
+	// 更新缓存
 	return s.GetBaseInfo(ctx)
 }

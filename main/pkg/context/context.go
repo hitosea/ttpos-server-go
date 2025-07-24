@@ -56,6 +56,7 @@ type Context interface {
 	Copy() Context                                         // 复制一个ctx实例。避免在协程中修改上下文导致主进程的ctx被修改
 	GetCfIPCountry() string                                // 获取CF-IPCountry
 	GetMember() model.Member                               // 获取会员信息
+	SetMember(member model.Member)                         // 设置会员信息
 	GetMemberUuid() uint64                                 // 获取会员uuid
 	Version(op Operator, version string) bool              // 比较版本
 	GetRemoteIp() string                                   // 获取客户端IP
@@ -283,6 +284,10 @@ func (c *ContextImpl) GetStaffUuid() uint64 {
 
 func (c *ContextImpl) GetMember() model.Member {
 	return c.member
+}
+
+func (c *ContextImpl) SetMember(member model.Member) {
+	c.member = member
 }
 
 func (c *ContextImpl) GetMemberUuid() uint64 {
