@@ -15,19 +15,18 @@ import (
 // MemberSaleOrder 会员端销售订单表 `ttpos_member_sale_order`
 type MemberSaleOrder struct {
 	BaseModel
-	MemberUuid        uint64  `gorm:"column:member_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员UUID'"`
-	SaleBillUuid      uint64  `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;not null;default:0;comment:'销售账单UUID'"`
-	SaleOrderUuid     uint64  `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:'销售订单UUID'"`
-	Status            uint    `gorm:"column:status;type:int(10);not null;default:0;comment:'订单状态 0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消'"`
-	SerialNumber      string  `gorm:"column:serial_number;type:varchar(255);not null;default:'';comment:'订单流水号'"`
-	OrderNo           string  `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:'订单号'"`
-	CancelScene       string  `gorm:"column:cancel_scene;type:varchar(50);not null;default:'';comment:'取消场景：merchant_cancel-商家取消；member_cancel-用户取消；merchant_reject-商家拒单'"`
-	IsAutoAccept      uint    `gorm:"column:is_auto_accept;type:int(10);not null;default:0;comment:'是否自动接单：0-否；1-是'"`
-	DeliveryDistance  float64 `gorm:"column:delivery_distance;type:decimal(12,6);not null;default:0;comment:'配送距离，单位km'"`
-	Remark            string  `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'订单备注'"`
-	CancelReason      string  `gorm:"column:cancel_reason;type:varchar(255);not null;default:'';comment:'取消原因'"`
-	IsVerifiedPhone   uint    `gorm:"column:is_verified_phone;type:int(10);not null;default:0;comment:'订单是否已经验证手机号,0-未验证 1-已验证,不再弹出验证手机号'"`
-	PaymentMethodUuid uint64  `gorm:"column:payment_method_uuid;type:bigint(20) unsigned;not null;default:0;comment:'支付方式UUID,订单已选择的支付方式'"`
+	MemberUuid        uint64 `gorm:"column:member_uuid;type:bigint(20) unsigned;not null;default:0;comment:'会员UUID'"`
+	SaleBillUuid      uint64 `gorm:"column:sale_bill_uuid;type:bigint(20) unsigned;not null;default:0;comment:'销售账单UUID'"`
+	SaleOrderUuid     uint64 `gorm:"column:sale_order_uuid;type:bigint(20) unsigned;not null;default:0;comment:'销售订单UUID'"`
+	Status            uint   `gorm:"column:status;type:int(10);not null;default:0;comment:'订单状态 0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消'"`
+	SerialNumber      string `gorm:"column:serial_number;type:varchar(255);not null;default:'';comment:'订单流水号'"`
+	OrderNo           string `gorm:"column:order_no;type:varchar(255);not null;default:'';comment:'订单号'"`
+	CancelScene       string `gorm:"column:cancel_scene;type:varchar(50);not null;default:'';comment:'取消场景：merchant_cancel-商家取消；member_cancel-用户取消；merchant_reject-商家拒单'"`
+	IsAutoAccept      uint   `gorm:"column:is_auto_accept;type:int(10);not null;default:0;comment:'是否自动接单：0-否；1-是'"`
+	Remark            string `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'订单备注'"`
+	CancelReason      string `gorm:"column:cancel_reason;type:varchar(255);not null;default:'';comment:'取消原因'"`
+	IsVerifiedPhone   uint   `gorm:"column:is_verified_phone;type:int(10);not null;default:0;comment:'订单是否已经验证手机号,0-未验证 1-已验证,不再弹出验证手机号'"`
+	PaymentMethodUuid uint64 `gorm:"column:payment_method_uuid;type:bigint(20) unsigned;not null;default:0;comment:'支付方式UUID,订单已选择的支付方式'"`
 	// 确认订单之后才有值的字段
 	ProductNum          float64 `gorm:"column:product_num;type:decimal(12,2);not null;default:0;comment:'商品数量.订单中商品的总数量，商品A数量2，商品B数量1，则商品数量为3'"`
 	ProductAmount       float64 `gorm:"column:product_amount;type:decimal(12,2);not null;default:0;comment:'商品金额,折前价，已含税'"`
@@ -36,10 +35,13 @@ type MemberSaleOrder struct {
 	Amount              float64 `gorm:"column:amount;type:decimal(12,2);not null;default:0;comment:'订单总金额.商品金额-会员折扣+配送费'"`
 	RefundAmount        float64 `gorm:"column:refund_amount;type:decimal(12,2);not null;default:0;comment:'退款金额'"`
 	// 配送费参数
-	DeliveryFeeAmount  float64 `gorm:"column:delivery_fee_amount;type:decimal(12,6);not null;default:0;comment:'配送费'"`
-	DeliveryFeeMinFee  float64 `gorm:"column:delivery_fee_min_fee;type:decimal(12,6);not null;default:0;comment:'起步配送费'"`
-	DeliveryFeeBaseFee float64 `gorm:"column:delivery_fee_base_fee;type:decimal(12,6);not null;default:0;comment:'基础配送费'"`
-	DeliveryFeePerKm   float64 `gorm:"column:delivery_fee_per_km;type:decimal(12,6);not null;default:0;comment:'每公里配送费'"`
+	IsDistanceCalculated int     `gorm:"column:is_distance_calculated;type:int(10);not null;default:-1;comment:'是否已计算距离费，-1-未计算，1-已计算'"`
+	DeliveryDistance     float64 `gorm:"column:delivery_distance;type:decimal(12,6);not null;default:0;comment:'配送距离，单位km'"`
+	DeliveryFeeAmount    float64 `gorm:"column:delivery_fee_amount;type:decimal(12,6);not null;default:0;comment:'配送费'"`
+	DeliveryFeeDistance  float64 `gorm:"column:delivery_fee_distance;type:decimal(12,6);not null;default:0;comment:'距离费送费'"`
+	DeliveryFeeMinFee    float64 `gorm:"column:delivery_fee_min_fee;type:decimal(12,6);not null;default:0;comment:'起步配送费'"`
+	DeliveryFeeBaseFee   float64 `gorm:"column:delivery_fee_base_fee;type:decimal(12,6);not null;default:0;comment:'基础服务费'"`
+	DeliveryFeePerKm     float64 `gorm:"column:delivery_fee_per_km;type:decimal(12,6);not null;default:0;comment:'每公里配送费'"`
 	// 第三方订单信息
 	RelatedOrderNo   string `gorm:"column:related_order_no;type:varchar(255);not null;default:'';comment:'关联订单号,skootar、grab等第三方平台上的订单号'"`
 	RelatedOrderType string `gorm:"column:related_order_type;type:varchar(255);not null;default:'';comment:'关联订单类型,skootar、grab'"`
@@ -78,6 +80,33 @@ type MemberSaleOrder struct {
 	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`
 }
 
+// 是否已计算距离费
+func (model *MemberSaleOrder) GetIsDistanceCalculated() bool {
+	return model.IsDistanceCalculated == constant.DistanceCalculated
+}
+
+// 设置配送距离
+func (model *MemberSaleOrder) SetDeliveryDistance(distance float64) {
+	model.DeliveryDistance = distance
+	model.IsDistanceCalculated = constant.DistanceCalculated
+	// 重新计算配送费
+	model.RecalculateDeliveryFee()
+}
+
+// 取消已设置的配送距离
+func (model *MemberSaleOrder) CancelDeliveryDistance() {
+	model.DeliveryDistance = 0
+	model.IsDistanceCalculated = constant.DistanceNotCalculated
+	// 重新计算配送费
+	model.RecalculateDeliveryFee()
+}
+
+// 重新计算配送费
+func (model *MemberSaleOrder) RecalculateDeliveryFee() {
+	model.DeliveryFeeDistance = model.CalculateDeliveryFeeDistance()
+	model.DeliveryFeeAmount = model.CalculateDeliveryFee()
+}
+
 func (model *MemberSaleOrder) OriginAmountValue() float64 {
 	return decimal.NewFromFloat(model.OriginProductAmount).Add(decimal.NewFromFloat(model.DeliveryFeeAmount)).Round(2).InexactFloat64()
 }
@@ -92,6 +121,7 @@ func (model *MemberSaleOrder) SetMemberAddress(address MemberAddress) {
 	model.ContactPhone = address.Phone
 	model.ContactPhonePrefix = address.PhonePrefix
 	model.Address = &address
+	model.CancelDeliveryDistance()
 }
 
 // 获取剩余支付时间(单位秒)
@@ -259,15 +289,20 @@ func (model *MemberSaleOrder) IsVerifiedPhoneBool() bool {
 // 2. 如果配送费<起步配送费，则配送费=起步配送费
 func (model *MemberSaleOrder) CalculateDeliveryFee() float64 {
 	var deliveryFeeAmount float64
-	distanceFee := decimal.NewFromFloat(model.DeliveryDistance).Mul(decimal.NewFromFloat(model.DeliveryFeePerKm)).Round(2) // 配送距离*每公里配送费
-	deliveryFee := decimal.NewFromFloat(model.DeliveryFeeBaseFee).Add(distanceFee).Round(2)                                // 基础配送费 + 配送距离*每公里配送费
-	if deliveryFee.LessThan(decimal.NewFromFloat(model.DeliveryFeeMinFee)) {                                               // 如果配送费<起步配送费
+	distanceFee := decimal.NewFromFloat(model.CalculateDeliveryFeeDistance()).Round(2)      // 配送距离*每公里配送费
+	deliveryFee := decimal.NewFromFloat(model.DeliveryFeeBaseFee).Add(distanceFee).Round(2) // 基础配送费 + 配送距离*每公里配送费
+	if deliveryFee.LessThan(decimal.NewFromFloat(model.DeliveryFeeMinFee)) {                // 如果配送费<起步配送费
 		deliveryFeeAmount = model.DeliveryFeeMinFee // 配送费=起步配送费
 	} else {
 		deliveryFeeAmount = deliveryFee.InexactFloat64() // 配送费=基础配送费 + 配送距离*每公里配送费
 	}
 
 	return deliveryFeeAmount
+}
+
+// 计算距离费
+func (model *MemberSaleOrder) CalculateDeliveryFeeDistance() float64 {
+	return decimal.NewFromFloat(model.DeliveryDistance).Mul(decimal.NewFromFloat(model.DeliveryFeePerKm)).Round(2).InexactFloat64() // 配送距离*每公里配送费
 }
 
 // 计算订单总金额. 订单总金额=商品金额+配送费-会员折扣

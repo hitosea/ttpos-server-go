@@ -393,7 +393,8 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderCookFinish(memberSaleOrder mo
 // UpdateDeliveryDistance 更新会员端销售订单的配送距离
 func (r *MemberSaleOrderRepo) UpdateDeliveryDistance(memberSaleOrderUuid uint64, distance float64) error {
 	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrderUuid).Updates(model.MemberSaleOrder{
-		DeliveryDistance: distance,
+		DeliveryDistance:     distance,
+		IsDistanceCalculated: constant.DistanceCalculated,
 	}).Error
 	if err != nil {
 		return errors.WithMessage(err)

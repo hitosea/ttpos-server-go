@@ -904,7 +904,6 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		}
 		if memberAddress != nil {
 			memberSaleOrder.SetMemberAddress(*memberAddress)
-			req.AddressChanged = true
 		}
 	}
 
@@ -927,20 +926,17 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		}
 	}
 
-	// 如果未查询配送距离,且配置地址,重新查询配送距离。因为查询距离可能失败，所以加载订单信息时需要重新查询
-	if memberSaleOrder.DeliveryDistance == 0 && memberSaleOrder.Address != nil {
-		req.AddressChanged = true
-	}
-
-	if req.AddressChanged {
+	// 如果未计算距离费，且配置了地址，则查询配送距离
+	if !memberSaleOrder.GetIsDistanceCalculated() && memberSaleOrder.MemberAddressUuid != 0 {
 		// 查询配送距离
 		distance, err := s.QueryDistance(ctx, memberSaleOrder)
 		if err != nil {
-			return nil, errors.WithMessage(err)
-		}
-		memberSaleOrder.DeliveryDistance = distance
-		if err := repository.NewMemberSaleOrderRepo(ctx.GetDB()).UpdateDeliveryDistance(memberSaleOrder.Uuid, distance); err != nil {
-			return nil, errors.WithMessage(err)
+			ctx.Log().Error("查询配送距离失败", zap.Error(err))
+		} else {
+			memberSaleOrder.SetDeliveryDistance(distance)
+			if err := repository.NewMemberSaleOrderRepo(ctx.GetDB()).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
+				return nil, errors.WithMessage(err)
+			}
 		}
 	}
 
@@ -950,7 +946,6 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 	memberSaleOrder.OriginProductAmount = memberSaleOrder.SaleBill.SaleOrders[0].GetOriginProductAmount()
 	memberSaleOrder.MemberDiscountFee = memberSaleOrder.SaleBill.SaleOrders[0].MemberDiscountFee
 	memberSaleOrder.Amount = memberSaleOrder.CalculateAmount()
-	memberSaleOrder.DeliveryFeeAmount = memberSaleOrder.CalculateDeliveryFee()
 	if err := repository.NewMemberSaleOrderRepo(ctx.GetDB()).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
 		return nil, errors.WithMessage(err)
 	}

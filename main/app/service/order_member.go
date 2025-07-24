@@ -183,8 +183,7 @@ func (s *orderSrv) SetMemberOrderAddress(ctx context.Context, request member_req
 	addressChanged := memberSaleOrder.MemberAddressUuid != request.MemberAddressUuid
 
 	memberSaleOrder.SetMemberAddress(*memberAddress)
-
-	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderAddress(*memberSaleOrder); err != nil {
+	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
 		return nil, errors.WithMessage(err)
 	}
 
@@ -213,6 +212,24 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 	// 如果未设置地址，返回错误
 	if memberSaleOrder.MemberAddressUuid == 0 {
 		return errors.New("请先选择订单地址")
+	}
+
+	// 如果未选择支付方式，返回错误
+	if request.PaymentMethodUuid == 0 {
+		return errors.New("请选择支付方式")
+	}
+
+	// 如果订单未计算距离费，则查询距离并计算距离费
+	if !memberSaleOrder.GetIsDistanceCalculated() {
+		// 查询距离
+		distance, err := s.QueryDistance(ctx, memberSaleOrder)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		memberSaleOrder.SetDeliveryDistance(distance)
+		if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
+			return errors.WithMessage(err)
+		}
 	}
 
 	memberSaleOrder.Remark = request.Remark
