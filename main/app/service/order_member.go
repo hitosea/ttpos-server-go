@@ -308,7 +308,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 		return nil, errors.NewWithCode(constant.CodeOrderAmountLessThan1, "订单金额小于1，无法支付")
 	}
 	// 判断订单是否可以支付
-	if !memberSaleOrder.IsCanPaid() {
+	if memberSaleOrder.Status < constant.MemberSaleOrderStatusPendingPayment {
 		return nil, errors.New("订单状态不可支付")
 	}
 
