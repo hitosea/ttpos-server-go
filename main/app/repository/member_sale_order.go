@@ -332,7 +332,7 @@ func (r *MemberSaleOrderRepo) GetForCall(opts ...DBOption) ([]model.MemberSaleOr
 	db = db.Where("( status = ? AND is_auto_accept = 0 ) OR ( status = ? AND is_auto_accept = 1 ) OR ( status = ? AND cancel_scene = ? )",
 		constant.MemberSaleOrderStatusPendingMerchantAccept, constant.MemberSaleOrderStatusCooking, constant.MemberSaleOrderStatusCancelled, constant.MemberSaleOrderSceneMemberCancel)
 	// 获取10条数据
-	err := db.Debug().Limit(10).Order("update_time desc").Find(&memberSaleOrders).Error
+	err := db.Limit(10).Order("update_time desc").Find(&memberSaleOrders).Error
 	return memberSaleOrders, errors.WithMessage(err)
 }
 
