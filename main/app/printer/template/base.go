@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/resp/business_data_resp"
 	respSetting "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
@@ -486,7 +485,7 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleBill *model.SaleBill, saleOr
 		// 打包商品
 		var wrap string
 		if isShowWrap {
-			if item.IsWrapProduct() || saleBill.DiningMethod == constant.SaleBillDiningMethodTakeout {
+			if item.IsWrapProduct() || (saleBill.IsTakeout() && saleBill.MemberSaleOrderUuid == 0) {
 				wrap = "(" + p.Translate("打包") + ") "
 				productTotalPrice = 0
 			}

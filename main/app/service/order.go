@@ -363,11 +363,13 @@ func createSaleOrder(ctx context.Context, db *gorm.DB, saleBillSetting *model.Sa
 	staff := ctx.GetStaff()
 	saleOrderObj.SetCashier(staff.Uuid, staff.GetUserName())
 	// 设置会员折扣
-	member, err := repository.NewMemberRepo(db).GetMemberByUuid(ctx.GetMemberUuid())
-	if err != nil {
-		return nil, errors.WithMessage(err)
+	if ctx.GetMemberUuid() != 0 {
+		member, err := repository.NewMemberRepo(db).GetMemberByUuid(ctx.GetMemberUuid())
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		saleOrderObj.SetMemberDiscount(*member)
 	}
-	saleOrderObj.SetMemberDiscount(*member)
 	//
 	saleOrder, err := repository.NewOrderRepo(db).CreateSaleOrder(*saleOrderObj)
 	if err != nil {
@@ -2453,7 +2455,13 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				TotalNum:        num,
 				NumType:         saleOrderProduct.NumType,
 				IsBuffet:        saleOrderProduct.IsBuffet == 1,
-				Remark:          saleOrderProduct.Remark,
+				IsWrap: func() bool {
+					if saleBill.IsTakeout() && saleBill.MemberSaleOrderUuid == 0 {
+						return true
+					}
+					return saleOrderProduct.IsWrapProduct()
+				}(),
+				Remark: saleOrderProduct.Remark,
 			})
 		}
 	}

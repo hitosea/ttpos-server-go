@@ -278,7 +278,8 @@ func MemberAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFu
 			return
 		}
 		// 验证会员是否存在
-		member, err := repository.NewMemberRepo(dbm.GetDB(claims.CompanyUuid)).GetMemberByUuid(claims.MemberUuid)
+		memberRepo := repository.NewMemberRepo(dbm.GetDB(claims.CompanyUuid))
+		member, err := memberRepo.GetMemberRecord(memberRepo.WhereUuid(claims.MemberUuid))
 		if err != nil || member.IsDelete() {
 			helper.Fail(c, constant.CodeTokenInvalid, "会员不存在")
 			c.Abort()

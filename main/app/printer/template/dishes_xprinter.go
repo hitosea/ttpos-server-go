@@ -136,8 +136,13 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
 			// 产品名称
-			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 			// 打印产品名称和数量
 			productNum := "x" + t.base.FloatToString(product.TotalNum)
 			if len(productNum) >= 3 {
@@ -257,8 +262,13 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
 			// 产品名称
-			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 设置列
 			if t.base.IsThText(productName) {
@@ -437,8 +447,13 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
 			// 产品名称
-			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
 			exportation := func(num float64) {
@@ -579,9 +594,13 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
-
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
 			// 产品名称
-			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
 			exportation := func(num float64) {
@@ -1011,8 +1030,13 @@ func (t *dishesXprinterTemplate) OutMenuTemplate(
 				buffetText = t.base.Translate("自助餐") + "-"
 			}
 		}
+		// 打包商品
+		wrapText := ""
+		if product.IsWrap {
+			wrapText = "(" + t.base.Translate("打包") + ") "
+		}
 		// 产品名称
-		productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+		productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 		// 设置字符大小和行间距
 		if printerType == PrinterTypeXPrinterWifi {

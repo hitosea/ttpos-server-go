@@ -123,8 +123,13 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
 			// 产品名称
-			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 			// 打印产品名称和数量
 			productNum := "x" + t.base.FloatToString(product.TotalNum)
 			if len(productNum) >= 3 {
@@ -243,8 +248,13 @@ func (t *dishesCodesoftTemplate) CompleteOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
 			// 产品名称
-			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 			// 打印产品名称和数量
 			productNum := "x" + t.base.FloatToString(product.TotalNum)
 			// 设置行间距
@@ -387,8 +397,13 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
 			// 产品名称
-			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
 			exportation := func(num float64) {
@@ -499,9 +514,13 @@ func (t *dishesCodesoftTemplate) OneDishOneOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
-
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
 			// 产品名称
-			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
 			exportation := func(num float64) {

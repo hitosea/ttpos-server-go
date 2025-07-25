@@ -25,6 +25,7 @@ type OrderProduct struct {
 	TotalNum        float64              `json:"total_num"`        // 总数量
 	NumType         uint                 `json:"num_type"`         // 数量计算方法, 0-整数 1-小数
 	IsBuffet        bool                 `json:"is_buffet"`        // 是否自助餐
+	IsWrap          bool                 `json:"is_wrap"`          // 是否打包
 	Remark          string               `json:"remark"`           // 备注
 }
 

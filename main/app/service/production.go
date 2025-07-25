@@ -379,7 +379,13 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 					TotalNum:        product.SaleOrderProduct.Num,
 					NumType:         product.SaleOrderProduct.NumType,
 					IsBuffet:        product.SaleOrderProduct.IsBuffet == 1,
-					Remark:          product.SaleOrderProduct.Remark,
+					IsWrap: func() bool {
+						if product.SaleBill.IsTakeout() && product.SaleBill.MemberSaleOrderUuid == 0 {
+							return true
+						}
+						return product.SaleOrderProduct.IsWrapProduct()
+					}(),
+					Remark: product.SaleOrderProduct.Remark,
 				},
 			},
 		})

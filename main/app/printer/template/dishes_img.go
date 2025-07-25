@@ -31,6 +31,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 	order model.SaleBill,
 	products printer_model.Products,
 ) string {
+
 	// 人的翻译
 	name := t.base.Translate("人")
 	// 自助餐标记开关
@@ -117,8 +118,14 @@ func (t *dishesImgTemplate) CompleteOrder(
 		}
 		img.LineFeed(1, 12)
 
+		// 打包商品
+		wrapText := ""
+		if product.IsWrap {
+			wrapText = "(" + t.base.Translate("打包") + ") "
+		}
+
 		// 产品名称
-		productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+		productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 		// 打印产品名称和数量
 		totalNum := "x" + t.base.FloatToString(product.TotalNum)
 		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
@@ -240,8 +247,13 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
 			// 产品名称
-			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
 			exportation := func(num float64) {
@@ -348,8 +360,13 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
 			// 产品名称
-			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
 			exportation := func(num float64) {
@@ -685,8 +702,14 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 			}
 		}
 
+		// 打包商品
+		wrapText := ""
+		if product.IsWrap {
+			wrapText = "(" + t.base.Translate("打包") + ") "
+		}
+
 		// 产品名称
-		productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+		productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 		if t.base.Lang == "my" {
 			img.SetTextLineHeight(90)
 		} else {
