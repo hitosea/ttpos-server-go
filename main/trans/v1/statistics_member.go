@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 
+	"github.com/duke-git/lancet/v2/slice"
 	"gorm.io/gorm"
 )
 
@@ -65,8 +66,23 @@ func (s *StatisticsMemberService) convertMember(offset int, limit int) error {
 
 	// 保存数据
 	if len(statisticsMembers) > 0 {
+		var insertData []model.StatisticsMember
+		for _, statisticsMember := range statisticsMembers {
+			i := 0
+			row, ok := slice.FindBy(insertData, func(index int, item model.StatisticsMember) bool {
+				i = index
+				return item.MemberRechargeOrderUuid == statisticsMember.MemberRechargeOrderUuid
+			})
+			if !ok {
+				insertData = append(insertData, statisticsMember)
+			} else {
+				row.PaymentAmount += statisticsMember.PaymentAmount
+				row.PaymentFee += statisticsMember.PaymentFee
+				insertData[i] = row
+			}
+		}
 		fmt.Println(fmt.Sprintf("statistics-members - num: %d", len(statisticsMembers)))
-		err := statisticsRepo.SaveMembers(statisticsMembers)
+		err := statisticsRepo.SaveMembers(insertData)
 		if err != nil {
 			return err
 		}
