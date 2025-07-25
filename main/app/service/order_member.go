@@ -308,7 +308,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 		return nil, errors.NewWithCode(constant.CodeOrderAmountLessThan1, "订单金额小于1，无法支付")
 	}
 	// 判断订单是否可以支付
-	if !memberSaleOrder.IsCanPaid() {
+	if memberSaleOrder.Status < constant.MemberSaleOrderStatusPendingPayment {
 		return nil, errors.New("订单状态不可支付")
 	}
 
@@ -1307,7 +1307,6 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		}
 	}
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderAccept(*memberSaleOrder)
 		lat, lng, _ := memberSaleOrder.Address.GetLocation()
 		// 获取商家地址
 		companySetting := ctx.GetCompanySetting()
@@ -1356,7 +1355,8 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		ctx.Log().Info("创建外送订单成功", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))
 		memberSaleOrder.RelatedOrderNo = res.TakeoutRefNo
 		memberSaleOrder.ExpectedFinishTime = res.FinishTime
-		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderProviderInfo(*memberSaleOrder); err != nil {
+		memberSaleOrder.RelatedOrderNo = res.TakeoutRefNo
+		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderAccept(*memberSaleOrder); err != nil {
 			return errors.WithMessage(err, "更新外送订单失败")
 		}
 		return nil

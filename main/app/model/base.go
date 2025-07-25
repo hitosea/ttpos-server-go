@@ -239,7 +239,7 @@ func (model *MemberSaleOrder) AfterUpdate(tx *gorm.DB) (err error) {
 			websocket.SourceAll,
 			websocket.UPDATE_MEMBER_SALE_ORDER,
 			map[string]interface{}{
-				"member_sale_order_uuid": model.Uuid,
+				"member_sale_order_uuid": model.BaseModel.Uuid,
 				"status":                 model.Status,
 				"update_time":            model.BaseModel.UpdateTime,
 			},
@@ -259,9 +259,8 @@ func (model *MemberSaleOrder) AfterUpdate(tx *gorm.DB) (err error) {
 			websocket.SourceAll,
 			websocket.CUSTOMER_CALL,
 			map[string]interface{}{
-				"member_sale_order_uuid": model.Uuid,
-				"status":                 model.Status,
-				"update_time":            time.Now().Unix(),
+				"status":      model.Status,
+				"update_time": model.BaseModel.UpdateTime,
 			},
 		)
 	}
