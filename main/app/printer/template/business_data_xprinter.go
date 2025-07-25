@@ -162,9 +162,9 @@ func (t *businessDataXprinterTemplate) GetPrintContent(
 		}
 		printer.AppendText(t.base.PrintText(t.base.Translate("退款金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalRefundMoney), width))
 		printer.LineFeed(1)
-		printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalFreeOrderPrice), width))
-		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("赠菜金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalGiveProductPrice), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.All.TotalFreeOrderPrice), width))
 		printer.LineFeed(1)
 		printer.SetPrintModes(true, true, false)
 		printer.SetCharacterSize(2, 1)

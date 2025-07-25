@@ -183,9 +183,9 @@ func (t *businessDataSunmiTemplate) GetPrintContent(
 		}
 		printer.PrintInColumns(t.base.Translate("退款金额"), t.base.GetPriceAndUnit(businessData.All.TotalRefundMoney))
 		printer.LineFeed(1)
-		printer.PrintInColumns(t.base.Translate("免单金额"), t.base.GetPriceAndUnit(businessData.All.TotalFreeOrderPrice))
-		printer.LineFeed(1)
 		printer.PrintInColumns(t.base.Translate("赠菜金额"), t.base.GetPriceAndUnit(businessData.All.TotalGiveProductPrice))
+		printer.LineFeed(1)
+		printer.PrintInColumns(t.base.Translate("免单金额"), t.base.GetPriceAndUnit(businessData.All.TotalFreeOrderPrice))
 		printer.LineFeed(1)
 		printer.SetPrintModes(true, true, false)
 		printer.SetCharacterSize(2, 1)
