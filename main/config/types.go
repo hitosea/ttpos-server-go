@@ -11,6 +11,7 @@ type ServerConf struct {
 	Mode       string // 模式：debug/release/test
 	DeployMode string // 部署模式：cloud云上，offline离线
 	BrandName  string // 品牌名称
+	Domain     string // 域名
 }
 
 type DatabaseConf struct {
@@ -87,9 +88,8 @@ type GoogleBucketConf struct {
 }
 
 type GrpcConf struct {
-	Endpoint         string
-	CallbackEndpoint string // 外定订单状态变更回调地址，用于通知ttpos订单状态变更
-	Service          string
+	Endpoint string
+	Service  string
 }
 
 func (c *GoogleBucketConf) Verification() bool {

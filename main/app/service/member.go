@@ -729,7 +729,7 @@ func (s *memberSrv) GetMemberPointsRecordList(ctx context.Context, pointsRecordL
 // 返回：注册响应，错误信息
 func (s *memberSrv) Register(ctx context.Context, reqs member_req.MemberRegisterReq) (member_resp.LoginResp, error) {
 	if err := reqs.Validate(); err != nil {
-		return member_resp.LoginResp{}, err
+		return member_resp.LoginResp{}, errors.WithMessage(err)
 	}
 	// 获取上下文中的公司ID
 	companyUuid := ctx.GetCompanyUuid()

@@ -3,7 +3,6 @@ import { $post, $get } from '../request';
 export interface DistanceRange {
   end: number;
   price_per_km: number;
-  is_unlimited: boolean;
 }
 
 export interface TakeoutSettingData {

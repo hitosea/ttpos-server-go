@@ -308,7 +308,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 		return nil, errors.NewWithCode(constant.CodeOrderAmountLessThan1, "订单金额小于1，无法支付")
 	}
 	// 判断订单是否可以支付
-	if !memberSaleOrder.IsCanPaid() {
+	if memberSaleOrder.Status < constant.MemberSaleOrderStatusPendingPayment {
 		return nil, errors.New("订单状态不可支付")
 	}
 
@@ -348,7 +348,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 	paymentOrder, err := paymentOrderRepo.GetPaymentOrderInfo(
 		repository.CommonRepo.WhereBySoftDelete(),
 		paymentOrderRepo.WhereRelatedUuid(relatedUuid),
-		paymentOrderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeMemberOrder),
+		paymentOrderRepo.WhereRelatedType(constant.PaymentOrderRelatedTypeSaleOrder),
 		paymentOrderRepo.WherePaymentMethodUuid(paymentMethod.Uuid),
 	)
 	if err == nil && paymentOrder.Uuid != 0 {
@@ -367,7 +367,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 			PaymentMethodName: paymentMethod.PaymentName,
 			PaymentMethodUuid: paymentMethod.Uuid,
 			PaymentFeePercent: 0,
-			RelatedType:       constant.PaymentOrderRelatedTypeMemberOrder,
+			RelatedType:       constant.PaymentOrderRelatedTypeSaleOrder,
 			RelatedUuid:       relatedUuid,
 			CurrencyUnit: func() string {
 				currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
@@ -393,13 +393,14 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 
 	// 创建连连支付订单
 	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
-		PaymentOrderUuid:  paymentOrder.Uuid,
-		RelatedType:       constant.PaymentOrderRelatedTypeMemberOrder,
-		RelatedUuid:       relatedUuid,
-		PaymentMethodUuid: paymentMethod.Uuid,
-		PaymentMethodCode: paymentMethod.Code,
-		PaymentAmount:     memberSaleOrder.Amount,
-		CommissionFee:     0,
+		PaymentOrderUuid:    paymentOrder.Uuid,
+		RelatedType:         constant.PaymentOrderRelatedTypeSaleOrder,
+		RelatedUuid:         relatedUuid,
+		PaymentMethodUuid:   paymentMethod.Uuid,
+		PaymentMethodCode:   paymentMethod.Code,
+		PaymentAmount:       memberSaleOrder.Amount,
+		CommissionFee:       0,
+		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		PaymentMethod: func() string {
 			if isOpenPc {
 				return PaymentMethodWechatPay
@@ -704,13 +705,6 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 		return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
 	}
 
-	// 取消订单后，删除所有销售订单商品
-	err = repository.NewSaleOrderProductRepo(tx).DeleteSaleOrderProductBySaleBillUuid(billInfo.Uuid)
-	if err != nil {
-		tx.Rollback()
-		return errors.WithMessage(builtinerrors.New("删除销售订单商品失败"), err.Error())
-	}
-
 	// 已经支付的-发起退款
 	var returnOrder *model.ReturnOrder
 	if memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingMerchantAccept {
@@ -861,12 +855,6 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 		err = productionRepo.UpdateProduct([]repository.DBOption{saleBillUuidOpt}, map[string]any{"num": 0})
 		if err != nil {
 			return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
-		}
-
-		// 取消订单后，删除所有销售订单商品
-		err = repository.NewSaleOrderProductRepo(tx).DeleteSaleOrderProductBySaleBillUuid(billInfo.Uuid)
-		if err != nil {
-			return errors.WithMessage(builtinerrors.New("删除销售订单商品失败"), err.Error())
 		}
 
 		// 已经支付的-发起退款
@@ -1175,10 +1163,7 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 					// 商家备餐中，商家可以取消订单
 					return memberSaleOrder.Status == constant.MemberSaleOrderStatusCooking
 				}(),
-				IsCellRefund: func() bool {
-					// 订单完成后，用户可以申请退款。TODO 且未全部退款时
-					return memberSaleOrder.Status == constant.MemberSaleOrderStatusCompleted
-				}(),
+				IsCellRefund: memberSaleOrder.IsCanRefund(),
 			},
 		})
 	}
@@ -1322,7 +1307,6 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		}
 	}
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderAccept(*memberSaleOrder)
 		lat, lng, _ := memberSaleOrder.Address.GetLocation()
 		// 获取商家地址
 		companySetting := ctx.GetCompanySetting()
@@ -1333,7 +1317,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		// 选择外送渠道
 		memberSaleOrder.RelatedOrderType = constant.ProviderNameSkootar
 		// 状态变更的回调地址
-		callbackUrl := config.TakeOutRpcConf.CallbackEndpoint + "/api/v1/member/order/callback?company_uuid=" + fmt.Sprintf("%d", ctx.GetCompany().Uuid)
+		callbackUrl := config.Server.Domain + "/api/v1/member/order/callback?company_uuid=" + fmt.Sprintf("%d", ctx.GetCompany().Uuid)
 
 		takeoutSrv := takeout.NewTakeoutSrv()
 		params := req.CreateTakeoutOrderReq{
@@ -1371,7 +1355,8 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		ctx.Log().Info("创建外送订单成功", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))
 		memberSaleOrder.RelatedOrderNo = res.TakeoutRefNo
 		memberSaleOrder.ExpectedFinishTime = res.FinishTime
-		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderProviderInfo(*memberSaleOrder); err != nil {
+		memberSaleOrder.RelatedOrderNo = res.TakeoutRefNo
+		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderAccept(*memberSaleOrder); err != nil {
 			return errors.WithMessage(err, "更新外送订单失败")
 		}
 		return nil

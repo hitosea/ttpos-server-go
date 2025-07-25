@@ -736,7 +736,7 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 		return nil, errors.WithMessage(err, "获取公司设置失败")
 	}
 	// 获取配送费配置
-	deliveryConfig, err := companySetting.GetDeliveryConfig("skootar", 0)
+	deliveryConfig, err := companySetting.GetDeliveryConfig(constant.ProviderNameSkootar, 0)
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取配送费配置失败")
 	}
@@ -944,6 +944,14 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 			}
 		}
 	}
+
+	// 每次获取会员端订单信息时，重新获取最新的外送费用配置
+	companySetting := ctx.GetCompanySetting()
+	deliveryConfig, err := companySetting.GetDeliveryConfig(constant.ProviderNameSkootar, memberSaleOrder.DeliveryDistance)
+	if err != nil {
+		return nil, errors.WithMessage(err, "配送费配置失败")
+	}
+	memberSaleOrder.UpdateDeliveryConfig(*deliveryConfig)
 
 	// 保存一下
 	memberSaleOrder.ProductNum = memberSaleOrder.SaleBill.SaleOrders[0].GetProductNum()
@@ -2504,6 +2512,16 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 			PaymentMethodUuid: amount.PaymentMethodUuid,
 		})
 	}
+
+	// 记录外送订单的退款金额
+	if saleBill.MemberSaleOrderUuid > 0 {
+		go func() {
+			if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderRefundAmount(saleBill.MemberSaleOrderUuid, returnOrder.RefundAmount); err != nil {
+				ctx.Log().Error("记录外送订单的退款金额失败", zap.Error(errors.WithMessage(err)))
+			}
+		}()
+	}
+
 	go func() {
 		s.bus.PublishReturnOrderEvent(event.ReturnOrderPayload{
 			SaleBill: saleBill,
@@ -9523,6 +9541,14 @@ func IsSameSignature[T any](sign string, toSaleOrderProductSignMap map[string]*T
 }
 
 func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error {
+	// 保存到数据库
+	if db == nil {
+		db = s.dbm.GetDB(ctx.GetDbId())
+	}
+	return CalcAndSaveSaleBill(ctx, db, saleBill, options...)
+}
+
+func CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBill *model.SaleBill, options ...func(option *model.CalcOption)) error {
 	option := &model.CalcOption{}
 	for _, optionFunc := range options {
 		optionFunc(option)
@@ -9532,10 +9558,6 @@ func (s *orderSrv) CalcAndSaveSaleBill(ctx context.Context, db *gorm.DB, saleBil
 	// 设置收银员信息
 	staff := ctx.GetStaff()
 	saleBill.SetCashier(staff.DutyNo, staff.Uuid, staff.GetUserName())
-	// 保存到数据库
-	if db == nil {
-		db = s.dbm.GetDB(ctx.GetDbId())
-	}
 
 	err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {
 		for _, saleOrder := range saleBill.SaleOrders {

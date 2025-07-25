@@ -7,10 +7,10 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"ttpos-server-go/config"
 	"ttpos-server-go/version"
 
 	"github.com/shopspring/decimal"
-	"github.com/spf13/viper"
 )
 
 type VersionInfo struct {
@@ -40,7 +40,7 @@ func GetLocalIP() (string, error) {
 }
 
 func GetBaseURL(r *http.Request) string {
-	domain := viper.GetString("DOMAIN")
+	domain := config.Server.Domain
 	if domain != "" {
 		return domain + "/"
 	}

@@ -41,8 +41,9 @@ type IQueryMemberSaleOrderRepo interface {
 	GetMemberSaleOrderByContactNameAndContactPhoneSuffix(contactName string, contactPhoneSuffix string) ([]*model.MemberSaleOrder, error)                            // 根据联系人姓名和手机号后缀查询会员端销售订单
 	GetOrderNum(status []uint) (int64, error)                                                                                                                        // 获取订单数量
 	GetMemberSaleOrderLatest() (*model.MemberSaleOrder, error)                                                                                                       // 获取最新的一条会员端销售订单(已提交支付的)
+	UpdateMemberSaleOrderRefundAmount(memberSaleOrderUuid uint64, refundAmount float64) error                                                                        // 更新会员端销售订单的退款金额
 
-	PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)
+	GetForCall(opts ...DBOption) ([]model.MemberSaleOrder, error)
 	WhereStatusIn(status []uint) DBOption
 	WhereNotStatusIn(status []uint) DBOption
 	WhereUpdateTimeGt(ts int64) DBOption
@@ -320,20 +321,20 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderNum(statusList []uint, ti
 	return total, nil
 }
 
-func (r *MemberSaleOrderRepo) PaginateGet(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error) {
+func (r *MemberSaleOrderRepo) GetForCall(opts ...DBOption) ([]model.MemberSaleOrder, error) {
 	var memberSaleOrders []model.MemberSaleOrder
-	var total int64
 	db := r.db.Model(&model.MemberSaleOrder{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	// 获取总数
-	if err := db.Count(&total).Error; err != nil {
-		return nil, 0, errors.WithMessage(err)
-	}
-	// 获取分页数据
-	err := db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Order("update_time desc").Find(&memberSaleOrders).Error
-	return memberSaleOrders, total, errors.WithMessage(err)
+	// 1、会员付款，非自动接单
+	// 2、已自动接单
+	// 3、会员取消
+	db = db.Where("( status = ? AND is_auto_accept = 0 ) OR ( status = ? AND is_auto_accept = 1 ) OR ( status = ? AND cancel_scene = ? )",
+		constant.MemberSaleOrderStatusPendingMerchantAccept, constant.MemberSaleOrderStatusCooking, constant.MemberSaleOrderStatusCancelled, constant.MemberSaleOrderSceneMemberCancel)
+	// 获取10条数据
+	err := db.Limit(10).Order("update_time desc").Find(&memberSaleOrders).Error
+	return memberSaleOrders, errors.WithMessage(err)
 }
 
 func (r *MemberSaleOrderRepo) WhereStatusIn(status []uint) DBOption {
@@ -407,8 +408,10 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderReject(memberSaleOrder model.
 // UpdateMemberSaleOrderAccept 更新会员端销售订单-接单
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderAccept(memberSaleOrder model.MemberSaleOrder) error {
 	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
-		Status:     memberSaleOrder.Status,
-		AcceptTime: memberSaleOrder.AcceptTime,
+		Status:           memberSaleOrder.Status,
+		AcceptTime:       memberSaleOrder.AcceptTime,
+		RelatedOrderType: memberSaleOrder.RelatedOrderType,
+		RelatedOrderNo:   memberSaleOrder.RelatedOrderNo,
 	}).Error
 	if err != nil {
 		return errors.WithMessage(err)
@@ -569,4 +572,13 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderLatest() (*model.MemberSaleOrder
 		return nil, errors.WithMessage(err)
 	}
 	return memberSaleOrder, nil
+}
+
+// 更新会员端销售订单的退款金额
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRefundAmount(memberSaleOrderUuid uint64, refundAmount float64) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrderUuid).Update("refund_amount", gorm.Expr("refund_amount + ?", refundAmount)).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
 }

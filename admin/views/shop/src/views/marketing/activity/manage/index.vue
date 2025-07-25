@@ -24,7 +24,7 @@
           <el-table-column prop="name_text" :label="$t('活动名称')"></el-table-column>
           <el-table-column prop="type" :label="$t('活动类型')">
             <template #default="scope">
-              <span v-if="scope.row.type == 0">{{ $t('邀请有礼') }}</span>
+              <span v-if="scope.row.type == 0">{{ $t('邀请消费有礼') }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="reward_type" :label="$t('活动奖品')">

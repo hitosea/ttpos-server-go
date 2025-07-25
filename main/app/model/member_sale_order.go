@@ -80,6 +80,20 @@ type MemberSaleOrder struct {
 	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`
 }
 
+// 是否还可退款
+func (model *MemberSaleOrder) IsCanRefund() bool {
+	return model.Status == constant.MemberSaleOrderStatusCompleted && model.RefundAmount < model.Amount
+}
+
+// 更新配送费配置
+func (model *MemberSaleOrder) UpdateDeliveryConfig(deliveryConfig DeliveryConfigResponse) {
+	model.DeliveryFeeMinFee = deliveryConfig.BaseDeliveryFee
+	model.DeliveryFeeBaseFee = deliveryConfig.BasicFee
+	model.DeliveryFeePerKm = deliveryConfig.PricePerKm
+	// 重新计算配送费
+	model.RecalculateDeliveryFee()
+}
+
 // 是否已计算距离费
 func (model *MemberSaleOrder) GetIsDistanceCalculated() bool {
 	return model.IsDistanceCalculated == constant.DistanceCalculated
@@ -222,7 +236,11 @@ func (model *MemberSaleOrder) SetCancel(cancelReason string) {
 	model.Status = constant.MemberSaleOrderStatusCancelled
 	model.CancelReason = cancelReason
 	model.CancelTime = time.Now().Unix()
-	model.CancelScene = constant.MemberSaleOrderSceneMemberCancel
+	if model.Status < constant.MemberSaleOrderStatusPendingMerchantAccept {
+		model.CancelScene = constant.MemberSaleOrderSceneMemberCancelUnpaid
+	} else {
+		model.CancelScene = constant.MemberSaleOrderSceneMemberCancel
+	}
 }
 
 // 设置订单为“已取消”状态

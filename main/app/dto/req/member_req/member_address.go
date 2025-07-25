@@ -34,7 +34,10 @@ func (r *MemberAddressAddReq) Validate() error {
 	if r.Phone == "" {
 		return errors.New("手机号不能为空")
 	}
-	if len(r.Phone) != 11 && len(r.Phone) != 10 {
+	if !slices.Contains([]string{"+86", "+66"}, r.PhonePrefix) {
+		return errors.New("区号不正确")
+	}
+	if (r.PhonePrefix == "+86" && len(r.Phone) != 11) || (r.PhonePrefix == "+66" && len(r.Phone) != 10) {
 		return errors.New("手机号不正确")
 	}
 	if r.Address == "" {
@@ -43,9 +46,7 @@ func (r *MemberAddressAddReq) Validate() error {
 	if r.Street == "" {
 		return errors.New("街道/门牌号不能为空")
 	}
-	if !slices.Contains([]string{"+86", "+66"}, r.PhonePrefix) {
-		return errors.New("地区编码不正确")
-	}
+
 	return nil
 }
 
@@ -70,7 +71,10 @@ func (r *MemberAddressUpdateReq) Validate() error {
 	if r.Phone == "" {
 		return errors.New("手机号不能为空")
 	}
-	if len(r.Phone) != 11 && len(r.Phone) != 10 {
+	if !slices.Contains([]string{"+86", "+66"}, r.PhonePrefix) {
+		return errors.New("区号不正确")
+	}
+	if (r.PhonePrefix == "+86" && len(r.Phone) != 11) || (r.PhonePrefix == "+66" && len(r.Phone) != 10) {
 		return errors.New("手机号不正确")
 	}
 	if r.Address == "" {
@@ -78,9 +82,6 @@ func (r *MemberAddressUpdateReq) Validate() error {
 	}
 	if r.Street == "" {
 		return errors.New("街道/门牌号不能为空")
-	}
-	if !slices.Contains([]string{"+86", "+66"}, r.PhonePrefix) {
-		return errors.New("地区编码不正确")
 	}
 	return nil
 }

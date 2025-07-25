@@ -58,7 +58,7 @@
     <!-- 分页 -->
     <ti-pagination :total="total" :currentPage="currentPage" :pageSize="pageSize" @change="handlePageChange"></ti-pagination>
 
-    <add-edit-shop v-model:show="addEditShow" :has-edit="hasEdit" :edit-data="editData" @getList="handleSearch" />
+    <add-edit-shop v-model:show="addEditShow" :has-edit="hasEdit" :edit-data="editData" @getList="getCompanyListData" />
   </div>
 </template>
 

@@ -125,6 +125,12 @@ func (r *returnOrderRepo) WhereMerchantRefundOrderNo(merchantRefundOrderNo strin
 	}
 }
 
+func (r *returnOrderRepo) WithSaleOrder() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("SaleOrder")
+	}
+}
+
 func (r *returnOrderRepo) WithReturnOrder() DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Preload("ReturnOrder")

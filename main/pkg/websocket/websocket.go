@@ -54,6 +54,8 @@ const (
 	UPDATE_KITCHEN = "update_kitchen"
 	// 更新打印机 data = {"update_time": 1742971471, "printer_uuid": 1, "type": "update | delete"}
 	UPDATE_SELECTED_PRINTER = "update_selected_printer"
+	// 更新会员订单 data = {"update_time": 1742971471, "status": 1, "member_sale_order_uuid": 1, "type": "update | delete"}
+	UPDATE_MEMBER_SALE_ORDER = "update_member_sale_order"
 )
 
 // Push sends a POST request to the WebSocket server with specific parameters.

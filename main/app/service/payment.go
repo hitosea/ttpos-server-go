@@ -18,6 +18,7 @@ import (
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/saas"
+	"ttpos-server-go/config"
 	contexts "ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
@@ -42,14 +43,15 @@ const (
 )
 
 type CreatePaymentReq struct {
-	RelatedType       int
-	RelatedUuid       uint64
-	PaymentMethodUuid uint64
-	PaymentMethodCode int
-	PaymentAmount     float64
-	CommissionFee     float64
-	PaymentMethod     string
-	PaymentOrderUuid  uint64
+	RelatedType         int
+	RelatedUuid         uint64
+	PaymentMethodUuid   uint64
+	PaymentMethodCode   int
+	PaymentAmount       float64
+	CommissionFee       float64
+	PaymentMethod       string
+	PaymentOrderUuid    uint64
+	MemberSaleOrderUuid uint64
 }
 
 // LianLianPaymentResp 连连支付仓库
@@ -97,8 +99,8 @@ func NewPaymentRepo(ctx contexts.Context, dbm *database.DBManager) *PaymentRepo 
 		payServiceUrl: viper.GetString("PAY_SERVICE_URL"),
 		payCallbackUrl: func() string {
 			if viper.GetString("PAY_SERVICE_LIANLIAN_CALLBACK_URL") == "" {
-				if viper.GetString("DOMAIN") != "" {
-					return viper.GetString("DOMAIN") + "/api/v1/passport/lianlian/callback"
+				if config.Server.Domain != "" {
+					return config.Server.Domain + "/api/v1/passport/lianlian/callback"
 				} else {
 					return ""
 				}
@@ -107,8 +109,8 @@ func NewPaymentRepo(ctx contexts.Context, dbm *database.DBManager) *PaymentRepo 
 		}(),
 		refundCallbackUrl: func() string {
 			if viper.GetString("PAY_SERVICE_LIANLIAN_REFUND_CALLBACK_URL") == "" {
-				if viper.GetString("DOMAIN") != "" {
-					return viper.GetString("DOMAIN") + "/api/v1/passport/lianlian/refund/callback"
+				if config.Server.Domain != "" {
+					return config.Server.Domain + "/api/v1/passport/lianlian/refund/callback"
 				} else {
 					return ""
 				}
@@ -221,23 +223,24 @@ func (p *PaymentRepo) CreatePayment(req CreatePaymentReq) (*model.LlPaymentOrder
 
 	// 创建支付订单
 	paymentOrder := &model.LlPaymentOrder{
-		PaymentOrderUuid:  uuid,
-		PaymentMethodUuid: req.PaymentMethodUuid,
-		RelatedType:       req.RelatedType,
-		RelatedUuid:       req.RelatedUuid,
-		MerchantOrderId:   merchantOrderNo,
-		MerchantId:        resp.Order.MerchantId,
-		OrderId:           resp.Order.OrderId,
-		OrderType:         resp.PayTypeDesc,
-		OrderStatus:       resp.Order.OrderStatus,
-		OrderAmount:       req.PaymentAmount,
-		OrderCurrency:     resp.Order.OrderCurrency,
-		FullName:          "CASHIER",
-		OrderDesc:         resp.PayTypeDesc,
-		LinkUrl:           resp.Order.QrCode,
-		MerchantUserId:    merchantUserId,
-		LlCreateTime:      resp.Order.CreateTime,
-		CommissionFee:     req.CommissionFee,
+		PaymentOrderUuid:    uuid,
+		PaymentMethodUuid:   req.PaymentMethodUuid,
+		RelatedType:         req.RelatedType,
+		RelatedUuid:         req.RelatedUuid,
+		MerchantOrderId:     merchantOrderNo,
+		MerchantId:          resp.Order.MerchantId,
+		OrderId:             resp.Order.OrderId,
+		OrderType:           resp.PayTypeDesc,
+		OrderStatus:         resp.Order.OrderStatus,
+		OrderAmount:         req.PaymentAmount,
+		OrderCurrency:       resp.Order.OrderCurrency,
+		FullName:            "CASHIER",
+		OrderDesc:           resp.PayTypeDesc,
+		LinkUrl:             resp.Order.QrCode,
+		MerchantUserId:      merchantUserId,
+		LlCreateTime:        resp.Order.CreateTime,
+		CommissionFee:       req.CommissionFee,
+		MemberSaleOrderUuid: req.MemberSaleOrderUuid,
 	}
 	// 设置创建时间
 	paymentOrder.CreateTime = time.Now().Unix()
@@ -484,12 +487,8 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 		}
 
 		// 会员端订单支付成功
-		if order.RelatedType == constant.PaymentOrderRelatedTypeMemberOrder {
-			saleOrder, err := repository.NewOrderRepo(db).GetSaleBillSaleOrderRecord(order.RelatedUuid)
-			if err != nil {
-				return err
-			}
-			memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(saleOrder.SaleBill.MemberSaleOrderUuid)
+		if order.MemberSaleOrderUuid > 0 {
+			memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(order.MemberSaleOrderUuid)
 			if err != nil {
 				return err
 			}
@@ -507,8 +506,8 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 					Ctx:                 p.ctx,
 					CompanyUuid:         p.ctx.GetCompanyUuid(),
 					Source:              constant.SourceMember,
-					SaleBillUuid:        saleOrder.SaleBill.Uuid,
-					SaleOrderUuid:       saleOrder.Uuid,
+					SaleBillUuid:        memberSaleOrder.SaleBillUuid,
+					SaleOrderUuid:       memberSaleOrder.SaleOrderUuid,
 					MemberSaleOrderUuid: memberSaleOrder.Uuid,
 					MemberUuid:          memberSaleOrder.MemberUuid,
 				},
@@ -788,11 +787,11 @@ func (p *PaymentRepo) MemberSaleOrderRefund(saleOrder model.SaleOrder, req Membe
 	// 发起退款
 	for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
 		refund, err := p.Refund(PaymentServiceRefundReq{
-			RelatedType:           constant.PaymentOrderRelatedTypeMemberOrder, // 相关类型
-			PaymentOrderUuid:      returnOrderAmount.PaymentOrderUuid,          // 支付订单UUID
-			MerchantRefundOrderNo: returnOrderAmount.MerchantRefundOrderNo,     // 商户退款订单号
-			RefundAmount:          returnOrderAmount.Amount,                    // 退款金额
-			RefundOrderId:         returnOrderAmount.LlReturnOrderid,           // 退款ID
+			RelatedType:           constant.PaymentOrderRelatedTypeSaleOrder, // 相关类型
+			PaymentOrderUuid:      returnOrderAmount.PaymentOrderUuid,        // 支付订单UUID
+			MerchantRefundOrderNo: returnOrderAmount.MerchantRefundOrderNo,   // 商户退款订单号
+			RefundAmount:          returnOrderAmount.Amount,                  // 退款金额
+			RefundOrderId:         returnOrderAmount.LlReturnOrderid,         // 退款ID
 			BankCode:              returnOrder.BankCode,
 			AccountNo:             returnOrder.AccountNo,
 			AccountName:           returnOrder.AccountName,

@@ -18,7 +18,6 @@ import (
 )
 
 var (
-	orderNo      string
 	statusBefore string
 	statusAfter  string
 )
@@ -42,7 +41,7 @@ var skootarStatusMap = map[string]string{
 func init() {
 	rootCommand.AddCommand(skootarStatusCmd)
 	skootarStatusCmd.Flags().StringVar(&companyIdStr, "company-id", "", "公司UUID")
-	skootarStatusCmd.Flags().StringVar(&orderNo, "order-no", "", "订单号")
+	// 移除 orderNo 参数，因为它应该在循环中交互式输入
 }
 
 // displayStatusOptions 显示状态选项
@@ -95,31 +94,46 @@ var skootarStatusCmd = &cobra.Command{
 			log.Fatalf("Error querying companies: %s", err)
 		}
 
-		// 读取用户输入
-		if orderNo == "" {
-			fmt.Printf("%s 输入订单号进行更新状态: %s", blueColor, resetColor)
+		fmt.Printf("%s Skootar 订单状态更新工具已启动！%s\n", greenColor, resetColor)
+		fmt.Printf("%s 输入 'q'可以退出程序 %s\n", greenColor, resetColor)
+
+		// 无限循环处理订单
+		for {
+			var orderNo string
+
+			// 读取订单号
+			fmt.Printf("\n%s 输入订单号: %s", blueColor, resetColor)
 			fmt.Scanln(&orderNo)
-			if orderNo == "" {
-				fmt.Printf("%s 订单号不能为空 %s\n", redColor, resetColor)
-				return
+
+			// 检查退出命令
+			if strings.ToLower(orderNo) == "q" {
+				fmt.Printf("%s 程序已退出，谢谢使用！ %s\n", greenColor, resetColor)
+				break
 			}
+
+			// 检查订单号是否为空
+			if orderNo == "" {
+				fmt.Printf("%s 订单号不能为空，请重新输入 %s\n", redColor, resetColor)
+				continue
+			}
+
+			// 显示状态选项
+			displayStatusOptions()
+
+			// 执行查询和请求发送
+			if err := processOrderStatusUpdate(orderNo); err != nil {
+				fmt.Printf("%s 处理失败: %v %s\n", redColor, err, resetColor)
+				fmt.Printf("%s 请检查订单号是否正确，然后重试 %s\n", yellowColor, resetColor)
+				continue // 发生错误时继续循环，不退出程序
+			}
+
+			fmt.Printf("%s 订单状态更新请求发送成功！ %s\n", greenColor, resetColor)
 		}
-
-		// 获取对应的订单
-		fmt.Println("skootar-update-status")
-
-		// 执行查询和请求发送
-		if err := processOrderStatusUpdate(); err != nil {
-			fmt.Printf("%s 处理失败: %v %s\n", redColor, err, resetColor)
-			return
-		}
-
-		fmt.Printf("%s 订单状态更新请求发送成功！ %s\n", greenColor, resetColor)
 	},
 }
 
 // processOrderStatusUpdate 处理订单状态更新
-func processOrderStatusUpdate() error {
+func processOrderStatusUpdate(orderNo string) error {
 	// 获取数据库连接
 	dbManager := database.GetDBManager(config.Database)
 	db := dbManager.GetDB(companyUuid)
@@ -148,17 +162,18 @@ func processOrderStatusUpdate() error {
 
 	fmt.Printf("%s 找到订单: %s, 关联外送订单号: %s %s\n", greenColor, orderNo, memberSaleOrder.RelatedOrderNo, resetColor)
 
-	// 显示状态选项
-	displayStatusOptions()
-
-	// 让用户输入变更前状态
+	// 让用户输入变更后状态
 	fmt.Printf("%s 输入变更后状态:  %s", blueColor, resetColor)
 	fmt.Scanln(&statusAfter)
 	if statusAfter == "" {
 		return fmt.Errorf("变更后状态不能为空")
 	}
 
-	statusAfterInt, _ := strconv.Atoi(statusAfter)
+	statusAfterInt, err := strconv.Atoi(statusAfter)
+	if err != nil {
+		return fmt.Errorf("变更后状态必须是数字")
+	}
+
 	statusBeforeInt := statusAfterInt - 1
 	statusBefore = strconv.Itoa(statusBeforeInt)
 
