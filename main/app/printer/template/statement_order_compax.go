@@ -290,7 +290,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.SetLineSpacing(35)
 	}
 	// 商品列表
-	products, num := t.base.MergeSaleOrderProduct(saleOrder, temp != 4)
+	products, num := t.base.MergeSaleOrderProduct(saleBill, saleOrder, temp != 4, true)
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for key, product := range products {
 		printer.AppendText(t.base.PrintText(
