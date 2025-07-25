@@ -136,7 +136,7 @@ func (s *productionSrv) getProductPackageUuidsAndSaleBillUuids(ctx context.Conte
 	if ctx.Version(context.GTE, "2.4.0") {
 		opt = productPrinterRepo.WhereSaleBillIsKitchenConfirm(0)
 	} else {
-		opt = repository.NotDeleted
+		opt = productPrinterRepo.WhereSaleBillNotDeletedOrIsNotCanceled() // 未被删除的，未整单取消的
 	}
 
 	// 从商品打印设置中获取区域ID，根据区域ID获取销售账单Uuid
@@ -210,8 +210,8 @@ func (s *productionSrv) GetProductListByCategory(ctx context.Context, req req.Pr
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
 			item.SerialNo = product.SaleBill.SerialNo
-			item.DiningMethod = product.GetWrapStatus()              // 订单商品的打包状态
-			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 // 是否已经整单取消
+			item.DiningMethod = product.GetWrapStatus()                                                                            // 订单商品的打包状态
+			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
 			items = append(items, item)
 		}
 		if group.LocaleName == nil {
@@ -290,9 +290,9 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 			if paginatedProduct.SaleBillUuid != product.SaleBillUuid {
 				continue
 			}
-			group.DiningMethod = product.SaleBill.DiningMethod        // 订单商品的打包状态
-			group.SaleBillUuid = product.SaleBillUuid                 // 销售账单Uuid
-			group.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 // 是否已经整单取消
+			group.DiningMethod = product.SaleBill.DiningMethod                                                                      // 订单商品的打包状态
+			group.SaleBillUuid = product.SaleBillUuid                                                                               // 销售账单Uuid
+			group.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
 			if product.SaleBill.SerialNo != "" && group.LocaleName == nil {
 				group.LocaleName = &dto.LocaleResponse{
 					ZH:   product.SaleBill.SerialNo,
@@ -314,8 +314,8 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 			item.LocaleName = product.SaleOrderProduct.MultiLanguageName.GetNames()
 			item.ProductAttributeNames = product.SaleOrderProduct.GetAttributeName()
 			item.SerialNo = product.SaleBill.SerialNo
-			item.DiningMethod = product.GetWrapStatus()              // 订单商品的打包状态
-			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 // 是否已经整单取消
+			item.DiningMethod = product.GetWrapStatus()                                                                            // 订单商品的打包状态
+			item.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
 			items = append(items, item)
 		}
 		if group.LocaleName == nil {
@@ -385,11 +385,11 @@ func (s *productionSrv) Finish(ctx context.Context, productUuid uint64) error {
 		})
 	}()
 	// 完成制作后，推送更新厨显
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
 		"update_time": time.Now().Unix(),
 	})
 	// 完成制作后，推送更新订单
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]any{
 		"update_time":    time.Now().Unix(),
 		"sale_bill_uuid": product.SaleBillUuid,
 		"desk_uuid":      product.SaleBill.DeskUuid,
@@ -415,11 +415,11 @@ func (s *productionSrv) Recovery(ctx context.Context, productUuid uint64) error 
 		return errors.ErrInternal
 	}
 	// 恢复制作后，推送更新厨显
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
 		"update_time": time.Now().Unix(),
 	})
 	// 恢复制作后，推送更新订单
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]any{
 		"update_time":    time.Now().Unix(),
 		"sale_bill_uuid": product.SaleBillUuid,
 		"desk_uuid":      product.SaleBill.DeskUuid,
@@ -443,7 +443,7 @@ func (s *productionSrv) ConfirmReturn(ctx context.Context, productUuid uint64) e
 		return errors.ErrInternal
 	}
 	// 恢复制作后，推送更新厨显
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
 		"update_time": time.Now().Unix(),
 	})
 	return nil
@@ -457,7 +457,8 @@ func (s *productionSrv) ConfirmReturnAll(ctx context.Context, saleBillUuid uint6
 	if err != nil {
 		return errors.ErrInternal
 	}
-	if saleBill.DeleteTime == 0 || saleBill.IsKitchenConfirm != 0 {
+
+	if saleBill.DeleteTime == 0 && saleBill.Status != constant.SaleBillStatusCanceled || saleBill.IsKitchenConfirm != 0 {
 		return errors.New("订单未整单取消")
 	}
 	saleBill.IsKitchenConfirm = 1
@@ -480,7 +481,7 @@ func (s *productionSrv) ConfirmReturnAll(ctx context.Context, saleBillUuid uint6
 	}
 
 	// 恢复制作后，推送更新厨显
-	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
+	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]any{
 		"update_time": time.Now().Unix(),
 	})
 	return nil
