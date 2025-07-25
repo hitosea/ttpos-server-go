@@ -31,7 +31,7 @@
             {{ proxy.$priceTwo(scope.row.reward_count) || '-' }}
           </template>
         </el-table-column>
-        <el-table-column v-if="rewardType == 1" prop="reward_value" :label="$t('发放积分')">
+        <el-table-column v-if="rewardType == 1" prop="reward_value" :label="$t('发放总积分')">
           <template #default="scope">
             {{ proxy.$priceTwo(scope.row.reward_value) || '-' }}
           </template>
