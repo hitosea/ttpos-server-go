@@ -30,4 +30,5 @@ gfcli:
       - hub.hitosea.com/ttpos-bmp-takeout
 
 #注意db的格式跟link的不一样 用容器内网ip 端口
-migrate-db-link: mysql://$DB_USER:$DB_PASSWORD@tcp($DB_HOST:$DB_OPEN)/takeout
+migrate-db-link: mysql://$DB_USER:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT)/takeout
+migrate-db-link-open: mysql://$DB_USER:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout
