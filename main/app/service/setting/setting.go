@@ -429,7 +429,7 @@ func (s *Srv) GetPrinterInfo(ctx context.Context, printerSetting setting.Printer
 			// 打印机SN
 			if printer.Sn != "" {
 				printerSn = printer.Sn
-			} else {
+			} else if printer.IsUsb != 1 {
 				printerSn = printerConfigJson.SN
 			}
 			// 由当前点击的设备进行打印

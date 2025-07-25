@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/config"
@@ -26,6 +27,7 @@ func NewInvoiceXprinterTemplate(
 
 // invoiceXprinterTemplate 获取打印内容
 func (t *invoiceXprinterTemplate) GetPrintContent(
+	settingPrinterInfo settingResp.PrinterInfo,
 	printerType string,
 	temp int,
 	saleBill *model.SaleBill,
@@ -38,6 +40,7 @@ func (t *invoiceXprinterTemplate) GetPrintContent(
 	 */
 	if temp == 2 {
 		return NewStatementOrderXprinterTemplate(t.base).GetPrintContent(
+			settingPrinterInfo,
 			printerType,
 			constant.PrinterTemplateInvoice,
 			3,

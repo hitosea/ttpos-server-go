@@ -67,7 +67,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	if t.base.Lang == "my" {
 		img.SetImagePadding(3)
 	}
-	if temp != 3 && temp != 4 {
+	if temp != 3 && temp != 4 && temp != 5 {
 		img.SetAlignment(pkg.AlignLeft)
 		if printOrderType == constant.PrinterTemplateInvoice {
 			img.AppendText(t.base.Translate("发票"))
@@ -302,7 +302,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 
 	// 商品列表 - 标题
-	if temp != 3 && temp != 4 {
+	if temp != 3 && temp != 4 && temp != 5 {
 		var productWidth, priceQtyWidth int
 		if t.base.Lang == "en" || t.base.Lang == "th" || t.base.Lang == "tr" || t.base.Lang == "my" {
 			productWidth = 210
@@ -374,7 +374,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	img.AppendSplitLine()
 	img.LineFeed(1)
 	img.SetAlignment(pkg.AlignRight)
-	if temp == 3 || temp == 4 {
+	if temp == 3 || temp == 4 || temp == 5 {
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %v", t.base.Translate("商品数量"), productNum), Width: 250, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount)), Width: 0, Align: pkg.AlignRight},
@@ -413,7 +413,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	if saleOrder.IsFree == 0 && saleOrder.CustomDiscountFee != 0 {
 		if saleOrder.CustomDiscountFee != 0 {
 			ratio := ""
-			if temp == 3 || temp == 4 {
+			if temp == 3 || temp == 4 || temp == 5 {
 				// 计算折扣率：折扣金额 / 原始金额 * 100
 				discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
 				ratio = fmt.Sprintf(" (%s%% OFF)", t.base.Number(discountRate.InexactFloat64()))
@@ -433,7 +433,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		oldCardDiscount := float64(100)
 		gradeEquity := float64(100)
 		cardDiscount := float64(100)
-		if temp == 3 || temp == 4 {
+		if temp == 3 || temp == 4 || temp == 5 {
 			if saleOrder.MemberDiscountRate != 0 {
 				gradeEquity = saleOrder.MemberDiscountRate * 100
 				oldGradeEquity = gradeEquity
@@ -491,7 +491,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 
 	// 分割线
-	if temp == 3 || temp == 4 {
+	if temp == 3 || temp == 4 || temp == 5 {
 		img.AppendSplitLine()
 		img.LineFeed(1)
 	} else {
