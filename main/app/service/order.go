@@ -363,7 +363,11 @@ func createSaleOrder(ctx context.Context, db *gorm.DB, saleBillSetting *model.Sa
 	staff := ctx.GetStaff()
 	saleOrderObj.SetCashier(staff.Uuid, staff.GetUserName())
 	// 设置会员折扣
-	saleOrderObj.SetMemberDiscount(ctx.GetMember())
+	member, err := repository.NewMemberRepo(db).GetMemberByUuid(ctx.GetMemberUuid())
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	saleOrderObj.SetMemberDiscount(*member)
 	//
 	saleOrder, err := repository.NewOrderRepo(db).CreateSaleOrder(*saleOrderObj)
 	if err != nil {
