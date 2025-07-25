@@ -3,7 +3,7 @@ old_dir=$OLDPWD
 cd `dirname $0`
 set -o allexport
 #引入环境变量
-. ../../.env
+. ../../../../.env
 app_dir=`dirname $(pwd)`
     # 仅处理目录类型
     if [ -d "$app_dir" ]; then

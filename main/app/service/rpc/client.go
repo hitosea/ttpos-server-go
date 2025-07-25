@@ -1,8 +1,8 @@
 package rpc
 
 import (
-	"takeout/api/echo"
 	"time"
+	"ttpos-bmp/app/ttpos-takeout/api/echo"
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"

@@ -2,11 +2,11 @@ package takeout
 
 import (
 	"google.golang.org/grpc/credentials/insecure"
+	"ttpos-bmp/app/ttpos-takeout/api/echo"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/config"
 
 	"google.golang.org/grpc"
-	"takeout/api/echo"
 )
 
 //根据配置创建外送服务gRPC客户端
