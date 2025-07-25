@@ -705,13 +705,6 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 		return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
 	}
 
-	// 取消订单后，删除所有销售订单商品
-	err = repository.NewSaleOrderProductRepo(tx).DeleteSaleOrderProductBySaleBillUuid(billInfo.Uuid)
-	if err != nil {
-		tx.Rollback()
-		return errors.WithMessage(builtinerrors.New("删除销售订单商品失败"), err.Error())
-	}
-
 	// 已经支付的-发起退款
 	var returnOrder *model.ReturnOrder
 	if memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingMerchantAccept {
@@ -862,12 +855,6 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 		err = productionRepo.UpdateProduct([]repository.DBOption{saleBillUuidOpt}, map[string]any{"num": 0})
 		if err != nil {
 			return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
-		}
-
-		// 取消订单后，删除所有销售订单商品
-		err = repository.NewSaleOrderProductRepo(tx).DeleteSaleOrderProductBySaleBillUuid(billInfo.Uuid)
-		if err != nil {
-			return errors.WithMessage(builtinerrors.New("删除销售订单商品失败"), err.Error())
 		}
 
 		// 已经支付的-发起退款
