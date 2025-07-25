@@ -232,7 +232,8 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderManageList(pageNo, pageSi
 
 	opts := []DBOption{
 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-		CommonRepo.DBOption(CommonRepo.SortWithPayTime("desc")),
+		CommonRepo.DBOption(CommonRepo.SortWithSort("desc")),
+		CommonRepo.DBOption(CommonRepo.SortWithSubmitPayTime("desc")),
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "PaymentMethod",
