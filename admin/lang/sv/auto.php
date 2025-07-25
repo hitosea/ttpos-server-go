@@ -2165,4 +2165,5 @@ return [
     "外送订单数据" => "Leveransorderdata",
     "至少有一个距离范围" => "Det måste finnas minst ett avståndsintervall",
     "最后一个距离范围必须是最大范围" => "Det sista avståndsintervallet måste vara det största intervallet",
+    "为非外送显示的商品，请移除" => "Denna vara visas endast för icke-leverans. Vänligen ta bort den.",
 ];

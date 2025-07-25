@@ -20830,7 +20830,7 @@ const docTemplate = `{
                     ]
                 },
                 "member": {
-                    "description": "会员信息",
+                    "description": "会员端配置信息",
                     "allOf": [
                         {
                             "$ref": "#/definitions/member_resp.MemberResp"
@@ -20838,7 +20838,7 @@ const docTemplate = `{
                     ]
                 },
                 "user": {
-                    "description": "用户信息",
+                    "description": "会员信息",
                     "allOf": [
                         {
                             "$ref": "#/definitions/member_resp.UserResp"

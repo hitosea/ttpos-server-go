@@ -692,9 +692,12 @@ class Product extends Controller
             $data = $model;
         }
 
-        $count = ProductModel::where('uuid', 'in', array_column($param['product_packages'], 'uuid'))->where('is_show_delivery', 1)->where('delete_time', 0)->count();
-        if ($count != count($param['product_packages'])) {
-            return $this->renderError('只能选择在外送显示的商品');
+        $deliveryProductPackages = ProductModel::where('uuid', 'in', array_column($param['product_packages'], 'uuid'))->where('is_show_delivery', 1)->where('delete_time', 0)->select()->toArray();
+        // 判断$param['product_packages'] 是否在$count中
+        foreach ($param['product_packages'] as $productPackage) {
+            if (!in_array($productPackage['uuid'], array_column($deliveryProductPackages, 'uuid'))) {
+                return $this->renderError('【' . $productPackage['name'] . '】' . __('为非外送显示的商品，请移除'));
+            }
         }
 
         $data->status = intval($param['status']);

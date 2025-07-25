@@ -1014,11 +1014,11 @@ definitions:
       member:
         allOf:
         - $ref: '#/definitions/member_resp.MemberResp'
-        description: 会员信息
+        description: 会员端配置信息
       user:
         allOf:
         - $ref: '#/definitions/member_resp.UserResp'
-        description: 用户信息
+        description: 会员信息
     type: object
   member_resp.MemberInfoResp:
     properties:

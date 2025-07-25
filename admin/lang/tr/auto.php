@@ -2165,4 +2165,5 @@ return [
     "外送订单数据" => "Paket Sipariş Verileri",
     "至少有一个距离范围" => "En az bir mesafe aralığı olmalıdır",
     "最后一个距离范围必须是最大范围" => "Son mesafe aralığı en geniş aralık olmalıdır",
+    "为非外送显示的商品，请移除" => "Bu ürün sadece teslimat dışı gösterim içindir, lütfen kaldırın",
 ];

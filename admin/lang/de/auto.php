@@ -2173,4 +2173,5 @@ return [
     "外送订单数据" => "Lieferbestelldaten",
     "至少有一个距离范围" => "Es muss mindestens einen Entfernungsbereich geben",
     "最后一个距离范围必须是最大范围" => "Der letzte Entfernungsbereich muss der größte Bereich sein",
+    "为非外送显示的商品，请移除" => "Dieser Artikel ist nur für die Anzeige ohne Lieferung vorgesehen. Bitte entfernen.",
 ];
