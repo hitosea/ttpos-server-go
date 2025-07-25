@@ -44,25 +44,25 @@ docker:
 	@# 指定项目名 -p ttpos-bmp
 	@set -o allexport; \
 	source ../.env && docker compose -p ttpos-bmp -f ./docker-compose.yml up -d ;\
-	set +o allexport
+	set +o allexport;
 
 
 # 构建并运行 ttpos-manager 服务
 .PHONY: run.manager
 run.manager:
-	@cd app/ttpos-manager && gf run main.go
+	@cd app/ttpos-manager && gf run main.go ;
 
 # 构建并运行 ttpos-shop 服务
 .PHONY: run.shop
 run.shop:
-	@cd app/ttpos-shop && gf run main.go:
+	@cd app/ttpos-shop && gf run main.go ;
 
 # 构建并运行 ttpos-erp 服务
- .PHONY: run.erp
- run.erp:
- 	@cd app/ttpos-erp && gf run main.go:
+.PHONY: run.erp
+run.erp:
+	@cd app/ttpos-erp && gf run main.go ;
 
  # 构建并运行 ttpos-takeout 服务
- .PHONY: run.takeout
- run.takeout:
- 	@cd app/ttpos-takeout && gf run main.go:
+.PHONY: run.takeout
+run.takeout:
+	@cd app/ttpos-takeout && gf run main.go
