@@ -125,6 +125,7 @@
         <el-radio :value="1">{{ $t('是') }}</el-radio>
         <el-radio :value="0">{{ $t('否') }}</el-radio>
       </el-radio-group>
+      <div class="gray9">{{ $t('获得活动奖品后，是否接收短信通知') }}</div>
     </el-form-item>
   </div>
   <SelectCouponDialog :open="openSelectCoupon" v-if="openSelectCoupon" @close="closeSelectCoupon" />
