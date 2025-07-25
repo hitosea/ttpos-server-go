@@ -219,6 +219,15 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 		return errors.New("请选择支付方式")
 	}
 
+	companySetting := ctx.GetCompanySetting()
+	deliveryConfig, err := companySetting.GetDeliveryConfig(constant.ProviderNameSkootar, memberSaleOrder.DeliveryDistance)
+	if err != nil {
+		return errors.WithMessage(err, "配送费配置失败")
+	}
+	if !deliveryConfig.IsInDeliveryRange {
+		return errors.NewWithCode(constant.CodeOrderAddressNotInDeliveryRange, "订单地址不在配送范围内")
+	}
+
 	// 如果订单未计算距离费，则查询距离并计算距离费
 	if !memberSaleOrder.GetIsDistanceCalculated() {
 		// 查询距离

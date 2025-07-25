@@ -94,6 +94,11 @@ func riderDeliveryMemberSaleOrderEventHandler() {
 				}
 				logger.Logger.Info(fmt.Sprintf("操作记录:骑手取货完成 %+v", payload), zap.Uint64("record", uuid))
 			}()
+
+			// 设置sort排序
+			if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderSort(memberSaleOrder.Uuid, constant.MemberSaleOrderSortRiderDelivering); err != nil {
+				payload.Ctx.Log().Error("更新会员端销售订单-骑手配送中排序失败", zap.Error(err))
+			}
 		})
 	})
 }

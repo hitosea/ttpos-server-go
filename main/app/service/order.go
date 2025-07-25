@@ -730,16 +730,6 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 		ctx.Log().Error("会员端订单编号生成失败", zap.Error(err))
 		return nil, errors.WithMessage(err, "会员端订单编号生成失败")
 	}
-	// 获取公司设置
-	companySetting, err := s.settingSrv.GetCompanySetting(ctx)
-	if err != nil {
-		return nil, errors.WithMessage(err, "获取公司设置失败")
-	}
-	// 获取配送费配置
-	deliveryConfig, err := companySetting.GetDeliveryConfig(constant.ProviderNameSkootar, 0)
-	if err != nil {
-		return nil, errors.WithMessage(err, "获取配送费配置失败")
-	}
 
 	memberSaleOrderUuid, _ := utils.GetID() // 生成外送订单uuid
 
@@ -773,13 +763,12 @@ func (s *orderSrv) createMemberOrder(ctx context.Context, request req.CreateMemb
 
 	// 创建外送订单
 	memberSaleOrder, errCreateMemberSaleOrder := createMemberSaleOrder(ctx, db, model.CreateMemberSaleOrderParams{
-		Uuid:           memberSaleOrderUuid,
-		DeliveryConfig: *deliveryConfig,
-		SerialNo:       "", // 等会员端订单提交支付时再生成订单流水号
-		OrderNo:        orderNo,
-		MemberUuid:     ctx.GetMemberUuid(),
-		SaleBillUuid:   saleBillUuid,
-		SaleOrderUuid:  saleOrderUuid,
+		Uuid:          memberSaleOrderUuid,
+		SerialNo:      "", // 等会员端订单提交支付时再生成订单流水号
+		OrderNo:       orderNo,
+		MemberUuid:    ctx.GetMemberUuid(),
+		SaleBillUuid:  saleBillUuid,
+		SaleOrderUuid: saleOrderUuid,
 	})
 	if errCreateMemberSaleOrder != nil {
 		return nil, errors.WithMessage(errCreateMemberSaleOrder)
@@ -972,7 +961,13 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		Amount:              memberSaleOrder.Amount,
 		Remark:              memberSaleOrder.Remark,
 		IsVerifiedPhone:     memberSaleOrder.IsVerifiedPhoneBool(),
-		Address:             address,
+		IsInDeliveryRange: func() bool {
+			if deliveryConfig != nil {
+				return deliveryConfig.IsInDeliveryRange
+			}
+			return false // 如果配送费配置为空，则认为不在配送范围内
+		}(),
+		Address: address,
 		DeliveryFee: resp.MemberSaleOrderDeliveryFee{
 			Amount:   memberSaleOrder.CalculateDeliveryFee(),
 			Distance: memberSaleOrder.DeliveryDistance,

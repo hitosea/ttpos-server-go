@@ -457,7 +457,7 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 // checkCanUpgrade 检查会员是否可以升级
 func (s *memberSrv) checkCanUpgrade(member model.Member, level model.MemberLevel) bool {
 	if (level.OpenMoney == 1 && level.OpenPoint == 1) &&
-		(member.AccumulatedConsumptionAmount >= level.UpgradeMoney && member.GetPoints() >= level.UpgradePoint) {
+		(member.AccumulatedConsumptionAmount >= level.UpgradeMoney && member.AccumulatedConsumptionGetPoint >= level.UpgradePoint) {
 		return true
 	}
 	if level.OpenMoney == 1 && member.AccumulatedConsumptionAmount >= level.UpgradeMoney {

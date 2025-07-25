@@ -111,6 +111,11 @@ func riderCompletedMemberSaleOrderEventHandler() {
 					SaleBillUuid: order.SaleBillUuid,
 				})
 			}()
+
+			// 设置sort排序
+			if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderSort(memberSaleOrder.Uuid, constant.MemberSaleOrderSortDefault); err != nil {
+				payload.Ctx.Log().Error("更新会员端销售订单-订单完成排序失败", zap.Error(err))
+			}
 		})
 	})
 }

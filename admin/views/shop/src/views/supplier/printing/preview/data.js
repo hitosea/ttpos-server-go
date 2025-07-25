@@ -339,7 +339,7 @@ export const previewData = {
         typeShow: '4',
       },
       {
-        name: $t('商品名称商品名称'),
+        name:$t('（打包）') +  $t('商品名称商品名称'),
         num: '55*2',
         label: '￥50',
       },

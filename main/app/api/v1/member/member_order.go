@@ -210,36 +210,6 @@ func (h *OrderHandler) PayOrderStatus(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// PaidOrder 支付成功
-// @Summary 支付成功
-// @Description 支付成功
-// @Tags 会员端-订单
-// @Accept json
-// @Produce json
-// @Security JwtToken
-// @Param data body member_req.PaidMemberOrderReq true "详情参数"
-// @Success 200 {object} resp.MemberOrderPaymentStatusResp "成功"
-// @Failure 400 {object} nil "错误请求"
-// @Router /member/xie-test/order/paid [post]
-func (h *OrderHandler) PaidOrder(c *gin.Context) {
-	ctx := helper.GetContext(c)
-	// 绑定请求参数
-	params := member_req.PaidMemberOrderReq{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.HandleValidationError(c, err, params, nil)
-		return
-	}
-	ctx.Log().Debug("支付成功", zap.Any("params", params))
-
-	// 支付成功
-	if err := h.orderSrv.PaidMemberOrder(ctx, params); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
-		return
-	}
-	// 返回结果
-	helper.Success(c, nil)
-}
-
 // GetMemberOrderList 获取会员端订单列表
 // @Summary 获取会员端订单列表
 // @Description 获取会员端订单列表
@@ -414,7 +384,6 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/detail", wrapper.GetMemberOrderDetail)                         // 获取会员端订单详情
 		privateApi.GET("/order/payment/method/list", wrapper.GetMemberOrderPaymentMethodList) // 获取会员端订单支付方式列表
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)                                 // 取消订单
-		privateApi.POST("/xie-test/order/paid", wrapper.PaidOrder)                            // 支付成功 TODO 上线前删除改接口
 
 		privateApi.GET("/order/rider", wrapper.GetRiderInfo) // 获取骑手信息，以及商家、会员坐标
 	}
