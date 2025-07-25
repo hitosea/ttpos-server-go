@@ -2,7 +2,6 @@ package queue
 
 import (
 	"encoding/json"
-	"go.uber.org/zap"
 	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/repository"
@@ -11,7 +10,10 @@ import (
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
+	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 
 	"github.com/hdt3213/delayqueue"
 )
@@ -53,11 +55,6 @@ func ProcessMemberOrderCancel(paramsJson string) bool {
 		return true
 	}
 
-	logger.Logger.Info("开始处理会员订单自动取消",
-		zap.Uint64("memberSaleOrderUuid", params.MemberSaleOrderUuid),
-		zap.Uint64("companyUuid", params.CompanyUuid),
-		zap.String("reason", params.Reason))
-
 	// 获取DB
 	dbm := database.GetDBManager(config.DatabaseConf{})
 	db := dbm.GetDB(params.CompanyUuid)
@@ -71,9 +68,6 @@ func ProcessMemberOrderCancel(paramsJson string) bool {
 
 	// 2. 检查订单状态是否可以取消 - 只有待支付状态的订单才能自动取消
 	if memberSaleOrder.Status != constant.MemberSaleOrderStatusPendingPayment {
-		logger.Logger.Info("订单状态不是待支付，跳过自动取消",
-			zap.Uint64("memberSaleOrderUuid", params.MemberSaleOrderUuid),
-			zap.Uint("currentStatus", memberSaleOrder.Status))
 		return true
 	}
 
@@ -84,14 +78,15 @@ func ProcessMemberOrderCancel(paramsJson string) bool {
 		return false
 	}
 
+	// 创建上下文
+	ctx := context.NewContext(
+		context.WithCompanyUuid(params.CompanyUuid),
+		context.WithLogger(logger.Logger),
+	)
+	ctx.SetDB(db)
+
 	// 4. 取消订单（如果有关联的销售账单）
 	if memberSaleOrder.SaleBillUuid > 0 {
-		ctx := context.NewContext(
-			context.WithCompanyUuid(params.CompanyUuid),
-			context.WithLogger(logger.Logger),
-		)
-		ctx.SetDB(db)
-
 		if err := repository.NewOrderRepo(db).CancelOrder(ctx, memberSaleOrder.SaleBillUuid, 0, params.Reason); err != nil {
 			logger.Logger.Error("取消销售账单失败",
 				zap.Uint64("memberSaleOrderUuid", params.MemberSaleOrderUuid),
@@ -100,6 +95,24 @@ func ProcessMemberOrderCancel(paramsJson string) bool {
 			// 这里不返回false，因为会员订单状态已经更新成功了
 		}
 	}
+
+	// 发布“订单取消”操作事件
+	go func() {
+		event.NewSystemBus().PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
+			BasePayload: event.BasePayload{ // 基础信息
+				Ctx:                 ctx,
+				CompanyUuid:         ctx.GetCompanyUuid(),
+				Source:              constant.SourceMember,
+				SaleBillUuid:        memberSaleOrder.SaleBillUuid,
+				SaleOrderUuid:       memberSaleOrder.Uuid,
+				MemberUuid:          memberSaleOrder.MemberUuid,
+				MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			},
+			Data: event.CancelMemberOrderPayloadData{
+				Type: "timeout_cancel",
+			},
+		})
+	}()
 
 	return true
 }

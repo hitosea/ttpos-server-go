@@ -9,7 +9,6 @@ const (
 	SourceAssistant = "assistant" // 点餐助手
 	SourceH5        = "h5"        // H5
 	SourceRider     = "rider"     // 骑手端. skootar
-	SourceSystem    = "system"    // 系统平台
 )
 
 var SourceTextMap = map[string]string{

@@ -58,6 +58,8 @@ mysql-open:
 # 运行数据库迁移
 migrate:
 	chmod +x ./.sh && ./.sh think migrate:run
+	#更新 takeout模块数据库
+	cd takeout && make conf && make db_up.docker
 
 # 生成文档
 build-doc:
@@ -119,3 +121,7 @@ bump-version:
 # 统计数据重跑
 statistics-re:
 	cd main && go run ./main.go statistics-re $(ARGS)
+
+# 更新skootar状态
+skootar-update-status:
+	cd main && go run ./main.go skootar-update-status $(ARGS)

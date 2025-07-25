@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"strings"
 	"time"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -18,6 +19,7 @@ type IMemberAddressRepo interface {
 	Update(address model.MemberAddress) (model.MemberAddress, error)                        // 更新会员地址
 	Delete(uuid uint64) error                                                               // 删除会员地址
 	UpdateIsDefault(memberUuid uint64) error                                                // 将该会员的所有地址设置为非默认
+	GetMemberDefaultAddress(memberUuid uint64) (*model.MemberAddress, error)                // 获取会员的默认地址
 }
 
 func NewMemberAddressRepo(db *gorm.DB) IMemberAddressRepo {
@@ -129,4 +131,20 @@ func (r *MemberAddressRepo) UpdateIsDefault(memberUuid uint64) error {
 		Where("member_uuid = ?", memberUuid).
 		Update("is_default", 0).Error
 	return errors.WithMessage(err)
+}
+
+// GetMemberDefaultAddress 获取会员的默认地址
+func (r *MemberAddressRepo) GetMemberDefaultAddress(memberUuid uint64) (*model.MemberAddress, error) {
+	address, err := r.GetMemberAddress(
+		CommonRepo.WhereByMemberUuid(memberUuid),
+		CommonRepo.WhereBySoftDelete(),
+		CommonRepo.WhereByIsDefault(1),
+	)
+	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return nil, nil
+		}
+		return nil, errors.WithMessage(err)
+	}
+	return address, nil
 }

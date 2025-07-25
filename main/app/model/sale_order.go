@@ -95,6 +95,25 @@ type SaleOrder struct {
 	index int `gorm:"-"`
 }
 
+// 获取订单付款信息
+func (model *SaleOrder) GetPaymentInfoList() []resp.PaymentOrder {
+	paymentOrders := make([]resp.PaymentOrder, 0)
+	for _, paymentOrder := range model.PaymentOrders {
+		order := resp.PaymentOrder{
+			Uuid:                 paymentOrder.Uuid,
+			PaymentMethodUuid:    paymentOrder.PaymentMethodUuid,
+			PaymentMethodName:    paymentOrder.PaymentMethodName,
+			PaymentMethodCode:    paymentOrder.PaymentMethod.Code,
+			PaymentAmount:        paymentOrder.PaymentAmount,
+			PaymentCommissionFee: paymentOrder.PaymentCommissionFee,
+			Amount:               paymentOrder.Amount,
+			DisabledCancel:       paymentOrder.PaymentMethod.IsDisabledCancel(),
+		}
+		paymentOrders = append(paymentOrders, order)
+	}
+	return paymentOrders
+}
+
 // 获取商品数量. 用于会员端订单
 func (model *SaleOrder) GetProductNum() float64 {
 	num := decimal.NewFromFloat(0)
@@ -117,7 +136,7 @@ func (model *SaleOrder) GetProductAmount() float64 {
 func (model *SaleOrder) GetOriginProductAmount() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
-		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.GetTotalProductPrice()))
+		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.GetTotalPriceOrigin()))
 	}
 	return amount.Round(2).InexactFloat64()
 }

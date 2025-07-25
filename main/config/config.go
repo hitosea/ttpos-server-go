@@ -139,12 +139,14 @@ func serverConf(opt copier.Option) {
 		Mode:       "debug",
 		DeployMode: "cloud",
 		BrandName:  "TTPOS",
+		Domain:     "http://127.0.0.1:8080",
 	}
 	copier.CopyWithOption(&Server, ServerConf{
 		Port:       viper.GetString("SERVER_PORT"),
 		Mode:       viper.GetString("SERVER_MODE"),
 		DeployMode: viper.GetString("DEPLOY_MODE"),
 		BrandName:  viper.GetString("BRAND_NAME"),
+		Domain:     viper.GetString("DOMAIN"),
 	}, opt)
 }
 
@@ -201,12 +203,10 @@ func googleBucketConf(opt copier.Option) {
 
 func takeoutConf(opt copier.Option) {
 	TakeOutRpcConf = GrpcConf{
-		Endpoint:         "127.0.0.1:14032",
-		CallbackEndpoint: "http://127.0.0.1:8080",
+		Endpoint: "127.0.0.1:14032",
 	}
 	copier.CopyWithOption(&TakeOutRpcConf, GrpcConf{
-		Endpoint:         viper.GetString("TAKEOUT_ENDPOINT"),
-		CallbackEndpoint: viper.GetString("TAKEOUT_CALLBACK_ENDPOINT"),
+		Endpoint: viper.GetString("TAKEOUT_ENDPOINT"),
 	}, opt)
 }
 

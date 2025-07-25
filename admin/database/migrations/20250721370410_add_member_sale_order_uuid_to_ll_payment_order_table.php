@@ -1,9 +1,8 @@
 <?php
 
 use think\migration\Migrator;
-use think\migration\db\Column;
 
-class AddGenderToMemberAddressTable extends Migrator
+class AddMemberSaleOrderUuidToLlPaymentOrderTable extends Migrator
 {
     /**
      * Change Method.
@@ -28,10 +27,18 @@ class AddGenderToMemberAddressTable extends Migrator
      */
     public function change()
     {
-        $table = $this->table('member_address');
-        if (!$table->hasColumn('gender')) {
-            $table->addColumn('gender', 'integer', ['limit' => 1, 'null' => false, 'default' => 0, 'comment' => '性别 0-女 1-男', 'after' => 'name'])
-                ->update();
+        // 检查表是否存在
+        if ($this->hasTable('ll_payment_order')) {
+            $table = $this->table('ll_payment_order');
+            if (!$table->hasColumn('member_sale_order_uuid')) {
+                $table->addColumn('member_sale_order_uuid', 'biginteger', [
+                    'null' => false,
+                    'default' => 0,
+                    'comment' => '会员销售订单UUID',
+                    'after' => 'pay_time'
+                ]);
+                $table->update();
+            }
         }
     }
-}
+} 

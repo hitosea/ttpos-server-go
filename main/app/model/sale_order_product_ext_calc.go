@@ -463,8 +463,8 @@ func (model *SaleOrderProduct) calcSaucePrice() float64 {
 			// 累加每个小料的价格
 			price := decimal.NewFromFloat(bom.Price) // 加料单价
 			// 如果要上浮价格的话
-			if model.MemberOrderDiscountRate != 1 {
-				price = price.Mul(decimal.NewFromFloat(model.MemberOrderDiscountRate)).Round(2)
+			if model.GetMemberOrderDiscountRate() != 1 {
+				price = price.Mul(decimal.NewFromFloat(model.GetMemberOrderDiscountRate())).Round(2)
 			}
 			saucePrice = saucePrice.Add(price)
 		}
@@ -492,7 +492,7 @@ func (model *SaleOrderProduct) calcLastestSaucePrice() float64 {
 // 当商品没有改价时,ProductPrice= 某个规格商品价+小料价
 // 当商品改价时，ProductPrice= ProductPrice 。 改价后不会修改这个字段的值，只会修改salePrice的值
 func (model *SaleOrderProduct) calcProductPrice() float64 {
-	productPrice := decimal.NewFromFloat(model.FlavorPrice).Add(decimal.NewFromFloat(model.SaucePrice))
+	productPrice := decimal.NewFromFloat(model.GetFlavorPrice()).Add(decimal.NewFromFloat(model.SaucePrice))
 	return productPrice.InexactFloat64()
 }
 

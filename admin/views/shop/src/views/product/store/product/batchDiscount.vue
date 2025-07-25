@@ -498,7 +498,7 @@
   // 确定按钮
   const handleClick = () => {
     // 筛选出未被勾选的商品
-    const unselectedProducts = productsTableData.value.filter((item) => !selectedProductsTmp.value.some((p) => p.product_id === item.product_id));
+    const unselectedProducts = products.value.filter((item) => !selectedProductsTmp.value.some((p) => p.product_id === item.product_id));
     // 把未被筛选的商品存入 product_ids
     const product_ids = unselectedProducts.map((item) => item.product_id);
     // 调用接口

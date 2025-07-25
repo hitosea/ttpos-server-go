@@ -2,8 +2,6 @@ package queue
 
 import (
 	"context"
-	"github.com/hdt3213/delayqueue"
-	"go.uber.org/zap"
 	"strconv"
 	"sync"
 	"ttpos-server-go/app/dto/req"
@@ -11,6 +9,9 @@ import (
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/logger"
+
+	"github.com/hdt3213/delayqueue"
+	"go.uber.org/zap"
 )
 
 var (
@@ -49,7 +50,6 @@ func TakeoutCancelFunc(shopRefNo string) bool {
 		return false // 返回false会触发重试
 	}
 
-	logger.Logger.Info("自动取消订单成功", zap.String("memberSaleOrderUuid", shopRefNo))
 	return true
 }
 

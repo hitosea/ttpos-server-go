@@ -31,14 +31,14 @@ class MemberOrder extends Controller
      */
     public function index()
     {
-        $data = $this->postData(); 
+        $data = $this->postData();
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/member_order/list', $data, [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
         ]);
         if (!$res) {
             return $this->renderError('请求失败');
-        } 
+        }
         $result = json_decode($res, true);
         if (($result['code'] ?? -1) != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
@@ -71,7 +71,7 @@ class MemberOrder extends Controller
         }
         //
         $data = $result['data'];
-         
+
         return $this->renderSuccess('', $data);
     }
 
@@ -83,7 +83,9 @@ class MemberOrder extends Controller
      */
     public function reject($member_sale_order_uuid)
     {
-        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/reject', json_encode($this->postData()), [
+        $param = $this->postData();
+        $param['member_sale_order_uuid'] = intval($param['member_sale_order_uuid'] ?? 0);
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/reject', json_encode($param), [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
         ]);
@@ -94,7 +96,7 @@ class MemberOrder extends Controller
         if (($result['code'] ?? -1) != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
         }
-        
+
         return $this->renderSuccess('');
     }
 
@@ -110,7 +112,9 @@ class MemberOrder extends Controller
      */
     public function cancel()
     {
-        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/cancel', json_encode($this->postData()), [
+        $param = $this->postData();
+        $param['member_sale_order_uuid'] = intval($param['member_sale_order_uuid'] ?? 0);
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/cancel', json_encode($param), [
             'Authorization: Bearer ' . request()->header('token'),
             'Accept-Language: ' . request()->header('language'),
         ]);
@@ -146,14 +150,14 @@ class MemberOrder extends Controller
         $data['page_no'] = 1;
         $data['page_size'] = 1000;
         // 请求获取充值订单列表接口
-        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/recharge_order/list', $data, [
-            'Authorization: Bearer ' . $data['token'],
-            'Accept-Language: ' . $data['language'],
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/member_order/list', $data, [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
         ]);
 
         if (!$res) {
             return $this->renderError('请求失败');
-        } 
+        }
         $result = json_decode($res, true);
         if (($result['code'] ?? -1) != 0) {
             return $this->renderError($result['message'] ?? '请求失败');
@@ -165,4 +169,89 @@ class MemberOrder extends Controller
         return (new MemberOrderExportService)->export($list);
     }
 
+    /**
+     * @Apidoc\Title("外送订单退款弹窗信息")
+     * @Apidoc\Method ("GET")
+     * @Apidoc\Url ("/index.php/shop/store.MemberOrder/return_info")
+     * @Apidoc\Param("member_sale_order_uuid", type="int", require=true, default="", desc="订单UUID")
+     */
+    public function return_info()
+    {
+        $res = HttpHelp::getRequest('http://nginx/api/v1/shop/member_order/return_info', $this->getData(), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+        return $this->renderSuccess('', $result['data']);
+    }
+
+    /**
+     * @Apidoc\Title("外送订单退款")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/store.MemberOrder/return")
+     */
+    public function return()
+    {
+        $param = $this->postData();
+        $param['sale_bill_uuid'] = intval($param['sale_bill_uuid'] ?? 0);
+        $param['sale_order_uuid'] = intval($param['sale_order_uuid'] ?? 0);
+        $param['member_sale_order_uuid'] = intval($param['member_sale_order_uuid'] ?? 0);
+
+        if (isset($param['points'])) {
+            $param['points'] = floatval($param['points'] ?: 0.0);
+        }
+        // 处理退款商品
+        if (isset($param['products']) && is_array($param['products'])) {
+            $param['products'] = array_map(function ($item) {
+                return [
+                    'sale_order_product_uuid' => intval($item['sale_order_product_uuid'] ?? 0),
+                    'num' => floatval($item['num'] ?? 0),
+                ];
+            }, $param['products']);
+        }
+
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/return', json_encode($param), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+        return $this->renderSuccess('');
+    }
+
+    /**
+     * @Apidoc\Title("外送订单重新退款")
+     * @Apidoc\Method ("POST")
+     * @Apidoc\Url ("/index.php/shop/store.MemberOrder/re_return")
+     */
+    public function re_return()
+    {
+        $param = $this->postData();
+        $param['sale_bill_uuid'] = intval($param['sale_bill_uuid'] ?? 0);
+        $param['sale_order_uuid'] = intval($param['sale_order_uuid'] ?? 0);
+        $param['member_sale_order_uuid'] = intval($param['member_sale_order_uuid'] ?? 0);
+        $res = HttpHelp::postRequest('http://nginx/api/v1/shop/member_order/re_return', json_encode($param), [
+            'Authorization: Bearer ' . request()->header('token'),
+            'Accept-Language: ' . request()->header('language'),
+        ]);
+        if (!$res) {
+            return $this->renderError('请求失败');
+        }
+        $result = json_decode($res, true);
+        if (($result['code'] ?? -1) != 0) {
+            return $this->renderError($result['message'] ?? '请求失败');
+        }
+        return $this->renderSuccess('');
+    }
 }

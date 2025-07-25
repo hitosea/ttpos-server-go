@@ -5,6 +5,7 @@ import (
 	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/printer"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/database"
@@ -27,6 +28,8 @@ func init() {
 // acceptMemberSaleOrderEventHandler "外送订单“商家接单”事件处理器"
 func acceptMemberSaleOrderEventHandler() {
 	once_accept_member_sale_order_event_handler.Do(func() {
+
+		// 创建操作记录
 		event.NewSystemBus().SubscribeAcceptMemberSaleOrderEvent(func(payload event.AcceptMemberSaleOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
@@ -49,6 +52,21 @@ func acceptMemberSaleOrderEventHandler() {
 
 			// +++++++++++++++++++++++ 设置SaleBill的当班编号
 			setDutyNoForSaleBill(db, payload.BasePayload)
+		})
+
+		// 创建结账单打印
+		event.NewSystemBus().SubscribeAcceptMemberSaleOrderEvent(func(payload event.AcceptMemberSaleOrderPayload) {
+			// 设置订单备注
+			payload.MemberSaleOrder.SaleBill.Remark = payload.MemberSaleOrder.Remark
+			// 打印外送单
+			_, err := printer.NewPrinterRepo(payload.Ctx).PrintingTakeoutOrder(
+				payload.MemberSaleOrder,
+				payload.MemberSaleOrder.SaleBill,
+				payload.SaleOrderUuid,
+			)
+			if err != nil {
+				fmt.Println("CheckoutSaleOrderEvent process, PrintingStatementOrder failed ", err)
+			}
 		})
 	})
 }

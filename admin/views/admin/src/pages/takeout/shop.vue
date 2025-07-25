@@ -32,7 +32,7 @@
       <el-table-column prop="channel_config_types" :label="$t('参数设置')" min-width="200">
         <template #default="scope">
           <!-- auto_sync 自动同步 -->
-          {{ scope.row.channel_config_types.map((item: string) => (item == 'auto_sync' ? $t('自动同步') : $t('手动同步'))).join(',') }}
+          {{ scope.row.channel_config_types.map((item: string) => (item == 'auto_sync' ? $t('自动同步') : $t('手动设置'))).join(',') }}
         </template>
       </el-table-column>
       <el-table-column prop="delivery_status" :label="$t('状态')" min-width="120">
@@ -58,7 +58,7 @@
     <!-- 分页 -->
     <ti-pagination :total="total" :currentPage="currentPage" :pageSize="pageSize" @change="handlePageChange"></ti-pagination>
 
-    <add-edit-shop v-model:show="addEditShow" :has-edit="hasEdit" :edit-data="editData" @getList="handleSearch" />
+    <add-edit-shop v-model:show="addEditShow" :has-edit="hasEdit" :edit-data="editData" @getList="getCompanyListData" />
   </div>
 </template>
 

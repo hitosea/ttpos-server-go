@@ -121,7 +121,7 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 	// 返回
 	member := ctx.GetMember()
 	return member_resp.MemberBaseInfoResp{
-		Member: member_resp.MemberResp{
+		User: member_resp.UserResp{
 			Id:        member.ID,
 			Uuid:      member.Uuid,
 			Nickname:  member.Nickname,
@@ -130,6 +130,12 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 			Balance:   member.Balance,
 			IsVisitor: member.IsVisitor,
 		},
+		Member: member_resp.MemberResp{
+			IsMemberShowSoldOut: cashierSetting.MemberShowSoldOut == "1",
+			LanguageList:        languageList,
+			IsOpenRider:         company.CompanySetting.DeliveryStatus == 1,
+			AreaCode:            areaCodes,
+		},
 		Company: member_resp.CompanyResp{
 			Uuid:         company.Uuid,
 			Name:         company.Name,
@@ -137,12 +143,8 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 			Address:      company.CompanySetting.Address,
 			LinkPhone:    company.CompanySetting.LinkPhone, // 公司联系电话
 			OpeningHours: businessSetting.OpeningHours,     // 公司营业时间
-			IsOpenRider:  company.CompanySetting.DeliveryStatus == 1,
 		},
-		Currency:            currencySetting,
-		AreaCode:            areaCodes,
-		LanguageList:        languageList,
-		IsMemberShowSoldOut: cashierSetting.MemberShowSoldOut == "1",
+		Currency: currencySetting,
 	}, nil
 
 }
@@ -165,5 +167,9 @@ func (s *baseSrv) UpdateNickname(ctx context.Context, req member_req.MemberNickn
 	if err != nil {
 		return member_resp.MemberBaseInfoResp{}, err
 	}
+	// 更新缓存
+	member.Nickname = req.Nickname
+	ctx.SetMember(member)
+	// 更新缓存
 	return s.GetBaseInfo(ctx)
 }

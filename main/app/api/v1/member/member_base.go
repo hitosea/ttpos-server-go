@@ -27,7 +27,7 @@ type BaseHandler struct {
 // @Produce json
 // @Security JwtToken
 // @Success 200 {object} dto.Response{data=member_resp.MemberBaseInfoResp}
-// @Router /member/base/info [get]
+// @Router /member/base [get]
 func (h *BaseHandler) BaseInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	baseInfoResp, err := h.baseSrv.GetBaseInfo(ctx)
@@ -81,7 +81,7 @@ func RegisterBaseHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	// 需要认证
 	privateApi := router.Group("", middleware.MemberAuth(authSrv, dbm))
 	{
-		privateApi.GET("/base/info", wrapper.BaseInfo)
+		privateApi.GET("/base", wrapper.BaseInfo)
 		privateApi.POST("/base/nickname", wrapper.NicknameUpdate)
 	}
 }

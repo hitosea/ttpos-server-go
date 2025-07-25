@@ -52,13 +52,13 @@
         :value="this.$formatPrice(detail.received_price || 0)"
       ></dataBox>
 
-      <dataBox :title="$t('商品数量')" :content="$t('所售卖的商品数量，仅计算普通商品及自助餐（不包括自助餐加钟）')" :value="detail.product_num || 0"></dataBox>
+      <dataBox :title="$t('商品数量')" :content="$t('所售卖的商品数量，仅计算普通商品及自助餐（不包括自助餐加钟）')" :value="(detail.product_num || 0)"></dataBox>
 
       <dataBox
         v-if="is_open_member == '1'"
         :title="$t('新增会员数/会员折扣')"
         :content="$t('新增会员数：新增会员数量') + `<br />` + $t('会员折扣：会员折扣总金额（包含等级折扣及会员卡折扣）')"
-        :value="detail.user_count || 0 + '/' + (detail.user_discount_money || 0)"
+        :value="(detail.user_count || 0) + '/' + (detail.user_discount_money || 0)"
       ></dataBox>
 
       <dataBox :title="$t('营业收入')" :content="$t('营业收入=实收金额-税费+会员余额消费金额')" :value="this.$formatPrice(detail.business_price || 0)"></dataBox>
@@ -76,19 +76,19 @@
       <dataBox
         :title="$t('优惠折扣/优惠占比')"
         :content="$t('优惠折扣=优惠折扣总金额（包含改价、折扣比例、抹零、结账抹零）') + `<br />` + $t('优惠占比=优惠折扣/总销售额')"
-        :value="(detail.discount_money || 0) + ('/' + (detail.discount_ratio || 0))"
+        :value="(detail.discount_money || 0) + '/' + (detail.discount_ratio || 0)"
       ></dataBox>
 
       <dataBox
         :title="$t('赠菜总额/赠菜数量')"
         :content="$t('赠菜总额：赠菜的总金额') + `<br />` + $t('赠菜数量：赠菜的数量')"
-        :value="(detail.free_product_price || 0) + ('/' + (detail.free_product_num || 0))"
+        :value="(detail.free_product_price || 0) + '/' + (detail.free_product_num || 0)"
       ></dataBox>
 
       <dataBox
         :title="$t('免单总额/免单数量')"
         :content="$t('免单总额：免单的总金额') + `<br />` + $t('免单数量：免单的数量')"
-        :value="(detail.free_order_price || 0) + ('/' + (detail.free_order_num || 0))"
+        :value="(detail.free_order_price || 0) + '/' + (detail.free_order_num || 0)"
       ></dataBox>
 
       <dataBox :title="$t('充值金额')" :content="$t('会员充值金额（实际充值的金额，不包含赠送金额）')" :value="this.$formatPrice(detail.recharge_amount || 0)"></dataBox>

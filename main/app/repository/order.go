@@ -1343,7 +1343,7 @@ func (r *orderRepo) GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, err
 // GetSaleBillSaleOrderRecord 获取销售账单记录
 func (r *orderRepo) GetSaleBillSaleOrderRecord(saleOrderUuid uint64) (*model.SaleOrder, error) {
 	var saleOrder model.SaleOrder
-	if err := r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).Preload("SaleBill").First(&saleOrder).Error; err != nil {
+	if err := r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).First(&saleOrder).Error; err != nil {
 		return nil, fmt.Errorf("GetSaleBillSaleOrderRecord: %v", err)
 	}
 	return &saleOrder, nil

@@ -114,6 +114,15 @@ type SaleOrderProduct struct {
 	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
 }
 
+// 获取会员端商品价格上浮比例
+func (model *SaleOrderProduct) GetMemberOrderDiscountRate() float64 {
+	// 如果会员端商品价格上浮比例小于等于0，则返回1,表示未设置上浮比例
+	if model.MemberOrderDiscountRate <= 0 {
+		return 1
+	}
+	return model.MemberOrderDiscountRate
+}
+
 // GetOpenOverallDiscount 获取是否开启 Overall 折扣
 func (model *SaleOrderProduct) GetOpenOverallDiscount() bool {
 	return model.OpenOverallDiscount == 1
@@ -160,35 +169,35 @@ func (model *SaleOrderProduct) GetMemberDiscountRate() float64 {
 // 会员端显示的价格= 商品规格价*会员端折扣率 + 小料A*会员端折扣率 + 小料B*会员端折扣率 + ...
 // （商品规格价=商品规格原价*会员端折扣率）=》 转换为商品未含税价格。  商品未含税价格*税率=税费 。 （商品未含税价格+税费）
 // 如果规格价已含税，计算
-func (model *SaleOrderProduct) GetPriceInMemberClient() float64 {
-	saucePrices := make([]float64, 0) // 该销售订单商品的各个小料原始价格
-	flavorPrice := model.FlavorPrice  // 该销售订单商品的规格原始价格
-	for _, bom := range model.SaleOrderProductBoms {
-		if bom.IsDelete() {
-			continue
-		}
-		if bom.ProductBom.IsSauce() {
-			saucePrices = append(saucePrices, bom.ProductBom.Price)
-		}
-	}
-	// 上浮后的价格
-	flavorPrice = decimal.NewFromFloat(flavorPrice).Mul(decimal.NewFromFloat(model.MemberOrderDiscountRate)).Round(2).InexactFloat64()
-	// 上浮后的小料价格
-	for i, saucePrice := range saucePrices {
-		saucePrices[i] = decimal.NewFromFloat(saucePrice).Mul(decimal.NewFromFloat(model.MemberOrderDiscountRate)).Round(2).InexactFloat64()
-	}
-	// 上浮后的小料价格总和
-	var saucePriceTotal float64
-	for _, saucePrice := range saucePrices {
-		saucePriceTotal += saucePrice
-	}
-	return decimal.NewFromFloat(flavorPrice).Add(decimal.NewFromFloat(saucePriceTotal)).Round(2).InexactFloat64()
-}
+// func (model *SaleOrderProduct) GetPriceInMemberClient() float64 {
+// 	saucePrices := make([]float64, 0) // 该销售订单商品的各个小料原始价格
+// 	flavorPrice := model.FlavorPrice  // 该销售订单商品的规格原始价格
+// 	for _, bom := range model.SaleOrderProductBoms {
+// 		if bom.IsDelete() {
+// 			continue
+// 		}
+// 		if bom.ProductBom.IsSauce() {
+// 			saucePrices = append(saucePrices, bom.ProductBom.Price)
+// 		}
+// 	}
+// 	// 上浮后的价格
+// 	flavorPrice = decimal.NewFromFloat(flavorPrice).Mul(decimal.NewFromFloat(model.GetMemberOrderDiscountRate())).Round(2).InexactFloat64()
+// 	// 上浮后的小料价格
+// 	for i, saucePrice := range saucePrices {
+// 		saucePrices[i] = decimal.NewFromFloat(saucePrice).Mul(decimal.NewFromFloat(model.GetMemberOrderDiscountRate())).Round(2).InexactFloat64()
+// 	}
+// 	// 上浮后的小料价格总和
+// 	var saucePriceTotal float64
+// 	for _, saucePrice := range saucePrices {
+// 		saucePriceTotal += saucePrice
+// 	}
+// 	return decimal.NewFromFloat(flavorPrice).Add(decimal.NewFromFloat(saucePriceTotal)).Round(2).InexactFloat64()
+// }
 
-// 获取商品在会员端显示的价格（折前）
-func (model *SaleOrderProduct) GetTotalPriceInMemberClient() float64 {
-	return decimal.NewFromFloat(model.GetPriceInMemberClient()).Mul(model.GetNumDecimal()).Round(2).InexactFloat64()
-}
+// // 获取商品在会员端显示的价格（折前）
+// func (model *SaleOrderProduct) GetTotalPriceInMemberClient() float64 {
+// 	return decimal.NewFromFloat(model.GetPriceInMemberClient()).Mul(model.GetNumDecimal()).Round(2).InexactFloat64()
+// }
 
 // 获取销售订单商品的总税费。包含服务费税费
 func (model *SaleOrderProduct) GetTotalTaxFee() float64 {
@@ -315,6 +324,14 @@ func (model *SaleOrderProduct) SetTaxRate(taxRate float64) {
 func (model *SaleOrderProduct) SetFlavorPrice(flavorPrice float64) {
 	defer model.SetUpdate() // 标记要更新model
 	model.FlavorPrice = flavorPrice
+}
+
+func (model *SaleOrderProduct) GetFlavorPrice() float64 {
+	memberCardDiscountRate := model.GetMemberOrderDiscountRate()
+	if memberCardDiscountRate != 1 {
+		return decimal.NewFromFloat(model.FlavorPrice).Mul(decimal.NewFromFloat(memberCardDiscountRate)).Round(2).InexactFloat64()
+	}
+	return model.FlavorPrice
 }
 
 // GetCanReturnNum 获取销售订单商品的可退货数量. 可退货数量=订单商品数量-已退货数量
@@ -830,6 +847,7 @@ func (model *SaleOrderProduct) SetMustPlanInfo(mustPlanUuid uint64) {
 
 // 标记该订单商品相关的资源为删除
 func (model *SaleOrderProduct) DeleteProduct() {
+	defer model.SetUpdate()
 	deleteTime := time.Now().Unix()
 	model.DeleteTime = deleteTime
 	for index, _ := range model.SaleOrderProductBoms {
@@ -1239,8 +1257,8 @@ func (model *SaleOrderProduct) ProductKey() string {
 		}
 	}
 	// 属性ID列表
-	for _, attributeGroup := range model.SaleOrderProductAttributes {
-		attributeIdList = append(attributeIdList, attributeGroup.ProductAttributeUuid)
+	for _, attribute := range model.SaleOrderProductAttributes {
+		attributeIdList = append(attributeIdList, attribute.ProductAttributeUuid)
 	}
 
 	// 物料ID列表和属性ID列表排序

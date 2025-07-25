@@ -6,6 +6,8 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/shopspring/decimal"
 )
 
 // SaleBill 销售账单 `ttpos_sale_bill`
@@ -94,6 +96,31 @@ type SaleBill struct {
 	Desk            *Desk             `gorm:"foreignKey:DeskUuid;references:uuid"`
 	BuffetPackage1  *BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
+}
+
+// 结束SaleBill和SaleOrder的生命周期。相当于用餐订单结账完成。
+func (model *SaleBill) EndSaleBillAndSaleOrder(dutyNo string, cashierUuid uint64, cashierName string) {
+	model.SetFinishSaleBill(dutyNo, cashierUuid, cashierName)
+
+	for _, saleOrder := range model.SaleOrders {
+		paymentInfoList := saleOrder.GetPaymentInfoList()
+		totalPay := float64(0) // 总付款金额=各个付款单的实收金额之和
+		for _, paymentOrder := range paymentInfoList {
+			totalPay = decimal.NewFromFloat(totalPay).Add(decimal.NewFromFloat(paymentOrder.Amount)).Round(2).InexactFloat64()
+		}
+		saleOrder.Status = constant.SaleOrderStatusFinish
+		// 修改订单为支付完成，并记录找零金额、最终付款金额等结算后才计算的字段
+		final := FinalAmount{
+			PaymentAmount:        totalPay,
+			ChangeAmount:         0,
+			ZeroCheckoutFee:      0,
+			FinalPrice:           totalPay,
+			PaymentCommissionFee: 0,
+			GiftAmount:           0,
+		}
+		saleOrder.SetFinishStatus(final) // 设置销售订单状态为已结清
+	}
+	model.CalcAll()
 }
 
 // IsReverseSettle 是否是反结账
