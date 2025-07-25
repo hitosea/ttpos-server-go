@@ -333,11 +333,11 @@ func (s *loginSrv) VisitorLogin(ctx context.Context, loginReq req.VisitorLoginRe
 		CompanyUuid: companyUuid,
 		MemberUuid:  member.Uuid,
 	}
-	token, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
+	token, err := auth.GenerateToken(claims, config.JWT.Secret, 3155673600, false)
 	if err != nil {
 		return nil, errors.New("生成token失败")
 	}
-	refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+	refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, 3155673600, true)
 	if err != nil {
 		return nil, errors.New("生成refresh_token失败")
 	}
