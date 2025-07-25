@@ -4,7 +4,7 @@
 gfcli:
   gen:
     pbentity:
-      link: "mysql:$DB_USER:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
+      link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
       path: "manifest/protobuf/takeout"
       removePrefix: "takeout_"
       #tables: "order,products"
@@ -13,7 +13,7 @@ gfcli:
       api: "api"
       ctrl: "internal/controller/rpc"
     dao:
-      - link: "mysql:$DB_USER:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
+      - link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
         descriptionTag: true
         removePrefix: "takeout_"
 
@@ -30,5 +30,5 @@ gfcli:
       - hub.hitosea.com/ttpos-bmp-takeout
 
 #注意db的格式跟link的不一样 用容器内网ip 端口
-migrate-db-link: mysql://$DB_USER:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT)/takeout
-migrate-db-link-open: mysql://$DB_USER:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout
+migrate-db-link: mysql://$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT)/takeout
+migrate-db-link-open: mysql://$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout
