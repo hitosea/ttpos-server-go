@@ -6709,6 +6709,10 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 	if err != nil {
 		return nil, errors.WithMessage(err, "目标桌台的销售账单不存在", fmt.Sprintf("targetDesk.SaleBillUuid: %d", targetDesk.SaleBillUuid))
 	}
+	// 不能转菜到自助餐桌台
+	if targetSaleBill.IsBuffetSaleBill() {
+		return nil, errors.WithMessage(errors.New("不能转菜到自助餐桌台"))
+	}
 
 	// 将销售订单商品的sale_bill_uuid和sale_order_uuid更新为新的桌台
 	targetSaleOrder := targetSaleBill.GetFirstSaleOrder()
