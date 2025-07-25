@@ -114,6 +114,14 @@ type SaleOrderProduct struct {
 	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
 }
 
+// 获取商品的就餐类型。打包或堂食
+func (model *SaleOrderProduct) GetDiningMethod() uint {
+	if model.IsWrapProduct() {
+		return constant.SaleBillDiningMethodTakeout
+	}
+	return constant.SaleBillDiningMethodDineIn
+}
+
 // 获取会员端商品价格上浮比例
 func (model *SaleOrderProduct) GetMemberOrderDiscountRate() float64 {
 	// 如果会员端商品价格上浮比例小于等于0，则返回1,表示未设置上浮比例
