@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
 )
@@ -130,28 +131,45 @@ type DeliveryConfigResponse struct {
 	BaseDeliveryFee        float64 `json:"base_delivery_fee"`        // 起步配送费
 	RiderAcceptanceTimeout int     `json:"rider_acceptance_timeout"` // 骑手接单超时时间,单位分钟
 	PricePerKm             float64 `json:"price_per_km"`             // 每公里价格
+	IsInDeliveryRange      bool    `json:"is_in_delivery_range"`     // 是否在配送范围内。如果不在配送范围内，则置灰提交订单按钮ß
 }
 
 // 根据渠道和距离获取配置
 // channel: 外送渠道. skootar、grab
 // distance: 距离
 func (model *DeliveryConfig) GetConfigByChannel(channel string, distance float64) (*DeliveryConfigResponse, error) {
+	var config *DeliveryConfigResponse
 	for _, item := range *model {
 		if item.Channel == channel {
-			for _, distanceRange := range item.DistanceRange {
-				if distanceRange.IsUnlimited || float64(distanceRange.End) >= distance {
-					return &DeliveryConfigResponse{
+			for index, distanceRange := range item.DistanceRange {
+				if float64(distanceRange.End) >= distance {
+					config = &DeliveryConfigResponse{
 						Channel:                item.Channel,
 						BasicFee:               item.BasicFee,
 						BaseDeliveryFee:        item.BaseDeliveryFee,
 						RiderAcceptanceTimeout: item.RiderAcceptanceTimeout,
 						PricePerKm:             distanceRange.PricePerKm,
-					}, nil
+						IsInDeliveryRange:      true,
+					}
+					break // 找到第一个符合条件的配置就退出
+				}
+				if index == len(item.DistanceRange)-1 {
+					config = &DeliveryConfigResponse{
+						Channel:                item.Channel,
+						BasicFee:               item.BasicFee,
+						BaseDeliveryFee:        item.BaseDeliveryFee,
+						RiderAcceptanceTimeout: item.RiderAcceptanceTimeout,
+						PricePerKm:             distanceRange.PricePerKm,
+						IsInDeliveryRange:      false,
+					}
 				}
 			}
 		}
 	}
-	return nil, errors.WithMessage(errors.ErrInternal, "delivery config not found")
+	if config == nil {
+		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeOrderAddressNotInDeliveryRange, "delivery config not found"), "delivery config not found")
+	}
+	return config, nil
 }
 
 type DeliveryConfigItem struct {
