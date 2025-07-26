@@ -2,6 +2,7 @@ package repository
 
 import (
 	"slices"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -12,6 +13,7 @@ type IProductPrinterRepo interface {
 	WhereProductPrinterUuid(uuid uint64) DBOption
 	WidthPrintMode(widthPrintMode int) DBOption
 	WhereSaleBillIsKitchenConfirm(isKitchenConfirm int) DBOption // 厨显端是否确认退菜整单
+	WhereSaleBillNotDeletedOrIsNotCanceled() DBOption            // 未被删除的，未整单取消的
 
 	GetProductPrinters(opts ...DBOption) ([]model.ProductPrinter, error)                 // 获取商品打印
 	GetProductPackageUuids(opts ...DBOption) ([]uint64, error)                           // 获取指定商品打印关联的商品Uuid
@@ -106,5 +108,12 @@ func (r *productPrinterRepo) WidthPrintMode(printMode int) DBOption {
 func (r *productPrinterRepo) WhereSaleBillIsKitchenConfirm(isKitchenConfirm int) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("is_kitchen_confirm = ?", isKitchenConfirm)
+	}
+}
+
+// 未被删除的，未整单取消的
+func (r *productPrinterRepo) WhereSaleBillNotDeletedOrIsNotCanceled() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("delete_time = ? or status <> ?", constant.NotDeleted, constant.SaleBillStatusCanceled)
 	}
 }

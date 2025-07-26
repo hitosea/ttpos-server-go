@@ -3,11 +3,21 @@ server:
   address:     ":14031"
   openapiPath: "/api.json"
   swaggerPath: "/swagger"
+  serverAgent:         "Ttpos Takeout Server" # 服务端Agent信息。默认
+  # 日志基本配置
+  # 此配置类似nginx，主要对请求日志的记录
+  logPath: "./log/takeout"
+  logStdout: false
+  errorStack: true
+  errorLogEnabled: true
+  errorLogPattern: "error.{Ymd}.log"
+  accessLogEnabled: false
+  accessLogPattern: "access.{Ymd}.log"
 
 # https://goframe.org/docs/core/glog-config
-logger:
-  level : "all"
-  stdout: true
+  logger:
+    level : "all"
+    stdout: true
 
 # https://goframe.org/docs/core/gdb-config-file
 database:

@@ -32,8 +32,8 @@ type CompanyResp struct {
 }
 
 type MemberBaseInfoResp struct {
-	User     UserResp         `json:"user"`     // 用户信息
-	Member   MemberResp       `json:"member"`   // 会员信息
+	User     UserResp         `json:"user"`     // 会员信息
+	Member   MemberResp       `json:"member"`   // 会员端配置信息
 	Company  CompanyResp      `json:"company"`  // 公司信息
 	Currency setting.Currency `json:"currency"` // 货币单位
 }

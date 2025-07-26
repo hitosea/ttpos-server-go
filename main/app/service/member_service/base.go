@@ -126,8 +126,8 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 			Uuid:      member.Uuid,
 			Nickname:  member.Nickname,
 			Phone:     member.Phone,
-			Point:     member.Point,
-			Balance:   member.Balance,
+			Point:     member.GetPoints(),
+			Balance:   member.GetBalanceAll(),
 			IsVisitor: member.IsVisitor,
 		},
 		Member: member_resp.MemberResp{

@@ -363,7 +363,13 @@ func createSaleOrder(ctx context.Context, db *gorm.DB, saleBillSetting *model.Sa
 	staff := ctx.GetStaff()
 	saleOrderObj.SetCashier(staff.Uuid, staff.GetUserName())
 	// 设置会员折扣
-	saleOrderObj.SetMemberDiscount(ctx.GetMember())
+	if ctx.GetMemberUuid() != 0 {
+		member, err := repository.NewMemberRepo(db).GetMemberByUuid(ctx.GetMemberUuid())
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		saleOrderObj.SetMemberDiscount(*member)
+	}
 	//
 	saleOrder, err := repository.NewOrderRepo(db).CreateSaleOrder(*saleOrderObj)
 	if err != nil {
@@ -2449,7 +2455,13 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 				TotalNum:        num,
 				NumType:         saleOrderProduct.NumType,
 				IsBuffet:        saleOrderProduct.IsBuffet == 1,
-				Remark:          saleOrderProduct.Remark,
+				IsWrap: func() bool {
+					if saleBill.IsTakeout() && saleBill.MemberSaleOrderUuid == 0 {
+						return true
+					}
+					return saleOrderProduct.IsWrapProduct()
+				}(),
+				Remark: saleOrderProduct.Remark,
 			})
 		}
 	}
@@ -6704,6 +6716,10 @@ func (s *orderSrv) InstantOrderCartProductChangeDesk(ctx context.Context, req re
 	targetSaleBill, err := repository.NewOrderRepo(db).GetSaleBillAllInfo(targetDesk.SaleBillUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err, "目标桌台的销售账单不存在", fmt.Sprintf("targetDesk.SaleBillUuid: %d", targetDesk.SaleBillUuid))
+	}
+	// 不能转菜到自助餐桌台
+	if targetSaleBill.IsBuffetSaleBill() {
+		return nil, errors.WithMessage(errors.New("不能转菜到自助餐桌台"))
 	}
 
 	// 将销售订单商品的sale_bill_uuid和sale_order_uuid更新为新的桌台

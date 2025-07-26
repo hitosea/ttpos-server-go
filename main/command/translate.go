@@ -236,7 +236,9 @@ func processGroup(texts []string) {
 				}
 			}
 			for k, v := range newEntries {
-				langData[k] = v
+				if langData[k] == "" {
+					langData[k] = v
+				}
 			}
 			// 写入语言文件
 			writeContent(lang, langData)

@@ -84,7 +84,7 @@ class SettingEnum extends Enum
     const DELIVERY_CONFIG = 'delivery_config';
 
     // 外送渠道
-    const DELIVERY_CHANNELS = ["SKootar", "Grab"];
+    const DELIVERY_CHANNELS = ["SKootar"];
 
     /**
      * 获取订单类型值
