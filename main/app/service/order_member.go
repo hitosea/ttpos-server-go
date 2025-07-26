@@ -522,14 +522,19 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 	}
 	//
 	products := make([]resp.MemberOrderProduct, 0)
-	for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
+	for _, saleOrderProduct := range memberSaleOrder.SaleBill.GetFirstSaleOrder().SaleOrderProducts {
 		products = append(products, resp.MemberOrderProduct{
 			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
 			TotalPrice:          saleOrderProduct.GetTotalPrice(),
 			OriginTotalPrice:    saleOrderProduct.GetTotalProductPrice(),
-			Image:               saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request)),
+			Image: func() string {
+				if saleOrderProduct.ImageFile == nil {
+					return ""
+				}
+				return saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+			}(),
 		})
 	}
 	//
