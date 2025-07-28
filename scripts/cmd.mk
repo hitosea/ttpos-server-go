@@ -42,19 +42,32 @@ build-web:
 	@echo "🔍 检查前端文件变化..."
 	@if [ -d "admin/views" ]; then \
 		FRONTEND_CHANGED=0; \
-		if git status --porcelain admin/views/ | grep -q .; then \
-			echo "📝 检测到前端文件有变化，开始构建..."; \
+		BUILD_MARKER="./admin/runtime/frontend_build_marker"; \
+		if [ ! -f "$$BUILD_MARKER" ]; then \
+			echo "📝 首次构建，开始构建前端..."; \
 			FRONTEND_CHANGED=1; \
 		elif [ ! -d "admin/public/admin" ] || [ ! -d "admin/public/shop" ]; then \
 			echo "📁 前端构建产物不存在，开始构建..."; \
 			FRONTEND_CHANGED=1; \
 		else \
-			echo "✅ 前端文件无变化，跳过构建"; \
+			LAST_BUILD_COMMIT=$$(cat $$BUILD_MARKER 2>/dev/null || echo ""); \
+			CURRENT_COMMIT=$$(git rev-parse HEAD 2>/dev/null || echo "current"); \
+			if [ "$$LAST_BUILD_COMMIT" != "$$CURRENT_COMMIT" ]; then \
+				if git diff --quiet $$LAST_BUILD_COMMIT..$$CURRENT_COMMIT -- admin/views/ 2>/dev/null; then \
+					echo "✅ 自上次构建后前端文件无变化，跳过构建"; \
+				else \
+					echo "📝 检测到前端文件自上次构建后有变化，开始构建..."; \
+					FRONTEND_CHANGED=1; \
+				fi; \
+			else \
+				echo "✅ 前端文件无变化，跳过构建"; \
+			fi; \
 		fi; \
 		if [ $$FRONTEND_CHANGED -eq 1 ]; then \
 			echo "🚀 正在构建前端项目..."; \
 			cd admin && ./build > /dev/null 2>&1 && echo "✅ 前端构建完成" || (echo "❌ 前端构建失败" && exit 1); \
 			cd ..; \
+			git rev-parse HEAD > $$BUILD_MARKER 2>/dev/null || echo "unknown" > $$BUILD_MARKER; \
 		fi; \
 	else \
 		echo "⚠️  admin/views 目录不存在，跳过前端构建"; \
