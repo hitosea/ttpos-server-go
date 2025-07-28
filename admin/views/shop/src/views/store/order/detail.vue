@@ -168,8 +168,8 @@
                 <div class="info">
                   <div class="name">
                     <el-tag class="mr-8" type="danger" effect="light" :hit="true" size="large" v-if="scope.row.refund_reason">{{ $t('退') }}</el-tag>
-                    <el-tag class="mr-8" color="#FF3300" effect="dark" :hit="true" size="large" v-if="scope.row.is_gift && !scope.row.refund_reason">{{ $t('赠') }}</el-tag>
-                    <el-tag class="mr-8" color="#19b800" effect="dark" :hit="true" size="large" v-if="scope.row.is_wrap && !scope.row.refund_reason">{{ $t('打包') }}</el-tag>
+                    <el-tag class="mr-8" color="#FF3300" effect="dark" :hit="true" size="large" v-if="scope.row.is_gift">{{ $t('赠') }}</el-tag>
+                    <el-tag class="mr-8" color="#19b800" effect="dark" :hit="true" size="large" v-if="scope.row.is_wrap">{{ $t('打包') }}</el-tag>
                     {{ scope.row.locale_name[language] || '-' }}
                   </div>
                   <div class="gray9" v-if="scope.row.locale_attribute_name[language]">

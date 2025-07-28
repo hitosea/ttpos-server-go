@@ -59,7 +59,7 @@
         <el-input v-model="form.coordinates" type="textarea" rows="3" :placeholder="$t('请输入')" class="max-w460"></el-input>
       </el-form-item>
 
-      <el-form-item for="no_click" class="max-w460" :label="$t('联系电话')">
+      <el-form-item for="no_click" class="max-w460" :label="$t('联系电话')" prop="phone" :rules="[{ required: true, message: $t('请输入联系电话') }]">
         <el-input v-model="form.phone" :placeholder="$t('请输入')" :maxlength="20" class="max-w460"></el-input>
       </el-form-item>
 
