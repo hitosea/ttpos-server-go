@@ -425,7 +425,7 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
 				}
 				// 发放奖励
-				err := HandleActivitySendReward(payload, db, activity.Uuid, saleOrder.Member.ReferrerUuid, saleOrder.Member.Phone)
+				err := HandleActivitySendReward(payload, db, activity.Uuid, saleOrder.Member.ReferrerUuid)
 				if err != nil {
 					fmt.Println(err)
 					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
@@ -452,7 +452,7 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 						logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, CreateConsumption failed", zap.Any("saleOrder", saleOrder), zap.Error(err))
 					}
 					// 发放奖励
-					err = HandleActivitySendReward(payload, db, referrer.ActivityUuid, referrer.ReferrerUuid, referrer.Phone)
+					err = HandleActivitySendReward(payload, db, referrer.ActivityUuid, referrer.ReferrerUuid)
 					if err != nil {
 						fmt.Println(err)
 						logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
@@ -464,7 +464,14 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 }
 
 // HandleActivitySendReward 发放奖励
-func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.DB, activityUuid, memberUuid uint64, phone string) error {
+func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.DB, activityUuid, memberUuid uint64) error {
+	member, err := repository.NewMemberRepo(db).GetMemberRecord(repository.CommonRepo.WhereByUuid(memberUuid))
+	if err != nil {
+		return err
+	}
+	if member == nil {
+		return fmt.Errorf("member not found")
+	}
 
 	// 获取活动信息
 	activity, err := repository.NewMarketingActivityRepo(db).GetActivityAndPrizes(activityUuid)
@@ -579,10 +586,10 @@ func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.D
 		// 发送短信
 		if rewardCountToGive > 0 && activity.IsSendSms == 1 {
 			go func() {
-				err := service.NewSMSSrv(dbm).SendMemberCouponSMS(payload.Ctx, phone, &sms.MemberCouponRequest{CouponNum: uint64(rewardCountToGive)})
+				err := service.NewSMSSrv(dbm).SendMemberCouponSMS(payload.Ctx, member.Phone, &sms.MemberCouponRequest{CouponNum: uint64(rewardCountToGive)})
 				if err != nil {
-					fmt.Println("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", phone), zap.Error(err))
-					logger.Logger.Info("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", phone), zap.Error(err))
+					fmt.Println("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
+					logger.Logger.Info("HandleActivitySendReward process, SendMemberCouponSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
 				}
 			}()
 		}
@@ -641,10 +648,10 @@ func HandleActivitySendReward(payload event.CheckoutSaleOrderPayload, db *gorm.D
 		// 发送短信
 		if activity.IsSendSms == 1 {
 			go func() {
-				err := service.NewSMSSrv(dbm).SendMemberPointsSMS(payload.Ctx, phone, &sms.MemberPointsRequest{Points: points})
+				err := service.NewSMSSrv(dbm).SendMemberPointsSMS(payload.Ctx, member.Phone, &sms.MemberPointsRequest{Points: points})
 				if err != nil {
-					fmt.Println("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", phone), zap.Error(err))
-					logger.Logger.Info("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", phone), zap.Error(err))
+					fmt.Println("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
+					logger.Logger.Info("HandleActivitySendReward process, SendMemberPointsSMS failed", zap.Any("activityUuid", activityUuid), zap.Any("phone", member.Phone), zap.Error(err))
 				}
 			}()
 		}
