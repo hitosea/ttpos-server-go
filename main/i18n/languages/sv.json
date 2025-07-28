@@ -1665,7 +1665,7 @@
   "昵称不能为空": "Smeknamn får inte vara tomt",
   "昵称不能超过50个字符": "Smeknamn får inte överstiga 50 tecken",
   "昵称输入字符不合规": "Ogiltiga tecken i smeknamnsinmatning",
-  "昵称长度不能超过20": "Smeknamnets längd får inte överstiga 20",
+  "昵称长度不能超过50": "Smeknamnets längd får inte överstiga 50",
   "显示": "Visa",
   "显示不能为空": "Visning får inte vara tom",
   "显示必须是12345": "Visningen måste vara 12345",

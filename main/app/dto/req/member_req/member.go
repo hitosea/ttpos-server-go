@@ -14,7 +14,7 @@ func (r *MemberNicknameUpdateReq) Validate() error {
 		return errors.New("昵称不能为空")
 	}
 	if len(r.Nickname) > 50 {
-		return errors.New("昵称长度不能超过20")
+		return errors.New("昵称长度不能超过50")
 	}
 	// 正则匹配 不能输入特殊的字符 只允许字母、数字、中文和常见标点符号
 	reg := regexp.MustCompile("^[a-zA-Z0-9\u4e00-\u9fa5]+$")
