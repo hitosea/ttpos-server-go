@@ -67,6 +67,10 @@ class BalanceLog extends BalanceLogModel
             if (isset($item['user']['id'])) {
                 $item['member_uuid'] = $item['user']['id'];
             }
+            //
+            if (isset($item['user']['member_card_no'])) {
+                $item['member_card_no'] = $item['user']['member_card_no'];
+            }
         }
         return $list;
     }

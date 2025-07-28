@@ -58,13 +58,9 @@
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { useI18n } from 'vue-i18n'
 import ProductApi from '@/api/product.js'
 import { languageStore } from '@/store/model/language.js'
 import UniqueNameForm from '@/components/product/UniqueNameForm.vue'
-
-// 国际化
-const { t } = useI18n()
 
 // 获取语言数据
 const languageData = JSON.stringify(languageStore().getLanguageData().languageData.value)
@@ -112,7 +108,7 @@ const getParentCategory = async () => {
     const res = await ProductApi.storeCatParentList({}, true)
     category.value = res.data.list
   } catch (err) {
-    ElMessage.error(err?.message || t('获取父级分类失败'))
+    ElMessage.error(err?.message || $t('获取父级分类失败'))
   } finally {
     loading.value = false
   }
@@ -137,7 +133,7 @@ const submit = async () => {
     
     const res = await ProductApi.storeCatAdd(params, true)
     ElMessage({
-      message: t('保存成功'),
+      message: $t('保存成功'),
       type: 'success',
     })
     dialogFormVisible(true, res.data)

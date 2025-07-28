@@ -55,8 +55,8 @@
         </el-form-item>
         <template v-if="form.apply_scope == '2'">
           <el-form-item label="">
-            <el-checkbox v-model="form.apply_scope_ordering" true-label="1" false-label="0">{{ $t('点餐方式') }}</el-checkbox>
-            <el-checkbox v-model="form.apply_scope_table" true-label="1" false-label="0">{{ $t('桌台方式') }}</el-checkbox>
+            <el-checkbox v-model="form.apply_scope_ordering" true-value="1" false-value="0">{{ $t('点餐方式') }}</el-checkbox>
+            <el-checkbox v-model="form.apply_scope_table" true-value="1" false-value="0">{{ $t('桌台方式') }}</el-checkbox>
           </el-form-item>
           <div class="table-selector" @click="handleOpenTableSelector" v-if="form.apply_scope_table == '1'">
             <div class="table-selector-content">
