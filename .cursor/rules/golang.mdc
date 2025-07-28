@@ -5,6 +5,7 @@ alwaysApply: true
 ---
 #关于目录
 1. golang 相关的文件目录是 /main
+2. golang 不使用redis-proxy容器
 
 # TTPOS Go开发规范与最佳实践
 
@@ -629,93 +630,3 @@ func (s *orderSrv) ValidateOrderCancel(ctx context.Context, orderUuid uint64) (b
     // 实现逻辑
 }
 ```
-
-## 🧪 测试规范
-
-### 1. 单元测试
-```go
-// ✅ 测试文件命名：xxx_test.go
-func TestOrderService_CreateOrder(t *testing.T) {
-    // 准备测试数据
-    req := req.CreateOrderReq{
-        ProductId: 1,
-        Quantity:  2,
-        Price:     100.00,
-    }
-    
-    // 执行测试
-    resp, err := orderSrv.CreateOrder(context.Background(), req)
-    
-    // 断言结果
-    assert.NoError(t, err)
-    assert.NotNil(t, resp)
-    assert.Equal(t, req.ProductId, resp.ProductId)
-}
-```
-
-## 🚀 部署和构建规范
-
-### 1. Docker构建
-```dockerfile
-# ✅ 多阶段构建
-FROM apache/skywalking-go:0.5.0-go1.23 AS builder
-
-WORKDIR /app
-ENV GOPROXY=https://goproxy.cn,direct
-
-COPY go.mod go.sum ./
-RUN go mod download
-
-COPY . .
-RUN skywalking-go-agent -inject /app
-RUN go build -o main -ldflags="-s -w" -toolexec="skywalking-go-agent" -a ./main.go
-
-FROM ubuntu:latest
-RUN apt-get update && apt-get install -y ca-certificates curl
-WORKDIR /var/www
-COPY --from=builder /app/main .
-EXPOSE 8080
-CMD ["./main"]
-```
-
-### 2. 构建脚本
-```bash
-#!/bin/bash
-# ✅ 构建脚本示例
-
-# 设置版本信息
-VERSION=$(grep '^VERSION=' ../.env | cut -d'=' -f2)
-COMMIT_SHA=$(git rev-parse HEAD)
-BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-
-# 构建二进制文件
-go build -ldflags="-s -w \
-    -X ttpos-server-go/version.Version=${VERSION} \
-    -X ttpos-server-go/version.CommitSHA=${COMMIT_SHA} \
-    -X ttpos-server-go/version.BuildTime=${BUILD_TIME}" \
-    -o bin/server main.go
-
-echo "构建完成: bin/server"
-```
-
----
-
-## 📋 开发检查清单
-
-在提交代码前，请确保：
-
-- [ ] 命名规范符合项目要求（结构体、URL、包名等）
-- [ ] API响应格式统一，data不返回null或数组
-- [ ] 错误处理使用return error，不使用panic
-- [ ] 服务依赖通过接口注入，不直接依赖其他服务的Repository
-- [ ] 并发场景正确使用UUID锁
-- [ ] 事件定义、发布、订阅符合规范
-- [ ] 包导入顺序正确（标准库-第三方-项目）
-- [ ] API文档注解完整
-- [ ] 参数验证充分
-- [ ] 所有注释使用中文
-- [ ] 数据库查询已优化（索引、预加载、分页）
-- [ ] API响应时间在200ms以内
-- [ ] 单元测试覆盖核心逻辑
-
-遵循这些规范将确保代码质量和项目的可维护性！ 

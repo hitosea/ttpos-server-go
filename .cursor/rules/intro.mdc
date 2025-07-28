@@ -16,6 +16,6 @@ alwaysApply: true
 2. 数据库集群
 3. redis集群
 4. api集群
-
+5. 只有php项目才会用到 redis-proxy 容器
 
 

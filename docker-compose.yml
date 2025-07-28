@@ -17,7 +17,9 @@ services:
     restart: always
     depends_on:
       - db
-      - redis
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
       - redis-proxy
     networks:
       saas-network:
@@ -70,19 +72,6 @@ services:
     networks:
       saas-network:
         ipv4_address: 10.0.0.12
-
-  redis:
-    container_name: "saas-redis-${APP_ID}"
-    image: redis:6
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - ./docker/redis/data:/data
-      - ./docker/redis/redis.conf:/etc/redis/redis.conf:ro
-    restart: always
-    networks:
-      saas-network:
-        ipv4_address: 10.0.0.13
     
   redis-proxy:
     container_name: "saas-redis-proxy-${APP_ID}"
@@ -93,7 +82,9 @@ services:
       - .env:/var/.env
     image: redis-proxy
     depends_on:
-      - redis
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
     restart: always
     networks:
       saas-network:
@@ -115,7 +106,7 @@ services:
     restart: always
     networks:
       saas-network:
-        ipv4_address: 10.0.0.14
+        ipv4_address: 10.0.0.18
 
   websocket:
     container_name: "saas-websocket-${APP_ID}"
@@ -128,7 +119,7 @@ services:
     restart: always
     networks:
       saas-network:
-        ipv4_address: 10.0.0.15
+        ipv4_address: 10.0.0.19
 
   takeout:
     container_name: "saas-takeout-${APP_ID}"
@@ -148,7 +139,7 @@ services:
       - "14032:14032"
     networks:
       saas-network:
-        ipv4_address: 10.0.0.16
+        ipv4_address: 10.0.0.20
 
 networks:
   saas-network:
