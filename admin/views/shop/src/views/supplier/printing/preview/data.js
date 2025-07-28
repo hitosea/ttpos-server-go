@@ -2025,8 +2025,8 @@ export const previewData = {
         ],
         [
             {
-                name: '',
-                label: $t('优惠折扣') + $t('：') + '￥50',
+                name: $t('会员折扣'),
+                label: '￥50',
             },
             {
                 name: $t('支付方式'),
