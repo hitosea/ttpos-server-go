@@ -49,8 +49,3 @@ run.erp:
 .PHONY: run.takeout
 run.takeout:
 	@cd app/ttpos-takeout && gf run main.go
-
-
-.PHONY: build.takeout
-build.takeout:
-	@cd app/ttpos-takeout &&  gf docker

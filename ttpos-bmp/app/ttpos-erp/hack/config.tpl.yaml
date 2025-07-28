@@ -24,6 +24,10 @@ gfcli:
     watchPaths:
       - api/*.go
       - internal/*.go
+  build:
+    path: "./bin"
+    system: linux
+    arch: amd64
   docker:
     build: "-a amd64 -s linux -p temp -ew"
     tagPrefixes:

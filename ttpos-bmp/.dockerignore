@@ -119,5 +119,6 @@ bin
 log
 app/**/.bin
 app/**/temp
+docker-compose.yml
 
 

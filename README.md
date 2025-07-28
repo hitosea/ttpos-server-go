@@ -52,7 +52,7 @@ ttpos-server-go/
 │   ├── middleware/         # 中间件
 │   └── router/             # 路由配置
 ├── websocket/              # WebSocket服务
-├── takeout/                # 外送gRPC服务
+├── ttpos-bmp/                # 业务中台服务
 ├── redis-proxy/            # Redis代理服务
 └── admin/                  # 管理后台（PHP）
 ```

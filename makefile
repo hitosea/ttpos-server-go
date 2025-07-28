@@ -62,8 +62,11 @@ mysql-open:
 # 运行数据库迁移
 migrate:
 	chmod +x ./.sh && ./.sh think migrate:run
-	#更新 takeout模块数据库
-	cd ttpos-bmp/app/ttpos-takeout && make conf && make db_up.docker
+	#更新 中台模块数据库变更
+	cd ttpos-bmp && make conf && cd app/ttpos-takeout && make db_up.docker
+	cd ttpos-bmp && make conf && cd app/ttpos-manager && make db_up.docker
+	cd ttpos-bmp && make conf && cd app/ttpos-shop && make db_up.docker
+	cd ttpos-bmp && make conf && cd app/ttpos-erp && make db_up.docker
 
 # 生成文档
 build-doc:
