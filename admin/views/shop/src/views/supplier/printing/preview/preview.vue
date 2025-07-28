@@ -97,7 +97,7 @@
           <p class="font24"> {{ $t('桌位: A01 (4人)') }} </p>
           <p class="mb-14"> <span class="span1">2024/05/04 14:15:12</span> </p>
           <p>
-            <span class="span3">{{ $t('商品名称商品名称') }}</span> <span class="span3">X1</span>
+            <span class="span3">{{ $t('（打包）') }}{{ $t('商品名称商品名称') }}</span> <span class="span3">X1</span>
           </p>
           <p class="mb-8">
             <span class="span3">{{ $t('规格名称') }}</span>
@@ -117,7 +117,7 @@
             {{ $t('桌位: A01 (4人)') }}
           </h3>
           <p>
-            <span class="span3">{{ $t('商品名称商品名称') }}</span> <span class="span3">X1</span>
+            <span class="span3">{{ $t('（打包）') }}{{ $t('商品名称商品名称') }}</span> <span class="span3">X1</span>
           </p>
           <p class="mb-8">
             <span class="span3">{{ $t('规格名称') }}</span>
@@ -483,7 +483,7 @@
       if (this.title == $t('外送单')) {
         this.details = previewData.fifteen;
         this.storeShow = false;
-        this.titleName = $t('外卖: 0001');
+        this.titleName = $t('外送: 0001');
       }
     },
     methods: {
