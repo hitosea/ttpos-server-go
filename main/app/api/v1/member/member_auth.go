@@ -5,6 +5,7 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/req/member_req"
+	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/member_service"
 	"ttpos-server-go/app/service/setting"
@@ -34,7 +35,7 @@ func (h *AuthHandler) LoginInfo(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	loginReq := member_req.MemberLoginInfoReq{}
 	if err := c.ShouldBindQuery(&loginReq); err != nil {
-		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("参数错误"), err.Error()))
 		return
 	}
 	loginResp, err := h.loginSrv.GetLoginInfo(ctx, loginReq)
