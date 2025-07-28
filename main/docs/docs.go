@@ -16532,48 +16532,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/member/xie-test/order/paid": {
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "支付成功",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "会员端-订单"
-                ],
-                "summary": "支付成功",
-                "parameters": [
-                    {
-                        "description": "详情参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/member_req.PaidMemberOrderReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "成功",
-                        "schema": {
-                            "$ref": "#/definitions/resp.MemberOrderPaymentStatusResp"
-                        }
-                    },
-                    "400": {
-                        "description": "错误请求"
-                    }
-                }
-            }
-        },
         "/menu/base": {
             "get": {
                 "security": [
@@ -20641,18 +20599,6 @@ const docTemplate = `{
                 }
             }
         },
-        "member_req.PaidMemberOrderReq": {
-            "type": "object",
-            "required": [
-                "member_sale_order_uuid"
-            ],
-            "properties": {
-                "member_sale_order_uuid": {
-                    "description": "会员端销售订单UUID",
-                    "type": "integer"
-                }
-            }
-        },
         "member_req.PayMemberOrderReq": {
             "type": "object",
             "required": [
@@ -20884,7 +20830,7 @@ const docTemplate = `{
                     ]
                 },
                 "member": {
-                    "description": "会员信息",
+                    "description": "会员端配置信息",
                     "allOf": [
                         {
                             "$ref": "#/definitions/member_resp.MemberResp"
@@ -20892,7 +20838,7 @@ const docTemplate = `{
                     ]
                 },
                 "user": {
-                    "description": "用户信息",
+                    "description": "会员信息",
                     "allOf": [
                         {
                             "$ref": "#/definitions/member_resp.UserResp"
@@ -26748,6 +26694,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/resp.MemberSaleOrderDeliveryFee"
                         }
                     ]
+                },
+                "is_in_delivery_range": {
+                    "description": "是否在配送范围内。如果不在配送范围内，则置灰提交订单按钮ß",
+                    "type": "boolean"
                 },
                 "is_verified_phone": {
                     "description": "订单是否已经验证手机号",

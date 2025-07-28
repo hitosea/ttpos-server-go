@@ -133,3 +133,10 @@ const (
 	DistanceNotCalculated = -1 // 未计算
 	DistanceCalculated    = 1  // 已计算
 )
+
+// 会员端销售订单排序.  0-其他状态，1-骑手正在赶往商家，2-骑手配送中，降序排序
+const (
+	MemberSaleOrderSortDefault         = 0 // 默认排序
+	MemberSaleOrderSortRiderAccepting  = 1 // 骑手正在赶往商家
+	MemberSaleOrderSortRiderDelivering = 2 // 骑手配送中
+)

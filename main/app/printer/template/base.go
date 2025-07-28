@@ -459,7 +459,7 @@ func (p *printerTemplate) MergeSaleOrderBuffetDelayProducts(saleOrder *model.Sal
 }
 
 // 合并销售订单商品数据
-func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder, isShowSku bool) ([]MergeSaleOrderProduct, float64) {
+func (p *printerTemplate) MergeSaleOrderProduct(saleBill *model.SaleBill, saleOrder *model.SaleOrder, isShowSku bool, isShowWrap bool) ([]MergeSaleOrderProduct, float64) {
 	productNum := decimal.NewFromFloat(0)
 	productMap := make(map[string]*MergeSaleOrderProduct)
 	products := make([]MergeSaleOrderProduct, 0)
@@ -482,9 +482,18 @@ func (p *printerTemplate) MergeSaleOrderProduct(saleOrder *model.SaleOrder, isSh
 			gift = "(" + p.Translate("赠") + ") "
 			productTotalPrice = 0
 		}
+		// 打包商品
+		var wrap string
+		if isShowWrap {
+			if item.IsWrapProduct() || (saleBill.IsTakeout() && saleBill.MemberSaleOrderUuid == 0) {
+				wrap = "(" + p.Translate("打包") + ") "
+				productTotalPrice = 0
+			}
+		}
+
 		// 商品名称
 		productAttr := item.GetAttributeNamesByLang(p.Lang, isShowSku)
-		productName := gift + item.MultiLanguageName.GetNameByLang(p.Lang)
+		productName := wrap + gift + item.MultiLanguageName.GetNameByLang(p.Lang)
 		if productAttr != "" {
 			productName = productName + "\n(" + productAttr + ")"
 		}

@@ -2165,4 +2165,5 @@ return [
     "外送订单数据" => "Delivery Order Data",
     "至少有一个距离范围" => "There must be at least one distance range",
     "最后一个距离范围必须是最大范围" => "The last distance range must be the maximum range",
+    "为非外送显示的商品，请移除" => "This item is for non-delivery display only. Please remove it.",
 ];

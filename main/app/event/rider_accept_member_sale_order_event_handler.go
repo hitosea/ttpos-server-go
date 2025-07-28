@@ -98,6 +98,10 @@ func riderAcceptMemberSaleOrderEventHandler() {
 				}
 				logger.Logger.Info(fmt.Sprintf("操作记录:商家接单 %+v", payload), zap.Uint64("record", uuid))
 
+				// 设置sort排序
+				if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderSort(memberSaleOrder.Uuid, constant.MemberSaleOrderSortRiderAccepting); err != nil {
+					payload.Ctx.Log().Error("更新会员端销售订单-骑手接单排序失败", zap.Error(err))
+				}
 			}()
 		})
 	})

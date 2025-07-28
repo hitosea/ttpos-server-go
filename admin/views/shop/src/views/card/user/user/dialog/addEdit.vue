@@ -7,9 +7,9 @@
       </el-form-item>
       <el-form-item for="no_click" :label="$t('性别')" prop="gender" :rules="[{ required: true, message: $t('请选择性别') }]">
         <el-radio-group v-model="form.gender">
-          <el-radio :label="2">{{ $t('保密') }}</el-radio>
-          <el-radio :label="1">{{ $t('男') }}</el-radio>
-          <el-radio :label="0">{{ $t('女') }}</el-radio>
+          <el-radio :value="2">{{ $t('保密') }}</el-radio>
+          <el-radio :value="1">{{ $t('男') }}</el-radio>
+          <el-radio :value="0">{{ $t('女') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item for="no_click" :label="$t('会员等级')" prop="grade_id" :rules="[{ required: true, message: $t('请选择等级') }]">
@@ -56,7 +56,7 @@
     </template>
   </el-dialog>
   <!--选择用户-->
-  <GetUser :is_open="open_getuser" :exclude_user_id="form.user_id" @close="closeGetuserFunc" :is_single="true"></GetUser>
+  <GetUser  :is_open="open_getuser" :exclude_user_id="form.user_id" @close="closeGetuserFunc" :is_single="true"></GetUser>
 </template>
 <script>
   import UserApi from '@/api/user.js';
@@ -69,6 +69,7 @@
     components: {
       GetUser,
     },
+    emits: ['closeDialog'],
     data() {
       return {
         dialogVisible: false,

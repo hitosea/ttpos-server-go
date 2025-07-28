@@ -42,6 +42,7 @@ type IQueryMemberSaleOrderRepo interface {
 	GetOrderNum(status []uint) (int64, error)                                                                                                                        // 获取订单数量
 	GetMemberSaleOrderLatest() (*model.MemberSaleOrder, error)                                                                                                       // 获取最新的一条会员端销售订单(已提交支付的)
 	UpdateMemberSaleOrderRefundAmount(memberSaleOrderUuid uint64, refundAmount float64) error                                                                        // 更新会员端销售订单的退款金额
+	UpdateMemberSaleOrderSort(memberSaleOrderUuid uint64, sort int) error                                                                                            // 更新会员端销售订单的sort排序
 
 	GetForCall(opts ...DBOption) ([]model.MemberSaleOrder, error)
 	WhereStatusIn(status []uint) DBOption
@@ -231,7 +232,8 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderManageList(pageNo, pageSi
 
 	opts := []DBOption{
 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-		CommonRepo.DBOption(CommonRepo.SortWithPayTime("desc")),
+		CommonRepo.DBOption(CommonRepo.SortWithSort("desc")),
+		CommonRepo.DBOption(CommonRepo.SortWithSubmitPayTime("desc")),
 		CommonRepo.Preload(
 			WithPreload{
 				Query: "PaymentMethod",
@@ -577,6 +579,15 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderLatest() (*model.MemberSaleOrder
 // 更新会员端销售订单的退款金额
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRefundAmount(memberSaleOrderUuid uint64, refundAmount float64) error {
 	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrderUuid).Update("refund_amount", gorm.Expr("refund_amount + ?", refundAmount)).Error
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateMemberSaleOrderSort 更新会员端销售订单的sort排序
+func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderSort(memberSaleOrderUuid uint64, sort int) error {
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrderUuid).Update("sort", sort).Error
 	if err != nil {
 		return errors.WithMessage(err)
 	}

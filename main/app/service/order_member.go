@@ -219,6 +219,15 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 		return errors.New("请选择支付方式")
 	}
 
+	companySetting := ctx.GetCompanySetting()
+	deliveryConfig, err := companySetting.GetDeliveryConfig(constant.ProviderNameSkootar, memberSaleOrder.DeliveryDistance)
+	if err != nil {
+		return errors.WithMessage(err, "配送费配置失败")
+	}
+	if !deliveryConfig.IsInDeliveryRange {
+		return errors.NewWithCode(constant.CodeOrderAddressNotInDeliveryRange, "订单地址不在配送范围内")
+	}
+
 	// 如果订单未计算距离费，则查询距离并计算距离费
 	if !memberSaleOrder.GetIsDistanceCalculated() {
 		// 查询距离
@@ -446,6 +455,8 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 	memberSaleOrderRepo := repository.NewMemberSaleOrderRepo(db)
 	memberSaleOrders, total, err := memberSaleOrderRepo.PaginateGetMemberSaleOrder(
 		req.PageNo, req.PageSize,
+		repository.CommonRepo.SortWithSort("desc"),
+		repository.CommonRepo.SortWithSubmitPayTime("desc"),
 		memberSaleOrderRepo.WithSaleBillSaleOrderProduct(),
 		repository.CommonRepo.WhereByMemberUuid(ctx.GetMemberUuid()),
 		memberSaleOrderRepo.WhereNotStatusIn([]uint{constant.MemberSaleOrderStatusSelecting}),
@@ -511,14 +522,19 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 	}
 	//
 	products := make([]resp.MemberOrderProduct, 0)
-	for _, saleOrderProduct := range memberSaleOrder.SaleBill.SaleOrders[0].SaleOrderProducts {
+	for _, saleOrderProduct := range memberSaleOrder.SaleBill.GetFirstSaleOrder().SaleOrderProducts {
 		products = append(products, resp.MemberOrderProduct{
 			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
 			TotalPrice:          saleOrderProduct.GetTotalPrice(),
 			OriginTotalPrice:    saleOrderProduct.GetTotalProductPrice(),
-			Image:               saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request)),
+			Image: func() string {
+				if saleOrderProduct.ImageFile == nil {
+					return ""
+				}
+				return saleOrderProduct.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+			}(),
 		})
 	}
 	//

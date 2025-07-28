@@ -94,7 +94,7 @@ func (t *takeoutOrderXprinterTemplate) GetPrintContent(
 	printer.AppendText("\n------------------------------------------------\n")
 	// 商品列表
 	productNum := decimal.NewFromFloat(0)
-	products, num := t.base.MergeSaleOrderProduct(saleOrder, temp != 4)
+	products, num := t.base.MergeSaleOrderProduct(saleBill, saleOrder, temp != 4, false)
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for _, product := range products {
 		printer.AppendText(t.base.PrintText(

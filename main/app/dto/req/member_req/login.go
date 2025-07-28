@@ -3,8 +3,8 @@ package member_req
 import (
 	"errors"
 	"regexp"
-	"ttpos-server-go/app/constant"
 	errs "ttpos-server-go/app/errors"
+	"ttpos-server-go/pkg/utils"
 )
 
 type MemberLoginInfoReq struct {
@@ -26,22 +26,8 @@ func (req *MemberSendCodeReq) Validate() error {
 		return errs.WithMessage(errors.New("手机号格式不正确"))
 	}
 	// 判断 req.Phone 是否是手机号
-	if req.AreaCode == constant.ChinaPrefix {
-		if len(req.Phone) != 11 {
-			return errs.WithMessage(errors.New("手机号格式不正确"))
-		}
-		if req.Phone[0] != '1' {
-			return errs.WithMessage(errors.New("手机号格式不正确"))
-		}
-	} else if req.AreaCode == constant.ThailandPrefix {
-		if len(req.Phone) != 10 {
-			return errs.WithMessage(errors.New("手机号格式不正确"))
-		}
-		if req.Phone[0] != '0' {
-			return errs.WithMessage(errors.New("手机号格式不正确"))
-		}
-	} else {
-		return errs.WithMessage(errors.New("区号格式不正确"))
+	if err := utils.ValidatePhone(req.Phone); err != nil {
+		return errs.WithMessage(err)
 	}
 	return nil
 }
@@ -73,14 +59,8 @@ func (req *MemberLoginReq) Validate() error {
 		return errors.New("验证码不能为空")
 	}
 	// 增加全数字校验
-	if !isNumeric(req.Phone) || len(req.Phone) != 11 && len(req.Phone) != 10 {
-		return errors.New("手机号格式不正确")
-	}
-	// 判断 req.Phone 是否是手机号
-	if len(req.Phone) == 11 && req.Phone[0] != '1' {
-		return errors.New("手机号格式不正确")
-	} else if len(req.Phone) == 10 && req.Phone[0] != '0' {
-		return errors.New("手机号格式不正确")
+	if err := utils.ValidatePhone(req.Phone); err != nil {
+		return errs.WithMessage(err)
 	}
 	return nil
 }
@@ -103,26 +83,12 @@ func (req *MemberRegisterReq) Validate() error {
 			return errs.WithMessage(errors.New("昵称输入字符不合规"))
 		}
 	}
-	if req.Phone == "" {
-		return errs.WithMessage(errors.New("手机号不能为空"))
+	// 验证手机号
+	if err := utils.ValidatePhone(req.Phone); err != nil {
+		return errs.WithMessage(err)
 	}
 	if req.Code == "" {
 		return errs.WithMessage(errors.New("验证码不能为空"))
-	}
-
-	// 增加全数字校验
-	if !isNumeric(req.Phone) {
-		return errs.WithMessage(errors.New("手机号格式不正确"))
-	}
-	if len(req.Phone) != 11 && len(req.Phone) != 10 {
-		return errs.WithMessage(errors.New("手机号格式不正确"))
-	}
-	if len(req.Phone) == 11 && string(req.Phone[0]) != "1" {
-		// 中国号码11位数且必须1开头
-		return errs.WithMessage(errors.New("手机号格式不正确"))
-	} else if len(req.Phone) == 10 && string(req.Phone[0]) == "0" {
-		// 泰国号码10位数且不能0开头
-		return errs.WithMessage(errors.New("手机号格式不正确"))
 	}
 	return nil
 }

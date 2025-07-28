@@ -51,6 +51,7 @@ func freeSaleOrderEventHandler() {
 					TotalNum:        saleOrderProduct.Num,
 					NumType:         saleOrderProduct.NumType,
 					IsBuffet:        saleOrderProduct.IsBuffet == 1,
+					IsWrap:          saleOrderProduct.IsWrapProduct(),
 					Remark:          saleOrderProduct.Remark,
 				})
 			}

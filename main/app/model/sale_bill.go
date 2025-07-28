@@ -214,6 +214,11 @@ func (model *SaleBill) IsTakeout() bool {
 	return model.DiningMethod == constant.SaleBillDiningMethodTakeout
 }
 
+// 获取销售账单的就餐方式
+func (model *SaleBill) GetDiningMethod() uint {
+	return constant.SaleBillDiningMethodMap[model.DiningMethod]
+}
+
 // 判断账单是否为已送厨状态
 func (model *SaleBill) IsCookingStatus() bool {
 	// 如果账单已经送出过一次，就记录第一次送厨的时间

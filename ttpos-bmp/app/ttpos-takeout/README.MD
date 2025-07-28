@@ -9,7 +9,7 @@ go mod tidy
 #生成配置，依赖上级目录生成的 .env 文件
 make conf
 
-#编译运行
+#本地编译运行, **注意改下 manifest/config/config.yaml 里的数据库端口为容器代理出来的端口 **
 make run
 
 #升级 db
@@ -59,6 +59,8 @@ make db_add NAME='comment'
 TAKEOUT_ENDPOINT=localhost:14032
 #外送服务 http 接入点, 本地调试用 localhost:14032 ,部署时使用 takeout 服务的地址
 TAKEOUT_SERVICE_URL=http://localhost:14031
+#测试环境参考 TAKEOUT_SERVICE_URL=https://ttpos-test1.ttpos.com/api/v1/takeout
+
 
 #外送服务调用点餐系统回调的加密密钥，目前和 JWT_SECRET 一致
 TAKEOUT_CALLBACK_SECRET=$JWT_SECRET  

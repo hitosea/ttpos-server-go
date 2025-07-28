@@ -214,6 +214,9 @@ func (r *memberRepo) GetMemberByUuid(uuid uint64) (*model.Member, error) {
 			WithPreload{
 				Query: "MemberLevel",
 			},
+			WithPreload{
+				Query: "MemberCard",
+			},
 		),
 	)
 	if err != nil {

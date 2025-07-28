@@ -235,7 +235,13 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 				TotalNum:        unCookingSaleOrderProduct.Num,
 				NumType:         unCookingSaleOrderProduct.NumType,
 				IsBuffet:        unCookingSaleOrderProduct.IsBuffet == 1,
-				Remark:          unCookingSaleOrderProduct.Remark,
+				IsWrap: func() bool {
+					if saleBill.IsTakeout() && saleBill.MemberSaleOrderUuid == 0 {
+						return true
+					}
+					return unCookingSaleOrderProduct.IsWrapProduct()
+				}(),
+				Remark: unCookingSaleOrderProduct.Remark,
 			})
 		}
 		go s.bus.PublishSentCookingEvent(event.SentCookingPayload{
@@ -273,6 +279,11 @@ func (s *orderSrv) ActionAdd(ctx context.Context, request req.ProductAddReq, sal
 		if err != nil {
 			return errors.WithMessage(err)
 		}
+	}
+
+	if saleBill.IsTakeout() {
+		// 如果是打包订单，则需要更新所有商品为打包商品
+		saleBill.SetTakeoutSaleBill(constant.SaleBillDiningMethodTakeout)
 	}
 
 	if err := repository.CommonRepo.Transaction(db, func(db *gorm.DB) error {

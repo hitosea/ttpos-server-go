@@ -84,9 +84,10 @@ const (
 
 // 外送业务错误码
 const (
-	CodeDistanceError                = -701 // 计算距离错误
-	CodeTakeoutCreateOrderError      = -702 // 外送订单创建失败
-	CodeOrderAddressNotVerifiedPhone = -703 // 订单地址未认证手机号
+	CodeDistanceError                  = -701 // 计算距离错误
+	CodeTakeoutCreateOrderError        = -702 // 外送订单创建失败
+	CodeOrderAddressNotVerifiedPhone   = -703 // 订单地址未认证手机号
+	CodeOrderAddressNotInDeliveryRange = -704 // 订单地址不在配送范围内
 )
 
 type ParseCodeOrderCheckOption struct {

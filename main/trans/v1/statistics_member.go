@@ -45,7 +45,7 @@ func (s *StatisticsMemberService) convertMember(offset int, limit int) error {
 			a.pay_fee as payment_fee,
 			ifnull(urord.refund_money, 0) as refund_amount,
 			ifnull(urord.refund_money, 0) as refund_fee,
-			a.pay_time as complete_time
+			a.create_time as complete_time
 		FROM jjjfood_user_recharge_order a 
 		LEFT JOIN jjjfood_user_recharge_order_pay_type opt ON a.id=opt.order_id
 		LEFT JOIN jjjfood_pay_type pt ON opt.value = pt.value 

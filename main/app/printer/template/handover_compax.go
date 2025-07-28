@@ -125,9 +125,9 @@ func (t *handoverCompaxTemplate) GetPrintContent(
 			printer.AppendText(t.base.PrintText(t.base.Translate("会员折扣"), "", t.base.GetPriceAndUnit(businessData.TotalUserDiscountMoney), width-differenceWidth))
 			printer.LineFeed(1)
 		}
-		printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.TotalFreeOrderPrice), width-differenceWidth))
-		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("赠菜金额"), "", t.base.GetPriceAndUnit(businessData.TotalGiveProductPrice), width-differenceWidth))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.TotalFreeOrderPrice), width-differenceWidth))
 		printer.LineFeed(1)
 		// 退款
 		printer.AppendText("------------------------------------------------")

@@ -58,6 +58,7 @@ func checkoutSaleOrderEventHandler() {
 					TotalNum:        saleOrderProduct.Num,
 					NumType:         saleOrderProduct.NumType,
 					IsBuffet:        saleOrderProduct.IsBuffet == 1,
+					IsWrap:          saleOrderProduct.IsWrapProduct(),
 					Remark:          saleOrderProduct.Remark,
 				})
 			}
@@ -158,12 +159,14 @@ func checkoutSaleOrderEventHandler() {
 					return
 				}
 
-				// 处理会员升级
-				memberSrv := service.NewMemberSrv(database.GetDBManager(config.DatabaseConf{}), cache.Global)
-				go memberSrv.HandleMemberUpgrade(payload.CompanyUuid, saleOrder.ConsumerUuid)
+				go func() {
+					//  处理"积分变动"事件
+					HandleMemberPoints(db)
 
-				// 发布"积分变动"事件
-				go HandleMemberPoints(db)
+					// 处理会员升级
+					memberSrv := service.NewMemberSrv(database.GetDBManager(config.DatabaseConf{}), cache.Global)
+					go memberSrv.HandleMemberUpgrade(payload.CompanyUuid, saleOrder.ConsumerUuid)
+				}()
 			}
 		})
 

@@ -31,6 +31,11 @@ const (
 	SaleBillDiningMethodTakeout = 1 // 打包
 )
 
+var SaleBillDiningMethodMap = map[uint]uint{
+	0: SaleBillDiningMethodDineIn,
+	1: SaleBillDiningMethodTakeout,
+}
+
 const (
 	SaleBillStatusPending  = 0 // 待付款
 	SaleBillStatusComplete = 1 // 已完成

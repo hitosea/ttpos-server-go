@@ -78,7 +78,7 @@
           <el-table-column v-else type="radio" width="45" fixed="right">
             <template #default="scope">
               <div class="radio-box">
-                <el-radio v-model="selectedRow" :label="scope.row" @change="handleRadioChange(scope.row)">&nbsp;</el-radio>
+                <el-radio v-model="selectedRow" :value="scope.row" @change="handleRadioChange(scope.row)">&nbsp;</el-radio>
               </div>
             </template>
           </el-table-column>
@@ -111,6 +111,7 @@
 <script>
   import DataApi from '@/api/data.js';
   export default {
+    emits: ['close'],
     data() {
       return {
         /*是否加载完成*/

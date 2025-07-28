@@ -150,6 +150,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	 */
 	if printerType == constant.PrinterTypeCashierCompax {
 		return template.NewInvoiceCompaxTemplate(base).GetPrintContent(
+			settingPrinterInfo,
 			tmp,
 			saleBill,
 			saleOrder,
@@ -162,6 +163,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	 */
 	if slices.Contains([]string{constant.PrinterTypeXPrinterLan, constant.PrinterTypeXPrinterWifi}, printerType) {
 		return template.NewInvoiceXprinterTemplate(base).GetPrintContent(
+			settingPrinterInfo,
 			printerType,
 			tmp,
 			saleBill,
@@ -175,6 +177,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	 */
 	if base.IsSunMi {
 		return template.NewInvoiceSunmiTemplate(base).GetPrintContent(
+			settingPrinterInfo,
 			printerType,
 			tmp,
 			saleBill,
@@ -188,6 +191,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	 */
 	if slices.Contains([]string{constant.PrinterTypeCodesoftLan, constant.PrinterTypeCodesoftWifi}, printerType) {
 		return template.NewInvoiceCodesoftTemplate(base).GetPrintContent(
+			settingPrinterInfo,
 			printerType,
 			tmp,
 			saleBill,

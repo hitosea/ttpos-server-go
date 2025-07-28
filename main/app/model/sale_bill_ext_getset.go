@@ -574,10 +574,6 @@ func (model *SaleBill) SetCashier(dutyNo string, cashierUuid uint64, cashierName
 
 // 设置打包销售账单。并更新订单的税率，更新订单商品的打包状态
 func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
-	// 如果没有改变，则不更新
-	if model.DiningMethod == diningMethod {
-		return
-	}
 	// 默认堂食
 	method := constant.SaleBillDiningMethodDineIn
 	// 严谨判断。拒绝非法的值
@@ -595,6 +591,10 @@ func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
 	// 从ProductPackage中获取税率
 	for _, saleOrder := range model.SaleOrders {
 		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			// 如果商品的就餐方式与账单的就餐方式相同，则不更新商品
+			if saleOrderProduct.GetDiningMethod() == uint(method) {
+				continue
+			}
 			if saleOrderProduct.ProductPackage == nil {
 				// 这种情况不应该出现，因为商品包是必填的.panic是为了提示没有预加载这个表
 				panic("saleOrderProduct.ProductPackage is nil")
