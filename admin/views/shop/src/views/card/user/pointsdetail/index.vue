@@ -10,8 +10,8 @@
           </a-select>
         </el-form-item>
 
-        <el-form-item :label="$t('昵称/手机号/会员ID/会员卡号')">
-          <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/会员ID/会员卡号')" @input="onSearch"></el-input>
+        <el-form-item :label="$t('昵称/手机号/ID/会员卡号')">
+          <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/ID/会员卡号')" @input="onSearch"></el-input>
         </el-form-item>
         <el-form-item :label="$t('变动时间')">
           <div class="block">

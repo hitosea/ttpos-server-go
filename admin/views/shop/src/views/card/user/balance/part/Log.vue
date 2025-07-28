@@ -9,8 +9,8 @@
             <el-option v-for="(item, index) in Scene" :key="index" :label="item.name" :value="item.value"></el-option>
           </a-select>
         </el-form-item>
-        <el-form-item :label="$t('昵称/手机号/会员ID/会员卡号')">
-          <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/会员ID/会员卡号')" @input="onSearch"></el-input>
+        <el-form-item :label="$t('昵称/手机号/ID/会员卡号')">
+          <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/ID/会员卡号')" @input="onSearch"></el-input>
         </el-form-item>
         <el-form-item :label="$t('起始日期')">
           <div class="block">
