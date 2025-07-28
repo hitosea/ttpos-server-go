@@ -207,6 +207,10 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 		return errors.WithMessage(err)
 	}
 
+	if memberSaleOrder.Amount < 1 {
+		return errors.New("订单金额小于1，无法支付")
+	}
+
 	// 如果未设置地址，返回错误
 	if memberSaleOrder.MemberAddressUuid == 0 {
 		return errors.New("请先选择订单地址")
@@ -1436,7 +1440,8 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		memberSaleOrder.ExpectedFinishTime = res.FinishTime
 		memberSaleOrder.RelatedOrderType = memberSaleOrder.RelatedOrderType
 		if opt.IsAutoAccept {
-			memberSaleOrder.IsAutoAccept = constant.Yes // 自动接单
+			memberSaleOrder.IsAutoAccept = constant.Yes          // 自动接单
+			memberSaleOrder.PayTime = memberSaleOrder.AcceptTime // 支付时间等于接单时间
 		}
 		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderAccept(*memberSaleOrder); err != nil {
 			return errors.WithMessage(err, "更新外送订单失败")
