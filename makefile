@@ -112,7 +112,7 @@ migrate:
 	@echo "🗄️  运行主项目数据库迁移..."
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think migrate:run
 	@echo "🚀 更新 takeout 模块数据库..."
-	@cd takeout && make conf > /dev/null 2>&1 && make db_up.docker
+	@cd takeout && make conf && make db_up.docker
 
 # 生成文档
 build-doc:
@@ -122,7 +122,7 @@ build-doc:
 restart:
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh restart $(filter-out $@,$(MAKECMDGOALS))
 
-# 更新 docker-compose up -d
+# docker-compose up -d
 up:
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
 
