@@ -22,6 +22,8 @@ endef
 
 # 初始化项目
 install:
+	# 构建前端
+	make build-web
 	# 初始化env文件 
 	if [ ! -f ".env" ]; then \
 		cp .env.example .env; \
@@ -40,18 +42,53 @@ install:
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
     # 初始化php项目
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh init
+	# 初始化takeout模块
+	cd takeout && make conf && make db_up.docker
+
+# 构建前端
+build-web:
+	# 检查并构建前端
+	@echo "🔍 检查前端文件变化..."
+	@if [ -d "admin/views" ]; then \
+		FRONTEND_CHANGED=0; \
+		if git status --porcelain admin/views/ | grep -q .; then \
+			echo "📝 检测到前端文件有变化，开始构建..."; \
+			FRONTEND_CHANGED=1; \
+		elif [ ! -d "admin/public/admin" ] || [ ! -d "admin/public/shop" ]; then \
+			echo "📁 前端构建产物不存在，开始构建..."; \
+			FRONTEND_CHANGED=1; \
+		else \
+			echo "✅ 前端文件无变化，跳过构建"; \
+		fi; \
+		if [ $$FRONTEND_CHANGED -eq 1 ]; then \
+			echo "🚀 正在构建前端项目..."; \
+			cd admin && ./build > /dev/null 2>&1 && echo "✅ 前端构建完成" || (echo "❌ 前端构建失败" && exit 1); \
+			cd ..; \
+		fi; \
+	else \
+		echo "⚠️  admin/views 目录不存在，跳过前端构建"; \
+	fi
 
 # 重新构建项目
 build:
-	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
-	make migrate
+	# 构建前端
+	make build-web
+	# 构建docker-compose
+	@echo "🐳 构建 Docker 容器..."
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
+	@echo "✅ Docker 构建完成"
+	# 运行数据库迁移
+	@echo "🗄️  运行数据库迁移..."
+	@make migrate
 
+# 重新构建项目
 build-run:
 	make build
 
 # 变更debug模式
 debug:
 	$(call update_env_and_debug)
+	make build
 
 # 运行run
 run: debug
@@ -72,9 +109,10 @@ mysql-open:
 
 # 运行数据库迁移
 migrate:
-	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think migrate:run
-	#更新 takeout模块数据库
-	cd takeout && make conf && make db_up.docker
+	@echo "🗄️  运行主项目数据库迁移..."
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think migrate:run
+	@echo "🚀 更新 takeout 模块数据库..."
+	@cd takeout && make conf > /dev/null 2>&1 && make db_up.docker
 
 # 生成文档
 build-doc:
@@ -84,7 +122,7 @@ build-doc:
 restart:
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh restart $(filter-out $@,$(MAKECMDGOALS))
 
-# 更新redis
+# 更新 docker-compose up -d
 up:
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
 
