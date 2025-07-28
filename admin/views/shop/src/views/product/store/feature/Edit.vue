@@ -40,96 +40,133 @@
   </el-dialog>
 </template>
 
-<script>
-  import ProductApi from '@/api/product.js';
-  import mInput from '@/components/m-input/index.vue';
-  import { languageStore } from '@/store/model/language.js';
-  import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
+<script setup>
+// 引入Vue3组合式API
+import { ref, reactive, onMounted } from 'vue';
+// 引入Element Plus消息
+import { ElMessage } from 'element-plus';
+// 引入API
+import ProductApi from '@/api/product.js';
+// 引入组件
+import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
+// 引入store
+import { languageStore } from '@/store/model/language.js';
 
-  const languageData = JSON.stringify(languageStore().getLanguageData().languageData.value);
+// 定义props
+const props = defineProps({
+  open_edit: {
+    type: Boolean,
+    default: false
+  },
+  editform: {
+    type: Object,
+    default: () => ({})
+  }
+});
 
-  export default {
-    name: 'ProductFeatureEdit',
-    components: {
-      mInput,
-      UniqueNameForm,
-    },
-    data() {
-      return {
-        category: [],
-        form: {
-          parent_id: 0,
-          category_id: 0,
-          name: JSON.parse(languageData),
-          sort: null,
-          is_special: 1,
-        },
-        /*是否显示*/
-        dialogVisible: false,
-        loading: false,
-      };
-    },
-    props: ['open_edit', 'editform'],
-    created() {
-      /*获取父级分类*/
-      this.dialogVisible = this.open_edit;
+// 定义emits
+const emit = defineEmits(['closeDialog']);
 
-      this.form.category_id = this.editform.model.category_id;
-      this.form.parent_id = this.editform.model.parent_id;
-      try {
-        const _names = JSON.parse(this.editform.model.name);
-        Object.keys(this.form.name).forEach((key) => {
-          this.form.name[key] = _names[key] ?? '';
-        });
-      } catch (error) {
-        //
-      }
-      this.form.sort = this.editform.model.sort;
-    },
-    methods: {
-      async submit() {
-        const self = this;
-        self.loading = true;
-        try {
-          const validUniqueName = await self.$refs.uniqueNameFormRef.validate();
-          const validForm = await self.$refs.formRef.validate();
-          if (!validUniqueName || !validForm) return;
-          const params = JSON.parse(JSON.stringify(self.form));
-          const _name = self.$refs.uniqueNameFormRef.data;
-          params.name = JSON.stringify(_name);
-          await ProductApi.storeCatEdit(params, true);
-          self.$ElMessage({
-            message: self.$t('保存成功'),
-            type: 'success',
-          });
-          self.dialogFormVisible(true);
-        } catch (error) {
-          //
-        } finally {
-          self.loading = false;
-        }
-      },
+// 获取语言数据
+const languageData = JSON.stringify(languageStore().getLanguageData().languageData.value);
 
-      /*关闭弹窗*/
-      dialogFormVisible(e) {
-        if (e) {
-          this.$emit('closeDialog', {
-            type: 'success',
-            openDialog: false,
-          });
-        } else {
-          this.$emit('closeDialog', {
-            type: 'error',
-            openDialog: false,
-          });
-        }
-      },
-    },
-  };
+// 分类数据
+const category = ref([]);
+// 表单数据
+const form = reactive({
+  parent_id: 0,
+  category_id: 0,
+  name: JSON.parse(languageData),
+  sort: null,
+  is_special: 1,
+});
+// 是否显示弹窗
+const dialogVisible = ref(false);
+// 是否正在加载
+const loading = ref(false);
+// 表单引用
+const formRef = ref();
+// 唯一名称表单引用
+const uniqueNameFormRef = ref();
+
+// 提交表单
+async function submit() {
+  loading.value = true;
+  try {
+    // 验证唯一名称表单
+    const validUniqueName = await uniqueNameFormRef.value.validate();
+    // 验证主表单
+    const validForm = await formRef.value.validate();
+    
+    if (!validUniqueName || !validForm) return;
+    
+    // 复制表单数据
+    const params = JSON.parse(JSON.stringify(form));
+    
+    // 获取唯一名称数据
+    const _name = uniqueNameFormRef.value.data;
+    params.name = JSON.stringify(_name);
+    
+    // 调用API
+    await ProductApi.storeCatEdit(params, true);
+    
+    // 显示成功消息
+    ElMessage({
+      message: $t('保存成功'),
+      type: 'success',
+    });
+    
+    // 关闭弹窗
+    dialogFormVisible(true);
+  } catch (error) {
+    // 错误处理
+  } finally {
+    loading.value = false;
+  }
+}
+
+// 关闭弹窗
+function dialogFormVisible(e) {
+  if (e) {
+    emit('closeDialog', {
+      type: 'success',
+      openDialog: false,
+    });
+  } else {
+    emit('closeDialog', {
+      type: 'error',
+      openDialog: false,
+    });
+  }
+}
+
+// 组件挂载时初始化数据
+onMounted(() => {
+  // 设置弹窗状态
+  dialogVisible.value = props.open_edit;
+  
+  // 设置分类ID
+  form.category_id = props.editform.model.category_id;
+  // 设置父级ID
+  form.parent_id = props.editform.model.parent_id;
+  
+  // 解析名称数据
+  try {
+    const _names = JSON.parse(props.editform.model.name);
+    Object.keys(form.name).forEach((key) => {
+      form.name[key] = _names[key] ?? '';
+    });
+  } catch (error) {
+    // 错误处理
+  }
+  
+  // 设置排序
+  form.sort = props.editform.model.sort;
+});
 </script>
 
 <style scoped>
-  .img {
-    margin-top: 10px;
-  }
+.img {
+  margin-top: 10px;
+}
 </style>

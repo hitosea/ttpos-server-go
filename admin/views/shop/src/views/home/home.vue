@@ -85,7 +85,6 @@
 
 <script setup>
   import { ref, onMounted } from 'vue';
-  import { useI18n } from 'vue-i18n';
   import { ElMessage } from 'element-plus';
   import IndexApi from '@/api/index.js';
   import Ranking from '@/views/home/part/product/Ranking.vue';
@@ -94,10 +93,6 @@
   import dataBox from '@/components/dataBox/dataBox.vue';
   import gridContent from './part/product/gridContent.vue';
   import centerRBox from './part/product/centerRBox.vue';
-  
-
-  // 国际化
-  const { t } = useI18n();
 
   // 定义emits
   const emit = defineEmits(['selectMenu']);
@@ -150,7 +145,7 @@
       wait_data.value = data.data.data.wait_data;
       today_data.value = data.data.data.today_data;
     } catch (error) {
-      ElMessage.error(error?.message || t('获取数据失败'));
+      ElMessage.error(error?.message || $t('获取数据失败'));
     } finally {
       loading.value = false;
     }
