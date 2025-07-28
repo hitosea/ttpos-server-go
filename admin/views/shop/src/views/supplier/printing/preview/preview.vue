@@ -261,7 +261,7 @@
         <template v-if="title == $t('出菜单')">
           <h4 class="mb-8"> {{ $t('出菜单') }}</h4>
           <h4 class="Invoice-h4 mb-8">
-            {{ $t('桌号/序号/外卖: A01 (4人)') }}
+            {{ $t('桌号/序号/外送: A01 (4人)') }}
           </h4>
         </template>
         <!-- 小字的数据 -->
@@ -478,7 +478,7 @@
       if (this.title == $t('出菜单')) {
         this.details = previewData.fourteen;
         this.storeShow = false;
-        this.titleName = $t('桌号/序号/外卖: A01 (4人)');
+        this.titleName = $t('桌号/序号/外送: A01 (4人)');
       }
       if (this.title == $t('外送单')) {
         this.details = previewData.fifteen;
