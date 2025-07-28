@@ -57,7 +57,7 @@ make db_add NAME='comment'
 #外送服务相关配置
 #外送服务grpc 接入点, 本地调试用 localhost:14032 ,部署时使用 takeout 服务的地址
 TAKEOUT_ENDPOINT=localhost:14032
-#外送服务 http 接入点, 本地调试用 localhost:14032 ,部署时使用 takeout 服务的地址
+#外送服务 http 接入点, 本地调试用 localhost:14031 ,部署时使用 takeout 服务的地址
 TAKEOUT_SERVICE_URL=http://localhost:14031
 #测试环境参考 TAKEOUT_SERVICE_URL=https://ttpos-test1.ttpos.com/api/v1/takeout
 

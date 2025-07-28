@@ -21,6 +21,13 @@ make conf
 make run.manager
 # 门店模块
 make run.shop
+
+#外送模块
+make run.takeout
+
+#erp模块
+make run.erp
+
 ```
 
 ## 数据库迁移
