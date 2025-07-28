@@ -550,6 +550,7 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 	//
 	return &resp.GetMemberOrderDetailResp{
 		MemberSaleOrderUuid:  memberSaleOrder.Uuid,
+		OrderNo:              memberSaleOrder.OrderNo,
 		CompanyName:          ctx.GetCompany().Name,
 		PayTime:              memberSaleOrder.PayTime,
 		FinishTime:           memberSaleOrder.FinishTime,

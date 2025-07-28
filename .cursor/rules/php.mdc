@@ -15,6 +15,7 @@ alwaysApply: true
 6. 都添加create_time, update_time, delete_time字段, 类型是int, 默认值是0, 不要用datetime类型
 7. 所有的迁移文件都写在php中，不要写在go中
 8. 新增迁移文件的时候，文件名的前缀我希望是20250721370408_， 比如20250721370408_add_table_name_table.php 并以上一个文件的序号+1作为新的文件名
+9. 在迁移文件中新增表或者字段的时候，也要同步改动 seeds/shop_01.sql 文件
 
 #关于接口
 1. 接口都用中文注释, 不要用英文注释

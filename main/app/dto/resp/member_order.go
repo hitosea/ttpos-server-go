@@ -71,6 +71,7 @@ type DeliveryResp struct {
 // 会员端订单详情
 type GetMemberOrderDetailResp struct {
 	MemberSaleOrderUuid  uint64                   `json:"member_sale_order_uuid"` // 会员端销售订单UUID
+	OrderNo              string                   `json:"order_no"`               // 订单编号
 	CompanyName          string                   `json:"company_name"`           // 公司名称
 	PayTime              int64                    `json:"pay_time"`               // 支付时间
 	RemainingPaymentTime int64                    `json:"remaining_payment_time"` // 剩余支付时间(单位秒)
