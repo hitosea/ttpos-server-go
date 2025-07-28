@@ -155,7 +155,7 @@
             if (e == 'first') {
               self.tableData = [];
             }
-            if (this.Dtype == 'delete') {
+            if (this.DType == 'delete') {
               self.tableData = data.data.list.data;
               self.totalDataNumber = data.data.list.total;
             } else {
@@ -181,9 +181,9 @@
       },
 
       handleClick() {
-        if (this.Dtype == 'delete') {
+        if (this.DType == 'delete') {
           this.deleteQrcode();
-        } else if (this.Dtype == 'service') {
+        } else if (this.DType == 'service') {
           // 使用selectedTableIds查找完整的表格行数据
           this.$emit('selectTable', this.selectedTableIds);
         } else {
@@ -279,7 +279,7 @@
       },
 
       selectable(row) {
-        if (row.status == 30 && this.Dtype == 'delete') {
+        if (row.status == 30 && this.DType == 'delete') {
           return false;
         } else {
           return true;
