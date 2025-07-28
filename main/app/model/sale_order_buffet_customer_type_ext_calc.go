@@ -23,8 +23,8 @@ func (model *SaleOrderBuffetCustomerType) calcSaleOrderBuffetCustomerType(servic
 	calc.SalePriceNoTax = model.calcProductPriceNoneTax(model.SalePrice, taxFeeType)
 	model.SalePriceNoTax = calc.SalePriceNoTax
 	if isLatestPrice {
-		calc.Price = model.calcLatestPrice()                                // 使用最新的价格
 		model.OpenOverallDiscount = model.BuffetPackage.OpenOverallDiscount // 更新自助餐是否开启整单打折
+		calc.Price = model.calcLatestPrice()                                // 使用最新的价格
 	} else {
 		calc.Price = model.calcPrice() // 使用下单时的价格
 	}

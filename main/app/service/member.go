@@ -152,7 +152,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 			return errors.New("推荐人不存在")
 		}
 		//if addMemberReq.ActivityUuid == 0 {
-		activity, _ := repository.NewMarketingActivityRepo(ctx.GetDB()).GetValidActivityByUuid(referrer.ActivityUuid)
+		activity, _ := repository.NewMarketingActivityRepo(ctx.GetDB()).GetValidActivityByUuid(0)
 		if activity != nil {
 			activityUuid = activity.Uuid
 		}
