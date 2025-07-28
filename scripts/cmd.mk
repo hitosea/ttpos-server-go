@@ -1,3 +1,5 @@
+LOCAL_IP := $(shell ifconfig | grep "inet " | grep "192" | awk '{print $$2}' | head -n 1)
+
 # 定义一个函数来更新环境变量并执行脚本
 define update_env_and_debug
 	sed -i.bak 's/^SERVER_MODE=.*/SERVER_MODE=debug/' .env && rm .env.bak;

@@ -1,5 +1,3 @@
-LOCAL_IP := $(shell ifconfig | grep "inet " | grep "192" | awk '{print $$2}' | head -n 1)
-
 # include
 include ./scripts/cmd.mk
 
