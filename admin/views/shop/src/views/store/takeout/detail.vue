@@ -17,7 +17,7 @@
               {{ detail.order_no }}
             </div>
           </el-col>
-          <el-col :span="6">
+          <el-col :span="6" v-if="detail.member?.id">
             <div class="pb16">
               <span class="gray9">{{ $t('会员：') }}</span>
               <span>{{ $t('会员ID') }}&nbsp;({{ detail?.member?.id }})</span>
@@ -90,7 +90,7 @@
               </span>
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.status == 7">
+          <el-col :span="6" v-if="detail.pay_time > 0">
             <div class="pb16">
               <span class="gray9">{{ $t('支付方式：') }}</span>
               <span>
@@ -98,7 +98,7 @@
               </span>
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.status == 7">
+          <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('支付时间：') }}</span>
               <span>
