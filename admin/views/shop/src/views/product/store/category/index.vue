@@ -35,7 +35,7 @@
           <el-table-column prop="sort" :label="$t('状态')">
             <template #default="scope">
               <el-switch
-                :disabled="!$filter.isAuth('/product/store/category/state') || scope.row.is_button == 1"
+                :disabled="!proxy.$filter.isAuth('/product/store/category/state') || scope.row.is_button == 1"
                 v-model="scope.row.status"
                 :active-value="1"
                 :inactive-value="0"
@@ -89,15 +89,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, getCurrentInstance } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useI18n } from 'vue-i18n'
 import PorductApi from '@/api/product.js'
 import Add from './Add.vue'
 import Edit from './Edit.vue'
 
-// 国际化
-const { t } = useI18n()
+
+const { proxy } = getCurrentInstance();
 
 // 响应式数据
 const loading = ref(true)
@@ -190,7 +189,7 @@ const statusSet = async (e, id) => {
       type: 'success',
     })
   } catch (error) {
-    ElMessage.error(error?.message || t('状态设置失败'))
+    ElMessage.error(error?.message || $t('状态设置失败'))
   }
 }
 
@@ -212,7 +211,7 @@ const closeDialogFunc = (e, f) => {
 
 // 删除分类
 const deleteClick = (row) => {
-  ElMessageBox.confirm(t('删除后不可恢复，确认删除吗?'), t('提示'), {
+  ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
     type: 'warning',
   }).then(async () => {
     try {
@@ -220,12 +219,12 @@ const deleteClick = (row) => {
         category_id: row.category_id,
       },true)
       ElMessage({
-        message: t('删除成功'),
+        message: $t('删除成功'),
         type: 'success',
       })
       getData()
     } catch (err) {
-      ElMessage.error(err?.message || t('删除失败'))
+      ElMessage.error(err?.message || $t('删除失败'))
     }
   })
 }

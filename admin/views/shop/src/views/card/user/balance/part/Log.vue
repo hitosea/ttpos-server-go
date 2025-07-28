@@ -9,8 +9,8 @@
             <el-option v-for="(item, index) in Scene" :key="index" :label="item.name" :value="item.value"></el-option>
           </a-select>
         </el-form-item>
-        <el-form-item :label="$t('昵称/手机号/会员ID')">
-          <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/会员ID')" @input="onSearch"></el-input>
+        <el-form-item :label="$t('昵称/手机号/ID/会员卡号')">
+          <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/ID/会员卡号')" @input="onSearch"></el-input>
         </el-form-item>
         <el-form-item :label="$t('起始日期')">
           <div class="block">
@@ -46,17 +46,17 @@
           </el-table-column>
           <el-table-column prop="user.mobile" :label="$t('手机号')" width="160"> </el-table-column>
           <el-table-column prop="user_id" :label="$t('会员ID')" width="80"></el-table-column>
+          <el-table-column prop="member_card_no" :label="$t('会员卡号')">
+            <template #default="scope">
+              {{ scope.row.member_card_no || '-' }}
+            </template>
+          </el-table-column>
           <el-table-column prop="money" :label="$t('变动数量')">
             <template #default="scope">
-              <template v-if="scope.row.scene.value == 90">
-                {{ scope.row.gift_money }}
-              </template>
-              <template v-else>
-                <p v-if="scope.row.money > 0"> +{{ this.$formatPrice(scope.row.money) }} </p>
-                <p v-else>
-                  {{ Number(scope.row.money).toLocaleString('en-US') }}
-                </p>
-              </template>
+              <p v-if="scope.row.money > 0"> +{{ this.$formatPrice(scope.row.money) }} </p>
+              <p v-else>
+                {{ Number(scope.row.money).toLocaleString('en-US') }}
+              </p>
             </template>
           </el-table-column>
           <el-table-column prop="balance" :label="$t('主账户变动数量')">

@@ -9,8 +9,15 @@ endef
 # 定义一个函数来更新环境变量并执行脚本
 define update_env_and_run
 	sed -i.bak 's/^DB_HOST=.*/DB_HOST=$(LOCAL_IP)/' .env && rm .env.bak;
-	sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP)/' .env && rm .env.bak;
-	chmod +x ./.sh && ./.sh mysql open
+	sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP),$(LOCAL_IP),$(LOCAL_IP)/' .env && rm .env.bak;
+	sed -i.bak 's/^REDIS_PORT=.*/REDIS_PORT=7001,7002,7003/' .env && rm .env.bak;
+	if grep -q '^REDIS_CLUSTER_ANNOUNCE_IP=' .env; then \
+		sed -i.bak 's/^REDIS_CLUSTER_ANNOUNCE_IP=.*/REDIS_CLUSTER_ANNOUNCE_IP=$(LOCAL_IP)/' .env && rm .env.bak; \
+	else \
+		echo '\nREDIS_CLUSTER_ANNOUNCE_IP=$(LOCAL_IP)' >> .env; \
+	fi;
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh mysql open
 endef
 
 # 初始化项目
@@ -30,9 +37,17 @@ install:
 		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env && rm .env.bak; \
 	fi
 	# 启动容器
-	docker compose -p ttpos-server-go up -d --build;
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
     # 初始化php项目
-	chmod +x ./.sh && ./.sh init
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh init
+
+# 重新构建项目
+build:
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
+	make migrate
+
+build-run:
+	make build
 
 # 变更debug模式
 debug:
@@ -57,7 +72,7 @@ mysql-open:
 
 # 运行数据库迁移
 migrate:
-	chmod +x ./.sh && ./.sh think migrate:run
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think migrate:run
 	#更新 takeout模块数据库
 	cd takeout && make conf && make db_up.docker
 
@@ -65,19 +80,13 @@ migrate:
 build-doc:
 	cd main && go install github.com/swaggo/swag/cmd/swag@latest && ${HOME}/go/bin/swag init
 
-# 构建项目 - 生产
-build-run:
-	docker compose -p ttpos-server-go up -d --build
-
-# 更新
-update:
-	chmod +x ./.sh && ./.sh update
-	docker compose -p ttpos-server-go up -d --build
-	chmod +x ./.sh && ./.sh restart
-
 # 重启容器
 restart:
-	chmod +x ./.sh && ./.sh restart
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh restart $(filter-out $@,$(MAKECMDGOALS))
+
+# 更新redis
+up:
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
 
 # 翻译
 translate:
@@ -85,27 +94,10 @@ translate:
 
 # 运行数据库迁移
 migrate-data:
-	cd main && go run ./main.go migrate-data $(ARGS)
-
-# 更新版本号
-update-version:
-	@echo "更新版本号..."
-	@CURRENT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
-	if [ -z "$(VERSION)" ] && [ -z "$(COMMIT_SHA)" ] && [ -z "$(BUILD_TIME)" ]; then \
-		echo "请提供至少一个参数: VERSION 或 BUILD_TIME"; \
-		echo "示例: make update-version VERSION=2.3.1 BUILD_TIME=2023-10-15"; \
-		echo "注意: COMMIT_SHA 将自动使用当前最新的Git提交哈希值"; \
-		echo "快速更新版本: make bump-version"; \
-		cd main && go run ./main.go version; \
-	else \
-		cd main && go run ./main.go version \
-		$(if $(VERSION),--version=$(VERSION),) \
-		--commit=$$CURRENT_COMMIT \
-		$(if $(BUILD_TIME),--build-time=$(BUILD_TIME),); \
-	fi
+	cd main && go run ./main.go migrate-data
 
 # 快速增加版本号
-bump-version:
+add-version:
 	@echo "快速增加版本号..."
 	@CURRENT_VERSION=$$(grep 'Version.*=.*"' main/version/version.go | sed 's/.*"\(.*\)".*/\1/'); \
 	MAJOR=$$(echo $$CURRENT_VERSION | cut -d. -f1); \
@@ -125,3 +117,8 @@ statistics-re:
 # 更新skootar状态
 skootar-update-status:
 	cd main && go run ./main.go skootar-update-status $(ARGS)
+
+# 忽略不存在的目标（用于处理额外参数）
+.PHONY: $(filter-out $(firstword $(MAKECMDGOALS)),$(MAKECMDGOALS))
+$(filter-out $(firstword $(MAKECMDGOALS)),$(MAKECMDGOALS)):
+	@:
