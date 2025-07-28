@@ -22,9 +22,8 @@ endef
 
 # 初始化项目
 install:
-	# 构建前端
 	make build-web
-	# 初始化env文件 
+	@echo "🔍 初始化env文件"
 	if [ ! -f ".env" ]; then \
 		cp .env.example .env; \
 		echo "Created .env file from .env.example"; \
@@ -32,22 +31,21 @@ install:
 		sed -i.bak 's/^DB_PASSWORD=.*/DB_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 	fi 
-	# 检查 .env 文件是否存在
+	@echo "🔍 检查 .env 文件是否存在"
 	if [ -f ".env" ]; then \
 		sed -i.bak 's/^DB_HOST=.*/DB_HOST=db/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_PORT=.*/DB_PORT=3306/' .env && rm .env.bak; \
 		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env && rm .env.bak; \
 	fi
-	# 启动容器
+	@echo "🗄️  启动容器..."
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
-    # 初始化php项目
+	@echo "🗄️  初始化php项目..."
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh init
-	# 初始化takeout模块
+	@echo "🗄️  初始化takeout模块..."
 	cd takeout && make conf && make db_up.docker
 
 # 构建前端
 build-web:
-	# 检查并构建前端
 	@echo "🔍 检查前端文件变化..."
 	@if [ -d "admin/views" ]; then \
 		FRONTEND_CHANGED=0; \
@@ -71,13 +69,10 @@ build-web:
 
 # 重新构建项目
 build:
-	# 构建前端
 	make build-web
-	# 构建docker-compose
 	@echo "🐳 构建 Docker 容器..."
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
 	@echo "✅ Docker 构建完成"
-	# 运行数据库迁移
 	@echo "🗄️  运行数据库迁移..."
 	@make migrate
 
@@ -88,7 +83,6 @@ build-run:
 # 变更debug模式
 debug:
 	$(call update_env_and_debug)
-	make build
 
 # 运行run
 run: debug

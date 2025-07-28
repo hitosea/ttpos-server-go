@@ -185,6 +185,11 @@ if [ $# -gt 0 ]; then
         echo -e "${OK} ${GreenBG} 初始化数据库 ${Font}"
         # 
         sleep 2
+        create=`run_exec db "sh /etc/mysql/create_saas.sh"`
+        echo -e "$create"
+        run_exec php "php think migrate:run"
+        # 
+        sleep 2
         run_exec php "php think migrate:run"
         #
         run_exec php "chown -R www-data:www-data ./app"
