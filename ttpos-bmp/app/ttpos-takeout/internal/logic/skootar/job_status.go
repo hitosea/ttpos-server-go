@@ -11,12 +11,12 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/guid"
-	v1 "takeout/api/callback/v1"
-	"takeout/internal/consts"
-	"takeout/internal/dao"
-	"takeout/internal/model/do"
-	"takeout/internal/model/entity"
-	"takeout/internal/model/input/skootar"
+	v1 "ttpos-bmp/app/ttpos-takeout/api/callback/v1"
+	"ttpos-bmp/app/ttpos-takeout/internal/consts"
+	"ttpos-bmp/app/ttpos-takeout/internal/dao"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"
 )
 
 func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq) (res *v1.SkootarStatusRes, err error) {

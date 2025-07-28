@@ -2,8 +2,8 @@ package context
 
 import (
 	"context"
-	"takeout/internal/model"
-	"takeout/internal/service"
+	"ttpos-bmp/app/ttpos-takeout/internal/model"
+	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
 var (

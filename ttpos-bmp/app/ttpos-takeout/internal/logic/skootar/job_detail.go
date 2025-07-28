@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
-	"takeout/internal/model/input/skootar"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"
 )
 
 var (

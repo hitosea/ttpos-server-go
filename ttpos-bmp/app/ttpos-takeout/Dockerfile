@@ -1,40 +1,40 @@
 # 使用官方Go语言镜像作为基础镜像
-FROM apache/skywalking-go:0.5.0-go1.23 AS builder
+FROM golang:1.23 AS builder
 
 # 设置工作目录
 WORKDIR /app
 
 # 设置代理
 ENV GOPROXY=https://goproxy.cn,direct
+RUN go install github.com/gogf/gf/cmd/gf/v2@latest
+# 复制源代码
+COPY ttpos-bmp/ ./ttpos-bmp
+COPY .env .
 
-# 复制go.mod和go.sum文件
-COPY go.mod go.sum ./
+WORKDIR /app/ttpos-bmp
 
 # 下载依赖，这一步会生成缓存，在依赖有变化时才会重新下载
 RUN go mod download
 
-# 复制源代码
-COPY . .
-
-RUN skywalking-go-agent -inject /app
-
 # 编译Go程序
-RUN go build -o main -ldflags="-s -w" -toolexec="skywalking-go-agent" -a ./main.go
+RUN cd app/ttpos-takeout && gf build
 
 # 添加执行权限
-RUN chmod +x main
+RUN chmod +x app/ttpos-takeout/.bin/linux_amd64/main
 
 # 使用轻量级的镜像来运行应用
 FROM ubuntu:latest
 
-# 安装 ca-certificates 和 curl
-RUN apt-get update && apt-get install -y ca-certificates curl
+# 安装 ca-certificates 和 curl，并清除 apt 缓存
+RUN apt-get update && apt-get install -y ca-certificates curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
 WORKDIR /app
 
 # 复制编译好的二进制文件到新镜像
-COPY --from=builder /app/main .
+COPY --from=builder /app/ttpos-bmp/app/ttpos-takeout/.bin/linux_amd64/main .
 
 # 暴露应用运行的端口
 EXPOSE 14031

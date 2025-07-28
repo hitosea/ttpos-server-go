@@ -7,11 +7,11 @@ package service
 
 import (
 	"context"
-	"takeout/api"
-	v1 "takeout/api/callback/v1"
-	"takeout/internal/model/conf"
-	"takeout/internal/model/input"
-	"takeout/internal/model/input/skootar"
+	"ttpos-bmp/app/ttpos-takeout/api"
+	v1 "ttpos-bmp/app/ttpos-takeout/api/callback/v1"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"
 )
 
 type (
@@ -24,7 +24,7 @@ type (
 		CreateOrder(ctx context.Context, req *api.CreateOrderReq) (res *api.CreateOrderResp, err error)
 		// EstimateDistance 获取预估距离
 		EstimateDistance(ctx context.Context, req *api.EstimateDistanceReq) (res *api.EstimateDistanceResp, err error)
-		// CreateOrder 创建订单
+		// GetDriverInfo 获取司机位置
 		GetDriverInfo(ctx context.Context, req *input.GetDriverInfoInp) (res *api.GetDriverInfoResp, err error)
 		JobDetail4Food(ctx context.Context, req *skootar.JobDetailInp) (jobDetail *skootar.JobDetail, err error)
 		JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq) (res *v1.SkootarStatusRes, err error)

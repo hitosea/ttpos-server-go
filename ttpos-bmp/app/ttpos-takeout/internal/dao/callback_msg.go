@@ -5,7 +5,7 @@
 package dao
 
 import (
-	"takeout/internal/dao/internal"
+	"ttpos-bmp/app/ttpos-takeout/internal/dao/internal"
 )
 
 // callbackMsgDao is the data access object for the table takeout_callback_msg.

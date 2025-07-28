@@ -3,8 +3,8 @@ package rpc
 import (
 	"context"
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
-	"takeout/internal/controller/rpc/echo"
-	"takeout/internal/controller/rpc/takeout"
+	"ttpos-bmp/app/ttpos-takeout/internal/controller/rpc/echo"
+	"ttpos-bmp/app/ttpos-takeout/internal/controller/rpc/takeout"
 )
 
 var Server = new(rpcServer)

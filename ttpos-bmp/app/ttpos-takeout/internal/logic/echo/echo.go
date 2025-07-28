@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
-	"takeout/internal/dao"
-	"takeout/internal/model/entity"
-	"takeout/internal/model/input"
-	"takeout/internal/service"
+	"ttpos-bmp/app/ttpos-takeout/internal/dao"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
+	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
 type sEcho struct {

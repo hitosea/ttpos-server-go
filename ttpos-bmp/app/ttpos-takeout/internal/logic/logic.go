@@ -5,8 +5,8 @@
 package logic
 
 import (
-	_ "takeout/internal/logic/context"
-	_ "takeout/internal/logic/echo"
-	_ "takeout/internal/logic/skootar"
-	_ "takeout/internal/logic/takeout"
+	_ "ttpos-bmp/app/ttpos-takeout/internal/logic/context"
+	_ "ttpos-bmp/app/ttpos-takeout/internal/logic/echo"
+	_ "ttpos-bmp/app/ttpos-takeout/internal/logic/skootar"
+	_ "ttpos-bmp/app/ttpos-takeout/internal/logic/takeout"
 )

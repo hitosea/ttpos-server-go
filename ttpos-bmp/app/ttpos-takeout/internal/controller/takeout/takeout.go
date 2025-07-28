@@ -2,7 +2,7 @@ package takeout
 
 import (
 	"context"
-	"takeout/api"
+	"ttpos-bmp/app/ttpos-takeout/api
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/errors/gcode"

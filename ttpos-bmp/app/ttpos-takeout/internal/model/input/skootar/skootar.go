@@ -1,6 +1,6 @@
 package skootar
 
-import "takeout/internal/consts"
+import "ttpos-bmp/app/ttpos-takeout/internal/consts"
 
 type ReqBase struct {
 	ApiKey   string `json:"apiKey"`

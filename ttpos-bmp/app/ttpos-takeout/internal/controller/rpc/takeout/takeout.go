@@ -2,16 +2,16 @@ package takeout
 
 import (
 	"context"
-	"takeout/api"
-	"takeout/internal/consts"
-	"takeout/internal/logic/takeout"
+	"ttpos-bmp/app/ttpos-takeout/api"
+	"ttpos-bmp/app/ttpos-takeout/internal/consts"
+	"ttpos-bmp/app/ttpos-takeout/internal/logic/takeout"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
 
-	"takeout/internal/model/input"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
 )
 
 type Controller struct {

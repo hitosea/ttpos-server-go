@@ -6,9 +6,9 @@ import (
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
-	"takeout/internal/model/conf"
-	"takeout/internal/model/input/skootar"
-	"takeout/internal/service"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"
+	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
 var (

@@ -7,7 +7,7 @@ package hello
 import (
 	"context"
 
-	"takeout/api/hello/v1"
+	"ttpos-bmp/app/ttpos-takeout/api/hello/v1"
 )
 
 type IHelloV1 interface {

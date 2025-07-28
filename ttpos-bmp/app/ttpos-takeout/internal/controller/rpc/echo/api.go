@@ -4,9 +4,9 @@ import (
 	"context"
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/errors/gerror"
-	"takeout/api/echo"
-	"takeout/internal/model/input"
-	"takeout/internal/service"
+	"ttpos-bmp/app/ttpos-takeout/api/echo"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
+	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
 type Controller struct {

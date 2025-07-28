@@ -3,9 +3,9 @@ package skootar
 import (
 	"context"
 	"encoding/json"
-	"takeout/api"
-	"takeout/internal/model/input"
-	"takeout/internal/model/input/skootar"
+	"ttpos-bmp/app/ttpos-takeout/api"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"

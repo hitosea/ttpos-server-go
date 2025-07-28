@@ -25,9 +25,11 @@ gfcli:
       - api/*.go
       - internal/*.go
   docker:
-    build: "-a amd64 -s linux -p temp -ew"
+    build: >-
+      -a amd64 -s linux -p temp -ew
+    tagName: ttpos-bmp-takeout
     tagPrefixes:
-      - hub.hitosea.com/ttpos-bmp-takeout
+      - hub.hitosea.com
 
 #注意db的格式跟link的不一样 用容器内网ip 端口
 migrate-db-link: mysql://$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT)/takeout

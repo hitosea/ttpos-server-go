@@ -3,9 +3,9 @@ package callback
 import (
 	"context"
 	"github.com/gogf/gf/v2/frame/g"
-	"takeout/internal/service"
+	"ttpos-bmp/app/ttpos-takeout/internal/service"
 
-	"takeout/api/callback/v1"
+	"ttpos-bmp/app/ttpos-takeout/api/callback/v1"
 )
 
 func (c *ControllerV1) SkootarStatus(ctx context.Context, req *v1.SkootarStatusReq) (res *v1.SkootarStatusRes, err error) {

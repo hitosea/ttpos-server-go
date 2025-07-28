@@ -2,14 +2,14 @@ package cmd
 
 import (
 	"context"
-	"takeout/internal/controller/callback"
-	"takeout/internal/controller/rpc"
+	"ttpos-bmp/app/ttpos-takeout/internal/controller/callback"
+	"ttpos-bmp/app/ttpos-takeout/internal/controller/rpc"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcmd"
 
-	"takeout/internal/controller/hello"
+	"ttpos-bmp/app/ttpos-takeout/internal/controller/hello"
 )
 
 var (

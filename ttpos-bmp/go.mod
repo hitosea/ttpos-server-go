@@ -1,8 +1,8 @@
 module ttpos-bmp
 
-go 1.24
+go 1.23
 
-toolchain go1.24.4
+toolchain go1.23.5
 
 require github.com/gogf/gf/v2 v2.9.0
 

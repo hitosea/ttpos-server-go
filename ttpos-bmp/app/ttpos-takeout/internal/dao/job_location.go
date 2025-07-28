@@ -5,7 +5,7 @@
 package dao
 
 import (
-	"takeout/internal/dao/internal"
+	"ttpos-bmp/app/ttpos-takeout/internal/dao/internal"
 )
 
 // jobLocationDao is the data access object for the table takeout_job_location.

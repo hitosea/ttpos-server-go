@@ -5,7 +5,7 @@
 package callback
 
 import (
-	"takeout/api/callback"
+	"ttpos-bmp/app/ttpos-takeout/api/callback"
 )
 
 type ControllerV1 struct{}

@@ -2,12 +2,12 @@ package takeout
 
 import (
 	"context"
-	"takeout/api"
-	"takeout/internal/consts"
-	"takeout/internal/dao"
-	"takeout/internal/model/entity"
-	"takeout/internal/model/input"
-	"takeout/internal/service"
+	"ttpos-bmp/app/ttpos-takeout/api"
+	"ttpos-bmp/app/ttpos-takeout/internal/consts"
+	"ttpos-bmp/app/ttpos-takeout/internal/dao"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
+	"ttpos-bmp/app/ttpos-takeout/internal/service"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 )

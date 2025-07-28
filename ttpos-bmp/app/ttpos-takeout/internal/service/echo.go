@@ -7,7 +7,7 @@ package service
 
 import (
 	"context"
-	"takeout/internal/model/input"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
 )
 
 type (

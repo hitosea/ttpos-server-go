@@ -5,7 +5,7 @@
 package hello
 
 import (
-	"takeout/api/hello"
+	"ttpos-bmp/app/ttpos-takeout/api/hello"
 )
 
 type ControllerV1 struct{}
@@ -13,4 +13,3 @@ type ControllerV1 struct{}
 func NewV1() hello.IHelloV1 {
 	return &ControllerV1{}
 }
-

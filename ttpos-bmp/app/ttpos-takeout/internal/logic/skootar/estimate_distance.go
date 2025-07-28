@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"takeout/api"
-	"takeout/internal/consts"
-	"takeout/internal/model/input/skootar"
+	"ttpos-bmp/app/ttpos-takeout/api"
+	"ttpos-bmp/app/ttpos-takeout/internal/consts"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"

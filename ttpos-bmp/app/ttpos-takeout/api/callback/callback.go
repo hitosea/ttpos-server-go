@@ -7,7 +7,7 @@ package callback
 import (
 	"context"
 
-	"takeout/api/callback/v1"
+	"ttpos-bmp/app/ttpos-takeout/api/callback/v1"
 )
 
 type ICallbackV1 interface {
