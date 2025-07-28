@@ -48,15 +48,10 @@
           <el-table-column prop="user_id" :label="$t('会员ID')" width="80"></el-table-column>
           <el-table-column prop="money" :label="$t('变动数量')">
             <template #default="scope">
-              <template v-if="scope.row.scene.value == 90">
-                {{ scope.row.gift_money }}
-              </template>
-              <template v-else>
-                <p v-if="scope.row.money > 0"> +{{ this.$formatPrice(scope.row.money) }} </p>
-                <p v-else>
-                  {{ Number(scope.row.money).toLocaleString('en-US') }}
-                </p>
-              </template>
+              <p v-if="scope.row.money > 0"> +{{ this.$formatPrice(scope.row.money) }} </p>
+              <p v-else>
+                {{ Number(scope.row.money).toLocaleString('en-US') }}
+              </p>
             </template>
           </el-table-column>
           <el-table-column prop="balance" :label="$t('主账户变动数量')">
