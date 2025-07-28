@@ -1011,51 +1011,85 @@ func (s *orderSrv) GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.
 }
 
 // GetMemberCashierOrderList 获取收银端"外送"订单列表
-func (s *orderSrv) GetMemberCashierOrderList(ctx context.Context, req req.MemberOrderListReq) (*resp.GetMemberCashierOrderListResp, error) {
+func (s *orderSrv) GetMemberCashierOrderList(ctx context.Context, request req.MemberOrderListReq) (*resp.GetMemberCashierOrderListResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
-	memberSaleOrders, total, err := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderList(
-		req.PageNo,
-		req.PageSize,
-		constant.GetStatusList(req.Status),
-	)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
 
+	orderTotal := int64(0)
+	var extra resp.ExtraMemberCashierOrderListMeta
 	memberOrders := make([]resp.MemberCashierOrder, 0)
-	for _, memberSaleOrder := range memberSaleOrders {
-		memberOrders = append(memberOrders, resp.MemberCashierOrder{
-			MemberSaleOrderUuid: memberSaleOrder.Uuid,
-			SerialNumber:        memberSaleOrder.SerialNumber,
-			Status:              memberSaleOrder.Status,
-			StatusGroup:         constant.ParseToStatusGroup(memberSaleOrder.Status),
-			Num:                 memberSaleOrder.ProductNum,
-			ProductAmount:       memberSaleOrder.ProductAmount,
-		})
-	}
-
-	// 获取数量
-	getOrderNum := func(status []uint) int64 {
-		num, _ := repository.NewMemberSaleOrderRepo(db).GetOrderNum(status)
-		return num
-	}
-
-	return &resp.GetMemberCashierOrderListResp{
-		Meta: dto.PageResponse{
-			PageNo:   req.PageNo,
-			PageSize: req.PageSize,
-			Total:    total,
-		},
-		Extra: resp.ExtraMemberCashierOrderListMeta{
+	if request.Keyword != "" {
+		res, err := s.GetMemberCashierOrderSearch(ctx, req.MemberOrderSearchReq{Keyword: request.Keyword})
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		memberOrders = res.List
+		orderTotal = int64(len(memberOrders))
+		// 获取数量
+		getOrderNum := func(status []uint) int64 {
+			statusMap := make(map[uint]bool)
+			for _, v := range status {
+				statusMap[v] = true
+			}
+			num := int64(0)
+			for _, v := range memberOrders {
+				if _, ok := statusMap[v.Status]; ok {
+					num++
+				}
+			}
+			return num
+		}
+		extra = resp.ExtraMemberCashierOrderListMeta{
 			UnacceptNum:   getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUnaccept)),
 			AcceptNum:     getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusAccept)),
 			UndeliveryNum: getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUndelivery)),
 			DeliveryNum:   getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusDelivery)),
 			CompletedNum:  getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusDelivered)),
 			CancelNum:     getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusCancel)),
+		}
+	} else {
+		memberSaleOrders, total, err := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderList(
+			request.PageNo,
+			request.PageSize,
+			constant.GetStatusList(request.Status),
+		)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		orderTotal = total
+		for _, memberSaleOrder := range memberSaleOrders {
+			memberOrders = append(memberOrders, resp.MemberCashierOrder{
+				MemberSaleOrderUuid: memberSaleOrder.Uuid,
+				SerialNumber:        memberSaleOrder.SerialNumber,
+				Status:              memberSaleOrder.Status,
+				StatusGroup:         constant.ParseToStatusGroup(memberSaleOrder.Status),
+				Num:                 memberSaleOrder.ProductNum,
+				ProductAmount:       memberSaleOrder.ProductAmount,
+			})
+		}
+		// 获取数量
+		getOrderNum := func(status []uint) int64 {
+			num, _ := repository.NewMemberSaleOrderRepo(db).GetOrderNum(status)
+			return num
+		}
+		extra = resp.ExtraMemberCashierOrderListMeta{
+			UnacceptNum:   getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUnaccept)),
+			AcceptNum:     getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusAccept)),
+			UndeliveryNum: getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusUndelivery)),
+			DeliveryNum:   getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusDelivery)),
+			CompletedNum:  getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusDelivered)),
+			CancelNum:     getOrderNum(constant.GetStatusList(constant.CashierMemberSaleOrderStatusCancel)),
+		}
+	}
+
+	return &resp.GetMemberCashierOrderListResp{
+		Meta: dto.PageResponse{
+			PageNo:   request.PageNo,
+			PageSize: request.PageSize,
+			Total:    orderTotal,
 		},
-		List: memberOrders,
+		Extra: extra,
+		List:  memberOrders,
 	}, nil
 }
 
@@ -1261,9 +1295,11 @@ func (s *orderSrv) GetMemberOrderManageDetail(ctx context.Context, req req.GetMe
 	}
 	var member resp.OrderMember
 	if memberSaleOrder.SaleBill.SaleOrders[0].Member != nil {
-		member = resp.OrderMember{
-			ID:   memberSaleOrder.SaleBill.SaleOrders[0].Member.ID,
-			Name: memberSaleOrder.SaleBill.SaleOrders[0].Member.Nickname,
+		if !memberSaleOrder.SaleBill.SaleOrders[0].Member.IsVisitor {
+			member = resp.OrderMember{
+				ID:   memberSaleOrder.SaleBill.SaleOrders[0].Member.ID,
+				Name: memberSaleOrder.SaleBill.SaleOrders[0].Member.Nickname,
+			}
 		}
 	}
 	return &resp.GetMemberOrderManageDetailResp{
