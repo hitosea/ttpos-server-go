@@ -450,7 +450,7 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 			"payment_order_uuid": paymentOrderUuid,
 		})
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 创建或更新支付单

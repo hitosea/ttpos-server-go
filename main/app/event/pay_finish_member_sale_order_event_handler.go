@@ -56,45 +56,65 @@ func payFinishMemberSaleOrderEventHandler() {
 		// 修改订单状态
 		event.NewSystemBus().SubscribePayFinishMemberSaleOrderEvent(func(payload event.PayFinishMemberSaleOrderPayload) {
 			dbm := database.GetDBManager(config.DatabaseConf{})
-			cache := cache.Global
 			db := dbm.GetDB(payload.CompanyUuid)
 			orderRepo := repository.NewMemberSaleOrderRepo(db)
-			// 更新订单状态为“待商家接单”
-			if err := orderRepo.UpdateMemberSaleOrderPendingMerchantAccept(payload.MemberSaleOrderUuid); err != nil {
-				logger.Logger.Error("SubscribePayFinishMemberSaleOrderEvent process, UpdateMemberSaleOrderPendingMerchantAccept failed", zap.Any("payload", utils.ToJson(payload)), zap.Error(err))
-				return
-			}
-			// 如果自动接单，更新订单状态为“商家备餐中”
-			settingSrv := setting.NewSrv(dbm, cache)
-			cashierSetting, err := settingSrv.GetCashierSetting(payload.Ctx, nil)
-			if err != nil {
-				logger.Logger.Error("SubscribePayFinishMemberSaleOrderEvent process, GetCashierSetting failed", zap.Any("payload", utils.ToJson(payload)), zap.Error(err))
-				return
-			}
 
-			memberSaleOrder, err := orderRepo.GetMemberSaleOrderRecordOnly(payload.MemberSaleOrderUuid)
-			if err != nil {
-				logger.Logger.Error("SubscribePayFinishMemberSaleOrderEvent process, GetMemberSaleOrder failed", zap.Any("payload", utils.ToJson(payload)), zap.Error(err))
+			if autoAcceptMemberSaleOrder(payload) {
+				// 自动接单成功，结束事件处理
 				return
-			}
-
-			// 初始化订单服务
-			cashBoxSrv := service.NewCashBoxSrv(dbm)
-			localeSrv := service.NewLocaleSrv()
-			mustPlanSrv := service.NewMustPlanSrv(dbm)
-			paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
-			memberSrv := service.NewMemberSrv(dbm, cache)
-			orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
-
-			if cashierSetting.IsAutoMemberOrderBool() {
-				limitAmount := cashierSetting.AutoMemberOrderLimitValue()
-				amount := memberSaleOrder.Amount
-				if limitAmount >= amount {
-					orderSrv.AcceptMemberSaleOrder(payload.Ctx, req.AcceptOrderReq{
-						MemberSaleOrderUuid: payload.MemberSaleOrderUuid,
-					})
+			} else {
+				// 自动接单失败，更新订单状态为“待商家接单”
+				// 或未开启自动接单
+				// 更新订单状态为“待商家接单”
+				if err := orderRepo.UpdateMemberSaleOrderPendingMerchantAccept(payload.MemberSaleOrderUuid); err != nil {
+					logger.Logger.Error("SubscribePayFinishMemberSaleOrderEvent process, UpdateMemberSaleOrderPendingMerchantAccept failed", zap.Any("payload", utils.ToJson(payload)), zap.Error(err))
+					return
 				}
 			}
 		})
 	})
+}
+
+func autoAcceptMemberSaleOrder(payload event.PayFinishMemberSaleOrderPayload) bool {
+	dbm := database.GetDBManager(config.DatabaseConf{})
+	cache := cache.Global
+	db := dbm.GetDB(payload.CompanyUuid)
+	orderRepo := repository.NewMemberSaleOrderRepo(db)
+
+	// 如果自动接单，更新订单状态为“商家备餐中”
+	settingSrv := setting.NewSrv(dbm, cache)
+	cashierSetting, err := settingSrv.GetCashierSetting(payload.Ctx, nil)
+	if err != nil {
+		logger.Logger.Error("SubscribePayFinishMemberSaleOrderEvent process, GetCashierSetting failed", zap.Any("payload", utils.ToJson(payload)), zap.Error(err))
+		return false
+	}
+
+	memberSaleOrder, err := orderRepo.GetMemberSaleOrderRecordOnly(payload.MemberSaleOrderUuid)
+	if err != nil {
+		logger.Logger.Error("SubscribePayFinishMemberSaleOrderEvent process, GetMemberSaleOrder failed", zap.Any("payload", utils.ToJson(payload)), zap.Error(err))
+		return false
+	}
+
+	// 初始化订单服务
+	cashBoxSrv := service.NewCashBoxSrv(dbm)
+	localeSrv := service.NewLocaleSrv()
+	mustPlanSrv := service.NewMustPlanSrv(dbm)
+	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
+	memberSrv := service.NewMemberSrv(dbm, cache)
+	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
+
+	if cashierSetting.IsAutoMemberOrderBool() {
+		limitAmount := cashierSetting.AutoMemberOrderLimitValue()
+		amount := memberSaleOrder.Amount
+		if limitAmount >= amount {
+			if err := orderSrv.AcceptMemberSaleOrder(payload.Ctx, req.AcceptOrderReq{
+				MemberSaleOrderUuid: payload.MemberSaleOrderUuid,
+			}, service.WithIsAutoAccept()); err != nil {
+				logger.Logger.Error("SubscribePayFinishMemberSaleOrderEvent process, AcceptMemberSaleOrder failed", zap.Any("payload", utils.ToJson(payload)), zap.Error(err))
+				return false
+			}
+			return true
+		}
+	}
+	return false
 }

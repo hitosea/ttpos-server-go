@@ -410,10 +410,12 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderReject(memberSaleOrder model.
 // UpdateMemberSaleOrderAccept 更新会员端销售订单-接单
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderAccept(memberSaleOrder model.MemberSaleOrder) error {
 	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
-		Status:           memberSaleOrder.Status,
-		AcceptTime:       memberSaleOrder.AcceptTime,
-		RelatedOrderType: memberSaleOrder.RelatedOrderType,
-		RelatedOrderNo:   memberSaleOrder.RelatedOrderNo,
+		Status:             memberSaleOrder.Status,
+		AcceptTime:         memberSaleOrder.AcceptTime,
+		RelatedOrderType:   memberSaleOrder.RelatedOrderType,
+		RelatedOrderNo:     memberSaleOrder.RelatedOrderNo,
+		ExpectedFinishTime: memberSaleOrder.ExpectedFinishTime,
+		IsAutoAccept:       memberSaleOrder.IsAutoAccept,
 	}).Error
 	if err != nil {
 		return errors.WithMessage(err)
