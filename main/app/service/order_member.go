@@ -526,7 +526,7 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
 			TotalPrice:          saleOrderProduct.GetTotalPrice(),
-			OriginTotalPrice:    saleOrderProduct.GetTotalProductPrice(),
+			OriginTotalPrice:    saleOrderProduct.GetOriginTotalPriceWithTax(),
 			Image: func() string {
 				if saleOrderProduct.ImageFile == nil {
 					return ""
@@ -564,7 +564,7 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 		},
 		ProductList: resp.MemberProductList{
 			List:          products,
-			ProductAmount: memberSaleOrder.ProductAmount,
+			ProductAmount: memberSaleOrder.OriginProductAmount,
 		},
 		AddressInfo: address,
 		DeliveryConfig: resp.DeliveryResp{
