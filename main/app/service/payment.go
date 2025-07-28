@@ -168,7 +168,7 @@ func (p *PaymentRepo) CreatePayment(req CreatePaymentReq) (*model.LlPaymentOrder
 		"client-ip":    p.ctx.GetRemoteIp(),
 	}, RequestTimeOut)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeOrderPayError, "请求支付失败"), err.Error())
 	}
 
 	// 返回支付结果

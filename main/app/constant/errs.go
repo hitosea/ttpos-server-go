@@ -80,6 +80,7 @@ const (
 // 支付业务错误码
 const (
 	CodeOrderAmountLessThan1 = -601 // 订单金额小于1，无法支付
+	CodeOrderPayError        = -602 // 支付服务异常
 )
 
 // 外送业务错误码
