@@ -1150,6 +1150,7 @@ func (s *orderSrv) GetMemberCashierOrderDetail(ctx context.Context, req req.GetM
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
 			TotalPrice:          saleOrderProduct.GetTotalPrice(),
+			OriginTotalPrice:    saleOrderProduct.GetTotalPriceOrigin(),
 		})
 	}
 
@@ -1174,7 +1175,7 @@ func (s *orderSrv) GetMemberCashierOrderDetail(ctx context.Context, req req.GetM
 		},
 		ProductList: resp.MemberProductList{
 			List:          products,
-			ProductAmount: memberSaleOrder.ProductAmount,
+			ProductAmount: memberSaleOrder.SaleBill.Amount, // 外送订单的商品金额等于SaleBill的amount，因为SaleBill的amount是包括了除配送费之外的所有金额
 		},
 		AddressInfo: address,
 		Rider: resp.RiderInfo{
