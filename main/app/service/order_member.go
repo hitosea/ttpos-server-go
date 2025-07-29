@@ -1390,7 +1390,8 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 			return errors.WithMessage(err, "整单送厨失败")
 		}
 		if checkRes != nil {
-			return errors.New("整单送厨失败")
+			ctx.Log().Info("接单外送订单时送厨失败", zap.Any("checkRes", checkRes))
+			return errors.New("商品库存不足")
 		}
 	}
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
