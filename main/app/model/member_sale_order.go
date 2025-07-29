@@ -233,14 +233,14 @@ func (model *MemberSaleOrder) GetCustomerLocation() (string, string) {
 
 // 设置订单为“已取消”状态
 func (model *MemberSaleOrder) SetCancel(cancelReason string) {
-	model.Status = constant.MemberSaleOrderStatusCancelled
-	model.CancelReason = cancelReason
-	model.CancelTime = time.Now().Unix()
 	if model.Status < constant.MemberSaleOrderStatusPendingMerchantAccept {
 		model.CancelScene = constant.MemberSaleOrderSceneMemberCancelUnpaid
 	} else {
 		model.CancelScene = constant.MemberSaleOrderSceneMemberCancel
 	}
+	model.Status = constant.MemberSaleOrderStatusCancelled
+	model.CancelReason = cancelReason
+	model.CancelTime = time.Now().Unix()
 }
 
 // 设置订单为“已取消”状态
