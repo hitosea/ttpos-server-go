@@ -131,7 +131,7 @@ type DeliveryConfigResponse struct {
 	BaseDeliveryFee        float64 `json:"base_delivery_fee"`        // 起步配送费
 	RiderAcceptanceTimeout int     `json:"rider_acceptance_timeout"` // 骑手接单超时时间,单位分钟
 	PricePerKm             float64 `json:"price_per_km"`             // 每公里价格
-	IsInDeliveryRange      bool    `json:"is_in_delivery_range"`     // 是否在配送范围内。如果不在配送范围内，则置灰提交订单按钮ß
+	IsInDeliveryRange      bool    `json:"is_in_delivery_range"`     // 是否在配送范围内。如果不在配送范围内，则置灰提交订单按钮
 }
 
 // 根据渠道和距离获取配置
