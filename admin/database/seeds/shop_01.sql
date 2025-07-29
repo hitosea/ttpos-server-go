@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `cancel_reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '取消原因',
     `is_verified_phone` INT(10) NOT NULL DEFAULT 0 COMMENT '订单是否已经验证手机号,0-未验证 1-已验证,不再弹出验证手机号',
     `payment_method_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '支付方式UUID,订单已选择的支付方式',
-    -- 确认订单（“待支付”状态）之后才有值的字段
+    -- 确认订单（"待支付"状态）之后才有值的字段
     `product_num` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品数量.订单中商品的总数量，商品A数量2，商品B数量1，则商品数量为3',
     `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额,折前价，已含税',
     `origin_product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品原价,折前价，已含税',
@@ -174,6 +174,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `delivery_fee_min_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '起步配送费',
     `delivery_fee_base_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '基础配送费',
     `delivery_fee_per_km` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '每公里配送费',
+    `rider_accept_timeout` INT(10) NOT NULL DEFAULT 0 COMMENT '骑手接单超时时间（秒）',
     -- 第三方订单信息
     `related_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关联订单号,skootar、grab等第三方平台上的订单号',
     `related_order_type` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关联订单类型,skootar、grab',

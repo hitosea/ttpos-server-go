@@ -131,6 +131,17 @@ const (
 	MemberSaleOrderSceneRiderPickupTimeout = "rider_pickup_timeout" // 骑手接单超时。取消订单
 )
 
+// 取消原因
+var MemberSaleOrderSceneReason = map[string]string{
+	MemberSaleOrderSceneMerchantCancel:     "商家取消",
+	MemberSaleOrderSceneMemberCancel:       "用户取消",
+	MemberSaleOrderSceneMerchantReject:     "商家拒单",
+	MemberSaleOrderSceneSelectingTimeout:   "选购超时",
+	MemberSaleOrderScenePaymentTimeout:     "支付超时",
+	MemberSaleOrderSceneMemberCancelUnpaid: "用户取消",
+	MemberSaleOrderSceneRiderPickupTimeout: "骑手接单超时",
+}
+
 // 外送订单是否已计算距离费
 const (
 	DistanceNotCalculated = -1 // 未计算

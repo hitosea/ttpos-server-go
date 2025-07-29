@@ -3,6 +3,7 @@ package queue
 import (
 	"encoding/json"
 	"sync"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
 	"ttpos-server-go/config"
@@ -42,7 +43,7 @@ func GetMemberOrderCancelQueue() *delayqueue.DelayQueue {
 type MemberOrderCancelParams struct {
 	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员订单UUID
 	CompanyUuid         uint64 `json:"company_uuid"`           // 公司UUID
-	Reason              string `json:"reason"`                 // 取消原因
+	CancelScene         string `json:"cancel_scene"`           // 取消场景
 }
 
 // ProcessMemberOrderCancel 处理会员订单自动取消
@@ -76,14 +77,34 @@ func ProcessMemberOrderCancel(paramsJson string) bool {
 		service.NewCashBoxSrv(dbm),
 	)
 
-	// 调用订单服务
-	err := orderSrv.MemberOrderPayTimeoutAutoCancel(ctx, service.MemberOrderPayTimeoutAutoCancelParams{
-		MemberSaleOrderUuid: params.MemberSaleOrderUuid,
-		Reason:              params.Reason,
-	})
-	if err != nil {
-		logger.Logger.Error("处理会员订单自动取消失败", zap.Error(err))
-		return false
+	// 选购超时自动取消订单
+	if params.CancelScene == constant.MemberSaleOrderSceneSelectingTimeout {
+		err := orderSrv.MemberOrderSelectingTimeoutAutoCancel(ctx, params.MemberSaleOrderUuid)
+		if err != nil {
+			logger.Logger.Error("处理会员订单自动取消失败", zap.Error(err))
+			return false
+		}
+		return true
+	}
+
+	// 支付超时自动取消订单
+	if params.CancelScene == constant.MemberSaleOrderScenePaymentTimeout {
+		err := orderSrv.MemberOrderPayTimeoutAutoCancel(ctx, params.MemberSaleOrderUuid)
+		if err != nil {
+			logger.Logger.Error("处理会员订单自动取消失败", zap.Error(err))
+			return false
+		}
+		return true
+	}
+
+	// 骑手接单超时自动取消订单
+	if params.CancelScene == constant.MemberSaleOrderSceneRiderPickupTimeout {
+		err := orderSrv.MemberOrderRiderPickupTimeoutAutoCancel(ctx, params.MemberSaleOrderUuid)
+		if err != nil {
+			logger.Logger.Error("处理会员订单自动取消失败", zap.Error(err))
+			return false
+		}
+		return true
 	}
 
 	return true

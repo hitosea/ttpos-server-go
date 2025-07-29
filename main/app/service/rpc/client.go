@@ -6,11 +6,8 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
-	"ttpos-server-go/app/queue"
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/pkg/logger"
-
-	"github.com/hdt3213/delayqueue"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -148,9 +145,4 @@ func TestCancelOrder() error {
 	}
 	logger.Logger.Info("外送服务gRPC客户端测试成功")
 	return nil
-}
-
-func TestCancelOrderDelay() {
-	queue.GetTakeoutCancelQueue().SendDelayMsgV2("3675534194245633",
-		1*time.Minute, delayqueue.WithRetryCount(3))
 }

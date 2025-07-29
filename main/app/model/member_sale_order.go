@@ -42,6 +42,7 @@ type MemberSaleOrder struct {
 	DeliveryFeeMinFee    float64 `gorm:"column:delivery_fee_min_fee;type:decimal(12,6);not null;default:0;comment:'起步配送费'"`
 	DeliveryFeeBaseFee   float64 `gorm:"column:delivery_fee_base_fee;type:decimal(12,6);not null;default:0;comment:'基础服务费'"`
 	DeliveryFeePerKm     float64 `gorm:"column:delivery_fee_per_km;type:decimal(12,6);not null;default:0;comment:'每公里配送费'"`
+	RiderAcceptTimeout   int     `gorm:"column:rider_accept_timeout;type:int(10);not null;default:0;comment:'骑手接单超时时间,单位分钟'"`
 	// 第三方订单信息
 	RelatedOrderNo   string `gorm:"column:related_order_no;type:varchar(255);not null;default:'';comment:'关联订单号,skootar、grab等第三方平台上的订单号'"`
 	RelatedOrderType string `gorm:"column:related_order_type;type:varchar(255);not null;default:'';comment:'关联订单类型,skootar、grab'"`
@@ -90,6 +91,7 @@ func (model *MemberSaleOrder) UpdateDeliveryConfig(deliveryConfig DeliveryConfig
 	model.DeliveryFeeMinFee = deliveryConfig.BaseDeliveryFee
 	model.DeliveryFeeBaseFee = deliveryConfig.BasicFee
 	model.DeliveryFeePerKm = deliveryConfig.PricePerKm
+	model.RiderAcceptTimeout = deliveryConfig.RiderAcceptanceTimeout
 	// 重新计算配送费
 	model.RecalculateDeliveryFee()
 }
@@ -339,7 +341,7 @@ func (model *MemberSaleOrder) Reject() {
 	model.Status = constant.MemberSaleOrderStatusCancelled          // 已取消
 	model.CancelScene = constant.MemberSaleOrderSceneMerchantReject // 商家拒单
 	model.CancelTime = time.Now().Unix()
-	model.CancelReason = "商家拒单"
+	model.CancelReason = constant.MemberSaleOrderSceneReason[constant.MemberSaleOrderSceneMerchantReject]
 }
 
 // 备餐完成
