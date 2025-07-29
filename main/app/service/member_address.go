@@ -120,12 +120,26 @@ func (s *memberAddressSrv) AddAddress(ctx context.Context, req member_req.Member
 	}
 	memberAddress.MemberUuid = ctx.GetMemberUuid()
 
+	db := ctx.GetDB()
+
+	// 获取该会员的所有地址 - 找出未认证并与当前手机号相同的地址，并认证
+	addresses, err := repository.NewMemberAddressRepo(db).GetMemberAddressByMemberUuid(memberAddress.MemberUuid)
+	if err == nil && len(addresses) > 0 {
+		for _, address := range addresses {
+			if address.AuthPhone == memberAddress.Phone && address.AuthTime > 0 {
+				memberAddress.AuthPhone = address.Phone
+				memberAddress.AuthTime = address.AuthTime
+				break
+			}
+		}
+	}
+
 	// 如果设置为默认地址，则需要将该会员的其他地址设置为非默认
 	if req.IsDefault {
 		// 开启事务
-		err := ctx.GetDB().Transaction(func(tx *gorm.DB) error {
+		err := db.Transaction(func(tx *gorm.DB) error {
 			// 先将该会员的所有地址设置为非默认
-			if err := repository.NewMemberAddressRepo(tx).UpdateIsDefault(ctx.GetMemberUuid()); err != nil {
+			if err := repository.NewMemberAddressRepo(tx).UpdateIsDefault(memberAddress.MemberUuid); err != nil {
 				return err
 			}
 
@@ -141,14 +155,12 @@ func (s *memberAddressSrv) AddAddress(ctx context.Context, req member_req.Member
 		if err != nil {
 			return err
 		}
-
-		return nil
-	}
-
-	// 如果不是设置为默认地址，则直接创建
-	_, err := repository.NewMemberAddressRepo(ctx.GetDB()).Create(memberAddress)
-	if err != nil {
-		return err
+	} else {
+		// 如果不是设置为默认地址，则直接创建
+		_, err = repository.NewMemberAddressRepo(db).Create(memberAddress)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

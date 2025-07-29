@@ -161,6 +161,10 @@ func (model *SaleOrderProduct) GetMemberCardDiscountRate() float64 {
 	if model.OpenMemberDiscount == constant.ProductMemberDiscountOff {
 		return constant.NoDiscount
 	}
+	// 现在不能折扣为0
+	if model.MemberCardDiscountRate <= 0 {
+		return constant.NoDiscount
+	}
 	return model.MemberCardDiscountRate
 }
 
@@ -168,6 +172,10 @@ func (model *SaleOrderProduct) GetMemberCardDiscountRate() float64 {
 func (model *SaleOrderProduct) GetMemberDiscountRate() float64 {
 	// 如果商品不参与会员打折，则返回1,表示不打折
 	if model.OpenMemberDiscount == constant.ProductMemberDiscountOff {
+		return constant.NoDiscount
+	}
+	// 现在不能折扣为0
+	if model.MemberDiscountRate <= 0 {
 		return constant.NoDiscount
 	}
 	return model.MemberDiscountRate

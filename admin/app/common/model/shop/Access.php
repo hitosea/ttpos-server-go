@@ -2,7 +2,6 @@
 
 namespace app\common\model\shop;
 
-use think\facade\Env;
 use app\common\model\BaseModel;
 
 /**

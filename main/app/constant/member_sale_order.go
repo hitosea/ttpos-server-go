@@ -96,6 +96,7 @@ func GetMemberOrderStatusList(status string) []uint {
 	}
 }
 
+// 仅收银机“订单管理”页面使用，会员端禁用这个方案
 func GetStatusList(status string) []uint {
 	switch status {
 	case CashierSaleMemberOrderStatusUnpaid: // 待付款。对应 1-待付款
@@ -112,6 +113,8 @@ func GetStatusList(status string) []uint {
 		return []uint{MemberSaleOrderStatusCompleted}
 	case CashierMemberSaleOrderStatusCancel: // 已取消。对应 8-已取消
 		return []uint{MemberSaleOrderStatusCancelled}
+	case CashierMemberOrderStatusAll: // 全部
+		return []uint{MemberSaleOrderStatusPendingPayment, MemberSaleOrderStatusPendingMerchantAccept, MemberSaleOrderStatusCooking, MemberSaleOrderStatusPendingRiderPickup, MemberSaleOrderStatusPendingRiderDelivery, MemberSaleOrderStatusDeliverying, MemberSaleOrderStatusCompleted, MemberSaleOrderStatusCancelled}
 	default:
 		return []uint{}
 	}
