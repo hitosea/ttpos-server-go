@@ -181,6 +181,10 @@ func (model *Member) GetMemberDiscountRate() float64 {
 	discount := float64(1) // 默认不打折
 	if model.MemberLevel != nil {
 		discount = model.MemberLevel.GetDiscount()
+		if model.IsVisitor {
+			// 游客不享受折扣
+			discount = constant.NoDiscount
+		}
 	}
 	return discount
 }
@@ -189,6 +193,10 @@ func (model *Member) GetMemberCardDiscountRate() float64 {
 	discount := float64(1) // 默认不打折
 	if model.MemberCard != nil {
 		discount = model.MemberCard.GetDiscount()
+		if model.IsVisitor {
+			// 游客不享受折扣
+			discount = constant.NoDiscount
+		}
 	}
 	return discount
 }
@@ -237,9 +245,9 @@ func (model *MemberLevel) GetDiscount() float64 {
 	if model.Discount > 1 {
 		return decimal.NewFromFloat(model.Discount).Div(decimal.NewFromUint64(100)).InexactFloat64()
 	}
-	// 不能为负数
-	if model.Discount < 0 {
-		return 0
+	// 不能为负数. 现在不能折扣为0, 所以默认100%不打折
+	if model.Discount <= 0 {
+		return 1
 	}
 	return model.Discount
 }
@@ -267,9 +275,9 @@ func (model *MemberCard) GetDiscount() float64 {
 	if model.Discount > 1 {
 		return decimal.NewFromFloat(model.Discount).Div(decimal.NewFromUint64(100)).InexactFloat64()
 	}
-	// 不能为负数
-	if model.Discount < 0 {
-		return 0
+	// 不能为负数. 现在不能折扣为0, 所以默认100%不打折
+	if model.Discount <= 0 {
+		return 1
 	}
 	return model.Discount
 }
