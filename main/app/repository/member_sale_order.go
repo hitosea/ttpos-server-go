@@ -548,7 +548,7 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderByContactNameAndContactPhoneSuff
 			constant.MemberSaleOrderStatusCompleted,             // 已完成
 			constant.MemberSaleOrderStatusCancelled,             // 已取消
 		}).
-		Where("contact_name = ? OR contact_phone LIKE ?", contactName, "%"+contactPhoneSuffix).Find(&memberSaleOrders).Error
+		Where("contact_name LIKE ? OR contact_phone LIKE ?", "%"+contactName+"%", "%"+contactPhoneSuffix).Find(&memberSaleOrders).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
