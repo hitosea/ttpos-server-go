@@ -428,6 +428,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		PaymentOrderUuid:    payment.PaymentOrderUuid,
 		PaymentMethodName:   paymentMethod.PaymentName,
+		IsWechatPay:         paymentMethod.IsWechatPay(),
 		QrCode:              utils.IfString(isOpenPc || paymentMethod.IsQrPromptPay(), payment.LinkUrl, ""),
 		LinkUrl:             utils.IfString(isOpenPc || paymentMethod.IsQrPromptPay(), "", payment.LinkUrl),
 		Status:              payment.GetStatus(), // 支付单状态 支付状态, 0-未支付 1-已支付 (可选择轮询当前接口，获取支付状态)

@@ -39,6 +39,7 @@ class ProductImportsValidate extends  BaseValidate
         'spec_id' => 'require',
         'ratin_tax_id' => 'require',
         'takeout_tax_id' => 'require',
+        'open_overall_discount' => 'require|in:0,1',
     ];
 
     protected $message = [
@@ -48,7 +49,7 @@ class ProductImportsValidate extends  BaseValidate
         'category_name.checkCategoryNameExist' => '所属分类不存在',
         'deduct_stock_type.require' => '库存计算方式不能为空',
         'deduct_stock_type.in' => '库存计算方式必须是1和2',
-        'num_type.require' => '计价方式不能为空',
+        'num_type.require' => '计价方式必须是1和2',
         'num_type.in' => '计价方式必须是1和2',
         'product_unit.require' => '商品单位不能为空',
         'unit_id.require' => '商品单位不能为空',
@@ -61,7 +62,7 @@ class ProductImportsValidate extends  BaseValidate
         'barcode.require' => '商品条码不能为空',
         // 'product_price.require' => '商品价格不能为空', // 价格可以为0，先注释掉
         'product_price.float' => '商品价格必须是浮点数',
-        'product_status.require' => '商品状态不能为空',
+        'product_status.require' => '商品状态必须是0和1',
         'product_status.in' => '商品状态必须是0和1',
         'product_ratin_tax_type.require' => '堂食税类不能为空',
         'ratin_tax_id.require' => '堂食税类不能为空',
@@ -72,8 +73,10 @@ class ProductImportsValidate extends  BaseValidate
         'product_sort.require' => '商品排序不能为空',
         'limit_num.require' => '限购数量不能为空',
         'limit_num.integer' => '限购数量必须是整数',
-        'is_enable_grade.require' => '是否开启会员折扣不能为空',
+        'is_enable_grade.require' => '是否开启会员折扣必须是0和1',
         'is_enable_grade.in' => '是否开启会员折扣必须是0和1',
+        'open_overall_discount.require' => '是否开启整单折扣必须是0和1',
+        'open_overall_discount.in' => '是否开启整单折扣必须是0和1',
     ];
 
     protected $scene = [
@@ -94,7 +97,8 @@ class ProductImportsValidate extends  BaseValidate
             'shows',
             'product_sort',
             'limit_num',
-            'is_enable_grade'
+            'is_enable_grade',
+            'open_overall_discount',
         ],
         'save' => [
             'product_name',
