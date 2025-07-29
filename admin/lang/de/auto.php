@@ -2174,4 +2174,8 @@ return [
     "至少有一个距离范围" => "Es muss mindestens einen Entfernungsbereich geben",
     "最后一个距离范围必须是最大范围" => "Der letzte Entfernungsbereich muss der größte Bereich sein",
     "为非外送显示的商品，请移除" => "Dieser Artikel ist nur für die Anzeige ohne Lieferung vorgesehen. Bitte entfernen.",
+    "是否开启整单折扣必须是0和1" => "Ob der Gesamtrabatt aktiviert wird, muss 0 oder 1 sein",
+    "联系电话不能为空" => "Die Kontakttelefonnummer darf nicht leer sein",
+    "联系电话长度不能超过20个字符" => "Die Kontakttelefonnummer darf nicht länger als 20 Zeichen sein",
+    "联系电话不能超过20个字符" => "Die Kontakttelefonnummer darf 20 Zeichen nicht überschreiten",
 ];
