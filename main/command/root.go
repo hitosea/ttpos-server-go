@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/queue"
 	"ttpos-server-go/app/tasks"
 	"ttpos-server-go/config"
@@ -67,6 +68,8 @@ var rootCommand = &cobra.Command{
 		if err := sms.GetSMSClient().CheckConfig(); err != nil {
 			logger.Logger.Info("Failed to check SMS client config", zap.Error(err))
 		}
+		//初始化服务发现
+		cloud.Init()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		defer logger.Logger.Sync()

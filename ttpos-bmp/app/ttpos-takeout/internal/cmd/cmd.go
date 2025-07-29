@@ -2,12 +2,10 @@ package cmd
 
 import (
 	"context"
-	"ttpos-bmp/app/ttpos-takeout/internal/controller/callback"
-	"ttpos-bmp/app/ttpos-takeout/internal/controller/rpc"
-
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcmd"
+	"ttpos-bmp/app/ttpos-takeout/internal/controller/callback"
 
 	"ttpos-bmp/app/ttpos-takeout/internal/controller/hello"
 )
@@ -19,7 +17,7 @@ var (
 		Brief: "start http server",
 		Func: func(ctx context.Context, parser *gcmd.Parser) (err error) {
 
-			rpc.InitRpc(ctx)
+			//rpc.InitRpc(ctx)
 
 			s := g.Server()
 			s.Group("/", func(group *ghttp.RouterGroup) {

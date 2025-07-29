@@ -21,6 +21,7 @@ require (
 	github.com/hdt3213/delayqueue v1.1.2
 	github.com/jinzhu/copier v0.4.0
 	github.com/joho/godotenv v1.5.1
+	github.com/nacos-group/nacos-sdk-go/v2 v2.3.2
 	github.com/nahid/gohttp v0.0.1
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646
 	github.com/patrickmn/go-cache v2.1.0+incompatible
@@ -62,19 +63,53 @@ require (
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.27.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.51.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.51.0 // indirect
+	github.com/alibabacloud-go/alibabacloud-gateway-pop v0.0.6 // indirect
+	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.5 // indirect
+	github.com/alibabacloud-go/darabonba-array v0.1.0 // indirect
+	github.com/alibabacloud-go/darabonba-encode-util v0.0.2 // indirect
+	github.com/alibabacloud-go/darabonba-map v0.0.2 // indirect
+	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.10 // indirect
+	github.com/alibabacloud-go/darabonba-signature-util v0.0.7 // indirect
+	github.com/alibabacloud-go/darabonba-string v1.0.2 // indirect
+	github.com/alibabacloud-go/debug v1.0.1 // indirect
+	github.com/alibabacloud-go/endpoint-util v1.1.0 // indirect
+	github.com/alibabacloud-go/kms-20160120/v3 v3.2.3 // indirect
+	github.com/alibabacloud-go/openapi-util v0.1.0 // indirect
+	github.com/alibabacloud-go/tea v1.2.2 // indirect
+	github.com/alibabacloud-go/tea-utils v1.4.4 // indirect
+	github.com/alibabacloud-go/tea-utils/v2 v2.0.7 // indirect
+	github.com/alibabacloud-go/tea-xml v1.1.3 // indirect
+	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1800 // indirect
+	github.com/aliyun/alibabacloud-dkms-gcs-go-sdk v0.5.1 // indirect
+	github.com/aliyun/alibabacloud-dkms-transfer-go-sdk v0.1.8 // indirect
+	github.com/aliyun/aliyun-secretsmanager-client-go v1.1.5 // indirect
+	github.com/aliyun/credentials-go v1.4.3 // indirect
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/buger/jsonparser v1.1.1 // indirect
+	github.com/clbanning/mxj/v2 v2.7.0 // indirect
 	github.com/cncf/xds/go v0.0.0-20250326154945-ae57f3c0d45f // indirect
+	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.2.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.2 // indirect
+	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect
+	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/orcaman/concurrent-map v0.0.0-20210501183033-44dafcb38ecc // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
+	github.com/prometheus/client_golang v1.19.1 // indirect
+	github.com/prometheus/client_model v0.6.1 // indirect
+	github.com/prometheus/common v0.55.0 // indirect
+	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.5.0 // indirect
+	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/zeebo/errs v1.4.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/detectors/gcp v1.36.0 // indirect

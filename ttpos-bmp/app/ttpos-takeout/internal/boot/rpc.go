@@ -1,27 +1,24 @@
-package logic
+package boot
 
 import (
 	"context"
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"google.golang.org/grpc"
-	"ttpos-bmp/app/ttpos-manager/api/rpc/svc"
-	svcSetting "ttpos-bmp/app/ttpos-manager/internal/controller/rpc"
+	"ttpos-bmp/app/ttpos-takeout/internal/controller/rpc/takeout"
 	"ttpos-bmp/internal/pkg/nacos/service"
 )
 
 var (
-	SettingClient svc.SettingSvcClient
-	managerConn   *grpc.ClientConn
+	managerConn *grpc.ClientConn
 )
 
 func InitRpcClient(ctx context.Context) {
 	managerConn = grpcx.Client.MustNewGrpcClientConn(g.Cfg().MustGet(ctx, "grpc.name").String())
-	SettingClient = svc.NewSettingSvcClient(managerConn)
 }
 
 func initRpcServer() {
-	svcSetting.Register(service.RpcServer.GRpc)
+	takeout.Register(service.RpcServer.GRpc)
 	go service.RpcServer.GRpc.Run()
 }
 
