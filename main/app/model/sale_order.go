@@ -118,6 +118,9 @@ func (model *SaleOrder) GetPaymentInfoList() []resp.PaymentOrder {
 func (model *SaleOrder) GetProductNum() float64 {
 	num := decimal.NewFromFloat(0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
+		if saleOrderProduct.IsDelete() {
+			continue
+		}
 		num = num.Add(decimal.NewFromFloat(saleOrderProduct.Num))
 	}
 	return num.Round(2).InexactFloat64()
@@ -127,7 +130,7 @@ func (model *SaleOrder) GetProductNum() float64 {
 func (model *SaleOrder) GetProductAmount() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
-		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.GetTotalPrice()))
+		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.GetOriginTotalPriceWithTax()))
 	}
 	return amount.Round(2).InexactFloat64()
 }

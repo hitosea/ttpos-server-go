@@ -165,7 +165,7 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderPendingPayment(memberSaleOrde
 // UpdateMemberSaleOrderPendingMerchantAccept 更新会员端销售订单为"待商家接单"状态，表示订单支付成功，等待商家接单
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderPendingMerchantAccept(memberSaleOrderUuid uint64) error {
 	if err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrderUuid).Updates(model.MemberSaleOrder{
-		Status:  constant.MemberSaleOrderStatusPendingMerchantAccept, // 更新订单状态为待支付
+		Status:  constant.MemberSaleOrderStatusPendingMerchantAccept, // 更新订单状态为待商家接单
 		PayTime: time.Now().Unix(),
 	}).Error; err != nil {
 		return errors.WithMessage(err)
@@ -410,10 +410,13 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderReject(memberSaleOrder model.
 // UpdateMemberSaleOrderAccept 更新会员端销售订单-接单
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderAccept(memberSaleOrder model.MemberSaleOrder) error {
 	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
-		Status:           memberSaleOrder.Status,
-		AcceptTime:       memberSaleOrder.AcceptTime,
-		RelatedOrderType: memberSaleOrder.RelatedOrderType,
-		RelatedOrderNo:   memberSaleOrder.RelatedOrderNo,
+		Status:             memberSaleOrder.Status,
+		AcceptTime:         memberSaleOrder.AcceptTime,
+		RelatedOrderType:   memberSaleOrder.RelatedOrderType,
+		RelatedOrderNo:     memberSaleOrder.RelatedOrderNo,
+		ExpectedFinishTime: memberSaleOrder.ExpectedFinishTime,
+		IsAutoAccept:       memberSaleOrder.IsAutoAccept,
+		PayTime:            memberSaleOrder.PayTime,
 	}).Error
 	if err != nil {
 		return errors.WithMessage(err)

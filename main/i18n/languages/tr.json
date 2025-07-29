@@ -1665,7 +1665,7 @@
   "昵称不能为空": "Takma ad doldurulmalıdır",
   "昵称不能超过50个字符": "Takma adlar 50 karakteri aşamaz",
   "昵称输入字符不合规": "Takma ad girişi geçersiz karakter içeriyor",
-  "昵称长度不能超过20": "Takma ad uzunluğu 20 karakteri geçemez",
+  "昵称长度不能超过50": "Takma ad uzunluğu 50 karakteri geçemez",
   "显示": "Göster",
   "显示不能为空": "Görüntüleme boş olamaz",
   "显示必须是12345": "Görüntüleme 12345 olmalıdır",

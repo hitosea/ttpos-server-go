@@ -1665,7 +1665,7 @@
   "昵称不能为空": "Nickname cannot be empty",
   "昵称不能超过50个字符": "Nickname cannot exceed 50 characters",
   "昵称输入字符不合规": "Nickname input contains invalid characters",
-  "昵称长度不能超过20": "Nickname length cannot exceed 20",
+  "昵称长度不能超过50": "Nickname length cannot exceed 50",
   "显示": "Display",
   "显示不能为空": "Display cannot be empty",
   "显示必须是12345": "Display must be 12345",

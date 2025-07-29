@@ -55,12 +55,10 @@ type IMemberOrderSrv interface {
 	GetMemberOrderManageList(ctx context.Context, req req.MemberOrderManageListReq) (*resp.GetMemberOrderManageListResp, error)          // 查询收银机"外送"管理页面的订单列表
 	GetMemberOrderManageDetail(ctx context.Context, req req.GetMemberOrderManageDetailReq) (*resp.GetMemberOrderManageDetailResp, error) // 查询收银机"外送"管理页面的订单详情
 	MemberOrderCancelInCashier(ctx context.Context, request member_req.CancelOrderReq) error                                             // 收银端取消订单
-	AcceptMemberSaleOrder(ctx context.Context, req req.AcceptOrderReq) error                                                             // 接单外送订单
+	AcceptMemberSaleOrder(ctx context.Context, request req.AcceptOrderReq, options ...AcceptMemberSaleOrderFunc) error                   // 接单外送订单
 	RejectMemberSaleOrder(ctx context.Context, req req.RejectOrderReq) error                                                             // 拒单外送订单
 	CookFinishMemberSaleOrder(ctx context.Context, request req.CookFinishOrderReq) error                                                 // 备餐完成外送订单
 	GetMemberCashierOrderSearch(ctx context.Context, req req.MemberOrderSearchReq) (*resp.GetMemberCashierOrderSearchResp, error)        // 搜索订单列表通过关键词
-	//
-	PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error // 会员端订单支付成功. TODO 用于测试，提测前删掉
 }
 
 // CreateMemberOrder 创建会员端订单。实现思路：
@@ -207,6 +205,10 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(request.MemberSaleOrderUuid)
 	if err != nil {
 		return errors.WithMessage(err)
+	}
+
+	if memberSaleOrder.Amount < 1 {
+		return errors.New("订单金额小于1，无法支付")
 	}
 
 	// 如果未设置地址，返回错误
@@ -528,7 +530,7 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
 			TotalPrice:          saleOrderProduct.GetTotalPrice(),
-			OriginTotalPrice:    saleOrderProduct.GetTotalProductPrice(),
+			OriginTotalPrice:    saleOrderProduct.GetOriginTotalPriceWithTax(),
 			Image: func() string {
 				if saleOrderProduct.ImageFile == nil {
 					return ""
@@ -566,7 +568,7 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 		},
 		ProductList: resp.MemberProductList{
 			List:          products,
-			ProductAmount: memberSaleOrder.ProductAmount,
+			ProductAmount: memberSaleOrder.OriginProductAmount,
 		},
 		AddressInfo: address,
 		DeliveryConfig: resp.DeliveryResp{
@@ -1331,10 +1333,30 @@ func (s *orderSrv) GetMemberOrderManageDetail(ctx context.Context, req req.GetMe
 	}, nil
 }
 
+type AcceptMemberSaleOrderFunc func(opt *AcceptMemberSaleOrderOption)
+
+type AcceptMemberSaleOrderOption struct {
+	IsAutoAccept bool // 是否自动接单
+}
+
+func WithIsAutoAccept() AcceptMemberSaleOrderFunc {
+	return func(opt *AcceptMemberSaleOrderOption) {
+		opt.IsAutoAccept = true
+	}
+}
+
 // AcceptMemberSaleOrder 接单外送订单
-func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.AcceptOrderReq) error {
-	db := s.dbm.GetDB(ctx.GetDbId())
-	ctx.SetDB(db)
+func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.AcceptOrderReq, options ...AcceptMemberSaleOrderFunc) error {
+	opt := &AcceptMemberSaleOrderOption{}
+	for _, option := range options {
+		option(opt)
+	}
+
+	if ctx.GetDB() == nil {
+		db := s.dbm.GetDB(ctx.GetDbId())
+		ctx.SetDB(db)
+	}
+	db := ctx.GetDB()
 	memberSaleOrder, err := getMemberOrderDetail(ctx, request.MemberSaleOrderUuid)
 	if err != nil {
 		return errors.WithMessage(err)
@@ -1363,6 +1385,14 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		lat, lng, _ := memberSaleOrder.Address.GetLocation()
 		// 获取商家地址
 		companySetting := ctx.GetCompanySetting()
+		if companySetting.ID == 0 {
+			// 如果ctx中没有商家设置，则从数据库中获取
+			if company, err := repository.NewCompanyRepo(tx).GetCompanyInfoByUuid(ctx.GetCompanyUuid()); err == nil {
+				companySetting = *company.CompanySetting
+				ctx.SetCompany(*company)
+				ctx.SetCompanySetting(companySetting)
+			}
+		}
 		latitude, longitude := companySetting.GetCoordinates()
 		if latitude == "" || longitude == "" {
 			return errors.New("无法找到商家经纬度")
@@ -1408,7 +1438,11 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		ctx.Log().Info("创建外送订单成功", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))
 		memberSaleOrder.RelatedOrderNo = res.TakeoutRefNo
 		memberSaleOrder.ExpectedFinishTime = res.FinishTime
-		memberSaleOrder.RelatedOrderNo = res.TakeoutRefNo
+		memberSaleOrder.RelatedOrderType = memberSaleOrder.RelatedOrderType
+		if opt.IsAutoAccept {
+			memberSaleOrder.IsAutoAccept = constant.Yes          // 自动接单
+			memberSaleOrder.PayTime = memberSaleOrder.AcceptTime // 支付时间等于接单时间
+		}
 		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrderAccept(*memberSaleOrder); err != nil {
 			return errors.WithMessage(err, "更新外送订单失败")
 		}
@@ -1594,30 +1628,6 @@ func (s *orderSrv) GetMemberCashierOrderSearch(ctx context.Context, req req.Memb
 	return &resp.GetMemberCashierOrderSearchResp{
 		List: memberOrders,
 	}, nil
-}
-
-// PaidMemberOrder 会员端订单支付成功
-func (s *orderSrv) PaidMemberOrder(ctx context.Context, request member_req.PaidMemberOrderReq) error {
-	ctx.SetDB(s.dbm.GetDB(ctx.GetDbId()))
-	memberSaleOrder, err := getMemberOrderDetail(ctx, request.MemberSaleOrderUuid)
-	if err != nil {
-		return errors.WithMessage(err)
-	}
-
-	// 更新订单状态
-	s.bus.PublishPayFinishMemberSaleOrderEvent(event.PayFinishMemberSaleOrderPayload{
-		BasePayload: event.BasePayload{
-			Ctx:                 ctx,
-			CompanyUuid:         ctx.GetCompanyUuid(),
-			Source:              ctx.GetSource(),
-			SaleBillUuid:        memberSaleOrder.SaleBill.Uuid,
-			SaleOrderUuid:       memberSaleOrder.SaleBill.SaleOrders[0].Uuid,
-			MemberSaleOrderUuid: memberSaleOrder.Uuid,
-			MemberUuid:          ctx.GetMemberUuid(),
-		},
-		MemberSaleOrderUuid: request.MemberSaleOrderUuid,
-	})
-	return nil
 }
 
 // GetMemberOrderReturnInfo 获取外送订单退款弹窗信息

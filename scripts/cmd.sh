@@ -12,7 +12,7 @@ OK="${Green}[OK]${Font}"
 Error="${Red}[错误]${Font}"
 
 cur_path="$(pwd)"
-COMPOSE="docker compose -p ttpos-server-go -f docker-compose.yml -f docker-compose.redis.yml"
+COMPOSE="docker compose -p ttpos-server-go -f docker-compose.dev.yml -f docker-compose.dev.redis.yml"
 
 judge() {
     if [[ 0 -eq $? ]]; then
@@ -183,6 +183,11 @@ if [ $# -gt 0 ]; then
         #
         run_exec php "composer install --ignore-platform-reqs"
         echo -e "${OK} ${GreenBG} 初始化数据库 ${Font}"
+        # 
+        sleep 2
+        create=`run_exec db "sh /etc/mysql/create_saas.sh"`
+        echo -e "$create"
+        run_exec php "php think migrate:run"
         # 
         sleep 2
         run_exec php "php think migrate:run"

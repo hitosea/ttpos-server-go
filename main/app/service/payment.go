@@ -168,7 +168,7 @@ func (p *PaymentRepo) CreatePayment(req CreatePaymentReq) (*model.LlPaymentOrder
 		"client-ip":    p.ctx.GetRemoteIp(),
 	}, RequestTimeOut)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeOrderPayError, "请求支付失败"), err.Error())
 	}
 
 	// 返回支付结果
@@ -450,7 +450,7 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 			"payment_order_uuid": paymentOrderUuid,
 		})
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 创建或更新支付单

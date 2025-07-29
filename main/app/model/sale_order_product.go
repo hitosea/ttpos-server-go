@@ -931,6 +931,13 @@ func (model *SaleOrderProduct) GetProductFinalSalePrice() float64 {
 	return decimal.NewFromFloat(model.GetFinalSalePrice()).Mul(model.GetNumDecimal()).Truncate(3).Round(2).InexactFloat64()
 }
 
+// 获取商品总金额（折前价）（商品原价）(包括税费)
+func (model *SaleOrderProduct) GetOriginTotalPriceWithTax() float64 {
+	// 金额*数量
+	price := decimal.NewFromFloat(model.ProductPrice).Add(decimal.NewFromFloat(model.TaxFee)).Mul(model.GetNumDecimal()).Truncate(3).Round(2).InexactFloat64()
+	return price
+}
+
 // 获取商品总金额（折前价）（商品原价）
 func (model *SaleOrderProduct) GetTotalProductPrice() float64 {
 	// 金额*数量

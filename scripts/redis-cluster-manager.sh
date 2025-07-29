@@ -11,7 +11,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # 配置
-COMPOSE_FILE="docker-compose.yml"
+COMPOSE_FILE="docker-compose.dev.yml -f docker-compose.dev.redis.yml"
 APP_ID=${APP_ID:-dev}
 
 # 日志函数
