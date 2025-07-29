@@ -2166,4 +2166,8 @@ return [
     "至少有一个距离范围" => "En az bir mesafe aralığı olmalıdır",
     "最后一个距离范围必须是最大范围" => "Son mesafe aralığı en geniş aralık olmalıdır",
     "为非外送显示的商品，请移除" => "Bu ürün sadece teslimat dışı gösterim içindir, lütfen kaldırın",
+    "是否开启整单折扣必须是0和1" => "Tüm sipariş indiriminin etkinleştirilip etkinleştirilmeyeceği 0 veya 1 olmalıdır",
+    "联系电话不能为空" => "İletişim telefonu boş olamaz",
+    "联系电话长度不能超过20个字符" => "İletişim telefonu uzunluğu 20 karakteri geçemez",
+    "联系电话不能超过20个字符" => "İletişim telefonu 20 karakteri geçemez",
 ];

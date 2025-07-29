@@ -395,6 +395,7 @@ class Product extends Controller
             'မြန်မာဘာသာ' => 'my',
             '日本語' => 'ja',
             '한국어' => 'ko',
+            'Svenska' => 'sv',
         ];
 
         // 验证 格式化参数

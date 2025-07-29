@@ -99,8 +99,8 @@
             <el-table-column prop="deduct_stock_type" width="120" :label="`*${$t('库存计算方式')}`">
               <template #default="scope">
                 <el-radio-group v-model="scope.row.deduct_stock_type">
-                  <el-radio :label="10">{{ $t('下单减库存') }}</el-radio>
-                  <el-radio :label="20">{{ $t('付款减库存') }}</el-radio>
+                  <el-radio :value="10">{{ $t('下单减库存') }}</el-radio>
+                  <el-radio :value="20">{{ $t('付款减库存') }}</el-radio>
                 </el-radio-group>
               </template>
             </el-table-column>
@@ -235,8 +235,8 @@
             <el-table-column prop="product_status" width="120" :label="`*${$t('商品状态')}`">
               <template #default="scope">
                 <el-radio-group v-model="scope.row.product_status">
-                  <el-radio :label="10">{{ $t('开启') }}</el-radio>
-                  <el-radio :label="20">{{ $t('关闭') }}</el-radio>
+                  <el-radio :value="10">{{ $t('开启') }}</el-radio>
+                  <el-radio :value="20">{{ $t('关闭') }}</el-radio>
                 </el-radio-group>
               </template>
             </el-table-column>
@@ -281,26 +281,48 @@
             <el-table-column prop="num_type" width="120" :label="`*${$t('计价方式')}`">
               <template #default="scope">
                 <el-radio-group v-model="scope.row.num_type">
-                  <el-radio label="1">{{ $t('整数') }}</el-radio>
-                  <el-radio label="2">{{ $t('小数') }}</el-radio>
+                  <el-radio value="1">{{ $t('整数') }}</el-radio>
+                  <el-radio value="2">{{ $t('小数') }}</el-radio>
                 </el-radio-group>
               </template>
             </el-table-column>
             <el-table-column prop="shows" width="120" :label="`*${$t('显示')}`">
               <template #default="scope">
-                <div>
-                  <el-checkbox v-model="scope.row.is_show_cashier" :true-label="1" :false-label="2" :label="$t('收银机')" />
-                  <el-checkbox v-model="scope.row.is_show_tablet" :true-label="1" :false-label="2" :label="$t('平板')" :disabled="scope.row.num_type === 1" />
-                  <el-checkbox v-model="scope.row.is_show_kitchen" :true-label="1" :false-label="2" :label="$t('厨显')" />
-                  <el-checkbox v-model="scope.row.is_show_assistant" :true-label="1" :false-label="2" :label="$t('点餐助手')" :disabled="scope.row.num_type === 1" />
-                  <el-checkbox v-model="scope.row.is_show_h5" :true-label="1" :false-label="2" :label="$t('扫码点餐')" :disabled="scope.row.num_type === 1" />
-                  <el-checkbox v-if="showDelivery" v-model="scope.row.is_show_delivery" :true-label="1" :false-label="2" :label="$t('外送')" :disabled="scope.row.num_type === 1" />
-                </div>
+                <el-form-item
+                  :prop="`${scope.$index}.is_show_cashier`"
+                  :rules="[
+                    {
+                      required: true,
+                      trigger: ['blur', 'change'],
+                      validator: (rule, value, callback) => {
+                        if (
+                          scope.row.is_show_cashier == 1 ||
+                          scope.row.is_show_tablet == 1 ||
+                          scope.row.is_show_kitchen == 1 ||
+                          scope.row.is_show_assistant == 1 ||
+                          scope.row.is_show_h5 == 1 ||
+                          scope.row.is_show_delivery == 1
+                        ) {
+                          return true;
+                        } else {
+                          callback(new Error($t('请选择显示')));
+                        }
+                      },
+                    },
+                  ]"
+                >
+                  <el-checkbox v-model="scope.row.is_show_cashier" :true-value="1" :false-value="2" :label="$t('收银机')" />
+                  <el-checkbox v-model="scope.row.is_show_tablet" :true-value="1" :false-value="2" :label="$t('平板')" :disabled="scope.row.num_type === 1" />
+                  <el-checkbox v-model="scope.row.is_show_kitchen" :true-value="1" :false-value="2" :label="$t('厨显')" />
+                  <el-checkbox v-model="scope.row.is_show_assistant" :true-value="1" :false-value="2" :label="$t('点餐助手')" :disabled="scope.row.num_type === 1" />
+                  <el-checkbox v-model="scope.row.is_show_h5" :true-value="1" :false-value="2" :label="$t('扫码点餐')" :disabled="scope.row.num_type === 1" />
+                  <el-checkbox v-if="showDelivery" v-model="scope.row.is_show_delivery" :true-value="1" :false-value="2" :label="$t('外送')" :disabled="scope.row.num_type === 1" />
+                </el-form-item>
               </template>
             </el-table-column>
             <el-table-column prop="product_sort" width="120" :label="$t('商品排序')">
               <template #default="scope">
-                <el-form-item prop="" scope.row.product_sort>
+                <el-form-item>
                   <el-input-number v-model.number="scope.row.product_sort" :controls="false" :min="0" :max="1000000" :precision="0" :placeholder="$t('商品排序')"></el-input-number>
                 </el-form-item>
               </template>
@@ -312,19 +334,19 @@
                 </el-form-item>
               </template>
             </el-table-column>
-            <el-table-column prop="is_enable_grade" width="120" :label="`*${$t('会员折扣')}`">
+            <el-table-column width="120" :label="`*${$t('会员折扣')}`">
               <template #default="scope">
                 <el-radio-group v-model="scope.row.is_enable_grade">
-                  <el-radio label="1">{{ $t('开启') }}</el-radio>
-                  <el-radio label="0">{{ $t('关闭') }}</el-radio>
+                  <el-radio value="1">{{ $t('开启') }}</el-radio>
+                  <el-radio value="0">{{ $t('关闭') }}</el-radio>
                 </el-radio-group>
               </template>
             </el-table-column>
-            <el-table-column prop="is_enable_grade" width="120" :label="`*${$t('整单折扣')}`">
+            <el-table-column width="120" :label="`*${$t('整单折扣')}`">
               <template #default="scope">
                 <el-radio-group v-model="scope.row.open_overall_discount">
-                  <el-radio label="1">{{ $t('开启') }}</el-radio>
-                  <el-radio label="0">{{ $t('关闭') }}</el-radio>
+                  <el-radio value="1">{{ $t('开启') }}</el-radio>
+                  <el-radio value="0">{{ $t('关闭') }}</el-radio>
                 </el-radio-group>
               </template>
             </el-table-column>
@@ -577,15 +599,15 @@
                 product_stock: item[6] || '', // 库存数量
                 barcode: item[7] || '', // 商品条码
                 product_price: item[8] || '', // 商品价格
-                product_status: item[9] || '0', // 商品状态
+                product_status: item[9] || '', // 商品状态
                 product_ratin_tax_type: item[10] || '', // 堂食税类
                 product_takeout_tax_type: item[11] || '', // 外带税类
-                num_type: item[12] || '1', // 计价方式
+                num_type: item[12] || '', // 计价方式
                 shows: item[13] || '', // 显示
                 product_sort: item[14] || '0', // 商品排序
                 limit_num: item[15] || '', // 限购数量
-                is_enable_grade: item[16] || '0', // 会员折扣
-                open_overall_discount: item[17] || '0', // 整单折扣
+                is_enable_grade: item[16] || '', // 会员折扣
+                open_overall_discount: item[17] || '', // 整单折扣
                 row: index,
               });
             }

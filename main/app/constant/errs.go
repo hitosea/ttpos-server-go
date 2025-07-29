@@ -89,6 +89,7 @@ const (
 	CodeTakeoutCreateOrderError        = -702 // 外送订单创建失败
 	CodeOrderAddressNotVerifiedPhone   = -703 // 订单地址未认证手机号
 	CodeOrderAddressNotInDeliveryRange = -704 // 订单地址不在配送范围内
+	CodeOrderPrepareDataError          = -705 // 准备数据发起外送订单创建时失败
 )
 
 type ParseCodeOrderCheckOption struct {

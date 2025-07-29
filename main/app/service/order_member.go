@@ -5,6 +5,7 @@ import (
 	builtinerrors "errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -427,6 +428,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 		MemberSaleOrderUuid: memberSaleOrder.Uuid,
 		PaymentOrderUuid:    payment.PaymentOrderUuid,
 		PaymentMethodName:   paymentMethod.PaymentName,
+		IsWechatPay:         paymentMethod.IsWechatPay(),
 		QrCode:              utils.IfString(isOpenPc || paymentMethod.IsQrPromptPay(), payment.LinkUrl, ""),
 		LinkUrl:             utils.IfString(isOpenPc || paymentMethod.IsQrPromptPay(), "", payment.LinkUrl),
 		Status:              payment.GetStatus(), // 支付单状态 支付状态, 0-未支付 1-已支付 (可选择轮询当前接口，获取支付状态)
@@ -1382,63 +1384,15 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		}
 	}
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
-		lat, lng, _ := memberSaleOrder.Address.GetLocation()
-		// 获取商家地址
-		companySetting := ctx.GetCompanySetting()
-		if companySetting.ID == 0 {
-			// 如果ctx中没有商家设置，则从数据库中获取
-			if company, err := repository.NewCompanyRepo(tx).GetCompanyInfoByUuid(ctx.GetCompanyUuid()); err == nil {
-				companySetting = *company.CompanySetting
-				ctx.SetCompany(*company)
-				ctx.SetCompanySetting(companySetting)
-			}
-		}
-		latitude, longitude := companySetting.GetCoordinates()
-		if latitude == "" || longitude == "" {
-			return errors.New("无法找到商家经纬度")
-		}
-		// 选择外送渠道
-		memberSaleOrder.RelatedOrderType = constant.ProviderNameSkootar
-		// 状态变更的回调地址
-		callbackUrl := config.Server.Domain + "/api/v1/member/order/callback?company_uuid=" + fmt.Sprintf("%d", ctx.GetCompany().Uuid)
-
-		takeoutSrv := takeout.NewTakeoutSrv()
-		params := req.CreateTakeoutOrderReq{
-			ProviderName:  memberSaleOrder.RelatedOrderType,
-			Remark:        memberSaleOrder.Remark,
-			CallbackUrl:   callbackUrl,
-			ShopOrderUuid: fmt.Sprintf("%d", memberSaleOrder.Uuid),
-			CustomerLocation: &req.TakeoutLocation{
-				ContactName:  memberSaleOrder.ContactName,
-				ContactPhone: memberSaleOrder.ContactPhone,
-				TakeoutAddress: req.TakeoutAddress{
-					AddressName: memberSaleOrder.ContactName,
-					Address:     memberSaleOrder.ContactAddress,
-					Lat:         lat,
-					Lng:         lng,
-				},
-			},
-			MerchantLocation: &req.TakeoutLocation{
-				ContactName:  ctx.GetCompany().Name,
-				ContactPhone: companySetting.LinkPhone,
-				TakeoutAddress: req.TakeoutAddress{
-					AddressName: ctx.GetCompany().Name,
-					Address:     companySetting.Address,
-					Lat:         latitude,
-					Lng:         longitude,
-				},
-			},
-		}
-		startTime := time.Now()
-		res, err := takeoutSrv.CreateOrder(contexts.Background(), &params)
+		res, err := createSkootarOrder(ctx, memberSaleOrder)
 		if err != nil {
-			ctx.Log().Info("创建外送订单失败", zap.Error(err), zap.Duration("cost", time.Since(startTime)))
-			return errors.WithMessage(errors.NewWithCode(constant.CodeTakeoutCreateOrderError, "创建外送订单失败"), err.Error())
+			if strings.Contains(err.Error(), "创建skootar外送订单失败") {
+				return errors.WithMessage(errors.NewWithCode(constant.CodeTakeoutCreateOrderError, "外送订单创建失败"), err.Error())
+			}
+			return errors.WithMessage(errors.NewWithCode(constant.CodeOrderPrepareDataError, "发起外送订单失败"), err.Error())
 		}
-		ctx.Log().Info("创建外送订单成功", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))
 		memberSaleOrder.RelatedOrderNo = res.TakeoutRefNo
 		memberSaleOrder.ExpectedFinishTime = res.FinishTime
-		memberSaleOrder.RelatedOrderType = memberSaleOrder.RelatedOrderType
 		if opt.IsAutoAccept {
 			memberSaleOrder.IsAutoAccept = constant.Yes          // 自动接单
 			memberSaleOrder.PayTime = memberSaleOrder.AcceptTime // 支付时间等于接单时间
@@ -1448,6 +1402,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		}
 		return nil
 	}); err != nil {
+		ctx.Log().Error("接单失败", zap.Error(err))
 		return errors.WithMessage(err, "更新外送订单失败")
 	}
 
@@ -1474,6 +1429,66 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 	}()
 
 	return nil
+}
+
+func createSkootarOrder(ctx context.Context, memberSaleOrder *model.MemberSaleOrder) (*resp.CreateTakeoutOrderResp, error) {
+	db := ctx.GetDB()
+	lat, lng, _ := memberSaleOrder.Address.GetLocation()
+	// 获取商家地址
+	companySetting := ctx.GetCompanySetting()
+	if companySetting.ID == 0 {
+		// 如果ctx中没有商家设置，则从数据库中获取
+		if company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(ctx.GetCompanyUuid()); err == nil {
+			companySetting = *company.CompanySetting
+			ctx.SetCompany(*company)
+			ctx.SetCompanySetting(companySetting)
+		}
+	}
+	latitude, longitude := companySetting.GetCoordinates()
+	if latitude == "" || longitude == "" {
+		return nil, errors.New("无法找到商家经纬度")
+	}
+	// 选择外送渠道
+	memberSaleOrder.RelatedOrderType = constant.ProviderNameSkootar
+	// 状态变更的回调地址
+	callbackUrl := config.Server.Domain + "/api/v1/member/order/callback?company_uuid=" + fmt.Sprintf("%d", ctx.GetCompany().Uuid)
+
+	takeoutSrv := takeout.NewTakeoutSrv()
+	params := req.CreateTakeoutOrderReq{
+		ProviderName:  memberSaleOrder.RelatedOrderType,
+		Remark:        memberSaleOrder.Remark,
+		CallbackUrl:   callbackUrl,
+		ShopOrderUuid: fmt.Sprintf("%d", memberSaleOrder.Uuid),
+		CustomerLocation: &req.TakeoutLocation{
+			ContactName:  memberSaleOrder.ContactName,
+			ContactPhone: memberSaleOrder.ContactPhone,
+			TakeoutAddress: req.TakeoutAddress{
+				AddressName: memberSaleOrder.ContactName,
+				Address:     memberSaleOrder.ContactAddress,
+				Lat:         lat,
+				Lng:         lng,
+			},
+		},
+		MerchantLocation: &req.TakeoutLocation{
+			ContactName:  ctx.GetCompany().Name,
+			ContactPhone: companySetting.LinkPhone,
+			TakeoutAddress: req.TakeoutAddress{
+				AddressName: ctx.GetCompany().Name,
+				Address:     companySetting.Address,
+				Lat:         latitude,
+				Lng:         longitude,
+			},
+		},
+	}
+	startTime := time.Now()
+	res, err := takeoutSrv.CreateOrder(contexts.Background(), &params)
+	if err != nil {
+		ctx.Log().Info("创建外送订单失败", zap.Error(err), zap.Duration("cost", time.Since(startTime)))
+		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeTakeoutCreateOrderError, "创建skootar外送订单失败"), err.Error())
+	}
+	ctx.Log().Info("创建外送订单成功", zap.String("takeout_ref_no", res.TakeoutRefNo), zap.Duration("cost", time.Since(startTime)))
+
+	return res, nil
 }
 
 // RejectMemberSaleOrder 拒单外送订单

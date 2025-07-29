@@ -2166,4 +2166,8 @@ return [
     "至少有一个距离范围" => "Det måste finnas minst ett avståndsintervall",
     "最后一个距离范围必须是最大范围" => "Det sista avståndsintervallet måste vara det största intervallet",
     "为非外送显示的商品，请移除" => "Denna vara visas endast för icke-leverans. Vänligen ta bort den.",
+    "是否开启整单折扣必须是0和1" => "Om hela orderrabatten ska aktiveras måste det vara 0 eller 1",
+    "联系电话不能为空" => "Kontakttelefonnummer får inte vara tom",
+    "联系电话长度不能超过20个字符" => "Kontakttelefonnummer får inte överstiga 20 tecken",
+    "联系电话不能超过20个字符" => "Kontakttelefonnummer får inte överstiga 20 tecken",
 ];
