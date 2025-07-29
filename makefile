@@ -64,6 +64,10 @@ restart:
 up:
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
 
+# docker-compose ps
+ps:
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh ps
+
 # 翻译
 translate:
 	cd main && go run ./main.go translate
