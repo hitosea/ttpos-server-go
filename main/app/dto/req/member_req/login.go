@@ -3,6 +3,7 @@ package member_req
 import (
 	"errors"
 	"regexp"
+	"slices"
 	errs "ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
 )
@@ -28,6 +29,12 @@ func (req *MemberSendCodeReq) Validate() error {
 	// 判断 req.Phone 是否是手机号
 	if err := utils.ValidatePhone(req.Phone); err != nil {
 		return errs.WithMessage(err)
+	}
+	if !slices.Contains([]string{"+66", "+86"}, req.AreaCode) {
+		return errs.WithMessage(errors.New("手机号区号不正确"))
+	}
+	if (req.AreaCode == "+66" && len(req.Phone) != 9) || (req.AreaCode == "+86" && len(req.Phone) != 11) {
+		return errs.WithMessage(errors.New("手机号格式不正确"))
 	}
 	return nil
 }
