@@ -625,10 +625,19 @@ func (s *orderSrv) GetMemberOrderPaymentMethodList(ctx context.Context, req req.
 	if !memberSaleOrder.IsCanPaid() {
 		return nil, errors.New("订单状态不可支付")
 	}
-	// // 判断订单是否支付超时
-	// if memberSaleOrder.GetRemainingPaymentTime() == 0 {
-	// 	return nil, errors.New("订单支付超时")
-	// }
+	// 判断订单是否支付超时
+	if memberSaleOrder.GetRemainingPaymentTime() == 0 {
+		// 支付超时自动取消订单
+		err := s.MemberOrderPayTimeoutAutoCancel(ctx, MemberOrderPayTimeoutAutoCancelParams{
+			MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			Reason:              "支付超时",
+		})
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		// 订单支付超时
+		return nil, errors.New("订单支付超时")
+	}
 
 	// 获取支付方式
 	paymentMethods, err := repository.NewPaymentMethodRepo(db).GetLianLianPayPaymentMethodList()
@@ -1861,6 +1870,9 @@ func (s *orderSrv) MemberOrderPayTimeoutAutoCancel(ctx context.Context, params M
 
 	// 2. 检查订单状态是否可以取消 - 只有待支付状态的订单才能自动取消
 	if memberSaleOrder.Status != constant.MemberSaleOrderStatusPendingPayment {
+		if memberSaleOrder.Status == constant.MemberSaleOrderStatusCancelled {
+			return nil
+		}
 		return errors.New("订单状态不支持取消")
 	}
 	if memberSaleOrder.GetRemainingPaymentTime() > 5 {
