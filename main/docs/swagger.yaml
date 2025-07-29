@@ -6219,6 +6219,9 @@ definitions:
       is_sale_bill_deleted:
         description: 销售账单是否已删除
         type: boolean
+      is_takeout_bill:
+        description: 是否是外送订单
+        type: boolean
       locale_name:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'

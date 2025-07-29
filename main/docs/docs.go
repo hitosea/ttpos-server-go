@@ -28534,6 +28534,10 @@ const docTemplate = `{
                     "description": "销售账单是否已删除",
                     "type": "boolean"
                 },
+                "is_takeout_bill": {
+                    "description": "是否是外送订单",
+                    "type": "boolean"
+                },
                 "locale_name": {
                     "description": "序列号",
                     "allOf": [

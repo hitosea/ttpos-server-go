@@ -5,6 +5,7 @@ import "ttpos-server-go/app/dto"
 type ProductionGroup struct {
 	LocaleName        *dto.LocaleResponse `json:"locale_name"`          // 序列号
 	DiningMethod      uint                `json:"dining_method"`        // 用餐方式,0-堂食(店内就餐) 1-打包
+	IsTakeoutBill     bool                `json:"is_takeout_bill"`      // 是否是外送订单
 	ProductionList    ProductionList      `json:"product_list"`         // 送厨商品列表
 	SaleBillUuid      uint64              `json:"sale_bill_uuid"`       // 销售账单Uuid
 	IsSaleBillDeleted bool                `json:"is_sale_bill_deleted"` // 销售账单是否已删除

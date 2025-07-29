@@ -21,9 +21,10 @@ class MemberOrderExportService
         $sheet = $spreadsheet->getActiveSheet();
 
         //列宽设置
-        // $sheet->getColumnDimension('B')->setWidth(20);
-        // $sheet->getColumnDimension('E')->setWidth(30);
-        // $sheet->getColumnDimension('M')->setWidth(20);
+        $sheet->getColumnDimension('B')->setWidth(20);
+        $sheet->getColumnDimension('D')->setWidth(30);
+        $sheet->getColumnDimension('H')->setWidth(20);
+        $sheet->getColumnDimension('J')->setWidth(20);
 
         //设置工作表标题名称
         $sheet->setTitle(__('外送订单'));
@@ -63,10 +64,10 @@ class MemberOrderExportService
             }
 
             $sheet->setCellValue('A' . ($index + 2), $order['serial_number']); // 外卖序号
-            $sheet->setCellValue('B' . ($index + 2), $order['order_no']); // 订单号
+            $sheet->setCellValueExplicit('B' . ($index + 2), $order['order_no'], \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING); // 订单号
             $sheet->setCellValue('C' . ($index + 2), $statusMap[$order['status']]); // 状态
-            $sheet->setCellValue('D' . ($index + 2), date('Y-m-d H:i:s', $order['create_time'])); // 下单时间
-            $sheet->setCellValue('E' . ($index + 2), date('Y-m-d H:i:s', $order['pay_time'])); // 支付时间
+            $sheet->setCellValue('D' . ($index + 2), $order['create_time'] ? date('Y-m-d H:i:s', $order['create_time']) : ''); // 下单时间
+            $sheet->setCellValue('E' . ($index + 2), $order['pay_time'] ? date('Y-m-d H:i:s', $order['pay_time']) : ''); // 支付时间
             $sheet->setCellValue('F' . ($index + 2), $order['origin_amount']); // 订单金额
             $sheet->setCellValue('G' . ($index + 2), $order['pay_amount']); // 实付金额 
             $sheet->setCellValue('H' . ($index + 2), $userInfo); // 用户信息
