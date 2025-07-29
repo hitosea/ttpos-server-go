@@ -477,7 +477,7 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 			SerialNumber:        memberSaleOrder.SerialNumber,
 			Status:              memberSaleOrder.Status,
 			Num:                 memberSaleOrder.ProductNum,
-			ProductAmount:       memberSaleOrder.ProductAmount,
+			ProductAmount:       memberSaleOrder.OriginProductAmount,
 			Rider: resp.RiderInfo{
 				Name:              memberSaleOrder.RiderName,
 				Phone:             memberSaleOrder.RiderPhone,
@@ -1620,6 +1620,7 @@ func (s *orderSrv) GetMemberCashierOrderSearch(ctx context.Context, req req.Memb
 			MemberSaleOrderUuid: memberSaleOrder.Uuid,
 			SerialNumber:        memberSaleOrder.SerialNumber,
 			Status:              memberSaleOrder.Status,
+			StatusGroup:         constant.ParseToStatusGroup(memberSaleOrder.Status),
 			Num:                 memberSaleOrder.ProductNum,
 			ProductAmount:       memberSaleOrder.Amount,
 		})
