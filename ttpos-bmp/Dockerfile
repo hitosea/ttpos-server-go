@@ -41,6 +41,8 @@ WORKDIR /app
 # 复制编译好的二进制文件到新镜像
 COPY --from=builder /app/ttpos-bmp/app/ttpos-$MODULE/bin/linux_amd64/main .
 
+ENV GRPC_ENDPOINTS=""
+
 # 暴露应用运行的端口
 EXPOSE $HTTP_PORT
 EXPOSE $RPC_PORT

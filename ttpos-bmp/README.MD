@@ -76,7 +76,7 @@ ttpos-bmp/
 
 ## 部署步骤
 
-1. 确认.env 包含了外送模块的配置
+1. 确认.env 包含了外送/中台相关配置 ，参考 .env.example
 2. ttpos-bmp 目录下执行 make conf 重新生成 manifest/config/config.yaml，注意数据库配置，开发环境用的是root，生产测试环境根据情况改一下
 3. 服务端口目前使用,需要对外开放， 可根据部署情况调整
     - 管理 manager模块 14001:http 14002:grpc
