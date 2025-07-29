@@ -783,9 +783,11 @@ func (s *statisticsSrv) Count7Days(ctx context.Context, req CountReq) Count7Days
 
 // CountMemberNum 统计会员数量
 func (s *statisticsSrv) CountMemberNum(ctx context.Context, req CountReq) int64 {
+	commonRepo := repository.NewCommonRepoImpl()
 	req.IsCreateTime = true
 	opts := s.buildCountOpts(ctx, req)
-	opts = append(opts, repository.NewCommonRepoImpl().WhereBySoftDelete())
+	opts = append(opts, commonRepo.WhereBySoftDelete())
+	opts = append(opts, commonRepo.WhereByIsVisitor(0))
 	return repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNum(opts...)
 }
 
@@ -796,8 +798,11 @@ type CountMemberNumDaysResp struct {
 
 // CountMemberNumDays 统计会员数量天数
 func (s *statisticsSrv) CountMemberNumDays(ctx context.Context, req CountReq, days []string) []CountMemberNumDaysResp {
+	commonRepo := repository.NewCommonRepoImpl()
 	req.IsCreateTime = true
 	opts := s.buildCountOpts(ctx, req)
+	opts = append(opts, commonRepo.WhereBySoftDelete())
+	opts = append(opts, commonRepo.WhereByIsVisitor(0))
 	memberNumData := repository.NewStatisticsRepo(ctx.GetDB()).CountMemberNumDays(opts...)
 
 	var list []CountMemberNumDaysResp
