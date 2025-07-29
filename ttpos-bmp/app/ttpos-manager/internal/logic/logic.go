@@ -3,3 +3,7 @@
 // ==========================================================================
 
 package logic
+
+import (
+	_ "ttpos-bmp/app/ttpos-manager/internal/logic/setting"
+)

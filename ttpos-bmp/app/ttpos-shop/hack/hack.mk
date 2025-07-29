@@ -77,11 +77,35 @@ pbentity: cli.install
 
 # 加载环境变量并替换数据库连接配置
 .PHONY: conf
-conf:
-	# 加载上级目录的.env文件（兼容文件不存在的情况）
-	@set -o allexport; \
-	# 替换config.yaml中的数据库连接字符串
-	# 匹配以空格开头的link行，替换为新的连接格式
-	source ../../../.env && sed -i '' "s|link: \".*|link: \"mysql:root:$$DB_ROOT_PASSWORD@tcp(localhost:$$DB_PORT_OPEN)/shop1604472279040000\"|" hack/config.yaml; \
-	source ../../../.env && sed -i '' "s|^[[:space:]]*link: \".*|  link: \"mysql:root:$$DB_ROOT_PASSWORD@tcp(localhost:$$DB_PORT_OPEN)/shop1604472279040000\"|" manifest/config/config.yaml; \
-	set +o allexport
+conf: envsubst.install
+	@sh $(ROOT_DIR)/hack/init_conf.sh
+
+.PHONY: db_add
+db_add: migrate.install
+	@migrate create -ext sql -dir ./manifest/sql -tz Asia/Shanghai $(NAME)
+
+.PHONY: db_up
+db_up: migrate.install
+	@# 使用 sed 从 config.yaml 中提取 link 配置的值
+	@DB_DSN=$$(sed -n 's/migrate-db-link-open:[[:space:]]*\(.*\)/\1/p' $(ROOT_DIR)/hack/config.yaml | sed 's/"//g') && \
+	echo $$DB_DSN ;\
+	if [ -z "$$DB_DSN" ]; then \
+		echo "未在 config.yaml 中找到有效的 link 配置" >&2; \
+		exit 1; \
+	fi && \
+	migrate -path ./manifest/sql -database "$$DB_DSN" up
+
+.PHONY: run
+run: cli.install
+	@gf run $(ROOT_DIR)/main.go
+
+.PHONY: db_up.docker
+db_up.docker:
+	@# 使用 sed 从 config.yaml 中提取 link 配置的值
+	@DB_DSN=$$(sed -n 's/migrate-db-link:[[:space:]]*\(.*\)/\1/p' $(ROOT_DIR)/hack/config.yaml | sed 's/"//g') && \
+	echo $$DB_DSN ;\
+	if [ -z "$$DB_DSN" ]; then \
+		echo "未在 config.yaml 中找到有效的 link 配置" >&2; \
+		exit 1; \
+	fi && \
+	docker run --rm --network ttpos-server-go_saas-network -v $(ROOT_DIR)/manifest/sql:/migrations migrate/migrate  -path /migrations -database "$$DB_DSN" up

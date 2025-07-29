@@ -29,8 +29,8 @@ grpc:
 
 nacos:
   server:
-    ip: localhost
-    port: 8848
+    ip: $NACOS_SERVER_IP
+    port: $NACOS_SERVER_PORT
   config:
     dataId: ttpos-erp.yaml
     group: DEFAULT_GROUP

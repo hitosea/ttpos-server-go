@@ -20,6 +20,13 @@ make conf
 ## 运行
 
 ```shell
+#启动中间件
+make mid
+
+# 构建并启动全部中台服务
+make up
+
+# 单独启动
 # 管理模块
 make run.manager
 # 门店模块
@@ -85,6 +92,10 @@ ttpos-bmp/
 
 4. 如果有数据库变更,可以通过本工程 make db_up.docker 或者主工程的 make migrate 升级迁移数据库变更
 5. 构建容器
-    - takeout: 在上级目录中执行 docker compose build takeout
-6. 检查容器部署时挂载生成好的manifest/config/config.yaml 到容器的 的/app/config/config.yaml
-7. 启动容器检查日志，可通过 /api/v1/[模块名称]/hello 检查服务是否存活
+    - bmp-takeout: 执行 docker compose build bmp-takeout
+    - bmp-manager: 执行 docker compose build bmp-manager
+    - bmp-shop: 执行 docker compose build bmp-shop
+    - bmp-erp: 执行 docker compose build bmp-erp
+6. 全量构建  docker compose build
+7. 检查容器部署时挂载生成好的manifest/config/config.yaml 到容器的 的/app/config/config.yaml
+8. 启动容器检查日志，可通过 /api/v1/[模块名称]/hello 检查服务是否存活

@@ -4,9 +4,9 @@ import (
 	"context"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"ttpos-bmp/app/ttpos-manager/api/hello/v1"
-	rpc "ttpos-bmp/app/ttpos-manager/api/rpc/manager"
-	"ttpos-bmp/app/ttpos-manager/api/rpc/svc"
-	"ttpos-bmp/app/ttpos-manager/internal/logic"
+	rpc "ttpos-bmp/app/ttpos-manager/api/manager"
+	"ttpos-bmp/app/ttpos-manager/api/svc"
+	"ttpos-bmp/app/ttpos-manager/internal/service"
 )
 
 // GetSetting 处理获取配置信息的HTTP请求
@@ -25,7 +25,7 @@ func (c *ControllerV1) GetSetting(ctx context.Context, req *v1.GetSettingReq) (r
 
 	// 调用逻辑层的SettingClient获取配置信息
 	// 传递请求中的Key参数（来自HTTP请求）到svc.GetReq结构体
-	setting, err = logic.SettingClient.GetSetting(ctx, &svc.GetReq{
+	setting, err = service.Setting().GetSetting(ctx, &svc.GetReq{
 		Key: req.Key,
 	})
 	if err != nil {

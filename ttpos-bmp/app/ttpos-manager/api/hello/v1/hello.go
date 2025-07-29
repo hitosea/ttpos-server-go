@@ -2,7 +2,7 @@ package v1
 
 import (
 	"github.com/gogf/gf/v2/frame/g"
-	"ttpos-bmp/app/ttpos-manager/api/rpc/manager"
+	"ttpos-bmp/app/ttpos-manager/api/manager"
 )
 
 type HelloReq struct {

@@ -6,7 +6,7 @@ syntax = "proto3";
 
 package manager;
 
-option go_package = "ttpos-bmp/app/ttpos-manager/api/rpc/manager";
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
 
 import "google/protobuf/timestamp.proto";
 

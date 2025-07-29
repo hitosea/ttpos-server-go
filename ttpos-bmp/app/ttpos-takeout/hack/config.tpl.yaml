@@ -8,7 +8,7 @@ gfcli:
       path: "manifest/protobuf/takeout"
       removePrefix: "takeout_"
       #tables: "order,products"
-      package: "takeout"
+      package: "ttpos-bmp/app/ttpos-takeout/api/takeout"
     pb:
       api: "api"
       ctrl: "internal/controller/rpc"

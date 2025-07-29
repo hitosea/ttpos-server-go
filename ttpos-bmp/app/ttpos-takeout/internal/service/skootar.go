@@ -7,8 +7,8 @@ package service
 
 import (
 	"context"
-	"ttpos-bmp/app/ttpos-takeout/api"
 	v1 "ttpos-bmp/app/ttpos-takeout/api/callback/v1"
+	api "ttpos-bmp/app/ttpos-takeout/api/takeout"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"

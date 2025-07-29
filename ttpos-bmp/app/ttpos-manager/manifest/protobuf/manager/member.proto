@@ -1,0 +1,24 @@
+// ==========================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// ==========================================================================
+
+syntax = "proto3";
+
+package manager;
+
+option go_package = "ttpos-bmp/app/ttpos-manager/api/manager";
+
+
+
+message Member {
+    uint32 Id          = 1;  //
+    int64  Uuid        = 2;  // 唯一ID
+    int64  CompanyUuid = 3;  // 公司ID
+    string DeviceId    = 4;  // 设备ID
+    int32  IsVisitor   = 5;  // 是否游客 0否 1是
+    string Nickname    = 6;  // 昵称
+    string Phone       = 7;  // 手机号
+    int32  CreateTime  = 8;  // 创建时间
+    int32  UpdateTime  = 9;  // 更新时间
+    int32  DeleteTime  = 10; // 删除时间
+}

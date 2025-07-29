@@ -8,10 +8,10 @@ gfcli:
       path: "manifest/protobuf/takeout"
       removePrefix: "erp_"
       #tables: "order,products"
-      package: "erp"
+      package: "ttpos-bmp/app/ttpos-erp/api/erp"
     pb:
       api: "api"
-      ctrl: "internal/controller/rpc"
+      ctrl: "internal/controller"
     dao:
       - link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/erp"
         descriptionTag: true

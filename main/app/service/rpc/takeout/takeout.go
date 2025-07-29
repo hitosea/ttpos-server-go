@@ -2,7 +2,7 @@ package takeout
 
 import (
 	"context"
-	"ttpos-bmp/app/ttpos-takeout/api"
+	api "ttpos-bmp/app/ttpos-takeout/api/takeout"
 	"ttpos-server-go/app/cloud"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"

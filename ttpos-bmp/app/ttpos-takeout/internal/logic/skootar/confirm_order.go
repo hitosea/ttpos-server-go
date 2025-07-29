@@ -3,7 +3,7 @@ package skootar
 import (
 	"context"
 	"encoding/json"
-	"ttpos-bmp/app/ttpos-takeout/api"
+	api "ttpos-bmp/app/ttpos-takeout/api/takeout"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"
 

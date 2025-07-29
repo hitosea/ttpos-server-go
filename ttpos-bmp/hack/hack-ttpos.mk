@@ -21,14 +21,29 @@ migrate.install:
 	fi;
 
 
-# 启动 Docker 容器（使用项目名 ttpos-bmp 并加载 ../.env）
-.PHONY: docker
-docker:
+# 重新构建所有应用并启动
+.PHONY: up
+up:
 	@# 指定项目名 -p ttpos-bmp
 	@set -o allexport; \
-	source ../.env && docker compose -p ttpos-bmp -f ./docker-compose.yml up -d ;\
+	. ../.env && docker compose  -p ttpos-bmp -f ./docker-compose.yml up -d --build;\
 	set +o allexport;
 
+
+# 仅启动中间件
+.PHONY: mid
+mid:
+	@set -o allexport; \
+	. ../.env && docker compose -p ttpos-bmp-mid -f ./docker-compose.mid.yml up -d ;\
+	set +o allexport;
+
+# 启动中间件及中台应用服务
+.PHONY: run
+run:
+	@# 指定项目名 -p ttpos-bmp
+	@set -o allexport; \
+	. ../.env && docker compose -f ./docker-compose.yml -f ./docker-compose.mid.yml up -d ;\
+	set +o allexport;
 
 # 构建并运行 ttpos-manager 服务
 .PHONY: run.manager

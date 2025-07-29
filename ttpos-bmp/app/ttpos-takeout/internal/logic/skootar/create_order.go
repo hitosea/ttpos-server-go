@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"ttpos-bmp/app/ttpos-takeout/api"
+	api "ttpos-bmp/app/ttpos-takeout/api/takeout"
 	v1 "ttpos-bmp/app/ttpos-takeout/api/callback/v1"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"

@@ -5,7 +5,7 @@ import (
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"google.golang.org/grpc"
-	"ttpos-bmp/app/ttpos-manager/internal/controller/rpc"
+	"ttpos-bmp/app/ttpos-manager/internal/controller/rpc/svc"
 	"ttpos-bmp/internal/pkg/nacos/service"
 )
 
@@ -19,7 +19,7 @@ func InitRpcClient(ctx context.Context) {
 
 func initRpcServer() {
 	//在这里注册 rpc server 服务
-	rpc.Register(service.RpcServer.GRpc)
+	svc.Register(service.RpcServer.GRpc)
 
 	go service.RpcServer.GRpc.Run()
 }
