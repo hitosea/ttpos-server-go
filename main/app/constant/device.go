@@ -1,5 +1,10 @@
 package constant
 
+// 上下文场景值
+const (
+	SceneMemberOrder = "member_order" // 会员端订单
+)
+
 const (
 	SourceShop      = "shop"      // 商家
 	SourceCashier   = "cashier"   // 收银机

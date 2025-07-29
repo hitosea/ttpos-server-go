@@ -66,8 +66,8 @@ func ProcessMemberOrderCancel(paramsJson string) bool {
 		return false
 	}
 
-	// 2. 检查订单状态是否可以取消 - 只有待支付状态的订单才能自动取消
-	if memberSaleOrder.Status != constant.MemberSaleOrderStatusPendingPayment {
+	// 2. 检查订单状态是否可以取消 - 只有“选购中”状态的订单才能自动取消
+	if memberSaleOrder.Status != constant.MemberSaleOrderStatusSelecting {
 		return true
 	}
 

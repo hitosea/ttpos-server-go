@@ -34,6 +34,9 @@ type Context interface {
 	GetGin() *gin.Context                                  // 获取gin上下文
 	GetContext() context.Context                           // 获取上下文
 	GetSource() string                                     // 获取请求来源
+	SetSource(source string)                               // 设置请求来源
+	GetScene() string                                      // 获取业务场景。用于区分不同的业务场景。如外送场景
+	SetScene(scene string)                                 // 设置业务场景。用于区分不同的业务场景。如外送场景
 	GetCompany() model.Company                             // 获取商家信息
 	GetCompanySetting() model.CompanySetting               // 获取商家设置
 	GetStaff() model.Staff                                 // 获取员工信息
@@ -69,6 +72,7 @@ type ContextImpl struct {
 	language       string               // 语言。记录当前请求的语言
 	companyUuid    uint64               // 商家uuid。记录当前请求的商家
 	source         string               // 请求来源
+	scene          string               // 业务场景。用于区分不同的业务场景。如外送场景
 	company        model.Company        // 商家信息
 	companySetting model.CompanySetting // 商家设置信息
 	staff          model.Staff          // 员工信息，如果是点餐助手，应该是收银员
@@ -248,6 +252,18 @@ func (c *ContextImpl) GetDeskUuid() uint64 {
 
 func (c *ContextImpl) GetSource() string {
 	return c.source
+}
+
+func (c *ContextImpl) SetSource(source string) {
+	c.source = source
+}
+
+func (c *ContextImpl) GetScene() string {
+	return c.scene
+}
+
+func (c *ContextImpl) SetScene(scene string) {
+	c.scene = scene
 }
 
 func (c *ContextImpl) GetCompanyUuid() uint64 {
