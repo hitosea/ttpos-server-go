@@ -601,6 +601,9 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 		CancelTime:           memberSaleOrder.CancelTime,
 		RemainingPaymentTime: memberSaleOrder.GetRemainingPaymentTime(),
 		CancelReason: func() string {
+			if memberSaleOrder.IsSelfCancel() {
+				return i18n.Translate(ctx.GetLanguage(), "自主取消") + " (" + memberSaleOrder.CancelReason + ")"
+			}
 			return i18n.Translate(ctx.GetLanguage(), memberSaleOrder.CancelReason)
 		}(),
 		CreateTime: memberSaleOrder.CreateTime,
@@ -1376,10 +1379,15 @@ func (s *orderSrv) GetMemberOrderManageDetail(ctx context.Context, req req.GetMe
 		PayTime:             memberSaleOrder.PayTime,
 		CreateTime:          memberSaleOrder.CreateTime,
 		FinshTime:           memberSaleOrder.FinishTime,
-		CancelReason:        memberSaleOrder.CancelReason,
-		CancelTime:          memberSaleOrder.CancelTime,
-		Remark:              memberSaleOrder.Remark,
-		Member:              member,
+		CancelReason: func() string {
+			if memberSaleOrder.IsSelfCancel() {
+				return i18n.Translate(ctx.GetLanguage(), "自主取消") + " (" + memberSaleOrder.CancelReason + ")"
+			}
+			return i18n.Translate(ctx.GetLanguage(), memberSaleOrder.CancelReason)
+		}(),
+		CancelTime: memberSaleOrder.CancelTime,
+		Remark:     memberSaleOrder.Remark,
+		Member:     member,
 		Cachier: resp.CachierInfo{
 			Uuid: memberSaleOrder.SaleBill.CashierUuid,
 			Name: memberSaleOrder.SaleBill.CashierName,

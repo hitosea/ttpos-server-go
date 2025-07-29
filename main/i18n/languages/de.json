@@ -2309,6 +2309,7 @@
   "联系电话已存在": "Kontakttelefonnummer existiert bereits",
   "联系电话限制最大100字符": "Die Telefonnummer darf maximal 100 Zeichen lang sein",
   "联邦快递": "FedEx",
+  "自主取消": "Eigenständig stornieren",
   "自动加购必选商品失败": "Automatisches Hinzufügen des Pflichtartikels fehlgeschlagen",
   "自动加购必选商品失败，上下文中没有device_sn": "Automatisches Hinzufügen des Pflichtartikels zum Warenkorb fehlgeschlagen, device_sn fehlt im Kontext",
   "自动加购必选商品失败，上下文中没有device_uuid": "Automatisches Hinzufügen der Pflichtartikel zum Warenkorb fehlgeschlagen, device_uuid fehlt im Kontext",

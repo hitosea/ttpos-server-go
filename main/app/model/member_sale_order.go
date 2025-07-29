@@ -89,6 +89,12 @@ func (model *MemberSaleOrder) GetContactPhoneMask() string {
 	return model.ContactPhonePrefix + " " + model.ContactPhone[:2] + "****" + model.ContactPhone[len(model.ContactPhone)-2:]
 }
 
+// 是否是自主取消
+func (model *MemberSaleOrder) IsSelfCancel() bool {
+	return model.CancelScene == constant.MemberSaleOrderSceneMemberCancel ||
+		model.CancelScene == constant.MemberSaleOrderSceneMemberCancelUnpaid
+}
+
 // 是否还可退款
 func (model *MemberSaleOrder) IsCanRefund() bool {
 	return model.Status == constant.MemberSaleOrderStatusCompleted && model.RefundAmount < model.Amount

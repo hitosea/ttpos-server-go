@@ -2309,6 +2309,7 @@
   "联系电话已存在": "Telefonnumret finns redan",
   "联系电话限制最大100字符": "Telefonnummer får vara högst 100 tecken",
   "联邦快递": "FedEx",
+  "自主取消": "Avbryt självständigt",
   "自动加购必选商品失败": "Misslyckades med att automatiskt lägga till obligatorisk vara",
   "自动加购必选商品失败，上下文中没有device_sn": "Misslyckades med att automatiskt lägga till obligatoriska varor i varukorgen, device_sn saknas i sammanhanget",
   "自动加购必选商品失败，上下文中没有device_uuid": "Misslyckades med att automatiskt lägga till obligatorisk vara, device_uuid saknas i sammanhanget",
