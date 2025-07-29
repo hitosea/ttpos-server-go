@@ -604,6 +604,9 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 			if memberSaleOrder.IsSelfCancel() {
 				return i18n.Translate(ctx.GetLanguage(), "自主取消") + " (" + memberSaleOrder.CancelReason + ")"
 			}
+			if memberSaleOrder.IsMerchantCancel() {
+				return i18n.Translate(ctx.GetLanguage(), "商家取消") + " (" + memberSaleOrder.CancelReason + ")"
+			}
 			return i18n.Translate(ctx.GetLanguage(), memberSaleOrder.CancelReason)
 		}(),
 		CreateTime: memberSaleOrder.CreateTime,
@@ -1382,6 +1385,9 @@ func (s *orderSrv) GetMemberOrderManageDetail(ctx context.Context, req req.GetMe
 		CancelReason: func() string {
 			if memberSaleOrder.IsSelfCancel() {
 				return i18n.Translate(ctx.GetLanguage(), "自主取消") + " (" + memberSaleOrder.CancelReason + ")"
+			}
+			if memberSaleOrder.IsMerchantCancel() {
+				return i18n.Translate(ctx.GetLanguage(), "商家取消") + " (" + memberSaleOrder.CancelReason + ")"
 			}
 			return i18n.Translate(ctx.GetLanguage(), memberSaleOrder.CancelReason)
 		}(),

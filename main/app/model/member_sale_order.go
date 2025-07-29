@@ -95,6 +95,11 @@ func (model *MemberSaleOrder) IsSelfCancel() bool {
 		model.CancelScene == constant.MemberSaleOrderSceneMemberCancelUnpaid
 }
 
+// 是否是商家取消
+func (model *MemberSaleOrder) IsMerchantCancel() bool {
+	return model.CancelScene == constant.MemberSaleOrderSceneMerchantCancel
+}
+
 // 是否还可退款
 func (model *MemberSaleOrder) IsCanRefund() bool {
 	return model.Status == constant.MemberSaleOrderStatusCompleted && model.RefundAmount < model.Amount
