@@ -116,10 +116,11 @@ type MemberOrderAmountInfo struct {
 }
 
 type MemberOrderDetailAddress struct {
-	ContactName string `json:"contact_name"` // 联系人
-	Phone       string `json:"phone"`        // 联系电话
-	PhonePrefix string `json:"phone_prefix"` // 联系电话前缀. 例如：+86
-	Address     string `json:"address"`      // 详细地址
+	ContactName       string `json:"contact_name"`         // 联系人
+	Phone             string `json:"phone"`                // 联系电话
+	PhonePrefix       string `json:"phone_prefix"`         // 联系电话前缀. 例如：+86
+	Address           string `json:"address"`              // 详细地址
+	IsInDeliveryRange bool   `json:"is_in_delivery_range"` // 是否在配送范围内
 }
 
 type MemberOrderPaymentInfoResp struct {
