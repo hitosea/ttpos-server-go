@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
@@ -391,6 +392,7 @@ func (s *productSrv) GetProductRecommendList(ctx context.Context, request req.Pr
 	}
 
 	var recommendProductUuids []uint64
+	productsSortMap := make(map[uint64]int) // 商品排序map, key是商品uuid, value是排序值
 	for _, recommendProduct := range recommendProducts {
 		// string转换为uint64
 		uuid, err := utils.StringToUint64(recommendProduct.Uuid)
@@ -399,6 +401,11 @@ func (s *productSrv) GetProductRecommendList(ctx context.Context, request req.Pr
 			continue // 跳过错误,不显示该错误的推荐商品
 		}
 		recommendProductUuids = append(recommendProductUuids, uuid)
+		sort, err := strconv.Atoi(recommendProduct.Sort)
+		if err != nil {
+			sort = 0 // 默认排序为0
+		}
+		productsSortMap[uuid] = sort
 	}
 	// 获取产品推荐列表
 	products, err := s.GetProductList(ctx, req.ProductListReq{
@@ -412,6 +419,16 @@ func (s *productSrv) GetProductRecommendList(ctx context.Context, request req.Pr
 	if err != nil {
 		return nil, errors.WithMessage(err, "获取产品推荐列表失败")
 	}
+
+	// 将商品排序map转换为商品列表
+	for index, product := range products.List {
+		products.List[index].Sort = productsSortMap[product.Uuid]
+	}
+
+	// 按照sort排序, sort是字符串类型, 小的在前
+	sort.Slice(products.List, func(i, j int) bool {
+		return products.List[i].Sort < products.List[j].Sort
+	})
 
 	// 返回响应对象
 	return &product_resp.ProductRecommendListResp{
