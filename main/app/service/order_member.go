@@ -1496,8 +1496,8 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 				Ctx:                 ctx,
 				CompanyUuid:         ctx.GetCompanyUuid(),
 				Source:              ctx.GetSource(),
-				SaleBillUuid:        memberSaleOrder.SaleBill.Uuid,
-				SaleOrderUuid:       memberSaleOrder.SaleBill.GetFirstSaleOrder().Uuid,
+				SaleBillUuid:        memberSaleOrder.SaleBillUuid,
+				SaleOrderUuid:       memberSaleOrder.SaleOrderUuid,
 				OperatorUuid:        int64(ctx.GetStaffUuid()),
 				Staff:               ctx.GetStaff(),
 				MemberSaleOrderUuid: memberSaleOrder.Uuid,
@@ -2007,7 +2007,7 @@ func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, 
 	if err := takeout.NewTakeoutSrv().CancelOrder(contexts.Background(), &req.CancelTakeoutOrderReq{
 		ShopOrderUuid: fmt.Sprintf("%d", memberSaleOrder.Uuid),
 	}); err != nil {
-		logger.Logger.Error("自动取消订单失败", zap.Uint64("memberSaleOrderUuid", memberSaleOrderUuid), zap.Error(err))
+		logger.Logger.Error("自动取消订单失败 - 取消外送订单失败", zap.Uint64("memberSaleOrderUuid", memberSaleOrderUuid), zap.Error(err))
 		return err
 	}
 
@@ -2029,22 +2029,19 @@ func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, 
 
 		// 4. 已经支付的-发起退款
 		var returnOrder *model.ReturnOrder
-		if memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingMerchantAccept {
-			returnOrder, err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
-				CancelReason: constant.MemberSaleOrderSceneReason[constant.MemberSaleOrderSceneRiderPickupTimeout],
-			})
-			if err != nil {
-				tx.Rollback()
-				return errors.WithMessage(err)
-			}
-			// 退款金额
-			memberSaleOrder.RefundAmount = returnOrder.RefundAmount
+		returnOrder, err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
+			CancelReason: constant.MemberSaleOrderSceneReason[constant.MemberSaleOrderSceneRiderPickupTimeout],
+		})
+		if err != nil {
+			tx.Rollback()
+			return errors.WithMessage(err)
 		}
 
 		// 5. 执行取消操作
 		reason := constant.MemberSaleOrderSceneReason[constant.MemberSaleOrderSceneRiderPickupTimeout]
 		memberSaleOrder.SetCancel(reason)
 		memberSaleOrder.CancelScene = constant.MemberSaleOrderSceneRiderPickupTimeout
+		memberSaleOrder.RefundAmount = returnOrder.RefundAmount
 		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
 			tx.Rollback()
 			return errors.WithMessage(err)

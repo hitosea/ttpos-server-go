@@ -139,7 +139,7 @@ var MemberSaleOrderSceneReason = map[string]string{
 	MemberSaleOrderSceneSelectingTimeout:   "选购超时",
 	MemberSaleOrderScenePaymentTimeout:     "支付超时",
 	MemberSaleOrderSceneMemberCancelUnpaid: "用户取消",
-	MemberSaleOrderSceneRiderPickupTimeout: "骑手接单超时",
+	MemberSaleOrderSceneRiderPickupTimeout: "骑手超时未接单",
 }
 
 // 外送订单是否已计算距离费
