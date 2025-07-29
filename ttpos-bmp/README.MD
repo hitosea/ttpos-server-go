@@ -20,13 +20,13 @@ make conf
 ## 运行
 
 ```shell
-#启动中间件
+# 在容器中启动中间件
 make mid
 
-# 构建并启动全部中台服务
+# 在容器中构建并启动全部中台服务
 make up
 
-# 单独启动
+# 本地单独启动各模块
 # 管理模块
 make run.manager
 # 门店模块
@@ -43,12 +43,6 @@ make run.erp
 ## 数据库迁移
 
 本项目使用 `golang-migrate` 进行数据库迁移管理，所有迁移脚本都放在 `manifest/sql` 目录中。
-
-### 详细文档
-
-- [数据库迁移规则](./DATABASE_MIGRATION_RULES.md) - 详细的迁移规范和最佳实践
-- [快速开始指南](./MIGRATION_QUICK_START.md) - 快速上手指南
-- [迁移脚本模板](./migrate_template.sql) - 常用迁移脚本模板
 
 ### 迁移目录结构
 
@@ -97,5 +91,5 @@ ttpos-bmp/
     - bmp-shop: 执行 docker compose build bmp-shop
     - bmp-erp: 执行 docker compose build bmp-erp
 6. 全量构建  docker compose build
-7. 检查容器部署时挂载生成好的manifest/config/config.yaml 到容器的 的/app/config/config.yaml
+7. 检查容器部署时挂载生成好的 manifest/config/config.yaml 到容器的 的/app/config/config.yaml
 8. 启动容器检查日志，可通过 /api/v1/[模块名称]/hello 检查服务是否存活
