@@ -495,13 +495,13 @@
         true
       );
       ElMessage({
-        message: res.msg,
+        message: $t('操作成功'),
         type: 'success',
       });
       getData();
     } catch (error) {
       ElMessage({
-        message: error.msg,
+        message: $t('操作失败'),
         type: 'error',
       });
     } finally {
