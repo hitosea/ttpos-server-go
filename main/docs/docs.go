@@ -16139,6 +16139,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/order/send_auth_code": {
+            "post": {
+                "description": "发送认证验证码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "发送认证验证码",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MemberOrderSendAuthCodeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/member/points/record/list": {
             "get": {
                 "security": [
@@ -16413,40 +16447,6 @@ const docTemplate = `{
                                     }
                                 }
                             ]
-                        }
-                    }
-                }
-            }
-        },
-        "/member/send_auth_code": {
-            "post": {
-                "description": "发送认证验证码",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "会员端-订单"
-                ],
-                "summary": "发送认证验证码",
-                "parameters": [
-                    {
-                        "description": "详情参数",
-                        "name": "data",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/member_req.MemberSendCodeReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
                         }
                     }
                 }
@@ -22205,6 +22205,15 @@ const docTemplate = `{
                 "username": {
                     "description": "用户名",
                     "type": "string"
+                }
+            }
+        },
+        "req.MemberOrderSendAuthCodeReq": {
+            "type": "object",
+            "properties": {
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
                 }
             }
         },

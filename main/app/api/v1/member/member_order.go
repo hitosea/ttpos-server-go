@@ -362,12 +362,12 @@ func (h *OrderHandler) GetRiderInfo(c *gin.Context) {
 // @Tags 会员端-订单
 // @Accept json
 // @Produce json
-// @param data body member_req.MemberSendCodeReq true "详情参数"
+// @param data body req.MemberOrderSendAuthCodeReq true "详情参数"
 // @Success 200 {object} dto.Response{}
-// @Router /member/send_auth_code [post]
+// @Router /member/order/send_auth_code [post]
 func (h *OrderHandler) SendAuthCode(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	sendCodeReq := member_req.MemberSendCodeReq{}
+	sendCodeReq := req.MemberOrderSendAuthCodeReq{}
 	if err := c.ShouldBindJSON(&sendCodeReq); err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, err)
 		return
@@ -378,7 +378,7 @@ func (h *OrderHandler) SendAuthCode(c *gin.Context) {
 		return
 	}
 	helper.Success(c, gin.H{
-		"uuid": sendCodeReq.Phone,
+		"uuid": sendCodeReq.MemberSaleOrderUuid,
 	})
 }
 
@@ -393,7 +393,16 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	// 初始化处理器
-	orderSrv := service.NewOrderSrv(dbm, service.NewLocaleSrv(), settingSrv, service.NewMustPlanSrv(dbm), service.NewPaymentMethodSrv(dbm, settingSrv), service.NewMemberSrv(dbm, cache), service.NewCashBoxSrv(dbm))
+	orderSrv := service.NewOrderSrv(
+		dbm,
+		service.NewLocaleSrv(),
+		settingSrv,
+		service.NewMustPlanSrv(dbm),
+		service.NewPaymentMethodSrv(dbm, settingSrv),
+		service.NewMemberSrv(dbm, cache),
+		service.NewCashBoxSrv(dbm),
+		service.WithSmsSrv(dbm),
+	)
 	wrapper := &OrderHandler{
 		orderSrv: orderSrv,
 	}

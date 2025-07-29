@@ -47,7 +47,7 @@ type IMemberOrderSrv interface {
 	GetMemberOrderPaymentMethodList(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderPaymentMethodListResp, error) // 获取会员端订单支付方式列表
 	MemberOrderCancel(ctx context.Context, req member_req.CancelOrderReq) error                                                              // 会员端订单取消
 	GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.GetRiderInfoReq) (*resp.MemberOrderCoordinates, error)                      // 获取骑手信息
-	SendAuthCode(ctx context.Context, sendCodeReq req.GetMemberOrderDetailReq) error                                                         // 发送认证验证码
+	SendAuthCode(ctx context.Context, sendCodeReq req.MemberOrderSendAuthCodeReq) error                                                      // 发送认证验证码
 
 	// 外送订单退款相关
 	GetMemberOrderReturnInfo(ctx context.Context, req member_req.MemberOrderReturnInfoReq) (*resp.OrderReturnInfoResp, error) // 获取外送订单退款弹窗信息
@@ -1078,7 +1078,7 @@ func (s *orderSrv) GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.
 }
 
 // SendAuthCode 发送认证验证码
-func (s *orderSrv) SendAuthCode(ctx context.Context, req req.GetMemberOrderDetailReq) error {
+func (s *orderSrv) SendAuthCode(ctx context.Context, req req.MemberOrderSendAuthCodeReq) error {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 	companyUuid := ctx.GetCompanyUuid()

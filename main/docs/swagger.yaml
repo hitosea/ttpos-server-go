@@ -1923,6 +1923,12 @@ definitions:
     - password
     - username
     type: object
+  req.MemberOrderSendAuthCodeReq:
+    properties:
+      member_sale_order_uuid:
+        description: 会员端销售订单UUID
+        type: integer
+    type: object
   req.MergeDeskReq:
     properties:
       desk_uuids:
@@ -17360,6 +17366,28 @@ paths:
       summary: 获取骑手信息
       tags:
       - 会员端-订单
+  /member/order/send_auth_code:
+    post:
+      consumes:
+      - application/json
+      description: 发送认证验证码
+      parameters:
+      - description: 详情参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.MemberOrderSendAuthCodeReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 发送认证验证码
+      tags:
+      - 会员端-订单
   /member/points/record/list:
     get:
       consumes:
@@ -17529,28 +17557,6 @@ paths:
       summary: 注册
       tags:
       - 会员端.认证
-  /member/send_auth_code:
-    post:
-      consumes:
-      - application/json
-      description: 发送认证验证码
-      parameters:
-      - description: 详情参数
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/member_req.MemberSendCodeReq'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/dto.Response'
-      summary: 发送认证验证码
-      tags:
-      - 会员端-订单
   /member/send_code:
     post:
       consumes:
