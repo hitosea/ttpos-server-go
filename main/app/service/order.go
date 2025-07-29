@@ -926,12 +926,16 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		}
 	}
 
+	isOutRange := false
 	// 如果未计算距离费，且配置了地址，则查询配送距离
 	if !memberSaleOrder.GetIsDistanceCalculated() && memberSaleOrder.MemberAddressUuid != 0 {
 		// 查询配送距离
 		distance, err := s.QueryDistance(ctx, memberSaleOrder)
 		if err != nil {
 			ctx.Log().Error("查询配送距离失败", zap.Error(err))
+			if strings.Contains(err.Error(), "不在配送范围内，无法下单") {
+				isOutRange = true
+			}
 		} else {
 			memberSaleOrder.SetDeliveryDistance(distance)
 			if err := repository.NewMemberSaleOrderRepo(ctx.GetDB()).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
@@ -968,6 +972,9 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		Remark:              memberSaleOrder.Remark,
 		IsVerifiedPhone:     memberSaleOrder.IsVerifiedPhoneBool(),
 		IsInDeliveryRange: func() bool {
+			if isOutRange {
+				return false
+			}
 			if deliveryConfig != nil {
 				return deliveryConfig.IsInDeliveryRange
 			}
