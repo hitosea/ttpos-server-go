@@ -46,3 +46,4 @@ API 返回数据必须做类型校验和异常处理。
 使用api的时候 从.then .catch 改为 try{} catch。
 proxy从vue引入getCurrentInstance, this..$filter.isAuth 替换成proxy.$filter.isAuth。
 国际化（i18n）直接使用$t('xxx')就可以。
+el-form 表单的例如ref="form"的时候，需要改为ref="formRef" 这样不会和他的数据form冲突。
