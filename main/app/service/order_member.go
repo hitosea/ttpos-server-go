@@ -1482,7 +1482,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 			// 发送骑手接单超时时间后自动取消订单的延时消息
 			_, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
 				paramsJson,
-				time.Duration(memberSaleOrder.RiderAcceptTimeout)*time.Second, // 骑手接单超时时间后执行
+				time.Duration(memberSaleOrder.RiderAcceptTimeout)*time.Minute, // 骑手接单超时时间后执行
 				delayqueue.WithRetryCount(3),                                  // 重试3次
 			)
 			if err != nil {
