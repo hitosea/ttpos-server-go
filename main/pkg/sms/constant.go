@@ -12,6 +12,10 @@ const (
 	TemplateMemberOrderRefund = "member_order_refund"
 	// TemplateMemberSendCode 会员发送验证码模板ID
 	TemplateMemberSendCode = "member_send_code"
+	// TemplateMemberRegisterCode 会员注册验证码模板ID
+	TemplateMemberRegisterCode = "member_register"
+	// TemplateMemberOrderAuthCode 会员认证验证码模板ID
+	TemplateMemberOrderAuthCode = "member_order_auth"
 	// TemplateMemberPoints 会员积分模板ID
 	TemplateMemberPoints = "referral_consumption_got_points"
 	// TemplateMemberCoupon 会员优惠券模板ID

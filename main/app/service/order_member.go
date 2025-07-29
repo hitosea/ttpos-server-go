@@ -18,12 +18,14 @@ import (
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/config"
 	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/validator"
 	"ttpos-server-go/pkg/websocket"
 
 	"github.com/hdt3213/delayqueue"
@@ -45,6 +47,7 @@ type IMemberOrderSrv interface {
 	GetMemberOrderPaymentMethodList(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderPaymentMethodListResp, error) // 获取会员端订单支付方式列表
 	MemberOrderCancel(ctx context.Context, req member_req.CancelOrderReq) error                                                              // 会员端订单取消
 	GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.GetRiderInfoReq) (*resp.MemberOrderCoordinates, error)                      // 获取骑手信息
+	SendAuthCode(ctx context.Context, sendCodeReq req.GetMemberOrderDetailReq) error                                                         // 发送认证验证码
 
 	// 外送订单退款相关
 	GetMemberOrderReturnInfo(ctx context.Context, req member_req.MemberOrderReturnInfoReq) (*resp.OrderReturnInfoResp, error) // 获取外送订单退款弹窗信息
@@ -1072,6 +1075,38 @@ func (s *orderSrv) GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.
 		},
 	}, nil
 
+}
+
+// SendAuthCode 发送认证验证码
+func (s *orderSrv) SendAuthCode(ctx context.Context, req req.GetMemberOrderDetailReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	companyUuid := ctx.GetCompanyUuid()
+	// 获取会员端销售订单
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(req.MemberSaleOrderUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	// 获取商家信息
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(companyUuid)
+	if err != nil || company.IsExpired() || company.IsDelete() {
+		return errors.New("无法使用该功能，请联系商家")
+	}
+	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
+		return errors.New("商家会员服务已关闭")
+	}
+	// 获取验证码
+	code, err := validator.GetCode(cache.Global, companyUuid, memberSaleOrder.ContactPhone)
+	if err != nil {
+		return err
+	}
+	// 发送验证码短信
+	if err := s.smsSrv.SendMemberAuthOrderCodeSMS(ctx, memberSaleOrder.ContactPhone, &sms.MemberSendCodeRequest{
+		Code: code,
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetMemberCashierOrderList 获取收银端"外送"订单列表

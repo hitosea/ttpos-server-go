@@ -356,6 +356,32 @@ func (h *OrderHandler) GetRiderInfo(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// SendAuthCode 发送认证验证码
+// @Summary 发送认证验证码
+// @Description 发送认证验证码
+// @Tags 会员端-订单
+// @Accept json
+// @Produce json
+// @param data body member_req.MemberSendCodeReq true "详情参数"
+// @Success 200 {object} dto.Response{}
+// @Router /member/send_auth_code [post]
+func (h *OrderHandler) SendAuthCode(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sendCodeReq := member_req.MemberSendCodeReq{}
+	if err := c.ShouldBindJSON(&sendCodeReq); err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	err := h.orderSrv.SendAuthCode(ctx, sendCodeReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, err)
+		return
+	}
+	helper.Success(c, gin.H{
+		"uuid": sendCodeReq.Phone,
+	})
+}
+
 func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -384,7 +410,7 @@ func RegisterOrderHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.GET("/order/detail", wrapper.GetMemberOrderDetail)                         // 获取会员端订单详情
 		privateApi.GET("/order/payment/method/list", wrapper.GetMemberOrderPaymentMethodList) // 获取会员端订单支付方式列表
 		privateApi.POST("/order/cancel", wrapper.CancelOrder)                                 // 取消订单
-
-		privateApi.GET("/order/rider", wrapper.GetRiderInfo) // 获取骑手信息，以及商家、会员坐标
+		privateApi.POST("/order/send_auth_code", wrapper.SendAuthCode)                        // 发送认证验证码
+		privateApi.GET("/order/rider", wrapper.GetRiderInfo)                                  // 获取骑手信息，以及商家、会员坐标
 	}
 }
