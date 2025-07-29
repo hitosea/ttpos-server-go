@@ -530,7 +530,7 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
 			TotalPrice:          saleOrderProduct.GetTotalPrice(),
-			OriginTotalPrice:    saleOrderProduct.GetOriginTotalPriceWithTax(),
+			OriginTotalPrice:    saleOrderProduct.GetTotalPriceOrigin(),
 			Image: func() string {
 				if saleOrderProduct.ImageFile == nil {
 					return ""
@@ -1067,7 +1067,7 @@ func (s *orderSrv) GetMemberCashierOrderList(ctx context.Context, request req.Me
 				Status:              memberSaleOrder.Status,
 				StatusGroup:         constant.ParseToStatusGroup(memberSaleOrder.Status),
 				Num:                 memberSaleOrder.ProductNum,
-				ProductAmount:       memberSaleOrder.ProductAmount,
+				ProductAmount:       memberSaleOrder.Amount,
 			})
 		}
 		// 获取数量
@@ -1281,7 +1281,7 @@ func (s *orderSrv) GetMemberOrderManageDetail(ctx context.Context, req req.GetMe
 			UnitPrice:           saleOrderProduct.TotalPrice,
 			Num:                 saleOrderProduct.Num,
 			TotalPrice:          saleOrderProduct.GetTotalPrice(),
-			OriginTotalPrice:    saleOrderProduct.GetTotalProductPrice(),
+			OriginTotalPrice:    saleOrderProduct.GetTotalPriceOrigin(),
 			RefundAmount:        saleOrderProduct.GetReturnPrice(),
 		})
 	}
@@ -1621,7 +1621,7 @@ func (s *orderSrv) GetMemberCashierOrderSearch(ctx context.Context, req req.Memb
 			SerialNumber:        memberSaleOrder.SerialNumber,
 			Status:              memberSaleOrder.Status,
 			Num:                 memberSaleOrder.ProductNum,
-			ProductAmount:       memberSaleOrder.ProductAmount,
+			ProductAmount:       memberSaleOrder.Amount,
 		})
 	}
 
