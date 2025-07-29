@@ -1042,7 +1042,7 @@ class Product extends BaseModel
             'id',
             'product_unit'
         ]) . " FROM ($productSql UNION ALL $materialSql) AS all_product";
-        $orderSql = ' ORDER BY sort ASC, id DESC';
+        $orderSql = ' ORDER BY sort ASC, create_time DESC';
         $pageSql = " LIMIT {$offset}, {$limit}";
 
         // 执行查询
