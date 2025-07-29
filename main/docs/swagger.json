@@ -26357,6 +26357,10 @@
                     "description": "联系人",
                     "type": "string"
                 },
+                "is_in_delivery_range": {
+                    "description": "是否在配送范围内",
+                    "type": "boolean"
+                },
                 "phone": {
                     "description": "联系电话",
                     "type": "string"
@@ -26492,6 +26496,10 @@
         "resp.MemberOrderPaymentInfoResp": {
             "type": "object",
             "properties": {
+                "is_wechat_pay": {
+                    "description": "是否是微信支付",
+                    "type": "boolean"
+                },
                 "link_url": {
                     "description": "支付单链接 (返回跳转地址 window.location.href = LinkUrl; )",
                     "type": "string"

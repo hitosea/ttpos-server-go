@@ -44,6 +44,7 @@ type IMemberOrderSrv interface {
 	GetMemberOrderPaymentMethodList(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderPaymentMethodListResp, error) // 获取会员端订单支付方式列表
 	MemberOrderCancel(ctx context.Context, req member_req.CancelOrderReq) error                                                              // 会员端订单取消
 	GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.GetRiderInfoReq) (*resp.MemberOrderCoordinates, error)                      // 获取骑手信息
+	MemberOrderPayTimeoutAutoCancel(ctx context.Context, params MemberOrderPayTimeoutAutoCancelParams) error                                 // 外送订单支付超时自动取消订单
 
 	// 外送订单退款相关
 	GetMemberOrderReturnInfo(ctx context.Context, req member_req.MemberOrderReturnInfoReq) (*resp.OrderReturnInfoResp, error) // 获取外送订单退款弹窗信息
@@ -322,6 +323,17 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 	// 判断订单是否可以支付
 	if memberSaleOrder.Status < constant.MemberSaleOrderStatusPendingPayment {
 		return nil, errors.New("订单状态不可支付")
+	}
+	// 判断订单是否支付超时
+	if memberSaleOrder.GetRemainingPaymentTime() == 0 {
+		err := s.MemberOrderPayTimeoutAutoCancel(ctx, MemberOrderPayTimeoutAutoCancelParams{
+			MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			Reason:              "支付超时",
+		})
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		return nil, errors.New("订单支付超时")
 	}
 
 	// 判断当前是否连连支付
@@ -609,8 +621,22 @@ func (s *orderSrv) GetMemberOrderPaymentMethodList(ctx context.Context, req req.
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
+	// 判断订单是否可支付
 	if !memberSaleOrder.IsCanPaid() {
 		return nil, errors.New("订单状态不可支付")
+	}
+	// 判断订单是否支付超时
+	if memberSaleOrder.GetRemainingPaymentTime() == 0 {
+		// 支付超时自动取消订单
+		err := s.MemberOrderPayTimeoutAutoCancel(ctx, MemberOrderPayTimeoutAutoCancelParams{
+			MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			Reason:              "支付超时",
+		})
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		// 订单支付超时
+		return nil, errors.New("订单支付超时")
 	}
 
 	// 获取支付方式
@@ -1823,4 +1849,71 @@ func (s *orderSrv) MemberOrderReReturn(ctx context.Context, memberReReturnReq re
 
 	// 调用原有的重新退款逻辑
 	return s.ReReturnOrder(ctx, orderReReturnReq)
+}
+
+type MemberOrderPayTimeoutAutoCancelParams struct {
+	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员订单UUID
+	Reason              string `json:"reason"`                 // 取消原因
+}
+
+// MemberOrderPayTimeoutAutoCancel 外送订单支付超时自动取消订单
+func (s *orderSrv) MemberOrderPayTimeoutAutoCancel(ctx context.Context, params MemberOrderPayTimeoutAutoCancelParams) error {
+	// 获取DB
+	db := ctx.GetDB()
+
+	// 1. 获取会员端销售订单
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(params.MemberSaleOrderUuid)
+	if err != nil {
+		logger.Logger.Error("获取会员端销售订单失败", zap.Uint64("memberSaleOrderUuid", params.MemberSaleOrderUuid), zap.Error(err))
+		return err
+	}
+
+	// 2. 检查订单状态是否可以取消 - 只有待支付状态的订单才能自动取消
+	if memberSaleOrder.Status != constant.MemberSaleOrderStatusPendingPayment {
+		if memberSaleOrder.Status == constant.MemberSaleOrderStatusCancelled {
+			return nil
+		}
+		return errors.New("订单状态不支持取消")
+	}
+	if memberSaleOrder.GetRemainingPaymentTime() > 5 {
+		return errors.New("订单支付未超时")
+	}
+
+	// 3. 执行取消操作
+	memberSaleOrder.SetCancel(params.Reason)
+	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
+		logger.Logger.Error("更新会员订单状态失败", zap.Uint64("memberSaleOrderUuid", params.MemberSaleOrderUuid), zap.Error(err))
+		return err
+	}
+
+	// 4. 取消订单（如果有关联的销售账单）
+	if memberSaleOrder.SaleBillUuid > 0 {
+		if err := repository.NewOrderRepo(db).CancelOrder(ctx, memberSaleOrder.SaleBillUuid, 0, params.Reason); err != nil {
+			logger.Logger.Error("取消销售账单失败",
+				zap.Uint64("memberSaleOrderUuid", params.MemberSaleOrderUuid),
+				zap.Uint64("saleBillUuid", memberSaleOrder.SaleBillUuid),
+				zap.Error(err))
+			// 这里不返回false，因为会员订单状态已经更新成功了
+		}
+	}
+
+	// 发布“订单取消”操作事件
+	go func() {
+		event.NewSystemBus().PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
+			BasePayload: event.BasePayload{ // 基础信息
+				Ctx:                 ctx,
+				CompanyUuid:         ctx.GetCompanyUuid(),
+				Source:              constant.SourceMember,
+				SaleBillUuid:        memberSaleOrder.SaleBillUuid,
+				SaleOrderUuid:       memberSaleOrder.Uuid,
+				MemberUuid:          memberSaleOrder.MemberUuid,
+				MemberSaleOrderUuid: memberSaleOrder.Uuid,
+			},
+			Data: event.CancelMemberOrderPayloadData{
+				Type: "timeout_cancel",
+			},
+		})
+	}()
+
+	return nil
 }

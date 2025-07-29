@@ -88,7 +88,7 @@ type PaymentRepo struct {
 	payServiceUrl     string
 	payCallbackUrl    string // 支付回调地址
 	refundCallbackUrl string // 退款回调地址
-	orderCurrency     string
+	orderCurrency     string // 订单币种 [THB, USD, JPY, CNY]
 }
 
 // NewPaymentRepo 创建连连支付仓库
