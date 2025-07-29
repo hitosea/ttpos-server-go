@@ -2240,6 +2240,7 @@
   "类型名称不得超过50字符": "Der Typname darf maximal 50 Zeichen lang sein",
   "系统内部错误": "Interner Systemfehler",
   "系统提供支持。": "Das System bietet Unterstützung.",
+  "系统自动": "System automatisch",
   "系统自动接单": "System nimmt Bestellungen automatisch entgegen",
   "系统设置": "Systemeinstellungen",
   "系统错误，请稍候再试": "Systemfehler, bitte versuchen Sie es später erneut",

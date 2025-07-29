@@ -2240,6 +2240,7 @@
   "类型名称不得超过50字符": "Typnamnet får inte överstiga 50 tecken",
   "系统内部错误": "Internt systemfel",
   "系统提供支持。": "stöds av systemet.",
+  "系统自动": "Systemet automatiskt",
   "系统自动接单": "Systemet accepterar automatiskt beställningen",
   "系统设置": "Systeminställningar",
   "系统错误，请稍候再试": "Systemfel, försök igen senare",
