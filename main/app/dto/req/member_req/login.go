@@ -75,7 +75,7 @@ type MemberRegisterReq struct {
 func (req *MemberRegisterReq) Validate() error {
 	if req.Nickname != "" {
 		if len(req.Nickname) > 50 {
-			return errs.WithMessage(errors.New("昵称长度不能超过20"))
+			return errs.WithMessage(errors.New("昵称长度不能超过50"))
 		}
 		// 正则匹配 不能输入特殊的字符 只允许字母、数字、中文和常见标点符号
 		reg := regexp.MustCompile("^[a-zA-Z0-9\u4e00-\u9fa5]+$")

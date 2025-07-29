@@ -14,7 +14,7 @@ services:
     command: /usr/local/bin/start-redis.sh
     restart: always
     environment:
-      - CLUSTER_ANNOUNCE_IP=192.168.100.88
+      - CLUSTER_ANNOUNCE_IP=${REDIS_CLUSTER_ANNOUNCE_IP:-auto}
       - CLUSTER_ANNOUNCE_PORT=7001
       - CLUSTER_ANNOUNCE_BUS_PORT=17001
     networks:
@@ -35,7 +35,7 @@ services:
     command: /usr/local/bin/start-redis.sh
     restart: always
     environment:
-      - CLUSTER_ANNOUNCE_IP=192.168.100.88
+      - CLUSTER_ANNOUNCE_IP=${REDIS_CLUSTER_ANNOUNCE_IP:-auto}
       - CLUSTER_ANNOUNCE_PORT=7002
       - CLUSTER_ANNOUNCE_BUS_PORT=17002
     networks:
@@ -56,7 +56,7 @@ services:
     command: /usr/local/bin/start-redis.sh
     restart: always
     environment:
-      - CLUSTER_ANNOUNCE_IP=192.168.100.88
+      - CLUSTER_ANNOUNCE_IP=${REDIS_CLUSTER_ANNOUNCE_IP:-auto}
       - CLUSTER_ANNOUNCE_PORT=7003
       - CLUSTER_ANNOUNCE_BUS_PORT=17003
     networks:

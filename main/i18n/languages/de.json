@@ -1665,7 +1665,7 @@
   "昵称不能为空": "Spitzname darf nicht leer sein",
   "昵称不能超过50个字符": "Der Spitzname darf maximal 50 Zeichen lang sein",
   "昵称输入字符不合规": "Ungültige Zeichen in der Spitzname-Eingabe",
-  "昵称长度不能超过20": "Spitznamenlänge darf 20 Zeichen nicht überschreiten",
+  "昵称长度不能超过50": "Spitznamenlänge darf 50 Zeichen nicht überschreiten",
   "显示": "Anzeigen",
   "显示不能为空": "Anzeige darf nicht leer sein",
   "显示必须是12345": "Die Anzeige muss 12345 sein",
