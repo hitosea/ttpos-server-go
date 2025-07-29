@@ -81,6 +81,14 @@ type MemberSaleOrder struct {
 	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`
 }
 
+// 获取中间四位脱敏手机号
+func (model *MemberSaleOrder) GetContactPhoneMask() string {
+	if model.ContactPhone == "" {
+		return ""
+	}
+	return model.ContactPhonePrefix + " " + model.ContactPhone[:2] + "****" + model.ContactPhone[len(model.ContactPhone)-2:]
+}
+
 // 是否还可退款
 func (model *MemberSaleOrder) IsCanRefund() bool {
 	return model.Status == constant.MemberSaleOrderStatusCompleted && model.RefundAmount < model.Amount
