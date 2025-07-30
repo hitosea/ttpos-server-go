@@ -317,8 +317,8 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 			// 发送24小时后自动取消订单的延时消息
 			_, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
 				paramsJson,
-				24*time.Hour,                 // 24小时后执行
-				delayqueue.WithRetryCount(3), // 重试3次
+				time.Duration(config.Server.PaymentTimeout)*time.Second, // 24小时后执行
+				delayqueue.WithRetryCount(3),                            // 重试3次
 			)
 			if err != nil {
 				ctx.Log().Error("添加24小时自动取消订单任务失败",
@@ -504,6 +504,12 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 
 	memberOrders := make([]resp.MemberOrder, 0)
 	for _, memberSaleOrder := range memberSaleOrders {
+		// 支付超时自动取消订单
+		if memberSaleOrder.GetRemainingPaymentTime() == 0 && memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingPayment {
+			s.MemberOrderPayTimeoutAutoCancel(ctx, memberSaleOrder.Uuid)
+			memberSaleOrder.Status = constant.MemberSaleOrderStatusCancelled
+		}
+		//
 		memberOrders = append(memberOrders, resp.MemberOrder{
 			MemberSaleOrderUuid: memberSaleOrder.Uuid,
 			CompanyName:         ctx.GetCompany().Name,
@@ -1163,6 +1169,11 @@ func (s *orderSrv) GetMemberCashierOrderList(ctx context.Context, request req.Me
 		}
 		orderTotal = total
 		for _, memberSaleOrder := range memberSaleOrders {
+			// 支付超时自动取消订单
+			if memberSaleOrder.GetRemainingPaymentTime() == 0 && memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingPayment {
+				s.MemberOrderPayTimeoutAutoCancel(ctx, memberSaleOrder.Uuid)
+				memberSaleOrder.Status = constant.MemberSaleOrderStatusCancelled
+			}
 			memberOrders = append(memberOrders, resp.MemberCashierOrder{
 				MemberSaleOrderUuid: memberSaleOrder.Uuid,
 				SerialNumber:        memberSaleOrder.SerialNumber,
@@ -1476,6 +1487,8 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		ctx.SetDB(db)
 	}
 	db := ctx.GetDB()
+
+	// 获取订单信息
 	memberSaleOrder, err := getMemberOrderDetail(ctx, request.MemberSaleOrderUuid)
 	if err != nil {
 		return errors.WithMessage(err)
@@ -1551,10 +1564,9 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 
 	// 发布"外送接单"操作事件
 	go func() {
-		memberSaleOrder, err := getMemberOrderDetail(ctx, request.MemberSaleOrderUuid)
-		if err != nil {
-			return
-		}
+		// 设置商品状态为送厨状态
+		memberSaleOrder.SaleBill.SetSaleOrderProductCooking()
+		// 发布"外送接单"操作事件
 		s.bus.PublishAcceptMemberSaleOrderEvent(event.AcceptMemberSaleOrderPayload{
 			BasePayload: event.BasePayload{
 				Ctx:                 ctx,
@@ -1781,6 +1793,12 @@ func (s *orderSrv) GetMemberCashierOrderSearch(ctx context.Context, req req.Memb
 
 	memberOrders := make([]resp.MemberCashierOrder, 0)
 	for _, memberSaleOrder := range memberSaleOrders {
+		// 支付超时自动取消订单
+		if memberSaleOrder.GetRemainingPaymentTime() == 0 && memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingPayment {
+			s.MemberOrderPayTimeoutAutoCancel(ctx, memberSaleOrder.Uuid)
+			memberSaleOrder.Status = constant.MemberSaleOrderStatusCancelled
+		}
+		//
 		memberOrders = append(memberOrders, resp.MemberCashierOrder{
 			MemberSaleOrderUuid: memberSaleOrder.Uuid,
 			SerialNumber:        memberSaleOrder.SerialNumber,

@@ -7,12 +7,13 @@ type GoogleConf struct {
 }
 
 type ServerConf struct {
-	Port          string // 端口
-	Mode          string // 模式：debug/release/test
-	DeployMode    string // 部署模式：cloud云上，offline离线
-	BrandName     string // 品牌名称
-	Domain        string // 域名
-	MemberBaseUrl string // 会员端域名
+	Port           string // 端口
+	Mode           string // 模式：debug/release/test
+	DeployMode     string // 部署模式：cloud云上，offline离线
+	BrandName      string // 品牌名称
+	Domain         string // 域名
+	MemberBaseUrl  string // 会员端域名
+	PaymentTimeout int64  // 支付超时时间，单位秒，默认24小时
 }
 
 type DatabaseConf struct {
