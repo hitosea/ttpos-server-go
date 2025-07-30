@@ -1824,17 +1824,22 @@ func (s *orderSrv) GetMemberOrderReturnInfo(ctx context.Context, req member_req.
 	// 要求排好序：退款顺序优先退会员、不够退则到现金、再到记录支付（多个时，哪个先后都行）、再到lianlian（多个时，哪个先后都行）
 	paymentRecords, currencyUnit := saleOrder.GetPaymentOrderCanReturnAmount()
 
+	// 配送费
+	deliveryFee := memberSaleOrder.DeliveryFeeAmount
+
 	// 构建退款支付记录
 	memberPaymentRecords := make([]resp.OrderReturnPaymentRecord, 0)
 	for _, record := range paymentRecords {
+		canReturnAmount := record.CanReturnAmount - deliveryFee
+		paymentAmount := record.PaymentAmount - deliveryFee
 		memberPaymentRecords = append(memberPaymentRecords, resp.OrderReturnPaymentRecord{
 			PaymentMethodCode: record.PaymentMethodCode,
 			PaymentOrderUuid:  record.PaymentOrderUuid,
 			PaymentMethodName: record.PaymentMethodName,
 			PaymentMethodUuid: record.PaymentMethodUuid,
 			CurrencyUnit:      record.CurrencyUnit,
-			PaymentAmount:     record.PaymentAmount,
-			CanReturnAmount:   record.CanReturnAmount,
+			PaymentAmount:     paymentAmount,
+			CanReturnAmount:   canReturnAmount,
 		})
 	}
 
@@ -1865,11 +1870,11 @@ func (s *orderSrv) GetMemberOrderReturnInfo(ctx context.Context, req member_req.
 	}
 
 	// 可退款金额
-	canReturnAmount := saleOrder.GetCanReturnAmount()
+	canReturnAmount := saleOrder.GetCanReturnAmountWithDeliveryFee(deliveryFee)
 	res := &resp.OrderReturnInfoResp{
 		ManualReturnPoints: saleOrder.CanManualReturnPoints(), // 是否可以手动退款积分。订单是按比例赠送积分且未发生积分抵扣时，不自动退款。
 		DeductiblePoints:   saleOrder.GetManualReturnPoints(), // 可扣除积分。订单赠送的积分-已经退回的积分
-		CanReturnAmount:    canReturnAmount,                   // 可退款金额. 可退款金额=订单最终应收金额-已退款金额
+		CanReturnAmount:    canReturnAmount,                   // 可退款金额. 可退款金额=订单最终应收金额-配送费-已退款金额
 		PaymentRecords:     memberPaymentRecords,
 		Products:           productList,
 	}
@@ -1934,6 +1939,7 @@ func (s *orderSrv) MemberOrderReturn(ctx context.Context, memberReturnReq req.Or
 	}
 
 	// 调用原有的退款逻辑
+	ctx.SetScene(constant.SceneMemberOrder)
 	err, codeResult := s.ReturnOrder(ctx, orderReturnReq)
 	if err != nil {
 		return errors.WithMessage(err), codeResult

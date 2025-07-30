@@ -24,6 +24,7 @@ type IQueryMemberSaleOrderRepo interface {
 	GetMemberSaleOrder(opts ...DBOption) (*model.MemberSaleOrder, error)                                                                                             // 获取会员端销售订单
 	GetMemberSaleOrderRecord(uuid uint64, opts ...DBOption) (*model.MemberSaleOrder, error)                                                                          // 获取会员端销售订单记录
 	GetMemberSaleOrderRecordOnly(uuid uint64) (*model.MemberSaleOrder, error)                                                                                        // 获取会员端销售订单记录，不包含关联数据
+	GetMemberSaleOrderRecordOnlyBySaleBillUuid(saleBillUuid uint64) (*model.MemberSaleOrder, error)                                                                  // 获取会员端销售订单记录，不包含关联数据，并包含配送费
 	PaginateGetMemberSaleOrder(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)                                                       // 分页获取会员端销售订单
 	GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error)                                                   // 获取收银台"外送"订单列表
 	GetCashierMemberSaleOrderManageList(pageNo, pageSize int, statusList []uint, req GetCashierMemberSaleOrderManageListReq) ([]model.MemberSaleOrder, int64, error) // 获取收银台"外送"订单管理列表
@@ -121,6 +122,18 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecordOnly(uuid uint64) (*model.
 	db := r.db.Model(&model.MemberSaleOrder{})
 
 	err := db.Where("uuid = ?", uuid).First(&memberSaleOrder).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &memberSaleOrder, nil
+}
+
+// GetMemberSaleOrderRecordOnlyBySaleBillUuid 获取会员端销售订单记录，不包含关联数据，并包含配送费
+func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecordOnlyBySaleBillUuid(saleBillUuid uint64) (*model.MemberSaleOrder, error) {
+	var memberSaleOrder model.MemberSaleOrder
+	db := r.db.Model(&model.MemberSaleOrder{})
+
+	err := db.Where("sale_bill_uuid = ?", saleBillUuid).First(&memberSaleOrder).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
