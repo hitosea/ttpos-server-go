@@ -452,6 +452,12 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 			}
 			return PaymentMethodH5Payment
 		}(),
+		RedirectUrl: func() string {
+			if ctx.IsMobile() && paymentMethod.IsWechatPay() {
+				return fmt.Sprintf("%s/company/%d/payment_result/%d/", config.Server.MemberBaseUrl, ctx.GetCompanyUuid(), memberSaleOrder.Uuid)
+			}
+			return ""
+		}(),
 	})
 	if err != nil {
 		return nil, errors.WithMessage(err)
@@ -1318,8 +1324,16 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 		})
 	}
 
+	var opts []repository.DBOption
+	if req.SerialNo != "" {
+		opts = append(opts, repository.CommonRepo.DBOption(repository.CommonRepo.WhereBySerialNumber(req.SerialNo)))
+	}
+	if req.OrderNo != "" {
+		opts = append(opts, repository.CommonRepo.DBOption(repository.CommonRepo.WhereByOrderNo(req.OrderNo)))
+	}
+
 	getOrderNum := func(status string) int64 {
-		num, _ := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderNum(constant.GetStatusList(status), req.GetTimeFilterParams(ctx.GetCompanySetting().Timezone))
+		num, _ := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderNum(constant.GetStatusList(status), req.GetTimeFilterParams(ctx.GetCompanySetting().Timezone), opts...)
 		return num
 	}
 
@@ -2049,7 +2063,8 @@ func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, 
 	}
 
 	// 2. 检查订单状态是否可以取消 - 只有待骑手接单状态的订单才能自动取消
-	if memberSaleOrder.Status != constant.MemberSaleOrderStatusCooking && memberSaleOrder.Status != constant.MemberSaleOrderStatusPendingRiderPickup {
+	if memberSaleOrder.Status != constant.MemberSaleOrderStatusCooking &&
+		memberSaleOrder.Status != constant.MemberSaleOrderStatusPendingRiderPickup {
 		return errors.New("订单状态不支持取消")
 	}
 

@@ -28,11 +28,6 @@ class AddMemberOrderDiscountRateToSaleBillSettingTable extends Migrator
      */
     public function change()
     {
-        $table = $this->table('sale_bill_setting');
-        if (!$table->hasColumn('member_order_discount_rate')) {
-            $table->addColumn('member_order_discount_rate', 'decimal', ['limit' => 12, 'precision' => 4, 'null' => false, 'default' => 1, 'comment' => '会员端商品价格上浮比例1%-300%', 'after' => 'auto_points_exchange'])
-                ->update();
-        }
         $table = $this->table('sale_order_product');
         if (!$table->hasColumn('member_order_discount_rate')) {
             $table->addColumn('member_order_discount_rate', 'decimal', ['limit' => 12, 'precision' => 4, 'null' => false, 'default' => 1, 'comment' => '会员端商品价格上浮比例1%-300%', 'after' => 'member_card_discount_rate'])
