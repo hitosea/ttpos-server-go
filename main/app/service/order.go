@@ -1994,18 +1994,6 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 		tx.Rollback()
 		return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
 	}
-	// 取消订单后，删除所有销售订单商品
-	err = repository.NewSaleOrderProductRepo(tx).DeleteSaleOrderProductBySaleBillUuid(billInfo.Uuid)
-	if err != nil {
-		tx.Rollback()
-		return errors.WithMessage(builtinerrors.New("删除销售订单商品失败"), err.Error())
-	}
-	// 取消订单后，删除所有销售订单自助餐顾客
-	err = repository.NewSaleOrderBuffetCustomerTypeRepo(tx).DeleteSaleOrderBuffetCustomerTypeBySaleBillUuid(billInfo.Uuid)
-	if err != nil {
-		tx.Rollback()
-		return errors.WithMessage(builtinerrors.New("删除销售订单自助餐顾客失败"), err.Error())
-	}
 
 	// 提交事务
 	if err := tx.Commit().Error; err != nil {
