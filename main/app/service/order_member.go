@@ -2049,7 +2049,8 @@ func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, 
 	}
 
 	// 2. 检查订单状态是否可以取消 - 只有待骑手接单状态的订单才能自动取消
-	if memberSaleOrder.Status != constant.MemberSaleOrderStatusCooking && memberSaleOrder.Status != constant.MemberSaleOrderStatusPendingRiderPickup {
+	if memberSaleOrder.Status != constant.MemberSaleOrderStatusCooking &&
+		memberSaleOrder.Status != constant.MemberSaleOrderStatusPendingRiderPickup {
 		return errors.New("订单状态不支持取消")
 	}
 
