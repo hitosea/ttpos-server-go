@@ -27,7 +27,7 @@ type IQueryMemberSaleOrderRepo interface {
 	PaginateGetMemberSaleOrder(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)                                                       // 分页获取会员端销售订单
 	GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error)                                                   // 获取收银台"外送"订单列表
 	GetCashierMemberSaleOrderManageList(pageNo, pageSize int, statusList []uint, req GetCashierMemberSaleOrderManageListReq) ([]model.MemberSaleOrder, int64, error) // 获取收银台"外送"订单管理列表
-	GetCashierMemberSaleOrderNum(statusList []uint, timeFilter *req.TimeFilterParams) (int64, error)                                                                 // 获取收银台"外送"订单数量
+	GetCashierMemberSaleOrderNum(statusList []uint, timeFilter *req.TimeFilterParams, opts ...DBOption) (int64, error)                                               // 获取收银台"外送"订单数量
 	UpdateMemberSaleOrderAccept(memberSaleOrder model.MemberSaleOrder) error                                                                                         // 更新会员端销售订单-接单
 	UpdateMemberSaleOrderReject(memberSaleOrder model.MemberSaleOrder) error                                                                                         // 更新会员端销售订单-拒单
 	UpdateMemberSaleOrderCookFinish(memberSaleOrder model.MemberSaleOrder) error                                                                                     // 更新会员端销售订单-备餐完成
@@ -287,8 +287,7 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderManageList(pageNo, pageSi
 }
 
 // GetCashierMemberSaleOrderNum 获取收银端"外送"订单数量
-func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderNum(statusList []uint, timeFilter *req.TimeFilterParams) (int64, error) {
-	opts := []DBOption{}
+func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderNum(statusList []uint, timeFilter *req.TimeFilterParams, opts ...DBOption) (int64, error) {
 
 	// 根据状态列表筛选
 	if len(statusList) == 1 {

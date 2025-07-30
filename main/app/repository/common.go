@@ -214,7 +214,7 @@ func (r *commonRepo) WhereByStatus(status uint) DBOption {
 // WhereBySerialNumber 根据外送序号查询
 func (r *commonRepo) WhereBySerialNumber(serialNo string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("serial_number = ?", serialNo)
+		return db.Where("serial_number like ?", "%"+serialNo+"%")
 	}
 }
 
@@ -319,7 +319,7 @@ func (r *commonRepo) WhereByRelatedType(relatedType uint) DBOption {
 // WhereByOrderNo 根据订单编号查询
 func (r *commonRepo) WhereByOrderNo(orderNo string) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
-		return db.Where("order_no = ?", orderNo)
+		return db.Where("order_no like ?", "%"+orderNo+"%")
 	}
 }
 
