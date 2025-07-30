@@ -356,7 +356,7 @@ func (model *SaleOrderProduct) GetCanReturnNum() float64 {
 	for _, returnOrderProduct := range model.ReturnOrderProducts {
 		amount = amount.Add(decimal.NewFromFloat(returnOrderProduct.Num))
 	}
-	num := decimal.NewFromFloat(model.Num).Sub(amount).Truncate(2).InexactFloat64()
+	num := decimal.NewFromFloat(model.Num).Sub(amount).InexactFloat64()
 	// 如果可退货数量小于0，则返回0
 	// 这个判断很有必要，否则会出现可退货数量为负数的情况但uint是无符号的，结果会得到一个很大的数。如2-14=18446744073709551604
 	if num < 0 {
@@ -367,7 +367,7 @@ func (model *SaleOrderProduct) GetCanReturnNum() float64 {
 
 // GetReturnNum 获取销售订单商品的已退货数量. 已退货数量=订单商品数量-可退货数量
 func (model *SaleOrderProduct) GetReturnNum() float64 {
-	return decimal.NewFromFloat(model.Num).Sub(decimal.NewFromFloat(model.GetCanReturnNum())).Truncate(2).InexactFloat64()
+	return decimal.NewFromFloat(model.Num).Sub(decimal.NewFromFloat(model.GetCanReturnNum())).InexactFloat64()
 }
 
 // GetReturnPrice 获取销售订单商品的已退金额。已退金额=订单商品金额*已退货数量
