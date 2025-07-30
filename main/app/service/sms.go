@@ -73,7 +73,7 @@ func (s *smsSrv) formatPhone(phone string) (string, error) {
 		phone = strings.TrimPrefix(phone, constant.ChinaPrefix)
 	}
 
-	if len(phone) == 10 {
+	if len(phone) == 10 || len(phone) == 9 {
 		// 如果手机号以0开头，则去掉0
 		if phone[0] == '0' {
 			phone = phone[1:]
