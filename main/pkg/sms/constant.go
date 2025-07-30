@@ -22,6 +22,10 @@ const (
 	TemplateMemberCoupon = "referral_consumption_got_coupons"
 	// TemplateDeliveryOrderCanceledBySelf 外送订单取消模板ID
 	TemplateDeliveryOrderCanceledBySelf = "delivery_order_canceled_by_self"
+	// TemplateDeliveryRejected 外送订单被商家拒单
+	TemplateDeliveryRejected = "delivery_order_rejected"
+	// TemplateDeliveryOrderCanceledByMerchant 商家取消外送订单
+	TemplateDeliveryOrderCanceledByMerchant = "delivery_order_canceled_by_merchant"
 )
 
 // 语言常量

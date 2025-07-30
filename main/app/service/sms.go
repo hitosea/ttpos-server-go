@@ -36,8 +36,8 @@ type ISmsSrv interface {
 	SendMemberPointsSMS(ctx context.Context, phone string, params *sms.MemberPointsRequest) error
 	// SendMemberCouponSMS 发送会员优惠券短信
 	SendMemberCouponSMS(ctx context.Context, phone string, params *sms.MemberCouponRequest) error
-	// SendDeliveryOrderBySelfCancelSMS 发送外送订单取消短信（自己取消）
-	SendDeliveryOrderBySelfCancelSMS(ctx context.Context, phone string, params *sms.DeliveryOrderCancelBySelfRequest) error
+	// SendDeliveryOrderCancelSMS 发送外送订单取消短信
+	SendDeliveryOrderCancelSMS(ctx context.Context, phone string, params *sms.DeliveryOrderCancel) error
 }
 
 // smsSrv 短信服务实现
@@ -504,7 +504,7 @@ func (s *smsSrv) SendMemberCouponSMS(ctx context.Context, phone string, params *
 }
 
 // SendDeliveryOrderBySelfCancelSMS 发送外送订单取消短信
-func (s *smsSrv) SendDeliveryOrderBySelfCancelSMS(ctx context.Context, phone string, params *sms.DeliveryOrderCancelBySelfRequest) error {
+func (s *smsSrv) SendDeliveryOrderCancelSMS(ctx context.Context, phone string, params *sms.DeliveryOrderCancel) error {
 	company := ctx.GetCompany()
 
 	// 禁止并发操作
@@ -525,7 +525,7 @@ func (s *smsSrv) SendDeliveryOrderBySelfCancelSMS(ctx context.Context, phone str
 	}
 
 	// 发送短信
-	resp, err := s.client.SendDeliveryOrderBySelfCancelSMS(formattedPhone, language, params)
+	resp, err := s.client.SendDeliveryOrderCancelSMS(formattedPhone, language, params)
 	if err != nil {
 		err := fmt.Errorf("failed to send SMS: %v", err)
 		return errors.WithMessage(err, "发送短信失败")
