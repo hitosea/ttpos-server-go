@@ -20,8 +20,8 @@ type SMSClient interface {
 	SendMemberPointsSMS(phone, language string, params *MemberPointsRequest) (*SMSResponse, error)
 	// SendMemberCouponSMS 发送会员优惠券短信
 	SendMemberCouponSMS(phone, language string, params *MemberCouponRequest) (*SMSResponse, error)
-	// SendDeliveryOrderBySelfCancelSMS 发送外送订单取消短信
-	SendDeliveryOrderBySelfCancelSMS(phone, language string, params *DeliveryOrderCancelBySelfRequest) (*SMSResponse, error)
+	// SendDeliveryOrderCancelSMS 发送外送订单取消短信
+	SendDeliveryOrderCancelSMS(phone, language string, params *DeliveryOrderCancel) (*SMSResponse, error)
 	// CheckConfig 检查客户端配置是否正确
 	CheckConfig() error
 }

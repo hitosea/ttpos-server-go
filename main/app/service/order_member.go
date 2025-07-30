@@ -852,9 +852,10 @@ func (s *orderSrv) MemberOrderCancel(ctx context.Context, request member_req.Can
 	}()
 
 	// 发送短信通知
-	go NewSMSSrv(s.dbm).SendDeliveryOrderBySelfCancelSMS(ctx, memberSaleOrder.ContactPhone, &sms.DeliveryOrderCancelBySelfRequest{
-		Company: ctx.GetCompany().Name,
-		OrderNo: memberSaleOrder.OrderNo,
+	go NewSMSSrv(s.dbm).SendDeliveryOrderCancelSMS(ctx, memberSaleOrder.ContactPhone, &sms.DeliveryOrderCancel{
+		CancelScene: sms.TemplateDeliveryOrderCanceledBySelf,
+		Company:     ctx.GetCompany().Name,
+		OrderNo:     memberSaleOrder.OrderNo,
 	})
 
 	// 成功后，推送到厨显端更新订单
@@ -999,6 +1000,13 @@ func (s *orderSrv) MemberOrderCancelInCashier(ctx context.Context, request membe
 			},
 		})
 	}()
+
+	// 发送短信通知
+	go NewSMSSrv(s.dbm).SendDeliveryOrderCancelSMS(ctx, memberSaleOrder.ContactPhone, &sms.DeliveryOrderCancel{
+		CancelScene: sms.TemplateDeliveryOrderCanceledByMerchant,
+		Company:     ctx.GetCompany().Name,
+		OrderNo:     memberSaleOrder.OrderNo,
+	})
 
 	// 成功后，推送到厨显端更新订单
 	go websocket.PushClient(ctx.GetCompanyUuid(), websocket.SourceKitchen, websocket.SourceAll, websocket.UPDATE_KITCHEN, map[string]interface{}{
@@ -1702,6 +1710,13 @@ func (s *orderSrv) RejectMemberSaleOrder(ctx context.Context, request req.Reject
 			},
 		})
 	}()
+
+	// 发送短信通知
+	go NewSMSSrv(s.dbm).SendDeliveryOrderCancelSMS(ctx, memberSaleOrder.ContactPhone, &sms.DeliveryOrderCancel{
+		CancelScene: sms.TemplateDeliveryRejected,
+		Company:     ctx.GetCompany().Name,
+		OrderNo:     memberSaleOrder.OrderNo,
+	})
 
 	return nil
 }

@@ -232,10 +232,10 @@ func (c *smsClient) SendMemberCouponSMS(phone, language string, params *MemberCo
 	return c.SendSMS(req)
 }
 
-// SendDeliveryOrderBySelfCancelSMS 发送外送订单取消短信（自己取消）
-func (c *smsClient) SendDeliveryOrderBySelfCancelSMS(phone, language string, params *DeliveryOrderCancelBySelfRequest) (*SMSResponse, error) {
+// SendDeliveryOrderCancelSMS 发送外送订单取消短信
+func (c *smsClient) SendDeliveryOrderCancelSMS(phone, language string, params *DeliveryOrderCancel) (*SMSResponse, error) {
 	req := &SendSMSRequest{
-		TemplateID: TemplateDeliveryOrderCanceledBySelf,
+		TemplateID: params.CancelScene,
 		Phone:      phone,
 		Language:   language,
 		Params: map[string]interface{}{
