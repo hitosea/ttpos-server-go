@@ -102,7 +102,8 @@ func (model *MemberSaleOrder) IsMerchantCancel() bool {
 
 // 是否还可退款
 func (model *MemberSaleOrder) IsCanRefund() bool {
-	return model.Status == constant.MemberSaleOrderStatusCompleted && model.RefundAmount < model.Amount
+	canRefundAmount := model.Amount - model.DeliveryFeeAmount
+	return model.Status == constant.MemberSaleOrderStatusCompleted && model.RefundAmount < canRefundAmount
 }
 
 // 计算外送单会员折扣。外送单的会员折扣=Sum(商品原价(含税费)-商品折后价（含税费）)

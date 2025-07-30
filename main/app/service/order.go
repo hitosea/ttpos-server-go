@@ -2200,11 +2200,21 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 
 	// 可退款金额
 	canReturnAmount := saleOrder.GetCanReturnAmount()
+	// 如果是会员端订单，则需要根据配送费计算可退款金额
+	deliveryFee := 0.0
+	if ctx.GetScene() == constant.SceneMemberOrder {
+		memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecordOnlyBySaleBillUuid(req.SaleBillUuid)
+		if err != nil {
+			return errors.WithMessage(err), constant.CodeFail
+		}
+		deliveryFee = memberSaleOrder.DeliveryFeeAmount
+		canReturnAmount = saleOrder.GetCanReturnAmountWithDeliveryFee(deliveryFee)
+	}
 	// 可退的会员消费金额
 	canReturnMemberConsumptionAmount := saleOrder.GetCanReturnMemberConsumptionAmount()
 
 	// 创建退款单
-	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetStaff().DutyNo, ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetCustomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
+	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetScene(), deliveryFee, ctx.GetStaff().DutyNo, ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetCustomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
 	if err != nil {
 		return errors.WithMessage(err), constant.CodeFail
 	}
