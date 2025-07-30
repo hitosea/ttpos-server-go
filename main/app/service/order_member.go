@@ -1474,6 +1474,7 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 	unCookingSaleOrderProducts := memberSaleOrder.SaleBill.GetSaleOrderProductUnCooking()
 	if len(unCookingSaleOrderProducts) > 0 {
 		// 整单送厨
+		ctx.SetScene(constant.SceneMemberOrder)
 		_, checkRes, err := s.InstantOrderCartProductCooking(ctx, req.OrderCartProductCookingReq{
 			SaleBillUuid:        memberSaleOrder.SaleBill.Uuid,
 			IgnoreMust:          true,
