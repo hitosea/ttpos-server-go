@@ -599,15 +599,15 @@
                 product_stock: item[6] || '', // 库存数量
                 barcode: item[7] || '', // 商品条码
                 product_price: item[8] || '', // 商品价格
-                product_status: item[9] || '', // 商品状态
+                product_status: item[9] , // 商品状态
                 product_ratin_tax_type: item[10] || '', // 堂食税类
                 product_takeout_tax_type: item[11] || '', // 外带税类
                 num_type: item[12] || '', // 计价方式
                 shows: item[13] || '', // 显示
                 product_sort: item[14] || '0', // 商品排序
                 limit_num: item[15] || '', // 限购数量
-                is_enable_grade: item[16] || '', // 会员折扣
-                open_overall_discount: item[17] || '', // 整单折扣
+                is_enable_grade: item[16] , // 会员折扣
+                open_overall_discount: item[17] , // 整单折扣
                 row: index,
               });
             }
