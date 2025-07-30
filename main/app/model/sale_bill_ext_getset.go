@@ -94,6 +94,20 @@ func (model *SaleBill) GetSaleOrderProductUnCooking() []*SaleOrderProduct {
 	return unCookingSaleOrderProducts
 }
 
+// 获取未送厨的销售订单商品
+func (model *SaleBill) SetSaleOrderProductCooking() {
+	for _, saleOrder := range model.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			if !saleOrderProduct.IsAcceptOrderBool() || saleOrderProduct.IsDelete() {
+				continue
+			}
+			if saleOrderProduct.Status == constant.SaleOrderProductStatusNormal {
+				saleOrderProduct.SetCooking(0)
+			}
+		}
+	}
+}
+
 // 获取未送厨的销售订单商品.获取出刚刚被送厨的商品
 func (model *SaleBill) GetSaleOrderProductUnCookingByUuids(uuids map[uint64]bool) []*SaleOrderProduct {
 	unCookingSaleOrderProducts := make([]*SaleOrderProduct, 0)

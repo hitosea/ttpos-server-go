@@ -1476,6 +1476,8 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		ctx.SetDB(db)
 	}
 	db := ctx.GetDB()
+
+	// 获取订单信息
 	memberSaleOrder, err := getMemberOrderDetail(ctx, request.MemberSaleOrderUuid)
 	if err != nil {
 		return errors.WithMessage(err)
@@ -1551,10 +1553,9 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 
 	// 发布"外送接单"操作事件
 	go func() {
-		memberSaleOrder, err := getMemberOrderDetail(ctx, request.MemberSaleOrderUuid)
-		if err != nil {
-			return
-		}
+		// 设置商品状态为送厨状态
+		memberSaleOrder.SaleBill.SetSaleOrderProductCooking()
+		// 发布"外送接单"操作事件
 		s.bus.PublishAcceptMemberSaleOrderEvent(event.AcceptMemberSaleOrderPayload{
 			BasePayload: event.BasePayload{
 				Ctx:                 ctx,
