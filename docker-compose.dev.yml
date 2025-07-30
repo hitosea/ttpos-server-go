@@ -91,7 +91,7 @@ services:
   golang:
     container_name: "saas-golang-${APP_ID}"
     build:
-      dockerfile: main/Dockerfile
+      dockerfile: main/Dockerfile-dev
     image: ttpos-server-go
     environment:
       SW_AGENT_NAME: "${SW_AGENT_NAME:-ttpos}"

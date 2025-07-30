@@ -55,7 +55,8 @@ type MemberCouponRequest struct {
 }
 
 // DeliveryOrderCancelBySelfRequest 外送订单取消请求参数
-type DeliveryOrderCancelBySelfRequest struct {
-	Company string `json:"company"`  // 商家名称
-	OrderNo string `json:"order_no"` // 订单号
+type DeliveryOrderCancel struct {
+	CancelScene string `json:"cancel_scene"` // 取消场景，delivery_order_canceled_by_self - 会员付款后取消, delivery_order_canceled_by_merchant - 商家取消, delivery_order_rejected - 商家拒单
+	Company     string `json:"company"`      // 商家名称
+	OrderNo     string `json:"order_no"`     // 订单号
 }

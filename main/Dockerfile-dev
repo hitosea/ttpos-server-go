@@ -1,0 +1,47 @@
+# 使用官方Go语言镜像作为基础镜像
+FROM apache/skywalking-go:0.5.0-go1.23 AS builder
+#注意 context 要设置为上级目录,因为要拷贝别的模块的文件
+#复制takeout 模块 api
+WORKDIR /takeout
+COPY  takeout/go.mod  .
+COPY  takeout/api ./api
+
+# 设置工作目录
+WORKDIR /app
+
+# 复制go.mod和go.sum文件
+COPY main/go.mod main/go.sum ./
+
+# 下载依赖，这一步会生成缓存，在依赖有变化时才会重新下载
+RUN go mod download
+# 复制源代码
+COPY main .
+
+# 编译Go程序
+RUN go build -o main -ldflags="-s -w" -a ./main.go
+
+# 添加执行权限
+RUN chmod +x main
+
+# 使用轻量级的镜像来运行应用
+FROM ubuntu:latest
+
+ENV SW_AGENT_NAME=ttpos-server-main
+ENV SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE=103.63.136.110:30435
+ENV SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL=20
+
+
+# 安装 ca-certificates 和 curl
+RUN apt-get update && apt-get install -y ca-certificates curl
+
+# 设置工作目录
+WORKDIR /var/www
+
+# 复制编译好的二进制文件到新镜像
+COPY --from=builder /app/main .
+
+# 暴露应用运行的端口
+EXPOSE 8080
+
+# 运行应用
+CMD ["./main"]

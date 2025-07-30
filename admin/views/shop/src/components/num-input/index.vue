@@ -86,8 +86,10 @@
         this.$emit('update:modelValue', newValue);
       },
 
-      handleBlur() {
-        this.handleChange(this.modelValue);
+      async handleBlur() {
+        await this.handleChange(this.modelValue);
+        // 处理 类似2.20 去掉末尾的0, 2.00 去掉0 变成2；2.0 变成2
+        this.$emit('update:modelValue', this.removeTrailingZeros(this.modelValue));
       },
 
       handleInput(value) {
@@ -136,16 +138,24 @@
             formattedValue = this.min.toString();
           }
         }
-        // 处理 类似2.20 去掉末尾的0
-        if (formattedValue.includes('.')) {
-          const [integer, decimal] = formattedValue.split('.');
-          if (decimal) {
-            formattedValue = `${integer}.${decimal.replace(/0+$/, '')}`;
-          }
-        }
 
         // 触发更新
         this.$emit('update:modelValue', formattedValue);
+      },
+
+      // 移除末尾的0
+      removeTrailingZeros(value) {
+        if (value.includes('.')) {
+          const [integer, decimal] = value.split('.');
+          if (decimal) {
+            const cleanDecimal = decimal.replace(/0+$/, '');
+            if (cleanDecimal === '') {
+              return integer; // 如果小数部分全是0，返回整数部分
+            }
+            return `${integer}.${cleanDecimal}`;
+          }
+        }
+        return value;
       },
     },
   };
