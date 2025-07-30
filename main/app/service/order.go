@@ -1817,6 +1817,11 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			realName = fmt.Sprintf("%s(%s)", prefix, record.Member.Nickname)
 		}
 
+		// 如果是系统自动操作
+		if record.Source == "" {
+			realName = i18n.Translate(language, "系统自动")
+		}
+
 		logs = append(logs, resp.OrderOperationLog{
 			Uuid:       record.Uuid,
 			RealName:   realName,
@@ -6279,14 +6284,6 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		defer s.lock.UnlockUuid(req.SaleBillUuid)
 		ctx.AddLock()
 	}
-
-	// 助手端下单校验高级密码
-	// 只有助手端的请求，且不只检查送厨时
-	//if ctx.GetSource() == constant.SourceAssistant && !req.IsCheckCooking {
-	//	if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password, setting.WithIsAssistantCheckOrder()); err != nil {
-	//		return nil, nil, errors.WithMessage(err)
-	//	}
-	//}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 

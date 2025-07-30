@@ -92,7 +92,11 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 				// 接单场景下，检查h5订单商品金额
 				checkServiceRes, errCheck = s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSaleOrderProductUuid(uuids...), WithH5OrderUuid(h5OrderUuid))
 			} else {
-				checkServiceRes, errCheck = s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSaleOrderProductUuid(uuids...))
+				if ctx.GetScene() == constant.SceneMemberOrder {
+					// 会员端订单不检查
+				} else {
+					checkServiceRes, errCheck = s.checkOrder(ctx, ignoreMust, db, saleBill.Uuid, saleBill.DeskUuid, saleOrderProductAll, WithCheckTypeCooking(), WithSaleOrderProductUuid(uuids...))
+				}
 			}
 		}
 		if errCheck != nil {

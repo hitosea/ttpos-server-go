@@ -426,7 +426,8 @@
 
   const onExport = () => {
     searchForm.token = token;
-    OrderApi.storeExport(
+    searchForm.dataType = activeName.value;
+    OrderApi.postTakeoutOrderExport(
       {
         ...searchForm,
         request_type: 1,

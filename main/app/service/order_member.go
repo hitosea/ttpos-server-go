@@ -17,12 +17,15 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/config"
+	"ttpos-server-go/i18n"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/lock"
 	"ttpos-server-go/pkg/logger"
 	"ttpos-server-go/pkg/sms"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/validator"
 	"ttpos-server-go/pkg/websocket"
 
 	"github.com/hdt3213/delayqueue"
@@ -44,7 +47,7 @@ type IMemberOrderSrv interface {
 	GetMemberOrderPaymentMethodList(ctx context.Context, req req.GetMemberOrderDetailReq) (*resp.GetMemberOrderPaymentMethodListResp, error) // 获取会员端订单支付方式列表
 	MemberOrderCancel(ctx context.Context, req member_req.CancelOrderReq) error                                                              // 会员端订单取消
 	GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.GetRiderInfoReq) (*resp.MemberOrderCoordinates, error)                      // 获取骑手信息
-	MemberOrderPayTimeoutAutoCancel(ctx context.Context, params MemberOrderPayTimeoutAutoCancelParams) error                                 // 外送订单支付超时自动取消订单
+	SendAuthCode(ctx context.Context, sendCodeReq req.MemberOrderSendAuthCodeReq) error                                                      // 发送认证验证码
 
 	// 外送订单退款相关
 	GetMemberOrderReturnInfo(ctx context.Context, req member_req.MemberOrderReturnInfoReq) (*resp.OrderReturnInfoResp, error) // 获取外送订单退款弹窗信息
@@ -61,6 +64,11 @@ type IMemberOrderSrv interface {
 	RejectMemberSaleOrder(ctx context.Context, req req.RejectOrderReq) error                                                             // 拒单外送订单
 	CookFinishMemberSaleOrder(ctx context.Context, request req.CookFinishOrderReq) error                                                 // 备餐完成外送订单
 	GetMemberCashierOrderSearch(ctx context.Context, req req.MemberOrderSearchReq) (*resp.GetMemberCashierOrderSearchResp, error)        // 搜索订单列表通过关键词
+
+	// 系统
+	MemberOrderSelectingTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error   // 外送订单选购超时自动取消订单
+	MemberOrderPayTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error         // 外送订单支付超时自动取消订单
+	MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error // 外送订单骑手接单超时自动取消订单
 }
 
 // CreateMemberOrder 创建会员端订单。实现思路：
@@ -107,12 +115,30 @@ func (s *orderSrv) CreateMemberOrder(ctx context.Context, req req.CreateMemberOr
 			})
 		}()
 
-		//FIXME N分钟后取消订单
-		Queue.TakeoutCancelQueue.SendDelayMsgV2(
-			strconv.FormatUint(result.MemberSaleOrderInfo.MemberSaleOrderUuid, 10),
-			30*time.Minute,
-			delayqueue.WithRetryCount(3),
-		)
+		// 添加选购超时自动取消订单的延时队列任务
+		if Queue.MemberOrderCancelQueue != nil {
+			go func() {
+				memberSaleOrderUuidStr := strconv.FormatUint(result.MemberSaleOrderInfo.MemberSaleOrderUuid, 10)
+				// 构建队列消息参数
+				paramsJson := utils.ToJson(map[string]interface{}{
+					"member_sale_order_uuid": result.MemberSaleOrderInfo.MemberSaleOrderUuid,
+					"company_uuid":           ctx.GetCompanyUuid(),
+					"cancel_scene":           constant.MemberSaleOrderSceneSelectingTimeout,
+				})
+
+				// 发送30分钟后自动取消订单的延时消息
+				_, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
+					paramsJson,
+					30*time.Minute,               // 30分钟后执行
+					delayqueue.WithRetryCount(3), // 重试3次
+				)
+				if err != nil {
+					ctx.Log().Error("添加选购超时自动取消订单任务失败",
+						zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
+						zap.Error(err))
+				}
+			}()
+		}
 
 		return result, nil, nil
 	} else {
@@ -278,31 +304,29 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 	}
 
 	// 添加24小时后自动取消订单的延时队列任务
-	go func() {
-		memberSaleOrderUuidStr := strconv.FormatUint(request.MemberSaleOrderUuid, 10)
-		if Queue.MemberOrderCancelQueue != nil {
+	if Queue.MemberOrderCancelQueue != nil {
+		go func() {
+			memberSaleOrderUuidStr := strconv.FormatUint(request.MemberSaleOrderUuid, 10)
 			// 构建队列消息参数
 			paramsJson := utils.ToJson(map[string]interface{}{
 				"member_sale_order_uuid": request.MemberSaleOrderUuid,
 				"company_uuid":           ctx.GetCompanyUuid(),
-				"reason":                 "支付超时",
+				"cancel_scene":           constant.MemberSaleOrderScenePaymentTimeout,
 			})
-			// 发送24小时后自动取消订单的延时消息，重试1次
+
+			// 发送24小时后自动取消订单的延时消息
 			_, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
 				paramsJson,
 				24*time.Hour,                 // 24小时后执行
-				delayqueue.WithRetryCount(2), // 重试2次
+				delayqueue.WithRetryCount(3), // 重试3次
 			)
 			if err != nil {
 				ctx.Log().Error("添加24小时自动取消订单任务失败",
 					zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
 					zap.Error(err))
 			}
-		} else {
-			ctx.Log().Error("MemberOrderCancelQueue队列未初始化",
-				zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr))
-		}
-	}()
+		}()
+	}
 
 	return nil
 }
@@ -326,10 +350,7 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 	}
 	// 判断订单是否支付超时
 	if memberSaleOrder.GetRemainingPaymentTime() == 0 {
-		err := s.MemberOrderPayTimeoutAutoCancel(ctx, MemberOrderPayTimeoutAutoCancelParams{
-			MemberSaleOrderUuid: memberSaleOrder.Uuid,
-			Reason:              "支付超时",
-		})
+		err := s.MemberOrderPayTimeoutAutoCancel(ctx, memberSaleOrder.Uuid)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -582,10 +603,18 @@ func (s *orderSrv) GetMemberOrderDetail(ctx context.Context, req req.GetMemberOr
 		FinishTime:           memberSaleOrder.FinishTime,
 		CancelTime:           memberSaleOrder.CancelTime,
 		RemainingPaymentTime: memberSaleOrder.GetRemainingPaymentTime(),
-		CancelReason:         memberSaleOrder.CancelReason,
-		CreateTime:           memberSaleOrder.CreateTime,
-		Status:               memberSaleOrder.Status,
-		Remark:               memberSaleOrder.Remark,
+		CancelReason: func() string {
+			if memberSaleOrder.IsSelfCancel() {
+				return i18n.Translate(ctx.GetLanguage(), "自主取消") + " (" + memberSaleOrder.CancelReason + ")"
+			}
+			if memberSaleOrder.IsMerchantCancel() {
+				return i18n.Translate(ctx.GetLanguage(), "商家取消") + " (" + memberSaleOrder.CancelReason + ")"
+			}
+			return i18n.Translate(ctx.GetLanguage(), memberSaleOrder.CancelReason)
+		}(),
+		CreateTime: memberSaleOrder.CreateTime,
+		Status:     memberSaleOrder.Status,
+		Remark:     memberSaleOrder.Remark,
 		AmountInfo: resp.MemberOrderAmountInfo{
 			Amount:            memberSaleOrder.Amount,
 			MemberDiscountFee: memberSaleOrder.MemberDiscountFee,
@@ -628,10 +657,7 @@ func (s *orderSrv) GetMemberOrderPaymentMethodList(ctx context.Context, req req.
 	// 判断订单是否支付超时
 	if memberSaleOrder.GetRemainingPaymentTime() == 0 {
 		// 支付超时自动取消订单
-		err := s.MemberOrderPayTimeoutAutoCancel(ctx, MemberOrderPayTimeoutAutoCancelParams{
-			MemberSaleOrderUuid: memberSaleOrder.Uuid,
-			Reason:              "支付超时",
-		})
+		err := s.MemberOrderPayTimeoutAutoCancel(ctx, memberSaleOrder.Uuid)
 		if err != nil {
 			return nil, errors.WithMessage(err)
 		}
@@ -1051,6 +1077,38 @@ func (s *orderSrv) GetRiderInfo(ctx context.Context, getRiderInfoReq member_req.
 
 }
 
+// SendAuthCode 发送认证验证码
+func (s *orderSrv) SendAuthCode(ctx context.Context, req req.MemberOrderSendAuthCodeReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	companyUuid := ctx.GetCompanyUuid()
+	// 获取会员端销售订单
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(req.MemberSaleOrderUuid)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	// 获取商家信息
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(companyUuid)
+	if err != nil || company.IsExpired() || company.IsDelete() {
+		return errors.New("无法使用该功能，请联系商家")
+	}
+	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
+		return errors.New("商家会员服务已关闭")
+	}
+	// 获取验证码
+	code, err := validator.GetCode(cache.Global, companyUuid, memberSaleOrder.ContactPhone)
+	if err != nil {
+		return err
+	}
+	// 发送验证码短信
+	if err := s.smsSrv.SendMemberAuthOrderCodeSMS(ctx, memberSaleOrder.ContactPhone, &sms.MemberSendCodeRequest{
+		Code: code,
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
 // GetMemberCashierOrderList 获取收银端"外送"订单列表
 func (s *orderSrv) GetMemberCashierOrderList(ctx context.Context, request req.MemberOrderListReq) (*resp.GetMemberCashierOrderListResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
@@ -1150,6 +1208,7 @@ func (s *orderSrv) GetMemberCashierOrderDetail(ctx context.Context, req req.GetM
 			LocaleAttributeName: saleOrderProduct.GetAttributeName(),
 			Num:                 saleOrderProduct.Num,
 			TotalPrice:          saleOrderProduct.GetTotalPrice(),
+			OriginTotalPrice:    saleOrderProduct.GetTotalPriceOrigin(),
 		})
 	}
 
@@ -1174,7 +1233,7 @@ func (s *orderSrv) GetMemberCashierOrderDetail(ctx context.Context, req req.GetM
 		},
 		ProductList: resp.MemberProductList{
 			List:          products,
-			ProductAmount: memberSaleOrder.ProductAmount,
+			ProductAmount: memberSaleOrder.SaleBill.Amount, // 外送订单的商品金额等于SaleBill的amount，因为SaleBill的amount是包括了除配送费之外的所有金额
 		},
 		AddressInfo: address,
 		Rider: resp.RiderInfo{
@@ -1358,10 +1417,18 @@ func (s *orderSrv) GetMemberOrderManageDetail(ctx context.Context, req req.GetMe
 		PayTime:             memberSaleOrder.PayTime,
 		CreateTime:          memberSaleOrder.CreateTime,
 		FinshTime:           memberSaleOrder.FinishTime,
-		CancelReason:        memberSaleOrder.CancelReason,
-		CancelTime:          memberSaleOrder.CancelTime,
-		Remark:              memberSaleOrder.Remark,
-		Member:              member,
+		CancelReason: func() string {
+			if memberSaleOrder.IsSelfCancel() {
+				return i18n.Translate(ctx.GetLanguage(), "自主取消") + " (" + memberSaleOrder.CancelReason + ")"
+			}
+			if memberSaleOrder.IsMerchantCancel() {
+				return i18n.Translate(ctx.GetLanguage(), "商家取消") + " (" + memberSaleOrder.CancelReason + ")"
+			}
+			return i18n.Translate(ctx.GetLanguage(), memberSaleOrder.CancelReason)
+		}(),
+		CancelTime: memberSaleOrder.CancelTime,
+		Remark:     memberSaleOrder.Remark,
+		Member:     member,
 		Cachier: resp.CachierInfo{
 			Uuid: memberSaleOrder.SaleBill.CashierUuid,
 			Name: memberSaleOrder.SaleBill.CashierName,
@@ -1443,6 +1510,30 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 		return errors.WithMessage(err, "更新外送订单失败")
 	}
 
+	// 添加骑手接单超时自动取消订单的延时队列任务
+	if Queue.MemberOrderCancelQueue != nil {
+		go func() {
+			memberSaleOrderUuidStr := strconv.FormatUint(request.MemberSaleOrderUuid, 10)
+			// 构建队列消息参数
+			paramsJson := utils.ToJson(map[string]interface{}{
+				"member_sale_order_uuid": request.MemberSaleOrderUuid,
+				"company_uuid":           ctx.GetCompanyUuid(),
+				"cancel_scene":           constant.MemberSaleOrderSceneRiderPickupTimeout,
+			})
+			// 发送骑手接单超时时间后自动取消订单的延时消息
+			_, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
+				paramsJson,
+				time.Duration(memberSaleOrder.RiderAcceptTimeout)*time.Minute, // 骑手接单超时时间后执行
+				delayqueue.WithRetryCount(3),                                  // 重试3次
+			)
+			if err != nil {
+				ctx.Log().Error("添加骑手接单超时自动取消订单任务失败",
+					zap.String("memberSaleOrderUuid", memberSaleOrderUuidStr),
+					zap.Error(err))
+			}
+		}()
+	}
+
 	// 发布"外送接单"操作事件
 	go func() {
 		memberSaleOrder, err := getMemberOrderDetail(ctx, request.MemberSaleOrderUuid)
@@ -1454,8 +1545,8 @@ func (s *orderSrv) AcceptMemberSaleOrder(ctx context.Context, request req.Accept
 				Ctx:                 ctx,
 				CompanyUuid:         ctx.GetCompanyUuid(),
 				Source:              ctx.GetSource(),
-				SaleBillUuid:        memberSaleOrder.SaleBill.Uuid,
-				SaleOrderUuid:       memberSaleOrder.SaleBill.GetFirstSaleOrder().Uuid,
+				SaleBillUuid:        memberSaleOrder.SaleBillUuid,
+				SaleOrderUuid:       memberSaleOrder.SaleOrderUuid,
 				OperatorUuid:        int64(ctx.GetStaffUuid()),
 				Staff:               ctx.GetStaff(),
 				MemberSaleOrderUuid: memberSaleOrder.Uuid,
@@ -1555,7 +1646,7 @@ func (s *orderSrv) RejectMemberSaleOrder(ctx context.Context, request req.Reject
 
 	// 退款
 	returnOrder, err := NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*billInfo.GetFirstSaleOrder(), MemberSaleOrderRefundReq{
-		CancelReason: "商家拒单",
+		CancelReason: constant.MemberSaleOrderSceneReason[memberSaleOrder.CancelScene],
 	})
 	if err != nil {
 		return errors.WithMessage(err)
@@ -1851,20 +1942,15 @@ func (s *orderSrv) MemberOrderReReturn(ctx context.Context, memberReReturnReq re
 	return s.ReReturnOrder(ctx, orderReReturnReq)
 }
 
-type MemberOrderPayTimeoutAutoCancelParams struct {
-	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员订单UUID
-	Reason              string `json:"reason"`                 // 取消原因
-}
-
 // MemberOrderPayTimeoutAutoCancel 外送订单支付超时自动取消订单
-func (s *orderSrv) MemberOrderPayTimeoutAutoCancel(ctx context.Context, params MemberOrderPayTimeoutAutoCancelParams) error {
+func (s *orderSrv) MemberOrderPayTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error {
 	// 获取DB
 	db := ctx.GetDB()
 
 	// 1. 获取会员端销售订单
-	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(params.MemberSaleOrderUuid)
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(memberSaleOrderUuid)
 	if err != nil {
-		logger.Logger.Error("获取会员端销售订单失败", zap.Uint64("memberSaleOrderUuid", params.MemberSaleOrderUuid), zap.Error(err))
+		logger.Logger.Error("获取会员端销售订单失败", zap.Uint64("memberSaleOrderUuid", memberSaleOrderUuid), zap.Error(err))
 		return err
 	}
 
@@ -1880,17 +1966,19 @@ func (s *orderSrv) MemberOrderPayTimeoutAutoCancel(ctx context.Context, params M
 	}
 
 	// 3. 执行取消操作
-	memberSaleOrder.SetCancel(params.Reason)
+	reason := constant.MemberSaleOrderSceneReason[constant.MemberSaleOrderScenePaymentTimeout]
+	memberSaleOrder.SetCancel(reason)
+	memberSaleOrder.CancelScene = constant.MemberSaleOrderScenePaymentTimeout
 	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
-		logger.Logger.Error("更新会员订单状态失败", zap.Uint64("memberSaleOrderUuid", params.MemberSaleOrderUuid), zap.Error(err))
+		logger.Logger.Error("更新会员订单状态失败", zap.Uint64("memberSaleOrderUuid", memberSaleOrderUuid), zap.Error(err))
 		return err
 	}
 
 	// 4. 取消订单（如果有关联的销售账单）
 	if memberSaleOrder.SaleBillUuid > 0 {
-		if err := repository.NewOrderRepo(db).CancelOrder(ctx, memberSaleOrder.SaleBillUuid, 0, params.Reason); err != nil {
+		if err := repository.NewOrderRepo(db).CancelOrder(ctx, memberSaleOrder.SaleBillUuid, 0, reason); err != nil {
 			logger.Logger.Error("取消销售账单失败",
-				zap.Uint64("memberSaleOrderUuid", params.MemberSaleOrderUuid),
+				zap.Uint64("memberSaleOrderUuid", memberSaleOrderUuid),
 				zap.Uint64("saleBillUuid", memberSaleOrder.SaleBillUuid),
 				zap.Error(err))
 			// 这里不返回false，因为会员订单状态已经更新成功了
@@ -1914,6 +2002,142 @@ func (s *orderSrv) MemberOrderPayTimeoutAutoCancel(ctx context.Context, params M
 			},
 		})
 	}()
+
+	return nil
+}
+
+// MemberOrderSelectingTimeoutAutoCancel 外送订单选购超时自动取消订单
+func (s *orderSrv) MemberOrderSelectingTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error {
+	// 获取DB
+	db := ctx.GetDB()
+
+	// 1. 获取会员端销售订单
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(memberSaleOrderUuid)
+	if err != nil {
+		logger.Logger.Error("获取会员端销售订单失败", zap.Uint64("memberSaleOrderUuid", memberSaleOrderUuid), zap.Error(err))
+		return err
+	}
+
+	// 2. 检查订单状态是否可以取消 - 只有选购中状态的订单才能自动取消
+	if memberSaleOrder.Status != constant.MemberSaleOrderStatusSelecting {
+		return errors.New("订单状态不支持取消")
+	}
+
+	// 3. 执行取消操作
+	reason := constant.MemberSaleOrderSceneReason[constant.MemberSaleOrderSceneSelectingTimeout]
+	memberSaleOrder.SetCancel(reason)
+	memberSaleOrder.CancelScene = constant.MemberSaleOrderSceneSelectingTimeout
+	if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
+		logger.Logger.Error("更新会员订单状态失败", zap.Uint64("memberSaleOrderUuid", memberSaleOrderUuid), zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+// MemberOrderRiderPickupTimeoutAutoCancel 外送订单骑手接单超时自动取消订单
+func (s *orderSrv) MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error {
+	// 获取DB
+	db := ctx.GetDB()
+
+	// 1. 获取会员端销售订单
+	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(memberSaleOrderUuid)
+	if err != nil {
+		logger.Logger.Error("获取会员端销售订单失败", zap.Uint64("memberSaleOrderUuid", memberSaleOrderUuid), zap.Error(err))
+		return err
+	}
+
+	// 2. 检查订单状态是否可以取消 - 只有待骑手接单状态的订单才能自动取消
+	if memberSaleOrder.Status != constant.MemberSaleOrderStatusCooking && memberSaleOrder.Status != constant.MemberSaleOrderStatusPendingRiderPickup {
+		return errors.New("订单状态不支持取消")
+	}
+
+	// 3. 调用外送取消
+	if err := takeout.NewTakeoutSrv().CancelOrder(contexts.Background(), &req.CancelTakeoutOrderReq{
+		ShopOrderUuid: fmt.Sprintf("%d", memberSaleOrder.Uuid),
+	}); err != nil {
+		logger.Logger.Error("自动取消订单失败 - 取消外送订单失败", zap.Uint64("memberSaleOrderUuid", memberSaleOrderUuid), zap.Error(err))
+		return err
+	}
+
+	// 事务开始
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 获取订单信息
+		orderRepo := repository.NewOrderRepo(tx)
+		billInfo, err := orderRepo.GetSaleBillAllInfo(memberSaleOrder.SaleBillUuid)
+		if err != nil {
+			tx.Rollback()
+			return errors.WithMessage(err)
+		}
+
+		// 获取销售订单
+		saleOrder := billInfo.GetFirstSaleOrder()
+		if saleOrder == nil {
+			return errors.WithMessage(errors.New("找不到销售订单"))
+		}
+
+		// 4. 已经支付的-发起退款
+		var returnOrder *model.ReturnOrder
+		returnOrder, err = NewPaymentRepo(ctx, s.dbm).MemberSaleOrderRefund(*saleOrder, MemberSaleOrderRefundReq{
+			CancelReason: constant.MemberSaleOrderSceneReason[constant.MemberSaleOrderSceneRiderPickupTimeout],
+		})
+		if err != nil {
+			tx.Rollback()
+			return errors.WithMessage(err)
+		}
+
+		// 5. 执行取消操作
+		reason := constant.MemberSaleOrderSceneReason[constant.MemberSaleOrderSceneRiderPickupTimeout]
+		memberSaleOrder.SetCancel(reason)
+		memberSaleOrder.CancelScene = constant.MemberSaleOrderSceneRiderPickupTimeout
+		memberSaleOrder.RefundAmount = returnOrder.RefundAmount
+		if err := repository.NewMemberSaleOrderRepo(tx).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
+			tx.Rollback()
+			return errors.WithMessage(err)
+		}
+
+		// 发布“订单取消”操作事件
+		go func() {
+			s.bus.PublishCancelMemberOrderEvent(event.CancelMemberOrderPayload{
+				BasePayload: event.BasePayload{
+					Ctx:                 ctx,
+					CompanyUuid:         ctx.GetCompanyUuid(),
+					Source:              ctx.GetSource(),
+					SaleBillUuid:        memberSaleOrder.SaleBillUuid,
+					SaleOrderUuid:       memberSaleOrder.Uuid,
+					OperatorUuid:        0,
+					MemberUuid:          memberSaleOrder.MemberUuid,
+					MemberSaleOrderUuid: memberSaleOrder.Uuid,
+				},
+				Data: event.CancelMemberOrderPayloadData{
+					Type: "rider_pickup_timeout",
+					Refunds: func() []event.CancelMemberOrderPayloadDataRefund {
+						refunds := make([]event.CancelMemberOrderPayloadDataRefund, 0)
+						if returnOrder != nil {
+							for _, returnOrderAmount := range returnOrder.ReturnOrderAmounts {
+								refunds = append(refunds, event.CancelMemberOrderPayloadDataRefund{
+									Name:              returnOrderAmount.PaymentMethod.PaymentName,
+									Code:              returnOrderAmount.PaymentMethod.Code,
+									Amount:            returnOrderAmount.Amount,
+									RefundStatus:      returnOrderAmount.RefundStatus,
+									ReturnAmountUuid:  returnOrderAmount.Uuid,
+									ReturnOrderUuid:   returnOrder.Uuid,
+									PaymentOrderUuid:  returnOrderAmount.PaymentOrderUuid,
+									PaymentMethodUuid: returnOrderAmount.PaymentMethodUuid,
+								})
+							}
+						}
+						return refunds
+					}(),
+				},
+			})
+		}()
+
+		return nil
+	}); err != nil {
+		logger.Logger.Error("自动取消订单失败", zap.Uint64("memberSaleOrderUuid", memberSaleOrderUuid), zap.Error(err))
+		return err
+	}
 
 	return nil
 }

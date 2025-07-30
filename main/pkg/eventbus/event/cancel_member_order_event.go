@@ -20,7 +20,7 @@ type CancelMemberOrderPayloadDataRefund struct {
 }
 
 type CancelMemberOrderPayloadData struct {
-	Type    string                               `json:"type"`
+	Type    string                               `json:"type"` // 取消类型 user_cancel 用户取消，rider_pickup_timeout 骑手接单超时，merchant_reject 商家拒绝接单
 	Refunds []CancelMemberOrderPayloadDataRefund `json:"refunds"`
 }
 

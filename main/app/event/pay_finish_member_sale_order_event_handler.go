@@ -107,10 +107,14 @@ func autoAcceptMemberSaleOrder(payload event.PayFinishMemberSaleOrderPayload) bo
 		limitAmount := cashierSetting.AutoMemberOrderLimitValue()
 		amount := memberSaleOrder.Amount
 		if limitAmount >= amount {
+			// 设置上下文来源为收银机，用于显示在操作日志中的来源
+			payload.Ctx.SetSource(constant.SourceCashier)
+			// 设置上下文场景为会员端订单
+			payload.Ctx.SetScene(constant.SceneMemberOrder)
 			if err := orderSrv.AcceptMemberSaleOrder(payload.Ctx, req.AcceptOrderReq{
 				MemberSaleOrderUuid: payload.MemberSaleOrderUuid,
 			}, service.WithIsAutoAccept()); err != nil {
-				logger.Logger.Error("SubscribePayFinishMemberSaleOrderEvent process, AcceptMemberSaleOrder failed", zap.Any("payload", utils.ToJson(payload)), zap.Error(err))
+				logger.Logger.Info("SubscribePayFinishMemberSaleOrderEvent process, AcceptMemberSaleOrder failed", zap.Any("payload", utils.ToJson(payload)), zap.Error(err))
 				return false
 			}
 			return true

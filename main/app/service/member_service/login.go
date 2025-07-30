@@ -198,7 +198,7 @@ func (s *loginSrv) SendRegisterCode(ctx context.Context, req member_req.MemberSe
 	ctx.SetCompanyUuid(companyUuid)
 	ctx.SetCompany(*company)
 	ctx.SetCompanySetting(*company.CompanySetting)
-	if err := s.smsSrv.SendMemberCodeSMS(ctx, req.Phone, &sms.MemberSendCodeRequest{
+	if err := s.smsSrv.SendMemberRegisterCodeSMS(ctx, req.Phone, &sms.MemberSendCodeRequest{
 		Code: code,
 	}); err != nil {
 		return err
