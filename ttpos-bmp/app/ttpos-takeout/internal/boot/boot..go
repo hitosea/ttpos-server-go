@@ -1,6 +1,9 @@
 package boot
 
-import "github.com/gogf/gf/v2/os/gctx"
+import (
+	"github.com/gogf/gf/v2/os/gctx"
+	"ttpos-bmp/app/ttpos-takeout/internal/global"
+)
 
 var ctx = gctx.GetInitCtx()
 
@@ -9,4 +12,5 @@ func init() {
 
 	InitRpc(ctx)
 
+	global.Init(ctx)
 }

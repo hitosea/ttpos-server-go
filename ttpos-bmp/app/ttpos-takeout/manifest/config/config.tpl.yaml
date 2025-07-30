@@ -75,3 +75,14 @@ queue:
     logLevel: "warn"        #rocketmq 客户端输出日志级别,和logger.queue 区分开来 debug|warn|error|fatal
     invisibleDuration: 25   #invisibleDuration should > 20s
     awaitDuration: 5      # maximum waiting time for receive func
+
+cache:
+  adapter: "redis"
+
+# database/gredis/gredis_config.go:22
+redis:
+  default:
+    address: "$REDIS_HOST:$REDIS_PORT"
+    password: "$REDIS_PASSWORD"
+    db: "$REDIS_DB"
+    cluster: false
