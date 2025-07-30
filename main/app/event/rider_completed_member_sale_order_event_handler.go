@@ -115,17 +115,18 @@ func riderCompletedMemberSaleOrderEventHandler() {
 				// 当前销售账单数据
 				saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(0, repository.WithMemberSaleOrderUuid(memberSaleOrder.Uuid))
 				if errSaleBill != nil {
-					logger.Logger.Error("获取当前销售账单数据失败", zap.Error(errSaleBill))
+					logger.Logger.Error("发送奖励-获取当前销售账单数据失败", zap.Error(errSaleBill))
 					return
 				}
 
 				// 设置当前公司
 				company, err := repository.NewCompanyRepo(db).GetCompany(repository.CommonRepo.WhereByUuid(payload.CompanyUuid))
 				if err != nil {
-					logger.Logger.Error("获取当前公司数据失败", zap.Error(err))
+					logger.Logger.Error("发送奖励-获取当前公司数据失败", zap.Error(err))
 					return
 				}
 				payload.Ctx.SetCompany(company)
+				payload.Ctx.SetCompanySetting(repository.NewCompanySettingRepo(db).Get())
 
 				// 处理邀请有礼活动-统计获奖
 				HandleActivityConsumption(event.CheckoutSaleOrderPayload{
