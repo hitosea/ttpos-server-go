@@ -108,7 +108,7 @@ func autoAcceptMemberSaleOrder(payload event.PayFinishMemberSaleOrderPayload) bo
 		amount := memberSaleOrder.Amount
 		if limitAmount >= amount {
 			// 设置上下文来源为收银机，用于显示在操作日志中的来源
-			payload.Ctx.SetSource(constant.SourceCashier)
+			// payload.Ctx.SetSource(constant.SourceCashier)
 			// 设置上下文场景为会员端订单
 			payload.Ctx.SetScene(constant.SceneMemberOrder)
 			// 设置上下文日志
