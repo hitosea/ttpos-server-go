@@ -348,14 +348,6 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 	if memberSaleOrder.Status < constant.MemberSaleOrderStatusPendingPayment {
 		return nil, errors.New("订单状态不可支付")
 	}
-	// 判断订单是否支付超时
-	if memberSaleOrder.GetRemainingPaymentTime() == 0 {
-		err := s.MemberOrderPayTimeoutAutoCancel(ctx, memberSaleOrder.Uuid)
-		if err != nil {
-			return nil, errors.WithMessage(err)
-		}
-		return nil, errors.New("订单支付超时")
-	}
 
 	// 判断当前是否连连支付
 	var paymentMethod *model.PaymentMethod
