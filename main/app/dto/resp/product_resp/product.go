@@ -2,6 +2,10 @@ package product_resp
 
 import "ttpos-server-go/app/dto"
 
+type ProductSearchResp struct {
+	List []Product `json:"list"`
+}
+
 // Product 商品
 type Product struct {
 	Uuid                uint64                    `json:"uuid"`                  // 商品UUID

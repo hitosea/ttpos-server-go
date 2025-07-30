@@ -27,7 +27,7 @@ type IProductSrv interface {
 	GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error)               // 获取产品列表
 	GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error)                                             // 获取产品类别列表
 	GetProductRecommendList(ctx context.Context, req req.ProductRecommendListReq) (*product_resp.ProductRecommendListResp, error) // 获取产品推荐列表
-	SearchProducts(ctx context.Context, req req.ProductSearchReq) ([]product_resp.Product, error)                                 // 搜索商品
+	SearchProducts(ctx context.Context, req req.ProductSearchReq) (*product_resp.ProductSearchResp, error)                        // 搜索商品
 }
 
 type productSrv struct {
@@ -458,7 +458,7 @@ type ProductItemInfo struct {
 }
 
 // SearchProducts 搜索商品
-func (s *productSrv) SearchProducts(ctx context.Context, req req.ProductSearchReq) ([]product_resp.Product, error) {
+func (s *productSrv) SearchProducts(ctx context.Context, req req.ProductSearchReq) (*product_resp.ProductSearchResp, error) {
 	dbId := ctx.GetDbId()
 	// 获取产品列表
 	commonRepo := repository.NewCommonRepo()
@@ -522,9 +522,13 @@ func (s *productSrv) SearchProducts(ctx context.Context, req req.ProductSearchRe
 		taxFeeType := taxRateSetting.GetTaxFeeType()
 
 		// 返回响应对象
-		return FormatProducts(ctx, products, WithTakeoutDiscountRate(deliveryPriceRatio, taxFeeType)), nil
+		return &product_resp.ProductSearchResp{
+			List: FormatProducts(ctx, products, WithTakeoutDiscountRate(deliveryPriceRatio, taxFeeType)),
+		}, nil
 	}
 
 	// 返回响应对象
-	return FormatProducts(ctx, products), nil
+	return &product_resp.ProductSearchResp{
+		List: FormatProducts(ctx, products),
+	}, nil
 }
