@@ -29,6 +29,7 @@ import (
 	"ttpos-server-go/pkg/websocket"
 
 	"github.com/hdt3213/delayqueue"
+	"github.com/shopspring/decimal"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -1830,8 +1831,8 @@ func (s *orderSrv) GetMemberOrderReturnInfo(ctx context.Context, req member_req.
 	// 构建退款支付记录
 	memberPaymentRecords := make([]resp.OrderReturnPaymentRecord, 0)
 	for _, record := range paymentRecords {
-		canReturnAmount := record.CanReturnAmount - deliveryFee
-		paymentAmount := record.PaymentAmount - deliveryFee
+		canReturnAmount := decimal.NewFromFloat(record.CanReturnAmount).Sub(decimal.NewFromFloat(deliveryFee)).Round(2).InexactFloat64()
+		paymentAmount := decimal.NewFromFloat(record.PaymentAmount).Sub(decimal.NewFromFloat(deliveryFee)).Round(2).InexactFloat64()
 		memberPaymentRecords = append(memberPaymentRecords, resp.OrderReturnPaymentRecord{
 			PaymentMethodCode: record.PaymentMethodCode,
 			PaymentOrderUuid:  record.PaymentOrderUuid,

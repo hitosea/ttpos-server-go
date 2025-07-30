@@ -102,7 +102,7 @@ func (model *MemberSaleOrder) IsMerchantCancel() bool {
 
 // 是否还可退款
 func (model *MemberSaleOrder) IsCanRefund() bool {
-	canRefundAmount := model.Amount - model.DeliveryFeeAmount
+	canRefundAmount := decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(model.DeliveryFeeAmount)).Round(2).InexactFloat64()
 	return model.Status == constant.MemberSaleOrderStatusCompleted && model.RefundAmount < canRefundAmount
 }
 
