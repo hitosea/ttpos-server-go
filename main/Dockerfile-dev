@@ -18,7 +18,7 @@ RUN go mod download
 COPY main .
 
 # 编译Go程序
-RUN go build -o main -ldflags="-s -w" -a ./main.go
+RUN go build -o main ./main.go
 
 # 添加执行权限
 RUN chmod +x main
