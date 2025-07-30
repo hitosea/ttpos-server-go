@@ -61,7 +61,8 @@ func (r *MemberAddressAddReq) Validate() error {
 	if err != nil {
 		return errors.New("位置坐标格式错误")
 	}
-	if latitude < 0 || latitude > 90 || longitude < 0 || longitude > 180 {
+	// 经纬度范围是-90到90，-180到180
+	if latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 {
 		return errors.New("位置坐标范围错误")
 	}
 	return nil
