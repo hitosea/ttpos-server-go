@@ -6,6 +6,7 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcmd"
 	"ttpos-bmp/app/ttpos-takeout/internal/controller/callback"
+	"ttpos-bmp/internal/pkg/middleware"
 
 	"ttpos-bmp/app/ttpos-takeout/internal/controller/hello"
 )
@@ -21,7 +22,8 @@ var (
 
 			s := g.Server()
 			s.Group("/", func(group *ghttp.RouterGroup) {
-				group.Middleware(ghttp.MiddlewareHandlerResponse)
+				group.Middleware(ghttp.MiddlewareHandlerResponse,
+					middleware.MiddlewareHandlerVersion)
 				group.Bind(
 					hello.NewV1(),
 					callback.NewV1(),
