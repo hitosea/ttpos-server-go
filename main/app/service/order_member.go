@@ -317,8 +317,8 @@ func (s *orderSrv) PayMemberOrder(ctx context.Context, request member_req.PayMem
 			// 发送24小时后自动取消订单的延时消息
 			_, err := Queue.MemberOrderCancelQueue.SendDelayMsgV2(
 				paramsJson,
-				24*time.Hour,                 // 24小时后执行
-				delayqueue.WithRetryCount(3), // 重试3次
+				time.Duration(config.Server.PaymentTimeout)*time.Second, // 24小时后执行
+				delayqueue.WithRetryCount(3),                            // 重试3次
 			)
 			if err != nil {
 				ctx.Log().Error("添加24小时自动取消订单任务失败",

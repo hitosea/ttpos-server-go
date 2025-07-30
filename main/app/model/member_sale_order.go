@@ -7,6 +7,7 @@ import (
 	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
+	"ttpos-server-go/config"
 	"ttpos-server-go/pkg/utils"
 
 	"github.com/shopspring/decimal"
@@ -173,7 +174,7 @@ func (model *MemberSaleOrder) SetMemberAddress(address MemberAddress) {
 // 获取剩余支付时间(单位秒)
 func (model *MemberSaleOrder) GetRemainingPaymentTime() int64 {
 	// 支付超时时间为24小时（86400秒）
-	const paymentTimeoutSeconds = 24 * 60 * 60 // 24小时
+	paymentTimeoutSeconds := config.Server.PaymentTimeout // 24小时
 
 	// 如果订单已经支付或取消，返回0
 	if model.Status != constant.MemberSaleOrderStatusPendingPayment {
