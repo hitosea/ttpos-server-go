@@ -52,6 +52,7 @@ type CreatePaymentReq struct {
 	PaymentMethod       string
 	PaymentOrderUuid    uint64
 	MemberSaleOrderUuid uint64
+	RedirectUrl         string // 跳转地址
 }
 
 // LianLianPaymentResp 连连支付仓库
@@ -149,7 +150,7 @@ func (p *PaymentRepo) CreatePayment(req CreatePaymentReq) (*model.LlPaymentOrder
 	}
 
 	// 组装请求数据
-	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":%v,\"merchant_order_no\":\"%v\",\"order_amount\":\"%v\",\"order_currency\":\"%v\",\"order_desc\":\"%v\",\"full_name\":\"%v\",\"merchant_user_id\":%v,\"callback_url\":\"%v\",\"payment_method\":\"%v\"}",
+	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":%v,\"merchant_order_no\":\"%v\",\"order_amount\":\"%v\",\"order_currency\":\"%v\",\"order_desc\":\"%v\",\"full_name\":\"%v\",\"merchant_user_id\":%v,\"callback_url\":\"%v\",\"payment_method\":\"%v\",\"redirect_url\":\"%v\"}",
 		p.ctx.GetCompanyUuid(),
 		merchantOrderNo,
 		req.PaymentAmount,
@@ -159,6 +160,7 @@ func (p *PaymentRepo) CreatePayment(req CreatePaymentReq) (*model.LlPaymentOrder
 		p.ctx.GetCompanyUuid(),
 		strings.ReplaceAll(p.payCallbackUrl, "/", "\\/"),
 		req.PaymentMethod,
+		strings.ReplaceAll(req.RedirectUrl, "/", "\\/"),
 	)
 
 	// 请求支付

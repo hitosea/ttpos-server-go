@@ -142,11 +142,12 @@ func serverConf(opt copier.Option) {
 		Domain:     "http://127.0.0.1:8080",
 	}
 	copier.CopyWithOption(&Server, ServerConf{
-		Port:       viper.GetString("SERVER_PORT"),
-		Mode:       viper.GetString("SERVER_MODE"),
-		DeployMode: viper.GetString("DEPLOY_MODE"),
-		BrandName:  viper.GetString("BRAND_NAME"),
-		Domain:     viper.GetString("DOMAIN"),
+		Port:          viper.GetString("SERVER_PORT"),
+		Mode:          viper.GetString("SERVER_MODE"),
+		DeployMode:    viper.GetString("DEPLOY_MODE"),
+		BrandName:     viper.GetString("BRAND_NAME"),
+		Domain:        viper.GetString("DOMAIN"),
+		MemberBaseUrl: viper.GetString("MEMBER_BASE_URL"),
 	}, opt)
 }
 

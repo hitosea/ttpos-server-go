@@ -452,6 +452,12 @@ func (s *orderSrv) GetMemberOrderPayInfo(ctx context.Context, request member_req
 			}
 			return PaymentMethodH5Payment
 		}(),
+		RedirectUrl: func() string {
+			if ctx.IsMobile() && paymentMethod.IsWechatPay() {
+				return fmt.Sprintf("%s/company/%d/payment_result/%d/", config.Server.MemberBaseUrl, ctx.GetCompanyUuid(), memberSaleOrder.Uuid)
+			}
+			return ""
+		}(),
 	})
 	if err != nil {
 		return nil, errors.WithMessage(err)
