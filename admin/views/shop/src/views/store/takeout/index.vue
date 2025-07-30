@@ -377,11 +377,7 @@
     if (time.value && time.value.length > 0) {
       // 转为时间戳
       searchForm.query_start_time = new Date(time.value[0]).getTime() / 1000;
-      searchForm.query_end_time = new Date(time.value[1]).getTime() / 1000;
-      // 如果开始时间戳等于结束时间戳, 则结束时间戳 结束时间戳23：59：59
-      if (searchForm.query_start_time == searchForm.query_end_time) {
-        searchForm.query_end_time = new Date(time.value[1]).getTime() / 1000 + 86399;
-      }
+      searchForm.query_end_time = new Date(time.value[1]).getTime() / 1000 + 86399;
     } else {
       searchForm.query_start_time = 0;
       searchForm.query_end_time = 0;
