@@ -235,7 +235,6 @@ func (model *SaleBill) GetFirstSaleOrder() *SaleOrder {
 // 重新设置外送订单的会员端折扣率，并重新计算商品价格
 func (model *SaleBill) SetMemberOrderDiscountRate(rate float64) {
 	defer model.SetUpdate()
-	model.SaleBillSetting.MemberOrderDiscountRate = rate
 	for _, saleOrder := range model.SaleOrders {
 		saleOrder.SetUpdate()
 		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {

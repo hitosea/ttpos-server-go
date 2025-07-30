@@ -5096,9 +5096,6 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		}
 
 		flavorPrice := flavorProductBom.Price
-		if params.Setting.GetMemberOrderDiscountRate() != 1 {
-			flavorPrice = decimal.NewFromFloat(flavorProductBom.Price).Mul(decimal.NewFromFloat(params.Setting.GetMemberOrderDiscountRate())).Round(2).InexactFloat64()
-		}
 		saleOrderProduct := model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
 			DeviceId:               deviceSn,
 			Name:                   productPackage.Name,
@@ -5125,10 +5122,6 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			IsAcceptOrder: uint(isAcceptOrder),
 			Remark:        product.Remark,
 		}, &productPackage, product.Operation)
-
-		if option.IsMemberAdd {
-			saleOrderProduct.MemberOrderDiscountRate = params.Setting.GetMemberOrderDiscountRate()
-		}
 
 		// 设置必点信息
 		if !option.IsMemberAdd { // 会员端加购不设置必点信息
