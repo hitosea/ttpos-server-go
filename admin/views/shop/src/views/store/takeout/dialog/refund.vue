@@ -254,33 +254,19 @@ const submit = () => {
     member_sale_order_uuid: props.member_sale_order_uuid,
     refund_type: form.refund_type,
     points: form.points,
-    refund_product: [],
-    refund_buffet: [],
-    refund_delay: [],
+    products: [],
   };
 
   tableData.value.map((item) => {
-    if (item.refund_num_updata > 0 && item.type == 1) {
-      formData.refund_buffet.push({
-        id: item.id,
-        refund_num: item.refund_num_updata,
-      });
-    }
-    if (item.refund_num_updata > 0 && item.type == 2) {
-      formData.refund_delay.push({
-        id: item.id,
-        refund_num: item.refund_num_updata,
-      });
-    }
     if (item.refund_num_updata > 0 && item.type == 3) {
-      formData.refund_product.push({
-        order_product_id: item.id,
-        refund_num: item.refund_num_updata,
+      formData.products.push({
+        sale_order_product_uuid: item.id,
+        num: item.refund_num_updata,
       });
     }
   });
 
-  if (form.refund_type == '2' && formData.refund_product.length == 0 && formData.refund_buffet.length == 0 && formData.refund_delay.length == 0) {
+  if (form.refund_type == '2' && formData.products.length == 0) {
     ElMessage({
       type: 'warning',
       message: $t('请选择退款商品'),

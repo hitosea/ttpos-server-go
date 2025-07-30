@@ -25,7 +25,7 @@
                   :prop="`product_packages.${scope.$index}.sort`"
                   :rules="[{ required: true, validator: (rule, value, callback) => validateSort(rule, value, callback, scope.$index) }]"
                 >
-                  <el-input-number class="mt16" v-model="scope.row.sort" :controls="false" :min="0" :precision="0" :placeholder="$t('请输入排序')"></el-input-number>
+                  <el-input-number @input="onCheckSort()" class="mt16" v-model="scope.row.sort" :controls="false" :min="0" :precision="0" :placeholder="$t('请输入排序')"></el-input-number>
                 </el-form-item>
               </template>
             </el-table-column>
@@ -93,6 +93,10 @@
     } else {
       callback();
     }
+  };
+
+  const onCheckSort = () => {
+    formRef.value.validate();
   };
 
   const submitForm = () => {

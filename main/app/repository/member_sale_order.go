@@ -499,10 +499,21 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderDelivery(memberSaleOrder
 
 // UpdateMemberSaleOrderRiderCompleted 更新会员端销售订单-骑手配送完成
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderCompleted(memberSaleOrder model.MemberSaleOrder) error {
-	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+	data := model.MemberSaleOrder{
 		Status:     memberSaleOrder.Status,
 		FinishTime: memberSaleOrder.FinishTime,
-	}).Error
+		Sort:       memberSaleOrder.Sort,
+	}
+	if memberSaleOrder.RiderName != "" {
+		data.RiderName = memberSaleOrder.RiderName
+	}
+	if memberSaleOrder.RiderPhone != "" {
+		data.RiderPhone = memberSaleOrder.RiderPhone
+	}
+	if memberSaleOrder.Location != "" {
+		data.Location = memberSaleOrder.Location
+	}
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(data).Error
 	if err != nil {
 		return errors.WithMessage(err)
 	}
