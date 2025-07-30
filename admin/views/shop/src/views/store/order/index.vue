@@ -401,6 +401,7 @@ function onSearch() {
 // 导出
 async function onExport() {
   searchForm.token = token;
+  searchForm.dataType = activeName.value;
   try {
     await OrderApi.storeExport(
       {

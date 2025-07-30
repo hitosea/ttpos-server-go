@@ -414,6 +414,7 @@
         this.select_list = copyData.buffetProducts.map((item) => ({ ...item, product_name_text: item.product.product_name_text }));
         this.form.price = Number(copyData.price);
         this.form.product_ids = copyData.buffetProducts.map((item) => item.product_id);
+        this.form.open_overall_discount = copyData.open_overall_discount;
 
         this.form.customer_type = copyData.buffetCustomerType.map((item) => ({ ...item, price: Number(item.price || 0) }));
         this.form.buy_limit_status = copyData.buy_limit_status;

@@ -42,6 +42,7 @@ type MemberSaleOrder struct {
 	DeliveryFeeMinFee    float64 `gorm:"column:delivery_fee_min_fee;type:decimal(12,6);not null;default:0;comment:'起步配送费'"`
 	DeliveryFeeBaseFee   float64 `gorm:"column:delivery_fee_base_fee;type:decimal(12,6);not null;default:0;comment:'基础服务费'"`
 	DeliveryFeePerKm     float64 `gorm:"column:delivery_fee_per_km;type:decimal(12,6);not null;default:0;comment:'每公里配送费'"`
+	RiderAcceptTimeout   int     `gorm:"column:rider_accept_timeout;type:int(10);not null;default:0;comment:'骑手接单超时时间,单位分钟'"`
 	// 第三方订单信息
 	RelatedOrderNo   string `gorm:"column:related_order_no;type:varchar(255);not null;default:'';comment:'关联订单号,skootar、grab等第三方平台上的订单号'"`
 	RelatedOrderType string `gorm:"column:related_order_type;type:varchar(255);not null;default:'';comment:'关联订单类型,skootar、grab'"`
@@ -80,6 +81,30 @@ type MemberSaleOrder struct {
 	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`
 }
 
+// 获取中间四位脱敏手机号
+func (model *MemberSaleOrder) GetContactPhoneMask() string {
+	if model.ContactPhone == "" {
+		return ""
+	}
+	return model.ContactPhonePrefix + " " + model.ContactPhone[:2] + "****" + model.ContactPhone[len(model.ContactPhone)-2:]
+}
+
+// 是否是自主取消
+func (model *MemberSaleOrder) IsSelfCancel() bool {
+	return model.CancelScene == constant.MemberSaleOrderSceneMemberCancel ||
+		model.CancelScene == constant.MemberSaleOrderSceneMemberCancelUnpaid
+}
+
+// 是否是商家取消
+func (model *MemberSaleOrder) IsMerchantCancel() bool {
+	return model.CancelScene == constant.MemberSaleOrderSceneMerchantCancel
+}
+
+// 是否还可退款
+func (model *MemberSaleOrder) IsCanRefund() bool {
+	return model.Status == constant.MemberSaleOrderStatusCompleted && model.RefundAmount < model.Amount
+}
+
 // 计算外送单会员折扣。外送单的会员折扣=Sum(商品原价(含税费)-商品折后价（含税费）)
 func (model *MemberSaleOrder) CalculateMemberDiscount() float64 {
 	saleOrder := model.SaleBill.SaleOrders[0]
@@ -90,16 +115,12 @@ func (model *MemberSaleOrder) CalculateMemberDiscount() float64 {
 	return memberDiscountFee
 }
 
-// 是否还可退款
-func (model *MemberSaleOrder) IsCanRefund() bool {
-	return model.Status == constant.MemberSaleOrderStatusCompleted && model.RefundAmount < model.Amount
-}
-
 // 更新配送费配置
 func (model *MemberSaleOrder) UpdateDeliveryConfig(deliveryConfig DeliveryConfigResponse) {
 	model.DeliveryFeeMinFee = deliveryConfig.BaseDeliveryFee
 	model.DeliveryFeeBaseFee = deliveryConfig.BasicFee
 	model.DeliveryFeePerKm = deliveryConfig.PricePerKm
+	model.RiderAcceptTimeout = deliveryConfig.RiderAcceptanceTimeout
 	// 重新计算配送费
 	model.RecalculateDeliveryFee()
 }
@@ -349,7 +370,7 @@ func (model *MemberSaleOrder) Reject() {
 	model.Status = constant.MemberSaleOrderStatusCancelled          // 已取消
 	model.CancelScene = constant.MemberSaleOrderSceneMerchantReject // 商家拒单
 	model.CancelTime = time.Now().Unix()
-	model.CancelReason = "商家拒单"
+	model.CancelReason = constant.MemberSaleOrderSceneReason[constant.MemberSaleOrderSceneMerchantReject]
 }
 
 // 备餐完成

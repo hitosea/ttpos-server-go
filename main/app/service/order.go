@@ -1817,6 +1817,11 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			realName = fmt.Sprintf("%s(%s)", prefix, record.Member.Nickname)
 		}
 
+		// 如果是系统自动操作
+		if record.Source == "" {
+			realName = i18n.Translate(language, "系统自动")
+		}
+
 		logs = append(logs, resp.OrderOperationLog{
 			Uuid:       record.Uuid,
 			RealName:   realName,

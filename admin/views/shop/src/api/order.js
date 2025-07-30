@@ -122,6 +122,11 @@ let OrderApi = {
   postTakeoutOrderRefundAgain(data, errorback) {
     return request._post('/shop/store.MemberOrder/re_return', data, errorback);
   },
+
+  //外卖订单导出
+  postTakeoutOrderExport(data, errorback) {
+    return request._get('/shop/store.MemberOrder/export', data, errorback);
+  },
 };
 
 export default OrderApi;

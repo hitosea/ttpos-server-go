@@ -102,6 +102,7 @@ type ICommonRepo interface {
 	WhereByShiftLogUuid(shiftLogUuid uint64) DBOption                   // 根据交班记录UUID查询
 	WhereByAction(action string) DBOption                               // 根据操作查询
 	WhereByOperatorUuid(operatorUuid uint64) DBOption                   // 根据操作员UUID查询
+	WhereByIsVisitor(isVisitor uint) DBOption                           // 根据是否访客查询
 	WhereLikeByName(name string) DBOption                               // 根据名称查询
 	WhereBetweenByCreateTime(startTime int64, endTime int64) DBOption   // 根据创建时间查询
 	WhereBetweenByPayTime(startTime int64, endTime int64) DBOption      // 根据支付时间查询
@@ -704,5 +705,12 @@ func (r *commonRepo) WhereByAction(action string) DBOption {
 func (r *commonRepo) WhereByOperatorUuid(operatorUuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("operator_uuid = ?", operatorUuid)
+	}
+}
+
+// WhereByIsVisitor 根据是否访客查询
+func (r *commonRepo) WhereByIsVisitor(isVisitor uint) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_visitor = ?", isVisitor)
 	}
 }

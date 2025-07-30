@@ -330,7 +330,7 @@ func HandleMemberBalance(db *gorm.DB) {
 	}
 	memberUuids = append(memberUuids, memberUuidsGift...)
 	// memberUuids 去重
-	memberUuids = utils.RemoveDuplicateUint64(memberUuids)
+	memberUuids = utils.RemoveDuplicates(memberUuids)
 
 	// 获取会员信息
 	members, err := repository.NewMemberRepo(db).GetMembersByUuids(memberUuids)

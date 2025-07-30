@@ -11,7 +11,7 @@ import (
 )
 
 // HttpPost
-func HttpPost(url string, payload map[string]interface{}, headers map[string]string) (map[string]interface{}, error) {
+func HttpPost(url string, payload map[string]any, headers map[string]string) (map[string]any, error) {
 	// 构建请求体
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -52,7 +52,7 @@ func HttpPost(url string, payload map[string]interface{}, headers map[string]str
 		return nil, fmt.Errorf("received non-OK response: %s", resp.Status)
 	}
 	// 解析响应
-	var result map[string]interface{}
+	var result map[string]any
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		fmt.Printf("Failed to decode response: %v", err)
@@ -63,7 +63,7 @@ func HttpPost(url string, payload map[string]interface{}, headers map[string]str
 }
 
 // HttpGet
-func HttpGet(url string, payload map[string]interface{}, headers map[string]string) (map[string]interface{}, error) {
+func HttpGet(url string, payload map[string]any, headers map[string]string) (map[string]any, error) {
 	// 构建查询参数
 	query := ""
 	if len(payload) > 0 {
@@ -101,7 +101,7 @@ func HttpGet(url string, payload map[string]interface{}, headers map[string]stri
 		return nil, fmt.Errorf("received non-OK response: %s", resp.Status)
 	}
 	// 解析响应
-	var result map[string]interface{}
+	var result map[string]any
 	err = json.NewDecoder(resp.Body).Decode(&result)
 	if err != nil {
 		fmt.Printf("Failed to decode response: %v", err)

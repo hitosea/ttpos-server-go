@@ -143,20 +143,16 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 
 	// 判断推荐人，活动
 	var referrer model.Member
-	//activityUuid := addMemberReq.ActivityUuid
-	// 默认为0，不接收前端传递的活动ID
 	var activityUuid uint64
 	if addMemberReq.ReferrerUuid != 0 {
 		referrer = memberRepo.GetMember(memberRepo.WhereUuid(addMemberReq.ReferrerUuid))
 		if referrer.ID == 0 {
 			return errors.New("推荐人不存在")
 		}
-		//if addMemberReq.ActivityUuid == 0 {
 		activity, _ := repository.NewMarketingActivityRepo(ctx.GetDB()).GetValidActivityByUuid(0)
 		if activity != nil {
 			activityUuid = activity.Uuid
 		}
-		//}
 	}
 
 	// 处理会员密码
@@ -765,10 +761,15 @@ func (s *memberSrv) Register(ctx context.Context, reqs member_req.MemberRegister
 
 	// 验证推荐人手机号是否存在
 	var referrer *model.Member
+	var activityUuid uint64
 	if reqs.ReferrerPhone != "" {
 		referrer, err = repository.NewMemberRepo(db).GetMemberByPhone(reqs.ReferrerPhone)
 		if err != nil || referrer.IsDelete() {
 			return member_resp.LoginResp{}, errors.New("该推荐人不存在")
+		}
+		activity, _ := repository.NewMarketingActivityRepo(db).GetValidActivityByUuid(0)
+		if activity != nil {
+			activityUuid = activity.Uuid
 		}
 	}
 
@@ -783,7 +784,8 @@ func (s *memberSrv) Register(ctx context.Context, reqs member_req.MemberRegister
 				}
 				return 0
 			}(),
-			"is_visitor": false,
+			"activity_uuid": activityUuid,
+			"is_visitor":    false,
 		}); err != nil {
 			return member_resp.LoginResp{}, errors.WithMessage(err, "更新游客信息失败")
 		}

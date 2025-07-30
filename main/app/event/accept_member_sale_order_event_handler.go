@@ -36,7 +36,7 @@ func acceptMemberSaleOrderEventHandler() {
 			record := model.SaleOrderOperationRecord{
 				Source:        payload.Source,
 				Action:        constant.OrderAcceptMemberSaleOrder,
-				Remark:        "商家接单",
+				Remark:        constant.MemberSaleOrderSceneReason[constant.MemberSaleOrderSceneMerchantReject],
 				SaleBillUuid:  payload.SaleBillUuid,
 				SaleOrderUuid: payload.SaleOrderUuid,
 				OperatorUuid:  payload.GetOperatorUuid(),
