@@ -956,7 +956,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 	memberSaleOrder.ProductNum = memberSaleOrder.SaleBill.SaleOrders[0].GetProductNum()
 	memberSaleOrder.ProductAmount = memberSaleOrder.SaleBill.SaleOrders[0].GetProductAmount()
 	memberSaleOrder.OriginProductAmount = memberSaleOrder.SaleBill.SaleOrders[0].GetOriginProductAmount()
-	memberSaleOrder.MemberDiscountFee = memberSaleOrder.SaleBill.SaleOrders[0].MemberDiscountFee
+	memberSaleOrder.MemberDiscountFee = memberSaleOrder.CalculateMemberDiscount()
 	memberSaleOrder.Amount = memberSaleOrder.CalculateAmount()
 	if err := repository.NewMemberSaleOrderRepo(ctx.GetDB()).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
 		return nil, errors.WithMessage(err)
