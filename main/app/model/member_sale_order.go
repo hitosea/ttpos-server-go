@@ -80,6 +80,16 @@ type MemberSaleOrder struct {
 	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`
 }
 
+// 计算外送单会员折扣。外送单的会员折扣=Sum(商品原价(含税费)-商品折后价（含税费）)
+func (model *MemberSaleOrder) CalculateMemberDiscount() float64 {
+	saleOrder := model.SaleBill.SaleOrders[0]
+	memberDiscountFee := 0.0
+	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+		memberDiscountFee += decimal.NewFromFloat(saleOrderProduct.OriginTotalPrice).Sub(decimal.NewFromFloat(saleOrderProduct.TotalPrice)).Round(2).InexactFloat64()
+	}
+	return memberDiscountFee
+}
+
 // 是否还可退款
 func (model *MemberSaleOrder) IsCanRefund() bool {
 	return model.Status == constant.MemberSaleOrderStatusCompleted && model.RefundAmount < model.Amount
