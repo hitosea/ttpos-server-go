@@ -111,6 +111,7 @@ func autoAcceptMemberSaleOrder(payload event.PayFinishMemberSaleOrderPayload) bo
 			payload.Ctx.SetSource(constant.SourceCashier)
 			// 设置上下文场景为会员端订单
 			payload.Ctx.SetScene(constant.SceneMemberOrder)
+			// 设置上下文日志
 			if err := orderSrv.AcceptMemberSaleOrder(payload.Ctx, req.AcceptOrderReq{
 				MemberSaleOrderUuid: payload.MemberSaleOrderUuid,
 			}, service.WithIsAutoAccept()); err != nil {
