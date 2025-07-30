@@ -504,6 +504,12 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 
 	memberOrders := make([]resp.MemberOrder, 0)
 	for _, memberSaleOrder := range memberSaleOrders {
+		// 支付超时自动取消订单
+		if memberSaleOrder.GetRemainingPaymentTime() == 0 && memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingPayment {
+			s.MemberOrderPayTimeoutAutoCancel(ctx, memberSaleOrder.Uuid)
+			memberSaleOrder.Status = constant.MemberSaleOrderStatusCancelled
+		}
+		//
 		memberOrders = append(memberOrders, resp.MemberOrder{
 			MemberSaleOrderUuid: memberSaleOrder.Uuid,
 			CompanyName:         ctx.GetCompany().Name,
@@ -1163,6 +1169,11 @@ func (s *orderSrv) GetMemberCashierOrderList(ctx context.Context, request req.Me
 		}
 		orderTotal = total
 		for _, memberSaleOrder := range memberSaleOrders {
+			// 支付超时自动取消订单
+			if memberSaleOrder.GetRemainingPaymentTime() == 0 && memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingPayment {
+				s.MemberOrderPayTimeoutAutoCancel(ctx, memberSaleOrder.Uuid)
+				memberSaleOrder.Status = constant.MemberSaleOrderStatusCancelled
+			}
 			memberOrders = append(memberOrders, resp.MemberCashierOrder{
 				MemberSaleOrderUuid: memberSaleOrder.Uuid,
 				SerialNumber:        memberSaleOrder.SerialNumber,
@@ -1782,6 +1793,12 @@ func (s *orderSrv) GetMemberCashierOrderSearch(ctx context.Context, req req.Memb
 
 	memberOrders := make([]resp.MemberCashierOrder, 0)
 	for _, memberSaleOrder := range memberSaleOrders {
+		// 支付超时自动取消订单
+		if memberSaleOrder.GetRemainingPaymentTime() == 0 && memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingPayment {
+			s.MemberOrderPayTimeoutAutoCancel(ctx, memberSaleOrder.Uuid)
+			memberSaleOrder.Status = constant.MemberSaleOrderStatusCancelled
+		}
+		//
 		memberOrders = append(memberOrders, resp.MemberCashierOrder{
 			MemberSaleOrderUuid: memberSaleOrder.Uuid,
 			SerialNumber:        memberSaleOrder.SerialNumber,
