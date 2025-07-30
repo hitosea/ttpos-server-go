@@ -373,7 +373,6 @@
   };
 
   const createTimeChange = () => {
-    searchForm.time_type = 1;
     if (time.value && time.value.length > 0) {
       // 转为时间戳
       searchForm.query_start_time = new Date(time.value[0]).getTime() / 1000;
