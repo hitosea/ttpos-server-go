@@ -387,19 +387,41 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 	if payload.SaleBill.IsReverseSettle() {
 		return
 	}
+
 	// 加锁, 避免并发问题
 	lock.NewSystemLock().LockUuid(constant.LockNameActivityConsumption)
 	defer lock.NewSystemLock().UnlockUuid(constant.LockNameActivityConsumption)
-	//
+
+	// 设置当前DB、公司设置
 	db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
+
 	// 产品： 关闭营销活动后，不限制会员的登录行为。系统需停止该商家的营销活动活动，不进行营销活动消费累积计算和奖励发放。
 	companySetting := repository.NewCompanySettingRepo(db).Get()
 	if companySetting.IsOpenMarketing != 1 {
 		return
 	}
-	//
+
+	// 设置当前上下文
+	payload.Ctx.SetDB(db)
+	payload.Ctx.SetCompanySetting(companySetting)
+	if payload.Ctx.GetCompany().Uuid == 0 {
+		company, err := repository.NewCompanyRepo(db).GetCompany(repository.CommonRepo.WhereByUuid(payload.CompanyUuid))
+		if err != nil {
+			logger.Logger.Error("发送奖励-获取当前公司数据失败", zap.Error(err))
+			return
+		}
+		payload.Ctx.SetCompany(company)
+	}
+
+	// 处理邀请有礼活动-统计获奖
 	for _, saleOrder := range payload.SaleBill.SaleOrders {
-		if saleOrder.ConsumerUuid != 0 && saleOrder.IsSettled() && saleOrder.Member != nil && saleOrder.Member.IsExistActivityAndReferrer() {
+		if saleOrder.ConsumerUuid != 0 && saleOrder.Member != nil && saleOrder.Member.IsExistActivityAndReferrer() {
+
+			if !saleOrder.IsSettled() {
+				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SaleOrder not settled", zap.Any("saleOrder", saleOrder))
+				continue
+			}
+
 			activity, err := repository.NewMarketingActivityRepo(db).GetActivity(saleOrder.Member.ActivityUuid)
 			if err != nil || activity == nil {
 				logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, GetActivity failed", zap.Any("activityUuid", saleOrder.Member.ActivityUuid), zap.Error(err))
@@ -428,7 +450,7 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 				err := HandleActivitySendReward(payload, db, activity.Uuid, saleOrder.Member.ReferrerUuid)
 				if err != nil {
 					fmt.Println(err)
-					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
+					logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed - 01", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
 				}
 			}
 
@@ -455,7 +477,7 @@ func HandleActivityConsumption(payload event.CheckoutSaleOrderPayload) {
 					err = HandleActivitySendReward(payload, db, referrer.ActivityUuid, referrer.ReferrerUuid)
 					if err != nil {
 						fmt.Println(err)
-						logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed", zap.Any("activityUuid", activity.Uuid), zap.Error(err))
+						logger.Logger.Info("SubscribeCheckoutSaleOrderEvent process, SendReward failed - 02", zap.Any("activityUuid", referrer.ActivityUuid), zap.Error(err))
 					}
 				}
 			}
