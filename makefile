@@ -68,6 +68,9 @@ up:
 ps:
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh ps
 
+# docker-compose down
+down:
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down
 # 翻译
 translate:
 	cd main && go run ./main.go translate

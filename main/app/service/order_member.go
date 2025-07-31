@@ -491,6 +491,7 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 	memberSaleOrderRepo := repository.NewMemberSaleOrderRepo(db)
 	memberSaleOrders, total, err := memberSaleOrderRepo.PaginateGetMemberSaleOrder(
 		req.PageNo, req.PageSize,
+		repository.CommonRepo.WhereBySoftDelete(),
 		repository.CommonRepo.SortWithSort("desc"),
 		repository.CommonRepo.SortWithSubmitPayTime("desc"),
 		memberSaleOrderRepo.WithSaleBillSaleOrderProduct(),
@@ -517,6 +518,7 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 			SerialNumber:        memberSaleOrder.SerialNumber,
 			Status:              memberSaleOrder.Status,
 			Num:                 memberSaleOrder.ProductNum,
+			Amount:              memberSaleOrder.Amount,
 			ProductAmount:       memberSaleOrder.OriginProductAmount,
 			Rider: resp.RiderInfo{
 				Name:              memberSaleOrder.RiderName,
