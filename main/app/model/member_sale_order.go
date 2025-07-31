@@ -117,7 +117,11 @@ func (model *MemberSaleOrder) CalculateMemberDiscount() float64 {
 	saleOrder := model.SaleBill.SaleOrders[0]
 	memberDiscountFee := 0.0
 	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-		memberDiscountFee += decimal.NewFromFloat(saleOrderProduct.OriginTotalPrice).Sub(decimal.NewFromFloat(saleOrderProduct.TotalPrice)).Round(2).InexactFloat64()
+		discountFee := decimal.NewFromFloat(saleOrderProduct.OriginTotalPrice).Sub(decimal.NewFromFloat(saleOrderProduct.TotalPrice)).Round(2)
+		discount := discountFee.Mul(decimal.NewFromFloat(saleOrderProduct.Num)).Round(2).InexactFloat64()
+		if discount > 0 {
+			memberDiscountFee += discount
+		}
 	}
 	return memberDiscountFee
 }
