@@ -95,6 +95,20 @@ add-version:
 redis-clear-data:
 	rm -rf ./docker/redis/cluster/data-*
 
+# 检查env的DB_HOST是否等于 LOCAL_IP。等于的话 就执行 make mysql-open;
+check-db-host-open-mysql:
+	@if [ -f ".env" ]; then \
+		DB_HOST_VALUE=$$(grep '^DB_HOST=' .env 2>/dev/null | cut -d '=' -f 2 | tr -d ' '); \
+		if [ "$$DB_HOST_VALUE" = "$(LOCAL_IP)" ]; then \
+			echo "🔍 检测到DB_HOST为本地IP，开启MySQL端口..."; \
+			make mysql-open; \
+		else \
+			echo "🔍 DB_HOST不是本地IP ($$DB_HOST_VALUE vs $(LOCAL_IP))，跳过开启MySQL端口"; \
+		fi; \
+	else \
+		echo "⚠️  .env文件不存在，跳过MySQL端口检查"; \
+	fi
+
 # 忽略不存在的目标（用于处理额外参数）
 .PHONY: $(filter-out $(firstword $(MAKECMDGOALS)),$(MAKECMDGOALS))
 $(filter-out $(firstword $(MAKECMDGOALS)),$(MAKECMDGOALS)):

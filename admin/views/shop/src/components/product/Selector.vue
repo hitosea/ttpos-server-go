@@ -205,7 +205,7 @@
     return [
       {
         id: 0,
-        label: proxy.$t('全部'),
+        label: $t('全部'),
         children: loading.value
           ? undefined
           : Array.isArray(categories.value)
@@ -251,7 +251,7 @@
     return [
       {
         id: 0,
-        label: proxy.$t('全部'),
+        label: $t('全部'),
         children: loading.value
           ? undefined
           : Array.isArray(printTags.value)
@@ -444,7 +444,7 @@
         // 超过则取消选中并提示
         productsTableRef.value.toggleRowSelection(node, false);
         proxy.$ElMessage({
-          message: proxy.$t('最多只能选择' + props.maxCount + $t('个商品')),
+          message: $t('最多只能选择' + props.maxCount + $t('个商品')),
           type: 'warning',
         });
         return;
@@ -474,7 +474,7 @@
     if (canSelectCount <= 0) {
       // 已满则提示
       proxy.$ElMessage({
-        message: proxy.$t('最多只能选择' + props.maxCount + $t('个商品')),
+        message: $t('最多只能选择' + props.maxCount + $t('个商品')),
         type: 'warning',
       });
       // 清除全选状态
@@ -508,7 +508,7 @@
         });
       });
       proxy.$ElMessage({
-        message: proxy.$t('最多只能选择' + props.maxCount + $t('个商品')),
+        message: $t('最多只能选择' + props.maxCount + $t('个商品')),
         type: 'warning',
       });
     }
