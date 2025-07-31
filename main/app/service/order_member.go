@@ -491,6 +491,7 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 	memberSaleOrderRepo := repository.NewMemberSaleOrderRepo(db)
 	memberSaleOrders, total, err := memberSaleOrderRepo.PaginateGetMemberSaleOrder(
 		req.PageNo, req.PageSize,
+		repository.CommonRepo.WhereBySoftDelete(),
 		repository.CommonRepo.SortWithSort("desc"),
 		repository.CommonRepo.SortWithSubmitPayTime("desc"),
 		memberSaleOrderRepo.WithSaleBillSaleOrderProduct(),

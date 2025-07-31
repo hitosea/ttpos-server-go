@@ -66,6 +66,11 @@ func riderCompletedMemberSaleOrderEventHandler() {
 				return
 			}
 
+			// 设置sort排序。 ！！！ 注意是修改sort字段为0，gorm默认不修改值为0的字段
+			if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderSort(updateMemberSaleOrder.Uuid, constant.MemberSaleOrderSortRiderDelivering); err != nil {
+				payload.Ctx.Log().Error("更新会员端销售订单-骑手配送中排序失败", zap.Error(err))
+			}
+
 			// 获取会员端销售订单记录
 			memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecordOnly(updateMemberSaleOrder.Uuid)
 			if err != nil {
