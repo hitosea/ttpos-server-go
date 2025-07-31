@@ -70,6 +70,62 @@ type IMemberOrderSrv interface {
 	MemberOrderSelectingTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error   // 外送订单选购超时自动取消订单
 	MemberOrderPayTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error         // 外送订单支付超时自动取消订单
 	MemberOrderRiderPickupTimeoutAutoCancel(ctx context.Context, memberSaleOrderUuid uint64) error // 外送订单骑手接单超时自动取消订单
+
+	// 完成外送订单
+	CompleteMemberSaleOrder(ctx context.Context, memberSaleOrderUuid uint64) error // 完成外送订单
+}
+
+func (s *orderSrv) CompleteMemberSaleOrder(ctx context.Context, memberSaleOrderUuid uint64) error {
+	db := s.dbm.GetDB(ctx.GetCompanyUuid())
+	ctx.SetDB(db)
+	memberSaleOrder, err := s.getMemberSaleOrderAllInfo(ctx, memberSaleOrderUuid, nil)
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	saleBill := memberSaleOrder.SaleBill
+	saleOrder := saleBill.GetFirstSaleOrder()
+
+	// 发放积分
+	// 计算本单获取的积分. 如果订单没有会员，则不计算
+	if saleOrder.ConsumerUuid != 0 {
+		// 计算积分
+		// 根据订单类型（自助餐订单或非自助餐订单）选择积分策略（按比例或按人数）
+		pointsRule, err := s.GetPointsRuleInfo(ctx, saleBill.IsBuffetSaleBill(), saleOrder.Member.MemberLevelUuid)
+		if err != nil {
+			return errors.WithMessage(err)
+		}
+		saleOrder.SetGiftPointsRate(int(saleBill.MealNum), *pointsRule)
+	}
+
+	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
+		// 更新销售订单
+		if err := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); err != nil {
+			return errors.WithMessage(err)
+		}
+		// 设置sort排序。 ！！！ 注意是修改sort字段为0，gorm默认不修改值为0的字段
+		if err := repository.NewMemberSaleOrderRepo(db).UpdateMemberSaleOrderSort(memberSaleOrderUuid, constant.MemberSaleOrderSortDefault); err != nil {
+			return errors.WithMessage(err)
+		}
+		return nil
+	}); err != nil {
+		return errors.WithMessage(err)
+	}
+
+	go func() {
+		s.bus.PublishRiderCompletedMemberSaleOrderEvent(event.RiderCompletedMemberSaleOrderPayload{
+			BasePayload: event.BasePayload{
+				Ctx:                 ctx,
+				CompanyUuid:         ctx.GetCompanyUuid(),
+				SaleBillUuid:        saleBill.Uuid,
+				SaleOrderUuid:       saleOrder.Uuid,
+				MemberSaleOrderUuid: memberSaleOrderUuid,
+				MemberUuid:          saleOrder.ConsumerUuid,
+			},
+			MemberSaleOrderUuid: memberSaleOrderUuid,
+			SaleBill:            saleBill,
+		})
+	}()
+	return nil
 }
 
 // CreateMemberOrder 创建会员端订单。实现思路：

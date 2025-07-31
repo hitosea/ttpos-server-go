@@ -76,7 +76,18 @@ func RegisterMemberCallbackHandlers(router gin.IRouter, dbm *database.DBManager,
 	// 初始化服务
 	settingSrv := setting.NewSrv(dbm, cache)
 	// 初始化处理器
-	memberCallbackSrv := service.NewMemberCallbackSrv(dbm, service.NewLocaleSrv(), settingSrv)
+	orderSrv := service.NewOrderSrv(
+		dbm,
+		service.NewLocaleSrv(),
+		settingSrv,
+		service.NewMustPlanSrv(dbm),
+		service.NewPaymentMethodSrv(dbm, settingSrv),
+		service.NewMemberSrv(dbm, cache),
+		service.NewCashBoxSrv(dbm),
+		service.WithSmsSrv(dbm),
+	)
+	// 初始化处理器
+	memberCallbackSrv := service.NewMemberCallbackSrv(dbm, service.NewLocaleSrv(), settingSrv, orderSrv)
 	wrapper := &CallbackHandler{
 		memberCallbackSrv: memberCallbackSrv,
 	}
