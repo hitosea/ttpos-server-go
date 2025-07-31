@@ -20,6 +20,8 @@ type MemberResp struct {
 	IsMemberShowSoldOut bool               `json:"is_member_show_sold_out"` // 是否显示售罄商品
 	IsOpenRider         bool               `json:"is_open_rider"`           // 是否开启外送
 	AreaCode            []string           `json:"area_code"`               // 区号列表
+	Language            []string           `json:"language"`                // 常用语言
+	DefaultLanguage     string             `json:"default_language"`        // 默认语言
 }
 
 type CompanyResp struct {
