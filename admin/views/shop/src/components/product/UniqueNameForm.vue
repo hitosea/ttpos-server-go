@@ -309,7 +309,7 @@
     formErrors.value = {};
     await nextTick();
     for (const key of Object.keys(formErrors)) {
-      formErrors[key] = data[key] ? proxy.$t('此名称已存在') : '';
+      formErrors[key] = data[key] ? $t('此名称已存在') : '';
     }
   };
 

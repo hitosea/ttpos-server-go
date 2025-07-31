@@ -77,7 +77,7 @@ const submit = async () => {
     const res = await ProductApi.addSpec(params, true);
     
     ElMessage({
-      message: proxy.$t('保存成功'),
+      message: $t('保存成功'),
       type: 'success',
     });
 

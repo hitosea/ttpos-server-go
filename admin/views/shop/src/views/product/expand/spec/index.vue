@@ -182,7 +182,7 @@ const addClick = () => {
 // 删除单个
 const deleteClick = async (id) => {
   try {
-    await ElMessageBox.confirm(proxy.$t('删除后不可恢复，确认删除吗?'), proxy.$t('提示'), {
+    await ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
       type: 'warning',
     });
     
@@ -191,7 +191,7 @@ const deleteClick = async (id) => {
     });
     
     ElMessage({
-      message: proxy.$t('删除成功'),
+      message: $t('删除成功'),
       type: 'success',
     });
     getData();
@@ -209,7 +209,7 @@ const deleteBatch = async () => {
   const spec_id = arr.join(',');
   
   try {
-    await ElMessageBox.confirm(proxy.$t('删除后不可恢复，确认删除吗?'), proxy.$t('提示'), {
+    await ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
       type: 'warning',
     });
     
@@ -218,7 +218,7 @@ const deleteBatch = async () => {
     });
     
     ElMessage({
-      message: proxy.$t('删除成功'),
+      message: $t('删除成功'),
       type: 'success',
     });
     getData();
@@ -263,7 +263,7 @@ const handleProductSelectorClose = async (list) => {
       );
       
       ElMessage({
-        message: proxy.$t('关联成功'),
+        message: $t('关联成功'),
         type: 'success',
       });
       getData();

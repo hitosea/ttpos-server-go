@@ -77,7 +77,7 @@
 
   const validateProductPackages = (_rule, value, callback) => {
     if (value.length < 3) {
-      callback(new Error(proxy.$t('至少选择3个商品')));
+      callback(new Error($t('至少选择3个商品')));
     } else {
       callback();
     }
@@ -85,11 +85,11 @@
 
   const validateSort = (_rule, value, callback, index) => {
     if (value === null) {
-      callback(new Error(proxy.$t('请输入排序')));
+      callback(new Error($t('请输入排序')));
     }
     // 排序不能重复
     else if (form.value.product_packages.some((item) => item.sort === value && item.uuid !== form.value.product_packages[index].uuid)) {
-      callback(new Error(proxy.$t('排序不能重复')));
+      callback(new Error($t('排序不能重复')));
     } else {
       callback();
     }
@@ -106,7 +106,7 @@
         ProductApi.setRecommend(form.value, true)
           .then((res) => {
             proxy.$ElMessage({
-              message: proxy.$t('操作成功'),
+              message: $t('操作成功'),
               type: 'success',
             });
           })
