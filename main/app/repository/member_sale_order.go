@@ -218,6 +218,7 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderList(pageNo, pageSize int
 	opts := []DBOption{
 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
 		CommonRepo.DBOption(CommonRepo.SortWithPayTime("asc")),
+		CommonRepo.DBOption(CommonRepo.WhereByNoSelectingTimeout()),
 	}
 
 	// 根据状态列表筛选
@@ -245,6 +246,7 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderManageList(pageNo, pageSi
 
 	opts := []DBOption{
 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+		CommonRepo.DBOption(CommonRepo.WhereByNoSelectingTimeout()),
 		CommonRepo.DBOption(CommonRepo.SortWithSort("desc")),
 		CommonRepo.DBOption(CommonRepo.SortWithSubmitPayTime("desc")),
 		CommonRepo.Preload(
@@ -583,6 +585,7 @@ func (r *MemberSaleOrderRepo) GetOrderNum(status []uint) (int64, error) {
 	var num int64
 	err := r.db.Model(&model.MemberSaleOrder{}).
 		Where("delete_time = ?", 0).
+		Where("cancel_scene != ?", constant.MemberSaleOrderSceneSelectingTimeout).
 		Where("status in ?", status).
 		Count(&num).Error
 	if err != nil {

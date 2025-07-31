@@ -548,6 +548,7 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 	memberSaleOrders, total, err := memberSaleOrderRepo.PaginateGetMemberSaleOrder(
 		req.PageNo, req.PageSize,
 		repository.CommonRepo.WhereBySoftDelete(),
+		repository.CommonRepo.WhereByNoSelectingTimeout(), // 不包含选购超时订单
 		repository.CommonRepo.SortWithSort("desc"),
 		repository.CommonRepo.SortWithSubmitPayTime("desc"),
 		memberSaleOrderRepo.WithSaleBillSaleOrderProduct(),
@@ -1408,6 +1409,7 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 	}
 
 	getOrderNum := func(status string) int64 {
+		opts = append(opts, repository.CommonRepo.DBOption(repository.CommonRepo.WhereByNoSelectingTimeout())) // 不包含选购超时订单
 		num, _ := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderNum(constant.GetStatusList(status), req.GetTimeFilterParams(ctx.GetCompanySetting().Timezone), opts...)
 		return num
 	}
