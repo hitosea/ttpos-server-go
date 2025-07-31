@@ -17,6 +17,7 @@ type MemberOrder struct {
 	SerialNumber        string               `json:"serial_number"`          // 订单流水号
 	Status              uint                 `json:"status"`                 // 订单状态 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消
 	Num                 float64              `json:"num"`                    // 商品数量. 所有商品数量总和，如商品A数量为2，商品B数量为3，则总数量为5
+	Amount              float64              `json:"amount"`                 // 订单金额，最终应收. 订单金额=商品金额+配送费-会员折扣金额
 	ProductAmount       float64              `json:"product_amount"`         // 商品金额. 所有商品金额总和，如商品A金额为2，商品B金额为3，则总金额为5
 	ProductList         []MemberOrderProduct `json:"product_list"`           // 订单商品列表
 	Rider               RiderInfo            `json:"rider"`                  // 骑手信息

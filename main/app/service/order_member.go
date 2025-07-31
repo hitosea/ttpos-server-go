@@ -518,6 +518,7 @@ func (s *orderSrv) GetMemberOrderList(ctx context.Context, req req.MemberOrderLi
 			SerialNumber:        memberSaleOrder.SerialNumber,
 			Status:              memberSaleOrder.Status,
 			Num:                 memberSaleOrder.ProductNum,
+			Amount:              memberSaleOrder.Amount,
 			ProductAmount:       memberSaleOrder.OriginProductAmount,
 			Rider: resp.RiderInfo{
 				Name:              memberSaleOrder.RiderName,
