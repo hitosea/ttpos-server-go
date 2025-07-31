@@ -137,6 +137,18 @@ func riderCompletedMemberSaleOrderEventHandler() {
 					SaleBill: saleBill,
 				})
 			}()
+
+			// 更新会员消费金额和消费次数
+			go func() {
+				if err := repository.NewMemberRepo(db).IncConsumptionAmount(memberSaleOrder.MemberUuid, memberSaleOrder.GetActualConsumptionAmount()); err != nil {
+					logger.Logger.Error("更新会员消费金额和消费次数-更新会员消费金额失败", zap.Error(err))
+					return
+				}
+				if err := repository.NewMemberRepo(db).IncConsumptionCount(memberSaleOrder.MemberUuid); err != nil {
+					logger.Logger.Error("更新会员消费金额和消费次数-更新会员消费次数失败", zap.Error(err))
+					return
+				}
+			}()
 		})
 	})
 
