@@ -1347,7 +1347,12 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 		if memberSaleOrder.PaymentMethod != nil {
 			payType = memberSaleOrder.PaymentMethod.PaymentName
 		}
-
+		// 支付超时自动取消订单
+		if memberSaleOrder.GetRemainingPaymentTime() == 0 && memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingPayment {
+			s.MemberOrderPayTimeoutAutoCancel(ctx, memberSaleOrder.Uuid)
+			memberSaleOrder.Status = constant.MemberSaleOrderStatusCancelled
+		}
+		// 获取联系人信息
 		var contact resp.ContactInfo
 		if memberSaleOrder.Address != nil {
 			contact = resp.ContactInfo{
