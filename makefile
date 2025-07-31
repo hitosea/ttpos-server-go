@@ -1,6 +1,56 @@
 # include
 include ./scripts/cmd.mk
 
+# 默认目标 - 显示帮助信息
+.DEFAULT_GOAL := help
+
+# 显示帮助信息
+help:
+	@echo "📚 TTPOS 餐饮收银系统 - 可用命令列表"
+	@echo "================================================="
+	@echo ""
+	@echo "🚀 项目管理命令:"
+	@echo "  install              - 初始化项目（首次安装）"
+	@echo "  build               - 重新构建项目"
+	@echo "  restart             - 重启容器"
+	@echo "  up                  - 启动Docker容器"
+	@echo "  down                - 停止Docker容器"
+	@echo "  ps                  - 查看容器状态"
+	@echo ""
+	@echo "🔧 开发命令:"
+	@echo "  debug               - 切换到调试模式"
+	@echo "  run                 - 运行项目（调试模式）"
+	@echo "  dev                 - 启动开发模式（热重启）"
+	@echo "  build-web           - 构建前端项目"
+	@echo "  build-doc           - 生成API文档"
+	@echo ""
+	@echo "🗄️  数据库命令:"
+	@echo "  migrate             - 运行数据库迁移"
+	@echo "  migrate-data        - 运行旧数据迁移"
+	@echo "  mysql-open          - 开启MySQL端口"
+	@echo "  check-db-host-open-mysql - 检查DB_HOST并开启MySQL端口"
+	@echo ""
+	@echo "🔐 系统管理命令:"
+	@echo "  repassword [ARGS]   - 重置密码"
+	@echo "  translate           - 运行翻译命令"
+	@echo "  statistics-re [ARGS] - 重新统计数据"
+	@echo "  skootar-update-status [ARGS] - 更新Skootar状态"
+	@echo ""
+	@echo "📦 版本管理:"
+	@echo "  add-ver             - 增加版本号"
+	@echo ""
+	@echo "🧹 清理命令:"
+	@echo "  redis-clear-data    - 清空Redis集群数据"
+	@echo ""
+	@echo "💡 使用示例:"
+	@echo "  make install        - 首次安装项目"
+	@echo "  make dev            - 启动开发环境"
+	@echo "  make migrate        - 更新数据库"
+	@echo "  make repassword ARGS='admin123' - 重置密码为admin123"
+	@echo ""
+	@echo "📖 获取更多帮助: make help"
+	@echo "================================================="
+
 # 初始化项目
 install:
 	make init-env
