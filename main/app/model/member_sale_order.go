@@ -96,12 +96,12 @@ func (model *MemberSaleOrder) GetContactPhoneMask() string {
 	phoneLen := len(model.ContactPhone)
 	if phoneLen <= 4 {
 		// 如果手机号长度小于等于4位，全部用*替换
-		return model.ContactPhonePrefix + " " + strings.Repeat("*", phoneLen)
+		return strings.Repeat("*", phoneLen)
 	}
 
 	// 只显示后4位，前面的都用*替换
 	maskCount := phoneLen - 4
-	return model.ContactPhonePrefix + " " + strings.Repeat("*", maskCount) + model.ContactPhone[phoneLen-4:]
+	return strings.Repeat("*", maskCount) + model.ContactPhone[phoneLen-4:]
 }
 
 // 是否是自主取消
