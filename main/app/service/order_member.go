@@ -1408,6 +1408,7 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 	}
 
 	getOrderNum := func(status string) int64 {
+		opts = append(opts, repository.CommonRepo.DBOption(repository.CommonRepo.WhereByNoSelectingTimeout())) // 不包含选购超时订单
 		num, _ := repository.NewMemberSaleOrderRepo(db).GetCashierMemberSaleOrderNum(constant.GetStatusList(status), req.GetTimeFilterParams(ctx.GetCompanySetting().Timezone), opts...)
 		return num
 	}
