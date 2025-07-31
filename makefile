@@ -49,6 +49,7 @@ mysql-open:
 
 # 运行数据库迁移
 migrate:
+	make check-db-host-open-mysql
 	@echo "🗄️  运行主项目数据库迁移..."
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think migrate:run
 	@echo "🚀 更新 takeout 模块数据库..."
