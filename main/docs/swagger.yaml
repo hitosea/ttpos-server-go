@@ -1172,12 +1172,20 @@ definitions:
         items:
           type: string
         type: array
+      default_language:
+        description: 默认语言
+        type: string
       is_member_show_sold_out:
         description: 是否显示售罄商品
         type: boolean
       is_open_rider:
         description: 是否开启外送
         type: boolean
+      language:
+        description: 常用语言
+        items:
+          type: string
+        type: array
       language_list:
         description: 语言列表
         items:
@@ -4673,6 +4681,9 @@ definitions:
     type: object
   resp.MemberOrder:
     properties:
+      amount:
+        description: 订单金额，最终应收. 订单金额=商品金额+配送费-会员折扣金额
+        type: number
       company_name:
         description: 公司名称
         type: string

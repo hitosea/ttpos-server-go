@@ -95,7 +95,7 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 
 	// 获取语言列表
 	ctx.SetCompanyUuid(ctx.GetCompanyUuid())
-	languageList, _ := settingSrv.GetStoreLanguageList(ctx)
+	// languageList, _ := settingSrv.GetStoreLanguageList(ctx)
 
 	// 获取门店业务设置
 	businessSetting, err := settingSrv.GetBusinessSetting(ctx)
@@ -118,6 +118,13 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 		fmt.Println("获取货币设置失败", zap.Error(err))
 	}
 
+	// 获取扫码H5设置
+	h5Setting, err := settingSrv.GetH5Setting(ctx, nil)
+	if err != nil {
+		logger.Logger.Error("获取H5设置失败", zap.Error(err))
+		fmt.Println("获取H5设置失败", zap.Error(err))
+	}
+
 	// 返回
 	member := ctx.GetMember()
 	return member_resp.MemberBaseInfoResp{
@@ -132,7 +139,9 @@ func (s *baseSrv) GetBaseInfo(ctx context.Context) (member_resp.MemberBaseInfoRe
 		},
 		Member: member_resp.MemberResp{
 			IsMemberShowSoldOut: cashierSetting.MemberShowSoldOut == "1",
-			LanguageList:        languageList,
+			LanguageList:        h5Setting.LanguageList,
+			Language:            h5Setting.Language,
+			DefaultLanguage:     h5Setting.DefaultLanguage,
 			IsOpenRider:         company.CompanySetting.DeliveryStatus == 1,
 			AreaCode:            areaCodes,
 		},

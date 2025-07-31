@@ -21116,6 +21116,10 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "default_language": {
+                    "description": "默认语言",
+                    "type": "string"
+                },
                 "is_member_show_sold_out": {
                     "description": "是否显示售罄商品",
                     "type": "boolean"
@@ -21123,6 +21127,13 @@ const docTemplate = `{
                 "is_open_rider": {
                     "description": "是否开启外送",
                     "type": "boolean"
+                },
+                "language": {
+                    "description": "常用语言",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "language_list": {
                     "description": "语言列表",
@@ -26312,6 +26323,10 @@ const docTemplate = `{
         "resp.MemberOrder": {
             "type": "object",
             "properties": {
+                "amount": {
+                    "description": "订单金额，最终应收. 订单金额=商品金额+配送费-会员折扣金额",
+                    "type": "number"
+                },
                 "company_name": {
                     "description": "公司名称",
                     "type": "string"
