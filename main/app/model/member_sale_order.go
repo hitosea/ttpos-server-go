@@ -87,12 +87,21 @@ func (model *MemberSaleOrder) GetActualConsumptionAmount() float64 {
 	return decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(model.DeliveryFeeAmount)).Round(2).InexactFloat64()
 }
 
-// 获取中间四位脱敏手机号
+// 获取脱敏手机号（只显示后四位）
 func (model *MemberSaleOrder) GetContactPhoneMask() string {
 	if model.ContactPhone == "" {
 		return ""
 	}
-	return model.ContactPhonePrefix + " " + model.ContactPhone[:2] + "****" + model.ContactPhone[len(model.ContactPhone)-2:]
+
+	phoneLen := len(model.ContactPhone)
+	if phoneLen <= 4 {
+		// 如果手机号长度小于等于4位，全部用*替换
+		return model.ContactPhonePrefix + " " + strings.Repeat("*", phoneLen)
+	}
+
+	// 只显示后4位，前面的都用*替换
+	maskCount := phoneLen - 4
+	return model.ContactPhonePrefix + " " + strings.Repeat("*", maskCount) + model.ContactPhone[phoneLen-4:]
 }
 
 // 是否是自主取消
