@@ -1,7 +1,4 @@
 <template>
-  <!--
-      描述：规格库
-  -->
   <div class="product-list">
     <!--添加规格-->
     <div class="common-level-rail">
@@ -83,205 +80,216 @@
   </div>
 </template>
 
-<script>
-  import ProductApi from '@/api/product.js';
-  import Add from './add.vue';
-  import Edit from './edit.vue';
-  import ProductSelector from '@/components/product/Selector.vue';
-  import ProductSpecPrice from '@/components/product/SpecPrice.vue';
-  export default {
-    name: 'ProductSpecIndex',
-    components: {
-      Add,
-      Edit,
-      ProductSelector,
-      ProductSpecPrice,
-    },
-    data() {
-      return {
-        /*切换菜单*/
-        activeName: 'sell',
-        /*切换选中值*/
-        activeIndex: '0',
-        /*是否正在加载*/
-        loading: true,
-        /*一页多少条*/
-        pageSize: 10,
-        /*一共多少条数据*/
-        totalDataNumber: 0,
-        /*当前是第几页*/
-        curPage: 1,
-        /*当前编辑的对象*/
-        model: {},
-        open_edit: false,
-        open_add: false,
-        /*列表数据*/
-        tableData: [],
-        multipleSelection: [],
-        //
-        searchForm: {
-          name: '',
-        },
-        searchLoading: '',
-        openProductSelector: false,
-        openProductSpecPrice: false,
-      };
-    },
-    created() {
-      /*获取列表*/
-      this.getData();
-    },
-    methods: {
-      /*选择第几页*/
-      handleCurrentChange(val) {
-        let self = this;
-        self.loading = true;
-        self.curPage = val;
-        self.getData();
-      },
+<script setup>
+import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
+import { ElMessageBox, ElMessage } from 'element-plus';
+import ProductApi from '@/api/product.js';
+import Add from './add.vue';
+import Edit from './edit.vue';
+import ProductSelector from '@/components/product/Selector.vue';
+import ProductSpecPrice from '@/components/product/SpecPrice.vue';
 
-      /*每页多少条*/
-      handleSizeChange(val) {
-        this.pageSize = val;
-        this.getData();
-      },
+// 获取当前实例
+const { proxy } = getCurrentInstance();
 
-      /*切换菜单*/
-      handleClick(tab, event) {
-        let self = this;
-        self.curPage = 1;
-        self.getData();
-      },
+// 响应式数据
+const activeName = ref('sell');
+const activeIndex = ref('0');
+const loading = ref(true);
+const pageSize = ref(10);
+const totalDataNumber = ref(0);
+const curPage = ref(1);
+const model = ref({});
+const open_edit = ref(false);
+const open_add = ref(false);
+const tableData = ref([]);
+const multipleSelection = ref([]);
+const searchForm = reactive({
+  name: '',
+});
+const searchLoading = ref('');
+const openProductSelector = ref(false);
+const openProductSpecPrice = ref(false);
 
-      /*搜索查询*/
-      onSearch() {
-        clearTimeout(this.searchLoading);
-        this.searchLoading = setTimeout(() => {
-          this.curPage = 1;
-          this.getData();
-        }, 200);
-      },
+// 选择第几页
+const handleCurrentChange = (val) => {
+  loading.value = true;
+  curPage.value = val;
+  getData();
+};
 
-      /*获取列表*/
-      getData() {
-        let self = this;
-        let Params = {};
-        Params.page = self.curPage;
-        Params.list_rows = self.pageSize;
-        Params.spec_name = self.searchForm.name;
-        self.loading = true;
-        ProductApi.SpecList(Params, true)
-          .then((data) => {
-            self.loading = false;
-            self.tableData = data.data.list.data;
-            self.totalDataNumber = data.data.list.total;
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
-      /*关闭弹窗*/
-      closeDialogFunc(e, f) {
-        if (f == 'add') {
-          this.open_add = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-          }
-        }
-        if (f == 'edit') {
-          this.open_edit = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-          }
-        }
-      },
-      /*打开添加*/
-      addClick() {
-        this.open_add = true;
-      },
-      deleteClick(id) {
-        let self = this;
-        ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          ProductApi.deleteSpec({
-            spec_id: id,
-          }).then((data) => {
-            this.$ElMessage({
-              message: $t('删除成功'),
-              type: 'success',
-            });
-            self.getData();
-          });
-        });
-      },
-      deleteBatch() {
-        let self = this;
-        let arr = [];
-        this.multipleSelection.forEach((item, index) => {
-          arr.push(item.spec_id);
-        });
-        let spec_id = arr.join(',');
-        ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          ProductApi.deleteSpec({
-            spec_id: spec_id,
-          }).then((data) => {
-            this.$ElMessage({
-              message: $t('删除成功'),
-              type: 'success',
-            });
-            self.getData();
-          });
-        });
-      },
-      handleSelectionChange(e) {
-        this.multipleSelection = e;
-      },
-      /*打开编辑*/
-      editClick(row) {
-        this.model = row;
-        this.open_edit = true;
-      },
-      relatedProductClick(row) {
-        this.model = row;
-        this.openProductSelector = true;
-      },
-      editPriceClick(row) {
-        this.model = row;
-        this.openProductSpecPrice = true;
-      },
-      handleProductSelectorClose(list) {
-        if (Array.isArray(list)) {
-          ProductApi.relateBySpec(
-            {
-              spec_id: this.model.spec_id,
-              product_ids: list.map((item) => item.product_id),
-            },
-            false
-          )
-            .then((data) => {
-              this.$ElMessage({
-                message: $t('关联成功'),
-                type: 'success',
-              });
-              this.getData();
-            })
-            .catch();
-        }
-        this.model = {};
-        this.openProductSelector = false;
-      },
-      handleProductSpecPriceClose() {
-        this.model = {};
-        this.openProductSpecPrice = false;
-      },
-      indexMethod(index) {
-        return index + 1 + (this.curPage - 1) * this.pageSize;
-      },
-    },
+// 每页多少条
+const handleSizeChange = (val) => {
+  pageSize.value = val;
+  getData();
+};
+
+// 切换菜单
+const handleClick = (tab, event) => {
+  curPage.value = 1;
+  getData();
+};
+
+// 搜索查询
+const onSearch = () => {
+  clearTimeout(searchLoading.value);
+  searchLoading.value = setTimeout(() => {
+    curPage.value = 1;
+    getData();
+  }, 200);
+};
+
+// 获取列表
+const getData = async () => {
+  const params = {
+    page: curPage.value,
+    list_rows: pageSize.value,
+    spec_name: searchForm.name,
   };
+  loading.value = true;
+  
+  try {
+    const data = await ProductApi.SpecList(params, true);
+    loading.value = false;
+    tableData.value = data.data.list.data;
+    totalDataNumber.value = data.data.list.total;
+  } catch (error) {
+    loading.value = false;
+  }
+};
+
+// 关闭弹窗
+const closeDialogFunc = (e, f) => {
+  if (f == 'add') {
+    open_add.value = e.openDialog;
+    if (e.type == 'success') {
+      getData();
+    }
+  }
+  if (f == 'edit') {
+    open_edit.value = e.openDialog;
+    if (e.type == 'success') {
+      getData();
+    }
+  }
+};
+
+// 打开添加
+const addClick = () => {
+  open_add.value = true;
+};
+
+// 删除单个
+const deleteClick = async (id) => {
+  try {
+    await ElMessageBox.confirm(proxy.$t('删除后不可恢复，确认删除吗?'), proxy.$t('提示'), {
+      type: 'warning',
+    });
+    
+    await ProductApi.deleteSpec({
+      spec_id: id,
+    });
+    
+    ElMessage({
+      message: proxy.$t('删除成功'),
+      type: 'success',
+    });
+    getData();
+  } catch (error) {
+    // 用户取消删除或删除失败
+  }
+};
+
+// 批量删除
+const deleteBatch = async () => {
+  const arr = [];
+  multipleSelection.value.forEach((item) => {
+    arr.push(item.spec_id);
+  });
+  const spec_id = arr.join(',');
+  
+  try {
+    await ElMessageBox.confirm(proxy.$t('删除后不可恢复，确认删除吗?'), proxy.$t('提示'), {
+      type: 'warning',
+    });
+    
+    await ProductApi.deleteSpec({
+      spec_id: spec_id,
+    });
+    
+    ElMessage({
+      message: proxy.$t('删除成功'),
+      type: 'success',
+    });
+    getData();
+  } catch (error) {
+    // 用户取消删除或删除失败
+  }
+};
+
+// 选择变化
+const handleSelectionChange = (e) => {
+  multipleSelection.value = e;
+};
+
+// 打开编辑
+const editClick = (row) => {
+  model.value = row;
+  open_edit.value = true;
+};
+
+// 关联商品
+const relatedProductClick = (row) => {
+  model.value = row;
+  openProductSelector.value = true;
+};
+
+// 修改价格
+const editPriceClick = (row) => {
+  model.value = row;
+  openProductSpecPrice.value = true;
+};
+
+// 商品选择器关闭
+const handleProductSelectorClose = async (list) => {
+  if (Array.isArray(list)) {
+    try {
+      await ProductApi.relateBySpec(
+        {
+          spec_id: model.value.spec_id,
+          product_ids: list.map((item) => item.product_id),
+        },
+        false
+      );
+      
+      ElMessage({
+        message: proxy.$t('关联成功'),
+        type: 'success',
+      });
+      getData();
+    } catch (error) {
+      // 处理错误
+    }
+  }
+  model.value = {};
+  openProductSelector.value = false;
+};
+
+// 规格价格关闭
+const handleProductSpecPriceClose = () => {
+  model.value = {};
+  openProductSpecPrice.value = false;
+};
+
+// 序号方法
+const indexMethod = (index) => {
+  return index + 1 + (curPage.value - 1) * pageSize.value;
+};
+
+// 组件挂载时获取数据
+onMounted(() => {
+  getData();
+});
 </script>
 
 <style scoped>

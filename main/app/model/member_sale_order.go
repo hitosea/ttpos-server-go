@@ -117,7 +117,11 @@ func (model *MemberSaleOrder) CalculateMemberDiscount() float64 {
 	saleOrder := model.SaleBill.SaleOrders[0]
 	memberDiscountFee := 0.0
 	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-		memberDiscountFee += decimal.NewFromFloat(saleOrderProduct.OriginTotalPrice).Sub(decimal.NewFromFloat(saleOrderProduct.TotalPrice)).Round(2).InexactFloat64()
+		discountFee := decimal.NewFromFloat(saleOrderProduct.OriginTotalPrice).Sub(decimal.NewFromFloat(saleOrderProduct.TotalPrice)).Round(2)
+		discount := discountFee.Mul(decimal.NewFromFloat(saleOrderProduct.Num)).Round(2).InexactFloat64()
+		if discount > 0 {
+			memberDiscountFee += discount
+		}
 	}
 	return memberDiscountFee
 }
@@ -399,7 +403,7 @@ func (model *MemberSaleOrder) RiderAccept(riderName string, riderPhone string, l
 
 // 骑手配送中
 func (model *MemberSaleOrder) RiderDelivery(riderName string, riderPhone string, location string) {
-	model.Status = constant.MemberSaleOrderStatusDeliverying // 骑手配送中
+	model.Status = constant.MemberSaleOrderStatusDelivering // 骑手配送中
 	model.RiderStartTime = time.Now().Unix()
 	model.RiderName = riderName
 	model.RiderPhone = riderPhone
