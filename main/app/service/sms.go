@@ -95,9 +95,8 @@ func (s *smsSrv) selectLanguage(defaultLanguage string) string {
 }
 
 func (s *smsSrv) checkQuotaAndFormatPhone(ctx context.Context, phone string) (string, string, string, error) {
-
 	// 检查短信额度
-	setting := ctx.GetCompanySetting()
+	setting := repository.NewCompanySettingRepo(ctx.GetDB()).Get()
 	if !setting.SmsEnabled() {
 		err := fmt.Errorf("SMS service is not enabled, EnableSms: %d, SmsQuota: %d", setting.EnableSms, setting.SmsQuota)
 		return "", "", "", errors.WithMessage(err, "没有开启短信或没有额度")
