@@ -5,6 +5,8 @@ include ./scripts/cmd.mk
 install:
 	make init-env
 	make build-web
+	make redis-clear-data
+	# 启动容器
 	@echo "🗄️  启动容器..."
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
 	@echo "🗄️  初始化php项目..."
@@ -16,6 +18,7 @@ install:
 # 重新构建项目
 build:
 	make build-web
+	make redis-clear-data
 	@echo "🐳 构建 Docker 容器..."
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
 	@echo "✅ Docker 构建完成"

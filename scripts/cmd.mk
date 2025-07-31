@@ -91,6 +91,10 @@ add-version:
 	echo "当前版本: $$CURRENT_VERSION, 新版本: $$NEW_VERSION"; \
 	cd main && go run ./main.go version --version=$$NEW_VERSION --commit=$$CURRENT_COMMIT --build-time=$$CURRENT_DATE
 
+# 清空redis的cluster的data-*目录
+redis-clear-data:
+	rm -rf ./docker/redis/cluster/data-*
+
 # 忽略不存在的目标（用于处理额外参数）
 .PHONY: $(filter-out $(firstword $(MAKECMDGOALS)),$(MAKECMDGOALS))
 $(filter-out $(firstword $(MAKECMDGOALS)),$(MAKECMDGOALS)):
