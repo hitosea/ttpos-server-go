@@ -399,7 +399,7 @@ func (model *MemberSaleOrder) RiderAccept(riderName string, riderPhone string, l
 
 // 骑手配送中
 func (model *MemberSaleOrder) RiderDelivery(riderName string, riderPhone string, location string) {
-	model.Status = constant.MemberSaleOrderStatusDeliverying // 骑手配送中
+	model.Status = constant.MemberSaleOrderStatusDelivering // 骑手配送中
 	model.RiderStartTime = time.Now().Unix()
 	model.RiderName = riderName
 	model.RiderPhone = riderPhone
