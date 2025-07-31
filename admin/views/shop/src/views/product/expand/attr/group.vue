@@ -134,14 +134,14 @@
   };
 
   const deleteClick = async (attribute_id) => {
-    ElMessageBox.confirm(proxy.$t('删除后不可恢复，确认删除吗?'), proxy.$t('提示'), {
+    ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
       type: 'warning',
     }).then(() => {
       ProductApi.deleteAttribute({
         attribute_id,
       }).then(() => {
         proxy.$ElMessage({
-          message: proxy.$t('删除成功'),
+          message: $t('删除成功'),
           type: 'success',
         });
         getData();

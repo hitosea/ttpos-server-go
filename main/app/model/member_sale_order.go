@@ -124,15 +124,15 @@ func (model *MemberSaleOrder) IsCanRefund() bool {
 // 计算外送单会员折扣。外送单的会员折扣=Sum(商品原价(含税费)-商品折后价（含税费）)
 func (model *MemberSaleOrder) CalculateMemberDiscount() float64 {
 	saleOrder := model.SaleBill.SaleOrders[0]
-	memberDiscountFee := 0.0
+	memberDiscountFee := decimal.NewFromFloat(0)
 	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
 		discountFee := decimal.NewFromFloat(saleOrderProduct.OriginTotalPrice).Sub(decimal.NewFromFloat(saleOrderProduct.TotalPrice)).Round(2)
-		discount := discountFee.Mul(decimal.NewFromFloat(saleOrderProduct.Num)).Round(2).InexactFloat64()
-		if discount > 0 {
-			memberDiscountFee += discount
+		discount := discountFee.Mul(decimal.NewFromFloat(saleOrderProduct.Num)).Round(2)
+		if discount.GreaterThan(decimal.NewFromFloat(0)) {
+			memberDiscountFee = memberDiscountFee.Add(discount)
 		}
 	}
-	return memberDiscountFee
+	return memberDiscountFee.Round(2).InexactFloat64()
 }
 
 // 更新配送费配置

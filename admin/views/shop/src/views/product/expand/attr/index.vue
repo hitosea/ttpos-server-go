@@ -1,7 +1,4 @@
 <template>
-  <!--
-      描述：属性库
-  -->
   <div class="product-wrapper">
     <div class="product-tree">
       <el-tree-v2
@@ -95,274 +92,273 @@
   </div>
 </template>
 
-<script>
-  import ProductApi from '@/api/product.js';
-  import Add from './add.vue';
-  import Edit from './edit.vue';
-  import ProductSelector from '@/components/product/Selector.vue';
-  import GroupManager from './group.vue';
-  import { ElMessageBox } from 'element-plus';
+<script setup>
+import { ref, reactive, computed, onMounted, getCurrentInstance } from 'vue';
+import { ElMessageBox, ElMessage } from 'element-plus';
+import ProductApi from '@/api/product.js';
+import Add from './add.vue';
+import Edit from './edit.vue';
+import ProductSelector from '@/components/product/Selector.vue';
+import GroupManager from './group.vue';
 
-  export default {
-    name: 'ProductExpandAttrIndex',
-    components: {
-      Add,
-      Edit,
-      ProductSelector,
-      GroupManager,
-    },
-    data() {
-      return {
-        /*切换菜单*/
-        activeName: 'sell',
-        /*切换选中值*/
-        activeIndex: '0',
-        /*是否正在加载*/
-        loading: true,
-        /*一页多少条*/
-        pageSize: 10,
-        /*一共多少条数据*/
-        totalDataNumber: 0,
-        /*当前是第几页*/
-        curPage: 1,
-        /*当前编辑的对象*/
-        model: {},
-        open_edit: false,
-        open_add: false,
-        open_manage_group: false,
-        /*列表数据*/
-        tableData: [],
-        multipleSelection: [],
-        //
-        searchForm: {
-          name: '',
-        },
-        searchLoading: '',
-        openProductSelector: false,
-        openGroupManager: false,
-        treeData: [],
-        attributeTreeCurrentKey: 0,
-      };
-    },
-    computed: {
-      attributeTreeData() {
-        const data = this.treeData ?? [];
-        return [
-          {
-            id: 0,
-            label: this.$t('全部'),
-            children: data
-              // .filter((group) => group.parent_id === 0)
-              .map((group) => ({
-                id: group.attribute_id,
-                label: group.attribute_name_text,
-              })),
-          },
-        ];
-      },
-      attributeTableData() {
-        const data = this.tableData ?? [];
-        const treeData = this.treeData ?? [];
-        return (
-          data
-            // .filter((value) => value.parent_id !== 0)
-            .map((value) => ({
-              attribute_id: value.attribute_id,
-              attribute_name: JSON.parse(value.attribute_name || '{}'),
-              attribute_name_text: value.attribute_name_text,
-              group_id: value.parent_id,
-              group_name_text: treeData.find((group) => group.attribute_id === value.parent_id)?.attribute_name_text,
-              product_ids: value.product_ids,
-              parent_id: value.parent_id,
-            }))
-        );
-      },
-    },
-    created() {
-      /*获取列表*/
-      this.getData();
-      this.getGroupData();
-    },
-    methods: {
-      /*选择第几页*/
-      handleCurrentChange(val) {
-        let self = this;
-        self.loading = true;
-        self.curPage = val;
-        self.getData();
-      },
+// 获取当前实例
+const { proxy } = getCurrentInstance();
 
-      /*每页多少条*/
-      handleSizeChange(val) {
-        this.pageSize = val;
-        this.getData();
-      },
+// 响应式数据
+const loading = ref(true);
+const pageSize = ref(10);
+const totalDataNumber = ref(0);
+const curPage = ref(1);
+const model = ref({});
+const open_edit = ref(false);
+const open_add = ref(false);
+const tableData = ref([]);
+const multipleSelection = ref([]);
+const searchForm = reactive({
+  name: '',
+});
+const searchLoading = ref('');
+const openProductSelector = ref(false);
+const openGroupManager = ref(false);
+const treeData = ref([]);
+const attributeTreeCurrentKey = ref(0);
 
-      /*搜索查询*/
-      onSearch() {
-        clearTimeout(this.searchLoading);
-        this.searchLoading = setTimeout(() => {
-          this.curPage = 1;
-          this.getData();
-        }, 200);
-      },
-
-      /*获取列表*/
-      getData() {
-        let self = this;
-        let Params = {};
-        Params.page = self.curPage;
-        Params.list_rows = self.pageSize;
-        Params.attribute_name = self.searchForm.name;
-        Params.type = 2;
-        Params.parent_ids = self.attributeTreeCurrentKey === 0 ? '' : self.attributeTreeCurrentKey;
-        self.loading = true;
-        ProductApi.AttributeList(Params, true)
-          .then((data) => {
-            self.loading = false;
-            if (typeof Params.parent_ids === 'number' && Params.parent_ids !== self.attributeTreeCurrentKey) return;
-            self.tableData = data.data.list.data;
-            self.totalDataNumber = data.data.list.total;
-          })
-          .catch(() => {
-            self.loading = false;
-          });
-      },
-      getGroupData() {
-        ProductApi.AttributeList(
-          {
-            page: 1,
-            list_rows: 10000,
-            type: 1,
-          },
-          true
-        ).then((data) => {
-          this.treeData = data.data.list.data;
-        });
-      },
-      attrjoin(e) {
-        if (e) {
-          return e.join('|');
-        } else {
-          return '';
-        }
-      },
-      /*搜索查询*/
-      onSubmit() {
-        this.curPage = 1;
-        this.getData();
-      },
-
-      /*打开添加*/
-      addClick() {
-        this.open_add = true;
-      },
-      deleteClick(id) {
-        let self = this;
-        ElMessageBox.confirm(self.$t('删除后不可恢复，确认删除吗?'), self.$t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          ProductApi.deleteAttribute({
-            attribute_id: id,
-          }).then(() => {
-            self.$ElMessage({
-              message: self.$t('删除成功'),
-              type: 'success',
-            });
-            self.getData();
-          });
-        });
-      },
-      deleteBatch() {
-        let self = this;
-        let arr = [];
-        this.multipleSelection.forEach((item) => {
-          arr.push(item.attribute_id);
-        });
-        let attribute_id = arr.join(',');
-        ElMessageBox.confirm(self.$t('删除后不可恢复，确认删除吗?'), self.$t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          ProductApi.deleteAttribute({
-            attribute_id: attribute_id,
-          }).then(() => {
-            self.$ElMessage({
-              message: self.$t('删除成功'),
-              type: 'success',
-            });
-            self.getData();
-            self.getGroupData();
-          });
-        });
-      },
-      handleSelectionChange(e) {
-        this.multipleSelection = e;
-      },
-      /*打开编辑*/
-      editClick(row) {
-        this.model = row;
-        this.open_edit = true;
-      },
-      /*关闭弹窗*/
-      closeDialogFunc(e, f) {
-        if (f == 'add') {
-          this.open_add = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-            this.getGroupData();
-          }
-        }
-        if (f == 'edit') {
-          this.open_edit = e.openDialog;
-          if (e.type == 'success') {
-            this.getData();
-            this.getGroupData();
-          }
-        }
-        this.model = {};
-      },
-      handleOpenGroupManager() {
-        this.openGroupManager = true;
-      },
-      handleGroupManagerClose() {
-        this.openGroupManager = false;
-        this.getData();
-        this.getGroupData();
-      },
-      relatedProductClick(row) {
-        this.model = row;
-        this.openProductSelector = true;
-      },
-      handleProductSelectorClose(list) {
-        if (Array.isArray(list)) {
-          ProductApi.relateByAttr(
-            {
-              attribute_id: this.model.attribute_id,
-              product_ids: list.map((item) => item.product_id),
-            },
-            false
-          )
-            .then(() => {
-              this.$ElMessage({
-                message: this.$t('关联成功'),
-                type: 'success',
-              });
-              this.getData();
-            })
-            .catch();
-        }
-        this.model = {};
-        this.openProductSelector = false;
-      },
-      handleAttributeTreeCurrentChange({ id }) {
-        this.attributeTreeCurrentKey = id;
-        this.getData();
-      },
-      indexMethod(index) {
-        return index + 1 + (this.curPage - 1) * this.pageSize;
-      },
+// 计算属性
+const attributeTreeData = computed(() => {
+  const data = treeData.value ?? [];
+  return [
+    {
+      id: 0,
+      label: $t('全部'),
+      children: data
+        .map((group) => ({
+          id: group.attribute_id,
+          label: group.attribute_name_text,
+        })),
     },
+  ];
+});
+
+const attributeTableData = computed(() => {
+  const data = tableData.value ?? [];
+  const treeDataValue = treeData.value ?? [];
+  return data.map((value) => ({
+    attribute_id: value.attribute_id,
+    attribute_name: JSON.parse(value.attribute_name || '{}'),
+    attribute_name_text: value.attribute_name_text,
+    group_id: value.parent_id,
+    group_name_text: treeDataValue.find((group) => group.attribute_id === value.parent_id)?.attribute_name_text,
+    product_ids: value.product_ids,
+    parent_id: value.parent_id,
+  }));
+});
+
+// 选择第几页
+const handleCurrentChange = (val) => {
+  loading.value = true;
+  curPage.value = val;
+  getData();
+};
+
+// 每页多少条
+const handleSizeChange = (val) => {
+  pageSize.value = val;
+  getData();
+};
+
+// 搜索查询
+const onSearch = () => {
+  clearTimeout(searchLoading.value);
+  searchLoading.value = setTimeout(() => {
+    curPage.value = 1;
+    getData();
+  }, 200);
+};
+
+// 获取列表
+const getData = async () => {
+  const params = {
+    page: curPage.value,
+    list_rows: pageSize.value,
+    attribute_name: searchForm.name,
+    type: 2,
+    parent_ids: attributeTreeCurrentKey.value === 0 ? '' : attributeTreeCurrentKey.value,
   };
+  loading.value = true;
+  
+  try {
+    const data = await ProductApi.AttributeList(params, true);
+    loading.value = false;
+    if (typeof params.parent_ids === 'number' && params.parent_ids !== attributeTreeCurrentKey.value) return;
+    tableData.value = data.data.list.data;
+    totalDataNumber.value = data.data.list.total;
+  } catch (error) {
+    loading.value = false;
+  }
+};
+
+// 获取组数据
+const getGroupData = async () => {
+  try {
+    const data = await ProductApi.AttributeList(
+      {
+        page: 1,
+        list_rows: 10000,
+        type: 1,
+      },
+      true
+    );
+    treeData.value = data.data.list.data;
+  } catch (error) {
+    console.error('获取组数据失败', error);
+  }
+};
+
+
+
+// 打开添加
+const addClick = () => {
+  open_add.value = true;
+};
+
+// 删除单个
+const deleteClick = async (id) => {
+  try {
+    await ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
+      type: 'warning',
+    });
+    
+    await ProductApi.deleteAttribute({
+      attribute_id: id,
+    });
+    
+    ElMessage({
+      message: $t('删除成功'),
+      type: 'success',
+    });
+    getData();
+  } catch (error) {
+    // 用户取消删除或删除失败
+  }
+};
+
+// 批量删除
+const deleteBatch = async () => {
+  const arr = [];
+  multipleSelection.value.forEach((item) => {
+    arr.push(item.attribute_id);
+  });
+  const attribute_id = arr.join(',');
+  
+  try {
+    await ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
+      type: 'warning',
+    });
+    
+    await ProductApi.deleteAttribute({
+      attribute_id: attribute_id,
+    });
+    
+    ElMessage({
+      message: $t('删除成功'),
+      type: 'success',
+    });
+    getData();
+    getGroupData();
+  } catch (error) {
+    // 用户取消删除或删除失败
+  }
+};
+
+// 选择变化
+const handleSelectionChange = (e) => {
+  multipleSelection.value = e;
+};
+
+// 打开编辑
+const editClick = (row) => {
+  model.value = row;
+  open_edit.value = true;
+};
+
+// 关闭弹窗
+const closeDialogFunc = (e, f) => {
+  if (f == 'add') {
+    open_add.value = e.openDialog;
+    if (e.type == 'success') {
+      getData();
+      getGroupData();
+    }
+  }
+  if (f == 'edit') {
+    open_edit.value = e.openDialog;
+    if (e.type == 'success') {
+      getData();
+      getGroupData();
+    }
+  }
+  model.value = {};
+};
+
+// 打开组管理器
+const handleOpenGroupManager = () => {
+  openGroupManager.value = true;
+};
+
+// 组管理器关闭
+const handleGroupManagerClose = () => {
+  openGroupManager.value = false;
+  getData();
+  getGroupData();
+};
+
+// 关联商品
+const relatedProductClick = (row) => {
+  model.value = row;
+  openProductSelector.value = true;
+};
+
+// 商品选择器关闭
+const handleProductSelectorClose = async (list) => {
+  if (Array.isArray(list)) {
+    try {
+      await ProductApi.relateByAttr(
+        {
+          attribute_id: model.value.attribute_id,
+          product_ids: list.map((item) => item.product_id),
+        },
+        false
+      );
+      
+      ElMessage({
+        message: $t('关联成功'),
+        type: 'success',
+      });
+      getData();
+    } catch (error) {
+      // 处理错误
+    }
+  }
+  model.value = {};
+  openProductSelector.value = false;
+};
+
+// 属性树当前变化
+const handleAttributeTreeCurrentChange = ({ id }) => {
+  attributeTreeCurrentKey.value = id;
+  getData();
+};
+
+// 序号方法
+const indexMethod = (index) => {
+  return index + 1 + (curPage.value - 1) * pageSize.value;
+};
+
+// 组件挂载时获取数据
+onMounted(() => {
+  getData();
+  getGroupData();
+});
 </script>
 
 <style lang="scss" scoped>
