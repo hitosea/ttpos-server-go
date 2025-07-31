@@ -42,7 +42,7 @@ dev: debug
 
 # 开启mysql端口
 mysql-open:
-	$(call update_env_and_run)
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh mysql open
 
 # 运行数据库迁移
 migrate:

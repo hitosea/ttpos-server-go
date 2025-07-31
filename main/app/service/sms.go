@@ -16,6 +16,10 @@ import (
 	"ttpos-server-go/pkg/sms"
 )
 
+const (
+	ISmsSrvLockSuffix = 1000
+)
+
 // ISmsSrv 短信服务接口
 type ISmsSrv interface {
 	// SendMemberConsumptionSMS 发送会员消费短信
@@ -149,13 +153,12 @@ func (s *smsSrv) deductQuota(ctx context.Context, companyUuid uint64) error {
 // SendMemberConsumptionSMS 发送会员消费短信
 func (s *smsSrv) SendMemberConsumptionSMS(ctx context.Context, phone string, params *sms.MemberConsumptionRequest) error {
 	company := ctx.GetCompany()
-	// 禁止并发操作
-	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(company.Uuid)
-		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-		ctx.AddLock()
-	}
 
+	// 禁止并发操作
+	lock.NewSystemLock().LockUuid(company.Uuid + ISmsSrvLockSuffix)
+	defer lock.NewSystemLock().UnlockUuid(company.Uuid + ISmsSrvLockSuffix)
+
+	// 检查短信额度
 	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
 	if err != nil {
 		return err
@@ -194,12 +197,10 @@ func (s *smsSrv) SendMemberConsumptionSMS(ctx context.Context, phone string, par
 // SendMemberRechargeSMS 发送会员充值短信
 func (s *smsSrv) SendMemberRechargeSMS(ctx context.Context, phone string, params *sms.MemberRechargeRequest) error {
 	company := ctx.GetCompany()
+
 	// 禁止并发操作
-	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(company.Uuid)
-		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-		ctx.AddLock()
-	}
+	lock.NewSystemLock().LockUuid(company.Uuid + ISmsSrvLockSuffix)
+	defer lock.NewSystemLock().UnlockUuid(company.Uuid + ISmsSrvLockSuffix)
 
 	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
 	if err != nil {
@@ -234,12 +235,10 @@ func (s *smsSrv) SendMemberRechargeSMS(ctx context.Context, phone string, params
 // SendMemberRechargeRefundSMS 发送会员充值退款短信
 func (s *smsSrv) SendMemberRechargeRefundSMS(ctx context.Context, phone string, params *sms.MemberRechargeRefundRequest) error {
 	company := ctx.GetCompany()
+
 	// 禁止并发操作
-	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(company.Uuid)
-		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-		ctx.AddLock()
-	}
+	lock.NewSystemLock().LockUuid(company.Uuid + ISmsSrvLockSuffix)
+	defer lock.NewSystemLock().UnlockUuid(company.Uuid + ISmsSrvLockSuffix)
 
 	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
 	if err != nil {
@@ -274,12 +273,10 @@ func (s *smsSrv) SendMemberRechargeRefundSMS(ctx context.Context, phone string, 
 // SendMemberOrderRefundSMS 发送会员用餐订单退款短信
 func (s *smsSrv) SendMemberOrderRefundSMS(ctx context.Context, phone string, params *sms.MemberOrderRefundRequest) error {
 	company := ctx.GetCompany()
+
 	// 禁止并发操作
-	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(company.Uuid)
-		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-		ctx.AddLock()
-	}
+	lock.NewSystemLock().LockUuid(company.Uuid + ISmsSrvLockSuffix)
+	defer lock.NewSystemLock().UnlockUuid(company.Uuid + ISmsSrvLockSuffix)
 
 	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
 	if err != nil {
@@ -314,12 +311,10 @@ func (s *smsSrv) SendMemberOrderRefundSMS(ctx context.Context, phone string, par
 // SendMemberCodeSMS 发送会员发送验证码短信
 func (s *smsSrv) SendMemberCodeSMS(ctx context.Context, phone string, params *sms.MemberSendCodeRequest) error {
 	company := ctx.GetCompany()
+
 	// 禁止并发操作
-	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(company.Uuid)
-		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-		ctx.AddLock()
-	}
+	lock.NewSystemLock().LockUuid(company.Uuid + ISmsSrvLockSuffix)
+	defer lock.NewSystemLock().UnlockUuid(company.Uuid + ISmsSrvLockSuffix)
 
 	formattedPhone, language, companyName, err := s.checkFormatPhone(ctx, phone)
 	if err != nil {
@@ -350,12 +345,10 @@ func (s *smsSrv) SendMemberCodeSMS(ctx context.Context, phone string, params *sm
 // SendMemberRegisterCodeSMS 发送会员注册验证码短信
 func (s *smsSrv) SendMemberRegisterCodeSMS(ctx context.Context, phone string, params *sms.MemberSendCodeRequest) error {
 	company := ctx.GetCompany()
+
 	// 禁止并发操作
-	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(company.Uuid)
-		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-		ctx.AddLock()
-	}
+	lock.NewSystemLock().LockUuid(company.Uuid + ISmsSrvLockSuffix)
+	defer lock.NewSystemLock().UnlockUuid(company.Uuid + ISmsSrvLockSuffix)
 
 	formattedPhone, language, companyName, err := s.checkFormatPhone(ctx, phone)
 	if err != nil {
@@ -387,12 +380,10 @@ func (s *smsSrv) SendMemberRegisterCodeSMS(ctx context.Context, phone string, pa
 // SendMemberAuthOrderCodeSMS 发送会员认证验证码短信
 func (s *smsSrv) SendMemberAuthOrderCodeSMS(ctx context.Context, phone string, params *sms.MemberSendCodeRequest) error {
 	company := ctx.GetCompany()
+
 	// 禁止并发操作
-	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(company.Uuid)
-		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-		ctx.AddLock()
-	}
+	lock.NewSystemLock().LockUuid(company.Uuid + ISmsSrvLockSuffix)
+	defer lock.NewSystemLock().UnlockUuid(company.Uuid + ISmsSrvLockSuffix)
 
 	formattedPhone, language, companyName, err := s.checkFormatPhone(ctx, phone)
 	if err != nil {
@@ -426,11 +417,8 @@ func (s *smsSrv) SendMemberPointsSMS(ctx context.Context, phone string, params *
 	company := ctx.GetCompany()
 
 	// 禁止并发操作
-	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(company.Uuid)
-		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-		ctx.AddLock()
-	}
+	lock.NewSystemLock().LockUuid(company.Uuid + ISmsSrvLockSuffix)
+	defer lock.NewSystemLock().UnlockUuid(company.Uuid + ISmsSrvLockSuffix)
 
 	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
 	if err != nil {
@@ -467,11 +455,8 @@ func (s *smsSrv) SendMemberCouponSMS(ctx context.Context, phone string, params *
 	company := ctx.GetCompany()
 
 	// 禁止并发操作
-	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(company.Uuid)
-		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-		ctx.AddLock()
-	}
+	lock.NewSystemLock().LockUuid(company.Uuid + ISmsSrvLockSuffix)
+	defer lock.NewSystemLock().UnlockUuid(company.Uuid + ISmsSrvLockSuffix)
 
 	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
 	if err != nil {
@@ -508,11 +493,8 @@ func (s *smsSrv) SendDeliveryOrderCancelSMS(ctx context.Context, phone string, p
 	company := ctx.GetCompany()
 
 	// 禁止并发操作
-	if ctx.NoLock() {
-		lock.NewSystemLock().LockUuid(company.Uuid)
-		defer lock.NewSystemLock().UnlockUuid(company.Uuid)
-		ctx.AddLock()
-	}
+	lock.NewSystemLock().LockUuid(company.Uuid + ISmsSrvLockSuffix)
+	defer lock.NewSystemLock().UnlockUuid(company.Uuid + ISmsSrvLockSuffix)
 
 	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
 	if err != nil {
