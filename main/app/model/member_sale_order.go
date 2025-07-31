@@ -82,6 +82,11 @@ type MemberSaleOrder struct {
 	Member        *Member        `gorm:"foreignKey:MemberUuid;references:Uuid"`
 }
 
+// 获取订单实际消费金额（订单金额-配送费）
+func (model *MemberSaleOrder) GetActualConsumptionAmount() float64 {
+	return decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(model.DeliveryFeeAmount)).Round(2).InexactFloat64()
+}
+
 // 获取中间四位脱敏手机号
 func (model *MemberSaleOrder) GetContactPhoneMask() string {
 	if model.ContactPhone == "" {
