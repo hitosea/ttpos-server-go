@@ -424,6 +424,7 @@ func (s *smsSrv) SendMemberAuthOrderCodeSMS(ctx context.Context, phone string, p
 // SendMemberPointsSMS 发送会员积分短信
 func (s *smsSrv) SendMemberPointsSMS(ctx context.Context, phone string, params *sms.MemberPointsRequest) error {
 	company := ctx.GetCompany()
+
 	// 禁止并发操作
 	if ctx.NoLock() {
 		lock.NewSystemLock().LockUuid(company.Uuid)
@@ -513,7 +514,7 @@ func (s *smsSrv) SendDeliveryOrderCancelSMS(ctx context.Context, phone string, p
 		ctx.AddLock()
 	}
 
-	formattedPhone, language, companyName, err := s.checkFormatPhone(ctx, phone)
+	formattedPhone, language, companyName, err := s.checkQuotaAndFormatPhone(ctx, phone)
 	if err != nil {
 		return err
 	}
