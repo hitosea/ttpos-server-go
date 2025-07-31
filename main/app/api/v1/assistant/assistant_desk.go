@@ -552,7 +552,6 @@ func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	ctx.Log().Debug("修改商品数量成功", zap.Any("res", shopCart))
 
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
