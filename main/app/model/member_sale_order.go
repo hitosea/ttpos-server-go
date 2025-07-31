@@ -87,12 +87,21 @@ func (model *MemberSaleOrder) GetActualConsumptionAmount() float64 {
 	return decimal.NewFromFloat(model.Amount).Sub(decimal.NewFromFloat(model.DeliveryFeeAmount)).Round(2).InexactFloat64()
 }
 
-// 获取中间四位脱敏手机号
+// 获取脱敏手机号（只显示后四位）
 func (model *MemberSaleOrder) GetContactPhoneMask() string {
 	if model.ContactPhone == "" {
 		return ""
 	}
-	return model.ContactPhonePrefix + " " + model.ContactPhone[:2] + "****" + model.ContactPhone[len(model.ContactPhone)-2:]
+
+	phoneLen := len(model.ContactPhone)
+	if phoneLen <= 4 {
+		// 如果手机号长度小于等于4位，全部用*替换
+		return strings.Repeat("*", phoneLen)
+	}
+
+	// 只显示后4位，前面的都用*替换
+	maskCount := phoneLen - 4
+	return strings.Repeat("*", maskCount) + model.ContactPhone[phoneLen-4:]
 }
 
 // 是否是自主取消
@@ -115,11 +124,15 @@ func (model *MemberSaleOrder) IsCanRefund() bool {
 // 计算外送单会员折扣。外送单的会员折扣=Sum(商品原价(含税费)-商品折后价（含税费）)
 func (model *MemberSaleOrder) CalculateMemberDiscount() float64 {
 	saleOrder := model.SaleBill.SaleOrders[0]
-	memberDiscountFee := 0.0
+	memberDiscountFee := decimal.NewFromFloat(0)
 	for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
-		memberDiscountFee += decimal.NewFromFloat(saleOrderProduct.OriginTotalPrice).Sub(decimal.NewFromFloat(saleOrderProduct.TotalPrice)).Round(2).InexactFloat64()
+		discountFee := decimal.NewFromFloat(saleOrderProduct.OriginTotalPrice).Sub(decimal.NewFromFloat(saleOrderProduct.TotalPrice)).Round(2)
+		discount := discountFee.Mul(decimal.NewFromFloat(saleOrderProduct.Num)).Round(2)
+		if discount.GreaterThan(decimal.NewFromFloat(0)) {
+			memberDiscountFee = memberDiscountFee.Add(discount)
+		}
 	}
-	return memberDiscountFee
+	return memberDiscountFee.Round(2).InexactFloat64()
 }
 
 // 更新配送费配置
@@ -399,7 +412,7 @@ func (model *MemberSaleOrder) RiderAccept(riderName string, riderPhone string, l
 
 // 骑手配送中
 func (model *MemberSaleOrder) RiderDelivery(riderName string, riderPhone string, location string) {
-	model.Status = constant.MemberSaleOrderStatusDeliverying // 骑手配送中
+	model.Status = constant.MemberSaleOrderStatusDelivering // 骑手配送中
 	model.RiderStartTime = time.Now().Unix()
 	model.RiderName = riderName
 	model.RiderPhone = riderPhone

@@ -490,6 +490,9 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderAccept(memberSaleOrder m
 // UpdateMemberSaleOrderRiderDelivery 更新会员端销售订单-骑手配送中
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderDelivery(memberSaleOrder model.MemberSaleOrder) error {
 	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		RiderName:      memberSaleOrder.RiderName,
+		RiderPhone:     memberSaleOrder.RiderPhone,
+		Location:       memberSaleOrder.Location,
 		Status:         memberSaleOrder.Status,
 		RiderStartTime: memberSaleOrder.RiderStartTime,
 	}).Error
@@ -569,7 +572,7 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderByContactNameAndContactPhoneSuff
 			constant.MemberSaleOrderStatusCooking,               // 商家备餐中
 			constant.MemberSaleOrderStatusPendingRiderPickup,    // 待骑手接单
 			constant.MemberSaleOrderStatusPendingRiderDelivery,  // 骑手正在赶往商家
-			constant.MemberSaleOrderStatusDeliverying,           // 骑手配送中
+			constant.MemberSaleOrderStatusDelivering,            // 骑手配送中
 			constant.MemberSaleOrderStatusCompleted,             // 已完成
 			constant.MemberSaleOrderStatusCancelled,             // 已取消
 		}).
