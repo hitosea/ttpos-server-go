@@ -20,6 +20,63 @@ define update_env_and_run
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh mysql open
 endef
 
+# 默认目标 - 显示帮助信息
+.DEFAULT_GOAL := help
+
+# 显示帮助信息
+help:
+	@printf "\033[1;36m"
+	@echo " 🍽️  TTPOS 餐饮收银系统 - 命令手册 🍽️                     "
+	@printf "\033[0m"
+	@echo ""
+	@printf "\033[1;32m"
+	@echo "🚀 项目管理命令"
+	@printf "\033[0m"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "install" "初始化项目（首次安装）"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build" "重新构建项目"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "restart" "重启容器"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "up" "启动Docker容器"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "down" "停止Docker容器"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "ps" "查看容器状态"
+	@echo ""
+	@printf "\033[1;32m"
+	@echo "🔧 开发命令"
+	@printf "\033[0m"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "debug" "切换到调试模式"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "run" "运行项目（调试模式）"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "dev" "启动开发模式（热重启）"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build-web" "构建前端项目"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build-doc" "生成API文档"
+	@echo ""
+	@printf "\033[1;32m"
+	@echo "🗄️  数据库命令"
+	@printf "\033[0m"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "migrate" "运行数据库迁移"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "migrate-data" "运行旧数据迁移"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "mysql-open" "开启MySQL端口"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "check-db-host-open-mysql" "检查DB_HOST并开启MySQL端口"
+	@echo ""
+	@printf "\033[1;32m"
+	@echo "🔐 系统管理命令"
+	@printf "\033[0m"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "repassword" "重置密码"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "translate" "运行翻译命令"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "statistics-re" "重新统计数据"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "skootar-update-status" "更新Skootar状态"
+	@echo ""
+	@printf "\033[1;32m"
+	@echo "📦 版本管理"
+	@printf "\033[0m"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "add-ver" "增加版本号"
+	@echo ""
+	@printf "\033[1;32m"
+	@echo "🧹 清理命令"
+	@printf "\033[0m"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "redis-clear-data" "清空Redis集群数据"
+	@echo ""
+	@printf "\033[1;35m"
+	@echo ""
+
 # 初始化项目
 init-env:
 	@echo "🔍 初始化env文件"
@@ -109,7 +166,17 @@ check-db-host-open-mysql:
 		echo "⚠️  .env文件不存在，跳过MySQL端口检查"; \
 	fi
 
-# 忽略不存在的目标（用于处理额外参数）
+# 处理额外参数（不包含第一个目标）
+ifneq ($(words $(MAKECMDGOALS)),1)
 .PHONY: $(filter-out $(firstword $(MAKECMDGOALS)),$(MAKECMDGOALS))
 $(filter-out $(firstword $(MAKECMDGOALS)),$(MAKECMDGOALS)):
 	@:
+endif
+
+# 捕获不存在的命令并显示帮助
+%:
+	@printf "\033[1;31mError:\033[0m make: *** No rule to make target '\033[1;33m$@\033[0m'. Stop.\n"
+	@echo ""
+	@printf "\033[1;37m🤔 您输入的命令 '\033[1;33m$@\033[1;37m' 不存在，请查看可用命令列表：\033[0m\n"
+	@echo ""
+	@make help
