@@ -24,18 +24,20 @@ type memberCallbackSrv struct {
 	bus        *event.SystemEventBus // 事件总线
 	localeSrv  ILocaleSrv            // 多语言名称服务
 	settingSrv setting.ISrv
+	orderSrv   IOrderSrv
 }
 
-func NewMemberCallbackSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IMemberCallbackSrv {
-	return NewMemberCallbackSrvImpl(dbm, localeSrv, settingSrv)
+func NewMemberCallbackSrv(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, orderSrv IOrderSrv) IMemberCallbackSrv {
+	return NewMemberCallbackSrvImpl(dbm, localeSrv, settingSrv, orderSrv)
 }
 
-func NewMemberCallbackSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv) IMemberCallbackSrv {
+func NewMemberCallbackSrvImpl(dbm *database.DBManager, localeSrv ILocaleSrv, settingSrv setting.ISrv, orderSrv IOrderSrv) IMemberCallbackSrv {
 	return &memberCallbackSrv{
 		dbm:        dbm,
 		bus:        event.NewSystemBus(),
 		localeSrv:  localeSrv,
 		settingSrv: settingSrv,
+		orderSrv:   orderSrv,
 	}
 }
 
@@ -109,15 +111,10 @@ func (s *memberCallbackSrv) ParseMemberCallbackData(ctx context.Context, data me
 				ctx.Log().Error("骑手送达回调时，订单号不合法", zap.Error(err))
 				return errors.WithMessage(err, "骑手送达回调时，订单号不合法")
 			}
-			go func() {
-				s.bus.PublishRiderCompletedMemberSaleOrderEvent(event.RiderCompletedMemberSaleOrderPayload{
-					BasePayload: event.BasePayload{
-						Ctx:         ctx,
-						CompanyUuid: companyUuid,
-					},
-					MemberSaleOrderUuid: memberSaleOrderUuid,
-				})
-			}()
+			if err := s.orderSrv.CompleteMemberSaleOrder(ctx, memberSaleOrderUuid); err != nil {
+				ctx.Log().Error("完成外送订单失败", zap.Error(err))
+				return errors.WithMessage(err, "完成外送订单失败")
+			}
 			return nil
 		}
 	}

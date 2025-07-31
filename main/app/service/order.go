@@ -711,13 +711,21 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}, nil
 }
 
-// getMemberSaleOrder 获取会员端销售订单
-func (s *orderSrv) getMemberSaleOrder(ctx context.Context, memberSaleOrderUuid uint64, saleBill *model.SaleBill) (*model.MemberSaleOrder, error) {
+// getMemberSaleOrderAllInfo 获取会员端销售订单
+func (s *orderSrv) getMemberSaleOrderAllInfo(ctx context.Context, memberSaleOrderUuid uint64, saleBill *model.SaleBill) (*model.MemberSaleOrder, error) {
 	// 获取数据库
 	db := ctx.GetDB()
 	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(memberSaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
+	}
+	if saleBill == nil {
+		// 当前销售账单数据
+		var errSaleBill error
+		saleBill, errSaleBill = repository.NewOrderRepo(db).GetSaleBillAllInfo(0, repository.WithMemberSaleOrderUuid(memberSaleOrderUuid))
+		if errSaleBill != nil {
+			return nil, errors.WithMessage(errSaleBill)
+		}
 	}
 	memberSaleOrder.SaleBill = saleBill
 
@@ -829,7 +837,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 			return nil, errors.WithMessage(errSaleBill)
 		}
 	}
-	memberSaleOrder, err := s.getMemberSaleOrder(ctx, req.MemberSaleOrderUuid, saleBill)
+	memberSaleOrder, err := s.getMemberSaleOrderAllInfo(ctx, req.MemberSaleOrderUuid, saleBill)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

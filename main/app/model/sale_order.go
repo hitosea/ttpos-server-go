@@ -758,7 +758,7 @@ func (model *SaleOrder) NewReturnOrder(scene string, deliveryFee float64, dutyNo
 		refundAmount = decimal.NewFromFloat(model.FinalPrice).Sub(decimal.NewFromFloat(model.GetReturnAmount())).Round(2).InexactFloat64()
 		// 如果是会员端订单，则退款金额=订单最终应收金额-已退款金额-配送费
 		if scene == constant.SceneMemberOrder {
-			refundAmount = refundAmount - deliveryFee
+			refundAmount = decimal.NewFromFloat(refundAmount).Sub(decimal.NewFromFloat(deliveryFee)).Round(2).InexactFloat64()
 		}
 	}
 	totalRefundAmount := refundAmount

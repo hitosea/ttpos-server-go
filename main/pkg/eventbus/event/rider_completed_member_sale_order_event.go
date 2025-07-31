@@ -1,6 +1,7 @@
 package event
 
 import (
+	"ttpos-server-go/app/model"
 	"ttpos-server-go/pkg/eventbus"
 	"ttpos-server-go/pkg/utils"
 )
@@ -11,9 +12,10 @@ const EventRiderCompletedMemberSaleOrder EventName = "Event_Rider_Completed_Memb
 // RiderCompletedMemberSaleOrderPayload “骑手送达”事件的数据结构
 type RiderCompletedMemberSaleOrderPayload struct {
 	BasePayload
-	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
-	RiderName           string `json:"rider_name" binding:"required"`             // 骑手名称
-	RiderPhone          string `json:"rider_phone" binding:"required"`            // 骑手手机号
+	SaleBill            *model.SaleBill `json:"-"`
+	MemberSaleOrderUuid uint64          `json:"member_sale_order_uuid" binding:"required"` // 会员端销售订单UUID
+	RiderName           string          `json:"rider_name" binding:"required"`             // 骑手名称
+	RiderPhone          string          `json:"rider_phone" binding:"required"`            // 骑手手机号
 }
 
 func (payload *RiderCompletedMemberSaleOrderPayload) ToJsonString() string {

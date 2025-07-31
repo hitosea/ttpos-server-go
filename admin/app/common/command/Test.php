@@ -58,63 +58,8 @@ class Test extends Command
 
     protected function execute(Input $input, Output $output)
     {
-
-        // (int)ceil(intval(strlen($content) / $speed) / 1000)
-        dump((int)ceil(intval(367400 / 30) / 1000));
-        die;
-        request()->appId = 1724054105;
-        
-        // 订单列表
-        $model = new OrderModel([], request()->appId);
-        $data = [];
-        // 时间模式
-        if (!isset($data['time_mode']) || !is_array($data['time_mode'])) {
-            $data['time_mode'] = [0]; // 默认开台时间
-        }
-        // 订单类型
-        $dataType = 'all';
-        //
-        $data['time'] = [];
-        $data['order_type'] = 1;
-        $data['parent_id'] = 0;
-        $data['shop_supplier_id'] = 1724054105;
-        $list = $model->getList($dataType, $data);
-        foreach ($list as $key => $item) {
-            // 是否显示退款按钮 1-显示 0-隐藏
-            /** @var OrderModel $item */
-            [$list[$key]['is_refund_button'], $list[$key]['is_cancel_button']] = $item->getButtonStatus($item);
-            if ($item['subOrder']) {
-                foreach ($item['subOrder'] as $subKey => $subItem) {
-                    /** @var OrderModel $subItem */
-                    [$list[$key]['subOrder'][$subKey]['is_refund_button'], $list[$key]['subOrder'][$subKey]['is_cancel_button']] = $subItem->getButtonStatus($subItem);
-                }
-            }
-            // 拆单主单支付方式去重
-            if ($item['parent_id'] == 0 && count($item['subOrder']) > 0) {
-                $payTypes = $item['payType']->toArray();
-                $uniquePayTypes = [];
-                foreach ($payTypes as $payType) {
-                    $uniquePayTypes[$payType['value']] = $payType;
-                }
-                $item['payType'] = new \think\Collection(array_values($uniquePayTypes));
-            }
-        }
-        $order_count = [
-            'order_count' => [
-                'all' => $model->getCount('all', $data),
-                'payment' => $model->getCount('payment', $data),
-                'process' => $model->getCount('process', $data),
-                'complete' => $model->getCount('complete', $data),
-                'cancel' => $model->getCount('cancel', $data),
-            ],
-        ];
-        $ex_style = DeliveryTypeEnum::store();
-        dump(compact('list', 'ex_style', 'order_count'));
-
-        die;
-        //
+        // //
         $imageSrc = root_path('runtime/storage') . 'generated_image.png';
-        $text = "Address\n發布掰個世界人權宣言发票\n2023-12-15(星期二) 現金引き出し 유효하지 ¥100 เวลาการชำระเงินไม่ถูกต้อง1 Address 發布金引き出し 유효하지 ฿100 9เวลาการชำระเงินไม่ถูกต้อง1";
         //
         $im = new ImgFont(568);
         //
@@ -189,7 +134,7 @@ class Test extends Command
         $orderData = $im->save($imageSrc);
 
         // 图片打印
-        $fp = @fsockopen('192.168.100.180', 9100, $errno, $errstr, 3);
+        $fp = @fsockopen('192.168.100.241', 9100, $errno, $errstr, 3);
         if ($fp === false) { //连接打印机出错
             dump("连接打印机出错");
             die;
@@ -200,43 +145,42 @@ class Test extends Command
         fwrite($fp, hex2bin($orderData));
         //
         fwrite($fp, "\x1d\x56\x00");
-        //
         // 关闭打印机连接
         fclose($fp);
 
 
 
         // 文本打印
-        $printer = new SunmiCloudPrinter(567);
-        $printer->appendText("asdjasgdasdasdasd");
-        $printer->appendText("asdjasgdasdasdasd");
-        $printer->appendText("asdjasgdasdasdasd");
-        $printer->lineFeed();
-        $printer->printAndExitPageMode();
-        $printer->lineFeed(6);
-        $printer->cutPaper(false);
-        //
-        $fp = @fsockopen('192.168.100.180', 9100, $errno, $errstr, 3);
-        if ($fp === false) { //连接打印机出错
-            dump("连接打印机出错");
-            die;
-        }
-        $content = hex2bin($printer->orderData);
-        $content = str_replace("ー", "-", $content);
-        $content = iconv("UTF-8", "UTF-8//IGNORE", $content);
-        $segments = preg_split('/([\p{Thai}\p{Hangul}฿]+)/u', $content, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
-        foreach ($segments as $segment) {
-            if (preg_match('/[\p{Thai}]/u', $segment) || strpos($segment, "฿") !== false) {
-                fwrite($fp, "\x1C\x2E");
-                fwrite($fp, iconv("UTF-8", "CP874//IGNORE",  $segment));
-            } else if (preg_match('/[\p{Hangul}]/u', $segment)) {
-                fwrite($fp, "\x1C\x26");
-                fwrite($fp, iconv("UTF-8", "CP949//IGNORE",  $segment));
-            } else {
-                fwrite($fp, "\x1C\x26");
-                fwrite($fp, iconv("UTF-8", "GBK//IGNORE",  $segment));
-            }
-        }
+        // $printer = new SunmiCloudPrinter(567);
+        // $printer->appendText("asdjasgdasdasdasd");
+        // $printer->appendText("asdjasgdasdasdasd");
+        // $printer->appendText("asdjasgdasdasdasd");
+        // $printer->lineFeed();
+        // $printer->printAndExitPageMode();
+        // $printer->lineFeed(6);
+        // $printer->cutPaper(false);
+        // //
+        // $fp = @fsockopen('192.168.100.241', 9100, $errno, $errstr, 3);
+        // if ($fp === false) { //连接打印机出错
+        //     dump("连接打印机出错");
+        //     die;
+        // }
+        // $content = hex2bin($printer->orderData);
+        // $content = str_replace("ー", "-", $content);
+        // $content = iconv("UTF-8", "UTF-8//IGNORE", $content);
+        // $segments = preg_split('/([\p{Thai}\p{Hangul}฿]+)/u', $content, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        // foreach ($segments as $segment) {
+        //     if (preg_match('/[\p{Thai}]/u', $segment) || strpos($segment, "฿") !== false) {
+        //         fwrite($fp, "\x1C\x2E");
+        //         fwrite($fp, iconv("UTF-8", "CP874//IGNORE",  $segment));
+        //     } else if (preg_match('/[\p{Hangul}]/u', $segment)) {
+        //         fwrite($fp, "\x1C\x26");
+        //         fwrite($fp, iconv("UTF-8", "CP949//IGNORE",  $segment));
+        //     } else {
+        //         fwrite($fp, "\x1C\x26");
+        //         fwrite($fp, iconv("UTF-8", "GBK//IGNORE",  $segment));
+        //     }
+        // }
     }
 
     function convertSqlFormat($input)
