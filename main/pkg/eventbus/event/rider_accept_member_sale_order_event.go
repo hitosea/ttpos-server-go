@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventRiderAcceptMemberSaleOrder “骑手接单”事件
-const EventRiderAcceptMemberSaleOrder EventName = "Event_Rider_Accept_Member_Sale_Order"
-
 // RiderAcceptMemberSaleOrderPayload  “骑手接单”事件的数据结构
 type RiderAcceptMemberSaleOrderPayload struct {
 	BasePayload

@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventOrderReverseSettle 用餐订单反结账事件名称
-const EventOrderReverseSettle EventName = "Event_Order_Reverse_Settle"
-
 // OrderReverseSettlePayload 用餐订单反结账事件数据结构
 type OrderReverseSettlePayload struct {
 	BasePayload

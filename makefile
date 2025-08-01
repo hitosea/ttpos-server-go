@@ -5,7 +5,7 @@ include ./scripts/cmd.mk
 install:
 	make init-env
 	make build-web
-	make redis-clear-data
+	make redis-clear-data-node-conf
 	# 启动容器
 	@echo "🗄️  启动容器..."
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
@@ -18,7 +18,7 @@ install:
 # 重新构建项目
 build:
 	make build-web
-	make redis-clear-data
+	make redis-clear-data-node-conf
 	@echo "🐳 构建 Docker 容器..."
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
 	@echo "✅ Docker 构建完成"
@@ -74,7 +74,8 @@ ps:
 
 # docker-compose down
 down:
-	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down $(filter-out $@,$(MAKECMDGOALS))
+	
 # 翻译
 translate:
 	cd main && go run ./main.go translate

@@ -20,12 +20,6 @@ import (
 
 var once_rider_accept_member_sale_order_event_handler sync.Once
 
-// init 自动注册事件处理器
-func init() {
-	// 只初始化一次
-	riderAcceptMemberSaleOrderEventHandler()
-}
-
 // riderAcceptMemberSaleOrderEventHandler "骑手接单"事件处理器
 func riderAcceptMemberSaleOrderEventHandler() {
 	once_rider_accept_member_sale_order_event_handler.Do(func() {

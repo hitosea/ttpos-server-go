@@ -8,12 +8,6 @@ import (
 
 var once_statistics_member_event_handler sync.Once
 
-// init 自动注册"统计会员"事件处理器
-func init() {
-	// 只初始化一次
-	statisticsMemberEventHandler()
-}
-
 // statisticsMemberEventHandler "统计会员"事件处理器
 func statisticsMemberEventHandler() {
 	once_statistics_member_event_handler.Do(func() {
