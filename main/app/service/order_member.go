@@ -1396,6 +1396,11 @@ func (s *orderSrv) GetMemberOrderManageList(ctx context.Context, req req.MemberO
 					return memberSaleOrder.Status == constant.MemberSaleOrderStatusCooking
 				}(),
 				IsCellRefund: memberSaleOrder.IsCanRefund(),
+				IsCellContactRider: func() bool {
+					// 骑手配送中，可以联系骑手
+					return memberSaleOrder.Status == constant.MemberSaleOrderStatusDelivering ||
+						memberSaleOrder.Status == constant.MemberSaleOrderStatusPendingRiderDelivery
+				}(),
 			},
 		})
 	}
