@@ -67,7 +67,8 @@
                 :rules="[
                   {
                     validator: (rule, value, callback) => {
-                      if (!scope.row.stock_num) {
+                      // 检查库存是否为空或null
+                      if (scope.row.stock_num == null || scope.row.stock_num === '' || scope.row.stock_num === undefined) {
                         callback(new Error($t('请输入库存')));
                         return;
                       }
@@ -76,7 +77,7 @@
                           callback(new Error($t('请输入整数')));
                           return;
                         }
-                      }
+                      }             
                       callback();
                     },
                     trigger: 'change',
