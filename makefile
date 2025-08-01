@@ -3,9 +3,9 @@ include ./scripts/cmd.mk
 
 # 初始化项目
 install:
-	make init-env
-	make build-web
-	make redis-clear-data-node-conf
+	@make init-env
+	@make build-web
+	@make redis-clear-data-node-conf
 	# 启动容器
 	@echo "🗄️  启动容器..."
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
@@ -17,8 +17,8 @@ install:
 
 # 重新构建项目
 build:
-	make build-web
-	make redis-clear-data-node-conf
+	@make build-web
+	@make redis-clear-data-node-conf
 	@echo "🐳 构建 Docker 容器..."
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
 	@echo "✅ Docker 构建完成"
@@ -49,7 +49,7 @@ mysql-open:
 
 # 运行数据库迁移
 migrate:
-	make check-db-host-open-mysql
+	@make check-db-host-open-mysql
 	@echo "🗄️  运行主项目数据库迁移..."
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think migrate:run
 	@echo "🚀 更新 takeout 模块数据库..."
@@ -66,6 +66,7 @@ restart:
 
 # docker-compose up -d
 up:
+	@make redis-clear-data-node-conf > /dev/null 2>&1
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
 
 # docker-compose ps
@@ -98,4 +99,4 @@ repassword:
 
 # 增加版本号
 add-ver:
-	make add-version
+	@make add-version
