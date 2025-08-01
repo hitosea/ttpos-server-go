@@ -6,9 +6,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventUnwrapSaleOrderProduct 取消打包事件
-const EventUnwrapSaleOrderProduct EventName = "Event_Unwrap_Sale_Order_Product"
-
 // UnwrapSaleOrderProductPayload 每个事件有一个数据结构
 type UnwrapSaleOrderProductPayload struct {
 	BasePayload

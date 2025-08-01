@@ -4,9 +4,6 @@ import (
 	"ttpos-server-go/pkg/eventbus"
 )
 
-// EventDiscountZeroSaleOrder "订单抹零"事件
-const EventDiscountZeroSaleOrder EventName = "Event_Discount_Zero_Sale_Order"
-
 // DiscountZeroSaleOrderHandler 每个事件的处理器
 type DiscountZeroSaleOrderHandler func(msg DiscountSaleOrderPayload)
 

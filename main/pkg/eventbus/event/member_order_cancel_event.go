@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventCancelMemberOrder 整单取消事件名称
-const EventCancelMemberOrder EventName = "Event_Cancel_Member_Order"
-
 type CancelMemberOrderPayloadDataRefund struct {
 	Name              string  `json:"name"`
 	Code              int     `json:"code"`

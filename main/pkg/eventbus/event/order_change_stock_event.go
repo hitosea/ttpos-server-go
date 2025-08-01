@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventChangeStock 加库存事件名称
-const EventChangeStock EventName = "Event_Change_Stock"
-
 // ChangeStockPayload 加库存事件数据结构
 type ChangeStockPayload struct {
 	BasePayload

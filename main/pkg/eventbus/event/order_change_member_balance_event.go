@@ -4,9 +4,6 @@ import (
 	"ttpos-server-go/pkg/eventbus"
 )
 
-// EventChangeMemberBalance “会员余额变动”事件
-const EventChangeMemberBalance EventName = "Event_Change_Member_Balance"
-
 // ChangeMemberBalancePayload “会员余额变动”事件数据结构
 type ChangeMemberBalancePayload struct {
 	BasePayload

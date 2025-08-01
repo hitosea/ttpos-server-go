@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventCheckoutZeroSaleOrder 结账手动抹零事件
-const EventCheckoutZeroSaleOrder EventName = "Event_Checkout_Zero_Sale_Order"
-
 // CheckoutZeroSaleOrderPayload 每个事件有一个数据结构
 type CheckoutZeroSaleOrderPayload struct {
 	BasePayload

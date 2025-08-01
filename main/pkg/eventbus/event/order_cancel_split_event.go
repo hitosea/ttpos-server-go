@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventCancelSplitOrder 拆单事件名称
-const EventCancelSplitOrder EventName = "Event_Cancel_Split_Order"
-
 // CancelSplitOrderPayload 拆单事件数据结构
 type CancelSplitOrderPayload struct {
 	BasePayload

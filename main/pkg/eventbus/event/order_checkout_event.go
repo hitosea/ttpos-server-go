@@ -6,9 +6,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventCheckoutSaleOrder 结账事件
-const EventCheckoutSaleOrder EventName = "Event_Checkout_Sale_Order"
-
 // CheckoutSaleOrderPayload 每个事件有一个数据结构
 type CheckoutSaleOrderPayload struct {
 	BasePayload

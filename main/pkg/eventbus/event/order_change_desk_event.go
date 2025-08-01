@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventChangeDesk “转台”事件名称
-const EventChangeDesk EventName = "Event_Change_Desk"
-
 // ChangeDeskPayload “转台”事件数据结构
 type ChangeDeskPayload struct {
 	BasePayload

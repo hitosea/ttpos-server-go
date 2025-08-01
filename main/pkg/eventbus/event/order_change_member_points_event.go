@@ -4,9 +4,6 @@ import (
 	"ttpos-server-go/pkg/eventbus"
 )
 
-// EventChangeMemberPoints “会员积分变动”事件
-const EventChangeMemberPoints EventName = "Event_Change_Member_Points"
-
 // ChangeMemberPointsPayload “会员积分变动”事件数据结构
 type ChangeMemberPointsPayload struct {
 	BasePayload

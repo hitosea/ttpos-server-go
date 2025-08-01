@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventHideSaleBill “挂单”事件名称
-const EventHideSaleBill EventName = "Event_Hide_Sale_Bill"
-
 // HideSaleBillPayload “挂单”事件数据结构
 type HideSaleBillPayload struct {
 	BasePayload

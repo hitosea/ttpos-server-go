@@ -6,9 +6,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventRejectMemberSaleOrder 拒单会员端销售订单事件
-const EventRejectMemberSaleOrder EventName = "Event_Reject_Member_Sale_Order"
-
 // RejectMemberSaleOrderPayload 拒单会员端销售订单事件的数据结构
 type RejectMemberSaleOrderPayload struct {
 	BasePayload

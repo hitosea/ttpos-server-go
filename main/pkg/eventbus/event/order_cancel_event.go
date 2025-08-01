@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventCancelOrder 整单取消事件名称
-const EventCancelOrder EventName = "Event_Cancel_Order"
-
 // CancelOrderPayload 整单取消事件数据结构
 type CancelOrderPayload struct {
 	BasePayload

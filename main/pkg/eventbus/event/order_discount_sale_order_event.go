@@ -4,9 +4,6 @@ import (
 	"ttpos-server-go/pkg/eventbus"
 )
 
-// EventDiscountSaleOrder 优惠折扣事件
-const EventDiscountSaleOrder EventName = "Event_Discount_Sale_Order"
-
 // DiscountSaleOrderHandler 每个事件的处理器
 type DiscountSaleOrderHandler func(msg DiscountSaleOrderPayload)
 

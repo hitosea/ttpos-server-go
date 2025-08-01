@@ -6,9 +6,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventCookFinishMemberSaleOrder 外送订单“备餐完成”事件
-const EventCookFinishMemberSaleOrder EventName = "Event_Cook_Finish_Member_Sale_Order"
-
 // CookFinishMemberSaleOrderPayload 外送订单“厨师完成”事件的数据结构
 type CookFinishMemberSaleOrderPayload struct {
 	BasePayload

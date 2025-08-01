@@ -6,9 +6,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventFreeSaleOrder 免单事件
-const EventFreeSaleOrder EventName = "Event_Free_Sale_Order"
-
 // FreeSaleOrderPayload 每个事件有一个数据结构
 type FreeSaleOrderPayload struct {
 	BasePayload

@@ -8,9 +8,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventOpenDesk 开台事件名称
-const EventOpenDesk EventName = "Event_Open_Desk"
-
 type BasePayload struct {
 	Ctx           context.Context `json:"-"`
 	CompanyUuid   uint64          `json:"-"`

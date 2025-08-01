@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventPayFinishMemberSaleOrder 支付完成会员端销售订单事件
-const EventPayFinishMemberSaleOrder EventName = "Event_Pay_Finish_Member_Sale_Order"
-
 // PayFinishMemberSaleOrderPayload 支付完成会员端销售订单事件的数据结构
 type PayFinishMemberSaleOrderPayload struct {
 	BasePayload

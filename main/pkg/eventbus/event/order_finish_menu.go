@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventFinishMenu 完成制作事件名称
-const EventFinishMenu EventName = "Event_Finish_Menu"
-
 // FinishMenuPayload 完成制作事件数据结构
 type FinishMenuPayload struct {
 	BasePayload

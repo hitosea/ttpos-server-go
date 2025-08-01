@@ -2,9 +2,6 @@ package event
 
 import "ttpos-server-go/pkg/eventbus"
 
-// EventCancelDoingProduct 事件名称，每个事件都有一个全局唯一的名称
-const EventCancelDoingProduct EventName = "Event_Cancel_Doing_Product"
-
 // CancelDoingProductPayload 每个事件有一个数据结构
 type CancelDoingProductPayload struct {
 	SaleOrderProductUuids []uint64 `json:"sale_order_product_uuids"`

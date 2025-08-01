@@ -6,9 +6,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventCancelReturnSaleOrderProduct 事件名称，每个事件都有一个全局唯一的名称
-const EventCancelReturnSaleOrderProduct EventName = "Event_Cancel_Return_Sale_Order_Product"
-
 // CancelReturnSaleOrderProductPayload 每个事件有一个数据结构
 type CancelReturnSaleOrderProductPayload struct {
 	BasePayload

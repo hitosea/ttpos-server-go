@@ -6,9 +6,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventReturnOrder 用餐订单退款事件名称
-const EventReturnOrder EventName = "Event_Return_Order"
-
 type RefundPayType struct {
 	Name              string  `json:"name"`                // 退款支付方式名称
 	Code              int     `json:"code"`                // 退款支付方式代号

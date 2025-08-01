@@ -4,9 +4,6 @@ import (
 	"ttpos-server-go/pkg/eventbus"
 )
 
-// EventShowSaleBill “取单”事件名称
-const EventShowSaleBill EventName = "Event_Show_Sale_Bill"
-
 // ShowSaleBillPayload “取单”事件数据结构
 type ShowSaleBillPayload struct {
 	BasePayload

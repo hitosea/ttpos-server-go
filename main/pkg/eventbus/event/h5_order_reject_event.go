@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventRejectH5Order 拒单事件名称
-const EventRejectH5Order EventName = "Event_Reject_H5_Order"
-
 // RejectH5OrderPayload 拒单事件数据结构
 type RejectH5OrderPayload struct {
 	BasePayload

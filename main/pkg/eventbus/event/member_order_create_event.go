@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventCreateMemberSaleOrder "创建外送订单"事件
-const EventCreateMemberSaleOrder EventName = "Event_Create_Member_Sale_Order"
-
 // CreateMemberSaleOrderPayload "创建外送订单"事件数据结构
 type CreateMemberSaleOrderPayload struct {
 	BasePayload

@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventMergeDesk 开台事件名称
-const EventMergeDesk EventName = "Event_Merge_Desk"
-
 // MergeDeskPayload 开台事件数据结构
 type MergeDeskPayload struct {
 	BasePayload

@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventSplitOrder 拆单事件名称
-const EventSplitOrder EventName = "Event_Split_Order"
-
 type Order struct {
 	SaleOrderUuid uint64  `json:"sale_order_uuid"` // 销售订单Uuid
 	OrderName     string  `json:"order_name"`      // 订单名称，顺序
