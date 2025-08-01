@@ -9234,6 +9234,9 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 	// 设置该销售订单为免单
 	saleOrder.SetFreeOrder(req.Reason, freeOrderReasons)
 
+	// 取消积分抵扣
+	saleOrder.SetPayPointsCancel()
+
 	updateSaleBill := false
 	// 如果销售账单中只有一个销售订单，则可以结束销售账单
 	if saleBill.CanFinishSaleBill() {
