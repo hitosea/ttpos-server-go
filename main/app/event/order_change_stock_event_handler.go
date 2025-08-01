@@ -15,7 +15,7 @@ func init() {
 	changeStockEventHandler()
 }
 
-// acceptH5OrderEventHandler "接单"事件处理器
+// changeStockEventHandler "变成库存" 事件处理器
 func changeStockEventHandler() {
 	once_change_stock_event_handler.Do(func() {
 		event.NewSystemBus().SubscribeChangeStockEvent(func(payload event.ChangeStockPayload) {

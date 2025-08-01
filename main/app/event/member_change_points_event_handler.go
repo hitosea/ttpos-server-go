@@ -16,7 +16,7 @@ func init() {
 	changeMemberPointsEventHandler()
 }
 
-// changeMemberBalanceEventHandler "会员余额变动"事件处理器
+// changeMemberPointsEventHandler "会员积分变动"事件处理器
 func changeMemberPointsEventHandler() {
 	once_change_member_points_event_handler.Do(func() {
 		event.NewSystemBus().SubscribeChangeMemberPointsEvent(func(payload event.ChangeMemberPointsPayload) {

@@ -15,7 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var once_merge_desk_event_handler sync.Once
+var order_merge_desk_event_handler sync.Once
 
 // init 自动注册"添加销售账单记录"事件处理器
 func init() {
@@ -25,7 +25,7 @@ func init() {
 
 // mergeDeskEventHandler "并台"事件处理器
 func mergeDeskEventHandler() {
-	once_merge_desk_event_handler.Do(func() {
+	order_merge_desk_event_handler.Do(func() {
 		event.NewSystemBus().SubscribeMergeDeskEvent(func(payload event.MergeDeskPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)

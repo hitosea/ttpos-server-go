@@ -18,12 +18,6 @@ import (
 
 var once_accept_h5_order_event_handler sync.Once
 
-// init 自动注册"添加销售账单记录"事件处理器
-func init() {
-	// 只初始化一次
-	acceptH5OrderEventHandler()
-}
-
 // acceptH5OrderEventHandler "接单"事件处理器
 func acceptH5OrderEventHandler() {
 	once_accept_h5_order_event_handler.Do(func() {

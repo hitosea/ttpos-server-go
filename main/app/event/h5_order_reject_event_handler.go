@@ -17,12 +17,6 @@ import (
 
 var once_reject_h5_order_event_handler sync.Once
 
-// init 自动注册"添加销售账单记录"事件处理器
-func init() {
-	// 只初始化一次
-	rejectH5OrderEventHandler()
-}
-
 // rejectH5OrderEventHandler "拒单"事件处理器
 func rejectH5OrderEventHandler() {
 	once_reject_h5_order_event_handler.Do(func() {
