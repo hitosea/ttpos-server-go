@@ -169,7 +169,7 @@
     return [
       {
         id: 0,
-        label: proxy.$t('全部'),
+        label: $t('全部'),
         children: loading.value
           ? undefined
           : Array.isArray(attributeGroups.value)

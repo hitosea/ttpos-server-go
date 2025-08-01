@@ -19,6 +19,9 @@ type Store struct {
 	ChainNumber   string             `json:"chain_number"`   // 连锁编号
 	Language      []dto.LanguageItem `json:"language"`       // 系统语言
 	AuthLanguage  string             `json:"auth_language"`  // 授权语言
+	Coordinates   string             `json:"coordinates"`    // 经纬度
+	Latitude      string             `json:"-"`              // 纬度
+	Longitude     string             `json:"-"`              // 经度
 }
 
 type TimeZoneItem struct {

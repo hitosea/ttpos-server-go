@@ -79,7 +79,9 @@ func (h *Handler) BaseInfo(c *gin.Context) {
 	currencySetting, err1 := h.settingSrv.GetCurrencySetting(ctx)
 	cloudBasic, err2 := h.settingSrv.GetCloudBasicSetting(ctx)
 	cashierSetting, err3 := h.settingSrv.GetCashierSetting(ctx, []dto.LanguageItem{})
-	if err1 != nil || err2 != nil || err3 != nil {
+	h5Setting, err4 := h.settingSrv.GetH5Setting(ctx, nil)
+
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(errors.New("获取配置失败")))
 		return
 	}
@@ -100,6 +102,11 @@ func (h *Handler) BaseInfo(c *gin.Context) {
 		CloudBasic:    cloudBasic,
 		Company:       companyResp,
 		IsShowSoldOut: cashierSetting.MenuShowSoldOut == "1",
+		Menu: resp.Menu{
+			LanguageList:    h5Setting.LanguageList,
+			Language:        h5Setting.Language,
+			DefaultLanguage: h5Setting.DefaultLanguage,
+		},
 	})
 }
 
@@ -116,7 +123,7 @@ func RegisterMenuHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 	localeSrv := service.NewLocaleSrv()
 
-	productService := service.NewProductSrv(dbm, localeSrv)
+	productService := service.NewProductSrv(dbm, localeSrv, settingSrv)
 	// 初始化处理器
 	wrapper := Handler{
 		productSrv: productService,

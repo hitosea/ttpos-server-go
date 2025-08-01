@@ -2,6 +2,10 @@ package product_resp
 
 import "ttpos-server-go/app/dto"
 
+type ProductSearchResp struct {
+	List []Product `json:"list"`
+}
+
 // Product 商品
 type Product struct {
 	Uuid                uint64                    `json:"uuid"`                  // 商品UUID
@@ -19,6 +23,8 @@ type Product struct {
 	AttributeGroups     ProductAttributeGroupList `json:"attribute_groups"`      // 商品属性组
 	Describe            string                    `json:"describe"`              // 卖点，h5端显示
 	IsShowKitchen       uint                      `json:"is_show_kitchen"`       // 是否在厨显端显示：1-是；0-否
+
+	Sort int `json:"-"` // 商品排序，内部字段，用于推荐商品列表排序
 }
 
 // ProductFlavor 商品规格
@@ -81,6 +87,13 @@ type ProductAttributeValueList struct {
 type ProductListWithPaginationResp struct {
 	List []Product        `json:"list"`
 	Meta dto.PageResponse `json:"meta"`
+}
+
+// ProductRecommendListResp 商品推荐列表响应
+type ProductRecommendListResp struct {
+	List   []Product `json:"list"`    // 商品列表
+	Title  string    `json:"title"`   // 推荐标题，如“商家推荐”
+	IsOpen bool      `json:"is_open"` // 是否开启推荐, true-开启, false-关闭
 }
 
 // ProductCategory 商品类别

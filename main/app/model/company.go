@@ -3,7 +3,13 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
+	"ttpos-server-go/pkg/utils"
 )
 
 // Company 集团表 ttpos_company
@@ -18,6 +24,14 @@ type Company struct {
 	OldCompanyId  int    `gorm:"column:old_company_id;type:int(11);default:0;comment:原商家ID;NOT NULL" json:"old_company_id"`
 
 	CompanySetting *CompanySetting `gorm:"foreignKey:CompanyUuid;references:Uuid" json:"company_setting"`
+}
+
+func (company *Company) GetLogo(baseURL string) string {
+	logoBase64, err := utils.AddImageDomainAndConvertToBase64(company.Logo, baseURL, true)
+	if err != nil {
+		return utils.AddImageDomain(company.Logo, baseURL, true)
+	}
+	return logoBase64
 }
 
 func (company *Company) SetNil() {
@@ -61,6 +75,115 @@ type CompanySetting struct {
 	Timezone         string `gorm:"column:timezone;type:varchar(50);default:Asia/Shanghai;comment:时区;NOT NULL" json:"timezone"`
 	Languages        string `gorm:"column:languages;type:varchar(255);comment:支持语言;NOT NULL" json:"languages"`
 	Address          string `gorm:"column:address;type:varchar(255);comment:联系地址;NOT NULL" json:"address"`
+	Coordinates      string `gorm:"column:coordinates;type:varchar(255);comment:经纬度，如：13.721899,100.52900;NOT NULL" json:"coordinates"`
+	DeliveryConfig   string `gorm:"column:delivery_config;type:text;comment:外送配置;NOT NULL" json:"delivery_config"`
+	DeliveryStatus   int    `gorm:"column:delivery_status;type:int(11);default:0;comment:外送配置状态：0-关,1-开;NOT NULL" json:"delivery_status"`
+}
+
+func (model *CompanySetting) GetCoordinates() (latitude, longitude string) {
+	if model.Coordinates == "" {
+		return
+	}
+	// 分隔后去掉前后空格,转成float64保留6位小数
+	latLng := strings.Split(strings.TrimSpace(model.Coordinates), ",")
+	if len(latLng) == 2 {
+		latFloat, _ := strconv.ParseFloat(strings.TrimSpace(latLng[0]), 64)
+		lngFloat, _ := strconv.ParseFloat(strings.TrimSpace(latLng[1]), 64)
+		latitude = fmt.Sprintf("%.6f", latFloat)
+		longitude = fmt.Sprintf("%.6f", lngFloat)
+	}
+	return
+}
+
+// GetDeliveryConfig 获取外送配置
+func (model *CompanySetting) GetDeliveryConfig(channel string, distance float64) (*DeliveryConfigResponse, error) {
+	// 如果配置为空，返回空配置
+	if model.DeliveryConfig == "" || model.DeliveryConfig == "[]" || len(model.DeliveryConfig) < 10 {
+		return nil, errors.WithMessage(errors.ErrInternal, "delivery config is empty")
+	}
+	var deliveryConfig DeliveryConfig
+	if err := json.Unmarshal([]byte(model.DeliveryConfig), &deliveryConfig); err != nil {
+		return nil, errors.WithMessage(err, "unmarshal delivery config failed")
+	}
+
+	for index := range deliveryConfig {
+		item := &deliveryConfig[index]
+		item.Channel = strings.ToLower(item.Channel) // 外送渠道转换为小写
+		// 按照距离排序,从小到大
+		sort.Slice(item.DistanceRange, func(i, j int) bool {
+			return item.DistanceRange[i].End < item.DistanceRange[j].End
+		})
+	}
+
+	config, err := deliveryConfig.GetConfigByChannel(channel, distance)
+	if err != nil {
+		return nil, errors.WithMessage(err, "get delivery config failed")
+	}
+	return config, nil
+}
+
+// 外送配置
+type DeliveryConfig []DeliveryConfigItem
+
+type DeliveryConfigResponse struct {
+	Channel                string  `json:"channel"`                  // 外送渠道
+	BasicFee               float64 `json:"basic_fee"`                // 基础服务费
+	BaseDeliveryFee        float64 `json:"base_delivery_fee"`        // 起步配送费
+	RiderAcceptanceTimeout int     `json:"rider_acceptance_timeout"` // 骑手接单超时时间,单位分钟
+	PricePerKm             float64 `json:"price_per_km"`             // 每公里价格
+	IsInDeliveryRange      bool    `json:"is_in_delivery_range"`     // 是否在配送范围内。如果不在配送范围内，则置灰提交订单按钮
+}
+
+// 根据渠道和距离获取配置
+// channel: 外送渠道. skootar、grab
+// distance: 距离
+func (model *DeliveryConfig) GetConfigByChannel(channel string, distance float64) (*DeliveryConfigResponse, error) {
+	var config *DeliveryConfigResponse
+	for _, item := range *model {
+		if item.Channel == channel {
+			for index, distanceRange := range item.DistanceRange {
+				if float64(distanceRange.End) >= distance {
+					config = &DeliveryConfigResponse{
+						Channel:                item.Channel,
+						BasicFee:               item.BasicFee,
+						BaseDeliveryFee:        item.BaseDeliveryFee,
+						RiderAcceptanceTimeout: item.RiderAcceptanceTimeout,
+						PricePerKm:             distanceRange.PricePerKm,
+						IsInDeliveryRange:      true,
+					}
+					break // 找到第一个符合条件的配置就退出
+				}
+				if index == len(item.DistanceRange)-1 {
+					config = &DeliveryConfigResponse{
+						Channel:                item.Channel,
+						BasicFee:               item.BasicFee,
+						BaseDeliveryFee:        item.BaseDeliveryFee,
+						RiderAcceptanceTimeout: item.RiderAcceptanceTimeout,
+						PricePerKm:             distanceRange.PricePerKm,
+						IsInDeliveryRange:      false,
+					}
+				}
+			}
+		}
+	}
+	if config == nil {
+		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeOrderAddressNotInDeliveryRange, "delivery config not found"), "delivery config not found")
+	}
+	return config, nil
+}
+
+type DeliveryConfigItem struct {
+	Channel                string          `json:"channel"`                  // 外送渠道
+	ConfigType             string          `json:"config_type"`              // 配置类型 auto_sync: 自动同步，manual: 手动配置
+	BasicFee               float64         `json:"basic_fee"`                // 基础服务费
+	BaseDeliveryFee        float64         `json:"base_delivery_fee"`        // 起步配送费
+	RiderAcceptanceTimeout int             `json:"rider_acceptance_timeout"` // 骑手接单超时时间
+	DistanceRange          []DistanceRange `json:"distance_range"`           // 距离范围
+}
+type DistanceRange struct {
+	End         float64 `json:"end"`          // 距离
+	PricePerKm  float64 `json:"price_per_km"` // 每公里价格
+	IsUnlimited bool    `json:"is_unlimited"` // 是否无限
 }
 
 // GetIsOpenCoupon 是否开启优惠券

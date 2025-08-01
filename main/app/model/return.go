@@ -3,7 +3,7 @@ package model
 // ReturnOrder 退货单表 `ttpos_return_order`
 type ReturnOrder struct {
 	BaseModel
-	RelatedOrderType    uint    `gorm:"column:related_order_type;type:tinyint(1) unsigned;default:0;comment:关联订单类型：0-销售订单；1-充值订单;NOT NULL" json:"related_order_type"`
+	RelatedOrderType    uint    `gorm:"column:related_order_type;type:tinyint(1) unsigned;default:0;comment:关联订单类型：0-销售订单；1-充值订单 2-会员订单;NOT NULL" json:"related_order_type"`
 	RelatedOrderUuid    uint64  `gorm:"column:related_order_uuid;type:bigint(20) unsigned;default:0;comment:关联订单ID;NOT NULL" json:"related_order_uuid"`
 	RelatedOrderNo      string  `gorm:"column:related_order_no;type:varchar(255);comment:关联订单号;NOT NULL" json:"related_order_no"`
 	IsReverseSettlement uint    `gorm:"column:is_reverse_settlement;type:tinyint(1) unsigned;default:0;comment:是否反结账：0-否；1-是;NOT NULL" json:"is_reverse_settlement"`

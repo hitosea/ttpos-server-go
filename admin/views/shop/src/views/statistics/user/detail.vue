@@ -21,9 +21,9 @@
         <p class="text">
           {{ $t('总销售额') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.total_business || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.total_business || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -31,9 +31,9 @@
         <p class="text">
           {{ $t('服务费') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.order?.service_money || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.order?.service_money || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -41,24 +41,19 @@
         <p class="text">
           {{ $t('支付手续费') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.order?.pay_fee_money || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.order?.pay_fee_money || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
       <el-col :span="8">
         <p class="text">
           {{ $t('税费') }}:
-          <!-- <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.order?.sales_price || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
-          </span> -->
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.order?.consumption_tax_money || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.order?.consumption_tax_money || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -74,9 +69,9 @@
         <p class="text">
           {{ $t('优惠折扣') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.order?.discount_money || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.order?.discount_money || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -84,9 +79,9 @@
         <p class="text">
           {{ $t('会员折扣') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.order?.user_discount_money || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.order?.user_discount_money || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -94,9 +89,9 @@
         <p class="text">
           {{ $t('退款') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.order?.refund_money || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.order?.refund_money || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -104,9 +99,9 @@
         <p class="text">
           {{ $t('营业收入') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.total_income || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.total_income || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -114,9 +109,9 @@
         <p class="text">
           {{ $t('实收金额') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.order?.received_price || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.order?.received_price || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -126,9 +121,9 @@
             <template v-if="languageTag === 'ja'"> {{ item.tax_rate }}%対象: </template>
             <template v-else> VAT ({{ item.tax_rate }}%): </template>
             <span>
-              <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ this.$formatPrice(item.total_price || 0) }}
-              <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+              <main-currency>
+                {{ this.$formatPrice(item.total_price || 0) }}
+              </main-currency>
             </span>
             <span>
               (
@@ -136,9 +131,9 @@
               <template v-else>
                 {{ $t('其中VAT') }}
               </template>
-              <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ this.$formatPrice(item.consumption_tax || 0) }}
-              <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+              <main-currency>
+                {{ this.$formatPrice(item.consumption_tax || 0) }}
+              </main-currency>
               )
             </span>
           </p>
@@ -149,9 +144,9 @@
         <el-col :span="8">
           <p class="text">
             {{ item.pay_type_name }}:<span>
-              <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ this.$formatPrice(item.price || 0) }}
-              <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+              <main-currency>
+                {{ this.$formatPrice(item.price || 0) }}
+              </main-currency>
             </span>
           </p>
         </el-col>
@@ -161,9 +156,9 @@
         <p class="text">
           {{ $t('充值金额') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail?.order?.recharge_amount || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail?.order?.recharge_amount || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -171,9 +166,19 @@
         <p class="text">
           {{ $t('赠送金额') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail?.order?.gift_money || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail?.order?.gift_money || 0) }}
+            </main-currency>
+          </span>
+        </p>
+      </el-col>
+      <el-col :span="8">
+        <p class="text">
+          {{ $t('赠菜金额') }}:
+          <span>
+            <main-currency>
+              {{ this.$formatPrice(detail?.order?.total_give_product_price || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -181,9 +186,9 @@
         <p class="text">
           {{ $t('赠送积分') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ detail?.order?.gift_points || 0 }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ detail?.order?.gift_points || 0 }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -191,9 +196,9 @@
         <p class="text">
           {{ $t('上一班遗留备用金') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.previous_shift_cash || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.previous_shift_cash || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -201,9 +206,9 @@
         <p class="text">
           {{ $t('本班取出现金') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.cash_taken_out || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.cash_taken_out || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -211,9 +216,9 @@
         <p class="text">
           {{ $t('本班遗留备用金') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.cash_left || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.cash_left || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -221,9 +226,9 @@
         <p class="text">
           {{ $t('中途存入现金') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.deposit_cash || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.deposit_cash || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -231,9 +236,9 @@
         <p class="text">
           {{ $t('中途取出现金') }}:
           <span>
-            <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-            {{ this.$formatPrice(detail.withdraw_cash || 0) }}
-            <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+            <main-currency>
+              {{ this.$formatPrice(detail.withdraw_cash || 0) }}
+            </main-currency>
           </span>
         </p>
       </el-col>
@@ -308,20 +313,20 @@
       <el-table-column prop="total_people_num" :label="$t('人数')"></el-table-column>
       <el-table-column :label="$t('最小/最大订单金额')">
         <template #default="scope">
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(scope.row.min_order_price) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(scope.row.min_order_price) }}
+          </main-currency>
           /
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(scope.row.max_order_price) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(scope.row.max_order_price) }}
+          </main-currency>
         </template>
       </el-table-column>
       <el-table-column prop="avg_order_price" :label="$t('平均订单金额')">
         <template #default="scope">
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(scope.row.avg_order_price) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(scope.row.avg_order_price) }}
+          </main-currency>
         </template>
       </el-table-column>
     </el-table>
@@ -332,27 +337,27 @@
       <el-table-column prop="table_people_num" :label="$t('人数')"></el-table-column>
       <el-table-column :label="$t('最小/最大订单金额')">
         <template #default="scope">
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(scope.row.table_min_order_price || 0) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(scope.row.table_min_order_price || 0) }}
+          </main-currency>
           /
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(scope.row.table_max_order_price || 0) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(scope.row.table_max_order_price || 0) }}
+          </main-currency>
         </template>
       </el-table-column>
       <el-table-column prop="table_avg_order_price" :label="$t('平均订单金额')">
         <template #default="scope">
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(scope.row.table_avg_order_price || 0) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(scope.row.table_avg_order_price || 0) }}
+          </main-currency>
         </template>
       </el-table-column>
       <el-table-column prop="table_people_avg" :label="$t('人均')">
         <template #default="scope">
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(scope.row.table_people_avg || 0) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(scope.row.table_people_avg || 0) }}
+          </main-currency>
         </template>
       </el-table-column>
     </el-table>
@@ -362,20 +367,20 @@
       <el-table-column prop="cashier_order_num" :label="$t('订单数')"></el-table-column>
       <el-table-column :label="$t('最小/最大订单金额')">
         <template #default="scope">
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(scope.row.cashier_min_order_price || 0) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(scope.row.cashier_min_order_price || 0) }}
+          </main-currency>
           /
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(scope.row.cashier_max_order_price || 0) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(scope.row.cashier_max_order_price || 0) }}
+          </main-currency>
         </template>
       </el-table-column>
       <el-table-column prop="cashier_avg_order_price" :label="$t('平均订单金额')">
         <template #default="scope">
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(scope.row.cashier_avg_order_price || 0) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(scope.row.cashier_avg_order_price || 0) }}
+          </main-currency>
         </template>
       </el-table-column>
     </el-table>
@@ -387,9 +392,9 @@
 
       <el-table-column prop="amount" :label="$t('订单金额')">
         <template #default="scope">
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(scope.row.amount || 0) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(scope.row.amount || 0) }}
+          </main-currency>
         </template>
       </el-table-column>
     </el-table>
@@ -400,9 +405,9 @@
       <el-table-column prop="sales" :label="$t('销售数量')"></el-table-column>
       <el-table-column prop="prices" :label="$t('销售金额')">
         <template #default="scope">
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(scope.row.prices || 0) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+          <main-currency>
+            {{ this.$formatPrice(scope.row.prices || 0) }}
+          </main-currency>
         </template>
       </el-table-column>
     </el-table>

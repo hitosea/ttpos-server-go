@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"ttpos-server-go/app/constant"
+	settingResp "ttpos-server-go/app/dto/resp/setting"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/printer/pkg"
 	"ttpos-server-go/config"
@@ -26,6 +27,7 @@ func NewInvoiceCompaxTemplate(
 
 // invoiceCompaxTemplate 获取打印内容
 func (t *invoiceCompaxTemplate) GetPrintContent(
+	settingPrinterInfo settingResp.PrinterInfo,
 	temp int,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
@@ -37,6 +39,7 @@ func (t *invoiceCompaxTemplate) GetPrintContent(
 	 */
 	if temp == 2 {
 		return NewStatementOrderCompaxTemplate(t.base).GetPrintContent(
+			settingPrinterInfo,
 			constant.PrinterTemplateInvoice,
 			3,
 			saleBill,

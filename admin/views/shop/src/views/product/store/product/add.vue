@@ -179,6 +179,7 @@
                 tax_category_id: '',
               },
             ],
+            open_overall_discount: 1, //整单折扣
           },
           /*商品分类*/
           category: [],

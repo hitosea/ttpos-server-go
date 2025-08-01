@@ -17,8 +17,10 @@ type IMemberRepo interface {
 	WithMemberCardType() DBOption   // Member 预加载会员卡.卡类型
 	WithMemberBalanceLog() DBOption // Member 预加载会员余额变动记录
 
-	WhereUuid(uuid uint64) DBOption     // Uuid 条件
-	WhereCardNo(cardNo string) DBOption // 卡号条件
+	WhereUuid(uuid uint64) DBOption         // Uuid 条件
+	WhereCardNo(cardNo string) DBOption     // 卡号条件
+	WhereDeviceId(deviceId string) DBOption // 设备ID条件
+	WhereIsVisitor(isVisitor bool) DBOption // 是否游客条件
 
 	CreateMember(member *model.Member) error             // 添加会员
 	CreateMemberCard(memberCard *model.MemberCard) error // 给会员发卡
@@ -32,6 +34,10 @@ type IMemberRepo interface {
 	IncConsumptionCount(uuid uint64) error                  // 增加会员消费次数
 	DecConsumptionAmount(uuid uint64, amount float64) error // 减少会员消费金额
 	DecConsumptionCount(uuid uint64) error                  // 减少会员消费次数
+
+	GetVisitorByDeviceId(deviceId string) (*model.Member, error) // 根据设备ID获取游客会员
+	CheckVisitorExists(deviceId string) bool                     // 检查游客是否存在
+	CheckNicknameExists(nickname string) bool                    // 根据昵称检查是否存在
 }
 
 // IMemberQueryRepo 会员查询
@@ -42,13 +48,16 @@ type IMemberQueryRepo interface {
 	GetMemberByUuid(uuid uint64) (*model.Member, error)                 // 根据uuid获取会员
 	GetMemberByReferrerUuid(referrerUuid uint64) (*model.Member, error) // 根据uuid获取会员
 	GetMemberByPhone(phone string) (*model.Member, error)               // 根据手机号获取会员
+	GetMemberByPhoneContainDeleted(phone string) (*model.Member, error) // 根据手机号获取会员 (包含已删除的会员)
 	GetMembersByUuids(uuids []uint64) ([]*model.Member, error)          // 根据uuid列表获取会员列表
 	GetMemberLevels() []model.MemberLevel                               // 获取会员等级
+	GetMemberLevelMinPriorityUuid() uint64                              // 获取会员等级权重最小的会员等级Uuid
 	GetCardTypes() []model.MemberCardType                               // 获取会员卡类型
 	GetCheckCardType(uuid uint64) model.MemberCardType                  // 获取会员卡类型
 	GetMemberLevelsAllColumns() []model.MemberLevel                     // 获取会员等级所有列
 	SearchMember(keyword string) []model.Member                         // 关键字搜索会员
 	CheckMemberExists(phone string) bool                                // 根据手机号检查是否存在
+	CheckNicknameExists(nickname string) bool                           // 根据昵称检查是否存在
 	CheckLevelExists(uuid uint64) bool                                  // 根据Uuid检查等级是否存在
 }
 
@@ -71,6 +80,13 @@ func (r *memberRepo) GetMemberLevels() []model.MemberLevel {
 	return levels
 }
 
+// GetMemberLevelMinPriorityUuid 获取会员等级权重最小的会员等级Uuid
+func (r *memberRepo) GetMemberLevelMinPriorityUuid() uint64 {
+	var uuid uint64
+	r.db.Model(&model.MemberLevel{}).Scopes(NotDeleted).Order("priority asc, create_time asc").Select("uuid").First(&uuid)
+	return uuid
+}
+
 // GetCardTypes 获取会员卡类型
 func (r *memberRepo) GetCardTypes() []model.MemberCardType {
 	var cardTypes []model.MemberCardType
@@ -89,7 +105,7 @@ func (r *memberRepo) GetMemberLevelsAllColumns() []model.MemberLevel {
 func (r *memberRepo) SearchMember(keyword string) []model.Member {
 	var members []model.Member
 	keyword = Like(keyword)
-	r.db.Model(&model.Member{}).Scopes(NotDeleted).Select("uuid, nickname, phone").Where("phone LIKE ? OR id LIKE ? OR nickname LIKE ?", keyword, keyword, keyword).Limit(200).Find(&members)
+	r.db.Model(&model.Member{}).Scopes(NotDeleted).Where("is_visitor = ?", 0).Select("uuid, nickname, phone, member_card_no").Where("phone LIKE ? OR id LIKE ? OR nickname LIKE ? OR member_card_no LIKE ?", keyword, keyword, keyword, keyword).Limit(200).Find(&members)
 	return members
 }
 
@@ -198,6 +214,9 @@ func (r *memberRepo) GetMemberByUuid(uuid uint64) (*model.Member, error) {
 			WithPreload{
 				Query: "MemberLevel",
 			},
+			WithPreload{
+				Query: "MemberCard",
+			},
 		),
 	)
 	if err != nil {
@@ -219,6 +238,16 @@ func (r *memberRepo) GetMemberByReferrerUuid(referrerUuid uint64) (*model.Member
 func (r *memberRepo) GetMemberByPhone(phone string) (*model.Member, error) {
 	var member model.Member
 	err := r.db.Model(&model.Member{}).Scopes(NotDeleted).Where("phone = ?", phone).First(&member).Error
+	if err != nil {
+		return nil, errors.WithMessage(err, "查询会员失败", phone)
+	}
+	return &member, nil
+}
+
+// GetMemberByPhoneAndDeleted 根据手机号查询会员 (包含已删除的会员)
+func (r *memberRepo) GetMemberByPhoneContainDeleted(phone string) (*model.Member, error) {
+	var member model.Member
+	err := r.db.Model(&model.Member{}).Where("phone = ?", phone).First(&member).Error
 	if err != nil {
 		return nil, errors.WithMessage(err, "查询会员失败", phone)
 	}
@@ -272,6 +301,20 @@ func (r *memberRepo) WhereCardNo(cardNo string) DBOption {
 	}
 }
 
+// WhereDeviceId 设备ID条件
+func (r *memberRepo) WhereDeviceId(deviceId string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("device_id = ?", deviceId)
+	}
+}
+
+// WhereIsVisitor 是否游客条件
+func (r *memberRepo) WhereIsVisitor(isVisitor bool) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_visitor = ?", isVisitor)
+	}
+}
+
 func (r *memberRepo) GetMemberInfoForSaleOrder(ctx context.Context, memberUuid uint64) (*model.Member, error) {
 	member := r.GetMember(r.WhereUuid(memberUuid), r.WithMemberCardType(), r.WithMemberLevel(), r.WithMemberBalanceLog())
 	if member.Uuid == 0 {
@@ -306,4 +349,31 @@ func (r *memberRepo) DecConsumptionAmount(uuid uint64, amount float64) error {
 // DecConsumptionCount 减少会员消费次数
 func (r *memberRepo) DecConsumptionCount(uuid uint64) error {
 	return r.db.Model(&model.Member{}).Where("uuid = ?", uuid).Update("consumption_count", gorm.Expr("consumption_count - 1")).Error
+}
+
+// GetVisitorByDeviceId 根据设备ID获取游客会员
+func (r *memberRepo) GetVisitorByDeviceId(deviceId string) (*model.Member, error) {
+	var member model.Member
+	err := r.db.Model(&model.Member{}).Where("device_id = ? AND is_visitor = ?", deviceId, 1).First(&member).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return &member, nil
+		}
+		return nil, err
+	}
+	return &member, nil
+}
+
+// CheckVisitorExists 检查游客是否存在
+func (r *memberRepo) CheckVisitorExists(deviceId string) bool {
+	var exists uint64
+	r.db.Model(&model.Member{}).Where("device_id = ? AND is_visitor = ?", deviceId, 1).Select("uuid").Scan(&exists)
+	return exists > 0
+}
+
+// CheckNicknameExists 根据昵称检查是否存在
+func (r *memberRepo) CheckNicknameExists(nickname string) bool {
+	var exists uint64
+	r.db.Model(&model.Member{}).Where("nickname = ?", nickname).Select("uuid").Scan(&exists)
+	return exists > 0
 }

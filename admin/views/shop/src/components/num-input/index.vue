@@ -3,7 +3,16 @@
     <div v-if="controls" class="icon-plus" @click="handlePlus">
       <el-icon><Plus /></el-icon>
     </div>
-    <el-input :class="controls ? 'controls-input' : ''" :disabled="disabled" :model-value="modelValue" type="text" :placeholder="placeholder" @input="handleInput"> </el-input>
+    <el-input
+      :class="controls ? 'controls-input' : ''"
+      :disabled="disabled"
+      :model-value="modelValue"
+      type="text"
+      :placeholder="placeholder"
+      @input="handleInput"
+      @blur="handleBlur"
+    >
+    </el-input>
     <div v-if="controls" class="icon-minus" @click="handleMinus">
       <el-icon><Minus /></el-icon>
     </div>
@@ -76,7 +85,23 @@
         newValue = Math.min(newValue, this.max);
         this.$emit('update:modelValue', newValue);
       },
+
+      async handleBlur() {
+        await this.handleChange(this.modelValue);
+        // 处理 类似2.20 去掉末尾的0, 2.00 去掉0 变成2；2.0 变成2
+        this.$emit('update:modelValue', this.removeTrailingZeros(this.modelValue));
+      },
+
       handleInput(value) {
+        this.$emit('update:modelValue', value);
+        // 如果最小值包含小数点，则不进行处理
+        if (this.min.toString().includes('.')) {
+          return;
+        }
+        this.handleChange(value);
+      },
+
+      handleChange(value) {
         if (this.disabled) {
           return;
         }
@@ -113,8 +138,24 @@
             formattedValue = this.min.toString();
           }
         }
+
         // 触发更新
         this.$emit('update:modelValue', formattedValue);
+      },
+
+      // 移除末尾的0
+      removeTrailingZeros(value) {
+        if (value.includes('.')) {
+          const [integer, decimal] = value.split('.');
+          if (decimal) {
+            const cleanDecimal = decimal.replace(/0+$/, '');
+            if (cleanDecimal === '') {
+              return integer; // 如果小数部分全是0，返回整数部分
+            }
+            return `${integer}.${cleanDecimal}`;
+          }
+        }
+        return value;
       },
     },
   };

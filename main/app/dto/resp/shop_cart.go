@@ -163,6 +163,7 @@ type Product struct {
 	Remark              string             `json:"remark"`                // 备注
 	IsMust              bool               `json:"is_must"`               // 是否必点
 	IsGift              bool               `json:"is_gift"`               // 是否是赠菜
+	IsWrap              bool               `json:"is_wrap"`               // 是否是打包
 	IsBuffet            bool               `json:"is_buffet"`             // 是否是自助餐
 	IsCancel            bool               `json:"is_cancel"`             // 是否退菜
 	CanChangeNum        bool               `json:"can_change_num"`        // 顾客可修改必点数量

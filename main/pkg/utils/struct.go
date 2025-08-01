@@ -7,7 +7,7 @@ import (
 
 // GetStructFieldsMap 获取结构体字段名称和json tag的映射
 // 返回 map[string]string，key 是字段名，value 是对应的 json tag
-func GetStructFieldsMap(obj interface{}) map[string]string {
+func GetStructFieldsMap(obj any) map[string]string {
 	result := make(map[string]string)
 
 	// 获取结构体类型信息
@@ -50,7 +50,7 @@ func GetStructFieldsMap(obj interface{}) map[string]string {
 }
 
 // GetStructFieldsMapRecursive 递归获取结构体（包括嵌套结构体）的字段名称和json tag的映射
-func GetStructFieldsMapRecursive(obj interface{}) map[string]string {
+func GetStructFieldsMapRecursive(obj any) map[string]string {
 	result := make(map[string]string)
 
 	t := reflect.TypeOf(obj)

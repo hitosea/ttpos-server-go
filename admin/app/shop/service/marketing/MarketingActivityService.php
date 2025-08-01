@@ -25,7 +25,6 @@ class MarketingActivityService
             'end_time' => 'require|string|gt:start_time',
             'reward_condition_amount' => 'require|float|egt:0',
             'is_open_reward_limit' => 'require|integer|in:0,1',
-            'prize_list' => 'require|array|min:1',
         ])->message([
             'name.require' => __('活动名称不能为空'),
             'description.require' => __('活动描述不能为空'),
@@ -87,11 +86,14 @@ class MarketingActivityService
                 'reward_limit' => $data['reward_limit'],
                 'is_invalid' => 0,
                 'image_base64' => $data['image_base64'] ?? '',
+                'reward_type' => $data['reward_type'] ?? 0,
+                'reward_value' => $data['reward_value'] ?? 0,
+                'is_send_sms' => $data['is_send_sms'] ?? 0,
                 'create_time' => time(),
                 'update_time' => time(),
             ]);
             // 保存奖品
-            foreach ($data['prize_list'] as $prize) {
+            foreach ($data['prize_list'] ?? [] as $prize) {
                 (new MarketingActivityPrize())->save([
                     'uuid' => createUuid(),
                     'activity_uuid' => $gift->uuid,
@@ -198,7 +200,6 @@ class MarketingActivityService
                     'end_time' => 'require|string|gt:start_time',
                     'reward_condition_amount' => 'require|float|egt:0',
                     'is_open_reward_limit' => 'require|integer|in:0,1',
-                    'prize_list' => 'require|array|min:1',
                 ])->message([
                     'name.require' => __('活动名称不能为空'),
                     'description.require' => __('活动描述不能为空'),
@@ -221,11 +222,14 @@ class MarketingActivityService
                     'is_open_reward_limit' => $data['is_open_reward_limit'] ?? $gift->is_open_reward_limit,
                     'reward_limit' => $data['reward_limit'] ?? $gift->reward_limit,
                     'image_base64' => $data['image_base64'] ?? $gift->image_base64,
+                    'reward_type' => $data['reward_type'] ?? $gift->reward_type,
+                    'reward_value' => $data['reward_value'] ?? $gift->reward_value,
+                    'is_send_sms' => $data['is_send_sms'] ?? $gift->is_send_sms,
                     'update_time' => time(),
                 ]);
                 // 奖品更新：先软删除原奖品，再插入新奖品
                 MarketingActivityPrize::where('activity_uuid', $uuid)->update(['delete_time'=>time()]);
-                if (!empty($data['prize_list'])) {
+                if (isset($data['prize_list']) && !empty($data['prize_list'])) {
                     foreach ($data['prize_list'] as $prize) {
                         (new MarketingActivityPrize())->save([
                             'uuid' => createUuid(),
@@ -271,6 +275,10 @@ class MarketingActivityService
             reward_limit, 
             is_invalid, 
             image_base64, 
+            is_open_reward_limit,
+            reward_type,
+            reward_value,
+            is_send_sms,
             create_time, 
             update_time
         ')->page($page, $pageSize)->select();
@@ -320,7 +328,19 @@ class MarketingActivityService
         $pageSize = (int)($params['list_rows'] ?? 10);
         // 
         $query =  MarketingActivityRecord::alias('record')
-            ->field('record.uuid, record.activity_uuid, record.member_uuid, record.reward_count, record.last_reward_time, record.create_time, record.update_time, m.nickname, m.phone, m.id')
+            ->field('
+                record.uuid, 
+                record.activity_uuid, 
+                record.member_uuid, 
+                record.reward_count, 
+                record.last_reward_time, 
+                record.create_time, 
+                record.update_time, 
+                record.reward_value,
+                m.nickname, 
+                m.phone, 
+                m.id
+            ')
             ->join('member m', 'record.member_uuid = m.uuid')
             ->where('record.delete_time', 0)
             ->when(isset($params['activity_uuid']) && !empty($params['activity_uuid']),function($query) use ($params){
@@ -330,7 +350,8 @@ class MarketingActivityService
                 $query->where(function($query) use ($params){
                     $query->where('m.nickname', 'like', '%'.$params['keyword'].'%')
                         ->whereOr('m.phone', 'like', '%'.$params['keyword'].'%')
-                        ->whereOr('m.id', 'like', '%'.$params['keyword'].'%');
+                        ->whereOr('m.id', 'like', '%'.$params['keyword'].'%')
+                        ->whereOr('m.member_card_no', 'like', '%'.$params['keyword'].'%');
                 });
             });
         // 

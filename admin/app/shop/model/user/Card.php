@@ -326,7 +326,7 @@ class Card extends CardModel
             return false;
         }
         if (($data['is_discount'] ?? 0) == 0) {
-            $data['discount'] = 0;
+            $data['discount'] = 100;
         }
         unset($data['create_time']);
         unset($data['update_time']);

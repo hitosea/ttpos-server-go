@@ -144,11 +144,19 @@ func (s *callSrv) GetUnprocessed(companyUuid uint64) (resp.UnprocessedResp, erro
 		return res, errors.WithMessage(errors.New("获取未处理的h5订单数量失败"), err.Error())
 	}
 
+	memberSaleOrderRepo := repository.NewMemberSaleOrderRepo(db)
+	unhandledMemberSaleOrderCount, err := memberSaleOrderRepo.GetOrderCount(memberSaleOrderRepo.WhereStatusIn([]uint{constant.MemberSaleOrderStatusPendingMerchantAccept}))
+	if err != nil {
+		logger.Logger.Error("获取待接单外送订单数量失败", zap.Error(err))
+		return res, errors.WithMessage(errors.New("获取待接单外送订单数量失败"), err.Error())
+	}
+
 	return resp.UnprocessedResp{
-		UnprocessedCallCount:    unprocessedCallCount,
-		AbnormalPrintCount:      abnormalPrintCount,
-		UnprocessedH5OrderCount: unhandledH5OrderCount,
-		UpdateTime:              time.Now().Unix(),
+		UnprocessedCallCount:        unprocessedCallCount,
+		AbnormalPrintCount:          abnormalPrintCount,
+		UnprocessedH5OrderCount:     unhandledH5OrderCount,
+		UnprocessedMemberOrderCount: unhandledMemberSaleOrderCount,
+		UpdateTime:                  time.Now().Unix(),
 	}, nil
 }
 
@@ -163,6 +171,9 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 		},
 		H5Order: resp.UnprocessedH5Order{
 			List: make([]resp.UnprocessedH5OrderItem, 0),
+		},
+		MemberSaleOrder: resp.UnprocessedMemberSaleOrder{
+			List: make([]resp.UnprocessedMemberSaleOrderItem, 0),
 		},
 	}
 	thirtyMinutesAgo := time.Now().Add(-30 * time.Minute).Unix()
@@ -195,6 +206,12 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 
 	if err != nil {
 		return res, errors.WithMessage(errors.New("获取未处理的H5订单失败"), err.Error())
+	}
+
+	memberSaleOrderRepo := repository.NewMemberSaleOrderRepo(ctx.GetDB())
+	memberSaleOrders, err := memberSaleOrderRepo.GetForCall(memberSaleOrderRepo.WhereUpdateTimeGt(thirtyMinutesAgo))
+	if err != nil {
+		return res, errors.WithMessage(errors.New("获取未处理的外送订单失败"), err.Error())
 	}
 
 	// 未处理的呼叫
@@ -239,6 +256,18 @@ func (s *callSrv) GetUnprocessedNotice(ctx context.Context) (resp.UnprocessedLis
 			IsAutoAccept: order.IsAutoAccept == 1,
 		})
 	}
+
+	for _, memberSaleOrder := range memberSaleOrders {
+		res.MemberSaleOrder.List = append(res.MemberSaleOrder.List, resp.UnprocessedMemberSaleOrderItem{
+			Uuid:         memberSaleOrder.Uuid,
+			Status:       memberSaleOrder.Status,
+			UpdateTime:   memberSaleOrder.UpdateTime,
+			IsAutoAccept: memberSaleOrder.IsAutoAccept == 1,
+			CancelScene:  memberSaleOrder.CancelScene,
+			SerialNumber: memberSaleOrder.SerialNumber,
+		})
+	}
+
 	return res, nil
 }
 

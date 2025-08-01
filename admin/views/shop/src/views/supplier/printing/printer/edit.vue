@@ -105,6 +105,9 @@
           <el-input v-model="form.XPRINTER_LAN.PORT"></el-input>
         </el-form-item>
       </div>
+      <el-form-item for="no_click" :label="$t('打印机SN')" v-if="form.printer_type == 'XPRINTER_LAN' || form.printer_type == 'XPRINTER_WIFI'">
+        <el-input v-model="form.sn"></el-input>
+      </el-form-item>
 
       <!-- CODESOFT打印 -->
       <div v-if="(form.printer_type == 'CODESOFT_LAN' || form.printer_type == 'CODESOFT_WIFI') && is_usb != 1">
@@ -116,6 +119,9 @@
           <el-input v-model="form.CODESOFT_LAN.PORT"></el-input>
         </el-form-item>
       </div>
+      <el-form-item for="no_click" :label="$t('打印机SN')" v-if="form.printer_type == 'CODESOFT_LAN' || form.printer_type == 'CODESOFT_WIFI'">
+        <el-input v-model="form.sn"></el-input>
+      </el-form-item>
 
       <el-form-item for="no_click" :label="$t('打印联数')" prop="print_times" :rules="[{ required: true, message: $t('请输入打印联数') }]">
         <el-input-number
@@ -129,7 +135,7 @@
         ></el-input-number>
         <div class="tips">{{ $t('同一订单，打印的次数') }}</div>
       </el-form-item>
-  
+
       <el-form-item for="no_click" :label="$t('排序')" prop="sort" :rules="[{ required: true, message: $t('接近0，排序等级越高') }]">
         <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model.number="form.sort" autocomplete="off"></el-input-number>
       </el-form-item>
@@ -182,6 +188,7 @@
           print_method: '',
           sort: 1,
           print_times: 1,
+          sn: '',
           FEI_E_YUN: {
             USER: '',
             UKEY: '',
@@ -268,10 +275,12 @@
             if (detail.printer_type.value == 'XPRINTER_LAN' || self.form.printer_type == 'XPRINTER_WIFI') {
               self.form.XPRINTER_LAN.IP = detail.printer_config.IP;
               self.form.XPRINTER_LAN.PORT = detail.printer_config.PORT;
+              self.form.sn = detail.sn;
             }
             if (detail.printer_type.value == 'CODESOFT_WIFI' || self.form.printer_type == 'CODESOFT_LAN') {
               self.form.CODESOFT_LAN.IP = detail.printer_config.IP;
               self.form.CODESOFT_LAN.PORT = detail.printer_config.PORT;
+              self.form.sn = detail.sn;
             }
           })
           .catch(() => {});
@@ -299,6 +308,8 @@
             self.loading = true;
             self.form.source_device_sn = self.form.source_device_sn || '';
             self.form.print_method = self.form.print_method || 0;
+
+
             SettingApi.editPrinter(self.form, true)
               .then(() => {
                 self.loading = false;

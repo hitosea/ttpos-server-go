@@ -56,10 +56,11 @@ type IOrderQueryRepo interface {
 	GetSaleBillDetails(saleBillUuid uint64, saleOrderUuid uint64) (model.SaleBill, error)                                                      // 获取销售账单详细信息-丰富的-几乎包含所有的关联
 	IsPartiallyPaid(param any) bool                                                                                                            // 判断是否存在部分支付
 	GetSaleOrderBomList(saleOrderUuid uint64) ([]model.SaleOrderProductBom, error)                                                             // 查询销售订单的所有bom
-	GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error)                                                                           // 获取销售账单所有信息
+	GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillAllInfoOption) (*model.SaleBill, error)                                         // 获取销售账单所有信息
 	GetSaleBillWithProducts(saleBillUuid uint64) (*model.SaleBill, error)                                                                      // 获取销售账单所有商品信息
 	HasShowOrder(deviceUuid uint64) (uint64, error)                                                                                            // 判断该设备是否有未挂单的点餐订单
 	GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, error)                                                                            // 获取销售账单记录
+	GetSaleBillSaleOrderRecord(saleOrderUuid uint64) (*model.SaleOrder, error)                                                                 // 获取销售账单记录
 	GetInvoiceInfo(saleOrderUuid uint64) (*model.SaleOrderInvoiceInfo, error)                                                                  // 获取订单发票信息
 }
 
@@ -235,7 +236,7 @@ func (r *orderRepo) GetOrderListWithPagination(pageNo int, pageSize int, opts ..
 	}
 
 	// 获取列表
-	err := db.Count(&total).Offset((pageNo - 1) * pageSize).Limit(pageSize).Debug().Find(&orders).Error
+	err := db.Count(&total).Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&orders).Error
 
 	return orders, total, errors.WithMessage(err)
 }
@@ -368,6 +369,7 @@ func (r *orderRepo) GetCashierOrderListWithPagination(param GetCashierOrderListW
 		),
 		CommonRepo.WhereBySoftDelete(),
 		CommonRepo.WhereByCooking(),
+		CommonRepo.WhereInBillType([]uint{constant.SaleBillTypeDesk, constant.SaleBillTypeInstant}),
 		CommonRepo.SortWithID("DESC"),
 		dbOption,
 		//
@@ -1338,6 +1340,15 @@ func (r *orderRepo) GetSaleBillRecord(saleBillUuid uint64) (*model.SaleBill, err
 	return &saleBill, nil
 }
 
+// GetSaleBillSaleOrderRecord 获取销售账单记录
+func (r *orderRepo) GetSaleBillSaleOrderRecord(saleOrderUuid uint64) (*model.SaleOrder, error) {
+	var saleOrder model.SaleOrder
+	if err := r.db.Model(&model.SaleOrder{}).Where("uuid = ?", saleOrderUuid).First(&saleOrder).Error; err != nil {
+		return nil, fmt.Errorf("GetSaleBillSaleOrderRecord: %v", err)
+	}
+	return &saleOrder, nil
+}
+
 // GetSaleBillAllInfo 获取销售账单所有信息
 func (r *orderRepo) GetCacheSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error) {
 	cacheDataRepo := NewCacheDataRepo(r.db)
@@ -1658,8 +1669,28 @@ func (r *orderRepo) GetCacheSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBil
 	return &saleBill, nil
 }
 
+type GetSaleBillAllInfoOption func(option *GetSaleBillAllInfoOptions)
+
+type GetSaleBillAllInfoOptions struct {
+	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员端销售订单UUID. 不为0时，根据会员端销售订单UUID查询
+}
+
+func WithMemberSaleOrderUuid(uuid uint64) func(option *GetSaleBillAllInfoOptions) {
+	return func(option *GetSaleBillAllInfoOptions) {
+		option.MemberSaleOrderUuid = uuid
+	}
+}
+
 // GetSaleBillAllInfo 获取销售账单所有信息
-func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, error) {
+func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillAllInfoOption) (*model.SaleBill, error) {
+	option := &GetSaleBillAllInfoOptions{}
+	for _, opt := range opts {
+		opt(option)
+	}
+	uuidFilter := CommonRepo.WhereByUuid(saleBillUuid) // 默认根据销售账单UUID查询
+	if option.MemberSaleOrderUuid != 0 {
+		uuidFilter = CommonRepo.WhereByMemberSaleOrderUuid(option.MemberSaleOrderUuid) // 根据会员端销售订单UUID查询
+	}
 	info, err := r.GetSaleBill(
 		CommonRepo.Preload(
 			WithPreload{
@@ -1755,6 +1786,9 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 				Query: "SaleOrders.SaleOrderProducts.MultiLanguageName",
 			},
 			WithPreload{
+				Query: "SaleOrders.SaleOrderProducts.ImageFile",
+			},
+			WithPreload{
 				Query: "SaleOrders.SaleOrderProducts.ReturnOrderProducts",
 				Args: []any{
 					CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
@@ -1844,7 +1878,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBill, er
 			},
 		),
 		CommonRepo.WhereBySoftDelete(),
-		CommonRepo.WhereByUuid(saleBillUuid),
+		uuidFilter,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("GetSaleBillAllInfo: %v", err)

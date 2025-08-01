@@ -201,11 +201,12 @@ func (s *deskSrv) GetDeskPing(ctx context.Context, deskUuid uint64, shopCart *re
 	// 订单列表，拆单时，会有多个
 	res.SaleOrderList = shopCart.SaleOrderList
 
+	// 合计送厨商品数量和完成数量，退菜的商品不计算
 	productPackageUuidMap := make(map[uint64]resp.SentKitchenProduct)
 	for _, saleOrder := range shopCart.SaleOrderList {
 		for _, product := range saleOrder.ProductList {
 			// 合计已送厨商品列表
-			if product.Status == constant.SaleOrderProductStatusCooking && !(product.AboutBuffet.IsCustomer || product.AboutBuffet.IsDelay) && product.IsShowKitchen == 1 {
+			if product.Status == constant.SaleOrderProductStatusCooking && !product.IsCancel && !(product.AboutBuffet.IsCustomer || product.AboutBuffet.IsDelay) && product.IsShowKitchen == 1 {
 				var sentKitchenNum, finishedNum float64
 				if existsProduct, exits := productPackageUuidMap[product.ProductPackageUuid]; exits {
 					sentKitchenNum = existsProduct.SentKitchenNum + product.Num
@@ -541,7 +542,7 @@ func (s *deskSrv) IsCellCloseInstant(ctx context.Context, saleBillUuid uint64) (
 				Status:        int(product.Status),
 				Remark:        product.Remark,
 				IsMust:        product.IsMustProduct(),
-				IsGift:        product.IsGiftBool(),
+				IsGift:        product.IsGiftProduct(),
 				IsBuffet:      product.IsBuffet == 1,
 				IsCancel:      product.IsCancelProduct(),
 			})
@@ -812,7 +813,9 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 		deskNos = append(deskNos, desk.DeskNo)
 		// 更新销售账单的首次送厨时间
 		if saleBill.ProductionTime == 0 || saleBill.ProductionTime > deskSaleBill.ProductionTime {
-			saleBill.ProductionTime = deskSaleBill.ProductionTime
+			if deskSaleBill.ProductionTime > 0 {
+				saleBill.ProductionTime = deskSaleBill.ProductionTime
+			}
 		}
 	}
 	if len(deskMergeCheckRes.List) > 0 {

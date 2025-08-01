@@ -552,7 +552,6 @@ func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	ctx.Log().Debug("修改商品数量成功", zap.Any("res", shopCart))
 
 	res, err := h.deskSrv.GetDeskPing(ctx, shopCart.Desk.Uuid, shopCart)
 	// 处理错误
@@ -914,6 +913,66 @@ func (h *DeskHandler) OrderCartProductChangeDesk(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// OrderCartProductWrap 打包单商品
+// @Summary 打包单商品
+// @Description 打包单商品
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderCartProductWrapReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/cart/product/wrap [post]
+func (h *DeskHandler) OrderCartProductWrap(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductWrapReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 打包单商品
+	res, err := h.orderSrv.OrderCartProductWrap(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("打包单商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// OrderCartProductUnwrap 取消打包单商品
+// @Summary 取消打包单商品
+// @Description 取消打包单商品
+// @Tags 收银端.桌台
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @param data body req.OrderCartProductWrapReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @Failure 404 {object} nil "未找到"
+// @Router /cashier/desk/order/cart/product/unwrap [post]
+func (h *DeskHandler) OrderCartProductUnwrap(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	// 绑定请求参数
+	params := req.OrderCartProductUnwrapReq{}
+	if err := c.ShouldBindJSON(&params); err != nil {
+		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+		return
+	}
+	// 取消打包单商品
+	res, err := h.orderSrv.OrderCartProductUnwrap(ctx, params)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	ctx.Log().Debug("取消打包单商品成功", zap.Any("res", res))
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // OrderCartProductGiving 赠菜购物车商品
 // @Summary 赠菜购物车商品
 // @Description 赠菜购物车商品
@@ -933,7 +992,7 @@ func (h *DeskHandler) OrderCartProductGiving(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-	// 退菜购物车商品
+	// 赠菜购物车商品
 	shopCart, err := h.orderSrv.InstantOrderCartProductGiving(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -969,7 +1028,7 @@ func (h *DeskHandler) OrderCartProductCancelGiving(c *gin.Context) {
 		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
 		return
 	}
-	// 退菜购物车商品
+	// 取消赠菜购物车商品
 	shopCart, err := h.orderSrv.InstantOrderCartProductCancelGiving(ctx, params)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
@@ -1563,14 +1622,14 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 	localeSrv := service.NewLocaleSrv()
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
-	memberSrv := service.NewMemberSrv(dbm)
+	memberSrv := service.NewMemberSrv(dbm, cache)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
 
 	// 创建处理程序
 	wrapper := DeskHandler{
 		deskSrv:   service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv),
 		orderSrv:  orderSrv,
-		memberSrv: service.NewMemberSrv(dbm),
+		memberSrv: service.NewMemberSrv(dbm, cache),
 	}
 
 	// 需要认证
@@ -1609,6 +1668,8 @@ func RegisterDeskHandlers(router gin.IRouter, dbm *database.DBManager, cache cac
 		privateApi.GET("/desk/order/payment/qrcode", wrapper.OrderPaymentQrcodeInfo)                          // 获取支付二维码
 		privateApi.POST("/desk/order/payment/finish", wrapper.OrderPaymentFinish)                             // 完成销售订单的付款结账
 		privateApi.POST("/desk/order/cart/product/change_desk", wrapper.OrderCartProductChangeDesk)           // 转菜
+		privateApi.POST("/desk/order/cart/product/wrap", wrapper.OrderCartProductWrap)                        // 打包单商品
+		privateApi.POST("/desk/order/cart/product/unwrap", wrapper.OrderCartProductUnwrap)                    // 取消打包单商品
 		privateApi.POST("/desk/order/cart/product/giving", wrapper.OrderCartProductGiving)                    // 赠菜购物车商品
 		privateApi.POST("/desk/order/cart/product/cancel_giving", wrapper.OrderCartProductCancelGiving)       // 取消赠菜购物车商品
 		privateApi.POST("/desk/order/population", wrapper.OrderChangePopulation)                              // 桌台订单修改人数

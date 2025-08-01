@@ -1,5 +1,7 @@
 package model
 
+import "ttpos-server-go/app/constant"
+
 // ProductionOrder 生产单 `ttpos_production_order`
 type ProductionOrder struct {
 	BaseModel
@@ -16,6 +18,7 @@ type ProductionOrderProduct struct {
 	BaseModel
 	Name                  string  `gorm:"column:name;type:varchar(255);comment:名称;NOT NULL" json:"name"`
 	Num                   float64 `gorm:"column:num;type:decimal(12,2);default:0;comment:商品数量;NOT NULL" json:"num"`
+	InitNum               float64 `gorm:"column:init_num;type:decimal(12,2);default:0;comment:送厨时商品数量;NOT NULL" json:"init_num"`
 	FlavorName            string  `gorm:"column:flavor_name;type:text;comment:规格名称,不随后台改变;" json:"flavor_name"`
 	ProductAttributeNames string  `gorm:"column:product_attribute_names;type:varchar(255);comment:商品属性名称,多个属性名用逗号分隔,不随后台改变;NOT NULL" json:"product_attribute_names"`
 	ProductSaucesNames    string  `gorm:"column:product_sauces_names;type:varchar(255);comment:商品加料名称,多个加料名用逗号分隔,不随后台改变;NOT NULL" json:"product_sauces_names"`
@@ -33,6 +36,19 @@ type ProductionOrderProduct struct {
 	SaleOrderProduct         SaleOrderProduct           `gorm:"foreignKey:SaleOrderProductUuid;references:Uuid" json:"sale_order_product"`
 	SaleBill                 SaleBill                   `gorm:"foreignKey:SaleBillUuid;references:Uuid" json:"sale_bill"`
 	ProductCategory          ProductCategory            `gorm:"foreignKey:FirstCategoryUuid;references:Uuid" json:"product_category"`
+}
+
+// 获取生产单商品的打包状态：0-堂食、1-打包
+func (p *ProductionOrderProduct) GetWrapStatus() uint {
+	// 如果商品是点餐订单的商品，则根据sale_bill是否打包来判断商品是否打包
+	if p.SaleBill.IsInstantBill() {
+		return p.SaleBill.DiningMethod
+	}
+	// 如果商品是桌台订单的商品，则根据订单商品的打包状态来判断商品是否打包
+	if p.SaleBill.IsDeskBill() && p.SaleOrderProduct.IsWrapProduct() {
+		return constant.SaleBillDiningMethodTakeout // 打包
+	}
+	return constant.SaleBillDiningMethodDineIn // 堂食
 }
 
 // ProductionOrderMaterial 生产单原料 `ttpos_production_order_material`

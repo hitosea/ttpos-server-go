@@ -1,38 +1,30 @@
-LOCAL_IP := $(shell ifconfig | grep "inet " | grep "192" | awk '{print $$2}' | head -n 1)
-
-# 定义一个函数来更新环境变量并执行脚本
-define update_env_and_debug
-	sed -i.bak 's/^SERVER_MODE=.*/SERVER_MODE=debug/' .env && rm .env.bak;
-	sed -i.bak 's/^APP_DEBUG=.*/APP_DEBUG=true/' .env && rm .env.bak;
-endef
-
-# 定义一个函数来更新环境变量并执行脚本
-define update_env_and_run
-	sed -i.bak 's/^DB_HOST=.*/DB_HOST=$(LOCAL_IP)/' .env && rm .env.bak;
-	sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=$(LOCAL_IP)/' .env && rm .env.bak;
-	chmod +x ./.sh && ./.sh mysql open
-endef
+# include
+include ./scripts/cmd.mk
 
 # 初始化项目
 install:
-	# 初始化env文件 
-	if [ ! -f ".env" ]; then \
-		cp .env.example .env; \
-		echo "Created .env file from .env.example"; \
-		sed -i.bak 's/^APP_ID=.*/APP_ID='$$(openssl rand -hex 3)'/' .env && rm .env.bak; \
-		sed -i.bak 's/^DB_PASSWORD=.*/DB_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
-		sed -i.bak 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
-	fi 
-	# 检查 .env 文件是否存在
-	if [ -f ".env" ]; then \
-		sed -i.bak 's/^DB_HOST=.*/DB_HOST=db/' .env && rm .env.bak; \
-		sed -i.bak 's/^DB_PORT=.*/DB_PORT=3306/' .env && rm .env.bak; \
-		sed -i.bak 's/^REDIS_HOST=.*/REDIS_HOST=redis/' .env && rm .env.bak; \
-	fi
+	make init-env
+	make build-web
+	make redis-clear-data
 	# 启动容器
-	docker compose -p ttpos-server-go up -d --build;
-    # 初始化php项目
-	chmod +x ./.sh && ./.sh init
+	@echo "🗄️  启动容器..."
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
+	@echo "🗄️  初始化php项目..."
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh init
+	@echo "🗄️  初始化takeout模块..."
+	cd takeout && make conf && make db_up.docker
+	@echo "✅ 初始化完成"
+
+# 重新构建项目
+build:
+	make build-web
+	make redis-clear-data
+	@echo "🐳 构建 Docker 容器..."
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
+	@echo "✅ Docker 构建完成"
+	@echo "🗄️  运行数据库迁移..."
+	@make migrate
+	@echo "✅ 构建完成"
 
 # 变更debug模式
 debug:
@@ -53,66 +45,56 @@ dev: debug
 
 # 开启mysql端口
 mysql-open:
-	$(call update_env_and_run)
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh mysql open
 
 # 运行数据库迁移
 migrate:
-	chmod +x ./.sh && ./.sh think migrate:run
+	make check-db-host-open-mysql
+	@echo "🗄️  运行主项目数据库迁移..."
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think migrate:run
+	@echo "🚀 更新 takeout 模块数据库..."
+	@cd takeout && make conf && make db_up.docker
+	@echo "✅ 数据库迁移完成"
 
 # 生成文档
 build-doc:
 	cd main && go install github.com/swaggo/swag/cmd/swag@latest && ${HOME}/go/bin/swag init
 
-# 构建项目 - 生产
-build-run:
-	docker compose -p ttpos-server-go up -d --build
-
-# 更新
-update:
-	chmod +x ./.sh && ./.sh update
-	docker compose -p ttpos-server-go up -d --build
-	chmod +x ./.sh && ./.sh restart
-
 # 重启容器
 restart:
-	chmod +x ./.sh && ./.sh restart
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh restart $(filter-out $@,$(MAKECMDGOALS))
 
+# docker-compose up -d
+up:
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d
+
+# docker-compose ps
+ps:
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh ps
+
+# docker-compose down
+down:
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh down
 # 翻译
 translate:
 	cd main && go run ./main.go translate
 
-# 运行数据库迁移
+# 运行数据库旧数据迁移
 migrate-data:
-	cd main && go run ./main.go migrate-data $(ARGS)
+	cd main && go run ./main.go migrate-data
 
-# 更新版本号
-update-version:
-	@echo "更新版本号..."
-	@CURRENT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
-	if [ -z "$(VERSION)" ] && [ -z "$(COMMIT_SHA)" ] && [ -z "$(BUILD_TIME)" ]; then \
-		echo "请提供至少一个参数: VERSION 或 BUILD_TIME"; \
-		echo "示例: make update-version VERSION=2.3.1 BUILD_TIME=2023-10-15"; \
-		echo "注意: COMMIT_SHA 将自动使用当前最新的Git提交哈希值"; \
-		echo "快速更新版本: make bump-version"; \
-		cd main && go run ./main.go version; \
-	else \
-		cd main && go run ./main.go version \
-		$(if $(VERSION),--version=$(VERSION),) \
-		--commit=$$CURRENT_COMMIT \
-		$(if $(BUILD_TIME),--build-time=$(BUILD_TIME),); \
-	fi
+# 统计数据重跑
+statistics-re:
+	cd main && go run ./main.go statistics-re $(ARGS)
 
-# 快速增加版本号
-bump-version:
-	@echo "快速增加版本号..."
-	@CURRENT_VERSION=$$(grep 'Version.*=.*"' main/version/version.go | sed 's/.*"\(.*\)".*/\1/'); \
-	MAJOR=$$(echo $$CURRENT_VERSION | cut -d. -f1); \
-	MINOR=$$(echo $$CURRENT_VERSION | cut -d. -f2); \
-	PATCH=$$(echo $$CURRENT_VERSION | cut -d. -f3); \
-	NEW_PATCH=$$((PATCH + 1)); \
-	NEW_VERSION="$$MAJOR.$$MINOR.$$NEW_PATCH"; \
-	CURRENT_DATE=$$(date +%Y-%m-%d); \
-	CURRENT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
-	echo "当前版本: $$CURRENT_VERSION, 新版本: $$NEW_VERSION"; \
-	cd main && go run ./main.go version --version=$$NEW_VERSION --commit=$$CURRENT_COMMIT --build-time=$$CURRENT_DATE
+# 更新skootar状态
+skootar-update-status:
+	cd main && go run ./main.go skootar-update-status $(ARGS)
 
+# 重置密码
+repassword:
+	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh repassword $(ARGS)
+
+# 增加版本号
+add-ver:
+	make add-version

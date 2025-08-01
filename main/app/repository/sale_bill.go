@@ -17,9 +17,11 @@ type ISaleBillRepo interface {
 	UpdateSaleBill(saleBill *model.SaleBill) error
 	UpdateSaleBillRecord(saleBill model.SaleBill) error
 	UpdateOrCreateSaleBillRecord(saleBill model.SaleBill) error
-	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error       // 确认必点
-	UpdateSaleBillAutoAddMustProduct(saleBillUuid uint64) error // 完成自动加购
-	DeleteSaleBill(saleBillUuid uint64) error                   // 软删除销售账单
+	UpdateSaleBillShowMustPlan(saleBillUuid uint64) error              // 确认必点
+	UpdateSaleBillAutoAddMustProduct(saleBillUuid uint64) error        // 完成自动加购
+	DeleteSaleBill(saleBillUuid uint64) error                          // 软删除销售账单
+	UpdateDutyNo(saleBillUuid uint64, dutyNo string) error             // 更新销售账单的当班编号
+	UpdateSaleBillSerialNo(saleBillUuid uint64, serialNo string) error // 更新销售账单的流水号
 }
 
 // ISaleBillQueryRepo 销售账单的查询接口。
@@ -32,6 +34,7 @@ type ISaleBillQueryRepo interface {
 	GetSaleOrderIndexByUuid(saleBillUuid, saleOrderUuid uint64) (int, error)                       // 获取销售订单的拆单序号。用于操作日志展示
 	GetHideSaleBillList(pageNo, pageSize int, deviceUuid uint64) ([]*model.SaleBill, int64, error) // 获取挂单销售账单列表
 	GetInstantSaleBillLatest() (*model.SaleBill, error)                                            // 获取最新的一条点餐销售账单
+	GetMemberSaleBillLatest() (*model.SaleBill, error)                                             // 获取最新的一条会员端销售账单
 	GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error)                     // 获取销售账单的自助餐商品列表
 	GetSaleBillRecord(uuid uint64) (*model.SaleBill, error)
 	GetDeskSaleBillUnPay() ([]*model.SaleBill, error) // 获取所有未付款的桌台账单
@@ -233,6 +236,20 @@ func (r *saleBillRepo) GetInstantSaleBillLatest() (*model.SaleBill, error) {
 	return &saleBill, nil
 }
 
+func (r *saleBillRepo) GetMemberSaleBillLatest() (*model.SaleBill, error) {
+	saleBill, err := r.GetSaleBill(
+		CommonRepo.WhereByBillType(constant.OrderSourceMapToBillType[constant.OrderSourceMember]),
+		CommonRepo.SortWithCreateTime("desc"),
+	)
+	if err != nil {
+		if utils.IsNotFoundRecord(err) {
+			return nil, nil
+		}
+		return nil, errors.WithMessage(err)
+	}
+	return &saleBill, nil
+}
+
 func (r *saleBillRepo) GetSaleBillBuffetProductList(saleBillUuid uint64) (*model.SaleBill, error) {
 	saleBill, err := r.GetSaleBill(
 		CommonRepo.WhereByUuid(saleBillUuid),
@@ -312,4 +329,21 @@ func (r *saleBillRepo) GetCompleteTotal() (int64, error) {
 		return 0, errors.WithMessage(err)
 	}
 	return total, nil
+}
+
+// UpdateDutyNo 更新销售账单的当班编号
+func (r *saleBillRepo) UpdateDutyNo(saleBillUuid uint64, dutyNo string) error {
+	if err := r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
+		DutyNo: dutyNo,
+	}).Error; err != nil {
+		return errors.WithMessage(err)
+	}
+	return nil
+}
+
+// UpdateSaleBillSerialNo 更新销售账单的流水号
+func (r *saleBillRepo) UpdateSaleBillSerialNo(saleBillUuid uint64, serialNo string) error {
+	return r.db.Model(&model.SaleBill{}).Where("uuid = ?", saleBillUuid).Updates(model.SaleBill{
+		SerialNo: serialNo,
+	}).Error
 }

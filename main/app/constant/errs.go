@@ -61,6 +61,37 @@ const (
 	CodeCouponInvalid = -233
 )
 
+// 桌台业务错误码
+const (
+	CodeDeskOrderEnd      = -300 // 桌台订单已经结束。前端收到这个业务码后，退出当前桌台，返回首页
+	CodeTabletNotBindDesk = -301 // 平板未绑定桌台
+)
+
+// 退款业务错误码
+const (
+	CodeReturnOrderBank = -401 // 请选择银行
+)
+
+// 营销活动业务错误码
+const (
+	CodeMarketingActivityInvalid = -501 // 营销活动已失效
+)
+
+// 支付业务错误码
+const (
+	CodeOrderAmountLessThan1 = -601 // 订单金额小于1，无法支付
+	CodeOrderPayError        = -602 // 支付服务异常
+)
+
+// 外送业务错误码
+const (
+	CodeDistanceError                  = -701 // 计算距离错误
+	CodeTakeoutCreateOrderError        = -702 // 外送订单创建失败
+	CodeOrderAddressNotVerifiedPhone   = -703 // 订单地址未认证手机号
+	CodeOrderAddressNotInDeliveryRange = -704 // 订单地址不在配送范围内
+	CodeOrderPrepareDataError          = -705 // 准备数据发起外送订单创建时失败
+)
+
 type ParseCodeOrderCheckOption struct {
 	IsH5     bool // 是否是h5端的文案
 	IsTablet bool // 是否是平板端的文案
@@ -107,19 +138,3 @@ func ParseCodeOrderCheck(code int, options ...func(option *ParseCodeOrderCheckOp
 		return "success"
 	}
 }
-
-// 桌台业务错误码
-const (
-	CodeDeskOrderEnd      = -300 // 桌台订单已经结束。前端收到这个业务码后，退出当前桌台，返回首页
-	CodeTabletNotBindDesk = -301 // 平板未绑定桌台
-)
-
-// 退款业务错误码
-const (
-	CodeReturnOrderBank = -401 // 请选择银行
-)
-
-// 营销活动业务错误码
-const (
-	CodeMarketingActivityInvalid = -501 // 营销活动已失效
-)

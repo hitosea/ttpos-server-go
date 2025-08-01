@@ -14,7 +14,7 @@
             <el-option v-for="(item, index) in sex" :key="index" :label="item" :value="index"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item :label="$t('昵称/手机号/ID')"><el-input :placeholder="$t('昵称/手机号/ID')" v-model="formInline.keyword"></el-input></el-form-item>
+        <el-form-item :label="$t('昵称/手机号/ID/会员卡号')"><el-input :placeholder="$t('昵称/手机号/ID/会员卡号')" v-model="formInline.keyword"></el-input></el-form-item>
         <el-form-item style="margin-right: 0">
           <el-button class="search-button" type="primary" icon="Search" @click="search">{{ $t('查询') }}</el-button>
         </el-form-item>
@@ -78,7 +78,7 @@
           <el-table-column v-else type="radio" width="45" fixed="right">
             <template #default="scope">
               <div class="radio-box">
-                <el-radio v-model="selectedRow" :label="scope.row" @change="handleRadioChange(scope.row)">&nbsp;</el-radio>
+                <el-radio v-model="selectedRow" :value="scope.row" @change="handleRadioChange(scope.row)">&nbsp;</el-radio>
               </div>
             </template>
           </el-table-column>
@@ -111,6 +111,7 @@
 <script>
   import DataApi from '@/api/data.js';
   export default {
+    emits: ['close'],
     data() {
       return {
         /*是否加载完成*/
@@ -140,8 +141,6 @@
         multipleSelection: [],
         /*是否显示*/
         dialogVisible: false,
-        /*单选模式*/
-        is_single: false,
         /*选中的行*/
         selectedRow: null,
       };
@@ -151,7 +150,10 @@
         type: Boolean,
         default: false,
       },
-      detailSelection: [],
+      detailSelection: {
+        type: Array,
+        default: () => [],
+      },
       is_open: Boolean,
       is_single: {
         type: Boolean,
@@ -174,19 +176,7 @@
           }
         }
       },
-      // 监听is_single变化
-      is_single: {
-        immediate: true,
-        handler(val) {
-          // 切换模式时重置选择状态
-          this.selectedRow = null;
-          this.multipleSelection = [];
-        },
-      },
-    },
-    created() {
-      // 初始化时设置单选/多选模式
-      this.is_single = this.$props.is_single;
+
     },
     methods: {
       /*选择第几页*/

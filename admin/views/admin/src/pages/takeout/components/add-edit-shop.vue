@@ -133,11 +133,10 @@
                                 if (!value) {
                                   callback(new Error($t('请输入结束距离')));
                                 }
-                                if (distanceRangeIndex > 0 && value <= item.distance_range[distanceRangeIndex - 1].end && !distanceRange.is_unlimited) {
+                                if (distanceRangeIndex > 0 && value <= item.distance_range[distanceRangeIndex - 1].end) {
                                   callback(new Error($t('结束距离必须大于前一个范围的结束距离')));
-                                } else {
-                                  callback();
                                 }
+                                callback();
                               },
                             },
                           ]"
@@ -147,19 +146,12 @@
                               class="flex-1"
                               v-model="distanceRange.end"
                               :controls="false"
-                              :disabled="distanceRange.is_unlimited || item.config_type === 'auto_sync'"
+                              :disabled="item.config_type === 'auto_sync'"
                               :precision="1"
                               :min="distanceRangeIndex === 0 ? 0 : item.distance_range[distanceRangeIndex - 1].end || 0"
                               :max="999999"
                               :placeholder="$t('请输入结束距离 (公里)')"
                             ></el-input-number>
-                            <el-checkbox
-                              v-if="distanceRangeIndex === item.distance_range.length - 1"
-                              v-model="distanceRange.is_unlimited"
-                              :disabled="item.config_type === 'auto_sync'"
-                              :label="$t('最大')"
-                              @change="handleIsUnlimitedChange(index, distanceRangeIndex)"
-                            />
                           </div>
                         </el-form-item>
                       </el-col>
@@ -197,16 +189,7 @@
                   </div>
                 </div>
               </el-form-item>
-              <el-button
-                v-if="item.config_type === 'manual'"
-                :disabled="item.distance_range?.map((distanceRange) => distanceRange.is_unlimited).includes(true)"
-                type="primary"
-                plain
-                class="!mr-0"
-                @click="addDistanceRange(index)"
-                icon="plus"
-                >{{ $t('添加范围距离') }}</el-button
-              >
+              <el-button v-if="item.config_type === 'manual'" type="primary" plain class="!mr-0" @click="addDistanceRange(index)" icon="plus">{{ $t('添加范围距离') }}</el-button>
             </div>
           </div>
         </div>
@@ -329,11 +312,6 @@
     formData.value.channels[index].distance_range.push({
       end: 0,
       price_per_km: 0,
-      is_unlimited: false,
-    });
-    // 所有的is_unlimited设置为false
-    formData.value.channels[index].distance_range?.forEach((item) => {
-      item.is_unlimited = false;
     });
     formElement.value.validateField('channels.' + index + '.distance_range');
   };
@@ -403,12 +381,5 @@
       formData.value.channels[index] = JSON.parse(JSON.stringify(takeoutSettingData.value.find((setting) => setting.channel === channel)));
       formData.value.channels[index].config_type = 'auto_sync';
     }
-  };
-
-  // 处理is_unlimited变化
-  const handleIsUnlimitedChange = (index: number, distanceRangeIndex: number) => {
-    if (!formData.value.channels[index].distance_range || !formData.value.channels[index].distance_range[distanceRangeIndex]) return;
-    const distanceRange = formData.value.channels[index].distance_range[distanceRangeIndex];
-    distanceRange.end = distanceRange.is_unlimited ? 999999 : 0;
   };
 </script>

@@ -104,6 +104,9 @@ class Controller extends BaseController
         }
         $token = request()->header('token');
         if (!$token) {
+            $token = Request()->param('token');
+        }
+        if (!$token) {
             throw new BaseException(['msg' => '缺少必要的参数：token', 'code' => StatusCode::USER_ERROR]);
         }
         $data = checkToken($token, 'admin');

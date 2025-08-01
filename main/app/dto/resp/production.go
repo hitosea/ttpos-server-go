@@ -3,9 +3,12 @@ package resp
 import "ttpos-server-go/app/dto"
 
 type ProductionGroup struct {
-	LocaleName     *dto.LocaleResponse `json:"locale_name"`   // 序列号
-	DiningMethod   uint                `json:"dining_method"` // 用餐方式,0-堂食(店内就餐) 1-打包
-	ProductionList ProductionList      `json:"product_list"`  // 送厨商品列表
+	LocaleName        *dto.LocaleResponse `json:"locale_name"`          // 序列号
+	DiningMethod      uint                `json:"dining_method"`        // 用餐方式,0-堂食(店内就餐) 1-打包
+	IsTakeoutBill     bool                `json:"is_takeout_bill"`      // 是否是外送订单
+	ProductionList    ProductionList      `json:"product_list"`         // 送厨商品列表
+	SaleBillUuid      uint64              `json:"sale_bill_uuid"`       // 销售账单Uuid
+	IsSaleBillDeleted bool                `json:"is_sale_bill_deleted"` // 销售账单是否已删除
 }
 
 type ProductionList struct {
@@ -18,10 +21,12 @@ type ProductionItem struct {
 	Uuid                  uint64             `json:"uuid"`                    // 送厨商品Uuid
 	LocaleName            dto.LocaleResponse `json:"locale_name"`             // 送厨商品名称
 	Num                   float64            `json:"num"`                     // 送厨商品数量
+	InitNum               float64            `json:"init_num"`                // 送厨商品初始数量
 	CreateTime            int64              `json:"create_time"`             // 送厨时间
 	FinishedTime          int64              `json:"finished_time"`           // 完成时间
 	ProductAttributeNames dto.LocaleResponse `json:"product_attribute_names"` // 商品属性
 	Remark                string             `json:"remark"`                  // 备注
+	IsSaleBillDeleted     bool               `json:"is_sale_bill_deleted"`    // 销售账单是否已删除
 }
 
 // ProductionListWithPagination 商品列表响应

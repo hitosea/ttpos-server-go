@@ -60,4 +60,5 @@ const (
 	PrinterTemplateRecharge       = 8  // 充值单
 	PrinterTemplateReturnDish     = 9  // 退菜单
 	PrinterTemplateOutMenu        = 10 // 出菜单
+	PrinterTemplateTakeoutOrder   = 11 // 外送单
 )

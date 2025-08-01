@@ -1,6 +1,7 @@
 package model
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -136,7 +137,7 @@ func (model *SaleBill) AfterUpdate(tx *gorm.DB) (err error) {
 				"desk_uuid":   model.DeskUuid,
 				"update_time": model.BaseModel.UpdateTime,
 			})
-		} else {
+		} else if model.MemberSaleOrderUuid == 0 {
 			go websocket.PushClient(companyUuid, websocket.SourceCashier, websocket.SourceAll, websocket.UPDATE_ORDER, map[string]interface{}{
 				"sale_bill_uuid": model.Uuid,
 				"desk_uuid":      model.DeskUuid,
@@ -220,5 +221,49 @@ func (model *Desk) AfterUpdate(tx *gorm.DB) (err error) {
 		}
 		go websocket.PushClient(companyUuid, websocket.SourceAll, websocket.SourceAll, websocket.UPDATE_DESK, data)
 	}
+	return nil
+}
+
+// MemberSaleOrder - AfterUpdate 更新会员端销售订单后的逻辑 - 推送呼叫消息
+func (model *MemberSaleOrder) AfterUpdate(tx *gorm.DB) (err error) {
+	companyUuid := model.getCompanyUuid(tx)
+	if companyUuid == 0 {
+		return nil
+	}
+
+	// 如果订单状态大于待商家接单，则推送呼叫消息
+	if model.Status > constant.MemberSaleOrderStatusPendingPayment {
+		go websocket.PushClient(
+			companyUuid,
+			websocket.SourceCashier,
+			websocket.SourceAll,
+			websocket.UPDATE_MEMBER_SALE_ORDER,
+			map[string]interface{}{
+				"member_sale_order_uuid": model.BaseModel.Uuid,
+				"status":                 model.Status,
+				"update_time":            model.BaseModel.UpdateTime,
+			},
+		)
+	}
+
+	// 只有以下状态的订单才需要推送websocket消息
+	if slices.Contains([]uint{
+		constant.MemberSaleOrderStatusPendingMerchantAccept,
+		constant.MemberSaleOrderStatusCooking,
+		constant.MemberSaleOrderStatusPendingRiderPickup,
+		constant.MemberSaleOrderStatusCancelled,
+	}, model.Status) {
+		go websocket.PushClient(
+			companyUuid,
+			websocket.SourceCashier,
+			websocket.SourceAll,
+			websocket.CUSTOMER_CALL,
+			map[string]interface{}{
+				"status":      model.Status,
+				"update_time": model.BaseModel.UpdateTime,
+			},
+		)
+	}
+
 	return nil
 }

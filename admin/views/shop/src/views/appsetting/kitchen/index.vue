@@ -230,9 +230,9 @@
             self.form.language = self.form.language.filter((lang) => {
               return self.languageList.map((h) => h.key).indexOf(lang) != -1;
             });
-            self.printerList = data.data.vars.values.printer_list;
             self.onlineList = [];
             self.offlineList = [];
+            self.printerList = data.data.vars.values.printer_list;
             self.form.bind_list.map((item) => {
               // 如果 related_printer_uuid 不为0，并且不在 printerList 中，就把 related_printer_uuid 设置为 0
               if (item.related_printer_uuid > 0 && !self.printerList.some((printer) => printer.uuid === item.related_printer_uuid)) {

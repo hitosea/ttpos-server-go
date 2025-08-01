@@ -2,12 +2,16 @@ package context
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"ttpos-server-go/app/constant/jwt"
 	"ttpos-server-go/app/model"
 
 	"go.uber.org/zap"
 	"gorm.io/gorm"
+
+	"math/rand"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/gin-gonic/gin"
@@ -16,9 +20,10 @@ import (
 type Operator string
 
 const (
-	LessThen    Operator = "<"
-	GreaterThen Operator = ">"
-	Equal       Operator = "="
+	LT  Operator = "<"
+	GT  Operator = ">"
+	EQ  Operator = "="
+	GTE Operator = ">="
 )
 
 type Context interface {
@@ -29,6 +34,9 @@ type Context interface {
 	GetGin() *gin.Context                                  // 获取gin上下文
 	GetContext() context.Context                           // 获取上下文
 	GetSource() string                                     // 获取请求来源
+	SetSource(source string)                               // 设置请求来源
+	GetScene() string                                      // 获取业务场景。用于区分不同的业务场景。如外送场景
+	SetScene(scene string)                                 // 设置业务场景。用于区分不同的业务场景。如外送场景
 	GetCompany() model.Company                             // 获取商家信息
 	GetCompanySetting() model.CompanySetting               // 获取商家设置
 	GetStaff() model.Staff                                 // 获取员工信息
@@ -51,8 +59,11 @@ type Context interface {
 	Copy() Context                                         // 复制一个ctx实例。避免在协程中修改上下文导致主进程的ctx被修改
 	GetCfIPCountry() string                                // 获取CF-IPCountry
 	GetMember() model.Member                               // 获取会员信息
+	SetMember(member model.Member)                         // 设置会员信息
 	GetMemberUuid() uint64                                 // 获取会员uuid
 	Version(op Operator, version string) bool              // 比较版本
+	GetRemoteIp() string                                   // 获取客户端IP
+	IsMobile() bool                                        // 判断是否是移动端
 }
 
 type ContextImpl struct {
@@ -61,6 +72,7 @@ type ContextImpl struct {
 	language       string               // 语言。记录当前请求的语言
 	companyUuid    uint64               // 商家uuid。记录当前请求的商家
 	source         string               // 请求来源
+	scene          string               // 业务场景。用于区分不同的业务场景。如外送场景
 	company        model.Company        // 商家信息
 	companySetting model.CompanySetting // 商家设置信息
 	staff          model.Staff          // 员工信息，如果是点餐助手，应该是收银员
@@ -242,6 +254,18 @@ func (c *ContextImpl) GetSource() string {
 	return c.source
 }
 
+func (c *ContextImpl) SetSource(source string) {
+	c.source = source
+}
+
+func (c *ContextImpl) GetScene() string {
+	return c.scene
+}
+
+func (c *ContextImpl) SetScene(scene string) {
+	c.scene = scene
+}
+
 func (c *ContextImpl) GetCompanyUuid() uint64 {
 	return c.companyUuid
 }
@@ -278,6 +302,10 @@ func (c *ContextImpl) GetMember() model.Member {
 	return c.member
 }
 
+func (c *ContextImpl) SetMember(member model.Member) {
+	c.member = member
+}
+
 func (c *ContextImpl) GetMemberUuid() uint64 {
 	return c.memberUuid
 }
@@ -287,6 +315,9 @@ func (c *ContextImpl) GetAssistantUuid() uint64 {
 }
 
 func (c *ContextImpl) GetDeviceSn() string {
+	if c.deviceSn == "" {
+		c.deviceSn = c.cc.GetHeader("Device-Id")
+	}
 	return c.deviceSn
 }
 
@@ -362,12 +393,61 @@ func (c *ContextImpl) Version(op Operator, version string) bool {
 		return false
 	}
 	switch op {
-	case GreaterThen:
+	case GTE:
+		return v1.GreaterThan(v2) || v1.Equal(v2)
+	case GT:
 		return v1.GreaterThan(v2)
-	case LessThen:
+	case LT:
 		return v1.LessThan(v2)
-	case Equal:
+	case EQ:
 		return v1.Equal(v2)
 	}
+	return false
+}
+
+// generateRandomIP 生成随机IP地址
+func generateRandomIP() string {
+	// 使用当前时间作为随机种子
+	rand.Seed(time.Now().UnixNano())
+
+	// 生成随机IP地址，避免私有IP段
+	var firstOctet int
+	for {
+		firstOctet = rand.Intn(254) + 1 // 1-254
+		// 避免私有IP段和保留段
+		// 10.0.0.0/8, 127.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+		if firstOctet != 10 && firstOctet != 127 && !(firstOctet >= 172 && firstOctet <= 191) && firstOctet != 192 {
+			break
+		}
+	}
+
+	// 后三段随机生成
+	second := rand.Intn(256)
+	third := rand.Intn(256)
+	fourth := rand.Intn(254) + 1 // 1-254，避免0和255
+
+	return fmt.Sprintf("%d.%d.%d.%d", firstOctet, second, third, fourth)
+}
+
+// GetRemoteIp 获取客户端IP
+func (c *ContextImpl) GetRemoteIp() string {
+	clientIp := c.cc.RemoteIP()
+	if clientIp == "127.0.0.1" || clientIp == "::1" {
+		return generateRandomIP()
+	}
+	return clientIp
+}
+
+// IsMobile 判断是否是移动端
+func (c *ContextImpl) IsMobile() bool {
+	userAgent := c.cc.GetHeader("User-Agent")
+	// 检查 User-Agent 字符串中的常见移动设备标识
+	mobileKeywords := []string{"Mobile", "Android", "iPhone", "iPad", "iPod", "BlackBerry", "Windows Phone", "iPad Desktop Mode", "Desktop with Mobile keyword"}
+	for _, keyword := range mobileKeywords {
+		if strings.Contains(userAgent, keyword) {
+			return true
+		}
+	}
+	//
 	return false
 }

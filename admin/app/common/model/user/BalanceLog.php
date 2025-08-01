@@ -98,6 +98,9 @@ class BalanceLog extends BaseModel
                 if (($scene == BalanceLogSceneEnum::ADMIN || $scene == BalanceLogSceneEnum::DEDUCT) && $gift_money < 0) {
                     $user->where('uuid', $user_id)->dec('gift_balance', abs($gift_money))->update();
                     $data['gift_money'] = -abs($gift_money); // 余额日志记录赠送金额
+                } elseif (($scene == BalanceLogSceneEnum::ADMIN || $scene == BalanceLogSceneEnum::DEDUCT) && $money < 0) {
+                    $user->where('uuid', $user_id)->dec('balance', abs($money))->update();
+                    $data['money'] = -abs($money); // 余额日志记录主账户余额
                 }
                 // 订单日志操作
                 else {

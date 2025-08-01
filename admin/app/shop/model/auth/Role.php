@@ -172,7 +172,9 @@ class Role extends RoleModel
 
             $access_list = [];
             $access_model = new RoleAccess();
-            $access_model->where(['role_uuid' => $role_id])->delete();
+            $access_model->destroy(function ($query) use ($role_id) {
+                $query->where('role_uuid', $role_id);
+            });
 
             foreach ($data['access_id'] as $val) {
                 $access_list[] = [

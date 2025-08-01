@@ -29,7 +29,7 @@
                 <el-table-column prop="spec.price" :label="$t('规格价格')" width="100">
                   <template #default="scope">
                     <el-form-item :prop="`tableForm.products[${scope.$index}].spec.price`" size="small" class="price-input">
-                      <num-input v-model:valueData="scope.row.spec.price" :value="scope.row.spec.price" :min="0" :max="999999999" :precision="2" />
+                      <numInput v-model="scope.row.spec.price" :min="0" :max="999999999" :precision="2" />
                     </el-form-item>
                   </template>
                 </el-table-column>
@@ -50,7 +50,6 @@
 
 <script setup>
   import { ref, reactive, watch, getCurrentInstance } from 'vue';
-  import NumInput from '@/components/num-input/index.vue';
   import ProductApi from '@/api/product.js';
 
   const { proxy } = getCurrentInstance();

@@ -95,6 +95,55 @@ type SaleOrder struct {
 	index int `gorm:"-"`
 }
 
+// 获取订单付款信息
+func (model *SaleOrder) GetPaymentInfoList() []resp.PaymentOrder {
+	paymentOrders := make([]resp.PaymentOrder, 0)
+	for _, paymentOrder := range model.PaymentOrders {
+		order := resp.PaymentOrder{
+			Uuid:                 paymentOrder.Uuid,
+			PaymentMethodUuid:    paymentOrder.PaymentMethodUuid,
+			PaymentMethodName:    paymentOrder.PaymentMethodName,
+			PaymentMethodCode:    paymentOrder.PaymentMethod.Code,
+			PaymentAmount:        paymentOrder.PaymentAmount,
+			PaymentCommissionFee: paymentOrder.PaymentCommissionFee,
+			Amount:               paymentOrder.Amount,
+			DisabledCancel:       paymentOrder.PaymentMethod.IsDisabledCancel(),
+		}
+		paymentOrders = append(paymentOrders, order)
+	}
+	return paymentOrders
+}
+
+// 获取商品数量. 用于会员端订单
+func (model *SaleOrder) GetProductNum() float64 {
+	num := decimal.NewFromFloat(0)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		if saleOrderProduct.IsDelete() {
+			continue
+		}
+		num = num.Add(decimal.NewFromFloat(saleOrderProduct.Num))
+	}
+	return num.Round(2).InexactFloat64()
+}
+
+// 获取商品金额. 用于会员端订单
+func (model *SaleOrder) GetProductAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.GetOriginTotalPriceWithTax()))
+	}
+	return amount.Round(2).InexactFloat64()
+}
+
+// 获取商品原价. 用于会员端订单
+func (model *SaleOrder) GetOriginProductAmount() float64 {
+	amount := decimal.NewFromFloat(0)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.GetTotalPriceOrigin()))
+	}
+	return amount.Round(2).InexactFloat64()
+}
+
 // 获取已选择的优惠券uuid
 func (model *SaleOrder) GetSelectedCouponUuid() uint64 {
 	if model.HasCoupon() {
@@ -497,6 +546,7 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			Remark:              saleOrderProduct.Remark,
 			IsMust:              saleOrderProduct.IsMustProduct(),
 			IsGift:              saleOrderProduct.IsGiftProduct(),
+			IsWrap:              saleOrderProduct.IsWrapProduct(),
 			IsBuffet:            saleOrderProduct.IsBuffetProduct(),
 			IsCancel:            saleOrderProduct.IsCancelProduct(),
 			CanChangeNum:        canChangeNum,
@@ -625,7 +675,7 @@ func (model *SaleOrder) NewReverseSettleExchangeMemberPointLog(points float64) *
 }
 
 // 创建退货单
-func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]float64, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
+func (model *SaleOrder) NewReturnOrder(scene string, deliveryFee float64, dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]float64, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
 	returnOrderUuid, _ := utils.GetID()
 
 	// 如果退款类型为整单退款，则退款金额=订单最终应收金额-已退款金额
@@ -706,6 +756,10 @@ func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProd
 	if returnType == constant.ReturnOrderRefundTypeTotal {
 		// 整单退款，退款金额=订单最终应收金额-已退款金额
 		refundAmount = decimal.NewFromFloat(model.FinalPrice).Sub(decimal.NewFromFloat(model.GetReturnAmount())).Round(2).InexactFloat64()
+		// 如果是会员端订单，则退款金额=订单最终应收金额-已退款金额-配送费
+		if scene == constant.SceneMemberOrder {
+			refundAmount = decimal.NewFromFloat(refundAmount).Sub(decimal.NewFromFloat(deliveryFee)).Round(2).InexactFloat64()
+		}
 	}
 	totalRefundAmount := refundAmount
 
@@ -887,7 +941,7 @@ func NewSaleOrder(deviceId string, saleBillUuid uint64, saleBillOrderNo string, 
 	return saleOrder
 }
 
-func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, saleBillUuid, buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting) *SaleOrderBuffetCustomerType {
+func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, saleBillUuid, buffetPackageUuid, buffetCustomerTypePriceUuid uint64, customerNum uint, buffetCustomerTypePricePrice float64, buffetPackageTaxRate float64, setting SaleBillSetting, openOverallDiscount uint) *SaleOrderBuffetCustomerType {
 	saleOrderBuffetCustomerType := &SaleOrderBuffetCustomerType{
 		Name:                        customerName,
 		SaleOrderUuid:               saleOrderUuid,
@@ -898,7 +952,8 @@ func NewSaleOrderBuffetCustomerType(customerName string, saleOrderUuid, saleBill
 		SalePrice:                   buffetCustomerTypePricePrice,
 		Price:                       buffetCustomerTypePricePrice,
 		TaxRate:                     buffetPackageTaxRate,
-		CustomDiscountRate:          1, // 默认自定义折扣率为1，即不打折。刚开始创建时是没有折扣的
+		CustomDiscountRate:          1,                   // 默认自定义折扣率为1，即不打折。刚开始创建时是没有折扣的
+		OpenOverallDiscount:         openOverallDiscount, // 默认开启整单折扣
 	}
 	// 计算金额
 	saleOrderBuffetCustomerType.CalcSaleOrderBuffetCustomerType(setting)

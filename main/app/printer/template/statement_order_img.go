@@ -32,7 +32,8 @@ func NewStatementOrderImgTemplate(
 
 // ImgPrint 图片打印
 func (t *statementOrderImgTemplate) GetPrintContent(
-	printType int,
+	settingPrinterInfo settingResp.PrinterInfo,
+	printOrderType int,
 	temp int,
 	saleBill *model.SaleBill,
 	saleOrder *model.SaleOrder,
@@ -66,11 +67,11 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	if t.base.Lang == "my" {
 		img.SetImagePadding(3)
 	}
-	if temp != 3 && temp != 4 {
+	if temp != 3 && temp != 4 && temp != 5 {
 		img.SetAlignment(pkg.AlignLeft)
-		if printType == constant.PrinterTemplateInvoice {
+		if printOrderType == constant.PrinterTemplateInvoice {
 			img.AppendText(t.base.Translate("发票"))
-		} else if printType == constant.PrinterTemplatePreBilling {
+		} else if printOrderType == constant.PrinterTemplatePreBilling {
 			img.AppendText(t.base.Translate("预结账单"))
 		} else {
 			img.AppendText(t.base.Translate("结账单"))
@@ -168,7 +169,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			)
 		}
 		img.LineFeed(1)
-	} else if temp == 3 || temp == 4 {
+	} else if temp == 3 || temp == 4 || temp == 5 {
 		// 打印logo
 		if logoAddr := t.base.GetLogoAddr(); logoAddr != "" {
 			img.SetTextLineHeight(25)
@@ -181,9 +182,9 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		img.SetFontWeight(2)
 		img.SetFontSize(26)
 		img.SetTextLineHeight(50)
-		if printType == constant.PrinterTemplateInvoice {
+		if printOrderType == constant.PrinterTemplateInvoice {
 			img.AppendText(t.base.Translate("发票"))
-		} else if printType == constant.PrinterTemplatePreBilling {
+		} else if printOrderType == constant.PrinterTemplatePreBilling {
 			img.AppendText(t.base.Translate("预结账单"))
 		} else {
 			img.AppendText(t.base.Translate("结账单"))
@@ -214,8 +215,18 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 			img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("税号"), taxNumber))
 			img.LineFeed(1)
 		}
+		if temp == 5 && printOrderType == constant.PrinterTemplateBilling {
+			if cashierSn := t.base.GetCashierSn(settingPrinterInfo.PrinterCashierDeviceSn); cashierSn != "" {
+				img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银机SN"), cashierSn))
+				img.LineFeed(1)
+			}
+			if printerSn := settingPrinterInfo.PrinterSn; printerSn != "" {
+				img.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("打印机SN"), printerSn))
+				img.LineFeed(1)
+			}
+		}
 		// 发票信息
-		if printType == constant.PrinterTemplateInvoice {
+		if printOrderType == constant.PrinterTemplateInvoice {
 			invoiceInfo := saleOrder.InvoiceInfo
 			if invoiceInfo != nil && invoiceInfo.HasContent() {
 				img.AppendSplitLine()
@@ -291,7 +302,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 
 	// 商品列表 - 标题
-	if temp != 3 && temp != 4 {
+	if temp != 3 && temp != 4 && temp != 5 {
 		var productWidth, priceQtyWidth int
 		if t.base.Lang == "en" || t.base.Lang == "th" || t.base.Lang == "tr" || t.base.Lang == "my" {
 			productWidth = 210
@@ -344,7 +355,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		)
 	}
 	// 商品列表
-	products, num := t.base.MergeSaleOrderProduct(saleOrder, temp != 4)
+	products, num := t.base.MergeSaleOrderProduct(saleBill, saleOrder, temp != 4, true)
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for key, product := range products {
 		img.SetTextLineHeight(45)
@@ -363,7 +374,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	img.AppendSplitLine()
 	img.LineFeed(1)
 	img.SetAlignment(pkg.AlignRight)
-	if temp == 3 || temp == 4 {
+	if temp == 3 || temp == 4 || temp == 5 {
 		img.PrintInColumns(
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %v", t.base.Translate("商品数量"), productNum), Width: 250, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: fmt.Sprintf("%s: %s", t.base.Translate("商品金额"), t.base.GetPriceAndUnit(saleOrder.ProductOriginalAmount)), Width: 0, Align: pkg.AlignRight},
@@ -402,7 +413,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	if saleOrder.IsFree == 0 && saleOrder.CustomDiscountFee != 0 {
 		if saleOrder.CustomDiscountFee != 0 {
 			ratio := ""
-			if temp == 3 || temp == 4 {
+			if temp == 3 || temp == 4 || temp == 5 {
 				// 计算折扣率：折扣金额 / 原始金额 * 100
 				discountRate := decimal.NewFromFloat(saleOrder.CustomDiscountFee).Div(decimal.NewFromFloat(saleOrder.ProductOriginalAmount)).Mul(decimal.NewFromInt(100))
 				ratio = fmt.Sprintf(" (%s%% OFF)", t.base.Number(discountRate.InexactFloat64()))
@@ -422,7 +433,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 		oldCardDiscount := float64(100)
 		gradeEquity := float64(100)
 		cardDiscount := float64(100)
-		if temp == 3 || temp == 4 {
+		if temp == 3 || temp == 4 || temp == 5 {
 			if saleOrder.MemberDiscountRate != 0 {
 				gradeEquity = saleOrder.MemberDiscountRate * 100
 				oldGradeEquity = gradeEquity
@@ -480,7 +491,7 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 	}
 
 	// 分割线
-	if temp == 3 || temp == 4 {
+	if temp == 3 || temp == 4 || temp == 5 {
 		img.AppendSplitLine()
 		img.LineFeed(1)
 	} else {
@@ -634,6 +645,16 @@ func (t *statementOrderImgTemplate) GetPrintContent(
 				}
 			}
 			img.SetTextLineHeight(50)
+		}
+	} else {
+		if temp == 5 && printOrderType == constant.PrinterTemplateBilling {
+			img.AppendSplitLine()
+			img.LineFeed(1)
+			img.AppendBarcode(saleOrder.OrderNo, 500, 120)
+			img.LineFeed(1, 12)
+			img.SetAlignment(pkg.AlignCenter)
+			img.AppendText(saleOrder.OrderNo)
+			img.LineFeed(1)
 		}
 	}
 

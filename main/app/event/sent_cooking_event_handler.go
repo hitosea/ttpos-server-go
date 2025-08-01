@@ -1,7 +1,6 @@
 package event
 
 import (
-	"fmt"
 	"sync"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
@@ -64,12 +63,11 @@ func sentCookingEventHandler() {
 			}
 			record.Data = payload.ToJsonString()
 			record.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
-			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
+			_, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
 				logger.Logger.Error("SubscribeSentCookingEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))
 				return
 			}
-			logger.Logger.Info(fmt.Sprintf("操作记录:送厨 %+v", payload), zap.Uint64("record", uuid))
 		})
 
 		// 扣减库存

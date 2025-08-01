@@ -12,6 +12,20 @@ const (
 	TemplateMemberOrderRefund = "member_order_refund"
 	// TemplateMemberSendCode 会员发送验证码模板ID
 	TemplateMemberSendCode = "member_send_code"
+	// TemplateMemberRegisterCode 会员注册验证码模板ID
+	TemplateMemberRegisterCode = "member_register"
+	// TemplateMemberOrderAuthCode 会员认证验证码模板ID
+	TemplateMemberOrderAuthCode = "delivery_order"
+	// TemplateMemberPoints 会员积分模板ID
+	TemplateMemberPoints = "referral_consumption_got_points"
+	// TemplateMemberCoupon 会员优惠券模板ID
+	TemplateMemberCoupon = "referral_consumption_got_coupons"
+	// TemplateDeliveryOrderCanceledBySelf 外送订单取消模板ID
+	TemplateDeliveryOrderCanceledBySelf = "delivery_order_canceled_by_self"
+	// TemplateDeliveryRejected 外送订单被商家拒单
+	TemplateDeliveryRejected = "delivery_order_rejected"
+	// TemplateDeliveryOrderCanceledByMerchant 商家取消外送订单
+	TemplateDeliveryOrderCanceledByMerchant = "delivery_order_canceled_by_merchant"
 )
 
 // 语言常量

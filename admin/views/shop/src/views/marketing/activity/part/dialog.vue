@@ -35,7 +35,7 @@
         <el-table-column type="radio" width="45" fixed="right">
           <template #default="scope">
             <div class="radio-box">
-              <el-radio v-model="selectedRow" :label="scope.row" @change="handleRadioChange(scope.row)">&nbsp;</el-radio>
+              <el-radio v-model="selectedRow" :value="scope.row" @change="handleRadioChange(scope.row)">&nbsp;</el-radio>
             </div>
           </template>
         </el-table-column>
@@ -61,9 +61,8 @@
 </template>
 <script setup>
   import { ref, reactive, onMounted } from 'vue';
-  import { useI18n } from 'vue-i18n';
   import MarketingApi from '@/api/marketing.js';
-  const { t } = useI18n();
+
   const emit = defineEmits(['close']);
   const props = defineProps({
     open: {

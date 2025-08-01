@@ -153,8 +153,8 @@ func (model *PrinterLog) CalculationTime(data string) int64 {
 		if t < 1200 {
 			return 1200
 		}
-	} else if t < 300 {
-		return 300
+	} else if t < 600 {
+		return 600
 	}
 	return t
 }

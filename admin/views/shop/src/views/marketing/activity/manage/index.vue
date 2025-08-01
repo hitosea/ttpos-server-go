@@ -24,13 +24,15 @@
           <el-table-column prop="name_text" :label="$t('活动名称')"></el-table-column>
           <el-table-column prop="type" :label="$t('活动类型')">
             <template #default="scope">
-              <span v-if="scope.row.type == 0">{{ $t('邀请有礼') }}</span>
+              <span v-if="scope.row.type == 0">{{ $t('邀请消费有礼') }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="prizes" :label="$t('活动奖品')">
+          <el-table-column prop="reward_type" :label="$t('活动奖品')">
             <template #default="scope">
-              <span v-if="scope.row.prizes.length > 0">{{ scope.row.prizes[0].coupon_name }}</span>
-              <span v-else>-</span>
+              <span v-if="scope.row.reward_type == 0 && scope.row.prizes.length > 0">{{ scope.row.prizes[0].coupon_name }}</span>
+              <span v-else>
+                {{ $t('积分') }}
+              </span>
             </template>
           </el-table-column>
           <el-table-column prop="create_time" :label="$t('创建时间')"></el-table-column>
@@ -69,7 +71,13 @@
         </el-pagination>
       </div>
     </div>
-    <record-dialog v-if="recordDialogVisible" :recordDialogVisible="recordDialogVisible" :recordUuid="recordUuid" @update:recordDialogVisible="recordDialogVisible = $event" />
+    <record-dialog
+      v-if="recordDialogVisible"
+      :recordDialogVisible="recordDialogVisible"
+      :recordUuid="recordUuid"
+      :rewardType="rewardType"
+      @update:recordDialogVisible="recordDialogVisible = $event"
+    />
   </div>
 </template>
 
@@ -99,6 +107,7 @@
   const searchLoading = ref('');
   const recordDialogVisible = ref(false);
   const recordUuid = ref('');
+  const rewardType = ref(0);
   // 表单数据
   const formInline = reactive({
     name: '',
@@ -144,7 +153,7 @@
 
   const memberAuth = () => {
     if (!proxy.$filter.isAuth('/card/user/index')) {
-      ElMessage.error(proxy.$t('该营销活动需商家开通会员中心功能，请联系销售代表处理'));
+      ElMessage.error($t('该营销活动需商家开通会员中心功能，请联系销售代表处理'));
       return false;
     }
     return true;
@@ -161,6 +170,7 @@
     if (!memberAuth()) {
       return;
     }
+    rewardType.value = row.reward_type;
     recordUuid.value = row.uuid;
     recordDialogVisible.value = true;
   };

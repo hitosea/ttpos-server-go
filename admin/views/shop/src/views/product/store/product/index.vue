@@ -1,9 +1,4 @@
 <template>
-  <!--
-  
-        时间：2019-10-24
-        描述：商品管理
-    -->
   <div class="product-list">
     <!--搜索表单-->
     <div class="common-search-wrap">
@@ -68,6 +63,9 @@
               <el-dropdown-item @click="openBatch(3)" v-if="userInfo.isOpenTax == '1'">
                 {{ $t('修改税类') }}
               </el-dropdown-item>
+              <el-dropdown-item @click="openBatch(6)">
+                {{ $t('批量修改整单折扣商品') }}
+              </el-dropdown-item>
               <el-dropdown-item @click="openBatch(4)">
                 {{ $t('删除') }}
               </el-dropdown-item>
@@ -105,7 +103,7 @@
                 </div>
                 <div class="info">
                   <div class="name">{{ scope.row.product_name_text }}</div>
-                  <div class="price"> {{ $t('销售价：') }}{{ this.$formatPrice(scope.row.product_price) }} </div>
+                  <div class="price"> {{ $t('销售价：') }}{{ $formatPrice(scope.row.product_price) }} </div>
                 </div>
               </div>
             </template>
@@ -120,7 +118,7 @@
           <el-table-column prop="product_status.text" :label="$t('状态')" width="100">
             <template #default="scope">
               <el-switch
-                :disabled="!this.$filter.isAuth('/product/store/product/state')"
+                :disabled="!proxy.$filter.isAuth('/product/store/product/state')"
                 :model-value="scope.row.product_status.value == 10 ? true : false"
                 @click="undercarriage(scope.row, scope.row.product_status.value == 10 ? 20 : 10)"
               ></el-switch>
@@ -157,307 +155,272 @@
   </div>
 </template>
 
-<script>
+<script setup>
+  import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
+  import { useRouter, useRoute } from 'vue-router';
+  import { ElMessageBox, ElMessage } from 'element-plus';
   import PorductApi from '@/api/product.js';
   import ProductSelector from '@/components/product/Selector.vue';
   import { useUserStore } from '@/store/index';
   import { languageStore } from '@/store/model/language';
   import defaultImg from '@/assets/img/default.png';
-  import Aselect from '@/components/a-select/index.vue';
-  import Acascader from '@/components/a-cascader/index.vue';
+
+  const router = useRouter();
+  const route = useRoute();
   const { computedSupplier, userInfo } = useUserStore();
   const supplier = computedSupplier().supplier;
   const app_id = supplier.value?.app_id || 0;
-  export default {
-    components: { ProductSelector, Aselect, Acascader },
-    data() {
-      return {
-        userInfo,
-        defaultImg,
-        /*切换菜单*/
-        activeName: '',
-        stock: '',
-        material_type: '',
-        /*切换选中值*/
-        activeIndex: '0',
-        /*是否正在加载*/
-        loading: true,
-        /*一页多少条*/
-        pageSize: 10,
-        /*一共多少条数据*/
-        totalDataNumber: 0,
-        /*当前是第几页*/
-        curPage: 1,
-        /*搜索参数*/
-        searchForm: {
-          product_name: '',
-          category_id: '',
-        },
-        /*列表数据*/
-        tableData: [],
-        /*全部分类*/
-        categoryList: [],
-        /*商品统计*/
-        product_count: {},
-        app_id: app_id,
-        searchLoading: '',
+  const { proxy } = getCurrentInstance();
 
-        open_import_product: false,
-        batch_title: '',
-        batch_type: '',
+  // 响应式数据
+  const activeName = ref('');
+  const stock = ref('');
+  const material_type = ref('');
+  const loading = ref(true);
+  const pageSize = ref(10);
+  const totalDataNumber = ref(0);
+  const curPage = ref(1);
+  const searchForm = reactive({
+    product_name: '',
+    category_id: '',
+  });
+  const tableData = ref([]);
+  const categoryList = ref([]);
+  const product_count = ref({});
+  const searchLoading = ref(null);
+  const batch_type = ref('');
+  const openProductSelector = ref(false);
 
-        openProductSelector: false,
-      };
-    },
-    created() {
-      let params = languageStore().getPageParams().pageParams;
-      if (params.value.page) {
-        this.searchForm = {
-          category_id: params.value.category_id,
-          product_name: params.value.product_name,
-        };
-        this.activeName = params.value.type;
-        this.stock = params.value.stock;
-        this.curPage = params.value.page;
-        this.pageSize = params.value.list_rows;
-        this.material_type = params.value.material_type;
-        languageStore().setPageParams({});
+  // 初始化参数
+  onMounted(() => {
+    let params = languageStore().getPageParams().pageParams;
+    if (params.value && params.value.page) {
+      searchForm.category_id = params.value.category_id;
+      searchForm.product_name = params.value.product_name;
+      activeName.value = params.value.type;
+      stock.value = params.value.stock;
+      curPage.value = params.value.page;
+      pageSize.value = params.value.list_rows;
+      material_type.value = params.value.material_type;
+      languageStore().setPageParams({});
+    }
+    if (route.query.inventory) {
+      stock.value = '10';
+      material_type.value = '10';
+      route.query = {};
+    }
+    getData();
+  });
+
+  // 获取列表
+  const getData = async () => {
+    let Params = {
+      ...searchForm,
+      page: curPage.value,
+      list_rows: pageSize.value,
+      type: activeName.value,
+      stock: stock.value,
+      material_type: material_type.value,
+    };
+    if (typeof Params.category_id === 'object' && Params.category_id) {
+      Params.category_id = Number(Params.category_id[Params.category_id.length - 1]);
+    }
+    loading.value = true;
+    try {
+      const data = await PorductApi.storeProductList(Params, true);
+      tableData.value = data.data.list.data;
+      tableData.value.forEach((item) => {
+        if (item.image.length > 0) {
+          item.image.forEach((items) => {
+            items.imageLoading = false;
+          });
+        }
+      });
+      categoryList.value = [];
+      data.data.category.forEach((item, index) => {
+        categoryList.value.push({
+          value: item.category_id,
+          label: item.name_text,
+          children: [],
+        });
+        item.child.forEach((items, indexs) => {
+          categoryList.value[index].children.push({
+            value: items.category_id,
+            label: items.name_text,
+          });
+        });
+      });
+      totalDataNumber.value = data.data.list.total;
+      product_count.value = data.data.product_count;
+    } catch (error) {
+      // 错误处理
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  // 搜索查询
+  const onSearch = (e) => {
+    clearTimeout(searchLoading.value);
+    searchLoading.value = setTimeout(() => {
+      curPage.value = 1;
+      getData();
+    }, 200);
+  };
+
+  // 选择第几页
+  const handleCurrentChange = (val) => {
+    loading.value = true;
+    curPage.value = val;
+    getData();
+  };
+
+  // 每页多少条
+  const handleSizeChange = (val) => {
+    pageSize.value = val;
+    getData();
+  };
+
+  // 切换菜单
+  const handleClick = (tab, event) => {
+    curPage.value = 1;
+    getData();
+  };
+
+  // 打开添加
+  const addClick = () => {
+    let pageParams = {
+      ...searchForm,
+      page: curPage.value,
+      list_rows: pageSize.value,
+      type: activeName.value,
+      stock: stock.value,
+      material_type: material_type.value,
+    };
+    if (typeof pageParams.category_id === 'object' && pageParams.category_id) {
+      pageParams.category_id = Number(pageParams.category_id[pageParams.category_id.length - 1]);
+    }
+    languageStore().setPageParams(pageParams);
+    router.push('/' + app_id + '/product/store/product/add');
+  };
+
+  // 打开编辑
+  const editClick = (row) => {
+    let pageParams = {
+      ...searchForm,
+      page: curPage.value,
+      list_rows: pageSize.value,
+      type: activeName.value,
+      stock: stock.value,
+      material_type: material_type.value,
+    };
+    if (typeof pageParams.category_id === 'object' && pageParams.category_id) {
+      pageParams.category_id = Number(pageParams.category_id[pageParams.category_id.length - 1]);
+    }
+    languageStore().setPageParams(pageParams);
+    router.push({
+      path: '/' + app_id + '/product/store/product/edit',
+      query: {
+        product_id: row.product_id,
+        scene: 'edit',
+      },
+    });
+  };
+
+  // 强制下架上架
+  const undercarriage = (row, state) => {
+    if (!proxy.$filter.isAuth('/product/store/product/state')) {
+      return;
+    }
+    let war = '';
+    let war_ = '';
+    if (state == 20) {
+      war = $t('确认要强制下架吗?');
+      war_ = $t('下架');
+    } else if (state == 10) {
+      war = $t('确认要重新上架吗?');
+      war_ = $t('上架');
+    }
+    ElMessageBox.confirm(war, $t('提示'), {
+      type: 'warning',
+    }).then(async () => {
+      try {
+        await PorductApi.storeStateProduct({
+          product_id: row.product_id,
+          state,
+        });
+        ElMessage({
+          message: war_ + $t('成功'),
+          type: 'success',
+        });
+        getData();
+      } catch (error) {
+        // 错误处理
       }
+    });
+  };
 
-      /*获取列表*/
-      if (this.$route.query.inventory) {
-        this.stock = '10';
-        this.material_type = '10';
-        this.$route.query = {};
+  // 删除
+  const deleteClick = async (row) => {
+    ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
+      type: 'warning',
+    }).then(async () => {
+      try {
+        await PorductApi.storeDelProduct({
+          product_id: row.product_id,
+        });
+        ElMessage({
+          message: $t('删除成功'),
+          type: 'success',
+        });
+        getData();
+      } catch (error) {
+        ElMessage({
+          message: $t('删除失败'),
+          type: 'error',
+        });
       }
-      this.getData();
-    },
-    methods: {
-      initGetData() {
-        this.curPage = 1;
-        this.getData();
-      },
+    });
+  };
 
-      /*选择第几页*/
-      handleCurrentChange(val) {
-        let self = this;
-        self.loading = true;
-        self.curPage = val;
-        self.getData();
-      },
+  // 批量操作
+  const openBatch = (e) => {
+    batch_type.value = e;
+    switch (e) {
+      case 1:
+      case 2:
+      case 3:
+      case 5:
+      case 6:
+        router.push({ path: '/' + app_id + '/product/store/product/batch', query: { type: batch_type.value } });
+        break;
+      case 4:
+        openProductSelector.value = true;
+        break;
+    }
+  };
 
-      /*每页多少条*/
-      handleSizeChange(val) {
-        this.pageSize = val;
-        this.getData();
-      },
-
-      /*切换菜单*/
-      handleClick(tab, event) {
-        let self = this;
-        self.curPage = 1;
-        self.getData();
-      },
-
-      /*获取列表*/
-      getData() {
-        let self = this;
-        let Params = self.searchForm;
-        Params.page = self.curPage;
-        Params.list_rows = self.pageSize;
-        Params.type = self.activeName;
-        Params.stock = self.stock;
-        Params.material_type = self.material_type;
-        if (typeof Params.category_id == 'object' && Params.category_id) {
-          Params.category_id = Number(Params.category_id[Params.category_id.length - 1]);
-        }
-        self.loading = true;
-        PorductApi.storeProductList(Params, true)
-          .then((data) => {
-            self.loading = false;
-            self.tableData = data.data.list.data;
-            self.tableData.map((item) => {
-              if (item.image.length > 0) {
-                item.image.map((items) => {
-                  items.imageLoading = false;
-                });
-              }
-            });
-
-            self.categoryList = [];
-            data.data.category.map((item, index) => {
-              self.categoryList.push({
-                value: item.category_id,
-                label: item.name_text,
-                children: [],
-              });
-              item.child.map((items, indexs) => {
-                self.categoryList[index].children.push({
-                  value: items.category_id,
-                  label: items.name_text,
-                });
-              });
-            });
-            self.totalDataNumber = data.data.list.total;
-            self.product_count = data.data.product_count;
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
-
-      /*搜索查询*/
-      onSearch(e) {
-        clearTimeout(this.searchLoading);
-        this.searchLoading = setTimeout(() => {
-          this.curPage = 1;
-          this.getData();
-        }, 200);
-      },
-
-      /*打开添加*/
-      addClick() {
-        let self = this;
-        let pageParams = self.searchForm;
-        pageParams.page = self.curPage;
-        pageParams.list_rows = self.pageSize;
-        pageParams.type = self.activeName;
-        pageParams.stock = self.stock;
-        pageParams.material_type = self.material_type;
-        if (typeof pageParams.category_id == 'object' && pageParams.category_id) {
-          pageParams.category_id = Number(pageParams.category_id[pageParams.category_id.length - 1]);
-        }
-        languageStore().setPageParams(pageParams);
-        this.$router.push('/' + this.app_id + '/product/store/product/add');
-      },
-
-      /*打开编辑*/
-      editClick(row) {
-        let self = this;
-        let pageParams = self.searchForm;
-        pageParams.page = self.curPage;
-        pageParams.list_rows = self.pageSize;
-        pageParams.type = self.activeName;
-        pageParams.stock = self.stock;
-        pageParams.material_type = self.material_type;
-        if (typeof pageParams.category_id == 'object' && pageParams.category_id) {
-          pageParams.category_id = Number(pageParams.category_id[pageParams.category_id.length - 1]);
-        }
-        languageStore().setPageParams(pageParams);
-        this.$router.push({
-          path: '/' + this.app_id + '/product/store/product/edit',
-          query: {
-            product_id: row.product_id,
-            scene: 'edit',
-          },
+  const deleteArr = async (data) => {
+    openProductSelector.value = false;
+    if (data && data.length > 0) {
+      const product_ids = data.map((item) => item.product_id).join(',');
+      try {
+        await PorductApi.storeDelProduct({
+          product_id: product_ids,
         });
-      },
-
-      /* 强制下架上架*/
-      undercarriage(row, state) {
-        if (!this.$filter.isAuth('/product/store/product/state')) {
-          return;
-        }
-        let self = this;
-        let war = '';
-        let war_ = '';
-        if (state == 20) {
-          (war = $t('确认要强制下架吗?')), (war_ = $t('下架'));
-        } else if (state == 10) {
-          (war = $t('确认要重新上架吗?')), (war_ = $t('上架'));
-        }
-        ElMessageBox.confirm(war, $t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          PorductApi.storeStateProduct({
-            product_id: row.product_id,
-            state,
-          }).then((data) => {
-            this.$ElMessage({
-              message: war_ + $t('成功'),
-              type: 'success',
-            });
-            self.getData();
-          });
+        ElMessage({
+          message: $t('删除成功'),
+          type: 'success',
         });
-      },
-      /*打开复制*/
-      copyClick(row) {
-        this.$router.push({
-          path: '/product/product/edit',
-          query: {
-            product_id: row.product_id,
-            scene: 'copy',
-          },
+      } catch (error) {
+        // 错误处理
+        ElMessage({
+          message: $t('删除失败'),
+          type: 'error',
         });
-      },
-
-      /*删除*/
-      deleteClick: function (row) {
-        let self = this;
-        ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          PorductApi.storeDelProduct({
-            product_id: row.product_id,
-          }).then((data) => {
-            this.$ElMessage({
-              message: $t('删除成功'),
-              type: 'success',
-            });
-            self.getData();
-          });
-        });
-      },
-
-      openImportProduct() {
-        this.$router.push({ path: '/' + this.app_id + '/product/store/product/importProduct' });
-      },
-
-      //   上传图片
-      openBatch(e) {
-        this.batch_type = e;
-        if (e == 1) {
-          this.batch_title = '修改图片';
-          this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { title: this.batch_title, type: this.batch_type } });
-        }
-        if (e == 2) {
-          this.batch_title = '修改分类';
-          this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { title: this.batch_title, type: this.batch_type } });
-        }
-        if (e == 3) {
-          this.batch_title = '修改税类';
-          this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { title: this.batch_title, type: this.batch_type } });
-        }
-        if (e == 4) {
-          this.openProductSelector = true;
-        }
-        if (e == 5) {
-          this.batch_title = '商品批量导入';
-          this.$router.push({ path: '/' + this.app_id + '/product/store/product/batch', query: { title: this.batch_title, type: this.batch_type } });
-        }
-      },
-
-      deleteArr(data) {
-        this.openProductSelector = false;
-        if (data && data.length > 0) {
-          const product_ids = [];
-          data.map((item) => {
-            product_ids.push(item.product_id);
-          });
-          const product_id = product_ids.join(',');
-          PorductApi.storeDelProduct({
-            product_id: product_id,
-          }).then((data) => {
-            this.$ElMessage({
-              message: $t('删除成功'),
-              type: 'success',
-            });
-            this.getData();
-          });
-        }
-      },
-    },
+      }
+      getData();
+    }
   };
 </script>
 

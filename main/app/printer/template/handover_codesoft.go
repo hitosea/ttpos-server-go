@@ -132,6 +132,8 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 			printer.AppendText(t.base.PrintText(t.base.Translate("会员折扣"), "", t.base.GetPriceAndUnit(businessData.TotalUserDiscountMoney), width))
 			printer.LineFeed(1)
 		}
+		printer.AppendText(t.base.PrintText(t.base.Translate("赠菜金额"), "", t.base.GetPriceAndUnit(businessData.TotalGiveProductPrice), width))
+		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.TotalFreeOrderPrice), width))
 		printer.LineFeed(2)
 		// 退款
@@ -276,6 +278,8 @@ func (t *handoverCodesoftTemplate) GetPrintContent(
 			printer.LineFeed(1)
 		}
 		printer.AppendText(t.base.PrintText(t.base.Translate("退款金额"), "", t.base.GetPriceAndUnit(businessData.TotalRefundMoney), width))
+		printer.LineFeed(1)
+		printer.AppendText(t.base.PrintText(t.base.Translate("赠菜金额"), "", t.base.GetPriceAndUnit(businessData.TotalGiveProductPrice), width))
 		printer.LineFeed(1)
 		printer.AppendText(t.base.PrintText(t.base.Translate("免单金额"), "", t.base.GetPriceAndUnit(businessData.TotalFreeOrderPrice), width))
 		printer.LineFeed(1)

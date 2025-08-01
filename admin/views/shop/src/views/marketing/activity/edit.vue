@@ -18,6 +18,7 @@
             :dateTime="dateTime"
             :couponList="couponList"
             :status="status"
+            :uuid="uuid"
           ></Basic>
           <!--高级设置-->
           <Set ref="SetRef" :status="status"></Set>
@@ -56,6 +57,7 @@
   const couponList = ref([]);
   // 表单数据
   const form = reactive({
+    type: null,
     name: '',
     description: '',
     start_time: '',
@@ -66,7 +68,9 @@
     reward_condition_num: 0,
     reward_type: 0,
     prize_list: [],
+    reward_value: null,
     image_base64: '',
+    is_send_sms: 1,
   });
 
   // 引用
@@ -93,6 +97,7 @@
     )
       .then((res) => {
         loading.value = false;
+        form.type = res.data.detail.type;
         form.name = JSON.parse(res.data.detail.name || '{}');
         form.description = JSON.parse(res.data.detail.description || '{}');
         form.start_time = res.data.detail.start_time;
@@ -103,6 +108,8 @@
         form.reward_limit = res.data.detail.reward_limit;
         form.reward_condition_num = res.data.detail.reward_condition_num;
         form.reward_type = res.data.detail.reward_type;
+        form.reward_value = res.data.detail.reward_value;
+        form.is_send_sms = res.data.detail.is_send_sms;
         form.image_base64 = res.data.detail.image_base64;
         qrcode.value = res.data.qr_code;
         if (res.data.detail.prizes.length > 0) {

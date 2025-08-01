@@ -1,0 +1,23 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+#关于目录
+1. php相关的文件目录是 /admin
+
+#关于迁移文件或者数据库
+1. 新增字段中有关时间的, 都用int类型并以_time结尾, 类型是int,  默认值是0
+2. 新增字段中有关金额的,都用decimal(14,2)类型
+3. 新增迁移文件的时候都判断一下表或者字段是否已经存在, 如果存在, 则不要新增
+4. 都用中文注释, 不要用英文注释
+5. 都添加uuid字段, 类型是biginteger, 默认值是0, 不要用bigint类型
+6. 都添加create_time, update_time, delete_time字段, 类型是int, 默认值是0, 不要用datetime类型
+7. 所有的迁移文件都写在php中，不要写在go中
+8. 新增迁移文件的时候，文件名的前缀我希望是20250721370408_， 比如20250721370408_add_table_name_table.php 并以上一个文件的序号+1作为新的文件名
+9. 在迁移文件中新增表或者删除字段的时候，也要同步改动 seeds/shop_01.sql 文件。../main/app/model/ 目录下也有对应的模型文件，也要同步改动
+10. 迁移文件不用写表的前缀 "ttpos_"
+
+#关于接口
+1. 接口都用中文注释, 不要用英文注释
+2. php接口，都基于其他接口都添加apidoc注释，头部引用 use hg\apidoc\annotation as Apidoc;

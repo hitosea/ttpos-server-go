@@ -23,6 +23,34 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	r.GET("api/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "healthy")
 	})
+	r.GET("api/testrpc", func(c *gin.Context) {
+
+		//var setting model.CompanySetting
+		//dbm.GetDB(7633004138496000).Model(&model.CompanySetting{}).Find(&setting)
+		//lat, lng := setting.GetCoordinates()
+		//c.String(http.StatusOK, fmt.Sprintf("lat: %s, lng: %s", lat, lng))
+		//测试外送服务
+		// rpc.TestEcho(c)
+		// rpc.TestEstimatePrice()
+
+		// res, err := rpc.TestCreateOrder()
+		// if err != nil {
+		// 	c.String(http.StatusInternalServerError, err.Error())
+		// 	return
+		// }
+		// json, _ := json.Marshal(res)
+		// c.String(http.StatusOK, string(json))
+
+		// // rpc.TestConfirmOrder()
+		// // rpc.TestGetDriverInfo()
+
+		// if err := rpc.TestCancelOrder(); err != nil {
+		// 	c.String(http.StatusInternalServerError, err.Error())
+		// 	return
+		// }
+		// rpc.TestCancelOrderDelay()
+		c.String(http.StatusOK, "Success")
+	})
 	apiV1 := r.Group("api/v1")
 	{
 		// 通用接口
@@ -37,6 +65,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterRechargeOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterStatisticsHandlers(shopGroup, dbm, cache)
+			shop.RegisterMemberOrderHandlers(shopGroup, dbm, cache)
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")
@@ -53,6 +82,8 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			cashier.RegisterBaseHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterCallHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterH5OrderHandlers(cashierGroup, dbm, cache)
+			cashier.RegisterMemberOrderHandlers(cashierGroup, dbm, cache)
+			cashier.RegisterMemberOrderManageHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterRechargeOrderHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterPrinterHandlers(cashierGroup, dbm, cache)
 			cashier.RegisterStatisticsHandlers(cashierGroup, dbm, cache)
@@ -101,7 +132,13 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		memberGroup := apiV1.Group("/member")
 		{
 			member.RegisterAuthHandlers(memberGroup, dbm, cache)
+			member.RegisterProductHandlers(memberGroup, dbm, cache)
+			member.RegisterOrderHandlers(memberGroup, dbm, cache)
 			member.RegisterMarketingHandlers(memberGroup, dbm, cache)
+			member.RegisterAddressHandlers(memberGroup, dbm, cache)
+			member.RegisterBaseHandlers(memberGroup, dbm, cache)
+			member.RegisterBenefitHandlers(memberGroup, dbm, cache)
+			member.RegisterMemberCallbackHandlers(memberGroup, dbm, cache)
 		}
 
 	}

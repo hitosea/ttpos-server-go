@@ -16,9 +16,13 @@ type IMemberPointLogRepo interface {
 
 // IMemberPointLogQueryRepo 会员积分日志查询
 type IMemberPointLogQueryRepo interface {
-	GetMemberPoint(opts ...DBOption) (*model.MemberPointLog, error)      // 获取会员积分日志
-	GetMemberPointList(opts ...DBOption) ([]model.MemberPointLog, error) // 获取会员积分日志列表
-	GetMemberPointLogNotProcessed() ([]model.MemberPointLog, error)      // 获取未处理的会员积分日志. 用于处理积分变动
+	GetMemberPoint(opts ...DBOption) (*model.MemberPointLog, error)                          // 获取会员积分日志
+	GetMemberPointList(opts ...DBOption) ([]model.MemberPointLog, error)                     // 获取会员积分日志列表
+	PaginateGet(page, pageSize int, opts ...DBOption) ([]model.MemberPointLog, int64, error) // 分页获取会员积分日志列表
+	GetMemberPointLogNotProcessed() ([]model.MemberPointLog, error)                          // 获取未处理的会员积分日志. 用于处理积分变动
+
+	WhereByPositiveValue() DBOption // 根据正数积分查询
+	WhereByNegativeValue() DBOption // 根据负数积分查询
 }
 
 func NewMemberPointLogRepo(db *gorm.DB) IMemberPointLogRepo {
@@ -85,4 +89,35 @@ func (r *MemberPointLogRepo) UpdateProcessed(uuids []uint64) error {
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+func (r *MemberPointLogRepo) PaginateGet(page int, pageSize int, opts ...DBOption) ([]model.MemberPointLog, int64, error) {
+	var logs []model.MemberPointLog
+	var total int64
+	db := r.db
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	db = db.Order("id DESC")
+
+	if err := db.Model(&model.MemberPointLog{}).Count(&total).Offset((page - 1) * pageSize).Limit(pageSize).Find(&logs).Error; err != nil {
+		return nil, 0, errors.WithMessage(err)
+	}
+
+	return logs, total, nil
+}
+
+// WhereByPositiveValue 根据正数积分查询
+func (r *MemberPointLogRepo) WhereByPositiveValue() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("value > 0")
+	}
+}
+
+// WhereByNegativeValue 根据负数积分查询
+func (r *MemberPointLogRepo) WhereByNegativeValue() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("value < 0")
+	}
 }

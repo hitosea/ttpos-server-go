@@ -34,6 +34,7 @@ type PPrinterRepo interface {
 	PrintingRechargeOrder(order model.MemberRechargeOrder, FirstExecution int) (*resp.PrinterData, error)
 	PrintingHandoverOrder(log *model.StaffShiftLog, businessData *business_data_resp.BusinessDataAll, FirstExecution int, openMoneybox bool, deviceSnId ...string) (*resp.PrinterData, error)
 	PrintingBusinessData(businessData *template.PrintingBusinessData, startTime int64, endTime int64, deviceSnId ...string) (*resp.PrinterData, error)
+	PrintingTakeoutOrder(memberSaleOrder *model.MemberSaleOrder, saleBill *model.SaleBill, saleOrderUuid uint64) (*resp.PrinterData, error)
 	SetFinishedTime(finishedTime int64) // 设置完成时间
 	GetFinishedTime() int64             // 获取完成时间
 }
@@ -99,7 +100,8 @@ func NewPrinterRepo(ctx context.Context, langs ...string) PPrinterRepo {
 // 获取商品打印机列表
 func (p *PrinterRepoImpl) GetPrinterTemplate(id uint64) int {
 	// 获取打印机模板
-	printerTemplateRepo, err := repository.NewPrinterTemplateRepo(p.dbm.GetDB(p.ctx.GetCompanyUuid())).GetPrinterTemplateInfo(id)
+	db := p.dbm.GetDB(p.ctx.GetCompanyUuid())
+	printerTemplateRepo, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(id)
 	if err != nil {
 		logger.Logger.Error("获取打印机模板失败", zap.Error(err))
 		return 1

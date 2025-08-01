@@ -1,6 +1,9 @@
 package setting
 
-import "ttpos-server-go/app/dto"
+import (
+	"strconv"
+	"ttpos-server-go/app/dto"
+)
 
 // CashierResp 收银机设置，接口响应
 type CashierResp struct {
@@ -21,7 +24,22 @@ type CashierResp struct {
 	IsAutoOrder            string             `json:"is_auto_order"`              // 是否自动接单
 	AutoOrderLimit         string             `json:"auto_order_limit"`           // 自动接单金额上限
 	IsAutoVoice            string             `json:"is_auto_voice"`              // 是否开启自动接单语音播报
+	IsAutoMemberOrder      string             `json:"is_auto_member_order"`       // 是否自动接单会员订单 0-关闭 1-开启
+	AutoMemberOrderLimit   string             `json:"auto_member_order_limit"`    // 自动接单会员订单金额上限
+	IsAutoVoiceMemberOrder string             `json:"is_auto_voice_member_order"` // 是否开启自动接单会员订单语音播报
 	MenuShowSoldOut        string             `json:"menu_show_sold_out"`         // 是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+	MemberShowSoldOut      string             `json:"member_show_sold_out"`       // 是否显示会员端售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+}
+
+// IsAutoMemberOrderBool 是否开启自动接单会员订单
+func (res *CashierResp) IsAutoMemberOrderBool() bool {
+	return res.IsAutoMemberOrder == "1"
+}
+
+// AutoMemberOrderLimitValue 是否开启自动接单会员订单金额上限
+func (res *CashierResp) AutoMemberOrderLimitValue() float64 {
+	val, _ := strconv.ParseFloat(res.AutoMemberOrderLimit, 64)
+	return val
 }
 
 // Cashier 收银机设置

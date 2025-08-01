@@ -17,6 +17,9 @@ type MarketingActivity struct {
 	MultiLanguageDescUuid uint64  `gorm:"column:multi_language_desc_uuid;type:biginteger;default:0;comment:活动文案多语言uuid" json:"multi_language_desc_uuid"`
 	StartTime             int     `gorm:"column:start_time;type:int;default:0;comment:活动开始时间" json:"start_time"`
 	EndTime               int     `gorm:"column:end_time;type:int;default:0;comment:活动结束时间" json:"end_time"`
+	RewardType            int     `gorm:"column:reward_type;type:tinyint(1);default:0;comment:奖励类型 0优惠券 1积分" json:"reward_type"`
+	RewardValue           float64 `gorm:"column:reward_value;type:decimal(14,2);default:0;comment:奖励值" json:"reward_value"`
+	IsSendSms             int     `gorm:"column:is_send_sms;type:tinyint(1);default:0;comment:是否发送短信通知 0否 1是" json:"is_send_sms"`
 	RewardConditionAmount float64 `gorm:"column:reward_condition_amount;type:decimal(14,2);default:0;comment:奖励条件金额" json:"reward_condition_amount"`
 	IsOpenRewardLimit     int     `gorm:"column:is_open_reward_limit;type:tinyint(1);default:0;comment:是否开启奖励次数限制 0否 1是" json:"is_open_reward_limit"`
 	RewardLimit           int64   `gorm:"column:reward_limit;type:int;default:0;comment:奖励次数限制" json:"reward_limit"`
@@ -27,6 +30,23 @@ type MarketingActivity struct {
 	Records           []*MarketingActivityRecord `gorm:"foreignKey:ActivityUuid;references:Uuid" json:"records"`
 	MultiLanguageName *MultiLanguageName         `gorm:"foreignKey:Uuid;references:MultiLanguageNameUuid" json:"multi_language_name"`
 	MultiLanguageDesc *MultiLanguageName         `gorm:"foreignKey:Uuid;references:MultiLanguageDescUuid" json:"multi_language_desc"`
+}
+
+/**
+ * 获取状态文字
+ */
+func (m *MarketingActivity) GetStatus() int {
+	if m.IsInvalid == 1 {
+		return 2
+	}
+	now := time.Now().Unix()
+	if int64(m.StartTime) > now {
+		return 0
+	} else if int64(m.EndTime) < now {
+		return 2
+	} else {
+		return 1
+	}
 }
 
 // 是否正在进行中
@@ -46,11 +66,12 @@ type MarketingActivityPrize struct {
 // MarketingActivityRecord 营销活动记录模型 `ttpos_marketing_activity_record`
 type MarketingActivityRecord struct {
 	BaseModel
-	ActivityUuid   uint64 `gorm:"column:activity_uuid;type:biginteger;default:0;comment:活动uuid" json:"activity_uuid"`
-	PrizeUuid      uint64 `gorm:"column:prize_uuid;type:biginteger;default:0;comment:奖品uuid" json:"prize_uuid"`
-	MemberUuid     uint64 `gorm:"column:member_uuid;type:biginteger;default:0;comment:会员uuid" json:"member_uuid"`
-	RewardCount    int    `gorm:"column:reward_count;type:int;default:0;comment:已获得奖励次数" json:"reward_count"`
-	LastRewardTime int64  `gorm:"column:last_reward_time;type:int;default:0;comment:最后一次获得奖励时间" json:"last_reward_time"`
+	ActivityUuid   uint64  `gorm:"column:activity_uuid;type:biginteger;default:0;comment:活动uuid" json:"activity_uuid"`
+	PrizeUuid      uint64  `gorm:"column:prize_uuid;type:biginteger;default:0;comment:奖品uuid" json:"prize_uuid"`
+	MemberUuid     uint64  `gorm:"column:member_uuid;type:biginteger;default:0;comment:会员uuid" json:"member_uuid"`
+	RewardCount    int     `gorm:"column:reward_count;type:int;default:0;comment:已获得奖励次数" json:"reward_count"`
+	RewardValue    float64 `gorm:"column:reward_value;type:decimal(14,2);default:0;comment:奖励值" json:"reward_value"`
+	LastRewardTime int64   `gorm:"column:last_reward_time;type:int;default:0;comment:最后一次获得奖励时间" json:"last_reward_time"`
 }
 
 // 营销活动消费记录表 `ttpos_marketing_activity_consumption`

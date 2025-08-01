@@ -90,7 +90,42 @@ let OrderApi = {
 
   //外卖订单列表
   postTakeoutOrderList(data, errorback) {
-    return request._post('/shop/store.DeliveryOrder/index', data, errorback);
+    return request._post('/shop/store.MemberOrder/index', data, errorback);
+  },
+
+  //外卖订单详情
+  postTakeoutOrderDetail(data, errorback) {
+    return request._post('/shop/store.MemberOrder/detail', data, errorback);
+  },
+
+  //外卖订单拒单
+  postTakeoutOrderReject(data, errorback) {
+    return request._post('/shop/store.MemberOrder/reject', data, errorback);
+  },
+
+  //外卖订单取消
+  postTakeoutOrderCancel(data, errorback) {
+    return request._post('/shop/store.MemberOrder/cancel', data, errorback);
+  },
+
+  //外卖订单退款信息
+  getTakeoutOrderReturnInfo(data, errorback) {
+    return request._get('/shop/store.MemberOrder/return_info', data, errorback);
+  },
+
+  //外卖订单退款
+  postTakeoutOrderRefund(data, errorback) {
+    return request._post('/shop/store.MemberOrder/return', data, errorback);
+  },
+
+  //外卖订单重新退款
+  postTakeoutOrderRefundAgain(data, errorback) {
+    return request._post('/shop/store.MemberOrder/re_return', data, errorback);
+  },
+
+  //外卖订单导出
+  postTakeoutOrderExport(data, errorback) {
+    return request._get('/shop/store.MemberOrder/export', data, errorback);
   },
 };
 

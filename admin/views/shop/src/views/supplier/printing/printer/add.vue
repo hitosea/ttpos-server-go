@@ -104,6 +104,9 @@
         <el-form-item for="no_click" :label="$t('打印机PORT')" prop="XPRINTER_LAN.PORT" :rules="[{ required: true, message: ' ' }]">
           <el-input v-model="form.XPRINTER_LAN.PORT"></el-input>
         </el-form-item>
+        <el-form-item for="no_click" :label="$t('打印机SN')">
+          <el-input v-model="form.sn"></el-input>
+        </el-form-item>
       </div>
 
       <!-- CODESOFT打印 -->
@@ -114,6 +117,9 @@
 
         <el-form-item for="no_click" :label="$t('打印机PORT')" prop="CODESOFT_LAN.PORT" :rules="[{ required: true, message: ' ' }]">
           <el-input v-model="form.CODESOFT_LAN.PORT"></el-input>
+        </el-form-item>
+        <el-form-item for="no_click" :label="$t('打印机SN')">
+          <el-input v-model="form.sn"></el-input>
         </el-form-item>
       </div>
 
@@ -180,6 +186,7 @@
           sort: null,
           print_times: 1,
           source_device_sn: '',
+          sn: '',
           FEI_E_YUN: {
             USER: '',
             UKEY: '',

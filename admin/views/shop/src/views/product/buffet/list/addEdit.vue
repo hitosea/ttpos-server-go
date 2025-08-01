@@ -275,6 +275,13 @@
           </div>
         </div>
       </el-form-item>
+
+      <el-form-item for="no_click" :label="$t('整单折扣')" prop="open_overall_discount" :rules="[{ required: true, message: '' }]">
+        <el-radio-group v-model="form.open_overall_discount">
+          <el-radio :value="1">{{ $t('开启') }}</el-radio>
+          <el-radio :value="0">{{ $t('关闭') }}</el-radio>
+        </el-radio-group>
+      </el-form-item>
     </el-form>
 
     <template #footer>
@@ -344,6 +351,7 @@
             },
           ],
           product_ids: [],
+          open_overall_discount: 1,
         },
         select_list: [],
         limit_list: [],
@@ -406,6 +414,7 @@
         this.select_list = copyData.buffetProducts.map((item) => ({ ...item, product_name_text: item.product.product_name_text }));
         this.form.price = Number(copyData.price);
         this.form.product_ids = copyData.buffetProducts.map((item) => item.product_id);
+        this.form.open_overall_discount = copyData.open_overall_discount;
 
         this.form.customer_type = copyData.buffetCustomerType.map((item) => ({ ...item, price: Number(item.price || 0) }));
         this.form.buy_limit_status = copyData.buy_limit_status;

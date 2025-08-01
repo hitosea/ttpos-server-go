@@ -1,9 +1,4 @@
 <template>
-  <!--
-      
-      时间：2019-10-25
-      描述：订单详情
-  -->
   <div class="pb50" v-loading="loading">
     <div class="product-content">
       <!--基本信息-->
@@ -13,7 +8,7 @@
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('订单类型：') }}</span>
-              {{ detail.bill_type == 1 ? $t('点餐订单') : $t('桌台订单') }}
+              {{ $t('外送订单') }}
             </div>
           </el-col>
           <el-col :span="6">
@@ -22,103 +17,111 @@
               {{ detail.order_no }}
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.member_uuids">
+          <el-col :span="6" v-if="detail.member?.id">
             <div class="pb16">
               <span class="gray9">{{ $t('会员：') }}</span>
-              <span>{{ $t('会员ID') }}&nbsp;({{ detail?.member_uuids }})</span>
+              <span>{{ $t('会员ID') }}&nbsp;({{ detail?.member?.id }})</span>
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div class="pb16">
+              <span class="gray9">{{ $t('外送序号：') }}</span>
+              <span>{{ detail?.serial_no || '-' }}</span>
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div class="pb16">
+              <span class="gray9">{{ $t('订单状态：') }}</span>
+              {{ statusMap(detail.status) }}
+            </div>
+          </el-col>
+          <el-col :span="6">
+            <div class="pb16">
+              <span class="gray9">{{ $t('收银员：') }}</span>
+              <span>{{ detail.cachier?.name || '-' }}</span>
             </div>
           </el-col>
           <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('订单金额：') }}</span>
-              <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ this.$formatPrice(detail.order_amount) }}
-              <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
-              <span v-if="currency.is_open == 1" style="padding-left: 8px">
-                <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                {{ this.$formatPrice(Number(detail.order_amount) * Number(currency.vices?.unit_rate)) }}
-                <template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }}</template>
+              <main-currency>
+                {{ formatPrice(detail.origin_amount) }}
+              </main-currency>
+              <span style="padding-left: 8px">
+                <sub-currency>
+                  {{ formatPrice(Number(detail.origin_amount) * Number(currency.vices?.unit_rate)) }}
+                </sub-currency>
               </span>
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.status == 1">
+          <el-col :span="6">
             <div class="pb16">
-              <span class="gray9">{{ $t('实付款金额：') }}</span>
-              <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-              {{ this.$formatPrice(Number(detail.payment_amount)) }}
-              <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+              <span class="gray9">{{ $t('配送费：') }}</span>
+              <main-currency>
+                {{ formatPrice(detail.delivery_fee) }}
+              </main-currency>
             </div>
           </el-col>
-          <el-col :span="6" v-if="Number(detail.refund_money || 0) > 0">
+
+          <el-col :span="6">
+            <div class="pb16">
+              <span class="gray9">{{ $t('会员折扣：') }}</span>
+              <main-currency>
+                {{ formatPrice(detail.member_discount) }}
+              </main-currency>
+            </div>
+          </el-col>
+
+          <el-col :span="6" v-if="detail.status == 7">
+            <div class="pb16">
+              <span class="gray9">{{ $t('实付金额：') }}</span>
+              <main-currency>
+                {{ formatPrice(Number(detail.pay_amount)) }}
+              </main-currency>
+            </div>
+          </el-col>
+          <el-col :span="6" v-if="Number(detail.refund_amount || 0) > 0">
             <div class="pb16">
               <span class="gray9">{{ $t('退款金额：') }}</span>
               <span>
-                <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                {{ this.$formatPrice(detail.refund_amount) }}
-                <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+                <main-currency>
+                  {{ formatPrice(detail.refund_amount) }}
+                </main-currency>
               </span>
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.status == 1" v-for="item in detail.pay_types">
+          <el-col :span="6" v-if="detail.pay_time > 0">
             <div class="pb16">
               <span class="gray9">{{ $t('支付方式：') }}</span>
               <span>
-                {{ item.payment_type_name }}
-                <template v-if="item.source_text && item.code != 40 && item.code != 10 && item.code != -1"> ({{ item.source_text }}) </template>
-                <el-tag class="ml-8" v-if="item.status == 0" type="danger" size="large">{{ $t('异常') }}</el-tag>
+                {{ detail.pay_type }}
               </span>
             </div>
           </el-col>
           <el-col :span="6">
             <div class="pb16">
-              <span class="gray9">{{ $t('用餐方式：') }}</span> {{ detail.dining_method == 0 ? $t('店内就餐') : $t('打包带走') }}
-            </div>
-          </el-col>
-          <el-col :span="6" v-if="detail.serial_no">
-            <div class="pb16">
-              <span class="gray9">{{ detail.bill_type == 1 ? $t('序号：') : $t('桌号：') }}</span> {{ detail.serial_no }}
-            </div>
-          </el-col>
-          <el-col :span="6">
-            <div class="pb16">
-              <span class="gray9">{{ $t('交易状态：') }}</span>
-              {{ detail.status == 0 ? $t('待付款') : detail.status == 2 ? $t('已取消') : $t('已完成') }}
-            </div>
-          </el-col>
-          <el-col :span="6" v-if="detail.cashier_name">
-            <div class="pb16">
-              <span class="gray9">{{ $t('收银员：') }}</span>
-              {{ detail.cashier_name || '-' }}
-            </div>
-          </el-col>
-          <el-col :span="6" v-if="detail.is_buffet == 1">
-            <div class="pb16">
-              <span class="gray9">{{ $t('自助餐：') }}</span
-              >{{ detail.buffet_names }}
-            </div>
-          </el-col>
-          <el-col :span="6" v-if="detail.status == 2">
-            <div class="pb16">
-              <span class="gray9">{{ $t('取消原因：') }}</span>
-              {{ detail.cancel_reason || '-' }}
-            </div>
-          </el-col>
-          <el-col :span="6" v-if="detail.sale_orders.length == 1 && detail.sale_orders[0]?.is_free">
-            <div class="pb16">
-              <span class="gray9">{{ $t('免单原因：') }}</span>
-              {{ detail.sale_orders[0]?.free_reason[language] || '-' }}
+              <span class="gray9">{{ $t('支付时间：') }}</span>
+              <span>
+                {{ DTime(detail.pay_time) }}
+              </span>
             </div>
           </el-col>
           <el-col :span="6">
             <div class="pb16">
-              <span class="gray9">{{ $t('时间：') }}</span>
-              {{ detail.create_time || '-' }} {{ $t('至') }} {{ detail.finish_time || '-' }}
+              <span class="gray9">{{ $t('订单时间：') }}</span>
+              {{ DTime(detail.create_time) }} {{ $t('至') }} {{ DTime(detail.finish_time) }}
             </div>
           </el-col>
-          <el-col :span="6" v-if="detail.bill_type != 1">
+          <el-col :span="6">
             <div class="pb16">
               <span class="gray9">{{ $t('备注：') }}</span>
               {{ detail.remark || '-' }}
+            </div>
+          </el-col>
+          <el-col :span="6" v-if="detail.status == 8">
+            <div class="pb16">
+              <span class="gray9">{{ $t('取消原因：') }}</span>
+              {{ detail.cancel_reason || '-' }}
             </div>
           </el-col>
         </el-row>
@@ -126,38 +129,8 @@
 
       <div class="common-form mt16"> {{ $t('商品信息') }} </div>
 
-      <el-radio-group v-model="activeName" class="radio-search" v-if="(detail?.sale_orders || []).length > 1">
-        <template v-for="(item, index) in detail?.sale_orders">
-          <el-radio-button :label="index">{{ item.serial_no }}</el-radio-button>
-        </template>
-      </el-radio-group>
-      <div class="sub-order" v-if="(detail?.sale_orders || []).length > 1">
-        <p class="sub-order-item">{{ $t('订单号：') }}{{ detail?.sale_orders[activeName].order_no }}</p>
-        <p class="sub-order-item">
-          {{ $t('订单金额：') }}
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(detail?.sale_orders[activeName].order_amount) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
-          <span v-if="currency.is_open == 1" style="padding-left: 8px">
-            <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-            {{ this.$formatPrice(Number(detail?.sale_orders[activeName].order_amount) * Number(currency.vices?.unit_rate)) }}
-            <template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }}</template>
-          </span>
-        </p>
-        <p class="sub-order-item">
-          {{ $t('实付金额：') }}
-          <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-          {{ this.$formatPrice(Number(detail?.sale_orders[activeName].payment_amount)) }}
-          <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
-        </p>
-        <p class="sub-order-item">
-          {{ $t('会员：') }}
-          <span v-if="detail?.sale_orders[activeName].member_uuid">{{ $t('会员ID') }}({{ detail?.sale_orders[activeName].member_uuid }})</span>
-          <span v-else>-</span>
-        </p>
-      </div>
       <div class="table-wrap">
-        <el-table size="small" :data="detail?.sale_orders[activeName]?.products" border style="width: 100%">
+        <el-table size="small" :data="detail?.product_list?.list" border style="width: 100%">
           <el-table-column prop="name_text" :label="$t('商品')" width="400">
             <template #default="scope">
               <div class="product-info">
@@ -177,13 +150,13 @@
                   </div>
                   <div class="price">
                     <span>
-                      <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                      {{ this.$formatPrice(scope.row.price) }}
-                      <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
-                      <span v-if="currency.is_open == 1" style="padding-left: 8px">
-                        <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                        {{ this.$formatPrice(Number(scope.row.price) * Number(currency.vices?.unit_rate)) }}
-                        <template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }}</template>
+                      <main-currency>
+                        {{ formatPrice(scope.row.origin_unit_price) }}
+                      </main-currency>
+                      <span style="padding-left: 8px">
+                        <sub-currency>
+                          {{ formatPrice(Number(scope.row.origin_unit_price) * Number(currency.vices?.unit_rate)) }}
+                        </sub-currency>
                       </span>
                     </span>
                   </div>
@@ -205,45 +178,29 @@
               <div>
                 <template v-if="scope.row.total_price != scope.row.sale_price">
                   <span class="text-line-through" v-if="scope.row.sale_price">
-                    <template v-if="currency.unit_position == '0'">
-                      {{ currency.unit }}
-                    </template>
-                    {{ this.$formatPrice(Number(scope.row.sale_price)) }}
-                    <template v-if="currency.unit_position == '1'">
-                      {{ currency.unit }}
-                    </template>
+                    <main-currency>
+                      {{ formatPrice(Number(scope.row.sale_price)) }}
+                    </main-currency>
                   </span>
-                  <span class="text-line-through" v-if="currency.is_open == 1 && scope.row.sale_price">
-                    <template v-if="currency.vices.vice_unit_position == '0'">
-                      {{ currency.vices?.vice_unit }}
-                    </template>
-                    {{ this.$formatPrice(Number(scope.row.sale_price) * Number(currency.vices?.unit_rate)) }}
-                    <template v-if="currency.vices.vice_unit_position == '1'">
-                      {{ currency.vices?.vice_unit }}
-                    </template>
+                  <span class="text-line-through" v-if="scope.row.sale_price">
+                    <sub-currency>
+                      {{ formatPrice(Number(scope.row.sale_price) * Number(currency.vices?.unit_rate)) }}
+                    </sub-currency>
                   </span>
                 </template>
 
                 <span>
-                  <template v-if="currency.unit_position == '0'">
-                    {{ currency.unit }}
-                  </template>
-                  {{ this.$formatPrice(Number(scope.row.total_price)) }}
-                  <template v-if="currency.unit_position == '1'">
-                    {{ currency.unit }}
-                  </template>
+                  <main-currency>
+                    {{ formatPrice(Number(scope.row.total_price)) }}
+                  </main-currency>
                 </span>
 
-                <span v-if="currency.is_open == 1">
-                  <template v-if="currency.vices.vice_unit_position == '0'">
-                    {{ currency.vices?.vice_unit }}
-                  </template>
-                  {{ this.$formatPrice(Number(scope.row.total_price) * Number(currency.vices?.unit_rate)) }}
-                  <template v-if="currency.vices.vice_unit_position == '1'">
-                    {{ currency.vices?.vice_unit }}
-                  </template>
+                <span>
+                  <sub-currency>
+                    {{ formatPrice(Number(scope.row.total_price) * Number(currency.vices?.unit_rate)) }}
+                  </sub-currency>
                 </span>
-                <span class="tips" v-if="Number(scope.row.refund_amount) > 0"> （{{ $t('退款：') + currency.unit + this.$formatPrice(scope.row.refund_amount) }}） </span>
+                <span class="tips" v-if="Number(scope.row.refund_amount) > 0"> （{{ $t('退款：') + currency.unit + formatPrice(scope.row.refund_amount) }}） </span>
               </div>
             </template>
           </el-table-column>
@@ -259,7 +216,7 @@
               {{ activity.content }}
               <template v-if="(activity.pay_type || []).length > 0"
                 >&nbsp; (<span class="flex" v-for="(item, itemIndex) in activity.pay_type" :key="itemIndex">
-                  <span>{{ item.name }}:{{ item.unit + this.$formatPrice(item.refund_money) }}</span>
+                  <span>{{ item.name }}:{{ item.unit + formatPrice(item.refund_money) }}</span>
                   <el-tag v-if="item.refund_status == '0'" class="cupon" type="danger" @click="handleRetry(item)">{{ $t('退款失败，重试') }}</el-tag>
                   <el-tooltip v-if="item.value == '90333'" placement="bottom" trigger="click">
                     <el-icon class="icon"><WarningFilled /></el-icon>
@@ -293,12 +250,12 @@
     </div>
     <div class="common-button-wrapper">
       <el-button size="small" @click="cancelFunc">{{ $t('返回') }}</el-button>
-      <el-button v-if="extra?.is_cell_refund" @click="refundClick(detail)" type="danger" size="small" v-auth="'/store/operate/refund'">{{ $t('退款') }}</el-button>
+      <!-- <el-button v-if="extra?.is_cell_refund" @click="refundClick(detail)" type="danger" size="small" v-auth="'/store/operate/refund'">{{ $t('退款') }}</el-button>
       <el-button v-if="extra?.is_cell_cancel" @click="cancelClick(detail)" type="danger" size="small" v-auth="'/store/operate/order_cancel'">{{ $t('取消') }} </el-button>
-      <el-button v-if="extra?.is_cell_delete" @click="delClick(detail)" type="danger" size="small" v-auth="'/store/order/delete'">{{ $t('删除') }} </el-button>
+      <el-button v-if="extra?.is_cell_delete" @click="delClick(detail)" type="danger" size="small" v-auth="'/store/order/delete'">{{ $t('删除') }} </el-button> -->
     </div>
     <!--处理-->
-    <Cancel v-if="open_edit" :open_edit="open_edit" :order_no="order_no" :order_id="sale_bill_uuid" @closeDialog="closeDialogFunc($event, 'edit')"> </Cancel>
+    <!-- <Cancel v-if="open_edit" :open_edit="open_edit" :order_no="order_no" :order_id="sale_bill_uuid" @closeDialog="closeDialogFunc($event, 'edit')"> </Cancel>
     <refund
       v-if="open_refund"
       :open_edit="open_refund"
@@ -308,280 +265,273 @@
       :pay_price="pay_price"
       @closeDialog="closerefundDialogFunc($event, 'edit')"
     ></refund>
-    <refundAgain v-if="open_refundAgain" :open_edit="open_refundAgain" :refundOrder="refundOrder" @closeDialog="closerefundAgainDialogFunc($event)"> </refundAgain>
+    <refundAgain v-if="open_refundAgain" :open_edit="open_refundAgain" :refundOrder="refundOrder" @closeDialog="closerefundAgainDialogFunc($event)"> </refundAgain> -->
   </div>
 </template>
 
-<script>
+<script setup>
+  import { ref, reactive, onMounted, computed, getCurrentInstance } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
+  import { useI18n } from 'vue-i18n';
+  import { ElMessageBox, ElMessage } from 'element-plus';
+  import { WarningFilled } from '@element-plus/icons-vue';
   import OrderApi from '@/api/order.js';
-  import Cancel from './dialog/cancel.vue';
-  import refund from './dialog/refund.vue';
-  import refundAgain from './dialog/refundAgain.vue';
+  // import Cancel from './dialog/cancel.vue';
+  // import refund from './dialog/refund.vue';
+  // import refundAgain from './dialog/refundAgain.vue';
   import { useUserStore } from '@/store';
   import { languageStore } from '@/store/model/language';
+  import { DTime } from '@/utils/DateTime.js';
+
+  // 获取当前实例
+  const { proxy } = getCurrentInstance();
+
+  // 使用路由和国际化
+  const route = useRoute();
+  const router = useRouter();
+  const { t: $t } = useI18n();
+
+  // 使用store
   const { currency } = useUserStore();
-  export default {
-    components: {
-      Cancel,
-      refund,
-      refundAgain,
+
+  // 格式化价格函数
+  const formatPrice = (price) => {
+    return proxy.$formatPrice(price);
+  };
+
+  // 响应式数据
+  const language = ref('');
+  const loading = ref(true);
+
+  const detail = reactive({
+    sale_bill_uuid: 0,
+    sale_order_uuid: 0,
+    pay_status: [],
+    pay_type: [],
+    delivery_type: [],
+    user: {},
+    address: [],
+    product: [],
+    order_status: [],
+    extract: [],
+    pay_types: [],
+    sale_orders: [],
+    supplier: {
+      name: '',
     },
-    data() {
-      return {
-        language: '',
-        currency: currency,
-        active: 0,
-        /*是否加载完成*/
-        loading: true,
-        /*订单数据*/
-        detail: {
-          sale_bill_uuid: 0,
-          sale_order_uuid: 0,
-          pay_status: [],
-          pay_type: [],
-          delivery_type: [],
-          user: {},
-          address: [],
-          product: [],
-          order_status: [],
-          extract: [],
-          pay_types: [],
-          sale_orders: [],
-          supplier: {
-            name: '',
-          },
-        },
-        extra: {},
-        /*是否打开编辑弹窗*/
-        open_edit: false,
-        open_refund: false,
-        open_refundAgain: false,
-        /*当前编辑的对象*/
-        refundOrder: {},
-        order_no: 0,
-        sale_bill_uuid: 0,
-        sale_order_uuid: 0,
-        pay_price: 0,
-        buffet: [],
-        tableData: [],
-        activeName: 0,
-        tableNameList: [],
-        pageParams: {},
-        activities: [],
-        bankList: [
-          { name: 'BANGKOK BANK (BBL)', value: '002' },
-          { name: 'KASIKORNBANK (KBANK)', value: '004' },
-          { name: 'KRUNG THAI BANK (KTB)', value: '006' },
-          { name: 'TMBTHANACHART BANK (TTB)', value: '011' },
-          { name: 'SIAM COMMERCIAL BANK (SCB)', value: '014' },
-          { name: 'CITIBANK BANGKOK BRANCH (CITI)', value: '017' },
-          { name: 'SUMITOMO MITSUI BANK (SMBC)', value: '018' },
-          { name: 'STANDARD CHARTERED BANK THAI (SCBT)', value: '020' },
-          { name: 'CIMB THAI BANK (CIMBT)', value: '022' },
-          { name: 'UNITED OVERSEAS BANK THAI (UOBT)', value: '024' },
-          { name: 'BANK OF AYUDHYA (BAY)', value: '025' },
-          { name: 'GOVERNMENT SAVINGS BANK (GSB)', value: '030' },
-          { name: 'THE HONGKONG AND SHANGHAI BANKING CORPORATION (HSBC)', value: '031' },
-          { name: 'GOVERNMENT HOUSING BANK (GHB)', value: '033' },
-          { name: 'BANK FOR AGRICULTURE AND AGRICULTURAL COOPERATIVES (BAAC)', value: '034' },
-          { name: 'MIZUHO CORPORATE BANK (MHCB)', value: '039' },
-          { name: 'ISLAMIC BANK OF THAILAND (ISBT)', value: 'ISBT' },
-          { name: 'TISCO BANK (TISCO)', value: 'TISCO' },
-          { name: 'KIATNAKIN BANK (KK)', value: '069' },
-          { name: 'INDUSTRIAL AND COMMERCIAL BANK OF CHINA (ICBC THAI)', value: '070' },
-          { name: 'THAI CREDIT RETAIL BANK (TCRB)', value: '071' },
-          { name: 'LAND AND HOUSES BANK (LH BANK)', value: '073' },
-        ],
-      };
-    },
-    created() {
-      this.language = languageStore()?.getLanguageKey().language.value;
-      this.pageParams = JSON.parse(JSON.stringify(languageStore().getPageParams().pageParams.value));
-      languageStore().setPageParams({});
+    status: 0,
+  });
 
-      /*获取列表*/
-      this.getParams();
-    },
-    computed: {
-      uniqueUsers() {
-        const userIds = new Set(); // 使用 Set 来存储唯一的 user_id
-        return (this.detail.subOrder || [])
-          .filter((item) => {
-            if (item.user && !userIds.has(item.user.user_id)) {
-              userIds.add(item.user.user_id);
-              return true; // 保留这个用户
-            }
-            return false; // 过滤掉重复的用户
-          })
-          .map((item) => item.user); // 返回去重后的用户对象
-      },
-    },
+  // const extra = ref({});
+  // const open_edit = ref(false);
+  // const open_refund = ref(false);
+  const open_refundAgain = ref(false);
+  const refundOrder = ref({});
+  // const order_no = ref(0);
+  // const sale_bill_uuid = ref(0);
+  // const sale_order_uuid = ref(0);
+  // const pay_price = ref(0);
+  const pageParams = ref({});
+  const activities = ref([]);
 
-    methods: {
-      next() {
-        if (this.active++ > 4) this.active = 0;
-      },
-      /*获取参数*/
-      getParams() {
-        let self = this;
-        // 取到路由带过来的参数
-        OrderApi.storeOrderdetail(
-          {
-            sale_bill_uuid: this.$route.query.sale_bill_uuid,
-            sale_order_uuid: this.$route.query.sale_order_uuid,
-          },
-          true
-        )
-          .then((res) => {
-            self.loading = false;
-            self.detail = res.data.detail;
-            self.extra = res.data.extra;
-            self.activities = [];
-            res.data.operation_log.list.map((item) => {
-              self.activities.push({
-                refund_type: item.refund_type,
-                pay_type: item.pay_type,
-                content: item.description,
-                timestamp:
-                  item.create_time +
-                  ' ' +
-                  $t('操作人：') +
-                  (item.user_name ? item.user_name + (item.user_email ? `(${item.user_email})` : '') : item.user_email || '') +
-                  ' ' +
-                  item.source,
-                color: '#0bbd87',
-              });
-            });
-          })
-          .catch((error) => {
-            self.loading = false;
-          });
-      },
+  const bankList = ref([
+    { name: 'BANGKOK BANK (BBL)', value: '002' },
+    { name: 'KASIKORNBANK (KBANK)', value: '004' },
+    { name: 'KRUNG THAI BANK (KTB)', value: '006' },
+    { name: 'TMBTHANACHART BANK (TTB)', value: '011' },
+    { name: 'SIAM COMMERCIAL BANK (SCB)', value: '014' },
+    { name: 'CITIBANK BANGKOK BRANCH (CITI)', value: '017' },
+    { name: 'SUMITOMO MITSUI BANK (SMBC)', value: '018' },
+    { name: 'STANDARD CHARTERED BANK THAI (SCBT)', value: '020' },
+    { name: 'CIMB THAI BANK (CIMBT)', value: '022' },
+    { name: 'UNITED OVERSEAS BANK THAI (UOBT)', value: '024' },
+    { name: 'BANK OF AYUDHYA (BAY)', value: '025' },
+    { name: 'GOVERNMENT SAVINGS BANK (GSB)', value: '030' },
+    { name: 'THE HONGKONG AND SHANGHAI BANKING CORPORATION (HSBC)', value: '031' },
+    { name: 'GOVERNMENT HOUSING BANK (GHB)', value: '033' },
+    { name: 'BANK FOR AGRICULTURE AND AGRICULTURAL COOPERATIVES (BAAC)', value: '034' },
+    { name: 'MIZUHO CORPORATE BANK (MHCB)', value: '039' },
+    { name: 'ISLAMIC BANK OF THAILAND (ISBT)', value: 'ISBT' },
+    { name: 'TISCO BANK (TISCO)', value: 'TISCO' },
+    { name: 'KIATNAKIN BANK (KK)', value: '069' },
+    { name: 'INDUSTRIAL AND COMMERCIAL BANK OF CHINA (ICBC THAI)', value: '070' },
+    { name: 'THAI CREDIT RETAIL BANK (TCRB)', value: '071' },
+    { name: 'LAND AND HOUSES BANK (LH BANK)', value: '073' },
+  ]);
 
-      /*取消*/
-      cancelFunc() {
-        languageStore().setPageParams(this.pageParams);
-        this.$router.back(-1);
-      },
+  // 生命周期
+  onMounted(() => {
+    language.value = languageStore()?.getLanguageKey().language.value;
+    pageParams.value = JSON.parse(JSON.stringify(languageStore().getPageParams().pageParams.value));
+    languageStore().setPageParams({});
 
-      /*打开取消*/
-      cancelClick(item) {
-        this.order_no = item.order_no;
-        this.sale_bill_uuid = item.sale_bill_uuid;
-        this.open_edit = true;
-      },
-      refundClick(item) {
-        this.order_no = item.order_no;
-        this.sale_bill_uuid = item.sale_bill_uuid;
-        this.sale_order_uuid = item.sale_orders[0].sale_order_uuid;
-        this.pay_price = 0;
-        this.open_refund = true;
-      },
+    // 获取列表
+    getParams();
+  });
 
-      /*关闭弹窗*/
-      closeDialogFunc(e, f) {
-        if (f == 'edit') {
-          this.open_edit = e.openDialog;
-          if (e.type == 'success') {
-            this.getParams();
-          }
-        }
+  const getParams = () => {
+    // 取到路由带过来的参数
+    OrderApi.postTakeoutOrderDetail(
+      {
+        member_sale_order_uuid: route.query.member_sale_order_uuid,
       },
-      /*关闭弹窗*/
-      closerefundDialogFunc(e, f) {
-        if (f == 'edit') {
-          this.open_refund = e.openDialog;
-          if (e.type == 'success') {
-            this.getParams();
-          }
-        }
-      },
-
-      closerefundAgainDialogFunc(e) {
-        this.open_refundAgain = e.openDialog;
-        if (e.type == 'success') {
-          this.getParams();
-        }
-      },
-
-      delClick(item) {
-        let self = this;
-        ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
-          type: 'warning',
-        }).then(() => {
-          OrderApi.storedelete({
-            sale_bill_uuid: item.sale_bill_uuid,
-            sale_order_uuid: item.is_split === 'undefined' ? item.sale_order_uuid : 0,
-          }).then((data) => {
-            this.$ElMessage({
-              message: $t('删除成功'),
-              type: 'success',
-            });
-            this.$router.back(-1);
+      true
+    )
+      .then((res) => {
+        loading.value = false;
+        Object.assign(detail, res.data);
+        activities.value = [];
+        res.data.operation_log.list.map((item) => {
+          activities.value.push({
+            refund_type: item.refund_type,
+            pay_type: item.pay_type,
+            content: item.description,
+            timestamp:
+              DTime(item.create_time) +
+              ' ' +
+              $t('操作人：') +
+              (item.user_name ? item.user_name + (item.user_email ? `(${item.user_email})` : '') : item.user_email || '') +
+              ' ' +
+              item.source,
+            color: '#0bbd87',
           });
         });
-      },
+      })
+      .catch((error) => {
+        loading.value = false;
+      });
+  };
 
-      handleRetry(item) {
-        this.refundOrder = item;
-        if (item.value == '90333') {
-          this.open_refundAgain = true;
-        } else {
-          ElMessageBox.confirm('确定重试退款操作?', '提示', {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning',
-          })
-            .then(() => {
-              this.loading = true;
-              const params = {
-                return_order_uuid: item.return_order_uuid,
-                return_amount_uuid: item.return_amount_uuid,
-              };
-              OrderApi.orderRefundAgain(params, true)
-                .then((data) => {
-                  this.loading = false;
-                  this.$ElMessage({
-                    message: $t('操作成功'),
-                    type: 'success',
-                  });
-                  this.getParams();
-                })
-                .catch((error) => {
-                  this.loading = false;
-                });
+  const cancelFunc = () => {
+    languageStore().setPageParams(pageParams.value);
+    router.back(-1);
+  };
+
+  // const cancelClick = (item) => {
+  //   order_no.value = item.order_no;
+  //   sale_bill_uuid.value = item.sale_bill_uuid;
+  //   open_edit.value = true;
+  // };
+
+  // const refundClick = (item) => {
+  //   order_no.value = item.order_no;
+  //   sale_bill_uuid.value = item.sale_bill_uuid;
+  //   sale_order_uuid.value = item.sale_orders[0].sale_order_uuid;
+  //   pay_price.value = 0;
+  //   open_refund.value = true;
+  // };
+
+  // const closeDialogFunc = (e, f) => {
+  //   if (f == 'edit') {
+  //     open_edit.value = e.openDialog;
+  //     if (e.type == 'success') {
+  //       getParams();
+  //     }
+  //   }
+  // };
+
+  // const closerefundDialogFunc = (e, f) => {
+  //   if (f == 'edit') {
+  //     open_refund.value = e.openDialog;
+  //     if (e.type == 'success') {
+  //       getParams();
+  //     }
+  //   }
+  // };
+
+  // const closerefundAgainDialogFunc = (e) => {
+  //   open_refundAgain.value = e.openDialog;
+  //   if (e.type == 'success') {
+  //     getParams();
+  //   }
+  // };
+
+  // const delClick = (item) => {
+  //   ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
+  //     type: 'warning',
+  //   }).then(() => {
+  //     OrderApi.storedelete({
+  //       sale_bill_uuid: item.sale_bill_uuid,
+  //       sale_order_uuid: item.is_split === 'undefined' ? item.sale_order_uuid : 0,
+  //     }).then((data) => {
+  //       ElMessage({
+  //         message: $t('删除成功'),
+  //         type: 'success',
+  //       });
+  //       router.back(-1);
+  //     });
+  //   });
+  // };
+
+  const handleRetry = (item) => {
+    refundOrder.value = item;
+    if (item.value == '90333') {
+      open_refundAgain.value = true;
+    } else {
+      ElMessageBox.confirm('确定重试退款操作?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      })
+        .then(() => {
+          loading.value = true;
+          const params = {
+            return_order_uuid: item.return_order_uuid,
+            return_amount_uuid: item.return_amount_uuid,
+          };
+          OrderApi.orderRefundAgain(params, true)
+            .then((data) => {
+              loading.value = false;
+              ElMessage({
+                message: $t('操作成功'),
+                type: 'success',
+              });
+              getParams();
             })
-            .catch(() => {
-              this.$ElMessage({
-                type: 'info',
-                message: '已取消操作',
-              });
+            .catch((error) => {
+              loading.value = false;
             });
-        }
-      },
-
-      bankName(value) {
-        let name = '';
-        this.bankList.map((item) => {
-          if (item.value == value) {
-            name = item.name;
-          }
-        });
-        return name;
-      },
-
-      tableNo(arr) {
-        let result = '-';
-        if (arr && arr.length > 0) {
-          let nameArr = [];
-          (arr || []).map((item) => {
-            nameArr.push(item.table_no);
+        })
+        .catch(() => {
+          ElMessage({
+            type: 'info',
+            message: '已取消操作',
           });
-          result = nameArr.join('+');
-        }
-        return result;
-      },
-    },
+        });
+    }
+  };
+
+  const bankName = (value) => {
+    let name = '';
+    bankList.value.map((item) => {
+      if (item.value == value) {
+        name = item.name;
+      }
+    });
+    return name;
+  };
+
+  const statusMap = (status) => {
+    switch (status) {
+      case 0:
+        return $t('选购中');
+      case 1:
+        return $t('待付款');
+      case 2:
+        return $t('待商家接单');
+      case 3:
+        return $t('商家备餐中');
+      case 4:
+        return $t('待骑手接单');
+      case 5:
+        return $t('骑手正在赶往商家');
+      case 6:
+        return $t('骑手配送中');
+      case 7:
+        return $t('已完成');
+      case 8:
+        return $t('已取消');
+    }
   };
 </script>
 <style scoped lang="scss">

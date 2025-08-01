@@ -240,6 +240,7 @@ CREATE TABLE `ttpos_company_setting` (
     `timezone` VARCHAR(50) NOT NULL DEFAULT 'Asia/Shanghai' COMMENT '时区',
     `languages` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '支持语言',
     `address` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '联系地址',
+    `coordinates` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '经纬度，如：13.721899,100.52900',
     `delivery_status` int(11) DEFAULT 0 COMMENT '外送配置状态：0-关,1-开',
     `delivery_config` text COMMENT '外送配置',
     `create_time` int(10) NOT NULL DEFAULT 0 COMMENT '创建时间（时间戳）',
@@ -384,5 +385,19 @@ CREATE TABLE `ttpos_web_socket_msg` (
   `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='websocket消息表';
+
+CREATE TABLE `ttpos_delivery_ledger_settle` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '唯一标识',
+  `company_uuid` bigint(20) unsigned NOT NULL DEFAULT 0 COMMENT '公司Uuid',
+  `month` varchar(7) NOT NULL DEFAULT '' COMMENT '月份',
+  `order_count` int(11) NOT NULL DEFAULT 0 COMMENT '订单数',
+  `delivery_fee_amount` int(11) NOT NULL DEFAULT 0 COMMENT '总配送费',
+  `channel_data` text DEFAULT NULL COMMENT '渠道数据',
+  `create_time` int(11) NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+  `update_time` int(11) NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+  `delete_time` int(11) NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='外送台账结清数据';
 
 SET FOREIGN_KEY_CHECKS = 1;

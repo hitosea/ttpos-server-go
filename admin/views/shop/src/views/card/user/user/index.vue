@@ -14,8 +14,8 @@
             <el-option v-for="(item, index) in gradeList" :key="index" :label="item.name" :value="item.grade_id"></el-option>
           </a-select>
         </el-form-item>
-        <el-form-item :label="$t('昵称/手机号/ID')">
-          <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/ID')" @input="onSearch"></el-input>
+        <el-form-item :label="$t('昵称/手机号/ID/会员卡号')" class="max-460">
+          <el-input v-model="formInline.keyword" :placeholder="$t('昵称/手机号/ID/会员卡号')" @input="onSearch"></el-input>
         </el-form-item>
         <el-form-item :label="$t('添加时间')">
           <div class="block">
@@ -101,6 +101,11 @@
           <el-table-column prop="points" :label="$t('积分')">
             <template #default="scope">
               {{ this.$priceTwo(scope.row.points) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="accumulated_consumption_get_point" :label="$t('累计消费获得积分')" width="160">
+            <template #default="scope">
+              {{ this.$priceTwo(scope.row.accumulated_consumption_get_point) || '-' }}
             </template>
           </el-table-column>
           <el-table-column prop="mobile" :label="$t('手机号')"></el-table-column>

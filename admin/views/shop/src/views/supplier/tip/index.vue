@@ -17,9 +17,9 @@
 
         <template v-if="form.charge_type == '1'">
           <el-form-item :label="$t('金额')" prop="service_charge">
-            <span v-if="currency.unit_position == '0'">{{ currency.unit }}</span>
-            <numInput class="max-w460" :min="0" :precision="2" v-model="form.service_charge" :placeholder="$t('请输入')"></numInput>
-            <span v-if="currency.unit_position == '1'">{{ currency.unit }}</span>
+            <main-currency>
+              <numInput class="max-w460" :min="0" :precision="2" v-model="form.service_charge" :placeholder="$t('请输入')"></numInput>
+            </main-currency>
             <div class="tips">{{ $t('收银/桌台订单所需要增加的服务费') }}</div>
           </el-form-item>
         </template>
@@ -55,8 +55,8 @@
         </el-form-item>
         <template v-if="form.apply_scope == '2'">
           <el-form-item label="">
-            <el-checkbox v-model="form.apply_scope_ordering" true-label="1" false-label="0">{{ $t('点餐方式') }}</el-checkbox>
-            <el-checkbox v-model="form.apply_scope_table" true-label="1" false-label="0">{{ $t('桌台方式') }}</el-checkbox>
+            <el-checkbox v-model="form.apply_scope_ordering" true-value="1" false-value="0">{{ $t('点餐方式') }}</el-checkbox>
+            <el-checkbox v-model="form.apply_scope_table" true-value="1" false-value="0">{{ $t('桌台方式') }}</el-checkbox>
           </el-form-item>
           <div class="table-selector" @click="handleOpenTableSelector" v-if="form.apply_scope_table == '1'">
             <div class="table-selector-content">

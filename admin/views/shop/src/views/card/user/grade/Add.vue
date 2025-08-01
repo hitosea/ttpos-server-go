@@ -21,15 +21,10 @@
                         style="width: 100%; margin-left: 10px;"></el-input-number>
                 </div>
                 <div class="d-s-c mt16 w-100">
-                    <el-checkbox v-model="form.open_points">{{ $t('累计积分满') }}</el-checkbox>
+                    <el-checkbox v-model="form.open_points">{{ $t('累计消费获得积分满') }}</el-checkbox>
                     <el-input-number v-model="form.upgrade_points" type="number" :controls="false" :min="0" :max="100000000" :disabled="form.open_points == 0"
                         style="width:  100%;margin-left: 10px;"></el-input-number>
                 </div>
-                <!-- <div class="d-s-c mt16">
-          <el-checkbox v-model="form.open_invite">推荐人数满</el-checkbox>
-          <el-input v-model="form.upgrade_invite" type="number" :disabled="form.open_invite==0" style="width: 160px;margin-left: 10px;"></el-input>
-          <span class="ml10">人</span>
-        </div> -->
             </el-form-item>
         </el-form>
         <template #footer>

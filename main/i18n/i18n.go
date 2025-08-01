@@ -62,7 +62,7 @@ func Init() {
 		}
 		parts := strings.SplitN(filename, ".", 2)
 		language := parts[0]
-		if !slices.Contains([]string{LanguageZH, LanguageZHTW, LanguageEN, LanguageJA, LanguageKO, LanguageMY, LanguageTH, LanguageTR, LanguageSV}, language) {
+		if !slices.Contains([]string{LanguageZH, LanguageZHTW, LanguageEN, LanguageJA, LanguageKO, LanguageMY, LanguageTH, LanguageTR, LanguageDE, LanguageSV}, language) {
 			continue
 		}
 		var content []byte

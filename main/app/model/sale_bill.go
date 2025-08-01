@@ -6,6 +6,8 @@ import (
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/pkg/utils"
+
+	"github.com/shopspring/decimal"
 )
 
 // SaleBill 销售账单 `ttpos_sale_bill`
@@ -22,7 +24,7 @@ type SaleBill struct {
 	IsSplitOrder uint `gorm:"column:is_split_order;type:tinyint(1);default:0;comment:是否拆单, 0-否 1-是" json:"is_split_order"`
 
 	// 订单类型字段
-	BillType        uint  `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单" json:"bill_type"`
+	BillType        uint  `gorm:"column:bill_type;type:tinyint(1);default:0;comment:账单类型, 0-桌台订单、1-点餐订单、2-会员端订单" json:"bill_type"`
 	DiningMethod    uint  `gorm:"column:dining_method;type:tinyint(1);default:0;comment:用餐方式,0-堂食 1-打包" json:"dining_method"`
 	IsBuffet        uint  `gorm:"column:is_buffet;type:tinyint(1);default:0;comment:是否自助餐, 0-否 1-是" json:"is_buffet"`
 	BuffetDuration  uint  `gorm:"column:buffet_duration;type:int(10);default:0;comment:自助餐可用时长（秒），0为不限时. 原始值为自助餐的时长，加钟时会累加" json:"buffet_duration"`
@@ -68,16 +70,23 @@ type SaleBill struct {
 	CashierName string `gorm:"column:cashier_name;type:varchar(255);default:'';comment:收银员名称" json:"cashier_name"`
 
 	// 关联ID字段
-	ConsumerUuid       uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
-	CashierUuid        uint64 `gorm:"column:cashier_uuid;type:bigint(20);default:0;comment:收银员ID" json:"cashier_uuid"`
-	DeskUuid           uint64 `gorm:"column:desk_uuid;type:bigint(20);default:0;comment:餐桌ID" json:"desk_uuid"`
-	BuffetPackage1Uuid uint64 `gorm:"column:buffet_package1_uuid;type:bigint(20);default:0;comment:自助餐套餐1ID" json:"buffet_package1_uuid"`
-	BuffetPackage2Uuid uint64 `gorm:"column:buffet_package2_uuid;type:bigint(20);default:0;comment:自助餐套餐2ID" json:"buffet_package2_uuid"`
-	DeviceUuid         uint64 `gorm:"column:device_uuid;type:bigint(20);default:0;comment:设备ID，用于标识这个账单是由哪个设备创建的。点餐账单通过设备uuid查询" json:"device_uuid"`
+	ConsumerUuid        uint64 `gorm:"column:consumer_uuid;type:bigint(20);default:0;comment:消费者ID" json:"consumer_uuid"`
+	CashierUuid         uint64 `gorm:"column:cashier_uuid;type:bigint(20);default:0;comment:收银员ID" json:"cashier_uuid"`
+	DeskUuid            uint64 `gorm:"column:desk_uuid;type:bigint(20);default:0;comment:餐桌ID" json:"desk_uuid"`
+	BuffetPackage1Uuid  uint64 `gorm:"column:buffet_package1_uuid;type:bigint(20);default:0;comment:自助餐套餐1ID" json:"buffet_package1_uuid"`
+	BuffetPackage2Uuid  uint64 `gorm:"column:buffet_package2_uuid;type:bigint(20);default:0;comment:自助餐套餐2ID" json:"buffet_package2_uuid"`
+	DeviceUuid          uint64 `gorm:"column:device_uuid;type:bigint(20);default:0;comment:设备ID，用于标识这个账单是由哪个设备创建的。点餐账单通过设备uuid查询" json:"device_uuid"`
+	MemberSaleOrderUuid uint64 `gorm:"column:member_sale_order_uuid;type:bigint(20);default:0;comment:会员销售订单ID" json:"member_sale_order_uuid"`
 
 	// 必点方案相关字段
 	ShowMustPlan       uint `gorm:"column:show_must_plan;type:tinyint(1);default:1;comment:是否显示必点方案, 0-不显示 1-显示" json:"show_must_plan"`
 	AutoAddMustProduct uint `gorm:"column:auto_add_must_product;type:tinyint(1);default:1;comment:是否自动加购必点商品, 0-不自动加购 1-自动加购" json:"auto_add_must_product"`
+
+	// 2.4.0 版本新增字段，厨显端是否确认退菜整单
+	IsKitchenConfirm uint `gorm:"column:is_kitchen_confirm;type:tinyint(1);default:0;comment:厨显端是否确认退菜整单, 0-否 1-是" json:"is_kitchen_confirm"`
+
+	// 2.5.0 版本新增字段， 反结账次数
+	ReverseSettleCount uint `gorm:"column:reverse_settle_count;type:int(11);default:0;comment:反结账次数" json:"reverse_settle_count"`
 
 	// 关联模型
 	SaleOrders      []*SaleOrder      `gorm:"foreignKey:SaleBillUuid;references:uuid"`
@@ -87,6 +96,51 @@ type SaleBill struct {
 	Desk            *Desk             `gorm:"foreignKey:DeskUuid;references:uuid"`
 	BuffetPackage1  *BuffetPackage    `gorm:"foreignKey:BuffetPackage1Uuid;references:uuid"`
 	BuffetPackage2  *BuffetPackage    `gorm:"foreignKey:BuffetPackage2Uuid;references:uuid"`
+}
+
+// 结束SaleBill和SaleOrder的生命周期。相当于用餐订单结账完成。
+func (model *SaleBill) EndSaleBillAndSaleOrder(dutyNo string, cashierUuid uint64, cashierName string) {
+	model.SetFinishSaleBill(dutyNo, cashierUuid, cashierName)
+
+	for _, saleOrder := range model.SaleOrders {
+		paymentInfoList := saleOrder.GetPaymentInfoList()
+		totalPay := float64(0) // 总付款金额=各个付款单的实收金额之和
+		for _, paymentOrder := range paymentInfoList {
+			totalPay = decimal.NewFromFloat(totalPay).Add(decimal.NewFromFloat(paymentOrder.Amount)).Round(2).InexactFloat64()
+		}
+		saleOrder.Status = constant.SaleOrderStatusFinish
+		// 修改订单为支付完成，并记录找零金额、最终付款金额等结算后才计算的字段
+		final := FinalAmount{
+			PaymentAmount:        totalPay,
+			ChangeAmount:         0,
+			ZeroCheckoutFee:      0,
+			FinalPrice:           totalPay,
+			PaymentCommissionFee: 0,
+			GiftAmount:           0,
+		}
+		saleOrder.SetFinishStatus(final) // 设置销售订单状态为已结清
+	}
+	model.CalcAll()
+}
+
+// IsReverseSettle 是否是反结账
+func (model *SaleBill) IsReverseSettle() bool {
+	return model.ReverseSettleCount > 0
+}
+
+// 是否是点餐订单
+func (model *SaleBill) IsInstantBill() bool {
+	return model.BillType == constant.SaleBillTypeInstant
+}
+
+// 是否是桌台订单
+func (model *SaleBill) IsDeskBill() bool {
+	return model.BillType == constant.SaleBillTypeDesk
+}
+
+// 是否是外送订单
+func (model *SaleBill) IsTakeoutBill() bool {
+	return model.BillType == constant.SaleBillTypeTakeout || model.MemberSaleOrderUuid != 0
 }
 
 // 销售账单是否已经使用了通用优惠券
@@ -155,8 +209,14 @@ func (model *SaleBill) IsLockStatus() bool {
 	return model.IsLock == constant.SaleBillIsLockYes
 }
 
+// 判断销售账单是否打包
 func (model *SaleBill) IsTakeout() bool {
 	return model.DiningMethod == constant.SaleBillDiningMethodTakeout
+}
+
+// 获取销售账单的就餐方式
+func (model *SaleBill) GetDiningMethod() uint {
+	return constant.SaleBillDiningMethodMap[model.DiningMethod]
 }
 
 // 判断账单是否为已送厨状态

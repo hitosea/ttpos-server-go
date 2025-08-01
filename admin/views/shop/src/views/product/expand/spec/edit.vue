@@ -15,74 +15,101 @@
   </el-dialog>
 </template>
 
-<script>
-  import ProductApi from '@/api/product.js';
-  import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
+<script setup>
+import { ref, reactive, watch, getCurrentInstance } from 'vue';
+import { ElMessage } from 'element-plus';
+import ProductApi from '@/api/product.js';
+import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
 
-  export default {
-    name: 'ProductSpecEditDialog',
-    components: {
-      UniqueNameForm,
-    },
-    data() {
-      return {
-        form: {
-          spec_id: undefined,
-          spec_name: {},
-        },
-        /*是否显示*/
-        dialogVisible: false,
-        loading: false,
-      };
-    },
-    props: ['open_edit', 'editform'],
-    created() {
-      this.dialogVisible = this.open_edit;
+// 获取当前实例
+const { proxy } = getCurrentInstance();
 
-      this.form.spec_id = this.editform.spec_id;
-      try {
-        const _names = typeof this.editform.spec_name === 'string' ? JSON.parse(this.editform.spec_name) : this.editform.spec_name ?? {};
-        this.form.spec_name = _names;
-      } catch (error) {
-        console.error('parse name faild', error);
-      }
-    },
-    methods: {
-      async submit() {
-        const self = this;
-        self.loading = true;
-        try {
-          const validForm = await self.$refs.formRef.validate();
-          if (!validForm) return;
+// 定义props
+const props = defineProps({
+  open_edit: {
+    type: Boolean,
+    default: false
+  },
+  editform: {
+    type: Object,
+    default: () => ({})
+  }
+});
 
-          const validUniqueName = await self.$refs.uniqueNameFormRef.validate();
-          if (!validUniqueName) return;
+// 定义emits
+const emit = defineEmits(['closeDialog']);
 
-          const _name = self.$refs.uniqueNameFormRef.data;
-          const params = JSON.parse(JSON.stringify(self.form));
-          params.spec_name = JSON.stringify(_name);
+// 响应式数据
+const form = reactive({
+  spec_id: undefined,
+  spec_name: {},
+});
+const dialogVisible = ref(false);
+const loading = ref(false);
 
-          const res = await ProductApi.editSpec(params, true);
-          self.$ElMessage({
-            message: self.$t('保存成功'),
-            type: 'success',
-          });
+// 表单引用
+const formRef = ref(null);
+const uniqueNameFormRef = ref(null);
 
-          self.handleClose(true, res.data);
-        } catch (error) {
-          console.error(error);
-        } finally {
-          self.loading = false;
-        }
-      },
-      /*关闭弹窗*/
-      handleClose(isSuccess = false, data) {
-        this.$emit('closeDialog', {
-          type: isSuccess ? 'success' : 'error',
-          openDialog: false,
-          data: data,
-        });
-      },
-    },
-  };
+// 监听open_edit变化并初始化数据
+watch(() => props.open_edit, (newVal) => {
+  dialogVisible.value = newVal;
+  
+  if (newVal && props.editform) {
+    // 初始化表单数据
+    form.spec_id = props.editform.spec_id;
+    
+    try {
+      const _names = typeof props.editform.spec_name === 'string' 
+        ? JSON.parse(props.editform.spec_name) 
+        : props.editform.spec_name ?? {};
+      form.spec_name = _names;
+    } catch (error) {
+      console.error('parse name failed', error);
+    }
+  }
+}, { immediate: true });
+
+// 提交方法
+const submit = async () => {
+  loading.value = true;
+  
+  try {
+    // 验证主表单
+    const validForm = await formRef.value.validate();
+    if (!validForm) return;
+
+    // 验证唯一名称表单
+    const validUniqueName = await uniqueNameFormRef.value.validate();
+    if (!validUniqueName) return;
+
+    // 获取名称数据
+    const _name = uniqueNameFormRef.value.data;
+    const params = JSON.parse(JSON.stringify(form));
+    params.spec_name = JSON.stringify(_name);
+
+    // 调用API
+    const res = await ProductApi.editSpec(params, true);
+    
+    ElMessage({
+      message: $t('保存成功'),
+      type: 'success',
+    });
+
+    handleClose(true, res.data);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 关闭弹窗
+const handleClose = (isSuccess = false, data) => {
+  emit('closeDialog', {
+    type: isSuccess ? 'success' : 'error',
+    openDialog: false,
+    data: data,
+  });
+};
 </script>

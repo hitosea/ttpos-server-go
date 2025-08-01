@@ -46,11 +46,13 @@ type SaleOrderProduct struct {
 	OriginTotalPrice float64 `gorm:"column:origin_total_price;type:decimal(12,2);not null;default:0.00;comment:'应收金额(单商品)。商品已含税时，应收金额(单商品)=(销售价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=销售价+服务费+总税费'" json:"origin_total_price"`
 
 	// 折扣相关字段
-	ChangePriceTime        int64   `gorm:"column:change_price_time;type:int(10);not null;default:0;comment:'改价时间(时间戳),用于判断是否改价和不同时间改价的商品不合并'" json:"change_price_time"`
-	OpenMemberDiscount     uint    `gorm:"column:open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"open_member_discount"`              // 快照设置相关，不受后台改变，结账时检查
-	MemberDiscountRate     float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`            // 与sale_order的member_discount_rate一致
-	MemberCardDiscountRate float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员卡折扣率(0-100%)'" json:"member_card_discount_rate"` // 与sale_order的member_card_discount_rate一致
-	CustomDiscountRate     float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'自定义折扣率(0-100%)'" json:"custom_discount_rate"`           // 与sale_order的custom_discount_rate一致
+	ChangePriceTime         int64   `gorm:"column:change_price_time;type:int(10);not null;default:0;comment:'改价时间(时间戳),用于判断是否改价和不同时间改价的商品不合并'" json:"change_price_time"`
+	OpenMemberDiscount      uint    `gorm:"column:open_member_discount;type:tinyint(1);not null;default:0;comment:'是否开启会员折扣, 0-否 1-是'" json:"open_member_discount"` // 快照设置相关，不受后台改变，结账时检查
+	OpenOverallDiscount     uint    `gorm:"column:open_overall_discount;type:tinyint(1);not null;default:0;comment:'是否开启 Overall 折扣, 0-否 1-是'" json:"open_overall_discount"`
+	MemberDiscountRate      float64 `gorm:"column:member_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员折扣率(0-100%)'" json:"member_discount_rate"`               // 与sale_order的member_discount_rate一致
+	MemberCardDiscountRate  float64 `gorm:"column:member_card_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'会员卡折扣率(0-100%)'" json:"member_card_discount_rate"`    // 与sale_order的member_card_discount_rate一致
+	MemberOrderDiscountRate float64 `gorm:"column:member_order_discount_rate;type:decimal(12,2);not null;default:1.00;comment:'会员订单折扣率(1-300%)'" json:"member_order_discount_rate"` // 用于上浮会员端上的商品价格
+	CustomDiscountRate      float64 `gorm:"column:custom_discount_rate;type:decimal(12,2);not null;default:0.00;comment:'自定义折扣率(0-100%)'" json:"custom_discount_rate"`              // 与sale_order的custom_discount_rate一致
 
 	// 折扣金额字段
 	DiscountFee       float64 `gorm:"column:discount_fee;type:decimal(12,2);not null;default:0.00;comment:'打折金额（单商品）=销售价-最终单价。校验：打折金额=会员折扣金额+自定义折扣金额'" json:"discount_fee"`
@@ -69,6 +71,7 @@ type SaleOrderProduct struct {
 
 	// 赠品相关字段
 	GiftTime     int64  `gorm:"column:gift_time;type:int(10);not null;default:0;comment:'赠菜时间(时间戳),用于判断不同时间赠送的商品不合并'" json:"gift_time"`
+	WrapTime     int64  `gorm:"column:wrap_time;type:int(10);not null;default:0;comment:'打包时间(时间戳),用于判断不同时间打包的商品不合并'" json:"wrap_time"`
 	CancelTime   int64  `gorm:"column:cancel_time;type:int(10);not null;default:0;comment:'退菜时间(时间戳)'" json:"cancel_time"`
 	GiftReason   string `gorm:"column:gift_reason;type:varchar(255);not null;default:'';comment:'赠菜原因'" json:"gift_reason"`
 	CancelReason string `gorm:"column:cancel_reason;type:varchar(255);not null;default:'';comment:'退菜原因'" json:"cancel_reason"`
@@ -111,6 +114,37 @@ type SaleOrderProduct struct {
 	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
 }
 
+// 获取商品的就餐类型。打包或堂食
+func (model *SaleOrderProduct) GetDiningMethod() uint {
+	if model.IsWrapProduct() {
+		return constant.SaleBillDiningMethodTakeout
+	}
+	return constant.SaleBillDiningMethodDineIn
+}
+
+// 获取会员端商品价格上浮比例
+func (model *SaleOrderProduct) GetMemberOrderDiscountRate() float64 {
+	// 如果会员端商品价格上浮比例小于等于0，则返回1,表示未设置上浮比例
+	if model.MemberOrderDiscountRate <= 0 {
+		return 1
+	}
+	return model.MemberOrderDiscountRate
+}
+
+// GetOpenOverallDiscount 获取是否开启 Overall 折扣
+func (model *SaleOrderProduct) GetOpenOverallDiscount() bool {
+	return model.OpenOverallDiscount == 1
+}
+
+// GetCustomDiscountRate 获取自定义折扣率
+func (model *SaleOrderProduct) GetCustomDiscountRate() float64 {
+	if !model.GetOpenOverallDiscount() {
+		// 不开启整单打折
+		return constant.NoDiscount
+	}
+	return model.CustomDiscountRate
+}
+
 // 获取商品包的规格uuid
 func (model *SaleOrderProduct) GetFlavorBomUuid() uint64 {
 	for _, bom := range model.SaleOrderProductBoms {
@@ -127,6 +161,10 @@ func (model *SaleOrderProduct) GetMemberCardDiscountRate() float64 {
 	if model.OpenMemberDiscount == constant.ProductMemberDiscountOff {
 		return constant.NoDiscount
 	}
+	// 现在不能折扣为0
+	if model.MemberCardDiscountRate <= 0 {
+		return constant.NoDiscount
+	}
 	return model.MemberCardDiscountRate
 }
 
@@ -136,8 +174,46 @@ func (model *SaleOrderProduct) GetMemberDiscountRate() float64 {
 	if model.OpenMemberDiscount == constant.ProductMemberDiscountOff {
 		return constant.NoDiscount
 	}
+	// 现在不能折扣为0
+	if model.MemberDiscountRate <= 0 {
+		return constant.NoDiscount
+	}
 	return model.MemberDiscountRate
 }
+
+// 获取商品在会员端显示的价格（折前）单个商品的价格
+// 会员端显示的价格= 商品规格价*会员端折扣率 + 小料A*会员端折扣率 + 小料B*会员端折扣率 + ...
+// （商品规格价=商品规格原价*会员端折扣率）=》 转换为商品未含税价格。  商品未含税价格*税率=税费 。 （商品未含税价格+税费）
+// 如果规格价已含税，计算
+// func (model *SaleOrderProduct) GetPriceInMemberClient() float64 {
+// 	saucePrices := make([]float64, 0) // 该销售订单商品的各个小料原始价格
+// 	flavorPrice := model.FlavorPrice  // 该销售订单商品的规格原始价格
+// 	for _, bom := range model.SaleOrderProductBoms {
+// 		if bom.IsDelete() {
+// 			continue
+// 		}
+// 		if bom.ProductBom.IsSauce() {
+// 			saucePrices = append(saucePrices, bom.ProductBom.Price)
+// 		}
+// 	}
+// 	// 上浮后的价格
+// 	flavorPrice = decimal.NewFromFloat(flavorPrice).Mul(decimal.NewFromFloat(model.GetMemberOrderDiscountRate())).Round(2).InexactFloat64()
+// 	// 上浮后的小料价格
+// 	for i, saucePrice := range saucePrices {
+// 		saucePrices[i] = decimal.NewFromFloat(saucePrice).Mul(decimal.NewFromFloat(model.GetMemberOrderDiscountRate())).Round(2).InexactFloat64()
+// 	}
+// 	// 上浮后的小料价格总和
+// 	var saucePriceTotal float64
+// 	for _, saucePrice := range saucePrices {
+// 		saucePriceTotal += saucePrice
+// 	}
+// 	return decimal.NewFromFloat(flavorPrice).Add(decimal.NewFromFloat(saucePriceTotal)).Round(2).InexactFloat64()
+// }
+
+// // 获取商品在会员端显示的价格（折前）
+// func (model *SaleOrderProduct) GetTotalPriceInMemberClient() float64 {
+// 	return decimal.NewFromFloat(model.GetPriceInMemberClient()).Mul(model.GetNumDecimal()).Round(2).InexactFloat64()
+// }
 
 // 获取销售订单商品的总税费。包含服务费税费
 func (model *SaleOrderProduct) GetTotalTaxFee() float64 {
@@ -214,6 +290,18 @@ func (model *SaleOrderProduct) IsSubOperation() bool {
 	return model.operation == "sub"
 }
 
+// 设置打包时间
+func (model *SaleOrderProduct) SetWrap() {
+	defer model.SetUpdate() // 标记要更新model
+	model.WrapTime = time.Now().Unix()
+}
+
+// 设置取消打包
+func (model *SaleOrderProduct) SetUnwrap() {
+	defer model.SetUpdate() // 标记要更新model
+	model.WrapTime = 0      // 取消打包，打包时间置为0。注：暂时不更新商品的签名，历史遗留问题取消赠菜也没有更新签名，如果更新签名的话可能会与未打包的商品签名一致需要合并商品。
+}
+
 // GetAcceptTime 获取接单时间
 func (model *SaleOrderProduct) GetAcceptTime() int64 {
 	if model.H5Order != nil {
@@ -254,13 +342,21 @@ func (model *SaleOrderProduct) SetFlavorPrice(flavorPrice float64) {
 	model.FlavorPrice = flavorPrice
 }
 
+func (model *SaleOrderProduct) GetFlavorPrice() float64 {
+	memberCardDiscountRate := model.GetMemberOrderDiscountRate()
+	if memberCardDiscountRate != 1 {
+		return decimal.NewFromFloat(model.FlavorPrice).Mul(decimal.NewFromFloat(memberCardDiscountRate)).Round(2).InexactFloat64()
+	}
+	return model.FlavorPrice
+}
+
 // GetCanReturnNum 获取销售订单商品的可退货数量. 可退货数量=订单商品数量-已退货数量
 func (model *SaleOrderProduct) GetCanReturnNum() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, returnOrderProduct := range model.ReturnOrderProducts {
 		amount = amount.Add(decimal.NewFromFloat(returnOrderProduct.Num))
 	}
-	num := decimal.NewFromFloat(model.Num).Sub(amount).Truncate(2).InexactFloat64()
+	num := decimal.NewFromFloat(model.Num).Sub(amount).InexactFloat64()
 	// 如果可退货数量小于0，则返回0
 	// 这个判断很有必要，否则会出现可退货数量为负数的情况但uint是无符号的，结果会得到一个很大的数。如2-14=18446744073709551604
 	if num < 0 {
@@ -271,7 +367,7 @@ func (model *SaleOrderProduct) GetCanReturnNum() float64 {
 
 // GetReturnNum 获取销售订单商品的已退货数量. 已退货数量=订单商品数量-可退货数量
 func (model *SaleOrderProduct) GetReturnNum() float64 {
-	return decimal.NewFromFloat(model.Num).Sub(decimal.NewFromFloat(model.GetCanReturnNum())).Truncate(2).InexactFloat64()
+	return decimal.NewFromFloat(model.Num).Sub(decimal.NewFromFloat(model.GetCanReturnNum())).InexactFloat64()
 }
 
 // GetReturnPrice 获取销售订单商品的已退金额。已退金额=订单商品金额*已退货数量
@@ -416,6 +512,14 @@ func (model *SaleOrderProduct) CheckOutProduct() (int, string) {
 		}
 	}
 
+	// 商品是否享受整单折扣发生变动
+	if model.overallDiscountChanged() {
+		// 如果商品已经有整单折扣时才返回价格变动
+		if model.CustomDiscountRate < 1 {
+			return constant.CodeOrderCheckProductPriceChanged, "商品整单折扣发生变动"
+		}
+	}
+
 	// 小料的价格有变动
 	if model.saucePriceChanged(model.SaucePrice) {
 		return constant.CodeOrderCheckProductPriceChanged, "小料价格变动"
@@ -498,6 +602,12 @@ func (model *SaleOrderProduct) CheckCookingProduct(lang string) (int, string) {
 func (model *SaleOrderProduct) memberDiscountChanged() bool {
 	latestOpenMemberDiscount := model.ProductPackage.OpenDiscount
 	return latestOpenMemberDiscount != model.OpenMemberDiscount
+}
+
+// 商品是否享受整单折扣发生变动
+func (model *SaleOrderProduct) overallDiscountChanged() bool {
+	latestOpenOverallDiscount := model.ProductPackage.OpenOverallDiscount
+	return latestOpenOverallDiscount != model.OpenOverallDiscount
 }
 
 // 小料的价格是否有变动
@@ -753,6 +863,7 @@ func (model *SaleOrderProduct) SetMustPlanInfo(mustPlanUuid uint64) {
 
 // 标记该订单商品相关的资源为删除
 func (model *SaleOrderProduct) DeleteProduct() {
+	defer model.SetUpdate()
 	deleteTime := time.Now().Unix()
 	model.DeleteTime = deleteTime
 	for index, _ := range model.SaleOrderProductBoms {
@@ -794,10 +905,6 @@ func (model *SaleOrderProduct) IsH5CartProduct() bool {
 	return model.IsAcceptOrder == constant.OrderProductIsAcceptOrderUnAccept && model.H5OrderUuid == 0
 }
 
-func (model *SaleOrderProduct) IsGiftBool() bool {
-	return model.GiftTime > 0
-}
-
 func (model *SaleOrderProduct) ChangeProductPrice(price float64) {
 	model.ChangePriceTime = time.Now().Unix()
 	model.SalePrice = price
@@ -821,7 +928,7 @@ func (model *SaleOrderProduct) GetSalePriceUnit() float64 {
 
 // 获取商品的最终售价（单价）。最终售价为商品的最终单价，默认等于Price，如果免单，则等于0
 func (model *SaleOrderProduct) GetFinalSalePrice() float64 {
-	if model.IsGiftBool() {
+	if model.IsGiftProduct() {
 		return 0
 	}
 	return model.Price
@@ -830,6 +937,13 @@ func (model *SaleOrderProduct) GetFinalSalePrice() float64 {
 // 获取商品的最终售价（*数量）。商品的最终售价*数量
 func (model *SaleOrderProduct) GetProductFinalSalePrice() float64 {
 	return decimal.NewFromFloat(model.GetFinalSalePrice()).Mul(model.GetNumDecimal()).Truncate(3).Round(2).InexactFloat64()
+}
+
+// 获取商品总金额（折前价）（商品原价）(包括税费)
+func (model *SaleOrderProduct) GetOriginTotalPriceWithTax() float64 {
+	// 金额*数量
+	price := decimal.NewFromFloat(model.ProductPrice).Add(decimal.NewFromFloat(model.TaxFee)).Mul(model.GetNumDecimal()).Truncate(3).Round(2).InexactFloat64()
+	return price
 }
 
 // 获取商品总金额（折前价）（商品原价）
@@ -880,6 +994,11 @@ func (model *SaleOrderProduct) IsMustProduct() bool {
 // 是否是赠品
 func (model *SaleOrderProduct) IsGiftProduct() bool {
 	return model.GiftTime > 0
+}
+
+// 是否是包装商品
+func (model *SaleOrderProduct) IsWrapProduct() bool {
+	return model.WrapTime > 0
 }
 
 // 是否取消商品
@@ -1119,6 +1238,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		MemberDiscountRate:         def.MemberDiscountRate,
 		MemberCardDiscountRate:     def.MemberCardDiscountRate,
 		CustomDiscountRate:         def.CustomDiscountRate,
+		OpenOverallDiscount:        productPackage.OpenOverallDiscount,
 		DeductStockType:            def.DeductStockType,
 		MultiLanguageNameUuid:      def.MultiLanguageNameUuid,
 		ImageFileUuid:              def.ImageFileUuid,
@@ -1146,16 +1266,56 @@ func (model *SaleOrderProduct) IsCustomPriceBool() bool {
 	return model.ChangePriceTime > 0
 }
 
+func (model *SaleOrderProduct) ProductKey() string {
+	flavorUuid := uint64(0)
+	sauceUuidList := make([]uint64, 0)
+	attributeIdList := make([]uint64, 0)
+
+	// 物料ID列表
+	for _, bom := range model.SaleOrderProductBoms {
+		if bom.IsFlavor() {
+			flavorUuid = bom.ProductBomUuid
+		} else if bom.IsSauce() {
+			sauceUuidList = append(sauceUuidList, bom.ProductBomUuid)
+		}
+	}
+	// 属性ID列表
+	for _, attribute := range model.SaleOrderProductAttributes {
+		attributeIdList = append(attributeIdList, attribute.ProductAttributeUuid)
+	}
+
+	// 物料ID列表和属性ID列表排序
+	sort.Slice(sauceUuidList, func(i, j int) bool {
+		return sauceUuidList[i] < sauceUuidList[j]
+	})
+	sort.Slice(attributeIdList, func(i, j int) bool {
+		return attributeIdList[i] < attributeIdList[j]
+	})
+
+	sauceUuidStrList := make([]string, 0)
+	for _, sauceUuid := range sauceUuidList {
+		sauceUuidStrList = append(sauceUuidStrList, fmt.Sprintf("%d", sauceUuid))
+	}
+	attributeIdStrList := make([]string, 0)
+	for _, attributeId := range attributeIdList {
+		attributeIdStrList = append(attributeIdStrList, fmt.Sprintf("%d", attributeId))
+	}
+
+	// 按照“规格id-属性id,属性id-加料id,加料id”的格式拼接
+	return fmt.Sprintf("%d-%s-%s", flavorUuid, strings.Join(attributeIdStrList, ","), strings.Join(sauceUuidStrList, ","))
+}
+
 // GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
-// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-退菜原因-H5OrderUuid-是否接单
+// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
 // 3 送厨
 // 4 赠菜
-// 5 退菜
-// 6 h5下单
-// 7 接单
+// 5 打包
+// 6 退菜
+// 7 h5下单
+// 8 接单
 func (model *SaleOrderProduct) GenerateProductSign() string {
 	bomIdList := make([]string, 0)
 	attributeIdList := make([]string, 0)
@@ -1175,7 +1335,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	sort.Slice(attributeIdList, func(i, j int) bool {
 		return attributeIdList[i] < attributeIdList[j]
 	})
-	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-退菜原因-H5OrderUuid-是否接单
+	// 物料ID列表和属性ID列表拼接。格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
 	bomIdListStr := strings.Join(bomIdList, ",")
 	attributeIdListStr := strings.Join(attributeIdList, ",")
 
@@ -1190,7 +1350,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	}
 	reasonStr := utils.ToJson(reason)
 
-	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%s-%d-%d",
+	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d",
 		bomIdListStr,
 		attributeIdListStr,
 		model.Remark,
@@ -1198,6 +1358,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 		model.ProductionOrderUuid,
 		model.ChangePriceTime,
 		model.GiftTime,
+		model.WrapTime,
 		reasonStr,
 		model.H5OrderUuid,
 		model.IsAcceptOrder, // 是否接单. 为了让未下单的h5商品和未送厨的商品不被合并在一起

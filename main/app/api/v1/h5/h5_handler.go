@@ -602,12 +602,12 @@ func RegisterH5Handlers(router gin.IRouter, dbm *database.DBManager, cache cache
 	localeSrv := service.NewLocaleSrv()
 	mustPlanSrv := service.NewMustPlanSrv(dbm)
 	paymentMethodSrv := service.NewPaymentMethodSrv(dbm, settingSrv)
-	memberSrv := service.NewMemberSrv(dbm)
+	memberSrv := service.NewMemberSrv(dbm, cache)
 	orderSrv := service.NewOrderSrv(dbm, localeSrv, settingSrv, mustPlanSrv, paymentMethodSrv, memberSrv, cashBoxSrv, service.WithSmsSrv(dbm))
 	deskSrv := service.NewDeskSrv(dbm, localeSrv, orderSrv, settingSrv, deviceSrv, mustPlanSrv)
 	buffetSrv := service.NewBuffetSrv(dbm)
 	h5Srv := service.NewH5Srv(dbm, deskSrv, orderSrv, buffetSrv, settingSrv)
-	productService := service.NewProductSrv(dbm, localeSrv)
+	productService := service.NewProductSrv(dbm, localeSrv, settingSrv)
 	callSrv := service.NewCallSrv(dbm)
 	// 初始化处理器
 	wrapper := Handler{

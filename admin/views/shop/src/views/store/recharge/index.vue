@@ -4,10 +4,10 @@
       <el-form size="small" :inline="true" :model="searchForm" class="demo-form-inline">
         <el-form-item label="">
           <el-radio-group v-model="searchForm.time_type" class="radio-search" @change="timeTypeChange">
-            <el-radio-button :label="1">{{ $t('今天') }}</el-radio-button>
-            <el-radio-button :label="2">{{ $t('昨天') }}</el-radio-button>
-            <el-radio-button :label="3">{{ $t('本周') }}</el-radio-button>
-            <el-radio-button :label="0">{{ $t('全部') }}</el-radio-button>
+            <el-radio-button :value="1">{{ $t('今天') }}</el-radio-button>
+            <el-radio-button :value="2">{{ $t('昨天') }}</el-radio-button>
+            <el-radio-button :value="3">{{ $t('本周') }}</el-radio-button>
+            <el-radio-button :value="0">{{ $t('全部') }}</el-radio-button>
           </el-radio-group>
         </el-form-item>
 
@@ -118,13 +118,13 @@
           <el-table-column prop="amount" :label="$t('订单金额')" width="140" show-overflow-tooltip>
             <template #default="scope">
               <div style="line-height: 24px">
-                <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                {{ proxy.$formatPrice(scope.row.recharge_amount) }}
-                <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
-                <p class="gray98" v-if="currency.is_open == 1">
-                  <template v-if="currency.vices.vice_unit_position == '0'">{{ currency.vices?.vice_unit }}</template>
-                  {{ proxy.$formatPrice((Number(scope.row.recharge_amount) * Number(currency.vices?.unit_rate)).toFixed(2))
-                  }}<template v-if="currency.vices.vice_unit_position == '1'">{{ currency.vices?.vice_unit }} </template>
+                <main-currency>
+                  {{ proxy.$formatPrice(scope.row.recharge_amount) }}
+                </main-currency>
+                <p class="gray98">
+                  <sub-currency>
+                    {{ proxy.$formatPrice((Number(scope.row.recharge_amount) * Number(currency.vices?.unit_rate)).toFixed(2)) }}
+                  </sub-currency>
                 </p>
               </div>
             </template>
@@ -133,9 +133,9 @@
             <template #default="scope">
               <div>
                 <div class="orange" v-if="scope.row.status == 1">
-                  <template v-if="currency.unit_position == '0'">{{ currency.unit }}</template>
-                  {{ proxy.$formatPrice(scope.row.amount || 0) }}
-                  <template v-if="currency.unit_position == '1'">{{ currency.unit }}</template>
+                  <main-currency>
+                    {{ proxy.$formatPrice(scope.row.amount || 0) }}
+                  </main-currency>
                 </div>
                 <div v-else>-</div>
               </div>

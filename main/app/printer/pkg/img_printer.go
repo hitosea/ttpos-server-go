@@ -24,6 +24,8 @@ import (
 
 	qrcode "github.com/skip2/go-qrcode"
 
+	"github.com/boombuler/barcode"
+	"github.com/boombuler/barcode/code128"
 	"github.com/goki/freetype"
 	"github.com/goki/freetype/truetype"
 	"github.com/nfnt/resize"
@@ -1020,6 +1022,44 @@ func (i *ImgFont) AppendQrcode(data string, size int, margin int, isBase64 bool)
 	return i
 }
 
+// 添加条形码
+func (i *ImgFont) AppendBarcode(data string, w, h int) *ImgFont {
+	// Create the barcode
+	qrCode, _ := code128.Encode(data)
+
+	// Scale the barcode to 200x200 pixels
+	barcodeImg, err := barcode.Scale(qrCode, w, h)
+	if err != nil {
+		fmt.Println("生成条形码错误", err)
+		return i
+	}
+
+	// 获取条形码尺寸
+	width := barcodeImg.Bounds().Dx()
+	height := barcodeImg.Bounds().Dy()
+
+	// 计算条形码位置 (水平居中)
+	x := (i.ImageWidth - width) / 2
+
+	// 将条形码绘制到目标图像上
+	draw.Draw(
+		i.Image,
+		image.Rect(x, i.TextTotalHeight, x+width, i.TextTotalHeight+height),
+		barcodeImg,
+		image.Point{0, 0},
+		draw.Over,
+	)
+
+	// 更新文本总高度和最后一行已使用宽度
+	i.TextTotalHeight += height - 40
+	i.TextLastLineUsedWidth += width
+
+	// 添加换行
+	i.LineFeed(1)
+
+	return i
+}
+
 // AppendSplitlineOption 定义 AppendSplitline 的可选参数函数类型
 type AppendSplitlineOption func(*appendSplitlineOptions)
 
@@ -1301,7 +1341,7 @@ func (i *ImgFont) SetImagePadding(padding int) *ImgFont {
 // Save 保存图像并返回打印数据
 func (i *ImgFont) Save(imageSrc string, reminderSound bool, openMoneybox int) string {
 	if config.Server.Mode == constant.ServerModeDebug && imageSrc == "" {
-		imageSrc = "./tmp/printer/dishes_img.png"
+		imageSrc = "./tmp/printer/test_img.png"
 	}
 	//
 	maxHeight := 2200

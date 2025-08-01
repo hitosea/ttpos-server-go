@@ -8,6 +8,7 @@ import (
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/logger"
@@ -55,7 +56,7 @@ func orderReverseSettleEventHandler() {
 				logger.Logger.Error("GetSaleBillAllInfo", zap.Error(fmt.Errorf("%v %s", payload.SaleBillUuid, errSaleBill)))
 				return
 			}
-			memberSrv := service.NewMemberSrv(database.GetDBManager(config.DatabaseConf{}))
+			memberSrv := service.NewMemberSrv(database.GetDBManager(config.DatabaseConf{}), cache.Global)
 			for _, saleOrder := range saleBill.SaleOrders {
 				if saleOrder.ConsumerUuid != 0 {
 					// 处理会员升级

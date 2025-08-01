@@ -2,7 +2,6 @@
 
 namespace app\common\model\shop;
 
-use think\facade\Env;
 use app\common\model\BaseModel;
 
 /**
@@ -369,7 +368,7 @@ class Access extends BaseModel
             }
             // 未开启外送，看不到外送订单
             if (($licenses['is_open_delivery'] ?? 0) == 0) {
-                if ($value['uuid'] == 1741590679 || $value['uuid'] == 1750930155) {
+                if ($value['uuid'] == 1741590679 || $value['uuid'] == 1750930155 || $value['uuid'] == 1752716650) {
                     continue;
                 }
             }

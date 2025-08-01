@@ -1,0 +1,129 @@
+package member_req
+
+import (
+	"errors"
+	"slices"
+	"strconv"
+	"strings"
+	"ttpos-server-go/app/dto"
+)
+
+// MemberAddressSearchReq 搜索地址请求
+type MemberAddressSearchReq struct {
+	Text      string  `form:"text"`      // 搜索文本
+	Latitude  float64 `form:"latitude"`  // 纬度
+	Longitude float64 `form:"longitude"` // 经度
+}
+
+type MemberAddressListReq struct {
+	dto.PageReq // 分页参数
+}
+
+type MemberAddressAddReq struct {
+	Name        string `json:"name"`         // 联系人
+	Phone       string `json:"phone"`        // 手机号
+	Address     string `json:"address"`      // 详细地址
+	Street      string `json:"street"`       // 街道/门牌号
+	IsDefault   bool   `json:"is_default"`   // 是否默认
+	Location    string `json:"location"`     // 位置坐标
+	PhonePrefix string `json:"phone_prefix"` // 地区编码，仅支持+86、+66
+}
+
+func (r *MemberAddressAddReq) Validate() error {
+	if r.Name == "" {
+		return errors.New("联系人不能为空")
+	}
+	if r.Phone == "" {
+		return errors.New("手机号不能为空")
+	}
+	if !slices.Contains([]string{"+86", "+66"}, r.PhonePrefix) {
+		return errors.New("区号不正确")
+	}
+	if (r.PhonePrefix == "+86" && len(r.Phone) != 11) || (r.PhonePrefix == "+66" && (len(r.Phone) != 9 || r.Phone[0:1] == "0")) {
+		return errors.New("手机号不正确")
+	}
+	if r.Address == "" {
+		return errors.New("详细地址不能为空")
+	}
+	if r.Street == "" {
+		return errors.New("街道/门牌号不能为空")
+	}
+	// 判断req.Location是否是经纬度范围，以逗号分隔，前部分是纬度，后部分是精度，纬度范围是0到90，精度范围是0到180
+	location := strings.Split(r.Location, ",")
+	if len(location) != 2 {
+		return errors.New("位置坐标格式错误")
+	}
+	latitude, err := strconv.ParseFloat(location[0], 64)
+	if err != nil {
+		return errors.New("位置坐标格式错误")
+	}
+	longitude, err := strconv.ParseFloat(location[1], 64)
+	if err != nil {
+		return errors.New("位置坐标格式错误")
+	}
+	// 经纬度范围是-90到90，-180到180
+	if latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 {
+		return errors.New("位置坐标范围错误")
+	}
+	return nil
+}
+
+type MemberAddressUpdateReq struct {
+	Uuid        uint64 `json:"uuid"`         // 地址UUID
+	Name        string `json:"name"`         // 联系人
+	Phone       string `json:"phone"`        // 手机号
+	Address     string `json:"address"`      // 详细地址
+	Street      string `json:"street"`       // 街道/门牌号
+	IsDefault   bool   `json:"is_default"`   // 是否默认
+	Location    string `json:"location"`     // 位置坐标
+	PhonePrefix string `json:"phone_prefix"` // 地区编码，仅支持+86、+66
+}
+
+func (r *MemberAddressUpdateReq) Validate() error {
+	if r.Uuid == 0 {
+		return errors.New("地址UUID不能为空")
+	}
+	addReq := &MemberAddressAddReq{
+		Name:        r.Name,
+		Phone:       r.Phone,
+		PhonePrefix: r.PhonePrefix,
+		Address:     r.Address,
+		Street:      r.Street,
+		Location:    r.Location,
+		IsDefault:   r.IsDefault,
+	}
+	return addReq.Validate()
+}
+
+type MemberAddressDeleteReq struct {
+	Uuid uint64 `json:"uuid"` // 地址UUID
+}
+
+type MemberAddressAuthReq struct {
+	Uuid          uint64 `json:"uuid"`           // 地址UUID
+	Code          string `json:"code"`           // 验证码
+	IsRegister    bool   `json:"is_register"`    // 是否注册
+	ReferrerPhone string `json:"referrer_phone"` // 推荐人手机号
+}
+
+func (r *MemberAddressAuthReq) Validate() error {
+	if r.Uuid == 0 {
+		return errors.New("地址UUID不能为空")
+	}
+	if r.Code == "" {
+		return errors.New("验证码不能为空")
+	}
+	return nil
+}
+
+// MemberAddressDetailReq 获取地址详情请求
+type MemberAddressDetailReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid"` // 地址UUID
+}
+
+func (r *MemberAddressDetailReq) Validate() error {
+	if r.Uuid == 0 {
+		return errors.New("地址UUID不能为空")
+	}
+	return nil
+}

@@ -1,10 +1,11 @@
 package passport
 
 import (
-	"go.uber.org/zap"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/logger"
+
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 
@@ -90,7 +91,7 @@ func (h *Handler) LianLianRefundCallback(c *gin.Context) {
 		helper.HandleValidationError(c, err, callbackReq, req.GetServerPublicKeyRequestMessage)
 		return
 	}
-	callbackReq.MerchantRefundOrderNo = c.Query("merchant_refund_id")
+	callbackReq.MerchantRefundId = c.Query("merchant_refund_id")
 
 	// 处理支付回调
 	err := service.NewPaymentRepo(ctx, h.dbm).HandleRefundCallback(sign, callbackReq)

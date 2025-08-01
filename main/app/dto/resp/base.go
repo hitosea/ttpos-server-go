@@ -175,6 +175,12 @@ type AcceptOrderSetting struct {
 	IsAutoVoice    string `json:"is_auto_voice"`    // 是否开启自动接单语音播报 0-否；1-是
 }
 
+type AcceptMemberOrderSetting struct {
+	IsAutoMemberOrder      string `json:"is_auto_member_order"`       // 是否自动接单会员订单：0-否；1-是
+	AutoMemberOrderLimit   string `json:"auto_member_order_limit"`    // 自动接单会员订单金额上限，0.01-100000000
+	IsAutoVoiceMemberOrder string `json:"is_auto_voice_member_order"` // 是否开启自动接单会员订单语音播报 0-否；1-是
+}
+
 // CanAutoOrder 是否可以自动接单
 func (s *AcceptOrderSetting) CanAutoOrder(amount float64) bool {
 	amountFloat, _ := strconv.ParseFloat(s.AutoOrderLimit, 64)
@@ -185,6 +191,7 @@ type SystemSetting struct {
 	IsShowScanSoldOut      int    `json:"is_show_scan_sold_out"`      // 扫码点餐端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 	IsShowAssistantSoldOut int    `json:"is_show_assistant_sold_out"` // 助手端点餐助手是否显示售罄商品 0-不显示 1-显示
 	MenuShowSoldOut        int    `json:"menu_show_sold_out"`         // 电子菜单是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
+	MemberShowSoldOut      int    `json:"member_show_sold_out"`       // 会员端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 	DishCardStyle          string `json:"dish_card_style"`            // 菜品卡片样式 0-无图模式 1-图片模式
 	IsShowSoldOut          int    `json:"is_show_sold_out"`           // 平板端是否显示售罄商品 0-关闭（不显示售罄） 1-开启（显示售罄）
 	DefaultLanguage        string `json:"default_language"`           // 默认语言
@@ -209,9 +216,10 @@ type UsbPrinterList struct {
 }
 
 type CashierBaseSetting struct {
-	AcceptOrder AcceptOrderSetting `json:"accept_order"` // 接单设置
-	System      SystemSetting      `json:"system"`       // 系统设置
-	UsbPrinter  UsbPrinterList     `json:"usb_printer"`  // 自带打印机设置
+	AcceptOrder       AcceptOrderSetting       `json:"accept_order"`        // 接单设置
+	AcceptMemberOrder AcceptMemberOrderSetting `json:"accept_member_order"` // 接单会员订单设置
+	System            SystemSetting            `json:"system"`              // 系统设置
+	UsbPrinter        UsbPrinterList           `json:"usb_printer"`         // 自带打印机设置
 }
 
 // ShiftInfo 交班信息

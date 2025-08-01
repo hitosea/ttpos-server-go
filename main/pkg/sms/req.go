@@ -41,3 +41,22 @@ type MemberSendCodeRequest struct {
 	Company string `json:"company"` // 公司名称
 	Code    string `json:"code"`    // 验证码
 }
+
+// MemberPointsRequest 会员积分请求参数
+type MemberPointsRequest struct {
+	Company string  `json:"company"` // 公司名称
+	Points  float64 `json:"points"`  // 积分
+}
+
+// MemberCouponRequest 会员优惠券请求参数
+type MemberCouponRequest struct {
+	Company   string `json:"company"`    // 公司名称
+	CouponNum uint64 `json:"coupon_num"` // 优惠券数量
+}
+
+// DeliveryOrderCancelBySelfRequest 外送订单取消请求参数
+type DeliveryOrderCancel struct {
+	CancelScene string `json:"cancel_scene"` // 取消场景，delivery_order_canceled_by_self - 会员付款后取消, delivery_order_canceled_by_merchant - 商家取消, delivery_order_rejected - 商家拒单
+	Company     string `json:"company"`      // 商家名称
+	OrderNo     string `json:"order_no"`     // 订单号
+}

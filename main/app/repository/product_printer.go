@@ -2,6 +2,7 @@ package repository
 
 import (
 	"slices"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
 
 	"gorm.io/gorm"
@@ -11,10 +12,12 @@ type IProductPrinterRepo interface {
 	WhereStatus(status int) DBOption
 	WhereProductPrinterUuid(uuid uint64) DBOption
 	WidthPrintMode(widthPrintMode int) DBOption
+	WhereSaleBillIsKitchenConfirm(isKitchenConfirm int) DBOption // 厨显端是否确认退菜整单
+	WhereSaleBillNotDeletedOrIsNotCanceled() DBOption            // 未被删除的，未整单取消的
 
-	GetProductPrinters(opts ...DBOption) ([]model.ProductPrinter, error)   // 获取商品打印
-	GetProductPackageUuids(opts ...DBOption) ([]uint64, error)             // 获取指定商品打印关联的商品Uuid
-	GetProductionSaleBillUuid(productPrinterUuid uint64) ([]uint64, error) // 获取sale_bill_uuid
+	GetProductPrinters(opts ...DBOption) ([]model.ProductPrinter, error)                 // 获取商品打印
+	GetProductPackageUuids(opts ...DBOption) ([]uint64, error)                           // 获取指定商品打印关联的商品Uuid
+	GetProductionSaleBillUuid(productPrinterUuid uint64, opt DBOption) ([]uint64, error) // 获取sale_bill_uuid
 }
 
 func NewProductPrinterRepo(db *gorm.DB) IProductPrinterRepo {
@@ -56,7 +59,7 @@ func (r *productPrinterRepo) GetProductPackageUuids(opts ...DBOption) ([]uint64,
 	return uuids, err
 }
 
-func (r *productPrinterRepo) GetProductionSaleBillUuid(productPrinterUuid uint64) ([]uint64, error) {
+func (r *productPrinterRepo) GetProductionSaleBillUuid(productPrinterUuid uint64, opt DBOption) ([]uint64, error) {
 	var deskRegionUuids []uint64
 	r.db.Model(&model.ProductPrinterRegion{}).Scopes(NotDeleted).Where("product_printer_uuid = ?", productPrinterUuid).Pluck("desk_region_uuid", &deskRegionUuids)
 	var deskUuids []uint64
@@ -67,7 +70,8 @@ func (r *productPrinterRepo) GetProductionSaleBillUuid(productPrinterUuid uint64
 		}
 	}
 	var uuids []uint64
-	query := r.db.Model(&model.SaleBill{}).Scopes(NotDeleted)
+	query := r.db.Model(&model.SaleBill{})
+	query = opt(query)
 	if len(deskUuids) != 0 {
 		query = query.Where("desk_uuid in (?)", deskUuids)
 	}
@@ -98,5 +102,18 @@ func (r *productPrinterRepo) WidthPrintMode(printMode int) DBOption {
 	}
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("print_mode = ?", printMode)
+	}
+}
+
+func (r *productPrinterRepo) WhereSaleBillIsKitchenConfirm(isKitchenConfirm int) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("is_kitchen_confirm = ?", isKitchenConfirm)
+	}
+}
+
+// 未被删除的，未整单取消的
+func (r *productPrinterRepo) WhereSaleBillNotDeletedOrIsNotCanceled() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("delete_time = ? or status <> ?", constant.NotDeleted, constant.SaleBillStatusCanceled)
 	}
 }

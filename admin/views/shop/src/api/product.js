@@ -268,6 +268,10 @@ let ProductApi = {
   stateBuffet(data, errorback) {
     return request._post('/shop/product.buffet.buffet/state', data, errorback);
   },
+  // 自助餐整单折扣
+  openOverallDiscount(data, errorback) {
+    return request._post('/shop/product.buffet.buffet/overallDiscount', data, errorback);
+  },
   // 自助餐状态
   combBuffet(data, errorback) {
     return request._post('/shop/product.buffet.buffet/comb', data, errorback);
@@ -331,6 +335,11 @@ let ProductApi = {
   // 批量修改分类
   batchUpdateTax(data, errorback) {
     return request._post('/shop/product.store.product/batchUpdateTax', data, errorback);
+  },
+
+  // 批量修改整单折扣
+  batchUpdateOverallDiscount(data, errorback) {
+    return request._post('/shop/product.store.product/batchUpdateOpenOverallDiscount', data, errorback);
   },
 
   // 推荐

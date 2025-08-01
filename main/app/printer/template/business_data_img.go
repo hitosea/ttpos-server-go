@@ -185,7 +185,11 @@ func (t *businessDataImgTemplate) GetPrintContent(
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.All.TotalRefundMoney), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("免单金额"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.Translate("赠菜金额"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.All.TotalGiveProductPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
+		)
+		img.PrintInColumns(
+			pkg.ColumnConfig{Text: t.base.Translate("免单金额"), Width: 380, Align: pkg.AlignLeft, FontWeight: 1},
 			pkg.ColumnConfig{Text: t.base.GetPriceAndUnit(businessData.All.TotalFreeOrderPrice), Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(

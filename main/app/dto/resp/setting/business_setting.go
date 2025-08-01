@@ -1,6 +1,10 @@
 package setting
 
-import "ttpos-server-go/app/constant"
+import (
+	"ttpos-server-go/app/constant"
+
+	"github.com/shopspring/decimal"
+)
 
 // Business 门店业务设置
 type Business struct {
@@ -20,11 +24,17 @@ type Business struct {
 	DishCardStyleTime         string                      `json:"dish_card_style_time"`         // 菜品卡片样式最后更新时间
 	IsInvoice                 string                      `json:"is_invoice"`                   // 开票信息 0-不需要填写 1-需要填写
 	OpeningHours              string                      `json:"opening_hours"`                // 营业时间 18:00-02:00
-	DeliveryPriceRatio        uint                        `json:"delivery_price_ratio"`         // 外送商品价格和商品原价比例
+	DeliveryPriceRatio        uint                        `json:"delivery_price_ratio"`         // 外送商品价格和商品原价比例. 取值范围1-300， 表示原价的1%到300%
 }
 
 func (resp *Business) IsAutoClearDesk() bool {
 	return resp.NoClearTable == constant.AutoClearTable
+}
+
+// 外送折扣率。100%应表示为1，90%应表示为0.9
+func (resp *Business) GetDeliveryPriceRatio() float64 {
+	value := float64(resp.DeliveryPriceRatio)
+	return decimal.NewFromFloat(value).Div(decimal.NewFromInt(100)).Round(4).InexactFloat64() // 取值范围为0.01-3
 }
 
 type ZeroingMethodItem MethodItem

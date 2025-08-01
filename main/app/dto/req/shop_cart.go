@@ -37,6 +37,7 @@ type ProductAddReq struct {
 	SaleOrderUuid uint64          `json:"sale_order_uuid"` // 销售订单ID。
 	Products      []ProductParams `json:"products"`        // 商品信息列表·
 	IsH5Product   bool            `json:"is_h5_product"`   // 是否是H5商品
+	IsMemberAdd   bool            `json:"is_member_add"`   // 是否是会员端加购
 }
 
 type GetProductPackageDetailReq struct {
@@ -75,12 +76,12 @@ type OrderCartProductNumReq struct {
 
 // OrderCartProductCookingReq 送厨购物车商品请求参数
 type OrderCartProductCookingReq struct {
-	SaleBillUuid   uint64 `json:"sale_bill_uuid"`   // 销售账单ID
-	SaleOrderUuid  uint64 `json:"sale_order_uuid"`  // 销售订单ID。废弃
-	IgnoreMust     bool   `json:"ignore_must"`      // 是否忽略必点方案
-	H5OrderUuid    uint64 `json:"h5_order_uuid"`    // h5订单ID。默认为0，表示不送厨h5订单商品。当从H5订单进入桌台时，需要传入h5订单ID，将该h5订单的商品送厨
-	Password       string `json:"password"`         // 高级密码后台开启的时候才传
-	IsCheckCooking bool   `json:"is_check_cooking"` // 是否只进行送厨检查，而不进行实际的送厨。场景：助手端开启下单校验高级密码时，先检查送厨，再实际送厨。检查送厨时不进行实际送厨
+	SaleBillUuid        uint64 `json:"sale_bill_uuid"`         // 销售账单ID
+	IgnoreMust          bool   `json:"ignore_must"`            // 是否忽略必点方案
+	H5OrderUuid         uint64 `json:"h5_order_uuid"`          // h5订单ID。默认为0，表示不送厨h5订单商品。当从H5订单进入桌台时，需要传入h5订单ID，将该h5订单的商品送厨
+	Password            string `json:"password"`               // 高级密码后台开启的时候才传
+	IsCheckCooking      bool   `json:"is_check_cooking"`       // 是否只进行送厨检查，而不进行实际的送厨。场景：助手端开启下单校验高级密码时，先检查送厨，再实际送厨。检查送厨时不进行实际送厨
+	IsMemberOrderAccept bool   `json:"is_member_order_accept"` // 是否是会员端接单. 不用返回购物车信息
 }
 
 type H5ConfirmOrderReq struct {
@@ -105,6 +106,20 @@ type OrderCartProductGivingReq struct {
 	SaleOrderProductUuid uint64   `json:"sale_order_product_uuid"` // 销售订单商品ID
 	Reason               string   `json:"reason"`                  // 赠菜原因
 	GiftIds              []uint64 `json:"gift_ids"`                // 赠菜标签ids
+}
+
+// OrderCartProductWrapReq 打包购物车商品请求参数
+type OrderCartProductWrapReq struct {
+	SaleBillUuid         uint64 `json:"sale_bill_uuid"`          // 销售账单ID
+	SaleOrderUuid        uint64 `json:"sale_order_uuid"`         // 销售订单ID
+	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
+}
+
+// OrderCartProductUnwrapReq 取消打包购物车商品请求参数
+type OrderCartProductUnwrapReq struct {
+	SaleBillUuid         uint64 `json:"sale_bill_uuid"`          // 销售账单ID
+	SaleOrderUuid        uint64 `json:"sale_order_uuid"`         // 销售订单ID
+	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
 }
 
 // OrderCartProductChangeDeskReq 转菜购物车商品请求参数

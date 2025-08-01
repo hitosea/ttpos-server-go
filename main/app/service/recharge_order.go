@@ -808,8 +808,13 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 			PaymentMethods: paymentMethods,
 			GiftAmount:     order.GiftAmount,
 			GiftPoint:      order.GiftPoint,
-			MemberUuid:     uint64(order.Member.ID),
-			RefundMoney:    order.RefundMoney,
+			MemberUuid: func() uint64 {
+				if order.Member != nil {
+					return uint64(order.Member.ID)
+				}
+				return 0
+			}(),
+			RefundMoney: order.RefundMoney,
 			Cashier: resp.RechargeOrderCashier{
 				RealName: cashierName,
 			},
@@ -1036,14 +1041,14 @@ func (s *rechargeOrderSrv) GetRechargeOrderPaymentQrcode(ctx context.Context, re
 	}
 
 	// 创建连连支付订单
-	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(
-		constant.PaymentOrderRelatedTypeRechargeOrder,
-		order.Uuid,
-		paymentMethod.Uuid,
-		paymentMethod.Code,
-		decimal.NewFromFloat(paymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64(),
-		commissionFee,
-	)
+	payment, err := NewPaymentRepo(ctx, s.dbm).CreatePayment(CreatePaymentReq{
+		RelatedType:       constant.PaymentOrderRelatedTypeRechargeOrder,
+		RelatedUuid:       order.Uuid,
+		PaymentMethodUuid: paymentMethod.Uuid,
+		PaymentMethodCode: paymentMethod.Code,
+		PaymentAmount:     decimal.NewFromFloat(paymentAmount).Add(decimal.NewFromFloat(commissionFee)).InexactFloat64(),
+		CommissionFee:     commissionFee,
+	})
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}

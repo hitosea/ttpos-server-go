@@ -2,7 +2,10 @@ package member_req
 
 import (
 	"errors"
-	"ttpos-server-go/app/constant"
+	"regexp"
+	"slices"
+	errs "ttpos-server-go/app/errors"
+	"ttpos-server-go/pkg/utils"
 )
 
 type MemberLoginInfoReq struct {
@@ -21,25 +24,17 @@ func (req *MemberSendCodeReq) Validate() error {
 	}
 	// 增加全数字校验
 	if !isNumeric(req.Phone) {
-		return errors.New("手机号格式不正确")
+		return errs.WithMessage(errors.New("手机号格式不正确"))
 	}
 	// 判断 req.Phone 是否是手机号
-	if req.AreaCode == constant.ChinaPrefix {
-		if len(req.Phone) != 11 {
-			return errors.New("手机号格式不正确")
-		}
-		if req.Phone[0] != '1' {
-			return errors.New("手机号格式不正确")
-		}
-	} else if req.AreaCode == constant.ThailandPrefix {
-		if len(req.Phone) != 10 {
-			return errors.New("手机号格式不正确")
-		}
-		if req.Phone[0] != '0' {
-			return errors.New("手机号格式不正确")
-		}
-	} else {
-		return errors.New("区号格式不正确")
+	if err := utils.ValidatePhone(req.Phone); err != nil {
+		return errs.WithMessage(err)
+	}
+	if !slices.Contains([]string{"+66", "+86"}, req.AreaCode) {
+		return errs.WithMessage(errors.New("手机号区号不正确"))
+	}
+	if (req.AreaCode == "+66" && len(req.Phone) != 9) || (req.AreaCode == "+86" && len(req.Phone) != 11) {
+		return errs.WithMessage(errors.New("手机号格式不正确"))
 	}
 	return nil
 }
@@ -71,14 +66,36 @@ func (req *MemberLoginReq) Validate() error {
 		return errors.New("验证码不能为空")
 	}
 	// 增加全数字校验
-	if !isNumeric(req.Phone) || len(req.Phone) != 11 && len(req.Phone) != 10 {
-		return errors.New("手机号格式不正确")
+	if err := utils.ValidatePhone(req.Phone); err != nil {
+		return errs.WithMessage(err)
 	}
-	// 判断 req.Phone 是否是手机号
-	if len(req.Phone) == 11 && req.Phone[0] != '1' {
-		return errors.New("手机号格式不正确")
-	} else if len(req.Phone) == 10 && req.Phone[0] != '0' {
-		return errors.New("手机号格式不正确")
+	return nil
+}
+
+type MemberRegisterReq struct {
+	Nickname      string `json:"nickname" form:"nickname"`             // 昵称 最大长度50，不能输入特殊的字符
+	Phone         string `json:"phone" form:"phone"`                   // 手机号
+	Code          string `json:"code" form:"code"`                     // 验证码
+	ReferrerPhone string `json:"referrer_phone" form:"referrer_phone"` // 推荐人手机号
+}
+
+func (req *MemberRegisterReq) Validate() error {
+	if req.Nickname != "" {
+		if len(req.Nickname) > 50 {
+			return errs.WithMessage(errors.New("昵称长度不能超过50"))
+		}
+		// 正则匹配 不能输入特殊的字符 只允许字母、数字、中文和常见标点符号
+		reg := regexp.MustCompile("^[a-zA-Z0-9\u4e00-\u9fa5]+$")
+		if !reg.MatchString(req.Nickname) {
+			return errs.WithMessage(errors.New("昵称输入字符不合规"))
+		}
+	}
+	// 验证手机号
+	if err := utils.ValidatePhone(req.Phone); err != nil {
+		return errs.WithMessage(err)
+	}
+	if req.Code == "" {
+		return errs.WithMessage(errors.New("验证码不能为空"))
 	}
 	return nil
 }

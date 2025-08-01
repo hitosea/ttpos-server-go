@@ -43,6 +43,15 @@
               </div>
             </template>
           </el-table-column>
+          <el-table-column prop="open_overall_discount" :label="$t('整单折扣')" width="100">
+            <template #default="scope">
+              <el-switch
+                :disabled="!this.$filter.isAuth('/product/buffet/list/overallDiscount')"
+                :model-value="scope.row.open_overall_discount == 1 ? true : false"
+                @click="handleOpenOverallDiscount(scope.row)"
+              ></el-switch>
+            </template>
+          </el-table-column>
           <el-table-column prop="is_comb" :label="$t('组合')" width="100">
             <template #default="scope">
               <el-switch
@@ -240,6 +249,35 @@
           PorductApi.stateBuffet({
             buffet_id: row.id,
             state: row.status == 1 ? 0 : 1,
+          }).then((data) => {
+            this.$ElMessage({
+              message: war_ + $t('成功'),
+              type: 'success',
+            });
+            self.getData();
+          });
+        });
+      },
+
+      //整单折扣
+      handleOpenOverallDiscount(row) {
+        if (!this.$filter.isAuth('/product/buffet/list/overallDiscount')) {
+          return;
+        }
+        let self = this;
+        let war = '';
+        let war_ = '';
+        if (row.open_overall_discount == 1) {
+          (war = $t('确认要关闭整单折扣吗?')), (war_ = $t('关闭'));
+        } else if (row.open_overall_discount == 0) {
+          (war = $t('确认要开启整单折扣吗?')), (war_ = $t('开启'));
+        }
+        ElMessageBox.confirm(war, $t('提示'), {
+          type: 'warning',
+        }).then(() => {
+          PorductApi.openOverallDiscount({
+            buffet_id: row.id,
+            open_overall_discount: row.open_overall_discount == 1 ? 0 : 1,
           }).then((data) => {
             this.$ElMessage({
               message: war_ + $t('成功'),

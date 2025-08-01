@@ -414,6 +414,11 @@ func (model *SaleOrder) GetCanReturnAmount() float64 {
 	return decimal.NewFromFloat(model.PaymentAmount).Sub(decimal.NewFromFloat(model.GetReturnAmount())).Round(2).InexactFloat64()
 }
 
+// 外送订单的可退款金额。可退款金额=订单最终应收金额-配送费-已退款金额
+func (model *SaleOrder) GetCanReturnAmountWithDeliveryFee(deliveryFee float64) float64 {
+	return decimal.NewFromFloat(model.GetCanReturnAmount()).Sub(decimal.NewFromFloat(deliveryFee)).Round(2).InexactFloat64()
+}
+
 // 本单最多可退的会员累计消费金额。=销售订单应收-结账抹零金额。 销售订单应收=购物车应收-积分抵扣金额-优惠券抵扣金额
 func (model *SaleOrder) GetCanReturnMemberConsumptionAmountMax() float64 {
 	return decimal.NewFromFloat(model.GetAmountValue()).Sub(decimal.NewFromFloat(model.ZeroCheckoutFee)).Round(2).InexactFloat64()
@@ -565,7 +570,7 @@ func (b *SaleOrder) GetSaleOrderBuffetCustomerTypes(
 			// 使用匿名结构体的字段
 			buffetCustomerTypePriceUuid := customerTypePrice.BaseModel.Uuid
 			taxRate := buffetPackage.GeTaxRate()
-			saleOrderBuffetCustomerType := NewSaleOrderBuffetCustomerType(customerTypePrice.Name, b.Uuid, b.SaleBillUuid, buffetUuid, buffetCustomerTypePriceUuid, num, customerTypePrice.Price, taxRate, *saleBillSetting)
+			saleOrderBuffetCustomerType := NewSaleOrderBuffetCustomerType(customerTypePrice.Name, b.Uuid, b.SaleBillUuid, buffetUuid, buffetCustomerTypePriceUuid, num, customerTypePrice.Price, taxRate, *saleBillSetting, buffetPackage.OpenOverallDiscount)
 			saleOrderBuffetCustomerTypes = append(saleOrderBuffetCustomerTypes, saleOrderBuffetCustomerType)
 			// 只有当buffetUuid不在map中时，才添加到_buffetUuids
 			if !newBuffetUuidMap2[buffetUuid] {

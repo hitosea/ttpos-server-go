@@ -1,0 +1,148 @@
+services:
+
+  php:
+    container_name: "saas-php-${APP_ID}"
+    image: hitosea2020/php-fpm:1.0.6
+    volumes:
+      - ./docker:/var/docker
+      - ./docker/php/conf.d/docker-vars.ini:/usr/local/etc/php/conf.d/docker-vars.ini
+      - ./docker/php/php.ini:/usr/local/etc/php/php.ini
+      - ./docker/php/conf.d/opcache.ini:/usr/local/etc/php/conf.d/docker-php-ext-opcache.ini
+      - ./docker/php/php-fpm.d/www.conf:/usr/local/etc/php-fpm.d/www.conf
+      - ./docker/php/supervisor/supervisor.conf:/etc/supervisor/conf.d/php.conf
+      - ./docker/certificate:/var/certificate
+      - ./admin/:/var/www
+    env_file:
+      - ./.env
+    restart: always
+    depends_on:
+      - db
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
+      - redis-proxy
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.10
+      
+  nginx:
+    container_name: "saas-nginx-${APP_ID}"
+    image: nginx:alpine
+    ports:
+      - "${NGINX_PORT:-}:80"
+      - "${NGINX_SSL_PORT:-}:443"
+    volumes:
+      - ./docker/sysctl/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx:/etc/nginx/conf.d
+      - ./admin/public:/var/www/public
+    links:
+      - php
+      - golang
+      - websocket
+    depends_on:
+      - php
+      - golang
+      - websocket
+    restart: unless-stopped
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.11
+
+  db:
+    container_name: "saas-db-${APP_ID}"
+    image: "mariadb:10.11.6"
+    volumes:
+      - ./docker/mysql/data:/var/lib/mysql
+      - ./docker/mysql/conf.d:/etc/mysql/conf.d
+      - ./docker/mysql/repassword.sh:/etc/mysql/repassword.sh
+      - ./docker/mysql/permissions.sh:/etc/mysql/permissions.sh
+      - ./docker/mysql/create_saas.sh:/etc/mysql/create_saas.sh
+      - ./docker/mysql/init.d:/docker-entrypoint-initdb.d/
+    environment:
+      MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      MARIADB_DATABASE: "${DB_DATABASE}"
+      MARIADB_USER: "${DB_USERNAME}"
+      MARIADB_PASSWORD: "${DB_PASSWORD}"
+      MARIADB_PREFIX: "${DB_PREFIX}"
+      MARIADB_HOST: "${DB_HOST}"
+      MARIADB_PORT: "${DB_PORT}"
+    restart: always
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.12
+    
+  redis-proxy:
+    container_name: "saas-redis-proxy-${APP_ID}"
+    build:
+      context: ./redis-proxy
+      dockerfile: Dockerfile
+    volumes:
+      - .env:/var/.env
+    image: redis-proxy
+    depends_on:
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
+    restart: always
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.17
+    
+  golang:
+    container_name: "saas-golang-${APP_ID}"
+    build:
+      dockerfile: main/Dockerfile-dev
+    image: ttpos-server-go
+    environment:
+      SW_AGENT_NAME: "${SW_AGENT_NAME:-ttpos}"
+      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
+      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
+    volumes:
+      - ./main/i18n:/var/www/i18n
+      - .env:/var/.env
+      - ./docker/certificate:/var/certificate
+    restart: always
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.18
+
+  websocket:
+    container_name: "saas-websocket-${APP_ID}"
+    build:
+      context: ./websocket
+      dockerfile: Dockerfile
+    image: ttpos-server-websocket
+    volumes:
+      - .env:/var/.env
+    restart: always
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.19
+
+  takeout:
+    container_name: "saas-takeout-${APP_ID}"
+    build:
+      context: ./takeout
+      dockerfile: Dockerfile
+    image: ttpos-server-takeout
+    environment:
+      SW_AGENT_NAME: "ttpos-server-takeout"
+      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
+      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
+    volumes:
+      - ./takeout/manifest/config:/app/config  #生产环境根据需要调整
+    restart: always
+    ports:
+      - "14031:14031"
+      - "14032:14032"
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.20
+
+networks:
+  saas-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.0.0/24
+          gateway: 10.0.0.1

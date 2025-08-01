@@ -94,6 +94,20 @@ func (model *SaleBill) GetSaleOrderProductUnCooking() []*SaleOrderProduct {
 	return unCookingSaleOrderProducts
 }
 
+// 获取未送厨的销售订单商品
+func (model *SaleBill) SetSaleOrderProductCooking() {
+	for _, saleOrder := range model.SaleOrders {
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			if !saleOrderProduct.IsAcceptOrderBool() || saleOrderProduct.IsDelete() {
+				continue
+			}
+			if saleOrderProduct.Status == constant.SaleOrderProductStatusNormal {
+				saleOrderProduct.SetCooking(0)
+			}
+		}
+	}
+}
+
 // 获取未送厨的销售订单商品.获取出刚刚被送厨的商品
 func (model *SaleBill) GetSaleOrderProductUnCookingByUuids(uuids map[uint64]bool) []*SaleOrderProduct {
 	unCookingSaleOrderProducts := make([]*SaleOrderProduct, 0)
@@ -230,6 +244,18 @@ func (model *SaleBill) GetSaleOrderProductByUuid(uuid uint64) *SaleOrderProduct 
 // 返回第一个销售订单
 func (model *SaleBill) GetFirstSaleOrder() *SaleOrder {
 	return model.SaleOrders[0]
+}
+
+// 重新设置外送订单的会员端折扣率，并重新计算商品价格
+func (model *SaleBill) SetMemberOrderDiscountRate(rate float64) {
+	defer model.SetUpdate()
+	for _, saleOrder := range model.SaleOrders {
+		saleOrder.SetUpdate()
+		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			saleOrderProduct.MemberOrderDiscountRate = rate
+			saleOrderProduct.SetUpdate()
+		}
+	}
 }
 
 // 获取销售账单的销售订单和销售订单商品
@@ -559,12 +585,8 @@ func (model *SaleBill) SetCashier(dutyNo string, cashierUuid uint64, cashierName
 	}
 }
 
-// 设置打包销售账单。并更新订单的税率
+// 设置打包销售账单。并更新订单的税率，更新订单商品的打包状态
 func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
-	// 如果没有改变，则不更新
-	if model.DiningMethod == diningMethod {
-		return
-	}
 	// 默认堂食
 	method := constant.SaleBillDiningMethodDineIn
 	// 严谨判断。拒绝非法的值
@@ -582,12 +604,24 @@ func (model *SaleBill) SetTakeoutSaleBill(diningMethod uint) {
 	// 从ProductPackage中获取税率
 	for _, saleOrder := range model.SaleOrders {
 		for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+			// 如果商品的就餐方式与账单的就餐方式相同，则不更新商品
+			if saleOrderProduct.GetDiningMethod() == uint(method) {
+				continue
+			}
 			if saleOrderProduct.ProductPackage == nil {
 				// 这种情况不应该出现，因为商品包是必填的.panic是为了提示没有预加载这个表
 				panic("saleOrderProduct.ProductPackage is nil")
 			}
 			taxRate := saleOrderProduct.ProductPackage.TaxRate(model.DiningMethod)
 			saleOrderProduct.SetTaxRate(taxRate)
+			// 设置打包状态
+			if method == constant.SaleBillDiningMethodTakeout {
+				saleOrderProduct.SetWrap()
+				saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign() // 重新生成签名
+			} else {
+				saleOrderProduct.SetUnwrap()
+				saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign() // 重新生成签名
+			}
 		}
 	}
 }
@@ -598,7 +632,8 @@ func (model *SaleBill) SetReverseSettle() {
 	// 销售订单状态变为未结账状态
 	// 销售订单的所有付款单都退款，并生成退款单
 	model.Status = constant.SaleBillStatusPending
-	model.FinishTime = 0 // 反结账后支付时间finish_time置0
+	model.FinishTime = 0                                    // 反结账后支付时间finish_time置0
+	model.ReverseSettleCount = model.ReverseSettleCount + 1 // 反结账次数+1
 	for _, saleOrder := range model.SaleOrders {
 		saleOrder.FinishTime = 0 // 反结账后支付时间finish_time置0
 		saleOrder.Status = constant.SaleOrderStatusPending

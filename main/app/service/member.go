@@ -2,18 +2,27 @@ package service
 
 import (
 	"fmt"
+	"math/rand"
 	"time"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
+	"ttpos-server-go/app/dto/req/member_req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/dto/resp/member_resp"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 	"ttpos-server-go/app/repository"
 	"ttpos-server-go/app/repository/base"
+	"ttpos-server-go/app/repository/saas"
+	"ttpos-server-go/config"
+	"ttpos-server-go/pkg/auth"
+	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/context"
 	"ttpos-server-go/pkg/database"
 	"ttpos-server-go/pkg/eventbus/event"
 	"ttpos-server-go/pkg/utils"
+	"ttpos-server-go/pkg/validator"
 
 	"github.com/shopspring/decimal"
 
@@ -26,34 +35,40 @@ import (
 
 // IMemberSrv 定义会员服务接口
 type IMemberSrv interface {
-	GetLevels(companyUuid uint64) resp.MemberLevelList                                                             // 获取等级列表
-	GetCardTypes(companyUuid uint64) resp.MemberCardTypeList                                                       // 获取会员开类型
-	SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList                                         // 模糊搜索
-	AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error                                            // 添加会员
-	GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember                                   // 获取充值会员信息
-	GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (*resp.MemberDiscountResp, error) // 获取会员折扣
-	CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error                         // 使用会员优惠验证密码
-	HandleMemberUpgrade(companyUuid uint64, memberUuid uint64)                                                     // 处理会员升级
-	HandleMemberPoints(ctx context.Context, changeReq MemberPointsChangeReq) error                                 // 处理会员积分
-	HandleMemberBalance(ctx context.Context, changeReq MemberBalanceChangeReq) error                               // 处理会员余额
+	GetLevels(companyUuid uint64) resp.MemberLevelList                                                                                                         // 获取等级列表
+	GetCardTypes(companyUuid uint64) resp.MemberCardTypeList                                                                                                   // 获取会员开类型
+	SearchMember(companyUuid uint64, keyword string) resp.SearchMemberList                                                                                     // 模糊搜索
+	AddMember(ctx context.Context, addMemberReq req.AddMemberReq) error                                                                                        // 添加会员
+	GetRechargeMember(companyUuid uint64, memberUuid uint64) resp.RechargeMember                                                                               // 获取充值会员信息
+	GetMemberDiscount(ctx context.Context, discountReq req.GetMemberDiscountReq) (*resp.MemberDiscountResp, error)                                             // 获取会员折扣
+	CheckMemberPassword(ctx context.Context, discountReq req.CheckMemberPasswordReq) error                                                                     // 使用会员优惠验证密码
+	HandleMemberUpgrade(companyUuid uint64, memberUuid uint64)                                                                                                 // 处理会员升级
+	HandleMemberPoints(ctx context.Context, changeReq MemberPointsChangeReq) error                                                                             // 处理会员积分
+	HandleMemberBalance(ctx context.Context, changeReq MemberBalanceChangeReq) error                                                                           // 处理会员余额
+	GenerateRandomNickname() string                                                                                                                            // 生成随机昵称
+	GetMemberCouponList(ctx context.Context, couponListReq member_req.CouponListReq) (member_resp.CouponListWithPaginationResp, error)                         // 获取优惠券列表
+	GetMemberPointsRecordList(ctx context.Context, pointsRecordListReq member_req.PointsRecordListReq) (member_resp.PointsRecordListWithPaginationResp, error) // 获取积分记录列表
+	Register(ctx context.Context, reqs member_req.MemberRegisterReq) (member_resp.LoginResp, error)                                                            // 注册
 }
 
 // memberSrv 会员服务结构体
 type memberSrv struct {
-	dbm *database.DBManager // 数据库管理器
-	bus *event.SystemEventBus
+	dbm   *database.DBManager // 数据库管理器
+	bus   *event.SystemEventBus
+	cache cache.Cache
 }
 
 // NewMemberSrv 创建新的会员服务
-func NewMemberSrv(dbm *database.DBManager) IMemberSrv {
-	return NewMemberSrvImpl(dbm)
+func NewMemberSrv(dbm *database.DBManager, cache cache.Cache) IMemberSrv {
+	return NewMemberSrvImpl(dbm, cache)
 }
 
 // NewMemberSrvImpl 创建新的会员服务实现
-func NewMemberSrvImpl(dbm *database.DBManager) IMemberSrv {
+func NewMemberSrvImpl(dbm *database.DBManager, cache cache.Cache) IMemberSrv {
 	return &memberSrv{
-		dbm: dbm,
-		bus: event.NewSystemBus(),
+		dbm:   dbm,
+		cache: cache,
+		bus:   event.NewSystemBus(),
 	}
 }
 
@@ -128,20 +143,16 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 
 	// 判断推荐人，活动
 	var referrer model.Member
-	//activityUuid := addMemberReq.ActivityUuid
-	// 默认为0，不接收前端传递的活动ID
 	var activityUuid uint64
 	if addMemberReq.ReferrerUuid != 0 {
 		referrer = memberRepo.GetMember(memberRepo.WhereUuid(addMemberReq.ReferrerUuid))
 		if referrer.ID == 0 {
 			return errors.New("推荐人不存在")
 		}
-		//if addMemberReq.ActivityUuid == 0 {
-		activities, _ := repository.NewMarketingActivityRepo(ctx.GetDB()).GetActivityListByNow()
-		if len(activities) != 0 {
-			activityUuid = activities[0].Uuid
+		activity, _ := repository.NewMarketingActivityRepo(ctx.GetDB()).GetValidActivityByUuid(0)
+		if activity != nil {
+			activityUuid = activity.Uuid
 		}
-		//}
 	}
 
 	// 处理会员密码
@@ -259,7 +270,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 	if memberPointsChanged || memberBalanceChanged {
 		go func() {
 			if memberBalanceChanged {
-				// 发布“会员余额变动”事件
+				// 发布"会员余额变动"事件
 				s.bus.PublishChangeMemberBalanceEvent(event.ChangeMemberBalancePayload{
 					BasePayload: event.BasePayload{ // 会员余额变动
 						Ctx:          ctx,
@@ -271,7 +282,7 @@ func (s *memberSrv) AddMember(ctx context.Context, addMemberReq req.AddMemberReq
 			}
 			if memberPointsChanged {
 				s.HandleMemberUpgrade(companyUuid, member.Uuid)
-				// 发布“会员积分变动”事件
+				// 发布"会员积分变动"事件
 				s.bus.PublishChangeMemberPointsEvent(event.ChangeMemberPointsPayload{
 					BasePayload: event.BasePayload{ // 会员积分变动
 						Ctx:          ctx,
@@ -442,13 +453,13 @@ func (s *memberSrv) HandleMemberBalance(ctx context.Context, changeReq MemberBal
 // checkCanUpgrade 检查会员是否可以升级
 func (s *memberSrv) checkCanUpgrade(member model.Member, level model.MemberLevel) bool {
 	if (level.OpenMoney == 1 && level.OpenPoint == 1) &&
-		(member.AccumulatedConsumptionAmount >= level.UpgradeMoney && member.GetPoints() >= level.UpgradePoint) {
+		(member.AccumulatedConsumptionAmount >= level.UpgradeMoney && member.AccumulatedConsumptionGetPoint >= level.UpgradePoint) {
 		return true
 	}
 	if level.OpenMoney == 1 && member.AccumulatedConsumptionAmount >= level.UpgradeMoney {
 		return true
 	}
-	if level.OpenPoint == 1 && member.GetPoints() >= level.UpgradePoint {
+	if level.OpenPoint == 1 && member.AccumulatedConsumptionGetPoint >= level.UpgradePoint {
 		return true
 	}
 	return false
@@ -578,4 +589,246 @@ func (s *memberSrv) CheckMemberPassword(ctx context.Context, discountReq req.Che
 	}
 
 	return nil
+}
+
+// GenerateRandomNickname 生成随机昵称
+func (s *memberSrv) GenerateRandomNickname() string {
+	// 获取当前纳秒时间戳的后8位
+	now := time.Now().UnixNano()
+	timePart := now % 100000000 // 取后8位，范围0-99999999
+	// 生成4位随机数
+	rand.Seed(now + int64(rand.Intn(10000))) // 使用时间戳+额外随机数作为种子
+	randomPart := rand.Intn(10000)           // 范围0-9999
+	// 生成机器/进程标识（基于当前时间的微秒部分）
+	processPart := (now / 1000) % 1000 // 范围0-999
+	// 组合成一个大整数
+	combined := timePart*10000000 + int64(randomPart)*1000 + processPart
+	// 将整数转换为Base62编码（0-9, a-z, A-Z）
+	nickname := s.base62Encode(combined)
+	// 确保长度为9位，不足则前补随机字符
+	if len(nickname) < 9 {
+		charset := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+		for len(nickname) < 9 {
+			nickname = string(charset[rand.Intn(62)]) + nickname
+		}
+	} else if len(nickname) > 9 {
+		// 如果超过9位，取后9位
+		nickname = nickname[len(nickname)-9:]
+	}
+	// 为了进一步确保唯一性，如果前面的算法生成重复，使用UUID方案
+	memberRepo := saas.NewMemberRepo(s.dbm.GetDB(0))
+	if memberRepo.CheckNicknameExists(nickname) {
+		retryCount := 0
+		for memberRepo.CheckNicknameExists(nickname) && retryCount < 10 {
+			nickname = s.GenerateRandomNickname()
+			retryCount++
+		}
+	}
+	return nickname
+}
+
+// base62Encode 将整数编码为Base62字符串
+func (s *memberSrv) base62Encode(num int64) string {
+	if num == 0 {
+		return "0"
+	}
+
+	charset := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	base := int64(62)
+	result := ""
+
+	for num > 0 {
+		result = string(charset[num%base]) + result
+		num = num / base
+	}
+
+	return result
+}
+
+// GetMemberCouponList 获取优惠券列表
+func (s *memberSrv) GetMemberCouponList(ctx context.Context, couponListReq member_req.CouponListReq) (member_resp.CouponListWithPaginationResp, error) {
+	dbId := ctx.GetDbId()
+	couponRepo := repository.NewMemberCouponRepo(s.dbm.GetDB(dbId))
+	// 处理错误
+	var coupons []*model.MemberCoupon
+	var err error
+	if couponListReq.IsHistory == 1 {
+		coupons, err = couponRepo.GetHistoryMemberCouponList(couponListReq.MemberUuid)
+	} else {
+		coupons, err = couponRepo.GetValidMemberCouponList(couponListReq.MemberUuid)
+	}
+	if err != nil {
+		return member_resp.CouponListWithPaginationResp{}, errors.WithMessage(err, "获取优惠券列表失败")
+	}
+	// 转换为响应对象
+	respMemberCoupons := make([]member_resp.Coupon, 0)
+	for _, memberCoupon := range coupons {
+		var respMemberCoupon member_resp.Coupon
+		copier.Copy(&respMemberCoupon, memberCoupon)
+		if memberCoupon.DayStartTime == "00:00" && memberCoupon.DayEndTime == "23:59" {
+			respMemberCoupon.ApplicableTimePeriod = 0
+		} else {
+			respMemberCoupon.ApplicableTimePeriod = 1
+		}
+		respMemberCoupon.Status = memberCoupon.GetStatus()
+		respMemberCoupons = append(respMemberCoupons, respMemberCoupon)
+	}
+	// 返回响应对象
+	return member_resp.CouponListWithPaginationResp{
+		List: respMemberCoupons,
+	}, nil
+}
+
+// GetMemberPointsRecordList 获取积分记录列表
+func (s *memberSrv) GetMemberPointsRecordList(ctx context.Context, pointsRecordListReq member_req.PointsRecordListReq) (member_resp.PointsRecordListWithPaginationResp, error) {
+	dbId := ctx.GetDbId()
+	pointsRecordRepo := repository.NewMemberPointLogRepo(s.dbm.GetDB(dbId))
+
+	var opts []repository.DBOption
+	if pointsRecordListReq.Type == 1 {
+		opts = append(opts, pointsRecordRepo.WhereByPositiveValue())
+	} else if pointsRecordListReq.Type == 2 {
+		opts = append(opts, pointsRecordRepo.WhereByNegativeValue())
+	}
+
+	pointsRecords, total, err := pointsRecordRepo.PaginateGet(
+		pointsRecordListReq.PageNo,
+		pointsRecordListReq.PageSize,
+		append(opts, repository.CommonRepo.WhereByMemberUuid(pointsRecordListReq.MemberUuid))...,
+	)
+	if err != nil {
+		return member_resp.PointsRecordListWithPaginationResp{}, errors.WithMessage(err, "获取积分记录列表失败")
+	}
+
+	pointsRecordsResp := make([]member_resp.PointsRecord, 0)
+	for _, pointsRecord := range pointsRecords {
+		pointsRecordsResp = append(pointsRecordsResp, member_resp.PointsRecord{
+			Scene:      pointsRecord.Scene,
+			Value:      pointsRecord.Value,
+			CreateTime: pointsRecord.CreateTime,
+		})
+	}
+
+	return member_resp.PointsRecordListWithPaginationResp{
+		List:       pointsRecordsResp,
+		TotalPoint: ctx.GetMember().Point,
+		Meta: dto.PageResponse{
+			PageNo:   pointsRecordListReq.PageNo,
+			PageSize: pointsRecordListReq.PageSize,
+			Total:    total,
+		},
+	}, nil
+}
+
+// Register 注册
+// 参数：ctx 上下文，req 注册请求
+// 返回：注册响应，错误信息
+func (s *memberSrv) Register(ctx context.Context, reqs member_req.MemberRegisterReq) (member_resp.LoginResp, error) {
+	if err := reqs.Validate(); err != nil {
+		return member_resp.LoginResp{}, errors.WithMessage(err)
+	}
+	// 获取上下文中的公司ID
+	companyUuid := ctx.GetCompanyUuid()
+
+	// 获取商家信息
+	db := s.dbm.GetDB(companyUuid)
+	company, err := repository.NewCompanyRepo(db).GetCompanyInfoByUuid(companyUuid)
+	if err != nil || company.IsExpired() || company.IsDelete() {
+		return member_resp.LoginResp{}, errors.New("无法使用该功能，请联系商家")
+	}
+	if company.CompanySetting == nil || company.CompanySetting.IsOpenMember != 1 {
+		return member_resp.LoginResp{}, errors.New("商家会员服务已关闭")
+	}
+
+	// 设置上下文
+	ctx.SetDB(db)
+	ctx.SetCompanyUuid(companyUuid)
+	ctx.SetCompany(*company)
+	ctx.SetCompanySetting(*company.CompanySetting)
+
+	// 验证验证码
+	if err := validator.VerifyCode(s.cache, companyUuid, reqs.Phone, reqs.Code); err != nil {
+		return member_resp.LoginResp{}, err
+	}
+
+	// 验证手机号是否存在
+	if member, err := repository.NewMemberRepo(db).GetMemberByPhoneContainDeleted(reqs.Phone); err == nil {
+		if member.IsDelete() {
+			return member_resp.LoginResp{}, errors.New("该会员已被注销，可联系商家处理")
+		}
+		return member_resp.LoginResp{}, errors.New("该手机号已注册本商家会员")
+	}
+
+	// 验证推荐人手机号是否存在
+	var referrer *model.Member
+	var activityUuid uint64
+	if reqs.ReferrerPhone != "" {
+		referrer, err = repository.NewMemberRepo(db).GetMemberByPhone(reqs.ReferrerPhone)
+		if err != nil || referrer.IsDelete() {
+			return member_resp.LoginResp{}, errors.New("该推荐人不存在")
+		}
+		activity, _ := repository.NewMarketingActivityRepo(db).GetValidActivityByUuid(0)
+		if activity != nil {
+			activityUuid = activity.Uuid
+		}
+	}
+
+	// 获取上下文中的会员信息
+	if members := ctx.GetMember(); members.IsVisitor {
+		if err := repository.NewMemberRepo(db).Update(members.Uuid, map[string]interface{}{
+			"phone":    reqs.Phone,
+			"nickname": utils.IfString(reqs.Nickname != "", reqs.Nickname, members.Nickname),
+			"referrer_uuid": func() uint64 {
+				if referrer != nil {
+					return referrer.Uuid
+				}
+				return 0
+			}(),
+			"activity_uuid": activityUuid,
+			"is_visitor":    false,
+		}); err != nil {
+			return member_resp.LoginResp{}, errors.WithMessage(err, "更新游客信息失败")
+		}
+	} else {
+		err = s.AddMember(ctx, req.AddMemberReq{
+			Phone: reqs.Phone,
+			ReferrerUuid: func() uint64 {
+				if referrer != nil {
+					return referrer.Uuid
+				}
+				return 0
+			}(),
+			Nickname:  reqs.Nickname,
+			LevelUuid: repository.NewMemberRepo(db).GetMemberLevelMinPriorityUuid(),
+		})
+		if err != nil {
+			return member_resp.LoginResp{}, err
+		}
+	}
+
+	// 获取会员信息
+	member, err := repository.NewMemberRepo(db).GetMemberByPhoneContainDeleted(reqs.Phone)
+	if err != nil {
+		return member_resp.LoginResp{}, err
+	}
+
+	// 生成token
+	claims := auth.Claims{
+		Source:      constant.SourceMember,
+		CompanyUuid: companyUuid,
+		MemberUuid:  member.Uuid,
+		DeviceId:    member.DeviceId,
+	}
+	token, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.Expire, false)
+	if err != nil {
+		return member_resp.LoginResp{}, errors.New("生成token失败")
+	}
+	refreshToken, err := auth.GenerateToken(claims, config.JWT.Secret, config.JWT.RefreshExpire, true)
+	if err != nil {
+		return member_resp.LoginResp{}, errors.New("生成refresh_token失败")
+	}
+	return member_resp.LoginResp{
+		Token:        token,
+		RefreshToken: refreshToken,
+	}, nil
 }

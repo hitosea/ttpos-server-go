@@ -278,7 +278,14 @@ func MemberAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFu
 			return
 		}
 		// 验证会员是否存在
-		member, err := repository.NewMemberRepo(dbm.GetDB(claims.CompanyUuid)).GetMemberByUuid(claims.MemberUuid)
+		db := dbm.GetDB(claims.CompanyUuid)
+		if db == nil {
+			helper.Fail(c, constant.CodeTokenInvalid, "无法使用该功能，请联系商家")
+			c.Abort()
+			return
+		}
+		memberRepo := repository.NewMemberRepo(db)
+		member, err := memberRepo.GetMemberRecord(memberRepo.WhereUuid(claims.MemberUuid))
 		if err != nil || member.IsDelete() {
 			helper.Fail(c, constant.CodeTokenInvalid, "会员不存在")
 			c.Abort()
@@ -290,12 +297,6 @@ func MemberAuth(authSrv service.IAuthSrv, dbm *database.DBManager) gin.HandlerFu
 			c.Abort()
 			return
 		}
-		// companySetting := repository.NewCompanySettingRepo(dbm.GetDB(claims.CompanyUuid)).Get()
-		// if companySetting.IsOpenMember != 1 {
-		// 	helper.Fail(c, constant.CodeTokenInvalid, "商家未开通会员功能")
-		// 	c.Abort()
-		// 	return
-		// }
 		// 将用户信息存储到上下文
 		c.Set(jwt.Source, jwt.SourceMember)
 		c.Set(jwt.CompanyUuid, claims.CompanyUuid)         // 商家Uuid

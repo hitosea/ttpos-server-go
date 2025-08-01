@@ -3,6 +3,7 @@ package repository
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 	"ttpos-server-go/app/constant"
@@ -22,16 +23,16 @@ type QrCodeParams struct {
 }
 
 type IMarketingActivityRepo interface {
-	// GetActivity 获取营销活动
-	GetActivity(uuid uint64) (*model.MarketingActivity, error)
-	// GetActivityAndPrizes 获取营销活动与奖励
-	GetActivityAndPrizes(uuid uint64) (*model.MarketingActivity, error)
-	// GetActivityListByNow 获取正在进行中的营销活动列表
-	GetActivityListByNow() ([]*model.MarketingActivity, error)
-	// GenerateQrCode 生成二维码
-	GenerateQrCode(params *QrCodeParams) (string, error)
-	// SendReward 发放奖励
-	SendReward(activityUuid, memberUuid uint64) error
+	GetActivity(uuid uint64) (*model.MarketingActivity, error)                            // 获取营销活动
+	GetActivityAndPrizes(uuid uint64) (*model.MarketingActivity, error)                   // 获取营销活动与奖励
+	GetMemberClientActivityList(dbOption ...DBOption) ([]*model.MarketingActivity, error) // 获取会员端营销活动列表
+	GetValidActivityListByNow(dbOption ...DBOption) ([]*model.MarketingActivity, error)   // 获取正在进行中的营销活动列表
+	GetValidActivity() (*model.MarketingActivity, error)                                  // 获取正在进行中的营销活动
+	GetValidActivityByUuid(uuid uint64) (*model.MarketingActivity, error)                 // 根据uuid获取正在进行中的营销活动
+	GenerateQrCode(params *QrCodeParams) (string, error)                                  // 生成二维码
+
+	WithLanguage() DBOption
+	WithPrizes() DBOption
 }
 
 // MarketingActivityRepo 营销活动仓库
@@ -46,6 +47,20 @@ func NewMarketingActivityRepo(db *gorm.DB) IMarketingActivityRepo {
 	}
 }
 
+// WithLanguage 根据语言获取营销活动
+func (r *MarketingActivityRepo) WithLanguage() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("MultiLanguageName").Preload("MultiLanguageDesc")
+	}
+}
+
+// WithPrizes 根据语言获取营销活动
+func (r *MarketingActivityRepo) WithPrizes() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Prizes", NotDeleted).Preload("Prizes.Coupon", NotDeleted)
+	}
+}
+
 // GetActivity 获取营销活动
 func (r *MarketingActivityRepo) GetActivity(uuid uint64) (*model.MarketingActivity, error) {
 	var activity model.MarketingActivity
@@ -54,6 +69,35 @@ func (r *MarketingActivityRepo) GetActivity(uuid uint64) (*model.MarketingActivi
 		return nil, err
 	}
 	return &activity, nil
+}
+
+// GetActivityList 获取营销活动列表
+func (r *MarketingActivityRepo) GetMemberClientActivityList(opts ...DBOption) ([]*model.MarketingActivity, error) {
+	activities := make([]*model.MarketingActivity, 0)
+	db := r.db
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	sevenDaysAgo := time.Now().AddDate(0, 0, -7).Unix() // 7天前的时间戳
+	nowUnix := time.Now().Unix()
+	result := db.Scopes(NotDeleted)
+	result = result.Where("start_time <= ? AND end_time >= ?", nowUnix, sevenDaysAgo)
+	// 按活动状态排序：进行中(1)排最前，未开始(0)其次，已结束/无效(2)最后
+	orderSQL := fmt.Sprintf(`
+		CASE 
+			WHEN is_invalid = 1 THEN 2
+			WHEN start_time > %d THEN 0  
+			WHEN end_time < %d THEN 2
+			ELSE 1 
+		END ASC, start_time DESC
+	`, nowUnix, nowUnix)
+	result = result.Order(orderSQL).Find(&activities)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return activities, nil
 }
 
 // GetActivityAndPrizes 获取营销活动与奖励
@@ -70,7 +114,7 @@ func (r *MarketingActivityRepo) GetActivityAndPrizes(uuid uint64) (*model.Market
 }
 
 // GetActivityListByNow 获取正在进行中的营销活动列表
-func (r *MarketingActivityRepo) GetActivityListByNow() ([]*model.MarketingActivity, error) {
+func (r *MarketingActivityRepo) GetValidActivityListByNow(opts ...DBOption) ([]*model.MarketingActivity, error) {
 	var activities []*model.MarketingActivity
 	db := r.db.Model(&model.MarketingActivity{}).
 		Preload("Prizes", NotDeleted).
@@ -79,11 +123,46 @@ func (r *MarketingActivityRepo) GetActivityListByNow() ([]*model.MarketingActivi
 		Where("delete_time = ? AND start_time <= ? AND end_time >= ? AND is_invalid = ?", constant.NotDeleted, time.Now().Unix(), time.Now().Unix(), 0).
 		Order("start_time DESC").
 		Order("end_time DESC")
+	// 应用选项
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	// 查询
 	err := db.Find(&activities).Error
 	if err != nil {
 		return nil, err
 	}
 	return activities, nil
+}
+
+// GetValidActivity 获取正在进行中的营销活动
+func (r *MarketingActivityRepo) GetValidActivity() (*model.MarketingActivity, error) {
+	return r.GetValidActivityByUuid(0)
+}
+
+// GetValidActivityByUuid 根据uuid获取营销活动
+func (r *MarketingActivityRepo) GetValidActivityByUuid(uuid uint64) (*model.MarketingActivity, error) {
+	var activity model.MarketingActivity
+	db := r.db.Model(&model.MarketingActivity{}).
+		Preload("Prizes", NotDeleted).
+		Preload("MultiLanguageName").
+		Preload("MultiLanguageDesc").
+		Where("delete_time = ? AND start_time <= ? AND end_time >= ? AND is_invalid = ?", constant.NotDeleted, time.Now().Unix(), time.Now().Unix(), 0).
+		Order("start_time DESC").
+		Order("end_time DESC")
+	//
+	if uuid != 0 {
+		db = db.Where("uuid = ?", uuid)
+	}
+	//
+	err := db.First(&activity).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &activity, nil
 }
 
 // GenerateQrCode 生成二维码
@@ -105,123 +184,4 @@ func (r *MarketingActivityRepo) GenerateQrCode(params *QrCodeParams) (string, er
 	}
 	// 转换为base64
 	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(qr), nil
-}
-
-// 计算奖励次数
-func (r *MarketingActivityRepo) calculateRewardCount(consumptionAmount, rewardConditionAmount float64) int {
-	if rewardConditionAmount <= 0 {
-		return 0
-	}
-	// 向下取整，确保不会超过实际消费金额对应的奖励次数
-	return int(consumptionAmount / rewardConditionAmount)
-}
-
-// SendReward 发放奖励
-func (r *MarketingActivityRepo) SendReward(activityUuid, memberUuid uint64) error {
-	// 获取活动信息
-	activity, err := r.GetActivityAndPrizes(activityUuid)
-	if err != nil {
-		return err
-	}
-	if activity == nil {
-		return fmt.Errorf("activity not found")
-	}
-
-	// 检查活动是否有效
-	if !activity.IsValid() {
-		return fmt.Errorf("activity is invalid")
-	}
-
-	// 检查是否开启奖励次数限制, 如果已经达到奖励次数限制，则不再发放奖励
-	rewardCount, err := NewMarketingActivityRecordRepo(r.db).GetRewardCount(activityUuid, memberUuid)
-	if err != nil {
-		return err
-	}
-	if activity.IsOpenRewardLimit == 1 && rewardCount >= activity.RewardLimit {
-		return fmt.Errorf("reward limit reached")
-	}
-
-	// 获取推荐人的总消费金额
-	consumptionAmount, err := NewMarketingActivityConsumptionRepo(r.db).GetByActivityAndReferrerConsumptionAmount(activityUuid, memberUuid)
-	if err != nil {
-		return err
-	}
-
-	// 计算应该发放的奖励次数
-	rewardCountToGive := r.calculateRewardCount(consumptionAmount, activity.RewardConditionAmount)
-	if rewardCountToGive <= 0 {
-		return fmt.Errorf("no reward to give")
-	}
-	// 最多等于奖励次数限制
-	if activity.IsOpenRewardLimit == 1 {
-		if rewardCountToGive > int(activity.RewardLimit) {
-			rewardCountToGive = int(activity.RewardLimit)
-		}
-	}
-	// 计算应该发放的奖励次数，减去已经发放的奖励次数
-	rewardCountToGive = rewardCountToGive - int(rewardCount)
-	if rewardCountToGive < 0 {
-		rewardCountToGive = 0
-	}
-
-	// 发放优惠券
-	marketingCoupon := &model.MarketingCoupon{}
-	if len(activity.Prizes) > 0 && activity.Prizes[0] != nil && activity.Prizes[0].Coupon != nil {
-		marketingCoupon = activity.Prizes[0].Coupon
-	}
-
-	// 循环发放多次奖励
-	for i := 0; i < rewardCountToGive; i++ {
-		err = r.db.Transaction(func(tx *gorm.DB) error {
-			// 只有当优惠券存在时才创建会员优惠券
-			if marketingCoupon != nil && marketingCoupon.Uuid != 0 {
-				// 创建优惠券
-				err = NewMarketingCouponRepo(tx).DecreaseCouponQuantity(marketingCoupon.Uuid, memberUuid, activityUuid)
-				if err != nil {
-					return err
-				}
-				// 创建奖励记录
-				err = NewMarketingActivityRecordRepo(tx).CreateRecord(&model.MarketingActivityRecord{
-					ActivityUuid:   activityUuid,
-					MemberUuid:     memberUuid,
-					RewardCount:    1,
-					LastRewardTime: time.Now().Unix(),
-					PrizeUuid: func() uint64 {
-						if len(activity.Prizes) > 0 && activity.Prizes[0] != nil {
-							return activity.Prizes[0].PrizeUuid
-						}
-						return 0
-					}(),
-				})
-				if err != nil {
-					return err
-				}
-				// 创建会员优惠券
-				err = NewMemberCouponRepo(tx).CreateMemberCoupon(&model.MemberCoupon{
-					MemberUuid:     memberUuid,
-					Type:           "deduction",
-					Status:         0,
-					CouponUuid:     marketingCoupon.Uuid,
-					Name:           marketingCoupon.Name,
-					DeductionType:  marketingCoupon.DeductionType,
-					DayStartTime:   marketingCoupon.DayStartTime,
-					DayEndTime:     marketingCoupon.DayEndTime,
-					ValidStartTime: marketingCoupon.ValidStartTime,
-					ValidEndTime:   marketingCoupon.ValidEndTime,
-					Amount:         marketingCoupon.Amount,
-					StartTime:      time.Now().Unix(),
-					EndTime:        time.Now().AddDate(0, 0, marketingCoupon.ValidDays).Unix(),
-				})
-				if err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

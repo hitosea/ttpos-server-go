@@ -133,6 +133,8 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		}
 	case constant.OrderStayOrder: // 挂单 不用解析data
 	case constant.OrderPickOrder: // 取单 不用解析data
+	case constant.OrderWrapSaleBill: // 整单打包 不用解析data
+	case constant.OrderUnwrapSaleBill: // 取消整单打包 不用解析data
 	case constant.OrderProductFree: // 赠菜
 		var productFree event.GiftSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &productFree); err == nil {
@@ -145,6 +147,18 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		if err := json.Unmarshal([]byte(log.Data), &cancelProductFree); err == nil {
 			desc := cancelProductFree.ProductName.GetLocale(language) + " (" + cancelProductFree.ProductAttr.GetLocale(language) + ") *" + utils.FormatFloat(cancelProductFree.TotalNum) +
 				" (" + s.settingSrv.SymbolPosition(ctx, cancelProductFree.TotalPrice) + ")"
+			return ActionDescription{Desc: desc, SplitMessage: ""}
+		}
+	case constant.OrderProductWrap: // 打包
+		var productWrap event.WrapSaleOrderProductPayload
+		if err := json.Unmarshal([]byte(log.Data), &productWrap); err == nil {
+			desc := productWrap.ProductName.GetLocale(language) + " (" + productWrap.ProductAttr.GetLocale(language) + ") *" + utils.FormatFloat(productWrap.Num)
+			return ActionDescription{Desc: desc, SplitMessage: ""}
+		}
+	case constant.OrderProductUnwrap: // 取消打包
+		var productUnwrap event.UnwrapSaleOrderProductPayload
+		if err := json.Unmarshal([]byte(log.Data), &productUnwrap); err == nil {
+			desc := productUnwrap.ProductName.GetLocale(language) + " (" + productUnwrap.ProductAttr.GetLocale(language) + ") *" + utils.FormatFloat(productUnwrap.Num)
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderProductMove: // 转菜
@@ -284,6 +298,42 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderCancelSplitOrder: // 撤销拆单 不需要解析data
+		return ActionDescription{Desc: "", SplitMessage: ""}
+
+	// 会员端订单操作
+	case constant.OrderCancelMemberSaleOrder: // 订单取消
+		var cancelMemberSaleOrder event.CancelMemberOrderPayload
+		if err := json.Unmarshal([]byte(log.Data), &cancelMemberSaleOrder.Data); err == nil {
+			desc := ""
+			if cancelMemberSaleOrder.Data.Type == "user_cancel" {
+				desc = desc + " (" + i18n.Translate(language, "用户取消") + ")"
+			}
+			if cancelMemberSaleOrder.Data.Type == "timeout_cancel" {
+				desc = desc + " (" + i18n.Translate(language, "超时取消") + ")"
+			}
+			if cancelMemberSaleOrder.Data.Type == "reject_order" {
+				desc = desc + " (" + i18n.Translate(language, "商家拒单") + ")"
+			}
+			if cancelMemberSaleOrder.Data.Type == "shop_cancel" {
+				desc = desc + " (" + i18n.Translate(language, "商家取消") + ")"
+			}
+			if cancelMemberSaleOrder.Data.Type == "rider_pickup_timeout" {
+				desc = desc + " (" + i18n.Translate(language, "骑手超时未接单") + ")"
+			}
+			// 退款信息
+			if len(cancelMemberSaleOrder.Data.Refunds) > 0 {
+				desc = desc + "，" + i18n.Translate(language, "订单已退款") + " ("
+				for i, refund := range cancelMemberSaleOrder.Data.Refunds {
+					desc = desc + " " + refund.Name + "：" + s.settingSrv.SymbolPosition(ctx, refund.Amount)
+					if i < len(cancelMemberSaleOrder.Data.Refunds)-1 {
+						desc = desc + "、"
+					}
+				}
+				desc = desc + ")"
+			}
+
+			return ActionDescription{Desc: desc}
+		}
 	}
 	return ActionDescription{Desc: "", SplitMessage: ""}
 }
@@ -291,6 +341,7 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language string) string {
 
 	actionTextMap := map[string]string{
+		// 用餐订单 操作
 		constant.OrderOpenTable:           i18n.Translate(language, "开台"),
 		constant.OrderSendKitchen:         i18n.Translate(language, "送厨"),
 		constant.OrderRefundProduct:       i18n.Translate(language, "退菜"),
@@ -300,6 +351,10 @@ func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language st
 		constant.OrderUpdateMealNum:       i18n.Translate(language, "人数"),
 		constant.OrderStayOrder:           i18n.Translate(language, "挂单"),
 		constant.OrderPickOrder:           i18n.Translate(language, "取单"),
+		constant.OrderProductWrap:         i18n.Translate(language, "打包"),
+		constant.OrderProductUnwrap:       i18n.Translate(language, "取消打包"),
+		constant.OrderWrapSaleBill:        i18n.Translate(language, "整单打包"),
+		constant.OrderUnwrapSaleBill:      i18n.Translate(language, "取消整单打包"),
 		constant.OrderProductFree:         i18n.Translate(language, "赠菜"),
 		constant.OrderCancelProductFree:   i18n.Translate(language, "取消赠菜"),
 		constant.OrderProductMove:         i18n.Translate(language, "转菜"),
@@ -316,6 +371,15 @@ func (s *orderSrv) getActionText(log model.SaleOrderOperationRecord, language st
 		constant.OrderCheckoutDiscount:    i18n.Translate(language, "结账手动抹零"),
 		constant.OrderSplitOrder:          i18n.Translate(language, "拆单"),
 		constant.OrderCancelSplitOrder:    i18n.Translate(language, "撤销拆单"),
+		// 外送订单 操作
+		constant.OrderCreateMemberSaleOrder:    i18n.Translate(language, "创建订单"),
+		constant.OrderPayFinishMemberSaleOrder: i18n.Translate(language, "订单支付成功"),
+		constant.OrderCancelMemberSaleOrder:    i18n.Translate(language, "订单取消"),
+		constant.OrderAcceptMemberSaleOrder:    i18n.Translate(language, "商家接单"),
+		constant.OrderPickMemberSaleOrder:      i18n.Translate(language, "出餐完成,呼叫骑手"),
+		constant.OrderPickUpMemberSaleOrder:    i18n.Translate(language, "骑手已接单，正在赶往商家"),
+		constant.OrderDeliveryMemberSaleOrder:  i18n.Translate(language, "骑手取货完成，开始配送"),
+		constant.OrderFinishMemberSaleOrder:    i18n.Translate(language, "配送完成，订单完成"),
 	}
 
 	var text, prefix string

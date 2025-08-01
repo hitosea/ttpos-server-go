@@ -129,6 +129,73 @@ type CreateDeskOrderResp struct {
 	SaleOrderUuid uint64 `json:"sale_order_uuid"` // 销售订单UUID
 }
 
+type CreateMemberOrderResp struct {
+	MemberSaleOrderInfo *MemberSaleOrderInfo `json:"member_sale_order_info"` // 会员端销售订单信息。当提交订单成功后，返回会员端销售订单信息
+}
+
+type MemberSaleOrderInfo struct {
+	MemberSaleOrderUuid uint64                     `json:"member_sale_order_uuid"` // 会员端销售订单UUID
+	Status              uint                       `json:"status"`                 // 会员端销售订单状态。0-选购中 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消
+	ProductList         MemberSaleOrderProductList `json:"product_list"`           // 会员端销售订单商品列表
+	ProductAmount       float64                    `json:"product_amount"`         // 商品金额(合计)
+	MemberDiscount      float64                    `json:"member_discount"`        // 会员折扣金额。大于0时才显示
+	Amount              float64                    `json:"amount"`                 // 订单金额。订单金额=商品金额(合计)-会员折扣金额+配送费
+	Remark              string                     `json:"remark"`                 // 备注
+	Address             MemberSaleOrderAddress     `json:"address"`                // 收货地址
+	DeliveryFee         MemberSaleOrderDeliveryFee `json:"delivery_fee"`           // 配送费信息
+	PaymentMethods      PaymentMethodList          `json:"payment_methods"`        // 支付方式列表。只显示lianlianpay的微信支付、支付宝支付、QRPromptPay支付
+	IsVerifiedPhone     bool                       `json:"is_verified_phone"`      // 订单是否已经验证手机号
+	IsInDeliveryRange   bool                       `json:"is_in_delivery_range"`   // 是否在配送范围内。如果不在配送范围内，则置灰提交订单按钮ß
+
+	// 内部使用，用于记录操作日志
+	SaleBillUuid  uint64 `json:"-"` // 销售账单UUID
+	SaleOrderUuid uint64 `json:"-"` // 销售订单UUID
+}
+
+type MemberSaleOrderProductList struct {
+	List []MemberSaleOrderProduct `json:"list"`
+}
+
+// 会员端销售订单商品
+type MemberSaleOrderProduct struct {
+	SaleOrderProductUuid uint64             `json:"sale_order_product_uuid"` // 销售订单商品UUID
+	LocaleName           dto.LocaleResponse `json:"locale_name"`             // 商品名称。
+	LocaleAttributeName  dto.LocaleResponse `json:"locale_attribute_name"`   // 商品属性
+	Num                  float64            `json:"num"`                     // 数量
+	UnitPrice            float64            `json:"unit_price"`              // 单价（折前）,含税费
+	Amount               float64            `json:"amount"`                  // 商品金额（折前）。商品金额=（商品规格价 + 商品小料A价格 + 商品小料B价格）*数量。商品规格价=商品规格原价*会员端折扣率。 商品小料价格=商品小料原价*会员端折扣率。 会员折扣率是指商品在会员端价格上浮比例，一般比堂食贵
+	Image                string             `json:"image"`                   // 商品图片URL
+}
+
+// 会员端销售订单地址
+type MemberSaleOrderAddress struct {
+	MemberAddressUuid  uint64 `json:"member_address_uuid"`  // 会员地址UUID
+	Longitude          string `json:"longitude"`            // 经度
+	Latitude           string `json:"latitude"`             // 纬度
+	Address            string `json:"address"`              // 地址
+	DetailAddress      string `json:"detail_address"`       // 详细地址。如门牌号
+	ContactName        string `json:"contact_name"`         // 联系人
+	ContactPhone       string `json:"contact_phone"`        // 联系电话
+	ContactPhonePrefix string `json:"contact_phone_prefix"` // 联系电话前缀
+	ContactGender      int    `json:"contact_gender"`       // 联系人性别, 0-女士 1-先生
+}
+
+// 会员端销售订单配送费信息
+type MemberSaleOrderDeliveryFee struct {
+	Amount   float64 `json:"amount"`     // 配送费。配送费=基础配送费+（配送距离*每公里配送费）。未达到起步配送按起步配送费收取
+	Distance float64 `json:"distance"`   // 配送距离，单位km。选择地址后才有值
+	MinFee   float64 `json:"min_fee"`    // 起步配送费，最低配送的费用。未达到起步配送按起步配送费收取
+	BaseFee  float64 `json:"base_fee"`   // 基础配送费
+	FeePerKm float64 `json:"fee_per_km"` // 每公里配送费
+}
+
+// 支付方式信息
+type PaymentMethod struct {
+	Uuid      uint64 `json:"uuid"`       // 支付方式UUID
+	Name      string `json:"name"`       // 支付方式名称
+	IsDefault bool   `json:"is_default"` // 是否默认
+}
+
 // 合并桌台接口响应 以下桌台已被拆单，不支持合并桌台"
 type DeskMergeCheckResp struct {
 	List []DeskNo `json:"list"`

@@ -26,20 +26,36 @@ func init() {
 // cancelOrderEventHandler "整单取消"事件处理器
 func cancelOrderEventHandler() {
 	once_cancel_order_event_handler.Do(func() {
+
+		// 整单取消 - 创建操作记录
 		event.NewSystemBus().SubscribeCancelOrderEvent(func(payload event.CancelOrderPayload) {
 			db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 			orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 			record := model.SaleOrderOperationRecord{
-				Source:        payload.Source,
-				Action:        constant.OrderOrderCancel,
-				Remark:        "整单取消",
-				SaleBillUuid:  payload.SaleBillUuid,
-				SaleOrderUuid: payload.SaleOrderUuid,
-				H5OrderUuid:   payload.H5OrderUuid,
-				OperatorUuid:  payload.GetOperatorUuid(),
+				Source: payload.Source,
+				Action: func() string {
+					if payload.MemberSaleOrderUuid != 0 {
+						return constant.OrderCancelMemberSaleOrder
+					}
+					return constant.OrderOrderCancel
+				}(),
+				Remark:              "整单取消",
+				SaleBillUuid:        payload.SaleBillUuid,
+				SaleOrderUuid:       payload.SaleOrderUuid,
+				H5OrderUuid:         payload.H5OrderUuid,
+				OperatorUuid:        payload.GetOperatorUuid(),
+				MemberSaleOrderUuid: payload.MemberSaleOrderUuid,
+				MemberUuid:          payload.MemberUuid,
+				Data: func() string {
+					if payload.MemberSaleOrderUuid != 0 {
+						return utils.ToJson(payload.Data)
+					}
+					return ""
+				}(),
 			}
-			record.Data = ""
-			record.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
+			if payload.Ctx.GetStaff() != (model.Staff{}) {
+				record.SetDutyNo(payload.Ctx.GetStaff().DutyNo)
+			}
 			uuid, err := orderRecordRepo.CreateSaleOrderOperationRecord(record)
 			if err != nil {
 				logger.Logger.Error("SubscribeCancelOrderEvent process, CreateSaleOrderOperationRecord failed", zap.Any("record", utils.ToJson(record)), zap.Error(err))

@@ -18,6 +18,8 @@ var Encrypt EncryptConf
 var Log LogConf
 var SMS SMSConf
 var GoogleBucket GoogleBucketConf
+var TakeOutRpcConf GrpcConf
+var Google GoogleConf
 
 func Init() error {
 	// 加载 .env 文件
@@ -30,14 +32,15 @@ func Init() error {
 
 	opt := copier.Option{IgnoreEmpty: true}
 
-	serverConf(opt)       // 服务器
-	databaseConf(opt)     // 数据库
-	redisConf(opt)        // Redis
-	jwtConf(opt)          // JWT
-	logConf(opt)          // 日志
-	smsConf(opt)          // 短信
-	googleBucketConf(opt) // 谷歌云
-
+	serverConf(opt)          // 服务器
+	databaseConf(opt)        // 数据库
+	redisConf(opt)           // Redis
+	jwtConf(opt)             // JWT
+	logConf(opt)             // 日志
+	smsConf(opt)             // 短信
+	googleBucketConf(opt)    // 谷歌云
+	takeoutConf(opt)         // 外送grpc
+	googleConf(opt)          // 谷歌
 	migrateDatabaseConf(opt) // 迁移数据库
 
 	// 验证码
@@ -132,16 +135,21 @@ func databaseConf(opt copier.Option) {
 
 func serverConf(opt copier.Option) {
 	Server = ServerConf{
-		Port:       "8080",
-		Mode:       "debug",
-		DeployMode: "cloud",
-		BrandName:  "TTPOS",
+		Port:           "8080",
+		Mode:           "debug",
+		DeployMode:     "cloud",
+		BrandName:      "TTPOS",
+		Domain:         "http://127.0.0.1:8080",
+		PaymentTimeout: 24 * 60 * 60, // 24小时
 	}
 	copier.CopyWithOption(&Server, ServerConf{
-		Port:       viper.GetString("SERVER_PORT"),
-		Mode:       viper.GetString("SERVER_MODE"),
-		DeployMode: viper.GetString("DEPLOY_MODE"),
-		BrandName:  viper.GetString("BRAND_NAME"),
+		Port:           viper.GetString("SERVER_PORT"),
+		Mode:           viper.GetString("SERVER_MODE"),
+		DeployMode:     viper.GetString("DEPLOY_MODE"),
+		BrandName:      viper.GetString("BRAND_NAME"),
+		Domain:         viper.GetString("DOMAIN"),
+		MemberBaseUrl:  viper.GetString("MEMBER_BASE_URL"),
+		PaymentTimeout: viper.GetInt64("PAYMENT_TIMEOUT"),
 	}, opt)
 }
 
@@ -193,5 +201,23 @@ func googleBucketConf(opt copier.Option) {
 		GoogleApplicationUploadsBucketName:    viper.GetString("GOOGLE_APPLICATION_UPLOADS_BUCKET_NAME"),
 		GoogleApplicationUploadsCatalogueName: viper.GetString("GOOGLE_APPLICATION_UPLOADS_CATALOGUE_NAME"),
 		GooglePrintBucketName:                 viper.GetString("GOOGLE_PRINT_BUCKET_NAME"),
+	}, opt)
+}
+
+func takeoutConf(opt copier.Option) {
+	TakeOutRpcConf = GrpcConf{
+		Endpoint: "127.0.0.1:14032",
+	}
+	copier.CopyWithOption(&TakeOutRpcConf, GrpcConf{
+		Endpoint: viper.GetString("TAKEOUT_ENDPOINT"),
+	}, opt)
+}
+
+func googleConf(opt copier.Option) {
+	Google = GoogleConf{
+		PlacesApiKey: "",
+	}
+	copier.CopyWithOption(&Google, GoogleConf{
+		PlacesApiKey: viper.GetString("GOOGLE_PLACES_API_KEY"),
 	}, opt)
 }

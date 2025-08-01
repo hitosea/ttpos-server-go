@@ -56,7 +56,7 @@ class User extends UserModel
         if ($data['keyword'] !== '') {
             $keyword = trim($data['keyword']);
             $model = $model->where(function ($query) use ($keyword) {
-                $query->like('id|phone|nickname', $keyword);
+                $query->like('id|phone|nickname|member_card_no', $keyword);
             });
         }
         // 检索：会员等级
@@ -79,6 +79,7 @@ class User extends UserModel
         $paginate = $model->with(['grade', 'memberCard' => ['card'], 'memberBalanceLog', 'referrer'])
             ->field('*, nickname as nickName')
             ->order(['create_time' => 'desc'])
+            ->where('is_visitor', 0)
             ->hidden(['open_id', 'union_id', 'password'])
             ->paginate($data);
 
@@ -532,6 +533,7 @@ class User extends UserModel
             // 更新账户积分
             $this->where('uuid', '=', $this['uuid'])->update([
                 'point' => $diffMoney,
+                'accumulated_get_point' => $this['accumulated_get_point'] + $points,
             ]);
             // 新增积分变动记录
             PointsLogModel::add([

@@ -31,6 +31,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 	order model.SaleBill,
 	products printer_model.Products,
 ) string {
+
 	// 人的翻译
 	name := t.base.Translate("人")
 	// 自助餐标记开关
@@ -61,6 +62,8 @@ func (t *dishesImgTemplate) CompleteOrder(
 		img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 		img.SetTextLineHeight(45)
 		img.LineFeed(1, 20)
+	} else if order.IsTakeout() {
+		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 	} else {
 		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 	}
@@ -115,8 +118,14 @@ func (t *dishesImgTemplate) CompleteOrder(
 		}
 		img.LineFeed(1, 12)
 
+		// 打包商品
+		wrapText := ""
+		if product.IsWrap {
+			wrapText = "(" + t.base.Translate("打包") + ") "
+		}
+
 		// 产品名称
-		productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+		productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 		// 打印产品名称和数量
 		totalNum := "x" + t.base.FloatToString(product.TotalNum)
 		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
@@ -215,6 +224,8 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 			img.SetTextLineHeight(45)
 			img.LineFeed(1, 20)
+		} else if order.IsTakeout() {
+			img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 		} else {
 			img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
 		}
@@ -236,8 +247,13 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
 			// 产品名称
-			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
 			exportation := func(num float64) {
@@ -323,6 +339,8 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 			img.SetTextLineHeight(spacing)
 			img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 			img.SetTextLineHeight(45)
+		} else if order.IsTakeout() {
+			img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo)
 		} else {
 			img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo)
 		}
@@ -342,8 +360,13 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 					buffetText = t.base.Translate("自助餐") + "-"
 				}
 			}
+			// 打包商品
+			wrapText := ""
+			if product.IsWrap {
+				wrapText = "(" + t.base.Translate("打包") + ") "
+			}
 			// 产品名称
-			productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+			productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 
 			// 定义产品导出函数
 			exportation := func(num float64) {
@@ -465,6 +488,8 @@ func (t *dishesImgTemplate) ReturnMenuTemplate(
 		img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 		img.SetTextLineHeight(45)
 		img.LineFeed(1)
+	} else if order.IsTakeout() {
+		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 	} else {
 		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 	}
@@ -624,7 +649,7 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 	img.LineFeed(1, 68)
 
 	// 桌号
-	if order.BillType == 2 {
+	if order.IsTakeoutBill() {
 		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 	} else if order.DeskUuid > 0 {
 		// 判断文字是否包含缅甸语
@@ -636,6 +661,8 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 		img.AppendText(fmt.Sprintf("%s: %s%s", t.base.Translate("桌号"), order.SerialNo, mealNumStr))
 		img.SetTextLineHeight(45)
 		img.LineFeed(1)
+	} else if order.IsTakeout() {
+		img.AppendText(t.base.Translate("外送") + ": " + order.SerialNo + "\n")
 	} else {
 		img.AppendText(t.base.Translate("取单号") + ": " + order.SerialNo + "\n")
 	}
@@ -675,8 +702,14 @@ func (t *dishesImgTemplate) OutMenuTemplate(
 			}
 		}
 
+		// 打包商品
+		wrapText := ""
+		if product.IsWrap {
+			wrapText = "(" + t.base.Translate("打包") + ") "
+		}
+
 		// 产品名称
-		productName := buffetText + product.ProductName.GetLocale(t.base.Lang)
+		productName := wrapText + buffetText + product.ProductName.GetLocale(t.base.Lang)
 		if t.base.Lang == "my" {
 			img.SetTextLineHeight(90)
 		} else {

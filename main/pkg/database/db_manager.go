@@ -4,19 +4,22 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"ttpos-server-go/app/repository"
+	"time"
 
 	"gorm.io/gorm"
 
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/model"
+	"ttpos-server-go/app/repository"
 	"ttpos-server-go/config"
 )
 
 type DBManager struct {
-	lock *sync.Mutex
-	dbs  map[uint64]*gorm.DB
-	conf config.DatabaseConf
+	lock          *sync.Mutex
+	dbs           map[uint64]*gorm.DB
+	conf          config.DatabaseConf
+	lastCheck     map[uint64]time.Time // 新增：记录最后检查时间
+	checkInterval time.Duration        // 新增：检查间隔
 }
 
 var (
@@ -28,9 +31,11 @@ var (
 func GetDBManager(conf config.DatabaseConf) *DBManager {
 	once.Do(func() {
 		instance = &DBManager{
-			dbs:  make(map[uint64]*gorm.DB),
-			conf: conf,
-			lock: &sync.Mutex{},
+			dbs:           make(map[uint64]*gorm.DB),
+			conf:          conf,
+			lock:          &sync.Mutex{},
+			lastCheck:     make(map[uint64]time.Time),
+			checkInterval: 10 * time.Second,
 		}
 		instance.initDBs(conf)
 	})
@@ -76,15 +81,34 @@ func (m *DBManager) GetDB(index uint64) *gorm.DB {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	if db, ok := m.dbs[index]; ok {
-		return db
+		// 只有超过检查间隔才进行健康检查
+		if time.Since(m.lastCheck[index]) > m.checkInterval {
+			if sqlDB, err := db.DB(); err == nil {
+				if err := sqlDB.Ping(); err != nil {
+					// 连接失效，删除并重建
+					delete(m.dbs, index)
+					delete(m.lastCheck, index)
+				} else {
+					// 更新检查时间
+					m.lastCheck[index] = time.Now()
+					return db
+				}
+			}
+		} else {
+			// 未到检查时间，直接返回
+			return db
+		}
 	}
+
 	// 不存在，尝试连接
 	companyDB, err := m.getConnection(m.conf, fmt.Sprintf("%s%d", constant.DBNamePrefix, index)) // 比如：shop1724054084 数据库
 	if err != nil {
 		log.Printf("Error connecting to database for company %d: %s\n", index, err)
 		return nil
 	}
+
 	m.dbs[index] = companyDB
+	m.lastCheck[index] = time.Now() // 记录检查时间
 	return companyDB
 }
 

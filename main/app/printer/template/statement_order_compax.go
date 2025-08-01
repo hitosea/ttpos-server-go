@@ -29,6 +29,7 @@ func NewStatementOrderCompaxTemplate(
 
 // GetPrintnrContent 获取打印内容
 func (t *statementOrderCompaxTemplate) GetPrintContent(
+	settingPrinterInfo settingResp.PrinterInfo,
 	printType int, //  来源 - 发票或其他
 	temp int,
 	saleBill *model.SaleBill,
@@ -65,7 +66,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 
 	// 创建打印机实例
 	printer := pkg.NewPrinter(567)
-	if temp != 3 && temp != 4 {
+	if temp != 3 && temp != 4 && temp != 5 {
 		printer.SetAlignment(pkg.AlignLeft)
 		if printType == constant.PrinterTemplateInvoice {
 			printer.AppendText(t.base.Translate("发票"))
@@ -181,6 +182,16 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 			printer.AppendText(t.base.Translate("税号") + ": " + taxNumber)
 			printer.LineFeed(1)
 		}
+		if temp == 5 && printType == constant.PrinterTemplateBilling {
+			if cashierSn := t.base.GetCashierSn(settingPrinterInfo.PrinterCashierDeviceSn); cashierSn != "" {
+				printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("收银机SN"), cashierSn))
+				printer.LineFeed(1)
+			}
+			if printerSn := settingPrinterInfo.PrinterSn; printerSn != "" {
+				printer.AppendText(fmt.Sprintf("%s: %s", t.base.Translate("打印机SN"), printerSn))
+				printer.LineFeed(1)
+			}
+		}
 		//
 		printer.AppendText("------------------------------------------------\n")
 		printer.SetAlignment(pkg.AlignLeft)
@@ -279,7 +290,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.SetLineSpacing(35)
 	}
 	// 商品列表
-	products, num := t.base.MergeSaleOrderProduct(saleOrder, temp != 4)
+	products, num := t.base.MergeSaleOrderProduct(saleBill, saleOrder, temp != 4, true)
 	productNum = productNum.Add(decimal.NewFromFloat(num).Round(3))
 	for key, product := range products {
 		printer.AppendText(t.base.PrintText(
@@ -443,7 +454,7 @@ func (t *statementOrderCompaxTemplate) GetPrintContent(
 		printer.LineFeed()
 		printer.SetAlignment(pkg.AlignRight)
 		printer.AppendText(t.base.Translate("合计 (其中VAT)"))
-		printer.SetLineSpacing(90)
+		printer.SetLineSpacing(45)
 		printer.LineFeed(1)
 		for _, percentage := range saleOrder.GetPercentageList() {
 			taxRate := percentage["TaxRate"]

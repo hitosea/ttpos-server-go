@@ -178,6 +178,7 @@ func (model *SaleOrderProduct) calcSaleOrderProduct(serviceFeeRate float64, taxF
 func (model *SaleOrderProduct) calcLastestSaleOrderProduct(serviceFeeRate float64, taxFeeType int, serviceFeeType int, options ...func(option *CalcOption)) SaleOrderProductCalc {
 	// 设置最新的商品会员折扣设置，即是否开启会员折扣
 	model.OpenMemberDiscount = model.ProductPackage.OpenDiscount
+	model.OpenOverallDiscount = model.ProductPackage.OpenOverallDiscount
 
 	calc := SaleOrderProductCalc{}
 	// 开始计算
@@ -254,7 +255,7 @@ func (model *SaleOrderProduct) calcMemberDiscountFee() float64 {
 // 当没有会员折扣时，自定义折扣费= 商品销售价- 商品销售价*自定义折扣率 = 商品销售价*（1-自定义折扣率）= （商品销售价-会员折扣费0）*（1-自定义折扣率）
 // 当没有会员折扣时，会员折扣费为0，则两个情况的算法可以都用 自定义折扣费=会员折扣价*（1-自定义折扣率）
 func (model *SaleOrderProduct) calcCustomDiscountFee() float64 {
-	customDiscountRate := model.CustomDiscountRate
+	customDiscountRate := model.GetCustomDiscountRate()
 	if customDiscountRate == constant.NoDiscount {
 		return 0
 	}
@@ -460,7 +461,12 @@ func (model *SaleOrderProduct) calcSaucePrice() float64 {
 	for _, bom := range model.SaleOrderProductBoms {
 		if !bom.IsFlavor() {
 			// 累加每个小料的价格
-			saucePrice = saucePrice.Add(decimal.NewFromFloat(bom.Price))
+			price := decimal.NewFromFloat(bom.Price) // 加料单价
+			// 如果要上浮价格的话
+			if model.GetMemberOrderDiscountRate() != 1 {
+				price = price.Mul(decimal.NewFromFloat(model.GetMemberOrderDiscountRate())).Round(2)
+			}
+			saucePrice = saucePrice.Add(price)
 		}
 	}
 	return saucePrice.InexactFloat64()
@@ -486,7 +492,7 @@ func (model *SaleOrderProduct) calcLastestSaucePrice() float64 {
 // 当商品没有改价时,ProductPrice= 某个规格商品价+小料价
 // 当商品改价时，ProductPrice= ProductPrice 。 改价后不会修改这个字段的值，只会修改salePrice的值
 func (model *SaleOrderProduct) calcProductPrice() float64 {
-	productPrice := decimal.NewFromFloat(model.FlavorPrice).Add(decimal.NewFromFloat(model.SaucePrice))
+	productPrice := decimal.NewFromFloat(model.GetFlavorPrice()).Add(decimal.NewFromFloat(model.SaucePrice))
 	return productPrice.InexactFloat64()
 }
 
@@ -534,7 +540,7 @@ func (model *SaleOrderProduct) calcDiscountRate() float64 {
 	rate := decimal.NewFromFloat(1)
 	memberDiscountRate := model.GetMemberDiscountRate()
 	memberCardDiscountRate := model.GetMemberCardDiscountRate()
-	customDiscountRate := model.CustomDiscountRate
+	customDiscountRate := model.GetCustomDiscountRate()
 	// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
 	rate = rate.Mul(decimal.NewFromFloat(memberDiscountRate))
 	// 折扣率=会员折扣率*会员卡折扣率*自定义折扣率
