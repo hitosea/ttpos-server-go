@@ -31,7 +31,7 @@ func (p *PrinterRepoImpl) PrintingTakeoutOrder(
 	deviceSn := p.ctx.GetDeviceSn()
 
 	// 如果不是收银端端，从主设备获取
-	if p.ctx.GetSource() != constant.SourceCashier {
+	if deviceSn == "" || p.ctx.GetSource() != constant.SourceCashier {
 		deviceRepo := repository.NewDeviceRepo(db)
 		deviceSn = deviceRepo.GetDeviceSn(deviceRepo.WhereMain())
 		if deviceSn == "" {

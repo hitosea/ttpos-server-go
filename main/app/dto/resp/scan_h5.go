@@ -1,6 +1,9 @@
 package resp
 
-import "ttpos-server-go/app/dto/resp/setting"
+import (
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/resp/setting"
+)
 
 type H5Response struct {
 	Code int    `json:"code"`
@@ -132,11 +135,18 @@ type H5BaseInfo struct {
 	Kitchen       setting.Kitchen    `json:"kitchen"`          // 厨显设置
 }
 
+type Menu struct {
+	LanguageList    []dto.LanguageItem `json:"language_list"`    // 语言列表
+	Language        []string           `json:"language"`         // 常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'
+	DefaultLanguage string             `json:"default_language"` // 默认语言
+}
+
 type MenuBaseInfo struct {
 	Currency      setting.Currency   `json:"currency"`         // 货币设置
 	CloudBasic    setting.CloudBasic `json:"cloud"`            // 云端基础信息
 	Company       Company            `json:"company"`          // 商家信息
 	IsShowSoldOut bool               `json:"is_show_sold_out"` // 电子菜单是否显示售罄商品
+	Menu          Menu               `json:"menu"`             // 菜单设置
 }
 
 type GetBaseInfoResponse struct {

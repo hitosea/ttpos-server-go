@@ -121,14 +121,15 @@ func TestSendSMS(t *testing.T) {
 
 	// 测试外送订单取消短信
 	t.Run("TestSendDeliveryOrderBySelfCancelSMS", func(t *testing.T) {
-		params := &DeliveryOrderCancelBySelfRequest{
-			Company: "测试餐厅",
-			OrderNo: "D20241221001",
+		params := &DeliveryOrderCancel{
+			CancelScene: TemplateDeliveryOrderCanceledBySelf,
+			Company:     "测试餐厅",
+			OrderNo:     "D20241221001",
 		}
 
-		resp, err := GetSMSClient().SendDeliveryOrderBySelfCancelSMS("+8617777777777", LanguageChinese, params)
+		resp, err := GetSMSClient().SendDeliveryOrderCancelSMS("+8617777777777", LanguageChinese, params)
 		if err != nil {
-			t.Errorf("SendDeliveryOrderBySelfCancelSMS failed: %v", err)
+			t.Errorf("SendDeliveryOrderCancelSMS failed: %v", err)
 		}
 		if resp.Code != ResponseCodeSuccess {
 			t.Errorf("Expected success response, got code: %d, msg: %s", resp.Code, resp.Msg)

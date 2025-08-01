@@ -689,7 +689,6 @@ func (h *DeskHandler) OrderCartProductNum(c *gin.Context) {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
-	ctx.Log().Debug("修改商品数量成功", zap.Any("res", res))
 	// 返回结果
 	helper.Success(c, res)
 }

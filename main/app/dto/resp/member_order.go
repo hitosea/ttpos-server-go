@@ -17,6 +17,7 @@ type MemberOrder struct {
 	SerialNumber        string               `json:"serial_number"`          // 订单流水号
 	Status              uint                 `json:"status"`                 // 订单状态 1-待付款 2-待商家接单 3-商家备餐中 4-待骑手接单 5-骑手正在赶往商家 6-骑手配送中 7-已完成 8-已取消
 	Num                 float64              `json:"num"`                    // 商品数量. 所有商品数量总和，如商品A数量为2，商品B数量为3，则总数量为5
+	Amount              float64              `json:"amount"`                 // 订单金额，最终应收. 订单金额=商品金额+配送费-会员折扣金额
 	ProductAmount       float64              `json:"product_amount"`         // 商品金额. 所有商品金额总和，如商品A金额为2，商品B金额为3，则总金额为5
 	ProductList         []MemberOrderProduct `json:"product_list"`           // 订单商品列表
 	Rider               RiderInfo            `json:"rider"`                  // 骑手信息
@@ -71,6 +72,7 @@ type DeliveryResp struct {
 // 会员端订单详情
 type GetMemberOrderDetailResp struct {
 	MemberSaleOrderUuid  uint64                   `json:"member_sale_order_uuid"` // 会员端销售订单UUID
+	OrderNo              string                   `json:"order_no"`               // 订单编号
 	CompanyName          string                   `json:"company_name"`           // 公司名称
 	PayTime              int64                    `json:"pay_time"`               // 支付时间
 	RemainingPaymentTime int64                    `json:"remaining_payment_time"` // 剩余支付时间(单位秒)
@@ -115,16 +117,18 @@ type MemberOrderAmountInfo struct {
 }
 
 type MemberOrderDetailAddress struct {
-	ContactName string `json:"contact_name"` // 联系人
-	Phone       string `json:"phone"`        // 联系电话
-	PhonePrefix string `json:"phone_prefix"` // 联系电话前缀. 例如：+86
-	Address     string `json:"address"`      // 详细地址
+	ContactName       string `json:"contact_name"`         // 联系人
+	Phone             string `json:"phone"`                // 联系电话
+	PhonePrefix       string `json:"phone_prefix"`         // 联系电话前缀. 例如：+86
+	Address           string `json:"address"`              // 详细地址
+	IsInDeliveryRange bool   `json:"is_in_delivery_range"` // 是否在配送范围内
 }
 
 type MemberOrderPaymentInfoResp struct {
 	MemberSaleOrderUuid uint64  `json:"member_sale_order_uuid"` // 会员端销售订单UUID
 	PaymentOrderUuid    uint64  `json:"payment_order_uuid"`     // 支付单uuid (当/cashier/desk/order/payment/info接口的payment_orders中的存在相同的uuid时证明已经支付)
 	PaymentMethodName   string  `json:"payment_method_name"`    // 支付方式名称
+	IsWechatPay         bool    `json:"is_wechat_pay"`          // 是否是微信支付
 	QrCode              string  `json:"qr_code"`                // 支付单二维码 (返回base64图片)
 	LinkUrl             string  `json:"link_url"`               // 支付单链接 (返回跳转地址 window.location.href = LinkUrl; )
 	Status              int     `json:"status"`                 // 支付单状态 支付状态, 0-未支付 1-已支付

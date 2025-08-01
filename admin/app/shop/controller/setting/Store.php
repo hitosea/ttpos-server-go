@@ -68,6 +68,14 @@ class Store extends Controller
         // 判断商家名称是否存在
         if (empty($data['logoUrl'])) {
             return $this->renderError('商城logo不能为空');
+        } 
+        // 判断商家联系电话
+        if (empty($data['phone'])) {
+            return $this->renderError('联系电话不能为空');
+        }
+        // 判断商家联系电话长度
+        if (mb_strlen($data['phone']) > 20) {
+            return $this->renderError('联系电话长度不能超过20个字符');
         }
         // 最长500个字符
         if (mb_strlen($data['address']) > 500) {

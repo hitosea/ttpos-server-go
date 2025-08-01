@@ -52,6 +52,7 @@ type CreatePaymentReq struct {
 	PaymentMethod       string
 	PaymentOrderUuid    uint64
 	MemberSaleOrderUuid uint64
+	RedirectUrl         string // 跳转地址
 }
 
 // LianLianPaymentResp 连连支付仓库
@@ -88,7 +89,7 @@ type PaymentRepo struct {
 	payServiceUrl     string
 	payCallbackUrl    string // 支付回调地址
 	refundCallbackUrl string // 退款回调地址
-	orderCurrency     string
+	orderCurrency     string // 订单币种 [THB, USD, JPY, CNY]
 }
 
 // NewPaymentRepo 创建连连支付仓库
@@ -149,7 +150,7 @@ func (p *PaymentRepo) CreatePayment(req CreatePaymentReq) (*model.LlPaymentOrder
 	}
 
 	// 组装请求数据
-	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":%v,\"merchant_order_no\":\"%v\",\"order_amount\":\"%v\",\"order_currency\":\"%v\",\"order_desc\":\"%v\",\"full_name\":\"%v\",\"merchant_user_id\":%v,\"callback_url\":\"%v\",\"payment_method\":\"%v\"}",
+	jsonStr := fmt.Sprintf("{\"shop_supplier_id\":%v,\"merchant_order_no\":\"%v\",\"order_amount\":\"%v\",\"order_currency\":\"%v\",\"order_desc\":\"%v\",\"full_name\":\"%v\",\"merchant_user_id\":%v,\"callback_url\":\"%v\",\"payment_method\":\"%v\",\"redirect_url\":\"%v\"}",
 		p.ctx.GetCompanyUuid(),
 		merchantOrderNo,
 		req.PaymentAmount,
@@ -159,6 +160,7 @@ func (p *PaymentRepo) CreatePayment(req CreatePaymentReq) (*model.LlPaymentOrder
 		p.ctx.GetCompanyUuid(),
 		strings.ReplaceAll(p.payCallbackUrl, "/", "\\/"),
 		req.PaymentMethod,
+		strings.ReplaceAll(req.RedirectUrl, "/", "\\/"),
 	)
 
 	// 请求支付
@@ -168,7 +170,7 @@ func (p *PaymentRepo) CreatePayment(req CreatePaymentReq) (*model.LlPaymentOrder
 		"client-ip":    p.ctx.GetRemoteIp(),
 	}, RequestTimeOut)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(errors.NewWithCode(constant.CodeOrderPayError, "请求支付失败"), err.Error())
 	}
 
 	// 返回支付结果
@@ -450,7 +452,7 @@ func (p *PaymentRepo) HandleCallback(sign string, callbackReq req.LianLianCallba
 			"payment_order_uuid": paymentOrderUuid,
 		})
 		if err != nil {
-			return err
+			return errors.WithMessage(err)
 		}
 
 		// 创建或更新支付单

@@ -293,6 +293,7 @@ func (s *productionSrv) groupByOrder(limitProducts []model.ProductionOrderProduc
 			group.DiningMethod = product.SaleBill.DiningMethod                                                                      // 订单商品的打包状态
 			group.SaleBillUuid = product.SaleBillUuid                                                                               // 销售账单Uuid
 			group.IsSaleBillDeleted = product.SaleBill.DeleteTime > 0 || product.SaleBill.Status == constant.SaleBillStatusCanceled // 是否已经整单取消
+			group.IsTakeoutBill = product.SaleBill.IsTakeoutBill()
 			if product.SaleBill.SerialNo != "" && group.LocaleName == nil {
 				group.LocaleName = &dto.LocaleResponse{
 					ZH:   product.SaleBill.SerialNo,

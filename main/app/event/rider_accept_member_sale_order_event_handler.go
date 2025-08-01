@@ -79,7 +79,6 @@ func riderAcceptMemberSaleOrderEventHandler() {
 				}
 				payload.SaleBillUuid = memberSaleOrder.SaleBillUuid
 				payload.SaleOrderUuid = memberSaleOrder.SaleOrderUuid
-				db := database.GetDBManager(config.DatabaseConf{}).GetDB(payload.CompanyUuid)
 				orderRecordRepo := repository.NewOrderOperationRecordRepo(db)
 				record := model.SaleOrderOperationRecord{
 					Source:        constant.SourceRider, // 骑手端

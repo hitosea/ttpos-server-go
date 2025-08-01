@@ -66,7 +66,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 		img.LineFeed(1, 24)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("当班编号"), Width: 350, Align: pkg.AlignLeft},
+			pkg.ColumnConfig{Text: t.base.Translate("当班编号"), Width: 300, Align: pkg.AlignLeft},
 			pkg.ColumnConfig{Text: log.ShiftNo, Width: 0, Align: pkg.AlignRight},
 		)
 		img.PrintInColumns(
@@ -360,7 +360,7 @@ func (t *handoverImgTemplate) GetPrintContent(
 		img.LineFeed(1)
 		img.LineFeed(1, 24)
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("当班编号"), Width: 350, Align: pkg.AlignLeft, FontWeight: 1},
+			pkg.ColumnConfig{Text: t.base.Translate("当班编号"), Width: 300, Align: pkg.AlignLeft, FontWeight: 1},
 			pkg.ColumnConfig{Text: log.ShiftNo, Width: 0, Align: pkg.AlignRight, FontWeight: 1},
 		)
 		img.PrintInColumns(

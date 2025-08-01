@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -68,6 +69,7 @@ func (s *UserPointsLogService) convertUserPointsLog(offset, limit int) error {
 			Scene:      int(userPointsLog.Scene),
 			Value:      userPointsLog.Value,
 			Describe:   userPointsLog.Describe,
+			Processed:  constant.MemberPointLogOrBalanceProcessedSuccess,
 		})
 
 	}

@@ -118,6 +118,9 @@ func (model *SaleOrder) GetPaymentInfoList() []resp.PaymentOrder {
 func (model *SaleOrder) GetProductNum() float64 {
 	num := decimal.NewFromFloat(0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
+		if saleOrderProduct.IsDelete() {
+			continue
+		}
 		num = num.Add(decimal.NewFromFloat(saleOrderProduct.Num))
 	}
 	return num.Round(2).InexactFloat64()
@@ -127,7 +130,7 @@ func (model *SaleOrder) GetProductNum() float64 {
 func (model *SaleOrder) GetProductAmount() float64 {
 	amount := decimal.NewFromFloat(0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
-		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.GetTotalPrice()))
+		amount = amount.Add(decimal.NewFromFloat(saleOrderProduct.GetOriginTotalPriceWithTax()))
 	}
 	return amount.Round(2).InexactFloat64()
 }
@@ -672,7 +675,7 @@ func (model *SaleOrder) NewReverseSettleExchangeMemberPointLog(points float64) *
 }
 
 // 创建退货单
-func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]float64, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
+func (model *SaleOrder) NewReturnOrder(scene string, deliveryFee float64, dutyNo string, lang string, saleOrderProducts []*SaleOrderProduct, buffetCustomers []*SaleOrderBuffetCustomerType, buffetDelays []*SaleOrderBuffetDelayProduct, numMap map[uint64]float64, returnType int, canReturnAmount float64) (*ReturnOrder, error) {
 	returnOrderUuid, _ := utils.GetID()
 
 	// 如果退款类型为整单退款，则退款金额=订单最终应收金额-已退款金额
@@ -753,6 +756,10 @@ func (model *SaleOrder) NewReturnOrder(dutyNo string, lang string, saleOrderProd
 	if returnType == constant.ReturnOrderRefundTypeTotal {
 		// 整单退款，退款金额=订单最终应收金额-已退款金额
 		refundAmount = decimal.NewFromFloat(model.FinalPrice).Sub(decimal.NewFromFloat(model.GetReturnAmount())).Round(2).InexactFloat64()
+		// 如果是会员端订单，则退款金额=订单最终应收金额-已退款金额-配送费
+		if scene == constant.SceneMemberOrder {
+			refundAmount = decimal.NewFromFloat(refundAmount).Sub(decimal.NewFromFloat(deliveryFee)).Round(2).InexactFloat64()
+		}
 	}
 	totalRefundAmount := refundAmount
 

@@ -1,1 +1,3 @@
 data
+cluster/data-*
+/logs

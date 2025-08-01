@@ -1981,7 +1981,7 @@
     "计价方式": "Prisberäkningsmetod",
     "整数": "Heltal",
     "小数": "Decimaltal",
-    "外送": "Utleverans",
+    "外送": "Utkör",
     "计价方式：": "Prisberäkningsmetod:",
     "选择计价方式": "Välj prisberäkningsmetod",
     "按整数计价：按”个/份/件“卖，数量只能是整数的商品。": "Heltalsprisberäkning: säljer per 'st/styck/stycken', antal kan bara vara heltal.",
@@ -1994,7 +1994,6 @@
     "用户信息": "Användarinformation",
     "配送费": "Leveransavgift",
     "出菜单": "Skapa meny",
-    "桌号/序号/外卖: A01 (4人)": "Bordnummer/Nummer/Takeaway: A01 (4 personer)",
     "请停止制作以上菜品！": "Sluta göra dessa rätter!",
     "反结账退还": "Återställning av avslutning",
     "商品推荐": "Produktrekommendation",
@@ -2091,5 +2090,13 @@
     "请输入邮箱/手机号": "Ange din e-postadress eller ditt telefonnummer",
     "（打包）": "(Förpackning)",
     "获得活动奖品后，是否接收短信通知": "Vill du få SMS-aviseringar efter att ha fått evenemangspriset?",
-    "发放总积分": "Total utdelning av poäng"
+    "发放总积分": "Total utdelning av poäng",
+    "外送: 0001": "Utkör: 0001",
+    "桌号/序号/外送: A01 (4人)": "Bordnr./Nummer/Utkör: A01 (4 personer)",
+    "获取数据失败": "Misslyckades med att hämta data",
+    "获取父级分类失败": "Misslyckades med att hämta överordnad kategori",
+    "状态设置失败": "Misslyckades med att ställa in status",
+    "请选择显示": "Vänligen välj visning",
+    "外送序号/订单号": "Leveransnummer/Ordernummer",
+    "外送序号": "Leveransordningsnummer"
 }

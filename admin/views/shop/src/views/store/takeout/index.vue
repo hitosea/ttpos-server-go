@@ -12,12 +12,17 @@
           </el-radio-group>
         </el-form-item>
 
-        <el-form-item :label="$t('外卖序号')">
-          <el-input size="small" v-model="searchForm.serial_no" :placeholder="$t('外卖序号')" @input="onSearch"></el-input>
+        <el-form-item :label="$t('外送序号/订单号')">
+            <div class="flex-box">
+            <el-select class="time-select" size="small" v-model="search_type" :placeholder="$t('请选择')" @change="()=>{ searchForm.serial_no = ''; searchForm.order_no = '';onSearch(); }">
+              <el-option :label="$t('外送序号')" :value="1"></el-option>
+              <el-option :label="$t('订单号')" :value="2"></el-option>
+            </el-select>
+            <el-input size="small" v-model="searchForm.serial_no" :placeholder="$t('外送序号')" @input="onSearch" v-if="search_type == 1"></el-input>
+            <el-input size="small" v-model="searchForm.order_no" :placeholder="$t('订单号')" @input="onSearch" v-if="search_type == 2"></el-input>
+          </div>
         </el-form-item>
-        <el-form-item :label="$t('订单号')">
-          <el-input size="small" v-model="searchForm.order_no" :placeholder="$t('订单号')" @input="onSearch"></el-input>
-        </el-form-item>
+
         <el-form-item :label="$t('起始时间')">
           <div class="flex-box">
             <el-select class="time-select" size="small" v-model="searchForm.time_type" :placeholder="$t('请选择')" @change="onSearch">
@@ -117,7 +122,7 @@
           </el-tab-pane>
         </el-tabs>
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
-          <el-table-column prop="serial_number" :label="$t('外卖序号')"> </el-table-column>
+          <el-table-column prop="serial_number" :label="$t('外送序号')"> </el-table-column>
           <el-table-column prop="order_no" :label="$t('订单号')"></el-table-column>
           <el-table-column prop="status" :label="$t('状态')">
             <template #default="scope">
@@ -181,7 +186,7 @@
             <template #default="scope">
               <div>
                 <el-button @click="detailClick(scope.row)" type="primary" link size="small" v-auth="'/store/order/detail'">{{ $t('详情') }} </el-button>
-                <el-button v-if="scope.row.status == 4 || scope.row.status == 5 || scope.row.status == 6" @click="contactClick(scope.row)" type="danger" link size="small"
+                <el-button v-if="scope.row.status == 5 || scope.row.status == 6" @click="contactClick(scope.row)" type="danger" link size="small"
                   >{{ $t('联系骑手') }}
                 </el-button>
                 <el-button v-if="scope.row.extra.is_cell_refund" @click="refundClick(scope.row)" type="danger" link size="small" v-auth="'/store/takeout/refund'"
@@ -264,7 +269,7 @@
   const pageSize = ref(10);
   const totalDataNumber = ref(0);
   const curPage = ref(1);
-
+  const search_type = ref(1);
   const searchForm = reactive({
     order_no: '',
     serial_no: '',
@@ -368,11 +373,13 @@
   };
 
   const createTimeChange = () => {
-    searchForm.time_type = 1;
-    if (time.value.length > 0) {
+    if (time.value && time.value.length > 0) {
       // 转为时间戳
       searchForm.query_start_time = new Date(time.value[0]).getTime() / 1000;
-      searchForm.query_end_time = new Date(time.value[1]).getTime() / 1000;
+      searchForm.query_end_time = new Date(time.value[1]).getTime() / 1000 + 86399;
+    } else {
+      searchForm.query_start_time = 0;
+      searchForm.query_end_time = 0;
     }
     onSearch();
   };
@@ -426,7 +433,8 @@
 
   const onExport = () => {
     searchForm.token = token;
-    OrderApi.storeExport(
+    searchForm.dataType = activeName.value;
+    OrderApi.postTakeoutOrderExport(
       {
         ...searchForm,
         request_type: 1,
@@ -495,13 +503,13 @@
         true
       );
       ElMessage({
-        message: res.msg,
+        message: $t('操作成功'),
         type: 'success',
       });
       getData();
     } catch (error) {
       ElMessage({
-        message: error.msg,
+        message: $t('操作失败'),
         type: 'error',
       });
     } finally {

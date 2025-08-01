@@ -153,7 +153,7 @@
 
   const memberAuth = () => {
     if (!proxy.$filter.isAuth('/card/user/index')) {
-      ElMessage.error(proxy.$t('该营销活动需商家开通会员中心功能，请联系销售代表处理'));
+      ElMessage.error($t('该营销活动需商家开通会员中心功能，请联系销售代表处理'));
       return false;
     }
     return true;

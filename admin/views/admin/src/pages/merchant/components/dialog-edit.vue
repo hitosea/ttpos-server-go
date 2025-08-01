@@ -149,7 +149,7 @@
           <div class="text-[#ccc] w-full">{{ $t('0为永不过期') }}</div>
         </el-form-item>
 
-        <el-form-item :label="$t('联系电话')">
+        <el-form-item :label="$t('联系电话')" prop="link_phone" :rules="[{ required: true, message: $t('请输入联系电话') }]">
           <el-input v-model="formData.link_phone" type="text" maxlength="20" :placeholder="$t('请输入联系电话')"></el-input>
         </el-form-item>
 

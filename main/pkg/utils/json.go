@@ -7,7 +7,7 @@ import (
 )
 
 // ToJsonString 结构体转json
-func ToJsonString(data interface{}) string {
+func ToJsonString(data any) string {
 	jsonBytes, err := json.MarshalIndent(data, "", "   ")
 	if err != nil {
 		return ""
@@ -15,7 +15,7 @@ func ToJsonString(data interface{}) string {
 	return string(jsonBytes)
 }
 
-func ToJson(data interface{}) string {
+func ToJson(data any) string {
 	jsonBytes, err := json.Marshal(data)
 	if err != nil {
 		return ""
@@ -24,25 +24,25 @@ func ToJson(data interface{}) string {
 }
 
 // JsonToStruct 对象转结构体
-func JsonToStruct(data string, v interface{}) error {
+func JsonToStruct(data string, v any) error {
 	return json.Unmarshal([]byte(data), v)
 }
 
 // StrToStruct 字符串转对象
-func StrToStruct(source string, destination interface{}) error {
+func StrToStruct(source string, destination any) error {
 	err := json.Unmarshal([]byte(source), destination)
 	return err
 }
 
 // StrToMap 字符转Map
-func StrToMap(source string) (map[string]interface{}, error) {
-	res := make(map[string]interface{})
+func StrToMap(source string) (map[string]any, error) {
+	res := make(map[string]any)
 	err := json.Unmarshal([]byte(source), &res)
 	return res, err
 }
 
 // MapToStruct Map转结构体
-func MapToStruct(m map[string]interface{}, s interface{}) error {
+func MapToStruct(m map[string]any, s any) error {
 	data, err := json.Marshal(m)
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func MapToStruct(m map[string]interface{}, s interface{}) error {
 }
 
 // StructToStruct 结构体转结构体，并可选择过滤某些字段
-func StructToStruct(data interface{}, newdata interface{}, filtrationKeys ...string) error {
+func StructToStruct(data any, newdata any, filtrationKeys ...string) error {
 	result, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func StructToStruct(data interface{}, newdata interface{}, filtrationKeys ...str
 }
 
 // JsonToStr 对象转换成字符串
-func JsonToStr(data interface{}) string {
+func JsonToStr(data any) string {
 	result, err := json.Marshal(data)
 	if err != nil {
 		return ""
@@ -91,15 +91,15 @@ func NumToStr(num any) string {
 }
 
 // StructToMap 结构体转map
-func StructToMap(data interface{}) (map[string]interface{}, error) {
-	var result map[string]interface{}
+func StructToMap(data any) (map[string]any, error) {
+	var result map[string]any
 	result, err := StrToMap(ToJsonString(data))
 	return result, err
 }
 
 // MergeMaps 合并map
-func MergeMaps(maps ...map[string]interface{}) map[string]interface{} {
-	result := make(map[string]interface{})
+func MergeMaps(maps ...map[string]any) map[string]any {
+	result := make(map[string]any)
 	for _, m := range maps {
 		for k, v := range m {
 			result[k] = v

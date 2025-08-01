@@ -32,10 +32,5 @@ class UpdateMemberOrderDiscountRateFromSaleOrderProductTable extends Migrator
             $table->changeColumn('member_order_discount_rate', 'decimal', ['precision' => 12, 'scale' => 4, 'null' => false, 'default' => 1.00,  'comment' => '会员端商品价格上浮比例1%-300%', 'after' => 'member_card_discount_rate']);
             $table->update();
         }
-        $table = $this->table('sale_bill_setting');
-        if ($table->hasColumn('member_order_discount_rate')) {
-            $table->changeColumn('member_order_discount_rate', 'decimal', ['precision' => 12, 'scale' => 4, 'null' => false, 'default' => 1.00,  'comment' => '会员端商品价格上浮比例1%-300%', 'after' => 'auto_points_exchange']);
-            $table->update();
-        }
     }
 } 

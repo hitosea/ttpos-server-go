@@ -159,14 +159,12 @@
   import { ref, reactive, onMounted, getCurrentInstance } from 'vue';
   import { useRouter, useRoute } from 'vue-router';
   import { ElMessageBox, ElMessage } from 'element-plus';
-  import { useI18n } from 'vue-i18n';
   import PorductApi from '@/api/product.js';
   import ProductSelector from '@/components/product/Selector.vue';
   import { useUserStore } from '@/store/index';
   import { languageStore } from '@/store/model/language';
   import defaultImg from '@/assets/img/default.png';
 
-  const { t } = useI18n();
   const router = useRouter();
   const route = useRoute();
   const { computedSupplier, userInfo } = useUserStore();
@@ -337,13 +335,13 @@
     let war = '';
     let war_ = '';
     if (state == 20) {
-      war = t('确认要强制下架吗?');
-      war_ = t('下架');
+      war = $t('确认要强制下架吗?');
+      war_ = $t('下架');
     } else if (state == 10) {
-      war = t('确认要重新上架吗?');
-      war_ = t('上架');
+      war = $t('确认要重新上架吗?');
+      war_ = $t('上架');
     }
-    ElMessageBox.confirm(war, t('提示'), {
+    ElMessageBox.confirm(war, $t('提示'), {
       type: 'warning',
     }).then(async () => {
       try {
@@ -352,7 +350,7 @@
           state,
         });
         ElMessage({
-          message: war_ + t('成功'),
+          message: war_ + $t('成功'),
           type: 'success',
         });
         getData();
@@ -364,7 +362,7 @@
 
   // 删除
   const deleteClick = async (row) => {
-    ElMessageBox.confirm(t('删除后不可恢复，确认删除吗?'), t('提示'), {
+    ElMessageBox.confirm($t('删除后不可恢复，确认删除吗?'), $t('提示'), {
       type: 'warning',
     }).then(async () => {
       try {
@@ -372,13 +370,13 @@
           product_id: row.product_id,
         });
         ElMessage({
-          message: t('删除成功'),
+          message: $t('删除成功'),
           type: 'success',
         });
         getData();
       } catch (error) {
         ElMessage({
-          message: t('删除失败'),
+          message: $t('删除失败'),
           type: 'error',
         });
       }
@@ -411,13 +409,13 @@
           product_id: product_ids,
         });
         ElMessage({
-          message: t('删除成功'),
+          message: $t('删除成功'),
           type: 'success',
         });
       } catch (error) {
         // 错误处理
         ElMessage({
-          message: t('删除失败'),
+          message: $t('删除失败'),
           type: 'error',
         });
       }

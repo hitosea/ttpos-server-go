@@ -24,10 +24,11 @@ type IQueryMemberSaleOrderRepo interface {
 	GetMemberSaleOrder(opts ...DBOption) (*model.MemberSaleOrder, error)                                                                                             // 获取会员端销售订单
 	GetMemberSaleOrderRecord(uuid uint64, opts ...DBOption) (*model.MemberSaleOrder, error)                                                                          // 获取会员端销售订单记录
 	GetMemberSaleOrderRecordOnly(uuid uint64) (*model.MemberSaleOrder, error)                                                                                        // 获取会员端销售订单记录，不包含关联数据
+	GetMemberSaleOrderRecordOnlyBySaleBillUuid(saleBillUuid uint64) (*model.MemberSaleOrder, error)                                                                  // 获取会员端销售订单记录，不包含关联数据，并包含配送费
 	PaginateGetMemberSaleOrder(pageNo, pageSize int, opts ...DBOption) ([]model.MemberSaleOrder, int64, error)                                                       // 分页获取会员端销售订单
 	GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error)                                                   // 获取收银台"外送"订单列表
 	GetCashierMemberSaleOrderManageList(pageNo, pageSize int, statusList []uint, req GetCashierMemberSaleOrderManageListReq) ([]model.MemberSaleOrder, int64, error) // 获取收银台"外送"订单管理列表
-	GetCashierMemberSaleOrderNum(statusList []uint, timeFilter *req.TimeFilterParams) (int64, error)                                                                 // 获取收银台"外送"订单数量
+	GetCashierMemberSaleOrderNum(statusList []uint, timeFilter *req.TimeFilterParams, opts ...DBOption) (int64, error)                                               // 获取收银台"外送"订单数量
 	UpdateMemberSaleOrderAccept(memberSaleOrder model.MemberSaleOrder) error                                                                                         // 更新会员端销售订单-接单
 	UpdateMemberSaleOrderReject(memberSaleOrder model.MemberSaleOrder) error                                                                                         // 更新会员端销售订单-拒单
 	UpdateMemberSaleOrderCookFinish(memberSaleOrder model.MemberSaleOrder) error                                                                                     // 更新会员端销售订单-备餐完成
@@ -127,6 +128,18 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecordOnly(uuid uint64) (*model.
 	return &memberSaleOrder, nil
 }
 
+// GetMemberSaleOrderRecordOnlyBySaleBillUuid 获取会员端销售订单记录，不包含关联数据，并包含配送费
+func (r *MemberSaleOrderRepo) GetMemberSaleOrderRecordOnlyBySaleBillUuid(saleBillUuid uint64) (*model.MemberSaleOrder, error) {
+	var memberSaleOrder model.MemberSaleOrder
+	db := r.db.Model(&model.MemberSaleOrder{})
+
+	err := db.Where("sale_bill_uuid = ?", saleBillUuid).First(&memberSaleOrder).Error
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	return &memberSaleOrder, nil
+}
+
 func (r *MemberSaleOrderRepo) CreateMemberSaleOrder(memberSaleOrder model.MemberSaleOrder) error {
 	memberSaleOrder.SetNil()
 	if err := r.db.Create(&memberSaleOrder).Error; err != nil {
@@ -165,7 +178,7 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderPendingPayment(memberSaleOrde
 // UpdateMemberSaleOrderPendingMerchantAccept 更新会员端销售订单为"待商家接单"状态，表示订单支付成功，等待商家接单
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderPendingMerchantAccept(memberSaleOrderUuid uint64) error {
 	if err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrderUuid).Updates(model.MemberSaleOrder{
-		Status:  constant.MemberSaleOrderStatusPendingMerchantAccept, // 更新订单状态为待支付
+		Status:  constant.MemberSaleOrderStatusPendingMerchantAccept, // 更新订单状态为待商家接单
 		PayTime: time.Now().Unix(),
 	}).Error; err != nil {
 		return errors.WithMessage(err)
@@ -204,7 +217,8 @@ func (r *MemberSaleOrderRepo) PaginateGetMemberSaleOrder(pageNo, pageSize int, o
 func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderList(pageNo, pageSize int, statusList []uint) ([]model.MemberSaleOrder, int64, error) {
 	opts := []DBOption{
 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
-		CommonRepo.DBOption(CommonRepo.SortWithPayTime("desc")),
+		CommonRepo.DBOption(CommonRepo.SortWithPayTime("asc")),
+		CommonRepo.DBOption(CommonRepo.WhereByNoSelectingTimeout()),
 	}
 
 	// 根据状态列表筛选
@@ -232,6 +246,7 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderManageList(pageNo, pageSi
 
 	opts := []DBOption{
 		CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+		CommonRepo.DBOption(CommonRepo.WhereByNoSelectingTimeout()),
 		CommonRepo.DBOption(CommonRepo.SortWithSort("desc")),
 		CommonRepo.DBOption(CommonRepo.SortWithSubmitPayTime("desc")),
 		CommonRepo.Preload(
@@ -287,8 +302,7 @@ func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderManageList(pageNo, pageSi
 }
 
 // GetCashierMemberSaleOrderNum 获取收银端"外送"订单数量
-func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderNum(statusList []uint, timeFilter *req.TimeFilterParams) (int64, error) {
-	opts := []DBOption{}
+func (r *MemberSaleOrderRepo) GetCashierMemberSaleOrderNum(statusList []uint, timeFilter *req.TimeFilterParams, opts ...DBOption) (int64, error) {
 
 	// 根据状态列表筛选
 	if len(statusList) == 1 {
@@ -410,10 +424,13 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderReject(memberSaleOrder model.
 // UpdateMemberSaleOrderAccept 更新会员端销售订单-接单
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderAccept(memberSaleOrder model.MemberSaleOrder) error {
 	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
-		Status:           memberSaleOrder.Status,
-		AcceptTime:       memberSaleOrder.AcceptTime,
-		RelatedOrderType: memberSaleOrder.RelatedOrderType,
-		RelatedOrderNo:   memberSaleOrder.RelatedOrderNo,
+		Status:             memberSaleOrder.Status,
+		AcceptTime:         memberSaleOrder.AcceptTime,
+		RelatedOrderType:   memberSaleOrder.RelatedOrderType,
+		RelatedOrderNo:     memberSaleOrder.RelatedOrderNo,
+		ExpectedFinishTime: memberSaleOrder.ExpectedFinishTime,
+		IsAutoAccept:       memberSaleOrder.IsAutoAccept,
+		PayTime:            memberSaleOrder.PayTime,
 	}).Error
 	if err != nil {
 		return errors.WithMessage(err)
@@ -473,6 +490,9 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderAccept(memberSaleOrder m
 // UpdateMemberSaleOrderRiderDelivery 更新会员端销售订单-骑手配送中
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderDelivery(memberSaleOrder model.MemberSaleOrder) error {
 	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+		RiderName:      memberSaleOrder.RiderName,
+		RiderPhone:     memberSaleOrder.RiderPhone,
+		Location:       memberSaleOrder.Location,
 		Status:         memberSaleOrder.Status,
 		RiderStartTime: memberSaleOrder.RiderStartTime,
 	}).Error
@@ -484,10 +504,21 @@ func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderDelivery(memberSaleOrder
 
 // UpdateMemberSaleOrderRiderCompleted 更新会员端销售订单-骑手配送完成
 func (r *MemberSaleOrderRepo) UpdateMemberSaleOrderRiderCompleted(memberSaleOrder model.MemberSaleOrder) error {
-	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(model.MemberSaleOrder{
+	data := model.MemberSaleOrder{
 		Status:     memberSaleOrder.Status,
 		FinishTime: memberSaleOrder.FinishTime,
-	}).Error
+		Sort:       memberSaleOrder.Sort,
+	}
+	if memberSaleOrder.RiderName != "" {
+		data.RiderName = memberSaleOrder.RiderName
+	}
+	if memberSaleOrder.RiderPhone != "" {
+		data.RiderPhone = memberSaleOrder.RiderPhone
+	}
+	if memberSaleOrder.Location != "" {
+		data.Location = memberSaleOrder.Location
+	}
+	err := r.db.Model(&model.MemberSaleOrder{}).Where("uuid = ?", memberSaleOrder.Uuid).Updates(data).Error
 	if err != nil {
 		return errors.WithMessage(err)
 	}
@@ -541,11 +572,11 @@ func (r *MemberSaleOrderRepo) GetMemberSaleOrderByContactNameAndContactPhoneSuff
 			constant.MemberSaleOrderStatusCooking,               // 商家备餐中
 			constant.MemberSaleOrderStatusPendingRiderPickup,    // 待骑手接单
 			constant.MemberSaleOrderStatusPendingRiderDelivery,  // 骑手正在赶往商家
-			constant.MemberSaleOrderStatusDeliverying,           // 骑手配送中
+			constant.MemberSaleOrderStatusDelivering,            // 骑手配送中
 			constant.MemberSaleOrderStatusCompleted,             // 已完成
 			constant.MemberSaleOrderStatusCancelled,             // 已取消
 		}).
-		Where("contact_name = ? OR contact_phone LIKE ?", contactName, "%"+contactPhoneSuffix).Find(&memberSaleOrders).Error
+		Where("contact_name LIKE ? OR contact_phone LIKE ?", "%"+contactName+"%", "%"+contactPhoneSuffix).Find(&memberSaleOrders).Error
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -557,6 +588,7 @@ func (r *MemberSaleOrderRepo) GetOrderNum(status []uint) (int64, error) {
 	var num int64
 	err := r.db.Model(&model.MemberSaleOrder{}).
 		Where("delete_time = ?", 0).
+		Where("cancel_scene != ?", constant.MemberSaleOrderSceneSelectingTimeout).
 		Where("status in ?", status).
 		Count(&num).Error
 	if err != nil {

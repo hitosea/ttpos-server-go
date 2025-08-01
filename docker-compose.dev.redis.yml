@@ -1,0 +1,90 @@
+services:
+
+  # Redis 集群节点1
+  redis-node-1:
+    container_name: "saas-redis-node-1-${APP_ID}"
+    image: redis:6
+    ports:
+      - "7001:6379"
+      - "17001:16379"
+    volumes:
+      - ./docker/redis/cluster/data-1:/data
+      - ./docker/redis/cluster/redis-1.conf:/etc/redis/redis.conf:ro
+      - ./docker/redis/scripts/start-redis.sh:/usr/local/bin/start-redis.sh:ro
+    command: /usr/local/bin/start-redis.sh
+    restart: always
+    environment:
+      - CLUSTER_ANNOUNCE_IP=${REDIS_CLUSTER_ANNOUNCE_IP:-auto}
+      - CLUSTER_ANNOUNCE_PORT=7001
+      - CLUSTER_ANNOUNCE_BUS_PORT=17001
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.30
+
+  # Redis 集群节点2  
+  redis-node-2:
+    container_name: "saas-redis-node-2-${APP_ID}"
+    image: redis:6
+    ports:
+      - "7002:6379"
+      - "17002:16379"
+    volumes:
+      - ./docker/redis/cluster/data-2:/data
+      - ./docker/redis/cluster/redis-2.conf:/etc/redis/redis.conf:ro
+      - ./docker/redis/scripts/start-redis.sh:/usr/local/bin/start-redis.sh:ro
+    command: /usr/local/bin/start-redis.sh
+    restart: always
+    environment:
+      - CLUSTER_ANNOUNCE_IP=${REDIS_CLUSTER_ANNOUNCE_IP:-auto}
+      - CLUSTER_ANNOUNCE_PORT=7002
+      - CLUSTER_ANNOUNCE_BUS_PORT=17002
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.31
+
+  # Redis 集群节点3
+  redis-node-3:
+    container_name: "saas-redis-node-3-${APP_ID}"
+    image: redis:6
+    ports:
+      - "7003:6379"
+      - "17003:16379"
+    volumes:
+      - ./docker/redis/cluster/data-3:/data
+      - ./docker/redis/cluster/redis-3.conf:/etc/redis/redis.conf:ro
+      - ./docker/redis/scripts/start-redis.sh:/usr/local/bin/start-redis.sh:ro
+    command: /usr/local/bin/start-redis.sh
+    restart: always
+    environment:
+      - CLUSTER_ANNOUNCE_IP=${REDIS_CLUSTER_ANNOUNCE_IP:-auto}
+      - CLUSTER_ANNOUNCE_PORT=7003
+      - CLUSTER_ANNOUNCE_BUS_PORT=17003
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.32
+
+  # Redis 集群初始化
+  redis-cluster-init:
+    container_name: "saas-redis-cluster-init-${APP_ID}"
+    image: redis:6
+    depends_on:
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.33
+    volumes:
+      - ./docker/redis/scripts/redis-cluster-auto-init.sh:/usr/local/bin/redis-cluster-auto-init.sh:ro
+    command: /usr/local/bin/redis-cluster-auto-init.sh
+    restart: always
+    environment:
+      - REDIS_NODES=10.0.0.30:6379 10.0.0.31:6379 10.0.0.32:6379
+
+networks:
+  saas-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.0.0/24
+          gateway: 10.0.0.1

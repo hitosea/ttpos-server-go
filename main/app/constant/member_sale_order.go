@@ -20,7 +20,7 @@ const (
 	MemberSaleOrderStatusCooking               = 3 // 商家备餐中
 	MemberSaleOrderStatusPendingRiderPickup    = 4 // 待骑手接单
 	MemberSaleOrderStatusPendingRiderDelivery  = 5 // 骑手正在赶往商家
-	MemberSaleOrderStatusDeliverying           = 6 // 骑手配送中
+	MemberSaleOrderStatusDelivering            = 6 // 骑手配送中
 	MemberSaleOrderStatusCompleted             = 7 // 已完成
 	MemberSaleOrderStatusCancelled             = 8 // 已取消
 )
@@ -68,7 +68,7 @@ func ParseToStatusGroup(status uint) string {
 		return CashierMemberSaleOrderStatusUndelivery // 待配送
 	case MemberSaleOrderStatusPendingRiderDelivery: // 骑手正在赶往商家
 		return CashierMemberSaleOrderStatusUndelivery // 待配送
-	case MemberSaleOrderStatusDeliverying: // 骑手配送中
+	case MemberSaleOrderStatusDelivering: // 骑手配送中
 		return CashierMemberSaleOrderStatusDelivery // 配送中
 	case MemberSaleOrderStatusCompleted: // 已完成
 		return CashierMemberSaleOrderStatusDelivered // 已完成
@@ -86,7 +86,7 @@ func GetMemberOrderStatusList(status string) []uint {
 	case CashierMemberSaleOrderStatusUndelivery: // 待配送。对应 2-待商家接单、3-商家备餐中、4-待骑手接单、5-骑手正在赶往商家
 		return []uint{MemberSaleOrderStatusPendingMerchantAccept, MemberSaleOrderStatusCooking, MemberSaleOrderStatusPendingRiderPickup}
 	case CashierMemberSaleOrderStatusDelivery: // 配送中。对应 5-骑手正在赶往商家、6-骑手配送中
-		return []uint{MemberSaleOrderStatusPendingRiderDelivery, MemberSaleOrderStatusDeliverying}
+		return []uint{MemberSaleOrderStatusPendingRiderDelivery, MemberSaleOrderStatusDelivering}
 	case CashierMemberSaleOrderStatusDelivered: // 已完成。对应 7-已完成
 		return []uint{MemberSaleOrderStatusCompleted}
 	case CashierMemberSaleOrderStatusCancel: // 已取消。对应 8-已取消
@@ -96,6 +96,7 @@ func GetMemberOrderStatusList(status string) []uint {
 	}
 }
 
+// 仅收银机“订单管理”页面使用，会员端禁用这个方案
 func GetStatusList(status string) []uint {
 	switch status {
 	case CashierSaleMemberOrderStatusUnpaid: // 待付款。对应 1-待付款
@@ -107,11 +108,13 @@ func GetStatusList(status string) []uint {
 	case CashierMemberSaleOrderStatusUndelivery: // 待配送。对应 4-待骑手接单、5-骑手正在赶往商家
 		return []uint{MemberSaleOrderStatusPendingRiderPickup, MemberSaleOrderStatusPendingRiderDelivery}
 	case CashierMemberSaleOrderStatusDelivery: // 配送中。对应 6-骑手配送中
-		return []uint{MemberSaleOrderStatusDeliverying}
+		return []uint{MemberSaleOrderStatusDelivering}
 	case CashierMemberSaleOrderStatusDelivered: // 已完成。对应 7-已完成
 		return []uint{MemberSaleOrderStatusCompleted}
 	case CashierMemberSaleOrderStatusCancel: // 已取消。对应 8-已取消
 		return []uint{MemberSaleOrderStatusCancelled}
+	case CashierMemberOrderStatusAll: // 全部
+		return []uint{MemberSaleOrderStatusPendingPayment, MemberSaleOrderStatusPendingMerchantAccept, MemberSaleOrderStatusCooking, MemberSaleOrderStatusPendingRiderPickup, MemberSaleOrderStatusPendingRiderDelivery, MemberSaleOrderStatusDelivering, MemberSaleOrderStatusCompleted, MemberSaleOrderStatusCancelled}
 	default:
 		return []uint{}
 	}
@@ -127,6 +130,17 @@ const (
 	MemberSaleOrderSceneMemberCancelUnpaid = "member_cancel_unpaid" // 用户取消。未支付时用户取消
 	MemberSaleOrderSceneRiderPickupTimeout = "rider_pickup_timeout" // 骑手接单超时。取消订单
 )
+
+// 取消原因
+var MemberSaleOrderSceneReason = map[string]string{
+	MemberSaleOrderSceneMerchantCancel:     "商家取消",
+	MemberSaleOrderSceneMemberCancel:       "用户取消",
+	MemberSaleOrderSceneMerchantReject:     "商家拒单",
+	MemberSaleOrderSceneSelectingTimeout:   "选购超时",
+	MemberSaleOrderScenePaymentTimeout:     "支付超时",
+	MemberSaleOrderSceneMemberCancelUnpaid: "用户取消",
+	MemberSaleOrderSceneRiderPickupTimeout: "骑手超时未接单",
+}
 
 // 外送订单是否已计算距离费
 const (

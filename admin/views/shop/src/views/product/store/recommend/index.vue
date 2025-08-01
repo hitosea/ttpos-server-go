@@ -25,7 +25,7 @@
                   :prop="`product_packages.${scope.$index}.sort`"
                   :rules="[{ required: true, validator: (rule, value, callback) => validateSort(rule, value, callback, scope.$index) }]"
                 >
-                  <el-input-number class="mt16" v-model="scope.row.sort" :controls="false" :min="0" :precision="0" :placeholder="$t('请输入排序')"></el-input-number>
+                  <el-input-number @input="onCheckSort()" class="mt16" v-model="scope.row.sort" :controls="false" :min="0" :precision="0" :placeholder="$t('请输入排序')"></el-input-number>
                 </el-form-item>
               </template>
             </el-table-column>
@@ -77,7 +77,7 @@
 
   const validateProductPackages = (_rule, value, callback) => {
     if (value.length < 3) {
-      callback(new Error(proxy.$t('至少选择3个商品')));
+      callback(new Error($t('至少选择3个商品')));
     } else {
       callback();
     }
@@ -85,14 +85,18 @@
 
   const validateSort = (_rule, value, callback, index) => {
     if (value === null) {
-      callback(new Error(proxy.$t('请输入排序')));
+      callback(new Error($t('请输入排序')));
     }
     // 排序不能重复
     else if (form.value.product_packages.some((item) => item.sort === value && item.uuid !== form.value.product_packages[index].uuid)) {
-      callback(new Error(proxy.$t('排序不能重复')));
+      callback(new Error($t('排序不能重复')));
     } else {
       callback();
     }
+  };
+
+  const onCheckSort = () => {
+    formRef.value.validate();
   };
 
   const submitForm = () => {
@@ -102,7 +106,7 @@
         ProductApi.setRecommend(form.value, true)
           .then((res) => {
             proxy.$ElMessage({
-              message: proxy.$t('操作成功'),
+              message: $t('操作成功'),
               type: 'success',
             });
           })

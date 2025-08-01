@@ -16139,6 +16139,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/member/order/send_auth_code": {
+            "post": {
+                "description": "发送认证验证码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "会员端-订单"
+                ],
+                "summary": "发送认证验证码",
+                "parameters": [
+                    {
+                        "description": "详情参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.MemberOrderSendAuthCodeReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/member/points/record/list": {
             "get": {
                 "security": [
@@ -21082,6 +21116,10 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "default_language": {
+                    "description": "默认语言",
+                    "type": "string"
+                },
                 "is_member_show_sold_out": {
                     "description": "是否显示售罄商品",
                     "type": "boolean"
@@ -21089,6 +21127,13 @@ const docTemplate = `{
                 "is_open_rider": {
                     "description": "是否开启外送",
                     "type": "boolean"
+                },
+                "language": {
+                    "description": "常用语言",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "language_list": {
                     "description": "语言列表",
@@ -22171,6 +22216,15 @@ const docTemplate = `{
                 "username": {
                     "description": "用户名",
                     "type": "string"
+                }
+            }
+        },
+        "req.MemberOrderSendAuthCodeReq": {
+            "type": "object",
+            "properties": {
+                "member_sale_order_uuid": {
+                    "description": "会员端销售订单UUID",
+                    "type": "integer"
                 }
             }
         },
@@ -25084,6 +25138,10 @@ const docTemplate = `{
                     "description": "会员端销售订单UUID",
                     "type": "integer"
                 },
+                "order_no": {
+                    "description": "订单编号",
+                    "type": "string"
+                },
                 "pay_time": {
                     "description": "支付时间",
                     "type": "integer"
@@ -26265,6 +26323,10 @@ const docTemplate = `{
         "resp.MemberOrder": {
             "type": "object",
             "properties": {
+                "amount": {
+                    "description": "订单金额，最终应收. 订单金额=商品金额+配送费-会员折扣金额",
+                    "type": "number"
+                },
                 "company_name": {
                     "description": "公司名称",
                     "type": "string"
@@ -26358,6 +26420,10 @@ const docTemplate = `{
                 "contact_name": {
                     "description": "联系人",
                     "type": "string"
+                },
+                "is_in_delivery_range": {
+                    "description": "是否在配送范围内",
+                    "type": "boolean"
                 },
                 "phone": {
                     "description": "联系电话",
@@ -26494,6 +26560,10 @@ const docTemplate = `{
         "resp.MemberOrderPaymentInfoResp": {
             "type": "object",
             "properties": {
+                "is_wechat_pay": {
+                    "description": "是否是微信支付",
+                    "type": "boolean"
+                },
                 "link_url": {
                     "description": "支付单链接 (返回跳转地址 window.location.href = LinkUrl; )",
                     "type": "string"
@@ -26793,6 +26863,29 @@ const docTemplate = `{
                 }
             }
         },
+        "resp.Menu": {
+            "type": "object",
+            "properties": {
+                "default_language": {
+                    "description": "默认语言",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "常用语言 泰语、英语、中文、繁体 'th', 'en', 'zh', 'zhtw'",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "language_list": {
+                    "description": "语言列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                }
+            }
+        },
         "resp.MenuBaseInfo": {
             "type": "object",
             "properties": {
@@ -26823,6 +26916,14 @@ const docTemplate = `{
                 "is_show_sold_out": {
                     "description": "电子菜单是否显示售罄商品",
                     "type": "boolean"
+                },
+                "menu": {
+                    "description": "菜单设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/resp.Menu"
+                        }
+                    ]
                 }
             }
         },
@@ -28489,6 +28590,10 @@ const docTemplate = `{
                 },
                 "is_sale_bill_deleted": {
                     "description": "销售账单是否已删除",
+                    "type": "boolean"
+                },
+                "is_takeout_bill": {
+                    "description": "是否是外送订单",
                     "type": "boolean"
                 },
                 "locale_name": {

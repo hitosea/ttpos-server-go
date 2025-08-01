@@ -151,8 +151,8 @@ class MemberOrder extends Controller
         $data['page_size'] = 1000;
         // 请求获取充值订单列表接口
         $res = HttpHelp::getRequest('http://nginx/api/v1/shop/member_order/list', $data, [
-            'Authorization: Bearer ' . request()->header('token'),
-            'Accept-Language: ' . request()->header('language'),
+            'Authorization: Bearer ' .  (request()->header('token') ?: request()->param('token')),
+            'Accept-Language: ' .  (request()->header('language') ?: request()->param('language')),
         ]);
 
         if (!$res) {

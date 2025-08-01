@@ -10,14 +10,11 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import StatisticsApi from '@/api/statistics.js'
 import { formatDate } from '@/utils/DateTime.js'
 
-// 国际化
-const { t } = useI18n()
 
 // 图表实例
 let myChart = null
@@ -36,7 +33,7 @@ const dataList = ref(null)
 // 图表配置
 const option = ref({
   title: {
-    text: t('近七日数据'),
+    text: $t('近七日数据'),
     textStyle: {
       fontWeight: 'bold', // 设置文字粗细为粗体
       color: '#100A05',
@@ -110,7 +107,7 @@ const createOption = () => {
       series2.push(item.total_num)
     })
     if (activeName.value == 'order') {
-      names = [t('实收'), t('订单数')]
+      names = [$t('实收'), $t('订单数')]
     } else if (activeName.value == 'refund') {
       names = ['退单额', '退单量']
     }
@@ -174,7 +171,7 @@ const getData = async () => {
     loading.value = false
     createOption()
   } catch (error) {
-    ElMessage.error(error?.message || t('获取数据失败'))
+    ElMessage.error(error?.message || $t('获取数据失败'))
     loading.value = false
   }
 }

@@ -51,12 +51,6 @@ func (model *Member) IsExistActivityAndReferrer() bool {
 	return model.ReferrerUuid != 0 && model.ActivityUuid != 0
 }
 
-// 累计会员的消费金额、消费次数
-func (model *Member) AccumulateConsumeAmount(amount float64) {
-	model.AccumulatedConsumptionAmount = decimal.NewFromFloat(model.AccumulatedConsumptionAmount).Add(decimal.NewFromFloat(amount)).InexactFloat64()
-	model.ConsumptionCount++
-}
-
 // 获取会员的积分余额，用于展示在前端。
 // 会员积分余额=积分+冻结积分
 func (model *Member) GetPoints() float64 {
@@ -181,6 +175,10 @@ func (model *Member) GetMemberDiscountRate() float64 {
 	discount := float64(1) // 默认不打折
 	if model.MemberLevel != nil {
 		discount = model.MemberLevel.GetDiscount()
+		if model.IsVisitor {
+			// 游客不享受折扣
+			discount = constant.NoDiscount
+		}
 	}
 	return discount
 }
@@ -189,6 +187,10 @@ func (model *Member) GetMemberCardDiscountRate() float64 {
 	discount := float64(1) // 默认不打折
 	if model.MemberCard != nil {
 		discount = model.MemberCard.GetDiscount()
+		if model.IsVisitor {
+			// 游客不享受折扣
+			discount = constant.NoDiscount
+		}
 	}
 	return discount
 }
@@ -237,9 +239,9 @@ func (model *MemberLevel) GetDiscount() float64 {
 	if model.Discount > 1 {
 		return decimal.NewFromFloat(model.Discount).Div(decimal.NewFromUint64(100)).InexactFloat64()
 	}
-	// 不能为负数
-	if model.Discount < 0 {
-		return 0
+	// 不能为负数. 现在不能折扣为0, 所以默认100%不打折
+	if model.Discount <= 0 {
+		return 1
 	}
 	return model.Discount
 }
@@ -267,9 +269,9 @@ func (model *MemberCard) GetDiscount() float64 {
 	if model.Discount > 1 {
 		return decimal.NewFromFloat(model.Discount).Div(decimal.NewFromUint64(100)).InexactFloat64()
 	}
-	// 不能为负数
-	if model.Discount < 0 {
-		return 0
+	// 不能为负数. 现在不能折扣为0, 所以默认100%不打折
+	if model.Discount <= 0 {
+		return 1
 	}
 	return model.Discount
 }

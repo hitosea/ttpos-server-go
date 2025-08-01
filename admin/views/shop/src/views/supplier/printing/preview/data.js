@@ -1018,7 +1018,7 @@ export const previewData = {
                 flexWidth: true,
             },
             {
-                name: $t('商品名称商品名称'),
+                name: $t('（打包）') + $t('商品名称商品名称'),
                 label: 'X2',
                 typeShow: '1',
                 flexWidth: true,
@@ -1038,7 +1038,7 @@ export const previewData = {
                 font18Small: true,
             },
             {
-                name: $t('商品名称商品名称'),
+                name: $t('（打包）') + $t('商品名称商品名称'),
                 label: 'X2',
                 font24: true,
                 typeShow: '2',
@@ -1194,7 +1194,7 @@ export const previewData = {
             },
 
             {
-                name: $t('商品名称商品名称'),
+                name: $t('（打包）') + $t('商品名称商品名称'),
                 num: '55*2',
                 label: '￥50',
             },
@@ -1957,7 +1957,7 @@ export const previewData = {
                 flexWidth: true,
             },
             {
-                name: $t('商品名称商品名称'),
+                name: $t('（打包）') + $t('商品名称商品名称'),
                 label: 'X2',
                 font22: true,
                 flexWidth: true,
@@ -1968,7 +1968,7 @@ export const previewData = {
         [
             {
                 name: $t('订单号'),
-                label: 'TP2024012536958425',
+                label: '2024012536958425',
             },
             {
                 name: $t('时间'),
@@ -2025,8 +2025,8 @@ export const previewData = {
         ],
         [
             {
-                name: '',
-                label: $t('优惠折扣') + $t('：') + '￥50',
+                name: $t('会员折扣'),
+                label: '￥50',
             },
             {
                 name: $t('支付方式'),

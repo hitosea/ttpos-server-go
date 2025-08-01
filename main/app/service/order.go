@@ -711,13 +711,21 @@ func (s *orderSrv) CreateDeskOrder(ctx context.Context, req req.DeskOrderCreateR
 	}, nil
 }
 
-// getMemberSaleOrder 获取会员端销售订单
-func (s *orderSrv) getMemberSaleOrder(ctx context.Context, memberSaleOrderUuid uint64, saleBill *model.SaleBill) (*model.MemberSaleOrder, error) {
+// getMemberSaleOrderAllInfo 获取会员端销售订单
+func (s *orderSrv) getMemberSaleOrderAllInfo(ctx context.Context, memberSaleOrderUuid uint64, saleBill *model.SaleBill) (*model.MemberSaleOrder, error) {
 	// 获取数据库
 	db := ctx.GetDB()
 	memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecord(memberSaleOrderUuid)
 	if err != nil {
 		return nil, errors.WithMessage(err)
+	}
+	if saleBill == nil {
+		// 当前销售账单数据
+		var errSaleBill error
+		saleBill, errSaleBill = repository.NewOrderRepo(db).GetSaleBillAllInfo(0, repository.WithMemberSaleOrderUuid(memberSaleOrderUuid))
+		if errSaleBill != nil {
+			return nil, errors.WithMessage(errSaleBill)
+		}
 	}
 	memberSaleOrder.SaleBill = saleBill
 
@@ -829,7 +837,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 			return nil, errors.WithMessage(errSaleBill)
 		}
 	}
-	memberSaleOrder, err := s.getMemberSaleOrder(ctx, req.MemberSaleOrderUuid, saleBill)
+	memberSaleOrder, err := s.getMemberSaleOrderAllInfo(ctx, req.MemberSaleOrderUuid, saleBill)
 	if err != nil {
 		return nil, errors.WithMessage(err)
 	}
@@ -926,12 +934,16 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		}
 	}
 
+	isOutRange := false
 	// 如果未计算距离费，且配置了地址，则查询配送距离
 	if !memberSaleOrder.GetIsDistanceCalculated() && memberSaleOrder.MemberAddressUuid != 0 {
 		// 查询配送距离
 		distance, err := s.QueryDistance(ctx, memberSaleOrder)
 		if err != nil {
 			ctx.Log().Error("查询配送距离失败", zap.Error(err))
+			if strings.Contains(err.Error(), "不在配送范围内，无法下单") {
+				isOutRange = true
+			}
 		} else {
 			memberSaleOrder.SetDeliveryDistance(distance)
 			if err := repository.NewMemberSaleOrderRepo(ctx.GetDB()).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
@@ -952,7 +964,7 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 	memberSaleOrder.ProductNum = memberSaleOrder.SaleBill.SaleOrders[0].GetProductNum()
 	memberSaleOrder.ProductAmount = memberSaleOrder.SaleBill.SaleOrders[0].GetProductAmount()
 	memberSaleOrder.OriginProductAmount = memberSaleOrder.SaleBill.SaleOrders[0].GetOriginProductAmount()
-	memberSaleOrder.MemberDiscountFee = memberSaleOrder.SaleBill.SaleOrders[0].MemberDiscountFee
+	memberSaleOrder.MemberDiscountFee = memberSaleOrder.CalculateMemberDiscount()
 	memberSaleOrder.Amount = memberSaleOrder.CalculateAmount()
 	if err := repository.NewMemberSaleOrderRepo(ctx.GetDB()).UpdateMemberSaleOrder(*memberSaleOrder); err != nil {
 		return nil, errors.WithMessage(err)
@@ -968,6 +980,9 @@ func (s *orderSrv) GetMemberOrderCheckoutInfo(ctx context.Context, req req.GetMe
 		Remark:              memberSaleOrder.Remark,
 		IsVerifiedPhone:     memberSaleOrder.IsVerifiedPhoneBool(),
 		IsInDeliveryRange: func() bool {
+			if isOutRange {
+				return false
+			}
 			if deliveryConfig != nil {
 				return deliveryConfig.IsInDeliveryRange
 			}
@@ -1810,6 +1825,11 @@ func (s *orderSrv) GetRecordList(ctx context.Context, saleBillUuid uint64, h5Ord
 			realName = fmt.Sprintf("%s(%s)", prefix, record.Member.Nickname)
 		}
 
+		// 如果是系统自动操作
+		if record.Source == "" {
+			realName = i18n.Translate(language, "系统自动")
+		}
+
 		logs = append(logs, resp.OrderOperationLog{
 			Uuid:       record.Uuid,
 			RealName:   realName,
@@ -1981,18 +2001,6 @@ func (s *orderSrv) CancelOrder(ctx context.Context, req req.OrderCancelReq) erro
 	if err != nil {
 		tx.Rollback()
 		return errors.WithMessage(builtinerrors.New("删除送厨单商品失败"), err.Error())
-	}
-	// 取消订单后，删除所有销售订单商品
-	err = repository.NewSaleOrderProductRepo(tx).DeleteSaleOrderProductBySaleBillUuid(billInfo.Uuid)
-	if err != nil {
-		tx.Rollback()
-		return errors.WithMessage(builtinerrors.New("删除销售订单商品失败"), err.Error())
-	}
-	// 取消订单后，删除所有销售订单自助餐顾客
-	err = repository.NewSaleOrderBuffetCustomerTypeRepo(tx).DeleteSaleOrderBuffetCustomerTypeBySaleBillUuid(billInfo.Uuid)
-	if err != nil {
-		tx.Rollback()
-		return errors.WithMessage(builtinerrors.New("删除销售订单自助餐顾客失败"), err.Error())
 	}
 
 	// 提交事务
@@ -2188,11 +2196,21 @@ func (s *orderSrv) ReturnOrder(ctx context.Context, req req.OrderReturnReq) (err
 
 	// 可退款金额
 	canReturnAmount := saleOrder.GetCanReturnAmount()
+	// 如果是会员端订单，则需要根据配送费计算可退款金额
+	deliveryFee := 0.0
+	if ctx.GetScene() == constant.SceneMemberOrder {
+		memberSaleOrder, err := repository.NewMemberSaleOrderRepo(db).GetMemberSaleOrderRecordOnlyBySaleBillUuid(req.SaleBillUuid)
+		if err != nil {
+			return errors.WithMessage(err), constant.CodeFail
+		}
+		deliveryFee = memberSaleOrder.DeliveryFeeAmount
+		canReturnAmount = saleOrder.GetCanReturnAmountWithDeliveryFee(deliveryFee)
+	}
 	// 可退的会员消费金额
 	canReturnMemberConsumptionAmount := saleOrder.GetCanReturnMemberConsumptionAmount()
 
 	// 创建退款单
-	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetStaff().DutyNo, ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetCustomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
+	returnOrder, err := saleOrder.NewReturnOrder(ctx.GetScene(), deliveryFee, ctx.GetStaff().DutyNo, ctx.GetLanguage(), saleOrderProducts, saleOrderBuffetCustomerTypes, saleOrderBuffetDelayProducts, numMap, returnType, canReturnAmount)
 	if err != nil {
 		return errors.WithMessage(err), constant.CodeFail
 	}
@@ -5084,9 +5102,6 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		}
 
 		flavorPrice := flavorProductBom.Price
-		if params.Setting.GetMemberOrderDiscountRate() != 1 {
-			flavorPrice = decimal.NewFromFloat(flavorProductBom.Price).Mul(decimal.NewFromFloat(params.Setting.GetMemberOrderDiscountRate())).Round(2).InexactFloat64()
-		}
 		saleOrderProduct := model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
 			DeviceId:               deviceSn,
 			Name:                   productPackage.Name,
@@ -5113,10 +5128,6 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			IsAcceptOrder: uint(isAcceptOrder),
 			Remark:        product.Remark,
 		}, &productPackage, product.Operation)
-
-		if option.IsMemberAdd {
-			saleOrderProduct.MemberOrderDiscountRate = params.Setting.GetMemberOrderDiscountRate()
-		}
 
 		// 设置必点信息
 		if !option.IsMemberAdd { // 会员端加购不设置必点信息
@@ -6272,14 +6283,6 @@ func (s *orderSrv) InstantOrderCartProductCooking(ctx context.Context, req req.O
 		defer s.lock.UnlockUuid(req.SaleBillUuid)
 		ctx.AddLock()
 	}
-
-	// 助手端下单校验高级密码
-	// 只有助手端的请求，且不只检查送厨时
-	//if ctx.GetSource() == constant.SourceAssistant && !req.IsCheckCooking {
-	//	if err := s.settingSrv.VerifyAdvancedPassword(ctx, req.Password, setting.WithIsAssistantCheckOrder()); err != nil {
-	//		return nil, nil, errors.WithMessage(err)
-	//	}
-	//}
 
 	db := s.dbm.GetDB(ctx.GetDbId())
 

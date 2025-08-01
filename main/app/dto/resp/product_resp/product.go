@@ -2,6 +2,10 @@ package product_resp
 
 import "ttpos-server-go/app/dto"
 
+type ProductSearchResp struct {
+	List []Product `json:"list"`
+}
+
 // Product 商品
 type Product struct {
 	Uuid                uint64                    `json:"uuid"`                  // 商品UUID
@@ -19,6 +23,8 @@ type Product struct {
 	AttributeGroups     ProductAttributeGroupList `json:"attribute_groups"`      // 商品属性组
 	Describe            string                    `json:"describe"`              // 卖点，h5端显示
 	IsShowKitchen       uint                      `json:"is_show_kitchen"`       // 是否在厨显端显示：1-是；0-否
+
+	Sort int `json:"-"` // 商品排序，内部字段，用于推荐商品列表排序
 }
 
 // ProductFlavor 商品规格

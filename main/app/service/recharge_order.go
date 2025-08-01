@@ -808,8 +808,13 @@ func (s *rechargeOrderSrv) GetRechargeOrderList(ctx context.Context, listReq req
 			PaymentMethods: paymentMethods,
 			GiftAmount:     order.GiftAmount,
 			GiftPoint:      order.GiftPoint,
-			MemberUuid:     uint64(order.Member.ID),
-			RefundMoney:    order.RefundMoney,
+			MemberUuid: func() uint64 {
+				if order.Member != nil {
+					return uint64(order.Member.ID)
+				}
+				return 0
+			}(),
+			RefundMoney: order.RefundMoney,
 			Cashier: resp.RechargeOrderCashier{
 				RealName: cashierName,
 			},

@@ -17,23 +17,24 @@ services:
     restart: always
     depends_on:
       - db
-      - redis
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
       - redis-proxy
-      - mysql-proxy
     networks:
       saas-network:
         ipv4_address: 10.0.0.10
       
   nginx:
     container_name: "saas-nginx-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-nginx:${IMAGE_VERSION}
+    image: nginx:alpine
     ports:
       - "${NGINX_PORT:-}:80"
       - "${NGINX_SSL_PORT:-}:443"
     volumes:
       - ./docker/sysctl/nginx.conf:/etc/nginx/nginx.conf
       - ./docker/nginx:/etc/nginx/conf.d
-      #- ./admin/public:/var/www/public
+      - ./admin/public:/var/www/public
     links:
       - php
       - golang
@@ -42,8 +43,6 @@ services:
       - php
       - golang
       - websocket
-      - redis-proxy
-      - mysql-proxy
     restart: unless-stopped
     networks:
       saas-network:
@@ -56,7 +55,9 @@ services:
       - ./docker/mysql/data:/var/lib/mysql
       - ./docker/mysql/conf.d:/etc/mysql/conf.d
       - ./docker/mysql/repassword.sh:/etc/mysql/repassword.sh
+      - ./docker/mysql/permissions.sh:/etc/mysql/permissions.sh
       - ./docker/mysql/create_saas.sh:/etc/mysql/create_saas.sh
+      - ./docker/mysql/init.d:/docker-entrypoint-initdb.d/
     environment:
       MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
       MARIADB_DATABASE: "${DB_DATABASE}"
@@ -70,67 +71,53 @@ services:
       saas-network:
         ipv4_address: 10.0.0.12
 
-  redis:
-    container_name: "saas-redis-${APP_ID}"
-    image: redis:6
+  redis-proxy:
+    container_name: "saas-redis-proxy-${APP_ID}"
+    build:
+      context: ./redis-proxy
+      dockerfile: Dockerfile
     volumes:
-      - ./docker/redis/data:/data
-      - ./docker/redis/redis.conf:/etc/redis/redis.conf:ro
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+      - .env:/var/.env
+    image: redis-proxy
+    depends_on:
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
     restart: always
     networks:
       saas-network:
-        ipv4_address: 10.0.0.13
+        ipv4_address: 10.0.0.17
     
   golang:
     container_name: "saas-golang-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-go:${IMAGE_VERSION}
+    build:
+      dockerfile: main/Dockerfile-dev
+    image: ttpos-server-go
+    environment:
+      SW_AGENT_NAME: "${SW_AGENT_NAME:-ttpos}"
+      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
+      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
     volumes:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env
       - ./docker/certificate:/var/certificate
-      - ./docker/golang/logs:/var/www/log
     restart: always
     networks:
       saas-network:
-        ipv4_address: 10.0.0.14
+        ipv4_address: 10.0.0.18
 
   websocket:
     container_name: "saas-websocket-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-websocket:${IMAGE_VERSION}
+    build:
+      context: ./websocket
+      dockerfile: Dockerfile
+    image: ttpos-server-websocket
     volumes:
       - .env:/var/.env
     restart: always
     networks:
       saas-network:
         ipv4_address: 10.0.0.15
-
-  mysql-proxy:
-    container_name: "saas-mysql-proxy-${APP_ID}"
-    image: "nginx:alpine"
-    # ports:
-    #   -  16446:6446
-    volumes:
-      - ./docker/mysql-proxy/nginx.conf:/etc/nginx/nginx.conf
-      - ./docker/mysql-proxy/conf.d:/etc/nginx/conf.d
-    restart: always
-    networks:
-      saas-network:
-        ipv4_address: 10.0.0.16
-
-  redis-proxy:
-    container_name: "saas-redis-proxy-${APP_ID}"
-    image: hub.hitosea.com/ttpos-server/ttpos-server-redis-proxy:${IMAGE_VERSION}
-    volumes:
-      - .env:/var/.env
-    depends_on:
-      - redis
-    restart: always
-    networks:
-      saas-network:
-        ipv4_address: 10.0.0.17
-      
-      
 networks:
   saas-network:
     driver: bridge

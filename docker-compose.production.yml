@@ -19,22 +19,21 @@ services:
       - db
       - redis
       - redis-proxy
+      - mysql-proxy
     networks:
       saas-network:
         ipv4_address: 10.0.0.10
       
   nginx:
     container_name: "saas-nginx-${APP_ID}"
-    image: ttpos-server-nginx
+    image: hub.hitosea.com/ttpos-server/ttpos-server-nginx:${IMAGE_VERSION}
     ports:
       - "${NGINX_PORT:-}:80"
       - "${NGINX_SSL_PORT:-}:443"
     volumes:
       - ./docker/sysctl/nginx.conf:/etc/nginx/nginx.conf
       - ./docker/nginx:/etc/nginx/conf.d
-    build:
-      context: ./admin
-      dockerfile: Dockerfile-views
+      #- ./admin/public:/var/www/public
     links:
       - php
       - golang
@@ -43,6 +42,8 @@ services:
       - php
       - golang
       - websocket
+      - redis-proxy
+      - mysql-proxy
     restart: unless-stopped
     networks:
       saas-network:
@@ -55,9 +56,7 @@ services:
       - ./docker/mysql/data:/var/lib/mysql
       - ./docker/mysql/conf.d:/etc/mysql/conf.d
       - ./docker/mysql/repassword.sh:/etc/mysql/repassword.sh
-      - ./docker/mysql/permissions.sh:/etc/mysql/permissions.sh
       - ./docker/mysql/create_saas.sh:/etc/mysql/create_saas.sh
-      - ./docker/mysql/init.d:/docker-entrypoint-initdb.d/
     environment:
       MARIADB_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
       MARIADB_DATABASE: "${DB_DATABASE}"
@@ -74,44 +73,23 @@ services:
   redis:
     container_name: "saas-redis-${APP_ID}"
     image: redis:6
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - ./docker/redis/data:/data
       - ./docker/redis/redis.conf:/etc/redis/redis.conf:ro
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     restart: always
     networks:
       saas-network:
         ipv4_address: 10.0.0.13
     
-  redis-proxy:
-    container_name: "saas-redis-proxy-${APP_ID}"
-    build:
-      context: ./redis-proxy
-      dockerfile: Dockerfile
-    volumes:
-      - .env:/var/.env
-    image: redis-proxy
-    depends_on:
-      - redis
-    restart: always
-    networks:
-      saas-network:
-        ipv4_address: 10.0.0.17
-    
   golang:
     container_name: "saas-golang-${APP_ID}"
-    build:
-      dockerfile: main/Dockerfile
-    image: ttpos-server-go
-    environment:
-      SW_AGENT_NAME: "${SW_AGENT_NAME:-ttpos}"
-      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
-      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
+    image: hub.hitosea.com/ttpos-server/ttpos-server-go:${IMAGE_VERSION}
     volumes:
       - ./main/i18n:/var/www/i18n
       - .env:/var/.env
       - ./docker/certificate:/var/certificate
+      - ./docker/golang/logs:/var/www/log
     restart: always
     networks:
       saas-network:
@@ -119,16 +97,56 @@ services:
 
   websocket:
     container_name: "saas-websocket-${APP_ID}"
-    build:
-      context: ./websocket
-      dockerfile: Dockerfile
-    image: ttpos-server-websocket
+    image: hub.hitosea.com/ttpos-server/ttpos-server-websocket:${IMAGE_VERSION}
     volumes:
       - .env:/var/.env
     restart: always
     networks:
       saas-network:
         ipv4_address: 10.0.0.15
+
+  mysql-proxy:
+    container_name: "saas-mysql-proxy-${APP_ID}"
+    image: "nginx:alpine"
+    # ports:
+    #   -  16446:6446
+    volumes:
+      - ./docker/mysql-proxy/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/mysql-proxy/conf.d:/etc/nginx/conf.d
+    restart: always
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.16
+
+  redis-proxy:
+    container_name: "saas-redis-proxy-${APP_ID}"
+    image: hub.hitosea.com/ttpos-server/ttpos-server-redis-proxy:${IMAGE_VERSION}
+    volumes:
+      - .env:/var/.env
+    depends_on:
+      - redis
+    restart: always
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.17
+
+  takeout:
+    container_name: "saas-takeout-${APP_ID}"
+    image: hub.hitosea.com/ttpos-server/ttpos-server-takeout:${IMAGE_VERSION}
+    environment:
+      SW_AGENT_NAME: "ttpos-server-takeout"
+      SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE: "${SW_AGENT_REPORTER_GRPC_BACKEND_SERVICE:-127.0.0.1:11800}"
+      SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL: "${SW_AGENT_REPORTER_GRPC_CHECK_INTERVAL:-20}"
+    volumes:
+      - ./takeout/manifest/config:/app/config  #生产环境根据需要调整
+    restart: always
+    ports:
+      - "14031:14031"
+      - "14032:14032"
+    networks:
+      saas-network:
+        ipv4_address: 10.0.0.18      
+      
 networks:
   saas-network:
     driver: bridge

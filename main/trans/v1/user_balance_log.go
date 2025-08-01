@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
 
@@ -74,6 +75,7 @@ func (s *UserBalanceLogService) convertUserBalanceLog(offset, limit int) error {
 			Money:      userBalanceLog.Money,
 			GiftMoney:  userBalanceLog.GiftMoney,
 			Describe:   userBalanceLog.Describe,
+			Processed:  constant.MemberPointLogOrBalanceProcessedSuccess,
 		})
 	}
 	// 保存数据

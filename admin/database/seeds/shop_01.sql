@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `cancel_reason` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '取消原因',
     `is_verified_phone` INT(10) NOT NULL DEFAULT 0 COMMENT '订单是否已经验证手机号,0-未验证 1-已验证,不再弹出验证手机号',
     `payment_method_uuid` BIGINT NOT NULL DEFAULT 0 COMMENT '支付方式UUID,订单已选择的支付方式',
-    -- 确认订单（“待支付”状态）之后才有值的字段
+    -- 确认订单（"待支付"状态）之后才有值的字段
     `product_num` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品数量.订单中商品的总数量，商品A数量2，商品B数量1，则商品数量为3',
     `product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品金额,折前价，已含税',
     `origin_product_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '商品原价,折前价，已含税',
@@ -174,6 +174,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_member_sale_order` (
     `delivery_fee_min_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '起步配送费',
     `delivery_fee_base_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '基础配送费',
     `delivery_fee_per_km` DECIMAL(12, 2) NOT NULL DEFAULT 0 COMMENT '每公里配送费',
+    `rider_accept_timeout` INT(10) NOT NULL DEFAULT 0 COMMENT '骑手接单超时时间（秒）',
     -- 第三方订单信息
     `related_order_no` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关联订单号,skootar、grab等第三方平台上的订单号',
     `related_order_type` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '关联订单类型,skootar、grab',
@@ -226,7 +227,6 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_bill_setting` (
     `open_points_exchange` INT(10) NOT NULL DEFAULT 0 COMMENT '是否开启积分抵扣, 0-不开启 1-开启',
     `points_exchange_rate` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '积分抵扣汇率,1积分抵扣多少元',
     `auto_points_exchange` INT(10) NOT NULL DEFAULT 0 COMMENT '积分抵扣类型,0-手动抵扣 1-自动抵扣',
-    `member_order_discount_rate` DECIMAL(12, 4) NOT NULL DEFAULT 1 COMMENT '会员端商品价格上浮比例1%-300%',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
@@ -2021,7 +2021,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_return_order_product` (
     `product_name` TEXT COMMENT '商品名称',
     `product_price` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '商品单价',
     `tax_rate` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '税率,根据结账时税率计算',
-    `num` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '商品数量,退货的商品数量',
+    `num` DECIMAL(12, 8) NOT NULL DEFAULT 0.00000000 COMMENT '商品数量,退货的商品数量',
     `product_discount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '商品折扣',
     `product_total_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT '商品总金额（退款总金额）',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
@@ -2194,6 +2194,8 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     `give_num` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '赠菜数量',
     `free_num` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '免单数量',
     `refund_num` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '退款数量',
+    `is_takeout` INT(10) NOT NULL DEFAULT 0 COMMENT '是否外送',
+    `member_order_discount_rate` DECIMAL(14, 2) NOT NULL DEFAULT 1.0000 COMMENT '会员端商品价格上浮比例1%-300%',
     `complete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间',
     `refund_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间',
     `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
@@ -2204,43 +2206,10 @@ CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
     INDEX idx_sale_bill_uuid (sale_bill_uuid),
     INDEX idx_duty_no (duty_no),
     INDEX idx_desk_uuid (desk_uuid),
-    INDEX idx_complete_time (complete_time)
+    INDEX idx_complete_time (complete_time),
+    INDEX `idx_is_takeout` (`is_takeout`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品统计表';
 
-CREATE TABLE IF NOT EXISTS `ttpos_statistics_product` (
-    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
-    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'UUID',
-    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售单UUID',
-    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单UUID',
-    `duty_no` varchar(255) NOT NULL DEFAULT '' COMMENT '当班编号',
-    `desk_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '桌台UUID',
-    `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品包uuid',
-    `product_bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品清单uuid',
-    `product_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品单价: 未含税',
-    `product_sale_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品销售价: 规格+加料',
-    `product_final_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品最终价',
-    `flavor_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '商品原价(规格价)',
-    `sauce_price` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '加料价格',
-    `product_num` INT(11) NOT NULL DEFAULT 0 COMMENT '商品数量',
-    `tax_rate` DECIMAL(14, 4) NOT NULL DEFAULT 0.0000 COMMENT '税率',
-    `tax_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '税费',
-    `service_fee` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '服务费',
-    `service_tax` DECIMAL(14, 2) NOT NULL DEFAULT 0.00 COMMENT '服务税',
-    `give_num` INT(11) NOT NULL DEFAULT 0 COMMENT '赠菜数量',
-    `free_num` INT(11) NOT NULL DEFAULT 0 COMMENT '免单数量',
-    `refund_num` INT(11) NOT NULL DEFAULT 0 COMMENT '退款数量',
-    `complete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间',
-    `refund_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '完成时间',
-    `create_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间',
-    `update_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间',
-    `delete_time` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间',
-    UNIQUE KEY `unique_uuid` (`uuid`),
-    INDEX idx_refund_time (refund_time),
-    INDEX idx_sale_bill_uuid (sale_bill_uuid),
-    INDEX idx_duty_no (duty_no),
-    INDEX idx_desk_uuid (desk_uuid),
-    INDEX idx_complete_time (complete_time)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '商品统计表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_statistics_customer_type` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',

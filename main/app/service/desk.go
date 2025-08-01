@@ -813,7 +813,9 @@ func (s *deskSrv) MergeDesk(ctx context.Context, req req.MergeDeskReq) (*resp.De
 		deskNos = append(deskNos, desk.DeskNo)
 		// 更新销售账单的首次送厨时间
 		if saleBill.ProductionTime == 0 || saleBill.ProductionTime > deskSaleBill.ProductionTime {
-			saleBill.ProductionTime = deskSaleBill.ProductionTime
+			if deskSaleBill.ProductionTime > 0 {
+				saleBill.ProductionTime = deskSaleBill.ProductionTime
+			}
 		}
 	}
 	if len(deskMergeCheckRes.List) > 0 {

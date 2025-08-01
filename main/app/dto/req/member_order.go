@@ -96,3 +96,7 @@ type CookFinishOrderReq struct {
 type MemberOrderSearchReq struct {
 	Keyword string `form:"keyword"` // 关键字
 }
+
+type MemberOrderSendAuthCodeReq struct {
+	MemberSaleOrderUuid uint64 `json:"member_sale_order_uuid"` // 会员端销售订单UUID
+}

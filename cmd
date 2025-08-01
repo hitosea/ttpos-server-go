@@ -12,7 +12,7 @@ OK="${Green}[OK]${Font}"
 Error="${Red}[错误]${Font}"
 
 cur_path="$(pwd)"
-COMPOSE="docker-compose -p ttpos-server-go -f new-docker-compose.yml"
+COMPOSE="docker-compose -p ttpos-server-go -f docker-compose.production.yml"
 
 judge() {
     if [[ 0 -eq $? ]]; then
@@ -218,6 +218,34 @@ arg_get() {
     echo $value
 }
 
+compare_env_vars_only_check() {
+    local example_file=".env.example"
+    local env_file=".env"
+    local missing_keys=()
+    if [ ! -f "$example_file" ] || [ ! -f "$env_file" ]; then
+        echo -e "${Error} ${RedBG} .env 或 .env.example 文件不存在，无法对比！${Font}"
+        exit 1
+    fi
+    while IFS= read -r line; do
+        # 跳过注释和空行
+        [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+        key=$(echo "$line" | cut -d'=' -f1)
+        [[ -z "$key" ]] && continue
+        if ! grep -q "^$key=" "$env_file"; then
+            missing_keys+=("$key")
+        fi
+    done < "$example_file"
+    if [ ${#missing_keys[@]} -ne 0 ]; then
+        echo -e "${Error} ${RedBG} 检查到以下环境变量在 .env 中缺失，请补充后再执行 update：${Font}"
+        for key in "${missing_keys[@]}"; do
+            echo -e "  - $key"
+        done
+        exit 1
+    else
+        echo -e "${OK} ${GreenBG} .env 文件已包含所有 .env.example 的环境变量，无需补充 ${Font}"
+    fi
+}
+
 ####################################################################################
 ####################################################################################
 ####################################################################################
@@ -265,6 +293,7 @@ if [ $# -gt 0 ]; then
                 git reset --hard origin/$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
             if git pull; then
                 echo -e "${OK} ${GreenBG} Git pull 成功 ${Font}"
+                compare_env_vars_only_check
                 run_exec php "composer update --ignore-platform-reqs"
                 run_exec php "php think migrate:run"
                 echo -e "${OK} ${GreenBG} 更新完成 ${Font}"

@@ -2166,4 +2166,8 @@ return [
     "至少有一个距离范围" => "There must be at least one distance range",
     "最后一个距离范围必须是最大范围" => "The last distance range must be the maximum range",
     "为非外送显示的商品，请移除" => "This item is for non-delivery display only. Please remove it.",
+    "是否开启整单折扣必须是0和1" => "Whether to enable the whole order discount must be 0 or 1",
+    "联系电话不能为空" => "Contact phone number cannot be empty",
+    "联系电话长度不能超过20个字符" => "Contact phone number cannot exceed 20 characters",
+    "联系电话不能超过20个字符" => "Contact phone number cannot exceed 20 characters",
 ];

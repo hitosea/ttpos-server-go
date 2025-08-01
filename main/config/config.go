@@ -156,18 +156,21 @@ func databaseConf(opt copier.Option) {
 
 func serverConf(opt copier.Option) {
 	Server = ServerConf{
-		Port:       "8080",
-		Mode:       "debug",
-		DeployMode: "cloud",
-		BrandName:  "TTPOS",
-		Domain:     "http://127.0.0.1:8080",
+		Port:           "8080",
+		Mode:           "debug",
+		DeployMode:     "cloud",
+		BrandName:      "TTPOS",
+		Domain:         "http://127.0.0.1:8080",
+		PaymentTimeout: 24 * 60 * 60, // 24小时
 	}
 	copier.CopyWithOption(&Server, ServerConf{
-		Port:       viper.GetString("SERVER_PORT"),
-		Mode:       viper.GetString("SERVER_MODE"),
-		DeployMode: viper.GetString("DEPLOY_MODE"),
-		BrandName:  viper.GetString("BRAND_NAME"),
-		Domain:     viper.GetString("DOMAIN"),
+		Port:           viper.GetString("SERVER_PORT"),
+		Mode:           viper.GetString("SERVER_MODE"),
+		DeployMode:     viper.GetString("DEPLOY_MODE"),
+		BrandName:      viper.GetString("BRAND_NAME"),
+		Domain:         viper.GetString("DOMAIN"),
+		MemberBaseUrl:  viper.GetString("MEMBER_BASE_URL"),
+		PaymentTimeout: viper.GetInt64("PAYMENT_TIMEOUT"),
 	}, opt)
 }
 
