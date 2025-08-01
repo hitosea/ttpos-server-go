@@ -26,15 +26,16 @@ var SourceTextMap = map[string]string{
 }
 
 const (
-	BrandA11500  = "A1-1500"  //不带打印机的 compax收银机器
-	BrandA11510P = "A2-1510P" //自带打印机的 compax收银机器
-	BrandT2      = "T2"       //自带打印机的 商米收银机器
-	BrandT2S     = "T2s"      //自带打印机的 商米收银机器
-	BrandD2S     = "D2s"      //自带打印机的 商米收银机器
-	BrandD2SPlus = "D2s_PLUS" //自带打印机的 商米收银机器
-	BrandT2MINIS = "T2mini_s" //自带打印机的 商米小屏收银机器
+	BrandA11500         = "A1-1500"           //不带打印机的 compax收银机器
+	BrandA11510P        = "A2-1510P"          //自带打印机的 compax收银机器
+	BrandT2             = "T2"                //自带打印机的 商米收银机器
+	BrandT2S            = "T2s"               //自带打印机的 商米收银机器
+	BrandD2S            = "D2s"               //自带打印机的 商米收银机器
+	BrandD2SPlus        = "D2s_PLUS"          //自带打印机的 商米收银机器
+	BrandD2sPlus2ndStgl = "D2s_PLUS_2nd_STGL" //自带打印机的 商米收银机器
+	BrandT2MINIS        = "T2mini_s"          //自带打印机的 商米小屏收银机器
 )
 
-var BrandsAll = []string{BrandA11500, BrandA11510P, BrandT2S, BrandT2MINIS, BrandT2, BrandD2SPlus} // 所有的机器
-var BrandsPrints = []string{BrandA11510P, BrandT2S, BrandT2MINIS, BrandT2, BrandD2SPlus, BrandD2S} // 所有带打印机的机器
-var SunmiAllPrints = []string{BrandT2, BrandT2S, BrandT2MINIS, BrandD2SPlus, BrandD2S}             // 商米所有带打印机的机器
+var BrandsAll = []string{BrandA11500, BrandA11510P, BrandT2S, BrandT2MINIS, BrandT2, BrandD2SPlus, BrandD2S, BrandD2sPlus2ndStgl} // 所有的机器
+var BrandsPrints = []string{BrandA11510P, BrandT2S, BrandT2MINIS, BrandT2, BrandD2SPlus, BrandD2S, BrandD2sPlus2ndStgl}           // 所有带打印机的机器
+var SunmiAllPrints = []string{BrandT2, BrandT2S, BrandT2MINIS, BrandD2SPlus, BrandD2S, BrandD2sPlus2ndStgl}                       // 商米所有带打印机的机器
