@@ -186,7 +186,7 @@
             <template #default="scope">
               <div>
                 <el-button @click="detailClick(scope.row)" type="primary" link size="small" v-auth="'/store/order/detail'">{{ $t('详情') }} </el-button>
-                <el-button v-if="scope.row.status == 5 || scope.row.status == 6" @click="contactClick(scope.row)" type="danger" link size="small"
+                <el-button v-if="scope.row.is_cell_contact_rider" @click="contactClick(scope.row)" type="danger" link size="small"
                   >{{ $t('联系骑手') }}
                 </el-button>
                 <el-button v-if="scope.row.extra.is_cell_refund" @click="refundClick(scope.row)" type="danger" link size="small" v-auth="'/store/takeout/refund'"
