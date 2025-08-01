@@ -72,7 +72,7 @@ help:
 	@printf "\033[1;32m"
 	@echo "🧹 清理命令"
 	@printf "\033[0m"
-	@printf "\033[1;33m  %-25s\033[0m - %s\n" "redis-clear-data" "清空Redis集群数据"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "redis-clear-data-node-conf" "清空Redis集群配置数据"
 	@echo ""
 	@printf "\033[1;35m"
 	@echo ""
@@ -149,7 +149,10 @@ add-version:
 	cd main && go run ./main.go version --version=$$NEW_VERSION --commit=$$CURRENT_COMMIT --build-time=$$CURRENT_DATE
 
 # 清空redis的cluster的data-*目录
-redis-clear-data:
+redis-clear-data-node-conf:
+	make down redis-node-1
+	make down redis-node-2
+	make down redis-node-3
 	rm -rf ./docker/redis/cluster/data-*
 
 # 检查env的DB_HOST是否等于 LOCAL_IP。等于的话 就执行 make mysql-open;
