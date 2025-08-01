@@ -19,10 +19,6 @@ import (
 
 var once_order_reverse_settle_event_handler sync.Once
 
-func init() {
-	orderReverseSettleEventHandler()
-}
-
 // orderReverseSettleEventHandler 订单"反结账"事件处理器
 func orderReverseSettleEventHandler() {
 	once_order_reverse_settle_event_handler.Do(func() {

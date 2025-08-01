@@ -19,12 +19,6 @@ import (
 
 var once_cook_finish_member_sale_order_event_handler sync.Once
 
-// init 自动注册"外送订单“备餐完成”事件处理器
-func init() {
-	// 只初始化一次
-	cookFinishMemberSaleOrderEventHandler()
-}
-
 // cookFinishMemberSaleOrderEventHandler "外送订单“备餐完成”事件处理器"
 func cookFinishMemberSaleOrderEventHandler() {
 	once_cook_finish_member_sale_order_event_handler.Do(func() {

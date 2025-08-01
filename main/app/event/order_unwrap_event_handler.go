@@ -17,12 +17,6 @@ import (
 
 var once_unwrap_sale_bill_event_handler sync.Once
 
-// init 自动注册事件处理器
-func init() {
-	// 只初始化一次
-	unwrapSaleBillEventHandler()
-}
-
 // unwrapSaleBillEventHandler "取消整单打包"事件处理器
 func unwrapSaleBillEventHandler() {
 	once_unwrap_sale_bill_event_handler.Do(func() {

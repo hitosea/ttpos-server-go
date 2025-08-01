@@ -17,13 +17,6 @@ import (
 )
 
 var once_create_member_sale_order_event_handler sync.Once
-
-// init 自动注册"创建外送订单"事件处理器
-func init() {
-	// 只初始化一次
-	createMemberSaleOrderEventHandler()
-}
-
 // createMemberSaleOrderEventHandler "创建外送订单"事件处理器
 func createMemberSaleOrderEventHandler() {
 	once_create_member_sale_order_event_handler.Do(func() {

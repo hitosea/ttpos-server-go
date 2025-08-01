@@ -17,10 +17,6 @@ import (
 
 var once_return_order_event_handler sync.Once
 
-func init() {
-	returnOrderEventHandler()
-}
-
 // returnOrderEventHandler 订单"退款"事件处理器
 func returnOrderEventHandler() {
 	once_return_order_event_handler.Do(func() {

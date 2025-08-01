@@ -17,12 +17,6 @@ import (
 
 var order_merge_desk_event_handler sync.Once
 
-// init 自动注册"添加销售账单记录"事件处理器
-func init() {
-	// 只初始化一次
-	mergeDeskEventHandler()
-}
-
 // mergeDeskEventHandler "并台"事件处理器
 func mergeDeskEventHandler() {
 	order_merge_desk_event_handler.Do(func() {

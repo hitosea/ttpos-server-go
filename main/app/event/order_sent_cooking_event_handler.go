@@ -22,12 +22,6 @@ import (
 
 var once_sent_cooking_event_handler sync.Once
 
-// init 自动注册"添加销售账单记录"事件处理器
-func init() {
-	// 只初始化一次
-	sentCookingEventHandler()
-}
-
 // sentCookingEventHandler "送厨"事件处理器
 func sentCookingEventHandler() {
 	once_sent_cooking_event_handler.Do(func() {

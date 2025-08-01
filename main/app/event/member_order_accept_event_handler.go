@@ -19,12 +19,6 @@ import (
 
 var once_accept_member_sale_order_event_handler sync.Once
 
-// init 自动注册"外送订单“商家接单”事件处理器
-func init() {
-	// 只初始化一次
-	acceptMemberSaleOrderEventHandler()
-}
-
 // acceptMemberSaleOrderEventHandler "外送订单“商家接单”事件处理器"
 func acceptMemberSaleOrderEventHandler() {
 	once_accept_member_sale_order_event_handler.Do(func() {

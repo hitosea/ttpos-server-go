@@ -16,13 +16,6 @@ import (
 )
 
 var once_show_sale_bill_event_handler sync.Once
-
-// init 自动注册事件处理器
-func init() {
-	// 只初始化一次
-	showSaleBillEventHandler()
-}
-
 // showSaleBillEventHandler "取单"事件处理器
 func showSaleBillEventHandler() {
 	once_show_sale_bill_event_handler.Do(func() {

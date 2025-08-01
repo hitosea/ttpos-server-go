@@ -17,12 +17,6 @@ import (
 
 var once_unwrap_sale_order_product_event_handler sync.Once
 
-// init 自动注册事件处理器
-func init() {
-	// 只初始化一次
-	unwrapSaleOrderProductEventHandler()
-}
-
 // unwrapSaleOrderProductEventHandler "取消打包"事件处理器
 func unwrapSaleOrderProductEventHandler() {
 	once_unwrap_sale_order_product_event_handler.Do(func() {

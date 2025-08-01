@@ -10,12 +10,6 @@ import (
 
 var once_change_member_balance_event_handler sync.Once
 
-// init 自动注册"会员余额变动"事件处理器
-func init() {
-	// 只初始化一次
-	changeMemberBalanceEventHandler()
-}
-
 // changeMemberBalanceEventHandler "会员余额变动"事件处理器
 func changeMemberBalanceEventHandler() {
 	once_change_member_balance_event_handler.Do(func() {

@@ -10,12 +10,6 @@ import (
 
 var once_change_member_points_event_handler sync.Once
 
-// init 自动注册"会员积分变动"事件处理器
-func init() {
-	// 只初始化一次
-	changeMemberPointsEventHandler()
-}
-
 // changeMemberPointsEventHandler "会员积分变动"事件处理器
 func changeMemberPointsEventHandler() {
 	once_change_member_points_event_handler.Do(func() {

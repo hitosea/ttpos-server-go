@@ -17,12 +17,6 @@ import (
 
 var once_cancel_order_event_handler sync.Once
 
-// init 自动注册"添加销售账单记录"事件处理器
-func init() {
-	// 只初始化一次
-	cancelOrderEventHandler()
-}
-
 // cancelOrderEventHandler "整单取消"事件处理器
 func cancelOrderEventHandler() {
 	once_cancel_order_event_handler.Do(func() {

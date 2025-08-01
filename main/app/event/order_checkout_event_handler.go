@@ -28,12 +28,6 @@ import (
 
 var once_checkout_sale_order_event_handler sync.Once
 
-// init 自动注册事件处理器
-func init() {
-	// 只初始化一次
-	checkoutSaleOrderEventHandler()
-}
-
 // checkoutSaleOrderEventHandler "结账"事件处理器
 func checkoutSaleOrderEventHandler() {
 	once_checkout_sale_order_event_handler.Do(func() {

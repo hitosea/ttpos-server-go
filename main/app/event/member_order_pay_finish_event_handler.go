@@ -21,12 +21,6 @@ import (
 
 var once_pay_finish_member_sale_order_event_handler sync.Once
 
-// init 自动注册事件处理器
-func init() {
-	// 只初始化一次
-	payFinishMemberSaleOrderEventHandler()
-}
-
 // payFinishMemberSaleOrderEventHandler "支付完成会员端销售订单"事件处理器
 func payFinishMemberSaleOrderEventHandler() {
 	once_pay_finish_member_sale_order_event_handler.Do(func() {

@@ -17,12 +17,6 @@ import (
 
 var once_change_desk_event_handler sync.Once
 
-// init 自动注册事件处理器
-func init() {
-	// 只初始化一次
-	changeDeskEventHandler()
-}
-
 // changeDeskEventHandler "转台"事件处理器
 func changeDeskEventHandler() {
 	once_change_desk_event_handler.Do(func() {

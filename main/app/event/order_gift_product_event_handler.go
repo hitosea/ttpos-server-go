@@ -17,12 +17,6 @@ import (
 
 var once_gift_sale_order_product_event_handler sync.Once
 
-// init 自动注册事件处理器
-func init() {
-	// 只初始化一次
-	giftSaleOrderProductEventHandler()
-}
-
 // giftSaleOrderProductEventHandler "赠菜"事件处理器
 func giftSaleOrderProductEventHandler() {
 	once_gift_sale_order_product_event_handler.Do(func() {

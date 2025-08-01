@@ -26,12 +26,6 @@ import (
 
 var once_rider_completed_member_sale_order_event_handler sync.Once
 
-// init 自动注册事件处理器
-func init() {
-	// 只初始化一次
-	riderCompletedMemberSaleOrderEventHandler()
-}
-
 // riderCompletedMemberSaleOrderEventHandler "骑手配送完成"事件处理器
 func riderCompletedMemberSaleOrderEventHandler() {
 	once_rider_completed_member_sale_order_event_handler.Do(func() {

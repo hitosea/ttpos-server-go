@@ -17,12 +17,6 @@ import (
 
 var once_cancel_sale_order_discount_event_handler sync.Once
 
-// init 自动注册事件处理器
-func init() {
-	// 只初始化一次
-	cancelSaleOrderDiscountEventHandler()
-}
-
 // cancelSaleOrderDiscountEventHandler "取消优惠折扣"事件处理器
 func cancelSaleOrderDiscountEventHandler() {
 	once_cancel_sale_order_discount_event_handler.Do(func() {

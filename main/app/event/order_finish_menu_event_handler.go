@@ -12,12 +12,6 @@ import (
 
 var once_finish_menu_event_handler sync.Once
 
-// init 自动注册"添加销售账单记录"事件处理器
-func init() {
-	// 只初始化一次
-	finishMenuEventHandler()
-}
-
 // finishMenuEventHandler "完成制作"事件处理器
 func finishMenuEventHandler() {
 	once_finish_menu_event_handler.Do(func() {
