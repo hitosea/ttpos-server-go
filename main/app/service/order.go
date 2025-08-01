@@ -9236,6 +9236,8 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 
 	// 取消积分抵扣
 	saleOrder.SetPayPointsCancel()
+	// 记录会员余额
+	saleOrder.SetMemberBalance()
 
 	updateSaleBill := false
 	// 如果销售账单中只有一个销售订单，则可以结束销售账单
