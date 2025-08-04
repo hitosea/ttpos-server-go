@@ -91,7 +91,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 	img.AppendSplitLine()
 	img.LineFeed(1)
 
-	if tmp == 2 {
+	if tmp == 2 || tmp == 3 {
 		img.SetTextLineHeight(50)
 	} else {
 		img.SetTextLineHeight(40)
@@ -106,7 +106,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 			}
 		}
 
-		if tmp == 2 {
+		if tmp == 2 || tmp == 3 {
 			if t.base.Lang == "my" {
 				img.SetTextLineHeight(75)
 			} else {
@@ -129,10 +129,10 @@ func (t *dishesImgTemplate) CompleteOrder(
 		// 打印产品名称和数量
 		totalNum := "x" + t.base.FloatToString(product.TotalNum)
 		productNameWidth := utils.IfInt(len(totalNum) >= 3, 470-(len(totalNum)*7), 480)
-		if tmp == 2 {
+		if tmp == 2 || tmp == 3 {
 			img.PrintInColumns(
 				pkg.ColumnConfig{Text: productName, Width: productNameWidth, Align: pkg.AlignLeft, FontWeight: 2, FontSize: 30},
-				pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: 42},
+				pkg.ColumnConfig{Text: totalNum, Width: 0, Align: pkg.AlignRight, FontWeight: 2, FontSize: 30, LineHeight: utils.IfInt(tmp == 3, 90, 42)},
 			)
 		} else {
 			img.PrintInColumns(
@@ -146,21 +146,19 @@ func (t *dishesImgTemplate) CompleteOrder(
 
 		// 分割处理属性
 		for _, attr := range product.ProductAttrList {
-			if t.base.Lang == "my" {
-				img.SetTextLineHeight(50)
+			if tmp == 3 {
+				img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 110, 100))
+				img.SetFontSize(28)
 			} else {
-				img.SetTextLineHeight(40)
+				img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 50, 40))
 			}
 			img.AppendText(attr.GetLocale(t.base.Lang))
-			img.LineFeed(1, 40)
+			img.LineFeed(1, utils.IfInt(tmp == 3, 100, 40))
+			img.SetFontSize(20)
 		}
 
 		if product.Remark != "" {
-			if t.base.IsMyText(product.Remark) {
-				img.SetTextLineHeight(68)
-			} else {
-				img.SetTextLineHeight(50)
-			}
+			img.SetTextLineHeight(utils.IfInt(t.base.IsMyText(product.Remark), 68, 50))
 			img.LineFeed(1, 12)
 			img.SetFontSize(28)
 			img.AppendText(product.Remark)
