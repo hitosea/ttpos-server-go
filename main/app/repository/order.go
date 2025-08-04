@@ -767,7 +767,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
 							Args: []any{
 								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-									return db.Order("product_attribute_uuid asc")
+									return db.Order("id asc")
 								}),
 							},
 						},
@@ -878,7 +878,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 							Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
 							Args: []any{
 								CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-									return db.Order("product_attribute_uuid asc")
+									return db.Order("id asc")
 								}),
 							},
 						},
@@ -986,7 +986,7 @@ func (r *orderRepo) GetOrderCartInfo(saleBillUuid uint64, opts ...OrderCartInfoO
 						Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
 						Args: []any{
 							CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-								return db.Order("product_attribute_uuid asc")
+								return db.Order("id asc")
 							}),
 						},
 					},
@@ -1434,7 +1434,7 @@ func (r *orderRepo) GetCacheSaleBillAllInfo(saleBillUuid uint64) (*model.SaleBil
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
 				Args: []any{
 					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-						return db.Order("product_attribute_uuid asc")
+						return db.Order("id asc")
 					}),
 				},
 			},
@@ -1825,7 +1825,7 @@ func (r *orderRepo) GetSaleBillAllInfo(saleBillUuid uint64, opts ...GetSaleBillA
 				Query: "SaleOrders.SaleOrderProducts.SaleOrderProductAttributes",
 				Args: []any{
 					CommonRepo.DBOption(func(db *gorm.DB) *gorm.DB {
-						return db.Order("product_attribute_uuid asc")
+						return db.Order("id asc")
 					}),
 				},
 			},
