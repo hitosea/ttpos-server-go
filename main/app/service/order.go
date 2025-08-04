@@ -5084,17 +5084,41 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 
 		// 构建属性信息
 		attributes := make([]model.Attribute, 0)
-		// 按照product.ProductPackageAttributeUuidList的顺序进行排序
+		// 将map转换为切片，然后按AttributeGroupUuid分组排序
 		productAttributeSlice := make([]*model.ProductPackageAttribute, 0, len(productAttributes))
-		// 创建uuid到productAttribute的映射
-		uuidToAttribute := make(map[uint64]*model.ProductPackageAttribute)
 		for _, productAttribute := range productAttributes {
-			uuidToAttribute[productAttribute.Uuid] = productAttribute
+			productAttributeSlice = append(productAttributeSlice, productAttribute)
 		}
-		// 按照ProductPackageAttributeUuidList的顺序构建切片
-		for _, uuid := range product.ProductPackageAttributeUuidList {
-			if attribute, exists := uuidToAttribute[uuid]; exists {
-				productAttributeSlice = append(productAttributeSlice, attribute)
+		if len(productAttributeSlice) > 0 {
+			// 按AttributeGroupUuid分组
+			groupMap := make(map[uint64][]*model.ProductPackageAttribute)
+			for _, attr := range productAttributeSlice {
+				groupUuid := attr.Attribute.AttributeGroupUuid
+				groupMap[groupUuid] = append(groupMap[groupUuid], attr)
+			}
+			// 对每个分组内的属性按Attribute.ID排序
+			for groupUuid, groupAttrs := range groupMap {
+				sort.Slice(groupAttrs, func(i, j int) bool {
+					return groupAttrs[i].ID < groupAttrs[j].ID
+				})
+				groupMap[groupUuid] = groupAttrs
+			}
+			// 获取所有分组，并按第一个分组的Attribute.ID排序
+			var groups [][]*model.ProductPackageAttribute
+			for _, groupAttrs := range groupMap {
+				groups = append(groups, groupAttrs)
+			}
+			// 按第一个分组的Attribute.ID排序分组
+			sort.Slice(groups, func(i, j int) bool {
+				if len(groups[i]) == 0 || len(groups[j]) == 0 {
+					return false
+				}
+				return groups[i][0].ID < groups[j][0].ID
+			})
+			// 合并所有分组
+			productAttributeSlice = productAttributeSlice[:0] // 清空原切片
+			for _, group := range groups {
+				productAttributeSlice = append(productAttributeSlice, group...)
 			}
 		}
 		for _, productAttribute := range productAttributeSlice {
