@@ -11,8 +11,8 @@ install:
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
 	@echo "🗄️  初始化php项目..."
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh init
-	@echo "🗄️  初始化takeout模块..."
-	cd takeout && make conf && make db_up.docker
+	@echo "🗄️  初始化中台模块..."
+	@cd ttpos-bmp && make conf && make migrate && make mid && make up
 	@echo "✅ 初始化完成"
 
 # 重新构建项目
@@ -52,8 +52,8 @@ migrate:
 	make check-db-host-open-mysql
 	@echo "🗄️  运行主项目数据库迁移..."
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think migrate:run
-	@echo "🚀 更新 takeout 模块数据库..."
-	@cd takeout && make conf && make db_up.docker
+	@echo "🚀 更新 中台 模块数据库..."
+	@cd ttpos-bmp && make conf && make db_up.docker
 	@echo "✅ 数据库迁移完成"
 
 # 生成文档

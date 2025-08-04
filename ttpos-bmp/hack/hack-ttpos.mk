@@ -64,3 +64,11 @@ run.erp:
 .PHONY: run.takeout
 run.takeout:
 	@cd app/ttpos-takeout && gf run main.go
+
+# 迁移升级所有应用的数据库
+.PHONY: migrate
+migrate:
+	@cd app/ttpos-takeout  && make db_up.docker
+	@cd app/ttpos-manager  && make db_up.docker
+	@cd app/ttpos-shop  && make db_up.docker
+	@cd app/ttpos-erp  && make db_up.docker

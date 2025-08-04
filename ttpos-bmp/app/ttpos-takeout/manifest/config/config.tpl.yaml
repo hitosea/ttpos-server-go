@@ -82,7 +82,7 @@ cache:
 # database/gredis/gredis_config.go:22
 redis:
   default:
-    address: "$REDIS_HOST:$REDIS_PORT"
+    address: "$REDIS_ADDRESSES"
     password: "$REDIS_PASSWORD"
     db: "$REDIS_DB"
-    cluster: false
+    cluster: true

@@ -31,6 +31,23 @@ for app_dir in ../app/*; do
         if [ -f "$tpl_file" ]; then
             # 执行复制操作
             cp "$tpl_file" "$target_file"
+            # 处理REDIS地址组合逻辑
+            if [ -n "$REDIS_CLUSTER_ANNOUNCE_IP" ] && [ -n "$REDIS_PORT" ]; then
+                # 分割端口列表
+                IFS=',' read -ra ports <<< "$REDIS_PORT"
+                addresses=()
+                for port in "${ports[@]}"; do
+                    # 清理端口前后空格
+                    port=$(echo "$port" | xargs)
+                    # 拼接IP和端口
+                    if [ -n "$port" ]; then
+                        addresses+=("$REDIS_CLUSTER_ANNOUNCE_IP:$port")
+                    fi
+                done
+                # 导出组合后的地址列表（供envsubst使用）
+                export REDIS_ADDRESSES=$(IFS=','; echo "${addresses[*]}")
+            fi
+
             envsubst < "$target_file" > "$target_file.tmp" && mv "$target_file.tmp" "$target_file"
             echo "成功复制配置文件：$tpl_file -> $target_file"
         else

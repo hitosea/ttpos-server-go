@@ -42,7 +42,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		// c.String(http.StatusOK, string(json))
 
 		// // rpc.TestConfirmOrder()
-		rpc.TestGetDriverInfo()
+		//rpc.TestGetDriverInfo()
 
 		// if err := rpc.TestCancelOrder(); err != nil {
 		// 	c.String(http.StatusInternalServerError, err.Error())

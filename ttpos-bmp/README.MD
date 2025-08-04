@@ -13,7 +13,7 @@
 
 ```shell
 go mod tidy
-#生成配置，依赖上级目录生成的 .env 文件
+#生成配置，依赖上级目录生成的 .env 文件, 每次.env 变更后执行
 make conf
 ```
 
@@ -77,14 +77,14 @@ ttpos-bmp/
 ## 部署步骤
 
 1. 确认.env 包含了外送/中台相关配置 ，参考 .env.example
-2. ttpos-bmp 目录下执行 make conf 重新生成 manifest/config/config.yaml，注意数据库配置，开发环境用的是root，生产测试环境根据情况改一下
+2. ttpos-bmp 目录下执行 make conf 重新生成各app下的 manifest/config/config.yaml，注意数据库配置，开发环境用的是root，生产测试环境根据情况改一下
 3. 服务端口目前使用,需要对外开放， 可根据部署情况调整
     - 管理 manager模块 14001:http 14002:grpc
     - 门店 shop 模块 14011:http 14012:grpc
     - erp 模块 14021:http 14022:grpc
     - 外送 takeout模块 14031:http 14032:grpc
 
-4. 如果有数据库变更,可以通过本工程 make db_up.docker 或者主工程的 make migrate 升级迁移数据库变更
+4. 如果有数据库变更,可以通过本各app下的 make db_up.docker 或者主工程的 make migrate 升级迁移数据库变更
 5. 构建容器
     - bmp-takeout: 执行 docker compose build bmp-takeout
     - bmp-manager: 执行 docker compose build bmp-manager
@@ -93,3 +93,4 @@ ttpos-bmp/
 6. 全量构建  docker compose build
 7. 检查容器部署时挂载生成好的 manifest/config/config.yaml 到容器的 的/app/config/config.yaml
 8. 启动容器检查日志，可通过 /api/v1/[模块名称]/hello 检查服务是否存活
+9. 修改 docker/nginx/conf.d/ttpos-bmp.conf 配置中对应模块的反向代理地址
