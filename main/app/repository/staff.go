@@ -16,11 +16,16 @@ type IStaffRepo interface {
 	WhereCashierOnline() DBOption           // 收银机在线条件
 	WhereDeviceId(bindKey string) DBOption  // 设备ID条件
 
+	WithRoles() DBOption // 关联角色
+
 	GetStaff(opts ...DBOption) (model.Staff, error) // 查询员工
 	GetStaffs(opts ...DBOption) []model.Staff       // 查询员工
 
-	CreateStaff(staff model.Staff) error           // 创建员工
-	Update(uuid uint64, vars map[string]any) error // 更新员工
+	PaginateGetStaffs(pageNo, pageSize int, opts ...DBOption) ([]model.Staff, int64, error) // 分页查询员工
+
+	CreateStaff(staff model.Staff) error                         // 创建员工
+	Update(uuid uint64, vars map[string]any) error               // 更新员工
+	UpdateStaffRoles(staffUuid uint64, roleUuids []uint64) error // 更新管理员角色
 }
 
 func NewStaffRepo(db *gorm.DB) IStaffRepo {
@@ -109,4 +114,36 @@ func (r *StaffRepo) WhereDeviceId(bindKey string) DBOption {
 
 func (r *StaffRepo) Update(uuid uint64, vars map[string]any) error {
 	return r.db.Model(&model.Staff{}).Where("uuid = ?", uuid).Updates(vars).Error
+}
+
+func (r *StaffRepo) PaginateGetStaffs(pageNo, pageSize int, opts ...DBOption) ([]model.Staff, int64, error) {
+	var staffs []model.Staff
+	var total int64
+	db := r.db.Model(&model.Staff{}).Debug().Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	db.Count(&total)
+	db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&staffs)
+	return staffs, total, nil
+}
+
+func (r *StaffRepo) WithRoles() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Roles")
+	}
+}
+
+func (r *StaffRepo) UpdateStaffRoles(staffUuid uint64, roleUuids []uint64) error {
+	// 删除此管理员和角色的关联
+	r.db.Model(&model.StaffRole{}).Where("staff_uuid = ?", staffUuid).Delete(&model.StaffRole{})
+
+	// 新增此管理员和角色的关联
+	for _, roleUuid := range roleUuids {
+		r.db.Model(&model.StaffRole{}).Create(&model.StaffRole{
+			StaffUuid: int64(staffUuid),
+			RoleUuid:  int64(roleUuid),
+		})
+	}
+	return nil
 }

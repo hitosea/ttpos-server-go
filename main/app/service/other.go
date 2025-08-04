@@ -14,8 +14,8 @@ import (
 
 type IOtherSrv interface {
 	Generate() (*resp.Captcha, error)
-	GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoodReasonResps, error)
-	GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFreeOrderReasonResps, error)
+	GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoodReasonResp, error)
+	GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFreeOrderReasonResp, error)
 }
 
 func NewOtherSrv(dbm *database.DBManager, cache cache.Cache) IOtherSrv {
@@ -47,7 +47,7 @@ func NewOtherSrvImpl(dbm *database.DBManager, cache cache.Cache) IOtherSrv {
 }
 
 // GetReturnFoodReasonList 获取退菜原因列表
-func (s *otherSrv) GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoodReasonResps, error) {
+func (s *otherSrv) GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoodReasonResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := base.NewReturnFoodReasonRepo(db)
 	list, err := productRepo.GetReturnFoodReasonList()
@@ -55,21 +55,21 @@ func (s *otherSrv) GetReturnFoodReasonList(ctx context.Context) (*resp.ReturnFoo
 		return nil, errors.WithMessage(err, "获取退菜原因列表失败")
 	}
 
-	result := make([]resp.ReturnFoodReasonResp, 0, len(list))
+	result := make([]resp.ReturnFoodReason, 0, len(list))
 	for _, item := range list {
-		result = append(result, resp.ReturnFoodReasonResp{
+		result = append(result, resp.ReturnFoodReason{
 			Uuid:       item.Uuid,
 			LocaleName: item.MultiLanguageName.GetNames(),
 		})
 	}
 
-	return &resp.ReturnFoodReasonResps{
+	return &resp.ReturnFoodReasonResp{
 		List: result,
 	}, nil
 }
 
 // GetGiftOrFreeReasonList 获取免单原因列表
-func (s *otherSrv) GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFreeOrderReasonResps, error) {
+func (s *otherSrv) GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFreeOrderReasonResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := base.NewGiftOrFreeOrderReasonRepo(db)
 	list, err := productRepo.GetGiftOrFreeOrderReasonList()
@@ -77,15 +77,15 @@ func (s *otherSrv) GetGiftOrFreeReasonList(ctx context.Context) (*resp.GiftOrFre
 		return nil, errors.WithMessage(err, "获取免单原因列表失败")
 	}
 
-	result := make([]resp.GiftOrFreeOrderReasonResp, 0, len(list))
+	result := make([]resp.GiftOrFreeOrderReason, 0, len(list))
 	for _, item := range list {
-		result = append(result, resp.GiftOrFreeOrderReasonResp{
+		result = append(result, resp.GiftOrFreeOrderReason{
 			Uuid:       item.Uuid,
 			LocaleName: item.MultiLanguageName.GetNames(),
 		})
 	}
 
-	return &resp.GiftOrFreeOrderReasonResps{
+	return &resp.GiftOrFreeOrderReasonResp{
 		List: result,
 	}, nil
 }

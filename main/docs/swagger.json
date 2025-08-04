@@ -2721,7 +2721,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.GiftOrFreeOrderReasonResps"
+                                            "$ref": "#/definitions/resp.GiftOrFreeOrderReasonResp"
                                         }
                                     }
                                 }
@@ -3433,7 +3433,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.ReturnFoodReasonResps"
+                                            "$ref": "#/definitions/resp.ReturnFoodReasonResp"
                                         }
                                     }
                                 }
@@ -6717,7 +6717,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.GiftOrFreeOrderReasonResps"
+                                            "$ref": "#/definitions/resp.GiftOrFreeOrderReasonResp"
                                         }
                                     }
                                 }
@@ -12430,7 +12430,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/resp.ReturnFoodReasonResps"
+                                            "$ref": "#/definitions/resp.ReturnFoodReasonResp"
                                         }
                                     }
                                 }
@@ -16788,6 +16788,45 @@
                 }
             }
         },
+        "/shop/change_password": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改密码",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.认证"
+                ],
+                "summary": "修改密码",
+                "parameters": [
+                    {
+                        "description": "修改密码参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ChangePasswordReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/login": {
             "post": {
                 "description": "登录",
@@ -18155,6 +18194,173 @@
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.SendMemberRechargeSMS"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/staff": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "管理员列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.管理员管理"
+                ],
+                "summary": "管理员列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.StaffListPaginationResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改管理员",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.管理员管理"
+                ],
+                "summary": "修改管理员",
+                "parameters": [
+                    {
+                        "description": "修改管理员请求",
+                        "name": "update_staff_req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UpdateStaffReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除员工",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.管理员管理"
+                ],
+                "summary": "删除员工",
+                "parameters": [
+                    {
+                        "description": "删除员工请求",
+                        "name": "delete_staff_req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeleteStaffReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/staff/status": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "设置启用禁用员工",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.管理员管理"
+                ],
+                "summary": "设置启用禁用员工",
+                "parameters": [
+                    {
+                        "description": "设置启用禁用员工请求",
+                        "name": "update_staff_status_req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UpdateStaffStatusReq"
                         }
                     }
                 ],
@@ -21967,6 +22173,28 @@
                 }
             }
         },
+        "req.ChangePasswordReq": {
+            "type": "object",
+            "required": [
+                "confirm_password",
+                "new_password",
+                "old_password"
+            ],
+            "properties": {
+                "confirm_password": {
+                    "description": "确认密码",
+                    "type": "string"
+                },
+                "new_password": {
+                    "description": "新密码，不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种",
+                    "type": "string"
+                },
+                "old_password": {
+                    "description": "旧密码",
+                    "type": "string"
+                }
+            }
+        },
         "req.CheckMemberPasswordReq": {
             "type": "object",
             "required": [
@@ -22040,6 +22268,18 @@
                 "sign": {
                     "description": "活动二维码sign",
                     "type": "string"
+                }
+            }
+        },
+        "req.DeleteStaffReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "员工ID",
+                    "type": "integer"
                 }
             }
         },
@@ -23550,6 +23790,70 @@
                         "0",
                         "1"
                     ]
+                }
+            }
+        },
+        "req.UpdateStaffReq": {
+            "type": "object",
+            "required": [
+                "phone",
+                "real_name",
+                "roles",
+                "username",
+                "uuid"
+            ],
+            "properties": {
+                "confirm_password": {
+                    "description": "确认密码",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "手机号",
+                    "type": "string"
+                },
+                "real_name": {
+                    "description": "姓名",
+                    "type": "string"
+                },
+                "roles": {
+                    "description": "角色ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "username": {
+                    "description": "账号，邮箱 邮箱格式",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "管理员ID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.UpdateStaffStatusReq": {
+            "type": "object",
+            "required": [
+                "status",
+                "uuid"
+            ],
+            "properties": {
+                "status": {
+                    "description": "状态 1:启用 0:禁用",
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        0
+                    ]
+                },
+                "uuid": {
+                    "description": "员工ID",
+                    "type": "integer"
                 }
             }
         },
@@ -25490,7 +25794,7 @@
                 }
             }
         },
-        "resp.GiftOrFreeOrderReasonResp": {
+        "resp.GiftOrFreeOrderReason": {
             "type": "object",
             "properties": {
                 "locale_name": {
@@ -25501,13 +25805,13 @@
                 }
             }
         },
-        "resp.GiftOrFreeOrderReasonResps": {
+        "resp.GiftOrFreeOrderReasonResp": {
             "type": "object",
             "properties": {
                 "list": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/resp.GiftOrFreeOrderReasonResp"
+                        "$ref": "#/definitions/resp.GiftOrFreeOrderReason"
                     }
                 }
             }
@@ -29460,7 +29764,7 @@
                 }
             }
         },
-        "resp.ReturnFoodReasonResp": {
+        "resp.ReturnFoodReason": {
             "type": "object",
             "properties": {
                 "locale_name": {
@@ -29471,13 +29775,13 @@
                 }
             }
         },
-        "resp.ReturnFoodReasonResps": {
+        "resp.ReturnFoodReasonResp": {
             "type": "object",
             "properties": {
                 "list": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/resp.ReturnFoodReasonResp"
+                        "$ref": "#/definitions/resp.ReturnFoodReason"
                     }
                 }
             }
@@ -29924,6 +30228,69 @@
                 },
                 "meta": {
                     "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.Staff": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "is_disable": {
+                    "description": "是否禁用",
+                    "type": "integer"
+                },
+                "is_super": {
+                    "description": "是否超级管理员",
+                    "type": "integer"
+                },
+                "real_name": {
+                    "description": "真实姓名",
+                    "type": "string"
+                },
+                "roles": {
+                    "description": "角色",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.StaffRole"
+                    }
+                },
+                "username": {
+                    "description": "用户名",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "自助餐UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.StaffListPaginationResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Staff"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "resp.StaffRole": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "角色名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "角色UUID",
+                    "type": "integer"
                 }
             }
         },

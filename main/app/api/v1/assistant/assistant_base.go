@@ -171,7 +171,7 @@ func (h *BaseHandler) GetPaymentMethodList(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.ReturnFoodReasonResps}
+// @Success 200 {object} dto.Response{data=resp.ReturnFoodReasonResp}
 // @Router /assistant/return_reason [get]
 func (h *BaseHandler) GetReturnReason(c *gin.Context) {
 	ctx := helper.GetContext(c)
@@ -190,7 +190,7 @@ func (h *BaseHandler) GetReturnReason(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @Success 200 {object} dto.Response{data=resp.GiftOrFreeOrderReasonResps}
+// @Success 200 {object} dto.Response{data=resp.GiftOrFreeOrderReasonResp}
 // @Router /assistant/free_or_gift_reason [get]
 func (h *BaseHandler) GetFreeOrGiftReason(c *gin.Context) {
 	ctx := helper.GetContext(c)

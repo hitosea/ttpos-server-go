@@ -41,6 +41,7 @@ type IAuthSrv interface {
 	GetOnlineCashiers(companyUuid uint64) resp.OnlineCashierList                                                           // 获取在线收银机
 	RefreshToken(ctx context.Context) (resp.LoginResp, error)                                                              // 刷新token
 	ShopBase(ctx context.Context) (resp.ShopBase, error)                                                                   // 移动管理端基本信息
+	ChangePassword(ctx context.Context, changePasswordReq req.ChangePasswordReq) error                                     // 移动管理端-修改密码
 }
 
 func NewAuthSrv(
@@ -735,6 +736,10 @@ func (s *authSrv) Auth(ctx context.Context, auth req.Authenticate) (model.Compan
 				return company, companySetting, staff, desk, errors.NewWithCode(constant.CodeFunctionDisabled, "当前尚未开启厨显功能，如有需要，请联系销售代表")
 			}
 		}
+	case constant.SourceShop: // 移动管理端
+		{
+			// TODO 操作日志，如果要记录日志，则需要映射商家后台的api_path
+		}
 	}
 	return company, companySetting, staff, desk, nil
 }
@@ -946,4 +951,24 @@ func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
 		Permissions: permissions,
 		Store:       storeSetting,
 	}, nil
+}
+
+// 修改密码
+func (s *authSrv) ChangePassword(ctx context.Context, changePasswordReq req.ChangePasswordReq) error {
+	if ctx.GetSource() != constant.SourceShop {
+		return errors.New("当前无权限，请联系管理员")
+	}
+	staff := ctx.GetStaff()
+	staffRepo := repository.NewStaffRepo(s.dbm.GetDB(staff.CompanyUuid))
+	staff, err := staffRepo.GetStaff(staffRepo.WhereUuid(staff.Uuid), staffRepo.WithCompany(), staffRepo.WithCompanySetting())
+	if err != nil {
+		return errors.WithMessage(err)
+	}
+	if staff.Password != utils.EncryptPassword(changePasswordReq.OldPassword) {
+		return errors.New("旧密码错误")
+	}
+	staff.Password = utils.EncryptPassword(changePasswordReq.NewPassword)
+	return staffRepo.Update(staff.Uuid, map[string]any{
+		"password": staff.Password,
+	})
 }
