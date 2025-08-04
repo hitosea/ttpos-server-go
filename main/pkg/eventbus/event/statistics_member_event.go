@@ -5,9 +5,6 @@ import (
 	"ttpos-server-go/pkg/utils"
 )
 
-// EventStatisticsMember 统计会员事件
-const EventStatisticsMember EventName = "Event_Statistics_Member"
-
 // StatisticsMemberPayload 每个事件有一个数据结构
 type StatisticsMemberPayload struct {
 	BasePayload

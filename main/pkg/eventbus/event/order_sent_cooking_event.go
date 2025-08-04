@@ -1,0 +1,50 @@
+package event
+
+import (
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/pkg/eventbus"
+	"ttpos-server-go/pkg/utils"
+)
+
+// SentCookingPayload 送厨事件数据结构
+type SentCookingPayload struct {
+	BasePayload
+	Products Products `json:"products"` // 用餐人数
+}
+
+// OrderProduct 订单商品
+type OrderProduct struct {
+	OrderProductId  uint64               `json:"order_product_id"` // 订单商品ID
+	ProductId       uint64               `json:"product_id"`       // 商品ID
+	ProductName     dto.LocaleResponse   `json:"product_name"`     // 商品名称
+	ProductAttr     dto.LocaleResponse   `json:"product_attr"`     // 商品属性, 包含规格、属性、小料
+	ProductAttrList []dto.LocaleResponse `json:"product_attrs"`    // 商品属性, 包含规格、属性、小料
+	TotalNum        float64              `json:"total_num"`        // 总数量
+	NumType         uint                 `json:"num_type"`         // 数量计算方法, 0-整数 1-小数
+	IsBuffet        bool                 `json:"is_buffet"`        // 是否自助餐
+	IsWrap          bool                 `json:"is_wrap"`          // 是否打包
+	Remark          string               `json:"remark"`           // 备注
+}
+
+// Products 送厨商品列表
+type Products []OrderProduct
+
+func (payload *SentCookingPayload) ToJsonString() string {
+	return utils.ToJson(payload)
+}
+
+// SentCookingHandler 送厨事件处理器
+type SentCookingHandler func(msg SentCookingPayload)
+
+// PublishSentCookingEvent 发布送厨事件
+func (system *SystemEventBus) PublishSentCookingEvent(msg SentCookingPayload) {
+	system.bus.Publish(eventbus.Event{Name: string(EventSentCooking), Payload: msg})
+}
+
+// SubscribeSentCookingEvent 订阅送厨事件
+func (system *SystemEventBus) SubscribeSentCookingEvent(handler SentCookingHandler) {
+	system.bus.Subscribe(string(EventSentCooking), func(event eventbus.Event) {
+		msg := event.Payload.(SentCookingPayload)
+		handler(msg)
+	})
+}

@@ -322,8 +322,8 @@ func (s *orderSrv) createInstantOrderSerialNo(ctx context.Context, db *gorm.DB) 
 		return serialNo, nil
 	}
 	createTime := saleBill.CreateTime
-	// TODO 选择商家的时区 判断账单的创建时间是不是今天
-	if !IsToday("Asia/Shanghai", createTime) {
+	setting := ctx.GetCompanySetting()
+	if !IsToday(setting.GetTimezone(), createTime) {
 		serialNo = "0001"
 	} else {
 		oldSerialNo := saleBill.SerialNo
@@ -9233,6 +9233,11 @@ func (s *orderSrv) InstantOrderFree(ctx context.Context, req req.InstantOrderFre
 
 	// 设置该销售订单为免单
 	saleOrder.SetFreeOrder(req.Reason, freeOrderReasons)
+
+	// 取消积分抵扣
+	saleOrder.SetPayPointsCancel()
+	// 记录会员余额
+	saleOrder.SetMemberBalance()
 
 	updateSaleBill := false
 	// 如果销售账单中只有一个销售订单，则可以结束销售账单

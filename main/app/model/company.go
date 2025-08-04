@@ -80,6 +80,13 @@ type CompanySetting struct {
 	DeliveryStatus   int    `gorm:"column:delivery_status;type:int(11);default:0;comment:外送配置状态：0-关,1-开;NOT NULL" json:"delivery_status"`
 }
 
+func (model *CompanySetting) GetTimezone() string {
+	if model.Timezone == "" {
+		return string(utils.ZH_TIMEZONE)
+	}
+	return model.Timezone
+}
+
 func (model *CompanySetting) GetCoordinates() (latitude, longitude string) {
 	if model.Coordinates == "" {
 		return

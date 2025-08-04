@@ -41,9 +41,10 @@ type MemberOrderManage struct {
 }
 
 type OrderListsExtra struct { // 通过当前数据控制按钮是否显示
-	IsCellReject bool `json:"is_cell_reject"` // 是否可拒单
-	IsCellRefund bool `json:"is_cell_refund"` // 是否可退款
-	IsCellCancel bool `json:"is_cell_cancel"` // 是否可取消
+	IsCellReject       bool `json:"is_cell_reject"`        // 是否可拒单
+	IsCellRefund       bool `json:"is_cell_refund"`        // 是否可退款
+	IsCellCancel       bool `json:"is_cell_cancel"`        // 是否可取消
+	IsCellContactRider bool `json:"is_cell_contact_rider"` // 是否可联系骑手
 }
 
 type ContactInfo struct {

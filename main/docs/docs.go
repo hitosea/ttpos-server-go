@@ -27355,6 +27355,10 @@ const docTemplate = `{
                     "description": "是否可取消",
                     "type": "boolean"
                 },
+                "is_cell_contact_rider": {
+                    "description": "是否可联系骑手",
+                    "type": "boolean"
+                },
                 "is_cell_refund": {
                     "description": "是否可退款",
                     "type": "boolean"
