@@ -1645,6 +1645,22 @@ definitions:
     - sale_bill_uuid
     - sale_order_uuid
     type: object
+  req.ChangePasswordReq:
+    properties:
+      confirm_password:
+        description: 确认密码
+        type: string
+      new_password:
+        description: 新密码，不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
+        type: string
+      old_password:
+        description: 旧密码
+        type: string
+    required:
+    - confirm_password
+    - new_password
+    - old_password
+    type: object
   req.CheckMemberPasswordReq:
     properties:
       member_uuid:
@@ -1697,6 +1713,14 @@ definitions:
         type: string
     required:
     - sign
+    type: object
+  req.DeleteStaffReq:
+    properties:
+      uuid:
+        description: 员工ID
+        type: integer
+    required:
+    - uuid
     type: object
   req.DeskBuffetCustomerType:
     properties:
@@ -2766,6 +2790,53 @@ definitions:
         type: string
     required:
     - is_auto_order
+    type: object
+  req.UpdateStaffReq:
+    properties:
+      confirm_password:
+        description: 确认密码
+        type: string
+      password:
+        description: 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
+        type: string
+      phone:
+        description: 手机号
+        type: string
+      real_name:
+        description: 姓名
+        type: string
+      roles:
+        description: 角色ID列表
+        items:
+          type: integer
+        type: array
+      username:
+        description: 账号，邮箱 邮箱格式
+        type: string
+      uuid:
+        description: 管理员ID
+        type: integer
+    required:
+    - phone
+    - real_name
+    - roles
+    - username
+    - uuid
+    type: object
+  req.UpdateStaffStatusReq:
+    properties:
+      status:
+        description: 状态 1:启用 0:禁用
+        enum:
+        - 1
+        - 0
+        type: integer
+      uuid:
+        description: 员工ID
+        type: integer
+    required:
+    - status
+    - uuid
     type: object
   req.UpdateSystemSetting:
     properties:
@@ -4063,18 +4134,18 @@ definitions:
         description: 剩余支付时间(单位秒)
         type: integer
     type: object
-  resp.GiftOrFreeOrderReasonResp:
+  resp.GiftOrFreeOrderReason:
     properties:
       locale_name:
         $ref: '#/definitions/dto.LocaleResponse'
       uuid:
         type: integer
     type: object
-  resp.GiftOrFreeOrderReasonResps:
+  resp.GiftOrFreeOrderReasonResp:
     properties:
       list:
         items:
-          $ref: '#/definitions/resp.GiftOrFreeOrderReasonResp'
+          $ref: '#/definitions/resp.GiftOrFreeOrderReason'
         type: array
     type: object
   resp.GroupList:
@@ -6715,18 +6786,18 @@ definitions:
         description: 剩余可退款金额
         type: number
     type: object
-  resp.ReturnFoodReasonResp:
+  resp.ReturnFoodReason:
     properties:
       locale_name:
         $ref: '#/definitions/dto.LocaleResponse'
       uuid:
         type: integer
     type: object
-  resp.ReturnFoodReasonResps:
+  resp.ReturnFoodReasonResp:
     properties:
       list:
         items:
-          $ref: '#/definitions/resp.ReturnFoodReasonResp'
+          $ref: '#/definitions/resp.ReturnFoodReason'
         type: array
     type: object
   resp.ReverseSettleRechargeOrderMemberInfo:
@@ -7024,6 +7095,50 @@ definitions:
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.Staff:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      is_disable:
+        description: 是否禁用
+        type: integer
+      is_super:
+        description: 是否超级管理员
+        type: integer
+      real_name:
+        description: 真实姓名
+        type: string
+      roles:
+        description: 角色
+        items:
+          $ref: '#/definitions/resp.StaffRole'
+        type: array
+      username:
+        description: 用户名
+        type: string
+      uuid:
+        description: 自助餐UUID
+        type: integer
+    type: object
+  resp.StaffListPaginationResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.Staff'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  resp.StaffRole:
+    properties:
+      name:
+        description: 角色名称
+        type: string
+      uuid:
+        description: 角色UUID
+        type: integer
     type: object
   resp.SystemSetting:
     properties:
@@ -9572,7 +9687,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.GiftOrFreeOrderReasonResps'
+                  $ref: '#/definitions/resp.GiftOrFreeOrderReasonResp'
               type: object
       security:
       - JwtToken: []
@@ -9989,7 +10104,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.ReturnFoodReasonResps'
+                  $ref: '#/definitions/resp.ReturnFoodReasonResp'
               type: object
       security:
       - JwtToken: []
@@ -11907,7 +12022,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.GiftOrFreeOrderReasonResps'
+                  $ref: '#/definitions/resp.GiftOrFreeOrderReasonResp'
               type: object
       security:
       - JwtToken: []
@@ -15267,7 +15382,7 @@ paths:
             - $ref: '#/definitions/dto.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/resp.ReturnFoodReasonResps'
+                  $ref: '#/definitions/resp.ReturnFoodReasonResp'
               type: object
       security:
       - JwtToken: []
@@ -17856,6 +17971,30 @@ paths:
       summary: 基本信息
       tags:
       - 移动管理端.基础信息
+  /shop/change_password:
+    post:
+      consumes:
+      - application/json
+      description: 修改密码
+      parameters:
+      - description: 修改密码参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ChangePasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 修改密码
+      tags:
+      - 移动管理端.认证
   /shop/login:
     post:
       consumes:
@@ -18699,6 +18838,107 @@ paths:
       summary: 发送会员充值短信
       tags:
       - 商家端.发送会员充值短信
+  /shop/staff:
+    delete:
+      consumes:
+      - application/json
+      description: 删除员工
+      parameters:
+      - description: 删除员工请求
+        in: body
+        name: delete_staff_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeleteStaffReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除员工
+      tags:
+      - 移动管理端.管理员管理
+    get:
+      consumes:
+      - application/json
+      description: 管理员列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.StaffListPaginationResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 管理员列表
+      tags:
+      - 移动管理端.管理员管理
+    post:
+      consumes:
+      - application/json
+      description: 修改管理员
+      parameters:
+      - description: 修改管理员请求
+        in: body
+        name: update_staff_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateStaffReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 修改管理员
+      tags:
+      - 移动管理端.管理员管理
+  /shop/staff/status:
+    post:
+      consumes:
+      - application/json
+      description: 设置启用禁用员工
+      parameters:
+      - description: 设置启用禁用员工请求
+        in: body
+        name: update_staff_status_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateStaffStatusReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 设置启用禁用员工
+      tags:
+      - 移动管理端.管理员管理
   /shop/statistics/7days:
     get:
       consumes:
