@@ -133,6 +133,7 @@
           </p>
           <h2 class="border-top">2024/05/04 14:15:12</h2>
         </template>
+
       </div>
     </template>
 
@@ -144,7 +145,7 @@
         <div @click="modeChange(2)" class="tabs-button" :class="mode == 2 ? 'tabs-active' : ''">
           {{ $t('模板2') }}
         </div>
-        <div @click="modeChange(3)" v-if="title != $t('整单打印') && title != $t('退菜单')" class="tabs-button" :class="mode == 3 ? 'tabs-active' : ''">
+        <div @click="modeChange(3)" v-if="title != $t('退菜单')" class="tabs-button" :class="mode == 3 ? 'tabs-active' : ''">
           {{ $t('模板3') }}
         </div>
         <div @click="modeChange(4)" v-if="title == $t('结账单') || title == $t('预结账单')" class="tabs-button" :class="mode == 4 ? 'tabs-active' : ''">
@@ -246,7 +247,7 @@
           <h4 class="mb-12" v-if="mode == 1">
             {{ $t('桌位: A01 (4人)') }}
           </h4>
-          <h3 v-if="mode == 2">
+          <h3 v-if="mode == 2 || mode == 3">
             {{ $t('桌位: A01 (4人)') }}
           </h3>
         </template>
@@ -299,6 +300,7 @@
                 items.font700 ? 'font-700' : '',
                 items.textCenter ? 'text-center' : '',
                 items.font16Bold ? 'font16Bold' : '',
+                items.lineHeight ? 'line-height-' + items.lineHeight : '',
               ]"
               v-html="items.name"
             >
@@ -319,6 +321,7 @@
                   items.font500 ? 'font-500' : '',
                   items.font700 ? 'font-700' : '',
                   items.textCenter ? 'text-center' : '',
+                  items.lineHeight ? 'line-height-' + items.lineHeight : '',
                 ]"
                 v-if="items.num"
               >
@@ -338,6 +341,7 @@
                   items.font500 ? 'font-500' : '',
                   items.font700 ? 'font-700' : '',
                   items.textCenter ? 'text-center' : '',
+                  items.lineHeight ? 'line-height-' + items.lineHeight : '',
                 ]"
               >
                 {{ items.label }}
@@ -438,7 +442,6 @@
         this.titleName = $t('桌位: ') + 'A01' + $t('（4人）');
       }
       if (this.title == $t('一菜一单')) {
-        this.details = previewData.four;
         this.dialogWidth = 2;
         this.storeShow = false;
       }
@@ -830,6 +833,9 @@
   .font-big {
     font-size: 18px;
     font-weight: 500;
+  }
+  .line-height-2-5 {
+    line-height: 2.5;
   }
 
   .font24 {
