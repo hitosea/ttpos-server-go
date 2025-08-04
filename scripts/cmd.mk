@@ -33,6 +33,7 @@ help:
 	@echo "🚀 项目管理命令"
 	@printf "\033[0m"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "install" "初始化项目（首次安装）"
+	@printf "\033[1;33m  %-25s\033[0m - %s\n" "install-bmp" "初始化中台模块"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "build" "重新构建项目"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "restart" "重启容器"
 	@printf "\033[1;33m  %-25s\033[0m - %s\n" "up" "启动Docker容器"
