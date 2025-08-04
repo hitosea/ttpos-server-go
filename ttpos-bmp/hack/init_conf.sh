@@ -33,6 +33,17 @@ for app_dir in ../app/*; do
             cp "$tpl_file" "$target_file"
             # 处理REDIS地址组合逻辑
             if [ -n "$REDIS_CLUSTER_ANNOUNCE_IP" ] && [ -n "$REDIS_PORT" ]; then
+                # 处理REDIS_CLUSTER_ANNOUNCE_IP为auto的情况
+                if [ "$REDIS_CLUSTER_ANNOUNCE_IP" = "auto" ]; then
+                    # 获取本地网卡IP，优先192.168.100开头
+                    local_ip=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep '^192\.168\.100\.' | head -n 1)
+                    # 如果没有找到192.168.100开头的IP，则取其他非本地回环地址
+                    if [ -z "$local_ip" ]; then
+                        local_ip=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '^127\.' | head -n 1)
+                    fi
+                    # 设置为获取到的IP
+                    export REDIS_CLUSTER_ANNOUNCE_IP="$local_ip"
+                fi
                 # 分割端口列表
                 IFS=',' read -ra ports <<< "$REDIS_PORT"
                 addresses=()
