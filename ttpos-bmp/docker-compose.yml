@@ -22,6 +22,8 @@ services:
     networks:
       bmp-network:
         ipv4_address: 10.0.10.40
+
+  # 门店管理服务 (预留)
   bmp-shop:
     container_name: "ttpos-bmp-shop-${APP_ID}"
     build:
@@ -44,6 +46,8 @@ services:
     networks:
       bmp-network:
         ipv4_address: 10.0.10.41
+
+  #erp管理模块
   bmp-erp:
     container_name: "ttpos-bmp-erp-${APP_ID}"
     build:
@@ -66,6 +70,8 @@ services:
     networks:
       bmp-network:
         ipv4_address: 10.0.10.42
+
+  #云平台管理模块
   bmp-manager:
     container_name: "ttpos-bmp-manager-${APP_ID}"
     build:
@@ -88,6 +94,7 @@ services:
     networks:
       bmp-network:
         ipv4_address: 10.0.10.43
+
 networks:
   bmp-network:
     driver: bridge

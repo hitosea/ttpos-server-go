@@ -19,7 +19,7 @@ services:
       bmp-mid-network:
         ipv4_address: 10.0.11.10
 
-  #rocketmq 服务
+  #以下是rocketmq 服务
   namesrv:
     image: apache/rocketmq:5.3.2
     container_name: "bmp-rmqnamesrv-${APP_ID}"
@@ -29,6 +29,7 @@ services:
       bmp-mid-network:
         ipv4_address: 10.0.11.40
     command: sh mqnamesrv
+
   broker:
     image: apache/rocketmq:5.3.2
     container_name: "bmp-rmqbroker-${APP_ID}"
@@ -44,6 +45,7 @@ services:
       bmp-mid-network:
         ipv4_address: 10.0.11.41
     command: sh mqbroker
+
   proxy:
     image: apache/rocketmq:5.3.2
     container_name: "bmp-rmqproxy-${APP_ID}"
