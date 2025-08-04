@@ -5084,7 +5084,15 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 
 		// 构建属性信息
 		attributes := make([]model.Attribute, 0)
+		// 将map转换为切片，然后根据productAttribute.ID进行排序
+		productAttributeSlice := make([]*model.ProductPackageAttribute, 0, len(productAttributes))
 		for _, productAttribute := range productAttributes {
+			productAttributeSlice = append(productAttributeSlice, productAttribute)
+		}
+		sort.Slice(productAttributeSlice, func(i, j int) bool {
+			return productAttributeSlice[i].Attribute.ID < productAttributeSlice[j].Attribute.ID
+		})
+		for _, productAttribute := range productAttributeSlice {
 			attribute := model.Attribute{
 				Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
 				ProductAttributeUuid: productAttribute.Attribute.Uuid,
