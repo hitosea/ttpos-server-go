@@ -322,8 +322,8 @@ func (s *orderSrv) createInstantOrderSerialNo(ctx context.Context, db *gorm.DB) 
 		return serialNo, nil
 	}
 	createTime := saleBill.CreateTime
-	// TODO 选择商家的时区 判断账单的创建时间是不是今天
-	if !IsToday("Asia/Shanghai", createTime) {
+	setting := ctx.GetCompanySetting()
+	if !IsToday(setting.GetTimezone(), createTime) {
 		serialNo = "0001"
 	} else {
 		oldSerialNo := saleBill.SerialNo
