@@ -189,102 +189,104 @@
       },
 
       handleCloseSelector(val) {
+ 
         this.open_selector = false;
 
         if (val == undefined) return;
 
-        const _newParentIds = val.map((item) => item.parent_id).filter((item, index, self) => self.indexOf(item) === index);
-        const _originalParentIds = this.parent_ids;
-        const _originalData = this.form.model.product_attr;
-        const needToDelete = _originalParentIds.filter((item) => !_newParentIds.includes(item));
-        needToDelete.map((item) => {
-          _originalData.splice(
-            _originalData.findIndex((originalItem) => originalItem.parent_id === item),
-            1
-          );
+        // 获取新选择的parent_id列表
+        const newSelectedParentIds = [];
+        val.forEach((item) => {
+          if (!newSelectedParentIds.includes(item.parent_id)) {
+            newSelectedParentIds.push(item.parent_id);
+          }
         });
 
-        // Create newData with the same order as _originalData
-        const newData = [];
-        // First, process existing parent_ids in their original order
-        for (const originalItem of _originalData) {
-          const parentId = originalItem.parent_id;
-          if (_newParentIds.includes(parentId)) {
-            const itemsWithParentId = val.filter((item) => item.parent_id === parentId);
-            const newItem = {
-              parent_id: parentId,
-              parent_name: itemsWithParentId[0].parent_attribute_name,
-              attribute_name: itemsWithParentId[0].parent_attribute_name,
-              attribute_value: itemsWithParentId.map((item) => item.attribute_name),
-              default_select: itemsWithParentId.map(() => 0),
-              attribute_ids: itemsWithParentId.map((item) => item.attribute_id),
-              attribute_max_select: 0,
-              attribute_open_max_select: 0,
-              attribute_required: 0,
-            };
-            newData.push(newItem);
+        // 获取原有的parent_id列表
+        const originalParentIds = this.form.model.product_attr.map((item) => item.parent_id);
+
+        // 找出需要删除的parent_id（原有的但新选择中没有的）
+        const toDelete = originalParentIds.filter((id) => !newSelectedParentIds.includes(id));
+
+        // 找出需要新增的parent_id（新选择中有但原有没有的）
+        const toAdd = newSelectedParentIds.filter((id) => !originalParentIds.includes(id));
+
+        // 第一步：删除不需要的属性（从后往前删除，避免索引问题）
+        for (let i = this.form.model.product_attr.length - 1; i >= 0; i--) {
+          if (toDelete.includes(this.form.model.product_attr[i].parent_id)) {
+            this.form.model.product_attr.splice(i, 1);
           }
         }
 
-        // 然后添加原数据中没有的parent_id
-        for (const parentId of _newParentIds) {
-          if (!newData.some((item) => item.parent_id === parentId)) {
-            const itemsWithParentId = val.filter((item) => item.parent_id === parentId);
-            const newItem = {
-              parent_id: parentId,
-              parent_name: itemsWithParentId[0].parent_attribute_name,
-              attribute_name: itemsWithParentId[0].parent_attribute_name,
-              attribute_value: itemsWithParentId.map((item) => item.attribute_name),
-              default_select: itemsWithParentId.map(() => 0),
-              attribute_ids: itemsWithParentId.map((item) => item.attribute_id),
-              attribute_max_select: 0,
-              attribute_open_max_select: 0,
-              attribute_required: 0,
-            };
-            newData.push(newItem);
-          }
-        }
-
-        // compare newData and _originalData
-        for (const newItem of newData) {
-          const originalGroupItem = _originalData.find((item) => item.parent_id === newItem.parent_id);
-          if (typeof originalGroupItem === 'undefined') continue;
-
-          newItem.attribute_required = Number(originalGroupItem.attribute_required || 0);
-          newItem.attribute_open_max_select = Number(originalGroupItem.attribute_open_max_select || 0);
-          newItem.attribute_max_select = Number(originalGroupItem.attribute_max_select || 0);
-
-          if (newItem.attribute_required === 1 && newItem.attribute_value.length === 0) {
-            newItem.attribute_required = 0;
-          }
-
-          if (newItem.attribute_open_max_select === 1) {
-            if (newItem.attribute_max_select > newItem.attribute_value.length) {
-              newItem.attribute_max_select = newItem.attribute_value.length;
-            }
-          } else {
-            newItem.attribute_max_select = 0;
-          }
-
-          if (originalGroupItem.default_select.some((item) => item !== 0)) {
-            const _ids = originalGroupItem.attribute_ids.filter((item, index) => originalGroupItem.default_select[index] === 1);
-
-            for (const id of _ids) {
-              const _index = newItem.attribute_ids.findIndex((item) => item === id);
-              if (_index !== -1) {
-                newItem.default_select[_index] = 1;
+        // 第二步：更新现有属性，但保持原有顺序
+        this.form.model.product_attr.forEach((existingItem) => {
+          const itemsWithParentId = val.filter((item) => item.parent_id === existingItem.parent_id);
+          if (itemsWithParentId.length > 0) {
+            // 获取新的属性ID集合
+            const newAttributeIds = itemsWithParentId.map((item) => item.attribute_id);
+            
+            // 保存原有状态
+            const oldAttributeIds = [...existingItem.attribute_ids];
+            const oldAttributeValues = [...existingItem.attribute_value];
+            const oldDefaultSelect = [...existingItem.default_select];
+            
+            // 按照原有顺序重新构建，保留存在的，添加新的
+            const updatedAttributeIds = [];
+            const updatedAttributeValues = [];
+            const updatedDefaultSelect = [];
+            
+            // 先保留原有顺序中还存在的
+            oldAttributeIds.forEach((oldId, oldIndex) => {
+              if (newAttributeIds.includes(oldId)) {
+                const newItem = itemsWithParentId.find((item) => item.attribute_id === oldId);
+                updatedAttributeIds.push(oldId);
+                updatedAttributeValues.push(newItem.attribute_name);
+                updatedDefaultSelect.push(oldDefaultSelect[oldIndex] || 0);
+              }
+            });
+            
+            // 然后添加新的（原来没有的）
+            newAttributeIds.forEach((newId) => {
+              if (!oldAttributeIds.includes(newId)) {
+                const newItem = itemsWithParentId.find((item) => item.attribute_id === newId);
+                updatedAttributeIds.push(newId);
+                updatedAttributeValues.push(newItem.attribute_name);
+                updatedDefaultSelect.push(0);
+              }
+            });
+            
+            // 更新到现有项
+            existingItem.attribute_ids = updatedAttributeIds;
+            existingItem.attribute_value = updatedAttributeValues;
+            existingItem.default_select = updatedDefaultSelect;
+            
+            // 验证最大选择数量
+            if (existingItem.attribute_open_max_select === 1) {
+              if (existingItem.attribute_max_select > existingItem.attribute_value.length) {
+                existingItem.attribute_max_select = existingItem.attribute_value.length;
               }
             }
           }
+        });
 
-          newData.splice(
-            newData.findIndex((item) => item.parent_id === newItem.parent_id),
-            1,
-            newItem
-          );
-        }
+        // 第三步：添加新的属性到数组末尾
+        toAdd.forEach((parentId) => {
+          const itemsWithParentId = val.filter((item) => item.parent_id === parentId);
+          
+          const newItem = {
+            parent_id: parentId,
+            parent_name: itemsWithParentId[0].parent_attribute_name,
+            attribute_name: itemsWithParentId[0].parent_attribute_name,
+            attribute_value: itemsWithParentId.map((item) => item.attribute_name),
+            default_select: itemsWithParentId.map(() => 0),
+            attribute_ids: itemsWithParentId.map((item) => item.attribute_id),
+            attribute_max_select: 0,
+            attribute_open_max_select: 0,
+            attribute_required: 0,
+          };
 
-        this.form.model.product_attr = newData;
+          this.form.model.product_attr.push(newItem);
+        });
       },
     },
   };
