@@ -70,5 +70,5 @@ run.takeout:
 migrate:
 	@cd app/ttpos-takeout  && make db_up.docker
 	#@cd app/ttpos-manager  && make db_up.docker
-	@cd app/ttpos-shop  && make db_up.docker
+	#@cd app/ttpos-shop  && make db_up.docker
 	#@cd app/ttpos-erp  && make db_up.docker
