@@ -5084,19 +5084,17 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 
 		// 构建属性信息
 		attributes := make([]model.Attribute, 0)
-		// 按照product.ProductPackageAttributeUuidList的顺序进行排序
+		// 将map转换为切片，然后先按AttributeGroupUuid分组，再按Attribute.ID进行排序
 		productAttributeSlice := make([]*model.ProductPackageAttribute, 0, len(productAttributes))
-		// 创建uuid到productAttribute的映射
-		uuidToAttribute := make(map[uint64]*model.ProductPackageAttribute)
 		for _, productAttribute := range productAttributes {
-			uuidToAttribute[productAttribute.Uuid] = productAttribute
+			productAttributeSlice = append(productAttributeSlice, productAttribute)
 		}
-		// 按照ProductPackageAttributeUuidList的顺序构建切片
-		for _, uuid := range product.ProductPackageAttributeUuidList {
-			if attribute, exists := uuidToAttribute[uuid]; exists {
-				productAttributeSlice = append(productAttributeSlice, attribute)
+		sort.Slice(productAttributeSlice, func(i, j int) bool {
+			if productAttributeSlice[i].Attribute.AttributeGroupUuid != productAttributeSlice[j].Attribute.AttributeGroupUuid {
+				return productAttributeSlice[i].Attribute.AttributeGroupUuid < productAttributeSlice[j].Attribute.AttributeGroupUuid
 			}
-		}
+			return productAttributeSlice[i].Attribute.ID < productAttributeSlice[j].Attribute.ID
+		})
 		for _, productAttribute := range productAttributeSlice {
 			attribute := model.Attribute{
 				Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
