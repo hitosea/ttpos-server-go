@@ -16748,6 +16748,127 @@
                 }
             }
         },
+        "/shop/base": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "基本信息",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.基础信息"
+                ],
+                "summary": "基本信息",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.ShopBase"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/login": {
+            "post": {
+                "description": "登录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.认证"
+                ],
+                "summary": "登录",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "验证码sign",
+                        "name": "X-SIGN",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "description": "登录参数",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.LoginReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.LoginResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/logout": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "退出登录",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.认证"
+                ],
+                "summary": "退出登录",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/shop/member_order/cancel": {
             "post": {
                 "security": [
@@ -17912,6 +18033,46 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/refresh_token": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "刷新token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.认证"
+                ],
+                "summary": "刷新token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.LoginResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -29618,6 +29779,34 @@
                 }
             }
         },
+        "resp.ShopBase": {
+            "type": "object",
+            "properties": {
+                "permissions": {
+                    "description": "权限",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Permission"
+                    }
+                },
+                "real_name": {
+                    "description": "员工真实姓名",
+                    "type": "string"
+                },
+                "store": {
+                    "description": "门店设置",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/setting.Store"
+                        }
+                    ]
+                },
+                "username": {
+                    "description": "员工账号",
+                    "type": "string"
+                }
+            }
+        },
         "resp.ShopCart": {
             "type": "object",
             "properties": {
@@ -30965,6 +31154,81 @@
                 }
             }
         },
+        "setting.Store": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "地址",
+                    "type": "string"
+                },
+                "auth_language": {
+                    "description": "授权语言",
+                    "type": "string"
+                },
+                "avatar_url": {
+                    "description": "默认头像",
+                    "type": "string"
+                },
+                "chain_number": {
+                    "description": "连锁编号",
+                    "type": "string"
+                },
+                "company": {
+                    "description": "公司名称",
+                    "type": "string"
+                },
+                "coordinates": {
+                    "description": "经纬度",
+                    "type": "string"
+                },
+                "ip_white_list": {
+                    "description": "ip白名单",
+                    "type": "string"
+                },
+                "language": {
+                    "description": "系统语言",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.LanguageItem"
+                    }
+                },
+                "logo_url": {
+                    "description": "商城logo",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "商城名称",
+                    "type": "string"
+                },
+                "no_clear_table": {
+                    "description": "结账后不清台 0-清台 1-不清台",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "联系电话",
+                    "type": "string"
+                },
+                "tax_number": {
+                    "description": "税号",
+                    "type": "string"
+                },
+                "time_zone": {
+                    "description": "时区",
+                    "type": "string"
+                },
+                "time_zone_list": {
+                    "description": "时区列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/setting.TimeZoneItem"
+                    }
+                },
+                "zeroing_method": {
+                    "description": "抹零方式: 0-不抹零 1-抹分 2-抹角 3-四舍五入到角 4-四舍五入到元",
+                    "type": "string"
+                }
+            }
+        },
         "setting.TabletResp": {
             "type": "object",
             "properties": {
@@ -31040,6 +31304,20 @@
                             "$ref": "#/definitions/setting.Server"
                         }
                     ]
+                }
+            }
+        },
+        "setting.TimeZoneItem": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
                 }
             }
         },

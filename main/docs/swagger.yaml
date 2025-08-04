@@ -6933,6 +6933,24 @@ definitions:
         - $ref: '#/definitions/resp.PrinterData'
         description: 打印数据
     type: object
+  resp.ShopBase:
+    properties:
+      permissions:
+        description: 权限
+        items:
+          $ref: '#/definitions/resp.Permission'
+        type: array
+      real_name:
+        description: 员工真实姓名
+        type: string
+      store:
+        allOf:
+        - $ref: '#/definitions/setting.Store'
+        description: 门店设置
+      username:
+        description: 员工账号
+        type: string
+    type: object
   resp.ShopCart:
     properties:
       buffet:
@@ -7844,6 +7862,61 @@ definitions:
         description: 端口号
         type: string
     type: object
+  setting.Store:
+    properties:
+      address:
+        description: 地址
+        type: string
+      auth_language:
+        description: 授权语言
+        type: string
+      avatar_url:
+        description: 默认头像
+        type: string
+      chain_number:
+        description: 连锁编号
+        type: string
+      company:
+        description: 公司名称
+        type: string
+      coordinates:
+        description: 经纬度
+        type: string
+      ip_white_list:
+        description: ip白名单
+        type: string
+      language:
+        description: 系统语言
+        items:
+          $ref: '#/definitions/dto.LanguageItem'
+        type: array
+      logo_url:
+        description: 商城logo
+        type: string
+      name:
+        description: 商城名称
+        type: string
+      no_clear_table:
+        description: 结账后不清台 0-清台 1-不清台
+        type: string
+      phone:
+        description: 联系电话
+        type: string
+      tax_number:
+        description: 税号
+        type: string
+      time_zone:
+        description: 时区
+        type: string
+      time_zone_list:
+        description: 时区列表
+        items:
+          $ref: '#/definitions/setting.TimeZoneItem'
+        type: array
+      zeroing_method:
+        description: '抹零方式: 0-不抹零 1-抹分 2-抹角 3-四舍五入到角 4-四舍五入到元'
+        type: string
+    type: object
   setting.TabletResp:
     properties:
       buffet_order_limit:
@@ -7894,6 +7967,15 @@ definitions:
         allOf:
         - $ref: '#/definitions/setting.Server'
         description: 平板服务器连接
+    type: object
+  setting.TimeZoneItem:
+    properties:
+      key:
+        type: string
+      name:
+        type: string
+      value:
+        type: string
     type: object
   setting.ZeroingMethodItem:
     properties:
@@ -17752,6 +17834,77 @@ paths:
       summary: 获取服务端公钥
       tags:
       - 通用
+  /shop/base:
+    get:
+      consumes:
+      - application/json
+      description: 基本信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopBase'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 基本信息
+      tags:
+      - 移动管理端.基础信息
+  /shop/login:
+    post:
+      consumes:
+      - application/json
+      description: 登录
+      parameters:
+      - description: 验证码sign
+        in: header
+        name: X-SIGN
+        required: true
+        type: string
+      - description: 登录参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.LoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      summary: 登录
+      tags:
+      - 移动管理端.认证
+  /shop/logout:
+    post:
+      consumes:
+      - application/json
+      description: 退出登录
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 退出登录
+      tags:
+      - 移动管理端.认证
   /shop/member_order/cancel:
     post:
       consumes:
@@ -18471,6 +18624,28 @@ paths:
       summary: 充值订单退款
       tags:
       - 商家端.充值订单
+  /shop/refresh_token:
+    get:
+      consumes:
+      - application/json
+      description: 刷新token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.LoginResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 刷新token
+      tags:
+      - 移动管理端.认证
   /shop/shift:
     post:
       consumes:

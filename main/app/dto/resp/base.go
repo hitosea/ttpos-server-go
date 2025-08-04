@@ -261,3 +261,10 @@ type ShiftSubmit struct {
 func (ss ShiftSubmit) MarshalBinary() ([]byte, error) {
 	return json.Marshal(ss)
 }
+
+type ShopBase struct {
+	RealName    string        `json:"real_name"`   // 员工真实姓名
+	Username    string        `json:"username"`    // 员工账号
+	Permissions []*Permission `json:"permissions"` // 权限
+	Store       setting.Store `json:"store"`       // 门店设置
+}
