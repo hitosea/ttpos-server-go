@@ -11,9 +11,13 @@ install:
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh up -d --build
 	@echo "🗄️  初始化php项目..."
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh init
+	@make install-bmp
+	@echo "✅ 初始化完成"
+
+# 初始化中台模块
+install-bmp:
 	@echo "🗄️  初始化中台模块..."
 	@cd ttpos-bmp && make conf && make migrate && make mid && make up
-	@echo "✅ 初始化完成"
 
 # 重新构建项目
 build:
@@ -25,6 +29,10 @@ build:
 	@echo "🗄️  运行数据库迁移..."
 	@make migrate
 	@echo "✅ 构建完成"
+
+# 生成文档
+build-doc:
+	cd main && go install github.com/swaggo/swag/cmd/swag@latest && ${HOME}/go/bin/swag init
 
 # 变更debug模式
 debug:
@@ -53,12 +61,9 @@ migrate:
 	@echo "🗄️  运行主项目数据库迁移..."
 	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think migrate:run
 	@echo "🚀 更新 中台 模块数据库..."
-	@cd ttpos-bmp && make conf && make db_up.docker
+	@cd ttpos-bmp && make conf && make migrate
 	@echo "✅ 数据库迁移完成"
 
-# 生成文档
-build-doc:
-	cd main && go install github.com/swaggo/swag/cmd/swag@latest && ${HOME}/go/bin/swag init
 
 # 重启容器
 restart:
