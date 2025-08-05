@@ -23,8 +23,36 @@ type Product struct {
 	AttributeGroups     ProductAttributeGroupList `json:"attribute_groups"`      // 商品属性组
 	Describe            string                    `json:"describe"`              // 卖点，h5端显示
 	IsShowKitchen       uint                      `json:"is_show_kitchen"`       // 是否在厨显端显示：1-是；0-否
+	// 套餐分组
+	PackageGroupList *ProductPackageGroupList `json:"package_group_list"`
 
 	Sort int `json:"-"` // 商品排序，内部字段，用于推荐商品列表排序
+
+}
+
+// ProductPackageGroupList 套餐分组列表
+type ProductPackageGroupList struct {
+	List []ProductPackageGroup `json:"list"`
+}
+
+// ProductPackageGroup 套餐分组
+type ProductPackageGroup struct {
+	Uuid       uint64             `json:"uuid"`        // 套餐分组UUID
+	LocaleName dto.LocaleResponse `json:"locale_name"` // 套餐分组名称
+	IsFull     bool               `json:"is_full"`     // 是否选满
+	Products   ProductList        `json:"products"`    // 套餐商品列表
+}
+
+// ProductList 商品列表
+type ProductList struct {
+	List []PackageProductDetail `json:"list"`
+	Num  int                    `json:"num"` // 套餐商品数量
+}
+
+// PackageProductDetail 套餐商品详情
+type PackageProductDetail struct {
+	Detail  Product `json:"detail"`   // 商品详情
+	CanEdit bool    `json:"can_edit"` // 是否可以编辑
 }
 
 // ProductFlavor 商品规格

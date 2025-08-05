@@ -7,6 +7,29 @@ type OrderCartProduct struct {
 	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
 }
 
+// OrderCartProductPackageAddReq 向购物车添加套餐请求参数
+type OrderCartProductPackageAddReq struct {
+	SaleBillUuid       uint64           `json:"sale_bill_uuid"`       // 销售账单UUID
+	SaleOrderUuid      uint64           `json:"sale_order_uuid"`      // 销售订单UUID
+	ProductPackageUuid uint64           `json:"product_package_uuid"` // 套餐UUID
+	Products           []ProductRequest `json:"products"`             // 套餐商品请求列表
+}
+
+// ProductRequest 套餐商品请求参数
+type ProductRequest struct {
+	ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"` // 套餐分组UUID
+	FlavorUuid              uint64   `json:"flavor_uuid"`                // 某个规格商品ID
+	AttributeUuidList       []uint64 `json:"attribute_uuid"`             // 属性ID列表
+	Num                     float64  `json:"num"`                        // 商品数量
+}
+
+type OrderCartProductFlavorAndAttributeReq struct {
+	SaleBillUuid         uint64 `json:"sale_bill_uuid"`          // 销售账单ID
+	SaleOrderUuid        uint64 `json:"sale_order_uuid"`         // 销售订单ID
+	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
+	ProductType          uint   `json:"product_type"`            // 商品类型 0-商品 1-套餐
+}
+
 // OrderCartProductAddReq 向购物车添加商品请求参数
 type OrderCartProductAddReq struct {
 	SaleBillUuid      uint64   `json:"sale_bill_uuid"`  // 销售账单ID。可选，参数不填时表示要新建销售账单，添加商品后创建点餐销售账单。
