@@ -1,9 +1,5 @@
 package model
 
-import (
-	"time"
-)
-
 // ProductPackageGroupItem 商品套餐组商品模型 `ttpos_product_package_group_item`
 type ProductPackageGroupItem struct {
 	Id                      uint64  `json:"id" gorm:"primaryKey;autoIncrement;comment:自增ID"`
