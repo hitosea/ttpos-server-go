@@ -111,7 +111,7 @@ func (h *BaseHandler) SendMemberRechargeSMS(c *gin.Context) {
 // GetBase 基本信息
 // @Summary 基本信息
 // @Description 基本信息
-// @Tags 移动管理端.基础信息
+// @Tags 商家端.基础信息
 // @Accept json
 // @Produce json
 // @Security JwtToken

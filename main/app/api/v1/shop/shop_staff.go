@@ -22,7 +22,7 @@ type StaffHandler struct {
 // GetStaff 管理员列表
 // @Summary 管理员列表
 // @Description 管理员列表
-// @Tags 移动管理端.管理员管理
+// @Tags 商家端.管理员管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -48,7 +48,7 @@ func (h *StaffHandler) GetStaff(c *gin.Context) {
 // UpdateStaff 修改管理员
 // @Summary 修改管理员
 // @Description 修改管理员
-// @Tags 移动管理端.管理员管理
+// @Tags 商家端.管理员管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -73,7 +73,7 @@ func (h *StaffHandler) UpdateStaff(c *gin.Context) {
 // UpdateStaffStatus 设置启用禁用员工
 // @Summary 设置启用禁用员工
 // @Description 设置启用禁用员工
-// @Tags 移动管理端.管理员管理
+// @Tags 商家端.管理员管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -98,7 +98,7 @@ func (h *StaffHandler) UpdateStaffStatus(c *gin.Context) {
 // DeleteStaff 删除员工
 // @Summary 删除员工
 // @Description 删除员工
-// @Tags 移动管理端.管理员管理
+// @Tags 商家端.管理员管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -123,7 +123,7 @@ func (h *StaffHandler) DeleteStaff(c *gin.Context) {
 // AddStaff 添加管理员
 // @Summary 添加管理员
 // @Description 添加管理员
-// @Tags 移动管理端.管理员管理
+// @Tags 商家端.管理员管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -148,7 +148,7 @@ func (h *StaffHandler) AddStaff(c *gin.Context) {
 // GetRoleList 获取角色列表
 // @Summary 获取角色列表
 // @Description 获取角色列表
-// @Tags 移动管理端.管理员管理
+// @Tags 商家端.管理员管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -174,7 +174,7 @@ func (h *StaffHandler) GetRoleList(c *gin.Context) {
 // AddRole 添加角色
 // @Summary 添加角色
 // @Description 添加角色
-// @Tags 移动管理端.管理员管理
+// @Tags 商家端.管理员管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -199,7 +199,7 @@ func (h *StaffHandler) AddRole(c *gin.Context) {
 // UpdateRole 修改角色
 // @Summary 修改角色
 // @Description 修改角色
-// @Tags 移动管理端.管理员管理
+// @Tags 商家端.管理员管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -224,7 +224,7 @@ func (h *StaffHandler) UpdateRole(c *gin.Context) {
 // DeleteRole 删除角色
 // @Summary 删除角色
 // @Description 删除角色
-// @Tags 移动管理端.管理员管理
+// @Tags 商家端.管理员管理
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -249,7 +249,7 @@ func (h *StaffHandler) DeleteRole(c *gin.Context) {
 // GetRoleAccess 获取角色权限
 // @Summary 获取角色权限
 // @Description 获取角色权限
-// @Tags 移动管理端.管理员管理
+// @Tags 商家端.管理员管理
 // @Accept json
 // @Produce json
 // @Security JwtToken

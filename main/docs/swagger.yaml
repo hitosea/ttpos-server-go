@@ -18076,7 +18076,7 @@ paths:
       - JwtToken: []
       summary: 基本信息
       tags:
-      - 移动管理端.基础信息
+      - 商家端.基础信息
   /shop/change_password:
     post:
       consumes:
@@ -18100,7 +18100,7 @@ paths:
       - JwtToken: []
       summary: 修改密码
       tags:
-      - 移动管理端.认证
+      - 商家端.认证
   /shop/login:
     post:
       consumes:
@@ -18132,7 +18132,7 @@ paths:
               type: object
       summary: 登录
       tags:
-      - 移动管理端.认证
+      - 商家端.认证
   /shop/logout:
     post:
       consumes:
@@ -18149,7 +18149,7 @@ paths:
       - JwtToken: []
       summary: 退出登录
       tags:
-      - 移动管理端.认证
+      - 商家端.认证
   /shop/member_order/cancel:
     post:
       consumes:
@@ -18890,7 +18890,7 @@ paths:
       - JwtToken: []
       summary: 刷新token
       tags:
-      - 移动管理端.认证
+      - 商家端.认证
   /shop/role:
     delete:
       consumes:
@@ -18914,7 +18914,7 @@ paths:
       - JwtToken: []
       summary: 删除角色
       tags:
-      - 移动管理端.管理员管理
+      - 商家端.管理员管理
     get:
       consumes:
       - application/json
@@ -18944,7 +18944,7 @@ paths:
       - JwtToken: []
       summary: 获取角色列表
       tags:
-      - 移动管理端.管理员管理
+      - 商家端.管理员管理
   /shop/role/add:
     post:
       consumes:
@@ -18968,7 +18968,7 @@ paths:
       - JwtToken: []
       summary: 添加角色
       tags:
-      - 移动管理端.管理员管理
+      - 商家端.管理员管理
   /shop/role/update:
     post:
       consumes:
@@ -18992,7 +18992,7 @@ paths:
       - JwtToken: []
       summary: 修改角色
       tags:
-      - 移动管理端.管理员管理
+      - 商家端.管理员管理
   /shop/role_access:
     get:
       consumes:
@@ -19020,7 +19020,7 @@ paths:
       - JwtToken: []
       summary: 获取角色权限
       tags:
-      - 移动管理端.管理员管理
+      - 商家端.管理员管理
   /shop/shift:
     post:
       consumes:
@@ -19097,7 +19097,7 @@ paths:
       - JwtToken: []
       summary: 删除员工
       tags:
-      - 移动管理端.管理员管理
+      - 商家端.管理员管理
     get:
       consumes:
       - application/json
@@ -19127,7 +19127,7 @@ paths:
       - JwtToken: []
       summary: 管理员列表
       tags:
-      - 移动管理端.管理员管理
+      - 商家端.管理员管理
   /shop/staff/add:
     post:
       consumes:
@@ -19151,7 +19151,7 @@ paths:
       - JwtToken: []
       summary: 添加管理员
       tags:
-      - 移动管理端.管理员管理
+      - 商家端.管理员管理
   /shop/staff/status:
     post:
       consumes:
@@ -19175,7 +19175,7 @@ paths:
       - JwtToken: []
       summary: 设置启用禁用员工
       tags:
-      - 移动管理端.管理员管理
+      - 商家端.管理员管理
   /shop/staff/update:
     post:
       consumes:
@@ -19199,7 +19199,7 @@ paths:
       - JwtToken: []
       summary: 修改管理员
       tags:
-      - 移动管理端.管理员管理
+      - 商家端.管理员管理
   /shop/statistics/7days:
     get:
       consumes:

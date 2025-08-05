@@ -16769,7 +16769,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.基础信息"
+                    "商家端.基础信息"
                 ],
                 "summary": "基本信息",
                 "responses": {
@@ -16809,7 +16809,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.认证"
+                    "商家端.认证"
                 ],
                 "summary": "修改密码",
                 "parameters": [
@@ -16843,7 +16843,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.认证"
+                    "商家端.认证"
                 ],
                 "summary": "登录",
                 "parameters": [
@@ -16901,7 +16901,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.认证"
+                    "商家端.认证"
                 ],
                 "summary": "退出登录",
                 "responses": {
@@ -18098,7 +18098,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.认证"
+                    "商家端.认证"
                 ],
                 "summary": "刷新token",
                 "responses": {
@@ -18138,7 +18138,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.管理员管理"
+                    "商家端.管理员管理"
                 ],
                 "summary": "获取角色列表",
                 "parameters": [
@@ -18190,7 +18190,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.管理员管理"
+                    "商家端.管理员管理"
                 ],
                 "summary": "删除角色",
                 "parameters": [
@@ -18229,7 +18229,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.管理员管理"
+                    "商家端.管理员管理"
                 ],
                 "summary": "添加角色",
                 "parameters": [
@@ -18268,7 +18268,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.管理员管理"
+                    "商家端.管理员管理"
                 ],
                 "summary": "修改角色",
                 "parameters": [
@@ -18307,7 +18307,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.管理员管理"
+                    "商家端.管理员管理"
                 ],
                 "summary": "获取角色权限",
                 "parameters": [
@@ -18446,7 +18446,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.管理员管理"
+                    "商家端.管理员管理"
                 ],
                 "summary": "管理员列表",
                 "parameters": [
@@ -18498,7 +18498,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.管理员管理"
+                    "商家端.管理员管理"
                 ],
                 "summary": "删除员工",
                 "parameters": [
@@ -18537,7 +18537,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.管理员管理"
+                    "商家端.管理员管理"
                 ],
                 "summary": "添加管理员",
                 "parameters": [
@@ -18576,7 +18576,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.管理员管理"
+                    "商家端.管理员管理"
                 ],
                 "summary": "设置启用禁用员工",
                 "parameters": [
@@ -18615,7 +18615,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "移动管理端.管理员管理"
+                    "商家端.管理员管理"
                 ],
                 "summary": "修改管理员",
                 "parameters": [

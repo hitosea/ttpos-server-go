@@ -25,7 +25,7 @@ type AuthHandler struct {
 // Login 登录
 // @Summary 登录
 // @Description 登录
-// @Tags 移动管理端.认证
+// @Tags 商家端.认证
 // @Accept json
 // @Produce json
 // @Param X-SIGN header string true "验证码sign"
@@ -59,7 +59,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // RefreshToken 刷新token
 // @Summary 刷新token
 // @Description 刷新token
-// @Tags 移动管理端.认证
+// @Tags 商家端.认证
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -81,7 +81,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 // Logout 退出登录
 // @Summary 退出登录
 // @Description 退出登录
-// @Tags 移动管理端.认证
+// @Tags 商家端.认证
 // @Accept json
 // @Produce json
 // @Security JwtToken
@@ -100,7 +100,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 // ChangePassword 修改密码
 // @Summary 修改密码
 // @Description 修改密码
-// @Tags 移动管理端.认证
+// @Tags 商家端.认证
 // @Accept json
 // @Produce json
 // @Security JwtToken
