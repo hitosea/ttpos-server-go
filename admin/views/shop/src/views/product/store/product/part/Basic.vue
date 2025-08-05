@@ -10,13 +10,14 @@
     <el-form-item :label="$t('类型：')" v-if="baseSale == '1'">
       <el-radio-group v-model="form.model.type" :disabled="disableChangeType" @change="changeType">
         <el-radio :value="10">{{ $t('成品') }}</el-radio>
+        <el-radio :value="30">{{ $t('套餐') }}</el-radio>
         <el-radio :value="20">{{ $t('材料') }}</el-radio>
       </el-radio-group>
     </el-form-item>
 
     <UniqueNameForm
       ref="uniqueNameFormRef"
-      :labelPrefix="$t('商品名称')"
+      :labelPrefix="form.model.type == 30 ? $t('套餐名称') : $t('商品名称')"
       apiSource="product"
       width="460px"
       :maxlength="150"
@@ -65,6 +66,10 @@
       :rules="[{ validator: uniqueNameValidator('product_img', formData.model.product_id, 'SINGLE', undefined, false), trigger: 'blur' }]"
     >
       <el-input type="text" :placeholder="$t('请输入图片名称')" v-model="form.model.img_name" :maxlength="50" class="max-w460"></el-input>
+    </el-form-item>
+
+    <el-form-item for="no_click" :label="$t('套餐价格：')" prop="model.package_price" v-if="form.model.type == 30" :rules="[{ required: true, message: $t('请输入套餐价格') }]">
+      <numInput type="text" :placeholder="$t('请输入套餐价格')" v-model="form.model.package_price" :maxlength="50" class="max-w460"></numInput>
     </el-form-item>
 
     <!--商品图片组件-->

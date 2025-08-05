@@ -5,16 +5,19 @@
       <!--基础信息-->
       <div class="product-form-flex">
         <Basic ref="BasicRef" @validateField="validateField" disableChangeType></Basic>
+
         <!--规格设置-->
-        <Spec></Spec>
+        <Spec v-if="form.model.type != 30"></Spec>
+
+        <!--套餐设置-->
+        <Package v-if="form.model.type == 30"></Package>
 
         <!-- 属性设置-->
         <Attr ref="AttrRef" v-if="form.model.type == 10" @validateField="validateField"></Attr>
 
         <!-- 加料设置-->
         <Ingredients ref="IngredientsRef" v-if="form.model.type == 10" @validateField="validateField"></Ingredients>
-        <!--商品详情-->
-        <!-- <Content></Content> -->
+
         <!--高级设置-->
         <Buyset></Buyset>
       </div>
@@ -66,12 +69,11 @@
   import Attr from './part/Attr.vue';
   import Ingredients from './part/Ingredients.vue';
   import Spec from './part/Spec.vue';
-  // import Content from './part/Content.vue';
+  import Package from './part/Package.vue';
   import Buyset from './part/Buyset.vue';
   import { languageStore } from '@/store/model/language.js';
   import { useUserStore } from '@/store/index';
   import { formatModel } from '@/utils/base.js';
-  import IndexApi from '@/api/index.js';
 
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
@@ -101,6 +103,8 @@
       // Content,
       /*高级设置*/
       Buyset,
+      /*套餐设置*/
+      Package,
     },
     data() {
       return {

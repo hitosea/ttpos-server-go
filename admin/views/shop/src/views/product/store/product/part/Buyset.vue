@@ -1,17 +1,5 @@
 <template>
-  <!--
-
-    	时间：2019-10-26
-    	描述：商品管理-商品编辑-高级设置
-    -->
   <div class="buy-set-content">
-    <!-- <div class="common-form">积分设置</div>
-    <el-form-item for="no_click"  label="是否开启积分赠送：">
-      <el-radio-group v-model="form.model.is_points_gift">
-        <el-radio :label="1">开启</el-radio>
-        <el-radio :label="0">关闭</el-radio>
-      </el-radio-group>
-    </el-form-item> -->
     <!--其他设置-->
     <div class="common-form mt50">{{ $t('其他设置') }}</div>
     <el-form-item
@@ -27,7 +15,7 @@
       </el-radio-group>
     </el-form-item>
 
-    <template v-for="(item, index) in form.model.productTaxes" v-if="userInfo.isOpenTax == '1' && form.model.type == 10">
+    <template v-for="(item, index) in form.model.productTaxes" v-if="userInfo.isOpenTax == '1' && (form.model.type == 10 || form.model.type == 30)">
       <el-form-item
         for="no_click"
         :label="returnType(item.product_tax_type)"
@@ -61,7 +49,7 @@
 
     <el-form-item
       for="no_click"
-      v-if="form.model.type == 10"
+      v-if="form.model.type == 10 || form.model.type == 30"
       :label="$t('显示：')"
       :rules="[
         {
@@ -114,11 +102,11 @@
       />
     </el-form-item>
 
-    <el-form-item v-if="form.model.type == 10" for="no_click" :label="$t('商品排序：')">
+    <el-form-item v-if="form.model.type == 10 || form.model.type == 30" for="no_click" :label="$t('商品排序：')">
       <el-input-number :controls="false" :min="0" :max="999" :placeholder="$t('接近0，排序等级越高')" v-model="form.model.product_sort" class="max-w460"></el-input-number>
     </el-form-item>
 
-    <el-form-item for="no_click" :label="$t('限购数量：')" v-if="form.model.type == 10">
+    <el-form-item for="no_click" :label="$t('限购数量：')" v-if="form.model.type == 10 || form.model.type == 30">
       <el-input-number :controls="false" :min="0" :max="999" v-model="form.model.limit_num" class="max-w460"></el-input-number>
       <div class="gray9">{{ $t('每单/每桌购买的最大数量，0为不限购') }}</div>
     </el-form-item>
@@ -138,7 +126,7 @@
         <el-input type="textarea" :placeholder="$t('请输入商品卖点')" v-model="form.model.selling_point" show-word-limit :maxlength="50" class="max-w460"></el-input>
       </el-form-item>
 
-      <el-form-item for="no_click" :label="$t('供应商：')" v-if="baseSale == '1'">
+      <el-form-item for="no_click" :label="$t('供应商：')" v-if="baseSale == '1' && form.model.type != 30">
         <el-select v-model="form.model.erp_supplier_id" filterable clearable class="max-w460" size="default" :placeholder="$t('请选择供应商')">
           <template v-for="item in supplierList" :key="item.id">
             <el-option :value="item.id" :label="item.name"></el-option>
@@ -167,7 +155,7 @@
       >
     </el-form-item>
     <!--会员折扣设置-->
-    <template v-if="form.model.type == 10 && is_open_member == '1'">
+    <template v-if="(form.model.type == 10 || form.model.type == 30) && is_open_member == '1'">
       <div class="common-form mt50">{{ $t('会员折扣设置') }}</div>
       <el-form-item for="no_click" :label="$t('是否开启会员折扣：')">
         <el-radio-group v-model="form.model.is_enable_grade">
@@ -227,7 +215,7 @@
       </el-form-item>
     </template>
 
-    <template v-if="form.model.type == 10">
+    <template v-if="form.model.type == 10 || form.model.type == 30">
       <!--整单折扣-->
       <div class="common-form mt50">{{ $t('整单折扣') }}</div>
       <el-form-item for="no_click" :label="$t('开启整单折扣：')" prop="model.open_overall_discount" :rules="[{ required: true, message: $t('请选择是否开启整单折扣') }]">

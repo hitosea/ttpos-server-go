@@ -7,7 +7,10 @@
         <Basic ref="BasicRef" @validateField="validateField"></Basic>
 
         <!--规格设置-->
-        <Spec></Spec>
+        <Spec v-if="form.model.type != 30"></Spec>
+
+        <!--套餐设置-->
+        <Package v-if="form.model.type == 30"></Package>
 
         <!-- 属性设置-->
         <Attr ref="AttrRef" v-if="form.model.type == 10" @validateField="validateField"></Attr>
@@ -15,13 +18,9 @@
         <!-- 加料设置-->
         <Ingredients ref="IngredientsRef" v-if="form.model.type == 10" @validateField="validateField"></Ingredients>
 
-        <!--商品详情-->
-        <!-- <Content></Content> -->
-
         <!--高级设置-->
         <Buyset></Buyset>
       </div>
-
       <!--提交-->
       <div class="common-button-wrapper">
         <el-button size="small" @click="() => cancelFunc(1)">{{ $t('取消') }}</el-button>
@@ -40,7 +39,7 @@
   import Attr from './part/Attr.vue';
   import Ingredients from './part/Ingredients.vue';
   import Spec from './part/Spec.vue';
-  // import Content from './part/Content.vue';
+  import Package from './part/Package.vue';
   import Buyset from './part/Buyset.vue';
   import { languageStore } from '@/store/model/language.js';
   import { EEUIRELOAD } from '@/utils/platform.js';
@@ -68,6 +67,8 @@
       // Content,
       /*高级设置*/
       Buyset,
+      /*套餐设置*/
+      Package,
     },
     data() {
       return {
@@ -180,6 +181,22 @@
               },
             ],
             open_overall_discount: 1, //整单折扣
+
+            /*套餐分组*/
+            package_price: null, //套餐价格
+            package_stock: null, //套餐可售卖库存
+            package_group: [
+              {
+                group_name: JSON.parse(languageData), //套餐分组名称
+                product_list: [
+                //   {
+                //     product_id: '', //商品id
+                //     sort: null, //排序
+                //     num: null, //商品数量
+                //   },
+                ],
+              },
+            ],
           },
           /*商品分类*/
           category: [],
@@ -303,6 +320,25 @@
               product_sort: params.product_sort,
             };
             params = data;
+          }
+
+          // 如果套餐类型，则处理套餐数据
+          if (params.type == 30) {
+            params.package_group.forEach(group => {
+              group.group_name = JSON.stringify(group.group_name);
+              // group.product_list 只需要保留product_id、num、sort，其他字段删除
+              let productList = [];
+              group.product_list.forEach(product => {
+                productList.push({
+                  product_id: product.product_id,
+                  num: product.num,
+                  sort: product.sort,
+                });
+              });
+              group.product_list = productList;
+            });
+            // 删除sku
+            params.sku = [];
           }
 
           // 将等级列表转换为json

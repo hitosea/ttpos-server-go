@@ -2098,5 +2098,12 @@
     "状态设置失败": "Misslyckades med att ställa in status",
     "请选择显示": "Vänligen välj visning",
     "外送序号/订单号": "Leveransnummer/Ordernummer",
-    "外送序号": "Leveransordningsnummer"
+    "外送序号": "Leveransordningsnummer",
+    "套餐": "Paket",
+    "套餐名称": "Paketnamn",
+    "套餐商品": "Paketprodukt",
+    "分组名称": "Gruppnamn",
+    "请填写分组名称": "Vänligen ange gruppnamnet",
+    "请输入分组名称": "Ange gruppnamn",
+    "翻译": "Översätt <content>"
 }

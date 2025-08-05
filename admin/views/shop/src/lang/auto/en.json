@@ -2102,5 +2102,12 @@
     "状态设置失败": "Failed to set status",
     "请选择显示": "Please select display",
     "外送序号/订单号": "Deli Number/Order Number",
-    "外送序号": "Deli Sequence Number"
+    "外送序号": "Deli Sequence Number",
+    "套餐": "Bundle",
+    "套餐名称": "Package Name",
+    "套餐商品": "Package Product",
+    "分组名称": "Group Name",
+    "请填写分组名称": "Please enter the group name",
+    "请输入分组名称": "Please enter the group name",
+    "翻译": "Translate <content>"
 }

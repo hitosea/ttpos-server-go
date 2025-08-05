@@ -54,6 +54,8 @@ let IndexApi = {
   getProductList(data, errorback) {
     return request._post('/shop/index/productList', data, errorback);
   },
+
+  
 };
 
 export default IndexApi;

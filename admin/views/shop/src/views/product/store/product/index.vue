@@ -7,6 +7,7 @@
           <a-select size="small" v-model:value="material_type" clearable :placeholder="$t('全部类型')" @change="onSearch">
             <el-option :label="$t('全部类型')" value=" "></el-option>
             <el-option :label="$t('材料')" value="20"></el-option>
+            <el-option :label="$t('套餐')" value="30"></el-option>
             <el-option :label="$t('成品')" value="10"></el-option>
           </a-select>
         </el-form-item>
@@ -82,7 +83,7 @@
         <el-table size="small" :data="tableData" border style="width: 100%" v-loading="loading">
           <el-table-column prop="category.path_name_text" :label="$t('类型')">
             <template #default="scope">
-              {{ scope.row.type == 10 ? $t('成品') : $t('材料') }}
+              {{ typeText(scope.row.type) }}
             </template>
           </el-table-column>
           <el-table-column prop="product_name" :label="$t('商品名称')" width="400px">
@@ -420,6 +421,17 @@
         });
       }
       getData();
+    }
+  };
+
+  const typeText = (type) => {
+    switch (type) {
+      case 10:
+        return $t('成品');
+      case 20:
+        return $t('材料');
+      case 30:
+        return $t('套餐');
     }
   };
 </script>
