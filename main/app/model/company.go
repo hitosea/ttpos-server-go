@@ -78,6 +78,8 @@ type CompanySetting struct {
 	Coordinates      string `gorm:"column:coordinates;type:varchar(255);comment:经纬度，如：13.721899,100.52900;NOT NULL" json:"coordinates"`
 	DeliveryConfig   string `gorm:"column:delivery_config;type:text;comment:外送配置;NOT NULL" json:"delivery_config"`
 	DeliveryStatus   int    `gorm:"column:delivery_status;type:int(11);default:0;comment:外送配置状态：0-关,1-开;NOT NULL" json:"delivery_status"`
+	ErpnextCode      string `gorm:"column:erpnext_code;type:varchar(255);default:'';comment:ERPNext编码;NOT NULL" json:"erpnext_code"`
+	ErpnextName      string `gorm:"column:erpnext_name;type:varchar(255);default:'';comment:ERPNext名称;NOT NULL" json:"erpnext_name"`
 }
 
 func (model *CompanySetting) GetTimezone() string {
