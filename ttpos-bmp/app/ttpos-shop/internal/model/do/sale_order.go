@@ -15,7 +15,6 @@ type SaleOrder struct {
 	Uuid                   interface{} // 销售订单ID
 	OrderNo                interface{} // 订单编号
 	Status                 interface{} // 订单状态, 0-未结账 1-已结账
-	DeviceId               interface{} // 设备ID,用于标识订单来源设备.来源h5时，device_id为h5
 	MemberDiscountFee      interface{} // 总会员折扣金额。总会员折扣金额=(订单商品.会员折扣金额)之和
 	CustomDiscountFee      interface{} // 总自定义折扣金额。总自定义折扣金额=(订单商品.自定义折扣金额)之和
 	ZeroFee                interface{} // 优惠折扣抹零金额。
@@ -33,10 +32,6 @@ type SaleOrder struct {
 	CustomAmount           interface{} // 整单改价金额。改价后，应收金额=整单改价金额，前端优先显示改价后的金额，改价金额不能为负数。当为-1时，表示不改价，显示amount改收金额
 	ZeroRule               interface{} // 优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数
 	ZeroCheckoutRule       interface{} // 结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元
-	PayPoints              interface{} // 抵扣积分,用了多少积分进行抵扣
-	PayPointsAmount        interface{} // 抵扣金额,积分 抵扣了多少金额
-	PointsExchangeRate     interface{} // 积分抵扣汇率,1积分抵扣多少元
-	AutoPointsExchange     interface{} // 积分抵扣类型,0-手动抵扣 1-自动抵扣
 	PaymentAmount          interface{} // 已支付金额,关联付款单的支付金额之和。
 	ChangeAmount           interface{} // 找零金额,结账完成后才记录
 	ZeroCheckoutFee        interface{} // 结账抹零金额。
@@ -45,10 +40,7 @@ type SaleOrder struct {
 	GiftAmount             interface{} // 赠菜金额,(销售订单赠菜商品.总最终单价)之和
 	GiftPoints             interface{} // 赠送积分. 赠送积分=应收金额amount*积分赠送比例.
 	GiftPointsRate         interface{} // 赠送积分比例. 取值范围0-1。结账后记录，不受后台改变
-	GiftPointsType         interface{} // 赠送积分类型, 0-按比例赠送 1-按人数固定金额赠送
 	MemberBalance          interface{} // 会员余额.会员消费本单后剩余的余额
-	MemberLevelName        interface{} // 会员等级名称
-	Unit                   interface{} // 积分抵扣金额的单位,$-美元 ￥-人民币,用于显示订单当时积分抵扣的金额价值
 	CashierName            interface{} // 收银员名称
 	ConsumerUuid           interface{} // 消费者ID
 	CashierUuid            interface{} // 收银员ID

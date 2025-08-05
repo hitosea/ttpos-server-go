@@ -25,7 +25,6 @@ type SaleOrderColumns struct {
 	Uuid                   string // 销售订单ID
 	OrderNo                string // 订单编号
 	Status                 string // 订单状态, 0-未结账 1-已结账
-	DeviceId               string // 设备ID,用于标识订单来源设备.来源h5时，device_id为h5
 	MemberDiscountFee      string // 总会员折扣金额。总会员折扣金额=(订单商品.会员折扣金额)之和
 	CustomDiscountFee      string // 总自定义折扣金额。总自定义折扣金额=(订单商品.自定义折扣金额)之和
 	ZeroFee                string // 优惠折扣抹零金额。
@@ -43,10 +42,6 @@ type SaleOrderColumns struct {
 	CustomAmount           string // 整单改价金额。改价后，应收金额=整单改价金额，前端优先显示改价后的金额，改价金额不能为负数。当为-1时，表示不改价，显示amount改收金额
 	ZeroRule               string // 优惠折扣抹零, 0-实款实收 1-抹分 2-抹角 3-四舍五入保留一位小数 4-四舍五入保留整数
 	ZeroCheckoutRule       string // 结账抹零, 0-实款实收 1-抹分 2-抹角 3-抹元
-	PayPoints              string // 抵扣积分,用了多少积分进行抵扣
-	PayPointsAmount        string // 抵扣金额,积分 抵扣了多少金额
-	PointsExchangeRate     string // 积分抵扣汇率,1积分抵扣多少元
-	AutoPointsExchange     string // 积分抵扣类型,0-手动抵扣 1-自动抵扣
 	PaymentAmount          string // 已支付金额,关联付款单的支付金额之和。
 	ChangeAmount           string // 找零金额,结账完成后才记录
 	ZeroCheckoutFee        string // 结账抹零金额。
@@ -55,10 +50,7 @@ type SaleOrderColumns struct {
 	GiftAmount             string // 赠菜金额,(销售订单赠菜商品.总最终单价)之和
 	GiftPoints             string // 赠送积分. 赠送积分=应收金额amount*积分赠送比例.
 	GiftPointsRate         string // 赠送积分比例. 取值范围0-1。结账后记录，不受后台改变
-	GiftPointsType         string // 赠送积分类型, 0-按比例赠送 1-按人数固定金额赠送
 	MemberBalance          string // 会员余额.会员消费本单后剩余的余额
-	MemberLevelName        string // 会员等级名称
-	Unit                   string // 积分抵扣金额的单位,$-美元 ￥-人民币,用于显示订单当时积分抵扣的金额价值
 	CashierName            string // 收银员名称
 	ConsumerUuid           string // 消费者ID
 	CashierUuid            string // 收银员ID
@@ -75,7 +67,6 @@ var saleOrderColumns = SaleOrderColumns{
 	Uuid:                   "uuid",
 	OrderNo:                "order_no",
 	Status:                 "status",
-	DeviceId:               "device_id",
 	MemberDiscountFee:      "member_discount_fee",
 	CustomDiscountFee:      "custom_discount_fee",
 	ZeroFee:                "zero_fee",
@@ -93,10 +84,6 @@ var saleOrderColumns = SaleOrderColumns{
 	CustomAmount:           "custom_amount",
 	ZeroRule:               "zero_rule",
 	ZeroCheckoutRule:       "zero_checkout_rule",
-	PayPoints:              "pay_points",
-	PayPointsAmount:        "pay_points_amount",
-	PointsExchangeRate:     "points_exchange_rate",
-	AutoPointsExchange:     "auto_points_exchange",
 	PaymentAmount:          "payment_amount",
 	ChangeAmount:           "change_amount",
 	ZeroCheckoutFee:        "zero_checkout_fee",
@@ -105,10 +92,7 @@ var saleOrderColumns = SaleOrderColumns{
 	GiftAmount:             "gift_amount",
 	GiftPoints:             "gift_points",
 	GiftPointsRate:         "gift_points_rate",
-	GiftPointsType:         "gift_points_type",
 	MemberBalance:          "member_balance",
-	MemberLevelName:        "member_level_name",
-	Unit:                   "unit",
 	CashierName:            "cashier_name",
 	ConsumerUuid:           "consumer_uuid",
 	CashierUuid:            "cashier_uuid",

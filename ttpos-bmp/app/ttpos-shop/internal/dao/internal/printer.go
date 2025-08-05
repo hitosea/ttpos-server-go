@@ -21,40 +21,30 @@ type PrinterDao struct {
 
 // PrinterColumns defines and stores column names for the table ttpos_printer.
 type PrinterColumns struct {
-	Id                string // 自增ID
-	Uuid              string // 打印机ID
-	Name              string // 打印机名称
-	PrinterTypeUuid   string // 打印机类型ID
-	ConfigJson        string // 打印机json配置
-	IsUsb             string // 是否usb 0-否 1-是
-	IsEnableUsb       string // 是否启用usb 0-否 1-是
-	Status            string // 状态 0-离线 1-在线
-	LastHeartbeatTime string // 最后心跳时间
-	SourceDeviceSn    string // 来源设备SN
-	Copies            string // 打印份数
-	Sort              string // 排序
-	CreateTime        string // 创建时间(时间戳)
-	UpdateTime        string // 更新时间(时间戳)
-	DeleteTime        string // 删除时间(时间戳)
+	Id              string // 自增ID
+	Uuid            string // 打印机ID
+	Name            string // 打印机名称
+	PrinterTypeUuid string // 打印机类型ID
+	ConfigJson      string // 打印机json配置
+	Copies          string // 打印份数
+	Sort            string // 排序
+	CreateTime      string // 创建时间(时间戳)
+	UpdateTime      string // 更新时间(时间戳)
+	DeleteTime      string // 删除时间(时间戳)
 }
 
 // printerColumns holds the columns for the table ttpos_printer.
 var printerColumns = PrinterColumns{
-	Id:                "id",
-	Uuid:              "uuid",
-	Name:              "name",
-	PrinterTypeUuid:   "printer_type_uuid",
-	ConfigJson:        "config_json",
-	IsUsb:             "is_usb",
-	IsEnableUsb:       "is_enable_usb",
-	Status:            "status",
-	LastHeartbeatTime: "last_heartbeat_time",
-	SourceDeviceSn:    "source_device_sn",
-	Copies:            "copies",
-	Sort:              "sort",
-	CreateTime:        "create_time",
-	UpdateTime:        "update_time",
-	DeleteTime:        "delete_time",
+	Id:              "id",
+	Uuid:            "uuid",
+	Name:            "name",
+	PrinterTypeUuid: "printer_type_uuid",
+	ConfigJson:      "config_json",
+	Copies:          "copies",
+	Sort:            "sort",
+	CreateTime:      "create_time",
+	UpdateTime:      "update_time",
+	DeleteTime:      "delete_time",
 }
 
 // NewPrinterDao creates and returns a new DAO object for table data access.

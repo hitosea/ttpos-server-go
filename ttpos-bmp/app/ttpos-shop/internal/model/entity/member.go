@@ -25,9 +25,6 @@ type Member struct {
 	AccumulatedRechargeAmount    float64 `json:"accumulatedRechargeAmount"    orm:"accumulated_recharge_amount"    description:"累计充值金额"`                                                                  // 累计充值金额
 	MemberLevelUuid              uint64  `json:"memberLevelUuid"              orm:"member_level_uuid"              description:"会员等级ID"`                                                                  // 会员等级ID
 	MemberCardUuid               uint64  `json:"memberCardUuid"               orm:"member_card_uuid"               description:"会员卡片ID"`                                                                  // 会员卡片ID
-	MemberCardNo                 string  `json:"memberCardNo"                 orm:"member_card_no"                 description:"会员卡号"`                                                                    // 会员卡号
-	ReferrerUuid                 uint64  `json:"referrerUuid"                 orm:"referrer_uuid"                  description:"推荐人ID"`                                                                   // 推荐人ID
-	ActivityUuid                 uint64  `json:"activityUuid"                 orm:"activity_uuid"                  description:"营销活动Uuid"`                                                                // 营销活动Uuid
 	CreateTime                   uint    `json:"createTime"                   orm:"create_time"                    description:"创建时间(时间戳)"`                                                               // 创建时间(时间戳)
 	UpdateTime                   uint    `json:"updateTime"                   orm:"update_time"                    description:"更新时间(时间戳)"`                                                               // 更新时间(时间戳)
 	DeleteTime                   uint    `json:"deleteTime"                   orm:"delete_time"                    description:"删除时间(时间戳)"`                                                               // 删除时间(时间戳)

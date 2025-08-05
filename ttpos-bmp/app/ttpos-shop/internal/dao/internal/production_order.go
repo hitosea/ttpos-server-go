@@ -26,7 +26,6 @@ type ProductionOrderColumns struct {
 	DeskUuid      string // 桌台ID
 	SaleOrderUuid string // 销售订单ID
 	SaleBillUuid  string // 销售账单ID
-	Source        string // 操作来源 shop-商家、cashier-收银机、tablet-平板端、kitchen-厨显端、assistant-点餐助手、h5-H5
 	CreateTime    string // 创建时间(时间戳)
 	UpdateTime    string // 更新时间(时间戳)
 	DeleteTime    string // 删除时间(时间戳)
@@ -39,7 +38,6 @@ var productionOrderColumns = ProductionOrderColumns{
 	DeskUuid:      "desk_uuid",
 	SaleOrderUuid: "sale_order_uuid",
 	SaleBillUuid:  "sale_bill_uuid",
-	Source:        "source",
 	CreateTime:    "create_time",
 	UpdateTime:    "update_time",
 	DeleteTime:    "delete_time",

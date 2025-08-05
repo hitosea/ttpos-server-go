@@ -30,9 +30,6 @@ type Member struct {
 	AccumulatedRechargeAmount    interface{} // 累计充值金额
 	MemberLevelUuid              interface{} // 会员等级ID
 	MemberCardUuid               interface{} // 会员卡片ID
-	MemberCardNo                 interface{} // 会员卡号
-	ReferrerUuid                 interface{} // 推荐人ID
-	ActivityUuid                 interface{} // 营销活动Uuid
 	CreateTime                   interface{} // 创建时间(时间戳)
 	UpdateTime                   interface{} // 更新时间(时间戳)
 	DeleteTime                   interface{} // 删除时间(时间戳)

@@ -23,9 +23,8 @@ type BuffetPackageDao struct {
 type BuffetPackageColumns struct {
 	Id                    string // 自增ID
 	Uuid                  string // 自助餐套餐ID
-	Name                  string // 名称
+	Name                  string // 自助餐套餐名称
 	MultiLanguageNameUuid string // 多语言名称ID
-	ActualSaleNum         string // 实际销量。每次卖出时,实际销量增加
 	Sort                  string // 排序顺序
 	TaxUuid               string // 税收ID
 	IsLimitTime           string // 是否限时, 0-否 1-是
@@ -45,7 +44,6 @@ var buffetPackageColumns = BuffetPackageColumns{
 	Uuid:                  "uuid",
 	Name:                  "name",
 	MultiLanguageNameUuid: "multi_language_name_uuid",
-	ActualSaleNum:         "actual_sale_num",
 	Sort:                  "sort",
 	TaxUuid:               "tax_uuid",
 	IsLimitTime:           "is_limit_time",

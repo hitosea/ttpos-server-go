@@ -29,7 +29,6 @@ type StatisticsSaleColumns struct {
 	DeskUuid             string // 桌台UUID
 	MealNum              string // 用餐人数
 	ProductPrice         string // 商品原价: 不含税
-	ProductOriginPrice   string // 原商品金额
 	ProductSalePrice     string // 商品销售价
 	ProductNum           string // 商品数量
 	ProductTax           string // 商品税
@@ -45,12 +44,7 @@ type StatisticsSaleColumns struct {
 	PaymentFee           string // 支付手续费
 	PaymentBalance       string // 支付余额
 	RefundAmount         string // 退款金额
-	RefundPaymentBalance string // 退款支付余额
 	RefundTax            string // 退款税额
-	NoRefundTax          string // 不退税金额
-	ExtendPrice          string // 扩展价格
-	IsMeger              string // 是否合单
-	IsSpecial            string // 是否特殊订单
 	RefundServiceFee     string // 退款服务费
 	RefundDiscount       string // 退款优惠折扣
 	RefundDiscountMember string // 退款会员折扣
@@ -72,7 +66,6 @@ var statisticsSaleColumns = StatisticsSaleColumns{
 	DeskUuid:             "desk_uuid",
 	MealNum:              "meal_num",
 	ProductPrice:         "product_price",
-	ProductOriginPrice:   "product_origin_price",
 	ProductSalePrice:     "product_sale_price",
 	ProductNum:           "product_num",
 	ProductTax:           "product_tax",
@@ -88,12 +81,7 @@ var statisticsSaleColumns = StatisticsSaleColumns{
 	PaymentFee:           "payment_fee",
 	PaymentBalance:       "payment_balance",
 	RefundAmount:         "refund_amount",
-	RefundPaymentBalance: "refund_payment_balance",
 	RefundTax:            "refund_tax",
-	NoRefundTax:          "no_refund_tax",
-	ExtendPrice:          "extend_price",
-	IsMeger:              "is_meger",
-	IsSpecial:            "is_special",
 	RefundServiceFee:     "refund_service_fee",
 	RefundDiscount:       "refund_discount",
 	RefundDiscountMember: "refund_discount_member",

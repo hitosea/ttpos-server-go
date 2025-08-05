@@ -23,7 +23,7 @@ type ProductUnitDao struct {
 type ProductUnitColumns struct {
 	Id                    string // 自增ID
 	Uuid                  string // 商品单位ID
-	Name                  string // 名称
+	Name                  string // 单位名称
 	MultiLanguageNameUuid string // 多语言名称ID
 	CreateTime            string // 创建时间(时间戳)
 	UpdateTime            string // 更新时间(时间戳)

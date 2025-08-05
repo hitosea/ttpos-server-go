@@ -26,7 +26,6 @@ type SaleOrderBuffetCustomerTypeColumns struct {
 	Name                        string // 顾客类型名称
 	Num                         string // 人数
 	SalePrice                   string // 原始单价（单人，折前价）。自助餐顾客类型原价,下单后价格不受后台改变
-	SalePriceNoTax              string // 销售价,未含税价格（折前）
 	Price                       string // 最终单价（折后价），只进行自定义打折，不进行会员打折
 	CustomDiscountRate          string // 自定义折扣率, 值为0-1之间(0-100%)
 	CustomDiscountFee           string // 自定义折扣金额（单人）。自定义折扣金额（单人）=自助餐顾客类型原价*自定义折扣率
@@ -35,9 +34,7 @@ type SaleOrderBuffetCustomerTypeColumns struct {
 	TaxFee                      string // 自助餐顾客类型税费（单人）。自助餐顾客类型已含税时，税费=自助餐顾客类型原价*(1-1/(1+税率))；自助餐顾客类型未含税时，税费=自助餐顾客类型原价*税率
 	ServiceFee                  string // 服务费（单人）,0-固定服务费 大于0-按比例收服务费；自助餐顾客类型已含税时，服务费=(自助餐顾客类型原价-自助餐顾客类型税费)*服务费比例；自助餐顾客类型未含税时，服务费=自助餐顾客类型原价*服务费比例
 	TotalPrice                  string // 应收金额(单人)。商品已含税时，应收金额(单人)=(最终单价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=最终单价+服务费+总税费
-	OriginTotalPrice            string // 原始应收金额(单人)。商品已含税时，应收金额(单人)=（原始单价-商品税费)+服务费+总税费；商品未含税时，应收金额(单商品)=原始单价+服务费+总税费
 	SaleOrderUuid               string // 销售订单ID
-	SaleBillUuid                string // 销售账单ID
 	BuffetPackageUuid           string // 自助餐套餐ID
 	BuffetCustomerTypePriceUuid string // 自助餐客户类型价格ID
 	CreateTime                  string // 创建时间(时间戳)
@@ -52,7 +49,6 @@ var saleOrderBuffetCustomerTypeColumns = SaleOrderBuffetCustomerTypeColumns{
 	Name:                        "name",
 	Num:                         "num",
 	SalePrice:                   "sale_price",
-	SalePriceNoTax:              "sale_price_no_tax",
 	Price:                       "price",
 	CustomDiscountRate:          "custom_discount_rate",
 	CustomDiscountFee:           "custom_discount_fee",
@@ -61,9 +57,7 @@ var saleOrderBuffetCustomerTypeColumns = SaleOrderBuffetCustomerTypeColumns{
 	TaxFee:                      "tax_fee",
 	ServiceFee:                  "service_fee",
 	TotalPrice:                  "total_price",
-	OriginTotalPrice:            "origin_total_price",
 	SaleOrderUuid:               "sale_order_uuid",
-	SaleBillUuid:                "sale_bill_uuid",
 	BuffetPackageUuid:           "buffet_package_uuid",
 	BuffetCustomerTypePriceUuid: "buffet_customer_type_price_uuid",
 	CreateTime:                  "create_time",

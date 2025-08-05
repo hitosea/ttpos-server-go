@@ -8,14 +8,14 @@ import (
 	"ttpos-bmp/app/ttpos-shop/internal/dao/internal"
 )
 
-// statisticsMemberPaymentDao is the data access object for the table ttpos_statistics_member_payment.
+// statisticsMemberPaymentDao is the data access object for the table statistics_member_payment.
 // You can define custom methods on it to extend its functionality as needed.
 type statisticsMemberPaymentDao struct {
 	*internal.StatisticsMemberPaymentDao
 }
 
 var (
-	// StatisticsMemberPayment is a globally accessible object for table ttpos_statistics_member_payment operations.
+	// StatisticsMemberPayment is a globally accessible object for table statistics_member_payment operations.
 	StatisticsMemberPayment = statisticsMemberPaymentDao{internal.NewStatisticsMemberPaymentDao()}
 )
 

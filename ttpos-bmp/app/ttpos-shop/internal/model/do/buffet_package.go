@@ -13,9 +13,8 @@ type BuffetPackage struct {
 	g.Meta                `orm:"table:ttpos_buffet_package, do:true"`
 	Id                    interface{} // 自增ID
 	Uuid                  interface{} // 自助餐套餐ID
-	Name                  interface{} // 名称
+	Name                  interface{} // 自助餐套餐名称
 	MultiLanguageNameUuid interface{} // 多语言名称ID
-	ActualSaleNum         interface{} // 实际销量。每次卖出时,实际销量增加
 	Sort                  interface{} // 排序顺序
 	TaxUuid               interface{} // 税收ID
 	IsLimitTime           interface{} // 是否限时, 0-否 1-是

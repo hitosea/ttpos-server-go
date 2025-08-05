@@ -26,7 +26,6 @@ type H5OrderColumns struct {
 	DeskUuid               string // 桌台uuid
 	DeskNo                 string // 桌台编号
 	Status                 string // 状态, 0-未下单 1-未接单 2-已接单 3-已拒单
-	IsNeedAudit            string // 是否需要审核，0-不需要审核，直接送厨 1-需要审核
 	IsAutoAccept           string // 是否自动接单, 0-否 1-是
 	IsBuffet               string // 是否是自助餐, 0-非自助餐 1-自助餐
 	MemberDiscountRate     string // 会员折扣率(0-100%).接单和拒单后从sale_order_product表获取，不再改变
@@ -51,7 +50,6 @@ var h5OrderColumns = H5OrderColumns{
 	DeskUuid:               "desk_uuid",
 	DeskNo:                 "desk_no",
 	Status:                 "status",
-	IsNeedAudit:            "is_need_audit",
 	IsAutoAccept:           "is_auto_accept",
 	IsBuffet:               "is_buffet",
 	MemberDiscountRate:     "member_discount_rate",

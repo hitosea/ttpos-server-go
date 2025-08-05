@@ -31,7 +31,6 @@ type SaleBillColumns struct {
 	IsBuffet              string // 是否自助餐, 0-否 1-是
 	Reason                string // 取消原因
 	IsLock                string // 是否锁单, 0-否 1-是
-	IsSplitOrder          string // 是否拆单, 0-否 1-是
 	MealNum               string // 就餐人数
 	Status                string // 订单状态, 0-待付款、1-已完成、2-已取消。
 	Remark                string // 备注(开台备注)
@@ -42,8 +41,7 @@ type SaleBillColumns struct {
 	BuffetPackage1Uuid    string // 自助餐套餐1的uuid
 	BuffetPackage2Uuid    string // 自助餐套餐2的uuid
 	DeviceUuid            string // 设备ID，用于标识这个账单是由哪个设备创建的。点餐账单通过设备uuid查询
-	Amount                string // 订单金额(折后价),关联销售订单的总金额之和
-	OriginAmount          string // 订单金额(折前价)。商品未含税时，订单金额(折前价)=商品金额+服务费+税费。商品已含税时，订单金额(折前价)=商品金额（含商品消费税）+服务费+税费（只有服务费税）
+	Amount                string // 订单金额,关联销售订单的总金额之和
 	ProductAmount         string // 商品金额,关联销售订单的商品金额之和
 	ServiceFee            string // 服务费,关联销售订单的服务费之和
 	TaxFee                string // 税费,关联销售订单的税费之和
@@ -64,7 +62,6 @@ type SaleBillColumns struct {
 	DelayDuration         string // 总延迟时长(秒)
 	DelayStartTime        string // 总延迟时长开始时间(秒)
 	HideBillTime          string // 隐藏账单(挂单)时间(时间戳)
-	LockTime              string // 锁单时间
 	ProductionTime        string // 首次送厨时间(时间戳)
 	FinishTime            string // 完成时间(时间戳),结账时间
 	CreateTime            string // 创建时间(时间戳),开台时间
@@ -84,7 +81,6 @@ var saleBillColumns = SaleBillColumns{
 	IsBuffet:              "is_buffet",
 	Reason:                "reason",
 	IsLock:                "is_lock",
-	IsSplitOrder:          "is_split_order",
 	MealNum:               "meal_num",
 	Status:                "status",
 	Remark:                "remark",
@@ -96,7 +92,6 @@ var saleBillColumns = SaleBillColumns{
 	BuffetPackage2Uuid:    "buffet_package2_uuid",
 	DeviceUuid:            "device_uuid",
 	Amount:                "amount",
-	OriginAmount:          "origin_amount",
 	ProductAmount:         "product_amount",
 	ServiceFee:            "service_fee",
 	TaxFee:                "tax_fee",
@@ -117,7 +112,6 @@ var saleBillColumns = SaleBillColumns{
 	DelayDuration:         "delay_duration",
 	DelayStartTime:        "delay_start_time",
 	HideBillTime:          "hide_bill_time",
-	LockTime:              "lock_time",
 	ProductionTime:        "production_time",
 	FinishTime:            "finish_time",
 	CreateTime:            "create_time",

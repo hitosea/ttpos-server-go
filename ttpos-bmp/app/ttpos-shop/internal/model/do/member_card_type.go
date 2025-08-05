@@ -13,9 +13,9 @@ type MemberCardType struct {
 	g.Meta       `orm:"table:ttpos_member_card_type, do:true"`
 	Id           interface{} // 自增ID
 	Uuid         interface{} // 会员卡类型ID
-	Price        interface{} // 会员卡类型名称
 	Name         interface{} // 会员卡类型名称
 	Expire       interface{} // 有效期限,单位:月, 0为永久有效
+	Price        interface{} // 价格
 	Discount     interface{} // 折扣,单位%
 	Sort         interface{} // 排序
 	Status       interface{} // 状态, 0-开启 1-关闭

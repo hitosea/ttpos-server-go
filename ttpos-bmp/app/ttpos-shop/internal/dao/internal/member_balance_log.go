@@ -25,9 +25,9 @@ type MemberBalanceLogColumns struct {
 	Uuid          string // 余额变动记录ID
 	MemberUuid    string // 会员ID
 	Scene         string // 场景,10-用户充值 20-用户消费 30-管理员操作 40-订单退款 50-余额提现 60-订单反结账 70-充值反结账 80-充值退款 90-销售订单支付扣减
-	Money         string // 变动金额,负数:减余额 正数:加余额。包含赠送余额
-	GiftMoney     string // 变动赠送金额
 	SaleOrderUuid string // 销售订单ID
+	Money         string // 变动金额,负数:减余额 整数:加余额
+	GiftMoney     string // 变动赠送金额
 	Describe      string // 变动描述
 	Processed     string // 是否已处理,0-未处理 1-已处理. 用于处理会员余额变动，修改会员的余额并清0冻结的余额
 	RelatedUuid   string // 关联uuid. 表示余额变动记录关联的业务订单ID,可能是销售订单(场景90)、充值订单(场景10)、退款单(场景80)、退货单退款金额(场景40)
@@ -42,9 +42,9 @@ var memberBalanceLogColumns = MemberBalanceLogColumns{
 	Uuid:          "uuid",
 	MemberUuid:    "member_uuid",
 	Scene:         "scene",
+	SaleOrderUuid: "sale_order_uuid",
 	Money:         "money",
 	GiftMoney:     "gift_money",
-	SaleOrderUuid: "sale_order_uuid",
 	Describe:      "describe",
 	Processed:     "processed",
 	RelatedUuid:   "related_uuid",

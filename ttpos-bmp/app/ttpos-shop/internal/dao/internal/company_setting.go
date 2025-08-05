@@ -28,8 +28,6 @@ type CompanySettingColumns struct {
 	LinkName         string // 联系人
 	LinkPhone        string // 联系电话
 	SaleStock        string // 进销存: 0不开启, 1开启
-	IsOpenCoupon     string // 是否开启优惠券
-	IsOpenMarketing  string // 是否开启营销活动
 	IsOpenTax        string // 是否开启税务对接: 0不开启, 1奥地利 2-其他
 	IsOpenMember     string // 是否开启会员: 0不开启, 1开启
 	IsOpenTablet     string // 是否开启平板: 0不开启, 1开启
@@ -37,8 +35,6 @@ type CompanySettingColumns struct {
 	IsOpenAssistant  string // 是否开启点餐助手: 0不开启, 1开启
 	IsOpenKitchenKds string // 是否开启后厨KDS: 0不开启, 1开启
 	IsOpenBuffet     string // 是否开启自助餐: 0不开启, 1开启
-	EnableSms        string // 是否启用短信功能：0-否；1-是
-	SmsQuota         string // 短信配额
 	IsOpenH5Order    string // 是否开启扫码点餐接单 0不开启, 1开启
 	IsOpenLocalPrint string // 是否开启本地打印服务 0不开启, 1开启
 	CashLimit        string // 收银机上限
@@ -64,8 +60,6 @@ var companySettingColumns = CompanySettingColumns{
 	LinkName:         "link_name",
 	LinkPhone:        "link_phone",
 	SaleStock:        "sale_stock",
-	IsOpenCoupon:     "is_open_coupon",
-	IsOpenMarketing:  "is_open_marketing",
 	IsOpenTax:        "is_open_tax",
 	IsOpenMember:     "is_open_member",
 	IsOpenTablet:     "is_open_tablet",
@@ -73,8 +67,6 @@ var companySettingColumns = CompanySettingColumns{
 	IsOpenAssistant:  "is_open_assistant",
 	IsOpenKitchenKds: "is_open_kitchen_kds",
 	IsOpenBuffet:     "is_open_buffet",
-	EnableSms:        "enable_sms",
-	SmsQuota:         "sms_quota",
 	IsOpenH5Order:    "is_open_h5_order",
 	IsOpenLocalPrint: "is_open_local_print",
 	CashLimit:        "cash_limit",

@@ -40,9 +40,6 @@ type MemberColumns struct {
 	AccumulatedRechargeAmount    string // 累计充值金额
 	MemberLevelUuid              string // 会员等级ID
 	MemberCardUuid               string // 会员卡片ID
-	MemberCardNo                 string // 会员卡号
-	ReferrerUuid                 string // 推荐人ID
-	ActivityUuid                 string // 营销活动Uuid
 	CreateTime                   string // 创建时间(时间戳)
 	UpdateTime                   string // 更新时间(时间戳)
 	DeleteTime                   string // 删除时间(时间戳)
@@ -69,9 +66,6 @@ var memberColumns = MemberColumns{
 	AccumulatedRechargeAmount:    "accumulated_recharge_amount",
 	MemberLevelUuid:              "member_level_uuid",
 	MemberCardUuid:               "member_card_uuid",
-	MemberCardNo:                 "member_card_no",
-	ReferrerUuid:                 "referrer_uuid",
-	ActivityUuid:                 "activity_uuid",
 	CreateTime:                   "create_time",
 	UpdateTime:                   "update_time",
 	DeleteTime:                   "delete_time",

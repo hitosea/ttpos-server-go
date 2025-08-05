@@ -19,7 +19,6 @@ type StatisticsSale struct {
 	DeskUuid             interface{} // 桌台UUID
 	MealNum              interface{} // 用餐人数
 	ProductPrice         interface{} // 商品原价: 不含税
-	ProductOriginPrice   interface{} // 原商品金额
 	ProductSalePrice     interface{} // 商品销售价
 	ProductNum           interface{} // 商品数量
 	ProductTax           interface{} // 商品税
@@ -35,12 +34,7 @@ type StatisticsSale struct {
 	PaymentFee           interface{} // 支付手续费
 	PaymentBalance       interface{} // 支付余额
 	RefundAmount         interface{} // 退款金额
-	RefundPaymentBalance interface{} // 退款支付余额
 	RefundTax            interface{} // 退款税额
-	NoRefundTax          interface{} // 不退税金额
-	ExtendPrice          interface{} // 扩展价格
-	IsMeger              interface{} // 是否合单
-	IsSpecial            interface{} // 是否特殊订单
 	RefundServiceFee     interface{} // 退款服务费
 	RefundDiscount       interface{} // 退款优惠折扣
 	RefundDiscountMember interface{} // 退款会员折扣

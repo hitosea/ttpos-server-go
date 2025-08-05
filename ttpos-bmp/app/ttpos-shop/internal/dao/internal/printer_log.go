@@ -31,7 +31,7 @@ type PrinterLogColumns struct {
 	RelatedUuid        string // 销售账单、充值订单id
 	Data               string // 打印数据
 	Type               string // 类型:0系统默认队列,1云上服务下放
-	DataType           string // 数据类型 1-交班单 2-结账单 3-预结账单 4-一菜一单 5-营业数据 6-整单打印 7-打印发票 8-充值单 9-退菜单
+	DataType           string // 数据类型 1-预结账单 2-结账单 3-一菜一单 4-整单打印 5-打印发票 6-打印营业数据 7-打印交班单
 	PrintMethod        string // 打印方式 1文本打印, 2图片打印
 	PrinterType        string // 打印机类型
 	Num                string // 打印次数
@@ -39,8 +39,6 @@ type PrinterLogColumns struct {
 	Reason             string // 原因
 	PrinterTime        string // 打印时间
 	FirstExecution     string // 是否首次执行打印 1-是 0-否
-	PrintingTime       string // 打印耗时(毫秒)
-	Copies             string // 打印份数
 	CreateTime         string // 创建时间(时间戳)
 	UpdateTime         string // 更新时间(时间戳)
 	DeleteTime         string // 删除时间(时间戳)
@@ -66,8 +64,6 @@ var printerLogColumns = PrinterLogColumns{
 	Reason:             "reason",
 	PrinterTime:        "printer_time",
 	FirstExecution:     "first_execution",
-	PrintingTime:       "printing_time",
-	Copies:             "copies",
 	CreateTime:         "create_time",
 	UpdateTime:         "update_time",
 	DeleteTime:         "delete_time",

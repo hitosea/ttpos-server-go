@@ -26,7 +26,6 @@ type ReturnOrder struct {
 	BankCode            interface{} // 银行编码 - 当存在QR PromptPay的时候需要传
 	AccountNo           interface{} // 账号 - 当存在QR PromptPay的时候需要传
 	AccountName         interface{} // 账户名称 - 当存在QR PromptPay的时候需要传
-	DutyNo              interface{} // 当班编号
 	CreateTime          interface{} // 创建时间(时间戳)
 	UpdateTime          interface{} // 更新时间(时间戳)
 	DeleteTime          interface{} // 删除时间(时间戳)

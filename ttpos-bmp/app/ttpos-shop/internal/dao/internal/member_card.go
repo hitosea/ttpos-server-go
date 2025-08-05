@@ -25,7 +25,7 @@ type MemberCardColumns struct {
 	Uuid         string // 会员卡ID
 	CardTypeUuid string // 会员卡类型ID
 	MemberUuid   string // 会员ID
-	ExpireTime   string // 有效期
+	ExpireTime   string // 截止日期(时间戳)
 	Discount     string // 折扣,单位%, 如80%为打8折，discount值为0.8 .不随后台改变,按领取时的折扣。后续会员卡类型折扣改变时,不改变此字段
 	CreateTime   string // 创建时间(时间戳),领取时间
 	UpdateTime   string // 更新时间(时间戳)
