@@ -271,6 +271,25 @@ func (h *StaffHandler) GetRoleAccess(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetPermissionGroup 获取权限组
+// @Summary 获取权限组
+// @Description 获取权限组
+// @Tags 商家端.管理员管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} dto.Response
+// @Router /shop/access_groups [get]
+func (h *StaffHandler) GetPermissionGroup(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	res, err := h.staffSrv.GetPermissionGroup(ctx)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
+		return
+	}
+	helper.Success(c, res)
+}
+
 func RegisterStaffHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -283,7 +302,7 @@ func RegisterStaffHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
 
 	wrapper := &StaffHandler{
-		staffSrv: service.NewStaffSrv(dbm),
+		staffSrv: service.NewStaffSrv(dbm, roleAccessSrv),
 	}
 
 	// 需要认证
@@ -302,5 +321,7 @@ func RegisterStaffHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 		privateApi.POST("/role/update", wrapper.UpdateRole)   // 修改角色
 		privateApi.DELETE("/role", wrapper.DeleteRole)        // 删除角色
 		privateApi.GET("/role_access", wrapper.GetRoleAccess) // 获取角色详细
+
+		privateApi.GET("/access_groups", wrapper.GetPermissionGroup) // 获取权限组
 	}
 }

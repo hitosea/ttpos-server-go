@@ -118,26 +118,23 @@ type Company struct {
 }
 
 type Permission struct {
-	ID               int           `json:"id"`
-	Uuid             uint64        `json:"uuid"`
-	Name             string        `json:"name"`
-	Path             string        `json:"path"`
-	APIPath          string        `json:"-"`
-	ParentUuid       uint64        `json:"parent_id"`
-	Sort             int           `json:"-"`
-	Icon             string        `json:"-"`
-	RedirectName     string        `json:"redirect_name"`
-	IsRoute          int           `json:"is_route"`
-	IsMenu           int           `json:"is_menu"`
-	Alias            string        `json:"alias"`
-	IsShow           int           `json:"is_show"`
-	PlusCategoryUuid uint64        `json:"-"`
-	Remark           string        `json:"-"`
-	IsSupplier       int           `json:"-"`
-	AppId            int           `json:"-"`
-	CreateTime       string        `json:"-"`
-	UpdateTime       string        `json:"-"`
-	Children         []*Permission `json:"children"`
+	ID           int           `json:"id"`
+	Uuid         uint64        `json:"uuid"`
+	Name         string        `json:"name"`
+	Path         string        `json:"path"`
+	ParentUuid   uint64        `json:"parent_id"`
+	Sort         int           `json:"-"`
+	RedirectName string        `json:"redirect_name"`
+	IsRoute      int           `json:"is_route"`
+	IsMenu       int           `json:"is_menu"`
+	Alias        string        `json:"alias"`
+	IsShow       int           `json:"is_show"`
+	CreateTime   string        `json:"-"`
+	UpdateTime   string        `json:"-"`
+	Children     []*Permission `json:"children"`
+}
+type PermissionGroup struct {
+	List []*Permission `json:"list"`
 }
 
 type LanguageResp struct {

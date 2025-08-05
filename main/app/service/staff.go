@@ -37,20 +37,24 @@ type IStaffSrv interface {
 	DeleteRole(ctx context.Context, deleteReq req.DeleteRoleReq) error
 	// 获取角色详细
 	GetRoleAccess(ctx context.Context, getReq req.GetRoleReq) (resp.RoleDetailResp, error)
+	// 获取所有角色权限
+	GetPermissionGroup(ctx context.Context) (resp.PermissionGroup, error)
 }
 
 type staffSrv struct {
-	dbm *database.DBManager
+	dbm           *database.DBManager
+	roleAccessSrv IRoleAccessSrv
 }
 
-func NewStaffSrvImpl(dbm *database.DBManager) IStaffSrv {
+func NewStaffSrvImpl(dbm *database.DBManager, roleAccessSrv IRoleAccessSrv) IStaffSrv {
 	return &staffSrv{
-		dbm: dbm,
+		dbm:           dbm,
+		roleAccessSrv: roleAccessSrv,
 	}
 }
 
-func NewStaffSrv(dbm *database.DBManager) IStaffSrv {
-	return NewStaffSrvImpl(dbm)
+func NewStaffSrv(dbm *database.DBManager, roleAccessSrv IRoleAccessSrv) IStaffSrv {
+	return NewStaffSrvImpl(dbm, roleAccessSrv)
 }
 
 func (s *staffSrv) GetStaffs(ctx context.Context, pageReq dto.PageReq) (resp.StaffListPaginationResp, error) {
@@ -367,4 +371,12 @@ func (s *staffSrv) GetRoleAccess(ctx context.Context, getReq req.GetRoleReq) (re
 		AccessUuids: accessUuids,
 		Name:        role.Name,
 	}, nil
+}
+
+func (s *staffSrv) GetPermissionGroup(ctx context.Context) (resp.PermissionGroup, error) {
+	permissionGroups, err := s.roleAccessSrv.GetPermissionGroup(ctx.GetStaffUuid(), ctx.GetCompanyUuid())
+	if err != nil {
+		return resp.PermissionGroup{}, err
+	}
+	return permissionGroups, nil
 }
