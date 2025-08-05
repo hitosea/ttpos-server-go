@@ -35,7 +35,6 @@ type PaymentMethodColumns struct {
 	IsShowMemberRecharge string // 0-不显示 1-收银机会员充值显示
 	Status               string // 状态 0-禁用 1-启用
 	Sort                 string // 排序
-	DefaultImg           string // 默认图片
 	CreateTime           string // 创建时间(时间戳)
 	UpdateTime           string // 更新时间(时间戳)
 	DeleteTime           string // 删除时间(时间戳)
@@ -57,7 +56,6 @@ var paymentMethodColumns = PaymentMethodColumns{
 	IsShowMemberRecharge: "is_show_member_recharge",
 	Status:               "status",
 	Sort:                 "sort",
-	DefaultImg:           "default_img",
 	CreateTime:           "create_time",
 	UpdateTime:           "update_time",
 	DeleteTime:           "delete_time",

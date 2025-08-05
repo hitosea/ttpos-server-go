@@ -26,10 +26,9 @@ type ProductPrinterColumns struct {
 	Name               string // 名称.厨显上叫档口
 	Status             string // 状态,1-open开启 1、0-close关闭
 	PrintMode          string // 打印模式,0-payment付款打印 1-kitchen送厨打印
-	PrintMethod        string // 打印方式,-1-全选 0-order整单打印 1-item按一菜一单打印
+	PrintMethod        string // 打印方式,0-order整单打印 1-item按一菜一单打印
 	PrintProductSelect string // 打印商品选择,0-category按商品分类 1-tag按打印标签
 	PrintModeScene     string // 打印模式场景,0-merge合并 1-separate分开
-	Copies             string // 打印份数
 	CreateTime         string // 创建时间(时间戳)
 	UpdateTime         string // 更新时间(时间戳)
 	DeleteTime         string // 删除时间(时间戳)
@@ -45,7 +44,6 @@ var productPrinterColumns = ProductPrinterColumns{
 	PrintMethod:        "print_method",
 	PrintProductSelect: "print_product_select",
 	PrintModeScene:     "print_mode_scene",
-	Copies:             "copies",
 	CreateTime:         "create_time",
 	UpdateTime:         "update_time",
 	DeleteTime:         "delete_time",

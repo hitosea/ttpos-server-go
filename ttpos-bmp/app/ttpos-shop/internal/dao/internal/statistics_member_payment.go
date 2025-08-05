@@ -21,11 +21,11 @@ type StatisticsMemberPaymentDao struct {
 
 // StatisticsMemberPaymentColumns defines and stores column names for the table ttpos_statistics_member_payment.
 type StatisticsMemberPaymentColumns struct {
-	Id                      string // 自增ID
-	Uuid                    string // UUID
+	Id                      string //
+	Uuid                    string // uuid
 	MemberRechargeOrderUuid string // 会员充值订单uuid
 	DutyNo                  string // 当班编号
-	PaymentMethodUuid       string // 支付方式UUID
+	PaymentMethodUuid       string // 支付方式uuid
 	PaymentAmount           string // 支付金额
 	RefundAmount            string // 退款金额
 	CompleteTime            string // 完成时间

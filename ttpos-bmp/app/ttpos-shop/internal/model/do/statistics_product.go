@@ -22,8 +22,6 @@ type StatisticsProduct struct {
 	ProductPrice       interface{} // 商品单价: 未含税
 	ProductSalePrice   interface{} // 商品销售价: 规格+加料
 	ProductFinalPrice  interface{} // 商品最终价
-	FlavorPrice        interface{} // 商品原价(规格价)
-	SaucePrice         interface{} // 加料价格
 	ProductNum         interface{} // 商品数量
 	TaxRate            interface{} // 税率
 	TaxFee             interface{} // 税费

@@ -22,8 +22,6 @@ type MemberCardLog struct {
 	MemberCardTypeName interface{} // 会员卡类型名称,不随后台改变,当无法用member_card_type_uuid获取会员卡类型信息时,用此字段
 	MemberCardTypeUuid interface{} // 会员卡类型ID
 	MemberUuid         interface{} // 会员ID
-	GiveMoney          interface{} // 赠送余额
-	GivePoint          interface{} // 赠送积分
 	CreateTime         interface{} // 创建时间(时间戳)
 	UpdateTime         interface{} // 更新时间(时间戳)
 	DeleteTime         interface{} // 删除时间(时间戳)

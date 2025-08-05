@@ -17,8 +17,6 @@ type StatisticsProduct struct {
 	ProductPrice       float64 `json:"productPrice"       orm:"product_price"        description:"商品单价: 未含税"`    // 商品单价: 未含税
 	ProductSalePrice   float64 `json:"productSalePrice"   orm:"product_sale_price"   description:"商品销售价: 规格+加料"` // 商品销售价: 规格+加料
 	ProductFinalPrice  float64 `json:"productFinalPrice"  orm:"product_final_price"  description:"商品最终价"`        // 商品最终价
-	FlavorPrice        float64 `json:"flavorPrice"        orm:"flavor_price"         description:"商品原价(规格价)"`    // 商品原价(规格价)
-	SaucePrice         float64 `json:"saucePrice"         orm:"sauce_price"          description:"加料价格"`         // 加料价格
 	ProductNum         int     `json:"productNum"         orm:"product_num"          description:"商品数量"`         // 商品数量
 	TaxRate            float64 `json:"taxRate"            orm:"tax_rate"             description:"税率"`           // 税率
 	TaxFee             float64 `json:"taxFee"             orm:"tax_fee"              description:"税费"`           // 税费

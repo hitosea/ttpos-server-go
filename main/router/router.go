@@ -58,7 +58,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		{
 			passport.RegisterHandlers(passportGroup, dbm, cache)
 		}
-		// 商家端
+		// 商家端/移动管理端
 		shopGroup := apiV1.Group("/shop")
 		{
 			shop.RegisterBaseHandlers(shopGroup, dbm, cache)
@@ -66,6 +66,8 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterRechargeOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterStatisticsHandlers(shopGroup, dbm, cache)
 			shop.RegisterMemberOrderHandlers(shopGroup, dbm, cache)
+			shop.RegisterAuthHandlers(shopGroup, dbm, cache)  // 认证
+			shop.RegisterStaffHandlers(shopGroup, dbm, cache) // 管理员管理
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")

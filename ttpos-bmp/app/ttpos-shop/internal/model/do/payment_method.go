@@ -25,7 +25,6 @@ type PaymentMethod struct {
 	IsShowMemberRecharge interface{} // 0-不显示 1-收银机会员充值显示
 	Status               interface{} // 状态 0-禁用 1-启用
 	Sort                 interface{} // 排序
-	DefaultImg           interface{} // 默认图片
 	CreateTime           interface{} // 创建时间(时间戳)
 	UpdateTime           interface{} // 更新时间(时间戳)
 	DeleteTime           interface{} // 删除时间(时间戳)

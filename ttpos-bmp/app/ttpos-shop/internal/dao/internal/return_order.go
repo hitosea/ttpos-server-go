@@ -36,7 +36,6 @@ type ReturnOrderColumns struct {
 	BankCode            string // 银行编码 - 当存在QR PromptPay的时候需要传
 	AccountNo           string // 账号 - 当存在QR PromptPay的时候需要传
 	AccountName         string // 账户名称 - 当存在QR PromptPay的时候需要传
-	DutyNo              string // 当班编号
 	CreateTime          string // 创建时间(时间戳)
 	UpdateTime          string // 更新时间(时间戳)
 	DeleteTime          string // 删除时间(时间戳)
@@ -59,7 +58,6 @@ var returnOrderColumns = ReturnOrderColumns{
 	BankCode:            "bank_code",
 	AccountNo:           "account_no",
 	AccountName:         "account_name",
-	DutyNo:              "duty_no",
 	CreateTime:          "create_time",
 	UpdateTime:          "update_time",
 	DeleteTime:          "delete_time",

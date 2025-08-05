@@ -11,7 +11,6 @@ type H5Order struct {
 	DeskUuid               uint64  `json:"deskUuid"               orm:"desk_uuid"                 description:"桌台uuid"`                                                // 桌台uuid
 	DeskNo                 string  `json:"deskNo"                 orm:"desk_no"                   description:"桌台编号"`                                                  // 桌台编号
 	Status                 int     `json:"status"                 orm:"status"                    description:"状态, 0-未下单 1-未接单 2-已接单 3-已拒单"`                           // 状态, 0-未下单 1-未接单 2-已接单 3-已拒单
-	IsNeedAudit            int     `json:"isNeedAudit"            orm:"is_need_audit"             description:"是否需要审核，0-不需要审核，直接送厨 1-需要审核"`                            // 是否需要审核，0-不需要审核，直接送厨 1-需要审核
 	IsAutoAccept           int     `json:"isAutoAccept"           orm:"is_auto_accept"            description:"是否自动接单, 0-否 1-是"`                                       // 是否自动接单, 0-否 1-是
 	IsBuffet               int     `json:"isBuffet"               orm:"is_buffet"                 description:"是否是自助餐, 0-非自助餐 1-自助餐"`                                  // 是否是自助餐, 0-非自助餐 1-自助餐
 	MemberDiscountRate     float64 `json:"memberDiscountRate"     orm:"member_discount_rate"      description:"会员折扣率(0-100%).接单和拒单后从sale_order_product表获取，不再改变"`       // 会员折扣率(0-100%).接单和拒单后从sale_order_product表获取，不再改变

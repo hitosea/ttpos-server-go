@@ -30,7 +30,6 @@ type SaleOrderProductColumns struct {
 	MultiLanguageNameUuid  string // 多语言名称ID
 	Num                    string // 商品数量。不能减为0，当数量为1再减时，标记删除
 	ImageFileUuid          string // 商品图片ID
-	DeviceId               string // 设备ID,用于标识订单来源设备.来源h5时，device_id为h5
 	FlavorPrice            string // 规格原价（单商品）,仅某规格商品的原价
 	SaucePrice             string // 小料价（单商品）,所有小料的价格之和
 	ProductPrice           string // 原始单价（单商品）,规格原价+小料价
@@ -87,7 +86,6 @@ var saleOrderProductColumns = SaleOrderProductColumns{
 	MultiLanguageNameUuid:  "multi_language_name_uuid",
 	Num:                    "num",
 	ImageFileUuid:          "image_file_uuid",
-	DeviceId:               "device_id",
 	FlavorPrice:            "flavor_price",
 	SaucePrice:             "sauce_price",
 	ProductPrice:           "product_price",

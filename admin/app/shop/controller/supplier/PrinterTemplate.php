@@ -39,12 +39,13 @@ class PrinterTemplate extends Controller
     public function setTemplate()
     {
         $id = $this->postData()['id'];
-        $template = $this->postData()['template'];
+        $data = $this->postData();
         $model = PrinterTemplateModel::detail($id);
+        /** @var PrinterTemplateModel $model */
         if (!$model) {
             return $this->renderError('模板不存在');
         }
-        if (!$model->setTemplate($template)) {
+        if (!$model->setTemplate($data)) {
             return $this->renderError('操作失败');
         }
         return $this->renderSuccess($model->getError() ?: '操作成功');

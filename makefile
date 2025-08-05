@@ -102,6 +102,14 @@ skootar-update-status:
 repassword:
 	chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh repassword $(ARGS)
 
+# 整理依赖
+mod-tidy:
+	@cd main && go mod tidy
+
 # 增加版本号
 add-ver:
 	@make add-version
+
+# 执行think命令
+think:
+	@chmod +x ./scripts/cmd.sh && ./scripts/cmd.sh think $(filter-out $@,$(MAKECMDGOALS)) 

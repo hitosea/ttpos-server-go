@@ -26,11 +26,15 @@ func NewDishesXprinterTemplate(
 
 // CompleteOrder 整单模版
 func (t *dishesXprinterTemplate) CompleteOrder(
-	temp int,
+	tmpInfo model.PrinterTemplate,
 	printerItem *model.ProductPrinterItem,
 	order model.SaleBill,
 	products printer_model.Products,
 ) string {
+
+	temp := tmpInfo.Template
+	isShowSku := tmpInfo.IsShowSku
+
 	// 人的翻译
 	name := t.base.Translate("人")
 	// 自助餐标记开关
@@ -163,7 +167,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 				printer.SetLineSpacing(45)
 			}
 			// 分割处理属性
-			for _, attr := range product.ProductAttrList {
+			for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
 				printer.AppendText(attr.GetLocale(t.base.Lang))
 				printer.LineFeed()
 			}
@@ -319,7 +323,7 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 				printer.SetLineSpacing(50)
 			}
 			// 分割处理属性
-			for _, attr := range product.ProductAttrList {
+			for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
 				printer.AppendText(attr.GetLocale(t.base.Lang))
 				printer.SetLineSpacing(45)
 				printer.LineFeed()
@@ -372,12 +376,15 @@ func (t *dishesXprinterTemplate) CompleteOrder(
 
 // OneDishOneOrder 一菜一单
 func (t *dishesXprinterTemplate) OneDishOneOrder(
-	tmp int,
+	tmpInfo model.PrinterTemplate,
 	productPrinter model.ProductPrinter,
 	printerItem *model.ProductPrinterItem,
 	order model.SaleBill,
 	products printer_model.Products,
 ) string {
+	tmp := tmpInfo.Template
+	isShowSku := tmpInfo.IsShowSku
+
 	// 人的翻译
 	name := t.base.Translate("人")
 	// 自助餐标记开关
@@ -486,7 +493,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 				}
 
 				// 处理产品属性
-				for _, attr := range product.ProductAttrList {
+				for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
 					printer.AppendText(attr.GetLocale(t.base.Lang))
 					if printerType == PrinterTypeXPrinterWifi {
 						printer.SetLineSpacing(40)
@@ -633,7 +640,7 @@ func (t *dishesXprinterTemplate) OneDishOneOrder(
 				}
 
 				// 处理产品属性
-				for _, attr := range product.ProductAttrList {
+				for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
 					printer.AppendText(attr.GetLocale(t.base.Lang))
 					if printerType == PrinterTypeXPrinterWifi {
 						printer.SetLineSpacing(40)

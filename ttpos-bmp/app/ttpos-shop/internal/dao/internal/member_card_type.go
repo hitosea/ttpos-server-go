@@ -23,9 +23,9 @@ type MemberCardTypeDao struct {
 type MemberCardTypeColumns struct {
 	Id           string // 自增ID
 	Uuid         string // 会员卡类型ID
-	Price        string // 会员卡类型名称
 	Name         string // 会员卡类型名称
 	Expire       string // 有效期限,单位:月, 0为永久有效
+	Price        string // 价格
 	Discount     string // 折扣,单位%
 	Sort         string // 排序
 	Status       string // 状态, 0-开启 1-关闭
@@ -43,9 +43,9 @@ type MemberCardTypeColumns struct {
 var memberCardTypeColumns = MemberCardTypeColumns{
 	Id:           "id",
 	Uuid:         "uuid",
-	Price:        "price",
 	Name:         "name",
 	Expire:       "expire",
+	Price:        "price",
 	Discount:     "discount",
 	Sort:         "sort",
 	Status:       "status",

@@ -5084,7 +5084,44 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 
 		// 构建属性信息
 		attributes := make([]model.Attribute, 0)
+		// 将map转换为切片，然后按AttributeGroupUuid分组排序
+		productAttributeSlice := make([]*model.ProductPackageAttribute, 0, len(productAttributes))
 		for _, productAttribute := range productAttributes {
+			productAttributeSlice = append(productAttributeSlice, productAttribute)
+		}
+		if len(productAttributeSlice) > 0 {
+			// 按AttributeGroupUuid分组
+			groupMap := make(map[uint64][]*model.ProductPackageAttribute)
+			for _, attr := range productAttributeSlice {
+				groupUuid := attr.Attribute.AttributeGroupUuid
+				groupMap[groupUuid] = append(groupMap[groupUuid], attr)
+			}
+			// 对每个分组内的属性按Attribute.ID排序
+			for groupUuid, groupAttrs := range groupMap {
+				sort.Slice(groupAttrs, func(i, j int) bool {
+					return groupAttrs[i].ID < groupAttrs[j].ID
+				})
+				groupMap[groupUuid] = groupAttrs
+			}
+			// 获取所有分组，并按第一个分组的Attribute.ID排序
+			var groups [][]*model.ProductPackageAttribute
+			for _, groupAttrs := range groupMap {
+				groups = append(groups, groupAttrs)
+			}
+			// 按第一个分组的Attribute.ID排序分组
+			sort.Slice(groups, func(i, j int) bool {
+				if len(groups[i]) == 0 || len(groups[j]) == 0 {
+					return false
+				}
+				return groups[i][0].ID < groups[j][0].ID
+			})
+			// 合并所有分组
+			productAttributeSlice = productAttributeSlice[:0] // 清空原切片
+			for _, group := range groups {
+				productAttributeSlice = append(productAttributeSlice, group...)
+			}
+		}
+		for _, productAttribute := range productAttributeSlice {
 			attribute := model.Attribute{
 				Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
 				ProductAttributeUuid: productAttribute.Attribute.Uuid,

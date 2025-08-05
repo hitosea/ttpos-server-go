@@ -5,7 +5,7 @@
 package dao
 
 import (
-	"ttpos-bmp/app/ttpos/internal/dao/internal"
+	"ttpos-bmp/app/ttpos-shop/internal/dao/internal"
 )
 
 // saleOrderProductBomDao is the data access object for the table ttpos_sale_order_product_bom.

@@ -21,42 +21,38 @@ type MemberLevelDao struct {
 
 // MemberLevelColumns defines and stores column names for the table ttpos_member_level.
 type MemberLevelColumns struct {
-	Id             string // 自增ID
-	Uuid           string // 会员等级ID
-	Name           string // 等级名称
-	OpenMoney      string // 是否开放累计消费额升级，0-否 1-是
-	UpgradeMoney   string // 升级条件，累计消费额
-	OpenPoint      string // 是否开放累计积分升级，0-否 1-是
-	UpgradePoint   string // 升级条件，累计积分
-	Discount       string // 等级权益,百分比折扣,单位%, 如80%为打8折，discount值为0.8
-	Priority       string // 等级权重，越大等级越高
-	IsDefault      string // 是否默认, 1-是 0-否
-	Remark         string // 备注
-	PointsRate     string // 购物赠送积分按照付款金额比例赠送时的比例
-	PointsQuantity string // 购物赠送积分按照桌台人数赠送时的数量
-	CreateTime     string // 创建时间(时间戳)
-	UpdateTime     string // 更新时间(时间戳)
-	DeleteTime     string // 删除时间(时间戳)
+	Id           string // 自增ID
+	Uuid         string // 会员等级ID
+	Name         string // 等级名称
+	OpenMoney    string // 是否开放累计消费额升级，0-否 1-是
+	UpgradeMoney string // 升级条件，累计消费额
+	OpenPoint    string // 是否开放累计积分升级，0-否 1-是
+	UpgradePoint string // 升级条件，累计积分
+	Discount     string // 等级权益,百分比折扣,单位%, 如80%为打8折，discount值为0.8
+	Priority     string // 等级权重，越大等级越高
+	IsDefault    string // 是否默认, 1-是 0-否
+	Remark       string // 备注
+	CreateTime   string // 创建时间(时间戳)
+	UpdateTime   string // 更新时间(时间戳)
+	DeleteTime   string // 删除时间(时间戳)
 }
 
 // memberLevelColumns holds the columns for the table ttpos_member_level.
 var memberLevelColumns = MemberLevelColumns{
-	Id:             "id",
-	Uuid:           "uuid",
-	Name:           "name",
-	OpenMoney:      "open_money",
-	UpgradeMoney:   "upgrade_money",
-	OpenPoint:      "open_point",
-	UpgradePoint:   "upgrade_point",
-	Discount:       "discount",
-	Priority:       "priority",
-	IsDefault:      "is_default",
-	Remark:         "remark",
-	PointsRate:     "points_rate",
-	PointsQuantity: "points_quantity",
-	CreateTime:     "create_time",
-	UpdateTime:     "update_time",
-	DeleteTime:     "delete_time",
+	Id:           "id",
+	Uuid:         "uuid",
+	Name:         "name",
+	OpenMoney:    "open_money",
+	UpgradeMoney: "upgrade_money",
+	OpenPoint:    "open_point",
+	UpgradePoint: "upgrade_point",
+	Discount:     "discount",
+	Priority:     "priority",
+	IsDefault:    "is_default",
+	Remark:       "remark",
+	CreateTime:   "create_time",
+	UpdateTime:   "update_time",
+	DeleteTime:   "delete_time",
 }
 
 // NewMemberLevelDao creates and returns a new DAO object for table data access.

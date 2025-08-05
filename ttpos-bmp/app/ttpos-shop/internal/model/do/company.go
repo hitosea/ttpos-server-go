@@ -19,7 +19,6 @@ type Company struct {
 	AuthDay       interface{} // 授权时间(天) 0为永不过期
 	Status        interface{} // 状态 1-启用 0-禁用;not null
 	AuthStartTime interface{} // 授权开始时间(时间戳)
-	OldCompanyId  interface{} // 原商家ID
 	CreateTime    interface{} // 创建时间(时间戳)
 	UpdateTime    interface{} // 更新时间(时间戳)
 	DeleteTime    interface{} // 删除时间(时间戳)

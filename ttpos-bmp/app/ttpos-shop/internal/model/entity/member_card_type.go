@@ -8,9 +8,9 @@ package entity
 type MemberCardType struct {
 	Id           uint    `json:"id"           orm:"id"             description:"自增ID"`              // 自增ID
 	Uuid         uint64  `json:"uuid"         orm:"uuid"           description:"会员卡类型ID"`           // 会员卡类型ID
-	Price        float64 `json:"price"        orm:"price"          description:"会员卡类型名称"`           // 会员卡类型名称
 	Name         string  `json:"name"         orm:"name"           description:"会员卡类型名称"`           // 会员卡类型名称
 	Expire       int     `json:"expire"       orm:"expire"         description:"有效期限,单位:月, 0为永久有效"` // 有效期限,单位:月, 0为永久有效
+	Price        float64 `json:"price"        orm:"price"          description:"价格"`                // 价格
 	Discount     float64 `json:"discount"     orm:"discount"       description:"折扣,单位%"`            // 折扣,单位%
 	Sort         int     `json:"sort"         orm:"sort"           description:"排序"`                // 排序
 	Status       int     `json:"status"       orm:"status"         description:"状态, 0-开启 1-关闭"`     // 状态, 0-开启 1-关闭

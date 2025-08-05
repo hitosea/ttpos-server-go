@@ -29,7 +29,6 @@ type CompanyColumns struct {
 	AuthDay       string // 授权时间(天) 0为永不过期
 	Status        string // 状态 1-启用 0-禁用;not null
 	AuthStartTime string // 授权开始时间(时间戳)
-	OldCompanyId  string // 原商家ID
 	CreateTime    string // 创建时间(时间戳)
 	UpdateTime    string // 更新时间(时间戳)
 	DeleteTime    string // 删除时间(时间戳)
@@ -45,7 +44,6 @@ var companyColumns = CompanyColumns{
 	AuthDay:       "auth_day",
 	Status:        "status",
 	AuthStartTime: "auth_start_time",
-	OldCompanyId:  "old_company_id",
 	CreateTime:    "create_time",
 	UpdateTime:    "update_time",
 	DeleteTime:    "delete_time",

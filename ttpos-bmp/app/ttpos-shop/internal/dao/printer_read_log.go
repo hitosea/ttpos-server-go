@@ -8,15 +8,15 @@ import (
 	"ttpos-bmp/app/ttpos-shop/internal/dao/internal"
 )
 
-// marketingCouponDao is the data access object for the table ttpos_marketing_coupon.
+// printerReadLogDao is the data access object for the table ttpos_printer_read_log.
 // You can define custom methods on it to extend its functionality as needed.
-type marketingCouponDao struct {
-	*internal.MarketingCouponDao
+type printerReadLogDao struct {
+	*internal.PrinterReadLogDao
 }
 
 var (
-	// MarketingCoupon is a globally accessible object for table ttpos_marketing_coupon operations.
-	MarketingCoupon = marketingCouponDao{internal.NewMarketingCouponDao()}
+	// PrinterReadLog is a globally accessible object for table ttpos_printer_read_log operations.
+	PrinterReadLog = printerReadLogDao{internal.NewPrinterReadLogDao()}
 )
 
 // Add your custom methods and functionality below.

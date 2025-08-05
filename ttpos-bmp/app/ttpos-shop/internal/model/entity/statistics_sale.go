@@ -14,7 +14,6 @@ type StatisticsSale struct {
 	DeskUuid             uint64  `json:"deskUuid"             orm:"desk_uuid"              description:"桌台UUID"`    // 桌台UUID
 	MealNum              int     `json:"mealNum"              orm:"meal_num"               description:"用餐人数"`      // 用餐人数
 	ProductPrice         float64 `json:"productPrice"         orm:"product_price"          description:"商品原价: 不含税"` // 商品原价: 不含税
-	ProductOriginPrice   float64 `json:"productOriginPrice"   orm:"product_origin_price"   description:"原商品金额"`     // 原商品金额
 	ProductSalePrice     float64 `json:"productSalePrice"     orm:"product_sale_price"     description:"商品销售价"`     // 商品销售价
 	ProductNum           int     `json:"productNum"           orm:"product_num"            description:"商品数量"`      // 商品数量
 	ProductTax           float64 `json:"productTax"           orm:"product_tax"            description:"商品税"`       // 商品税
@@ -30,12 +29,7 @@ type StatisticsSale struct {
 	PaymentFee           float64 `json:"paymentFee"           orm:"payment_fee"            description:"支付手续费"`     // 支付手续费
 	PaymentBalance       float64 `json:"paymentBalance"       orm:"payment_balance"        description:"支付余额"`      // 支付余额
 	RefundAmount         float64 `json:"refundAmount"         orm:"refund_amount"          description:"退款金额"`      // 退款金额
-	RefundPaymentBalance float64 `json:"refundPaymentBalance" orm:"refund_payment_balance" description:"退款支付余额"`    // 退款支付余额
 	RefundTax            float64 `json:"refundTax"            orm:"refund_tax"             description:"退款税额"`      // 退款税额
-	NoRefundTax          float64 `json:"noRefundTax"          orm:"no_refund_tax"          description:"不退税金额"`     // 不退税金额
-	ExtendPrice          float64 `json:"extendPrice"          orm:"extend_price"           description:"扩展价格"`      // 扩展价格
-	IsMeger              int     `json:"isMeger"              orm:"is_meger"               description:"是否合单"`      // 是否合单
-	IsSpecial            int     `json:"isSpecial"            orm:"is_special"             description:"是否特殊订单"`    // 是否特殊订单
 	RefundServiceFee     float64 `json:"refundServiceFee"     orm:"refund_service_fee"     description:"退款服务费"`     // 退款服务费
 	RefundDiscount       float64 `json:"refundDiscount"       orm:"refund_discount"        description:"退款优惠折扣"`    // 退款优惠折扣
 	RefundDiscountMember float64 `json:"refundDiscountMember" orm:"refund_discount_member" description:"退款会员折扣"`    // 退款会员折扣

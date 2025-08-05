@@ -21,7 +21,6 @@ type SaleBill struct {
 	IsBuffet              interface{} // 是否自助餐, 0-否 1-是
 	Reason                interface{} // 取消原因
 	IsLock                interface{} // 是否锁单, 0-否 1-是
-	IsSplitOrder          interface{} // 是否拆单, 0-否 1-是
 	MealNum               interface{} // 就餐人数
 	Status                interface{} // 订单状态, 0-待付款、1-已完成、2-已取消。
 	Remark                interface{} // 备注(开台备注)
@@ -32,8 +31,7 @@ type SaleBill struct {
 	BuffetPackage1Uuid    interface{} // 自助餐套餐1的uuid
 	BuffetPackage2Uuid    interface{} // 自助餐套餐2的uuid
 	DeviceUuid            interface{} // 设备ID，用于标识这个账单是由哪个设备创建的。点餐账单通过设备uuid查询
-	Amount                interface{} // 订单金额(折后价),关联销售订单的总金额之和
-	OriginAmount          interface{} // 订单金额(折前价)。商品未含税时，订单金额(折前价)=商品金额+服务费+税费。商品已含税时，订单金额(折前价)=商品金额（含商品消费税）+服务费+税费（只有服务费税）
+	Amount                interface{} // 订单金额,关联销售订单的总金额之和
 	ProductAmount         interface{} // 商品金额,关联销售订单的商品金额之和
 	ServiceFee            interface{} // 服务费,关联销售订单的服务费之和
 	TaxFee                interface{} // 税费,关联销售订单的税费之和
@@ -54,7 +52,6 @@ type SaleBill struct {
 	DelayDuration         interface{} // 总延迟时长(秒)
 	DelayStartTime        interface{} // 总延迟时长开始时间(秒)
 	HideBillTime          interface{} // 隐藏账单(挂单)时间(时间戳)
-	LockTime              interface{} // 锁单时间
 	ProductionTime        interface{} // 首次送厨时间(时间戳)
 	FinishTime            interface{} // 完成时间(时间戳),结账时间
 	CreateTime            interface{} // 创建时间(时间戳),开台时间

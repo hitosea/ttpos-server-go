@@ -32,8 +32,6 @@ type StatisticsProductColumns struct {
 	ProductPrice       string // 商品单价: 未含税
 	ProductSalePrice   string // 商品销售价: 规格+加料
 	ProductFinalPrice  string // 商品最终价
-	FlavorPrice        string // 商品原价(规格价)
-	SaucePrice         string // 加料价格
 	ProductNum         string // 商品数量
 	TaxRate            string // 税率
 	TaxFee             string // 税费
@@ -62,8 +60,6 @@ var statisticsProductColumns = StatisticsProductColumns{
 	ProductPrice:       "product_price",
 	ProductSalePrice:   "product_sale_price",
 	ProductFinalPrice:  "product_final_price",
-	FlavorPrice:        "flavor_price",
-	SaucePrice:         "sauce_price",
 	ProductNum:         "product_num",
 	TaxRate:            "tax_rate",
 	TaxFee:             "tax_fee",

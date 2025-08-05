@@ -12,7 +12,7 @@ type StatisticsMember struct {
 	DutyNo                  string  `json:"dutyNo"                  orm:"duty_no"                    description:"当班编号"`       // 当班编号
 	RechargeAmount          float64 `json:"rechargeAmount"          orm:"recharge_amount"            description:"充值金额"`       // 充值金额
 	GiveAmount              float64 `json:"giveAmount"              orm:"give_amount"                description:"赠送金额"`       // 赠送金额
-	GivePoint               float64 `json:"givePoint"               orm:"give_point"                 description:"赠送积分"`       // 赠送积分
+	GivePoint               int     `json:"givePoint"               orm:"give_point"                 description:"赠送积分"`       // 赠送积分
 	PaymentAmount           float64 `json:"paymentAmount"           orm:"payment_amount"             description:"支付金额"`       // 支付金额
 	PaymentFee              float64 `json:"paymentFee"              orm:"payment_fee"                description:"支付手续费"`      // 支付手续费
 	RefundAmount            float64 `json:"refundAmount"            orm:"refund_amount"              description:"退款金额"`       // 退款金额

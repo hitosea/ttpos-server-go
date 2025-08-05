@@ -20,7 +20,6 @@ type PaymentMethod struct {
 	IsShowMemberRecharge int     `json:"isShowMemberRecharge" orm:"is_show_member_recharge" description:"0-不显示 1-收银机会员充值显示"`          // 0-不显示 1-收银机会员充值显示
 	Status               int     `json:"status"               orm:"status"                  description:"状态 0-禁用 1-启用"`               // 状态 0-禁用 1-启用
 	Sort                 int     `json:"sort"                 orm:"sort"                    description:"排序"`                         // 排序
-	DefaultImg           string  `json:"defaultImg"           orm:"default_img"             description:"默认图片"`                       // 默认图片
 	CreateTime           uint    `json:"createTime"           orm:"create_time"             description:"创建时间(时间戳)"`                  // 创建时间(时间戳)
 	UpdateTime           uint    `json:"updateTime"           orm:"update_time"             description:"更新时间(时间戳)"`                  // 更新时间(时间戳)
 	DeleteTime           uint    `json:"deleteTime"           orm:"delete_time"             description:"删除时间(时间戳)"`                  // 删除时间(时间戳)

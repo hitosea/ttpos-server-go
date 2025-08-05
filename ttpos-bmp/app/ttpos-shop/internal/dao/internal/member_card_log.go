@@ -32,8 +32,6 @@ type MemberCardLogColumns struct {
 	MemberCardTypeName string // 会员卡类型名称,不随后台改变,当无法用member_card_type_uuid获取会员卡类型信息时,用此字段
 	MemberCardTypeUuid string // 会员卡类型ID
 	MemberUuid         string // 会员ID
-	GiveMoney          string // 赠送余额
-	GivePoint          string // 赠送积分
 	CreateTime         string // 创建时间(时间戳)
 	UpdateTime         string // 更新时间(时间戳)
 	DeleteTime         string // 删除时间(时间戳)
@@ -52,8 +50,6 @@ var memberCardLogColumns = MemberCardLogColumns{
 	MemberCardTypeName: "member_card_type_name",
 	MemberCardTypeUuid: "member_card_type_uuid",
 	MemberUuid:         "member_uuid",
-	GiveMoney:          "give_money",
-	GivePoint:          "give_point",
 	CreateTime:         "create_time",
 	UpdateTime:         "update_time",
 	DeleteTime:         "delete_time",

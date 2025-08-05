@@ -21,7 +21,6 @@ type ReturnOrder struct {
 	BankCode            string  `json:"bankCode"            orm:"bank_code"             description:"银行编码 - 当存在QR PromptPay的时候需要传"` // 银行编码 - 当存在QR PromptPay的时候需要传
 	AccountNo           string  `json:"accountNo"           orm:"account_no"            description:"账号 - 当存在QR PromptPay的时候需要传"`   // 账号 - 当存在QR PromptPay的时候需要传
 	AccountName         string  `json:"accountName"         orm:"account_name"          description:"账户名称 - 当存在QR PromptPay的时候需要传"` // 账户名称 - 当存在QR PromptPay的时候需要传
-	DutyNo              string  `json:"dutyNo"              orm:"duty_no"               description:"当班编号"`                         // 当班编号
 	CreateTime          uint    `json:"createTime"          orm:"create_time"           description:"创建时间(时间戳)"`                    // 创建时间(时间戳)
 	UpdateTime          uint    `json:"updateTime"          orm:"update_time"           description:"更新时间(时间戳)"`                    // 更新时间(时间戳)
 	DeleteTime          uint    `json:"deleteTime"          orm:"delete_time"           description:"删除时间(时间戳)"`                    // 删除时间(时间戳)
