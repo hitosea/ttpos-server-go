@@ -42,8 +42,9 @@
                 items.textCenter ? 'text-center' : '',
                 items.font16Bold ? 'font16Bold' : '',
               ]"
+              
             >
-              {{ items.name }}
+              {{ items.name }}{{  is_show_sku == 1 && items.addLabel ? items.addLabel : '' }}
             </div>
             <!-- 右边的字段 -->
             <div v-if="items.label" class="text-box text-box-r" :class="[items.flexWidthRight ? 'flexWidthRight' : '', items.num ? 'flex-end' : '']">
@@ -145,7 +146,7 @@
         <div @click="modeChange(2)" class="tabs-button" :class="mode == 2 ? 'tabs-active' : ''">
           {{ $t('模板2') }}
         </div>
-        <div @click="modeChange(3)" v-if="title != $t('退菜单')" class="tabs-button" :class="mode == 3 ? 'tabs-active' : ''">
+        <div @click="modeChange(3)" v-if=" title != $t('退菜单') && title != $t('整单打印') " class="tabs-button" :class="mode == 3 ? 'tabs-active' : ''">
           {{ $t('模板3') }}
         </div>
         <div @click="modeChange(4)" v-if="title == $t('结账单') || title == $t('预结账单')" class="tabs-button" :class="mode == 4 ? 'tabs-active' : ''">
@@ -247,7 +248,7 @@
           <h4 class="mb-12" v-if="mode == 1">
             {{ $t('桌位: A01 (4人)') }}
           </h4>
-          <h3 v-if="mode == 2 || mode == 3">
+          <h3 v-if="mode == 2 ">
             {{ $t('桌位: A01 (4人)') }}
           </h3>
         </template>
@@ -281,7 +282,7 @@
           :key="index"
           v-show="(item[0]?.allHide && item[0].allHide.includes(mode)) || !item[0]?.allHide"
         >
-          <div class="box-text-box" v-for="(items, indexs) in item" :key="indexs" v-show="(items.typeShow && items.typeShow.includes(mode)) || !items.typeShow">
+          <div class="box-text-box" :class="items.showSkuAttr && is_show_sku == 0 ? 'show-sku-attr' : ''" v-for="(items, indexs) in item" :key="indexs" v-show="(items.typeShow && items.typeShow.includes(mode)) || !items.typeShow">
             <!-- 左边的字段 -->
             <div
               class="text-box"
@@ -368,6 +369,10 @@
         </template>
       </div>
     </template>
+    <div class="flex-switch" v-if="title == $t('整单打印') || (title == $t('发票') && mode == 2)">
+      <span class="font14">{{ $t('是否显示规格、属性') }}</span>
+      <el-switch v-model="is_show_sku" :active-value="1" :inactive-value="0" />
+    </div>
     <template #footer>
       <span class="dialog-footer">
         <el-button @click="handleClose" :loading="loading"> {{ $t('关闭') }}</el-button>
@@ -414,13 +419,15 @@
         details: [],
         titleName: '',
         mode: 1,
+        is_show_sku: 0,
       };
     },
-    props: ['open', 'title', 'template', 'editId', 'print_method'],
+    props: ['open', 'title', 'template', 'editId', 'print_method', 'isShowSku'],
     created() {
       this.dialogVisible = this.open;
       this.brand = this.cloudBasic.base.brand_name;
       this.mode = this.template;
+      this.is_show_sku = this.isShowSku;
       if (this.title == $t('交班单')) {
         if (this.mode == 1) {
           this.details = previewData.one;
@@ -490,7 +497,7 @@
       }
     },
     methods: {
-      onSubmit() {
+      onSubmit() {  
         if (((this.title == $t('结账单') && this.mode == '3') || (this.title == $t('发票') && this.mode == '2') || this.title == $t('预结账单')) && this.print_method == 1) {
           ElMessageBox.confirm($t('请前去打印设置调整打印方式为“图片打印”，否则图片将无法正常打印，如已设置，请忽略此步骤'), $t('提示'), {
             confirmButtonText: $t('确定'),
@@ -516,6 +523,7 @@
         let form = {};
         form.id = this.editId;
         form.template = this.mode;
+        form.is_show_sku = this.is_show_sku;
         self.loading = true;
         SettingApi.setTemplate(form, true)
           .then((data) => {
@@ -534,6 +542,7 @@
       handleClose() {
         this.$emit('close');
       },
+
 
       modeChange(e) {
         this.mode = e;
@@ -644,6 +653,13 @@
 
   .box-border .font14 {
     font-size: 14px;
+  }
+
+  .flex-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
   }
 
   .one-menu p {
@@ -836,6 +852,15 @@
   }
   .line-height-2-5 {
     line-height: 2.5;
+  }
+
+  .show-sku-attr {
+    opacity: 0;
+    height: 0;
+  }
+
+  .is-show-sku-attr {
+    opacity: 0;
   }
 
   .font24 {

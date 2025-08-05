@@ -1013,9 +1013,16 @@ export const previewData = {
                 font16Normal: true,
             },
             {
-                name: `${$t('少冰')}` + '\n' + `${$t('加珍珠')}` + '\n' + `<span class="font24-400">${$t('这是备注这是备注这是备注')}</span>`,
+                name: `${$t('少冰')}` + '\n' + `${$t('加珍珠')}` ,
                 typeShow: '1',
                 flexWidth: true,
+                showSkuAttr: true,
+            },
+            {
+                name: `<span class="font24-400">${$t('这是备注这是备注这是备注')}</span>`,
+                typeShow: '1',
+                flexWidth: true,
+                font18Small: true,
             },
             {
                 name: $t('（打包）') + $t('商品名称商品名称'),
@@ -1032,7 +1039,14 @@ export const previewData = {
                 flexWidth: true,
             },
             {
-                name: `${$t('少冰')}` + '\n' + `${$t('加珍珠')}` + '\n' + `<span class="font24-400">${$t('这是备注这是备注这是备注')}</span>`,
+                name: `${$t('少冰')}` + '\n' + `${$t('加珍珠')}`,
+                typeShow: '2',
+                flexWidth: true,
+                font18Small: true,
+                showSkuAttr: true,
+            },
+            {
+                name: `<span class="font24-400">${$t('这是备注这是备注这是备注')}</span>`,
                 typeShow: '2',
                 flexWidth: true,
                 font18Small: true,
@@ -1045,28 +1059,6 @@ export const previewData = {
                 flexWidth: true,
             },
 
-            {
-                name: $t('商品名称商品名称品名称商品名称商品名称品名称'),
-                label: 'X2',
-                font24: true,
-                typeShow: '3',
-                flexWidth: true,
-            },
-            {
-                name: `<span class="grey">${$t('少冰')}</span>` + '\n' + `<span class="grey">${$t('加珍珠')}</span>` + '\n' + `<span class="grey">${$t('这是备注这是备注这是备注')}</span>`,
-                typeShow: '3',
-                flexWidth: true,
-                font24: true,
-                right: false,
-                lineHeight: '2-5',
-            },
-            {
-                name: $t('（打包）') + $t('商品名称商品名称'),
-                label: 'X2',
-                font24: true,
-                typeShow: '3',
-                flexWidth: true,
-            },
         ],
     ],
     seven: [
@@ -1211,9 +1203,10 @@ export const previewData = {
 
         [
             {
-                name: $t('（赠）') + $t('商品名称商品名称品名称商品名称商品名称品名称') + `(${$t('少冰、')}${$t('加珍珠')})`,
+                name: $t('（赠）') + $t('商品名称商品名称品名称商品名称商品名称品名称'),
                 num: '24*12',
                 label: '￥350',
+                addLabel: `(${$t('少冰、')}${$t('加珍珠')})`,
             },
 
             {
