@@ -128,6 +128,19 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order` (
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单表';
 
+CREATE TABLE IF NOT EXISTS `ttpos_sale_order_package_product` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单套餐商品ID',
+    `sale_order_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单ID',
+    `sale_bill_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售账单ID',
+    `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联订单套餐UUID, sale_order_product_uuid',
+    `sale_order_product_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单商品ID,套餐子商品的订单商品',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)'
+    UNIQUE KEY `unique_uuid` (`uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '销售订单套餐商品表';
+
 CREATE TABLE IF NOT EXISTS `ttpos_sale_order_coupon` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
     `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '销售订单优惠券ID',
@@ -986,7 +999,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package` (
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品包表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品包和套餐表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_package_attribute_group` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
@@ -1012,6 +1025,38 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_package_attribute` (
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
     UNIQUE KEY `unique_uuid` (`uuid`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品包属性表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_product_package_group` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品套餐组ID',
+    `name` TEXT COMMENT '名称',
+    `multi_language_name_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '多语言名称ID',
+    `product_package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品套餐UUID',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_product_package_uuid` (`product_package_uuid`),
+    INDEX `idx_multi_language_name_uuid` (`multi_language_name_uuid`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品套餐组表';
+
+CREATE TABLE IF NOT EXISTS `ttpos_product_package_group_item` (
+    `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
+    `uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品套餐组商品ID',
+    `product_package_group_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品套餐组ID',
+    `related_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联商品UUID, product_package_uuid',
+    `product_bom_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '商品BOM UUID,商品规格uuid',
+    `num` DECIMAL(12, 4) NOT NULL DEFAULT 0 COMMENT '数量',
+    `sort` INT(11) NOT NULL DEFAULT 0 COMMENT '排序',
+    `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
+    `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
+    `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',
+    UNIQUE KEY `unique_uuid` (`uuid`),
+    INDEX `idx_product_package_group_uuid` (`product_package_group_uuid`),
+    INDEX `idx_related_uuid` (`related_uuid`),
+    INDEX `idx_product_bom_uuid` (`product_bom_uuid`),
+    INDEX `idx_sort` (`sort`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '商品套餐组商品表';
 
 CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '自增ID',
