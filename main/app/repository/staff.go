@@ -10,13 +10,13 @@ type IStaffRepo interface {
 	WithCompany() DBOption             // 关联集团
 	WithCompanySetting() DBOption      // 关联集团设置
 	WithDevice(source string) DBOption // 关联设备
+	WithRoles() DBOption               // 关联角色
 
 	WhereUuid(uuid uint64) DBOption         // Uuid 条件
 	WhereUsername(username string) DBOption // 用户名条件
 	WhereCashierOnline() DBOption           // 收银机在线条件
 	WhereDeviceId(bindKey string) DBOption  // 设备ID条件
-
-	WithRoles() DBOption // 关联角色
+	WhereRoleUuid(roleUuid uint64) DBOption // 角色ID条件
 
 	GetStaff(opts ...DBOption) (model.Staff, error) // 查询员工
 	GetStaffs(opts ...DBOption) []model.Staff       // 查询员工
@@ -146,4 +146,10 @@ func (r *StaffRepo) UpdateStaffRoles(staffUuid uint64, roleUuids []uint64) error
 		})
 	}
 	return nil
+}
+
+func (r *StaffRepo) WhereRoleUuid(roleUuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("role_uuid = ?", roleUuid)
+	}
 }

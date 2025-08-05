@@ -54,7 +54,7 @@ func (h *StaffHandler) GetStaff(c *gin.Context) {
 // @Security JwtToken
 // @Param update_staff_req body req.UpdateStaffReq true "修改管理员请求"
 // @Success 200 {object} dto.Response
-// @Router /shop/staff [post]
+// @Router /shop/staff/update [post]
 func (h *StaffHandler) UpdateStaff(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	var updateStaffReq req.UpdateStaffReq
@@ -120,6 +120,157 @@ func (h *StaffHandler) DeleteStaff(c *gin.Context) {
 	helper.Success(c, nil)
 }
 
+// AddStaff 添加管理员
+// @Summary 添加管理员
+// @Description 添加管理员
+// @Tags 移动管理端.管理员管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param add_staff_req body req.AddStaffReq true "添加管理员请求"
+// @Success 200 {object} dto.Response
+// @Router /shop/staff/add [post]
+func (h *StaffHandler) AddStaff(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var addStaffReq req.AddStaffReq
+	if err := c.ShouldBindJSON(&addStaffReq); err != nil {
+		helper.HandleValidationError(c, err, addStaffReq, nil)
+		return
+	}
+	err := h.staffSrv.AddStaff(ctx, addStaffReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// GetRoleList 获取角色列表
+// @Summary 获取角色列表
+// @Description 获取角色列表
+// @Tags 移动管理端.管理员管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param page_no query int false "页码"
+// @Param page_size query int false "每页条数"
+// @Success 200 {object} dto.Response{data=resp.RoleListResp}
+// @Router /shop/role [get]
+func (h *StaffHandler) GetRoleList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var pageReq dto.PageReq
+	if err := c.ShouldBindQuery(&pageReq); err != nil {
+		helper.HandleValidationError(c, err, pageReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.staffSrv.GetRoleList(ctx, pageReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
+		return
+	}
+	helper.Success(c, res)
+}
+
+// AddRole 添加角色
+// @Summary 添加角色
+// @Description 添加角色
+// @Tags 移动管理端.管理员管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param add_role_req body req.AddRoleReq true "添加角色请求"
+// @Success 200 {object} dto.Response
+// @Router /shop/role/add [post]
+func (h *StaffHandler) AddRole(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var addRoleReq req.AddRoleReq
+	if err := c.ShouldBindJSON(&addRoleReq); err != nil {
+		helper.HandleValidationError(c, err, addRoleReq, nil)
+		return
+	}
+	err := h.staffSrv.AddRole(ctx, addRoleReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// UpdateRole 修改角色
+// @Summary 修改角色
+// @Description 修改角色
+// @Tags 移动管理端.管理员管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param update_role_req body req.UpdateRoleReq true "修改角色请求"
+// @Success 200 {object} dto.Response
+// @Router /shop/role/update [post]
+func (h *StaffHandler) UpdateRole(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var updateRoleReq req.UpdateRoleReq
+	if err := c.ShouldBindJSON(&updateRoleReq); err != nil {
+		helper.HandleValidationError(c, err, updateRoleReq, nil)
+		return
+	}
+	err := h.staffSrv.UpdateRole(ctx, updateRoleReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// DeleteRole 删除角色
+// @Summary 删除角色
+// @Description 删除角色
+// @Tags 移动管理端.管理员管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param delete_role_req body req.DeleteRoleReq true "删除角色请求"
+// @Success 200 {object} dto.Response
+// @Router /shop/role [delete]
+func (h *StaffHandler) DeleteRole(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var deleteRoleReq req.DeleteRoleReq
+	if err := c.ShouldBindJSON(&deleteRoleReq); err != nil {
+		helper.HandleValidationError(c, err, deleteRoleReq, nil)
+		return
+	}
+	err := h.staffSrv.DeleteRole(ctx, deleteRoleReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// GetRoleAccess 获取角色权限
+// @Summary 获取角色权限
+// @Description 获取角色权限
+// @Tags 移动管理端.管理员管理
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param get_role_req query req.GetRoleReq true "获取角色详细请求"
+// @Success 200 {object} dto.Response{data=resp.RoleDetailResp}
+// @Router /shop/role_access [get]
+func (h *StaffHandler) GetRoleAccess(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	var getRoleReq req.GetRoleReq
+	if err := c.ShouldBindQuery(&getRoleReq); err != nil {
+		helper.HandleValidationError(c, err, getRoleReq, nil)
+		return
+	}
+	res, err := h.staffSrv.GetRoleAccess(ctx, getRoleReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeSystemError, err)
+		return
+	}
+	helper.Success(c, res)
+}
+
 func RegisterStaffHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -138,10 +289,18 @@ func RegisterStaffHandlers(router gin.IRouter, dbm *database.DBManager, cache ca
 	// 需要认证
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
-		// 员工管理
-		privateApi.GET("/staff", wrapper.GetStaff)                  // 获取员工列表
-		privateApi.POST("/staff", wrapper.UpdateStaff)              // 修改员工
-		privateApi.POST("/staff/status", wrapper.UpdateStaffStatus) // 设置启用禁用员工
-		privateApi.DELETE("/staff", wrapper.DeleteStaff)            // 删除员工
+		// 管理员管理
+		privateApi.GET("/staff", wrapper.GetStaff)                  // 获取管理员列表
+		privateApi.POST("/staff/update", wrapper.UpdateStaff)       // 修改管理员
+		privateApi.POST("/staff/status", wrapper.UpdateStaffStatus) // 设置启用禁用管理员
+		privateApi.DELETE("/staff", wrapper.DeleteStaff)            // 删除管理员
+		privateApi.POST("/staff/add", wrapper.AddStaff)             // 添加管理员
+
+		// 获取角色列表
+		privateApi.GET("/role", wrapper.GetRoleList)          // 获取角色列表/下拉选择
+		privateApi.POST("/role/add", wrapper.AddRole)         // 添加角色
+		privateApi.POST("/role/update", wrapper.UpdateRole)   // 修改角色
+		privateApi.DELETE("/role", wrapper.DeleteRole)        // 删除角色
+		privateApi.GET("/role_access", wrapper.GetRoleAccess) // 获取角色详细
 	}
 }

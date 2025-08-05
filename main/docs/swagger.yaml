@@ -1485,6 +1485,20 @@ definitions:
     - level_uuid
     - phone
     type: object
+  req.AddRoleReq:
+    properties:
+      access_uuids:
+        description: 权限ID列表
+        items:
+          type: integer
+        type: array
+      name:
+        description: 角色名称
+        type: string
+    required:
+    - access_uuids
+    - name
+    type: object
   req.AddSoldOutReq:
     properties:
       sold_out_data:
@@ -1494,6 +1508,36 @@ definitions:
         type: array
     required:
     - sold_out_data
+    type: object
+  req.AddStaffReq:
+    properties:
+      confirm_password:
+        description: 确认密码
+        type: string
+      password:
+        description: 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
+        type: string
+      phone:
+        description: 手机号
+        type: string
+      real_name:
+        description: 姓名
+        type: string
+      roles:
+        description: 角色ID列表
+        items:
+          type: integer
+        type: array
+      username:
+        description: 账号，邮箱 邮箱格式
+        type: string
+    required:
+    - confirm_password
+    - password
+    - phone
+    - real_name
+    - roles
+    - username
     type: object
   req.BindCashierReq:
     properties:
@@ -1713,6 +1757,14 @@ definitions:
         type: string
     required:
     - sign
+    type: object
+  req.DeleteRoleReq:
+    properties:
+      uuid:
+        description: 角色ID
+        type: integer
+    required:
+    - uuid
     type: object
   req.DeleteStaffReq:
     properties:
@@ -2790,6 +2842,24 @@ definitions:
         type: string
     required:
     - is_auto_order
+    type: object
+  req.UpdateRoleReq:
+    properties:
+      access_uuids:
+        description: 权限ID列表
+        items:
+          type: integer
+        type: array
+      name:
+        description: 角色名称
+        type: string
+      uuid:
+        description: 角色ID
+        type: integer
+    required:
+    - access_uuids
+    - name
+    - uuid
     type: object
   req.UpdateStaffReq:
     properties:
@@ -6835,6 +6905,42 @@ definitions:
       remaining_distance:
         description: 剩余距离
         type: number
+    type: object
+  resp.Role:
+    properties:
+      create_time:
+        description: 创建时间
+        type: integer
+      name:
+        description: 角色名称
+        type: string
+      uuid:
+        description: 角色UUID
+        type: integer
+    type: object
+  resp.RoleDetailResp:
+    properties:
+      access_uuids:
+        description: 权限ID列表
+        items:
+          type: integer
+        type: array
+      name:
+        description: 角色名称
+        type: string
+      uuid:
+        description: 角色UUID
+        type: integer
+    type: object
+  resp.RoleListResp:
+    properties:
+      list:
+        description: 角色列表
+        items:
+          $ref: '#/definitions/resp.Role'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
     type: object
   resp.SaleOrder:
     properties:
@@ -18785,6 +18891,136 @@ paths:
       summary: 刷新token
       tags:
       - 移动管理端.认证
+  /shop/role:
+    delete:
+      consumes:
+      - application/json
+      description: 删除角色
+      parameters:
+      - description: 删除角色请求
+        in: body
+        name: delete_role_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.DeleteRoleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 删除角色
+      tags:
+      - 移动管理端.管理员管理
+    get:
+      consumes:
+      - application/json
+      description: 获取角色列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.RoleListResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取角色列表
+      tags:
+      - 移动管理端.管理员管理
+  /shop/role/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加角色
+      parameters:
+      - description: 添加角色请求
+        in: body
+        name: add_role_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.AddRoleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 添加角色
+      tags:
+      - 移动管理端.管理员管理
+  /shop/role/update:
+    post:
+      consumes:
+      - application/json
+      description: 修改角色
+      parameters:
+      - description: 修改角色请求
+        in: body
+        name: update_role_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateRoleReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 修改角色
+      tags:
+      - 移动管理端.管理员管理
+  /shop/role_access:
+    get:
+      consumes:
+      - application/json
+      description: 获取角色权限
+      parameters:
+      - description: 角色ID
+        in: query
+        name: uuid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.RoleDetailResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 获取角色权限
+      tags:
+      - 移动管理端.管理员管理
   /shop/shift:
     post:
       consumes:
@@ -18892,17 +19128,18 @@ paths:
       summary: 管理员列表
       tags:
       - 移动管理端.管理员管理
+  /shop/staff/add:
     post:
       consumes:
       - application/json
-      description: 修改管理员
+      description: 添加管理员
       parameters:
-      - description: 修改管理员请求
+      - description: 添加管理员请求
         in: body
-        name: update_staff_req
+        name: add_staff_req
         required: true
         schema:
-          $ref: '#/definitions/req.UpdateStaffReq'
+          $ref: '#/definitions/req.AddStaffReq'
       produces:
       - application/json
       responses:
@@ -18912,7 +19149,7 @@ paths:
             $ref: '#/definitions/dto.Response'
       security:
       - JwtToken: []
-      summary: 修改管理员
+      summary: 添加管理员
       tags:
       - 移动管理端.管理员管理
   /shop/staff/status:
@@ -18937,6 +19174,30 @@ paths:
       security:
       - JwtToken: []
       summary: 设置启用禁用员工
+      tags:
+      - 移动管理端.管理员管理
+  /shop/staff/update:
+    post:
+      consumes:
+      - application/json
+      description: 修改管理员
+      parameters:
+      - description: 修改管理员请求
+        in: body
+        name: update_staff_req
+        required: true
+        schema:
+          $ref: '#/definitions/req.UpdateStaffReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - JwtToken: []
+      summary: 修改管理员
       tags:
       - 移动管理端.管理员管理
   /shop/statistics/7days:

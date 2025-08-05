@@ -38,3 +38,31 @@ type DeleteStaffReq struct {
 var DeleteStaffRequestMessage = map[string]string{
 	"uuid.required": "员工ID不能为空",
 }
+
+type AddStaffReq struct {
+	Username        string   `json:"username" binding:"required,email"`                    // 账号，邮箱 邮箱格式
+	RealName        string   `json:"real_name" binding:"required"`                         // 姓名
+	Phone           string   `json:"phone" binding:"required"`                             // 手机号
+	Roles           []uint64 `json:"roles" binding:"required"`                             // 角色ID列表
+	Password        string   `json:"password" binding:"required,strong_password"`          // 密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种
+	ConfirmPassword string   `json:"confirm_password" binding:"required,eqfield=Password"` // 确认密码
+}
+
+type AddRoleReq struct {
+	Name        string   `json:"name" binding:"required"`         // 角色名称
+	AccessUuids []uint64 `json:"access_uuids" binding:"required"` // 权限ID列表
+}
+
+type UpdateRoleReq struct {
+	Uuid        uint64   `json:"uuid" binding:"required"`         // 角色ID
+	Name        string   `json:"name" binding:"required"`         // 角色名称
+	AccessUuids []uint64 `json:"access_uuids" binding:"required"` // 权限ID列表
+}
+
+type DeleteRoleReq struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 角色ID
+}
+
+type GetRoleReq struct {
+	Uuid uint64 `form:"uuid" binding:"required"` // 角色ID
+}

@@ -18123,6 +18123,224 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/role": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取角色列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.管理员管理"
+                ],
+                "summary": "获取角色列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.RoleListResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除角色",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.管理员管理"
+                ],
+                "summary": "删除角色",
+                "parameters": [
+                    {
+                        "description": "删除角色请求",
+                        "name": "delete_role_req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.DeleteRoleReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/role/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "添加角色",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.管理员管理"
+                ],
+                "summary": "添加角色",
+                "parameters": [
+                    {
+                        "description": "添加角色请求",
+                        "name": "add_role_req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.AddRoleReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/role/update": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改角色",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.管理员管理"
+                ],
+                "summary": "修改角色",
+                "parameters": [
+                    {
+                        "description": "修改角色请求",
+                        "name": "update_role_req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UpdateRoleReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/role_access": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取角色权限",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.管理员管理"
+                ],
+                "summary": "获取角色权限",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "角色ID",
+                        "name": "uuid",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.RoleDetailResp"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/shift": {
             "post": {
                 "security": [
@@ -18266,43 +18484,6 @@ const docTemplate = `{
                     }
                 }
             },
-            "post": {
-                "security": [
-                    {
-                        "JwtToken": []
-                    }
-                ],
-                "description": "修改管理员",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "移动管理端.管理员管理"
-                ],
-                "summary": "修改管理员",
-                "parameters": [
-                    {
-                        "description": "修改管理员请求",
-                        "name": "update_staff_req",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/req.UpdateStaffReq"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/dto.Response"
-                        }
-                    }
-                }
-            },
             "delete": {
                 "security": [
                     {
@@ -18328,6 +18509,45 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.DeleteStaffReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/staff/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "添加管理员",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.管理员管理"
+                ],
+                "summary": "添加管理员",
+                "parameters": [
+                    {
+                        "description": "添加管理员请求",
+                        "name": "add_staff_req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.AddStaffReq"
                         }
                     }
                 ],
@@ -18367,6 +18587,45 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/req.UpdateStaffStatusReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/staff/update": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "修改管理员",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "移动管理端.管理员管理"
+                ],
+                "summary": "修改管理员",
+                "parameters": [
+                    {
+                        "description": "修改管理员请求",
+                        "name": "update_staff_req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.UpdateStaffReq"
                         }
                     }
                 ],
@@ -21954,6 +22213,26 @@ const docTemplate = `{
                 }
             }
         },
+        "req.AddRoleReq": {
+            "type": "object",
+            "required": [
+                "access_uuids",
+                "name"
+            ],
+            "properties": {
+                "access_uuids": {
+                    "description": "权限ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "name": {
+                    "description": "角色名称",
+                    "type": "string"
+                }
+            }
+        },
         "req.AddSoldOutReq": {
             "type": "object",
             "required": [
@@ -21966,6 +22245,46 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/req.SoldOutItem"
                     }
+                }
+            }
+        },
+        "req.AddStaffReq": {
+            "type": "object",
+            "required": [
+                "confirm_password",
+                "password",
+                "phone",
+                "real_name",
+                "roles",
+                "username"
+            ],
+            "properties": {
+                "confirm_password": {
+                    "description": "确认密码",
+                    "type": "string"
+                },
+                "password": {
+                    "description": "密码，如果不为空，则不能包括空格，长度为8-16个字符必须包含字母、数字、符号中至少2种",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "手机号",
+                    "type": "string"
+                },
+                "real_name": {
+                    "description": "姓名",
+                    "type": "string"
+                },
+                "roles": {
+                    "description": "角色ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "username": {
+                    "description": "账号，邮箱 邮箱格式",
+                    "type": "string"
                 }
             }
         },
@@ -22274,6 +22593,18 @@ const docTemplate = `{
                 "sign": {
                     "description": "活动二维码sign",
                     "type": "string"
+                }
+            }
+        },
+        "req.DeleteRoleReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "角色ID",
+                    "type": "integer"
                 }
             }
         },
@@ -23796,6 +24127,31 @@ const docTemplate = `{
                         "0",
                         "1"
                     ]
+                }
+            }
+        },
+        "req.UpdateRoleReq": {
+            "type": "object",
+            "required": [
+                "access_uuids",
+                "name",
+                "uuid"
+            ],
+            "properties": {
+                "access_uuids": {
+                    "description": "权限ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "name": {
+                    "description": "角色名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "角色ID",
+                    "type": "integer"
                 }
             }
         },
@@ -29839,6 +30195,58 @@ const docTemplate = `{
                 "remaining_distance": {
                     "description": "剩余距离",
                     "type": "number"
+                }
+            }
+        },
+        "resp.Role": {
+            "type": "object",
+            "properties": {
+                "create_time": {
+                    "description": "创建时间",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "角色名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "角色UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.RoleDetailResp": {
+            "type": "object",
+            "properties": {
+                "access_uuids": {
+                    "description": "权限ID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "name": {
+                    "description": "角色名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "角色UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "resp.RoleListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "description": "角色列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.Role"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
                 }
             }
         },

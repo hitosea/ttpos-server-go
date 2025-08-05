@@ -22,3 +22,20 @@ type StaffListPaginationResp struct {
 	List []Staff          `json:"list"`
 	Meta dto.PageResponse `json:"meta"`
 }
+
+type RoleListResp struct {
+	List []Role           `json:"list"` // 角色列表
+	Meta dto.PageResponse `json:"meta"`
+}
+
+type Role struct {
+	Uuid       uint64 `json:"uuid"`        // 角色UUID
+	Name       string `json:"name"`        // 角色名称
+	CreateTime int64  `json:"create_time"` // 创建时间
+}
+
+type RoleDetailResp struct {
+	Uuid        uint64   `json:"uuid"`         // 角色UUID
+	AccessUuids []uint64 `json:"access_uuids"` // 权限ID列表
+	Name        string   `json:"name"`         // 角色名称
+}
