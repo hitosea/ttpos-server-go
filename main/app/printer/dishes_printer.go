@@ -259,7 +259,7 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 	saleBill model.SaleBill,
 	products printer_model.Products,
 ) string {
-	tmp := p.GetPrinterTemplate(constant.PrinterTemplateEntireOrder)
+	tmpInfo := p.GetPrinterTemplateInfo(constant.PrinterTemplateEntireOrder)
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -275,7 +275,7 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 	// 图片打印
 	if p.IsImagePrinterMethod(true) {
 		t := template.NewDishesImgTemplate(base)
-		return t.CompleteOrder(tmp, printerItem, saleBill, products)
+		return t.CompleteOrder(tmpInfo, printerItem, saleBill, products)
 	}
 
 	// 获取打印机类型
@@ -290,13 +290,13 @@ func (p *PrinterRepoImpl) getPrintProductContent(
 		constant.PrinterTypeCodesoftWifi,
 	}, printerType) {
 		t := template.NewDishesCodesoftTemplate(base)
-		return t.CompleteOrder(tmp, printerItem, saleBill, products)
+		return t.CompleteOrder(tmpInfo, printerItem, saleBill, products)
 	}
 
 	// 商米和芯烨打印机
 	if printerItem.Printer != nil {
 		t := template.NewDishesXprinterTemplate(base)
-		return t.CompleteOrder(tmp, printerItem, saleBill, products)
+		return t.CompleteOrder(tmpInfo, printerItem, saleBill, products)
 	}
 
 	return ""
@@ -309,7 +309,7 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 	saleBill model.SaleBill,
 	product printer_model.OrderProduct,
 ) string {
-	tmp := p.GetPrinterTemplate(constant.PrinterTemplateOneDishOneMenu)
+	tmpInfo := p.GetPrinterTemplateInfo(constant.PrinterTemplateOneDishOneMenu)
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -325,7 +325,7 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 	// 图片打印
 	if p.IsImagePrinterMethod(true) {
 		t := template.NewDishesImgTemplate(base)
-		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
+		return t.OneDishOneOrder(tmpInfo, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
 	}
 
 	// 获取打印机类型
@@ -340,13 +340,13 @@ func (p *PrinterRepoImpl) getPrintProductOneContent(
 		constant.PrinterTypeCodesoftWifi,
 	}, printerType) {
 		t := template.NewDishesCodesoftTemplate(base)
-		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
+		return t.OneDishOneOrder(tmpInfo, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
 	}
 
 	// 商米和芯烨打印机
 	if printerItem.Printer != nil {
 		t := template.NewDishesXprinterTemplate(base)
-		return t.OneDishOneOrder(tmp, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
+		return t.OneDishOneOrder(tmpInfo, productPrinter, printerItem, saleBill, []printer_model.OrderProduct{product})
 	}
 
 	return ""

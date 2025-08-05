@@ -1093,6 +1093,22 @@ func (model *SaleOrderProduct) GetAttributeNameList() []dto.LocaleResponse {
 	if len(sauceNames) > 0 {
 		nameList = append(nameList, sauceNames...)
 	}
+
+	return nameList
+}
+
+func (model *SaleOrderProduct) GetSauceNamesList() []dto.LocaleResponse {
+	var sauceNames []dto.LocaleResponse
+	for _, saleOrderProductBom := range model.SaleOrderProductBoms {
+		if !saleOrderProductBom.IsFlavor() {
+			sauceName := saleOrderProductBom.ProductBom.ProductSauce.MultiLanguageName.GetNames()
+			sauceNames = append(sauceNames, sauceName)
+		}
+	}
+	nameList := make([]dto.LocaleResponse, 0)
+	if len(sauceNames) > 0 {
+		nameList = append(nameList, sauceNames...)
+	}
 	return nameList
 }
 

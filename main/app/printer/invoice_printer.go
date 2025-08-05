@@ -113,7 +113,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	isCashierPrinter bool,
 ) string {
 	// 获取打印模板
-	tmp := p.GetPrinterTemplate(uint64(constant.PrinterTemplateInvoice))
+	tmpInfo := p.GetPrinterTemplateInfo(uint64(constant.PrinterTemplateInvoice))
 
 	// 创建打印机实例
 	base := template.NewPrinterTemplate(
@@ -139,7 +139,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	if p.IsImagePrinterMethod() {
 		return template.NewInvoiceImgTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			tmp,
+			tmpInfo,
 			saleBill,
 			saleOrder,
 		)
@@ -151,7 +151,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 	if printerType == constant.PrinterTypeCashierCompax {
 		return template.NewInvoiceCompaxTemplate(base).GetPrintContent(
 			settingPrinterInfo,
-			tmp,
+			tmpInfo,
 			saleBill,
 			saleOrder,
 			isCashierPrinter,
@@ -165,7 +165,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 		return template.NewInvoiceXprinterTemplate(base).GetPrintContent(
 			settingPrinterInfo,
 			printerType,
-			tmp,
+			tmpInfo,
 			saleBill,
 			saleOrder,
 			isCashierPrinter,
@@ -179,7 +179,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 		return template.NewInvoiceSunmiTemplate(base).GetPrintContent(
 			settingPrinterInfo,
 			printerType,
-			tmp,
+			tmpInfo,
 			saleBill,
 			saleOrder,
 			isCashierPrinter,
@@ -193,7 +193,7 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 		return template.NewInvoiceCodesoftTemplate(base).GetPrintContent(
 			settingPrinterInfo,
 			printerType,
-			tmp,
+			tmpInfo,
 			saleBill,
 			saleOrder,
 			isCashierPrinter,

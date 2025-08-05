@@ -26,11 +26,14 @@ func NewDishesImgTemplate(
 
 // CompleteOrder 整单模版
 func (t *dishesImgTemplate) CompleteOrder(
-	tmp int,
+	tmpInfo model.PrinterTemplate,
 	printerItem *model.ProductPrinterItem,
 	order model.SaleBill,
 	products printer_model.Products,
 ) string {
+
+	tmp := tmpInfo.Template
+	isShowSku := tmpInfo.IsShowSku
 
 	// 人的翻译
 	name := t.base.Translate("人")
@@ -145,7 +148,7 @@ func (t *dishesImgTemplate) CompleteOrder(
 		}
 
 		// 分割处理属性
-		for _, attr := range product.ProductAttrList {
+		for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
 			if tmp == 3 {
 				img.SetTextLineHeight(utils.IfInt(t.base.Lang == "my", 110, 100))
 				img.SetFontSize(28)
@@ -183,12 +186,15 @@ func (t *dishesImgTemplate) CompleteOrder(
 
 // OneDishOneOrder 一菜一单模版
 func (t *dishesImgTemplate) OneDishOneOrder(
-	tmp int,
+	tmpInfo model.PrinterTemplate,
 	productPrinter model.ProductPrinter,
 	printerItem *model.ProductPrinterItem,
 	order model.SaleBill,
 	products printer_model.Products,
 ) string {
+	tmp := tmpInfo.Template
+	isShowSku := tmpInfo.IsShowSku
+
 	// 人的翻译
 	name := t.base.Translate("人")
 	// 自助餐标记开关
@@ -272,7 +278,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 				}
 
 				// 分割处理属性
-				for _, attr := range product.ProductAttrList {
+				for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
 					img.SetFontSize(24)
 					if t.base.Lang == "my" {
 						img.SetTextLineHeight(50)
@@ -385,7 +391,7 @@ func (t *dishesImgTemplate) OneDishOneOrder(
 				}
 
 				// 分割处理属性
-				for _, attr := range product.ProductAttrList {
+				for _, attr := range utils.IfSlice(isShowSku == 0, product.ProductSauceNamesList, product.ProductAttrList) {
 					img.SetFontSize(24)
 					if t.base.Lang == "my" {
 						img.SetTextLineHeight(50)

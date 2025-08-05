@@ -97,7 +97,7 @@ func NewPrinterRepo(ctx context.Context, langs ...string) PPrinterRepo {
 	return printerRepo
 }
 
-// 获取商品打印机列表
+// 获取打印机模板
 func (p *PrinterRepoImpl) GetPrinterTemplate(id uint64) int {
 	// 获取打印机模板
 	db := p.dbm.GetDB(p.ctx.GetCompanyUuid())
@@ -107,6 +107,18 @@ func (p *PrinterRepoImpl) GetPrinterTemplate(id uint64) int {
 		return 1
 	}
 	return printerTemplateRepo.Template
+}
+
+// 获取打印机模板详情
+func (p *PrinterRepoImpl) GetPrinterTemplateInfo(id uint64) model.PrinterTemplate {
+	// 获取打印机模板
+	db := p.dbm.GetDB(p.ctx.GetCompanyUuid())
+	printerTemplateRepo, err := repository.NewPrinterTemplateRepo(db).GetPrinterTemplateInfo(id)
+	if err != nil {
+		logger.Logger.Error("获取打印机模板失败", zap.Error(err))
+		return model.PrinterTemplate{}
+	}
+	return printerTemplateRepo
 }
 
 // 获取商品打印机列表
