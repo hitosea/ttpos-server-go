@@ -186,6 +186,35 @@ class App extends AppModel
             ->append([]);
     }
 
+
+    /**
+     * ERPNext商家列表
+     */
+    public function getErpnextCompanyList($param)
+    {
+        $keyword = $param['keyword'] ?? ''; 
+        $configured = $param['configured'] ?? false;
+
+        return $this->alias('app')
+            ->field("su.uuid, app.name, su.link_phone, su.real_name,su.erpnext_code, su.erpnext_name")
+            ->leftJoin('company_setting su', "su.company_uuid = app.uuid") 
+            ->where('su.delete_time', '=', 0)
+            ->where('app.delete_time', '=', 0)
+            ->when($configured, function($q){
+                return $q->where('su.erpnext_code', '<>', "");
+            })
+            ->when($keyword, function ($q) use ($keyword) { // 商家名称关键字
+                $q->where(function ($qq) use ($keyword) {
+                    $qq->like('app.name', $keyword);
+                    $qq->orLike('app.uuid', $keyword);
+                });
+            })
+            ->order(["su.create_time" => 'asc'])
+            ->group('app.uuid')
+            ->paginate($param)
+            ->append([]);
+    }
+
     /**
      * 新增记录
      */

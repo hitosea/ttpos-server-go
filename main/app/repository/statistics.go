@@ -215,6 +215,8 @@ func (r *StatisticsRepo) CountPayment(opts ...DBOption) []model.StatisticsPaymen
 		Select(countPaymentSelect).
 		Joins("LEFT JOIN " + paymentMethodTable + " ON sp.payment_method_uuid = pm.uuid").
 		Group("sp.payment_method_uuid").
+		Order("pm.sort ASC").
+		Order("pm.id DESC").
 		Find(&result)
 
 	return result
@@ -329,12 +331,16 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 				"'' AS category_name",
 				"SUM(sp.product_num) AS sale_num",
 				"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
+				"IF(pc.parent_uuid > 0, ppc.sort, pc.sort) AS sort",
 			).
 			Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 			Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
 			Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
 			Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
 			Group("IF(pc.parent_uuid = 0, pp.category_uuid, pc.parent_uuid)").
+			Order("sort ASC").
+			Order("category_parent_uuid DESC").
+			Order("pp.uuid DESC").
 			Find(&result)
 	} else {
 		db.Table(statisticsProductTable).
@@ -352,6 +358,11 @@ func (r *StatisticsRepo) CountCategory(categoryType int, language string, opts .
 			Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
 			Where("pc.parent_uuid > 0").
 			Group("pc.uuid").
+			Order("ppc.sort ASC").
+			Order("ppc.uuid DESC").
+			Order("pc.sort ASC").
+			Order("pc.uuid DESC").
+			Order("pp.uuid DESC").
 			Find(&result)
 	}
 
@@ -370,6 +381,8 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 	statisticsProductTable := prefix + "statistics_product as sp"
 	productPackageTable := prefix + "product_package as pp"
 	productBomTable := prefix + "product_bom as pb"
+	productCategoryTable := prefix + "product_category as pc"
+	productParentCategoryTable := prefix + "product_category as ppc"
 
 	db.Table(statisticsProductTable).
 		Select(
@@ -378,10 +391,20 @@ func (r *StatisticsRepo) CountProduct(language string, opts ...DBOption) []model
 			"pb.price AS sale_price",
 			"SUM(sp.product_num) AS sale_num",
 			"SUM(sp.product_final_price * sp.product_num) AS sale_amount",
+			"IF(pc.parent_uuid = 0, pc.sort, ppc.sort) AS ppc_sort",
+			"IF(pc.parent_uuid = 0, pc.uuid, ppc.uuid) AS ppc_uuid",
+			"iF(pc.parent_uuid = 0, 0, pc.sort) AS pc_sort",
 		).
 		Joins("LEFT JOIN " + productPackageTable + " ON sp.product_package_uuid = pp.uuid").
 		Joins("LEFT JOIN " + productBomTable + " ON sp.product_bom_uuid = pb.uuid").
+		Joins("LEFT JOIN " + productCategoryTable + " ON pp.category_uuid = pc.uuid").
+		Joins("LEFT JOIN " + productParentCategoryTable + " ON pc.parent_uuid = ppc.uuid").
 		Group("sp.product_bom_uuid").
+		Order("ppc_sort ASC").
+		Order("ppc_uuid DESC").
+		Order("pc_sort ASC").
+		Order("pc.uuid DESC").
+		Order("pp.uuid DESC").
 		Find(&result)
 
 	return result

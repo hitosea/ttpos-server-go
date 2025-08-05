@@ -44,13 +44,7 @@ class AddProductPackageGroupTables extends Migrator
         
         // 检查表是否已存在
         if (!$this->hasTable('product_package_group')) {
-            $table->addColumn('id', 'integer', [
-                'identity' => true,
-                'signed' => false,
-                'null' => false,
-                'comment' => '自增ID'
-            ])
-            ->addColumn('uuid', 'biginteger', [
+            $table->addColumn('uuid', 'biginteger', [
                 'signed' => false,
                 'null' => false,
                 'default' => 0,
@@ -106,13 +100,7 @@ class AddProductPackageGroupTables extends Migrator
         
         // 检查表是否已存在
         if (!$this->hasTable('product_package_group_item')) {
-            $table->addColumn('id', 'integer', [
-                'identity' => true,
-                'signed' => false,
-                'null' => false,
-                'comment' => '自增ID'
-            ])
-            ->addColumn('uuid', 'biginteger', [
+            $table->addColumn('uuid', 'biginteger', [
                 'signed' => false,
                 'null' => false,
                 'default' => 0,
