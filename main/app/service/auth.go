@@ -930,26 +930,72 @@ func (s *authSrv) RefreshToken(ctx context.Context) (resp.LoginResp, error) {
 }
 
 func (s *authSrv) ShopBase(ctx context.Context) (resp.ShopBase, error) {
-	var cashierBase resp.ShopBase
+	var shopBase resp.ShopBase
+	company := ctx.GetCompany()
+	companySetting := ctx.GetCompanySetting()
 	staff := ctx.GetStaff()
-
+	var (
+		source   = ctx.GetSource()
+		deviceId = ctx.GetGin().GetString(jwt.DeviceId)
+	)
+	deviceRemark := s.deviceSrv.GetRemark(company.Uuid, source, deviceId)
 	// 判断权限
-	permissions, err := s.roleAccessSrv.GetPermission(constant.ShopRouteName, staff.Uuid, staff.CompanyUuid)
+	permissions := []*resp.Permission{}
+
+	businessSetting, err := s.settingSrv.GetBusinessSetting(ctx)
 	if err != nil {
-		return cashierBase, errors.WithMessage(err)
+		return shopBase, errors.WithMessage(err)
 	}
-	if len(permissions) == 0 {
-		return cashierBase, errors.New("当前无权限，请联系管理员")
+	buffetSetting, err := s.settingSrv.GetBuffetSetting(ctx, companySetting)
+	if err != nil {
+		return shopBase, errors.WithMessage(err)
+	}
+	currencySetting, err := s.settingSrv.GetCurrencySetting(ctx)
+	if err != nil {
+		return shopBase, errors.WithMessage(err)
+	}
+	cloudBasicSetting, err := s.settingSrv.GetCloudBasicSetting(ctx)
+	if err != nil {
+		return shopBase, errors.WithMessage(err)
 	}
 	storeSetting, err := s.settingSrv.GetStoreSetting(ctx)
 	if err != nil {
-		return cashierBase, errors.WithMessage(err)
+		return shopBase, errors.WithMessage(err)
 	}
 	return resp.ShopBase{
-		RealName:    staff.RealName,
-		Username:    staff.Username,
-		Permissions: permissions,
-		Store:       storeSetting,
+		Username:     staff.Username,
+		ProfileUuid:  staff.Uuid,
+		DeviceId:     deviceId,
+		DeviceRemark: deviceRemark,
+		Permissions:  permissions,
+
+		Business: businessSetting,
+		Buffet:   buffetSetting,
+		Currency: currencySetting,
+		Company: resp.Company{ // shop
+			Uuid:           company.Uuid,
+			Name:           company.Name,
+			Logo:           utils.AddImageDomain(company.Logo, utils.GetBaseURL(ctx.GetGin().Request), true),
+			TimeZone:       companySetting.Timezone,
+			ExpireTime:     company.ExpireTime,
+			IsOpenMember:   companySetting.IsOpenMember,
+			IsOpenBuffet:   companySetting.IsOpenBuffet,
+			IsOpenH5Order:  companySetting.IsOpenH5Order,
+			IsOpenOldOrder: utils.IfInt(company.OldCompanyId > 0, 1, 0),
+		},
+		CloudBasic: cloudBasicSetting,
+		Profile: resp.ShopProfile{
+			Address:         storeSetting.Address,
+			Coordinates:     storeSetting.Coordinates,
+			IpWhiteList:     storeSetting.IPWhiteList,
+			Phone:           storeSetting.Phone,
+			TaxNumber:       storeSetting.TaxNumber,
+			TimeZoneList:    storeSetting.TimeZoneList,
+			DefaultLanguage: companySetting.GetDefaultLanguage(),
+			LanguageList:    storeSetting.Language,
+			Language:        companySetting.GetLanguages(),
+		},
+		UpdateTime: time.Now().Unix(),
 	}, nil
 }
 

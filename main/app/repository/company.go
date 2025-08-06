@@ -10,6 +10,9 @@ import (
 
 // ICompanyRepo 公司
 type ICompanyRepo interface {
+	WhereName(name string) DBOption
+	WhereNotUuid(uuid uint64) DBOption
+
 	GetCompany(opts ...DBOption) (model.Company, error) // 获取公司
 	GetCompanyInfo(ctx context.Context, opts ...DBOption) (model.Company, error)
 	GetCompanyInfoByUuid(uuid uint64) (*model.Company, error)
@@ -28,6 +31,18 @@ func NewCompanyRepoImpl(db *gorm.DB) ICompanyRepo {
 
 type companyRepo struct {
 	db *gorm.DB
+}
+
+func (r *companyRepo) WhereName(name string) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("name = ?", name)
+	}
+}
+
+func (r *companyRepo) WhereNotUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid <> ?", uuid)
+	}
 }
 
 // CreateCompany 创建公司

@@ -260,8 +260,30 @@ func (ss ShiftSubmit) MarshalBinary() ([]byte, error) {
 }
 
 type ShopBase struct {
-	RealName    string        `json:"real_name"`   // 员工真实姓名
-	Username    string        `json:"username"`    // 员工账号
-	Permissions []*Permission `json:"permissions"` // 权限
-	Store       setting.Store `json:"store"`       // 门店设置
+	Username     string        `json:"username"`      // 登录账号
+	ProfileUuid  uint64        `json:"profile_uuid"`  // 收银员UUID
+	DeviceId     string        `json:"device_id"`     // 设备ID
+	DeviceRemark string        `json:"device_remark"` // 设备备注
+	Permissions  []*Permission `json:"permissions"`   // 页面权限
+
+	Buffet     setting.BuffetResp `json:"buffet"`   // 自助餐设置
+	CloudBasic setting.CloudBasic `json:"cloud"`    // 云端基础信息
+	Company    Company            `json:"company"`  // 商家信息
+	Currency   setting.Currency   `json:"currency"` // 货币单位
+	Business   setting.Business   `json:"business"` // 门店业务设置
+	Profile    ShopProfile        `json:"profile"`  // 门店信息
+
+	UpdateTime int64 `json:"update_time"` // 更新时间
+}
+
+type ShopProfile struct {
+	Address         string                 `json:"address"`          // 地址
+	Coordinates     string                 `json:"coordinates"`      // 经纬度
+	IpWhiteList     string                 `json:"ip_white_list"`    // ip白名单
+	Phone           string                 `json:"phone"`            // 联系电话
+	TaxNumber       string                 `json:"tax_number"`       // 税号
+	TimeZoneList    []setting.TimeZoneItem `json:"time_zone_list"`   // 时区列表
+	DefaultLanguage string                 `json:"default_language"` // 默认语言
+	LanguageList    []dto.LanguageItem     `json:"language_list"`    // 语言列表，当前勾选了的语言列表
+	Language        []string               `json:"language"`         // 可用语言
 }

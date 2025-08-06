@@ -1,5 +1,7 @@
 package req
 
+import "ttpos-server-go/app/dto"
+
 type VerifyPasswordReq struct {
 	Password string `json:"password" binding:"required"` // 密码
 }
@@ -88,4 +90,16 @@ type SendMemberRechargeSMS struct {
 	BonusPoints   float64 `json:"bonus_points"`
 	Balance       float64 `json:"balance"`
 	PointsBalance float64 `json:"points_balance"`
+}
+
+type UpdateStoreSetting struct {
+	Name        string             `json:"name" binding:"required,max=100"`   // 店铺名称，既同步到company_setting表，也保存在store设置，必填，最大100个字符
+	LogoUrl     string             `json:"logo_url" binding:"required"`       // 店铺logo，上传后保存url，必填
+	TimeZone    string             `json:"time_zone" binding:"required"`      // 时区，必填
+	Company     string             `json:"company"`                           // 公司名称 - 不同步到company_setting表，只保存到store设置
+	Address     string             `json:"address" binding:"max=500"`         // 地址，必填，最大500个字符
+	Phone       string             `json:"phone" binding:"required,max=20"`   // 联系电话，必填，最大20个字符
+	TaxNumber   string             `json:"tax_number"`                        // 税号
+	Language    []dto.LanguageItem `json:"language" binding:"required,min=1"` // 系统语言，必填，至少一个
+	Coordinates string             `json:"coordinates"`                       // 经纬度
 }
