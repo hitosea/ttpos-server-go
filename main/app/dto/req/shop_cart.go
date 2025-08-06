@@ -23,6 +23,18 @@ type ProductRequest struct {
 	Num                     float64  `json:"num"`                        // 商品数量
 }
 
+type OrderCartProductFlavorAndAttributeChangeReq struct {
+	OrderCartProductPackageAddReq        // 套餐商品请求参数
+	ProductType                   uint   `json:"product_type"`            // 商品类型 0-商品 1-套餐
+	SaleOrderProductUuid          uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
+
+	// 普通商品的参数
+	FlavorUuid        uint64   `json:"flavor_uuid"`    // 某个规格商品ID
+	SauceUuidList     []uint64 `json:"sauce_uuid"`     // 小料ID列表
+	AttributeUuidList []uint64 `json:"attribute_uuid"` // 属性ID列表
+}
+
+// OrderCartProductFlavorAndAttributeReq 查询购物车商品“规格/属性”请求参数
 type OrderCartProductFlavorAndAttributeReq struct {
 	SaleBillUuid         uint64 `json:"sale_bill_uuid"`          // 销售账单ID
 	SaleOrderUuid        uint64 `json:"sale_order_uuid"`         // 销售订单ID

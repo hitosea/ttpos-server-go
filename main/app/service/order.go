@@ -90,6 +90,7 @@ type IOrderSrv interface {
 	GetOrderCartInfo(ctx context.Context, saleOrderUuid uint64, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                              // 获取购物车信息
 	OrderCartProductPackageAdd(ctx context.Context, request req.OrderCartProductPackageAddReq) (*resp.ShopCart, error)                                           // 向购物车添加套餐
 	OrderCartProductFlavorAndAttribute(ctx context.Context, request req.OrderCartProductFlavorAndAttributeReq) (*resp.ProductFlavorAndAttributeRes, error)       // 查询购物车商品“规格/属性”
+	OrderCartProductFlavorAndAttributeChange(ctx context.Context, request req.OrderCartProductFlavorAndAttributeChangeReq) (*resp.ShopCart, error)               // 修改购物车商品“规格/属性”
 	InstantOrderCartProductAdd(ctx context.Context, request req.OrderCartProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)      // 向购物车添加商品
 	GetSaleBillUuidAndSaleOrderUuid(ctx context.Context, deskUuid uint64) (uint64, uint64, error)                                                                // 获取销售账单uuid和销售订单uuid
 	OrderCartProductAdd(ctx context.Context, request req.ProductAddReq, opts ...repository.OrderCartInfoOptionFunc) (*resp.ShopCart, error)                      // 修改购物车商品数量
@@ -4876,6 +4877,10 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 }
 
 func (s *orderSrv) OrderCartProductFlavorAndAttribute(ctx context.Context, request req.OrderCartProductFlavorAndAttributeReq) (*resp.ProductFlavorAndAttributeRes, error) {
+	return nil, nil
+}
+
+func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context, request req.OrderCartProductFlavorAndAttributeChangeReq) (*resp.ShopCart, error) {
 	return nil, nil
 }
 
