@@ -1869,9 +1869,10 @@
     "请输入套餐价格": "Lütfen paket fiyatını girin",
     "请添加套餐商品": "Lütfen paket ürününü ekleyin",
     "添加分组": "Grup ekle",
-    "实时可售上限": "Gerçek zamanlı satılabilir üst sınır",
-    "根据子菜品库存动态计算，库存变化自动更新": "Alt ürün stoğuna göre dinamik olarak hesaplanır, stok değişiklikleri otomatik olarak güncellenir",
+    "是否显示规格、属性": "Özellikler ve nitelikler gösterilsin mi",
+    "可售量": "Satılabilir miktar",
+    "根据子商品库存动态计算，库存变化自动更新": "Alt ürün stoğuna göre dinamik olarak hesaplanır, stok değişiklikleri otomatik olarak güncellenir",
+    "是否开启库存": "Stok etkinleştirilsin mi",
     "套餐可售总量": "Paketin satılabilir toplam miktarı",
-    "达到此可售总量后套餐自动售罄，与库存无关。不设置则不限总量": "Bu satılabilir toplam miktara ulaşıldığında paket otomatik olarak tükenir, stokla ilgili değildir. Ayarlanmazsa toplam miktar sınırsızdır",
-    "是否显示规格、属性": "Özellikler ve nitelikler gösterilsin mi"
+    "库存为0时套餐自动售罄": "Stok sıfır olduğunda paket otomatik olarak tükenir"
 }

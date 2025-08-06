@@ -184,7 +184,7 @@
 
             /*套餐分组*/
             package_price: null, //套餐价格
-            is_open_stock: 1, //是否开启套餐库存
+            is_open_stock: 0, //是否开启套餐库存
             package_stock: null, //套餐可售卖库存
             package_group: [
               {
