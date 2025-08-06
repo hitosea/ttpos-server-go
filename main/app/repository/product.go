@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"strings"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/model"
@@ -66,8 +67,9 @@ func NewProductRepoImpl(db *gorm.DB) IProductRepo {
 }
 
 // 默认关联对象
-func (r *productRepo) defaultPreload() []DBOption {
-	return []DBOption{
+func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
+
+	preloads := []DBOption{
 		r.WithMultiLanguageName(),
 		r.WithProductUnit(),
 		r.WithProductUnitMultiLanguageName(),
@@ -89,6 +91,57 @@ func (r *productRepo) defaultPreload() []DBOption {
 		r.WithProductPackageImageFile(),
 		r.WithProductCategory(),
 	}
+
+	// 如果有商品套餐，则添加商品套餐预加载
+	if hasPackage {
+		// 预加载商品套餐
+		packagePreloads := []DBOption{
+			// 预加载商品套餐
+			CommonRepo.DBOption(CommonRepo.Preload(
+				WithPreload{
+					Query: "ProductPackageGroups.MultiLanguageName",
+				},
+			)),
+			CommonRepo.DBOption(CommonRepo.Preload(
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductBom.ProductFlavor.MultiLanguageName",
+				},
+			)),
+			CommonRepo.DBOption(CommonRepo.Preload(
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.MultiLanguageName",
+				},
+			)),
+			CommonRepo.DBOption(CommonRepo.Preload(
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductPackageAttributeGroups.ProductAttributeGroup.MultiLanguageName",
+				},
+			)),
+			CommonRepo.DBOption(CommonRepo.Preload(
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductPackageAttributeGroups.ProductPackageAttributes.Attribute.MultiLanguageName",
+				},
+			)),
+		}
+		preloads = append(preloads, packagePreloads...)
+	}
+
+	return preloads
+}
+
+// 查询商家是否存在商品套餐
+func (r *productRepo) HasProductPackage() (bool, error) {
+	var productPackage model.ProductPackage
+	db := r.db.Model(&model.ProductPackage{}).Session(&gorm.Session{}).Where("is_package = ?", constant.Yes)
+	err := db.First(&productPackage).Error
+	if err != nil {
+		if strings.Contains(err.Error(), "record not found") {
+			return false, nil
+		}
+		return false, errors.WithMessage(err)
+	}
+
+	return true, nil
 }
 
 // GetProductListWithPagination 分页获取商品列表
@@ -98,7 +151,12 @@ func (r *productRepo) GetProductListWithPagination(pageNo int, pageSize int, opt
 
 	db := r.db.Model(&model.ProductPackage{}).Session(&gorm.Session{})
 
-	opts = append(r.defaultPreload(), opts...)
+	// 查询商家是否存在商品套餐
+	hasPackage, errPackage := r.HasProductPackage()
+	if errPackage != nil {
+		return nil, 0, errors.WithMessage(errPackage)
+	}
+	opts = append(r.defaultPreload(hasPackage), opts...)
 
 	for _, opt := range opts {
 		db = opt(db)

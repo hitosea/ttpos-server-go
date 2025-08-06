@@ -23,6 +23,7 @@ type Product struct {
 	AttributeGroups     ProductAttributeGroupList `json:"attribute_groups"`      // 商品属性组
 	Describe            string                    `json:"describe"`              // 卖点，h5端显示
 	IsShowKitchen       uint                      `json:"is_show_kitchen"`       // 是否在厨显端显示：1-是；0-否
+	ProductType         uint                      `json:"product_type"`          // 商品类型 0-商品 1-套餐
 	// 套餐分组
 	PackageGroupList *ProductPackageGroupList `json:"package_group_list"`
 
@@ -43,6 +44,17 @@ type ProductPackageGroup struct {
 	Products   ProductList        `json:"products"`    // 套餐商品列表
 }
 
+// 判断套餐分组是否选满
+func (p *ProductPackageGroup) GetIsFull() bool {
+	for _, product := range p.Products.List {
+		// 如果套餐商品可以编辑，则套餐分组未选满
+		if product.CanEdit {
+			return false
+		}
+	}
+	return true
+}
+
 // ProductList 商品列表
 type ProductList struct {
 	List []PackageProductDetail `json:"list"`
@@ -53,6 +65,20 @@ type ProductList struct {
 type PackageProductDetail struct {
 	Detail  Product `json:"detail"`   // 商品详情
 	CanEdit bool    `json:"can_edit"` // 是否可以编辑
+}
+
+// 判断是否可以编辑。无需选择属性的商品，不可以编辑
+func (p *PackageProductDetail) GetCanEdit() bool {
+	// 如果套餐商品没有属性，则不可以编辑
+	if p.Detail.AttributeGroups.List == nil || len(p.Detail.AttributeGroups.List) == 0 {
+		return false
+	}
+	// 如果套餐商品有属性，但必须且只有一个时，则不可以编辑
+	if len(p.Detail.AttributeGroups.List) == 1 && p.Detail.AttributeGroups.List[0].IsMust {
+		return false
+	}
+
+	return true
 }
 
 // ProductFlavor 商品规格

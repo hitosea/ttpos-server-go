@@ -136,6 +136,9 @@ type ProductPackage struct {
 
 	ActualSaleNum float64 `gorm:"default:0.0000;column:actual_sale_num;comment:'实际销量。每次卖出时,实际销量增加'"`
 
+	Price float64 `gorm:"default:0;column:price;comment:'套餐价格'"`
+
+	ProductType         uint  `gorm:"default:0;column:product_type;comment:'商品类型, 0-商品 1-套餐'"`
 	SauceRequired       uint8 `gorm:"default:0;column:sauce_required;comment:'是否必选小料, 0-否 1-是'"`
 	SauceMaxSelection   uint  `gorm:"default:0;column:sauce_max_selection;comment:'小料最大选择数量'"`
 	OpenDiscount        uint  `gorm:"default:0;column:open_discount;comment:'是否开启会员折扣, 0-否 1-是'"`
@@ -149,6 +152,7 @@ type ProductPackage struct {
 	TakeoutTax                    Tax                            `gorm:"foreignKey:takeout_tax_uuid;references:uuid" json:"-"` // 外卖税
 	ProductCategory               ProductCategory                `gorm:"foreignKey:category_uuid;references:uuid" json:"-"`    // 类别
 	ImageFile                     File                           `gorm:"foreignKey:image_file_uuid;references:uuid" json:"-"`  // 图片
+	ProductPackageGroups          []ProductPackageGroup          `gorm:"foreignKey:product_package_uuid;references:uuid"`      // 商品套餐组
 }
 
 func (model *ProductPackage) SetNil() {

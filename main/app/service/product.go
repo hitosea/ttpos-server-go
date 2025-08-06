@@ -159,121 +159,222 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 	// 转换为响应对象
 	list := make([]product_resp.Product, 0, len(products))
 	for _, product := range products {
-		flavors := make([]product_resp.ProductFlavor, 0, len(product.ProductBoms))                                   // 商品规格
-		sauces := make([]product_resp.ProductSauce, 0, len(product.ProductBoms))                                     // 商品小料
-		attributeGroups := make([]product_resp.ProductAttributeGroup, 0, len(product.ProductPackageAttributeGroups)) // 商品属性组
-		var prices []float64                                                                                         // 保存所有价格，用于计算最低价格
+		image := product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
+		unit := product.ProductUnit.MultiLanguageName.GetNames()
 
-		// 商品规格、加料
-		if len(product.ProductBoms) > 0 {
-			taxRate := product.TakeoutTax.TaxRate
-			takeoutDiscountRate := option.TakeoutDiscountRate // 外送端折扣率
-
-			for _, productBom := range product.ProductBoms {
-				if productBom.IsDelete() {
-					continue
+		if product.ProductType == constant.Yes {
+			packageGroupList := make([]product_resp.ProductPackageGroup, 0)
+			for _, group := range product.ProductPackageGroups {
+				productList := make([]product_resp.PackageProductDetail, 0)
+				for _, item := range group.ProductPackageGroupItems {
+					flavor := getFlavor(item.ProductBom)            // 商品规格
+					attributeGroups := getAttributeGroups(&product) // 商品属性组
+					productDetail := product_resp.PackageProductDetail{
+						Detail: product_resp.Product{
+							Uuid:       item.ProductBom.Uuid,
+							LocaleName: item.ProductPackage.MultiLanguageName.GetNames(),
+							Image:      image,
+							Unit:       unit,
+							Price:      0, // 商品价格，套餐内目前是0元
+							Flavors: product_resp.ProductFlavorList{
+								List: []product_resp.ProductFlavor{flavor},
+							},
+							AttributeGroups: product_resp.ProductAttributeGroupList{
+								List: attributeGroups,
+							},
+							Describe: product.Describe,
+						},
+					}
+					productDetail.CanEdit = productDetail.GetCanEdit() // 是否可以编辑
+					productList = append(productList, productDetail)
 				}
-				if productBom.IsFlavor() {
-					flavor := product_resp.ProductFlavor{
-						Uuid:       productBom.Uuid,
-						LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
-						Price:      productBom.Price,
-						StockNum:   int(productBom.GetStockNum()),
-						Barcode:    productBom.BarcodeValue,
+
+				packageGroup := product_resp.ProductPackageGroup{
+					Uuid:       group.Uuid,
+					LocaleName: group.MultiLanguageName.GetNames(),
+					Products: product_resp.ProductList{
+						List: productList,
+					},
+				}
+				packageGroup.IsFull = packageGroup.GetIsFull() // 是否选满
+				packageGroupList = append(packageGroupList, packageGroup)
+			}
+			list = append(list, product_resp.Product{
+				Uuid:              product.Uuid,
+				Image:             image,
+				LocaleName:        product.MultiLanguageName.GetNames(),
+				Unit:              unit,
+				Price:             product.Price,
+				LimitNum:          product.LimitNum,
+				CategoryUuid:      product.CategoryUuid,
+				FirstCategoryUuid: product.ProductCategory.GetFirstCategoryUuid(),
+				Describe:          product.Describe,
+				IsShowKitchen:     product.IsShowKitchen,
+				ProductType:       product.ProductType,
+				PackageGroupList: &product_resp.ProductPackageGroupList{
+					List: packageGroupList,
+				},
+			})
+		} else {
+			flavors := make([]product_resp.ProductFlavor, 0, len(product.ProductBoms))                                   // 商品规格
+			sauces := make([]product_resp.ProductSauce, 0, len(product.ProductBoms))                                     // 商品小料
+			attributeGroups := make([]product_resp.ProductAttributeGroup, 0, len(product.ProductPackageAttributeGroups)) // 商品属性组
+			var prices []float64                                                                                         // 保存所有价格，用于计算最低价格
+
+			// 商品规格、加料
+			if len(product.ProductBoms) > 0 {
+				taxRate := product.TakeoutTax.TaxRate
+				takeoutDiscountRate := option.TakeoutDiscountRate // 外送端折扣率
+
+				for _, productBom := range product.ProductBoms {
+					if productBom.IsDelete() {
+						continue
 					}
-					// 如果是会员端查询商品列表，需要获取在会员端的该商品规格价格
-					// 会员端商品规格价格=原商品规格价*外送商品折扣率 + 税费。 税费=原商品规格价*外送商品折扣率*外送的税率
-					// 故，会员端商品规格价格=原商品规格价*外送商品折扣率 * (1 + 外送的税率)
-					if option.IsMember {
-						flavor.Price = calculateTakeoutProductPrice(productBom.Price, takeoutDiscountRate, taxRate, option.TaxFeeType)
-					}
-					flavors = append(flavors, flavor)
-					if len(prices) == 0 {
-						prices = append(prices, productBom.Price)
-					} else {
-						if prices[0] > productBom.Price {
-							prices[0] = productBom.Price
+					if productBom.IsFlavor() {
+						flavor := product_resp.ProductFlavor{
+							Uuid:       productBom.Uuid,
+							LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
+							Price:      productBom.Price,
+							StockNum:   int(productBom.GetStockNum()),
+							Barcode:    productBom.BarcodeValue,
+						}
+						// 如果是会员端查询商品列表，需要获取在会员端的该商品规格价格
+						// 会员端商品规格价格=原商品规格价*外送商品折扣率 + 税费。 税费=原商品规格价*外送商品折扣率*外送的税率
+						// 故，会员端商品规格价格=原商品规格价*外送商品折扣率 * (1 + 外送的税率)
+						if option.IsMember {
+							flavor.Price = calculateTakeoutProductPrice(productBom.Price, takeoutDiscountRate, taxRate, option.TaxFeeType)
+						}
+						flavors = append(flavors, flavor)
+						if len(prices) == 0 {
+							prices = append(prices, productBom.Price)
+						} else {
+							if prices[0] > productBom.Price {
+								prices[0] = productBom.Price
+							}
 						}
 					}
-				}
-				if productBom.IsSauce() {
-					sauce := product_resp.ProductSauce{
-						Uuid:              productBom.Uuid,
-						LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),
-						Price:             productBom.Price,
-						IsDefaultSelected: productBom.IsDefaultSelect == 1,
-						StockNum:          int(productBom.GetStockNum()),
+					if productBom.IsSauce() {
+						sauce := product_resp.ProductSauce{
+							Uuid:              productBom.Uuid,
+							LocaleName:        productBom.ProductSauce.MultiLanguageName.GetNames(),
+							Price:             productBom.Price,
+							IsDefaultSelected: productBom.IsDefaultSelect == 1,
+							StockNum:          int(productBom.GetStockNum()),
+						}
+						// 如果是会员端查询商品列表，需要获取在会员端的该商品小料价格
+						// 会员端商品小料价格=原商品小料价*外送商品折扣率 + 税费。 税费=原商品小料价*外送商品折扣率*外送的税率
+						// 故，会员端商品小料价格=原商品小料价*外送商品折扣率 * (1 + 外送的税率)
+						if option.IsMember {
+							sauce.Price = calculateTakeoutProductPrice(productBom.Price, takeoutDiscountRate, taxRate, option.TaxFeeType)
+						}
+						sauces = append(sauces, sauce)
 					}
-					// 如果是会员端查询商品列表，需要获取在会员端的该商品小料价格
-					// 会员端商品小料价格=原商品小料价*外送商品折扣率 + 税费。 税费=原商品小料价*外送商品折扣率*外送的税率
-					// 故，会员端商品小料价格=原商品小料价*外送商品折扣率 * (1 + 外送的税率)
-					if option.IsMember {
-						sauce.Price = calculateTakeoutProductPrice(productBom.Price, takeoutDiscountRate, taxRate, option.TaxFeeType)
-					}
-					sauces = append(sauces, sauce)
 				}
 			}
-		}
 
-		// 商品属性组
-		if len(product.ProductPackageAttributeGroups) > 0 {
-			for _, group := range product.ProductPackageAttributeGroups {
-				attributeValues := make([]product_resp.ProductAttributeValue, 0, len(group.ProductPackageAttributes)) // 商品属性值
-				for _, attribute := range group.ProductPackageAttributes {
-					attributeValues = append(attributeValues, product_resp.ProductAttributeValue{
-						Uuid:              attribute.Uuid,
-						LocaleName:        attribute.Attribute.MultiLanguageName.GetNames(),
-						IsDefaultSelected: attribute.IsDefaultSelected == 1,
+			// 商品属性组
+			if len(product.ProductPackageAttributeGroups) > 0 {
+				for _, group := range product.ProductPackageAttributeGroups {
+					attributeValues := make([]product_resp.ProductAttributeValue, 0, len(group.ProductPackageAttributes)) // 商品属性值
+					for _, attribute := range group.ProductPackageAttributes {
+						attributeValues = append(attributeValues, product_resp.ProductAttributeValue{
+							Uuid:              attribute.Uuid,
+							LocaleName:        attribute.Attribute.MultiLanguageName.GetNames(),
+							IsDefaultSelected: attribute.IsDefaultSelected == 1,
+						})
+					}
+					attributeGroups = append(attributeGroups, product_resp.ProductAttributeGroup{
+						Uuid:       group.ProductAttributeGroupUuid,
+						LocaleName: group.ProductAttributeGroup.MultiLanguageName.GetNames(),
+						IsMust:     group.IsMust == 1,
+						MaxSelect:  group.MaxSelection,
+						Attributes: product_resp.ProductAttributeValueList{
+							List: attributeValues,
+						},
 					})
 				}
-				attributeGroups = append(attributeGroups, product_resp.ProductAttributeGroup{
-					Uuid:       group.ProductAttributeGroupUuid,
-					LocaleName: group.ProductAttributeGroup.MultiLanguageName.GetNames(),
-					IsMust:     group.IsMust == 1,
-					MaxSelect:  group.MaxSelection,
-					Attributes: product_resp.ProductAttributeValueList{
-						List: attributeValues,
-					},
-				})
 			}
-		}
 
-		image := product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
-		// 添加到列表
-		minPrice := float64(0)
-		if len(prices) > 0 {
-			minPrice = slices.Min(prices)
+			// 添加到列表
+			minPrice := float64(0)
+			if len(prices) > 0 {
+				minPrice = slices.Min(prices)
+			}
+			if option.IsMember {
+				minPrice = calculateTakeoutProductPrice(minPrice, option.TakeoutDiscountRate, product.TakeoutTax.TaxRate, option.TaxFeeType)
+			}
+			list = append(list, product_resp.Product{
+				Uuid:                product.Uuid,
+				Image:               image,
+				LocaleName:          product.MultiLanguageName.GetNames(),
+				Unit:                unit,
+				Price:               minPrice,
+				NumType:             product.NumType,
+				LimitNum:            product.LimitNum,
+				CategoryUuid:        product.CategoryUuid,
+				FirstCategoryUuid:   product.ProductCategory.GetFirstCategoryUuid(),
+				SpecialCategoryUuid: product.SpecialCategoryUuid,
+				Flavors: product_resp.ProductFlavorList{
+					List: flavors,
+				},
+				Sauces: product_resp.ProductSauceList{
+					List:      sauces,
+					IsMust:    product.SauceRequired == 1,
+					MaxSelect: int(product.SauceMaxSelection),
+				},
+				AttributeGroups: product_resp.ProductAttributeGroupList{
+					List: attributeGroups,
+				},
+				Describe:      product.Describe,
+				IsShowKitchen: product.IsShowKitchen,
+			})
 		}
-		if option.IsMember {
-			minPrice = calculateTakeoutProductPrice(minPrice, option.TakeoutDiscountRate, product.TakeoutTax.TaxRate, option.TaxFeeType)
-		}
-		list = append(list, product_resp.Product{
-			Uuid:                product.Uuid,
-			Image:               image,
-			LocaleName:          product.MultiLanguageName.GetNames(),
-			Unit:                product.ProductUnit.MultiLanguageName.GetNames(),
-			Price:               minPrice,
-			NumType:             product.NumType,
-			LimitNum:            product.LimitNum,
-			CategoryUuid:        product.CategoryUuid,
-			FirstCategoryUuid:   product.ProductCategory.GetFirstCategoryUuid(),
-			SpecialCategoryUuid: product.SpecialCategoryUuid,
-			Flavors: product_resp.ProductFlavorList{
-				List: flavors,
-			},
-			Sauces: product_resp.ProductSauceList{
-				List:      sauces,
-				IsMust:    product.SauceRequired == 1,
-				MaxSelect: int(product.SauceMaxSelection),
-			},
-			AttributeGroups: product_resp.ProductAttributeGroupList{
-				List: attributeGroups,
-			},
-			Describe:      product.Describe,
-			IsShowKitchen: product.IsShowKitchen,
-		})
 	}
 	return list
+}
+
+func getFlavor(productBom *model.ProductBom) product_resp.ProductFlavor {
+	if productBom.IsDelete() {
+		return product_resp.ProductFlavor{}
+	}
+	if productBom.IsFlavor() {
+		flavor := product_resp.ProductFlavor{
+			Uuid:       productBom.Uuid,
+			LocaleName: productBom.ProductFlavor.MultiLanguageName.GetNames(),
+			Price:      productBom.Price,
+			StockNum:   int(productBom.GetStockNum()),
+			Barcode:    productBom.BarcodeValue,
+		}
+		return flavor
+	}
+	return product_resp.ProductFlavor{}
+}
+
+func getAttributeGroups(product *model.ProductPackage) []product_resp.ProductAttributeGroup {
+	attributeGroups := make([]product_resp.ProductAttributeGroup, 0)
+	// 商品属性组
+	if len(product.ProductPackageAttributeGroups) > 0 {
+		for _, group := range product.ProductPackageAttributeGroups {
+			attributeValues := make([]product_resp.ProductAttributeValue, 0, len(group.ProductPackageAttributes)) // 商品属性值
+			for _, attribute := range group.ProductPackageAttributes {
+				attributeValues = append(attributeValues, product_resp.ProductAttributeValue{
+					Uuid:              attribute.Uuid,
+					LocaleName:        attribute.Attribute.MultiLanguageName.GetNames(),
+					IsDefaultSelected: attribute.IsDefaultSelected == 1,
+				})
+			}
+			attributeGroups = append(attributeGroups, product_resp.ProductAttributeGroup{
+				Uuid:       group.ProductAttributeGroupUuid,
+				LocaleName: group.ProductAttributeGroup.MultiLanguageName.GetNames(),
+				IsMust:     group.IsMust == 1,
+				MaxSelect:  group.MaxSelection,
+				Attributes: product_resp.ProductAttributeValueList{
+					List: attributeValues,
+				},
+			})
+		}
+	}
+	return attributeGroups
 }
 
 // 外送端商品价格计算
