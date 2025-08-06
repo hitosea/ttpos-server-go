@@ -217,6 +217,11 @@
         ].includes(value);
       },
     },
+    otherGroupNames: {
+      type: Array,
+      required: false,
+      default: () => [],
+    },
   });
 
   const form = reactive(props.singleLanguage ? { SINGLE: '' } : languageStore.getLanguageKeyForm());
@@ -254,6 +259,7 @@
       }
       await nextTick();
       await handleValidateUnique();
+      await validateOtherGroupNames();
     } catch (error) {
       console.error(error);
     } finally {
@@ -269,6 +275,8 @@
       if (!baseValidateResult) return false;
       const uniqueValidateResult = await handleValidateUnique();
       if (!uniqueValidateResult) return false;
+      const otherGroupNamesValidateResult = await validateOtherGroupNames();
+      if (!otherGroupNamesValidateResult) return false;
       return true;
     } catch (error) {
       console.error('validate error', error);
@@ -303,6 +311,38 @@
     } finally {
       validateLoading.value = false;
     }
+  };
+
+  // 校验是否与其他分组名称重复
+  const validateOtherGroupNames = async () => {
+    if (!props.otherGroupNames.length) return true;
+    
+    // 清空之前的重复错误信息
+    for (const key of Object.keys(formErrors)) {
+      if (formErrors[key] === $t('此名称与其他分组重复')) {
+        formErrors[key] = '';
+      }
+    }
+    
+    let hasRepeat = false;
+    
+    // 检查每个语言字段是否与其他分组对应的key值的名称重复
+    for (const languageKey of Object.keys(form)) {
+      const currentValue = form[languageKey];
+      if (!currentValue || currentValue.trim() === '') continue;
+      
+      // 只比较相同语言键的值
+      const isRepeat = props.otherGroupNames.some((item) => {
+        return item[languageKey] === currentValue;
+      });
+      
+      if (isRepeat) {
+        formErrors[languageKey] = $t('此名称与其他分组重复');
+        hasRepeat = true;
+      }
+    }
+    
+    return !hasRepeat;
   };
 
   const handleValidateUniqueResult = async (data) => {

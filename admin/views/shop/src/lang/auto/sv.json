@@ -2105,5 +2105,15 @@
     "分组名称": "Gruppnamn",
     "请填写分组名称": "Vänligen ange gruppnamnet",
     "请输入分组名称": "Ange gruppnamn",
-    "翻译": "Översätt <content>"
+    "翻译": "Översätt <content>",
+    "此名称与其他分组重复": "Detta namn är dubblerat med andra grupper",
+    "套餐价格：": "Paketpris:",
+    "请输入套餐价格": "Ange paketpriset",
+    "请添加套餐商品": "Lägg till paketprodukter",
+    "添加分组": "Lägg till grupp",
+    "实时可售上限": "Realtidsförsäljningsgräns",
+    "根据子菜品库存动态计算，库存变化自动更新": "Beräknas dynamiskt utifrån delrättens lager, lagersaldot uppdateras automatiskt vid förändring",
+    "套餐可售总量": "Total försäljningskvantitet för paketet",
+    "达到此可售总量后套餐自动售罄，与库存无关。不设置则不限总量": "När denna totala försäljningskvantitet uppnås säljs paketet automatiskt slut, oavsett lager. Om inget anges finns ingen gräns för total kvantitet",
+    "是否显示规格、属性": "Visa specifikationer och egenskaper?"
 }

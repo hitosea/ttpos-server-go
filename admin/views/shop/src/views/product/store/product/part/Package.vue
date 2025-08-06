@@ -36,14 +36,14 @@
             <el-table-column prop="product_price" :label="$t('商品价格')" width="120" />
             <el-table-column prop="num" :label="$t('数量')" width="120">
               <template #default="scope">
-                <el-form-item :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.num`" :rules="[{ required: true, message: $t('请输入数量') }]">
+                <el-form-item class="mt16" :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.num`" :rules="[{ required: true, message: $t('请输入数量') }]">
                   <numInput v-model="scope.row.num" :min="0" :max="999" :precision="0" />
                 </el-form-item>
               </template>
             </el-table-column>
             <el-table-column prop="sort" :label="$t('排序')" width="120">
               <template #default="scope">
-                <el-form-item :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.sort`" :rules="[{ required: true, message: $t('请输入排序') }]">
+                <el-form-item class="mt16" :prop="`model.package_group.${groupIndex}.product_list.${scope.$index}.sort`" :rules="[{ required: true, message: $t('请输入排序') }]">
                   <numInput v-model="scope.row.sort" :min="0" :max="999" :precision="0" @change="handleSortChange(groupIndex)" />
                 </el-form-item>
               </template>
@@ -66,7 +66,7 @@
 
     <div class="common-form mt50">{{ $t('库存') }}</div>
 
-    <el-form-item for="no_click" :label="$t('实时可售上限')" :rules="[{ required: true, message: $t('请输入库存') }]">
+    <el-form-item for="no_click" :label="$t('实时可售上限')" >
       <numInput type="text" :placeholder="$t('请输入库存')" disabled v-model="nowStock" :maxlength="50" class="max-w460"></numInput>
       <div class="tips">{{ $t('根据子菜品库存动态计算，库存变化自动更新') }}</div>
     </el-form-item>
@@ -85,7 +85,7 @@
 
     <el-dialog v-model="dialogVisible" :title="$t('翻译')" :close-on-click-modal="false">
       <!-- TODO: 翻译 分组名称 需要同一套餐内校验唯一 -->
-      <UniqueNameForm ref="uniqueNameFormRef" :labelPrefix="$t('分组名称')" :isUnique="false" apiSource="product" />
+      <UniqueNameForm ref="uniqueNameFormRef" :labelPrefix="$t('分组名称')" :isUnique="false" apiSource="product" :otherGroupNames="otherGroupNames" />
       <template #footer>
         <div class="flex justify-end">
           <el-button @click="dialogVisible = false">{{ $t('取消') }}</el-button>
@@ -126,6 +126,8 @@
 
   const selectIndex = ref(0);
 
+  const otherGroupNames = ref([]);
+
   const nowStock = computed(() => {
     // 如果有商品组的时候，列出所有商品库存除以数量的值选最小的值，如果是小数向下取整，如果没有商品组的时候返回0，如果商品数量为null则返回0
     
@@ -165,6 +167,7 @@
     return Math.floor(minStock);
   });
 
+  // 翻译
   const translate = async (groupIndex) => {
     selectIndex.value = groupIndex; // 保存当前选中的分组索引
     dialogVisible.value = true;
@@ -173,10 +176,26 @@
     Object.keys(uniqueNameFormRef.value.data).forEach(key => {
       uniqueNameFormRef.value.data[key] = '';
     });
-    Object.assign(uniqueNameFormRef.value.data, form.model.package_group[groupIndex].group_name);
+    
+    // 赋值新数据，确保所有语言字段都有值（避免undefined导致的验证错误）
+    Object.keys(uniqueNameFormRef.value.data).forEach(key => {
+      uniqueNameFormRef.value.data[key] = form.model.package_group[groupIndex].group_name[key] || '';
+    });
+    
+    // 把除了自己以外的其他分组名称获取到
+    otherGroupNames.value = form.model.package_group.filter((item, index) => index !== groupIndex).map((item) => item.group_name);
+
+    // 校验表单
+    uniqueNameFormRef.value.validate();
   };
 
-  const translateConfirm = () => {
+  // 翻译确认
+  const translateConfirm = async () => {
+    // 校验是否与其他分组名称重复
+    const isRepeat = await uniqueNameFormRef.value.validate();
+    if (!isRepeat) {
+      return;
+    }
     // 将翻译结果回写到原数据
     Object.assign(form.model.package_group[selectIndex.value].group_name, uniqueNameFormRef.value.data);
     dialogVisible.value = false;
@@ -189,6 +208,7 @@
     });
   };
 
+  // 添加商品
   const addGoods = (groupIndex) => {
     openProductSelector.value = true;
     selectedProductIds.value = [];
@@ -198,10 +218,12 @@
     });
   };
 
+  // 删除商品
   const handleDeleteGoods = (groupIndex, index) => {
     form.model.package_group[groupIndex].product_list.splice(index, 1);
   };
 
+  // 删除分组
   const handleDelete = (index) => {
     if (form.model.package_group.length === 1) {
       return;
@@ -209,6 +231,7 @@
     form.model.package_group.splice(index, 1);
   };
 
+  // 商品选择器关闭
   const handleProductSelectorClose = async (selectedProducts) => {
     openProductSelector.value = false;
     if (!selectedProducts) {
@@ -269,11 +292,13 @@
  
   };
 
+  // 排序改变
   const handleSortChange = (groupIndex) => {
     // 排序改变后，需要重新排序
     form.model.package_group[groupIndex].product_list.sort((a, b) => a.sort - b.sort);
   };
 
+  // 校验套餐商品
   const validatePackageGroup = (rule, value, callback) => {
     if (value.length === 0) {
       callback(new Error($t('请添加套餐商品')));

@@ -1863,5 +1863,15 @@
     "分组名称": "Grup Adı",
     "请填写分组名称": "Lütfen grup adını girin",
     "请输入分组名称": "Lütfen grup adını girin",
-    "翻译": "Çevir <content>"
+    "翻译": "Çevir <content>",
+    "此名称与其他分组重复": "Bu ad diğer gruplarla aynı.",
+    "套餐价格：": "Paket fiyatı:",
+    "请输入套餐价格": "Lütfen paket fiyatını girin",
+    "请添加套餐商品": "Lütfen paket ürününü ekleyin",
+    "添加分组": "Grup ekle",
+    "实时可售上限": "Gerçek zamanlı satılabilir üst sınır",
+    "根据子菜品库存动态计算，库存变化自动更新": "Alt ürün stoğuna göre dinamik olarak hesaplanır, stok değişiklikleri otomatik olarak güncellenir",
+    "套餐可售总量": "Paketin satılabilir toplam miktarı",
+    "达到此可售总量后套餐自动售罄，与库存无关。不设置则不限总量": "Bu satılabilir toplam miktara ulaşıldığında paket otomatik olarak tükenir, stokla ilgili değildir. Ayarlanmazsa toplam miktar sınırsızdır",
+    "是否显示规格、属性": "Özellikler ve nitelikler gösterilsin mi"
 }
