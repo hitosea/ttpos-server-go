@@ -4875,7 +4875,7 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 	return nil, nil
 }
 
-func (s *orderSrv) 00 sOrderCartProductFlavorAndAttribute(ctx context.Context, request req.OrderCartProductFlavorAndAttributeReq) (*resp.ProductFlavorAndAttributeRes, error) {
+func (s *orderSrv) OrderCartProductFlavorAndAttribute(ctx context.Context, request req.OrderCartProductFlavorAndAttributeReq) (*resp.ProductFlavorAndAttributeRes, error) {
 	return nil, nil
 }
 
