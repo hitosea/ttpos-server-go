@@ -104,10 +104,10 @@
             <span class="span3">{{ $t('规格名称') }}</span>
           </p>
           <p>
-            <span class="span4">{{ $t('少冰') }}</span>
+            <span v-if="is_show_sku == 1" class="span4">{{ $t('少冰') }}</span>
           </p>
           <p>
-            <span class="span4">{{ $t('加珍珠') }}</span>
+            <span v-if="is_show_sku == 1" class="span4">{{ $t('加珍珠') }}</span>
           </p>
           <p class="mb-8">
             <span class="span4">{{ $t('这是备注这是备注这是备注') }}</span>
@@ -124,10 +124,10 @@
             <span class="span3">{{ $t('规格名称') }}</span>
           </p>
           <p>
-            <span class="span4">{{ $t('少冰') }}</span>
+            <span v-if="is_show_sku == 1" class="span4">{{ $t('少冰') }}</span>
           </p>
           <p>
-            <span class="span4">{{ $t('加珍珠') }}</span>
+            <span v-if="is_show_sku == 1" class="span4">{{ $t('加珍珠') }}</span>
           </p>
           <p class="mb-8">
             <span class="span4">{{ $t('这是备注这是备注这是备注') }}</span>
@@ -369,7 +369,7 @@
         </template>
       </div>
     </template>
-    <div class="flex-switch" v-if="title == $t('整单打印') || (title == $t('发票') && mode == 2)">
+    <div class="flex-switch" v-if="title == $t('整单打印') || (title == $t('发票') && mode == 2) || title == $t('一菜一单')">
       <span class="font14">{{ $t('是否显示规格、属性') }}</span>
       <el-switch v-model="is_show_sku" :active-value="1" :inactive-value="0" />
     </div>

@@ -113,7 +113,12 @@
           <el-table-column prop="sales_actual" :label="$t('实际销量')"></el-table-column>
           <el-table-column prop="product_stock" :label="$t('库存')">
             <template #default="scope">
-              {{ scope.row.type == 10 ? scope.row.product_stock : scope.row.product_material_stock }}
+              <template v-if="scope.row.type == 10 || scope.row.type == 30">
+                {{ scope.row.is_open_stock == 1 ? scope.row.product_stock : '-' }}
+              </template>
+              <template v-else>
+                {{ scope.row.product_material_stock }}
+              </template>
             </template>
           </el-table-column>
           <el-table-column prop="product_status.text" :label="$t('状态')" width="100">
