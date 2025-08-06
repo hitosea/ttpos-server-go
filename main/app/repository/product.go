@@ -132,7 +132,7 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 // 查询商家是否存在商品套餐
 func (r *productRepo) HasProductPackage() (bool, error) {
 	var productPackage model.ProductPackage
-	db := r.db.Model(&model.ProductPackage{}).Session(&gorm.Session{}).Where("is_package = ?", constant.Yes)
+	db := r.db.Model(&model.ProductPackage{}).Session(&gorm.Session{}).Where("product_type = ?", constant.ProductTypePackage)
 	err := db.First(&productPackage).Error
 	if err != nil {
 		if strings.Contains(err.Error(), "record not found") {

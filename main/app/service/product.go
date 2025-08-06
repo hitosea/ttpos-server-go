@@ -182,6 +182,9 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 							AttributeGroups: product_resp.ProductAttributeGroupList{
 								List: attributeGroups,
 							},
+							Sauces: product_resp.ProductSauceList{
+								List: make([]product_resp.ProductSauce, 0),
+							},
 							Describe: product.Describe,
 						},
 					}
@@ -199,6 +202,24 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				packageGroup.IsFull = packageGroup.GetIsFull() // 是否选满
 				packageGroupList = append(packageGroupList, packageGroup)
 			}
+
+			// 套餐的默认规格
+			flavors := make([]product_resp.ProductFlavor, 0)
+			for _, productBom := range product.ProductBoms {
+				if productBom.IsDelete() {
+					continue
+				}
+				if productBom.IsFlavor() {
+					flavors = append(flavors, product_resp.ProductFlavor{
+						Uuid:       productBom.Uuid,
+						LocaleName: product.MultiLanguageName.GetNames(),
+						Price:      productBom.Price,
+						StockNum:   int(productBom.GetStockNum()),
+						Barcode:    productBom.BarcodeValue,
+					})
+				}
+			}
+
 			list = append(list, product_resp.Product{
 				Uuid:              product.Uuid,
 				Image:             image,
@@ -211,6 +232,15 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				Describe:          product.Describe,
 				IsShowKitchen:     product.IsShowKitchen,
 				ProductType:       product.ProductType,
+				Flavors: product_resp.ProductFlavorList{
+					List: flavors,
+				},
+				Sauces: product_resp.ProductSauceList{
+					List: make([]product_resp.ProductSauce, 0),
+				},
+				AttributeGroups: product_resp.ProductAttributeGroupList{
+					List: make([]product_resp.ProductAttributeGroup, 0),
+				},
 				PackageGroupList: &product_resp.ProductPackageGroupList{
 					List: packageGroupList,
 				},
