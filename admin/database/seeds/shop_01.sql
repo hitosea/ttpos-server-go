@@ -1075,6 +1075,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_product_bom` (
     `status` INT(10) NOT NULL DEFAULT 0 COMMENT '状态, 0-下架 1-上架. 同步商品包的状态',
     `is_sold_out` INT(10) NOT NULL DEFAULT 0 COMMENT '是否沽清, 0-否 1-是',
     `actual_sale_num` DECIMAL(12, 4) NOT NULL DEFAULT 0.0000 COMMENT '实际销量。每次卖出时,实际销量增加',
+    `is_open_stock` INT(10) NOT NULL DEFAULT 1 COMMENT '是否开启库存, 0-否 1-是',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
     `delete_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '删除时间(时间戳)',

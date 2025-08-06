@@ -16,6 +16,11 @@ const (
 	ProductTypePackage = 1 // 套餐
 )
 
+// 库存相关常量
+const (
+	ProductBomInfiniteStock = 999999 // 无限库存（关闭库存检查时使用）
+)
+
 const (
 	ProductBomTypeSauce  = 0 // 小料
 	ProductBomTypeFlavor = 1 // 规格商品

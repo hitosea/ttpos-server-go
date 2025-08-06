@@ -282,6 +282,7 @@ type ProductBom struct {
 	Price           float64 `gorm:"column:price;type:decimal(12,2);default:0;comment:价格;NOT NULL" json:"price"`
 	Name            string  `gorm:"column:name;type:text;comment:商品名称或小料名称(不用于业务显示)" json:"name"`
 	StockNum        float64 `gorm:"column:stock_num;type:decimal(12,4);default:0.0000;comment:库存数量;NOT NULL" json:"stock_num"`
+	IsOpenStock     int     `gorm:"column:is_open_stock;type:tinyint(1);default:1;comment:是否开启库存, 0-否 1-是;NOT NULL" json:"is_open_stock"`
 	BarcodeValue    string  `gorm:"column:barcode_value;type:varchar(255);comment:条形码值;NOT NULL" json:"barcode_value"`
 	IsDefaultSelect int     `gorm:"column:is_default_select;type:tinyint(1);default:0;comment:是否默认选择, 0-否 1-是;NOT NULL" json:"is_default_select"`
 	Status          int     `gorm:"column:status;type:tinyint(1);default:0;comment:状态, 0-下架 1-上架. 同步商品包的状态;NOT NULL" json:"status"`
@@ -307,6 +308,11 @@ func (model *ProductBom) SetNil() {
 }
 
 func (model *ProductBom) GetStockNum() float64 {
+	// 如果关闭库存，返回999999表示无限库存
+	if !model.IsOpenStockBool() {
+		return constant.ProductBomInfiniteStock
+	}
+	// 如果标记沽清，返回0
 	if model.IsSoldOut == constant.ProductStatusSaleOut {
 		return 0
 	}
@@ -334,6 +340,10 @@ func (model *RelatedMaterial) GetDecreaseNum(productNum float64) float64 {
 
 // IsStockShortage 判断库存是否不足
 func (model *ProductBom) IsStockShortage(productNum float64) bool {
+	// 如果关闭库存，则不检查库存不足
+	if !model.IsOpenStockBool() {
+		return false
+	}
 	return model.GetStockNum() < productNum
 }
 
@@ -355,7 +365,7 @@ func (model *ProductBom) IsStockShortageWithMaterial(productNum float64) bool {
 			}
 		}
 	}
-	return model.GetStockNum() < productNum
+	return model.IsStockShortage(productNum)
 }
 
 // IsPriceChanged 判断商品价格是否变动
@@ -375,6 +385,16 @@ func (model *ProductBom) IsDefaultSelectBool() bool {
 // IsNotSoldOutStatus 判断bom是否还可以销售
 func (model *ProductBom) IsNotSoldOutStatus() bool {
 	return !model.IsSoldOutStatus()
+}
+
+// IsOpenStockBool 判断是否开启库存
+func (model *ProductBom) IsOpenStockBool() bool {
+	return model.IsOpenStock == constant.Yes
+}
+
+// IsCloseStockBool 判断是否关闭库存
+func (model *ProductBom) IsCloseStockBool() bool {
+	return model.IsOpenStock == constant.No
 }
 
 func (model *ProductBom) IsUp() bool {
