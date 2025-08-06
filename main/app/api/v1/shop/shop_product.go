@@ -1,0 +1,71 @@
+package shop
+
+import (
+	"ttpos-server-go/app/api/helper"
+	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/errors"
+	"ttpos-server-go/app/service"
+	"ttpos-server-go/app/service/setting"
+	"ttpos-server-go/middleware"
+	"ttpos-server-go/pkg/cache"
+	"ttpos-server-go/pkg/database"
+
+	"github.com/gin-gonic/gin"
+)
+
+// ProductHandler 商品处理程序
+type ProductHandler struct {
+	productSrv service.IProductSrv // 商品服务
+}
+
+// GetProductCategoryList 获取商品分类列表
+// @Summary 获取商品分类列表
+// @Description 获取商品分类列表
+// @Tags 商家端.商品分类
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Success 200 {object} product_resp.ProductCategoryListResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/category/list [get]
+func (h *ProductHandler) GetProductCategoryList(c *gin.Context) {
+	// 获取商品分类列表
+	res, err := h.productSrv.GetProductCategoryList(helper.GetCompanyUuid(c))
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// RegisterProductHandlers 注册商品
+func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
+	// 初始化服务
+	captchaSrv := service.NewCaptchaSrv(cache)
+	settingSrv := setting.NewSrv(dbm, cache)
+	roleAccessSrv := service.NewRoleAccessSrv(dbm)
+	deviceSrv := service.NewDeviceSrv(settingSrv, dbm)
+	cashBoxSrv := service.NewCashBoxSrv(dbm)
+	statisticsSrv := service.NewStatisticsSrv()
+	staffShiftSrv := service.NewStaffShiftSrv(cache, dbm, cashBoxSrv, statisticsSrv)
+	authSrv := service.NewAuthSrv(dbm, captchaSrv, roleAccessSrv, deviceSrv, staffShiftSrv, settingSrv)
+
+	// 创建收银产品处理程序
+	wrapper := ProductHandler{
+		productSrv: service.NewProductSrv(
+			dbm,                    // 数据库管理器
+			service.NewLocaleSrv(), // 多语言服务
+			settingSrv,
+		),
+	}
+
+	// 需要认证
+	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
+	{
+		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取商品分类列表
+
+		// privateApi.GET("/product/unit/list", wrapper.GetProductUnitList) // 获取商品单位列表
+	}
+}

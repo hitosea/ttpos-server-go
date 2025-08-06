@@ -16890,6 +16890,56 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/ai/translate": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通用"
+                ],
+                "summary": "翻译",
+                "parameters": [
+                    {
+                        "description": "翻译数据",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.AiTranslateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/utils.TranslateResponseItem"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/shop/base": {
             "get": {
                 "security": [
@@ -16964,6 +17014,53 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/dto.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/shop/check/name/exists": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "通用"
+                ],
+                "summary": "检查名称是否存在",
+                "parameters": [
+                    {
+                        "description": "检查名称是否存在",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.CheckNameRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/dto.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/resp.CheckNameResp"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -17949,6 +18046,37 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product/category/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品分类列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品分类"
+                ],
+                "summary": "获取商品分类列表",
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductCategoryListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/recharge_order/cancel": {
             "post": {
                 "security": [
@@ -18872,7 +19000,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "统计区域",
+                "description": "统计区域，移动管理端首页-区域数据",
                 "consumes": [
                     "application/json"
                 ],
@@ -18882,7 +19010,7 @@ const docTemplate = `{
                 "tags": [
                     "商家端.营业数据"
                 ],
-                "summary": "统计区域",
+                "summary": "统计区域，移动管理端首页-区域数据",
                 "parameters": [
                     {
                         "description": "统计参数",
@@ -18923,7 +19051,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "统计营业数据",
+                "description": "统计营业数据，移动管理端首页-店内概况",
                 "consumes": [
                     "application/json"
                 ],
@@ -18933,7 +19061,7 @@ const docTemplate = `{
                 "tags": [
                     "商家端.营业数据"
                 ],
-                "summary": "统计营业数据",
+                "summary": "统计营业数据，移动管理端首页-店内概况",
                 "parameters": [
                     {
                         "description": "统计参数",
@@ -19229,7 +19357,7 @@ const docTemplate = `{
                         "JwtToken": []
                     }
                 ],
-                "description": "统计商品排行",
+                "description": "统计商品排行，移动管理端首页-销量、销售额排行",
                 "consumes": [
                     "application/json"
                 ],
@@ -19239,7 +19367,7 @@ const docTemplate = `{
                 "tags": [
                     "商家端.营业数据"
                 ],
-                "summary": "统计商品排行",
+                "summary": "统计商品排行，移动管理端首页-销量、销售额排行",
                 "parameters": [
                     {
                         "description": "统计参数",
@@ -22547,6 +22675,17 @@ const docTemplate = `{
                 }
             }
         },
+        "req.AiTranslateRequest": {
+            "type": "object",
+            "properties": {
+                "language": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
         "req.BindCashierReq": {
             "type": "object",
             "required": [
@@ -22802,6 +22941,41 @@ const docTemplate = `{
                 "sale_order_uuid": {
                     "description": "销售订单 Uuid",
                     "type": "integer"
+                }
+            }
+        },
+        "req.CheckNameRequest": {
+            "type": "object",
+            "required": [
+                "names",
+                "source"
+            ],
+            "properties": {
+                "names": {
+                    "description": "名称列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.CheckingName"
+                    }
+                },
+                "source": {
+                    "description": "来源：unit-单位 product-商品 category-分类 sauce-加料 attribute-属性 attribute_group-属性组",
+                    "type": "string"
+                }
+            }
+        },
+        "req.CheckingName": {
+            "type": "object",
+            "required": [
+                "lang",
+                "text"
+            ],
+            "properties": {
+                "lang": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
                 }
             }
         },
@@ -25631,6 +25805,28 @@ const docTemplate = `{
                 "username": {
                     "description": "收银员账号",
                     "type": "string"
+                }
+            }
+        },
+        "resp.CheckNameItem": {
+            "type": "object",
+            "properties": {
+                "lang": {
+                    "type": "string"
+                },
+                "text_exist": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "resp.CheckNameResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/resp.CheckNameItem"
+                    }
                 }
             }
         },
@@ -32600,6 +32796,55 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "utils.TranslateResponseItem": {
+            "type": "object",
+            "properties": {
+                "de": {
+                    "description": "翻译后的德语",
+                    "type": "string"
+                },
+                "en": {
+                    "description": "翻译后的英语",
+                    "type": "string"
+                },
+                "ja": {
+                    "description": "翻译后的日语",
+                    "type": "string"
+                },
+                "key": {
+                    "description": "原始内容",
+                    "type": "string"
+                },
+                "ko": {
+                    "description": "翻译后的韩语",
+                    "type": "string"
+                },
+                "my": {
+                    "description": "翻译后的缅甸语",
+                    "type": "string"
+                },
+                "sv": {
+                    "description": "翻译后的瑞典语",
+                    "type": "string"
+                },
+                "th": {
+                    "description": "翻译后的泰语",
+                    "type": "string"
+                },
+                "tr": {
+                    "description": "翻译后的土耳其语",
+                    "type": "string"
+                },
+                "zh": {
+                    "description": "翻译后的中文",
+                    "type": "string"
+                },
+                "zh-TW": {
+                    "description": "翻译后的中文繁体",
                     "type": "string"
                 }
             }

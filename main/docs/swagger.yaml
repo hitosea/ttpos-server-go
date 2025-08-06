@@ -1590,6 +1590,13 @@ definitions:
     - roles
     - username
     type: object
+  req.AiTranslateRequest:
+    properties:
+      language:
+        type: string
+      text:
+        type: string
+    type: object
   req.BindCashierReq:
     properties:
       cashier_uuid:
@@ -1774,6 +1781,30 @@ definitions:
         type: integer
     required:
     - member_uuid
+    type: object
+  req.CheckNameRequest:
+    properties:
+      names:
+        description: 名称列表
+        items:
+          $ref: '#/definitions/req.CheckingName'
+        type: array
+      source:
+        description: 来源：unit-单位 product-商品 category-分类 sauce-加料 attribute-属性 attribute_group-属性组
+        type: string
+    required:
+    - names
+    - source
+    type: object
+  req.CheckingName:
+    properties:
+      lang:
+        type: string
+      text:
+        type: string
+    required:
+    - lang
+    - text
     type: object
   req.ConfirmRechargeOrder:
     properties:
@@ -3733,6 +3764,20 @@ definitions:
       username:
         description: 收银员账号
         type: string
+    type: object
+  resp.CheckNameItem:
+    properties:
+      lang:
+        type: string
+      text_exist:
+        type: boolean
+    type: object
+  resp.CheckNameResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/resp.CheckNameItem'
+        type: array
     type: object
   resp.Company:
     properties:
@@ -8407,6 +8452,42 @@ definitions:
       key:
         type: string
       name:
+        type: string
+    type: object
+  utils.TranslateResponseItem:
+    properties:
+      de:
+        description: 翻译后的德语
+        type: string
+      en:
+        description: 翻译后的英语
+        type: string
+      ja:
+        description: 翻译后的日语
+        type: string
+      key:
+        description: 原始内容
+        type: string
+      ko:
+        description: 翻译后的韩语
+        type: string
+      my:
+        description: 翻译后的缅甸语
+        type: string
+      sv:
+        description: 翻译后的瑞典语
+        type: string
+      th:
+        description: 翻译后的泰语
+        type: string
+      tr:
+        description: 翻译后的土耳其语
+        type: string
+      zh:
+        description: 翻译后的中文
+        type: string
+      zh-TW:
+        description: 翻译后的中文繁体
         type: string
     type: object
 host: 127.0.0.1:8080
@@ -18338,6 +18419,34 @@ paths:
       summary: 获取权限组
       tags:
       - 商家端.管理员管理
+  /shop/ai/translate:
+    post:
+      parameters:
+      - description: 翻译数据
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.AiTranslateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/utils.TranslateResponseItem'
+                  type: array
+              type: object
+      security:
+      - JwtToken: []
+      summary: 翻译
+      tags:
+      - 通用
   /shop/base:
     get:
       consumes:
@@ -18384,6 +18493,32 @@ paths:
       summary: 修改密码
       tags:
       - 商家端.认证
+  /shop/check/name/exists:
+    post:
+      parameters:
+      - description: 检查名称是否存在
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.CheckNameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.CheckNameResp'
+              type: object
+      security:
+      - JwtToken: []
+      summary: 检查名称是否存在
+      tags:
+      - 通用
   /shop/login:
     post:
       consumes:
@@ -18990,6 +19125,25 @@ paths:
       summary: 退款订单
       tags:
       - 商家端.订单
+  /shop/product/category/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品分类列表
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductCategoryListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品分类列表
+      tags:
+      - 商家端.商品分类
   /shop/recharge_order/cancel:
     post:
       consumes:
@@ -19540,7 +19694,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 统计区域
+      description: 统计区域，移动管理端首页-区域数据
       parameters:
       - description: 统计参数
         in: body
@@ -19562,14 +19716,14 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 统计区域
+      summary: 统计区域，移动管理端首页-区域数据
       tags:
       - 商家端.营业数据
   /shop/statistics/business:
     get:
       consumes:
       - application/json
-      description: 统计营业数据
+      description: 统计营业数据，移动管理端首页-店内概况
       parameters:
       - description: 统计参数
         in: body
@@ -19591,7 +19745,7 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 统计营业数据
+      summary: 统计营业数据，移动管理端首页-店内概况
       tags:
       - 商家端.营业数据
   /shop/statistics/export:
@@ -19743,7 +19897,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: 统计商品排行
+      description: 统计商品排行，移动管理端首页-销量、销售额排行
       parameters:
       - description: 统计参数
         in: body
@@ -19765,7 +19919,7 @@ paths:
               type: object
       security:
       - JwtToken: []
-      summary: 统计商品排行
+      summary: 统计商品排行，移动管理端首页-销量、销售额排行
       tags:
       - 商家端.营业数据
   /shop/statistics/product_sales:
