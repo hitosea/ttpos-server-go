@@ -253,6 +253,12 @@ func (model *ProductPackage) IsNoSelectProduct() (bool, *resp.ProductAutoAddReq)
 }
 
 func (model *ProductPackage) GetMinPrice() float64 {
+	// 如果是套餐类型，直接返回套餐价格
+	if model.ProductType == constant.ProductTypePackage {
+		return model.Price
+	}
+
+	// 如果是商品类型，计算BOM中的最低价格
 	minPrice := float64(0)
 	for _, productBom := range model.ProductBoms {
 		if !productBom.IsFlavor() {

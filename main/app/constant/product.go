@@ -10,6 +10,12 @@ const (
 	ProductPackageDeductStockTypeCooking = 1 // 下单减库存，送厨减库存
 )
 
+// 商品类型
+const (
+	ProductTypeProduct = 0 // 商品
+	ProductTypePackage = 1 // 套餐
+)
+
 const (
 	ProductBomTypeSauce  = 0 // 小料
 	ProductBomTypeFlavor = 1 // 规格商品

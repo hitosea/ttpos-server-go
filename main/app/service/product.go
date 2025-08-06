@@ -162,7 +162,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 		image := product.ImageFile.GetUrl(utils.GetBaseURL(ctx.GetGin().Request))
 		unit := product.ProductUnit.MultiLanguageName.GetNames()
 
-		if product.ProductType == constant.Yes {
+		if product.ProductType == constant.ProductTypePackage {
 			packageGroupList := make([]product_resp.ProductPackageGroup, 0)
 			for _, group := range product.ProductPackageGroups {
 				productList := make([]product_resp.PackageProductDetail, 0)
