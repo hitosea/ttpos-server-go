@@ -523,7 +523,7 @@ class Index extends Controller
             '"material" as source_type',
             '0 as open_overall_discount'
         ]);
-        $applyConditions = function ($query) use ($categoryIds, $labelIds, $productName, $mode, $numType, $showDeliveryRequired) {
+        $applyConditions = function ($query) use ($categoryIds, $labelIds, $productName, $mode, $numType, $showDeliveryRequired, $type) {
             if ($categoryIds) {
                 $query->whereIn('category_uuid', explode(',', $categoryIds));
             }
@@ -551,6 +551,10 @@ class Index extends Controller
 
             if ($showDeliveryRequired != 0) {
                 $query->where('is_show_delivery', 1);
+            }
+
+            if ($type == 'product') {
+                $query->where('product_type', 0);
             }
 
             return $query;
