@@ -2109,5 +2109,15 @@
     "分组名称": "Group Name",
     "请填写分组名称": "Please enter the group name",
     "请输入分组名称": "Please enter the group name",
-    "翻译": "Translate <content>"
+    "翻译": "Translate <content>",
+    "此名称与其他分组重复": "This name is duplicated with other groups",
+    "套餐价格：": "Package price:",
+    "请输入套餐价格": "Please enter the package price",
+    "请添加套餐商品": "Please add package items",
+    "添加分组": "Add group",
+    "实时可售上限": "Real-time sale limit",
+    "根据子菜品库存动态计算，库存变化自动更新": "Dynamically calculated based on sub-item inventory, with automatic updates for inventory changes",
+    "套餐可售总量": "Total saleable quantity of the set",
+    "达到此可售总量后套餐自动售罄，与库存无关。不设置则不限总量": "Once this total saleable quantity is reached, the set will be automatically sold out, regardless of inventory. If not set, there is no limit on the total quantity",
+    "是否显示规格、属性": "Display specifications and attributes?"
 }
