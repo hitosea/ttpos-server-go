@@ -67,6 +67,7 @@ class Product extends BaseModel
      */
     const TYPE_PRODUCT = 10;
     const TYPE_MATERIAL = 20;
+    const TYPE_PACKAGE = 30;
 
     /**
      * 商品更新后推送通知
@@ -100,7 +101,7 @@ class Product extends BaseModel
      */
     public function getTypeAttr($value, $data = [])
     {
-        return 10;
+        return $this->product_type == 0 ? self::TYPE_PRODUCT : self::TYPE_PACKAGE;
     }
     public function getProductIdAttr($value, $data = [])
     {
@@ -315,7 +316,7 @@ class Product extends BaseModel
      */
     public function sku()
     {
-        return $this->hasMany('app\\common\\model\\product\\ProductBom', 'product_package_uuid', 'uuid')->where('product_flavor_uuid', '>', 0)->order(['uuid' => 'asc']);
+        return $this->hasMany('app\\common\\model\\product\\ProductBom', 'product_package_uuid', 'uuid')->where('product_sauce_uuid', '=', 0)->order(['uuid' => 'asc']);
     }
 
     /**
@@ -428,6 +429,14 @@ class Product extends BaseModel
     public function orderSchemeProduct()
     {
         return $this->hasMany(OrderSchemeProduct::class, 'product_package_uuid', 'uuid');
+    }
+
+    /**
+     * 关联套餐分组
+     */
+    public function productPackageGroup()
+    {
+        return $this->hasMany(ProductPackageGroup::class, 'product_package_uuid', 'uuid');
     }
 
 
@@ -879,23 +888,23 @@ class Product extends BaseModel
                 'p.sort as product_sort',
                 'c1.name as category_name', 
                 'c2.name as category_parent_name', 
-                ' (SELECT sum(stock_num) FROM ttpos_product_bom WHERE product_package_uuid = p.uuid AND delete_time = 0 AND product_flavor_uuid > 0) AS product_stock',
-                ' (SELECT min(price) FROM ttpos_product_bom WHERE product_package_uuid = p.uuid AND product_flavor_uuid > 0 AND delete_time = 0) AS product_price',
-                '10 as type',
+                ' (SELECT sum(stock_num) FROM ttpos_product_bom WHERE product_package_uuid = p.uuid AND delete_time = 0 AND product_sauce_uuid = 0) AS product_stock',
+                ' (SELECT min(price) FROM ttpos_product_bom WHERE product_package_uuid = p.uuid AND product_sauce_uuid = 0 AND delete_time = 0) AS product_price',
+                'CASE WHEN product_type = 1 THEN 30 ELSE 10 END as type',
                 'c1.uuid as category_uuid',
                 'c2.uuid as category_parent_uuid',
                 '0 as is_material_used',
                 'p.sort as sort',
                 'p.id as id',
-                'pu.name as product_unit'
+                'pu.name as product_unit',
+                'bom.is_open_stock'
             ]))
             ->leftJoin('product_category c1', 'p.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
             ->leftJoin('product_bom bom', 'p.uuid = bom.product_package_uuid')
             ->leftJoin('file', 'p.image_file_uuid = file.uuid')
             ->leftJoin('product_unit pu', 'p.unit_uuid = pu.uuid')
-            ->where('bom.product_flavor_uuid', '>', 0)
-            // ->where('bom.delete_time', 0)
+            ->where('bom.product_sauce_uuid', '=', 0)
             ->group('p.uuid')
             ->order('p.sort', 'asc')
             ->order('p.id', 'desc')
@@ -926,7 +935,8 @@ class Product extends BaseModel
                 'count(rm.uuid) as is_material_used',
                 '0 as sort',
                 'm.id as id',
-                'pu.name as product_unit'
+                'pu.name as product_unit',
+                '1 as is_open_stock'
             ]))
             ->leftJoin('product_category c1', 'm.category_uuid = c1.uuid')
             ->leftJoin('product_category c2', 'c1.parent_uuid = c2.uuid')
@@ -947,7 +957,7 @@ class Product extends BaseModel
 
         // 搜索商品类型
         $materialType = $params['material_type'] ?? 0;
-        if (in_array($materialType, [self::TYPE_MATERIAL, self::TYPE_PRODUCT])) {
+        if (in_array($materialType, [self::TYPE_MATERIAL, self::TYPE_PRODUCT, self::TYPE_PACKAGE])) {
             $whereSql .= " WHERE (type = :type)";
             $bind['type'] = $materialType;
         }
@@ -1040,7 +1050,8 @@ class Product extends BaseModel
             'is_material_used',
             'sort',
             'id',
-            'product_unit'
+            'product_unit',
+            'is_open_stock'
         ]) . " FROM ($productSql UNION ALL $materialSql) AS all_product";
         $orderSql = ' ORDER BY sort ASC, create_time DESC';
         $pageSql = " LIMIT {$offset}, {$limit}";
@@ -1068,7 +1079,7 @@ class Product extends BaseModel
             // 库存
             $productStock = 0;
             $productMaterialStock = 0;
-            if ($row['type'] == 10) {
+            if ($row['type'] == 10 || $row['type'] == 30) {
                 $productStock = $row['product_stock'];
             } else {
                 $productMaterialStock = $row['product_stock'];
@@ -1124,6 +1135,7 @@ class Product extends BaseModel
                 'is_material_used' => $row['is_material_used'] > 0 ? 1 : 0,
                 'product_unit' => $productUnit,
                 'product_unit_text' => $productUnitText,
+                'is_open_stock' => $row['is_open_stock'],
             ];
         }
 
@@ -1184,7 +1196,12 @@ class Product extends BaseModel
             // 商品主图
             $product['product_image'] = $product['image'][0]['file_path'] ?? '';
             // 商品默认规格
-            $product['product_sku'] = self::getShowSku($product);
+            $product['product_sku'] = [];
+            if (!$product->product_type == 1) {
+                $product['product_sku'] = self::getShowSku($product);
+            }
+            // 套餐分组
+            $product['package'] = self::getPackageGroup($product);
             // 材料是否被使用
             $product['is_material_used'] = 0;
             if ($product['type'] == self::TYPE_MATERIAL) {
@@ -1289,6 +1306,7 @@ class Product extends BaseModel
      */
     public static function detail($product_id)
     {
+        /** @var Product $model */
         $model = (new static())->alias('p')
         ->field(['p.*', 'unit.name as product_unit'])
         ->leftJoin('product_unit unit', 'unit.uuid = p.unit_uuid')
@@ -1317,6 +1335,13 @@ class Product extends BaseModel
             ],
             'dineTax',
             'takeoutTax',
+            'productPackageGroup' => [
+                'productPackageGropItem' => [
+                    'productBom' => [
+                        'product'
+                    ]
+                ]
+            ],
         ])->where('p.uuid', '=', $product_id)->find();
         if (empty($model)) {
             return $model;
@@ -1470,6 +1495,46 @@ class Product extends BaseModel
                 'product_id' => $product->uuid,
             ],
         ];
+    }
+
+    /**
+     * 获取套餐分组
+     */
+    public static function getPackageGroup($product)
+    {
+        $result = [
+            'package_price' => 0,
+            'package_stock' => 0,
+            'package_group' => [],
+        ];
+        if ($product['product_type'] == 1) {
+            $result['package_price'] = $product['sku'][0]['price']; // 套餐价格
+            $result['package_stock'] = $product['sku'][0]['stock_num']; // 套餐库存
+            $result['is_open_stock'] = $product['sku'][0]['is_open_stock']; // 是否开启库存
+            foreach ($product['productPackageGroup'] as $group) {
+                $productList = [];
+                foreach ($group['productPackageGropItem'] as $item) {
+                    $productList[] = [
+                        'item_id' => $item['uuid'], // 套餐分组商品uuid
+                        'product_id' => $item['product_bom_uuid'], // 商品package_bom_uuid
+                        'product_name_text' => $item['productBom']['product']['product_name_text'], // 商品名称
+                        'spec_name_text' => $item['productBom']['spec_name_text'], // 规格名称
+                        'product_price' => $item['productBom']['price'], // 商品价格
+                        'stock_num' => $item['productBom']['stock_num'], // 商品库存
+                        'num' => intval($item['num']), // 商品数量
+                        'sort' => $item['sort'], // 排序
+                    ];
+                }
+                $result['package_group'][] = [
+                    'group_id' => $group['uuid'], // 套餐分组uuid
+                    'group_name' => $group['name'], // 套餐分组名称
+                    'group_name_text' => $group['group_name_text'], // 套餐分组名称
+                    'product_list' => $productList, // 套餐分组商品列表
+                ];
+            }
+        }
+
+        return $result;
     }
 
     /**

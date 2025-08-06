@@ -445,6 +445,9 @@ class ProductBom extends BaseModel
                 'history_purchase_num' => floatval($historyPurchaseNum),
                 'history_loss_num' => floatval($historyLossNum),
                 'barcode' => $row['barcode_value'],
+                'category_id' => $row['category_uuid'],
+                'category_parent_id' => $row['category_parent_uuid'],
+                'product_name_text' => extractLanguage($row['product_name']),
             ];
         }
 
