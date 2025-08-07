@@ -45,8 +45,8 @@ type ProductUnit struct {
 	// ProductPackage里面关联的单位
 	ProductPackages []ProductPackage `gorm:"foreignKey:unit_uuid;references:uuid"`
 
-	// 表里面没有这个related_product_count字段，但是查询的时候会自动统计关联商品数量
-	RelatedProductCount int `gorm:"->"`
+	// 表里面没有这个product_package_count字段，但是查询的时候会自动统计关联商品数量
+	ProductPackageCount int `gorm:"->"`
 }
 
 // PrinterTag 打印标签表,定义打印标签的相关信息 ttpos_printer_tag

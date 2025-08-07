@@ -119,7 +119,7 @@
     <template #footer>
       <span class="dialog-footer">
         <el-button @click="handleClose">{{ $t('取消') }}</el-button>
-        <el-button type="primary" @click="onSubmit" :loading="loading">{{ $t('确定') }}</el-button>
+        <el-button type="primary" @click="onSubmit" :loading="loading || props.isLoading">{{ $t('确定') }}</el-button>
       </span>
     </template>
   </el-dialog>
@@ -172,6 +172,10 @@
       default: Infinity,
     },
     haveSku: {
+      type: Boolean,
+      default: false,
+    },
+    isLoading: {
       type: Boolean,
       default: false,
     },

@@ -119,7 +119,7 @@ func (r *StaffRepo) Update(uuid uint64, vars map[string]any) error {
 func (r *StaffRepo) PaginateGetStaffs(pageNo, pageSize int, opts ...DBOption) ([]model.Staff, int64, error) {
 	var staffs []model.Staff
 	var total int64
-	db := r.db.Model(&model.Staff{}).Debug().Scopes(NotDeleted)
+	db := r.db.Model(&model.Staff{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}

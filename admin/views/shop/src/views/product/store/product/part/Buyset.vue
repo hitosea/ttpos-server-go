@@ -229,10 +229,13 @@
   </div>
 </template>
 
-<script>
+<script setup>
+  import { ref, inject, watch, onMounted, nextTick } from 'vue';
   import { useUserStore } from '@/store';
   import PorductApi from '@/api/product.js';
   import PurchaseApi from '@/api/purchase.js';
+
+  // 获取用户信息和配置
   const { currency, userInfo } = useUserStore();
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
@@ -242,154 +245,146 @@
   const is_open_kitchen_kds = supplier.value?.is_open_kitchen_kds || 0;
   const is_open_member = supplier.value?.is_open_member || 0;
   const is_open_delivery = supplier.value?.delivery_status || 0;
-  export default {
-    data() {
-      return {
-        unit: '%',
-        grade_unit: '%',
-        currency: currency,
-        minPrice: 0,
-        userInfo: userInfo,
-        taxList: [],
-        supplierList: [],
-        is_open_tablet: is_open_tablet,
-        is_open_assistant: is_open_assistant,
-        is_open_kitchen_kds: is_open_kitchen_kds,
-        is_open_member: is_open_member,
-        is_open_delivery: is_open_delivery,
-        baseSale: baseSale,
-        showMore: false,
-      };
-    },
-    created() {
-      if (this.form.model.alone_grade_type == '20') {
-        this.grade_unit = '元';
-      }
-      if (this.form.model.agent_money_type == '20') {
-        this.unit = '元';
-      }
-      if (this.userInfo.isOpenTax == '1') {
-        this.getTaxData();
-      }
-      this.getData();
-      //权限判断
-      if (!this.is_open_tablet) {
-        this.form.model.is_show_tablet = 2;
-      }
-      if (!this.is_open_assistant) {
-        this.form.model.is_show_assistant = 2;
-      }
-      if (!this.is_open_kitchen_kds) {
-        this.form.model.is_show_kitchen = 2;
-      }
-    },
-    inject: ['form'],
-    watch: {
-      'form': {
-        handler(val) {
-          let price = [];
-          val.model.sku.map((item) => {
-            price.push(item.product_price);
-          });
-          this.minPrice = Math.min(...price);
-        },
-        immediate: true,
-        deep: true,
-      },
-      'form.model.num_type': {
-        handler(val) {
-          if (val == 1) {
-            this.form.model.is_show_tablet = 2;
-            this.form.model.is_show_assistant = 2;
-            this.form.model.is_show_h5 = 2;
-            this.form.model.is_show_delivery = 2;
-          }
-        },
-      },
-    },
-    methods: {
-      /*获取基础数据*/
-      getTaxData: function () {
-        let self = this;
-        PorductApi.getTaxList({}, true)
-          .then((res) => {
-            this.taxList = res.data.list;
-            let idArr = [];
-            this.taxList.map((item) => {
-              idArr.push(item.id);
-            });
-            this.form.model.productTaxes.map((item) => {
-              if (!idArr.includes(item.tax_category_id)) {
-                item.tax_category_id = '';
-              }
-            });
-          })
-          .catch((error) => {});
-      },
 
-      //获取供应商
-      getData() {
-        let self = this;
-        let Params = {};
-        Params.list_rows = 1000;
-        PurchaseApi.supplierList(Params, true)
-          .then((data) => {
-            self.loading = false;
-            self.supplierList = data.data.list.data;
-            self.$nextTick(() => {
-              let arr = [];
-              self.supplierList.map((item) => {
-                arr.push(item.id);
-              });
-              if (!arr.includes(self.form.model.erp_supplier_id)) {
-                self.form.model.erp_supplier_id = '';
-              }
-            });
-          })
-          .catch((error) => {});
-      },
+  // 注入form
+  const form = inject('form', {});
 
-      /*换算单位*/
-      changeMoneyType: function (val) {
-        if (val == '10') {
-          this.unit = '%';
-        } else {
-          this.unit = '元';
+  // 响应式数据
+  const unit = ref('%');
+  const grade_unit = ref('%');
+  const minPrice = ref(0);
+  const userInfo_ref = ref(userInfo);
+  const taxList = ref([]);
+  const supplierList = ref([]);
+  const is_open_tablet_ref = ref(is_open_tablet);
+  const is_open_assistant_ref = ref(is_open_assistant);
+  const is_open_kitchen_kds_ref = ref(is_open_kitchen_kds);
+  const showMore = ref(false);
+
+  // 组件挂载时初始化
+  onMounted(() => {
+    if (form.model.alone_grade_type == '20') {
+      grade_unit.value = '元';
+    }
+    if (form.model.agent_money_type == '20') {
+      unit.value = '元';
+    }
+    if (userInfo_ref.value.isOpenTax == '1') {
+      getTaxData();
+    }
+    getData();
+    //权限判断
+    if (!is_open_tablet_ref.value) {
+      form.model.is_show_tablet = 2;
+    }
+    if (!is_open_assistant_ref.value) {
+      form.model.is_show_assistant = 2;
+    }
+    if (!is_open_kitchen_kds_ref.value) {
+      form.model.is_show_kitchen = 2;
+    }
+  });
+
+  // 监听form变化
+  watch(
+    () => form,
+    (val) => {
+      let price = [];
+      val.model.sku.map((item) => {
+        price.push(item.product_price);
+      });
+      minPrice.value = Math.min(...price);
+    },
+    { immediate: true, deep: true }
+  );
+
+  // 监听计价方式变化
+  watch(
+    () => form.model.num_type,
+    (val) => {
+      if (val == 1) {
+        form.model.is_show_tablet = 2;
+        form.model.is_show_assistant = 2;
+        form.model.is_show_h5 = 2;
+        form.model.is_show_delivery = 2;
+      }
+    }
+  );
+
+  // 方法定义
+  /*获取基础数据*/
+  const getTaxData = async () => {
+    try {
+      const res = await PorductApi.getTaxList({}, true);
+      taxList.value = res.data.list;
+      let idArr = [];
+      taxList.value.map((item) => {
+        idArr.push(item.id);
+      });
+      form.model.productTaxes.map((item) => {
+        if (!idArr.includes(item.tax_category_id)) {
+          item.tax_category_id = '';
         }
-      },
-      /*换算单位*/
-      changeGradeType: function (val) {
-        this.form.gradeList.map((item, index) => {
-          this.form.gradeList[index].product_equity = null;
+      });
+    } catch (error) {
+      // 错误处理
+    }
+  };
+
+  //获取供应商
+  const getData = async () => {
+    try {
+      let Params = {};
+      Params.list_rows = 1000;
+      const data = await PurchaseApi.supplierList(Params, true);
+      supplierList.value = data.data.list.data;
+      nextTick(() => {
+        let arr = [];
+        supplierList.value.map((item) => {
+          arr.push(item.id);
         });
-        if (val == '10') {
-          this.grade_unit = '%';
-        } else {
-          this.grade_unit = '元';
+        if (!arr.includes(form.model.erp_supplier_id)) {
+          form.model.erp_supplier_id = '';
         }
-      },
+      });
+    } catch (error) {
+      // 错误处理
+    }
+  };
 
-      returnType(type) {
-        let result = '';
-        if (type == '1') {
-          result = $t('堂食税类：');
-        } else {
-          result = $t('外带税类：');
-        }
-        return result;
-      },
-      returnMessage(type) {
-        let result = '';
-        if (type == '1') {
-          result = $t('请选择堂食税类');
-        } else {
-          result = $t('请选择外带税类');
-        }
-        return result;
-      },
-    },
+  /*换算单位*/
+  const changeGradeType = (val) => {
+    form.gradeList.map((item, index) => {
+      form.gradeList[index].product_equity = null;
+    });
+    if (val == '10') {
+      grade_unit.value = '%';
+    } else {
+      grade_unit.value = '元';
+    }
+  };
+
+  const returnType = (type) => {
+    let result = '';
+    if (type == '1') {
+      result = $t('堂食税类：');
+    } else {
+      result = $t('外带税类：');
+    }
+    return result;
+  };
+
+  const returnMessage = (type) => {
+    let result = '';
+    if (type == '1') {
+      result = $t('请选择堂食税类');
+    } else {
+      result = $t('请选择外带税类');
+    }
+    return result;
   };
 </script>
+
 <style lang="scss" scoped>
   :deep(.el-input__wrapper) {
     padding-left: 7px !important;

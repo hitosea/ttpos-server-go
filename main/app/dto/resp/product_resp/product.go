@@ -170,7 +170,7 @@ type ProductCategoryListResp struct {
 type ProductUnitItem struct {
 	Uuid                uint64 `json:"uuid"`                  // 商品单位UUID
 	Sort                int    `json:"sort"`                  // 商品单位排序
-	RelatedProductCount int    `json:"related_product_count"` // 关联商品数量
+	ProductPackageCount int    `json:"product_package_count"` // 关联商品包数量
 	Name                string `json:"name"`                  // 商品单位名称
 }
 

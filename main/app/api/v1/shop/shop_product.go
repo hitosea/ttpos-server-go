@@ -103,7 +103,123 @@ func (h *ProductHandler) GetProductUnit(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// RegisterProductHandlers 注册商品
+// AddProductUnit 添加商品单位
+// @Summary 添加商品单位
+// @Description 添加商品单位
+// @Tags 商家端.商品单位
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductUnitAddReq true "商品单位添加请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/unit/add [post]
+func (h *ProductHandler) AddProductUnit(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	addReq := req.ProductUnitAddReq{}
+
+	if err := c.ShouldBindJSON(&addReq); err != nil {
+		helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
+		return
+	}
+	// 添加商品单位
+	err := h.productSrv.AddProductUnit(ctx, addReq)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, nil)
+}
+
+// EditProductUnit 编辑商品单位
+// @Summary 编辑商品单位
+// @Description 编辑商品单位
+// @Tags 商家端.商品单位
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductUnitEditReq true "商品单位编辑请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/unit/edit [post]
+func (h *ProductHandler) EditProductUnit(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	editReq := req.ProductUnitEditReq{}
+
+	if err := c.ShouldBindJSON(&editReq); err != nil {
+		helper.HandleValidationError(c, err, editReq, dto.PageReqMessage)
+		return
+	}
+	// 编辑商品单位
+	err := h.productSrv.EditProductUnit(ctx, editReq)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, nil)
+}
+
+// DeleteProductUnit 删除商品单位
+// @Summary 删除商品单位
+// @Description 删除商品单位
+// @Tags 商家端.商品单位
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductUnitReq true "商品单位删除请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/unit [delete]
+func (h *ProductHandler) DeleteProductUnit(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	unitReq := req.ProductUnitReq{}
+
+	if err := c.ShouldBindJSON(&unitReq); err != nil {
+		helper.HandleValidationError(c, err, unitReq, dto.PageReqMessage)
+		return
+	}
+	// 删除商品单位
+	err := h.productSrv.DeleteProductUnit(ctx, unitReq)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, nil)
+}
+
+// SortProductUnit 排序商品单位
+// @Summary 排序商品单位
+// @Description 排序商品单位
+// @Tags 商家端.商品单位
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductUnitSortReq true "商品单位排序请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/unit/sort [post]
+func (h *ProductHandler) SortProductUnit(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sortReq := req.ProductUnitSortReq{}
+
+	if err := c.ShouldBindJSON(&sortReq); err != nil {
+		helper.HandleValidationError(c, err, sortReq, dto.PageReqMessage)
+		return
+	}
+	// 排序商品单位
+	err := h.productSrv.SortProductUnit(ctx, sortReq)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+}
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -130,6 +246,9 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取商品分类列表
 		privateApi.GET("/product/unit/list", wrapper.GetProductUnitList)         // 获取商品单位列表
 		privateApi.GET("/product/unit", wrapper.GetProductUnit)                  // 获取商品单位详情
-		privateApi.POST("/product/unit/add", nil)                                // 添加商品单位
+		privateApi.POST("/product/unit/add", wrapper.AddProductUnit)             // 添加商品单位
+		privateApi.POST("/product/unit/edit", wrapper.EditProductUnit)           // 编辑商品单位
+		privateApi.DELETE("/product/unit", wrapper.DeleteProductUnit)            // 删除商品单位
+		privateApi.POST("/product/unit/sort", wrapper.SortProductUnit)           // 排序商品单位
 	}
 }

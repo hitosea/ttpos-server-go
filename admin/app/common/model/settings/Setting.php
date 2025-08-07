@@ -92,7 +92,7 @@ class Setting extends BaseModel
         // v1.0.8 语言数据兼容处理
         foreach ($data_key['language'] as $key => $language) {
             $data_key['language'][$key]['key'] = $language['name'];
-            $data_key['language'][$key]['i'] = $language['key'];
+            $data_key['language'][$key]['i'] = $language['key'] ?? '';
         }
         //
         return $data_key['language'];

@@ -20,6 +20,7 @@ import (
 
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // IProductSrv 定义产品服务接口
@@ -30,6 +31,11 @@ type IProductSrv interface {
 	GetProductUnit(ctx context.Context, req req.ProductUnitReq) (product_resp.ProductUnitDetail, error)                           // 获取产品单位详情
 	GetProductRecommendList(ctx context.Context, req req.ProductRecommendListReq) (*product_resp.ProductRecommendListResp, error) // 获取产品推荐列表
 	SearchProducts(ctx context.Context, req req.ProductSearchReq) (*product_resp.ProductSearchResp, error)                        // 搜索商品
+
+	AddProductUnit(ctx context.Context, req req.ProductUnitAddReq) error   // 添加产品单位
+	EditProductUnit(ctx context.Context, req req.ProductUnitEditReq) error // 编辑产品单位
+	DeleteProductUnit(ctx context.Context, req req.ProductUnitReq) error   // 删除产品单位
+	SortProductUnit(ctx context.Context, req req.ProductUnitSortReq) error // 排序产品单位
 }
 
 type productSrv struct {
@@ -689,7 +695,7 @@ func (s *productSrv) GetProductUnitList(ctx context.Context, req req.ProductUnit
 			Uuid:                unit.Uuid,
 			Name:                unit.MultiLanguageName.GetNameByLang(language),
 			Sort:                unit.Sort,
-			RelatedProductCount: unit.RelatedProductCount,
+			ProductPackageCount: unit.ProductPackageCount,
 		})
 	}
 
@@ -704,13 +710,13 @@ func (s *productSrv) GetProductUnitList(ctx context.Context, req req.ProductUnit
 	}, nil
 }
 
-func (s *productSrv) GetProductUnit(ctx context.Context, req req.ProductUnitReq) (product_resp.ProductUnitDetail, error) {
+func (s *productSrv) GetProductUnit(ctx context.Context, getUnitReq req.ProductUnitReq) (product_resp.ProductUnitDetail, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	language := ctx.GetLanguage()
 
 	productRepo := repository.NewProductRepo(db)
 	unit, err := productRepo.GetProductUnit(
-		productRepo.WhereUuid(req.Uuid),
+		productRepo.WhereUuid(getUnitReq.Uuid),
 		productRepo.WithMultiLanguageName(),
 		productRepo.WithProductPackages(),
 		productRepo.WithProductPackagesMultiLanguageName(),
@@ -737,4 +743,166 @@ func (s *productSrv) GetProductUnit(ctx context.Context, req req.ProductUnitReq)
 	}
 
 	return productUnit, nil
+}
+
+func (s *productSrv) AddProductUnit(ctx context.Context, addReq req.ProductUnitAddReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	checkService := NewCheckNameSrv(s.dbm)
+	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
+	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+		Source: "unit",
+		Names:  names,
+	})
+	if exists {
+		return errors.New("名称已存在")
+	}
+	// 获取当前最大的排序值
+	var maxSort int
+	db.Model(&model.ProductUnit{}).Select("MAX(sort)").Scan(&maxSort)
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		// 保存多语言名称
+		multiLanguageName := model.MultiLanguageName{
+			ZhName:   addReq.LocaleName.ZH,
+			ThName:   addReq.LocaleName.TH,
+			EnName:   addReq.LocaleName.EN,
+			ZhTwName: addReq.LocaleName.ZHTW,
+			JaName:   addReq.LocaleName.JA,
+			KoName:   addReq.LocaleName.KO,
+			MyName:   addReq.LocaleName.MY,
+			TrName:   addReq.LocaleName.TR,
+			SvName:   addReq.LocaleName.SV,
+		}
+		tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName)
+		// 保存产品单位
+		productUnit := model.ProductUnit{
+			Sort:                  maxSort + 1,
+			MultiLanguageNameUuid: multiLanguageName.Uuid,
+			Name:                  addReq.LocaleName.ToJson(),
+		}
+		tx.Model(&model.ProductUnit{}).Create(&productUnit)
+
+		// 修改商品包的单位UUID
+		for _, productPackageUuid := range addReq.ProductPackageUuids {
+			tx.Model(&model.ProductPackage{}).Where("uuid = ?", productPackageUuid).Updates(map[string]any{
+				"unit_uuid": productUnit.Uuid,
+			})
+		}
+		return nil
+	})
+	return err
+}
+
+func (s *productSrv) EditProductUnit(ctx context.Context, editUnitReq req.ProductUnitEditReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productRepo := repository.NewProductRepo(db)
+
+	// 获取产品单位
+	productUnit, err := productRepo.GetProductUnit(productRepo.WhereUuid(editUnitReq.Uuid), productRepo.WithMultiLanguageName())
+	if err != nil {
+		return errors.WithMessage(err, "单位不存在")
+	}
+
+	if productUnit.MultiLanguageNameUuid == 0 {
+		return errors.New("单位名称不存在")
+	}
+
+	// 检查名称是否存在
+	checkService := NewCheckNameSrv(s.dbm)
+	names := checkService.MakeCheckNameList(ctx, editUnitReq.LocaleName)
+	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+		Uuid:   editUnitReq.Uuid,
+		Source: "unit",
+		Names:  names,
+	})
+	if exists {
+		return errors.New("名称已存在")
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		// 修改多语言名称
+		tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productUnit.MultiLanguageNameUuid).Updates(map[string]any{
+			"zh_name":    editUnitReq.LocaleName.ZH,
+			"th_name":    editUnitReq.LocaleName.TH,
+			"en_name":    editUnitReq.LocaleName.EN,
+			"zh_tw_name": editUnitReq.LocaleName.ZHTW,
+			"ja_name":    editUnitReq.LocaleName.JA,
+			"ko_name":    editUnitReq.LocaleName.KO,
+			"my_name":    editUnitReq.LocaleName.MY,
+			"tr_name":    editUnitReq.LocaleName.TR,
+			"sv_name":    editUnitReq.LocaleName.SV,
+		})
+		// 修改产品单位
+		tx.Model(&model.ProductUnit{}).Where("uuid = ?", editUnitReq.Uuid).Updates(map[string]any{
+			"name": editUnitReq.LocaleName.ToJson(),
+		})
+		// 修改商品包的单位UUID, 如果商品包的单位UUID是当前单位，则修改为0
+		tx.Model(&model.ProductPackage{}).Where("unit_uuid = ?", editUnitReq.Uuid).Updates(map[string]any{
+			"unit_uuid": 0,
+		})
+		// 修改商品包的单位UUID
+		if len(editUnitReq.ProductPackageUuids) > 0 {
+			// 修改商品包的单位UUID
+			tx.Model(&model.ProductPackage{}).Where("uuid in (?)", editUnitReq.ProductPackageUuids).Updates(map[string]any{
+				"unit_uuid": productUnit.Uuid,
+			})
+		}
+		return nil
+	})
+	return err
+}
+
+func (s *productSrv) DeleteProductUnit(ctx context.Context, deleteUnitReq req.ProductUnitReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productRepo := repository.NewProductRepo(db)
+	// 获取产品单位
+	productUnit, err := productRepo.GetProductUnit(
+		productRepo.WhereUuid(deleteUnitReq.Uuid),
+		productRepo.WithMultiLanguageName(),
+		productRepo.WithProductPackages(),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "单位不存在")
+	}
+	if productUnit.MultiLanguageNameUuid == 0 {
+		return errors.New("单位名称不存在")
+	}
+	// 是否关联商品
+	if len(productUnit.ProductPackages) > 0 {
+		return errors.New("该单位下存在商品，不允许删除")
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		// 删除产品单位
+		tx.Model(&model.ProductUnit{}).Where("uuid = ?", deleteUnitReq.Uuid).Delete(&model.ProductUnit{})
+		// 删除多语言名称
+		tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productUnit.MultiLanguageNameUuid).Delete(&model.MultiLanguageName{})
+		return nil
+	})
+	return err
+}
+
+func (s *productSrv) SortProductUnit(ctx context.Context, sortReq req.ProductUnitSortReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productRepo := repository.NewProductRepo(db)
+
+	productUnitUuids := make([]uint64, 0, len(sortReq.List))
+	for _, item := range sortReq.List {
+		productUnitUuids = append(productUnitUuids, item.Uuid)
+	}
+	productUnits, err := productRepo.GetProductUnitList(productRepo.WhereUuidIn(productUnitUuids))
+	if err != nil {
+		return errors.WithMessage(err, "单位不存在")
+	}
+	if len(productUnits) != len(productUnitUuids) {
+		return errors.New("单位不存在")
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range sortReq.List {
+			tx.Model(&model.ProductUnit{}).Where("uuid = ?", item.Uuid).Updates(map[string]any{
+				"sort": item.Sort,
+			})
+		}
+		return nil
+	})
+	return err
 }

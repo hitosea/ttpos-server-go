@@ -1514,8 +1514,8 @@ definitions:
       name:
         description: 商品单位名称
         type: string
-      related_product_count:
-        description: 关联商品数量
+      product_package_count:
+        description: 关联商品包数量
         type: integer
       sort:
         description: 商品单位排序
@@ -1852,6 +1852,9 @@ definitions:
       source:
         description: 来源：unit-单位 product-商品 category-分类 sauce-加料 attribute-属性 attribute_group-属性组
         type: string
+      uuid:
+        description: 排除的UUID
+        type: integer
     required:
     - names
     - source
@@ -2805,6 +2808,65 @@ definitions:
       product_package_group_uuid:
         description: 套餐分组UUID
         type: integer
+    type: object
+  req.ProductUnitAddReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位名称
+      product_package_uuids:
+        description: 关联商品包UUID列表
+        items:
+          type: integer
+        type: array
+    type: object
+  req.ProductUnitEditReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位名称
+      product_package_uuids:
+        description: 关联商品包UUID列表
+        items:
+          type: integer
+        type: array
+      uuid:
+        description: 商品单位UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductUnitReq:
+    properties:
+      uuid:
+        description: 商品单位UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductUnitSortItem:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品单位UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.ProductUnitSortReq:
+    properties:
+      list:
+        description: 商品单位排序列表
+        items:
+          $ref: '#/definitions/req.ProductUnitSortItem'
+        type: array
+    required:
+    - list
     type: object
   req.ProductUuid:
     properties:
@@ -19205,6 +19267,29 @@ paths:
       tags:
       - 商家端.商品分类
   /shop/product/unit:
+    delete:
+      consumes:
+      - application/json
+      description: 删除商品单位
+      parameters:
+      - description: 商品单位删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductUnitReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除商品单位
+      tags:
+      - 商家端.商品单位
     get:
       consumes:
       - application/json
@@ -19226,6 +19311,54 @@ paths:
       security:
       - JwtToken: []
       summary: 获取商品单位详情
+      tags:
+      - 商家端.商品单位
+  /shop/product/unit/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加商品单位
+      parameters:
+      - description: 商品单位添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductUnitAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加商品单位
+      tags:
+      - 商家端.商品单位
+  /shop/product/unit/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑商品单位
+      parameters:
+      - description: 商品单位编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductUnitEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑商品单位
       tags:
       - 商家端.商品单位
   /shop/product/unit/list:
@@ -19254,6 +19387,30 @@ paths:
       security:
       - JwtToken: []
       summary: 获取商品单位列表
+      tags:
+      - 商家端.商品单位
+  /shop/product/unit/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品单位
+      parameters:
+      - description: 商品单位排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductUnitSortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品单位
       tags:
       - 商家端.商品单位
   /shop/recharge_order/cancel:

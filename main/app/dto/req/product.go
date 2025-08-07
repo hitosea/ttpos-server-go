@@ -35,3 +35,23 @@ type ProductUnitListReq struct {
 type ProductUnitReq struct {
 	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品单位UUID
 }
+
+type ProductUnitAddReq struct {
+	LocaleName          dto.LocaleResponse `json:"locale_name"`           // 商品单位名称
+	ProductPackageUuids []uint64           `json:"product_package_uuids"` // 关联商品包UUID列表
+}
+
+type ProductUnitEditReq struct {
+	Uuid                uint64             `json:"uuid" binding:"required"` // 商品单位UUID
+	LocaleName          dto.LocaleResponse `json:"locale_name"`             // 商品单位名称
+	ProductPackageUuids []uint64           `json:"product_package_uuids"`   // 关联商品包UUID列表
+}
+
+type ProductUnitSortItem struct {
+	Uuid uint64 `json:"uuid" binding:"required"` // 商品单位UUID
+	Sort int    `json:"sort" binding:"required"` // 排序
+}
+
+type ProductUnitSortReq struct {
+	List []ProductUnitSortItem `json:"list" binding:"required,dive"` // 商品单位排序列表
+}
