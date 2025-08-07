@@ -524,6 +524,10 @@ func (model *SaleOrder) GetDelayProductList() []resp.Product {
 func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []resp.Product {
 	productList := make([]resp.Product, 0)
 	for _, saleOrderProduct := range model.SaleOrderProducts {
+		// 套餐子商品不返回
+		if saleOrderProduct.ProductType == constant.ProductTypePackageSubProduct {
+			continue
+		}
 		// 如果查询的是H5已下单的商品和被拒单的商品，则不跳过被删除的商品
 		if !hasOrderedH5ProductWithReject {
 			if saleOrderProduct.IsDelete() {
@@ -547,13 +551,16 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 		}
 		// 套餐商品列表
 		packageProductList := make([]resp.PackageProduct, 0)
-		for _, packageProduct := range saleOrderProduct.SaleOrderPackageProducts {
-			packageProductList = append(packageProductList, resp.PackageProduct{
-				Uuid:                packageProduct.SaleOrderProduct.Uuid,
-				LocaleName:          packageProduct.SaleOrderProduct.MultiLanguageName.GetNames(),
-				LocaleAttributeName: packageProduct.SaleOrderProduct.GetAttributeName(),
-				Num:                 packageProduct.SaleOrderProduct.Num,
-			})
+		if saleOrderProduct.ProductType == constant.ProductTypePackage {
+			subProductList := model.GetPackageSubProductList(saleOrderProduct.Uuid) // 获取套餐的子商品列表
+			for _, subProduct := range subProductList {
+				packageProductList = append(packageProductList, resp.PackageProduct{
+					Uuid:                subProduct.Uuid,
+					LocaleName:          subProduct.MultiLanguageName.GetNames(),
+					LocaleAttributeName: subProduct.GetAttributeName(),
+					Num:                 subProduct.Num,
+				})
+			}
 		}
 
 		product := resp.Product{

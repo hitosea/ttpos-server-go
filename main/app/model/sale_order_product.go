@@ -94,8 +94,9 @@ type SaleOrderProduct struct {
 	H5OrderUuid        uint64 `gorm:"column:h5_order_uuid;type:bigint(20) unsigned;default:0;comment:扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品;NOT NULL" json:"h5_order_uuid"`
 
 	// 套餐相关
-	PackageUuid uint64 `gorm:"column:package_uuid;type:bigint(20);not null;default:0;comment:'套餐uuid'" json:"package_uuid"` // 只有套餐子商品才会有这个字段
-	ProductType uint8  `gorm:"column:product_type;type:tinyint(1);not null;default:0;comment:'商品类型, 0-商品 1-套餐'" json:"product_type"`
+	PackageUuid             uint64 `gorm:"column:package_uuid;type:bigint(20);not null;default:0;comment:'套餐uuid'" json:"package_uuid"` // 只有套餐子商品才会有这个字段
+	ProductType             uint8  `gorm:"column:product_type;type:tinyint(1);not null;default:0;comment:'商品类型, 0-商品 1-套餐'" json:"product_type"`
+	PackageSubProductParams string `gorm:"column:package_sub_product_params;type:text;not null;default:'';comment:'套餐子商品参数'" json:"package_sub_product_params"`
 
 	// 送厨时间
 	SendKitchenTime int64 `gorm:"column:send_kitchen_time;type:int(10);not null;default:0;comment:'送厨时间'" json:"send_kitchen_time"`
@@ -1187,28 +1188,29 @@ func (model *SaleOrderProduct) GetAttributeNamesByLang(lang string, showSku ...b
 
 // 点餐时录入的原始数据
 type DefaultSaleOrderProduct struct {
-	DeviceId               string // 设备ID,用于标识订单来源设备.来源h5时，device_id为h5的device_id
-	Name                   string
-	OpenMemberDiscount     uint
-	TaxRate                float64
-	DeductStockType        uint
-	MultiLanguageNameUuid  uint64
-	ImageFileUuid          uint64
-	ProductPackageUuid     uint64
-	SaleBillUuid           uint64
-	SaleOrderUuid          uint64
-	MemberDiscountRate     float64
-	MemberCardDiscountRate float64
-	CustomDiscountRate     float64
-	Sauces                 []Sauce
-	Flavor                 Flavor
-	Attribute              []Attribute
-	IsAcceptOrder          uint    // 是否接单
-	Num                    float64 // 数量
-	NumType                uint    // 数量类型
-	Remark                 string  // 备注
-	PackageUuid            uint64  // 套餐uuid
-	ProductType            uint8   // 商品类型
+	DeviceId                string // 设备ID,用于标识订单来源设备.来源h5时，device_id为h5的device_id
+	Name                    string
+	OpenMemberDiscount      uint
+	TaxRate                 float64
+	DeductStockType         uint
+	MultiLanguageNameUuid   uint64
+	ImageFileUuid           uint64
+	ProductPackageUuid      uint64
+	SaleBillUuid            uint64
+	SaleOrderUuid           uint64
+	MemberDiscountRate      float64
+	MemberCardDiscountRate  float64
+	CustomDiscountRate      float64
+	Sauces                  []Sauce
+	Flavor                  Flavor
+	Attribute               []Attribute
+	IsAcceptOrder           uint    // 是否接单
+	Num                     float64 // 数量
+	NumType                 uint    // 数量类型
+	Remark                  string  // 备注
+	PackageUuid             uint64  // 套餐uuid
+	ProductType             uint8   // 商品类型
+	PackageSubProductParams string  // 套餐子商品参数
 }
 
 func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *ProductPackage, operation string) *SaleOrderProduct {
@@ -1392,7 +1394,7 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 }
 
 // GeneratePackageSign 生成商品套餐签名. 相同的商品套餐，商品套餐签名相同,用于取消拆单时合并商品。
-// 格式：套餐uuid-[子商品uuid,属性,属性;子商品uuid,属性,属性;]-备注内容-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
+// 格式：套餐uuid-[子商品规格uuid,属性,属性;子商品规格uuid,属性,属性;]-备注内容-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
@@ -1405,33 +1407,6 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 func (model *SaleOrderProduct) GeneratePackageSign() string {
 	packageUuid := model.ProductPackageUuid
 
-	type SubProduct struct {
-		Uuid           uint64   `json:"uuid"`
-		AttributeUuids []uint64 `json:"attribute_uuids"`
-	}
-
-	toString := func(subProduct SubProduct) string {
-		attributeUuidsStr := make([]string, 0)
-		for _, attributeUuid := range subProduct.AttributeUuids {
-			attributeUuidsStr = append(attributeUuidsStr, strconv.FormatUint(attributeUuid, 10))
-		}
-		return fmt.Sprintf("%d,%s;", subProduct.Uuid, strings.Join(attributeUuidsStr, ","))
-	}
-	subProductList := make([]SubProduct, 0)
-
-	for _, packageProduct := range model.SaleOrderPackageProducts {
-		subProduct := SubProduct{
-			Uuid:           packageProduct.ProductPackageGroupItemUuid,
-			AttributeUuids: packageProduct.SaleOrderProduct.GetAttributeUuidList(),
-		}
-		subProductList = append(subProductList, subProduct)
-	}
-
-	subProductListStr := make([]string, 0)
-	for _, subProduct := range subProductList {
-		subProductListStr = append(subProductListStr, toString(subProduct))
-	}
-
 	// 构建商品的退菜原因
 	type Reason struct {
 		Uuids []uint64 `json:"uuids"`
@@ -1443,9 +1418,9 @@ func (model *SaleOrderProduct) GeneratePackageSign() string {
 	}
 	reasonStr := utils.ToJson(reason)
 
-	return fmt.Sprintf("%d-[%s]-%s-%d-%d-%d-%d-%d-%s-%d-%d",
+	return fmt.Sprintf("%d-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d",
 		packageUuid,
-		strings.Join(subProductListStr, ""),
+		model.PackageSubProductParams,
 		model.Remark,
 		model.MustPlanUuid,
 		model.ProductionOrderUuid,

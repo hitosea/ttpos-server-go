@@ -5024,22 +5024,23 @@ type CreateSaleOrderProductParams struct {
 	SaleOrder   *model.SaleOrder      // 销售订单
 }
 
+type InnerParams struct {
+	IsDeskSaleBill         bool    // 是否是桌台销售账单
+	SaleBillUuid           uint64  // 销售账单uuid
+	SaleOrderUuid          uint64  // 销售订单uuid
+	DeskUuid               uint64  // 桌台uuid
+	DiningMethod           uint    // 就餐方式
+	MemberDiscountRate     float64 // 会员折扣率
+	MemberCardDiscountRate float64 // 会员卡折扣率
+	CustomDiscountRate     float64 // 自定义折扣率
+}
+
 func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrderProductParams, options ...func(option *ActionAddOption)) ([]*model.SaleOrderProduct, error) {
 	option := &ActionAddOption{}
 	for _, opt := range options {
 		opt(option)
 	}
 
-	type InnerParams struct {
-		IsDeskSaleBill         bool    // 是否是桌台销售账单
-		SaleBillUuid           uint64  // 销售账单uuid
-		SaleOrderUuid          uint64  // 销售订单uuid
-		DeskUuid               uint64  // 桌台uuid
-		DiningMethod           uint    // 就餐方式
-		MemberDiscountRate     float64 // 会员折扣率
-		MemberCardDiscountRate float64 // 会员卡折扣率
-		CustomDiscountRate     float64 // 自定义折扣率
-	}
 	innerParams := InnerParams{
 		IsDeskSaleBill:         params.SaleBill.IsDeskSaleBill(),
 		SaleBillUuid:           params.SaleBill.Uuid,
@@ -5230,11 +5231,11 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			Sauces:                 sauces,
 			Num:                    product.Num,
 			NumType:                productPackage.NumType,
-			PackageUuid: func() uint64 {
-				if isPackageSubProduct, packageUuid := product.GetIsPackageSubProduct(); isPackageSubProduct {
-					return packageUuid
+			PackageSubProductParams: func() string {
+				if product.GetIsPackageProduct() {
+					return utils.ToJson(product.GetSubProductList())
 				}
-				return 0
+				return ""
 			}(),
 			ProductType: func() uint8 {
 				if product.GetIsPackageProduct() {
@@ -5397,7 +5398,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
 				// 如果该商品是套餐，则新建套餐子商品
 				if saleOrderProduct.ProductType == constant.ProductTypePackage {
-					subProducts, err := s.newPackageSubProduct(ctx, nil)
+					subProducts, err := s.newPackageSubProducts(ctx, product.GetSubProducts(), innerParams, params, saleOrderProduct.Uuid)
 					if err != nil {
 						return nil, errors.WithMessage(err)
 					}
@@ -5415,9 +5416,221 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 }
 
 // 新建套餐子商品
-func (s *orderSrv) newPackageSubProduct(ctx context.Context, params []req.ProductParams) ([]*model.SaleOrderProduct, error) {
+func (s *orderSrv) newPackageSubProducts(ctx context.Context, subProducts []req.ProductParams, innerParams InnerParams, params CreateSaleOrderProductParams, packageUuid uint64) ([]*model.SaleOrderProduct, error) {
+	subSaleOrderProducts := make([]*model.SaleOrderProduct, 0)
+	for _, subProduct := range subProducts {
+		subSaleOrderProduct, err := s.newSaleOrderProductForPackageSubProduct(ctx, subProduct, innerParams, params, packageUuid)
+		if err != nil {
+			return nil, errors.WithMessage(err)
+		}
+		subSaleOrderProducts = append(subSaleOrderProducts, subSaleOrderProduct)
+	}
+	return subSaleOrderProducts, nil
+}
 
-	return nil, nil
+func (s *orderSrv) newSaleOrderProductForPackageSubProduct(ctx context.Context, product req.ProductParams, innerParams InnerParams, params CreateSaleOrderProductParams, packageUuid uint64) (*model.SaleOrderProduct, error) {
+	db := ctx.GetDB()
+	// 获取商品包信息
+	productBom, err := repository.NewProductPackageRepo(db).GetProductPackageBaseInfoByBomUuid(product.FlavorProductBomUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+	productPackage := productBom.ProductPackage
+	productName := productPackage.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+
+	if productBom.IsDelete() {
+		return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品规格已经删除")))
+	}
+	// 商品已经下架
+	if productBom.IsProductPackageDown() {
+		return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品已经下架")))
+	}
+
+	// 获取某商品规格信息
+	flavorProductBom, errFlavorProductBom := repository.NewProductBomRepo(db).GetFlavorProductBomByUuid(product.FlavorProductBomUuid)
+	if errFlavorProductBom != nil {
+		return nil, errors.WithMessage(errFlavorProductBom)
+	}
+	if flavorProductBom.GetStockNum() < float64(product.Num) {
+		return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
+	}
+	// 如果商品规格关联了材料，检查材料库存是否充足
+	if len(flavorProductBom.FlavorMaterials) > 0 {
+		for _, flavorMaterial := range flavorProductBom.FlavorMaterials {
+			if flavorMaterial.Material.StockNum < flavorMaterial.GetDecreaseNum(product.Num) {
+				return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "材料库存不足")))
+			}
+		}
+	}
+
+	// 获取加料信息
+	sauceProductBoms := make(map[uint64]*model.ProductBom)
+	if len(product.SauceProductBomUuidList) > 0 {
+		sauceProductBomList, errSauceProductBomList := repository.NewProductBomRepo(db).GetSauceProductBomsByUuids(product.SauceProductBomUuidList)
+		if errSauceProductBomList != nil {
+			return nil, errors.WithMessage(errSauceProductBomList)
+		}
+		if len(sauceProductBomList) != len(product.SauceProductBomUuidList) {
+			sauceUuidMap := make(map[uint64]struct{})
+			for _, uuid := range product.SauceProductBomUuidList {
+				sauceUuidMap[uuid] = struct{}{}
+			}
+			for _, bom := range sauceProductBomList {
+				delete(sauceUuidMap, bom.Uuid)
+			}
+			names := make([]string, 0)
+			for uuid := range sauceUuidMap {
+				bom, err := repository.NewProductBomRepo(db).GetSauceProductBomByUuid(uuid)
+				if err != nil {
+					return nil, errors.WithMessage(err)
+				}
+				sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+				names = append(names, sauceName)
+			}
+			tipStrPrefix := i18n.Translate(ctx.GetLanguage(), "加料")
+			tipStr := i18n.Translate(ctx.GetLanguage(), "已下架，请重新选择其他加料")
+			return nil, errors.New(tipStrPrefix + " " + strings.Join(names, ",") + " " + tipStr)
+		}
+		for i, bom := range sauceProductBomList {
+			sauceProductBoms[bom.Uuid] = sauceProductBomList[i]
+			sauceName := bom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage())
+			if bom.GetStockNum() < product.Num {
+				return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "库存不足")))
+			}
+			// 检查加料材料库存是否充足
+			if len(bom.ProductSauce.SauceMaterials) > 0 {
+				for _, sauceMaterial := range bom.ProductSauce.SauceMaterials {
+					if sauceMaterial.Material.StockNum < sauceMaterial.GetDecreaseNum(product.Num) {
+						return nil, errors.WithMessage(fmt.Errorf("%s %s", sauceName, i18n.Translate(ctx.GetLanguage(), "加料材料库存不足")))
+					}
+				}
+			}
+		}
+	}
+
+	// 获取属性信息
+	productAttributes := make(map[uint64]*model.ProductPackageAttribute)
+	if len(product.ProductPackageAttributeUuidList) > 0 {
+		productAttributeList, errProductAttributeList := repository.NewProductPackageAttributeRepo(db).GetProductPackageAttributesByUuids(product.ProductPackageAttributeUuidList)
+		if errProductAttributeList != nil {
+			return nil, errors.WithMessage(errProductAttributeList)
+		}
+		for i, attribute := range productAttributeList {
+			productAttributes[attribute.Uuid] = productAttributeList[i]
+		}
+	}
+
+	// 构建加料信息
+	sauces := make([]model.Sauce, 0)
+	for sauceProductBomUuid, sauceProductBom := range sauceProductBoms {
+		sauce := model.Sauce{
+			Name:           sauceProductBom.ProductSauce.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
+			Price:          sauceProductBom.Price,
+			ProductBomUuid: sauceProductBomUuid,
+		}
+		sauces = append(sauces, sauce)
+	}
+
+	// 构建属性信息
+	attributes := make([]model.Attribute, 0)
+	// 将map转换为切片，然后按AttributeGroupUuid分组排序
+	productAttributeSlice := make([]*model.ProductPackageAttribute, 0, len(productAttributes))
+	for _, productAttribute := range productAttributes {
+		productAttributeSlice = append(productAttributeSlice, productAttribute)
+	}
+	if len(productAttributeSlice) > 0 {
+		// 按AttributeGroupUuid分组
+		groupMap := make(map[uint64][]*model.ProductPackageAttribute)
+		for _, attr := range productAttributeSlice {
+			groupUuid := attr.Attribute.AttributeGroupUuid
+			groupMap[groupUuid] = append(groupMap[groupUuid], attr)
+		}
+		// 对每个分组内的属性按Attribute.ID排序
+		for groupUuid, groupAttrs := range groupMap {
+			sort.Slice(groupAttrs, func(i, j int) bool {
+				return groupAttrs[i].ID < groupAttrs[j].ID
+			})
+			groupMap[groupUuid] = groupAttrs
+		}
+		// 获取所有分组，并按第一个分组的Attribute.ID排序
+		var groups [][]*model.ProductPackageAttribute
+		for _, groupAttrs := range groupMap {
+			groups = append(groups, groupAttrs)
+		}
+		// 按第一个分组的Attribute.ID排序分组
+		sort.Slice(groups, func(i, j int) bool {
+			if len(groups[i]) == 0 || len(groups[j]) == 0 {
+				return false
+			}
+			return groups[i][0].ID < groups[j][0].ID
+		})
+		// 合并所有分组
+		productAttributeSlice = productAttributeSlice[:0] // 清空原切片
+		for _, group := range groups {
+			productAttributeSlice = append(productAttributeSlice, group...)
+		}
+	}
+	for _, productAttribute := range productAttributeSlice {
+		attribute := model.Attribute{
+			Name:                 productAttribute.Attribute.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 记录顾客下单时所用语言的名字
+			ProductAttributeUuid: productAttribute.Attribute.Uuid,
+		}
+		attributes = append(attributes, attribute)
+	}
+
+	isAcceptOrder := constant.OrderProductIsAcceptOrderAccepted // 已接单
+	if params.IsH5Product {
+		isAcceptOrder = constant.OrderProductIsAcceptOrderUnAccept // 未接单
+	}
+	deviceSn := ctx.GetDeviceSn()
+	if ctx.GetSource() == jwt.SourceH5 {
+		deviceSn = jwt.SourceH5 // 扫码h5订单，设备sn为h5
+	}
+
+	flavorPrice := flavorProductBom.Price
+	saleOrderProduct := model.NewDefaultSaleOrderProduct(model.DefaultSaleOrderProduct{
+		DeviceId:               deviceSn,
+		Name:                   productPackage.Name,
+		OpenMemberDiscount:     productPackage.OpenDiscount,
+		TaxRate:                productPackage.TaxRate(innerParams.DiningMethod),
+		DeductStockType:        productPackage.DeductStockType,
+		MultiLanguageNameUuid:  productPackage.MultiLanguageNameUuid,
+		ImageFileUuid:          productPackage.ImageFileUuid,
+		ProductPackageUuid:     productPackage.Uuid,
+		SaleBillUuid:           innerParams.SaleBillUuid,
+		SaleOrderUuid:          innerParams.SaleOrderUuid,
+		MemberDiscountRate:     innerParams.MemberDiscountRate,
+		MemberCardDiscountRate: innerParams.MemberCardDiscountRate,
+		CustomDiscountRate:     innerParams.CustomDiscountRate,
+		Sauces:                 sauces,
+		Num:                    product.Num,
+		NumType:                productPackage.NumType,
+		PackageSubProductParams: func() string {
+			if product.GetIsPackageProduct() {
+				return utils.ToJson(product.GetSubProductList())
+			}
+			return ""
+		}(),
+		ProductType: 2, // 套餐子商品
+		PackageUuid: packageUuid,
+		Flavor: model.Flavor{
+			Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
+			Price:          flavorPrice,
+			ProductBomUuid: product.FlavorProductBomUuid,
+		},
+		Attribute:     attributes,
+		IsAcceptOrder: uint(isAcceptOrder),
+		Remark:        product.Remark,
+	}, &productPackage, product.Operation)
+
+	// 生成签名
+	saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign()
+	ctx.Log().Debug("生成商品签名", zap.Any("sign", saleOrderProduct.Sign))
+
+	// 计算商品数据。折扣、税费、服务
+	saleOrderProduct.CalcSaleOrderProduct(params.Setting)
+
+	return saleOrderProduct, nil
 }
 
 // OrderCartProductAdd 向购物车添加商品

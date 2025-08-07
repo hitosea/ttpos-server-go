@@ -100,7 +100,8 @@ type ProductParams struct {
 	MustPlanUuid                    uint64   `json:"must_plan_uuid"`                             // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
 	Remark                          string   `json:"remark"`                                     // 备注，平板端离线购物车提交
 
-	isPackageProduct bool `json:"is_package_product"` // 是否是套餐商品
+	isPackageProduct        bool   `json:"is_package_product"`         // 是否是套餐商品
+	packageSubProductParams string `json:"package_sub_product_params"` // 套餐子商品参数（JSON格式）
 
 	subProducts         []ProductParams `json:"sub_products"`           // 套餐子商品列表。当商品是套餐商品时，该字段有值
 	isPackageSubProduct bool            `json:"is_package_sub_product"` // 是否是套餐子商品
@@ -117,12 +118,37 @@ func (req *ProductParams) SetIsPackageSubProduct(packageUuid uint64) {
 	req.packageUuid = packageUuid
 }
 
+func (req *ProductParams) SetPackageSubProductParams(params string) {
+	req.packageSubProductParams = params
+}
+
+func (req *ProductParams) GetPackageSubProductParams() string {
+	return req.packageSubProductParams
+}
+
 func (req *ProductParams) GetIsPackageProduct() bool {
 	return req.isPackageProduct
 }
 
-func (req *ProductParams) GetIsPackageSubProduct() (bool, uint64) {
-	return req.isPackageSubProduct, req.packageUuid
+type SubProduct struct {
+	Uuid           uint64   `json:"uuid"`
+	AttributeUuids []uint64 `json:"attribute_uuids"`
+}
+
+func (req *ProductParams) GetSubProductList() []SubProduct {
+	subProductList := make([]SubProduct, 0)
+	for _, subProduct := range req.subProducts {
+		subProductList = append(subProductList, SubProduct{
+			Uuid:           subProduct.FlavorProductBomUuid,
+			AttributeUuids: subProduct.ProductPackageAttributeUuidList,
+		})
+	}
+	return subProductList
+}
+
+// 获取套餐子商品参数
+func (req *ProductParams) GetSubProducts() []ProductParams {
+	return req.subProducts
 }
 
 // OrderCartProductNumReq 修改购物车商品数量请求参数

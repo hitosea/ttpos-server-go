@@ -12,8 +12,9 @@ const (
 
 // 商品类型
 const (
-	ProductTypeProduct = 0 // 商品
-	ProductTypePackage = 1 // 套餐
+	ProductTypeProduct           = 0 // 商品
+	ProductTypePackage           = 1 // 套餐
+	ProductTypePackageSubProduct = 2 // 套餐子商品
 )
 
 // 库存相关常量
