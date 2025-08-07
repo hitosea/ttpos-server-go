@@ -32,6 +32,9 @@ func (s *erpSrv) GetCompanyList(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	logger.Logger.Info("GetCompanyList resp: %v", zap.Any("resp", resp))
+	//反序列化
+	result := &companyApi.GetCompanyListResp{}
+	resp.Data.UnmarshalTo(result)
+	logger.Logger.Info("GetCompanyList resp: %v", zap.Any("resp", result))
 	return nil
 }

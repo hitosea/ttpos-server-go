@@ -2,6 +2,8 @@ package company
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/company"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
@@ -59,4 +61,34 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 		g.Log().Error(ctx, "解析公司列表失败", err)
 	}
 	return
+}
+
+// CreateBranch 创建分店
+// 参数：店铺名称和公司缩写编码
+// 返回：ERP用户名和创建结果
+func (s *sCompany) CreateBranch(ctx context.Context, req *company.CreateBranchReq) (res *company.CreateBranchResp, err error) {
+	// 参数验证
+	if strings.TrimSpace(req.ShopUuid) == "" {
+		g.Log().Error(ctx, "店铺UUID不能为空")
+		return nil, gerror.New("店铺UUID不能为空")
+	}
+
+	if strings.TrimSpace(req.ShopName) == "" {
+		g.Log().Error(ctx, "店铺名称不能为空")
+		return nil, gerror.New("店铺名称不能为空")
+	}
+
+	if strings.TrimSpace(req.CompanyAbbr) == "" {
+		g.Log().Error(ctx, "公司缩写编码不能为空")
+		return nil, gerror.New("公司缩写编码不能为空")
+	}
+
+	// 调用 erpnext document 服务创建分店
+	// 这里需要根据实际的ERP系统API来调用
+	// 暂时返回模拟的成功结果
+	res = &company.CreateBranchResp{
+		ErpUserEmail: fmt.Sprintf("shop%s@ttpos-user.com", req.ShopUuid),
+	}
+
+	return res, nil
 }
