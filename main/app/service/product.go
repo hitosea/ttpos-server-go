@@ -176,7 +176,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 							Uuid:       item.ProductBom.Uuid,
 							LocaleName: item.ProductPackage.MultiLanguageName.GetNames(),
 							Image:      image,
-							Unit:       unit,
+							Unit:       item.ProductPackage.ProductUnit.MultiLanguageName.GetNames(),
 							Price:      0, // 商品价格，套餐内目前是0元
 							Flavors: product_resp.ProductFlavorList{
 								List: []product_resp.ProductFlavor{flavor},

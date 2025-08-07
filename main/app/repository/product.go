@@ -105,7 +105,23 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 			// 预加载商品套餐
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
+					Query: "ProductPackageGroups",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
+				},
+			)),
+			CommonRepo.DBOption(CommonRepo.Preload(
+				WithPreload{
 					Query: "ProductPackageGroups.MultiLanguageName",
+				},
+			)),
+			CommonRepo.DBOption(CommonRepo.Preload(
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems",
+					Args: []any{
+						CommonRepo.DBOption(CommonRepo.WhereBySoftDelete()),
+					},
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
@@ -116,6 +132,11 @@ func (r *productRepo) defaultPreload(hasPackage bool) []DBOption {
 			CommonRepo.DBOption(CommonRepo.Preload(
 				WithPreload{
 					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.MultiLanguageName",
+				},
+			)),
+			CommonRepo.DBOption(CommonRepo.Preload(
+				WithPreload{
+					Query: "ProductPackageGroups.ProductPackageGroupItems.ProductPackage.ProductUnit.MultiLanguageName",
 				},
 			)),
 			CommonRepo.DBOption(CommonRepo.Preload(
