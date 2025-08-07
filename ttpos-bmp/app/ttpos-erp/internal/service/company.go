@@ -13,6 +13,10 @@ import (
 type (
 	ICompany interface {
 		GetCompanyList(ctx context.Context, req *company.GetCompanyListReq) (res *company.GetCompanyListResp, err error)
+		// CreateBranch 创建分店
+		// 参数：店铺名称和公司缩写编码
+		// 返回：ERP用户名和创建结果
+		CreateBranch(ctx context.Context, req *company.CreateBranchReq) (res *company.CreateBranchResp, err error)
 	}
 )
 

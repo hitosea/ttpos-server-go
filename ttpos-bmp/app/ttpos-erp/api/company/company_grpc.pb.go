@@ -11,6 +11,7 @@ package company
 
 import (
 	context "context"
+	api "ttpos-bmp/app/ttpos-erp/api"
 
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -24,6 +25,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	CompanyService_GetCompanyList_FullMethodName = "/company.CompanyService/GetCompanyList"
+	CompanyService_CreateBranch_FullMethodName   = "/company.CompanyService/CreateBranch"
 )
 
 // CompanyServiceClient is the client API for CompanyService service.
@@ -36,7 +38,11 @@ type CompanyServiceClient interface {
 	// 获取公司列表
 	// 参数：查询条件
 	// 返回：公司列表和分页信息
-	GetCompanyList(ctx context.Context, in *GetCompanyListReq, opts ...grpc.CallOption) (*GetCompanyListResp, error)
+	GetCompanyList(ctx context.Context, in *GetCompanyListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
+	// 创建分店
+	// 参数：店铺名称和公司缩写编码
+	// 返回：ERP用户名和创建结果
+	CreateBranch(ctx context.Context, in *CreateBranchReq, opts ...grpc.CallOption) (*api.ResponseInfo, error)
 }
 
 type companyServiceClient struct {
@@ -47,10 +53,20 @@ func NewCompanyServiceClient(cc grpc.ClientConnInterface) CompanyServiceClient {
 	return &companyServiceClient{cc}
 }
 
-func (c *companyServiceClient) GetCompanyList(ctx context.Context, in *GetCompanyListReq, opts ...grpc.CallOption) (*GetCompanyListResp, error) {
+func (c *companyServiceClient) GetCompanyList(ctx context.Context, in *GetCompanyListReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetCompanyListResp)
+	out := new(api.ResponseInfo)
 	err := c.cc.Invoke(ctx, CompanyService_GetCompanyList_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *companyServiceClient) CreateBranch(ctx context.Context, in *CreateBranchReq, opts ...grpc.CallOption) (*api.ResponseInfo, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(api.ResponseInfo)
+	err := c.cc.Invoke(ctx, CompanyService_CreateBranch_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +83,11 @@ type CompanyServiceServer interface {
 	// 获取公司列表
 	// 参数：查询条件
 	// 返回：公司列表和分页信息
-	GetCompanyList(context.Context, *GetCompanyListReq) (*GetCompanyListResp, error)
+	GetCompanyList(context.Context, *GetCompanyListReq) (*api.ResponseInfo, error)
+	// 创建分店
+	// 参数：店铺名称和公司缩写编码
+	// 返回：ERP用户名和创建结果
+	CreateBranch(context.Context, *CreateBranchReq) (*api.ResponseInfo, error)
 	mustEmbedUnimplementedCompanyServiceServer()
 }
 
@@ -78,8 +98,11 @@ type CompanyServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedCompanyServiceServer struct{}
 
-func (UnimplementedCompanyServiceServer) GetCompanyList(context.Context, *GetCompanyListReq) (*GetCompanyListResp, error) {
+func (UnimplementedCompanyServiceServer) GetCompanyList(context.Context, *GetCompanyListReq) (*api.ResponseInfo, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCompanyList not implemented")
+}
+func (UnimplementedCompanyServiceServer) CreateBranch(context.Context, *CreateBranchReq) (*api.ResponseInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateBranch not implemented")
 }
 func (UnimplementedCompanyServiceServer) mustEmbedUnimplementedCompanyServiceServer() {}
 func (UnimplementedCompanyServiceServer) testEmbeddedByValue()                        {}
@@ -120,6 +143,24 @@ func _CompanyService_GetCompanyList_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CompanyService_CreateBranch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateBranchReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CompanyServiceServer).CreateBranch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CompanyService_CreateBranch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CompanyServiceServer).CreateBranch(ctx, req.(*CreateBranchReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CompanyService_ServiceDesc is the grpc.ServiceDesc for CompanyService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -130,6 +171,10 @@ var CompanyService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCompanyList",
 			Handler:    _CompanyService_GetCompanyList_Handler,
+		},
+		{
+			MethodName: "CreateBranch",
+			Handler:    _CompanyService_CreateBranch_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
