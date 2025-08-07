@@ -1,0 +1,8 @@
+{
+  "doctype": "DocType",
+  "label": "规格",
+  "fieldtype": "Link",
+  "options": "Item Specification",
+  "insert_after": "item_name",
+  "dt": "Item"
+}

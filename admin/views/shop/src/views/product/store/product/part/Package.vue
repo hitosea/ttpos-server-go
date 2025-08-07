@@ -11,7 +11,7 @@
             class="package-group-item"
             for="no_click"
             :label="$t('分组名称') + `(${item.value})`"
-            :rules="[{ required: true, message: $t('请填写分组名称') }]"
+            :rules="[{ required: true, validator: (rule, value, callback) => validateGroupName(rule, value, callback, groupIndex) }]"
             :prop="`model.package_group.${groupIndex}.group_name.${item.key}`"
             v-if="item.name == languageKey"
           >
@@ -66,24 +66,22 @@
 
     <div class="common-form mt50">{{ $t('库存') }}</div>
 
-    <el-form-item for="no_click" :label="$t('可售量')" >
+    <el-form-item for="no_click" :label="$t('可售量')">
       <numInput type="text" :placeholder="$t('请输入库存')" disabled v-model="nowStock" :maxlength="50" class="max-w460"></numInput>
       <div class="gray9">{{ $t('根据子商品库存动态计算，库存变化自动更新') }}</div>
     </el-form-item>
-
-    <el-form-item for="no_click" :label="$t('是否开启库存')">
+    <!-- TODO: 是否开启库存,2025年08月07日09:55:45，需求暂时隐藏 -->
+    <!-- <el-form-item for="no_click" :label="$t('是否开启库存')">
       <el-radio-group v-model="form.model.is_open_stock">
         <el-radio :value="1">{{ $t('是') }}</el-radio>
         <el-radio :value="0">{{ $t('否') }}</el-radio>
       </el-radio-group>
-    </el-form-item>
+    </el-form-item> -->
 
     <el-form-item v-if="form.model.is_open_stock" for="no_click" :prop="`model.package_stock`" :label="$t('套餐可售总量')" :rules="[{ required: true, message: $t('请输入库存') }]">
       <numInput type="text" :placeholder="$t('请输入库存')" :precision="0" v-model="form.model.package_stock" :maxlength="50" class="max-w460"></numInput>
       <div class="gray9">{{ $t('库存为0时套餐自动售罄') }}</div>
     </el-form-item>
-
-
 
     <el-form-item for="no_click" :label="$t('库存计算方式：')">
       <el-radio-group v-model="form.model.deduct_stock_type">
@@ -116,10 +114,11 @@
   </div>
 </template>
 <script setup>
-  import { ref, inject, nextTick, computed } from 'vue';
+  import { ref, inject, nextTick, computed, defineEmits } from 'vue';
   import { languageStore } from '@/store/model/language.js';
   import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
   import ProductSelector from '@/components/product/Selector.vue';
+  const emit = defineEmits(['validateField']);
   const languageList = languageStore().getLanguageList().languageList.value;
   const languageKey = languageStore().getLanguageKey().language.value;
 
@@ -139,24 +138,24 @@
 
   const nowStock = computed(() => {
     // 如果有商品组的时候，列出所有商品库存除以数量的值选最小的值，如果是小数向下取整，如果没有商品组的时候返回0，如果商品数量为null则返回0
-    
+
     // 如果没有商品组或者商品组为空，返回0
     if (!form.model.package_group || form.model.package_group.length === 0) {
       return 0;
     }
-    
+
     let minStock = Infinity;
     let hasValidProduct = false;
-    
+
     // 遍历所有商品组
-    form.model.package_group.forEach(group => {
+    form.model.package_group.forEach((group) => {
       if (group.product_list && group.product_list.length > 0) {
-        group.product_list.forEach(product => {
+        group.product_list.forEach((product) => {
           // 如果商品数量为null、0或者不存在，跳过此商品
           if (!product.num || product.num <= 0) {
             return;
           }
-          
+
           // 如果库存数量存在且有效
           if (product.stock_num !== null && product.stock_num !== undefined && product.stock_num >= 0) {
             const stockRatio = product.stock_num / product.num;
@@ -166,12 +165,12 @@
         });
       }
     });
-    
+
     // 如果没有有效商品，返回0
     if (!hasValidProduct || minStock === Infinity) {
       return 0;
     }
-    
+
     // 向下取整
     return Math.floor(minStock);
   });
@@ -182,15 +181,15 @@
     dialogVisible.value = true;
     await nextTick();
     // 先清空原有数据，再赋值新数据，保持响应式连接
-    Object.keys(uniqueNameFormRef.value.data).forEach(key => {
+    Object.keys(uniqueNameFormRef.value.data).forEach((key) => {
       uniqueNameFormRef.value.data[key] = '';
     });
-    
+
     // 赋值新数据，确保所有语言字段都有值（避免undefined导致的验证错误）
-    Object.keys(uniqueNameFormRef.value.data).forEach(key => {
+    Object.keys(uniqueNameFormRef.value.data).forEach((key) => {
       uniqueNameFormRef.value.data[key] = form.model.package_group[groupIndex].group_name[key] || '';
     });
-    
+
     // 把除了自己以外的其他分组名称获取到
     otherGroupNames.value = form.model.package_group.filter((item, index) => index !== groupIndex).map((item) => item.group_name);
 
@@ -208,6 +207,9 @@
     // 将翻译结果回写到原数据
     Object.assign(form.model.package_group[selectIndex.value].group_name, uniqueNameFormRef.value.data);
     dialogVisible.value = false;
+
+    // 校验分组名称
+    emit('validateField', `model.package_group.${selectIndex.value}.group_name.${languageKey}`);
   };
 
   const addGroup = () => {
@@ -298,7 +300,6 @@
       };
       form.model.package_group[selectIndex.value].product_list.push(newProduct);
     });
- 
   };
 
   // 排序改变
@@ -312,6 +313,29 @@
     if (value.length === 0) {
       callback(new Error($t('请添加套餐商品')));
     } else {
+      callback();
+    }
+  };
+
+  // 校验分组名称
+  const validateGroupName = (rule, value, callback, groupIndex) => {
+    // 检查当前输入框的值是否为空
+    if (!value) {
+      callback(new Error($t('请填写分组名称')));
+      return;
+    }
+    
+    // 检查该分组下所有语言版本是否都已填写
+    const groupName = form.model.package_group[groupIndex].group_name;
+    const allLanguagesFilled = Object.keys(groupName).every((key) => {
+      const langValue = groupName[key];
+      return langValue && langValue.trim();
+    });
+    
+    if (!allLanguagesFilled) {
+      callback(new Error($t('请翻译分组名称')));
+    } 
+    else {
       callback();
     }
   };

@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/app/api/v1/shop"
 	"ttpos-server-go/app/api/v1/tablet"
 	_ "ttpos-server-go/app/event" // 注册事件
+	"ttpos-server-go/app/service/rpc"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
@@ -49,6 +50,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		// 	return
 		// }
 		// rpc.TestCancelOrderDelay()
+		rpc.TestCompanyList()
 		c.String(http.StatusOK, "Success")
 	})
 	apiV1 := r.Group("api/v1")

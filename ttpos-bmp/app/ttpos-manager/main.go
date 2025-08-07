@@ -1,8 +1,9 @@
 package main
 
 import (
-	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
 	_ "ttpos-bmp/app/ttpos-manager/internal/packed"
+
+	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
 
 	_ "ttpos-bmp/app/ttpos-manager/internal/logic"
 

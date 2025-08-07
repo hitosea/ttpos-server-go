@@ -1,0 +1,8 @@
+{
+  "doctype": "DocType",
+  "label": "公司",
+  "fieldtype": "Link",
+  "options": "Company",
+  "insert_after": "item_name",
+  "dt": "Item"
+}

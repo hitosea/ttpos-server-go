@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	api "ttpos-bmp/app/ttpos-takeout/api/takeout"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/skootar"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -15,7 +15,7 @@ import (
 var merchantConfirmApiPath = "/partner/api/v1/job"
 
 // ConfirmOrder 商家确认订单
-func (s *sSkootar) ConfirmOrder(ctx context.Context, req *input.ConfirmOrderInp) (res *api.ConfirmOrderResp, err error) {
+func (s *sSkootar) ConfirmOrder(ctx context.Context, req *dto.ConfirmOrderInp) (res *api.ConfirmOrderResp, err error) {
 	reqInp := &skootar.ConfirmOrderInp{
 		ReqBase: s.ReqBase(),
 		JobId:   req.JobId,

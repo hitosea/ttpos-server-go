@@ -172,6 +172,7 @@
         Params.keyword = self.searchForm.keyword;
         Params.sort = self.searchForm.sort;
         Params.stock_num = self.searchForm.stock_num;
+        Params.filter_having_package = 1;
         InventoryApi.getErpInventory(Params, true)
           .then((data) => {
             self.loading = false;

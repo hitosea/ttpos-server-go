@@ -1,11 +1,12 @@
-package erp
+package erpnext
 
 import (
 	"context"
 	"fmt"
-	"github.com/gogf/gf/v2/frame/g"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 const rpcApiUrl = "/api/v2/method"
@@ -20,10 +21,6 @@ func init() {
 }
 
 func (s *sRpc) Execute(ctx context.Context, req *dto.ErpReq, params interface{}) (rst *g.Var, err error) {
-	rst = g.Client().PostVar(ctx, fmt.Sprintf("%s%s", getRpcUrlWithName(req), req.Method), params)
+	rst = GetClient(ctx).PostVar(ctx, fmt.Sprintf("%s%s", getRpcUrlWithName(req), req.Method), params)
 	return
-}
-
-func getRpcUrlWithName(req *dto.ErpReq) string {
-	return fmt.Sprintf("%s%s/%s", GetApiBase(), rpcApiUrl, req.DocType)
 }

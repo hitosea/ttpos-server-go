@@ -18,7 +18,7 @@ type (
 		Count(ctx context.Context, req *dto.ErpReq) (int, error)
 	}
 	IDocument interface {
-		List(ctx context.Context, req *dto.ErpReq) (rst *g.Var, err error)
+		List(ctx context.Context, req *dto.ErpReq, params *dto.RequestParams) (rst *g.Var, err error)
 		Get(ctx context.Context, req *dto.ErpReq, params *dto.RequestParams) (rst *g.Var, err error)
 		Create(ctx context.Context, docType string, data interface{}) (rst *g.Var, err error)
 		Update(ctx context.Context, req *dto.ErpReq, data interface{}) (rst *g.Var, err error)
