@@ -21,9 +21,9 @@ func getRpcUrlWithName(req *dto.ErpReq) string {
 func GetClient(ctx context.Context) *gclient.Client {
 	var c = g.Client()
 	m := grpcx.Ctx.IncomingMap(ctx)
-	if m.Contains("site_code") {
+	if m.Contains("erp_site_code") {
 		var site *entity.Site
-		dao.Site.Ctx(ctx).Limit(1).Where(do.Site{}.SiteCode, m.GetVar("site_code")).Scan(&site)
+		dao.Site.Ctx(ctx).Limit(1).Where(do.Site{}.SiteCode, m.GetVar("erp_site_code")).Scan(&site)
 		if site != nil {
 			c.SetPrefix(site.SiteUrl)
 			c.SetHeader("Authorization", fmt.Sprintf("token %s:%s", site.ApiKey, site.ApiSecret))
