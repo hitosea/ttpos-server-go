@@ -95,6 +95,7 @@ type SaleOrderProduct struct {
 
 	// 套餐相关
 	PackageUuid uint64 `gorm:"column:package_uuid;type:bigint(20);not null;default:0;comment:'套餐uuid'" json:"package_uuid"` // 只有套餐子商品才会有这个字段
+	ProductType uint8  `gorm:"column:product_type;type:tinyint(1);not null;default:0;comment:'商品类型, 0-商品 1-套餐'" json:"product_type"`
 
 	// 送厨时间
 	SendKitchenTime int64 `gorm:"column:send_kitchen_time;type:int(10);not null;default:0;comment:'送厨时间'" json:"send_kitchen_time"`
@@ -1206,6 +1207,7 @@ type DefaultSaleOrderProduct struct {
 	Num                    float64 // 数量
 	NumType                uint    // 数量类型
 	Remark                 string  // 备注
+	PackageUuid            uint64  // 套餐uuid
 }
 
 func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *ProductPackage, operation string) *SaleOrderProduct {
@@ -1267,6 +1269,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		SaleOrderUuid:              def.SaleOrderUuid,
 		SaleOrderProductBoms:       saleOrderProductBoms,
 		SaleOrderProductAttributes: saleOrderProductAttributes,
+		PackageUuid:                def.PackageUuid,
 	}
 	product.SetTaxRate(def.TaxRate)
 	// 设置商品包. 加购并送厨时用到，用于计算限购

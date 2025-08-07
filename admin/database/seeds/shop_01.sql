@@ -404,6 +404,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
     `is_accept_order` INT(10) NOT NULL DEFAULT 1 COMMENT '是否已接单, 0-否 1-是。订单商品默认已接单，h5订单商品只有下单并接单后才改为已接单',
 
     `package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '套餐uuid',
+    `product_type` INT(10) NOT NULL DEFAULT 0 COMMENT '商品类型, 0-商品 1-套餐',
 
     `send_kitchen_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '送厨时间(时间戳)',
 
