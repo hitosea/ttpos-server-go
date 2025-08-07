@@ -563,7 +563,7 @@ class Product extends Controller
             $val['shop_supplier_id'] = $shop_supplier_id;
             $val['type'] = 10;
             $val['spec_type'] = 20;
-            $val['product_type'] = 1;
+            $val['product_type'] = 0; 
             $val['image'] = [];
             // 分类
             $category = CategoryModel::where('uuid',  $val['category_id'])->find();
