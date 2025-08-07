@@ -68,7 +68,7 @@ const props = defineProps({
 const emit = defineEmits(['closeDialog']);
 
 // 获取语言数据
-const languageData = JSON.stringify(languageStore().getLanguageData().languageData.value);
+const languageData = JSON.stringify(languageStore().getLanguageKeyForm());
 
 // 分类数据
 const category = ref([]);

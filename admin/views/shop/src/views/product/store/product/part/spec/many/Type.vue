@@ -13,7 +13,7 @@
 
 <script>
   import { languageStore } from '@/store/model/language.js';
-  const languageData = JSON.stringify(languageStore().getLanguageData().languageData.value);
+  const languageData = JSON.stringify(languageStore().getLanguageKeyForm());
   export default {
     data() {
       return {
