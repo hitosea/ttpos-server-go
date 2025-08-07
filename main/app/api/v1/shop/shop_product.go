@@ -220,6 +220,61 @@ func (h *ProductHandler) SortProductUnit(c *gin.Context) {
 		return
 	}
 }
+
+// GetProductSourceList 获取商品加料列表
+// @Summary 获取商品加料列表
+// @Description 获取商品加料列表
+// @Tags 商家端.商品加料
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param page_no query int false "页码"
+// @Param page_size query int false "每页条数"
+// @Success 200 {object} product_resp.ProductSourceListResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/source/list [get]
+func (h *ProductHandler) GetProductSourceList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sourceListReq := req.ProductSourceListReq{}
+
+	if err := c.ShouldBindQuery(&sourceListReq); err != nil {
+		helper.HandleValidationError(c, err, sourceListReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productSrv.GetProductSourceList(ctx, sourceListReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
+// GetProductSource 获取商品加料详情
+// @Summary 获取商品加料详情
+// @Description 获取商品加料详情
+// @Tags 商家端.商品加料
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query string false "商品加料UUID"
+// @Success 200 {object} product_resp.ProductSourceDetail "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/source [get]
+func (h *ProductHandler) GetProductSource(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sourceReq := req.ProductSourceReq{}
+	if err := c.ShouldBindQuery(&sourceReq); err != nil {
+		helper.HandleValidationError(c, err, sourceReq, dto.PageReqMessage)
+		return
+	}
+	res, err := h.productSrv.GetProductSource(ctx, sourceReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, res)
+}
+
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
 	captchaSrv := service.NewCaptchaSrv(cache)
@@ -250,5 +305,8 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 		privateApi.POST("/product/unit/edit", wrapper.EditProductUnit)           // 编辑商品单位
 		privateApi.DELETE("/product/unit", wrapper.DeleteProductUnit)            // 删除商品单位
 		privateApi.POST("/product/unit/sort", wrapper.SortProductUnit)           // 排序商品单位
+
+		privateApi.GET("/product/source/list", wrapper.GetProductSourceList) // 获取商品加料列表
+		privateApi.GET("/product/source", wrapper.GetProductSource)          // 获取商品加料详情
 	}
 }

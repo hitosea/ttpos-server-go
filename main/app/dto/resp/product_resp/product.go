@@ -191,7 +191,33 @@ type ProductUnitProductPackageList struct {
 
 type ProductUnitDetail struct {
 	Uuid            uint64                        `json:"uuid"`             // 商品单位UUID
-	Sort            int                           `json:"sort"`             // 商品单位排序
 	LocaleName      dto.LocaleResponse            `json:"locale_name"`      // 商品单位名称
 	ProductPackages ProductUnitProductPackageList `json:"product_packages"` // 商品包列表
+}
+
+type ProductSourceListResp struct {
+	List []ProductSourceItem `json:"list"`
+	Meta dto.PageResponse    `json:"meta"`
+}
+
+type ProductSourceItem struct {
+	Uuid                uint64 `json:"uuid"`                  // 商品加料UUID
+	Name                string `json:"name"`                  // 商品加料名称
+	ProductPackageCount int    `json:"product_package_count"` // 关联商品包数量
+}
+
+type ProductSourceProductPackage struct {
+	Uuid uint64 `json:"uuid"` // 商品包UUID
+	Name string `json:"name"` // 商品包名称
+}
+
+type ProductSourceProductPackageList struct {
+	List []ProductSourceProductPackage `json:"list"`
+}
+
+type ProductSourceDetail struct {
+	Uuid            uint64                          `json:"uuid"`             // 商品单位UUID
+	Price           float64                         `json:"price"`            // 商品加料价格
+	LocaleName      dto.LocaleResponse              `json:"locale_name"`      // 商品单位名称
+	ProductPackages ProductSourceProductPackageList `json:"product_packages"` // 商品包列表
 }

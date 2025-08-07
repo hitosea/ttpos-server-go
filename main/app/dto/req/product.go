@@ -32,6 +32,14 @@ type ProductUnitListReq struct {
 	dto.PageReq // 分页参数
 }
 
+type ProductSourceListReq struct {
+	dto.PageReq // 分页参数
+}
+
+type ProductSourceReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品加料UUID
+}
+
 type ProductUnitReq struct {
 	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品单位UUID
 }

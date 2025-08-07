@@ -31,6 +31,7 @@ func NewCheckNameSrvImpl(dbm *database.DBManager) ICheckNameSrv {
 	}
 }
 
+// CheckNameExists 检查名称是否存在
 func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.CheckNameRequest) (resp.CheckNameResp, error) {
 	keyMap := map[string]string{
 		"zh":    "zh_name",

@@ -36,6 +36,9 @@ type IProductSrv interface {
 	EditProductUnit(ctx context.Context, req req.ProductUnitEditReq) error // 编辑产品单位
 	DeleteProductUnit(ctx context.Context, req req.ProductUnitReq) error   // 删除产品单位
 	SortProductUnit(ctx context.Context, req req.ProductUnitSortReq) error // 排序产品单位
+
+	GetProductSourceList(ctx context.Context, req req.ProductSourceListReq) (product_resp.ProductSourceListResp, error) // 获取商品加料列表
+	GetProductSource(ctx context.Context, req req.ProductSourceReq) (product_resp.ProductSourceDetail, error)           // 获取商品加料详情
 }
 
 type productSrv struct {
@@ -735,7 +738,6 @@ func (s *productSrv) GetProductUnit(ctx context.Context, getUnitReq req.ProductU
 
 	productUnit := product_resp.ProductUnitDetail{
 		Uuid:       unit.Uuid,
-		Sort:       unit.Sort,
 		LocaleName: unit.MultiLanguageName.GetNames(),
 		ProductPackages: product_resp.ProductUnitProductPackageList{
 			List: productPackages,
@@ -889,14 +891,11 @@ func (s *productSrv) SortProductUnit(ctx context.Context, sortReq req.ProductUni
 	for _, item := range sortReq.List {
 		productUnitUuids = append(productUnitUuids, item.Uuid)
 	}
-	productUnits, err := productRepo.GetProductUnitList(productRepo.WhereUuidIn(productUnitUuids))
-	if err != nil {
-		return errors.WithMessage(err, "单位不存在")
-	}
-	if len(productUnits) != len(productUnitUuids) {
+	productUnits, _ := productRepo.GetProductUnitCount(productRepo.WhereUuidIn(productUnitUuids))
+	if productUnits != int64(len(productUnitUuids)) {
 		return errors.New("单位不存在")
 	}
-	err = db.Transaction(func(tx *gorm.DB) error {
+	err := db.Transaction(func(tx *gorm.DB) error {
 		for _, item := range sortReq.List {
 			tx.Model(&model.ProductUnit{}).Where("uuid = ?", item.Uuid).Updates(map[string]any{
 				"sort": item.Sort,
@@ -905,4 +904,63 @@ func (s *productSrv) SortProductUnit(ctx context.Context, sortReq req.ProductUni
 		return nil
 	})
 	return err
+}
+
+func (s *productSrv) GetProductSourceList(ctx context.Context, sourceReq req.ProductSourceListReq) (product_resp.ProductSourceListResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productRepo := repository.NewProductRepo(db)
+	language := ctx.GetLanguage()
+
+	productSourceList, total, err := productRepo.PaginateGetProductSourceList(sourceReq.PageNo, sourceReq.PageSize, productRepo.WithMultiLanguageName())
+	if err != nil {
+		return product_resp.ProductSourceListResp{}, errors.WithMessage(err, "获取商品加料列表失败")
+	}
+	productSourceListResp := make([]product_resp.ProductSourceItem, 0, len(productSourceList))
+	for _, productSource := range productSourceList {
+		productSourceListResp = append(productSourceListResp, product_resp.ProductSourceItem{
+			Uuid:                productSource.Uuid,
+			Name:                productSource.MultiLanguageName.GetNameByLang(language),
+			ProductPackageCount: productSource.ProductPackageCount,
+		})
+	}
+	return product_resp.ProductSourceListResp{
+		List: productSourceListResp,
+		Meta: dto.PageResponse{
+			PageNo:   sourceReq.PageNo,
+			PageSize: sourceReq.PageSize,
+			Total:    total,
+		},
+	}, nil
+}
+
+func (s *productSrv) GetProductSource(ctx context.Context, sourceReq req.ProductSourceReq) (product_resp.ProductSourceDetail, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productRepo := repository.NewProductRepo(db)
+	language := ctx.GetLanguage()
+
+	productSource, err := productRepo.GetProductSource(
+		productRepo.WhereUuid(sourceReq.Uuid),
+		productRepo.WithMultiLanguageName(),
+		productRepo.WithProductPackages(),
+		productRepo.WithProductPackagesMultiLanguageName(),
+	)
+	if err != nil {
+		return product_resp.ProductSourceDetail{}, errors.WithMessage(err, "获取商品加料详情失败")
+	}
+
+	productPackages := make([]product_resp.ProductSourceProductPackage, 0, len(productSource.ProductPackages))
+	for _, productPackage := range productSource.ProductPackages {
+		productPackages = append(productPackages, product_resp.ProductSourceProductPackage{
+			Uuid: productPackage.Uuid,
+			Name: productPackage.MultiLanguageName.GetNameByLang(language),
+		})
+	}
+	return product_resp.ProductSourceDetail{
+		Uuid:       productSource.Uuid,
+		Price:      productSource.Price,
+		LocaleName: productSource.MultiLanguageName.GetNames(),
+		ProductPackages: product_resp.ProductSourceProductPackageList{
+			List: productPackages,
+		},
+	}, nil
 }

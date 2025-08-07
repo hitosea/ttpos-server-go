@@ -18077,6 +18077,90 @@ const docTemplate = `{
                 }
             }
         },
+        "/shop/product/source": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品加料详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品加料"
+                ],
+                "summary": "获取商品加料详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "商品加料UUID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductSourceDetail"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/source/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品加料列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品加料"
+                ],
+                "summary": "获取商品加料列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductSourceListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/product/unit": {
             "get": {
                 "security": [
@@ -22396,7 +22480,7 @@ const docTemplate = `{
                 },
                 "num": {
                     "description": "商品数量，分组中item的数量",
-                    "type": "integer"
+                    "type": "number"
                 }
             }
         },
@@ -22778,6 +22862,90 @@ const docTemplate = `{
                 }
             }
         },
+        "product_resp.ProductSourceDetail": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "price": {
+                    "description": "商品加料价格",
+                    "type": "number"
+                },
+                "product_packages": {
+                    "description": "商品包列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.ProductSourceProductPackageList"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "商品单位UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductSourceItem": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "商品加料名称",
+                    "type": "string"
+                },
+                "product_package_count": {
+                    "description": "关联商品包数量",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品加料UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductSourceListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductSourceItem"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "product_resp.ProductSourceProductPackage": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "商品包名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "商品包UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductSourceProductPackageList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductSourceProductPackage"
+                    }
+                }
+            }
+        },
         "product_resp.ProductUnitDetail": {
             "type": "object",
             "properties": {
@@ -22796,10 +22964,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/product_resp.ProductUnitProductPackageList"
                         }
                     ]
-                },
-                "sort": {
-                    "description": "商品单位排序",
-                    "type": "integer"
                 },
                 "uuid": {
                     "description": "商品单位UUID",
