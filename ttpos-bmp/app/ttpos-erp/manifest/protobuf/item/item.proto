@@ -1,0 +1,19 @@
+syntax = "proto3";
+import "erp.proto" ;
+package item;
+
+// Go 包路径配置，指定生成的 Go 代码存放位置
+option go_package = "ttpos-bmp/app/ttpos-erp/api/item";
+
+message GetItemListReq {
+  string item_name = 1; // 商品名称模糊查询，可选，如: %商品名称%
+}
+
+
+
+service ItemService {
+  // 获取商品列表
+  // 参数：查询条件
+  // 返回：商品列表和分页信息
+  rpc GetItemList(item.GetItemListReq) returns (erp.ResponseInfo);
+}

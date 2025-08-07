@@ -39,6 +39,10 @@ type IProductRepo interface {
 	WhereBomUuid(uuid uint64) DBOption                                                                      // 沽清 产品 uuid 查询条件
 	WhereBomIsSoldOut() DBOption                                                                            // 沽清 产品是否售罄
 	UpdateProductBomSoldOut(opts []DBOption, vars map[string]any) error                                     // 沽清 更新产品售罄状态
+
+	WhereUuid(uuid uint64) DBOption                 // 查询条件 产品单位 uuid
+	WithProductPackages() DBOption                  // 预加载产品单位关联的商品
+	WithProductPackagesMultiLanguageName() DBOption // 预加载产品单位关联的商品多语言名称
 }
 
 // IProductQueryRepo 商品查询仓库接口
@@ -49,6 +53,8 @@ type IProductQueryRepo interface {
 	GetProduct(opts ...DBOption) (model.ProductPackage, error)                                                      // 获取商品详情
 	GetProductFlavor(opts ...DBOption) (model.ProductFlavor, error)                                                 // 获取商品口味详情
 	GetProductBom(opts ...DBOption) (model.ProductBom, error)                                                       // 获取商品BOM详情
+	PaginateGetProductUnitList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductUnit, int64, error)      // 分页获取产品单位列表
+	GetProductUnit(opts ...DBOption) (model.ProductUnit, error)                                                     // 获取产品单位详情
 }
 
 // productRepo 商品仓库
@@ -436,4 +442,70 @@ func (r *productRepo) GetProductPackageListByUuids(uuids []uint64) ([]model.Prod
 	var productPackages []model.ProductPackage
 	err := r.db.Model(&model.ProductPackage{}).Where("uuid IN ? AND delete_time = ?", uuids, constant.NotDeleted).Find(&productPackages).Error
 	return productPackages, errors.WithMessage(err)
+}
+
+// GetProductUnitList 获取产品单位列表
+func (r *productRepo) PaginateGetProductUnitList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductUnit, int64, error) {
+	var units []model.ProductUnit
+	var total int64
+
+	// 关联了商品，要连表join获取关联商品数量
+	db := r.db.Model(&model.ProductUnit{})
+	db = db.Joins("LEFT JOIN ttpos_product_package ON ttpos_product_package.unit_uuid = ttpos_product_unit.uuid AND ttpos_product_package.delete_time = ?", constant.NotDeleted)
+	db = db.Select("ttpos_product_unit.*, COUNT(ttpos_product_package.uuid) as related_product_count")
+	db = db.Group("ttpos_product_unit.uuid") // 分组统计关联商品数量
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Count(&total).Error
+	if err != nil {
+		return nil, 0, errors.WithMessage(err)
+	}
+
+	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Debug().Order("sort asc, create_time asc").Find(&units).Error
+	if err != nil {
+		return nil, 0, errors.WithMessage(err)
+	}
+
+	return units, total, nil
+}
+
+// WithProductPackages 预加载产品单位关联的商品
+func (r *productRepo) WithProductPackages() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackages", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted)
+		})
+	}
+}
+
+// WithProductPackagesMultiLanguageName 预加载产品单位关联的商品多语言名称
+func (r *productRepo) WithProductPackagesMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductPackages.MultiLanguageName")
+	}
+}
+
+// GetProductUnit 获取产品单位详情
+func (r *productRepo) GetProductUnit(opts ...DBOption) (model.ProductUnit, error) {
+	var unit model.ProductUnit
+
+	db := r.db.Model(&model.ProductUnit{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.First(&unit).Error
+
+	return unit, errors.WithMessage(err)
+}
+
+// WhereUuid 根据uuid查询
+func (r *productRepo) WhereUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid = ?", uuid)
+	}
 }

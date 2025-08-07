@@ -10,7 +10,7 @@
         <Spec v-if="form.model.type != 30"></Spec>
 
         <!--套餐设置-->
-        <Package v-if="form.model.type == 30"></Package>
+        <Package v-if="form.model.type == 30" @validateField="validateField"></Package>
 
         <!-- 属性设置-->
         <Attr ref="AttrRef" v-if="form.model.type == 10" @validateField="validateField"></Attr>
@@ -78,7 +78,7 @@
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
   const app_id = supplier.value?.app_id || 0;
-  const languageData = JSON.stringify(languageStore().getLanguageData().languageData.value);
+  const languageData = JSON.stringify(languageStore().getLanguageKeyForm());
   const languageList = languageStore().getLanguageList().languageList.value;
   let language = languageStore().language;
   let languageKey = '0';
@@ -241,7 +241,7 @@
 
           /*套餐分组*/
           package_price: null, //套餐价格
-          is_open_stock: 0, //是否开启套餐库存
+          is_open_stock: 1, //是否开启套餐库存
           package_stock: null, //套餐可售卖库存
           package_group: [
             {

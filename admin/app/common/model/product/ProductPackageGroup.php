@@ -55,11 +55,13 @@ class ProductPackageGroup extends BaseModel
                 'create_time' => time(), // 创建时间
                 'update_time' => time(), // 更新时间
             ];
+            $productIds = array_column($item['product_list'], 'product_id');
+            $productBoms = ProductBom::whereIn('uuid', $productIds)->column('product_package_uuid', 'uuid');
             foreach ($item['product_list'] as $productItem) {
                 $insertGroupItems[] = [
                     'uuid' => createUuid(), // 套餐分组商品uuid
                     'product_package_group_uuid' => $groupUuid, // 套餐分组uuid
-                    'related_uuid' => $product['uuid'], // product_package_uuid
+                    'related_uuid' => $productBoms[$productItem['product_id']], // product_package_uuid
                     'product_bom_uuid' => $productItem['product_id'], // product_bom_uuid
                     'num' => $productItem['num'] ?: 0, // 商品数量
                     'sort' => $productItem['sort'] ?: 0, // 排序
@@ -111,13 +113,15 @@ class ProductPackageGroup extends BaseModel
                 }
             }
             $groupItemList = $item['product_list'] ?? [];
+            $productIds = array_column($groupItemList, 'product_id');
+            $productBoms = ProductBom::whereIn('uuid', $productIds)->column('product_package_uuid', 'uuid');
             foreach ($groupItemList as $item) {
                 $itemData = [
-                    'product_package_group_uuid' => $group['uuid'],
-                    'related_uuid' => $product['uuid'],
-                    'product_bom_uuid' => $item['product_id'],
-                    'num' => $item['num'] ?: 0,
-                    'sort' => $item['sort'] ?: 0,
+                    'product_package_group_uuid' => $group['uuid'], // 套餐分组uuid 
+                    'related_uuid' => $productBoms[$item['product_id']], // product_package_uuid
+                    'product_bom_uuid' => $item['product_id'], // product_bom_uuid
+                    'num' => $item['num'] ?: 0, // 商品数量
+                    'sort' => $item['sort'] ?: 0, // 排序
                 ];
                 $groupItemId = $item['item_id'] ?? 0;
                 if ($groupItemId == 0) {
@@ -130,24 +134,27 @@ class ProductPackageGroup extends BaseModel
                         $item->save($itemData);
                     }
                 }
-                $groupItemUuidList[] = $item['uuid'];
+                $groupItemUuidList[$group['uuid']][] = $item['uuid'];
             }
             $groupUuidList[] = $group['uuid'];
         }
         // 删除套餐分组
         if (!empty($groupUuidList)) {
-            self::destroy(function ($query) use ($groupUuidList, $product) {
-                $query->whereNotIn('uuid', $groupUuidList)->where('product_package_uuid', $product['uuid']);
+            $delGroupUuidList = self::whereNotIn('uuid', $groupUuidList)->where('product_package_uuid', $product['uuid'])->column('uuid');
+            self::destroy(function ($query) use ($delGroupUuidList) {
+                $query->whereIn('uuid', $delGroupUuidList);
             });
-            ProductPackageGroupItemModel::destroy(function ($query) use ($groupUuidList, $product) {
-                $query->whereNotIn('product_package_group_uuid', $groupUuidList)->where('related_uuid', $product['uuid']);
+            ProductPackageGroupItemModel::destroy(function ($query) use ($delGroupUuidList) {
+                $query->whereIn('product_package_group_uuid', $delGroupUuidList);
             });     
         }
         // 删除套餐分组商品
         if (!empty($groupItemUuidList)) {
-            ProductPackageGroupItemModel::destroy(function ($query) use ($groupItemUuidList, $product) {
-                $query->whereNotIn('uuid', $groupItemUuidList)->where('related_uuid', $product['uuid']);
-            });
+            foreach ($groupItemUuidList as $groupUuid => $itemUuidList) {
+                ProductPackageGroupItemModel::destroy(function ($query) use ($groupUuid, $itemUuidList) {
+                    $query->where('product_package_group_uuid', $groupUuid)->whereNotIn('uuid', $itemUuidList);
+                });
+            };
         }
     }
 
@@ -156,11 +163,12 @@ class ProductPackageGroup extends BaseModel
      */
     public static function deletePackageGroup($product)
     {
+        $groupUuidList = self::where('product_package_uuid', $product['uuid'])->column('uuid');
         self::destroy(function ($query) use ($product) {
             $query->where('product_package_uuid', $product['uuid']);
         });
-        ProductPackageGroupItemModel::destroy(function ($query) use ($product) {
-            $query->where('related_uuid', $product['uuid']);
+        ProductPackageGroupItemModel::destroy(function ($query) use ($groupUuidList) {
+            $query->whereIn('product_package_group_uuid', $groupUuidList);
         });
     }
 }

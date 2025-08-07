@@ -187,8 +187,9 @@ class Product extends ProductModel
                     }
                 }
             }
-            $data['product_type'] = 1;
-            $data['price'] = $packagePrice;
+            $data['product_type'] = 1; // 商品类型 0-商品 1-套餐
+            $data['price'] = $packagePrice; // 套餐价格
+            $data['is_show_delivery'] = 2; // 默认不显示外送 1-显示 2-隐藏
             $data['sku'] = [
                 [
                     'product_price' => $packagePrice,
@@ -277,6 +278,7 @@ class Product extends ProductModel
         $data['is_show_kitchen'] = $data['is_show_kitchen'] != 2 ? 1 : 0;
         $data['is_show_assistant'] = $data['is_show_assistant'] != 2 ? 1 : 0;
         $data['is_show_h5'] = $data['is_show_h5'] != 2 ? 1 : 0;
+        $data['is_show_delivery'] = $data['is_show_delivery'] != 2 ? 1 : 0;
         $data['sort'] = $data['product_sort'] ?? 0;
         $data['open_overall_discount'] = $data['open_overall_discount'] ?? 1; // 是否开启整单折扣 0-否 1-是
 
@@ -538,8 +540,9 @@ class Product extends ProductModel
                     }
                 }
             }
-            $data['product_type'] = 1;
-            $data['price'] = $packagePrice;
+            $data['product_type'] = 1; // 商品类型 0-商品 1-套餐
+            $data['price'] = $packagePrice; // 套餐价格
+            $data['is_show_delivery'] = 2; // 默认不显示外送 1-显示 2-隐藏
             $data['sku'] = [
                 [
                     'product_price' => $packagePrice,

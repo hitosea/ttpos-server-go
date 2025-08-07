@@ -10,7 +10,7 @@
         <Spec v-if="form.model.type != 30"></Spec>
 
         <!--套餐设置-->
-        <Package v-if="form.model.type == 30"></Package>
+        <Package v-if="form.model.type == 30" @validateField="validateField"></Package>
 
         <!-- 属性设置-->
         <Attr ref="AttrRef" v-if="form.model.type == 10" @validateField="validateField"></Attr>
@@ -43,11 +43,10 @@
   import Buyset from './part/Buyset.vue';
   import { languageStore } from '@/store/model/language.js';
   import { EEUIRELOAD } from '@/utils/platform.js';
-
-  const languageData = JSON.stringify(languageStore().getLanguageData().languageData.value);
-  // eslint-disable-next-line no-unused-vars
-  const languageList = languageStore().getLanguageList().languageList.value;
   import { useUserStore } from '@/store/index';
+
+  // 使用 getLanguageKeyForm() 方法获取多语言表单结构
+  const languageData = JSON.stringify(languageStore().getLanguageKeyForm());
   const { computedSupplier } = useUserStore();
   const supplier = computedSupplier().supplier;
   const app_id = supplier.value?.app_id || 0;
@@ -184,7 +183,7 @@
 
             /*套餐分组*/
             package_price: null, //套餐价格
-            is_open_stock: 0, //是否开启套餐库存
+            is_open_stock: 1, //是否开启套餐库存
             package_stock: null, //套餐可售卖库存
             package_group: [
               {

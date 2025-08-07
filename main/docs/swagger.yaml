@@ -1492,6 +1492,63 @@ definitions:
         description: 小料最大可选数量
         type: integer
     type: object
+  product_resp.ProductUnitDetail:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位名称
+      product_packages:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductUnitProductPackageList'
+        description: 商品包列表
+      sort:
+        description: 商品单位排序
+        type: integer
+      uuid:
+        description: 商品单位UUID
+        type: integer
+    type: object
+  product_resp.ProductUnitItem:
+    properties:
+      name:
+        description: 商品单位名称
+        type: string
+      related_product_count:
+        description: 关联商品数量
+        type: integer
+      sort:
+        description: 商品单位排序
+        type: integer
+      uuid:
+        description: 商品单位UUID
+        type: integer
+    type: object
+  product_resp.ProductUnitListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductUnitItem'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  product_resp.ProductUnitProductPackage:
+    properties:
+      name:
+        description: 商品包名称
+        type: string
+      uuid:
+        description: 商品包UUID
+        type: integer
+    type: object
+  product_resp.ProductUnitProductPackageList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductUnitProductPackage'
+        type: array
+    type: object
   req.AcceptH5OrderReq:
     properties:
       h5_order_uuid:
@@ -19147,6 +19204,58 @@ paths:
       summary: 获取商品分类列表
       tags:
       - 商家端.商品分类
+  /shop/product/unit:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品单位详情
+      parameters:
+      - description: 商品单位UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductUnitDetail'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品单位详情
+      tags:
+      - 商家端.商品单位
+  /shop/product/unit/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品单位列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductUnitListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品单位列表
+      tags:
+      - 商家端.商品单位
   /shop/recharge_order/cancel:
     post:
       consumes:

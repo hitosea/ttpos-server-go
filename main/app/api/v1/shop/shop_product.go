@@ -3,6 +3,8 @@ package shop
 import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/constant"
+	"ttpos-server-go/app/dto"
+	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/errors"
 	"ttpos-server-go/app/service"
 	"ttpos-server-go/app/service/setting"
@@ -40,6 +42,67 @@ func (h *ProductHandler) GetProductCategoryList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
+// GetProductUnitList 获取商品单位列表
+// @Summary 获取商品单位列表
+// @Description 获取商品单位列表
+// @Tags 商家端.商品单位
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param page_no query int false "页码"
+// @Param page_size query int false "每页条数"
+// @Success 200 {object} product_resp.ProductUnitListResp "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/unit/list [get]
+func (h *ProductHandler) GetProductUnitList(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	listReq := req.ProductUnitListReq{}
+
+	if err := c.ShouldBindQuery(&listReq); err != nil {
+		helper.HandleValidationError(c, err, listReq, dto.PageReqMessage)
+		return
+	}
+	// 获取商品单位列表
+	res, err := h.productSrv.GetProductUnitList(ctx, listReq)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
+// GetProductUnitList 获取商品单位详情
+// @Summary 获取商品单位详情
+// @Description 获取商品单位详情
+// @Tags 商家端.商品单位
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param uuid query string false "商品单位UUID"
+// @Success 200 {object} product_resp.ProductUnitDetail "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/unit [get]
+func (h *ProductHandler) GetProductUnit(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	unitReq := req.ProductUnitReq{}
+
+	if err := c.ShouldBindQuery(&unitReq); err != nil {
+		helper.HandleValidationError(c, err, unitReq, dto.PageReqMessage)
+		return
+	}
+	// 获取商品单位列表
+	res, err := h.productSrv.GetProductUnit(ctx, unitReq)
+	// 处理错误
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	// 返回结果
+	helper.Success(c, res)
+}
+
 // RegisterProductHandlers 注册商品
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
 	// 初始化服务
@@ -65,7 +128,8 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取商品分类列表
-
-		// privateApi.GET("/product/unit/list", wrapper.GetProductUnitList) // 获取商品单位列表
+		privateApi.GET("/product/unit/list", wrapper.GetProductUnitList)         // 获取商品单位列表
+		privateApi.GET("/product/unit", wrapper.GetProductUnit)                  // 获取商品单位详情
+		privateApi.POST("/product/unit/add", nil)                                // 添加商品单位
 	}
 }

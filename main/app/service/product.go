@@ -26,6 +26,8 @@ import (
 type IProductSrv interface {
 	GetProductList(ctx context.Context, req req.ProductListReq) (product_resp.ProductListWithPaginationResp, error)               // 获取产品列表
 	GetProductCategoryList(dbId uint64) (product_resp.ProductCategoryListResp, error)                                             // 获取产品类别列表
+	GetProductUnitList(ctx context.Context, req req.ProductUnitListReq) (product_resp.ProductUnitListResp, error)                 // 获取产品单位列表
+	GetProductUnit(ctx context.Context, req req.ProductUnitReq) (product_resp.ProductUnitDetail, error)                           // 获取产品单位详情
 	GetProductRecommendList(ctx context.Context, req req.ProductRecommendListReq) (*product_resp.ProductRecommendListResp, error) // 获取产品推荐列表
 	SearchProducts(ctx context.Context, req req.ProductSearchReq) (*product_resp.ProductSearchResp, error)                        // 搜索商品
 }
@@ -663,4 +665,76 @@ func (s *productSrv) SearchProducts(ctx context.Context, req req.ProductSearchRe
 	return &product_resp.ProductSearchResp{
 		List: FormatProducts(ctx, products),
 	}, nil
+}
+
+// GetProductUnitList 获取产品单位列表
+func (s *productSrv) GetProductUnitList(ctx context.Context, req req.ProductUnitListReq) (product_resp.ProductUnitListResp, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	language := ctx.GetLanguage()
+	productRepo := repository.NewProductRepo(db)
+	units, total, err := productRepo.PaginateGetProductUnitList(
+		req.PageNo,
+		req.PageSize,
+		productRepo.WithMultiLanguageName(),
+		productRepo.WithProductPackages(),
+		productRepo.WithProductPackagesMultiLanguageName(),
+	)
+	if err != nil {
+		return product_resp.ProductUnitListResp{}, errors.WithMessage(err, "获取产品单位列表失败")
+	}
+
+	productUnitList := make([]product_resp.ProductUnitItem, 0, len(units))
+	for _, unit := range units {
+		productUnitList = append(productUnitList, product_resp.ProductUnitItem{
+			Uuid:                unit.Uuid,
+			Name:                unit.MultiLanguageName.GetNameByLang(language),
+			Sort:                unit.Sort,
+			RelatedProductCount: unit.RelatedProductCount,
+		})
+	}
+
+	// 返回响应对象
+	return product_resp.ProductUnitListResp{
+		List: productUnitList,
+		Meta: dto.PageResponse{
+			PageNo:   req.PageNo,
+			PageSize: req.PageSize,
+			Total:    total,
+		},
+	}, nil
+}
+
+func (s *productSrv) GetProductUnit(ctx context.Context, req req.ProductUnitReq) (product_resp.ProductUnitDetail, error) {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	language := ctx.GetLanguage()
+
+	productRepo := repository.NewProductRepo(db)
+	unit, err := productRepo.GetProductUnit(
+		productRepo.WhereUuid(req.Uuid),
+		productRepo.WithMultiLanguageName(),
+		productRepo.WithProductPackages(),
+		productRepo.WithProductPackagesMultiLanguageName(),
+	)
+	if err != nil {
+		return product_resp.ProductUnitDetail{}, errors.WithMessage(err, "获取产品单位详情失败")
+	}
+
+	productPackages := make([]product_resp.ProductUnitProductPackage, 0, len(unit.ProductPackages))
+	for _, productPackage := range unit.ProductPackages {
+		productPackages = append(productPackages, product_resp.ProductUnitProductPackage{
+			Uuid: productPackage.Uuid,
+			Name: productPackage.MultiLanguageName.GetNameByLang(language),
+		})
+	}
+
+	productUnit := product_resp.ProductUnitDetail{
+		Uuid:       unit.Uuid,
+		Sort:       unit.Sort,
+		LocaleName: unit.MultiLanguageName.GetNames(),
+		ProductPackages: product_resp.ProductUnitProductPackageList{
+			List: productPackages,
+		},
+	}
+
+	return productUnit, nil
 }
