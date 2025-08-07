@@ -91,8 +91,15 @@
     </el-form-item>
 
     <el-dialog v-model="dialogVisible" :title="$t('翻译')" :close-on-click-modal="false">
-      <!-- TODO: 翻译 分组名称 需要同一套餐内校验唯一 -->
-      <UniqueNameForm ref="uniqueNameFormRef" :labelPrefix="$t('分组名称')" :isUnique="false" apiSource="product" :otherGroupNames="otherGroupNames" />
+      <UniqueNameForm
+        v-if="dialogVisible"
+        ref="uniqueNameFormRef"
+        :labelPrefix="$t('分组名称')"
+        :isUnique="false"
+        apiSource="product"
+        :overrideLanguages="overrideLanguages"
+        :otherGroupNames="otherGroupNames"
+      />
       <template #footer>
         <div class="flex justify-end">
           <el-button @click="dialogVisible = false">{{ $t('取消') }}</el-button>
@@ -133,6 +140,8 @@
   const selectedProductIds = ref([]);
 
   const selectIndex = ref(0);
+
+  const overrideLanguages = ref({});
 
   const otherGroupNames = ref([]);
 
@@ -177,18 +186,13 @@
 
   // 翻译
   const translate = async (groupIndex) => {
-    selectIndex.value = groupIndex; // 保存当前选中的分组索引
+    // 设置当前分组名称
+    overrideLanguages.value = form.model.package_group[groupIndex].group_name;
+    // 保存当前选中的分组索引
+    selectIndex.value = groupIndex;
+    // 打开翻译弹窗
     dialogVisible.value = true;
     await nextTick();
-    // 先清空原有数据，再赋值新数据，保持响应式连接
-    Object.keys(uniqueNameFormRef.value.data).forEach((key) => {
-      uniqueNameFormRef.value.data[key] = '';
-    });
-
-    // 赋值新数据，确保所有语言字段都有值（避免undefined导致的验证错误）
-    Object.keys(uniqueNameFormRef.value.data).forEach((key) => {
-      uniqueNameFormRef.value.data[key] = form.model.package_group[groupIndex].group_name[key] || '';
-    });
 
     // 把除了自己以外的其他分组名称获取到
     otherGroupNames.value = form.model.package_group.filter((item, index) => index !== groupIndex).map((item) => item.group_name);
@@ -324,18 +328,17 @@
       callback(new Error($t('请填写分组名称')));
       return;
     }
-    
+
     // 检查该分组下所有语言版本是否都已填写
     const groupName = form.model.package_group[groupIndex].group_name;
     const allLanguagesFilled = Object.keys(groupName).every((key) => {
       const langValue = groupName[key];
       return langValue && langValue.trim();
     });
-    
+
     if (!allLanguagesFilled) {
       callback(new Error($t('请翻译分组名称')));
-    } 
-    else {
+    } else {
       callback();
     }
   };
