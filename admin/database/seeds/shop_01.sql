@@ -1493,6 +1493,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_printer` (
     `last_heartbeat_time` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '最后心跳时间',
     `source_device_sn` VARCHAR(255) NOT NULL DEFAULT '' COMMENT '来源设备SN',
     `copies` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '打印份数',
+    `width` INT UNSIGNED NOT NULL DEFAULT 80 COMMENT '纸张宽度（mm）',
     `sort` INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '排序',
     `create_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建时间(时间戳)',
     `update_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新时间(时间戳)',
