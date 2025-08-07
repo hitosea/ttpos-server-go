@@ -52,4 +52,5 @@ type PrinterInfo struct {
 	IsUsbPrinter           bool   // 是否usb打印机
 	PrintMethod            int    // 打印方式 1文本打印, 2图片打印
 	PrinterSn              string // 打印机SN
+	PrinterWidth           int    // 打印机宽度mm
 }
