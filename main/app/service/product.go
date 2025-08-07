@@ -167,8 +167,8 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 			for _, group := range product.ProductPackageGroups {
 				productList := make([]product_resp.PackageProductDetail, 0)
 				for _, item := range group.ProductPackageGroupItems {
-					flavor := getFlavor(item.ProductBom)            // 商品规格
-					attributeGroups := getAttributeGroups(&product) // 商品属性组
+					flavor := getFlavor(item.ProductBom)                       // 商品规格
+					attributeGroups := getAttributeGroups(item.ProductPackage) // 商品属性组
 					productDetail := product_resp.PackageProductDetail{
 						Detail: product_resp.Product{
 							Uuid:       item.ProductBom.Uuid,
@@ -187,8 +187,10 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 							},
 							Describe: product.Describe,
 						},
+						Num: item.Num,
 					}
 					productDetail.CanEdit = productDetail.GetCanEdit() // 是否可以编辑
+
 					productList = append(productList, productDetail)
 				}
 
@@ -210,15 +212,13 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				if productBom.IsDelete() {
 					continue
 				}
-				if productBom.IsFlavor() {
-					flavors = append(flavors, product_resp.ProductFlavor{
-						Uuid:       productBom.Uuid,
-						LocaleName: product.MultiLanguageName.GetNames(),
-						Price:      productBom.Price,
-						StockNum:   int(productBom.GetStockNum()),
-						Barcode:    productBom.BarcodeValue,
-					})
-				}
+				flavors = append(flavors, product_resp.ProductFlavor{
+					Uuid:       productBom.Uuid,
+					LocaleName: product.MultiLanguageName.GetNames(),
+					Price:      productBom.Price,
+					StockNum:   int(productBom.GetStockNum()),
+					Barcode:    productBom.BarcodeValue,
+				})
 			}
 
 			list = append(list, product_resp.Product{
@@ -226,7 +226,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				Image:             image,
 				LocaleName:        product.MultiLanguageName.GetNames(),
 				Unit:              unit,
-				Price:             product.Price,
+				Price:             flavors[0].Price,
 				LimitNum:          product.LimitNum,
 				CategoryUuid:      product.CategoryUuid,
 				FirstCategoryUuid: product.ProductCategory.GetFirstCategoryUuid(),

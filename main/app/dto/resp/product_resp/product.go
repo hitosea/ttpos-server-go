@@ -64,7 +64,7 @@ type ProductList struct {
 // PackageProductDetail 套餐商品详情
 type PackageProductDetail struct {
 	Detail  Product `json:"detail"`   // 商品详情
-	Num     int     `json:"num"`      // 商品数量，分组中item的数量
+	Num     float64 `json:"num"`      // 商品数量，分组中item的数量
 	CanEdit bool    `json:"can_edit"` // 是否可以编辑
 }
 
