@@ -5,18 +5,18 @@
 package dao
 
 import (
-	"ttpos-bmp/app/ttpos-shop/internal/dao/internal"
+	"ttpos-bmp/app/ttpos-erp/internal/dao/internal"
 )
 
-// cashierDutyDetailDao is the data access object for the table ttpos_cashier_duty_detail.
+// siteDao is the data access object for the table erp_site.
 // You can define custom methods on it to extend its functionality as needed.
-type cashierDutyDetailDao struct {
-	*internal.CashierDutyDetailDao
+type siteDao struct {
+	*internal.SiteDao
 }
 
 var (
-	// CashierDutyDetail is a globally accessible object for table ttpos_cashier_duty_detail operations.
-	CashierDutyDetail = cashierDutyDetailDao{internal.NewCashierDutyDetailDao()}
+	// Site is a globally accessible object for table erp_site operations.
+	Site = siteDao{internal.NewSiteDao()}
 )
 
 // Add your custom methods and functionality below.

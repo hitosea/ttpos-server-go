@@ -16,7 +16,7 @@ logger:
 # https://goframe.org/docs/core/gdb-config-file
 database:
   default:
-  link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
+  link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/erp"
 
 grpc:
   name: "ttpos-erp"

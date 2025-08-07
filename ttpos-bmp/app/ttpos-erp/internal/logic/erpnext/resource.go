@@ -1,12 +1,12 @@
-package erp
+package erpnext
 
 import (
 	"context"
 	"fmt"
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/os/gctx"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 var Resource = new(sResource)
@@ -22,38 +22,34 @@ func init() {
 }
 
 func (s *sResource) List(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error) {
-	rst = g.Client().GetVar(ctx, getResourceUrl(docType), params)
+	rst = GetClient(ctx).GetVar(ctx, getResourceUrl(docType), params)
 	return
 }
 
 func (s *sResource) Get(ctx context.Context, docType string, name string, params *dto.RequestParams) (rst *g.Var, err error) {
-	rst = g.Client().GetVar(ctx, getResourceUrlWithName(docType, name), params)
+	rst = GetClient(ctx).GetVar(ctx, getResourceUrlWithName(docType, name), params)
 	return
 }
 
 func (s *sResource) Post(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error) {
-	rst = g.Client().PostVar(ctx, getResourceUrl(docType), params)
+	rst = GetClient(ctx).PostVar(ctx, getResourceUrl(docType), params)
 	return
 }
 
 func (s *sResource) Put(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error) {
-	rst = g.Client().PutVar(ctx, getResourceUrl(docType), params)
+	rst = GetClient(ctx).PutVar(ctx, getResourceUrl(docType), params)
 	return
 }
 
 func (s *sResource) Delete(ctx context.Context, docType string, params *dto.RequestParams) (rst *g.Var, err error) {
-	rst = g.Client().DeleteVar(ctx, getResourceUrl(docType), params)
+	rst = GetClient(ctx).DeleteVar(ctx, getResourceUrl(docType), params)
 	return
 }
 
 func getResourceUrl(docType string) string {
-	return fmt.Sprintf("%s%s%s", GetApiBase(), apiUrl, docType)
+	return fmt.Sprintf("%s%s", apiUrl, docType)
 }
 
 func getResourceUrlWithName(docType string, name string) string {
 	return fmt.Sprintf("%s/%s", getResourceUrl(docType), name)
-}
-
-func GetApiBase() string {
-	return g.Cfg().MustGet(gctx.GetInitCtx(), "app.erpnext.serviceUrl").String()
 }

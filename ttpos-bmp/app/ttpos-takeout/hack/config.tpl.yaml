@@ -5,10 +5,10 @@ gfcli:
   gen:
     pbentity:
       link: "mysql:$DB_USERNAME:$DB_PASSWORD@tcp($DB_HOST:$DB_PORT_OPEN)/takeout"
-      path: "manifest/protobuf/takeout"
+      path: "manifest/protobuf/pbentity"
       removePrefix: "takeout_"
       #tables: "order,products"
-      package: "ttpos-bmp/app/ttpos-takeout/api/takeout"
+      package: "ttpos-bmp/app/ttpos-takeout/api/pbentity"
     pb:
       api: "api"
       ctrl: "internal/controller/rpc"
