@@ -38,8 +38,15 @@ type ProductUnit struct {
 	BaseModel
 	Name                  string `gorm:"default:'';column:name;comment:'单位名称'"`
 	MultiLanguageNameUuid uint64 `gorm:"default:0;column:multi_language_name_uuid;comment:'多语言名称UUID'"`
+	Sort                  int    `gorm:"default:0;column:sort;comment:'排序(数字越小越靠前)';NOT NULL" json:"sort"`
 
 	MultiLanguageName MultiLanguageName `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
+
+	// ProductPackage里面关联的单位
+	ProductPackages []ProductPackage `gorm:"foreignKey:unit_uuid;references:uuid"`
+
+	// 表里面没有这个related_product_count字段，但是查询的时候会自动统计关联商品数量
+	RelatedProductCount int `gorm:"->"`
 }
 
 // PrinterTag 打印标签表,定义打印标签的相关信息 ttpos_printer_tag

@@ -22,7 +22,7 @@ class Unit extends UnitModel
         if (isset($data['unit_name']) && $data['unit_name'] != '') {
             $model = $model->jsonLike('name', $data['unit_name']);
         }
-        $list = $model->order(['create_time' => 'desc'])->paginate($data)?->append(['product_ids'], true);
+        $list = $model->order(['sort' => 'asc', 'create_time' => 'asc'])->paginate($data)?->append(['product_ids'], true);
 
         // 是否关联产品
         foreach ($list as &$item) {

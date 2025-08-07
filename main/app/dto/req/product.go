@@ -26,3 +26,12 @@ type ProductSearchReq struct {
 	Keyword  string `form:"keyword" json:"keyword" binding:"required"` // 搜索关键词
 	IsMember bool   `json:"-"`                                         // 是否是会员端查询商品列表
 }
+
+// ProductUnitListReq 商品单位列表查询
+type ProductUnitListReq struct {
+	dto.PageReq // 分页参数
+}
+
+type ProductUnitReq struct {
+	Uuid uint64 `form:"uuid" json:"uuid" binding:"required"` // 商品单位UUID
+}

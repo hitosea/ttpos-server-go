@@ -164,3 +164,33 @@ type ProductCategory struct {
 type ProductCategoryListResp struct {
 	List []ProductCategory `json:"list"`
 }
+
+// ProductUnit 商品单位
+type ProductUnitItem struct {
+	Uuid                uint64 `json:"uuid"`                  // 商品单位UUID
+	Sort                int    `json:"sort"`                  // 商品单位排序
+	RelatedProductCount int    `json:"related_product_count"` // 关联商品数量
+	Name                string `json:"name"`                  // 商品单位名称
+}
+
+// ProductUnitListResp 商品单位列表响应
+type ProductUnitListResp struct {
+	List []ProductUnitItem `json:"list"`
+	Meta dto.PageResponse  `json:"meta"`
+}
+
+type ProductUnitProductPackage struct {
+	Uuid uint64 `json:"uuid"` // 商品包UUID
+	Name string `json:"name"` // 商品包名称
+}
+
+type ProductUnitProductPackageList struct {
+	List []ProductUnitProductPackage `json:"list"`
+}
+
+type ProductUnitDetail struct {
+	Uuid            uint64                        `json:"uuid"`             // 商品单位UUID
+	Sort            int                           `json:"sort"`             // 商品单位排序
+	LocaleName      dto.LocaleResponse            `json:"locale_name"`      // 商品单位名称
+	ProductPackages ProductUnitProductPackageList `json:"product_packages"` // 商品包列表
+}

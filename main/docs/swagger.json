@@ -18071,6 +18071,90 @@
                 }
             }
         },
+        "/shop/product/unit": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品单位详情",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品单位"
+                ],
+                "summary": "获取商品单位详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "商品单位UUID",
+                        "name": "uuid",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductUnitDetail"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/unit/list": {
+            "get": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "获取商品单位列表",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品单位"
+                ],
+                "summary": "获取商品单位列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码",
+                        "name": "page_no",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功",
+                        "schema": {
+                            "$ref": "#/definitions/product_resp.ProductUnitListResp"
+                        }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
         "/shop/recharge_order/cancel": {
             "post": {
                 "security": [
@@ -22527,6 +22611,94 @@
                 "max_select": {
                     "description": "小料最大可选数量",
                     "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductUnitDetail": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "product_packages": {
+                    "description": "商品包列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.ProductUnitProductPackageList"
+                        }
+                    ]
+                },
+                "sort": {
+                    "description": "商品单位排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品单位UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductUnitItem": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "商品单位名称",
+                    "type": "string"
+                },
+                "related_product_count": {
+                    "description": "关联商品数量",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "商品单位排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品单位UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductUnitListResp": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductUnitItem"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageResponse"
+                }
+            }
+        },
+        "product_resp.ProductUnitProductPackage": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "商品包名称",
+                    "type": "string"
+                },
+                "uuid": {
+                    "description": "商品包UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductUnitProductPackageList": {
+            "type": "object",
+            "properties": {
+                "list": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/product_resp.ProductUnitProductPackage"
+                    }
                 }
             }
         },
