@@ -85,7 +85,7 @@
       <Edit v-if="open_edit" :open_edit="open_edit" :editform="model" @closeDialog="closeDialogFunc($event, 'edit')"> </Edit>
 
       <!-- 商品选择器 -->
-      <ProductSelector v-if="openProductSelector" :open="openProductSelector" @close="handleProductSelectorClose" selectorType="all" :selectedProductIds="model?.product_ids ?? []">
+      <ProductSelector v-if="openProductSelector" :open="openProductSelector" @close="handleProductSelectorClose" selectorType="all" :isLoading="loading" :selectedProductIds="model?.product_ids ?? []">
       </ProductSelector>
       <GroupManager v-if="openGroupManager" :open="openGroupManager" @close="handleGroupManagerClose" />
     </div>
@@ -322,6 +322,7 @@ const relatedProductClick = (row) => {
 const handleProductSelectorClose = async (list) => {
   if (Array.isArray(list)) {
     try {
+      loading.value = true;
       await ProductApi.relateByAttr(
         {
           attribute_id: model.value.attribute_id,
@@ -335,8 +336,10 @@ const handleProductSelectorClose = async (list) => {
         type: 'success',
       });
       getData();
+      loading.value = false;
     } catch (error) {
       // 处理错误
+      loading.value = false;
     }
   }
   model.value = {};
