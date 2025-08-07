@@ -92,25 +92,12 @@ func (t *handoverImg58mmTemplate) GetPrintContent58mm(
 		img.SetTextLineHeight(50)
 		// 支付方式
 		numberWidth := 190
-		if isTrThEn {
-			if t.base.Lang == "en" {
-				numberWidth = 160
-			} else {
-				numberWidth = 120
-			}
-		} else {
-			if t.base.Lang == "my" {
-				numberWidth = 120
-			} else if t.base.Lang == "sv" {
-				numberWidth = 160
-			} else {
-				numberWidth = 80
-			}
-		}
+		numberWidth = utils.IfInt(isTrThEn, utils.IfInt(t.base.Lang == "en", 88, 122), utils.IfInt(t.base.Lang == "my", 122, 81))
 		// 支付方式
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: utils.IfInt(isTrThEn || t.base.Lang == "sv", 156, 190), Align: pkg.AlignLeft, FontWeight: 2},
-			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: numberWidth, Align: pkg.AlignCenter, FontWeight: 2},
+			pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: utils.IfInt(t.base.Lang == "sv", 135, utils.IfInt(isTrThEn, 132, 203)), Align: pkg.AlignLeft, FontWeight: 2},
+			pkg.ColumnConfig{Text: "", Width: utils.IfInt(isTrThEn, 72, utils.IfInt(t.base.Lang == "my", 10, utils.IfInt(t.base.Lang == "sv", 88, 1))), Align: pkg.AlignCenter, FontWeight: 2},
+			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(t.base.Lang == "sv", 88, numberWidth), Align: pkg.AlignCenter, FontWeight: 2},
 			pkg.ColumnConfig{Text: t.base.Translate("金额"), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 		)
 		totalPayPrice := decimal.NewFromFloat(0)
@@ -538,24 +525,11 @@ func (t *handoverImg58mmTemplate) GetPrintContent58mm(
 		img.AppendText("-------------------------------------------")
 		img.LineFeed(1)
 		numberWidth := 190
-		if isTrThEn {
-			if t.base.Lang == "en" {
-				numberWidth = 162
-			} else {
-				numberWidth = 122
-			}
-		} else {
-			if t.base.Lang == "my" {
-				numberWidth = 122
-			} else if t.base.Lang == "sv" {
-				numberWidth = 162
-			} else {
-				numberWidth = 81
-			}
-		}
+		numberWidth = utils.IfInt(isTrThEn, utils.IfInt(t.base.Lang == "en", 88, 122), utils.IfInt(t.base.Lang == "my", 122, 81))
 		img.PrintInColumns(
-			pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: utils.IfInt(isTrThEn || t.base.Lang == "sv", 149, 190), Align: pkg.AlignLeft, FontWeight: 2},
-			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: numberWidth, Align: pkg.AlignCenter, FontWeight: 2},
+			pkg.ColumnConfig{Text: t.base.Translate("支付方式"), Width: utils.IfInt(t.base.Lang == "sv", 135, utils.IfInt(isTrThEn, 132, 203)), Align: pkg.AlignLeft, FontWeight: 2},
+			pkg.ColumnConfig{Text: "", Width: utils.IfInt(isTrThEn, 72, utils.IfInt(t.base.Lang == "my", 10, utils.IfInt(t.base.Lang == "sv", 88, 1))), Align: pkg.AlignCenter, FontWeight: 2},
+			pkg.ColumnConfig{Text: t.base.Translate("订单数"), Width: utils.IfInt(t.base.Lang == "sv", 88, numberWidth), Align: pkg.AlignCenter, FontWeight: 2},
 			pkg.ColumnConfig{Text: t.base.Translate("金额"), Width: 0, Align: pkg.AlignRight, FontWeight: 2},
 		)
 		// 支付方式
