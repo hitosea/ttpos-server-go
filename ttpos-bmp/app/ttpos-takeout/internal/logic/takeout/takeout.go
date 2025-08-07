@@ -18,11 +18,11 @@ type ITakeout interface {
 	// CreateOrder 创建订单
 	CreateOrder(ctx context.Context, req *api.CreateOrderReq) (res *api.CreateOrderResp, err error)
 	// ConfirmOrder 商家确认订单
-	ConfirmOrder(ctx context.Context, req *input.ConfirmOrderInp) (res *api.ConfirmOrderResp, err error)
+	ConfirmOrder(ctx context.Context, req *dto.ConfirmOrderInp) (res *api.ConfirmOrderResp, err error)
 	// CancelOrder 取消订单
-	CancelOrder(ctx context.Context, req *input.CancelOrderInp) (res *api.CancelOrderResp, err error)
+	CancelOrder(ctx context.Context, req *dto.CancelOrderInp) (res *api.CancelOrderResp, err error)
 	// GetDriverInfo 获取司机信息
-	GetDriverInfo(ctx context.Context, req *input.GetDriverInfoInp) (res *api.GetDriverInfoResp, err error)
+	GetDriverInfo(ctx context.Context, req *dto.GetDriverInfoInp) (res *api.GetDriverInfoResp, err error)
 }
 
 func GetService(name consts.ProviderName) ITakeout {

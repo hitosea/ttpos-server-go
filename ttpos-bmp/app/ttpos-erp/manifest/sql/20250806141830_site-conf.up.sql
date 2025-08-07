@@ -1,6 +1,6 @@
 -- erp.erp_site definition
 
-CREATE TABLE `erp_site` (
+CREATE TABLE if not exists `erp_site` (
                             `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
                             `uuid` varchar(100) DEFAULT NULL COMMENT 'UUID',
                             `site_name` varchar(100) DEFAULT NULL COMMENT '站点名称',
@@ -11,3 +11,9 @@ CREATE TABLE `erp_site` (
                             `api_secret` varchar(100) DEFAULT NULL,
                             PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+
+INSERT INTO erp.erp_site
+(id, uuid, site_name, site_url, remark, site_code, api_key, api_secret)
+VALUES(1, '666666', '开发通用', 'http://192.168.100.206:15080/', NULL, 'wallace', '1cd4278df0189a3', 'c93d1d1bb4c76a7');

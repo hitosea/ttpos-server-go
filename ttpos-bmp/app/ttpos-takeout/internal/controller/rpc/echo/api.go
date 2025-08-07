@@ -18,7 +18,7 @@ func Register(s *grpcx.GrpcServer) {
 }
 
 func (*Controller) Echo(ctx context.Context, in *echo.EchoRequest) (res *echo.EchoResponse, err error) {
-	rst, err := service.Echo().Msg(ctx, &input.EchoMsgInput{
+	rst, err := service.Echo().Msg(ctx, &dto.EchoMsgInput{
 		Message:      in.Message,
 		OtherMessage: "other message",
 	})

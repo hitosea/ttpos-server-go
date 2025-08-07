@@ -18,6 +18,7 @@ func NewErpCompanyClient() (companyApi.CompanyServiceClient, *grpc.ClientConn, e
 	return companyApi.NewCompanyServiceClient(conn), conn, nil
 }
 
+// GetCompanyList 获取公司列表  FIXME ,增加查询参数
 func (s *erpSrv) GetCompanyList(ctx context.Context) error {
 	client, conn, err := NewErpCompanyClient()
 	if err != nil {
