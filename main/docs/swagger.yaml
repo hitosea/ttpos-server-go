@@ -1252,7 +1252,7 @@ definitions:
         description: 商品详情
       num:
         description: 商品数量，分组中item的数量
-        type: integer
+        type: number
     type: object
   product_resp.Product:
     properties:
@@ -1492,6 +1492,60 @@ definitions:
         description: 小料最大可选数量
         type: integer
     type: object
+  product_resp.ProductSourceDetail:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位名称
+      price:
+        description: 商品加料价格
+        type: number
+      product_packages:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductSourceProductPackageList'
+        description: 商品包列表
+      uuid:
+        description: 商品单位UUID
+        type: integer
+    type: object
+  product_resp.ProductSourceItem:
+    properties:
+      name:
+        description: 商品加料名称
+        type: string
+      product_package_count:
+        description: 关联商品包数量
+        type: integer
+      uuid:
+        description: 商品加料UUID
+        type: integer
+    type: object
+  product_resp.ProductSourceListResp:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductSourceItem'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageResponse'
+    type: object
+  product_resp.ProductSourceProductPackage:
+    properties:
+      name:
+        description: 商品包名称
+        type: string
+      uuid:
+        description: 商品包UUID
+        type: integer
+    type: object
+  product_resp.ProductSourceProductPackageList:
+    properties:
+      list:
+        items:
+          $ref: '#/definitions/product_resp.ProductSourceProductPackage'
+        type: array
+    type: object
   product_resp.ProductUnitDetail:
     properties:
       locale_name:
@@ -1502,9 +1556,6 @@ definitions:
         allOf:
         - $ref: '#/definitions/product_resp.ProductUnitProductPackageList'
         description: 商品包列表
-      sort:
-        description: 商品单位排序
-        type: integer
       uuid:
         description: 商品单位UUID
         type: integer
@@ -19266,6 +19317,58 @@ paths:
       summary: 获取商品分类列表
       tags:
       - 商家端.商品分类
+  /shop/product/source:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品加料详情
+      parameters:
+      - description: 商品加料UUID
+        in: query
+        name: uuid
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductSourceDetail'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品加料详情
+      tags:
+      - 商家端.商品加料
+  /shop/product/source/list:
+    get:
+      consumes:
+      - application/json
+      description: 获取商品加料列表
+      parameters:
+      - description: 页码
+        in: query
+        name: page_no
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/product_resp.ProductSourceListResp'
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 获取商品加料列表
+      tags:
+      - 商家端.商品加料
   /shop/product/unit:
     delete:
       consumes:

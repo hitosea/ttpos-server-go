@@ -46,7 +46,7 @@ type ProductSauceService struct {
 
 func (s *ProductSauceService) GetProductSauceList() ([]oldModel.Feed, error) {
 	var sauces []oldModel.Feed
-	err := s.db.Preload("ProductFeedMaterials").Find(&sauces).Error
+	err := s.db.Preload("ProductFeedMaterials").Order("create_time asc").Find(&sauces).Error
 	if err != nil {
 		return nil, err
 	}
@@ -59,6 +59,7 @@ func (s *ProductSauceService) ConvertProductSauce() error {
 		return err
 	}
 	if err := s.targetDB.Transaction(func(tx *gorm.DB) error {
+		sort := 1
 		for index, _ := range sauces {
 			feed := &sauces[index]
 			fmt.Println(fmt.Sprintf("-----迁移小料：%+v", feed))
@@ -66,10 +67,12 @@ func (s *ProductSauceService) ConvertProductSauce() error {
 			if err != nil {
 				return err
 			}
+			productSauce.Sort = sort
 			repo := repository.NewProductSauceRepo(tx)
 			if err := repo.CreateProductSauce(productSauce); err != nil {
 				return err
 			}
+			sort++
 		}
 		return nil
 	}); err != nil {
