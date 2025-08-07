@@ -144,7 +144,7 @@ func (p *PrinterRepoImpl) getPrintingStatementOrderContent(
 
 	// 图片打印
 	if p.IsImagePrinterMethod() {
-		return template.NewStatementOrderImgTemplate(base).GetPrintContent(
+		return template.NewStatementOrderImg58mmTemplate(base).GetPrintContent58mm(
 			settingPrinterInfo,
 			printType,
 			tmp,
