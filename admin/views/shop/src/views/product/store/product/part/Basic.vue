@@ -1,9 +1,4 @@
 <template>
-  <!--
-
-          时间：2019-10-26
-          描述：商品管理-商品编辑-基础信息
-      -->
   <div class="basic-setting-content">
     <!--基本信息-->
     <div class="common-form">{{ $t('基本信息') }}</div>
@@ -48,7 +43,7 @@
           </div>
         </transition-group>
 
-        <div v-if="form.model.image.length == 0" class="item img-select" @click="openProductUpload">
+        <div v-if="form.model.image && form.model.image.length == 0" class="item img-select" @click="openProductUpload">
           <el-icon>
             <Plus />
           </el-icon>
@@ -58,12 +53,11 @@
         {{ $t('支持JPG、JPEG、PNG、WEBP格式，小于15MB，尺寸：160*120px') }}
       </div>
     </el-form-item>
-
     <el-form-item
       for="no_click"
       :label="$t('图片名称：')"
       prop="model.img_name"
-      :rules="[{ validator: uniqueNameValidator('product_img', formData.model.product_id, 'SINGLE', undefined, false), trigger: 'blur' }]"
+      :rules="[{ validator: uniqueNameValidator('product_img', form.model.product_id , 'SINGLE', undefined, false), trigger: 'blur' }]"
     >
       <el-input type="text" :placeholder="$t('请输入图片名称')" v-model="form.model.img_name" :maxlength="50" class="max-w460"></el-input>
     </el-form-item>
@@ -80,146 +74,145 @@
   </div>
 </template>
 
-<script>
-  import Upload from '@/components/file/Upload.vue';
-  import mInput from '@/components/m-input/index.vue';
-  import Add from '../../category/Add.vue';
-  import PurchaseApi from '@/api/purchase.js';
-  import { useUserStore } from '@/store';
-  import UniqueNameForm from '@/components/product/UniqueNameForm.vue';
-  import { uniqueNameValidator } from '@/utils/form.js';
+<script setup>
+import { ref, inject, watch, onMounted, nextTick } from 'vue'
+import Upload from '@/components/file/Upload.vue'
+import Add from '../../category/Add.vue'
+import PurchaseApi from '@/api/purchase.js'
+import { useUserStore } from '@/store'
+import UniqueNameForm from '@/components/product/UniqueNameForm.vue'
+import { uniqueNameValidator } from '@/utils/form.js'
 
-  const { computedSupplier } = useUserStore();
-  const supplier = computedSupplier().supplier;
-  const baseSale = supplier.value?.sale_stock || 0;
+// 获取用户信息
+const { computedSupplier } = useUserStore()
+const supplier = computedSupplier().supplier
+const baseSale = supplier.value?.sale_stock || 0
 
-  export default {
-    name: 'ProductStoreProductPartBasic',
-    components: {
-      Upload,
-      mInput,
-      UniqueNameForm,
-      Add,
-    },
-    data() {
-      return {
-        formData: {},
-        isProductUpload: false,
-        open_add: false,
-        options: [],
-        supplierList: [],
-        baseSale: baseSale,
-      };
-    },
-    props: {
-      disableChangeType: {
-        type: Boolean,
-        default: false,
-      },
-    },
-    inject: ['form'],
-    watch: {
-      form: {
-        handler(val) {
-          this.options = [];
-          val.category.map((item, index) => {
-            this.options.push({
-              value: item.category_id,
-              label: item.name_text,
-              children: [],
-            });
-            item.child.map((items) => {
-              this.options[index].children.push({
-                value: items.category_id,
-                label: items.name_text,
-              });
-            });
-          });
-        },
-        deep: true,
-        immediate: true,
-      },
-    },
-    created() {
-      this.formData = this.form;
-      // this['formData'] = this.form;
-      this.getData();
-    },
-    methods: {
-      //获取供应商
-      getData() {
-        let self = this;
-        let Params = {};
-        Params.list_rows = 1000;
-        PurchaseApi.supplierList(Params, true)
-          .then((data) => {
-            self.loading = false;
-            self.supplierList = data.data.list.data;
-            self.$nextTick(() => {
-              let arr = [];
-              self.supplierList.map((item) => {
-                arr.push(item.id);
-              });
-              if (!arr.includes(self.form.model.erp_supplier_id)) {
-                self.form.model.erp_supplier_id = '';
-              }
-            });
-          })
-          .catch(() => {});
-      },
+// 定义props
+const props = defineProps({
+  disableChangeType: {
+    type: Boolean,
+    default: false,
+  },
+})
 
-      addCategory() {
-        this.open_add = true;
-      },
+// 定义emit
+const emit = defineEmits(['validateField'])
 
-      /*关闭弹窗*/
-      closeDialogFunc(e, f) {
-        if (f == 'add') {
-          this.open_add = e.openDialog;
-          if (e.type == 'success' && e.data) {
-            e.data.parent_id = Number(e.data.parent_id);
-            if (e.data.parent_id) {
-              this.form.category.map((item) => {
-                if (item.category_id == e.data.parent_id) {
-                  item.child.push(e.data);
-                }
-              });
-            } else {
-              e.data.child = [];
-              this.form.category.unshift(e.data);
-            }
+// 注入form
+const form = inject('form', {})
+
+// 响应式数据
+const isProductUpload = ref(false)
+const open_add = ref(false)
+const options = ref([])
+const supplierList = ref([])
+
+// 模板引用
+const uniqueNameFormRef = ref(null)
+
+// 组件挂载时初始化
+onMounted(() => {
+  getData()
+})
+
+// 监听form变化
+watch(
+  () => form,
+  (val) => {
+    options.value = []
+    val.category.map((item, index) => {
+      options.value.push({
+        value: item.category_id,
+        label: item.name_text,
+        children: [],
+      })
+      item.child.map((items) => {
+        options.value[index].children.push({
+          value: items.category_id,
+          label: items.name_text,
+        })
+      })
+    })
+  },
+  { deep: true, immediate: true }
+)
+
+// 方法定义
+//获取供应商
+const getData = async () => {
+  try {
+    let Params = {}
+    Params.list_rows = 1000
+    const data = await PurchaseApi.supplierList(Params, true)
+    supplierList.value = data.data.list.data
+    nextTick(() => {
+      let arr = []
+      supplierList.value.map((item) => {
+        arr.push(item.id)
+      })
+      if (!arr.includes(form.model.erp_supplier_id)) {
+        form.model.erp_supplier_id = ''
+      }
+    })
+  } catch (error) {
+    // 错误处理
+  }
+}
+
+const addCategory = () => {
+  open_add.value = true
+}
+
+/*关闭弹窗*/
+const closeDialogFunc = (e, f) => {
+  if (f == 'add') {
+    open_add.value = e.openDialog
+    if (e.type == 'success' && e.data) {
+      e.data.parent_id = Number(e.data.parent_id)
+      if (e.data.parent_id) {
+        form.category.map((item) => {
+          if (item.category_id == e.data.parent_id) {
+            item.child.push(e.data)
           }
-        }
-      },
+        })
+      } else {
+        e.data.child = []
+        form.category.unshift(e.data)
+      }
+    }
+  }
+}
 
-      changeType() {
-        this.form.model.sku[0].material = [];
-        this.form.model.sku = this.form.model.sku.slice(0, 1);
-        this.form.single_select_list = [];
-        this.form.many_select_list = [[]];
-        this.form.ing_select_list = [[]];
-        this.form.model.type == 10 ? (this.form.model.spec_type = 20) : (this.form.model.spec_type = 10);
-      },
-      /*打开上传图片*/
-      openProductUpload: function () {
-        this.isProductUpload = true;
-      },
+const changeType = () => {
+  form.model.sku[0].material = []
+  form.model.sku = form.model.sku.slice(0, 1)
+  form.single_select_list = []
+  form.many_select_list = [[]]
+  form.ing_select_list = [[]]
+  form.model.type == 10 ? (form.model.spec_type = 20) : (form.model.spec_type = 10)
+}
 
-      /*上传商品图片*/
-      returnProductImgsFunc(e) {
-        if (e != null) {
-          let imgs = this.form.model.image.concat(e);
-          this.form.model['image'] = imgs;
-        }
-        this.isProductUpload = false;
-        this.$emit('validateField', 'model.image');
-      },
+/*打开上传图片*/
+const openProductUpload = () => {
+  isProductUpload.value = true
+}
 
-      /*删除商品图片*/
-      deleteImg(index) {
-        this.form.model.image.splice(index, 1);
-      },
-      uniqueNameValidator: uniqueNameValidator,
-    },
-  };
+/*上传商品图片*/
+const returnProductImgsFunc = (e) => {
+  if (e != null) {
+    let imgs = form.model.image.concat(e)
+    form.model['image'] = imgs
+  }
+  isProductUpload.value = false
+  emit('validateField', 'model.image')
+}
+
+/*删除商品图片*/
+const deleteImg = (index) => {
+  form.model.image.splice(index, 1)
+}
 </script>
+
+<style lang="scss" scoped>
+</style>
