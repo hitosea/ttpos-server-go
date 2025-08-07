@@ -1208,6 +1208,7 @@ type DefaultSaleOrderProduct struct {
 	NumType                uint    // 数量类型
 	Remark                 string  // 备注
 	PackageUuid            uint64  // 套餐uuid
+	ProductType            uint8   // 商品类型
 }
 
 func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *ProductPackage, operation string) *SaleOrderProduct {
@@ -1270,6 +1271,7 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		SaleOrderProductBoms:       saleOrderProductBoms,
 		SaleOrderProductAttributes: saleOrderProductAttributes,
 		PackageUuid:                def.PackageUuid,
+		ProductType:                def.ProductType,
 	}
 	product.SetTaxRate(def.TaxRate)
 	// 设置商品包. 加购并送厨时用到，用于计算限购

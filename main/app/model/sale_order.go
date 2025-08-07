@@ -95,6 +95,17 @@ type SaleOrder struct {
 	index int `gorm:"-"`
 }
 
+// 获取套餐商品的子商品列表
+func (model *SaleOrder) GetPackageSubProductList(saleOrderProductUuid uint64) []*SaleOrderProduct {
+	subProducts := make([]*SaleOrderProduct, 0)
+	for _, saleOrderProduct := range model.SaleOrderProducts {
+		if saleOrderProduct.PackageUuid == saleOrderProductUuid {
+			subProducts = append(subProducts, saleOrderProduct)
+		}
+	}
+	return subProducts
+}
+
 // 获取订单付款信息
 func (model *SaleOrder) GetPaymentInfoList() []resp.PaymentOrder {
 	paymentOrders := make([]resp.PaymentOrder, 0)

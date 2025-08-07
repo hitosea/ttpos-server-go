@@ -4884,59 +4884,37 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 	db := s.dbm.GetDB(ctx.GetDbId())
 	ctx.SetDB(db)
 
-	// 3. 获取销售账单信息
-	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
-	if errSaleBill != nil {
-		return nil, errors.WithMessage(errSaleBill)
+	// 往销售账单里添加商品
+	productParam := req.ProductParams{
+		FlavorProductBomUuid: request.ProductPackageUuid,
+		Num:                  1,
+		Operation:            "add",
 	}
-
-	// 4. 判断订单状态
-	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, request.SaleOrderUuid); err != nil {
-		return nil, errors.WithMessage(err)
-	}
-
-	// 5. 设置操作来源
-	saleBill.SetOperateSource(ctx.GetSource())
-
-	// 6. 转换为ProductParams格式进行加购
-	productAddReq, err := s.convertPackageToProductAddReq(ctx, request)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-
-	// 7. 加购套餐
-	if err := s.ActionAdd(ctx, productAddReq, saleBill); err != nil {
-		return nil, errors.WithMessage(err)
-	}
-
-	// 8. 获取新的购物车商品数据
-	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
-	if err != nil {
-		return nil, errors.WithMessage(err)
-	}
-
-	return info, nil
-}
-
-// convertPackageToProductAddReq 将套餐请求转换为商品加购请求
-func (s *orderSrv) convertPackageToProductAddReq(ctx context.Context, request req.OrderCartProductPackageAddReq) (req.ProductAddReq, error) {
-	var products []req.ProductParams
-
+	// 记录相关的子商品。
+	subProducts := make([]req.ProductParams, 0)
 	for _, productReq := range request.Products {
-		productParam := req.ProductParams{
+		subProduct := req.ProductParams{
 			FlavorProductBomUuid:            productReq.FlavorUuid,
 			Num:                             productReq.Num,
-			Operation:                       "add", // 默认加购操作
 			ProductPackageAttributeUuidList: productReq.AttributeUuidList,
+			Operation:                       "add",
 		}
-		products = append(products, productParam)
+		subProducts = append(subProducts, subProduct)
 	}
+	productParam.SetIsPackageProduct(subProducts) // 设置为套餐商品
 
-	return req.ProductAddReq{
+	shopCart, err := s.OrderCartProductAdd(ctx, req.ProductAddReq{
 		SaleBillUuid:  request.SaleBillUuid,
 		SaleOrderUuid: request.SaleOrderUuid,
-		Products:      products,
-	}, nil
+		Products: []req.ProductParams{
+			productParam,
+		},
+	})
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return shopCart, nil
 }
 
 func (s *orderSrv) OrderCartProductFlavorAndAttribute(ctx context.Context, request req.OrderCartProductFlavorAndAttributeReq) (*resp.ProductFlavorAndAttributeRes, error) {
@@ -4997,6 +4975,7 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 	if request.Num != nil {
 		num = *request.Num
 	}
+
 	// 往销售账单里添加商品
 	shopCart, err := s.OrderCartProductAdd(ctx, req.ProductAddReq{
 		SaleBillUuid:  request.SaleBillUuid,
@@ -5013,6 +4992,23 @@ func (s *orderSrv) InstantOrderCartProductAdd(ctx context.Context, request req.O
 		},
 		IsH5Product: request.IsH5Product(),
 	}, opts...)
+
+	// 往销售账单里添加商品
+	// shopCart, err := s.OrderCartProductAdd(ctx, req.ProductAddReq{
+	// 	SaleBillUuid:  request.SaleBillUuid,
+	// 	SaleOrderUuid: request.SaleOrderUuid,
+	// 	Products: []req.ProductParams{
+	// 		{
+	// 			FlavorProductBomUuid:            request.FlavorUuid,
+	// 			Num:                             num,
+	// 			SauceProductBomUuidList:         request.SauceUuidList,
+	// 			ProductPackageAttributeUuidList: request.AttributeUuidList,
+	// 			Operation:                       request.Operation,
+	// 			MustPlanUuid:                    request.MustPlanUuid,
+	// 		},
+	// 	},
+	// 	IsH5Product: request.IsH5Product(),
+	// }, opts...)
 	if err != nil {
 		ctx.Log().Info("往点餐账单里添加商品失败", zap.Any("req", request), zap.Any("error", err))
 		return nil, errors.WithMessage(err)
@@ -5234,6 +5230,18 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 			Sauces:                 sauces,
 			Num:                    product.Num,
 			NumType:                productPackage.NumType,
+			PackageUuid: func() uint64 {
+				if isPackageSubProduct, packageUuid := product.GetIsPackageSubProduct(); isPackageSubProduct {
+					return packageUuid
+				}
+				return 0
+			}(),
+			ProductType: func() uint8 {
+				if product.GetIsPackageProduct() {
+					return 1
+				}
+				return 0
+			}(),
 			Flavor: model.Flavor{
 				Name:           flavorProductBom.ProductFlavor.MultiLanguageName.GetNameByLang(ctx.GetLanguage()), // 填顾客下单时规格的名字 todo preload
 				Price:          flavorPrice,
@@ -5286,7 +5294,11 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		}
 
 		// 生成签名
-		saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign()
+		if saleOrderProduct.ProductType == constant.ProductTypePackage {
+			saleOrderProduct.Sign = saleOrderProduct.GeneratePackageSign()
+		} else {
+			saleOrderProduct.Sign = saleOrderProduct.GenerateProductSign()
+		}
 		ctx.Log().Debug("生成商品签名", zap.Any("sign", saleOrderProduct.Sign))
 
 		// 计算商品数据。折扣、税费、服务
@@ -5339,11 +5351,42 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 					if status != constant.CodeSuccess {
 						return nil, errors.WithMessage(errors.New(message))
 					}
+					// 如果该商品是套餐，则修改套餐子商品的数量
+					if orderProduct.ProductType == constant.ProductTypePackage {
+						subProducts := params.SaleOrder.GetPackageSubProductList(orderProduct.Uuid)
+						for _, subProduct := range subProducts {
+							uintNum := decimal.NewFromFloat(subProduct.Num).Div(decimal.NewFromFloat(orderProduct.Num)) // 每个套餐该子商品的数量
+							addNum := decimal.NewFromFloat(saleOrderProduct.Num).Mul(uintNum).Round(3).InexactFloat64() // 新增的套餐该子商品的数量
+							subProduct.Num += addNum
+							subProduct.SetUpdate()
+						}
+					}
 				} else if saleOrderProduct.IsSubOperation() {
 					// 减去新增的商品数量
 					orderProduct.Num -= saleOrderProduct.Num
+					// 如果该商品是套餐，则修改套餐子商品的数量
+					if orderProduct.ProductType == constant.ProductTypePackage {
+						subProducts := params.SaleOrder.GetPackageSubProductList(orderProduct.Uuid)
+						for _, subProduct := range subProducts {
+							uintNum := decimal.NewFromFloat(subProduct.Num).Div(decimal.NewFromFloat(orderProduct.Num)) // 每个套餐该子商品的数量
+							addNum := decimal.NewFromFloat(saleOrderProduct.Num).Mul(uintNum).Round(3).InexactFloat64() // 新增的套餐该子商品的数量
+							subProduct.Num -= addNum
+							if subProduct.Num <= 0 {
+								subProduct.SetDelete()
+							}
+							subProduct.SetUpdate()
+						}
+					}
 					if orderProduct.Num <= 0 {
 						orderProduct.SetDelete()
+						// 如果该商品是套餐，则删除套餐子商品
+						if orderProduct.ProductType == constant.ProductTypePackage {
+							subProducts := params.SaleOrder.GetPackageSubProductList(orderProduct.Uuid)
+							for _, subProduct := range subProducts {
+								subProduct.SetDelete()
+								subProduct.SetUpdate()
+							}
+						}
 					}
 					orderProduct.SetUpdate()
 					saleOrderProducts = append(saleOrderProducts, orderProduct)
@@ -5352,6 +5395,15 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 				// 将新的订单商品加入到订单的商品列表中，用于计算订单金额
 				params.SaleOrder.SaleOrderProducts = append(params.SaleOrder.SaleOrderProducts, saleOrderProduct)
 				saleOrderProducts = append(saleOrderProducts, saleOrderProduct)
+				// 如果该商品是套餐，则新建套餐子商品
+				if saleOrderProduct.ProductType == constant.ProductTypePackage {
+					subProducts, err := s.newPackageSubProduct(ctx, nil)
+					if err != nil {
+						return nil, errors.WithMessage(err)
+					}
+					params.SaleOrder.SaleOrderProducts = append(params.SaleOrder.SaleOrderProducts, subProducts...)
+					saleOrderProducts = append(saleOrderProducts, subProducts...)
+				}
 				// 商品数量不能超过999个
 				if saleOrderProduct.Num > constant.ProductNumMax {
 					return nil, errors.WithMessage(fmt.Errorf("%s %s", productName, i18n.Translate(ctx.GetLanguage(), "商品数量不能超过999个")))
@@ -5360,6 +5412,12 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 		}
 	}
 	return saleOrderProducts, nil
+}
+
+// 新建套餐子商品
+func (s *orderSrv) newPackageSubProduct(ctx context.Context, params []req.ProductParams) ([]*model.SaleOrderProduct, error) {
+
+	return nil, nil
 }
 
 // OrderCartProductAdd 向购物车添加商品

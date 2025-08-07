@@ -101,6 +101,28 @@ type ProductParams struct {
 	Remark                          string   `json:"remark"`                                     // 备注，平板端离线购物车提交
 
 	isPackageProduct bool `json:"is_package_product"` // 是否是套餐商品
+
+	subProducts         []ProductParams `json:"sub_products"`           // 套餐子商品列表。当商品是套餐商品时，该字段有值
+	isPackageSubProduct bool            `json:"is_package_sub_product"` // 是否是套餐子商品
+	packageUuid         uint64          `json:"package_uuid"`           // 套餐uuid,用于标注套餐子商品的套餐商品（sale_order_product）的uuid
+}
+
+func (req *ProductParams) SetIsPackageProduct(subProducts []ProductParams) {
+	req.subProducts = subProducts
+	req.isPackageProduct = true
+}
+
+func (req *ProductParams) SetIsPackageSubProduct(packageUuid uint64) {
+	req.isPackageSubProduct = true
+	req.packageUuid = packageUuid
+}
+
+func (req *ProductParams) GetIsPackageProduct() bool {
+	return req.isPackageProduct
+}
+
+func (req *ProductParams) GetIsPackageSubProduct() (bool, uint64) {
+	return req.isPackageSubProduct, req.packageUuid
 }
 
 // OrderCartProductNumReq 修改购物车商品数量请求参数
