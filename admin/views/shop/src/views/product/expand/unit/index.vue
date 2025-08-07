@@ -236,6 +236,7 @@ const relatedProductClick = (row) => {
 const handleProductSelectorClose = async (list) => {
   if (Array.isArray(list)) {
     try {
+      loading.value = true;
       await ProductApi.relateByUnit(
         {
           unit_id: model.value.unit_id,
@@ -249,8 +250,10 @@ const handleProductSelectorClose = async (list) => {
         type: 'success',
       })
       getData()
+      loading.value = false;
     } catch (error) {
       // 处理错误
+      loading.value = false;
     }
   }
   model.value = {}
