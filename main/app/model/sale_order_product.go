@@ -26,6 +26,7 @@ type SaleOrderProduct struct {
 	Name       string  `gorm:"column:name;type:varchar(255);not null;default:'';comment:'商品名称'" json:"name"`
 	FlavorName string  `gorm:"column:flavor_name;type:varchar(255);not null;default:'';comment:'规格名称'" json:"flavor_name"`
 	Num        float64 `gorm:"column:num;type:int(11);not null;default:0;comment:'商品数量。不能减为0，当数量为1再减时，标记删除'" json:"num"`
+	UnitNum    float64 `gorm:"column:unit_num;type:decimal(12,4);not null;default:0.00;comment:'单位数量，用于套餐子商品'" json:"unit_num"`
 	NumType    uint    `gorm:"column:num_type;type:tinyint(1);not null;default:0;comment:'数量类型, 0-整数 1-小数'" json:"num_type"`
 	Remark     string  `gorm:"column:remark;type:varchar(255);not null;default:'';comment:'备注，顾客对商品的备注信息'" json:"remark"`
 	IsBuffet   uint    `gorm:"column:is_buffet;type:tinyint(1);not null;default:0;comment:'是否为自助餐商品,0-否 1-是. 如果是自助餐商品，则sale_price为0'" json:"is_buffet"`
@@ -1278,6 +1279,10 @@ func NewDefaultSaleOrderProduct(def DefaultSaleOrderProduct, productPackage *Pro
 		SaleOrderProductAttributes: saleOrderProductAttributes,
 		PackageUuid:                def.PackageUuid,
 		ProductType:                def.ProductType,
+	}
+	// 套餐子商品，设置单位数量
+	if def.ProductType == constant.ProductTypePackageSubProduct {
+		product.UnitNum = def.Num
 	}
 	product.SetTaxRate(def.TaxRate)
 	// 设置商品包. 加购并送厨时用到，用于计算限购

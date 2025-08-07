@@ -5356,7 +5356,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 					if orderProduct.ProductType == constant.ProductTypePackage {
 						subProducts := params.SaleOrder.GetPackageSubProductList(orderProduct.Uuid)
 						for _, subProduct := range subProducts {
-							uintNum := decimal.NewFromFloat(subProduct.Num).Div(decimal.NewFromFloat(orderProduct.Num)) // 每个套餐该子商品的数量
+							uintNum := decimal.NewFromFloat(subProduct.UnitNum)                                         // 每个套餐该子商品的数量
 							addNum := decimal.NewFromFloat(saleOrderProduct.Num).Mul(uintNum).Round(3).InexactFloat64() // 新增的套餐该子商品的数量
 							subProduct.Num += addNum
 							subProduct.SetUpdate()
@@ -5369,7 +5369,7 @@ func (s *orderSrv) newSaleOrderProduct(ctx context.Context, params CreateSaleOrd
 					if orderProduct.ProductType == constant.ProductTypePackage {
 						subProducts := params.SaleOrder.GetPackageSubProductList(orderProduct.Uuid)
 						for _, subProduct := range subProducts {
-							uintNum := decimal.NewFromFloat(subProduct.Num).Div(decimal.NewFromFloat(orderProduct.Num)) // 每个套餐该子商品的数量
+							uintNum := decimal.NewFromFloat(subProduct.UnitNum)                                         // 每个套餐该子商品的数量
 							addNum := decimal.NewFromFloat(saleOrderProduct.Num).Mul(uintNum).Round(3).InexactFloat64() // 新增的套餐该子商品的数量
 							subProduct.Num -= addNum
 							if subProduct.Num <= 0 {
