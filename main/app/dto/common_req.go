@@ -12,3 +12,8 @@ var PageReqMessage = map[string]string{
 	"page_size.min": "每页大小不能小于1",
 	"page_size.max": "每页大小不能大于1100",
 }
+
+type CheckNameResult struct {
+	Lang      string `json:"lang"`
+	TextExist bool   `json:"text_exist"`
+}

@@ -238,6 +238,17 @@
           /*打印标签*/
           label_id: '',
           open_overall_discount: 0, //整单折扣
+
+          /*套餐分组*/
+          package_price: null, //套餐价格
+          is_open_stock: 0, //是否开启套餐库存
+          package_stock: null, //套餐可售卖库存
+          package_group: [
+            {
+              group_name: JSON.parse(languageData), //套餐分组名称
+              product_list: [],
+            },
+          ],
         },
         oldForm: {},
         /*库存变没变*/
@@ -409,6 +420,17 @@
                   });
                 });
               }
+
+              // 处理套餐
+              if (self.form.model.type == 30) {
+                self.form.model.package_group = JSON.parse(JSON.stringify(self.form.model.package.package_group));
+                self.form.model.package_group.forEach(group => {
+                  group.group_name = JSON.parse(group.group_name || '{}');
+                });
+                self.form.model.package_price = self.form.model.package.package_price;
+                self.form.model.package_stock = self.form.model.package.package_stock;
+                self.form.model.is_open_stock = self.form.model.package.is_open_stock;
+              }
             } catch (error) {
               console.log(error);
             }
@@ -483,9 +505,10 @@
           params.stock_remark = self.tiao.stock_remark;
 
           // 处理sku中的材料
-          params.sku.map((skuItem, skuIndex) => {
+          
+          (params.sku || []).map((skuItem, skuIndex) => {
             params.sku[skuIndex].material = [];
-            self.form.model.sku[skuIndex].material.map((materialItem) => {
+            (self.form.model.sku[skuIndex].material || []).map((materialItem) => {
               params.sku[skuIndex].material.push({
                 product_id: materialItem.product_id,
                 material_num: materialItem.material_num,
@@ -528,6 +551,29 @@
             };
             params = data;
           }
+
+          // 如果套餐类型，则处理套餐数据
+          if (params.type == 30) {
+            params.package_group.forEach(group => {
+              group.group_name = JSON.stringify(group.group_name);
+              // group.product_list 只需要保留product_id、num、sort，其他字段删除
+              let productList = [];
+              group.product_list.forEach(product => {
+                productList.push({
+                  product_id: product.product_id,
+                  num: product.num,
+                  sort: product.sort,
+                  item_id: product.item_id || 0,
+                });
+              });
+              group.product_list = productList;
+            });
+            // 删除sku
+            params.sku = [];
+            // 套餐类型不显示外送
+            params.is_show_delivery = 0;
+          }
+
           //库存变动的时候
           // 如果旧表单类型为20且库存数量发生变化，则设置stockNumChange为true
           if (this.oldForm.model.type == '20' && this.oldForm.model.sku[0].material_stock != this.form.model.sku[0].material_stock) {

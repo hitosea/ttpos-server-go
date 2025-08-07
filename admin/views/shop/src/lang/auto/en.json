@@ -2115,9 +2115,10 @@
     "请输入套餐价格": "Please enter the package price",
     "请添加套餐商品": "Please add package items",
     "添加分组": "Add group",
-    "实时可售上限": "Real-time sale limit",
-    "根据子菜品库存动态计算，库存变化自动更新": "Dynamically calculated based on sub-item inventory, with automatic updates for inventory changes",
+    "是否显示规格、属性": "Display specifications and attributes?",
+    "可售量": "Available quantity",
+    "根据子商品库存动态计算，库存变化自动更新": "Dynamically calculated based on sub-product inventory, stock changes are automatically updated",
+    "是否开启库存": "Enable inventory?",
     "套餐可售总量": "Total saleable quantity of the set",
-    "达到此可售总量后套餐自动售罄，与库存无关。不设置则不限总量": "Once this total saleable quantity is reached, the set will be automatically sold out, regardless of inventory. If not set, there is no limit on the total quantity",
-    "是否显示规格、属性": "Display specifications and attributes?"
+    "库存为0时套餐自动售罄": "When inventory is zero, the package will be automatically sold out"
 }

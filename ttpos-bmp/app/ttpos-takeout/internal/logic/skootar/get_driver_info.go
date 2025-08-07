@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	api "ttpos-bmp/app/ttpos-takeout/api/takeout"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/skootar"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -15,7 +15,7 @@ import (
 var trackingDriverApiPath = "/api/tracking_driver"
 
 // GetDriverInfo 获取司机位置
-func (s *sSkootar) GetDriverInfo(ctx context.Context, req *input.GetDriverInfoInp) (res *api.GetDriverInfoResp, err error) {
+func (s *sSkootar) GetDriverInfo(ctx context.Context, req *dto.GetDriverInfoInp) (res *api.GetDriverInfoResp, err error) {
 	reqInp := &skootar.GetDriverLocationInp{
 		ReqBase:   s.ReqBase(),
 		SKootarId: req.SKootarId,

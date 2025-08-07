@@ -7,8 +7,8 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/skootar"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -18,7 +18,7 @@ import (
 var cancelOrderApiPath = "/api/cancel_created_job"
 
 // CancelOrder 取消订单
-func (s *sSkootar) CancelOrder(ctx context.Context, req *input.CancelOrderInp) (res *api.CancelOrderResp, err error) {
+func (s *sSkootar) CancelOrder(ctx context.Context, req *dto.CancelOrderInp) (res *api.CancelOrderResp, err error) {
 	reqInp := &skootar.CancelOrderInp{
 		ReqBase:      s.ReqBase(),
 		JobId:        req.JobId,

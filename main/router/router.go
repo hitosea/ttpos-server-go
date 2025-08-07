@@ -12,6 +12,7 @@ import (
 	"ttpos-server-go/app/api/v1/shop"
 	"ttpos-server-go/app/api/v1/tablet"
 	_ "ttpos-server-go/app/event" // 注册事件
+	"ttpos-server-go/app/service/rpc"
 	"ttpos-server-go/pkg/cache"
 	"ttpos-server-go/pkg/database"
 
@@ -49,6 +50,7 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 		// 	return
 		// }
 		// rpc.TestCancelOrderDelay()
+		rpc.TestCompanyList()
 		c.String(http.StatusOK, "Success")
 	})
 	apiV1 := r.Group("api/v1")
@@ -66,8 +68,11 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 			shop.RegisterRechargeOrderHandlers(shopGroup, dbm, cache)
 			shop.RegisterStatisticsHandlers(shopGroup, dbm, cache)
 			shop.RegisterMemberOrderHandlers(shopGroup, dbm, cache)
-			shop.RegisterAuthHandlers(shopGroup, dbm, cache)  // 认证
-			shop.RegisterStaffHandlers(shopGroup, dbm, cache) // 管理员管理
+			shop.RegisterAuthHandlers(shopGroup, dbm, cache)    // 认证
+			shop.RegisterStaffHandlers(shopGroup, dbm, cache)   // 管理员管理
+			shop.RegisterSettingHandlers(shopGroup, dbm, cache) // 设置
+			shop.RegisterProductHandlers(shopGroup, dbm, cache) // 商品
+			shop.RegisterMiscHandlers(shopGroup, dbm, cache)    // 杂项
 		}
 		// 收银端
 		cashierGroup := apiV1.Group("/cashier")

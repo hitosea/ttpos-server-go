@@ -5,7 +5,7 @@ import (
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"ttpos-bmp/app/ttpos-takeout/api/echo"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 
@@ -18,7 +18,7 @@ func Register(s *grpcx.GrpcServer) {
 }
 
 func (*Controller) Echo(ctx context.Context, in *echo.EchoRequest) (res *echo.EchoResponse, err error) {
-	rst, err := service.Echo().Msg(ctx, &input.EchoMsgInput{
+	rst, err := service.Echo().Msg(ctx, &dto.EchoMsgInput{
 		Message:      in.Message,
 		OtherMessage: "other message",
 	})

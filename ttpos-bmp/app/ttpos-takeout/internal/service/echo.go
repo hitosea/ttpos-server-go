@@ -7,12 +7,12 @@ package service
 
 import (
 	"context"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto"
 )
 
 type (
 	IEcho interface {
-		Msg(ctx context.Context, in *input.EchoMsgInput) (out *input.EcoMsgOutput, err error)
+		Msg(ctx context.Context, in *dto.EchoMsgInput) (out *dto.EcoMsgOutput, err error)
 	}
 )
 

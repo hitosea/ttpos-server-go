@@ -7,7 +7,7 @@ import (
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gctx"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/conf"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/skootar"
 	"ttpos-bmp/app/ttpos-takeout/internal/service"
 )
 

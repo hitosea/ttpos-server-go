@@ -66,15 +66,24 @@
 
     <div class="common-form mt50">{{ $t('库存') }}</div>
 
-    <el-form-item for="no_click" :label="$t('实时可售上限')" >
+    <el-form-item for="no_click" :label="$t('可售量')" >
       <numInput type="text" :placeholder="$t('请输入库存')" disabled v-model="nowStock" :maxlength="50" class="max-w460"></numInput>
-      <div class="tips">{{ $t('根据子菜品库存动态计算，库存变化自动更新') }}</div>
+      <div class="gray9">{{ $t('根据子商品库存动态计算，库存变化自动更新') }}</div>
     </el-form-item>
 
-    <el-form-item for="no_click" :prop="`model.package_stock`" :label="$t('套餐可售总量')" :rules="[{ required: true, message: $t('请输入库存') }]">
-      <numInput type="text" :placeholder="$t('请输入库存')" :precision="0" v-model="form.model.package_stock" :maxlength="50" class="max-w460"></numInput>
-      <div class="tips">{{ $t('达到此可售总量后套餐自动售罄，与库存无关。不设置则不限总量') }}</div>
+    <el-form-item for="no_click" :label="$t('是否开启库存')">
+      <el-radio-group v-model="form.model.is_open_stock">
+        <el-radio :value="1">{{ $t('是') }}</el-radio>
+        <el-radio :value="0">{{ $t('否') }}</el-radio>
+      </el-radio-group>
     </el-form-item>
+
+    <el-form-item v-if="form.model.is_open_stock" for="no_click" :prop="`model.package_stock`" :label="$t('套餐可售总量')" :rules="[{ required: true, message: $t('请输入库存') }]">
+      <numInput type="text" :placeholder="$t('请输入库存')" :precision="0" v-model="form.model.package_stock" :maxlength="50" class="max-w460"></numInput>
+      <div class="gray9">{{ $t('库存为0时套餐自动售罄') }}</div>
+    </el-form-item>
+
+
 
     <el-form-item for="no_click" :label="$t('库存计算方式：')">
       <el-radio-group v-model="form.model.deduct_stock_type">

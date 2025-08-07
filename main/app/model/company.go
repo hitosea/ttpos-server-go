@@ -212,25 +212,27 @@ func (model *CompanySetting) SmsEnabled() bool {
 
 // GetDefaultLanguage 获取默认语言。 注意：这是admin端的显示的第一个语言
 func (model *CompanySetting) GetDefaultLanguage() string {
-	languages := make([]string, 0)
-	if err := json.Unmarshal([]byte(model.Languages), &languages); err != nil {
-		fmt.Println("GetDefaultLanguage error", err)
-		tmp := ""
-		err = json.Unmarshal([]byte(model.Languages), &tmp)
-		if err != nil {
-			fmt.Println("GetDefaultLanguage error1", err)
-			return "en"
-		}
-		err = json.Unmarshal([]byte(tmp), &languages)
-		if err != nil {
-			fmt.Println("GetDefaultLanguage error2", err)
-			return "en"
-		}
-	}
+	languages := model.GetLanguages()
 	if len(languages) > 0 {
 		return languages[0]
 	}
 	return "en"
+}
+
+func (model *CompanySetting) GetLanguages() []string {
+	languages := make([]string, 0)
+	if err := json.Unmarshal([]byte(model.Languages), &languages); err != nil {
+		tmp := ""
+		err = json.Unmarshal([]byte(model.Languages), &tmp)
+		if err != nil {
+			return nil
+		}
+		err = json.Unmarshal([]byte(tmp), &languages)
+		if err != nil {
+			return nil
+		}
+	}
+	return languages
 }
 
 // CompanyStaff saas库保存的集团员工关联表 ttpos_company_staff
