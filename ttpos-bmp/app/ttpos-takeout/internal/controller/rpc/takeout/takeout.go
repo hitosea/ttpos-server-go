@@ -11,7 +11,7 @@ import (
 	"github.com/gogf/gf/contrib/rpc/grpcx/v2"
 	"github.com/gogf/gf/v2/frame/g"
 
-	"ttpos-bmp/app/ttpos-takeout/internal/model/input"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto"
 )
 
 type Controller struct {

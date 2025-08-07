@@ -6,7 +6,7 @@ import (
 	"fmt"
 	api "ttpos-bmp/app/ttpos-takeout/api/takeout"
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/skootar"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"

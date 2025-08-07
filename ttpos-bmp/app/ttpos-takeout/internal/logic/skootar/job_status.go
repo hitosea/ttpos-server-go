@@ -15,8 +15,8 @@ import (
 	"ttpos-bmp/app/ttpos-takeout/internal/consts"
 	"ttpos-bmp/app/ttpos-takeout/internal/dao"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/do"
+	"ttpos-bmp/app/ttpos-takeout/internal/model/dto/skootar"
 	"ttpos-bmp/app/ttpos-takeout/internal/model/entity"
-	"ttpos-bmp/app/ttpos-takeout/internal/model/input/skootar"
 )
 
 func (s *sSkootar) JobStatusChange(ctx context.Context, req *v1.SkootarStatusReq) (res *v1.SkootarStatusRes, err error) {

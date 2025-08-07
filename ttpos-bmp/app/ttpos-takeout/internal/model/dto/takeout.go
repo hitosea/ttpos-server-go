@@ -1,4 +1,4 @@
-package input
+package dto
 
 type ConfirmOrderInp struct {
 	JobId string

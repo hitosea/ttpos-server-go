@@ -1,4 +1,4 @@
-package input
+package dto
 
 type EchoMsgInput struct {
 	Message string
