@@ -21988,6 +21988,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/product_resp.Product"
                         }
                     ]
+                },
+                "num": {
+                    "description": "商品数量，分组中item的数量",
+                    "type": "integer"
                 }
             }
         },
@@ -22260,10 +22264,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/product_resp.PackageProductDetail"
                     }
-                },
-                "num": {
-                    "description": "套餐商品数量",
-                    "type": "integer"
                 }
             }
         },
@@ -22295,6 +22295,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.LocaleResponse"
                         }
                     ]
+                },
+                "num": {
+                    "description": "套餐商品数量",
+                    "type": "integer"
                 },
                 "products": {
                     "description": "套餐商品列表",

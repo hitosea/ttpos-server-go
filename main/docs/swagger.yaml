@@ -1250,6 +1250,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/product_resp.Product'
         description: 商品详情
+      num:
+        description: 商品数量，分组中item的数量
+        type: integer
     type: object
   product_resp.Product:
     properties:
@@ -1420,9 +1423,6 @@ definitions:
         items:
           $ref: '#/definitions/product_resp.PackageProductDetail'
         type: array
-      num:
-        description: 套餐商品数量
-        type: integer
     type: object
   product_resp.ProductListWithPaginationResp:
     properties:
@@ -1442,6 +1442,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.LocaleResponse'
         description: 套餐分组名称
+      num:
+        description: 套餐商品数量
+        type: integer
       products:
         allOf:
         - $ref: '#/definitions/product_resp.ProductList'

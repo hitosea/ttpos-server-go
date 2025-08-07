@@ -4872,8 +4872,71 @@ func (s *orderSrv) GetProductDetail(ctx context.Context, productPackageUuid uint
 	return formatProducts[0], nil
 }
 
+// OrderCartProductPackageAdd 往购物车添加套餐
 func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.OrderCartProductPackageAddReq) (*resp.ShopCart, error) {
-	return nil, nil
+	// 上锁防止并发操作
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+
+	// 3. 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill)
+	}
+
+	// 4. 判断订单状态
+	if err := saleBill.ValidateOrderStatus(ctx.GetSource(), constant.OrderAddProduct, request.SaleOrderUuid); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 5. 设置操作来源
+	saleBill.SetOperateSource(ctx.GetSource())
+
+	// 6. 转换为ProductParams格式进行加购
+	productAddReq, err := s.convertPackageToProductAddReq(ctx, request)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 7. 加购套餐
+	if err := s.ActionAdd(ctx, productAddReq, saleBill); err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	// 8. 获取新的购物车商品数据
+	info, err := s.GetOrderCartInfo(ctx, request.SaleBillUuid)
+	if err != nil {
+		return nil, errors.WithMessage(err)
+	}
+
+	return info, nil
+}
+
+// convertPackageToProductAddReq 将套餐请求转换为商品加购请求
+func (s *orderSrv) convertPackageToProductAddReq(ctx context.Context, request req.OrderCartProductPackageAddReq) (req.ProductAddReq, error) {
+	var products []req.ProductParams
+
+	for _, productReq := range request.Products {
+		productParam := req.ProductParams{
+			FlavorProductBomUuid:            productReq.FlavorUuid,
+			Num:                             productReq.Num,
+			Operation:                       "add", // 默认加购操作
+			ProductPackageAttributeUuidList: productReq.AttributeUuidList,
+		}
+		products = append(products, productParam)
+	}
+
+	return req.ProductAddReq{
+		SaleBillUuid:  request.SaleBillUuid,
+		SaleOrderUuid: request.SaleOrderUuid,
+		Products:      products,
+	}, nil
 }
 
 func (s *orderSrv) OrderCartProductFlavorAndAttribute(ctx context.Context, request req.OrderCartProductFlavorAndAttributeReq) (*resp.ProductFlavorAndAttributeRes, error) {

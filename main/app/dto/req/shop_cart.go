@@ -99,6 +99,8 @@ type ProductParams struct {
 	Operation                       string   `json:"operation"`                                  // 操作类型。add: 加购，sub: 减购
 	MustPlanUuid                    uint64   `json:"must_plan_uuid"`                             // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
 	Remark                          string   `json:"remark"`                                     // 备注，平板端离线购物车提交
+
+	isPackageProduct bool `json:"is_package_product"` // 是否是套餐商品
 }
 
 // OrderCartProductNumReq 修改购物车商品数量请求参数

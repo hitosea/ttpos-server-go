@@ -5,7 +5,7 @@ FROM apache/skywalking-go:0.5.0-go1.23 AS builder
 WORKDIR /app
 
 # 设置代理
-ENV GOPROXY=https://goproxy.cn,direct
+# ENV GOPROXY=https://goproxy.cn,direct
 RUN wget http://cmdb.keli.vip/static/assets/script/apache-skywalking-go-0.6.0-bin.tar.gz && tar xvf apache-skywalking-go-0.6.0-bin.tar.gz
 
 #注意 context 要设置为上级目录,因为要拷贝别的模块的文件
@@ -27,8 +27,8 @@ RUN go mod download
 # 复制源代码
 COPY main .
 
-RUN GOPROXY=https://goproxy.cn,direct /app/apache-skywalking-go-0.6.0-bin/bin/skywalking-go-agent-0.6.0-linux-amd64   -inject ./main.go
-RUN GOPROXY=https://goproxy.cn,direct go build -toolexec=/app/apache-skywalking-go-0.6.0-bin/bin/skywalking-go-agent-0.6.0-linux-amd64  -a -ldflags="-s -w"  -o main ./main.go
+RUN  /app/apache-skywalking-go-0.6.0-bin/bin/skywalking-go-agent-0.6.0-linux-amd64   -inject ./main.go
+RUN  go build -toolexec=/app/apache-skywalking-go-0.6.0-bin/bin/skywalking-go-agent-0.6.0-linux-amd64  -a -ldflags="-s -w"  -o main ./main.go
 
 
 # 添加执行权限

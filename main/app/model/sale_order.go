@@ -534,6 +534,17 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 		if saleOrderProduct.MustPlanUuid != 0 {
 			canChangeNum = saleOrderProduct.ProductMustPlan.GetCanChangeNum()
 		}
+		// 套餐商品列表
+		packageProductList := make([]resp.PackageProduct, 0)
+		for _, packageProduct := range saleOrderProduct.SaleOrderPackageProducts {
+			packageProductList = append(packageProductList, resp.PackageProduct{
+				Uuid:                packageProduct.SaleOrderProduct.Uuid,
+				LocaleName:          packageProduct.SaleOrderProduct.MultiLanguageName.GetNames(),
+				LocaleAttributeName: packageProduct.SaleOrderProduct.GetAttributeName(),
+				Num:                 packageProduct.SaleOrderProduct.Num,
+			})
+		}
+
 		product := resp.Product{
 			Uuid:                saleOrderProduct.Uuid,
 			LocaleName:          saleOrderProduct.MultiLanguageName.GetNames(),
@@ -561,6 +572,10 @@ func (model *SaleOrder) GetProductList(hasOrderedH5ProductWithReject bool) []res
 			UnitPrice:           saleOrderProduct.SalePrice,
 			IsShowKitchen:       saleOrderProduct.ProductPackage.IsShowKitchen,
 			CreateTime:          saleOrderProduct.CreateTime,
+			ProductType:         saleOrderProduct.ProductPackage.ProductType,
+			PackageProductList: resp.PackageProductList{
+				List: packageProductList,
+			},
 		}
 		if saleOrderProduct.ProductionOrderProduct != nil {
 			if saleOrderProduct.ProductionOrderProduct.Status == constant.ProductionOrderProductStatusFinished {

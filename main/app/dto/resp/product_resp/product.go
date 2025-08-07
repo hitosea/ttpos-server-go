@@ -41,6 +41,7 @@ type ProductPackageGroup struct {
 	Uuid       uint64             `json:"uuid"`        // 套餐分组UUID
 	LocaleName dto.LocaleResponse `json:"locale_name"` // 套餐分组名称
 	IsFull     bool               `json:"is_full"`     // 是否选满
+	Num        int                `json:"num"`         // 套餐商品数量
 	Products   ProductList        `json:"products"`    // 套餐商品列表
 }
 
@@ -58,12 +59,12 @@ func (p *ProductPackageGroup) GetIsFull() bool {
 // ProductList 商品列表
 type ProductList struct {
 	List []PackageProductDetail `json:"list"`
-	Num  int                    `json:"num"` // 套餐商品数量
 }
 
 // PackageProductDetail 套餐商品详情
 type PackageProductDetail struct {
 	Detail  Product `json:"detail"`   // 商品详情
+	Num     int     `json:"num"`      // 商品数量，分组中item的数量
 	CanEdit bool    `json:"can_edit"` // 是否可以编辑
 }
 

@@ -93,6 +93,9 @@ type SaleOrderProduct struct {
 	H5OrderProductUuid uint64 `gorm:"column:h5_order_product_uuid;type:bigint(20) unsigned;default:0;comment:h5订单商品ID，用于关联h5订单商品，用于判断是否为h5订单商品;NOT NULL" json:"h5_order_product_uuid"`
 	H5OrderUuid        uint64 `gorm:"column:h5_order_uuid;type:bigint(20) unsigned;default:0;comment:扫码订单ID，用于关联扫码订单，用于判断是否为扫码订单商品;NOT NULL" json:"h5_order_uuid"`
 
+	// 套餐相关
+	PackageUuid uint64 `gorm:"column:package_uuid;type:bigint(20);not null;default:0;comment:'套餐uuid'" json:"package_uuid"` // 只有套餐子商品才会有这个字段
+
 	// 送厨时间
 	SendKitchenTime int64 `gorm:"column:send_kitchen_time;type:int(10);not null;default:0;comment:'送厨时间'" json:"send_kitchen_time"`
 
@@ -108,6 +111,7 @@ type SaleOrderProduct struct {
 	ProductionOrderProduct     *ProductionOrderProduct      `gorm:"foreignKey:SaleOrderProductUuid;references:uuid"`
 	H5Order                    *H5Order                     `gorm:"foreignKey:H5OrderUuid;references:uuid"`
 	ProductMustPlan            *ProductMustPlan             `gorm:"foreignKey:MustPlanUuid;references:uuid"`
+	SaleOrderPackageProducts   []*SaleOrderPackageProduct   `gorm:"foreignKey:RelatedUuid;references:Uuid"`
 
 	// 内部字段
 	operation        string `gorm:"-"` // 操作类型。add: 加购，sub: 减购
@@ -1322,7 +1326,7 @@ func (model *SaleOrderProduct) ProductKey() string {
 }
 
 // GenerateProductSign 生成商品包签名. 相同的商品，商品签名相同,用于取消拆单时合并商品。
-// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
+// 格式：物料,物料,物料-属性,属性,属性-备注内容-必点方案uuid-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单-套餐uuid
 // 更新签名的场景：
 // 1 改价销售订单商品价格后要重新生成签名
 // 2 修改备注
@@ -1366,9 +1370,77 @@ func (model *SaleOrderProduct) GenerateProductSign() string {
 	}
 	reasonStr := utils.ToJson(reason)
 
-	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d",
+	return fmt.Sprintf("%s-%s-%s-%d-%d-%d-%d-%d-%s-%d-%d-%d",
 		bomIdListStr,
 		attributeIdListStr,
+		model.Remark,
+		model.MustPlanUuid,
+		model.ProductionOrderUuid,
+		model.ChangePriceTime,
+		model.GiftTime,
+		model.WrapTime,
+		reasonStr,
+		model.H5OrderUuid,
+		model.IsAcceptOrder, // 是否接单. 为了让未下单的h5商品和未送厨的商品不被合并在一起
+		model.PackageUuid,
+	)
+}
+
+// GeneratePackageSign 生成商品套餐签名. 相同的商品套餐，商品套餐签名相同,用于取消拆单时合并商品。
+// 格式：套餐uuid-[子商品uuid,属性,属性;子商品uuid,属性,属性;]-备注内容-送厨批次uuid-改价时间-赠菜时间-打包时间-退菜原因-H5OrderUuid-是否接单
+// 更新签名的场景：
+// 1 改价销售订单商品价格后要重新生成签名
+// 2 修改备注
+// 3 送厨
+// 4 赠菜
+// 5 打包
+// 6 退菜
+// 7 h5下单
+// 8 接单
+func (model *SaleOrderProduct) GeneratePackageSign() string {
+	packageUuid := model.ProductPackageUuid
+
+	type SubProduct struct {
+		Uuid           uint64   `json:"uuid"`
+		AttributeUuids []uint64 `json:"attribute_uuids"`
+	}
+
+	toString := func(subProduct SubProduct) string {
+		attributeUuidsStr := make([]string, 0)
+		for _, attributeUuid := range subProduct.AttributeUuids {
+			attributeUuidsStr = append(attributeUuidsStr, strconv.FormatUint(attributeUuid, 10))
+		}
+		return fmt.Sprintf("%d,%s;", subProduct.Uuid, strings.Join(attributeUuidsStr, ","))
+	}
+	subProductList := make([]SubProduct, 0)
+
+	for _, packageProduct := range model.SaleOrderPackageProducts {
+		subProduct := SubProduct{
+			Uuid:           packageProduct.ProductPackageGroupItemUuid,
+			AttributeUuids: packageProduct.SaleOrderProduct.GetAttributeUuidList(),
+		}
+		subProductList = append(subProductList, subProduct)
+	}
+
+	subProductListStr := make([]string, 0)
+	for _, subProduct := range subProductList {
+		subProductListStr = append(subProductListStr, toString(subProduct))
+	}
+
+	// 构建商品的退菜原因
+	type Reason struct {
+		Uuids []uint64 `json:"uuids"`
+		Text  string   `json:"text"`
+	}
+	reason := Reason{Uuids: make([]uint64, 0), Text: model.CancelReason}
+	for _, item := range model.CancelReasons {
+		reason.Uuids = append(reason.Uuids, item.ReturnFoodReasonUuid)
+	}
+	reasonStr := utils.ToJson(reason)
+
+	return fmt.Sprintf("%d-[%s]-%s-%d-%d-%d-%d-%d-%s-%d-%d",
+		packageUuid,
+		strings.Join(subProductListStr, ""),
 		model.Remark,
 		model.MustPlanUuid,
 		model.ProductionOrderUuid,

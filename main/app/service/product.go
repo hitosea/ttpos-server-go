@@ -195,6 +195,7 @@ func FormatProducts(ctx context.Context, products []model.ProductPackage, option
 				packageGroup := product_resp.ProductPackageGroup{
 					Uuid:       group.Uuid,
 					LocaleName: group.MultiLanguageName.GetNames(),
+					Num:        len(productList),
 					Products: product_resp.ProductList{
 						List: productList,
 					},
