@@ -127,7 +127,8 @@ func (p *PrinterRepoImpl) getPrintingBusinessDataContent(
 
 	// 图片打印
 	if p.IsImagePrinterMethod() {
-		return template.NewBusinessDataImgTemplate(base).GetPrintContent(businessData, startTime, endTime)
+		// 调用58mm模板
+		return template.NewBusinessDataImgTemplate58mm(base).GetPrintContent58mm(businessData, startTime, endTime)
 	}
 
 	/* *
