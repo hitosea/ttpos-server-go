@@ -132,7 +132,7 @@ func (p *PrinterRepoImpl) getPrintingHandoverOrderContent(
 
 	// 图片打印
 	if p.IsImagePrinterMethod() {
-		return template.NewHandoverImgTemplate(base).GetPrintContent(
+		return template.NewHandoverImg58mmTemplate(base).GetPrintContent58mm(
 			tmp,
 			log,
 			businessData,
