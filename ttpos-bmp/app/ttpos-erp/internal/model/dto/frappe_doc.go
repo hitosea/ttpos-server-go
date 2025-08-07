@@ -31,41 +31,41 @@ type FrappeDoc struct {
 // RequestParams 定义请求参数结构体
 type RequestParams struct {
 	// Fields 要返回的字段列表
-	Fields []string
+	Fields []string `json:"fields,omitempty"`
 	// Filters 筛选条件列表
-	Filters [][]string
+	Filters [][]string `json:"filters,omitempty"`
 	// OrFilters 筛选条件列表
-	OrFilters [][]string
+	OrFilters [][]string `json:"or_filters,omitempty"`
 	// LimitStart 分页起始位置
-	LimitStart int
+	LimitStart int `json:"limit_start,omitempty"`
 	// Limit 分页返回的数量
-	Limit int
+	Limit int `json:"limit,omitempty"`
 	// OrderBy 排序参数
-	OrderBy OrderBy
+	OrderBy OrderBy `json:"order_by,omitempty"`
 	// GroupBy 分组参数
-	GroupBy string
+	GroupBy string `json:"group_by,omitempty"`
 	// AsDict 作为字典返回
-	AsDict bool
+	AsDict bool `json:"as_dict,omitempty"`
 }
 
 // OrderBy 定义排序参数结构体
 type OrderBy struct {
 	// Field 要排序的字段
-	Field string
+	Field string `json:"field,omitempty"`
 	// Order 排序顺序，可选值为 "asc"（升序）或 "desc"（降序）
-	Order string
+	Order string `json:"order,omitempty"`
 }
 
 type ApiResp struct {
-	data   *gmap.Map
-	errors []ApiError
+	Data   *gmap.Map  `json:"data,omitempty"`
+	Errors []ApiError `json:"errors,omitempty"`
 }
 
 type ApiError struct {
-	typeStr   string `json:"type"`
-	message   string `json:"message"`
-	title     string `json:"title"`
-	indicator string `json:"indicator"`
+	TypeStr   string `json:"type,omitempty"`
+	Message   string `json:"message,omitempty"`
+	Title     string `json:"title,omitempty"`
+	Indicator string `json:"indicator,omitempty"`
 }
 
 // UomConversionDetail结构体，表示计量单位换算明细

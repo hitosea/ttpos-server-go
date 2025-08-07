@@ -23,11 +23,11 @@ func New() *sEcho {
 	return &sEcho{}
 }
 
-func (s *sEcho) Msg(ctx context.Context, in *input.EchoMsgInput) (out *input.EcoMsgOutput, err error) {
+func (s *sEcho) Msg(ctx context.Context, in *dto.EchoMsgInput) (out *dto.EcoMsgOutput, err error) {
 	g.Log().Infof(ctx, "获取随路数据:%v", grpcx.Ctx.IncomingMap(ctx))
 	var echoEntity = &entity.Echo{}
 	dao.Echo.Ctx(ctx).Scan(echoEntity)
-	out = &input.EcoMsgOutput{
+	out = &dto.EcoMsgOutput{
 		Message: fmt.Sprintf("Hello %v: %v", in.Message, echoEntity.Msg),
 	}
 	return

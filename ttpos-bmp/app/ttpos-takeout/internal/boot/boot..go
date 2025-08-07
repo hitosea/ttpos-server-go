@@ -1,8 +1,9 @@
 package boot
 
 import (
-	"github.com/gogf/gf/v2/os/gctx"
 	"ttpos-bmp/app/ttpos-takeout/internal/global"
+
+	"github.com/gogf/gf/v2/os/gctx"
 )
 
 var ctx = gctx.GetInitCtx()

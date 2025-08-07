@@ -3,9 +3,10 @@ package main
 import (
 	_ "ttpos-bmp/app/ttpos-erp/internal/packed"
 
+	_ "ttpos-bmp/app/ttpos-erp/internal/boot"
 	_ "ttpos-bmp/app/ttpos-erp/internal/logic"
 
-	_ "ttpos-bmp/app/ttpos-erp/internal/boot"
+	_ "github.com/gogf/gf/contrib/drivers/mysql/v2"
 
 	"github.com/gogf/gf/v2/os/gctx"
 

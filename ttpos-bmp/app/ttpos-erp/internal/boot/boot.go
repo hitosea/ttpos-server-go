@@ -7,6 +7,6 @@ var (
 )
 
 func init() {
-	//InitRpc(ctx)
+	InitRpc(ctx)
 	InitConsumer(ctx)
 }

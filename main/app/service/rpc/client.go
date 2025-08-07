@@ -6,6 +6,7 @@ import (
 	"ttpos-server-go/app/api/helper"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
+	"ttpos-server-go/app/service/rpc/erp"
 	"ttpos-server-go/app/service/rpc/takeout"
 	"ttpos-server-go/pkg/logger"
 
@@ -144,5 +145,15 @@ func TestCancelOrder() error {
 		return err
 	}
 	logger.Logger.Info("外送服务gRPC客户端测试成功")
+	return nil
+}
+
+func TestCompanyList() error {
+	err := erp.NewIErpSrv().GetCompanyList(context.Background())
+	if err != nil {
+		logger.Logger.Error("调用erp服务gRPC客户端失败: %v", zap.Error(err))
+		return err
+	}
+	logger.Logger.Info("ERP服务gRPC客户端测试成功")
 	return nil
 }

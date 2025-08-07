@@ -52,7 +52,7 @@ func (c *Controller) ConfirmOrder(ctx context.Context, req *api.ConfirmOrderReq)
 	if takeoutJob == nil {
 		return nil, gerror.Wrap(gerror.New("订单不存在"), "确认订单失败")
 	}
-	res, err = c.getService(takeoutJob.ProviderName).ConfirmOrder(ctx, &input.ConfirmOrderInp{JobId: takeoutJob.TakeoutRefNo})
+	res, err = c.getService(takeoutJob.ProviderName).ConfirmOrder(ctx, &dto.ConfirmOrderInp{JobId: takeoutJob.TakeoutRefNo})
 	if err != nil {
 		return nil, gerror.Wrap(err, "确认订单失败")
 	}
@@ -71,7 +71,7 @@ func (c *Controller) GetDriverInfo(ctx context.Context, req *api.GetDriverInfoRe
 	if takeoutJob.SkootarId == "" {
 		return nil, gerror.Wrap(gerror.New("未有骑手接单"), "获取司机位置失败")
 	}
-	res, err = c.getService(takeoutJob.ProviderName).GetDriverInfo(ctx, &input.GetDriverInfoInp{
+	res, err = c.getService(takeoutJob.ProviderName).GetDriverInfo(ctx, &dto.GetDriverInfoInp{
 		SKootarId: takeoutJob.SkootarId,
 		Name:      takeoutJob.SkootarName,
 		Phone:     takeoutJob.SkootarPhone,
@@ -93,7 +93,7 @@ func (c *Controller) CancelOrder(ctx context.Context, req *api.CancelOrderReq) (
 	if takeoutJob == nil {
 		return nil, gerror.Wrap(gerror.New("订单不存在"), "取消订单失败")
 	}
-	res, err = c.getService(takeoutJob.ProviderName).CancelOrder(ctx, &input.CancelOrderInp{JobId: takeoutJob.TakeoutRefNo, Reason: req.Reason})
+	res, err = c.getService(takeoutJob.ProviderName).CancelOrder(ctx, &dto.CancelOrderInp{JobId: takeoutJob.TakeoutRefNo, Reason: req.Reason})
 	if err != nil {
 		return nil, gerror.Wrap(err, "取消订单失败")
 	}

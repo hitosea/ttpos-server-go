@@ -1,4 +1,4 @@
-package erp
+package erpnext
 
 import (
 	"time"

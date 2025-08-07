@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"context"
+	"ttpos-bmp/app/ttpos-takeout/internal/controller/callback"
+	"ttpos-bmp/internal/pkg/middleware"
+
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcmd"
-	"ttpos-bmp/app/ttpos-takeout/internal/controller/callback"
-	"ttpos-bmp/internal/pkg/middleware"
 
 	"ttpos-bmp/app/ttpos-takeout/internal/controller/hello"
 )

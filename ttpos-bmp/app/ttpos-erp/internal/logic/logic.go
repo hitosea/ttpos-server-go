@@ -5,5 +5,6 @@
 package logic
 
 import (
-	_ "ttpos-bmp/app/ttpos-erp/internal/logic/erp"
+	_ "ttpos-bmp/app/ttpos-erp/internal/logic/company"
+	_ "ttpos-bmp/app/ttpos-erp/internal/logic/erpnext"
 )
