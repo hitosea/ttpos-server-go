@@ -148,7 +148,12 @@ func (p *PrinterRepoImpl) getPrintingInvoiceContent(
 				saleOrder,
 			)
 		} else {
-			// TODO 调用58mm模板
+			return template.NewInvoiceImg58mmTemplate(base).GetPrintContent58mm(
+				settingPrinterInfo,
+				tmp,
+				saleBill,
+				saleOrder,
+			)
 		}
 
 	}
