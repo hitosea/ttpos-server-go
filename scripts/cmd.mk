@@ -89,6 +89,10 @@ init-env:
 		sed -i.bak 's/^APP_ID=.*/APP_ID='$$(openssl rand -hex 3)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_PASSWORD=.*/DB_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 		sed -i.bak 's/^DB_ROOT_PASSWORD=.*/DB_ROOT_PASSWORD='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
+		# 新增中台配置 \
+		sed -i.bak 's/^NACOS_AUTH_TOKEN=.*/NACOS_AUTH_TOKEN='$$(openssl rand -hex 32 | base64)'/' .env && rm .env.bak; \
+		sed -i.bak 's/^NACOS_AUTH_IDENTITY_KEY=.*/NACOS_AUTH_IDENTITY_KEY='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
+		sed -i.bak 's/^NACOS_AUTH_IDENTITY_VALUE=.*/NACOS_AUTH_IDENTITY_VALUE='$$(openssl rand -hex 8)'/' .env && rm .env.bak; \
 	fi 
 	@echo "🔍 检查 .env 文件是否存在"
 	if [ -f ".env" ]; then \
