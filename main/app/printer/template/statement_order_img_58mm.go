@@ -309,10 +309,14 @@ func (t *statementOrderImg58mmTemplate) GetPrintContent58mm(
 	if temp != 3 && temp != 4 && temp != 5 {
 		var productWidth, priceQtyWidth int
 		if t.base.Lang == "en" || t.base.Lang == "th" || t.base.Lang == "tr" || t.base.Lang == "my" {
-			productWidth = 142  // 210 * 0.676 ≈ 142
-			priceQtyWidth = 155 // 230 * 0.676 ≈ 155
+			productWidth = 160  // 给第一列更多空间显示"Product"等英文词汇
+			priceQtyWidth = 110 // 压缩第二列宽度
 			if t.base.Lang == "th" {
-				productWidth = 135 // 200 * 0.676 ≈ 135
+				productWidth = 150 // 泰语调整
+			}
+			if t.base.Lang == "en" {
+				productWidth = 240 // 泰语调整
+				priceQtyWidth = 70 // 压缩第二列宽度
 			}
 		} else {
 			productWidth = 210 // 310 * 0.676 ≈ 210
