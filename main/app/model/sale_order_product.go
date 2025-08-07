@@ -121,8 +121,14 @@ type SaleOrderProduct struct {
 	unOrderH5Product bool   `gorm:"-"` // 是否为未下单的h5订单商品。 特别标记该商品为正在下单的h5订单商品
 }
 
+// 是否为套餐子商品
 func (model *SaleOrderProduct) IsPackageSubProduct() bool {
 	return model.ProductType == constant.ProductTypePackageSubProduct
+}
+
+// 是否为套餐商品
+func (model *SaleOrderProduct) IsPackageProduct() bool {
+	return model.ProductType == constant.ProductTypePackage
 }
 
 // 获取商品的就餐类型。打包或堂食
