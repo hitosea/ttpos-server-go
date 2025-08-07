@@ -41,6 +41,7 @@ type IProductRepo interface {
 	UpdateProductBomSoldOut(opts []DBOption, vars map[string]any) error                                     // 沽清 更新产品售罄状态
 
 	WhereUuid(uuid uint64) DBOption                 // 查询条件 产品单位 uuid
+	WhereUuidIn(uuids []uint64) DBOption            // 查询条件 产品单位 uuid 列表
 	WithProductPackages() DBOption                  // 预加载产品单位关联的商品
 	WithProductPackagesMultiLanguageName() DBOption // 预加载产品单位关联的商品多语言名称
 }
@@ -55,6 +56,7 @@ type IProductQueryRepo interface {
 	GetProductBom(opts ...DBOption) (model.ProductBom, error)                                                       // 获取商品BOM详情
 	PaginateGetProductUnitList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductUnit, int64, error)      // 分页获取产品单位列表
 	GetProductUnit(opts ...DBOption) (model.ProductUnit, error)                                                     // 获取产品单位详情
+	GetProductUnitList(opts ...DBOption) ([]model.ProductUnit, error)                                               // 获取产品单位列表
 }
 
 // productRepo 商品仓库
@@ -452,7 +454,7 @@ func (r *productRepo) PaginateGetProductUnitList(pageNo int, pageSize int, opts 
 	// 关联了商品，要连表join获取关联商品数量
 	db := r.db.Model(&model.ProductUnit{})
 	db = db.Joins("LEFT JOIN ttpos_product_package ON ttpos_product_package.unit_uuid = ttpos_product_unit.uuid AND ttpos_product_package.delete_time = ?", constant.NotDeleted)
-	db = db.Select("ttpos_product_unit.*, COUNT(ttpos_product_package.uuid) as related_product_count")
+	db = db.Select("ttpos_product_unit.*, COUNT(ttpos_product_package.uuid) as product_package_count")
 	db = db.Group("ttpos_product_unit.uuid") // 分组统计关联商品数量
 
 	for _, opt := range opts {
@@ -464,7 +466,7 @@ func (r *productRepo) PaginateGetProductUnitList(pageNo int, pageSize int, opts 
 		return nil, 0, errors.WithMessage(err)
 	}
 
-	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Debug().Order("sort asc, create_time asc").Find(&units).Error
+	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Order("sort asc, create_time asc").Find(&units).Error
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
@@ -508,4 +510,26 @@ func (r *productRepo) WhereUuid(uuid uint64) DBOption {
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Where("uuid = ?", uuid)
 	}
+}
+
+// WhereUuidIn 根据uuid列表查询
+func (r *productRepo) WhereUuidIn(uuids []uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("uuid IN (?)", uuids)
+	}
+}
+
+// GetProductUnitList 获取产品单位列表
+func (r *productRepo) GetProductUnitList(opts ...DBOption) ([]model.ProductUnit, error) {
+	var units []model.ProductUnit
+
+	db := r.db.Model(&model.ProductUnit{})
+
+	for _, opt := range opts {
+		db = opt(db)
+	}
+
+	err := db.Find(&units).Error
+
+	return units, errors.WithMessage(err)
 }

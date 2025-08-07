@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
 	"ttpos-server-go/app/dto/resp"
 	"ttpos-server-go/app/errors"
@@ -11,7 +12,9 @@ import (
 )
 
 type ICheckNameSrv interface {
-	CheckNameExist(ctx context.Context, param req.CheckNameRequest) (resp.CheckNameResp, error) // 检查名称是否存在
+	CheckNameExists(ctx context.Context, param req.CheckNameRequest) (resp.CheckNameResp, error) // 检查名称是否存在
+	MakeCheckNameList(ctx context.Context, param dto.LocaleResponse) []req.CheckingName          // 生成检查名称列表
+	InnerCheckNameExists(ctx context.Context, param req.CheckNameRequest) bool                   // 内部检查名称是否存在
 }
 
 func NewCheckNameSrv(dbm *database.DBManager) ICheckNameSrv {
@@ -28,9 +31,7 @@ func NewCheckNameSrvImpl(dbm *database.DBManager) ICheckNameSrv {
 	}
 }
 
-func (s *checkNameSrv) CheckNameExist(ctx context.Context, checkNameReq req.CheckNameRequest) (resp.CheckNameResp, error) {
-	db := s.dbm.GetDB(ctx.GetCompanyUuid())
-
+func (s *checkNameSrv) CheckNameExists(ctx context.Context, checkNameReq req.CheckNameRequest) (resp.CheckNameResp, error) {
 	keyMap := map[string]string{
 		"zh":    "zh_name",
 		"zh-TW": "zh_tw_name",
@@ -46,14 +47,20 @@ func (s *checkNameSrv) CheckNameExist(ctx context.Context, checkNameReq req.Chec
 	var result []resp.CheckNameItem
 
 	for _, name := range checkNameReq.Names {
+		// 为每个查询创建新的数据库连接实例
+		db := s.dbm.GetDB(ctx.GetCompanyUuid())
+
 		switch checkNameReq.Source {
 		case "unit":
 			{
 				var count int64
-				_ = db.Model(&model.ProductUnit{}).
+				query := db.Model(&model.ProductUnit{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_product_unit.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Count(&count).Error
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+				if checkNameReq.Uuid != 0 {
+					query = query.Where("ttpos_product_unit.uuid != ?", checkNameReq.Uuid)
+				}
+				query.Count(&count)
 
 				result = append(result, resp.CheckNameItem{
 					Lang:      name.Lang,
@@ -64,10 +71,13 @@ func (s *checkNameSrv) CheckNameExist(ctx context.Context, checkNameReq req.Chec
 		case "product":
 			{
 				var count int64
-				_ = db.Model(&model.Product{}).
-					Joins("JOIN ttpos_multi_language_name ON ttpos_product.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Count(&count).Error
+				query := db.Model(&model.ProductPackage{}).
+					Joins("JOIN ttpos_multi_language_name ON ttpos_product_package.multi_language_name_uuid = ttpos_multi_language_name.uuid").
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+				if checkNameReq.Uuid != 0 {
+					query = query.Where("ttpos_product_package.uuid != ?", checkNameReq.Uuid)
+				}
+				query.Count(&count)
 
 				result = append(result, resp.CheckNameItem{
 					Lang:      name.Lang,
@@ -78,36 +88,47 @@ func (s *checkNameSrv) CheckNameExist(ctx context.Context, checkNameReq req.Chec
 		case "category":
 			{
 				var count int64
-				_ = db.Model(&model.ProductCategory{}).
+				query := db.Model(&model.ProductCategory{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_product_category.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Count(&count).Error
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+				if checkNameReq.Uuid != 0 {
+					query = query.Where("ttpos_product_category.uuid != ?", checkNameReq.Uuid)
+				}
+				query.Count(&count)
 
 				result = append(result, resp.CheckNameItem{
 					Lang:      name.Lang,
 					TextExist: count > 0,
 				})
 			}
+
 		case "sauce":
 			{
 				var count int64
-				_ = db.Model(&model.ProductSauce{}).
+				query := db.Model(&model.ProductSauce{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_product_sauce.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Count(&count).Error
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+				if checkNameReq.Uuid != 0 {
+					query = query.Where("ttpos_product_sauce.uuid != ?", checkNameReq.Uuid)
+				}
+				query.Count(&count)
 
 				result = append(result, resp.CheckNameItem{
 					Lang:      name.Lang,
 					TextExist: count > 0,
 				})
 			}
+
 		case "attribute":
 			{
 				var count int64
-				_ = db.Model(&model.ProductAttribute{}).
+				query := db.Model(&model.ProductAttribute{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_product_attribute.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Count(&count).Error
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+				if checkNameReq.Uuid != 0 {
+					query = query.Where("ttpos_product_attribute.uuid != ?", checkNameReq.Uuid)
+				}
+				query.Count(&count)
 
 				result = append(result, resp.CheckNameItem{
 					Lang:      name.Lang,
@@ -118,10 +139,13 @@ func (s *checkNameSrv) CheckNameExist(ctx context.Context, checkNameReq req.Chec
 		case "attribute_group":
 			{
 				var count int64
-				_ = db.Model(&model.ProductAttributeGroup{}).
+				query := db.Model(&model.ProductAttributeGroup{}).
 					Joins("JOIN ttpos_multi_language_name ON ttpos_product_attribute_group.multi_language_name_uuid = ttpos_multi_language_name.uuid").
-					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text).
-					Count(&count).Error
+					Where(fmt.Sprintf("ttpos_multi_language_name.%s = ?", keyMap[name.Lang]), name.Text)
+				if checkNameReq.Uuid != 0 {
+					query = query.Where("ttpos_product_attribute_group.uuid != ?", checkNameReq.Uuid)
+				}
+				query.Count(&count)
 
 				result = append(result, resp.CheckNameItem{
 					Lang:      name.Lang,
@@ -137,4 +161,88 @@ func (s *checkNameSrv) CheckNameExist(ctx context.Context, checkNameReq req.Chec
 	return resp.CheckNameResp{
 		List: result,
 	}, nil
+}
+
+// NOTE: 后续如果需要添加其他语言，请在这里添加
+func (s *checkNameSrv) MakeCheckNameList(ctx context.Context, param dto.LocaleResponse) []req.CheckingName {
+	var names []req.CheckingName
+
+	if param.ZH != "" {
+		names = append(names, req.CheckingName{
+			Lang: "zh",
+			Text: param.ZH,
+		})
+	}
+
+	if param.ZHTW != "" {
+		names = append(names, req.CheckingName{
+			Lang: "zh-TW",
+			Text: param.ZHTW,
+		})
+	}
+
+	if param.EN != "" {
+		names = append(names, req.CheckingName{
+			Lang: "en",
+			Text: param.EN,
+		})
+	}
+
+	if param.JA != "" {
+		names = append(names, req.CheckingName{
+			Lang: "ja",
+			Text: param.JA,
+		})
+	}
+
+	if param.KO != "" {
+		names = append(names, req.CheckingName{
+			Lang: "ko",
+			Text: param.KO,
+		})
+	}
+
+	if param.MY != "" {
+		names = append(names, req.CheckingName{
+			Lang: "my",
+			Text: param.MY,
+		})
+	}
+
+	if param.SV != "" {
+		names = append(names, req.CheckingName{
+			Lang: "sv",
+			Text: param.SV,
+		})
+	}
+
+	if param.TH != "" {
+		names = append(names, req.CheckingName{
+			Lang: "th",
+			Text: param.TH,
+		})
+	}
+
+	if param.TR != "" {
+		names = append(names, req.CheckingName{
+			Lang: "tr",
+			Text: param.TR,
+		})
+	}
+
+	return names
+}
+
+// InnerCheckNameExists 内部检查名称是否存在，不返回错误
+func (s *checkNameSrv) InnerCheckNameExists(ctx context.Context, param req.CheckNameRequest) bool {
+	checkNameResp, err := s.CheckNameExists(ctx, param)
+	if err != nil {
+		return false
+	}
+	for _, item := range checkNameResp.List {
+		if item.TextExist {
+			return true
+		}
+	}
+	return false
 }

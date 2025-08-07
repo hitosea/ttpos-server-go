@@ -65,7 +65,7 @@ func (h *MiscHandler) CheckNameExists(c *gin.Context) {
 		helper.HandleValidationError(c, err, checkNameReq, nil)
 		return
 	}
-	res, err := h.checkNameSrv.CheckNameExist(ctx, checkNameReq)
+	res, err := h.checkNameSrv.CheckNameExists(ctx, checkNameReq)
 	if err != nil {
 		helper.Fail(c, constant.CodeFail, err.Error())
 		return
