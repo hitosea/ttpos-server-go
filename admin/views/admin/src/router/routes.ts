@@ -65,6 +65,13 @@ export const asyncRoutes: RouteRecordRaw[] = [
         },
       },
       {
+        path: '/authorization',
+        component: () => import('@/pages/authorization/index.vue'),
+        meta: {
+          title: $t('商家授权管理'),
+        },
+      },
+      {
         path: '/user',
         redirect: { path: '/user/admin' }, // 重定向
         meta: {
@@ -175,7 +182,6 @@ export const asyncRoutes: RouteRecordRaw[] = [
           },
         ],
       },
-
       {
         path: '/settings',
         component: () => import('@/pages/settings/index.vue'),

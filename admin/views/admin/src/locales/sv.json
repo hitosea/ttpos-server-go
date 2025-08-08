@@ -418,5 +418,12 @@
     "外送台账": "Leveransbok",
     "渠道": "Kanal",
     "经纬度": "Latitud och longitud",
-    "请输入经纬度": "Vänligen ange latitud och longitud"
+    "请输入经纬度": "Vänligen ange latitud och longitud",
+    "商家授权管理": "Handlartillståndshantering",
+    "所属erpnext的site": "Tillhörande erpnext-webbplats",
+    "所属erpnext公司": "Tillhörande erpnext-företag",
+    "请选择所属erpnext公司": "Vänligen välj tillhörande erpnext-företag",
+    "请选择所属erpnext的site": "Vänligen välj tillhörande erpnext-webbplats",
+    "授权商家": "Auktoriserad återförsäljare",
+    "授权": "Auktorisera"
 }

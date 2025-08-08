@@ -418,5 +418,12 @@
     "外送台账": "Dışarıya Teslimat Defteri",
     "渠道": "Kanal",
     "经纬度": "Enlem ve boylam",
-    "请输入经纬度": "Lütfen enlem ve boylam giriniz"
+    "请输入经纬度": "Lütfen enlem ve boylam giriniz",
+    "商家授权管理": "Satıcı Yetkilendirme Yönetimi",
+    "所属erpnext的site": "Bağlı olduğu erpnext sitesi",
+    "所属erpnext公司": "Bağlı olduğu erpnext şirketi",
+    "请选择所属erpnext公司": "Lütfen bağlı olduğunuz erpnext şirketini seçin",
+    "请选择所属erpnext的site": "Lütfen bağlı olduğunuz erpnext sitesini seçin",
+    "授权商家": "Yetkili Satıcı",
+    "授权": "Yetki Ver"
 }

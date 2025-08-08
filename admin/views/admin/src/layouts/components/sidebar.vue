@@ -70,6 +70,12 @@
       permission: ['admin_shop_index'],
     },
     {
+      icon: 'dashboard',
+      title: $t('商家授权管理'),
+      path: '/authorization',
+      permission: ['admin_erpnext_index'],
+    },
+    {
       icon: 'store',
       title: $t('用户管理'),
       path: '/user',
@@ -101,6 +107,7 @@
         },
       ],
     },
+
     {
       icon: 'dashboard',
       title: $t('客户端管理'),
