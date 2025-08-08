@@ -19,6 +19,7 @@ type Printer struct {
 	LastHeartbeatTime uint   `gorm:"column:last_heartbeat_time;type:int(10) unsigned;default:0;comment:最后心跳时间;NOT NULL" json:"last_heartbeat_time"`
 	SourceDeviceSn    string `gorm:"column:source_device_sn;type:varchar(255);comment:源设备SN;NOT NULL" json:"source_device_sn"`
 	PrintMethod       int    `gorm:"column:print_method;type:tinyint(2);default:0;comment:打印方式,1-文本打印,2-图片打印;NOT NULL" json:"print_method"`
+	Width             int    `gorm:"column:width;type:int(11) unsigned;default:80;comment:纸张宽度（mm）;NOT NULL" json:"width"`
 
 	PrinterType *PrinterType `gorm:"foreignKey:PrinterTypeUuid;references:Uuid"` // 关联 printer_type
 }

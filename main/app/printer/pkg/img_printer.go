@@ -615,10 +615,26 @@ func (i *ImgFont) drawText(text, fontPath string, fontSize, fontWeight int, x, y
 	// 后绘制原始文本
 	ctx.SetSrc(image.NewUniform(textColor))
 	pt := freetype.Pt(x, y+fontSize)
-	for i := 0; i < fontWeight; i++ {
+	
+	// 对于58mm打印纸，减少重复绘制避免重影
+	// 只有在初始ImageWidth为58mm时才应用此逻辑，避免PrintInColumns中临时ImageWidth的误判
+	maxWeight := fontWeight
+	if fontWeight > 2 {
+		// 检查是否为58mm纸张：初始ImageWidth应该是384像素
+		// 通过TextSpacing来判断更准确，因为58mm模板设置了TextSpacing=1.1
+		if i.TextSpacing > 1.05 { // 58mm模板的TextSpacing是1.1
+			maxWeight = 2 // 限制最大重复次数
+		}
+	}
+	
+	for j := 0; j < maxWeight; j++ {
 		_, err := ctx.DrawString(text, pt)
 		if err != nil {
 			fmt.Println("绘制原始文本失败:", err)
+		}
+		// 对于多次绘制，稍微偏移位置避免完全重叠
+		if j > 0 && maxWeight > 1 {
+			pt.X += 64 // 1像素偏移 (64 = 1 << 6)
 		}
 	}
 
@@ -1119,6 +1135,12 @@ func (i *ImgFont) AppendSplitLine(opts ...AppendSplitlineOption) *ImgFont {
 	// 根据图像宽度添加分割线
 	if i.ImageWidth == 567 || i.ImageWidth == 568 {
 		i.AppendText("----------------------------------------------------------------------")
+	} else if i.ImageWidth == 384 {
+		// 58mm 打印纸适配的分割线 (384像素) - 减少到44个短横线避免换行
+		i.AppendText("----------------------------------------------")
+	} else if i.ImageWidth == 410 {
+		// 58mm 打印纸适配的分割线 (410像素)
+		i.AppendText("--------------------------------------------------")
 	}
 
 	// 如果需要换行
@@ -1444,13 +1466,35 @@ func (i *ImgFont) ToRasterFormat(img image.Image) string {
 // 旋转图像的辅助函数
 func (i *ImgFont) rotateImage(src image.Image, angle float64) image.Image {
 	// 对于Go语言，我们需要实现自定义旋转逻辑
-	// 对于简单起见，我们只处理-90度旋转和0度旋转两种情况
+	// 只处理标准旋转角度：0度、-90度、90度
 
-	if angle == 0 {
-		return src
+	// 标准化角度到 0, -90, 90
+	normalizedAngle := int(angle) % 360
+	if normalizedAngle < 0 {
+		normalizedAngle += 360
 	}
 
-	// 如果是-90度旋转
+	// 只有90度的倍数才旋转，其他情况直接返回原图
+	switch normalizedAngle {
+	case 0:
+		return src
+	case 90, -270:
+		// 90度顺时针旋转 = -90度逆时针旋转
+		return i.rotate90(src, true)
+	case 270, -90:
+		// 270度顺时针旋转 = -90度逆时针旋转
+		return i.rotate90(src, false)
+	case 180, -180:
+		// 180度旋转
+		return i.rotate180(src)
+	default:
+		// 非标准角度，直接返回原图避免错误
+		return src
+	}
+}
+
+// rotate90 90度旋转
+func (i *ImgFont) rotate90(src image.Image, clockwise bool) image.Image {
 	bounds := src.Bounds()
 	w, h := bounds.Dx(), bounds.Dy()
 
@@ -1460,8 +1504,32 @@ func (i *ImgFont) rotateImage(src image.Image, angle float64) image.Image {
 	// 旋转图像
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
-			// 对于-90度旋转，坐标转换为: (h-1-y, x)
-			dst.Set(h-1-y+bounds.Min.Y, x, src.At(x, y))
+			if clockwise {
+				// 顺时针90度: (y, w-1-x)
+				dst.Set(y-bounds.Min.Y, w-1-(x-bounds.Min.X), src.At(x, y))
+			} else {
+				// 逆时针90度: (h-1-y, x)
+				dst.Set(h-1-(y-bounds.Min.Y), x-bounds.Min.X, src.At(x, y))
+			}
+		}
+	}
+
+	return dst
+}
+
+// rotate180 180度旋转
+func (i *ImgFont) rotate180(src image.Image) image.Image {
+	bounds := src.Bounds()
+	w, h := bounds.Dx(), bounds.Dy()
+
+	// 创建一个新图像，尺寸不变
+	dst := image.NewRGBA(image.Rect(0, 0, w, h))
+
+	// 旋转图像
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			// 180度旋转: (w-1-x, h-1-y)
+			dst.Set(w-1-(x-bounds.Min.X), h-1-(y-bounds.Min.Y), src.At(x, y))
 		}
 	}
 
@@ -1474,7 +1542,9 @@ func (i *ImgFont) GetBytesFromBitMap(bitmap image.Image) string {
 	bounds := bitmap.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
-	bw := (width-1)/8 + 1
+	
+	// 计算字节宽度，确保8字节对齐
+	bw := (width + 7) / 8 // 向上取整到8的倍数
 
 	// 预分配足够的空间
 	rv := make([]byte, height*bw+4)
