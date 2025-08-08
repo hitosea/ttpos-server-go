@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"fmt"
 	"time"
 	"ttpos-bmp/app/ttpos-takeout/api/echo"
 	"ttpos-server-go/app/api/helper"
@@ -149,11 +150,15 @@ func TestCancelOrder() error {
 }
 
 func TestCompanyList() error {
-	err := erp.NewIErpSrv().GetCompanyList(context.Background())
+	ctx := erp.WithSiteCode(context.Background(), "1")
+	companyResp, err := erp.NewIErpSrv().GetCompanyList(ctx, req.ErpnextSiteCompanyReq{
+		SiteCode: "1",
+	})
 	if err != nil {
 		logger.Logger.Error("调用erp服务gRPC客户端失败: %v", zap.Error(err))
 		return err
 	}
+	fmt.Println(companyResp)
 	logger.Logger.Info("ERP服务gRPC客户端测试成功")
 	return nil
 }

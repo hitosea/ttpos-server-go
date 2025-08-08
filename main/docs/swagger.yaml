@@ -8738,6 +8738,35 @@ info:
   title: ttpos-server-go API
   version: "1.0"
 paths:
+  /admin/erpnext/site/company:
+    get:
+      consumes:
+      - application/json
+      description: 获取ERPNext站点公司名称
+      parameters:
+      - description: ERPNext站点编码
+        in: query
+        name: erpnext_code
+        required: true
+        type: string
+      - description: 公司名称
+        in: query
+        name: company_name
+        type: string
+      - description: 公司缩写
+        in: query
+        name: company_abbr
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+      summary: 获取ERPNext站点公司名称
+      tags:
+      - admin
   /assistant/base:
     get:
       consumes:
@@ -13107,6 +13136,37 @@ paths:
       security:
       - JwtToken: []
       summary: 退菜购物车商品
+      tags:
+      - 收银端.点餐
+  /cashier/instant/order/cart/product_package/add:
+    post:
+      consumes:
+      - application/json
+      description: 向购物车添加套餐
+      parameters:
+      - description: 套餐参数
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.OrderCartProductPackageAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/dto.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/resp.ShopCart'
+              type: object
+        "404":
+          description: 未找到
+      security:
+      - JwtToken: []
+      summary: 向购物车添加套餐
       tags:
       - 收银端.点餐
   /cashier/instant/order/check:

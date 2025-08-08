@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"ttpos-server-go/app/api/v1/admin"
 	"ttpos-server-go/app/api/v1/assistant"
 	"ttpos-server-go/app/api/v1/cashier"
 	"ttpos-server-go/app/api/v1/h5"
@@ -55,6 +56,11 @@ func Setup(r *gin.Engine, dbm *database.DBManager, cache cache.Cache) {
 	})
 	apiV1 := r.Group("api/v1")
 	{
+		adminGroup := apiV1.Group("/admin")
+		{
+			admin.RegisterHandlers(adminGroup, dbm, cache)
+		}
+
 		// 通用接口
 		passportGroup := apiV1.Group("/passport")
 		{

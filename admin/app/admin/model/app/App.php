@@ -162,10 +162,10 @@ class App extends AppModel
 
         return $this->alias('app')
             ->field("su.uuid, app.name, su.delivery_status, su.delivery_config")
-            ->leftJoin('company_setting su', "su.company_uuid = app.uuid") 
+            ->leftJoin('company_setting su', "su.company_uuid = app.uuid")
             ->where('su.delete_time', '=', 0)
             ->where('app.delete_time', '=', 0)
-            ->when($configured, function($q){
+            ->when($configured, function ($q) {
                 return $q->where('su.delivery_config', '<>', "");
             })
             ->where("app.uuid", "in", function ($q) {
@@ -178,7 +178,7 @@ class App extends AppModel
                 });
             })
             ->when($channel && $configured, function ($q) use ($channel) { // 外送渠道
-                $q->whereRaw('JSON_CONTAINS(su.delivery_config, ?)', [json_encode(['channel' => $channel])]); 
+                $q->whereRaw('JSON_CONTAINS(su.delivery_config, ?)', [json_encode(['channel' => $channel])]);
             })
             ->order(["su.create_time" => 'asc'])
             ->group('app.uuid')
@@ -192,16 +192,16 @@ class App extends AppModel
      */
     public function getErpnextCompanyList($param)
     {
-        $keyword = $param['keyword'] ?? ''; 
+        $keyword = $param['keyword'] ?? '';
         $configured = $param['configured'] ?? false;
 
         return $this->alias('app')
-            ->field("su.uuid, app.name, su.link_phone, su.real_name,su.erpnext_code, su.erpnext_name")
-            ->leftJoin('company_setting su', "su.company_uuid = app.uuid") 
+            ->field("su.uuid, app.name, su.link_phone, su.real_name, su.erpnext_site_code, su.erpnext_company_abbr, su.erpnext_branch_name")
+            ->leftJoin('company_setting su', "su.company_uuid = app.uuid")
             ->where('su.delete_time', '=', 0)
             ->where('app.delete_time', '=', 0)
-            ->when($configured, function($q){
-                return $q->where('su.erpnext_code', '<>', "");
+            ->when($configured, function ($q) {
+                return $q->where('su.erpnext_site_code', '<>', "");
             })
             ->when($keyword, function ($q) use ($keyword) { // 商家名称关键字
                 $q->where(function ($qq) use ($keyword) {

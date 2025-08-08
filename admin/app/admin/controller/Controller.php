@@ -55,9 +55,13 @@ class Controller extends BaseController
         '/admin/apk/download',
         '/admin/apk/preDownload',
         // 外送渠道
-        '/admin/delivery/channels'.
+        '/admin/delivery/channels',
         // 可选商家列表 
-        '/admin/delivery/companySelect'
+        '/admin/delivery/companySelect',
+        // 商家授权管理，erpnext站点编码
+        '/admin/erpnext/site_code',
+        // 商家授权管理，获取site company
+        '/admin/erpnext/siteCompany',
     ];
 
     /**
