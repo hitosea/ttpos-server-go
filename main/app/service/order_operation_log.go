@@ -92,7 +92,11 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 	case constant.OrderRefundProduct: // 退菜
 		var returnProduct event.CancelSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &returnProduct); err == nil {
-			desc := returnProduct.ProductName.GetLocale(language) + " (" + returnProduct.ProductAttr.GetLocale(language) + ")*" +
+			attrString := ""
+			if returnProduct.ProductAttr.GetLocale(language) != "" {
+				attrString = " (" + returnProduct.ProductAttr.GetLocale(language) + ")"
+			}
+			desc := returnProduct.ProductName.GetLocale(language) + attrString + "*" +
 				utils.FormatFloat(returnProduct.TotalNum) +
 				" (" + i18n.Translate(language, "原因") + ": "
 			reason := returnProduct.Reason.GetLocale(language)
@@ -111,7 +115,11 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 	case constant.OrderCancelRefundProduct: // 取消退菜
 		var cancelRefundProduct event.CancelReturnSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &cancelRefundProduct); err == nil {
-			desc := cancelRefundProduct.ProductName.GetLocale(language) + " (" + cancelRefundProduct.ProductAttr.GetLocale(language) + ") *" +
+			attrString := ""
+			if cancelRefundProduct.ProductAttr.GetLocale(language) != "" {
+				attrString = " (" + cancelRefundProduct.ProductAttr.GetLocale(language) + ")"
+			}
+			desc := cancelRefundProduct.ProductName.GetLocale(language) + attrString + " *" +
 				utils.FormatFloat(cancelRefundProduct.Num)
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
@@ -125,7 +133,11 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 	case constant.OrderChangePrice: // 改价
 		var changePrice event.ChangeSaleOrderProductPricePayload
 		if err := json.Unmarshal([]byte(log.Data), &changePrice); err == nil {
-			desc := changePrice.ProductName.GetLocale(language) + " (" + changePrice.ProductAttr.GetLocale(language) + ") *" +
+			attrString := ""
+			if changePrice.ProductAttr.GetLocale(language) != "" {
+				attrString = " (" + changePrice.ProductAttr.GetLocale(language) + ")"
+			}
+			desc := changePrice.ProductName.GetLocale(language) + attrString + " *" +
 				utils.FormatFloat(changePrice.TotalNum) + " (" + s.settingSrv.SymbolPosition(ctx, changePrice.Price) + ")"
 			return ActionDescription{Desc: desc, SplitMessage: splitMessage}
 		}
@@ -142,33 +154,53 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 	case constant.OrderProductFree: // 赠菜
 		var productFree event.GiftSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &productFree); err == nil {
-			desc := productFree.ProductName.GetLocale(language) + " (" + productFree.ProductAttr.GetLocale(language) + ") *" + utils.FormatFloat(productFree.TotalNum) +
+			attrString := ""
+			if productFree.ProductAttr.GetLocale(language) != "" {
+				attrString = " (" + productFree.ProductAttr.GetLocale(language) + ")"
+			}
+			desc := productFree.ProductName.GetLocale(language) + attrString + " *" + utils.FormatFloat(productFree.TotalNum) +
 				" (" + s.settingSrv.SymbolPosition(ctx, productFree.TotalPrice) + ")"
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderCancelProductFree: // 取消赠菜
 		var cancelProductFree event.CancelGiftSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &cancelProductFree); err == nil {
-			desc := cancelProductFree.ProductName.GetLocale(language) + " (" + cancelProductFree.ProductAttr.GetLocale(language) + ") *" + utils.FormatFloat(cancelProductFree.TotalNum) +
+			attrString := ""
+			if cancelProductFree.ProductAttr.GetLocale(language) != "" {
+				attrString = " (" + cancelProductFree.ProductAttr.GetLocale(language) + ")"
+			}
+			desc := cancelProductFree.ProductName.GetLocale(language) + attrString + " *" + utils.FormatFloat(cancelProductFree.TotalNum) +
 				" (" + s.settingSrv.SymbolPosition(ctx, cancelProductFree.TotalPrice) + ")"
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderProductWrap: // 打包
 		var productWrap event.WrapSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &productWrap); err == nil {
-			desc := productWrap.ProductName.GetLocale(language) + " (" + productWrap.ProductAttr.GetLocale(language) + ") *" + utils.FormatFloat(productWrap.Num)
+			attrString := ""
+			if productWrap.ProductAttr.GetLocale(language) != "" {
+				attrString = " (" + productWrap.ProductAttr.GetLocale(language) + ")"
+			}
+			desc := productWrap.ProductName.GetLocale(language) + attrString + " *" + utils.FormatFloat(productWrap.Num)
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderProductUnwrap: // 取消打包
 		var productUnwrap event.UnwrapSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &productUnwrap); err == nil {
-			desc := productUnwrap.ProductName.GetLocale(language) + " (" + productUnwrap.ProductAttr.GetLocale(language) + ") *" + utils.FormatFloat(productUnwrap.Num)
+			attrString := ""
+			if productUnwrap.ProductAttr.GetLocale(language) != "" {
+				attrString = " (" + productUnwrap.ProductAttr.GetLocale(language) + ")"
+			}
+			desc := productUnwrap.ProductName.GetLocale(language) + attrString + " *" + utils.FormatFloat(productUnwrap.Num)
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderProductMove: // 转菜
 		var productMove event.ChangeDeskSaleOrderProductPayload
 		if err := json.Unmarshal([]byte(log.Data), &productMove); err == nil {
-			desc := fmt.Sprintf("%s (%s) *%f(%s%s)", productMove.ProductName.GetLocale(language), productMove.ProductAttr.GetLocale(language), productMove.TotalNum, i18n.Translate(language, "转至"), productMove.ToTableNo)
+			attrString := ""
+			if productMove.ProductAttr.GetLocale(language) != "" {
+				attrString = " (" + productMove.ProductAttr.GetLocale(language) + ")"
+			}
+			desc := fmt.Sprintf("%s %s *%f(%s%s)", productMove.ProductName.GetLocale(language), attrString, productMove.TotalNum, i18n.Translate(language, "转至"), productMove.ToTableNo)
 			return ActionDescription{Desc: desc, SplitMessage: ""}
 		}
 	case constant.OrderDiscount: // 优惠折扣
