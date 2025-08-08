@@ -24,12 +24,14 @@ func init() {
 
 func (s *sDoctype) Meta(ctx context.Context, req *dto.ErpReq) (rst *g.Var, err error) {
 	rst = GetClient(ctx).GetVar(ctx, fmt.Sprintf("%s/%s/meta", docTypeApiUrl, req.DocType))
+	err = detectError(rst)
 	return
 }
 
 func (s *sDoctype) Count(ctx context.Context, req *dto.ErpReq) (int, error) {
 	rst := GetClient(ctx).GetVar(ctx, fmt.Sprintf("%s/%s/count", docTypeApiUrl, req.DocType))
-	if rst != nil {
+	err := detectError(rst)
+	if err == nil {
 		return gconv.Int(rst.Map()["data"]), nil
 	}
 	return 0, gerror.Newf("获取文档数量失败, docType: %v", req)

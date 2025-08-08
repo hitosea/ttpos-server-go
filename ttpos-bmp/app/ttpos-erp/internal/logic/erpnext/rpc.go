@@ -22,5 +22,6 @@ func init() {
 
 func (s *sRpc) Execute(ctx context.Context, req *dto.ErpReq, params interface{}) (rst *g.Var, err error) {
 	rst = GetClient(ctx).PostVar(ctx, fmt.Sprintf("%s%s", getRpcUrlWithName(req), req.Method), params)
+	err = detectError(rst)
 	return
 }

@@ -1,6 +1,6 @@
 {
   "doctype": "DocType",
-  "label": "公司",
+  "label": "Company",
   "fieldtype": "Link",
   "options": "Company",
   "insert_after": "uom_name",

@@ -7,13 +7,107 @@ option go_package = "ttpos-bmp/app/ttpos-erp/api/item";
 
 message GetItemListReq {
   string item_name = 1; // 商品名称模糊查询，可选，如: %商品名称%
+  string branch = 2; // 分支名称，可选
+  string company_name = 3; // 公司名称，可选
+}
+
+message AddItemReq {
+  string branch = 1; // 分支名称，可选
+  string company_name = 2; // 公司名称，可选
+  string item_name = 3; // 物品名称，必填
+  string item_code = 4; // 物品编码，必填
+  string item_group = 5; // 物品分组，必填
+  string stock_uom = 6; // 单位名称，必填
+  bool is_stock_item = 7; // 是否库存物品
+}
+
+message AddItemGroupReq {
+  string branch = 1; // 分支名称，可选
+  string item_group_name = 2; // 物品分组，必填
+}
+
+message GetItemGroupListReq {
+  string branch = 1; // 分支名称，可选
+  string item_group_name = 2; // 物品分组，可选
+}
+
+message GetItemGroupListResp {
+  string branch = 1; // 分支名称，可选
+  string item_group_name = 2; // 物品分组，可选
+}
+
+message GetUomListReq {
+  string branch = 1; // 分支名称，可选
+  string company_name = 2; // 公司名称，可选
+  string uom_name = 3; // 单位名称，可选
 }
 
 
+message GetUomListResp {
+  string branch = 1; // 分支名称，可选
+  string company_name = 2; // 公司名称，可选
+  string uom_name = 3; // 单位名称，可选
+  bool enabled = 4; // 是否启用
+  bool must_be_whole_number = 5; // 是否必须为整数
+}
+
+
+message GetAttributeListReq {
+  string branch = 1; // 分支名称，可选
+  string company_name = 2; // 公司名称，可选
+  string attribute_name = 3; // 属性名称，可选
+}
+
+message GetAttributeListResp {
+  string branch = 1; // 分支名称，可选
+  string company_name = 2; // 公司名称，可选
+  string attribute_name = 3; // 属性名称，可选
+}
+
+message GetSpecificationListReq {
+  string branch = 1; // 分支名称，可选
+  string company_name = 2; // 公司名称，可选
+  string specification_name = 3; // 规格名称，可选
+}
+
+
+message AddUomReq {
+  string branch = 1; // 分支名称，可选
+  string company_name = 2; // 公司名称，可选
+  string uom_name = 3; // 单位名称，必填
+  bool must_be_whole_number = 4; // 是否必须为整数
+}
+
+message AddAttributeReq {
+  string branch = 1; // 分支名称，可选
+  string company_name = 2; // 公司名称，可选
+  string attribute_name = 3; // 属性名称，必填
+}
 
 service ItemService {
   // 获取商品列表
   // 参数：查询条件
   // 返回：商品列表和分页信息
   rpc GetItemList(item.GetItemListReq) returns (erp.ResponseInfo);
+
+  // 获取单位列表
+  // 参数：查询条件
+  // 返回：单位列表和分页信息
+  rpc GetUomList(item.GetUomListReq) returns (erp.ResponseInfo);
+
+  // 添加单位
+  // 参数：单位信息
+  // 返回：添加结果
+  rpc AddUom(item.AddUomReq) returns (erp.ResponseInfo);
+
+  // 获取属性列表
+  // 参数：查询条件
+  // 返回：属性列表和分页信息
+  rpc GetAttributeList(item.GetAttributeListReq) returns (erp.ResponseInfo);
+
+  // 添加属性
+  // 参数：属性信息
+  // 返回：添加结果
+  rpc AddAttribute(item.AddAttributeReq) returns (erp.ResponseInfo);
+
 }

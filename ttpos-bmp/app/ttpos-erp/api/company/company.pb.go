@@ -30,7 +30,8 @@ const (
 // 用于向服务端发送获取公司列表的请求
 type GetCompanyListReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	CompanyName   string                 `protobuf:"bytes,1,opt,name=company_name,json=companyName,proto3" json:"company_name,omitempty" dc:"公司名称模糊查询，可选，如: %公司名称%"` // 公司名称模糊查询，可选，如: %公司名称%
+	CompanyName   string                 `protobuf:"bytes,1,opt,name=company_name,json=companyName,proto3" json:"company_name,omitempty" dc:"公司名称模糊查询，可选，如: %公司名称%"`   // 公司名称模糊查询，可选，如: %公司名称%
+	CompanyAbbr   string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写编码模糊查询，可选，如: %公司缩写%"` // 公司缩写编码模糊查询，可选，如: %公司缩写%
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -68,6 +69,13 @@ func (*GetCompanyListReq) Descriptor() ([]byte, []int) {
 func (x *GetCompanyListReq) GetCompanyName() string {
 	if x != nil {
 		return x.CompanyName
+	}
+	return ""
+}
+
+func (x *GetCompanyListReq) GetCompanyAbbr() string {
+	if x != nil {
+		return x.CompanyAbbr
 	}
 	return ""
 }
@@ -172,135 +180,21 @@ func (x *CompanyInfo) GetCompanyName() string {
 	return ""
 }
 
-// 创建分店请求消息
-// 用于向服务端发送创建分店的请求
-type CreateBranchReq struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ShopName      string                 `protobuf:"bytes,1,opt,name=shop_name,json=shopName,proto3" json:"shop_name,omitempty" dc:"店铺名称，必填"`            // 店铺名称，必填
-	CompanyAbbr   string                 `protobuf:"bytes,2,opt,name=company_abbr,json=companyAbbr,proto3" json:"company_abbr,omitempty" dc:"公司缩写编码，必填"` // 公司缩写编码，必填
-	ShopUuid      string                 `protobuf:"bytes,3,opt,name=shop_uuid,json=shopUuid,proto3" json:"shop_uuid,omitempty" dc:"店铺UUID，必填"`          // 店铺UUID，必填
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateBranchReq) Reset() {
-	*x = CreateBranchReq{}
-	mi := &file_company_company_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateBranchReq) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateBranchReq) ProtoMessage() {}
-
-func (x *CreateBranchReq) ProtoReflect() protoreflect.Message {
-	mi := &file_company_company_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateBranchReq.ProtoReflect.Descriptor instead.
-func (*CreateBranchReq) Descriptor() ([]byte, []int) {
-	return file_company_company_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *CreateBranchReq) GetShopName() string {
-	if x != nil {
-		return x.ShopName
-	}
-	return ""
-}
-
-func (x *CreateBranchReq) GetCompanyAbbr() string {
-	if x != nil {
-		return x.CompanyAbbr
-	}
-	return ""
-}
-
-func (x *CreateBranchReq) GetShopUuid() string {
-	if x != nil {
-		return x.ShopUuid
-	}
-	return ""
-}
-
-// 创建分店响应消息
-// 服务端返回的创建分店结果
-type CreateBranchResp struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ErpUserEmail  string                 `protobuf:"bytes,1,opt,name=erp_user_email,json=erpUserEmail,proto3" json:"erp_user_email,omitempty" dc:"ERP用户邮箱，创建成功时返回"` // ERP用户邮箱，创建成功时返回
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CreateBranchResp) Reset() {
-	*x = CreateBranchResp{}
-	mi := &file_company_company_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CreateBranchResp) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CreateBranchResp) ProtoMessage() {}
-
-func (x *CreateBranchResp) ProtoReflect() protoreflect.Message {
-	mi := &file_company_company_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CreateBranchResp.ProtoReflect.Descriptor instead.
-func (*CreateBranchResp) Descriptor() ([]byte, []int) {
-	return file_company_company_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *CreateBranchResp) GetErpUserEmail() string {
-	if x != nil {
-		return x.ErpUserEmail
-	}
-	return ""
-}
-
 var File_company_company_proto protoreflect.FileDescriptor
 
 const file_company_company_proto_rawDesc = "" +
 	"\n" +
-	"\x15company/company.proto\x12\acompany\x1a\terp.proto\"6\n" +
+	"\x15company/company.proto\x12\acompany\x1a\terp.proto\"Y\n" +
 	"\x11GetCompanyListReq\x12!\n" +
-	"\fcompany_name\x18\x01 \x01(\tR\vcompanyName\"M\n" +
+	"\fcompany_name\x18\x01 \x01(\tR\vcompanyName\x12!\n" +
+	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\"M\n" +
 	"\x12GetCompanyListResp\x127\n" +
 	"\fcompany_list\x18\x01 \x03(\v2\x14.company.CompanyInfoR\vcompanyList\"S\n" +
 	"\vCompanyInfo\x12!\n" +
 	"\fcompany_abbr\x18\x01 \x01(\tR\vcompanyAbbr\x12!\n" +
-	"\fcompany_name\x18\x02 \x01(\tR\vcompanyName\"n\n" +
-	"\x0fCreateBranchReq\x12\x1b\n" +
-	"\tshop_name\x18\x01 \x01(\tR\bshopName\x12!\n" +
-	"\fcompany_abbr\x18\x02 \x01(\tR\vcompanyAbbr\x12\x1b\n" +
-	"\tshop_uuid\x18\x03 \x01(\tR\bshopUuid\"8\n" +
-	"\x10CreateBranchResp\x12$\n" +
-	"\x0eerp_user_email\x18\x01 \x01(\tR\ferpUserEmail2\x8e\x01\n" +
+	"\fcompany_name\x18\x02 \x01(\tR\vcompanyName2Q\n" +
 	"\x0eCompanyService\x12?\n" +
-	"\x0eGetCompanyList\x12\x1a.company.GetCompanyListReq\x1a\x11.erp.ResponseInfo\x12;\n" +
-	"\fCreateBranch\x12\x18.company.CreateBranchReq\x1a\x11.erp.ResponseInfoB%Z#ttpos-bmp/app/ttpos-erp/api/companyb\x06proto3"
+	"\x0eGetCompanyList\x12\x1a.company.GetCompanyListReq\x1a\x11.erp.ResponseInfoB%Z#ttpos-bmp/app/ttpos-erp/api/companyb\x06proto3"
 
 var (
 	file_company_company_proto_rawDescOnce sync.Once
@@ -314,23 +208,19 @@ func file_company_company_proto_rawDescGZIP() []byte {
 	return file_company_company_proto_rawDescData
 }
 
-var file_company_company_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_company_company_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_company_company_proto_goTypes = []any{
 	(*GetCompanyListReq)(nil),  // 0: company.GetCompanyListReq
 	(*GetCompanyListResp)(nil), // 1: company.GetCompanyListResp
 	(*CompanyInfo)(nil),        // 2: company.CompanyInfo
-	(*CreateBranchReq)(nil),    // 3: company.CreateBranchReq
-	(*CreateBranchResp)(nil),   // 4: company.CreateBranchResp
-	(*api.ResponseInfo)(nil),   // 5: erp.ResponseInfo
+	(*api.ResponseInfo)(nil),   // 3: erp.ResponseInfo
 }
 var file_company_company_proto_depIdxs = []int32{
 	2, // 0: company.GetCompanyListResp.company_list:type_name -> company.CompanyInfo
 	0, // 1: company.CompanyService.GetCompanyList:input_type -> company.GetCompanyListReq
-	3, // 2: company.CompanyService.CreateBranch:input_type -> company.CreateBranchReq
-	5, // 3: company.CompanyService.GetCompanyList:output_type -> erp.ResponseInfo
-	5, // 4: company.CompanyService.CreateBranch:output_type -> erp.ResponseInfo
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
+	3, // 2: company.CompanyService.GetCompanyList:output_type -> erp.ResponseInfo
+	2, // [2:3] is the sub-list for method output_type
+	1, // [1:2] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -347,7 +237,7 @@ func file_company_company_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_company_company_proto_rawDesc), len(file_company_company_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

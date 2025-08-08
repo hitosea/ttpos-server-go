@@ -3,6 +3,6 @@
   "label": "Branch",
   "fieldtype": "Link",
   "options": "Branch",
-  "insert_after": "is_group",
-  "dt": "Customer Group"
+  "insert_after": "company",
+  "dt": "Pos Profile"
 }

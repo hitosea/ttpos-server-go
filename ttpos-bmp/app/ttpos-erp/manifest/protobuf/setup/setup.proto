@@ -1,0 +1,39 @@
+syntax = "proto3";
+import "erp.proto";
+package setup;
+
+// Go 包路径配置，指定生成的 Go 代码存放位置
+option go_package = "ttpos-bmp/app/ttpos-erp/api/setup";
+
+
+
+// 创建分店请求消息
+// 用于向服务端发送创建分店的请求
+message InitShopReq {
+  string shop_name = 1;     // 店铺名称，必填
+  string company_abbr = 2;  // 公司缩写编码，必填
+  string shop_uuid = 3;     // 店铺UUID，必填
+  string admin_uuid = 4;     // 管理员UUID，必填
+}
+
+message CreatePosUserReq {
+  string user_email = 1; // 用户邮箱，必填
+}
+
+// 创建分店响应消息
+// 服务端返回的创建分店结果
+message InitShopResp {
+  string branch_name = 1; // 分支名称
+}
+
+service SetupService {
+
+  // 初始化店铺
+  // 返回：初始化结果
+  rpc InitShop(InitShopReq) returns (erp.ResponseInfo);
+
+  // 创建.pos用户
+  // 参数：用户邮箱
+  // 返回：创建结果
+  rpc CreatePosUser(CreatePosUserReq) returns (erp.ResponseInfo);
+}
