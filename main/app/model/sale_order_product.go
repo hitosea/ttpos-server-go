@@ -1572,3 +1572,25 @@ func (model *SaleOrderProduct) GetProductPackageDetail() resp.ProductPackageDeta
 		Num:            model.Num, // 数量
 	}
 }
+
+// 获取套餐的选购详情
+func (model *SaleOrderProduct) GetPackageDetail() []resp.PackageSelectedInfo {
+	packageSelectedInfoList := make([]resp.PackageSelectedInfo, 0)
+
+	type SubProduct struct {
+		Uuid                    uint64   `json:"uuid"`
+		AttributeUuids          []uint64 `json:"attribute_uuids"`
+		ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"`
+	}
+
+	subProductList := make([]SubProduct, 0)
+	utils.FromJson(model.PackageSubProductParams, &subProductList)
+	for _, subProduct := range subProductList {
+		packageSelectedInfoList = append(packageSelectedInfoList, resp.PackageSelectedInfo{
+			ProductPackageGroupUuid: subProduct.ProductPackageGroupUuid,
+			FlavorUuid:              subProduct.Uuid,
+			AttributeUuidList:       subProduct.AttributeUuids,
+		})
+	}
+	return packageSelectedInfoList
+}

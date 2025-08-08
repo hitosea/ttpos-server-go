@@ -36,10 +36,10 @@ type OrderCartProductFlavorAndAttributeChangeReq struct {
 
 // OrderCartProductFlavorAndAttributeReq 查询购物车商品“规格/属性”请求参数
 type OrderCartProductFlavorAndAttributeReq struct {
-	SaleBillUuid         uint64 `json:"sale_bill_uuid"`          // 销售账单ID
-	SaleOrderUuid        uint64 `json:"sale_order_uuid"`         // 销售订单ID
-	SaleOrderProductUuid uint64 `json:"sale_order_product_uuid"` // 销售订单商品ID
-	ProductType          uint   `json:"product_type"`            // 商品类型 0-商品 1-套餐
+	SaleBillUuid         uint64 `form:"sale_bill_uuid"`          // 销售账单ID
+	SaleOrderUuid        uint64 `form:"sale_order_uuid"`         // 销售订单ID
+	SaleOrderProductUuid uint64 `form:"sale_order_product_uuid"` // 销售订单商品ID
+	ProductType          uint   `form:"product_type"`            // 商品类型 0-商品 1-套餐
 }
 
 // OrderCartProductAddReq 向购物车添加商品请求参数
@@ -99,6 +99,7 @@ type ProductParams struct {
 	Operation                       string   `json:"operation"`                                  // 操作类型。add: 加购，sub: 减购
 	MustPlanUuid                    uint64   `json:"must_plan_uuid"`                             // 必点方案uuid. 可选，在必点方案弹窗中加购时填写
 	Remark                          string   `json:"remark"`                                     // 备注，平板端离线购物车提交
+	ProductPackageGroupUuid         uint64   `json:"product_package_group_uuid"`                 // 套餐分组uuid。可选，当商品是套餐商品时，该字段有值
 
 	isPackageProduct        bool   `json:"is_package_product"`         // 是否是套餐商品
 	packageSubProductParams string `json:"package_sub_product_params"` // 套餐子商品参数（JSON格式）
@@ -131,16 +132,18 @@ func (req *ProductParams) GetIsPackageProduct() bool {
 }
 
 type SubProduct struct {
-	Uuid           uint64   `json:"uuid"`
-	AttributeUuids []uint64 `json:"attribute_uuids"`
+	Uuid                    uint64   `json:"uuid"`
+	AttributeUuids          []uint64 `json:"attribute_uuids"`
+	ProductPackageGroupUuid uint64   `json:"product_package_group_uuid"`
 }
 
 func (req *ProductParams) GetSubProductList() []SubProduct {
 	subProductList := make([]SubProduct, 0)
 	for _, subProduct := range req.subProducts {
 		subProductList = append(subProductList, SubProduct{
-			Uuid:           subProduct.FlavorProductBomUuid,
-			AttributeUuids: subProduct.ProductPackageAttributeUuidList,
+			Uuid:                    subProduct.FlavorProductBomUuid,
+			AttributeUuids:          subProduct.ProductPackageAttributeUuidList,
+			ProductPackageGroupUuid: subProduct.ProductPackageGroupUuid,
 		})
 	}
 	return subProductList

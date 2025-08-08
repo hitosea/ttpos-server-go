@@ -5010,6 +5010,7 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 			FlavorProductBomUuid:            productReq.FlavorUuid,
 			Num:                             productReq.Num,
 			ProductPackageAttributeUuidList: productReq.AttributeUuidList,
+			ProductPackageGroupUuid:         productReq.ProductPackageGroupUuid,
 			Operation:                       "add",
 		}
 		subProducts = append(subProducts, subProduct)
@@ -5031,7 +5032,59 @@ func (s *orderSrv) OrderCartProductPackageAdd(ctx context.Context, request req.O
 }
 
 func (s *orderSrv) OrderCartProductFlavorAndAttribute(ctx context.Context, request req.OrderCartProductFlavorAndAttributeReq) (*resp.ProductFlavorAndAttributeRes, error) {
-	return nil, nil
+	if ctx.NoLock() {
+		s.lock.LockUuid(request.SaleBillUuid)
+		defer s.lock.UnlockUuid(request.SaleBillUuid)
+		ctx.AddLock()
+	}
+
+	db := s.dbm.GetDB(ctx.GetDbId())
+	ctx.SetDB(db)
+	// 获取销售账单信息
+	saleBill, errSaleBill := repository.NewOrderRepo(db).GetSaleBillAllInfo(request.SaleBillUuid)
+	if errSaleBill != nil {
+		return nil, errors.WithMessage(errSaleBill)
+	}
+
+	saleOrder := saleBill.GetSaleOrder(request.SaleOrderUuid)
+	if saleOrder == nil {
+		return nil, errors.WithMessage(errors.New("销售订单不存在"), "销售订单不存在")
+	}
+
+	saleOrderProduct, _, errProduct := saleOrder.GetSaleOrderProduct(request.SaleOrderProductUuid)
+	if errProduct != nil {
+		return nil, errors.WithMessage(errProduct)
+	}
+
+	if saleOrderProduct.IsPackageProduct() {
+		product, errProduct := s.GetProductDetail(ctx, saleOrderProduct.ProductPackageUuid)
+		if errProduct != nil {
+			return nil, errors.WithMessage(errProduct)
+		}
+		productDetail := saleOrderProduct.GetPackageDetail()
+		return &resp.ProductFlavorAndAttributeRes{
+			ProductType: uint(saleOrderProduct.ProductType),
+			ProductInfo: &resp.ProductInfo{
+				Product: product,
+				SelectedProductPackage: &resp.ProductSelectedInfoList{
+					List: productDetail,
+				},
+			},
+		}, nil
+	} else {
+		product, errProduct := s.GetProductDetail(ctx, saleOrderProduct.ProductPackageUuid)
+		if errProduct != nil {
+			return nil, errors.WithMessage(errProduct)
+		}
+		productDetail := saleOrderProduct.GetProductPackageDetail()
+		return &resp.ProductFlavorAndAttributeRes{
+			ProductType: uint(saleOrderProduct.ProductType),
+			ProductInfo: &resp.ProductInfo{
+				Product:         product,
+				SelectedProduct: &productDetail,
+			},
+		}, nil
+	}
 }
 
 func (s *orderSrv) OrderCartProductFlavorAndAttributeChange(ctx context.Context, request req.OrderCartProductFlavorAndAttributeChangeReq) (*resp.ShopCart, error) {
@@ -6962,6 +7015,7 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 	returnFoodReasonList := saleOrderProduct.NewSaleOrderProductReasonList(returnFoodReason)
 
 	var returnSaleOrderProduct *model.SaleOrderProduct
+	// var returnSubSaleOrderProducts []*model.SaleOrderProduct // 套餐子商品退菜列表
 	var keepNum float64
 	// 提前获取属性和属性列表
 	productAttr := saleOrderProduct.GetAttributeName()
@@ -7028,6 +7082,15 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			// 有相同签名的商品。将两个商品合并，数量相加
 			sameSignSaleOrderProduct.SetNum(sameSignSaleOrderProduct.Num + req.Num)
 			returnSaleOrderProduct = sameSignSaleOrderProduct
+			// 如果是套餐商品，则更新套餐子商品退菜信息
+			if saleOrderProduct.IsPackageProduct() {
+				subProducts := saleOrder.GetPackageSubProductList(sameSignSaleOrderProduct.Uuid)
+				for _, subProduct := range subProducts {
+					unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+					num := decimal.NewFromFloat(sameSignSaleOrderProduct.Num).Mul(unitNum).Round(3).InexactFloat64()
+					subProduct.SetNum(num)
+				}
+			}
 		} else {
 			// 没有相同签名的商品。将新建的商品添加到销售订单商品列表中
 			// CalcAndSaveSaleBill 方法会检查到newSaleOrderProduct没有主键ID，会创建新记录。所以不用另外创建该订单商品，否则会重复创建

@@ -699,16 +699,16 @@ func (h *DeskHandler) OrderCartProductPackageAdd(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security JwtToken
-// @param data body req.OrderCartProductPackageAddReq true "套餐参数"
-// @Success 200 {object} dto.Response{data=resp.ShopCart}
+// @param data query req.OrderCartProductFlavorAndAttributeReq true "商品参数"
+// @Success 200 {object} dto.Response{data=resp.ProductFlavorAndAttributeRes}
 // @Failure 404 {object} nil "未找到"
-// @Router /cashier/desk/order/cart/product_package/add [post]
+// @Router /cashier/desk/order/cart/product/flavor_and_attribute [get]
 func (h *DeskHandler) OrderCartProductFlavorAndAttribute(c *gin.Context) {
 	ctx := helper.GetContext(c)
 	// 绑定请求参数
 	params := req.OrderCartProductFlavorAndAttributeReq{}
-	if err := c.ShouldBindJSON(&params); err != nil {
-		helper.HandleValidationError(c, err, params, req.OrderReqMessage)
+	if err := c.ShouldBindQuery(&params); err != nil {
+		helper.HandleValidationError(c, err, params, nil)
 		return
 	}
 	// 查询购物车商品“规格/属性”
