@@ -18,7 +18,7 @@ COPY . .
 RUN  go mod download
 
 # 编译Go程序
-RUN cd app/ttpos-$MODULE && gf build
+RUN cd app/ttpos-$MODULE && gf build -a amd64 -s linux -p bin -ew
 
 # 添加执行权限
 RUN chmod +x app/ttpos-$MODULE/bin/linux_amd64/main
