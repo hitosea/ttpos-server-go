@@ -80,7 +80,11 @@ func (s *orderSrv) getActionDescription(ctx context.Context, log model.SaleOrder
 		if err := json.Unmarshal([]byte(log.Data), &sendKitchen); err == nil {
 			var desc []string
 			for _, product := range sendKitchen.Products {
-				desc = append(desc, product.ProductName.GetLocale(language)+" ("+product.ProductAttr.GetLocale(language)+") *"+utils.FormatFloat(product.TotalNum))
+				attrString := ""
+				if product.ProductAttr.GetLocale(language) != "" {
+					attrString = " (" + product.ProductAttr.GetLocale(language) + ")"
+				}
+				desc = append(desc, product.ProductName.GetLocale(language)+attrString+" *"+utils.FormatFloat(product.TotalNum))
 			}
 			descStr := strings.Join(desc, "、")
 			return ActionDescription{Desc: descStr, SplitMessage: ""}

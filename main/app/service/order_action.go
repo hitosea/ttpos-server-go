@@ -230,6 +230,10 @@ func (s *orderSrv) ActionCooking(ctx context.Context, ignoreMust bool, saleBill 
 		// 发起“送厨”操作的事件
 		products := make(event.Products, 0)
 		for _, unCookingSaleOrderProduct := range unCookingSaleOrderProducts {
+			// 套餐子商品不显示送厨记录
+			if unCookingSaleOrderProduct.IsPackageSubProduct() {
+				continue
+			}
 			products = append(products, event.OrderProduct{
 				OrderProductId:  unCookingSaleOrderProduct.Uuid,
 				ProductId:       unCookingSaleOrderProduct.ProductPackageUuid,
