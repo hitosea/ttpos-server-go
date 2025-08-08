@@ -51,89 +51,89 @@
 </template>
 
 <script setup>
-import { ref, reactive, inject, watch } from 'vue'
-import Single from './spec/Single.vue'
-import Many from './spec/Many.vue'
-import { languageStore } from '@/store/model/language.js'
-import Add from '../../../expand/unit/add.vue'
+  import { ref, reactive, inject, watch } from 'vue';
+  import Single from './spec/Single.vue';
+  import Many from './spec/Many.vue';
+  import { languageStore } from '@/store/model/language.js';
+  import Add from '../../../expand/unit/add.vue';
 
-// 获取语言数据
-const languageList = languageStore().getLanguageList().languageList.value
-const languageKey = languageStore().getLanguageKey().language.value
+  // 获取语言数据
+  const languageList = languageStore().getLanguageList().languageList.value;
+  const languageKey = languageStore().getLanguageKey().language.value;
 
-// 注入form
-const form = inject('form')
+  // 注入form
+  const form = inject('form');
 
-// 响应式数据
-const restaurants = ref([])
-const open_add_feed = ref(false)
+  // 响应式数据
+  const restaurants = ref([]);
+  const open_add_feed = ref(false);
 
-// 初始化语言对象
-let languageObj = {}
-languageList.forEach((item) => {
-  languageObj[item.key] = []
-})
-
-const restaurantsObj = reactive(languageObj)
-
-// 工具函数定义
-const isValidJSON = (str) => {
-  try {
-    JSON.parse(str)
-    return true // 如果解析成功，返回 true
-  } catch (e) {
-    return false // 如果解析失败，返回 false
-  }
-}
-
-// 监听form变化
-watch(
-  () => form,
-  (val) => {
-    let languageObj = {}
-    languageList.forEach((item) => {
-      languageObj[item.key] = []
-    })
-    Object.assign(restaurantsObj, languageObj)
-    
-    val.unit.map((item, index) => {
-      let unit_name = isValidJSON(item.unit_name) ? JSON.parse(item.unit_name) : {}
-      languageList.forEach((items) => {
-        if (unit_name[items.key] != null) {
-          restaurantsObj[items.key].push({
-            value: unit_name[items.key] == '' ? '-' : unit_name[items.key],
-            index: index,
-            unit_id: item.unit_id,
-          })
-        }
-      })
-    })
-  },
-  { deep: true, immediate: true }
-)
-
-// 方法定义
-const selectChange = (e) => {
+  // 初始化语言对象
+  let languageObj = {};
   languageList.forEach((item) => {
-    form.model.product_unit[item.key] = restaurantsObj[item.key][e]?.value || ''
-    form.model.unit_id = restaurantsObj[item.key][e]?.unit_id || ''
-  })
-}
+    languageObj[item.key] = [];
+  });
 
-const addUnit = () => {
-  open_add_feed.value = true
-}
+  const restaurantsObj = reactive(languageObj);
 
-/*关闭弹窗*/
-const closeDialogFunc = (e, f) => {
-  if (f == 'add') {
-    open_add_feed.value = e.openDialog
-    if (e.type == 'success' && e.data) {
-      //
-      form.unit.unshift(e.data)
+  // 工具函数定义
+  const isValidJSON = (str) => {
+    try {
+      JSON.parse(str);
+      return true; // 如果解析成功，返回 true
+    } catch (e) {
+      return false; // 如果解析失败，返回 false
     }
-  }
-}
+  };
+
+  // 监听form变化
+  watch(
+    () => form,
+    (val) => {
+      let languageObj = {};
+      languageList.forEach((item) => {
+        languageObj[item.key] = [];
+      });
+      Object.assign(restaurantsObj, languageObj);
+
+      val.unit.map((item, index) => {
+        let unit_name = isValidJSON(item.unit_name) ? JSON.parse(item.unit_name) : {};
+        languageList.forEach((items) => {
+          if (unit_name[items.key] != null) {
+            restaurantsObj[items.key].push({
+              value: unit_name[items.key] == '' ? '-' : unit_name[items.key],
+              index: index,
+              unit_id: item.unit_id,
+            });
+          }
+        });
+      });
+    },
+    { deep: true, immediate: true }
+  );
+
+  // 方法定义
+  const selectChange = (e) => {
+    languageList.forEach((item) => {
+      form.model.product_unit[item.key] = restaurantsObj[item.key][e]?.value || '';
+      form.model.unit_id = restaurantsObj[item.key][e]?.unit_id || '';
+    });
+  };
+
+  const addUnit = () => {
+    open_add_feed.value = true;
+  };
+
+  /*关闭弹窗*/
+  const closeDialogFunc = (e, f) => {
+    if (f == 'add') {
+      open_add_feed.value = e.openDialog;
+      if (e.type == 'success' && e.data) {
+        //
+        form.unit.unshift(e.data);
+      }
+    }
+  };
 </script>
 
 <style scoped lang="scss">

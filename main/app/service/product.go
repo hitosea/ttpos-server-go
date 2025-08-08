@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"ttpos-server-go/app/constant"
 	"ttpos-server-go/app/dto"
 	"ttpos-server-go/app/dto/req"
@@ -37,8 +38,12 @@ type IProductSrv interface {
 	DeleteProductUnit(ctx context.Context, req req.ProductUnitReq) error   // 删除产品单位
 	SortProductUnit(ctx context.Context, req req.ProductUnitSortReq) error // 排序产品单位
 
-	GetProductSourceList(ctx context.Context, req req.ProductSourceListReq) (product_resp.ProductSourceListResp, error) // 获取商品加料列表
-	GetProductSource(ctx context.Context, req req.ProductSourceReq) (product_resp.ProductSourceDetail, error)           // 获取商品加料详情
+	GetProductSauceList(ctx context.Context, req req.ProductSauceListReq) (product_resp.ProductSauceListResp, error) // 获取商品加料列表
+	GetProductSauce(ctx context.Context, req req.ProductSauceReq) (product_resp.ProductSauceDetail, error)           // 获取商品加料详情
+	AddProductSauce(ctx context.Context, req req.ProductSauceAddReq) error                                           // 添加商品加料
+	EditProductSauce(ctx context.Context, req req.ProductSauceEditReq) error                                         // 编辑商品加料
+	DeleteProductSauce(ctx context.Context, req req.ProductSauceReq) error                                           // 删除商品加料
+	SortProductSauce(ctx context.Context, req req.ProductSauceSortReq) error                                         // 排序商品加料
 }
 
 type productSrv struct {
@@ -875,9 +880,9 @@ func (s *productSrv) DeleteProductUnit(ctx context.Context, deleteUnitReq req.Pr
 	}
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 删除产品单位
-		tx.Model(&model.ProductUnit{}).Where("uuid = ?", deleteUnitReq.Uuid).Delete(&model.ProductUnit{})
+		tx.Model(&model.ProductUnit{}).Where("uuid = ?", deleteUnitReq.Uuid).Update("delete_time", time.Now().Unix())
 		// 删除多语言名称
-		tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productUnit.MultiLanguageNameUuid).Delete(&model.MultiLanguageName{})
+		tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productUnit.MultiLanguageNameUuid).Update("delete_time", time.Now().Unix())
 		return nil
 	})
 	return err
@@ -906,61 +911,277 @@ func (s *productSrv) SortProductUnit(ctx context.Context, sortReq req.ProductUni
 	return err
 }
 
-func (s *productSrv) GetProductSourceList(ctx context.Context, sourceReq req.ProductSourceListReq) (product_resp.ProductSourceListResp, error) {
+func (s *productSrv) GetProductSauceList(ctx context.Context, sauceListReq req.ProductSauceListReq) (product_resp.ProductSauceListResp, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 	language := ctx.GetLanguage()
 
-	productSourceList, total, err := productRepo.PaginateGetProductSourceList(sourceReq.PageNo, sourceReq.PageSize, productRepo.WithMultiLanguageName())
+	productSauceList, total, err := productRepo.PaginateGetProductSauceList(sauceListReq.PageNo, sauceListReq.PageSize, productRepo.WithMultiLanguageName())
 	if err != nil {
-		return product_resp.ProductSourceListResp{}, errors.WithMessage(err, "获取商品加料列表失败")
+		return product_resp.ProductSauceListResp{}, errors.WithMessage(err, "获取商品加料列表失败")
 	}
-	productSourceListResp := make([]product_resp.ProductSourceItem, 0, len(productSourceList))
-	for _, productSource := range productSourceList {
-		productSourceListResp = append(productSourceListResp, product_resp.ProductSourceItem{
-			Uuid:                productSource.Uuid,
-			Name:                productSource.MultiLanguageName.GetNameByLang(language),
-			ProductPackageCount: productSource.ProductPackageCount,
+	productSauceListResp := make([]product_resp.ProductSauceItem, 0, len(productSauceList))
+	for _, productSauce := range productSauceList {
+		productSauceListResp = append(productSauceListResp, product_resp.ProductSauceItem{
+			Uuid:                productSauce.Uuid,
+			Name:                productSauce.MultiLanguageName.GetNameByLang(language),
+			Sort:                productSauce.Sort,
+			ProductPackageCount: productSauce.ProductPackageCount,
 		})
 	}
-	return product_resp.ProductSourceListResp{
-		List: productSourceListResp,
+	return product_resp.ProductSauceListResp{
+		List: productSauceListResp,
 		Meta: dto.PageResponse{
-			PageNo:   sourceReq.PageNo,
-			PageSize: sourceReq.PageSize,
+			PageNo:   sauceListReq.PageNo,
+			PageSize: sauceListReq.PageSize,
 			Total:    total,
 		},
 	}, nil
 }
 
-func (s *productSrv) GetProductSource(ctx context.Context, sourceReq req.ProductSourceReq) (product_resp.ProductSourceDetail, error) {
+func (s *productSrv) GetProductSauce(ctx context.Context, sauceReq req.ProductSauceReq) (product_resp.ProductSauceDetail, error) {
 	db := s.dbm.GetDB(ctx.GetDbId())
 	productRepo := repository.NewProductRepo(db)
 	language := ctx.GetLanguage()
 
-	productSource, err := productRepo.GetProductSource(
-		productRepo.WhereUuid(sourceReq.Uuid),
+	productSauce, err := productRepo.GetProductSauce(
+		productRepo.WhereUuid(sauceReq.Uuid),
 		productRepo.WithMultiLanguageName(),
-		productRepo.WithProductPackages(),
-		productRepo.WithProductPackagesMultiLanguageName(),
+		productRepo.WithActiveProductBoms(),
+		productRepo.WithActiveProductBomsProductPackages(),
+		productRepo.WithActiveProductBomsProductPackagesMultiLanguageName(),
 	)
 	if err != nil {
-		return product_resp.ProductSourceDetail{}, errors.WithMessage(err, "获取商品加料详情失败")
+		return product_resp.ProductSauceDetail{}, errors.WithMessage(err, "获取商品加料详情失败")
 	}
 
-	productPackages := make([]product_resp.ProductSourceProductPackage, 0, len(productSource.ProductPackages))
-	for _, productPackage := range productSource.ProductPackages {
-		productPackages = append(productPackages, product_resp.ProductSourceProductPackage{
-			Uuid: productPackage.Uuid,
-			Name: productPackage.MultiLanguageName.GetNameByLang(language),
+	productPackages := make([]product_resp.ProductSauceProductPackage, 0, len(productSauce.ProductBoms))
+	for _, productBom := range productSauce.ProductBoms {
+		productPackages = append(productPackages, product_resp.ProductSauceProductPackage{
+			Uuid: productBom.ProductPackage.Uuid,
+			Name: productBom.ProductPackage.MultiLanguageName.GetNameByLang(language),
 		})
 	}
-	return product_resp.ProductSourceDetail{
-		Uuid:       productSource.Uuid,
-		Price:      productSource.Price,
-		LocaleName: productSource.MultiLanguageName.GetNames(),
-		ProductPackages: product_resp.ProductSourceProductPackageList{
+	return product_resp.ProductSauceDetail{
+		Uuid:       productSauce.Uuid,
+		Price:      productSauce.Price,
+		LocaleName: productSauce.MultiLanguageName.GetNames(),
+		ProductPackages: product_resp.ProductSauceProductPackageList{
 			List: productPackages,
 		},
 	}, nil
+}
+
+func (s *productSrv) AddProductSauce(ctx context.Context, addReq req.ProductSauceAddReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	checkService := NewCheckNameSrv(s.dbm)
+	names := checkService.MakeCheckNameList(ctx, addReq.LocaleName)
+	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+		Source: "sauce",
+		Names:  names,
+	})
+	if exists {
+		return errors.New("名称已存在")
+	}
+
+	productRepo := repository.NewProductRepo(db)
+	// 检查商品包是否存在
+	productPackages, err := productRepo.GetProductPackageListByUuids(addReq.ProductPackageUuids)
+	if err != nil {
+		return errors.WithMessage(err, "商品包不存在")
+	}
+	if len(productPackages) != len(addReq.ProductPackageUuids) {
+		return errors.New("商品包不存在")
+	}
+
+	// 获取当前最大的排序值
+	var maxSort int
+	db.Model(&model.ProductSauce{}).Select("MAX(sort)").Scan(&maxSort)
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		// 保存多语言名称
+		multiLanguageName := model.MultiLanguageName{
+			ZhName:   addReq.LocaleName.ZH,
+			ThName:   addReq.LocaleName.TH,
+			EnName:   addReq.LocaleName.EN,
+			ZhTwName: addReq.LocaleName.ZHTW,
+			JaName:   addReq.LocaleName.JA,
+			KoName:   addReq.LocaleName.KO,
+			MyName:   addReq.LocaleName.MY,
+			TrName:   addReq.LocaleName.TR,
+			SvName:   addReq.LocaleName.SV,
+		}
+		tx.Model(&model.MultiLanguageName{}).Create(&multiLanguageName)
+		// 保存商品加料
+		productSauce := model.ProductSauce{
+			Sort:                  maxSort + 1,
+			Price:                 addReq.Price,
+			MultiLanguageNameUuid: multiLanguageName.Uuid,
+			Name:                  addReq.LocaleName.ToJson(),
+		}
+		tx.Model(&model.ProductSauce{}).Create(&productSauce)
+
+		var boms []model.ProductBom
+		for _, productPackageUuid := range addReq.ProductPackageUuids {
+			// 创建商品BOM
+			boms = append(boms, model.ProductBom{
+				Name:               addReq.LocaleName.ToJson(),
+				Price:              addReq.Price,
+				StockNum:           99999999,
+				IsOpenStock:        1,
+				Status:             1,
+				ProductPackageUuid: productPackageUuid,
+				ProductSauceUuid:   productSauce.Uuid,
+			})
+		}
+		repository.NewProductBomRepo(tx).CreateProductBoms(boms)
+		return nil
+	})
+	return err
+}
+
+func (s *productSrv) EditProductSauce(ctx context.Context, editReq req.ProductSauceEditReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productRepo := repository.NewProductRepo(db)
+
+	// 判断名称是否存在
+	checkService := NewCheckNameSrv(s.dbm)
+	names := checkService.MakeCheckNameList(ctx, editReq.LocaleName)
+	exists := checkService.InnerCheckNameExists(ctx, req.CheckNameRequest{
+		Uuid:   editReq.Uuid,
+		Source: "sauce",
+		Names:  names,
+	})
+	if exists {
+		return errors.New("名称已存在")
+	}
+
+	// 获取商品加料
+	productSauce, err := productRepo.GetProductSauce(
+		productRepo.WhereUuid(editReq.Uuid),
+		productRepo.WithMultiLanguageName(),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取商品加料详情失败")
+	}
+
+	if productSauce.MultiLanguageNameUuid == 0 {
+		return errors.New("商品加料名称不存在")
+	}
+
+	// 检查商品包是否存在
+	productPackages, err := productRepo.GetProductPackageListByUuids(editReq.ProductPackageUuids)
+	if err != nil {
+		return errors.WithMessage(err, "商品包不存在")
+	}
+	if len(productPackages) != len(editReq.ProductPackageUuids) {
+		return errors.New("商品包不存在")
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		name := editReq.LocaleName.ToJson()
+		// 修改多语言名称
+		tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productSauce.MultiLanguageNameUuid).Updates(map[string]any{
+			"zh_name":    editReq.LocaleName.ZH,
+			"th_name":    editReq.LocaleName.TH,
+			"en_name":    editReq.LocaleName.EN,
+			"zh_tw_name": editReq.LocaleName.ZHTW,
+			"ja_name":    editReq.LocaleName.JA,
+			"ko_name":    editReq.LocaleName.KO,
+			"my_name":    editReq.LocaleName.MY,
+			"tr_name":    editReq.LocaleName.TR,
+			"sv_name":    editReq.LocaleName.SV,
+		})
+		// 修改商品加料
+		tx.Model(&model.ProductSauce{}).Where("uuid = ?", editReq.Uuid).Updates(map[string]any{
+			"name":  name,
+			"price": editReq.Price,
+		})
+		if len(editReq.ProductPackageUuids) > 0 {
+			bomRepo := repository.NewProductBomRepo(tx)
+			boms, _ := bomRepo.GetProductBoms(bomRepo.WhereProductSauceUuid(editReq.Uuid), repository.NotDeleted)
+			var bomProductPackageUuids []uint64
+			// boms中product_sauce_uuid不是editReq.Uuid的记录，删除
+			for _, bom := range boms {
+				if !slices.Contains(editReq.ProductPackageUuids, bom.ProductPackageUuid) {
+					tx.Model(&model.ProductBom{}).Where("uuid = ?", bom.Uuid).Update("delete_time", time.Now().Unix())
+				}
+				bomProductPackageUuids = append(bomProductPackageUuids, bom.ProductPackageUuid)
+			}
+			// editReq.ProductPackageUuids 中，不在bomProductPackageUuids中的记录，创建新的bom
+			var newBoms []model.ProductBom
+			for _, productPackageUuid := range editReq.ProductPackageUuids {
+				if !slices.Contains(bomProductPackageUuids, productPackageUuid) {
+					newBoms = append(newBoms, model.ProductBom{
+						Name:               name,
+						Price:              editReq.Price,
+						StockNum:           99999999,
+						IsOpenStock:        1,
+						Status:             1,
+						ProductPackageUuid: productPackageUuid,
+						ProductSauceUuid:   editReq.Uuid,
+					})
+				}
+			}
+			bomRepo.CreateProductBoms(newBoms)
+		} else {
+			// 删除bom中sauce_uuid为当前商品加料的记录
+			tx.Model(&model.ProductBom{}).Where("product_sauce_uuid = ?", editReq.Uuid).Update("delete_time", time.Now().Unix())
+		}
+		return nil
+	})
+	return err
+}
+
+func (s *productSrv) DeleteProductSauce(ctx context.Context, deleteReq req.ProductSauceReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productRepo := repository.NewProductRepo(db)
+
+	productSauce, err := productRepo.GetProductSauce(
+		productRepo.WhereUuid(deleteReq.Uuid),
+		productRepo.WithMultiLanguageName(),
+	)
+	if err != nil {
+		return errors.WithMessage(err, "获取商品加料详情失败")
+	}
+	if productSauce.MultiLanguageNameUuid == 0 {
+		return errors.New("商品加料名称不存在")
+	}
+	// bom是否存在
+	bomRepo := repository.NewProductBomRepo(db)
+	boms, _ := bomRepo.GetProductBoms(bomRepo.WhereProductSauceUuid(deleteReq.Uuid), repository.NotDeleted)
+	if len(boms) > 0 {
+		return errors.New("该加料下存在商品，不允许删除")
+	}
+	err = db.Transaction(func(tx *gorm.DB) error {
+		// 删除商品加料
+		tx.Model(&model.ProductSauce{}).Where("uuid = ?", deleteReq.Uuid).Update("delete_time", time.Now().Unix())
+		// 删除多语言名称
+		tx.Model(&model.MultiLanguageName{}).Where("uuid = ?", productSauce.MultiLanguageNameUuid).Update("delete_time", time.Now().Unix())
+		return nil
+	})
+	return err
+}
+
+func (s *productSrv) SortProductSauce(ctx context.Context, sortReq req.ProductSauceSortReq) error {
+	db := s.dbm.GetDB(ctx.GetDbId())
+	productRepo := repository.NewProductRepo(db)
+
+	productSauceUuids := make([]uint64, 0, len(sortReq.List))
+	for _, item := range sortReq.List {
+		productSauceUuids = append(productSauceUuids, item.Uuid)
+	}
+	productSauceCount, _ := productRepo.GetProductSauceCount(productRepo.WhereUuidIn(productSauceUuids))
+	if productSauceCount != int64(len(productSauceUuids)) {
+		return errors.New("商品加料不存在")
+	}
+	err := db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range sortReq.List {
+			tx.Model(&model.ProductSauce{}).Where("uuid = ?", item.Uuid).Updates(map[string]any{
+				"sort": item.Sort,
+			})
+		}
+		return nil
+	})
+	return err
 }

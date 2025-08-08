@@ -12,6 +12,7 @@ option go_package = "ttpos-bmp/app/ttpos-erp/api/company";
 // 用于向服务端发送获取公司列表的请求
 message GetCompanyListReq {
   string company_name = 1; // 公司名称模糊查询，可选，如: %公司名称%
+  string company_abbr = 2; // 公司缩写编码模糊查询，可选，如: %公司缩写%
 }
 
 // 获取公司列表响应消息
@@ -28,20 +29,6 @@ message CompanyInfo {
 
 }
 
-// 创建分店请求消息
-// 用于向服务端发送创建分店的请求
-message CreateBranchReq {
-  string shop_name = 1;     // 店铺名称，必填
-  string company_abbr = 2;  // 公司缩写编码，必填
-  string shop_uuid = 3;     // 店铺UUID，必填
-}
-
-// 创建分店响应消息
-// 服务端返回的创建分店结果
-message CreateBranchResp {
-  string erp_user_email = 1; // ERP用户邮箱，创建成功时返回
-}
-
 
 // 公司服务接口定义
 // 提供公司信息查询相关的 gRPC 服务方法
@@ -49,10 +36,6 @@ service CompanyService {
   // 获取公司列表
   // 参数：查询条件
   // 返回：公司列表和分页信息
-  rpc GetCompanyList(company.GetCompanyListReq) returns (erp.ResponseInfo);
+  rpc GetCompanyList(GetCompanyListReq) returns (erp.ResponseInfo);
 
-  // 创建分店
-  // 参数：店铺名称和公司缩写编码
-  // 返回：ERP用户名和创建结果
-  rpc CreateBranch(company.CreateBranchReq) returns (erp.ResponseInfo);
 }

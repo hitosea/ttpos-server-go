@@ -117,7 +117,7 @@ class Unit extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        $unitList = $this->with(['multiLanguageName'])->order(['create_time' => 'desc'])->select();
+        $unitList = $this->with(['multiLanguageName'])->order(['sort' => 'asc', 'create_time' => 'asc'])->select();
         foreach ($unitList as $key => $unit) {
             $name = [
                 'zh' => $unit['multiLanguageName']['zh_name'],

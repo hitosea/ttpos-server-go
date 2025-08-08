@@ -2,8 +2,6 @@ package company
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"ttpos-bmp/app/ttpos-erp/api/company"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
@@ -27,6 +25,9 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 	// 调用 erpnext 下 document 服务，从外部获取 company 信息
 	if len(req.CompanyName) > 0 {
 		filters = append(filters, g.ArrayStr{"name", "like", "%" + req.CompanyName + "%"})
+	}
+	if len(req.CompanyAbbr) > 0 {
+		filters = append(filters, g.ArrayStr{"abbr", "like", "%" + req.CompanyAbbr + "%"})
 	}
 	// 1. 调用 erpnext document 服务获取公司信息
 	erpCompanyList, err := service.Document().List(ctx, &dto.ErpReq{
@@ -63,32 +64,17 @@ func (s *sCompany) GetCompanyList(ctx context.Context, req *company.GetCompanyLi
 	return
 }
 
-// CreateBranch 创建分店
-// 参数：店铺名称和公司缩写编码
-// 返回：ERP用户名和创建结果
-func (s *sCompany) CreateBranch(ctx context.Context, req *company.CreateBranchReq) (res *company.CreateBranchResp, err error) {
-	// 参数验证
-	if strings.TrimSpace(req.ShopUuid) == "" {
-		g.Log().Error(ctx, "店铺UUID不能为空")
-		return nil, gerror.New("店铺UUID不能为空")
-	}
+func (s *sCompany) GetCompanyWithAbbr(ctx context.Context, abbr string) (res *company.CompanyInfo, err error) {
 
-	if strings.TrimSpace(req.ShopName) == "" {
-		g.Log().Error(ctx, "店铺名称不能为空")
-		return nil, gerror.New("店铺名称不能为空")
+	var companyList *company.GetCompanyListResp
+	if companyList, err = service.Company().GetCompanyList(ctx, &company.GetCompanyListReq{
+		CompanyAbbr: abbr,
+	}); err != nil {
+		g.Log().Error(ctx, "获取公司列表失败", err)
+		return nil, gerror.New("获取公司列表失败")
 	}
-
-	if strings.TrimSpace(req.CompanyAbbr) == "" {
-		g.Log().Error(ctx, "公司缩写编码不能为空")
-		return nil, gerror.New("公司缩写编码不能为空")
+	if len(companyList.CompanyList) > 0 {
+		return companyList.CompanyList[0], nil
 	}
-
-	// 调用 erpnext document 服务创建分店
-	// 这里需要根据实际的ERP系统API来调用
-	// 暂时返回模拟的成功结果
-	res = &company.CreateBranchResp{
-		ErpUserEmail: fmt.Sprintf("shop%s@ttpos-user.com", req.ShopUuid),
-	}
-
-	return res, nil
+	return nil, gerror.New("公司不存在")
 }

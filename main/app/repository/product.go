@@ -44,6 +44,10 @@ type IProductRepo interface {
 	WhereUuidIn(uuids []uint64) DBOption            // 查询条件 产品单位 uuid 列表
 	WithProductPackages() DBOption                  // 预加载产品单位关联的商品
 	WithProductPackagesMultiLanguageName() DBOption // 预加载产品单位关联的商品多语言名称
+
+	WithActiveProductBoms() DBOption                                 // 预加载商品BOM
+	WithActiveProductBomsProductPackages() DBOption                  // 预加载商品BOM关联的商品包
+	WithActiveProductBomsProductPackagesMultiLanguageName() DBOption // 预加载商品BOM关联的商品包多语言名称
 }
 
 // IProductQueryRepo 商品查询仓库接口
@@ -58,8 +62,9 @@ type IProductQueryRepo interface {
 	GetProductUnit(opts ...DBOption) (model.ProductUnit, error)                                                     // 获取产品单位详情
 	GetProductUnitCount(opts ...DBOption) (int64, error)                                                            // 获取产品单位数量
 
-	PaginateGetProductSourceList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductSauce, int64, error) // 分页获取商品加料列表
-	GetProductSource(opts ...DBOption) (model.ProductSauce, error)                                                // 获取商品加料详情
+	PaginateGetProductSauceList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductSauce, int64, error) // 分页获取商品加料列表
+	GetProductSauce(opts ...DBOption) (model.ProductSauce, error)                                                // 获取商品加料详情
+	GetProductSauceCount(opts ...DBOption) (int64, error)                                                        // 获取商品加料数量
 }
 
 // productRepo 商品仓库
@@ -476,7 +481,7 @@ func (r *productRepo) PaginateGetProductUnitList(pageNo int, pageSize int, opts 
 	var total int64
 
 	// 关联了商品，要连表join获取关联商品数量
-	db := r.db.Model(&model.ProductUnit{})
+	db := r.db.Model(&model.ProductUnit{}).Where("ttpos_product_unit.delete_time = ?", constant.NotDeleted)
 	db = db.Joins("LEFT JOIN ttpos_product_package ON ttpos_product_package.unit_uuid = ttpos_product_unit.uuid AND ttpos_product_package.delete_time = ?", constant.NotDeleted)
 	db = db.Select("ttpos_product_unit.*, COUNT(ttpos_product_package.uuid) as product_package_count")
 	db = db.Group("ttpos_product_unit.uuid") // 分组统计关联商品数量
@@ -518,7 +523,7 @@ func (r *productRepo) WithProductPackagesMultiLanguageName() DBOption {
 func (r *productRepo) GetProductUnit(opts ...DBOption) (model.ProductUnit, error) {
 	var unit model.ProductUnit
 
-	db := r.db.Model(&model.ProductUnit{})
+	db := r.db.Model(&model.ProductUnit{}).Scopes(NotDeleted)
 
 	for _, opt := range opts {
 		db = opt(db)
@@ -546,7 +551,7 @@ func (r *productRepo) WhereUuidIn(uuids []uint64) DBOption {
 // GetProductUnitCount 获取产品单位数量
 func (r *productRepo) GetProductUnitCount(opts ...DBOption) (int64, error) {
 	var total int64
-	db := r.db.Model(&model.ProductUnit{})
+	db := r.db.Model(&model.ProductUnit{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
@@ -554,11 +559,11 @@ func (r *productRepo) GetProductUnitCount(opts ...DBOption) (int64, error) {
 	return total, errors.WithMessage(err)
 }
 
-// PaginateGetProductSourceList 分页获取商品加料列表
-func (r *productRepo) PaginateGetProductSourceList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductSauce, int64, error) {
-	var sources []model.ProductSauce
+// PaginateGetProductSauceList 分页获取商品加料列表
+func (r *productRepo) PaginateGetProductSauceList(pageNo int, pageSize int, opts ...DBOption) ([]model.ProductSauce, int64, error) {
+	var sauces []model.ProductSauce
 	var total int64
-	db := r.db.Model(&model.ProductSauce{})
+	db := r.db.Model(&model.ProductSauce{}).Where("ttpos_product_sauce.delete_time = ?", constant.NotDeleted)
 	db = db.Joins("LEFT JOIN ttpos_product_bom ON ttpos_product_bom.product_sauce_uuid = ttpos_product_sauce.uuid AND ttpos_product_bom.delete_time = ?", constant.NotDeleted)
 	db = db.Select("ttpos_product_sauce.*, COUNT(ttpos_product_bom.uuid) as product_package_count")
 	db = db.Group("ttpos_product_sauce.uuid") // 分组统计关联商品数量
@@ -569,17 +574,52 @@ func (r *productRepo) PaginateGetProductSourceList(pageNo int, pageSize int, opt
 	if err != nil {
 		return nil, 0, errors.WithMessage(err)
 	}
-	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&sources).Error
-	return sources, total, errors.WithMessage(err)
+	err = db.Offset((pageNo - 1) * pageSize).Limit(pageSize).Find(&sauces).Error
+	return sauces, total, errors.WithMessage(err)
 }
 
-// GetProductSource 获取商品加料详情
-func (r *productRepo) GetProductSource(opts ...DBOption) (model.ProductSauce, error) {
-	var source model.ProductSauce
-	db := r.db.Model(&model.ProductSauce{})
+// GetProductSauce 获取商品加料详情
+func (r *productRepo) GetProductSauce(opts ...DBOption) (model.ProductSauce, error) {
+	var sauce model.ProductSauce
+	db := r.db.Model(&model.ProductSauce{}).Scopes(NotDeleted)
 	for _, opt := range opts {
 		db = opt(db)
 	}
-	err := db.First(&source).Error
-	return source, errors.WithMessage(err)
+	err := db.First(&sauce).Error
+	return sauce, errors.WithMessage(err)
+}
+
+// GetProductSauceCount 获取商品加料数量
+func (r *productRepo) GetProductSauceCount(opts ...DBOption) (int64, error) {
+	var total int64
+	db := r.db.Model(&model.ProductSauce{}).Scopes(NotDeleted)
+	for _, opt := range opts {
+		db = opt(db)
+	}
+	err := db.Count(&total).Error
+	return total, errors.WithMessage(err)
+}
+
+func (r *productRepo) WithActiveProductBoms() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductBoms", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted)
+		})
+	}
+}
+
+func (r *productRepo) WithActiveProductBomsProductPackages() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductBoms.ProductPackage", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted)
+		})
+	}
+}
+
+func (r *productRepo) WithActiveProductBomsProductPackagesMultiLanguageName() DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Preload("ProductBoms.ProductPackage.MultiLanguageName", func(db *gorm.DB) *gorm.DB {
+			return db.Scopes(NotDeleted)
+		})
+	}
 }

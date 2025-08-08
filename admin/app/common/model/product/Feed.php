@@ -125,7 +125,7 @@ class Feed extends BaseModel
      */
     public function getAllList($shop_supplier_id)
     {
-        return $this->order(['create_time' => 'desc'])->select();
+        return $this->order(['sort' => 'asc', 'create_time' => 'asc'])->select();
     }
 
     /**

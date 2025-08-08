@@ -45,9 +45,12 @@ class Unit extends UnitModel
             $this->error = '名称已存在';
             return false;
         }
-        //
+        // 获取当前最大的排序值
+        $maxSort = $this->where('uuid', '<>', $this['uuid'])->max('sort');
+        $data['sort'] = $maxSort + 1;
         $data['name'] = $data['unit_name'] ?? '';
         $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($data['unit_name']);
+        // 保存单位
         $this->save($data);
         return array_merge($data, ['unit_id' => $this->uuid]);
     }

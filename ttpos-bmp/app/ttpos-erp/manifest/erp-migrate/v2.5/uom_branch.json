@@ -1,6 +1,6 @@
 {
   "doctype": "DocType",
-  "label": "分支",
+  "label": "Branch",
   "fieldtype": "Link",
   "options": "Branch",
   "insert_after": "uom_name",

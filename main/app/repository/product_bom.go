@@ -23,6 +23,8 @@ type IProductBomQueryRepo interface {
 	GetSauceProductBomByUuid(uuid uint64) (*model.ProductBom, error) // 获取小料商品信息
 	GetSauceProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
 	GetProductBomsByUuids(uuids []uint64) ([]*model.ProductBom, error)
+
+	WhereProductSauceUuid(uuid uint64) DBOption // 查询条件 商品加料UUID
 }
 
 type productBomRepoImpl struct {
@@ -189,4 +191,10 @@ func (r *productBomRepoImpl) CreateProductBoms(productBoms []model.ProductBom) e
 		return errors.WithMessage(err)
 	}
 	return nil
+}
+
+func (r *productBomRepoImpl) WhereProductSauceUuid(uuid uint64) DBOption {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Where("product_sauce_uuid = ?", uuid)
+	}
 }

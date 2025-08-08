@@ -1,8 +1,8 @@
 {
   "doctype": "DocType",
-  "label": "Branch",
-  "fieldtype": "Link",
-  "options": "Branch",
+  "label": "别名",
+  "fieldname": "custom_aliasname",
+  "fieldtype": "Data",
   "insert_after": "warehouse_name",
   "dt": "Warehouse"
 }

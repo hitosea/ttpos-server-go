@@ -3,11 +3,9 @@ package erpnext
 import (
 	"context"
 	"fmt"
-	"ttpos-bmp/app/ttpos-erp/internal/consts"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
 	"ttpos-bmp/app/ttpos-erp/internal/service"
 
-	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 )
 
@@ -26,57 +24,43 @@ func init() {
 
 func (s *sDocument) List(ctx context.Context, req *dto.ErpReq, params *dto.RequestParams) (rst *g.Var, err error) {
 	rst = GetClient(ctx).GetVar(ctx, getDocumentUrl(ctx, req.DocType), params)
-	if rst == nil {
-		return nil, gerror.NewCode(consts.CodeErpError, "获取Erp文档列表失败")
-	}
+	err = detectError(rst)
 	return
 }
 
 func (s *sDocument) Get(ctx context.Context, req *dto.ErpReq, params *dto.RequestParams) (rst *g.Var, err error) {
 	rst = GetClient(ctx).GetVar(ctx, getDocumentUrlWithName(ctx, req), params)
-	if rst == nil {
-		return nil, gerror.NewCode(consts.CodeErpError, "获取Erp文档列表失败")
-	}
+	err = detectError(rst)
 	return
 }
 
 func (s *sDocument) Create(ctx context.Context, docType string, data interface{}) (rst *g.Var, err error) {
 	rst = GetClient(ctx).PostVar(ctx, getDocumentUrl(ctx, docType), data)
-	if rst == nil {
-		return nil, gerror.NewCode(consts.CodeErpError, "获取Erp文档列表失败")
-	}
+	err = detectError(rst)
 	return
 }
 
 func (s *sDocument) Update(ctx context.Context, req *dto.ErpReq, data interface{}) (rst *g.Var, err error) {
 	rst = GetClient(ctx).PutVar(ctx, getDocumentUrlWithName(ctx, req), data)
-	if rst == nil {
-		return nil, gerror.NewCode(consts.CodeErpError, "获取Erp文档列表失败")
-	}
+	err = detectError(rst)
 	return
 }
 
 func (s *sDocument) Delete(ctx context.Context, req *dto.ErpReq) (rst *g.Var, err error) {
 	rst = GetClient(ctx).DeleteVar(ctx, getDocumentUrlWithName(ctx, req))
-	if rst == nil {
-		return nil, gerror.NewCode(consts.CodeErpError, "获取Erp文档列表失败")
-	}
+	err = detectError(rst)
 	return
 }
 
 func (s *sDocument) Copy(ctx context.Context, req *dto.ErpReq) (rst *g.Var, err error) {
 	rst = GetClient(ctx).GetVar(ctx, fmt.Sprintf("%scopy", getDocumentUrlWithName(ctx, req)))
-	if rst == nil {
-		return nil, gerror.NewCode(consts.CodeErpError, "获取Erp文档列表失败")
-	}
+	err = detectError(rst)
 	return
 }
 
 func (s *sDocument) Execute(ctx context.Context, req *dto.ErpReq, params interface{}) (rst *g.Var, err error) {
 	rst = GetClient(ctx).GetVar(ctx, fmt.Sprintf("%smethod/%s", getDocumentUrlWithName(ctx, req), req.Method), params)
-	if rst == nil {
-		return nil, gerror.NewCode(consts.CodeErpError, "获取Erp文档列表失败")
-	}
+	err = detectError(rst)
 	return
 }
 
