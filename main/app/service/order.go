@@ -6954,6 +6954,24 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			returnSaleOrderProduct = sameSignSaleOrderProduct
 			saleOrderProduct.SetDelete() // 标记该商品为删除
 			saleOrderProduct.SetUpdate() // 标记该商品需要更新
+			// 如果是套餐商品，则更新套餐子商品退菜信息
+			if saleOrderProduct.IsPackageProduct() {
+				subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+				for _, subProduct := range subProducts {
+					subProduct.SetDelete() // 标记该商品为删除
+					subProduct.SetUpdate() // 标记该商品需要更新
+				}
+			}
+			// 如果是套餐商品，则更新套餐子商品退菜信息
+			if sameSignSaleOrderProduct.IsPackageProduct() {
+				subProducts := saleOrder.GetPackageSubProductList(sameSignSaleOrderProduct.Uuid)
+				for _, subProduct := range subProducts {
+					unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+					addNum := decimal.NewFromFloat(req.Num).Mul(unitNum).Round(3).InexactFloat64()
+					subProduct.SetNum(subProduct.Num + addNum)
+				}
+			}
+
 		} else {
 			saleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
 			returnSaleOrderProduct = saleOrderProduct
@@ -6988,6 +7006,19 @@ func (s *orderSrv) InstantOrderCartProductReturning(ctx context.Context, req req
 			// CalcAndSaveSaleBill 方法会检查到newSaleOrderProduct没有主键ID，会创建新记录。所以不用另外创建该订单商品，否则会重复创建
 			saleOrder.SaleOrderProducts = append(saleOrder.SaleOrderProducts, newSaleOrderProduct)
 			returnSaleOrderProduct = newSaleOrderProduct
+			// 如果是套餐商品，则更新套餐子商品退菜信息
+			if saleOrderProduct.IsPackageProduct() {
+				subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+				for _, subProduct := range subProducts {
+					newSubSaleOrderProduct := subProduct.CopyOrderProduct(subProduct.SaleOrderUuid)
+					newSubSaleOrderProduct.PackageUuid = newSaleOrderProduct.Uuid // 设置为新的套餐商品uuid
+					unitNum := decimal.NewFromFloat(subProduct.UnitNum)
+					num := decimal.NewFromFloat(req.Num).Mul(unitNum).Round(3).InexactFloat64()
+					newSubSaleOrderProduct.SetNum(num)
+					newSubSaleOrderProduct.SetCancelInfo(req.Reason, returnFoodReasonList)
+					saleOrder.SaleOrderProducts = append(saleOrder.SaleOrderProducts, newSubSaleOrderProduct)
+				}
+			}
 		}
 	}
 
