@@ -2098,5 +2098,7 @@
     "状态设置失败": "Misslyckades med att ställa in status",
     "请选择显示": "Vänligen välj visning",
     "外送序号/订单号": "Leveransnummer/Ordernummer",
-    "外送序号": "Leveransordningsnummer"
+    "外送序号": "Leveransordningsnummer",
+    "开始序列号": "Startserienummer",
+    "请输入开始序列号": "Ange startserienummern"
 }
