@@ -3564,6 +3564,10 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 		listMap := make(map[string]resp.Product) // 商品列表，key为商品sign
 		for _, saleOrder := range saleBill.SaleOrders {
 			for _, saleOrderProduct := range saleOrder.SaleOrderProducts {
+				if saleOrderProduct.IsPackageSubProduct() {
+					// 套餐子商品不显示
+					continue
+				}
 				if saleOrderProduct.IsDelete() || saleOrderProduct.Num == 0 {
 					continue
 				}
@@ -3575,6 +3579,21 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 						SalePrice:     productPrice,
 						DiscountPrice: productPrice,
 					}
+					// 如果是套餐商品，则设置套餐商品列表
+					if saleOrderProduct.IsPackageProduct() {
+						subProducts := saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+						packageProductList := make([]resp.PackageProduct, 0)
+						for _, subProduct := range subProducts {
+							packageProductList = append(packageProductList, resp.PackageProduct{
+								Uuid:       subProduct.Uuid,
+								LocaleName: subProduct.MultiLanguageName.GetNames(),
+								Num:        subProduct.Num,
+							})
+						}
+						newProduct.PackageProductList = resp.PackageProductList{
+							List: packageProductList,
+						}
+					}
 					listMap[saleOrderProduct.Sign] = newProduct
 				} else {
 					productPrice := decimal.NewFromFloat(saleOrderProduct.Price).Mul(saleOrderProduct.GetNumDecimal())
@@ -3582,6 +3601,14 @@ func (s *orderSrv) InstantHideOrderList(ctx context.Context, req req.HideSaleBil
 					product.Num += saleOrderProduct.Num
 					product.SalePrice = price
 					product.DiscountPrice = price
+					// 如果是套餐商品，则更新套餐商品列表
+					if saleOrderProduct.IsPackageProduct() {
+						for index, _ := range product.PackageProductList.List {
+							unitNum := decimal.NewFromFloat(saleOrderProduct.UnitNum)                       // 每份套餐的子商品数量
+							num := decimal.NewFromFloat(product.Num).Mul(unitNum).Round(3).InexactFloat64() // 套餐数量*每份套餐的子商品数量= 子商品的数量
+							product.PackageProductList.List[index].Num = num
+						}
+					}
 				}
 			}
 		}
