@@ -406,6 +406,7 @@ CREATE TABLE IF NOT EXISTS `ttpos_sale_order_product` (
 
     `package_uuid` BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '套餐uuid',
     `product_type` INT(10) NOT NULL DEFAULT 0 COMMENT '商品类型, 0-商品 1-套餐',
+    `package_sub_product_params` TEXT NOT NULL COMMENT '套餐子商品参数',
 
     `send_kitchen_time` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '送厨时间(时间戳)',
 
