@@ -7573,6 +7573,12 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 		return nil, errors.New("商品未赠送")
 	}
 
+	// 如果是套餐商品，则更新套餐子商品数量
+	subProducts := make([]*model.SaleOrderProduct, 0)
+	if saleOrderProduct.IsPackageProduct() {
+		subProducts = saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+	}
+
 	// 更新销售订单商品
 	if err := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		if err := repository.NewSaleOrderProductRepo(db).DeleteSaleOrderProductReasons(
@@ -7589,6 +7595,18 @@ func (s *orderSrv) InstantOrderCartProductCancelGiving(ctx context.Context, req 
 			"GiftTime":   true,
 			"GiftReason": true,
 		})
+		// 更新套餐子商品赠菜时间
+		if len(subProducts) > 0 {
+			for _, subProduct := range subProducts {
+				saleBill.SetProductFields(subProduct.Uuid, model.SaleOrderProduct{
+					GiftTime:   0,
+					GiftReason: "",
+				}, map[string]bool{
+					"GiftTime":   true,
+					"GiftReason": true,
+				})
+			}
+		}
 		// 计算订单商品、订单、账单金额并更新或创建
 		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.New("更新数据失败")
