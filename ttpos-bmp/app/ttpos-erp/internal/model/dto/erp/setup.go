@@ -3,18 +3,18 @@ package erp
 type CreateWarehouseInp struct {
 	Branch      string `json:"branch"`
 	WhType      string `json:"whType"`
-	AliasName   string `json:"aliasName"`
+	AliasName   string `json:"aliasname"`
 	Company     string `json:"company"`
-	CompanyAbbr string `json:"companyAbbr"`
+	CompanyAbbr string `json:"company_abbr"`
 }
 
 type CreateWarehouseOut struct {
-	WarehouseName string `json:"warehouseName"`
+	WarehouseName string `json:"warehouse_name"`
 }
 
 type CreatePosProfileInp struct {
-	PosProfileName string `json:"posProfileName"`
-	Company        string `json:"company"`
+	PosProfileName string `json:"pos_profile_name"`
+	CompanyAbbr    string `json:"company_abbr"`
 	Warehouse      string `json:"warehouse"`
 	Branch         string `json:"branch"`
 

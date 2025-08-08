@@ -3,6 +3,7 @@ package erpnext
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"ttpos-bmp/app/ttpos-erp/internal/dao"
 	"ttpos-bmp/app/ttpos-erp/internal/model/do"
 	"ttpos-bmp/app/ttpos-erp/internal/model/dto"
@@ -34,6 +35,14 @@ func GetClient(ctx context.Context) *gclient.Client {
 	} else {
 		c.SetPrefix(g.Cfg().MustGet(gctx.GetInitCtx(), "app.erpnext.serviceUrl").String())
 	}
+	c.Use(func(c *gclient.Client, r *http.Request) (resp *gclient.Response, err error) {
+		resp, err = c.Next(r)
+		if resp != nil {
+			//TODO 增加开关
+			resp.RawDump()
+		}
+		return resp, err
+	})
 	return c
 }
 

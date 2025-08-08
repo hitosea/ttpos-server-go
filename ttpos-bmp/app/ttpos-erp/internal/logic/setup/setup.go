@@ -115,9 +115,17 @@ func (s *sSetup) CreateWarehouse(ctx context.Context, req *erp.CreateWarehouseIn
 
 // CreatePosProfile CreatePosFile 创建 默认 pos profile  配置默认 posprofile
 func (s *sSetup) CreatePosProfile(ctx context.Context, req *erp.CreatePosProfileInp) (posFileId string, err error) {
+
+	// 获取公司信息
+	company, err := companyService.GetCompanyWithAbbr(ctx, req.CompanyAbbr)
+	if err != nil {
+		g.Log().Error(ctx, "获取公司信息失败", err)
+		return "", gerror.New("获取公司信息失败")
+	}
+
 	posProfilePayload := g.Map{
 		"pos_profile_name": req.PosProfileName,
-		"company":          req.Company,
+		"company":          company.CompanyName,
 		"warehouse":        req.Warehouse,
 		"branch":           req.Branch,
 		"currency":         req.Currency,
@@ -147,7 +155,7 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (branchNa
 	}
 
 	//创建默认仓库
-	_, err = s.CreateWarehouse(ctx, &erp.CreateWarehouseInp{
+	warehouseName, err := s.CreateWarehouse(ctx, &erp.CreateWarehouseInp{
 		Branch:      branchName,
 		WhType:      "Normal",
 		AliasName:   "Default",
@@ -157,7 +165,7 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (branchNa
 		return "", gerror.New("创建默认仓库失败")
 	}
 	//创建在途仓
-	warehouseName, err := s.CreateWarehouse(ctx, &erp.CreateWarehouseInp{
+	_, err = s.CreateWarehouse(ctx, &erp.CreateWarehouseInp{
 		Branch:      branchName,
 		WhType:      "InTransit",
 		AliasName:   "Default",
@@ -170,7 +178,7 @@ func (s *sSetup) InitShop(ctx context.Context, req *setup.InitShopReq) (branchNa
 	//创建默认pos profile
 	_, err = s.CreatePosProfile(ctx, &erp.CreatePosProfileInp{
 		PosProfileName: "Default",
-		Company:        req.CompanyAbbr,
+		CompanyAbbr:    req.CompanyAbbr,
 		Warehouse:      warehouseName,
 		Branch:         branchName,
 
