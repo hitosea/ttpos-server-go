@@ -198,7 +198,7 @@
     <productList
       v-if="open_product"
       :open_product="open_product"
-      :index="index"
+      :index="selectIndex"
       :multiple_selection="multiple_selection"
       :material_type="20"
       @closeDialogFunc="closeDialogFunc($event)"
@@ -237,7 +237,7 @@
   const restaurantsObj = reactive(languageObj);
   const open_product = ref(false);
   const multiple_selection = ref([]);
-  const index = ref(0);
+  const selectIndex = ref(0);
   const open_add = ref(false);
   const model = ref({});
 
@@ -321,7 +321,7 @@
 
   const addMaterials = (index) => {
     multiple_selection.value = form.many_select_list[index];
-    index.value = index;
+    selectIndex.value = index;
     open_product.value = true;
   };
 
