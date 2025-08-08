@@ -25,6 +25,7 @@ type Business struct {
 	IsInvoice                 string                      `json:"is_invoice"`                   // 开票信息 0-不需要填写 1-需要填写
 	OpeningHours              string                      `json:"opening_hours"`                // 营业时间 18:00-02:00
 	DeliveryPriceRatio        uint                        `json:"delivery_price_ratio"`         // 外送商品价格和商品原价比例. 取值范围1-300， 表示原价的1%到300%
+	StartSerialNo             string                      `json:"start_serial_no"`              // 开始序列号
 }
 
 func (resp *Business) IsAutoClearDesk() bool {

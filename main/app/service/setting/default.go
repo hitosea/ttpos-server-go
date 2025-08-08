@@ -242,6 +242,7 @@ func (s *Srv) getDefaultBusiness(language string) setting.Business {
 		IsInvoice:          "0",      // 开票信息 0-不需要填写 1-需要填写
 		OpeningHours:       "",       // 营业时间 00:00-23:59
 		DeliveryPriceRatio: 100,      // 外送商品价格和商品原价比例
+		StartSerialNo:      "0001",   // 开始序列号
 	}
 
 }
