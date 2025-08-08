@@ -3728,6 +3728,14 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 	}
 
 	saleOrderProduct.DeleteProduct()
+	// 如果是套餐商品，则更新套餐子商品数量
+	subProducts := make([]*model.SaleOrderProduct, 0)
+	if saleOrderProduct.IsPackageProduct() {
+		subProducts = saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+		for _, subProduct := range subProducts {
+			subProduct.DeleteProduct()
+		}
+	}
 
 	if saleOrderProduct.H5OrderUuid != 0 {
 		if err := s.deleteOrRejectH5OrderProduct(ctx, db, saleOrderProduct); err != nil {
@@ -3746,6 +3754,14 @@ func (s *orderSrv) orderProductDelete(ctx context.Context, dbId uint64, staffUui
 		err := repository.NewOrderRepo(db).DeleteOrderProduct(req.SaleBillUuid, req.SaleOrderUuid, req.OrderProductUuid)
 		if err != nil {
 			return errors.WithMessage(err)
+		}
+		// 删除套餐子商品
+		if len(subProducts) > 0 {
+			for _, subProduct := range subProducts {
+				if errUpdate := repository.NewSaleOrderProductRepo(db).UpdateSaleOrderProduct(subProduct); errUpdate != nil {
+					return errors.WithMessage(errUpdate)
+				}
+			}
 		}
 		// 更新完整个销售订单
 		if errUpdate := repository.NewSaleOrderRepo(db).UpdateSaleOrderRecord(*saleOrder); errUpdate != nil {
