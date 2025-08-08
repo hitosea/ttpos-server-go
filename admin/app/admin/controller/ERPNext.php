@@ -99,7 +99,7 @@ class ERPNext extends Controller
      * @Apidoc\Title("获取ERPNext站点编码列表")
      * @Apidoc\Desc("获取ERPNext站点编码列表，用于下拉框")
      * @Apidoc\Method("GET")
-     * @Apidoc\Url("/api/admin/erpnext/site_code")
+     * @Apidoc\Url("/api/admin/erpnext/siteCode")
      * @Apidoc\Returned("list", type="array", desc="ERPNext站点列表", children={
      *      @Apidoc\Returned("name", type="string", desc="ERPNext站点名称"),
      *      @Apidoc\Returned("code", type="string", desc="ERPNext站点编码"),

@@ -59,7 +59,7 @@ class Controller extends BaseController
         // 可选商家列表 
         '/admin/delivery/companySelect',
         // 商家授权管理，erpnext站点编码
-        '/admin/erpnext/site_code',
+        '/admin/erpnext/siteCode',
         // 商家授权管理，获取site company
         '/admin/erpnext/siteCompany',
     ];
