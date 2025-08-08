@@ -10,7 +10,7 @@
   >
     <el-form :model="formData" :rules="formRules" ref="formRef" label-position="top" label-width="auto">
       <el-form-item :label="$t('选择商家')" prop="uuid">
-        <el-select v-model="formData.uuid" :placeholder="$t('请选择商家')" clearable style="min-width: 200px" :disabled="props.hasEdit">
+        <el-select v-model="formData.uuid" :placeholder="$t('请选择商家')" clearable filterable :disabled="props.hasEdit">
           <el-option v-for="item in companyList" :key="item.uuid" :value="item.uuid" :label="item.name" :disabled="item.erpnext_site_code !== ''" />
         </el-select>
       </el-form-item>
@@ -20,7 +20,7 @@
         </el-radio-group>
       </el-form-item>
       <el-form-item :label="$t('所属erpnext公司')" prop="erpnext_company_abbr">
-        <el-select v-model="formData.erpnext_company_abbr" :placeholder="$t('请选择所属erpnext公司')" clearable style="min-width: 200px" :disabled="props.hasEdit">
+        <el-select v-model="formData.erpnext_company_abbr" :placeholder="$t('请选择所属erpnext公司')" filterable clearable :disabled="props.hasEdit">
           <el-option v-for="item in erpnextCompanyList" :key="item.company_abbr" :value="item.company_abbr" :label="item.company_name" />
         </el-select>
       </el-form-item>
