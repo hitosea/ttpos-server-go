@@ -28,8 +28,7 @@ type ProductSauce struct {
 	MultiLanguageName MultiLanguageName  `gorm:"foreignKey:multi_language_name_uuid;references:uuid"` // 多语言名称
 	SauceMaterials    []*RelatedMaterial `gorm:"foreignKey:related_uuid;references:uuid"`             // 小料的组成材料
 
-	// product_package 和 product_sauce 是多对多关系，通过 product_bom 表关联
-	ProductPackages []ProductPackage `gorm:"many2many:product_bom;foreignKey:uuid;references:uuid"`
+	ProductBoms []ProductBom `gorm:"foreignKey:product_sauce_uuid;references:uuid"`
 
 	// 表里面没有这个product_package_count字段，但是查询的时候会自动统计关联商品数量
 	ProductPackageCount int `gorm:"->"`

@@ -39,7 +39,7 @@ class Feed extends FeedModel
         // 关联加料材料
         $list = $model->with([
             'relatedMaterial' => [ 'material' ]
-        ])->order(['feed.create_time' => 'desc'])->paginate($data);
+        ])->order(['feed.sort' => 'asc', 'feed.create_time' => 'asc'])->paginate($data);
 
         foreach ($list as $item) {
             $materialList = [];
@@ -80,6 +80,9 @@ class Feed extends FeedModel
         try {
             $data['name'] = $data['feed_name'] ?? '';
             $data['multi_language_name_uuid'] = (new MultiLanguageName)->saveNames($data['feed_name']);
+            // 获取当前最大的排序值
+            $maxSort = $this->where('uuid', '<>', $this['uuid'])->max('sort');
+            $data['sort'] = $maxSort + 1;
             // 保存加料
             $this->save($data);
             // 关联加料材料

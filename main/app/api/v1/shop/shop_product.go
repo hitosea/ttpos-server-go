@@ -221,7 +221,7 @@ func (h *ProductHandler) SortProductUnit(c *gin.Context) {
 	}
 }
 
-// GetProductSourceList 获取商品加料列表
+// GetProductSauceList 获取商品加料列表
 // @Summary 获取商品加料列表
 // @Description 获取商品加料列表
 // @Tags 商家端.商品加料
@@ -230,18 +230,18 @@ func (h *ProductHandler) SortProductUnit(c *gin.Context) {
 // @Security JwtToken
 // @Param page_no query int false "页码"
 // @Param page_size query int false "每页条数"
-// @Success 200 {object} product_resp.ProductSourceListResp "成功"
+// @Success 200 {object} product_resp.ProductSauceListResp "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /shop/product/source/list [get]
-func (h *ProductHandler) GetProductSourceList(c *gin.Context) {
+// @Router /shop/product/sauce/list [get]
+func (h *ProductHandler) GetProductSauceList(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	sourceListReq := req.ProductSourceListReq{}
+	sauceListReq := req.ProductSauceListReq{}
 
-	if err := c.ShouldBindQuery(&sourceListReq); err != nil {
-		helper.HandleValidationError(c, err, sourceListReq, dto.PageReqMessage)
+	if err := c.ShouldBindQuery(&sauceListReq); err != nil {
+		helper.HandleValidationError(c, err, sauceListReq, dto.PageReqMessage)
 		return
 	}
-	res, err := h.productSrv.GetProductSourceList(ctx, sourceListReq)
+	res, err := h.productSrv.GetProductSauceList(ctx, sauceListReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
@@ -249,7 +249,7 @@ func (h *ProductHandler) GetProductSourceList(c *gin.Context) {
 	helper.Success(c, res)
 }
 
-// GetProductSource 获取商品加料详情
+// GetProductSauce 获取商品加料详情
 // @Summary 获取商品加料详情
 // @Description 获取商品加料详情
 // @Tags 商家端.商品加料
@@ -257,22 +257,126 @@ func (h *ProductHandler) GetProductSourceList(c *gin.Context) {
 // @Produce json
 // @Security JwtToken
 // @Param uuid query string false "商品加料UUID"
-// @Success 200 {object} product_resp.ProductSourceDetail "成功"
+// @Success 200 {object} product_resp.ProductSauceDetail "成功"
 // @Failure 400 {object} nil "错误请求"
-// @Router /shop/product/source [get]
-func (h *ProductHandler) GetProductSource(c *gin.Context) {
+// @Router /shop/product/sauce [get]
+func (h *ProductHandler) GetProductSauce(c *gin.Context) {
 	ctx := helper.GetContext(c)
-	sourceReq := req.ProductSourceReq{}
-	if err := c.ShouldBindQuery(&sourceReq); err != nil {
-		helper.HandleValidationError(c, err, sourceReq, dto.PageReqMessage)
+	sauceReq := req.ProductSauceReq{}
+	if err := c.ShouldBindQuery(&sauceReq); err != nil {
+		helper.HandleValidationError(c, err, sauceReq, dto.PageReqMessage)
 		return
 	}
-	res, err := h.productSrv.GetProductSource(ctx, sourceReq)
+	res, err := h.productSrv.GetProductSauce(ctx, sauceReq)
 	if err != nil {
 		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
 		return
 	}
 	helper.Success(c, res)
+}
+
+// AddProductSauce 添加商品加料
+// @Summary 添加商品加料
+// @Description 添加商品加料
+// @Tags 商家端.商品加料
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductSauceAddReq true "商品加料添加请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/sauce/add [post]
+func (h *ProductHandler) AddProductSauce(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	addReq := req.ProductSauceAddReq{}
+	if err := c.ShouldBindJSON(&addReq); err != nil {
+		helper.HandleValidationError(c, err, addReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.AddProductSauce(ctx, addReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// EditProductSauce 编辑商品加料
+// @Summary 编辑商品加料
+// @Description 编辑商品加料
+// @Tags 商家端.商品加料
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductSauceEditReq true "商品加料编辑请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/sauce/edit [post]
+func (h *ProductHandler) EditProductSauce(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	editReq := req.ProductSauceEditReq{}
+	if err := c.ShouldBindJSON(&editReq); err != nil {
+		helper.HandleValidationError(c, err, editReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.EditProductSauce(ctx, editReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// DeleteProductSauce 删除商品加料
+// @Summary 删除商品加料
+// @Description 删除商品加料
+// @Tags 商家端.商品加料
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductSauceReq true "商品加料删除请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/sauce [delete]
+func (h *ProductHandler) DeleteProductSauce(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	deleteReq := req.ProductSauceReq{}
+	if err := c.ShouldBindJSON(&deleteReq); err != nil {
+		helper.HandleValidationError(c, err, deleteReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.DeleteProductSauce(ctx, deleteReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
+}
+
+// SortProductSauce 排序商品加料
+// @Summary 排序商品加料
+// @Description 排序商品加料
+// @Tags 商家端.商品加料
+// @Accept json
+// @Produce json
+// @Security JwtToken
+// @Param data body req.ProductSauceSortReq true "商品加料排序请求"
+// @Success 200 {object} nil "成功"
+// @Failure 400 {object} nil "错误请求"
+// @Router /shop/product/sauce/sort [post]
+func (h *ProductHandler) SortProductSauce(c *gin.Context) {
+	ctx := helper.GetContext(c)
+	sortReq := req.ProductSauceSortReq{}
+	if err := c.ShouldBindJSON(&sortReq); err != nil {
+		helper.HandleValidationError(c, err, sortReq, dto.PageReqMessage)
+		return
+	}
+	err := h.productSrv.SortProductSauce(ctx, sortReq)
+	if err != nil {
+		helper.ErrorWithDetail(c, constant.CodeFail, errors.WithMessage(err))
+		return
+	}
+	helper.Success(c, nil)
 }
 
 func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache cache.Cache) {
@@ -299,14 +403,19 @@ func RegisterProductHandlers(router gin.IRouter, dbm *database.DBManager, cache 
 	privateApi := router.Group("", middleware.Auth(authSrv, dbm))
 	{
 		privateApi.GET("/product/category/list", wrapper.GetProductCategoryList) // 获取商品分类列表
-		privateApi.GET("/product/unit/list", wrapper.GetProductUnitList)         // 获取商品单位列表
-		privateApi.GET("/product/unit", wrapper.GetProductUnit)                  // 获取商品单位详情
-		privateApi.POST("/product/unit/add", wrapper.AddProductUnit)             // 添加商品单位
-		privateApi.POST("/product/unit/edit", wrapper.EditProductUnit)           // 编辑商品单位
-		privateApi.DELETE("/product/unit", wrapper.DeleteProductUnit)            // 删除商品单位
-		privateApi.POST("/product/unit/sort", wrapper.SortProductUnit)           // 排序商品单位
 
-		privateApi.GET("/product/source/list", wrapper.GetProductSourceList) // 获取商品加料列表
-		privateApi.GET("/product/source", wrapper.GetProductSource)          // 获取商品加料详情
+		privateApi.GET("/product/unit/list", wrapper.GetProductUnitList) // 获取商品单位列表
+		privateApi.GET("/product/unit", wrapper.GetProductUnit)          // 获取商品单位详情
+		privateApi.POST("/product/unit/add", wrapper.AddProductUnit)     // 添加商品单位
+		privateApi.POST("/product/unit/edit", wrapper.EditProductUnit)   // 编辑商品单位
+		privateApi.DELETE("/product/unit", wrapper.DeleteProductUnit)    // 删除商品单位
+		privateApi.POST("/product/unit/sort", wrapper.SortProductUnit)   // 排序商品单位
+
+		privateApi.GET("/product/sauce/list", wrapper.GetProductSauceList) // 获取商品加料列表
+		privateApi.GET("/product/sauce", wrapper.GetProductSauce)          // 获取商品加料详情
+		privateApi.POST("/product/sauce/add", wrapper.AddProductSauce)     // 添加商品加料
+		privateApi.POST("/product/sauce/edit", wrapper.EditProductSauce)   // 编辑商品加料
+		privateApi.DELETE("/product/sauce", wrapper.DeleteProductSauce)    // 删除商品加料
+		privateApi.POST("/product/sauce/sort", wrapper.SortProductSauce)   // 排序商品加料
 	}
 }

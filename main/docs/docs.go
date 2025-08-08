@@ -18077,7 +18077,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/product/source": {
+        "/shop/product/sauce": {
             "get": {
                 "security": [
                     {
@@ -18107,8 +18107,45 @@ const docTemplate = `{
                     "200": {
                         "description": "成功",
                         "schema": {
-                            "$ref": "#/definitions/product_resp.ProductSourceDetail"
+                            "$ref": "#/definitions/product_resp.ProductSauceDetail"
                         }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "删除商品加料",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品加料"
+                ],
+                "summary": "删除商品加料",
+                "parameters": [
+                    {
+                        "description": "商品加料删除请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductSauceReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
                     },
                     "400": {
                         "description": "错误请求"
@@ -18116,7 +18153,85 @@ const docTemplate = `{
                 }
             }
         },
-        "/shop/product/source/list": {
+        "/shop/product/sauce/add": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "添加商品加料",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品加料"
+                ],
+                "summary": "添加商品加料",
+                "parameters": [
+                    {
+                        "description": "商品加料添加请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductSauceAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/sauce/edit": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "编辑商品加料",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品加料"
+                ],
+                "summary": "编辑商品加料",
+                "parameters": [
+                    {
+                        "description": "商品加料编辑请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductSauceEditReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/sauce/list": {
             "get": {
                 "security": [
                     {
@@ -18152,8 +18267,47 @@ const docTemplate = `{
                     "200": {
                         "description": "成功",
                         "schema": {
-                            "$ref": "#/definitions/product_resp.ProductSourceListResp"
+                            "$ref": "#/definitions/product_resp.ProductSauceListResp"
                         }
+                    },
+                    "400": {
+                        "description": "错误请求"
+                    }
+                }
+            }
+        },
+        "/shop/product/sauce/sort": {
+            "post": {
+                "security": [
+                    {
+                        "JwtToken": []
+                    }
+                ],
+                "description": "排序商品加料",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "商家端.商品加料"
+                ],
+                "summary": "排序商品加料",
+                "parameters": [
+                    {
+                        "description": "商品加料排序请求",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/req.ProductSauceSortReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "成功"
                     },
                     "400": {
                         "description": "错误请求"
@@ -22843,6 +22997,56 @@ const docTemplate = `{
                 }
             }
         },
+        "product_resp.ProductSauceDetail": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品单位名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "price": {
+                    "description": "商品加料价格",
+                    "type": "number"
+                },
+                "product_packages": {
+                    "description": "商品包列表",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/product_resp.ProductSauceProductPackageList"
+                        }
+                    ]
+                },
+                "uuid": {
+                    "description": "商品单位UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "product_resp.ProductSauceItem": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "商品加料名称",
+                    "type": "string"
+                },
+                "product_package_count": {
+                    "description": "关联商品包数量",
+                    "type": "integer"
+                },
+                "sort": {
+                    "description": "商品加料排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品加料UUID",
+                    "type": "integer"
+                }
+            }
+        },
         "product_resp.ProductSauceList": {
             "type": "object",
             "properties": {
@@ -22862,59 +23066,13 @@ const docTemplate = `{
                 }
             }
         },
-        "product_resp.ProductSourceDetail": {
-            "type": "object",
-            "properties": {
-                "locale_name": {
-                    "description": "商品单位名称",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/dto.LocaleResponse"
-                        }
-                    ]
-                },
-                "price": {
-                    "description": "商品加料价格",
-                    "type": "number"
-                },
-                "product_packages": {
-                    "description": "商品包列表",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/product_resp.ProductSourceProductPackageList"
-                        }
-                    ]
-                },
-                "uuid": {
-                    "description": "商品单位UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "product_resp.ProductSourceItem": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "description": "商品加料名称",
-                    "type": "string"
-                },
-                "product_package_count": {
-                    "description": "关联商品包数量",
-                    "type": "integer"
-                },
-                "uuid": {
-                    "description": "商品加料UUID",
-                    "type": "integer"
-                }
-            }
-        },
-        "product_resp.ProductSourceListResp": {
+        "product_resp.ProductSauceListResp": {
             "type": "object",
             "properties": {
                 "list": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/product_resp.ProductSourceItem"
+                        "$ref": "#/definitions/product_resp.ProductSauceItem"
                     }
                 },
                 "meta": {
@@ -22922,7 +23080,7 @@ const docTemplate = `{
                 }
             }
         },
-        "product_resp.ProductSourceProductPackage": {
+        "product_resp.ProductSauceProductPackage": {
             "type": "object",
             "properties": {
                 "name": {
@@ -22935,13 +23093,13 @@ const docTemplate = `{
                 }
             }
         },
-        "product_resp.ProductSourceProductPackageList": {
+        "product_resp.ProductSauceProductPackageList": {
             "type": "object",
             "properties": {
                 "list": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/product_resp.ProductSourceProductPackage"
+                        "$ref": "#/definitions/product_resp.ProductSauceProductPackage"
                     }
                 }
             }
@@ -24804,6 +24962,105 @@ const docTemplate = `{
                 "product_package_group_uuid": {
                     "description": "套餐分组UUID",
                     "type": "integer"
+                }
+            }
+        },
+        "req.ProductSauceAddReq": {
+            "type": "object",
+            "properties": {
+                "locale_name": {
+                    "description": "商品加料名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "price": {
+                    "description": "商品加料价格",
+                    "type": "number"
+                },
+                "product_package_uuids": {
+                    "description": "关联商品包UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "req.ProductSauceEditReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "locale_name": {
+                    "description": "商品加料名称",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.LocaleResponse"
+                        }
+                    ]
+                },
+                "price": {
+                    "description": "商品加料价格",
+                    "type": "number"
+                },
+                "product_package_uuids": {
+                    "description": "关联商品包UUID列表",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "uuid": {
+                    "description": "商品加料UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductSauceReq": {
+            "type": "object",
+            "required": [
+                "uuid"
+            ],
+            "properties": {
+                "uuid": {
+                    "description": "商品加料UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductSauceSortItem": {
+            "type": "object",
+            "required": [
+                "sort",
+                "uuid"
+            ],
+            "properties": {
+                "sort": {
+                    "description": "排序",
+                    "type": "integer"
+                },
+                "uuid": {
+                    "description": "商品加料UUID",
+                    "type": "integer"
+                }
+            }
+        },
+        "req.ProductSauceSortReq": {
+            "type": "object",
+            "required": [
+                "list"
+            ],
+            "properties": {
+                "list": {
+                    "description": "商品加料排序列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/req.ProductSauceSortItem"
+                    }
                 }
             }
         },

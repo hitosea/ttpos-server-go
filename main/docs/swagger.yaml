@@ -1479,6 +1479,38 @@ definitions:
         description: 商品小料UUID
         type: integer
     type: object
+  product_resp.ProductSauceDetail:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品单位名称
+      price:
+        description: 商品加料价格
+        type: number
+      product_packages:
+        allOf:
+        - $ref: '#/definitions/product_resp.ProductSauceProductPackageList'
+        description: 商品包列表
+      uuid:
+        description: 商品单位UUID
+        type: integer
+    type: object
+  product_resp.ProductSauceItem:
+    properties:
+      name:
+        description: 商品加料名称
+        type: string
+      product_package_count:
+        description: 关联商品包数量
+        type: integer
+      sort:
+        description: 商品加料排序
+        type: integer
+      uuid:
+        description: 商品加料UUID
+        type: integer
+    type: object
   product_resp.ProductSauceList:
     properties:
       is_must:
@@ -1492,45 +1524,16 @@ definitions:
         description: 小料最大可选数量
         type: integer
     type: object
-  product_resp.ProductSourceDetail:
-    properties:
-      locale_name:
-        allOf:
-        - $ref: '#/definitions/dto.LocaleResponse'
-        description: 商品单位名称
-      price:
-        description: 商品加料价格
-        type: number
-      product_packages:
-        allOf:
-        - $ref: '#/definitions/product_resp.ProductSourceProductPackageList'
-        description: 商品包列表
-      uuid:
-        description: 商品单位UUID
-        type: integer
-    type: object
-  product_resp.ProductSourceItem:
-    properties:
-      name:
-        description: 商品加料名称
-        type: string
-      product_package_count:
-        description: 关联商品包数量
-        type: integer
-      uuid:
-        description: 商品加料UUID
-        type: integer
-    type: object
-  product_resp.ProductSourceListResp:
+  product_resp.ProductSauceListResp:
     properties:
       list:
         items:
-          $ref: '#/definitions/product_resp.ProductSourceItem'
+          $ref: '#/definitions/product_resp.ProductSauceItem'
         type: array
       meta:
         $ref: '#/definitions/dto.PageResponse'
     type: object
-  product_resp.ProductSourceProductPackage:
+  product_resp.ProductSauceProductPackage:
     properties:
       name:
         description: 商品包名称
@@ -1539,11 +1542,11 @@ definitions:
         description: 商品包UUID
         type: integer
     type: object
-  product_resp.ProductSourceProductPackageList:
+  product_resp.ProductSauceProductPackageList:
     properties:
       list:
         items:
-          $ref: '#/definitions/product_resp.ProductSourceProductPackage'
+          $ref: '#/definitions/product_resp.ProductSauceProductPackage'
         type: array
     type: object
   product_resp.ProductUnitDetail:
@@ -2859,6 +2862,71 @@ definitions:
       product_package_group_uuid:
         description: 套餐分组UUID
         type: integer
+    type: object
+  req.ProductSauceAddReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品加料名称
+      price:
+        description: 商品加料价格
+        type: number
+      product_package_uuids:
+        description: 关联商品包UUID列表
+        items:
+          type: integer
+        type: array
+    type: object
+  req.ProductSauceEditReq:
+    properties:
+      locale_name:
+        allOf:
+        - $ref: '#/definitions/dto.LocaleResponse'
+        description: 商品加料名称
+      price:
+        description: 商品加料价格
+        type: number
+      product_package_uuids:
+        description: 关联商品包UUID列表
+        items:
+          type: integer
+        type: array
+      uuid:
+        description: 商品加料UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductSauceReq:
+    properties:
+      uuid:
+        description: 商品加料UUID
+        type: integer
+    required:
+    - uuid
+    type: object
+  req.ProductSauceSortItem:
+    properties:
+      sort:
+        description: 排序
+        type: integer
+      uuid:
+        description: 商品加料UUID
+        type: integer
+    required:
+    - sort
+    - uuid
+    type: object
+  req.ProductSauceSortReq:
+    properties:
+      list:
+        description: 商品加料排序列表
+        items:
+          $ref: '#/definitions/req.ProductSauceSortItem'
+        type: array
+    required:
+    - list
     type: object
   req.ProductUnitAddReq:
     properties:
@@ -19317,7 +19385,30 @@ paths:
       summary: 获取商品分类列表
       tags:
       - 商家端.商品分类
-  /shop/product/source:
+  /shop/product/sauce:
+    delete:
+      consumes:
+      - application/json
+      description: 删除商品加料
+      parameters:
+      - description: 商品加料删除请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductSauceReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 删除商品加料
+      tags:
+      - 商家端.商品加料
     get:
       consumes:
       - application/json
@@ -19333,7 +19424,7 @@ paths:
         "200":
           description: 成功
           schema:
-            $ref: '#/definitions/product_resp.ProductSourceDetail'
+            $ref: '#/definitions/product_resp.ProductSauceDetail'
         "400":
           description: 错误请求
       security:
@@ -19341,7 +19432,55 @@ paths:
       summary: 获取商品加料详情
       tags:
       - 商家端.商品加料
-  /shop/product/source/list:
+  /shop/product/sauce/add:
+    post:
+      consumes:
+      - application/json
+      description: 添加商品加料
+      parameters:
+      - description: 商品加料添加请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductSauceAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 添加商品加料
+      tags:
+      - 商家端.商品加料
+  /shop/product/sauce/edit:
+    post:
+      consumes:
+      - application/json
+      description: 编辑商品加料
+      parameters:
+      - description: 商品加料编辑请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductSauceEditReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 编辑商品加料
+      tags:
+      - 商家端.商品加料
+  /shop/product/sauce/list:
     get:
       consumes:
       - application/json
@@ -19361,12 +19500,36 @@ paths:
         "200":
           description: 成功
           schema:
-            $ref: '#/definitions/product_resp.ProductSourceListResp'
+            $ref: '#/definitions/product_resp.ProductSauceListResp'
         "400":
           description: 错误请求
       security:
       - JwtToken: []
       summary: 获取商品加料列表
+      tags:
+      - 商家端.商品加料
+  /shop/product/sauce/sort:
+    post:
+      consumes:
+      - application/json
+      description: 排序商品加料
+      parameters:
+      - description: 商品加料排序请求
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/req.ProductSauceSortReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+        "400":
+          description: 错误请求
+      security:
+      - JwtToken: []
+      summary: 排序商品加料
       tags:
       - 商家端.商品加料
   /shop/product/unit:

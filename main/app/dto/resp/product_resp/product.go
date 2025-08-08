@@ -195,29 +195,30 @@ type ProductUnitDetail struct {
 	ProductPackages ProductUnitProductPackageList `json:"product_packages"` // 商品包列表
 }
 
-type ProductSourceListResp struct {
-	List []ProductSourceItem `json:"list"`
-	Meta dto.PageResponse    `json:"meta"`
+type ProductSauceListResp struct {
+	List []ProductSauceItem `json:"list"`
+	Meta dto.PageResponse   `json:"meta"`
 }
 
-type ProductSourceItem struct {
+type ProductSauceItem struct {
 	Uuid                uint64 `json:"uuid"`                  // 商品加料UUID
 	Name                string `json:"name"`                  // 商品加料名称
+	Sort                int    `json:"sort"`                  // 商品加料排序
 	ProductPackageCount int    `json:"product_package_count"` // 关联商品包数量
 }
 
-type ProductSourceProductPackage struct {
+type ProductSauceProductPackage struct {
 	Uuid uint64 `json:"uuid"` // 商品包UUID
 	Name string `json:"name"` // 商品包名称
 }
 
-type ProductSourceProductPackageList struct {
-	List []ProductSourceProductPackage `json:"list"`
+type ProductSauceProductPackageList struct {
+	List []ProductSauceProductPackage `json:"list"`
 }
 
-type ProductSourceDetail struct {
-	Uuid            uint64                          `json:"uuid"`             // 商品单位UUID
-	Price           float64                         `json:"price"`            // 商品加料价格
-	LocaleName      dto.LocaleResponse              `json:"locale_name"`      // 商品单位名称
-	ProductPackages ProductSourceProductPackageList `json:"product_packages"` // 商品包列表
+type ProductSauceDetail struct {
+	Uuid            uint64                         `json:"uuid"`             // 商品单位UUID
+	Price           float64                        `json:"price"`            // 商品加料价格
+	LocaleName      dto.LocaleResponse             `json:"locale_name"`      // 商品单位名称
+	ProductPackages ProductSauceProductPackageList `json:"product_packages"` // 商品包列表
 }
