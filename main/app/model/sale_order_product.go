@@ -323,6 +323,11 @@ func (model *SaleOrderProduct) IsSubOperation() bool {
 func (model *SaleOrderProduct) SetWrap() {
 	defer model.SetUpdate() // 标记要更新model
 	model.WrapTime = time.Now().Unix()
+	if model.IsPackageProduct() {
+		model.Sign = model.GeneratePackageSign()
+	} else {
+		model.Sign = model.GenerateProductSign()
+	}
 }
 
 // 设置取消打包

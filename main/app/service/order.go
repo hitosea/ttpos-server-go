@@ -7427,12 +7427,31 @@ func (s *orderSrv) OrderCartProductWrap(ctx context.Context, req req.OrderCartPr
 
 	// 设置打包时间
 	saleOrderProduct.SetWrap()
+
+	// 如果是套餐商品，则更新套餐子商品数量
+	subProducts := make([]*model.SaleOrderProduct, 0)
+	if saleOrderProduct.IsPackageProduct() {
+		subProducts = saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+		for _, subProduct := range subProducts {
+			subProduct.SetWrap()
+		}
+	}
+
 	// 执行
 	if errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
 			WrapTime: saleOrderProduct.WrapTime,
-			Sign:     saleOrderProduct.GenerateProductSign(),
+			Sign:     saleOrderProduct.Sign,
 		})
+		// 更新套餐子商品打包时间
+		if len(subProducts) > 0 {
+			for _, subProduct := range subProducts {
+				saleBill.SetProductFields(subProduct.Uuid, model.SaleOrderProduct{
+					WrapTime: subProduct.WrapTime,
+					Sign:     subProduct.Sign,
+				})
+			}
+		}
 		// 计算订单商品、订单、账单金额并更新或创建
 		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.WithMessage(err)
@@ -7504,11 +7523,27 @@ func (s *orderSrv) OrderCartProductUnwrap(ctx context.Context, req req.OrderCart
 
 	// 设置打包时间
 	saleOrderProduct.SetUnwrap()
+	// 如果是套餐商品，则更新套餐子商品数量
+	subProducts := make([]*model.SaleOrderProduct, 0)
+	if saleOrderProduct.IsPackageProduct() {
+		subProducts = saleOrder.GetPackageSubProductList(saleOrderProduct.Uuid)
+		for _, subProduct := range subProducts {
+			subProduct.SetUnwrap()
+		}
+	}
 	// 执行
 	if errUpdateDB := repository.CommonRepo.Transaction(db, func(tx *gorm.DB) error {
 		saleBill.SetProductFields(saleOrderProduct.Uuid, model.SaleOrderProduct{
 			WrapTime: saleOrderProduct.WrapTime,
 		})
+		// 更新套餐子商品打包时间
+		if len(subProducts) > 0 {
+			for _, subProduct := range subProducts {
+				saleBill.SetProductFields(subProduct.Uuid, model.SaleOrderProduct{
+					WrapTime: subProduct.WrapTime,
+				})
+			}
+		}
 		// 计算订单商品、订单、账单金额并更新或创建
 		if err := s.CalcAndSaveSaleBill(ctx, tx, saleBill); err != nil {
 			return errors.WithMessage(err)
